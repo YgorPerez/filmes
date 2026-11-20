@@ -47,6 +47,10 @@ Um filme do Catálogo que sobreviveu aos Vetos e às Restrições de uma Sessão
 Como uma Sessão junta o gosto dos Presentes para ordenar os Candidatos. Cada Sessão pode usar uma; a padrão é média sem miséria com justiça entre sessões.
 _Evitar_: regra de grupo, acordo, agregação
 
+**Crédito**:
+O quanto uma Pessoa ficou atrás dos outros Presentes nas Sessões recentes que dividiu com quem está na Sessão de hoje, medido pelo Feedback. Quem tem Crédito pesa mais na Regra de escolha; quem gostou mais que a média não perde nada.
+_Evitar_: dívida, vez, saldo
+
 **Recomendação**:
 O top 5 que uma Sessão recebe, cada filme com os seus Motivos.
 _Evitar_: sugestão, lista
@@ -96,14 +100,14 @@ A avaliação que uma Pessoa deu a um filme, sempre dita com o nome de quem deu.
 _Evitar_: nota própria, nota de amigo, rating
 
 **Declarado**:
-O que uma Pessoa disse sobre o próprio gosto, por exemplo num questionário.
+O que uma Pessoa disse sobre o próprio gosto ou sobre um filme, por exemplo num questionário ou numa review que ela escreveu.
 
 **Relato**:
 O que o Dono disse sobre o gosto de outra Pessoa, como "Leo odeia filme lento". Vale menos que a própria Pessoa dizendo.
 _Evitar_: descrição, declarado
 
 **Review**:
-Um sinal tirado de opiniões de terceiros, que não estão entre as Pessoas, como as tags de uma base pública.
+Um sinal tirado de opiniões de terceiros, que não estão entre as Pessoas, como as tags de uma base pública ou quantos estranhos que gostaram de um filme gostaram de outro.
 
 **Palpite**:
 Um Motivo sem Fato que o sustente.
