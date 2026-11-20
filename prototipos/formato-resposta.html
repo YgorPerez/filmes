@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Formato da resposta</title>
+<style>
+:root{--bg:#f7f6f2;--card:#fff;--ink:#1f1e1c;--mute:#6b6760;--line:#e4e1da;--acc:#b4542f;--code:#f0ede6}
+@media (prefers-color-scheme:dark){:root{--bg:#1c1b19;--card:#262522;--ink:#ecebe7;--mute:#a19d95;--line:#3a3834;--acc:#e08a63;--code:#302e2a}}
+body{background:var(--bg);color:var(--ink);font:15px/1.55 system-ui,sans-serif;margin:0;padding:16px 16px 90px}
+.wrap{max-width:760px;margin:0 auto}
+.proto{font-size:12px;color:var(--mute);border:1px dashed var(--line);padding:6px 10px;border-radius:6px;margin-bottom:12px}
+.user{background:var(--code);padding:10px 14px;border-radius:12px;margin:0 0 14px auto;max-width:80%;width:fit-content}
+.msg{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:6px 18px 12px}
+h3{font-size:16px;margin:16px 0 4px}
+code{background:var(--code);padding:1px 4px;border-radius:4px;font-size:13px}
+small,.mute{color:var(--mute)}
+table{border-collapse:collapse;width:100%;font-size:13.5px}td,th{border-bottom:1px solid var(--line);padding:5px 6px;text-align:left;vertical-align:top}
+ul{padding-left:20px;margin:4px 0}li{margin:2px 0}
+.bar{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);padding:10px;display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+.bar button{border:1px solid var(--line);background:var(--bg);color:var(--ink);padding:7px 12px;border-radius:8px;cursor:pointer;font:inherit;font-size:13px}
+.bar button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+.v{display:none}.v.on{display:block}
+</style></head><body><div class="wrap">
+<div class="proto">PROTÓTIPO descartável (ticket "Formato da resposta no Claude"). Filmes e números plausíveis, não tirados do banco. Troque a variante na barra de baixo ou com <code>?v=a|b|c|d</code>.</div>
+<div class="user">somos eu, Ana e Leo, 2h, algo leve</div>
+
+<!-- A: linha literal -->
+<div class="msg v" id="a">
+<p><b>Variante A, linha completa.</b> <span class="mute">Cada Motivo é a linha do modelo de evidência, sem mudança.</span></p>
+<p>Sessão: você, Ana e Leo · até 2h · Clima: leve. Sem Restrição. 1.212 Candidatos depois dos Vetos (Leo não vê terror).</p>
+<h3>1. Paddington 2 (2017, 1h44)</h3>
+<ul>
+<li>Evidência: Ana deu 5 a Paddington em 2024-03-02 · Fonte: export do Letterboxd da Ana · Força: forte · Tipo: nota</li>
+<li>Evidência: de 3.104 pessoas que deram 4+ a O Grande Hotel Budapeste, 64% deram 4+ a Paddington 2 · Fonte: MovieLens ml-32m (2024-05) · Força: forte · Tipo: review</li>
+<li>Evidência: tag "feel-good" aplicada por 41 usuários · Fonte: MovieLens tags.csv · Força: forte · Tipo: review</li>
+<li>Evidência: duração 1h44 · Fonte: IMDb title.basics · Força: forte · Tipo: metadado</li>
+</ul>
+<h3>2. A Incrível Aventura de Rick Baker (2016, 1h41)</h3>
+<ul>
+<li>Evidência: Leo deu 2 a Duna: Parte 2 na Sessão de 2026-11-08 e a média foi 4 · Fonte: Feedback da Sessão 2026-11-08 · Força: forte · Tipo: nota</li>
+<li>Evidência: mesmo diretor de O Que Fazemos nas Sombras e Jojo Rabbit, que Leo deu 4,5 e 4 · Fonte: Wikidata P57 e export do Trakt do Leo · Força: moderada · Tipo: metadado</li>
+<li>Evidência: sem fato sobre Ana · Fonte: — · Força: fraca · Tipo: palpite</li>
+</ul>
+<h3>3. Feitiço do Tempo (1993, 1h41)</h3>
+<ul>
+<li>Evidência: você disse "adoro comédia com Bill Murray" em 2026-10-01 · Fonte: questionário do Dono · Força: forte · Tipo: declarado</li>
+<li>Evidência: Ana já viu em 2019-07-14 · Fonte: export do Letterboxd da Ana · Força: forte · Tipo: metadado</li>
+</ul>
+<p class="mute">(4 e 5 no mesmo formato)</p>
+<p>Depois da Sessão, me diga qual filme vocês viram e como cada um reagiu.</p>
+</div>
+
+<!-- B: compacto com legenda -->
+<div class="msg v" id="b">
+<p><b>Variante B, compacta.</b> <span class="mute">Força virou ●●● ●●○ ●○○, Tipo virou etiqueta curta, e a Fonte foi para o fim, numerada.</span></p>
+<p><b>Você, Ana e Leo · até 2h · leve.</b> Leo não vê terror, então tirei 380 filmes.</p>
+<h3>1. Paddington 2 · 2017 · 1h44</h3>
+<ul>
+<li>●●● <i>nota</i> Ana deu 5 a Paddington (2024) [1]</li>
+<li>●●● <i>review</i> 64% de 3.104 fãs de O Grande Hotel Budapeste deram 4+ [2]</li>
+<li>●●● <i>review</i> "feel-good" por 41 pessoas [3]</li>
+</ul>
+<h3>2. A Incrível Aventura de Rick Baker · 2016 · 1h41</h3>
+<ul>
+<li>●●● <i>nota</i> Leo ficou atrás na última Sessão (deu 2 a Duna 2, média 4) [4]</li>
+<li>●●○ <i>metadado</i> mesmo diretor de 2 filmes que Leo deu 4+ [5][6]</li>
+<li>●○○ <i>palpite</i> nada sobre Ana</li>
+</ul>
+<h3>3. Feitiço do Tempo · 1993 · 1h41</h3>
+<ul>
+<li>●●● <i>declarado</i> você: "adoro comédia com Bill Murray"</li>
+<li>●●● <i>já visto</i> Ana viu em 2019</li>
+</ul>
+<p class="mute">(4 e 5)</p>
+<p><small>Fontes: [1] Letterboxd da Ana, 2024-03-02 · [2] MovieLens ml-32m · [3] MovieLens tags.csv · [4] Feedback da Sessão 2026-11-08 · [5] Wikidata P57 · [6] Trakt do Leo. Legenda: ●●● forte, ●●○ moderada, ●○○ fraca.</small></p>
+<p>Depois, me conte o que viram e como foi.</p>
+</div>
+
+<!-- C: tabela -->
+<div class="msg v" id="c">
+<p><b>Variante C, frase e tabela.</b> <span class="mute">Uma frase por filme para ler rápido. As linhas de evidência ficam numa tabela embaixo.</span></p>
+<p>Você, Ana e Leo, até 2h, algo leve. Sem terror por causa do Leo.</p>
+<ol>
+<li><b>Paddington 2</b> (2017, 1h44): a Ana amou o primeiro, e quem gosta de Wes Anderson costuma gostar deste.</li>
+<li><b>A Incrível Aventura de Rick Baker</b> (2016, 1h41): a vez do Leo depois de Duna 2, do diretor de dois filmes que ele adora.</li>
+<li><b>Feitiço do Tempo</b> (1993, 1h41): Bill Murray, como você pediu no questionário. A Ana já viu.</li>
+<li>…</li><li>…</li>
+</ol>
+<table><tr><th>#</th><th>Evidência</th><th>Fonte</th><th>Força</th><th>Tipo</th></tr>
+<tr><td>1</td><td>Ana deu 5 a Paddington</td><td>Letterboxd da Ana, 2024-03-02</td><td>forte</td><td>nota</td></tr>
+<tr><td>1</td><td>64% de 3.104 fãs de Grande Hotel Budapeste deram 4+</td><td>MovieLens ml-32m</td><td>forte</td><td>review</td></tr>
+<tr><td>2</td><td>Leo deu 2 a Duna 2, média 4</td><td>Feedback 2026-11-08</td><td>forte</td><td>nota</td></tr>
+<tr><td>2</td><td>mesmo diretor de 2 filmes que Leo deu 4+</td><td>Wikidata P57, Trakt do Leo</td><td>moderada</td><td>metadado</td></tr>
+<tr><td>2</td><td>nada sobre Ana</td><td>—</td><td>fraca</td><td>palpite</td></tr>
+<tr><td>3</td><td>"adoro comédia com Bill Murray"</td><td>questionário, 2026-10-01</td><td>forte</td><td>declarado</td></tr>
+<tr><td>3</td><td>Ana já viu</td><td>Letterboxd da Ana, 2019-07-14</td><td>forte</td><td>metadado</td></tr>
+</table>
+<p>Depois, me conte o que viram e como foi.</p>
+</div>
+
+<!-- D: por pessoa -->
+<div class="msg v" id="d">
+<p><b>Variante D, por Pessoa.</b> <span class="mute">Cada filme diz o que há para cada Presente. Força e Tipo ficam entre parênteses no fim da linha, e a fonte fica na própria linha.</span></p>
+<p>Você, Ana e Leo · até 2h · leve · sem terror (Leo).</p>
+<h3>1. Paddington 2 (2017, 1h44)</h3>
+<ul>
+<li><b>Ana:</b> deu 5 ao primeiro Paddington (Letterboxd, 2024-03-02) <small>(forte, nota)</small></li>
+<li><b>Você:</b> 64% de 3.104 fãs de Grande Hotel Budapeste deram 4+, e você deu 5 a ele (MovieLens ml-32m) <small>(forte, review)</small></li>
+<li><b>Leo:</b> sem fato <small>(fraca, palpite)</small></li>
+</ul>
+<h3>2. A Incrível Aventura de Rick Baker (2016, 1h41)</h3>
+<ul>
+<li><b>Leo:</b> mesmo diretor de 2 filmes que ele deu 4+ (Wikidata P57, Trakt) <small>(moderada, metadado)</small>. Subiu porque Leo ficou atrás em Duna 2 (Feedback 2026-11-08) <small>(forte, nota)</small></li>
+<li><b>Você:</b> tag "quirky" por 18 pessoas (MovieLens) <small>(forte, review)</small></li>
+<li><b>Ana:</b> sem fato <small>(fraca, palpite)</small></li>
+</ul>
+<p class="mute">(3 a 5)</p>
+<p>Depois, me conte o que viram e como foi.</p>
+</div>
+</div>
+<div class="bar"><button data-v="a">A linha completa</button><button data-v="b">B compacta</button><button data-v="c">C frase + tabela</button><button data-v="d">D por Pessoa</button></div>
+<script>
+function show(v){document.querySelectorAll('.v').forEach(e=>e.classList.toggle('on',e.id===v));document.querySelectorAll('.bar button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));try{history.replaceState(null,'','?v='+v)}catch(e){}}
+document.querySelectorAll('.bar button').forEach(b=>b.onclick=()=>show(b.dataset.v));
+show((new URLSearchParams(location.search).get('v'))||'a');
+</script></body></html>
