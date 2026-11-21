@@ -9,14 +9,17 @@ CREATE TABLE notas (
     nota     REAL NOT NULL CHECK (nota BETWEEN 0.5 AND 5),
     data     TEXT NOT NULL,                 -- quando a Pessoa deu a Nota
     fonte    TEXT NOT NULL,                 -- "Letterboxd do Bruno"
-    sessao   TEXT                           -- a Sessão, quando a Nota veio do Feedback dela
+    sessao   TEXT,                           -- a Sessão, quando a Nota veio do Feedback dela
+    -- nota: a Pessoa deu. declarado: Nota declarada ("amo" vira 5, "odeio" vira 1),
+    -- com o fato_id do Declarado. relato: o mesmo, contado pelo Dono.
+    tipo     TEXT NOT NULL DEFAULT 'nota' CHECK (tipo IN ('nota', 'declarado', 'relato'))
 );
 CREATE INDEX notas_por_pessoa ON notas(pessoa, filme_id);
 
 -- A Nota que vale de cada Pessoa para cada filme: a mais recente.
 -- As outras continuam guardadas em notas (spec, história 41).
 CREATE VIEW notas_vigentes AS
-SELECT fato_id, pessoa, filme_id, nota, data, fonte, sessao FROM (
+SELECT fato_id, pessoa, filme_id, nota, data, fonte, tipo, sessao FROM (
     SELECT *, row_number() OVER (PARTITION BY pessoa, filme_id ORDER BY data DESC, fato_id) AS ordem
     FROM notas
 ) WHERE ordem = 1;

@@ -14,6 +14,8 @@ Prado), 4,5 a Barulho (Caio Brandão) e 2 a Fronteira (Rui Tavares). Com o Bruno
   Mar agrada o Bruno e pouco o Quim.
 """
 
+from pathlib import Path
+
 
 def _filme(saida, titulo):
     [filme] = [f for f in saida["filmes"] if f["titulo"] == titulo]
@@ -37,7 +39,7 @@ def test_quem_ficou_atras_ganha_credito_e_o_filme_dele_sobe_com_a_linha_de_credi
     # Reações 0,111 e 1; média 0,556. Bruno ficou 0,444 atrás; Quim, à frente, não perde nada.
     assert depois["credito"] == {"bruno": 0.4444, "quim": 0}
     assert _titulos(depois).index("As Horas Lentas") < _titulos(depois).index("Vento Norte")
-    [linha] = _filme(depois, "As Horas Lentas")["do_filme"]
+    [linha] = _filme(depois, "As Horas Lentas")["linhas_do_filme"]
     assert linha == {
         "pessoa": "bruno",
         "texto": "na Sessão de 2026-11-20 (Pequenos Milagres), Bruno deu 1 e a média dos Presentes foi 3",
@@ -45,8 +47,8 @@ def test_quem_ficou_atras_ganha_credito_e_o_filme_dele_sobe_com_a_linha_de_credi
         "fato_id": linha["fato_id"], "contribuicao": 0,
     }
     assert linha["fato_id"] in [f for [f] in banco.consultar("SELECT fato_id FROM notas WHERE pessoa = 'bruno'")]
-    assert _filme(depois, "Vento Norte")["do_filme"] == []
-    assert _filme(antes, "As Horas Lentas")["do_filme"] == []
+    assert _filme(depois, "Vento Norte")["linhas_do_filme"] == []
+    assert _filme(antes, "As Horas Lentas")["linhas_do_filme"] == []
 
 
 def test_filme_que_subiu_mas_em_que_quem_tem_credito_e_o_minimo_nao_leva_a_linha(banco):
@@ -58,7 +60,7 @@ def test_filme_que_subiu_mas_em_que_quem_tem_credito_e_o_minimo_nao_leva_a_linha
     depois = banco.ok("recomendar", "--presentes", "dono", "quim", "--quantos", "50")
 
     assert _titulos(depois).index("Noite de Estreia") < _titulos(antes).index("Noite de Estreia")
-    assert _filme(depois, "Noite de Estreia")["do_filme"] == []
+    assert _filme(depois, "Noite de Estreia")["linhas_do_filme"] == []
 
 
 def _sessao_com_feedback(banco, presentes, *reacoes, filme="Pequenos Milagres"):
@@ -74,7 +76,7 @@ def test_relato_do_dono_conta_no_credito_em_tres_niveis(banco):
     # Reações 1 e 0: média 0,5, e o Quim ficou 0,5 atrás. Média 0,5 é 2,75 na escala de Nota.
     assert saida["credito"] == {"bruno": 0, "quim": 0.5}
     assert _titulos(saida).index("Asfalto Quente") < _titulos(saida).index("A Volta do Mar")
-    [linha] = _filme(saida, "Asfalto Quente")["do_filme"]
+    [linha] = _filme(saida, "Asfalto Quente")["linhas_do_filme"]
     assert (linha["pessoa"], linha["fonte"], linha["tipo"], linha["forca"]) \
         == ("quim", "Feedback da Sessão 2026-11-20", "relato", "forte")
     assert linha["texto"] == ("na Sessão de 2026-11-20 (Pequenos Milagres), Quim não gostou"
@@ -113,7 +115,7 @@ def test_regra_media_e_de_fulano_nao_usam_credito(banco):
     for regra in (["--regra", "media"], ["--de", "quim"]):
         saida = banco.ok("recomendar", "--presentes", "dono", "quim", *regra, "--quantos", "50")
         assert saida["credito"] == {}
-        assert all(f["do_filme"] == [] for f in saida["filmes"])
+        assert all(f["linhas_do_filme"] == [] for f in saida["filmes"])
 
 
 def test_dono_sozinho_nao_tem_credito(banco):
@@ -148,3 +150,35 @@ def test_credito_olha_as_5_sessoes_mais_recentes_com_algum_presente_de_hoje(cli,
     assert cli.ok("recomendar", "--presentes", "dono", "iara")["credito"] == {"bruno": 0.5, "iara": 0}
     # Com os três, contam as 5 mais recentes que o Bruno dividiu com o Quim ou a Iara.
     assert cli.ok("recomendar", "--presentes", "dono", "quim", "iara")["credito"]["bruno"] == 0.1
+
+
+def test_filme_que_sobe_so_pela_restricao_sob_demanda_nao_leva_linha_de_credito(banco, tmp_path):
+    fixture = Path(__file__).resolve().parent / "fixture"
+    banco.env.update(FILMES_DDD_CHAVE="chave-de-teste", FILMES_GRAVACOES=str(fixture / "gravacoes"))
+    _sessao_com_feedback(banco, ["dono", "quim"], "--nota", "dono=1", "--nota", "quim=5")
+    args = ("recomendar", "--presentes", "dono", "quim", "--quantos", "50", "--gatilho", "a dog dies")
+
+    pesos = Path(__file__).resolve().parents[1] / "config" / "pesos.toml"
+    sem_credito = tmp_path / "pesos.toml"
+    sem_credito.write_text(pesos.read_text().replace("fator = 0.5", "fator = 0"))
+    banco.env["FILMES_PESOS"] = str(sem_credito)
+    antes = banco.ok(*args)
+    del banco.env["FILMES_PESOS"]
+    depois = banco.ok(*args)
+
+    assert "As Horas Lentas" not in _titulos(depois)
+    posicoes = {f["id"]: f["posicao"] for f in antes["filmes"]}
+    for filme in depois["filmes"]:
+        if filme["posicao"] >= posicoes[filme["id"]]:
+            assert all(linha["pessoa"] is None for linha in filme["linhas_do_filme"]), filme["titulo"]
+
+
+def test_credito_corta_a_janela_pelos_sufixos_numericos_no_mesmo_dia(cli, dados):
+    data = "2026-11-20"
+    base = f"{data}-quim"
+    for numero in range(5, 10):
+        _arquivo(dados, f"{base}-{numero}", data, ["bruno", "quim"], [("bruno", 5), ("quim", 5)])
+    _arquivo(dados, f"{base}-10", data, ["bruno", "quim"], [("bruno", 0.5), ("quim", 5)])
+
+    cli.ok("reconstruir")
+    assert cli.ok("recomendar", "--presentes", "dono", "quim")["credito"] == {"bruno": 0.1, "quim": 0}

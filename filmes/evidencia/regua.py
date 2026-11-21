@@ -9,7 +9,7 @@ from filmes.evidencia import FORCAS
 
 NOTA_ALTA = 4.0       # "Nota alta" no caminho de gosto
 ANOS_FRESCOR = 5      # Nota com mais de 5 anos cai um nível
-ANOS_DECLARADO = 2    # Declarado e Relato com mais de 2 anos caem um nível
+ANOS_DITO = 2         # Declarado e Relato com mais de 2 anos caem um nível
 FORCA_JA_VISTO = "forte"
 
 
@@ -57,10 +57,7 @@ def forca_feedback(tipo: str, nota: float | None, data: str, hoje: dt.date) -> s
     """
     if tipo == "nota":
         return forca_nota(nota, data, hoje, de_feedback=True)[0]
-    forca = descer("forte")
-    if _mais_velha_que(data, ANOS_DECLARADO, hoje):
-        forca = descer(forca)
-    return subir(forca)
+    return subir(forca_dito("relato", True, data, hoje))
 
 
 def forca_caminho(notas_altas: int, predicado: str) -> str | None:
@@ -70,6 +67,28 @@ def forca_caminho(notas_altas: int, predicado: str) -> str | None:
         return None
     forca = "forte" if notas_altas >= 3 else "moderada" if notas_altas == 2 else "fraca"
     return "fraca" if predicado == "genero" else forca
+
+
+def forca_dito(tipo: str, especifico: bool, data: str, hoje: dt.date) -> str:
+    """Declarado específico (nomeia filme, diretor, ator, subgênero) é forte; genérico é moderada.
+    Uma review ou tag que a própria Pessoa escreveu é Declarado específico.
+    Relato fica um nível abaixo do Declarado equivalente. Os dois caem um nível depois de 2 anos."""
+    forca = "forte" if especifico else "moderada"
+    if tipo == "relato":
+        forca = descer(forca)
+    if _mais_velha_que(data, ANOS_DITO, hoje):
+        forca = descer(forca)
+    return forca
+
+
+def forca_metadado_do_pedido() -> str:
+    """Metadado que responde ao pedido (duração, classificação, idioma, gatilho): sempre forte."""
+    return "forte"
+
+
+def forca_palpite() -> str:
+    """Palpite, um Motivo sem Fato: sempre fraca."""
+    return "fraca"
 
 
 def _mais_velha_que(data: str, anos: int, hoje: dt.date) -> bool:

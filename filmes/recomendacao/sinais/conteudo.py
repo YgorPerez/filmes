@@ -3,7 +3,9 @@
 Para cada Candidato ligado a uma entidade (por ora só o diretor) de um filme a
 que a Pessoa deu Nota, saem duas espécies de Evidência:
 
-- uma de Tipo nota por Nota-semente, com Força pela régua de Nota (valor e idade);
+- uma por Nota-semente, com Força pela régua de Nota (valor e idade). Uma Nota
+  declarada ("amo" vira 5, "odeio" vira 1) é semente de Tipo declarado, ou relato
+  se veio do Dono, com Força pela régua de Declarado e Relato;
 - uma de Tipo metadado para a entidade, se houver Nota alta, com Força pelo
   número de Notas altas da Pessoa no mesmo nó.
 
@@ -15,10 +17,17 @@ from collections import defaultdict
 from filmes.erros import ErroFilmes
 from filmes.evidencia import Evidencia, regua, texto
 
+# Como a Nota declarada abre a frase da semente.
+_DITO = {
+    ("declarado", 5.0): "disse que ama", ("declarado", 1.0): "disse que odeia",
+    ("relato", 5.0): "segundo o Dono, ama", ("relato", 1.0): "segundo o Dono, odeia",
+}
+
 # Como cada predicado aparece no texto. Um predicado novo na config precisa de linha aqui.
 _REDACAO = {
     "diretor": {
         "semente": "deu {nota} a {filme}, também de {entidade}",
+        "semente_dita": "{dito} {filme}, também de {entidade}",
         "no": "dirigido por {entidade}, como {n} {filmes} a que deu 4 ou mais: {lista}",
     },
 }
@@ -27,7 +36,8 @@ _SQL = """
 SELECT c.filme_id  AS candidato,
        c.fato_id   AS aresta_fato, c.fonte AS aresta_fonte, c.data AS aresta_data,
        e.rotulo    AS entidade,
-       n.fato_id   AS nota_fato, n.nota, n.data AS nota_data, n.fonte AS nota_fonte, n.sessao AS nota_sessao,
+       n.fato_id   AS nota_fato, n.nota, n.data AS nota_data, n.fonte AS nota_fonte,
+       n.tipo AS nota_tipo, n.sessao AS nota_sessao,
        f.titulo, f.ano
 FROM notas_vigentes n
 JOIN arestas s   ON s.filme_id = n.filme_id AND s.predicado = :predicado
@@ -53,13 +63,19 @@ def sinais(rodada, pessoa):
         for (candidato, _), sementes in nos.items():
             primeira = sementes[0]
             for s in sementes:
-                forca, direcao = regua.forca_nota(s["nota"], s["nota_data"], rodada.hoje,
+                filme, tipo = texto.filme(s["titulo"], s["ano"]), s["nota_tipo"]
+                if tipo == "nota":
+                    forca, direcao = regua.forca_nota(s["nota"], s["nota_data"], rodada.hoje,
                                                   de_feedback=s["nota_sessao"] is not None)
+                    frase = redacao["semente"].format(nota=texto.nota(s["nota"]), filme=filme, entidade=s["entidade"])
+                else:
+                    forca = regua.forca_dito(tipo, True, s["nota_data"], rodada.hoje)
+                    direcao = 1 if s["nota"] >= 3 else -1
+                    frase = redacao["semente_dita"].format(
+                        dito=_DITO[(tipo, s["nota"])], filme=filme, entidade=s["entidade"])
                 evidencia = Evidencia(
-                    pessoa=pessoa, filme_id=candidato,
-                    texto=redacao["semente"].format(
-                        nota=texto.nota(s["nota"]), filme=texto.filme(s["titulo"], s["ano"]), entidade=s["entidade"]),
-                    fonte=s["nota_fonte"], data=s["nota_data"], forca=forca, tipo="nota",
+                    pessoa=pessoa, filme_id=candidato, texto=frase,
+                    fonte=s["nota_fonte"], data=s["nota_data"], forca=forca, tipo=tipo,
                     fato_id=s["nota_fato"], base=peso * direcao,
                 )
                 # A mesma Nota pode ligar ao Candidato por mais de um nó: vale a ligação mais forte.

@@ -13,6 +13,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 
 from filmes.evidencia import Evidencia, regua, texto
+from filmes.sessao import arquivo
 
 
 @dataclass(frozen=True)
@@ -24,7 +25,8 @@ class Credito:
 def calcular(conn: sqlite3.Connection, presentes: list[str], janela: int) -> dict[str, Credito]:
     sessoes = conn.execute(
         """SELECT s.id, s.data, s.escolhido, f.titulo, f.ano FROM sessoes s LEFT JOIN filmes f ON f.id = s.escolhido
-           WHERE s.feedback_em IS NOT NULL AND s.escolhido IS NOT NULL ORDER BY s.data DESC, s.id DESC""").fetchall()
+           WHERE s.feedback_em IS NOT NULL AND s.escolhido IS NOT NULL""").fetchall()
+    sessoes.sort(key=arquivo.ordem, reverse=True)
     presentes_de = defaultdict(set)
     for linha in conn.execute("SELECT sessao, pessoa FROM sessao_presentes"):
         presentes_de[linha["sessao"]].add(linha["pessoa"])

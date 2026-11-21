@@ -98,18 +98,28 @@ def _filme(conn: sqlite3.Connection, pedido: str, recomendacao: list[dict]) -> d
     """Pelo ID do IMDb ou pelo título (com ou sem o ano entre parênteses).
     O título procura primeiro na Recomendação, depois no Catálogo inteiro."""
     pedido = pedido.strip()
+    recomendados = {r["id"]: r for r in recomendacao}
     if re.fullmatch(r"tt\d+", pedido):
         linha = conn.execute("SELECT id, titulo, ano FROM filmes WHERE id = ?", (pedido,)).fetchone()
-        return dict(linha) if linha else {"id": pedido, "titulo": None, "ano": None}
+        return dict(linha) if linha else {"id": pedido, "titulo": recomendados.get(pedido, {}).get("titulo"), "ano": None}
     casado = re.fullmatch(r"(.+?)\s*\((\d{4})\)", pedido)
     titulo, ano = (casado[1], int(casado[2])) if casado else (pedido, None)
     conn.create_function("dobrar", 1, lambda t: t.casefold() if t else t, deterministic=True)
     candidatos = [dict(l) for l in conn.execute(
         "SELECT id, titulo, ano FROM filmes WHERE dobrar(titulo) = ? AND (? IS NULL OR ano = ?) ORDER BY votos DESC, id",
         (titulo.casefold(), ano, ano))]
-    na_recomendacao = [c for c in candidatos if c["id"] in {r["id"] for r in recomendacao}]
+    na_recomendacao = {c["id"]: c for c in candidatos if c["id"] in recomendados}
+    for item in recomendacao:
+        filme_id = item["id"]
+        if filme_id not in na_recomendacao and item["titulo"].casefold() == titulo.casefold():
+            linha = conn.execute("SELECT ano FROM filmes WHERE id = ?", (filme_id,)).fetchone()
+            ano_do_filme = linha["ano"] if linha else None
+            if ano is None or ano == ano_do_filme:
+                na_recomendacao[filme_id] = {"id": filme_id, "titulo": item["titulo"], "ano": ano_do_filme}
     if len(na_recomendacao) == 1:
-        return na_recomendacao[0]
+        return next(iter(na_recomendacao.values()))
+    if na_recomendacao:
+        candidatos = list(na_recomendacao.values())
     if len(candidatos) == 1:
         return candidatos[0]
     if not candidatos:

@@ -52,7 +52,7 @@ def abertas(amb: Ambiente) -> list[dict]:
                 "pedido": (frente.get("contexto") or {}).get("pedido"),
                 "recomendacao": frente.get("recomendacao") or [],
             })
-    return sorted(lista, key=lambda s: (s["data"], s["id"]), reverse=True)
+    return sorted(lista, key=arquivo.ordem, reverse=True)
 
 
 @contextmanager

@@ -195,8 +195,32 @@ def test_falha_ao_carregar_fatos_preserva_o_arquivo_aberto(banco, dados):
     aberto = "---\ndata: 2026-11-20\npresentes: [bruno, bruno]\nregra: {nome: padrao}\n---\n"
     arquivo.write_text(aberto, encoding="utf-8")
 
-    codigo, _ = banco.rodar("feedback", "--sessao", sessao, "--filme", "tt9000301")
+    codigo, _ = banco.rodar("feedback", "--sessao", sessao, "--filme", "tt9000302")
 
     assert codigo != 0
     assert arquivo.read_text(encoding="utf-8") == aberto
     assert banco.ok("sessoes-abertas")["sessoes"][0]["id"] == sessao
+
+
+def test_sem_ja_visto_exclui_filme_da_sessao_para_presente_sem_reacao(banco):
+    sessao = banco.ok("recomendar", "--presentes", "dono", "teo")["sessao"]["id"]
+    banco.ok("feedback", "--sessao", sessao, "--filme", "Vento Norte", "--nota", "dono=4")
+
+    saida = banco.ok("recomendar", "--presentes", "teo", "--sem-ja-visto", "--quantos", "50")
+    assert all(filme["id"] != "tt9000302" for filme in saida["filmes"])
+    assert saida["restricoes"]["sem_ja_visto"]["tirados"] == 1
+
+
+def test_feedback_acha_pelo_titulo_filme_recomendado_que_saiu_do_catalogo(banco, dados):
+    pasta = dados / "sessoes"
+    pasta.mkdir()
+    sessao = "2026-11-20-bruno"
+    (pasta / f"{sessao}.md").write_text(
+        "---\ndata: 2026-11-20\npresentes: [bruno]\nregra: {nome: padrao}\n"
+        "recomendacao: [{posicao: 1, id: tt9999999, titulo: Filme Arquivado}]\n---\n",
+        encoding="utf-8",
+    )
+
+    saida = banco.ok("feedback", "--sessao", sessao, "--filme", "filme arquivado")
+
+    assert saida["escolhido"] == {"id": "tt9999999", "titulo": "Filme Arquivado", "ano": None, "posicao": 1}

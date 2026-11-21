@@ -120,10 +120,22 @@ def test_reconstruir_e_registrar_feedback_numa_sessao_no_formato_do_prototipo(ba
     (pasta / f"{sessao}.md").write_text(
         "---\ndata: 2026-11-20\npresentes: [bruno, iara]\n"
         "regra: media-sem-miseria-com-justica\n---\n\n"
-        "## Recomendação\n\n1. Vento Norte (tt9000301)\n",
+        "## Recomendação\n\n1. Vento Norte (tt9000302)\n",
         encoding="utf-8",
     )
 
     banco.ok("reconstruir")
-    saida = banco.ok("feedback", "--sessao", sessao, "--filme", "tt9000301", "--nota", "dono=4")
+    saida = banco.ok("feedback", "--sessao", sessao, "--filme", "tt9000302", "--nota", "dono=4")
     assert saida["escolhido"]["posicao"] == 1
+
+
+def test_sessao_guarda_as_restricoes_e_as_linhas_do_filme(banco, dados):
+    saida = banco.ok("recomendar", "--presentes", "dono", "--pedido", "duas horas sem repetir",
+                     "--duracao-max", "120", "--sem-ja-visto")
+
+    frente, corpo = _ler(dados / saida["sessao"]["arquivo"])
+    assert frente["contexto"] == {
+        "pedido": "duas horas sem repetir", "duracao_max": 120, "clima": [],
+        "restricoes": [{"nome": "sem_ja_visto"}],
+    }
+    assert " · Fonte: IMDb · Força: forte · Tipo: metadado" in corpo

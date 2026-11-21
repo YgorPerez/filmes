@@ -45,6 +45,14 @@ def ids(repo: Path) -> list[str]:
     return sorted(a.stem for a in (repo / PASTA).glob("*.md"))
 
 
+def ordem(registro) -> tuple[str, str, int]:
+    sessao_id = registro["id"]
+    base, _, sufixo = sessao_id.rpartition("-")
+    if len(base) > 10 and sufixo.isascii() and sufixo.isdecimal():
+        return registro["data"], base, int(sufixo)
+    return registro["data"], sessao_id, 1
+
+
 def ler(repo: Path, sessao_id: str) -> tuple[dict, str]:
     arquivo = caminho(repo, sessao_id)
     if not arquivo.exists():
@@ -102,9 +110,9 @@ def corpo(recomendacao: dict, nomes: dict) -> str:
         for pessoa, evidencias in filme["evidencias"].items():
             linhas.append(f"   - {nomes.get(pessoa, pessoa)}")
             linhas.extend(f"     - {linha_completa(e)}" for e in evidencias)
-        if filme.get("do_filme"):
+        if filme.get("linhas_do_filme"):
             linhas.append("   - Filme")
-            linhas.extend(f"     - {linha_completa(e)}" for e in filme["do_filme"])
+            linhas.extend(f"     - {linha_completa(e)}" for e in filme["linhas_do_filme"])
     return "\n".join(linhas) + "\n"
 
 

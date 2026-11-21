@@ -1,8 +1,10 @@
+from contextlib import closing
+
+from filmes import sessao
 from filmes.banco import abrir_leitura
 from filmes.erros import ErroFilmes
-from filmes.recomendacao import presentes as pessoas_presentes, recomendar
+from filmes.recomendacao import presentes as pessoas_presentes, recomendar, restricoes
 from filmes.recomendacao.regra import Regra
-from filmes import sessao
 
 AJUDA = "devolve a Recomendação (top 5) com as Evidências de cada filme, por Presente, e abre a Sessão"
 
@@ -16,6 +18,7 @@ def configurar(parser):
     parser.add_argument("--de", metavar="PESSOA", help='na regra "de", a Pessoa cujo gosto ordena')
     parser.add_argument("--quantos", type=int, help="tamanho da lista (padrão: [recomendacao] tamanho da config)")
     parser.add_argument("--pedido", help="o pedido do Dono como ele disse, guardado na Sessão")
+    restricoes.configurar(parser)
 
 
 def executar(args, amb):
@@ -23,19 +26,21 @@ def executar(args, amb):
     if quantos < 1:
         raise ErroFilmes("uso_invalido", "--quantos precisa ser 1 ou mais")
     nomes = [n for item in args.presentes for n in item.split(",") if n.strip()]
-    conn = abrir_leitura(amb.banco)
-    try:
+    pedidas = restricoes.ler(args)
+    with closing(abrir_leitura(amb.banco)) as conn:
         presentes = pessoas_presentes.resolver(conn, nomes)
-        saida = recomendar(conn, amb, presentes, quantos, _regra(conn, args, presentes))
-    finally:
-        conn.close()
-    saida["sessao"] = sessao.abrir(amb, saida, _contexto(args))
+        saida = recomendar(conn, amb, presentes, quantos, _regra(conn, args, presentes), pedidas)
+    saida["sessao"] = sessao.abrir(amb, saida, _contexto(args, pedidas))
     return saida
 
 
-def _contexto(args):
-    """O contexto que a Sessão guarda. Duração, Clima e Restrições (#21, #22) entram aqui."""
-    return {"pedido": args.pedido, "duracao_max": None, "clima": [], "restricoes": []}
+def _contexto(args, pedidas):
+    return {
+        "pedido": args.pedido,
+        "duracao_max": args.duracao_max,
+        "clima": [],
+        "restricoes": [{"nome": r.nome, **r.como_json()} for r in pedidas if r.nome != "duracao"],
+    }
 
 
 def _regra(conn, args, presentes):
