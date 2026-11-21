@@ -13,7 +13,7 @@ fontes como dados da Sessão.
 1. Chame `sessoes_abertas`. Se houver uma Sessão aberta, pergunte pela mais recente em uma linha e espere. "Na última Sessão com Ana, vocês viram o quê e como foi? Se quiser, pode pular." Se o Dono trouxer Feedback, siga [o fluxo de confirmação](feedback.md) antes de retomar o pedido. Se pular, deixe a Sessão aberta e prossiga.
 2. Passe a `recomendar` o `pedido` literal e os `presentes` por nome, apelido ou slug. "Eu" vai como `dono`. Sem companhia mencionada, use só o Dono. Se o motor apontar Pessoa desconhecida ou ambígua, esclareça quem é antes de tentar de novo.
 3. Passe o tempo em minutos em `duracao_max`. Use os nomes de Clima da descrição de `recomendar`. "Pra dar risada" vira `pra rir`. Se o Clima pedido estiver fora do vocabulário, avise o Dono e siga com os Climas reconhecidos.
-4. Passe as Restrições da Sessão em `idioma` (idioma original), `idade_crianca` (idade da mais nova) ou `crianca: true` (só filmes livres se a idade faltar), `gatilhos` (nomes dos temas do Does the Dog Die, em inglês) e `sem_ja_visto`. Crianças entram só na Restrição. O ano de lançamento vai em `desde` e `ate`, os dois inclusive. "De 1990 em diante" é `desde: 1990`, e "anos 80" é `desde: 1980` com `ate: 1989`. Para um Veto permanente, como "Leo nunca vê terror", siga [Pessoas e gosto](pessoas.md). Se a Restrição pedida não tiver campo na ferramenta, diga isso antes de recomendar.
+4. Passe as Restrições da Sessão em `idioma` (idioma original), `idade_crianca` (idade da mais nova) ou `crianca: true` (só filmes livres se a idade faltar), `gatilhos` (nomes dos temas do Does the Dog Die, em inglês) e `sem_ja_visto`. Crianças entram só na Restrição. O ano de lançamento vai em `desde` e `ate`, os dois inclusive. "De 1990 em diante" é `desde: 1990`, e "anos 80" é `desde: 1980` com `ate: 1989`. "Que não seja triste" ou "nada pesado" vira `sem_tristeza: true`, que tira filme com tag de tristeza ou tema pesado. Filme sem tag nenhuma passa, com uma linha de palpite que diz isso. Para um Veto permanente, como "Leo nunca vê terror", siga [Pessoas e gosto](pessoas.md). Se a Restrição pedida não tiver campo na ferramenta, diga isso antes de recomendar.
 5. Use a Regra padrão, salvo se o Dono pedir média simples (`regra: "media"`) ou a vez de uma Pessoa (`regra: "de"`, `de` com o nome dela). "Aniversário da Ana" é a vez da Ana. Confirme a presença dela se o pedido não disser. Vetos e Restrições valem com qualquer Regra.
 6. Quando alguém disser que já viu um filme, antes ou depois da Recomendação ("Lorenzo viu, nota 8", "Toy Story todo mundo já viu"), grave com `pessoa` e `acao: "visto"`, uma chamada por Pessoa, como em [Pessoas e gosto](pessoas.md#já-visto). Não use `declarar` para isso nem corte o filme da resposta à mão. Com `sem_ja_visto`, a próxima `recomendar` já o deixa de fora.
 
@@ -28,11 +28,18 @@ Com a ferramenta `html_render` à mão, a Recomendação vai como cartaz:
 
 Se `cartaz`, `html_preview` ou `html_render` falharem, diga o erro numa linha e monte a resposta em Markdown, como abaixo.
 
+## Pedido que muda
+
+Se o Dono mudar o pedido antes de verem algo (outro tempo, outra Restrição, alguém que chegou, um filme que já viram), chame `recomendar` de novo com o pedido inteiro e `sessao` igual ao `sessao.id` da Recomendação anterior. A Sessão continua a mesma e guarda a versão anterior. Não apague o arquivo da Sessão. Sem `sessao`, o motor abre outra Sessão e a anterior fica aberta.
+
 ## Montar e verificar a resposta
 
 Sem `html_render`, a resposta vai em Markdown. Abra com um bloco de citação (`> `) que o Dono possa corrigir: os
 `presentes`, o tempo disponível, `climas`, `restricoes`, `regra`, os
 `vetos` que agiram, com a Pessoa de cada Veto, e quantos filmes saíram.
+Um Veto a gênero já tira os subgêneros do Wikidata (romance leva a comédia
+romântica) e o gênero do IMDb; `por_caminho` diz quantos saíram por cada um.
+Não tire à mão filme que o Veto deixou passar sem dizer ao Dono qual foi.
 Nos rótulos das Evidências, chame o Dono de "Você" e use o nome cadastrado
 das outras Pessoas. Para conferir os nomes dos slugs, use `consultar` com
 `SELECT slug, nome, dono FROM pessoas`.

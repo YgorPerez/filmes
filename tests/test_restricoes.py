@@ -1,6 +1,6 @@
 """Restrições da Sessão: duração, idioma, criança, gatilho e "sem Já visto".
 
-Sem Restrição, o Bruno recebe com `--quantos 50` todos os filmes com votos
+Sem Restrição, o Bruno recebe com `--quantos 100` todos os filmes com votos
 suficientes, os com Fato antes dos só com palpites (veja o LEIAME da fixture). Cada Restrição tira filmes antes da ordenação e põe, em cada filme
 que passou, em `linhas_do_filme`, uma linha (Evidência com `pessoa` nula) dizendo por quê.
 """
@@ -11,7 +11,7 @@ from conftest import sem_o_da_capa
 
 
 def _todos(banco, *restricoes):
-    return banco.ok("recomendar", "--presentes", "dono", "--quantos", "50", *restricoes)
+    return banco.ok("recomendar", "--presentes", "dono", "--quantos", "100", *restricoes)
 
 
 def _titulos(saida):

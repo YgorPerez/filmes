@@ -20,12 +20,12 @@ def registrados(repo, pessoa, tipo):
             yield arquivo
 
 
-def guardar(amb, pessoa, tipo, nome_original, conteudo) -> tuple[str, bool]:
+def guardar(amb, pessoa, tipo, nome_original, conteudo, extensao="zip") -> tuple[str, bool]:
     sha = hashlib.sha256(conteudo).hexdigest()
     for importado in pessoa.imports:
         if isinstance(importado, dict) and importado.get("tipo") == tipo and importado.get("sha256") == sha:
             return importado["arquivo"], False
-    relativo = Path("imports") / pessoa.slug / f"{tipo}-{sha}.zip"
+    relativo = Path("imports") / pessoa.slug / f"{tipo}-{sha}.{extensao}"
     destino = amb.dados / relativo
     destino.parent.mkdir(parents=True, exist_ok=True)
     with NamedTemporaryFile(dir=destino.parent, delete=False) as arquivo:

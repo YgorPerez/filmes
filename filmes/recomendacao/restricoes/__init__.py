@@ -10,6 +10,7 @@ e a Restrição devolvida tem:
 
     nome: str                              # chave em "restricoes" no JSON
     def como_json(self) -> dict            # o que foi pedido, para a leitura do pedido
+    def resultado(self) -> dict            # opcional: o que a Restrição achou, ao lado de "tirados"
     def avaliar(self, contexto, filmes) -> dict[filme_id, Veredito]
     def resolver(self, contexto, filme, consultar) -> Passa | SAI   # só se avaliar deu PENDENTE
 
@@ -115,4 +116,5 @@ class Restricoes:
         return True
 
     def como_json(self) -> dict:
-        return {r.nome: {**r.como_json(), "tirados": self.tirados[r.nome]} for r in self.restricoes}
+        return {r.nome: {**r.como_json(), **getattr(r, "resultado", dict)(), "tirados": self.tirados[r.nome]}
+                for r in self.restricoes}

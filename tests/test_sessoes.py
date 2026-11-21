@@ -11,7 +11,7 @@ from conftest import ler_markdown as _ler
 def test_recomendar_abre_a_sessao_num_arquivo_do_repo_de_dados(banco, dados):
     saida = banco.ok("recomendar", "--presentes", "dono", "iara", "--pedido", "eu e a Iara, algo bom")
 
-    assert saida["sessao"] == {"id": "2026-11-20-iara", "arquivo": "sessoes/2026-11-20-iara.md"}
+    assert saida["sessao"] == {"id": "2026-11-20-iara", "arquivo": "sessoes/2026-11-20-iara.md", "versao": 1}
     frente, _ = _ler(dados / "sessoes" / "2026-11-20-iara.md")
     assert str(frente["data"]) == "2026-11-20"
     assert frente["presentes"] == ["bruno", "iara"]
@@ -86,6 +86,7 @@ def test_sessoes_abertas_lista_as_sessoes_sem_feedback_a_mais_recente_primeiro(b
         "pedido": "eu e a Iara",
         "recomendacao": [{"posicao": 1, "id": "tt9000403", "titulo": "A Volta do Mar"},
                          {"posicao": 2, "id": "tt9001903", "titulo": "Fronteira II"}],
+        "versao": 1,
     }
 
 

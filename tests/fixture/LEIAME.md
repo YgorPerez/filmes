@@ -30,6 +30,17 @@ Entidades que não são diretor, com IDs `Q90018NN` (faixa do #18), só no predi
 
 Essas entidades não ligam a Nota nenhuma do Bruno, então não mudam o top 5 dele.
 
+Veto a gênero com subgêneros (#48, `test_veto_subgeneros.py`). Os filmes `tt90048NN` não têm diretor nem Nota, e ficam entre os só com palpites. Romance usa o QID real (Q1054574) porque `filmes/catalogo/generos.py` liga o Romance do IMDb a ele. `subclasses_wikidata.csv` faz comédia romântica (Q9004801) subclasse de romance e de comédia (Q157443), e comédia de recasamento (Q9004802) subclasse de comédia romântica.
+
+| Filme | Gênero | Caminho de um Veto a romance |
+|---|---|---|
+| Carta de Amor (4801) | romance (Wikidata) | direto |
+| Amor em Paris (4802) | comédia romântica (Wikidata) | subgêneros |
+| Casar de Novo (4803) | comédia de recasamento (Wikidata) | subgêneros, dois níveis abaixo |
+| Baile de Formatura (4804) | Romance (IMDb) | gênero do IMDb |
+
+Maré Baixa (102) também tem Romance no IMDb e sai pelo mesmo caminho.
+
 Caminho de conteúdo por outros predicados (`test_caminho_conteudo.py`). Cada filme liga às Notas do Bruno por um predicado só, com entidade `Q90019NN`:
 
 | Filme | Predicado e entidade | Liga a |
@@ -39,7 +50,7 @@ Caminho de conteúdo por outros predicados (`test_caminho_conteudo.py`). Cada fi
 | Fronteira II (1903) | serie, Trilogia da Fronteira | Fronteira (401) |
 | Poeira (1904) | genero, faroeste | 101, 102, 103 e Jardim Suspenso (301): quatro Notas altas, que no gênero ficam em metadado fraco |
 | Escala em Lisboa (3501) | elenco, Rita Lobo | Ponte Aérea (201), como Voo Noturno, mas Rita Lobo está fora dos 3 primeiros créditos |
-| Mar Aberto (4901) | serie, Os 100 melhores filmes segundo a Revista Tela (`Q9004901`) | Fronteira (401), mas a lista não está em `series_de_filmes.csv` e a aresta sai na reconstrução. Tem 1.000 votos, o mínimo, para ficar depois dos outros filmes só com palpites e fora do `--quantos 50` |
+| Mar Aberto (4901) | serie, Os 100 melhores filmes segundo a Revista Tela (`Q9004901`) | Fronteira (401), mas a lista não está em `series_de_filmes.csv` e a aresta sai na reconstrução. Tem 1.000 votos, o mínimo, para ficar depois dos outros filmes só com palpites; entra no `--quantos 100` de `test_grupo.py` |
 
 `series_de_filmes.csv` diz quais entidades de série são série de filmes: só a Trilogia da Fronteira. Uma série nova na fixture precisa de linha ali, senão a aresta dela some.
 
@@ -147,3 +158,36 @@ linhas. As tags de O Farol de Areia aparecem tanto no diário quanto na review.
   busca de séries do TMDB. Os dois são descartados.
 - Vento Norte fica na fila com dois candidatos do TMDB. Confirmar o primeiro
   usa `externos-9102.json`. Filme Perdido também fica na fila, sem candidato.
+
+### Nada triste (#42)
+
+`test_restricao_tristeza.py`. Sinais de tristeza e de tema pesado em filmes sem Nota de ninguém, com as tags e os QIDs reais de `config/tristeza.toml`:
+
+| Filme | Sinal | Com `--sem-tristeza` |
+|---|---|---|
+| Pequenos Milagres (601) | tags.csv "sad", 5 usuários | sai |
+| Casa Cheia (602) | tags.csv "sad", 2 usuários | passa |
+| Deserto Branco (701) | genome "tearjerker" 0,6 | sai |
+| A Última Estação (702) | genome "sad" 0,59 | passa |
+| Os Inquilinos (901) | tags.csv "massacre", 2 usuários | sai |
+| Fim de Tarde (902) | `tema` Holocausto (Q2763) | sai |
+| Café Amargo (801) | `baseado_em` suicídio (Q10737) | sai |
+| Linha Cruzada (802) | `tema` futebol (Q9004201), sem tag | passa |
+
+"sad" e "tearjerker" estão no Clima "pra chorar"; nenhum teste pede esse Clima. As tags de "sozinho" (bleak, depressing) ficaram de fora de propósito, para não mudar quem é filme só com palpites.
+
+## RSS do Letterboxd
+
+`gravacoes/letterboxd/rss-olga_farol.xml` é um RSS inventado no formato do real
+(conferido num RSS público em 2026-11-21), lido por `importar --letterboxd-rss olga_farol`.
+Usuário sem arquivo vale como perfil inexistente.
+
+- O Farol de Areia (2012-01-10, 4,5) e Maré Baixa (2015, 2024-02-11, 2) repetem o
+  diário do ZIP da Olga; o ZIP importado depois não duplica esses Fatos.
+- O Farol de Areia tem uma revisão em 2024-05-05 com 5 que o ZIP não tem.
+- Maré Baixa (2014) traz o ID 9002, do homônimo de 1980 (tt9023002): o slug com
+  `-2015` daria outro filme, e o ID vence.
+- Vento Norte não tem data do diário; vale a data de publicação, 16/07 às 21h
+  (-03:00). O ID 9102 resolve por `tmdb/externos-9102.json`, sem passar pela busca
+  por título, que daria dois candidatos.
+- Uma lista ("Faróis") fica de fora.

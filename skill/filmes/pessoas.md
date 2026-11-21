@@ -39,7 +39,11 @@ Recomendação o que alguém já viu, passe `sem_ja_visto` a `recomendar`.
 ## Imports
 
 Chame `importar` com a Pessoa e o caminho do ZIP do Letterboxd ou do
-export do Trakt, no campo do formato correspondente. Mostre o relatório
+export do Trakt, no campo do formato correspondente. Se a Pessoa só deu o
+usuário do Letterboxd, pergunte se ela concorda que o RSS público dela seja
+baixado e, com o sim, passe o usuário em `letterboxd_rss`. O RSS traz só as
+cerca de 50 entradas recentes do diário, com nota e data; o ZIP completo
+importado depois soma o resto sem repetir Fatos. Mostre o relatório
 de resolução e as pendências. Para os itens da fila, chame `fila_import`
 com `acao: "ver"`. Mostre as opções e use `confirmar` com o ID do
 filme ou `descartar` com a razão (`razao`) depois que o Dono decidir.
