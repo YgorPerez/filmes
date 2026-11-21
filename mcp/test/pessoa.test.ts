@@ -62,7 +62,19 @@ describe("ferramenta pessoa", () => {
     assert.deepEqual(json(resultado).vetos.map((v: any) => v.pessoa), ["ana"]);
   });
 
+  it("registra Já visto com Nota de 1 a 10 e o filme sai com sem Já visto", async () => {
+    const visto = json(await pessoa({ acao: "visto", pessoa: "teo", filme: "tt9000601", nota: "8/10" }));
+    assert.equal(visto.visto.nota, 4);
+
+    const resultado = (await cliente.callTool({
+      name: "recomendar", arguments: { presentes: ["teo"], quantos: 50, sem_ja_visto: true },
+    })) as Resultado;
+
+    assert.ok(!json(resultado).filmes.some((f: any) => f.id === "tt9000601"));
+  });
+
   it("ação sem o que ela precisa é recusada", async () => {
+    assert.equal((await pessoa({ acao: "visto", pessoa: "teo" })).isError, true);
     assert.equal((await pessoa({ acao: "vetar", pessoa: "ana", texto: "nunca vê terror" })).isError, true);
     assert.equal((await pessoa({ acao: "ver" })).isError, true);
   });

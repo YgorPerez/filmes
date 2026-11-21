@@ -2,8 +2,11 @@
 
 Reações, como o Dono as diz:
 - `--nota dono=4`: a Nota do Dono. `--nota iara=4,5`: um número que a Iara deu,
-  repassado pelo Dono. As duas são Nota.
+  repassado pelo Dono. As duas são Nota. `--nota iara=9/10` é a escala de 10:
+  grava a Nota 4,5 e guarda o 9/10.
 - `--relato iara=gostou` (gostou, neutro, não gostou): a impressão do Dono. É Relato.
+- `--comentario iara=texto`: o que ela achou, junto da nota ou do Relato dela. Vira
+  Declarado específico sobre o Filme escolhido (veja `fatos.py`).
 - Presente sem reação: não gera Fato nem conta no Crédito, mas ganha o Já visto.
 """
 
@@ -17,7 +20,8 @@ from filmes.recomendacao import presentes as pessoas_presentes
 from filmes.sessao import arquivo, banco, escrita, fatos
 
 
-def registrar(amb: Ambiente, sessao_id: str, filme: str | None, notas: list[str], relatos: list[str]) -> dict:
+def registrar(amb: Ambiente, sessao_id: str, filme: str | None, notas: list[str], relatos: list[str],
+              comentarios: list[str] = ()) -> dict:
     """`filme` None é "não vimos nada": fecha a Sessão sem Filme escolhido e sem reação."""
     with escrita(amb) as conn:
         frente, corpo = arquivo.ler(amb.dados, sessao_id)
@@ -25,6 +29,7 @@ def registrar(amb: Ambiente, sessao_id: str, filme: str | None, notas: list[str]
             raise ErroFilmes("sessao_fechada", f"a Sessão {sessao_id} já tem Feedback")
         dono = {slug for (slug,) in conn.execute("SELECT slug FROM pessoas WHERE dono = 1")}
         reacoes = _reacoes(conn, frente["presentes"], dono, notas, relatos)
+        _comentarios(conn, frente["presentes"], reacoes, comentarios)
         recomendacao = frente.get("recomendacao") or []
         if filme is None:
             if reacoes:
@@ -52,13 +57,7 @@ def _reacoes(conn, presentes, dono, notas, relatos):
     por_pessoa = {}
     for item in notas:
         pessoa, valor = _par(conn, presentes, "--nota", item)
-        try:
-            nota = float(valor.replace(",", "."))
-        except ValueError:
-            raise ErroFilmes("uso_invalido", f"--nota {item}: a Nota é um número de 0,5 a 5")
-        if not 0.5 <= nota <= 5:
-            raise ErroFilmes("uso_invalido", f"--nota {item}: a Nota vai de 0,5 a 5")
-        reacao = {"pessoa": pessoa, "tipo": "nota", "nota": nota}
+        reacao = {"pessoa": pessoa, "tipo": "nota", **_nota(item, valor)}
         if pessoa not in dono:
             reacao["repassada"] = True
         _uma_por_pessoa(por_pessoa, reacao)
@@ -71,6 +70,38 @@ def _reacoes(conn, presentes, dono, notas, relatos):
             raise ErroFilmes("uso_invalido", f"--relato {item}: o Relato é gostou, neutro ou não gostou")
         _uma_por_pessoa(por_pessoa, {"pessoa": pessoa, "tipo": "relato", "reacao": nivel})
     return [por_pessoa[p] for p in presentes if p in por_pessoa]
+
+
+def _nota(item, valor):
+    """`4,5` é a Nota de 0,5 a 5. `9/10` é a escala de 10: vai de 1 a 10 e a Nota é
+    a metade; o número dito fica em `nota_original`, para a Sessão mostrar."""
+    numero, barra, escala = valor.partition("/")
+    if barra and escala.strip() != "10":
+        raise ErroFilmes("uso_invalido", f"--nota {item}: a escala é /10, ou nenhuma para a Nota de 0,5 a 5")
+    try:
+        nota = float(numero.strip().replace(",", "."))
+    except ValueError:
+        raise ErroFilmes("uso_invalido", f"--nota {item}: a Nota é um número de 0,5 a 5, ou de 1 a 10 com /10")
+    if not barra:
+        if not 0.5 <= nota <= 5:
+            raise ErroFilmes("uso_invalido", f"--nota {item}: a Nota vai de 0,5 a 5")
+        return {"nota": nota}
+    if not 1 <= nota <= 10:
+        raise ErroFilmes("uso_invalido", f"--nota {item}: na escala de 10, a Nota vai de 1 a 10")
+    return {"nota": nota / 2, "nota_original": f"{texto.nota(nota)}/10"}
+
+
+def _comentarios(conn, presentes, reacoes, comentarios):
+    """Põe cada comentário na reação da mesma Pessoa. Sem reação dela, é erro."""
+    por_pessoa = {r["pessoa"]: r for r in reacoes}
+    for item in comentarios:
+        pessoa, valor = _par(conn, presentes, "--comentario", item)
+        reacao = por_pessoa.get(pessoa)
+        if reacao is None:
+            raise ErroFilmes("uso_invalido", f"--comentario {item}: o comentário acompanha a nota ou o Relato de {pessoa}")
+        if "comentario" in reacao:
+            raise ErroFilmes("uso_invalido", f"mais de um comentário para {pessoa}")
+        reacao["comentario"] = " ".join(valor.split())
 
 
 def _par(conn, presentes, opcao, item):
@@ -136,10 +167,14 @@ def _fatos(sessao_id, frente, dono, escolhido, amb):
     nome = texto.filme(escolhido["titulo"] or escolhido["id"], escolhido["ano"])
     linhas = []
     for r in fatos.reacoes(sessao_id, frente):
-        frase = f"deu {texto.nota(r.nota)} a {nome}" if r.tipo == "nota" else _RELATO[r.reacao].format(filme=nome)
+        frase = f"deu {r.nota_original or texto.nota(r.nota)} a {nome}" if r.tipo == "nota" else _RELATO[r.reacao].format(filme=nome)
         linhas.append({"pessoa": r.pessoa, "texto": frase, "fonte": r.fonte, "data": r.data,
                        "forca": regua.forca_feedback(r.tipo, r.nota, r.data, amb.hoje), "tipo": r.tipo,
                        "fato_id": r.fato_id})
+    for c in fatos.comentarios(sessao_id, frente, dono):
+        linhas.append({"pessoa": c.pessoa, "texto": f'disse "{c.texto}" de {nome}', "fonte": c.fonte, "data": c.data,
+                       "forca": regua.forca_dito("declarado", True, c.data, amb.hoje), "tipo": "declarado",
+                       "fato_id": c.fato_id})
     for v in fatos.ja_vistos(sessao_id, frente, dono):
         linhas.append({"pessoa": v.pessoa, "texto": "já viu", "fonte": v.fonte, "data": v.data,
                        "forca": regua.FORCA_JA_VISTO, "tipo": v.tipo, "fato_id": v.fato_id})
