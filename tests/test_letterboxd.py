@@ -95,7 +95,7 @@ def test_dono_confirma_pelo_tmdb_e_descarta_na_fila(olga, zip_olga):
     assert [c["tmdb"] for c in vento["candidatos"]] == [9102, 9103]
     olga.ok("fila", "confirmar", vento["id"], "--filme", vento["candidatos"][0]["link"])
     perdido = por_nome["Filme Perdido"]
-    olga.ok("fila", "descartar", perdido["id"], "--motivo", "ignorar")
+    olga.ok("fila", "descartar", perdido["id"], "--razao", "ignorar")
     assert olga.ok("fila", "ver")["itens"] == []
     nota = ["tt9000302", 3.5, "2024-07-16", "Letterboxd de Olga"]
     assert nota in _notas(olga)

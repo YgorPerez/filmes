@@ -46,7 +46,7 @@ class OMDb(Fonte):
         if corpo.get("Response") == "False" and ("api key" in erro or "limit" in erro):
             # "Invalid API key!", "No API key provided.", "Request limit reached!": vale para todo filme.
             raise FalhaDaFonte(corpo["Error"])
-        return corpo  # "Movie not found!", "Incorrect IMDb ID." e afins: só este filme fica sem dado
+        return corpo  # "Movie not found!", "Incorrect IMDb ID." e afins: só este filme fica sem informação
 
     def nao_encontrado(self):
         return {"Response": "False", "Error": "Movie not found!"}

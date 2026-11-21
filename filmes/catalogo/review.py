@@ -42,11 +42,11 @@ def carregar(conn, catalogo, dumps):
     with ZipFile(catalogo / versao["sha256"] / MOVIELENS) as dump:
         links, notas, tags = MEMBROS[MOVIELENS]
         mapa = dict(_links(dump, links))
-        origem = (versao["fonte"], versao["data"])
+        fonte_e_data = (versao["fonte"], versao["data"])
         conn.executemany("INSERT INTO vizinhos VALUES (?, ?, ?, ?, ?, ?, ?)",
-                         _fatos("vizinhos", vizinhos(_csv(dump, notas), mapa), origem))
+                         _fatos("vizinhos", vizinhos(_csv(dump, notas), mapa), fonte_e_data))
         conn.executemany("INSERT INTO tags_movielens VALUES (?, ?, ?, ?, ?, ?)",
-                         _fatos("tags_movielens", _tags(_csv(dump, tags), mapa), origem))
+                         _fatos("tags_movielens", _tags(_csv(dump, tags), mapa), fonte_e_data))
     _carregar_genoma(conn, catalogo, dumps[GENOMA])
 
 
@@ -59,7 +59,7 @@ def _carregar_genoma(conn, catalogo, versao):
                 for linha in map(json.loads, fluxo)
                 if (imdb := _imdb(linha.get("imdbId")))
             }
-        origem = (versao["fonte"], versao["data"])
+        fonte_e_data = (versao["fonte"], versao["data"])
         conn.executemany("""
             INSERT INTO genoma VALUES (?, ?, ?, ?, ?, ?)
             ON CONFLICT(filme_id, tag) DO UPDATE SET
@@ -68,7 +68,7 @@ def _carregar_genoma(conn, catalogo, versao):
         """, (
             (id_, filme, tag, float(escore), fonte, data)
             for id_, filme, tag, escore, fonte, data in
-            _fatos("genoma", _genoma(_csv(dump, escores), mapa), origem)
+            _fatos("genoma", _genoma(_csv(dump, escores), mapa), fonte_e_data)
         ))
 
 
@@ -107,7 +107,7 @@ def _genoma(linhas, mapa):
             yield filme, tag, linha["score"]
 
 
-def _fatos(tabela, linhas, origem):
+def _fatos(tabela, linhas, fonte_e_data):
     for linha in linhas:
-        valores = linha + origem
+        valores = linha + fonte_e_data
         yield fato_id(tabela, *valores), *valores

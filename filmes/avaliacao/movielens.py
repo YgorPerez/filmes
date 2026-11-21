@@ -7,7 +7,7 @@ from collections import defaultdict
 from dataclasses import dataclass, replace
 from random import Random
 
-from filmes.avaliacao.pessoas import Perfil, separar
+from filmes.avaliacao.pessoas import Pessoa, separar
 from filmes.banco import fato_id
 from filmes.erros import ErroFilmes
 from filmes.evidencia import regua
@@ -20,7 +20,7 @@ _DATA = "2023-10-13"
 
 @dataclass
 class Amostra:
-    perfis: list[Perfil]
+    pessoas_medidas: list[Pessoa]
     usuarios: frozenset[int]
     filmes: dict[int, str]
     votos: tuple
@@ -58,8 +58,8 @@ def ler(pasta, progresso):
             elif nota >= regua.NOTA_ALTA:
                 usuarios.append(usuario)
                 itens.append(colunas[filme])
-        perfis = [perfil for u, notas in sorted(avaliacoes.items()) if (perfil := _perfil(u, notas))]
-        return Amostra(perfis, sorteados, filmes, (imdbs, usuarios, itens))
+        pessoas_medidas = [medida for u, notas in sorted(avaliacoes.items()) if (medida := _pessoa(u, notas))]
+        return Amostra(pessoas_medidas, sorteados, filmes, (imdbs, usuarios, itens))
     except (ValueError, csv.Error) as erro:
         raise ErroFilmes("dados_invalidos", f"{pasta}: {erro}") from erro
 
@@ -75,20 +75,20 @@ def _linhas(caminho, colunas):
             yield tuple(linha[i] for i in indices)
 
 
-def _perfil(usuario, avaliacoes):
+def _pessoa(usuario, avaliacoes):
     pessoa = f"movielens:{usuario}"
     datas = {filme: dt.datetime.fromtimestamp(instante, dt.UTC).isoformat()
              for filme, (instante, _) in avaliacoes.items()}
     notas = {filme: nota for filme, (_, nota) in avaliacoes.items()}
-    perfil = separar(pessoa, datas, notas)
-    if perfil is None:
+    medida = separar(pessoa, datas, notas)
+    if medida is None:
         return None
     treino = []
     for filme, data in datas.items():
-        if data < perfil.corte:
+        if data < medida.corte:
             valores = (pessoa, filme, notas[filme], data[:10], _FONTE)
             treino.append((fato_id("notas", *valores), *valores))
-    return replace(perfil, corte=perfil.corte[:10], treino=tuple(treino))
+    return replace(medida, corte=medida.corte[:10], treino=tuple(treino))
 
 
 def preparar(conn, pasta, amostra, progresso):

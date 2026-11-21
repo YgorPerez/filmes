@@ -14,7 +14,7 @@ def configurar(parser):
         if acao == "confirmar":
             sub.add_argument("--filme", required=True, help="tconst ou link de filme do IMDb ou TMDB")
         if acao == "descartar":
-            sub.add_argument("--motivo", default="ignorar", help='ex.: "não é filme" ou "ignorar"')
+            sub.add_argument("--razao", default="ignorar", help='ex.: "não é filme" ou "ignorar"')
 
 
 def executar(args, amb):
@@ -23,4 +23,4 @@ def executar(args, amb):
             return fila.ver(conn, amb)
     with letterboxd.escrita(amb) as conn:
         return fila.decidir(conn, amb, args.id, filme=getattr(args, "filme", None),
-                            motivo=getattr(args, "motivo", None))
+                            razao=getattr(args, "razao", None))

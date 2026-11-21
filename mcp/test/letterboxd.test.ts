@@ -39,7 +39,7 @@ it("importa o ZIP e confirma ou descarta as pendências pelo MCP", async () => {
     const [perdido, vento] = itens;
     assert.equal(vento.nome, "Vento Norte");
     await chamar("fila_import", { acao: "confirmar", id: vento.id, filme: "tt9000302" });
-    await chamar("fila_import", { acao: "descartar", id: perdido.id, motivo: "não é filme" });
+    await chamar("fila_import", { acao: "descartar", id: perdido.id, razao: "não é filme" });
     assert.deepEqual((await chamar("fila_import", { acao: "ver" })).itens, []);
   } finally {
     await cliente.close();

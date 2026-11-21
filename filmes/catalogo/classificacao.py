@@ -7,10 +7,10 @@ uma criança mais nova. Exceções decididas na pesquisa e no #15:
 
 - MPA R vira 16, não 18 (bate com a ClassInd em 41% dos casos, contra 25%).
 - FSK 6, Kijkwijzer 6 e Medierådet 7 caem na faixa 6.
-- O "livre" da EIRIN (G) e do CNC francês (tous publics) conta como sem dado:
+- O "livre" da EIRIN (G) e do CNC francês (tous publics) conta como sem informação:
   os dois saem mais brandos que a ClassInd em mais de 80% dos filmes.
 
-Rótulo fora da tabela também conta como sem dado.
+Rótulo fora da tabela também conta como sem informação.
 """
 
 import re

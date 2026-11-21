@@ -33,13 +33,13 @@ def gravar(data, resultado):
         "",
         "## Offline",
         "",
-        "| Amostra | Perfis | Recall@50 | Cobertura no top 5 |",
+        "| Amostra | Pessoas | Recall@50 | Cobertura no top 5 |",
         "| --- | ---: | ---: | ---: |",
     ]
     for nome, chave in (("Pessoas", "pessoas"), ("MovieLens", "movielens")):
         m = resultado["offline"][chave]
         secoes.append(
-            f"| {nome} | {m['perfis']} | {_taxa(m['recall_50'])} "
+            f"| {nome} | {m['pessoas']} | {_taxa(m['recall_50'])} "
             f"({m['recuperados']}/{m['retidos_4_mais']}) | {_taxa(m['cobertura_top_5'])} "
             f"({m['com_evidencia']}/{m['filmes_top_5']}) |"
         )

@@ -35,7 +35,7 @@ Em `evidencias`, escolha uma linha por Presente. Priorize `forte`, depois
 `moderada`, depois `fraca`. Entre linhas da mesma Força, use a primeira
 na ordem do motor. Use o `sem fato` devolvido quando só houver Palpite.
 Escolha até uma linha de `linhas_do_filme` quando ela importar para o
-pedido. Se várias disputarem a vaga, priorize aviso de gatilho sem dado,
+pedido. Se várias disputarem a vaga, priorize aviso de gatilho sem informação,
 faixa etária, resultado do gatilho, Crédito, duração e Clima, nessa ordem.
 
 Em cada linha, copie `texto`, `fonte`, `data`, `forca` e `tipo` do

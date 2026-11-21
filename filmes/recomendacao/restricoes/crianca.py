@@ -86,9 +86,9 @@ class Crianca:
             return SAI
         # Alguns sistemas já põem o nome no rótulo ("FSK 6"); outros não ("12A" da BBFC).
         rotulo_completo = rotulo if rotulo.startswith(f"{sistema} ") else f"{sistema} {rotulo}"
-        de_onde = f"{rotulo_completo} convertida" if convertida else sistema
+        fonte_da_faixa = f"{rotulo_completo} convertida" if convertida else sistema
         return Passa((Evidencia(
-            pessoa=None, filme_id=filme_id, texto=f"classificação {faixa} ({de_onde})",
+            pessoa=None, filme_id=filme_id, texto=f"classificação {faixa} ({fonte_da_faixa})",
             fonte=fonte, data=data, forca=regua.forca_metadado_do_pedido(), tipo="metadado",
             fato_id=fato_id, base=0.0,
         ),))

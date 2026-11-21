@@ -12,7 +12,7 @@ from filmes.sob_demanda.cache import Cache, caminho
 def ver(conn, amb):
     itens = {}
     for linha in conn.execute(
-        "SELECT id, nome, ano, pessoa, motivo FROM itens_letterboxd "
+        "SELECT id, nome, ano, pessoa, razao FROM itens_letterboxd "
         "WHERE situacao = 'fila' ORDER BY nome, ano, id, pessoa"
     ):
         id_ = linha["id"]
@@ -39,14 +39,14 @@ def ver(conn, amb):
             "creditos": [tmdb.CREDITO] if any(i["candidatos"] for i in itens.values()) else []}
 
 
-def decidir(conn, amb, id_, *, filme=None, motivo=None):
+def decidir(conn, amb, id_, *, filme=None, razao=None):
     item = conn.execute(
         "SELECT nome, ano FROM itens_letterboxd WHERE id = ? AND situacao = 'fila' LIMIT 1", (id_,)
     ).fetchone()
     registro = decisoes.ler(amb.dados)
     if item is None:
         anterior = registro.get(id_, {})
-        if (filme is None and anterior.get("situacao") == "descartado" and anterior.get("motivo") == motivo
+        if (filme is None and anterior.get("situacao") == "descartado" and anterior.get("razao") == razao
                 or filme is not None and anterior.get("entrada") == filme):
             return anterior | {"novo": False}
         raise ErroFilmes("item_fora_da_fila", f"'{id_}' não está na fila; consulte `fila ver`")
@@ -55,9 +55,9 @@ def decidir(conn, amb, id_, *, filme=None, motivo=None):
                "fonte": "Dono", "tipo": "declarado"}
     creditos = []
     if filme is None:
-        if not motivo or not motivo.strip():
-            raise ErroFilmes("uso_invalido", "informe o motivo do descarte")
-        decisao.update(situacao="descartado", motivo=motivo.strip())
+        if not razao or not razao.strip():
+            raise ErroFilmes("uso_invalido", "informe a razão do descarte")
+        decisao.update(situacao="descartado", razao=razao.strip())
     else:
         imdb, creditos = _filme(conn, amb, filme)
         decisao.update(situacao="confirmado", filme=imdb, entrada=filme)

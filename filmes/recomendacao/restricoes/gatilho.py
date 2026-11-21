@@ -47,7 +47,7 @@ class Gatilho:
         for pedido in self.temas:
             tema = dados.tema(pedido) if dados else None
             if tema is None:
-                linhas.append(_sem_dado(filme["id"], pedido))
+                linhas.append(_sem_informacao(filme["id"], pedido))
             elif tema.sim + tema.nao >= VOTOS_MINIMOS and tema.sim > tema.nao:
                 return SAI
             else:
@@ -60,8 +60,8 @@ class Gatilho:
         return Passa(tuple(linhas))
 
 
-def _sem_dado(filme_id, pedido):
+def _sem_informacao(filme_id, pedido):
     return Evidencia(
-        pessoa=None, filme_id=filme_id, texto=f'sem dado do {ddd.NOME} sobre "{pedido}"',
+        pessoa=None, filme_id=filme_id, texto=f'sem informação do {ddd.NOME} sobre "{pedido}"',
         fonte=None, data=None, forca=regua.forca_palpite(), tipo="palpite", fato_id=None, base=0.0,
     )

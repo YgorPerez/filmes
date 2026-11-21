@@ -64,7 +64,7 @@ def ler(args) -> list:
     return [r for r in (modulo.pedido(args) for modulo in _modulos()) if r is not None]
 
 
-class Filtro:
+class Restricoes:
     """Aplica as Restrições pedidas: antes da ordenação, e sob demanda depois dela."""
 
     def __init__(self, contexto: Contexto, restricoes: list):

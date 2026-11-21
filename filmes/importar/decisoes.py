@@ -8,7 +8,7 @@ Dono, uma entrada por par (Name, Year). Os candidatos da busca ficam no cache.
     situacao: minisserie  o TMDB achou só uma série com o título
     situacao: pendente    o TMDB não achou um filme único com ID do IMDb
     situacao: confirmado  o Dono disse qual é o filme (`filme`)
-    situacao: descartado  o Dono disse que não é filme ou que é para ignorar (`motivo`)
+    situacao: descartado  o Dono disse que não é filme ou que é para ignorar (`razao`)
 
 As duas últimas valem antes de tudo, inclusive do Wikidata.
 """
@@ -30,7 +30,12 @@ def ler(repo: Path) -> dict[str, dict]:
     if not arquivo.exists():
         return {}
     frente, _ = markdown.ler(arquivo)
-    return {str(d["id"]): d for d in frente.get("filmes") or []}
+    decisoes = {str(d["id"]): d for d in frente.get("filmes") or []}
+    # Arquivos escritos antes da troca de nome guardam a razão do descarte em `motivo`.
+    for d in decisoes.values():
+        if "motivo" in d:
+            d.setdefault("razao", d.pop("motivo"))
+    return decisoes
 
 
 def salvar(repo: Path, decisoes: dict[str, dict]) -> None:

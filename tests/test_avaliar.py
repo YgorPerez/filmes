@@ -8,9 +8,9 @@ def test_avaliar_grava_os_resultados_sem_abrir_sessao(banco, tmp_path):
     resultado = banco.ok("avaliar")
 
     assert banco.ok("sessoes-abertas") == antes
-    assert resultado["offline"]["pessoas"]["perfis"] == 3
+    assert resultado["offline"]["pessoas"]["pessoas"] == 3
     assert resultado["offline"]["pessoas"]["retidos_4_mais"] == 4
-    assert resultado["offline"]["movielens"]["perfis"] == 0
+    assert resultado["offline"]["movielens"]["pessoas"] == 0
     assert resultado["online"]["sessoes"] == 0
     assert resultado["prioridade"] == "offline"
     relatorio = Path(resultado["arquivo"])
@@ -85,7 +85,7 @@ def test_avaliar_exclui_os_usuarios_sorteados_da_vizinhanca(banco, tmp_path):
 
     resultado = banco.ok("avaliar")
     amostra = resultado["offline"]["movielens"]
-    assert amostra["perfis"] == amostra["recuperados"] == 1000
+    assert amostra["pessoas"] == amostra["recuperados"] == 1000
     assert amostra["retidos_4_mais"] == 2000
     assert amostra["cobertura_top_5"] == 0
     assert amostra["recall_50"] == 0.5
@@ -129,7 +129,7 @@ def test_avaliar_usa_as_datas_do_diario_quando_o_export_tem_avaliacoes_avulsas(b
 
     # O filme mais recente nas avaliações avulsas recebeu 5. No diário,
     # o mais recente é Maré Baixa, que recebeu 2 e entra só na cobertura.
-    assert resultado["perfis"] == 4
+    assert resultado["pessoas"] == 4
     assert resultado["filmes_top_5"] == 20
     assert resultado["retidos_4_mais"] == 4
 

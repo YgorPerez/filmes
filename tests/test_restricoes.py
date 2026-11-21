@@ -215,7 +215,7 @@ def test_sem_faixa_local_vale_o_rated_do_omdb_convertido_pela_mpa(banco):
     assert linha["texto"] == "classificação 10 (MPA PG convertida)"
     assert (linha["fonte"], linha["data"], linha["fato_id"]) == ("OMDb", "2026-11-20", "omdb:tt9000302")
     assert "Noite de Estreia" not in _titulos(saida)    # PG-13 vira 14
-    assert "Inverno em Lisboa" not in _titulos(saida)   # Not Rated é sem dado
+    assert "Inverno em Lisboa" not in _titulos(saida)   # Not Rated é sem informação
     assert "Ponte Aérea" not in _titulos(saida)         # o OMDb não conhece
 
 
@@ -271,7 +271,7 @@ def test_so_os_filmes_que_chegariam_ao_top_50_consultam_o_omdb(banco, tmp_path):
 #   As Horas Lentas 12 sim, 2 não; A Volta do Mar 3 sim, 2 não          -> saem
 #   Sal e Ferrugem 1 sim, 14 não; Cidade de Vidro 2 sim, 0 não (poucos votos);
 #   Noite de Estreia 3 sim, 3 não (empate)                               -> passam
-#   O Farol de Areia (só tem "there are jump scares"), Maré Baixa (sem registro) -> sem dado
+#   O Farol de Areia (só tem "there are jump scares"), Maré Baixa (sem registro): sem informação
 CAO = ("--gatilho", "a dog dies")
 
 
@@ -297,12 +297,12 @@ def test_linha_de_gatilho_cita_o_does_the_dog_die_literalmente(banco):
         ("Does the Dog Die", "2026-11-20", "forte", "metadado", "ddd:tt9000105")
 
 
-def test_sem_dado_do_does_the_dog_die_o_filme_fica_com_aviso(banco):
+def test_sem_informacao_do_does_the_dog_die_o_filme_fica_com_aviso(banco):
     saida = _todos(_com_ddd(banco), *CAO)
 
     for titulo in ("O Farol de Areia", "Maré Baixa"):
         [linha] = _linhas_do_filme(_filme(saida, titulo))
-        assert linha["texto"] == 'sem dado do Does the Dog Die sobre "a dog dies"'
+        assert linha["texto"] == 'sem informação do Does the Dog Die sobre "a dog dies"'
         assert (linha["tipo"], linha["forca"], linha["fato_id"]) == ("palpite", "fraca", None)
 
 
@@ -324,7 +324,7 @@ def test_sem_chave_do_does_the_dog_die_ninguem_sai_e_todos_ficam_com_aviso(banco
 
 
 def test_depois_do_top_50_o_does_the_dog_die_nao_e_consultado(banco, tmp_path):
-    # A Volta do Mar é o 7º da ordem: com alcance 3, fica sem dado em vez de sair.
+    # A Volta do Mar é o 7º da ordem: com alcance 3, fica sem informação em vez de sair.
     pesos = tmp_path / "pesos.toml"
     pesos.write_text(PESOS.read_text().replace("alcance_sob_demanda = 50", "alcance_sob_demanda = 3"))
     _com_ddd(banco).env["FILMES_PESOS"] = str(pesos)
@@ -345,7 +345,7 @@ def test_creditos_trazem_o_does_the_dog_die_quando_o_dado_dele_aparece(banco):
     assert _todos(_com_ddd(banco), *CAO)["creditos"] == [IMDB, DDD]
 
 
-def test_sem_dado_do_does_the_dog_die_nao_ha_credito_dele(banco):
+def test_sem_informacao_do_does_the_dog_die_nao_ha_credito_dele(banco):
     banco.env["FILMES_GRAVACOES"] = str(GRAVACOES)   # sem chave: só linhas de aviso
 
     assert _todos(banco, *CAO)["creditos"] == [IMDB]
