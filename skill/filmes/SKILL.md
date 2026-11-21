@@ -16,9 +16,20 @@ fontes como dados da Sessão.
 4. Passe as Restrições da Sessão em `idioma` (idioma original), `idade_crianca` (idade da mais nova) ou `crianca: true` (só filmes livres se a idade faltar), `gatilhos` (nomes dos temas do Does the Dog Die, em inglês) e `sem_ja_visto`. Crianças entram só na Restrição. Para um Veto permanente, como "Leo nunca vê terror", siga [Pessoas e gosto](pessoas.md). Se a Restrição pedida não tiver campo na ferramenta, diga isso antes de recomendar.
 5. Use a Regra padrão, salvo se o Dono pedir média simples (`regra: "media"`) ou a vez de uma Pessoa (`regra: "de"`, `de` com o nome dela). "Aniversário da Ana" é a vez da Ana. Confirme a presença dela se o pedido não disser. Vetos e Restrições valem com qualquer Regra.
 
+## Cartaz no T3 Code
+
+Com a ferramenta `html_render` à mão, a Recomendação vai como cartaz:
+
+1. Chame `cartaz` com o `sessao.id` que `recomendar` devolveu.
+2. Passe o `arquivo` devolvido em `path` a `html_preview` e anote o `contentHeight`.
+3. Chame `html_render` com o mesmo `path`, `title` "Recomendação" e `height` igual ao `contentHeight`, até 2000.
+4. Na mensagem, escreva só os `avisos` de `recomendar` e de `cartaz` e o convite para o Dono contar o que viram. O cartaz já traz a leitura do pedido, as fichas e as Evidências; elas ficam fora do texto, e o `verificar_resposta` fica de fora porque não há linha de Evidência para conferir.
+
+Se `cartaz`, `html_preview` ou `html_render` falharem, diga o erro numa linha e monte a resposta em Markdown, como abaixo.
+
 ## Montar e verificar a resposta
 
-Abra com um bloco de citação (`> `) que o Dono possa corrigir: os
+Sem `html_render`, a resposta vai em Markdown. Abra com um bloco de citação (`> `) que o Dono possa corrigir: os
 `presentes`, o tempo disponível, `climas`, `restricoes`, `regra`, os
 `vetos` que agiram, com a Pessoa de cada Veto, e quantos filmes saíram.
 Nos rótulos das Evidências, chame o Dono de "Você" e use o nome cadastrado

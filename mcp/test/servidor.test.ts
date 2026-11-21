@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { isAbsolute } from "node:path";
 import { after, before, describe, it } from "node:test";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
@@ -161,6 +163,26 @@ describe("servidor MCP sobre a CLI real e a fixture", () => {
 
     assert.equal(resultado.isError, true);
     assert.equal(json(resultado).erro.codigo, "pessoa_desconhecida");
+  });
+
+  it("cartaz grava o HTML da Sessão e devolve o caminho para o html_render", async () => {
+    const recomendacao = json(
+      (await cliente.callTool({ name: "recomendar", arguments: { presentes: ["dono"] } })) as Resultado,
+    );
+
+    const resultado = (await cliente.callTool({
+      name: "cartaz",
+      arguments: { sessao: recomendacao.sessao.id },
+    })) as Resultado;
+
+    assert.ok(!resultado.isError);
+    const saida = json(resultado);
+    assert.equal(saida.sessao, recomendacao.sessao.id);
+    assert.equal(saida.filmes, 5);
+    assert.ok(isAbsolute(saida.arquivo));
+    const html = readFileSync(saida.arquivo, "utf8");
+    assert.ok(html.startsWith("<!doctype html>"));
+    assert.equal(html.match(/<article class="card">/g)?.length, 5);
   });
 
   it("entrada inválida é recusada antes de chamar a CLI", async () => {

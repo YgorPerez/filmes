@@ -130,7 +130,47 @@ def _ano_duracao(filme: dict) -> str:
     partes = []
     if filme.get("ano"):
         partes.append(str(filme["ano"]))
-    minutos = filme.get("duracao_min")
-    if minutos:
-        partes.append(f"{minutos // 60}h{minutos % 60:02d}" if minutos >= 60 else f"{minutos}min")
+    if filme.get("duracao_min"):
+        partes.append(duracao(filme["duracao_min"]))
     return f" ({', '.join(partes)})" if partes else ""
+
+
+def duracao(minutos: int) -> str:
+    return f"{minutos // 60}h{minutos % 60:02d}" if minutos >= 60 else f"{minutos}min"
+
+
+_CABECALHO_DO_FILME = re.compile(r"^(\d+)\. .* · (tt\d+)( · sem fato que o sustente)?$")
+_FONTE_E_DATA = re.compile(r"^(.*), (\d{4}-\d{2}-\d{2})$")
+
+
+def filmes_do_corpo(frente: dict, corpo: str) -> list[dict]:
+    """O inverso de `corpo`: por filme, {posicao, id, so_palpites, evidencias}, com as
+    Evidências de cada Presente (slug) na ordem gravada, a mais forte antes. Os grupos
+    de Pessoa saem na ordem dos Presentes; o grupo seguinte é o das linhas do filme."""
+    presentes = frente["presentes"]
+    filmes, atual, grupo, indice = [], None, None, 0
+    for linha in corpo.splitlines():
+        casou = _CABECALHO_DO_FILME.match(linha)
+        if casou:
+            atual = {"posicao": int(casou.group(1)), "id": casou.group(2),
+                     "so_palpites": bool(casou.group(3)), "evidencias": {p: [] for p in presentes}}
+            filmes.append(atual)
+            grupo, indice = None, 0
+        elif atual and linha.startswith("   - "):
+            grupo = presentes[indice] if indice < len(presentes) else None
+            indice += 1
+        elif atual and grupo and linha.startswith("     - Evidência: "):
+            atual["evidencias"][grupo].append(_evidencia(linha.removeprefix("     - Evidência: ")))
+    return filmes
+
+
+def _evidencia(linha: str) -> dict:
+    resto, _, tipo = linha.rpartition(" · Tipo: ")
+    resto, _, forca = resto.rpartition(" · Força: ")
+    texto, separador, fonte = resto.rpartition(" · Fonte: ")
+    if not separador:
+        texto, fonte = resto, None
+    data = None
+    if fonte and (casou := _FONTE_E_DATA.match(fonte)):
+        fonte, data = casou.groups()
+    return {"texto": texto, "fonte": fonte, "data": data, "forca": forca, "tipo": tipo}

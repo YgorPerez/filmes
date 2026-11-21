@@ -30,7 +30,7 @@ it("atualizar entrega progresso e as versões fixadas pela CLI", async () => {
     });
 
     assert.equal(resultado.isError, false);
-    assert.deepEqual(etapas, [0, 1, 2, 3, 4, 5, 6, 7, 8]);
+    assert.deepEqual(etapas, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
     const [saida] = resultado.content as Array<{ text: string }>;
     const fixadas = JSON.parse(saida.text);
     assert.equal(fixadas.versoes, process.env.FILMES_VERSOES);

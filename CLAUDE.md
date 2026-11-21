@@ -58,6 +58,7 @@ filmes/
   importar/                imports do Letterboxd e do Trakt, fila de resolução e decisões do Dono
   avaliacao/               `avaliar`: corte offline, amostra do MovieLens, grade de pesos e relatório
   verificar/               confere a resposta do Claude contra a Sessão
+  cartaz/                  cartaz HTML da Sessão para o T3 Code; CSS em cartaz.css, só sob .cartaz
 mcp/src/
   servidor.ts              registra cada ferramenta de ferramentas/
   ferramenta.ts            formato de uma ferramenta (definirFerramenta) e validações comuns
@@ -84,4 +85,5 @@ mcp/test/                  testes do MCP, chamando a CLI de verdade sobre a mesm
 - **Classificação etária.** EIRIN e CNC entram na cadeia de criança só quando restringem (PG12, -12...); o "livre" deles (G, tous publics) conta como sem informação.
 - **Import do Letterboxd.** O ano do export pode diferir em 1 do ano do Wikidata ou do TMDB (Year ± 1); o ano exato vence no empate.
 - **Nota mínima.** Candidato precisa de nota 7 ou mais no IMDb, além dos 1.000 votos (`[catalogo] nota_imdb_minima` em `config/pesos.toml`). Decisão do Dono de 2026-11-21: vale sempre.
+- **Elenco coadjuvante.** No caminho de conteúdo, ator fora dos 3 primeiros créditos de ator do `title.principals` no Candidato gera Evidência no máximo fraca. Filme sem créditos carregados fica com a régua normal.
 - **Já visto.** Toda Nota é também Já visto (view `ja_vistos`): pesa contra o filme para a Pessoa que deu a Nota.
