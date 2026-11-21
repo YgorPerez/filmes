@@ -5,6 +5,8 @@ from array import array
 import numpy as np
 from scipy.sparse import csr_matrix
 
+from filmes.evidencia import regua
+
 TOP_K = 50
 LOTE = 128
 
@@ -16,7 +18,7 @@ def vizinhos(notas, links):
     itens, usuarios = array("i"), array("i")
     for linha in notas:
         item = por_movie_id.get(linha["movieId"])
-        if item is not None and float(linha["rating"]) >= 4:
+        if item is not None and float(linha["rating"]) >= regua.NOTA_ALTA:
             itens.append(item)
             usuarios.append(int(linha["userId"]))
     if not usuarios:

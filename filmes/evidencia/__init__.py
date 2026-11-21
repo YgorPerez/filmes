@@ -45,6 +45,8 @@ class Evidencia:
 
 
 def sem_fato(pessoa: str, filme_id: str) -> Evidencia:
-    """A linha de quem não tem Fato ligado ao filme: palpite, fraca, soma 0."""
+    """A linha de quem não tem Fato ligado ao filme: palpite, Força da régua, soma 0."""
+    from filmes.evidencia import regua  # regua importa FORCAS daqui
+
     return Evidencia(pessoa=pessoa, filme_id=filme_id, texto="sem fato", fonte=None, data=None,
-                     forca="fraca", tipo="palpite", fato_id=None, base=0.0)
+                     forca=regua.forca_palpite(), tipo="palpite", fato_id=None, base=0.0)
