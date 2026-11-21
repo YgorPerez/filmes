@@ -105,7 +105,7 @@ Tabelas que só as Restrições da Sessão leem. Os filmes são os de cima; a ta
 
 ## gravacoes/
 
-Respostas das fontes sob demanda como a API devolve, em `<fonte>/<tconst>.json`. Os testes ligam com `FILMES_GRAVACOES` e uma chave qualquer; arquivo ausente vale como "a fonte não conhece o filme".
+Respostas das fontes sob demanda como a API devolve, em `<fonte>/<tconst>.json`. Os testes ligam com `FILMES_GRAVACOES` e uma chave qualquer; arquivo ausente vale como "a fonte não conhece o filme". Uma falha de rede se grava em `<fonte>/<chave>.falha.json` (`{"motivo": "Connection reset by peer", "vezes": 2}` falha duas vezes e depois lê `<chave>.json`; sem `vezes`, falha sempre). A fixture não tem nenhuma: `test_fila_reprocessar.py` cria as suas numa cópia das gravações.
 
 - `omdb/`: Vento Norte PG, Noite de Estreia PG-13, Inverno em Lisboa Not Rated, Jardim Suspenso G. Ponte Aérea não tem arquivo.
 - `ddd/`: o tema "a dog dies" tem 12 sim e 2 não em As Horas Lentas, 3 e 2 em A Volta do Mar (os dois saem), 1 e 14 em Sal e Ferrugem, 2 e 0 em Cidade de Vidro (poucos votos), 3 e 3 em Noite de Estreia (empate). O Farol de Areia só tem "there are jump scares"; Maré Baixa não tem arquivo.
