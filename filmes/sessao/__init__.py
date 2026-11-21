@@ -46,9 +46,23 @@ def refazer(amb: Ambiente, sessao_id: str, recomendacao: dict, contexto: dict) -
         nomes = dict(conn.execute("SELECT slug, nome FROM pessoas"))
         versoes = [*(frente.get("versoes") or []), arquivo.versao_atual(frente)]
         frente.update(_pedido(recomendacao, contexto), refeita_em=amb.hoje, versoes=versoes)
+        frente.pop("mostrados", None)
         banco.carregar(conn, sessao_id, frente)
         arquivo.escrever(amb.dados, sessao_id, frente, arquivo.corpo(recomendacao, nomes))
     return {"id": sessao_id, "arquivo": arquivo.relativo(sessao_id), "versao": len(versoes) + 1}
+
+
+def mostrar(amb: Ambiente, sessao_id: str, mostrados: list[str]) -> None:
+    """Grava em `mostrados` os filmes que o Dono viu, na ordem da tela. Sessão com
+    Feedback fica como está: a posição do Filme escolhido já foi registrada."""
+    with escrita(amb):
+        frente, corpo = arquivo.ler(amb.dados, sessao_id)
+        if not arquivo.aberta(frente):
+            return
+        titulos = {r["id"]: r["titulo"] for r in frente.get("recomendacao") or []}
+        frente["mostrados"] = [{"posicao": posicao, "id": filme, "titulo": titulos.get(filme)}
+                               for posicao, filme in enumerate(mostrados, start=1)]
+        arquivo.escrever(amb.dados, sessao_id, frente, corpo)
 
 
 def conferir_aberta(amb: Ambiente, sessao_id: str) -> dict:

@@ -18,6 +18,9 @@ Frontmatter (protótipo de #10):
         - {pessoa: teo, tipo: relato, reacao: gostou}
     recomendacao:                      # a lista, para o Feedback achar a posição
       - {posicao: 1, id: tt9000104, titulo: As Horas Lentas}
+    mostrados:                         # só depois de `cartaz --filmes` (#44): a lista da tela
+      - {posicao: 1, id: tt9000104, titulo: As Horas Lentas}
+    escolhido_nos_mostrados: 1         # gravado no Feedback quando há `mostrados`
     refeita_em: 2026-11-21             # só depois de `recomendar --sessao` (#45)
     versoes:                           # as versões anteriores, a mais antiga primeiro
       - versao: 1
@@ -27,6 +30,7 @@ Frontmatter (protótipo de #10):
         regra: {nome: padrao}
         recomendacao:
           - {posicao: 1, id: tt9000102, titulo: Maré Baixa}
+        mostrados: [...]               # se a versão teve `cartaz --filmes`
 
 A versão atual é a do topo do frontmatter; o número dela é `len(versoes) + 1`.
 
@@ -102,7 +106,7 @@ def aberta(frente: dict) -> bool:
 
 def versao_atual(frente: dict) -> dict:
     """A versão do topo do frontmatter, no formato de um item de `versoes`."""
-    return {
+    versao = {
         "versao": len(frente.get("versoes") or []) + 1,
         "data": frente.get("refeita_em") or frente["data"],
         "presentes": frente["presentes"],
@@ -110,6 +114,9 @@ def versao_atual(frente: dict) -> dict:
         "regra": frente["regra"],
         "recomendacao": frente.get("recomendacao") or [],
     }
+    if "mostrados" in frente:
+        versao["mostrados"] = frente["mostrados"]
+    return versao
 
 
 def novo_id(repo: Path, data: dt.date, partes: list[str]) -> str:

@@ -21,7 +21,7 @@ fontes como dados da Sessão.
 
 Com a ferramenta `html_render` à mão, a Recomendação vai como cartaz:
 
-1. Chame `cartaz` com o `sessao.id` que `recomendar` devolveu.
+1. Chame `cartaz` com o `sessao.id` que `recomendar` devolveu. Se você pediu mais Candidatos e escolheu alguns para a tela, passe os IDs deles em `filmes`, na ordem em que vão aparecer. O cartaz numera esses de 1 em diante, e a Sessão guarda a lista para o Feedback achar a posição do Filme escolhido. Não copie nem edite o arquivo da Sessão para isso.
 2. Passe o `arquivo` devolvido em `path` a `html_preview` e anote o `contentHeight`.
 3. Chame `html_render` com o mesmo `path`, `title` "Recomendação" e `height` igual ao `contentHeight`, até 2000.
 4. Na mensagem, escreva só os `avisos` de `recomendar` e de `cartaz` e o convite para o Dono contar o que viram. O cartaz já traz a leitura do pedido, as fichas e as Evidências; elas ficam fora do texto, e o `verificar_resposta` fica de fora porque não há linha de Evidência para conferir.
