@@ -1,0 +1,200 @@
+{
+    "head": {
+        "vars": [
+            "valor",
+            "pt",
+            "en",
+            "mul",
+            "codigo"
+        ]
+    },
+    "results": {
+        "bindings": [
+            {
+                "valor": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/entity/Q1033909"
+                },
+                "pt": {
+                    "type": "literal",
+                    "value": "Mark Ivanir",
+                    "xml:lang": "pt"
+                },
+                "en": {
+                    "type": "literal",
+                    "value": "Mark Ivanir",
+                    "xml:lang": "en"
+                }
+            },
+            {
+                "valor": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/entity/Q1860"
+                },
+                "pt": {
+                    "type": "literal",
+                    "value": "inglês",
+                    "xml:lang": "pt"
+                },
+                "en": {
+                    "type": "literal",
+                    "value": "English",
+                    "xml:lang": "en"
+                },
+                "codigo": {
+                    "type": "literal",
+                    "value": "en"
+                }
+            },
+            {
+                "valor": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/entity/Q18665344"
+                },
+                "pt": {
+                    "type": "literal",
+                    "value": "R",
+                    "xml:lang": "pt"
+                },
+                "en": {
+                    "type": "literal",
+                    "value": "R",
+                    "xml:lang": "en"
+                },
+                "mul": {
+                    "type": "literal",
+                    "value": "R",
+                    "xml:lang": "mul"
+                }
+            },
+            {
+                "valor": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/entity/Q20644796"
+                },
+                "en": {
+                    "type": "literal",
+                    "value": "FSK 12",
+                    "xml:lang": "en"
+                }
+            },
+            {
+                "valor": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/entity/Q23790282"
+                },
+                "en": {
+                    "type": "literal",
+                    "value": "R15+",
+                    "xml:lang": "en"
+                }
+            },
+            {
+                "valor": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/entity/Q23817729"
+                },
+                "pt": {
+                    "type": "literal",
+                    "value": "sem restrição de idade",
+                    "xml:lang": "pt"
+                },
+                "en": {
+                    "type": "literal",
+                    "value": "no age restriction",
+                    "xml:lang": "en"
+                }
+            },
+            {
+                "valor": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/entity/Q26678735"
+                },
+                "pt": {
+                    "type": "literal",
+                    "value": "16",
+                    "xml:lang": "pt"
+                },
+                "en": {
+                    "type": "literal",
+                    "value": "16",
+                    "xml:lang": "en"
+                },
+                "mul": {
+                    "type": "literal",
+                    "value": "16",
+                    "xml:lang": "mul"
+                }
+            },
+            {
+                "valor": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/entity/Q483941"
+                },
+                "pt": {
+                    "type": "literal",
+                    "value": "A Lista de Schindler",
+                    "xml:lang": "pt"
+                },
+                "en": {
+                    "type": "literal",
+                    "value": "Schindler's List",
+                    "xml:lang": "en"
+                }
+            },
+            {
+                "valor": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/entity/Q8877"
+                },
+                "pt": {
+                    "type": "literal",
+                    "value": "Steven Spielberg",
+                    "xml:lang": "pt"
+                },
+                "en": {
+                    "type": "literal",
+                    "value": "Steven Spielberg",
+                    "xml:lang": "en"
+                },
+                "mul": {
+                    "type": "literal",
+                    "value": "Steven Spielberg",
+                    "xml:lang": "mul"
+                }
+            },
+            {
+                "valor": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/entity/Q4550895"
+                },
+                "en": {
+                    "type": "literal",
+                    "value": "15 certificate",
+                    "xml:lang": "en"
+                },
+                "mul": {
+                    "type": "literal",
+                    "value": "15",
+                    "xml:lang": "mul"
+                }
+            },
+            {
+                "valor": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/entity/Q80655145"
+                },
+                "en": {
+                    "type": "literal",
+                    "value": "Prohibited for children under 16",
+                    "xml:lang": "en"
+                }
+            }
+        ]
+    },
+    "meta": {
+        "query-time-ms": 17,
+        "result-size-total": 11,
+        "warnings": []
+    }
+}

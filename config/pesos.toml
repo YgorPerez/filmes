@@ -1,0 +1,67 @@
+# Pesos do motor. Valores iniciais da spec (#16), calibrados por `avaliar`.
+# A régua de Força (que Fato é forte, moderado ou fraco) é regra fixa no
+# código, em filmes/evidencia; aqui ficam só os números da ordenação.
+
+[forca.multiplicador]
+# A Força multiplica a contribuição de cada Evidência. Palpite soma 0.
+forte = 1.0
+moderada = 0.6
+fraca = 0.3
+palpite = 0.0
+
+[caminho.peso]
+# Peso de cada tipo de aresta de conteúdo no caminho de gosto. Um predicado fora
+# daqui não entra no caminho; o texto de cada um fica em sinais/conteudo.py.
+# Gênero só dá metadado, no máximo fraco (régua).
+diretor = 1.0
+roteiro = 0.8
+serie = 1.0
+elenco = 0.5
+genero = 0.3
+
+[utilidade]
+# Utilidade individual de 0 a 1: u = 1 / (1 + exp(-k * soma das contribuições)).
+k = 1.0
+
+[catalogo]
+# Mínimo de votos no IMDb para um filme virar Candidato.
+votos_minimos = 1000
+
+[recomendacao]
+# Quantos filmes a Recomendação devolve quando o pedido não diz.
+tamanho = 5
+
+[ja_visto]
+# Já visto pesa contra o filme com esta base (a Força é sempre forte).
+peso = 1.0
+
+[credito]
+# u' = u - fator x Crédito na Regra padrão. O Crédito olha as últimas `janela`
+# Sessões em grupo com Feedback que a Pessoa dividiu com algum Presente de hoje.
+fator = 0.5
+janela = 5
+
+[vizinhanca]
+# Peso da Evidência de vizinhança item-item do MovieLens (Tipo review).
+peso = 1.0
+
+[clima]
+# Bônus de cada Clima pedido que o filme sustenta, somado à pontuação da Regra
+# de escolha (que vai de 0 a 1), vezes o multiplicador da Força.
+peso = 0.1
+
+[grupo]
+# Bônus do filme com tag de grupo numa Sessão em grupo, ou de sozinho numa
+# Sessão sozinha, somado à pontuação da Regra, vezes o multiplicador da Força.
+# Menor que o do Clima: o Dono não pediu, e a leitura da tag é do projeto.
+peso = 0.05
+
+[pessoas]
+# Base de um Declarado ou Relato com alvo entidade (diretor, ator, gênero...):
+# positiva para ama e gosta, negativa para não gosta e odeia. A Força multiplica.
+peso_dito = 1.0
+
+[restricoes]
+# Só os filmes que chegariam a estas primeiras posições consultam fonte sob
+# demanda (OMDb para a classificação, Does the Dog Die para gatilho).
+alcance_sob_demanda = 50
