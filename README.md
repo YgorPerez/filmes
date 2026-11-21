@@ -15,24 +15,8 @@ mkdir -p .claude/skills
 ln -s ../../skill/filmes .claude/skills/filmes
 ```
 
-Crie a pasta do repo de dados, se ela ainda não existir. Use esse repo
-para Pessoas, imports e Sessões. Em `config/local.toml`, ponha os
-caminhos da sua máquina.
-
-```toml
-[caminhos]
-dados = "/caminho/para/filmes-dados"
-catalogo = "/caminho/para/dumps-do-catalogo"
-banco = "/caminho/para/filmes.sqlite"
-```
-
-Quando a pasta configurada tiver os dados do Catálogo, monte o SQLite e
-inicie o Claude na raiz do repo.
-
-```sh
-uv run python -m filmes reconstruir --json
-claude
-```
+Siga os passos de [Catálogo local](#catálogo-local) para configurar o
+repo de dados e montar o SQLite. Depois, inicie `claude` na raiz do repo.
 
 O Claude Code encontra o servidor `filmes` no [`.mcp.json`](.mcp.json).
 Aprove o servidor do projeto quando o Claude pedir e veja a conexão
@@ -56,3 +40,33 @@ claude
 
 A fixture já tem Bruno como Dono. Rode `make check` para verificar a CLI
 e o MCP sem rede.
+
+## Catálogo local
+
+Configure o caminho do repo de dados separadamente do código. Os dumps e o
+SQLite ficam em `$XDG_DATA_HOME/filmes` por padrão. Sem essa variável, o
+diretório é `~/.local/share/filmes`. Use `FILMES_CATALOGO` e `FILMES_BANCO`
+para apontar para outros caminhos fora do repo.
+
+```sh
+export FILMES_DADOS=/caminho/do/repo-de-dados
+uv run python -m filmes atualizar --json
+uv run python -m filmes reconstruir --json
+```
+
+`atualizar` busca os TSVs de títulos e votos do IMDb e as triplas e rótulos do
+Wikidata. Se uma consulta falhar no QLever, busca aquele conjunto por
+predicado no WDQS. O progresso da CLI sai em stderr. No MCP, a ferramenta
+`atualizar` envia notificações de progresso ao cliente que as solicita.
+
+O manifesto [config/versoes-catalogo.json](config/versoes-catalogo.json) é o
+único arquivo da atualização que vai para o git. Ele fixa a data e o SHA-256
+de cada dump. Para escrever ou ler outro manifesto, use `FILMES_VERSOES` ou
+`[caminhos] versoes` em `config/local.toml`.
+
+Para reconstruir uma versão anterior, use seu manifesto e guarde os arquivos
+que ele lista, cada um em `<catalogo>/<sha256>/<nome do dump>`.
+`reconstruir` confere os hashes e monta o banco sem rede. A fixture em
+`tests/fixture/catalogo` continua a usar as tabelas em CSV.
+
+O catálogo é para uso pessoal e não comercial. [Datasets do IMDb](https://developer.imdb.com/non-commercial-datasets/).

@@ -5,6 +5,7 @@ nesta ordem:
 
     FILMES_DADOS      repo de dados (Pessoas, Sessões)        [caminhos] dados
     FILMES_CATALOGO   dumps fixados e tabelas prontas em CSV   [caminhos] catalogo
+    FILMES_VERSOES    manifesto dos dumps                   [caminhos] versoes
     FILMES_BANCO      SQLite derivado                          [caminhos] banco
     FILMES_PESOS      config de pesos (padrão: config/pesos.toml)
     FILMES_HOJE       data de hoje (AAAA-MM-DD), para os testes
@@ -34,10 +35,12 @@ class Ambiente:
     def carregar(cls) -> "Ambiente":
         arquivo_local = Path(os.environ.get("FILMES_LOCAL") or LOCAL)
         local = _ler_toml(arquivo_local).get("caminhos", {}) if arquivo_local.exists() else {}
+        armazenamento = Path(os.environ.get("XDG_DATA_HOME") or Path.home() / ".local" / "share") / "filmes"
         caminhos = {
             "dados": os.environ.get("FILMES_DADOS") or local.get("dados"),
-            "catalogo": os.environ.get("FILMES_CATALOGO") or local.get("catalogo") or str(RAIZ / "var" / "catalogo"),
-            "banco": os.environ.get("FILMES_BANCO") or local.get("banco") or str(RAIZ / "var" / "filmes.sqlite"),
+            "catalogo": os.environ.get("FILMES_CATALOGO") or local.get("catalogo") or str(armazenamento / "catalogo"),
+            "versoes": os.environ.get("FILMES_VERSOES") or local.get("versoes") or str(RAIZ / "config" / "versoes-catalogo.json"),
+            "banco": os.environ.get("FILMES_BANCO") or local.get("banco") or str(armazenamento / "filmes.sqlite"),
         }
         pesos = _ler_toml(Path(os.environ.get("FILMES_PESOS") or PESOS_PADRAO))
         hoje = os.environ.get("FILMES_HOJE")
@@ -63,6 +66,10 @@ class Ambiente:
     @property
     def catalogo(self) -> Path:
         return self.caminho("catalogo")
+
+    @property
+    def versoes(self) -> Path:
+        return self.caminho("versoes")
 
     @property
     def banco(self) -> Path:
