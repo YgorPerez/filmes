@@ -27,6 +27,7 @@ import pkgutil
 import sqlite3
 from collections import defaultdict
 from dataclasses import dataclass
+from itertools import islice
 
 from filmes.ambiente import Ambiente
 from filmes.evidencia import sem_fato
@@ -67,9 +68,11 @@ def _modulos_de_sinal():
 
 
 def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], quantos: int,
-               regra: Regra = Regra(), restricoes: list = (), climas: list[str] = ()) -> dict:
+               regra: Regra = Regra(), restricoes: list = (), climas: list[str] = (),
+               *, selecao: candidatos.Selecao | None = None) -> dict:
     # Os Vetos de todos os Presentes valem, seja qual for a Regra de escolha.
-    restantes, vetos_que_agiram = vetos.aplicar(conn, presentes, candidatos.escolher(conn, amb.pesos))
+    elegiveis = selecao.filmes if selecao is not None else candidatos.escolher(conn, amb.pesos)
+    restantes, vetos_que_agiram = vetos.aplicar(conn, presentes, elegiveis)
     climas_aceitos, avisos_de_clima = vocabulario_climas.resolver(list(climas))
     contexto = Contexto(conn=conn, amb=amb, presentes=presentes, avisos=avisos_de_clima)
     filtro = Filtro(contexto, list(restricoes))
@@ -100,7 +103,14 @@ def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], qu
     # Fato quando sustentados e somam um bônus à ordem; depois, o mais votado antes.
     ordenados = []
     sem_credito = []
-    for filme_id, filme in rodada.candidatos.items():
+    ids = rodada.candidatos
+    if selecao is not None and not ajuste and not filtro.pendentes:
+        # Sem consulta que possa recusar um filme depois de ordenado, os demais
+        # palpites não alcançam o topo se já há `quantos` mais votados.
+        populares = (filme for filme in selecao.populares if filme in rodada.candidatos)
+        ids = por_filme.keys() | do_filme.keys() | set(islice(populares, quantos))
+    for filme_id in ids:
+        filme = rodada.candidatos[filme_id]
         evidencias = por_filme.get(filme_id, [])
         utilidades = {
             pessoa: utilidade.individual([e for e in evidencias if e.pessoa == pessoa], pesos)
