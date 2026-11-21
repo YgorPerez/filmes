@@ -86,7 +86,7 @@ def test_dono_confirma_pelo_tmdb_e_descarta_na_fila(olga, zip_olga):
     assert importado["resolvidos"] == {"wikidata": 5, "tmdb": 1, "manual": 0}
     assert importado["descartados"] == {"wikidata": 1, "tmdb": 1, "manual": 0}
     assert importado["fila"] == 2
-    assert {c["fonte"] for c in importado["creditos"]} == {"TMDB"}
+    assert {c["fonte"] for c in importado["atribuicoes"]} == {"TMDB"}
     fila = olga.ok("fila", "ver")["itens"]
     por_nome = {item["nome"]: item for item in fila}
     vento = por_nome["Vento Norte"]

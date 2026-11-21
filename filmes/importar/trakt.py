@@ -7,7 +7,7 @@ from filmes.dados import pessoas
 from filmes.erros import ErroFilmes
 from filmes.importar import arquivos, zip_trakt
 from filmes.importar.letterboxd import escrita
-from filmes.recomendacao.creditos import TEXTOS
+from filmes.recomendacao.atribuicoes import TEXTOS
 
 TIPO = "trakt"
 _TABELAS = ("notas", "ja_visto")
@@ -32,7 +32,7 @@ def importar(amb, nome, arquivo):
         "arquivo_novo": novo,
         "fatos": depois,
         "fatos_novos": {t: depois[t] - antes[t] for t in _TABELAS},
-        "creditos": [{"fonte": "Trakt", "texto": TEXTOS["Trakt"]}],
+        "atribuicoes": [{"fonte": "Trakt", "texto": TEXTOS["Trakt"]}],
     }
 
 

@@ -36,7 +36,7 @@ def ver(conn, amb):
                 )
                 item["candidatos"] = [letterboxd.candidato(f) for f in filmes or ()]
     return {"itens": list(itens.values()),
-            "creditos": [tmdb.CREDITO] if any(i["candidatos"] for i in itens.values()) else []}
+            "atribuicoes": [tmdb.ATRIBUICAO] if any(i["candidatos"] for i in itens.values()) else []}
 
 
 def decidir(conn, amb, id_, *, filme=None, razao=None):
@@ -53,18 +53,18 @@ def decidir(conn, amb, id_, *, filme=None, razao=None):
 
     decisao = {"id": id_, "nome": item["nome"], "ano": item["ano"], "data": amb.hoje.isoformat(),
                "fonte": "Dono", "tipo": "declarado"}
-    creditos = []
+    atribuicoes = []
     if filme is None:
         if not razao or not razao.strip():
             raise ErroFilmes("uso_invalido", "informe a razão do descarte")
         decisao.update(situacao="descartado", razao=razao.strip())
     else:
-        imdb, creditos = _filme(conn, amb, filme)
+        imdb, atribuicoes = _filme(conn, amb, filme)
         decisao.update(situacao="confirmado", filme=imdb, entrada=filme)
     registro[id_] = decisao
     letterboxd.carregar(conn, amb, decididos=registro)
     decisoes.salvar(amb.dados, registro)
-    return decisao | {"novo": True, "creditos": creditos}
+    return decisao | {"novo": True, "atribuicoes": atribuicoes}
 
 
 def _filme(conn, amb, entrada):
@@ -82,6 +82,6 @@ def _filme(conn, amb, entrada):
     contexto = letterboxd.Contexto(amb)
     convertido = tmdb.TMDB.de(contexto).imdb(id_tmdb[1])
     if convertido:
-        return convertido, [tmdb.CREDITO]
+        return convertido, [tmdb.ATRIBUICAO]
     aviso = contexto.avisos[0] if contexto.avisos else "o TMDB não devolveu um ID do IMDb"
     raise ErroFilmes("filme_sem_imdb", f"{aviso}. Use o tconst ou o link do IMDb para confirmar.")

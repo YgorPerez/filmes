@@ -337,15 +337,15 @@ IMDB = {"fonte": "IMDb", "texto": "Information courtesy of IMDb (https://www.imd
 DDD = {"fonte": "Does the Dog Die", "texto": "Powered by DoesTheDogDie.com"}
 
 
-def test_creditos_trazem_sempre_o_imdb(banco):
-    assert _todos(banco)["creditos"] == [IMDB]
+def test_atribuicoes_trazem_sempre_o_imdb(banco):
+    assert _todos(banco)["atribuicoes"] == [IMDB]
 
 
-def test_creditos_trazem_o_does_the_dog_die_quando_o_dado_dele_aparece(banco):
-    assert _todos(_com_ddd(banco), *CAO)["creditos"] == [IMDB, DDD]
+def test_atribuicoes_trazem_o_does_the_dog_die_quando_o_dado_dele_aparece(banco):
+    assert _todos(_com_ddd(banco), *CAO)["atribuicoes"] == [IMDB, DDD]
 
 
 def test_sem_informacao_do_does_the_dog_die_nao_ha_credito_dele(banco):
     banco.env["FILMES_GRAVACOES"] = str(GRAVACOES)   # sem chave: só linhas de aviso
 
-    assert _todos(banco, *CAO)["creditos"] == [IMDB]
+    assert _todos(banco, *CAO)["atribuicoes"] == [IMDB]

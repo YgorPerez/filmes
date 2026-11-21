@@ -54,7 +54,7 @@ Você e Teo · até 2h · regra padrão.
 ```
 
 Depois dos filmes, deixe uma linha em branco e copie `avisos` e os textos
-de `creditos`. Ponha os créditos em uma linha, incluindo "Powered by
+de `atribuicoes`. Ponha as atribuições em uma linha, incluindo "Powered by
 DoesTheDogDie.com" quando o motor o devolver. Feche com um convite para o
 Dono contar o que viram e como cada Presente reagiu. Se a lista vier
 vazia, diga que o motor não encontrou Candidatos para o pedido.

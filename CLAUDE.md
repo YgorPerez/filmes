@@ -51,7 +51,7 @@ filmes/
   recomendacao/            Candidatos, utilidade, ordem; sinais/<caminho>.py, um por caminho
                            (sinais(rodada, pessoa) para uma Pessoa, sinais_do_filme(rodada) para a linha do filme)
     restricoes/<nome>.py   uma Restrição da Sessão por arquivo (duração, idioma, criança, gatilho, sem Já visto)
-    creditos.py            créditos obrigatórios das fontes usadas
+    atribuicoes.py         atribuições obrigatórias das fontes usadas
   sob_demanda/             fontes consultadas na hora, com cache de validade: fonte.py, cache.py, omdb.py, ddd.py
   sessao/ importar/ avaliacao/ verificar/   reservados para os tickets seguintes
 mcp/src/

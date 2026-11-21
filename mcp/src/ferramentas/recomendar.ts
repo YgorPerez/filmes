@@ -18,7 +18,7 @@ export default definirFerramenta({
     "A linha de Crédito aparece em `linhas_do_filme` quando o Crédito fez o filme subir. " +
     "`credito` traz o Crédito de cada Presente na Regra padrão em grupo. Cada chamada abre uma Sessão (`sessao.id`). " +
     "Antes, chame `sessoes_abertas` e, se houver uma, pergunte por ela. O Dono pode pular. " +
-    "A resposta inclui `climas` (os aceitos), `restricoes`, `avisos` e `creditos`. " +
+    "A resposta inclui `climas` (os aceitos), `restricoes`, `avisos` e `atribuicoes`. " +
     "Copie o texto do Does the Dog Die como veio.",
   entrada: {
     presentes: z.array(pessoa).min(1).describe('Pessoas da Sessão, ex.: ["dono", "ana"]'),

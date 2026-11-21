@@ -130,14 +130,14 @@ def test_clima_vale_sem_acento_e_sem_maiuscula(banco):
     assert saida["avisos"] == []
 
 
-def test_linha_do_tag_genome_poe_a_atribuicao_nos_creditos(banco):
+def test_linha_do_tag_genome_poe_a_atribuicao_na_saida(banco):
     com_genoma = _recomendar(banco, "--clima", "leve")
     sem_genoma = _recomendar(banco)
 
-    [credito] = [c for c in com_genoma["creditos"] if c["fonte"] == "Tag Genome"]
+    [credito] = [c for c in com_genoma["atribuicoes"] if c["fonte"] == "Tag Genome"]
     assert "Tag Genome 2021, de Kotkov, Maslov e Neovius" in credito["texto"]
     assert "CC BY-NC 3.0" in credito["texto"]
-    assert not [c for c in sem_genoma["creditos"] if c["fonte"] == "Tag Genome"]
+    assert not [c for c in sem_genoma["atribuicoes"] if c["fonte"] == "Tag Genome"]
 
 
 # Sessão Maldita tem "so bad it's good" (12 usuários); Silêncio no Lago tem "meditative" (12)

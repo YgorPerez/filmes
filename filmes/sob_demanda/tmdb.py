@@ -10,7 +10,7 @@ Três pedidos, cada um uma entrada no cache e um arquivo nas gravações:
 
 A busca usa o título como veio do export. O cache distingue nomes que geram
 o mesmo slug.
-Os termos do TMDB pedem o aviso de `CREDITO` onde os dados dele aparecem.
+Os termos do TMDB pedem o aviso de `ATRIBUICAO` onde os dados dele aparecem.
 """
 
 import hashlib
@@ -18,11 +18,11 @@ import re
 import urllib.parse
 
 from filmes.importar.zip_letterboxd import slug
-from filmes.recomendacao.creditos import TEXTOS
+from filmes.recomendacao.atribuicoes import TEXTOS
 from filmes.sob_demanda.fonte import Fonte, pegar_json
 
 URL = "https://api.themoviedb.org/3"
-CREDITO = {"fonte": "TMDB", "texto": TEXTOS["TMDB"]}
+ATRIBUICAO = {"fonte": "TMDB", "texto": TEXTOS["TMDB"]}
 
 
 class TMDB(Fonte):

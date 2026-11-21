@@ -32,7 +32,7 @@ from typing import NamedTuple
 
 from filmes.ambiente import Ambiente
 from filmes.evidencia import sem_fato
-from filmes.recomendacao import candidatos, climas as vocabulario_climas, creditos, sinais as pacote_sinais, utilidade, vetos
+from filmes.recomendacao import atribuicoes, candidatos, climas as vocabulario_climas, sinais as pacote_sinais, utilidade, vetos
 from filmes.recomendacao.climas import Clima
 from filmes.recomendacao.regra import Regra
 from filmes.recomendacao.restricoes import Contexto, Restricoes
@@ -172,7 +172,7 @@ def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], qu
         "filmes": filmes,
         "restricoes": pedidas.como_json(),
         "avisos": contexto.avisos,
-        "creditos": creditos.das_fontes(
+        "atribuicoes": atribuicoes.das_fontes(
             e["fonte"] for f in filmes for linhas in (f["linhas_do_filme"], *f["evidencias"].values()) for e in linhas),
     }
 

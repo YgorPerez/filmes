@@ -276,7 +276,7 @@ def importar(amb, nome: str, zip_: Path) -> dict:
             "fatos": depois,
             "fatos_novos": {t: depois[t] - antes[t] for t in TABELAS_DE_FATO},
             "avisos": contexto.avisos,
-            "creditos": [tmdb.CREDITO] if usou_tmdb or _usa_tmdb(conn, pessoa.slug) else [],
+            "atribuicoes": [tmdb.ATRIBUICAO] if usou_tmdb or _usa_tmdb(conn, pessoa.slug) else [],
         }
 
 
