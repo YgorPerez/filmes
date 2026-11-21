@@ -14,7 +14,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 
 from filmes.ambiente import Ambiente
-from filmes.recomendacao import candidatos, sinais as pacote_sinais, utilidade
+from filmes.recomendacao import candidatos, sinais as pacote_sinais, utilidade, vetos
 
 
 @dataclass(frozen=True)
@@ -40,7 +40,8 @@ def _modulos_de_sinal():
 
 
 def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], quantos: int) -> dict:
-    rodada = Rodada(conn=conn, amb=amb, candidatos=candidatos.escolher(conn, amb.pesos))
+    restantes, vetos_que_agiram = vetos.aplicar(conn, presentes, candidatos.escolher(conn, amb.pesos))
+    rodada = Rodada(conn=conn, amb=amb, candidatos=restantes)
     pesos = amb.pesos
 
     por_filme = defaultdict(list)
@@ -75,4 +76,4 @@ def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], qu
             "utilidade": {p: (round(u, 4) if u is not None else None) for p, u in utilidades.items()},
             "evidencias": [e.como_json(pesos) for e in evidencias],
         })
-    return {"presentes": presentes, "filmes": filmes, "creditos": []}
+    return {"presentes": presentes, "vetos": vetos_que_agiram, "filmes": filmes, "creditos": []}

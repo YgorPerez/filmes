@@ -24,3 +24,8 @@ votos_minimos = 1000
 [recomendacao]
 # Quantos filmes a Recomendação devolve quando o pedido não diz.
 tamanho = 5
+
+[pessoas]
+# Base de um Declarado ou Relato com alvo entidade (diretor, ator, gênero...):
+# positiva para ama e gosta, negativa para não gosta e odeia. A Força multiplica.
+peso_dito = 1.0

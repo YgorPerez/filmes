@@ -7,7 +7,7 @@ export default definirFerramenta({
   nome: "recomendar",
   descricao:
     "Recomendação para uma Sessão: devolve o top 5 com as Evidências de cada filme " +
-    "(pessoa, texto, fonte, data, forca, tipo, fato_id, contribuicao). " +
+    "(pessoa, texto, fonte, data, forca, tipo, fato_id, contribuicao) e os Vetos que agiram (vetos). " +
     'Presentes por slug, nome ou apelido; "dono" é o Dono.',
   entrada: {
     presentes: z.array(pessoa).min(1).describe('Pessoas da Sessão, ex.: ["dono", "ana"]'),
