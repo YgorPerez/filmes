@@ -28,9 +28,11 @@ GRUPOS = {
     "elenco": ("P161",),
     "conteudo": (*(p for p in ARESTAS if p != "P161"), *CLASSIFICACOES),
     "atores": ("P345",),
+    "subgeneros": ("P279",),
 }
-# Grupos que um manifesto anterior ao #35 não tem; sem eles, o elenco fica sem créditos.
-OPCIONAIS = ("atores",)
+# Grupos que um manifesto anterior ao #35 (atores) ou ao #48 (subgeneros) não tem.
+# Sem eles, o elenco fica sem créditos e o Veto a gênero não desce aos subgêneros.
+OPCIONAIS = ("atores", "subgeneros")
 
 IRI = ("http://www.wikidata.org/entity/", "https://www.wikidata.org/entity/")
 
@@ -51,6 +53,9 @@ def consulta(grupo, propriedades):
     escopos = {
         "ids": "{ ?item wdt:P31 wd:Q11424 } UNION { ?item wdt:P6127 ?slug }",
         "atores": "?filme wdt:P31 wd:Q11424 ; wdt:P161 ?item .",
+        # Os gêneros dos filmes e todas as classes acima deles, para a hierarquia
+        # ficar inteira mesmo onde um gênero intermediário não é usado por filme nenhum.
+        "subgeneros": "{ SELECT DISTINCT ?item WHERE { ?filme wdt:P31 wd:Q11424 ; wdt:P136/wdt:P279* ?item . } }",
     }
     escopo = escopos.get(grupo, "?item wdt:P31 wd:Q11424 .")
     return f"""{PREFIXOS}
