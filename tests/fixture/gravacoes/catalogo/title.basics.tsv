@@ -1,0 +1,9 @@
+tconst	titleType	primaryTitle	originalTitle	isAdult	startYear	endYear	runtimeMinutes	genres
+tt0000001	short	Carmencita	Carmencita	0	1894	\N	1	Documentary,Short
+tt0000009	movie	Miss Jerry	Miss Jerry	0	1894	\N	45	Romance
+tt0000502	movie	Bohemios	Bohemios	0	1905	\N	100	\N
+tt0108052	movie	Schindler's List	Schindler's List	0	1993	\N	196	Biography,Drama,History
+tt0133093	movie	The Matrix	The Matrix	0	1999	\N	136	Action,Sci-Fi
+tt0944947	tvSeries	Game of Thrones	Game of Thrones	0	2011	2019	60	Drama,Fantasy
+tt0017839	movie	Two Days	Dva dnya	0	1927	\N	60	Drama
+tt0065442	movie	Bacchanale	Bacchanale	1	1970	\N	70	Adult,Fantasy,Horror

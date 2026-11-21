@@ -41,6 +41,6 @@ class Duracao:
         return Evidencia(
             pessoa=None, filme_id=filme["id"],
             texto=f"duração {texto.duracao(filme['duracao_min'])}, dentro do limite de {texto.duracao(self.maximo)}",
-            fonte="IMDb", data=None, forca=regua.forca_metadado_do_pedido(), tipo="metadado",
+            fonte="IMDb", data=filme["data_imdb"], forca=regua.forca_metadado_do_pedido(), tipo="metadado",
             fato_id=filme["id"], base=0.0,
         )

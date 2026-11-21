@@ -26,14 +26,15 @@ CREATE TABLE classificacoes (
     propriedade TEXT NOT NULL,              -- P3216 (ClassInd), P1657 (MPA), P2629 (BBFC)...
     rotulo      TEXT NOT NULL,              -- como o sistema escreve: "12A", "PG-13", "FSK 6"
     fonte       TEXT NOT NULL,              -- "Wikidata"
-    data        TEXT NOT NULL
+    data        TEXT NOT NULL,
+    valor_wikidata TEXT                    -- QID quando o valor é um item
 );
 CREATE INDEX classificacoes_por_filme ON classificacoes(filme_id);
 
--- isAdult = 1 no title.basics do IMDb. Numa Sessão com criança, sai antes de tudo.
+-- isAdult = 1 no title.basics do IMDb, inclusive para IDs fora de filmes.
 CREATE TABLE adultos (
     fato_id  TEXT PRIMARY KEY,
-    filme_id TEXT NOT NULL REFERENCES filmes(id),
+    filme_id TEXT NOT NULL,
     fonte    TEXT NOT NULL,                 -- "IMDb"
     data     TEXT NOT NULL
 );
