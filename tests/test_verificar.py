@@ -1,9 +1,12 @@
 from pathlib import Path
 
 
+# Na Regra padrão, o Teo, sem Fato nenhum, vale 0,5 em todo filme e o topo vira o
+# dos filmes com bônus de grupo. Na vez do Bruno, As Horas Lentas fica em 1º.
+
 def test_verifica_resposta_por_pessoa_usando_a_sessao(banco):
-    saida = banco.ok("recomendar", "--presentes", "dono", "teo", "--duracao-max", "120", "--quantos", "1")
-    resposta = """Você e Teo · até 2h · regra padrão.
+    saida = banco.ok("recomendar", "--presentes", "dono", "teo", "--de", "dono", "--duracao-max", "120", "--quantos", "1")
+    resposta = """Você e Teo · até 2h · vez do Bruno.
 
 **1. As Horas Lentas** (2021, 1h44)
 - **Você:** deu 5 a O Farol de Areia (2012), também de Helena Prado (Letterboxd do Bruno, 2025-06-01) *(forte, nota)*
@@ -19,8 +22,8 @@ Depois, me conte o que viram e como foi."""
 
 def test_capa_generos_e_link_do_imdb_no_cabecalho_nao_contam_como_evidencia(banco):
     banco.env.update(FILMES_TMDB_CHAVE="x", FILMES_GRAVACOES=str(Path(__file__).parent / "fixture" / "gravacoes"))
-    saida = banco.ok("recomendar", "--presentes", "dono", "teo", "--duracao-max", "120", "--quantos", "2")
-    resposta = """Você e Teo · até 2h · regra padrão.
+    saida = banco.ok("recomendar", "--presentes", "dono", "teo", "--de", "dono", "--duracao-max", "120", "--quantos", "2")
+    resposta = """Você e Teo · até 2h · vez do Bruno.
 
 ![capa](https://image.tmdb.org/t/p/w92/hOrAsLeNtAs9104.jpg) **1. As Horas Lentas** (2021, 1h44)\\
 Drama, Mistério · [IMDb](https://www.imdb.com/title/tt9000104/)
@@ -46,7 +49,7 @@ def _com_tmdb(banco):
 
 # Formato do #32: leitura do pedido em citação, um bloco por filme com título em
 # português, capa, ficha, sinopse e cobertura, Evidências com o marcador de Força.
-RESPOSTA_EM_BLOCOS = """> Você e Teo · até 2h · regra padrão. Saíram 2 filmes.
+RESPOSTA_EM_BLOCOS = """> Você e Teo · até 2h · vez do Bruno. Saíram 2 filmes.
 
 ### 1. As Horas Lentas
 
@@ -81,7 +84,7 @@ Depois, me conte o que viram e como foi."""
 
 
 def test_aceita_a_resposta_em_blocos_por_filme_com_marcador_de_forca(banco):
-    saida = _com_tmdb(banco).ok("recomendar", "--presentes", "dono", "teo", "--duracao-max", "120", "--quantos", "2")
+    saida = _com_tmdb(banco).ok("recomendar", "--presentes", "dono", "teo", "--de", "dono", "--duracao-max", "120", "--quantos", "2")
 
     assert [f["titulo_pt"] for f in saida["filmes"]] == ["As Horas Lentas", "Sal & Ferrugem"]
     assert banco.ok("verificar", "--sessao", saida["sessao"]["id"], f"--texto={RESPOSTA_EM_BLOCOS}") == {
@@ -90,7 +93,7 @@ def test_aceita_a_resposta_em_blocos_por_filme_com_marcador_de_forca(banco):
 
 
 def test_no_formato_em_blocos_marcador_de_forca_errado_ou_texto_alterado_sao_invalidos(banco):
-    saida = _com_tmdb(banco).ok("recomendar", "--presentes", "dono", "teo", "--duracao-max", "120", "--quantos", "2")
+    saida = _com_tmdb(banco).ok("recomendar", "--presentes", "dono", "teo", "--de", "dono", "--duracao-max", "120", "--quantos", "2")
     invalidas = [
         "- ●●○ **Você:** deu 5 a O Farol de Areia (2012), também de Helena Prado (Letterboxd do Bruno, 2025-06-01) *(nota)*",
         "- ●●● **Teo:** sem fato *(palpite)*",
@@ -109,7 +112,7 @@ def test_no_formato_em_blocos_marcador_de_forca_errado_ou_texto_alterado_sao_inv
 
 
 def test_no_formato_em_blocos_o_titulo_original_entre_parenteses_precisa_ser_o_da_sessao(banco):
-    saida = _com_tmdb(banco).ok("recomendar", "--presentes", "dono", "teo", "--duracao-max", "120", "--quantos", "2")
+    saida = _com_tmdb(banco).ok("recomendar", "--presentes", "dono", "teo", "--de", "dono", "--duracao-max", "120", "--quantos", "2")
     trocado = "### 2. Sal & Ferrugem *(As Horas Lentas)*"
     resposta = RESPOSTA_EM_BLOCOS.replace("### 2. Sal & Ferrugem *(Sal e Ferrugem)*", trocado)
 
@@ -121,12 +124,12 @@ def test_no_formato_em_blocos_o_titulo_original_entre_parenteses_precisa_ser_o_d
 
 
 def test_presentes_sem_fato_podem_dividir_uma_linha_so(banco):
-    saida = banco.ok("recomendar", "--presentes", "dono", "teo", "iara", "--quantos", "1")
-    [filme] = saida["filmes"]
+    saida = banco.ok("recomendar", "--presentes", "dono", "teo", "iara", "--quantos", "50")
+    filme = next(f for f in saida["filmes"] if f["cobertura"]["sem_fato"] == ["teo", "iara"])
     assert filme["cobertura"] == {"com_fato": 1, "presentes": 3, "sem_fato": ["teo", "iara"]}
     resposta = f"""> Você, Teo e Iara · regra padrão.
 
-### 1. {filme["titulo"]}
+### {filme["posicao"]}. {filme["titulo"]}
 
 Fato sobre 1 de 3; sem fato: Teo e Iara
 
@@ -138,7 +141,7 @@ Fato sobre 1 de 3; sem fato: Teo e Iara
 
 
 def test_lista_evidencias_alteradas_ou_atribuidas_a_outra_pessoa(banco):
-    saida = banco.ok("recomendar", "--presentes", "dono", "teo", "--quantos", "1")
+    saida = banco.ok("recomendar", "--presentes", "dono", "teo", "--de", "dono", "--quantos", "1")
     invalidas = [
         "- **Você:** deu 4 a O Farol de Areia (2012), também de Helena Prado (Letterboxd do Bruno, 2025-06-01) *(forte, nota)*",
         "- **Teo:** deu 5 a O Farol de Areia (2012), também de Helena Prado (Letterboxd do Bruno, 2025-06-01) *(forte, nota)*",

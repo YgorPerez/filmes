@@ -107,8 +107,8 @@ def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], qu
     fator = pesos["credito"]["fator"]
     ajuste = {p: fator * c.valor for p, c in creditos_pessoais.items() if fator and c.valor > 0}
 
-    # Ordem em três faixas: (0) utilidade conhecida para quem a Regra ouve, pela Regra;
-    # (1) Fato sem utilidade conhecida para essa gente, no fim; (2) só palpites, que só
+    # Ordem em três faixas: (0) algum Presente tem utilidade conhecida, pela Regra, com
+    # 0,5 para quem não tem Fato; (1) Fato só nos sinais do filme; (2) só palpites, que só
     # aparecem quando faltam Candidatos com Fato. Os sinais do filme contam como
     # Fato quando sustentados e somam um bônus à ordem; depois, o mais votado antes.
     ordenados = []
@@ -189,7 +189,8 @@ def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], qu
 def _subiu_pelo_credito(filme_id, posicao, posicao_sem_credito, utilidades, ajuste) -> list[str]:
     """Quem tem Crédito e fez este filme subir: o filme ganhou posição com o Crédito, a
     Pessoa tem Fato sobre ele e não é o mínimo da Regra padrão (o filme é dela: com o
-    Crédito, os filmes em que ela é o mínimo caíram e este ficou)."""
+    Crédito, os filmes em que ela é o mínimo caíram e este ficou). O mínimo aqui é entre
+    quem tem Fato: o 0,5 de quem não tem não conta."""
     if not ajuste or posicao >= posicao_sem_credito[filme_id]:
         return []
     ajustadas = {p: u - ajuste.get(p, 0.0) for p, u in utilidades.items() if u is not None}

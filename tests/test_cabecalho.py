@@ -133,7 +133,8 @@ def test_nota_e_votos_do_imdb_vem_do_banco(banco):
 
 
 def test_cobertura_diz_quantos_presentes_tem_fato_sobre_o_filme_e_quem_nao_tem(banco):
-    saida = banco.ok("recomendar", "--presentes", "dono", "teo", "--quantos", "1")
+    # Na vez do Bruno, para o topo não depender do 0,5 do Teo.
+    saida = banco.ok("recomendar", "--presentes", "dono", "teo", "--de", "dono", "--quantos", "1")
 
     [filme] = saida["filmes"]
     assert filme["titulo"] == "As Horas Lentas"

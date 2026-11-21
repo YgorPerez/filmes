@@ -21,7 +21,7 @@ it("verificar_resposta devolve as linhas que a Sessão não sustenta", async () 
       return JSON.parse(bloco.text);
     }
 
-    const { sessao } = await chamar("recomendar", { presentes: ["dono", "teo"], quantos: 1 });
+    const { sessao } = await chamar("recomendar", { presentes: ["dono", "teo"], de: "dono", quantos: 1 });
     const valido = "- **Teo:** sem fato *(fraca, palpite)*";
     const invalido = "- **Teo:** gosta muito da diretora *(forte, declarado)*";
     const inicio = "Você e Teo.\n\n**1. As Horas Lentas** (2021, 1h44)\n";

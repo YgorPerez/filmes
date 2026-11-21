@@ -1,19 +1,21 @@
 """Regra de escolha: como a Sessão junta as utilidades dos Presentes para ordenar.
 
-Utilidade desconhecida (None) fica fora do mínimo e da média.
+Quem não tem Fato sobre o filme (utilidade None) conta como neutro, 0,5. Um filme
+sem utilidade conhecida para ninguém não tem chave e vai para o fim.
 
-- padrao: a menor utilidade conhecida, com desempate pela média.
-- media: a média simples das conhecidas.
+- padrao: a menor utilidade, com desempate pela média.
+- media: a média simples.
 - de fulano: só a utilidade de fulano. Os Vetos e Restrições de todos continuam
   valendo, porque tiram filmes antes da ordenação.
 
 O Crédito (#20) entra só na padrão, como `u' = u − fator × Crédito`: `ajuste`
-traz o `fator × Crédito` de cada Pessoa.
+traz o `fator × Crédito` de cada Pessoa. Ele não mexe no 0,5 de quem não tem Fato.
 """
 
 from dataclasses import dataclass
 
 NOMES = ("padrao", "media", "de")
+NEUTRA = 0.5   # utilidade de quem não tem Fato sobre o filme (#37)
 
 
 @dataclass(frozen=True)
@@ -30,18 +32,16 @@ class Regra:
         return self.nome == "padrao"
 
     def chave(self, utilidades: dict, ajuste: dict | None = None) -> tuple | None:
-        """Quanto maior, melhor. None quando a regra não conhece utilidade de ninguém."""
-        if self.nome == "de":
-            conhecidas = [u for p, u in utilidades.items() if p == self.pessoa and u is not None]
-        elif self.usa_credito and ajuste:
-            conhecidas = [u - ajuste.get(p, 0.0) for p, u in utilidades.items() if u is not None]
-        else:
-            conhecidas = [u for u in utilidades.values() if u is not None]
-        if not conhecidas:
+        """Quanto maior, melhor. None quando ninguém tem utilidade conhecida."""
+        if all(u is None for u in utilidades.values()):
             return None
-        media = sum(conhecidas) / len(conhecidas)
+        if self.nome == "de":
+            utilidades = {self.pessoa: utilidades[self.pessoa]}
+        ajuste = ajuste if self.usa_credito and ajuste else {}
+        valores = [NEUTRA if u is None else u - ajuste.get(p, 0.0) for p, u in utilidades.items()]
+        media = sum(valores) / len(valores)
         if self.nome == "padrao":
-            return (min(conhecidas), media)
+            return (min(valores), media)
         return (media,)
 
     def como_json(self) -> dict:

@@ -43,10 +43,12 @@ def _titulos(saida):
     return [f["titulo"] for f in saida["filmes"]]
 
 
-def test_pessoa_sem_nota_nenhuma_fica_fora_do_minimo_e_da_media(banco):
+def test_pessoa_sem_nota_nenhuma_conta_neutro_e_nao_muda_a_ordem(banco):
     sozinho = banco.ok("recomendar", "--presentes", "dono", "--quantos", "50")
     com_teo = banco.ok("recomendar", "--presentes", "dono", "teo", "--quantos", "50")
 
+    # O Teo vale 0,5 em todo filme: o mínimo vira min(u, 0,5) e a média sobe com u,
+    # então a ordem dos filmes do Bruno não muda.
     # Com o Teo a Sessão é em grupo, e o bônus de grupo/sozinho muda de filme
     # (test_clima.py); fora os filmes com esse bônus, a ordem é a mesma.
     com_bonus = {f["titulo"] for saida in (sozinho, com_teo) for f in saida["filmes"] if f["linhas_do_filme"]}
@@ -56,6 +58,32 @@ def test_pessoa_sem_nota_nenhuma_fica_fora_do_minimo_e_da_media(banco):
     for filme in com_teo["filmes"]:
         assert filme["utilidade"]["teo"] is None
         assert filme["evidencias"]["teo"] == [{"pessoa": "teo", **SEM_FATO}]
+
+
+# Bruno e Quim: Voo Noturno tem Nota forte dos dois (0,657 cada); Maré Cheia é
+# forte só para o Bruno (0,739), e o Quim não tem Fato sobre ele. Quem não tem
+# Fato conta como 0,5 na Regra, sem tirar a utilidade de null na saída.
+
+def test_regra_padrao_conta_quem_nao_tem_fato_como_neutro(banco):
+    saida = banco.ok("recomendar", "--presentes", "dono", "quim", "--quantos", "50")
+
+    titulos = _titulos(saida)
+    assert titulos.index("Voo Noturno") < titulos.index("Maré Cheia")
+    assert _filme(saida, "Maré Cheia")["utilidade"]["quim"] is None
+
+
+def test_regra_media_conta_quem_nao_tem_fato_como_neutro(banco):
+    # Maré Cheia: (0,739 + 0,5) / 2 = 0,619, abaixo dos 0,657 de Voo Noturno.
+    titulos = _titulos(banco.ok("recomendar", "--presentes", "dono", "quim", "--regra", "media", "--quantos", "50"))
+
+    assert titulos.index("Voo Noturno") < titulos.index("Maré Cheia")
+
+
+def test_na_regra_de_fulano_sem_fato_dele_vale_neutro(banco):
+    # Pelo Quim, Maré Cheia vale 0,5 e A Volta do Mar, com Nota moderada contra, 0,354.
+    titulos = _titulos(banco.ok("recomendar", "--presentes", "dono", "quim", "--de", "quim", "--quantos", "50"))
+
+    assert titulos.index("Maré Cheia") < titulos.index("A Volta do Mar")
 
 
 # Bruno ama As Horas Lentas (forte) e Iara gosta pouco (uma Nota 3 no mesmo diretor).
@@ -86,8 +114,9 @@ def test_regra_de_fulano_ordena_so_pelo_gosto_dessa_pessoa(banco):
     assert titulos.index("As Horas Lentas") < titulos.index("A Volta do Mar")
 
 
-def test_na_regra_de_fulano_filme_sem_fato_dele_vai_depois_dos_que_tem(banco):
-    # Noite de Estreia (Otávio Lins) agrada o Bruno, mas a Iara não tem Fato sobre ele.
+def test_na_regra_de_fulano_filme_sem_fato_dele_vai_depois_dos_que_ele_gosta(banco):
+    # Noite de Estreia (Otávio Lins) agrada o Bruno, mas a Iara não tem Fato sobre ele:
+    # vale 0,5 para ela, abaixo das Notas a favor dela.
     titulos = _titulos(banco.ok("recomendar", "--presentes", "dono", "iara", "--regra", "de", "--de", "iara",
                                 "--quantos", "50"))
 
