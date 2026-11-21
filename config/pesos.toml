@@ -67,3 +67,10 @@ peso_dito = 1.0
 # Só os filmes que chegariam a estas primeiras posições consultam fonte sob
 # demanda (OMDb para a classificação, Does the Dog Die para gatilho).
 alcance_sob_demanda = 50
+
+[sem_tristeza]
+# Mínimos para uma tag de config/tristeza.toml tirar o filme em `--sem-tristeza`.
+# Tema pesado pede menos usuários: Polytechnique tem "massacre" de 2.
+usuarios_triste = 3
+usuarios_tema_pesado = 2
+relevancia_minima = 0.6
