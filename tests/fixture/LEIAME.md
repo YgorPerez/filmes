@@ -30,6 +30,17 @@ Entidades que não são diretor, com IDs `Q90018NN` (faixa do #18), só no predi
 
 Essas entidades não ligam a Nota nenhuma do Bruno, então não mudam o top 5 dele.
 
+Veto a gênero com subgêneros (#48, `test_veto_subgeneros.py`). Os filmes `tt90048NN` não têm diretor nem Nota, e ficam entre os só com palpites. Romance usa o QID real (Q1054574) porque `filmes/catalogo/generos.py` liga o Romance do IMDb a ele. `subclasses_wikidata.csv` faz comédia romântica (Q9004801) subclasse de romance e de comédia (Q157443), e comédia de recasamento (Q9004802) subclasse de comédia romântica.
+
+| Filme | Gênero | Caminho de um Veto a romance |
+|---|---|---|
+| Carta de Amor (4801) | romance (Wikidata) | direto |
+| Amor em Paris (4802) | comédia romântica (Wikidata) | subgêneros |
+| Casar de Novo (4803) | comédia de recasamento (Wikidata) | subgêneros, dois níveis abaixo |
+| Baile de Formatura (4804) | Romance (IMDb) | gênero do IMDb |
+
+Maré Baixa (102) também tem Romance no IMDb e sai pelo mesmo caminho.
+
 Caminho de conteúdo por outros predicados (`test_caminho_conteudo.py`). Cada filme liga às Notas do Bruno por um predicado só, com entidade `Q90019NN`:
 
 | Filme | Predicado e entidade | Liga a |

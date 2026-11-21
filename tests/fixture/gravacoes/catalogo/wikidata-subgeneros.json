@@ -1,0 +1,83 @@
+{
+    "head": {
+        "vars": [
+            "item",
+            "p",
+            "valor"
+        ]
+    },
+    "results": {
+        "bindings": [
+            {
+                "item": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/entity/Q1054574"
+                },
+                "p": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/prop/direct/P279"
+                },
+                "valor": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/entity/Q11424"
+                }
+            },
+            {
+                "item": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/entity/Q1054574"
+                },
+                "p": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/prop/direct/P279"
+                },
+                "valor": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/entity/Q19765983"
+                }
+            },
+            {
+                "item": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/entity/Q118612349"
+                },
+                "p": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/prop/direct/P279"
+                },
+                "valor": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/entity/Q1054574"
+                }
+            },
+            {
+                "item": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/entity/Q118612349"
+                },
+                "p": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/prop/direct/P279"
+                },
+                "valor": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/entity/Q157443"
+                }
+            },
+            {
+                "item": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/entity/Q118612349"
+                },
+                "p": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/prop/direct/P279"
+                },
+                "valor": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/entity/Q860626"
+                }
+            }
+        ]
+    }
+}
