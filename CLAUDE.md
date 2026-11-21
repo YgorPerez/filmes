@@ -26,7 +26,7 @@ node mcp/src/stdio.ts          # servidor MCP por stdio (registrado em .mcp.json
 
 Para brincar com a fixture: `FILMES_DADOS=tests/fixture/dados FILMES_CATALOGO=tests/fixture/catalogo FILMES_BANCO=/tmp/filmes.sqlite`.
 
-Fontes sob demanda (OMDb para a classificação de criança, Does the Dog Die para gatilho, TMDB para a capa e o import do Letterboxd) leem a chave de `FILMES_OMDB_CHAVE`, `FILMES_DDD_CHAVE` e `FILMES_TMDB_CHAVE`. Sem chave, a Recomendação sai assim mesmo, com um aviso em `"avisos"`. As respostas ficam 30 dias em `FILMES_CACHE`, ou em `<banco>-cache.sqlite` ao lado do banco, que `reconstruir` não apaga. Com `FILMES_GRAVACOES=tests/fixture/gravacoes`, as fontes leem respostas gravadas em vez da rede (é o que os testes fazem).
+Fontes sob demanda (OMDb para a classificação de criança, Does the Dog Die para gatilho, TMDB para a capa e o import do Letterboxd) leem a chave de `FILMES_OMDB_CHAVE`, `FILMES_DDD_CHAVE` e `FILMES_TMDB_CHAVE`. Sem chave, a Recomendação sai assim mesmo, com um aviso em `"avisos"`. As respostas ficam 30 dias em `FILMES_CACHE`, ou em `<banco>-cache.sqlite` ao lado do banco, que `reconstruir` não apaga. Com `FILMES_GRAVACOES=tests/fixture/gravacoes`, as fontes leem respostas gravadas em vez da rede (é o que os testes fazem). Falha passageira (conexão derrubada, tempo esgotado, HTTP 429 ou 5xx) é tentada até 3 vezes; se persistir, a fonte fica desligada até o fim da execução, e `fila reprocessar [--pessoa X]` consulta o TMDB de novo para os itens do import que ficaram sem resposta.
 
 Sem `--json`, a saída é o mesmo JSON indentado. Erro sai com código diferente de 0 e `{"erro": {"codigo", "mensagem"}}` no stdout; código 2 é uso inválido.
 

@@ -34,7 +34,7 @@ class TMDB(Fonte):
     pasta = "tmdb"
     variavel_chave = "FILMES_TMDB_CHAVE"
     validade_dias = 182
-    sem_a_fonte = "o que o Wikidata não resolveu fica na fila manual"
+    sem_a_fonte = "o que o Wikidata não resolveu fica na fila; `fila reprocessar` consulta o TMDB de novo"
 
     def __init__(self, contexto):
         super().__init__(contexto)

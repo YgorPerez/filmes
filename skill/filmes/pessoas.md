@@ -48,6 +48,10 @@ de resolução e as pendências. Para os itens da fila, chame `fila_import`
 com `acao: "ver"`. Mostre as opções e use `confirmar` com o ID do
 filme ou `descartar` com a razão (`razao`) depois que o Dono decidir.
 
+Se o relatório avisar que o TMDB não respondeu, os itens que ele não
+chegou a ver ficam na fila. Antes de levar esses itens ao Dono, chame
+`fila_import` com `acao: "reprocessar"` (e `pessoa`, para só os dela).
+
 ## Desfazer um registro
 
 Quando o Dono corrigir algo já gravado ("não era esse filme", "ela não

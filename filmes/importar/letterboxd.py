@@ -90,7 +90,7 @@ def resolver(conn, nome: str, ano: int | None, decisao: dict | None, tmdb_id: st
         return Resolucao("descartado", "tmdb", razao="minissérie (só há série com esse título no TMDB)")
     if decisao and decisao["situacao"] == "pendente":
         return Resolucao("fila", razao=decisao.get("razao"), tmdb_id=tmdb_id)
-    return Resolucao("fila", razao="o Wikidata não deu um ID do IMDb, e o TMDB ainda não foi consultado",
+    return Resolucao("fila", razao="o Wikidata não deu um ID do IMDb, e o TMDB ainda não respondeu (`fila reprocessar` tenta de novo)",
                      tmdb_id=tmdb_id)
 
 
@@ -313,25 +313,7 @@ def _importar(amb, nome, linhas_novas, original) -> dict:
         pessoa = pessoas.resolver(amb.dados, nome)
         antes = _contar_fatos(conn, pessoa.slug)
         decididos = registro.ler(amb.dados)
-        fonte = tmdb.TMDB.de(contexto)
-        usou_tmdb = mudou = False
-        for id_, do_filme in _por_filme(linhas_novas + linhas_da_pessoa(amb.dados, pessoa)).items():
-            linha, tmdb_id = do_filme[0], _tmdb(do_filme)
-            decisao = decididos.get(id_)
-            nova = None
-            do_dono = decisao and decisao["situacao"] in ("confirmado", "descartado")
-            if tmdb_id and not do_dono and not pelo_id_do_tmdb(conn, tmdb_id, decisao):
-                nova = consultar_id_do_tmdb(fonte, linha.nome, linha.ano, tmdb_id)
-            if nova is None:
-                r = resolver(conn, linha.nome, linha.ano, decisao, tmdb_id)
-                if r.situacao != "fila" or linha.ano is None:
-                    continue
-                nova = consultar_tmdb(fonte, linha.nome, linha.ano, r.tmdb_id)
-            if nova is not None:
-                usou_tmdb = True
-                if not decisao or any(decisao.get(c) != v for c, v in nova.items() if c != "data"):
-                    decididos[id_] = nova
-                    mudou = True
+        usou_tmdb, mudou = _consultar(conn, contexto, linhas_novas + linhas_da_pessoa(amb.dados, pessoa), decididos)
         arquivo, novo = arquivos.guardar(amb, pessoa, tipo, nome_original, conteudo, extensao)
         carregar(conn, amb, decididos=decididos)
         if mudou:
@@ -345,6 +327,64 @@ def _importar(amb, nome, linhas_novas, original) -> dict:
             "avisos": contexto.avisos,
             "atribuicoes": [tmdb.ATRIBUICAO] if usou_tmdb or _usa_tmdb(conn, pessoa.slug) else [],
         }
+
+
+def reprocessar(amb, nome: str | None = None) -> dict:
+    """Consulta de novo o TMDB para os itens da fila sem resposta dele, de uma Pessoa
+    ou de todas. O que o TMDB já respondeu sai do cache, sem rede."""
+    contexto = Contexto(amb)
+    with escrita(amb) as conn:
+        todas = [pessoas.resolver(amb.dados, nome)] if nome else pessoas.ler_todas(amb.dados)
+        slugs = [p.slug for p in todas]
+        marcas = ",".join("?" * len(slugs))
+        antes = {l["id"] for l in conn.execute(
+            f"SELECT id FROM itens_letterboxd WHERE situacao = 'fila' AND pessoa IN ({marcas})", slugs)}
+        decididos = registro.ler(amb.dados)
+        usou_tmdb, mudou = _consultar(
+            conn, contexto, [l for p in todas for l in linhas_da_pessoa(amb.dados, p)], decididos)
+        carregar(conn, amb, decididos=decididos)
+        if mudou:
+            registro.salvar(amb.dados, decididos)
+        itens = {}
+        for l in conn.execute(
+            f"""SELECT id, nome, ano, situacao, caminho, filme_id, razao, pessoa FROM itens_letterboxd
+                WHERE pessoa IN ({marcas}) ORDER BY nome, ano, id, pessoa""", slugs):
+            if l["id"] in antes:
+                item = itens.setdefault(l["id"], {k: l[k] for k in l.keys() if k != "pessoa"} | {"pessoas": []})
+                item["pessoas"].append(l["pessoa"])
+        return {
+            "pessoas": slugs,
+            "resolvidos": [i for i in itens.values() if i["situacao"] == "resolvido"],
+            "descartados": [i for i in itens.values() if i["situacao"] == "descartado"],
+            "na_fila": [i for i in itens.values() if i["situacao"] == "fila"],
+            "avisos": contexto.avisos,
+            "atribuicoes": [tmdb.ATRIBUICAO] if usou_tmdb else [],
+        }
+
+
+def _consultar(conn, contexto, linhas, decididos) -> tuple[bool, bool]:
+    """Consulta o TMDB para o que a cadeia sem rede deixa na fila e põe as respostas em
+    `decididos`. Devolve (se o TMDB respondeu algo, se alguma decisão mudou)."""
+    fonte = tmdb.TMDB.de(contexto)
+    usou_tmdb = mudou = False
+    for id_, do_filme in _por_filme(linhas).items():
+        linha, tmdb_id = do_filme[0], _tmdb(do_filme)
+        decisao = decididos.get(id_)
+        nova = None
+        do_dono = decisao and decisao["situacao"] in ("confirmado", "descartado")
+        if tmdb_id and not do_dono and not pelo_id_do_tmdb(conn, tmdb_id, decisao):
+            nova = consultar_id_do_tmdb(fonte, linha.nome, linha.ano, tmdb_id)
+        if nova is None:
+            r = resolver(conn, linha.nome, linha.ano, decisao, tmdb_id)
+            if r.situacao != "fila" or linha.ano is None:
+                continue
+            nova = consultar_tmdb(fonte, linha.nome, linha.ano, r.tmdb_id)
+        if nova is not None:
+            usou_tmdb = True
+            if not decisao or any(decisao.get(c) != v for c, v in nova.items() if c != "data"):
+                decididos[id_] = nova
+                mudou = True
+    return usou_tmdb, mudou
 
 
 @contextmanager

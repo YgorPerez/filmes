@@ -72,3 +72,35 @@ it("importa o RSS do Letterboxd pelo usuário", async () => {
     limpar();
   }
 });
+
+it("reprocessa a fila de uma Pessoa pelo MCP", async () => {
+  const limpar = prepararAmbiente();
+  const cliente = new Client({ name: "teste", version: "0" });
+  try {
+    const fixture = join(RAIZ, "tests", "fixture");
+    const zip = join(process.env.FILMES_DADOS!, "olga.zip");
+    execFileSync(comandoPython(), ["-m", "zipfile", "-c", zip, "watched.csv"],
+      { cwd: join(fixture, "letterboxd", "olga") });
+    delete process.env.FILMES_TMDB_CHAVE;
+    process.env.FILMES_GRAVACOES = join(fixture, "gravacoes");
+    const servidor = await criarServidor();
+    const [doCliente, doServidor] = InMemoryTransport.createLinkedPair();
+    await servidor.connect(doServidor);
+    await cliente.connect(doCliente);
+    async function chamar(name: string, args: Record<string, unknown>) {
+      const resultado = await cliente.callTool({ name, arguments: args });
+      const [bloco] = resultado.content as Array<{ type: string; text: string }>;
+      assert.ok(!resultado.isError, bloco.text);
+      return JSON.parse(bloco.text);
+    }
+
+    await chamar("importar", { pessoa: "iara", letterboxd: zip });
+    process.env.FILMES_TMDB_CHAVE = "chave-de-teste";
+    const saida = await chamar("fila_import", { acao: "reprocessar", pessoa: "iara" });
+    assert.deepEqual(saida.pessoas, ["iara"]);
+    assert.ok(saida.resolvidos.some((i: { nome: string }) => i.nome === "Rio Abaixo"));
+  } finally {
+    await cliente.close();
+    limpar();
+  }
+});
