@@ -25,6 +25,16 @@ votos_minimos = 1000
 # Quantos filmes a Recomendação devolve quando o pedido não diz.
 tamanho = 5
 
+[ja_visto]
+# Já visto pesa contra o filme com esta base (a Força é sempre forte).
+peso = 1.0
+
+[credito]
+# u' = u - fator x Crédito na Regra padrão. O Crédito olha as últimas `janela`
+# Sessões em grupo com Feedback que a Pessoa dividiu com algum Presente de hoje.
+fator = 0.5
+janela = 5
+
 [vizinhanca]
 # Peso da Evidência de vizinhança item-item do MovieLens (Tipo review).
 peso = 1.0

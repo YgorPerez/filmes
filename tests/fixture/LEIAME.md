@@ -34,6 +34,7 @@ Notas de outras Pessoas, para os testes de grupo (`test_grupo.py`):
 |---|---|---|
 | Iara | 3 em O Farol de Areia (101), 4 em Fronteira (401) | Fraca a favor nos outros de Helena Prado, moderada nos outros de Rui Tavares. Sem Fato sobre 101 e 401 em si. Bruno e Iara discordam em As Horas Lentas e concordam em Inverno em Lisboa: a Regra padrão e a média simples ordenam os dois ao contrário |
 | Teo | nenhuma | "sem fato" em todo filme |
+| Quim | 5 em Ponte Aérea (201), 3,5 em Maré Baixa (102), 4,5 em Barulho (501), 2 em Fronteira (401) | Testes de Crédito (`test_credito.py`). Com o Bruno, o Quim é o mínimo em As Horas Lentas e em A Volta do Mar, e o Bruno é o mínimo em Asfalto Quente: o Crédito de um faz subir os filmes dele |
 
 Os filmes de Lia Moura, Tomás Reis, Beatriz Sá e Jorge Amaral não ligam a Nota nenhuma: são os filmes só com palpites, que completam a lista com `--quantos 50`.
 
@@ -90,6 +91,8 @@ Repo de dados fictício. Cada teste trabalha numa cópia, então comandos podem 
 
 - `pessoas/bruno.md`: o Dono (`dono: true`, apelido `eu`).
 - `pessoas/iara.md` e `pessoas/teo.md`: Pessoas para os testes de grupo.
+- `pessoas/quim.md`: Pessoa para os testes de Crédito.
+- Não há `sessoes/`: os testes criam as Sessões com `recomendar` e `feedback`, ou escrevem o arquivo direto quando precisam de várias datas (veja `test_credito.py`).
 
 Os testes de Pessoa (#18) criam a Ana pela CLI e escrevem a Carol direto no repo de dados do teste; nenhuma das duas fica na fixture.
 

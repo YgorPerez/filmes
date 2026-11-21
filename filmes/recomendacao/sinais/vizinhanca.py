@@ -13,7 +13,7 @@ from filmes.evidencia import Evidencia, regua, texto
 
 _SQL = """
 SELECT v.vizinho_id AS candidato, v.fato_id, v.base, v.ambos, v.fonte, v.data,
-       n.nota, n.data AS nota_data, f.titulo, f.ano
+       n.nota, n.data AS nota_data, n.sessao, f.titulo, f.ano
 FROM notas_vigentes n
 JOIN vizinhos v ON v.filme_id = n.filme_id
 JOIN filmes f   ON f.id = n.filme_id
@@ -27,7 +27,9 @@ def sinais(rodada, pessoa):
     for linha in rodada.conn.execute(_SQL, {"pessoa": pessoa}):
         if linha["candidato"] not in rodada.candidatos:
             continue
-        forca_semente, direcao = regua.forca_nota(linha["nota"], linha["nota_data"], rodada.hoje)
+        forca_semente, direcao = regua.forca_nota(
+            linha["nota"], linha["nota_data"], rodada.hoje, de_feedback=linha["sessao"] is not None,
+        )
         if direcao < 0:
             continue
         forca = regua.forca_vizinhanca(linha["base"], linha["ambos"], teto=forca_semente)

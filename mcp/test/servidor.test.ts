@@ -26,16 +26,19 @@ describe("servidor MCP sobre a CLI real e a fixture", () => {
     await cliente.connect(doCliente);
   });
 
+  // Os testes dividem o repo de dados e o banco: os que registram Feedback mudam a
+  // ordem da Recomendação e ficam no fim.
   after(async () => {
     await cliente?.close();
     limpar?.();
   });
 
-  it("expõe recomendar e consultar", async () => {
+  it("expõe recomendar, consultar, registrar_feedback e sessoes_abertas", async () => {
     const { tools } = await cliente.listTools();
     const nomes = tools.map((t) => t.name);
-    assert.ok(nomes.includes("recomendar"));
-    assert.ok(nomes.includes("consultar"));
+    for (const nome of ["recomendar", "consultar", "registrar_feedback", "sessoes_abertas"]) {
+      assert.ok(nomes.includes(nome), nome);
+    }
   });
 
   it("recomendar devolve o top 5 do Dono com Evidências", async () => {
@@ -164,5 +167,55 @@ describe("servidor MCP sobre a CLI real e a fixture", () => {
     const resultado = (await cliente.callTool({ name: "recomendar", arguments: { presentes: [] } })) as Resultado;
 
     assert.equal(resultado.isError, true);
+  });
+
+  it("recomendar abre a Sessão, sessoes_abertas a lista e registrar_feedback a fecha", async () => {
+    const pedido = "-- eu e o Teo, qualquer coisa";
+    const recomendacao = json(
+      (await cliente.callTool({ name: "recomendar", arguments: { presentes: ["dono", "teo"], pedido } })) as Resultado,
+    );
+    const sessao = recomendacao.sessao.id;
+    assert.equal(sessao, "2026-11-20-teo");
+
+    const abertas = json((await cliente.callTool({ name: "sessoes_abertas", arguments: {} })) as Resultado);
+    const [aberta] = abertas.sessoes.filter((s: { id: string }) => s.id === sessao);
+    assert.equal(aberta.pedido, pedido);
+
+    const resultado = (await cliente.callTool({
+      name: "registrar_feedback",
+      arguments: {
+        sessao,
+        filme: recomendacao.filmes[0].titulo,
+        notas: [{ pessoa: "dono", nota: 4.5 }],
+        relatos: [{ pessoa: "teo", reacao: "não gostou" }],
+      },
+    })) as Resultado;
+    assert.ok(!resultado.isError, JSON.stringify(resultado.content));
+    const feedback = json(resultado);
+    assert.equal(feedback.escolhido.posicao, 1);
+    assert.deepEqual(
+      feedback.fatos.filter((f: { texto: string }) => f.texto !== "já viu").map((f: { pessoa: string; tipo: string }) => [f.pessoa, f.tipo]),
+      [["bruno", "nota"], ["teo", "relato"]],
+    );
+
+    const depois = json((await cliente.callTool({ name: "sessoes_abertas", arguments: {} })) as Resultado);
+    assert.ok(!depois.sessoes.some((s: { id: string }) => s.id === sessao));
+  });
+
+  it("registrar_feedback fecha com nao vimos nada e recusa filme junto", async () => {
+    const recomendacao = json(
+      (await cliente.callTool({ name: "recomendar", arguments: { presentes: ["iara"] } })) as Resultado,
+    );
+    const sessao = recomendacao.sessao.id;
+
+    const ambos = (await cliente.callTool({
+      name: "registrar_feedback",
+      arguments: { sessao, nada: true, filme: "Vento Norte" },
+    })) as Resultado;
+    assert.equal(ambos.isError, true);
+
+    const nada = (await cliente.callTool({ name: "registrar_feedback", arguments: { sessao, nada: true } })) as Resultado;
+    assert.ok(!nada.isError, JSON.stringify(nada.content));
+    assert.equal(json(nada).escolhido, null);
   });
 });

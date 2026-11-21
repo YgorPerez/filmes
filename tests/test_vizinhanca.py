@@ -60,6 +60,15 @@ def test_vizinhanca_nunca_passa_da_forca_da_nota_semente(banco):
     assert forca_por_semente == {"deu 3,5 a Rio Abaixo (2014)": "fraca", "deu 5 a Fronteira (2008)": "moderada"}
 
 
+def test_nota_do_feedback_sobe_a_forca_da_vizinhanca(banco):
+    sessao = _todos(banco)["sessao"]["id"]
+    banco.ok("feedback", "--sessao", sessao, "--filme", "Rio Abaixo", "--nota", "dono=3,5")
+
+    filme = _filme(_todos(banco), "Luz de Inverno")
+    [evidencia] = [e for e in _review(filme) if e["texto"].startswith("deu 3,5 a Rio Abaixo")]
+    assert evidencia["forca"] == "moderada"
+
+
 def test_nota_contra_nao_e_semente_de_vizinhanca(banco):
     filme = _filme(_todos(banco), "Ruído Branco")
 

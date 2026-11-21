@@ -7,7 +7,8 @@ Utilidade desconhecida (None) fica fora do mínimo e da média.
 - de fulano: só a utilidade de fulano. Os Vetos e Restrições de todos continuam
   valendo, porque tiram filmes antes da ordenação.
 
-O Crédito (#20) entra aqui, na padrão, como `u − fator × Crédito`.
+O Crédito (#20) entra só na padrão, como `u' = u − fator × Crédito`: `ajuste`
+traz o `fator × Crédito` de cada Pessoa.
 """
 
 from dataclasses import dataclass
@@ -24,10 +25,16 @@ class Regra:
         assert self.nome in NOMES, self.nome
         assert (self.nome == "de") == (self.pessoa is not None), self
 
-    def chave(self, utilidades: dict) -> tuple | None:
+    @property
+    def usa_credito(self) -> bool:
+        return self.nome == "padrao"
+
+    def chave(self, utilidades: dict, ajuste: dict | None = None) -> tuple | None:
         """Quanto maior, melhor. None quando a regra não conhece utilidade de ninguém."""
         if self.nome == "de":
             conhecidas = [u for p, u in utilidades.items() if p == self.pessoa and u is not None]
+        elif self.usa_credito and ajuste:
+            conhecidas = [u - ajuste.get(p, 0.0) for p, u in utilidades.items() if u is not None]
         else:
             conhecidas = [u for u in utilidades.values() if u is not None]
         if not conhecidas:

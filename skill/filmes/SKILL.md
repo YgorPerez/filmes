@@ -39,10 +39,9 @@ O texto, a fonte, a data, a Força e o Tipo vêm do JSON do motor e são
 copiados sem mudar uma palavra. Nunca invente uma linha de evidência. Quem
 não tem Fato sobre o filme já vem com a linha "sem fato" do motor.
 
-`linhas_do_filme` traz as linhas que falam do filme e não de alguém: primeiro
-as das Restrições (duração, faixa etária, gatilho), depois o Clima pedido
-("Clima leve: ...") e "para ver em grupo" ou "para ver sozinho". Mostre no
-máximo uma, a primeira, depois das linhas dos Presentes:
+`linhas_do_filme` traz primeiro as linhas das Restrições (duração, faixa
+etária, gatilho), depois as de Clima, de grupo ou sozinho e de Crédito.
+Mostre a primeira linha do filme depois das linhas dos Presentes.
 
 ```
 - **Filme:** <texto> (<fonte>, <data>) *(<forca>, <tipo>)*
