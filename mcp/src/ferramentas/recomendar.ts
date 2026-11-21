@@ -12,7 +12,8 @@ export default definirFerramenta({
     'recebe a linha "sem fato". Fora das Evidências, cada filme traz `imdb` (link), `generos` (do IMDb, em português) ' +
     "`capa` (pôster do TMDB em w185), `titulo_pt` e `sinopse` (a primeira frase do overview), os três do TMDB em pt-BR " +
     "e null sem chave do TMDB ou sem o dado, `nota_imdb` e `votos_imdb`, e `cobertura` ({com_fato, presentes, sem_fato: slugs}). " +
-    "`vetos` lista os Vetos dos Presentes que tiraram filmes. " +
+    "`vetos` lista os Vetos dos Presentes que tiraram filmes, com `filmes_tirados` e `por_caminho` " +
+    "({direto, subgeneros, genero_imdb}): um Veto a gênero tira também os subgêneros do Wikidata e o gênero do IMDb. " +
     "`so_palpites` marca filme sem Fato nenhum, que só entra no fim quando " +
     'faltam Candidatos com Fato. Presentes por slug, nome ou apelido; "dono" é o Dono. ' +
     "Restrições opcionais (duração, ano de lançamento, idioma, criança, gatilhos, sem Já visto, nada triste) tiram filmes antes da ordenação. " +
