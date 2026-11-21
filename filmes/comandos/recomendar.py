@@ -13,7 +13,7 @@ def configurar(parser):
                         help="Regra de escolha: padrao (menor utilidade, desempate pela média), "
                              "media (média simples) ou de (só o gosto de quem --de diz)")
     parser.add_argument("--de", metavar="PESSOA", help='na regra "de", a Pessoa cujo gosto ordena')
-    parser.add_argument("--clima", nargs="+", default=[], metavar="CLIMA",
+    parser.add_argument("--clima", nargs="+", action="extend", default=[], metavar="CLIMA",
                         help="Climas do vocabulário (config/climas.toml); um Clima fora dele volta como aviso")
     parser.add_argument("--quantos", type=int, help="tamanho da lista (padrão: [recomendacao] tamanho da config)")
     restricoes.configurar(parser)

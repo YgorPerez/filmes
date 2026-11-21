@@ -20,9 +20,8 @@ os Presentes.
 
 O Clima vai em `climas`, com os nomes do vocabulário fixo que a descrição da
 ferramenta lista: "algo leve" é `leve`, "pra dar risada" é `pra rir`, "algo
-tenso" é `tenso`. Se o motor devolver um aviso `clima_desconhecido` em
-`avisos`, diga ao Dono que aquele Clima não existe e ficou de fora; o motor
-recomendou sem ele.
+tenso" é `tenso`. Se `avisos` indicar um Clima fora do vocabulário, diga ao
+Dono qual ficou de fora. Use os nomes de `climas` na leitura do pedido.
 
 ## Mostrar
 

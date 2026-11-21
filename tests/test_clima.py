@@ -23,7 +23,7 @@ def test_clima_pedido_ganha_linha_do_filme_com_a_tag_que_o_sustenta(banco):
     [linha] = filme["linhas_do_filme"]
     assert linha == {
         "pessoa": None,
-        "texto": 'Clima leve: 14 usuários do MovieLens marcaram o filme com a tag "feel-good"',
+        "texto": 'Clima leve: 10 usuários do MovieLens marcaram o filme com a tag "feel-good"',
         "fonte": "MovieLens ml-32m",
         "data": "2023-10-13",
         "forca": "forte",
@@ -64,13 +64,25 @@ def test_forca_da_linha_de_clima_segue_a_regua_de_review(banco):
     saida = _recomendar(banco, "--clima", "leve")
 
     assert _linhas(saida, "Tarde de Domingo") == [
-        ('Clima leve: 5 usuários do MovieLens marcaram o filme com a tag "feel-good"', "moderada", "review")]
+        ('Clima leve: 3 usuários do MovieLens marcaram o filme com a tag "feel-good"', "moderada", "review")]
     # Só 2 usuários deram "feel-good" a Bolo de Fubá: vale o Tag Genome, no máximo moderada.
     assert _linhas(saida, "Bolo de Fubá") == [
         ('Clima leve: relevância 0,85 da tag "feel-good" para o filme no Tag Genome', "moderada", "review")]
     # Pipa no Céu: 0,70 em "feel-good" é fraca; 0,50 em "feel good movie" fica fora.
     assert _linhas(saida, "Pipa no Céu") == [
-        ('Clima leve: relevância 0,70 da tag "feel-good" para o filme no Tag Genome', "fraca", "review")]
+        ('Clima leve: relevância 0,7 da tag "feel-good" para o filme no Tag Genome', "fraca", "review")]
+
+
+def test_limiar_de_relevancia_do_genoma_aparece_sem_arredondamento(banco):
+    saida = _recomendar(banco, "--clima", "tenso")
+
+    assert _linhas(saida, "Dia de Feira") == [
+        ('Clima tenso: relevância 0,8 da tag "suspense" para o filme no Tag Genome', "moderada", "review")]
+    assert _linhas(saida, "Bolo de Fubá") == [
+        ('Clima tenso: relevância 0,799 da tag "suspense" para o filme no Tag Genome', "fraca", "review")]
+    assert _linhas(saida, "Carnaval de Rua") == [
+        ('Clima tenso: relevância 0,6 da tag "suspense" para o filme no Tag Genome', "fraca", "review")]
+    assert _linhas(saida, "Outro Dia Qualquer") == []
 
 
 def test_genero_do_clima_vale_como_metadado_fraco(banco):
@@ -82,12 +94,12 @@ def test_genero_do_clima_vale_como_metadado_fraco(banco):
 
 
 def test_cada_clima_pedido_da_uma_linha_so_a_mais_forte(banco):
-    # Dia de Feira tem "feel-good" (14), "funny" (12) e é comédia, que está nos dois Climas.
+    # Dia de Feira tem "feel-good" (10), "funny" (12) e é comédia, que está nos dois Climas.
     saida = _recomendar(banco, "--clima", "leve", "pra rir")
 
     assert saida["climas"] == ["leve", "pra rir"]
     assert _linhas(saida, "Dia de Feira") == [
-        ('Clima leve: 14 usuários do MovieLens marcaram o filme com a tag "feel-good"', "forte", "review"),
+        ('Clima leve: 10 usuários do MovieLens marcaram o filme com a tag "feel-good"', "forte", "review"),
         ('Clima pra rir: 12 usuários do MovieLens marcaram o filme com a tag "funny"', "forte", "review"),
     ]
 
@@ -114,6 +126,7 @@ def test_linha_do_tag_genome_poe_a_atribuicao_nos_creditos(banco):
     sem_genoma = _recomendar(banco)
 
     [credito] = [c for c in com_genoma["creditos"] if c["fonte"] == "Tag Genome"]
+    assert "Tag Genome 2021, de Kotkov, Maslov e Neovius" in credito["texto"]
     assert "CC BY-NC 3.0" in credito["texto"]
     assert not [c for c in sem_genoma["creditos"] if c["fonte"] == "Tag Genome"]
 
@@ -142,11 +155,13 @@ def test_sessao_em_grupo_da_bonus_ao_filme_bom_em_grupo(banco):
     assert titulos.index("Sessão Maldita") < titulos.index("Outro Dia Qualquer") < titulos.index("Silêncio no Lago")
 
 
-def test_clima_ordena_tambem_os_filmes_so_com_palpites_sem_tirar_a_marca(banco):
-    # Teo não tem Nota: todo filme é só palpites para ele.
+def test_clima_sustenta_o_filme_mesmo_sem_fato_sobre_o_presente(banco):
+    # Teo não tem Nota, mas Dia de Feira tem Fato sobre o Clima.
     saida = _recomendar(banco, "--clima", "leve", presentes=("teo",))
 
     primeiro = saida["filmes"][0]
     assert primeiro["titulo"] == "Dia de Feira"
-    assert primeiro["so_palpites"] is True
+    assert primeiro["so_palpites"] is False
     assert primeiro["utilidade"] == {"teo": None}
+    assert primeiro["evidencias"]["teo"][0]["texto"] == "sem fato"
+    assert _filme(saida, "Outro Dia Qualquer")["so_palpites"] is True

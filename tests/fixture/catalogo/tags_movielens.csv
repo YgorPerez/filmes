@@ -1,7 +1,8 @@
 filme_id,tag,usuarios,fonte,data
-tt9001101,feel-good,14,MovieLens ml-32m,2023-10-13
+tt9001101,feel-good,10,MovieLens ml-32m,2023-10-13
 tt9001101,funny,12,MovieLens ml-32m,2023-10-13
-tt9001102,feel-good,5,MovieLens ml-32m,2023-10-13
+tt9001102,feel-good,3,MovieLens ml-32m,2023-10-13
 tt9001103,feel-good,2,MovieLens ml-32m,2023-10-13
 tt9001106,so bad it's good,12,MovieLens ml-32m,2023-10-13
 tt9001107,meditative,12,MovieLens ml-32m,2023-10-13
+tt9001108,tense,2,MovieLens ml-32m,2023-10-13

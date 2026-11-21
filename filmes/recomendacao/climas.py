@@ -41,7 +41,7 @@ def resolver(pedidos: list[str]) -> tuple[list[Clima], list[str]]:
         clima = vocabulario.get(_chave(pedido))
         if clima is None:
             nomes = ", ".join(c.nome for c in vocabulario.values())
-            avisos.append(f"o Clima '{pedido.strip()}' não está no vocabulário e ficou de fora; os Climas são: {nomes}")
+            avisos.append(f"o Clima '{pedido.strip()}' não está no vocabulário e ficou de fora. Os Climas são {nomes}.")
         elif clima not in climas:
             climas.append(clima)
     return climas, avisos

@@ -17,7 +17,7 @@ def melhores(rodada, rotulo: str, tags, generos=(), peso: float = 1.0) -> dict:
     def considerar(filme_id, evidencia, desempate):
         if filme_id not in rodada.candidatos:
             return
-        chave = (evidencia.contribuicao(rodada.pesos), *desempate)
+        chave = (regua.FORCAS.index(evidencia.forca), *desempate)
         if filme_id not in achadas or chave > achadas[filme_id][0]:
             achadas[filme_id] = (chave, evidencia)
 
@@ -61,5 +61,4 @@ def melhores(rodada, rotulo: str, tags, generos=(), peso: float = 1.0) -> dict:
 
 
 def _decimal(valor: float) -> str:
-    """0.854 vira "0,85"."""
-    return f"{valor:.2f}".replace(".", ",")
+    return str(valor).replace(".", ",")

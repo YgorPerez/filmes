@@ -1,7 +1,8 @@
 -- Sinais de Review: o que estranhos do MovieLens fizeram com os filmes.
 -- A fixture preenche estas tabelas por CSV; a ingestão real (#26) preenche as
--- mesmas a partir do ml-32m e do Tag Genome 2021. Os IDs de filme são tconst do
--- IMDb, ligados pelo links.csv do MovieLens. Sem chave estrangeira para filmes:
+-- mesmas a partir do ml-32m e do Tag Genome 2021. Os IDs são tconst do IMDb,
+-- vindos de links.csv no ml-32m e de raw/metadata.json no Tag Genome.
+-- Sem chave estrangeira para filmes:
 -- o MovieLens tem filmes fora do Catálogo, e os sinais só olham os Candidatos.
 
 -- Vizinhança item-item, lida como "de <base> pessoas que deram 4+ a <filme_id>,
@@ -35,7 +36,7 @@ CREATE INDEX tags_movielens_por_tag ON tags_movielens(tag);
 CREATE TABLE genoma (
     fato_id    TEXT PRIMARY KEY,
     filme_id   TEXT NOT NULL,
-    tag        TEXT NOT NULL,              -- em minúsculas, como no tags.json do genome
+    tag        TEXT NOT NULL,              -- em minúsculas, sem espaço nas pontas
     relevancia REAL NOT NULL CHECK (relevancia BETWEEN 0 AND 1),
     fonte      TEXT NOT NULL,              -- "Tag Genome 2021"
     data       TEXT NOT NULL,              -- data do dataset (2021-12-30)

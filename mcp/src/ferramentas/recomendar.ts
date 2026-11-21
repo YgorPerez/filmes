@@ -28,7 +28,7 @@ export default definirFerramenta({
       ),
     de: pessoa.optional().describe('na regra "de", a Pessoa cujo gosto ordena; precisa estar entre os Presentes'),
     climas: z
-      .array(z.string().regex(/^[^-\s]/, "Clima não pode começar com '-' nem espaço"))
+      .array(z.string())
       .optional()
       .describe(
         "Climas do pedido, do vocabulário fixo: leve, pra rir, tenso, romântico, pra chorar, pra pensar, " +
@@ -54,7 +54,7 @@ export default definirFerramenta({
     else if (e.crianca) args.push("--crianca");
     for (const gatilho of e.gatilhos ?? []) args.push(`--gatilho=${gatilho}`);
     if (e.sem_ja_visto) args.push("--sem-ja-visto");
-    if (e.climas?.length) args.push("--clima", ...e.climas);
+    for (const clima of e.climas ?? []) args.push(`--clima=${clima}`);
     return { comando: "recomendar", args };
   },
 });

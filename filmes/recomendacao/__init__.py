@@ -88,8 +88,8 @@ def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], qu
 
     # Ordem em três faixas: (0) utilidade conhecida para quem a Regra ouve, pela Regra;
     # (1) Fato sem utilidade conhecida para essa gente, no fim; (2) só palpites, que só
-    # aparecem quando faltam Candidatos com Fato. Os sinais do filme somam um bônus que
-    # ordena dentro da faixa, sem mudar de faixa; depois, o mais votado antes.
+    # aparecem quando faltam Candidatos com Fato. Os sinais do filme contam como
+    # Fato quando sustentados e somam um bônus à ordem; depois, o mais votado antes.
     ordenados = []
     for filme_id, filme in rodada.candidatos.items():
         evidencias = por_filme.get(filme_id, [])
@@ -97,11 +97,12 @@ def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], qu
             pessoa: utilidade.individual([e for e in evidencias if e.pessoa == pessoa], pesos)
             for pessoa in presentes
         }
-        bonus = sum(e.contribuicao(pesos) for e in do_filme.get(filme_id, []))
+        sinais_do_filme = do_filme.get(filme_id, [])
+        bonus = sum(e.contribuicao(pesos) for e in sinais_do_filme)
         pela_regra = regra.chave(utilidades)
         if pela_regra is not None:
             faixa = (0, tuple(-(v + bonus) for v in pela_regra))
-        elif any(e.tipo != "palpite" for e in evidencias):
+        elif any(e.tipo != "palpite" for e in (*evidencias, *sinais_do_filme)):
             faixa = (1, (-bonus,))
         else:
             faixa = (2, (-bonus,))
