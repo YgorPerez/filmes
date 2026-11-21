@@ -113,7 +113,7 @@ def _filme(saida, titulo):
 
 def _da_ana(banco, titulo):
     saida = banco.ok("recomendar", "--presentes", "ana", "--quantos", "50")
-    return [e for e in _filme(saida, titulo)["evidencias"] if e["pessoa"] == "ana"]
+    return [e for e in _filme(saida, titulo)["evidencias"]["ana"] if e["tipo"] != "palpite"]
 
 
 def test_declarado_sobre_diretor_vira_evidencia_forte_nos_filmes_dele(banco, dados):
@@ -276,7 +276,7 @@ def test_veto_e_declarado_valem_sem_reconstruir(banco):
 
     assert "Explosão Final" not in _titulos(saida)
     assert [v["rotulo"] for v in saida["vetos"]] == ["Terror"]
-    assert any(e["tipo"] == "declarado" for e in _filme(saida, "Pequenos Milagres")["evidencias"])
+    assert any(e["tipo"] == "declarado" for e in _filme(saida, "Pequenos Milagres")["evidencias"]["ana"])
 
 
 def test_banco_sincronizado_e_igual_ao_reconstruido(banco):

@@ -28,11 +28,21 @@ Entidades que não são diretor, com IDs `Q90018NN` (faixa do #18), só no predi
 
 O caminho de conteúdo só usa os predicados de `[caminho.peso]` (hoje, só diretor), então gênero e elenco não mudam o top 5 do Bruno.
 
+Notas de outras Pessoas, para os testes de grupo (`test_grupo.py`):
+
+| Pessoa | Notas | Para que serve |
+|---|---|---|
+| Iara | 3 em O Farol de Areia (101), 4 em Fronteira (401) | Fraca a favor nos outros de Helena Prado, moderada nos outros de Rui Tavares. Sem Fato sobre 101 e 401 em si. Bruno e Iara discordam em As Horas Lentas e concordam em Inverno em Lisboa: a Regra padrão e a média simples ordenam os dois ao contrário |
+| Teo | nenhuma | "sem fato" em todo filme |
+
+Os filmes de Lia Moura, Tomás Reis, Beatriz Sá e Jorge Amaral não ligam a Nota nenhuma: são os filmes só com palpites, que completam a lista com `--quantos 50`.
+
 ## dados/
 
 Repo de dados fictício. Cada teste trabalha numa cópia, então comandos podem escrever nele.
 
 - `pessoas/bruno.md`: o Dono (`dono: true`, apelido `eu`).
+- `pessoas/iara.md` e `pessoas/teo.md`: Pessoas para os testes de grupo.
 
 Os testes de Pessoa (#18) criam a Ana pela CLI e escrevem a Carol direto no repo de dados do teste; nenhuma das duas fica na fixture.
 

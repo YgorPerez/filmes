@@ -13,19 +13,29 @@ Feedback, questionário, verificador).
 Chame a ferramenta `recomendar` do MCP `filmes` com os Presentes. O Dono é
 `"dono"`; as outras Pessoas vão por nome ou apelido.
 
+A Regra de escolha vai em `regra`. Sem ela vale a padrão, em que ninguém sai
+miserável. "Tanto faz", "pela média": `regra: "media"`. "Hoje é a vez da Ana",
+"aniversário da Ana": `regra: "de"` com `de: "ana"`; a Ana precisa estar entre
+os Presentes.
+
 ## Mostrar
 
-Para cada filme, na ordem que o motor devolveu: título, ano e duração, e a
-Evidência mais forte de cada Presente, assim:
+Para cada filme, na ordem que o motor devolveu: título, ano e duração, e uma
+linha por Presente. `evidencias` vem agrupado pelo slug de cada Presente, na
+ordem do pedido; mostre a Evidência mais forte de cada um, assim:
 
 ```
 **1. As Horas Lentas** (2021, 1h44)
 - **Você:** <texto> (<fonte>, <data>) *(<forca>, <tipo>)*
+- **Iara:** sem fato *(fraca, palpite)*
 ```
 
 O texto, a fonte, a data, a Força e o Tipo vêm do JSON do motor e são
-copiados sem mudar uma palavra. Nunca invente uma linha de evidência. Se o
-motor não deu Evidência para alguém, a linha diz "sem fato".
+copiados sem mudar uma palavra. Nunca invente uma linha de evidência. Quem
+não tem Fato sobre o filme já vem com a linha "sem fato" do motor.
+
+Filme com `so_palpites: true` não tem Fato nenhum: só aparece no fim, quando
+faltam filmes com Fato, e o título leva "— sem fato que o sustente".
 
 ## Pessoas
 

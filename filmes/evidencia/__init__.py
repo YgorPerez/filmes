@@ -16,8 +16,8 @@ class Evidencia:
     pessoa: str
     filme_id: str
     texto: str
-    fonte: str
-    data: str
+    fonte: str | None
+    data: str | None
     forca: str
     tipo: str
     fato_id: str | None
@@ -42,3 +42,9 @@ class Evidencia:
             "fato_id": self.fato_id,
             "contribuicao": round(self.contribuicao(pesos), 4),
         }
+
+
+def sem_fato(pessoa: str, filme_id: str) -> Evidencia:
+    """A linha de quem não tem Fato ligado ao filme: palpite, fraca, soma 0."""
+    return Evidencia(pessoa=pessoa, filme_id=filme_id, texto="sem fato", fonte=None, data=None,
+                     forca="fraca", tipo="palpite", fato_id=None, base=0.0)

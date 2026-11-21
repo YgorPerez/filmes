@@ -14,7 +14,7 @@ def _filme(saida, titulo):
 
 
 def _evidencias(filme, tipo):
-    return [e for e in filme["evidencias"] if e["tipo"] == tipo]
+    return [e for e in filme["evidencias"]["bruno"] if e["tipo"] == tipo]
 
 
 def test_dono_sozinho_recebe_cinco_filmes_com_evidencias(banco):
@@ -24,8 +24,9 @@ def test_dono_sozinho_recebe_cinco_filmes_com_evidencias(banco):
     assert len(saida["filmes"]) == 5
     for filme in saida["filmes"]:
         assert {"id", "titulo", "ano", "duracao_min"} <= set(filme)
-        assert filme["evidencias"]
-        for evidencia in filme["evidencias"]:
+        assert list(filme["evidencias"]) == ["bruno"]
+        assert filme["evidencias"]["bruno"]
+        for evidencia in filme["evidencias"]["bruno"]:
             assert set(evidencia) == CAMPOS_EVIDENCIA
             assert evidencia["pessoa"] == "bruno"
             assert evidencia["forca"] in {"forte", "moderada", "fraca"}
@@ -98,7 +99,8 @@ def test_notas_baixas_no_diretor_pesam_contra(banco):
     assert {e["forca"] for e in contra} == {"forte", "moderada"}
     assert all(e["contribuicao"] < 0 for e in contra)
     assert filme["utilidade"]["bruno"] < 0.5
-    assert filme["posicao"] == len(saida["filmes"])
+    com_fato = [f for f in saida["filmes"] if not f["so_palpites"]]
+    assert com_fato[-1] == filme   # depois dele, só os filmes sem Fato nenhum
 
 
 def test_forca_multiplica_a_contribuicao(banco):
