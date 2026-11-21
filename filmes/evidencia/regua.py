@@ -52,6 +52,11 @@ def forca_caminho(notas_altas: int, predicado: str) -> str | None:
     return "fraca" if predicado == "genero" else forca
 
 
+def forca_metadado_do_pedido() -> str:
+    """Metadado que responde ao pedido (duração, classificação, idioma, gatilho): sempre forte."""
+    return "forte"
+
+
 def _mais_velha_que(data: str, anos: int, hoje: dt.date) -> bool:
     dia = dt.date.fromisoformat(data)
     try:

@@ -15,6 +15,7 @@ from dataclasses import dataclass
 
 from filmes.ambiente import Ambiente
 from filmes.recomendacao import candidatos, sinais as pacote_sinais, utilidade
+from filmes.recomendacao.restricoes import Contexto, Filtro
 
 
 @dataclass(frozen=True)
@@ -39,8 +40,11 @@ def _modulos_de_sinal():
             yield importlib.import_module(f"filmes.recomendacao.sinais.{info.name}")
 
 
-def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], quantos: int) -> dict:
-    rodada = Rodada(conn=conn, amb=amb, candidatos=candidatos.escolher(conn, amb.pesos))
+def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], quantos: int,
+               restricoes: list = ()) -> dict:
+    contexto = Contexto(conn=conn, amb=amb, presentes=presentes)
+    filtro = Filtro(contexto, list(restricoes))
+    rodada = Rodada(conn=conn, amb=amb, candidatos=filtro.candidatos(candidatos.escolher(conn, amb.pesos)))
     pesos = amb.pesos
 
     por_filme = defaultdict(list)
@@ -62,10 +66,14 @@ def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], qu
         chave = (-min(conhecidas), -sum(conhecidas) / len(conhecidas), -filme["votos"], filme_id)
         ordenados.append((chave, filme, utilidades, evidencias))
     ordenados.sort(key=lambda item: item[0])
+    por_id = {item[1]["id"]: item for item in ordenados}
+    aprovados = filtro.aprovar([item[1] for item in ordenados], quantos, pesos["restricoes"]["alcance_sob_demanda"])
 
     filmes = []
-    for posicao, (_, filme, utilidades, evidencias) in enumerate(ordenados[:quantos], start=1):
+    for posicao, filme in enumerate(aprovados, start=1):
+        _, filme, utilidades, evidencias = por_id[filme["id"]]
         evidencias = sorted(evidencias, key=lambda e: (-abs(e.contribuicao(pesos)), e.fato_id or ""))
+        evidencias += filtro.linhas[filme["id"]]
         filmes.append({
             "posicao": posicao,
             "id": filme["id"],
@@ -75,4 +83,10 @@ def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], qu
             "utilidade": {p: (round(u, 4) if u is not None else None) for p, u in utilidades.items()},
             "evidencias": [e.como_json(pesos) for e in evidencias],
         })
-    return {"presentes": presentes, "filmes": filmes, "creditos": []}
+    return {
+        "presentes": presentes,
+        "filmes": filmes,
+        "restricoes": filtro.como_json(),
+        "avisos": contexto.avisos,
+        "creditos": [],
+    }
