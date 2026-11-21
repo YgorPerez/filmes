@@ -96,3 +96,20 @@ Os testes de Pessoa (#18) criam a Ana pela CLI e escrevem a Carol direto no repo
 ## Para estender
 
 Acrescente linhas e filmes novos com IDs novos (um diretor novo `10`, `11`... ou filmes `tt90DD9NN`) em vez de mudar os existentes: outros testes contam com eles. Uma Pessoa nova é um arquivo em `dados/pessoas/`; as Notas dela vão em `catalogo/notas.csv`. Se a mudança alterar o top 5 do Bruno, rode a suíte inteira e ajuste a tabela acima.
+
+## Export do Letterboxd
+
+`letterboxd/olga/` tem os cinco CSVs no formato de export. Os testes montam o ZIP
+no diretório temporário. Uma review tem HTML, vírgulas e aspas. A outra tem duas
+linhas. As tags de O Farol de Areia aparecem tanto no diário quanto na review.
+
+- O Farol de Areia, Maré Baixa, Cidade de Vidro, Noite d'Estreia e Jardim Suspenso
+  vêm de `catalogo/slugs_letterboxd.csv`. Maré Baixa tem um homônimo de 1980 e
+  precisa do sufixo de ano. Cidade de Vidro foi cadastrada no export com um ano
+  de diferença. Jardim Suspenso só está na watchlist.
+- Rio Abaixo tem um homônimo com ano incompatível no Wikidata. O TMDB acha o
+  título em 2015, um ano depois do export, e devolve o tconst em `externos-9101.json`.
+- A Longa Série tem só ID de série no Wikidata. Gambito só tem resultado na
+  busca de séries do TMDB. Os dois são descartados.
+- Vento Norte fica na fila com dois candidatos do TMDB. Confirmar o primeiro
+  usa `externos-9102.json`. Filme Perdido também fica na fila, sem candidato.
