@@ -1,9 +1,11 @@
 import datetime as dt
+from dataclasses import dataclass
 
 from filmes.banco import abrir_leitura, pessoas as fatos
-from filmes.dados import pessoas
+from filmes.dados import nota as nota_dita, pessoas
 from filmes.erros import ErroFilmes
 from filmes.evidencia import regua
+from filmes.sessao import feedback
 
 AJUDA = "cria uma Pessoa, mostra o que se sabe dela e registra ou remove Declarados, Relatos, Vetos e Já vistos"
 
@@ -99,10 +101,10 @@ def _criar(args, amb):
 def _ver(args, amb):
     pessoa = pessoas.resolver(amb.dados, args.pessoa)
     saida = _resumo(pessoa) | {
-        "vetos": [_veto_json(pessoa.slug, v) for v in pessoa.vetos],
-        "declarados": [_dito_json("declarados", pessoa.slug, d, amb) for d in pessoa.declarados],
-        "relatos": [_dito_json("relatos", pessoa.slug, d, amb) for d in pessoa.relatos],
-        "vistos": [_visto_json(pessoa.slug, v) for v in pessoa.vistos],
+        "vetos": _como_json(pessoa, "vetos", amb),
+        "declarados": _como_json(pessoa, "declarados", amb),
+        "relatos": _como_json(pessoa, "relatos", amb),
+        "vistos": _como_json(pessoa, "já vistos", amb),
         "imports": pessoa.imports,
     }
     if amb.banco.exists():
@@ -140,16 +142,15 @@ def _vetar(args, amb):
     with abrir_leitura(amb.banco) as conn:
         rotulo = fatos.rotulo_do_alvo(conn, alvo)
     veto = pessoas.Veto(texto=_texto(args.texto), alvo=alvo, rotulo=rotulo, data=_data(args.data, amb))
-    novo = all(v.alvo != alvo for v in pessoa.vetos)
+    novo = pessoa.acrescentar("vetos", veto)
     if novo:
-        pessoa.vetos.append(veto)
         _salvar(amb, pessoa)
     else:
         veto = next(v for v in pessoa.vetos if v.alvo == alvo)
     return {"pessoa": pessoa.slug, "veto": _veto_json(pessoa.slug, veto), "novo": novo}
 
 
-def _veto_json(slug, veto):
+def _veto_json(slug, veto, amb=None):
     return veto.como_dict() | {"fato_id": fatos.id_do_veto(slug, veto)}
 
 
@@ -157,7 +158,9 @@ def _remover(args, amb):
     pessoa = pessoas.resolver(amb.dados, args.pessoa)
     [(opcao, valor)] = [(o, getattr(args, o)) for o in _REMOVIVEIS if getattr(args, o) is not None]
     secao = _REMOVIVEIS[opcao]
-    itens = _itens_removiveis(pessoa, secao, amb)
+    itens = [(item, _JSON[secao](pessoa.slug, item, amb)) for item in pessoa.itens(secao)]
+    if secao == "declarados":
+        itens += _comentarios_do_feedback(pessoa.slug, amb)
     achados = [(item, saida) for item, saida in itens if saida["fato_id"] == valor]
     if not achados:
         achados = [(item, saida) for item, saida in itens if saida.get("alvo", saida.get("filme")) == valor]
@@ -168,67 +171,55 @@ def _remover(args, amb):
         raise ErroFilmes(f"{opcao}_ambiguo", f"mais de um {opcao} de {pessoa.slug} tem o alvo {valor}; "
                                               f"escolha pelo fato_id: {ids}")
     [(item, saida)] = achados
-    if secao == "vetos":
-        pessoa.vetos.remove(item)
+    if isinstance(item, _Comentario):
+        feedback.tirar_comentario(amb, item.sessao, pessoa.slug)
     else:
         pessoa.tirar(secao, item)
-    _salvar(amb, pessoa)
+        _salvar(amb, pessoa)
     return {"pessoa": pessoa.slug, "tipo": opcao, "removido": saida}
-
-
-def _itens_removiveis(pessoa, secao, amb):
-    if secao == "vetos":
-        return [(v, _veto_json(pessoa.slug, v)) for v in pessoa.vetos]
-    if secao == "já vistos":
-        return [(v, _visto_json(pessoa.slug, v)) for v in pessoa.vistos]
-    return [(d, _dito_json(secao, pessoa.slug, d, amb)) for d in getattr(pessoa, secao)]
 
 
 def _sem_item(pessoa, opcao, valor, amb):
     mensagem = f"{pessoa.slug} não tem {opcao} com fato_id ou alvo {valor!r} no arquivo"
     if opcao == "declarado" and valor.startswith("letterboxd:"):
         return mensagem + "; ele veio de um import: tire o import com `importar --remover`"
-    if opcao == "declarado" and valor.startswith("feedback:"):
-        return mensagem + "; ele veio do Feedback de uma Sessão, não do arquivo da Pessoa"
     return mensagem
+
+
+@dataclass(frozen=True)
+class _Comentario:
+    """O Comentário do Feedback de uma Sessão: mora no arquivo da Sessão, não no da Pessoa."""
+    sessao: str
+
+
+def _comentarios_do_feedback(slug, amb):
+    if not amb.banco.exists():
+        return []
+    with abrir_leitura(amb.banco) as conn:
+        sessoes = dict(conn.execute(
+            "SELECT fato_id, sessao FROM declarados WHERE pessoa = ? AND sessao IS NOT NULL", (slug,)))
+        return [(_Comentario(sessoes[d["fato_id"]]), d)
+                for d in _declarados_importados(conn, slug, amb.hoje) if d["fato_id"] in sessoes]
 
 
 def _visto(args, amb):
     pessoa = pessoas.resolver(amb.dados, args.pessoa)
     if not args.filme.startswith("tt"):
         raise ErroFilmes("uso_invalido", f"--filme precisa ser um ID de filme (tt...), não {args.filme!r}")
-    nota = _nota(args.nota) if args.nota is not None else None
+    nota = nota_dita.ler(args.nota)[0] if args.nota is not None else None
     with abrir_leitura(amb.banco) as conn:
         rotulo = fatos.rotulo_do_alvo(conn, args.filme)
-    visto = pessoas.Visto(data=_data(args.data, amb), fonte=_fonte(args.fonte), alvo=args.filme,
-                          rotulo=rotulo, nota=nota)
+    visto = pessoas.JaVisto(data=_data(args.data, amb), fonte=_fonte(args.fonte), alvo=args.filme,
+                            rotulo=rotulo, nota=nota)
     novo = pessoa.acrescentar("já vistos", visto)
     if novo:
         _salvar(amb, pessoa)
-    return {"pessoa": pessoa.slug, "visto": _visto_json(pessoa.slug, visto), "novo": novo}
+    return {"pessoa": pessoa.slug, "visto": _ja_visto_json(pessoa.slug, visto), "novo": novo}
 
 
-def _visto_json(slug, visto):
+def _ja_visto_json(slug, visto, amb=None):
     return {"filme": visto.alvo, "titulo": visto.rotulo, "nota": visto.nota, "data": visto.data,
-            "fonte": visto.fonte, "fato_id": fatos.id_do_visto(slug, visto)}
-
-
-def _nota(texto):
-    """"4", "4,5" e "4.5" são a escala de 0,5 a 5; "8/10" é dividido por 2."""
-    bruto = texto.strip().replace(",", ".")
-    de_dez = bruto.endswith("/10")
-    try:
-        valor = float(bruto.removesuffix("/10"))
-    except ValueError:
-        raise ErroFilmes("uso_invalido", f'nota inválida: {texto!r} (use de 0,5 a 5, ou "8/10")')
-    if de_dez:
-        if not 1 <= valor <= 10:
-            raise ErroFilmes("uso_invalido", f"nota de 1 a 10 fora da escala: {texto!r}")
-        return valor / 2
-    if not 0.5 <= valor <= 5:
-        dica = f' (se é de 0 a 10, escreva "{texto.strip()}/10")' if valor <= 10 else ""
-        raise ErroFilmes("uso_invalido", f"nota fora da escala de 0,5 a 5: {texto!r}{dica}")
-    return valor
+            "fonte": visto.fonte, "fato_id": fatos.id_do_ja_visto(slug, visto)}
 
 
 def _fonte(fonte):
@@ -304,3 +295,19 @@ def _dito_json(secao, slug, dito, amb):
         "nota": fatos.nota_declarada(dito),
         "fato_id": fatos.id_do_dito(secao, slug, dito),
     }
+
+
+def _declarado_json(slug, dito, amb):
+    return _dito_json("declarados", slug, dito, amb)
+
+
+def _relato_json(slug, dito, amb):
+    return _dito_json("relatos", slug, dito, amb)
+
+
+# Seção da Pessoa -> como cada item dela sai no JSON de `ver` e `remover`.
+_JSON = {"vetos": _veto_json, "declarados": _declarado_json, "relatos": _relato_json, "já vistos": _ja_visto_json}
+
+
+def _como_json(pessoa, secao, amb):
+    return [_JSON[secao](pessoa.slug, item, amb) for item in pessoa.itens(secao)]

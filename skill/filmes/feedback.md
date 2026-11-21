@@ -18,9 +18,9 @@
 
    O Dono não tem Relato. Se ele falar da própria reação sem número, peça a nota. Presente sem reação ganha o Já visto do mesmo jeito e fica fora do Crédito.
 
-   Se o Dono mandar tudo de uma vez ("Leo 9, adorou a fotografia; Ana 6, achou longo"), separe por Pessoa você mesmo e pergunte só por quem faltou.
+   Pergunte sempre assim, uma caixa por Presente, nunca uma pergunta só para todos. Se o Dono mesmo assim mandar tudo junto ("Leo 9, adorou a fotografia; Ana 6, achou longo"), separe por Pessoa, pergunte só por quem faltou e siga para a tabela do passo 4, que nunca se pula.
 
-4. Mostre uma tabela para confirmar antes de gravar, com a Sessão e o Filme escolhido (e a posição, se estava na Recomendação) no título:
+4. Mostre sempre uma tabela para confirmar antes de gravar, com a Sessão e o Filme escolhido (e a posição, se estava na Recomendação) no título:
 
    | Pessoa | Reação | Nota gravada | Comentário |
    | --- | --- | --- | --- |

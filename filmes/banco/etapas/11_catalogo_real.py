@@ -1,4 +1,4 @@
-from filmes.catalogo import elenco, grafo, imdb, review, subgeneros, versoes
+from filmes.catalogo import elenco, grafo, imdb, review, versoes
 
 
 def carregar(conn, amb):
@@ -8,5 +8,4 @@ def carregar(conn, amb):
     imdb.carregar(conn, amb.catalogo, dumps)
     grafo.carregar(conn, amb.catalogo, dumps)
     elenco.carregar(conn, amb.catalogo, dumps)
-    subgeneros.carregar(conn, amb.catalogo, dumps)
     review.carregar(conn, amb.catalogo, dumps)

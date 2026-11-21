@@ -14,9 +14,6 @@ from filmes.erros import ErroFilmes
 from filmes.importar import letterboxd, trakt
 from filmes.importar.letterboxd import escrita
 
-TABELAS = ("notas", "ja_visto", "declarados", "watchlist")
-
-
 def remover(amb, arquivo: str, nome: str | None = None) -> dict:
     candidatas = [pessoas.resolver(amb.dados, nome)] if nome else pessoas.ler_todas(amb.dados)
     achados = [(pessoa, importado) for pessoa in candidatas for importado in pessoa.imports
@@ -42,7 +39,7 @@ def remover(amb, arquivo: str, nome: str | None = None) -> dict:
         "pessoa": pessoa.slug,
         "removido": importado,
         "fatos": depois,
-        "fatos_removidos": {t: antes[t] - depois[t] for t in TABELAS},
+        "fatos_removidos": {t: antes[t] - depois[t] for t in letterboxd.TABELAS_DE_FATO},
     }
 
 
@@ -54,4 +51,4 @@ def _nomes(importado) -> set[str]:
 def _contar(conn, slug) -> dict:
     return {t: conn.execute(
         f"SELECT count(*) FROM {t} WHERE pessoa = ? AND (fato_id LIKE 'letterboxd:%' OR fato_id LIKE 'trakt:%')",
-        (slug,)).fetchone()[0] for t in TABELAS}
+        (slug,)).fetchone()[0] for t in letterboxd.TABELAS_DE_FATO}

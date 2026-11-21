@@ -30,6 +30,10 @@ def pedido(args):
     return Gatilho(temas)
 
 
+def rotulo(gravada):
+    return "sem " + ", ".join(f"“{t}”" for t in gravada.get("temas") or [])
+
+
 @dataclass(frozen=True)
 class Gatilho:
     temas: tuple
@@ -37,6 +41,9 @@ class Gatilho:
 
     def como_json(self):
         return {"temas": list(self.temas)}
+
+    def resultado(self, saidas):
+        return {}
 
     def avaliar(self, contexto, filmes):
         return {filme_id: PENDENTE for filme_id in filmes}

@@ -243,14 +243,15 @@ def _por_filme(linhas) -> dict[str, list[Linha]]:
     return por_filme
 
 
-def _tmdb(do_filme) -> str | None:
+def _id_do_tmdb(do_filme) -> str | None:
+    """O ID do TMDB que alguma linha do filme traz (só o RSS traz)."""
     return next((linha.tmdb for linha in do_filme if linha.tmdb), None)
 
 
 def _carregar_pessoa(conn, pessoa, linhas, decididos):
     for id_, do_filme in _por_filme(linhas).items():
         primeira = do_filme[0]
-        r = resolver(conn, primeira.nome, primeira.ano, decididos.get(id_), _tmdb(do_filme))
+        r = resolver(conn, primeira.nome, primeira.ano, decididos.get(id_), _id_do_tmdb(do_filme))
         conn.execute(
             """INSERT INTO itens_letterboxd (pessoa, id, nome, ano, situacao, caminho, filme_id, razao)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
@@ -258,8 +259,7 @@ def _carregar_pessoa(conn, pessoa, linhas, decididos):
         )
         if r.situacao == "resolvido":
             for linha in do_filme:
-                origem = "RSS do Letterboxd" if linha.arquivo == rss_letterboxd.ARQUIVO else "Letterboxd"
-                _fatos(conn, pessoa.slug, f"{origem} de {pessoa.nome}", r.filme_id, linha)
+                _fatos(conn, pessoa.slug, f"{linha.origem} de {pessoa.nome}", r.filme_id, linha)
 
 
 def _fatos(conn, slug, fonte, filme, linha: Linha):
@@ -312,12 +312,10 @@ def _importar(amb, nome, linhas_novas, original) -> dict:
     with escrita(amb) as conn:
         pessoa = pessoas.resolver(amb.dados, nome)
         antes = _contar_fatos(conn, pessoa.slug)
-        decididos = registro.ler(amb.dados)
-        usou_tmdb, mudou = _consultar(conn, contexto, linhas_novas + linhas_da_pessoa(amb.dados, pessoa), decididos)
+        decididos, usou_tmdb = _registrar_respostas_do_tmdb(
+            conn, amb, contexto, linhas_novas + linhas_da_pessoa(amb.dados, pessoa))
         arquivo, novo = arquivos.guardar(amb, pessoa, tipo, nome_original, conteudo, extensao)
         carregar(conn, amb, decididos=decididos)
-        if mudou:
-            registro.salvar(amb.dados, decididos)
         depois = _contar_fatos(conn, pessoa.slug)
         return relatorio(conn, pessoa.slug) | {
             "arquivo": arquivo,
@@ -339,12 +337,9 @@ def reprocessar(amb, nome: str | None = None) -> dict:
         marcas = ",".join("?" * len(slugs))
         antes = {l["id"] for l in conn.execute(
             f"SELECT id FROM itens_letterboxd WHERE situacao = 'fila' AND pessoa IN ({marcas})", slugs)}
-        decididos = registro.ler(amb.dados)
-        usou_tmdb, mudou = _consultar(
-            conn, contexto, [l for p in todas for l in linhas_da_pessoa(amb.dados, p)], decididos)
+        decididos, usou_tmdb = _registrar_respostas_do_tmdb(
+            conn, amb, contexto, [l for p in todas for l in linhas_da_pessoa(amb.dados, p)])
         carregar(conn, amb, decididos=decididos)
-        if mudou:
-            registro.salvar(amb.dados, decididos)
         itens = {}
         for l in conn.execute(
             f"""SELECT id, nome, ano, situacao, caminho, filme_id, razao, pessoa FROM itens_letterboxd
@@ -362,13 +357,14 @@ def reprocessar(amb, nome: str | None = None) -> dict:
         }
 
 
-def _consultar(conn, contexto, linhas, decididos) -> tuple[bool, bool]:
-    """Consulta o TMDB para o que a cadeia sem rede deixa na fila e põe as respostas em
-    `decididos`. Devolve (se o TMDB respondeu algo, se alguma decisão mudou)."""
+def _registrar_respostas_do_tmdb(conn, amb, contexto, linhas) -> tuple[dict, bool]:
+    """Consulta o TMDB para o que a cadeia sem rede deixa na fila e grava as respostas
+    em imports/letterboxd.md. Devolve (as decisões, se o TMDB respondeu algo)."""
+    decididos = registro.ler(amb.dados)
     fonte = tmdb.TMDB.de(contexto)
     usou_tmdb = mudou = False
     for id_, do_filme in _por_filme(linhas).items():
-        linha, tmdb_id = do_filme[0], _tmdb(do_filme)
+        linha, tmdb_id = do_filme[0], _id_do_tmdb(do_filme)
         decisao = decididos.get(id_)
         nova = None
         do_dono = decisao and decisao["situacao"] in ("confirmado", "descartado")
@@ -384,7 +380,9 @@ def _consultar(conn, contexto, linhas, decididos) -> tuple[bool, bool]:
             if not decisao or any(decisao.get(c) != v for c, v in nova.items() if c != "data"):
                 decididos[id_] = nova
                 mudou = True
-    return usou_tmdb, mudou
+    if mudou:
+        registro.salvar(amb.dados, decididos)
+    return decididos, usou_tmdb
 
 
 @contextmanager

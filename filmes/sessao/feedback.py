@@ -17,6 +17,7 @@ import re
 import sqlite3
 
 from filmes.ambiente import Ambiente
+from filmes.dados import nota as nota_dita
 from filmes.erros import ErroFilmes
 from filmes.evidencia import regua, texto
 from filmes.recomendacao import presentes as pessoas_presentes
@@ -64,6 +65,17 @@ def registrar(amb: Ambiente, sessao_id: str, filme: str | None, notas: list[str]
     }
 
 
+def tirar_comentario(amb: Ambiente, sessao_id: str, pessoa: str) -> None:
+    """Tira o Comentário da Pessoa da reação dela, no arquivo da Sessão e no banco. A reação fica."""
+    with escrita(amb) as conn:
+        frente, corpo = arquivo.ler(amb.dados, sessao_id)
+        for reacao in (frente.get("feedback") or {}).get("reacoes") or []:
+            if reacao["pessoa"] == pessoa:
+                reacao.pop("comentario", None)
+        banco.carregar(conn, sessao_id, frente)
+        arquivo.escrever(amb.dados, sessao_id, frente, corpo)
+
+
 def _posicao(lista, escolhido):
     return next((r["posicao"] for r in lista if r["id"] == escolhido["id"]), None)
 
@@ -88,22 +100,12 @@ def _reacoes(conn, presentes, dono, notas, relatos):
 
 
 def _nota(item, valor):
-    """`4,5` é a Nota de 0,5 a 5. `9/10` é a escala de 10: vai de 1 a 10 e a Nota é
-    a metade; o número dito fica em `nota_original`, para a Sessão mostrar."""
-    numero, barra, escala = valor.partition("/")
-    if barra and escala.strip() != "10":
-        raise ErroFilmes("uso_invalido", f"--nota {item}: a escala é /10, ou nenhuma para a Nota de 0,5 a 5")
+    """A Nota de 0,5 a 5; na escala de 10, o número dito fica em `nota_original`, para a Sessão mostrar."""
     try:
-        nota = float(numero.strip().replace(",", "."))
-    except ValueError:
-        raise ErroFilmes("uso_invalido", f"--nota {item}: a Nota é um número de 0,5 a 5, ou de 1 a 10 com /10")
-    if not barra:
-        if not 0.5 <= nota <= 5:
-            raise ErroFilmes("uso_invalido", f"--nota {item}: a Nota vai de 0,5 a 5")
-        return {"nota": nota}
-    if not 1 <= nota <= 10:
-        raise ErroFilmes("uso_invalido", f"--nota {item}: na escala de 10, a Nota vai de 1 a 10")
-    return {"nota": nota / 2, "nota_original": f"{texto.nota(nota)}/10"}
+        nota, original = nota_dita.ler(valor)
+    except ErroFilmes as erro:
+        raise ErroFilmes(erro.codigo, f"--nota {item}: {erro.mensagem}")
+    return {"nota": nota} if original is None else {"nota": nota, "nota_original": original}
 
 
 def _comentarios(conn, presentes, reacoes, comentarios):

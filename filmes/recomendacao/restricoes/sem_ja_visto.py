@@ -16,11 +16,18 @@ def pedido(args):
     return SemJaVisto() if args.sem_ja_visto else None
 
 
+def rotulo(gravada):
+    return "nada repetido"
+
+
 @dataclass(frozen=True)
 class SemJaVisto:
     nome = "sem_ja_visto"
 
     def como_json(self):
+        return {}
+
+    def resultado(self, saidas):
         return {}
 
     def avaliar(self, contexto, filmes):

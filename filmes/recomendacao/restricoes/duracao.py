@@ -22,6 +22,10 @@ def pedido(args):
     return Duracao(args.duracao_max)
 
 
+def rotulo(gravada):
+    return f"até {texto.duracao(gravada['maximo_min'])}"
+
+
 @dataclass(frozen=True)
 class Duracao:
     maximo: int
@@ -29,6 +33,9 @@ class Duracao:
 
     def como_json(self):
         return {"maximo_min": self.maximo}
+
+    def resultado(self, saidas):
+        return {}
 
     def avaliar(self, contexto, filmes):
         return {
