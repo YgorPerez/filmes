@@ -31,6 +31,7 @@ def test_atualizar_fixa_os_dumps_por_data_e_hash(catalogo_real):
         "title.basics.tsv.gz", "title.ratings.tsv.gz", "wikidata-ids.json.gz",
         "wikidata-conteudo.json.gz", "wikidata-elenco.json.gz", "wikidata-rotulos.json.gz",
         "ml-32m.zip", "genome_2021.zip", "title.principals.tsv.gz", "wikidata-atores.json.gz",
+        "wikidata-subgeneros.json.gz",
     }
     for nome, versao in fixados.items():
         assert versao["data"] == {
@@ -110,6 +111,31 @@ def test_reconstruir_aceita_manifesto_sem_os_creditos_do_imdb(catalogo_real):
     cli.ok("reconstruir")
 
     assert cli.consultar("SELECT count(*) FROM elenco_principal_imdb") == [[0]]
+    assert cli.consultar("SELECT count(*) FROM filmes") == [[4]]
+
+
+def test_reconstruir_guarda_a_hierarquia_de_generos_do_wikidata(catalogo_real):
+    cli, _, _ = catalogo_real
+    cli.ok("atualizar")
+    cli.ok("reconstruir")
+
+    # Resposta real do QLever de 2026-11-21: romantic comedy film (Q118612349) é
+    # subclasse de romance film, comedy film e romantic comedy.
+    assert cli.consultar("""
+        SELECT classe FROM subclasses_wikidata WHERE item = 'Q118612349' ORDER BY classe
+    """) == [["Q1054574"], ["Q157443"], ["Q860626"]]
+
+
+def test_reconstruir_aceita_manifesto_sem_a_hierarquia_de_generos(catalogo_real):
+    cli, _, versoes = catalogo_real
+    cli.ok("atualizar")
+    manifesto = json.loads(versoes.read_text())
+    del manifesto["dumps"]["wikidata-subgeneros.json.gz"]
+    versoes.write_text(json.dumps(manifesto))
+
+    cli.ok("reconstruir")
+
+    assert cli.consultar("SELECT count(*) FROM subclasses_wikidata") == [[0]]
     assert cli.consultar("SELECT count(*) FROM filmes") == [[4]]
 
 

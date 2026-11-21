@@ -37,6 +37,9 @@ Se o Dono mudar o pedido antes de verem algo (outro tempo, outra Restrição, al
 Sem `html_render`, a resposta vai em Markdown. Abra com um bloco de citação (`> `) que o Dono possa corrigir: os
 `presentes`, o tempo disponível, `climas`, `restricoes`, `regra`, os
 `vetos` que agiram, com a Pessoa de cada Veto, e quantos filmes saíram.
+Um Veto a gênero já tira os subgêneros do Wikidata (romance leva a comédia
+romântica) e o gênero do IMDb; `por_caminho` diz quantos saíram por cada um.
+Não tire à mão filme que o Veto deixou passar sem dizer ao Dono qual foi.
 Nos rótulos das Evidências, chame o Dono de "Você" e use o nome cadastrado
 das outras Pessoas. Para conferir os nomes dos slugs, use `consultar` com
 `SELECT slug, nome, dono FROM pessoas`.
