@@ -26,10 +26,47 @@ ambíguo, peça ano ou outro detalhe antes de gravar.
 
 Ao terminar, diga o que entrou e quais alvos ainda precisam de identificação.
 
+## Já visto
+
+"Já vi", "Lorenzo viu, nota 8" e "esse todo mundo já viu" viram `pessoa`
+com `acao: "visto"`, a Pessoa e o ID do filme (ache com `consultar`).
+"Todo mundo" é uma chamada por Presente. Se a Pessoa disse a nota, passe
+em `nota`: "8/10" quando ela falou de 0 a 10, "4,5" quando falou em
+estrelas. Sem nota, grava só o Já visto. A nota grava uma Nota, que pesa
+no gosto da Pessoa como as do Letterboxd. Para tirar da próxima
+Recomendação o que alguém já viu, passe `sem_ja_visto` a `recomendar`.
+
 ## Imports
 
 Chame `importar` com a Pessoa e o caminho do ZIP do Letterboxd ou do
-export do Trakt, no campo do formato correspondente. Mostre o relatório
+export do Trakt, no campo do formato correspondente. Se a Pessoa só deu o
+usuário do Letterboxd, pergunte se ela concorda que o RSS público dela seja
+baixado e, com o sim, passe o usuário em `letterboxd_rss`. O RSS traz só as
+cerca de 50 entradas recentes do diário, com nota e data; o ZIP completo
+importado depois soma o resto sem repetir Fatos. Mostre o relatório
 de resolução e as pendências. Para os itens da fila, chame `fila_import`
 com `acao: "ver"`. Mostre as opções e use `confirmar` com o ID do
 filme ou `descartar` com a razão (`razao`) depois que o Dono decidir.
+
+Se o relatório avisar que o TMDB não respondeu, os itens que ele não
+chegou a ver ficam na fila. Antes de levar esses itens ao Dono, chame
+`fila_import` com `acao: "reprocessar"` (e `pessoa`, para só os dela).
+
+## Desfazer um registro
+
+Quando o Dono corrigir algo já gravado ("não era esse filme", "ela não
+disse isso"), não edite o arquivo da Pessoa. Chame `pessoa` com
+`acao: "ver"`, ache o item e chame `acao: "remover"` com a Pessoa e um
+só campo entre `declarado`, `relato`, `veto` e `visto`, com o `fato_id`
+do item. O alvo (tt..., Q...) também serve quando só um item daquele tipo
+tem esse alvo. Depois registre o certo, se houver.
+
+Declarado com `fato_id` que começa por `feedback:` é o Comentário de um
+Presente no Feedback de uma Sessão. `remover` tira o Comentário do arquivo
+da Sessão; a Nota ou o Relato que ele acompanhava fica.
+
+Declarado com `fato_id` que começa por `letterboxd:` veio de um import, e
+`remover` recusa. Para tirar um import inteiro (um RSS que o ZIP vai substituir, um
+export da Pessoa errada), chame `importar` com `remover` e o `arquivo`
+que `ver` mostra em `imports`. Saem o registro, a cópia guardada e os
+Fatos que só esse import trazia.

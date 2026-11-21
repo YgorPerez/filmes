@@ -1,0 +1,32 @@
+{
+    "head": {
+        "vars": [
+            "item",
+            "p",
+            "valor"
+        ]
+    },
+    "results": {
+        "bindings": [
+            {
+                "item": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/entity/Q1210827"
+                },
+                "p": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/prop/direct/P31"
+                },
+                "valor": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/entity/Q24856"
+                }
+            }
+        ]
+    },
+    "meta": {
+        "query-time-ms": 120,
+        "result-size-total": 1,
+        "warnings": []
+    }
+}

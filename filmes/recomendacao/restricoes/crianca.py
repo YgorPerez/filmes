@@ -36,6 +36,10 @@ def pedido(args):
     return Crianca(args.crianca)
 
 
+def rotulo(gravada):
+    return f"com criança de {gravada['idade']} anos" if gravada.get("idade") else "com criança"
+
+
 @dataclass(frozen=True)
 class Crianca:
     idade: int
@@ -43,6 +47,9 @@ class Crianca:
 
     def como_json(self):
         return {"idade": self.idade, "ate_faixa": self._faixa_maxima()}
+
+    def resultado(self, saidas):
+        return {}
 
     def _faixa_maxima(self):
         return [f for f in classificacao.ESCALA if classificacao.idade(f) <= self.idade][-1]

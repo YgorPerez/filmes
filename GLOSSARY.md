@@ -55,12 +55,24 @@ _Evitar_: dívida, vez, saldo
 O top 5 que uma Sessão recebe, cada filme com os seus Motivos.
 _Evitar_: sugestão, lista
 
+**Versão da Sessão**:
+Uma Recomendação de uma Sessão aberta. Quando o Dono pede outra lista na mesma Sessão, a atual vira uma versão anterior, guardada com o pedido e os Presentes dela, e a nova passa a valer. O número da versão conta a partir de 1.
+_Evitar_: rodada, tentativa
+
+**Filmes mostrados**:
+Os filmes da Recomendação que o Dono de fato viu na tela, na ordem em que apareceram. O Feedback grava a posição do Filme escolhido nessa lista.
+_Evitar_: exibidos, lista da tela
+
 **Filme escolhido**:
 O filme que os Presentes de fato assistiram, saia ele da Recomendação ou não.
 
 **Feedback**:
 O registro que fecha uma Sessão: o Filme escolhido e como cada Presente reagiu. Cada reação vira um Fato com a Sessão como Fonte, de Tipo relato quando o Dono fala por outra Pessoa e nota quando a própria Pessoa avalia.
 _Evitar_: avaliação, review
+
+**Comentário**:
+O que um Presente achou do Filme escolhido, dito junto da Nota ou do Relato dele no Feedback. Vira um Declarado específico da Pessoa sobre o filme, com a Sessão como Fonte.
+_Evitar_: opinião, review
 
 **Já visto**:
 O Fato de que uma Pessoa já assistiu a um filme. Pesa contra o filme e aparece como Motivo, mas não é Veto: rever um filme continua possível, e só sai se o Dono pedir como Restrição.

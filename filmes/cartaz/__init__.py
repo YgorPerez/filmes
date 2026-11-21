@@ -1,6 +1,9 @@
 """Cartaz HTML da Recomendação, a partir da Sessão gravada.
 
-    gerar(amb, sessao_id) -> {"html", "filmes", "avisos"}
+    gerar(amb, sessao_id, mostrados=None) -> {"html", "filmes", "avisos"}
+
+Com `mostrados` (IDs do IMDb), o cartaz traz só esses filmes da Recomendação, na
+ordem dada e numerados de 1 em diante, que é a lista que o Dono vê.
 
 O cartaz é um documento completo (`<!doctype html>`) para o T3 Code mostrar na
 conversa. Todo o texto sai daqui: a leitura do pedido, o cabeçalho de cada filme
@@ -21,6 +24,7 @@ from pathlib import Path
 from filmes.banco import abrir_leitura
 from filmes.erros import ErroFilmes
 from filmes.recomendacao import cabecalho
+from filmes.recomendacao import restricoes
 from filmes.recomendacao.restricoes import Contexto
 from filmes.sessao import arquivo
 
@@ -31,9 +35,11 @@ CORES = 6   # o T3 define --chart-1 a --chart-6
 POR_EXTENSO = {2: "dois", 3: "três", 4: "quatro", 5: "cinco", 6: "seis", 7: "sete", 8: "oito", 9: "nove", 10: "dez"}
 
 
-def gerar(amb, sessao_id: str) -> dict:
+def gerar(amb, sessao_id: str, mostrados: list[str] | None = None) -> dict:
     frente, corpo = arquivo.ler(amb.dados, sessao_id)
     filmes = arquivo.filmes_do_corpo(frente, corpo)
+    if mostrados is not None:
+        filmes = _so_os_mostrados(sessao_id, filmes, mostrados)
     presentes = frente["presentes"]
     conn = abrir_leitura(amb.banco)
     try:
@@ -62,6 +68,18 @@ def gerar(amb, sessao_id: str) -> dict:
     return {"html": html, "filmes": len(cards), "avisos": contexto.avisos}
 
 
+def _so_os_mostrados(sessao_id, filmes, mostrados) -> list[dict]:
+    por_id = {f["id"]: f for f in filmes}
+    if not mostrados:
+        raise ErroFilmes("uso_invalido", "--filmes vazio: passe os IDs do IMDb dos filmes mostrados")
+    if len(set(mostrados)) != len(mostrados):
+        raise ErroFilmes("uso_invalido", "--filmes repete um filme")
+    fora = [f for f in mostrados if f not in por_id]
+    if fora:
+        raise ErroFilmes("uso_invalido", f"{', '.join(fora)} fora da Recomendação da Sessão {sessao_id}")
+    return [{**por_id[f], "posicao": posicao} for posicao, f in enumerate(mostrados, start=1)]
+
+
 def _pessoas(presentes, nomes) -> dict:
     """slug -> {nome, inicial, cor}. A inicial é o menor começo do nome que não se
     repete entre os Presentes ("Léo" e "Lorenzo" viram "Lé" e "Lo")."""
@@ -84,7 +102,7 @@ def _pedido(frente, pessoas, pesos) -> str:
         partes.append(f"até {arquivo.duracao(contexto['duracao_max'])}")
     partes.append(f"nota {_numero(pesos['catalogo']['nota_imdb_minima'])}+ no IMDb")
     partes.extend(escape(c) for c in contexto.get("clima") or [])
-    partes.extend(escape(_restricao(r)) for r in contexto.get("restricoes") or [])
+    partes.extend(escape(restricoes.rotulo(r)) for r in contexto.get("restricoes") or [])
     regra = frente.get("regra") or {}
     if regra.get("nome") == "media":
         partes.append("pela média")
@@ -102,19 +120,6 @@ def _quem(frente, pessoas) -> str:
         [(slug, pessoa)] = pessoas.items()
         return "Você" if slug == frente.get("dono") else pessoa["nome"]
     return f"Vocês {POR_EXTENSO.get(len(pessoas), len(pessoas))}"
-
-
-def _restricao(restricao) -> str:
-    nome = restricao.get("nome")
-    if nome == "sem_ja_visto":
-        return "nada repetido"
-    if nome == "idioma":
-        return f"idioma original: {restricao['idioma']}"
-    if nome == "crianca":
-        return f"com criança de {restricao['idade']} anos" if restricao.get("idade") else "com criança"
-    if nome == "gatilho":
-        return "sem " + ", ".join(f"“{t}”" for t in restricao.get("temas") or [])
-    return str(nome)
 
 
 def _card(filme, linha, ficha, pessoas, primeiro) -> str:

@@ -24,8 +24,7 @@ def carregar(conn: sqlite3.Connection, pessoa: Pessoa) -> None:
     for veto in pessoa.vetos:
         conn.execute(
             "INSERT OR IGNORE INTO vetos (fato_id, pessoa, alvo, rotulo, texto, data) VALUES (?, ?, ?, ?, ?, ?)",
-            (fato_id("vetos", pessoa.slug, veto.alvo, veto.texto, veto.data),
-             pessoa.slug, veto.alvo, veto.rotulo, veto.texto, veto.data),
+            (id_do_veto(pessoa.slug, veto), pessoa.slug, veto.alvo, veto.rotulo, veto.texto, veto.data),
         )
     for tabela, ditos in (("declarados", pessoa.declarados), ("relatos", pessoa.relatos)):
         for dito in ditos:
@@ -42,6 +41,28 @@ def carregar(conn: sqlite3.Connection, pessoa: Pessoa) -> None:
                     "INSERT OR IGNORE INTO notas (fato_id, pessoa, filme_id, nota, data, fonte, tipo) VALUES (?, ?, ?, ?, ?, ?, ?)",
                     (id_, pessoa.slug, dito.alvo, nota, dito.data, dito.fonte, tabela[:-1]),
                 )
+
+    for visto in pessoa.ja_vistos:
+        id_ = id_do_ja_visto(pessoa.slug, visto)
+        if visto.nota is None:
+            conn.execute(
+                "INSERT OR IGNORE INTO ja_visto (fato_id, pessoa, filme_id, tipo, data, fonte) VALUES (?, ?, ?, 'declarado', ?, ?)",
+                (id_, pessoa.slug, visto.alvo, visto.data, visto.fonte),
+            )
+        else:
+            # Toda Nota já é Já visto (view ja_vistos): não precisa de linha em ja_visto.
+            conn.execute(
+                "INSERT OR IGNORE INTO notas (fato_id, pessoa, filme_id, nota, data, fonte, tipo) VALUES (?, ?, ?, ?, ?, ?, 'nota')",
+                (id_, pessoa.slug, visto.alvo, visto.nota, visto.data, visto.fonte),
+            )
+
+
+def id_do_veto(slug: str, veto) -> str:
+    return fato_id("vetos", slug, veto.alvo, veto.texto, veto.data)
+
+
+def id_do_ja_visto(slug: str, visto) -> str:
+    return fato_id("vistos", slug, visto.data, visto.fonte, visto.alvo, visto.nota)
 
 
 def nota_declarada(dito) -> float | None:
@@ -70,7 +91,9 @@ def sincronizar(banco: Path, pessoa: Pessoa) -> bool:
 
 
 def _apagar(conn, slug):
-    conn.execute("DELETE FROM notas WHERE pessoa = ? AND (fato_id LIKE 'declarados:%' OR fato_id LIKE 'relatos:%')", (slug,))
+    conn.execute("DELETE FROM notas WHERE pessoa = ? AND (fato_id LIKE 'declarados:%' OR fato_id LIKE 'relatos:%'"
+                 " OR fato_id LIKE 'vistos:%')", (slug,))
+    conn.execute("DELETE FROM ja_visto WHERE pessoa = ? AND fato_id LIKE 'vistos:%'", (slug,))
     conn.execute("DELETE FROM declarados WHERE pessoa = ? AND fato_id LIKE 'declarados:%'", (slug,))
     for tabela in ("vetos", "relatos", "apelidos"):
         conn.execute(f"DELETE FROM {tabela} WHERE pessoa = ?", (slug,))

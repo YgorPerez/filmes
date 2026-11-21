@@ -148,6 +148,33 @@ describe("servidor MCP sobre a CLI real e a fixture", () => {
     assert.ok(!titulos.includes("O Farol de Areia"));
   });
 
+  it("recomendar repassa o intervalo de anos", async () => {
+    const resultado = (await cliente.callTool({
+      name: "recomendar", arguments: { presentes: ["dono"], quantos: 50, desde: 2015, ate: 2016 },
+    })) as Resultado;
+
+    assert.ok(!resultado.isError);
+    const saida = json(resultado);
+    assert.deepEqual(saida.restricoes.ano, { desde: 2015, ate: 2016, tirados: saida.restricoes.ano.tirados });
+    assert.ok(saida.restricoes.ano.tirados > 0);
+    const titulos = saida.filmes.map((f: any) => f.titulo);
+    assert.ok(titulos.includes("Maré Baixa"));
+    assert.ok(!titulos.includes("O Farol de Areia"));
+  });
+
+  it("nada triste tira o filme triste e conta por sinal", async () => {
+    const resultado = (await cliente.callTool({
+      name: "recomendar", arguments: { presentes: ["dono"], quantos: 100, sem_tristeza: true },
+    })) as Resultado;
+
+    assert.ok(!resultado.isError);
+    const saida = json(resultado);
+    assert.deepEqual(saida.restricoes.sem_tristeza, { por_sinal: { triste: 2, tema_pesado: 3 }, tirados: 5 });
+    const titulos = saida.filmes.map((f: any) => f.titulo);
+    assert.ok(titulos.includes("Casa Cheia"));
+    assert.ok(!titulos.includes("Pequenos Milagres"));
+  });
+
   it("tem criança sem idade vale livre", async () => {
     const resultado = (await cliente.callTool({
       name: "recomendar", arguments: { presentes: ["dono"], quantos: 50, crianca: true },
@@ -156,6 +183,22 @@ describe("servidor MCP sobre a CLI real e a fixture", () => {
     const saida = json(resultado);
     assert.equal(saida.restricoes.crianca.idade, 0);
     assert.deepEqual(saida.filmes.map((f: any) => f.titulo).sort(), ["Maré Baixa", "O Farol de Areia"]);
+  });
+
+  it("recomendar com sessao refaz a Recomendação na mesma Sessão aberta", async () => {
+    const primeira = json(
+      (await cliente.callTool({ name: "recomendar", arguments: { presentes: ["dono", "quim"], pedido: "algo bom" } })) as Resultado,
+    );
+    const resultado = (await cliente.callTool({
+      name: "recomendar",
+      arguments: { presentes: ["dono", "quim"], pedido: "algo curto", duracao_max: 100, sessao: primeira.sessao.id },
+    })) as Resultado;
+
+    assert.ok(!resultado.isError, JSON.stringify(resultado.content));
+    assert.deepEqual(json(resultado).sessao, { ...primeira.sessao, versao: 2 });
+    const abertas = json((await cliente.callTool({ name: "sessoes_abertas", arguments: {} })) as Resultado);
+    const comQuim = abertas.sessoes.filter((s: { presentes: string[] }) => s.presentes.includes("quim"));
+    assert.deepEqual(comQuim.map((s: { pedido: string; versao: number }) => [s.pedido, s.versao]), [["algo curto", 2]]);
   });
 
   it("erro da CLI chega como erro da ferramenta", async () => {
@@ -183,6 +226,24 @@ describe("servidor MCP sobre a CLI real e a fixture", () => {
     const html = readFileSync(saida.arquivo, "utf8");
     assert.ok(html.startsWith("<!doctype html>"));
     assert.equal(html.match(/<article class="card">/g)?.length, 5);
+  });
+
+  it("cartaz com filmes traz só os mostrados, na ordem dada", async () => {
+    const recomendacao = json(
+      (await cliente.callTool({ name: "recomendar", arguments: { presentes: ["dono"] } })) as Resultado,
+    );
+    const [primeiro, , terceiro] = recomendacao.filmes;
+
+    const resultado = (await cliente.callTool({
+      name: "cartaz",
+      arguments: { sessao: recomendacao.sessao.id, filmes: [terceiro.id, primeiro.id] },
+    })) as Resultado;
+
+    assert.ok(!resultado.isError);
+    const saida = json(resultado);
+    assert.equal(saida.filmes, 2);
+    const html = readFileSync(saida.arquivo, "utf8");
+    assert.ok(html.indexOf(terceiro.id) < html.indexOf(primeiro.id));
   });
 
   it("entrada inválida é recusada antes de chamar a CLI", async () => {

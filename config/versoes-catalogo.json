@@ -398,6 +398,13 @@
       "fonte": "QLever",
       "sha256": "5cc7739d2961af4d525c4f5281270276c68c8df1ad64cbe2d3c00467a693ad0a",
       "url": "https://qlever.dev/api/wikidata"
+    },
+    "wikidata-series.json.gz": {
+      "bytes": 7838,
+      "data": "2026-11-21",
+      "fonte": "QLever",
+      "sha256": "e52a7abf8ecf1331caaee53c980a505b5ffc21884c7d0a4189bc0c2a7832631f",
+      "url": "https://qlever.dev/api/wikidata"
     }
   }
 }

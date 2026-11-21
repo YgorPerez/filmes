@@ -9,6 +9,7 @@ FONTE = "Wikidata"
 def carregar(conn, pasta, dumps):
     _carregar_ids(conn, pasta, dumps)
     _carregar_rotulos(conn, pasta, dumps)
+    _carregar_series(conn, pasta, dumps)
     filmes_por_item = {}
     for item, filme in conn.execute("""
         SELECT m.item, f.id FROM metadados_wikidata m JOIN filmes f ON f.id = m.valor
@@ -47,6 +48,16 @@ def _carregar_ids(conn, pasta, dumps):
         WHERE s.propriedade = 'P6127'
         GROUP BY s.item, s.valor
     """)
+
+
+def _carregar_series(conn, pasta, dumps):
+    for nome, versao in sorted(dumps.items()):
+        if nome.startswith("wikidata-series"):
+            conn.executemany(
+                "INSERT INTO series_de_filmes (item, classe) VALUES (?, ?) ON CONFLICT DO NOTHING",
+                ((wikidata.qid(linha["item"]), wikidata.qid(linha["valor"]))
+                 for linha in wikidata.linhas(pasta / versao["sha256"] / nome)),
+            )
 
 
 def _carregar_rotulos(conn, pasta, dumps):

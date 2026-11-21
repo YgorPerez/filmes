@@ -30,6 +30,17 @@ Entidades que não são diretor, com IDs `Q90018NN` (faixa do #18), só no predi
 
 Essas entidades não ligam a Nota nenhuma do Bruno, então não mudam o top 5 dele.
 
+Veto a gênero com subgêneros (#48, `test_veto_subgeneros.py`). Os filmes `tt90048NN` não têm diretor nem Nota, e ficam entre os só com palpites. Romance usa o QID real (Q1054574) porque `filmes/catalogo/generos.py` liga o Romance do IMDb a ele. `subclasses_wikidata.csv` faz comédia romântica (Q9004801) subclasse de romance e de comédia (Q157443), e comédia de recasamento (Q9004802) subclasse de comédia romântica.
+
+| Filme | Gênero | Caminho de um Veto a romance |
+|---|---|---|
+| Carta de Amor (4801) | romance (Wikidata) | direto |
+| Amor em Paris (4802) | comédia romântica (Wikidata) | subgêneros |
+| Casar de Novo (4803) | comédia de recasamento (Wikidata) | subgêneros, dois níveis abaixo |
+| Baile de Formatura (4804) | Romance (IMDb) | gênero do IMDb |
+
+Maré Baixa (102) também tem Romance no IMDb e sai pelo mesmo caminho.
+
 Caminho de conteúdo por outros predicados (`test_caminho_conteudo.py`). Cada filme liga às Notas do Bruno por um predicado só, com entidade `Q90019NN`:
 
 | Filme | Predicado e entidade | Liga a |
@@ -39,6 +50,9 @@ Caminho de conteúdo por outros predicados (`test_caminho_conteudo.py`). Cada fi
 | Fronteira II (1903) | serie, Trilogia da Fronteira | Fronteira (401) |
 | Poeira (1904) | genero, faroeste | 101, 102, 103 e Jardim Suspenso (301): quatro Notas altas, que no gênero ficam em metadado fraco |
 | Escala em Lisboa (3501) | elenco, Rita Lobo | Ponte Aérea (201), como Voo Noturno, mas Rita Lobo está fora dos 3 primeiros créditos |
+| Mar Aberto (4901) | serie, Os 100 melhores filmes segundo a Revista Tela (`Q9004901`) | Fronteira (401), mas a lista não está em `series_de_filmes.csv` e a aresta sai na reconstrução. Tem 1.000 votos, o mínimo, para ficar depois dos outros filmes só com palpites; entra no `--quantos 100` de `test_grupo.py` |
+
+`series_de_filmes.csv` diz quais entidades de série são série de filmes: só a Trilogia da Fronteira. Uma série nova na fixture precisa de linha ali, senão a aresta dela some.
 
 Créditos do IMDb (`elenco_principal_imdb.csv`, `atores_imdb.csv`): os 3 primeiros atores de Voo Noturno e de Escala em Lisboa. Rita Lobo (`nm9001902`) é o segundo crédito de Voo Noturno, e a Evidência fica com a régua normal; em Escala em Lisboa os três primeiros são outros, e ela vale no máximo fraca. Os demais filmes não têm créditos, e a régua deles não muda.
 
@@ -105,13 +119,13 @@ Tabelas que só as Restrições da Sessão leem. Os filmes são os de cima; a ta
 
 ## gravacoes/
 
-Respostas das fontes sob demanda como a API devolve, em `<fonte>/<tconst>.json`. Os testes ligam com `FILMES_GRAVACOES` e uma chave qualquer; arquivo ausente vale como "a fonte não conhece o filme".
+Respostas das fontes sob demanda como a API devolve, em `<fonte>/<tconst>.json`. Os testes ligam com `FILMES_GRAVACOES` e uma chave qualquer; arquivo ausente vale como "a fonte não conhece o filme". Uma falha de rede se grava em `<fonte>/<chave>.falha.json` (`{"motivo": "Connection reset by peer", "vezes": 2}` falha duas vezes e depois lê `<chave>.json`; sem `vezes`, falha sempre). A fixture não tem nenhuma: `test_fila_reprocessar.py` cria as suas numa cópia das gravações.
 
 - `omdb/`: Vento Norte PG, Noite de Estreia PG-13, Inverno em Lisboa Not Rated, Jardim Suspenso G. Ponte Aérea não tem arquivo.
 - `ddd/`: o tema "a dog dies" tem 12 sim e 2 não em As Horas Lentas, 3 e 2 em A Volta do Mar (os dois saem), 1 e 14 em Sal e Ferrugem, 2 e 0 em Cidade de Vidro (poucos votos), 3 e 3 em Noite de Estreia (empate). O Farol de Areia só tem "there are jump scares"; Maré Baixa não tem arquivo.
 - `tmdb/find-<tconst>-pt-BR.json`: respostas do `/find` com `language=pt-BR`, de onde saem capa, título em português e sinopse. `find-tt0133093-pt-BR.json` (Matrix) foi gravada do TMDB em 2026-11-21; as outras copiam o formato dela. As Horas Lentas tem pôster e sinopse de duas frases; Sal e Ferrugem vem sem pôster, com o título "Sal & Ferrugem" e um "Dr." na primeira frase; Noite de Estreia vem sem pôster e com o overview vazio; os demais não têm arquivo. Os outros arquivos de `tmdb/` são do import do Letterboxd, descrito abaixo.
 
-- `catalogo/`: trechos dos TSVs do IMDb e das respostas SPARQL JSON do QLever, coletados em 2026-11-20. Exercitam o corte de 100 votos, a exclusão de adultos, a ponte de IDs, o elenco, os créditos do `title.principals` (Schindler's List, Matrix e Miss Jerry) e o P345 de dois atores, os idiomas e os rótulos reais de classificação. `atualizar` lê essas gravações em vez de acessar a rede.
+- `catalogo/`: trechos dos TSVs do IMDb e das respostas SPARQL JSON do QLever, coletados em 2026-11-20. Exercitam o corte de 100 votos, a exclusão de adultos, a ponte de IDs, o elenco, os créditos do `title.principals` (Schindler's List, Matrix e Miss Jerry) e o P345 de dois atores, os idiomas e os rótulos reais de classificação. `atualizar` lê essas gravações em vez de acessar a rede. O P179 de Matrix (The Matrix series, `Q1210827`) e a linha dela em `wikidata-series.json` são reais, de 2026-11-21. O P179 de Schindler's List para a lista da BBC (`Q26705935`) é inventado: a lista existe, mas o filme não está nela. Serve para a aresta que a reconstrução tira.
 
 ## dados/
 
@@ -144,3 +158,36 @@ linhas. As tags de O Farol de Areia aparecem tanto no diário quanto na review.
   busca de séries do TMDB. Os dois são descartados.
 - Vento Norte fica na fila com dois candidatos do TMDB. Confirmar o primeiro
   usa `externos-9102.json`. Filme Perdido também fica na fila, sem candidato.
+
+### Nada triste (#42)
+
+`test_restricao_tristeza.py`. Sinais de tristeza e de tema pesado em filmes sem Nota de ninguém, com as tags e os QIDs reais de `config/tristeza.toml`:
+
+| Filme | Sinal | Com `--sem-tristeza` |
+|---|---|---|
+| Pequenos Milagres (601) | tags.csv "sad", 5 usuários | sai |
+| Casa Cheia (602) | tags.csv "sad", 2 usuários | passa |
+| Deserto Branco (701) | genome "tearjerker" 0,6 | sai |
+| A Última Estação (702) | genome "sad" 0,59 | passa |
+| Os Inquilinos (901) | tags.csv "massacre", 2 usuários | sai |
+| Fim de Tarde (902) | `tema` Holocausto (Q2763) | sai |
+| Café Amargo (801) | `baseado_em` suicídio (Q10737) | sai |
+| Linha Cruzada (802) | `tema` futebol (Q9004201), sem tag | passa |
+
+"sad" e "tearjerker" estão no Clima "pra chorar"; nenhum teste pede esse Clima. As tags de "sozinho" (bleak, depressing) ficaram de fora de propósito, para não mudar quem é filme só com palpites.
+
+## RSS do Letterboxd
+
+`gravacoes/letterboxd/rss-olga_farol.xml` é um RSS inventado no formato do real
+(conferido num RSS público em 2026-11-21), lido por `importar --letterboxd-rss olga_farol`.
+Usuário sem arquivo vale como perfil inexistente.
+
+- O Farol de Areia (2012-01-10, 4,5) e Maré Baixa (2015, 2024-02-11, 2) repetem o
+  diário do ZIP da Olga; o ZIP importado depois não duplica esses Fatos.
+- O Farol de Areia tem uma revisão em 2024-05-05 com 5 que o ZIP não tem.
+- Maré Baixa (2014) traz o ID 9002, do homônimo de 1980 (tt9023002): o slug com
+  `-2015` daria outro filme, e o ID vence.
+- Vento Norte não tem data do diário; vale a data de publicação, 16/07 às 21h
+  (-03:00). O ID 9102 resolve por `tmdb/externos-9102.json`, sem passar pela busca
+  por título, que daria dois candidatos.
+- Uma lista ("Faróis") fica de fora.

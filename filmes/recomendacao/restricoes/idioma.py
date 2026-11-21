@@ -23,6 +23,10 @@ def pedido(args):
     return Idioma(args.idioma.strip())
 
 
+def rotulo(gravada):
+    return f"idioma original: {gravada['idioma']}"
+
+
 @dataclass(frozen=True)
 class Idioma:
     pedido: str
@@ -30,6 +34,9 @@ class Idioma:
 
     def como_json(self):
         return {"idioma": self.pedido}
+
+    def resultado(self, saidas):
+        return {}
 
     def avaliar(self, contexto, filmes):
         alvo = self.pedido.casefold()

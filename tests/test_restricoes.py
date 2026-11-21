@@ -1,6 +1,6 @@
 """Restrições da Sessão: duração, idioma, criança, gatilho e "sem Já visto".
 
-Sem Restrição, o Bruno recebe com `--quantos 50` todos os filmes com votos
+Sem Restrição, o Bruno recebe com `--quantos 100` todos os filmes com votos
 suficientes, os com Fato antes dos só com palpites (veja o LEIAME da fixture). Cada Restrição tira filmes antes da ordenação e põe, em cada filme
 que passou, em `linhas_do_filme`, uma linha (Evidência com `pessoa` nula) dizendo por quê.
 """
@@ -11,7 +11,7 @@ from conftest import sem_o_da_capa
 
 
 def _todos(banco, *restricoes):
-    return banco.ok("recomendar", "--presentes", "dono", "--quantos", "50", *restricoes)
+    return banco.ok("recomendar", "--presentes", "dono", "--quantos", "100", *restricoes)
 
 
 def _titulos(saida):
@@ -102,8 +102,9 @@ def test_filme_no_idioma_pedido_mostra_a_linha_do_idioma(banco):
 def test_sem_ja_visto_tira_os_filmes_que_algum_presente_ja_viu(banco):
     vistos = {titulo for (titulo,) in banco.consultar(
         "SELECT titulo FROM filmes JOIN notas ON notas.filme_id = filmes.id WHERE pessoa = 'bruno'")}
-    com_vistos = set(_titulos(_todos(banco)))
-    saida = _todos(banco, "--sem-ja-visto")
+    # Com a lista inteira, a vaga de um já visto não puxa um filme de fora dos 50.
+    com_vistos = set(_titulos(_todos(banco, "--quantos", "80")))
+    saida = _todos(banco, "--sem-ja-visto", "--quantos", "80")
 
     assert "O Farol de Areia" in vistos & com_vistos
     assert set(_titulos(saida)) == com_vistos - vistos

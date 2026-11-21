@@ -109,12 +109,26 @@
                     "type": "literal",
                     "value": "schindlers-list"
                 }
+            },
+            {
+                "item": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/entity/Q83495"
+                },
+                "p": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/prop/direct/P345"
+                },
+                "valor": {
+                    "type": "literal",
+                    "value": "tt0133093"
+                }
             }
         ]
     },
     "meta": {
         "query-time-ms": 44,
-        "result-size-total": 7,
+        "result-size-total": 8,
         "warnings": []
     }
 }

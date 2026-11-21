@@ -35,7 +35,7 @@ _PASTAS_FORA = {"deleted", "orphaned", "lists"}
 @dataclass(frozen=True)
 class Linha:
     """Uma linha de um dos CSVs, já com os campos que viram Fato."""
-    arquivo: str                 # watched, ratings, diary, reviews, watchlist
+    arquivo: str                 # watched, ratings, diary, reviews, watchlist; rss (rss_letterboxd.py)
     nome: str
     ano: int | None
     data: str                    # Date: quando a linha foi registrada no Letterboxd
@@ -43,6 +43,8 @@ class Linha:
     nota: float | None = None
     review: str | None = None    # texto puro, sem HTML
     tags: tuple[str, ...] = ()
+    tmdb: str | None = None      # ID do filme no TMDB (só o RSS traz)
+    origem: str = "Letterboxd"   # abre a Fonte: "<origem> de <nome da Pessoa>"
 
     @property
     def id(self) -> str:

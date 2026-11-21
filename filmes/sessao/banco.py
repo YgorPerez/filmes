@@ -44,12 +44,17 @@ def carregar(conn: sqlite3.Connection, sessao_id: str, frente: dict) -> None:
             conn.execute("INSERT INTO notas (fato_id, pessoa, filme_id, nota, data, fonte, sessao) VALUES (?, ?, ?, ?, ?, ?, ?)",
                          (r.fato_id, r.pessoa, r.filme_id, r.nota, r.data, r.fonte, r.sessao))
     dono = {slug for (slug,) in conn.execute("SELECT slug FROM pessoas WHERE dono = 1")}
+    for c in fatos.comentarios(sessao_id, frente, dono):
+        conn.execute(
+            """INSERT INTO declarados (fato_id, pessoa, data, fonte, especifico, reacao, alvo, rotulo, texto, sessao)
+               VALUES (?, ?, ?, ?, 1, ?, ?, (SELECT titulo FROM filmes WHERE id = ?), ?, ?)""",
+            (c.fato_id, c.pessoa, c.data, c.fonte, c.reacao, c.filme_id, c.filme_id, c.texto, c.sessao))
     for v in fatos.ja_vistos(sessao_id, frente, dono):
         conn.execute("INSERT INTO ja_visto (fato_id, pessoa, filme_id, tipo, data, fonte, sessao) VALUES (?, ?, ?, ?, ?, ?, ?)",
                      (v.fato_id, v.pessoa, v.filme_id, v.tipo, v.data, v.fonte, v.sessao))
 
 
 def _apagar(conn, sessao_id):
-    for tabela in ("notas", "ja_visto", "reacoes", "sessao_presentes", "sessao_recomendacao"):
+    for tabela in ("notas", "ja_visto", "reacoes", "declarados", "sessao_presentes", "sessao_recomendacao"):
         conn.execute(f"DELETE FROM {tabela} WHERE sessao = ?", (sessao_id,))
     conn.execute("DELETE FROM sessoes WHERE id = ?", (sessao_id,))
