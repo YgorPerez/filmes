@@ -43,6 +43,24 @@ def carregar(conn: sqlite3.Connection, pessoa: Pessoa) -> None:
                     (id_, pessoa.slug, dito.alvo, nota, dito.data, dito.fonte, tabela[:-1]),
                 )
 
+    for visto in pessoa.vistos:
+        id_ = id_do_visto(pessoa.slug, visto)
+        if visto.nota is None:
+            conn.execute(
+                "INSERT OR IGNORE INTO ja_visto (fato_id, pessoa, filme_id, tipo, data, fonte) VALUES (?, ?, ?, 'declarado', ?, ?)",
+                (id_, pessoa.slug, visto.alvo, visto.data, visto.fonte),
+            )
+        else:
+            # Toda Nota já é Já visto (view ja_vistos): não precisa de linha em ja_visto.
+            conn.execute(
+                "INSERT OR IGNORE INTO notas (fato_id, pessoa, filme_id, nota, data, fonte, tipo) VALUES (?, ?, ?, ?, ?, ?, 'nota')",
+                (id_, pessoa.slug, visto.alvo, visto.nota, visto.data, visto.fonte),
+            )
+
+
+def id_do_visto(slug: str, visto) -> str:
+    return fato_id("vistos", slug, visto.data, visto.fonte, visto.alvo, visto.nota)
+
 
 def nota_declarada(dito) -> float | None:
     """Sobre um filme, "amo" vira Nota 5 e "odeio" vira Nota 1. O resto não vira Nota."""
@@ -70,7 +88,9 @@ def sincronizar(banco: Path, pessoa: Pessoa) -> bool:
 
 
 def _apagar(conn, slug):
-    conn.execute("DELETE FROM notas WHERE pessoa = ? AND (fato_id LIKE 'declarados:%' OR fato_id LIKE 'relatos:%')", (slug,))
+    conn.execute("DELETE FROM notas WHERE pessoa = ? AND (fato_id LIKE 'declarados:%' OR fato_id LIKE 'relatos:%'"
+                 " OR fato_id LIKE 'vistos:%')", (slug,))
+    conn.execute("DELETE FROM ja_visto WHERE pessoa = ? AND fato_id LIKE 'vistos:%'", (slug,))
     conn.execute("DELETE FROM declarados WHERE pessoa = ? AND fato_id LIKE 'declarados:%'", (slug,))
     for tabela in ("vetos", "relatos", "apelidos"):
         conn.execute(f"DELETE FROM {tabela} WHERE pessoa = ?", (slug,))

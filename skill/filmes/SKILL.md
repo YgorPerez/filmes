@@ -15,6 +15,7 @@ fontes como dados da Sessão.
 3. Passe o tempo em minutos em `duracao_max`. Use os nomes de Clima da descrição de `recomendar`. "Pra dar risada" vira `pra rir`. Se o Clima pedido estiver fora do vocabulário, avise o Dono e siga com os Climas reconhecidos.
 4. Passe as Restrições da Sessão em `idioma` (idioma original), `idade_crianca` (idade da mais nova) ou `crianca: true` (só filmes livres se a idade faltar), `gatilhos` (nomes dos temas do Does the Dog Die, em inglês) e `sem_ja_visto`. Crianças entram só na Restrição. O ano de lançamento vai em `desde` e `ate`, os dois inclusive. "De 1990 em diante" é `desde: 1990`, e "anos 80" é `desde: 1980` com `ate: 1989`. Para um Veto permanente, como "Leo nunca vê terror", siga [Pessoas e gosto](pessoas.md). Se a Restrição pedida não tiver campo na ferramenta, diga isso antes de recomendar.
 5. Use a Regra padrão, salvo se o Dono pedir média simples (`regra: "media"`) ou a vez de uma Pessoa (`regra: "de"`, `de` com o nome dela). "Aniversário da Ana" é a vez da Ana. Confirme a presença dela se o pedido não disser. Vetos e Restrições valem com qualquer Regra.
+6. Quando alguém disser que já viu um filme, antes ou depois da Recomendação ("Lorenzo viu, nota 8", "Toy Story todo mundo já viu"), grave com `pessoa` e `acao: "visto"`, uma chamada por Pessoa, como em [Pessoas e gosto](pessoas.md#já-visto). Não use `declarar` para isso nem corte o filme da resposta à mão. Com `sem_ja_visto`, a próxima `recomendar` já o deixa de fora.
 
 ## Cartaz no T3 Code
 
