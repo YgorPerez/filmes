@@ -101,7 +101,7 @@ def _ver(args, amb):
 def _declarados_importados(conn, slug, hoje):
     for linha in conn.execute(
         """SELECT fato_id, texto, fonte, data, especifico, reacao, alvo, rotulo FROM declarados
-           WHERE pessoa = ? AND fato_id LIKE 'letterboxd:%' ORDER BY data DESC, fato_id""", (slug,)
+           WHERE pessoa = ? AND (fato_id LIKE 'letterboxd:%' OR sessao IS NOT NULL) ORDER BY data DESC, fato_id""", (slug,)
     ):
         especifico = bool(linha["especifico"])
         yield dict(linha) | {

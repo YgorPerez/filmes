@@ -223,3 +223,100 @@ def test_feedback_acha_pelo_titulo_filme_recomendado_que_saiu_do_catalogo(banco,
     saida = banco.ok("feedback", "--sessao", sessao, "--filme", "filme arquivado")
 
     assert saida["escolhido"] == {"id": "tt9999999", "titulo": "Filme Arquivado", "ano": None, "posicao": 1}
+
+
+# Escala de 10 e comentário por Presente (#40).
+
+def test_nota_de_1_a_10_grava_a_nota_convertida_e_o_numero_original(banco, dados):
+    sessao = _sessao(banco, "dono", "iara", "teo", "--de", "dono")
+
+    saida = banco.ok("feedback", "--sessao", sessao, "--filme", "Noite de Estreia",
+                     "--nota", "dono=9/10", "--nota", "iara=7/10", "--nota", "teo=4")
+
+    frente, _ = _ler(dados / "sessoes" / f"{sessao}.md")
+    assert frente["feedback"]["reacoes"] == [
+        {"pessoa": "bruno", "tipo": "nota", "nota": 4.5, "nota_original": "9/10"},
+        {"pessoa": "iara", "tipo": "nota", "nota": 3.5, "nota_original": "7/10", "repassada": True},
+        {"pessoa": "teo", "tipo": "nota", "nota": 4.0, "repassada": True},
+    ]
+    assert banco.consultar("SELECT pessoa, nota FROM notas WHERE sessao IS NOT NULL ORDER BY pessoa") \
+        == [["bruno", 4.5], ["iara", 3.5], ["teo", 4.0]]
+    textos = {f["pessoa"]: f["texto"] for f in saida["fatos"] if f["tipo"] == "nota"}
+    assert textos == {"bruno": "deu 9/10 a Noite de Estreia (2022)", "iara": "deu 7/10 a Noite de Estreia (2022)",
+                      "teo": "deu 4 a Noite de Estreia (2022)"}
+
+
+def test_nota_na_escala_de_10_vai_de_1_a_10(banco):
+    sessao = _sessao(banco, "dono")
+    feedback = ("feedback", "--sessao", sessao, "--filme", "Vento Norte")
+
+    assert _erro(banco, *feedback, "--nota", "dono=0/10") == (2, "uso_invalido")
+    assert _erro(banco, *feedback, "--nota", "dono=11/10") == (2, "uso_invalido")
+    assert _erro(banco, *feedback, "--nota", "dono=9/7") == (2, "uso_invalido")
+    assert banco.ok(*feedback, "--nota", "dono=8,5/10")["fatos"][0]["texto"] == "deu 8,5/10 a Vento Norte (2020)"
+
+
+_DECLARADOS = "SELECT pessoa, reacao, alvo, especifico, fonte, data, texto FROM declarados WHERE sessao IS NOT NULL ORDER BY pessoa"
+
+
+def test_comentario_vira_declarado_especifico_com_a_reacao_pela_nota(banco, dados):
+    sessao = _sessao(banco, "dono", "iara", "teo", "--de", "dono")
+    banco.env["FILMES_HOJE"] = "2026-11-21"
+    notas = banco.consultar("SELECT count(*) FROM notas")
+
+    saida = banco.ok(
+        "feedback", "--sessao", sessao, "--filme", "Noite de Estreia",
+        "--nota", "dono=9/10", "--comentario", "dono=enquadramento e diálogo muito bons",
+        "--nota", "iara=5/10", "--comentario", "iara=  bonito,   mas   comprido ",
+        "--nota", "teo=4/10", "--comentario", "teo=muita violência sem sentido")
+
+    fonte, repassado = "Feedback da Sessão 2026-11-20", "Feedback da Sessão 2026-11-20, repassado pelo Dono"
+    assert banco.consultar(_DECLARADOS) == [
+        ["bruno", "gosta", "tt9000203", 1, fonte, "2026-11-21", "enquadramento e diálogo muito bons"],
+        ["iara", None, "tt9000203", 1, repassado, "2026-11-21", "bonito, mas comprido"],
+        ["teo", "nao_gosta", "tt9000203", 1, repassado, "2026-11-21", "muita violência sem sentido"],
+    ]
+    # O comentário não gera Nota nova: só as três Notas da Sessão entraram.
+    assert banco.consultar("SELECT count(*) FROM notas") == [[notas[0][0] + 3]]
+    declarados = [{k: f[k] for k in ("pessoa", "texto", "fonte", "forca", "tipo")}
+                  for f in saida["fatos"] if f["tipo"] == "declarado" and f["texto"] != "já viu"]
+    assert declarados == [
+        {"pessoa": "bruno", "texto": 'disse "enquadramento e diálogo muito bons" de Noite de Estreia (2022)',
+         "fonte": fonte, "forca": "forte", "tipo": "declarado"},
+        {"pessoa": "iara", "texto": 'disse "bonito, mas comprido" de Noite de Estreia (2022)',
+         "fonte": repassado, "forca": "forte", "tipo": "declarado"},
+        {"pessoa": "teo", "texto": 'disse "muita violência sem sentido" de Noite de Estreia (2022)',
+         "fonte": repassado, "forca": "forte", "tipo": "declarado"},
+    ]
+    frente, _ = _ler(dados / "sessoes" / f"{sessao}.md")
+    assert frente["feedback"]["reacoes"][2] == {"pessoa": "teo", "tipo": "nota", "nota": 2.0, "nota_original": "4/10",
+                                              "repassada": True, "comentario": "muita violência sem sentido"}
+    ver = banco.ok("pessoa", "ver", "teo")
+    assert [(d["texto"], d["reacao"], d["forca"]) for d in ver["declarados"]] \
+        == [("muita violência sem sentido", "nao_gosta", "forte")]
+
+    banco.ok("reconstruir")
+    assert banco.consultar(_DECLARADOS)[2][-1] == "muita violência sem sentido"
+
+
+def test_comentario_na_escala_de_5_e_com_relato(banco):
+    sessao = _sessao(banco, "dono", "iara", "teo")
+
+    banco.ok("feedback", "--sessao", sessao, "--filme", "Vento Norte",
+             "--nota", "dono=3,5", "--comentario", "dono=lento",
+             "--relato", "iara=gostou", "--comentario", "iara=amou a trilha",
+             "--relato", "teo=neutro", "--comentario", "teo=tanto faz")
+
+    # 3,5 é 7 na escala de 10: gosta.
+    assert [linha[:2] for linha in banco.consultar(_DECLARADOS)] == [["bruno", "gosta"], ["iara", "gosta"], ["teo", None]]
+
+
+def test_comentario_precisa_de_reacao_da_mesma_pessoa(banco):
+    sessao = _sessao(banco, "dono", "iara")
+    feedback = ("feedback", "--sessao", sessao, "--filme", "Vento Norte")
+
+    assert _erro(banco, *feedback, "--nota", "dono=4", "--comentario", "iara=chato") == (2, "uso_invalido")
+    assert _erro(banco, *feedback, "--nota", "dono=4", "--comentario", "dono=  ") == (2, "uso_invalido")
+    assert _erro(banco, *feedback, "--nota", "dono=4", "--comentario", "dono=a", "--comentario", "dono=b") \
+        == (2, "uso_invalido")
+    assert _erro(banco, "feedback", "--sessao", sessao, "--nada", "--comentario", "dono=a") == (2, "uso_invalido")
