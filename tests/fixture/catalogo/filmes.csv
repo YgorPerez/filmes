@@ -1,52 +1,52 @@
-id,titulo,ano,duracao_min,votos
-tt9000101,O Farol de Areia,2012,112,45000
-tt9000102,Maré Baixa,2015,98,32000
-tt9000103,Cidade de Vidro,2018,121,61000
-tt9000104,As Horas Lentas,2021,104,28000
-tt9000105,Sal e Ferrugem,2023,117,15000
-tt9000106,Curta da Madrugada,2010,88,600
-tt9000201,Ponte Aérea,2016,101,22000
-tt9000202,O Último Bonde,2019,95,18000
-tt9000203,Noite de Estreia,2022,109,9000
-tt9000301,Jardim Suspenso,2017,126,12000
-tt9000302,Vento Norte,2020,99,7000
-tt9000303,Rio Abaixo,2014,110,5000
-tt9000401,Fronteira,2008,118,40000
-tt9000402,Inverno em Lisboa,2011,105,30000
-tt9000403,A Volta do Mar,2016,100,20000
-tt9000501,Barulho,2013,92,25000
-tt9000502,Explosão Final,2017,115,35000
-tt9000503,Asfalto Quente,2020,108,30000
-tt9000601,Pequenos Milagres,2019,96,80000
-tt9000602,Casa Cheia,2021,102,50000
-tt9000701,Deserto Branco,2015,140,70000
-tt9000702,A Última Estação,2018,131,26000
-tt9000801,Café Amargo,2022,89,4000
-tt9000802,Linha Cruzada,2024,94,3000
-tt9000901,Os Inquilinos,2012,107,11000
-tt9000902,Fim de Tarde,2016,93,1500
-tt9000903,Chuva de Verão,2023,85,999
-tt9001001,A Casa das Marés,2019,103,21000
-tt9001002,Segunda Chamada,2017,97,14000
-tt9001003,O Mapa Rasgado,2014,110,9000
-tt9001004,Luz de Inverno,2020,99,12000
-tt9001005,Ruído Branco,2018,101,16000
-tt9001101,Dia de Feira,2016,94,13000
-tt9001108,Outro Dia Qualquer,2015,100,30000
-tt9001102,Tarde de Domingo,2019,91,11000
-tt9001103,Bolo de Fubá,2021,88,10500
-tt9001104,Pipa no Céu,2013,95,10200
-tt9001105,Carnaval de Rua,2010,99,10100
-tt9001106,Sessão Maldita,2005,86,10050
-tt9001107,Silêncio no Lago,2018,132,10020
-tt9001801,Porão Escuro,2019,98,20000
-tt9001802,A Casa do Fim,2021,104,16000
-tt9001803,Risos de Domingo,2020,95,14000
-tt9001901,Maré Cheia,2022,100,8000
-tt9001902,Voo Noturno,2021,97,8000
-tt9001903,Fronteira II,2012,115,8000
-tt9001904,Poeira,2019,108,8000
-tt9001006,Porto Seguro,2016,102,8800
-tt9001007,Canal Fundo,2015,96,8700
-tt9001109,Quermesse,2017,93,9000
-tt9001110,Piquenique,2014,90,8900
+id,titulo,ano,duracao_min,votos,nota_imdb
+tt9000101,O Farol de Areia,2012,112,45000,
+tt9000102,Maré Baixa,2015,98,32000,
+tt9000103,Cidade de Vidro,2018,121,61000,
+tt9000104,As Horas Lentas,2021,104,28000,7.4
+tt9000105,Sal e Ferrugem,2023,117,15000,
+tt9000106,Curta da Madrugada,2010,88,600,
+tt9000201,Ponte Aérea,2016,101,22000,
+tt9000202,O Último Bonde,2019,95,18000,
+tt9000203,Noite de Estreia,2022,109,9000,
+tt9000301,Jardim Suspenso,2017,126,12000,
+tt9000302,Vento Norte,2020,99,7000,
+tt9000303,Rio Abaixo,2014,110,5000,
+tt9000401,Fronteira,2008,118,40000,
+tt9000402,Inverno em Lisboa,2011,105,30000,
+tt9000403,A Volta do Mar,2016,100,20000,
+tt9000501,Barulho,2013,92,25000,
+tt9000502,Explosão Final,2017,115,35000,
+tt9000503,Asfalto Quente,2020,108,30000,
+tt9000601,Pequenos Milagres,2019,96,80000,
+tt9000602,Casa Cheia,2021,102,50000,
+tt9000701,Deserto Branco,2015,140,70000,
+tt9000702,A Última Estação,2018,131,26000,
+tt9000801,Café Amargo,2022,89,4000,
+tt9000802,Linha Cruzada,2024,94,3000,
+tt9000901,Os Inquilinos,2012,107,11000,
+tt9000902,Fim de Tarde,2016,93,1500,
+tt9000903,Chuva de Verão,2023,85,999,
+tt9001001,A Casa das Marés,2019,103,21000,
+tt9001002,Segunda Chamada,2017,97,14000,
+tt9001003,O Mapa Rasgado,2014,110,9000,
+tt9001004,Luz de Inverno,2020,99,12000,
+tt9001005,Ruído Branco,2018,101,16000,
+tt9001101,Dia de Feira,2016,94,13000,
+tt9001108,Outro Dia Qualquer,2015,100,30000,
+tt9001102,Tarde de Domingo,2019,91,11000,
+tt9001103,Bolo de Fubá,2021,88,10500,
+tt9001104,Pipa no Céu,2013,95,10200,
+tt9001105,Carnaval de Rua,2010,99,10100,
+tt9001106,Sessão Maldita,2005,86,10050,
+tt9001107,Silêncio no Lago,2018,132,10020,
+tt9001801,Porão Escuro,2019,98,20000,
+tt9001802,A Casa do Fim,2021,104,16000,
+tt9001803,Risos de Domingo,2020,95,14000,
+tt9001901,Maré Cheia,2022,100,8000,
+tt9001902,Voo Noturno,2021,97,8000,
+tt9001903,Fronteira II,2012,115,8000,
+tt9001904,Poeira,2019,108,8000,
+tt9001006,Porto Seguro,2016,102,8800,
+tt9001007,Canal Fundo,2015,96,8700,
+tt9001109,Quermesse,2017,93,9000,
+tt9001110,Piquenique,2014,90,8900,

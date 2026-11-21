@@ -98,6 +98,7 @@ Tabelas que só as Restrições da Sessão leem. Os filmes são os de cima; a ta
 ### Cabeçalho do filme
 
 - `generos_imdb.csv`: gêneros do IMDb como o title.basics escreve, na ordem dele. Têm gênero 101–105 e 403; Noite de Estreia (203) não tem, para o caso da lista vazia. Nada lê esta tabela fora do cabeçalho, então acrescentar gênero não muda a ordem.
+- `filmes.csv`, coluna `nota_imdb`: só As Horas Lentas (104) tem nota (7,4); os outros saem com `nota_imdb` nulo.
 
 ## gravacoes/
 
@@ -105,7 +106,7 @@ Respostas das fontes sob demanda como a API devolve, em `<fonte>/<tconst>.json`.
 
 - `omdb/`: Vento Norte PG, Noite de Estreia PG-13, Inverno em Lisboa Not Rated, Jardim Suspenso G. Ponte Aérea não tem arquivo.
 - `ddd/`: o tema "a dog dies" tem 12 sim e 2 não em As Horas Lentas, 3 e 2 em A Volta do Mar (os dois saem), 1 e 14 em Sal e Ferrugem, 2 e 0 em Cidade de Vidro (poucos votos), 3 e 3 em Noite de Estreia (empate). O Farol de Areia só tem "there are jump scares"; Maré Baixa não tem arquivo.
-- `tmdb/find-<tconst>.json`: respostas do `/find` para a capa. `find-tt0133093.json` (The Matrix) foi gravada do TMDB em 2026-11-21; as outras copiam o formato dela. As Horas Lentas tem pôster, Sal e Ferrugem vem com `poster_path` nulo e os demais não têm arquivo. Os outros arquivos de `tmdb/` são do import do Letterboxd, descrito abaixo.
+- `tmdb/find-<tconst>-pt-BR.json`: respostas do `/find` com `language=pt-BR`, de onde saem capa, título em português e sinopse. `find-tt0133093-pt-BR.json` (Matrix) foi gravada do TMDB em 2026-11-21; as outras copiam o formato dela. As Horas Lentas tem pôster e sinopse de duas frases; Sal e Ferrugem vem sem pôster, com o título "Sal & Ferrugem" e um "Dr." na primeira frase; Noite de Estreia vem sem pôster e com o overview vazio; os demais não têm arquivo. Os outros arquivos de `tmdb/` são do import do Letterboxd, descrito abaixo.
 
 - `catalogo/`: trechos dos TSVs do IMDb e das respostas SPARQL JSON do QLever, coletados em 2026-11-20. Exercitam o corte de 100 votos, a exclusão de adultos, a ponte de IDs, o elenco, os idiomas e os rótulos reais de classificação. `atualizar` lê essas gravações em vez de acessar a rede.
 

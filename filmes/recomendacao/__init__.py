@@ -160,6 +160,11 @@ def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], qu
             "ano": filme["ano"],
             "duracao_min": filme["duracao_min"],
             **cabecalho.do_filme(contexto, filme),
+            "cobertura": {
+                "com_fato": sum(u is not None for u in utilidades.values()),
+                "presentes": len(utilidades),
+                "sem_fato": [p for p, u in utilidades.items() if u is None],
+            },
             "so_palpites": chave[0] == 2,
             "utilidade": {p: (round(u, 4) if u is not None else None) for p, u in utilidades.items()},
             "evidencias": {p: [e.como_json(pesos) for e in evidencias if e.pessoa == p] for p in presentes},
@@ -176,7 +181,7 @@ def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], qu
         "avisos": contexto.avisos,
         "atribuicoes": atribuicoes.das_fontes([
             *(e["fonte"] for f in filmes for linhas in (f["linhas_do_filme"], *f["evidencias"].values()) for e in linhas),
-            *(tmdb.ATRIBUICAO["fonte"] for f in filmes if f["capa"]),
+            *(tmdb.ATRIBUICAO["fonte"] for f in filmes if f["capa"] or f["titulo_pt"]),
         ]),
     }
 

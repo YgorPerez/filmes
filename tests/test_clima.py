@@ -72,7 +72,7 @@ def test_forca_da_linha_de_clima_segue_a_regua_de_review(banco):
         ('Clima leve: relevância 0,85 da tag "feel-good" para o filme no Tag Genome', "moderada", "review")]
     # Pipa no Céu: 0,70 em "feel-good" é fraca; 0,50 em "feel good movie" fica fora.
     assert _linhas(saida, "Pipa no Céu") == [
-        ('Clima leve: relevância 0,7 da tag "feel-good" para o filme no Tag Genome', "fraca", "review")]
+        ('Clima leve: relevância 0,70 da tag "feel-good" para o filme no Tag Genome', "fraca", "review")]
 
 
 def test_numero_de_usuarios_no_limite_da_regua_ja_vale_a_forca(banco):
@@ -84,15 +84,16 @@ def test_numero_de_usuarios_no_limite_da_regua_ja_vale_a_forca(banco):
         ('Clima leve: 3 usuários do MovieLens marcaram o filme com a tag "feel-good"', "moderada", "review")]
 
 
-def test_limiar_de_relevancia_do_genoma_aparece_sem_arredondamento(banco):
+def test_relevancia_do_genoma_sai_com_duas_casas_cortadas_sem_passar_do_limiar(banco):
+    # 0,799 sai "0,79" e não "0,80": arredondar mostraria o limiar da moderada numa linha fraca.
     saida = _recomendar(banco, "--clima", "tenso")
 
     assert _linhas(saida, "Dia de Feira") == [
-        ('Clima tenso: relevância 0,8 da tag "suspense" para o filme no Tag Genome', "moderada", "review")]
+        ('Clima tenso: relevância 0,80 da tag "suspense" para o filme no Tag Genome', "moderada", "review")]
     assert _linhas(saida, "Bolo de Fubá") == [
-        ('Clima tenso: relevância 0,799 da tag "suspense" para o filme no Tag Genome', "fraca", "review")]
+        ('Clima tenso: relevância 0,79 da tag "suspense" para o filme no Tag Genome', "fraca", "review")]
     assert _linhas(saida, "Carnaval de Rua") == [
-        ('Clima tenso: relevância 0,6 da tag "suspense" para o filme no Tag Genome', "fraca", "review")]
+        ('Clima tenso: relevância 0,60 da tag "suspense" para o filme no Tag Genome', "fraca", "review")]
     assert _linhas(saida, "Outro Dia Qualquer") == []
 
 

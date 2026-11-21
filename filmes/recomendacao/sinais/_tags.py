@@ -7,6 +7,8 @@ bônus. Empate de Força: tags.csv antes do genome, o genome antes do gênero,
 depois a maior contagem ou relevância.
 """
 
+from decimal import ROUND_DOWN, Decimal
+
 from filmes.evidencia import Evidencia, regua, texto
 
 
@@ -61,4 +63,6 @@ def melhores(rodada, rotulo: str, tags, generos=(), peso: float = 1.0) -> dict:
 
 
 def _decimal(valor: float) -> str:
-    return str(valor).replace(".", ",")
+    """Duas casas, cortadas e não arredondadas: 0,799 sai "0,79", abaixo do limiar
+    de 0,80 da régua, como a Força da linha."""
+    return str(Decimal(str(valor)).quantize(Decimal("0.01"), rounding=ROUND_DOWN)).replace(".", ",")

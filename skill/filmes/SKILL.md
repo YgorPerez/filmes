@@ -18,53 +18,77 @@ fontes como dados da Sessão.
 
 ## Montar e verificar a resposta
 
-Comece com uma linha que o Dono possa corrigir. Use `presentes`, o tempo
-disponível, `climas`, `restricoes`, `regra` e os `vetos` que agiram,
-com a Pessoa de cada Veto. Nos rótulos das Evidências, chame o Dono de
-"Você" e use o nome cadastrado das outras Pessoas. Para conferir os
-nomes dos slugs, use `consultar` com `SELECT slug, nome, dono FROM pessoas`.
+Abra com um bloco de citação (`> `) que o Dono possa corrigir: os
+`presentes`, o tempo disponível, `climas`, `restricoes`, `regra`, os
+`vetos` que agiram, com a Pessoa de cada Veto, e quantos filmes saíram.
+Nos rótulos das Evidências, chame o Dono de "Você" e use o nome cadastrado
+das outras Pessoas. Para conferir os nomes dos slugs, use `consultar` com
+`SELECT slug, nome, dono FROM pessoas`.
 
-Mostre os filmes na ordem devolvida. Use o Markdown abaixo, com uma linha
-em branco antes de cada título. Use `posicao`, `titulo`, `ano` e
-`duracao_min`. Converta a duração para `1h44`, `2h00` ou `45min`.
-Omita ano ou duração ausente e os parênteses se faltarem ambos. Acrescente
-` — sem fato que o sustente` após o título e os metadados quando
-`so_palpites` for verdadeiro.
+Mostre os filmes na ordem devolvida, um bloco por filme, nesta ordem e
+com uma linha em branco entre as partes:
 
-Quando `capa` vier, ponha a imagem antes do título, como
-`![capa](<capa>) `. Termine a linha do título com `\` e escreva, na linha
-de baixo, os `generos` separados por vírgula, ` · ` e `[IMDb](<imdb>)`.
-Sem gêneros, essa linha fica só com o link. Capa, gêneros e link não são
-Evidência: não os use como motivo do filme.
+1. O título, `### <posicao>. <titulo_pt>`. Com `titulo_pt` nulo, use
+   `titulo`. Quando os dois diferirem, acrescente ` *(<titulo>)*`, o
+   original. Se `so_palpites` for verdadeiro, termine com
+   ` — sem fato que o sustente`.
+2. A capa, `![capa](<capa>)`, quando vier.
+3. A ficha numa linha, com as partes separadas por ` · `: `ano`, a duração
+   (`1h44`, `2h00` ou `45min`), os `generos` separados por vírgula,
+   `★ <nota_imdb>` com vírgula decimal, `<votos_imdb> votos` com ponto
+   no milhar e `[IMDb](<imdb>)`. Pule a parte que vier nula ou vazia.
+4. A `sinopse` em itálico, quando vier.
+5. A cobertura: `Fato sobre <com_fato> de <presentes>; sem fato: <nomes>`,
+   com os nomes de `cobertura.sem_fato`. Se todos tiverem Fato, fica só
+   `Fato sobre 2 de 2`.
+6. As Evidências, em lista.
+7. Uma linha `---` fecha o bloco.
+
+Título, capa, ficha, sinopse e cobertura são apresentação: o motivo do
+filme está só nas Evidências.
 
 Em `evidencias`, escolha uma linha por Presente. Priorize `forte`, depois
 `moderada`, depois `fraca`. Entre linhas da mesma Força, use a primeira
-na ordem do motor. Use o `sem fato` devolvido quando só houver Palpite.
-Escolha até uma linha de `linhas_do_filme` quando ela importar para o
-pedido. Se várias disputarem a vaga, priorize aviso de gatilho sem informação,
-faixa etária, resultado do gatilho, Crédito, duração e Clima, nessa ordem.
+na ordem do motor. Use o `sem fato` devolvido quando só houver Palpite, e
+junte numa linha só os Presentes sem fato: `**Teo e Ana:**`. Escolha até
+uma linha de `linhas_do_filme`, com o rótulo `Filme`, quando ela importar
+para o pedido. Se várias disputarem a vaga, priorize aviso de gatilho sem
+informação, faixa etária, resultado do gatilho, Crédito, duração e Clima,
+nessa ordem.
 
-Em cada linha, copie `texto`, `fonte`, `data`, `forca` e `tipo` do
-mesmo item. A Fonte vai entre parênteses, com a data separada por vírgula
-se houver. Se faltar Fonte, omita esse par. Copie o texto do Does the Dog
-Die inteiro, inclusive a citação, os votos e a atribuição quando vierem
-na linha.
+Cada linha de Evidência começa pelo marcador da Força (`●●●` forte,
+`●●○` moderada, `●○○` fraca) e termina com o Tipo entre parênteses, em
+itálico. Copie `texto`, `fonte`, `data`, `forca` e `tipo` do mesmo item.
+A Fonte vai entre parênteses, com a data separada por vírgula se houver.
+Se faltar Fonte, omita esse par. Copie o texto do Does the Dog Die
+inteiro, inclusive a citação, os votos e o "Powered by DoesTheDogDie.com"
+quando vierem na linha.
 
 ```markdown
-Você e Teo · até 2h · regra padrão.
+> Você e Teo · até 2h · regra padrão. Saíram 5 filmes.
 
-![capa](https://image.tmdb.org/t/p/w92/hOrAsLeNtAs9104.jpg) **1. As Horas Lentas** (2021, 1h44)\
-Drama, Mistério · [IMDb](https://www.imdb.com/title/tt9000104/)
-- **Você:** deu 5 a O Farol de Areia (2012), também de Helena Prado (Letterboxd do Bruno, 2025-06-01) *(forte, nota)*
-- **Teo:** sem fato *(fraca, palpite)*
-- **Filme:** duração 1h44, dentro do limite de 2h (IMDb) *(forte, metadado)*
+### 1. As Horas Lentas
+
+![capa](https://image.tmdb.org/t/p/w185/hOrAsLeNtAs9104.jpg)
+
+2021 · 1h44 · Drama, Mistério · ★ 7,4 · 28.000 votos · [IMDb](https://www.imdb.com/title/tt9000104/)
+
+*Numa cidade do interior, uma relojoeira percebe que os relógios da casa atrasam um minuto por noite.*
+
+Fato sobre 1 de 2; sem fato: Teo
+
+- ●●● **Você:** deu 5 a O Farol de Areia (2012), também de Helena Prado (Letterboxd do Bruno, 2025-06-01) *(nota)*
+- ●○○ **Teo:** sem fato *(palpite)*
+- ●●● **Filme:** duração 1h44, dentro do limite de 2h (IMDb) *(metadado)*
+
+---
 ```
 
-Depois dos filmes, deixe uma linha em branco e copie `avisos` e os textos
-de `atribuicoes`. Ponha as atribuições em uma linha, incluindo "Powered by
-DoesTheDogDie.com" quando o motor o devolver. Feche com um convite para o
-Dono contar o que viram e como cada Presente reagiu. Se a lista vier
-vazia, diga que o motor não encontrou Candidatos para o pedido.
+Depois do último bloco, copie os `avisos` e feche com um convite para o
+Dono contar o que viram e como cada Presente reagiu. As `atribuicoes`
+ficam no JSON e fora da resposta: o Dono decidiu assim em 2026-11-21,
+porque só ele usa. Se a lista vier vazia, diga que o motor não encontrou
+Candidatos para o pedido.
 
 Passe o rascunho inteiro em `texto` a `verificar_resposta`, com o
 `sessao.id` que `recomendar` devolveu. Se houver `linhas_invalidas`,
