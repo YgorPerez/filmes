@@ -17,6 +17,15 @@ Os IDs de filme seguem `tt90DDNNN`: `DD` é o diretor (`Q90000DD`), `NNN` a orde
 | Caio Brandão (05) | 501–503 | 1 e 2 | Notas baixas: Evidência contra |
 | Lia Moura, Tomás Reis, Beatriz Sá, Jorge Amaral (06–09) | 601–903 | nenhuma | Sem Fato para o Bruno. 903 tem 999 votos |
 
+Notas de outras Pessoas, para os testes de grupo (`test_grupo.py`):
+
+| Pessoa | Notas | Para que serve |
+|---|---|---|
+| Iara | 3 em O Farol de Areia (101), 4 em Fronteira (401) | Fraca a favor nos outros de Helena Prado, moderada nos outros de Rui Tavares. Sem Fato sobre 101 e 401 em si. Bruno e Iara discordam em As Horas Lentas e concordam em Inverno em Lisboa: a Regra padrão e a média simples ordenam os dois ao contrário |
+| Teo | nenhuma | "sem fato" em todo filme |
+
+Os filmes de Lia Moura, Tomás Reis, Beatriz Sá e Jorge Amaral não ligam a Nota nenhuma: são os filmes só com palpites, que completam a lista com `--quantos 50`.
+
 ### Restrições
 
 Tabelas que só as Restrições da Sessão leem. Os filmes são os de cima; a tabela completa do que passa em cada idade está no começo da seção de criança de `tests/test_restricoes.py`.
@@ -38,6 +47,7 @@ Respostas das fontes sob demanda como a API devolve, em `<fonte>/<tconst>.json`.
 Repo de dados fictício. Cada teste trabalha numa cópia, então comandos podem escrever nele.
 
 - `pessoas/bruno.md`: o Dono (`dono: true`, apelido `eu`).
+- `pessoas/iara.md` e `pessoas/teo.md`: Pessoas para os testes de grupo.
 
 ## Para estender
 

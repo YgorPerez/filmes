@@ -1,10 +1,18 @@
 """Recomendação: Candidatos, sinais por Presente, utilidade e ordem.
 
-    recomendar(conn, amb, presentes, quantos) -> dict
+    recomendar(conn, amb, presentes, quantos, regra, restricoes) -> dict
 
 Os sinais são módulos em `sinais/`, achados pelo nome. Cada um define
 `sinais(rodada, pessoa) -> Iterable[Evidencia]` e devolve as Evidências que
 acha para os Candidatos da rodada. Acrescentar um sinal não muda este arquivo.
+
+As Restrições pedidas (`restricoes/`) tiram filmes antes dos sinais; as que
+dependem de fonte sob demanda são resolvidas depois da ordem, só no topo dela.
+Cada filme que passa traz em `linhas_do_filme` as linhas que dizem por quê.
+
+A ordem segue a Regra de escolha (`regra.py`). Cada filme da saída traz a
+utilidade e as Evidências de cada Presente, agrupadas pelo slug na ordem dos
+Presentes; quem não tem Fato sobre o filme ganha a linha "sem fato".
 """
 
 import importlib
@@ -14,7 +22,9 @@ from collections import defaultdict
 from dataclasses import dataclass
 
 from filmes.ambiente import Ambiente
+from filmes.evidencia import sem_fato
 from filmes.recomendacao import candidatos, creditos, sinais as pacote_sinais, utilidade
+from filmes.recomendacao.regra import Regra
 from filmes.recomendacao.restricoes import Contexto, Filtro
 
 
@@ -41,7 +51,7 @@ def _modulos_de_sinal():
 
 
 def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], quantos: int,
-               restricoes: list = ()) -> dict:
+               regra: Regra = Regra(), restricoes: list = ()) -> dict:
     contexto = Contexto(conn=conn, amb=amb, presentes=presentes)
     filtro = Filtro(contexto, list(restricoes))
     rodada = Rodada(conn=conn, amb=amb, candidatos=filtro.candidatos(candidatos.escolher(conn, amb.pesos)))
@@ -53,38 +63,48 @@ def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], qu
             for evidencia in modulo.sinais(rodada, pessoa):
                 por_filme[evidencia.filme_id].append(evidencia)
 
+    # Ordem em três faixas: (0) utilidade conhecida para quem a Regra ouve, pela Regra;
+    # (1) Fato sem utilidade conhecida para essa gente, no fim; (2) só palpites, que só
+    # aparecem quando faltam Candidatos com Fato. Dentro de (1) e (2), o mais votado antes.
     ordenados = []
-    for filme_id, evidencias in por_filme.items():
+    for filme_id, filme in rodada.candidatos.items():
+        evidencias = por_filme.get(filme_id, [])
         utilidades = {
             pessoa: utilidade.individual([e for e in evidencias if e.pessoa == pessoa], pesos)
             for pessoa in presentes
         }
-        conhecidas = [u for u in utilidades.values() if u is not None]
-        if not conhecidas:
-            continue  # filme só com palpites: ticket #19
-        filme = rodada.candidatos[filme_id]
-        chave = (-min(conhecidas), -sum(conhecidas) / len(conhecidas), -filme["votos"], filme_id)
-        ordenados.append((chave, filme, utilidades, evidencias))
+        pela_regra = regra.chave(utilidades)
+        if pela_regra is not None:
+            faixa = (0, tuple(-v for v in pela_regra))
+        elif any(e.tipo != "palpite" for e in evidencias):
+            faixa = (1, ())
+        else:
+            faixa = (2, ())
+        ordenados.append(((*faixa, -filme["votos"], filme_id), filme, utilidades, evidencias))
     ordenados.sort(key=lambda item: item[0])
     aprovados = filtro.aprovar(ordenados, quantos, pesos["restricoes"]["alcance_sob_demanda"], filme=lambda i: i[1])
 
     filmes = []
-    for posicao, (_, filme, utilidades, evidencias) in enumerate(aprovados, start=1):
+    for posicao, (chave, filme, utilidades, evidencias) in enumerate(aprovados, start=1):
+        evidencias = evidencias + [sem_fato(p, filme["id"]) for p, u in utilidades.items() if u is None]
         evidencias = sorted(evidencias, key=lambda e: (-abs(e.contribuicao(pesos)), e.fato_id or ""))
-        evidencias += filtro.linhas[filme["id"]]
         filmes.append({
             "posicao": posicao,
             "id": filme["id"],
             "titulo": filme["titulo"],
             "ano": filme["ano"],
             "duracao_min": filme["duracao_min"],
+            "so_palpites": chave[0] == 2,
             "utilidade": {p: (round(u, 4) if u is not None else None) for p, u in utilidades.items()},
-            "evidencias": [e.como_json(pesos) for e in evidencias],
+            "evidencias": {p: [e.como_json(pesos) for e in evidencias if e.pessoa == p] for p in presentes},
+            "linhas_do_filme": [e.como_json(pesos) for e in filtro.linhas[filme["id"]]],
         })
     return {
         "presentes": presentes,
+        "regra": regra.como_json(),
         "filmes": filmes,
         "restricoes": filtro.como_json(),
         "avisos": contexto.avisos,
-        "creditos": creditos.das_fontes(e["fonte"] for f in filmes for e in f["evidencias"]),
+        "creditos": creditos.das_fontes(
+            e["fonte"] for f in filmes for linhas in (f["linhas_do_filme"], *f["evidencias"].values()) for e in linhas),
     }

@@ -8,7 +8,7 @@ def test_reconstruir_carrega_o_catalogo_da_fixture(cli):
 def test_reconstruir_carrega_o_dono_do_repo_de_dados(cli):
     cli.ok("reconstruir")
 
-    assert cli.consultar("SELECT slug, nome, dono FROM pessoas") == [["bruno", "Bruno", 1]]
+    assert cli.consultar("SELECT slug, nome FROM pessoas WHERE dono = 1") == [["bruno", "Bruno"]]
 
 
 def _conteudo(cli):

@@ -1,8 +1,8 @@
 """Restrições da Sessão: duração, idioma, criança, gatilho e "sem Já visto".
 
-Sem Restrição, o Bruno recebe 17 filmes com `--quantos 50` (veja o LEIAME da
-fixture). Cada Restrição tira filmes antes da ordenação e põe, em cada filme
-que passou, uma linha do filme (Evidência com `pessoa` nula) dizendo por quê.
+Sem Restrição, o Bruno recebe com `--quantos 50` os 25 filmes com votos
+suficientes: 17 com Fato e 8 só com palpites (veja o LEIAME da fixture). Cada Restrição tira filmes antes da ordenação e põe, em cada filme
+que passou, em `linhas_do_filme`, uma linha (Evidência com `pessoa` nula) dizendo por quê.
 """
 
 from pathlib import Path
@@ -22,7 +22,9 @@ def _filme(saida, titulo):
 
 
 def _linhas_do_filme(filme):
-    return [e for e in filme["evidencias"] if e["pessoa"] is None]
+    linhas = filme["linhas_do_filme"]
+    assert all(e["pessoa"] is None for e in linhas)
+    return linhas
 
 
 def test_duracao_maxima_tira_filmes_mais_longos(banco):
@@ -93,6 +95,11 @@ def test_filme_no_idioma_pedido_mostra_a_linha_do_idioma(banco):
         "SELECT fato_id FROM idiomas_originais WHERE filme_id = 'tt9000301' AND codigo = 'pt'")]
 
 
+# Filmes de Lia Moura, Tomás Reis, Beatriz Sá e Jorge Amaral: ninguém viu, só palpites.
+SO_PALPITES = {"Pequenos Milagres", "Casa Cheia", "Deserto Branco", "A Última Estação", "Café Amargo",
+               "Linha Cruzada", "Os Inquilinos", "Fim de Tarde"}
+
+
 def test_sem_ja_visto_tira_os_filmes_que_algum_presente_ja_viu(banco):
     com_vistos = _titulos(_todos(banco))
     saida = _todos(banco, "--sem-ja-visto")
@@ -101,7 +108,7 @@ def test_sem_ja_visto_tira_os_filmes_que_algum_presente_ja_viu(banco):
     assert "O Farol de Areia" in com_vistos
     assert set(_titulos(saida)) == {
         "As Horas Lentas", "Sal e Ferrugem", "Noite de Estreia", "Vento Norte", "A Volta do Mar", "Explosão Final",
-    }
+    } | SO_PALPITES
     assert saida["restricoes"]["sem_ja_visto"]["tirados"] == 11
 
 

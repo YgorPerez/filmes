@@ -47,13 +47,27 @@ describe("servidor MCP sobre a CLI real e a fixture", () => {
     assert.equal(saida.filmes.length, 5);
     assert.equal(saida.filmes[0].titulo, "As Horas Lentas");
     for (const filme of saida.filmes) {
-      for (const evidencia of filme.evidencias) {
+      assert.deepEqual(Object.keys(filme.evidencias), ["bruno"]);
+      for (const evidencia of filme.evidencias.bruno) {
         assert.deepEqual(
           Object.keys(evidencia).sort(),
           ["contribuicao", "data", "fato_id", "fonte", "forca", "pessoa", "texto", "tipo"],
         );
       }
     }
+  });
+
+  it("recomendar passa a Regra de escolha e agrupa as Evidências por Presente", async () => {
+    const resultado = (await cliente.callTool({
+      name: "recomendar",
+      arguments: { presentes: ["dono", "Iara"], regra: "de", de: "iara" },
+    })) as Resultado;
+
+    assert.ok(!resultado.isError);
+    const saida = json(resultado);
+    assert.deepEqual(saida.regra, { nome: "de", pessoa: "iara" });
+    assert.equal(saida.filmes[0].titulo, "Inverno em Lisboa");
+    assert.deepEqual(Object.keys(saida.filmes[0].evidencias), ["bruno", "iara"]);
   });
 
   it("consultar executa SELECT", async () => {
@@ -89,7 +103,7 @@ describe("servidor MCP sobre a CLI real e a fixture", () => {
     assert.deepEqual(saida.restricoes.gatilho.temas, ["a dog dies"]);
     // Em português, até 1h50 e até a faixa 6, só sobra Maré Baixa; sem chave do Does the Dog Die, fica com aviso.
     assert.deepEqual(saida.filmes.map((f: any) => f.titulo), ["Maré Baixa"]);
-    const linhas = saida.filmes[0].evidencias.filter((e: any) => e.pessoa === null).map((e: any) => e.texto);
+    const linhas = saida.filmes[0].linhas_do_filme.map((e: any) => e.texto);
     assert.deepEqual(linhas.sort(), [
       "duração 1h38, dentro do limite de 1h50",
       "classificação L (Kijkwijzer AL convertida)",
