@@ -3,11 +3,11 @@
 O Wikidata é refeito a cada `reconstruir`, a partir do Catálogo. O resto não pode
 ser: a busca do TMDB depende de rede e de cache, e a fila depende do Dono. Por
 isso cada resposta do TMDB que decidiu algo, e cada decisão do Dono, fica neste
-arquivo, uma entrada por filme (pelo id `vento-norte-2020`):
+arquivo, uma entrada por par (Name, Year):
 
     situacao: tmdb        o TMDB achou um filme só com o título; `filme` é o tconst
     situacao: minisserie  o TMDB achou só uma série com o título
-    situacao: pendente    o TMDB não achou, ou achou mais de um; `candidatos` lista o que veio
+    situacao: pendente    o TMDB não achou um filme único com ID do IMDb
     situacao: confirmado  o Dono disse qual é o filme (`filme`)
     situacao: descartado  o Dono disse que não é filme ou que é para ignorar (`motivo`)
 
@@ -19,10 +19,9 @@ from pathlib import Path
 from filmes.dados import markdown
 
 CAMINHO = Path("imports") / "letterboxd.md"
-SITUACOES = ("tmdb", "minisserie", "pendente", "confirmado", "descartado")
 
 _CORPO = (
-    "Resoluções do import do Letterboxd que não saem do Wikidata: as respostas do TMDB e as\n"
+    "Resoluções do import do Letterboxd que não saem do Wikidata: os IDs resolvidos e as\n"
     "decisões do Dono na fila. `reconstruir` lê este arquivo; os comandos `importar` e `fila` o escrevem.\n"
 )
 

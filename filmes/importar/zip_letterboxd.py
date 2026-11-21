@@ -25,6 +25,7 @@ import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 
+from filmes.banco import fato_id
 from filmes.erros import ErroFilmes
 
 ARQUIVOS = ("watched", "ratings", "diary", "reviews", "watchlist")
@@ -63,14 +64,15 @@ def slug(nome: str) -> str:
 
 
 def id_do_filme(nome: str, ano: int | None) -> str:
-    """ID de um filme do export, estável e legível: `vento-norte-2020`."""
-    base = slug(nome) or "sem-titulo"
-    return f"{base}-{ano}" if ano else base
+    """ID estável para o par (Name, Year), mesmo quando dois nomes dão o mesmo slug."""
+    base = slug(nome)[:80] or "sem-titulo"
+    sufixo = fato_id("letterboxd", nome, ano).split(":")[1]
+    return f"{base}-{ano}-{sufixo}" if ano is not None else f"{base}-{sufixo}"
 
 
-def ler(caminho: Path) -> list[Linha]:
+def ler(caminho: Path, *, conteudo: bytes | None = None) -> list[Linha]:
     try:
-        with zipfile.ZipFile(caminho) as z:
+        with zipfile.ZipFile(caminho if conteudo is None else io.BytesIO(conteudo)) as z:
             achados = _achar_csvs(z)
             if not achados:
                 raise ErroFilmes("arquivo_invalido",
@@ -84,6 +86,8 @@ def ler(caminho: Path) -> list[Linha]:
             return linhas
     except zipfile.BadZipFile:
         raise ErroFilmes("arquivo_invalido", f"{caminho.name}: não é um ZIP")
+    except (UnicodeDecodeError, csv.Error, RuntimeError) as erro:
+        raise ErroFilmes("arquivo_invalido", f"{caminho.name}: {erro}") from erro
     except FileNotFoundError:
         raise ErroFilmes("arquivo_ausente", f"arquivo não encontrado: {caminho}")
 
@@ -102,7 +106,7 @@ def _achar_csvs(z: zipfile.ZipFile) -> dict[str, str]:
 
 
 def _ler_csv(arquivo: str, texto: str) -> list[Linha]:
-    leitor = csv.DictReader(io.StringIO(texto, newline=""))
+    leitor = csv.DictReader(io.StringIO(texto, newline=""), strict=True)
     faltando = {"Date", "Name", "Year"} - set(leitor.fieldnames or [])
     if faltando:
         raise ErroFilmes("arquivo_invalido", f"{arquivo}.csv: faltam as colunas {', '.join(sorted(faltando))}")
@@ -130,7 +134,7 @@ def _ano(valor, onde):
     valor = (valor or "").strip()
     if not valor:
         return None
-    if not valor.isdigit():
+    if not re.fullmatch(r"[0-9]{4}", valor):
         raise ErroFilmes("arquivo_invalido", f"{onde}: ano inválido: {valor!r}")
     return int(valor)
 

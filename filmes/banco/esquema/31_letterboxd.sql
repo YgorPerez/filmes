@@ -15,16 +15,6 @@ CREATE TABLE slugs_letterboxd (
     PRIMARY KEY (slug, item)
 );
 
--- Já visto vindo de import: watched.csv e as datas do diário.
-CREATE TABLE vistos (
-    fato_id  TEXT PRIMARY KEY,
-    pessoa   TEXT NOT NULL REFERENCES pessoas(slug),
-    filme_id TEXT NOT NULL,                 -- sem FK, como em notas
-    data     TEXT NOT NULL,
-    fonte    TEXT NOT NULL
-);
-CREATE INDEX vistos_por_pessoa ON vistos(pessoa, filme_id);
-
 -- O que a Pessoa marcou para ver um dia. Fato guardado; nenhum sinal o usa ainda.
 CREATE TABLE watchlist (
     fato_id  TEXT PRIMARY KEY,
@@ -35,8 +25,7 @@ CREATE TABLE watchlist (
 );
 
 -- Cada filme dos ZIPs de cada Pessoa e como ele foi resolvido. A fila manual é
--- situacao = 'fila'. O id é o slug do nome com o ano ("vento-norte-2020") e vale
--- para todas as Pessoas: resolver uma vez resolve para todas.
+-- situacao = 'fila'. O id identifica o par (Name, Year) para todas as Pessoas.
 CREATE TABLE itens_letterboxd (
     pessoa     TEXT NOT NULL REFERENCES pessoas(slug),
     id         TEXT NOT NULL,
@@ -46,6 +35,5 @@ CREATE TABLE itens_letterboxd (
     caminho    TEXT CHECK (caminho IN ('wikidata', 'tmdb', 'manual')),
     filme_id   TEXT,                        -- tconst, quando resolvido
     motivo     TEXT,                        -- por que foi descartado ou está na fila
-    candidatos TEXT,                        -- JSON: o que o TMDB achou, para a fila
     PRIMARY KEY (pessoa, id)
 );
