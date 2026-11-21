@@ -28,9 +28,13 @@ GRUPOS = {
     "elenco": ("P161",),
     "conteudo": (*(p for p in ARESTAS if p != "P161"), *CLASSIFICACOES),
     "atores": ("P345",),
+    "series": ("P31",),
 }
-# Grupos que um manifesto anterior ao #35 não tem; sem eles, o elenco fica sem créditos.
-OPCIONAIS = ("atores",)
+# Grupos que um manifesto anterior ao #35 (atores) ou ao #49 (series) não tem.
+# Sem atores, o elenco fica sem créditos; sem series, as arestas de série ficam todas.
+OPCIONAIS = ("atores", "series")
+# O P179 aponta também para listas e rankings. Série é o item com P31 sob uma destas classes.
+SERIES = ("Q24856", "Q196600")  # série de filmes, franquia de mídia
 
 IRI = ("http://www.wikidata.org/entity/", "https://www.wikidata.org/entity/")
 
@@ -51,6 +55,8 @@ def consulta(grupo, propriedades):
     escopos = {
         "ids": "{ ?item wdt:P31 wd:Q11424 } UNION { ?item wdt:P6127 ?slug }",
         "atores": "?filme wdt:P31 wd:Q11424 ; wdt:P161 ?item .",
+        "series": "?filme wdt:P31 wd:Q11424 ; wdt:P179 ?item .\n"
+                  f"    ?valor wdt:P279* ?raiz . VALUES ?raiz {{ {' '.join(f'wd:{q}' for q in SERIES)} }}",
     }
     escopo = escopos.get(grupo, "?item wdt:P31 wd:Q11424 .")
     return f"""{PREFIXOS}

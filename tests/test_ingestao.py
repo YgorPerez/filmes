@@ -31,6 +31,7 @@ def test_atualizar_fixa_os_dumps_por_data_e_hash(catalogo_real):
         "title.basics.tsv.gz", "title.ratings.tsv.gz", "wikidata-ids.json.gz",
         "wikidata-conteudo.json.gz", "wikidata-elenco.json.gz", "wikidata-rotulos.json.gz",
         "ml-32m.zip", "genome_2021.zip", "title.principals.tsv.gz", "wikidata-atores.json.gz",
+        "wikidata-series.json.gz",
     }
     for nome, versao in fixados.items():
         assert versao["data"] == {
@@ -111,6 +112,31 @@ def test_reconstruir_aceita_manifesto_sem_os_creditos_do_imdb(catalogo_real):
 
     assert cli.consultar("SELECT count(*) FROM elenco_principal_imdb") == [[0]]
     assert cli.consultar("SELECT count(*) FROM filmes") == [[4]]
+
+
+def test_reconstruir_so_guarda_a_serie_que_e_serie_de_filmes(catalogo_real):
+    cli, _, _ = catalogo_real
+    cli.ok("atualizar")
+    cli.ok("reconstruir")
+
+    # The Matrix series é série de filmes; a lista da BBC é artigo de lista da Wikimedia.
+    assert cli.consultar("SELECT filme_id, entidade_id FROM arestas WHERE predicado = 'serie'") == [
+        ["tt0133093", "Q1210827"],
+    ]
+
+
+def test_reconstruir_sem_o_dump_das_series_guarda_todas_as_arestas_de_serie(catalogo_real):
+    cli, _, versoes = catalogo_real
+    cli.ok("atualizar")
+    manifesto = json.loads(versoes.read_text())
+    del manifesto["dumps"]["wikidata-series.json.gz"]
+    versoes.write_text(json.dumps(manifesto))
+
+    cli.ok("reconstruir")
+
+    assert cli.consultar("SELECT filme_id, entidade_id FROM arestas WHERE predicado = 'serie' ORDER BY filme_id") == [
+        ["tt0108052", "Q26705935"], ["tt0133093", "Q1210827"],
+    ]
 
 
 def test_reconstruir_recusa_dump_diferente_do_que_foi_fixado(catalogo_real):

@@ -133,12 +133,40 @@
                     "type": "uri",
                     "value": "http://www.wikidata.org/entity/Q80655145"
                 }
+            },
+            {
+                "item": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/entity/Q83495"
+                },
+                "p": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/prop/direct/P179"
+                },
+                "valor": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/entity/Q1210827"
+                }
+            },
+            {
+                "item": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/entity/Q483941"
+                },
+                "p": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/prop/direct/P179"
+                },
+                "valor": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/entity/Q26705935"
+                }
             }
         ]
     },
     "meta": {
         "query-time-ms": 240,
-        "result-size-total": 9,
+        "result-size-total": 11,
         "warnings": []
     }
 }

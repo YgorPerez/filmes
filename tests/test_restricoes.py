@@ -102,8 +102,9 @@ def test_filme_no_idioma_pedido_mostra_a_linha_do_idioma(banco):
 def test_sem_ja_visto_tira_os_filmes_que_algum_presente_ja_viu(banco):
     vistos = {titulo for (titulo,) in banco.consultar(
         "SELECT titulo FROM filmes JOIN notas ON notas.filme_id = filmes.id WHERE pessoa = 'bruno'")}
-    com_vistos = set(_titulos(_todos(banco)))
-    saida = _todos(banco, "--sem-ja-visto")
+    # Com a lista inteira, a vaga de um já visto não puxa um filme de fora dos 50.
+    com_vistos = set(_titulos(_todos(banco, "--quantos", "80")))
+    saida = _todos(banco, "--sem-ja-visto", "--quantos", "80")
 
     assert "O Farol de Areia" in vistos & com_vistos
     assert set(_titulos(saida)) == com_vistos - vistos
