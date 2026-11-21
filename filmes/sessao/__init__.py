@@ -25,6 +25,7 @@ def abrir(amb: Ambiente, recomendacao: dict, contexto: dict) -> dict:
         frente = {
             "data": amb.hoje,
             "presentes": presentes,
+            "dono": next(iter(dono), None),
             "contexto": contexto,
             "regra": recomendacao["regra"],
             "escolhido": None,

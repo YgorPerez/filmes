@@ -4,6 +4,7 @@ Frontmatter (protótipo de #10):
 
     data: 2026-11-20
     presentes: [bruno, iara]           # slugs
+    dono: bruno                         # para reconhecer "Você" na resposta
     contexto: {pedido, duracao_max, clima, restricoes}
     regra: {nome: padrao}              # ou {nome: de, pessoa: iara}
     escolhido: tt9000104               # null enquanto aberta e em "não vimos nada"
