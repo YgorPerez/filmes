@@ -1,7 +1,7 @@
 """Restrições da Sessão: duração, idioma, criança, gatilho e "sem Já visto".
 
-Sem Restrição, o Bruno recebe com `--quantos 50` os 25 filmes com votos
-suficientes: 17 com Fato e 8 só com palpites (veja o LEIAME da fixture). Cada Restrição tira filmes antes da ordenação e põe, em cada filme
+Sem Restrição, o Bruno recebe com `--quantos 50` todos os filmes com votos
+suficientes, os com Fato antes dos só com palpites (veja o LEIAME da fixture). Cada Restrição tira filmes antes da ordenação e põe, em cada filme
 que passou, em `linhas_do_filme`, uma linha (Evidência com `pessoa` nula) dizendo por quê.
 """
 
@@ -95,21 +95,16 @@ def test_filme_no_idioma_pedido_mostra_a_linha_do_idioma(banco):
         "SELECT fato_id FROM idiomas_originais WHERE filme_id = 'tt9000301' AND codigo = 'pt'")]
 
 
-# Filmes de Lia Moura, Tomás Reis, Beatriz Sá e Jorge Amaral: ninguém viu, só palpites.
-SO_PALPITES = {"Pequenos Milagres", "Casa Cheia", "Deserto Branco", "A Última Estação", "Café Amargo",
-               "Linha Cruzada", "Os Inquilinos", "Fim de Tarde"}
-
-
 def test_sem_ja_visto_tira_os_filmes_que_algum_presente_ja_viu(banco):
-    com_vistos = _titulos(_todos(banco))
+    vistos = {titulo for (titulo,) in banco.consultar(
+        "SELECT titulo FROM filmes JOIN notas ON notas.filme_id = filmes.id WHERE pessoa = 'bruno'")}
+    com_vistos = set(_titulos(_todos(banco)))
     saida = _todos(banco, "--sem-ja-visto")
 
-    # Bruno deu Nota a O Farol de Areia, Maré Baixa e Cidade de Vidro, entre outros.
-    assert "O Farol de Areia" in com_vistos
-    assert set(_titulos(saida)) == {
-        "As Horas Lentas", "Sal e Ferrugem", "Noite de Estreia", "Vento Norte", "A Volta do Mar", "Explosão Final",
-    } | SO_PALPITES
-    assert saida["restricoes"]["sem_ja_visto"]["tirados"] == 11
+    assert "O Farol de Areia" in vistos & com_vistos
+    assert set(_titulos(saida)) == com_vistos - vistos
+    assert {"As Horas Lentas", "Sal e Ferrugem", "Vento Norte"} <= set(_titulos(saida))
+    assert saida["restricoes"]["sem_ja_visto"]["tirados"] == len(vistos & com_vistos)
 
 
 # Criança. Na fixture (classificacoes.csv, adultos.csv):

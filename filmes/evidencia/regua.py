@@ -9,6 +9,7 @@ from filmes.evidencia import FORCAS
 
 NOTA_ALTA = 4.0       # "Nota alta" no caminho de gosto
 ANOS_FRESCOR = 5      # Nota com mais de 5 anos cai um nível
+ANOS_DITO = 2         # Declarado e Relato com mais de 2 anos caem um nível
 
 
 def descer(forca: str) -> str:
@@ -50,6 +51,18 @@ def forca_caminho(notas_altas: int, predicado: str) -> str | None:
         return None
     forca = "forte" if notas_altas >= 3 else "moderada" if notas_altas == 2 else "fraca"
     return "fraca" if predicado == "genero" else forca
+
+
+def forca_dito(tipo: str, especifico: bool, data: str, hoje: dt.date) -> str:
+    """Declarado específico (nomeia filme, diretor, ator, subgênero) é forte; genérico é moderada.
+    Uma review ou tag que a própria Pessoa escreveu é Declarado específico.
+    Relato fica um nível abaixo do Declarado equivalente. Os dois caem um nível depois de 2 anos."""
+    forca = "forte" if especifico else "moderada"
+    if tipo == "relato":
+        forca = descer(forca)
+    if _mais_velha_que(data, ANOS_DITO, hoje):
+        forca = descer(forca)
+    return forca
 
 
 def forca_metadado_do_pedido() -> str:
