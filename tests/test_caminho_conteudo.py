@@ -6,7 +6,9 @@ Bruno por um predicado só:
 - Voo Noturno: Rita Lobo no elenco, como em Ponte Aérea (4,5);
 - Fronteira II: da Trilogia da Fronteira, com Fronteira (5 em 2019);
 - Poeira: faroeste, como O Farol de Areia, Maré Baixa, Cidade de Vidro e Jardim Suspenso;
-- Escala em Lisboa: também com Rita Lobo, mas fora dos 3 primeiros créditos do IMDb.
+- Escala em Lisboa: também com Rita Lobo, mas fora dos 3 primeiros créditos do IMDb;
+- Mar Aberto: na mesma lista que Fronteira, "Os 100 melhores filmes segundo a
+  Revista Tela", que o Wikidata põe em P179 mas não é série nem franquia.
 
 Os pesos de config/pesos.toml são roteiro 0,8, elenco 0,5, série 1,0 e gênero 0,3.
 """
@@ -52,6 +54,11 @@ def test_serie_em_comum_liga_a_nota_ao_candidato(banco):
         ("deu 5 a Fronteira (2008), também da série Trilogia da Fronteira", "moderada", "nota", 0.6),
         ("da série Trilogia da Fronteira, como 1 filme a que deu 4 ou mais: Fronteira (2008)", "fraca", "metadado", 0.3),
     ]
+
+
+def test_lista_no_p179_nao_conta_como_serie(banco):
+    textos = [e[0] for e in _do_bruno(_todos(banco), "Mar Aberto")]
+    assert not [t for t in textos if "série" in t]
 
 
 def test_genero_em_comum_fica_no_maximo_fraco_e_nao_vira_semente(banco):

@@ -138,11 +138,13 @@ def test_regra_de_sem_dizer_de_quem_e_uso_invalido(banco):
 
 
 # Lia Moura, Tomás Reis, Beatriz Sá e Jorge Amaral não ligam a nenhuma Nota da fixture:
-# os filmes deles são Candidatos só com palpites.
+# os filmes deles são Candidatos só com palpites. Mar Aberto também: a lista em P179
+# que o ligaria a Fronteira não é série e a aresta sai na reconstrução.
 SO_PALPITES = {"Pequenos Milagres", "Casa Cheia", "Deserto Branco", "A Última Estação",
                "Café Amargo", "Linha Cruzada", "Os Inquilinos", "Fim de Tarde",
                "Porão Escuro", "A Casa do Fim", "Risos de Domingo",
-               "Carta de Amor", "Amor em Paris", "Casar de Novo", "Baile de Formatura"}
+               "Carta de Amor", "Amor em Paris", "Casar de Novo", "Baile de Formatura",
+               "Mar Aberto"}
 
 
 def test_filme_so_com_palpites_fica_de_fora_quando_ha_candidatos_com_fato(banco):

@@ -50,6 +50,9 @@ Caminho de conteúdo por outros predicados (`test_caminho_conteudo.py`). Cada fi
 | Fronteira II (1903) | serie, Trilogia da Fronteira | Fronteira (401) |
 | Poeira (1904) | genero, faroeste | 101, 102, 103 e Jardim Suspenso (301): quatro Notas altas, que no gênero ficam em metadado fraco |
 | Escala em Lisboa (3501) | elenco, Rita Lobo | Ponte Aérea (201), como Voo Noturno, mas Rita Lobo está fora dos 3 primeiros créditos |
+| Mar Aberto (4901) | serie, Os 100 melhores filmes segundo a Revista Tela (`Q9004901`) | Fronteira (401), mas a lista não está em `series_de_filmes.csv` e a aresta sai na reconstrução. Tem 1.000 votos, o mínimo, para ficar depois dos outros filmes só com palpites; entra no `--quantos 100` de `test_grupo.py` |
+
+`series_de_filmes.csv` diz quais entidades de série são série de filmes: só a Trilogia da Fronteira. Uma série nova na fixture precisa de linha ali, senão a aresta dela some.
 
 Créditos do IMDb (`elenco_principal_imdb.csv`, `atores_imdb.csv`): os 3 primeiros atores de Voo Noturno e de Escala em Lisboa. Rita Lobo (`nm9001902`) é o segundo crédito de Voo Noturno, e a Evidência fica com a régua normal; em Escala em Lisboa os três primeiros são outros, e ela vale no máximo fraca. Os demais filmes não têm créditos, e a régua deles não muda.
 
@@ -122,7 +125,7 @@ Respostas das fontes sob demanda como a API devolve, em `<fonte>/<tconst>.json`.
 - `ddd/`: o tema "a dog dies" tem 12 sim e 2 não em As Horas Lentas, 3 e 2 em A Volta do Mar (os dois saem), 1 e 14 em Sal e Ferrugem, 2 e 0 em Cidade de Vidro (poucos votos), 3 e 3 em Noite de Estreia (empate). O Farol de Areia só tem "there are jump scares"; Maré Baixa não tem arquivo.
 - `tmdb/find-<tconst>-pt-BR.json`: respostas do `/find` com `language=pt-BR`, de onde saem capa, título em português e sinopse. `find-tt0133093-pt-BR.json` (Matrix) foi gravada do TMDB em 2026-11-21; as outras copiam o formato dela. As Horas Lentas tem pôster e sinopse de duas frases; Sal e Ferrugem vem sem pôster, com o título "Sal & Ferrugem" e um "Dr." na primeira frase; Noite de Estreia vem sem pôster e com o overview vazio; os demais não têm arquivo. Os outros arquivos de `tmdb/` são do import do Letterboxd, descrito abaixo.
 
-- `catalogo/`: trechos dos TSVs do IMDb e das respostas SPARQL JSON do QLever, coletados em 2026-11-20. Exercitam o corte de 100 votos, a exclusão de adultos, a ponte de IDs, o elenco, os créditos do `title.principals` (Schindler's List, Matrix e Miss Jerry) e o P345 de dois atores, os idiomas e os rótulos reais de classificação. `atualizar` lê essas gravações em vez de acessar a rede.
+- `catalogo/`: trechos dos TSVs do IMDb e das respostas SPARQL JSON do QLever, coletados em 2026-11-20. Exercitam o corte de 100 votos, a exclusão de adultos, a ponte de IDs, o elenco, os créditos do `title.principals` (Schindler's List, Matrix e Miss Jerry) e o P345 de dois atores, os idiomas e os rótulos reais de classificação. `atualizar` lê essas gravações em vez de acessar a rede. O P179 de Matrix (The Matrix series, `Q1210827`) e a linha dela em `wikidata-series.json` são reais, de 2026-11-21. O P179 de Schindler's List para a lista da BBC (`Q26705935`) é inventado: a lista existe, mas o filme não está nela. Serve para a aresta que a reconstrução tira.
 
 ## dados/
 
