@@ -3,6 +3,9 @@
 - Cada reação é um Fato, com a Sessão como Fonte e a data do Feedback. A Nota
   (do Dono, ou repassada por ele) vai também para `notas`, com o mesmo fato_id.
 - Cada Presente ganha o Já visto do Filme escolhido, tenha reação ou não.
+- O comentário que acompanha uma reação é um Declarado específico da Pessoa sobre o
+  Filme escolhido. A reação sai da nota (na escala de 10: 7 a 10 gosta, 1 a 4 não
+  gosta, o meio é neutro) ou do Relato. Não gera Nota.
 - "Não vimos nada" (Feedback sem Filme escolhido) não gera Fato.
 """
 
@@ -23,9 +26,22 @@ class Reacao:
     filme_id: str
     tipo: str            # nota ou relato
     nota: float | None
+    nota_original: str | None   # "9/10", quando o Dono deu a Nota na escala de 10
     reacao: str | None
     repassada: bool
     valor: float
+    data: str
+    fonte: str
+
+
+@dataclass(frozen=True)
+class Comentario:
+    fato_id: str
+    sessao: str
+    pessoa: str
+    filme_id: str
+    reacao: str | None   # gosta, nao_gosta, ou None no neutro
+    texto: str
     data: str
     fonte: str
 
@@ -65,16 +81,43 @@ def reacoes(sessao_id: str, frente: dict) -> list[Reacao]:
             fonte_da_nota = fonte(frente, repassada)
             lista.append(Reacao(
                 fato_id=fato_id("notas", pessoa, filme_id, nota, data, fonte_da_nota, sessao_id),
-                sessao=sessao_id, pessoa=pessoa, filme_id=filme_id, tipo="nota", nota=nota, reacao=None,
+                sessao=sessao_id, pessoa=pessoa, filme_id=filme_id, tipo="nota", nota=nota,
+                nota_original=r.get("nota_original"), reacao=None,
                 repassada=repassada, valor=valor_da_nota(nota), data=data, fonte=fonte_da_nota))
         elif tipo == "relato" and r.get("reacao") in NIVEIS:
             fonte_do_relato = fonte(frente)
             lista.append(Reacao(
                 fato_id=fato_id("reacoes", sessao_id, pessoa, filme_id, r["reacao"], data),
-                sessao=sessao_id, pessoa=pessoa, filme_id=filme_id, tipo="relato", nota=None, reacao=r["reacao"],
+                sessao=sessao_id, pessoa=pessoa, filme_id=filme_id, tipo="relato", nota=None,
+                nota_original=None, reacao=r["reacao"],
                 repassada=False, valor=NIVEIS[r["reacao"]], data=data, fonte=fonte_do_relato))
         else:
             raise ErroFilmes("dados_invalidos", f"Sessão {sessao_id}: reação inválida {r!r}")
+    return lista
+
+
+def reacao_do_comentario(r: dict) -> str | None:
+    if r["tipo"] == "relato":
+        return {"gostou": "gosta", "não gostou": "nao_gosta"}.get(r["reacao"])
+    de_10 = float(r["nota"]) * 2
+    return "gosta" if de_10 >= 7 else "nao_gosta" if de_10 <= 4 else None
+
+
+def comentarios(sessao_id: str, frente: dict, dono: set[str]) -> list[Comentario]:
+    feedback = frente.get("feedback") or {}
+    filme_id = frente.get("escolhido")
+    if not feedback or not filme_id:
+        return []
+    data = str(feedback["registrado_em"])
+    lista = []
+    for r in feedback.get("reacoes") or []:
+        if not r.get("comentario"):
+            continue
+        pessoa, reacao = r["pessoa"], reacao_do_comentario(r)
+        lista.append(Comentario(
+            fato_id=fato_id("feedback", sessao_id, pessoa, filme_id, reacao, r["comentario"], data),
+            sessao=sessao_id, pessoa=pessoa, filme_id=filme_id, reacao=reacao, texto=r["comentario"], data=data,
+            fonte=fonte(frente, repassada=pessoa not in dono)))
     return lista
 
 
