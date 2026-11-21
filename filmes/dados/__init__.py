@@ -3,5 +3,5 @@
 Layout do repo de dados:
 
     pessoas/<slug>.md     frontmatter YAML (nome, apelidos, dono, vetos, imports) e corpo
-    sessoes/<data>-<presentes>.md   (ticket #20)
+    sessoes/<data>-<presentes>.md   uma Sessão: veja filmes/sessao/arquivo.py
 """

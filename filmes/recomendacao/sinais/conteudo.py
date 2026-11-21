@@ -27,7 +27,7 @@ _SQL = """
 SELECT c.filme_id  AS candidato,
        c.fato_id   AS aresta_fato, c.fonte AS aresta_fonte, c.data AS aresta_data,
        e.rotulo    AS entidade,
-       n.fato_id   AS nota_fato, n.nota, n.data AS nota_data, n.fonte AS nota_fonte,
+       n.fato_id   AS nota_fato, n.nota, n.data AS nota_data, n.fonte AS nota_fonte, n.sessao AS nota_sessao,
        f.titulo, f.ano
 FROM notas_vigentes n
 JOIN arestas s   ON s.filme_id = n.filme_id AND s.predicado = :predicado
@@ -53,7 +53,8 @@ def sinais(rodada, pessoa):
         for (candidato, _), sementes in nos.items():
             primeira = sementes[0]
             for s in sementes:
-                forca, direcao = regua.forca_nota(s["nota"], s["nota_data"], rodada.hoje)
+                forca, direcao = regua.forca_nota(s["nota"], s["nota_data"], rodada.hoje,
+                                                  de_feedback=s["nota_sessao"] is not None)
                 evidencia = Evidencia(
                     pessoa=pessoa, filme_id=candidato,
                     texto=redacao["semente"].format(
