@@ -31,6 +31,8 @@ Sem `--json`, a saída é o mesmo JSON indentado. Erro sai com código diferente
 
 ```
 config/pesos.toml          pesos versionados (multiplicadores de Força, peso por aresta, utilidade, votos mínimos)
+config/climas.toml         vocabulário fixo de Climas: Clima -> tags do MovieLens e gêneros
+config/grupo_sozinho.toml  tags do MovieLens que dão bônus numa Sessão em grupo ou sozinha
 filmes/
   cli.py                   contrato da CLI; acha os comandos em comandos/
   ambiente.py              caminhos, pesos e "hoje" de uma execução
@@ -44,6 +46,7 @@ filmes/
   catalogo/                ingestão do Catálogo; tabelas.py carrega CSV pronto
   evidencia/               Evidencia, régua de Força (regua.py), redação (texto.py)
   recomendacao/            Candidatos, utilidade, ordem; sinais/<caminho>.py, um por caminho
+                           (sinais(rodada, pessoa) para uma Pessoa, sinais_do_filme(rodada) para a linha do filme)
   sessao/ importar/ sob_demanda/ avaliacao/ verificar/   reservados para os tickets seguintes
 mcp/src/
   servidor.ts              registra cada ferramenta de ferramentas/

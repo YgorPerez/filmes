@@ -14,3 +14,8 @@ def lista(itens: list[str]) -> str:
 
 def filme(titulo: str, ano) -> str:
     return f"{titulo} ({ano})" if ano else titulo
+
+
+def inteiro(valor: int) -> str:
+    """3104 vira "3.104"."""
+    return f"{valor:,}".replace(",", ".")

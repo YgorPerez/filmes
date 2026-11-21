@@ -17,11 +17,13 @@ def test_consultar_devolve_colunas_e_linhas(banco):
     "PRAGMA writable_schema = ON",
 ])
 def test_consultar_recusa_escrita_e_o_banco_fica_intacto(banco, sql):
+    antes = banco.consultar("SELECT count(*) FROM filmes")
+
     codigo, saida = banco.rodar("consultar", sql)
 
     assert codigo != 0
     assert saida["erro"]["codigo"] == "somente_leitura"
-    assert banco.consultar("SELECT count(*) FROM filmes") == [[27]]
+    assert banco.consultar("SELECT count(*) FROM filmes") == antes
 
 
 def test_consultar_com_sql_quebrado_e_erro_de_sql(banco):

@@ -47,7 +47,12 @@ def test_pessoa_sem_nota_nenhuma_fica_fora_do_minimo_e_da_media(banco):
     sozinho = banco.ok("recomendar", "--presentes", "dono", "--quantos", "50")
     com_teo = banco.ok("recomendar", "--presentes", "dono", "teo", "--quantos", "50")
 
-    assert _titulos(com_teo) == _titulos(sozinho)
+    # Com o Teo a Sessão é em grupo, e o bônus de grupo/sozinho muda de filme
+    # (test_clima.py); fora os filmes com esse bônus, a ordem é a mesma.
+    com_bonus = {f["titulo"] for saida in (sozinho, com_teo) for f in saida["filmes"] if f["evidencias_do_filme"]}
+    assert [t for t in _titulos(com_teo) if t not in com_bonus] == [t for t in _titulos(sozinho) if t not in com_bonus]
+    assert ({f["titulo"]: f["utilidade"]["bruno"] for f in com_teo["filmes"]}
+            == {f["titulo"]: f["utilidade"]["bruno"] for f in sozinho["filmes"]})
     for filme in com_teo["filmes"]:
         assert filme["utilidade"]["teo"] is None
         assert filme["evidencias"]["teo"] == [{"pessoa": "teo", **SEM_FATO}]

@@ -26,6 +26,37 @@ Notas de outras Pessoas, para os testes de grupo (`test_grupo.py`):
 
 Os filmes de Lia Moura, Tomás Reis, Beatriz Sá e Jorge Amaral não ligam a Nota nenhuma: são os filmes só com palpites, que completam a lista com `--quantos 50`.
 
+### Sinais de Review (#21)
+
+Os filmes `tt90010NN` e `tt90011NN` não têm diretor. Eles se ligam às Notas só pela tabela `vizinhos`, e cada um tem pelo menos uma Evidência do Bruno, para não virar filme só com palpites nos testes de grupo.
+
+Vizinhança item-item (`vizinhos.csv`, `test_vizinhanca.py`):
+
+| Filme | Vizinho de (base, ambos) | Para que serve |
+|---|---|---|
+| A Casa das Marés (1001) | O Farol de Areia (3104, 1987); Cidade de Vidro (600, 120) | 64% de 3.104: forte. 20% fica fora |
+| Segunda Chamada (1002) | Maré Baixa (250, 112) | 44% de 250: moderada |
+| O Mapa Rasgado (1003) | Maré Baixa (40, 12); O Farol de Areia (25, 20) | 30% de 40: fraca. Base 25 fica fora |
+| Luz de Inverno (1004) | Rio Abaixo (900, 630); Fronteira (1000, 650) | Seriam fortes; a semente limita a fraca (3,5) e a moderada (5 de 2019). A Iara também deu 4 a Fronteira |
+| Ruído Branco (1005) | Barulho (700, 490); Fronteira (150, 63) | Barulho levou 1 do Bruno e não é semente. Fronteira dá moderada ao Bruno e à Iara |
+
+Tags, genome e gênero (`tags_movielens.csv`, `genoma.csv`, `test_clima.py`). Todos são vizinhos de O Farol de Areia por (50, 15), o que dá Evidência fraca igual ao Bruno e à Iara: no gosto, empatam, e só o bônus e os votos os separam.
+
+| Filme | Votos | Tags (usuários) | Genome | Gênero |
+|---|---|---|---|---|
+| Dia de Feira (1101) | 13000 | feel-good (14), funny (12) | | comédia |
+| Tarde de Domingo (1102) | 11000 | feel-good (5) | | |
+| Bolo de Fubá (1103) | 10500 | feel-good (2) | feel-good 0,85 | |
+| Pipa no Céu (1104) | 10200 | | feel-good 0,70; feel good movie 0,50 | |
+| Carnaval de Rua (1105) | 10100 | | | comédia |
+| Sessão Maldita (1106) | 10050 | so bad it's good (12) | | |
+| Silêncio no Lago (1107) | 10020 | meditative (12) | slow 0,90 | |
+| Outro Dia Qualquer (1108) | 30000 | | | |
+
+Outro Dia Qualquer é a régua: sem tag nenhuma e com mais votos, fica à frente de qualquer um deles quando não há bônus.
+
+O gênero comédia usa o QID real (`Q157443`), porque o vocabulário de Climas (`config/climas.toml`) aponta para QIDs reais. Tags e QIDs da fixture têm de existir nos vocabulários de `config/`; trocar uma tag de lá pode quebrar `test_clima.py`.
+
 ## dados/
 
 Repo de dados fictício. Cada teste trabalha numa cópia, então comandos podem escrever nele.

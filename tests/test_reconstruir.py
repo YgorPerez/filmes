@@ -1,8 +1,12 @@
+from conftest import FIXTURE
+
+
 def test_reconstruir_carrega_o_catalogo_da_fixture(cli):
     cli.ok("reconstruir")
 
     [[filmes]] = cli.consultar("SELECT count(*) FROM filmes")
-    assert filmes == 27
+    linhas_do_csv = len((FIXTURE / "catalogo" / "filmes.csv").read_text().splitlines()) - 1
+    assert filmes == linhas_do_csv
 
 
 def test_reconstruir_carrega_o_dono_do_repo_de_dados(cli):

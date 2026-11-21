@@ -13,7 +13,7 @@ TIPOS = ("metadado", "nota", "declarado", "relato", "review", "palpite")
 
 @dataclass(frozen=True)
 class Evidencia:
-    pessoa: str
+    pessoa: str | None          # None numa linha do filme (Clima, grupo/sozinho), que não fala de ninguém
     filme_id: str
     texto: str
     fonte: str | None
