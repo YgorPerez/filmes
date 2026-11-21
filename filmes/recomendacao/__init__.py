@@ -19,7 +19,7 @@ from dataclasses import dataclass
 
 from filmes.ambiente import Ambiente
 from filmes.evidencia import sem_fato
-from filmes.recomendacao import candidatos, sinais as pacote_sinais, utilidade
+from filmes.recomendacao import candidatos, sinais as pacote_sinais, utilidade, vetos
 from filmes.recomendacao.regra import Regra
 
 
@@ -47,7 +47,9 @@ def _modulos_de_sinal():
 
 def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], quantos: int,
                regra: Regra = Regra()) -> dict:
-    rodada = Rodada(conn=conn, amb=amb, candidatos=candidatos.escolher(conn, amb.pesos))
+    # Os Vetos de todos os Presentes valem, seja qual for a Regra de escolha.
+    restantes, vetos_que_agiram = vetos.aplicar(conn, presentes, candidatos.escolher(conn, amb.pesos))
+    rodada = Rodada(conn=conn, amb=amb, candidatos=restantes)
     pesos = amb.pesos
 
     por_filme = defaultdict(list)
@@ -90,4 +92,5 @@ def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], qu
             "utilidade": {p: (round(u, 4) if u is not None else None) for p, u in utilidades.items()},
             "evidencias": {p: [e.como_json(pesos) for e in evidencias if e.pessoa == p] for p in presentes},
         })
-    return {"presentes": presentes, "regra": regra.como_json(), "filmes": filmes, "creditos": []}
+    return {"presentes": presentes, "regra": regra.como_json(), "vetos": vetos_que_agiram,
+            "filmes": filmes, "creditos": []}

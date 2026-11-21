@@ -16,6 +16,17 @@ Os IDs de filme seguem `tt90DDNNN`: `DD` é o diretor (`Q90000DD`), `NNN` a orde
 | Rui Tavares (04) | 401–403 | 5 (2019), 4 (2018) | Notas com mais de 5 anos caem um nível |
 | Caio Brandão (05) | 501–503 | 1 e 2 | Notas baixas: Evidência contra |
 | Lia Moura, Tomás Reis, Beatriz Sá, Jorge Amaral (06–09) | 601–903 | nenhuma | Sem Fato para o Bruno. 903 tem 999 votos |
+| Sofia Rangel (18) | 1801–1803 | nenhuma | Alvo de Declarado, Relato e Veto nos testes de Pessoa (#18) |
+
+Entidades que não são diretor, com IDs `Q90018NN` (faixa do #18), só no predicado indicado:
+
+| Entidade | Predicado | Filmes |
+|---|---|---|
+| Terror (Q9001801) | genero | Porão Escuro (1801), A Casa do Fim (1802), Explosão Final (502) |
+| Comédia (Q9001802) | genero | Risos de Domingo (1803), Pequenos Milagres (601) |
+| Davi Couto (Q9001803) | elenco | Risos de Domingo (1803), Casa Cheia (602) |
+
+O caminho de conteúdo só usa os predicados de `[caminho.peso]` (hoje, só diretor), então gênero e elenco não mudam o top 5 do Bruno.
 
 Notas de outras Pessoas, para os testes de grupo (`test_grupo.py`):
 
@@ -32,6 +43,8 @@ Repo de dados fictício. Cada teste trabalha numa cópia, então comandos podem 
 
 - `pessoas/bruno.md`: o Dono (`dono: true`, apelido `eu`).
 - `pessoas/iara.md` e `pessoas/teo.md`: Pessoas para os testes de grupo.
+
+Os testes de Pessoa (#18) criam a Ana pela CLI e escrevem a Carol direto no repo de dados do teste; nenhuma das duas fica na fixture.
 
 ## Para estender
 

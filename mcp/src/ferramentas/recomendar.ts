@@ -9,7 +9,8 @@ export default definirFerramenta({
     "Recomendação para uma Sessão: devolve o top 5 na ordem da Regra de escolha. Cada filme traz " +
     "`utilidade` (0 a 1, ou null quando não há Fato) e `evidencias` agrupadas por Presente " +
     "(pessoa, texto, fonte, data, forca, tipo, fato_id, contribuicao); quem não tem Fato sobre o filme " +
-    'recebe a linha "sem fato". `so_palpites` marca filme sem Fato nenhum, que só entra no fim quando ' +
+    'recebe a linha "sem fato". `vetos` lista os Vetos dos Presentes que tiraram filmes. ' +
+    "`so_palpites` marca filme sem Fato nenhum, que só entra no fim quando " +
     'faltam Candidatos com Fato. Presentes por slug, nome ou apelido; "dono" é o Dono.',
   entrada: {
     presentes: z.array(pessoa).min(1).describe('Pessoas da Sessão, ex.: ["dono", "ana"]'),

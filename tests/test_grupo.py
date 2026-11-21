@@ -106,7 +106,8 @@ def test_regra_de_sem_dizer_de_quem_e_uso_invalido(banco):
 # Lia Moura, Tomás Reis, Beatriz Sá e Jorge Amaral não ligam a nenhuma Nota da fixture:
 # os filmes deles são Candidatos só com palpites.
 SO_PALPITES = {"Pequenos Milagres", "Casa Cheia", "Deserto Branco", "A Última Estação",
-               "Café Amargo", "Linha Cruzada", "Os Inquilinos", "Fim de Tarde"}
+               "Café Amargo", "Linha Cruzada", "Os Inquilinos", "Fim de Tarde",
+               "Porão Escuro", "A Casa do Fim", "Risos de Domingo"}
 
 
 def test_filme_so_com_palpites_fica_de_fora_quando_ha_candidatos_com_fato(banco):

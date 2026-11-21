@@ -1,10 +1,67 @@
-"""Pessoas no repo de dados: um arquivo `pessoas/<slug>.md` por Pessoa."""
+"""Pessoas no repo de dados: um arquivo `pessoas/<slug>.md` por Pessoa.
 
+Frontmatter com nome, apelidos, `dono: true` no Dono, Vetos e imports. Nenhuma
+idade é guardada. O corpo tem as seções `## Declarados` (o que a Pessoa disse do
+próprio gosto) e `## Relatos` (o que o Dono contou dela), um item por linha:
+
+    - 2026-11-20 · questionário · específico · gosta de Sofia Rangel (Q9000018) · "adoro os filmes dela"
+    - 2026-11-20 · questionário · específico · ama O Farol de Areia (tt9000101) · "é o meu favorito"
+    - 2026-11-20 · descrição do Dono · genérico · "odeia filme lento"
+
+Os campos são data, Fonte, específico ou genérico, a reação ao alvo (ama, gosta de,
+não gosta de, odeia, ou só "sobre") com o ID entre parênteses, e o que foi dito.
+O alvo é opcional. O resto do corpo é texto livre e fica como está.
+"""
+
+import datetime as dt
+import re
+import unicodedata
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from filmes.dados import markdown
 from filmes.erros import ErroFilmes
+
+
+@dataclass(frozen=True)
+class Veto:
+    texto: str
+    alvo: str       # filme (tt...) ou entidade (Q...)
+    rotulo: str
+    data: str
+
+    def como_dict(self) -> dict:
+        return {"texto": self.texto, "alvo": self.alvo, "rotulo": self.rotulo, "data": self.data}
+
+
+REACOES = {"ama": "ama", "gosta": "gosta de", "nao_gosta": "não gosta de", "odeia": "odeia"}
+_REACAO_POR_TEXTO = {v: k for k, v in REACOES.items()} | {"sobre": None}
+SECOES = {"declarados": "Declarados", "relatos": "Relatos"}
+
+_LINHA = re.compile(
+    r"- (?P<data>\d{4}-\d{2}-\d{2}) · (?P<fonte>.+?) · (?P<especificidade>específico|genérico)"
+    r"(?: · (?P<reacao>ama|gosta de|não gosta de|odeia|sobre) (?P<rotulo>.+?) \((?P<alvo>[^()\s]+)\))?"
+    r' · "(?P<texto>.*)"'
+)
+
+
+@dataclass(frozen=True)
+class Dito:
+    """Um Declarado ou um Relato: uma linha do corpo do arquivo da Pessoa."""
+    data: str
+    fonte: str
+    especifico: bool
+    texto: str
+    reacao: str | None = None   # ama, gosta, nao_gosta, odeia
+    alvo: str | None = None     # filme (tt...) ou entidade (Q...)
+    rotulo: str | None = None
+
+    def linha(self) -> str:
+        campos = [self.data, self.fonte, "específico" if self.especifico else "genérico"]
+        if self.alvo:
+            campos.append(f"{REACOES.get(self.reacao, 'sobre')} {self.rotulo} ({self.alvo})")
+        campos.append(f'"{self.texto}"')
+        return "- " + " · ".join(campos)
 
 
 @dataclass
@@ -13,20 +70,100 @@ class Pessoa:
     nome: str
     apelidos: list[str] = field(default_factory=list)
     dono: bool = False
-    vetos: list = field(default_factory=list)
+    vetos: list[Veto] = field(default_factory=list)
     imports: list = field(default_factory=list)
     corpo: str = ""
 
+    @property
+    def declarados(self) -> list[Dito]:
+        return _ditos(self.corpo, "declarados", self.slug)
 
-def ler_todas(repo: Path) -> list[Pessoa]:
-    pasta = repo / "pessoas"
+    @property
+    def relatos(self) -> list[Dito]:
+        return _ditos(self.corpo, "relatos", self.slug)
+
+    def acrescentar(self, secao: str, dito: Dito) -> bool:
+        """Põe o Dito no fim da seção (criando a seção se faltar). Devolve False se ele já estava lá."""
+        if dito in _ditos(self.corpo, secao, self.slug):
+            return False
+        linhas = self.corpo.splitlines()
+        titulo = f"## {SECOES[secao]}"
+        if titulo not in linhas:
+            while linhas and not linhas[-1].strip():
+                linhas.pop()
+            linhas += ([""] if linhas else []) + [titulo, "", dito.linha()]
+        else:
+            inicio = linhas.index(titulo) + 1
+            fim = next((i for i in range(inicio, len(linhas)) if linhas[i].startswith("#")), len(linhas))
+            ultima = max((i for i in range(inicio, fim) if linhas[i].strip()), default=inicio)
+            linhas.insert(ultima + 1, dito.linha())
+        self.corpo = "\n".join(linhas) + "\n"
+        return True
+
+
+def pasta(repo: Path) -> Path:
     if not repo.is_dir():
         raise ErroFilmes("dados_ausentes", f"repo de dados não encontrado em {repo}")
-    pessoas = [_ler(arquivo) for arquivo in sorted(pasta.glob("*.md"))]
+    return repo / "pessoas"
+
+
+def ler_todas(repo: Path) -> list[Pessoa]:
+    pessoas = [_ler(arquivo) for arquivo in sorted(pasta(repo).glob("*.md"))]
     donos = [p.slug for p in pessoas if p.dono]
     if len(donos) > 1:
         raise ErroFilmes("dados_invalidos", f"mais de uma Pessoa com dono: true ({', '.join(donos)})")
     return pessoas
+
+
+def resolver(repo: Path, nome: str) -> Pessoa:
+    """Acha a Pessoa por slug, nome ou apelido, sem diferença de maiúscula; "dono" é o Dono."""
+    alvo = nome.strip().casefold()
+    pessoas = ler_todas(repo)
+    if alvo == "dono":
+        achadas = [p for p in pessoas if p.dono]
+        if not achadas:
+            raise ErroFilmes("pessoa_desconhecida", "nenhuma Pessoa tem dono: true no repo de dados")
+    else:
+        achadas = [p for p in pessoas
+                   if alvo in {p.slug.casefold(), p.nome.casefold(), *(a.casefold() for a in p.apelidos)}]
+    if not achadas:
+        raise ErroFilmes("pessoa_desconhecida", f"nenhuma Pessoa se chama '{nome}'")
+    if len(achadas) > 1:
+        opcoes = ", ".join(p.slug for p in achadas)
+        raise ErroFilmes("pessoa_ambigua", f"'{nome}' pode ser mais de uma Pessoa: {opcoes}")
+    return achadas[0]
+
+
+def criar(repo: Path, nome: str, apelidos: list[str], slug: str | None = None, dono: bool = False) -> Pessoa:
+    slug = slug or slug_de(nome)
+    if not re.fullmatch(r"[a-z0-9]+(-[a-z0-9]+)*", slug):
+        raise ErroFilmes("uso_invalido", f"slug inválido: '{slug}' (só letras minúsculas sem acento, números e '-')")
+    if slug == "dono" or nome.strip().casefold() == "dono":
+        raise ErroFilmes("uso_invalido", "'dono' é reservado para achar o Dono")
+    arquivo = pasta(repo) / f"{slug}.md"
+    if arquivo.exists():
+        raise ErroFilmes("pessoa_existente", f"já existe uma Pessoa com o slug '{slug}'")
+    if dono:
+        atual = [p.slug for p in ler_todas(repo) if p.dono]
+        if atual:
+            raise ErroFilmes("dono_existente", f"o Dono já é '{atual[0]}'")
+    pessoa = Pessoa(slug=slug, nome=nome.strip(), apelidos=list(dict.fromkeys(apelidos)), dono=dono)
+    salvar(repo, pessoa)
+    return pessoa
+
+
+def salvar(repo: Path, pessoa: Pessoa) -> None:
+    frente = {"nome": pessoa.nome, "apelidos": pessoa.apelidos}
+    if pessoa.dono:
+        frente["dono"] = True
+    frente["vetos"] = [v.como_dict() for v in pessoa.vetos]
+    frente["imports"] = pessoa.imports
+    markdown.escrever(pasta(repo) / f"{pessoa.slug}.md", frente, pessoa.corpo)
+
+
+def slug_de(nome: str) -> str:
+    sem_acento = unicodedata.normalize("NFKD", nome).encode("ascii", "ignore").decode()
+    return re.sub(r"[^a-z0-9]+", "-", sem_acento.lower()).strip("-")
 
 
 def _ler(arquivo: Path) -> Pessoa:
@@ -38,7 +175,43 @@ def _ler(arquivo: Path) -> Pessoa:
         nome=str(frente["nome"]),
         apelidos=[str(a) for a in frente.get("apelidos") or []],
         dono=bool(frente.get("dono", False)),
-        vetos=list(frente.get("vetos") or []),
+        vetos=[_veto(arquivo, v) for v in frente.get("vetos") or []],
         imports=list(frente.get("imports") or []),
         corpo=corpo,
     )
+
+
+def _veto(arquivo: Path, item) -> Veto:
+    if not isinstance(item, dict) or not all(item.get(c) for c in ("texto", "alvo", "data")):
+        raise ErroFilmes("dados_invalidos", f"{arquivo}: Veto precisa de texto, alvo e data: {item!r}")
+    if not _data_valida(str(item["data"])):
+        raise ErroFilmes("dados_invalidos", f"{arquivo}: data do Veto inválida: {item['data']!r}")
+    return Veto(texto=str(item["texto"]), alvo=str(item["alvo"]), rotulo=str(item.get("rotulo") or item["alvo"]),
+                data=str(item["data"]))
+
+
+def _data_valida(data: str) -> bool:
+    try:
+        dt.date.fromisoformat(data)
+    except ValueError:
+        return False
+    return True
+
+
+def _ditos(corpo: str, secao: str, slug: str) -> list[Dito]:
+    ditos, atual = [], None
+    for numero, linha in enumerate(corpo.splitlines(), start=1):
+        if linha.startswith("#"):
+            atual = linha.lstrip("#").strip().casefold()
+            continue
+        if atual != secao or not linha.startswith("- "):
+            continue
+        achado = _LINHA.fullmatch(linha.rstrip())
+        if not achado or not _data_valida(achado["data"]):
+            raise ErroFilmes("dados_invalidos", f"pessoas/{slug}.md, linha {numero} do corpo: {SECOES[secao][:-1]} fora do formato: {linha}")
+        ditos.append(Dito(
+            data=achado["data"], fonte=achado["fonte"], especifico=achado["especificidade"] == "específico",
+            texto=achado["texto"], reacao=_REACAO_POR_TEXTO.get(achado["reacao"]),
+            alvo=achado["alvo"], rotulo=achado["rotulo"],
+        ))
+    return ditos
