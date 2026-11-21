@@ -40,10 +40,12 @@ def test_avaliar_usa_so_as_dez_sessoes_mais_recentes_com_feedback(banco, tmp_pat
     banco.ok("recomendar", "--presentes", "dono")
     resultado = banco.ok("avaliar")
     assert resultado["prioridade"] == "online"
+    # A Sessão "não vimos nada" conta na janela das 10, mas não no denominador da taxa.
     assert resultado["online"] == {
         "sessoes": 10,
+        "com_filme": 9,
         "escolhidos_top_5": 8,
-        "taxa_top_5": 0.8,
+        "taxa_top_5": 8 / 9,
         "reacoes": 9,
         "reacao_media": 1.0,
     }

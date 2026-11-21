@@ -55,6 +55,7 @@ def gravar(data, resultado):
         "## Online",
         "",
         f"- Sessões com Feedback na janela: {online['sessoes']}",
+        f"- Sessões em que viram um filme: {online['com_filme']}",
         f"- Filme escolhido no top 5: {_taxa(online['taxa_top_5'])}",
         f"- Reação média: {online['reacao_media'] if online['reacao_media'] is not None else '—'}",
         f"- Medida que decide: {resultado['prioridade']}",

@@ -89,8 +89,10 @@ def _medir(conn, amb, perfis, perfis_ml, com_grade, progresso):
 
 def _online(conn):
     sessoes = sorted(conn.execute("""
-        SELECT id, data, escolhido_na_recomendacao FROM sessoes WHERE feedback_em IS NOT NULL
+        SELECT id, data, escolhido, escolhido_na_recomendacao FROM sessoes WHERE feedback_em IS NOT NULL
     """), key=ordem, reverse=True)[:10]
+    # "Não vimos nada" fica na janela das 10, mas fora do denominador da taxa.
+    com_filme = sum(sessao["escolhido"] is not None for sessao in sessoes)
     escolhidos = sum(1 <= (sessao["escolhido_na_recomendacao"] or 0) <= 5 for sessao in sessoes)
     ids = [sessao["id"] for sessao in sessoes]
     marcas = ",".join("?" for _ in ids)
@@ -99,8 +101,9 @@ def _online(conn):
     ).fetchone()
     return {
         "sessoes": len(sessoes),
+        "com_filme": com_filme,
         "escolhidos_top_5": escolhidos,
-        "taxa_top_5": escolhidos / len(sessoes) if sessoes else None,
+        "taxa_top_5": escolhidos / com_filme if com_filme else None,
         "reacoes": reacoes,
         "reacao_media": media,
     }
