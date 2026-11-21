@@ -86,6 +86,31 @@ def test_vizinhanca_vale_para_cada_presente_com_as_notas_dela(banco):
     assert da_iara["forca"] == "moderada"
 
 
+def _da_ana(banco, titulo):
+    return _review(_filme(_todos(banco, "ana"), titulo), "ana")
+
+
+def test_nota_declarada_e_semente_de_vizinhanca_com_o_texto_e_a_regua_do_declarado(banco):
+    banco.ok("pessoa", "criar", "Ana", "--slug", "ana")
+    banco.ok("pessoa", "declarar", "ana", "amo O Farol", "--filme", "tt9000101", "--reacao", "ama")
+    banco.ok("reconstruir")
+
+    [evidencia] = _da_ana(banco, "A Casa das Marés")
+    assert evidencia["texto"] == ("disse que ama O Farol de Areia (2012), e de 3.104 pessoas que deram 4+ a ele, "
+                                  "64% deram 4+ a este")
+    assert evidencia["forca"] == "forte"
+
+
+def test_relato_de_que_ama_um_filme_e_semente_de_vizinhanca_um_nivel_abaixo(banco):
+    banco.ok("pessoa", "criar", "Ana", "--slug", "ana")
+    banco.ok("pessoa", "relatar", "ana", "ama O Farol", "--filme", "tt9000101", "--reacao", "ama")
+    banco.ok("reconstruir")
+
+    [evidencia] = _da_ana(banco, "A Casa das Marés")
+    assert evidencia["texto"].startswith("segundo o Dono, ama O Farol de Areia (2012), e de 3.104 pessoas")
+    assert evidencia["forca"] == "moderada"
+
+
 def test_base_da_vizinhanca_e_a_mesma_para_todos_os_vizinhos_da_semente(banco):
     assert banco.consultar(
         "SELECT filme_id FROM vizinhos GROUP BY filme_id HAVING MIN(base) <> MAX(base)"

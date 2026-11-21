@@ -50,6 +50,15 @@ def forca_nota(nota: float, data: str, hoje: dt.date, de_feedback: bool = False)
     return forca, direcao
 
 
+def forca_semente(tipo: str, nota: float, data: str, hoje: dt.date, de_feedback: bool = False) -> tuple[str, int]:
+    """Força e direção de uma Nota-semente de qualquer Tipo. Nota segue a régua de Nota;
+    Nota declarada ("amo" vira 5, "odeio" vira 1) e a contada pelo Dono seguem a de
+    Declarado específico e Relato."""
+    if tipo == "nota":
+        return forca_nota(nota, data, hoje, de_feedback=de_feedback)
+    return forca_dito(tipo, True, data, hoje), (1 if nota >= 3 else -1)
+
+
 def forca_feedback(tipo: str, nota: float | None, data: str, hoje: dt.date) -> str:
     """Força de uma reação do Feedback (Tipo nota ou relato) sobre o Filme escolhido.
 

@@ -17,17 +17,10 @@ from collections import defaultdict
 from filmes.erros import ErroFilmes
 from filmes.evidencia import Evidencia, regua, texto
 
-# Como a Nota declarada abre a frase da semente.
-_DITO = {
-    ("declarado", 5.0): "disse que ama", ("declarado", 1.0): "disse que odeia",
-    ("relato", 5.0): "segundo o Dono, ama", ("relato", 1.0): "segundo o Dono, odeia",
-}
-
 # Como cada predicado aparece no texto. Um predicado novo na config precisa de linha aqui.
 _REDACAO = {
     "diretor": {
-        "semente": "deu {nota} a {filme}, também de {entidade}",
-        "semente_dita": "{dito} {filme}, também de {entidade}",
+        "semente": "{semente}, também de {entidade}",
         "no": "dirigido por {entidade}, como {n} {filmes} a que deu 4 ou mais: {lista}",
     },
 }
@@ -63,16 +56,12 @@ def sinais(rodada, pessoa):
         for (candidato, _), sementes in nos.items():
             primeira = sementes[0]
             for s in sementes:
-                filme, tipo = texto.filme(s["titulo"], s["ano"]), s["nota_tipo"]
-                if tipo == "nota":
-                    forca, direcao = regua.forca_nota(s["nota"], s["nota_data"], rodada.hoje,
-                                                  de_feedback=s["nota_sessao"] is not None)
-                    frase = redacao["semente"].format(nota=texto.nota(s["nota"]), filme=filme, entidade=s["entidade"])
-                else:
-                    forca = regua.forca_dito(tipo, True, s["nota_data"], rodada.hoje)
-                    direcao = 1 if s["nota"] >= 3 else -1
-                    frase = redacao["semente_dita"].format(
-                        dito=_DITO[(tipo, s["nota"])], filme=filme, entidade=s["entidade"])
+                tipo = s["nota_tipo"]
+                forca, direcao = regua.forca_semente(tipo, s["nota"], s["nota_data"], rodada.hoje,
+                                                     de_feedback=s["nota_sessao"] is not None)
+                frase = redacao["semente"].format(
+                    semente=texto.semente(tipo, s["nota"], texto.filme(s["titulo"], s["ano"])),
+                    entidade=s["entidade"])
                 evidencia = Evidencia(
                     pessoa=pessoa, filme_id=candidato, texto=frase,
                     fonte=s["nota_fonte"], data=s["nota_data"], forca=forca, tipo=tipo,
