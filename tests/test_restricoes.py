@@ -57,7 +57,9 @@ def test_sem_restricao_nao_ha_linha_do_filme(banco):
     saida = _todos(banco)
 
     assert saida["restricoes"] == {}
-    assert all(not _linhas_do_filme(f) for f in saida["filmes"])
+    # Sobra só a linha de grupo/sozinho (#21), que toda Sessão tem.
+    textos = [linha["texto"] for f in saida["filmes"] for linha in f["linhas_do_filme"]]
+    assert all(t.startswith("para ver sozinho:") for t in textos)
 
 
 def test_duracao_maxima_invalida_e_uso_invalido(banco):

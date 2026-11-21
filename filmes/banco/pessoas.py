@@ -71,7 +71,8 @@ def sincronizar(banco: Path, pessoa: Pessoa) -> bool:
 
 def _apagar(conn, slug):
     conn.execute("DELETE FROM notas WHERE pessoa = ? AND (fato_id LIKE 'declarados:%' OR fato_id LIKE 'relatos:%')", (slug,))
-    for tabela in ("vetos", "declarados", "relatos", "apelidos"):
+    conn.execute("DELETE FROM declarados WHERE pessoa = ? AND fato_id LIKE 'declarados:%'", (slug,))
+    for tabela in ("vetos", "relatos", "apelidos"):
         conn.execute(f"DELETE FROM {tabela} WHERE pessoa = ?", (slug,))
 
 

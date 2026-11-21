@@ -25,6 +25,31 @@ votos_minimos = 1000
 # Quantos filmes a Recomendação devolve quando o pedido não diz.
 tamanho = 5
 
+[ja_visto]
+# Já visto pesa contra o filme com esta base (a Força é sempre forte).
+peso = 1.0
+
+[credito]
+# u' = u - fator x Crédito na Regra padrão. O Crédito olha as últimas `janela`
+# Sessões em grupo com Feedback que a Pessoa dividiu com algum Presente de hoje.
+fator = 0.5
+janela = 5
+
+[vizinhanca]
+# Peso da Evidência de vizinhança item-item do MovieLens (Tipo review).
+peso = 1.0
+
+[clima]
+# Bônus de cada Clima pedido que o filme sustenta, somado à pontuação da Regra
+# de escolha (que vai de 0 a 1), vezes o multiplicador da Força.
+peso = 0.1
+
+[grupo]
+# Bônus do filme com tag de grupo numa Sessão em grupo, ou de sozinho numa
+# Sessão sozinha, somado à pontuação da Regra, vezes o multiplicador da Força.
+# Menor que o do Clima: o Dono não pediu, e a leitura da tag é do projeto.
+peso = 0.05
+
 [pessoas]
 # Base de um Declarado ou Relato com alvo entidade (diretor, ator, gênero...):
 # positiva para ama e gosta, negativa para não gosta e odeia. A Força multiplica.

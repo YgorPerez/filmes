@@ -13,10 +13,11 @@ CREATE TABLE idiomas_originais (
 );
 CREATE INDEX idiomas_por_filme ON idiomas_originais(filme_id);
 
--- Já visto: quem já assistiu a qual filme. Por ora, quem deu Nota a ele.
--- O Feedback (#20) acrescenta aqui os Presentes das Sessões fechadas.
+-- Quem já assistiu a qual filme, segundo Notas ou registros de Já visto.
 CREATE VIEW ja_vistos AS
-SELECT DISTINCT pessoa, filme_id FROM notas;
+SELECT pessoa, filme_id FROM notas
+UNION
+SELECT pessoa, filme_id FROM ja_visto;
 
 -- Classificação etária como está na fonte, uma linha por propriedade e valor.
 -- A conversão para a escala L, 6, 10, 12, 14, 16, 18 fica em faixas_etarias.

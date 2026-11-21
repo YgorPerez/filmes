@@ -36,7 +36,8 @@ _SQL = """
 SELECT c.filme_id  AS candidato,
        c.fato_id   AS aresta_fato, c.fonte AS aresta_fonte, c.data AS aresta_data,
        e.rotulo    AS entidade,
-       n.fato_id   AS nota_fato, n.nota, n.data AS nota_data, n.fonte AS nota_fonte, n.tipo AS nota_tipo,
+       n.fato_id   AS nota_fato, n.nota, n.data AS nota_data, n.fonte AS nota_fonte,
+       n.tipo AS nota_tipo, n.sessao AS nota_sessao,
        f.titulo, f.ano
 FROM notas_vigentes n
 JOIN arestas s   ON s.filme_id = n.filme_id AND s.predicado = :predicado
@@ -64,7 +65,8 @@ def sinais(rodada, pessoa):
             for s in sementes:
                 filme, tipo = texto.filme(s["titulo"], s["ano"]), s["nota_tipo"]
                 if tipo == "nota":
-                    forca, direcao = regua.forca_nota(s["nota"], s["nota_data"], rodada.hoje)
+                    forca, direcao = regua.forca_nota(s["nota"], s["nota_data"], rodada.hoje,
+                                                  de_feedback=s["nota_sessao"] is not None)
                     frase = redacao["semente"].format(nota=texto.nota(s["nota"]), filme=filme, entidade=s["entidade"])
                 else:
                     forca = regua.forca_dito(tipo, True, s["nota_data"], rodada.hoje)

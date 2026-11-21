@@ -87,6 +87,7 @@ def _ver(args, amb):
     }
     if amb.banco.exists():
         with abrir_leitura(amb.banco) as conn:
+            saida["declarados"].extend(_declarados_importados(conn, pessoa.slug, amb.hoje))
             saida["notas"] = [dict(linha) for linha in conn.execute(
                 """SELECT n.filme_id, f.titulo, n.nota, n.data, n.fonte, n.tipo, n.fato_id
                    FROM notas_vigentes n LEFT JOIN filmes f ON f.id = n.filme_id
@@ -95,6 +96,18 @@ def _ver(args, amb):
         saida["notas"] = None
         saida["aviso"] = "banco não encontrado: as Notas aparecem depois de `reconstruir`"
     return saida
+
+
+def _declarados_importados(conn, slug, hoje):
+    for linha in conn.execute(
+        """SELECT fato_id, texto, fonte, data, especifico, reacao, alvo, rotulo FROM declarados
+           WHERE pessoa = ? AND fato_id LIKE 'letterboxd:%' ORDER BY data DESC, fato_id""", (slug,)
+    ):
+        especifico = bool(linha["especifico"])
+        yield dict(linha) | {
+            "tipo": "declarado", "especifico": especifico, "nota": None,
+            "forca": regua.forca_dito("declarado", especifico, linha["data"], hoje),
+        }
 
 
 def _resumo(pessoa):
