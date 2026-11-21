@@ -1,5 +1,19 @@
 {
   "dumps": {
+    "genome_2021.zip": {
+      "bytes": 1928028583,
+      "data": "2021-12-30",
+      "fonte": "Tag Genome 2021",
+      "sha256": "20a48e952c0161126edb9c6988b4cc2b70869f872dbae4eac4dce455afc768d6",
+      "url": "https://files.grouplens.org/datasets/tag-genome-2021/genome_2021.zip"
+    },
+    "ml-32m.zip": {
+      "bytes": 238950008,
+      "data": "2023-10-13",
+      "fonte": "MovieLens ml-32m",
+      "sha256": "e4a68655d7386b8f95f2f2424b2ff975dfdd15ffd59e0d864a14dca43e99d6ee",
+      "url": "https://files.grouplens.org/datasets/movielens/ml-32m.zip"
+    },
     "title.basics.tsv.gz": {
       "bytes": 230740328,
       "data": "2026-11-20",

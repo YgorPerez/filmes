@@ -28,9 +28,12 @@ it("atualizar entrega progresso e as versões fixadas pela CLI", async () => {
     });
 
     assert.equal(resultado.isError, false);
-    assert.deepEqual(etapas, [0, 1, 2, 3, 4, 5, 6]);
+    assert.deepEqual(etapas, [0, 1, 2, 3, 4, 5, 6, 7, 8]);
     const [saida] = resultado.content as Array<{ text: string }>;
-    assert.equal(JSON.parse(saida.text).versoes, process.env.FILMES_VERSOES);
+    const fixadas = JSON.parse(saida.text);
+    assert.equal(fixadas.versoes, process.env.FILMES_VERSOES);
+    assert.equal(fixadas.dumps["ml-32m.zip"].data, "2023-10-13");
+    assert.equal(fixadas.dumps["genome_2021.zip"].data, "2021-12-30");
   } finally {
     await cliente.close();
     rmSync(pasta, { recursive: true, force: true });
