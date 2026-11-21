@@ -1,13 +1,11 @@
 """Versões dos dados e relatório datado da avaliação."""
 
 import json
-import os
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 
 import yaml
 
-from filmes.ambiente import RAIZ
 from filmes.catalogo.versoes import sha256
 
 
@@ -24,8 +22,7 @@ def versoes(amb):
     return resultado
 
 
-def gravar(data, resultado):
-    pasta = Path(os.environ.get("FILMES_AVALIACOES") or RAIZ / "docs" / "avaliacoes")
+def gravar(pasta, data, resultado):
     pasta.mkdir(parents=True, exist_ok=True)
     destino = pasta / f"{data}.md"
     secoes = [

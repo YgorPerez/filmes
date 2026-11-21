@@ -7,12 +7,10 @@ Um nome fora do vocabulário não é erro: volta como aviso e a Recomendação s
 sem ele, porque um Clima só puxa a ordem.
 """
 
-import tomllib
 import unicodedata
 from dataclasses import dataclass
 
-from filmes.ambiente import RAIZ
-from filmes.erros import ErroFilmes
+from filmes.ambiente import RAIZ, ler_toml
 
 VOCABULARIO = RAIZ / "config" / "climas.toml"
 
@@ -25,11 +23,7 @@ class Clima:
 
 
 def todos() -> list[Clima]:
-    try:
-        with open(VOCABULARIO, "rb") as f:
-            tabela = tomllib.load(f)
-    except (OSError, tomllib.TOMLDecodeError) as erro:
-        raise ErroFilmes("config_invalida", f"{VOCABULARIO}: {erro}")
+    tabela = ler_toml(VOCABULARIO)
     return [Clima(nome, tuple(t.lower() for t in d.get("tags", [])), tuple(d.get("generos", [])))
             for nome, d in tabela.items()]
 

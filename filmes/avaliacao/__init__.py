@@ -45,7 +45,7 @@ def avaliar(amb, *, com_grade=False, progresso=lambda *_: None):
     }
     if calibracao is not None:
         resultado["grade"] = calibracao
-    resultado["arquivo"] = str(relatorio.gravar(amb.hoje, resultado))
+    resultado["arquivo"] = str(relatorio.gravar(amb.avaliacoes, amb.hoje, resultado))
     progresso(100, "Relatório gravado")
     return resultado
 
