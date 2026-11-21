@@ -8,6 +8,9 @@ Reações, como o Dono as diz:
 - `--comentario iara=texto`: o que ela achou, junto da nota ou do Relato dela. Vira
   Declarado específico sobre o Filme escolhido (veja `fatos.py`).
 - Presente sem reação: não gera Fato nem conta no Crédito, mas ganha o Já visto.
+
+Se a Sessão tem `mostrados` (`cartaz --filmes`), o Feedback grava também a posição do
+Filme escolhido nessa lista, em `escolhido_nos_mostrados`, e devolve `posicao_mostrada`.
 """
 
 import re
@@ -31,26 +34,38 @@ def registrar(amb: Ambiente, sessao_id: str, filme: str | None, notas: list[str]
         reacoes = _reacoes(conn, frente["presentes"], dono, notas, relatos)
         _comentarios(conn, frente["presentes"], reacoes, comentarios)
         recomendacao = frente.get("recomendacao") or []
+        mostrados = frente.get("mostrados")
         if filme is None:
             if reacoes:
                 raise ErroFilmes("uso_invalido", '"não vimos nada" não leva reação')
-            escolhido, posicao = None, None
+            escolhido, posicao, mostrada = None, None, None
         else:
             escolhido = _filme(conn, filme, recomendacao)
-            posicao = next((r["posicao"] for r in recomendacao if r["id"] == escolhido["id"]), None)
+            posicao = _posicao(recomendacao, escolhido)
+            mostrada = _posicao(mostrados or [], escolhido)
         frente["escolhido"] = escolhido["id"] if escolhido else None
         frente["escolhido_na_recomendacao"] = posicao
+        if mostrados is not None:
+            frente["escolhido_nos_mostrados"] = mostrada
         frente["feedback"] = {"registrado_em": amb.hoje, "reacoes": reacoes}
         banco.carregar(conn, sessao_id, frente)
         arquivo.escrever(amb.dados, sessao_id, frente, corpo)
 
     com_reacao = {r["pessoa"] for r in reacoes}
+    if escolhido:
+        escolhido = {**escolhido, "posicao": posicao}
+        if mostrados is not None:
+            escolhido["posicao_mostrada"] = mostrada
     return {
         "sessao": {"id": sessao_id, "arquivo": arquivo.relativo(sessao_id)},
-        "escolhido": {**escolhido, "posicao": posicao} if escolhido else None,
+        "escolhido": escolhido,
         "fatos": _fatos(sessao_id, frente, dono, escolhido, amb) if escolhido else [],
         "sem_reacao": [p for p in frente["presentes"] if p not in com_reacao] if escolhido else [],
     }
+
+
+def _posicao(lista, escolhido):
+    return next((r["posicao"] for r in lista if r["id"] == escolhido["id"]), None)
 
 
 def _reacoes(conn, presentes, dono, notas, relatos):

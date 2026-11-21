@@ -228,6 +228,24 @@ describe("servidor MCP sobre a CLI real e a fixture", () => {
     assert.equal(html.match(/<article class="card">/g)?.length, 5);
   });
 
+  it("cartaz com filmes traz só os mostrados, na ordem dada", async () => {
+    const recomendacao = json(
+      (await cliente.callTool({ name: "recomendar", arguments: { presentes: ["dono"] } })) as Resultado,
+    );
+    const [primeiro, , terceiro] = recomendacao.filmes;
+
+    const resultado = (await cliente.callTool({
+      name: "cartaz",
+      arguments: { sessao: recomendacao.sessao.id, filmes: [terceiro.id, primeiro.id] },
+    })) as Resultado;
+
+    assert.ok(!resultado.isError);
+    const saida = json(resultado);
+    assert.equal(saida.filmes, 2);
+    const html = readFileSync(saida.arquivo, "utf8");
+    assert.ok(html.indexOf(terceiro.id) < html.indexOf(primeiro.id));
+  });
+
   it("entrada inválida é recusada antes de chamar a CLI", async () => {
     const resultado = (await cliente.callTool({ name: "recomendar", arguments: { presentes: [] } })) as Resultado;
 
