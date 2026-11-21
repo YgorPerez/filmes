@@ -8,10 +8,11 @@ import re
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 
-from filmes.catalogo.wikidata import GRUPOS
+from filmes.catalogo.wikidata import GRUPOS, OPCIONAIS
 from filmes.erros import ErroFilmes
 
 IMDB = ("title.basics.tsv.gz", "title.ratings.tsv.gz")
+PRINCIPAIS = "title.principals.tsv.gz"     # opcional: manifesto anterior ao #35 não tem
 ROTULOS = "wikidata-rotulos.json.gz"
 MOVIELENS = "ml-32m.zip"
 GENOMA = "genome_2021.zip"
@@ -51,12 +52,14 @@ def ler(caminho, catalogo):
             if not set(GROUPLENS) <= set(dumps):
                 raise ValueError("faltam dumps da GroupLens")
             obrigatorios.update(GROUPLENS)
-        restantes = set(dumps) - obrigatorios
+        restantes = set(dumps) - obrigatorios - {PRINCIPAIS}
         if not obrigatorios <= set(dumps):
             raise ValueError("faltam os dumps do IMDb ou os rótulos do Wikidata")
         for grupo, propriedades in GRUPOS.items():
             principal = nome_wikidata(grupo)
             nomes = {principal} if principal in dumps else {nome_wikidata(grupo, p) for p in propriedades}
+            if grupo in OPCIONAIS and not nomes & restantes:
+                continue
             if not nomes <= restantes:
                 raise ValueError(f"faltam dumps do Wikidata ({grupo})")
             restantes -= nomes

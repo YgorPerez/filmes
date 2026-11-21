@@ -37,7 +37,7 @@ def atualizar(amb, progresso):
     try:
         with TemporaryDirectory(dir=amb.catalogo) as pasta:
             execucao = _Atualizacao(amb, Path(pasta), gravacoes)
-            baixaveis = (*versoes.GROUPLENS, *versoes.IMDB)
+            baixaveis = (*versoes.GROUPLENS, *versoes.IMDB, versoes.PRINCIPAIS)
             etapas = len(baixaveis) + len(wikidata.GRUPOS) + 1
             for posicao, nome in enumerate(baixaveis):
                 progresso(posicao, etapas, f"Baixando {nome}")

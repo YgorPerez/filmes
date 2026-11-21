@@ -27,7 +27,10 @@ GRUPOS = {
     "ids": ("P345", "P4947", "P6127", "P4983", "P577"),
     "elenco": ("P161",),
     "conteudo": (*(p for p in ARESTAS if p != "P161"), *CLASSIFICACOES),
+    "atores": ("P345",),
 }
+# Grupos que um manifesto anterior ao #35 não tem; sem eles, o elenco fica sem créditos.
+OPCIONAIS = ("atores",)
 
 IRI = ("http://www.wikidata.org/entity/", "https://www.wikidata.org/entity/")
 
@@ -45,8 +48,11 @@ def qid(termo):
 
 def consulta(grupo, propriedades):
     predicados = " ".join(f"wdt:{p}" for p in propriedades)
-    escopo = ("{ ?item wdt:P31 wd:Q11424 } UNION { ?item wdt:P6127 ?slug }"
-              if grupo == "ids" else "?item wdt:P31 wd:Q11424 .")
+    escopos = {
+        "ids": "{ ?item wdt:P31 wd:Q11424 } UNION { ?item wdt:P6127 ?slug }",
+        "atores": "?filme wdt:P31 wd:Q11424 ; wdt:P161 ?item .",
+    }
+    escopo = escopos.get(grupo, "?item wdt:P31 wd:Q11424 .")
     return f"""{PREFIXOS}
 SELECT DISTINCT ?item ?p ?valor WHERE {{
     {escopo}

@@ -5,7 +5,8 @@ Bruno por um predicado só:
 - Maré Cheia: roteiro de Ana Ruiz, que escreveu O Farol de Areia (5);
 - Voo Noturno: Rita Lobo no elenco, como em Ponte Aérea (4,5);
 - Fronteira II: da Trilogia da Fronteira, com Fronteira (5 em 2019);
-- Poeira: faroeste, como O Farol de Areia, Maré Baixa, Cidade de Vidro e Jardim Suspenso.
+- Poeira: faroeste, como O Farol de Areia, Maré Baixa, Cidade de Vidro e Jardim Suspenso;
+- Escala em Lisboa: também com Rita Lobo, mas fora dos 3 primeiros créditos do IMDb.
 
 Os pesos de config/pesos.toml são roteiro 0,8, elenco 0,5, série 1,0 e gênero 0,3.
 """
@@ -33,6 +34,15 @@ def test_ator_em_comum_liga_a_nota_ao_candidato(banco):
     assert _do_bruno(_todos(banco), "Voo Noturno") == [
         ("deu 4,5 a Ponte Aérea (2016), também com Rita Lobo", "forte", "nota", 0.5),
         ("com Rita Lobo no elenco, como 1 filme a que deu 4 ou mais: Ponte Aérea (2016)", "fraca", "metadado", 0.15),
+    ]
+
+
+def test_ator_fora_dos_tres_primeiros_creditos_do_imdb_fica_no_maximo_fraco(banco):
+    # Em Voo Noturno, Rita Lobo é o segundo crédito do IMDb e a régua fica como está (teste acima).
+    # Em Escala em Lisboa, ela é coadjuvante: a semente de 4,5 seria forte.
+    assert sorted(_do_bruno(_todos(banco), "Escala em Lisboa")) == [
+        ("com Rita Lobo no elenco, como 1 filme a que deu 4 ou mais: Ponte Aérea (2016)", "fraca", "metadado", 0.15),
+        ("deu 4,5 a Ponte Aérea (2016), também com Rita Lobo", "fraca", "nota", 0.15),
     ]
 
 

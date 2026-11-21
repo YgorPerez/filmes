@@ -13,6 +13,9 @@ Gênero só dá a segunda, e no máximo fraca (régua). Um gênero junta milhare
 filmes: uma Evidência por Nota nele somaria dezenas de Motivos que pouco dizem
 sobre o Candidato.
 
+No elenco, a Força das duas espécies depende do crédito do ator no Candidato:
+fora dos 3 primeiros créditos de ator do IMDb, fica no máximo fraca (régua).
+
 Os predicados usados e os pesos estão em [caminho.peso] da config.
 """
 
@@ -60,9 +63,14 @@ WHERE c.predicado = :predicado AND c.entidade_id IN (
 ORDER BY c.filme_id, c.entidade_id
 """
 
+# Filmes com créditos do IMDb e, entre eles, os pares (filme, ator) dos 3 primeiros.
+_SQL_COM_CREDITOS = "SELECT DISTINCT filme_id FROM elenco_principal_imdb"
+_SQL_PRINCIPAIS = "SELECT filme_id, entidade_id FROM elenco_principal"
+
 
 def sinais(rodada, pessoa):
     sementes_vistas = {}
+    com_creditos = principais = None
     for predicado, peso in rodada.pesos["caminho"]["peso"].items():
         if predicado not in _REDACAO:
             raise ErroFilmes("config_invalida", f"[caminho.peso] {predicado}: o caminho de conteúdo não sabe redigir esse predicado")
@@ -80,10 +88,18 @@ def sinais(rodada, pessoa):
             if not sementes:
                 continue
             entidade = sementes[0]["entidade"]
+            principal = None
+            if predicado == "elenco":
+                if com_creditos is None:
+                    com_creditos = {f for (f,) in rodada.conn.execute(_SQL_COM_CREDITOS)}
+                    principais = set(map(tuple, rodada.conn.execute(_SQL_PRINCIPAIS)))
+                if candidato in com_creditos:
+                    principal = (candidato, aresta["entidade_id"]) in principais
             for s in sementes if redacao["semente"] else ():
                 tipo = s["nota_tipo"]
                 forca, direcao = regua.forca_semente(tipo, s["nota"], s["nota_data"], rodada.hoje,
                                                      de_feedback=s["nota_sessao"] is not None)
+                forca = regua.forca_elenco(forca, principal)
                 inicio = texto.semente(tipo, s["nota"], texto.filme(s["titulo"], s["ano"]))
                 evidencia = Evidencia(
                     pessoa=pessoa, filme_id=candidato,
@@ -100,6 +116,7 @@ def sinais(rodada, pessoa):
             altas = [s for s in sementes if s["nota"] >= regua.NOTA_ALTA]
             forca = regua.forca_caminho(len(altas), predicado)
             if forca:
+                forca = regua.forca_elenco(forca, principal)
                 yield Evidencia(
                     pessoa=pessoa, filme_id=candidato,
                     texto=f"{redacao['no'].format(entidade=entidade)}, {_notas_altas(altas)}",

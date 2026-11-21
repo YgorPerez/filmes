@@ -1,0 +1,41 @@
+{
+    "head": {
+        "vars": [
+            "item",
+            "p",
+            "valor"
+        ]
+    },
+    "results": {
+        "bindings": [
+            {
+                "item": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/entity/Q1033909"
+                },
+                "p": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/prop/direct/P345"
+                },
+                "valor": {
+                    "type": "literal",
+                    "value": "nm0411980"
+                }
+            },
+            {
+                "item": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/entity/Q58444"
+                },
+                "p": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/prop/direct/P345"
+                },
+                "valor": {
+                    "type": "literal",
+                    "value": "nm0000553"
+                }
+            }
+        ]
+    }
+}
