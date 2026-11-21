@@ -46,3 +46,29 @@ it("importa o ZIP e confirma ou descarta as pendências pelo MCP", async () => {
     limpar();
   }
 });
+
+it("importa o RSS do Letterboxd pelo usuário", async () => {
+  const limpar = prepararAmbiente();
+  const cliente = new Client({ name: "teste", version: "0" });
+  try {
+    process.env.FILMES_TMDB_CHAVE = "chave-de-teste";
+    process.env.FILMES_GRAVACOES = join(RAIZ, "tests", "fixture", "gravacoes");
+    const servidor = await criarServidor();
+    const [doCliente, doServidor] = InMemoryTransport.createLinkedPair();
+    await servidor.connect(doServidor);
+    await cliente.connect(doCliente);
+
+    const resultado = await cliente.callTool({ name: "importar", arguments: { pessoa: "iara", letterboxd_rss: "olga_farol" } });
+    const [bloco] = resultado.content as Array<{ type: string; text: string }>;
+    assert.ok(!resultado.isError, bloco.text);
+    const relatorio = JSON.parse(bloco.text);
+    assert.equal(relatorio.fatos_novos.notas, 4);
+    assert.equal(relatorio.fila, 0);
+
+    const invalido = await cliente.callTool({ name: "importar", arguments: { pessoa: "iara", letterboxd_rss: "../x" } });
+    assert.ok(invalido.isError);
+  } finally {
+    await cliente.close();
+    limpar();
+  }
+});
