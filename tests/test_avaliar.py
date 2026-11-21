@@ -127,3 +127,20 @@ def test_avaliar_usa_as_datas_do_diario_quando_o_export_tem_avaliacoes_avulsas(b
     assert resultado["perfis"] == 4
     assert resultado["filmes_top_5"] == 20
     assert resultado["retidos_4_mais"] == 4
+
+
+def test_relatorio_guarda_o_manifesto_do_catalogo_fixado(cli, tmp_path):
+    gravacoes = Path(__file__).resolve().parent / "fixture" / "gravacoes"
+    cli.env.update(
+        FILMES_CATALOGO=str(tmp_path / "catalogo"),
+        FILMES_VERSOES=str(tmp_path / "versoes.json"),
+        FILMES_GRAVACOES=str(gravacoes),
+        FILMES_AVALIACOES=str(tmp_path / "avaliacoes"),
+    )
+    fixados = cli.ok("atualizar")["dumps"]
+    cli.ok("reconstruir")
+
+    resultado = cli.ok("avaliar")
+
+    assert resultado["versoes"]["manifesto"]["dumps"] == fixados
+    assert fixados["title.basics.tsv.gz"]["sha256"] in Path(resultado["arquivo"]).read_text(encoding="utf-8")

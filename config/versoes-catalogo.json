@@ -1,0 +1,46 @@
+{
+  "dumps": {
+    "title.basics.tsv.gz": {
+      "bytes": 230740328,
+      "data": "2026-11-20",
+      "fonte": "IMDb",
+      "sha256": "701b9bd606239b9cb04481e6b9adc0ea8424014ea5764828c6048258d3b10d87",
+      "url": "https://datasets.imdbws.com/title.basics.tsv.gz"
+    },
+    "title.ratings.tsv.gz": {
+      "bytes": 8764161,
+      "data": "2026-11-19",
+      "fonte": "IMDb",
+      "sha256": "025a78bb026a35a0296800366a919b7ba89efdc76a0888f713e8432fb63ffc94",
+      "url": "https://datasets.imdbws.com/title.ratings.tsv.gz"
+    },
+    "wikidata-conteudo.json.gz": {
+      "bytes": 18891893,
+      "data": "2026-11-20",
+      "fonte": "QLever",
+      "sha256": "b0939949e75f9f777ac93e0e0e9a1b1e3fa8c970e730ce9aa2a8d43b9895b864",
+      "url": "https://qlever.dev/api/wikidata"
+    },
+    "wikidata-elenco.json.gz": {
+      "bytes": 10278637,
+      "data": "2026-11-20",
+      "fonte": "QLever",
+      "sha256": "5f98c86ea6af27971024ec4d9d9e068cad9efea3d71e3ed358d4bc832888cbce",
+      "url": "https://qlever.dev/api/wikidata"
+    },
+    "wikidata-ids.json.gz": {
+      "bytes": 16188852,
+      "data": "2026-11-20",
+      "fonte": "QLever",
+      "sha256": "db4b7df05ea19611132adf3ed6f8001db4e9fac98c0f0d1bd07aa00232c80a13",
+      "url": "https://qlever.dev/api/wikidata"
+    },
+    "wikidata-rotulos.json.gz": {
+      "bytes": 14002781,
+      "data": "2026-11-20",
+      "fonte": "QLever",
+      "sha256": "2d90405cd07a3635d491d323adafcba4085ca38e3ec55362fe8c292c0fed7c65",
+      "url": "https://qlever.dev/api/wikidata"
+    }
+  }
+}

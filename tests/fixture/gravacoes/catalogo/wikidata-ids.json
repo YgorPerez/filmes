@@ -1,0 +1,120 @@
+{
+    "head": {
+        "vars": [
+            "item",
+            "p",
+            "valor"
+        ]
+    },
+    "results": {
+        "bindings": [
+            {
+                "item": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/entity/Q483941"
+                },
+                "p": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/prop/direct/P345"
+                },
+                "valor": {
+                    "type": "literal",
+                    "value": "tt0108052"
+                }
+            },
+            {
+                "item": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/entity/Q483941"
+                },
+                "p": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/prop/direct/P4947"
+                },
+                "valor": {
+                    "type": "literal",
+                    "value": "424"
+                }
+            },
+            {
+                "item": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/entity/Q483941"
+                },
+                "p": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/prop/direct/P577"
+                },
+                "valor": {
+                    "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+                    "type": "literal",
+                    "value": "1993-01-01T00:00:00Z"
+                }
+            },
+            {
+                "item": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/entity/Q483941"
+                },
+                "p": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/prop/direct/P577"
+                },
+                "valor": {
+                    "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+                    "type": "literal",
+                    "value": "1993-12-15T00:00:00Z"
+                }
+            },
+            {
+                "item": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/entity/Q483941"
+                },
+                "p": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/prop/direct/P577"
+                },
+                "valor": {
+                    "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+                    "type": "literal",
+                    "value": "1994-03-03T00:00:00Z"
+                }
+            },
+            {
+                "item": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/entity/Q483941"
+                },
+                "p": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/prop/direct/P577"
+                },
+                "valor": {
+                    "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+                    "type": "literal",
+                    "value": "1994-03-04T00:00:00Z"
+                }
+            },
+            {
+                "item": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/entity/Q483941"
+                },
+                "p": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/prop/direct/P6127"
+                },
+                "valor": {
+                    "type": "literal",
+                    "value": "schindlers-list"
+                }
+            }
+        ]
+    },
+    "meta": {
+        "query-time-ms": 44,
+        "result-size-total": 7,
+        "warnings": []
+    }
+}

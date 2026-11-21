@@ -1,6 +1,5 @@
 """Versões dos dados e relatório datado da avaliação."""
 
-import hashlib
 import json
 import os
 from pathlib import Path
@@ -9,7 +8,7 @@ from tempfile import NamedTemporaryFile
 import yaml
 
 from filmes.ambiente import RAIZ
-from filmes.erros import ErroFilmes
+from filmes.catalogo.versoes import sha256
 
 
 def versoes(amb):
@@ -17,28 +16,12 @@ def versoes(amb):
     movielens = catalogo / "ml-32m"
     arquivos = list(catalogo.glob("*.csv")) + [movielens / nome for nome in ("links.csv", "ratings.csv", "tags.csv")]
     resultado = {
-        str(arquivo.relative_to(catalogo)): _sha256(arquivo)
+        str(arquivo.relative_to(catalogo)): sha256(arquivo)
         for arquivo in sorted(arquivos) if arquivo.is_file()
     }
-    if not (catalogo / "filmes.csv").is_file():
-        manifesto = _manifesto(amb)
-        if manifesto.is_file():
-            resultado["manifesto"] = json.loads(manifesto.read_text(encoding="utf-8"))
+    if not (catalogo / "filmes.csv").is_file() and amb.versoes.is_file():
+        resultado["manifesto"] = json.loads(amb.versoes.read_text(encoding="utf-8"))
     return resultado
-
-
-def _manifesto(amb):
-    try:
-        return amb.caminho("versoes")
-    except ErroFilmes as erro:
-        if erro.codigo != "config_ausente":
-            raise
-        return Path(os.environ.get("FILMES_VERSOES") or RAIZ / "config" / "versoes-catalogo.json")
-
-
-def _sha256(arquivo):
-    with arquivo.open("rb") as fluxo:
-        return hashlib.file_digest(fluxo, "sha256").hexdigest()
 
 
 def gravar(data, resultado):
