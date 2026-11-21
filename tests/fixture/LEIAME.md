@@ -144,3 +144,19 @@ linhas. As tags de O Farol de Areia aparecem tanto no diário quanto na review.
   busca de séries do TMDB. Os dois são descartados.
 - Vento Norte fica na fila com dois candidatos do TMDB. Confirmar o primeiro
   usa `externos-9102.json`. Filme Perdido também fica na fila, sem candidato.
+
+## RSS do Letterboxd
+
+`gravacoes/letterboxd/rss-olga_farol.xml` é um RSS inventado no formato do real
+(conferido num RSS público em 2026-11-21), lido por `importar --letterboxd-rss olga_farol`.
+Usuário sem arquivo vale como perfil inexistente.
+
+- O Farol de Areia (2012-01-10, 4,5) e Maré Baixa (2015, 2024-02-11, 2) repetem o
+  diário do ZIP da Olga; o ZIP importado depois não duplica esses Fatos.
+- O Farol de Areia tem uma revisão em 2024-05-05 com 5 que o ZIP não tem.
+- Maré Baixa (2014) traz o ID 9002, do homônimo de 1980 (tt9023002): o slug com
+  `-2015` daria outro filme, e o ID vence.
+- Vento Norte não tem data do diário; vale a data de publicação, 16/07 às 21h
+  (-03:00). O ID 9102 resolve por `tmdb/externos-9102.json`, sem passar pela busca
+  por título, que daria dois candidatos.
+- Uma lista ("Faróis") fica de fora.
