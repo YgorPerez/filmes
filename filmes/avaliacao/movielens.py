@@ -9,13 +9,12 @@ from random import Random
 
 from filmes.avaliacao.pessoas import Pessoa, separar
 from filmes.banco import fato_id
+from filmes.catalogo import review, versoes
 from filmes.erros import ErroFilmes
 from filmes.evidencia import regua
 
 SEMENTE = 27
 TAMANHO = 1000
-_FONTE = "MovieLens ml-32m"
-_DATA = "2023-10-13"
 
 
 @dataclass
@@ -24,14 +23,17 @@ class Amostra:
     usuarios: frozenset[int]
     filmes: dict[int, str]
     votos: tuple
+    fonte_e_data: tuple[str, str]
 
 
-def ler(pasta, progresso):
+def ler(pasta, manifesto, progresso):
     ratings, links = pasta / "ratings.csv", pasta / "links.csv"
     if not ratings.is_file() and not links.is_file():
         return None
     if not ratings.is_file() or not links.is_file():
         raise ErroFilmes("dados_invalidos", f"{pasta}: são necessários ratings.csv e links.csv para avaliar o MovieLens")
+    # Fonte e data como as do Catálogo (catalogo/review.py), lidas do manifesto.
+    fonte_e_data = versoes.fonte_e_data(manifesto, versoes.MOVIELENS)
     try:
         filmes = {
             int(movie_id): "tt" + imdb_id
@@ -58,8 +60,9 @@ def ler(pasta, progresso):
             elif nota >= regua.NOTA_ALTA:
                 usuarios.append(usuario)
                 itens.append(colunas[filme])
-        pessoas_medidas = [medida for u, notas in sorted(avaliacoes.items()) if (medida := _pessoa(u, notas))]
-        return Amostra(pessoas_medidas, sorteados, filmes, (imdbs, usuarios, itens))
+        pessoas_medidas = [medida for u, notas in sorted(avaliacoes.items())
+                           if (medida := _pessoa(u, notas, fonte_e_data[0]))]
+        return Amostra(pessoas_medidas, sorteados, filmes, (imdbs, usuarios, itens), fonte_e_data)
     except (ValueError, csv.Error) as erro:
         raise ErroFilmes("dados_invalidos", f"{pasta}: {erro}") from erro
 
@@ -75,7 +78,7 @@ def _linhas(caminho, colunas):
             yield tuple(linha[i] for i in indices)
 
 
-def _pessoa(usuario, avaliacoes):
+def _pessoa(usuario, avaliacoes, fonte):
     pessoa = f"movielens:{usuario}"
     datas = {filme: dt.datetime.fromtimestamp(instante, dt.UTC).isoformat()
              for filme, (instante, _) in avaliacoes.items()}
@@ -86,7 +89,7 @@ def _pessoa(usuario, avaliacoes):
     treino = []
     for filme, data in datas.items():
         if data < medida.corte:
-            valores = (pessoa, filme, notas[filme], data[:10], _FONTE)
+            valores = (pessoa, filme, notas[filme], data[:10], fonte)
             treino.append((fato_id("notas", *valores), *valores))
     return replace(medida, corte=medida.corte[:10], treino=tuple(treino))
 
@@ -110,59 +113,30 @@ def preparar(conn, pasta, amostra, progresso):
 
 
 def _vizinhos(conn, amostra, progresso):
-    import numpy as np
-    from scipy.sparse import csr_matrix
+    """A vizinhança de produção (catalogo/vizinhos.py), só com os usuários fora da
+    amostra e só para os filmes que alguém usa como semente."""
+    from filmes.catalogo.vizinhos import calcular  # numpy e scipy só quando há MovieLens
 
     imdbs, usuarios, itens = amostra.votos
-    if not len(usuarios):
-        return
-    treino = csr_matrix(
-        (np.ones(len(usuarios), dtype=np.int32), (usuarios, itens)),
-        shape=(max(usuarios) + 1, len(imdbs)),
-    )
-    # Um mesmo tconst pode aparecer em mais de um movieId. Cada usuário conta uma vez.
-    treino.data[:] = 1
-    por_filme = treino.T.tocsr()
-    bases = np.diff(por_filme.indptr)
     sementes = {
         filme for (filme,) in conn.execute("""
             SELECT DISTINCT n.filme_id FROM notas_vigentes n JOIN filmes f ON f.id = n.filme_id WHERE n.nota >= 3
         """)
     }
-    colunas = [
-        i for i, filme in enumerate(imdbs) if filme in sementes and bases[i] >= regua.BASE_MINIMA_VIZINHANCA
-    ]
-    # Fatie a multiplicação para manter só um lote de pares em memória.
-    ultimo_progresso = 20
-    for inicio in range(0, len(colunas), 64):
-        atual = 20 + 14 * inicio // len(colunas)
-        if atual > ultimo_progresso:
-            ultimo_progresso = atual
-            progresso(atual, "Calculando vizinhos sem os usuários sorteados")
-        lote = colunas[inicio:inicio + 64]
-        pares = por_filme[lote] @ treino
-        for linha, semente in enumerate(lote):
-            base = int(bases[semente])
-            primeiro, ultimo = pares.indptr[linha:linha + 2]
-            ambos = pares.data[primeiro:ultimo]
-            vizinhos = pares.indices[primeiro:ultimo]
-            aceita = (vizinhos != semente) & (100 * ambos >= regua.PORCENTO_MINIMO_VIZINHANCA * base)
-            for vizinho, total in zip(vizinhos[aceita], ambos[aceita]):
-                valores = (imdbs[semente], imdbs[vizinho], base, int(total), _FONTE, _DATA)
-                yield (fato_id("vizinhos", *valores), *valores)
+    linhas = [i for i, filme in enumerate(imdbs) if filme in sementes]
+
+    def ao_lote(feitos, total):
+        progresso(20 + 14 * feitos // total, "Calculando vizinhos sem os usuários sorteados")
+
+    pares = calcular(imdbs, itens, usuarios, sementes=linhas, ao_lote=ao_lote)
+    yield from review.fatos("vizinhos", pares, amostra.fonte_e_data)
 
 
 def _tags(caminho, amostra):
-    usuarios = defaultdict(set)
     try:
-        for usuario, movie_id, tag in _linhas(caminho, ("userId", "movieId", "tag")):
-            filme = amostra.filmes.get(int(movie_id))
-            usuario = int(usuario)
-            tag = tag.strip().lower()
-            if filme and tag and usuario not in amostra.usuarios:
-                usuarios[filme, tag].add(usuario)
+        linhas = list(_linhas(caminho, ("userId", "movieId", "tag")))
+        mapa = {str(movie_id): filme for movie_id, filme in amostra.filmes.items()}
+        contagens = list(review.contar_tags(linhas, mapa, excluidos=amostra.usuarios))
     except (ValueError, csv.Error) as erro:
         raise ErroFilmes("dados_invalidos", f"{caminho}: {erro}") from erro
-    for (filme, tag), distintos in sorted(usuarios.items()):
-        valores = (filme, tag, len(distintos), _FONTE, _DATA)
-        yield (fato_id("tags_movielens", *valores), *valores)
+    yield from review.fatos("tags_movielens", contagens, amostra.fonte_e_data)

@@ -18,7 +18,7 @@ def avaliar(amb, *, com_grade=False, progresso=lambda *_: None):
         pessoas_medidas = pessoas.pessoas_medidas(conn, amb)
         pasta_ml = amb.catalogo / "ml-32m"
         progresso(10, "Sorteando a amostra do MovieLens")
-        amostra = movielens.ler(pasta_ml, progresso)
+        amostra = movielens.ler(pasta_ml, amb.versoes, progresso)
         pessoas_ml = amostra.pessoas_medidas if amostra else []
         offline.preparar(conn, pessoas_medidas, pessoas_ml)
         if amostra:
