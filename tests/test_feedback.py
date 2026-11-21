@@ -7,12 +7,7 @@
 - Nota e Relato vindos de Feedback sobem um nível de Força.
 """
 
-import yaml
-
-
-def _ler(caminho):
-    _, frente, corpo = caminho.read_text(encoding="utf-8").split("---\n", 2)
-    return yaml.safe_load(frente), corpo
+from conftest import ler_markdown as _ler
 
 
 def _sessao(banco, *presentes):

@@ -5,13 +5,7 @@ contexto, Regra, Filme escolhido e Feedback; no corpo, a Recomendação inteira
 com todas as Evidências no formato completo de linha.
 """
 
-import yaml
-
-
-def _ler(caminho):
-    texto = caminho.read_text(encoding="utf-8")
-    _, frente, corpo = texto.split("---\n", 2)
-    return yaml.safe_load(frente), corpo
+from conftest import ler_markdown as _ler
 
 
 def test_recomendar_abre_a_sessao_num_arquivo_do_repo_de_dados(banco, dados):

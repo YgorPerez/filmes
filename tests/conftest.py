@@ -12,10 +12,19 @@ import sys
 from pathlib import Path
 
 import pytest
+import yaml
 
 RAIZ = Path(__file__).resolve().parents[1]
 FIXTURE = Path(__file__).resolve().parent / "fixture"
 HOJE = "2026-11-20"
+
+
+def ler_markdown(caminho):
+    """Frontmatter (dict) e corpo de um arquivo do repo de dados."""
+    texto = caminho.read_text(encoding="utf-8")
+    assert texto.startswith("---\n"), caminho
+    _, frente, corpo = texto.split("---\n", 2)
+    return yaml.safe_load(frente), corpo
 
 
 class Cli:

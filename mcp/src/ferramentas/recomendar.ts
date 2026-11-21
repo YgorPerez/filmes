@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { definirFerramenta } from "../ferramenta.ts";
+import { definirFerramenta, semHifen } from "../ferramenta.ts";
 
-const pessoa = z.string().regex(/^[^-\s]/, "nome de Pessoa não pode começar com '-' nem espaço");
+const pessoa = semHifen("nome de Pessoa");
 
 export default definirFerramenta({
   nome: "recomendar",

@@ -10,9 +10,8 @@ import zipfile
 from pathlib import Path
 
 import pytest
-import yaml
 
-from conftest import FIXTURE
+from conftest import FIXTURE, ler_markdown
 
 GRAVACOES = FIXTURE / "gravacoes"
 
@@ -57,8 +56,7 @@ def test_duplicar_zip_e_reconstruir_preserva_os_fatos(olga, zip_olga, dados):
     primeiro = olga.ok(*comando)
     salvo = dados / primeiro["arquivo"]
     assert salvo.read_bytes() == zip_olga.read_bytes()
-    arquivo_pessoa = (dados / "pessoas" / "olga.md").read_text()
-    [registro] = yaml.safe_load(arquivo_pessoa.split("---")[1])["imports"]
+    [registro] = ler_markdown(dados / "pessoas" / "olga.md")[0]["imports"]
     assert registro["arquivo"] == primeiro["arquivo"]
 
     def fatos():
