@@ -11,3 +11,11 @@ CREATE TABLE notas (
     fonte    TEXT NOT NULL                  -- "Letterboxd do Bruno"
 );
 CREATE INDEX notas_por_pessoa ON notas(pessoa, filme_id);
+
+-- A Nota que vale de cada Pessoa para cada filme: a mais recente.
+-- As outras continuam guardadas em notas (spec, história 41).
+CREATE VIEW notas_vigentes AS
+SELECT fato_id, pessoa, filme_id, nota, data, fonte FROM (
+    SELECT *, row_number() OVER (PARTITION BY pessoa, filme_id ORDER BY data DESC, fato_id) AS ordem
+    FROM notas
+) WHERE ordem = 1;
