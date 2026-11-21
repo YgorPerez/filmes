@@ -18,6 +18,11 @@ miserável. "Tanto faz", "pela média": `regra: "media"`. "Hoje é a vez da Ana"
 "aniversário da Ana": `regra: "de"` com `de: "ana"`; a Ana precisa estar entre
 os Presentes.
 
+O Clima vai em `climas`, com os nomes do vocabulário fixo que a descrição da
+ferramenta lista: "algo leve" é `leve`, "pra dar risada" é `pra rir`, "algo
+tenso" é `tenso`. Se `avisos` indicar um Clima fora do vocabulário, diga ao
+Dono qual ficou de fora. Use os nomes de `climas` na leitura do pedido.
+
 ## Mostrar
 
 Para cada filme, na ordem que o motor devolveu: título, ano e duração, e uma
@@ -33,6 +38,17 @@ ordem do pedido; mostre a Evidência mais forte de cada um, assim:
 O texto, a fonte, a data, a Força e o Tipo vêm do JSON do motor e são
 copiados sem mudar uma palavra. Nunca invente uma linha de evidência. Quem
 não tem Fato sobre o filme já vem com a linha "sem fato" do motor.
+
+`linhas_do_filme` traz as linhas que falam do filme e não de alguém: primeiro
+as das Restrições (duração, faixa etária, gatilho), depois o Clima pedido
+("Clima leve: ...") e "para ver em grupo" ou "para ver sozinho". Mostre no
+máximo uma, a primeira, depois das linhas dos Presentes:
+
+```
+- **Filme:** <texto> (<fonte>, <data>) *(<forca>, <tipo>)*
+```
+
+O `texto` de cada item de `creditos` vai na linha de créditos do fim.
 
 Filme com `so_palpites: true` não tem Fato nenhum: só aparece no fim, quando
 faltam filmes com Fato, e o título leva "— sem fato que o sustente".

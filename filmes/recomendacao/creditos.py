@@ -13,7 +13,8 @@ SEMPRE = "IMDb"
 TEXTOS = {
     "IMDb": "Information courtesy of IMDb (https://www.imdb.com). Used with permission.",
     "Does the Dog Die": "Powered by DoesTheDogDie.com",
-    "Tag Genome": "Tag Genome 2021, GroupLens Research, licença CC BY-NC 3.0 "
+    "Tag Genome": "Tag Genome 2021, de Kotkov, Maslov e Neovius "
+                  "(https://grouplens.org/datasets/movielens/tag-genome-2021/), sob licença CC BY-NC 3.0 "
                   "(https://creativecommons.org/licenses/by-nc/3.0/)",
     "Trakt": "filmes uses Trakt but is not endorsed or certified by Trakt",
     "TMDB": "This product uses the TMDB API but is not endorsed or certified by TMDB.",

@@ -70,6 +70,27 @@ describe("servidor MCP sobre a CLI real e a fixture", () => {
     assert.deepEqual(Object.keys(saida.filmes[0].evidencias), ["bruno", "iara"]);
   });
 
+  it("recomendar passa os Climas, e o vocabulário da descrição é o do motor", async () => {
+    const { tools } = await cliente.listTools();
+    const climas = tools.find((t) => t.name === "recomendar")!.inputSchema.properties!.climas as { description: string };
+    const vocabulario = climas.description.match(/vocabulário fixo: ([^.]+)\./)![1].split(", ");
+
+    const resultado = (await cliente.callTool({
+      name: "recomendar",
+      arguments: { presentes: ["dono"], climas: [...vocabulario, " épico ", "--sem-ja-visto"] },
+    })) as Resultado;
+
+    assert.ok(!resultado.isError);
+    const saida = json(resultado);
+    assert.deepEqual(saida.climas, vocabulario);
+    const [aviso, avisoComHifen] = saida.avisos;
+    assert.ok(aviso.startsWith("o Clima 'épico' não está no vocabulário"));
+    assert.ok(aviso.endsWith(`Os Climas são ${vocabulario.join(", ")}.`));
+    assert.ok(avisoComHifen.startsWith("o Clima '--sem-ja-visto' não está no vocabulário"));
+    assert.deepEqual(saida.restricoes, {});
+    assert.ok(Array.isArray(saida.filmes[0].linhas_do_filme));
+  });
+
   it("consultar executa SELECT", async () => {
     const resultado = (await cliente.callTool({
       name: "consultar",
