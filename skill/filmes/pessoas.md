@@ -52,6 +52,15 @@ Se o relatório avisar que o TMDB não respondeu, os itens que ele não
 chegou a ver ficam na fila. Antes de levar esses itens ao Dono, chame
 `fila_import` com `acao: "reprocessar"` (e `pessoa`, para só os dela).
 
+## Exportar para o MovieLens
+
+O MovieLens só importa o CSV de avaliações do IMDb. Quando o Dono pedir as
+Notas de alguém nesse formato, chame `exportar` com a Pessoa, `formato: "imdb"`
+e um caminho em `exports/` do repo de dados (ex.: `~/filmes-dados/exports/lorenzo-imdb-ratings.csv`),
+nunca no repo de código. Vai a Nota mais recente de cada filme, de 1 a 10.
+A Pessoa sobe o arquivo em movielens.org, Import or Export Data; o MovieLens
+pula filme que não conhece e não sobrescreve nota que ela já deu lá.
+
 ## Desfazer um registro
 
 Quando o Dono corrigir algo já gravado ("não era esse filme", "ela não

@@ -56,6 +56,7 @@ filmes/
   sob_demanda/             fontes consultadas na hora, com cache de validade: fonte.py, cache.py, omdb.py, ddd.py, tmdb.py
   sessao/                  arquivo da Sessão, Feedback, Fatos do Feedback e Crédito
   importar/                imports do Letterboxd (ZIP e RSS) e do Trakt, fila de resolução e decisões do Dono
+  exportar/                Notas de uma Pessoa em formato de outro serviço (imdb.py: o CSV que o MovieLens importa)
   avaliacao/               `avaliar`: corte offline, amostra do MovieLens, grade de pesos e relatório
   verificar/               confere a resposta do Claude contra a Sessão
   cartaz/                  cartaz HTML da Sessão para o T3 Code; CSS em cartaz.css, só sob .cartaz
