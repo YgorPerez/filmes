@@ -22,6 +22,7 @@ from filmes.banco import abrir_leitura
 from filmes.erros import ErroFilmes
 from filmes.recomendacao import cabecalho
 from filmes.recomendacao.restricoes import Contexto
+from filmes.recomendacao.restricoes import ano
 from filmes.sessao import arquivo
 
 CSS = (Path(__file__).resolve().parent / "cartaz.css").read_text(encoding="utf-8")
@@ -112,6 +113,8 @@ def _restricao(restricao) -> str:
         return f"idioma original: {restricao['idioma']}"
     if nome == "crianca":
         return f"com criança de {restricao['idade']} anos" if restricao.get("idade") else "com criança"
+    if nome == "ano":
+        return ano.intervalo(restricao.get("desde"), restricao.get("ate"))
     if nome == "gatilho":
         return "sem " + ", ".join(f"“{t}”" for t in restricao.get("temas") or [])
     return str(nome)

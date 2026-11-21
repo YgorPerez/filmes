@@ -15,7 +15,7 @@ export default definirFerramenta({
     "`vetos` lista os Vetos dos Presentes que tiraram filmes. " +
     "`so_palpites` marca filme sem Fato nenhum, que só entra no fim quando " +
     'faltam Candidatos com Fato. Presentes por slug, nome ou apelido; "dono" é o Dono. ' +
-    "Restrições opcionais (duração, idioma, criança, gatilhos, sem Já visto) tiram filmes antes da ordenação. " +
+    "Restrições opcionais (duração, ano de lançamento, idioma, criança, gatilhos, sem Já visto) tiram filmes antes da ordenação. " +
     "Cada filme que passa traz em `linhas_do_filme` as linhas das Restrições, do Clima e de grupo ou sozinho. " +
     "Clima e grupo ou sozinho puxam a ordem dos filmes. " +
     "A linha de Crédito aparece em `linhas_do_filme` quando o Crédito fez o filme subir. " +
@@ -43,6 +43,8 @@ export default definirFerramenta({
     quantos: z.number().int().min(1).max(100).optional().describe("tamanho da lista; padrão 5"),
     pedido: z.string().optional().describe("o pedido do Dono como ele disse, guardado na Sessão"),
     duracao_max: z.number().int().min(1).optional().describe("tempo disponível, em minutos"),
+    desde: z.number().int().optional().describe('ano de lançamento mínimo, inclusive: "de 1990 em diante" é 1990'),
+    ate: z.number().int().optional().describe('ano de lançamento máximo, inclusive: "até 2005" é 2005; "anos 90" é desde 1990 e ate 1999'),
     idioma: z.string().min(1).optional().describe('idioma original exigido, só quando pedido: "pt", "português" ou o QID'),
     crianca: z.boolean().optional().describe('"tem criança" sem idade: vale livre (L)'),
     idade_crianca: z.number().int().min(0).max(17).optional().describe("idade da criança mais nova"),
@@ -56,6 +58,8 @@ export default definirFerramenta({
     if (e.de) args.push("--de", e.de);
     if (e.quantos) args.push("--quantos", String(e.quantos));
     if (e.duracao_max) args.push("--duracao-max", String(e.duracao_max));
+    if (e.desde !== undefined) args.push(`--desde=${e.desde}`);
+    if (e.ate !== undefined) args.push(`--ate=${e.ate}`);
     if (e.idioma) args.push(`--idioma=${e.idioma}`);
     if (e.idade_crianca !== undefined) args.push("--crianca", String(e.idade_crianca));
     else if (e.crianca) args.push("--crianca");
