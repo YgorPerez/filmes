@@ -41,9 +41,30 @@ claude
 A fixture já tem Bruno como Dono. Rode `make check` para verificar a CLI
 e o MCP sem rede.
 
+## Cartaz no T3 Code
+
+No T3 Code, a Recomendação aparece como cartaz HTML na conversa. A skill
+chama a ferramenta `cartaz`, que roda `python -m filmes cartaz --sessao <id>`
+e grava um documento completo em `cartazes/<sessão>.html`, na pasta do
+banco (`--saida` escolhe outro arquivo). Depois, o `html_render` do T3
+mostra o arquivo, e o texto da resposta fica só com os avisos.
+
+O cartaz abre com a leitura do pedido e a legenda dos Presentes. Cada
+filme ganha um card com a capa do TMDB em w500 (160 px, ou 104 px no
+celular), a nota do IMDb sobre a capa e uma faixa com um ponto por Presente,
+cheio para quem tem Fato sobre o filme e vazado para quem não tem. Ao
+lado vêm o título em português com o original, a sinopse e as etiquetas
+de ano, duração, gêneros e votos. Em "Por que cada um vai gostar" fica a
+Evidência mais forte de cada Presente. Quem tem a mesma Evidência divide
+a linha, e quem não tem Fato fica numa linha à parte, sem marcador de
+Força. O CSS vale só dentro de `.cartaz` e usa as variáveis de tema do T3,
+então o cartaz segue o tema claro ou escuro. Todo o texto sai do motor.
+
+Fora do T3, a resposta continua em Markdown, como descrito abaixo.
+
 ## Como sai cada filme
 
-A resposta abre com uma citação que repete o pedido como o Claude entendeu,
+A resposta em Markdown abre com uma citação que repete o pedido como o Claude entendeu,
 os Vetos que agiram e quantos filmes saíram. Cada filme vem num bloco
 fechado por `---`: título em português (o original ao lado, em itálico,
 quando difere), capa, ficha, uma frase de sinopse, quantos Presentes têm
@@ -96,8 +117,13 @@ uv run python -m filmes atualizar --json
 uv run python -m filmes reconstruir --json
 ```
 
-`atualizar` busca os TSVs de títulos e votos do IMDb, as triplas e rótulos do
-Wikidata e os ZIPs MovieLens ml-32m e Tag Genome 2021. Se uma consulta falhar
+`atualizar` busca os TSVs de títulos, votos e créditos (`title.principals`)
+do IMDb, as triplas e rótulos do Wikidata, o ID do IMDb de cada ator do
+elenco e os ZIPs MovieLens ml-32m e Tag Genome 2021. Com os créditos, o
+caminho de conteúdo por elenco sabe quem é coadjuvante: ator fora dos 3
+primeiros créditos de ator do filme gera Evidência no máximo fraca. Um
+manifesto sem esses dois dumps ainda reconstrói, com a régua do elenco
+de antes. Se uma consulta falhar
 no QLever, busca aquele conjunto por predicado no WDQS. O progresso da CLI
 sai em stderr. No MCP, a ferramenta
 `atualizar` envia notificações de progresso ao cliente que as solicita.

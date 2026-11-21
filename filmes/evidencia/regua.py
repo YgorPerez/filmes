@@ -80,6 +80,12 @@ def forca_caminho(notas_altas: int, predicado: str) -> str | None:
     return "fraca" if predicado == "genero" else forca
 
 
+def forca_elenco(forca: str, principal: bool | None) -> str:
+    """Ator fora dos 3 primeiros créditos do IMDb (coadjuvante, `principal` falso)
+    dá no máximo fraca. Sem os créditos do filme (`principal` None), a Força fica."""
+    return "fraca" if principal is False else forca
+
+
 def forca_vizinhanca(base: int, ambos: int, teto: str) -> str | None:
     """Review de vizinhança item-item: de `base` pessoas que deram 4+ ao filme da
     Nota-semente, `ambos` deram 4+ ao Candidato.

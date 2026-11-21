@@ -30,7 +30,7 @@ def test_atualizar_fixa_os_dumps_por_data_e_hash(catalogo_real):
     assert set(fixados) == {
         "title.basics.tsv.gz", "title.ratings.tsv.gz", "wikidata-ids.json.gz",
         "wikidata-conteudo.json.gz", "wikidata-elenco.json.gz", "wikidata-rotulos.json.gz",
-        "ml-32m.zip", "genome_2021.zip",
+        "ml-32m.zip", "genome_2021.zip", "title.principals.tsv.gz", "wikidata-atores.json.gz",
     }
     for nome, versao in fixados.items():
         assert versao["data"] == {
@@ -79,6 +79,38 @@ def test_reconstruir_liga_o_imdb_ao_grafo_e_converte_as_faixas(catalogo_real):
         ["P1657", "16", 1], ["P1981", "12", 1], ["P2629", "16", 1],
         ["P2756", "16", 1], ["P3216", "16", 0], ["P5970", "16", 1],
     ]
+
+
+def test_reconstruir_guarda_os_tres_primeiros_creditos_de_ator_e_liga_ao_elenco_do_wikidata(catalogo_real):
+    cli, _, _ = catalogo_real
+    cli.ok("atualizar")
+    cli.ok("reconstruir")
+
+    # No title.principals, Schindler's List abre com Liam Neeson, Ralph Fiennes e Ben Kingsley;
+    # Miss Jerry tem duas atrizes e dois atores antes do diretor.
+    assert cli.consultar("SELECT filme_id, ordem, ator_imdb FROM elenco_principal_imdb ORDER BY filme_id, ordem") == [
+        ["tt0000009", 1, "nm0063086"], ["tt0000009", 2, "nm0183823"], ["tt0000009", 3, "nm1309758"],
+        ["tt0108052", 1, "nm0000553"], ["tt0108052", 2, "nm0000146"], ["tt0108052", 3, "nm0001426"],
+        ["tt0133093", 1, "nm0000206"], ["tt0133093", 2, "nm0000401"], ["tt0133093", 3, "nm0005251"],
+    ]
+    # Mark Ivanir, o elenco gravado de Schindler's List, é o nono crédito: coadjuvante.
+    assert cli.consultar("SELECT filme_id, entidade_id FROM elenco_principal ORDER BY filme_id") == [
+        ["tt0108052", "Q58444"],
+    ]
+
+
+def test_reconstruir_aceita_manifesto_sem_os_creditos_do_imdb(catalogo_real):
+    cli, _, versoes = catalogo_real
+    cli.ok("atualizar")
+    manifesto = json.loads(versoes.read_text())
+    for nome in ("title.principals.tsv.gz", "wikidata-atores.json.gz"):
+        del manifesto["dumps"][nome]
+    versoes.write_text(json.dumps(manifesto))
+
+    cli.ok("reconstruir")
+
+    assert cli.consultar("SELECT count(*) FROM elenco_principal_imdb") == [[0]]
+    assert cli.consultar("SELECT count(*) FROM filmes") == [[4]]
 
 
 def test_reconstruir_recusa_dump_diferente_do_que_foi_fixado(catalogo_real):
