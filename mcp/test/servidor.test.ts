@@ -148,6 +148,20 @@ describe("servidor MCP sobre a CLI real e a fixture", () => {
     assert.ok(!titulos.includes("O Farol de Areia"));
   });
 
+  it("recomendar repassa o intervalo de anos", async () => {
+    const resultado = (await cliente.callTool({
+      name: "recomendar", arguments: { presentes: ["dono"], quantos: 50, desde: 2015, ate: 2016 },
+    })) as Resultado;
+
+    assert.ok(!resultado.isError);
+    const saida = json(resultado);
+    assert.deepEqual(saida.restricoes.ano, { desde: 2015, ate: 2016, tirados: saida.restricoes.ano.tirados });
+    assert.ok(saida.restricoes.ano.tirados > 0);
+    const titulos = saida.filmes.map((f: any) => f.titulo);
+    assert.ok(titulos.includes("Maré Baixa"));
+    assert.ok(!titulos.includes("O Farol de Areia"));
+  });
+
   it("tem criança sem idade vale livre", async () => {
     const resultado = (await cliente.callTool({
       name: "recomendar", arguments: { presentes: ["dono"], quantos: 50, crianca: true },
