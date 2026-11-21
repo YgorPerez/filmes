@@ -3,11 +3,12 @@ import do Letterboxd, e a capa dos filmes da Recomendação. Cache de 6 meses;
 chave em FILMES_TMDB_CHAVE (a chave v3, que vai como `api_key`, ou o token de
 leitura v4, que vai no cabeçalho).
 
-Quatro pedidos, cada um uma entrada no cache e um arquivo nas gravações:
+Cinco pedidos, cada um uma entrada no cache e um arquivo nas gravações:
 
     filme-<slug>-<ano>-<hash>    GET /search/movie?query=<título>&primary_release_year=<ano>
     serie-<slug>-<ano>-<hash>    GET /search/tv?query=<título>&first_air_date_year=<ano>
     externos-<id>         GET /movie/<id>/external_ids, de onde sai o imdb_id
+    detalhes-<id>         GET /movie/<id>, de onde sai a duração dos candidatos com poucos votos
     find-<tconst>-pt-BR   GET /find/<tconst>?external_source=imdb_id&language=pt-BR, de onde
                           saem o pôster, o título em português e a sinopse
 
@@ -68,6 +69,15 @@ class TMDB(Fonte):
             return None
         imdb = registro.corpo.get("imdb_id") or ""
         return imdb if re.fullmatch(r"tt[0-9]+", imdb) else None
+
+    def duracao(self, tmdb_id) -> int | None:
+        """Duração em minutos; None sem resposta ou sem o dado."""
+        if not re.fullmatch(r"[0-9]+", str(tmdb_id)):
+            return None
+        registro = self._obter(f"detalhes-{tmdb_id}", f"/movie/{tmdb_id}", {})
+        if registro is None:
+            return None
+        return registro.corpo.get("runtime") or None
 
     def _resultados(self, chave, caminho, parametros):
         registro = self._obter(chave, caminho, parametros)
