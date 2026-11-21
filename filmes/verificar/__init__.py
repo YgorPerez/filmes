@@ -1,4 +1,18 @@
-"""Conferência da resposta por filme e por Pessoa, a partir da Sessão gravada."""
+"""Conferência da resposta por filme e por Pessoa, a partir da Sessão gravada.
+
+Cada filme da resposta abre com um título numerado. Logo abaixo dele vem o
+cabeçalho de apresentação (capa, ficha, sinopse, cobertura), que não é
+Evidência e não é conferido. Da primeira linha de lista em diante, cada linha
+do bloco precisa ser uma Evidência da Sessão para aquele filme e aquele rótulo.
+
+Dois formatos de Evidência valem:
+
+    - **Você:** <texto> (<fonte>, <data>) *(forte, nota)*
+    - ●●● **Você:** <texto> (<fonte>, <data>) *(nota)*         # #32: Força no marcador
+
+No segundo, o rótulo pode juntar Presentes ("Ana e Teo") quando a linha vale
+para cada um deles, como o "sem fato".
+"""
 
 import re
 from pathlib import Path
@@ -7,14 +21,16 @@ from filmes.dados import pessoas
 from filmes.evidencia import FORCAS, TIPOS
 from filmes.sessao import arquivo
 
-_CABECALHO = re.compile(r"^\s*(?:#{1,6}\s+)?(?:\*\*)?\d+\.\s")
-_EVIDENCIA = re.compile(r"^\s*(?:[-+*]\s|(?:\*\*)?Evidência:)")
-_FORCA_TIPO = re.compile(rf"\((?:{'|'.join(FORCAS)}), (?:{'|'.join(TIPOS)})\)\*?$")
+_MARCADORES = {"●●●": "forte", "●●○": "moderada", "●○○": "fraca"}
+_TITULO = re.compile(r"^\s*(?:#{1,6}\s+)?(?:\*\*)?(\d+)\.\s")
+_EM_BLOCOS = re.compile(r"^\s*#{1,6}\s+(\d+)\.\s+(.+?)\s*$")
+_EVIDENCIA = re.compile(rf"^\s*(?:[-+*]\s|(?:\*\*)?Evidência:|(?:{'|'.join(_MARCADORES)})\s)")
+_LISTA = re.compile(r"^\s*[-+*]\s")
+_FORCA_TIPO = re.compile(rf"\((?:(?:{'|'.join(FORCAS)}), )?(?:{'|'.join(TIPOS)})\)\*?$")
+_COM_MARCADOR = re.compile(rf"^- ({'|'.join(_MARCADORES)}) \*\*(.+?):\*\* (.*) \*\(({'|'.join(TIPOS)})\)\*$")
 _MARCA_PALPITE = "sem fato que o sustente"
-# Cabeçalho de apresentação (#30): a capa antes do título, a quebra `\` no fim
-# dele e, na linha de baixo, gêneros e link do IMDb. Não são Evidência.
+# Formato antigo (#30): a capa antes do título e a quebra `\` no fim dele.
 _CAPA = re.compile(r"^!\[[^\]]*\]\([^)\s]*\)\s+")
-_GENEROS_E_IMDB = re.compile(r"^(?:[^*\[]+ · )?\[IMDb\]\(https://www\.imdb\.com/title/tt[0-9]+/\)$")
 
 
 def verificar(repo: Path, sessao_id: str, resposta: str) -> list[str]:
@@ -26,27 +42,69 @@ def verificar(repo: Path, sessao_id: str, resposta: str) -> list[str]:
     filmes = _ler_recomendacao(frente, corpo, dono)
     invalidas = []
     permitidas = set()
-    no_bloco = False
+    estado = None   # None fora de filme; "cabecalho" logo depois do título; "evidencias" da primeira linha de lista em diante
     for linha in resposta.splitlines():
         titulo = _CAPA.sub("", linha).removesuffix("\\")
-        if titulo in filmes:
-            permitidas = filmes[titulo]
-            no_bloco = True
-        elif _CABECALHO.match(titulo):
-            invalidas.append(linha)
-            permitidas = set()
-            no_bloco = True
-        elif not linha.strip():
-            no_bloco = False
-        elif _GENEROS_E_IMDB.match(linha.strip()):
+        if _TITULO.match(titulo):
+            filme = _filme_do_titulo(titulo, filmes)
+            if filme is None:
+                invalidas.append(linha)
+            permitidas = filme["linhas"] if filme else set()
+            estado = "cabecalho"
+        elif linha.strip() == "---":
+            estado = None
+        elif estado == "cabecalho" and not _LISTA.match(linha):
             continue
-        elif no_bloco or _EVIDENCIA.match(linha) or _FORCA_TIPO.search(linha):
-            if linha not in permitidas:
+        elif not linha.strip():
+            estado = None if estado == "evidencias" else estado
+        elif estado or _EVIDENCIA.match(linha) or _FORCA_TIPO.search(linha):
+            estado = estado and "evidencias"
+            if not _permitida(linha, permitidas):
                 invalidas.append(linha)
     return invalidas
 
 
-def _ler_recomendacao(frente: dict, corpo: str, dono: str | None) -> dict[str, set[str]]:
+def _filme_do_titulo(titulo: str, filmes: dict) -> dict | None:
+    """O filme da Sessão que o título da resposta nomeia, ou None.
+
+    Formato antigo: `**N. Título** (ano, duração)`, igual ao que a Sessão gravou.
+    Em blocos: `### N. Título`, ou `### N. Título em português *(Título original)*`,
+    com ` — sem fato que o sustente` no fim quando o filme só tem palpites.
+    """
+    for filme in filmes.values():
+        if titulo == filme["antigo"]:
+            return filme
+    casou = _EM_BLOCOS.match(titulo)
+    filme = filmes.get(int(casou.group(1))) if casou else None
+    if filme is None:
+        return None
+    nome = casou.group(2)
+    marca = f" — {_MARCA_PALPITE}"
+    if nome.endswith(marca) != filme["palpite"]:
+        return None
+    nome = nome.removesuffix(marca)
+    original = filme["titulo"]
+    if nome == original or (nome.endswith(f" *({original})*") and nome != f"*({original})*"):
+        return filme
+    return None
+
+
+def _permitida(linha: str, permitidas: set[str]) -> bool:
+    if linha in permitidas:
+        return True
+    casou = _COM_MARCADOR.match(linha)
+    if not casou:
+        return False
+    marcador, rotulo, texto, tipo = casou.groups()
+    rotulos = [rotulo]
+    if rotulo not in {p.split(":**", 1)[0].removeprefix("- **") for p in permitidas}:
+        rotulos = [r for r in re.split(r", | e ", rotulo) if r]
+    forca = _MARCADORES[marcador]
+    return all(f"- **{r}:** {texto} *({forca}, {tipo})*" in permitidas for r in rotulos)
+
+
+def _ler_recomendacao(frente: dict, corpo: str, dono: str | None) -> dict[int, dict]:
+    """posição -> {titulo, palpite, antigo, linhas}, do corpo da Sessão."""
     por_posicao = {str(f["posicao"]): f for f in frente["recomendacao"]}
     filmes = {}
     linhas_do_filme = set()
@@ -54,9 +112,17 @@ def _ler_recomendacao(frente: dict, corpo: str, dono: str | None) -> dict[str, s
     indice = 0
     for linha in corpo.splitlines():
         if linha[:1].isdigit():
-            filme = por_posicao.get(linha.partition(".")[0])
-            cabecalho = _cabecalho_da_resposta(linha, filme) if filme else None
-            linhas_do_filme = filmes.setdefault(cabecalho, set()) if cabecalho else set()
+            posicao = linha.partition(".")[0]
+            filme = por_posicao.get(posicao)
+            antigo = _cabecalho_da_resposta(linha, filme) if filme else None
+            linhas_do_filme = set()
+            if antigo:
+                filmes[int(posicao)] = {
+                    "titulo": filme["titulo"],
+                    "palpite": linha.endswith(f" · {_MARCA_PALPITE}"),
+                    "antigo": antigo,
+                    "linhas": linhas_do_filme,
+                }
             rotulos = ()
             indice = 0
         elif linha.startswith("   - "):

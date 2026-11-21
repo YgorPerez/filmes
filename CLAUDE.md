@@ -51,7 +51,7 @@ filmes/
   recomendacao/            Candidatos, utilidade, ordem; sinais/<caminho>.py, um por caminho
                            (sinais(rodada, pessoa) para uma Pessoa, sinais_do_filme(rodada) para a linha do filme)
     restricoes/<nome>.py   uma Restrição da Sessão por arquivo (duração, idioma, criança, gatilho, sem Já visto)
-    cabecalho.py           link do IMDb, gêneros e capa de cada filme; fora das Evidências
+    cabecalho.py           link, gêneros, nota e votos do IMDb, capa, título pt e sinopse do TMDB; fora das Evidências
     atribuicoes.py         atribuições obrigatórias das fontes usadas
   sob_demanda/             fontes consultadas na hora, com cache de validade: fonte.py, cache.py, omdb.py, ddd.py, tmdb.py
   sessao/                  arquivo da Sessão, Feedback, Fatos do Feedback e Crédito

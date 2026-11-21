@@ -61,7 +61,7 @@ def test_avaliar_exclui_os_usuarios_sorteados_da_vizinhanca(banco, tmp_path):
     banco.env.update(FILMES_CATALOGO=str(catalogo), FILMES_AVALIACOES=str(tmp_path / "avaliacoes"))
     with (catalogo / "filmes.csv").open("a", encoding="utf-8") as arquivo:
         for i in range(55):
-            arquivo.write(f"tt927{i:04d},Filme popular {i},2020,90,999999\n")
+            arquivo.write(f"tt927{i:04d},Filme popular {i},2020,90,999999,\n")
     ml = catalogo / "ml-32m"
     ml.mkdir()
     (ml / "links.csv").write_text(

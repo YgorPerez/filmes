@@ -8,7 +8,8 @@ Quatro pedidos, cada um uma entrada no cache e um arquivo nas gravações:
     filme-<slug>-<ano>-<hash>    GET /search/movie?query=<título>&primary_release_year=<ano>
     serie-<slug>-<ano>-<hash>    GET /search/tv?query=<título>&first_air_date_year=<ano>
     externos-<id>         GET /movie/<id>/external_ids, de onde sai o imdb_id
-    find-<tconst>         GET /find/<tconst>?external_source=imdb_id, de onde sai o poster_path
+    find-<tconst>-pt-BR   GET /find/<tconst>?external_source=imdb_id&language=pt-BR, de onde
+                          saem o pôster, o título em português e a sinopse
 
 A busca usa o título como veio do export. O cache distingue nomes que geram
 o mesmo slug.
@@ -24,7 +25,7 @@ from filmes.recomendacao.atribuicoes import TEXTOS
 from filmes.sob_demanda.fonte import Fonte, pegar_json
 
 URL = "https://api.themoviedb.org/3"
-IMAGENS = "https://image.tmdb.org/t/p/w92"   # o menor tamanho de pôster que o TMDB serve
+IMAGENS = "https://image.tmdb.org/t/p/w185"
 ATRIBUICAO = {"fonte": "TMDB", "texto": TEXTOS["TMDB"]}
 
 
@@ -104,15 +105,24 @@ class TMDB(Fonte):
 
 class CapasTMDB(TMDB):
     """O mesmo cliente, com o aviso que vale para a Recomendação."""
-    sem_a_fonte = "os filmes saem sem capa"
+    sem_a_fonte = "os filmes saem sem capa, sem título em português e sem sinopse"
 
-    def capa(self, tconst: str) -> str | None:
-        """URL do pôster em w92, ou None sem resposta, sem filme ou sem pôster."""
+    def ficha(self, tconst: str) -> dict:
+        """Capa (URL do pôster em w185), título e overview em pt-BR, de uma só consulta.
+        Cada um é None sem resposta, sem filme ou sem o dado."""
+        filme = self._filme(tconst)
+        poster = filme.get("poster_path")
+        return {
+            "capa": f"{IMAGENS}{poster}" if poster else None,
+            "titulo_pt": filme.get("title") or None,
+            "overview": (filme.get("overview") or "").strip() or None,
+        }
+
+    def _filme(self, tconst: str) -> dict:
+        """O filme do /find em pt-BR, ou {} sem resposta ou sem filme."""
         if not re.fullmatch(r"tt[0-9]+", tconst):
-            return None
-        registro = self._obter(f"find-{tconst}", f"/find/{tconst}", {"external_source": "imdb_id"})
-        if registro is None:
-            return None
-        filmes = registro.corpo.get("movie_results") or []
-        poster = filmes[0].get("poster_path") if filmes else None
-        return f"{IMAGENS}{poster}" if poster else None
+            return {}
+        registro = self._obter(f"find-{tconst}-pt-BR", f"/find/{tconst}",
+                               {"external_source": "imdb_id", "language": "pt-BR"})
+        filmes = (registro.corpo.get("movie_results") if registro else None) or []
+        return filmes[0] if filmes else {}

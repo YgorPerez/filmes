@@ -43,23 +43,45 @@ e o MCP sem rede.
 
 ## Como sai cada filme
 
-O Claude mostra a capa pequena ao lado do título e, embaixo, os gêneros e o
-link do IMDb. Depois vêm as Evidências de cada Presente.
+A resposta abre com uma citação que repete o pedido como o Claude entendeu,
+os Vetos que agiram e quantos filmes saíram. Cada filme vem num bloco
+fechado por `---`: título em português (o original ao lado, em itálico,
+quando difere), capa, ficha, uma frase de sinopse, quantos Presentes têm
+Fato sobre o filme e, por fim, as Evidências de cada Presente. O marcador
+no começo da linha é a Força (●●● forte, ●●○ moderada, ●○○ fraca) e o
+Tipo vai no fim.
 
 ```markdown
-![capa](https://image.tmdb.org/t/p/w92/hOrAsLeNtAs9104.jpg) **1. As Horas Lentas** (2021, 1h44)\
-Drama, Mistério · [IMDb](https://www.imdb.com/title/tt9000104/)
-- **Você:** deu 5 a O Farol de Areia (2012), também de Helena Prado (Letterboxd do Bruno, 2025-06-01) *(forte, nota)*
-- **Teo:** sem fato *(fraca, palpite)*
+> Você e Teo · até 2h · regra padrão. Saíram 5 filmes.
+
+### 1. As Horas Lentas
+
+![capa](https://image.tmdb.org/t/p/w185/hOrAsLeNtAs9104.jpg)
+
+2021 · 1h44 · Drama, Mistério · ★ 7,4 · 28.000 votos · [IMDb](https://www.imdb.com/title/tt9000104/)
+
+*Numa cidade do interior, uma relojoeira percebe que os relógios da casa atrasam um minuto por noite.*
+
+Fato sobre 1 de 2; sem fato: Teo
+
+- ●●● **Você:** deu 5 a O Farol de Areia (2012), também de Helena Prado (Letterboxd do Bruno, 2025-06-01) *(nota)*
+- ●○○ **Teo:** sem fato *(palpite)*
+
+---
 ```
 
 Os gêneros são os do IMDb, traduzidos por uma tabela fixa
-([filmes/catalogo/generos.py](filmes/catalogo/generos.py)). A capa é o
-pôster do TMDB, buscado na hora só para os filmes devolvidos e guardado
-por 6 meses no cache. Ela precisa da chave em `FILMES_TMDB_CHAVE`. Sem a
-chave, ou se o TMDB não responder, o filme sai sem capa e a Recomendação
-avisa. Capa, gêneros e link não são motivo de nada e o verificador da
-resposta não os confere.
+([filmes/catalogo/generos.py](filmes/catalogo/generos.py)); nota e votos
+também saem do IMDb. Capa (pôster em w185), título em português e sinopse
+vêm de uma só consulta ao TMDB em pt-BR, feita na hora só para os filmes
+devolvidos e guardada por 6 meses no cache. A sinopse é a primeira frase
+do overview. A consulta precisa da chave em `FILMES_TMDB_CHAVE`. Sem a
+chave, ou se o TMDB não responder, os três saem nulos, o título original
+vale e a Recomendação avisa. Nada disso é motivo de filme: o verificador
+da resposta confere só as linhas de Evidência.
+
+A resposta não mostra os créditos das fontes, porque só o Dono usa o
+`filmes`. O JSON de `recomendar` continua trazendo `atribuicoes`.
 
 ## Catálogo local
 

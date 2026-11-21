@@ -39,6 +39,104 @@ Depois, me conte o que viram e como foi."""
     }
 
 
+def _com_tmdb(banco):
+    banco.env.update(FILMES_TMDB_CHAVE="x", FILMES_GRAVACOES=str(Path(__file__).parent / "fixture" / "gravacoes"))
+    return banco
+
+
+# Formato do #32: leitura do pedido em citação, um bloco por filme com título em
+# português, capa, ficha, sinopse e cobertura, Evidências com o marcador de Força.
+RESPOSTA_EM_BLOCOS = """> Você e Teo · até 2h · regra padrão. Saíram 2 filmes.
+
+### 1. As Horas Lentas
+
+![capa](https://image.tmdb.org/t/p/w185/hOrAsLeNtAs9104.jpg)
+
+2021 · 1h44 · Drama, Mistério · ★ 7,4 · 28.000 votos · [IMDb](https://www.imdb.com/title/tt9000104/)
+
+*Numa cidade do interior, uma relojoeira percebe que os relógios da casa atrasam um minuto por noite.*
+
+Fato sobre 1 de 2; sem fato: Teo
+
+- ●●● **Você:** deu 5 a O Farol de Areia (2012), também de Helena Prado (Letterboxd do Bruno, 2025-06-01) *(nota)*
+- ●○○ **Teo:** sem fato *(palpite)*
+- ●●● **Filme:** duração 1h44, dentro do limite de 2h (IMDb) *(metadado)*
+
+---
+
+### 2. Sal & Ferrugem *(Sal e Ferrugem)*
+
+2023 · 1h57 · Aventura, Ficção científica, Suspense · 15.000 votos · [IMDb](https://www.imdb.com/title/tt9000105/)
+
+*O Dr. Lemos embarca num cargueiro velho atrás de um sinal que vem do fundo do mar!*
+
+Fato sobre 1 de 2; sem fato: Teo
+
+- ●●● **Você:** deu 4,5 a Maré Baixa (2015), também de Helena Prado (Letterboxd do Bruno, 2024-02-10) *(nota)*
+- ●○○ **Teo:** sem fato *(palpite)*
+
+---
+
+Depois, me conte o que viram e como foi."""
+
+
+def test_aceita_a_resposta_em_blocos_por_filme_com_marcador_de_forca(banco):
+    saida = _com_tmdb(banco).ok("recomendar", "--presentes", "dono", "teo", "--duracao-max", "120", "--quantos", "2")
+
+    assert [f["titulo_pt"] for f in saida["filmes"]] == ["As Horas Lentas", "Sal & Ferrugem"]
+    assert banco.ok("verificar", "--sessao", saida["sessao"]["id"], f"--texto={RESPOSTA_EM_BLOCOS}") == {
+        "valida": True, "linhas_invalidas": [],
+    }
+
+
+def test_no_formato_em_blocos_marcador_de_forca_errado_ou_texto_alterado_sao_invalidos(banco):
+    saida = _com_tmdb(banco).ok("recomendar", "--presentes", "dono", "teo", "--duracao-max", "120", "--quantos", "2")
+    invalidas = [
+        "- ●●○ **Você:** deu 5 a O Farol de Areia (2012), também de Helena Prado (Letterboxd do Bruno, 2025-06-01) *(nota)*",
+        "- ●●● **Teo:** sem fato *(palpite)*",
+        "- ●○○ **Você e Ana:** sem fato *(palpite)*",
+        "Vai ser a noite perfeita para os dois.",
+    ]
+    resposta = (RESPOSTA_EM_BLOCOS
+                .replace("- ●●● **Você:** deu 5 a O Farol de Areia (2012), também de Helena Prado (Letterboxd do Bruno, 2025-06-01) *(nota)*", invalidas[0])
+                .replace("- ●○○ **Teo:** sem fato *(palpite)*\n- ●●● **Filme:**", f"{invalidas[1]}\n- ●●● **Filme:**")
+                .replace("- ●○○ **Teo:** sem fato *(palpite)*\n\n---\n\nDepois",
+                         f"{invalidas[2]}\n{invalidas[3]}\n\n---\n\nDepois"))
+
+    assert banco.ok("verificar", "--sessao", saida["sessao"]["id"], f"--texto={resposta}") == {
+        "valida": False, "linhas_invalidas": invalidas,
+    }
+
+
+def test_no_formato_em_blocos_o_titulo_original_entre_parenteses_precisa_ser_o_da_sessao(banco):
+    saida = _com_tmdb(banco).ok("recomendar", "--presentes", "dono", "teo", "--duracao-max", "120", "--quantos", "2")
+    trocado = "### 2. Sal & Ferrugem *(As Horas Lentas)*"
+    resposta = RESPOSTA_EM_BLOCOS.replace("### 2. Sal & Ferrugem *(Sal e Ferrugem)*", trocado)
+
+    assert banco.ok("verificar", "--sessao", saida["sessao"]["id"], f"--texto={resposta}")["linhas_invalidas"] == [
+        trocado,
+        "- ●●● **Você:** deu 4,5 a Maré Baixa (2015), também de Helena Prado (Letterboxd do Bruno, 2024-02-10) *(nota)*",
+        "- ●○○ **Teo:** sem fato *(palpite)*",
+    ]
+
+
+def test_presentes_sem_fato_podem_dividir_uma_linha_so(banco):
+    saida = banco.ok("recomendar", "--presentes", "dono", "teo", "iara", "--quantos", "1")
+    [filme] = saida["filmes"]
+    assert filme["cobertura"] == {"com_fato": 1, "presentes": 3, "sem_fato": ["teo", "iara"]}
+    resposta = f"""> Você, Teo e Iara · regra padrão.
+
+### 1. {filme["titulo"]}
+
+Fato sobre 1 de 3; sem fato: Teo e Iara
+
+- ●○○ **Teo e Iara:** sem fato *(palpite)*
+
+---"""
+
+    assert banco.ok("verificar", "--sessao", saida["sessao"]["id"], f"--texto={resposta}")["valida"] is True
+
+
 def test_lista_evidencias_alteradas_ou_atribuidas_a_outra_pessoa(banco):
     saida = banco.ok("recomendar", "--presentes", "dono", "teo", "--quantos", "1")
     invalidas = [
