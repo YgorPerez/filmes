@@ -1,0 +1,79 @@
+"""Configuração e caminhos de uma execução da CLI.
+
+Caminhos vêm de variável de ambiente ou de `config/local.toml` (fora do git),
+nesta ordem:
+
+    FILMES_DADOS      repo de dados (Pessoas, Sessões)        [caminhos] dados
+    FILMES_CATALOGO   dumps fixados e tabelas prontas em CSV   [caminhos] catalogo
+    FILMES_BANCO      SQLite derivado                          [caminhos] banco
+    FILMES_PESOS      config de pesos (padrão: config/pesos.toml)
+    FILMES_HOJE       data de hoje (AAAA-MM-DD), para os testes
+    FILMES_LOCAL      outro config/local.toml (os testes apontam para um que não existe)
+"""
+
+import datetime as dt
+import os
+import tomllib
+from dataclasses import dataclass
+from pathlib import Path
+
+from filmes.erros import ErroFilmes
+
+RAIZ = Path(__file__).resolve().parents[1]
+PESOS_PADRAO = RAIZ / "config" / "pesos.toml"
+LOCAL = RAIZ / "config" / "local.toml"
+
+
+@dataclass(frozen=True)
+class Ambiente:
+    pesos: dict
+    hoje: dt.date
+    _caminhos: dict
+
+    @classmethod
+    def carregar(cls) -> "Ambiente":
+        arquivo_local = Path(os.environ.get("FILMES_LOCAL") or LOCAL)
+        local = _ler_toml(arquivo_local).get("caminhos", {}) if arquivo_local.exists() else {}
+        caminhos = {
+            "dados": os.environ.get("FILMES_DADOS") or local.get("dados"),
+            "catalogo": os.environ.get("FILMES_CATALOGO") or local.get("catalogo") or str(RAIZ / "var" / "catalogo"),
+            "banco": os.environ.get("FILMES_BANCO") or local.get("banco") or str(RAIZ / "var" / "filmes.sqlite"),
+        }
+        pesos = _ler_toml(Path(os.environ.get("FILMES_PESOS") or PESOS_PADRAO))
+        hoje = os.environ.get("FILMES_HOJE")
+        try:
+            data = dt.date.fromisoformat(hoje) if hoje else dt.date.today()
+        except ValueError:
+            raise ErroFilmes("config_invalida", f"FILMES_HOJE inválido: {hoje!r}")
+        return cls(pesos=pesos, hoje=data, _caminhos=caminhos)
+
+    def caminho(self, nome: str) -> Path:
+        valor = self._caminhos.get(nome)
+        if not valor:
+            raise ErroFilmes(
+                "config_ausente",
+                f"caminho '{nome}' não configurado: defina FILMES_{nome.upper()} ou [caminhos] {nome} em config/local.toml",
+            )
+        return Path(valor)
+
+    @property
+    def dados(self) -> Path:
+        return self.caminho("dados")
+
+    @property
+    def catalogo(self) -> Path:
+        return self.caminho("catalogo")
+
+    @property
+    def banco(self) -> Path:
+        return self.caminho("banco")
+
+
+def _ler_toml(caminho: Path) -> dict:
+    try:
+        with open(caminho, "rb") as f:
+            return tomllib.load(f)
+    except FileNotFoundError:
+        raise ErroFilmes("config_ausente", f"arquivo de config não encontrado: {caminho}")
+    except tomllib.TOMLDecodeError as erro:
+        raise ErroFilmes("config_invalida", f"{caminho}: {erro}")

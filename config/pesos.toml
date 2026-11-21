@@ -1,0 +1,26 @@
+# Pesos do motor. Valores iniciais da spec (#16), calibrados por `avaliar`.
+# A régua de Força (que Fato é forte, moderado ou fraco) é regra fixa no
+# código, em filmes/evidencia; aqui ficam só os números da ordenação.
+
+[forca.multiplicador]
+# A Força multiplica a contribuição de cada Evidência. Palpite soma 0.
+forte = 1.0
+moderada = 0.6
+fraca = 0.3
+palpite = 0.0
+
+[caminho.peso]
+# Peso de cada tipo de aresta de conteúdo no caminho de gosto.
+diretor = 1.0
+
+[utilidade]
+# Utilidade individual de 0 a 1: u = 1 / (1 + exp(-k * soma das contribuições)).
+k = 1.0
+
+[catalogo]
+# Mínimo de votos no IMDb para um filme virar Candidato.
+votos_minimos = 1000
+
+[recomendacao]
+# Quantos filmes a Recomendação devolve quando o pedido não diz.
+tamanho = 5
