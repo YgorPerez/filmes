@@ -1,22 +1,26 @@
 """Restrições da Sessão: limites que valem só no pedido de hoje e tiram filmes
 antes de qualquer ordenação.
 
-Cada Restrição é um módulo deste pacote, achado pelo nome. O módulo define:
+Cada Restrição é um módulo deste pacote, com o mesmo nome dela. O módulo define:
 
     def configurar(parser)                 # argumentos de `recomendar`
     def pedido(args) -> Restricao | None   # None quando o pedido não traz a Restrição
+    def rotulo(gravada: dict) -> str       # o pedido como se lê ("nada triste"), a partir
+                                           # de {"nome", **como_json()} gravado na Sessão
 
 e a Restrição devolvida tem:
 
     nome: str                              # chave em "restricoes" no JSON
     def como_json(self) -> dict            # o que foi pedido, para a leitura do pedido
-    def resultado(self) -> dict            # opcional: o que a Restrição achou, ao lado de "tirados"
+    def resultado(self, saidas) -> dict    # o que a Restrição achou, ao lado de "tirados"
     def avaliar(self, contexto, filmes) -> dict[filme_id, Veredito]
-    def resolver(self, contexto, filme, consultar) -> Passa | SAI   # só se avaliar deu PENDENTE
+    def resolver(self, contexto, filme, consultar) -> Passa | Sai   # só se avaliar deu PENDENTE
 
 `avaliar` recebe todos os Candidatos (id -> linha de filmes) de uma vez, para
 resolver com uma consulta só. Filme que passa leva as linhas do filme
-(Evidências com `pessoa` nula) que justificam ter passado. PENDENTE é para a
+(Evidências com `pessoa` nula) que justificam ter passado. Filme que sai é `SAI`,
+ou `Sai(motivo)` quando a Restrição conta as saídas por motivo: `resultado`
+recebe essa contagem (Counter motivo -> filmes) e devolve {} quando não usa. PENDENTE é para a
 Restrição que precisa de fonte sob demanda (OMDb, Does the Dog Die): o filme
 entra na ordenação e só é resolvido se chegar ao top 50 (`consultar` verdadeiro);
 depois disso, `resolver` decide sem consultar.
@@ -36,7 +40,12 @@ class Passa:
     linhas: tuple = ()
 
 
-SAI = "sai"
+@dataclass(frozen=True)
+class Sai:
+    motivo: str | None = None
+
+
+SAI = Sai()
 PENDENTE = "pendente"
 
 
@@ -65,6 +74,13 @@ def ler(args) -> list:
     return [r for r in (modulo.pedido(args) for modulo in _modulos()) if r is not None]
 
 
+def rotulo(gravada: dict) -> str:
+    """A Restrição gravada na Sessão como se lê; o nome cru se não há módulo com esse nome."""
+    nome = str(gravada.get("nome"))
+    modulo = next((m for m in _modulos() if m.__name__.rpartition(".")[2] == nome), None)
+    return modulo.rotulo(gravada) if modulo else nome
+
+
 class Restricoes:
     """Aplica as Restrições pedidas: antes da ordenação, e sob demanda depois dela."""
 
@@ -74,6 +90,7 @@ class Restricoes:
         self.linhas = defaultdict(list)
         self.pendentes = defaultdict(list)
         self.tirados = Counter()
+        self.saidas = defaultdict(Counter)   # nome da Restrição -> motivo -> filmes
 
     def candidatos(self, filmes: dict) -> dict:
         vivos = dict(filmes)
@@ -81,9 +98,9 @@ class Restricoes:
             vereditos = restricao.avaliar(self.contexto, vivos)
             for filme_id in list(vivos):
                 veredito = vereditos.get(filme_id, SAI)
-                if veredito == SAI:
+                if isinstance(veredito, Sai):
                     del vivos[filme_id]
-                    self.tirados[restricao.nome] += 1
+                    self._contar_saida(restricao, veredito)
                 elif veredito == PENDENTE:
                     self.pendentes[filme_id].append(restricao)
                 else:
@@ -108,13 +125,18 @@ class Restricoes:
         linhas = []
         for restricao in self.pendentes.get(filme["id"], []):
             veredito = restricao.resolver(self.contexto, filme, consultar)
-            if veredito == SAI:
-                self.tirados[restricao.nome] += 1
+            if isinstance(veredito, Sai):
+                self._contar_saida(restricao, veredito)
                 return False
             linhas.extend(veredito.linhas)
         self.linhas[filme["id"]].extend(linhas)
         return True
 
+    def _contar_saida(self, restricao, veredito: Sai) -> None:
+        self.tirados[restricao.nome] += 1
+        if veredito.motivo is not None:
+            self.saidas[restricao.nome][veredito.motivo] += 1
+
     def como_json(self) -> dict:
-        return {r.nome: {**r.como_json(), **getattr(r, "resultado", dict)(), "tirados": self.tirados[r.nome]}
+        return {r.nome: {**r.como_json(), **r.resultado(self.saidas[r.nome]), "tirados": self.tirados[r.nome]}
                 for r in self.restricoes}

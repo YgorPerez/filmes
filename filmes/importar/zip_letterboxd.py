@@ -44,6 +44,7 @@ class Linha:
     review: str | None = None    # texto puro, sem HTML
     tags: tuple[str, ...] = ()
     tmdb: str | None = None      # ID do filme no TMDB (só o RSS traz)
+    origem: str = "Letterboxd"   # abre a Fonte: "<origem> de <nome da Pessoa>"
 
     @property
     def id(self) -> str:

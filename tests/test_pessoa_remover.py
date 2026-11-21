@@ -114,3 +114,21 @@ def test_declarado_de_import_aponta_para_importar_remover(banco):
 
     assert codigo == 1
     assert "importar --remover" in saida["erro"]["mensagem"]
+
+
+def test_comentario_do_feedback_sai_do_arquivo_da_sessao_e_do_banco(banco, dados):
+    sessao = banco.ok("recomendar", "--presentes", "dono", "teo")["sessao"]["id"]
+    banco.ok("feedback", "--sessao", sessao, "--filme", "Vento Norte",
+             "--nota", "dono=8/10", "--nota", "teo=9/10", "--comentario", "teo=a trilha é linda")
+    [comentario] = [d for d in banco.ok("pessoa", "ver", "teo")["declarados"] if d["fato_id"].startswith("feedback:")]
+
+    saida = banco.ok("pessoa", "remover", "teo", "--declarado", comentario["fato_id"])
+
+    assert saida["removido"]["fato_id"] == comentario["fato_id"]
+    assert saida["removido"]["texto"] == "a trilha é linda"
+    assert not [d for d in banco.ok("pessoa", "ver", "teo")["declarados"] if d["fato_id"].startswith("feedback:")]
+    frente, _ = ler_markdown(dados / "sessoes" / f"{sessao}.md")
+    teo = next(r for r in frente["feedback"]["reacoes"] if r["pessoa"] == "teo")
+    assert teo == {"pessoa": "teo", "tipo": "nota", "nota": 4.5, "nota_original": "9/10", "repassada": True}
+    assert banco.consultar("SELECT count(*) FROM declarados WHERE sessao IS NOT NULL") == [[0]]
+    assert banco.consultar("SELECT nota FROM notas WHERE pessoa = 'teo' AND sessao IS NOT NULL") == [[4.5]]

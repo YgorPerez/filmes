@@ -23,6 +23,10 @@ def pedido(args):
     return Ano(args.desde, args.ate)
 
 
+def rotulo(gravada):
+    return intervalo(gravada.get("desde"), gravada.get("ate"))
+
+
 @dataclass(frozen=True)
 class Ano:
     desde: int | None
@@ -31,6 +35,9 @@ class Ano:
 
     def como_json(self):
         return {"desde": self.desde, "ate": self.ate}
+
+    def resultado(self, saidas):
+        return {}
 
     def avaliar(self, contexto, filmes):
         return {

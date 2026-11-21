@@ -19,12 +19,16 @@ ela deu uma (na escala de 0,5 a 5):
     - 2026-11-21 · conversa com o Dono · Casa Cheia (tt9000602) · nota 4
 
 O resto do corpo é texto livre e fica como está.
+
+`SECOES` diz onde mora cada tipo de item: os Vetos no frontmatter, o resto numa
+seção do corpo. `Pessoa.itens`, `acrescentar` e `tirar` passam por ela.
 """
 
 import datetime as dt
 import re
 import unicodedata
 from dataclasses import dataclass, field
+from typing import Callable
 from pathlib import Path
 
 from filmes.dados import markdown
@@ -44,7 +48,6 @@ class Veto:
 
 REACOES = {"ama": "ama", "gosta": "gosta de", "nao_gosta": "não gosta de", "odeia": "odeia"}
 _REACAO_POR_TEXTO = {v: k for k, v in REACOES.items()} | {"sobre": None}
-SECOES = {"declarados": "Declarados", "relatos": "Relatos", "já vistos": "Já vistos"}
 
 _LINHA = re.compile(
     r"- (?P<data>\d{4}-\d{2}-\d{2}) · (?P<fonte>.+?) · (?P<especificidade>específico|genérico)"
@@ -79,7 +82,7 @@ _LINHA_VISTO = re.compile(
 
 
 @dataclass(frozen=True)
-class Visto:
+class JaVisto:
     """Um Já visto dito na hora, com a Nota quando a Pessoa deu uma: uma linha de `## Já vistos`."""
     data: str
     fonte: str
@@ -106,45 +109,113 @@ class Pessoa:
 
     @property
     def declarados(self) -> list[Dito]:
-        return _ditos(self.corpo, "declarados", self.slug)
+        return self.itens("declarados")
 
     @property
     def relatos(self) -> list[Dito]:
-        return _ditos(self.corpo, "relatos", self.slug)
+        return self.itens("relatos")
 
     @property
-    def vistos(self) -> list[Visto]:
-        return _vistos(self.corpo, self.slug)
+    def ja_vistos(self) -> list[JaVisto]:
+        return self.itens("já vistos")
 
-    def acrescentar(self, secao: str, dito: Dito | Visto) -> bool:
-        """Põe o Dito ou o Visto no fim da seção (criando a seção se faltar). Devolve False se ele já estava lá."""
-        ja_estao = self.vistos if secao == "já vistos" else _ditos(self.corpo, secao, self.slug)
-        if dito in ja_estao:
+    def itens(self, secao: str) -> list:
+        return SECOES[secao].ler(self)
+
+    def acrescentar(self, secao: str, item) -> bool:
+        """Põe o item na seção (criando a seção do corpo se faltar). Devolve False se ele já estava lá."""
+        return SECOES[secao].acrescentar(self, item)
+
+    def tirar(self, secao: str, item) -> None:
+        """Tira o item da seção. A seção do corpo fica, mesmo vazia."""
+        SECOES[secao].tirar(self, item)
+
+
+class _Vetos:
+    """Os Vetos, no frontmatter. Um por alvo."""
+
+    def ler(self, pessoa: Pessoa) -> list[Veto]:
+        return list(pessoa.vetos)
+
+    def acrescentar(self, pessoa: Pessoa, veto: Veto) -> bool:
+        if any(v.alvo == veto.alvo for v in pessoa.vetos):
             return False
-        linhas = self.corpo.splitlines()
-        titulo = f"## {SECOES[secao]}"
+        pessoa.vetos.append(veto)
+        return True
+
+    def tirar(self, pessoa: Pessoa, veto: Veto) -> None:
+        pessoa.vetos.remove(veto)
+
+
+@dataclass(frozen=True)
+class _SecaoDoCorpo:
+    """Uma seção `## <titulo>` do corpo, um item por linha no formato dado."""
+    titulo: str
+    formato: re.Pattern
+    item: Callable[[re.Match], object]
+
+    def ler(self, pessoa: Pessoa) -> list:
+        return [item for _, item in self._com_indice(pessoa)]
+
+    def acrescentar(self, pessoa: Pessoa, item) -> bool:
+        if item in self.ler(pessoa):
+            return False
+        linhas = pessoa.corpo.splitlines()
+        titulo = f"## {self.titulo}"
         if titulo not in linhas:
             while linhas and not linhas[-1].strip():
                 linhas.pop()
-            linhas += ([""] if linhas else []) + [titulo, "", dito.linha()]
+            linhas += ([""] if linhas else []) + [titulo, "", item.linha()]
         else:
             inicio = linhas.index(titulo) + 1
             fim = next((i for i in range(inicio, len(linhas)) if linhas[i].startswith("#")), len(linhas))
             ultima = max((i for i in range(inicio, fim) if linhas[i].strip()), default=inicio)
-            linhas.insert(ultima + 1, dito.linha())
-        self.corpo = "\n".join(linhas) + "\n"
+            linhas.insert(ultima + 1, item.linha())
+        pessoa.corpo = "\n".join(linhas) + "\n"
         return True
 
-    def tirar(self, secao: str, item: Dito | Visto) -> None:
-        """Tira do corpo a linha do Dito ou do Visto. A seção fica, mesmo vazia."""
-        if secao == "já vistos":
-            achados = _vistos_com_indice(self.corpo, self.slug)
-        else:
-            achados = _ditos_com_indice(self.corpo, secao, self.slug)
-        indice = next(i for i, achado in achados if achado == item)
-        linhas = self.corpo.splitlines()
+    def tirar(self, pessoa: Pessoa, item) -> None:
+        indice = next(i for i, achado in self._com_indice(pessoa) if achado == item)
+        linhas = pessoa.corpo.splitlines()
         del linhas[indice]
-        self.corpo = "\n".join(linhas) + "\n"
+        pessoa.corpo = "\n".join(linhas) + "\n"
+
+    def _com_indice(self, pessoa: Pessoa):
+        """(índice da linha, item) de cada linha da seção; linha fora do formato é erro com arquivo e linha."""
+        secao = self.titulo.casefold()
+        atual = None
+        for numero, linha in enumerate(pessoa.corpo.splitlines(), start=1):
+            if linha.startswith("#"):
+                atual = linha.lstrip("#").strip().casefold()
+                continue
+            if atual != secao or not linha.startswith("- "):
+                continue
+            achado = self.formato.fullmatch(linha.rstrip())
+            if not achado or not _data_valida(achado["data"]):
+                raise ErroFilmes("dados_invalidos", f"pessoas/{pessoa.slug}.md, linha {numero} do corpo: "
+                                                    f"{self.titulo[:-1]} fora do formato: {linha}")
+            yield numero - 1, self.item(achado)
+
+
+def _dito(achado: re.Match) -> Dito:
+    return Dito(
+        data=achado["data"], fonte=achado["fonte"], especifico=achado["especificidade"] == "específico",
+        texto=achado["texto"], reacao=_REACAO_POR_TEXTO.get(achado["reacao"]),
+        alvo=achado["alvo"], rotulo=achado["rotulo"],
+    )
+
+
+def _ja_visto(achado: re.Match) -> JaVisto:
+    return JaVisto(data=achado["data"], fonte=achado["fonte"], alvo=achado["alvo"], rotulo=achado["rotulo"],
+                   nota=float(achado["nota"].replace(",", ".")) if achado["nota"] else None)
+
+
+SECOES = {
+    "vetos": _Vetos(),
+    "declarados": _SecaoDoCorpo("Declarados", _LINHA, _dito),
+    "relatos": _SecaoDoCorpo("Relatos", _LINHA, _dito),
+    "já vistos": _SecaoDoCorpo("Já vistos", _LINHA_VISTO, _ja_visto),
+}
 
 
 def pasta(repo: Path) -> Path:
@@ -242,41 +313,3 @@ def _data_valida(data: str) -> bool:
     except ValueError:
         return False
     return True
-
-
-def _itens(corpo: str, secao: str, slug: str, formato: re.Pattern):
-    """As linhas da seção que casam com o formato; linha fora dele é erro com arquivo e linha."""
-    atual = None
-    for numero, linha in enumerate(corpo.splitlines(), start=1):
-        if linha.startswith("#"):
-            atual = linha.lstrip("#").strip().casefold()
-            continue
-        if atual != secao or not linha.startswith("- "):
-            continue
-        achado = formato.fullmatch(linha.rstrip())
-        if not achado or not _data_valida(achado["data"]):
-            raise ErroFilmes("dados_invalidos", f"pessoas/{slug}.md, linha {numero} do corpo: {SECOES[secao][:-1]} fora do formato: {linha}")
-        yield numero - 1, achado
-
-
-def _vistos(corpo: str, slug: str) -> list[Visto]:
-    return [visto for _, visto in _vistos_com_indice(corpo, slug)]
-
-
-def _vistos_com_indice(corpo: str, slug: str):
-    for indice, a in _itens(corpo, "já vistos", slug, _LINHA_VISTO):
-        yield indice, Visto(data=a["data"], fonte=a["fonte"], alvo=a["alvo"], rotulo=a["rotulo"],
-                            nota=float(a["nota"].replace(",", ".")) if a["nota"] else None)
-
-
-def _ditos(corpo: str, secao: str, slug: str) -> list[Dito]:
-    return [dito for _, dito in _ditos_com_indice(corpo, secao, slug)]
-
-
-def _ditos_com_indice(corpo: str, secao: str, slug: str):
-    for indice, achado in _itens(corpo, secao, slug, _LINHA):
-        yield indice, Dito(
-            data=achado["data"], fonte=achado["fonte"], especifico=achado["especificidade"] == "específico",
-            texto=achado["texto"], reacao=_REACAO_POR_TEXTO.get(achado["reacao"]),
-            alvo=achado["alvo"], rotulo=achado["rotulo"],
-        )

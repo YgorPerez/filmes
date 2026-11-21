@@ -61,9 +61,12 @@ só campo entre `declarado`, `relato`, `veto` e `visto`, com o `fato_id`
 do item. O alvo (tt..., Q...) também serve quando só um item daquele tipo
 tem esse alvo. Depois registre o certo, se houver.
 
+Declarado com `fato_id` que começa por `feedback:` é o Comentário de um
+Presente no Feedback de uma Sessão. `remover` tira o Comentário do arquivo
+da Sessão; a Nota ou o Relato que ele acompanhava fica.
+
 Declarado com `fato_id` que começa por `letterboxd:` veio de um import, e
-o que começa por `feedback:` veio do Feedback de uma Sessão. `remover`
-recusa os dois. Para tirar um import inteiro (um RSS que o ZIP vai substituir, um
+`remover` recusa. Para tirar um import inteiro (um RSS que o ZIP vai substituir, um
 export da Pessoa errada), chame `importar` com `remover` e o `arquivo`
 que `ver` mostra em `imports`. Saem o registro, a cópia guardada e os
 Fatos que só esse import trazia.

@@ -24,8 +24,8 @@ from pathlib import Path
 from filmes.banco import abrir_leitura
 from filmes.erros import ErroFilmes
 from filmes.recomendacao import cabecalho
+from filmes.recomendacao import restricoes
 from filmes.recomendacao.restricoes import Contexto
-from filmes.recomendacao.restricoes import ano
 from filmes.sessao import arquivo
 
 CSS = (Path(__file__).resolve().parent / "cartaz.css").read_text(encoding="utf-8")
@@ -102,7 +102,7 @@ def _pedido(frente, pessoas, pesos) -> str:
         partes.append(f"até {arquivo.duracao(contexto['duracao_max'])}")
     partes.append(f"nota {_numero(pesos['catalogo']['nota_imdb_minima'])}+ no IMDb")
     partes.extend(escape(c) for c in contexto.get("clima") or [])
-    partes.extend(escape(_restricao(r)) for r in contexto.get("restricoes") or [])
+    partes.extend(escape(restricoes.rotulo(r)) for r in contexto.get("restricoes") or [])
     regra = frente.get("regra") or {}
     if regra.get("nome") == "media":
         partes.append("pela média")
@@ -120,23 +120,6 @@ def _quem(frente, pessoas) -> str:
         [(slug, pessoa)] = pessoas.items()
         return "Você" if slug == frente.get("dono") else pessoa["nome"]
     return f"Vocês {POR_EXTENSO.get(len(pessoas), len(pessoas))}"
-
-
-def _restricao(restricao) -> str:
-    nome = restricao.get("nome")
-    if nome == "sem_ja_visto":
-        return "nada repetido"
-    if nome == "sem_tristeza":
-        return "nada triste"
-    if nome == "idioma":
-        return f"idioma original: {restricao['idioma']}"
-    if nome == "crianca":
-        return f"com criança de {restricao['idade']} anos" if restricao.get("idade") else "com criança"
-    if nome == "ano":
-        return ano.intervalo(restricao.get("desde"), restricao.get("ate"))
-    if nome == "gatilho":
-        return "sem " + ", ".join(f"“{t}”" for t in restricao.get("temas") or [])
-    return str(nome)
 
 
 def _card(filme, linha, ficha, pessoas, primeiro) -> str:

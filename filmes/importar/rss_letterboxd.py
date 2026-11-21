@@ -26,6 +26,7 @@ from filmes.erros import ErroFilmes
 from filmes.importar.zip_letterboxd import Linha
 
 ARQUIVO = "rss"
+ORIGEM = "RSS do Letterboxd"
 TEMPO_LIMITE = 20  # segundos
 _NS = {"letterboxd": "https://letterboxd.com", "tmdb": "https://themoviedb.org"}
 
@@ -77,6 +78,7 @@ def ler(caminho: Path, *, conteudo: bytes | None = None) -> list[Linha]:
         onde = f"{caminho.name}, entrada {_texto(item, 'guid') or nome}"
         linhas.append(Linha(
             arquivo=ARQUIVO,
+            origem=ORIGEM,
             nome=nome,
             ano=_ano(_texto(item, "letterboxd:filmYear"), onde),
             data=_publicacao(_texto(item, "pubDate"), onde),

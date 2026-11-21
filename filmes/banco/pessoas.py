@@ -42,8 +42,8 @@ def carregar(conn: sqlite3.Connection, pessoa: Pessoa) -> None:
                     (id_, pessoa.slug, dito.alvo, nota, dito.data, dito.fonte, tabela[:-1]),
                 )
 
-    for visto in pessoa.vistos:
-        id_ = id_do_visto(pessoa.slug, visto)
+    for visto in pessoa.ja_vistos:
+        id_ = id_do_ja_visto(pessoa.slug, visto)
         if visto.nota is None:
             conn.execute(
                 "INSERT OR IGNORE INTO ja_visto (fato_id, pessoa, filme_id, tipo, data, fonte) VALUES (?, ?, ?, 'declarado', ?, ?)",
@@ -61,7 +61,7 @@ def id_do_veto(slug: str, veto) -> str:
     return fato_id("vetos", slug, veto.alvo, veto.texto, veto.data)
 
 
-def id_do_visto(slug: str, visto) -> str:
+def id_do_ja_visto(slug: str, visto) -> str:
     return fato_id("vistos", slug, visto.data, visto.fonte, visto.alvo, visto.nota)
 
 

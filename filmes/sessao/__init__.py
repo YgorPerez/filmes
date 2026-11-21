@@ -25,7 +25,7 @@ def abrir(amb: Ambiente, recomendacao: dict, contexto: dict) -> dict:
         frente = {
             "data": amb.hoje,
             "dono": next(iter(dono), None),
-            **_pedido(recomendacao, contexto),
+            **_campos_da_recomendacao(recomendacao, contexto),
             "escolhido": None,
             "escolhido_na_recomendacao": None,
             "feedback": None,
@@ -45,7 +45,7 @@ def refazer(amb: Ambiente, sessao_id: str, recomendacao: dict, contexto: dict) -
         frente = conferir_aberta(amb, sessao_id)
         nomes = dict(conn.execute("SELECT slug, nome FROM pessoas"))
         versoes = [*(frente.get("versoes") or []), arquivo.versao_atual(frente)]
-        frente.update(_pedido(recomendacao, contexto), refeita_em=amb.hoje, versoes=versoes)
+        frente.update(_campos_da_recomendacao(recomendacao, contexto), refeita_em=amb.hoje, versoes=versoes)
         frente.pop("mostrados", None)
         banco.carregar(conn, sessao_id, frente)
         arquivo.escrever(amb.dados, sessao_id, frente, arquivo.corpo(recomendacao, nomes))
@@ -73,7 +73,7 @@ def conferir_aberta(amb: Ambiente, sessao_id: str) -> dict:
     return frente
 
 
-def _pedido(recomendacao: dict, contexto: dict) -> dict:
+def _campos_da_recomendacao(recomendacao: dict, contexto: dict) -> dict:
     """Os campos do frontmatter que mudam quando a Recomendação é refeita."""
     return {
         "presentes": recomendacao["presentes"],

@@ -12,11 +12,11 @@ Filme sem sinal nenhum passa. A falta de tag não prova que ele é leve, por
 isso a linha do filme que passou é palpite.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from filmes.ambiente import RAIZ, ler_toml
 from filmes.evidencia import Evidencia, regua
-from filmes.recomendacao.restricoes import Passa
+from filmes.recomendacao.restricoes import Passa, Sai
 
 VOCABULARIO = RAIZ / "config" / "tristeza.toml"
 SINAIS = ("triste", "tema_pesado")
@@ -31,16 +31,20 @@ def pedido(args):
     return SemTristeza() if args.sem_tristeza else None
 
 
+def rotulo(gravada):
+    return "nada triste"
+
+
 @dataclass(frozen=True)
 class SemTristeza:
     nome = "sem_tristeza"
-    por_sinal: dict = field(default_factory=lambda: dict.fromkeys(SINAIS, 0))
 
     def como_json(self):
         return {}
 
-    def resultado(self):
-        return {"por_sinal": dict(self.por_sinal)}
+    def resultado(self, saidas):
+        """Os filmes tirados por sinal; o filme com os dois sinais conta no primeiro de SINAIS."""
+        return {"por_sinal": {sinal: saidas[sinal] for sinal in SINAIS}}
 
     def avaliar(self, contexto, filmes):
         vocabulario = ler_toml(VOCABULARIO)
@@ -50,11 +54,9 @@ class SemTristeza:
             for filme_id in _marcados(contexto.conn, vocabulario[sinal], minimos, sinal):
                 if filme_id in filmes:
                     achados.setdefault(filme_id, sinal)
-        for sinal in achados.values():
-            self.por_sinal[sinal] += 1
         com_tags = _com_tags(contexto.conn)
-        return {filme_id: _passa(filme_id, filme_id in com_tags)
-                for filme_id in filmes if filme_id not in achados}
+        return {filme_id: Sai(achados[filme_id]) if filme_id in achados else _passa(filme_id, filme_id in com_tags)
+                for filme_id in filmes}
 
 
 def _marcados(conn, lista, minimos, sinal):
