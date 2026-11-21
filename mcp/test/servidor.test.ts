@@ -185,6 +185,22 @@ describe("servidor MCP sobre a CLI real e a fixture", () => {
     assert.deepEqual(saida.filmes.map((f: any) => f.titulo).sort(), ["Maré Baixa", "O Farol de Areia"]);
   });
 
+  it("recomendar com sessao refaz a Recomendação na mesma Sessão aberta", async () => {
+    const primeira = json(
+      (await cliente.callTool({ name: "recomendar", arguments: { presentes: ["dono", "quim"], pedido: "algo bom" } })) as Resultado,
+    );
+    const resultado = (await cliente.callTool({
+      name: "recomendar",
+      arguments: { presentes: ["dono", "quim"], pedido: "algo curto", duracao_max: 100, sessao: primeira.sessao.id },
+    })) as Resultado;
+
+    assert.ok(!resultado.isError, JSON.stringify(resultado.content));
+    assert.deepEqual(json(resultado).sessao, { ...primeira.sessao, versao: 2 });
+    const abertas = json((await cliente.callTool({ name: "sessoes_abertas", arguments: {} })) as Resultado);
+    const comQuim = abertas.sessoes.filter((s: { presentes: string[] }) => s.presentes.includes("quim"));
+    assert.deepEqual(comQuim.map((s: { pedido: string; versao: number }) => [s.pedido, s.versao]), [["algo curto", 2]]);
+  });
+
   it("erro da CLI chega como erro da ferramenta", async () => {
     const resultado = (await cliente.callTool({ name: "recomendar", arguments: { presentes: ["fulano"] } })) as Resultado;
 

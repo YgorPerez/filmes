@@ -20,6 +20,9 @@ def configurar(parser):
                         help="Climas do vocabulário (config/climas.toml); um Clima fora dele volta como aviso")
     parser.add_argument("--quantos", type=int, help="tamanho da lista (padrão: [recomendacao] tamanho da config)")
     parser.add_argument("--pedido", help="o pedido do Dono como ele disse, guardado na Sessão")
+    parser.add_argument("--sessao", metavar="ID",
+                        help="refaz a Recomendação nesta Sessão aberta, em vez de abrir outra; "
+                             "a versão anterior fica no histórico da Sessão")
     restricoes.configurar(parser)
 
 
@@ -29,10 +32,16 @@ def executar(args, amb):
         raise ErroFilmes("uso_invalido", "--quantos precisa ser 1 ou mais")
     nomes = [n for item in args.presentes for n in item.split(",") if n.strip()]
     pedidas = restricoes.ler(args)
+    if args.sessao:
+        sessao.conferir_aberta(amb, args.sessao)
     with closing(abrir_leitura(amb.banco)) as conn:
         presentes = pessoas_presentes.resolver(conn, nomes)
         saida = recomendar(conn, amb, presentes, quantos, _regra(conn, args, presentes), pedidas, args.clima)
-    saida["sessao"] = sessao.abrir(amb, saida, _contexto(args, pedidas, saida["climas"]))
+    contexto = _contexto(args, pedidas, saida["climas"])
+    if args.sessao:
+        saida["sessao"] = sessao.refazer(amb, args.sessao, saida, contexto)
+    else:
+        saida["sessao"] = sessao.abrir(amb, saida, contexto)
     return saida
 
 

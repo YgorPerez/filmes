@@ -28,6 +28,10 @@ Com a ferramenta `html_render` à mão, a Recomendação vai como cartaz:
 
 Se `cartaz`, `html_preview` ou `html_render` falharem, diga o erro numa linha e monte a resposta em Markdown, como abaixo.
 
+## Pedido que muda
+
+Se o Dono mudar o pedido antes de verem algo (outro tempo, outra Restrição, alguém que chegou, um filme que já viram), chame `recomendar` de novo com o pedido inteiro e `sessao` igual ao `sessao.id` da Recomendação anterior. A Sessão continua a mesma e guarda a versão anterior. Não apague o arquivo da Sessão. Sem `sessao`, o motor abre outra Sessão e a anterior fica aberta.
+
 ## Montar e verificar a resposta
 
 Sem `html_render`, a resposta vai em Markdown. Abra com um bloco de citação (`> `) que o Dono possa corrigir: os
