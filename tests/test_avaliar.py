@@ -102,7 +102,10 @@ def test_grade_testa_tres_valores_por_peso_e_preserva_a_config(banco, tmp_path):
 
     resultado = banco.ok("avaliar", "--grade")
     grade = resultado["grade"]
-    assert grade["combinacoes"] == 81
+    # 27 conjuntos de multiplicadores; os cinco pesos de aresta variam um de cada vez
+    # (1 conjunto atual + 5 × 2 variações).
+    assert set(grade["valores"]["caminho.peso"]) == {"diretor", "roteiro", "elenco", "genero", "serie"}
+    assert grade["combinacoes"] == 27 * 11
     assert all(len(valores) == 3 for pesos in grade["valores"].values() for valores in pesos.values())
     assert len(grade["melhores"]) == 3
     assert pesos.read_bytes() == antes

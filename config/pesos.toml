@@ -10,8 +10,14 @@ fraca = 0.3
 palpite = 0.0
 
 [caminho.peso]
-# Peso de cada tipo de aresta de conteúdo no caminho de gosto.
+# Peso de cada tipo de aresta de conteúdo no caminho de gosto. Um predicado fora
+# daqui não entra no caminho; o texto de cada um fica em sinais/conteudo.py.
+# Gênero só dá metadado, no máximo fraco (régua).
 diretor = 1.0
+roteiro = 0.8
+serie = 1.0
+elenco = 0.5
+genero = 0.3
 
 [utilidade]
 # Utilidade individual de 0 a 1: u = 1 / (1 + exp(-k * soma das contribuições)).

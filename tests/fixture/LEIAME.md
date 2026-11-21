@@ -28,7 +28,16 @@ Entidades que não são diretor, com IDs `Q90018NN` (faixa do #18), só no predi
 | Comédia (Q9001802) | genero | Risos de Domingo (1803), Pequenos Milagres (601) |
 | Davi Couto (Q9001803) | elenco | Risos de Domingo (1803), Casa Cheia (602) |
 
-O caminho de conteúdo só usa os predicados de `[caminho.peso]` (hoje, só diretor), então gênero e elenco não mudam o top 5 do Bruno.
+Essas entidades não ligam a Nota nenhuma do Bruno, então não mudam o top 5 dele.
+
+Caminho de conteúdo por outros predicados (`test_caminho_conteudo.py`). Cada filme liga às Notas do Bruno por um predicado só, com entidade `Q90019NN`:
+
+| Filme | Predicado e entidade | Liga a |
+|---|---|---|
+| Maré Cheia (1901) | roteiro, Ana Ruiz | O Farol de Areia (101) |
+| Voo Noturno (1902) | elenco, Rita Lobo | Ponte Aérea (201) |
+| Fronteira II (1903) | serie, Trilogia da Fronteira | Fronteira (401) |
+| Poeira (1904) | genero, faroeste | 101, 102, 103 e Jardim Suspenso (301): quatro Notas altas, que no gênero ficam em metadado fraco |
 
 Notas de outras Pessoas, para os testes de grupo (`test_grupo.py`):
 
