@@ -47,13 +47,27 @@ describe("servidor MCP sobre a CLI real e a fixture", () => {
     assert.equal(saida.filmes.length, 5);
     assert.equal(saida.filmes[0].titulo, "As Horas Lentas");
     for (const filme of saida.filmes) {
-      for (const evidencia of filme.evidencias) {
+      assert.deepEqual(Object.keys(filme.evidencias), ["bruno"]);
+      for (const evidencia of filme.evidencias.bruno) {
         assert.deepEqual(
           Object.keys(evidencia).sort(),
           ["contribuicao", "data", "fato_id", "fonte", "forca", "pessoa", "texto", "tipo"],
         );
       }
     }
+  });
+
+  it("recomendar passa a Regra de escolha e agrupa as Evidências por Presente", async () => {
+    const resultado = (await cliente.callTool({
+      name: "recomendar",
+      arguments: { presentes: ["dono", "Iara"], regra: "de", de: "iara" },
+    })) as Resultado;
+
+    assert.ok(!resultado.isError);
+    const saida = json(resultado);
+    assert.deepEqual(saida.regra, { nome: "de", pessoa: "iara" });
+    assert.equal(saida.filmes[0].titulo, "Inverno em Lisboa");
+    assert.deepEqual(Object.keys(saida.filmes[0].evidencias), ["bruno", "iara"]);
   });
 
   it("consultar executa SELECT", async () => {
