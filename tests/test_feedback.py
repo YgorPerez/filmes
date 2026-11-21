@@ -7,12 +7,7 @@
 - Nota e Relato vindos de Feedback sobem um nível de Força.
 """
 
-import yaml
-
-
-def _ler(caminho):
-    _, frente, corpo = caminho.read_text(encoding="utf-8").split("---\n", 2)
-    return yaml.safe_load(frente), corpo
+from conftest import ler_markdown as _ler
 
 
 def _sessao(banco, *presentes):
@@ -29,7 +24,7 @@ def test_feedback_grava_o_filme_escolhido_e_as_reacoes_e_fecha_a_sessao(banco, d
 
     frente, corpo = _ler(dados / "sessoes" / f"{sessao}.md")
     assert frente["escolhido"] == "tt9000203"
-    assert frente["escolhido_na_recomendacao"] == 2
+    assert frente["escolhido_na_recomendacao"] == 1
     assert str(frente["feedback"]["registrado_em"]) == "2026-11-21"
     assert frente["feedback"]["reacoes"] == [
         {"pessoa": "bruno", "tipo": "nota", "nota": 4.0},
@@ -49,7 +44,7 @@ def test_feedback_devolve_os_fatos_gravados_com_forca_um_nivel_acima(banco):
                      "--nota", "eu=4", "--nota", "Iara=2", "--relato", "teo=não gostou")
 
     assert saida["sessao"] == {"id": sessao, "arquivo": f"sessoes/{sessao}.md"}
-    assert saida["escolhido"] == {"id": "tt9000203", "titulo": "Noite de Estreia", "ano": 2022, "posicao": 2}
+    assert saida["escolhido"] == {"id": "tt9000203", "titulo": "Noite de Estreia", "ano": 2022, "posicao": 1}
     assert saida["sem_reacao"] == []
     reacoes = [{k: f[k] for k in ("pessoa", "texto", "fonte", "data", "forca", "tipo")}
                for f in saida["fatos"] if f["texto"] != "já viu"]
@@ -106,7 +101,8 @@ def test_nota_do_feedback_entra_como_nota_semente_um_nivel_acima(banco):
 
     filme = _filme(banco.ok("recomendar", "--presentes", "dono", "--quantos", "50"), "Rio Abaixo")
 
-    sementes = {e["texto"]: (e["fonte"], e["forca"]) for e in filme["evidencias"]["bruno"] if e["tipo"] == "nota"}
+    sementes = {e["texto"]: (e["fonte"], e["forca"]) for e in filme["evidencias"]["bruno"]
+                if e["tipo"] == "nota" and e["texto"] != "já viu"}
     assert sementes == {
         "deu 4 a Jardim Suspenso (2017), também de Marta Quintal": ("Letterboxd do Bruno", "moderada"),
         "deu 4 a Vento Norte (2020), também de Marta Quintal": ("Feedback da Sessão 2026-11-20", "forte"),
@@ -119,18 +115,19 @@ def _titulos(saida):
 
 def test_filme_que_alguem_ja_viu_pesa_contra_e_aparece_como_ja_visto_forte(banco):
     antes = banco.ok("recomendar", "--presentes", "dono", "iara", "--quantos", "50")
-    banco.ok("feedback", "--sessao", antes["sessao"]["id"], "--filme", "Inverno em Lisboa", "--nota", "dono=4")
+    banco.ok("feedback", "--sessao", antes["sessao"]["id"], "--filme", "As Horas Lentas")
 
     depois = banco.ok("recomendar", "--presentes", "dono", "iara", "--quantos", "50")
 
-    filme = _filme(depois, "Inverno em Lisboa")
+    # Nenhum dos dois deu Nota a As Horas Lentas: o Já visto vem só do Feedback.
+    filme = _filme(depois, "As Horas Lentas")
     for pessoa, tipo in (("bruno", "declarado"), ("iara", "relato")):
         [visto] = [e for e in filme["evidencias"][pessoa] if e["texto"] == "já viu"]
         assert visto == {"pessoa": pessoa, "texto": "já viu", "fonte": "Feedback da Sessão 2026-11-20",
                          "data": "2026-11-20", "forca": "forte", "tipo": tipo, "fato_id": visto["fato_id"],
                          "contribuicao": -1.0}
-        assert filme["utilidade"][pessoa] < _filme(antes, "Inverno em Lisboa")["utilidade"][pessoa]
-    assert _titulos(depois).index("Inverno em Lisboa") > _titulos(antes).index("Inverno em Lisboa")
+        assert filme["utilidade"][pessoa] < _filme(antes, "As Horas Lentas")["utilidade"][pessoa]
+    assert _titulos(depois).index("As Horas Lentas") > _titulos(antes).index("As Horas Lentas")
 
 
 def test_nao_vimos_nada_fecha_a_sessao_sem_filme_escolhido_e_sem_fato(banco, dados):

@@ -131,7 +131,7 @@ describe("servidor MCP sobre a CLI real e a fixture", () => {
     assert.deepEqual(linhas.sort(), [
       "duração 1h38, dentro do limite de 1h50",
       "classificação L (Kijkwijzer AL convertida)",
-      'sem dado do Does the Dog Die sobre "a dog dies"',
+      'sem informação do Does the Dog Die sobre "a dog dies"',
       "idioma original português",
     ].sort());
   });

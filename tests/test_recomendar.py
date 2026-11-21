@@ -99,8 +99,10 @@ def test_notas_baixas_no_diretor_pesam_contra(banco):
     assert {e["forca"] for e in contra} == {"forte", "moderada"}
     assert all(e["contribuicao"] < 0 for e in contra)
     assert filme["utilidade"]["bruno"] < 0.5
-    com_fato = [f for f in saida["filmes"] if not f["so_palpites"]]
-    assert com_fato[-1] == filme   # depois dele, só os filmes sem Fato nenhum
+    # Depois dele, só Barulho e Asfalto Quente, a que Bruno deu 1 e 2 (Já visto e semente
+    # contra um do outro), e os filmes sem Fato nenhum.
+    com_fato = [f["titulo"] for f in saida["filmes"] if not f["so_palpites"]]
+    assert set(com_fato[com_fato.index("Explosão Final") + 1:]) == {"Barulho", "Asfalto Quente"}
 
 
 def test_forca_multiplica_a_contribuicao(banco):
@@ -136,3 +138,15 @@ def test_dono_pode_ser_chamado_pelo_nome_ou_apelido(banco):
     pelo_apelido = banco.ok("recomendar", "--presentes", "eu")
 
     assert pelo_nome["presentes"] == pelo_apelido["presentes"] == ["bruno"]
+
+
+def test_filme_a_que_a_pessoa_deu_nota_e_ja_visto_e_pesa_contra(banco):
+    saida = _todos(banco)
+    filme = _filme(saida, "O Farol de Areia")
+
+    [visto] = [e for e in filme["evidencias"]["bruno"] if e["texto"] == "já viu"]
+    assert visto == {"pessoa": "bruno", "texto": "já viu", "fonte": "Letterboxd do Bruno", "data": "2025-06-01",
+                     "forca": "forte", "tipo": "nota", "fato_id": visto["fato_id"], "contribuicao": -1.0}
+    assert visto["fato_id"] in [linha[0] for linha in banco.consultar(
+        "SELECT fato_id FROM notas WHERE pessoa = 'bruno' AND filme_id = 'tt9000101'")]
+    assert "O Farol de Areia" not in [f["titulo"] for f in banco.ok("recomendar", "--presentes", "dono")["filmes"]]

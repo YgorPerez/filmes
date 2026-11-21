@@ -45,6 +45,17 @@ class Evidencia:
 
 
 def sem_fato(pessoa: str, filme_id: str) -> Evidencia:
-    """A linha de quem não tem Fato ligado ao filme: palpite, fraca, soma 0."""
+    """A linha de quem não tem Fato ligado ao filme: palpite, Força da régua, soma 0."""
+    from filmes.evidencia import regua  # regua importa FORCAS daqui
+
     return Evidencia(pessoa=pessoa, filme_id=filme_id, texto="sem fato", fonte=None, data=None,
-                     forca="fraca", tipo="palpite", fato_id=None, base=0.0)
+                     forca=regua.forca_palpite(), tipo="palpite", fato_id=None, base=0.0)
+
+
+def linha_do_pedido(filme_id: str, texto: str, fonte: str, data: str, fato_id: str) -> Evidencia:
+    """A linha do filme de uma Restrição que ele passou: metadado que responde ao
+    pedido (duração, idioma, classificação, gatilho), Força da régua, soma 0."""
+    from filmes.evidencia import regua
+
+    return Evidencia(pessoa=None, filme_id=filme_id, texto=texto, fonte=fonte, data=data,
+                     forca=regua.forca_metadado_do_pedido(), tipo="metadado", fato_id=fato_id, base=0.0)

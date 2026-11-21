@@ -32,4 +32,4 @@ Chame `importar` com a Pessoa e o caminho do ZIP do Letterboxd ou do
 export do Trakt, no campo do formato correspondente. Mostre o relatório
 de resolução e as pendências. Para os itens da fila, chame `fila_import`
 com `acao: "ver"`. Mostre as opções e use `confirmar` com o ID do
-filme ou `descartar` com o motivo depois que o Dono decidir.
+filme ou `descartar` com a razão (`razao`) depois que o Dono decidir.

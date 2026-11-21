@@ -1,7 +1,5 @@
 import { z } from "zod";
-import { definirFerramenta } from "../ferramenta.ts";
-
-const semHifen = (o_que: string) => z.string().regex(/^[^-\s]/, `${o_que} não pode começar com '-' nem espaço`);
+import { definirFerramenta, semHifen } from "../ferramenta.ts";
 
 const PRECISA: Record<string, string[]> = {
   criar: ["nome"],

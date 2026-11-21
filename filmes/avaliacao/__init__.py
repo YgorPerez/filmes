@@ -15,16 +15,16 @@ def avaliar(amb, *, com_grade=False, progresso=lambda *_: None):
     with closing(abrir_leitura(amb.banco)) as conn:
         conn.execute("BEGIN")
         online = _online(conn)
-        perfis = pessoas.perfis(conn, amb)
+        pessoas_medidas = pessoas.pessoas_medidas(conn, amb)
         pasta_ml = amb.catalogo / "ml-32m"
         progresso(10, "Sorteando a amostra do MovieLens")
-        amostra = movielens.ler(pasta_ml, progresso)
-        perfis_ml = amostra.perfis if amostra else []
-        offline.preparar(conn, perfis, perfis_ml)
+        amostra = movielens.ler(pasta_ml, amb.versoes, progresso)
+        pessoas_ml = amostra.pessoas_medidas if amostra else []
+        offline.preparar(conn, pessoas_medidas, pessoas_ml)
         if amostra:
             progresso(20, "Calculando vizinhos sem os usuários sorteados")
             movielens.preparar(conn, pasta_ml, amostra, progresso)
-        medidas, calibracao = _medir(conn, amb, perfis, perfis_ml, com_grade, progresso)
+        medidas, calibracao = _medir(conn, amb, pessoas_medidas, pessoas_ml, com_grade, progresso)
 
     avisos = []
     if amostra is None:
@@ -45,13 +45,13 @@ def avaliar(amb, *, com_grade=False, progresso=lambda *_: None):
     }
     if calibracao is not None:
         resultado["grade"] = calibracao
-    resultado["arquivo"] = str(relatorio.gravar(amb.hoje, resultado))
+    resultado["arquivo"] = str(relatorio.gravar(amb.avaliacoes, amb.hoje, resultado))
     progresso(100, "Relatório gravado")
     return resultado
 
 
-def _medir(conn, amb, perfis, perfis_ml, com_grade, progresso):
-    quantidade = len(perfis) + len(perfis_ml)
+def _medir(conn, amb, pessoas_medidas, pessoas_ml, com_grade, progresso):
+    quantidade = len(pessoas_medidas) + len(pessoas_ml)
     selecao = Selecao.preparar(conn, amb.pesos)
     espaco = grade.valores(amb.pesos) if com_grade else {}
     configs = list(grade.combinacoes(amb.pesos, espaco)) if espaco and quantidade else []
@@ -76,7 +76,7 @@ def _medir(conn, amb, perfis, perfis_ml, com_grade, progresso):
         ambiente = replace(amb, pesos=config)
         return {
             nome: offline.medir(conn, ambiente, amostra, selecao, avancar).como_json()
-            for nome, amostra in (("pessoas", perfis), ("movielens", perfis_ml))
+            for nome, amostra in (("pessoas", pessoas_medidas), ("movielens", pessoas_ml))
         }
 
     atual = medir(amb.pesos)
@@ -89,8 +89,10 @@ def _medir(conn, amb, perfis, perfis_ml, com_grade, progresso):
 
 def _online(conn):
     sessoes = sorted(conn.execute("""
-        SELECT id, data, escolhido_na_recomendacao FROM sessoes WHERE feedback_em IS NOT NULL
+        SELECT id, data, escolhido, escolhido_na_recomendacao FROM sessoes WHERE feedback_em IS NOT NULL
     """), key=ordem, reverse=True)[:10]
+    # "Não vimos nada" fica na janela das 10, mas fora do denominador da taxa.
+    com_filme = sum(sessao["escolhido"] is not None for sessao in sessoes)
     escolhidos = sum(1 <= (sessao["escolhido_na_recomendacao"] or 0) <= 5 for sessao in sessoes)
     ids = [sessao["id"] for sessao in sessoes]
     marcas = ",".join("?" for _ in ids)
@@ -99,8 +101,9 @@ def _online(conn):
     ).fetchone()
     return {
         "sessoes": len(sessoes),
+        "com_filme": com_filme,
         "escolhidos_top_5": escolhidos,
-        "taxa_top_5": escolhidos / len(sessoes) if sessoes else None,
+        "taxa_top_5": escolhidos / com_filme if com_filme else None,
         "reacoes": reacoes,
         "reacao_media": media,
     }

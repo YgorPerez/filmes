@@ -3,13 +3,11 @@
 O arquivo `pessoas/<slug>.md` é a fonte; `reconstruir` refaz os Fatos a partir dele.
 """
 
-import yaml
+from conftest import ler_markdown
 
 
 def _frontmatter(caminho):
-    texto = caminho.read_text(encoding="utf-8")
-    assert texto.startswith("---\n")
-    return yaml.safe_load(texto[4:texto.index("\n---", 4)])
+    return ler_markdown(caminho)[0]
 
 
 def test_criar_pessoa_escreve_o_arquivo_com_nome_e_apelidos(cli, dados):

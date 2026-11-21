@@ -1,7 +1,7 @@
 """Clima do pedido e sinal de grupo ou sozinho: linhas do filme, sem Pessoa.
 
 O vocabulário de Climas está em config/climas.toml e o de grupo/sozinho em
-config/grupo_sozinho.toml. Na fixture, os filmes 1101 a 1108 têm tags do
+config/grupo_sozinho.toml. Na fixture, os filmes 1101 a 1110 têm tags do
 MovieLens, escores do Tag Genome e gêneros (tabelas `tags_movielens`, `genoma`,
 `arestas`); todos têm a mesma Evidência fraca do Bruno e da Iara, por
 vizinhança de O Farol de Areia, e por isso empatam no gosto. Veja o LEIAME.
@@ -23,7 +23,7 @@ def test_clima_pedido_ganha_linha_do_filme_com_a_tag_que_o_sustenta(banco):
     [linha] = filme["linhas_do_filme"]
     assert linha == {
         "pessoa": None,
-        "texto": 'Clima leve: 10 usuários do MovieLens marcaram o filme com a tag "feel-good"',
+        "texto": 'Clima leve: 14 usuários do MovieLens marcaram o filme com a tag "feel-good"',
         "fonte": "MovieLens ml-32m",
         "data": "2023-10-13",
         "forca": "forte",
@@ -64,13 +64,22 @@ def test_forca_da_linha_de_clima_segue_a_regua_de_review(banco):
     saida = _recomendar(banco, "--clima", "leve")
 
     assert _linhas(saida, "Tarde de Domingo") == [
-        ('Clima leve: 3 usuários do MovieLens marcaram o filme com a tag "feel-good"', "moderada", "review")]
+        ('Clima leve: 5 usuários do MovieLens marcaram o filme com a tag "feel-good"', "moderada", "review")]
     # Só 2 usuários deram "feel-good" a Bolo de Fubá: vale o Tag Genome, no máximo moderada.
     assert _linhas(saida, "Bolo de Fubá") == [
         ('Clima leve: relevância 0,85 da tag "feel-good" para o filme no Tag Genome', "moderada", "review")]
     # Pipa no Céu: 0,70 em "feel-good" é fraca; 0,50 em "feel good movie" fica fora.
     assert _linhas(saida, "Pipa no Céu") == [
         ('Clima leve: relevância 0,7 da tag "feel-good" para o filme no Tag Genome', "fraca", "review")]
+
+
+def test_numero_de_usuarios_no_limite_da_regua_ja_vale_a_forca(banco):
+    saida = _recomendar(banco, "--clima", "leve")
+
+    assert _linhas(saida, "Quermesse") == [
+        ('Clima leve: 10 usuários do MovieLens marcaram o filme com a tag "feel-good"', "forte", "review")]
+    assert _linhas(saida, "Piquenique") == [
+        ('Clima leve: 3 usuários do MovieLens marcaram o filme com a tag "feel-good"', "moderada", "review")]
 
 
 def test_limiar_de_relevancia_do_genoma_aparece_sem_arredondamento(banco):
@@ -94,12 +103,12 @@ def test_genero_do_clima_vale_como_metadado_fraco(banco):
 
 
 def test_cada_clima_pedido_da_uma_linha_so_a_mais_forte(banco):
-    # Dia de Feira tem "feel-good" (10), "funny" (12) e é comédia, que está nos dois Climas.
+    # Dia de Feira tem "feel-good" (14), "funny" (12) e é comédia, que está nos dois Climas.
     saida = _recomendar(banco, "--clima", "leve", "pra rir")
 
     assert saida["climas"] == ["leve", "pra rir"]
     assert _linhas(saida, "Dia de Feira") == [
-        ('Clima leve: 10 usuários do MovieLens marcaram o filme com a tag "feel-good"', "forte", "review"),
+        ('Clima leve: 14 usuários do MovieLens marcaram o filme com a tag "feel-good"', "forte", "review"),
         ('Clima pra rir: 12 usuários do MovieLens marcaram o filme com a tag "funny"', "forte", "review"),
     ]
 
@@ -121,14 +130,14 @@ def test_clima_vale_sem_acento_e_sem_maiuscula(banco):
     assert saida["avisos"] == []
 
 
-def test_linha_do_tag_genome_poe_a_atribuicao_nos_creditos(banco):
+def test_linha_do_tag_genome_poe_a_atribuicao_na_saida(banco):
     com_genoma = _recomendar(banco, "--clima", "leve")
     sem_genoma = _recomendar(banco)
 
-    [credito] = [c for c in com_genoma["creditos"] if c["fonte"] == "Tag Genome"]
+    [credito] = [c for c in com_genoma["atribuicoes"] if c["fonte"] == "Tag Genome"]
     assert "Tag Genome 2021, de Kotkov, Maslov e Neovius" in credito["texto"]
     assert "CC BY-NC 3.0" in credito["texto"]
-    assert not [c for c in sem_genoma["creditos"] if c["fonte"] == "Tag Genome"]
+    assert not [c for c in sem_genoma["atribuicoes"] if c["fonte"] == "Tag Genome"]
 
 
 # Sessão Maldita tem "so bad it's good" (12 usuários); Silêncio no Lago tem "meditative" (12)

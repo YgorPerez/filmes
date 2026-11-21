@@ -1,4 +1,4 @@
-"""Perfis de treino e Notas retidas pelo corte no diário de cada Pessoa."""
+"""Pessoas medidas pela avaliação: o corte no diário de cada uma e as Notas retidas."""
 
 from collections import defaultdict
 from dataclasses import dataclass
@@ -11,7 +11,7 @@ from filmes.importar.letterboxd import linhas_da_pessoa
 
 
 @dataclass(frozen=True)
-class Perfil:
+class Pessoa:
     pessoa: str
     corte: str
     retidos: frozenset[str]
@@ -27,10 +27,10 @@ def separar(pessoa, diario, notas):
     retidos = frozenset(ordenados[-ceil(len(diario) / 5):])
     corte = min(diario[filme] for filme in retidos)
     alvos = frozenset(filme for filme in retidos if notas.get(filme, 0) >= NOTA_ALTA)
-    return Perfil(pessoa, corte, retidos, alvos)
+    return Pessoa(pessoa, corte, retidos, alvos)
 
 
-def perfis(conn, amb):
+def pessoas_medidas(conn, amb):
     diarios = _diarios(conn, amb)
     historico_de_notas = defaultdict(dict)
     notas = defaultdict(dict)
@@ -48,9 +48,9 @@ def perfis(conn, amb):
     resultado = []
     for pessoa in sorted(notas):
         diario = diarios[pessoa] or historico_de_notas[pessoa]
-        perfil = separar(pessoa, diario, notas[pessoa])
-        if perfil:
-            resultado.append(perfil)
+        medida = separar(pessoa, diario, notas[pessoa])
+        if medida:
+            resultado.append(medida)
     return resultado
 
 

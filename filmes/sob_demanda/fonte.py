@@ -17,7 +17,6 @@ import json
 import os
 import urllib.error
 import urllib.request
-from pathlib import Path
 
 from filmes.sob_demanda.cache import Cache, Registro, caminho
 
@@ -56,7 +55,8 @@ class Fonte:
             self._desligar(f"{self.nome} sem chave de API (defina {self.variavel_chave}); {self.sem_a_fonte}")
             return None
         try:
-            corpo = self._da_gravacao(chave) if os.environ.get("FILMES_GRAVACOES") else self.buscar(chave, api)
+            gravacoes = self.contexto.amb.gravacoes
+            corpo = self._da_gravacao(gravacoes, chave) if gravacoes else self.buscar(chave, api)
         except FalhaDaFonte as falha:
             self._desligar(f"{self.nome} não respondeu ({falha}); {self.sem_a_fonte}")
             return None
@@ -71,8 +71,8 @@ class Fonte:
     def nao_encontrado(self) -> dict:
         raise NotImplementedError
 
-    def _da_gravacao(self, chave):
-        arquivo = Path(os.environ["FILMES_GRAVACOES"]) / self.pasta / f"{chave}.json"
+    def _da_gravacao(self, gravacoes, chave):
+        arquivo = gravacoes / self.pasta / f"{chave}.json"
         if not arquivo.exists():
             return self.nao_encontrado()
         return json.loads(arquivo.read_text(encoding="utf-8"))

@@ -1,13 +1,11 @@
 """Versões dos dados e relatório datado da avaliação."""
 
 import json
-import os
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 
 import yaml
 
-from filmes.ambiente import RAIZ
 from filmes.catalogo.versoes import sha256
 
 
@@ -24,8 +22,7 @@ def versoes(amb):
     return resultado
 
 
-def gravar(data, resultado):
-    pasta = Path(os.environ.get("FILMES_AVALIACOES") or RAIZ / "docs" / "avaliacoes")
+def gravar(pasta, data, resultado):
     pasta.mkdir(parents=True, exist_ok=True)
     destino = pasta / f"{data}.md"
     secoes = [
@@ -33,13 +30,13 @@ def gravar(data, resultado):
         "",
         "## Offline",
         "",
-        "| Amostra | Perfis | Recall@50 | Cobertura no top 5 |",
+        "| Amostra | Pessoas | Recall@50 | Cobertura no top 5 |",
         "| --- | ---: | ---: | ---: |",
     ]
     for nome, chave in (("Pessoas", "pessoas"), ("MovieLens", "movielens")):
         m = resultado["offline"][chave]
         secoes.append(
-            f"| {nome} | {m['perfis']} | {_taxa(m['recall_50'])} "
+            f"| {nome} | {m['pessoas']} | {_taxa(m['recall_50'])} "
             f"({m['recuperados']}/{m['retidos_4_mais']}) | {_taxa(m['cobertura_top_5'])} "
             f"({m['com_evidencia']}/{m['filmes_top_5']}) |"
         )
@@ -55,6 +52,7 @@ def gravar(data, resultado):
         "## Online",
         "",
         f"- Sessões com Feedback na janela: {online['sessoes']}",
+        f"- Sessões em que viram um filme: {online['com_filme']}",
         f"- Filme escolhido no top 5: {_taxa(online['taxa_top_5'])}",
         f"- Reação média: {online['reacao_media'] if online['reacao_media'] is not None else '—'}",
         f"- Medida que decide: {resultado['prioridade']}",

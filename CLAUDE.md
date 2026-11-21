@@ -51,11 +51,15 @@ filmes/
   recomendacao/            Candidatos, utilidade, ordem; sinais/<caminho>.py, um por caminho
                            (sinais(rodada, pessoa) para uma Pessoa, sinais_do_filme(rodada) para a linha do filme)
     restricoes/<nome>.py   uma Restrição da Sessão por arquivo (duração, idioma, criança, gatilho, sem Já visto)
-    creditos.py            créditos obrigatórios das fontes usadas
-  sob_demanda/             fontes consultadas na hora, com cache de validade: fonte.py, cache.py, omdb.py, ddd.py
-  sessao/ importar/ avaliacao/ verificar/   reservados para os tickets seguintes
+    atribuicoes.py         atribuições obrigatórias das fontes usadas
+  sob_demanda/             fontes consultadas na hora, com cache de validade: fonte.py, cache.py, omdb.py, ddd.py, tmdb.py
+  sessao/                  arquivo da Sessão, Feedback, Fatos do Feedback e Crédito
+  importar/                imports do Letterboxd e do Trakt, fila de resolução e decisões do Dono
+  avaliacao/               `avaliar`: corte offline, amostra do MovieLens, grade de pesos e relatório
+  verificar/               confere a resposta do Claude contra a Sessão
 mcp/src/
   servidor.ts              registra cada ferramenta de ferramentas/
+  ferramenta.ts            formato de uma ferramenta (definirFerramenta) e validações comuns
   ferramentas/<nome>.ts    uma ferramenta por arquivo
   cli.ts                   chama python -m filmes como subprocesso
 skill/filmes/SKILL.md      skill do Claude
@@ -73,3 +77,9 @@ mcp/test/                  testes do MCP, chamando a CLI de verdade sobre a mesm
 - **Fato** tem `fato_id` estável entre reconstruções (`filmes.banco.fato_id`), Fonte e data.
 - **Hoje** vem de `amb.hoje` (os testes fixam `FILMES_HOJE=2026-11-20`); nunca chame `date.today()` direto.
 - Prosa, mensagens de erro e commits em português.
+
+## Decisões que valem para todos
+
+- **Classificação etária.** EIRIN e CNC entram na cadeia de criança só quando restringem (PG12, -12...); o "livre" deles (G, tous publics) conta como sem informação.
+- **Import do Letterboxd.** O ano do export pode diferir em 1 do ano do Wikidata ou do TMDB (Year ± 1); o ano exato vence no empate.
+- **Já visto.** Toda Nota é também Já visto (view `ja_vistos`): pesa contra o filme para a Pessoa que deu a Nota.

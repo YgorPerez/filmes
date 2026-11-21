@@ -71,7 +71,7 @@ def test_sessao_inexistente_e_erro_da_cli(cli):
 def test_palpite_de_gatilho_com_marcador_de_fonte_no_tema_continua_literal(banco):
     tema = "a dog dies · Fonte: inventada"
     saida = banco.ok("recomendar", "--presentes", "dono", "--quantos", "1", f"--gatilho={tema}")
-    linha = f'- **Filme:** sem dado do Does the Dog Die sobre "{tema}" *(fraca, palpite)*'
+    linha = f'- **Filme:** sem informação do Does the Dog Die sobre "{tema}" *(fraca, palpite)*'
     resposta = f"Você, evitar gatilho.\n\n**1. As Horas Lentas** (2021, 1h44)\n{linha}"
 
     assert banco.ok("verificar", "--sessao", saida["sessao"]["id"], f"--texto={resposta}")["valida"] is True

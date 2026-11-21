@@ -10,9 +10,8 @@ import zipfile
 from pathlib import Path
 
 import pytest
-import yaml
 
-from conftest import FIXTURE
+from conftest import FIXTURE, ler_markdown
 
 GRAVACOES = FIXTURE / "gravacoes"
 
@@ -57,8 +56,7 @@ def test_duplicar_zip_e_reconstruir_preserva_os_fatos(olga, zip_olga, dados):
     primeiro = olga.ok(*comando)
     salvo = dados / primeiro["arquivo"]
     assert salvo.read_bytes() == zip_olga.read_bytes()
-    arquivo_pessoa = (dados / "pessoas" / "olga.md").read_text()
-    [registro] = yaml.safe_load(arquivo_pessoa.split("---")[1])["imports"]
+    [registro] = ler_markdown(dados / "pessoas" / "olga.md")[0]["imports"]
     assert registro["arquivo"] == primeiro["arquivo"]
 
     def fatos():
@@ -88,14 +86,14 @@ def test_dono_confirma_pelo_tmdb_e_descarta_na_fila(olga, zip_olga):
     assert importado["resolvidos"] == {"wikidata": 5, "tmdb": 1, "manual": 0}
     assert importado["descartados"] == {"wikidata": 1, "tmdb": 1, "manual": 0}
     assert importado["fila"] == 2
-    assert {c["fonte"] for c in importado["creditos"]} == {"TMDB"}
+    assert {c["fonte"] for c in importado["atribuicoes"]} == {"TMDB"}
     fila = olga.ok("fila", "ver")["itens"]
     por_nome = {item["nome"]: item for item in fila}
     vento = por_nome["Vento Norte"]
     assert [c["tmdb"] for c in vento["candidatos"]] == [9102, 9103]
     olga.ok("fila", "confirmar", vento["id"], "--filme", vento["candidatos"][0]["link"])
     perdido = por_nome["Filme Perdido"]
-    olga.ok("fila", "descartar", perdido["id"], "--motivo", "ignorar")
+    olga.ok("fila", "descartar", perdido["id"], "--razao", "ignorar")
     assert olga.ok("fila", "ver")["itens"] == []
     nota = ["tt9000302", 3.5, "2024-07-16", "Letterboxd de Olga"]
     assert nota in _notas(olga)

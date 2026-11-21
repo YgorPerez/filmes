@@ -1,4 +1,10 @@
-"""Grade dos pesos de aresta e dos multiplicadores de Força."""
+"""Grade dos pesos de aresta e dos multiplicadores de Força.
+
+Os multiplicadores variam todos juntos (produto). Os pesos de aresta variam um
+de cada vez: com cinco predicados, o produto completo daria 243 conjuntos de
+pesos de aresta para cada conjunto de multiplicadores, e a grade deixaria de
+ser pequena.
+"""
 
 from copy import deepcopy
 from itertools import product
@@ -28,7 +34,8 @@ def combinacoes(pesos, espaco):
             tabela, campo = secao.split(".")
             config[tabela][campo][nome] = valor
         forcas = config["forca"]["multiplicador"]
-        if forcas["fraca"] <= forcas["moderada"] <= forcas["forte"]:
+        arestas_mudadas = sum(valor != pesos["caminho"]["peso"][nome] for nome, valor in config["caminho"]["peso"].items())
+        if forcas["fraca"] <= forcas["moderada"] <= forcas["forte"] and arestas_mudadas <= 1:
             yield config
 
 

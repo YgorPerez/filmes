@@ -75,3 +75,12 @@ def ler(caminho, catalogo):
         return dumps
     except (OSError, ValueError, KeyError, TypeError) as erro:
         raise ErroFilmes("versoes_invalidas", f"{caminho}: {erro}") from erro
+
+
+def fonte_e_data(caminho, nome):
+    """Fonte e data de um dump do manifesto, sem conferir os arquivos fixados."""
+    try:
+        versao = json.loads(caminho.read_text(encoding="utf-8"))["dumps"][nome]
+        return versao["fonte"], versao["data"]
+    except (OSError, ValueError, KeyError, TypeError) as erro:
+        raise ErroFilmes("versoes_invalidas", f"{caminho}: sem fonte e data de {nome} ({erro})") from erro

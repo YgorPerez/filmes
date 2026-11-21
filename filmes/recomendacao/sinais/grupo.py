@@ -6,21 +6,15 @@ ganha a linha "para ver em grupo"; com 1 Presente, um com tag de "sozinho" ganha
 filme, a mais forte (veja `_tags.py`). O peso está em [grupo] da config.
 """
 
-import tomllib
 
-from filmes.ambiente import RAIZ
-from filmes.erros import ErroFilmes
+from filmes.ambiente import RAIZ, ler_toml
 from filmes.recomendacao.sinais import _tags
 
 VOCABULARIO = RAIZ / "config" / "grupo_sozinho.toml"
 
 
 def sinais_do_filme(rodada):
-    try:
-        with open(VOCABULARIO, "rb") as f:
-            eixos = tomllib.load(f)
-    except (OSError, tomllib.TOMLDecodeError) as erro:
-        raise ErroFilmes("config_invalida", f"{VOCABULARIO}: {erro}")
+    eixos = ler_toml(VOCABULARIO)
     eixo, rotulo = ("grupo", "para ver em grupo") if rodada.em_grupo else ("sozinho", "para ver sozinho")
     tags = [t.lower() for t in eixos.get(eixo, [])]
     yield from _tags.melhores(rodada, rotulo, tags, peso=rodada.pesos["grupo"]["peso"]).values()

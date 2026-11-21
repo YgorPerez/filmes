@@ -6,20 +6,20 @@ from datetime import date
 from filmes.recomendacao import recomendar
 
 
-def preparar(conn, perfis, amostra):
+def preparar(conn, pessoas_medidas, amostra):
     """As vistas TEMP isolam a avaliação mesmo com o banco principal só de leitura."""
     conn.execute("CREATE TEMP TABLE cortes (pessoa TEXT PRIMARY KEY, data TEXT)")
     conn.execute("CREATE TEMP TABLE retidos (pessoa TEXT, filme_id TEXT, PRIMARY KEY (pessoa, filme_id))")
-    conn.executemany("INSERT INTO cortes VALUES (?, ?)", ((p.pessoa, p.corte) for p in perfis))
+    conn.executemany("INSERT INTO cortes VALUES (?, ?)", ((p.pessoa, p.corte) for p in pessoas_medidas))
     conn.executemany(
-        "INSERT INTO retidos VALUES (?, ?)", ((p.pessoa, f) for p in perfis for f in p.retidos)
+        "INSERT INTO retidos VALUES (?, ?)", ((p.pessoa, f) for p in pessoas_medidas for f in p.retidos)
     )
     conn.execute("CREATE TEMP TABLE treino_movielens AS SELECT * FROM main.notas WHERE 0")
     conn.execute("CREATE INDEX temp.treino_por_pessoa ON treino_movielens(pessoa, filme_id)")
     conn.executemany("""
         INSERT INTO treino_movielens (fato_id, pessoa, filme_id, nota, data, fonte, tipo)
         VALUES (?, ?, ?, ?, ?, ?, 'nota')
-    """, (nota for perfil in amostra for nota in perfil.treino))
+    """, (nota for medida in amostra for nota in medida.treino))
     for tabela, alvo in (
         ("notas", "filme_id"),
         ("ja_visto", "filme_id"),
@@ -44,7 +44,7 @@ def preparar(conn, perfis, amostra):
 
 @dataclass
 class Medidas:
-    perfis: int = 0
+    pessoas: int = 0
     recuperados: int = 0
     retidos_4_mais: int = 0
     com_evidencia: int = 0
@@ -52,7 +52,7 @@ class Medidas:
 
     def acrescentar(self, filmes, alvos):
         topo = filmes[:5]
-        self.perfis += 1
+        self.pessoas += 1
         self.recuperados += sum(filme["id"] in alvos for filme in filmes)
         self.retidos_4_mais += len(alvos)
         self.com_evidencia += sum(_sustentado(filme) for filme in topo)
@@ -74,11 +74,11 @@ def _sustentado(filme):
     )
 
 
-def medir(conn, amb, perfis, selecao, avancar):
+def medir(conn, amb, pessoas_medidas, selecao, avancar):
     medidas = Medidas()
-    for perfil in perfis:
-        treino = replace(amb, hoje=date.fromisoformat(perfil.corte))
-        lista = recomendar(conn, treino, [perfil.pessoa], 50, selecao=selecao)["filmes"]
-        medidas.acrescentar(lista, perfil.alvos)
+    for medida in pessoas_medidas:
+        treino = replace(amb, hoje=date.fromisoformat(medida.corte))
+        lista = recomendar(conn, treino, [medida.pessoa], 50, selecao=selecao)["filmes"]
+        medidas.acrescentar(lista, medida.alvos)
         avancar()
     return medidas

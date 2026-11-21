@@ -28,13 +28,14 @@ import sqlite3
 from collections import defaultdict
 from dataclasses import dataclass
 from itertools import islice
+from typing import NamedTuple
 
 from filmes.ambiente import Ambiente
 from filmes.evidencia import sem_fato
-from filmes.recomendacao import candidatos, climas as vocabulario_climas, creditos, sinais as pacote_sinais, utilidade, vetos
+from filmes.recomendacao import atribuicoes, candidatos, climas as vocabulario_climas, sinais as pacote_sinais, utilidade, vetos
 from filmes.recomendacao.climas import Clima
 from filmes.recomendacao.regra import Regra
-from filmes.recomendacao.restricoes import Contexto, Filtro
+from filmes.recomendacao.restricoes import Contexto, Restricoes
 from filmes.sessao import credito
 
 
@@ -61,6 +62,14 @@ class Rodada:
         return self.amb.hoje
 
 
+class Ordenado(NamedTuple):
+    """Um Candidato na ordem: a chave de ordenação e o que a saída mostra dele."""
+    chave: tuple
+    filme: sqlite3.Row
+    utilidades: dict        # Presente -> utilidade, ou None se desconhecida
+    evidencias: list        # Evidências dos Presentes sobre o filme
+
+
 def _modulos_de_sinal():
     for info in sorted(pkgutil.iter_modules(pacote_sinais.__path__), key=lambda m: m.name):
         if not info.name.startswith("_"):
@@ -75,8 +84,8 @@ def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], qu
     restantes, vetos_que_agiram = vetos.aplicar(conn, presentes, elegiveis)
     climas_aceitos, avisos_de_clima = vocabulario_climas.resolver(list(climas))
     contexto = Contexto(conn=conn, amb=amb, presentes=presentes, avisos=avisos_de_clima)
-    filtro = Filtro(contexto, list(restricoes))
-    rodada = Rodada(conn=conn, amb=amb, candidatos=filtro.candidatos(restantes),
+    pedidas = Restricoes(contexto, list(restricoes))
+    rodada = Rodada(conn=conn, amb=amb, candidatos=pedidas.candidatos(restantes),
                     presentes=tuple(presentes), climas=tuple(climas_aceitos))
     pesos = amb.pesos
 
@@ -104,7 +113,7 @@ def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], qu
     ordenados = []
     sem_credito = []
     ids = rodada.candidatos
-    if selecao is not None and not ajuste and not filtro.pendentes:
+    if selecao is not None and not ajuste and not pedidas.pendentes:
         # Sem consulta que possa recusar um filme depois de ordenado, os demais
         # palpites não alcançam o topo se já há `quantos` mais votados.
         populares = (filme for filme in selecao.populares if filme in rodada.candidatos)
@@ -120,16 +129,16 @@ def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], qu
         bonus = sum(e.contribuicao(pesos) for e in sinais_do_filme)
         tem_fato = any(e.tipo != "palpite" for e in (*evidencias, *sinais_do_filme))
         chave = _chave(regra.chave(utilidades, ajuste), tem_fato, filme, bonus)
-        ordenados.append((chave, filme, utilidades, evidencias))
+        ordenados.append(Ordenado(chave, filme, utilidades, evidencias))
         if ajuste:
             sem_credito.append((_chave(regra.chave(utilidades), tem_fato, filme, bonus), filme_id))
-    ordenados.sort(key=lambda item: item[0])
-    aprovados = filtro.aprovar(ordenados, quantos, pesos["restricoes"]["alcance_sob_demanda"], filme=lambda i: i[1])
-    ids_aprovados = {filme["id"] for _, filme, _, _ in aprovados}
+    ordenados.sort(key=lambda item: item.chave)
+    aprovados = pedidas.aprovar(ordenados, quantos, pesos["restricoes"]["alcance_sob_demanda"], filme=lambda item: item.filme)
+    ids_aprovados = {item.filme["id"] for item in aprovados}
     # Compare as duas ordens com os mesmos vereditos, sem buscar outras respostas sob demanda.
     ordem_sem_credito = [
         filme_id for _, filme_id in sorted(sem_credito)
-        if filme_id in ids_aprovados or not filtro.pendentes.get(filme_id)
+        if filme_id in ids_aprovados or not pedidas.pendentes.get(filme_id)
     ]
     posicao_sem_credito = {filme_id: i for i, filme_id in enumerate(ordem_sem_credito, start=1)}
 
@@ -142,7 +151,7 @@ def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], qu
         do_sinal = sorted(do_filme.get(filme["id"], []), key=lambda e: -abs(e.contribuicao(pesos)))
         do_credito = [credito.linha(p, nomes.get(p, p), creditos_pessoais[p], filme["id"], amb.hoje)
                       for p in _subiu_pelo_credito(filme["id"], posicao, posicao_sem_credito, utilidades, ajuste)]
-        linhas = [*filtro.linhas[filme["id"]], *do_sinal, *do_credito]
+        linhas = [*pedidas.linhas[filme["id"]], *do_sinal, *do_credito]
         filmes.append({
             "posicao": posicao,
             "id": filme["id"],
@@ -161,9 +170,9 @@ def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], qu
         "vetos": vetos_que_agiram,
         "climas": [c.nome for c in climas_aceitos],
         "filmes": filmes,
-        "restricoes": filtro.como_json(),
+        "restricoes": pedidas.como_json(),
         "avisos": contexto.avisos,
-        "creditos": creditos.das_fontes(
+        "atribuicoes": atribuicoes.das_fontes(
             e["fonte"] for f in filmes for linhas in (f["linhas_do_filme"], *f["evidencias"].values()) for e in linhas),
     }
 

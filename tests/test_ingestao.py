@@ -150,7 +150,7 @@ def test_recomendacao_do_catalogo_real_da_o_credito_do_imdb(catalogo_real):
     assert {
         "fonte": "IMDb",
         "texto": "Information courtesy of IMDb (https://www.imdb.com). Used with permission.",
-    } in saida["creditos"]
+    } in saida["atribuicoes"]
 
 
 def test_reconstruir_conta_vizinhos_direcionais_a_partir_das_notas_quatro_ou_mais(catalogo_real):
@@ -223,5 +223,5 @@ def test_reconstruir_liga_o_genoma_ao_imdb_e_preserva_a_precisao_do_escore(catal
 
     assert any(
         credito["fonte"] == "Tag Genome" and "CC BY-NC 3.0" in credito["texto"]
-        for credito in saida["creditos"]
+        for credito in saida["atribuicoes"]
     )

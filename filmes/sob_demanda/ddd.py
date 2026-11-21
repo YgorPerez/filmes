@@ -42,7 +42,7 @@ class DoesTheDogDie(Fonte):
     pasta = "ddd"
     variavel_chave = "FILMES_DDD_CHAVE"
     validade_dias = 30
-    sem_a_fonte = "o gatilho fica sem dado e nenhum filme sai por ele"
+    sem_a_fonte = "o gatilho fica sem informação e nenhum filme sai por ele"
 
     def temas(self, imdb_id: str) -> Temas | None:
         """Os temas que o Does the Dog Die tem para o filme, ou None sem resposta."""

@@ -31,8 +31,7 @@ LOTE_WDQS = 500
 def atualizar(amb, progresso):
     if amb.catalogo.resolve().is_relative_to(RAIZ):
         raise ErroFilmes("config_invalida", "ponha FILMES_CATALOGO fora do repositório de código")
-    gravacoes = os.environ.get("FILMES_GRAVACOES")
-    gravacoes = Path(gravacoes) / "catalogo" if gravacoes else None
+    gravacoes = amb.gravacoes / "catalogo" if amb.gravacoes else None
     amb.catalogo.mkdir(parents=True, exist_ok=True)
 
     try:

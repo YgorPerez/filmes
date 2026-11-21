@@ -34,6 +34,6 @@ CREATE TABLE itens_letterboxd (
     situacao   TEXT NOT NULL CHECK (situacao IN ('resolvido', 'descartado', 'fila')),
     caminho    TEXT CHECK (caminho IN ('wikidata', 'tmdb', 'manual')),
     filme_id   TEXT,                        -- tconst, quando resolvido
-    motivo     TEXT,                        -- por que foi descartado ou está na fila
+    razao      TEXT,                        -- por que foi descartado ou está na fila
     PRIMARY KEY (pessoa, id)
 );

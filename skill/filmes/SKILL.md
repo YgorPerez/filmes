@@ -35,7 +35,7 @@ Em `evidencias`, escolha uma linha por Presente. Priorize `forte`, depois
 `moderada`, depois `fraca`. Entre linhas da mesma Força, use a primeira
 na ordem do motor. Use o `sem fato` devolvido quando só houver Palpite.
 Escolha até uma linha de `linhas_do_filme` quando ela importar para o
-pedido. Se várias disputarem a vaga, priorize aviso de gatilho sem dado,
+pedido. Se várias disputarem a vaga, priorize aviso de gatilho sem informação,
 faixa etária, resultado do gatilho, Crédito, duração e Clima, nessa ordem.
 
 Em cada linha, copie `texto`, `fonte`, `data`, `forca` e `tipo` do
@@ -54,7 +54,7 @@ Você e Teo · até 2h · regra padrão.
 ```
 
 Depois dos filmes, deixe uma linha em branco e copie `avisos` e os textos
-de `creditos`. Ponha os créditos em uma linha, incluindo "Powered by
+de `atribuicoes`. Ponha as atribuições em uma linha, incluindo "Powered by
 DoesTheDogDie.com" quando o motor o devolver. Feche com um convite para o
 Dono contar o que viram e como cada Presente reagiu. Se a lista vier
 vazia, diga que o motor não encontrou Candidatos para o pedido.

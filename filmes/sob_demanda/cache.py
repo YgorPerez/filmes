@@ -7,7 +7,6 @@ pode apagar o que levou chamadas de API para juntar. O arquivo é
 
 import datetime as dt
 import json
-import os
 import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
@@ -31,10 +30,7 @@ class Registro:
 
 
 def caminho(amb) -> Path:
-    if os.environ.get("FILMES_CACHE"):
-        return Path(os.environ["FILMES_CACHE"])
-    banco = amb.banco
-    return banco.with_name(f"{banco.stem}-cache.sqlite")
+    return amb.cache
 
 
 class Cache:

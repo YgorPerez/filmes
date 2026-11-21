@@ -46,7 +46,7 @@ class Resolucao:
     situacao: str                    # resolvido, descartado, fila
     caminho: str | None = None       # wikidata, tmdb, manual
     filme_id: str | None = None
-    motivo: str | None = None
+    razao: str | None = None
     tmdb_id: str | None = None
 
 
@@ -65,9 +65,9 @@ def resolver(conn, nome: str, ano: int | None, decisao: dict | None) -> Resoluca
     if decisao and decisao["situacao"] == "confirmado":
         return Resolucao("resolvido", "manual", filme_id=decisao["filme"])
     if decisao and decisao["situacao"] == "descartado":
-        return Resolucao("descartado", "manual", motivo=decisao.get("motivo") or "descartado pelo Dono")
+        return Resolucao("descartado", "manual", razao=decisao.get("razao") or "descartado pelo Dono")
     if ano is None:
-        return Resolucao("fila", motivo="o export não traz o ano do filme")
+        return Resolucao("fila", razao="o export não traz o ano do filme")
     achado = _pelo_wikidata(conn, nome, ano)
     if achado and achado.situacao != "fila":
         return achado
@@ -75,10 +75,10 @@ def resolver(conn, nome: str, ano: int | None, decisao: dict | None) -> Resoluca
     if decisao and decisao["situacao"] == "tmdb":
         return Resolucao("resolvido", "tmdb", filme_id=decisao["filme"])
     if decisao and decisao["situacao"] == "minisserie":
-        return Resolucao("descartado", "tmdb", motivo="minissérie (só há série com esse título no TMDB)")
+        return Resolucao("descartado", "tmdb", razao="minissérie (só há série com esse título no TMDB)")
     if decisao and decisao["situacao"] == "pendente":
-        return Resolucao("fila", motivo=decisao.get("motivo"), tmdb_id=tmdb_id)
-    return Resolucao("fila", motivo="o Wikidata não deu um ID do IMDb, e o TMDB ainda não foi consultado",
+        return Resolucao("fila", razao=decisao.get("razao"), tmdb_id=tmdb_id)
+    return Resolucao("fila", razao="o Wikidata não deu um ID do IMDb, e o TMDB ainda não foi consultado",
                      tmdb_id=tmdb_id)
 
 
@@ -99,7 +99,7 @@ def _pelo_wikidata(conn, nome, ano) -> Resolucao | None:
         return None
     [item] = itens.values()
     if item["tmdb_serie"] and not item["tmdb"]:
-        return Resolucao("descartado", "wikidata", motivo=f"minissérie ({item['item']} só tem ID de série no TMDB)")
+        return Resolucao("descartado", "wikidata", razao=f"minissérie ({item['item']} só tem ID de série no TMDB)")
     if item["imdb"]:
         return Resolucao("resolvido", "wikidata", filme_id=item["imdb"])
     return Resolucao("fila", tmdb_id=item["tmdb"])
@@ -129,15 +129,15 @@ def consultar_tmdb(fonte: tmdb.TMDB, nome: str, ano: int, tmdb_id: str | None) -
             return base | {"situacao": "tmdb", "filme": imdb}
         if fonte.desligada:
             return None
-        return base | {"situacao": "pendente", "motivo": "o TMDB achou o filme, mas sem ID do IMDb"}
+        return base | {"situacao": "pendente", "razao": "o TMDB achou o filme, mas sem ID do IMDb"}
     if iguais:
-        return base | {"situacao": "pendente", "motivo": "o TMDB achou mais de um filme com esse título"}
+        return base | {"situacao": "pendente", "razao": "o TMDB achou mais de um filme com esse título"}
     series = fonte.series(nome, ano)
     if series is None:
         return None
     if any(_mesmo_titulo(nome, s, "name", "original_name") for s in series):
         return base | {"situacao": "minisserie"}
-    return base | {"situacao": "pendente", "motivo": "nem o Wikidata nem o TMDB acharam o filme"}
+    return base | {"situacao": "pendente", "razao": "nem o Wikidata nem o TMDB acharam o filme"}
 
 
 def filmes_com_mesmo_titulo(buscar, nome, ano):
@@ -201,9 +201,9 @@ def _carregar_pessoa(conn, pessoa, linhas, decididos):
         primeira = do_filme[0]
         r = resolver(conn, primeira.nome, primeira.ano, decididos.get(id_))
         conn.execute(
-            """INSERT INTO itens_letterboxd (pessoa, id, nome, ano, situacao, caminho, filme_id, motivo)
+            """INSERT INTO itens_letterboxd (pessoa, id, nome, ano, situacao, caminho, filme_id, razao)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-            (pessoa.slug, id_, primeira.nome, primeira.ano, r.situacao, r.caminho, r.filme_id, r.motivo),
+            (pessoa.slug, id_, primeira.nome, primeira.ano, r.situacao, r.caminho, r.filme_id, r.razao),
         )
         if r.situacao == "resolvido":
             for linha in do_filme:
@@ -276,7 +276,7 @@ def importar(amb, nome: str, zip_: Path) -> dict:
             "fatos": depois,
             "fatos_novos": {t: depois[t] - antes[t] for t in TABELAS_DE_FATO},
             "avisos": contexto.avisos,
-            "creditos": [tmdb.CREDITO] if usou_tmdb or _usa_tmdb(conn, pessoa.slug) else [],
+            "atribuicoes": [tmdb.ATRIBUICAO] if usou_tmdb or _usa_tmdb(conn, pessoa.slug) else [],
         }
 
 
@@ -314,9 +314,9 @@ def relatorio(conn, slug) -> dict:
     contagem = Counter((l["situacao"], l["caminho"]) for l in conn.execute(
         "SELECT situacao, caminho FROM itens_letterboxd WHERE pessoa = ?", (slug,)))
     fila = [dict(l) for l in conn.execute(
-        "SELECT id, nome, ano, motivo FROM itens_letterboxd WHERE pessoa = ? AND situacao = 'fila' ORDER BY id", (slug,))]
+        "SELECT id, nome, ano, razao FROM itens_letterboxd WHERE pessoa = ? AND situacao = 'fila' ORDER BY id", (slug,))]
     descartados = [dict(l) for l in conn.execute(
-        "SELECT id, nome, ano, caminho, motivo FROM itens_letterboxd WHERE pessoa = ? AND situacao = 'descartado' ORDER BY id",
+        "SELECT id, nome, ano, caminho, razao FROM itens_letterboxd WHERE pessoa = ? AND situacao = 'descartado' ORDER BY id",
         (slug,))]
     return {
         "pessoa": slug,

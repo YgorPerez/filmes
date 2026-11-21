@@ -42,11 +42,12 @@ def carregar(conn, catalogo, dumps):
     with ZipFile(catalogo / versao["sha256"] / MOVIELENS) as dump:
         links, notas, tags = MEMBROS[MOVIELENS]
         mapa = dict(_links(dump, links))
-        origem = (versao["fonte"], versao["data"])
+        fonte_e_data = (versao["fonte"], versao["data"])
         conn.executemany("INSERT INTO vizinhos VALUES (?, ?, ?, ?, ?, ?, ?)",
-                         _fatos("vizinhos", vizinhos(_csv(dump, notas), mapa), origem))
+                         fatos("vizinhos", vizinhos(_csv(dump, notas), mapa), fonte_e_data))
+        linhas_de_tag = ((linha["userId"], linha["movieId"], linha["tag"]) for linha in _csv(dump, tags))
         conn.executemany("INSERT INTO tags_movielens VALUES (?, ?, ?, ?, ?, ?)",
-                         _fatos("tags_movielens", _tags(_csv(dump, tags), mapa), origem))
+                         fatos("tags_movielens", contar_tags(linhas_de_tag, mapa), fonte_e_data))
     _carregar_genoma(conn, catalogo, dumps[GENOMA])
 
 
@@ -59,7 +60,7 @@ def _carregar_genoma(conn, catalogo, versao):
                 for linha in map(json.loads, fluxo)
                 if (imdb := _imdb(linha.get("imdbId")))
             }
-        origem = (versao["fonte"], versao["data"])
+        fonte_e_data = (versao["fonte"], versao["data"])
         conn.executemany("""
             INSERT INTO genoma VALUES (?, ?, ?, ?, ?, ?)
             ON CONFLICT(filme_id, tag) DO UPDATE SET
@@ -68,7 +69,7 @@ def _carregar_genoma(conn, catalogo, versao):
         """, (
             (id_, filme, tag, float(escore), fonte, data)
             for id_, filme, tag, escore, fonte, data in
-            _fatos("genoma", _genoma(_csv(dump, escores), mapa), origem)
+            fatos("genoma", _genoma(_csv(dump, escores), mapa), fonte_e_data)
         ))
 
 
@@ -88,13 +89,20 @@ def _links(dump, membro):
             yield linha["movieId"], imdb
 
 
-def _tags(linhas, mapa):
+def contar_tags(linhas, mapa, excluidos=frozenset()):
+    """Usuários distintos por (filme, tag), como (filme, tag, usuarios).
+
+    `linhas` dá (userId, movieId, tag) de tags.csv; `mapa` leva o movieId (texto)
+    ao tconst. A tag vale em minúsculas e sem espaço nas pontas. Os usuários de
+    `excluidos` não contam: a avaliação tira daqui os usuários sorteados.
+    """
     usuarios = defaultdict(set)
-    for linha in linhas:
-        filme = mapa.get(linha["movieId"])
-        tag = linha["tag"].strip().lower()
-        if filme and tag:
-            usuarios[filme, tag].add(int(linha["userId"]))
+    for usuario, movie_id, tag in linhas:
+        filme = mapa.get(str(movie_id))
+        tag = tag.strip().lower()
+        usuario = int(usuario)
+        if filme and tag and usuario not in excluidos:
+            usuarios[filme, tag].add(usuario)
     for (filme, tag), ids in sorted(usuarios.items()):
         yield filme, tag, len(ids)
 
@@ -107,7 +115,8 @@ def _genoma(linhas, mapa):
             yield filme, tag, linha["score"]
 
 
-def _fatos(tabela, linhas, origem):
+def fatos(tabela, linhas, fonte_e_data):
+    """Acrescenta Fonte e data a cada linha e põe o fato_id na frente."""
     for linha in linhas:
-        valores = linha + origem
+        valores = linha + fonte_e_data
         yield fato_id(tabela, *valores), *valores

@@ -9,7 +9,7 @@ O texto do Does the Dog Die vai citado como veio, nunca parafraseado.
 from dataclasses import dataclass
 
 from filmes.erros import ErroFilmes
-from filmes.evidencia import Evidencia, regua
+from filmes.evidencia import Evidencia, linha_do_pedido, regua
 from filmes.recomendacao.restricoes import PENDENTE, SAI, Passa
 from filmes.sob_demanda import ddd
 
@@ -47,21 +47,19 @@ class Gatilho:
         for pedido in self.temas:
             tema = dados.tema(pedido) if dados else None
             if tema is None:
-                linhas.append(_sem_dado(filme["id"], pedido))
+                linhas.append(_sem_informacao(filme["id"], pedido))
             elif tema.sim + tema.nao >= VOTOS_MINIMOS and tema.sim > tema.nao:
                 return SAI
             else:
-                linhas.append(Evidencia(
-                    pessoa=None, filme_id=filme["id"],
-                    texto=f'{ddd.NOME}, "{tema.nome}": {tema.sim} sim, {tema.nao} não. {ddd.ATRIBUICAO}',
-                    fonte=ddd.NOME, data=dados.data, forca=regua.forca_metadado_do_pedido(), tipo="metadado",
-                    fato_id=dados.fato_id, base=0.0,
+                linhas.append(linha_do_pedido(
+                    filme["id"], f'{ddd.NOME}, "{tema.nome}": {tema.sim} sim, {tema.nao} não. {ddd.ATRIBUICAO}',
+                    fonte=ddd.NOME, data=dados.data, fato_id=dados.fato_id,
                 ))
         return Passa(tuple(linhas))
 
 
-def _sem_dado(filme_id, pedido):
+def _sem_informacao(filme_id, pedido):
     return Evidencia(
-        pessoa=None, filme_id=filme_id, texto=f'sem dado do {ddd.NOME} sobre "{pedido}"',
+        pessoa=None, filme_id=filme_id, texto=f'sem informação do {ddd.NOME} sobre "{pedido}"',
         fonte=None, data=None, forca=regua.forca_palpite(), tipo="palpite", fato_id=None, base=0.0,
     )

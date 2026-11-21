@@ -62,17 +62,17 @@ def reacoes(sessao_id: str, frente: dict) -> list[Reacao]:
         if tipo == "nota":
             nota = float(r["nota"])
             repassada = bool(r.get("repassada", False))
-            origem = fonte(frente, repassada)
+            fonte_da_nota = fonte(frente, repassada)
             lista.append(Reacao(
-                fato_id=fato_id("notas", pessoa, filme_id, nota, data, origem, sessao_id),
+                fato_id=fato_id("notas", pessoa, filme_id, nota, data, fonte_da_nota, sessao_id),
                 sessao=sessao_id, pessoa=pessoa, filme_id=filme_id, tipo="nota", nota=nota, reacao=None,
-                repassada=repassada, valor=valor_da_nota(nota), data=data, fonte=origem))
+                repassada=repassada, valor=valor_da_nota(nota), data=data, fonte=fonte_da_nota))
         elif tipo == "relato" and r.get("reacao") in NIVEIS:
-            origem = fonte(frente)
+            fonte_do_relato = fonte(frente)
             lista.append(Reacao(
                 fato_id=fato_id("reacoes", sessao_id, pessoa, filme_id, r["reacao"], data),
                 sessao=sessao_id, pessoa=pessoa, filme_id=filme_id, tipo="relato", nota=None, reacao=r["reacao"],
-                repassada=False, valor=NIVEIS[r["reacao"]], data=data, fonte=origem))
+                repassada=False, valor=NIVEIS[r["reacao"]], data=data, fonte=fonte_do_relato))
         else:
             raise ErroFilmes("dados_invalidos", f"Sessão {sessao_id}: reação inválida {r!r}")
     return lista

@@ -8,9 +8,9 @@ def test_avaliar_grava_os_resultados_sem_abrir_sessao(banco, tmp_path):
     resultado = banco.ok("avaliar")
 
     assert banco.ok("sessoes-abertas") == antes
-    assert resultado["offline"]["pessoas"]["perfis"] == 3
+    assert resultado["offline"]["pessoas"]["pessoas"] == 3
     assert resultado["offline"]["pessoas"]["retidos_4_mais"] == 4
-    assert resultado["offline"]["movielens"]["perfis"] == 0
+    assert resultado["offline"]["movielens"]["pessoas"] == 0
     assert resultado["online"]["sessoes"] == 0
     assert resultado["prioridade"] == "offline"
     relatorio = Path(resultado["arquivo"])
@@ -40,10 +40,12 @@ def test_avaliar_usa_so_as_dez_sessoes_mais_recentes_com_feedback(banco, tmp_pat
     banco.ok("recomendar", "--presentes", "dono")
     resultado = banco.ok("avaliar")
     assert resultado["prioridade"] == "online"
+    # A Sessão "não vimos nada" conta na janela das 10, mas não no denominador da taxa.
     assert resultado["online"] == {
         "sessoes": 10,
+        "com_filme": 9,
         "escolhidos_top_5": 8,
-        "taxa_top_5": 0.8,
+        "taxa_top_5": 8 / 9,
         "reacoes": 9,
         "reacao_media": 1.0,
     }
@@ -83,7 +85,7 @@ def test_avaliar_exclui_os_usuarios_sorteados_da_vizinhanca(banco, tmp_path):
 
     resultado = banco.ok("avaliar")
     amostra = resultado["offline"]["movielens"]
-    assert amostra["perfis"] == amostra["recuperados"] == 1000
+    assert amostra["pessoas"] == amostra["recuperados"] == 1000
     assert amostra["retidos_4_mais"] == 2000
     assert amostra["cobertura_top_5"] == 0
     assert amostra["recall_50"] == 0.5
@@ -100,7 +102,10 @@ def test_grade_testa_tres_valores_por_peso_e_preserva_a_config(banco, tmp_path):
 
     resultado = banco.ok("avaliar", "--grade")
     grade = resultado["grade"]
-    assert grade["combinacoes"] == 81
+    # 27 conjuntos de multiplicadores; os cinco pesos de aresta variam um de cada vez
+    # (1 conjunto atual + 5 × 2 variações).
+    assert set(grade["valores"]["caminho.peso"]) == {"diretor", "roteiro", "elenco", "genero", "serie"}
+    assert grade["combinacoes"] == 27 * 11
     assert all(len(valores) == 3 for pesos in grade["valores"].values() for valores in pesos.values())
     assert len(grade["melhores"]) == 3
     assert pesos.read_bytes() == antes
@@ -124,7 +129,7 @@ def test_avaliar_usa_as_datas_do_diario_quando_o_export_tem_avaliacoes_avulsas(b
 
     # O filme mais recente nas avaliações avulsas recebeu 5. No diário,
     # o mais recente é Maré Baixa, que recebeu 2 e entra só na cobertura.
-    assert resultado["perfis"] == 4
+    assert resultado["pessoas"] == 4
     assert resultado["filmes_top_5"] == 20
     assert resultado["retidos_4_mais"] == 4
 

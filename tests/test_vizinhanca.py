@@ -36,7 +36,7 @@ def test_base_e_proporcao_menores_dao_evidencia_moderada_ou_fraca(banco):
     [moderada] = _review(_filme(saida, "Segunda Chamada"))
     [fraca] = _review(_filme(saida, "O Mapa Rasgado"))
     assert (moderada["forca"], moderada["contribuicao"]) == ("moderada", 0.6)
-    assert moderada["texto"].endswith("de 100 pessoas que deram 4+ a ele, 40% deram 4+ a este")
+    assert moderada["texto"].endswith("de 250 pessoas que deram 4+ a ele, 44% deram 4+ a este")
     assert (fraca["forca"], fraca["contribuicao"]) == ("fraca", 0.3)
 
 
@@ -44,7 +44,7 @@ def test_vizinhanca_abaixo_do_piso_nao_vira_evidencia(banco):
     saida = _todos(banco)
 
     # A Casa das Marés também é vizinha de Cidade de Vidro, mas só 20% de 600; O Mapa
-    # Rasgado é vizinho de Ponte Aérea com 80%, mas de uma base de 25 pessoas.
+    # Rasgado é vizinho de O Farol de Areia com 80%, mas de uma base de 25 pessoas.
     [casa] = _review(_filme(saida, "A Casa das Marés"))
     [mapa] = _review(_filme(saida, "O Mapa Rasgado"))
     assert "O Farol de Areia" in casa["texto"]
@@ -82,11 +82,42 @@ def test_vizinhanca_vale_para_cada_presente_com_as_notas_dela(banco):
     filme = _filme(_todos(banco, "dono", "iara"), "Ruído Branco")
 
     [da_iara] = _review(filme, "iara")
-    assert da_iara["texto"] == "deu 4 a Fronteira (2008), e de 1.000 pessoas que deram 4+ a ele, 42% deram 4+ a este"
+    assert da_iara["texto"] == "deu 4 a Fronteira (2008), e de 150 pessoas que deram 4+ a ele, 42% deram 4+ a este"
     assert da_iara["forca"] == "moderada"
 
 
-def test_base_da_vizinhanca_e_a_mesma_para_todos_os_vizinhos_da_semente(banco):
-    assert banco.consultar(
-        "SELECT filme_id FROM vizinhos GROUP BY filme_id HAVING MIN(base) <> MAX(base)"
-    ) == []
+def _da_ana(banco, titulo):
+    return _review(_filme(_todos(banco, "ana"), titulo), "ana")
+
+
+def test_nota_declarada_e_semente_de_vizinhanca_com_o_texto_e_a_regua_do_declarado(banco):
+    banco.ok("pessoa", "criar", "Ana", "--slug", "ana")
+    banco.ok("pessoa", "declarar", "ana", "amo O Farol", "--filme", "tt9000101", "--reacao", "ama")
+    banco.ok("reconstruir")
+
+    [evidencia] = _da_ana(banco, "A Casa das Marés")
+    assert evidencia["texto"] == ("disse que ama O Farol de Areia (2012), e de 3.104 pessoas que deram 4+ a ele, "
+                                  "64% deram 4+ a este")
+    assert evidencia["forca"] == "forte"
+
+
+def test_relato_de_que_ama_um_filme_e_semente_de_vizinhanca_um_nivel_abaixo(banco):
+    banco.ok("pessoa", "criar", "Ana", "--slug", "ana")
+    banco.ok("pessoa", "relatar", "ana", "ama O Farol", "--filme", "tt9000101", "--reacao", "ama")
+    banco.ok("reconstruir")
+
+    [evidencia] = _da_ana(banco, "A Casa das Marés")
+    assert evidencia["texto"].startswith("segundo o Dono, ama O Farol de Areia (2012), e de 3.104 pessoas")
+    assert evidencia["forca"] == "moderada"
+
+
+def test_proporcao_exata_no_limite_da_regua_ja_vale_a_forca(banco):
+    saida = _todos(banco)
+
+    # De 600 pessoas que deram 4+ a Cidade de Vidro, 240 (40%) e 150 (25%).
+    [moderada] = _review(_filme(saida, "Porto Seguro"))
+    [fraca] = _review(_filme(saida, "Canal Fundo"))
+    assert moderada["forca"] == "moderada"
+    assert moderada["texto"].endswith("de 600 pessoas que deram 4+ a ele, 40% deram 4+ a este")
+    assert fraca["forca"] == "fraca"
+    assert fraca["texto"].endswith("de 600 pessoas que deram 4+ a ele, 25% deram 4+ a este")

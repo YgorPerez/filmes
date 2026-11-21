@@ -7,7 +7,7 @@ O pedido vale pelo código ISO ("pt"), pelo nome ("português") ou pelo QID.
 from dataclasses import dataclass
 
 from filmes.erros import ErroFilmes
-from filmes.evidencia import Evidencia, regua
+from filmes.evidencia import linha_do_pedido
 from filmes.recomendacao.restricoes import Passa
 
 
@@ -38,9 +38,8 @@ class Idioma:
             if linha["filme_id"] not in filmes or linha["filme_id"] in vereditos:
                 continue
             if alvo in {(linha["codigo"] or "").casefold(), linha["rotulo"].casefold(), linha["idioma_id"].casefold()}:
-                vereditos[linha["filme_id"]] = Passa((Evidencia(
-                    pessoa=None, filme_id=linha["filme_id"], texto=f"idioma original {linha['rotulo']}",
-                    fonte=f"{linha['fonte']} P364", data=linha["data"], forca=regua.forca_metadado_do_pedido(),
-                    tipo="metadado", fato_id=linha["fato_id"], base=0.0,
+                vereditos[linha["filme_id"]] = Passa((linha_do_pedido(
+                    linha["filme_id"], f"idioma original {linha['rotulo']}",
+                    fonte=f"{linha['fonte']} P364", data=linha["data"], fato_id=linha["fato_id"],
                 ),))
         return vereditos

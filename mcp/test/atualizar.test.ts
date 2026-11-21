@@ -7,8 +7,10 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { RAIZ } from "../src/cli.ts";
 import { criarServidor } from "../src/servidor.ts";
+import { prepararAmbiente } from "./ambiente.ts";
 
 it("atualizar entrega progresso e as versões fixadas pela CLI", async () => {
+  const limpar = prepararAmbiente();
   const pasta = mkdtempSync(join(tmpdir(), "filmes-atualizar-"));
   const cliente = new Client({ name: "teste", version: "0" });
   try {
@@ -37,5 +39,6 @@ it("atualizar entrega progresso e as versões fixadas pela CLI", async () => {
   } finally {
     await cliente.close();
     rmSync(pasta, { recursive: true, force: true });
+    limpar();
   }
 });

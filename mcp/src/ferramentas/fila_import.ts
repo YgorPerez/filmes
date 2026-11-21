@@ -8,7 +8,7 @@ export default definirFerramenta({
     acao: z.enum(["ver", "confirmar", "descartar"]),
     id: z.string().min(1).optional().describe("ID do item devolvido por ver"),
     filme: z.string().trim().min(1).optional().describe("confirmar: tconst ou link do filme no IMDb ou TMDB"),
-    motivo: z.string().trim().min(1).optional().describe('descartar: ex. "não é filme" ou "ignorar"'),
+    razao: z.string().trim().min(1).optional().describe('descartar: ex. "não é filme" ou "ignorar"'),
   },
   cli: (e) => {
     if (e.acao === "ver") return { comando: "fila", args: ["ver"] };
@@ -17,7 +17,7 @@ export default definirFerramenta({
       if (!e.filme) throw new Error("fila confirmar precisa de filme");
       return { comando: "fila", args: ["confirmar", `--filme=${e.filme}`, "--", e.id] };
     }
-    const motivo = e.motivo === undefined ? [] : [`--motivo=${e.motivo}`];
-    return { comando: "fila", args: ["descartar", ...motivo, "--", e.id] };
+    const razao = e.razao === undefined ? [] : [`--razao=${e.razao}`];
+    return { comando: "fila", args: ["descartar", ...razao, "--", e.id] };
   },
 });

@@ -5,13 +5,7 @@ contexto, Regra, Filme escolhido e Feedback; no corpo, a Recomendação inteira
 com todas as Evidências no formato completo de linha.
 """
 
-import yaml
-
-
-def _ler(caminho):
-    texto = caminho.read_text(encoding="utf-8")
-    _, frente, corpo = texto.split("---\n", 2)
-    return yaml.safe_load(frente), corpo
+from conftest import ler_markdown as _ler
 
 
 def test_recomendar_abre_a_sessao_num_arquivo_do_repo_de_dados(banco, dados):
@@ -90,8 +84,8 @@ def test_sessoes_abertas_lista_as_sessoes_sem_feedback_a_mais_recente_primeiro(b
         "data": "2026-11-19",
         "presentes": ["bruno", "iara"],
         "pedido": "eu e a Iara",
-        "recomendacao": [{"posicao": 1, "id": "tt9000101", "titulo": "O Farol de Areia"},
-                         {"posicao": 2, "id": "tt9000203", "titulo": "Noite de Estreia"}],
+        "recomendacao": [{"posicao": 1, "id": "tt9000203", "titulo": "Noite de Estreia"},
+                         {"posicao": 2, "id": "tt9000302", "titulo": "Vento Norte"}],
     }
 
 
