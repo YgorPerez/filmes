@@ -138,8 +138,9 @@ def consultar_tmdb(fonte: tmdb.TMDB, nome: str, ano: int, tmdb_id: str | None) -
     """A decisão que a busca do TMDB dá ao filme, ou None se o TMDB não respondeu.
 
     Aceita um filme só com título igual (sem diferença de caixa, acento e pontuação),
-    primeiro no ano, depois em ano ± 1. Mais de um vai para a fila com os candidatos.
-    Nenhum filme e uma série com o título no ano é minissérie."""
+    primeiro no ano, depois em ano ± 1. Curta quase sem votos sai dos candidatos
+    quando sobra outro. Uma série com o título no ano e mais votos que todos os
+    filmes é minissérie. Mais de um filme vai para a fila com os candidatos."""
     base = _decisao(fonte, nome, ano)
     if tmdb_id:
         imdb = fonte.imdb(tmdb_id)
@@ -150,6 +151,17 @@ def consultar_tmdb(fonte: tmdb.TMDB, nome: str, ano: int, tmdb_id: str | None) -
     iguais = filmes_com_mesmo_titulo(fonte.filmes, nome, ano)
     if iguais is None:
         return None
+    iguais = _sem_curtas(fonte, iguais)
+    if iguais is None:
+        return None
+    series = fonte.series(nome, ano)
+    if series is None:
+        return None
+    votos_da_serie = max((s.get("vote_count") or 0 for s in series
+                          if _mesmo_titulo(nome, s, "name", "original_name")), default=None)
+    if votos_da_serie is not None and votos_da_serie > max(
+            (f.get("vote_count") or 0 for f in iguais), default=-1):
+        return base | {"situacao": "minisserie"}
     if len(iguais) == 1:
         [filme] = iguais
         imdb = fonte.imdb(filme["id"])
@@ -160,11 +172,6 @@ def consultar_tmdb(fonte: tmdb.TMDB, nome: str, ano: int, tmdb_id: str | None) -
         return base | {"situacao": "pendente", "razao": "o TMDB achou o filme, mas sem ID do IMDb"}
     if iguais:
         return base | {"situacao": "pendente", "razao": "o TMDB achou mais de um filme com esse título"}
-    series = fonte.series(nome, ano)
-    if series is None:
-        return None
-    if any(_mesmo_titulo(nome, s, "name", "original_name") for s in series):
-        return base | {"situacao": "minisserie"}
     return base | {"situacao": "pendente", "razao": "nem o Wikidata nem o TMDB acharam o filme"}
 
 
@@ -174,6 +181,27 @@ def consultar_id_do_tmdb(fonte: tmdb.TMDB, nome: str, ano: int | None, tmdb_id: 
     if not imdb:
         return None
     return _decisao(fonte, nome, ano) | {"situacao": "tmdb", "filme": imdb, "tmdb": str(tmdb_id)}
+
+
+CURTA_MINUTOS = 40
+CURTA_VOTOS = 10
+
+
+def _sem_curtas(fonte, candidatos):
+    """Os candidatos sem os curtas (menos de 40 min e de 10 votos), se sobrar algum;
+    None se o TMDB parou de responder. A duração só é pedida para quem tem poucos votos."""
+    if len(candidatos) < 2:
+        return candidatos
+    longas = []
+    for filme in candidatos:
+        if (filme.get("vote_count") or 0) < CURTA_VOTOS:
+            duracao = fonte.duracao(filme["id"])
+            if duracao is None and fonte.desligada:
+                return None
+            if duracao and duracao < CURTA_MINUTOS:
+                continue
+        longas.append(filme)
+    return longas or candidatos
 
 
 def _decisao(fonte, nome, ano):

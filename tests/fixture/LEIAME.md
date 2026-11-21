@@ -159,6 +159,15 @@ linhas. As tags de O Farol de Areia aparecem tanto no diário quanto na review.
 - Vento Norte fica na fila com dois candidatos do TMDB. Confirmar o primeiro
   usa `externos-9102.json`. Filme Perdido também fica na fila, sem candidato.
 
+### Série e curta homônimos (#53)
+
+`test_letterboxd.py` monta um `watched.csv` no diretório temporário com estes títulos:
+
+- Dama do Lago (2017): o filme 9301 tem 2 votos e a série 9302 tem 540. Vira minissérie.
+- Porto Seguro (2019): o filme 9311 tem 820 votos e a série 9312 tem 31. Resolve para `tt9009311`.
+- Eco (2021): 9321 é curta de 6 min sem votos e 9322 é longa de 98 min com 4 votos (`detalhes-<id>.json`). Resolve para `tt9009322`.
+- Duas Margens (2022): os dois candidatos são curtas. Ficam os dois, e o item vai para a fila.
+
 ### Nada triste (#42)
 
 `test_restricao_tristeza.py`. Sinais de tristeza e de tema pesado em filmes sem Nota de ninguém, com as tags e os QIDs reais de `config/tristeza.toml`:

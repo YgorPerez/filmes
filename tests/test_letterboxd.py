@@ -5,6 +5,7 @@ real). A P6127 do Wikidata está em `catalogo/slugs_letterboxd.csv` e as respost
 do TMDB em `gravacoes/tmdb/`. O LEIAME da fixture diz o caminho de cada filme.
 """
 
+import re
 import shutil
 import zipfile
 from pathlib import Path
@@ -217,3 +218,36 @@ def test_cache_do_tmdb_ainda_resolve_depois_de_um_item_sem_resposta(olga, tmp_pa
     assert len(saida["avisos"]) == 1
     assert saida["fila"] == 1
     assert saida["resolvidos"]["tmdb"] == 1
+
+
+def _importar_watched(cli, tmp_path, linhas):
+    zip_ = tmp_path / "watched.zip"
+    with zipfile.ZipFile(zip_, "w") as z:
+        z.writestr("watched.csv", "Date,Name,Year,Letterboxd URI\n" + "".join(
+            f"2024-05-0{n},{nome},{ano},https://boxd.it/s{n}\n" for n, (nome, ano) in enumerate(linhas, 1)))
+    return cli.ok("importar", "--pessoa", "olga", "--letterboxd", str(zip_))
+
+
+def _situacoes(dados):
+    texto = (dados / "imports" / "letterboxd.md").read_text()
+    return {nome: situacao for nome, situacao in re.findall(r"nome: ([^,]+), .*?situacao: (\w+)", texto, re.S)}
+
+
+def test_serie_com_mais_votos_vence_o_filme_homonimo(olga, tmp_path, dados):
+    saida = _importar_watched(olga, tmp_path, [("Dama do Lago", 2017), ("Porto Seguro", 2019)])
+    assert saida["resolvidos"]["tmdb"] == 1
+    situacoes = _situacoes(dados)
+    assert situacoes["Dama do Lago"] == "minisserie"
+    assert situacoes["Porto Seguro"] == "tmdb"
+    vistos = {l[0] for l in olga.consultar("SELECT filme_id FROM ja_visto WHERE pessoa = 'olga'")}
+    assert "tt9009311" in vistos and "tt9009301" not in vistos
+
+
+def test_curta_sem_votos_sai_dos_candidatos_quando_ha_um_longa(olga, tmp_path, dados):
+    saida = _importar_watched(olga, tmp_path, [("Eco", 2021), ("Duas Margens", 2022)])
+    assert saida["resolvidos"]["tmdb"] == 1
+    assert _situacoes(dados)["Eco"] == "tmdb"
+    vistos = {l[0] for l in olga.consultar("SELECT filme_id FROM ja_visto WHERE pessoa = 'olga'")}
+    assert "tt9009322" in vistos
+    [margens] = [i for i in olga.ok("fila", "ver")["itens"] if i["nome"] == "Duas Margens"]
+    assert len(margens["candidatos"]) == 2
