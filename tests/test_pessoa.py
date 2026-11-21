@@ -90,7 +90,8 @@ def test_veto_tira_os_filmes_quando_a_pessoa_esta_presente(banco):
     assert "Explosão Final" not in _titulos(com_ana)
     assert "Explosão Final" in _titulos(sem_ana)
     assert com_ana["vetos"] == [{"pessoa": "ana", "texto": "nunca vê terror", "alvo": TERROR,
-                                 "rotulo": "Terror", "filmes_tirados": 3}]
+                                 "rotulo": "Terror", "filmes_tirados": 3,
+                                 "por_caminho": {"direto": 3, "subgeneros": 0, "genero_imdb": 0}}]
     assert sem_ana["vetos"] == []
 
 
