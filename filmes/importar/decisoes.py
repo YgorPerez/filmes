@@ -6,7 +6,7 @@ Dono, uma entrada por par (Name, Year). Os candidatos da busca ficam no cache.
 
     situacao: tmdb        o TMDB achou um filme só com o título; `filme` é o tconst
                           (com `tmdb` quando veio do ID do TMDB que o RSS trouxe)
-    situacao: minisserie  o TMDB achou só uma série com o título
+    situacao: minisserie  a série do TMDB com o título tem mais votos que os filmes
     situacao: pendente    o TMDB não achou um filme único com ID do IMDb
     situacao: confirmado  o Dono disse qual é o filme (`filme`)
     situacao: descartado  o Dono disse que não é filme ou que é para ignorar (`razao`)

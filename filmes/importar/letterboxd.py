@@ -87,7 +87,7 @@ def resolver(conn, nome: str, ano: int | None, decisao: dict | None, tmdb_id: st
     if decisao and decisao["situacao"] == "tmdb":
         return Resolucao("resolvido", "tmdb", filme_id=decisao["filme"])
     if decisao and decisao["situacao"] == "minisserie":
-        return Resolucao("descartado", "tmdb", razao="minissérie (só há série com esse título no TMDB)")
+        return Resolucao("descartado", "tmdb", razao="minissérie (no TMDB, a série com esse título tem mais votos que qualquer filme)")
     if decisao and decisao["situacao"] == "pendente":
         return Resolucao("fila", razao=decisao.get("razao"), tmdb_id=tmdb_id)
     return Resolucao("fila", razao="o Wikidata não deu um ID do IMDb, e o TMDB ainda não respondeu (`fila reprocessar` tenta de novo)",
