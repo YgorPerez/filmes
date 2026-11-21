@@ -13,7 +13,8 @@ Frontmatter (protótipo de #10):
       registrado_em: 2026-11-21
       reacoes:
         - {pessoa: bruno, tipo: nota, nota: 4.0}
-        - {pessoa: iara, tipo: nota, nota: 4.5, repassada: true}
+        - {pessoa: iara, tipo: nota, nota: 4.5, nota_original: 9/10, repassada: true,
+           comentario: enquadramento e diálogo muito bons}
         - {pessoa: teo, tipo: relato, reacao: gostou}
     recomendacao:                      # a lista, para o Feedback achar a posição
       - {posicao: 1, id: tt9000104, titulo: As Horas Lentas}

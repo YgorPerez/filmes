@@ -5,7 +5,7 @@ from filmes.dados import pessoas
 from filmes.erros import ErroFilmes
 from filmes.evidencia import regua
 
-AJUDA = "cria uma Pessoa, mostra o que se sabe dela e registra Declarados, Relatos e Vetos"
+AJUDA = "cria uma Pessoa, mostra o que se sabe dela e registra Declarados, Relatos, Vetos e Já vistos"
 
 
 def configurar(parser):
@@ -38,6 +38,14 @@ def configurar(parser):
     _argumentos_de_alvo(p, obrigatorio=True)
     p.add_argument("--data", help="AAAA-MM-DD (padrão: hoje)")
     p.set_defaults(_acao=_vetar)
+
+    p = _acao(acoes, "visto", "registra que a Pessoa já viu o filme e, com --nota, a Nota que ela deu")
+    p.add_argument("pessoa", help='slug, nome ou apelido; "dono" é o Dono')
+    p.add_argument("--filme", required=True, help="ID do filme no Catálogo (tt...)")
+    p.add_argument("--nota", help='a Nota que a Pessoa deu: de 0,5 a 5, ou de 1 a 10 escrita "8/10"')
+    p.add_argument("--fonte", default="conversa com o Dono", help='de onde veio (padrão: "conversa com o Dono")')
+    p.add_argument("--data", help="AAAA-MM-DD (padrão: hoje)")
+    p.set_defaults(_acao=_visto)
 
 
 def _acao(acoes, nome, ajuda):
@@ -83,6 +91,7 @@ def _ver(args, amb):
         "vetos": [v.como_dict() for v in pessoa.vetos],
         "declarados": [_dito_json("declarados", pessoa.slug, d, amb) for d in pessoa.declarados],
         "relatos": [_dito_json("relatos", pessoa.slug, d, amb) for d in pessoa.relatos],
+        "vistos": [_visto_json(pessoa.slug, v) for v in pessoa.vistos],
         "imports": pessoa.imports,
     }
     if amb.banco.exists():
@@ -101,7 +110,7 @@ def _ver(args, amb):
 def _declarados_importados(conn, slug, hoje):
     for linha in conn.execute(
         """SELECT fato_id, texto, fonte, data, especifico, reacao, alvo, rotulo FROM declarados
-           WHERE pessoa = ? AND fato_id LIKE 'letterboxd:%' ORDER BY data DESC, fato_id""", (slug,)
+           WHERE pessoa = ? AND (fato_id LIKE 'letterboxd:%' OR sessao IS NOT NULL) ORDER BY data DESC, fato_id""", (slug,)
     ):
         especifico = bool(linha["especifico"])
         yield dict(linha) | {
@@ -127,6 +136,51 @@ def _vetar(args, amb):
     else:
         veto = next(v for v in pessoa.vetos if v.alvo == alvo)
     return {"pessoa": pessoa.slug, "veto": veto.como_dict(), "novo": novo}
+
+
+def _visto(args, amb):
+    pessoa = pessoas.resolver(amb.dados, args.pessoa)
+    if not args.filme.startswith("tt"):
+        raise ErroFilmes("uso_invalido", f"--filme precisa ser um ID de filme (tt...), não {args.filme!r}")
+    nota = _nota(args.nota) if args.nota is not None else None
+    with abrir_leitura(amb.banco) as conn:
+        rotulo = fatos.rotulo_do_alvo(conn, args.filme)
+    visto = pessoas.Visto(data=_data(args.data, amb), fonte=_fonte(args.fonte), alvo=args.filme,
+                          rotulo=rotulo, nota=nota)
+    novo = pessoa.acrescentar("já vistos", visto)
+    if novo:
+        _salvar(amb, pessoa)
+    return {"pessoa": pessoa.slug, "visto": _visto_json(pessoa.slug, visto), "novo": novo}
+
+
+def _visto_json(slug, visto):
+    return {"filme": visto.alvo, "titulo": visto.rotulo, "nota": visto.nota, "data": visto.data,
+            "fonte": visto.fonte, "fato_id": fatos.id_do_visto(slug, visto)}
+
+
+def _nota(texto):
+    """"4", "4,5" e "4.5" são a escala de 0,5 a 5; "8/10" é dividido por 2."""
+    bruto = texto.strip().replace(",", ".")
+    de_dez = bruto.endswith("/10")
+    try:
+        valor = float(bruto.removesuffix("/10"))
+    except ValueError:
+        raise ErroFilmes("uso_invalido", f'nota inválida: {texto!r} (use de 0,5 a 5, ou "8/10")')
+    if de_dez:
+        if not 1 <= valor <= 10:
+            raise ErroFilmes("uso_invalido", f"nota de 1 a 10 fora da escala: {texto!r}")
+        return valor / 2
+    if not 0.5 <= valor <= 5:
+        dica = f' (se é de 0 a 10, escreva "{texto.strip()}/10")' if valor <= 10 else ""
+        raise ErroFilmes("uso_invalido", f"nota fora da escala de 0,5 a 5: {texto!r}{dica}")
+    return valor
+
+
+def _fonte(fonte):
+    fonte = " ".join(fonte.split())
+    if not fonte or " · " in fonte:
+        raise ErroFilmes("uso_invalido", "a fonte não pode ser vazia nem ter ' · '")
+    return fonte
 
 
 def _salvar(amb, pessoa):
@@ -168,9 +222,7 @@ def _registrar_dito(args, amb, secao):
         raise ErroFilmes("uso_invalido", "--reacao precisa de --filme ou --entidade")
     if args.review and args.especifico is False:
         raise ErroFilmes("uso_invalido", "review ou tag da própria Pessoa é sempre específico")
-    fonte = " ".join(args.fonte.split())
-    if not fonte or " · " in fonte:
-        raise ErroFilmes("uso_invalido", "a fonte não pode ser vazia nem ter ' · '")
+    fonte = _fonte(args.fonte)
 
     rotulo, especifico = None, args.especifico
     if alvo:
