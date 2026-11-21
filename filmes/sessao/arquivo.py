@@ -17,6 +17,17 @@ Frontmatter (protótipo de #10):
         - {pessoa: teo, tipo: relato, reacao: gostou}
     recomendacao:                      # a lista, para o Feedback achar a posição
       - {posicao: 1, id: tt9000104, titulo: As Horas Lentas}
+    refeita_em: 2026-11-21             # só depois de `recomendar --sessao` (#45)
+    versoes:                           # as versões anteriores, a mais antiga primeiro
+      - versao: 1
+        data: 2026-11-20               # quando essa versão foi feita
+        presentes: [bruno, iara]
+        contexto: {pedido, duracao_max, clima, restricoes}
+        regra: {nome: padrao}
+        recomendacao:
+          - {posicao: 1, id: tt9000102, titulo: Maré Baixa}
+
+A versão atual é a do topo do frontmatter; o número dela é `len(versoes) + 1`.
 
 O corpo guarda a Recomendação com todas as Evidências no formato completo de linha.
 """
@@ -86,6 +97,18 @@ def escrever(repo: Path, sessao_id: str, frente: dict, corpo: str) -> None:
 
 def aberta(frente: dict) -> bool:
     return not frente.get("feedback")
+
+
+def versao_atual(frente: dict) -> dict:
+    """A versão do topo do frontmatter, no formato de um item de `versoes`."""
+    return {
+        "versao": len(frente.get("versoes") or []) + 1,
+        "data": frente.get("refeita_em") or frente["data"],
+        "presentes": frente["presentes"],
+        "contexto": frente.get("contexto"),
+        "regra": frente["regra"],
+        "recomendacao": frente.get("recomendacao") or [],
+    }
 
 
 def novo_id(repo: Path, data: dt.date, partes: list[str]) -> str:

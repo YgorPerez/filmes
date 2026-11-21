@@ -20,6 +20,7 @@ export default definirFerramenta({
     "Clima e grupo ou sozinho puxam a ordem dos filmes. " +
     "A linha de Crédito aparece em `linhas_do_filme` quando o Crédito fez o filme subir. " +
     "`credito` traz o Crédito de cada Presente na Regra padrão em grupo. Cada chamada abre uma Sessão (`sessao.id`). " +
+    "Com `sessao`, refaz a Recomendação nessa Sessão aberta em vez de abrir outra, e `sessao.versao` conta as versões. " +
     "Antes, chame `sessoes_abertas` e, se houver uma, pergunte por ela. O Dono pode pular. " +
     "A resposta inclui `climas` (os aceitos), `restricoes`, `avisos` e `atribuicoes`. " +
     "Copie o texto do Does the Dog Die como veio.",
@@ -42,6 +43,14 @@ export default definirFerramenta({
       ),
     quantos: z.number().int().min(1).max(100).optional().describe("tamanho da lista; padrão 5"),
     pedido: z.string().optional().describe("o pedido do Dono como ele disse, guardado na Sessão"),
+    sessao: z
+      .string()
+      .regex(/^[^-\s]/)
+      .optional()
+      .describe(
+        "ID da Sessão aberta a refazer quando o pedido muda antes de verem algo (outro tempo, Restrição, " +
+          "Presente ou Já visto); a versão anterior fica no histórico. Sem ele, abre uma Sessão nova",
+      ),
     duracao_max: z.number().int().min(1).optional().describe("tempo disponível, em minutos"),
     desde: z.number().int().optional().describe('ano de lançamento mínimo, inclusive: "de 1990 em diante" é 1990'),
     ate: z.number().int().optional().describe('ano de lançamento máximo, inclusive: "até 2005" é 2005; "anos 90" é desde 1990 e ate 1999'),
@@ -66,6 +75,7 @@ export default definirFerramenta({
     for (const gatilho of e.gatilhos ?? []) args.push(`--gatilho=${gatilho}`);
     if (e.sem_ja_visto) args.push("--sem-ja-visto");
     if (e.pedido !== undefined) args.push(`--pedido=${e.pedido}`);
+    if (e.sessao) args.push("--sessao", e.sessao);
     for (const clima of e.climas ?? []) args.push(`--clima=${clima}`);
     return { comando: "recomendar", args };
   },
