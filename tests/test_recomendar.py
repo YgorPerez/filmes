@@ -150,3 +150,11 @@ def test_filme_a_que_a_pessoa_deu_nota_e_ja_visto_e_pesa_contra(banco):
     assert visto["fato_id"] in [linha[0] for linha in banco.consultar(
         "SELECT fato_id FROM notas WHERE pessoa = 'bruno' AND filme_id = 'tt9000101'")]
     assert "O Farol de Areia" not in [f["titulo"] for f in banco.ok("recomendar", "--presentes", "dono")["filmes"]]
+
+
+def test_filme_com_nota_imdb_abaixo_de_7_nunca_vira_candidato(banco):
+    # Sombra Morna é de Helena Prado, a diretora preferida de Bruno, mas tem 6,5 no IMDb.
+    titulos = {f["titulo"] for f in _todos(banco)["filmes"]}
+
+    assert "Sombra Morna" not in titulos
+    assert "As Horas Lentas" in titulos  # 7,4 passa

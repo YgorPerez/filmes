@@ -26,6 +26,8 @@ k = 1.0
 [catalogo]
 # Mínimo de votos no IMDb para um filme virar Candidato.
 votos_minimos = 1000
+# Nota mínima no IMDb para um filme virar Candidato (decisão do Dono, 2026-11-21).
+nota_imdb_minima = 7.0
 
 [recomendacao]
 # Quantos filmes a Recomendação devolve quando o pedido não diz.
