@@ -6,7 +6,7 @@ Filme sem duração no Catálogo sai: não dá para garantir que cabe.
 from dataclasses import dataclass
 
 from filmes.erros import ErroFilmes
-from filmes.evidencia import Evidencia, regua, texto
+from filmes.evidencia import linha_do_pedido, texto
 from filmes.recomendacao.restricoes import Passa
 
 
@@ -38,9 +38,7 @@ class Duracao:
         }
 
     def _linha(self, filme):
-        return Evidencia(
-            pessoa=None, filme_id=filme["id"],
-            texto=f"duração {texto.duracao(filme['duracao_min'])}, dentro do limite de {texto.duracao(self.maximo)}",
-            fonte="IMDb", data=filme["data_imdb"], forca=regua.forca_metadado_do_pedido(), tipo="metadado",
-            fato_id=filme["id"], base=0.0,
+        return linha_do_pedido(
+            filme["id"], f"duração {texto.duracao(filme['duracao_min'])}, dentro do limite de {texto.duracao(self.maximo)}",
+            fonte="IMDb", data=filme["data_imdb"], fato_id=filme["id"],
         )

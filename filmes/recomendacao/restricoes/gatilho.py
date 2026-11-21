@@ -9,7 +9,7 @@ O texto do Does the Dog Die vai citado como veio, nunca parafraseado.
 from dataclasses import dataclass
 
 from filmes.erros import ErroFilmes
-from filmes.evidencia import Evidencia, regua
+from filmes.evidencia import Evidencia, linha_do_pedido, regua
 from filmes.recomendacao.restricoes import PENDENTE, SAI, Passa
 from filmes.sob_demanda import ddd
 
@@ -51,11 +51,9 @@ class Gatilho:
             elif tema.sim + tema.nao >= VOTOS_MINIMOS and tema.sim > tema.nao:
                 return SAI
             else:
-                linhas.append(Evidencia(
-                    pessoa=None, filme_id=filme["id"],
-                    texto=f'{ddd.NOME}, "{tema.nome}": {tema.sim} sim, {tema.nao} não. {ddd.ATRIBUICAO}',
-                    fonte=ddd.NOME, data=dados.data, forca=regua.forca_metadado_do_pedido(), tipo="metadado",
-                    fato_id=dados.fato_id, base=0.0,
+                linhas.append(linha_do_pedido(
+                    filme["id"], f'{ddd.NOME}, "{tema.nome}": {tema.sim} sim, {tema.nao} não. {ddd.ATRIBUICAO}',
+                    fonte=ddd.NOME, data=dados.data, fato_id=dados.fato_id,
                 ))
         return Passa(tuple(linhas))
 
