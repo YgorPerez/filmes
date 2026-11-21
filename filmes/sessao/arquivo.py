@@ -21,7 +21,9 @@ O corpo guarda a Recomendação com todas as Evidências no formato completo de 
 """
 
 import datetime as dt
+import re
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 
 from filmes.dados import markdown
 from filmes.erros import ErroFilmes
@@ -34,6 +36,8 @@ def relativo(sessao_id: str) -> str:
 
 
 def caminho(repo: Path, sessao_id: str) -> Path:
+    if not sessao_id or Path(sessao_id).name != sessao_id or sessao_id in {".", ".."}:
+        raise ErroFilmes("uso_invalido", "passe o ID da Sessão sem o caminho do arquivo")
     return repo / PASTA / f"{sessao_id}.md"
 
 
@@ -49,11 +53,26 @@ def ler(repo: Path, sessao_id: str) -> tuple[dict, str]:
     for campo in ("data", "presentes", "regra"):
         if campo not in frente:
             raise ErroFilmes("dados_invalidos", f"{arquivo}: falta o campo {campo}")
+    if frente["regra"] == "media-sem-miseria-com-justica":
+        frente["regra"] = {"nome": "padrao"}
+    if "recomendacao" not in frente:
+        frente["recomendacao"] = [
+            {"posicao": int(posicao), "id": filme, "titulo": titulo}
+            for posicao, titulo, filme in re.findall(r"^(\d+)\. (.+) \((tt\d+)\)$", corpo, re.MULTILINE)
+        ]
     return frente, corpo
 
 
 def escrever(repo: Path, sessao_id: str, frente: dict, corpo: str) -> None:
-    markdown.escrever(caminho(repo, sessao_id), frente, corpo)
+    destino = caminho(repo, sessao_id)
+    destino.parent.mkdir(parents=True, exist_ok=True)
+    with NamedTemporaryFile(dir=destino.parent, delete=False) as arquivo:
+        temporario = Path(arquivo.name)
+    try:
+        markdown.escrever(temporario, frente, corpo)
+        temporario.replace(destino)
+    finally:
+        temporario.unlink(missing_ok=True)
 
 
 def aberta(frente: dict) -> bool:
@@ -61,14 +80,12 @@ def aberta(frente: dict) -> bool:
 
 
 def novo_id(repo: Path, data: dt.date, partes: list[str]) -> str:
-    """`<data>-<presentes>`. Se já houver uma Sessão fechada com esse nome, ganha -2, -3...
-    Uma aberta com o mesmo nome é a mesma Sessão pedida de novo e é regravada."""
+    """`<data>-<presentes>`, com sufixo -2, -3... quando o nome já existe."""
     base = f"{data.isoformat()}-{'-'.join(partes)}"
     n = 1
     while True:
         sessao_id = base if n == 1 else f"{base}-{n}"
-        arquivo = caminho(repo, sessao_id)
-        if not arquivo.exists() or aberta(markdown.ler(arquivo)[0]):
+        if not caminho(repo, sessao_id).exists():
             return sessao_id
         n += 1
 

@@ -33,8 +33,8 @@ def abrir(amb: Ambiente, recomendacao: dict, contexto: dict) -> dict:
             "recomendacao": [{"posicao": f["posicao"], "id": f["id"], "titulo": f["titulo"]}
                              for f in recomendacao["filmes"]],
         }
+        banco.carregar(conn, sessao_id, frente)
         arquivo.escrever(amb.dados, sessao_id, frente, arquivo.corpo(recomendacao, nomes))
-        banco.carregar(conn, amb.dados, sessao_id)
     return {"id": sessao_id, "arquivo": arquivo.relativo(sessao_id)}
 
 
@@ -65,6 +65,7 @@ def escrita(amb: Ambiente):
     conn.execute("PRAGMA foreign_keys = ON")
     try:
         with conn:
+            conn.execute("BEGIN IMMEDIATE")
             yield conn
     finally:
         conn.close()

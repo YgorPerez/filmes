@@ -12,7 +12,7 @@ export default definirFerramenta({
     'recebe a linha "sem fato". `so_palpites` marca filme sem Fato nenhum, que só entra no fim quando ' +
     'faltam Candidatos com Fato. `do_filme` traz as linhas do filme, como a de Crédito, que só aparece no filme ' +
     "que subiu por causa dele; `credito` diz o Crédito de cada Presente (só na Regra padrão, em grupo). " +
-    "Cada chamada abre a Sessão (`sessao.id`) no repo de dados; pedir de novo com a mesma Sessão aberta a regrava. " +
+    "Cada chamada abre uma Sessão (`sessao.id`) no repo de dados. " +
     'Presentes por slug, nome ou apelido; "dono" é o Dono.',
   entrada: {
     presentes: z.array(pessoa).min(1).describe('Pessoas da Sessão, ex.: ["dono", "ana"]'),

@@ -61,15 +61,17 @@ def test_dono_sozinho_da_nome_a_sessao(banco, dados):
     assert (dados / "sessoes" / "2026-11-20-bruno.md").exists()
 
 
-def test_pedir_de_novo_com_a_sessao_aberta_regrava_a_mesma_sessao(banco, dados):
-    banco.ok("recomendar", "--presentes", "dono", "iara", "--pedido", "primeira tentativa")
-    saida = banco.ok("recomendar", "--presentes", "dono", "iara", "--regra", "media", "--pedido", "corrigido")
+def test_novo_pedido_no_mesmo_dia_preserva_a_sessao_pulada(banco, dados):
+    primeira = banco.ok("recomendar", "--presentes", "dono", "iara", "--pedido", "primeira Sessão")
+    saida = banco.ok("recomendar", "--presentes", "dono", "iara", "--regra", "media", "--pedido", "outra Sessão")
 
-    assert saida["sessao"]["id"] == "2026-11-20-iara"
-    assert [a.name for a in (dados / "sessoes").iterdir()] == ["2026-11-20-iara.md"]
-    frente, _ = _ler(dados / "sessoes" / "2026-11-20-iara.md")
-    assert frente["contexto"]["pedido"] == "corrigido"
-    assert frente["regra"] == {"nome": "media"}
+    assert primeira["sessao"]["id"] == "2026-11-20-iara"
+    assert saida["sessao"]["id"] == "2026-11-20-iara-2"
+    frente, _ = _ler(dados / primeira["sessao"]["arquivo"])
+    assert frente["contexto"]["pedido"] == "primeira Sessão"
+    assert [s["id"] for s in banco.ok("sessoes-abertas")["sessoes"]] == [
+        "2026-11-20-iara-2", "2026-11-20-iara",
+    ]
 
 
 def test_sessoes_abertas_lista_as_sessoes_sem_feedback_a_mais_recente_primeiro(banco):
@@ -109,3 +111,19 @@ def test_reconstruir_tira_dos_arquivos_de_sessao_os_mesmos_fatos_que_o_feedback_
 
     assert _conteudo(banco) == depois_do_feedback
     assert depois_do_feedback["reacoes"] and depois_do_feedback["ja_visto"] and len(depois_do_feedback["sessoes"]) == 2
+
+
+def test_reconstruir_e_registrar_feedback_numa_sessao_no_formato_do_prototipo(banco, dados):
+    sessao = "2026-11-20-iara"
+    pasta = dados / "sessoes"
+    pasta.mkdir()
+    (pasta / f"{sessao}.md").write_text(
+        "---\ndata: 2026-11-20\npresentes: [bruno, iara]\n"
+        "regra: media-sem-miseria-com-justica\n---\n\n"
+        "## Recomendação\n\n1. Vento Norte (tt9000301)\n",
+        encoding="utf-8",
+    )
+
+    banco.ok("reconstruir")
+    saida = banco.ok("feedback", "--sessao", sessao, "--filme", "tt9000301", "--nota", "dono=4")
+    assert saida["escolhido"]["posicao"] == 1

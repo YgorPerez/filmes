@@ -19,10 +19,10 @@ from filmes.sessao import arquivo, banco, escrita, fatos
 
 def registrar(amb: Ambiente, sessao_id: str, filme: str | None, notas: list[str], relatos: list[str]) -> dict:
     """`filme` None é "não vimos nada": fecha a Sessão sem Filme escolhido e sem reação."""
-    frente, corpo = arquivo.ler(amb.dados, sessao_id)
-    if not arquivo.aberta(frente):
-        raise ErroFilmes("sessao_fechada", f"a Sessão {sessao_id} já tem Feedback")
     with escrita(amb) as conn:
+        frente, corpo = arquivo.ler(amb.dados, sessao_id)
+        if not arquivo.aberta(frente):
+            raise ErroFilmes("sessao_fechada", f"a Sessão {sessao_id} já tem Feedback")
         dono = {slug for (slug,) in conn.execute("SELECT slug FROM pessoas WHERE dono = 1")}
         reacoes = _reacoes(conn, frente["presentes"], dono, notas, relatos)
         recomendacao = frente.get("recomendacao") or []
@@ -36,8 +36,8 @@ def registrar(amb: Ambiente, sessao_id: str, filme: str | None, notas: list[str]
         frente["escolhido"] = escolhido["id"] if escolhido else None
         frente["escolhido_na_recomendacao"] = posicao
         frente["feedback"] = {"registrado_em": amb.hoje, "reacoes": reacoes}
+        banco.carregar(conn, sessao_id, frente)
         arquivo.escrever(amb.dados, sessao_id, frente, corpo)
-        banco.carregar(conn, amb.dados, sessao_id)
 
     com_reacao = {r["pessoa"] for r in reacoes}
     return {

@@ -1,8 +1,7 @@
 """A cópia das Sessões no banco, derivada dos arquivos.
 
-`carregar(conn, repo, id)` apaga o que havia daquela Sessão e a insere de novo,
-com os Fatos do Feedback. Reconstruir chama para todas; recomendar e feedback,
-para a que acabaram de gravar.
+Reconstruir carrega todas as Sessões. Recomendar e feedback atualizam os Fatos
+da Sessão que vão gravar.
 """
 
 import sqlite3
@@ -13,11 +12,11 @@ from filmes.sessao import arquivo, fatos
 
 def carregar_todas(conn: sqlite3.Connection, repo: Path) -> None:
     for sessao_id in arquivo.ids(repo):
-        carregar(conn, repo, sessao_id)
+        frente, _ = arquivo.ler(repo, sessao_id)
+        carregar(conn, sessao_id, frente)
 
 
-def carregar(conn: sqlite3.Connection, repo: Path, sessao_id: str) -> None:
-    frente, _ = arquivo.ler(repo, sessao_id)
+def carregar(conn: sqlite3.Connection, sessao_id: str, frente: dict) -> None:
     _apagar(conn, sessao_id)
     regra = frente["regra"] or {}
     feedback = frente.get("feedback") or {}

@@ -185,3 +185,18 @@ def test_feedback_recusa_o_que_nao_cabe_na_sessao(banco):
     assert _erro(banco, *feedback, "--nada", "--nota", "dono=4") == (2, "uso_invalido")
     assert _erro(banco, *feedback, "--nada", "--filme", "Vento Norte") == (2, "uso_invalido")
     assert banco.ok("sessoes-abertas")["sessoes"][0]["id"] == sessao
+
+
+def test_falha_ao_carregar_fatos_preserva_o_arquivo_aberto(banco, dados):
+    pasta = dados / "sessoes"
+    pasta.mkdir()
+    sessao = "2026-11-20-bruno"
+    arquivo = pasta / f"{sessao}.md"
+    aberto = "---\ndata: 2026-11-20\npresentes: [bruno, bruno]\nregra: {nome: padrao}\n---\n"
+    arquivo.write_text(aberto, encoding="utf-8")
+
+    codigo, _ = banco.rodar("feedback", "--sessao", sessao, "--filme", "tt9000301")
+
+    assert codigo != 0
+    assert arquivo.read_text(encoding="utf-8") == aberto
+    assert banco.ok("sessoes-abertas")["sessoes"][0]["id"] == sessao
