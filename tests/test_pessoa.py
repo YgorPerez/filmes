@@ -301,7 +301,8 @@ def test_ver_mostra_tudo_o_que_se_sabe_da_pessoa(banco):
 
     saida = banco.ok("pessoa", "ver", "ana")
 
-    assert saida["vetos"] == [{"texto": "nunca vê terror", "alvo": TERROR, "rotulo": "Terror", "data": "2026-11-20"}]
+    assert [{k: v for k, v in veto.items() if k != "fato_id"} for veto in saida["vetos"]] == [
+        {"texto": "nunca vê terror", "alvo": TERROR, "rotulo": "Terror", "data": "2026-11-20"}]
     [declarado] = saida["declarados"]
     assert {k: declarado[k] for k in ("texto", "fonte", "data", "reacao", "alvo", "rotulo", "nota", "tipo", "forca")} == {
         "texto": "amo O Farol", "fonte": "questionário", "data": "2026-10-01", "reacao": "ama", "alvo": FAROL,

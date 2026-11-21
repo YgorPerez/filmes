@@ -43,6 +43,11 @@ def carregar(conn, amb):
             _carregar_pessoa(conn, pessoa, linhas)
 
 
+def recarregar(conn, amb, pessoa):
+    """Refaz os Fatos do Trakt da Pessoa com os imports que ela tem agora, mesmo sem nenhum."""
+    _carregar_pessoa(conn, pessoa, _linhas_registradas(amb, pessoa))
+
+
 def _linhas_registradas(amb, pessoa):
     return [linha for arquivo in arquivos.registrados(amb.dados, pessoa, TIPO)
             for linha in zip_trakt.ler(arquivo)]

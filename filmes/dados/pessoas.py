@@ -135,6 +135,17 @@ class Pessoa:
         self.corpo = "\n".join(linhas) + "\n"
         return True
 
+    def tirar(self, secao: str, item: Dito | Visto) -> None:
+        """Tira do corpo a linha do Dito ou do Visto. A seção fica, mesmo vazia."""
+        if secao == "já vistos":
+            achados = _vistos_com_indice(self.corpo, self.slug)
+        else:
+            achados = _ditos_com_indice(self.corpo, secao, self.slug)
+        indice = next(i for i, achado in achados if achado == item)
+        linhas = self.corpo.splitlines()
+        del linhas[indice]
+        self.corpo = "\n".join(linhas) + "\n"
+
 
 def pasta(repo: Path) -> Path:
     if not repo.is_dir():
@@ -245,21 +256,27 @@ def _itens(corpo: str, secao: str, slug: str, formato: re.Pattern):
         achado = formato.fullmatch(linha.rstrip())
         if not achado or not _data_valida(achado["data"]):
             raise ErroFilmes("dados_invalidos", f"pessoas/{slug}.md, linha {numero} do corpo: {SECOES[secao][:-1]} fora do formato: {linha}")
-        yield achado
+        yield numero - 1, achado
 
 
 def _vistos(corpo: str, slug: str) -> list[Visto]:
-    return [Visto(data=a["data"], fonte=a["fonte"], alvo=a["alvo"], rotulo=a["rotulo"],
-                  nota=float(a["nota"].replace(",", ".")) if a["nota"] else None)
-            for a in _itens(corpo, "já vistos", slug, _LINHA_VISTO)]
+    return [visto for _, visto in _vistos_com_indice(corpo, slug)]
+
+
+def _vistos_com_indice(corpo: str, slug: str):
+    for indice, a in _itens(corpo, "já vistos", slug, _LINHA_VISTO):
+        yield indice, Visto(data=a["data"], fonte=a["fonte"], alvo=a["alvo"], rotulo=a["rotulo"],
+                            nota=float(a["nota"].replace(",", ".")) if a["nota"] else None)
 
 
 def _ditos(corpo: str, secao: str, slug: str) -> list[Dito]:
-    ditos = []
-    for achado in _itens(corpo, secao, slug, _LINHA):
-        ditos.append(Dito(
+    return [dito for _, dito in _ditos_com_indice(corpo, secao, slug)]
+
+
+def _ditos_com_indice(corpo: str, secao: str, slug: str):
+    for indice, achado in _itens(corpo, secao, slug, _LINHA):
+        yield indice, Dito(
             data=achado["data"], fonte=achado["fonte"], especifico=achado["especificidade"] == "específico",
             texto=achado["texto"], reacao=_REACAO_POR_TEXTO.get(achado["reacao"]),
             alvo=achado["alvo"], rotulo=achado["rotulo"],
-        ))
-    return ditos
+        )
