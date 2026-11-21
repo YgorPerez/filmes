@@ -28,6 +28,7 @@ import sqlite3
 from collections import defaultdict
 from dataclasses import dataclass
 from itertools import islice
+from typing import NamedTuple
 
 from filmes.ambiente import Ambiente
 from filmes.evidencia import sem_fato
@@ -59,6 +60,14 @@ class Rodada:
     @property
     def hoje(self):
         return self.amb.hoje
+
+
+class Ordenado(NamedTuple):
+    """Um Candidato na ordem: a chave de ordenação e o que a saída mostra dele."""
+    chave: tuple
+    filme: sqlite3.Row
+    utilidades: dict        # Presente -> utilidade, ou None se desconhecida
+    evidencias: list        # Evidências dos Presentes sobre o filme
 
 
 def _modulos_de_sinal():
@@ -120,12 +129,12 @@ def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], qu
         bonus = sum(e.contribuicao(pesos) for e in sinais_do_filme)
         tem_fato = any(e.tipo != "palpite" for e in (*evidencias, *sinais_do_filme))
         chave = _chave(regra.chave(utilidades, ajuste), tem_fato, filme, bonus)
-        ordenados.append((chave, filme, utilidades, evidencias))
+        ordenados.append(Ordenado(chave, filme, utilidades, evidencias))
         if ajuste:
             sem_credito.append((_chave(regra.chave(utilidades), tem_fato, filme, bonus), filme_id))
-    ordenados.sort(key=lambda item: item[0])
-    aprovados = pedidas.aprovar(ordenados, quantos, pesos["restricoes"]["alcance_sob_demanda"], filme=lambda i: i[1])
-    ids_aprovados = {filme["id"] for _, filme, _, _ in aprovados}
+    ordenados.sort(key=lambda item: item.chave)
+    aprovados = pedidas.aprovar(ordenados, quantos, pesos["restricoes"]["alcance_sob_demanda"], filme=lambda item: item.filme)
+    ids_aprovados = {item.filme["id"] for item in aprovados}
     # Compare as duas ordens com os mesmos vereditos, sem buscar outras respostas sob demanda.
     ordem_sem_credito = [
         filme_id for _, filme_id in sorted(sem_credito)
