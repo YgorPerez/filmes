@@ -8,21 +8,25 @@ import os
 import pkgutil
 import sqlite3
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 
-from filmes.ambiente import Ambiente
+from filmes.ambiente import RAIZ, Ambiente
 from filmes.banco import etapas
+from filmes.erros import ErroFilmes
 
 ESQUEMA = Path(__file__).resolve().parent / "esquema"
 
 
 def reconstruir(amb: Ambiente) -> dict:
     destino = amb.banco
+    if not (amb.catalogo / "filmes.csv").is_file() and destino.resolve().is_relative_to(RAIZ):
+        raise ErroFilmes("config_invalida", "ponha FILMES_BANCO fora do repositório de código")
     destino.parent.mkdir(parents=True, exist_ok=True)
-    temporario = destino.with_name(destino.name + ".novo")
-    temporario.unlink(missing_ok=True)
-
-    conn = sqlite3.connect(temporario)
+    with NamedTemporaryFile(dir=destino.parent, prefix=destino.name + ".", suffix=".novo", delete=False) as f:
+        temporario = Path(f.name)
+    conn = None
     try:
+        conn = sqlite3.connect(temporario)
         conn.execute("PRAGMA foreign_keys = ON")
         for arquivo in sorted(ESQUEMA.glob("*.sql")):
             conn.executescript(arquivo.read_text())
@@ -35,10 +39,11 @@ def reconstruir(amb: Ambiente) -> dict:
                 "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name"
             )
         }
-    except BaseException:
         conn.close()
+        conn = None
+        os.replace(temporario, destino)
+    finally:
+        if conn is not None:
+            conn.close()
         temporario.unlink(missing_ok=True)
-        raise
-    conn.close()
-    os.replace(temporario, destino)
     return {"banco": str(destino), "tabelas": tabelas}

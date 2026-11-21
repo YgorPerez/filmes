@@ -85,6 +85,8 @@ Respostas das fontes sob demanda como a API devolve, em `<fonte>/<tconst>.json`.
 - `omdb/`: Vento Norte PG, Noite de Estreia PG-13, Inverno em Lisboa Not Rated, Jardim Suspenso G. Ponte Aérea não tem arquivo.
 - `ddd/`: o tema "a dog dies" tem 12 sim e 2 não em As Horas Lentas, 3 e 2 em A Volta do Mar (os dois saem), 1 e 14 em Sal e Ferrugem, 2 e 0 em Cidade de Vidro (poucos votos), 3 e 3 em Noite de Estreia (empate). O Farol de Areia só tem "there are jump scares"; Maré Baixa não tem arquivo.
 
+- `catalogo/`: trechos dos TSVs do IMDb e das respostas SPARQL JSON do QLever, coletados em 2026-11-20. Exercitam o corte de 100 votos, a exclusão de adultos, a ponte de IDs, o elenco, os idiomas e os rótulos reais de classificação. `atualizar` lê essas gravações em vez de acessar a rede.
+
 ## dados/
 
 Repo de dados fictício. Cada teste trabalha numa cópia, então comandos podem escrever nele.
