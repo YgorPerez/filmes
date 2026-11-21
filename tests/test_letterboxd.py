@@ -198,3 +198,24 @@ def test_csv_invalido_nao_registra_o_zip(olga, tmp_path, dados):
     assert saida["erro"]["codigo"] == "arquivo_invalido"
     assert not list((dados / "imports").rglob("*.zip"))
     assert olga.ok("pessoa", "ver", "olga")["imports"] == []
+
+
+def test_cache_do_tmdb_ainda_resolve_depois_de_um_item_sem_resposta(olga, tmp_path, dados):
+    zip_ = tmp_path / "rio.zip"
+    cabecalho = "Date,Name,Year,Letterboxd URI\n"
+    rio = "2024-04-13,Rio Abaixo,2014,https://boxd.it/9a4\n"
+    with zipfile.ZipFile(zip_, "w") as z:
+        z.writestr("watched.csv", cabecalho + rio)
+    comando = ("importar", "--pessoa", "olga", "--letterboxd")
+    assert olga.ok(*comando, str(zip_))["resolvidos"]["tmdb"] == 1
+    (dados / "imports" / "letterboxd.md").unlink()
+    olga.ok("reconstruir")
+    del olga.env["FILMES_TMDB_CHAVE"]
+
+    novo = tmp_path / "export.zip"
+    with zipfile.ZipFile(novo, "w") as z:
+        z.writestr("watched.csv", cabecalho + "2024-01-01,Sem Resposta,2020,https://boxd.it/z\n" + rio)
+    saida = olga.ok(*comando, str(novo))
+    assert len(saida["avisos"]) == 1
+    assert saida["fila"] == 1
+    assert saida["resolvidos"]["tmdb"] == 1

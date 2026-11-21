@@ -128,10 +128,10 @@ def consultar_tmdb(fonte: tmdb.TMDB, nome: str, ano: int, tmdb_id: str | None) -
     if len(iguais) == 1:
         [filme] = iguais
         imdb = fonte.imdb(filme["id"])
-        if fonte.desligada:
-            return None
         if imdb:
             return base | {"situacao": "tmdb", "filme": imdb}
+        if fonte.desligada:
+            return None
         return base | {"situacao": "pendente", "motivo": "o TMDB achou o filme, mas sem ID do IMDb"}
     if iguais:
         return base | {"situacao": "pendente", "motivo": "o TMDB achou mais de um filme com esse título"}
@@ -267,7 +267,7 @@ def importar(amb, nome: str, zip_: Path) -> dict:
         for id_, linha in por_filme.items():
             decisao = decididos.get(id_)
             r = resolver(conn, linha.nome, linha.ano, decisao)
-            if r.situacao != "fila" or linha.ano is None or fonte.desligada:
+            if r.situacao != "fila" or linha.ano is None:
                 continue
             nova = consultar_tmdb(fonte, linha.nome, linha.ano, r.tmdb_id)
             if nova is not None:

@@ -1,9 +1,8 @@
 """O que a resolução do Letterboxd guarda no repo de dados: `imports/letterboxd.md`.
 
-O Wikidata é refeito a cada `reconstruir`, a partir do Catálogo. O resto não pode
-ser: a busca do TMDB depende de rede e de cache, e a fila depende do Dono. Por
-isso cada resposta do TMDB que decidiu algo, e cada decisão do Dono, fica neste
-arquivo, uma entrada por par (Name, Year):
+`reconstruir` refaz a busca no Wikidata pelo Catálogo local. Para repetir o
+resultado sem rede, lê neste arquivo as resoluções do TMDB e as decisões do
+Dono, uma entrada por par (Name, Year). Os candidatos da busca ficam no cache.
 
     situacao: tmdb        o TMDB achou um filme só com o título; `filme` é o tconst
     situacao: minisserie  o TMDB achou só uma série com o título
