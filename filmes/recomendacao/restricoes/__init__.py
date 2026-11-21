@@ -89,18 +89,18 @@ class Filtro:
                     self.linhas[filme_id].extend(veredito.linhas)
         return vivos
 
-    def aprovar(self, ordenados: list, quantos: int, alcance: int) -> list:
-        """Os primeiros `quantos` filmes da ordem que passam nas Restrições sob demanda.
+    def aprovar(self, ordenados: list, quantos: int, alcance: int, filme=lambda item: item) -> list:
+        """Os primeiros `quantos` itens da ordem cujo filme passa nas Restrições sob demanda.
 
-        `ordenados` são linhas de filmes na ordem da Recomendação. Só os que estão
-        nas `alcance` primeiras posições consultam fonte sob demanda.
+        `filme(item)` dá a linha de filmes de cada item. Só os filmes nas `alcance`
+        primeiras posições consultam fonte sob demanda; os outros, `resolver` decide sem consultar.
         """
         aprovados = []
-        for posicao, filme in enumerate(ordenados):
+        for posicao, item in enumerate(ordenados):
             if len(aprovados) == quantos:
                 break
-            if self._passa_sob_demanda(filme, consultar=posicao < alcance):
-                aprovados.append(filme)
+            if self._passa_sob_demanda(filme(item), consultar=posicao < alcance):
+                aprovados.append(item)
         return aprovados
 
     def _passa_sob_demanda(self, filme, consultar) -> bool:

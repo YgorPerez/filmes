@@ -254,3 +254,87 @@ def test_so_os_filmes_que_chegariam_ao_top_50_consultam_o_omdb(banco, tmp_path):
     _com_omdb(banco).env["FILMES_PESOS"] = str(pesos)
 
     assert "Vento Norte" not in _titulos(_todos(banco, "--crianca", "10"))
+
+
+# Gatilho. Does the Dog Die gravado, tema "a dog dies":
+#   As Horas Lentas 12 sim, 2 não; A Volta do Mar 3 sim, 2 não          -> saem
+#   Sal e Ferrugem 1 sim, 14 não; Cidade de Vidro 2 sim, 0 não (poucos votos);
+#   Noite de Estreia 3 sim, 3 não (empate)                               -> passam
+#   O Farol de Areia (só tem "there are jump scares"), Maré Baixa (sem registro) -> sem dado
+CAO = ("--gatilho", "a dog dies")
+
+
+def _com_ddd(banco):
+    banco.env.update(FILMES_DDD_CHAVE="chave-de-teste", FILMES_GRAVACOES=str(GRAVACOES))
+    return banco
+
+
+def test_gatilho_tira_filme_com_3_ou_mais_votos_e_mais_sim_que_nao(banco):
+    titulos = _titulos(_todos(_com_ddd(banco), *CAO))
+
+    assert "As Horas Lentas" not in titulos
+    assert "A Volta do Mar" not in titulos
+    assert {"Sal e Ferrugem", "Cidade de Vidro", "Noite de Estreia"} <= set(titulos)
+
+
+def test_linha_de_gatilho_cita_o_does_the_dog_die_literalmente(banco):
+    filme = _filme(_todos(_com_ddd(banco), *CAO), "Sal e Ferrugem")
+
+    [linha] = _linhas_do_filme(filme)
+    assert linha["texto"] == 'Does the Dog Die, "a dog dies": 1 sim, 14 não. Powered by DoesTheDogDie.com'
+    assert (linha["fonte"], linha["data"], linha["forca"], linha["tipo"], linha["fato_id"]) == \
+        ("Does the Dog Die", "2026-11-20", "forte", "metadado", "ddd:tt9000105")
+
+
+def test_sem_dado_do_does_the_dog_die_o_filme_fica_com_aviso(banco):
+    saida = _todos(_com_ddd(banco), *CAO)
+
+    for titulo in ("O Farol de Areia", "Maré Baixa"):
+        [linha] = _linhas_do_filme(_filme(saida, titulo))
+        assert linha["texto"] == 'sem dado do Does the Dog Die sobre "a dog dies"'
+        assert (linha["tipo"], linha["forca"], linha["fato_id"]) == ("palpite", "fraca", None)
+
+
+def test_cada_gatilho_pedido_vale_por_si(banco):
+    saida = _todos(_com_ddd(banco), *CAO, "--gatilho", "there are jump scares")
+
+    assert "Sal e Ferrugem" not in _titulos(saida)       # 8 sim, 1 não em jump scares
+    assert len(_linhas_do_filme(_filme(saida, "O Farol de Areia"))) == 2
+
+
+def test_sem_chave_do_does_the_dog_die_ninguem_sai_e_todos_ficam_com_aviso(banco):
+    banco.env["FILMES_GRAVACOES"] = str(GRAVACOES)
+    saida = _todos(banco, *CAO)
+
+    assert "As Horas Lentas" in _titulos(saida)
+    assert all(_linhas_do_filme(f)[0]["tipo"] == "palpite" for f in saida["filmes"])
+    [aviso] = saida["avisos"]
+    assert "Does the Dog Die" in aviso and "FILMES_DDD_CHAVE" in aviso
+
+
+def test_depois_do_top_50_o_does_the_dog_die_nao_e_consultado(banco, tmp_path):
+    # A Volta do Mar é o 7º da ordem: com alcance 3, fica sem dado em vez de sair.
+    pesos = tmp_path / "pesos.toml"
+    pesos.write_text(PESOS.read_text().replace("alcance_sob_demanda = 50", "alcance_sob_demanda = 3"))
+    _com_ddd(banco).env["FILMES_PESOS"] = str(pesos)
+
+    filme = _filme(_todos(banco, *CAO), "A Volta do Mar")
+    assert _linhas_do_filme(filme)[0]["tipo"] == "palpite"
+
+
+IMDB = {"fonte": "IMDb", "texto": "Information courtesy of IMDb (https://www.imdb.com). Used with permission."}
+DDD = {"fonte": "Does the Dog Die", "texto": "Powered by DoesTheDogDie.com"}
+
+
+def test_creditos_trazem_sempre_o_imdb(banco):
+    assert _todos(banco)["creditos"] == [IMDB]
+
+
+def test_creditos_trazem_o_does_the_dog_die_quando_o_dado_dele_aparece(banco):
+    assert _todos(_com_ddd(banco), *CAO)["creditos"] == [IMDB, DDD]
+
+
+def test_sem_dado_do_does_the_dog_die_nao_ha_credito_dele(banco):
+    banco.env["FILMES_GRAVACOES"] = str(GRAVACOES)   # sem chave: só linhas de aviso
+
+    assert _todos(banco, *CAO)["creditos"] == [IMDB]

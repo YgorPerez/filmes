@@ -57,6 +57,11 @@ def forca_metadado_do_pedido() -> str:
     return "forte"
 
 
+def forca_palpite() -> str:
+    """Palpite, um Motivo sem Fato: sempre fraca."""
+    return "fraca"
+
+
 def _mais_velha_que(data: str, anos: int, hoje: dt.date) -> bool:
     dia = dt.date.fromisoformat(data)
     try:

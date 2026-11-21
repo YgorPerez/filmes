@@ -16,7 +16,7 @@ class Evidencia:
     pessoa: str | None      # None: linha do filme (duração, classificação...), não fala de um Presente
     filme_id: str
     texto: str
-    fonte: str
+    fonte: str | None       # None só em palpite
     data: str | None
     forca: str
     tipo: str

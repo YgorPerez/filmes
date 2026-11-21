@@ -14,7 +14,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 
 from filmes.ambiente import Ambiente
-from filmes.recomendacao import candidatos, sinais as pacote_sinais, utilidade
+from filmes.recomendacao import candidatos, creditos, sinais as pacote_sinais, utilidade
 from filmes.recomendacao.restricoes import Contexto, Filtro
 
 
@@ -66,12 +66,10 @@ def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], qu
         chave = (-min(conhecidas), -sum(conhecidas) / len(conhecidas), -filme["votos"], filme_id)
         ordenados.append((chave, filme, utilidades, evidencias))
     ordenados.sort(key=lambda item: item[0])
-    por_id = {item[1]["id"]: item for item in ordenados}
-    aprovados = filtro.aprovar([item[1] for item in ordenados], quantos, pesos["restricoes"]["alcance_sob_demanda"])
+    aprovados = filtro.aprovar(ordenados, quantos, pesos["restricoes"]["alcance_sob_demanda"], filme=lambda i: i[1])
 
     filmes = []
-    for posicao, filme in enumerate(aprovados, start=1):
-        _, filme, utilidades, evidencias = por_id[filme["id"]]
+    for posicao, (_, filme, utilidades, evidencias) in enumerate(aprovados, start=1):
         evidencias = sorted(evidencias, key=lambda e: (-abs(e.contribuicao(pesos)), e.fato_id or ""))
         evidencias += filtro.linhas[filme["id"]]
         filmes.append({
@@ -88,5 +86,5 @@ def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], qu
         "filmes": filmes,
         "restricoes": filtro.como_json(),
         "avisos": contexto.avisos,
-        "creditos": [],
+        "creditos": creditos.das_fontes(e["fonte"] for f in filmes for e in f["evidencias"]),
     }

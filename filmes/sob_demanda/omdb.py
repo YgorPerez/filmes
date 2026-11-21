@@ -42,9 +42,11 @@ class OMDb(Fonte):
         corpo = pegar_json(f"{URL}?{urllib.parse.urlencode({'i': imdb_id, 'apikey': api})}")
         if corpo is None:
             return self.nao_encontrado()
-        if corpo.get("Response") == "False" and "not found" not in (corpo.get("Error") or "").casefold():
-            raise FalhaDaFonte(corpo.get("Error") or "erro sem mensagem")
-        return corpo
+        erro = (corpo.get("Error") or "").casefold()
+        if corpo.get("Response") == "False" and ("api key" in erro or "limit" in erro):
+            # "Invalid API key!", "No API key provided.", "Request limit reached!": vale para todo filme.
+            raise FalhaDaFonte(corpo["Error"])
+        return corpo  # "Movie not found!", "Incorrect IMDb ID." e afins: só este filme fica sem dado
 
     def nao_encontrado(self):
         return {"Response": "False", "Error": "Movie not found!"}
