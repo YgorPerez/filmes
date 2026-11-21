@@ -84,8 +84,8 @@ def test_sessoes_abertas_lista_as_sessoes_sem_feedback_a_mais_recente_primeiro(b
         "data": "2026-11-19",
         "presentes": ["bruno", "iara"],
         "pedido": "eu e a Iara",
-        "recomendacao": [{"posicao": 1, "id": "tt9000203", "titulo": "Noite de Estreia"},
-                         {"posicao": 2, "id": "tt9000302", "titulo": "Vento Norte"}],
+        "recomendacao": [{"posicao": 1, "id": "tt9000403", "titulo": "A Volta do Mar"},
+                         {"posicao": 2, "id": "tt9001903", "titulo": "Fronteira II"}],
     }
 
 

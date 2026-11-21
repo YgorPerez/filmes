@@ -14,8 +14,10 @@ def _sessao(banco, *presentes):
     return banco.ok("recomendar", "--presentes", *presentes)["sessao"]["id"]
 
 
+# Na vez do Bruno, Noite de Estreia sai em 3º: As Horas Lentas, Sal e Ferrugem, Noite de Estreia.
+
 def test_feedback_grava_o_filme_escolhido_e_as_reacoes_e_fecha_a_sessao(banco, dados):
-    sessao = _sessao(banco, "dono", "iara", "teo")
+    sessao = _sessao(banco, "dono", "iara", "teo", "--de", "dono")
     antes, corpo_antes = _ler(dados / "sessoes" / f"{sessao}.md")
     banco.env["FILMES_HOJE"] = "2026-11-21"
 
@@ -24,7 +26,7 @@ def test_feedback_grava_o_filme_escolhido_e_as_reacoes_e_fecha_a_sessao(banco, d
 
     frente, corpo = _ler(dados / "sessoes" / f"{sessao}.md")
     assert frente["escolhido"] == "tt9000203"
-    assert frente["escolhido_na_recomendacao"] == 1
+    assert frente["escolhido_na_recomendacao"] == 3
     assert str(frente["feedback"]["registrado_em"]) == "2026-11-21"
     assert frente["feedback"]["reacoes"] == [
         {"pessoa": "bruno", "tipo": "nota", "nota": 4.0},
@@ -38,13 +40,13 @@ def test_feedback_grava_o_filme_escolhido_e_as_reacoes_e_fecha_a_sessao(banco, d
 
 
 def test_feedback_devolve_os_fatos_gravados_com_forca_um_nivel_acima(banco):
-    sessao = _sessao(banco, "dono", "iara", "teo")
+    sessao = _sessao(banco, "dono", "iara", "teo", "--de", "dono")
 
     saida = banco.ok("feedback", "--sessao", sessao, "--filme", "Noite de Estreia (2022)",
                      "--nota", "eu=4", "--nota", "Iara=2", "--relato", "teo=não gostou")
 
     assert saida["sessao"] == {"id": sessao, "arquivo": f"sessoes/{sessao}.md"}
-    assert saida["escolhido"] == {"id": "tt9000203", "titulo": "Noite de Estreia", "ano": 2022, "posicao": 1}
+    assert saida["escolhido"] == {"id": "tt9000203", "titulo": "Noite de Estreia", "ano": 2022, "posicao": 3}
     assert saida["sem_reacao"] == []
     reacoes = [{k: f[k] for k in ("pessoa", "texto", "fonte", "data", "forca", "tipo")}
                for f in saida["fatos"] if f["texto"] != "já viu"]

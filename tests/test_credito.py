@@ -9,7 +9,8 @@ hoje, com piso 0. Na Regra padrão, u' = u − 0,5 × Crédito.
 Na fixture, Quim deu 5 a Ponte Aérea (Otávio Lins), 3,5 a Maré Baixa (Helena
 Prado), 4,5 a Barulho (Caio Brandão) e 2 a Fronteira (Rui Tavares). Com o Bruno:
 - As Horas Lentas agrada muito o Bruno e pouco o Quim (o Quim é o mínimo);
-  Vento Norte só tem Fato do Bruno, e o agrada menos.
+  Voo Noturno agrada os dois na mesma medida, menos do que As Horas Lentas
+  agrada o Bruno.
 - Asfalto Quente agrada o Quim e não o Bruno (o Bruno é o mínimo); A Volta do
   Mar agrada o Bruno e pouco o Quim.
 """
@@ -29,7 +30,7 @@ def _titulos(saida):
 def test_quem_ficou_atras_ganha_credito_e_o_filme_dele_sobe_com_a_linha_de_credito(banco):
     antes = banco.ok("recomendar", "--presentes", "dono", "quim", "--quantos", "50")
     assert antes["credito"] == {"bruno": 0, "quim": 0}
-    assert _titulos(antes).index("Vento Norte") < _titulos(antes).index("As Horas Lentas")
+    assert _titulos(antes).index("Voo Noturno") < _titulos(antes).index("As Horas Lentas")
 
     # Bruno detestou Pequenos Milagres; o Quim amou.
     banco.ok("feedback", "--sessao", antes["sessao"]["id"], "--filme", "Pequenos Milagres",
@@ -38,7 +39,7 @@ def test_quem_ficou_atras_ganha_credito_e_o_filme_dele_sobe_com_a_linha_de_credi
 
     # Reações 0,111 e 1; média 0,556. Bruno ficou 0,444 atrás; Quim, à frente, não perde nada.
     assert depois["credito"] == {"bruno": 0.4444, "quim": 0}
-    assert _titulos(depois).index("As Horas Lentas") < _titulos(depois).index("Vento Norte")
+    assert _titulos(depois).index("As Horas Lentas") < _titulos(depois).index("Voo Noturno")
     [linha] = _filme(depois, "As Horas Lentas")["linhas_do_filme"]
     assert linha == {
         "pessoa": "bruno",
@@ -47,21 +48,21 @@ def test_quem_ficou_atras_ganha_credito_e_o_filme_dele_sobe_com_a_linha_de_credi
         "fato_id": linha["fato_id"], "contribuicao": 0,
     }
     assert linha["fato_id"] in [f for [f] in banco.consultar("SELECT fato_id FROM notas WHERE pessoa = 'bruno'")]
-    assert _filme(depois, "Vento Norte")["linhas_do_filme"] == []
+    assert _filme(depois, "Voo Noturno")["linhas_do_filme"] == []
     assert _filme(antes, "As Horas Lentas")["linhas_do_filme"] == []
 
 
 def test_filme_que_subiu_mas_em_que_quem_tem_credito_e_o_minimo_nao_leva_a_linha(banco):
-    # Segunda Chamada agrada o Bruno um pouco mais que o Quim (vizinha de Maré Baixa, a que
-    # os dois deram Nota). Com o Crédito, o Bruno passa a ser o mínimo dela; ela sobe só
-    # porque outros caíram mais, e não é o filme dele.
+    # O Farol de Areia agrada o Bruno (0,784) um pouco mais que o Quim (0,574). Com o
+    # Crédito, o Bruno passa a ser o mínimo dele (0,562); ele sobe só porque outros
+    # caíram mais, e não é o filme do Bruno.
     antes = banco.ok("recomendar", "--presentes", "dono", "quim", "--quantos", "50")
     banco.ok("feedback", "--sessao", antes["sessao"]["id"], "--filme", "Pequenos Milagres",
              "--nota", "dono=1", "--nota", "quim=5")
     depois = banco.ok("recomendar", "--presentes", "dono", "quim", "--quantos", "50")
 
-    assert _titulos(depois).index("Segunda Chamada") < _titulos(antes).index("Segunda Chamada")
-    assert _filme(depois, "Segunda Chamada")["linhas_do_filme"] == []
+    assert _titulos(depois).index("O Farol de Areia") < _titulos(antes).index("O Farol de Areia")
+    assert _filme(depois, "O Farol de Areia")["linhas_do_filme"] == []
 
 
 def _sessao_com_feedback(banco, presentes, *reacoes, filme="Pequenos Milagres"):
@@ -82,6 +83,17 @@ def test_relato_do_dono_conta_no_credito_em_tres_niveis(banco):
         == ("quim", "Feedback da Sessão 2026-11-20", "relato", "forte")
     assert linha["texto"] == ("na Sessão de 2026-11-20 (Pequenos Milagres), Quim não gostou"
                               " e a média dos Presentes foi 2,8")
+
+
+def test_credito_nao_mexe_no_neutro_de_quem_nao_tem_fato(banco):
+    # Quim fica com Crédito 0,5 (u' = u − 0,25). Em Voo Noturno ele tem Fato e cai para
+    # 0,407. Em Maré Cheia ele não tem Fato e conta 0,5, sem o Crédito.
+    _sessao_com_feedback(banco, ["dono", "quim"], "--nota", "dono=5", "--relato", "quim=não gostou")
+
+    saida = banco.ok("recomendar", "--presentes", "dono", "quim", "--quantos", "50")
+
+    assert saida["credito"]["quim"] == 0.5
+    assert _titulos(saida).index("Maré Cheia") < _titulos(saida).index("Voo Noturno")
 
 
 def test_sem_credito_o_filme_de_quem_ficou_atras_vem_depois(banco):
