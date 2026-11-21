@@ -15,7 +15,7 @@ export default definirFerramenta({
     "`vetos` lista os Vetos dos Presentes que tiraram filmes. " +
     "`so_palpites` marca filme sem Fato nenhum, que só entra no fim quando " +
     'faltam Candidatos com Fato. Presentes por slug, nome ou apelido; "dono" é o Dono. ' +
-    "Restrições opcionais (duração, ano de lançamento, idioma, criança, gatilhos, sem Já visto) tiram filmes antes da ordenação. " +
+    "Restrições opcionais (duração, ano de lançamento, idioma, criança, gatilhos, sem Já visto, nada triste) tiram filmes antes da ordenação. " +
     "Cada filme que passa traz em `linhas_do_filme` as linhas das Restrições, do Clima e de grupo ou sozinho. " +
     "Clima e grupo ou sozinho puxam a ordem dos filmes. " +
     "A linha de Crédito aparece em `linhas_do_filme` quando o Crédito fez o filme subir. " +
@@ -51,6 +51,9 @@ export default definirFerramenta({
     gatilhos: z.array(z.string().min(1)).min(1).optional()
       .describe('temas do Does the Dog Die a evitar, em inglês como o site escreve, ex.: ["a dog dies"]'),
     sem_ja_visto: z.boolean().optional().describe("tira os filmes que algum Presente já viu"),
+    sem_tristeza: z.boolean().optional().describe(
+      '"nada triste": tira filme com tag de tristeza ou de tema pesado no MovieLens e filme de tema pesado no Wikidata',
+    ),
   },
   cli: (e) => {
     const args = ["--presentes", ...e.presentes];
@@ -65,6 +68,7 @@ export default definirFerramenta({
     else if (e.crianca) args.push("--crianca");
     for (const gatilho of e.gatilhos ?? []) args.push(`--gatilho=${gatilho}`);
     if (e.sem_ja_visto) args.push("--sem-ja-visto");
+    if (e.sem_tristeza) args.push("--sem-tristeza");
     if (e.pedido !== undefined) args.push(`--pedido=${e.pedido}`);
     for (const clima of e.climas ?? []) args.push(`--clima=${clima}`);
     return { comando: "recomendar", args };

@@ -109,6 +109,8 @@ def _restricao(restricao) -> str:
     nome = restricao.get("nome")
     if nome == "sem_ja_visto":
         return "nada repetido"
+    if nome == "sem_tristeza":
+        return "nada triste"
     if nome == "idioma":
         return f"idioma original: {restricao['idioma']}"
     if nome == "crianca":

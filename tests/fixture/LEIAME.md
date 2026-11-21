@@ -144,3 +144,20 @@ linhas. As tags de O Farol de Areia aparecem tanto no diário quanto na review.
   busca de séries do TMDB. Os dois são descartados.
 - Vento Norte fica na fila com dois candidatos do TMDB. Confirmar o primeiro
   usa `externos-9102.json`. Filme Perdido também fica na fila, sem candidato.
+
+### Nada triste (#42)
+
+`test_restricao_tristeza.py`. Sinais de tristeza e de tema pesado em filmes sem Nota de ninguém, com as tags e os QIDs reais de `config/tristeza.toml`:
+
+| Filme | Sinal | Com `--sem-tristeza` |
+|---|---|---|
+| Pequenos Milagres (601) | tags.csv "sad", 5 usuários | sai |
+| Casa Cheia (602) | tags.csv "sad", 2 usuários | passa |
+| Deserto Branco (701) | genome "tearjerker" 0,6 | sai |
+| A Última Estação (702) | genome "sad" 0,59 | passa |
+| Os Inquilinos (901) | tags.csv "massacre", 2 usuários | sai |
+| Fim de Tarde (902) | `tema` Holocausto (Q2763) | sai |
+| Café Amargo (801) | `baseado_em` suicídio (Q10737) | sai |
+| Linha Cruzada (802) | `tema` futebol (Q9004201), sem tag | passa |
+
+"sad" e "tearjerker" estão no Clima "pra chorar"; nenhum teste pede esse Clima. As tags de "sozinho" (bleak, depressing) ficaram de fora de propósito, para não mudar quem é filme só com palpites.
