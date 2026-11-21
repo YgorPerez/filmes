@@ -20,22 +20,19 @@ Nota (ratings, e a nota do diário e da review no dia em que viu), Já visto
 datado do dia em que viu) e watchlist.
 """
 
-import hashlib
-import os
 import sqlite3
 import unicodedata
 from collections import Counter
 from contextlib import closing, contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
-from tempfile import NamedTemporaryFile
 
 from filmes.ambiente import Ambiente
 from filmes.banco import fato_id
 from filmes.dados import pessoas
 from filmes.erros import ErroFilmes
 from filmes.importar import decisoes as registro
-from filmes.importar import zip_letterboxd
+from filmes.importar import arquivos, zip_letterboxd
 from filmes.importar.zip_letterboxd import Linha
 from filmes.sob_demanda import tmdb
 
@@ -191,15 +188,8 @@ def carregar(conn: sqlite3.Connection, amb, *, decididos=None) -> None:
 
 
 def linhas_da_pessoa(repo: Path, pessoa) -> list[Linha]:
-    linhas = []
-    for importado in pessoa.imports:
-        if isinstance(importado, dict) and importado.get("tipo") == TIPO:
-            arquivo = repo / importado["arquivo"]
-            if not arquivo.exists():
-                raise ErroFilmes("dados_invalidos",
-                                 f"pessoas/{pessoa.slug}.md registra o import {importado['arquivo']}, que não está no repo de dados")
-            linhas += zip_letterboxd.ler(arquivo)
-    return linhas
+    return [linha for arquivo in arquivos.registrados(repo, pessoa, TIPO)
+            for linha in zip_letterboxd.ler(arquivo)]
 
 
 def _carregar_pessoa(conn, pessoa, linhas, decididos):
@@ -275,7 +265,7 @@ def importar(amb, nome: str, zip_: Path) -> dict:
                 if not decisao or any(decisao.get(c) != v for c, v in nova.items() if c != "data"):
                     decididos[id_] = nova
                     mudou = True
-        arquivo, novo = _guardar(amb, pessoa, zip_.name, conteudo)
+        arquivo, novo = arquivos.guardar(amb, pessoa, TIPO, zip_.name, conteudo)
         carregar(conn, amb, decididos=decididos)
         if mudou:
             registro.salvar(amb.dados, decididos)
@@ -288,28 +278,6 @@ def importar(amb, nome: str, zip_: Path) -> dict:
             "avisos": contexto.avisos,
             "creditos": [tmdb.CREDITO] if usou_tmdb or _usa_tmdb(conn, pessoa.slug) else [],
         }
-
-
-def _guardar(amb, pessoa, nome_original, conteudo) -> tuple[str, bool]:
-    sha = hashlib.sha256(conteudo).hexdigest()
-    for importado in pessoa.imports:
-        if isinstance(importado, dict) and importado.get("tipo") == TIPO and importado.get("sha256") == sha:
-            return importado["arquivo"], False
-    relativo = Path("imports") / pessoa.slug / f"letterboxd-{sha}.zip"
-    destino = amb.dados / relativo
-    destino.parent.mkdir(parents=True, exist_ok=True)
-    with NamedTemporaryFile(dir=destino.parent, delete=False) as arquivo:
-        temporario = Path(arquivo.name)
-        try:
-            arquivo.write(conteudo)
-            arquivo.close()
-            os.replace(temporario, destino)
-        finally:
-            temporario.unlink(missing_ok=True)
-    pessoa.imports.append({"tipo": TIPO, "arquivo": relativo.as_posix(), "data": amb.hoje.isoformat(),
-                           "original": nome_original, "sha256": sha})
-    pessoas.salvar(amb.dados, pessoa)
-    return relativo.as_posix(), True
 
 
 @contextmanager

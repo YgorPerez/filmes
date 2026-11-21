@@ -1,0 +1,14 @@
+[
+  {
+    "rated_at": "2025-02-05T14:00:00.000Z",
+    "rating": 9,
+    "type": "movie",
+    "movie": {"title": "O Farol de Areia", "year": 2012, "ids": {"trakt": 24, "imdb": "tt9000101", "tmdb": 9001}}
+  },
+  {
+    "rated_at": "2025-04-01T01:45:00.000Z",
+    "rating": 1,
+    "type": "movie",
+    "movie": {"title": "Maré Baixa", "year": 2015, "ids": {"trakt": 25, "imdb": null, "tmdb": 9003}}
+  }
+]
