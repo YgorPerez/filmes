@@ -139,3 +139,13 @@ def test_sessao_guarda_as_restricoes_e_as_linhas_do_filme(banco, dados):
         "restricoes": [{"nome": "sem_ja_visto"}],
     }
     assert " · Fonte: IMDb · Força: forte · Tipo: metadado" in corpo
+
+
+def test_sessao_guarda_o_clima_aceito_e_sua_evidencia(banco, dados):
+    saida = banco.ok("recomendar", "--presentes", "dono", "iara", "--clima", "Leve", "épico", "--quantos", "50")
+
+    frente, corpo = _ler(dados / saida["sessao"]["arquivo"])
+    assert frente["contexto"]["clima"] == ["leve"]
+    filme = next(f for f in saida["filmes"] if f["titulo"] == "Dia de Feira")
+    [evidencia] = [e for e in filme["linhas_do_filme"] if e["texto"].startswith("Clima leve")]
+    assert f"Evidência: {evidencia['texto']} · Fonte: MovieLens ml-32m" in corpo

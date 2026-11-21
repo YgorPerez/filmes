@@ -69,6 +69,49 @@ def forca_caminho(notas_altas: int, predicado: str) -> str | None:
     return "fraca" if predicado == "genero" else forca
 
 
+def forca_vizinhanca(base: int, ambos: int, teto: str) -> str | None:
+    """Review de vizinhança item-item: de `base` pessoas que deram 4+ ao filme da
+    Nota-semente, `ambos` deram 4+ ao Candidato.
+
+    Forte com base 500+ e 60% ou mais, moderada com 100+ e 40%, fraca com 30+ e 25%;
+    abaixo disso não vira Evidência. Nunca passa de `teto`, a Força da Nota-semente.
+    A proporção é comparada em inteiros, sem arredondar.
+    """
+    for forca, base_minima, porcento in (("forte", 500, 60), ("moderada", 100, 40), ("fraca", 30, 25)):
+        if base >= base_minima and 100 * ambos >= porcento * base:
+            return min(forca, teto, key=FORCAS.index)
+    return None
+
+
+def forca_tag_movielens(usuarios: int) -> str | None:
+    """Review de tag do tags.csv do MovieLens: forte com 10+ usuários distintos,
+    moderada com 3 a 9; com menos de 3 não vira Evidência."""
+    if usuarios >= 10:
+        return "forte"
+    if usuarios >= 3:
+        return "moderada"
+    return None
+
+
+def forca_genoma(relevancia: float) -> str | None:
+    """Review do Tag Genome: no máximo moderada (relevância 0,8 ou mais), fraca de
+    0,6 a 0,8; abaixo de 0,6 não vira Evidência. É previsão de modelo, por isso
+    vale menos que uma contagem de usuários."""
+    if relevancia >= 0.8:
+        return "moderada"
+    if relevancia >= 0.6:
+        return "fraca"
+    return None
+
+
+def forca_genero_no_clima() -> str:
+    """Metadado de gênero que responde a um Clima: fraca, porque gênero é amplo
+    demais (a mesma razão que o limita a fraca no caminho de gosto). A spec não
+    diz nada; a régua do metadado "que responde ao pedido" fala de duração e
+    classificação, que são exatas."""
+    return "fraca"
+
+
 def forca_dito(tipo: str, especifico: bool, data: str, hoje: dt.date) -> str:
     """Declarado específico (nomeia filme, diretor, ator, subgênero) é forte; genérico é moderada.
     Uma review ou tag que a própria Pessoa escreveu é Declarado específico.

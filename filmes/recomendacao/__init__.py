@@ -1,14 +1,20 @@
 """Recomendação: Candidatos, sinais por Presente, utilidade e ordem.
 
-    recomendar(conn, amb, presentes, quantos, regra, restricoes) -> dict
+    recomendar(conn, amb, presentes, quantos, regra, restricoes, climas) -> dict
 
-Os sinais são módulos em `sinais/`, achados pelo nome. Cada um define
-`sinais(rodada, pessoa) -> Iterable[Evidencia]` e devolve as Evidências que
-acha para os Candidatos da rodada. Acrescentar um sinal não muda este arquivo.
+Os sinais são módulos em `sinais/`, achados pelo nome. Um sinal de Pessoa
+define `sinais(rodada, pessoa) -> Iterable[Evidencia]`; um sinal do filme
+(Clima, grupo/sozinho), que não fala de ninguém, define
+`sinais_do_filme(rodada) -> Iterable[Evidencia]` com `pessoa=None`. Os dois
+devolvem só Evidências de Candidatos da rodada. Acrescentar um sinal não muda
+este arquivo.
 
 As Restrições pedidas (`restricoes/`) tiram filmes antes dos sinais; as que
 dependem de fonte sob demanda são resolvidas depois da ordem, só no topo dela.
 Cada filme que passa traz em `linhas_do_filme` as linhas que dizem por quê.
+Os sinais do filme também vão para `linhas_do_filme`, depois das linhas das
+Restrições; a soma das contribuições deles é um bônus somado à pontuação da
+Regra, que puxa a ordem sem tocar na utilidade de ninguém.
 
 A ordem segue a Regra de escolha (`regra.py`). Cada filme da saída traz a
 utilidade e as Evidências de cada Presente, agrupadas pelo slug na ordem dos
@@ -24,7 +30,8 @@ from dataclasses import dataclass
 
 from filmes.ambiente import Ambiente
 from filmes.evidencia import sem_fato
-from filmes.recomendacao import candidatos, creditos, sinais as pacote_sinais, utilidade, vetos
+from filmes.recomendacao import candidatos, climas as vocabulario_climas, creditos, sinais as pacote_sinais, utilidade, vetos
+from filmes.recomendacao.climas import Clima
 from filmes.recomendacao.regra import Regra
 from filmes.recomendacao.restricoes import Contexto, Filtro
 from filmes.sessao import credito
@@ -32,10 +39,17 @@ from filmes.sessao import credito
 
 @dataclass(frozen=True)
 class Rodada:
-    """O que os sinais recebem: o banco, a config, hoje e os Candidatos (id -> linha de filmes)."""
+    """O que os sinais recebem: o banco, a config, hoje, os Candidatos (id -> linha de
+    filmes), os Presentes e os Climas pedidos."""
     conn: sqlite3.Connection
     amb: Ambiente
     candidatos: dict
+    presentes: tuple[str, ...] = ()
+    climas: tuple[Clima, ...] = ()
+
+    @property
+    def em_grupo(self) -> bool:
+        return len(self.presentes) > 1
 
     @property
     def pesos(self) -> dict:
@@ -53,19 +67,26 @@ def _modulos_de_sinal():
 
 
 def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], quantos: int,
-               regra: Regra = Regra(), restricoes: list = ()) -> dict:
+               regra: Regra = Regra(), restricoes: list = (), climas: list[str] = ()) -> dict:
     # Os Vetos de todos os Presentes valem, seja qual for a Regra de escolha.
     restantes, vetos_que_agiram = vetos.aplicar(conn, presentes, candidatos.escolher(conn, amb.pesos))
-    contexto = Contexto(conn=conn, amb=amb, presentes=presentes)
+    climas_aceitos, avisos_de_clima = vocabulario_climas.resolver(list(climas))
+    contexto = Contexto(conn=conn, amb=amb, presentes=presentes, avisos=avisos_de_clima)
     filtro = Filtro(contexto, list(restricoes))
-    rodada = Rodada(conn=conn, amb=amb, candidatos=filtro.candidatos(restantes))
+    rodada = Rodada(conn=conn, amb=amb, candidatos=filtro.candidatos(restantes),
+                    presentes=tuple(presentes), climas=tuple(climas_aceitos))
     pesos = amb.pesos
 
     por_filme = defaultdict(list)
+    do_filme = defaultdict(list)
     for modulo in _modulos_de_sinal():
-        for pessoa in presentes:
-            for evidencia in modulo.sinais(rodada, pessoa):
-                por_filme[evidencia.filme_id].append(evidencia)
+        if hasattr(modulo, "sinais"):
+            for pessoa in presentes:
+                for evidencia in modulo.sinais(rodada, pessoa):
+                    por_filme[evidencia.filme_id].append(evidencia)
+        if hasattr(modulo, "sinais_do_filme"):
+            for evidencia in modulo.sinais_do_filme(rodada):
+                do_filme[evidencia.filme_id].append(evidencia)
 
     # Crédito (#20): só na Regra padrão e em grupo. `ajuste` é o fator × Crédito de cada Pessoa.
     creditos_pessoais = credito.calcular(conn, presentes, pesos["credito"]["janela"]) \
@@ -75,7 +96,8 @@ def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], qu
 
     # Ordem em três faixas: (0) utilidade conhecida para quem a Regra ouve, pela Regra;
     # (1) Fato sem utilidade conhecida para essa gente, no fim; (2) só palpites, que só
-    # aparecem quando faltam Candidatos com Fato. Dentro de (1) e (2), o mais votado antes.
+    # aparecem quando faltam Candidatos com Fato. Os sinais do filme contam como
+    # Fato quando sustentados e somam um bônus à ordem; depois, o mais votado antes.
     ordenados = []
     sem_credito = []
     for filme_id, filme in rodada.candidatos.items():
@@ -84,10 +106,13 @@ def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], qu
             pessoa: utilidade.individual([e for e in evidencias if e.pessoa == pessoa], pesos)
             for pessoa in presentes
         }
-        chave = _chave(regra.chave(utilidades, ajuste), evidencias, filme)
+        sinais_do_filme = do_filme.get(filme_id, [])
+        bonus = sum(e.contribuicao(pesos) for e in sinais_do_filme)
+        tem_fato = any(e.tipo != "palpite" for e in (*evidencias, *sinais_do_filme))
+        chave = _chave(regra.chave(utilidades, ajuste), tem_fato, filme, bonus)
         ordenados.append((chave, filme, utilidades, evidencias))
         if ajuste:
-            sem_credito.append((_chave(regra.chave(utilidades), evidencias, filme), filme_id))
+            sem_credito.append((_chave(regra.chave(utilidades), tem_fato, filme, bonus), filme_id))
     ordenados.sort(key=lambda item: item[0])
     aprovados = filtro.aprovar(ordenados, quantos, pesos["restricoes"]["alcance_sob_demanda"], filme=lambda i: i[1])
     ids_aprovados = {filme["id"] for _, filme, _, _ in aprovados}
@@ -103,8 +128,11 @@ def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], qu
     for posicao, (chave, filme, utilidades, evidencias) in enumerate(aprovados, start=1):
         evidencias = evidencias + [sem_fato(p, filme["id"]) for p, u in utilidades.items() if u is None]
         evidencias = sorted(evidencias, key=lambda e: (-abs(e.contribuicao(pesos)), e.fato_id or ""))
-        do_filme = [credito.linha(p, nomes.get(p, p), creditos_pessoais[p], filme["id"], amb.hoje)
-                    for p in _subiu_pelo_credito(filme["id"], posicao, posicao_sem_credito, utilidades, ajuste)]
+        # Sinais do filme: o mais forte antes; no empate, a ordem dos Climas pedidos.
+        do_sinal = sorted(do_filme.get(filme["id"], []), key=lambda e: -abs(e.contribuicao(pesos)))
+        do_credito = [credito.linha(p, nomes.get(p, p), creditos_pessoais[p], filme["id"], amb.hoje)
+                      for p in _subiu_pelo_credito(filme["id"], posicao, posicao_sem_credito, utilidades, ajuste)]
+        linhas = [*filtro.linhas[filme["id"]], *do_sinal, *do_credito]
         filmes.append({
             "posicao": posicao,
             "id": filme["id"],
@@ -114,13 +142,14 @@ def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], qu
             "so_palpites": chave[0] == 2,
             "utilidade": {p: (round(u, 4) if u is not None else None) for p, u in utilidades.items()},
             "evidencias": {p: [e.como_json(pesos) for e in evidencias if e.pessoa == p] for p in presentes},
-            "linhas_do_filme": [e.como_json(pesos) for e in [*filtro.linhas[filme["id"]], *do_filme]],
+            "linhas_do_filme": [e.como_json(pesos) for e in linhas],
         })
     return {
         "presentes": presentes,
         "regra": regra.como_json(),
         "credito": {p: round(c.valor, 4) for p, c in creditos_pessoais.items()},
         "vetos": vetos_que_agiram,
+        "climas": [c.nome for c in climas_aceitos],
         "filmes": filmes,
         "restricoes": filtro.como_json(),
         "avisos": contexto.avisos,
@@ -140,11 +169,11 @@ def _subiu_pelo_credito(filme_id, posicao, posicao_sem_credito, utilidades, ajus
     return [p for p in ajustadas if p in ajuste and ajustadas[p] > minimo]
 
 
-def _chave(pela_regra, evidencias, filme) -> tuple:
+def _chave(pela_regra, tem_fato, filme, bonus) -> tuple:
     if pela_regra is not None:
-        faixa = (0, tuple(-v for v in pela_regra))
-    elif any(e.tipo != "palpite" for e in evidencias):
-        faixa = (1, ())
+        faixa = (0, tuple(-(v + bonus) for v in pela_regra))
+    elif tem_fato:
+        faixa = (1, (-bonus,))
     else:
-        faixa = (2, ())
+        faixa = (2, (-bonus,))
     return (*faixa, -filme["votos"], filme["id"])

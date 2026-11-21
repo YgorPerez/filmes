@@ -115,7 +115,8 @@ def test_regra_media_e_de_fulano_nao_usam_credito(banco):
     for regra in (["--regra", "media"], ["--de", "quim"]):
         saida = banco.ok("recomendar", "--presentes", "dono", "quim", *regra, "--quantos", "50")
         assert saida["credito"] == {}
-        assert all(f["linhas_do_filme"] == [] for f in saida["filmes"])
+        linhas = [linha for filme in saida["filmes"] for linha in filme["linhas_do_filme"]]
+        assert linhas and all(linha["pessoa"] is None for linha in linhas)
 
 
 def test_dono_sozinho_nao_tem_credito(banco):

@@ -1,0 +1,28 @@
+# Tags do MovieLens que dão bônus numa Sessão em grupo (2 ou mais Presentes) ou
+# numa Sessão sozinha (spec #16, história 36). Lista fechada, escrita à mão, da
+# pesquisa de sinais (docs/research/sinais-grupo.md no ramo research/sinais-grupo).
+#
+# A fonte só diz que estranhos deram a tag ao filme; a leitura "bom em grupo"
+# é do projeto. Por isso a linha de evidência cita a tag e a contagem, e o eixo
+# aparece só como "para ver em grupo" ou "para ver sozinho".
+# Tags em minúsculas, como nas tabelas tags_movielens e genoma. Tag que descreve
+# o enredo ("party", "friends") ou o diário de alguém ("seen 2022 with family")
+# não entra.
+
+grupo = [
+    # genome e tags.csv
+    "fun movie", "funny", "hilarious", "highly quotable", "quotable",
+    "so bad it's good", "so bad it's funny", "cult classic", "campy", "cheesy",
+    "silly fun", "dumb but funny", "fast paced", "feel-good", "feel good movie",
+    "kids and family", "good romantic comedies", "guilty pleasure",
+    # só tags.csv
+    "drinking game", "mst3k", "date movie", "family friendly", "watch with kids",
+]
+
+sozinho = [
+    # genome e tags.csv
+    "slow", "slow paced", "meditative", "atmospheric", "thought-provoking",
+    "depressing", "disturbing", "hard to watch", "bleak",
+    # só tags.csv
+    "contemplative",
+]

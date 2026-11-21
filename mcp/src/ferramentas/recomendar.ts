@@ -12,12 +12,14 @@ export default definirFerramenta({
     'recebe a linha "sem fato". `vetos` lista os Vetos dos Presentes que tiraram filmes. ' +
     "`so_palpites` marca filme sem Fato nenhum, que só entra no fim quando " +
     'faltam Candidatos com Fato. Presentes por slug, nome ou apelido; "dono" é o Dono. ' +
-    "Restrições opcionais (duração, idioma, criança, gatilhos, sem Já visto) tiram filmes da Recomendação. " +
-    "Cada filme que passa traz em `linhas_do_filme` as linhas que dizem por quê. " +
+    "Restrições opcionais (duração, idioma, criança, gatilhos, sem Já visto) tiram filmes antes da ordenação. " +
+    "Cada filme que passa traz em `linhas_do_filme` as linhas das Restrições, do Clima e de grupo ou sozinho. " +
+    "Clima e grupo ou sozinho puxam a ordem dos filmes. " +
     "A linha de Crédito aparece em `linhas_do_filme` quando o Crédito fez o filme subir. " +
     "`credito` traz o Crédito de cada Presente na Regra padrão em grupo. Cada chamada abre uma Sessão (`sessao.id`). " +
     "Antes, chame `sessoes_abertas` e, se houver uma, pergunte por ela. O Dono pode pular. " +
-    "A resposta inclui `restricoes`, `avisos` e `creditos`. Copie o texto do Does the Dog Die como veio.",
+    "A resposta inclui `climas` (os aceitos), `restricoes`, `avisos` e `creditos`. " +
+    "Copie o texto do Does the Dog Die como veio.",
   entrada: {
     presentes: z.array(pessoa).min(1).describe('Pessoas da Sessão, ex.: ["dono", "ana"]'),
     regra: z
@@ -28,6 +30,13 @@ export default definirFerramenta({
           'media (média simples, "tanto faz") ou de (só o gosto de uma Pessoa, "hoje é a vez da Ana")',
       ),
     de: pessoa.optional().describe('na regra "de", a Pessoa cujo gosto ordena; precisa estar entre os Presentes'),
+    climas: z
+      .array(z.string())
+      .optional()
+      .describe(
+        "Climas do pedido, do vocabulário fixo: leve, pra rir, tenso, romântico, pra chorar, pra pensar, " +
+          'assustador, ação. "Algo leve" é leve; "pra dar risada" é pra rir. Fora da lista, o motor devolve um aviso',
+      ),
     quantos: z.number().int().min(1).max(100).optional().describe("tamanho da lista; padrão 5"),
     pedido: z.string().optional().describe("o pedido do Dono como ele disse, guardado na Sessão"),
     duracao_max: z.number().int().min(1).optional().describe("tempo disponível, em minutos"),
@@ -50,6 +59,7 @@ export default definirFerramenta({
     for (const gatilho of e.gatilhos ?? []) args.push(`--gatilho=${gatilho}`);
     if (e.sem_ja_visto) args.push("--sem-ja-visto");
     if (e.pedido !== undefined) args.push(`--pedido=${e.pedido}`);
+    for (const clima of e.climas ?? []) args.push(`--clima=${clima}`);
     return { comando: "recomendar", args };
   },
 });
