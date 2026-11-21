@@ -65,6 +65,16 @@ def forca_dito(tipo: str, especifico: bool, data: str, hoje: dt.date) -> str:
     return forca
 
 
+def forca_metadado_do_pedido() -> str:
+    """Metadado que responde ao pedido (duração, classificação, idioma, gatilho): sempre forte."""
+    return "forte"
+
+
+def forca_palpite() -> str:
+    """Palpite, um Motivo sem Fato: sempre fraca."""
+    return "fraca"
+
+
 def _mais_velha_que(data: str, anos: int, hoje: dt.date) -> bool:
     dia = dt.date.fromisoformat(data)
     try:

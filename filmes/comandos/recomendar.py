@@ -1,6 +1,6 @@
 from filmes.banco import abrir_leitura
 from filmes.erros import ErroFilmes
-from filmes.recomendacao import presentes as pessoas_presentes, recomendar
+from filmes.recomendacao import presentes as pessoas_presentes, recomendar, restricoes
 from filmes.recomendacao.regra import Regra
 
 AJUDA = "devolve a Recomendação (top 5) com as Evidências de cada filme, por Presente"
@@ -14,6 +14,7 @@ def configurar(parser):
                              "media (média simples) ou de (só o gosto de quem --de diz)")
     parser.add_argument("--de", metavar="PESSOA", help='na regra "de", a Pessoa cujo gosto ordena')
     parser.add_argument("--quantos", type=int, help="tamanho da lista (padrão: [recomendacao] tamanho da config)")
+    restricoes.configurar(parser)
 
 
 def executar(args, amb):
@@ -21,9 +22,10 @@ def executar(args, amb):
     if quantos < 1:
         raise ErroFilmes("uso_invalido", "--quantos precisa ser 1 ou mais")
     nomes = [n for item in args.presentes for n in item.split(",") if n.strip()]
+    pedidas = restricoes.ler(args)
     with abrir_leitura(amb.banco) as conn:
         presentes = pessoas_presentes.resolver(conn, nomes)
-        return recomendar(conn, amb, presentes, quantos, _regra(conn, args, presentes))
+        return recomendar(conn, amb, presentes, quantos, _regra(conn, args, presentes), pedidas)
 
 
 def _regra(conn, args, presentes):

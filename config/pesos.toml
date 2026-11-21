@@ -29,3 +29,8 @@ tamanho = 5
 # Base de um Declarado ou Relato com alvo entidade (diretor, ator, gênero...):
 # positiva para ama e gosta, negativa para não gosta e odeia. A Força multiplica.
 peso_dito = 1.0
+
+[restricoes]
+# Só os filmes que chegariam a estas primeiras posições consultam fonte sob
+# demanda (OMDb para a classificação, Does the Dog Die para gatilho).
+alcance_sob_demanda = 50
