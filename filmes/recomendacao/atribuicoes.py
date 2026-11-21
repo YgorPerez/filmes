@@ -5,7 +5,8 @@ O nome não é "créditos" para não se confundir com o Crédito das Sessões.
 Textos da pesquisa de termos (ramo research/termos, docs/research/termos.md) e,
 para o TMDB, do aviso que os termos dele pedem. O IMDb entra sempre: todo
 Candidato sai dos datasets dele. As outras fontes entram quando alguma
-Evidência devolvida tem a Fonte com o nome delas ("Trakt da Ana").
+Evidência devolvida tem a Fonte com o nome delas ("Trakt da Ana"); o TMDB
+também entra quando algum filme sai com capa.
 Wikidata (CC0), Letterboxd, MovieLens ml-32m e OMDb não pedem atribuição na tela.
 """
 

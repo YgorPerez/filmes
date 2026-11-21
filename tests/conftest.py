@@ -27,6 +27,11 @@ def ler_markdown(caminho):
     return yaml.safe_load(frente), corpo
 
 
+def sem_o_da_capa(avisos):
+    """Os avisos de `recomendar` menos o do TMDB, que todo teste sem FILMES_TMDB_CHAVE recebe."""
+    return [a for a in avisos if not a.startswith("TMDB ")]
+
+
 class Cli:
     def __init__(self, env):
         self.env = env

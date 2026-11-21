@@ -7,6 +7,8 @@ MovieLens, escores do Tag Genome e gêneros (tabelas `tags_movielens`, `genoma`,
 vizinhança de O Farol de Areia, e por isso empatam no gosto. Veja o LEIAME.
 """
 
+from conftest import sem_o_da_capa
+
 
 def _filme(saida, titulo):
     [filme] = [f for f in saida["filmes"] if f["titulo"] == titulo]
@@ -117,7 +119,7 @@ def test_clima_fora_do_vocabulario_fica_de_fora_com_aviso(banco):
     saida = _recomendar(banco, "--clima", "Leve", "épico")
 
     assert saida["climas"] == ["leve"]
-    [aviso] = saida["avisos"]
+    [aviso] = sem_o_da_capa(saida["avisos"])
     assert "'épico' não está no vocabulário" in aviso
     assert "pra rir" in aviso   # o aviso lista o vocabulário
     assert _linhas(saida, "Dia de Feira")[0][0].startswith("Clima leve:")
@@ -127,7 +129,7 @@ def test_clima_vale_sem_acento_e_sem_maiuscula(banco):
     saida = _recomendar(banco, "--clima", "ACAO", "Pra-Rir")
 
     assert saida["climas"] == ["ação", "pra rir"]
-    assert saida["avisos"] == []
+    assert sem_o_da_capa(saida["avisos"]) == []
 
 
 def test_linha_do_tag_genome_poe_a_atribuicao_na_saida(banco):

@@ -40,9 +40,9 @@ class Fonte:
     @classmethod
     def de(cls, contexto):
         """A instância desta fonte para a execução, criada no primeiro uso."""
-        if cls.pasta not in contexto.fontes:
-            contexto.fontes[cls.pasta] = cls(contexto)
-        return contexto.fontes[cls.pasta]
+        if cls not in contexto.fontes:
+            contexto.fontes[cls] = cls(contexto)
+        return contexto.fontes[cls]
 
     def obter(self, chave: str) -> Registro | None:
         cache = _cache(self.contexto)

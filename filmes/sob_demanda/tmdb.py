@@ -1,12 +1,14 @@
 """TMDB: busca de filme por título e ano, para o que o Wikidata não resolveu no
-import do Letterboxd. Cache de 6 meses; chave em FILMES_TMDB_CHAVE (a chave v3,
-que vai como `api_key`, ou o token de leitura v4, que vai no cabeçalho).
+import do Letterboxd, e a capa dos filmes da Recomendação. Cache de 6 meses;
+chave em FILMES_TMDB_CHAVE (a chave v3, que vai como `api_key`, ou o token de
+leitura v4, que vai no cabeçalho).
 
-Três pedidos, cada um uma entrada no cache e um arquivo nas gravações:
+Quatro pedidos, cada um uma entrada no cache e um arquivo nas gravações:
 
     filme-<slug>-<ano>-<hash>    GET /search/movie?query=<título>&primary_release_year=<ano>
     serie-<slug>-<ano>-<hash>    GET /search/tv?query=<título>&first_air_date_year=<ano>
     externos-<id>         GET /movie/<id>/external_ids, de onde sai o imdb_id
+    find-<tconst>         GET /find/<tconst>?external_source=imdb_id, de onde sai o poster_path
 
 A busca usa o título como veio do export. O cache distingue nomes que geram
 o mesmo slug.
@@ -22,6 +24,7 @@ from filmes.recomendacao.atribuicoes import TEXTOS
 from filmes.sob_demanda.fonte import Fonte, pegar_json
 
 URL = "https://api.themoviedb.org/3"
+IMAGENS = "https://image.tmdb.org/t/p/w92"   # o menor tamanho de pôster que o TMDB serve
 ATRIBUICAO = {"fonte": "TMDB", "texto": TEXTOS["TMDB"]}
 
 
@@ -97,3 +100,19 @@ class TMDB(Fonte):
 
     def nao_encontrado(self):
         return {"results": []}
+
+
+class CapasTMDB(TMDB):
+    """O mesmo cliente, com o aviso que vale para a Recomendação."""
+    sem_a_fonte = "os filmes saem sem capa"
+
+    def capa(self, tconst: str) -> str | None:
+        """URL do pôster em w92, ou None sem resposta, sem filme ou sem pôster."""
+        if not re.fullmatch(r"tt[0-9]+", tconst):
+            return None
+        registro = self._obter(f"find-{tconst}", f"/find/{tconst}", {"external_source": "imdb_id"})
+        if registro is None:
+            return None
+        filmes = registro.corpo.get("movie_results") or []
+        poster = filmes[0].get("poster_path") if filmes else None
+        return f"{IMAGENS}{poster}" if poster else None

@@ -153,6 +153,32 @@ def test_recomendacao_do_catalogo_real_da_o_credito_do_imdb(catalogo_real):
     } in saida["atribuicoes"]
 
 
+def test_generos_da_recomendacao_saem_do_title_basics(catalogo_real):
+    cli, _, _ = catalogo_real
+    cli.ok("atualizar")
+    cli.ok("reconstruir")
+
+    saida = cli.ok("recomendar", "--presentes", "dono")
+
+    generos = {f["titulo"]: f["generos"] for f in saida["filmes"]}
+    assert generos["The Matrix"] == ["Ação", "Ficção científica"]
+    assert generos["Schindler's List"] == ["Biografia", "Drama", "História"]
+
+
+def test_capa_sai_da_resposta_real_do_find_do_tmdb(catalogo_real):
+    # gravacoes/tmdb/find-tt0133093.json é uma resposta de verdade do /find, gravada em 2026-11-21.
+    cli, _, _ = catalogo_real
+    cli.ok("atualizar")
+    cli.ok("reconstruir")
+    cli.env["FILMES_TMDB_CHAVE"] = "x"
+
+    saida = cli.ok("recomendar", "--presentes", "dono", "--duracao-max", "150")
+
+    [matrix] = [f for f in saida["filmes"] if f["titulo"] == "The Matrix"]
+    assert matrix["imdb"] == "https://www.imdb.com/title/tt0133093/"
+    assert matrix["capa"] == "https://image.tmdb.org/t/p/w92/dXNAPwY7VrqMAo51EKhhCJfaGb5.jpg"
+
+
 def test_reconstruir_conta_vizinhos_direcionais_a_partir_das_notas_quatro_ou_mais(catalogo_real):
     cli, _, _ = catalogo_real
     cli.ok("atualizar")

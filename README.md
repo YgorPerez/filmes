@@ -41,6 +41,26 @@ claude
 A fixture já tem Bruno como Dono. Rode `make check` para verificar a CLI
 e o MCP sem rede.
 
+## Como sai cada filme
+
+O Claude mostra a capa pequena ao lado do título e, embaixo, os gêneros e o
+link do IMDb. Depois vêm as Evidências de cada Presente.
+
+```markdown
+![capa](https://image.tmdb.org/t/p/w92/hOrAsLeNtAs9104.jpg) **1. As Horas Lentas** (2021, 1h44)\
+Drama, Mistério · [IMDb](https://www.imdb.com/title/tt9000104/)
+- **Você:** deu 5 a O Farol de Areia (2012), também de Helena Prado (Letterboxd do Bruno, 2025-06-01) *(forte, nota)*
+- **Teo:** sem fato *(fraca, palpite)*
+```
+
+Os gêneros são os do IMDb, traduzidos por uma tabela fixa
+([filmes/catalogo/generos.py](filmes/catalogo/generos.py)). A capa é o
+pôster do TMDB, buscado na hora só para os filmes devolvidos e guardado
+por 6 meses no cache. Ela precisa da chave em `FILMES_TMDB_CHAVE`. Sem a
+chave, ou se o TMDB não responder, o filme sai sem capa e a Recomendação
+avisa. Capa, gêneros e link não são motivo de nada e o verificador da
+resposta não os confere.
+
 ## Catálogo local
 
 Configure o caminho do repo de dados separadamente do código. Os dumps e o
