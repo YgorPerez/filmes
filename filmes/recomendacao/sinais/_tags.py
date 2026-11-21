@@ -9,14 +9,6 @@ depois a maior contagem ou relevância.
 
 from filmes.evidencia import Evidencia, regua, texto
 
-# Fonte do Tag Genome nas linhas da tabela `genoma`, e a atribuição que a licença
-# CC BY-NC 3.0 pede quando uma linha dele sai na Recomendação.
-FONTE_GENOMA = "Tag Genome 2021"
-CREDITOS = {
-    FONTE_GENOMA: "Tag Genome 2021, de Kotkov et al. (GroupLens Research), sob licença CC BY-NC 3.0 "
-                  "(https://creativecommons.org/licenses/by-nc/3.0/)",
-}
-
 
 def melhores(rodada, rotulo: str, tags, generos=(), peso: float = 1.0) -> dict:
     """Candidato -> a Evidência mais forte entre as tags e gêneros dados."""

@@ -49,7 +49,7 @@ def test_pessoa_sem_nota_nenhuma_fica_fora_do_minimo_e_da_media(banco):
 
     # Com o Teo a Sessão é em grupo, e o bônus de grupo/sozinho muda de filme
     # (test_clima.py); fora os filmes com esse bônus, a ordem é a mesma.
-    com_bonus = {f["titulo"] for saida in (sozinho, com_teo) for f in saida["filmes"] if f["evidencias_do_filme"]}
+    com_bonus = {f["titulo"] for saida in (sozinho, com_teo) for f in saida["filmes"] if f["linhas_do_filme"]}
     assert [t for t in _titulos(com_teo) if t not in com_bonus] == [t for t in _titulos(sozinho) if t not in com_bonus]
     assert ({f["titulo"]: f["utilidade"]["bruno"] for f in com_teo["filmes"]}
             == {f["titulo"]: f["utilidade"]["bruno"] for f in sozinho["filmes"]})
@@ -111,7 +111,8 @@ def test_regra_de_sem_dizer_de_quem_e_uso_invalido(banco):
 # Lia Moura, Tomás Reis, Beatriz Sá e Jorge Amaral não ligam a nenhuma Nota da fixture:
 # os filmes deles são Candidatos só com palpites.
 SO_PALPITES = {"Pequenos Milagres", "Casa Cheia", "Deserto Branco", "A Última Estação",
-               "Café Amargo", "Linha Cruzada", "Os Inquilinos", "Fim de Tarde"}
+               "Café Amargo", "Linha Cruzada", "Os Inquilinos", "Fim de Tarde",
+               "Porão Escuro", "A Casa do Fim", "Risos de Domingo"}
 
 
 def test_filme_so_com_palpites_fica_de_fora_quando_ha_candidatos_com_fato(banco):

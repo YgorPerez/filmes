@@ -20,7 +20,7 @@ def _recomendar(banco, *args, presentes=("dono",)):
 def test_clima_pedido_ganha_linha_do_filme_com_a_tag_que_o_sustenta(banco):
     filme = _filme(_recomendar(banco, "--clima", "leve"), "Dia de Feira")
 
-    [linha] = filme["evidencias_do_filme"]
+    [linha] = filme["linhas_do_filme"]
     assert linha == {
         "pessoa": None,
         "texto": 'Clima leve: 14 usuários do MovieLens marcaram o filme com a tag "feel-good"',
@@ -53,11 +53,11 @@ def test_sem_clima_pedido_nao_ha_linha_de_clima(banco):
     saida = _recomendar(banco)
 
     assert saida["climas"] == []
-    assert not any(l["texto"].startswith("Clima") for f in saida["filmes"] for l in f["evidencias_do_filme"])
+    assert not any(l["texto"].startswith("Clima") for f in saida["filmes"] for l in f["linhas_do_filme"])
 
 
 def _linhas(saida, titulo):
-    return [(l["texto"], l["forca"], l["tipo"]) for l in _filme(saida, titulo)["evidencias_do_filme"]]
+    return [(l["texto"], l["forca"], l["tipo"]) for l in _filme(saida, titulo)["linhas_do_filme"]]
 
 
 def test_forca_da_linha_de_clima_segue_a_regua_de_review(banco):
@@ -76,7 +76,7 @@ def test_forca_da_linha_de_clima_segue_a_regua_de_review(banco):
 def test_genero_do_clima_vale_como_metadado_fraco(banco):
     saida = _recomendar(banco, "--clima", "pra rir")
 
-    [linha] = _filme(saida, "Carnaval de Rua")["evidencias_do_filme"]
+    [linha] = _filme(saida, "Carnaval de Rua")["linhas_do_filme"]
     assert (linha["texto"], linha["fonte"], linha["forca"], linha["tipo"]) == (
         "Clima pra rir: do gênero comédia cinematográfica", "Wikidata", "fraca", "metadado")
 
@@ -97,9 +97,8 @@ def test_clima_fora_do_vocabulario_fica_de_fora_com_aviso(banco):
 
     assert saida["climas"] == ["leve"]
     [aviso] = saida["avisos"]
-    assert aviso["codigo"] == "clima_desconhecido"
-    assert "'épico'" in aviso["mensagem"]
-    assert "pra rir" in aviso["mensagem"]   # o aviso lista o vocabulário
+    assert "'épico' não está no vocabulário" in aviso
+    assert "pra rir" in aviso   # o aviso lista o vocabulário
     assert _linhas(saida, "Dia de Feira")[0][0].startswith("Clima leve:")
 
 
@@ -110,15 +109,13 @@ def test_clima_vale_sem_acento_e_sem_maiuscula(banco):
     assert saida["avisos"] == []
 
 
-GENOMA = "Tag Genome 2021, de Kotkov et al. (GroupLens Research), sob licença CC BY-NC 3.0"
-
-
 def test_linha_do_tag_genome_poe_a_atribuicao_nos_creditos(banco):
     com_genoma = _recomendar(banco, "--clima", "leve")
     sem_genoma = _recomendar(banco)
 
-    assert [c for c in com_genoma["creditos"] if c.startswith(GENOMA)]
-    assert not [c for c in sem_genoma["creditos"] if c.startswith(GENOMA)]
+    [credito] = [c for c in com_genoma["creditos"] if c["fonte"] == "Tag Genome"]
+    assert "CC BY-NC 3.0" in credito["texto"]
+    assert not [c for c in sem_genoma["creditos"] if c["fonte"] == "Tag Genome"]
 
 
 # Sessão Maldita tem "so bad it's good" (12 usuários); Silêncio no Lago tem "meditative" (12)
@@ -137,7 +134,7 @@ def test_sessao_sozinha_da_bonus_ao_filme_bom_sozinho(banco):
 def test_sessao_em_grupo_da_bonus_ao_filme_bom_em_grupo(banco):
     saida = _recomendar(banco, presentes=("dono", "iara"))
 
-    [linha] = _filme(saida, "Sessão Maldita")["evidencias_do_filme"]
+    [linha] = _filme(saida, "Sessão Maldita")["linhas_do_filme"]
     assert linha["texto"] == 'para ver em grupo: 12 usuários do MovieLens marcaram o filme com a tag "so bad it\'s good"'
     assert (linha["pessoa"], linha["forca"], linha["contribuicao"]) == (None, "forte", 0.05)
     assert _linhas(saida, "Silêncio no Lago") == []

@@ -34,16 +34,14 @@ def todos() -> list[Clima]:
             for nome, d in tabela.items()]
 
 
-def resolver(pedidos: list[str]) -> tuple[list[Clima], list[dict]]:
+def resolver(pedidos: list[str]) -> tuple[list[Clima], list[str]]:
     vocabulario = {_chave(c.nome): c for c in todos()}
     climas, avisos = [], []
     for pedido in pedidos:
         clima = vocabulario.get(_chave(pedido))
         if clima is None:
             nomes = ", ".join(c.nome for c in vocabulario.values())
-            avisos.append({"codigo": "clima_desconhecido",
-                           "mensagem": f"o Clima '{pedido.strip()}' não está no vocabulário e ficou de fora; "
-                                       f"os Climas são: {nomes}"})
+            avisos.append(f"o Clima '{pedido.strip()}' não está no vocabulário e ficou de fora; os Climas são: {nomes}")
         elif clima not in climas:
             climas.append(clima)
     return climas, avisos

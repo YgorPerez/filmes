@@ -40,18 +40,35 @@ O texto, a fonte, a data, a Força e o Tipo vêm do JSON do motor e são
 copiados sem mudar uma palavra. Nunca invente uma linha de evidência. Quem
 não tem Fato sobre o filme já vem com a linha "sem fato" do motor.
 
-`evidencias_do_filme` traz as linhas que falam do filme e não de alguém: o
-Clima pedido ("Clima leve: ...") e "para ver em grupo" ou "para ver sozinho".
-Mostre no máximo uma, a primeira, depois das linhas dos Presentes:
+`linhas_do_filme` traz as linhas que falam do filme e não de alguém: primeiro
+as das Restrições (duração, faixa etária, gatilho), depois o Clima pedido
+("Clima leve: ...") e "para ver em grupo" ou "para ver sozinho". Mostre no
+máximo uma, a primeira, depois das linhas dos Presentes:
 
 ```
 - **Filme:** <texto> (<fonte>, <data>) *(<forca>, <tipo>)*
 ```
 
-Se `creditos` vier com alguma frase, ela vai na linha de créditos do fim.
+O `texto` de cada item de `creditos` vai na linha de créditos do fim.
 
 Filme com `so_palpites: true` não tem Fato nenhum: só aparece no fim, quando
 faltam filmes com Fato, e o título leva "— sem fato que o sustente".
+
+## Pessoas
+
+A ferramenta `pessoa` cadastra e mostra Pessoas e grava o gosto delas no repo
+de dados. O que se grava vale já na próxima Recomendação.
+
+- O que a própria Pessoa disse ("adoro a Sofia Rangel", resposta de
+  questionário, review dela) é `declarar`. O que o Dono conta dela ("o Leo
+  odeia filme lento") é `relatar`. "Nunca vê terror" é `vetar`.
+- Passe o alvo pelo ID do Catálogo (`filme` tt..., `entidade` Q... de diretor,
+  ator ou gênero), achado com `consultar`, e a `reacao`. Filme que a Pessoa ama
+  ou odeia vira Nota 5 ou 1.
+- Guarde o `texto` como a Pessoa ou o Dono disse. Ele aparece na linha de
+  Evidência entre aspas.
+- A leitura do pedido cita os Vetos que agiram, que vêm em `vetos` no JSON de
+  `recomendar`.
 
 ## Consultar
 

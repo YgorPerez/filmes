@@ -84,9 +84,9 @@ describe("servidor MCP sobre a CLI real e a fixture", () => {
     const saida = json(resultado);
     assert.deepEqual(saida.climas, vocabulario);
     const [aviso] = saida.avisos;
-    assert.equal(aviso.codigo, "clima_desconhecido");
-    assert.ok(aviso.mensagem.endsWith(`os Climas são: ${vocabulario.join(", ")}`));
-    assert.ok(Array.isArray(saida.filmes[0].evidencias_do_filme));
+    assert.ok(aviso.startsWith("o Clima 'épico' não está no vocabulário"));
+    assert.ok(aviso.endsWith(`os Climas são: ${vocabulario.join(", ")}`));
+    assert.ok(Array.isArray(saida.filmes[0].linhas_do_filme));
   });
 
   it("consultar executa SELECT", async () => {
@@ -104,6 +104,51 @@ describe("servidor MCP sobre a CLI real e a fixture", () => {
 
     assert.equal(resultado.isError, true);
     assert.equal(json(resultado).erro.codigo, "somente_leitura");
+  });
+
+  it("recomendar repassa as Restrições da Sessão", async () => {
+    const resultado = (await cliente.callTool({
+      name: "recomendar",
+      arguments: {
+        presentes: ["dono"], quantos: 50, duracao_max: 110, idioma: "pt", idade_crianca: 7,
+        gatilhos: ["a dog dies"],
+      },
+    })) as Resultado;
+
+    assert.ok(!resultado.isError);
+    const saida = json(resultado);
+    assert.deepEqual(Object.keys(saida.restricoes).sort(), ["crianca", "duracao", "gatilho", "idioma"]);
+    assert.equal(saida.restricoes.crianca.idade, 7);
+    assert.deepEqual(saida.restricoes.gatilho.temas, ["a dog dies"]);
+    // Em português, até 1h50 e até a faixa 6, só sobra Maré Baixa; sem chave do Does the Dog Die, fica com aviso.
+    assert.deepEqual(saida.filmes.map((f: any) => f.titulo), ["Maré Baixa"]);
+    const linhas = saida.filmes[0].linhas_do_filme.map((e: any) => e.texto);
+    assert.deepEqual(linhas.sort(), [
+      "duração 1h38, dentro do limite de 1h50",
+      "classificação L (Kijkwijzer AL convertida)",
+      'sem dado do Does the Dog Die sobre "a dog dies"',
+      "idioma original português",
+    ].sort());
+  });
+
+  it("sem Já visto tira o que o Dono já viu", async () => {
+    const resultado = (await cliente.callTool({
+      name: "recomendar", arguments: { presentes: ["dono"], quantos: 50, sem_ja_visto: true },
+    })) as Resultado;
+
+    const titulos = json(resultado).filmes.map((f: any) => f.titulo);
+    assert.ok(titulos.includes("As Horas Lentas"));
+    assert.ok(!titulos.includes("O Farol de Areia"));
+  });
+
+  it("tem criança sem idade vale livre", async () => {
+    const resultado = (await cliente.callTool({
+      name: "recomendar", arguments: { presentes: ["dono"], quantos: 50, crianca: true },
+    })) as Resultado;
+
+    const saida = json(resultado);
+    assert.equal(saida.restricoes.crianca.idade, 0);
+    assert.deepEqual(saida.filmes.map((f: any) => f.titulo).sort(), ["Maré Baixa", "O Farol de Areia"]);
   });
 
   it("erro da CLI chega como erro da ferramenta", async () => {

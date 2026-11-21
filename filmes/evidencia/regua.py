@@ -9,6 +9,7 @@ from filmes.evidencia import FORCAS
 
 NOTA_ALTA = 4.0       # "Nota alta" no caminho de gosto
 ANOS_FRESCOR = 5      # Nota com mais de 5 anos cai um nível
+ANOS_DITO = 2         # Declarado e Relato com mais de 2 anos caem um nível
 
 
 def descer(forca: str) -> str:
@@ -92,6 +93,28 @@ def forca_genero_no_clima() -> str:
     demais (a mesma razão que o limita a fraca no caminho de gosto). A spec não
     diz nada; a régua do metadado "que responde ao pedido" fala de duração e
     classificação, que são exatas."""
+    return "fraca"
+
+
+def forca_dito(tipo: str, especifico: bool, data: str, hoje: dt.date) -> str:
+    """Declarado específico (nomeia filme, diretor, ator, subgênero) é forte; genérico é moderada.
+    Uma review ou tag que a própria Pessoa escreveu é Declarado específico.
+    Relato fica um nível abaixo do Declarado equivalente. Os dois caem um nível depois de 2 anos."""
+    forca = "forte" if especifico else "moderada"
+    if tipo == "relato":
+        forca = descer(forca)
+    if _mais_velha_que(data, ANOS_DITO, hoje):
+        forca = descer(forca)
+    return forca
+
+
+def forca_metadado_do_pedido() -> str:
+    """Metadado que responde ao pedido (duração, classificação, idioma, gatilho): sempre forte."""
+    return "forte"
+
+
+def forca_palpite() -> str:
+    """Palpite, um Motivo sem Fato: sempre fraca."""
     return "fraca"
 
 

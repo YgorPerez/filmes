@@ -8,8 +8,6 @@ nunca à utilidade de alguém. O peso está em [clima] da config.
 
 from filmes.recomendacao.sinais import _tags
 
-CREDITOS = _tags.CREDITOS
-
 
 def sinais_do_filme(rodada):
     peso = rodada.pesos["clima"]["peso"]

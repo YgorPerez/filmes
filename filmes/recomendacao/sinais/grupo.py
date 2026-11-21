@@ -13,7 +13,6 @@ from filmes.erros import ErroFilmes
 from filmes.recomendacao.sinais import _tags
 
 VOCABULARIO = RAIZ / "config" / "grupo_sozinho.toml"
-CREDITOS = _tags.CREDITOS
 
 
 def sinais_do_filme(rodada):
