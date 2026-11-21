@@ -10,7 +10,15 @@ próprio gosto) e `## Relatos` (o que o Dono contou dela), um item por linha:
 
 Os campos são data, Fonte, específico ou genérico, a reação ao alvo (ama, gosta de,
 não gosta de, odeia, ou só "sobre") com o ID entre parênteses, e o que foi dito.
-O alvo é opcional. O resto do corpo é texto livre e fica como está.
+O alvo é opcional.
+
+A seção `## Já vistos` guarda o que a Pessoa disse que já viu, com a Nota quando
+ela deu uma (na escala de 0,5 a 5):
+
+    - 2026-11-21 · conversa com o Dono · Pequenos Milagres (tt9000601)
+    - 2026-11-21 · conversa com o Dono · Casa Cheia (tt9000602) · nota 4
+
+O resto do corpo é texto livre e fica como está.
 """
 
 import datetime as dt
@@ -36,7 +44,7 @@ class Veto:
 
 REACOES = {"ama": "ama", "gosta": "gosta de", "nao_gosta": "não gosta de", "odeia": "odeia"}
 _REACAO_POR_TEXTO = {v: k for k, v in REACOES.items()} | {"sobre": None}
-SECOES = {"declarados": "Declarados", "relatos": "Relatos"}
+SECOES = {"declarados": "Declarados", "relatos": "Relatos", "já vistos": "Já vistos"}
 
 _LINHA = re.compile(
     r"- (?P<data>\d{4}-\d{2}-\d{2}) · (?P<fonte>.+?) · (?P<especificidade>específico|genérico)"
@@ -64,6 +72,28 @@ class Dito:
         return "- " + " · ".join(campos)
 
 
+_LINHA_VISTO = re.compile(
+    r"- (?P<data>\d{4}-\d{2}-\d{2}) · (?P<fonte>.+?) · (?P<rotulo>.+?) \((?P<alvo>tt[^()\s]+)\)"
+    r"(?: · nota (?P<nota>\d+(?:,\d+)?))?"
+)
+
+
+@dataclass(frozen=True)
+class Visto:
+    """Um Já visto dito na hora, com a Nota quando a Pessoa deu uma: uma linha de `## Já vistos`."""
+    data: str
+    fonte: str
+    alvo: str       # filme (tt...)
+    rotulo: str
+    nota: float | None = None
+
+    def linha(self) -> str:
+        campos = [self.data, self.fonte, f"{self.rotulo} ({self.alvo})"]
+        if self.nota is not None:
+            campos.append("nota " + f"{self.nota:g}".replace(".", ","))
+        return "- " + " · ".join(campos)
+
+
 @dataclass
 class Pessoa:
     slug: str
@@ -82,9 +112,14 @@ class Pessoa:
     def relatos(self) -> list[Dito]:
         return _ditos(self.corpo, "relatos", self.slug)
 
-    def acrescentar(self, secao: str, dito: Dito) -> bool:
-        """Põe o Dito no fim da seção (criando a seção se faltar). Devolve False se ele já estava lá."""
-        if dito in _ditos(self.corpo, secao, self.slug):
+    @property
+    def vistos(self) -> list[Visto]:
+        return _vistos(self.corpo, self.slug)
+
+    def acrescentar(self, secao: str, dito: Dito | Visto) -> bool:
+        """Põe o Dito ou o Visto no fim da seção (criando a seção se faltar). Devolve False se ele já estava lá."""
+        ja_estao = self.vistos if secao == "já vistos" else _ditos(self.corpo, secao, self.slug)
+        if dito in ja_estao:
             return False
         linhas = self.corpo.splitlines()
         titulo = f"## {SECOES[secao]}"
@@ -198,17 +233,30 @@ def _data_valida(data: str) -> bool:
     return True
 
 
-def _ditos(corpo: str, secao: str, slug: str) -> list[Dito]:
-    ditos, atual = [], None
+def _itens(corpo: str, secao: str, slug: str, formato: re.Pattern):
+    """As linhas da seção que casam com o formato; linha fora dele é erro com arquivo e linha."""
+    atual = None
     for numero, linha in enumerate(corpo.splitlines(), start=1):
         if linha.startswith("#"):
             atual = linha.lstrip("#").strip().casefold()
             continue
         if atual != secao or not linha.startswith("- "):
             continue
-        achado = _LINHA.fullmatch(linha.rstrip())
+        achado = formato.fullmatch(linha.rstrip())
         if not achado or not _data_valida(achado["data"]):
             raise ErroFilmes("dados_invalidos", f"pessoas/{slug}.md, linha {numero} do corpo: {SECOES[secao][:-1]} fora do formato: {linha}")
+        yield achado
+
+
+def _vistos(corpo: str, slug: str) -> list[Visto]:
+    return [Visto(data=a["data"], fonte=a["fonte"], alvo=a["alvo"], rotulo=a["rotulo"],
+                  nota=float(a["nota"].replace(",", ".")) if a["nota"] else None)
+            for a in _itens(corpo, "já vistos", slug, _LINHA_VISTO)]
+
+
+def _ditos(corpo: str, secao: str, slug: str) -> list[Dito]:
+    ditos = []
+    for achado in _itens(corpo, secao, slug, _LINHA):
         ditos.append(Dito(
             data=achado["data"], fonte=achado["fonte"], especifico=achado["especificidade"] == "específico",
             texto=achado["texto"], reacao=_REACAO_POR_TEXTO.get(achado["reacao"]),

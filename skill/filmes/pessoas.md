@@ -26,6 +26,16 @@ ambíguo, peça ano ou outro detalhe antes de gravar.
 
 Ao terminar, diga o que entrou e quais alvos ainda precisam de identificação.
 
+## Já visto
+
+"Já vi", "Lorenzo viu, nota 8" e "esse todo mundo já viu" viram `pessoa`
+com `acao: "visto"`, a Pessoa e o ID do filme (ache com `consultar`).
+"Todo mundo" é uma chamada por Presente. Se a Pessoa disse a nota, passe
+em `nota`: "8/10" quando ela falou de 0 a 10, "4,5" quando falou em
+estrelas. Sem nota, grava só o Já visto. A nota grava uma Nota, que pesa
+no gosto da Pessoa como as do Letterboxd. Para tirar da próxima
+Recomendação o que alguém já viu, passe `sem_ja_visto` a `recomendar`.
+
 ## Imports
 
 Chame `importar` com a Pessoa e o caminho do ZIP do Letterboxd ou do
