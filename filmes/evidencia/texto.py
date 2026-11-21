@@ -16,6 +16,11 @@ def filme(titulo: str, ano) -> str:
     return f"{titulo} ({ano})" if ano else titulo
 
 
+def inteiro(valor: int) -> str:
+    """3104 vira "3.104"."""
+    return f"{valor:,}".replace(",", ".")
+
+
 def duracao(minutos: int) -> str:
     """104 vira "1h44"; 120 vira "2h"; 45 vira "45min"."""
     horas, resto = divmod(minutos, 60)

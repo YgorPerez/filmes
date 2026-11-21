@@ -13,8 +13,10 @@ export default definirFerramenta({
     "`so_palpites` marca filme sem Fato nenhum, que só entra no fim quando " +
     'faltam Candidatos com Fato. Presentes por slug, nome ou apelido; "dono" é o Dono. ' +
     "Restrições opcionais (duração, idioma, criança, gatilhos, sem Já visto) tiram filmes antes da ordenação; " +
-    "cada filme que passa traz em `linhas_do_filme` as linhas que dizem por quê. Devolve também " +
-    "`restricoes`, `avisos` e `creditos`. Texto do Does the Dog Die vai citado como veio, nunca parafraseado.",
+    "cada filme que passa traz em `linhas_do_filme` as linhas que dizem por quê. Também em `linhas_do_filme`, " +
+    'sem Pessoa: o Clima pedido e "para ver em grupo" ou "para ver sozinho", que puxam a ordem sem tirar filme. ' +
+    "Devolve também `climas` (os aceitos), `restricoes`, `avisos` (Clima fora do vocabulário, fonte sem chave) " +
+    "e `creditos`. Texto do Does the Dog Die vai citado como veio, nunca parafraseado.",
   entrada: {
     presentes: z.array(pessoa).min(1).describe('Pessoas da Sessão, ex.: ["dono", "ana"]'),
     regra: z
@@ -25,6 +27,13 @@ export default definirFerramenta({
           'media (média simples, "tanto faz") ou de (só o gosto de uma Pessoa, "hoje é a vez da Ana")',
       ),
     de: pessoa.optional().describe('na regra "de", a Pessoa cujo gosto ordena; precisa estar entre os Presentes'),
+    climas: z
+      .array(z.string())
+      .optional()
+      .describe(
+        "Climas do pedido, do vocabulário fixo: leve, pra rir, tenso, romântico, pra chorar, pra pensar, " +
+          'assustador, ação. "Algo leve" é leve; "pra dar risada" é pra rir. Fora da lista, o motor devolve um aviso',
+      ),
     quantos: z.number().int().min(1).max(100).optional().describe("tamanho da lista; padrão 5"),
     duracao_max: z.number().int().min(1).optional().describe("tempo disponível, em minutos"),
     idioma: z.string().min(1).optional().describe('idioma original exigido, só quando pedido: "pt", "português" ou o QID'),
@@ -45,6 +54,7 @@ export default definirFerramenta({
     else if (e.crianca) args.push("--crianca");
     for (const gatilho of e.gatilhos ?? []) args.push(`--gatilho=${gatilho}`);
     if (e.sem_ja_visto) args.push("--sem-ja-visto");
+    for (const clima of e.climas ?? []) args.push(`--clima=${clima}`);
     return { comando: "recomendar", args };
   },
 });
