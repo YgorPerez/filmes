@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "filmes": {
+      "command": "node",
+      "args": ["mcp/src/stdio.ts"]
+    }
+  }
+}
