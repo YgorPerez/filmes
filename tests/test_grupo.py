@@ -3,8 +3,8 @@
 Na fixture, além do Bruno (veja test_recomendar.py):
 - Iara deu 3 a O Farol de Areia (Helena Prado) e 4 a Fronteira (Rui Tavares).
   Isso dá Evidência fraca a favor nos outros filmes de Helena Prado e
-  moderada nos outros de Rui Tavares. Sobre O Farol de Areia e Fronteira em si
-  ela não tem Fato: a Nota-semente não vale para o próprio filme.
+  moderada nos outros de Rui Tavares. Sobre O Farol de Areia e Fronteira em si,
+  o Fato dela é o Já visto da própria Nota.
 - Teo não tem Nota nenhuma.
 """
 
@@ -34,7 +34,7 @@ SEM_FATO = {"texto": "sem fato", "fonte": None, "data": None, "forca": "fraca", 
 def test_presente_sem_fato_sobre_o_filme_tem_utilidade_desconhecida_e_linha_sem_fato(banco):
     saida = banco.ok("recomendar", "--presentes", "dono", "iara", "--quantos", "50")
 
-    filme = _filme(saida, "O Farol de Areia")
+    filme = _filme(saida, "Noite de Estreia")
     assert filme["utilidade"]["iara"] is None
     assert filme["evidencias"]["iara"] == [{"pessoa": "iara", **SEM_FATO}]
 
@@ -59,12 +59,12 @@ def test_pessoa_sem_nota_nenhuma_fica_fora_do_minimo_e_da_media(banco):
 
 
 # Bruno ama As Horas Lentas (forte) e Iara gosta pouco (uma Nota 3 no mesmo diretor).
-# Inverno em Lisboa agrada os dois na mesma medida, menos do que As Horas Lentas agrada o Bruno.
+# A Volta do Mar agrada os dois quase na mesma medida, menos do que As Horas Lentas agrada o Bruno.
 
 def test_regra_padrao_poe_antes_o_filme_em_que_ninguem_fica_mal(banco):
     titulos = _titulos(banco.ok("recomendar", "--presentes", "dono", "iara", "--quantos", "50"))
 
-    assert titulos.index("Inverno em Lisboa") < titulos.index("As Horas Lentas")
+    assert titulos.index("A Volta do Mar") < titulos.index("As Horas Lentas")
 
 
 def test_regra_media_poe_antes_o_filme_de_maior_media(banco):
@@ -72,7 +72,7 @@ def test_regra_media_poe_antes_o_filme_de_maior_media(banco):
 
     assert saida["regra"] == {"nome": "media"}
     titulos = _titulos(saida)
-    assert titulos.index("As Horas Lentas") < titulos.index("Inverno em Lisboa")
+    assert titulos.index("As Horas Lentas") < titulos.index("A Volta do Mar")
 
 
 def test_regra_de_fulano_ordena_so_pelo_gosto_dessa_pessoa(banco):
@@ -81,9 +81,9 @@ def test_regra_de_fulano_ordena_so_pelo_gosto_dessa_pessoa(banco):
                         "--quantos", "50")
 
     assert do_bruno["regra"] == {"nome": "de", "pessoa": "bruno"}
-    assert padrao.index("Inverno em Lisboa") < padrao.index("As Horas Lentas")
+    assert padrao.index("A Volta do Mar") < padrao.index("As Horas Lentas")
     titulos = _titulos(do_bruno)
-    assert titulos.index("As Horas Lentas") < titulos.index("Inverno em Lisboa")
+    assert titulos.index("As Horas Lentas") < titulos.index("A Volta do Mar")
 
 
 def test_na_regra_de_fulano_filme_sem_fato_dele_vai_depois_dos_que_tem(banco):
@@ -91,7 +91,7 @@ def test_na_regra_de_fulano_filme_sem_fato_dele_vai_depois_dos_que_tem(banco):
     titulos = _titulos(banco.ok("recomendar", "--presentes", "dono", "iara", "--regra", "de", "--de", "iara",
                                 "--quantos", "50"))
 
-    assert titulos.index("Inverno em Lisboa") < titulos.index("As Horas Lentas") < titulos.index("Noite de Estreia")
+    assert titulos.index("A Volta do Mar") < titulos.index("As Horas Lentas") < titulos.index("Noite de Estreia")
 
 
 def test_regra_de_quem_nao_esta_entre_os_presentes_e_uso_invalido(banco):

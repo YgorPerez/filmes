@@ -52,15 +52,16 @@ def test_quem_ficou_atras_ganha_credito_e_o_filme_dele_sobe_com_a_linha_de_credi
 
 
 def test_filme_que_subiu_mas_em_que_quem_tem_credito_e_o_minimo_nao_leva_a_linha(banco):
-    # Noite de Estreia agrada o Bruno mais que o Quim. Com o Crédito, o Bruno passa a ser
-    # o mínimo dela; ela sobe só porque outros caíram mais, e não é o filme dele.
+    # Segunda Chamada agrada o Bruno um pouco mais que o Quim (vizinha de Maré Baixa, a que
+    # os dois deram Nota). Com o Crédito, o Bruno passa a ser o mínimo dela; ela sobe só
+    # porque outros caíram mais, e não é o filme dele.
     antes = banco.ok("recomendar", "--presentes", "dono", "quim", "--quantos", "50")
     banco.ok("feedback", "--sessao", antes["sessao"]["id"], "--filme", "Pequenos Milagres",
              "--nota", "dono=1", "--nota", "quim=5")
     depois = banco.ok("recomendar", "--presentes", "dono", "quim", "--quantos", "50")
 
-    assert _titulos(depois).index("Noite de Estreia") < _titulos(antes).index("Noite de Estreia")
-    assert _filme(depois, "Noite de Estreia")["linhas_do_filme"] == []
+    assert _titulos(depois).index("Segunda Chamada") < _titulos(antes).index("Segunda Chamada")
+    assert _filme(depois, "Segunda Chamada")["linhas_do_filme"] == []
 
 
 def _sessao_com_feedback(banco, presentes, *reacoes, filme="Pequenos Milagres"):
