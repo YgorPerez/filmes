@@ -47,3 +47,19 @@ importado depois soma o resto sem repetir Fatos. Mostre o relatório
 de resolução e as pendências. Para os itens da fila, chame `fila_import`
 com `acao: "ver"`. Mostre as opções e use `confirmar` com o ID do
 filme ou `descartar` com a razão (`razao`) depois que o Dono decidir.
+
+## Desfazer um registro
+
+Quando o Dono corrigir algo já gravado ("não era esse filme", "ela não
+disse isso"), não edite o arquivo da Pessoa. Chame `pessoa` com
+`acao: "ver"`, ache o item e chame `acao: "remover"` com a Pessoa e um
+só campo entre `declarado`, `relato`, `veto` e `visto`, com o `fato_id`
+do item. O alvo (tt..., Q...) também serve quando só um item daquele tipo
+tem esse alvo. Depois registre o certo, se houver.
+
+Declarado com `fato_id` que começa por `letterboxd:` veio de um import, e
+o que começa por `feedback:` veio do Feedback de uma Sessão. `remover`
+recusa os dois. Para tirar um import inteiro (um RSS que o ZIP vai substituir, um
+export da Pessoa errada), chame `importar` com `remover` e o `arquivo`
+que `ver` mostra em `imports`. Saem o registro, a cópia guardada e os
+Fatos que só esse import trazia.

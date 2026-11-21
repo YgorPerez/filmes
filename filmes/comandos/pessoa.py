@@ -5,7 +5,7 @@ from filmes.dados import pessoas
 from filmes.erros import ErroFilmes
 from filmes.evidencia import regua
 
-AJUDA = "cria uma Pessoa, mostra o que se sabe dela e registra Declarados, Relatos, Vetos e Já vistos"
+AJUDA = "cria uma Pessoa, mostra o que se sabe dela e registra ou remove Declarados, Relatos, Vetos e Já vistos"
 
 
 def configurar(parser):
@@ -46,6 +46,17 @@ def configurar(parser):
     p.add_argument("--fonte", default="conversa com o Dono", help='de onde veio (padrão: "conversa com o Dono")')
     p.add_argument("--data", help="AAAA-MM-DD (padrão: hoje)")
     p.set_defaults(_acao=_visto)
+
+    p = _acao(acoes, "remover", "tira do arquivo da Pessoa e do banco um Declarado, Relato, Veto ou Já visto")
+    p.add_argument("pessoa", help='slug, nome ou apelido; "dono" é o Dono')
+    qual = p.add_mutually_exclusive_group(required=True)
+    for opcao in _REMOVIVEIS:
+        qual.add_argument(f"--{opcao}", metavar="ID_OU_ALVO",
+                          help="o fato_id que `pessoa ver` mostra, ou o alvo (tt..., Q...) se só um item tem esse alvo")
+    p.set_defaults(_acao=_remover)
+
+
+_REMOVIVEIS = {"declarado": "declarados", "relato": "relatos", "veto": "vetos", "visto": "já vistos"}
 
 
 def _acao(acoes, nome, ajuda):
@@ -88,7 +99,7 @@ def _criar(args, amb):
 def _ver(args, amb):
     pessoa = pessoas.resolver(amb.dados, args.pessoa)
     saida = _resumo(pessoa) | {
-        "vetos": [v.como_dict() for v in pessoa.vetos],
+        "vetos": [_veto_json(pessoa.slug, v) for v in pessoa.vetos],
         "declarados": [_dito_json("declarados", pessoa.slug, d, amb) for d in pessoa.declarados],
         "relatos": [_dito_json("relatos", pessoa.slug, d, amb) for d in pessoa.relatos],
         "vistos": [_visto_json(pessoa.slug, v) for v in pessoa.vistos],
@@ -135,7 +146,51 @@ def _vetar(args, amb):
         _salvar(amb, pessoa)
     else:
         veto = next(v for v in pessoa.vetos if v.alvo == alvo)
-    return {"pessoa": pessoa.slug, "veto": veto.como_dict(), "novo": novo}
+    return {"pessoa": pessoa.slug, "veto": _veto_json(pessoa.slug, veto), "novo": novo}
+
+
+def _veto_json(slug, veto):
+    return veto.como_dict() | {"fato_id": fatos.id_do_veto(slug, veto)}
+
+
+def _remover(args, amb):
+    pessoa = pessoas.resolver(amb.dados, args.pessoa)
+    [(opcao, valor)] = [(o, getattr(args, o)) for o in _REMOVIVEIS if getattr(args, o) is not None]
+    secao = _REMOVIVEIS[opcao]
+    itens = _itens_removiveis(pessoa, secao, amb)
+    achados = [(item, saida) for item, saida in itens if saida["fato_id"] == valor]
+    if not achados:
+        achados = [(item, saida) for item, saida in itens if saida.get("alvo", saida.get("filme")) == valor]
+    if not achados:
+        raise ErroFilmes(f"{opcao}_desconhecido", _sem_item(pessoa, opcao, valor, amb))
+    if len(achados) > 1:
+        ids = ", ".join(saida["fato_id"] for _, saida in achados)
+        raise ErroFilmes(f"{opcao}_ambiguo", f"mais de um {opcao} de {pessoa.slug} tem o alvo {valor}; "
+                                              f"escolha pelo fato_id: {ids}")
+    [(item, saida)] = achados
+    if secao == "vetos":
+        pessoa.vetos.remove(item)
+    else:
+        pessoa.tirar(secao, item)
+    _salvar(amb, pessoa)
+    return {"pessoa": pessoa.slug, "tipo": opcao, "removido": saida}
+
+
+def _itens_removiveis(pessoa, secao, amb):
+    if secao == "vetos":
+        return [(v, _veto_json(pessoa.slug, v)) for v in pessoa.vetos]
+    if secao == "já vistos":
+        return [(v, _visto_json(pessoa.slug, v)) for v in pessoa.vistos]
+    return [(d, _dito_json(secao, pessoa.slug, d, amb)) for d in getattr(pessoa, secao)]
+
+
+def _sem_item(pessoa, opcao, valor, amb):
+    mensagem = f"{pessoa.slug} não tem {opcao} com fato_id ou alvo {valor!r} no arquivo"
+    if opcao == "declarado" and valor.startswith("letterboxd:"):
+        return mensagem + "; ele veio de um import: tire o import com `importar --remover`"
+    if opcao == "declarado" and valor.startswith("feedback:"):
+        return mensagem + "; ele veio do Feedback de uma Sessão, não do arquivo da Pessoa"
+    return mensagem
 
 
 def _visto(args, amb):
