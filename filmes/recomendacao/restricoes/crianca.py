@@ -84,9 +84,11 @@ class Crianca:
     def _julgar(self, filme_id, faixa, sistema, rotulo, convertida, fonte, data, fato_id):
         if classificacao.idade(faixa) > self.idade:
             return SAI
-        origem = f"{sistema} {rotulo} convertida" if convertida else sistema
+        # Alguns sistemas já põem o nome no rótulo ("FSK 6"); outros não ("12A" da BBFC).
+        rotulo_completo = rotulo if rotulo.startswith(f"{sistema} ") else f"{sistema} {rotulo}"
+        de_onde = f"{rotulo_completo} convertida" if convertida else sistema
         return Passa((Evidencia(
-            pessoa=None, filme_id=filme_id, texto=f"classificação {faixa} ({origem})",
+            pessoa=None, filme_id=filme_id, texto=f"classificação {faixa} ({de_onde})",
             fonte=fonte, data=data, forca=regua.forca_metadado_do_pedido(), tipo="metadado",
             fato_id=fato_id, base=0.0,
         ),))

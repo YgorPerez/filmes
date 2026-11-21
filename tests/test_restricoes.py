@@ -166,6 +166,13 @@ def test_sem_classind_vale_a_faixa_mais_alta_e_a_linha_diz_que_foi_convertida(ba
     assert _linha_de_classificacao(saida, "A Volta do Mar")["texto"] == "classificação 6 (Medierådet 7 convertida)"
 
 
+def test_rotulo_que_ja_traz_o_nome_do_sistema_nao_o_repete(banco):
+    # A FSK escreve "FSK 6".
+    linha = _linha_de_classificacao(_todos(banco, "--crianca", "12"), "Cidade de Vidro")
+
+    assert linha["texto"] == "classificação 6 (FSK 6 convertida)"
+
+
 def test_classificacao_convertida_fica_no_banco_com_a_origem(banco):
     linhas = banco.consultar(
         "SELECT faixa, sistema, rotulo, convertida FROM faixas_etarias WHERE filme_id = 'tt9000105' ORDER BY faixa")
