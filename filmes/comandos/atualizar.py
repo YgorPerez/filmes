@@ -3,7 +3,7 @@ import sys
 
 from filmes.catalogo.atualizacao import atualizar
 
-AJUDA = "baixa os dumps do IMDb e do Wikidata e fixa suas versões"
+AJUDA = "baixa os dumps do IMDb, do Wikidata e da GroupLens e fixa suas versões"
 
 
 def configurar(parser):

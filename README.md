@@ -54,9 +54,10 @@ uv run python -m filmes atualizar --json
 uv run python -m filmes reconstruir --json
 ```
 
-`atualizar` busca os TSVs de títulos e votos do IMDb e as triplas e rótulos do
-Wikidata. Se uma consulta falhar no QLever, busca aquele conjunto por
-predicado no WDQS. O progresso da CLI sai em stderr. No MCP, a ferramenta
+`atualizar` busca os TSVs de títulos e votos do IMDb, as triplas e rótulos do
+Wikidata e os ZIPs MovieLens ml-32m e Tag Genome 2021. Se uma consulta falhar
+no QLever, busca aquele conjunto por predicado no WDQS. O progresso da CLI
+sai em stderr. No MCP, a ferramenta
 `atualizar` envia notificações de progresso ao cliente que as solicita.
 
 O manifesto [config/versoes-catalogo.json](config/versoes-catalogo.json) é o
@@ -66,7 +67,12 @@ de cada dump. Para escrever ou ler outro manifesto, use `FILMES_VERSOES` ou
 
 Para reconstruir uma versão anterior, use seu manifesto e guarde os arquivos
 que ele lista, cada um em `<catalogo>/<sha256>/<nome do dump>`.
-`reconstruir` confere os hashes e monta o banco sem rede. A fixture em
-`tests/fixture/catalogo` continua a usar as tabelas em CSV.
+`reconstruir` confere os hashes e monta o banco sem rede. A carga do MovieLens
+guarda até 50 vizinhos por filme, ordenados pela proporção de usuários que
+deram 4+ aos dois filmes entre os que deram 4+ ao filme de partida. Em caso de
+empate, vale a ordem do ID do IMDb. A carga também guarda contagens de usuários
+por tag no ml-32m e escores do Tag Genome 2021. Manifestos anteriores à ingestão
+da GroupLens ainda podem ser reconstruídos, com essas tabelas vazias. A fixture
+em `tests/fixture/catalogo` usa as tabelas em CSV.
 
 O catálogo é para uso pessoal e não comercial. [Datasets do IMDb](https://developer.imdb.com/non-commercial-datasets/).

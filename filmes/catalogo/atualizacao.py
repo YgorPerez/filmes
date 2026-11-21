@@ -13,16 +13,17 @@ from tempfile import TemporaryDirectory
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
+from zipfile import BadZipFile
 
 import ijson
 
 from filmes.ambiente import RAIZ
-from filmes.catalogo import versoes, wikidata
+from filmes.catalogo import review, versoes, wikidata
 from filmes.erros import ErroFilmes
 
 IMDB_URL = "https://datasets.imdbws.com/"
 AGENTE = "filmes/0.1 (https://github.com/YgorPerez/filmes)"
-FALHAS = (OSError, EOFError, HTTPException, ValueError, ijson.JSONError)
+FALHAS = (OSError, EOFError, HTTPException, ValueError, ijson.JSONError, BadZipFile)
 LOTE_ROTULOS = 20_000
 LOTE_WDQS = 500
 
@@ -37,11 +38,15 @@ def atualizar(amb, progresso):
     try:
         with TemporaryDirectory(dir=amb.catalogo) as pasta:
             execucao = _Atualizacao(amb, Path(pasta), gravacoes)
-            etapas = len(versoes.IMDB) + len(wikidata.GRUPOS) + 1
-            for posicao, nome in enumerate(versoes.IMDB):
+            baixaveis = (*versoes.GROUPLENS, *versoes.IMDB)
+            etapas = len(baixaveis) + len(wikidata.GRUPOS) + 1
+            for posicao, nome in enumerate(baixaveis):
                 progresso(posicao, etapas, f"Baixando {nome}")
-                execucao.imdb(nome)
-            for posicao, grupo in enumerate(wikidata.GRUPOS, start=len(versoes.IMDB)):
+                if nome in versoes.GROUPLENS:
+                    execucao.grouplens(nome)
+                else:
+                    execucao.imdb(nome)
+            for posicao, grupo in enumerate(wikidata.GRUPOS, start=len(baixaveis)):
                 execucao.wikidata(grupo, lambda fracao, mensagem: progresso(posicao + fracao, etapas, mensagem))
             execucao.rotulos(lambda fracao, mensagem: progresso(etapas - 1 + fracao, etapas, mensagem))
             versoes.gravar(amb.versoes, execucao.dumps)
@@ -59,6 +64,18 @@ class _Atualizacao:
         self.gravacoes = gravacoes
         self.dumps = {}
         self.itens = set()
+
+    def grouplens(self, nome):
+        fonte, data, url = review.FONTES[nome]
+        arquivo = self.pasta / nome
+        try:
+            resposta = (self.gravacoes / nome).open("rb") if self.gravacoes else _abrir(url)
+            with resposta, arquivo.open("wb") as destino:
+                shutil.copyfileobj(resposta, destino, length=1024 * 1024)
+            review.validar_zip(arquivo)
+        except (*FALHAS, KeyError) as erro:
+            raise ValueError(f"{nome}: {erro}") from erro
+        self._guardar(arquivo, fonte, url, data)
 
     def imdb(self, nome):
         url = IMDB_URL + nome

@@ -13,6 +13,9 @@ from filmes.erros import ErroFilmes
 
 IMDB = ("title.basics.tsv.gz", "title.ratings.tsv.gz")
 ROTULOS = "wikidata-rotulos.json.gz"
+MOVIELENS = "ml-32m.zip"
+GENOMA = "genome_2021.zip"
+GROUPLENS = (MOVIELENS, GENOMA)
 
 
 def nome_wikidata(grupo, propriedade=None):
@@ -44,6 +47,10 @@ def ler(caminho, catalogo):
     try:
         dumps = json.loads(caminho.read_text(encoding="utf-8"))["dumps"]
         obrigatorios = {*IMDB, ROTULOS}
+        if set(dumps).intersection(GROUPLENS):
+            if not set(GROUPLENS) <= set(dumps):
+                raise ValueError("faltam dumps da GroupLens")
+            obrigatorios.update(GROUPLENS)
         restantes = set(dumps) - obrigatorios
         if not obrigatorios <= set(dumps):
             raise ValueError("faltam os dumps do IMDb ou os rótulos do Wikidata")

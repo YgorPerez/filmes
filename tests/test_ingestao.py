@@ -1,6 +1,7 @@
 import hashlib
 import json
 import shutil
+from zipfile import ZipFile
 
 import pytest
 
@@ -29,9 +30,12 @@ def test_atualizar_fixa_os_dumps_por_data_e_hash(catalogo_real):
     assert set(fixados) == {
         "title.basics.tsv.gz", "title.ratings.tsv.gz", "wikidata-ids.json.gz",
         "wikidata-conteudo.json.gz", "wikidata-elenco.json.gz", "wikidata-rotulos.json.gz",
+        "ml-32m.zip", "genome_2021.zip",
     }
     for nome, versao in fixados.items():
-        assert versao["data"] == "2026-11-20"
+        assert versao["data"] == {
+            "ml-32m.zip": "2023-10-13", "genome_2021.zip": "2021-12-30",
+        }.get(nome, "2026-11-20")
         assert hashlib.sha256((catalogo / versao["sha256"] / nome).read_bytes()).hexdigest() == versao["sha256"]
 
 
@@ -92,6 +96,24 @@ def test_reconstruir_recusa_dump_diferente_do_que_foi_fixado(catalogo_real):
     assert cli.consultar("SELECT titulo FROM filmes WHERE id = 'tt0133093'") == [["The Matrix"]]
 
 
+def test_atualizar_preserva_o_manifesto_quando_o_zip_da_grouplens_falha(catalogo_real, tmp_path):
+    cli, _, versoes = catalogo_real
+    cli.ok("atualizar")
+    anterior = versoes.read_bytes()
+    gravacoes = tmp_path / "gravacoes"
+    pasta = gravacoes / "catalogo"
+    shutil.copytree(FIXTURE / "gravacoes" / "catalogo", pasta)
+    cli.env["FILMES_GRAVACOES"] = str(gravacoes)
+    (pasta / "genome_2021.zip").write_bytes(b"zip incompleto")
+
+    codigo, saida = cli.rodar("atualizar")
+
+    assert codigo == 1
+    assert saida["erro"]["codigo"] == "atualizacao_falhou"
+    assert "genome_2021.zip" in saida["erro"]["mensagem"]
+    assert versoes.read_bytes() == anterior
+
+
 def test_atualizar_recupera_ids_por_predicado_quando_o_qlever_entrega_json_incompleto(catalogo_real, tmp_path):
     cli, _, versoes = catalogo_real
     gravacoes = tmp_path / "gravacoes"
@@ -129,3 +151,77 @@ def test_recomendacao_do_catalogo_real_da_o_credito_do_imdb(catalogo_real):
         "fonte": "IMDb",
         "texto": "Information courtesy of IMDb (https://www.imdb.com). Used with permission.",
     } in saida["creditos"]
+
+
+def test_reconstruir_conta_vizinhos_direcionais_a_partir_das_notas_quatro_ou_mais(catalogo_real):
+    cli, _, _ = catalogo_real
+    cli.ok("atualizar")
+
+    cli.ok("reconstruir")
+
+    assert cli.consultar("""
+        SELECT filme_id, vizinho_id, base, ambos, fonte, data FROM vizinhos
+        ORDER BY filme_id, vizinho_id
+    """) == [
+        ["tt0108052", "tt0133093", 3, 1, "MovieLens ml-32m", "2023-10-13"],
+        ["tt0114709", "tt0133093", 1, 1, "MovieLens ml-32m", "2023-10-13"],
+        ["tt0133093", "tt0108052", 2, 1, "MovieLens ml-32m", "2023-10-13"],
+        ["tt0133093", "tt0114709", 2, 1, "MovieLens ml-32m", "2023-10-13"],
+    ]
+
+
+def test_reconstruir_limita_a_vizinhanca_e_desempata_por_imdb(catalogo_real, tmp_path):
+    cli, _, _ = catalogo_real
+    gravacoes = tmp_path / "gravacoes"
+    pasta = gravacoes / "catalogo"
+    shutil.copytree(FIXTURE / "gravacoes" / "catalogo", pasta)
+    cli.env["FILMES_GRAVACOES"] = str(gravacoes)
+    with ZipFile(pasta / "ml-32m.zip", "w") as dump:
+        dump.writestr("ml-32m/links.csv", "movieId,imdbId,tmdbId\n" + "".join(
+            f"{id_},{id_:07d},\n" for id_ in range(1, 54)
+        ))
+        dump.writestr("ml-32m/ratings.csv", "userId,movieId,rating,timestamp\n" + "".join(
+            f"1,{id_},4,1\n" for id_ in range(53, 0, -1)
+        ) + "2,1,4,1\n2,53,4,1\n")
+        dump.writestr("ml-32m/tags.csv", "userId,movieId,tag,timestamp\n")
+    cli.ok("atualizar")
+
+    cli.ok("reconstruir")
+
+    assert cli.consultar("""
+        SELECT vizinho_id FROM vizinhos WHERE filme_id = 'tt0000001'
+        ORDER BY ambos DESC, vizinho_id
+    """) == [["tt0000053"]] + [[f"tt{id_:07d}"] for id_ in range(2, 51)]
+
+
+def test_reconstruir_agrega_as_tags_normalizadas_por_usuario_distinto(catalogo_real):
+    cli, _, _ = catalogo_real
+    cli.ok("atualizar")
+
+    cli.ok("reconstruir")
+
+    assert cli.consultar("SELECT filme_id, tag, usuarios, fonte, data FROM tags_movielens") == [
+        ["tt0133093", "sci-fi, action", 3, "MovieLens ml-32m", "2023-10-13"],
+    ]
+
+
+def test_reconstruir_liga_o_genoma_ao_imdb_e_preserva_a_precisao_do_escore(catalogo_real):
+    cli, _, _ = catalogo_real
+    cli.ok("atualizar")
+    del cli.env["FILMES_GRAVACOES"]
+
+    cli.ok("reconstruir")
+
+    assert cli.consultar("""
+        SELECT filme_id, tag, relevancia, fonte, data FROM genoma ORDER BY filme_id
+    """) == [
+        ["tt0108052", "funny", 0.599999999999999, "Tag Genome 2021", "2021-12-30"],
+        ["tt0133093", "funny", 0.876543210987654, "Tag Genome 2021", "2021-12-30"],
+    ]
+
+    saida = cli.ok("recomendar", "--presentes", "dono", "--clima", "pra rir")
+
+    assert any(
+        credito["fonte"] == "Tag Genome" and "CC BY-NC 3.0" in credito["texto"]
+        for credito in saida["creditos"]
+    )
