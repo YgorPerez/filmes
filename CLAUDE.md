@@ -26,7 +26,7 @@ node mcp/src/stdio.ts          # servidor MCP por stdio (registrado em .mcp.json
 
 Para brincar com a fixture: `FILMES_DADOS=tests/fixture/dados FILMES_CATALOGO=tests/fixture/catalogo FILMES_BANCO=/tmp/filmes.sqlite`.
 
-Fontes sob demanda (OMDb para a classificação de criança, Does the Dog Die para gatilho) leem a chave de `FILMES_OMDB_CHAVE` e `FILMES_DDD_CHAVE`. Sem chave, a Recomendação sai assim mesmo, com um aviso em `"avisos"`. As respostas ficam 30 dias em `FILMES_CACHE`, ou em `<banco>-cache.sqlite` ao lado do banco, que `reconstruir` não apaga. Com `FILMES_GRAVACOES=tests/fixture/gravacoes`, as fontes leem respostas gravadas em vez da rede (é o que os testes fazem).
+Fontes sob demanda (OMDb para a classificação de criança, Does the Dog Die para gatilho, TMDB para a capa e o import do Letterboxd) leem a chave de `FILMES_OMDB_CHAVE`, `FILMES_DDD_CHAVE` e `FILMES_TMDB_CHAVE`. Sem chave, a Recomendação sai assim mesmo, com um aviso em `"avisos"`. As respostas ficam 30 dias em `FILMES_CACHE`, ou em `<banco>-cache.sqlite` ao lado do banco, que `reconstruir` não apaga. Com `FILMES_GRAVACOES=tests/fixture/gravacoes`, as fontes leem respostas gravadas em vez da rede (é o que os testes fazem).
 
 Sem `--json`, a saída é o mesmo JSON indentado. Erro sai com código diferente de 0 e `{"erro": {"codigo", "mensagem"}}` no stdout; código 2 é uso inválido.
 
@@ -51,6 +51,7 @@ filmes/
   recomendacao/            Candidatos, utilidade, ordem; sinais/<caminho>.py, um por caminho
                            (sinais(rodada, pessoa) para uma Pessoa, sinais_do_filme(rodada) para a linha do filme)
     restricoes/<nome>.py   uma Restrição da Sessão por arquivo (duração, idioma, criança, gatilho, sem Já visto)
+    cabecalho.py           link do IMDb, gêneros e capa de cada filme; fora das Evidências
     atribuicoes.py         atribuições obrigatórias das fontes usadas
   sob_demanda/             fontes consultadas na hora, com cache de validade: fonte.py, cache.py, omdb.py, ddd.py, tmdb.py
   sessao/                  arquivo da Sessão, Feedback, Fatos do Feedback e Crédito

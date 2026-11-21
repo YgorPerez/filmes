@@ -7,6 +7,8 @@ que passou, em `linhas_do_filme`, uma linha (Evidência com `pessoa` nula) dizen
 
 from pathlib import Path
 
+from conftest import sem_o_da_capa
+
 
 def _todos(banco, *restricoes):
     return banco.ok("recomendar", "--presentes", "dono", "--quantos", "50", *restricoes)
@@ -233,7 +235,7 @@ def test_sem_chave_do_omdb_filme_sem_faixa_local_sai_com_aviso(banco):
 
     assert "Vento Norte" not in _titulos(saida)
     assert set(_titulos(saida)) == ATE_6
-    [aviso] = saida["avisos"]
+    [aviso] = sem_o_da_capa(saida["avisos"])
     assert "OMDb" in aviso and "FILMES_OMDB_CHAVE" in aviso
 
 
@@ -319,7 +321,7 @@ def test_sem_chave_do_does_the_dog_die_ninguem_sai_e_todos_ficam_com_aviso(banco
 
     assert "As Horas Lentas" in _titulos(saida)
     assert all(_linhas_do_filme(f)[0]["tipo"] == "palpite" for f in saida["filmes"])
-    [aviso] = saida["avisos"]
+    [aviso] = sem_o_da_capa(saida["avisos"])
     assert "Does the Dog Die" in aviso and "FILMES_DDD_CHAVE" in aviso
 
 

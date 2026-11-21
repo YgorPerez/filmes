@@ -17,6 +17,28 @@ Depois, me conte o que viram e como foi."""
     }
 
 
+def test_capa_generos_e_link_do_imdb_no_cabecalho_nao_contam_como_evidencia(banco):
+    banco.env.update(FILMES_TMDB_CHAVE="x", FILMES_GRAVACOES=str(Path(__file__).parent / "fixture" / "gravacoes"))
+    saida = banco.ok("recomendar", "--presentes", "dono", "teo", "--duracao-max", "120", "--quantos", "2")
+    resposta = """Você e Teo · até 2h · regra padrão.
+
+![capa](https://image.tmdb.org/t/p/w92/hOrAsLeNtAs9104.jpg) **1. As Horas Lentas** (2021, 1h44)\\
+Drama, Mistério · [IMDb](https://www.imdb.com/title/tt9000104/)
+- **Você:** deu 5 a O Farol de Areia (2012), também de Helena Prado (Letterboxd do Bruno, 2025-06-01) *(forte, nota)*
+- **Teo:** sem fato *(fraca, palpite)*
+
+**2. Sal e Ferrugem** (2023, 1h57)\\
+Aventura, Ficção científica, Suspense · [IMDb](https://www.imdb.com/title/tt9000105/)
+- **Teo:** sem fato *(fraca, palpite)*
+
+Depois, me conte o que viram e como foi."""
+
+    assert [f["titulo"] for f in saida["filmes"]] == ["As Horas Lentas", "Sal e Ferrugem"]
+    assert banco.ok("verificar", "--sessao", saida["sessao"]["id"], f"--texto={resposta}") == {
+        "valida": True, "linhas_invalidas": [],
+    }
+
+
 def test_lista_evidencias_alteradas_ou_atribuidas_a_outra_pessoa(banco):
     saida = banco.ok("recomendar", "--presentes", "dono", "teo", "--quantos", "1")
     invalidas = [

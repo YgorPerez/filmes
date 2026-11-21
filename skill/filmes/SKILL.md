@@ -31,6 +31,12 @@ Omita ano ou duração ausente e os parênteses se faltarem ambos. Acrescente
 ` — sem fato que o sustente` após o título e os metadados quando
 `so_palpites` for verdadeiro.
 
+Quando `capa` vier, ponha a imagem antes do título, como
+`![capa](<capa>) `. Termine a linha do título com `\` e escreva, na linha
+de baixo, os `generos` separados por vírgula, ` · ` e `[IMDb](<imdb>)`.
+Sem gêneros, essa linha fica só com o link. Capa, gêneros e link não são
+Evidência: não os use como motivo do filme.
+
 Em `evidencias`, escolha uma linha por Presente. Priorize `forte`, depois
 `moderada`, depois `fraca`. Entre linhas da mesma Força, use a primeira
 na ordem do motor. Use o `sem fato` devolvido quando só houver Palpite.
@@ -47,7 +53,8 @@ na linha.
 ```markdown
 Você e Teo · até 2h · regra padrão.
 
-**1. As Horas Lentas** (2021, 1h44)
+![capa](https://image.tmdb.org/t/p/w92/hOrAsLeNtAs9104.jpg) **1. As Horas Lentas** (2021, 1h44)\
+Drama, Mistério · [IMDb](https://www.imdb.com/title/tt9000104/)
 - **Você:** deu 5 a O Farol de Areia (2012), também de Helena Prado (Letterboxd do Bruno, 2025-06-01) *(forte, nota)*
 - **Teo:** sem fato *(fraca, palpite)*
 - **Filme:** duração 1h44, dentro do limite de 2h (IMDb) *(forte, metadado)*

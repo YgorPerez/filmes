@@ -11,6 +11,10 @@ _CABECALHO = re.compile(r"^\s*(?:#{1,6}\s+)?(?:\*\*)?\d+\.\s")
 _EVIDENCIA = re.compile(r"^\s*(?:[-+*]\s|(?:\*\*)?Evidência:)")
 _FORCA_TIPO = re.compile(rf"\((?:{'|'.join(FORCAS)}), (?:{'|'.join(TIPOS)})\)\*?$")
 _MARCA_PALPITE = "sem fato que o sustente"
+# Cabeçalho de apresentação (#30): a capa antes do título, a quebra `\` no fim
+# dele e, na linha de baixo, gêneros e link do IMDb. Não são Evidência.
+_CAPA = re.compile(r"^!\[[^\]]*\]\([^)\s]*\)\s+")
+_GENEROS_E_IMDB = re.compile(r"^(?:[^*\[]+ · )?\[IMDb\]\(https://www\.imdb\.com/title/tt[0-9]+/\)$")
 
 
 def verificar(repo: Path, sessao_id: str, resposta: str) -> list[str]:
@@ -24,15 +28,18 @@ def verificar(repo: Path, sessao_id: str, resposta: str) -> list[str]:
     permitidas = set()
     no_bloco = False
     for linha in resposta.splitlines():
-        if linha in filmes:
-            permitidas = filmes[linha]
+        titulo = _CAPA.sub("", linha).removesuffix("\\")
+        if titulo in filmes:
+            permitidas = filmes[titulo]
             no_bloco = True
-        elif _CABECALHO.match(linha):
+        elif _CABECALHO.match(titulo):
             invalidas.append(linha)
             permitidas = set()
             no_bloco = True
         elif not linha.strip():
             no_bloco = False
+        elif _GENEROS_E_IMDB.match(linha.strip()):
+            continue
         elif no_bloco or _EVIDENCIA.match(linha) or _FORCA_TIPO.search(linha):
             if linha not in permitidas:
                 invalidas.append(linha)
