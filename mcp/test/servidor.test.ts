@@ -162,6 +162,19 @@ describe("servidor MCP sobre a CLI real e a fixture", () => {
     assert.ok(!titulos.includes("O Farol de Areia"));
   });
 
+  it("nada triste tira o filme triste e conta por sinal", async () => {
+    const resultado = (await cliente.callTool({
+      name: "recomendar", arguments: { presentes: ["dono"], quantos: 100, sem_tristeza: true },
+    })) as Resultado;
+
+    assert.ok(!resultado.isError);
+    const saida = json(resultado);
+    assert.deepEqual(saida.restricoes.sem_tristeza, { por_sinal: { triste: 2, tema_pesado: 3 }, tirados: 5 });
+    const titulos = saida.filmes.map((f: any) => f.titulo);
+    assert.ok(titulos.includes("Casa Cheia"));
+    assert.ok(!titulos.includes("Pequenos Milagres"));
+  });
+
   it("tem criança sem idade vale livre", async () => {
     const resultado = (await cliente.callTool({
       name: "recomendar", arguments: { presentes: ["dono"], quantos: 50, crianca: true },
