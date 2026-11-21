@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+var/
+config/local.toml
+mcp/node_modules/
