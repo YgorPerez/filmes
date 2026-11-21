@@ -27,10 +27,19 @@ SISTEMAS = {
     "P2629": ("BBFC", {"u": "L", "pg": "10", "12": "12", "12a": "12", "15": "16", "18": "18", "x": "18"}),
     "P1981": ("FSK", {"0": "L", "6": "6", "12": "12", "16": "16", "18": "18"}),
     "P2684": ("Kijkwijzer", {"al": "L", "6": "6", "9": "10", "12": "12", "14": "14", "16": "16", "18": "18"}),
-    "P5970": ("Medierådet", {"a": "L", "tilladt for alle": "L", "7": "6", "11": "12", "12": "12",
-                             "15": "16", "16": "16"}),
+    "P5970": ("Medierådet", {
+        "a": "L", "tilladt for alle": "L", "suitable for a general audience": "L",
+        "7": "6", "suitable for a general audience, but not recommended for children under 7": "6",
+        "11": "12", "for ages 11 and up": "12", "12": "12", "for ages 12 and up": "12",
+        "15": "16", "for ages 15 and up": "16", "16": "16", "prohibited for children under 16": "16",
+    }),
     "P2756": ("EIRIN", {"pg12": "12", "r15+": "16", "r18+": "18"}),
-    "P2758": ("CNC", {"-12": "12", "-16": "16", "-18": "18", "x": "18"}),
+    "P2758": ("CNC", {
+        "-12": "12", "no minors under twelve": "12",
+        "-16": "16", "no minors under sixteen": "16",
+        "-18": "18", "no minors under eighteen": "18",
+        "x": "18", "x rating (incitement to violence)": "18", "x rating (pornographic content)": "18",
+    }),
 }
 MPA = "P1657"
 
@@ -53,4 +62,7 @@ def _normalizar(rotulo: str, sistema: str) -> str:
     """ "FSK 12" vira "12"; "  PG-13 " vira "pg-13"."""
     texto = re.sub(r"\s+", " ", rotulo.strip().casefold())
     prefixo = sistema.casefold() + " "
-    return texto[len(prefixo):] if texto.startswith(prefixo) else texto
+    texto = texto.removeprefix(prefixo)
+    if sistema == "BBFC":
+        texto = texto.removeprefix("certificado ").removesuffix(" certificate")
+    return texto

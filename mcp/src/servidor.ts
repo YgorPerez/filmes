@@ -3,7 +3,7 @@ import { readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { chamarCli } from "./cli.ts";
+import { chamarCli, type ProgressoCli } from "./cli.ts";
 import type { Ferramenta } from "./ferramenta.ts";
 
 const PASTA_FERRAMENTAS = join(dirname(fileURLToPath(import.meta.url)), "ferramentas");
@@ -24,9 +24,18 @@ export async function criarServidor(): Promise<McpServer> {
     servidor.registerTool(
       ferramenta.nome,
       { description: ferramenta.descricao, inputSchema: ferramenta.entrada },
-      async (entrada: Record<string, unknown>) => {
+      async (entrada: Record<string, unknown>, contexto) => {
         const { comando, args = [] } = ferramenta.cli(entrada as never);
-        const resultado = await chamarCli(comando, args);
+        const progressToken = contexto._meta?.progressToken;
+        let notificacoes = Promise.resolve();
+        const progresso = progressToken === undefined ? undefined : (etapa: ProgressoCli) => {
+          notificacoes = notificacoes.then(() => contexto.sendNotification({
+            method: "notifications/progress",
+            params: { progressToken, progress: etapa.progresso, total: etapa.total, message: etapa.mensagem },
+          })).catch(() => {});
+        };
+        const resultado = await chamarCli(comando, args, progresso);
+        await notificacoes;
         return {
           content: [{ type: "text" as const, text: JSON.stringify(resultado.dados) }],
           isError: !resultado.ok,

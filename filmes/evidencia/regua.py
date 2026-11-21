@@ -11,6 +11,8 @@ NOTA_ALTA = 4.0       # "Nota alta" no caminho de gosto
 ANOS_FRESCOR = 5      # Nota com mais de 5 anos cai um nível
 ANOS_DITO = 2         # Declarado e Relato com mais de 2 anos caem um nível
 FORCA_JA_VISTO = "forte"
+BASE_MINIMA_VIZINHANCA = 30
+PORCENTO_MINIMO_VIZINHANCA = 25
 
 
 def descer(forca: str) -> str:
@@ -77,7 +79,7 @@ def forca_vizinhanca(base: int, ambos: int, teto: str) -> str | None:
     abaixo disso não vira Evidência. Nunca passa de `teto`, a Força da Nota-semente.
     A proporção é comparada em inteiros, sem arredondar.
     """
-    for forca, base_minima, porcento in (("forte", 500, 60), ("moderada", 100, 40), ("fraca", 30, 25)):
+    for forca, base_minima, porcento in (("forte", 500, 60), ("moderada", 100, 40), ("fraca", BASE_MINIMA_VIZINHANCA, PORCENTO_MINIMO_VIZINHANCA)):
         if base >= base_minima and 100 * ambos >= porcento * base:
             return min(forca, teto, key=FORCAS.index)
     return None
