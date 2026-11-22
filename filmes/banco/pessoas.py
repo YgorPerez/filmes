@@ -26,6 +26,11 @@ def carregar(conn: sqlite3.Connection, pessoa: Pessoa) -> None:
             "INSERT OR IGNORE INTO vetos (fato_id, pessoa, alvo, rotulo, texto, data) VALUES (?, ?, ?, ?, ?, ?)",
             (id_do_veto(pessoa.slug, veto), pessoa.slug, veto.alvo, veto.rotulo, veto.texto, veto.data),
         )
+    for ajuste in pessoa.ajustes:
+        conn.execute(
+            "INSERT INTO ajustes (fato_id, pessoa, elo, nivel, data) VALUES (?, ?, ?, ?, ?)",
+            (id_do_ajuste(pessoa.slug, ajuste), pessoa.slug, ajuste.elo, ajuste.nivel, ajuste.data),
+        )
     for tabela, ditos in (("declarados", pessoa.declarados), ("relatos", pessoa.relatos)):
         for dito in ditos:
             id_ = id_do_dito(tabela, pessoa.slug, dito)
@@ -59,6 +64,10 @@ def carregar(conn: sqlite3.Connection, pessoa: Pessoa) -> None:
 
 def id_do_veto(slug: str, veto) -> str:
     return fato_id("vetos", slug, veto.alvo, veto.texto, veto.data)
+
+
+def id_do_ajuste(slug: str, ajuste) -> str:
+    return fato_id("ajustes", slug, ajuste.elo, ajuste.nivel, ajuste.data)
 
 
 def id_do_ja_visto(slug: str, visto) -> str:
@@ -95,7 +104,7 @@ def _apagar(conn, slug):
                  " OR fato_id LIKE 'vistos:%')", (slug,))
     conn.execute("DELETE FROM ja_visto WHERE pessoa = ? AND fato_id LIKE 'vistos:%'", (slug,))
     conn.execute("DELETE FROM declarados WHERE pessoa = ? AND fato_id LIKE 'declarados:%'", (slug,))
-    for tabela in ("vetos", "relatos", "apelidos"):
+    for tabela in ("vetos", "ajustes", "relatos", "apelidos"):
         conn.execute(f"DELETE FROM {tabela} WHERE pessoa = ?", (slug,))
 
 

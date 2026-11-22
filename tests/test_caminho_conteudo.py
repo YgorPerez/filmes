@@ -25,22 +25,24 @@ def _todos(banco):
     return banco.ok("recomendar", "--presentes", "dono", "--quantos", "60")
 
 
-def test_roteirista_em_comum_liga_a_nota_ao_candidato(banco):
+def test_roteirista_em_comum_liga_a_nota_ao_candidato_no_maximo_moderado(banco):
+    # A semente de 5 seria forte; roteiro tem teto moderado (decisão do Dono, 2026-11-22).
     assert _do_bruno(_todos(banco), "Maré Cheia") == [
-        ("deu 5 a O Farol de Areia (2012), também escrito por Ana Ruiz", "forte", "nota", 0.8),
+        ("deu 5 a O Farol de Areia (2012), também escrito por Ana Ruiz", "moderada", "nota", 0.48),
         ("escrito por Ana Ruiz, como 1 filme a que deu 4 ou mais: O Farol de Areia (2012)", "fraca", "metadado", 0.24),
     ]
 
 
-def test_ator_em_comum_liga_a_nota_ao_candidato(banco):
+def test_ator_em_comum_liga_a_nota_ao_candidato_no_maximo_moderado(banco):
+    # Ter amado um filme com o mesmo ator não prova que o ator foi o motivo: teto moderado.
     assert _do_bruno(_todos(banco), "Voo Noturno") == [
-        ("deu 4,5 a Ponte Aérea (2016), também com Rita Lobo", "forte", "nota", 0.5),
+        ("deu 4,5 a Ponte Aérea (2016), também com Rita Lobo", "moderada", "nota", 0.3),
         ("com Rita Lobo no elenco, como 1 filme a que deu 4 ou mais: Ponte Aérea (2016)", "fraca", "metadado", 0.15),
     ]
 
 
 def test_ator_fora_dos_tres_primeiros_creditos_do_imdb_fica_no_maximo_fraco(banco):
-    # Em Voo Noturno, Rita Lobo é o segundo crédito do IMDb e a régua fica como está (teste acima).
+    # Em Voo Noturno, Rita Lobo é o segundo crédito do IMDb e só o teto do elo vale (teste acima).
     # Em Escala em Lisboa, ela é coadjuvante: a semente de 4,5 seria forte.
     assert sorted(_do_bruno(_todos(banco), "Escala em Lisboa")) == [
         ("com Rita Lobo no elenco, como 1 filme a que deu 4 ou mais: Ponte Aérea (2016)", "fraca", "metadado", 0.15),

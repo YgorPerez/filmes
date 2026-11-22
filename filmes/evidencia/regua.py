@@ -73,17 +73,35 @@ def forca_feedback(tipo: str, nota: float | None, data: str, hoje: dt.date) -> s
 
 def forca_caminho(notas_altas: int, predicado: str) -> str | None:
     """Metadado no caminho de gosto: 3+ Notas altas da Pessoa no mesmo nó é forte,
-    2 é moderada, 1 é fraca. Gênero sozinho fica no máximo em fraca."""
+    2 é moderada, 1 é fraca, até o teto do elo (`TETO_DO_ELO`): gênero fica no máximo em fraca."""
     if notas_altas <= 0:
         return None
     forca = "forte" if notas_altas >= 3 else "moderada" if notas_altas == 2 else "fraca"
-    return "fraca" if predicado == "genero" else forca
+    return forca_elo(forca, predicado)
 
 
 def forca_elenco(forca: str, principal: bool | None) -> str:
     """Ator fora dos 3 primeiros créditos do IMDb (coadjuvante, `principal` falso)
     dá no máximo fraca. Sem os créditos do filme (`principal` None), a Força fica."""
     return "fraca" if principal is False else forca
+
+
+# Força máxima de cada elo do caminho de conteúdo (decisão do Dono, 2026-11-22): a
+# Evidência sai com a menor entre a da semente e a do elo. Ter amado um filme com o
+# mesmo ator não prova que o ator foi o motivo; o mesmo diretor ou a mesma série dizem mais.
+TETO_DO_ELO = {"diretor": "forte", "serie": "forte", "roteiro": "moderada", "elenco": "moderada", "genero": "fraca"}
+
+def forca_elo(forca: str, predicado: str) -> str:
+    """A menor entre a Força dada (da semente ou do nó) e o teto do elo."""
+    return min(forca, TETO_DO_ELO.get(predicado, "forte"), key=FORCAS.index)
+
+
+def forca_ajustada(forca: str, nivel: str) -> str | None:
+    """A Força depois do Ajuste da Pessoa ao elo: "nada" tira a Evidência (None), "pouco"
+    desce um nível, "normal" e "muito" deixam como está ("muito" só mexe no peso)."""
+    if nivel == "nada":
+        return None
+    return descer(forca) if nivel == "pouco" else forca
 
 
 def forca_vizinhanca(base: int, ambos: int, teto: str) -> str | None:

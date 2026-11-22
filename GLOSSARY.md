@@ -26,6 +26,10 @@ _Evitar_: grupo, turma
 A recusa permanente de uma Pessoa a um tipo de filme, como "Leo nunca vê terror". Vale em toda Sessão em que ela está entre os Presentes e tira o filme antes de qualquer ordenação.
 _Evitar_: filtro, bloqueio
 
+**Ajuste**:
+Quanto um elo entre filmes (diretor, roteiro, elenco, série, gênero) pesa para uma Pessoa: nada, pouco, normal ou muito. "Pro Lorenzo ator não importa" é o Ajuste de elenco dele em nada. Vale para o que o motor deduz das Notas dela; o que a Pessoa disse sobre um ator ou diretor nomeado continua valendo.
+_Evitar_: peso da Pessoa, importância, preferência
+
 **Restrição**:
 Um limite que vale só numa Sessão, como "tem criança" ou "sem legenda". Tira o filme antes de qualquer ordenação, como o Veto.
 _Evitar_: filtro, veto da sessão

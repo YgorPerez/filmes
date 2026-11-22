@@ -26,6 +26,18 @@ ambíguo, peça ano ou outro detalhe antes de gravar.
 
 Ao terminar, diga o que entrou e quais alvos ainda precisam de identificação.
 
+## Ajuste
+
+Quando o Dono disser que um elo pesa pouco ou muito para alguém ("pro
+Lorenzo ator não importa", "a Duda vê tudo do diretor que ela gosta"), use
+`pessoa` com `acao: "ajustar"`, o `elo` (`diretor`, `roteiro`, `elenco`,
+`serie` ou `genero`) e o `nivel`. "Não importa" é `nada`, que tira as
+Evidências desse elo. "Importa pouco" é `pouco`, que vale metade e desce a
+Força um nível. "Importa muito" é `muito`. `normal` desfaz. O Ajuste não
+apaga o que a Pessoa disse de um ator ou diretor nomeado: "gosta de Jake
+Gyllenhaal" continua valendo. Confirme com o Dono o elo e o nível antes de
+gravar.
+
 ## Já visto
 
 "Já vi", "Lorenzo viu, nota 8" e "esse todo mundo já viu" viram `pessoa`

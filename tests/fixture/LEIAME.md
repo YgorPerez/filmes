@@ -54,7 +54,7 @@ Caminho de conteúdo por outros predicados (`test_caminho_conteudo.py`). Cada fi
 
 `series_de_filmes.csv` diz quais entidades de série são série de filmes: só a Trilogia da Fronteira. Uma série nova na fixture precisa de linha ali, senão a aresta dela some.
 
-Créditos do IMDb (`elenco_principal_imdb.csv`, `atores_imdb.csv`): os 3 primeiros atores de Voo Noturno e de Escala em Lisboa. Rita Lobo (`nm9001902`) é o segundo crédito de Voo Noturno, e a Evidência fica com a régua normal; em Escala em Lisboa os três primeiros são outros, e ela vale no máximo fraca. Os demais filmes não têm créditos, e a régua deles não muda.
+Créditos do IMDb (`elenco_principal_imdb.csv`, `atores_imdb.csv`): os 3 primeiros atores de Voo Noturno e de Escala em Lisboa. Rita Lobo (`nm9001902`) é o segundo crédito de Voo Noturno, e a Evidência fica só com o teto do elo (moderada); em Escala em Lisboa os três primeiros são outros, e ela vale no máximo fraca. Os demais filmes não têm créditos, e a régua deles não muda.
 
 Notas de outras Pessoas, para os testes de grupo (`test_grupo.py`):
 

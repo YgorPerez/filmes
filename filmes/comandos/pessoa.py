@@ -7,7 +7,7 @@ from filmes.erros import ErroFilmes
 from filmes.evidencia import regua
 from filmes.sessao import feedback
 
-AJUDA = "cria uma Pessoa, mostra o que se sabe dela e registra ou remove Declarados, Relatos, Vetos e Já vistos"
+AJUDA = "cria uma Pessoa, mostra o que se sabe dela e registra ou remove Declarados, Relatos, Vetos, Ajustes e Já vistos"
 
 
 def configurar(parser):
@@ -40,6 +40,16 @@ def configurar(parser):
     _argumentos_de_alvo(p, obrigatorio=True)
     p.add_argument("--data", help="AAAA-MM-DD (padrão: hoje)")
     p.set_defaults(_acao=_vetar)
+
+    p = _acao(acoes, "ajustar", "registra um Ajuste: quanto um elo (diretor, ator...) pesa para a Pessoa")
+    p.add_argument("pessoa", help='slug, nome ou apelido; "dono" é o Dono')
+    p.add_argument("--elo", required=True, choices=pessoas.ELOS,
+                   help="o elo do caminho de conteúdo: diretor, roteiro, elenco, serie ou genero")
+    p.add_argument("--nivel", required=True, choices=pessoas.NIVEIS,
+                   help='nada tira as Evidências do elo, pouco vale metade e desce a Força um nível, '
+                        'muito vale 1,5 vez; normal tira o Ajuste')
+    p.add_argument("--data", help="AAAA-MM-DD (padrão: hoje)")
+    p.set_defaults(_acao=_ajustar)
 
     p = _acao(acoes, "visto", "registra que a Pessoa já viu o filme e, com --nota, a Nota que ela deu")
     p.add_argument("pessoa", help='slug, nome ou apelido; "dono" é o Dono')
@@ -102,6 +112,7 @@ def _ver(args, amb):
     pessoa = pessoas.resolver(amb.dados, args.pessoa)
     saida = _resumo(pessoa) | {
         "vetos": _como_json(pessoa, "vetos", amb),
+        "ajustes": _como_json(pessoa, "ajustes", amb),
         "declarados": _como_json(pessoa, "declarados", amb),
         "relatos": _como_json(pessoa, "relatos", amb),
         "vistos": _como_json(pessoa, "já vistos", amb),
@@ -148,6 +159,26 @@ def _vetar(args, amb):
     else:
         veto = next(v for v in pessoa.vetos if v.alvo == alvo)
     return {"pessoa": pessoa.slug, "veto": _veto_json(pessoa.slug, veto), "novo": novo}
+
+
+def _ajustar(args, amb):
+    pessoa = pessoas.resolver(amb.dados, args.pessoa)
+    anterior = next((a for a in pessoa.ajustes if a.elo == args.elo), None)
+    if args.nivel == "normal":
+        if anterior:
+            pessoa.tirar("ajustes", anterior)
+            _salvar(amb, pessoa)
+        return {"pessoa": pessoa.slug, "ajuste": {"elo": args.elo, "nivel": "normal"}, "novo": anterior is not None}
+    ajuste = pessoas.Ajuste(elo=args.elo, nivel=args.nivel, data=_data(args.data, amb))
+    if anterior and anterior.nivel == ajuste.nivel:
+        return {"pessoa": pessoa.slug, "ajuste": _ajuste_json(pessoa.slug, anterior), "novo": False}
+    pessoa.acrescentar("ajustes", ajuste)
+    _salvar(amb, pessoa)
+    return {"pessoa": pessoa.slug, "ajuste": _ajuste_json(pessoa.slug, ajuste), "novo": True}
+
+
+def _ajuste_json(slug, ajuste, amb=None):
+    return ajuste.como_dict() | {"fato_id": fatos.id_do_ajuste(slug, ajuste)}
 
 
 def _veto_json(slug, veto, amb=None):
@@ -306,7 +337,7 @@ def _relato_json(slug, dito, amb):
 
 
 # Seção da Pessoa -> como cada item dela sai no JSON de `ver` e `remover`.
-_JSON = {"vetos": _veto_json, "declarados": _declarado_json, "relatos": _relato_json, "já vistos": _ja_visto_json}
+_JSON = {"vetos": _veto_json, "ajustes": _ajuste_json, "declarados": _declarado_json, "relatos": _relato_json, "já vistos": _ja_visto_json}
 
 
 def _como_json(pessoa, secao, amb):

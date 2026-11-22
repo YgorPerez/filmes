@@ -22,6 +22,7 @@ class Evidencia:
     tipo: str
     fato_id: str | None
     base: float
+    ja_visto: bool = False  # o Já visto fica fora do corte das N mais fortes e sempre conta
 
     def __post_init__(self):
         assert self.forca in FORCAS, self.forca

@@ -13,8 +13,15 @@ Gênero só dá a segunda, e no máximo fraca (régua). Um gênero junta milhare
 filmes: uma Evidência por Nota nele somaria dezenas de Motivos que pouco dizem
 sobre o Candidato.
 
-No elenco, a Força das duas espécies depende do crédito do ator no Candidato:
-fora dos 3 primeiros créditos de ator do IMDb, fica no máximo fraca (régua).
+As duas espécies ficam no teto do elo (régua, `TETO_DO_ELO`): diretor e série
+podem ser forte, roteiro e elenco no máximo moderada, gênero no máximo fraca.
+No elenco, a Força depende também do crédito do ator no Candidato: fora dos 3
+primeiros créditos de ator do IMDb, fica no máximo fraca (régua).
+
+O Ajuste da Pessoa a um elo (tabela `ajustes`) vem por último: "nada" tira as
+Evidências daquele elo, "pouco" desce a Força um nível, e o nível multiplica o
+peso ([ajuste.nivel] da config). O Declarado sobre a própria entidade não passa
+por aqui (sinais/declarados.py) e não sofre Ajuste.
 
 Os predicados usados e os pesos estão em [caminho.peso] da config.
 """
@@ -66,14 +73,20 @@ ORDER BY c.filme_id, c.entidade_id
 # Filmes com créditos do IMDb e, entre eles, os pares (filme, ator) dos 3 primeiros.
 _SQL_COM_CREDITOS = "SELECT DISTINCT filme_id FROM elenco_principal_imdb"
 _SQL_PRINCIPAIS = "SELECT filme_id, entidade_id FROM elenco_principal"
+_SQL_AJUSTES = "SELECT elo, nivel FROM ajustes WHERE pessoa = ?"
 
 
 def sinais(rodada, pessoa):
     sementes_vistas = {}
     com_creditos = principais = None
+    ajustes = dict(rodada.conn.execute(_SQL_AJUSTES, (pessoa,)).fetchall())
     for predicado, peso in rodada.pesos["caminho"]["peso"].items():
         if predicado not in _REDACAO:
             raise ErroFilmes("config_invalida", f"[caminho.peso] {predicado}: o caminho de conteúdo não sabe redigir esse predicado")
+        nivel = ajustes.get(predicado, "normal")
+        if nivel == "nada":
+            continue
+        peso = peso * rodada.pesos["ajuste"]["nivel"][nivel]
         redacao = _REDACAO[predicado]
         parametros = {"predicado": predicado, "pessoa": pessoa}
         por_entidade = defaultdict(list)
@@ -99,7 +112,7 @@ def sinais(rodada, pessoa):
                 tipo = s["nota_tipo"]
                 forca, direcao = regua.forca_semente(tipo, s["nota"], s["nota_data"], rodada.hoje,
                                                      de_feedback=s["nota_sessao"] is not None)
-                forca = regua.forca_elenco(forca, principal)
+                forca = regua.forca_ajustada(regua.forca_elenco(regua.forca_elo(forca, predicado), principal), nivel)
                 inicio = texto.semente(tipo, s["nota"], texto.filme(s["titulo"], s["ano"]))
                 evidencia = Evidencia(
                     pessoa=pessoa, filme_id=candidato,
@@ -116,7 +129,7 @@ def sinais(rodada, pessoa):
             altas = [s for s in sementes if s["nota"] >= regua.NOTA_ALTA]
             forca = regua.forca_caminho(len(altas), predicado)
             if forca:
-                forca = regua.forca_elenco(forca, principal)
+                forca = regua.forca_ajustada(regua.forca_elenco(forca, principal), nivel)
                 yield Evidencia(
                     pessoa=pessoa, filme_id=candidato,
                     texto=f"{redacao['no'].format(entidade=entidade)}, {_notas_altas(altas)}",
