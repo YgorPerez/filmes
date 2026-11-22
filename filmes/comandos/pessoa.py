@@ -5,6 +5,7 @@ from filmes.banco import abrir_leitura, pessoas as fatos
 from filmes.dados import nota as nota_dita, pessoas
 from filmes.erros import ErroFilmes
 from filmes.evidencia import regua
+from filmes.recomendacao import vetos
 from filmes.sessao import feedback
 
 AJUDA = "cria uma Pessoa, mostra o que se sabe dela e registra ou remove Declarados, Relatos, Vetos, Ajustes e Já vistos"
@@ -37,7 +38,8 @@ def configurar(parser):
     p = _acao(acoes, "vetar", "registra um Veto: a Pessoa nunca vê filmes do alvo")
     p.add_argument("pessoa", help='slug, nome ou apelido; "dono" é o Dono')
     p.add_argument("texto", help='o Veto como foi dito, ex.: "nunca vê terror"')
-    _argumentos_de_alvo(p, obrigatorio=True)
+    alvo = _argumentos_de_alvo(p, obrigatorio=True)
+    alvo.add_argument("--grupo", help="chave de um grupo de tags de config/vetos_por_tag.toml, ex.: comedia_boba")
     p.add_argument("--data", help="AAAA-MM-DD (padrão: hoje)")
     p.set_defaults(_acao=_vetar)
 
@@ -81,6 +83,7 @@ def _argumentos_de_alvo(p, obrigatorio):
     grupo = p.add_mutually_exclusive_group(required=obrigatorio)
     grupo.add_argument("--filme", help="ID do filme no Catálogo (tt...)")
     grupo.add_argument("--entidade", help="ID da entidade no Catálogo (Q...): diretor, ator, gênero...")
+    return grupo
 
 
 def _argumentos_de_dito(p, fonte_padrao):
@@ -149,9 +152,12 @@ def _resumo(pessoa):
 
 def _vetar(args, amb):
     pessoa = pessoas.resolver(amb.dados, args.pessoa)
-    alvo = args.filme or args.entidade
-    with abrir_leitura(amb.banco) as conn:
-        rotulo = fatos.rotulo_do_alvo(conn, alvo)
+    alvo = args.filme or args.entidade or args.grupo
+    if args.grupo:
+        rotulo = _rotulo_do_grupo(args.grupo)
+    else:
+        with abrir_leitura(amb.banco) as conn:
+            rotulo = fatos.rotulo_do_alvo(conn, alvo)
     veto = pessoas.Veto(texto=_texto(args.texto), alvo=alvo, rotulo=rotulo, data=_data(args.data, amb))
     novo = pessoa.acrescentar("vetos", veto)
     if novo:
@@ -179,6 +185,14 @@ def _ajustar(args, amb):
 
 def _ajuste_json(slug, ajuste, amb=None):
     return ajuste.como_dict() | {"fato_id": fatos.id_do_ajuste(slug, ajuste)}
+
+
+def _rotulo_do_grupo(chave):
+    grupos = vetos.grupos()
+    if chave not in grupos or not vetos.e_grupo(chave):
+        raise ErroFilmes("alvo_desconhecido", f"'{chave}' não é um grupo de config/vetos_por_tag.toml "
+                                              f"(há: {', '.join(grupos) or 'nenhum'})")
+    return grupos[chave]["rotulo"]
 
 
 def _veto_json(slug, veto, amb=None):

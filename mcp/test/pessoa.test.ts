@@ -54,6 +54,12 @@ describe("ferramenta pessoa", () => {
     assert.deepEqual(saida.vetos.map((v: any) => v.rotulo), ["Terror"]);
   });
 
+  it("veta um grupo de tags", async () => {
+    const veto = json(await pessoa({ acao: "vetar", pessoa: "ana", texto: "não quer comédia boba", grupo: "comedia_boba" }));
+    assert.deepEqual([veto.veto.alvo, veto.veto.rotulo], ["comedia_boba", "comédia boba"]);
+    assert.ok(!(await pessoa({ acao: "remover", pessoa: "ana", veto: "comedia_boba" })).isError);
+  });
+
   it("grava e desfaz um Ajuste", async () => {
     const ajuste = json(await pessoa({ acao: "ajustar", pessoa: "ana", elo: "elenco", nivel: "nada" }));
     assert.deepEqual([ajuste.ajuste.elo, ajuste.ajuste.nivel, ajuste.novo], ["elenco", "nada", true]);

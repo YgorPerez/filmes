@@ -21,7 +21,7 @@ ambíguo, peça ano ou outro detalhe antes de gravar.
 
 - Use `pessoa` com `acao: "declarar"` e `fonte: "questionário"` para o que a Pessoa disse de si. Passe o trecho literal em `texto`. Filme que ela ama ou odeia vai com o ID e `reacao: "ama"` ou `"odeia"`. O motor gera a Nota declarada de 5 ou 1.
 - Marque como `especifico` um filme, diretor, ator ou subgênero identificado. Use `generico` para gostos amplos, como "gosto de comédia" ou "evito filmes lentos". Use o ID do alvo quando existir e a reação correspondente. Texto sem alvo fica registrado para consulta.
-- Para "nunca vejo X", use `acao: "vetar"` com o texto e o ID do filme ou da entidade. Se não achar um alvo no Catálogo, informe a pendência ao Dono.
+- Para "nunca vejo X", use `acao: "vetar"` com o texto e o ID do filme ou da entidade. Quando X é um jeito de filme e não um gênero ("comédia que parece bobinha"), veja se um grupo de `config/vetos_por_tag.toml` o descreve e passe a chave dele em `grupo` (`comedia_boba`). Se não achar um alvo no Catálogo nem um grupo, informe a pendência ao Dono.
 - Para uma impressão que veio do próprio Dono sobre outra Pessoa, use `acao: "relatar"`. Preserve a fala e passe alvo e reação quando ela os identificar.
 
 Ao terminar, diga o que entrou e quais alvos ainda precisam de identificação.

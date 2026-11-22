@@ -24,7 +24,8 @@ def _filme(saida, titulo):
 
 
 def _linhas_do_filme(filme):
-    linhas = filme["linhas_do_filme"]
+    """As linhas do filme menos a da nota do IMDb (#56), que não é Restrição."""
+    linhas = [e for e in filme["linhas_do_filme"] if not e["texto"].endswith(" no IMDb")]
     assert all(e["pessoa"] is None for e in linhas)
     return linhas
 
@@ -59,8 +60,8 @@ def test_sem_restricao_nao_ha_linha_do_filme(banco):
     saida = _todos(banco)
 
     assert saida["restricoes"] == {}
-    # Sobra só a linha de grupo/sozinho (#21), que toda Sessão tem.
-    textos = [linha["texto"] for f in saida["filmes"] for linha in f["linhas_do_filme"]]
+    # Sobra só a linha de grupo/sozinho (#21), que toda Sessão tem, e a da nota do IMDb (#56).
+    textos = [linha["texto"] for f in saida["filmes"] for linha in _linhas_do_filme(f)]
     assert all(t.startswith("para ver sozinho:") for t in textos)
 
 

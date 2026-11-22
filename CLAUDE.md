@@ -36,6 +36,7 @@ Sem `--json`, a saída é o mesmo JSON indentado. Erro sai com código diferente
 config/pesos.toml          pesos versionados (multiplicadores de Força, peso por aresta, utilidade, votos mínimos)
 config/climas.toml         vocabulário fixo de Climas: Clima -> tags do MovieLens e gêneros
 config/grupo_sozinho.toml  tags do MovieLens que dão bônus numa Sessão em grupo ou sozinha
+config/vetos_por_tag.toml  grupos de tags que um Veto pode nomear (comédia boba)
 filmes/
   cli.py                   contrato da CLI; acha os comandos em comandos/
   ambiente.py              caminhos, pesos e "hoje" de uma execução
@@ -90,5 +91,7 @@ mcp/test/                  testes do MCP, chamando a CLI de verdade sobre a mesm
 - **Teto do elo.** No caminho de conteúdo, a Evidência sai com a menor Força entre a da semente e a do elo: diretor e série até forte, roteiro e elenco até moderada, gênero até fraca. Vale também para o metadado agregado ("como 3 filmes a que deu 4 ou mais"); não vale para o Declarado ou Relato sobre a própria entidade. Decisão do Dono de 2026-11-22.
 - **Ajuste.** Cada Pessoa pode ter um Ajuste por elo (`ajustes:` no frontmatter, `pessoa ajustar`): nada tira as Evidências do elo, pouco vale metade e desce a Força um nível, muito vale 1,5 vez sem subir a Força. O Declarado sobre a entidade vence o Ajuste. Decisão do Dono de 2026-11-22.
 - **Corte das N mais fortes.** A utilidade de uma Pessoa num filme soma só as N contribuições de maior módulo (`[utilidade] evidencias_maximas`); o Já visto fica fora do corte e sempre conta. Sem isso, quem tem mil Notas satura em 1. Decisão do Dono de 2026-11-22.
+- **Veto por grupo de tags.** O alvo de um Veto pode ser um grupo de `config/vetos_por_tag.toml` (`pessoa vetar ... --grupo comedia_boba`): sai o filme com um dos gêneros do IMDb do grupo e uma das tags com o mínimo de `[vetos_por_tag]`. O Lorenzo veta "comédia boba". Decisão do Dono de 2026-11-22 (#56).
+- **Nota do IMDb na ordem.** Acima da mínima, a nota soma um bônus do filme à pontuação da Regra, como o do Clima: `[nota_imdb] peso × (nota − 7) / 3`, com peso 0,3. A linha "nota 8,5 no IMDb" vai em `linhas_do_filme` e não conta como Fato (filme só com ela continua "só palpites"). Decisão do Dono de 2026-11-22 (#56).
 - **Sem fato é neutro.** Na Regra de escolha (padrão, média e "de fulano"), Presente sem Fato sobre o filme conta como 0,5, e o Crédito não mexe nesse 0,5. Na saída, a utilidade dele continua `null`, com a linha "sem fato". Decisão do Dono de 2026-11-21 (#37), que muda a do #8.
 - **Já visto.** Toda Nota é também Já visto (view `ja_vistos`): pesa contra o filme para a Pessoa que deu a Nota.

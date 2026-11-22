@@ -22,7 +22,9 @@ export default definirFerramenta({
     "relatar: o que o Dono sabe do gosto de outra Pessoa; vetar: um tipo de filme que ela nunca vê. " +
     "Alvo por ID do Catálogo (filme tt..., entidade Q... de diretor, ator ou gênero; ache com consultar). " +
     "Sobre um filme, reacao ama vira Nota 5 e odeia vira Nota 1. Sem alvo, o texto fica guardado mas não muda a ordem. " +
-    "Um Veto precisa de alvo. visto: a Pessoa já viu o filme; com nota, grava também a Nota que ela deu " +
+    "Um Veto precisa de alvo: filme, entidade ou grupo (chave de um grupo de tags de config/vetos_por_tag.toml, " +
+    'como comedia_boba para "não quer comédia boba"). ' +
+    "visto: a Pessoa já viu o filme; com nota, grava também a Nota que ela deu " +
     '(de 0,5 a 5, ou de 1 a 10 escrita "8/10"). remover: tira um item registrado por engano; informe um só de ' +
     "declarado, relato, veto ou visto, com o fato_id que ver mostra ou o alvo (tt..., Q...) quando só um item tem esse alvo. " +
     "ajustar: quanto um elo do caminho de conteúdo (diretor, roteiro, elenco, serie, genero) pesa para a Pessoa, " +
@@ -39,6 +41,7 @@ export default definirFerramenta({
     texto: z.string().min(1).optional().describe("declarar, relatar, vetar: o que foi dito, como foi dito"),
     filme: semHifen("filme").optional().describe("alvo: ID do filme (tt...)"),
     entidade: semHifen("entidade").optional().describe("alvo: ID da entidade (Q...)"),
+    grupo: semHifen("grupo").optional().describe("vetar: grupo de tags de config/vetos_por_tag.toml, ex.: comedia_boba"),
     reacao: z.enum(["ama", "gosta", "nao-gosta", "odeia"]).optional().describe("declarar, relatar: reação ao alvo"),
     especificidade: z.enum(["especifico", "generico"]).optional()
       .describe("declarar, relatar: específico nomeia filme, diretor, ator ou subgênero; padrão vem do alvo"),
@@ -57,7 +60,9 @@ export default definirFerramenta({
   cli: (e) => {
     const faltando = PRECISA[e.acao].filter((campo) => e[campo as keyof typeof e] === undefined);
     if (faltando.length) throw new Error(`pessoa ${e.acao} precisa de: ${faltando.join(", ")}`);
-    if (e.acao === "vetar" && !e.filme && !e.entidade) throw new Error("pessoa vetar precisa de filme ou entidade");
+    if (e.acao === "vetar" && !e.filme && !e.entidade && !e.grupo) {
+      throw new Error("pessoa vetar precisa de filme, entidade ou grupo");
+    }
 
     const opcoes: string[] = [];
     const opcao = (nome: string, valor: string | undefined) => {
@@ -93,6 +98,7 @@ export default definirFerramenta({
     opcao("filme", e.filme);
     opcao("entidade", e.entidade);
     opcao("data", e.data);
+    if (e.acao === "vetar") opcao("grupo", e.grupo);
     if (e.acao !== "vetar") {
       opcao("reacao", e.reacao);
       opcao("fonte", e.fonte);
