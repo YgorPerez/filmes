@@ -119,6 +119,6 @@ retenha a Recomendação.
 ## Outros pedidos
 
 - Para registrar o que viram, leia [Feedback](feedback.md).
-- Para cadastrar Pessoas, aplicar o questionário, registrar Relatos e Vetos ou importar Notas, leia [Pessoas e gosto](pessoas.md).
+- Para cadastrar Pessoas, aplicar o questionário, registrar Relatos, Vetos e Ajustes ("pro Lorenzo ator não importa") ou importar Notas, leia [Pessoas e gosto](pessoas.md).
 - Para perguntas sobre o banco, use `consultar` com SELECT e responda com o que a consulta mostrou.
 - Para atualizar dados públicos ou medir a Recomendação a pedido do Dono, use `atualizar` ou `avaliar` conforme a descrição da ferramenta. Se o Dono pedir uma grade de pesos, mostre os três melhores conjuntos com as métricas antes de qualquer alteração na config. Só aplique o conjunto que ele aprovar.

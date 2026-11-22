@@ -54,6 +54,16 @@ describe("ferramenta pessoa", () => {
     assert.deepEqual(saida.vetos.map((v: any) => v.rotulo), ["Terror"]);
   });
 
+  it("grava e desfaz um Ajuste", async () => {
+    const ajuste = json(await pessoa({ acao: "ajustar", pessoa: "ana", elo: "elenco", nivel: "nada" }));
+    assert.deepEqual([ajuste.ajuste.elo, ajuste.ajuste.nivel, ajuste.novo], ["elenco", "nada", true]);
+    assert.deepEqual(json(await pessoa({ acao: "ver", pessoa: "ana" })).ajustes.map((a: any) => a.nivel), ["nada"]);
+
+    assert.ok(!(await pessoa({ acao: "ajustar", pessoa: "ana", elo: "elenco", nivel: "normal" })).isError);
+    assert.deepEqual(json(await pessoa({ acao: "ver", pessoa: "ana" })).ajustes, []);
+    assert.ok((await pessoa({ acao: "ajustar", pessoa: "ana", elo: "elenco" })).isError);
+  });
+
   it("o Veto age na Recomendação", async () => {
     const resultado = (await cliente.callTool({
       name: "recomendar", arguments: { presentes: ["dono", "ana"], quantos: 50 },

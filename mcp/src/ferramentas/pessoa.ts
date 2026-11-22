@@ -8,6 +8,7 @@ const PRECISA: Record<string, string[]> = {
   relatar: ["pessoa", "texto"],
   vetar: ["pessoa", "texto"],
   visto: ["pessoa", "filme"],
+  ajustar: ["pessoa", "elo", "nivel"],
   remover: ["pessoa"],
 };
 
@@ -24,9 +25,12 @@ export default definirFerramenta({
     "Um Veto precisa de alvo. visto: a Pessoa já viu o filme; com nota, grava também a Nota que ela deu " +
     '(de 0,5 a 5, ou de 1 a 10 escrita "8/10"). remover: tira um item registrado por engano; informe um só de ' +
     "declarado, relato, veto ou visto, com o fato_id que ver mostra ou o alvo (tt..., Q...) quando só um item tem esse alvo. " +
+    "ajustar: quanto um elo do caminho de conteúdo (diretor, roteiro, elenco, serie, genero) pesa para a Pessoa, " +
+    '"pra ele ator não importa" é elo elenco, nivel nada; nada tira as Evidências do elo, pouco vale metade e desce ' +
+    "a Força um nível, muito vale 1,5 vez, normal desfaz. O Declarado sobre um ator ou diretor nomeado continua valendo. " +
     "O que se grava ou remove vale já na próxima Recomendação.",
   entrada: {
-    acao: z.enum(["criar", "ver", "declarar", "relatar", "vetar", "visto", "remover"]),
+    acao: z.enum(["criar", "ver", "declarar", "relatar", "vetar", "visto", "ajustar", "remover"]),
     pessoa: semHifen("pessoa").optional().describe('slug, nome ou apelido; "dono" é o Dono'),
     nome: semHifen("nome").optional().describe("criar: nome da Pessoa"),
     apelidos: z.array(semHifen("apelido")).optional().describe("criar: como o Dono a chama"),
@@ -42,6 +46,8 @@ export default definirFerramenta({
       .describe('visto: a Nota que a Pessoa deu, de 0,5 a 5 ("4,5") ou de 1 a 10 ("8/10")'),
     review: z.boolean().optional().describe("declarar: é review ou tag que a própria Pessoa escreveu"),
     fonte: semHifen("fonte").optional().describe('declarar, relatar, visto: de onde veio, ex.: "questionário"'),
+    elo: z.enum(["diretor", "roteiro", "elenco", "serie", "genero"]).optional().describe("ajustar: o elo"),
+    nivel: z.enum(["nada", "pouco", "normal", "muito"]).optional().describe("ajustar: quanto o elo pesa; normal desfaz"),
     data: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().describe("AAAA-MM-DD; padrão hoje"),
     declarado: z.string().min(1).optional().describe("remover: fato_id ou alvo do Declarado"),
     relato: z.string().min(1).optional().describe("remover: fato_id ou alvo do Relato"),
@@ -70,6 +76,12 @@ export default definirFerramenta({
       return { comando: "pessoa", args: ["remover", `--${tipo}=${e[tipo]}`, "--", e.pessoa!] };
     }
     if (e.acao === "ver") return { comando: "pessoa", args: ["ver", "--", e.pessoa!] };
+    if (e.acao === "ajustar") {
+      opcao("elo", e.elo);
+      opcao("nivel", e.nivel);
+      opcao("data", e.data);
+      return { comando: "pessoa", args: ["ajustar", ...opcoes, "--", e.pessoa!] };
+    }
     if (e.acao === "visto") {
       opcao("filme", e.filme);
       opcao("nota", e.nota);

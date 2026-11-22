@@ -21,4 +21,4 @@ def sinais(rodada, pessoa):
         if linha["filme_id"] in rodada.candidatos:
             yield Evidencia(pessoa=pessoa, filme_id=linha["filme_id"], texto="já viu", fonte=linha["fonte"],
                             data=linha["data"], forca=regua.FORCA_JA_VISTO, tipo=linha["tipo"],
-                            fato_id=linha["fato_id"], base=-peso)
+                            fato_id=linha["fato_id"], base=-peso, ja_visto=True)

@@ -1,6 +1,6 @@
 """Pessoas no repo de dados: um arquivo `pessoas/<slug>.md` por Pessoa.
 
-Frontmatter com nome, apelidos, `dono: true` no Dono, Vetos e imports. Nenhuma
+Frontmatter com nome, apelidos, `dono: true` no Dono, Vetos, Ajustes e imports. Nenhuma
 idade é guardada. O corpo tem as seções `## Declarados` (o que a Pessoa disse do
 próprio gosto) e `## Relatos` (o que o Dono contou dela), um item por linha:
 
@@ -20,7 +20,12 @@ ela deu uma (na escala de 0,5 a 5):
 
 O resto do corpo é texto livre e fica como está.
 
-`SECOES` diz onde mora cada tipo de item: os Vetos no frontmatter, o resto numa
+Um Ajuste diz quanto um elo do caminho de conteúdo pesa para a Pessoa:
+
+    ajustes:
+    - {elo: elenco, nivel: nada, data: '2026-11-22'}
+
+`SECOES` diz onde mora cada tipo de item: os Vetos e os Ajustes no frontmatter, o resto numa
 seção do corpo. `Pessoa.itens`, `acrescentar` e `tirar` passam por ela.
 """
 
@@ -45,6 +50,19 @@ class Veto:
     def como_dict(self) -> dict:
         return {"texto": self.texto, "alvo": self.alvo, "rotulo": self.rotulo, "data": self.data}
 
+
+@dataclass(frozen=True)
+class Ajuste:
+    elo: str        # diretor, roteiro, elenco, serie, genero
+    nivel: str      # nada, pouco, muito ("normal" não fica no arquivo)
+    data: str
+
+    def como_dict(self) -> dict:
+        return {"elo": self.elo, "nivel": self.nivel, "data": self.data}
+
+
+ELOS = ("diretor", "roteiro", "elenco", "serie", "genero")
+NIVEIS = ("nada", "pouco", "normal", "muito")
 
 REACOES = {"ama": "ama", "gosta": "gosta de", "nao_gosta": "não gosta de", "odeia": "odeia"}
 _REACAO_POR_TEXTO = {v: k for k, v in REACOES.items()} | {"sobre": None}
@@ -104,6 +122,7 @@ class Pessoa:
     apelidos: list[str] = field(default_factory=list)
     dono: bool = False
     vetos: list[Veto] = field(default_factory=list)
+    ajustes: list[Ajuste] = field(default_factory=list)
     imports: list = field(default_factory=list)
     corpo: str = ""
 
@@ -145,6 +164,22 @@ class _Vetos:
 
     def tirar(self, pessoa: Pessoa, veto: Veto) -> None:
         pessoa.vetos.remove(veto)
+
+
+class _Ajustes:
+    """Os Ajustes, no frontmatter. Um por elo: o novo substitui o anterior."""
+
+    def ler(self, pessoa: Pessoa) -> list[Ajuste]:
+        return list(pessoa.ajustes)
+
+    def acrescentar(self, pessoa: Pessoa, ajuste: Ajuste) -> bool:
+        if ajuste in pessoa.ajustes:
+            return False
+        pessoa.ajustes = [a for a in pessoa.ajustes if a.elo != ajuste.elo] + [ajuste]
+        return True
+
+    def tirar(self, pessoa: Pessoa, ajuste: Ajuste) -> None:
+        pessoa.ajustes.remove(ajuste)
 
 
 @dataclass(frozen=True)
@@ -212,6 +247,7 @@ def _ja_visto(achado: re.Match) -> JaVisto:
 
 SECOES = {
     "vetos": _Vetos(),
+    "ajustes": _Ajustes(),
     "declarados": _SecaoDoCorpo("Declarados", _LINHA, _dito),
     "relatos": _SecaoDoCorpo("Relatos", _LINHA, _dito),
     "já vistos": _SecaoDoCorpo("Já vistos", _LINHA_VISTO, _ja_visto),
@@ -274,6 +310,8 @@ def salvar(repo: Path, pessoa: Pessoa) -> None:
     if pessoa.dono:
         frente["dono"] = True
     frente["vetos"] = [v.como_dict() for v in pessoa.vetos]
+    if pessoa.ajustes:
+        frente["ajustes"] = [a.como_dict() for a in pessoa.ajustes]
     frente["imports"] = pessoa.imports
     markdown.escrever(pasta(repo) / f"{pessoa.slug}.md", frente, pessoa.corpo)
 
@@ -293,6 +331,7 @@ def _ler(arquivo: Path) -> Pessoa:
         apelidos=[str(a) for a in frente.get("apelidos") or []],
         dono=bool(frente.get("dono", False)),
         vetos=[_veto(arquivo, v) for v in frente.get("vetos") or []],
+        ajustes=_ajustes(arquivo, frente.get("ajustes") or []),
         imports=list(frente.get("imports") or []),
         corpo=corpo,
     )
@@ -305,6 +344,23 @@ def _veto(arquivo: Path, item) -> Veto:
         raise ErroFilmes("dados_invalidos", f"{arquivo}: data do Veto inválida: {item['data']!r}")
     return Veto(texto=str(item["texto"]), alvo=str(item["alvo"]), rotulo=str(item.get("rotulo") or item["alvo"]),
                 data=str(item["data"]))
+
+
+def _ajustes(arquivo: Path, itens) -> list[Ajuste]:
+    ajustes = []
+    for item in itens:
+        if not isinstance(item, dict) or not all(item.get(c) for c in ("elo", "nivel", "data")):
+            raise ErroFilmes("dados_invalidos", f"{arquivo}: Ajuste precisa de elo, nivel e data: {item!r}")
+        if item["elo"] not in ELOS:
+            raise ErroFilmes("dados_invalidos", f"{arquivo}: elo do Ajuste inválido: {item['elo']!r} (use {', '.join(ELOS)})")
+        if item["nivel"] not in NIVEIS or item["nivel"] == "normal":
+            raise ErroFilmes("dados_invalidos", f"{arquivo}: nível do Ajuste inválido: {item['nivel']!r} (use nada, pouco ou muito)")
+        if not _data_valida(str(item["data"])):
+            raise ErroFilmes("dados_invalidos", f"{arquivo}: data do Ajuste inválida: {item['data']!r}")
+        if any(a.elo == item["elo"] for a in ajustes):
+            raise ErroFilmes("dados_invalidos", f"{arquivo}: mais de um Ajuste para o elo {item['elo']}")
+        ajustes.append(Ajuste(elo=str(item["elo"]), nivel=str(item["nivel"]), data=str(item["data"])))
+    return ajustes
 
 
 def _data_valida(data: str) -> bool:

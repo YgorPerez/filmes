@@ -22,6 +22,19 @@ genero = 0.3
 [utilidade]
 # Utilidade individual de 0 a 1: u = 1 / (1 + exp(-k * soma das contribuições)).
 k = 1.0
+# Só as N contribuições de maior módulo de cada Pessoa no filme entram na soma; o
+# Já visto fica fora do corte e sempre conta. Sem o corte, quem tem mil Notas
+# encosta em dezenas de Evidências por filme e fica com utilidade ~1 em tudo.
+evidencias_maximas = 5
+
+[ajuste.nivel]
+# Ajuste de uma Pessoa a um elo do caminho de conteúdo (`pessoa ajustar`): o
+# nível multiplica o peso do elo. "nada" tira as Evidências do elo e "pouco"
+# também desce a Força um nível (régua).
+nada = 0.0
+pouco = 0.5
+normal = 1.0
+muito = 1.5
 
 [catalogo]
 # Mínimo de votos no IMDb para um filme virar Candidato.
