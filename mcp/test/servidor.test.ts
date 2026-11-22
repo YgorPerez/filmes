@@ -175,6 +175,17 @@ describe("servidor MCP sobre a CLI real e a fixture", () => {
     assert.ok(!titulos.includes("Pequenos Milagres"));
   });
 
+  it("nada lento tira o filme com tag de ritmo lento", async () => {
+    const resultado = (await cliente.callTool({
+      name: "recomendar", arguments: { presentes: ["dono"], quantos: 100, sem_lento: true },
+    })) as Resultado;
+
+    assert.ok(!resultado.isError, JSON.stringify(resultado.content));
+    const saida = json(resultado);
+    assert.deepEqual(saida.restricoes.sem_lento, { tirados: 3 });
+    assert.ok(!saida.filmes.map((f: any) => f.titulo).includes("Drama Juvenil"));
+  });
+
   it("tem criança sem idade vale livre", async () => {
     const resultado = (await cliente.callTool({
       name: "recomendar", arguments: { presentes: ["dono"], quantos: 50, crianca: true },
@@ -196,6 +207,7 @@ describe("servidor MCP sobre a CLI real e a fixture", () => {
 
     assert.ok(!resultado.isError, JSON.stringify(resultado.content));
     assert.deepEqual(json(resultado).sessao, { ...primeira.sessao, versao: 2 });
+    assert.ok(json(resultado).restricoes.sem_repetido.tirados >= 1);
     const abertas = json((await cliente.callTool({ name: "sessoes_abertas", arguments: {} })) as Resultado);
     const comQuim = abertas.sessoes.filter((s: { presentes: string[] }) => s.presentes.includes("quim"));
     assert.deepEqual(comQuim.map((s: { pedido: string; versao: number }) => [s.pedido, s.versao]), [["algo curto", 2]]);

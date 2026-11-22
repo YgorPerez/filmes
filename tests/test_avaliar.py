@@ -104,10 +104,14 @@ def test_grade_testa_tres_valores_por_peso_e_preserva_a_config(banco, tmp_path):
     resultado = banco.ok("avaliar", "--grade")
     grade = resultado["grade"]
     # 27 conjuntos de multiplicadores; os cinco pesos de aresta variam um de cada vez
-    # (1 conjunto atual + 5 × 2 variações).
+    # (1 conjunto atual + 5 × 2 variações); o N do corte (3, 8 e 10 além do 5) varia
+    # sozinho, com o resto como está na config.
     assert set(grade["valores"]["caminho.peso"]) == {"diretor", "roteiro", "elenco", "genero", "serie"}
-    assert grade["combinacoes"] == 27 * 11
-    assert all(len(valores) == 3 for pesos in grade["valores"].values() for valores in pesos.values())
+    assert grade["combinacoes"] == 27 * 11 + 3
+    assert all(len(valores) == 3 for secao in ("caminho.peso", "forca.multiplicador")
+               for valores in grade["valores"][secao].values())
+    assert grade["valores"]["utilidade"] == {"evidencias_maximas": [3, 5, 8, 10]}
+    assert all("evidencias_maximas" in m["pesos"]["utilidade"] for m in grade["melhores"])
     assert len(grade["melhores"]) == 3
     assert pesos.read_bytes() == antes
     assert banco.ok("sessoes-abertas") == {"sessoes": []}
