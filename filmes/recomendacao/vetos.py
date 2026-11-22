@@ -81,9 +81,14 @@ def _caminhos(conn, alvo):
 
 
 def _do_grupo(conn, chave, minimos):
+    yield "tags", marcados_pelo_grupo(conn, chave, minimos)
+
+
+def marcados_pelo_grupo(conn: sqlite3.Connection, chave: str, minimos: dict) -> set:
+    """Os filmes que o grupo de tags pega: gênero do IMDb do grupo e tag com o mínimo de `minimos`."""
     grupo = grupos().get(chave)
     if grupo is None:
-        raise ErroFilmes("config_invalida", f"Veto ao grupo '{chave}', que não está em config/vetos_por_tag.toml")
+        raise ErroFilmes("config_invalida", f"grupo '{chave}', que não está em config/vetos_por_tag.toml")
     tags = [t.lower() for t in grupo["tags"]]
     marcados = _coluna(conn, f"SELECT filme_id FROM genoma WHERE relevancia >= ? AND tag IN ({_marcas(tags)})",
                        [minimos["relevancia_minima"], *tags])
@@ -92,7 +97,7 @@ def _do_grupo(conn, chave, minimos):
     generos = list(grupo.get("generos_imdb", []))
     if generos:
         marcados &= _coluna(conn, f"SELECT filme_id FROM generos_imdb WHERE genero IN ({_marcas(generos)})", generos)
-    yield "tags", marcados
+    return marcados
 
 
 def _filmes_dos_generos(conn, generos):

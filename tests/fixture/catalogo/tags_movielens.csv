@@ -13,3 +13,5 @@ tt9000602,sad,2,MovieLens ml-32m,2023-10-13
 tt9000901,massacre,2,MovieLens ml-32m,2023-10-13
 tt9005602,silly,12,MovieLens ml-32m,2023-10-13
 tt9005603,silly,9,MovieLens ml-32m,2023-10-13
+tt9005603,boring,9,MovieLens ml-32m,2023-10-13
+tt9005602,boring,10,MovieLens ml-32m,2023-10-13

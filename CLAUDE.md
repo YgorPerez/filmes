@@ -36,7 +36,7 @@ Sem `--json`, a saída é o mesmo JSON indentado. Erro sai com código diferente
 config/pesos.toml          pesos versionados (multiplicadores de Força, peso por aresta, utilidade, votos mínimos)
 config/climas.toml         vocabulário fixo de Climas: Clima -> tags do MovieLens e gêneros
 config/grupo_sozinho.toml  tags do MovieLens que dão bônus numa Sessão em grupo ou sozinha
-config/vetos_por_tag.toml  grupos de tags que um Veto pode nomear (comédia boba)
+config/vetos_por_tag.toml  grupos de tags que um Veto pode nomear (comédia boba, lento); lento é também o --sem-lento
 filmes/
   cli.py                   contrato da CLI; acha os comandos em comandos/
   ambiente.py              caminhos, pesos e "hoje" de uma execução
@@ -51,7 +51,7 @@ filmes/
   evidencia/               Evidencia, régua de Força (regua.py), redação (texto.py)
   recomendacao/            Candidatos, utilidade, ordem; sinais/<caminho>.py, um por caminho
                            (sinais(rodada, pessoa) para uma Pessoa, sinais_do_filme(rodada) para a linha do filme)
-    restricoes/<nome>.py   uma Restrição da Sessão por arquivo (duração, idioma, criança, gatilho, sem Já visto)
+    restricoes/<nome>.py   uma Restrição da Sessão por arquivo (duração, ano, idioma, criança, gatilho, sem Já visto, nada triste, nada lento, sem repetido)
     cabecalho.py           link, gêneros, nota e votos do IMDb, capa, título pt e sinopse do TMDB; fora das Evidências
     atribuicoes.py         atribuições obrigatórias das fontes usadas
   sob_demanda/             fontes consultadas na hora, com cache de validade: fonte.py, cache.py, omdb.py, ddd.py, tmdb.py
@@ -93,5 +93,7 @@ mcp/test/                  testes do MCP, chamando a CLI de verdade sobre a mesm
 - **Corte das N mais fortes.** A utilidade de uma Pessoa num filme soma só as N contribuições de maior módulo (`[utilidade] evidencias_maximas`); o Já visto fica fora do corte e sempre conta. Sem isso, quem tem mil Notas satura em 1. Decisão do Dono de 2026-11-22.
 - **Veto por grupo de tags.** O alvo de um Veto pode ser um grupo de `config/vetos_por_tag.toml` (`pessoa vetar ... --grupo comedia_boba`): sai o filme com um dos gêneros do IMDb do grupo e uma das tags com o mínimo de `[vetos_por_tag]`. O Lorenzo veta "comédia boba". Decisão do Dono de 2026-11-22 (#56).
 - **Nota do IMDb na ordem.** Acima da mínima, a nota soma um bônus do filme à pontuação da Regra, como o do Clima: `[nota_imdb] peso × (nota − 7) / 3`, com peso 0,3. A linha "nota 8,5 no IMDb" vai em `linhas_do_filme` e não conta como Fato (filme só com ela continua "só palpites"). Decisão do Dono de 2026-11-22 (#56).
+- **Nada lento.** `--sem-lento` é Restrição da Sessão: tira o filme com uma tag do grupo `lento` de `config/vetos_por_tag.toml` (slow, slow paced, meditative, contemplative, boring), com os mínimos de `[vetos_por_tag]`, em qualquer gênero. O grupo também serve de alvo de Veto. Decisão do Dono de 2026-11-22 (#57).
+- **Sem repetido.** Ao refazer com `--sessao`, a Restrição `sem_repetido` liga sozinha e tira o que a Sessão já mostrou: os `mostrados` do cartaz de cada versão, ou as 5 primeiras posições da versão sem cartaz. Outras Sessões não contam. Decisão do Dono de 2026-11-22 (#57).
 - **Sem fato é neutro.** Na Regra de escolha (padrão, média e "de fulano"), Presente sem Fato sobre o filme conta como 0,5, e o Crédito não mexe nesse 0,5. Na saída, a utilidade dele continua `null`, com a linha "sem fato". Decisão do Dono de 2026-11-21 (#37), que muda a do #8.
 - **Já visto.** Toda Nota é também Já visto (view `ja_vistos`): pesa contra o filme para a Pessoa que deu a Nota.

@@ -17,12 +17,13 @@ export default definirFerramenta({
     "um Veto a grupo de tags, como comédia boba, conta em {tags}. " +
     "`so_palpites` marca filme sem Fato nenhum, que só entra no fim quando " +
     'faltam Candidatos com Fato. Presentes por slug, nome ou apelido; "dono" é o Dono. ' +
-    "Restrições opcionais (duração, ano de lançamento, idioma, criança, gatilhos, sem Já visto, nada triste) tiram filmes antes da ordenação. " +
+    "Restrições opcionais (duração, ano de lançamento, idioma, criança, gatilhos, sem Já visto, nada triste, nada lento) tiram filmes antes da ordenação. " +
     "Cada filme que passa traz em `linhas_do_filme` as linhas das Restrições, do Clima, de grupo ou sozinho e da nota do IMDb acima de 7. " +
     "Clima, grupo ou sozinho e a nota do IMDb puxam a ordem dos filmes. " +
     "A linha de Crédito aparece em `linhas_do_filme` quando o Crédito fez o filme subir. " +
     "`credito` traz o Crédito de cada Presente na Regra padrão em grupo. Cada chamada abre uma Sessão (`sessao.id`). " +
-    "Com `sessao`, refaz a Recomendação nessa Sessão aberta em vez de abrir outra, e `sessao.versao` conta as versões. " +
+    "Com `sessao`, refaz a Recomendação nessa Sessão aberta em vez de abrir outra, e `sessao.versao` conta as versões; " +
+    "o que a Sessão já mostrou (o cartaz ou as 5 primeiras de cada versão) sai sozinho, em `restricoes.sem_repetido`. " +
     "Antes, chame `sessoes_abertas` e, se houver uma, pergunte por ela. O Dono pode pular. " +
     "A resposta inclui `climas` (os aceitos), `restricoes`, `avisos` e `atribuicoes`. " +
     "Copie o texto do Does the Dog Die como veio.",
@@ -65,6 +66,9 @@ export default definirFerramenta({
     sem_tristeza: z.boolean().optional().describe(
       '"nada triste": tira filme com tag de tristeza ou de tema pesado no MovieLens e filme de tema pesado no Wikidata',
     ),
+    sem_lento: z.boolean().optional().describe(
+      '"nada lento": tira filme com tag de ritmo lento no MovieLens (slow, slow paced, meditative, contemplative, boring)',
+    ),
   },
   cli: (e) => {
     const args = ["--presentes", ...e.presentes];
@@ -80,6 +84,7 @@ export default definirFerramenta({
     for (const gatilho of e.gatilhos ?? []) args.push(`--gatilho=${gatilho}`);
     if (e.sem_ja_visto) args.push("--sem-ja-visto");
     if (e.sem_tristeza) args.push("--sem-tristeza");
+    if (e.sem_lento) args.push("--sem-lento");
     if (e.pedido !== undefined) args.push(`--pedido=${e.pedido}`);
     if (e.sessao) args.push("--sessao", e.sessao);
     for (const clima of e.climas ?? []) args.push(`--clima=${clima}`);

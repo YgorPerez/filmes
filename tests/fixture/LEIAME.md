@@ -214,3 +214,13 @@ Filmes `tt90056NN`, sem diretor nem Nota, para `test_veto_por_tag_e_nota_imdb.py
 | Obra-Prima (5605) | — | — | nota 8,5 e 1.000 votos: o bônus da nota o põe à frente dos outros só com palpites |
 
 As Horas Lentas (7,4) também ganha o bônus da nota; `test_credito.py` zera o peso para isolar o Crédito.
+
+### Nada lento (#57)
+
+Os mesmos filmes `tt90056NN` levam "boring", tag do grupo `lento` fora do `grupo_sozinho.toml` (`config/vetos_por_tag.toml`), para `test_sem_lento_e_sem_repetido.py`. O grupo vale para qualquer gênero, com os mínimos do #56.
+
+| Filme | Tag de ritmo | No `--sem-lento` |
+|---|---|---|
+| Piada Pronta (5602) | boring, 10 usuários | sai pelo tags.csv |
+| Riso Contido (5603) | boring, 9 usuários | abaixo do mínimo: fica |
+| Drama Juvenil (5604) | boring 0,8 (Genome) | sai pelo Genome, mesmo sendo drama |

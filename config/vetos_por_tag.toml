@@ -23,3 +23,11 @@ tags = [
     # cotidiano
     "slice of life", "everyday life", "summer", "suburbia",
 ]
+
+[lento]
+# Decisão do Dono de 2026-11-22 (#57): também é a lista do `--sem-lento`, a Restrição
+# "nada lento" da Sessão. Só as tags de ritmo: atmospheric e thought-provoking ficam
+# de fora porque muito filme ágil tem. Vale para qualquer gênero.
+rotulo = "lento"
+generos_imdb = []
+tags = ["slow", "slow paced", "meditative", "contemplative", "boring"]
