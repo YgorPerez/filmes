@@ -82,7 +82,7 @@ def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], qu
                *, selecao: candidatos.Selecao | None = None) -> dict:
     # Os Vetos de todos os Presentes valem, seja qual for a Regra de escolha.
     elegiveis = selecao.filmes if selecao is not None else candidatos.escolher(conn, amb.pesos)
-    restantes, vetos_que_agiram = vetos.aplicar(conn, presentes, elegiveis)
+    restantes, vetos_que_agiram = vetos.aplicar(conn, presentes, elegiveis, amb.pesos["vetos_por_tag"])
     climas_aceitos, avisos_de_clima = vocabulario_climas.resolver(list(climas))
     contexto = Contexto(conn=conn, amb=amb, presentes=presentes, avisos=avisos_de_clima)
     pedidas = Restricoes(contexto, list(restricoes))
@@ -128,7 +128,7 @@ def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], qu
         }
         sinais_do_filme = do_filme.get(filme_id, [])
         bonus = sum(e.contribuicao(pesos) for e in sinais_do_filme)
-        tem_fato = any(e.tipo != "palpite" for e in (*evidencias, *sinais_do_filme))
+        tem_fato = any(e.tipo != "palpite" and e.conta_como_fato for e in (*evidencias, *sinais_do_filme))
         chave = _chave(regra.chave(utilidades, ajuste), tem_fato, filme, bonus)
         ordenados.append(Ordenado(chave, filme, utilidades, evidencias))
         if ajuste:

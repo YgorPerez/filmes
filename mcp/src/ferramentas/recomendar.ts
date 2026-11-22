@@ -13,12 +13,13 @@ export default definirFerramenta({
     "`capa` (pôster do TMDB em w185), `titulo_pt` e `sinopse` (a primeira frase do overview), os três do TMDB em pt-BR " +
     "e null sem chave do TMDB ou sem o dado, `nota_imdb` e `votos_imdb`, e `cobertura` ({com_fato, presentes, sem_fato: slugs}). " +
     "`vetos` lista os Vetos dos Presentes que tiraram filmes, com `filmes_tirados` e `por_caminho` " +
-    "({direto, subgeneros, genero_imdb}): um Veto a gênero tira também os subgêneros do Wikidata e o gênero do IMDb. " +
+    "({direto, subgeneros, genero_imdb}): um Veto a gênero tira também os subgêneros do Wikidata e o gênero do IMDb; " +
+    "um Veto a grupo de tags, como comédia boba, conta em {tags}. " +
     "`so_palpites` marca filme sem Fato nenhum, que só entra no fim quando " +
     'faltam Candidatos com Fato. Presentes por slug, nome ou apelido; "dono" é o Dono. ' +
     "Restrições opcionais (duração, ano de lançamento, idioma, criança, gatilhos, sem Já visto, nada triste) tiram filmes antes da ordenação. " +
-    "Cada filme que passa traz em `linhas_do_filme` as linhas das Restrições, do Clima e de grupo ou sozinho. " +
-    "Clima e grupo ou sozinho puxam a ordem dos filmes. " +
+    "Cada filme que passa traz em `linhas_do_filme` as linhas das Restrições, do Clima, de grupo ou sozinho e da nota do IMDb acima de 7. " +
+    "Clima, grupo ou sozinho e a nota do IMDb puxam a ordem dos filmes. " +
     "A linha de Crédito aparece em `linhas_do_filme` quando o Crédito fez o filme subir. " +
     "`credito` traz o Crédito de cada Presente na Regra padrão em grupo. Cada chamada abre uma Sessão (`sessao.id`). " +
     "Com `sessao`, refaz a Recomendação nessa Sessão aberta em vez de abrir outra, e `sessao.versao` conta as versões. " +

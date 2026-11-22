@@ -39,6 +39,7 @@ Sem `html_render`, a resposta vai em Markdown. Abra com um bloco de citação (`
 `vetos` que agiram, com a Pessoa de cada Veto, e quantos filmes saíram.
 Um Veto a gênero já tira os subgêneros do Wikidata (romance leva a comédia
 romântica) e o gênero do IMDb; `por_caminho` diz quantos saíram por cada um.
+Um Veto a grupo de tags (comédia boba) conta em `tags`.
 Não tire à mão filme que o Veto deixou passar sem dizer ao Dono qual foi.
 Nos rótulos das Evidências, chame o Dono de "Você" e use o nome cadastrado
 das outras Pessoas. Para conferir os nomes dos slugs, use `consultar` com

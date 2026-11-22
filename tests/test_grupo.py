@@ -144,7 +144,8 @@ SO_PALPITES = {"Pequenos Milagres", "Casa Cheia", "Deserto Branco", "A Última E
                "Café Amargo", "Linha Cruzada", "Os Inquilinos", "Fim de Tarde",
                "Porão Escuro", "A Casa do Fim", "Risos de Domingo",
                "Carta de Amor", "Amor em Paris", "Casar de Novo", "Baile de Formatura",
-               "Mar Aberto"}
+               "Mar Aberto", "Turma do Recreio", "Piada Pronta", "Riso Contido", "Drama Juvenil",
+               "Obra-Prima"}
 
 
 def test_filme_so_com_palpites_fica_de_fora_quando_ha_candidatos_com_fato(banco):
@@ -160,8 +161,8 @@ def test_filme_so_com_palpites_completa_a_lista_no_fim_marcado(banco):
     marcados = [f for f in saida["filmes"] if f["so_palpites"]]
     assert {f["titulo"] for f in marcados} == SO_PALPITES
     assert saida["filmes"][-len(marcados):] == marcados
-    # entre eles, o mais votado primeiro
-    assert [f["titulo"] for f in marcados][:2] == ["Pequenos Milagres", "Deserto Branco"]
+    # entre eles, o de nota do IMDb acima de 7 primeiro (#56), depois o mais votado
+    assert [f["titulo"] for f in marcados][:3] == ["Obra-Prima", "Pequenos Milagres", "Deserto Branco"]
     for filme in marcados:
         assert filme["utilidade"] == {"bruno": None, "iara": None}
         assert filme["evidencias"] == {"bruno": [{"pessoa": "bruno", **SEM_FATO}],

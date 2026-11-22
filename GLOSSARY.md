@@ -23,7 +23,7 @@ As Pessoas de uma Sessão. Não existe grupo guardado: cada Sessão tem os seus 
 _Evitar_: grupo, turma
 
 **Veto**:
-A recusa permanente de uma Pessoa a um tipo de filme, como "Leo nunca vê terror". Vale em toda Sessão em que ela está entre os Presentes e tira o filme antes de qualquer ordenação.
+A recusa permanente de uma Pessoa a um tipo de filme, como "Leo nunca vê terror". Vale em toda Sessão em que ela está entre os Presentes e tira o filme antes de qualquer ordenação. O alvo é um filme, uma entidade (gênero, diretor, ator) ou um grupo de tags com nome, como "comédia boba".
 _Evitar_: filtro, bloqueio
 
 **Ajuste**:

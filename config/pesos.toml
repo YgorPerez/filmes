@@ -81,6 +81,18 @@ peso_dito = 1.0
 # demanda (OMDb para a classificação, Does the Dog Die para gatilho).
 alcance_sob_demanda = 50
 
+[vetos_por_tag]
+# Mínimos para uma tag de config/vetos_por_tag.toml tirar o filme de um Veto por grupo.
+# Mais firmes que os do "nada triste": "bobo" é mais subjetivo que "triste".
+relevancia_minima = 0.7
+usuarios_minimos = 10
+
+[nota_imdb]
+# Bônus do filme pela nota do IMDb, somado à pontuação da Regra como o do Clima:
+# peso × (nota − mínima) / (10 − mínima), com a mínima de [catalogo]. Nota 7 ganha 0.
+# 0,3 (decisão do Dono, 2026-11-22): com 0,1, um 8,0 ganhava só 0,033 e quase não mudava a ordem.
+peso = 0.3
+
 [sem_tristeza]
 # Mínimos para uma tag de config/tristeza.toml tirar o filme em `--sem-tristeza`.
 # Tema pesado pede menos usuários: Polytechnique tem "massacre" de 2.

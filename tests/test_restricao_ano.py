@@ -6,7 +6,7 @@ Cidade de Vidro 2018, As Horas Lentas 2021, Sal e Ferrugem 2023.
 
 
 def _todos(banco, *restricoes):
-    return banco.ok("recomendar", "--presentes", "dono", "--quantos", "50", *restricoes)
+    return banco.ok("recomendar", "--presentes", "dono", "--quantos", "100", *restricoes)
 
 
 def _titulos(saida):

@@ -200,3 +200,17 @@ Usuário sem arquivo vale como perfil inexistente.
   (-03:00). O ID 9102 resolve por `tmdb/externos-9102.json`, sem passar pela busca
   por título, que daria dois candidatos.
 - Uma lista ("Faróis") fica de fora.
+
+### Veto por grupo de tags e nota do IMDb (#56)
+
+Filmes `tt90056NN`, sem diretor nem Nota, para `test_veto_por_tag_e_nota_imdb.py`. O grupo "comédia boba" (`config/vetos_por_tag.toml`) vale para Comédia no IMDb, com relevância 0,7 no Genome ou 10 usuários no tags.csv.
+
+| Filme | Gênero do IMDb | Tag | Para que serve |
+|---|---|---|---|
+| Turma do Recreio (5601) | Comedy | teen 0,9 (Genome) | sai pelo Genome |
+| Piada Pronta (5602) | Comedy | silly, 12 usuários | sai pelo tags.csv |
+| Riso Contido (5603) | Comedy | silly 0,69 e 9 usuários | abaixo dos dois mínimos: fica |
+| Drama Juvenil (5604) | Drama | teen 0,95 | não é comédia: fica |
+| Obra-Prima (5605) | — | — | nota 8,5 e 1.000 votos: o bônus da nota o põe à frente dos outros só com palpites |
+
+As Horas Lentas (7,4) também ganha o bônus da nota; `test_credito.py` zera o peso para isolar o Crédito.

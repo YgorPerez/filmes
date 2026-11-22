@@ -4,6 +4,7 @@ from dataclasses import dataclass, replace
 from datetime import date
 
 from filmes.recomendacao import recomendar
+from filmes.recomendacao.sinais import nota_imdb
 
 
 def preparar(conn, pessoas_medidas, amostra):
@@ -67,8 +68,9 @@ class Medidas:
 
 
 def _sustentado(filme):
+    """Filme com Evidência forte ou moderada; a linha da nota do IMDb (#56) não sustenta nada."""
     return any(
-        e["tipo"] != "palpite" and e["forca"] in {"forte", "moderada"}
+        e["tipo"] != "palpite" and e["forca"] in {"forte", "moderada"} and not nota_imdb.e_da_nota(e)
         for linhas in (filme["linhas_do_filme"], *filme["evidencias"].values())
         for e in linhas
     )

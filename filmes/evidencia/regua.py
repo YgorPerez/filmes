@@ -159,6 +159,12 @@ def forca_dito(tipo: str, especifico: bool, data: str, hoje: dt.date) -> str:
     return forca
 
 
+def forca_nota_imdb() -> str:
+    """Nota do IMDb como linha do filme: metadado exato, forte. O tamanho do bônus vem
+    da própria nota (sinais/nota_imdb.py), não da Força."""
+    return "forte"
+
+
 def forca_metadado_do_pedido() -> str:
     """Metadado que responde ao pedido (duração, classificação, idioma, gatilho): sempre forte."""
     return "forte"

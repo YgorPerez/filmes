@@ -17,6 +17,19 @@ Prado), 4,5 a Barulho (Caio Brandão) e 2 a Fronteira (Rui Tavares). Com o Bruno
 
 from pathlib import Path
 
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def sem_bonus_da_nota(banco, tmp_path):
+    """As margens destes cenários são pequenas: o bônus da nota do IMDb (#56) de As
+    Horas Lentas (7,4) mudaria a ordem sem o Crédito. Aqui só o Crédito mexe nela."""
+    pesos = tmp_path / "pesos-sem-nota.toml"
+    texto = Path("config/pesos.toml").read_text(encoding="utf-8")
+    assert "\npeso = 0.3\n\n[sem_tristeza]" in texto
+    pesos.write_text(texto.replace("\npeso = 0.3\n\n[sem_tristeza]", "\npeso = 0.0\n\n[sem_tristeza]"), encoding="utf-8")
+    banco.env["FILMES_PESOS"] = str(pesos)
+
 
 def _filme(saida, titulo):
     [filme] = [f for f in saida["filmes"] if f["titulo"] == titulo]

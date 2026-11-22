@@ -23,6 +23,7 @@ class Evidencia:
     fato_id: str | None
     base: float
     ja_visto: bool = False  # o Já visto fica fora do corte das N mais fortes e sempre conta
+    conta_como_fato: bool = True  # False: só puxa a ordem; filme só com ela continua "só palpites"
 
     def __post_init__(self):
         assert self.forca in FORCAS, self.forca
