@@ -2,9 +2,10 @@
 filme que a Sessão já mostrou (#57).
 
 Liga sozinha com `--sessao`: refazer já é pedir outras opções. Conta, em cada
-versão da Sessão (a atual e as de `versoes`), os `mostrados` que o cartaz
-gravou, ou as 5 primeiras posições quando a versão não tem `mostrados`.
-Outras Sessões não contam.
+versão da Sessão (a atual e as de `versoes`), o que o Dono viu dela
+(`arquivo.na_tela`): os `mostrados` que o cartaz gravou, ou a Recomendação
+inteira, que é o que o cartaz sem `--filmes` mostra. É a mesma lista que
+`--manter` e `cartaz responder` aceitam. Outras Sessões não contam.
 
 Os mantidos (`--manter`, #59) que estavam na versão atual não saem por aqui: o
 Dono pediu que ficassem.
@@ -14,8 +15,6 @@ from dataclasses import dataclass
 
 from filmes.recomendacao.restricoes import Passa
 from filmes.sessao import arquivo
-
-TOPO = 5
 
 
 def configurar(parser):
@@ -59,8 +58,5 @@ def ja_mostrados(dados, sessao_id) -> set:
     frente, _ = arquivo.ler(dados, sessao_id)
     ids = set()
     for versao in [*(frente.get("versoes") or []), arquivo.versao_atual(frente)]:
-        if versao.get("mostrados"):
-            ids |= {m["id"] for m in versao["mostrados"]}
-        else:
-            ids |= {r["id"] for r in versao.get("recomendacao") or [] if r["posicao"] <= TOPO}
+        ids |= {f["id"] for f in arquivo.na_tela(versao)}
     return ids

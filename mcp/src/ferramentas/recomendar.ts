@@ -23,7 +23,7 @@ export default definirFerramenta({
     "A linha de Crédito aparece em `linhas_do_filme` quando o Crédito fez o filme subir. " +
     "`credito` traz o Crédito de cada Presente na Regra padrão em grupo. Cada chamada abre uma Sessão (`sessao.id`). " +
     "Com `sessao`, refaz a Recomendação nessa Sessão aberta em vez de abrir outra, e `sessao.versao` conta as versões; " +
-    "o que a Sessão já mostrou (o cartaz ou as 5 primeiras de cada versão) sai sozinho, em `restricoes.sem_repetido`. " +
+    "o que a Sessão já mostrou (os filmes do cartaz, ou a Recomendação inteira de cada versão) sai sozinho, em `restricoes.sem_repetido`. " +
     "Com `manter`, os mantidos ficam no número da versão anterior e só as vagas ganham filme novo; cada filme traz " +
     "`novo` (true nas vagas), e a resposta traz `mantidos` e `saidas` ({posicao, id, titulo, motivo}: `ja_visto` com " +
     "`pessoas`, `trocado`, `restricao` com `restricao` e `rotulo`, `veto` com `pessoa` e `texto`, ou `nota_minima` com `rotulo`). " +
