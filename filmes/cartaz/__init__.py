@@ -23,7 +23,7 @@ o topo diz o que saiu e por quê, a partir de `saidas`.
 O cartaz responde (#60), como o do match-reply: a página não manda nada a lugar
 nenhum. Cada card tem Já vi (um chip por Presente, "Você" para o Dono, e "Todos"
 com mais de um Presente; com uma Pessoa só marcada, um campo de nota de 1 a 10),
-Trocar, estrelas de 1 a 5 e comentário; no topo, o campo acrescentar e um botão
+Trocar, estrelas de 1 a 5 e comentário; embaixo, depois do último filme, o campo acrescentar e um botão
 só, Copiar pro chat. Quem monta o texto é `textoDoCartaz(estado)`, em `cartaz.js`,
 embutido no `<script>`. Sem JavaScript, o cartaz se lê como antes e o botão não
 faz nada.
@@ -101,7 +101,7 @@ def gerar(amb, sessao_id: str, mostrados: list[str] | None = None) -> dict:
                                dono=frente.get("dono")))
     finally:
         conn.close()
-    topo = _pedido(frente, pessoas, amb.pesos) + _saiu(frente, pessoas) + RESPONDER
+    topo = _pedido(frente, pessoas, amb.pesos) + _saiu(frente, pessoas)
     versao = arquivo.versao_atual(frente)["versao"]
     dados = (f'data-sessao="{escape(sessao_id)}" data-versao="{versao}" '
              f'data-presentes="{escape(" ".join(presentes))}"')
@@ -112,7 +112,7 @@ def gerar(amb, sessao_id: str, mostrados: list[str] | None = None) -> dict:
         '<meta name="viewport" content="width=device-width,initial-scale=1">'
         f"<title>{escape(titulo)}</title></head><body>\n"
         f"<style>\n{CSS}</style>\n"
-        f'<div class="cartaz" {dados}>\n{topo}\n{"".join(cards)}</div>\n'
+        f'<div class="cartaz" {dados}>\n{topo}\n{"".join(cards)}\n{RESPONDER}</div>\n'
         f"<script>\n{JS}</script>\n"
         "</body></html>\n"
     )
