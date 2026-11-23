@@ -159,3 +159,14 @@ def test_lista_menor_que_a_posicao_do_mantido_fica_sem_buraco(banco):
     assert [f["posicao"] for f in refeita["filmes"]] == [1, 2, 3]
     assert [(f["id"], f["novo"]) for f in refeita["filmes"][1:]] == [(p[1], False), (p[4], False)]
     assert refeita["filmes"][0]["novo"]
+
+
+def test_ja_visto_de_quem_estava_na_versao_anterior_e_saiu_conta_na_saida(banco):
+    primeira, sessao_id = _primeira(banco, "iara")
+    f = primeira["filmes"]
+    banco.ok("cartaz", "responder", "--sessao", sessao_id, entrada=f"#cartaz {sessao_id} v1\n2 {f[1]['id']} · já vi: iara\n")
+
+    refeita = banco.ok("recomendar", "--presentes", "dono", "--sessao", sessao_id, "--manter", f[0]["id"])
+
+    assert {"posicao": 2, "id": f[1]["id"], "titulo": f[1]["titulo"], "motivo": "ja_visto",
+            "pessoas": ["iara"]} in refeita["saidas"]

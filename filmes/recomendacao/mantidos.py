@@ -17,7 +17,7 @@ entra nas vagas.
     {"posicao", "id", "titulo", "motivo": "nota_minima", "rotulo": "nota 6,5 no IMDb, abaixo de 7"}
 
 `posicao` é o número que o filme tinha na versão anterior. `ja_visto` vale quando
-algum Presente tem Já visto do filme com data igual ou posterior à da versão
+algum Presente, de agora ou da versão anterior, tem Já visto do filme com data igual ou posterior à da versão
 anterior (o "Já vi" do cartaz); o Já visto mais antigo já estava lá quando o
 filme foi mostrado, e a saída conta como `trocado`.
 """
@@ -35,6 +35,7 @@ class Regerar:
     anterior: tuple          # {posicao, id, titulo} da versão anterior, como o Dono viu
     data: str                # data da versão anterior, AAAA-MM-DD
     posicoes: dict           # filme_id -> posição, só dos mantidos que estavam na versão anterior
+    presentes: tuple = ()    # os Presentes da versão anterior
 
     def mantido(self, filme_id) -> bool:
         return filme_id in self.posicoes
@@ -51,7 +52,8 @@ def preparar(frente: dict, manter: list[str]) -> tuple[Regerar, list[str]]:
     posicoes = {f["id"]: f["posicao"] for f in tela}
     avisos = [f"--manter {filme_id}: o filme não estava na versão anterior da Sessão; ficou de fora"
               for filme_id in manter if filme_id not in posicoes]
-    return Regerar(tuple(tela), str(versao["data"]), {f: posicoes[f] for f in manter if f in posicoes}), avisos
+    return Regerar(tuple(tela), str(versao["data"]), {f: posicoes[f] for f in manter if f in posicoes},
+                   tuple(versao["presentes"])), avisos
 
 
 def pela_nota_minima(conn: sqlite3.Connection, filme_id: str, catalogo: dict) -> dict:
@@ -108,7 +110,9 @@ def saidas(conn, presentes, regerar: Regerar, ficaram: set, tirados: dict) -> li
         if filme["id"] in tirados:
             lista.append({**base, **tirados[filme["id"]]})
             continue
-        viram = _viram(conn, presentes, filme["id"], regerar.data)
+        # Quem estava na versão anterior e saiu também viu o filme que o Dono marcou.
+        quem = [*presentes, *(p for p in regerar.presentes if p not in presentes)]
+        viram = _viram(conn, quem, filme["id"], regerar.data)
         lista.append({**base, "motivo": "ja_visto", "pessoas": viram} if viram else {**base, "motivo": "trocado"})
     return lista
 
