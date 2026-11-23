@@ -64,4 +64,20 @@ describe("responder_cartaz lê o texto colado do cartaz", () => {
     assert.ok(resultado.isError);
     assert.equal(json(resultado).erro.codigo, "uso_invalido");
   });
+
+  it("filho que sai sem ler o stdin vira erro, sem derrubar o servidor", async () => {
+    const python = process.env.FILMES_PYTHON;
+    process.env.FILMES_PYTHON = "/bin/true";
+    try {
+      const resultado = await chamar("responder_cartaz", { sessao: "x", texto: "#cartaz x v1\n".repeat(1_000_000) });
+
+      assert.ok(resultado.isError);
+      assert.equal(json(resultado).erro.codigo, "cli_sem_json");
+    } finally {
+      if (python === undefined) delete process.env.FILMES_PYTHON;
+      else process.env.FILMES_PYTHON = python;
+    }
+    const sessao = json(await chamar("recomendar", { presentes: ["dono"] })).sessao.id;
+    assert.ok(sessao);
+  });
 });

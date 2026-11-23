@@ -40,7 +40,12 @@ export function chamarCli(
         resolver(falha ? { ok: false, dados: dados as ErroCli } : { ok: true, dados });
       },
     );
-    if (stdin !== undefined) processo.stdin?.end(stdin);
+    if (stdin !== undefined) {
+      // O filho pode sair sem ler a entrada (erro de uso, Python errado): o EPIPE da escrita não
+      // derruba o servidor, e quem responde é o retorno do execFile, com o JSON ou cli_sem_json.
+      processo.stdin?.on("error", () => {});
+      processo.stdin?.end(stdin);
+    }
     if (progresso && processo.stderr) {
       createInterface({ input: processo.stderr }).on("line", (linha) => {
         let etapa: Partial<ProgressoCli>;
