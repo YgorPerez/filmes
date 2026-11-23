@@ -80,6 +80,58 @@ if (typeof document !== "undefined") (function () {
     });
     ajustar(c);
   });
+  // Guarda o que foi marcado a cada mudança e restaura ao recarregar: o T3 recarrega o
+  // quadro quando o Dono troca de aba. Uma chave por Sessão e versão.
+  const chave = `filmes-cartaz:${R.dataset.sessao}:v${R.dataset.versao}`;
+  const guardado = R.querySelector(".guardado");
+  let loja = null;
+  try { loja = window.localStorage; loja.setItem(chave + ":teste", "1"); loja.removeItem(chave + ":teste"); }
+  catch (e) { loja = null; }
+  function bruto() {
+    return {
+      acrescentar: R.querySelector(".acrescentar").value,
+      filmes: Object.fromEntries(cards().map((c) => [c.dataset.id, {
+        jaVi: [...c.querySelectorAll("input.javi:checked")].map((i) => i.value),
+        detalhes: Object.fromEntries([...c.querySelectorAll(".javi-detalhe")].map((d) => [d.dataset.pessoa, {
+          nota: d.querySelector("input.nota").value, achou: d.querySelector(".achou").value }])),
+        trocar: c.querySelector("input.trocar").checked,
+        estrelas: (c.querySelector(".estrelas input:checked") || {}).value || "",
+        comentario: c.querySelector(".comentario").value,
+      }])),
+    };
+  }
+  function guardar() {
+    if (!loja) return;
+    try { loja.setItem(chave, JSON.stringify(bruto())); } catch (e) { /* cheio ou bloqueado: segue sem guardar */ }
+  }
+  function restaurar() {
+    let salvo = null;
+    try { salvo = loja && JSON.parse(loja.getItem(chave) || "null"); } catch (e) { salvo = null; }
+    if (!salvo) return;
+    R.querySelector(".acrescentar").value = salvo.acrescentar || "";
+    for (const c of cards()) {
+      const f = (salvo.filmes || {})[c.dataset.id];
+      if (!f) continue;
+      c.querySelectorAll("input.javi").forEach((i) => { i.checked = (f.jaVi || []).includes(i.value); });
+      c.querySelectorAll(".javi-detalhe").forEach((d) => {
+        const x = (f.detalhes || {})[d.dataset.pessoa] || {};
+        d.querySelector("input.nota").value = x.nota || "";
+        d.querySelector(".achou").value = x.achou || "";
+      });
+      c.querySelector("input.trocar").checked = !!f.trocar;
+      c.querySelectorAll(".estrelas input").forEach((i) => {
+        i.checked = i.value === f.estrelas; i.dataset.era = i.checked ? "1" : "0";
+      });
+      c.querySelector(".comentario").value = f.comentario || "";
+      ajustar(c);
+    }
+  }
+  restaurar();
+  R.addEventListener("input", guardar);
+  R.addEventListener("change", guardar);
+  if (guardado) guardado.textContent = loja
+    ? "O que você marcar fica guardado neste navegador, mesmo trocando de aba."
+    : "Este navegador não deixa o cartaz guardar: se trocar de aba, o que foi marcado se perde.";
   function mostrar(txt) {
     saida.hidden = false; saida.value = txt; saida.focus(); saida.select();
     avisar("Não deu pra copiar sozinho: o texto está selecionado na caixa, copie e cole no chat.");
