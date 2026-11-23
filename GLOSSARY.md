@@ -63,6 +63,10 @@ _Evitar_: sugestão, lista
 Uma Recomendação de uma Sessão aberta. Quando o Dono pede outra lista na mesma Sessão, a atual vira uma versão anterior, guardada com o pedido e os Presentes dela, e a nova passa a valer. O número da versão conta a partir de 1.
 _Evitar_: rodada, tentativa
 
+**Mantido**:
+Um filme da versão anterior que o Dono quer na próxima. Ao regerar, fica no mesmo número e só as vagas ganham filme novo. Sai só por Restrição ou Veto do pedido refeito, nunca por gosto novo. O que sai da versão anterior vira uma saída, com o motivo: Já visto, trocado, a Restrição ou o Veto.
+_Evitar_: fixado, travado
+
 **Filmes mostrados**:
 Os filmes da Recomendação que o Dono de fato viu na tela, na ordem em que apareceram. O Feedback grava a posição do Filme escolhido nessa lista.
 _Evitar_: exibidos, lista da tela

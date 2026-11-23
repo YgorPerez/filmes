@@ -91,6 +91,7 @@ class Restricoes:
         self.pendentes = defaultdict(list)
         self.tirados = Counter()
         self.saidas = defaultdict(Counter)   # nome da Restrição -> motivo -> filmes
+        self.tirou = {}                      # filme_id -> a Restrição que o tirou
 
     def candidatos(self, filmes: dict) -> dict:
         vivos = dict(filmes)
@@ -100,7 +101,7 @@ class Restricoes:
                 veredito = vereditos.get(filme_id, SAI)
                 if isinstance(veredito, Sai):
                     del vivos[filme_id]
-                    self._contar_saida(restricao, veredito)
+                    self._contar_saida(restricao, veredito, filme_id)
                 elif veredito == PENDENTE:
                     self.pendentes[filme_id].append(restricao)
                 else:
@@ -117,22 +118,23 @@ class Restricoes:
         for posicao, item in enumerate(ordenados):
             if len(aprovados) == quantos:
                 break
-            if self._passa_sob_demanda(filme(item), consultar=posicao < alcance):
+            if self.passa_sob_demanda(filme(item), consultar=posicao < alcance):
                 aprovados.append(item)
         return aprovados
 
-    def _passa_sob_demanda(self, filme, consultar) -> bool:
+    def passa_sob_demanda(self, filme, consultar) -> bool:
         linhas = []
         for restricao in self.pendentes.get(filme["id"], []):
             veredito = restricao.resolver(self.contexto, filme, consultar)
             if isinstance(veredito, Sai):
-                self._contar_saida(restricao, veredito)
+                self._contar_saida(restricao, veredito, filme["id"])
                 return False
             linhas.extend(veredito.linhas)
         self.linhas[filme["id"]].extend(linhas)
         return True
 
-    def _contar_saida(self, restricao, veredito: Sai) -> None:
+    def _contar_saida(self, restricao, veredito: Sai, filme_id) -> None:
+        self.tirou[filme_id] = restricao
         self.tirados[restricao.nome] += 1
         if veredito.motivo is not None:
             self.saidas[restricao.nome][veredito.motivo] += 1

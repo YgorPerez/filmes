@@ -24,6 +24,10 @@ export default definirFerramenta({
     "`credito` traz o Crédito de cada Presente na Regra padrão em grupo. Cada chamada abre uma Sessão (`sessao.id`). " +
     "Com `sessao`, refaz a Recomendação nessa Sessão aberta em vez de abrir outra, e `sessao.versao` conta as versões; " +
     "o que a Sessão já mostrou (o cartaz ou as 5 primeiras de cada versão) sai sozinho, em `restricoes.sem_repetido`. " +
+    "Com `manter`, os mantidos ficam no número da versão anterior e só as vagas ganham filme novo; cada filme traz " +
+    "`novo` (true nas vagas), e a resposta traz `mantidos` e `saidas` ({posicao, id, titulo, motivo}: `ja_visto` com " +
+    "`pessoas`, `trocado`, `restricao` com `restricao` e `rotulo`, ou `veto` com `pessoa` e `texto`). Uma Restrição ou " +
+    "um Veto do pedido tiram também o mantido que os viola, com aviso; gosto novo não tira mantido. " +
     "Antes, chame `sessoes_abertas` e, se houver uma, pergunte por ela. O Dono pode pular. " +
     "A resposta inclui `climas` (os aceitos), `restricoes`, `avisos` e `atribuicoes`. " +
     "Copie o texto do Does the Dog Die como veio.",
@@ -53,6 +57,13 @@ export default definirFerramenta({
       .describe(
         "ID da Sessão aberta a refazer quando o pedido muda antes de verem algo (outro tempo, Restrição, " +
           "Presente ou Já visto); a versão anterior fica no histórico. Sem ele, abre uma Sessão nova",
+      ),
+    manter: z
+      .array(z.string().regex(/^tt\d+$/))
+      .optional()
+      .describe(
+        "com sessao: os filmes da versão anterior que ficam (o que o Dono não mandou trocar nem já viu). " +
+          "Ficam no mesmo número; só as vagas ganham filme novo",
       ),
     duracao_max: z.number().int().min(1).optional().describe("tempo disponível, em minutos"),
     desde: z.number().int().optional().describe('ano de lançamento mínimo, inclusive: "de 1990 em diante" é 1990'),
@@ -87,6 +98,7 @@ export default definirFerramenta({
     if (e.sem_lento) args.push("--sem-lento");
     if (e.pedido !== undefined) args.push(`--pedido=${e.pedido}`);
     if (e.sessao) args.push("--sessao", e.sessao);
+    if (e.manter?.length) args.push(`--manter=${e.manter.join(",")}`);
     for (const clima of e.climas ?? []) args.push(`--clima=${clima}`);
     return { comando: "recomendar", args };
   },

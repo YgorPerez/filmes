@@ -45,8 +45,9 @@ def refazer(amb: Ambiente, sessao_id: str, recomendacao: dict, contexto: dict) -
         frente = conferir_aberta(amb, sessao_id)
         nomes = dict(conn.execute("SELECT slug, nome FROM pessoas"))
         versoes = [*(frente.get("versoes") or []), arquivo.versao_atual(frente)]
+        for campo in ("mostrados", "mantidos", "saidas"):
+            frente.pop(campo, None)
         frente.update(_campos_da_recomendacao(recomendacao, contexto), refeita_em=amb.hoje, versoes=versoes)
-        frente.pop("mostrados", None)
         banco.carregar(conn, sessao_id, frente)
         arquivo.escrever(amb.dados, sessao_id, frente, arquivo.corpo(recomendacao, nomes))
     return {"id": sessao_id, "arquivo": arquivo.relativo(sessao_id), "versao": len(versoes) + 1}
@@ -75,13 +76,19 @@ def conferir_aberta(amb: Ambiente, sessao_id: str) -> dict:
 
 def _campos_da_recomendacao(recomendacao: dict, contexto: dict) -> dict:
     """Os campos do frontmatter que mudam quando a Recomendação é refeita."""
-    return {
+    campos = {
         "presentes": recomendacao["presentes"],
         "contexto": contexto,
         "regra": recomendacao["regra"],
-        "recomendacao": [{"posicao": f["posicao"], "id": f["id"], "titulo": f["titulo"]}
+        "recomendacao": [{"posicao": f["posicao"], "id": f["id"], "titulo": f["titulo"],
+                          **({"novo": f["novo"]} if "novo" in f else {})}
                          for f in recomendacao["filmes"]],
     }
+    # Regerar mantendo (#59): o que ficou e o que saiu, com o motivo.
+    for campo in ("mantidos", "saidas"):
+        if campo in recomendacao:
+            campos[campo] = recomendacao[campo]
+    return campos
 
 
 def abertas(amb: Ambiente) -> list[dict]:

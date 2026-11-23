@@ -1,0 +1,125 @@
+"""Regerar mantendo filmes e posições na Sessão (#59, decisão do Dono de 2026-11-23).
+
+`recomendar --sessao ID --manter tt1,tt3` deixa os mantidos no número que tinham
+na versão anterior e preenche as vagas com os melhores Candidatos que a Sessão
+ainda não mostrou. Cada filme diz se é `novo`; `saidas` diz o que saiu e por quê.
+"""
+
+from conftest import ler_markdown
+
+
+def _ids(saida):
+    return [f["id"] for f in saida["filmes"]]
+
+
+def _primeira(banco, *extra):
+    primeira = banco.ok("recomendar", "--presentes", "dono", *extra)
+    return primeira, primeira["sessao"]["id"]
+
+
+def test_mantidos_ficam_na_posicao_e_as_vagas_ganham_filmes_que_a_sessao_nao_mostrou(banco):
+    primeira, sessao_id = _primeira(banco)
+    p = _ids(primeira)
+
+    refeita = banco.ok("recomendar", "--presentes", "dono", "--sessao", sessao_id, "--manter", f"{p[0]},{p[2]},{p[3]}")
+
+    assert len(refeita["filmes"]) == 5
+    por_posicao = {f["posicao"]: f for f in refeita["filmes"]}
+    assert [por_posicao[n]["id"] for n in (1, 3, 4)] == [p[0], p[2], p[3]]
+    assert [por_posicao[n]["novo"] for n in (1, 3, 4)] == [False, False, False]
+    vagas = [por_posicao[2], por_posicao[5]]
+    assert all(f["novo"] for f in vagas)
+    assert not {f["id"] for f in vagas} & set(p)
+
+
+def test_saidas_dizem_quem_ja_viu_e_o_que_foi_trocado(banco):
+    primeira, sessao_id = _primeira(banco)
+    f = primeira["filmes"]
+    banco.ok("pessoa", "visto", "dono", "--filme", f[1]["id"], "--nota", "8/10")
+
+    refeita = banco.ok("recomendar", "--presentes", "dono", "--sessao", sessao_id, "--manter", f"{f[0]['id']},{f[2]['id']}")
+
+    assert refeita["mantidos"] == [f[0]["id"], f[2]["id"]]
+    assert refeita["saidas"] == [
+        {"posicao": 2, "id": f[1]["id"], "titulo": f[1]["titulo"], "motivo": "ja_visto", "pessoas": ["bruno"]},
+        {"posicao": 4, "id": f[3]["id"], "titulo": f[3]["titulo"], "motivo": "trocado"},
+        {"posicao": 5, "id": f[4]["id"], "titulo": f[4]["titulo"], "motivo": "trocado"},
+    ]
+
+
+def test_a_versao_gravada_guarda_novo_mantidos_e_saidas(banco, dados):
+    primeira, sessao_id = _primeira(banco)
+    p = _ids(primeira)
+    refeita = banco.ok("recomendar", "--presentes", "dono", "--sessao", sessao_id, "--manter", p[1])
+
+    frente, _ = ler_markdown(dados / "sessoes" / f"{sessao_id}.md")
+    assert frente["recomendacao"] == [{"posicao": f["posicao"], "id": f["id"], "titulo": f["titulo"], "novo": f["novo"]}
+                                      for f in refeita["filmes"]]
+    assert frente["mantidos"] == [p[1]]
+    assert frente["saidas"] == refeita["saidas"]
+
+    banco.ok("recomendar", "--presentes", "dono", "--sessao", sessao_id)
+
+    frente, _ = ler_markdown(dados / "sessoes" / f"{sessao_id}.md")
+    assert "mantidos" not in frente and "saidas" not in frente
+    assert frente["versoes"][1]["mantidos"] == [p[1]]
+    assert frente["versoes"][1]["saidas"] == refeita["saidas"]
+    assert "novo" not in frente["recomendacao"][0]
+
+
+def test_manter_sem_sessao_e_uso_invalido(banco):
+    codigo, saida = banco.rodar("recomendar", "--presentes", "dono", "--manter", "tt9000104")
+
+    assert codigo == 2
+    assert saida["erro"]["codigo"] == "uso_invalido"
+
+
+def test_mantido_fora_da_versao_anterior_fica_de_fora_com_aviso(banco):
+    primeira, sessao_id = _primeira(banco)
+    fora = "tt9000101"
+    assert fora not in _ids(primeira)
+
+    refeita = banco.ok("recomendar", "--presentes", "dono", "--sessao", sessao_id, "--manter", fora)
+
+    assert all(f["novo"] for f in refeita["filmes"])
+    assert refeita["mantidos"] == []
+    assert any(fora in aviso for aviso in refeita["avisos"])
+
+
+def test_restricao_nova_tira_o_mantido_que_a_viola_com_aviso(banco):
+    primeira, sessao_id = _primeira(banco)
+    f = primeira["filmes"]
+    assert f[1]["duracao_min"] > 110 >= f[0]["duracao_min"]
+
+    refeita = banco.ok("recomendar", "--presentes", "dono", "--sessao", sessao_id, "--duracao-max", "110",
+                       "--manter", f"{f[0]['id']},{f[1]['id']}")
+
+    assert refeita["mantidos"] == [f[0]["id"]]
+    assert {"posicao": 2, "id": f[1]["id"], "titulo": f[1]["titulo"], "motivo": "restricao",
+            "restricao": "duracao", "rotulo": "até 1h50"} in refeita["saidas"]
+    assert any(f[1]["titulo"] in aviso and "mantido" in aviso for aviso in refeita["avisos"])
+    assert refeita["filmes"][1]["novo"] and refeita["filmes"][1]["posicao"] == 2
+
+
+def test_veto_novo_tira_o_mantido_e_declarado_novo_nao(banco):
+    primeira, sessao_id = _primeira(banco)
+    f = primeira["filmes"]
+    banco.ok("pessoa", "vetar", "dono", "não vejo esse de jeito nenhum", "--filme", f[0]["id"])
+    banco.ok("pessoa", "declarar", "dono", "detestei o trailer", "--filme", f[2]["id"], "--reacao", "odeia")
+
+    refeita = banco.ok("recomendar", "--presentes", "dono", "--sessao", sessao_id, "--manter", f"{f[0]['id']},{f[2]['id']}")
+
+    assert refeita["mantidos"] == [f[2]["id"]]
+    assert refeita["filmes"][2]["id"] == f[2]["id"]
+    assert {"posicao": 1, "id": f[0]["id"], "titulo": f[0]["titulo"], "motivo": "veto",
+            "pessoa": "bruno", "texto": "não vejo esse de jeito nenhum"} in refeita["saidas"]
+    assert any(f[0]["titulo"] in aviso and "mantido" in aviso for aviso in refeita["avisos"])
+
+
+def test_sem_manter_o_refazer_nao_traz_novo_nem_saidas(banco):
+    _, sessao_id = _primeira(banco)
+
+    refeita = banco.ok("recomendar", "--presentes", "dono", "--sessao", sessao_id)
+
+    assert "saidas" not in refeita and "mantidos" not in refeita
+    assert all("novo" not in f for f in refeita["filmes"])

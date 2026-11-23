@@ -196,6 +196,24 @@ describe("servidor MCP sobre a CLI real e a fixture", () => {
     assert.deepEqual(saida.filmes.map((f: any) => f.titulo).sort(), ["Maré Baixa", "O Farol de Areia"]);
   });
 
+  it("recomendar com manter deixa os mantidos no número e diz o que saiu", async () => {
+    const primeira = json(
+      (await cliente.callTool({ name: "recomendar", arguments: { presentes: ["dono", "iara"] } })) as Resultado,
+    );
+    const [um, dois] = primeira.filmes;
+    const resultado = (await cliente.callTool({
+      name: "recomendar",
+      arguments: { presentes: ["dono", "iara"], sessao: primeira.sessao.id, manter: [dois.id] },
+    })) as Resultado;
+
+    assert.ok(!resultado.isError, JSON.stringify(resultado.content));
+    const refeita = json(resultado);
+    assert.deepEqual([refeita.filmes[1].id, refeita.filmes[1].novo], [dois.id, false]);
+    assert.equal(refeita.filmes[0].novo, true);
+    assert.deepEqual(refeita.mantidos, [dois.id]);
+    assert.deepEqual(refeita.saidas[0], { posicao: 1, id: um.id, titulo: um.titulo, motivo: "trocado" });
+  });
+
   it("recomendar com sessao refaz a Recomendação na mesma Sessão aberta", async () => {
     const primeira = json(
       (await cliente.callTool({ name: "recomendar", arguments: { presentes: ["dono", "quim"], pedido: "algo bom" } })) as Resultado,

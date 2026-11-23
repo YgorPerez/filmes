@@ -30,7 +30,7 @@ Se `cartaz`, `html_preview` ou `html_render` falharem, diga o erro numa linha e 
 
 ## Pedido que muda
 
-Se o Dono mudar o pedido antes de verem algo (outro tempo, outra Restrição, alguém que chegou, um filme que já viram), chame `recomendar` de novo com o pedido inteiro e `sessao` igual ao `sessao.id` da Recomendação anterior. A Sessão continua a mesma e guarda a versão anterior. Não apague o arquivo da Sessão. Sem `sessao`, o motor abre outra Sessão e a anterior fica aberta.
+Se o Dono mudar o pedido antes de verem algo (outro tempo, outra Restrição, alguém que chegou, um filme que já viram), chame `recomendar` de novo com o pedido inteiro e `sessao` igual ao `sessao.id` da Recomendação anterior. A Sessão continua a mesma e guarda a versão anterior. Não apague o arquivo da Sessão. Sem `sessao`, o motor abre outra Sessão e a anterior fica aberta. Para trocar só alguns filmes, passe em `manter` os que ficam: eles continuam no mesmo número e só as vagas ganham filme novo, marcado com `novo`. `saidas` diz o que saiu e por quê.
 
 ## Montar e verificar a resposta
 

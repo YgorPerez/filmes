@@ -5,6 +5,9 @@ Liga sozinha com `--sessao`: refazer já é pedir outras opções. Conta, em cad
 versão da Sessão (a atual e as de `versoes`), os `mostrados` que o cartaz
 gravou, ou as 5 primeiras posições quando a versão não tem `mostrados`.
 Outras Sessões não contam.
+
+Os mantidos (`--manter`, #59) que estavam na versão atual não saem por aqui: o
+Dono pediu que ficassem.
 """
 
 from dataclasses import dataclass
@@ -21,7 +24,12 @@ def configurar(parser):
 
 def pedido(args):
     sessao_id = getattr(args, "sessao", None)
-    return SemRepetido(sessao_id) if sessao_id else None
+    return SemRepetido(sessao_id, frozenset(manter(args))) if sessao_id else None
+
+
+def manter(args) -> list[str]:
+    """Os IDs de `--manter`, na ordem, aceitando vírgulas."""
+    return [f.strip() for item in getattr(args, "manter", None) or [] for f in item.split(",") if f.strip()]
 
 
 def rotulo(gravada):
@@ -31,6 +39,7 @@ def rotulo(gravada):
 @dataclass(frozen=True)
 class SemRepetido:
     sessao: str
+    manter: frozenset = frozenset()
     nome = "sem_repetido"
 
     def como_json(self):
@@ -40,7 +49,9 @@ class SemRepetido:
         return {}
 
     def avaliar(self, contexto, filmes):
-        mostrados = ja_mostrados(contexto.amb.dados, self.sessao)
+        frente, _ = arquivo.ler(contexto.amb.dados, self.sessao)
+        na_tela = {f["id"] for f in arquivo.na_tela(arquivo.versao_atual(frente))}
+        mostrados = ja_mostrados(contexto.amb.dados, self.sessao) - (self.manter & na_tela)
         return {filme_id: Passa() for filme_id in filmes if filme_id not in mostrados}
 
 

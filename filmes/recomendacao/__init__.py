@@ -32,7 +32,7 @@ from typing import NamedTuple
 
 from filmes.ambiente import Ambiente
 from filmes.evidencia import sem_fato
-from filmes.recomendacao import atribuicoes, cabecalho, candidatos, climas as vocabulario_climas, sinais as pacote_sinais, utilidade, vetos
+from filmes.recomendacao import atribuicoes, cabecalho, candidatos, climas as vocabulario_climas, mantidos, sinais as pacote_sinais, utilidade, vetos
 from filmes.recomendacao.climas import Clima
 from filmes.recomendacao.regra import Regra
 from filmes.recomendacao.restricoes import Contexto, Restricoes
@@ -79,9 +79,11 @@ def _modulos_de_sinal():
 
 def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], quantos: int,
                regra: Regra = Regra(), restricoes: list = (), climas: list[str] = (),
-               *, selecao: candidatos.Selecao | None = None) -> dict:
+               *, selecao: candidatos.Selecao | None = None, regerar: mantidos.Regerar | None = None) -> dict:
     # Os Vetos de todos os Presentes valem, seja qual for a Regra de escolha.
     elegiveis = selecao.filmes if selecao is not None else candidatos.escolher(conn, amb.pesos)
+    if regerar:
+        elegiveis = mantidos.incluir(conn, elegiveis, regerar)
     restantes, vetos_que_agiram = vetos.aplicar(conn, presentes, elegiveis, amb.pesos["vetos_por_tag"])
     climas_aceitos, avisos_de_clima = vocabulario_climas.resolver(list(climas))
     contexto = Contexto(conn=conn, amb=amb, presentes=presentes, avisos=avisos_de_clima)
@@ -89,6 +91,15 @@ def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], qu
     rodada = Rodada(conn=conn, amb=amb, candidatos=pedidas.candidatos(restantes),
                     presentes=tuple(presentes), climas=tuple(climas_aceitos))
     pesos = amb.pesos
+    # Mantido que um Veto ou uma Restrição tirou: o motivo, para `saidas`.
+    tirados = {}
+    for filme_id in (regerar.posicoes if regerar else {}):
+        if filme_id not in elegiveis:
+            continue
+        if filme_id not in restantes:
+            tirados[filme_id] = mantidos.pelo_veto(conn, presentes, elegiveis[filme_id], pesos["vetos_por_tag"])
+        elif filme_id not in rodada.candidatos:
+            tirados[filme_id] = mantidos.pela_restricao(pedidas.tirou[filme_id])
 
     por_filme = defaultdict(list)
     do_filme = defaultdict(list)
@@ -119,6 +130,8 @@ def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], qu
         # palpites não alcançam o topo se já há `quantos` mais votados.
         populares = (filme for filme in selecao.populares if filme in rodada.candidatos)
         ids = por_filme.keys() | do_filme.keys() | set(islice(populares, quantos))
+        if regerar:
+            ids |= regerar.posicoes.keys() & rodada.candidatos.keys()
     for filme_id in ids:
         filme = rodada.candidatos[filme_id]
         evidencias = por_filme.get(filme_id, [])
@@ -134,8 +147,23 @@ def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], qu
         if ajuste:
             sem_credito.append((_chave(regra.chave(utilidades), tem_fato, filme, bonus), filme_id))
     ordenados.sort(key=lambda item: item.chave)
-    aprovados = pedidas.aprovar(ordenados, quantos, pesos["restricoes"]["alcance_sob_demanda"], filme=lambda item: item.filme)
-    ids_aprovados = {item.filme["id"] for item in aprovados}
+    alcance = pesos["restricoes"]["alcance_sob_demanda"]
+    if regerar:
+        fixos = []
+        for item in ordenados:
+            if not regerar.mantido(item.filme["id"]):
+                continue
+            if pedidas.passa_sob_demanda(item.filme, consultar=True):
+                fixos.append(item)
+            else:
+                tirados[item.filme["id"]] = mantidos.pela_restricao(pedidas.tirou[item.filme["id"]])
+        outros = [item for item in ordenados if not regerar.mantido(item.filme["id"])]
+        vagas = pedidas.aprovar(outros, max(quantos - len(fixos), 0), alcance, filme=lambda item: item.filme)
+        posicionados = mantidos.posicionar(regerar, fixos, vagas, quantos)
+    else:
+        posicionados = list(enumerate(pedidas.aprovar(ordenados, quantos, alcance, filme=lambda item: item.filme),
+                                      start=1))
+    ids_aprovados = {item.filme["id"] for _, item in posicionados}
     # Compare as duas ordens com os mesmos vereditos, sem buscar outras respostas sob demanda.
     ordem_sem_credito = [
         filme_id for _, filme_id in sorted(sem_credito)
@@ -145,7 +173,7 @@ def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], qu
 
     nomes = dict(conn.execute("SELECT slug, nome FROM pessoas")) if ajuste else {}
     filmes = []
-    for posicao, (chave, filme, utilidades, evidencias) in enumerate(aprovados, start=1):
+    for posicao, (chave, filme, utilidades, evidencias) in posicionados:
         evidencias = evidencias + [sem_fato(p, filme["id"]) for p, u in utilidades.items() if u is None]
         evidencias = sorted(evidencias, key=lambda e: (-abs(e.contribuicao(pesos)), e.fato_id or ""))
         # Sinais do filme: o mais forte antes; no empate, a ordem dos Climas pedidos.
@@ -169,8 +197,11 @@ def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], qu
             "utilidade": {p: (round(u, 4) if u is not None else None) for p, u in utilidades.items()},
             "evidencias": {p: [e.como_json(pesos) for e in evidencias if e.pessoa == p] for p in presentes},
             "linhas_do_filme": [e.como_json(pesos) for e in linhas],
+            **({"novo": not regerar.mantido(filme["id"])} if regerar else {}),
         })
-    return {
+    if regerar:
+        contexto.avisos.extend(mantidos.aviso(elegiveis[f], motivo) for f, motivo in tirados.items())
+    resposta = {
         "presentes": presentes,
         "regra": regra.como_json(),
         "credito": {p: round(c.valor, 4) for p, c in creditos_pessoais.items()},
@@ -184,6 +215,10 @@ def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], qu
             *(tmdb.ATRIBUICAO["fonte"] for f in filmes if f["capa"] or f["titulo_pt"]),
         ]),
     }
+    if regerar:
+        resposta["mantidos"] = [f["id"] for f in filmes if not f["novo"]]
+        resposta["saidas"] = mantidos.saidas(conn, presentes, regerar, {f["id"] for f in filmes}, tirados)
+    return resposta
 
 
 def _subiu_pelo_credito(filme_id, posicao, posicao_sem_credito, utilidades, ajuste) -> list[str]:
