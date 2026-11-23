@@ -5,6 +5,8 @@ Fica em `perguntas_abertas:` no frontmatter da Pessoa, com o texto, o assunto
 foi pulada. Pulada duas vezes, sai da lista.
 """
 
+import sqlite3
+
 from conftest import ler_markdown
 
 HELENA = "Q9000001"
@@ -95,3 +97,17 @@ def test_pular_e_remover_valem_no_banco_sem_reconstruir(banco):
 
     banco.ok("pessoa", "pular", "bruno", "o Bruno topa comédia boba?", "--grupo", "comedia_boba")
     assert banco.consultar("SELECT count(*) FROM perguntas_abertas WHERE pessoa = 'bruno'") == [[0]]
+
+
+def test_banco_de_antes_das_perguntas_abertas_aceita_escrita_na_pessoa(banco):
+    # Um banco reconstruído antes do #62 não tem a tabela; mudar a Pessoa não pede `reconstruir`.
+    caminho = banco.env["FILMES_BANCO"]
+    with sqlite3.connect(caminho) as conn:
+        conn.execute("DROP TABLE perguntas_abertas")
+    conn.close()
+
+    banco.ok("pessoa", "vetar", "bruno", "esse não", "--filme", "tt9000101")
+    banco.ok("pessoa", "pular", "bruno", "o Bruno topa comédia boba?", "--grupo", "comedia_boba")
+
+    assert banco.consultar("SELECT pessoa, assunto FROM perguntas_abertas") == [["bruno", "comedia_boba"]]
+    assert banco.consultar("SELECT pessoa FROM vetos WHERE alvo = 'tt9000101'") == [["bruno"]]
