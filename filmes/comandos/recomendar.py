@@ -42,8 +42,9 @@ def executar(args, amb):
     regerar, avisos = None, []
     if args.sessao:
         frente = sessao.conferir_aberta(amb, args.sessao)
-        if manter:
-            regerar, avisos = mantidos.preparar(frente, manter)
+        # Refazer é sempre regerar: sem --manter, nenhum filme fica, mas o selo novo e as
+        # saídas ainda dizem o que entrou e o que saiu.
+        regerar, avisos = mantidos.preparar(frente, manter)
     with closing(abrir_leitura(amb.banco)) as conn:
         presentes = pessoas_presentes.resolver(conn, nomes)
         saida = recomendar(conn, amb, presentes, quantos, _regra(conn, args, presentes), pedidas, args.clima,

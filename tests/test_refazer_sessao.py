@@ -18,7 +18,7 @@ def test_refazer_grava_o_pedido_novo_na_mesma_sessao_e_guarda_a_versao_anterior(
     frente, corpo = _ler(dados / "sessoes" / "2026-11-20-iara.md")
     assert frente["contexto"]["pedido"] == "algo curto"
     assert frente["contexto"]["duracao_max"] == 100
-    assert frente["recomendacao"] == [{"posicao": f["posicao"], "id": f["id"], "titulo": f["titulo"]}
+    assert frente["recomendacao"] == [{"posicao": f["posicao"], "id": f["id"], "titulo": f["titulo"], "novo": True}
                                       for f in refeita["filmes"]]
     assert frente["versoes"] == [{
         "versao": 1,

@@ -63,10 +63,10 @@ def test_a_versao_gravada_guarda_novo_mantidos_e_saidas(banco, dados):
     banco.ok("recomendar", "--presentes", "dono", "--sessao", sessao_id)
 
     frente, _ = ler_markdown(dados / "sessoes" / f"{sessao_id}.md")
-    assert "mantidos" not in frente and "saidas" not in frente
+    assert frente["mantidos"] == []
     assert frente["versoes"][1]["mantidos"] == [p[1]]
     assert frente["versoes"][1]["saidas"] == refeita["saidas"]
-    assert "novo" not in frente["recomendacao"][0]
+    assert frente["recomendacao"][0]["novo"] is True
 
 
 def test_manter_sem_sessao_e_uso_invalido(banco):
@@ -118,13 +118,16 @@ def test_veto_novo_tira_o_mantido_e_declarado_novo_nao(banco):
     assert any(f[0]["titulo"] in aviso and "mantido" in aviso for aviso in refeita["avisos"])
 
 
-def test_sem_manter_o_refazer_nao_traz_novo_nem_saidas(banco):
-    _, sessao_id = _primeira(banco)
+def test_refazer_sem_manter_troca_todos_e_diz_o_que_saiu(banco):
+    primeira, sessao_id = _primeira(banco)
+    banco.ok("pessoa", "visto", "dono", "--filme", primeira["filmes"][1]["id"])
 
     refeita = banco.ok("recomendar", "--presentes", "dono", "--sessao", sessao_id)
 
-    assert "saidas" not in refeita and "mantidos" not in refeita
-    assert all("novo" not in f for f in refeita["filmes"])
+    assert refeita["mantidos"] == []
+    assert all(f["novo"] is True for f in refeita["filmes"])
+    assert [(s["id"], s["motivo"]) for s in refeita["saidas"]] == [
+        (f["id"], "ja_visto" if i == 1 else "trocado") for i, f in enumerate(primeira["filmes"])]
 
 
 def test_mantido_abaixo_da_nota_minima_sai_com_aviso(banco, dados, tmp_path):
