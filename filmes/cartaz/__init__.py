@@ -16,6 +16,46 @@ em português, sinopse) é refeito do banco e do TMDB, que responde do cache.
 O CSS (`cartaz.css`) só vale dentro de `.cartaz` e usa as variáveis de tema do T3.
 As atribuições das fontes ficam fora, como na resposta em Markdown (decisão do
 Dono de 2026-11-21).
+
+Numa versão refeita com `--manter` (#59), o filme que entrou leva o selo "novo" e
+o topo diz o que saiu e por quê, a partir de `saidas`.
+
+O cartaz responde (#60), como o do match-reply: a página não manda nada a lugar
+nenhum. Cada card tem Já vi (um chip por Presente, "Você" para o Dono, e "Todos"
+com mais de um Presente; com uma Pessoa só marcada, um campo de nota de 1 a 10),
+Trocar, estrelas de 1 a 5 e comentário; no topo, o campo acrescentar e um botão
+só, Copiar pro chat. Quem monta o texto é `textoDoCartaz(estado)`, em `cartaz.js`,
+embutido no `<script>`. Sem JavaScript, o cartaz se lê como antes e o botão não
+faz nada.
+
+Formato do texto copiado (o que `cartaz responder`, #61, lê):
+
+    #cartaz 2026-11-20-iara v2
+    acrescentar: chegou a Ana, algo leve
+    1 tt9000104 · já vi: bruno=8 · estrelas: 4
+    3 tt9000106 · já vi: todos
+    4 tt9000107 · já vi: bruno, teo · trocar · comentário: lindo, mas · longo
+    5 tt9000108 · estrelas: 2
+
+- Cabeçalho, sempre a primeira linha: `#cartaz <sessao-id> v<n>`, com `n` o número
+  da versão que o cartaz mostra (`len(versoes) + 1` quando foi gerado).
+- `acrescentar: <texto>` na segunda linha, só se o campo tiver texto.
+- Uma linha por filme com alguma marcação, na ordem da tela: `<posição> <id do
+  IMDb>`, depois as marcações separadas por ` · `, sempre nesta ordem:
+  - `já vi: <slug>` ou `já vi: <slug>=<nota>` com uma Pessoa marcada (nota inteira
+    de 1 a 10, a escala do Feedback, só se preenchida); `já vi: <slug>, <slug>` com
+    algumas, sem nota; `já vi: todos` com todos os Presentes, se forem mais de um.
+    Os slugs saem na ordem dos Presentes.
+  - `trocar`
+  - `estrelas: <1 a 5>`
+  - `comentário: <texto>`, sempre a última: o texto vai até o fim da linha e pode
+    ter ` · `.
+- A posição é a da tela (`mostrados`, se o cartaz veio de `--filmes`); quem lê
+  aplica pelo ID, que vale mesmo num texto de versão velha.
+- Texto livre (acrescentar e comentário) vira uma linha só: espaços e quebras
+  seguidos viram um espaço, sem espaço nas pontas.
+- O texto termina com quebra de linha. Sem marcação nenhuma, sai só o cabeçalho, e
+  o botão avisa "Nada marcado ainda." em vez de copiar.
 """
 
 from html import escape
@@ -48,16 +88,18 @@ def gerar(amb, sessao_id: str, mostrados: list[str] | None = None) -> dict:
         nomes = dict(conn.execute("SELECT slug, nome FROM pessoas"))
         contexto = Contexto(conn=conn, amb=amb, presentes=presentes)
         pessoas = _pessoas(presentes, nomes)
+        novos = {r["id"]: r.get("novo", False) for r in frente.get("recomendacao") or []}
         cards = []
         for filme in filmes:
             linha = conn.execute("SELECT * FROM filmes WHERE id = ?", (filme["id"],)).fetchone()
             if linha is None:
                 raise ErroFilmes("dados_invalidos", f"Sessão {sessao_id}: {filme['id']} não está no Catálogo")
+            filme["novo"] = novos.get(filme["id"], False)
             cards.append(_card(filme, linha, cabecalho.do_filme(contexto, linha), pessoas, primeiro=not cards,
                                dono=frente.get("dono")))
     finally:
         conn.close()
-    topo = _pedido(frente, pessoas, amb.pesos) + RESPONDER
+    topo = _pedido(frente, pessoas, amb.pesos) + _saiu(frente, pessoas) + RESPONDER
     versao = arquivo.versao_atual(frente)["versao"]
     dados = (f'data-sessao="{escape(sessao_id)}" data-versao="{versao}" '
              f'data-presentes="{escape(" ".join(presentes))}"')
@@ -120,6 +162,32 @@ def _pedido(frente, pessoas, pesos) -> str:
         f'<span class="leg">{_avatar(p)}{escape(p["nome"])}</span>' for p in pessoas.values()
     ) + '<span class="leg">●●● forte · ●●○ moderada · ●○○ fraca</span>'
     return f'<div class="pedido">{fala}<div>{" · ".join(partes)}</div><div class="legenda">{legenda}</div></div>'
+
+
+def _saiu(frente, pessoas) -> str:
+    """A linha do que saiu da versão anterior e por quê, das `saidas` de um `--manter` (#59)."""
+    saidas = frente.get("saidas") or []
+    if not saidas:
+        return ""
+    dono = frente.get("dono")
+
+    def nome(slug):
+        return "você" if slug == dono else pessoas.get(slug, {}).get("nome", slug)
+
+    def motivo(s):
+        if s["motivo"] == "ja_visto":
+            quem = s.get("pessoas") or []
+            nomes = " e ".join(filter(None, [", ".join(nome(p) for p in quem[:-1]), nome(quem[-1])])) if quem else ""
+            return f"{nomes} já {'viu' if len(quem) == 1 else 'viram'}".strip()
+        if s["motivo"] == "restricao":
+            return s.get("rotulo") or s.get("restricao")
+        if s["motivo"] == "veto":
+            de = "seu Veto" if s.get("pessoa") == dono else f"Veto de {nome(s.get('pessoa'))}"
+            return f"{de}: “{s.get('texto', '')}”"
+        return "trocado"
+
+    itens = " · ".join(f"{s['posicao']} {escape(s['titulo'])} ({escape(motivo(s))})" for s in saidas)
+    return f'<div class="saiu">Saiu: {itens}</div>'
 
 
 def _quem(frente, pessoas) -> str:
@@ -202,7 +270,7 @@ def _card(filme, linha, ficha, pessoas, primeiro, dono=None) -> str:
     <span class="faixa">{pontos}</span>
   </a>
   <div class="corpo">
-    <h2><span class="n">{filme["posicao"]}</span>{escape(titulo)}{original}</h2>
+    <h2><span class="n">{filme["posicao"]}</span>{escape(titulo)}{original}{'<span class="novo">novo</span>' if filme["novo"] else ""}</h2>
     {sinopse}
     <div class="chips">{"".join(f'<span class="chip">{escape(c)}</span>' for c in chips)}<a class="chip imdb" href="{imdb}" target="_blank" rel="noopener">{nota_imdb}{_votos(ficha["votos_imdb"])} votos</a></div>
   </div>

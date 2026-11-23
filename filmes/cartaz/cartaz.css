@@ -49,6 +49,7 @@
 .cartaz .opcao{display:inline-flex;align-items:center;gap:5px;font-size:13px;padding:4px 10px;border-radius:999px;box-shadow:inset 0 0 0 1px var(--border);cursor:pointer}
 .cartaz .opcao:has(input:checked){background:var(--secondary);box-shadow:inset 0 0 0 1.5px var(--foreground)}
 .cartaz .opcao input{margin:0}
+.cartaz .opcao[hidden]{display:none}
 .cartaz .nota-campo input{width:4em;font:inherit;font-size:13px;background:transparent;color:inherit;border:1px solid var(--border);border-radius:6px;padding:2px 4px}
 .cartaz .estrelas{border:0;margin:0 0 0 6px;padding:0;display:inline-flex;flex-direction:row-reverse;justify-content:flex-end}
 .cartaz .estrelas legend{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}

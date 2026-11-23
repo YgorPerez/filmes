@@ -255,7 +255,7 @@ describe("servidor MCP sobre a CLI real e a fixture", () => {
     assert.ok(isAbsolute(saida.arquivo));
     const html = readFileSync(saida.arquivo, "utf8");
     assert.ok(html.startsWith("<!doctype html>"));
-    assert.equal(html.match(/<article class="card">/g)?.length, 5);
+    assert.equal(html.match(/<article class="card"[ >]/g)?.length, 5);
   });
 
   it("cartaz com filmes traz só os mostrados, na ordem dada", async () => {

@@ -121,3 +121,39 @@ def test_cartaz_com_filmes_numera_os_cards_pela_tela(banco, tmp_path):
 
     [card] = arvore(html).todos("card")
     assert (card.attrs["data-posicao"], card.attrs["data-id"]) == ("1", quarto)
+
+
+def test_versao_refeita_traz_o_selo_novo_e_a_linha_do_que_saiu_e_por_que(banco, tmp_path):
+    primeira = banco.ok("recomendar", "--presentes", "dono", "iara")
+    sessao_id, f = primeira["sessao"]["id"], primeira["filmes"]
+    banco.ok("pessoa", "visto", "dono", "--filme", f[1]["id"], "--nota", "8/10")
+    refeita = banco.ok("recomendar", "--presentes", "dono", "iara", "--sessao", sessao_id,
+                       "--manter", f"{f[0]['id']},{f[2]['id']}")
+
+    raiz = arvore(_cartaz(banco, tmp_path, sessao_id)).um("cartaz")
+
+    assert raiz.attrs["data-versao"] == "2"
+    cards = {c.attrs["data-id"]: c for c in raiz.todos("card")}
+    assert {i: [s.texto for s in c.todos("novo")] for i, c in cards.items()} == {
+        g["id"]: (["novo"] if g["novo"] else []) for g in refeita["filmes"]}
+    assert raiz.um("saiu").texto == (
+        f"Saiu: 2 {f[1]['titulo']} (você já viu) · 4 {f[3]['titulo']} (trocado) · 5 {f[4]['titulo']} (trocado)")
+
+
+def test_saida_por_restricao_ou_veto_diz_qual(banco, tmp_path):
+    primeira = banco.ok("recomendar", "--presentes", "dono")
+    sessao_id, f = primeira["sessao"]["id"], primeira["filmes"]
+    banco.ok("pessoa", "vetar", "dono", "não vejo esse", "--filme", f[0]["id"])
+    banco.ok("recomendar", "--presentes", "dono", "--sessao", sessao_id, "--duracao-max", "110",
+             "--manter", ",".join(g["id"] for g in f))
+
+    saiu = arvore(_cartaz(banco, tmp_path, sessao_id)).um("saiu").texto
+
+    assert f"1 {f[0]['titulo']} (seu Veto: “não vejo esse”)" in saiu
+    assert f"2 {f[1]['titulo']} (até 1h50)" in saiu
+
+
+def test_primeira_versao_nao_tem_selo_novo_nem_linha_do_que_saiu(banco, tmp_path):
+    raiz = arvore(_cartaz(banco, tmp_path, banco.ok("recomendar", "--presentes", "dono")["sessao"]["id"])).um("cartaz")
+
+    assert list(raiz.todos("novo")) == [] and list(raiz.todos("saiu")) == []
