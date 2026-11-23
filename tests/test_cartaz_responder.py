@@ -173,7 +173,7 @@ def test_de_ponta_a_ponta_o_texto_que_o_cartaz_copia_e_o_que_o_responder_le(banc
     f = primeira["filmes"]
     html = _cartaz(banco, tmp_path, sessao_id)
     texto = _texto(html, _estado(sessao_id, 1, ["bruno", "iara"], acrescentar="algo\n leve", filmes=[
-        {"posicao": 1, "id": f[0]["id"], "jaVi": ["iara"], "nota": 9, "estrelas": 3},
+        {"posicao": 1, "id": f[0]["id"], "jaVi": ["iara"], "notas": {"iara": 9}, "estrelas": 3},
         {"posicao": 2, "id": f[1]["id"], "jaVi": ["bruno", "iara"]},
         {"posicao": 3, "id": f[2]["id"], "trocar": True, "comentario": "já cansei · de drama"},
         {"posicao": 4, "id": f[3]["id"], "estrelas": 5},
@@ -261,11 +261,25 @@ def test_o_que_achou_colado_de_novo_com_outro_texto_substitui_o_anterior(banco):
     assert ditos == [("nao_gosta", "pensei melhor, ruim")]
 
 
-def test_o_que_achou_sem_ja_vi_de_uma_pessoa_so_e_uso_invalido(banco):
+def test_cada_pessoa_do_ja_vi_tem_a_sua_nota_e_o_que_achou(banco):
+    primeira, sessao_id = _sessao(banco, "iara")
+    filme = primeira["filmes"][0]["id"]
+
+    saida = _responder(banco, sessao_id, f"#cartaz {sessao_id} v1\n1 {filme} · já vi: bruno=9, iara=3 · "
+                                         "achou bruno: lindo · achou iara: chato\n")
+
+    assert {(v["pessoa"], v["nota"], v.get("achou")) for v in saida["vistos"]} == {
+        ("bruno", 4.5, "lindo"), ("iara", 1.5, "chato")}
+    iara = [(d["reacao"], d["texto"]) for d in banco.ok("pessoa", "ver", "iara")["declarados"]
+            if d["fonte"] == f"cartaz {sessao_id}"]
+    assert iara == [("nao_gosta", "chato")]
+
+
+def test_o_que_achou_de_quem_nao_esta_no_ja_vi_e_uso_invalido(banco):
     primeira, sessao_id = _sessao(banco, "iara")
     filme = primeira["filmes"][0]["id"]
 
     codigo, saida = banco.rodar("cartaz", "responder", "--sessao", sessao_id,
-                                entrada=f"#cartaz {sessao_id} v1\n1 {filme} · já vi: todos · achou: bom\n")
+                                entrada=f"#cartaz {sessao_id} v1\n1 {filme} · já vi: iara · achou bruno: bom\n")
 
     assert (codigo, saida["erro"]["codigo"]) == (2, "uso_invalido")

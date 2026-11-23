@@ -50,6 +50,9 @@
 .cartaz .opcao:has(input:checked){background:var(--secondary);box-shadow:inset 0 0 0 1.5px var(--foreground)}
 .cartaz .opcao input{margin:0}
 .cartaz .opcao[hidden]{display:none}
+.cartaz .javi-detalhe{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:2px 0 2px 12px}
+.cartaz .javi-detalhe[hidden]{display:none}
+.cartaz .javi-detalhe .quem{font-size:13px;min-width:4em;color:var(--muted-foreground)}
 .cartaz .achou-campo{flex:1 1 12em}
 .cartaz .achou{width:100%;box-sizing:border-box;resize:vertical;font:inherit;font-size:13px;background:transparent;color:inherit;border:1px solid var(--border);border-radius:6px;padding:2px 6px}
 .cartaz .nota-campo input{width:4em;font:inherit;font-size:13px;background:transparent;color:inherit;border:1px solid var(--border);border-radius:6px;padding:2px 4px}

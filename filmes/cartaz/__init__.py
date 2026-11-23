@@ -22,7 +22,7 @@ o topo diz o que saiu e por quê, a partir de `saidas`.
 
 O cartaz responde (#60), como o do match-reply: a página não manda nada a lugar
 nenhum. Cada card tem Já vi (um chip por Presente, "Você" para o Dono, e "Todos"
-com mais de um Presente; com uma Pessoa só marcada, um campo de nota de 1 a 10),
+com mais de um Presente; para cada Pessoa marcada, nota de 1 a 10 e o que achou),
 Trocar, estrelas de 1 a 5 e comentário; embaixo, depois do último filme, o campo acrescentar e um botão
 só, Copiar pro chat. Quem monta o texto é `textoDoCartaz(estado)`, em `cartaz.js`,
 embutido no `<script>`. Sem JavaScript, o cartaz se lê como antes e o botão não
@@ -42,12 +42,13 @@ Formato do texto copiado (o que `cartaz responder`, #61, lê):
 - `acrescentar: <texto>` na segunda linha, só se o campo tiver texto.
 - Uma linha por filme com alguma marcação, na ordem da tela: `<posição> <id do
   IMDb>`, depois as marcações separadas por ` · `, sempre nesta ordem:
-  - `já vi: <slug>` ou `já vi: <slug>=<nota>` com uma Pessoa marcada (nota inteira
-    de 1 a 10, a escala do Feedback, só se preenchida); `já vi: <slug>, <slug>` com
-    algumas, sem nota; `já vi: todos` com todos os Presentes, se forem mais de um.
-    Os slugs saem na ordem dos Presentes.
-  - `achou: <texto>`, só com uma Pessoa marcada no Já vi: o que ela achou do filme.
-    Um ` · ` dentro do texto vira ` - `.
+  - `já vi: <slug>, <slug>=<nota>, ...`: cada Pessoa marcada, com `=<nota>` (inteira
+    de 1 a 10, a escala do Feedback) se a dela foi preenchida. Os slugs saem na
+    ordem dos Presentes. `já vi: todos` quando todos os Presentes (mais de um)
+    estão marcados e ninguém deu nota nem disse o que achou.
+  - `achou <slug>: <texto>`, uma por Pessoa marcada que disse o que achou, na ordem
+    dos Presentes. Um ` · ` dentro do texto vira ` - `. (O leitor aceita também o
+    `achou: <texto>` antigo, com uma Pessoa só no Já vi.)
   - `trocar`
   - `estrelas: <1 a 5>`
   - `comentário: <texto>`, sempre a última: o texto vai até o fim da linha e pode
@@ -212,8 +213,8 @@ RESPONDER = (
 
 
 def _responde(filme, pessoas, dono) -> str:
-    """Os controles do card: Já vi por Presente (e Todos, com mais de um), nota de 1 a 10
-    e o que achou (com uma Pessoa marcada), Trocar, estrelas de 1 a 5 e comentário. Quem monta o texto é o cartaz.js."""
+    """Os controles do card: Já vi por Presente (e Todos, com mais de um), e para cada
+    Pessoa marcada uma linha com nota de 1 a 10 e o que achou; Trocar, estrelas de 1 a 5 e comentário. Quem monta o texto é o cartaz.js."""
     n = filme["posicao"]
     chips = "".join(
         f'<label class="opcao"><input type="checkbox" class="javi" value="{escape(slug)}">'
@@ -222,6 +223,16 @@ def _responde(filme, pessoas, dono) -> str:
     )
     if len(pessoas) > 1:
         chips += '<label class="opcao"><input type="checkbox" class="javi-todos">Todos</label>'
+    detalhes = "".join(
+        f'<div class="javi-detalhe" data-pessoa="{escape(slug)}" hidden>'
+        f'<span class="quem">{"Você" if slug == dono else escape(p["nome"])}</span>'
+        '<label class="opcao nota-campo">nota <input type="number" class="nota" min="1" max="10" step="1" '
+        'inputmode="numeric" disabled></label>'
+        f'<label class="opcao achou-campo"><textarea class="achou" rows="1" disabled '
+        f'aria-label="o que {"você" if slug == dono else escape(p["nome"])} achou do filme {n}" '
+        'placeholder="o que achou"></textarea></label></div>'
+        for slug, p in pessoas.items()
+    )
     estrelas = "".join(
         f'<input type="radio" id="e{n}-{v}" name="e{n}" value="{v}" aria-label="{v} de 5">'
         f'<label for="e{n}-{v}" aria-hidden="true">★</label>'
@@ -229,11 +240,7 @@ def _responde(filme, pessoas, dono) -> str:
     )
     return (
         '<div class="responde">'
-        f'<div class="linha"><span class="rot">Já vi</span>{chips}'
-        '<label class="opcao nota-campo">nota <input type="number" class="nota" min="1" max="10" step="1" '
-        'inputmode="numeric" disabled></label>'
-        f'<label class="opcao achou-campo"><textarea class="achou" rows="1" disabled '
-        f'aria-label="o que achou do filme {n}" placeholder="o que achou"></textarea></label></div>'
+        f'<div class="linha"><span class="rot">Já vi</span>{chips}</div>{detalhes}'
         '<div class="linha"><label class="opcao"><input type="checkbox" class="trocar">Trocar</label>'
         f'<fieldset class="estrelas"><legend>quanto animou</legend>{estrelas}</fieldset></div>'
         f'<textarea class="comentario" rows="1" aria-label="comentário sobre o filme {n}" placeholder="comentário"></textarea>'

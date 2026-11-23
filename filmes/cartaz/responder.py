@@ -11,8 +11,8 @@ linhas seguintes que casam com o formato; a primeira que não casa encerra.
   são os Presentes da versão que o texto mostra.
   Colar de novo não soma outro Já visto: o da mesma Fonte e filme fica, com a
   nota nova se veio outra.
-- O que achou (só com uma Pessoa no Já vi): Declarado específico dela sobre o
-  filme, com a mesma Fonte, como o comentário do Feedback. A reação vem da nota:
+- O que cada Pessoa do Já vi achou (`achou <slug>: ...`): Declarado específico
+  dela sobre o filme, com a mesma Fonte, como o comentário do Feedback. A reação vem da nota:
   7 a 10 gosta, 1 a 4 não gosta, sem nota ou 5 e 6 sem reação. Colar de novo
   substitui o Declarado do cartaz sobre o filme.
 - Estrelas, comentário e acrescentar: em `respostas` da versão do texto. Não
@@ -43,6 +43,7 @@ _CABECALHO = re.compile(r"^\s*#cartaz\s+(\S+)\s+v(\d+)\s*$")
 _ACRESCENTAR = re.compile(r"^\s*acrescentar:\s*(.*?)\s*$")
 _FILME = re.compile(r"^\s*(\d+)\s+(tt\d+)((?:\s+·\s+.*)?)\s*$")
 _NOTA_DO_JA_VI = re.compile(r"^(.+?)\s*=\s*(\d+)$")
+_ACHOU = re.compile(r"^achou(?:\s+(\S+))?$")
 
 
 def ler(texto: str) -> dict:
@@ -66,7 +67,7 @@ def ler(texto: str) -> dict:
 
 
 def _marcacoes(posicao: int, filme: str, resto: str) -> dict:
-    marcado = {"posicao": posicao, "id": filme, "ja_vi": None, "achou": None, "trocar": False,
+    marcado = {"posicao": posicao, "id": filme, "ja_vi": None, "achou": {}, "trocar": False,
                "estrelas": None, "comentario": None}
     resto = re.sub(r"^\s+·\s+", "", resto)
     if resto.startswith("comentário:"):
@@ -81,14 +82,14 @@ def _marcacoes(posicao: int, filme: str, resto: str) -> dict:
             marcado["trocar"] = True
         elif nome == "já vi" and valor:
             marcado["ja_vi"] = valor
-        elif nome == "achou" and valor:
-            marcado["achou"] = _uma_linha(valor)
+        elif (casou := _ACHOU.match(nome)) and valor:
+            marcado["achou"][casou[1]] = _uma_linha(valor)
         elif nome == "estrelas" and valor in {"1", "2", "3", "4", "5"}:
             marcado["estrelas"] = int(valor)
         else:
             raise ErroFilmes("uso_invalido", f"marcação desconhecida no cartaz, filme {posicao} {filme}: {parte!r}")
-    if marcado["achou"] and (not marcado["ja_vi"] or marcado["ja_vi"] == "todos" or "," in marcado["ja_vi"]):
-        raise ErroFilmes("uso_invalido", f"achou: vale só com uma Pessoa no Já vi, filme {posicao} {filme}")
+    if marcado["achou"] and not marcado["ja_vi"]:
+        raise ErroFilmes("uso_invalido", f"achou sem Já vi, filme {posicao} {filme}")
     return marcado
 
 
@@ -171,8 +172,9 @@ def _gravar_ja_vistos(amb, sessao_id, presentes, filmes) -> list[dict]:
     pedidos = []
     for marcado in filmes:
         if marcado["ja_vi"]:
-            for slug, nota in _quem_viu(amb, marcado, presentes):
-                pedidos.append((slug, marcado["id"], nota, marcado["achou"]))
+            quem = _quem_viu(amb, marcado, presentes)
+            for slug, nota in quem:
+                pedidos.append((slug, marcado["id"], nota, _achou_de(amb, marcado, slug, [s for s, _ in quem])))
     if not pedidos:
         return []
     with abrir_leitura(amb.banco) as conn:
@@ -219,21 +221,37 @@ def _gravar_achou(pessoa, fonte, filme, rotulo, nota, texto, hoje) -> bool:
 
 
 def _quem_viu(amb, marcado, presentes) -> list[tuple[str, float | None]]:
+    """[(slug, nota)] de `já vi: todos` ou `já vi: fulano=8, beltrano`."""
     valor = marcado["ja_vi"]
     if valor == "todos":
         return [(slug, None) for slug in presentes]
-    if casou := _NOTA_DO_JA_VI.match(valor):
-        nomes, nota = [casou[1]], nota_dita.ler(f"{casou[2]}/10")[0]
-    else:
-        nomes, nota = [n for n in (p.strip() for p in valor.split(",")) if n], None
     quem = []
-    for nome in nomes:
+    for item in filter(None, (p.strip() for p in valor.split(","))):
+        if casou := _NOTA_DO_JA_VI.match(item):
+            nome, nota = casou[1], nota_dita.ler(f"{casou[2]}/10")[0]
+        else:
+            nome, nota = item, None
         slug = pessoas.resolver(amb.dados, nome).slug
         if slug not in presentes:
             raise ErroFilmes("uso_invalido", f"já vi: {slug} não estava entre os Presentes do cartaz "
                                              f"({marcado['posicao']} {marcado['id']})")
         quem.append((slug, nota))
     return quem
+
+
+def _achou_de(amb, marcado, slug, quem) -> str | None:
+    """O que `slug` achou do filme: `achou <slug>: ...`, ou o `achou: ...` antigo, com uma Pessoa só."""
+    for nome, texto in marcado["achou"].items():
+        dono_do_texto = pessoas.resolver(amb.dados, nome).slug if nome else (quem[0] if len(quem) == 1 else None)
+        if nome is None and dono_do_texto is None:
+            raise ErroFilmes("uso_invalido", f"achou sem nome vale só com uma Pessoa no Já vi "
+                                             f"({marcado['posicao']} {marcado['id']})")
+        if dono_do_texto not in quem:
+            raise ErroFilmes("uso_invalido", f"achou {nome}: {nome} não está no Já vi "
+                                             f"({marcado['posicao']} {marcado['id']})")
+        if dono_do_texto == slug:
+            return texto
+    return None
 
 
 def _resposta(amb, lido) -> dict | None:
