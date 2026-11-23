@@ -230,3 +230,42 @@ def test_marcacao_de_filme_fora_da_tela_da_versao_e_pulada_com_aviso(banco, dado
     frente, _ = ler_markdown(dados / "sessoes" / f"{sessao_id}.md")
     assert "respostas" not in frente
     assert any(fora in aviso and "tela" in aviso for aviso in saida["avisos"])
+
+
+def test_o_que_achou_vira_declarado_especifico_da_pessoa_sobre_o_filme(banco):
+    primeira, sessao_id = _sessao(banco, "iara")
+    f = primeira["filmes"]
+    texto = (f"#cartaz {sessao_id} v1\n1 {f[0]['id']} · já vi: iara=8 · achou: final lindo\n"
+             f"2 {f[1]['id']} · já vi: iara · achou: nada demais\n")
+
+    saida = _responder(banco, sessao_id, texto)
+    _responder(banco, sessao_id, texto)
+
+    ditos = [(d["alvo"], d["reacao"], d["texto"], d["especifico"], d["fonte"])
+             for d in banco.ok("pessoa", "ver", "iara")["declarados"] if d["fonte"] == f"cartaz {sessao_id}"]
+    assert ditos == [(f[0]["id"], "gosta", "final lindo", True, f"cartaz {sessao_id}"),
+                     (f[1]["id"], None, "nada demais", True, f"cartaz {sessao_id}")]
+    assert [(v["filme"], v["achou"]) for v in saida["vistos"]] == [(f[0]["id"], "final lindo"),
+                                                                     (f[1]["id"], "nada demais")]
+
+
+def test_o_que_achou_colado_de_novo_com_outro_texto_substitui_o_anterior(banco):
+    primeira, sessao_id = _sessao(banco, "iara")
+    filme = primeira["filmes"][0]["id"]
+
+    _responder(banco, sessao_id, f"#cartaz {sessao_id} v1\n1 {filme} · já vi: iara=8 · achou: bom\n")
+    _responder(banco, sessao_id, f"#cartaz {sessao_id} v1\n1 {filme} · já vi: iara=3 · achou: pensei melhor, ruim\n")
+
+    ditos = [(d["reacao"], d["texto"]) for d in banco.ok("pessoa", "ver", "iara")["declarados"]
+             if d["fonte"] == f"cartaz {sessao_id}"]
+    assert ditos == [("nao_gosta", "pensei melhor, ruim")]
+
+
+def test_o_que_achou_sem_ja_vi_de_uma_pessoa_so_e_uso_invalido(banco):
+    primeira, sessao_id = _sessao(banco, "iara")
+    filme = primeira["filmes"][0]["id"]
+
+    codigo, saida = banco.rodar("cartaz", "responder", "--sessao", sessao_id,
+                                entrada=f"#cartaz {sessao_id} v1\n1 {filme} · já vi: todos · achou: bom\n")
+
+    assert (codigo, saida["erro"]["codigo"]) == (2, "uso_invalido")

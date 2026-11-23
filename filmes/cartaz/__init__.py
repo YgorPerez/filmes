@@ -46,6 +46,8 @@ Formato do texto copiado (o que `cartaz responder`, #61, lê):
     de 1 a 10, a escala do Feedback, só se preenchida); `já vi: <slug>, <slug>` com
     algumas, sem nota; `já vi: todos` com todos os Presentes, se forem mais de um.
     Os slugs saem na ordem dos Presentes.
+  - `achou: <texto>`, só com uma Pessoa marcada no Já vi: o que ela achou do filme.
+    Um ` · ` dentro do texto vira ` - `.
   - `trocar`
   - `estrelas: <1 a 5>`
   - `comentário: <texto>`, sempre a última: o texto vai até o fim da linha e pode
@@ -210,8 +212,8 @@ RESPONDER = (
 
 
 def _responde(filme, pessoas, dono) -> str:
-    """Os controles do card: Já vi por Presente (e Todos, com mais de um), nota de 1 a 10,
-    Trocar, estrelas de 1 a 5 e comentário. Quem monta o texto é o cartaz.js."""
+    """Os controles do card: Já vi por Presente (e Todos, com mais de um), nota de 1 a 10
+    e o que achou (com uma Pessoa marcada), Trocar, estrelas de 1 a 5 e comentário. Quem monta o texto é o cartaz.js."""
     n = filme["posicao"]
     chips = "".join(
         f'<label class="opcao"><input type="checkbox" class="javi" value="{escape(slug)}">'
@@ -229,7 +231,9 @@ def _responde(filme, pessoas, dono) -> str:
         '<div class="responde">'
         f'<div class="linha"><span class="rot">Já vi</span>{chips}'
         '<label class="opcao nota-campo">nota <input type="number" class="nota" min="1" max="10" step="1" '
-        'inputmode="numeric" disabled></label></div>'
+        'inputmode="numeric" disabled></label>'
+        f'<label class="opcao achou-campo"><textarea class="achou" rows="1" disabled '
+        f'aria-label="o que achou do filme {n}" placeholder="o que achou"></textarea></label></div>'
         '<div class="linha"><label class="opcao"><input type="checkbox" class="trocar">Trocar</label>'
         f'<fieldset class="estrelas"><legend>quanto animou</legend>{estrelas}</fieldset></div>'
         f'<textarea class="comentario" rows="1" aria-label="comentário sobre o filme {n}" placeholder="comentário"></textarea>'

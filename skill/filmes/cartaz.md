@@ -1,7 +1,8 @@
 # Cartaz que responde
 
-O cartaz é o lugar das marcações: em cada filme, Já vi (por Presente, com
-nota de 1 a 10), Trocar, estrelas e comentário; no topo, o campo
+O cartaz é o lugar das marcações: em cada filme, Já vi (por Presente; com
+uma Pessoa marcada, nota de 1 a 10 e o que ela achou), Trocar, estrelas e
+comentário; no topo, o campo
 acrescentar e o botão Copiar pro chat. O Dono marca, copia e cola no chat
 um texto que começa com `#cartaz <sessao> v<n>`.
 
@@ -10,7 +11,9 @@ um texto que começa com `#cartaz <sessao> v<n>`.
 Uma mensagem com uma linha `#cartaz` vai inteira, como veio, para
 `responder_cartaz`, com a Sessão do cabeçalho em `sessao`. Conversa em
 volta da linha pode ir junto: a ferramenta acha o texto do cartaz. Ela
-grava os Já vistos, as estrelas, os comentários e o acrescentar, e
+grava os Já vistos (o que a Pessoa achou vira Declarado específico dela
+sobre o filme, sem pedir o sim: é a fala dela sobre um filme visto, como
+no Feedback), as estrelas, os comentários e o acrescentar, e
 devolve `regerar`, `manter`, `saem`, `acrescentar` e `comentarios`.
 
 1. Leia o `acrescentar` e os `comentarios` e separe cada trecho em uma

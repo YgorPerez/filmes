@@ -8,7 +8,12 @@ function textoDoCartaz(estado) {
   for (const f of estado.filmes) {
     const partes = [];
     const jaVi = estado.presentes.filter((p) => f.jaVi.includes(p));
-    if (jaVi.length === 1) partes.push(`já vi: ${jaVi[0]}${f.nota ? `=${f.nota}` : ""}`);
+    if (jaVi.length === 1) {
+      partes.push(`já vi: ${jaVi[0]}${f.nota ? `=${f.nota}` : ""}`);
+      // " · " separa as marcações: dentro do que a Pessoa achou, vira " - ".
+      const achou = umaLinha((f.achou || "").replace(/\s+·\s+|\s+·$|^·\s+/g, " - ")).replace(/^- | -$/g, "");
+      if (achou) partes.push(`achou: ${achou}`);
+    }
     else if (jaVi.length && jaVi.length === estado.presentes.length) partes.push("já vi: todos");
     else if (jaVi.length) partes.push(`já vi: ${jaVi.join(", ")}`);
     if (f.trocar) partes.push("trocar");
@@ -31,9 +36,10 @@ if (typeof document !== "undefined") (function () {
     const marcados = [...card.querySelectorAll("input.javi:checked")];
     const todos = card.querySelector("input.javi-todos");
     if (todos) todos.checked = marcados.length === presentes.length;
-    const nota = card.querySelector("input.nota");
-    nota.disabled = marcados.length !== 1;
-    nota.closest("label").hidden = marcados.length !== 1;
+    for (const campo of [card.querySelector("input.nota"), card.querySelector(".achou")]) {
+      campo.disabled = marcados.length !== 1;
+      campo.closest("label").hidden = marcados.length !== 1;
+    }
     card.classList.toggle("trocar", card.querySelector("input.trocar").checked);
   }
   function estado() {
@@ -48,6 +54,7 @@ if (typeof document !== "undefined") (function () {
           posicao: +c.dataset.posicao, id: c.dataset.id,
           jaVi: [...c.querySelectorAll("input.javi:checked")].map((i) => i.value),
           nota: !nota.disabled && valor >= 1 && valor <= 10 ? valor : null,
+          achou: nota.disabled ? "" : c.querySelector(".achou").value,
           trocar: c.querySelector("input.trocar").checked,
           estrelas: estrela ? +estrela.value : 0,
           comentario: c.querySelector(".comentario").value,
