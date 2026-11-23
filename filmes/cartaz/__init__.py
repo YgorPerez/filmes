@@ -206,6 +206,7 @@ RESPONDER = (
     '<textarea class="acrescentar" rows="2"></textarea></label>'
     '<button class="copiar" type="button">Copiar pro chat</button>'
     '<p class="aviso" role="status" aria-live="polite"></p>'
+    '<p class="guardado"></p>'
     '<textarea class="saida" readonly hidden aria-label="texto pra colar no chat"></textarea>'
     '<noscript><p class="semjs">Sem JavaScript o botão não copia: responda no chat.</p></noscript>'
     "</div>"
