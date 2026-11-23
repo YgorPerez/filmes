@@ -165,11 +165,18 @@ def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], qu
                                       start=1))
     ids_aprovados = {item.filme["id"] for _, item in posicionados}
     # Compare as duas ordens com os mesmos vereditos, sem buscar outras respostas sob demanda.
+    # Ao regerar, só as vagas disputam: a ordem de cada uma é entre os filmes que não
+    # foram mantidos, e o mantido, que está ali por pedido, não leva linha de Crédito.
     ordem_sem_credito = [
         filme_id for _, filme_id in sorted(sem_credito)
-        if filme_id in ids_aprovados or not pedidas.pendentes.get(filme_id)
+        if (filme_id in ids_aprovados or not pedidas.pendentes.get(filme_id))
+        and not (regerar and regerar.mantido(filme_id))
     ]
     posicao_sem_credito = {filme_id: i for i, filme_id in enumerate(ordem_sem_credito, start=1)}
+    na_disputa = {}
+    for _, item in posicionados:
+        if not (regerar and regerar.mantido(item.filme["id"])):
+            na_disputa[item.filme["id"]] = len(na_disputa) + 1
 
     nomes = dict(conn.execute("SELECT slug, nome FROM pessoas")) if ajuste else {}
     filmes = []
@@ -179,7 +186,7 @@ def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], qu
         # Sinais do filme: o mais forte antes; no empate, a ordem dos Climas pedidos.
         do_sinal = sorted(do_filme.get(filme["id"], []), key=lambda e: -abs(e.contribuicao(pesos)))
         do_credito = [credito.linha(p, nomes.get(p, p), creditos_pessoais[p], filme["id"], amb.hoje)
-                      for p in _subiu_pelo_credito(filme["id"], posicao, posicao_sem_credito, utilidades, ajuste)]
+                      for p in _subiu_pelo_credito(filme["id"], na_disputa, posicao_sem_credito, utilidades, ajuste)]
         linhas = [*pedidas.linhas[filme["id"]], *do_sinal, *do_credito]
         filmes.append({
             "posicao": posicao,
@@ -221,12 +228,12 @@ def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], qu
     return resposta
 
 
-def _subiu_pelo_credito(filme_id, posicao, posicao_sem_credito, utilidades, ajuste) -> list[str]:
+def _subiu_pelo_credito(filme_id, na_disputa, posicao_sem_credito, utilidades, ajuste) -> list[str]:
     """Quem tem Crédito e fez este filme subir: o filme ganhou posição com o Crédito, a
     Pessoa tem Fato sobre ele e não é o mínimo da Regra padrão (o filme é dela: com o
     Crédito, os filmes em que ela é o mínimo caíram e este ficou). O mínimo aqui é entre
     quem tem Fato: o 0,5 de quem não tem não conta."""
-    if not ajuste or posicao >= posicao_sem_credito[filme_id]:
+    if not ajuste or filme_id not in na_disputa or na_disputa[filme_id] >= posicao_sem_credito[filme_id]:
         return []
     ajustadas = {p: u - ajuste.get(p, 0.0) for p, u in utilidades.items() if u is not None}
     minimo = min(ajustadas.values())
