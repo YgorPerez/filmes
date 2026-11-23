@@ -2,7 +2,7 @@
 
 O cartaz é o lugar das marcações: em cada filme, Já vi (por Presente; com
 uma Pessoa marcada, nota de 1 a 10 e o que ela achou), Trocar, estrelas e
-comentário; no topo, o campo
+comentário; embaixo, depois do último filme, o campo
 acrescentar e o botão Copiar pro chat. O Dono marca, copia e cola no chat
 um texto que começa com `#cartaz <sessao> v<n>`.
 

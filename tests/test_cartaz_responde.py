@@ -121,7 +121,13 @@ def test_com_um_presente_nao_ha_chip_todos(banco, tmp_path):
     assert list(card.todos("javi-todos")) == []
 
 
-def test_topo_tem_acrescentar_e_um_botao_so_de_copiar_pro_chat(banco, tmp_path):
+def test_acrescentar_e_copiar_ficam_embaixo_depois_do_ultimo_filme(banco, tmp_path):
+    html = _cartaz(banco, tmp_path, banco.ok("recomendar", "--presentes", "dono")["sessao"]["id"])
+
+    assert html.index('<div class="responder">') > html.rindex('<article class="card"')
+
+
+def test_cartaz_tem_acrescentar_e_um_botao_so_de_copiar_pro_chat(banco, tmp_path):
     html = _cartaz(banco, tmp_path, banco.ok("recomendar", "--presentes", "dono")["sessao"]["id"])
     raiz = arvore(html).um("cartaz")
 
