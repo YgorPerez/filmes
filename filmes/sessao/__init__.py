@@ -45,7 +45,7 @@ def refazer(amb: Ambiente, sessao_id: str, recomendacao: dict, contexto: dict) -
         frente = conferir_aberta(amb, sessao_id)
         nomes = dict(conn.execute("SELECT slug, nome FROM pessoas"))
         versoes = [*(frente.get("versoes") or []), arquivo.versao_atual(frente)]
-        for campo in ("mostrados", "mantidos", "saidas"):
+        for campo in ("mostrados", "mantidos", "saidas", "respostas"):
             frente.pop(campo, None)
         frente.update(_campos_da_recomendacao(recomendacao, contexto), refeita_em=amb.hoje, versoes=versoes)
         banco.carregar(conn, sessao_id, frente)

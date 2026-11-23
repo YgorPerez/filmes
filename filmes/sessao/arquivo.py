@@ -26,6 +26,11 @@ Frontmatter (protótipo de #10):
                                        # de `recomendacao` traz então `novo: true|false`
     saidas:                            # idem: o que saiu da versão anterior e por quê
       - {posicao: 2, id: tt9000105, titulo: Sal e Ferrugem, motivo: ja_visto, pessoas: [bruno]}
+    respostas:                         # `cartaz responder` (#61): um item por texto colado
+      - data: 2026-11-21               # desta versão; o de versão velha vai para `versoes[n]`
+        acrescentar: chegou a Ana, algo leve
+        filmes:
+          - {posicao: 1, id: tt9000104, estrelas: 4, comentario: lindo, mas longo}
     versoes:                           # as versões anteriores, a mais antiga primeiro
       - versao: 1
         data: 2026-11-20               # quando essa versão foi feita
@@ -36,6 +41,7 @@ Frontmatter (protótipo de #10):
           - {posicao: 1, id: tt9000102, titulo: Maré Baixa}
         mostrados: [...]               # se a versão teve `cartaz --filmes`
         mantidos: [...]                # se a versão veio de `--manter`, com `saidas`
+        respostas: [...]               # se o Dono colou texto do cartaz dessa versão
 
 A versão atual é a do topo do frontmatter; o número dela é `len(versoes) + 1`.
 
@@ -119,7 +125,7 @@ def versao_atual(frente: dict) -> dict:
         "regra": frente["regra"],
         "recomendacao": frente.get("recomendacao") or [],
     }
-    for campo in ("mostrados", "mantidos", "saidas"):
+    for campo in ("mostrados", "mantidos", "saidas", "respostas"):
         if campo in frente:
             versao[campo] = frente[campo]
     return versao
