@@ -6,7 +6,7 @@ Mini Catálogo e repo de dados fictícios. Títulos, diretores e IDs são invent
 
 Cada `<tabela>.csv` vai direto para a tabela de mesmo nome do banco, na ordem do esquema. O cabeçalho nomeia as colunas; célula vazia vira NULL; `fato_id`, se a tabela tiver e o CSV não, sai do hash da linha. CSV sem tabela no esquema é erro de `reconstruir`.
 
-Os IDs de filme seguem `tt90DDNNN`: `DD` é o diretor (`Q90000DD`), `NNN` a ordem dentro dele.
+Os IDs de filme seguem `tt90DDNNN`: `DD` é o diretor (`Q90000DD`), `NNN` a ordem dentro dele. Os filmes acrescentados por ticket a partir do #55 usam `tt900TTNN`, com `TT` o número do ticket (`tt90055NN`, `tt90056NN`, `tt90058NN`), e não seguem essa regra.
 
 | Diretor | Filmes | Notas do Bruno | Para que serve |
 |---|---|---|---|
@@ -54,13 +54,14 @@ Caminho de conteúdo por outros predicados (`test_caminho_conteudo.py`). Cada fi
 
 `series_de_filmes.csv` diz quais entidades de série são série de filmes: só a Trilogia da Fronteira. Uma série nova na fixture precisa de linha ali, senão a aresta dela some.
 
-Créditos do IMDb (`elenco_principal_imdb.csv`, `atores_imdb.csv`): os 3 primeiros atores de Voo Noturno e de Escala em Lisboa. Rita Lobo (`nm9001902`) é o segundo crédito de Voo Noturno, e a Evidência fica só com o teto do elo (moderada); em Escala em Lisboa os três primeiros são outros, e ela vale no máximo fraca. Os demais filmes não têm créditos, e a régua deles não muda.
+Créditos do IMDb (`elenco_principal_imdb.csv`, `atores_imdb.csv`): os 3 primeiros atores de Voo Noturno e de Escala em Lisboa. Rita Lobo (`nm9001902`) é o segundo crédito de Voo Noturno, e a Evidência fica só com o teto do elo (moderada); em Escala em Lisboa os três primeiros são outros, e ela vale no máximo fraca. Também Coxia (`tt9005504`), com Duda Alves (`nm9005501`) no primeiro crédito, para o teto do elenco no metadado agregado (#55). Os demais filmes não têm créditos, e a régua deles não muda.
 
 Notas de outras Pessoas, para os testes de grupo (`test_grupo.py`):
 
 | Pessoa | Notas | Para que serve |
 |---|---|---|
 | Iara | 3 em O Farol de Areia (101), 4 em Fronteira (401) | Fraca a favor nos outros de Helena Prado, moderada nos outros de Rui Tavares. Sobre 101 e 401 em si, só o Já visto da própria Nota. Bruno e Iara discordam em As Horas Lentas e quase concordam em A Volta do Mar: a Regra padrão e a média simples ordenam os dois ao contrário |
+| Rosa | 5 em Ensaio Geral, 4,5 em Bastidores e em Ato Final (`tt9005501`–`03`) | Teto do elenco no metadado agregado (#55): Duda Alves e Clara Bastos em 3 Notas altas. Recomenda sozinha; para os outros, os filmes dela são só palpites |
 | Teo | nenhuma | "sem fato" em todo filme |
 | Quim | 5 em Ponte Aérea (201), 3,5 em Maré Baixa (102), 4,5 em Barulho (501), 2 em Fronteira (401) | Testes de Crédito (`test_credito.py`). Com o Bruno, o Quim é o mínimo em As Horas Lentas e em A Volta do Mar, e o Bruno é o mínimo em Asfalto Quente: o Crédito de um faz subir os filmes dele |
 
