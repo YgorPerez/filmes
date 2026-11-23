@@ -9,8 +9,11 @@ linhas seguintes que casam com o formato; a primeira que não casa encerra.
 - Já vi: Já visto da Pessoa, com a data de hoje e a fonte "cartaz <sessão>";
   com nota (1 a 10, a escala do Feedback), Nota de metade do número. "todos"
   são os Presentes da versão que o texto mostra.
+  Colar de novo não soma outro Já visto: o da mesma Fonte e filme fica, com a
+  nota nova se veio outra.
 - Estrelas, comentário e acrescentar: em `respostas` da versão do texto. Não
-  viram Fato nem mexem no gosto.
+  viram Fato nem mexem no gosto. Resposta igual a uma que a versão já tem não
+  é gravada de novo.
 - Trocar e Já vi tiram o filme da tela atual. Aplica-se pelo ID: um texto de
   versão velha vale do mesmo jeito; o Trocar de um filme que já não está na
   tela é ignorado, com aviso.
@@ -22,6 +25,7 @@ Devolve o pedido de regerar: `regerar` (algum filme caiu ou veio acrescentar),
 """
 
 import re
+from dataclasses import replace
 
 from filmes.banco import abrir_leitura
 from filmes.banco import pessoas as fatos_da_pessoa
@@ -159,12 +163,21 @@ def _gravar_ja_vistos(amb, sessao_id, presentes, filmes) -> list[dict]:
     vistos, mudadas = [], {}
     for slug, filme, nota in pedidos:
         pessoa = mudadas.get(slug) or pessoas.resolver(amb.dados, slug)
-        visto = pessoas.JaVisto(data=amb.hoje.isoformat(), fonte=f"cartaz {sessao_id}", alvo=filme,
-                                rotulo=rotulos[filme], nota=nota)
-        novo = pessoa.acrescentar("já vistos", visto)
-        if novo:
+        fonte = f"cartaz {sessao_id}"
+        anterior = next((v for v in pessoa.itens("já vistos") if v.fonte == fonte and v.alvo == filme), None)
+        if anterior is None:
+            pessoa.acrescentar("já vistos", pessoas.JaVisto(data=amb.hoje.isoformat(), fonte=fonte, alvo=filme,
+                                                            rotulo=rotulos[filme], nota=nota))
             mudadas[slug] = pessoa
-        vistos.append({"pessoa": slug, "filme": filme, "titulo": rotulos[filme], "nota": nota, "novo": novo})
+        elif nota is not None and nota != anterior.nota:
+            # Colar de novo atualiza a nota do Já visto que o cartaz já gravou, sem somar outro.
+            pessoa.tirar("já vistos", anterior)
+            pessoa.acrescentar("já vistos", replace(anterior, nota=nota))
+            mudadas[slug] = pessoa
+        else:
+            nota = anterior.nota
+        vistos.append({"pessoa": slug, "filme": filme, "titulo": rotulos[filme], "nota": nota,
+                       "novo": anterior is None})
     for pessoa in mudadas.values():
         pessoas.salvar(amb.dados, pessoa)
         fatos_da_pessoa.sincronizar(amb.banco, pessoa)
@@ -210,6 +223,13 @@ def _gravar_resposta(amb, sessao_id, numero, resposta) -> None:
         frente, corpo = arquivo.ler(amb.dados, sessao_id)
         versoes = frente.get("versoes") or []
         alvo = frente if numero == len(versoes) + 1 else versoes[numero - 1]
-        alvo.setdefault("respostas", []).append(resposta)
+        respostas = alvo.setdefault("respostas", [])
+        if any(_sem_data(r) == _sem_data(resposta) for r in respostas):
+            return   # o mesmo texto colado de novo
+        respostas.append(resposta)
         banco.carregar(conn, sessao_id, frente)
         arquivo.escrever(amb.dados, sessao_id, frente, corpo)
+
+
+def _sem_data(resposta: dict) -> dict:
+    return {k: v for k, v in resposta.items() if k != "data"}

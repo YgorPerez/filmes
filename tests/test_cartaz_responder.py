@@ -195,3 +195,21 @@ def test_de_ponta_a_ponta_o_texto_que_o_cartaz_copia_e_o_que_o_responder_le(banc
     refeita = banco.ok("recomendar", "--presentes", "dono", "iara", "--sessao", sessao_id,
                        "--manter", ",".join(saida["manter"]))
     assert [(s["id"], s["motivo"]) for s in refeita["saidas"]] == [(s["id"], s["motivo"]) for s in saida["saem"]]
+
+
+def test_colar_o_mesmo_texto_de_novo_nao_duplica_resposta_nem_ja_visto(banco, dados):
+    primeira, sessao_id = _sessao(banco, "iara")
+    filme = primeira["filmes"][0]["id"]
+    texto = f"#cartaz {sessao_id} v1\n1 {filme} · já vi: iara=8 · estrelas: 4\n"
+
+    _responder(banco, sessao_id, texto)
+    _responder(banco, sessao_id, texto)
+    banco.env["FILMES_HOJE"] = "2026-11-21"
+    segunda = _responder(banco, sessao_id, texto.replace("iara=8", "iara=9"))
+
+    frente, _ = ler_markdown(dados / "sessoes" / f"{sessao_id}.md")
+    assert [r["filmes"] for r in frente["respostas"]] == [[{"posicao": 1, "id": filme, "estrelas": 4}]]
+    iara = banco.ok("pessoa", "ver", "iara")
+    assert [(v["filme"], v["nota"]) for v in iara["vistos"]] == [(filme, 4.5)]
+    assert [n["nota"] for n in iara["notas"] if n["filme_id"] == filme] == [4.5]
+    assert [(v["pessoa"], v["nota"], v["novo"]) for v in segunda["vistos"]] == [("iara", 4.5, False)]
