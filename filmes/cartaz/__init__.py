@@ -179,7 +179,7 @@ def _saiu(frente, pessoas) -> str:
             quem = s.get("pessoas") or []
             nomes = " e ".join(filter(None, [", ".join(nome(p) for p in quem[:-1]), nome(quem[-1])])) if quem else ""
             return f"{nomes} já {'viu' if len(quem) == 1 else 'viram'}".strip()
-        if s["motivo"] == "restricao":
+        if s["motivo"] in {"restricao", "nota_minima"}:
             return s.get("rotulo") or s.get("restricao")
         if s["motivo"] == "veto":
             de = "seu Veto" if s.get("pessoa") == dono else f"Veto de {nome(s.get('pessoa'))}"

@@ -82,8 +82,6 @@ def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], qu
                *, selecao: candidatos.Selecao | None = None, regerar: mantidos.Regerar | None = None) -> dict:
     # Os Vetos de todos os Presentes valem, seja qual for a Regra de escolha.
     elegiveis = selecao.filmes if selecao is not None else candidatos.escolher(conn, amb.pesos)
-    if regerar:
-        elegiveis = mantidos.incluir(conn, elegiveis, regerar)
     restantes, vetos_que_agiram = vetos.aplicar(conn, presentes, elegiveis, amb.pesos["vetos_por_tag"])
     climas_aceitos, avisos_de_clima = vocabulario_climas.resolver(list(climas))
     contexto = Contexto(conn=conn, amb=amb, presentes=presentes, avisos=avisos_de_clima)
@@ -95,6 +93,7 @@ def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], qu
     tirados = {}
     for filme_id in (regerar.posicoes if regerar else {}):
         if filme_id not in elegiveis:
+            tirados[filme_id] = mantidos.pela_nota_minima(conn, filme_id, pesos["catalogo"])
             continue
         if filme_id not in restantes:
             tirados[filme_id] = mantidos.pelo_veto(conn, presentes, elegiveis[filme_id], pesos["vetos_por_tag"])
@@ -207,7 +206,7 @@ def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], qu
             **({"novo": not regerar.mantido(filme["id"])} if regerar else {}),
         })
     if regerar:
-        contexto.avisos.extend(mantidos.aviso(elegiveis[f], motivo) for f, motivo in tirados.items())
+        contexto.avisos.extend(mantidos.aviso(regerar.titulo(f), motivo) for f, motivo in tirados.items())
     resposta = {
         "presentes": presentes,
         "regra": regra.como_json(),

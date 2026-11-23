@@ -67,7 +67,7 @@ Uma Recomendação de uma Sessão aberta. Quando o Dono pede outra lista na mesm
 _Evitar_: rodada, tentativa
 
 **Mantido**:
-Um filme da versão anterior que o Dono quer na próxima. Ao regerar, fica no mesmo número e só as vagas ganham filme novo. Sai só por Restrição ou Veto do pedido refeito, nunca por gosto novo. O que sai da versão anterior vira uma saída, com o motivo: Já visto, trocado, a Restrição ou o Veto.
+Um filme da versão anterior que o Dono quer na próxima. Ao regerar, fica no mesmo número e só as vagas ganham filme novo. Sai por Restrição ou Veto do pedido refeito, ou por estar abaixo da nota mínima do IMDb, nunca por gosto novo. O que sai da versão anterior vira uma saída, com o motivo: Já visto, trocado, a Restrição, o Veto ou a nota mínima.
 _Evitar_: fixado, travado
 
 **Cartaz**:

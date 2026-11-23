@@ -6,6 +6,8 @@ ainda não mostrou. Cada filme diz se é `novo`; `saidas` diz o que saiu e por q
 """
 
 from conftest import ler_markdown
+from test_cartaz import arvore
+from test_cartaz_responde import _cartaz
 
 
 def _ids(saida):
@@ -123,3 +125,25 @@ def test_sem_manter_o_refazer_nao_traz_novo_nem_saidas(banco):
 
     assert "saidas" not in refeita and "mantidos" not in refeita
     assert all("novo" not in f for f in refeita["filmes"])
+
+
+def test_mantido_abaixo_da_nota_minima_sai_com_aviso(banco, dados, tmp_path):
+    # Sombra Morna tem nota 6,5 no IMDb: não é Candidato. Uma Sessão de antes da
+    # nota mínima a mostrou em 2.
+    primeira, sessao_id = _primeira(banco)
+    arquivo = dados / "sessoes" / f"{sessao_id}.md"
+    trocado = primeira["filmes"][1]
+    arquivo.write_text(arquivo.read_text(encoding="utf-8")
+                       .replace(f"id: {trocado['id']}", "id: tt9003401")
+                       .replace(f"titulo: {trocado['titulo']}", "titulo: Sombra Morna"), encoding="utf-8")
+
+    refeita = banco.ok("recomendar", "--presentes", "dono", "--sessao", sessao_id,
+                       "--manter", f"{primeira['filmes'][0]['id']},tt9003401")
+
+    assert "tt9003401" not in _ids(refeita)
+    assert refeita["mantidos"] == [primeira["filmes"][0]["id"]]
+    assert {"posicao": 2, "id": "tt9003401", "titulo": "Sombra Morna", "motivo": "nota_minima",
+            "rotulo": "nota 6,5 no IMDb, abaixo de 7"} in refeita["saidas"]
+    assert any("Sombra Morna" in aviso and "mantido" in aviso for aviso in refeita["avisos"])
+    saiu = arvore(_cartaz(banco, tmp_path, sessao_id)).um("saiu").texto
+    assert "2 Sombra Morna (nota 6,5 no IMDb, abaixo de 7)" in saiu

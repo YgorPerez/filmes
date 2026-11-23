@@ -3,8 +3,9 @@
 Ao refazer uma Sessão com `--manter`, os mantidos ficam no número que tinham na
 versão anterior (a lista do cartaz, `mostrados`, ou a Recomendação sem cartaz) e
 só as vagas ganham filme novo. Uma Restrição ou um Veto do pedido refeito tiram
-também o mantido que os viole; gosto novo não tira mantido, só muda quem entra
-nas vagas.
+também o mantido que os viole, e a nota mínima e os votos mínimos do IMDb valem
+para ele como para qualquer Candidato; gosto novo não tira mantido, só muda quem
+entra nas vagas.
 
 `saidas` diz, para cada filme da versão anterior que não está na nova, o motivo:
 
@@ -12,6 +13,7 @@ nas vagas.
     {"posicao", "id", "titulo", "motivo": "trocado"}
     {"posicao", "id", "titulo", "motivo": "restricao", "restricao": nome, "rotulo": "nada triste"}
     {"posicao", "id", "titulo", "motivo": "veto", "pessoa": slug, "texto": "o Veto como foi dito"}
+    {"posicao", "id", "titulo", "motivo": "nota_minima", "rotulo": "nota 6,5 no IMDb, abaixo de 7"}
 
 `posicao` é o número que o filme tinha na versão anterior. `ja_visto` vale quando
 algum Presente tem Já visto do filme com data igual ou posterior à da versão
@@ -22,6 +24,7 @@ filme foi mostrado, e a saída conta como `trocado`.
 import sqlite3
 from dataclasses import dataclass
 
+from filmes.evidencia import texto
 from filmes.recomendacao import restricoes, vetos
 from filmes.sessao import arquivo
 
@@ -35,6 +38,9 @@ class Regerar:
     def mantido(self, filme_id) -> bool:
         return filme_id in self.posicoes
 
+    def titulo(self, filme_id) -> str:
+        return next((f.get("titulo") or filme_id for f in self.anterior if f["id"] == filme_id), filme_id)
+
 
 def preparar(frente: dict, manter: list[str]) -> tuple[Regerar, list[str]]:
     """O que fica e o que estava na tela da versão atual da Sessão, e os avisos dos mantidos
@@ -47,14 +53,21 @@ def preparar(frente: dict, manter: list[str]) -> tuple[Regerar, list[str]]:
     return Regerar(tuple(tela), str(versao["data"]), {f: posicoes[f] for f in manter if f in posicoes}), avisos
 
 
-def incluir(conn: sqlite3.Connection, elegiveis: dict, regerar: Regerar) -> dict:
-    """Os elegíveis mais os mantidos que deixaram de ser Candidatos (nota ou votos): o
-    mantido só sai por Restrição ou Veto."""
-    faltam = [f for f in regerar.posicoes if f not in elegiveis]
-    if not faltam:
-        return elegiveis
-    linhas = conn.execute(f"SELECT * FROM filmes WHERE id IN ({', '.join('?' * len(faltam))})", faltam)
-    return {**elegiveis, **{linha["id"]: linha for linha in linhas}}
+def pela_nota_minima(conn: sqlite3.Connection, filme_id: str, catalogo: dict) -> dict:
+    """O motivo da saída de um mantido que não é Candidato: a nota mínima do IMDb e os
+    votos mínimos valem sempre, para o mantido também."""
+    filme = conn.execute("SELECT nota_imdb, votos FROM filmes WHERE id = ?", [filme_id]).fetchone()
+    if filme is None:
+        rotulo = "fora do Catálogo"
+    elif filme["nota_imdb"] is not None and filme["nota_imdb"] < catalogo["nota_imdb_minima"]:
+        rotulo = f"nota {texto.nota(filme['nota_imdb'])} no IMDb, abaixo de {texto.nota(catalogo['nota_imdb_minima'])}"
+    else:
+        rotulo = f"{_milhar(filme['votos'] or 0)} votos no IMDb, abaixo de {_milhar(catalogo['votos_minimos'])}"
+    return {"motivo": "nota_minima", "rotulo": rotulo}
+
+
+def _milhar(n: int) -> str:
+    return f"{n:,}".replace(",", ".")
 
 
 def pelo_veto(conn, presentes, filme, minimos) -> dict:
@@ -94,9 +107,9 @@ def saidas(conn, presentes, regerar: Regerar, ficaram: set, tirados: dict) -> li
     return lista
 
 
-def aviso(filme: dict, motivo: dict) -> str:
-    porque = motivo["rotulo"] if motivo["motivo"] == "restricao" else f"Veto de {motivo['pessoa']} ({motivo['texto']})"
-    return f"{filme['titulo']} saiu, apesar de mantido: {porque}"
+def aviso(titulo: str, motivo: dict) -> str:
+    porque = f"Veto de {motivo['pessoa']} ({motivo['texto']})" if motivo["motivo"] == "veto" else motivo["rotulo"]
+    return f"{titulo} saiu, apesar de mantido: {porque}"
 
 
 def _viram(conn, presentes, filme_id, desde) -> list[str]:

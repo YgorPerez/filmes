@@ -26,8 +26,9 @@ export default definirFerramenta({
     "o que a Sessão já mostrou (o cartaz ou as 5 primeiras de cada versão) sai sozinho, em `restricoes.sem_repetido`. " +
     "Com `manter`, os mantidos ficam no número da versão anterior e só as vagas ganham filme novo; cada filme traz " +
     "`novo` (true nas vagas), e a resposta traz `mantidos` e `saidas` ({posicao, id, titulo, motivo}: `ja_visto` com " +
-    "`pessoas`, `trocado`, `restricao` com `restricao` e `rotulo`, ou `veto` com `pessoa` e `texto`). Uma Restrição ou " +
-    "um Veto do pedido tiram também o mantido que os viola, com aviso; gosto novo não tira mantido. " +
+    "`pessoas`, `trocado`, `restricao` com `restricao` e `rotulo`, `veto` com `pessoa` e `texto`, ou `nota_minima` com `rotulo`). " +
+    "Uma Restrição ou um Veto do pedido tiram também o mantido que os viola, e o mantido abaixo da nota ou dos votos " +
+    "mínimos do IMDb também sai, com aviso; gosto novo não tira mantido. " +
     "Antes, chame `sessoes_abertas` e, se houver uma, pergunte por ela. O Dono pode pular. " +
     "A resposta inclui `climas` (os aceitos), `restricoes`, `avisos` e `atribuicoes`. " +
     "Copie o texto do Does the Dog Die como veio.",
