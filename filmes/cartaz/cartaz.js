@@ -129,9 +129,8 @@ if (typeof document !== "undefined") (function () {
   restaurar();
   R.addEventListener("input", guardar);
   R.addEventListener("change", guardar);
-  if (guardado) guardado.textContent = loja
-    ? "O que você marcar fica guardado neste navegador, mesmo trocando de aba."
-    : "Este navegador não deixa o cartaz guardar: se trocar de aba, o que foi marcado se perde.";
+  // No T3 Code o quadro não tem localStorage: lá nada é guardado e nada é dito.
+  if (guardado && loja) guardado.textContent = "O que você marcar fica guardado neste navegador, mesmo trocando de aba.";
   function mostrar(txt) {
     saida.hidden = false; saida.value = txt; saida.focus(); saida.select();
     avisar("Não deu pra copiar sozinho: o texto está selecionado na caixa, copie e cole no chat.");
