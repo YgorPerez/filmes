@@ -31,6 +31,12 @@ def carregar(conn: sqlite3.Connection, pessoa: Pessoa) -> None:
             "INSERT INTO ajustes (fato_id, pessoa, elo, nivel, data) VALUES (?, ?, ?, ?, ?)",
             (id_do_ajuste(pessoa.slug, ajuste), pessoa.slug, ajuste.elo, ajuste.nivel, ajuste.data),
         )
+    for pergunta in pessoa.perguntas_abertas:
+        conn.execute(
+            "INSERT INTO perguntas_abertas (fato_id, pessoa, texto, assunto, rotulo, data, puladas) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (id_da_pergunta(pessoa.slug, pergunta), pessoa.slug, pergunta.texto, pergunta.assunto,
+             pergunta.rotulo, pergunta.data, pergunta.puladas),
+        )
     for tabela, ditos in (("declarados", pessoa.declarados), ("relatos", pessoa.relatos)):
         for dito in ditos:
             id_ = id_do_dito(tabela, pessoa.slug, dito)
@@ -70,6 +76,11 @@ def id_do_ajuste(slug: str, ajuste) -> str:
     return fato_id("ajustes", slug, ajuste.elo, ajuste.nivel, ajuste.data)
 
 
+def id_da_pergunta(slug: str, pergunta) -> str:
+    """Não muda com o contador nem com a data: é a mesma pergunta pulada de novo."""
+    return fato_id("perguntas_abertas", slug, pergunta.assunto or pergunta.texto.casefold())
+
+
 def id_do_ja_visto(slug: str, visto) -> str:
     return fato_id("vistos", slug, visto.data, visto.fonte, visto.alvo, visto.nota)
 
@@ -104,7 +115,7 @@ def _apagar(conn, slug):
                  " OR fato_id LIKE 'vistos:%')", (slug,))
     conn.execute("DELETE FROM ja_visto WHERE pessoa = ? AND fato_id LIKE 'vistos:%'", (slug,))
     conn.execute("DELETE FROM declarados WHERE pessoa = ? AND fato_id LIKE 'declarados:%'", (slug,))
-    for tabela in ("vetos", "ajustes", "relatos", "apelidos"):
+    for tabela in ("vetos", "ajustes", "perguntas_abertas", "relatos", "apelidos"):
         conn.execute(f"DELETE FROM {tabela} WHERE pessoa = ?", (slug,))
 
 

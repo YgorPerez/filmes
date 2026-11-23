@@ -8,7 +8,8 @@ from filmes.evidencia import regua
 from filmes.recomendacao import vetos
 from filmes.sessao import feedback
 
-AJUDA = "cria uma Pessoa, mostra o que se sabe dela e registra ou remove Declarados, Relatos, Vetos, Ajustes e Já vistos"
+AJUDA = ("cria uma Pessoa, mostra o que se sabe dela e registra ou remove Declarados, Relatos, Vetos, Ajustes, "
+         "Já vistos e perguntas abertas")
 
 
 def configurar(parser):
@@ -61,16 +62,31 @@ def configurar(parser):
     p.add_argument("--data", help="AAAA-MM-DD (padrão: hoje)")
     p.set_defaults(_acao=_visto)
 
-    p = _acao(acoes, "remover", "tira do arquivo da Pessoa e do banco um Declarado, Relato, Veto ou Já visto")
+    p = _acao(acoes, "pular", "guarda uma pergunta de gosto que a Pessoa pulou; pulada pela segunda vez, sai")
+    p.add_argument("pessoa", help='slug, nome ou apelido; "dono" é o Dono')
+    p.add_argument("texto", help='a pergunta como foi feita, ex.: "a Ana curte terror psicológico?"')
+    assunto = p.add_mutually_exclusive_group()
+    assunto.add_argument("--entidade", help="assunto: ID da entidade no Catálogo (Q...): diretor, ator, gênero...")
+    assunto.add_argument("--grupo", help="assunto: chave de um grupo de tags de config/vetos_por_tag.toml")
+    p.add_argument("--data", help="AAAA-MM-DD (padrão: hoje)")
+    p.set_defaults(_acao=_pular)
+
+    p = _acao(acoes, "perguntas", "lista as perguntas de gosto que a Pessoa pulou e continuam abertas")
+    p.add_argument("pessoa", help='slug, nome ou apelido; "dono" é o Dono')
+    p.set_defaults(_acao=_perguntas)
+
+    p = _acao(acoes, "remover", "tira do arquivo da Pessoa e do banco um Declarado, Relato, Veto, Já visto "
+                                "ou pergunta aberta (respondida)")
     p.add_argument("pessoa", help='slug, nome ou apelido; "dono" é o Dono')
     qual = p.add_mutually_exclusive_group(required=True)
     for opcao in _REMOVIVEIS:
         qual.add_argument(f"--{opcao}", metavar="ID_OU_ALVO",
-                          help="o fato_id que `pessoa ver` mostra, ou o alvo (tt..., Q...) se só um item tem esse alvo")
+                          help="o fato_id que `pessoa ver` mostra, ou o alvo (tt..., Q..., grupo) se só um item tem esse alvo")
     p.set_defaults(_acao=_remover)
 
 
-_REMOVIVEIS = {"declarado": "declarados", "relato": "relatos", "veto": "vetos", "visto": "já vistos"}
+_REMOVIVEIS = {"declarado": "declarados", "relato": "relatos", "veto": "vetos", "visto": "já vistos",
+               "pergunta": "perguntas abertas"}
 
 
 def _acao(acoes, nome, ajuda):
@@ -119,6 +135,7 @@ def _ver(args, amb):
         "declarados": _como_json(pessoa, "declarados", amb),
         "relatos": _como_json(pessoa, "relatos", amb),
         "vistos": _como_json(pessoa, "já vistos", amb),
+        "perguntas_abertas": _como_json(pessoa, "perguntas abertas", amb),
         "imports": pessoa.imports,
     }
     if amb.banco.exists():
@@ -199,6 +216,32 @@ def _veto_json(slug, veto, amb=None):
     return veto.como_dict() | {"fato_id": fatos.id_do_veto(slug, veto)}
 
 
+def _pular(args, amb):
+    pessoa = pessoas.resolver(amb.dados, args.pessoa)
+    assunto, rotulo = args.entidade or args.grupo, None
+    if args.grupo:
+        rotulo = _rotulo_do_grupo(args.grupo)
+    elif args.entidade:
+        if args.entidade.startswith("tt"):
+            raise ErroFilmes("uso_invalido", f"o assunto é uma entidade (Q...) ou um grupo, não um filme: {args.entidade!r}")
+        with abrir_leitura(amb.banco) as conn:
+            rotulo = fatos.rotulo_do_alvo(conn, args.entidade)
+    pergunta = pessoas.PerguntaAberta(texto=_texto(args.texto), data=_data(args.data, amb), assunto=assunto, rotulo=rotulo)
+    pergunta, saiu = pessoas.pular(pessoa, pergunta)
+    _salvar(amb, pessoa)
+    return {"pessoa": pessoa.slug, "pergunta": _pergunta_json(pessoa.slug, pergunta), "saiu": saiu}
+
+
+def _perguntas(args, amb):
+    pessoa = pessoas.resolver(amb.dados, args.pessoa)
+    return {"pessoa": pessoa.slug, "perguntas_abertas": _como_json(pessoa, "perguntas abertas", amb)}
+
+
+def _pergunta_json(slug, pergunta, amb=None):
+    return {"texto": pergunta.texto, "assunto": pergunta.assunto, "rotulo": pergunta.rotulo,
+            "data": pergunta.data, "puladas": pergunta.puladas, "fato_id": fatos.id_da_pergunta(slug, pergunta)}
+
+
 def _remover(args, amb):
     pessoa = pessoas.resolver(amb.dados, args.pessoa)
     [(opcao, valor)] = [(o, getattr(args, o)) for o in _REMOVIVEIS if getattr(args, o) is not None]
@@ -208,7 +251,7 @@ def _remover(args, amb):
         itens += _comentarios_do_feedback(pessoa.slug, amb)
     achados = [(item, saida) for item, saida in itens if saida["fato_id"] == valor]
     if not achados:
-        achados = [(item, saida) for item, saida in itens if saida.get("alvo", saida.get("filme")) == valor]
+        achados = [(item, saida) for item, saida in itens if _alvo_de(saida) == valor]
     if not achados:
         raise ErroFilmes(f"{opcao}_desconhecido", _sem_item(pessoa, opcao, valor, amb))
     if len(achados) > 1:
@@ -222,6 +265,13 @@ def _remover(args, amb):
         pessoa.tirar(secao, item)
         _salvar(amb, pessoa)
     return {"pessoa": pessoa.slug, "tipo": opcao, "removido": saida}
+
+
+def _alvo_de(saida):
+    for campo in ("alvo", "filme", "assunto"):
+        if campo in saida:
+            return saida[campo]
+    return None
 
 
 def _sem_item(pessoa, opcao, valor, amb):
@@ -351,7 +401,8 @@ def _relato_json(slug, dito, amb):
 
 
 # Seção da Pessoa -> como cada item dela sai no JSON de `ver` e `remover`.
-_JSON = {"vetos": _veto_json, "ajustes": _ajuste_json, "declarados": _declarado_json, "relatos": _relato_json, "já vistos": _ja_visto_json}
+_JSON = {"vetos": _veto_json, "ajustes": _ajuste_json, "declarados": _declarado_json, "relatos": _relato_json,
+         "já vistos": _ja_visto_json, "perguntas abertas": _pergunta_json}
 
 
 def _como_json(pessoa, secao, amb):
