@@ -145,7 +145,7 @@ SO_PALPITES = {"Pequenos Milagres", "Casa Cheia", "Deserto Branco", "A Última E
                "Porão Escuro", "A Casa do Fim", "Risos de Domingo",
                "Carta de Amor", "Amor em Paris", "Casar de Novo", "Baile de Formatura",
                "Mar Aberto", "Turma do Recreio", "Piada Pronta", "Riso Contido", "Drama Juvenil",
-               "Obra-Prima"}
+               "Obra-Prima", "Casa Vazia", "Último Verão", "Aliança Partida"}
 
 
 def test_filme_so_com_palpites_fica_de_fora_quando_ha_candidatos_com_fato(banco):

@@ -50,7 +50,7 @@ Caminho de conteúdo por outros predicados (`test_caminho_conteudo.py`). Cada fi
 | Fronteira II (1903) | serie, Trilogia da Fronteira | Fronteira (401) |
 | Poeira (1904) | genero, faroeste | 101, 102, 103 e Jardim Suspenso (301): quatro Notas altas, que no gênero ficam em metadado fraco |
 | Escala em Lisboa (3501) | elenco, Rita Lobo | Ponte Aérea (201), como Voo Noturno, mas Rita Lobo está fora dos 3 primeiros créditos |
-| Mar Aberto (4901) | serie, Os 100 melhores filmes segundo a Revista Tela (`Q9004901`) | Fronteira (401), mas a lista não está em `series_de_filmes.csv` e a aresta sai na reconstrução. Tem 1.000 votos, o mínimo, para ficar depois dos outros filmes só com palpites; entra no `--quantos 100` de `test_grupo.py` |
+| Mar Aberto (4901) | serie, Os 100 melhores filmes segundo a Revista Tela (`Q9004901`) | Fronteira (401), mas a lista não está em `series_de_filmes.csv` e a aresta sai na reconstrução. Tem 1.000 votos, o mínimo, para ficar depois dos outros filmes só com palpites; entra no `--quantos 100` de `test_grupo.py` e de `test_caminho_conteudo.py` |
 
 `series_de_filmes.csv` diz quais entidades de série são série de filmes: só a Trilogia da Fronteira. Uma série nova na fixture precisa de linha ali, senão a aresta dela some.
 
@@ -182,6 +182,11 @@ linhas. As tags de O Farol de Areia aparecem tanto no diário quanto na review.
 | Fim de Tarde (902) | `tema` Holocausto (Q2763) | sai |
 | Café Amargo (801) | `baseado_em` suicídio (Q10737) | sai |
 | Linha Cruzada (802) | `tema` futebol (Q9004201), sem tag | passa |
+| Casa Vazia (5801) | tags.csv "grief", 2 usuários | sai |
+| Último Verão (5802) | tags.csv "tragic loss", 2 usuários | sai |
+| Aliança Partida (5803) | tags.csv "death of wife", 2 usuários | sai |
+
+Os filmes `tt90058NN` (#58) não têm diretor nem Nota, e ficam entre os só com palpites. Cada um tem só uma das tags de luto de `[tema_pesado]`.
 
 "sad" e "tearjerker" estão no Clima "pra chorar"; nenhum teste pede esse Clima. As tags de "sozinho" (bleak, depressing) ficaram de fora de propósito, para não mudar quem é filme só com palpites.
 
