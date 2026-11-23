@@ -28,7 +28,9 @@ from filmes.recomendacao import restricoes
 from filmes.recomendacao.restricoes import Contexto
 from filmes.sessao import arquivo
 
-CSS = (Path(__file__).resolve().parent / "cartaz.css").read_text(encoding="utf-8")
+AQUI = Path(__file__).resolve().parent
+CSS = (AQUI / "cartaz.css").read_text(encoding="utf-8")
+JS = (AQUI / "cartaz.js").read_text(encoding="utf-8")
 MARCADOR = {"forte": "●●●", "moderada": "●●○", "fraca": "●○○"}
 ORDEM_DA_FORCA = {"forte": 0, "moderada": 1, "fraca": 2}
 CORES = 6   # o T3 define --chart-1 a --chart-6
@@ -51,10 +53,14 @@ def gerar(amb, sessao_id: str, mostrados: list[str] | None = None) -> dict:
             linha = conn.execute("SELECT * FROM filmes WHERE id = ?", (filme["id"],)).fetchone()
             if linha is None:
                 raise ErroFilmes("dados_invalidos", f"Sessão {sessao_id}: {filme['id']} não está no Catálogo")
-            cards.append(_card(filme, linha, cabecalho.do_filme(contexto, linha), pessoas, primeiro=not cards))
+            cards.append(_card(filme, linha, cabecalho.do_filme(contexto, linha), pessoas, primeiro=not cards,
+                               dono=frente.get("dono")))
     finally:
         conn.close()
-    topo = _pedido(frente, pessoas, amb.pesos)
+    topo = _pedido(frente, pessoas, amb.pesos) + RESPONDER
+    versao = arquivo.versao_atual(frente)["versao"]
+    dados = (f'data-sessao="{escape(sessao_id)}" data-versao="{versao}" '
+             f'data-presentes="{escape(" ".join(presentes))}"')
     titulo = f"Recomendação de {frente['data']}"
     html = (
         "<!doctype html>\n"
@@ -62,7 +68,8 @@ def gerar(amb, sessao_id: str, mostrados: list[str] | None = None) -> dict:
         '<meta name="viewport" content="width=device-width,initial-scale=1">'
         f"<title>{escape(titulo)}</title></head><body>\n"
         f"<style>\n{CSS}</style>\n"
-        f'<div class="cartaz">\n{topo}\n{"".join(cards)}</div>\n'
+        f'<div class="cartaz" {dados}>\n{topo}\n{"".join(cards)}</div>\n'
+        f"<script>\n{JS}</script>\n"
         "</body></html>\n"
     )
     return {"html": html, "filmes": len(cards), "avisos": contexto.avisos}
@@ -122,7 +129,47 @@ def _quem(frente, pessoas) -> str:
     return f"Vocês {POR_EXTENSO.get(len(pessoas), len(pessoas))}"
 
 
-def _card(filme, linha, ficha, pessoas, primeiro) -> str:
+RESPONDER = (
+    '<div class="responder">'
+    '<label class="campo">Acrescentar <span>contexto da noite ou gosto: “chegou a Ana”, “algo leve”</span>'
+    '<textarea class="acrescentar" rows="2"></textarea></label>'
+    '<button class="copiar" type="button">Copiar pro chat</button>'
+    '<p class="aviso" role="status" aria-live="polite"></p>'
+    '<textarea class="saida" readonly hidden aria-label="texto pra colar no chat"></textarea>'
+    '<noscript><p class="semjs">Sem JavaScript o botão não copia: responda no chat.</p></noscript>'
+    "</div>"
+)
+
+
+def _responde(filme, pessoas, dono) -> str:
+    """Os controles do card: Já vi por Presente (e Todos, com mais de um), nota de 1 a 10,
+    Trocar, estrelas de 1 a 5 e comentário. Quem monta o texto é o cartaz.js."""
+    n = filme["posicao"]
+    chips = "".join(
+        f'<label class="opcao"><input type="checkbox" class="javi" value="{escape(slug)}">'
+        f'{"Você" if slug == dono else escape(p["nome"])}</label>'
+        for slug, p in pessoas.items()
+    )
+    if len(pessoas) > 1:
+        chips += '<label class="opcao"><input type="checkbox" class="javi-todos">Todos</label>'
+    estrelas = "".join(
+        f'<input type="radio" id="e{n}-{v}" name="e{n}" value="{v}" aria-label="{v} de 5">'
+        f'<label for="e{n}-{v}" aria-hidden="true">★</label>'
+        for v in range(5, 0, -1)   # de trás para a frente: o CSS inverte e pinta as menores com `~`
+    )
+    return (
+        '<div class="responde">'
+        f'<div class="linha"><span class="rot">Já vi</span>{chips}'
+        '<label class="opcao nota-campo">nota <input type="number" class="nota" min="1" max="10" step="1" '
+        'inputmode="numeric" disabled></label></div>'
+        '<div class="linha"><label class="opcao"><input type="checkbox" class="trocar">Trocar</label>'
+        f'<fieldset class="estrelas"><legend>quanto animou</legend>{estrelas}</fieldset></div>'
+        f'<textarea class="comentario" rows="1" aria-label="comentário sobre o filme {n}" placeholder="comentário"></textarea>'
+        "</div>"
+    )
+
+
+def _card(filme, linha, ficha, pessoas, primeiro, dono=None) -> str:
     sem_fato = [p for p, es in filme["evidencias"].items() if not any(e["tipo"] != "palpite" for e in es)]
     titulo = ficha["titulo_pt"] or linha["titulo"]
     original = (f'<span class="orig">{escape(linha["titulo"])}</span>'
@@ -148,7 +195,7 @@ def _card(filme, linha, ficha, pessoas, primeiro) -> str:
     sinopse = f'<p class="sinopse">{escape(ficha["sinopse"])}</p>' if ficha["sinopse"] else ""
     presentes = len(pessoas)
     cobertura = f"Fato sobre {presentes - len(sem_fato)} de {presentes}"
-    return f'''<article class="card">
+    return f'''<article class="card" data-posicao="{filme["posicao"]}" data-id="{escape(filme["id"])}">
   <a class="capa" href="{imdb}" target="_blank" rel="noopener">
     {imagem}
     {selo}
@@ -160,6 +207,7 @@ def _card(filme, linha, ficha, pessoas, primeiro) -> str:
     <div class="chips">{"".join(f'<span class="chip">{escape(c)}</span>' for c in chips)}<a class="chip imdb" href="{imdb}" target="_blank" rel="noopener">{nota_imdb}{_votos(ficha["votos_imdb"])} votos</a></div>
   </div>
   <div class="porque"><h3>Por que cada um vai gostar <span>{cobertura}</span></h3><ul>{_linhas(filme, pessoas, sem_fato)}</ul></div>
+  {_responde(filme, pessoas, dono)}
 </article>
 '''
 
