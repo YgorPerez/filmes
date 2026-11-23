@@ -102,11 +102,11 @@ def test_o_que_foi_marcado_volta_quando_o_cartaz_recarrega(banco, tmp_path):
     assert "fica guardado" in lido["guardado"]
 
 
-def test_sem_localstorage_o_cartaz_funciona_e_avisa_que_nao_guarda(banco, tmp_path):
+def test_sem_localstorage_o_cartaz_funciona_sem_aviso(banco, tmp_path):
     sessao, html = _sessao_e_cartaz(banco, tmp_path)
     f = sessao["filmes"][0]["id"]
 
     lido = _rodar(html, {"bloquear": True, "marcar": [{"id": f, "trocar": True}]})
 
     assert lido["filmes"][0]["trocar"] is True
-    assert "se perde" in lido["guardado"]
+    assert lido["guardado"] == ""
