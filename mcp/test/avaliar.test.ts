@@ -27,7 +27,7 @@ it("entrega o relatório da avaliação e notifica o progresso pelo MCP", async 
     assert.ok(etapas.slice(1).every((valor, indice) => valor > etapas[indice]));
     const [bloco] = resultado.content as Array<{ text: string }>;
     const avaliacao = JSON.parse(bloco.text);
-    assert.equal(avaliacao.offline.pessoas.retidos_4_mais, 4);
+    assert.equal(avaliacao.offline.pessoas.retidos_4_mais, 5);
     assert.equal(avaliacao.grade.melhores.length, 3);
     assert.ok(existsSync(avaliacao.arquivo));
   } finally {

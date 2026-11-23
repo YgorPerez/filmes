@@ -134,6 +134,7 @@ Repo de dados fictício. Cada teste trabalha numa cópia, então comandos podem 
 - `pessoas/bruno.md`: o Dono (`dono: true`, apelido `eu`).
 - `pessoas/iara.md` e `pessoas/teo.md`: Pessoas para os testes de grupo.
 - `pessoas/quim.md`: Pessoa para os testes de Crédito.
+- `pessoas/rosa.md`: Pessoa do teste do teto do elenco no metadado agregado (#55).
 - Não há `sessoes/`: os testes criam as Sessões com `recomendar` e `feedback`, ou escrevem o arquivo direto quando precisam de várias datas (veja `test_credito.py`).
 
 Os testes de Pessoa (#18) criam a Ana pela CLI e escrevem a Carol direto no repo de dados do teste; nenhuma das duas fica na fixture.
@@ -224,3 +225,14 @@ Os mesmos filmes `tt90056NN` levam "boring", tag do grupo `lento` fora do `grupo
 | Piada Pronta (5602) | boring, 10 usuários | sai pelo tags.csv |
 | Riso Contido (5603) | boring, 9 usuários | abaixo do mínimo: fica |
 | Drama Juvenil (5604) | boring 0,8 (Genome) | sai pelo Genome, mesmo sendo drama |
+
+### Teto do elenco no metadado agregado (#55)
+
+Filmes `tt90055NN`, de Clara Bastos (`Q9000055`) e com Duda Alves (`Q9005501`, `nm9005501`) no elenco, para o último teste de `test_caminho_conteudo.py`. Só a Rosa deu Nota a eles, então para o Bruno e os outros são filmes só com palpites. Têm 1.000 votos, para ficar no fim entre eles.
+
+| Filme | Nota da Rosa | Para que serve |
+|---|---|---|
+| Ensaio Geral (5501) | 5 (2025) | três Notas altas no mesmo diretor e no mesmo ator |
+| Bastidores (5502) | 4,5 (2025) | |
+| Ato Final (5503) | 4,5 (2025) | |
+| Coxia (5504) | nenhuma | Candidato: Duda Alves é o primeiro crédito do IMDb. O agregado do diretor sai forte e o do elenco fica no teto, moderada |
