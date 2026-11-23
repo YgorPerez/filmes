@@ -22,6 +22,15 @@ Frontmatter (protótipo de #10):
       - {posicao: 1, id: tt9000104, titulo: As Horas Lentas}
     escolhido_nos_mostrados: 1         # gravado no Feedback quando há `mostrados`
     refeita_em: 2026-11-21             # só depois de `recomendar --sessao` (#45)
+    mantidos: [tt9000104]              # só com `recomendar --sessao --manter` (#59); cada item
+                                       # de `recomendacao` traz então `novo: true|false`
+    saidas:                            # idem: o que saiu da versão anterior e por quê
+      - {posicao: 2, id: tt9000105, titulo: Sal e Ferrugem, motivo: ja_visto, pessoas: [bruno]}
+    respostas:                         # `cartaz responder` (#61): um item por texto colado
+      - data: 2026-11-21               # desta versão; o de versão velha vai para `versoes[n]`
+        acrescentar: chegou a Ana, algo leve
+        filmes:
+          - {posicao: 1, id: tt9000104, estrelas: 4, comentario: lindo, mas longo}
     versoes:                           # as versões anteriores, a mais antiga primeiro
       - versao: 1
         data: 2026-11-20               # quando essa versão foi feita
@@ -31,6 +40,8 @@ Frontmatter (protótipo de #10):
         recomendacao:
           - {posicao: 1, id: tt9000102, titulo: Maré Baixa}
         mostrados: [...]               # se a versão teve `cartaz --filmes`
+        mantidos: [...]                # se a versão veio de `--manter`, com `saidas`
+        respostas: [...]               # se o Dono colou texto do cartaz dessa versão
 
 A versão atual é a do topo do frontmatter; o número dela é `len(versoes) + 1`.
 
@@ -114,9 +125,15 @@ def versao_atual(frente: dict) -> dict:
         "regra": frente["regra"],
         "recomendacao": frente.get("recomendacao") or [],
     }
-    if "mostrados" in frente:
-        versao["mostrados"] = frente["mostrados"]
+    for campo in ("mostrados", "mantidos", "saidas", "respostas"):
+        if campo in frente:
+            versao[campo] = frente[campo]
     return versao
+
+
+def na_tela(versao: dict) -> list[dict]:
+    """A lista que o Dono viu de uma versão: os `mostrados` do cartaz, ou a Recomendação."""
+    return versao.get("mostrados") or versao.get("recomendacao") or []
 
 
 def novo_id(repo: Path, data: dt.date, partes: list[str]) -> str:

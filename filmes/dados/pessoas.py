@@ -25,7 +25,13 @@ Um Ajuste diz quanto um elo do caminho de conteúdo pesa para a Pessoa:
     ajustes:
     - {elo: elenco, nivel: nada, data: '2026-11-22'}
 
-`SECOES` diz onde mora cada tipo de item: os Vetos e os Ajustes no frontmatter, o resto numa
+Uma pergunta aberta é uma pergunta de gosto que o Claude fez e a Pessoa pulou. O
+assunto (entidade do Catálogo ou grupo de tags de config/vetos_por_tag.toml) é opcional:
+
+    perguntas_abertas:
+    - {texto: 'o Bruno curte terror psicológico?', assunto: Q9000001, rotulo: Helena Prado, data: '2026-11-22', puladas: 1}
+
+`SECOES` diz onde mora cada tipo de item: os Vetos, os Ajustes e as perguntas abertas no frontmatter, o resto numa
 seção do corpo. `Pessoa.itens`, `acrescentar` e `tirar` passam por ela.
 """
 
@@ -60,6 +66,29 @@ class Ajuste:
     def como_dict(self) -> dict:
         return {"elo": self.elo, "nivel": self.nivel, "data": self.data}
 
+
+@dataclass(frozen=True)
+class PerguntaAberta:
+    texto: str
+    data: str               # a última vez que foi pulada
+    puladas: int = 1
+    assunto: str | None = None   # entidade (Q...) ou grupo de tags
+    rotulo: str | None = None
+
+    def como_dict(self) -> dict:
+        item = {"texto": self.texto}
+        if self.assunto:
+            item |= {"assunto": self.assunto, "rotulo": self.rotulo}
+        return item | {"data": self.data, "puladas": self.puladas}
+
+    def mesma(self, outra: "PerguntaAberta") -> bool:
+        """Mesma pergunta: mesmo assunto, quando as duas têm um; senão, mesmo texto."""
+        if self.assunto and outra.assunto:
+            return self.assunto == outra.assunto
+        return self.texto.casefold() == outra.texto.casefold()
+
+
+PULADAS_PARA_SAIR = 2
 
 ELOS = ("diretor", "roteiro", "elenco", "serie", "genero")
 NIVEIS = ("nada", "pouco", "normal", "muito")
@@ -123,6 +152,7 @@ class Pessoa:
     dono: bool = False
     vetos: list[Veto] = field(default_factory=list)
     ajustes: list[Ajuste] = field(default_factory=list)
+    perguntas_abertas: list[PerguntaAberta] = field(default_factory=list)
     imports: list = field(default_factory=list)
     corpo: str = ""
 
@@ -180,6 +210,43 @@ class _Ajustes:
 
     def tirar(self, pessoa: Pessoa, ajuste: Ajuste) -> None:
         pessoa.ajustes.remove(ajuste)
+
+
+class _PerguntasAbertas:
+    """As perguntas abertas, no frontmatter. Uma por assunto (ou por texto, sem assunto)."""
+
+    def ler(self, pessoa: Pessoa) -> list[PerguntaAberta]:
+        return list(pessoa.perguntas_abertas)
+
+    def acrescentar(self, pessoa: Pessoa, pergunta: PerguntaAberta) -> bool:
+        if any(p.mesma(pergunta) for p in pessoa.perguntas_abertas):
+            return False
+        pessoa.perguntas_abertas.append(pergunta)
+        return True
+
+    def tirar(self, pessoa: Pessoa, pergunta: PerguntaAberta) -> None:
+        pessoa.perguntas_abertas.remove(pergunta)
+
+
+def pular(pessoa: Pessoa, pergunta: PerguntaAberta) -> tuple[PerguntaAberta, bool]:
+    """Guarda a pergunta pulada, somando o contador se ela já estava aberta.
+
+    Devolve a pergunta com o contador novo e se ela saiu da lista (pulada pela segunda vez).
+    """
+    anterior = next((p for p in pessoa.perguntas_abertas if p.mesma(pergunta)), None)
+    if anterior is None:
+        pessoa.perguntas_abertas.append(pergunta)
+        return pergunta, False
+    # O assunto vem de qualquer uma das duas: a pergunta pode ter sido pulada sem ele.
+    assunto, rotulo = (anterior.assunto, anterior.rotulo) if anterior.assunto else (pergunta.assunto, pergunta.rotulo)
+    atual = PerguntaAberta(texto=anterior.texto, data=pergunta.data, puladas=anterior.puladas + 1,
+                           assunto=assunto, rotulo=rotulo)
+    indice = pessoa.perguntas_abertas.index(anterior)
+    if atual.puladas >= PULADAS_PARA_SAIR:
+        del pessoa.perguntas_abertas[indice]
+        return atual, True
+    pessoa.perguntas_abertas[indice] = atual
+    return atual, False
 
 
 @dataclass(frozen=True)
@@ -248,6 +315,7 @@ def _ja_visto(achado: re.Match) -> JaVisto:
 SECOES = {
     "vetos": _Vetos(),
     "ajustes": _Ajustes(),
+    "perguntas abertas": _PerguntasAbertas(),
     "declarados": _SecaoDoCorpo("Declarados", _LINHA, _dito),
     "relatos": _SecaoDoCorpo("Relatos", _LINHA, _dito),
     "já vistos": _SecaoDoCorpo("Já vistos", _LINHA_VISTO, _ja_visto),
@@ -312,6 +380,8 @@ def salvar(repo: Path, pessoa: Pessoa) -> None:
     frente["vetos"] = [v.como_dict() for v in pessoa.vetos]
     if pessoa.ajustes:
         frente["ajustes"] = [a.como_dict() for a in pessoa.ajustes]
+    if pessoa.perguntas_abertas:
+        frente["perguntas_abertas"] = [p.como_dict() for p in pessoa.perguntas_abertas]
     frente["imports"] = pessoa.imports
     markdown.escrever(pasta(repo) / f"{pessoa.slug}.md", frente, pessoa.corpo)
 
@@ -332,6 +402,7 @@ def _ler(arquivo: Path) -> Pessoa:
         dono=bool(frente.get("dono", False)),
         vetos=[_veto(arquivo, v) for v in frente.get("vetos") or []],
         ajustes=_ajustes(arquivo, frente.get("ajustes") or []),
+        perguntas_abertas=_perguntas_abertas(arquivo, frente.get("perguntas_abertas") or []),
         imports=list(frente.get("imports") or []),
         corpo=corpo,
     )
@@ -361,6 +432,26 @@ def _ajustes(arquivo: Path, itens) -> list[Ajuste]:
             raise ErroFilmes("dados_invalidos", f"{arquivo}: mais de um Ajuste para o elo {item['elo']}")
         ajustes.append(Ajuste(elo=str(item["elo"]), nivel=str(item["nivel"]), data=str(item["data"])))
     return ajustes
+
+
+def _perguntas_abertas(arquivo: Path, itens) -> list[PerguntaAberta]:
+    perguntas = []
+    for item in itens:
+        if not isinstance(item, dict) or not all(item.get(c) for c in ("texto", "data", "puladas")):
+            raise ErroFilmes("dados_invalidos", f"{arquivo}: pergunta aberta precisa de texto, data e puladas: {item!r}")
+        if not _data_valida(str(item["data"])):
+            raise ErroFilmes("dados_invalidos", f"{arquivo}: data da pergunta aberta inválida: {item['data']!r}")
+        puladas = item["puladas"]
+        if not isinstance(puladas, int) or isinstance(puladas, bool) or not 1 <= puladas < PULADAS_PARA_SAIR:
+            raise ErroFilmes("dados_invalidos", f"{arquivo}: puladas da pergunta aberta inválido: {puladas!r} "
+                                                f"(de 1 a {PULADAS_PARA_SAIR - 1}; pulada {PULADAS_PARA_SAIR} vezes, sai)")
+        assunto = str(item["assunto"]) if item.get("assunto") else None
+        pergunta = PerguntaAberta(texto=str(item["texto"]), data=str(item["data"]), puladas=puladas, assunto=assunto,
+                                  rotulo=str(item.get("rotulo") or assunto) if assunto else None)
+        if any(p.mesma(pergunta) for p in perguntas):
+            raise ErroFilmes("dados_invalidos", f"{arquivo}: pergunta aberta repetida: {item['texto']!r}")
+        perguntas.append(pergunta)
+    return perguntas
 
 
 def _data_valida(data: str) -> bool:

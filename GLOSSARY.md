@@ -30,6 +30,9 @@ _Evitar_: filtro, bloqueio
 Quanto um elo entre filmes (diretor, roteiro, elenco, série, gênero) pesa para uma Pessoa: nada, pouco, normal ou muito. "Pro Lorenzo ator não importa" é o Ajuste de elenco dele em nada. Vale para o que o motor deduz das Notas dela; o que a Pessoa disse sobre um ator ou diretor nomeado continua valendo.
 _Evitar_: peso da Pessoa, importância, preferência
 
+**Pergunta aberta**:
+Pergunta de gosto que o Claude fez sobre um Presente e ele pulou ("a Ana curte terror psicológico?"). Fica no arquivo da Pessoa com o assunto (entidade do Catálogo ou grupo de tags), a data e quantas vezes foi pulada; volta uma vez, quando o assunto aparece na tela, e pulada duas vezes, sai. Não é Fato: a resposta, quando vem, vira Declarado ou Relato.
+
 **Restrição**:
 Um limite que vale só numa Sessão, como "tem criança" ou "sem legenda". Tira o filme antes de qualquer ordenação, como o Veto.
 _Evitar_: filtro, veto da sessão
@@ -39,7 +42,7 @@ O que uma Sessão quer sem excluir nenhum filme: a energia ("algo leve"), a ocas
 _Evitar_: desejo, mood, preferência
 
 **Contexto**:
-Tudo o que o pedido diz além dos Presentes: as Restrições e o Clima.
+Tudo o que o pedido diz além dos Presentes: as Restrições e o Clima. Vale só para a Sessão; o que diz como uma Pessoa é sempre (Veto, Declarado, Relato) é gosto, e só é gravado com um sim do Dono.
 
 **Catálogo**:
 Todos os filmes que o sistema conhece.
@@ -62,6 +65,18 @@ _Evitar_: sugestão, lista
 **Versão da Sessão**:
 Uma Recomendação de uma Sessão aberta. Quando o Dono pede outra lista na mesma Sessão, a atual vira uma versão anterior, guardada com o pedido e os Presentes dela, e a nova passa a valer. O número da versão conta a partir de 1.
 _Evitar_: rodada, tentativa
+
+**Mantido**:
+Um filme da versão anterior que o Dono quer na próxima. Ao regerar, fica no mesmo número e só as vagas ganham filme novo. Sai por Restrição ou Veto do pedido refeito, ou por estar abaixo da nota mínima do IMDb, nunca por gosto novo. O que sai da versão anterior vira uma saída, com o motivo: Já visto, trocado, a Restrição, o Veto ou a nota mínima.
+_Evitar_: fixado, travado
+
+**Cartaz**:
+A Recomendação mostrada como página no T3 Code. Ele responde: em cada filme o Dono marca Já vi, Trocar, estrelas e comentário, e no topo acrescenta contexto ou gosto; o botão Copiar pro chat junta tudo num texto que começa com `#cartaz <sessao> v<n>`, e o Dono cola no chat. Estrelas e comentário medem a Recomendação e ficam na Sessão, sem mexer no gosto; só o Trocar troca filme.
+_Evitar_: formulário, painel
+
+**Regerar**:
+Fazer a próxima versão da Sessão a partir do Cartaz colado, trocando só o que caiu (Já visto, Trocar, Restrição ou Veto novos). O resto fica como Mantido; os que entram levam o selo "novo".
+_Evitar_: refazer do zero, recomendar de novo
 
 **Filmes mostrados**:
 Os filmes da Recomendação que o Dono de fato viu na tela, na ordem em que apareceram. O Feedback grava a posição do Filme escolhido nessa lista.

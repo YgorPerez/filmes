@@ -54,6 +54,7 @@ filmes/
     restricoes/<nome>.py   uma Restrição da Sessão por arquivo (duração, ano, idioma, criança, gatilho, sem Já visto, nada triste, nada lento, sem repetido)
     cabecalho.py           link, gêneros, nota e votos do IMDb, capa, título pt e sinopse do TMDB; fora das Evidências
     atribuicoes.py         atribuições obrigatórias das fontes usadas
+    mantidos.py            regerar com --manter: posições dos mantidos, selo novo e saídas
   sob_demanda/             fontes consultadas na hora, com cache de validade: fonte.py, cache.py, omdb.py, ddd.py, tmdb.py
   sessao/                  arquivo da Sessão, Feedback, Fatos do Feedback e Crédito
   importar/                imports do Letterboxd (ZIP e RSS) e do Trakt, fila de resolução e decisões do Dono
@@ -61,12 +62,13 @@ filmes/
   avaliacao/               `avaliar`: corte offline, amostra do MovieLens, grade de pesos e relatório
   verificar/               confere a resposta do Claude contra a Sessão
   cartaz/                  cartaz HTML da Sessão para o T3 Code; CSS em cartaz.css, só sob .cartaz
+                           cartaz.js monta o texto do Copiar pro chat; responder.py lê esse texto colado
 mcp/src/
   servidor.ts              registra cada ferramenta de ferramentas/
   ferramenta.ts            formato de uma ferramenta (definirFerramenta) e validações comuns
   ferramentas/<nome>.ts    uma ferramenta por arquivo
   cli.ts                   chama python -m filmes como subprocesso
-skill/filmes/SKILL.md      skill do Claude
+skill/filmes/SKILL.md      skill do Claude; feedback.md, pessoas.md e cartaz.md (texto colado e perguntas de gosto)
 tests/                     testes Python, só pela CLI
 tests/fixture/             mini Catálogo (catalogo/*.csv), repo de dados fictício (dados/) e respostas gravadas das fontes sob demanda (gravacoes/)
 mcp/test/                  testes do MCP, chamando a CLI de verdade sobre a mesma fixture
@@ -94,6 +96,7 @@ mcp/test/                  testes do MCP, chamando a CLI de verdade sobre a mesm
 - **Veto por grupo de tags.** O alvo de um Veto pode ser um grupo de `config/vetos_por_tag.toml` (`pessoa vetar ... --grupo comedia_boba`): sai o filme com um dos gêneros do IMDb do grupo e uma das tags com o mínimo de `[vetos_por_tag]`. O Lorenzo veta "comédia boba". Decisão do Dono de 2026-11-22 (#56).
 - **Nota do IMDb na ordem.** Acima da mínima, a nota soma um bônus do filme à pontuação da Regra, como o do Clima: `[nota_imdb] peso × (nota − 7) / 3`, com peso 0,3. A linha "nota 8,5 no IMDb" vai em `linhas_do_filme` e não conta como Fato (filme só com ela continua "só palpites"). Decisão do Dono de 2026-11-22 (#56).
 - **Nada lento.** `--sem-lento` é Restrição da Sessão: tira o filme com uma tag do grupo `lento` de `config/vetos_por_tag.toml` (slow, slow paced, meditative, contemplative, boring), com os mínimos de `[vetos_por_tag]`, em qualquer gênero. O grupo também serve de alvo de Veto. Decisão do Dono de 2026-11-22 (#57).
-- **Sem repetido.** Ao refazer com `--sessao`, a Restrição `sem_repetido` liga sozinha e tira o que a Sessão já mostrou: os `mostrados` do cartaz de cada versão, ou as 5 primeiras posições da versão sem cartaz. Outras Sessões não contam. Decisão do Dono de 2026-11-22 (#57).
+- **Sem repetido.** Ao refazer com `--sessao`, a Restrição `sem_repetido` liga sozinha e tira o que a Sessão já mostrou: os `mostrados` do cartaz de cada versão, ou a Recomendação inteira da versão sem `mostrados` (o que o cartaz sem `--filmes` mostra, a mesma lista que `--manter` e `cartaz responder` aceitam). Outras Sessões não contam. Decisão do Dono de 2026-11-22 (#57); a lista inteira no lugar das 5 primeiras veio da revisão do #64.
 - **Sem fato é neutro.** Na Regra de escolha (padrão, média e "de fulano"), Presente sem Fato sobre o filme conta como 0,5, e o Crédito não mexe nesse 0,5. Na saída, a utilidade dele continua `null`, com a linha "sem fato". Decisão do Dono de 2026-11-21 (#37), que muda a do #8.
+- **Cartaz que responde.** No cartaz, o Dono marca por filme Já vi (por Presente, nota de 1 a 10), Trocar, estrelas e comentário, e no topo o acrescentar; Copiar pro chat gera o texto `#cartaz <sessao> v<n>`, que `cartaz responder` grava. Regera só se um filme caiu (Já vi de um Presente ou Trocar) ou se veio acrescentar, com `recomendar --manter`: os mantidos ficam no número, os que entram têm o selo "novo" e `saidas` diz o que saiu e por quê. Uma Restrição ou um Veto novos tiram o mantido; gosto novo só vale para os que entram. Estrelas e comentário ficam na Sessão e não mexem no gosto; comentário não troca filme. Texto de versão velha vale pelo filme. O contexto da noite regera direto; gosto permanente (do acrescentar, de comentário ou de resposta) só é gravado depois de um sim do Dono. A cada cartaz, a skill faz 1 ou 2 perguntas de gosto com "pular"; a pulada fica em `perguntas_abertas:` da Pessoa, volta uma vez quando o assunto está na tela e, pulada duas vezes, sai. Decisão do Dono de 2026-11-23 (#64).
 - **Já visto.** Toda Nota é também Já visto (view `ja_vistos`): pesa contra o filme para a Pessoa que deu a Nota.

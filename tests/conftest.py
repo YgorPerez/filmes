@@ -36,11 +36,11 @@ class Cli:
     def __init__(self, env):
         self.env = env
 
-    def rodar(self, *args):
-        """Roda a CLI e devolve (código de saída, JSON da saída)."""
+    def rodar(self, *args, entrada=None):
+        """Roda a CLI e devolve (código de saída, JSON da saída). `entrada` vai no stdin."""
         proc = subprocess.run(
             [sys.executable, "-m", "filmes", *args, "--json"],
-            cwd=RAIZ, env=self.env, capture_output=True, text=True,
+            cwd=RAIZ, env=self.env, capture_output=True, text=True, input=entrada,
         )
         saida = proc.stdout if proc.stdout.strip() else proc.stderr
         try:
@@ -49,9 +49,9 @@ class Cli:
             raise AssertionError(f"saída não é JSON (código {proc.returncode}):\n{proc.stdout}\n{proc.stderr}")
         return proc.returncode, dados
 
-    def ok(self, *args):
+    def ok(self, *args, entrada=None):
         """Roda a CLI e exige sucesso."""
-        codigo, dados = self.rodar(*args)
+        codigo, dados = self.rodar(*args, entrada=entrada)
         assert codigo == 0, dados
         return dados
 

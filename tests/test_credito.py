@@ -209,3 +209,33 @@ def test_credito_corta_a_janela_pelos_sufixos_numericos_no_mesmo_dia(cli, dados)
 
     cli.ok("reconstruir")
     assert cli.ok("recomendar", "--presentes", "dono", "quim")["credito"] == {"bruno": 0.1, "quim": 0}
+
+
+def _linha_de_credito(filme):
+    return [linha for linha in filme["linhas_do_filme"] if linha["texto"].startswith("na Sessão de")]
+
+
+def test_ao_regerar_o_credito_compara_so_as_vagas_e_mantido_nao_leva_a_linha(banco):
+    # Com o Crédito do Bruno, As Horas Lentas passa à frente de Ruído Branco e Voo
+    # Noturno. A versão 1, pelo gosto do Quim, mostrou Casa Cheia e Explosão Final no
+    # topo; mantidos ali, As Horas Lentas entra na primeira vaga (3), que sem o Crédito
+    # seria de Ruído Branco.
+    antes = banco.ok("recomendar", "--presentes", "dono", "quim")
+    banco.ok("feedback", "--sessao", antes["sessao"]["id"], "--filme", "Pequenos Milagres",
+             "--nota", "dono=1", "--nota", "quim=5")
+    pelo_quim = banco.ok("recomendar", "--presentes", "dono", "quim", "--regra", "de", "--de", "quim")
+    sessao_id = pelo_quim["sessao"]["id"]
+    assert [f["titulo"] for f in pelo_quim["filmes"][:2]] == ["Casa Cheia", "Explosão Final"]
+
+    refeita = banco.ok("recomendar", "--presentes", "dono", "quim", "--sessao", sessao_id,
+                       "--manter", ",".join(f["id"] for f in pelo_quim["filmes"][:2]))
+
+    assert refeita["filmes"][2]["titulo"] == "As Horas Lentas" and refeita["filmes"][2]["novo"]
+    assert [linha["pessoa"] for linha in _linha_de_credito(refeita["filmes"][2])] == ["bruno"]
+
+    mantendo_o_que_subiu = banco.ok("recomendar", "--presentes", "dono", "quim", "--sessao", sessao_id,
+                                    "--manter", refeita["filmes"][2]["id"])
+
+    [mantido] = [f for f in mantendo_o_que_subiu["filmes"] if not f["novo"]]
+    assert mantido["titulo"] == "As Horas Lentas"
+    assert _linha_de_credito(mantido) == []

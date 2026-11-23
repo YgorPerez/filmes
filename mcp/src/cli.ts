@@ -18,9 +18,10 @@ export function comandoPython(): string {
   return existsSync(venv) ? venv : "python3";
 }
 
-/** Roda um comando da CLI e devolve o JSON dela, de sucesso ou de erro. */
+/** Roda um comando da CLI e devolve o JSON dela, de sucesso ou de erro. `stdin`, se vier, é o texto
+ * que o comando lê da entrada padrão. */
 export function chamarCli(
-  comando: string, args: string[] = [], progresso?: (etapa: ProgressoCli) => void,
+  comando: string, args: string[] = [], progresso?: (etapa: ProgressoCli) => void, stdin?: string,
 ): Promise<ResultadoCli> {
   return new Promise((resolver) => {
     const processo = execFile(
@@ -39,6 +40,12 @@ export function chamarCli(
         resolver(falha ? { ok: false, dados: dados as ErroCli } : { ok: true, dados });
       },
     );
+    if (stdin !== undefined) {
+      // O filho pode sair sem ler a entrada (erro de uso, Python errado): o EPIPE da escrita não
+      // derruba o servidor, e quem responde é o retorno do execFile, com o JSON ou cli_sem_json.
+      processo.stdin?.on("error", () => {});
+      processo.stdin?.end(stdin);
+    }
     if (progresso && processo.stderr) {
       createInterface({ input: processo.stderr }).on("line", (linha) => {
         let etapa: Partial<ProgressoCli>;

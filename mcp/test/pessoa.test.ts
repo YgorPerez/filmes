@@ -70,6 +70,24 @@ describe("ferramenta pessoa", () => {
     assert.ok((await pessoa({ acao: "ajustar", pessoa: "ana", elo: "elenco" })).isError);
   });
 
+  it("guarda, lista e tira perguntas abertas; pulada duas vezes, sai", async () => {
+    const pulada = json(await pessoa({
+      acao: "pular", pessoa: "ana", texto: "a Ana curte a Helena Prado?", entidade: "Q9000001",
+    }));
+    assert.deepEqual([pulada.pergunta.rotulo, pulada.pergunta.puladas, pulada.saiu], ["Helena Prado", 1, false]);
+    const outra = json(await pessoa({ acao: "pular", pessoa: "ana", texto: "-- topa comédia boba?", grupo: "comedia_boba" }));
+    assert.equal(outra.pergunta.texto, "-- topa comédia boba?");
+
+    const abertas = json(await pessoa({ acao: "perguntas", pessoa: "ana" })).perguntas_abertas;
+    assert.deepEqual(abertas.map((p: any) => p.assunto), ["Q9000001", "comedia_boba"]);
+
+    const de_novo = json(await pessoa({ acao: "pular", pessoa: "ana", texto: "e a Helena Prado?", entidade: "Q9000001" }));
+    assert.deepEqual([de_novo.pergunta.puladas, de_novo.saiu], [2, true]);
+    assert.ok(!(await pessoa({ acao: "remover", pessoa: "ana", pergunta: "comedia_boba" })).isError);
+    assert.deepEqual(json(await pessoa({ acao: "perguntas", pessoa: "ana" })).perguntas_abertas, []);
+    assert.ok((await pessoa({ acao: "pular", pessoa: "ana" })).isError);
+  });
+
   it("o Veto age na Recomendação", async () => {
     const resultado = (await cliente.callTool({
       name: "recomendar", arguments: { presentes: ["dono", "ana"], quantos: 50 },

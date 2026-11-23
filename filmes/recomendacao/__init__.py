@@ -32,7 +32,7 @@ from typing import NamedTuple
 
 from filmes.ambiente import Ambiente
 from filmes.evidencia import sem_fato
-from filmes.recomendacao import atribuicoes, cabecalho, candidatos, climas as vocabulario_climas, sinais as pacote_sinais, utilidade, vetos
+from filmes.recomendacao import atribuicoes, cabecalho, candidatos, climas as vocabulario_climas, mantidos, sinais as pacote_sinais, utilidade, vetos
 from filmes.recomendacao.climas import Clima
 from filmes.recomendacao.regra import Regra
 from filmes.recomendacao.restricoes import Contexto, Restricoes
@@ -79,7 +79,7 @@ def _modulos_de_sinal():
 
 def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], quantos: int,
                regra: Regra = Regra(), restricoes: list = (), climas: list[str] = (),
-               *, selecao: candidatos.Selecao | None = None) -> dict:
+               *, selecao: candidatos.Selecao | None = None, regerar: mantidos.Regerar | None = None) -> dict:
     # Os Vetos de todos os Presentes valem, seja qual for a Regra de escolha.
     elegiveis = selecao.filmes if selecao is not None else candidatos.escolher(conn, amb.pesos)
     restantes, vetos_que_agiram = vetos.aplicar(conn, presentes, elegiveis, amb.pesos["vetos_por_tag"])
@@ -89,6 +89,16 @@ def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], qu
     rodada = Rodada(conn=conn, amb=amb, candidatos=pedidas.candidatos(restantes),
                     presentes=tuple(presentes), climas=tuple(climas_aceitos))
     pesos = amb.pesos
+    # Mantido que um Veto ou uma Restrição tirou: o motivo, para `saidas`.
+    tirados = {}
+    for filme_id in (regerar.posicoes if regerar else {}):
+        if filme_id not in elegiveis:
+            tirados[filme_id] = mantidos.pela_nota_minima(conn, filme_id, pesos["catalogo"])
+            continue
+        if filme_id not in restantes:
+            tirados[filme_id] = mantidos.pelo_veto(conn, presentes, elegiveis[filme_id], pesos["vetos_por_tag"])
+        elif filme_id not in rodada.candidatos:
+            tirados[filme_id] = mantidos.pela_restricao(pedidas.tirou[filme_id])
 
     por_filme = defaultdict(list)
     do_filme = defaultdict(list)
@@ -119,6 +129,8 @@ def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], qu
         # palpites não alcançam o topo se já há `quantos` mais votados.
         populares = (filme for filme in selecao.populares if filme in rodada.candidatos)
         ids = por_filme.keys() | do_filme.keys() | set(islice(populares, quantos))
+        if regerar:
+            ids |= regerar.posicoes.keys() & rodada.candidatos.keys()
     for filme_id in ids:
         filme = rodada.candidatos[filme_id]
         evidencias = por_filme.get(filme_id, [])
@@ -134,24 +146,46 @@ def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], qu
         if ajuste:
             sem_credito.append((_chave(regra.chave(utilidades), tem_fato, filme, bonus), filme_id))
     ordenados.sort(key=lambda item: item.chave)
-    aprovados = pedidas.aprovar(ordenados, quantos, pesos["restricoes"]["alcance_sob_demanda"], filme=lambda item: item.filme)
-    ids_aprovados = {item.filme["id"] for item in aprovados}
+    alcance = pesos["restricoes"]["alcance_sob_demanda"]
+    if regerar:
+        fixos = []
+        for item in ordenados:
+            if not regerar.mantido(item.filme["id"]):
+                continue
+            if pedidas.passa_sob_demanda(item.filme, consultar=True):
+                fixos.append(item)
+            else:
+                tirados[item.filme["id"]] = mantidos.pela_restricao(pedidas.tirou[item.filme["id"]])
+        outros = [item for item in ordenados if not regerar.mantido(item.filme["id"])]
+        vagas = pedidas.aprovar(outros, max(quantos - len(fixos), 0), alcance, filme=lambda item: item.filme)
+        posicionados = mantidos.posicionar(regerar, fixos, vagas, quantos)
+    else:
+        posicionados = list(enumerate(pedidas.aprovar(ordenados, quantos, alcance, filme=lambda item: item.filme),
+                                      start=1))
+    ids_aprovados = {item.filme["id"] for _, item in posicionados}
     # Compare as duas ordens com os mesmos vereditos, sem buscar outras respostas sob demanda.
+    # Ao regerar, só as vagas disputam: a ordem de cada uma é entre os filmes que não
+    # foram mantidos, e o mantido, que está ali por pedido, não leva linha de Crédito.
     ordem_sem_credito = [
         filme_id for _, filme_id in sorted(sem_credito)
-        if filme_id in ids_aprovados or not pedidas.pendentes.get(filme_id)
+        if (filme_id in ids_aprovados or not pedidas.pendentes.get(filme_id))
+        and not (regerar and regerar.mantido(filme_id))
     ]
     posicao_sem_credito = {filme_id: i for i, filme_id in enumerate(ordem_sem_credito, start=1)}
+    na_disputa = {}
+    for _, item in posicionados:
+        if not (regerar and regerar.mantido(item.filme["id"])):
+            na_disputa[item.filme["id"]] = len(na_disputa) + 1
 
     nomes = dict(conn.execute("SELECT slug, nome FROM pessoas")) if ajuste else {}
     filmes = []
-    for posicao, (chave, filme, utilidades, evidencias) in enumerate(aprovados, start=1):
+    for posicao, (chave, filme, utilidades, evidencias) in posicionados:
         evidencias = evidencias + [sem_fato(p, filme["id"]) for p, u in utilidades.items() if u is None]
         evidencias = sorted(evidencias, key=lambda e: (-abs(e.contribuicao(pesos)), e.fato_id or ""))
         # Sinais do filme: o mais forte antes; no empate, a ordem dos Climas pedidos.
         do_sinal = sorted(do_filme.get(filme["id"], []), key=lambda e: -abs(e.contribuicao(pesos)))
         do_credito = [credito.linha(p, nomes.get(p, p), creditos_pessoais[p], filme["id"], amb.hoje)
-                      for p in _subiu_pelo_credito(filme["id"], posicao, posicao_sem_credito, utilidades, ajuste)]
+                      for p in _subiu_pelo_credito(filme["id"], na_disputa, posicao_sem_credito, utilidades, ajuste)]
         linhas = [*pedidas.linhas[filme["id"]], *do_sinal, *do_credito]
         filmes.append({
             "posicao": posicao,
@@ -169,8 +203,11 @@ def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], qu
             "utilidade": {p: (round(u, 4) if u is not None else None) for p, u in utilidades.items()},
             "evidencias": {p: [e.como_json(pesos) for e in evidencias if e.pessoa == p] for p in presentes},
             "linhas_do_filme": [e.como_json(pesos) for e in linhas],
+            **({"novo": not regerar.mantido(filme["id"])} if regerar else {}),
         })
-    return {
+    if regerar:
+        contexto.avisos.extend(mantidos.aviso(regerar.titulo(f), motivo) for f, motivo in tirados.items())
+    resposta = {
         "presentes": presentes,
         "regra": regra.como_json(),
         "credito": {p: round(c.valor, 4) for p, c in creditos_pessoais.items()},
@@ -184,14 +221,18 @@ def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], qu
             *(tmdb.ATRIBUICAO["fonte"] for f in filmes if f["capa"] or f["titulo_pt"]),
         ]),
     }
+    if regerar:
+        resposta["mantidos"] = [f["id"] for f in filmes if not f["novo"]]
+        resposta["saidas"] = mantidos.saidas(conn, presentes, regerar, {f["id"] for f in filmes}, tirados)
+    return resposta
 
 
-def _subiu_pelo_credito(filme_id, posicao, posicao_sem_credito, utilidades, ajuste) -> list[str]:
+def _subiu_pelo_credito(filme_id, na_disputa, posicao_sem_credito, utilidades, ajuste) -> list[str]:
     """Quem tem Crédito e fez este filme subir: o filme ganhou posição com o Crédito, a
     Pessoa tem Fato sobre ele e não é o mínimo da Regra padrão (o filme é dela: com o
     Crédito, os filmes em que ela é o mínimo caíram e este ficou). O mínimo aqui é entre
     quem tem Fato: o 0,5 de quem não tem não conta."""
-    if not ajuste or posicao >= posicao_sem_credito[filme_id]:
+    if not ajuste or filme_id not in na_disputa or na_disputa[filme_id] >= posicao_sem_credito[filme_id]:
         return []
     ajustadas = {p: u - ajuste.get(p, 0.0) for p, u in utilidades.items() if u is not None}
     minimo = min(ajustadas.values())

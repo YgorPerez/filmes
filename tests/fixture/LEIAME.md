@@ -134,7 +134,7 @@ Repo de dados fictício. Cada teste trabalha numa cópia, então comandos podem 
 
 - `pessoas/bruno.md`: o Dono (`dono: true`, apelido `eu`).
 - `pessoas/iara.md` e `pessoas/teo.md`: Pessoas para os testes de grupo.
-- `pessoas/quim.md`: Pessoa para os testes de Crédito.
+- `pessoas/quim.md`: Pessoa para os testes de Crédito; tem uma pergunta aberta sobre a Helena Prado (Q9000001), para os testes de perguntas abertas (#62).
 - `pessoas/rosa.md`: Pessoa do teste do teto do elenco no metadado agregado (#55).
 - Não há `sessoes/`: os testes criam as Sessões com `recomendar` e `feedback`, ou escrevem o arquivo direto quando precisam de várias datas (veja `test_credito.py`).
 

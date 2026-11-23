@@ -3,7 +3,8 @@ from contextlib import closing
 from filmes import sessao
 from filmes.banco import abrir_leitura
 from filmes.erros import ErroFilmes
-from filmes.recomendacao import presentes as pessoas_presentes, recomendar, restricoes
+from filmes.recomendacao import mantidos, presentes as pessoas_presentes, recomendar, restricoes
+from filmes.recomendacao.restricoes import sem_repetido
 from filmes.recomendacao.regra import Regra
 
 AJUDA = "devolve a Recomendação (top 5) com as Evidências de cada filme, por Presente, e abre a Sessão"
@@ -23,6 +24,9 @@ def configurar(parser):
     parser.add_argument("--sessao", metavar="ID",
                         help="refaz a Recomendação nesta Sessão aberta, em vez de abrir outra; "
                              "a versão anterior fica no histórico da Sessão")
+    parser.add_argument("--manter", nargs="+", action="extend", metavar="ID",
+                        help="com --sessao, os filmes da versão anterior que ficam, no mesmo número "
+                             "(ex.: tt1,tt3); só as vagas ganham filme novo")
     restricoes.configurar(parser)
 
 
@@ -32,11 +36,19 @@ def executar(args, amb):
         raise ErroFilmes("uso_invalido", "--quantos precisa ser 1 ou mais")
     nomes = [n for item in args.presentes for n in item.split(",") if n.strip()]
     pedidas = restricoes.ler(args)
+    manter = sem_repetido.manter(args)
+    if manter and not args.sessao:
+        raise ErroFilmes("uso_invalido", "--manter só vale com --sessao: são os filmes da versão anterior que ficam")
+    regerar, avisos = None, []
     if args.sessao:
-        sessao.conferir_aberta(amb, args.sessao)
+        frente = sessao.conferir_aberta(amb, args.sessao)
+        if manter:
+            regerar, avisos = mantidos.preparar(frente, manter)
     with closing(abrir_leitura(amb.banco)) as conn:
         presentes = pessoas_presentes.resolver(conn, nomes)
-        saida = recomendar(conn, amb, presentes, quantos, _regra(conn, args, presentes), pedidas, args.clima)
+        saida = recomendar(conn, amb, presentes, quantos, _regra(conn, args, presentes), pedidas, args.clima,
+                           regerar=regerar)
+    saida["avisos"][:0] = avisos
     contexto = _contexto(args, pedidas, saida["climas"])
     if args.sessao:
         saida["sessao"] = sessao.refazer(amb, args.sessao, saida, contexto)

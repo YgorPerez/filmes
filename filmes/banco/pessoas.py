@@ -5,6 +5,7 @@ arquivo chamam `sincronizar`, que refaz no banco só as linhas daquela Pessoa,
 para o que o Dono registrou valer na próxima Recomendação sem reconstruir tudo.
 """
 
+import re
 import sqlite3
 from pathlib import Path
 
@@ -30,6 +31,12 @@ def carregar(conn: sqlite3.Connection, pessoa: Pessoa) -> None:
         conn.execute(
             "INSERT INTO ajustes (fato_id, pessoa, elo, nivel, data) VALUES (?, ?, ?, ?, ?)",
             (id_do_ajuste(pessoa.slug, ajuste), pessoa.slug, ajuste.elo, ajuste.nivel, ajuste.data),
+        )
+    for pergunta in pessoa.perguntas_abertas:
+        conn.execute(
+            "INSERT INTO perguntas_abertas (fato_id, pessoa, texto, assunto, rotulo, data, puladas) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (id_da_pergunta(pessoa.slug, pergunta), pessoa.slug, pergunta.texto, pergunta.assunto,
+             pergunta.rotulo, pergunta.data, pergunta.puladas),
         )
     for tabela, ditos in (("declarados", pessoa.declarados), ("relatos", pessoa.relatos)):
         for dito in ditos:
@@ -70,6 +77,11 @@ def id_do_ajuste(slug: str, ajuste) -> str:
     return fato_id("ajustes", slug, ajuste.elo, ajuste.nivel, ajuste.data)
 
 
+def id_da_pergunta(slug: str, pergunta) -> str:
+    """Não muda com o contador nem com a data: é a mesma pergunta pulada de novo."""
+    return fato_id("perguntas_abertas", slug, pergunta.assunto or pergunta.texto.casefold())
+
+
 def id_do_ja_visto(slug: str, visto) -> str:
     return fato_id("vistos", slug, visto.data, visto.fonte, visto.alvo, visto.nota)
 
@@ -89,6 +101,7 @@ def sincronizar(banco: Path, pessoa: Pessoa) -> bool:
     try:
         conn.execute("PRAGMA foreign_keys = ON")
         with conn:
+            _criar_se_faltar(conn)
             _apagar(conn, pessoa.slug)
             carregar(conn, pessoa)
     except sqlite3.Error as erro:
@@ -99,12 +112,27 @@ def sincronizar(banco: Path, pessoa: Pessoa) -> bool:
     return True
 
 
+# Tabelas da Pessoa que chegaram depois de bancos já reconstruídos: `sincronizar` as cria
+# se faltarem, em vez de exigir `reconstruir` (o arquivo da Pessoa já foi salvo).
+_TABELAS_NOVAS = {"perguntas_abertas": "23_perguntas_abertas.sql"}
+_ESQUEMA = Path(__file__).resolve().parent / "esquema"
+
+
+def _criar_se_faltar(conn):
+    for tabela, arquivo in _TABELAS_NOVAS.items():
+        if not conn.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?", (tabela,)).fetchone():
+            sql = re.sub(r"--[^\n]*", "", (_ESQUEMA / arquivo).read_text(encoding="utf-8"))
+            for comando in sql.split(";"):
+                if comando.strip():
+                    conn.execute(comando)
+
+
 def _apagar(conn, slug):
     conn.execute("DELETE FROM notas WHERE pessoa = ? AND (fato_id LIKE 'declarados:%' OR fato_id LIKE 'relatos:%'"
                  " OR fato_id LIKE 'vistos:%')", (slug,))
     conn.execute("DELETE FROM ja_visto WHERE pessoa = ? AND fato_id LIKE 'vistos:%'", (slug,))
     conn.execute("DELETE FROM declarados WHERE pessoa = ? AND fato_id LIKE 'declarados:%'", (slug,))
-    for tabela in ("vetos", "ajustes", "relatos", "apelidos"):
+    for tabela in ("vetos", "ajustes", "perguntas_abertas", "relatos", "apelidos"):
         conn.execute(f"DELETE FROM {tabela} WHERE pessoa = ?", (slug,))
 
 

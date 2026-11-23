@@ -2,7 +2,7 @@
 
 `--sem-lento` tira o filme com tag do grupo `lento` de config/vetos_por_tag.toml
 (veja o LEIAME da fixture). Ao refazer com `--sessao`, sai sozinho o que a Sessão
-já mostrou: os `mostrados` do cartaz, ou as 5 primeiras posições da versão.
+já mostrou: os `mostrados` do cartaz, ou a Recomendação inteira da versão sem eles.
 """
 
 from conftest import ler_markdown
@@ -43,21 +43,22 @@ def test_lento_tambem_e_grupo_para_veto(banco):
     assert "Drama Juvenil" not in _titulos(banco.ok("recomendar", "--presentes", "dono", "--quantos", "100"))
 
 
-def test_refazer_na_sessao_tira_as_5_primeiras_das_versoes_anteriores(banco):
+def test_refazer_na_sessao_tira_a_recomendacao_inteira_das_versoes_anteriores(banco):
+    # Sem `mostrados`, o cartaz mostra a Recomendação inteira: é o que o Dono viu,
+    # o mesmo que `--manter` e `cartaz responder` aceitam.
     primeira = banco.ok("recomendar", "--presentes", "dono", "--quantos", "8")
     sessao_id = primeira["sessao"]["id"]
 
     segunda = banco.ok("recomendar", "--presentes", "dono", "--quantos", "8", "--sessao", sessao_id)
 
-    assert not set(_ids(segunda)) & set(_ids(primeira)[:5])
-    assert set(_ids(primeira)[5:8]) <= set(_ids(segunda))
-    assert segunda["restricoes"]["sem_repetido"] == {"tirados": 5}
+    assert not set(_ids(segunda)) & set(_ids(primeira))
+    assert segunda["restricoes"]["sem_repetido"] == {"tirados": 8}
 
     terceira = banco.ok("recomendar", "--presentes", "dono", "--quantos", "8", "--sessao", sessao_id)
-    assert not set(_ids(terceira)) & (set(_ids(primeira)[:5]) | set(_ids(segunda)[:5]))
+    assert not set(_ids(terceira)) & (set(_ids(primeira)) | set(_ids(segunda)))
 
 
-def test_com_cartaz_conta_o_que_foi_mostrado_e_nao_as_5_primeiras(banco, tmp_path):
+def test_com_cartaz_conta_o_que_foi_mostrado_e_nao_a_recomendacao_inteira(banco, tmp_path):
     primeira = banco.ok("recomendar", "--presentes", "dono", "--quantos", "10")
     sessao_id = primeira["sessao"]["id"]
     oitavo, nono = _ids(primeira)[7], _ids(primeira)[8]

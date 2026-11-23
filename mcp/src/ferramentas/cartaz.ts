@@ -8,6 +8,10 @@ export default definirFerramenta({
     "título em português, sinopse, ficha e, em \"Por que cada um vai gostar\", a Evidência mais forte de cada Presente. " +
     "Com `filmes`, o cartaz traz só esses, na ordem dada e numerados de 1 em diante, e a Sessão guarda a lista " +
     "como mostrada, para o Feedback registrar a posição do Filme escolhido nela. " +
+    "O cartaz responde: em cada filme, Já vi (por Presente, com nota de 1 a 10 se for uma Pessoa só), Trocar, " +
+    "estrelas e comentário; no topo, um campo acrescentar e o botão Copiar pro chat. O Dono cola no chat um texto " +
+    "que começa com `#cartaz <sessao> v<n>`. Numa versão refeita com `manter`, os que entraram levam o selo \"novo\" " +
+    "e o topo diz o que saiu e por quê. " +
     "Devolve `arquivo` (caminho absoluto do .html), `filmes` (quantos cards) e `avisos`. " +
     "No T3 Code, mostre o arquivo com html_render (path) e não repita as linhas em texto.",
   entrada: {

@@ -25,7 +25,7 @@ export async function criarServidor(): Promise<McpServer> {
       ferramenta.nome,
       { description: ferramenta.descricao, inputSchema: ferramenta.entrada },
       async (entrada: Record<string, unknown>, contexto) => {
-        const { comando, args = [] } = ferramenta.cli(entrada as never);
+        const { comando, args = [], stdin } = ferramenta.cli(entrada as never);
         const progressToken = contexto._meta?.progressToken;
         let notificacoes = Promise.resolve();
         const progresso = progressToken === undefined ? undefined : (etapa: ProgressoCli) => {
@@ -34,7 +34,7 @@ export async function criarServidor(): Promise<McpServer> {
             params: { progressToken, progress: etapa.progresso, total: etapa.total, message: etapa.mensagem },
           })).catch(() => {});
         };
-        const resultado = await chamarCli(comando, args, progresso);
+        const resultado = await chamarCli(comando, args, progresso, stdin);
         await notificacoes;
         return {
           content: [{ type: "text" as const, text: JSON.stringify(resultado.dados) }],
