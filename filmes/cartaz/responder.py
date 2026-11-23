@@ -14,6 +14,7 @@ linhas seguintes que casam com o formato; a primeira que não casa encerra.
 - Estrelas, comentário e acrescentar: em `respostas` da versão do texto. Não
   viram Fato nem mexem no gosto. Resposta igual a uma que a versão já tem não
   é gravada de novo.
+- Linha de filme que não estava na tela da versão do texto é pulada, com aviso.
 - Trocar e Já vi tiram o filme da tela atual. Aplica-se pelo ID: um texto de
   versão velha vale do mesmo jeito; o Trocar de um filme que já não está na
   tela é ignorado, com aviso.
@@ -101,12 +102,19 @@ def responder(amb, sessao_id: str, texto: str) -> dict:
         raise ErroFilmes("uso_invalido", f"a Sessão {sessao_id} não tem a versão {lido['versao']}")
     versao = atual if lido["versao"] == atual["versao"] else frente["versoes"][lido["versao"] - 1]
 
+    avisos = []
+    da_versao = {f["id"] for f in arquivo.na_tela(versao)}
+    for marcado in lido["filmes"]:
+        if marcado["id"] not in da_versao:
+            avisos.append(f"{marcado['posicao']} {marcado['id']} ignorado: o filme não estava na tela da "
+                          f"versão {lido['versao']}")
+    lido["filmes"] = [m for m in lido["filmes"] if m["id"] in da_versao]
+
     vistos = _gravar_ja_vistos(amb, sessao_id, versao["presentes"], lido["filmes"])
     resposta = _resposta(amb, lido)
     if resposta:
         _gravar_resposta(amb, sessao_id, lido["versao"], resposta)
 
-    avisos = []
     tela = arquivo.na_tela(atual)
     na_tela = {f["id"] for f in tela}
     viram = {}

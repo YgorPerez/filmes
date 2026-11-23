@@ -213,3 +213,20 @@ def test_colar_o_mesmo_texto_de_novo_nao_duplica_resposta_nem_ja_visto(banco, da
     assert [(v["filme"], v["nota"]) for v in iara["vistos"]] == [(filme, 4.5)]
     assert [n["nota"] for n in iara["notas"] if n["filme_id"] == filme] == [4.5]
     assert [(v["pessoa"], v["nota"], v["novo"]) for v in segunda["vistos"]] == [("iara", 4.5, False)]
+
+
+def test_marcacao_de_filme_fora_da_tela_da_versao_e_pulada_com_aviso(banco, dados):
+    primeira, sessao_id = _sessao(banco, "iara")
+    fora = "tt9000101"
+    assert fora not in {f["id"] for f in primeira["filmes"]}
+    antes = (dados / "pessoas" / "iara.md").read_text()
+
+    saida = _responder(banco, sessao_id, f"#cartaz {sessao_id} v1\n"
+                                         f"6 {fora} · já vi: iara · trocar · estrelas: 3 · comentário: oi\n")
+
+    assert (dados / "pessoas" / "iara.md").read_text() == antes
+    assert saida["vistos"] == [] and saida["estrelas"] == [] and saida["comentarios"] == []
+    assert saida["regerar"] is False
+    frente, _ = ler_markdown(dados / "sessoes" / f"{sessao_id}.md")
+    assert "respostas" not in frente
+    assert any(fora in aviso and "tela" in aviso for aviso in saida["avisos"])
