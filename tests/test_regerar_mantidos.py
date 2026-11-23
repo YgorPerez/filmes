@@ -147,3 +147,15 @@ def test_mantido_abaixo_da_nota_minima_sai_com_aviso(banco, dados, tmp_path):
     assert any("Sombra Morna" in aviso and "mantido" in aviso for aviso in refeita["avisos"])
     saiu = arvore(_cartaz(banco, tmp_path, sessao_id)).um("saiu").texto
     assert "2 Sombra Morna (nota 6,5 no IMDb, abaixo de 7)" in saiu
+
+
+def test_lista_menor_que_a_posicao_do_mantido_fica_sem_buraco(banco):
+    primeira, sessao_id = _primeira(banco)
+    p = _ids(primeira)
+
+    refeita = banco.ok("recomendar", "--presentes", "dono", "--sessao", sessao_id, "--quantos", "3",
+                       "--manter", f"{p[1]},{p[4]}")
+
+    assert [f["posicao"] for f in refeita["filmes"]] == [1, 2, 3]
+    assert [(f["id"], f["novo"]) for f in refeita["filmes"][1:]] == [(p[1], False), (p[4], False)]
+    assert refeita["filmes"][0]["novo"]

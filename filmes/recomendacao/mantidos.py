@@ -2,7 +2,8 @@
 
 Ao refazer uma Sessão com `--manter`, os mantidos ficam no número que tinham na
 versão anterior (a lista do cartaz, `mostrados`, ou a Recomendação sem cartaz) e
-só as vagas ganham filme novo. Uma Restrição ou um Veto do pedido refeito tiram
+só as vagas ganham filme novo. Se a lista nova é mais curta que o número de um
+mantido, a numeração se fecha, na mesma ordem, sem buraco. Uma Restrição ou um Veto do pedido refeito tiram
 também o mantido que os viole, e a nota mínima e os votos mínimos do IMDb valem
 para ele como para qualquer Candidato; gosto novo não tira mantido, só muda quem
 entra nas vagas.
@@ -84,11 +85,16 @@ def pela_restricao(restricao) -> dict:
 
 
 def posicionar(regerar: Regerar, fixos: list, vagas: list, quantos: int) -> list[tuple[int, object]]:
-    """(posição, item): os mantidos no número deles e as vagas, em ordem, nos números livres."""
+    """(posição, item): os mantidos no número deles e as vagas, em ordem, nos números livres.
+
+    Sem buraco: quando a lista nova é mais curta que o número de um mantido (`--quantos`
+    menor, ou vagas que faltaram), os que vêm depois do último número preenchido descem,
+    na mesma ordem. Os mantidos de antes do primeiro buraco ficam no número deles."""
     ocupadas = {regerar.posicoes[item.filme["id"]] for item in fixos}
     livres = [p for p in range(1, max(quantos, *ocupadas, 0) + 1) if p not in ocupadas]
-    return sorted([*((regerar.posicoes[item.filme["id"]], item) for item in fixos), *zip(livres, vagas)],
-                  key=lambda par: par[0])
+    em_ordem = sorted([*((regerar.posicoes[item.filme["id"]], item) for item in fixos), *zip(livres, vagas)],
+                      key=lambda par: par[0])
+    return [(posicao, item) for posicao, (_, item) in enumerate(em_ordem, start=1)]
 
 
 def saidas(conn, presentes, regerar: Regerar, ficaram: set, tirados: dict) -> list[dict]:
