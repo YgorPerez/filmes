@@ -8,14 +8,13 @@ function textoDoCartaz(estado) {
   for (const f of estado.filmes) {
     const partes = [];
     const jaVi = estado.presentes.filter((p) => f.jaVi.includes(p));
-    if (jaVi.length === 1) {
-      partes.push(`já vi: ${jaVi[0]}${f.nota ? `=${f.nota}` : ""}`);
-      // " · " separa as marcações: dentro do que a Pessoa achou, vira " - ".
-      const achou = umaLinha((f.achou || "").replace(/\s+·\s+|\s+·$|^·\s+/g, " - ")).replace(/^- | -$/g, "");
-      if (achou) partes.push(`achou: ${achou}`);
-    }
-    else if (jaVi.length && jaVi.length === estado.presentes.length) partes.push("já vi: todos");
-    else if (jaVi.length) partes.push(`já vi: ${jaVi.join(", ")}`);
+    const notas = f.notas || {}, achados = f.achou || {};
+    // " · " separa as marcações: dentro do que a Pessoa achou, vira " - ".
+    const achou = (p) => umaLinha((achados[p] || "").replace(/\s*·\s*/g, " - ")).replace(/^- | -$/g, "").trim();
+    const temDetalhe = jaVi.some((p) => notas[p] || achou(p));
+    if (jaVi.length > 1 && jaVi.length === estado.presentes.length && !temDetalhe) partes.push("já vi: todos");
+    else if (jaVi.length) partes.push(`já vi: ${jaVi.map((p) => (notas[p] ? `${p}=${notas[p]}` : p)).join(", ")}`);
+    for (const p of jaVi) if (achou(p)) partes.push(`achou ${p}: ${achou(p)}`);
     if (f.trocar) partes.push("trocar");
     if (f.estrelas) partes.push(`estrelas: ${f.estrelas}`);
     const comentario = umaLinha(f.comentario);
@@ -36,10 +35,11 @@ if (typeof document !== "undefined") (function () {
     const marcados = [...card.querySelectorAll("input.javi:checked")];
     const todos = card.querySelector("input.javi-todos");
     if (todos) todos.checked = marcados.length === presentes.length;
-    for (const campo of [card.querySelector("input.nota"), card.querySelector(".achou")]) {
-      campo.disabled = marcados.length !== 1;
-      campo.closest("label").hidden = marcados.length !== 1;
-    }
+    card.querySelectorAll(".javi-detalhe").forEach((d) => {
+      const viu = card.querySelector(`input.javi[value="${d.dataset.pessoa}"]`).checked;
+      d.hidden = !viu;
+      d.querySelectorAll("input, textarea").forEach((campo) => { campo.disabled = !viu; });
+    });
     card.classList.toggle("trocar", card.querySelector("input.trocar").checked);
   }
   function estado() {
@@ -48,13 +48,16 @@ if (typeof document !== "undefined") (function () {
       acrescentar: R.querySelector(".acrescentar").value,
       filmes: cards().map((c) => {
         const estrela = c.querySelector(".estrelas input:checked");
-        const nota = c.querySelector("input.nota");
-        const valor = Math.round(+nota.value);
+        const notas = {}, achou = {};
+        c.querySelectorAll(".javi-detalhe:not([hidden])").forEach((d) => {
+          const valor = Math.round(+d.querySelector("input.nota").value);
+          if (valor >= 1 && valor <= 10) notas[d.dataset.pessoa] = valor;
+          achou[d.dataset.pessoa] = d.querySelector(".achou").value;
+        });
         return {
           posicao: +c.dataset.posicao, id: c.dataset.id,
           jaVi: [...c.querySelectorAll("input.javi:checked")].map((i) => i.value),
-          nota: !nota.disabled && valor >= 1 && valor <= 10 ? valor : null,
-          achou: nota.disabled ? "" : c.querySelector(".achou").value,
+          notas, achou,
           trocar: c.querySelector("input.trocar").checked,
           estrelas: estrela ? +estrela.value : 0,
           comentario: c.querySelector(".comentario").value,

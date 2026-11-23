@@ -33,7 +33,7 @@ def _texto(html, estado):
 
 
 def _estado(sessao, versao, presentes, acrescentar="", filmes=()):
-    base = {"jaVi": [], "nota": None, "achou": "", "trocar": False, "estrelas": 0, "comentario": ""}
+    base = {"jaVi": [], "notas": {}, "achou": {}, "trocar": False, "estrelas": 0, "comentario": ""}
     return {"sessao": sessao, "versao": versao, "presentes": presentes, "acrescentar": acrescentar,
             "filmes": [{**base, **f} for f in filmes]}
 
@@ -41,9 +41,9 @@ def _estado(sessao, versao, presentes, acrescentar="", filmes=()):
 def test_texto_copiado_tem_cabecalho_acrescentar_e_uma_linha_por_filme_marcado(banco, tmp_path):
     html = _cartaz(banco, tmp_path, banco.ok("recomendar", "--presentes", "dono", "iara")["sessao"]["id"])
     estado = _estado("2026-11-20-iara", 2, ["bruno", "iara"], acrescentar="  chegou a Ana,\n algo leve ", filmes=[
-        {"posicao": 1, "id": "tt9000104", "jaVi": ["bruno"], "nota": 8, "estrelas": 4},
+        {"posicao": 1, "id": "tt9000104", "jaVi": ["bruno"], "notas": {"bruno": 8}, "estrelas": 4},
         {"posicao": 2, "id": "tt9000105"},
-        {"posicao": 3, "id": "tt9000106", "jaVi": ["bruno", "iara"], "nota": 7},
+        {"posicao": 3, "id": "tt9000106", "jaVi": ["bruno", "iara"]},
         {"posicao": 4, "id": "tt9000107", "jaVi": ["iara"], "trocar": True,
          "comentario": "lindo,\n mas · longo"},
         {"posicao": 5, "id": "tt9000108", "estrelas": 2},
@@ -59,30 +59,32 @@ def test_texto_copiado_tem_cabecalho_acrescentar_e_uma_linha_por_filme_marcado(b
     )
 
 
-def test_ja_vi_de_algumas_pessoas_lista_os_slugs_sem_nota_e_sozinho_nao_vira_todos(banco, tmp_path):
+def test_cada_pessoa_marcada_tem_a_sua_nota_e_o_que_achou_mesmo_com_varias(banco, tmp_path):
     html = _cartaz(banco, tmp_path, banco.ok("recomendar", "--presentes", "dono", "iara", "teo")["sessao"]["id"])
-    tres = _estado("s", 1, ["bruno", "iara", "teo"], filmes=[
-        {"posicao": 2, "id": "tt1", "jaVi": ["teo", "bruno"], "nota": 9}])
-    sozinho = _estado("s", 1, ["bruno"], filmes=[{"posicao": 1, "id": "tt1", "jaVi": ["bruno"], "nota": 10}])
-
-    assert _texto(html, tres) == "#cartaz s v1\n2 tt1 · já vi: bruno, teo\n"
-    assert _texto(html, sozinho) == "#cartaz s v1\n1 tt1 · já vi: bruno=10\n"
-
-
-def test_ja_vi_de_uma_pessoa_leva_o_que_ela_achou_numa_linha_so(banco, tmp_path):
-    html = _cartaz(banco, tmp_path, banco.ok("recomendar", "--presentes", "dono", "iara")["sessao"]["id"])
-    estado = _estado("s", 1, ["bruno", "iara"], filmes=[
-        {"posicao": 1, "id": "tt1", "jaVi": ["iara"], "nota": 8, "achou": " final lindo ·\n mas longo "},
-        {"posicao": 2, "id": "tt2", "jaVi": ["iara"], "achou": "chato", "comentario": "nem pensar"},
-        {"posicao": 3, "id": "tt3", "jaVi": ["bruno", "iara"], "achou": "some"},
+    estado = _estado("s", 1, ["bruno", "iara", "teo"], filmes=[
+        {"posicao": 1, "id": "tt1", "jaVi": ["teo", "bruno"], "notas": {"bruno": 9, "teo": 6},
+         "achou": {"teo": " meio · arrastado\n ", "bruno": "lindo"}},
+        {"posicao": 2, "id": "tt2", "jaVi": ["bruno", "iara", "teo"], "notas": {"iara": 3},
+         "achou": {"iara": "chato"}},
+        {"posicao": 3, "id": "tt3", "jaVi": ["bruno", "iara", "teo"]},
+        {"posicao": 4, "id": "tt4", "jaVi": ["iara"], "notas": {"bruno": 5}, "achou": {"bruno": "some"}},
     ])
 
     assert _texto(html, estado) == (
         "#cartaz s v1\n"
-        "1 tt1 · já vi: iara=8 · achou: final lindo - mas longo\n"
-        "2 tt2 · já vi: iara · achou: chato · comentário: nem pensar\n"
+        "1 tt1 · já vi: bruno=9, teo=6 · achou bruno: lindo · achou teo: meio - arrastado\n"
+        "2 tt2 · já vi: bruno, iara=3, teo · achou iara: chato\n"
         "3 tt3 · já vi: todos\n"
+        "4 tt4 · já vi: iara\n"
     )
+
+
+def test_ja_vi_sozinho_com_um_presente_nao_vira_todos(banco, tmp_path):
+    html = _cartaz(banco, tmp_path, banco.ok("recomendar", "--presentes", "dono")["sessao"]["id"])
+    sozinho = _estado("s", 1, ["bruno"], filmes=[{"posicao": 1, "id": "tt1", "jaVi": ["bruno"],
+                                                  "notas": {"bruno": 10}, "achou": {"bruno": "obra-prima"}}])
+
+    assert _texto(html, sozinho) == "#cartaz s v1\n1 tt1 · já vi: bruno=10 · achou bruno: obra-prima\n"
 
 
 def test_sem_nada_marcado_o_texto_e_so_o_cabecalho(banco, tmp_path):
@@ -105,9 +107,12 @@ def test_cada_card_tem_ja_vi_por_presente_e_todos_nota_trocar_estrelas_e_comenta
     assert [(i.attrs["value"], i.pai.texto) for i in responde.todos("javi", tag="input")] == [
         ("bruno", "Você"), ("iara", "Iara")]
     assert responde.um("javi-todos", tag="input").pai.texto == "Todos"
-    nota = responde.um("nota", tag="input")
-    assert (nota.attrs["type"], nota.attrs["min"], nota.attrs["max"]) == ("number", "1", "10")
-    assert responde.um("achou").tag == "textarea"
+    detalhes = list(responde.todos("javi-detalhe"))
+    assert [d.attrs["data-pessoa"] for d in detalhes] == ["bruno", "iara"]
+    for d in detalhes:
+        nota = d.um("nota", tag="input")
+        assert (nota.attrs["type"], nota.attrs["min"], nota.attrs["max"]) == ("number", "1", "10")
+        assert d.um("achou").tag == "textarea" and "hidden" in d.attrs
     assert responde.um("trocar", tag="input").pai.texto == "Trocar"
     assert sorted(i.attrs["value"] for i in responde.um("estrelas").todos(tag="input")) == ["1", "2", "3", "4", "5"]
     assert responde.um("comentario").tag == "textarea"
