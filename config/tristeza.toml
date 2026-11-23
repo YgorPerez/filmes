@@ -19,6 +19,8 @@ tags = [
     "massacre", "mass murder", "school shooting", "genocide", "holocaust",
     "war crimes", "suicide", "rape", "child abuse", "terminal illness",
     "death of a child",
+    # Luto, aceito pelo Dono em 2026-11-23 (#58): Demolition só tem estas.
+    "grief", "tragic loss", "death of wife",
 ]
 wikidata = [
     "Q2763",      # Holocausto

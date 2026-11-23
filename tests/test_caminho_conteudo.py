@@ -22,7 +22,7 @@ def _do_bruno(saida, titulo):
 
 
 def _todos(banco):
-    return banco.ok("recomendar", "--presentes", "dono", "--quantos", "60")
+    return banco.ok("recomendar", "--presentes", "dono", "--quantos", "100")
 
 
 def test_roteirista_em_comum_liga_a_nota_ao_candidato_no_maximo_moderado(banco):
