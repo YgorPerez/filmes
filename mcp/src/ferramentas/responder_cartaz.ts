@@ -7,7 +7,7 @@ export default definirFerramenta({
     "Lê o texto que o Dono colou do cartaz (o do botão Copiar pro chat, que começa com `#cartaz <sessao> v<n>`; " +
     "pode vir com conversa em volta) e grava: cada Já vi vira Já visto da Pessoa e, com nota de 1 a 10, Nota " +
     "(metade do número); \"todos\" são os Presentes da versão. Estrelas, comentários e o acrescentar ficam na " +
-    "versão da Sessão e não mexem no gosto. Texto de versão velha vale pelo filme; o Trocar de um filme que já " +
+    "versão da Sessão e não mexem no gosto; comentário não troca filme, só o Trocar. Texto de versão velha vale pelo filme; o Trocar de um filme que já " +
     "saiu da tela é ignorado, com aviso. Sessão errada ou texto que não é de cartaz é erro uso_invalido. " +
     "Devolve `regerar` (verdadeiro se algum filme caiu, por Já visto ou Trocar, ou se veio acrescentar), " +
     "`manter` (IDs que ficam, na ordem da tela), `saem` ({posicao, id, titulo, motivo: ja_visto|trocado, " +

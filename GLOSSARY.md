@@ -42,7 +42,7 @@ O que uma Sessão quer sem excluir nenhum filme: a energia ("algo leve"), a ocas
 _Evitar_: desejo, mood, preferência
 
 **Contexto**:
-Tudo o que o pedido diz além dos Presentes: as Restrições e o Clima.
+Tudo o que o pedido diz além dos Presentes: as Restrições e o Clima. Vale só para a Sessão; o que diz como uma Pessoa é sempre (Veto, Declarado, Relato) é gosto, e só é gravado com um sim do Dono.
 
 **Catálogo**:
 Todos os filmes que o sistema conhece.
@@ -69,6 +69,14 @@ _Evitar_: rodada, tentativa
 **Mantido**:
 Um filme da versão anterior que o Dono quer na próxima. Ao regerar, fica no mesmo número e só as vagas ganham filme novo. Sai só por Restrição ou Veto do pedido refeito, nunca por gosto novo. O que sai da versão anterior vira uma saída, com o motivo: Já visto, trocado, a Restrição ou o Veto.
 _Evitar_: fixado, travado
+
+**Cartaz**:
+A Recomendação mostrada como página no T3 Code. Ele responde: em cada filme o Dono marca Já vi, Trocar, estrelas e comentário, e no topo acrescenta contexto ou gosto; o botão Copiar pro chat junta tudo num texto que começa com `#cartaz <sessao> v<n>`, e o Dono cola no chat. Estrelas e comentário medem a Recomendação e ficam na Sessão, sem mexer no gosto; só o Trocar troca filme.
+_Evitar_: formulário, painel
+
+**Regerar**:
+Fazer a próxima versão da Sessão a partir do Cartaz colado, trocando só o que caiu (Já visto, Trocar, Restrição ou Veto novos). O resto fica como Mantido; os que entram levam o selo "novo".
+_Evitar_: refazer do zero, recomendar de novo
 
 **Filmes mostrados**:
 Os filmes da Recomendação que o Dono de fato viu na tela, na ordem em que apareceram. O Feedback grava a posição do Filme escolhido nessa lista.
