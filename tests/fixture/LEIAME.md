@@ -6,7 +6,7 @@ Mini Catálogo e repo de dados fictícios. Títulos, diretores e IDs são invent
 
 Cada `<tabela>.csv` vai direto para a tabela de mesmo nome do banco, na ordem do esquema. O cabeçalho nomeia as colunas; célula vazia vira NULL; `fato_id`, se a tabela tiver e o CSV não, sai do hash da linha. CSV sem tabela no esquema é erro de `reconstruir`.
 
-Os IDs de filme seguem `tt90DDNNN`: `DD` é o diretor (`Q90000DD`), `NNN` a ordem dentro dele.
+Os IDs de filme seguem `tt90DDNNN`: `DD` é o diretor (`Q90000DD`), `NNN` a ordem dentro dele. Os filmes acrescentados por ticket a partir do #55 usam `tt900TTNN`, com `TT` o número do ticket (`tt90055NN`, `tt90056NN`, `tt90058NN`), e não seguem essa regra.
 
 | Diretor | Filmes | Notas do Bruno | Para que serve |
 |---|---|---|---|
@@ -50,17 +50,18 @@ Caminho de conteúdo por outros predicados (`test_caminho_conteudo.py`). Cada fi
 | Fronteira II (1903) | serie, Trilogia da Fronteira | Fronteira (401) |
 | Poeira (1904) | genero, faroeste | 101, 102, 103 e Jardim Suspenso (301): quatro Notas altas, que no gênero ficam em metadado fraco |
 | Escala em Lisboa (3501) | elenco, Rita Lobo | Ponte Aérea (201), como Voo Noturno, mas Rita Lobo está fora dos 3 primeiros créditos |
-| Mar Aberto (4901) | serie, Os 100 melhores filmes segundo a Revista Tela (`Q9004901`) | Fronteira (401), mas a lista não está em `series_de_filmes.csv` e a aresta sai na reconstrução. Tem 1.000 votos, o mínimo, para ficar depois dos outros filmes só com palpites; entra no `--quantos 100` de `test_grupo.py` |
+| Mar Aberto (4901) | serie, Os 100 melhores filmes segundo a Revista Tela (`Q9004901`) | Fronteira (401), mas a lista não está em `series_de_filmes.csv` e a aresta sai na reconstrução. Tem 1.000 votos, o mínimo, para ficar depois dos outros filmes só com palpites; entra no `--quantos 100` de `test_grupo.py` e de `test_caminho_conteudo.py` |
 
 `series_de_filmes.csv` diz quais entidades de série são série de filmes: só a Trilogia da Fronteira. Uma série nova na fixture precisa de linha ali, senão a aresta dela some.
 
-Créditos do IMDb (`elenco_principal_imdb.csv`, `atores_imdb.csv`): os 3 primeiros atores de Voo Noturno e de Escala em Lisboa. Rita Lobo (`nm9001902`) é o segundo crédito de Voo Noturno, e a Evidência fica só com o teto do elo (moderada); em Escala em Lisboa os três primeiros são outros, e ela vale no máximo fraca. Os demais filmes não têm créditos, e a régua deles não muda.
+Créditos do IMDb (`elenco_principal_imdb.csv`, `atores_imdb.csv`): os 3 primeiros atores de Voo Noturno e de Escala em Lisboa. Rita Lobo (`nm9001902`) é o segundo crédito de Voo Noturno, e a Evidência fica só com o teto do elo (moderada); em Escala em Lisboa os três primeiros são outros, e ela vale no máximo fraca. Também Coxia (`tt9005504`), com Duda Alves (`nm9005501`) no primeiro crédito, para o teto do elenco no metadado agregado (#55). Os demais filmes não têm créditos, e a régua deles não muda.
 
 Notas de outras Pessoas, para os testes de grupo (`test_grupo.py`):
 
 | Pessoa | Notas | Para que serve |
 |---|---|---|
 | Iara | 3 em O Farol de Areia (101), 4 em Fronteira (401) | Fraca a favor nos outros de Helena Prado, moderada nos outros de Rui Tavares. Sobre 101 e 401 em si, só o Já visto da própria Nota. Bruno e Iara discordam em As Horas Lentas e quase concordam em A Volta do Mar: a Regra padrão e a média simples ordenam os dois ao contrário |
+| Rosa | 5 em Ensaio Geral, 4,5 em Bastidores e em Ato Final (`tt9005501`–`03`) | Teto do elenco no metadado agregado (#55): Duda Alves e Clara Bastos em 3 Notas altas. Recomenda sozinha; para os outros, os filmes dela são só palpites |
 | Teo | nenhuma | "sem fato" em todo filme |
 | Quim | 5 em Ponte Aérea (201), 3,5 em Maré Baixa (102), 4,5 em Barulho (501), 2 em Fronteira (401) | Testes de Crédito (`test_credito.py`). Com o Bruno, o Quim é o mínimo em As Horas Lentas e em A Volta do Mar, e o Bruno é o mínimo em Asfalto Quente: o Crédito de um faz subir os filmes dele |
 
@@ -134,6 +135,7 @@ Repo de dados fictício. Cada teste trabalha numa cópia, então comandos podem 
 - `pessoas/bruno.md`: o Dono (`dono: true`, apelido `eu`).
 - `pessoas/iara.md` e `pessoas/teo.md`: Pessoas para os testes de grupo.
 - `pessoas/quim.md`: Pessoa para os testes de Crédito.
+- `pessoas/rosa.md`: Pessoa do teste do teto do elenco no metadado agregado (#55).
 - Não há `sessoes/`: os testes criam as Sessões com `recomendar` e `feedback`, ou escrevem o arquivo direto quando precisam de várias datas (veja `test_credito.py`).
 
 Os testes de Pessoa (#18) criam a Ana pela CLI e escrevem a Carol direto no repo de dados do teste; nenhuma das duas fica na fixture.
@@ -182,6 +184,11 @@ linhas. As tags de O Farol de Areia aparecem tanto no diário quanto na review.
 | Fim de Tarde (902) | `tema` Holocausto (Q2763) | sai |
 | Café Amargo (801) | `baseado_em` suicídio (Q10737) | sai |
 | Linha Cruzada (802) | `tema` futebol (Q9004201), sem tag | passa |
+| Casa Vazia (5801) | tags.csv "grief", 2 usuários | sai |
+| Último Verão (5802) | tags.csv "tragic loss", 2 usuários | sai |
+| Aliança Partida (5803) | tags.csv "death of wife", 2 usuários | sai |
+
+Os filmes `tt90058NN` (#58) não têm diretor nem Nota, e ficam entre os só com palpites. Cada um tem só uma das tags de luto de `[tema_pesado]`.
 
 "sad" e "tearjerker" estão no Clima "pra chorar"; nenhum teste pede esse Clima. As tags de "sozinho" (bleak, depressing) ficaram de fora de propósito, para não mudar quem é filme só com palpites.
 
@@ -224,3 +231,14 @@ Os mesmos filmes `tt90056NN` levam "boring", tag do grupo `lento` fora do `grupo
 | Piada Pronta (5602) | boring, 10 usuários | sai pelo tags.csv |
 | Riso Contido (5603) | boring, 9 usuários | abaixo do mínimo: fica |
 | Drama Juvenil (5604) | boring 0,8 (Genome) | sai pelo Genome, mesmo sendo drama |
+
+### Teto do elenco no metadado agregado (#55)
+
+Filmes `tt90055NN`, de Clara Bastos (`Q9000055`) e com Duda Alves (`Q9005501`, `nm9005501`) no elenco, para o último teste de `test_caminho_conteudo.py`. Só a Rosa deu Nota a eles, então para o Bruno e os outros são filmes só com palpites. Têm 1.000 votos, para ficar no fim entre eles.
+
+| Filme | Nota da Rosa | Para que serve |
+|---|---|---|
+| Ensaio Geral (5501) | 5 (2025) | três Notas altas no mesmo diretor e no mesmo ator |
+| Bastidores (5502) | 4,5 (2025) | |
+| Ato Final (5503) | 4,5 (2025) | |
+| Coxia (5504) | nenhuma | Candidato: Duda Alves é o primeiro crédito do IMDb. O agregado do diretor sai forte e o do elenco fica no teto, moderada |

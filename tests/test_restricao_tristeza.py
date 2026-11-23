@@ -6,6 +6,8 @@ Sinais na fixture, todos em filmes sem Nota de ninguém:
 - Tag Genome: Deserto Branco "tearjerker" 0,6, A Última Estação "sad" 0,59.
 - Wikidata: Fim de Tarde tem tema Holocausto (Q2763), Café Amargo é baseado
   em suicídio (Q10737), Linha Cruzada tem tema futebol.
+- Luto (#58): Casa Vazia "grief", Último Verão "tragic loss" e Aliança
+  Partida "death of wife", cada um só com essa tag, de 2 usuários.
 """
 
 from conftest import ler_markdown
@@ -49,13 +51,21 @@ def test_tema_pesado_do_wikidata_tira_o_filme(banco):
     assert "Linha Cruzada" in titulos        # tema futebol
 
 
+def test_tag_de_luto_conta_como_tema_pesado(banco):
+    luto = {"Casa Vazia", "Último Verão", "Aliança Partida"}
+    assert luto <= set(_titulos(_todos(banco)))
+
+    assert luto.isdisjoint(_titulos(_todos(banco, "--sem-tristeza")))
+
+
 def test_resposta_conta_os_tirados_por_sinal(banco):
     sem = _titulos(_todos(banco))
     saida = _todos(banco, "--sem-tristeza")
 
     tirados = set(sem) - set(_titulos(saida))
-    assert tirados == {"Pequenos Milagres", "Deserto Branco", "Os Inquilinos", "Fim de Tarde", "Café Amargo"}
-    assert saida["restricoes"]["sem_tristeza"] == {"por_sinal": {"triste": 2, "tema_pesado": 3}, "tirados": 5}
+    assert tirados == {"Pequenos Milagres", "Deserto Branco", "Os Inquilinos", "Fim de Tarde", "Café Amargo",
+                       "Casa Vazia", "Último Verão", "Aliança Partida"}
+    assert saida["restricoes"]["sem_tristeza"] == {"por_sinal": {"triste": 2, "tema_pesado": 6}, "tirados": 8}
 
 
 def test_sem_o_pedido_nada_sai_e_a_restricao_nao_aparece(banco):

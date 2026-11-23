@@ -22,7 +22,7 @@ def _do_bruno(saida, titulo):
 
 
 def _todos(banco):
-    return banco.ok("recomendar", "--presentes", "dono", "--quantos", "60")
+    return banco.ok("recomendar", "--presentes", "dono", "--quantos", "100")
 
 
 def test_roteirista_em_comum_liga_a_nota_ao_candidato_no_maximo_moderado(banco):
@@ -79,3 +79,18 @@ def test_predicado_fora_da_config_nao_entra_no_caminho(banco, tmp_path):
     banco.env["FILMES_PESOS"] = str(pesos)
 
     assert _do_bruno(_todos(banco), "Maré Cheia") == [("sem fato", "fraca", "palpite", 0)]
+
+
+def test_ator_principal_em_tres_notas_altas_fica_no_maximo_moderado_e_o_diretor_sai_forte(banco):
+    # A Rosa deu 5, 4,5 e 4,5 a Ensaio Geral, Bastidores e Ato Final, todos de Clara Bastos
+    # e com Duda Alves. Coxia também, com Duda Alves no primeiro crédito do IMDb: três Notas
+    # altas no mesmo nó dariam metadado forte, mas o elenco tem teto moderado e o diretor não.
+    saida = banco.ok("recomendar", "--presentes", "rosa")
+    [coxia] = [f for f in saida["filmes"] if f["titulo"] == "Coxia"]
+    metadados = sorted((e["texto"], e["forca"]) for e in coxia["evidencias"]["rosa"] if e["tipo"] == "metadado")
+    assert metadados == [
+        ("com Duda Alves no elenco, como 3 filmes a que deu 4 ou mais: Ensaio Geral (2014), "
+         "Ato Final (2018) e Bastidores (2016)", "moderada"),
+        ("dirigido por Clara Bastos, como 3 filmes a que deu 4 ou mais: Ensaio Geral (2014), "
+         "Ato Final (2018) e Bastidores (2016)", "forte"),
+    ]

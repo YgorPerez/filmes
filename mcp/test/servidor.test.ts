@@ -169,7 +169,7 @@ describe("servidor MCP sobre a CLI real e a fixture", () => {
 
     assert.ok(!resultado.isError);
     const saida = json(resultado);
-    assert.deepEqual(saida.restricoes.sem_tristeza, { por_sinal: { triste: 2, tema_pesado: 3 }, tirados: 5 });
+    assert.deepEqual(saida.restricoes.sem_tristeza, { por_sinal: { triste: 2, tema_pesado: 6 }, tirados: 8 });
     const titulos = saida.filmes.map((f: any) => f.titulo);
     assert.ok(titulos.includes("Casa Cheia"));
     assert.ok(!titulos.includes("Pequenos Milagres"));
