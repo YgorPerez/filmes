@@ -111,3 +111,12 @@ def test_banco_de_antes_das_perguntas_abertas_aceita_escrita_na_pessoa(banco):
 
     assert banco.consultar("SELECT pessoa, assunto FROM perguntas_abertas") == [["bruno", "comedia_boba"]]
     assert banco.consultar("SELECT pessoa FROM vetos WHERE alvo = 'tt9000101'") == [["bruno"]]
+
+
+def test_pulada_de_novo_com_assunto_guarda_o_assunto(banco):
+    banco.ok("pessoa", "pular", "bruno", "o Bruno topa comédia boba?")
+
+    saida = banco.ok("pessoa", "pular", "bruno", "o Bruno topa comédia boba?", "--grupo", "comedia_boba")
+
+    assert saida["saiu"] is True
+    assert (saida["pergunta"]["assunto"], saida["pergunta"]["puladas"]) == ("comedia_boba", 2)

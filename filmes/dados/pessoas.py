@@ -237,8 +237,10 @@ def pular(pessoa: Pessoa, pergunta: PerguntaAberta) -> tuple[PerguntaAberta, boo
     if anterior is None:
         pessoa.perguntas_abertas.append(pergunta)
         return pergunta, False
+    # O assunto vem de qualquer uma das duas: a pergunta pode ter sido pulada sem ele.
+    assunto, rotulo = (anterior.assunto, anterior.rotulo) if anterior.assunto else (pergunta.assunto, pergunta.rotulo)
     atual = PerguntaAberta(texto=anterior.texto, data=pergunta.data, puladas=anterior.puladas + 1,
-                           assunto=anterior.assunto, rotulo=anterior.rotulo)
+                           assunto=assunto, rotulo=rotulo)
     indice = pessoa.perguntas_abertas.index(anterior)
     if atual.puladas >= PULADAS_PARA_SAIR:
         del pessoa.perguntas_abertas[indice]
