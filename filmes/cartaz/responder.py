@@ -11,6 +11,10 @@ linhas seguintes que casam com o formato; a primeira que não casa encerra.
   são os Presentes da versão que o texto mostra.
   Colar de novo não soma outro Já visto: o da mesma Fonte e filme fica, com a
   nota nova se veio outra.
+- O que achou (só com uma Pessoa no Já vi): Declarado específico dela sobre o
+  filme, com a mesma Fonte, como o comentário do Feedback. A reação vem da nota:
+  7 a 10 gosta, 1 a 4 não gosta, sem nota ou 5 e 6 sem reação. Colar de novo
+  substitui o Declarado do cartaz sobre o filme.
 - Estrelas, comentário e acrescentar: em `respostas` da versão do texto. Não
   viram Fato nem mexem no gosto. Resposta igual a uma que a versão já tem não
   é gravada de novo.
@@ -62,7 +66,8 @@ def ler(texto: str) -> dict:
 
 
 def _marcacoes(posicao: int, filme: str, resto: str) -> dict:
-    marcado = {"posicao": posicao, "id": filme, "ja_vi": None, "trocar": False, "estrelas": None, "comentario": None}
+    marcado = {"posicao": posicao, "id": filme, "ja_vi": None, "achou": None, "trocar": False,
+               "estrelas": None, "comentario": None}
     resto = re.sub(r"^\s+·\s+", "", resto)
     if resto.startswith("comentário:"):
         resto = " · " + resto
@@ -76,10 +81,14 @@ def _marcacoes(posicao: int, filme: str, resto: str) -> dict:
             marcado["trocar"] = True
         elif nome == "já vi" and valor:
             marcado["ja_vi"] = valor
+        elif nome == "achou" and valor:
+            marcado["achou"] = _uma_linha(valor)
         elif nome == "estrelas" and valor in {"1", "2", "3", "4", "5"}:
             marcado["estrelas"] = int(valor)
         else:
             raise ErroFilmes("uso_invalido", f"marcação desconhecida no cartaz, filme {posicao} {filme}: {parte!r}")
+    if marcado["achou"] and (not marcado["ja_vi"] or marcado["ja_vi"] == "todos" or "," in marcado["ja_vi"]):
+        raise ErroFilmes("uso_invalido", f"achou: vale só com uma Pessoa no Já vi, filme {posicao} {filme}")
     return marcado
 
 
@@ -163,13 +172,13 @@ def _gravar_ja_vistos(amb, sessao_id, presentes, filmes) -> list[dict]:
     for marcado in filmes:
         if marcado["ja_vi"]:
             for slug, nota in _quem_viu(amb, marcado, presentes):
-                pedidos.append((slug, marcado["id"], nota))
+                pedidos.append((slug, marcado["id"], nota, marcado["achou"]))
     if not pedidos:
         return []
     with abrir_leitura(amb.banco) as conn:
-        rotulos = {filme: fatos_da_pessoa.rotulo_do_alvo(conn, filme) for _, filme, _ in pedidos}
+        rotulos = {filme: fatos_da_pessoa.rotulo_do_alvo(conn, filme) for _, filme, _, _ in pedidos}
     vistos, mudadas = [], {}
-    for slug, filme, nota in pedidos:
+    for slug, filme, nota, achou in pedidos:
         pessoa = mudadas.get(slug) or pessoas.resolver(amb.dados, slug)
         fonte = f"cartaz {sessao_id}"
         anterior = next((v for v in pessoa.itens("já vistos") if v.fonte == fonte and v.alvo == filme), None)
@@ -184,12 +193,29 @@ def _gravar_ja_vistos(amb, sessao_id, presentes, filmes) -> list[dict]:
             mudadas[slug] = pessoa
         else:
             nota = anterior.nota
-        vistos.append({"pessoa": slug, "filme": filme, "titulo": rotulos[filme], "nota": nota,
-                       "novo": anterior is None})
+        if achou and _gravar_achou(pessoa, fonte, filme, rotulos[filme], nota, achou, amb.hoje.isoformat()):
+            mudadas[slug] = pessoa
+        item = {"pessoa": slug, "filme": filme, "titulo": rotulos[filme], "nota": nota, "novo": anterior is None}
+        if achou:
+            item["achou"] = achou
+        vistos.append(item)
     for pessoa in mudadas.values():
         pessoas.salvar(amb.dados, pessoa)
         fatos_da_pessoa.sincronizar(amb.banco, pessoa)
     return vistos
+
+
+def _gravar_achou(pessoa, fonte, filme, rotulo, nota, texto, hoje) -> bool:
+    """O que a Pessoa achou vira Declarado específico sobre o filme; o do cartaz anterior sai."""
+    reacao = None if nota is None else "gosta" if nota * 2 >= 7 else "nao_gosta" if nota * 2 <= 4 else None
+    anteriores = [d for d in pessoa.itens("declarados") if d.fonte == fonte and d.alvo == filme]
+    if any(d.texto == texto and d.reacao == reacao for d in anteriores):
+        return False
+    for d in anteriores:
+        pessoa.tirar("declarados", d)
+    pessoa.acrescentar("declarados", pessoas.Dito(data=hoje, fonte=fonte, especifico=True, texto=texto,
+                                                  reacao=reacao, alvo=filme, rotulo=rotulo))
+    return True
 
 
 def _quem_viu(amb, marcado, presentes) -> list[tuple[str, float | None]]:

@@ -33,7 +33,7 @@ def _texto(html, estado):
 
 
 def _estado(sessao, versao, presentes, acrescentar="", filmes=()):
-    base = {"jaVi": [], "nota": None, "trocar": False, "estrelas": 0, "comentario": ""}
+    base = {"jaVi": [], "nota": None, "achou": "", "trocar": False, "estrelas": 0, "comentario": ""}
     return {"sessao": sessao, "versao": versao, "presentes": presentes, "acrescentar": acrescentar,
             "filmes": [{**base, **f} for f in filmes]}
 
@@ -69,6 +69,22 @@ def test_ja_vi_de_algumas_pessoas_lista_os_slugs_sem_nota_e_sozinho_nao_vira_tod
     assert _texto(html, sozinho) == "#cartaz s v1\n1 tt1 · já vi: bruno=10\n"
 
 
+def test_ja_vi_de_uma_pessoa_leva_o_que_ela_achou_numa_linha_so(banco, tmp_path):
+    html = _cartaz(banco, tmp_path, banco.ok("recomendar", "--presentes", "dono", "iara")["sessao"]["id"])
+    estado = _estado("s", 1, ["bruno", "iara"], filmes=[
+        {"posicao": 1, "id": "tt1", "jaVi": ["iara"], "nota": 8, "achou": " final lindo ·\n mas longo "},
+        {"posicao": 2, "id": "tt2", "jaVi": ["iara"], "achou": "chato", "comentario": "nem pensar"},
+        {"posicao": 3, "id": "tt3", "jaVi": ["bruno", "iara"], "achou": "some"},
+    ])
+
+    assert _texto(html, estado) == (
+        "#cartaz s v1\n"
+        "1 tt1 · já vi: iara=8 · achou: final lindo - mas longo\n"
+        "2 tt2 · já vi: iara · achou: chato · comentário: nem pensar\n"
+        "3 tt3 · já vi: todos\n"
+    )
+
+
 def test_sem_nada_marcado_o_texto_e_so_o_cabecalho(banco, tmp_path):
     html = _cartaz(banco, tmp_path, banco.ok("recomendar", "--presentes", "dono")["sessao"]["id"])
 
@@ -91,6 +107,7 @@ def test_cada_card_tem_ja_vi_por_presente_e_todos_nota_trocar_estrelas_e_comenta
     assert responde.um("javi-todos", tag="input").pai.texto == "Todos"
     nota = responde.um("nota", tag="input")
     assert (nota.attrs["type"], nota.attrs["min"], nota.attrs["max"]) == ("number", "1", "10")
+    assert responde.um("achou").tag == "textarea"
     assert responde.um("trocar", tag="input").pai.texto == "Trocar"
     assert sorted(i.attrs["value"] for i in responde.um("estrelas").todos(tag="input")) == ["1", "2", "3", "4", "5"]
     assert responde.um("comentario").tag == "textarea"
