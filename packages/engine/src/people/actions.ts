@@ -334,17 +334,15 @@ const ratingsOf = (db: Connection, slug: string) =>
       slug,
     ),
     (rows) =>
-      rows.map(
-        (row): RatingJson => ({
-          filmId: String(row.filme_id),
-          title: row.titulo === null ? null : String(row.titulo),
-          rating: Number(row.nota),
-          date: String(row.data),
-          source: String(row.fonte),
-          kind: ratingKindFromDb(row.tipo),
-          factId: String(row.fato_id),
-        }),
-      ),
+      rows.map((row): RatingJson => ({
+        filmId: String(row.filme_id),
+        title: row.titulo === null ? null : String(row.titulo),
+        rating: Number(row.nota),
+        date: String(row.data),
+        source: String(row.fonte),
+        kind: ratingKindFromDb(row.tipo),
+        factId: String(row.fato_id),
+      })),
   )
 
 /** Everything the engine knows of the Pessoa (`pessoa ver`). */
@@ -491,7 +489,11 @@ export const personReport = (
   input: Omit<StatementInput, 'review'>,
 ): Effect.Effect<ReportResult, EngineError | SqliteError, Services> =>
   Effect.map(
-    recordStatement('relatos', { ...input, review: false }, 'descrição do Dono'),
+    recordStatement(
+      'relatos',
+      { ...input, review: false },
+      'descrição do Dono',
+    ),
     (r) => ({ person: r.person, report: r.json, new: r.added }),
   )
 
@@ -540,6 +542,10 @@ export const personSeen = (
       }
       const { person: updated, added } = yield* addItem(person, 'seen', seen)
       if (added) yield* savePersonAndSync(db, updated)
-      return { person: person.slug, seen: seenJson(person.slug, seen), new: added }
+      return {
+        person: person.slug,
+        seen: seenJson(person.slug, seen),
+        new: added,
+      }
     }),
   )

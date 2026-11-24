@@ -88,9 +88,9 @@ describe('Python parsers', () => {
     expect(
       rows.filter(({ s, out }) => (pyIsoDate(s) ?? false) !== out),
     ).toEqual([])
-    expect(rows.filter(({ s, out }) => isIsoDate(s) !== (out !== false))).toEqual(
-      [],
-    )
+    expect(
+      rows.filter(({ s, out }) => isIsoDate(s) !== (out !== false)),
+    ).toEqual([])
     expect(isIsoDate('2026-11-\ud800')).toBe(false)
   })
 })

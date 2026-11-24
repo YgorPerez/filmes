@@ -11,20 +11,11 @@
 // Dono's `pessoa remover` refer to. `DB_*` below are those spellings.
 
 import { Effect } from 'effect'
-import {
-  factId,
-  pyFloat,
-  pyInt,
-  type PyValue,
-} from '../compat/fact-id.ts'
+import { factId, pyFloat, pyInt, type PyValue } from '../compat/fact-id.ts'
 import { casefold } from '../compat/text.ts'
 import type { Kind, Link } from '../evidence/strength.ts'
 import { engineError, type EngineError } from '../runtime/EngineError.ts'
-import {
-  Sqlite,
-  type Connection,
-  type SqliteError,
-} from '../sqlite/Sqlite.ts'
+import { Sqlite, type Connection, type SqliteError } from '../sqlite/Sqlite.ts'
 import { readPeople } from './people.ts'
 import {
   items,
@@ -86,7 +77,9 @@ const REACTIONS_FROM_DB = inverse(DB_REACTIONS)
 
 /** A Veto target or a subject, as the database keeps it. */
 export const dbTarget = (target: string): string =>
-  Object.hasOwn(DB_TAG_GROUPS, target) ? (DB_TAG_GROUPS[target] ?? target) : target
+  Object.hasOwn(DB_TAG_GROUPS, target)
+    ? (DB_TAG_GROUPS[target] ?? target)
+    : target
 
 /** A `reacao` column, in the engine's names. */
 export const reactionFromDb = (value: unknown): StatementReaction | null =>
@@ -386,7 +379,9 @@ export const syncPerson = (
     yield* createMissingTables(db)
     yield* deleteRows(db, person.slug)
     yield* loadPerson(db, person)
-  }).pipe(Effect.catchTag('SqliteError', (error) => Effect.fail(outdated(error))))
+  }).pipe(
+    Effect.catchTag('SqliteError', (error) => Effect.fail(outdated(error))),
+  )
 
 /** Reloads every Pessoa's rows from filmes-dados, as a rebuild would load
  * them (Python's loading step `10_pessoas`): the start of a server whose

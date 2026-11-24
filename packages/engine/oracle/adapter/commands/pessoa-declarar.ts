@@ -8,6 +8,5 @@ export default defineCommand({
     ...statementArgs,
     options: { ...statementArgs.options, review: { kind: 'flag' } },
   },
-  run: (args) =>
-    personState({ ...statementInput(args), review: args.review }),
+  run: (args) => personState({ ...statementInput(args), review: args.review }),
 })

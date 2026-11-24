@@ -95,9 +95,7 @@ describe('the database spellings', () => {
     const { normal: _, ...levels } = flip(data.LEVELS)
     expect(DB_LEVELS).toEqual(levels)
     expect(DB_REACTIONS).toEqual(flip(output.STATEMENT_REACTIONS))
-    expect(DB_TAG_GROUPS).toEqual(
-      flip(config.TAG_GROUPS),
-    )
+    expect(DB_TAG_GROUPS).toEqual(flip(config.TAG_GROUPS))
     expect(dbTarget('slow')).toBe('lento')
     expect(dbTarget('Q9001801')).toBe('Q9001801')
     expect(dbTarget('toString')).toBe('toString')
@@ -109,7 +107,11 @@ describe('pessoa criar and ver', () => {
     const fixture = useFixture()
 
     const created = await fixture.ok(
-      personCreate({ name: 'Ana Lima', aliases: ['Ana', 'Aninha'], slug: 'ana' }),
+      personCreate({
+        name: 'Ana Lima',
+        aliases: ['Ana', 'Aninha'],
+        slug: 'ana',
+      }),
     )
 
     expect(created).toEqual({
@@ -437,7 +439,10 @@ describe('pessoa declarar and relatar', () => {
       strength: 'moderate',
     })
     expect(
-      await query(fixture, "SELECT reacao, alvo FROM relatos WHERE pessoa = 'ana'"),
+      await query(
+        fixture,
+        "SELECT reacao, alvo FROM relatos WHERE pessoa = 'ana'",
+      ),
     ).toEqual([{ reacao: 'odeia', alvo: SOFIA_RANGEL }])
   })
 
@@ -502,7 +507,7 @@ describe('pessoa declarar and relatar', () => {
     expect(strengths).toEqual(['moderate', 'weak', 'moderate'])
   })
 
-  test("her own review counts as a specific Declarado", async () => {
+  test('her own review counts as a specific Declarado', async () => {
     const fixture = useFixture()
     await ana(fixture)
 
@@ -536,7 +541,10 @@ describe('pessoa declarar and relatar', () => {
 
     expect(result.stated).toMatchObject({ specific: true, rating: 5 })
     expect(
-      await query(fixture, "SELECT fato_id, nota, tipo, fonte FROM notas WHERE pessoa = 'ana'"),
+      await query(
+        fixture,
+        "SELECT fato_id, nota, tipo, fonte FROM notas WHERE pessoa = 'ana'",
+      ),
     ).toEqual([
       {
         fato_id: result.stated.factId,
@@ -599,7 +607,10 @@ describe('pessoa declarar and relatar', () => {
 
     expect(result.stated.rating).toBeNull()
     expect(
-      await query(fixture, "SELECT count(*) AS n FROM notas WHERE pessoa = 'ana'"),
+      await query(
+        fixture,
+        "SELECT count(*) AS n FROM notas WHERE pessoa = 'ana'",
+      ),
     ).toEqual([{ n: 0 }])
   })
 
@@ -619,7 +630,9 @@ describe('pessoa declarar and relatar', () => {
     const fixture = useFixture()
     writeFileSync(file(fixture, 'carol'), CAROL)
 
-    await fixture.ok(personReport({ person: 'carol', text: 'odeia filme lento' }))
+    await fixture.ok(
+      personReport({ person: 'carol', text: 'odeia filme lento' }),
+    )
 
     const text = read(fixture, 'carol')
     expect(text).toContain('Amiga da faculdade.')
@@ -674,7 +687,11 @@ describe('pessoa declarar and relatar', () => {
       { source: 'a · b' },
       "a fonte não pode ser vazia nem ter ' · '",
     ],
-    ['an empty source', { source: '  ' }, "a fonte não pode ser vazia nem ter ' · '"],
+    [
+      'an empty source',
+      { source: '  ' },
+      "a fonte não pode ser vazia nem ter ' · '",
+    ],
     [
       'a date that is not one',
       { date: 'ontem' },
@@ -779,13 +796,25 @@ describe('the Pessoa sync and the reload', () => {
     const fixture = useFixture()
     await ana(fixture)
     await fixture.ok(
-      personState({ person: 'ana', text: 'amo O Farol', target: FAROL, reaction: 'love' }),
+      personState({
+        person: 'ana',
+        text: 'amo O Farol',
+        target: FAROL,
+        reaction: 'love',
+      }),
     )
     await fixture.ok(
-      personReport({ person: 'ana', text: 'odeia comédia', target: COMEDY, reaction: 'hate' }),
+      personReport({
+        person: 'ana',
+        text: 'odeia comédia',
+        target: COMEDY,
+        reaction: 'hate',
+      }),
     )
     writeFileSync(file(fixture, 'carol'), CAROL)
-    await fixture.ok(personReport({ person: 'carol', text: 'odeia filme lento' }))
+    await fixture.ok(
+      personReport({ person: 'carol', text: 'odeia filme lento' }),
+    )
     await fixture.ok(
       personSeen({ person: 'teo', film: CASA_CHEIA, rating: '4,5' }),
     )
@@ -809,18 +838,36 @@ describe('the Pessoa sync and the reload', () => {
       ),
     ).toEqual([
       { reacao: 'gosta', alvo: COMEDY, especifico: 0, texto: 'comédia sempre' },
-      { reacao: 'ama', alvo: BARULHO, especifico: 1, texto: 'Barulho é o melhor' },
+      {
+        reacao: 'ama',
+        alvo: BARULHO,
+        especifico: 1,
+        texto: 'Barulho é o melhor',
+      },
     ])
     expect(
-      await query(fixture, "SELECT reacao, alvo, texto FROM relatos WHERE pessoa = 'carol'"),
+      await query(
+        fixture,
+        "SELECT reacao, alvo, texto FROM relatos WHERE pessoa = 'carol'",
+      ),
     ).toEqual([
-      { reacao: 'nao_gosta', alvo: DAVI_COUTO, texto: 'acha o Davi Couto canastrão' },
+      {
+        reacao: 'nao_gosta',
+        alvo: DAVI_COUTO,
+        texto: 'acha o Davi Couto canastrão',
+      },
     ])
     expect(
-      await query(fixture, "SELECT nota, tipo FROM notas WHERE pessoa = 'carol'"),
+      await query(
+        fixture,
+        "SELECT nota, tipo FROM notas WHERE pessoa = 'carol'",
+      ),
     ).toEqual([{ nota: 5, tipo: 'declarado' }])
     expect(
-      await query(fixture, "SELECT alvo, data FROM vetos WHERE pessoa = 'carol'"),
+      await query(
+        fixture,
+        "SELECT alvo, data FROM vetos WHERE pessoa = 'carol'",
+      ),
     ).toEqual([{ alvo: SOFIA_RANGEL, data: '2026-01-05' }])
   })
 
@@ -882,11 +929,15 @@ imports: []
     const fixture = useFixture()
     await fixture.ok(
       Effect.gen(function* () {
-        yield* (yield* Sqlite).write((db) => db.exec('DROP TABLE perguntas_abertas'))
+        yield* (yield* Sqlite).write((db) =>
+          db.exec('DROP TABLE perguntas_abertas'),
+        )
       }),
     )
 
-    await fixture.ok(personReport({ person: 'quim', text: 'odeia filme lento' }))
+    await fixture.ok(
+      personReport({ person: 'quim', text: 'odeia filme lento' }),
+    )
 
     expect(
       await query(fixture, 'SELECT pessoa, assunto FROM perguntas_abertas'),
@@ -941,7 +992,11 @@ describe('pessoa visto', () => {
         "SELECT fato_id, filme_id, tipo FROM ja_visto WHERE pessoa = 'teo'",
       ),
     ).toEqual([
-      { fato_id: result.seen.factId, filme_id: PEQUENOS_MILAGRES, tipo: 'declarado' },
+      {
+        fato_id: result.seen.factId,
+        filme_id: PEQUENOS_MILAGRES,
+        tipo: 'declarado',
+      },
     ])
   })
 
@@ -959,17 +1014,23 @@ describe('pessoa visto', () => {
 
     expect(result.seen.rating).toBe(4)
     const { ratings } = await fixture.ok(personView('teo'))
-    expect(ratings?.map((r) => [r.filmId, r.rating, r.source, r.date])).toEqual([
-      [CASA_CHEIA, 4, 'Sessão de sábado', '2026-11-20'],
-    ])
+    expect(ratings?.map((r) => [r.filmId, r.rating, r.source, r.date])).toEqual(
+      [[CASA_CHEIA, 4, 'Sessão de sábado', '2026-11-20']],
+    )
   })
 
   test('it holds after a reload as synced, and the body has the lines', async () => {
     const fixture = useFixture()
     await fixture.ok(
-      personSeen({ person: 'teo', film: PEQUENOS_MILAGRES, date: '2026-11-19' }),
+      personSeen({
+        person: 'teo',
+        film: PEQUENOS_MILAGRES,
+        date: '2026-11-19',
+      }),
     )
-    await fixture.ok(personSeen({ person: 'teo', film: CASA_CHEIA, rating: '4,5' }))
+    await fixture.ok(
+      personSeen({ person: 'teo', film: CASA_CHEIA, rating: '4,5' }),
+    )
     const sql =
       "SELECT 'j' AS t, fato_id, filme_id, tipo AS x, data, fonte FROM ja_visto WHERE pessoa = 'teo' UNION ALL " +
       "SELECT 'n', fato_id, filme_id, nota, data, fonte FROM notas WHERE pessoa = 'teo' ORDER BY 1, 2"
@@ -978,7 +1039,9 @@ describe('pessoa visto', () => {
     await fixture.ok(reloadPeople)
 
     expect(await query(fixture, sql)).toEqual(synced)
-    expect(synced.map(({ filme_id, x, data, fonte }) => [filme_id, x, data, fonte])).toEqual([
+    expect(
+      synced.map(({ filme_id, x, data, fonte }) => [filme_id, x, data, fonte]),
+    ).toEqual([
       [PEQUENOS_MILAGRES, 'declarado', '2026-11-19', 'conversa com o Dono'],
       [CASA_CHEIA, 4.5, '2026-11-20', 'conversa com o Dono'],
     ])
@@ -1042,7 +1105,9 @@ describe('pessoa visto', () => {
   test('ver shows her Já vistos', async () => {
     const fixture = useFixture()
     await fixture.ok(personSeen({ person: 'teo', film: PEQUENOS_MILAGRES }))
-    await fixture.ok(personSeen({ person: 'teo', film: CASA_CHEIA, rating: '7/10' }))
+    await fixture.ok(
+      personSeen({ person: 'teo', film: CASA_CHEIA, rating: '7/10' }),
+    )
 
     const view = await fixture.ok(personView('teo'))
 

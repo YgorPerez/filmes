@@ -157,7 +157,9 @@ export const pyIsoDate = (text: string): string | null => {
   }
   if (ymd === null) return null
   const [y, m, d] = ymd
-  if (!(y >= 1 && y <= 9999 && m >= 1 && m <= 12 && d >= 1 && d <= daysIn(y, m)))
+  if (
+    !(y >= 1 && y <= 9999 && m >= 1 && m <= 12 && d >= 1 && d <= daysIn(y, m))
+  )
     return null
   const pad = (n: number, width: number) => String(n).padStart(width, '0')
   return `${pad(y, 4)}-${pad(m, 2)}-${pad(d, 2)}`
