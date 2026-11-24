@@ -118,6 +118,54 @@ export {
 } from './recommendation/vetoes.ts'
 export { sessionOrder } from './sessions/order.ts'
 export {
+  currentVersion,
+  filmsInBody,
+  fullLine,
+  isOpen,
+  KIND_IN_BODY,
+  newSessionId,
+  onScreen,
+  readSession,
+  sessionBody,
+  sessionDuration,
+  sessionIds,
+  sessionPath,
+  sessionRelative,
+  sessionsFolder,
+  SESSIONS_FOLDER,
+  STRENGTH_IN_BODY,
+  VERSION_EXTRAS,
+  writeSession,
+  type BodyEvidence,
+  type BodyFilm,
+  type FilmInBody,
+  type SessionFile,
+} from './sessions/file.ts'
+export {
+  comments,
+  feedbackSource,
+  ratingValue,
+  reactions,
+  REPORT_LEVELS,
+  sessionSeen,
+  type Comment,
+  type Reaction,
+  type ReportLevel,
+  type SessionSeen,
+} from './sessions/facts.ts'
+export { DB_RULES, reloadSessions, syncSession } from './sessions/database.ts'
+export {
+  openSession,
+  openSessions,
+  recommendationFields,
+  recommendSession,
+  sessionContext,
+  type OpenSession,
+  type RecommendSessionRequest,
+  type SessionRecommendation,
+  type SessionRef,
+} from './sessions/open.ts'
+export {
   engineLayer,
   errorOutcome,
   makeEngine,
@@ -125,7 +173,9 @@ export {
   type EngineServices,
   type ErrorOutput,
   type Outcome,
+  type RunOptions,
 } from './runtime/Engine.ts'
+export { Owner, ownerOf } from './runtime/Owner.ts'
 export {
   ERROR_CODES,
   EngineError,
@@ -183,10 +233,12 @@ export {
 export { formatRating, readRating, type ReadRating } from './data/rating.ts'
 export {
   isMapping,
+  isPyDate,
   isPyFloat,
   isPyInt,
   isSequence,
   parseYaml,
+  pyDate,
   pyIterate,
   pyReprValue,
   pyStrValue,
@@ -194,6 +246,7 @@ export {
   stringifyYaml,
   yamlToJson,
   YamlError,
+  type PyDate,
   type YamlMapping,
   type YamlScalar,
   type YamlValue,

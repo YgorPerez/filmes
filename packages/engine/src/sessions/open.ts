@@ -1,0 +1,289 @@
+// `recomendar` opens a Session; `sessoes-abertas` lists the open ones
+// (`sessao/__init__.py` `abrir` and `abertas`, `comandos/recomendar.py`).
+//
+// Opening writes `sessions/<id>.md` with no Feedback yet, syncs its rows in
+// the same transaction, and commits it to filmes-dados (`DataWriter`),
+// signed by the request's Dono. The id is the date and the Presentes other
+// than the Dono (the Dono alone when there is no one else).
+
+import { join } from 'node:path'
+import { Effect } from 'effect'
+import { compareTuple } from '../compat/compare.ts'
+import { pyFloat, pyInt } from '../compat/fact-id.ts'
+import {
+  authorOf,
+  DataWriter,
+  ENGINE_AUTHOR,
+  type Author,
+} from '../data/DataWriter.ts'
+import type { GitError } from '../data/git.ts'
+import {
+  isMapping,
+  isSequence,
+  pyStrValue,
+  pyTruthy,
+  yamlToJson,
+  type YamlValue,
+} from '../data/yaml.ts'
+import { peopleFolder, readPerson } from '../people/people.ts'
+import type { Constraint } from '../recommendation/constraints.ts'
+import {
+  readConstraints,
+  storedConstraints,
+} from '../recommendation/constraints/index.ts'
+import {
+  recommend,
+  type Recommendation,
+  type RecommendRequest,
+} from '../recommendation/recommend.ts'
+import type { EngineServices } from '../runtime/Engine.ts'
+import type { EngineError } from '../runtime/EngineError.ts'
+import { Owner } from '../runtime/Owner.ts'
+import { Run } from '../runtime/Run.ts'
+import { Sqlite, type Connection, type SqliteError } from '../sqlite/Sqlite.ts'
+import { syncSession } from './database.ts'
+import {
+  currentVersion,
+  isOpen,
+  newSessionId,
+  readSession,
+  sessionBody,
+  sessionIds,
+  sessionRelative,
+  writeSession,
+} from './file.ts'
+import { sessionOrder } from './order.ts'
+
+/** Where a result names a Session: its id, its file in filmes-dados and
+ * the version the result is. */
+export interface SessionRef {
+  readonly id: string
+  readonly file: string
+  readonly version: number
+}
+
+/** `recomendar`'s request: the Recomendação's, and the Dono's words. */
+export interface RecommendSessionRequest extends RecommendRequest {
+  /** The request as the Dono said it, kept in the Session. */
+  readonly request?: string | null
+}
+
+export interface SessionRecommendation extends Recommendation {
+  readonly session: SessionRef
+}
+
+/** A value of the result as YAML: an integer is an int (positions,
+ * counts); the fields copied here hold no float that is a whole number. */
+const toYaml = (value: unknown): YamlValue => {
+  if (value === undefined || value === null) return null
+  if (typeof value === 'number')
+    return Number.isInteger(value) ? pyInt(value) : pyFloat(value)
+  if (typeof value === 'string' || typeof value === 'boolean') return value
+  if (Array.isArray(value)) return value.map(toYaml)
+  return new Map(
+    Object.entries(value as Record<string, unknown>)
+      .filter(([, inner]) => inner !== undefined)
+      .map(([key, inner]) => [key, toYaml(inner)]),
+  )
+}
+
+/** The request's context, as the Session keeps it (`_contexto`): the
+ * request, the duration, the accepted Climas and the other Restrições. */
+export const sessionContext = (
+  request: string | null,
+  moods: ReadonlyArray<string>,
+  constraints: ReadonlyArray<Constraint>,
+): YamlValue => {
+  const duration = constraints.find((c) => c.name === 'duration')
+  const maxDuration = duration?.toJson()['maxMinutes'] ?? null
+  return toYaml({
+    request,
+    max_duration: maxDuration,
+    moods,
+    constraints: storedConstraints(constraints),
+  })
+}
+
+/** The frontmatter fields that change when the Recomendação is redone
+ * (`_campos_da_recomendacao`). */
+export const recommendationFields = (
+  recommendation: Recommendation,
+  context: YamlValue,
+): ReadonlyArray<readonly [string, YamlValue]> => {
+  const fields: Array<readonly [string, YamlValue]> = [
+    ['attendees', toYaml(recommendation.attendees)],
+    ['context', context],
+    ['rule', toYaml(recommendation.rule)],
+    [
+      'recommendation',
+      toYaml(
+        recommendation.films.map((f) => ({
+          position: f.position,
+          id: f.id,
+          title: f.title,
+          ...('new' in f && { new: f.new }),
+        })),
+      ),
+    ],
+  ]
+  // Regenerating with kept films (#59): what stayed and what left, and why.
+  for (const field of ['kept', 'dropped'])
+    if (field in recommendation)
+      fields.push([
+        field,
+        toYaml((recommendation as unknown as Record<string, unknown>)[field]),
+      ])
+  return fields
+}
+
+/** The Donos in the database, by slug. */
+const databaseOwners = (db: Connection) =>
+  Effect.map(
+    db.all('SELECT slug FROM pessoas WHERE dono = 1 ORDER BY slug'),
+    (rows) => rows.map((row) => String(row['slug'])),
+  )
+
+/** The request's Donos: the logged-in Pessoa, or every Pessoa with
+ * `dono = 1` (Python's list; the first one is the Session's Dono). */
+const requestOwners = (
+  db: Connection,
+): Effect.Effect<ReadonlyArray<string>, SqliteError> =>
+  Effect.flatMap(Owner, (owner) =>
+    owner !== null ? Effect.succeed([owner]) : databaseOwners(db),
+  )
+
+/** Who signs the commit: the Dono, from her file, or the engine itself
+ * when there is no Dono. */
+const authorFor = (
+  owner: string | undefined,
+): Effect.Effect<Author, never, EngineServices> =>
+  owner === undefined
+    ? Effect.succeed(ENGINE_AUTHOR)
+    : Effect.flatMap(peopleFolder, (folder) =>
+        readPerson(join(folder, `${owner}.md`)),
+      ).pipe(
+        Effect.map(authorOf),
+        Effect.orElseSucceed(() => ENGINE_AUTHOR),
+      )
+
+/** Opens the Session of a Recomendação (`sessao.abrir`), with no Feedback
+ * yet: writes its file, syncs its rows and commits it. */
+export const openSession = (
+  recommendation: Recommendation,
+  context: YamlValue,
+): Effect.Effect<
+  SessionRef,
+  EngineError | SqliteError | GitError,
+  EngineServices | Run
+> =>
+  Effect.gen(function* () {
+    const { today } = yield* Run
+    const owners = yield* (yield* Sqlite).read(requestOwners)
+    const writer = yield* DataWriter
+    const attendees = recommendation.attendees
+    return yield* writer.write(
+      {
+        author: yield* authorFor(owners[0]),
+        message: `open session ${today} (${attendees.join(', ')})`,
+      },
+      (db) =>
+        Effect.gen(function* () {
+          const names = new Map(
+            (yield* db.all('SELECT slug, nome FROM pessoas ORDER BY slug')).map(
+              (row) => [String(row['slug']), String(row['nome'])],
+            ),
+          )
+          const others = attendees.filter((p) => !owners.includes(p))
+          const id = yield* newSessionId(
+            today,
+            others.length > 0 ? others : attendees,
+          )
+          const front = new Map<string, YamlValue>([
+            ['date', today],
+            ['owner', owners[0] ?? null],
+            ...recommendationFields(recommendation, context),
+            ['chosen', null],
+            ['chosen_in_recommendation', null],
+            ['feedback', null],
+          ])
+          yield* syncSession(db, id, front)
+          yield* writeSession(
+            id,
+            front,
+            sessionBody(recommendation.films, names),
+          )
+          return { id, file: sessionRelative(id), version: 1 }
+        }),
+    )
+  })
+
+/** `recomendar`: the Recomendação, and the Session it opens. */
+export const recommendSession = (
+  request: RecommendSessionRequest,
+): Effect.Effect<
+  SessionRecommendation,
+  EngineError | SqliteError | GitError,
+  EngineServices | Run
+> =>
+  Effect.gen(function* () {
+    const recommendation = yield* recommend(request)
+    // `recommend` already read them, so this read cannot fail.
+    const asked = yield* readConstraints(request)
+    const context = sessionContext(
+      request.request ?? null,
+      recommendation.moods,
+      [...asked, ...(request.constraints ?? [])],
+    )
+    const session = yield* openSession(recommendation, context)
+    return { ...recommendation, session }
+  })
+
+/** A Session without Feedback, as `sessoes-abertas` lists it. */
+export interface OpenSession {
+  readonly id: string
+  readonly file: string
+  readonly date: string
+  readonly attendees: unknown
+  /** The request as the Dono said it, or null. */
+  readonly request: unknown
+  /** The current version's films: `{position, id, title, new?}`. */
+  readonly recommendation: unknown
+  readonly version: number
+}
+
+/** The Sessions without Feedback, the latest first (`sessao.abertas`).
+ * Reads the files only. */
+export const openSessions: Effect.Effect<
+  { readonly sessions: ReadonlyArray<OpenSession> },
+  EngineError,
+  EngineServices
+> = Effect.gen(function* () {
+  const list: OpenSession[] = []
+  for (const id of yield* sessionIds) {
+    const { frontmatter: front } = yield* readSession(id)
+    if (!isOpen(front)) continue
+    const context = front.get('context')
+    const recommendation = front.get('recommendation')
+    list.push({
+      id,
+      file: sessionRelative(id),
+      date: pyStrValue(front.get('date') ?? null),
+      attendees: yamlToJson(front.get('attendees') ?? null),
+      request:
+        pyTruthy(context) && isMapping(context)
+          ? yamlToJson(context.get('request') ?? null)
+          : null,
+      recommendation: yamlToJson(
+        pyTruthy(recommendation) && isSequence(recommendation)
+          ? recommendation
+          : [],
+      ),
+      version: Number(yamlToJson(currentVersion(front).get('version') ?? null)),
+    })
+  }
+  // `sorted(..., reverse=True)`: stable, so equal keys keep the file order.
+  const sessions = list.toSorted((a, b) =>
+    compareTuple([...sessionOrder(b)], [...sessionOrder(a)]),
+  )
+  return { sessions }
+})
