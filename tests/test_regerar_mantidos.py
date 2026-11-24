@@ -118,16 +118,19 @@ def test_veto_novo_tira_o_mantido_e_declarado_novo_nao(banco):
     assert any(f[0]["titulo"] in aviso and "mantido" in aviso for aviso in refeita["avisos"])
 
 
-def test_refazer_sem_manter_troca_todos_e_diz_o_que_saiu(banco):
+def test_refazer_sem_manter_nao_mantem_nada_e_diz_o_que_saiu(banco):
+    # Sem o sem repetido (#66), o que não foi visto pode voltar; o Já visto da Sessão sai.
     primeira, sessao_id = _primeira(banco)
-    banco.ok("pessoa", "visto", "dono", "--filme", primeira["filmes"][1]["id"])
+    visto = primeira["filmes"][1]
+    banco.ok("pessoa", "visto", "dono", "--filme", visto["id"])
 
     refeita = banco.ok("recomendar", "--presentes", "dono", "--sessao", sessao_id)
 
     assert refeita["mantidos"] == []
     assert all(f["novo"] is True for f in refeita["filmes"])
-    assert [(s["id"], s["motivo"]) for s in refeita["saidas"]] == [
-        (f["id"], "ja_visto" if i == 1 else "trocado") for i, f in enumerate(primeira["filmes"])]
+    assert visto["id"] not in _ids(refeita)
+    assert {"posicao": 2, "id": visto["id"], "titulo": visto["titulo"], "motivo": "ja_visto",
+            "pessoas": ["bruno"]} in refeita["saidas"]
 
 
 def test_mantido_abaixo_da_nota_minima_sai_com_aviso(banco, dados, tmp_path):
