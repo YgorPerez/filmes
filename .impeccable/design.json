@@ -152,7 +152,8 @@
       "**Do** carimbar o estado no card (Trocar, Já vi) e dizer em \"Saiu\" o que saiu e por quê.",
       "**Do** manter alvos de toque de 44px ou mais.",
       "**Do** conferir cada componente no claro e no escuro, a 360px e a 390px.",
-      "**Do** embutir a Antonio no recurso do MCP Apps."
+      "**Do** servir a Antonio da origem do app, declarada no CSP do recurso do MCP Apps; nunca em `data:`.",
+      "**Do** manter o card inline do Claude compacto (até duas ações, 4 ou 5 dados por filme) e marcar vários filmes na tela cheia."
     ],
     "donts": [
       "**Don't** usar o vermelho-cinema fora dos quatro lugares dele.",

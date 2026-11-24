@@ -10,27 +10,9 @@
 //   (`filmes/importar/decisoes.py`).
 
 import { isMap, isScalar, isSeq, parseDocument, type YAMLMap } from 'yaml'
-import { MigrationError } from './rewrite-yaml.ts'
-
-interface Edit {
-  readonly start: number
-  readonly end: number
-  readonly text: string
-}
-
-function apply(text: string, edits: readonly Edit[]): string {
-  let out = text
-  for (const edit of [...edits].sort((a, b) => b.start - a.start))
-    out = out.slice(0, edit.start) + edit.text + out.slice(edit.end)
-  return out
-}
-
-function frontmatter(text: string): { start: number; yaml: string } | null {
-  if (!text.startsWith('---\n')) return null
-  const end = text.indexOf('\n---', 4)
-  if (end === -1) return null
-  return { start: 4, yaml: text.slice(4, end) }
-}
+import { applyEdits, splitFrontmatter, type Edit } from './edit.ts'
+import { MigrationError } from './error.ts'
+import type { DataKind } from './tables/data.ts'
 
 function legacyRule(map: YAMLMap, offset: number, edits: Edit[]): void {
   const pair = map.items.find((p) => isScalar(p.key) && p.key.value === 'regra')
@@ -48,7 +30,7 @@ function legacyRule(map: YAMLMap, offset: number, edits: Edit[]): void {
 }
 
 function normalizeSession(text: string): string {
-  const fm = frontmatter(text)
+  const fm = splitFrontmatter(text)
   if (!fm) return text
   const doc = parseDocument(fm.yaml, { version: '1.1' })
   const edits: Edit[] = []
@@ -59,11 +41,11 @@ function normalizeSession(text: string): string {
       for (const v of versions.items)
         if (isMap(v)) legacyRule(v, fm.start, edits)
   }
-  return apply(text, edits)
+  return applyEdits(text, edits)
 }
 
 function normalizeLetterboxd(text: string): string {
-  const fm = frontmatter(text)
+  const fm = splitFrontmatter(text)
   if (!fm) return text
   const doc = parseDocument(fm.yaml, { version: '1.1' })
   const edits: Edit[] = []
@@ -85,15 +67,12 @@ function normalizeLetterboxd(text: string): string {
         text: 'razao',
       })
     }
-  return apply(text, edits)
+  return applyEdits(text, edits)
 }
 
 /** A Portuguese file in the current shape, with the older shapes rewritten
  * the way the Python engine reads them. */
-export function normalizeLegacy(
-  kind: 'person' | 'session' | 'letterboxd',
-  text: string,
-): string {
+export function normalizeLegacy(kind: DataKind, text: string): string {
   if (kind === 'session') return normalizeSession(text)
   if (kind === 'letterboxd') return normalizeLetterboxd(text)
   return text

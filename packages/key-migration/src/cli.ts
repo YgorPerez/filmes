@@ -11,11 +11,11 @@
 
 import { parseArgs } from 'node:util'
 import {
-  migrateConfig,
-  migrateData,
+  migrateFolder,
   roundTrip,
   type Direction,
   type FileResult,
+  type SourceKind,
 } from './migrate.ts'
 
 const USAGE = `usage:
@@ -52,7 +52,7 @@ export function main(argv: readonly string[], io: Io): number {
   const { positionals, values } = parsed
   const [command] = positionals
   const source = values.data ?? values.config
-  const kind = values.data !== undefined ? 'data' : 'config'
+  const kind: SourceKind = values.data !== undefined ? 'data' : 'config'
   if (
     positionals.length !== 1 ||
     source === undefined ||
@@ -79,8 +79,11 @@ export function main(argv: readonly string[], io: Io): number {
       io.err(USAGE)
       return 2
     }
-    const run = kind === 'data' ? migrateData : migrateConfig
-    io.out(summary(run(source, values.out, command satisfies Direction)))
+    io.out(
+      summary(
+        migrateFolder(kind)(source, values.out, command satisfies Direction),
+      ),
+    )
     return 0
   } catch (error) {
     io.err((error as Error).message)

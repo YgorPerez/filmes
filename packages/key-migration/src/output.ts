@@ -2,7 +2,7 @@
 // `tables/output.ts`: what the parity oracle (ADR 0004) compares with the
 // TypeScript engine's result.
 
-import { MigrationError } from './rewrite-yaml.ts'
+import { MigrationError } from './error.ts'
 import { invert, type Shape } from './shape.ts'
 import { COMMANDS, error } from './tables/output.ts'
 

@@ -204,7 +204,7 @@ export function fakeVps() {
     },
     upload(folder, names) {
       for (const name of names)
-        copyFileSync(join(folder, name), join(paths.folder, 'upload', name))
+        copyFileSync(join(folder, name), join(paths.upload, name))
     },
   }
 

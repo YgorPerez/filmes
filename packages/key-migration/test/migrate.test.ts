@@ -8,7 +8,7 @@ import {
   migrateDataFile,
   roundTrip,
 } from '../src/migrate.ts'
-import { MigrationError } from '../src/rewrite-yaml.ts'
+import { MigrationError } from '../src/error.ts'
 import { readTree, scratch, writeTree } from './helpers.ts'
 
 const PERSON = `---

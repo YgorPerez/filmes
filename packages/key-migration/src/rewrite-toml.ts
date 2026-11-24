@@ -8,8 +8,8 @@
 // else (inline tables with keys, arrays of tables, multi-line strings) is an
 // error, never a silent skip.
 
-import { MigrationError } from './rewrite-yaml.ts'
-import type { Values } from './shape.ts'
+import { MigrationError } from './error.ts'
+import { invertValues, type Values } from './shape.ts'
 
 export interface TomlTable {
   /** The table's name in the other language. */
@@ -53,15 +53,6 @@ function depthChange(text: string, where: string): number {
     else if (c === ']' || c === '}') depth--
   }
   return depth
-}
-
-function invertValues(values: Values, where: string): Values {
-  const out: Record<string, string> = {}
-  for (const [a, b] of Object.entries(values)) {
-    if (b in out) throw new MigrationError(`${where}: two keys become '${b}'`)
-    out[b] = a
-  }
-  return out
 }
 
 /** The same shape read the other way. */

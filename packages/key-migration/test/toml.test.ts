@@ -77,7 +77,7 @@ describe('rewriteToml', () => {
     ).toThrow('two tables become [x]')
     expect(() =>
       invertToml({ tables: { a: { name: 'x', keys: { p: 'k', q: 'k' } } } }),
-    ).toThrow("two keys become 'k'")
+    ).toThrow("'p' and 'q' both become 'k'")
     expect(invertToml({ tables: {}, anyTable: { generos: 'genres' } })).toEqual(
       {
         tables: {},

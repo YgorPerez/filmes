@@ -14,7 +14,7 @@ export {
   type RoundTrip,
 } from './migrate.ts'
 export { outputToEnglish, outputToPortuguese, renameValue } from './output.ts'
-export { MigrationError } from './rewrite-yaml.ts'
+export { MigrationError } from './error.ts'
 export * as config from './tables/config.ts'
 export * as data from './tables/data.ts'
 export * as output from './tables/output.ts'

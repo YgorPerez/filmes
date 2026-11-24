@@ -8,8 +8,8 @@
 //   (`.github/scripts/suppressions.ts`) against the target branch: the remote
 //   branch the commit is closest to, `master` or a `spec/*`.
 // - And through the tests of only what the push affects (`affected.ts`):
-//   Vitest with `--changed` in the affected folders, the MCP tests and the
-//   Python suite. On the branch's first push, since the merge-base with the
+//   Vitest with `--changed` in the affected folders (without it when the
+//   plan runs everything), the MCP tests and the Python suite. On the branch's first push, since the merge-base with the
 //   target; on later ones, since what the remote already had. The full suite
 //   belongs to the PR's CI.
 // - `master` only moves forward.
@@ -170,14 +170,15 @@ export function verifyPush({
     const plan = planForDiff(files)
     const commands: { command: string[]; folder: string }[] = [
       ...plan.vitest.map((folder) => ({
+        // A full plan runs every test: what changed is outside the import
+        // graph, so `--changed` would pick none.
         command: [
           'pnpm',
           'exec',
           'vp',
           'test',
           'run',
-          '--changed',
-          base,
+          ...(plan.full ? [] : ['--changed', base]),
           '--passWithNoTests',
         ],
         folder: join(root, folder),

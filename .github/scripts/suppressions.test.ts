@@ -6,6 +6,7 @@ import { countInGrep, findDirective, judge, readDiff } from './suppressions.ts'
 const OX = 'oxlint' + '-disable'
 const TS = '@ts-' + 'expect-error'
 const MEMO = "'use no " + "memo'"
+const NOQA = '# no' + 'qa'
 
 describe('findDirective', () => {
   it('finds the directive that opens a comment and says whether it has a reason', () => {
@@ -136,6 +137,36 @@ describe('countInGrep', () => {
       'oxlint-disable': 2,
       '@ts-expect-error': 1,
     })
+  })
+})
+
+describe('# noqa in Python', () => {
+  it('is counted in .py files and wants the reason after the codes', () => {
+    expect(
+      findDirective(`x = 1  ${NOQA}: E501 -- the URL is one token`),
+    ).toEqual({ name: '# noqa', hasReason: true })
+    expect(findDirective(`import os  ${NOQA}: F401`)).toEqual({
+      name: '# noqa',
+      hasReason: false,
+    })
+    expect(findDirective(`x = 1  ${NOQA}`)).toEqual({
+      name: '# noqa',
+      hasReason: false,
+    })
+    expect(
+      countInGrep(
+        [
+          `abc:filmes/cli.py:3:import os  ${NOQA}: F401 -- re-exported`,
+          `abc:docs/x.md:1:${NOQA}`,
+        ].join('\n'),
+      ),
+    ).toEqual({ '# noqa': 1 })
+    expect(
+      readDiff(diff('filmes/cli.py', `+import os  ${NOQA}: F401`))
+        .withoutReason,
+    ).toEqual([
+      expect.objectContaining({ file: 'filmes/cli.py', name: '# noqa' }),
+    ])
   })
 })
 
