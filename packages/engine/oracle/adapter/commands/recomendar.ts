@@ -1,16 +1,15 @@
-// `recomendar` → `recommend` (#90), for the steps it answers: the Session
-// the Python opens (#94), refaz (`--sessao`, `--manter`) and the Restrições
-// (#91, #92) are ported later, so a step with those arguments stays
-// `not_ported`. What a plain step still differs on (the Session it opens)
-// is in decisions.yaml, to come out with #94.
+// `recomendar` → `recommendSession` (#90, #94): the Recomendação and the
+// Session it opens. Refazer (`--sessao`, `--manter`, `--trocar`, #95) and
+// the Restrições (#91, #92) are ported later, so a step with those
+// arguments stays `not_ported`.
 
 import { data } from '@filmes/key-migration'
-import { recommend, type RuleName } from '../../../src/index.ts'
+import { recommendSession, type RuleName } from '../../../src/index.ts'
 import { engineError } from '../../../src/runtime/EngineError.ts'
 import { Effect } from 'effect'
 import { defineCommand } from '../command.ts'
 
-/** Arguments of later tickets: the Session's (#94) and the Restrições'
+/** Arguments of later tickets: refazer's (#95) and the Restrições'
  * (#91, #92, `restricoes/*.py` `configurar`). */
 const LATER = [
   '--sessao',
@@ -69,8 +68,9 @@ export default defineCommand({
     const rule = args.regra
       ? ((data.RULES as Record<string, string>)[args.regra] as RuleName)
       : undefined
-    return recommend({
+    return recommendSession({
       attendees: args.presentes,
+      request: args.pedido ?? null,
       ...(count !== undefined && { count }),
       ...(rule && { rule }),
       ...(args.de !== undefined && { by: args.de }),

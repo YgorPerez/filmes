@@ -15,6 +15,7 @@ import { Tmdb } from '../sources/Tmdb.ts'
 import { Sqlite } from '../sqlite/Sqlite.ts'
 import { EngineError, type ErrorCode } from './EngineError.ts'
 import { Environment, type Vars } from './Environment.ts'
+import { Owner } from './Owner.ts'
 import { Run } from './Run.ts'
 import { Today } from './Today.ts'
 
@@ -73,11 +74,17 @@ export const errorOutcome = (cause: Cause.Cause<unknown>): Outcome<never> => {
   return { exitCode: 1, output: { error: { code: 'internal', message } } }
 }
 
+export interface RunOptions {
+  /** The logged-in Pessoa's slug: the request's Dono (`Owner`). */
+  readonly owner?: string
+}
+
 export interface Engine {
   /** Runs one request with its own `Run`. Never rejects: every failure is
    * an `Outcome` with an error. */
   readonly run: <A, E>(
     effect: Effect.Effect<A, E, EngineServices | Run>,
+    options?: RunOptions,
   ) => Promise<Outcome<A>>
   /** Closes the process-wide services. */
   readonly dispose: () => Promise<void>
@@ -89,9 +96,12 @@ export interface Engine {
 export const makeEngine = (vars: Vars): Engine => {
   const runtime = ManagedRuntime.make(engineLayer(vars))
   return {
-    run: async (effect) => {
+    run: async (effect, options = {}) => {
       const exit = await runtime.runPromiseExit(
-        effect.pipe(Effect.provide(Run.layer)),
+        effect.pipe(
+          Effect.provide(Run.layer),
+          Effect.provideService(Owner, options.owner ?? null),
+        ),
       )
       return Exit.isSuccess(exit)
         ? { exitCode: 0, output: exit.value }

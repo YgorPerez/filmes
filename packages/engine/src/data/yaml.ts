@@ -6,7 +6,8 @@
 // dot), `09` is text, `0o10` is text. A value keeps its Python type: an int
 // is a `PyInt`, a float a `PyFloat`, and a date or a timestamp becomes the
 // text of its Python `str()` ("2026-11-20", "2026-11-20 10:00:00+00:00"),
-// which is how the Python engine used every date it read.
+// which is how the Python engine used every date it read. A date the engine
+// writes is a `PyDate` (`pyDate("2026-11-20")`), written plain.
 
 import {
   Document,
@@ -34,7 +35,18 @@ import { pyRepr } from '../compat/number.ts'
 import { pythonError } from '../compat/python-error.ts'
 import { pyReprStr } from '../compat/text.ts'
 
-export type YamlScalar = string | boolean | null | PyInt | PyFloat
+/** A date the engine writes (`2026-11-20`, plain, as PyYAML writes a
+ * Python `date`). Reading gives the text instead: see the header. */
+export interface PyDate {
+  readonly isoDate: string
+}
+
+export const pyDate = (isoDate: string): PyDate => ({ isoDate })
+
+export const isPyDate = (value: unknown): value is PyDate =>
+  typeof value === 'object' && value !== null && 'isoDate' in value
+
+export type YamlScalar = string | boolean | null | PyInt | PyFloat | PyDate
 
 /** A YAML value with Python's types. A mapping is a `Map` (insertion order,
  * a repeated key keeps its first place and its last value, as a dict); its
@@ -215,8 +227,8 @@ const PYYAML_TAGS: ScalarTag[] = [
     'timestamp',
     /^(?:[0-9]{4}-[0-9]{2}-[0-9]{2}|[0-9]{4}-[0-9]{1,2}-[0-9]{1,2}(?:[Tt]|[ \t]+)[0-9]{1,2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]*)?(?:[ \t]*(?:Z|[-+][0-9]{1,2}(?::[0-9]{2})?))?)$/,
     constructTimestamp,
-    never,
-    String,
+    isPyDate,
+    (value) => (value as PyDate).isoDate,
   ),
   tag('merge', /^<<$/, () => MERGE_KEY, never, String),
   // PyYAML resolves a plain `=` and has no constructor for it.
@@ -444,7 +456,7 @@ const toValue = (node: unknown, doc: Document.Parsed): YamlValue => {
 const keyText = (key: YamlValue): string => {
   if (isSequence(key) || isMapping(key))
     throw new YamlError('found unhashable key')
-  return pyStr(key)
+  return pyStrValue(key)
 }
 
 /** `yaml.safe_load(text)`. A text PyYAML refuses throws a `YamlError`. */
@@ -522,6 +534,7 @@ export const pyTruthy = (value: YamlValue | undefined): boolean => {
     return Boolean(value)
   if (isPyInt(value)) return BigInt(value.int) !== 0n
   if (isPyFloat(value)) return value.float !== 0
+  if (isPyDate(value)) return true
   if (isSequence(value)) return value.length > 0
   return value.size > 0
 }
@@ -534,12 +547,21 @@ export const pyReprValue = (value: YamlValue): string => {
     return `{${[...value]
       .map(([k, v]) => `${pyReprStr(k)}: ${pyReprValue(v)}`)
       .join(', ')}}`
+  if (isPyDate(value))
+    return `datetime.date(${value.isoDate
+      .split('-')
+      .map((part) => Number(part))
+      .join(', ')})`
   return pyStr(value)
 }
 
 /** Python's `str()` of a value read from YAML. */
 export const pyStrValue = (value: YamlValue): string =>
-  isSequence(value) || isMapping(value) ? pyReprValue(value) : pyStr(value)
+  isSequence(value) || isMapping(value)
+    ? pyReprValue(value)
+    : isPyDate(value)
+      ? value.isoDate
+      : pyStr(value)
 
 /** What a Python `for` over the value yields: the items of a list, the
  * keys of a dict, the characters of a str. Anything else is the
@@ -558,7 +580,9 @@ const typeName = (value: YamlScalar): string =>
       ? "'bool'"
       : isPyInt(value)
         ? "'int'"
-        : "'float'"
+        : isPyDate(value)
+          ? "'datetime.date'"
+          : "'float'"
 
 /** What `json.dumps` writes for a value read from YAML: a dict as an
  * object in its order, an int or a float as a number. */
@@ -570,5 +594,6 @@ export const yamlToJson = (value: YamlValue): unknown => {
     )
   if (isPyInt(value)) return Number(value.int)
   if (isPyFloat(value)) return value.float
+  if (isPyDate(value)) return value.isoDate
   return value
 }
