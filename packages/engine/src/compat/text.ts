@@ -55,3 +55,12 @@ export const letterboxdSlug = (name: string): string =>
 /** The slug of a Pessoa [Person] file name (`dados/pessoas.py` `slug_de`):
  * "Zé Ramalho" is "ze-ramalho". */
 export const personSlug = (name: string): string => asciiSlug(name)
+
+/** The code points Python's `str.isspace()` takes as whitespace: JavaScript's
+ * `trim` adds U+FEFF and leaves out U+001C to U+001F and U+0085. */
+const PY_SPACE =
+  '[\\t\\n\\v\\f\\r\\x1c-\\x20\\x85\\xa0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000]'
+const PY_STRIP = new RegExp(`^${PY_SPACE}+|${PY_SPACE}+$`, 'g')
+
+/** Python's `str.strip()` with no argument. */
+export const pyStrip = (text: string): string => text.replace(PY_STRIP, '')

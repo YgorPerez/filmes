@@ -1,0 +1,275 @@
+// The Força [strength] ruler: how strong each Evidence is, by its Tipo, its
+// value and its age (`evidencia/regua.py`, issue #7). Fixed rules, no
+// config: the numbers that are calibrated live in `weights.toml`. The
+// strength of an Evidence comes only from here.
+
+import { pythonError } from '../compat/python-error.ts'
+import { STRENGTHS, type Strength } from './strength.ts'
+
+/** A "high rating" on the taste path. */
+export const HIGH_RATING = 4.0
+/** A Nota older than this many years drops one level. */
+export const FRESH_YEARS = 5
+/** A Declarado or Relato older than this many years drops one level. */
+export const STATED_YEARS = 2
+export const SEEN_STRENGTH: Strength = 'strong'
+export const MIN_NEIGHBOR_BASE = 30
+export const MIN_NEIGHBOR_PERCENT = 25
+
+/** One level down; weak stays weak. */
+export const weaken = (strength: Strength): Strength =>
+  STRENGTHS[Math.max(0, STRENGTHS.indexOf(strength) - 1)] ?? strength
+
+/** One level up; strong stays strong. */
+export const strengthen = (strength: Strength): Strength =>
+  STRENGTHS[Math.min(STRENGTHS.length - 1, STRENGTHS.indexOf(strength) + 1)] ??
+  strength
+
+/** The weaker of two; the first on a tie (Python's `min`). */
+const weaker = (a: Strength, b: Strength): Strength =>
+  STRENGTHS.indexOf(b) < STRENGTHS.indexOf(a) ? b : a
+
+/** +1 when the Fact speaks for the film, -1 against. */
+export type Direction = 1 | -1
+
+/** Strength and direction of a Nota [rating] on a similar film.
+ *
+ * Strong: 4.5–5 (or 0.5–1.5 against). Moderate: 4 (or 2). Weak: 3–3.5, and
+ * 2.5 is weak against. Given more than 5 years ago, it drops one level.
+ * From a Session's Feedback, it then goes up one level, up to strong. */
+export const ratingStrength = (
+  rating: number,
+  date: string,
+  today: string,
+  fromFeedback = false,
+): readonly [Strength, Direction] => {
+  let [strength, direction]: [Strength, Direction] =
+    rating >= 4.5
+      ? ['strong', 1]
+      : rating >= 4
+        ? ['moderate', 1]
+        : rating >= 3
+          ? ['weak', 1]
+          : rating >= 2.5
+            ? ['weak', -1]
+            : rating >= 2
+              ? ['moderate', -1]
+              : ['strong', -1]
+  if (isOlderThan(date, FRESH_YEARS, today)) strength = weaken(strength)
+  if (fromFeedback) strength = strengthen(strength)
+  return [strength, direction]
+}
+
+/** The Tipo of a seed rating: a Nota, or a rating stated by the Pessoa
+ * ("love" is 5, "hate" is 1) or told by the Dono. */
+export type SeedKind = 'rating' | 'stated' | 'report'
+
+/** Strength and direction of a seed rating of any Tipo. A Nota follows the
+ * Nota ruler; a stated or reported one follows the specific Declarado and
+ * the Relato rulers. */
+export const seedStrength = (
+  kind: SeedKind,
+  rating: number,
+  date: string,
+  today: string,
+  fromFeedback = false,
+): readonly [Strength, Direction] =>
+  kind === 'rating'
+    ? ratingStrength(rating, date, today, fromFeedback)
+    : [statedStrength(kind, true, date, today), rating >= 3 ? 1 : -1]
+
+/** Strength of a Feedback reaction (a Nota or a Relato) on the chosen film.
+ *
+ * A Nota: the Nota ruler, one level up. A Relato speaks of the film itself,
+ * so its Declarado would be specific (strong); the Relato is one level below,
+ * drops one more after 2 years and goes up one for coming from Feedback. */
+export const feedbackStrength = (
+  kind: 'rating' | 'report',
+  rating: number,
+  date: string,
+  today: string,
+): Strength =>
+  kind === 'rating'
+    ? ratingStrength(rating, date, today, true)[0]
+    : strengthen(statedStrength('report', true, date, today))
+
+/** Metadata on the taste path: 3 or more high Notas of the Pessoa on the
+ * same node is strong, 2 moderate, 1 weak, up to the link's ceiling. None
+ * gives no Evidence. */
+export const pathStrength = (
+  highRatings: number,
+  predicate: string,
+): Strength | null => {
+  if (highRatings <= 0) return null
+  const strength: Strength =
+    highRatings >= 3 ? 'strong' : highRatings === 2 ? 'moderate' : 'weak'
+  return linkStrength(strength, predicate)
+}
+
+/** An actor outside the first 3 IMDb credits (supporting, `principal`
+ * false) gives weak at most. Without the film's credits (`null`), the
+ * strength stays. */
+export const castStrength = (
+  strength: Strength,
+  principal: boolean | null,
+): Strength => (principal === false ? 'weak' : strength)
+
+/** The strongest each content link can be (the Dono's decision of
+ * 2026-11-22): the same director or series says more than the same actor. */
+export const LINK_CEILING: Readonly<Record<string, Strength>> = {
+  director: 'strong',
+  series: 'strong',
+  writer: 'moderate',
+  cast: 'moderate',
+  genre: 'weak',
+}
+
+/** The weaker of the given strength (the seed's or the node's) and the
+ * link's ceiling. A predicate outside the table has no ceiling. */
+export const linkStrength = (strength: Strength, predicate: string): Strength =>
+  weaker(strength, LINK_CEILING[predicate] ?? 'strong')
+
+/** The strength after the Pessoa's Ajuste [adjustment] to the link: `none`
+ * removes the Evidence (null), `low` drops one level, `normal` and `high`
+ * leave it (`high` only changes the weight). */
+export const adjustedStrength = (
+  strength: Strength,
+  level: string,
+): Strength | null => {
+  if (level === 'none') return null
+  return level === 'low' ? weaken(strength) : strength
+}
+
+/** Item-item neighbourhood review: of `base` people who gave 4+ to the seed
+ * film, `both` also gave 4+ to the Candidate.
+ *
+ * Strong with a base of 500+ and 60% or more, moderate with 100+ and 40%,
+ * weak with 30+ and 25%; below that, no Evidence. Never above `ceiling`,
+ * the seed's strength. The share is compared in integers. */
+export const neighborStrength = (
+  base: number,
+  both: number,
+  ceiling: Strength,
+): Strength | null => {
+  const steps: ReadonlyArray<readonly [Strength, number, number]> = [
+    ['strong', 500, 60],
+    ['moderate', 100, 40],
+    ['weak', MIN_NEIGHBOR_BASE, MIN_NEIGHBOR_PERCENT],
+  ]
+  for (const [strength, minBase, percent] of steps) {
+    if (base >= minBase && 100 * both >= percent * base) {
+      return weaker(strength, ceiling)
+    }
+  }
+  return null
+}
+
+/** A MovieLens `tags.csv` review: strong with 10+ distinct users, moderate
+ * with 3 to 9; fewer than 3 gives no Evidence. */
+export const movielensTagStrength = (users: number): Strength | null =>
+  users >= 10 ? 'strong' : users >= 3 ? 'moderate' : null
+
+/** A Tag Genome review: moderate at most (relevance 0.8 or more), weak
+ * from 0.6 to 0.8; below 0.6 no Evidence. It is a model's guess, so it is
+ * worth less than a count of users. */
+export const genomeStrength = (relevance: number): Strength | null =>
+  relevance >= 0.8 ? 'moderate' : relevance >= 0.6 ? 'weak' : null
+
+/** Genre metadata that answers a Clima [mood]: weak, because genre is too
+ * broad (the same reason that caps it at weak on the taste path). */
+export const moodGenreStrength = (): Strength => 'weak'
+
+/** A Declarado that names a film, director, actor or subgenre is specific
+ * and strong; a generic one is moderate. A review or tag the Pessoa wrote
+ * is a specific Declarado. A Relato is one level below its Declarado. Both
+ * drop one level after 2 years. */
+export const statedStrength = (
+  kind: 'stated' | 'report',
+  specific: boolean,
+  date: string,
+  today: string,
+): Strength => {
+  let strength: Strength = specific ? 'strong' : 'moderate'
+  if (kind === 'report') strength = weaken(strength)
+  if (isOlderThan(date, STATED_YEARS, today)) strength = weaken(strength)
+  return strength
+}
+
+/** The IMDb rating as a film line: exact metadata, strong. The bonus size
+ * comes from the rating itself, not from the strength. */
+export const imdbRatingStrength = (): Strength => 'strong'
+
+/** The "parecido com X" line of a similar request: the project's reading
+ * of tags and neighbours, weak. Not a Fact, and adds to nothing. */
+export const similarStrength = (): Strength => 'weak'
+
+/** Metadata that answers the request (duration, rating, language, trigger):
+ * always strong. */
+export const requestMetadataStrength = (): Strength => 'strong'
+
+/** A Palpite [guess], a Motivo with no Fact: always weak. */
+export const guessStrength = (): Strength => 'weak'
+
+interface Day {
+  readonly year: number
+  readonly month: number
+  readonly day: number
+}
+
+const isLeap = (year: number): boolean =>
+  year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0)
+
+const daysIn = (year: number, month: number): number =>
+  month === 2
+    ? isLeap(year)
+      ? 29
+      : 28
+    : [4, 6, 9, 11].includes(month)
+      ? 30
+      : 31
+
+/** Python's `date.fromisoformat` on the `YYYY-MM-DD` the engine stores; a
+ * string that is not a date is Python's ValueError. */
+const parseDay = (text: string): Day => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text)
+  const [year, month, day] = (match?.slice(1) ?? []).map(Number)
+  if (
+    year === undefined ||
+    month === undefined ||
+    day === undefined ||
+    year < 1 ||
+    month < 1 ||
+    month > 12 ||
+    day < 1 ||
+    day > daysIn(year, month)
+  ) {
+    throw pythonError('ValueError', `Invalid isoformat string: '${text}'`)
+  }
+  return { year, month, day }
+}
+
+/** Whether `date` is more than `years` years before `today`. On 29 February,
+ * the same day `years` back is the 28th when that year has no 29th. */
+export const isOlderThan = (
+  date: string,
+  years: number,
+  today: string,
+): boolean => {
+  const day = parseDay(date)
+  const now = parseDay(today)
+  const year = now.year - years
+  if (year < 1 || year > 9999) {
+    throw pythonError('ValueError', `year ${year} is out of range`)
+  }
+  const limit: Day = {
+    year,
+    month: now.month,
+    day: Math.min(now.day, daysIn(year, now.month)),
+  }
+  return (
+    day.year < limit.year ||
+    (day.year === limit.year &&
+      (day.month < limit.month ||
+        (day.month === limit.month && day.day < limit.day)))
+  )
+}
