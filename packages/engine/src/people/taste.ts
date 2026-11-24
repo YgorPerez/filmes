@@ -4,9 +4,9 @@
 
 import { Effect } from 'effect'
 import { pyReprStr } from '../compat/text.ts'
-import type { EngineError } from '../runtime/EngineError.ts'
+import { engineError, type EngineError } from '../runtime/EngineError.ts'
 import type { Environment } from '../runtime/Environment.ts'
-import { tagGroupLabel } from '../recommendation/tag-groups.ts'
+import { isTagGroup, readTagGroups } from '../recommendation/vetoes.ts'
 import {
   adjustmentJson,
   dateOf,
@@ -35,6 +35,27 @@ import {
   type Veto,
 } from './Person.ts'
 import type { Level, Link } from '../evidence/strength.ts'
+
+/** The tag group's label; a key that is not a group is `unknown_target`
+ * (`_rotulo_do_grupo`). The message names the English file and keys the
+ * engine reads, where Python's names `config/vetos_por_tag.toml` and its
+ * Portuguese keys. */
+export const tagGroupLabel = (
+  key: string,
+): Effect.Effect<string, EngineError, Environment> =>
+  Effect.flatMap(readTagGroups, (groups) => {
+    const group = groups.get(key)
+    if (group === undefined || !isTagGroup(key)) {
+      const keys = [...groups.keys()].join(', ') || 'nenhum'
+      return Effect.fail(
+        engineError(
+          'unknown_target',
+          `'${key}' não é um grupo de config/tag_vetoes.toml (há: ${keys})`,
+        ),
+      )
+    }
+    return Effect.succeed(group.label)
+  })
 
 // --- vetar -------------------------------------------------------------------
 

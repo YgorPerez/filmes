@@ -296,6 +296,7 @@ export {
   personQuestions,
   personSkip,
   personVeto,
+  tagGroupLabel,
   type AdjustInput,
   type AdjustResult,
   type NormalAdjustmentJson,
@@ -313,9 +314,3 @@ export {
   type RemoveInput,
   type RemoveResult,
 } from './people/remove.ts'
-export {
-  isTagGroup,
-  readTagGroups,
-  tagGroupLabel,
-  type TagGroup,
-} from './recommendation/tag-groups.ts'
