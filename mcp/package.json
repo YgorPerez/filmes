@@ -1,19 +1,16 @@
 {
-  "name": "filmes-mcp",
+  "name": "@filmes/mcp",
   "version": "0.1.0",
   "private": true,
-  "type": "module",
   "description": "Servidor MCP do recomendador de filmes: chama a CLI python -m filmes",
   "bin": {
     "filmes-mcp": "src/servidor.ts"
   },
+  "type": "module",
   "scripts": {
     "start": "node src/servidor.ts",
     "typecheck": "tsc --noEmit",
-    "test": "node --test 'test/**/*.test.ts'"
-  },
-  "engines": {
-    "node": ">=23.6"
+    "test": "vp test run"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.32.2",
@@ -22,6 +19,10 @@
   "devDependencies": {
     "@types/node": "26.6.6",
     "jsdom": "^26.1.0",
-    "typescript": "7.0.2"
+    "typescript": "catalog:",
+    "vite-plus": "catalog:"
+  },
+  "engines": {
+    "node": ">=23.6"
   }
 }

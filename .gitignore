@@ -4,4 +4,18 @@ __pycache__/
 .pytest_cache/
 var/
 config/local.toml
-mcp/node_modules/
+
+# The pnpm workspace (frontend/, mcp/, packages/).
+node_modules/
+
+# What the frontend build leaves.
+.output/
+.nitro/
+.tanstack/
+
+# What `pnpm check` leaves: each package's coverage, which `fallow health`
+# reads, and fallow's cache.
+coverage/
+.fallow/
+
+.claude/worktrees/

@@ -1,0 +1,15 @@
+{
+  // The repository's own scripts and the root Vite+ config. The app and each
+  // package keep their own.
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "types": ["node"]
+  },
+  "include": ["*.ts", "scripts/**/*.ts", ".github/scripts/**/*.ts"]
+}

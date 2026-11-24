@@ -1,0 +1,24 @@
+{
+  "name": "filmes",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "prepare": "effect-tsgo patch --typescript --oxlint",
+    "dev": "pnpm --filter frontend dev",
+    "build": "pnpm --filter frontend build",
+    "start": "pnpm --filter frontend start",
+    "check": "vp check && vp run -r --cache test:coverage && vp test run --coverage && vp run --filter frontend fallow && vp run --filter frontend doctor",
+    "fmt": "vp fmt",
+    "lint": "vp lint",
+    "test": "vp test run && vp run -r --cache test",
+    "typecheck": "vp run -r --cache typecheck"
+  },
+  "devDependencies": {
+    "@effect/tsgo": "catalog:",
+    "@types/node": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "typescript": "catalog:",
+    "vite-plus": "catalog:"
+  },
+  "packageManager": "pnpm@12.10.1"
+}

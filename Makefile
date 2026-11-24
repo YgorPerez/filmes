@@ -1,23 +1,25 @@
 .PHONY: check test-py typecheck test-ts instalar
 
-# Verificação completa: testes Python, typecheck e testes do servidor MCP.
+# Verificação do motor Python e do servidor MCP que chama a CLI dele. O resto
+# do workspace (formato, lint, tipos, cobertura, fallow, React Doctor) é o
+# `pnpm check`.
 check: test-py typecheck test-ts
 
 test-py: .venv
 	uv run pytest -q
 
-typecheck: mcp/node_modules
-	npm --prefix mcp run --silent typecheck
+typecheck: node_modules
+	pnpm --filter @filmes/mcp --silent typecheck
 
-test-ts: .venv mcp/node_modules
-	npm --prefix mcp test --silent
+test-ts: .venv node_modules
+	pnpm --filter @filmes/mcp --silent test
 
-instalar: .venv mcp/node_modules
+instalar: .venv node_modules
 
 .venv: pyproject.toml uv.lock
 	uv sync
 	@touch .venv
 
-mcp/node_modules: mcp/package.json mcp/package-lock.json
-	npm --prefix mcp ci
-	@touch mcp/node_modules
+node_modules: package.json pnpm-lock.yaml pnpm-workspace.yaml mcp/package.json
+	pnpm install --frozen-lockfile
+	@touch node_modules
