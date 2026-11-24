@@ -7,7 +7,7 @@
 // call goes to `calls`, in order.
 //
 // The VPS is not empty: like the real one, it already serves temestudo, with
-// its container, its image, its vhost and the package's default site, so the
+// its containers (temestudo-app, temestudo-stats, saude-app), their images, its vhost and the package's default site, so the
 // tests can show the deploy leaves them alone.
 
 import { spawnSync } from 'node:child_process'
@@ -127,6 +127,13 @@ const NEIGHBOUR_FILES = [
   ['opt/temestudo/no-ar', 'temestudo sha\n'],
 ] as const
 
+/** The other apps' containers on the VPS: name, image and host port. */
+export const NEIGHBOUR_CONTAINERS = [
+  ['temestudo-app', 'temestudo-app:sha-2c1f1d9', '3031'],
+  ['temestudo-stats', 'temestudo-stats:sha-2c1f1d9', '3051'],
+  ['saude-app', 'saude-app:sha-7e0b4a1', '3071'],
+] as const
+
 /** A VPS with Nginx up, temestudo live and nothing of filmes. */
 export function fakeVps() {
   const root = mkdtempSync(join(tmpdir(), 'fake-vps-'))
@@ -152,12 +159,14 @@ export function fakeVps() {
     mkdirSync(folder, { recursive: true })
   for (const [path, text] of NEIGHBOUR_FILES)
     writeFileSync(join(root, path), text)
-  writeFileSync(join(state, 'images'), 'temestudo-app:sha-2c1f1d9\n')
   writeFileSync(
-    join(state, 'c', 'temestudo-app'),
-    'temestudo-app:sha-2c1f1d9\n',
+    join(state, 'images'),
+    NEIGHBOUR_CONTAINERS.map(([, image]) => `${image}\n`).join(''),
   )
-  writeFileSync(join(state, 'c', 'temestudo-app.port'), '3031\n')
+  for (const [name, image, port] of NEIGHBOUR_CONTAINERS) {
+    writeFileSync(join(state, 'c', name), `${image}\n`)
+    writeFileSync(join(state, 'c', `${name}.port`), `${port}\n`)
+  }
   writeFileSync(join(state, 'calls'), '')
   writeFileSync(paths.nginxPid, '1\n')
   const programs = {

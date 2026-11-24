@@ -3,7 +3,7 @@
 // serves temestudo, as the real one does.
 import { join } from 'node:path'
 import { describe, expect, it } from 'vite-plus/test'
-import { fakeFrontend, fakeVps } from './fake-vps.ts'
+import { fakeFrontend, fakeVps, NEIGHBOUR_CONTAINERS } from './fake-vps.ts'
 import { publish, rollback, targetFrom } from './vps.ts'
 
 const SHA_1 = 'aaaaaaa'
@@ -63,7 +63,7 @@ describe.skipIf(process.platform === 'win32')('the deploy on the VPS', () => {
     expect(vps.calls()).toContain(`chown 1000:1000 ${data} ${data}/db`)
   })
 
-  it("leaves temestudo's container, image, vhost and the default site alone", () => {
+  it("leaves temestudo's containers, images, vhost and the default site alone", () => {
     const vps = aVps()
 
     vps.publish(SHA_1)
@@ -72,14 +72,21 @@ describe.skipIf(process.platform === 'win32')('the deploy on the VPS', () => {
     vps.rollback()
 
     expect(vps.neighbour()).toEqual(vps.neighbourBefore)
-    expect(vps.container('temestudo-app')).toEqual({
-      image: 'temestudo-app:sha-2c1f1d9',
-      port: '3031',
-      volume: '',
-      running: true,
-    })
-    expect(vps.images()).toContain('temestudo-app:sha-2c1f1d9')
-    expect(vps.containers().sort()).toEqual(['filmes-app', 'temestudo-app'])
+    for (const [name, image, port] of NEIGHBOUR_CONTAINERS) {
+      expect(vps.container(name)).toEqual({
+        image,
+        port,
+        volume: '',
+        running: true,
+      })
+      expect(vps.images()).toContain(image)
+    }
+    expect(vps.containers().sort()).toEqual([
+      'filmes-app',
+      'saude-app',
+      'temestudo-app',
+      'temestudo-stats',
+    ])
   })
 
   it('the log says how long each step took, and the total', () => {
@@ -126,7 +133,7 @@ describe.skipIf(process.platform === 'win32')('the deploy on the VPS', () => {
 
     expect(vps.live().include).toBe(proxyTo(3091))
     expect(vps.images()).toEqual([
-      'temestudo-app:sha-2c1f1d9',
+      ...NEIGHBOUR_CONTAINERS.map(([, image]) => image),
       `filmes-app:sha-${SHA_2}`,
       `filmes-app:sha-${SHA_3}`,
     ])
