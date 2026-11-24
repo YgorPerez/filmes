@@ -22,3 +22,6 @@ coverage/
 
 # The deploy wizard's answers (`frontend/scripts/deploy-wizard.sh`).
 .env.deploy
+
+# Read-only source checkouts agents read (AGENTS.md "Código do Effect").
+.repos/
