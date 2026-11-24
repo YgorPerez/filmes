@@ -17,7 +17,8 @@ export default definirFerramenta({
     "um Veto a grupo de tags, como comédia boba, conta em {tags}. " +
     "`so_palpites` marca filme sem Fato nenhum, que só entra no fim quando " +
     'faltam Candidatos com Fato. Presentes por slug, nome ou apelido; "dono" é o Dono. ' +
-    "Restrições opcionais (duração, ano de lançamento, idioma, criança, gatilhos, sem Já visto, nada triste, nada lento) tiram filmes antes da ordenação. " +
+    "Restrições opcionais (duração, ano de lançamento, idioma, criança, gatilhos, sem Já visto, nada triste, nada lento, parecido) tiram filmes antes da ordenação. " +
+    'Com `parecido`, cada filme traz a linha "parecido com X: tags em comum", que não é Fato. ' +
     "Cada filme que passa traz em `linhas_do_filme` as linhas das Restrições, do Clima, de grupo ou sozinho e da nota do IMDb acima de 7. " +
     "Clima, grupo ou sozinho e a nota do IMDb puxam a ordem dos filmes. " +
     "A linha de Crédito aparece em `linhas_do_filme` quando o Crédito fez o filme subir. " +
@@ -81,6 +82,15 @@ export default definirFerramenta({
     sem_lento: z.boolean().optional().describe(
       '"nada lento": tira filme com tag de ritmo lento no MovieLens (slow, slow paced, meditative, contemplative, boring)',
     ),
+    parecido: z
+      .array(z.string().regex(/^tt\d+$/))
+      .min(1)
+      .optional()
+      .describe(
+        '"algo igual X" ou "entre X e Y": os filmes de referência (tt... do IMDb; ache com `consultar`). Só passam os 50 ' +
+          "mais parecidos com eles (média entre as referências), e a Regra de escolha ordena entre esses. Faltando " +
+          "parecidos, a lista sai menor, com aviso. O pedido é da noite: não grava gosto",
+      ),
   },
   cli: (e) => {
     const args = ["--presentes", ...e.presentes];
@@ -97,6 +107,7 @@ export default definirFerramenta({
     if (e.sem_ja_visto) args.push("--sem-ja-visto");
     if (e.sem_tristeza) args.push("--sem-tristeza");
     if (e.sem_lento) args.push("--sem-lento");
+    if (e.parecido?.length) args.push(`--parecido=${e.parecido.join(",")}`);
     if (e.pedido !== undefined) args.push(`--pedido=${e.pedido}`);
     if (e.sessao) args.push("--sessao", e.sessao);
     if (e.manter?.length) args.push(`--manter=${e.manter.join(",")}`);

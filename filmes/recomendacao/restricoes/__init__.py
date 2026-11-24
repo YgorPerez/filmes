@@ -15,6 +15,7 @@ e a Restrição devolvida tem:
     def resultado(self, saidas) -> dict    # o que a Restrição achou, ao lado de "tirados"
     def avaliar(self, contexto, filmes) -> dict[filme_id, Veredito]
     def resolver(self, contexto, filme, consultar) -> Passa | Sai   # só se avaliar deu PENDENTE
+    def aviso_da_lista(self, achados, quantos) -> str | None        # opcional: aviso sobre a lista pronta
 
 `avaliar` recebe todos os Candidatos (id -> linha de filmes) de uma vez, para
 resolver com uma consulta só. Filme que passa leva as linhas do filme
@@ -132,6 +133,12 @@ class Restricoes:
             linhas.extend(veredito.linhas)
         self.linhas[filme["id"]].extend(linhas)
         return True
+
+    def avisos_da_lista(self, achados: int, quantos: int) -> list[str]:
+        """Avisos das Restrições sobre a lista pronta (a de `aviso_da_lista`, opcional):
+        o "parecido" avisa quando passaram menos filmes que o pedido."""
+        avisos = (getattr(r, "aviso_da_lista", lambda *_: None)(achados, quantos) for r in self.restricoes)
+        return [a for a in avisos if a]
 
     def _contar_saida(self, restricao, veredito: Sai, filme_id) -> None:
         self.tirou[filme_id] = restricao

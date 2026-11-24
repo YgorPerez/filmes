@@ -242,3 +242,19 @@ Filmes `tt90055NN`, de Clara Bastos (`Q9000055`) e com Duda Alves (`Q9005501`, `
 | Bastidores (5502) | 4,5 (2025) | |
 | Ato Final (5503) | 4,5 (2025) | |
 | Coxia (5504) | nenhuma | Candidato: Duda Alves é o primeiro crédito do IMDb. O agregado do diretor sai forte e o do elenco fica no teto, moderada |
+
+### Algo igual X (#67)
+
+Filmes `tt90067NN`, sem diretor nem Nota, para `test_parecido.py` e `mcp/test/parecido.test.ts`. Para o Bruno são só palpites: entre eles, os votos ordenam. Nenhum tem Romance, para não mudar a contagem do Veto a romance. Escrever Cartas e Estrada Afora são as referências.
+
+| Filme | Votos, nota | Genoma | Tags (usuários) | Vizinho de Escrever Cartas | Gêneros do IMDb |
+|---|---|---|---|---|---|
+| Escrever Cartas (6701) | 5000 | family 0,9, writers 0,85, bittersweet 0,8 | family 20, writers 15 | | Drama, Family |
+| Estrada Afora (6702) | 5000 | — | road trip 10 | | Comedy, Drama |
+| Mesa de Domingo (6711) | 3000 | family 0,9, writers 0,8, bittersweet 0,75 | family 10, writers 8 | 500, 200 | Drama, Family |
+| Rascunho (6712) | 2000 | family 0,6 | | | Drama |
+| Pé na Estrada (6713) | 2500 | | road trip 8 | 500, 50 | Comedy |
+| Quase Igual (6714) | 3000, 6,5 | como Mesa de Domingo | | | Drama, Family |
+| Tinta e Papel (6716) | 1500 | — | family 20, writers 15 | | Drama, Family |
+
+Parecença com Escrever Cartas, do maior para o menor: Tinta e Papel (fora do genoma, com o peso dele redistribuído, empata em tudo o que tem), Mesa de Domingo, Quase Igual (abaixo da nota mínima, mas conta entre os N), Rascunho e Pé na Estrada. Com Estrada Afora, que não está no genoma, só Pé na Estrada.

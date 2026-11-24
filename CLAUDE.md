@@ -51,10 +51,11 @@ filmes/
   evidencia/               Evidencia, régua de Força (regua.py), redação (texto.py)
   recomendacao/            Candidatos, utilidade, ordem; sinais/<caminho>.py, um por caminho
                            (sinais(rodada, pessoa) para uma Pessoa, sinais_do_filme(rodada) para a linha do filme)
-    restricoes/<nome>.py   uma Restrição da Sessão por arquivo (duração, ano, idioma, criança, gatilho, sem Já visto, nada triste, nada lento, sem repetido)
+    restricoes/<nome>.py   uma Restrição da Sessão por arquivo (duração, ano, idioma, criança, gatilho, sem Já visto, nada triste, nada lento, sem repetido, parecido)
     cabecalho.py           link, gêneros, nota e votos do IMDb, capa, título pt e sinopse do TMDB; fora das Evidências
     atribuicoes.py         atribuições obrigatórias das fontes usadas
     mantidos.py            regerar com --manter: posições dos mantidos, selo novo e saídas
+    parecenca.py           parecença de 0 a 1 entre dois filmes (genoma, tags, vizinhos, gênero, diretor/elenco), para --parecido
   sob_demanda/             fontes consultadas na hora, com cache de validade: fonte.py, cache.py, omdb.py, ddd.py, tmdb.py
   sessao/                  arquivo da Sessão, Feedback, Fatos do Feedback e Crédito
   importar/                imports do Letterboxd (ZIP e RSS) e do Trakt, fila de resolução e decisões do Dono

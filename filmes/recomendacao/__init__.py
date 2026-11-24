@@ -205,6 +205,7 @@ def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], qu
             "linhas_do_filme": [e.como_json(pesos) for e in linhas],
             **({"novo": not regerar.mantido(filme["id"])} if regerar else {}),
         })
+    contexto.avisos.extend(pedidas.avisos_da_lista(len(filmes), quantos))
     if regerar:
         contexto.avisos.extend(mantidos.aviso(regerar.titulo(f), motivo) for f, motivo in tirados.items())
     resposta = {
