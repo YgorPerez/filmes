@@ -112,6 +112,7 @@ def _vistos(conn, versoes, agora) -> set:
             continue
         vistos |= {filme_id for (filme_id,) in conn.execute(
             f"SELECT DISTINCT filme_id FROM ja_vistos WHERE data >= ? "
-            f"AND filme_id IN ({', '.join('?' * len(na_tela))}) AND pessoa IN ({', '.join('?' * len(presentes))})",
+            f"AND filme_id IN ({', '.join('?' * len(na_tela))}) AND pessoa IN ({', '.join('?' * len(presentes))}) "
+            "ORDER BY filme_id",
             [str(versao["data"]), *na_tela, *presentes])}
     return vistos

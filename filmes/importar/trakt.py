@@ -86,7 +86,7 @@ def _resolver(conn, filme, tem_metadados):
     if not filme.tmdb:
         return None
     ids = {id_ for (id_,) in conn.execute(
-        "SELECT f.id FROM slugs_letterboxd s JOIN filmes f ON f.id = s.imdb WHERE s.tmdb = ?",
+        "SELECT f.id FROM slugs_letterboxd s JOIN filmes f ON f.id = s.imdb WHERE s.tmdb = ? ORDER BY f.id",
         (filme.tmdb,),
     )}
     if tem_metadados:
@@ -95,6 +95,7 @@ def _resolver(conn, filme, tem_metadados):
             JOIN metadados_wikidata i ON i.item = t.item AND i.propriedade = 'P345'
             JOIN filmes f ON f.id = i.valor
             WHERE t.propriedade = 'P4947' AND t.valor = ?
+            ORDER BY f.id
         """, (filme.tmdb,)))
     if len(ids) == 1:
         return ids.pop(), "tmdb"

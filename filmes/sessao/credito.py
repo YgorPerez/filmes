@@ -25,13 +25,13 @@ class Credito:
 def calcular(conn: sqlite3.Connection, presentes: list[str], janela: int) -> dict[str, Credito]:
     sessoes = conn.execute(
         """SELECT s.id, s.data, s.escolhido, f.titulo, f.ano FROM sessoes s LEFT JOIN filmes f ON f.id = s.escolhido
-           WHERE s.feedback_em IS NOT NULL AND s.escolhido IS NOT NULL""").fetchall()
+           WHERE s.feedback_em IS NOT NULL AND s.escolhido IS NOT NULL ORDER BY s.id""").fetchall()
     sessoes.sort(key=arquivo.ordem, reverse=True)
     presentes_de = defaultdict(set)
-    for linha in conn.execute("SELECT sessao, pessoa FROM sessao_presentes"):
+    for linha in conn.execute("SELECT sessao, pessoa FROM sessao_presentes ORDER BY sessao, pessoa"):
         presentes_de[linha["sessao"]].add(linha["pessoa"])
     reacoes_de = defaultdict(dict)
-    for linha in conn.execute("SELECT * FROM reacoes"):
+    for linha in conn.execute("SELECT * FROM reacoes ORDER BY sessao, pessoa, fato_id"):
         reacoes_de[linha["sessao"]][linha["pessoa"]] = linha
 
     creditos = {}

@@ -18,7 +18,8 @@ def carregar(conn, amb):
     normas = {}
     for filme_id, usuarios, raridade in conn.execute("""
             SELECT t.filme_id, t.usuarios, r.valor FROM tags_movielens t
-            JOIN tags_no_catalogo r ON r.fonte = 'tags_movielens' AND r.tag = t.tag"""):
+            JOIN tags_no_catalogo r ON r.fonte = 'tags_movielens' AND r.tag = t.tag
+            ORDER BY t.filme_id, t.tag"""):
         normas[filme_id] = normas.get(filme_id, 0.0) + (math.log1p(usuarios) * raridade) ** 2
     conn.executemany("INSERT INTO normas_tags_movielens (filme_id, norma) VALUES (?, ?)",
                      ((f, math.sqrt(q)) for f, q in normas.items()))
