@@ -41,6 +41,16 @@ describe('planForDiff', () => {
       })
   })
 
+  it("Markdown a package's tests read is data: it runs that package's tests", () => {
+    expect(
+      planForDiff(['packages/key-migration/test/corpus/person/ana.md']),
+    ).toMatchObject({
+      vitest: ['packages/key-migration'],
+      mcp: false,
+      python: false,
+    })
+  })
+
   it('the Python engine runs pytest and the MCP tests, which call its CLI', () => {
     for (const file of ['filmes/cli.py', 'tests/test_recomendar.py', 'uv.lock'])
       expect({ file, ...planForDiff([file]) }).toMatchObject({

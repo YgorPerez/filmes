@@ -38,6 +38,8 @@ const AFFECTS_ALL: ReadonlyArray<[RegExp, string]> = [
 const PYTHON = /^(filmes|tests|config)\/|^(pyproject\.toml|uv\.lock)$/
 /** Has no tests: text for people and for agents. */
 const TEXT_ONLY = /(\.md$|^docs\/|^skill\/|^\.claude\/)/
+/** A test folder, whose files (fixtures, a corpus) are data. */
+const TEST_DATA = /(^|\/)tests?\//
 const FROM_ROOT = /^(\.github\/)?scripts\//
 /** What the key migration's round-trip test reads, outside its package. */
 const MIGRATED = /^(config\/|tests\/fixture\/dados\/)/
@@ -64,8 +66,9 @@ export function planForDiff(files: readonly string[]): Plan {
         mcp: true,
         python: true,
       }
-    // Markdown under tests/ and config/ is data the engine reads, not text.
-    if (TEXT_ONLY.test(file) && !PYTHON.test(file)) continue
+    // Markdown under config/ or a test folder is data the tests read, not text.
+    if (TEXT_ONLY.test(file) && !PYTHON.test(file) && !TEST_DATA.test(file))
+      continue
     if (MIGRATED.test(file)) vitest.add('packages/key-migration')
     if (PYTHON.test(file)) {
       python = true
