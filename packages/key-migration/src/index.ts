@@ -8,6 +8,7 @@ export {
   migrateConfigFile,
   migrateData,
   migrateDataFile,
+  migrateDataPath,
   roundTrip,
   type Direction,
   type FileResult,

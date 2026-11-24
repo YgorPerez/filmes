@@ -2,10 +2,11 @@
 # is where the whole suite runs; on the machine, the push hook runs only the
 # affected tests (`scripts/verify-push.ts`).
 #
-# Three jobs in parallel, each on its own runner: `check` (the workspace),
-# `build` (the app builds, serves `/` and passes the e2e) and `python` (the
+# Four jobs in parallel, each on its own runner: `check` (the workspace),
+# `build` (the app builds, serves `/` and passes the e2e), `python` (the
 # Python engine and the MCP that calls its CLI, until the port replaces
-# them).
+# them) and `oracle` (the parity oracle between the two engines on the
+# fixture, until the same).
 #
 # Every job has `timeout-minutes`: without it, a stuck job holds the PR for
 # GitHub's default six hours.
@@ -160,3 +161,45 @@ jobs:
 
       - name: make check
         run: make check
+
+  # The parity oracle on the fixture (`packages/engine/oracle/`, #76 §4):
+  # every pytest scenario on the Python engine, twice with different hash
+  # seeds, and the steps the TypeScript engine ports on it too. Fails on a
+  # difference `decisions.yaml` does not explain.
+  oracle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: |
+          uv sync --frozen
+          pnpm install --frozen-lockfile
+
+      - name: Oracle
+        run: pnpm oracle --report "$RUNNER_TEMP/oracle.json"
+
+      - name: Oracle report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oracle-report
+          path: ${{ runner.temp }}/oracle.json
+          if-no-files-found: ignore

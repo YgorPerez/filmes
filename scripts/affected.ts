@@ -48,6 +48,9 @@ const MIGRATED = /^(config\/|tests\/fixture\/dados\/)/
  * and config (`packages/engine/test/global-setup.ts`). */
 const ENGINE_FIXTURE =
   /^(filmes\/|tests\/fixture\/|config\/|packages\/key-migration\/src\/|pyproject\.toml$|uv\.lock$)/
+/** The pytest seam, whose trace hook the parity oracle's tests run
+ * (`packages/engine/oracle/`). */
+const ORACLE_TRACE = /^tests\/conftest\.py$/
 const VITEST_FOLDERS = [
   'frontend',
   'packages/engine',
@@ -75,7 +78,8 @@ export function planForDiff(files: readonly string[]): Plan {
     if (TEXT_ONLY.test(file) && !PYTHON.test(file) && !TEST_DATA.test(file))
       continue
     if (MIGRATED.test(file)) vitest.add('packages/key-migration')
-    if (ENGINE_FIXTURE.test(file)) vitest.add('packages/engine')
+    if (ENGINE_FIXTURE.test(file) || ORACLE_TRACE.test(file))
+      vitest.add('packages/engine')
     if (PYTHON.test(file)) {
       python = true
       mcp = true
