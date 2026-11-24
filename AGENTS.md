@@ -92,7 +92,7 @@ O gancho de push (`node scripts/install-hooks.ts`, uma vez por clone) roda a aud
 
 - Rode a menor prova do que você mudou antes da suíte inteira: o teste do arquivo que você mexeu, depois o `check`.
 - Teste o comportamento, não a fiação. Um teste que precisa de timer ou sleep para passar está errado.
-- Uma supressão nova (`oxlint-disable`, `@ts-expect-error`, `# noqa`) leva o motivo no mesmo comentário, e uma pessoa a lê antes de entrar. O teto de supressões é zero.
+- Uma supressão nova (`oxlint-disable`, `@ts-expect-error`, `# noqa`) leva o motivo no mesmo comentário e cabe no teto, que é zero.
 
 ## Rodar o motor de hoje
 

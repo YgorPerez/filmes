@@ -56,6 +56,16 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # The suppression ceiling and the reason on each new directive
+      # (`.github/scripts/suppressions.ts`). A `pull_request` checkout is the
+      # PR merged with the base; the target is the PR tip.
+      - name: Suppressions
+        if: github.event_name == 'pull_request'
+        env:
+          BASE: origin/${{ github.base_ref }}
+          TARGET: ${{ github.event.pull_request.head.sha }}
+        run: node .github/scripts/suppressions.ts --base "$BASE" --target "$TARGET"
+
       # Each package's `tsc`, with the Effect diagnostics.
       - name: Types
         run: pnpm typecheck
