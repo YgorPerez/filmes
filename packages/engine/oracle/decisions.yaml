@@ -66,3 +66,27 @@
 #   parsed YAML, so this needs no entry.
 # - Two Donos stays invalid_data in readPeople/resolvePerson/createPerson;
 #   the login decodes each file alone. The Sessions tickets decide.
+
+# The TypeScript engine reads tag_vetoes.toml with English group keys
+# (ADR 0002), so the message names that file and lists the keys it has: a
+# Python file name and Portuguese keys would point the user at a file and
+# values the engine does not read (the exception #86 made for the Ajuste
+# hints).
+- id: unknown-tag-group-names-the-english-file-and-keys
+  commands: [pessoa vetar, pessoa pular]
+  path: error.message
+  python: "^'.*' não é um grupo de config/vetos_por_tag\\.toml \\(há: comedia_boba, lento\\)$"
+  ts: "^'.*' não é um grupo de config/tag_vetoes\\.toml \\(há: silly_comedy, slow\\)$"
+  reason: the engine reads config/tag_vetoes.toml, whose group keys are English after the key migration
+  link: https://github.com/YgorPerez/filmes/issues/88
+
+# Removing a Feedback comment edits a Session's file, which comes with the
+# Sessions' port. Until then `pessoa remover` finds the comment (so a target
+# it shares is still ambiguous) and refuses with `internal`. #96 removes
+# this entry.
+- id: removing-a-feedback-comment-waits-for-sessions
+  commands: [pessoa remover]
+  scenarios: 'tests/test_pessoa_remover.py::test_comentario_do_feedback_sai_do_arquivo_da_sessao_e_do_banco'
+  path: '*'
+  reason: removing a Feedback comment edits the Session's file, ported by #96 (ticket #88 leaves the comment case out)
+  link: https://github.com/YgorPerez/filmes/issues/88

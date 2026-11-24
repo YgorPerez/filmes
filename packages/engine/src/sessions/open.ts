@@ -10,7 +10,12 @@ import { join } from 'node:path'
 import { Effect } from 'effect'
 import { compareTuple } from '../compat/compare.ts'
 import { pyFloat, pyInt } from '../compat/fact-id.ts'
-import { authorOf, DataWriter, type Author } from '../data/DataWriter.ts'
+import {
+  authorOf,
+  DataWriter,
+  ENGINE_AUTHOR,
+  type Author,
+} from '../data/DataWriter.ts'
 import type { GitError } from '../data/git.ts'
 import {
   isMapping,
@@ -164,15 +169,13 @@ const authorFor = (
   owner: string | undefined,
 ): Effect.Effect<Author, never, EngineServices> =>
   owner === undefined
-    ? Effect.succeed(NO_AUTHOR)
+    ? Effect.succeed(ENGINE_AUTHOR)
     : Effect.flatMap(peopleFolder, (folder) =>
         readPerson(join(folder, `${owner}.md`)),
       ).pipe(
         Effect.map(authorOf),
-        Effect.orElseSucceed(() => NO_AUTHOR),
+        Effect.orElseSucceed(() => ENGINE_AUTHOR),
       )
-
-const NO_AUTHOR: Author = { name: 'filmes', email: '' }
 
 /** Opens the Session of a Recomendação (`sessao.abrir`), with no Feedback
  * yet: writes its file, syncs its rows and commits it. */
