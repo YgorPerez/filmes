@@ -16,9 +16,34 @@ cartaz: siga [Cartaz que responde](cartaz.md#texto-colado).
 1. Chame `sessoes_abertas`. Se houver uma Sessão aberta, pergunte pela mais recente em uma linha e espere. "Na última Sessão com Ana, vocês viram o quê e como foi? Se quiser, pode pular." Se o Dono trouxer Feedback, siga [o fluxo de confirmação](feedback.md) antes de retomar o pedido. Se pular, deixe a Sessão aberta e prossiga.
 2. Passe a `recomendar` o `pedido` literal e os `presentes` por nome, apelido ou slug. "Eu" vai como `dono`. Sem companhia mencionada, use só o Dono. Se o motor apontar Pessoa desconhecida ou ambígua, esclareça quem é antes de tentar de novo.
 3. Passe o tempo em minutos em `duracao_max`. Use os nomes de Clima da descrição de `recomendar`. "Pra dar risada" vira `pra rir`. Se o Clima pedido estiver fora do vocabulário, avise o Dono e siga com os Climas reconhecidos.
-4. Passe as Restrições da Sessão em `idioma` (idioma original), `idade_crianca` (idade da mais nova) ou `crianca: true` (só filmes livres se a idade faltar), `gatilhos` (nomes dos temas do Does the Dog Die, em inglês) e `sem_ja_visto`. Crianças entram só na Restrição. O ano de lançamento vai em `desde` e `ate`, os dois inclusive. "De 1990 em diante" é `desde: 1990`, e "anos 80" é `desde: 1980` com `ate: 1989`. "Que não seja triste" ou "nada pesado" vira `sem_tristeza: true`, que tira filme com tag de tristeza ou tema pesado. Filme sem tag nenhuma passa, com uma linha de palpite que diz isso. "Nada lento" ou "nada parado" vira `sem_lento: true`, que tira filme com tag de ritmo lento. Ao refazer com `sessao`, o motor já tira o que o Dono trocou e o que alguém marcou Já vi na Sessão; o resto do que ela mostrou pode voltar. Não corte filmes à mão. Para um Veto permanente, como "Leo nunca vê terror", siga [Pessoas e gosto](pessoas.md). Se a Restrição pedida não tiver campo na ferramenta, diga isso antes de recomendar.
+4. Passe as Restrições da Sessão em `idioma` (idioma original), `idade_crianca` (idade da mais nova) ou `crianca: true` (só filmes livres se a idade faltar), `gatilhos` (nomes dos temas do Does the Dog Die, em inglês) e `sem_ja_visto`. Crianças entram só na Restrição. O ano de lançamento vai em `desde` e `ate`, os dois inclusive. "De 1990 em diante" é `desde: 1990`, e "anos 80" é `desde: 1980` com `ate: 1989`. "Que não seja triste" ou "nada pesado" vira `sem_tristeza: true`, que tira filme com tag de tristeza ou tema pesado. Filme sem tag nenhuma passa, com uma linha de palpite que diz isso. "Nada lento" ou "nada parado" vira `sem_lento: true`, que tira filme com tag de ritmo lento. Ao refazer com `sessao`, o motor já tira o que o Dono trocou e o que alguém marcou Já vi na Sessão; o resto do que ela mostrou pode voltar. Não corte filmes à mão. "Algo igual X", "tipo X" ou "entre X e Y" vai em `parecido`, como em [Algo igual X](#algo-igual-x). Para um Veto permanente, como "Leo nunca vê terror", siga [Pessoas e gosto](pessoas.md). Se a Restrição pedida não tiver campo na ferramenta, diga isso antes de recomendar.
 5. Use a Regra padrão, salvo se o Dono pedir média simples (`regra: "media"`) ou a vez de uma Pessoa (`regra: "de"`, `de` com o nome dela). "Aniversário da Ana" é a vez da Ana. Confirme a presença dela se o pedido não disser. Vetos e Restrições valem com qualquer Regra.
 6. Com um cartaz na tela, o Já vi e o Trocar dos filmes dele são marcados no cartaz: convide o Dono a marcar e colar, como em [Cartaz que responde](cartaz.md). Sem `html_render`, ou para um filme fora do cartaz: quando alguém disser que já viu um filme, antes ou depois da Recomendação ("Lorenzo viu, nota 8", "Toy Story todo mundo já viu"), grave com `pessoa` e `acao: "visto"`, uma chamada por Pessoa, como em [Pessoas e gosto](pessoas.md#já-visto). Não use `declarar` para isso nem corte o filme da resposta à mão. Com `sem_ja_visto`, a próxima `recomendar` já o deixa de fora.
+
+## Algo igual X
+
+"Algo igual Stuck in Love", "tipo Amélie" e "entre Her e Antes do Amanhecer" pedem filmes parecidos com as referências. O pedido é contexto da noite: vai direto para `recomendar`, sem gravar gosto e sem perguntar se grava.
+
+1. Resolva cada título num ID do Catálogo com `consultar`. O título pode vir em português (rótulo do Wikidata) ou no original:
+
+   ```sql
+   SELECT DISTINCT f.id, f.titulo, f.ano, r.pt FROM filmes f
+   LEFT JOIN metadados_wikidata m ON m.propriedade = 'P345' AND m.valor = f.id
+   LEFT JOIN rotulos_wikidata r ON r.item = m.item
+   WHERE f.titulo LIKE '%stuck in love%' OR r.pt LIKE '%stuck in love%'
+   ORDER BY f.votos DESC LIMIT 10
+   ```
+
+   Com o ano no pedido, filtre por `f.ano`. Uma linha só resolve o título. Com várias, pergunte qual numa linha, com título e ano de cada uma ("Solaris (1972) ou Solaris (2002)?"), e espere. Sem linha, diga que o filme está fora do Catálogo e peça outro.
+2. Chame `recomendar` com o pedido inteiro e os IDs em `parecido`: um para "algo igual X", dois para "entre X e Y". Com Sessão aberta da noite, passe também `sessao`. Depois mostre o cartaz, como em [Cartaz no T3 Code](#cartaz-no-t3-code). O pedido vai só pelo chat ou pelo acrescentar; o cartaz não tem botão para ele.
+3. Se a lista vier menor, com aviso de que faltaram parecidos, diga isso numa linha e ofereça afrouxar uma Restrição da noite (o tempo, o ano, nada lento). O motor mostra menos em vez de completar com outra coisa.
+
+Exemplos:
+
+- "Algo igual Stuck in Love pra mim e pra Ana": `consultar` acha `tt2205697` e a chamada vai com `presentes: ["dono", "ana"]` e `parecido: ["tt2205697"]`.
+- "Algo entre Her e Antes do Amanhecer, até 2h": dois IDs, `parecido: ["tt1798709", "tt0112471"]` e `duracao_max: 120`. A parecença é a média entre os dois.
+
+Com `sessao`, o filtro fica nos refazeres seguintes (Trocar, Já vi, acrescentar) sem repetir `parecido`. Referências novas trocam a lista inteira, mesmo com `manter`. Quando o Dono disser "esquece o parecido" ou pedir uma noite diferente ("agora quero terror"), refaça com `sem_parecido: true`.
 
 ## Cartaz no T3 Code
 
