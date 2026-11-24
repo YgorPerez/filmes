@@ -1,6 +1,6 @@
 # filmes
 
-Recomendador de filmes com evidência. Hoje: motor em Python (`python -m filmes <comando> --json`), servidor MCP por stdio que chama essa CLI como subprocesso, e uma skill para o Claude. O mapa #72 leva tudo para um workspace pnpm na stack do pesquisa-relacionamentos e põe o filmes online em `cinema.finalsend.com.br`: motor em TypeScript (`packages/engine`), app TanStack Start (`frontend/`) que serve o MCP por HTTP, o login e o app web. A v1 do motor é a spec #16 e continua valendo para o comportamento.
+Recomendador de filmes com evidência. Hoje: motor em Python (`python -m filmes <comando> --json`), servidor MCP por stdio que chama essa CLI como subprocesso, e uma skill para o Claude. O mapa #72 leva tudo para um workspace pnpm na stack do pesquisa-relacionamentos e põe o filmes online em `cinema.temestudo.cloud`: motor em TypeScript (`packages/engine`), app TanStack Start (`frontend/`) que serve o MCP por HTTP, o login e o app web. A v1 do motor é a spec #16 e continua valendo para o comportamento.
 
 ## Issue tracker
 
@@ -80,7 +80,7 @@ O motor em TypeScript usa o Effect v4, cuja API difere da que você lembra (v3 e
 
 Adaptado do `AGENTS.md` do pesquisa-relacionamentos.
 
-1. **Um push no ramo padrão publica o site.** Com o deploy do #79, o GitHub Actions publica em `cinema.finalsend.com.br` a cada push no `master`. Dê push no `master` só quando o usuário pedir; trabalho de ticket vai para o ramo `ticket/*`.
+1. **Um push no ramo padrão publica o site.** Com o deploy do #79, o GitHub Actions publica em `cinema.temestudo.cloud` a cada push no `master`. Dê push no `master` só quando o usuário pedir; trabalho de ticket vai para o ramo `ticket/*`.
 2. **O checkout principal é compartilhado.** Outras sessões trabalham nele enquanto você trabalha. Lá, nunca troque de ramo, nunca `git add -A` (adicione por caminho) e nunca reformate arquivo que você não tocou. Trabalhe num worktree.
 3. **Matar por padrão.** Pare só o PID que você guardou ao subir, ou o dono da porta do seu worktree. Nunca pare `node`, `vite`, `python` ou Chrome por nome ou padrão (`pkill`, `killall`): outras sessões rodam os seus.
 4. **Segredos e dados privados.** O filmes-dados é privado (gosto e e-mail de Pessoas reais), e a deploy key dele, as chaves `FILMES_*_CHAVE`, `config/local.toml`, o cliente OAuth do Google e o acesso à VPS são segredos. Nunca os leia para um log, um commit ou um comentário, e nunca troque um secret do GitHub sem perguntar. Teste e experimento usam `tests/fixture/dados` ou uma cópia; só a VPS escreve no filmes-dados (ADR 0005).
