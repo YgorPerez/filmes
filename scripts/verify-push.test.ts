@@ -160,6 +160,36 @@ describe('verifyPush', () => {
     ])
   })
 
+  it('a change outside the import graph runs every Vitest test, not only the changed ones', () => {
+    const { clone, commit } = repositories()
+    const sha = commit('pnpm-lock.yaml')
+    const { run, runs } = fakeRun()
+    verifyPush({
+      root: clone,
+      remote: 'origin',
+      input: line('refs/heads/ticket/10-y', sha),
+      run,
+      say: () => {},
+      env: {},
+    })
+    const vitest = runs.filter((r) => r.command.includes('vp'))
+    expect(vitest.map((r) => r.folder)).toEqual([
+      join(clone, 'frontend'),
+      join(clone, 'packages/engine'),
+      join(clone, 'packages/key-migration'),
+      clone,
+    ])
+    for (const { command } of vitest)
+      expect(command).toEqual([
+        'pnpm',
+        'exec',
+        'vp',
+        'test',
+        'run',
+        '--passWithNoTests',
+      ])
+  })
+
   it('docs only runs no tests at all', () => {
     const { clone, commit } = repositories()
     const sha = commit('docs/x.md')

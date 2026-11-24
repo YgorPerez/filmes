@@ -14,7 +14,7 @@
 export type Plan = {
   /** Why everything runs, or `null` when only the affected part runs. */
   readonly full: string | null
-  /** The folders where Vitest runs, with `--changed`: `frontend`,
+  /** The folders where Vitest runs (with `--changed`, unless `full`): `frontend`,
    * `packages/engine`, `packages/key-migration`, or `.` for the root
    * scripts. */
   readonly vitest: readonly string[]
