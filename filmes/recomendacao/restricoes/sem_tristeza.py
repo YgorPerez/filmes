@@ -80,7 +80,7 @@ def _marcados(conn, lista, minimos, sinal):
 
 def _com_tags(conn):
     return {filme_id for (filme_id,) in conn.execute(
-        "SELECT filme_id FROM tags_movielens UNION SELECT filme_id FROM genoma")}
+        "SELECT filme_id FROM tags_movielens UNION SELECT filme_id FROM genoma ORDER BY filme_id")}
 
 
 def _passa(filme_id, tem_tags):

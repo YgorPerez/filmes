@@ -3,7 +3,7 @@
   // transpiles the `.ts`. The types are `node`'s, the strictest with import
   // extensions.
   "compilerOptions": {
-    "target": "ES2022",
+    "target": "ES2024",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "strict": true,
@@ -18,5 +18,5 @@
     // `effecttsgo` plugin in the root `vite.config.ts`.
     "plugins": [{ "name": "@effect/language-service" }]
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts", "test/**/*.ts"]
 }

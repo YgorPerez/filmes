@@ -90,6 +90,7 @@ def _medir(conn, amb, pessoas_medidas, pessoas_ml, com_grade, progresso):
 def _online(conn):
     sessoes = sorted(conn.execute("""
         SELECT id, data, escolhido, escolhido_na_recomendacao FROM sessoes WHERE feedback_em IS NOT NULL
+        ORDER BY id
     """), key=ordem, reverse=True)[:10]
     # "Não vimos nada" fica na janela das 10, mas fora do denominador da taxa.
     com_filme = sum(sessao["escolhido"] is not None for sessao in sessoes)

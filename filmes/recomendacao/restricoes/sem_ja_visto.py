@@ -33,5 +33,5 @@ class SemJaVisto:
     def avaliar(self, contexto, filmes):
         marcas = ", ".join("?" * len(contexto.presentes))
         vistos = {filme_id for (filme_id,) in contexto.conn.execute(
-            f"SELECT filme_id FROM ja_vistos WHERE pessoa IN ({marcas})", contexto.presentes)}
+            f"SELECT filme_id FROM ja_vistos WHERE pessoa IN ({marcas}) ORDER BY filme_id", contexto.presentes)}
         return {filme_id: Passa() for filme_id in filmes if filme_id not in vistos}
