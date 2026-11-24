@@ -10,8 +10,8 @@ import {
   prepareSelection,
   resolveAttendees,
   Sqlite,
-} from '../src/index.ts'
-import { useFixture } from './fixture.ts'
+} from '../../src/index.ts'
+import { useFixture } from '../fixture.ts'
 
 const selection = Effect.gen(function* () {
   const { weights } = yield* Environment
