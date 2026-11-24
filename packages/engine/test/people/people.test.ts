@@ -200,7 +200,7 @@ describe('reading the Pessoas', () => {
 
     expect(await errorOf(fixture, readPeople)).toEqual({
       code: 'invalid_data',
-      message: 'mais de uma Pessoa com owner: true (ana, bruno)',
+      message: 'mais de uma Pessoa com dono: true (ana, bruno)',
     })
   })
 
@@ -222,18 +222,18 @@ describe('reading the Pessoas', () => {
   })
 
   test.each([
-    ['no frontmatter', 'só texto\n', 'falta o campo name'],
+    ['no frontmatter', 'só texto\n', 'falta o campo nome'],
     [
       'an open frontmatter',
       '---\nname: Ana\n',
       "frontmatter sem o '---' de fechamento",
     ],
     ['broken YAML', '---\nname: [Ana\n---\n', 'frontmatter inválido: '],
-    ['a list frontmatter', '---\n- a\n---\n', 'falta o campo name'],
+    ['a list frontmatter', '---\n- a\n---\n', 'falta o campo nome'],
     [
       'a Veto with no target',
       '---\nname: Ana\nvetoes:\n- {text: x, date: 2026-01-01}\n---\n',
-      "Veto precisa de text, target e date: {'text': 'x', 'date': '2026-01-01'}",
+      "Veto precisa de texto, alvo e data: {'text': 'x', 'date': '2026-01-01'}",
     ],
     [
       'a Veto with a bad date',
@@ -253,7 +253,7 @@ describe('reading the Pessoas', () => {
     [
       'an Ajuste with no level',
       "---\nname: Ana\nadjustments:\n- {link: cast, date: '2026-01-01'}\n---\n",
-      "Ajuste precisa de link, level e date: {'link': 'cast', 'date': '2026-01-01'}",
+      "Ajuste precisa de elo, nivel e data: {'link': 'cast', 'date': '2026-01-01'}",
     ],
     [
       'an Ajuste with a bad date',
@@ -268,17 +268,17 @@ describe('reading the Pessoas', () => {
     [
       'an open question skipped twice',
       "---\nname: Ana\nopen_questions:\n- {text: x?, date: '2026-01-01', skips: 2}\n---\n",
-      'skips da pergunta aberta inválido: 2 (de 1 a 1; pulada 2 vezes, sai)',
+      'puladas da pergunta aberta inválido: 2 (de 1 a 1; pulada 2 vezes, sai)',
     ],
     [
       'an open question with skips 1.0',
       "---\nname: Ana\nopen_questions:\n- {text: x?, date: '2026-01-01', skips: 1.0}\n---\n",
-      'skips da pergunta aberta inválido: 1.0',
+      'puladas da pergunta aberta inválido: 1.0',
     ],
     [
       'an open question with no date',
       '---\nname: Ana\nopen_questions:\n- {text: x?, skips: 1}\n---\n',
-      "pergunta aberta precisa de text, date e skips: {'text': 'x?', 'skips': 1}",
+      "pergunta aberta precisa de texto, data e puladas: {'text': 'x?', 'skips': 1}",
     ],
     [
       'an open question with a bad date',
@@ -397,7 +397,7 @@ describe('resolving a Pessoa', () => {
 
     expect(await errorOf(fixture, resolvePerson('dono'))).toEqual({
       code: 'unknown_person',
-      message: 'nenhuma Pessoa tem owner: true no repo de dados',
+      message: 'nenhuma Pessoa tem dono: true no repo de dados',
     })
   })
 

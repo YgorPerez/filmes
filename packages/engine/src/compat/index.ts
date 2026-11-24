@@ -2,6 +2,7 @@
 // rules or ordering differ from the Python engine's, the port goes through
 // these, so its output matches the Python's (map #72, ticket #81).
 export { compareTuple, type PyOrderable } from './compare.ts'
+export { pyExp } from './exp.ts'
 export {
   factId,
   pyFloat,

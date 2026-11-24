@@ -6,11 +6,19 @@
 // - today, fixed when the request starts (a request never sees two dates);
 // - the warnings (`avisos`) the request returns, in the order given;
 // - the on-demand sources switched off for the rest of the request after a
-//   failure (Python's "desligada até o fim da execução").
+//   failure (Python's "desligada até o fim da execução");
+// - how many times each recorded failure (`<key>.falha.json`) has failed
+//   in this request, which its `vezes` limits.
 
 import { Context, Effect, Layer, Ref } from 'effect'
 import { Today } from './Today.ts'
 
+/**
+ * Request-scoped by design: a process-wide service whose methods need the
+ * request's state (the on-demand sources) asks for it from every caller.
+ *
+ * @effect-leakable-service
+ */
 export class Run extends Context.Service<
   Run,
   {
@@ -24,6 +32,12 @@ export class Run extends Context.Service<
      * ends. */
     readonly disableSource: (source: string) => Effect.Effect<void>
     readonly isSourceDisabled: (source: string) => Effect.Effect<boolean>
+    /** Counts one more failure of a recorded answer (`source`, `key`) and
+     * gives how many there were before it. */
+    readonly countRecordedFailure: (
+      source: string,
+      key: string,
+    ) => Effect.Effect<number>
   }
 >()('@filmes/engine/runtime/Run') {
   static readonly layer: Layer.Layer<Run, never, Today> = Layer.effect(
@@ -32,6 +46,9 @@ export class Run extends Context.Service<
       const today = yield* (yield* Today).date
       const warnings = yield* Ref.make<ReadonlyArray<string>>([])
       const disabled = yield* Ref.make<ReadonlySet<string>>(new Set())
+      const recordedFailures = yield* Ref.make<ReadonlyMap<string, number>>(
+        new Map(),
+      )
       return Run.of({
         today,
         warn: (text) => Ref.update(warnings, (list) => [...list, text]),
@@ -40,6 +57,12 @@ export class Run extends Context.Service<
           Ref.update(disabled, (set) => new Set([...set, source])),
         isSourceDisabled: (source) =>
           Effect.map(Ref.get(disabled), (set) => set.has(source)),
+        countRecordedFailure: (source, key) =>
+          Ref.modify(recordedFailures, (counts) => {
+            const id = `${source}\0${key}`
+            const before = counts.get(id) ?? 0
+            return [before, new Map([...counts, [id, before + 1]])]
+          }),
       })
     }),
   )

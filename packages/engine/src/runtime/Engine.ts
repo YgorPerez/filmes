@@ -6,6 +6,11 @@
 // Nothing above `packages/engine` writes Effect code to call it.
 
 import { Cause, Effect, Exit, Layer, ManagedRuntime } from 'effect'
+import { DoesTheDogDie } from '../sources/DoesTheDogDie.ts'
+import { Omdb } from '../sources/Omdb.ts'
+import { Transport } from '../sources/Source.ts'
+import { SourceCache } from '../sources/SourceCache.ts'
+import { Tmdb } from '../sources/Tmdb.ts'
 import { Sqlite } from '../sqlite/Sqlite.ts'
 import { EngineError, type ErrorCode } from './EngineError.ts'
 import { Environment, type Vars } from './Environment.ts'
@@ -13,13 +18,28 @@ import { Run } from './Run.ts'
 import { Today } from './Today.ts'
 
 /** What every engine operation may require. */
-export type EngineServices = Environment | Today | Sqlite
+export type EngineServices =
+  | Environment
+  | Today
+  | Sqlite
+  | SourceCache
+  | Omdb
+  | DoesTheDogDie
+  | Tmdb
+
+/** The on-demand sources, sharing one cache connection and one transport
+ * (the network, or `FILMES_GRAVACOES`). */
+const sourcesLayer = Layer.mergeAll(
+  Omdb.layer,
+  DoesTheDogDie.layer,
+  Tmdb.layer,
+).pipe(Layer.provide(Transport.layer), Layer.provideMerge(SourceCache.layer))
 
 /** The process-wide services, from the environment variables. */
 export const engineLayer = (
   vars: Vars,
 ): Layer.Layer<EngineServices, EngineError> =>
-  Layer.mergeAll(Today.layer, Sqlite.layer).pipe(
+  Layer.mergeAll(Today.layer, Sqlite.layer, sourcesLayer).pipe(
     Layer.provideMerge(Environment.layerFrom(vars)),
   )
 

@@ -34,16 +34,26 @@ import {
   pySplitlines,
   pyStrip,
 } from '../compat/text.ts'
+import type { Level, Link } from '../evidence/strength.ts'
 import { engineError, type EngineError } from '../runtime/EngineError.ts'
 import type { YamlValue } from '../data/yaml.ts'
 
-/** An Ajuste's elo [link], also a content path. */
-export const LINKS = ['director', 'writer', 'cast', 'series', 'genre'] as const
-export type Link = (typeof LINKS)[number]
+/** An Ajuste's elo [link], in the order of the file's error message. */
+export const LINKS = [
+  'director',
+  'writer',
+  'cast',
+  'series',
+  'genre',
+] as const satisfies readonly Link[]
 
 /** An Ajuste's nível [level]; `normal` is never written to the file. */
-export const LEVELS = ['none', 'low', 'normal', 'high'] as const
-export type Level = (typeof LEVELS)[number]
+export const LEVELS = [
+  'none',
+  'low',
+  'normal',
+  'high',
+] as const satisfies readonly Level[]
 
 /** How a Declarado or a Relato feels about its target. */
 export const STATEMENT_REACTIONS = ['love', 'like', 'dislike', 'hate'] as const

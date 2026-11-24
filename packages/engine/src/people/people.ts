@@ -2,9 +2,10 @@
 // (`filmes/dados/pessoas.py`). Read them all, find one by slug, name or
 // alias, create one, and write one back.
 //
-// The files have English keys (ADR 0002), so an error that names a key
-// names the English one (`owner: true`, `name`); the rest of each message is
-// Python's, word for word.
+// Every message is Python's, word for word, so the oracle compares them
+// as they are (a key is named as the Portuguese file had it). Two point at
+// something else in an English file: the link and level hints list the
+// English values, and a body line names `people/<slug>.md`.
 
 import { existsSync, readdirSync, statSync } from 'node:fs'
 import { basename, join } from 'node:path'
@@ -84,7 +85,7 @@ const decodeVeto = (
   if (!isMapping(item) || !has(item, ['text', 'target', 'date']))
     return Effect.fail(
       invalid(
-        `${file}: Veto precisa de text, target e date: ${pyReprValue(item)}`,
+        `${file}: Veto precisa de texto, alvo e data: ${pyReprValue(item)}`,
       ),
     )
   const date = item.get('date') ?? null
@@ -120,7 +121,7 @@ const decodeAdjustments = (
       if (!isMapping(item) || !has(item, ['link', 'level', 'date']))
         return Effect.fail(
           invalid(
-            `${file}: Ajuste precisa de link, level e date: ${pyReprValue(item)}`,
+            `${file}: Ajuste precisa de elo, nivel e data: ${pyReprValue(item)}`,
           ),
         )
       const link = item.get('link')
@@ -163,7 +164,7 @@ const decodeOpenQuestions = (
       if (!isMapping(item) || !has(item, ['text', 'date', 'skips']))
         return Effect.fail(
           invalid(
-            `${file}: pergunta aberta precisa de text, date e skips: ${pyReprValue(item)}`,
+            `${file}: pergunta aberta precisa de texto, data e puladas: ${pyReprValue(item)}`,
           ),
         )
       const date = item.get('date')
@@ -178,7 +179,7 @@ const decodeOpenQuestions = (
       if (!(count >= 1 && count < SKIPS_TO_DROP))
         return Effect.fail(
           invalid(
-            `${file}: skips da pergunta aberta inválido: ${pyReprValue(skips)} ` +
+            `${file}: puladas da pergunta aberta inválido: ${pyReprValue(skips)} ` +
               `(de 1 a ${SKIPS_TO_DROP - 1}; pulada ${SKIPS_TO_DROP} vezes, sai)`,
           ),
         )
@@ -235,13 +236,13 @@ const decodeParts = (
         !named &&
         (isSequence(frontmatter) || typeof frontmatter === 'string')
       )
-        return yield* invalid(`${file}: falta o campo name`)
+        return yield* invalid(`${file}: falta o campo nome`)
       return yield* Effect.die(
         new TypeError(`the frontmatter of ${file} is not a mapping`),
       )
     }
     const name = frontmatter.get('name')
-    if (name === undefined) return yield* invalid(`${file}: falta o campo name`)
+    if (name === undefined) return yield* invalid(`${file}: falta o campo nome`)
     const email = frontmatter.get('email')
     const vetoes: Veto[] = []
     for (const item of listOf(frontmatter, 'vetoes'))
@@ -351,7 +352,7 @@ export const readPeople: Effect.Effect<
   const owners = people.filter((p) => p.owner).map((p) => p.slug)
   if (owners.length > 1)
     return yield* invalid(
-      `mais de uma Pessoa com owner: true (${owners.join(', ')})`,
+      `mais de uma Pessoa com dono: true (${owners.join(', ')})`,
     )
   return people
 })
@@ -387,7 +388,7 @@ export const resolvePerson = (
       if (found.length === 0)
         return yield* engineError(
           'unknown_person',
-          'nenhuma Pessoa tem owner: true no repo de dados',
+          'nenhuma Pessoa tem dono: true no repo de dados',
         )
     } else
       found = people.filter((p) =>
