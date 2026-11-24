@@ -379,7 +379,7 @@ def text_vectors(r):
              "nonPrintable": ranges(non_printable)}]
     for _ in range(N):
         s = spaced_text(r) if r.random() < 0.7 else r.choice(["", "'", '"', "'\"", "\\", "a'b", 'a"b'] ) + random_text(r)
-        rows.append({"s": s, "strip": s.strip(), "lines": s.splitlines(), "repr": repr(s)})
+        rows.append({"s": s, "strip": s.strip(), "lines": s.splitlines(), "repr": repr(s), "words": " ".join(s.split())})
     return rows
 
 
@@ -398,12 +398,12 @@ def float_vectors(r):
 
 
 def iso_date(s):
+    """`date.fromisoformat(s).isoformat()`, or False where it raises."""
     import datetime as dt
     try:
-        dt.date.fromisoformat(s)
+        return dt.date.fromisoformat(s).isoformat()
     except ValueError:
         return False
-    return True
 
 
 DATE_CHARS = "0123456789" * 5 + "-" * 6 + "W" * 2 + "T: x\xe9"

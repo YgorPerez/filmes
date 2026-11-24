@@ -71,6 +71,15 @@ const STRIP_END = new RegExp(`[${SPACE}]+$`, 'u')
  * removes. */
 export const pyStrip = (text: string): string => text.replace(STRIP, '')
 
+const SPACES = new RegExp(`[${SPACE}]+`, 'u')
+
+/** Python's `" ".join(text.split())`: the words, one space between them. */
+export const pyJoinWords = (text: string): string =>
+  pyStrip(text)
+    .split(SPACES)
+    .filter((word) => word !== '')
+    .join(' ')
+
 /** Python's `str.rstrip()`. */
 export const pyRstrip = (text: string): string => text.replace(STRIP_END, '')
 

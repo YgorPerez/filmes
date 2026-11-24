@@ -113,17 +113,22 @@ const fromIsoWeek = (
  * the hyphens), of 7, 8 or 10 bytes, a valid date from year 1 to 9999.
  * Like CPython, it reads no further than the date it found, so
  * "20261120xx" passes. */
-export const isIsoDate = (text: string): boolean => {
+export const isIsoDate = (text: string): boolean => pyIsoDate(text) !== null
+
+/** Python 3.12's `date.fromisoformat(text).isoformat()`: the date as
+ * "2026-11-20", or null where Python raises ValueError ("20261120" and
+ * "2026-W47-5" are 2026-11-20). */
+export const pyIsoDate = (text: string): string | null => {
   const length = Buffer.byteLength(text, 'utf8')
-  if (length !== 7 && length !== 8 && length !== 10) return false
-  if (!text.isWellFormed()) return false
+  if (length !== 7 && length !== 8 && length !== 10) return null
+  if (!text.isWellFormed()) return null
   const digits = (from: number, count: number): number | null => {
     const part = text.slice(from, from + count)
     return /^[0-9]+$/.test(part) && part.length === count ? Number(part) : null
   }
   let at = 0
   const year = digits(at, 4)
-  if (year === null) return false
+  if (year === null) return null
   at += 4
   const hyphens = text[at] === '-'
   if (hyphens) at += 1
@@ -131,26 +136,31 @@ export const isIsoDate = (text: string): boolean => {
   if (text[at] === 'W') {
     at += 1
     const week = digits(at, 2)
-    if (week === null) return false
+    if (week === null) return null
     at += 2
     let day = 1
     if (Buffer.byteLength(text.slice(0, at), 'utf8') < length) {
-      if (hyphens && text[at++] !== '-') return false
+      if (hyphens && text[at++] !== '-') return null
       const read = digits(at, 1)
-      if (read === null) return false
+      if (read === null) return null
       day = read
     }
     ymd = fromIsoWeek(year, week, day)
   } else {
     const month = digits(at, 2)
-    if (month === null) return false
+    if (month === null) return null
     at += 2
-    if (hyphens && text[at++] !== '-') return false
+    if (hyphens && text[at++] !== '-') return null
     const day = digits(at, 2)
-    if (day === null) return false
+    if (day === null) return null
     ymd = [year, month, day]
   }
-  if (ymd === null) return false
+  if (ymd === null) return null
   const [y, m, d] = ymd
-  return y >= 1 && y <= 9999 && m >= 1 && m <= 12 && d >= 1 && d <= daysIn(y, m)
+  if (
+    !(y >= 1 && y <= 9999 && m >= 1 && m <= 12 && d >= 1 && d <= daysIn(y, m))
+  )
+    return null
+  const pad = (n: number, width: number) => String(n).padStart(width, '0')
+  return `${pad(y, 4)}-${pad(m, 2)}-${pad(d, 2)}`
 }
