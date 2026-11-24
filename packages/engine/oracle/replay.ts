@@ -15,7 +15,7 @@ import {
   writeFileSync,
 } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { basename, join } from 'node:path'
+import { basename, isAbsolute, join, relative } from 'node:path'
 import {
   migrateConfigFile,
   migrateDataPath,
@@ -298,7 +298,9 @@ export async function replayScenario(
               'files',
               'parity',
               { mode: 'bytes', ...rewrite },
-              adapted.files,
+              adapted.files.map((file) =>
+                isAbsolute(file) ? relative(ts, file) : file,
+              ),
             ),
           )
       }

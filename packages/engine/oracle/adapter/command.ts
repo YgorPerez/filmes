@@ -42,8 +42,9 @@ export interface CommandDefinition<S extends ArgSpec> extends CompareOptions {
     input: { readonly stdin: string | null },
   ) => Operation
   /** Files the command writes outside filmes-dados and the database (an
-   * export, a Cartaz), relative to the step's `{work}`: compared byte for
-   * byte, with the work folders written `{work}`. */
+   * export, a Cartaz), relative to the step's `{work}` or absolute inside
+   * the TypeScript side's work folder (a path argument as the adapter got
+   * it): compared byte for byte, with the work folders written `{work}`. */
   readonly files?: (args: Parsed<S>) => readonly string[]
 }
 

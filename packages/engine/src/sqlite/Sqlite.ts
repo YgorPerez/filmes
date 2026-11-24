@@ -64,6 +64,27 @@ export interface Connection {
   ) => Effect.Effect<RunResult, SqliteError>
   /** Several statements, no parameters. */
   readonly exec: (sql: string) => Effect.Effect<void, SqliteError>
+  /** The first statement of a text someone typed (`consultar`), prepared
+   * on its own; `undefined` when the text has none (blanks, comments, `;`). */
+  readonly prepareTyped: (
+    sql: string,
+  ) => Effect.Effect<TypedStatement | undefined, SqliteError>
+}
+
+/** A statement someone typed, as Python's `sqlite3` sees it before running
+ * it: SQLite prepares only the first statement of a text. */
+export interface TypedStatement {
+  /** The result columns' names, in order, a repeated name kept. */
+  readonly columns: ReadonlyArray<string>
+  /** The text after the first statement, which SQLite left unprepared. */
+  readonly tail: string
+  /** How many parameters it takes (`sqlite3_bind_parameter_count`). */
+  readonly parameterCount: number
+  /** Runs it with no parameter: every row, as an array in column order. */
+  readonly rows: Effect.Effect<
+    ReadonlyArray<ReadonlyArray<SQLOutputValue>>,
+    SqliteError
+  >
 }
 
 /** SQLite's authorizer callback: an action code (`constants.SQLITE_*` of
@@ -117,7 +138,95 @@ const makeConnection = (db: DatabaseSync): Connection => {
       ),
     run: (sql, ...params) => attempt(() => prepare(sql).run(...params)),
     exec: (sql) => attempt(() => db.exec(sql)),
+    prepareTyped: (sql) =>
+      attempt(() => {
+        let statement: StatementSync
+        try {
+          statement = db.prepare(sql)
+        } catch (error) {
+          // node:sqlite's own refusal of a text with no statement, where
+          // SQLite gives no statement and no error.
+          if (isNoStatement(error)) return undefined
+          throw error
+        }
+        statement.setReturnArrays(true)
+        const source = statement.sourceSQL
+        return {
+          columns: statement.columns().map((column) => column.name),
+          tail: sql.slice(source.length),
+          // Without parameters SQLite expands the text verbatim.
+          parameterCount:
+            statement.expandedSQL === source ? 0 : parameterCount(source),
+          rows: attempt(
+            () =>
+              statement.all() as unknown as ReadonlyArray<
+                ReadonlyArray<SQLOutputValue>
+              >,
+          ),
+        }
+      }),
   }
+}
+
+const isNoStatement = (error: unknown): boolean =>
+  error instanceof Error &&
+  'code' in error &&
+  error.code === 'ERR_INVALID_ARG_VALUE'
+
+/** SQLite's identifier characters (`IdChar`): ASCII letters, digits, `_`,
+ * `$`, and anything past ASCII. */
+const isIdChar = (c: string | undefined): boolean =>
+  c !== undefined && (/[\w$]/.test(c) || c.charCodeAt(0) > 0x7f)
+
+const skipPast = (sql: string, from: number, end: string): number => {
+  const at = sql.indexOf(end, from)
+  return at === -1 ? sql.length : at + end.length
+}
+
+/** `sqlite3_bind_parameter_count` of one statement SQLite already accepted,
+ * which node:sqlite does not expose: the parser's numbering, from SQLite's
+ * tokenizer. `?` takes the next number, `?NNN` the number NNN, and a name
+ * (`:a`, `@a`, `$a`) the next number the first time it shows up. */
+export function parameterCount(sql: string): number {
+  let count = 0
+  const names = new Set<string>()
+  let i = 0
+  while (i < sql.length) {
+    const c = sql[i] as string
+    if (c === "'" || c === '"' || c === '`') {
+      // A quote ends the string unless doubled.
+      let j = i + 1
+      while (j < sql.length && !(sql[j] === c && sql[j + 1] !== c))
+        j += sql[j] === c ? 2 : 1
+      i = j + 1
+    } else if (c === '[') i = skipPast(sql, i + 1, ']')
+    else if (c === '-' && sql[i + 1] === '-') i = skipPast(sql, i + 2, '\n')
+    else if (c === '/' && sql[i + 1] === '*') i = skipPast(sql, i + 2, '*/')
+    else if (c === '?') {
+      let j = i + 1
+      while (j < sql.length && /[0-9]/.test(sql[j] as string)) j++
+      count =
+        j > i + 1 ? Math.max(count, Number(sql.slice(i + 1, j))) : count + 1
+      i = j
+    } else if (c === ':' || c === '@' || c === '$' || c === '#') {
+      let j = i + 1
+      while (isIdChar(sql[j]) || (c === '$' && sql.startsWith('::', j)))
+        j += sql.startsWith('::', j) ? 2 : 1
+      // Tcl's `$a(index)`.
+      if (c === '$' && j > i + 1 && sql[j] === '(') j = skipPast(sql, j, ')')
+      const name = sql.slice(i, j)
+      if (j > i + 1 && !names.has(name)) {
+        names.add(name)
+        count++
+      }
+      i = Math.max(j, i + 1)
+    } else if (isIdChar(c)) {
+      let j = i + 1
+      while (isIdChar(sql[j])) j++
+      i = j
+    } else i++
+  }
+  return count
 }
 
 export class Sqlite extends Context.Service<

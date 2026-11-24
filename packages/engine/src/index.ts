@@ -3,6 +3,11 @@
 
 export * from './compat/index.ts'
 export {
+  consult,
+  type ConsultResult,
+  type ConsultValue,
+} from './consult/consult.ts'
+export {
   contribution,
   evidenceToJson,
   makeEvidence,
@@ -21,6 +26,14 @@ export {
   type Strength,
 } from './evidence/strength.ts'
 export * from './evidence/wording.ts'
+export {
+  EXPORT_FORMATS,
+  exportRatings,
+  IMDB_HEADER,
+  imdbRating,
+  type ExportFormat,
+  type ExportResult,
+} from './export/imdb.ts'
 export { resolveAttendees } from './recommendation/attendees.ts'
 export {
   chooseCandidates,
@@ -74,6 +87,7 @@ export {
   type ReadOptions,
   type Row,
   type RunResult,
+  type TypedStatement,
 } from './sqlite/Sqlite.ts'
 export {
   formatMarkdown,
