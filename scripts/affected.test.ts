@@ -73,6 +73,14 @@ describe('planForDiff', () => {
       })
   })
 
+  it("the pytest seam also runs the engine's tests: the oracle reads its trace", () => {
+    expect(planForDiff(['tests/conftest.py'])).toMatchObject({
+      vitest: ['packages/engine'],
+      mcp: true,
+      python: true,
+    })
+  })
+
   it('the MCP runs only its own tests', () => {
     expect(planForDiff(['mcp/src/cli.ts'])).toMatchObject({
       vitest: [],

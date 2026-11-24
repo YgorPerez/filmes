@@ -51,6 +51,9 @@ packages/engine/           o motor em TypeScript, com Effect v4 (ADR 0003); sem 
   src/sqlite/              o serviço Sqlite (leitura, escrita com BEGIN IMMEDIATE) e as funções SQL
   src/<área>/              o resto do porte, uma área por pasta
   test/                    Vitest pela costura de test/fixture.ts; o global-setup monta a fixture com o Python
+  oracle/                  oráculo de paridade Python × TypeScript (`pnpm oracle`); sai com o Python
+    adapter/commands/      um arquivo por comando portado: o argv do Python vira a operação do motor
+    decisions.yaml         cada diferença aceita entre os motores, com o motivo
 frontend/                  app TanStack Start: MCP por HTTP, OAuth, app web e o Cartaz (MCP Apps e web)
   scripts/                 deploy na VPS (deploy-plan.ts, vps.ts, db-publish.ts, check-live.ts, prepare-vps.sh, deploy-wizard.sh; ADR 0006)
   nginx/                   vhost, TLS, formato de log sem query e rotação que o deploy instala na VPS
@@ -92,6 +95,8 @@ pnpm install      # uma vez: o workspace inteiro, e o patch do @effect/tsgo no p
 pnpm check        # formato e lint (Oxfmt, Oxlint com tipos), tipos, testes com piso de cobertura, fallow e React Doctor
 make check        # testes Python (uv run pytest), typecheck e testes do MCP (Vitest, com a CLI de verdade)
 ```
+
+O oráculo de paridade (`pnpm oracle`, job `oracle` do CI) roda cada cenário do pytest nos dois motores e falha em diferença que `packages/engine/oracle/decisions.yaml` não explica; `--command "pessoa ver"` roda só os cenários com um passo do comando.
 
 O e2e do app (`pnpm --filter frontend e2e`, Playwright no Chrome da máquina) faz o build, sobe o app com um Google falso (`frontend/e2e/fake-google.ts`) e as Pessoas da fixture; o CI roda no job `build`.
 
