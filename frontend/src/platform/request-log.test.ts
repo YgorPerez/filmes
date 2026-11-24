@@ -47,9 +47,7 @@ describe("the server's log of each request", () => {
       () => new Response('ok', { headers: { 'content-type': 'text/html' } }),
     )
 
-    const response = await fetch(
-      new Request('https://cinema.temestudo.cloud/'),
-    )
+    const response = await fetch(new Request('https://cinema.temestudo.cloud/'))
 
     expect(response.headers.get('content-type')).toBe('text/html')
     expect(await response.text()).toBe('ok')
