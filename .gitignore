@@ -19,3 +19,6 @@ coverage/
 .fallow/
 
 .claude/worktrees/
+
+# The deploy wizard's answers (`frontend/scripts/deploy-wizard.sh`).
+.env.deploy

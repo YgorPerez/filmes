@@ -21,18 +21,25 @@ export default defineConfig({
   resolve: { tsconfigPaths: true },
   plugins: process.env.VITEST ? [viteReact()] : appPlugins(),
   test: {
-    include: ['src/**/*.test.{ts,tsx}'],
+    include: [
+      'src/**/*.test.{ts,tsx}',
+      'scripts/**/*.test.ts',
+      'nginx/**/*.test.ts',
+    ],
     environment: 'node',
     // The coverage serves `fallow health` (the `json` format) and has a
     // floor: the measured value, which rises with it and never falls.
     coverage: {
       provider: 'v8',
       reporter: ['text-summary', 'json'],
-      include: ['src/**/*.{ts,tsx}'],
+      include: ['src/**/*.{ts,tsx}', 'scripts/**/*.ts'],
       exclude: ['src/routeTree.gen.ts'],
       // The routes and the router are covered by the build and its `/`
-      // (CI's `build` job), not by Vitest.
-      thresholds: { statements: 16, branches: 100, functions: 25, lines: 16 },
+      // (CI's `build` job), not by Vitest; the deploy scripts' `ssh` and
+      // `scp` and their command lines, by the deploy itself. The branch
+      // floor came from a skeleton with no branches; #79's scripts set it
+      // at their measured value.
+      thresholds: { statements: 82, branches: 74, functions: 77, lines: 85 },
     },
   },
 })
