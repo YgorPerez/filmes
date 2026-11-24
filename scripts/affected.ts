@@ -18,7 +18,7 @@ export type Plan = {
    * `packages/engine`, `packages/key-migration`, or `.` for the root
    * scripts. */
   readonly vitest: readonly string[]
-  /** Whether the MCP tests (`node --test` over the real CLI) run. */
+  /** Whether the MCP tests (Vitest, over the real CLI) run. */
   readonly mcp: boolean
   /** Whether the Python suite (`uv run pytest`) runs. */
   readonly python: boolean

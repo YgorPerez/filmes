@@ -76,6 +76,14 @@ _Evitar_: fixado, travado
 A Recomendação mostrada como página no T3 Code. Ele responde: em cada filme o Dono marca Já vi, Trocar, estrelas e comentário, e embaixo, depois do último filme, acrescenta contexto ou gosto; o botão Copiar pro chat junta tudo num texto que começa com `#cartaz <sessao> v<n>`, e o Dono cola no chat. Estrelas e comentário medem a Recomendação e ficam na Sessão, sem mexer no gosto; só o Trocar troca filme.
 _Evitar_: formulário, painel
 
+**Resposta** [reply, `replies`]:
+O que o Dono colou do Cartaz (o texto `#cartaz <sessao> v<n>`), gravado na versão da Sessão: a data, as estrelas e o comentário de cada filme e o Acrescentar.
+_Evitar_: retorno, devolutiva
+
+**Acrescentar** [addition, `addition`]:
+O texto livre que o Dono escreve embaixo do Cartaz, depois do último filme: contexto da noite ou gosto novo. O contexto regera direto; o gosto só é gravado com um sim do Dono.
+_Evitar_: observação, extra
+
 **Trocado** [swapped, `swapped`]:
 Um filme que o Dono tirou da tela de uma versão: o Trocar do Cartaz e, ao refazer, o que ele mandou trocar e o que não ficou como Mantido. Fica fora da Sessão até o fim.
 _Evitar_: descartado, rejeitado
@@ -100,6 +108,10 @@ O filme que os Presentes de fato assistiram, saia ele da Recomendação ou não.
 **Feedback** [feedback, `Feedback`]:
 O registro que fecha uma Sessão: o Filme escolhido e como cada Presente reagiu. Cada reação vira um Fato com a Sessão como Fonte, de Tipo relato quando o Dono fala por outra Pessoa e nota quando a própria Pessoa avalia.
 _Evitar_: avaliação, review
+
+**Reação** [reaction, `reaction`, a coleção `reactions`: `liked`, `neutral`, `disliked`]:
+Como um Presente recebeu o Filme escolhido no Feedback: gostou, neutro ou não gostou. Num Declarado ou num Relato, o mesmo campo diz como a Pessoa se sente sobre o alvo: ama, gosta, não gosta ou odeia (`love`, `like`, `dislike`, `hate`).
+_Evitar_: avaliação, opinião
 
 **Comentário** [comment, `comment`]:
 O que um Presente achou do Filme escolhido, dito junto da Nota ou do Relato dele no Feedback. Vira um Declarado específico da Pessoa sobre o filme, com a Sessão como Fonte.
@@ -127,8 +139,8 @@ _Evitar_: justificativa, explicação
 O uso de um Fato como Motivo. É ela que tem Força: o mesmo Fato pode ser forte para um Motivo e fraco para outro.
 _Evitar_: prova
 
-**Força** [strength, `strength`: `strong`, `moderate`, `weak`]:
-Quanto uma Evidência sustenta o seu Motivo: forte, moderada ou fraca.
+**Força** [strength, `strength`: `strong`, `moderate`, `weak`, `guess`]:
+Quanto uma Evidência sustenta o seu Motivo: forte, moderada ou fraca. Um Motivo sem Fato sai com Força palpite (`guess`), como o Palpite.
 _Evitar_: peso, confiança
 
 **Tipo** [kind, `kind`: `metadata`, `rating`, `stated`, `report`, `review`, `guess`]:
