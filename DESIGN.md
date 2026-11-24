@@ -220,7 +220,7 @@ Neutros fazem quase tudo. O vermelho-cinema, a lâmpada âmbar e as cores dos Pr
 **Display Font:** Antonio 700 (fallback Arial Narrow, sans-serif), só para letreiro, número de posição e carimbo
 **Body Font:** fonte do sistema (system-ui, -apple-system, Segoe UI, Roboto, sans-serif)
 
-A Antonio vai auto-hospedada no app e embutida no recurso `ui://` do Cartaz, porque a view do MCP Apps não deve buscar fonte de fora.
+A Antonio vai auto-hospedada no app. Na view do MCP Apps ela não vai embutida no recurso `ui://`: o CSP do MCP Apps nunca aceita fonte em `data:` (o `font-src` padrão é `'none'`; o declarado é `'self'` mais `resourceDomains`). A view carrega a Antonio da origem do app (`https://cinema.finalsend.com.br`), declarada em `resourceDomains` no `_meta.ui.csp` do recurso, junto da origem das capas. Se a fonte não chegar, o letreiro cai no fallback (Arial Narrow, depois a fonte sans do host), e as regras abaixo continuam valendo.
 
 **Character:** a Antonio é a letra de placa de letreiro: condensada, reta, maiúscula. A fonte do sistema deixa o resto com cara de app do celular de quem usa, que é o que uma tela de trabalho pede.
 
@@ -246,6 +246,15 @@ A Antonio vai auto-hospedada no app e embutida no recurso `ui://` do Cartaz, por
 Uma coluna, celular primeiro, a partir de 360px. O Cartaz tem até 720px de largura com 16px de respiro lateral. Entre blocos, 14px.
 
 O card é uma grade: capa à esquerda (104px no celular, 160px a partir de 560px), título, sinopse e chips à direita; "Por que cada um vai gostar" e os controles de marcar ocupam a largura toda embaixo, cada um com uma divisória de 1px. A partir de 560px, "Por que" sobe para a coluna da direita, sob os chips, como no Cartaz de hoje.
+
+### Dentro do Claude
+
+No Claude, o Cartaz é uma view do MCP Apps: um só arquivo HTML com o JS e o CSS dentro, e só a fonte e as capas vindas de fora, das origens declaradas no CSP do recurso. Ele tem dois modos:
+
+- **Card inline, compacto.** É o que aparece na conversa. No celular a conversa é dona da rolagem vertical: a altura do card inline tem teto, o que passa dele é cortado e não há rolagem interna. Por isso o card inline mostra só o letreiro, a lista dos filmes em uma linha cada (posição, título, ano e duração) e no máximo duas ações: "Marcar" (abre a tela cheia) e Enviar. Cabem 4 ou 5 dados por filme, nunca a Evidência inteira.
+- **Tela cheia, para marcar vários filmes.** "Marcar" pede `fullscreen` (`ui/request-display-mode`). Ali vai o Cartaz inteiro, com os cards, a Evidência e os controles, e a rolagem é da view. O Enviar fica dentro da área segura, acima da caixa de mensagem que o Claude sobrepõe no pé da tela. Não há painel lateral no celular: são só esses dois modos.
+
+Em qualquer modo, alvos de toque de 44pt ou mais, como no resto do filmes.
 
 No app web, a navegação é uma barra de abas embaixo no celular (Sessões, Pessoas, Importar e, para admin, Operações) e uma barra no topo a partir de 900px. As telas de Sessão abrem com o letreiro do pedido. Na view do MCP Apps não há navegação: só o Cartaz.
 
@@ -306,6 +315,8 @@ Pílula âmbar com "NOVO" em tinta, 11px 700, ao lado do título de quem entrou 
 
 Vermelho-cinema, texto branco 700 15px, pílula de 44px. No Cartaz é "Enviar", que manda as marcações para a conversa no Claude ou regera no app; acima dele, em meta, o resumo do que foi marcado ("1 Trocar marcado"). Sem nada marcado, o botão fica e, ao tocar, avisa "Nada marcado ainda".
 
+No Claude, o Enviar manda o texto por `ui/message`, e o Claude só age com o sim de quem usa. Até ela aceitar as mensagens do app, o Claude pede para ela permitir a mensagem ou põe o texto na caixa de mensagem para ela mandar: um toque a mais, que o desenho conta como parte do fluxo. O sucesso do envio pode chegar antes dessa decisão, então a view diz "Enviado para a conversa", nunca "Regerado". O envio sai só do toque no botão, sem nova tentativa nem timer, em texto de até 8.000 caracteres. As marcações vivem só na view: se o Claude recarregar a view, ela volta do HTML, e o que precisa sobreviver fica no servidor.
+
 ### Campos
 
 Superfície, fio de 1px, raio 8px, 44px de altura mínima, texto 15px. Rótulo em 14px 600 com a dica em tinta clara ao lado.
@@ -325,7 +336,8 @@ Barra de abas embaixo no celular, com ícone e palavra; aba atual em tinta com t
 - **Do** carimbar o estado no card (Trocar, Já vi) e dizer em "Saiu" o que saiu e por quê.
 - **Do** manter alvos de toque de 44px ou mais.
 - **Do** conferir cada componente no claro e no escuro, a 360px e a 390px.
-- **Do** embutir a Antonio no recurso do MCP Apps.
+- **Do** servir a Antonio da origem do app, declarada no CSP do recurso do MCP Apps; nunca em `data:`.
+- **Do** manter o card inline do Claude compacto (até duas ações, 4 ou 5 dados por filme) e marcar vários filmes na tela cheia.
 
 ### Don't:
 
