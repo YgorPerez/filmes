@@ -4,16 +4,13 @@
 
 import { Effect } from 'effect'
 import {
+  ENGINE_AUTHOR,
   engineError,
   importLetterboxd,
   readUpload,
 } from '../../../src/index.ts'
 import { ArgvError, parseArgv } from '../argv.ts'
 import { defineCommand } from '../command.ts'
-
-/** The CLI has no logged-in Pessoa; the oracle's data folder is no git
- * repository, so no commit is made with it. */
-const CLI_AUTHOR = { name: 'filmes', email: '' }
 
 const ARGS = {
   positionals: [],
@@ -56,7 +53,7 @@ export default defineCommand({
         person: args.pessoa,
         original,
         content,
-        author: CLI_AUTHOR,
+        author: ENGINE_AUTHOR,
       })
     }),
 })
