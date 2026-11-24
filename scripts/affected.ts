@@ -43,6 +43,11 @@ const TEST_DATA = /(^|\/)tests?\//
 const FROM_ROOT = /^(\.github\/)?scripts\//
 /** What the key migration's round-trip test reads, outside its package. */
 const MIGRATED = /^(config\/|tests\/fixture\/dados\/)/
+/** What the engine's test fixture is built from, outside its package: the
+ * Python engine builds the database, the key migration the English data
+ * and config (`packages/engine/test/global-setup.ts`). */
+const ENGINE_FIXTURE =
+  /^(filmes\/|tests\/fixture\/|config\/|packages\/key-migration\/src\/|pyproject\.toml$|uv\.lock$)/
 const VITEST_FOLDERS = [
   'frontend',
   'packages/engine',
@@ -70,6 +75,7 @@ export function planForDiff(files: readonly string[]): Plan {
     if (TEXT_ONLY.test(file) && !PYTHON.test(file) && !TEST_DATA.test(file))
       continue
     if (MIGRATED.test(file)) vitest.add('packages/key-migration')
+    if (ENGINE_FIXTURE.test(file)) vitest.add('packages/engine')
     if (PYTHON.test(file)) {
       python = true
       mcp = true

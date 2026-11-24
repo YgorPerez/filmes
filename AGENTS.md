@@ -47,6 +47,10 @@ Workspace do mapa #72 (o esqueleto veio no #73; o resto chega pelos tickets segu
 
 ```
 packages/engine/           o motor em TypeScript, com Effect v4 (ADR 0003); sem nada de tela nem de HTTP
+  src/runtime/             Environment, Today, Run, EngineError e makeEngine (a borda que o app, o MCP e a CLI chamam)
+  src/sqlite/              o serviço Sqlite (leitura, escrita com BEGIN IMMEDIATE) e as funções SQL
+  src/<área>/              o resto do porte, uma área por pasta
+  test/                    Vitest pela costura de test/fixture.ts; o global-setup monta a fixture com o Python
 frontend/                  app TanStack Start: MCP por HTTP, OAuth, app web e o Cartaz (MCP Apps e web)
   scripts/                 deploy na VPS (deploy-plan.ts, vps.ts, check-live.ts, prepare-vps.sh, deploy-wizard.sh; ADR 0006)
   nginx/                   vhost, TLS, formato de log sem query e rotação que o deploy instala na VPS
@@ -89,7 +93,7 @@ pnpm check        # formato e lint (Oxfmt, Oxlint com tipos), tipos, testes com 
 make check        # testes Python (uv run pytest), typecheck e testes do MCP (Vitest, com a CLI de verdade)
 ```
 
-Precisa de `uv`, pnpm e Node 24 (o MCP roda `.ts` direto, sem build). `make check` instala o que faltar (`uv sync`, `pnpm install`) na primeira vez. Enquanto o Python existir, os dois ficam verdes antes de um push para um ramo de integração; o CI do PR roda os dois (`.github/workflows/pr.yml`).
+Precisa de `uv`, pnpm e Node 24 (o MCP roda `.ts` direto, sem build). O `pnpm check` também usa o `uv`: os testes do motor partem de um banco que o Python constrói da fixture. `make check` instala o que faltar (`uv sync`, `pnpm install`) na primeira vez. Enquanto o Python existir, os dois ficam verdes antes de um push para um ramo de integração; o CI do PR roda os dois (`.github/workflows/pr.yml`).
 
 O gancho de push (`node scripts/install-hooks.ts`, uma vez por clone) roda a auditoria de supressões e só os testes do que o push mudou. O teto de supressões é zero (`.github/suppression-ceiling.json`).
 
