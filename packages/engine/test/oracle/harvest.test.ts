@@ -110,7 +110,7 @@ describe('partial adapters', () => {
           { options: ['letterboxd', 'trakt', 'remover'], required: true },
         ],
       },
-      handles: (args) => args[origin as 'letterboxd' | 'trakt'] !== undefined,
+      ported: (argv) => argv.includes(`--${origin}`),
       run: () => Effect.succeed(origin),
     })
 

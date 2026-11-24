@@ -37,6 +37,12 @@ export interface CommandDefinition<S extends ArgSpec> extends CompareOptions {
   readonly command: string
   /** The command's arguments, as its `configurar` declares them. */
   readonly args: S
+  /** Whether the engine answers this step yet, from its raw arguments
+   * (after the command and action words). A command ported in parts says
+   * `false` for the arguments a later ticket ports, and the step stays
+   * `not_ported`. Absent: every step. Several adapters may share a
+   * command when each has it (`importar --letterboxd`, `--trakt`...). */
+  readonly ported?: (argv: readonly string[]) => boolean
   /** The engine operation for one call. `stdin` is what the step sent. */
   readonly run: (
     args: Parsed<S>,
@@ -47,19 +53,14 @@ export interface CommandDefinition<S extends ArgSpec> extends CompareOptions {
    * the TypeScript side's work folder (a path argument as the adapter got
    * it): compared byte for byte, with the work folders written `{work}`. */
   readonly files?: (args: Parsed<S>) => readonly string[]
-  /** The calls this adapter answers, when it ports only part of the
-   * command (`importar --letterboxd`, not `--trakt`); the others stay not
-   * ported. Several adapters may share a command if each says which calls
-   * it takes. */
-  readonly handles?: (args: Parsed<S>) => boolean
 }
 
 /** A command, with its argument types erased: what the adapter holds. */
 export interface Command extends CompareOptions {
   readonly command: string
-  /** Whether it answers only some calls (`handles`). */
+  /** It answers only some steps of the command (`ported`). */
   readonly partial?: boolean
-  /** The operation for one call; null for a call it does not answer. */
+  /** `null` when the command does not answer these arguments yet. */
   readonly prepare: (
     argv: readonly string[],
     stdin: string | null,
@@ -74,13 +75,14 @@ export interface Command extends CompareOptions {
 export function defineCommand<const S extends ArgSpec>(
   definition: CommandDefinition<S>,
 ): Command {
-  const { command, unordered, tolerance, handles } = definition
+  const { command, unordered, tolerance } = definition
   return {
     command,
-    ...(handles && { partial: true }),
     ...(unordered && { unordered }),
     ...(tolerance && { tolerance }),
+    ...(definition.ported && { partial: true }),
     prepare: (argv, stdin) => {
+      if (definition.ported && !definition.ported(argv)) return null
       let args: Parsed<S>
       try {
         args = parseArgv(argv, definition.args)
@@ -91,7 +93,6 @@ export function defineCommand<const S extends ArgSpec>(
           files: [],
         }
       }
-      if (handles && !handles(args)) return null
       return {
         operation: definition.run(args, { stdin }),
         files: definition.files?.(args) ?? [],

@@ -1,0 +1,73 @@
+// MovieLens item-item neighbourhood: a Pessoa's Nota → MovieLens neighbour →
+// Candidate (`recomendacao/sinais/vizinhanca.py`).
+//
+// Each rating for the film (3 or more) of the Pessoa on a film X is a seed.
+// For each neighbour Y of X that is a Candidate, one review Evidence: "deu 5
+// a X, e de 3.104 pessoas que deram 4+ a ele, 64% deram 4+ a este". The
+// strength comes from the base and the share, capped by the seed's
+// strength. A stated rating opens the line as on the content path and has
+// the stated seed strength. A rating against is not a seed: liking Y when
+// you liked X says nothing about someone who did not like X.
+
+import { Effect } from 'effect'
+import { makeEvidence } from '../../evidence/Evidence.ts'
+import {
+  neighborStrength,
+  seedStrength,
+  type SeedKind,
+} from '../../evidence/ruler.ts'
+import { filmText, integerText, seedText } from '../../evidence/wording.ts'
+import { num, numOrNull, text, textOrNull } from '../../sqlite/row.ts'
+import { kindOf } from '../../sqlite/vocabulary.ts'
+import type { Signal } from './Signal.ts'
+
+const NEIGHBORS = `
+SELECT v.vizinho_id AS candidato, v.fato_id, v.base, v.ambos, v.fonte, v.data,
+       n.nota, n.data AS nota_data, n.sessao, n.tipo AS nota_tipo, f.titulo, f.ano
+FROM notas_vigentes n
+JOIN vizinhos v ON v.filme_id = n.filme_id
+JOIN filmes f   ON f.id = n.filme_id
+WHERE n.pessoa = ?
+ORDER BY v.vizinho_id, v.fato_id
+`
+
+export const neighbors: Signal = {
+  module: 'vizinhanca',
+  forPerson: (round, person) =>
+    Effect.map(round.db.all(NEIGHBORS, person), (rows) =>
+      rows.flatMap((row) => {
+        const candidate = text(row, 'candidato')
+        if (!round.candidates.has(candidate)) return []
+        const kind = kindOf(text(row, 'nota_tipo')) as SeedKind
+        const [seed, direction] = seedStrength(
+          kind,
+          num(row, 'nota'),
+          text(row, 'nota_data'),
+          round.today,
+          textOrNull(row, 'sessao') !== null,
+        )
+        if (direction < 0) return []
+        const base = num(row, 'base')
+        const both = num(row, 'ambos')
+        const strength = neighborStrength(base, both, seed)
+        if (strength === null) return []
+        const film = filmText(text(row, 'titulo'), numOrNull(row, 'ano'))
+        return [
+          makeEvidence({
+            person,
+            filmId: candidate,
+            text:
+              `${seedText(kind, num(row, 'nota'), film)}, ` +
+              `e de ${integerText(base)} pessoas que deram 4+ a ele, ` +
+              `${Math.floor((100 * both) / base)}% deram 4+ a este`,
+            source: text(row, 'fonte'),
+            date: text(row, 'data'),
+            strength,
+            kind: 'review',
+            factId: text(row, 'fato_id'),
+            base: round.weights.neighbors.weight,
+          }),
+        ]
+      }),
+    ),
+}

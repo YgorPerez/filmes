@@ -26,6 +26,7 @@ export {
   type Strength,
 } from './evidence/strength.ts'
 export * from './evidence/wording.ts'
+export { genreInPortuguese, WIKIDATA_GENRE } from './catalog/genres.ts'
 export {
   EXPORT_FORMATS,
   exportRatings,
@@ -36,11 +37,48 @@ export {
 } from './export/imdb.ts'
 export { resolveAttendees } from './recommendation/attendees.ts'
 export {
+  attributionsOf,
+  type Attribution,
+} from './recommendation/attributions.ts'
+export {
   chooseCandidates,
   prepareSelection,
   type Candidate,
   type CandidateSelection,
 } from './recommendation/candidates.ts'
+export {
+  CONSTRAINT_ORDER,
+  drop,
+  makeConstraintSet,
+  pass,
+  type Constraint,
+  type ConstraintContext,
+  type ConstraintEffect,
+  type ConstraintName,
+  type ConstraintSet,
+  type Drop,
+  type Pass,
+  type Verdict,
+} from './recommendation/constraints.ts'
+export {
+  computeCredit,
+  creditLine,
+  type Credit,
+} from './recommendation/credit.ts'
+export {
+  filmHeader,
+  firstSentence,
+  type FilmHeader,
+} from './recommendation/header.ts'
+export { readMoods, resolveMoods, type Mood } from './recommendation/moods.ts'
+export {
+  rank,
+  recommend,
+  type RankOptions,
+  type Recommendation,
+  type RecommendedFilm,
+  type RecommendRequest,
+} from './recommendation/recommend.ts'
 export {
   DEFAULT_RULE,
   NEUTRAL_UTILITY,
@@ -51,7 +89,23 @@ export {
   type Rule,
   type RuleName,
 } from './recommendation/rule.ts'
+export { SIGNALS } from './recommendation/signals/index.ts'
+export type {
+  Round,
+  Signal,
+  SignalEffect,
+} from './recommendation/signals/Signal.ts'
 export { individualUtility } from './recommendation/utility.ts'
+export {
+  applyVetoes,
+  isTagGroup,
+  markedByGroup,
+  readTagGroups,
+  type TagGroup,
+  type VetoPath,
+  type VetoReport,
+} from './recommendation/vetoes.ts'
+export { sessionOrder } from './sessions/order.ts'
 export {
   engineLayer,
   errorOutcome,
@@ -79,6 +133,14 @@ export {
 export { Run } from './runtime/Run.ts'
 export { TIME_ZONE, Today } from './runtime/Today.ts'
 export { Weights } from './runtime/Weights.ts'
+export { num, numOrNull, text, textOrNull } from './sqlite/row.ts'
+export {
+  kindOf,
+  levelOf,
+  LINK_PREDICATE,
+  linkOf,
+  targetOf,
+} from './sqlite/vocabulary.ts'
 export {
   missingDatabase,
   Sqlite,
