@@ -224,7 +224,7 @@ As Horas Lentas (7,4) também ganha o bônus da nota; `test_credito.py` zera o p
 
 ### Nada lento (#57)
 
-Os mesmos filmes `tt90056NN` levam "boring", tag do grupo `lento` fora do `grupo_sozinho.toml` (`config/vetos_por_tag.toml`), para `test_sem_lento_e_sem_repetido.py`. O grupo vale para qualquer gênero, com os mínimos do #56.
+Os mesmos filmes `tt90056NN` levam "boring", tag do grupo `lento` fora do `grupo_sozinho.toml` (`config/vetos_por_tag.toml`), para `test_sem_lento.py`. O grupo vale para qualquer gênero, com os mínimos do #56.
 
 | Filme | Tag de ritmo | No `--sem-lento` |
 |---|---|---|

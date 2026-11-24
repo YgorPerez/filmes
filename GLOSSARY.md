@@ -63,7 +63,7 @@ O top 5 que uma Sessão recebe, cada filme com os seus Motivos.
 _Evitar_: sugestão, lista
 
 **Versão da Sessão**:
-Uma Recomendação de uma Sessão aberta. Quando o Dono pede outra lista na mesma Sessão, a atual vira uma versão anterior, guardada com o pedido e os Presentes dela, e a nova passa a valer. O número da versão conta a partir de 1.
+Uma Recomendação de uma Sessão aberta. Quando o Dono pede outra lista na mesma Sessão, a atual vira uma versão anterior, guardada com o pedido e os Presentes dela, e a nova passa a valer. O número da versão conta a partir de 1. Um filme de uma versão anterior pode voltar na nova; só o que o Dono trocou em alguma versão e o que algum Presente marcou Já vi na Sessão ficam fora dela até o fim.
 _Evitar_: rodada, tentativa
 
 **Mantido**:
@@ -94,7 +94,7 @@ O que um Presente achou do Filme escolhido, dito junto da Nota ou do Relato dele
 _Evitar_: opinião, review
 
 **Já visto**:
-O Fato de que uma Pessoa já assistiu a um filme. Pesa contra o filme e aparece como Motivo, mas não é Veto: rever um filme continua possível, e só sai se o Dono pedir como Restrição.
+O Fato de que uma Pessoa já assistiu a um filme. Pesa contra o filme e aparece como Motivo, mas não é Veto: rever um filme continua possível, e só sai se o Dono pedir como Restrição ou se o Já vi foi marcado na Sessão que está sendo refeita.
 _Evitar_: assistido, histórico
 
 ## Evidência

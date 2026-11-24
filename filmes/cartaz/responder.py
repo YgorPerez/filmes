@@ -21,7 +21,8 @@ linhas seguintes que casam com o formato; a primeira que não casa encerra.
 - Linha de filme que não estava na tela da versão do texto é pulada, com aviso.
 - Trocar e Já vi tiram o filme da tela atual. Aplica-se pelo ID: um texto de
   versão velha vale do mesmo jeito; o Trocar de um filme que já não está na
-  tela é ignorado, com aviso.
+  tela é ignorado, com aviso. O Trocar fica em `trocados` da versão atual, e o
+  filme não volta mais na Sessão (#66).
 
 Devolve o pedido de regerar: `regerar` (algum filme caiu ou veio acrescentar),
 `manter` (os IDs que ficam, na ordem da tela), `saem` (com o motivo),
@@ -139,6 +140,8 @@ def responder(amb, sessao_id: str, texto: str) -> dict:
         else:
             avisos.append(f"trocar {marcado['id']} ignorado: o filme não está mais na tela da versão "
                           f"{atual['versao']}")
+    if trocar:
+        _gravar_trocados(amb, sessao_id, trocar)
     saem, manter = [], []
     for item in tela:
         base = {"posicao": item["posicao"], "id": item["id"], "titulo": item.get("titulo")}
@@ -280,6 +283,15 @@ def _gravar_resposta(amb, sessao_id, numero, resposta) -> None:
             return   # o mesmo texto colado de novo
         respostas.append(resposta)
         banco.carregar(conn, sessao_id, frente)
+        arquivo.escrever(amb.dados, sessao_id, frente, corpo)
+
+
+def _gravar_trocados(amb, sessao_id, trocar: set) -> None:
+    """O Trocar fica na versão atual, em `trocados`: o filme não volta mais na Sessão (#66)."""
+    with escrita(amb):
+        frente, corpo = arquivo.ler(amb.dados, sessao_id)
+        trocados = frente.setdefault("trocados", [])
+        trocados.extend(sorted(trocar - set(trocados)))
         arquivo.escrever(amb.dados, sessao_id, frente, corpo)
 
 
