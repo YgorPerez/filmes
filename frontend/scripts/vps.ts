@@ -31,10 +31,8 @@ import {
   publishPlan,
   rollbackPlan,
   prologue,
+  vpsPaths,
 } from './deploy-plan.ts'
-
-// `nginx.test.ts` checks the vhost against this.
-export { HOST_CONFIG } from './deploy-plan.ts'
 
 /** The VPS as the deploy sees it: runs a script in the app folder and
  * receives files in `upload/`. */
@@ -78,6 +76,7 @@ function run(command: string, args: string[], cwd?: string, input?: string) {
  * `scp`. */
 function overSsh(target: Target): Vps {
   const account = `${target.user}@${target.host}`
+  const { upload } = vpsPaths()
   return {
     run: (script) =>
       run(
@@ -89,7 +88,7 @@ function overSsh(target: Target): Vps {
     upload: (folder, names) =>
       void run(
         'scp',
-        [...options(target, '-P'), ...names, `${account}:/opt/filmes/upload/`],
+        [...options(target, '-P'), ...names, `${account}:${upload}/`],
         folder,
       ),
   }

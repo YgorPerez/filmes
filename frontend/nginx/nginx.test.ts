@@ -5,7 +5,7 @@
 
 import { readFileSync } from 'node:fs'
 import { describe, expect, test } from 'vite-plus/test'
-import { HOST_CONFIG } from '../scripts/vps.ts'
+import { HOST_CONFIG } from '../scripts/deploy-plan.ts'
 
 const folder = new URL('./', import.meta.url)
 const read = (name: string) => readFileSync(new URL(name, folder), 'utf8')

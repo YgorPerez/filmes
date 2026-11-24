@@ -66,6 +66,8 @@ export function vpsPaths(root = '') {
   const at = (path: string) => `${root}${path}`
   return {
     folder: at(APP.folder),
+    /** Where the deploy's files arrive, in the app folder. */
+    upload: at(`${APP.folder}/upload`),
     include: at(APP.include),
     vhost: at(APP.vhost),
     config: HOST_CONFIG.map(([name, target]) => [name, at(target)] as const),
@@ -234,6 +236,10 @@ export type Step = {
   script: string
 }
 
+function checkSha(sha: string) {
+  if (!SHA.test(sha)) throw new Error(`"${sha}" is not a SHA.`)
+}
+
 /** Publishing a build: the upload, the image, the volume and the swap,
  * which installs the host configuration along with it. */
 export function publishPlan({
@@ -243,7 +249,7 @@ export function publishPlan({
   sha: string
   paths?: VpsPaths
 }): Step[] {
-  if (!SHA.test(sha)) throw new Error(`"${sha}" is not a SHA.`)
+  checkSha(sha)
   return [
     {
       name: 'Upload',
@@ -264,6 +270,6 @@ export function rollbackPlan({
   sha: string
   paths?: VpsPaths
 }): Step[] {
-  if (!SHA.test(sha)) throw new Error(`"${sha}" is not a SHA.`)
+  checkSha(sha)
   return [{ name: 'Swap', script: swapApp(sha, false, paths) }]
 }
