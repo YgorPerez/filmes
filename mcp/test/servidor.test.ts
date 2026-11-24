@@ -225,7 +225,7 @@ describe("servidor MCP sobre a CLI real e a fixture", () => {
 
     assert.ok(!resultado.isError, JSON.stringify(resultado.content));
     assert.deepEqual(json(resultado).sessao, { ...primeira.sessao, versao: 2 });
-    assert.ok(json(resultado).restricoes.sem_repetido.tirados >= 1);
+    assert.deepEqual(json(resultado).restricoes.fora_da_sessao, { trocados: 0, ja_vistos: 0, tirados: 0 });
     const abertas = json((await cliente.callTool({ name: "sessoes_abertas", arguments: {} })) as Resultado);
     const comQuim = abertas.sessoes.filter((s: { presentes: string[] }) => s.presentes.includes("quim"));
     assert.deepEqual(comQuim.map((s: { pedido: string; versao: number }) => [s.pedido, s.versao]), [["algo curto", 2]]);

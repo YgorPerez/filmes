@@ -4,7 +4,7 @@ from filmes import sessao
 from filmes.banco import abrir_leitura
 from filmes.erros import ErroFilmes
 from filmes.recomendacao import mantidos, presentes as pessoas_presentes, recomendar, restricoes
-from filmes.recomendacao.restricoes import sem_repetido
+from filmes.recomendacao.restricoes import fora_da_sessao
 from filmes.recomendacao.regra import Regra
 
 AJUDA = "devolve a Recomendação (top 5) com as Evidências de cada filme, por Presente, e abre a Sessão"
@@ -36,7 +36,7 @@ def executar(args, amb):
         raise ErroFilmes("uso_invalido", "--quantos precisa ser 1 ou mais")
     nomes = [n for item in args.presentes for n in item.split(",") if n.strip()]
     pedidas = restricoes.ler(args)
-    manter = sem_repetido.manter(args)
+    manter = fora_da_sessao.manter(args)
     if manter and not args.sessao:
         raise ErroFilmes("uso_invalido", "--manter só vale com --sessao: são os filmes da versão anterior que ficam")
     regerar, avisos = None, []
