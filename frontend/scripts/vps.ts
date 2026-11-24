@@ -34,14 +34,16 @@ import {
   vpsPaths,
 } from './deploy-plan.ts'
 
-/** The VPS as the deploy sees it: runs a script in the app folder and
- * receives files in `upload/`. */
+/** The VPS as the deploy sees it: runs a script in the app folder,
+ * receives files in `upload/`, and receives one big file at a path, resuming
+ * an interrupted transfer. */
 export type Vps = {
   run: (script: string) => string
   upload: (folder: string, names: readonly string[]) => void
+  send: (file: string, to: string) => void
 }
 
-type Target = {
+export type Target = {
   host: string
   port: string
   user: string
@@ -72,9 +74,17 @@ function run(command: string, args: string[], cwd?: string, input?: string) {
   return r.stdout
 }
 
+/** `rsync -e` splits its command on spaces and honours single quotes. */
+function shellWord(word: string) {
+  return /^[\w@%+=:,./-]+$/.test(word)
+    ? word
+    : `'${word.replaceAll("'", `'\\''`)}'`
+}
+
 /** The real VPS: the script goes through `ssh`'s stdin, the files through
- * `scp`. */
-function overSsh(target: Target): Vps {
+ * `scp`, and the database through `rsync`, which keeps the part of an
+ * interrupted transfer and resumes it, with its progress on the terminal. */
+export function overSsh(target: Target): Vps {
   const account = `${target.user}@${target.host}`
   const { upload } = vpsPaths()
   return {
@@ -91,12 +101,34 @@ function overSsh(target: Target): Vps {
         [...options(target, '-P'), ...names, `${account}:${upload}/`],
         folder,
       ),
+    send(file, to) {
+      const ssh = ['ssh', ...options(target, '-p')].map(shellWord).join(' ')
+      const r = spawnSync(
+        'rsync',
+        [
+          // Writes straight into the part, so an interrupted transfer keeps
+          // what arrived and the next one only sends the rest.
+          '--inplace',
+          '--compress',
+          '--info=progress2',
+          '-e',
+          ssh,
+          file,
+          `${account}:${to}`,
+        ],
+        { stdio: 'inherit' },
+      )
+      if (r.status !== 0)
+        throw new Error(
+          `rsync failed (exited with ${r.status}); run it again to resume.`,
+        )
+    },
   }
 }
 
 /** Follows the plan on the VPS, step by step, with each one's time in the
  * log. */
-function followThePlan({
+export function followThePlan({
   steps,
   vps,
   upload,
@@ -119,6 +151,10 @@ function followThePlan({
         if (!upload) throw new Error(`The ${step.name} step needs an upload.`)
         say('The build goes to the VPS.')
         vps.upload(upload, step.upload)
+      }
+      if (step.send) {
+        say(`${step.send.file} goes to ${step.send.to}.`)
+        vps.send(step.send.file, step.send.to)
       }
     })
   clock.total()

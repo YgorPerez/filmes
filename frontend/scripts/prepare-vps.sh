@@ -26,6 +26,8 @@ command -v docker >/dev/null || MISSING+=(docker.io)
 command -v nginx >/dev/null || MISSING+=(nginx)
 command -v certbot >/dev/null || MISSING+=(certbot)
 command -v flock >/dev/null || MISSING+=(util-linux)
+# db:publish sends the database with rsync, which resumes.
+command -v rsync >/dev/null || MISSING+=(rsync)
 if [ ${#MISSING[@]} -gt 0 ]; then
   export DEBIAN_FRONTEND=noninteractive
   apt-get update -qq
