@@ -82,13 +82,13 @@ describe('the access_log format', () => {
   })
 })
 
-describe('the cinema.finalsend.com.br vhost', () => {
-  test('only serves cinema.finalsend.com.br, on 80 and 443', () => {
+describe('the cinema.temestudo.cloud vhost', () => {
+  test('only serves cinema.temestudo.cloud, on 80 and 443', () => {
     expect(
       servers.map((s) =>
         named(s.children, 'server_name').flatMap((n) => n.args),
       ),
-    ).toEqual([['cinema.finalsend.com.br'], ['cinema.finalsend.com.br']])
+    ).toEqual([['cinema.temestudo.cloud'], ['cinema.temestudo.cloud']])
   })
 
   test("never takes the shared VPS's default_server", () => {
@@ -125,7 +125,7 @@ describe('the cinema.finalsend.com.br vhost', () => {
     ])
     const rest = locations.find((l) => l.args.join(' ') === '/')
     expect(named(rest?.children, 'return').map((d) => d.args)).toEqual([
-      ['301', 'https://cinema.finalsend.com.br$request_uri'],
+      ['301', 'https://cinema.temestudo.cloud$request_uri'],
     ])
   })
 
@@ -146,7 +146,7 @@ describe('the cinema.finalsend.com.br vhost', () => {
     ).toEqual([['shared:filmes_tls:10m']])
     expect(
       named(tlsDirectives, 'ssl_certificate').map((d) => d.args[0]),
-    ).toEqual(['/etc/letsencrypt/live/cinema.finalsend.com.br/fullchain.pem'])
+    ).toEqual(['/etc/letsencrypt/live/cinema.temestudo.cloud/fullchain.pem'])
   })
 
   test('the deploy installs every file here, each under a filmes name', () => {

@@ -1,4 +1,4 @@
-# Each push to master publishes the app at https://cinema.finalsend.com.br
+# Each push to master publishes the app at https://cinema.temestudo.cloud
 # (#79, ADR 0006), modeled on pesquisa-relacionamentos' `deploy.yml`. The
 # `build` job runs the frontend's types and tests and builds it. `publish`
 # sends that same build to the VPS over SSH, and `frontend/scripts/vps.ts`
@@ -108,7 +108,7 @@ jobs:
     timeout-minutes: 15
     environment:
       name: production
-      url: https://cinema.finalsend.com.br
+      url: https://cinema.temestudo.cloud
     defaults:
       run:
         working-directory: frontend
@@ -143,7 +143,7 @@ jobs:
       # it cites arrives with its own type, and http leads to https with the
       # query kept.
       - name: Verify the live site
-        run: node scripts/check-live.ts cinema.finalsend.com.br "$GITHUB_SHA"
+        run: node scripts/check-live.ts cinema.temestudo.cloud "$GITHUB_SHA"
 
   rollback:
     needs: secrets
@@ -152,7 +152,7 @@ jobs:
     timeout-minutes: 10
     environment:
       name: production
-      url: https://cinema.finalsend.com.br
+      url: https://cinema.temestudo.cloud
     defaults:
       run:
         working-directory: frontend
@@ -180,4 +180,4 @@ jobs:
           fi
 
       - name: Verify the live site
-        run: node scripts/check-live.ts cinema.finalsend.com.br "$GITHUB_SHA"
+        run: node scripts/check-live.ts cinema.temestudo.cloud "$GITHUB_SHA"
