@@ -16,10 +16,16 @@ import { tmpdir } from 'node:os'
 import { dirname, join, relative, resolve, sep } from 'node:path'
 import { normalizeLegacy } from './legacy.ts'
 import { invertToml, rewriteToml } from './rewrite-toml.ts'
-import { MigrationError, rewriteMarkdown, rewriteYaml } from './rewrite-yaml.ts'
+import { MigrationError } from './error.ts'
+import { rewriteMarkdown, rewriteYaml } from './rewrite-yaml.ts'
 import { invert, type Shape } from './shape.ts'
 import { CONFIG_FILES, type ConfigFile } from './tables/config.ts'
-import { letterboxdResolutions, person, session } from './tables/data.ts'
+import {
+  letterboxdResolutions,
+  person,
+  session,
+  type DataKind,
+} from './tables/data.ts'
 
 export type Direction = 'to-en' | 'to-pt'
 
@@ -32,8 +38,6 @@ export interface FileResult {
    * export, a file this script has no table for). */
   readonly action: 'rewritten' | 'copied'
 }
-
-type DataKind = 'person' | 'session' | 'letterboxd'
 
 const DATA_SHAPES: Readonly<Record<DataKind, Shape>> = {
   person,
@@ -209,6 +213,16 @@ export function migrateConfig(
     })
 }
 
+/** What a source folder is: a filmes-dados checkout or a `config/`. */
+export type SourceKind = 'data' | 'config'
+
+/** The migration of a whole folder of that kind. */
+export function migrateFolder(
+  kind: SourceKind,
+): (source: string, destination: string, direction: Direction) => FileResult[] {
+  return kind === 'data' ? migrateData : migrateConfig
+}
+
 export interface RoundTrip {
   /** Files that came back byte for byte. */
   readonly identical: readonly string[]
@@ -248,12 +262,12 @@ function compare(
 
 /** PT → EN → PT over copies in a temporary folder; `source` is only read.
  * `kind` says whether it is a filmes-dados checkout or a `config/`. */
-export function roundTrip(source: string, kind: 'data' | 'config'): RoundTrip {
+export function roundTrip(source: string, kind: SourceKind): RoundTrip {
   const work = mkdtempSync(join(tmpdir(), 'filmes-key-migration-'))
   try {
     const en = join(work, 'en')
     const back = join(work, 'pt')
-    const run = kind === 'data' ? migrateData : migrateConfig
+    const run = migrateFolder(kind)
     const english = run(source, en, 'to-en')
     run(en, back, 'to-pt')
     const normalize = (path: string, text: string) => {

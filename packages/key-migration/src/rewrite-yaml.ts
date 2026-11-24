@@ -14,15 +14,9 @@ import {
   Scalar,
   type Node,
 } from 'yaml'
+import { applyEdits, splitFrontmatter, type Edit } from './edit.ts'
+import { MigrationError } from './error.ts'
 import type { Shape } from './shape.ts'
-
-interface Edit {
-  readonly start: number
-  readonly end: number
-  readonly text: string
-}
-
-export class MigrationError extends Error {}
 
 /** YAML 1.1 words a plain scalar cannot be without changing type. */
 const RESERVED =
@@ -99,13 +93,6 @@ function walk(node: unknown, shape: Shape, path: string, edits: Edit[]): void {
   throw new MigrationError(`${path}: unexpected YAML node`)
 }
 
-function apply(text: string, edits: readonly Edit[]): string {
-  let out = text
-  for (const edit of [...edits].sort((a, b) => b.start - a.start))
-    out = out.slice(0, edit.start) + edit.text + out.slice(edit.end)
-  return out
-}
-
 /** `text` with every key and closed-list value renamed by `shape`. */
 export function rewriteYaml(
   text: string,
@@ -117,16 +104,14 @@ export function rewriteYaml(
     throw new MigrationError(`invalid YAML: ${doc.errors[0]!.message}`)
   const edits: Edit[] = []
   walk(doc.contents as Node | null, shape, '$', edits)
-  return apply(text, edits)
+  return applyEdits(text, edits)
 }
 
-/** A Markdown file of filmes-dados: the frontmatter between `---` lines is
- * rewritten, the body is kept as written. Split as the Python engine reads
- * it (`filmes/dados/markdown.py`). A file without frontmatter is kept. */
+/** A Markdown file of filmes-dados: the frontmatter is rewritten, the body
+ * is kept as written. A file without frontmatter is kept. */
 export function rewriteMarkdown(text: string, shape: Shape): string {
-  if (!text.startsWith('---\n')) return text
-  const end = text.indexOf('\n---', 4)
-  if (end === -1)
-    throw new MigrationError(`frontmatter without the closing '---'`)
-  return '---\n' + rewriteYaml(text.slice(4, end), shape) + text.slice(end)
+  const fm = splitFrontmatter(text)
+  if (!fm) return text
+  const end = fm.start + fm.yaml.length
+  return text.slice(0, fm.start) + rewriteYaml(fm.yaml, shape) + text.slice(end)
 }

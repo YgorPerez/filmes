@@ -7,6 +7,10 @@ import { anything, closed, free, list, map, type Shape } from '../shape.ts'
 import { TAG_GROUPS } from './config.ts'
 
 /** A Constraint name (`contexto.restricoes[].nome`, a drop's `restricao`). */
+/** The filmes-dados files the migration rewrites: a Pessoa, a Sessão, the
+ * Letterboxd resolutions. */
+export type DataKind = 'person' | 'session' | 'letterboxd'
+
 export const CONSTRAINTS = {
   ano: 'year',
   crianca: 'child',

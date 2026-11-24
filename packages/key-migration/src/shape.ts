@@ -3,6 +3,8 @@
 // once, Portuguese to English; `invert` derives the other direction, so the
 // two can never drift apart.
 
+import { MigrationError } from './error.ts'
+
 /** A closed list: Portuguese value → English value. */
 export type Values = Readonly<Record<string, string>>
 
@@ -69,11 +71,13 @@ export function oneOf(...shapes: readonly Shape[]): Shape {
   return Object.assign({}, ...shapes) as Shape
 }
 
-function invertTable(table: Values, where: string): Values {
+/** A table read the other way. Fails when two names share one on the
+ * other side. */
+export function invertValues(table: Values, where: string): Values {
   const out: Record<string, string> = {}
   for (const [pt, en] of Object.entries(table)) {
     if (en in out)
-      throw new Error(
+      throw new MigrationError(
         `${where}: '${out[en]}' and '${pt}' both become '${en}', so the way back is ambiguous`,
       )
     out[en] = pt
@@ -96,7 +100,7 @@ export function invert(shape: Shape, where = '$'): Shape {
   } = {}
   inverted.set(shape, out)
   if (shape.fields) {
-    const names = invertTable(
+    const names = invertValues(
       Object.fromEntries(
         Object.entries(shape.fields).map(([pt, f]) => [pt, f.name]),
       ),
@@ -116,7 +120,7 @@ export function invert(shape: Shape, where = '$'): Shape {
       shape.scalar === 'free'
         ? 'free'
         : {
-            values: invertTable(shape.scalar.values, where),
+            values: invertValues(shape.scalar.values, where),
             open: shape.scalar.open ?? false,
           }
   return out
