@@ -1,128 +1,564 @@
 <!doctype html>
 <!-- Protótipo descartável do #78: o Cartaz no mundo do DESIGN.md, com dados da fixture. Não é o componente. -->
 <html lang="pt-BR">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Cartaz (protótipo)</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Antonio:wght@600;700&display=swap" rel="stylesheet">
-<style>
-:root{
-  --ground:#f3f3f0;--surface:#ffffff;--surface-2:#e9e9e4;--ink:#141414;--ink-2:#5c5c58;--rule:#d9d9d3;
-  --marquee-red:#c8102e;--marquee-red-text:#c8102e;--on-red:#ffffff;--panel:#fbfaf5;--panel-ink:#141414;--bulb:#f2b632;--star:#b07a00;
-  --p1:#2c62c4;--p2:#1b7a50;--p3:#a63d8d;--p4:#b9580f;--p5:#6650c4;--p6:#0b7676;--on-p:#ffffff;
-  --letter:"Antonio","Arial Narrow",sans-serif;--sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-  color-scheme:light;
-}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --ground:#0f0f11;--surface:#1a1a1d;--surface-2:#26262a;--ink:#f2f2ee;--ink-2:#a3a39d;--rule:#2e2e33;
-  --marquee-red:#d23347;--marquee-red-text:#ec6273;--panel:#f4f1e6;--star:#f2b632;
-  --p1:#6c9cf0;--p2:#4cbf8a;--p3:#e07ccb;--p4:#f0954a;--p5:#a593f5;--p6:#3fc1c1;--on-p:#141414;color-scheme:dark}}
-:root[data-theme="dark"]{
-  --ground:#0f0f11;--surface:#1a1a1d;--surface-2:#26262a;--ink:#f2f2ee;--ink-2:#a3a39d;--rule:#2e2e33;
-  --marquee-red:#d23347;--marquee-red-text:#ec6273;--panel:#f4f1e6;--star:#f2b632;
-  --p1:#6c9cf0;--p2:#4cbf8a;--p3:#e07ccb;--p4:#f0954a;--p5:#a593f5;--p6:#3fc1c1;--on-p:#141414;color-scheme:dark}
-*{box-sizing:border-box}
-body{margin:0;background:var(--ground);color:var(--ink);font:16px/1.5 var(--sans)}
-.cartaz{max-width:720px;margin:0 auto;padding:16px;display:grid;gap:14px}
-/* O letreiro: a leitura do pedido em letras de painel de cinema */
-.letreiro{background:var(--panel);color:var(--panel-ink);border:3px solid var(--marquee-red);border-radius:4px;padding:10px 12px 9px;display:grid;gap:5px}
-.letreiro .linha{display:flex;flex-wrap:wrap;gap:3px}
-.letreiro .t{font:700 22px/1 var(--letter);text-transform:uppercase;letter-spacing:.02em;padding:3px 4px 2px;background:rgba(20,20,20,.045);border-radius:2px}
-.letreiro .t.sp{background:none;width:6px;padding:0}
-.letreiro .fala{font:italic 14px/1.4 var(--sans);color:#4a4a46;margin-top:2px}
-.legenda{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--ink-2);align-items:center}
-.leg{display:inline-flex;align-items:center;gap:6px;color:var(--ink)}
-.av{width:24px;height:24px;border-radius:50%;background:var(--c);color:var(--on-p);font:700 11px/24px var(--sans);text-align:center;display:inline-block}
-.av.vazio{background:transparent;color:var(--c);box-shadow:inset 0 0 0 2px var(--c)}
-.saiu{font-size:13px;color:var(--ink-2)}
-.card{position:relative;display:grid;grid-template-columns:104px 1fr;grid-template-areas:"capa corpo" "porque porque" "responde responde";column-gap:14px;row-gap:14px;padding:14px;background:var(--surface);border:1px solid var(--rule);border-radius:10px}
-.capa{grid-area:capa;position:relative;aspect-ratio:2/3;border-radius:6px;overflow:hidden;background:var(--surface-2);display:grid;place-items:center;text-align:center;padding:10px;font-size:13px;color:var(--ink-2)}
-.capa .pontos{position:absolute;left:0;right:0;bottom:0;display:flex;gap:6px;justify-content:center;padding:16px 0 8px;background:linear-gradient(transparent,rgba(0,0,0,.72))}
-.ponto{width:12px;height:12px;border-radius:50%;background:var(--c);box-shadow:0 0 0 2px rgba(0,0,0,.45)}
-.ponto.vazio{background:rgba(0,0,0,.35);box-shadow:inset 0 0 0 2px var(--c)}
-.corpo{grid-area:corpo;min-width:0;display:grid;gap:8px;align-content:start}
-h2{margin:0;font:700 19px/1.25 var(--sans);display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 10px}
-h2 .n{font:700 26px/1 var(--letter);color:var(--marquee-red-text)}
-.orig{font:italic 400 13px var(--sans);color:var(--ink-2)}
-.novo{font:700 11px/1 var(--sans);text-transform:uppercase;letter-spacing:.05em;padding:4px 8px;border-radius:999px;background:var(--bulb);color:#141414;align-self:center}
-.sinopse{margin:0;font-size:15.5px;line-height:1.5;text-wrap:pretty}
-.chips{display:flex;flex-wrap:wrap;gap:6px}
-.chip{font-size:12px;padding:3px 9px;border-radius:999px;background:var(--surface-2)}
-.chip.imdb{background:none;box-shadow:inset 0 0 0 1px var(--rule);font-weight:600}
-.porque{grid-area:porque;border-top:1px solid var(--rule);padding-top:12px}
-.rot{margin:0 0 8px;font:600 12px/1.3 var(--sans);letter-spacing:.05em;text-transform:uppercase;color:var(--ink-2);display:flex;justify-content:space-between;gap:8px}
-.rot span{text-transform:none;letter-spacing:0}
-ul{list-style:none;margin:0;padding:0;display:grid;gap:9px}
-li{display:grid;grid-template-columns:24px 32px 1fr;gap:8px;font-size:14px;line-height:1.45}
-.forca{font-size:11px;letter-spacing:1px;padding-top:4px;white-space:nowrap}
-.fonte{display:block;color:var(--ink-2);font-size:12px}
-.semfato{color:var(--ink-2)}
-.responde{grid-area:responde;border-top:1px solid var(--rule);padding-top:12px;display:grid;gap:8px}
-.linha-r{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
-.opcao{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 14px;border-radius:999px;box-shadow:inset 0 0 0 1px var(--rule);font-size:14px;background:var(--surface)}
-.opcao.on{box-shadow:inset 0 0 0 2px var(--ink);background:var(--surface-2);font-weight:600}
-.estrelas{display:inline-flex;font-size:24px;line-height:44px}
-.estrelas span{padding:0 3px;color:var(--ink-2);opacity:.45}
-.estrelas .on{color:var(--star);opacity:1}
-/* Carimbo: o estado se imprime no card, nada some */
-.carimbo{position:absolute;top:38%;left:50%;translate:-50% 0;font:700 15px/1 var(--letter);text-transform:uppercase;letter-spacing:.06em;padding:5px 8px 4px;border:2px solid var(--marquee-red-text);color:var(--marquee-red-text);border-radius:3px;transform:rotate(-4deg);background:var(--surface)}
-.carimbo.javi{border-color:var(--ink);color:var(--ink)}
-.card.trocado .capa img,.card.trocado .capa .pontos,.card.trocado .corpo{opacity:.72}
-.responder{display:grid;gap:10px;padding:14px;background:var(--surface);border:1px solid var(--rule);border-radius:10px}
-.responder label{display:grid;gap:4px;font-size:14px;font-weight:600}
-.responder label span{font-weight:400;color:var(--ink-2)}
-textarea{font:inherit;font-size:15px;min-height:44px;padding:9px 12px;border:1px solid var(--rule);border-radius:8px;background:transparent;color:inherit}
-.enviar{justify-self:start;min-height:44px;padding:0 22px;border:0;border-radius:999px;background:var(--marquee-red);color:var(--on-red);font:700 15px var(--sans)}
-.resumo{font-size:13px;color:var(--ink-2)}
-</style>
-</head>
-<body>
-<div class="cartaz">
-  <div class="letreiro" role="group" aria-label="Pedido: Vocês dois, até 1h40, algo leve, nota 7 ou mais no IMDb">
-    <div class="linha" aria-hidden="true"><span class="t">Vocês</span><span class="t">dois</span><span class="t sp"></span><span class="t">até</span><span class="t">1h40</span></div>
-    <div class="linha" aria-hidden="true"><span class="t">Algo</span><span class="t">leve</span><span class="t sp"></span><span class="t">IMDb</span><span class="t">7+</span></div>
-    <div class="fala">“algo leve pra sexta”</div>
-  </div>
-  <div class="legenda"><span class="leg"><span class="av" style="--c:var(--p1)">B</span>Bruno</span><span class="leg"><span class="av" style="--c:var(--p2)">T</span>Teo</span><span>●●● forte · ●●○ moderada · ●○○ fraca</span></div>
-  <div class="saiu">Saiu: 2 Sessão Maldita (Teo já viu)</div>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Cartaz (protótipo)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Antonio:wght@600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --ground: #f3f3f0;
+        --surface: #ffffff;
+        --surface-2: #e9e9e4;
+        --ink: #141414;
+        --ink-2: #5c5c58;
+        --rule: #d9d9d3;
+        --marquee-red: #c8102e;
+        --marquee-red-text: #c8102e;
+        --on-red: #ffffff;
+        --panel: #fbfaf5;
+        --panel-ink: #141414;
+        --bulb: #f2b632;
+        --star: #b07a00;
+        --p1: #2c62c4;
+        --p2: #1b7a50;
+        --p3: #a63d8d;
+        --p4: #b9580f;
+        --p5: #6650c4;
+        --p6: #0b7676;
+        --on-p: #ffffff;
+        --letter: 'Antonio', 'Arial Narrow', sans-serif;
+        --sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        color-scheme: light;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme='light']) {
+          --ground: #0f0f11;
+          --surface: #1a1a1d;
+          --surface-2: #26262a;
+          --ink: #f2f2ee;
+          --ink-2: #a3a39d;
+          --rule: #2e2e33;
+          --marquee-red: #d23347;
+          --marquee-red-text: #ec6273;
+          --panel: #f4f1e6;
+          --star: #f2b632;
+          --p1: #6c9cf0;
+          --p2: #4cbf8a;
+          --p3: #e07ccb;
+          --p4: #f0954a;
+          --p5: #a593f5;
+          --p6: #3fc1c1;
+          --on-p: #141414;
+          color-scheme: dark;
+        }
+      }
+      :root[data-theme='dark'] {
+        --ground: #0f0f11;
+        --surface: #1a1a1d;
+        --surface-2: #26262a;
+        --ink: #f2f2ee;
+        --ink-2: #a3a39d;
+        --rule: #2e2e33;
+        --marquee-red: #d23347;
+        --marquee-red-text: #ec6273;
+        --panel: #f4f1e6;
+        --star: #f2b632;
+        --p1: #6c9cf0;
+        --p2: #4cbf8a;
+        --p3: #e07ccb;
+        --p4: #f0954a;
+        --p5: #a593f5;
+        --p6: #3fc1c1;
+        --on-p: #141414;
+        color-scheme: dark;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--ground);
+        color: var(--ink);
+        font: 16px/1.5 var(--sans);
+      }
+      .cartaz {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 16px;
+        display: grid;
+        gap: 14px;
+      }
+      /* O letreiro: a leitura do pedido em letras de painel de cinema */
+      .letreiro {
+        background: var(--panel);
+        color: var(--panel-ink);
+        border: 3px solid var(--marquee-red);
+        border-radius: 4px;
+        padding: 10px 12px 9px;
+        display: grid;
+        gap: 5px;
+      }
+      .letreiro .linha {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 3px;
+      }
+      .letreiro .t {
+        font: 700 22px/1 var(--letter);
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+        padding: 3px 4px 2px;
+        background: rgba(20, 20, 20, 0.045);
+        border-radius: 2px;
+      }
+      .letreiro .t.sp {
+        background: none;
+        width: 6px;
+        padding: 0;
+      }
+      .letreiro .fala {
+        font: italic 14px/1.4 var(--sans);
+        color: #4a4a46;
+        margin-top: 2px;
+      }
+      .legenda {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 14px;
+        font-size: 13px;
+        color: var(--ink-2);
+        align-items: center;
+      }
+      .leg {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--ink);
+      }
+      .av {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: var(--c);
+        color: var(--on-p);
+        font: 700 11px/24px var(--sans);
+        text-align: center;
+        display: inline-block;
+      }
+      .av.vazio {
+        background: transparent;
+        color: var(--c);
+        box-shadow: inset 0 0 0 2px var(--c);
+      }
+      .saiu {
+        font-size: 13px;
+        color: var(--ink-2);
+      }
+      .card {
+        position: relative;
+        display: grid;
+        grid-template-columns: 104px 1fr;
+        grid-template-areas: 'capa corpo' 'porque porque' 'responde responde';
+        column-gap: 14px;
+        row-gap: 14px;
+        padding: 14px;
+        background: var(--surface);
+        border: 1px solid var(--rule);
+        border-radius: 10px;
+      }
+      .capa {
+        grid-area: capa;
+        position: relative;
+        aspect-ratio: 2/3;
+        border-radius: 6px;
+        overflow: hidden;
+        background: var(--surface-2);
+        display: grid;
+        place-items: center;
+        text-align: center;
+        padding: 10px;
+        font-size: 13px;
+        color: var(--ink-2);
+      }
+      .capa .pontos {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: flex;
+        gap: 6px;
+        justify-content: center;
+        padding: 16px 0 8px;
+        background: linear-gradient(transparent, rgba(0, 0, 0, 0.72));
+      }
+      .ponto {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--c);
+        box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.45);
+      }
+      .ponto.vazio {
+        background: rgba(0, 0, 0, 0.35);
+        box-shadow: inset 0 0 0 2px var(--c);
+      }
+      .corpo {
+        grid-area: corpo;
+        min-width: 0;
+        display: grid;
+        gap: 8px;
+        align-content: start;
+      }
+      h2 {
+        margin: 0;
+        font: 700 19px/1.25 var(--sans);
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 2px 10px;
+      }
+      h2 .n {
+        font: 700 26px/1 var(--letter);
+        color: var(--marquee-red-text);
+      }
+      .orig {
+        font: italic 400 13px var(--sans);
+        color: var(--ink-2);
+      }
+      .novo {
+        font: 700 11px/1 var(--sans);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 4px 8px;
+        border-radius: 999px;
+        background: var(--bulb);
+        color: #141414;
+        align-self: center;
+      }
+      .sinopse {
+        margin: 0;
+        font-size: 15.5px;
+        line-height: 1.5;
+        text-wrap: pretty;
+      }
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .chip {
+        font-size: 12px;
+        padding: 3px 9px;
+        border-radius: 999px;
+        background: var(--surface-2);
+      }
+      .chip.imdb {
+        background: none;
+        box-shadow: inset 0 0 0 1px var(--rule);
+        font-weight: 600;
+      }
+      .porque {
+        grid-area: porque;
+        border-top: 1px solid var(--rule);
+        padding-top: 12px;
+      }
+      .rot {
+        margin: 0 0 8px;
+        font: 600 12px/1.3 var(--sans);
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: var(--ink-2);
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+      }
+      .rot span {
+        text-transform: none;
+        letter-spacing: 0;
+      }
+      ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        gap: 9px;
+      }
+      li {
+        display: grid;
+        grid-template-columns: 24px 32px 1fr;
+        gap: 8px;
+        font-size: 14px;
+        line-height: 1.45;
+      }
+      .forca {
+        font-size: 11px;
+        letter-spacing: 1px;
+        padding-top: 4px;
+        white-space: nowrap;
+      }
+      .fonte {
+        display: block;
+        color: var(--ink-2);
+        font-size: 12px;
+      }
+      .semfato {
+        color: var(--ink-2);
+      }
+      .responde {
+        grid-area: responde;
+        border-top: 1px solid var(--rule);
+        padding-top: 12px;
+        display: grid;
+        gap: 8px;
+      }
+      .linha-r {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+      }
+      .opcao {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 44px;
+        padding: 0 14px;
+        border-radius: 999px;
+        box-shadow: inset 0 0 0 1px var(--rule);
+        font-size: 14px;
+        background: var(--surface);
+      }
+      .opcao.on {
+        box-shadow: inset 0 0 0 2px var(--ink);
+        background: var(--surface-2);
+        font-weight: 600;
+      }
+      .estrelas {
+        display: inline-flex;
+        font-size: 24px;
+        line-height: 44px;
+      }
+      .estrelas span {
+        padding: 0 3px;
+        color: var(--ink-2);
+        opacity: 0.45;
+      }
+      .estrelas .on {
+        color: var(--star);
+        opacity: 1;
+      }
+      /* Carimbo: o estado se imprime no card, nada some */
+      .carimbo {
+        position: absolute;
+        top: 38%;
+        left: 50%;
+        translate: -50% 0;
+        font: 700 15px/1 var(--letter);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        padding: 5px 8px 4px;
+        border: 2px solid var(--marquee-red-text);
+        color: var(--marquee-red-text);
+        border-radius: 3px;
+        transform: rotate(-4deg);
+        background: var(--surface);
+      }
+      .carimbo.javi {
+        border-color: var(--ink);
+        color: var(--ink);
+      }
+      .card.trocado .capa img,
+      .card.trocado .capa .pontos,
+      .card.trocado .corpo {
+        opacity: 0.72;
+      }
+      .responder {
+        display: grid;
+        gap: 10px;
+        padding: 14px;
+        background: var(--surface);
+        border: 1px solid var(--rule);
+        border-radius: 10px;
+      }
+      .responder label {
+        display: grid;
+        gap: 4px;
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .responder label span {
+        font-weight: 400;
+        color: var(--ink-2);
+      }
+      textarea {
+        font: inherit;
+        font-size: 15px;
+        min-height: 44px;
+        padding: 9px 12px;
+        border: 1px solid var(--rule);
+        border-radius: 8px;
+        background: transparent;
+        color: inherit;
+      }
+      .enviar {
+        justify-self: start;
+        min-height: 44px;
+        padding: 0 22px;
+        border: 0;
+        border-radius: 999px;
+        background: var(--marquee-red);
+        color: var(--on-red);
+        font: 700 15px var(--sans);
+      }
+      .resumo {
+        font-size: 13px;
+        color: var(--ink-2);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="cartaz">
+      <div
+        class="letreiro"
+        role="group"
+        aria-label="Pedido: Vocês dois, até 1h40, algo leve, nota 7 ou mais no IMDb"
+      >
+        <div class="linha" aria-hidden="true">
+          <span class="t">Vocês</span><span class="t">dois</span
+          ><span class="t sp"></span><span class="t">até</span
+          ><span class="t">1h40</span>
+        </div>
+        <div class="linha" aria-hidden="true">
+          <span class="t">Algo</span><span class="t">leve</span
+          ><span class="t sp"></span><span class="t">IMDb</span
+          ><span class="t">7+</span>
+        </div>
+        <div class="fala">“algo leve pra sexta”</div>
+      </div>
+      <div class="legenda">
+        <span class="leg"
+          ><span class="av" style="--c: var(--p1)">B</span>Bruno</span
+        ><span class="leg"
+          ><span class="av" style="--c: var(--p2)">T</span>Teo</span
+        ><span>●●● forte · ●●○ moderada · ●○○ fraca</span>
+      </div>
+      <div class="saiu">Saiu: 2 Sessão Maldita (Teo já viu)</div>
 
-  <article class="card">
-    <div class="capa">As Horas Lentas<span class="pontos"><span class="ponto" style="--c:var(--p1)"></span><span class="ponto vazio" style="--c:var(--p2)"></span></span></div>
-    <div class="corpo">
-      <h2><span class="n">1</span>As Horas Lentas</h2>
-      <p class="sinopse">Numa cidade do interior, uma relojoeira percebe que os relógios da casa atrasam um minuto por noite.</p>
-      <div class="chips"><span class="chip">2021</span><span class="chip">1h44</span><span class="chip">Drama</span><span class="chip">Mistério</span><span class="chip imdb">★ 7,4 IMDb · 28 mil votos</span></div>
-    </div>
-    <div class="porque"><p class="rot">Por que cada um vai gostar <span>Fato sobre 1 de 2</span></p>
-      <ul>
-        <li><span class="av" style="--c:var(--p1)">B</span><span class="forca" aria-label="Força forte">●●●</span><span>dirigido por Helena Prado, como 3 filmes a que deu 4 ou mais<span class="fonte">Wikidata</span></span></li>
-        <li class="semfato"><span class="av vazio" style="--c:var(--p2)">T</span><span class="forca"></span><span>Teo: sem fato sobre este filme</span></li>
-      </ul></div>
-    <div class="responde">
-      <div class="linha-r"><span class="rot" style="margin:0">Já vi</span><span class="opcao">Você</span><span class="opcao">Teo</span><span class="opcao">Todos</span></div>
-      <div class="linha-r"><span class="opcao">Trocar</span><span class="estrelas" aria-label="4 de 5"><span class="on">★</span><span class="on">★</span><span class="on">★</span><span class="on">★</span><span>★</span></span></div>
-    </div>
-  </article>
+      <article class="card">
+        <div class="capa">
+          As Horas Lentas<span class="pontos"
+            ><span class="ponto" style="--c: var(--p1)"></span
+            ><span class="ponto vazio" style="--c: var(--p2)"></span
+          ></span>
+        </div>
+        <div class="corpo">
+          <h2><span class="n">1</span>As Horas Lentas</h2>
+          <p class="sinopse">
+            Numa cidade do interior, uma relojoeira percebe que os relógios da
+            casa atrasam um minuto por noite.
+          </p>
+          <div class="chips">
+            <span class="chip">2021</span><span class="chip">1h44</span
+            ><span class="chip">Drama</span><span class="chip">Mistério</span
+            ><span class="chip imdb">★ 7,4 IMDb · 28 mil votos</span>
+          </div>
+        </div>
+        <div class="porque">
+          <p class="rot">
+            Por que cada um vai gostar <span>Fato sobre 1 de 2</span>
+          </p>
+          <ul>
+            <li>
+              <span class="av" style="--c: var(--p1)">B</span
+              ><span class="forca" aria-label="Força forte">●●●</span
+              ><span
+                >dirigido por Helena Prado, como 3 filmes a que deu 4 ou
+                mais<span class="fonte">Wikidata</span></span
+              >
+            </li>
+            <li class="semfato">
+              <span class="av vazio" style="--c: var(--p2)">T</span
+              ><span class="forca"></span
+              ><span>Teo: sem fato sobre este filme</span>
+            </li>
+          </ul>
+        </div>
+        <div class="responde">
+          <div class="linha-r">
+            <span class="rot" style="margin: 0">Já vi</span
+            ><span class="opcao">Você</span><span class="opcao">Teo</span
+            ><span class="opcao">Todos</span>
+          </div>
+          <div class="linha-r">
+            <span class="opcao">Trocar</span
+            ><span class="estrelas" aria-label="4 de 5"
+              ><span class="on">★</span><span class="on">★</span
+              ><span class="on">★</span><span class="on">★</span
+              ><span>★</span></span
+            >
+          </div>
+        </div>
+      </article>
 
-  <article class="card trocado">
-    <div class="capa"><span class="tit">Quermesse</span><span class="carimbo">Trocar</span><span class="pontos"><span class="ponto" style="--c:var(--p1)"></span><span class="ponto vazio" style="--c:var(--p2)"></span></span></div>
-    <div class="corpo">
-      <h2><span class="n">2</span>Quermesse <span class="novo">novo</span></h2>
-      <div class="chips"><span class="chip">2017</span><span class="chip">1h33</span><span class="chip imdb">IMDb · 9 mil votos</span></div>
-    </div>
-    <div class="porque"><p class="rot">Por que cada um vai gostar <span>Fato sobre 1 de 2</span></p>
-      <ul><li><span class="av" style="--c:var(--p1)">B</span><span class="forca" aria-label="Força fraca">●○○</span><span>deu 5 a O Farol de Areia (2012), e de 50 pessoas que deram 4+ a ele, 30% deram 4+ a este<span class="fonte">MovieLens ml-32m</span></span></li></ul></div>
-    <div class="responde"><div class="linha-r"><span class="rot" style="margin:0">Já vi</span><span class="opcao">Você</span><span class="opcao">Teo</span><span class="opcao">Todos</span></div>
-      <div class="linha-r"><span class="opcao on">✓ Trocar</span></div></div>
-  </article>
+      <article class="card trocado">
+        <div class="capa">
+          <span class="tit">Quermesse</span><span class="carimbo">Trocar</span
+          ><span class="pontos"
+            ><span class="ponto" style="--c: var(--p1)"></span
+            ><span class="ponto vazio" style="--c: var(--p2)"></span
+          ></span>
+        </div>
+        <div class="corpo">
+          <h2>
+            <span class="n">2</span>Quermesse <span class="novo">novo</span>
+          </h2>
+          <div class="chips">
+            <span class="chip">2017</span><span class="chip">1h33</span
+            ><span class="chip imdb">IMDb · 9 mil votos</span>
+          </div>
+        </div>
+        <div class="porque">
+          <p class="rot">
+            Por que cada um vai gostar <span>Fato sobre 1 de 2</span>
+          </p>
+          <ul>
+            <li>
+              <span class="av" style="--c: var(--p1)">B</span
+              ><span class="forca" aria-label="Força fraca">●○○</span
+              ><span
+                >deu 5 a O Farol de Areia (2012), e de 50 pessoas que deram 4+ a
+                ele, 30% deram 4+ a este<span class="fonte"
+                  >MovieLens ml-32m</span
+                ></span
+              >
+            </li>
+          </ul>
+        </div>
+        <div class="responde">
+          <div class="linha-r">
+            <span class="rot" style="margin: 0">Já vi</span
+            ><span class="opcao">Você</span><span class="opcao">Teo</span
+            ><span class="opcao">Todos</span>
+          </div>
+          <div class="linha-r"><span class="opcao on">✓ Trocar</span></div>
+        </div>
+      </article>
 
-  <div class="responder">
-    <label>Acrescentar <span>contexto da noite ou gosto: “chegou a Ana”, “algo leve”</span><textarea rows="2"></textarea></label>
-    <span class="resumo">1 Trocar marcado</span>
-    <button class="enviar" type="button">Enviar</button>
-  </div>
-</div>
-</body>
+      <div class="responder">
+        <label
+          >Acrescentar
+          <span>contexto da noite ou gosto: “chegou a Ana”, “algo leve”</span
+          ><textarea rows="2"></textarea>
+        </label>
+        <span class="resumo">1 Trocar marcado</span>
+        <button class="enviar" type="button">Enviar</button>
+      </div>
+    </div>
+  </body>
 </html>

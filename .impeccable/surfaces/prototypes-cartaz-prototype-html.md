@@ -1,7 +1,7 @@
 ---
 version: 1
-slug: "prototypes-cartaz-prototype-html"
-primary_target: "prototypes/cartaz.prototype.html"
+slug: 'prototypes-cartaz-prototype-html'
+primary_target: 'prototypes/cartaz.prototype.html'
 related_targets: []
 ---
 
