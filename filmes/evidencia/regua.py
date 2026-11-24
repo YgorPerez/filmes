@@ -165,6 +165,12 @@ def forca_nota_imdb() -> str:
     return "forte"
 
 
+def forca_parecido() -> str:
+    """Linha "parecido com X" de `--parecido`: leitura do projeto sobre tags e vizinhos, fraca.
+    Não é Fato e não soma em nada."""
+    return "fraca"
+
+
 def forca_metadado_do_pedido() -> str:
     """Metadado que responde ao pedido (duração, classificação, idioma, gatilho): sempre forte."""
     return "forte"

@@ -99,3 +99,23 @@ peso = 0.3
 usuarios_triste = 3
 usuarios_tema_pesado = 2
 relevancia_minima = 0.6
+
+[parecido]
+# `recomendar --parecido` (#67): só passam os `candidatos` filmes mais parecidos
+# com a referência, contados antes das outras Restrições e da nota mínima.
+candidatos = 50
+# Tags do genoma da referência que contam: as mais próprias dela (relevância
+# acima da média da tag no genoma). As candidatas a isso são as de maior relevância.
+tags_genoma = 15
+tags_genoma_consideradas = 40
+# Tags do MovieLens da referência que buscam filmes: as de mais peso (TF-IDF).
+tags_movielens = 20
+
+[parecido.peso]
+# Parecença de 0 a 1: soma destes pesos vezes a parecença de cada fonte (0 a 1).
+# Fonte sem dado para o par fica de fora e o peso dela se redistribui entre as outras.
+genoma = 0.35
+tags_movielens = 0.25
+vizinhos = 0.2
+genero = 0.1
+pessoas = 0.1
