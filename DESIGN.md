@@ -220,7 +220,7 @@ Neutros fazem quase tudo. O vermelho-cinema, a lâmpada âmbar e as cores dos Pr
 **Display Font:** Antonio 700 (fallback Arial Narrow, sans-serif), só para letreiro, número de posição e carimbo
 **Body Font:** fonte do sistema (system-ui, -apple-system, Segoe UI, Roboto, sans-serif)
 
-A Antonio vai auto-hospedada no app. Na view do MCP Apps ela não vai embutida no recurso `ui://`: o CSP do MCP Apps nunca aceita fonte em `data:` (o `font-src` padrão é `'none'`; o declarado é `'self'` mais `resourceDomains`). A view carrega a Antonio da origem do app (`https://cinema.finalsend.com.br`), declarada em `resourceDomains` no `_meta.ui.csp` do recurso, junto da origem das capas. Se a fonte não chegar, o letreiro cai no fallback (Arial Narrow, depois a fonte sans do host), e as regras abaixo continuam valendo.
+A Antonio vai auto-hospedada no app. Na view do MCP Apps ela não vai embutida no recurso `ui://`: o CSP do MCP Apps nunca aceita fonte em `data:` (o `font-src` padrão é `'none'`; o declarado é `'self'` mais `resourceDomains`). A view carrega a Antonio da origem do app (`https://cinema.temestudo.cloud`), declarada em `resourceDomains` no `_meta.ui.csp` do recurso, junto da origem das capas. Se a fonte não chegar, o letreiro cai no fallback (Arial Narrow, depois a fonte sans do host), e as regras abaixo continuam valendo.
 
 **Character:** a Antonio é a letra de placa de letreiro: condensada, reta, maiúscula. A fonte do sistema deixa o resto com cara de app do celular de quem usa, que é o que uma tela de trabalho pede.
 

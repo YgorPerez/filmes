@@ -45,7 +45,7 @@ const LIVE: Record<string, Answer> = {
   '/assets/estilo-B3x_9a.css': { type: CSS, body: 'body{}' },
   'http /': {
     status: 301,
-    headers: { location: 'https://cinema.finalsend.com.br/?x=1' },
+    headers: { location: 'https://cinema.temestudo.cloud/?x=1' },
   },
 }
 
@@ -62,7 +62,7 @@ function noWait() {
 
 const check = (answers: Record<string, Answer>) =>
   checkLive({
-    host: 'cinema.finalsend.com.br',
+    host: 'cinema.temestudo.cloud',
     mark: 'abc1234',
     fetch: site(answers).fetch,
     deadlineMs: 10_000,
@@ -75,7 +75,7 @@ describe('checkLive', () => {
     const { fetch, requests } = site(LIVE)
 
     const r = await checkLive({
-      host: 'cinema.finalsend.com.br',
+      host: 'cinema.temestudo.cloud',
       mark: 'abc1234',
       fetch,
       ...noWait(),
@@ -84,10 +84,10 @@ describe('checkLive', () => {
     expect(r).toEqual({
       ok: true,
       lines: [
-        'cinema.finalsend.com.br: / arrives as text/html;charset=utf-8',
-        'cinema.finalsend.com.br: /assets/estilo-B3x_9a.css arrives as text/css; charset=utf-8',
-        'cinema.finalsend.com.br: /assets/main-Df81kZ.js arrives as text/javascript; charset=utf-8',
-        'cinema.finalsend.com.br: http://cinema.finalsend.com.br/?x=1 leads to https://cinema.finalsend.com.br/?x=1',
+        'cinema.temestudo.cloud: / arrives as text/html;charset=utf-8',
+        'cinema.temestudo.cloud: /assets/estilo-B3x_9a.css arrives as text/css; charset=utf-8',
+        'cinema.temestudo.cloud: /assets/main-Df81kZ.js arrives as text/javascript; charset=utf-8',
+        'cinema.temestudo.cloud: http://cinema.temestudo.cloud/?x=1 leads to https://cinema.temestudo.cloud/?x=1',
       ],
     })
     // The query busts the cache of whoever is in between.
@@ -105,7 +105,7 @@ describe('checkLive', () => {
     expect(r).toEqual({
       ok: false,
       reason:
-        'cinema.finalsend.com.br: /assets/main-Df81kZ.js arrived with 200 and text/html;charset=utf-8 (3 attempts in 10 s)',
+        'cinema.temestudo.cloud: /assets/main-Df81kZ.js arrived with 200 and text/html;charset=utf-8 (3 attempts in 10 s)',
     })
   })
 
@@ -164,12 +164,12 @@ describe('checkLive', () => {
       ...LIVE,
       'http /': {
         status: 301,
-        headers: { location: 'https://cinema.finalsend.com.br/' },
+        headers: { location: 'https://cinema.temestudo.cloud/' },
       },
     })
 
     expect(!r.ok && r.reason).toContain(
-      'http://cinema.finalsend.com.br/?x=1 leads to https://cinema.finalsend.com.br/, not to https://cinema.finalsend.com.br/?x=1',
+      'http://cinema.temestudo.cloud/?x=1 leads to https://cinema.temestudo.cloud/, not to https://cinema.temestudo.cloud/?x=1',
     )
   })
 
@@ -177,7 +177,7 @@ describe('checkLive', () => {
     let times = 0
     const { fetch } = site(LIVE)
     const r = await checkLive({
-      host: 'cinema.finalsend.com.br',
+      host: 'cinema.temestudo.cloud',
       mark: 'abc1234',
       fetch: async (url) => {
         if (times++ === 0) throw new Error('connection refused')
@@ -191,7 +191,7 @@ describe('checkLive', () => {
 
   it('a connection that does not open becomes the reason', async () => {
     const r = await checkLive({
-      host: 'cinema.finalsend.com.br',
+      host: 'cinema.temestudo.cloud',
       mark: 'abc1234',
       fetch: async () => {
         throw new TypeError('fetch failed', { cause: 'ECONNREFUSED' })
@@ -203,7 +203,7 @@ describe('checkLive', () => {
     expect(r).toEqual({
       ok: false,
       reason:
-        'cinema.finalsend.com.br: the connection failed: ECONNREFUSED (1 attempts in 0 s)',
+        'cinema.temestudo.cloud: the connection failed: ECONNREFUSED (1 attempts in 0 s)',
     })
   })
 })

@@ -22,7 +22,7 @@ const APP = {
   folder: '/opt/filmes',
   /** The blue/green pair. temestudo has 3011/3031 and 3051, saude 3071. */
   ports: [3091, 3092],
-  host: 'cinema.finalsend.com.br',
+  host: 'cinema.temestudo.cloud',
   /** The one-line include the vhost reads the port from
    * (`../nginx/filmes.conf`). */
   include: '/etc/nginx/filmes/filmes-app.conf',

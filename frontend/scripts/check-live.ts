@@ -5,7 +5,7 @@
 // https with the query along. `deploy.yml` calls it like this, from
 // `frontend/`:
 //
-//   node scripts/check-live.ts cinema.finalsend.com.br <sha>
+//   node scripts/check-live.ts cinema.temestudo.cloud <sha>
 //
 // The TanStack page carries a NUL byte (the `"__root__\0"` id of the
 // dehydrated root route), and `grep` reads it as binary: here the search is

@@ -10,7 +10,7 @@ web
 
 ## Stack
 
-Decidida no mapa #72: a mesma do pesquisa-relacionamentos. Workspace pnpm neste repositório, com Vite+ (Oxfmt, Oxlint, Vitest), TypeScript 7, TanStack Start (React 19, Router, Query, Nitro), Base UI, shadcn, Tailwind 4, Storybook, Playwright, fallow e react-doctor. O motor vira `packages/engine`, em TypeScript com Effect; `frontend/` serve o app web, o MCP por HTTP, o OAuth e o Cartaz. Roda num contêiner Docker atrás do Nginx na VPS do temestudo, em `cinema.finalsend.com.br`, publicado a cada push na branch padrão.
+Decidida no mapa #72: a mesma do pesquisa-relacionamentos. Workspace pnpm neste repositório, com Vite+ (Oxfmt, Oxlint, Vitest), TypeScript 7, TanStack Start (React 19, Router, Query, Nitro), Base UI, shadcn, Tailwind 4, Storybook, Playwright, fallow e react-doctor. O motor vira `packages/engine`, em TypeScript com Effect; `frontend/` serve o app web, o MCP por HTTP, o OAuth e o Cartaz. Roda num contêiner Docker atrás do Nginx na VPS do temestudo, em `cinema.temestudo.cloud`, publicado a cada push na branch padrão.
 
 ## Users
 
@@ -52,7 +52,7 @@ Cada linha de "Por que cada um vai gostar" aponta para um Fato guardado, com Fon
 - Gosto permanente só é gravado depois de um sim do Dono. Contexto da noite regera direto.
 - Operações (`consult`, `evaluate`) só para `admin: true`.
 - Fora do escopo: cadastro aberto, outras línguas, rede social, streaming, notificações.
-- A decidir: o nome que aparece na tela (o repo se chama `filmes`; o domínio é `cinema.finalsend.com.br`), e se as atribuições do TMDB e do IMDb passam a aparecer na tela agora que mais de uma pessoa usa.
+- A decidir: o nome que aparece na tela (o repo se chama `filmes`; o domínio é `cinema.temestudo.cloud`), e se as atribuições do TMDB e do IMDb passam a aparecer na tela agora que mais de uma pessoa usa.
 
 ## Brand Commitments
 
