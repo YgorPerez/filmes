@@ -3,12 +3,16 @@
 // `frontend/`:
 //
 //   VPS_HOST=… [VPS_USER=root] [VPS_PORT=22] [VPS_SSH_KEY=<the key, or its path>] \
+//     [FILMES_DATA_REMOTE=<git URL> FILMES_DATA_DEPLOY_KEY=<the key's text>] \
 //     node scripts/vps.ts --publish .output <sha>
 //   … node scripts/vps.ts --rollback [<sha>]
 //
 // `--publish` sends the `.output`, the `Dockerfile`, the vhost and the log
 // rotation (`../nginx/`), builds the `filmes-app:sha-<sha>` image on the VPS
-// and swaps the container. `--rollback` swaps to an image the VPS already
+// and swaps the container. With `FILMES_DATA_REMOTE` and
+// `FILMES_DATA_DEPLOY_KEY`, it also sets up the push of filmes-dados (ADR
+// 0005): the key goes to the VPS inside the step's script, through ssh's
+// stdin. `--rollback` swaps to an image the VPS already
 // has: the previous deploy's, without the SHA, or the requested SHA's.
 //
 // What each step does on the VPS is the plan (`deploy-plan.ts`, ADR 0006).
@@ -27,6 +31,7 @@ import { keyFile } from './ssh-key.ts'
 import { stopwatch } from './stopwatch.ts'
 import {
   HOST_CONFIG,
+  type DataRepo,
   type Step,
   publishPlan,
   rollbackPlan,
@@ -210,6 +215,22 @@ export function rollback({
   followThePlan({ steps, vps, say, now })
 }
 
+/** filmes-dados' remote and deploy key from the environment: both, or
+ * neither (the deploy then leaves the VPS's as they are). The message names
+ * the variable, never its value. */
+export function dataRepoFrom(
+  env: Record<string, string | undefined>,
+): DataRepo | undefined | string {
+  const remote = env.FILMES_DATA_REMOTE
+  const key = env.FILMES_DATA_DEPLOY_KEY
+  if (!remote && !key) return undefined
+  if (!remote)
+    return 'FILMES_DATA_REMOTE is missing (FILMES_DATA_DEPLOY_KEY is set).'
+  if (!key)
+    return 'FILMES_DATA_DEPLOY_KEY is missing (FILMES_DATA_REMOTE is set).'
+  return { remote, key: key.replaceAll('\r\n', '\n') }
+}
+
 /** The VPS from the `VPS_*` environment variables. Each is checked before
  * the first step; the message names the variable, never its value. */
 export function targetFrom(
@@ -230,16 +251,18 @@ export function targetFrom(
 if (import.meta.main) {
   const [mode, a, b] = process.argv.slice(2)
   const target = targetFrom(process.env)
+  const dataRepo = dataRepoFrom(process.env)
   const say = (line: string) => console.log(`[vps] ${line}`)
   const stop = (message: string) => {
     console.error(`[vps] ${message}`)
     process.exit(1)
   }
   if (typeof target === 'string') stop(target)
+  else if (typeof dataRepo === 'string') stop(dataRepo)
   else {
     const vps = overSsh({ ...target, key: keyFile(target.key) })
     if (mode === '--publish' && a && b)
-      publish({ output: resolve(a), sha: b, vps, say })
+      publish({ output: resolve(a), sha: b, dataRepo, vps, say })
     else if (mode === '--rollback') rollback({ sha: a, vps, say })
     else
       stop(

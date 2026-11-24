@@ -28,6 +28,8 @@ command -v certbot >/dev/null || MISSING+=(certbot)
 command -v flock >/dev/null || MISSING+=(util-linux)
 # db:publish sends the database with rsync, which resumes.
 command -v rsync >/dev/null || MISSING+=(rsync)
+# The deploy clones filmes-dados into the volume once (ADR 0005).
+command -v git >/dev/null || MISSING+=(git)
 if [ ${#MISSING[@]} -gt 0 ]; then
   export DEBIAN_FRONTEND=noninteractive
   apt-get update -qq

@@ -3,6 +3,11 @@
 
 export * from './compat/index.ts'
 export {
+  consult,
+  type ConsultResult,
+  type ConsultValue,
+} from './consult/consult.ts'
+export {
   contribution,
   evidenceToJson,
   makeEvidence,
@@ -22,6 +27,14 @@ export {
 } from './evidence/strength.ts'
 export * from './evidence/wording.ts'
 export { genreInPortuguese, WIKIDATA_GENRE } from './catalog/genres.ts'
+export {
+  EXPORT_FORMATS,
+  exportRatings,
+  IMDB_HEADER,
+  imdbRating,
+  type ExportFormat,
+  type ExportResult,
+} from './export/imdb.ts'
 export { resolveAttendees } from './recommendation/attendees.ts'
 export {
   attributionsOf,
@@ -129,6 +142,7 @@ export {
   targetOf,
 } from './sqlite/vocabulary.ts'
 export {
+  missingDatabase,
   Sqlite,
   SqliteError,
   type Authorizer,
@@ -136,7 +150,17 @@ export {
   type ReadOptions,
   type Row,
   type RunResult,
+  type TypedStatement,
 } from './sqlite/Sqlite.ts'
+export {
+  ALERT_AFTER_FAILURES,
+  authorOf,
+  DataWriter,
+  type Author,
+  type PushStatus,
+  type WriteOptions,
+} from './data/DataWriter.ts'
+export { GitError } from './data/git.ts'
 export {
   formatMarkdown,
   parseMarkdown,
@@ -156,6 +180,7 @@ export {
   pyStrValue,
   pyTruthy,
   stringifyYaml,
+  yamlToJson,
   YamlError,
   type YamlMapping,
   type YamlScalar,
@@ -196,6 +221,55 @@ export {
   savePerson,
   type NewPerson,
 } from './people/people.ts'
+export {
+  adjustmentJson,
+  openQuestionJson,
+  personCreate,
+  personReport,
+  personSeen,
+  personState,
+  personView,
+  savePersonAndSync,
+  seenJson,
+  statementJson,
+  vetoJson,
+  withPeopleDatabase,
+  type AdjustmentJson,
+  type NewPersonInput,
+  type OpenQuestionJson,
+  type PersonSummary,
+  type PersonView,
+  type RatingJson,
+  type ReportResult,
+  type SeenInput,
+  type SeenJson,
+  type SeenResult,
+  type StatedResult,
+  type StatementInput,
+  type StatementJson,
+  type VetoJson,
+} from './people/actions.ts'
+export {
+  adjustmentId,
+  DB_LEVELS,
+  DB_LINKS,
+  DB_REACTIONS,
+  DB_TAG_GROUPS,
+  dbTarget,
+  loadPerson,
+  onlyGenre,
+  questionId,
+  ratingKindFromDb,
+  reactionFromDb,
+  reloadPeople,
+  seenId,
+  statedRating,
+  statementId,
+  syncPerson,
+  targetLabel,
+  vetoId,
+  type StatementTable,
+} from './people/facts.ts'
 export {
   DDD_ATTRIBUTION,
   DDD_NAME,

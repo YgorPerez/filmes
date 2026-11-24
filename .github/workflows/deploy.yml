@@ -137,6 +137,10 @@ jobs:
           VPS_USER: ${{ secrets.VPS_USER }}
           VPS_PORT: ${{ secrets.VPS_PORT || '22' }}
           VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          # Both or neither: the push of filmes-dados (ADR 0005). Without
+          # them the VPS keeps the remote and key it already has.
+          FILMES_DATA_REMOTE: ${{ secrets.FILMES_DATA_REMOTE }}
+          FILMES_DATA_DEPLOY_KEY: ${{ secrets.FILMES_DATA_DEPLOY_KEY }}
         run: node scripts/vps.ts --publish .output "$GITHUB_SHA"
 
       # From outside, over the internet: the page arrives as HTML, each asset

@@ -18,6 +18,13 @@
 //     FILMES_AVALIACOES  `avaliar`'s reports                  [paths] evaluations
 //     FILMES_OMDB_CHAVE  FILMES_DDD_CHAVE  FILMES_TMDB_CHAVE  the on-demand
 //                        sources' API keys (environment only, never local.toml)
+//     FILMES_DATA_REMOTE   where `DataWriter` pushes filmes-dados (a git URL)
+//     FILMES_DATA_KEY      the deploy key's file for that push (a path; the
+//                          key itself is never read here)
+//
+// The last two have no Python counterpart (the Python engine never commits),
+// so they are named in English like the app's `FILMES_DATABASE`. Environment
+// only, never local.toml: only the VPS pushes (ADR 0005).
 //
 // A variable wins over `[paths]` in local.toml. An empty variable counts as
 // unset, as in Python.
@@ -137,6 +144,12 @@ export interface EnvironmentShape {
   readonly sourceKeys: Readonly<
     Partial<Record<SourceKeyVariable, Redacted.Redacted<string>>>
   >
+  /** `FILMES_DATA_REMOTE`: where filmes-dados is pushed. Unset, nothing is
+   * pushed (tests and local runs). */
+  readonly dataRemote: string | undefined
+  /** `FILMES_DATA_KEY`: the path of the deploy key that pushes. Redacted so
+   * a log or an error never shows it. */
+  readonly dataKey: Redacted.Redacted<string> | undefined
   /** `FILMES_HOJE` when set. Code asks `Run` (or `Today`) for today, never
    * this. */
   readonly fixedToday: string | undefined
@@ -210,6 +223,8 @@ const makeEnvironment = Effect.fnUntraced(function* (vars: Vars) {
     if (value !== undefined) sourceKeys[name] = Redacted.make(value)
   }
 
+  const dataKey = get('FILMES_DATA_KEY')
+
   const pinned = get('FILMES_HOJE')
   const today = pinned === undefined ? undefined : yield* checkToday(pinned)
 
@@ -218,6 +233,8 @@ const makeEnvironment = Effect.fnUntraced(function* (vars: Vars) {
     paths,
     weights,
     sourceKeys,
+    dataRemote: get('FILMES_DATA_REMOTE'),
+    dataKey: dataKey === undefined ? undefined : Redacted.make(dataKey),
     fixedToday: today,
     path: (name) => {
       const value = paths[name]

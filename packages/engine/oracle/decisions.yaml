@@ -63,3 +63,30 @@
   ts: '^<absent>$'
   reason: the Session is opened by #94; #90 ports the ranking only
   link: https://github.com/YgorPerez/filmes/issues/94
+
+# Decided in #86 (Pessoa files). No fixture scenario reaches these yet, so
+# they are not entries (an entry no difference uses goes stale in a full
+# run). Whoever ports a command whose steps show one adds the entry, with
+# this reason and the link
+# https://github.com/YgorPerez/filmes/issues/86:
+#
+# - Error messages stay Python's word for word, even where they name the
+#   Portuguese key of an English file. Two exceptions: the Ajuste hints
+#   list the English values ("(use director, writer, cast, series, genre)",
+#   "(use none, low ou high)"), and a body line error names
+#   "people/<slug>.md, linha N do corpo" (Python: "pessoas/"), because the
+#   Python text would point at a wrong value or file. `{item!r}` shows the
+#   item's English keys.
+# - The repr of a YAML date in an error message is '2026-11-20' (TS keeps
+#   dates as text); Python shows datetime.date(2026, 11, 20). Invalid data
+#   only.
+# - A raw U+2028 or U+2029 in a frontmatter is invalid_data ("frontmatter
+#   inválido"): YAML 1.1 reads them as line breaks and the `yaml` package
+#   does not. The TS writer escapes them; real filmes-dados has none.
+# - An impossible YAML date (2026-02-30) is invalid_data ("frontmatter
+#   inválido: ValueError: ...") where Python crashed with `interno`.
+# - The TS writer lays out a frontmatter its own way (one flow collection
+#   per line, PyYAML's quoting rule). The oracle compares frontmatter as
+#   parsed YAML, so this needs no entry.
+# - Two Donos stays invalid_data in readPeople/resolvePerson/createPerson;
+#   the login decodes each file alone. The Sessions tickets decide.

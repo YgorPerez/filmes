@@ -24,6 +24,7 @@ export {
 export {
   casefold,
   isalnum,
+  pyJoinWords,
   letterboxdSlug,
   personSlug,
   PY_SPACE_CLASS,
@@ -32,4 +33,4 @@ export {
   pySplitlines,
   pyStrip,
 } from './text.ts'
-export { isIsoDate, pyParseFloat } from './parse.ts'
+export { isIsoDate, pyIsoDate, pyParseFloat } from './parse.ts'

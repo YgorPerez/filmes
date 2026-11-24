@@ -559,3 +559,16 @@ const typeName = (value: YamlScalar): string =>
       : isPyInt(value)
         ? "'int'"
         : "'float'"
+
+/** What `json.dumps` writes for a value read from YAML: a dict as an
+ * object in its order, an int or a float as a number. */
+export const yamlToJson = (value: YamlValue): unknown => {
+  if (isSequence(value)) return value.map(yamlToJson)
+  if (isMapping(value))
+    return Object.fromEntries(
+      [...value].map(([key, item]) => [key, yamlToJson(item)]),
+    )
+  if (isPyInt(value)) return Number(value.int)
+  if (isPyFloat(value)) return value.float
+  return value
+}

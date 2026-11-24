@@ -6,6 +6,7 @@
 // Nothing above `packages/engine` writes Effect code to call it.
 
 import { Cause, Effect, Exit, Layer, ManagedRuntime } from 'effect'
+import { DataWriter } from '../data/DataWriter.ts'
 import { DoesTheDogDie } from '../sources/DoesTheDogDie.ts'
 import { Omdb } from '../sources/Omdb.ts'
 import { Transport } from '../sources/Source.ts'
@@ -22,6 +23,7 @@ export type EngineServices =
   | Environment
   | Today
   | Sqlite
+  | DataWriter
   | SourceCache
   | Omdb
   | DoesTheDogDie
@@ -35,13 +37,16 @@ const sourcesLayer = Layer.mergeAll(
   Tmdb.layer,
 ).pipe(Layer.provide(Transport.layer), Layer.provideMerge(SourceCache.layer))
 
-/** The process-wide services, from the environment variables. */
+/** The process-wide services, from the environment variables. The writer
+ * shares the one `Sqlite` (and so its write lock). */
 export const engineLayer = (
   vars: Vars,
 ): Layer.Layer<EngineServices, EngineError> =>
-  Layer.mergeAll(Today.layer, Sqlite.layer, sourcesLayer).pipe(
-    Layer.provideMerge(Environment.layerFrom(vars)),
-  )
+  Layer.mergeAll(
+    Today.layer,
+    DataWriter.layer.pipe(Layer.provideMerge(Sqlite.layer)),
+    sourcesLayer,
+  ).pipe(Layer.provideMerge(Environment.layerFrom(vars)))
 
 export interface ErrorOutput {
   readonly error: { readonly code: ErrorCode; readonly message: string }
