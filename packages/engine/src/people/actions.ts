@@ -1,15 +1,19 @@
 // The `pessoa` actions (`filmes/comandos/pessoa.py`): create a Pessoa, show
 // what is known of her, and record a Declarado, a Relato or a Já visto. A
-// write saves her file and syncs her rows in the database in one step,
-// under the database's write lock, so two requests on the same Pessoa never
-// lose each other's change (#76 §6.3). Without a database the file is
-// written alone, as in Python.
+// write goes through `DataWriter`: her file, the sync of her rows in the
+// database and one commit to filmes-dados, under the write lock, so two
+// requests on the same Pessoa never lose each other's change (#76 §6.3).
+// She is read again inside the lock. Without a database the file is written
+// alone, as in Python. The commit is by `author`, the logged-in Pessoa who
+// asked (the edge passes her); without one, by `ENGINE_AUTHOR`.
 //
 // The results are named as key-migration's output table names the Python
 // JSON (`pessoa ver` → `person view`); messages are Python's, word for word.
 
 import { existsSync } from 'node:fs'
 import { Effect } from 'effect'
+import { DataWriter, ENGINE_AUTHOR, type Author } from '../data/DataWriter.ts'
+import type { GitError } from '../data/git.ts'
 import { pyIsoDate } from '../compat/parse.ts'
 import { pyJoinWords, pyReprStr } from '../compat/text.ts'
 import { readRating } from '../data/rating.ts'
@@ -52,7 +56,17 @@ import {
   type Veto,
 } from './Person.ts'
 
-type Services = Environment | Sqlite | Run
+/** What a `pessoa` action needs. */
+export type PersonServices = Environment | Sqlite | Run | DataWriter
+
+/** How a `pessoa` write can fail. */
+export type PersonWriteError = EngineError | SqliteError | GitError
+
+/** Who asked for a write: the commit's author. */
+export interface WrittenBy {
+  /** The logged-in Pessoa; `ENGINE_AUTHOR` when none (the command line). */
+  readonly author?: Author
+}
 
 // --- results -----------------------------------------------------------------
 
@@ -207,19 +221,20 @@ export const seenJson = (slug: string, seen: Seen): SeenJson => ({
 
 // --- the write step ----------------------------------------------------------
 
-/** Runs a Pessoa write with the database's write connection, or with null
- * when there is no database file. */
-export const withPeopleDatabase = <A, E, R>(
+/** Runs a Pessoa write through `DataWriter`: one commit with `message`,
+ * the database's write connection, or null when there is no database
+ * file. */
+export const writePerson = <A, E, R>(
+  by: WrittenBy,
+  message: string,
   use: (db: Connection | null) => Effect.Effect<A, E, R>,
-): Effect.Effect<A, E | EngineError | SqliteError, R | Environment | Sqlite> =>
-  Effect.gen(function* () {
-    const path = yield* (yield* Environment).path('database')
-    if (!(yield* Effect.sync(() => existsSync(path)))) return yield* use(null)
-    return yield* (yield* Sqlite).write(use)
-  })
+): Effect.Effect<A, E | PersonWriteError, R | DataWriter> =>
+  Effect.flatMap(DataWriter, (writer) =>
+    writer.writeFiles({ author: by.author ?? ENGINE_AUTHOR, message }, use),
+  )
 
 /** The database for a Catalog lookup; without one, `missing_database`. */
-const required = (
+export const required = (
   db: Connection | null,
 ): Effect.Effect<Connection, EngineError, Environment> =>
   db !== null
@@ -240,10 +255,11 @@ export const savePersonAndSync = (
 
 // --- arguments ---------------------------------------------------------------
 
-const invalidUsage = (message: string) => engineError('invalid_usage', message)
+export const invalidUsage = (message: string) =>
+  engineError('invalid_usage', message)
 
 /** The text as said, one space between words; never empty. */
-const textOf = (text: string) => {
+export const textOf = (text: string) => {
   const words = pyJoinWords(text)
   return words === ''
     ? Effect.fail(invalidUsage('o texto não pode ser vazio'))
@@ -251,7 +267,7 @@ const textOf = (text: string) => {
 }
 
 /** Where it came from: never empty, never with the body's separator. */
-const sourceOf = (source: string) => {
+export const sourceOf = (source: string) => {
   const words = pyJoinWords(source)
   return words === '' || words.includes(' · ')
     ? Effect.fail(invalidUsage("a fonte não pode ser vazia nem ter ' · '"))
@@ -259,7 +275,7 @@ const sourceOf = (source: string) => {
 }
 
 /** The date given (anything `date.fromisoformat` takes), or today. */
-const dateOf = (date: string | undefined) =>
+export const dateOf = (date: string | undefined) =>
   Effect.gen(function* () {
     if (date === undefined) return (yield* Run).today
     const iso = pyIsoDate(date)
@@ -272,7 +288,7 @@ const dateOf = (date: string | undefined) =>
 
 // --- actions -----------------------------------------------------------------
 
-export interface NewPersonInput {
+export interface NewPersonInput extends WrittenBy {
   readonly name: string
   readonly aliases?: readonly string[]
   /** The file name; by default the name without accents, with '-'. */
@@ -284,8 +300,8 @@ export interface NewPersonInput {
 /** Creates the Pessoa's file (`pessoa criar`). */
 export const personCreate = (
   input: NewPersonInput,
-): Effect.Effect<PersonSummary, EngineError | SqliteError, Services> =>
-  withPeopleDatabase((db) =>
+): Effect.Effect<PersonSummary, PersonWriteError, PersonServices> =>
+  writePerson(input, `pessoa criar ${input.name}`, (db) =>
     Effect.gen(function* () {
       const person = yield* createPerson(input)
       if (db !== null) yield* syncPerson(db, person)
@@ -298,7 +314,7 @@ const NO_DATABASE_WARNING =
 
 /** Her Declarados that live outside her file: from a Letterboxd import or
  * a Feedback comment. */
-const importedStated = (db: Connection, slug: string, today: string) =>
+export const importedStated = (db: Connection, slug: string, today: string) =>
   Effect.map(
     db.all(
       `SELECT fato_id, texto, fonte, data, especifico, reacao, alvo, rotulo FROM declarados
@@ -348,7 +364,11 @@ const ratingsOf = (db: Connection, slug: string) =>
 /** Everything the engine knows of the Pessoa (`pessoa ver`). */
 export const personView = (
   name: string,
-): Effect.Effect<PersonView, EngineError | SqliteError, Services> =>
+): Effect.Effect<
+  PersonView,
+  EngineError | SqliteError,
+  Environment | Sqlite | Run
+> =>
   Effect.gen(function* () {
     const person = yield* resolvePerson(name)
     const { today } = yield* Run
@@ -385,7 +405,7 @@ export const personView = (
     )
   })
 
-export interface StatementInput {
+export interface StatementInput extends WrittenBy {
   /** Slug, name or alias; "dono" is the Dono. */
   readonly person: string
   /** What was said, as it was said. */
@@ -423,61 +443,66 @@ const recordStatement = (
   input: StatementInput,
   defaultSource: string,
 ) =>
-  withPeopleDatabase((db) =>
-    Effect.gen(function* () {
-      const person = yield* resolvePerson(input.person)
-      if (table === 'relatos' && person.owner)
-        return yield* invalidUsage(
-          'o Dono falando do próprio gosto é Declarado, não Relato',
+  writePerson(
+    input,
+    `pessoa ${table === 'declarados' ? 'declarar' : 'relatar'} ${input.person}: ${input.text}`,
+    (db) =>
+      Effect.gen(function* () {
+        const person = yield* resolvePerson(input.person)
+        if (table === 'relatos' && person.owner)
+          return yield* invalidUsage(
+            'o Dono falando do próprio gosto é Declarado, não Relato',
+          )
+        const target = input.target || null
+        const reaction = input.reaction ?? null
+        if (reaction !== null && target === null)
+          return yield* invalidUsage(
+            '--reacao precisa de --filme ou --entidade',
+          )
+        if (input.review && input.specific === false)
+          return yield* invalidUsage(
+            'review ou tag da própria Pessoa é sempre específico',
+          )
+        const source = yield* sourceOf(input.source ?? defaultSource)
+        let label: string | null = null
+        let specific = input.specific
+        if (target !== null) {
+          const connection = yield* required(db)
+          label = yield* targetLabel(connection, target)
+          if (specific === undefined)
+            specific = !(yield* onlyGenre(connection, target))
+        }
+        if (input.review) specific = true
+        const statement: Statement = {
+          date: yield* dateOf(input.date),
+          source,
+          specific: specific ?? false,
+          text: yield* textOf(input.text),
+          reaction,
+          target,
+          label,
+        }
+        const section = table === 'declarados' ? 'stated' : 'reports'
+        const { person: updated, added } = yield* addItem(
+          person,
+          section,
+          statement,
         )
-      const target = input.target || null
-      const reaction = input.reaction ?? null
-      if (reaction !== null && target === null)
-        return yield* invalidUsage('--reacao precisa de --filme ou --entidade')
-      if (input.review && input.specific === false)
-        return yield* invalidUsage(
-          'review ou tag da própria Pessoa é sempre específico',
-        )
-      const source = yield* sourceOf(input.source ?? defaultSource)
-      let label: string | null = null
-      let specific = input.specific
-      if (target !== null) {
-        const connection = yield* required(db)
-        label = yield* targetLabel(connection, target)
-        if (specific === undefined)
-          specific = !(yield* onlyGenre(connection, target))
-      }
-      if (input.review) specific = true
-      const statement: Statement = {
-        date: yield* dateOf(input.date),
-        source,
-        specific: specific ?? false,
-        text: yield* textOf(input.text),
-        reaction,
-        target,
-        label,
-      }
-      const section = table === 'declarados' ? 'stated' : 'reports'
-      const { person: updated, added } = yield* addItem(
-        person,
-        section,
-        statement,
-      )
-      if (added) yield* savePersonAndSync(db, updated)
-      const { today } = yield* Run
-      return {
-        person: person.slug,
-        json: statementJson(table, person.slug, statement, today),
-        added,
-      }
-    }),
+        if (added) yield* savePersonAndSync(db, updated)
+        const { today } = yield* Run
+        return {
+          person: person.slug,
+          json: statementJson(table, person.slug, statement, today),
+          added,
+        }
+      }),
   )
 
 /** Records a Declarado: what the Pessoa said of her own taste (`pessoa
  * declarar`). */
 export const personState = (
   input: StatementInput,
-): Effect.Effect<StatedResult, EngineError | SqliteError, Services> =>
+): Effect.Effect<StatedResult, PersonWriteError, PersonServices> =>
   Effect.map(
     recordStatement('declarados', input, 'conversa com o Dono'),
     (r) => ({ person: r.person, stated: r.json, new: r.added }),
@@ -487,7 +512,7 @@ export const personState = (
  * (`pessoa relatar`). Never a review. */
 export const personReport = (
   input: Omit<StatementInput, 'review'>,
-): Effect.Effect<ReportResult, EngineError | SqliteError, Services> =>
+): Effect.Effect<ReportResult, PersonWriteError, PersonServices> =>
   Effect.map(
     recordStatement(
       'relatos',
@@ -497,7 +522,7 @@ export const personReport = (
     (r) => ({ person: r.person, report: r.json, new: r.added }),
   )
 
-export interface SeenInput {
+export interface SeenInput extends WrittenBy {
   /** Slug, name or alias; "dono" is the Dono. */
   readonly person: string
   /** The film's Catalog id (tt...). */
@@ -520,8 +545,8 @@ export interface SeenResult {
  * (`pessoa visto`). */
 export const personSeen = (
   input: SeenInput,
-): Effect.Effect<SeenResult, EngineError | SqliteError, Services> =>
-  withPeopleDatabase((db) =>
+): Effect.Effect<SeenResult, PersonWriteError, PersonServices> =>
+  writePerson(input, `pessoa visto ${input.person}: ${input.film}`, (db) =>
     Effect.gen(function* () {
       const person = yield* resolvePerson(input.person)
       if (!input.film.startsWith('tt'))

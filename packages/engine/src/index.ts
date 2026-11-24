@@ -94,6 +94,7 @@ export {
   ALERT_AFTER_FAILURES,
   authorOf,
   DataWriter,
+  ENGINE_AUTHOR,
   type Author,
   type PushStatus,
   type WriteOptions,
@@ -171,7 +172,10 @@ export {
   seenJson,
   statementJson,
   vetoJson,
-  withPeopleDatabase,
+  writePerson,
+  type PersonServices,
+  type PersonWriteError,
+  type WrittenBy,
   type AdjustmentJson,
   type NewPersonInput,
   type OpenQuestionJson,
@@ -225,3 +229,31 @@ export {
 } from './sources/Source.ts'
 export { SourceCache, type CachedAnswer } from './sources/SourceCache.ts'
 export { TMDB_ATTRIBUTION, TMDB_NAME, Tmdb, type Card } from './sources/Tmdb.ts'
+export {
+  personAdjust,
+  personQuestions,
+  personSkip,
+  personVeto,
+  type AdjustInput,
+  type AdjustResult,
+  type NormalAdjustmentJson,
+  type QuestionsResult,
+  type SkipInput,
+  type SkipResult,
+  type VetoInput,
+  type VetoResult,
+} from './people/taste.ts'
+export {
+  personRemove,
+  REMOVABLE,
+  type Removable,
+  type RemovedJson,
+  type RemoveInput,
+  type RemoveResult,
+} from './people/remove.ts'
+export {
+  isTagGroup,
+  readTagGroups,
+  tagGroupLabel,
+  type TagGroup,
+} from './recommendation/tag-groups.ts'
