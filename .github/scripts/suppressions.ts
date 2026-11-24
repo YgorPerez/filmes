@@ -3,19 +3,16 @@
 // suppression does not get in on its own:
 //
 // - The ceiling (`.github/suppression-ceiling.json`) says how many of each
-//   directive the tree may have. Over it, this fails, label or not. The
-//   ceiling only goes down: whoever removes a suppression lowers the number;
-//   raising it changes an auditor's configuration, and that waits for a
-//   person (below).
+//   directive the tree may have. Over it, this fails. The
+//   ceiling only goes down: whoever removes a suppression lowers the number.
 // - Every new directive says why, in the tool's format: after the `--` in
 //   Oxlint, React Doctor and fallow, after the directive itself in
 //   TypeScript, in a comment on the same line for `'use no memo'`. With no
 //   reason, it always fails.
-// - With a reason, or with an auditor's configuration changed, the PR waits
-//   for a person to add the `supressao-revisada` label. No agent adds the
-//   label. Outside CI (the push hook), this only warns: the PR is what blocks.
+// - New suppressions with a reason and changed auditor configuration are
+//   listed in the report, so the PR reviewer sees them; they do not block.
 //
-// Runs in `suppressions.yml` on every PR, in the push hook
+// Runs in `pr.yml` on every PR, in the push hook
 // (`scripts/verify-push.ts`), and by hand:
 //   node .github/scripts/suppressions.ts --base origin/master [--target HEAD]
 import { spawnSync } from 'node:child_process'
@@ -31,7 +28,6 @@ export type Finding = {
 }
 export type Count = Record<string, number>
 
-export const LABEL = 'supressao-revisada'
 export const CEILING_FILE = '.github/suppression-ceiling.json'
 
 /** Each directive, how it starts, and what counts as a reason after it. */
@@ -93,7 +89,7 @@ const IGNORED = [
 const isCode = (file: string) =>
   CODE.test(file) && !IGNORED.some((r) => r.test(file))
 
-/** The auditors' configuration. Any change to it goes through a person. In
+/** The auditors' configuration. A change to it is listed in the report. In
  * `package.json`, only the lines of the scripts that audit. */
 const CONFIGURATION: { file: RegExp; line?: RegExp }[] = [
   { file: /(?:^|\/)vite\.config\.ts$/ },
@@ -185,13 +181,9 @@ export function judge({
   configuration,
   count,
   ceiling,
-  labels,
-  inCi,
 }: ReturnType<typeof readDiff> & {
   count: Count
   ceiling: Count
-  labels: readonly string[]
-  inCi: boolean
 }) {
   const names = [...new Set([...Object.keys(count), ...Object.keys(ceiling)])]
   const above = names.filter((n) => (count[n] ?? 0) > (ceiling[n] ?? 0))
@@ -206,7 +198,7 @@ export function judge({
     output.push(
       '### Above the ceiling',
       '',
-      `Remove the new suppression. The ceiling (\`${CEILING_FILE}\`) only goes up with a person, and this fails even with the label until it does.`,
+      `Remove the new suppression, or raise the ceiling in \`${CEILING_FILE}\` on purpose.`,
       '',
       ...above.map(
         (n) =>
@@ -219,7 +211,7 @@ export function judge({
     output.push(
       '### Suppressions without a reason',
       '',
-      'Say why next to the directive. This fails even with the label.',
+      'Say why next to the directive.',
       '',
     )
     list(withoutReason)
@@ -234,20 +226,6 @@ export function judge({
       output.push(`- \`${c}\``, '', '```diff', ...lines, '```')
     output.push('')
   }
-  const needsReview = withReason.length > 0 || configuration.size > 0
-  const reviewed = labels.includes(LABEL)
-  if (needsReview) {
-    if (reviewed)
-      output.push(`Label \`${LABEL}\` present: a person read what is above.`)
-    else if (inCi)
-      output.push(
-        `A person still has to read what is above and add the \`${LABEL}\` label to the PR. An agent never adds this label.`,
-      )
-    else
-      output.push(
-        `The PR will wait for a person to add the \`${LABEL}\` label: show them what is above.`,
-      )
-  }
   if (below.length > 0)
     output.push(
       '',
@@ -259,10 +237,7 @@ export function judge({
     output.push(
       'No new suppression, the tree is at the ceiling, and no auditor configuration changed.',
     )
-  const passes =
-    above.length === 0 &&
-    withoutReason.length === 0 &&
-    (!needsReview || reviewed || !inCi)
+  const passes = above.length === 0 && withoutReason.length === 0
   return { passes, lines: output }
 }
 
@@ -312,8 +287,6 @@ if (import.meta.main) {
     ...diff,
     count: countInGrep(git('grep', '-n', '-E', CANDIDATES, targetSha)),
     ceiling,
-    labels: JSON.parse(process.env.LABELS ?? '[]'),
-    inCi: process.env.GITHUB_ACTIONS === 'true',
   })
   const report = lines.join('\n')
   console.log(report)

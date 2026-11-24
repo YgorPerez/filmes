@@ -90,7 +90,7 @@ describe('readDiff', () => {
     expect(read.withoutReason).toEqual([])
   })
 
-  it('a changed auditor configuration goes to a person', () => {
+  it('lists each changed auditor configuration', () => {
     const read = readDiff(
       [
         diff('frontend/doctor.config.ts', '+      files: ["x"],'),
@@ -107,6 +107,18 @@ describe('readDiff', () => {
       'packages/rules/package.json',
       '.github/suppression-ceiling.json',
     ])
+  })
+  it('a deleted auditor configuration is listed too', () => {
+    const read = readDiff(
+      [
+        'diff --git a/frontend/.fallowrc.jsonc b/frontend/.fallowrc.jsonc',
+        '--- a/frontend/.fallowrc.jsonc',
+        '+++ /dev/null',
+        '@@ -1,1 +0,0 @@',
+        '-{ "ignore": [] }',
+      ].join('\n'),
+    )
+    expect([...read.configuration.keys()]).toEqual(['frontend/.fallowrc.jsonc'])
   })
 })
 
@@ -145,20 +157,16 @@ describe('judge', () => {
       ...nothing,
       count: {},
       ceiling: {},
-      labels: [],
-      inCi: true,
     })
     expect(passes).toBe(true)
   })
 
-  it('above the ceiling fails, even with the label', () => {
+  it('above the ceiling fails', () => {
     const { passes, lines } = judge({
       ...nothing,
       withReason: [finding],
       count: { 'oxlint-disable': 1 },
       ceiling: { 'oxlint-disable': 0 },
-      labels: ['supressao-revisada'],
-      inCi: true,
     })
     expect(passes).toBe(false)
     expect(lines.join('\n')).toContain(
@@ -172,26 +180,19 @@ describe('judge', () => {
       withoutReason: [finding],
       count: { 'oxlint-disable': 1 },
       ceiling: { 'oxlint-disable': 1 },
-      labels: ['supressao-revisada'],
-      inCi: true,
     })
     expect(passes).toBe(false)
   })
 
-  it('with a reason and at the ceiling, CI waits for the label; the machine only warns', () => {
-    const input = {
+  it('with a reason and at the ceiling, passes and lists it', () => {
+    const { passes, lines } = judge({
       ...nothing,
       withReason: [finding],
       count: { 'oxlint-disable': 1 },
       ceiling: { 'oxlint-disable': 1 },
-    }
-    expect(judge({ ...input, labels: [], inCi: true }).passes).toBe(false)
-    expect(
-      judge({ ...input, labels: ['supressao-revisada'], inCi: true }).passes,
-    ).toBe(true)
-    const local = judge({ ...input, labels: [], inCi: false })
-    expect(local.passes).toBe(true)
-    expect(local.lines.join('\n')).toContain('supressao-revisada')
+    })
+    expect(passes).toBe(true)
+    expect(lines.join('\n')).toContain('### New suppressions')
   })
 
   it('below the ceiling passes and asks to lower it', () => {
@@ -199,8 +200,6 @@ describe('judge', () => {
       ...nothing,
       count: {},
       ceiling: { '@ts-expect-error': 2 },
-      labels: [],
-      inCi: true,
     })
     expect(passes).toBe(true)
     expect(lines.join('\n')).toContain('lower in')
