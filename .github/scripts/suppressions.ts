@@ -7,8 +7,9 @@
 //   ceiling only goes down: whoever removes a suppression lowers the number.
 // - Every new directive says why, in the tool's format: after the `--` in
 //   Oxlint, React Doctor and fallow, after the directive itself in
-//   TypeScript, in a comment on the same line for `'use no memo'`. With no
-//   reason, it always fails.
+//   TypeScript, in a comment on the same line for `'use no memo'`, after the
+//   codes and a `--` or a second `#` for Ruff's `# noqa`. With no reason, it
+//   always fails.
 // - New suppressions with a reason and changed auditor configuration are
 //   listed in the report, so the PR reviewer sees them; they do not block.
 //
@@ -56,8 +57,10 @@ const DIRECTIVES = (
   ),
   reason,
 }))
-/** `'use no memo'` takes a component out of the React Compiler (ADR 0003). */
+/** `'use no memo'` takes a component out of the React Compiler. */
 const NO_MEMO = /^\s*['"]use no memo['"];?(.*)$/
+/** Ruff's `# noqa`, with or without codes; the reason goes after them. */
+const NOQA = /#\s*noqa\b(?::\s*[A-Z]+\d+(?:[\s,]+[A-Z]+\d+)*)?(.*)$/i
 
 export function findDirective(
   line: string,
@@ -67,6 +70,12 @@ export function findDirective(
     return {
       name: 'use no memo',
       hasReason: /\/[/*]\s*\S/.test(memo[1] ?? ''),
+    }
+  const noqa = line.match(NOQA)
+  if (noqa)
+    return {
+      name: '# noqa',
+      hasReason: /^\s*(?:--|#)\s*\S/.test(noqa[1] ?? ''),
     }
   for (const { name, pattern, reason } of DIRECTIVES) {
     const found = line.match(pattern)
@@ -78,7 +87,7 @@ export function findDirective(
 /** Where a directive is code. Documentation quotes directives without
  * applying any, vendored and generated files are not written here, and the
  * auditor and its test quote them on purpose. */
-const CODE = /\.(?:[cm]?[jt]sx?|css)$/
+const CODE = /\.(?:[cm]?[jt]sx?|css|py)$/
 const IGNORED = [
   /^\.agents\//,
   /^\.claude\//,
@@ -243,7 +252,7 @@ export function judge({
 
 /** The `git grep` pattern that finds every candidate directive. */
 const CANDIDATES =
-  'oxlint-disable|eslint-disable|react-doctor-disable|@ts-expect-error|@ts-ignore|@ts-nocheck|@effect-diagnostics|fallow-ignore|(v8|c8|istanbul) ignore|use no memo'
+  'oxlint-disable|eslint-disable|react-doctor-disable|@ts-expect-error|@ts-ignore|@ts-nocheck|@effect-diagnostics|fallow-ignore|(v8|c8|istanbul) ignore|use no memo|noqa'
 
 if (import.meta.main) {
   const { values: options, positionals } = parseArgs({
