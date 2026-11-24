@@ -38,6 +38,23 @@ describe("recomendar com parecido (#67)", () => {
     assert.ok(saida.avisos.includes("só 1 parecido com Estrada Afora passou nas Restrições"));
   });
 
+  it("o parecido fica na Sessão e sem_parecido tira (#68)", async () => {
+    const chamar = async (args: Record<string, unknown>) => {
+      const resultado = (await cliente.callTool({ name: "recomendar", arguments: args })) as Resultado;
+      assert.ok(!resultado.isError, resultado.content[0].text ?? "");
+      return JSON.parse(resultado.content[0].text!);
+    };
+    const primeira = await chamar({ presentes: ["dono"], parecido: ["tt9006702"] });
+    const sessao = primeira.sessao.id;
+
+    const segunda = await chamar({ presentes: ["dono"], sessao });
+    const terceira = await chamar({ presentes: ["dono"], sessao, sem_parecido: true });
+
+    assert.deepEqual(segunda.restricoes.parecido.filmes, ["tt9006702"]);
+    assert.deepEqual(segunda.filmes.map((f: any) => f.id), ["tt9006713"]);
+    assert.equal(terceira.restricoes.parecido, undefined);
+  });
+
   it("recusa o que não é ID do IMDb", async () => {
     const resultado = (await cliente.callTool({
       name: "recomendar",

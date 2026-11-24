@@ -19,6 +19,9 @@ export default definirFerramenta({
     'faltam Candidatos com Fato. Presentes por slug, nome ou apelido; "dono" é o Dono. ' +
     "Restrições opcionais (duração, ano de lançamento, idioma, criança, gatilhos, sem Já visto, nada triste, nada lento, parecido) tiram filmes antes da ordenação. " +
     'Com `parecido`, cada filme traz a linha "parecido com X: tags em comum", que não é Fato. ' +
+    "Com `sessao`, o parecido fica: o refazer sem `parecido` continua com as referências da versão anterior; " +
+    "`parecido` com outras referências substitui, e `sem_parecido` tira o filtro. Parecido novo troca a lista inteira: " +
+    "ignora `manter`, com aviso, e `saidas` traz `parecido` com `rotulo`. " +
     "Cada filme que passa traz em `linhas_do_filme` as linhas das Restrições, do Clima, de grupo ou sozinho e da nota do IMDb acima de 7. " +
     "Clima, grupo ou sozinho e a nota do IMDb puxam a ordem dos filmes. " +
     "A linha de Crédito aparece em `linhas_do_filme` quando o Crédito fez o filme subir. " +
@@ -28,7 +31,7 @@ export default definirFerramenta({
     "marcou Já vi nela, em `restricoes.fora_da_sessao` ({trocados, ja_vistos, tirados}). " +
     "Com `manter`, os mantidos ficam no número da versão anterior e só as vagas ganham filme novo; cada filme traz " +
     "`novo` (true nas vagas), e a resposta traz `mantidos` e `saidas` ({posicao, id, titulo, motivo}: `ja_visto` com " +
-    "`pessoas`, `trocado`, `restricao` com `restricao` e `rotulo`, `veto` com `pessoa` e `texto`, ou `nota_minima` com `rotulo`). " +
+    "`pessoas`, `trocado`, `restricao` com `restricao` e `rotulo`, `veto` com `pessoa` e `texto`, `nota_minima` com `rotulo` ou `parecido` com `rotulo`). " +
     "Uma Restrição ou um Veto do pedido tiram também o mantido que os viola, e o mantido abaixo da nota ou dos votos " +
     "mínimos do IMDb também sai, com aviso; gosto novo não tira mantido. " +
     "Antes, chame `sessoes_abertas` e, se houver uma, pergunte por ela. O Dono pode pular. " +
@@ -90,8 +93,13 @@ export default definirFerramenta({
       .describe(
         '"algo igual X" ou "entre X e Y": os filmes de referência (tt... do IMDb; ache com `consultar`). Só passam os 50 ' +
           "mais parecidos com eles (média entre as referências), e a Regra de escolha ordena entre esses. Faltando " +
-          "parecidos, a lista sai menor, com aviso. O pedido é da noite: não grava gosto",
+          "parecidos, a lista sai menor, com aviso. O pedido é da noite: não grava gosto. Com sessao, fica nos " +
+          "refazeres seguintes sem repetir; referências novas trocam a lista inteira",
       ),
+    sem_parecido: z
+      .boolean()
+      .optional()
+      .describe("com sessao: tira o filtro de parecido que a Sessão trazia (o Dono pediu outra coisa)"),
   },
   cli: (e) => {
     const args = ["--presentes", ...e.presentes];
@@ -109,6 +117,7 @@ export default definirFerramenta({
     if (e.sem_tristeza) args.push("--sem-tristeza");
     if (e.sem_lento) args.push("--sem-lento");
     if (e.parecido?.length) args.push(`--parecido=${e.parecido.join(",")}`);
+    if (e.sem_parecido) args.push("--sem-parecido");
     if (e.pedido !== undefined) args.push(`--pedido=${e.pedido}`);
     if (e.sessao) args.push("--sessao", e.sessao);
     if (e.manter?.length) args.push(`--manter=${e.manter.join(",")}`);

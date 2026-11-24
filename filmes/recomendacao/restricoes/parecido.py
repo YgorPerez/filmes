@@ -11,6 +11,12 @@ com X: tags em comum; vizinho do MovieLens". A linha não é Fato: não entra na
 utilidade de ninguém, e filme só com ela continua "só palpites". Se passam menos
 que o pedido, a lista sai menor, com aviso: não completa com filme que não parece.
 O pedido é da noite e não grava nada em Pessoa nenhuma.
+
+Na Sessão (#68), as referências ficam gravadas em `contexto.restricoes` da
+versão, e `recomendar --sessao` sem `--parecido` continua com elas
+(`da_sessao`); `--parecido` com outras referências substitui, e `--sem-parecido`
+tira o filtro. Parecido novo numa Sessão aberta troca a lista inteira: quem
+decide isso é `filmes/comandos/recomendar.py`.
 """
 
 from dataclasses import dataclass, field
@@ -25,7 +31,9 @@ from filmes.recomendacao.restricoes import Passa
 def configurar(parser):
     parser.add_argument("--parecido", nargs="+", action="extend", metavar="ID",
                         help="só os filmes mais parecidos com estes (tt..., ex.: tt2205697); "
-                             "com vários, a parecença é a média")
+                             "com vários, a parecença é a média; com --sessao, fica nos refazeres seguintes")
+    parser.add_argument("--sem-parecido", action="store_true",
+                        help="com --sessao, tira o filtro de parecido que a Sessão trazia")
 
 
 def pedido(args):
@@ -35,7 +43,13 @@ def pedido(args):
 
 def rotulo(gravada):
     titulos = gravada.get("titulos") or gravada.get("filmes") or []
-    return f"parecido com {_e(titulos)}"
+    return f"parecidos com {_e(titulos)}"
+
+
+def da_sessao(frente: dict) -> list[str]:
+    """As referências do parecido que valem na versão atual da Sessão, ou []."""
+    gravadas = (frente.get("contexto") or {}).get("restricoes") or []
+    return next((list(r.get("filmes") or []) for r in gravadas if r.get("nome") == "parecido"), [])
 
 
 def _e(nomes) -> str:

@@ -15,11 +15,15 @@ entra nas vagas.
     {"posicao", "id", "titulo", "motivo": "restricao", "restricao": nome, "rotulo": "nada triste"}
     {"posicao", "id", "titulo", "motivo": "veto", "pessoa": slug, "texto": "o Veto como foi dito"}
     {"posicao", "id", "titulo", "motivo": "nota_minima", "rotulo": "nota 6,5 no IMDb, abaixo de 7"}
+    {"posicao", "id", "titulo", "motivo": "parecido", "rotulo": "parecidos com Stuck in Love"}
 
 `posicao` é o número que o filme tinha na versão anterior. `ja_visto` vale quando
 algum Presente, de agora ou da versão anterior, tem Já visto do filme com data igual ou posterior à da versão
 anterior (o "Já vi" do cartaz); o Já visto mais antigo já estava lá quando o
 filme foi mostrado, e a saída conta como `trocado`.
+
+`parecido` (#68) é a saída de um pedido de parecido novo, que troca a lista
+inteira: o que não é Já vi sai por ele, e não conta como Trocado na Sessão.
 """
 
 import sqlite3
@@ -115,6 +119,13 @@ def saidas(conn, presentes, regerar: Regerar, ficaram: set, tirados: dict) -> li
         viram = _viram(conn, quem, filme["id"], regerar.data)
         lista.append({**base, "motivo": "ja_visto", "pessoas": viram} if viram else {**base, "motivo": "trocado"})
     return lista
+
+
+def pelo_parecido(saidas: list[dict], rotulo: str) -> list[dict]:
+    """As saídas de um pedido de parecido novo: quem não saiu por Já vi saiu pelo parecido."""
+    return [s if s["motivo"] == "ja_visto" else {**{k: s[k] for k in ("posicao", "id", "titulo")},
+                                                  "motivo": "parecido", "rotulo": rotulo}
+            for s in saidas]
 
 
 def aviso(titulo: str, motivo: dict) -> str:
