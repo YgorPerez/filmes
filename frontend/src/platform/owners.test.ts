@@ -56,18 +56,33 @@ describe('the Donos in filmes-dados', () => {
     expect(owners.ownerByEmail('same@example.org')).toBeNull()
   })
 
-  it('skips files without frontmatter, with a broken one, or not Markdown', () => {
+  it('skips files the engine refuses, and files not Markdown', () => {
     const owners = repo('people', {
       plain: 'no frontmatter',
       open: '---\nname: Open\n',
       list: '---\n- a\n---\n',
+      // No name: the engine refuses the file, so no one gets in by it.
       ana: '---\nowner: true\nemail: ana@example.org\n---\n',
+      // An unknown key: the key migration refuses it.
+      teo: '---\nnome: Teo\ndono: true\nemail: teo@example.org\nidade: 9\n---\n',
+      rosa: '---\nname: Rosa\nowner: true\nemail: rosa@example.org\n---\n',
       'notes.txt':
         '---\nname: Notes\nowner: true\nemail: notes@example.org\n---\n',
     })
-    // Without a name, the slug stands for it.
-    expect(owners.ownerByEmail('ana@example.org')?.name).toBe('ana')
+    expect(owners.ownerByEmail('ana@example.org')).toBeNull()
     expect(owners.ownerByEmail('notes@example.org')).toBeNull()
+    expect(owners.ownerByEmail('rosa@example.org')?.name).toBe('Rosa')
+  })
+
+  it('needs an email with an @, and owner: true as YAML 1.1 reads it', () => {
+    const owners = repo('people', {
+      ana: '---\nname: Ana\nowner: yes\nemail: ana@example.org\n---\n',
+      bia: '---\nname: Bia\nowner: true\nemail: bia\n---\n',
+      caio: '---\nname: Caio\nemail: caio@example.org\n---\n',
+    })
+    expect(owners.ownerByEmail('ana@example.org')?.person).toBe('ana')
+    expect(owners.ownerByEmail('bia')).toBeNull()
+    expect(owners.ownerByEmail('caio@example.org')).toBeNull()
   })
 
   it('finds no one when the data repo has no Pessoas folder', () => {

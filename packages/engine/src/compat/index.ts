@@ -26,5 +26,10 @@ export {
   isalnum,
   letterboxdSlug,
   personSlug,
+  PY_SPACE_CLASS,
+  pyReprStr,
+  pyRstrip,
+  pySplitlines,
   pyStrip,
 } from './text.ts'
+export { isIsoDate, pyParseFloat } from './parse.ts'
