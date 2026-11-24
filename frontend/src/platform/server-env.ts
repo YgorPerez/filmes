@@ -14,6 +14,10 @@ export const serverEnv = (env: NodeJS.ProcessEnv = process.env) => ({
   AUTH_DATABASE_PATH: optional(env.AUTH_DATABASE_PATH) ?? '/data/auth.sqlite',
   /** The filmes-dados checkout, where the Pessoas (and their `email:`) are. */
   DATA_REPO_PATH: optional(env.DATA_REPO_PATH) ?? '/data/filmes-dados',
+  /** The derived SQLite the engine reads, `/data/db/<version>.sqlite` on the
+   * VPS (`db:publish`, ADR 0006). Unset before the first publish: the pages
+   * that need it say the engine is not ready, and the rest still answer. */
+  FILMES_DATABASE: optional(env.FILMES_DATABASE),
   /** The e2e's stand-in for Google; ignored unless APP_ORIGIN is local. */
   GOOGLE_STUB_ORIGIN: optional(env.GOOGLE_STUB_ORIGIN),
 })

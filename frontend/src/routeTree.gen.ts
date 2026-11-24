@@ -12,6 +12,8 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as OwnerRouteImport } from './routes/_owner'
 import { Route as EntrarRouteImport } from './routes/entrar'
 import { Route as OwnerIndexRouteImport } from './routes/_owner/index'
+import { Route as OwnerExportarRouteImport } from './routes/_owner/exportar'
+import { Route as ExportarImdbDotcsvRouteImport } from './routes/exportar/imdb[.]csv'
 
 const OwnerRoute = OwnerRouteImport.update({
   id: '/_owner',
@@ -27,32 +29,55 @@ const OwnerIndexRoute = OwnerIndexRouteImport.update({
   path: '/',
   getParentRoute: () => OwnerRoute,
 } as any)
+const OwnerExportarRoute = OwnerExportarRouteImport.update({
+  id: '/exportar',
+  path: '/exportar',
+  getParentRoute: () => OwnerRoute,
+} as any)
+const ExportarImdbDotcsvRoute = ExportarImdbDotcsvRouteImport.update({
+  id: '/exportar/imdb.csv',
+  path: '/exportar/imdb.csv',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof OwnerIndexRoute
   '/entrar': typeof EntrarRoute
+  '/exportar': typeof OwnerExportarRoute
+  '/exportar/imdb.csv': typeof ExportarImdbDotcsvRoute
 }
 export interface FileRoutesByTo {
   '/entrar': typeof EntrarRoute
+  '/exportar': typeof OwnerExportarRoute
+  '/exportar/imdb.csv': typeof ExportarImdbDotcsvRoute
   '/': typeof OwnerIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_owner': typeof OwnerRouteWithChildren
   '/entrar': typeof EntrarRoute
+  '/_owner/exportar': typeof OwnerExportarRoute
+  '/exportar/imdb.csv': typeof ExportarImdbDotcsvRoute
   '/_owner/': typeof OwnerIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/entrar'
+  fullPaths: '/' | '/entrar' | '/exportar' | '/exportar/imdb.csv'
   fileRoutesByTo: FileRoutesByTo
-  to: '/entrar' | '/'
-  id: '__root__' | '/_owner' | '/entrar' | '/_owner/'
+  to: '/entrar' | '/exportar' | '/exportar/imdb.csv' | '/'
+  id:
+    | '__root__'
+    | '/_owner'
+    | '/entrar'
+    | '/_owner/exportar'
+    | '/exportar/imdb.csv'
+    | '/_owner/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   OwnerRoute: typeof OwnerRouteWithChildren
   EntrarRoute: typeof EntrarRoute
+  ExportarImdbDotcsvRoute: typeof ExportarImdbDotcsvRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -78,14 +103,30 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OwnerIndexRouteImport
       parentRoute: typeof OwnerRoute
     }
+    '/_owner/exportar': {
+      id: '/_owner/exportar'
+      path: '/exportar'
+      fullPath: '/exportar'
+      preLoaderRoute: typeof OwnerExportarRouteImport
+      parentRoute: typeof OwnerRoute
+    }
+    '/exportar/imdb.csv': {
+      id: '/exportar/imdb.csv'
+      path: '/exportar/imdb.csv'
+      fullPath: '/exportar/imdb.csv'
+      preLoaderRoute: typeof ExportarImdbDotcsvRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 interface OwnerRouteChildren {
+  OwnerExportarRoute: typeof OwnerExportarRoute
   OwnerIndexRoute: typeof OwnerIndexRoute
 }
 
 const OwnerRouteChildren: OwnerRouteChildren = {
+  OwnerExportarRoute: OwnerExportarRoute,
   OwnerIndexRoute: OwnerIndexRoute,
 }
 
@@ -94,6 +135,7 @@ const OwnerRouteWithChildren = OwnerRoute._addFileChildren(OwnerRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   OwnerRoute: OwnerRouteWithChildren,
   EntrarRoute: EntrarRoute,
+  ExportarImdbDotcsvRoute: ExportarImdbDotcsvRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
