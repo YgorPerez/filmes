@@ -367,3 +367,8 @@ export {
   type RemoveInput,
   type RemoveResult,
 } from './people/remove.ts'
+export {
+  verifyAnswer,
+  type Verification,
+  type VerifyRequest,
+} from './verify/verify.ts'
