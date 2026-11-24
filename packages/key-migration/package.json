@@ -1,0 +1,23 @@
+{
+  "name": "@filmes/key-migration",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "migrate": "node src/cli.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vp test run",
+    "test:coverage": "vp test run --coverage"
+  },
+  "dependencies": {
+    "yaml": "2.9.1"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "typescript": "catalog:",
+    "vite-plus": "catalog:"
+  }
+}

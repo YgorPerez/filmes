@@ -24,6 +24,10 @@ const IGNORED = [
   // HTML byte by byte, and the Python tests check that text. They leave with
   // the Python engine.
   'filmes/**',
+  // Files the Python engine wrote (frontmatter and CLI output), which the
+  // key migration's tests read byte for byte.
+  'packages/key-migration/test/corpus/**',
+  'packages/key-migration/test/python-outputs.jsonl',
   // The Claude skill: prose the agent reads, kept as written.
   'skill/**',
   // Its sample of the Recommendation is the engine's Markdown, byte for
