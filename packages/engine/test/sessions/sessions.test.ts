@@ -9,12 +9,7 @@
 // written by Python until its port (#96).
 
 import { spawnSync } from 'node:child_process'
-import {
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  writeFileSync,
-} from 'node:fs'
+import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { migrateDataFile, output } from '@filmes/key-migration'
 import { Effect } from 'effect'
@@ -26,7 +21,10 @@ import {
   openSessions,
   pass,
   parseYaml,
+  currentVersion,
+  onScreen,
   readSession,
+  writeSession,
   recommendSession,
   reloadSessions,
   sessionContext,
@@ -35,6 +33,7 @@ import {
   yamlToJson,
   type Constraint,
   type Outcome,
+  type YamlMapping,
   type SessionRecommendation,
   type Vars,
 } from '../../src/index.ts'
@@ -58,8 +57,7 @@ const open = (
   fixture: Fixture,
   request: Parameters<typeof recommendSession>[0],
   vars?: Vars,
-): Promise<SessionRecommendation> =>
-  fixture.ok(recommendSession(request), vars)
+): Promise<SessionRecommendation> => fixture.ok(recommendSession(request), vars)
 
 const query = (fixture: Fixture, sql: string) =>
   fixture.ok(
@@ -80,9 +78,9 @@ const sessionRows = async (fixture: Fixture) => {
     'ja_visto',
     'declarados',
   ])
-    rows[table] = (
-      await query(fixture, `SELECT * FROM "${table}` + '"')
-    ).map((row) => ({ ...row }))
+    rows[table] = (await query(fixture, `SELECT * FROM "${table}` + '"')).map(
+      (row) => ({ ...row }),
+    )
   for (const list of Object.values(rows))
     list.sort((a, b) => (JSON.stringify(a) < JSON.stringify(b) ? -1 : 1))
   return rows
@@ -250,7 +248,7 @@ describe('recomendar opens the Session', () => {
     expect(
       await query(
         fixture,
-        "SELECT regra, regra_pessoa, pedido FROM sessoes ORDER BY id",
+        'SELECT regra, regra_pessoa, pedido FROM sessoes ORDER BY id',
       ),
     ).toEqual([
       { regra: 'padrao', regra_pessoa: null, pedido: 'algo bom' },
@@ -267,9 +265,11 @@ describe('recomendar opens the Session', () => {
         { owner: 'iara' },
       )
       expect(out.exitCode).toBe(0)
-      const { session, attendees } = (out as Outcome<SessionRecommendation> & {
-        exitCode: 0
-      }).output
+      const { session, attendees } = (
+        out as Outcome<SessionRecommendation> & {
+          exitCode: 0
+        }
+      ).output
       expect(attendees).toEqual(['iara', 'bruno'])
       expect(session.id).toBe('2026-11-20-bruno')
       expect(readFile(fixture, session.id).front['owner']).toBe('iara')
@@ -409,9 +409,9 @@ describe('the Session file', () => {
 
     await fixture.ok(reloadSessions)
 
-    expect(
-      await query(fixture, 'SELECT id, regra FROM sessoes'),
-    ).toEqual([{ id: '2026-11-20-iara', regra: 'padrao' }])
+    expect(await query(fixture, 'SELECT id, regra FROM sessoes')).toEqual([
+      { id: '2026-11-20-iara', regra: 'padrao' },
+    ])
     expect(
       await query(fixture, 'SELECT posicao, filme_id FROM sessao_recomendacao'),
     ).toEqual([{ posicao: 1, filme_id: 'tt9000302' }])
@@ -438,7 +438,11 @@ describe('the Session file', () => {
 
   test('an unknown id, a path, or a missing field is an error', async () => {
     const fixture = useFixture()
-    write(fixture, 'sem-regra', '---\ndate: 2026-11-20\nattendees: [bruno]\n---\n')
+    write(
+      fixture,
+      'sem-regra',
+      '---\ndate: 2026-11-20\nattendees: [bruno]\n---\n',
+    )
 
     expect(await error(fixture, 'nada')).toEqual({
       error: {
@@ -455,6 +459,92 @@ describe('the Session file', () => {
         code: 'invalid_data',
         message: `${sessionFile(fixture, 'sem-regra')}: falta o campo regra`,
       },
+    })
+  })
+})
+
+describe('a redone Session', () => {
+  const REDONE =
+    '---\ndate: 2026-11-20\nowner: bruno\nattendees: [bruno, iara]\n' +
+    "context: {request: '2026-11-19', max_duration: null, moods: [], constraints: []}\n" +
+    'rule: {name: default}\n' +
+    'recommendation:\n- {position: 1, id: tt9000104, title: As Horas Lentas, new: true}\n' +
+    'kept: []\n' +
+    "replies:\n- {date: '2026-11-21', addition: algo leve}\n" +
+    "redone_on: '2026-11-21'\n" +
+    'versions:\n' +
+    "- version: 1\n  date: '2026-11-20'\n  attendees: [bruno, iara]\n  context: null\n" +
+    '  rule: {name: default}\n' +
+    '  recommendation:\n  - {position: 1, id: tt9000102, title: Maré Baixa}\n' +
+    '  shown:\n  - {position: 1, id: tt9000102, title: Maré Baixa}\n' +
+    "  replies:\n  - {date: '2026-11-20', films: []}\n" +
+    "feedback: {recorded_on: '2026-11-22', reactions: []}\n---\n## Recomendação\n"
+
+  test('is written with its dates as dates, and reads back the same', async () => {
+    const fixture = useFixture()
+    mkdirSync(join(fixture.data, 'sessions'))
+    writeFileSync(sessionFile(fixture, 'x'), REDONE)
+    const before = await fixture.ok(readSession('x'))
+
+    await fixture.ok(writeSession('x', before.frontmatter, before.body))
+
+    const text = readFileSync(sessionFile(fixture, 'x'), 'utf8')
+    for (const line of [
+      'redone_on: 2026-11-21',
+      '- {date: 2026-11-21, addition: algo leve}',
+      '  date: 2026-11-20',
+      '  - date: 2026-11-20',
+      '  recorded_on: 2026-11-22',
+    ])
+      expect(text.split('\n')).toContain(line)
+    // A request that looks like a date stays text.
+    expect(text).toContain("request: '2026-11-19'")
+    const after = await fixture.ok(readSession('x'))
+    expect(yamlToJson(after.frontmatter)).toEqual(
+      yamlToJson(before.frontmatter),
+    )
+    expect(after.body).toBe(before.body)
+  })
+
+  test('its current version is the top of the frontmatter', async () => {
+    const fixture = useFixture()
+    mkdirSync(join(fixture.data, 'sessions'))
+    writeFileSync(sessionFile(fixture, 'x'), REDONE)
+    const { frontmatter } = await fixture.ok(readSession('x'))
+
+    const current = currentVersion(frontmatter)
+
+    expect(yamlToJson(current)).toEqual({
+      version: 2,
+      date: '2026-11-21',
+      attendees: ['bruno', 'iara'],
+      context: {
+        request: '2026-11-19',
+        max_duration: null,
+        moods: [],
+        constraints: [],
+      },
+      rule: { name: 'default' },
+      recommendation: [
+        { position: 1, id: 'tt9000104', title: 'As Horas Lentas', new: true },
+      ],
+      kept: [],
+      replies: [{ date: '2026-11-21', addition: 'algo leve' }],
+    })
+    expect(yamlToJson([...onScreen(current)])).toEqual([
+      { position: 1, id: 'tt9000104', title: 'As Horas Lentas', new: true },
+    ])
+    const [first] = frontmatter.get('versions') as YamlMapping[]
+    expect(yamlToJson([...onScreen(first as YamlMapping)])).toEqual([
+      { position: 1, id: 'tt9000102', title: 'Maré Baixa' },
+    ])
+    expect(onScreen(new Map())).toEqual([])
+    expect(
+      yamlToJson(currentVersion(new Map([['date', '2026-11-20']]))),
+    ).toMatchObject({
+      version: 1,
+      date: '2026-11-20',
+      recommendation: [],
     })
   })
 })
@@ -505,7 +595,12 @@ describe('the Feedback’s Fatos in the database', () => {
         '--comentario',
         'dono=longo',
       ])
-      const other = pythonOk(fixture, ['recomendar', '--presentes', 'dono', 'teo'])
+      const other = pythonOk(fixture, [
+        'recomendar',
+        '--presentes',
+        'dono',
+        'teo',
+      ])
       pythonOk(fixture, [
         'feedback',
         '--sessao',
@@ -517,7 +612,9 @@ describe('the Feedback’s Fatos in the database', () => {
       ])
       const python = await sessionRows(fixture)
       expect(python['reacoes']?.length).toBeGreaterThan(0)
-      expect(python['declarados']?.some((r) => (r as { sessao: unknown }).sessao)).toBe(true)
+      expect(
+        python['declarados']?.some((r) => (r as { sessao: unknown }).sessao),
+      ).toBe(true)
       pythonSessions(fixture)
 
       await fixture.ok(reloadSessions)

@@ -34,6 +34,7 @@
 import { existsSync, readdirSync, renameSync, rmSync } from 'node:fs'
 import { basename, join } from 'node:path'
 import { Effect } from 'effect'
+import { compareTuple } from '../compat/compare.ts'
 import { pyInt } from '../compat/fact-id.ts'
 import { pySplitlines } from '../compat/text.ts'
 import { readMarkdown, writeMarkdown } from '../data/markdown.ts'
@@ -88,19 +89,10 @@ export const sessionIds: Effect.Effect<
       ? readdirSync(folder, { withFileTypes: true })
           .filter((entry) => entry.name.endsWith('.md'))
           .map((entry) => entry.name.slice(0, -'.md'.length))
-          .sort(byCodePoint)
+          .sort((a, b) => compareTuple([a], [b]))
       : [],
   ),
 )
-
-/** Python's `sorted` on text: by code point, not by UTF-16 unit. */
-const byCodePoint = (a: string, b: string): number => {
-  const x = Array.from(a, (c) => c.codePointAt(0) ?? 0)
-  const y = Array.from(b, (c) => c.codePointAt(0) ?? 0)
-  for (let i = 0; i < Math.min(x.length, y.length); i++)
-    if (x[i] !== y[i]) return (x[i] ?? 0) - (y[i] ?? 0)
-  return x.length - y.length
-}
 
 export interface SessionFile {
   readonly id: string
@@ -150,45 +142,53 @@ export const readSession = (
           ([, position, title, film]) =>
             new Map<string, YamlValue>([
               ['position', pyInt(Number(position))],
-              ['id', film ?? ''],
-              ['title', title ?? ''],
+              ['id', String(film)],
+              ['title', String(title)],
             ]),
         ),
       )
     return { id, frontmatter: front, body }
   })
 
-/** Where Python wrote a `date` object, which PyYAML writes plain. */
-const dated = (front: YamlMapping): YamlMapping => {
-  const date = (value: YamlValue | undefined): YamlValue | undefined =>
-    typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/u.test(value)
-      ? pyDate(value)
-      : value
-  const datedKeys = (
-    mapping: YamlValue | undefined,
-    keys: ReadonlyArray<string>,
-  ): YamlValue | undefined => {
-    if (!isMapping(mapping)) return mapping
-    const out = new Map(mapping)
-    for (const key of keys) if (out.has(key)) out.set(key, date(out.get(key)) ?? null)
-    return out
-  }
-  const replies = (value: YamlValue | undefined) =>
-    isSequence(value) ? value.map((r) => datedKeys(r, ['date']) ?? null) : value
-  const version = (mapping: YamlValue | undefined): YamlValue | undefined => {
-    if (!isMapping(mapping)) return mapping
-    const out = new Map(datedKeys(mapping, ['date', 'redone_on']) as YamlMapping)
-    if (out.has('replies')) out.set('replies', replies(out.get('replies')) ?? null)
-    if (out.has('feedback'))
-      out.set('feedback', datedKeys(out.get('feedback'), ['recorded_on']) ?? null)
-    return out
-  }
-  const out = new Map(version(front) as YamlMapping)
-  const versions = out.get('versions')
-  if (isSequence(versions))
-    out.set('versions', versions.map((v) => version(v) ?? null))
-  return out
-}
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/u
+
+/** A text date as a `date` object. */
+const asDate = (value: YamlValue): YamlValue =>
+  typeof value === 'string' && ISO_DATE.test(value) ? pyDate(value) : value
+
+const eachMapping = (
+  value: YamlValue,
+  change: (item: YamlMapping) => YamlValue,
+): YamlValue =>
+  isSequence(value)
+    ? value.map((item) => (isMapping(item) ? change(item) : item))
+    : value
+
+const datedReply = (reply: YamlMapping): YamlValue =>
+  new Map([...reply].map(([key, v]) => [key, key === 'date' ? asDate(v) : v]))
+
+/** Where Python wrote a `date` object, which PyYAML writes plain: a
+ * version's `date` and `redone_on`, a reply's `date`, the Feedback's
+ * `recorded_on`, and the same in each earlier version. */
+const dated = (front: YamlMapping): YamlMapping =>
+  new Map(
+    [...front].map(([key, value]): [string, YamlValue] => {
+      if (key === 'date' || key === 'redone_on') return [key, asDate(value)]
+      if (key === 'replies') return [key, eachMapping(value, datedReply)]
+      if (key === 'versions') return [key, eachMapping(value, dated)]
+      if (key === 'feedback' && isMapping(value))
+        return [
+          key,
+          new Map(
+            [...value].map(([k, v]) => [
+              k,
+              k === 'recorded_on' ? asDate(v) : v,
+            ]),
+          ),
+        ]
+      return [key, value]
+    }),
+  )
 
 /** Writes the Session's file (`arquivo.escrever`): through a temporary
  * file in the same folder, so a reader never sees half of it. The dates
@@ -204,9 +204,7 @@ export const writeSession = (
     const temporary = `${file}.${process.pid}.tmp`
     yield* writeMarkdown(temporary, dated(frontmatter), body).pipe(
       Effect.andThen(Effect.sync(() => renameSync(temporary, file))),
-      Effect.ensuring(
-        Effect.sync(() => rmSync(temporary, { force: true })),
-      ),
+      Effect.ensuring(Effect.sync(() => rmSync(temporary, { force: true }))),
     )
   })
 
@@ -227,27 +225,21 @@ export const VERSION_EXTRAS = [
 /** The version at the top of the frontmatter, shaped as an item of
  * `versions` (`arquivo.versao_atual`). */
 export const currentVersion = (front: YamlMapping): YamlMapping => {
-  const versions = front.get('versions')
+  const get = (key: string): YamlValue => front.get(key) ?? null
+  const versions = get('versions')
   const version = new Map<string, YamlValue>([
     ['version', pyInt((isSequence(versions) ? versions.length : 0) + 1)],
-    [
-      'date',
-      pyTruthy(front.get('redone_on'))
-        ? (front.get('redone_on') ?? null)
-        : (front.get('date') ?? null),
-    ],
-    ['attendees', front.get('attendees') ?? null],
-    ['context', front.get('context') ?? null],
-    ['rule', front.get('rule') ?? null],
+    ['date', pyTruthy(get('redone_on')) ? get('redone_on') : get('date')],
+    ['attendees', get('attendees')],
+    ['context', get('context')],
+    ['rule', get('rule')],
     [
       'recommendation',
-      pyTruthy(front.get('recommendation'))
-        ? (front.get('recommendation') ?? null)
-        : [],
+      pyTruthy(get('recommendation')) ? get('recommendation') : [],
     ],
   ])
   for (const field of VERSION_EXTRAS)
-    if (front.has(field)) version.set(field, front.get(field) ?? null)
+    if (front.has(field)) version.set(field, get(field))
   return version
 }
 
@@ -387,7 +379,10 @@ const fromBody = <A extends string>(
   (Object.keys(table) as A[]).find((name) => table[name] === value)
 
 /** Python's `str.rpartition`. */
-const rpartition = (text: string, separator: string): [string, string, string] => {
+const rpartition = (
+  text: string,
+  separator: string,
+): [string, string, string] => {
   const at = text.lastIndexOf(separator)
   return at < 0
     ? ['', '', text]
@@ -453,7 +448,11 @@ export const filmsInBody = (
     } else if (current && line.startsWith('   - ')) {
       group = attendees[index]
       index++
-    } else if (current && group !== undefined && line.startsWith('     - Evidência: '))
+    } else if (
+      current &&
+      group !== undefined &&
+      line.startsWith('     - Evidência: ')
+    )
       current.evidence[group]?.push(
         bodyEvidence(line.slice('     - Evidência: '.length)),
       )

@@ -151,14 +151,24 @@ export const reactions = (
         const source = feedbackSource(front, relayed)
         const original = r.get('original_rating')
         list.push({
-          factId: factId('notas', person, filmId, pyFloat(rating), date, source, id),
+          factId: factId(
+            'notas',
+            person,
+            filmId,
+            pyFloat(rating),
+            date,
+            source,
+            id,
+          ),
           session: id,
           person,
           filmId,
           kind: 'rating',
           rating,
           originalRating:
-            original === undefined || original === null ? null : pyStrValue(original),
+            original === undefined || original === null
+              ? null
+              : pyStrValue(original),
           reaction: null,
           relayed,
           value: ratingValue(rating),
@@ -172,7 +182,14 @@ export const reactions = (
       ) {
         const reaction = level as ReportLevel
         list.push({
-          factId: factId('reacoes', id, person, filmId, REPORT_LEVELS[reaction].db, date),
+          factId: factId(
+            'reacoes',
+            id,
+            person,
+            filmId,
+            REPORT_LEVELS[reaction].db,
+            date,
+          ),
           session: id,
           person,
           filmId,
@@ -198,7 +215,11 @@ export const reactions = (
 const commentReaction = (r: YamlMapping): 'gosta' | 'nao_gosta' | null => {
   if (field(r, 'kind') === 'report') {
     const level = field(r, 'reaction')
-    return level === 'liked' ? 'gosta' : level === 'disliked' ? 'nao_gosta' : null
+    return level === 'liked'
+      ? 'gosta'
+      : level === 'disliked'
+        ? 'nao_gosta'
+        : null
   }
   const outOf10 = toFloat(field(r, 'rating')) * 2
   return outOf10 >= 7 ? 'gosta' : outOf10 <= 4 ? 'nao_gosta' : null

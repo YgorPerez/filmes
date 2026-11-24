@@ -6,7 +6,15 @@
 // (`padrao`, `nota`, `gostou`).
 
 import { Effect } from 'effect'
-import { pyStrValue, isMapping, isPyInt, pyTruthy, isSequence, type YamlMapping, type YamlValue } from '../data/yaml.ts'
+import {
+  pyStrValue,
+  isMapping,
+  isPyInt,
+  pyTruthy,
+  isSequence,
+  type YamlMapping,
+  type YamlValue,
+} from '../data/yaml.ts'
 import type { EngineError } from '../runtime/EngineError.ts'
 import type { Environment } from '../runtime/Environment.ts'
 import { Sqlite, type Connection, type SqliteError } from '../sqlite/Sqlite.ts'
@@ -32,7 +40,9 @@ const SESSION_TABLES = [
 
 /** A frontmatter scalar as sqlite3 binds it: an int as an integer, text
  * as text, None as NULL. */
-const bind = (value: YamlValue | undefined): string | number | bigint | null => {
+const bind = (
+  value: YamlValue | undefined,
+): string | number | bigint | null => {
   if (value === undefined || value === null) return null
   if (isPyInt(value)) return value.int
   if (typeof value === 'boolean') return value ? 1 : 0
@@ -46,7 +56,9 @@ const ownersOf = (db: Connection, front: YamlMapping) =>
   Effect.gen(function* () {
     const owner = front.get('owner')
     if (pyTruthy(owner)) return new Set([pyStrValue(owner ?? null)])
-    const rows = yield* db.all('SELECT slug FROM pessoas WHERE dono = 1 ORDER BY slug')
+    const rows = yield* db.all(
+      'SELECT slug FROM pessoas WHERE dono = 1 ORDER BY slug',
+    )
     return new Set(rows.map((row) => String(row['slug'])))
   })
 
@@ -71,7 +83,9 @@ export const syncSession = (
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       id,
       pyStrValue(front.get('date') ?? null),
-      ruleName === undefined ? 'padrao' : (DB_RULES[ruleName as RuleName] ?? bind(ruleName)),
+      ruleName === undefined
+        ? 'padrao'
+        : (DB_RULES[ruleName as RuleName] ?? bind(ruleName)),
       bind(ruleOf.get('person')),
       isMapping(context) ? bind(context.get('request')) : null,
       bind(front.get('chosen')),
