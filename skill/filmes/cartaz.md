@@ -25,6 +25,11 @@ devolve `regerar`, `manter`, `saem`, `acrescentar` e `comentarios`.
      "a Ana ama a Helena Prado". Ele espera o sim do passo 4.
    - **Só sobre o filme**: "lindo, mas longo". Fica na Sessão, onde a
      ferramenta já gravou.
+   - **Algo igual X**: "algo igual Stuck in Love", "entre X e Y". É
+     contexto da noite: resolva os títulos e passe os IDs em `parecido`,
+     como em [Algo igual X](SKILL.md#algo-igual-x). Referência nova troca
+     a lista inteira, mesmo com `manter`. "Esquece o parecido" ou um
+     acrescentar que muda o que a noite quer vai com `sem_parecido: true`.
 
    Só o Trocar troca filme. Um comentário, mesmo negativo, deixa o filme
    na tela.

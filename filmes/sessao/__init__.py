@@ -35,17 +35,20 @@ def abrir(amb: Ambiente, recomendacao: dict, contexto: dict) -> dict:
     return {"id": sessao_id, "arquivo": arquivo.relativo(sessao_id), "versao": 1}
 
 
-def refazer(amb: Ambiente, sessao_id: str, recomendacao: dict, contexto: dict) -> dict:
+def refazer(amb: Ambiente, sessao_id: str, recomendacao: dict, contexto: dict, trocados=()) -> dict:
     """Troca a Recomendação de uma Sessão aberta pela nova, no mesmo arquivo.
 
-    A versão que sai vai para o fim de `versoes` (ver `arquivo.versao_atual`); o
+    A versão que sai vai para o fim de `versoes` (ver `arquivo.versao_atual`),
+    com `trocados` somados aos dela (o que o Dono trocou da tela dela); o
     corpo passa a ter só a Recomendação nova. O ID não muda, mesmo que mudem os
     Presentes. Devolve {id, arquivo, versao}."""
     with escrita(amb) as conn:
         frente = conferir_aberta(amb, sessao_id)
         nomes = dict(conn.execute("SELECT slug, nome FROM pessoas"))
+        if trocados:
+            frente["trocados"] = sorted({*(frente.get("trocados") or []), *trocados})
         versoes = [*(frente.get("versoes") or []), arquivo.versao_atual(frente)]
-        for campo in ("mostrados", "mantidos", "saidas", "respostas"):
+        for campo in ("mostrados", "mantidos", "saidas", "respostas", "trocados"):
             frente.pop(campo, None)
         frente.update(_campos_da_recomendacao(recomendacao, contexto), refeita_em=amb.hoje, versoes=versoes)
         banco.carregar(conn, sessao_id, frente)

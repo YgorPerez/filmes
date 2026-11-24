@@ -20,6 +20,12 @@ entra nas vagas.
 algum Presente, de agora ou da versão anterior, tem Já visto do filme com data igual ou posterior à da versão
 anterior (o "Já vi" do cartaz); o Já visto mais antigo já estava lá quando o
 filme foi mostrado, e a saída conta como `trocado`.
+
+Uma Restrição nova que troca a lista inteira (o parecido novo, #68) é o motivo
+`restricao` de quem sai sem ser Já vi nem trocado pelo Dono (`trocados`: o
+Trocar do cartaz, `--trocar` e o que não ficou do `--manter`).
+
+O filme que volta da versão anterior não leva o selo "novo", mantido ou não.
 """
 
 import sqlite3
@@ -36,24 +42,30 @@ class Regerar:
     data: str                # data da versão anterior, AAAA-MM-DD
     posicoes: dict           # filme_id -> posição, só dos mantidos que estavam na versão anterior
     presentes: tuple = ()    # os Presentes da versão anterior
+    trocados: frozenset = frozenset()   # o que o Dono trocou da versão anterior
+    troca: object = None     # a Restrição nova que troca a lista inteira, se há
 
     def mantido(self, filme_id) -> bool:
         return filme_id in self.posicoes
+
+    def novo(self, filme_id) -> bool:
+        return all(f["id"] != filme_id for f in self.anterior)
 
     def titulo(self, filme_id) -> str:
         return next((f.get("titulo") or filme_id for f in self.anterior if f["id"] == filme_id), filme_id)
 
 
-def preparar(frente: dict, manter: list[str]) -> tuple[Regerar, list[str]]:
+def preparar(frente: dict, manter: list[str], trocados=frozenset(), troca=None) -> tuple[Regerar, list[str]]:
     """O que fica e o que estava na tela da versão atual da Sessão, e os avisos dos mantidos
-    que não estavam nela."""
+    que não estavam nela. `trocados` é o que o Dono trocou dela; `troca`, a Restrição nova
+    que troca a lista inteira."""
     versao = arquivo.versao_atual(frente)
     tela = arquivo.na_tela(versao)
     posicoes = {f["id"]: f["posicao"] for f in tela}
     avisos = [f"--manter {filme_id}: o filme não estava na versão anterior da Sessão; ficou de fora"
               for filme_id in manter if filme_id not in posicoes]
     return Regerar(tuple(tela), str(versao["data"]), {f: posicoes[f] for f in manter if f in posicoes},
-                   tuple(versao["presentes"])), avisos
+                   tuple(versao["presentes"]), frozenset(trocados), troca), avisos
 
 
 def pela_nota_minima(conn: sqlite3.Connection, filme_id: str, catalogo: dict) -> dict:
@@ -113,7 +125,12 @@ def saidas(conn, presentes, regerar: Regerar, ficaram: set, tirados: dict) -> li
         # Quem estava na versão anterior e saiu também viu o filme que o Dono marcou.
         quem = [*presentes, *(p for p in regerar.presentes if p not in presentes)]
         viram = _viram(conn, quem, filme["id"], regerar.data)
-        lista.append({**base, "motivo": "ja_visto", "pessoas": viram} if viram else {**base, "motivo": "trocado"})
+        if viram:
+            lista.append({**base, "motivo": "ja_visto", "pessoas": viram})
+        elif regerar.troca is not None and filme["id"] not in regerar.trocados:
+            lista.append({**base, **pela_restricao(regerar.troca)})
+        else:
+            lista.append({**base, "motivo": "trocado"})
     return lista
 
 

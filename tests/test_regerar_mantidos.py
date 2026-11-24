@@ -60,13 +60,13 @@ def test_a_versao_gravada_guarda_novo_mantidos_e_saidas(banco, dados):
     assert frente["mantidos"] == [p[1]]
     assert frente["saidas"] == refeita["saidas"]
 
-    banco.ok("recomendar", "--presentes", "dono", "--sessao", sessao_id)
+    terceira = banco.ok("recomendar", "--presentes", "dono", "--sessao", sessao_id)
 
     frente, _ = ler_markdown(dados / "sessoes" / f"{sessao_id}.md")
     assert frente["mantidos"] == []
     assert frente["versoes"][1]["mantidos"] == [p[1]]
     assert frente["versoes"][1]["saidas"] == refeita["saidas"]
-    assert frente["recomendacao"][0]["novo"] is True
+    assert [r["novo"] for r in frente["recomendacao"]] == [f["id"] not in _ids(refeita) for f in terceira["filmes"]]
 
 
 def test_manter_sem_sessao_e_uso_invalido(banco):
@@ -118,16 +118,21 @@ def test_veto_novo_tira_o_mantido_e_declarado_novo_nao(banco):
     assert any(f[0]["titulo"] in aviso and "mantido" in aviso for aviso in refeita["avisos"])
 
 
-def test_refazer_sem_manter_troca_todos_e_diz_o_que_saiu(banco):
+def test_refazer_sem_manter_nao_mantem_nada_e_diz_o_que_saiu(banco):
+    # Sem o sem repetido (#66), o que não foi visto pode voltar; o Já visto da Sessão sai.
     primeira, sessao_id = _primeira(banco)
-    banco.ok("pessoa", "visto", "dono", "--filme", primeira["filmes"][1]["id"])
+    visto = primeira["filmes"][1]
+    banco.ok("pessoa", "visto", "dono", "--filme", visto["id"])
 
     refeita = banco.ok("recomendar", "--presentes", "dono", "--sessao", sessao_id)
 
     assert refeita["mantidos"] == []
-    assert all(f["novo"] is True for f in refeita["filmes"])
-    assert [(s["id"], s["motivo"]) for s in refeita["saidas"]] == [
-        (f["id"], "ja_visto" if i == 1 else "trocado") for i, f in enumerate(primeira["filmes"])]
+    # O que volta da tela anterior não leva o selo novo; só o que entrou no lugar do visto.
+    assert [f["novo"] for f in refeita["filmes"]] == [f["id"] not in _ids(primeira) for f in refeita["filmes"]]
+    assert any(f["novo"] for f in refeita["filmes"])
+    assert visto["id"] not in _ids(refeita)
+    assert {"posicao": 2, "id": visto["id"], "titulo": visto["titulo"], "motivo": "ja_visto",
+            "pessoas": ["bruno"]} in refeita["saidas"]
 
 
 def test_mantido_abaixo_da_nota_minima_sai_com_aviso(banco, dados, tmp_path):

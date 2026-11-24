@@ -18,7 +18,9 @@ As atribuições das fontes ficam fora, como na resposta em Markdown (decisão d
 Dono de 2026-11-21).
 
 Numa versão refeita com `--manter` (#59), o filme que entrou leva o selo "novo" e
-o topo diz o que saiu e por quê, a partir de `saidas`.
+o topo diz o que saiu e por quê, a partir de `saidas`. Enquanto o parecido vale
+na Sessão (#68), a leitura do pedido no topo diz "parecidos com X"; Restrição
+gravada que já não existe (o sem_repetido) fica de fora.
 
 O cartaz responde (#60), como o do match-reply: a página não manda nada a lugar
 nenhum. Cada card tem Já vi (um chip por Presente, "Você" para o Dono, e "Todos"
@@ -154,7 +156,8 @@ def _pedido(frente, pessoas, pesos) -> str:
         partes.append(f"até {arquivo.duracao(contexto['duracao_max'])}")
     partes.append(f"nota {_numero(pesos['catalogo']['nota_imdb_minima'])}+ no IMDb")
     partes.extend(escape(c) for c in contexto.get("clima") or [])
-    partes.extend(escape(restricoes.rotulo(r)) for r in contexto.get("restricoes") or [])
+    # Restrição gravada que já não existe (o sem_repetido de Sessão antiga) não aparece.
+    partes.extend(escape(rotulo) for r in contexto.get("restricoes") or [] if (rotulo := restricoes.rotulo(r)))
     regra = frente.get("regra") or {}
     if regra.get("nome") == "media":
         partes.append("pela média")

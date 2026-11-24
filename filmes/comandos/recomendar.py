@@ -1,10 +1,11 @@
 from contextlib import closing
 
 from filmes import sessao
+from filmes.sessao import arquivo
 from filmes.banco import abrir_leitura
 from filmes.erros import ErroFilmes
 from filmes.recomendacao import mantidos, presentes as pessoas_presentes, recomendar, restricoes
-from filmes.recomendacao.restricoes import sem_repetido
+from filmes.recomendacao.restricoes import fora_da_sessao
 from filmes.recomendacao.regra import Regra
 
 AJUDA = "devolve a Recomendação (top 5) com as Evidências de cada filme, por Presente, e abre a Sessão"
@@ -35,16 +36,26 @@ def executar(args, amb):
     if quantos < 1:
         raise ErroFilmes("uso_invalido", "--quantos precisa ser 1 ou mais")
     nomes = [n for item in args.presentes for n in item.split(",") if n.strip()]
-    pedidas = restricoes.ler(args)
-    manter = sem_repetido.manter(args)
+    manter = fora_da_sessao.manter(args)
     if manter and not args.sessao:
         raise ErroFilmes("uso_invalido", "--manter só vale com --sessao: são os filmes da versão anterior que ficam")
     regerar, avisos = None, []
     if args.sessao:
         frente = sessao.conferir_aberta(amb, args.sessao)
+        restricoes.herdar(args, frente)
+    pedidas = restricoes.ler(args)
+    if args.sessao:
         # Refazer é sempre regerar: sem --manter, nenhum filme fica, mas o selo novo e as
         # saídas ainda dizem o que entrou e o que saiu.
-        regerar, avisos = mantidos.preparar(frente, manter)
+        troca = next(iter(restricoes.trocam_a_lista(pedidas, frente)), None)
+        if troca is not None and manter:
+            avisos.append(f"--manter {','.join(manter)}: ignorado, {_rotulo(troca)} troca a lista inteira")
+            manter, args.manter = [], None
+            pedidas = restricoes.ler(args)
+            troca = next(r for r in pedidas if r.nome == troca.nome)
+        trocados = fora_da_sessao.trocados_agora(arquivo.versao_atual(frente), manter, fora_da_sessao.trocar(args))
+        regerar, dos_mantidos = mantidos.preparar(frente, manter, trocados, troca)
+        avisos += dos_mantidos
     with closing(abrir_leitura(amb.banco)) as conn:
         presentes = pessoas_presentes.resolver(conn, nomes)
         saida = recomendar(conn, amb, presentes, quantos, _regra(conn, args, presentes), pedidas, args.clima,
@@ -52,10 +63,14 @@ def executar(args, amb):
     saida["avisos"][:0] = avisos
     contexto = _contexto(args, pedidas, saida["climas"])
     if args.sessao:
-        saida["sessao"] = sessao.refazer(amb, args.sessao, saida, contexto)
+        saida["sessao"] = sessao.refazer(amb, args.sessao, saida, contexto, regerar.trocados)
     else:
         saida["sessao"] = sessao.abrir(amb, saida, contexto)
     return saida
+
+
+def _rotulo(restricao) -> str:
+    return restricoes.rotulo({"nome": restricao.nome, **restricao.como_json()})
 
 
 def _contexto(args, pedidas, climas):

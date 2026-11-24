@@ -7,6 +7,9 @@ Cada Restrição é um módulo deste pacote, com o mesmo nome dela. O módulo de
     def pedido(args) -> Restricao | None   # None quando o pedido não traz a Restrição
     def rotulo(gravada: dict) -> str       # o pedido como se lê ("nada triste"), a partir
                                            # de {"nome", **como_json()} gravado na Sessão
+    def herdar(args, gravada: dict | None) # opcional: no refazer (--sessao), recebe a Restrição
+                                           # gravada na versão atual (ou None) e pode pô-la em
+                                           # `args` antes de `pedido`, para ela continuar valendo
 
 e a Restrição devolvida tem:
 
@@ -15,6 +18,10 @@ e a Restrição devolvida tem:
     def resultado(self, saidas) -> dict    # o que a Restrição achou, ao lado de "tirados"
     def avaliar(self, contexto, filmes) -> dict[filme_id, Veredito]
     def resolver(self, contexto, filme, consultar) -> Passa | Sai   # só se avaliar deu PENDENTE
+    def aviso_da_lista(self, achados, quantos) -> str | None        # opcional: aviso sobre a lista pronta
+    def troca_a_lista(self, gravada: dict | None) -> bool           # opcional: no refazer, se o pedido
+                                           # é novo e troca a lista inteira (o --manter é ignorado,
+                                           # e quem sai sai por esta Restrição)
 
 `avaliar` recebe todos os Candidatos (id -> linha de filmes) de uma vez, para
 resolver com uma consulta só. Filme que passa leva as linhas do filme
@@ -74,11 +81,34 @@ def ler(args) -> list:
     return [r for r in (modulo.pedido(args) for modulo in _modulos()) if r is not None]
 
 
-def rotulo(gravada: dict) -> str:
-    """A Restrição gravada na Sessão como se lê; o nome cru se não há módulo com esse nome."""
-    nome = str(gravada.get("nome"))
-    modulo = next((m for m in _modulos() if m.__name__.rpartition(".")[2] == nome), None)
-    return modulo.rotulo(gravada) if modulo else nome
+def rotulo(gravada: dict) -> str | None:
+    """A Restrição gravada na Sessão como se lê; None se não há mais módulo com esse
+    nome (o sem_repetido, que saiu no #66, numa Sessão gravada antes)."""
+    modulo = _modulo(gravada.get("nome"))
+    return modulo.rotulo(gravada) if modulo else None
+
+
+def _modulo(nome):
+    return next((m for m in _modulos() if m.__name__.rpartition(".")[2] == nome), None)
+
+
+def _gravadas(frente: dict) -> dict:
+    """As Restrições gravadas na versão atual da Sessão, por nome."""
+    return {r.get("nome"): r for r in (frente.get("contexto") or {}).get("restricoes") or []}
+
+
+def herdar(args, frente: dict) -> None:
+    """No refazer: cada módulo com `herdar` recebe a Restrição dele gravada na versão atual."""
+    gravadas = _gravadas(frente)
+    for modulo in _modulos():
+        if hasattr(modulo, "herdar"):
+            modulo.herdar(args, gravadas.get(modulo.__name__.rpartition(".")[2]))
+
+
+def trocam_a_lista(pedidas: list, frente: dict) -> list:
+    """As Restrições pedidas que, no refazer, trocam a lista inteira (`troca_a_lista`)."""
+    gravadas = _gravadas(frente)
+    return [r for r in pedidas if hasattr(r, "troca_a_lista") and r.troca_a_lista(gravadas.get(r.nome))]
 
 
 class Restricoes:
@@ -132,6 +162,12 @@ class Restricoes:
             linhas.extend(veredito.linhas)
         self.linhas[filme["id"]].extend(linhas)
         return True
+
+    def avisos_da_lista(self, achados: int, quantos: int) -> list[str]:
+        """Avisos das Restrições sobre a lista pronta (a de `aviso_da_lista`, opcional):
+        o "parecido" avisa quando passaram menos filmes que o pedido."""
+        avisos = (getattr(r, "aviso_da_lista", lambda *_: None)(achados, quantos) for r in self.restricoes)
+        return [a for a in avisos if a]
 
     def _contar_saida(self, restricao, veredito: Sai, filme_id) -> None:
         self.tirou[filme_id] = restricao
