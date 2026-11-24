@@ -17,8 +17,11 @@ Cada fonte dá um número de 0 a 1 para o par (referência, filme):
 Fonte sem dado de um dos dois lados fica de fora do par, e a parecença é a média
 das presentes com os pesos de `[parecido.peso]` (o peso de quem falta se
 redistribui). Só entra filme com genoma, tags ou vizinhos acima de 0, ou com o
-mesmo diretor: gênero e um ator em comum, sozinhos, não fazem um filme parecido,
-e milhares de filmes obscuros os dividem.
+mesmo diretor: gênero e atores em comum, sozinhos (até os 3 primeiros), não
+fazem um filme parecido, e milhares de filmes obscuros os dividem.
+
+A média de cada tag no genoma, a raridade de cada tag e a norma do vetor de cada
+filme saem prontas da reconstrução (`filmes/banco/etapas/70_parecenca.py`).
 """
 
 import json
@@ -32,6 +35,7 @@ class Par:
     fontes: dict = field(default_factory=dict)      # fonte -> parecença de 0 a 1
     temas: dict = field(default_factory=dict)       # tag em comum -> (peso, fonte, data), para a explicação
     vizinho: tuple | None = None                    # (base, ambos, fonte, data) do vizinho da referência
+    diretor: tuple | None = None                    # (fonte, data) da aresta, se divide o diretor
 
     def valor(self, pesos: dict) -> float:
         total = sum(pesos[f] for f in self.fontes)
@@ -74,9 +78,10 @@ def medir(conn: sqlite3.Connection, referencia: str, config: dict) -> dict:
 
 
 def _tem_algo_em_comum(par: Par) -> bool:
-    """Genoma, tags ou vizinhos acima de 0, ou o mesmo diretor. Um ator em comum e o
-    gênero, sozinhos, trazem filme obscuro que só ganha pela redistribuição do peso."""
-    return any(par.fontes.get(f, 0) > 0 for f in _DO_MOVIELENS) or par.fontes.get("pessoas", 0) >= 1
+    """Genoma, tags ou vizinhos acima de 0, ou o mesmo diretor. Atores em comum (mesmo os
+    3 primeiros) e o gênero, sozinhos, trazem filme obscuro que só ganha pela
+    redistribuição do peso."""
+    return any(par.fontes.get(f, 0) > 0 for f in _DO_MOVIELENS) or par.diretor is not None
 
 
 _DO_MOVIELENS = ("genoma", "tags_movielens", "vizinhos")
@@ -106,13 +111,8 @@ def _genoma(conn, referencia, config, par) -> bool:
     if not da_ref:
         return False
     tags = [l["tag"] for l in da_ref]
-    # A média de cada tag no genoma: o filme sem a linha conta 0, como no Tag Genome completo.
-    filmes_no_genoma = conn.execute("SELECT count(DISTINCT filme_id) FROM genoma").fetchone()[0]
-    somas = dict(conn.execute(
-        "SELECT tag, sum(relevancia) FROM genoma WHERE tag IN (SELECT value FROM json_each(?)) GROUP BY tag",
-        (lista_json(tags),),
-    ).fetchall())
-    media = {t: somas[t] / filmes_no_genoma for t in tags}
+    # A média de cada tag no genoma, pré-calculada na reconstrução (tags_no_catalogo).
+    media = _por_tag(conn, "genoma", tags)
     excesso = {l["tag"]: l["relevancia"] - media[l["tag"]] for l in da_ref}
     proprias = dict(sorted(((t, e) for t, e in excesso.items() if e > 0),
                            key=lambda item: (-item[1], item[0]))[:config["tags_genoma"]])
@@ -135,35 +135,41 @@ def _tags(conn, referencia, config, par) -> bool:
     if not da_ref:
         return False
     # TF-IDF: log(1 + usuários) vezes a raridade da tag. "overrated" e "love" estão em
-    # milhares de filmes e dizem pouco; "writers" diz mais.
-    filmes_com_tag = conn.execute("SELECT count(DISTINCT filme_id) FROM tags_movielens").fetchone()[0]
-    frequencia = dict(conn.execute("SELECT tag, count(*) FROM tags_movielens GROUP BY tag").fetchall())
-
-    def peso(tag, usuarios):
-        return math.log1p(usuarios) * math.log(filmes_com_tag / frequencia[tag])
-
-    vetor_ref = {t: peso(t, u) for t, u in da_ref.items()}
+    # milhares de filmes e dizem pouco; "writers" diz mais. A raridade e a norma de cada
+    # filme vêm prontas da reconstrução (tags_no_catalogo, normas_tags_movielens).
+    raridade = _por_tag(conn, "tags_movielens", da_ref)
+    vetor_ref = {t: math.log1p(u) * raridade[t] for t, u in da_ref.items()}
     norma_ref = math.sqrt(sum(w * w for w in vetor_ref.values()))
     if not norma_ref:
         return False
-    # Só as tags de mais peso da referência buscam filmes; a norma usa todas.
+    # Só as tags de mais peso da referência buscam filmes; o produto usa todas.
     busca = sorted(vetor_ref, key=lambda t: (-vetor_ref[t], t))[:config["tags_movielens"]]
-    vetores, comuns = {}, {}
+    produtos, comuns = {}, {}
     for l in conn.execute(
-            "SELECT filme_id, tag, usuarios, fonte, data FROM tags_movielens WHERE filme_id IN "
-            "(SELECT filme_id FROM tags_movielens WHERE tag IN (SELECT value FROM json_each(?)))", (lista_json(busca),)):
-        vetores.setdefault(l["filme_id"], {})[l["tag"]] = peso(l["tag"], l["usuarios"])
-        if l["tag"] in busca:
-            comuns.setdefault(l["filme_id"], []).append(l)
-    for filme_id, vetor in vetores.items():
-        norma = math.sqrt(sum(w * w for w in vetor.values()))
-        if not norma:
+            "SELECT t.filme_id, t.tag, t.usuarios, t.fonte, t.data, n.norma FROM tags_movielens t "
+            "JOIN normas_tags_movielens n ON n.filme_id = t.filme_id "
+            "WHERE t.tag IN (SELECT value FROM json_each(?1)) AND t.filme_id IN "
+            "(SELECT filme_id FROM tags_movielens WHERE tag IN (SELECT value FROM json_each(?2)))",
+            (lista_json(vetor_ref), lista_json(busca))):
+        if not l["norma"]:
             continue
+        w = math.log1p(l["usuarios"]) * raridade[l["tag"]] / (norma_ref * l["norma"])
+        produtos[l["filme_id"]] = produtos.get(l["filme_id"], 0.0) + vetor_ref[l["tag"]] * w
+        if l["tag"] in busca:
+            comuns.setdefault(l["filme_id"], []).append((l, w))
+    for filme_id, produto in produtos.items():
         p = par(filme_id)
-        p.fontes["tags_movielens"] = sum(vetor_ref[t] * w for t, w in vetor.items() if t in vetor_ref) / (norma_ref * norma)
-        for l in comuns[filme_id]:
-            _tema(p, l["tag"], vetor_ref[l["tag"]] * vetor[l["tag"]] / (norma_ref * norma), l["fonte"], l["data"])
+        p.fontes["tags_movielens"] = produto
+        for l, w in comuns.get(filme_id, []):
+            _tema(p, l["tag"], vetor_ref[l["tag"]] * w, l["fonte"], l["data"])
     return True
+
+
+def _por_tag(conn, fonte, tags) -> dict:
+    """O valor pré-calculado de cada tag numa fonte (tags_no_catalogo)."""
+    return dict(conn.execute(
+        "SELECT tag, valor FROM tags_no_catalogo WHERE fonte = ? AND tag IN (SELECT value FROM json_each(?))",
+        (fonte, lista_json(tags))).fetchall())
 
 
 def _vizinhos(conn, referencia, par) -> bool:
@@ -195,10 +201,13 @@ def _pessoas(conn, referencia, par) -> bool:
     atores = {l[0] for l in conn.execute(
         "SELECT ator_imdb FROM elenco_principal_imdb WHERE filme_id = ?", (referencia,))}
     if diretores:
-        for (filme_id,) in conn.execute(
-                "SELECT DISTINCT filme_id FROM arestas WHERE predicado = 'diretor' "
-                "AND entidade_id IN (SELECT value FROM json_each(?))", (lista_json(diretores),)):
-            par(filme_id).fontes["pessoas"] = 1.0
+        for filme_id, fonte, data in conn.execute(
+                "SELECT filme_id, fonte, data FROM arestas WHERE predicado = 'diretor' "
+                "AND entidade_id IN (SELECT value FROM json_each(?)) ORDER BY filme_id, data DESC",
+                (lista_json(diretores),)):
+            p = par(filme_id)
+            p.fontes["pessoas"] = 1.0
+            p.diretor = p.diretor or (fonte, data)
     if atores:
         for filme_id, comuns in conn.execute(
                 "SELECT filme_id, count(*) FROM elenco_principal_imdb "

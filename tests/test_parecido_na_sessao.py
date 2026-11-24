@@ -4,7 +4,8 @@
 refazeres seguintes da mesma Sessão continuam com o filtro sem repetir
 `--parecido`. Um `--parecido` com outras referências substitui as anteriores;
 `--sem-parecido` tira o filtro. Pedido de parecido novo troca a lista inteira:
-ignora `--manter`, com aviso, e as saídas dizem `parecido`.
+ignora `--manter`, com aviso, e quem sai sem ser Já vi nem trocado pelo Dono sai
+pela Restrição `parecido`.
 """
 
 from conftest import sem_o_da_capa
@@ -80,7 +81,7 @@ def test_parecido_novo_troca_a_lista_inteira_e_ignora_manter_com_aviso(banco):
     assert all(f["novo"] for f in segunda["filmes"])
     assert any("--manter" in a and "parecido" in a for a in sem_o_da_capa(segunda["avisos"]))
     assert [s["id"] for s in segunda["saidas"]] == [f for f in tela if f != PE_NA_ESTRADA]
-    assert {s["motivo"] for s in segunda["saidas"]} == {"parecido"}
+    assert {(s["motivo"], s["restricao"]) for s in segunda["saidas"]} == {("restricao", "parecido")}
     assert segunda["saidas"][0]["rotulo"] == "parecidos com Estrada Afora"
 
 
@@ -129,3 +130,26 @@ def test_parecido_e_sem_parecido_juntos_e_uso_invalido(banco):
                             "--parecido", ESTRADA_AFORA, "--sem-parecido")
 
     assert codigo == 2
+
+
+def test_parecido_novo_mantem_trocado_o_que_o_dono_trocou_no_cartaz(banco):
+    primeira, sessao_id = _abrir(banco)
+    trocado = primeira["filmes"][1]["id"]
+    banco.ok("cartaz", "responder", "--sessao", sessao_id, entrada=f"#cartaz {sessao_id} v1\n2 {trocado} · trocar\n")
+
+    segunda = _refazer(banco, sessao_id, "--parecido", ESTRADA_AFORA)
+
+    [saiu] = [s for s in segunda["saidas"] if s["id"] == trocado]
+    assert saiu["motivo"] == "trocado"
+
+
+def test_restricao_gravada_que_nao_existe_mais_nao_aparece_no_topo(banco, dados, tmp_path):
+    _, sessao_id = _abrir(banco)
+    caminho = dados / "sessoes" / f"{sessao_id}.md"
+    texto = caminho.read_text(encoding="utf-8")
+    caminho.write_text(texto.replace("restricoes: []", "restricoes:\n  - {nome: sem_repetido}"), encoding="utf-8")
+    assert "sem_repetido" in caminho.read_text(encoding="utf-8")
+
+    topo = _topo(banco, sessao_id, tmp_path)
+
+    assert "sem_repetido" not in topo

@@ -115,3 +115,30 @@ def test_parecido_nao_grava_gosto(banco, dados):
     banco.ok("recomendar", "--presentes", "dono", "--parecido", ESCREVER_CARTAS)
 
     assert {p.name: p.read_text(encoding="utf-8") for p in (dados / "pessoas").iterdir()} == antes
+
+
+PONTO_DE_PARTIDA = "tt9006720"   # referência só com diretor, elenco e gênero
+MESMO_ELENCO = "tt9006721"       # os 3 primeiros atores da referência, e nada mais
+MESMA_DIRETORA = "tt9006722"     # a diretora da referência
+
+
+def test_tres_atores_em_comum_sozinhos_nao_fazem_um_filme_parecido(banco):
+    saida = banco.ok("recomendar", "--presentes", "dono", "--quantos", "10", "--parecido", PONTO_DE_PARTIDA)
+
+    assert MESMO_ELENCO not in _ids(saida)
+    assert MESMA_DIRETORA in _ids(saida)
+
+
+def test_linha_de_parecido_pelo_diretor_diz_mesmo_diretor_e_cita_o_wikidata(banco):
+    saida = banco.ok("recomendar", "--presentes", "dono", "--quantos", "10", "--parecido", PONTO_DE_PARTIDA)
+
+    mesma = next(f for f in saida["filmes"] if f["id"] == MESMA_DIRETORA)
+    [linha] = [l for l in mesma["linhas_do_filme"] if l["texto"].startswith("parecido com")]
+    assert linha["texto"] == "parecido com Ponto de Partida: mesmo diretor"
+    assert (linha["fonte"], linha["data"]) == ("Wikidata", "2026-11-20")
+
+
+def test_reconstruir_pre_calcula_o_que_a_parecenca_usa_do_catalogo_inteiro(cli):
+    tabelas = cli.ok("reconstruir")["tabelas"]
+
+    assert tabelas["tags_no_catalogo"] > 0 and tabelas["normas_tags_movielens"] > 0

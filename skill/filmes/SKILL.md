@@ -61,7 +61,9 @@ Se `cartaz`, `html_preview` ou `html_render` falharem, diga o erro numa linha e 
 
 Com um cartaz na tela, a mudança vai pelo campo acrescentar do cartaz, e o texto colado segue [Cartaz que responde](cartaz.md#texto-colado). Se o Dono disser a mudança no chat, trate a fala como o acrescentar: refaça com `sessao` e `manter` igual aos filmes da tela, menos os que ele mandou trocar ou já viu.
 
-Sem cartaz, se o Dono mudar o pedido antes de verem algo (outro tempo, outra Restrição, alguém que chegou, um filme que já viram), chame `recomendar` de novo com o pedido inteiro e `sessao` igual ao `sessao.id` da Recomendação anterior. A Sessão continua a mesma e guarda a versão anterior. Não apague o arquivo da Sessão. Sem `sessao`, o motor abre outra Sessão e a anterior fica aberta. Para trocar só alguns filmes, passe em `manter` os que ficam: eles continuam no mesmo número e só as vagas ganham filme novo, marcado com `novo`. `saidas` diz o que saiu e por quê.
+Quando o Dono pedir outras opções no chat ("nenhum desses", "me dá outros"), refaça com `sessao` e `trocar` igual a todos os filmes da tela; se ele trocar só alguns, use `manter` com os que ficam. Sem `trocar` nem `manter`, o refazer devolve a mesma lista.
+
+Sem cartaz, se o Dono mudar o pedido antes de verem algo (outro tempo, outra Restrição, alguém que chegou, um filme que já viram), chame `recomendar` de novo com o pedido inteiro e `sessao` igual ao `sessao.id` da Recomendação anterior. A Sessão continua a mesma e guarda a versão anterior. Não apague o arquivo da Sessão. Sem `sessao`, o motor abre outra Sessão e a anterior fica aberta. Para trocar só alguns filmes, passe em `manter` os que ficam: eles continuam no mesmo número e só as vagas ganham filme novo, marcado com `novo`. Para trocar todos, passe em `trocar` os filmes da tela. `saidas` diz o que saiu e por quê.
 
 ## Montar e verificar a resposta
 

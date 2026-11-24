@@ -60,13 +60,13 @@ def test_a_versao_gravada_guarda_novo_mantidos_e_saidas(banco, dados):
     assert frente["mantidos"] == [p[1]]
     assert frente["saidas"] == refeita["saidas"]
 
-    banco.ok("recomendar", "--presentes", "dono", "--sessao", sessao_id)
+    terceira = banco.ok("recomendar", "--presentes", "dono", "--sessao", sessao_id)
 
     frente, _ = ler_markdown(dados / "sessoes" / f"{sessao_id}.md")
     assert frente["mantidos"] == []
     assert frente["versoes"][1]["mantidos"] == [p[1]]
     assert frente["versoes"][1]["saidas"] == refeita["saidas"]
-    assert frente["recomendacao"][0]["novo"] is True
+    assert [r["novo"] for r in frente["recomendacao"]] == [f["id"] not in _ids(refeita) for f in terceira["filmes"]]
 
 
 def test_manter_sem_sessao_e_uso_invalido(banco):
@@ -127,7 +127,9 @@ def test_refazer_sem_manter_nao_mantem_nada_e_diz_o_que_saiu(banco):
     refeita = banco.ok("recomendar", "--presentes", "dono", "--sessao", sessao_id)
 
     assert refeita["mantidos"] == []
-    assert all(f["novo"] is True for f in refeita["filmes"])
+    # O que volta da tela anterior não leva o selo novo; só o que entrou no lugar do visto.
+    assert [f["novo"] for f in refeita["filmes"]] == [f["id"] not in _ids(primeira) for f in refeita["filmes"]]
+    assert any(f["novo"] for f in refeita["filmes"])
     assert visto["id"] not in _ids(refeita)
     assert {"posicao": 2, "id": visto["id"], "titulo": visto["titulo"], "motivo": "ja_visto",
             "pessoas": ["bruno"]} in refeita["saidas"]

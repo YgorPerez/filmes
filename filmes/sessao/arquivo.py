@@ -26,7 +26,8 @@ Frontmatter (protótipo de #10):
                                        # de `recomendacao` traz então `novo: true|false`
     saidas:                            # idem: o que saiu da versão anterior e por quê
       - {posicao: 2, id: tt9000105, titulo: Sal e Ferrugem, motivo: ja_visto, pessoas: [bruno]}
-    trocados: [tt9000105]              # `cartaz responder` (#66): o Trocar da tela desta versão
+    trocados: [tt9000105]              # o que o Dono trocou da tela desta versão (#66): o Trocar
+                                       # do cartaz, e, ao refazer, `--trocar` e o que não ficou do `--manter`
     respostas:                         # `cartaz responder` (#61): um item por texto colado
       - data: 2026-11-21               # desta versão; o de versão velha vai para `versoes[n]`
         acrescentar: chegou a Ana, algo leve
@@ -43,7 +44,7 @@ Frontmatter (protótipo de #10):
         mostrados: [...]               # se a versão teve `cartaz --filmes`
         mantidos: [...]                # se a versão veio de `--manter`, com `saidas`
         respostas: [...]               # se o Dono colou texto do cartaz dessa versão
-        trocados: [...]                # idem, se marcou Trocar
+        trocados: [...]                # idem, se o Dono trocou algum filme dela
 
 A versão atual é a do topo do frontmatter; o número dela é `len(versoes) + 1`.
 

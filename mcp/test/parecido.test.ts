@@ -55,6 +55,21 @@ describe("recomendar com parecido (#67)", () => {
     assert.equal(terceira.restricoes.parecido, undefined);
   });
 
+  it("trocar grava os filmes da tela como Trocados e o refazer traz outros (revisão do #70)", async () => {
+    const chamar = async (args: Record<string, unknown>) => {
+      const resultado = (await cliente.callTool({ name: "recomendar", arguments: args })) as Resultado;
+      assert.ok(!resultado.isError, resultado.content[0].text ?? "");
+      return JSON.parse(resultado.content[0].text!);
+    };
+    const primeira = await chamar({ presentes: ["dono"] });
+    const tela = primeira.filmes.map((f: any) => f.id);
+
+    const segunda = await chamar({ presentes: ["dono"], sessao: primeira.sessao.id, trocar: tela });
+
+    assert.equal(segunda.filmes.filter((f: any) => tela.includes(f.id)).length, 0);
+    assert.equal(segunda.restricoes.fora_da_sessao.trocados, tela.length);
+  });
+
   it("recusa o que não é ID do IMDb", async () => {
     const resultado = (await cliente.callTool({
       name: "recomendar",

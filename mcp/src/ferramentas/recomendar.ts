@@ -21,7 +21,7 @@ export default definirFerramenta({
     'Com `parecido`, cada filme traz a linha "parecido com X: tags em comum", que não é Fato. ' +
     "Com `sessao`, o parecido fica: o refazer sem `parecido` continua com as referências da versão anterior; " +
     "`parecido` com outras referências substitui, e `sem_parecido` tira o filtro. Parecido novo troca a lista inteira: " +
-    "ignora `manter`, com aviso, e `saidas` traz `parecido` com `rotulo`. " +
+    "ignora `manter`, com aviso, e quem sai sem ser Já vi nem trocado pelo Dono vem em `saidas` como `restricao` `parecido`. " +
     "Cada filme que passa traz em `linhas_do_filme` as linhas das Restrições, do Clima, de grupo ou sozinho e da nota do IMDb acima de 7. " +
     "Clima, grupo ou sozinho e a nota do IMDb puxam a ordem dos filmes. " +
     "A linha de Crédito aparece em `linhas_do_filme` quando o Crédito fez o filme subir. " +
@@ -29,9 +29,10 @@ export default definirFerramenta({
     "Com `sessao`, refaz a Recomendação nessa Sessão aberta em vez de abrir outra, e `sessao.versao` conta as versões; " +
     "o que a Sessão já mostrou pode voltar; só sai, sozinho, o que o Dono trocou em alguma versão dela e o que algum Presente " +
     "marcou Já vi nela, em `restricoes.fora_da_sessao` ({trocados, ja_vistos, tirados}). " +
+    'Com `trocar`, os filmes dados viram Trocados da Sessão antes de refazer ("outras opções" no chat: passe os da tela). ' +
     "Com `manter`, os mantidos ficam no número da versão anterior e só as vagas ganham filme novo; cada filme traz " +
-    "`novo` (true nas vagas), e a resposta traz `mantidos` e `saidas` ({posicao, id, titulo, motivo}: `ja_visto` com " +
-    "`pessoas`, `trocado`, `restricao` com `restricao` e `rotulo`, `veto` com `pessoa` e `texto`, `nota_minima` com `rotulo` ou `parecido` com `rotulo`). " +
+    "`novo` (false no filme que já estava na tela anterior), e a resposta traz `mantidos` e `saidas` ({posicao, id, titulo, motivo}: `ja_visto` com " +
+    "`pessoas`, `trocado`, `restricao` com `restricao` e `rotulo`, `veto` com `pessoa` e `texto` ou `nota_minima` com `rotulo`). " +
     "Uma Restrição ou um Veto do pedido tiram também o mantido que os viola, e o mantido abaixo da nota ou dos votos " +
     "mínimos do IMDb também sai, com aviso; gosto novo não tira mantido. " +
     "Antes, chame `sessoes_abertas` e, se houver uma, pergunte por ela. O Dono pode pular. " +
@@ -70,6 +71,13 @@ export default definirFerramenta({
       .describe(
         "com sessao: os filmes da versão anterior que ficam (o que o Dono não mandou trocar nem já viu). " +
           "Ficam no mesmo número; só as vagas ganham filme novo",
+      ),
+    trocar: z
+      .array(z.string().regex(/^tt\d+$/))
+      .optional()
+      .describe(
+        'com sessao: filmes que o Dono trocou, gravados como Trocados da Sessão antes de refazer; não voltam mais nela. ' +
+          '"Nenhum desses, quero outros" no chat: passe todos os da tela',
       ),
     duracao_max: z.number().int().min(1).optional().describe("tempo disponível, em minutos"),
     desde: z.number().int().optional().describe('ano de lançamento mínimo, inclusive: "de 1990 em diante" é 1990'),
@@ -121,6 +129,7 @@ export default definirFerramenta({
     if (e.pedido !== undefined) args.push(`--pedido=${e.pedido}`);
     if (e.sessao) args.push("--sessao", e.sessao);
     if (e.manter?.length) args.push(`--manter=${e.manter.join(",")}`);
+    if (e.trocar?.length) args.push(`--trocar=${e.trocar.join(",")}`);
     for (const clima of e.climas ?? []) args.push(`--clima=${clima}`);
     return { comando: "recomendar", args };
   },
