@@ -76,6 +76,15 @@ export {
   type RunResult,
 } from './sqlite/Sqlite.ts'
 export {
+  ALERT_AFTER_FAILURES,
+  authorOf,
+  DataWriter,
+  type Author,
+  type PushStatus,
+  type WriteOptions,
+} from './data/DataWriter.ts'
+export { GitError } from './data/git.ts'
+export {
   formatMarkdown,
   parseMarkdown,
   readMarkdown,

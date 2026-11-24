@@ -1,10 +1,14 @@
 // The deploy against a fake VPS (`fake-vps.ts`): the same plan that goes
 // over SSH, run in a bash, with no real Docker or Nginx. The fake VPS already
 // serves temestudo, as the real one does.
+import { execFileSync } from 'node:child_process'
+import { mkdtempSync, statSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vite-plus/test'
 import { fakeFrontend, fakeVps, NEIGHBOUR_CONTAINERS } from './fake-vps.ts'
-import { publish, rollback, targetFrom } from './vps.ts'
+import type { DataRepo } from './deploy-plan.ts'
+import { dataRepoFrom, publish, rollback, targetFrom } from './vps.ts'
 
 const SHA_1 = 'aaaaaaa'
 const SHA_2 = 'bbbbbbb'
@@ -22,10 +26,11 @@ function aVps() {
     ...vps,
     log,
     neighbourBefore,
-    publish: (sha: string) =>
+    publish: (sha: string, dataRepo?: DataRepo) =>
       publish({
         output: fakeFrontend(sha),
         sha,
+        dataRepo,
         vps: vps.vps,
         paths: vps.paths,
         say,
@@ -223,6 +228,109 @@ describe.skipIf(process.platform === 'win32')('the deploy on the VPS', () => {
       expect(vps.read(target)).toBeNull()
     expect(vps.read(join(vps.paths.sitesEnabled, 'filmes.conf'))).toBeNull()
     expect(vps.neighbour()).toEqual(vps.neighbourBefore)
+  })
+})
+
+/** A fake deploy key: the shape of one, no real key. */
+const KEY =
+  '-----BEGIN OPENSSH PRIVATE KEY-----\nZmFrZQ==\n-----END OPENSSH PRIVATE KEY-----\n'
+
+/** A bare repository standing for filmes-dados' remote, with one commit. */
+function aDataRemote() {
+  const root = mkdtempSync(join(tmpdir(), 'data-remote-'))
+  const remote = join(root, 'filmes-dados.git')
+  const env: Record<string, string | undefined> = {}
+  for (const [name, value] of Object.entries(process.env))
+    if (!name.startsWith('GIT_')) env[name] = value
+  const git = (cwd: string, ...args: string[]) =>
+    execFileSync('git', args, {
+      cwd,
+      env: {
+        ...env,
+        GIT_AUTHOR_NAME: 'Setup',
+        GIT_AUTHOR_EMAIL: 'setup@example.org',
+        GIT_COMMITTER_NAME: 'Setup',
+        GIT_COMMITTER_EMAIL: 'setup@example.org',
+      },
+    })
+  git(root, 'init', '--quiet', '--bare', '-b', 'master', remote)
+  const work = join(root, 'work')
+  git(root, 'init', '--quiet', '-b', 'master', work)
+  git(work, 'commit', '--quiet', '--allow-empty', '-m', 'initial')
+  git(work, 'push', '--quiet', remote, 'master')
+  return remote
+}
+
+describe.skipIf(process.platform === 'win32')('filmes-dados on the VPS', () => {
+  it('writes the key for the container only, clones once and sets app.env', () => {
+    const vps = aVps()
+    const remote = aDataRemote()
+    const { data, folder } = vps.paths
+
+    vps.publish(SHA_1, { remote, key: KEY })
+
+    expect(vps.read(join(data, 'filmes-dados.key'))).toBe(KEY)
+    expect(statSync(join(data, 'filmes-dados.key')).mode & 0o777).toBe(0o600)
+    expect(vps.read(join(data, 'filmes-dados', '.git', 'HEAD'))).not.toBeNull()
+    expect(vps.read(join(folder, 'app.env'))).toBe(
+      `FILMES_DADOS=/data/filmes-dados\nFILMES_DATA_REMOTE=${remote}\nFILMES_DATA_KEY=/data/filmes-dados.key\n`,
+    )
+    expect(vps.calls()).toContain(`chown -R 1000:1000 ${data}/filmes-dados`)
+  })
+
+  it('keeps the clone and the other lines of app.env on the next deploy', () => {
+    const vps = aVps()
+    const remote = aDataRemote()
+    const { data, folder } = vps.paths
+    vps.publish(SHA_1, { remote, key: KEY })
+    vps.vps.run(
+      `echo pending > ${data}/filmes-dados/unpushed.md\necho OTHER=1 >> app.env\n`,
+    )
+
+    vps.publish(SHA_2, { remote, key: KEY })
+    vps.publish(SHA_3)
+
+    expect(vps.read(join(data, 'filmes-dados', 'unpushed.md'))).toBe(
+      'pending\n',
+    )
+    expect(vps.read(join(folder, 'app.env'))).toBe(
+      `OTHER=1\nFILMES_DADOS=/data/filmes-dados\nFILMES_DATA_REMOTE=${remote}\nFILMES_DATA_KEY=/data/filmes-dados.key\n`,
+    )
+  })
+
+  it('refuses a remote or a key that would break the script, without showing it', () => {
+    const vps = aVps()
+
+    expect(() =>
+      vps.publish(SHA_1, { remote: "x'; rm -rf /", key: KEY }),
+    ).toThrow('FILMES_DATA_REMOTE is not a git URL.')
+    expect(() =>
+      vps.publish(SHA_1, {
+        remote: 'git@github.com:o/r.git',
+        key: 'x\nFILMES_DATA_KEY\n',
+      }),
+    ).toThrow('FILMES_DATA_DEPLOY_KEY is not a private key.')
+  })
+})
+
+describe('filmes-dados from the environment', () => {
+  it('both or neither, and the message names the variable only', () => {
+    expect(dataRepoFrom({})).toBeUndefined()
+    expect(
+      dataRepoFrom({ FILMES_DATA_REMOTE: '', FILMES_DATA_DEPLOY_KEY: '' }),
+    ).toBeUndefined()
+    expect(dataRepoFrom({ FILMES_DATA_DEPLOY_KEY: KEY })).toBe(
+      'FILMES_DATA_REMOTE is missing (FILMES_DATA_DEPLOY_KEY is set).',
+    )
+    expect(dataRepoFrom({ FILMES_DATA_REMOTE: 'r' })).toBe(
+      'FILMES_DATA_DEPLOY_KEY is missing (FILMES_DATA_REMOTE is set).',
+    )
+    expect(
+      dataRepoFrom({
+        FILMES_DATA_REMOTE: 'git@github.com:o/r.git',
+        FILMES_DATA_DEPLOY_KEY: KEY.replaceAll('\n', '\r\n'),
+      }),
+    ).toEqual({ remote: 'git@github.com:o/r.git', key: KEY })
   })
 })
 

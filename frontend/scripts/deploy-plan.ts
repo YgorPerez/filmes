@@ -48,8 +48,27 @@ const UPLOAD = [
 
 /** The app's environment on the VPS, in the app folder, read by
  * `docker run --env-file` on every swap when it exists. Only root reads it.
- * Empty for the skeleton; the OAuth and source keys go here later. */
+ * Each step that sets variables replaces its own lines and keeps the rest
+ * (`dataRepo`); the OAuth and source keys go here later. */
 const APP_ENV = 'app.env'
+
+/** filmes-dados on the volume (ADR 0005): the clone the app writes and
+ * commits to, the deploy key that pushes it, and the hosts ssh has seen,
+ * by their path on the VPS and inside the container. */
+const DATA_REPO = {
+  clone: 'filmes-dados',
+  key: 'filmes-dados.key',
+  knownHosts: 'filmes-dados.key.known_hosts',
+} as const
+
+/** A git URL that goes into a script and into `app.env` as it is: no
+ * quote, no space, no `$`. */
+const REMOTE = /^[A-Za-z0-9@._~:/+-]+$/
+
+/** An OpenSSH private key, which goes into a script in a quoted
+ * here-document: only its own lines. */
+const PRIVATE_KEY =
+  /^-----BEGIN [A-Z ]+-----\n[A-Za-z0-9+/=\n]+-----END [A-Z ]+-----\n?$/
 
 /** The UID and GID of the `node` user in `node:24-alpine`, which the
  * container runs as: the volume is its. */
@@ -156,6 +175,54 @@ function ensureVolume(paths: VpsPaths) {
 chown ${NODE_USER} ${paths.data} ${paths.data}/db
 echo "Volume ${paths.data} ready."
 `
+}
+
+/** What the app needs to push filmes-dados: the remote and the deploy
+ * key's text (a GitHub deploy key with write access to that repository
+ * only). */
+export type DataRepo = { remote: string; key: string }
+
+/** The deploy key in the volume, readable by the container only; the clone
+ * of filmes-dados, made once, with that key; and `app.env` with
+ * `FILMES_DADOS`, `FILMES_DATA_REMOTE` and `FILMES_DATA_KEY`, the rest of the file kept. The
+ * key goes inside the script, which reaches the VPS through ssh's stdin,
+ * never on a command line. An existing clone is left as it is: it may hold
+ * commits not pushed yet. */
+function dataRepo({ remote, key }: DataRepo, paths: VpsPaths) {
+  const keyFile = `${paths.data}/${DATA_REPO.key}`
+  const knownHosts = `${paths.data}/${DATA_REPO.knownHosts}`
+  const clone = `${paths.data}/${DATA_REPO.clone}`
+  const text = key.endsWith('\n') ? key : `${key}\n`
+  return String.raw`( umask 077; cat > "${keyFile}.new" <<'FILMES_DATA_KEY'
+${text}FILMES_DATA_KEY
+)
+mv -f "${keyFile}.new" "${keyFile}"
+touch "${knownHosts}"
+chmod 600 "${keyFile}" "${knownHosts}"
+if [ ! -d "${clone}/.git" ]; then
+  command -v git >/dev/null || { echo "The VPS has no git: run prepare-vps.sh again." >&2; exit 1; }
+  rm -rf "${clone}.part"
+  GIT_SSH_COMMAND="ssh -F /dev/null -i '${keyFile}' -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile='${knownHosts}'" \
+    git clone --quiet '${remote}' "${clone}.part"
+  mv "${clone}.part" "${clone}"
+  chown -R ${NODE_USER} "${clone}"
+  echo "filmes-dados cloned into ${clone}."
+fi
+chown ${NODE_USER} "${keyFile}" "${knownHosts}"
+( umask 077
+  { grep -v -e '^FILMES_DADOS=' -e '^FILMES_DATA_REMOTE=' -e '^FILMES_DATA_KEY=' ${APP_ENV} 2>/dev/null || true
+    printf '%s\n' 'FILMES_DADOS=/data/${DATA_REPO.clone}' 'FILMES_DATA_REMOTE=${remote}' 'FILMES_DATA_KEY=/data/${DATA_REPO.key}'
+  } > ${APP_ENV}.new )
+mv -f ${APP_ENV}.new ${APP_ENV}
+echo "The push of filmes-dados is set in ${APP_ENV}."
+`
+}
+
+function checkDataRepo({ remote, key }: DataRepo) {
+  if (!REMOTE.test(remote))
+    throw new Error('FILMES_DATA_REMOTE is not a git URL.')
+  if (!PRIVATE_KEY.test(key))
+    throw new Error('FILMES_DATA_DEPLOY_KEY is not a private key.')
 }
 
 /** Which image the swap starts: a deploy's SHA, or the one already live,
@@ -303,17 +370,20 @@ function checkSha(sha: string) {
   if (!SHA.test(sha)) throw new Error(`"${sha}" is not a SHA.`)
 }
 
-/** Publishing a build: the upload, the image, the volume and the swap,
- * which installs the host configuration along with it. The database stays
- * the live one. */
+/** Publishing a build: the upload, the image, the volume, filmes-dados
+ * when its remote and key are given, and the swap, which installs the host
+ * configuration along with it. The database stays the live one. */
 export function publishPlan({
   sha,
+  dataRepo: data,
   paths = ON_VPS,
 }: {
   sha: string
+  dataRepo?: DataRepo
   paths?: VpsPaths
 }): Step[] {
   checkSha(sha)
+  if (data) checkDataRepo(data)
   return [
     {
       name: 'Upload',
@@ -322,6 +392,7 @@ export function publishPlan({
     },
     { name: 'Image', script: buildImage(sha) },
     { name: 'Volume', script: ensureVolume(paths) },
+    ...(data ? [{ name: 'Data repo', script: dataRepo(data, paths) }] : []),
     {
       name: 'Swap',
       script: swapApp(

@@ -11,6 +11,10 @@
 #   docker run --rm -p 127.0.0.1:4391:3000 filmes-app
 FROM node:24-alpine
 
+# The engine commits each write to filmes-dados and pushes it over ssh with
+# the deploy key (ADR 0005, `packages/engine/src/data/DataWriter.ts`).
+RUN apk add --no-cache git openssh-client
+
 ENV NODE_ENV=production \
     PORT=3000 \
     HOST=0.0.0.0 \
