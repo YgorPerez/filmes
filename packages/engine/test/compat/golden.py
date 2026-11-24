@@ -361,6 +361,44 @@ def compare_vectors(r):
     return rows
 
 
+def strip_vectors(r):
+    space = [cp for cp in ASSIGNED if chr(cp).isspace()]
+    rows = [{"space": ranges(space)}]
+    for _ in range(N):
+        pad = lambda: "".join(chr(r.choice(space)) if r.random() < 0.7 else r.choice(" \ufeff\u200b") for _ in range(r.randint(0, 3)))
+        s = pad() + random_text(r, r.randint(0, 6)) + pad()
+        rows.append({"s": s, "out": s.strip()})
+    return rows
+
+
+# --- exp --------------------------------------------------------------------
+
+EXP_EDGES = [
+    0.0, -0.0, 5e-324, -5e-324, 1e-300, 2.0**-54, -(2.0**-54), 2.0**-53, 1e-17, 1.0, -1.0, 0.5, 512.0,
+    -512.0, 511.9999999999999, 709.782712893384, 709.7827128933841, 709.79, 710.0, -708.3964185322641,
+    -708.4, -720.0, -745.1332191019411, -745.1332191019412, -746.0, 1024.0, -1024.0, 1e308,
+    math.inf, -math.inf, math.nan,
+]
+
+
+def exp_vectors(r):
+    rows = [{"x": tag(x), "out": attempt(math.exp, x)} for x in EXP_EDGES]
+    for _ in range(N * 2):
+        k = r.random()
+        if k < 0.3:
+            x = r.uniform(-50, 50)
+        elif k < 0.5:
+            x = r.uniform(-1, 1) * 10 ** r.randint(-20, 0)
+        elif k < 0.75:
+            x = r.uniform(-746, 710)
+        elif k < 0.9:
+            x = r.uniform(-746, -700)
+        else:
+            x = any_float(r)
+        rows.append({"x": tag(x), "out": attempt(math.exp, x)})
+    return rows
+
+
 def main():
     for name, make, seed in [
         ("py-sum", sum_vectors, 1),
@@ -374,6 +412,8 @@ def main():
         ("slug", slug_vectors, 9),
         ("fact-id", fact_id_vectors, 10),
         ("compare-tuple", compare_vectors, 11),
+        ("exp", exp_vectors, 12),
+        ("strip", strip_vectors, 13),
     ]:
         write(name, make(random.Random(seed)))
 

@@ -15,11 +15,13 @@ export type Tagged =
   | { readonly error: string }
   | readonly Tagged[]
 
-/** The rows of one vector file, after its header line. */
-export const golden = <Row>(name: string): Row[] =>
-  gunzipSync(
-    readFileSync(new URL(`./golden/${name}.jsonl.gz`, import.meta.url)),
-  )
+/** The rows of one vector file, after its header line. `folder` is where
+ * the files are; by default this one's `golden/`. */
+export const golden = <Row>(
+  name: string,
+  folder: URL = new URL('./golden/', import.meta.url),
+): Row[] =>
+  gunzipSync(readFileSync(new URL(`${name}.jsonl.gz`, folder)))
     .toString('utf8')
     .split('\n')
     .filter((line) => line !== '')

@@ -13,7 +13,9 @@ import {
   pyFloat,
   pyFormatG,
   pyInt,
+  pyExp,
   pyRound,
+  pyStrip,
   pyStr,
   pySum,
   thousandsDot,
@@ -64,6 +66,12 @@ describe('numbers', () => {
         ),
       ),
     ).toEqual([])
+  })
+
+  test('pyExp gives math.exp bit for bit', () => {
+    const rows = golden<{ x: { f: string }; out: Tagged }>('exp')
+    expect(rows.length).toBeGreaterThanOrEqual(20_000)
+    expect(misses(rows, ({ x }) => pyExp(float(x.f)))).toEqual([])
   })
 
   test('pyRound rounds as round()', () => {
@@ -131,6 +139,23 @@ describe('text', () => {
     expect(wrong).toEqual([])
     atLeast10k(rows)
     expect(misses(rows, ({ s }) => casefold(s))).toEqual([])
+  })
+
+  test('pyStrip strips what str.strip() strips', () => {
+    const [table, ...rows] = golden<{ space: Range[]; s: string; out: string }>(
+      'strip',
+    )
+    const space = new Set(codePoints(table?.space ?? []))
+    // Every code point is stripped alone exactly when Python takes it as
+    // whitespace.
+    const wrong = [...codePoints([[0, 0x10ffff]])].filter(
+      (cp) =>
+        (cp < 0xd800 || cp > 0xdfff) &&
+        (pyStrip(String.fromCodePoint(cp)) === '') !== space.has(cp),
+    )
+    expect(wrong).toEqual([])
+    atLeast10k(rows)
+    expect(misses(rows, ({ s }) => pyStrip(s))).toEqual([])
   })
 
   test('isalnum agrees with str.isalnum() on every code point', () => {
