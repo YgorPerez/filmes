@@ -132,8 +132,8 @@ Respostas das fontes sob demanda como a API devolve, em `<fonte>/<tconst>.json`.
 
 Repo de dados fictício. Cada teste trabalha numa cópia, então comandos podem escrever nele.
 
-- `pessoas/bruno.md`: o Dono (`dono: true`, apelido `eu`).
-- `pessoas/iara.md` e `pessoas/teo.md`: Pessoas para os testes de grupo.
+- `pessoas/bruno.md`: o Dono (`dono: true`, apelido `eu`), com `email: bruno@example.org`, que entra no login online (#112).
+- `pessoas/iara.md` e `pessoas/teo.md`: Pessoas para os testes de grupo. A Iara tem `email: iara@example.org` sem ser Dona: o login a recusa (#112).
 - `pessoas/quim.md`: Pessoa para os testes de Crédito; tem uma pergunta aberta sobre a Helena Prado (Q9000001), para os testes de perguntas abertas (#62).
 - `pessoas/rosa.md`: Pessoa do teste do teto do elenco no metadado agregado (#55).
 - Não há `sessoes/`: os testes criam as Sessões com `recomendar` e `feedback`, ou escrevem o arquivo direto quando precisam de várias datas (veja `test_credito.py`).

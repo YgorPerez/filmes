@@ -1,4 +1,5 @@
 import babel from '@rolldown/plugin-babel'
+import tailwindcss from '@tailwindcss/vite'
 import { tanstackStart } from '@tanstack/react-start/plugin/vite'
 import viteReact, { reactCompilerPreset } from '@vitejs/plugin-react'
 import { nitro } from 'nitro/vite'
@@ -7,6 +8,8 @@ import { defineConfig, type PluginOption } from 'vite-plus'
 // Vitest only needs React: Start and nitro build the server, which no Vitest
 // test uses.
 const appPlugins = (): PluginOption[] => [
+  // The Tailwind classes (`styles.css`, `ui/tokens.css`), before Start.
+  tailwindcss(),
   tanstackStart(),
   nitro(),
   viteReact(),

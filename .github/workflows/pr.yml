@@ -3,8 +3,9 @@
 # affected tests (`scripts/verify-push.ts`).
 #
 # Three jobs in parallel, each on its own runner: `check` (the workspace),
-# `build` (the app builds and serves `/`) and `python` (the Python engine and
-# the MCP that calls its CLI, until the port replaces them).
+# `build` (the app builds, serves `/` and passes the e2e) and `python` (the
+# Python engine and the MCP that calls its CLI, until the port replaces
+# them).
 #
 # Every job has `timeout-minutes`: without it, a stuck job holds the PR for
 # GitHub's default six hours.
@@ -83,10 +84,10 @@ jobs:
       - name: Check
         run: pnpm check
 
-  # The app build, as the deploy will do it, and its `/` answering.
+  # The app build, as the deploy will do it, its `/` answering, and the e2e.
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -107,19 +108,26 @@ jobs:
       - name: Build
         run: pnpm build
 
-      - name: Serve /
+      # Without a Dono logged in, `/` leads to the login page.
+      - name: Serve /entrar
         working-directory: frontend
         run: |
           PORT=3000 node .output/server/index.mjs &
           for _ in $(seq 1 20); do
-            if curl -fsS http://localhost:3000/ -o "$RUNNER_TEMP/home.html"; then
-              grep -q '<h1>filmes</h1>' "$RUNNER_TEMP/home.html"
+            if curl -fsSL http://localhost:3000/ -o "$RUNNER_TEMP/home.html"; then
+              grep -q 'Entrar com Google' "$RUNNER_TEMP/home.html"
               exit $?
             fi
             sleep 1
           done
           echo '::error::The built app did not answer on /.'
           exit 1
+
+      # The login in Chrome, with a stand-in for Google (`e2e/fake-google.ts`)
+      # and the fixture's Pessoas (`playwright.config.ts`).
+      - name: E2E
+        working-directory: frontend
+        run: pnpm e2e
 
   # The Python suite (`uv run pytest`) and the MCP tests over the real CLI:
   # `make check`.
