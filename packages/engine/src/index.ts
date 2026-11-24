@@ -3,6 +3,43 @@
 
 export * from './compat/index.ts'
 export {
+  contribution,
+  evidenceToJson,
+  makeEvidence,
+  requestLine,
+  withoutFact,
+  type Evidence,
+  type EvidenceJson,
+} from './evidence/Evidence.ts'
+export * from './evidence/ruler.ts'
+export {
+  KINDS,
+  STRENGTHS,
+  type Kind,
+  type Level,
+  type Link,
+  type Strength,
+} from './evidence/strength.ts'
+export * from './evidence/wording.ts'
+export { resolveAttendees } from './recommendation/attendees.ts'
+export {
+  chooseCandidates,
+  prepareSelection,
+  type Candidate,
+  type CandidateSelection,
+} from './recommendation/candidates.ts'
+export {
+  DEFAULT_RULE,
+  NEUTRAL_UTILITY,
+  RULE_NAMES,
+  ruleKey,
+  ruleToJson,
+  usesCredit,
+  type Rule,
+  type RuleName,
+} from './recommendation/rule.ts'
+export { individualUtility } from './recommendation/utility.ts'
+export {
   engineLayer,
   errorOutcome,
   makeEngine,
