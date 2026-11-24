@@ -5,12 +5,16 @@ Recomendador de filmes com evidência. Motor em Python (`python -m filmes <coman
 ## Verificação
 
 ```sh
-make check
+pnpm install   # uma vez: o workspace inteiro, e o patch do @effect/tsgo no prepare
+pnpm check     # formato e lint (Oxfmt, Oxlint com tipos), tipos, testes com piso de cobertura, fallow e React Doctor
+make check     # testes Python (uv run pytest), typecheck e testes do MCP (Vitest, com a CLI de verdade)
 ```
 
-Roda os testes Python (`uv run pytest`), o typecheck do MCP (`tsc --noEmit`) e os testes do MCP (`node --test`). Instala o que faltar (`uv sync`, `npm ci`) na primeira vez. Tudo verde antes de qualquer commit que vá para a integração.
+O repo é um workspace pnpm no molde do pesquisa-relacionamentos (map #72): `frontend/` (TanStack Start), `packages/engine` (o motor em TypeScript, vazio até o port) e `mcp/`. O motor Python fica fora do workspace até o port substituí-lo. `make check` instala o que faltar (`uv sync`, `pnpm install`) na primeira vez. Os dois verdes antes de qualquer commit que vá para a integração; o PR roda os dois no CI (`.github/workflows/pr.yml`).
 
-Precisa de `uv` e de Node 23.6 ou mais novo (o MCP roda `.ts` direto, sem build).
+O gancho de push (`node scripts/install-hooks.ts`, uma vez por clone) roda a auditoria de supressões e só os testes do que o push mudou. O teto de supressões é zero (`.github/suppression-ceiling.json`).
+
+Precisa de `uv`, pnpm e Node 24 (o MCP roda `.ts` direto, sem build).
 
 ## Rodar
 
@@ -73,7 +77,10 @@ mcp/src/
 skill/filmes/SKILL.md      skill do Claude; feedback.md, pessoas.md e cartaz.md (texto colado e perguntas de gosto)
 tests/                     testes Python, só pela CLI
 tests/fixture/             mini Catálogo (catalogo/*.csv), repo de dados fictício (dados/) e respostas gravadas das fontes sob demanda (gravacoes/)
-mcp/test/                  testes do MCP, chamando a CLI de verdade sobre a mesma fixture
+mcp/test/                  testes do MCP (Vitest), chamando a CLI de verdade sobre a mesma fixture
+frontend/                  app TanStack Start: hoje só serve /
+packages/engine/           motor em TypeScript com Effect v4, vazio até o port
+scripts/                   gancho de push (verify-push.ts, affected.ts, install-hooks.ts)
 ```
 
 ## Convenções
