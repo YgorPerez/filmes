@@ -27,7 +27,12 @@ const fakeFetch = (
 ) => {
   const calls: Call[] = []
   const fetch = (input: string | URL | Request, init?: RequestInit) => {
-    const url = String(input)
+    const url =
+      typeof input === 'string'
+        ? input
+        : input instanceof URL
+          ? input.href
+          : input.url
     calls.push({
       url,
       headers: { ...(init?.headers as Record<string, string>) },

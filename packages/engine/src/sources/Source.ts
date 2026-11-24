@@ -154,7 +154,9 @@ const readRecording = (
   })
 
 /** The `fetch` the sources call: the global one, unless an effect provides
- * another (tests do, so no test reaches the network). */
+ * another (tests do, so no test reaches the network). Plain `fetch`, not
+ * `effect/http`'s HttpClient: that module is flagged unstable, and the lint
+ * denies the warning. */
 export const Fetch = Context.Reference<typeof globalThis.fetch>(
   '@filmes/engine/sources/Fetch',
   { defaultValue: () => globalThis.fetch },
