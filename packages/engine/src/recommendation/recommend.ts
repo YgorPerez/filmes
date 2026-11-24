@@ -1,0 +1,486 @@
+// The Recomendação: Candidates, signals per Presente, utility and order
+// (`recomendacao/__init__.py` `recomendar`, and `comandos/recomendar.py`
+// up to opening the Session, which is #94's).
+//
+// The Presentes' Vetos and the Restrições asked for remove films before the
+// signals; a Restrição that needs an on-demand source is resolved after the
+// order, only at its top. Each film that passes carries in `filmLines` the
+// lines that say why. The film signals go to `filmLines` too, after the
+// Restrições' lines; their contributions add a bonus to the Regra's score,
+// which pulls the order without touching anyone's utility.
+//
+// The order follows the Regra de escolha (`rule.ts`), in three bands: (0)
+// some Presente has a known utility, by the Regra, with 0.5 for whoever has
+// no Fact; (1) Facts only in the film signals; (2) only guesses, which show
+// only when Candidates with Facts run out. Then the most voted first, then
+// the id. Each film carries each Presente's utility and Evidence, grouped by
+// slug in the Presentes' order; whoever has no Fact on the film gets the
+// "sem fato" line. The Crédito line also goes in `filmLines` when the
+// adjustment changes the order.
+
+import { Effect } from 'effect'
+import { compareTuple, type PyOrderable } from '../compat/compare.ts'
+import { pyRound, pySum } from '../compat/number.ts'
+import { pyStrip } from '../compat/text.ts'
+import { pythonError } from '../compat/python-error.ts'
+import {
+  contribution,
+  evidenceToJson,
+  withoutFact,
+  type Evidence,
+  type EvidenceJson,
+} from '../evidence/Evidence.ts'
+import type { EngineServices } from '../runtime/Engine.ts'
+import { Environment } from '../runtime/Environment.ts'
+import { engineError, type EngineError } from '../runtime/EngineError.ts'
+import { Run } from '../runtime/Run.ts'
+import { text } from '../sqlite/row.ts'
+import { Sqlite, type Connection, type SqliteError } from '../sqlite/Sqlite.ts'
+import { resolveAttendees } from './attendees.ts'
+import { attributionsOf, type Attribution } from './attributions.ts'
+import {
+  chooseCandidates,
+  type Candidate,
+  type CandidateSelection,
+} from './candidates.ts'
+import {
+  makeConstraintSet,
+  type Constraint,
+  type ConstraintContext,
+} from './constraints.ts'
+import { computeCredit, creditLine, type Credit } from './credit.ts'
+import { filmHeader, type FilmHeader } from './header.ts'
+import { resolveMoods } from './moods.ts'
+import {
+  DEFAULT_RULE,
+  ruleKey,
+  ruleToJson,
+  usesCredit,
+  type Rule,
+  type RuleName,
+} from './rule.ts'
+import { SIGNALS } from './signals/index.ts'
+import type { Round } from './signals/Signal.ts'
+import { individualUtility } from './utility.ts'
+import { applyVetoes, type VetoReport } from './vetoes.ts'
+
+export interface RecommendedFilm extends FilmHeader {
+  readonly position: number
+  readonly id: string
+  readonly title: string
+  readonly year: number | null
+  readonly runtimeMinutes: number | null
+  readonly coverage: {
+    /** How many Presentes have a Fact on the film. */
+    readonly withFact: number
+    readonly attendees: number
+    readonly withoutFact: ReadonlyArray<string>
+  }
+  /** Band 2: nobody has a Fact and no film signal backs it. */
+  readonly onlyGuesses: boolean
+  /** By Presente, rounded to 4 places; `null` with no Fact. */
+  readonly utility: Readonly<Record<string, number | null>>
+  /** By Presente, in the Presentes' order; the strongest first. */
+  readonly evidence: Readonly<Record<string, ReadonlyArray<EvidenceJson>>>
+  /** The Restrições' lines, the film signals and the Crédito line. */
+  readonly filmLines: ReadonlyArray<EvidenceJson>
+}
+
+export interface Recommendation {
+  readonly attendees: ReadonlyArray<string>
+  readonly rule: ReturnType<typeof ruleToJson>
+  /** By Presente, rounded to 4 places; empty when the Regra or a Session
+   * alone takes no Crédito. */
+  readonly credit: Readonly<Record<string, number>>
+  readonly vetoes: ReadonlyArray<VetoReport>
+  readonly moods: ReadonlyArray<string>
+  readonly films: ReadonlyArray<RecommendedFilm>
+  readonly constraints: Readonly<
+    Record<string, Readonly<Record<string, unknown>>>
+  >
+  readonly warnings: ReadonlyArray<string>
+  readonly attributions: ReadonlyArray<Attribution>
+}
+
+export interface RankOptions {
+  /** Slugs, already resolved, in the request's order. */
+  readonly attendees: ReadonlyArray<string>
+  readonly count: number
+  readonly rule?: Rule
+  readonly constraints?: ReadonlyArray<Constraint>
+  /** Clima names as asked. */
+  readonly moods?: ReadonlyArray<string>
+  /** The Candidates prepared once for many rounds (`avaliar`). */
+  readonly selection?: CandidateSelection
+}
+
+type Key = readonly PyOrderable[]
+
+interface Ordered {
+  readonly key: Key
+  readonly film: Candidate
+  readonly utilities: ReadonlyMap<string, number | null>
+  readonly evidence: ReadonlyArray<Evidence>
+}
+
+const orderKey = (
+  byRule: readonly number[] | null,
+  hasFact: boolean,
+  film: Candidate,
+  bonus: number,
+): Key => {
+  const band: Key =
+    byRule !== null
+      ? [0, byRule.map((v) => -(v + bonus))]
+      : [hasFact ? 1 : 2, [-bonus]]
+  return [...band, -film.votes, film.id]
+}
+
+const byKey = (a: { key: Key }, b: { key: Key }) =>
+  compareTuple([...a.key], [...b.key])
+
+/** Who has Crédito and made this film go up: the film gained places with
+ * the Crédito, the Pessoa has a Fact on it and is not the default Regra's
+ * minimum (the film is hers: with the Crédito, the films where she is the
+ * minimum fell and this one stayed). The minimum is among those with a
+ * Fact: the 0.5 of whoever has none does not count. */
+const wentUpByCredit = (
+  filmId: string,
+  contested: ReadonlyMap<string, number>,
+  positionWithoutCredit: ReadonlyMap<string, number>,
+  utilities: ReadonlyMap<string, number | null>,
+  adjustment: ReadonlyMap<string, number>,
+): ReadonlyArray<string> => {
+  const position = contested.get(filmId)
+  const before = positionWithoutCredit.get(filmId)
+  if (adjustment.size === 0 || position === undefined) return []
+  if (before === undefined) throw pythonError('KeyError', `'${filmId}'`)
+  if (position >= before) return []
+  const adjusted = [...utilities]
+    .filter((entry): entry is [string, number] => entry[1] !== null)
+    .map(([p, u]): [string, number] => [p, u - (adjustment.get(p) ?? 0.0)])
+  if (adjusted.length === 0)
+    throw pythonError('ValueError', 'min() iterable argument is empty')
+  const minimum = Math.min(...adjusted.map(([, u]) => u))
+  return adjusted
+    .filter(([p, u]) => adjustment.has(p) && u > minimum)
+    .map(([p]) => p)
+}
+
+/** The recommendation for Presentes already resolved, on an open read
+ * connection (Python's `recomendar(conn, ...)`). Warnings go to the
+ * request's `Run`; the result carries the ones this call added. */
+export const rank = (
+  db: Connection,
+  options: RankOptions,
+): Effect.Effect<
+  Recommendation,
+  EngineError | SqliteError,
+  EngineServices | Run
+> =>
+  Effect.gen(function* () {
+    const { weights } = yield* Environment
+    const run = yield* Run
+    const warningsBefore = (yield* run.warnings).length
+    const { attendees, count, selection } = options
+    const rule = options.rule ?? DEFAULT_RULE
+
+    // Every Presente's Vetos hold, whatever the Regra.
+    const eligible = selection?.films ?? (yield* chooseCandidates(db, weights))
+    const vetoes = yield* applyVetoes(
+      db,
+      attendees,
+      eligible,
+      weights.tag_vetoes,
+    )
+    const moods = yield* resolveMoods(options.moods ?? [])
+    for (const warning of moods.warnings) yield* run.warn(warning)
+    const context: ConstraintContext = {
+      db,
+      weights,
+      today: run.today,
+      attendees,
+    }
+    const asked = makeConstraintSet(context, options.constraints ?? [])
+    const round: Round = {
+      db,
+      weights,
+      today: run.today,
+      candidates: yield* asked.candidates(vetoes.remaining),
+      attendees,
+      moods: moods.moods,
+    }
+
+    const byFilm = new Map<string, Evidence[]>()
+    const ofFilm = new Map<string, Evidence[]>()
+    const collect = (
+      into: Map<string, Evidence[]>,
+      evidence: ReadonlyArray<Evidence>,
+    ) => {
+      for (const e of evidence)
+        into.set(e.filmId, [...(into.get(e.filmId) ?? []), e])
+    }
+    for (const signal of SIGNALS) {
+      if (signal.forPerson)
+        for (const person of attendees)
+          collect(byFilm, yield* signal.forPerson(round, person))
+      if (signal.forFilm) collect(ofFilm, yield* signal.forFilm(round))
+    }
+
+    // Crédito (#20): only in the default Regra and in a group.
+    // `adjustment` is each Pessoa's factor × Crédito.
+    const credits: ReadonlyMap<string, Credit> =
+      usesCredit(rule) && attendees.length > 1
+        ? yield* computeCredit(db, attendees, weights.credit.window)
+        : new Map()
+    const factor = weights.credit.factor
+    const adjustment = new Map(
+      [...credits]
+        .filter(([, c]) => factor && c.value > 0)
+        .map(([p, c]) => [p, factor * c.value]),
+    )
+
+    let ids: Iterable<string> = round.candidates.keys()
+    if (
+      selection !== undefined &&
+      adjustment.size === 0 &&
+      asked.pending.size === 0
+    ) {
+      // With no lookup that could refuse a film after the order, the other
+      // guesses never reach the top when there are already `count` more
+      // voted ones.
+      const popular = selection.popular
+        .filter((id) => round.candidates.has(id))
+        .slice(0, count)
+      ids = new Set([...byFilm.keys(), ...ofFilm.keys(), ...popular])
+    }
+    const ordered: Ordered[] = []
+    const withoutCredit: { key: Key; id: string }[] = []
+    for (const filmId of ids) {
+      const film = round.candidates.get(filmId)
+      if (film === undefined) throw pythonError('KeyError', `'${filmId}'`)
+      const evidence = byFilm.get(filmId) ?? []
+      const utilities = new Map(
+        attendees.map((person) => [
+          person,
+          individualUtility(
+            evidence.filter((e) => e.person === person),
+            weights,
+          ),
+        ]),
+      )
+      const filmSignals = ofFilm.get(filmId) ?? []
+      const bonus = pySum(filmSignals.map((e) => contribution(e, weights)))
+      const hasFact = [...evidence, ...filmSignals].some(
+        (e) => e.kind !== 'guess' && e.countsAsFact,
+      )
+      ordered.push({
+        key: orderKey(
+          ruleKey(rule, utilities, adjustment),
+          hasFact,
+          film,
+          bonus,
+        ),
+        film,
+        utilities,
+        evidence,
+      })
+      if (adjustment.size > 0)
+        withoutCredit.push({
+          key: orderKey(ruleKey(rule, utilities), hasFact, film, bonus),
+          id: filmId,
+        })
+    }
+    ordered.sort(byKey)
+    const approved = yield* asked.approve(
+      ordered,
+      count,
+      weights.constraints.on_demand_reach,
+      (item) => item.film,
+    )
+    const approvedIds = new Set(approved.map((item) => item.film.id))
+    // The two orders with the same verdicts, without asking an on-demand
+    // source for more answers.
+    const positionWithoutCredit = new Map(
+      withoutCredit
+        .sort(byKey)
+        .filter(
+          ({ id }) => approvedIds.has(id) || !asked.pending.get(id)?.length,
+        )
+        .map(({ id }, i) => [id, i + 1]),
+    )
+    const contested = new Map(approved.map((item, i) => [item.film.id, i + 1]))
+
+    const names = new Map<string, string>()
+    if (adjustment.size > 0)
+      for (const row of yield* db.all('SELECT slug, nome FROM pessoas'))
+        names.set(text(row, 'slug'), text(row, 'nome'))
+    const strongestFirst = (a: Evidence, b: Evidence) =>
+      compareTuple(
+        [-Math.abs(contribution(a, weights)), a.factId ?? ''],
+        [-Math.abs(contribution(b, weights)), b.factId ?? ''],
+      )
+    const films: RecommendedFilm[] = []
+    for (const [i, { key, film, utilities, evidence }] of approved.entries()) {
+      const all = [
+        ...evidence,
+        ...[...utilities]
+          .filter(([, u]) => u === null)
+          .map(([p]) => withoutFact(p, film.id)),
+      ].sort(strongestFirst)
+      // Film signals: the strongest first; on a tie, the order of the
+      // Climas asked for.
+      const signalLines = [...(ofFilm.get(film.id) ?? [])].sort(
+        (a, b) =>
+          Math.abs(contribution(b, weights)) -
+          Math.abs(contribution(a, weights)),
+      )
+      const creditLines = wentUpByCredit(
+        film.id,
+        contested,
+        positionWithoutCredit,
+        utilities,
+        adjustment,
+      ).map((p) => {
+        const credit = credits.get(p)
+        if (credit === undefined) throw pythonError('KeyError', `'${p}'`)
+        return creditLine(p, names.get(p) ?? p, credit, film.id, run.today)
+      })
+      const lines = [...asked.linesOf(film.id), ...signalLines, ...creditLines]
+      const withoutFactOn = [...utilities]
+        .filter(([, u]) => u === null)
+        .map(([p]) => p)
+      films.push({
+        position: i + 1,
+        id: film.id,
+        title: film.title,
+        year: film.year,
+        runtimeMinutes: film.runtimeMinutes,
+        ...(yield* filmHeader(db, film)),
+        coverage: {
+          withFact: utilities.size - withoutFactOn.length,
+          attendees: utilities.size,
+          withoutFact: withoutFactOn,
+        },
+        onlyGuesses: key[0] === 2,
+        utility: Object.fromEntries(
+          [...utilities].map(([p, u]) => [
+            p,
+            u === null ? null : pyRound(u, 4),
+          ]),
+        ),
+        evidence: Object.fromEntries(
+          attendees.map((p) => [
+            p,
+            all
+              .filter((e) => e.person === p)
+              .map((e) => evidenceToJson(e, weights)),
+          ]),
+        ),
+        filmLines: lines.map((e) => evidenceToJson(e, weights)),
+      })
+    }
+    for (const warning of asked.listWarnings(films.length, count))
+      yield* run.warn(warning)
+
+    return {
+      attendees,
+      rule: ruleToJson(rule),
+      credit: Object.fromEntries(
+        [...credits].map(([p, c]) => [p, pyRound(c.value, 4)]),
+      ),
+      vetoes: vetoes.acted,
+      moods: moods.moods.map((m) => m.name),
+      films,
+      constraints: asked.toJson(),
+      warnings: (yield* run.warnings).slice(warningsBefore),
+      attributions: attributionsOf([
+        ...films.flatMap((f) =>
+          [f.filmLines, ...Object.values(f.evidence)].flatMap((lines) =>
+            lines.map((e) => e.source),
+          ),
+        ),
+        ...films.filter((f) => f.poster || f.titlePt).map(() => 'TMDB'),
+      ]),
+    }
+  })
+
+/** A recommendation request, as an edge (the MCP, the app, the oracle's
+ * argv adapter) gives it. */
+export interface RecommendRequest {
+  /** Slugs, names or nicknames, or "dono"; an item may hold several
+   * separated by commas. */
+  readonly attendees: ReadonlyArray<string>
+  /** How many films; `[recommendation] size` when absent. */
+  readonly count?: number
+  /** `default` unless `by` is given, then `by`. */
+  readonly rule?: RuleName
+  /** With the `by` rule, the Pessoa whose taste orders. */
+  readonly by?: string
+  readonly moods?: ReadonlyArray<string>
+  readonly constraints?: ReadonlyArray<Constraint>
+}
+
+const resolveRule = (
+  db: Connection,
+  request: RecommendRequest,
+  attendees: ReadonlyArray<string>,
+): Effect.Effect<Rule, EngineError | SqliteError> =>
+  Effect.gen(function* () {
+    const name = request.rule ?? (request.by ? 'by' : 'default')
+    if (name !== 'by') {
+      if (request.by)
+        return yield* engineError(
+          'invalid_usage',
+          `--de só vale com --regra de, não com --regra ${name}`,
+        )
+      return { name }
+    }
+    if (!request.by)
+      return yield* engineError(
+        'invalid_usage',
+        '--regra de precisa de --de com a Pessoa cujo gosto ordena',
+      )
+    const [person = ''] = yield* resolveAttendees(db, [request.by])
+    if (!attendees.includes(person))
+      return yield* engineError(
+        'invalid_usage',
+        `--de ${request.by}: ${person} não está entre os Presentes`,
+      )
+    return { name: 'by', person }
+  })
+
+/** `recomendar` without the Session: the Presentes resolved, the Regra
+ * checked, and the ranked films with their Evidence. */
+export const recommend = (
+  request: RecommendRequest,
+): Effect.Effect<
+  Recommendation,
+  EngineError | SqliteError,
+  EngineServices | Run
+> =>
+  Effect.gen(function* () {
+    const { weights } = yield* Environment
+    const count = request.count ?? weights.recommendation.size
+    if (count < 1)
+      return yield* engineError(
+        'invalid_usage',
+        '--quantos precisa ser 1 ou mais',
+      )
+    const names = request.attendees
+      .flatMap((item) => item.split(','))
+      .filter((name) => pyStrip(name) !== '')
+    return yield* (yield* Sqlite).read((db) =>
+      Effect.gen(function* () {
+        const attendees = yield* resolveAttendees(db, names)
+        const rule = yield* resolveRule(db, request, attendees)
+        return yield* rank(db, {
+          attendees,
+          count,
+          rule,
+          constraints: request.constraints ?? [],
+          moods: request.moods ?? [],
+        })
+      }),
+    )
+  })

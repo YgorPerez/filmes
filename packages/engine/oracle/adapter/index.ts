@@ -91,7 +91,9 @@ export function makeAdapter(commands: readonly Command[]): Adapter {
         }
       const found = byName.get(command)
       if (!found) return { kind: 'not_ported', command }
-      const { operation, files } = found.prepare(rest, stdin)
+      const prepared = found.prepare(rest, stdin)
+      if (prepared === null) return { kind: 'not_ported', command }
+      const { operation, files } = prepared
       return {
         kind: 'ported',
         command,
