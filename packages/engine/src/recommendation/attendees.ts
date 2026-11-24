@@ -1,11 +1,12 @@
 // Who is who in a request: a Pessoa's slug, name or nickname, or "dono"
 // (`recomendacao/presentes.py`). The match ignores ASCII case, as SQLite's
-// `COLLATE NOCASE`.
+// `COLLATE NOCASE`. "dono" is the request's Dono (`Owner`).
 
 import { Effect } from 'effect'
 import { compareTuple } from '../compat/compare.ts'
 import { casefold, pyStrip } from '../compat/text.ts'
 import { engineError, type EngineError } from '../runtime/EngineError.ts'
+import { ownerOf } from '../runtime/Owner.ts'
 import type { Connection, SqliteError } from '../sqlite/Sqlite.ts'
 
 const slugOf = (row: { readonly [column: string]: unknown } | undefined) =>
@@ -17,16 +18,14 @@ const resolveOne = (
 ): Effect.Effect<string, EngineError | SqliteError> =>
   Effect.gen(function* () {
     if (casefold(name) === 'dono') {
-      const owner = yield* db.get(
-        'SELECT slug FROM pessoas WHERE dono = 1 ORDER BY slug',
-      )
-      if (!owner) {
+      const owner = yield* ownerOf(db)
+      if (owner === null) {
         return yield* engineError(
           'unknown_person',
           'nenhuma Pessoa tem dono: true no repo de dados',
         )
       }
-      return slugOf(owner)
+      return owner
     }
     const rows = yield* db.all(
       `SELECT slug FROM pessoas WHERE slug = ? COLLATE NOCASE OR nome = ? COLLATE NOCASE

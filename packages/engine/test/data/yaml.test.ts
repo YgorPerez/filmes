@@ -9,11 +9,13 @@ import {
   isPyInt,
   isSequence,
   parseYaml,
+  pyDate,
   pyIterate,
   pyReprValue,
   pyStrValue,
   pyTruthy,
   stringifyYaml,
+  yamlToJson,
   YamlError,
   type YamlValue,
 } from '../../src/data/yaml.ts'
@@ -239,5 +241,36 @@ describe("Python's view of a value", () => {
     expect(() => pyIterate(null)).toThrow("'NoneType'")
     expect(() => pyIterate(false)).toThrow("'bool'")
     expect(() => pyIterate(pyFloat(1))).toThrow("'float'")
+  })
+})
+
+describe('a date the engine writes', () => {
+  test('goes plain, as PyYAML writes a date, and reads back as its text', () => {
+    const text = stringifyYaml(
+      new Map<string, YamlValue>([
+        ['date', pyDate('2026-11-20')],
+        ['text', '2026-11-20'],
+      ]),
+    )
+
+    expect(text).toBe("{date: 2026-11-20, text: '2026-11-20'}\n")
+    expect(parseYaml(text)).toEqual(
+      new Map([
+        ['date', '2026-11-20'],
+        ['text', '2026-11-20'],
+      ]),
+    )
+  })
+
+  test('is a date to Python', () => {
+    const date = pyDate('2026-01-05')
+
+    expect(pyTruthy(date)).toBe(true)
+    expect(pyStrValue(date)).toBe('2026-01-05')
+    expect(pyReprValue(date)).toBe('datetime.date(2026, 1, 5)')
+    expect(yamlToJson(new Map([['d', date]]))).toEqual({ d: '2026-01-05' })
+    expect(() => pyIterate(date)).toThrow(
+      "TypeError: 'datetime.date' object is not iterable",
+    )
   })
 })
