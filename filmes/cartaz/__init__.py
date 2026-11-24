@@ -18,7 +18,8 @@ As atribuições das fontes ficam fora, como na resposta em Markdown (decisão d
 Dono de 2026-11-21).
 
 Numa versão refeita com `--manter` (#59), o filme que entrou leva o selo "novo" e
-o topo diz o que saiu e por quê, a partir de `saidas`.
+o topo diz o que saiu e por quê, a partir de `saidas`. Enquanto o parecido vale
+na Sessão (#68), a leitura do pedido no topo diz "parecidos com X".
 
 O cartaz responde (#60), como o do match-reply: a página não manda nada a lugar
 nenhum. Cada card tem Já vi (um chip por Presente, "Você" para o Dono, e "Todos"
@@ -182,7 +183,7 @@ def _saiu(frente, pessoas) -> str:
             quem = s.get("pessoas") or []
             nomes = " e ".join(filter(None, [", ".join(nome(p) for p in quem[:-1]), nome(quem[-1])])) if quem else ""
             return f"{nomes} já {'viu' if len(quem) == 1 else 'viram'}".strip()
-        if s["motivo"] in {"restricao", "nota_minima"}:
+        if s["motivo"] in {"restricao", "nota_minima", "parecido"}:
             return s.get("rotulo") or s.get("restricao")
         if s["motivo"] == "veto":
             de = "seu Veto" if s.get("pessoa") == dono else f"Veto de {nome(s.get('pessoa'))}"
