@@ -11,9 +11,11 @@
     "test:coverage": "vp test run --coverage"
   },
   "dependencies": {
-    "effect": "catalog:"
+    "effect": "catalog:",
+    "smol-toml": "1.9.1"
   },
   "devDependencies": {
+    "@filmes/key-migration": "workspace:*",
     "@total-typescript/ts-reset": "catalog:",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",

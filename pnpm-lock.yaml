@@ -304,7 +304,13 @@ importers:
       effect:
         specifier: 'catalog:'
         version: 4.0.2
+      smol-toml:
+        specifier: 1.9.1
+        version: 1.9.1
     devDependencies:
+      '@filmes/key-migration':
+        specifier: workspace:*
+        version: link:../key-migration
       '@total-typescript/ts-reset':
         specifier: 'catalog:'
         version: 0.6.1
@@ -3216,6 +3222,10 @@ packages:
 
   sisteransi@1.0.5:
     resolution: {integrity: sha512-bLGGlR1QxBcynn2d5YmDX4MGjlZvy2MRBDRNHLJ8VI6l6+9FUiyTFNJ0IveOSP0bcXgVDPRcfGqA0pjaqUpfVg==}
+
+  smol-toml@1.9.1:
+    resolution: {integrity: sha512-j7WyPdf0CJoutMzMoPLF/bVXHtKZIT9Rb4eGeEbWw8X2t5oirjPgpL+OpaENZrILYaXqYwnVH+qgUwVbl+pUJQ==}
+    engines: {node: '>= 18'}
 
   source-map-js@1.2.4:
     resolution: {integrity: sha512-J7ZjMvHd9O1fcT/5V09QWaaSl2BbWx3F6O08spde82Namf9UB0GxRVIPiNbVsdKkoizHiSpTodo3vp2bAy91MA==}
@@ -6390,6 +6400,8 @@ snapshots:
       totalist: 3.0.1
 
   sisteransi@1.0.5: {}
+
+  smol-toml@1.9.1: {}
 
   source-map-js@1.2.4: {}
 

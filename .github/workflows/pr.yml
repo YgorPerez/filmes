@@ -53,8 +53,18 @@ jobs:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
+      # The engine's tests start from a fixture database the Python engine
+      # builds (`packages/engine/test/global-setup.ts`), until the TypeScript
+      # reconstruct exists.
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: |
+          uv sync --frozen
+          pnpm install --frozen-lockfile
 
       # The suppression ceiling and the reason on each new directive
       # (`.github/scripts/suppressions.ts`). A `pull_request` checkout is the
