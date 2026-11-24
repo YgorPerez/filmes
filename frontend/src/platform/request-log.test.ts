@@ -17,7 +17,7 @@ describe("the server's log of each request", () => {
 
     await fetch(
       new Request(
-        'https://cinema.finalsend.com.br/oauth/callback?code=s3cr3t&state=xyz#top',
+        'https://cinema.temestudo.cloud/oauth/callback?code=s3cr3t&state=xyz#top',
       ),
     )
 
@@ -29,7 +29,7 @@ describe("the server's log of each request", () => {
     const { fetch, lines } = setup(() => new Response('{}', { status: 201 }))
 
     await fetch(
-      new Request('https://cinema.finalsend.com.br/_serverFn/abc?x=1', {
+      new Request('https://cinema.temestudo.cloud/_serverFn/abc?x=1', {
         method: 'POST',
         headers: {
           'x-forwarded-for': '203.0.113.7',
@@ -48,7 +48,7 @@ describe("the server's log of each request", () => {
     )
 
     const response = await fetch(
-      new Request('https://cinema.finalsend.com.br/'),
+      new Request('https://cinema.temestudo.cloud/'),
     )
 
     expect(response.headers.get('content-type')).toBe('text/html')
@@ -61,7 +61,7 @@ describe("the server's log of each request", () => {
     })
 
     await expect(
-      fetch(new Request('https://cinema.finalsend.com.br/x?y=1')),
+      fetch(new Request('https://cinema.temestudo.cloud/x?y=1')),
     ).rejects.toThrow('broke')
     expect(lines).toEqual(['GET /x 500 12ms'])
   })
