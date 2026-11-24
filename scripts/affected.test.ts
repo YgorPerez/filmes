@@ -18,13 +18,31 @@ describe('planForDiff', () => {
     ])
   })
 
-  it('the Python engine runs pytest and the MCP tests, which call its CLI', () => {
+  it('the key migration runs only its own tests', () => {
+    expect(
+      planForDiff(['packages/key-migration/src/migrate.ts']),
+    ).toMatchObject({
+      vitest: ['packages/key-migration'],
+      mcp: false,
+      python: false,
+    })
+  })
+
+  it('config/ and the fixture data also run the key migration, which round-trips them', () => {
     for (const file of [
-      'filmes/cli.py',
-      'tests/test_recomendar.py',
       'config/pesos.toml',
-      'uv.lock',
+      'tests/fixture/dados/pessoas/ana.md',
     ])
+      expect({ file, ...planForDiff([file]) }).toMatchObject({
+        file,
+        vitest: ['packages/key-migration'],
+        mcp: true,
+        python: true,
+      })
+  })
+
+  it('the Python engine runs pytest and the MCP tests, which call its CLI', () => {
+    for (const file of ['filmes/cli.py', 'tests/test_recomendar.py', 'uv.lock'])
       expect({ file, ...planForDiff([file]) }).toMatchObject({
         file,
         vitest: [],
@@ -64,7 +82,7 @@ describe('planForDiff', () => {
       const plan = planForDiff(['frontend/src/ui/home.tsx', file])
       expect(plan.full).toContain(file)
       expect(plan).toMatchObject({
-        vitest: ['frontend', 'packages/engine', '.'],
+        vitest: ['frontend', 'packages/engine', 'packages/key-migration', '.'],
         mcp: true,
         python: true,
       })
