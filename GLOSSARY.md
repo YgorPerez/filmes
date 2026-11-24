@@ -2,144 +2,156 @@
 
 O vocabulário do recomendador de filmes: quem assiste, o que se pede, e de onde vem cada motivo de uma recomendação.
 
+Cada termo traz, entre colchetes, o nome que ele tem no código, em inglês ([ADR 0001](docs/adr/0001-code-in-english.md)): o nome em prosa, o identificador e, quando o termo tem uma lista fechada, os valores dela. Um tipo usa o identificador em PascalCase; um campo, uma coleção ou um valor usa camelCase no TypeScript e snake_case nas chaves de arquivo (frontmatter do filmes-dados e `config/*.toml`). Texto da interface, URLs e prosa continuam em português, com o termo daqui.
+
 ## Pessoas
 
-**Pessoa**:
+**Pessoa** [person, `Person`]:
 Alguém cujo gosto o sistema guarda: o Dono ou qualquer pessoa que assiste com ele.
 _Evitar_: usuário, amigo, perfil
 
-**Dono**:
-A Pessoa que opera o sistema pelo Claude. Só ele pede recomendações, descreve as outras Pessoas e registra o Feedback.
+**Dono** [owner, `owner`]:
+A Pessoa que opera o sistema: pede recomendações, descreve as outras Pessoas e registra o Feedback das Sessões dela. Cada Sessão tem um Dono; online, é quem está logado (mapa #72).
 _Evitar_: usuário, admin
 
 ## Sessão
 
-**Sessão**:
+**Sessão** [session, `Session`]:
 Um encontro para ver um filme. Nasce no pedido do Dono, guarda os Presentes, o contexto, a Recomendação e o Filme escolhido, e fecha quando o Feedback é registrado. Sessão sem Feedback fica aberta.
 _Evitar_: pedido, noite, rolê
 
-**Presentes**:
+**Presentes** [attendees, `attendees`]:
 As Pessoas de uma Sessão. Não existe grupo guardado: cada Sessão tem os seus Presentes.
 _Evitar_: grupo, turma
 
-**Veto**:
+**Veto** [veto, `Veto`]:
 A recusa permanente de uma Pessoa a um tipo de filme, como "Leo nunca vê terror". Vale em toda Sessão em que ela está entre os Presentes e tira o filme antes de qualquer ordenação. O alvo é um filme, uma entidade (gênero, diretor, ator) ou um grupo de tags com nome, como "comédia boba".
 _Evitar_: filtro, bloqueio
 
-**Ajuste**:
+**Ajuste** [adjustment, `Adjustment`; elo [link: `director`, `writer`, `cast`, `series`, `genre`]; nível [level: `none`, `low`, `normal`, `high`]]:
 Quanto um elo entre filmes (diretor, roteiro, elenco, série, gênero) pesa para uma Pessoa: nada, pouco, normal ou muito. "Pro Lorenzo ator não importa" é o Ajuste de elenco dele em nada. Vale para o que o motor deduz das Notas dela; o que a Pessoa disse sobre um ator ou diretor nomeado continua valendo.
 _Evitar_: peso da Pessoa, importância, preferência
 
-**Pergunta aberta**:
+**Pergunta aberta** [open question, `OpenQuestion`]:
 Pergunta de gosto que o Claude fez sobre um Presente e ele pulou ("a Ana curte terror psicológico?"). Fica no arquivo da Pessoa com o assunto (entidade do Catálogo ou grupo de tags), a data e quantas vezes foi pulada; volta uma vez, quando o assunto aparece na tela, e pulada duas vezes, sai. Não é Fato: a resposta, quando vem, vira Declarado ou Relato.
 
-**Restrição**:
+**Restrição** [constraint, `Constraint`]:
 Um limite que vale só numa Sessão, como "tem criança" ou "sem legenda". Tira o filme antes de qualquer ordenação, como o Veto.
 _Evitar_: filtro, veto da sessão
 
-**Clima**:
+**Clima** [mood, `Mood`]:
 O que uma Sessão quer sem excluir nenhum filme: a energia ("algo leve"), a ocasião ("aniversário da Ana"), a vontade do momento. Puxa a ordem, nunca tira um filme.
 _Evitar_: desejo, mood, preferência
 
-**Contexto**:
+**Contexto** [context, `context`]:
 Tudo o que o pedido diz além dos Presentes: as Restrições e o Clima. Vale só para a Sessão; o que diz como uma Pessoa é sempre (Veto, Declarado, Relato) é gosto, e só é gravado com um sim do Dono.
 
-**Catálogo**:
+**Catálogo** [catalog, `Catalog`]:
 Todos os filmes que o sistema conhece.
 
-**Candidato**:
+**Candidato** [candidate, `Candidate`]:
 Um filme do Catálogo que sobreviveu aos Vetos e às Restrições de uma Sessão e entra na ordenação.
 
-**Regra de escolha**:
+**Regra de escolha** [choice rule, `rule`: `default`, `average`, `by`]:
 Como uma Sessão junta o gosto dos Presentes para ordenar os Candidatos. Cada Sessão pode usar uma; a padrão é média sem miséria com justiça entre sessões.
 _Evitar_: regra de grupo, acordo, agregação
 
-**Crédito**:
+**Crédito** [credit, `credit`]:
 O quanto uma Pessoa ficou atrás dos outros Presentes nas Sessões recentes que dividiu com quem está na Sessão de hoje, medido pelo Feedback. Quem tem Crédito pesa mais na Regra de escolha; quem gostou mais que a média não perde nada.
 _Evitar_: dívida, vez, saldo
 
-**Recomendação**:
+**Recomendação** [recommendation, `Recommendation`]:
 O top 5 que uma Sessão recebe, cada filme com os seus Motivos.
 _Evitar_: sugestão, lista
 
-**Versão da Sessão**:
+**Versão da Sessão** [session version, `SessionVersion`]:
 Uma Recomendação de uma Sessão aberta. Quando o Dono pede outra lista na mesma Sessão, a atual vira uma versão anterior, guardada com o pedido e os Presentes dela, e a nova passa a valer. O número da versão conta a partir de 1. Um filme de uma versão anterior pode voltar na nova; só o que o Dono trocou em alguma versão e o que algum Presente marcou Já vi na Sessão ficam fora dela até o fim.
 _Evitar_: rodada, tentativa
 
-**Mantido**:
+**Mantido** [kept, `kept`]:
 Um filme da versão anterior que o Dono quer na próxima. Ao regerar, fica no mesmo número e só as vagas ganham filme novo. Sai por Restrição ou Veto do pedido refeito, ou por estar abaixo da nota mínima do IMDb, nunca por gosto novo. O que sai da versão anterior vira uma saída, com o motivo: Já visto, trocado, a Restrição, o Veto ou a nota mínima.
 _Evitar_: fixado, travado
 
-**Cartaz**:
+**Cartaz** [billboard, `Billboard`]:
 A Recomendação mostrada como página no T3 Code. Ele responde: em cada filme o Dono marca Já vi, Trocar, estrelas e comentário, e embaixo, depois do último filme, acrescenta contexto ou gosto; o botão Copiar pro chat junta tudo num texto que começa com `#cartaz <sessao> v<n>`, e o Dono cola no chat. Estrelas e comentário medem a Recomendação e ficam na Sessão, sem mexer no gosto; só o Trocar troca filme.
 _Evitar_: formulário, painel
 
-**Regerar**:
+**Trocado** [swapped, `swapped`]:
+Um filme que o Dono tirou da tela de uma versão: o Trocar do Cartaz e, ao refazer, o que ele mandou trocar e o que não ficou como Mantido. Fica fora da Sessão até o fim.
+_Evitar_: descartado, rejeitado
+
+**Saída** [dropped, `dropped`; causa: `seen`, `swapped`, `constraint`, `veto`, `min_rating`]:
+Um filme da versão anterior que não está na nova, com a causa. A causa não é Motivo: Motivo é por que um filme está na Recomendação.
+
+**Capa** [poster, `poster`]:
+O pôster do filme, vindo do TMDB. Não é o Cartaz, que é a Recomendação inteira.
+
+**Regerar** [regenerate, `regenerate`]:
 Fazer a próxima versão da Sessão a partir do Cartaz colado, trocando só o que caiu (Já visto, Trocar, Restrição ou Veto novos). O resto fica como Mantido; os que entram levam o selo "novo".
 _Evitar_: refazer do zero, recomendar de novo
 
-**Filmes mostrados**:
+**Filmes mostrados** [shown films, `shown`]:
 Os filmes da Recomendação que o Dono de fato viu na tela, na ordem em que apareceram. O Feedback grava a posição do Filme escolhido nessa lista.
 _Evitar_: exibidos, lista da tela
 
-**Filme escolhido**:
+**Filme escolhido** [chosen film, `chosen`]:
 O filme que os Presentes de fato assistiram, saia ele da Recomendação ou não.
 
-**Feedback**:
+**Feedback** [feedback, `Feedback`]:
 O registro que fecha uma Sessão: o Filme escolhido e como cada Presente reagiu. Cada reação vira um Fato com a Sessão como Fonte, de Tipo relato quando o Dono fala por outra Pessoa e nota quando a própria Pessoa avalia.
 _Evitar_: avaliação, review
 
-**Comentário**:
+**Comentário** [comment, `comment`]:
 O que um Presente achou do Filme escolhido, dito junto da Nota ou do Relato dele no Feedback. Vira um Declarado específico da Pessoa sobre o filme, com a Sessão como Fonte.
 _Evitar_: opinião, review
 
-**Já visto**:
+**Já visto** [seen, `seen`]:
 O Fato de que uma Pessoa já assistiu a um filme. Pesa contra o filme e aparece como Motivo, mas não é Veto: rever um filme continua possível, e só sai se o Dono pedir como Restrição ou se o Já vi foi marcado na Sessão que está sendo refeita.
 _Evitar_: assistido, histórico
 
 ## Evidência
 
-**Fato**:
+**Fato** [fact, `Fact`]:
 Um dado guardado no banco, com Fonte e data. Ex.: Ana deu 4,5 a Paddington 2 em 2024-03-02, segundo o export do Letterboxd dela.
 _Evitar_: dado, sinal
 
-**Fonte**:
+**Fonte** [source, `source`]:
 De onde um Fato veio: uma base pública, o export de uma Pessoa, uma resposta de questionário, uma descrição do Dono ou o Feedback de uma Sessão.
 _Evitar_: origem
 
-**Motivo**:
+**Motivo** [reason, `Reason`]:
 Uma razão para um filme estar na Recomendação.
 _Evitar_: justificativa, explicação
 
-**Evidência**:
+**Evidência** [evidence, `Evidence`]:
 O uso de um Fato como Motivo. É ela que tem Força: o mesmo Fato pode ser forte para um Motivo e fraco para outro.
 _Evitar_: prova
 
-**Força**:
+**Força** [strength, `strength`: `strong`, `moderate`, `weak`]:
 Quanto uma Evidência sustenta o seu Motivo: forte, moderada ou fraca.
 _Evitar_: peso, confiança
 
-**Tipo**:
+**Tipo** [kind, `kind`: `metadata`, `rating`, `stated`, `report`, `review`, `guess`]:
 A natureza do Fato por trás de uma Evidência, contada do ponto de vista da Pessoa de quem o Motivo fala. Pode ser metadado, nota, declarado, relato, review ou palpite.
 _Evitar_: categoria
 
-**Metadado**:
+**Metadado** [metadata, `metadata`]:
 Um Fato sobre o filme em si, vindo de uma base pública: elenco, diretor, gênero, duração, classificação.
 
-**Nota**:
+**Nota** [rating, `Rating`]:
 A avaliação que uma Pessoa deu a um filme, sempre dita com o nome de quem deu.
 _Evitar_: nota própria, nota de amigo, rating
 
-**Declarado**:
+**Declarado** [stated, `stated`]:
 O que uma Pessoa disse sobre o próprio gosto ou sobre um filme, por exemplo num questionário ou numa review que ela escreveu.
 
-**Relato**:
+**Relato** [report, `report`]:
 O que o Dono disse sobre o gosto de outra Pessoa, como "Leo odeia filme lento". Vale menos que a própria Pessoa dizendo.
 _Evitar_: descrição, declarado
 
-**Review**:
+**Review** [review, `review`]:
 Um sinal tirado de opiniões de terceiros, que não estão entre as Pessoas, como as tags de uma base pública ou quantos estranhos que gostaram de um filme gostaram de outro.
 
-**Palpite**:
+**Palpite** [guess, `guess`]:
 Um Motivo sem Fato que o sustente.
 _Evitar_: chute, inferência
