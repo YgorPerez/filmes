@@ -36,6 +36,13 @@ export class SqliteError extends Schema.TaggedError<
 
 export type Row = Readonly<Record<string, SQLOutputValue>>
 
+/** The database file is not there (Python `abrir_leitura`). */
+export const missingDatabase = (path: string): EngineError =>
+  engineError(
+    'missing_database',
+    `banco não encontrado em ${path}: rode \`python -m filmes reconstruir\``,
+  )
+
 export interface RunResult {
   readonly changes: number | bigint
   readonly lastInsertRowid: number | bigint
@@ -145,13 +152,7 @@ export class Sqlite extends Context.Service<
         Effect.flatMap(
           environment.path('database'),
           (path): Effect.Effect<DatabaseSync, EngineError | SqliteError> => {
-            if (!existsSync(path))
-              return Effect.fail(
-                engineError(
-                  'missing_database',
-                  `banco não encontrado em ${path}: rode \`python -m filmes reconstruir\``,
-                ),
-              )
+            if (!existsSync(path)) return Effect.fail(missingDatabase(path))
             return Effect.try({
               try: () => {
                 const db = new DatabaseSync(path, {

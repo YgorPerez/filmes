@@ -1,9 +1,11 @@
 // The Python string and parse rules the data files need (#86) against the
 // golden vectors `golden.py` wrote: `strip`, `splitlines`, `repr`,
-// `float()` and `date.fromisoformat()`.
+// `float()`, `date.fromisoformat()` and `" ".join(s.split())`.
 import { describe, expect, test } from 'vite-plus/test'
 import {
   isIsoDate,
+  pyIsoDate,
+  pyJoinWords,
   pyParseFloat,
   pyReprStr,
   pyRstrip,
@@ -23,8 +25,13 @@ describe('Python text', () => {
     strip: string
     lines: string[]
     repr: string
+    words: string
   }>('py-text')
   const assigned = [...codePoints(table?.assigned ?? [])]
+
+  test('pyJoinWords is " ".join(s.split())', () => {
+    expect(rows.filter(({ s, words }) => pyJoinWords(s) !== words)).toEqual([])
+  })
 
   test('strip takes the whitespace of str.isspace() on every code point', () => {
     const space = new Set(codePoints(table?.space ?? []))
@@ -75,10 +82,15 @@ describe('Python parsers', () => {
     expect(wrong).toEqual([])
   })
 
-  test('isIsoDate takes what date.fromisoformat() takes', () => {
-    const rows = golden<{ s: string; out: boolean }>('iso-date')
+  test('pyIsoDate is date.fromisoformat().isoformat()', () => {
+    const rows = golden<{ s: string; out: string | false }>('iso-date')
     expect(rows.length).toBeGreaterThanOrEqual(10_000)
-    expect(rows.filter(({ s, out }) => isIsoDate(s) !== out)).toEqual([])
+    expect(
+      rows.filter(({ s, out }) => (pyIsoDate(s) ?? false) !== out),
+    ).toEqual([])
+    expect(rows.filter(({ s, out }) => isIsoDate(s) !== (out !== false))).toEqual(
+      [],
+    )
     expect(isIsoDate('2026-11-\ud800')).toBe(false)
   })
 })
