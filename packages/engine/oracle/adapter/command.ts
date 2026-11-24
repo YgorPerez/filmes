@@ -4,11 +4,11 @@
 // arquivo mora").
 
 import { Effect } from 'effect'
+import type { GitError } from '../../src/data/git.ts'
 import type { EngineServices } from '../../src/runtime/Engine.ts'
 import { engineError, type EngineError } from '../../src/runtime/EngineError.ts'
 import type { Run } from '../../src/runtime/Run.ts'
 import type { SqliteError } from '../../src/sqlite/Sqlite.ts'
-import type { GitError } from '../../src/data/git.ts'
 import { ArgvError, parseArgv, type ArgSpec, type Parsed } from './argv.ts'
 
 /** An engine operation, as `makeEngine(...).run` takes it. A port whose
