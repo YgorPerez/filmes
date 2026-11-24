@@ -4,6 +4,7 @@
 // arquivo mora").
 
 import { Effect } from 'effect'
+import type { GitError } from '../../src/data/git.ts'
 import type { EngineServices } from '../../src/runtime/Engine.ts'
 import { engineError, type EngineError } from '../../src/runtime/EngineError.ts'
 import type { Run } from '../../src/runtime/Run.ts'
@@ -14,7 +15,7 @@ import { ArgvError, parseArgv, type ArgSpec, type Parsed } from './argv.ts'
  * operation fails with another error adds it here. */
 export type Operation = Effect.Effect<
   unknown,
-  EngineError | SqliteError,
+  EngineError | SqliteError | GitError,
   EngineServices | Run
 >
 
