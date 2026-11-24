@@ -4,6 +4,7 @@ import {
   Outlet,
   Scripts,
 } from '@tanstack/react-router'
+import css from '../styles.css?url'
 
 export const Route = createRootRoute({
   head: () => ({
@@ -12,6 +13,7 @@ export const Route = createRootRoute({
       { name: 'viewport', content: 'width=device-width, initial-scale=1' },
       { title: 'filmes' },
     ],
+    links: [{ rel: 'stylesheet', href: css }],
   }),
   component: Root,
 })

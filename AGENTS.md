@@ -89,6 +89,8 @@ pnpm check        # formato e lint (Oxfmt, Oxlint com tipos), tipos, testes com 
 make check        # testes Python (uv run pytest), typecheck e testes do MCP (Vitest, com a CLI de verdade)
 ```
 
+O e2e do app (`pnpm --filter frontend e2e`, Playwright no Chrome da máquina) faz o build, sobe o app com um Google falso (`frontend/e2e/fake-google.ts`) e as Pessoas da fixture; o CI roda no job `build`.
+
 Precisa de `uv`, pnpm e Node 24 (o MCP roda `.ts` direto, sem build). `make check` instala o que faltar (`uv sync`, `pnpm install`) na primeira vez. Enquanto o Python existir, os dois ficam verdes antes de um push para um ramo de integração; o CI do PR roda os dois (`.github/workflows/pr.yml`).
 
 O gancho de push (`node scripts/install-hooks.ts`, uma vez por clone) roda a auditoria de supressões e só os testes do que o push mudou. O teto de supressões é zero (`.github/suppression-ceiling.json`).

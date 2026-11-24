@@ -1,4 +1,5 @@
 import babel from '@rolldown/plugin-babel'
+import tailwindcss from '@tailwindcss/vite'
 import { tanstackStart } from '@tanstack/react-start/plugin/vite'
 import viteReact, { reactCompilerPreset } from '@vitejs/plugin-react'
 import { nitro } from 'nitro/vite'
@@ -7,6 +8,8 @@ import { defineConfig, type PluginOption } from 'vite-plus'
 // Vitest only needs React: Start and nitro build the server, which no Vitest
 // test uses.
 const appPlugins = (): PluginOption[] => [
+  // The Tailwind classes (`styles.css`, `ui/tokens.css`), before Start.
+  tailwindcss(),
   tanstackStart(),
   nitro(),
   viteReact(),
@@ -39,7 +42,7 @@ export default defineConfig({
       // `scp` and their command lines, by the deploy itself. The branch
       // floor came from a skeleton with no branches; #79's scripts set it
       // at their measured value.
-      thresholds: { statements: 82, branches: 74, functions: 77, lines: 85 },
+      thresholds: { statements: 84, branches: 81, functions: 78, lines: 85 },
     },
   },
 })
