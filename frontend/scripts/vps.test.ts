@@ -236,6 +236,12 @@ describe('the VPS from the environment', () => {
     })
   })
 
+  it('an empty user or port, as an unset GitHub secret arrives, also defaults', () => {
+    expect(
+      targetFrom({ VPS_HOST: '203.0.113.7', VPS_USER: '', VPS_PORT: '' }),
+    ).toEqual({ host: '203.0.113.7', user: 'root', port: '22', key: undefined })
+  })
+
   it('names the variable that is wrong, never its value', () => {
     expect(targetFrom({})).toBe('VPS_HOST is missing.')
     expect(targetFrom({ VPS_HOST: 'a b' })).toBe('VPS_HOST is not a host name.')

@@ -180,12 +180,11 @@ export function rollback({
 export function targetFrom(
   env: Record<string, string | undefined>,
 ): Target | string {
-  const {
-    VPS_HOST: host,
-    VPS_USER: user = 'root',
-    VPS_PORT: port = '22',
-    VPS_SSH_KEY: key,
-  } = env
+  // An unset GitHub secret arrives empty, not missing.
+  const host = env.VPS_HOST
+  const user = env.VPS_USER || 'root'
+  const port = env.VPS_PORT || '22'
+  const key = env.VPS_SSH_KEY
   if (!host) return 'VPS_HOST is missing.'
   if (!/^[A-Za-z0-9.-]+$/.test(host)) return 'VPS_HOST is not a host name.'
   if (!/^[a-z_][a-z0-9_-]*$/.test(user)) return 'VPS_USER is not a user name.'
