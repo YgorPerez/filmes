@@ -12,6 +12,8 @@ export default defineConfig({
       '**/package.json/**',
       '**/vite.config.*/**',
       '**/tests/fixture/**',
+      // The trace hook the oracle's harvest test runs.
+      '**/tests/conftest.py',
       '**/filmes/**/*.{py,sql}',
       '**/config/*.{toml,json}',
       '**/key-migration/src/**',
