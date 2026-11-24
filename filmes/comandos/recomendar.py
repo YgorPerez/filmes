@@ -1,10 +1,11 @@
 from contextlib import closing
 
 from filmes import sessao
+from filmes.sessao import arquivo
 from filmes.banco import abrir_leitura
 from filmes.erros import ErroFilmes
 from filmes.recomendacao import mantidos, presentes as pessoas_presentes, recomendar, restricoes
-from filmes.recomendacao.restricoes import fora_da_sessao, parecido
+from filmes.recomendacao.restricoes import fora_da_sessao
 from filmes.recomendacao.regra import Regra
 
 AJUDA = "devolve a Recomendação (top 5) com as Evidências de cada filme, por Presente, e abre a Sessão"
@@ -38,52 +39,38 @@ def executar(args, amb):
     manter = fora_da_sessao.manter(args)
     if manter and not args.sessao:
         raise ErroFilmes("uso_invalido", "--manter só vale com --sessao: são os filmes da versão anterior que ficam")
-    if args.sem_parecido and not args.sessao:
-        raise ErroFilmes("uso_invalido", "--sem-parecido só vale com --sessao: tira o parecido que a Sessão trazia")
-    if args.sem_parecido and args.parecido:
-        raise ErroFilmes("uso_invalido", "--parecido e --sem-parecido juntos: escolha um")
-    regerar, avisos, parecido_novo = None, [], False
+    regerar, avisos = None, []
     if args.sessao:
         frente = sessao.conferir_aberta(amb, args.sessao)
-        parecido_novo = _parecido_na_sessao(args, frente)
-        if parecido_novo and manter:
-            avisos.append(f"--manter {','.join(manter)}: ignorado, o parecido novo troca a lista inteira")
-            manter, args.manter = [], None
+        restricoes.herdar(args, frente)
     pedidas = restricoes.ler(args)
     if args.sessao:
         # Refazer é sempre regerar: sem --manter, nenhum filme fica, mas o selo novo e as
         # saídas ainda dizem o que entrou e o que saiu.
-        regerar, dos_mantidos = mantidos.preparar(frente, manter)
+        troca = next(iter(restricoes.trocam_a_lista(pedidas, frente)), None)
+        if troca is not None and manter:
+            avisos.append(f"--manter {','.join(manter)}: ignorado, {_rotulo(troca)} troca a lista inteira")
+            manter, args.manter = [], None
+            pedidas = restricoes.ler(args)
+            troca = next(r for r in pedidas if r.nome == troca.nome)
+        trocados = fora_da_sessao.trocados_agora(arquivo.versao_atual(frente), manter, fora_da_sessao.trocar(args))
+        regerar, dos_mantidos = mantidos.preparar(frente, manter, trocados, troca)
         avisos += dos_mantidos
     with closing(abrir_leitura(amb.banco)) as conn:
         presentes = pessoas_presentes.resolver(conn, nomes)
         saida = recomendar(conn, amb, presentes, quantos, _regra(conn, args, presentes), pedidas, args.clima,
                            regerar=regerar)
     saida["avisos"][:0] = avisos
-    if parecido_novo:
-        [pedido] = [r for r in pedidas if r.nome == "parecido"]
-        saida["saidas"] = mantidos.pelo_parecido(
-            saida["saidas"], restricoes.rotulo({"nome": pedido.nome, **pedido.como_json()}))
     contexto = _contexto(args, pedidas, saida["climas"])
     if args.sessao:
-        saida["sessao"] = sessao.refazer(amb, args.sessao, saida, contexto)
+        saida["sessao"] = sessao.refazer(amb, args.sessao, saida, contexto, regerar.trocados)
     else:
         saida["sessao"] = sessao.abrir(amb, saida, contexto)
     return saida
 
 
-def _parecido_na_sessao(args, frente) -> bool:
-    """O parecido fica na Sessão até o Dono pedir outra coisa (#68): sem --parecido nem
-    --sem-parecido, valem as referências da versão atual. Devolve se o pedido de parecido é
-    novo (referências que a versão atual não tinha), que troca a lista inteira."""
-    anteriores = parecido.da_sessao(frente)
-    if args.sem_parecido:
-        return False
-    pedidas = parecido.pedido(args)
-    if pedidas is None:
-        args.parecido = anteriores or None
-        return False
-    return set(pedidas.filmes) != set(anteriores)
+def _rotulo(restricao) -> str:
+    return restricoes.rotulo({"nome": restricao.nome, **restricao.como_json()})
 
 
 def _contexto(args, pedidas, climas):

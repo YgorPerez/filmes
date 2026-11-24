@@ -7,16 +7,17 @@ Catálogo inteiro, antes das outras Restrições e da nota mínima; a referênci
 nunca entra. Entre os que passam, a Regra de escolha ordena como sempre.
 
 Cada filme que passa leva, por referência com algo em comum, a linha "parecido
-com X: tags em comum; vizinho do MovieLens". A linha não é Fato: não entra na
+com X: tags em comum; vizinho do MovieLens; mesmo diretor", com a fonte do que
+vem primeiro (a aresta do Wikidata, quando é só o diretor). A linha não é Fato: não entra na
 utilidade de ninguém, e filme só com ela continua "só palpites". Se passam menos
 que o pedido, a lista sai menor, com aviso: não completa com filme que não parece.
 O pedido é da noite e não grava nada em Pessoa nenhuma.
 
 Na Sessão (#68), as referências ficam gravadas em `contexto.restricoes` da
-versão, e `recomendar --sessao` sem `--parecido` continua com elas
-(`da_sessao`); `--parecido` com outras referências substitui, e `--sem-parecido`
-tira o filtro. Parecido novo numa Sessão aberta troca a lista inteira: quem
-decide isso é `filmes/comandos/recomendar.py`.
+versão, e `recomendar --sessao` sem `--parecido` continua com elas (`herdar`);
+`--parecido` com outras referências substitui, e `--sem-parecido` tira o
+filtro. Parecido novo numa Sessão aberta troca a lista inteira
+(`troca_a_lista`): o `--manter` é ignorado, e quem sai sai por ele.
 """
 
 from dataclasses import dataclass, field
@@ -37,19 +38,25 @@ def configurar(parser):
 
 
 def pedido(args):
+    if getattr(args, "sem_parecido", False):
+        if not getattr(args, "sessao", None):
+            raise ErroFilmes("uso_invalido", "--sem-parecido só vale com --sessao: tira o parecido que a Sessão trazia")
+        if getattr(args, "parecido", None):
+            raise ErroFilmes("uso_invalido", "--parecido e --sem-parecido juntos: escolha um")
+        return None
     ids = [f.strip() for item in getattr(args, "parecido", None) or [] for f in item.split(",") if f.strip()]
     return Parecido(tuple(dict.fromkeys(ids))) if ids else None
+
+
+def herdar(args, gravada):
+    """Sem --parecido nem --sem-parecido, o refazer continua com as referências da versão atual."""
+    if gravada and not args.parecido and not args.sem_parecido:
+        args.parecido = list(gravada.get("filmes") or []) or None
 
 
 def rotulo(gravada):
     titulos = gravada.get("titulos") or gravada.get("filmes") or []
     return f"parecidos com {_e(titulos)}"
-
-
-def da_sessao(frente: dict) -> list[str]:
-    """As referências do parecido que valem na versão atual da Sessão, ou []."""
-    gravadas = (frente.get("contexto") or {}).get("restricoes") or []
-    return next((list(r.get("filmes") or []) for r in gravadas if r.get("nome") == "parecido"), [])
 
 
 def _e(nomes) -> str:
@@ -68,6 +75,10 @@ class Parecido:
 
     def resultado(self, saidas):
         return {}
+
+    def troca_a_lista(self, gravada):
+        """Referências que a versão atual não tinha: pedido novo, que troca a lista inteira."""
+        return set(self.filmes) != set((gravada or {}).get("filmes") or [])
 
     def avaliar(self, contexto, filmes):
         conn, config = contexto.conn, contexto.amb.pesos["parecido"]
@@ -117,7 +128,10 @@ class Parecido:
                 base, ambos, _, _ = par.vizinho
                 partes.append(f"de {texto.inteiro(base)} pessoas que deram 4+ a ele, "
                               f"{100 * ambos // base}% deram 4+ a este")
-            fonte, data = (temas[0][1:] if temas else par.vizinho[2:] if par.vizinho else ("IMDb", linha["data_imdb"]))
+            if par.diretor:
+                partes.append("mesmo diretor")
+            fonte, data = (temas[0][1:] if temas else par.vizinho[2:] if par.vizinho
+                           else par.diretor if par.diretor else ("IMDb", linha["data_imdb"]))
             yield Evidencia(
                 pessoa=None, filme_id=filme_id,
                 texto=f"parecido com {linha['titulo']}" + (f": {'; '.join(partes)}" if partes else ""),

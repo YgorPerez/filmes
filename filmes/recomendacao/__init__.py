@@ -203,7 +203,7 @@ def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], qu
             "utilidade": {p: (round(u, 4) if u is not None else None) for p, u in utilidades.items()},
             "evidencias": {p: [e.como_json(pesos) for e in evidencias if e.pessoa == p] for p in presentes},
             "linhas_do_filme": [e.como_json(pesos) for e in linhas],
-            **({"novo": not regerar.mantido(filme["id"])} if regerar else {}),
+            **({"novo": regerar.novo(filme["id"])} if regerar else {}),
         })
     contexto.avisos.extend(pedidas.avisos_da_lista(len(filmes), quantos))
     if regerar:
@@ -223,7 +223,7 @@ def recomendar(conn: sqlite3.Connection, amb: Ambiente, presentes: list[str], qu
         ]),
     }
     if regerar:
-        resposta["mantidos"] = [f["id"] for f in filmes if not f["novo"]]
+        resposta["mantidos"] = [f["id"] for f in filmes if regerar.mantido(f["id"])]
         resposta["saidas"] = mantidos.saidas(conn, presentes, regerar, {f["id"] for f in filmes}, tirados)
     return resposta
 

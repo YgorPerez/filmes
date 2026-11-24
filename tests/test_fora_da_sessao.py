@@ -81,3 +81,61 @@ def test_outra_sessao_nao_conta(banco):
 
     assert trocado in _ids(outra)
     assert "fora_da_sessao" not in outra["restricoes"]
+
+
+def test_o_que_nao_ficou_num_manter_cujos_mantidos_sairam_todos_continua_trocado(banco):
+    # O único mantido sai pela duração: a versão fica sem mantidos, mas o Dono escolheu.
+    primeira = banco.ok("recomendar", "--presentes", "dono")
+    sessao_id, f = primeira["sessao"]["id"], _ids(primeira)
+    longo = max(primeira["filmes"], key=lambda filme: filme["duracao_min"])
+
+    segunda = banco.ok("recomendar", "--presentes", "dono", "--sessao", sessao_id, "--manter", longo["id"],
+                       "--duracao-max", str(longo["duracao_min"] - 1))
+    terceira = banco.ok("recomendar", "--presentes", "dono", "--sessao", sessao_id)
+
+    assert segunda["mantidos"] == []
+    assert not (set(f) - {longo["id"]}) & set(_ids(terceira))
+
+
+def test_trocar_grava_os_filmes_como_trocados_antes_de_refazer(banco, dados):
+    primeira, sessao_id = _sessao(banco)
+    tela = _ids(primeira)[:5]
+
+    segunda = _refazer(banco, sessao_id, "--trocar", *tela)
+    terceira = _refazer(banco, sessao_id)
+
+    assert not set(tela) & set(_ids(segunda))
+    assert not set(tela) & set(_ids(terceira))
+    assert {s["motivo"] for s in segunda["saidas"] if s["id"] in tela} == {"trocado"}
+    frente, _ = ler_markdown(dados / "sessoes" / f"{sessao_id}.md")
+    assert frente["versoes"][0]["trocados"] == sorted(tela)
+
+
+def test_trocar_aceita_virgulas_e_so_vale_com_sessao(banco):
+    primeira, sessao_id = _sessao(banco)
+    tela = _ids(primeira)[:2]
+
+    segunda = _refazer(banco, sessao_id, "--trocar", ",".join(tela))
+    codigo, erro = banco.rodar("recomendar", "--presentes", "dono", "--trocar", tela[0])
+
+    assert not set(tela) & set(_ids(segunda))
+    assert codigo == 2 and "--trocar" in erro["erro"]["mensagem"]
+
+
+def test_o_que_volta_da_tela_anterior_nao_leva_selo_novo(banco):
+    primeira, sessao_id = _sessao(banco)
+
+    segunda = _refazer(banco, sessao_id)
+
+    assert not any(f["novo"] for f in segunda["filmes"])
+
+
+def test_ja_vi_de_quem_chegou_neste_refazer_tira_o_filme(banco):
+    primeira = banco.ok("recomendar", "--presentes", "dono")
+    sessao_id, visto = primeira["sessao"]["id"], primeira["filmes"][0]["id"]
+    banco.ok("pessoa", "visto", "iara", "--filme", visto)
+
+    segunda = banco.ok("recomendar", "--presentes", "dono", "iara", "--quantos", "100", "--sessao", sessao_id)
+
+    assert visto not in _ids(segunda)
+    assert segunda["restricoes"]["fora_da_sessao"]["ja_vistos"] == 1
