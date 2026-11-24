@@ -12,7 +12,13 @@ import {
   type RecommendedFilm,
 } from '../../src/index.ts'
 import { useFixture, type Fixture } from '../fixture.ts'
-import { engineRecommendation, film, pythonOk, titles } from './support.ts'
+import {
+  engineRecommendation,
+  film,
+  pythonOk,
+  titles,
+  PYTHON_TIMEOUT,
+} from './support.ts'
 
 const EVIDENCE_FIELDS = [
   'contribution',
@@ -42,7 +48,7 @@ const factIds = (fixture: Fixture, sql: string): string[] =>
     ([id]) => id ?? '',
   )
 
-describe('recommend for the Dono alone', () => {
+describe('recommend for the Dono alone', { timeout: PYTHON_TIMEOUT }, () => {
   test('the Dono alone gets five films with Evidence', async () => {
     const fixture = useFixture()
     const out = await engineRecommendation(fixture, { attendees: ['dono'] })

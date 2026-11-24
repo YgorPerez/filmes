@@ -13,7 +13,12 @@ import {
 } from '../../src/index.ts'
 import { useFixture, type Fixture } from '../fixture.ts'
 import { RECORDINGS } from '../sources/support.ts'
-import { engineRecommendation, film, pythonOk } from './support.ts'
+import {
+  engineRecommendation,
+  film,
+  pythonOk,
+  PYTHON_TIMEOUT,
+} from './support.ts'
 
 const TMDB = { FILMES_TMDB_CHAVE: 'x', FILMES_GRAVACOES: RECORDINGS }
 
@@ -42,7 +47,7 @@ const maxDuration = (minutes: number): Constraint => ({
     ),
 })
 
-describe('the card header', () => {
+describe('the card header', { timeout: PYTHON_TIMEOUT }, () => {
   test('each film has its IMDb link', async () => {
     expect(film(await ask(useFixture()), 'As Horas Lentas').imdbUrl).toBe(
       'https://www.imdb.com/title/tt9000104/',

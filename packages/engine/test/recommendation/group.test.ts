@@ -13,10 +13,13 @@ const ask = (fixture: Fixture, request: RecommendRequest) =>
 const order = async (fixture: Fixture, request: RecommendRequest) =>
   titles(await ask(fixture, request))
 
-const before = (list: string[], ...names: string[]) => {
-  for (const [i, name] of names.slice(1).entries())
-    expect(list.indexOf(names[i] ?? '')).toBeLessThan(list.indexOf(name))
-}
+/** Whether every name is in the list, in this order. */
+const inOrder = (list: string[], ...names: string[]): boolean =>
+  names.every(
+    (name, i) =>
+      list.includes(name) &&
+      (i === 0 || list.indexOf(names[i - 1] ?? '') < list.indexOf(name)),
+  )
 
 const WITHOUT_FACT = {
   text: 'sem fato',
@@ -101,44 +104,50 @@ describe('the Regra de escolha', () => {
       count: 50,
     })
 
-    before(titles(out), 'Voo Noturno', 'Maré Cheia')
+    expect(inOrder(titles(out), 'Voo Noturno', 'Maré Cheia')).toBe(true)
     expect(film(out, 'Maré Cheia').utility['quim']).toBeNull()
   })
 
   test('the average rule counts whoever has no Fact as neutral', async () => {
     // Maré Cheia: (0.739 + 0.5) / 2 = 0.619, below Voo Noturno's 0.657.
-    before(
-      await order(useFixture(), {
-        attendees: ['dono', 'quim'],
-        rule: 'average',
-        count: 50,
-      }),
-      'Voo Noturno',
-      'Maré Cheia',
-    )
+    expect(
+      inOrder(
+        await order(useFixture(), {
+          attendees: ['dono', 'quim'],
+          rule: 'average',
+          count: 50,
+        }),
+        'Voo Noturno',
+        'Maré Cheia',
+      ),
+    ).toBe(true)
   })
 
   test("in someone's rule, no Fact of theirs is neutral", async () => {
     // By Quim, Maré Cheia is 0.5 and A Volta do Mar, a moderate Nota against, 0.354.
-    before(
-      await order(useFixture(), {
-        attendees: ['dono', 'quim'],
-        by: 'quim',
-        count: 50,
-      }),
-      'Maré Cheia',
-      'A Volta do Mar',
-    )
+    expect(
+      inOrder(
+        await order(useFixture(), {
+          attendees: ['dono', 'quim'],
+          by: 'quim',
+          count: 50,
+        }),
+        'Maré Cheia',
+        'A Volta do Mar',
+      ),
+    ).toBe(true)
   })
 
   // Bruno loves As Horas Lentas (strong) and Iara likes it little (a 3 on
   // the same director). A Volta do Mar pleases both about equally.
   test('the default rule puts first the film where nobody is badly off', async () => {
-    before(
-      await order(useFixture(), { attendees: ['dono', 'iara'], count: 50 }),
-      'A Volta do Mar',
-      'As Horas Lentas',
-    )
+    expect(
+      inOrder(
+        await order(useFixture(), { attendees: ['dono', 'iara'], count: 50 }),
+        'A Volta do Mar',
+        'As Horas Lentas',
+      ),
+    ).toBe(true)
   })
 
   test('the average rule puts first the film with the higher mean', async () => {
@@ -149,7 +158,7 @@ describe('the Regra de escolha', () => {
     })
 
     expect(out.rule).toEqual({ name: 'average' })
-    before(titles(out), 'As Horas Lentas', 'A Volta do Mar')
+    expect(inOrder(titles(out), 'As Horas Lentas', 'A Volta do Mar')).toBe(true)
   })
 
   test("someone's rule orders by that Pessoa's taste only", async () => {
@@ -166,24 +175,28 @@ describe('the Regra de escolha', () => {
     })
 
     expect(byBruno.rule).toEqual({ name: 'by', person: 'bruno' })
-    before(byDefault, 'A Volta do Mar', 'As Horas Lentas')
-    before(titles(byBruno), 'As Horas Lentas', 'A Volta do Mar')
+    expect(inOrder(byDefault, 'A Volta do Mar', 'As Horas Lentas')).toBe(true)
+    expect(inOrder(titles(byBruno), 'As Horas Lentas', 'A Volta do Mar')).toBe(
+      true,
+    )
   })
 
   test("in someone's rule, a film with no Fact of theirs comes after the ones they like", async () => {
     // Noite de Estreia pleases Bruno, but Iara has no Fact on it: 0.5 for
     // her, below her Notas for.
-    before(
-      await order(useFixture(), {
-        attendees: ['dono', 'iara'],
-        rule: 'by',
-        by: 'iara',
-        count: 50,
-      }),
-      'A Volta do Mar',
-      'As Horas Lentas',
-      'Noite de Estreia',
-    )
+    expect(
+      inOrder(
+        await order(useFixture(), {
+          attendees: ['dono', 'iara'],
+          rule: 'by',
+          by: 'iara',
+          count: 50,
+        }),
+        'A Volta do Mar',
+        'As Horas Lentas',
+        'Noite de Estreia',
+      ),
+    ).toBe(true)
   })
 
   test.each([

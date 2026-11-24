@@ -18,6 +18,10 @@ import {
 } from '../../src/index.ts'
 import { FIXTURE_TODAY, ROOT, type Fixture } from '../fixture.ts'
 
+/** For a test that runs the Python CLI: each call starts a process (`uv`,
+ * the interpreter, the engine), about half a second on an idle machine. */
+export const PYTHON_TIMEOUT = 120_000
+
 /** `python -m filmes <args> --json` over the fixture's Portuguese data
  * (copied once per test) and the test's database. `vars` add to or, with
  * `undefined`, remove from its environment. */
@@ -90,17 +94,15 @@ export const engineRecommendation = async (
 
 /** Both engines on the same request: Python's argv and the engine's
  * request say the same thing. */
-export const expectParity = async (
+export const bothEngines = async (
   fixture: Fixture,
   args: ReadonlyArray<string>,
   request: RecommendRequest,
   vars: { readonly python?: Vars; readonly engine?: Vars } = {},
-): Promise<Recommendation> => {
-  const expected = pythonRecommendation(fixture, args, vars.python)
-  const actual = await engineRecommendation(fixture, request, vars.engine)
-  expect(actual).toEqual(expected)
-  return actual
-}
+): Promise<{ readonly python: unknown; readonly engine: Recommendation }> => ({
+  python: pythonRecommendation(fixture, args, vars.python),
+  engine: await engineRecommendation(fixture, request, vars.engine),
+})
 
 /** A copy of `config/pesos.toml` with `from` replaced by `to`, for Python,
  * and its English migration, for the engine: the `FILMES_PESOS` of each. */

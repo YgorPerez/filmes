@@ -11,13 +11,19 @@
 
 import { describe, expect, test } from 'vite-plus/test'
 import { useFixture, type Fixture } from '../fixture.ts'
-import { engineRecommendation, film, pythonOk, titles } from './support.ts'
+import {
+  engineRecommendation,
+  film,
+  pythonOk,
+  titles,
+  PYTHON_TIMEOUT,
+} from './support.ts'
 
 const all = (fixture: Fixture) =>
   engineRecommendation(fixture, { attendees: ['dono'], count: 100 })
 
 // `pessoa vetar` is not ported yet: the Python records the Vetos.
-describe('a Veto to a tag group', () => {
+describe('a Veto to a tag group', { timeout: PYTHON_TIMEOUT }, () => {
   test('removes the comedy with the tag above the minimum', async () => {
     const fixture = useFixture()
     const before = new Set(titles(await all(fixture)))
@@ -72,7 +78,7 @@ describe('a Veto to a tag group', () => {
   })
 })
 
-describe('the IMDb rating bonus', () => {
+describe('the IMDb rating bonus', { timeout: PYTHON_TIMEOUT }, () => {
   test('gives the film a bonus and the film line', async () => {
     const obra = film(await all(useFixture()), 'Obra-Prima')
 
@@ -102,7 +108,7 @@ describe('the IMDb rating bonus', () => {
   })
 })
 
-describe('a Veto to a genre', () => {
+describe('a Veto to a genre', { timeout: PYTHON_TIMEOUT }, () => {
   const vetoRomance = async (fixture: Fixture, count?: number) => {
     pythonOk(fixture, ['pessoa', 'criar', 'Lorenzo', '--slug', 'lorenzo'])
     pythonOk(fixture, [

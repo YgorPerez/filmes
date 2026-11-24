@@ -36,6 +36,11 @@ export interface CommandDefinition<S extends ArgSpec> extends CompareOptions {
   readonly command: string
   /** The command's arguments, as its `configurar` declares them. */
   readonly args: S
+  /** Whether the engine answers this step yet, from its raw arguments
+   * (after the command and action words). A command ported in parts says
+   * `false` for the arguments a later ticket ports, and the step stays
+   * `not_ported`. Absent: every step. */
+  readonly ported?: (argv: readonly string[]) => boolean
   /** The engine operation for one call. `stdin` is what the step sent. */
   readonly run: (
     args: Parsed<S>,
@@ -50,10 +55,14 @@ export interface CommandDefinition<S extends ArgSpec> extends CompareOptions {
 /** A command, with its argument types erased: what the adapter holds. */
 export interface Command extends CompareOptions {
   readonly command: string
+  /** `null` when the command does not answer these arguments yet. */
   readonly prepare: (
     argv: readonly string[],
     stdin: string | null,
-  ) => { readonly operation: Operation; readonly files: readonly string[] }
+  ) => {
+    readonly operation: Operation
+    readonly files: readonly string[]
+  } | null
 }
 
 /** Declares the adapter of one Python command. Arguments argparse would
@@ -67,6 +76,7 @@ export function defineCommand<const S extends ArgSpec>(
     ...(unordered && { unordered }),
     ...(tolerance && { tolerance }),
     prepare: (argv, stdin) => {
+      if (definition.ported && !definition.ported(argv)) return null
       let args: Parsed<S>
       try {
         args = parseArgv(argv, definition.args)

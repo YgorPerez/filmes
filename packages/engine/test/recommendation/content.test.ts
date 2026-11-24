@@ -20,6 +20,7 @@ import {
   film,
   pythonOk,
   weightsWith,
+  PYTHON_TIMEOUT,
 } from './support.ts'
 
 const all = (fixture: Fixture, count = 100, vars = {}) =>
@@ -28,7 +29,7 @@ const all = (fixture: Fixture, count = 100, vars = {}) =>
 const sortedRows = <T>(rows: T[]): T[] =>
   [...rows].sort((a, b) => (String(a) < String(b) ? -1 : 1))
 
-describe('the content path', () => {
+describe('the content path', { timeout: PYTHON_TIMEOUT }, () => {
   test('a shared writer links the Nota to the Candidate, at most moderate', async () => {
     // A seed of 5 would be strong; the writer's ceiling is moderate.
     expect(evidenceOf(await all(useFixture()), 'Maré Cheia', 'bruno')).toEqual([
@@ -185,7 +186,7 @@ describe('the content path', () => {
   })
 })
 
-describe('the Ajuste to a link', () => {
+describe('the Ajuste to a link', { timeout: PYTHON_TIMEOUT }, () => {
   // `pessoa ajustar` is not ported yet: the Python sets the Ajuste up.
   const adjust = (fixture: Fixture, level: string) =>
     pythonOk(fixture, [
@@ -279,7 +280,7 @@ describe('the Ajuste to a link', () => {
   })
 })
 
-describe('the cut of the N strongest', () => {
+describe('the cut of the N strongest', { timeout: PYTHON_TIMEOUT }, () => {
   const sigmoid = (sum: number) => pyRound(1 / (1 + pyExp(-sum)), 4)
   const largest = (values: number[]) =>
     values.reduce((best, v) => (Math.abs(v) > Math.abs(best) ? v : best))

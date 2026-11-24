@@ -28,3 +28,38 @@
   ts: "^caminho '\\w+' não configurado: defina FILMES_\\w+ ou \\[paths\\] \\w+ em config/local\\.toml$"
   reason: local.toml is English after the cutover, so the message names its English section and key
   link: https://github.com/YgorPerez/filmes/issues/82
+
+# #90 ports `recomendar` without the Session it opens; #94 opens it. Until
+# then a plain `recomendar` step differs only by that Session: the `session`
+# of the output, its file, and its rows. These go stale when #94 lands, and
+# #94 deletes them.
+- id: recommend-opens-no-session-until-94-output
+  commands: [recomendar]
+  path: output.session
+  ts: '^<absent>$'
+  reason: the Session is opened by #94; #90 ports the ranking only
+  link: https://github.com/YgorPerez/filmes/issues/94
+- id: recommend-opens-no-session-until-94-file
+  commands: [recomendar]
+  path: data/sessions/*
+  ts: '^<absent>$'
+  reason: the Session is opened by #94; #90 ports the ranking only
+  link: https://github.com/YgorPerez/filmes/issues/94
+- id: recommend-opens-no-session-until-94-sessoes
+  commands: [recomendar]
+  path: db/sessoes
+  ts: '^<absent>$'
+  reason: the Session is opened by #94; #90 ports the ranking only
+  link: https://github.com/YgorPerez/filmes/issues/94
+- id: recommend-opens-no-session-until-94-presentes
+  commands: [recomendar]
+  path: db/sessao_presentes
+  ts: '^<absent>$'
+  reason: the Session is opened by #94; #90 ports the ranking only
+  link: https://github.com/YgorPerez/filmes/issues/94
+- id: recommend-opens-no-session-until-94-recomendacao
+  commands: [recomendar]
+  path: db/sessao_recomendacao
+  ts: '^<absent>$'
+  reason: the Session is opened by #94; #90 ports the ranking only
+  link: https://github.com/YgorPerez/filmes/issues/94

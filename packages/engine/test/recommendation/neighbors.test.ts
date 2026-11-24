@@ -5,7 +5,12 @@
 import { describe, expect, test } from 'vite-plus/test'
 import type { Recommendation } from '../../src/index.ts'
 import { useFixture, type Fixture } from '../fixture.ts'
-import { engineRecommendation, film, pythonOk } from './support.ts'
+import {
+  engineRecommendation,
+  film,
+  pythonOk,
+  PYTHON_TIMEOUT,
+} from './support.ts'
 
 const all = (fixture: Fixture, ...attendees: string[]) =>
   engineRecommendation(fixture, {
@@ -22,7 +27,7 @@ const one = (out: Recommendation, title: string, person = 'bruno') => {
   return found[0]
 }
 
-describe('the neighbourhood path', () => {
+describe('the neighbourhood path', { timeout: PYTHON_TIMEOUT }, () => {
   test('a large base and a high share give strong Evidence', async () => {
     const fixture = useFixture()
     const e = one(await all(fixture), 'A Casa das Marés')
