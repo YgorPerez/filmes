@@ -61,6 +61,10 @@ export const authorOf = (person: Person): Author => ({
   email: person.email ?? '',
 })
 
+/** The author of a write no logged-in Pessoa asked for: the command line,
+ * the oracle, a script. */
+export const ENGINE_AUTHOR: Author = { name: 'filmes', email: '' }
+
 export interface WriteOptions {
   readonly author: Author
   /** The commit message: what the action was. */
@@ -127,6 +131,14 @@ export class DataWriter extends Context.Service<
     readonly write: <A, E, R>(
       options: WriteOptions,
       use: (db: Connection) => Effect.Effect<A, E, R>,
+    ) => Effect.Effect<A, E | EngineError | SqliteError | GitError, R>
+    /** As `write`, for files the derived database only mirrors (a
+     * Pessoa): without a database file, `use` gets null and only the files
+     * are written and committed, as Python's `sincronizar` skips a missing
+     * database. */
+    readonly writeFiles: <A, E, R>(
+      options: WriteOptions,
+      use: (db: Connection | null) => Effect.Effect<A, E, R>,
     ) => Effect.Effect<A, E | EngineError | SqliteError | GitError, R>
     /** Pushes what is queued, now, after any push already running. A
      * failure is recorded in the status, not returned. */
@@ -368,21 +380,33 @@ export class DataWriter extends Context.Service<
           yield* kick
         }
 
+        /** Inside the lock: the use, then one commit of what it changed. */
+        const committed = <A, E, R>(
+          options: WriteOptions,
+          use: Effect.Effect<A, E, R>,
+        ) =>
+          Effect.gen(function* () {
+            const repo = yield* openRepo
+            if (!repo.git) return yield* use
+            yield* setAside(repo.root, options.author)
+            return yield* use.pipe(
+              Effect.tap(() => commit(repo.root, options)),
+              Effect.onError(() => discard(repo.root)),
+            )
+          })
+
         return DataWriter.of({
           write: (options, use) =>
             sqlite
-              .write((db) =>
-                Effect.gen(function* () {
-                  const repo = yield* openRepo
-                  if (!repo.git) return yield* use(db)
-                  yield* setAside(repo.root, options.author)
-                  return yield* use(db).pipe(
-                    Effect.tap(() => commit(repo.root, options)),
-                    Effect.onError(() => discard(repo.root)),
-                  )
-                }),
-              )
+              .write((db) => committed(options, use(db)))
               .pipe(Effect.tap(() => kick)),
+          writeFiles: (options, use) =>
+            Effect.gen(function* () {
+              const database = yield* env.path('database')
+              if (yield* Effect.sync(() => existsSync(database)))
+                return yield* sqlite.write((db) => committed(options, use(db)))
+              return yield* sqlite.exclusive(committed(options, use(null)))
+            }).pipe(Effect.tap(() => kick)),
           push,
           status,
         })

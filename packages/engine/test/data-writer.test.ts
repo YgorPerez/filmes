@@ -23,6 +23,8 @@ import {
   DataWriter,
   engineError,
   makeEngine,
+  personSkip,
+  personVeto,
   resolvePerson,
   savePerson,
   Sqlite,
@@ -340,6 +342,46 @@ describe('write', () => {
     expect(outcome).toMatchObject({
       output: { error: { code: 'missing_data' } },
     })
+  })
+})
+
+describe('the pessoa actions', () => {
+  test('commit by the logged-in Pessoa, or by the engine when none; without a database, the file alone', async () => {
+    const { fixture, vars, log } = useScratchRepo()
+    await withEngine(vars, async (engine) => {
+      await ok(
+        engine.run(
+          personVeto({
+            person: 'teo',
+            text: 'nunca vê terror',
+            target: 'Q9001801',
+            author: BRUNO,
+          }),
+        ),
+      )
+      // The same Veto again changes nothing: no commit.
+      await ok(
+        engine.run(
+          personVeto({ person: 'teo', text: 'de novo', target: 'Q9001801' }),
+        ),
+      )
+      await ok(engine.run(personSkip({ person: 'teo', text: 'curte mudo?' })))
+    })
+    rmSync(fixture.database)
+    await ok(
+      makeEngineRun(
+        vars,
+        personSkip({ person: 'iara', text: 'curte mudo?', author: IARA }),
+      ),
+    )
+
+    expect(log(fixture.data)).toEqual([
+      'Iara <iara@example.org>|Iara <iara@example.org>|pessoa pular iara: curte mudo?',
+      'filmes <>|filmes <>|pessoa pular teo: curte mudo?',
+      'Bruno <bruno@example.org>|Bruno <bruno@example.org>|pessoa vetar teo: Q9001801',
+      'Setup <setup@example.org>|Setup <setup@example.org>|initial',
+    ])
+    expect(gitIn(fixture.data, 'status', '--porcelain')).toBe('')
   })
 })
 
