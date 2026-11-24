@@ -1,6 +1,6 @@
 {
-  "leia": "How many suppressions of each directive the code may have (.github/scripts/suppressions.ts). It only goes down: whoever removes a suppression lowers the number.",
-  "teto": {
+  "readme": "How many suppressions of each directive the code may have (.github/scripts/suppressions.ts). It only goes down: whoever removes a suppression lowers the number.",
+  "ceiling": {
     "oxlint-disable": 0,
     "eslint-disable": 0,
     "react-doctor-disable": 0,
@@ -9,7 +9,7 @@
     "@ts-nocheck": 0,
     "@effect-diagnostics": 0,
     "fallow-ignore": 0,
-    "ignore de cobertura": 0,
+    "coverage ignore": 0,
     "use no memo": 0,
     "# noqa": 0
   }

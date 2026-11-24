@@ -46,7 +46,7 @@ const DIRECTIVES = (
     ['@ts-nocheck', /@ts-nocheck/, /\S/],
     ['@effect-diagnostics', /@effect-diagnostics/, /\s--?\s+\S/],
     ['fallow-ignore', /fallow-ignore\S*/, /\s--\s*\S/],
-    ['ignore de cobertura', /(?:v8|c8|istanbul) ignore/, /\s--\s*\S/],
+    ['coverage ignore', /(?:v8|c8|istanbul) ignore/, /\s--\s*\S/],
   ] satisfies [string, RegExp, RegExp][]
 ).map(([name, directive, reason]) => ({
   name,
@@ -291,7 +291,7 @@ if (import.meta.main) {
     target === 'HEAD'
       ? readFileSync(join(root, CEILING_FILE), 'utf8')
       : git('show', `${targetSha}:${CEILING_FILE}`),
-  ).teto
+  ).ceiling
   const { passes, lines } = judge({
     ...diff,
     count: countInGrep(git('grep', '-n', '-E', CANDIDATES, targetSha)),
