@@ -17,7 +17,10 @@ export function Home({ name }: { name: string }) {
       </header>
       <h1 className="text-title">{HOME.greeting(name)}</h1>
       <p className="text-ink-2">{HOME.soon}</p>
-      <nav aria-label={HOME.nav}>
+      <nav aria-label={HOME.nav} className="flex flex-wrap gap-sm">
+        <a href="/pessoas" className={buttonVariants({ variant: 'quiet' })}>
+          {HOME.people}
+        </a>
         <a href="/exportar" className={buttonVariants({ variant: 'quiet' })}>
           {HOME.export}
         </a>
