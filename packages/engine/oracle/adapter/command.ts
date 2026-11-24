@@ -7,6 +7,7 @@ import { Effect } from 'effect'
 import type { EngineServices } from '../../src/runtime/Engine.ts'
 import { engineError, type EngineError } from '../../src/runtime/EngineError.ts'
 import type { Run } from '../../src/runtime/Run.ts'
+import type { GitError } from '../../src/data/git.ts'
 import type { SqliteError } from '../../src/sqlite/Sqlite.ts'
 import { ArgvError, parseArgv, type ArgSpec, type Parsed } from './argv.ts'
 
@@ -14,7 +15,7 @@ import { ArgvError, parseArgv, type ArgSpec, type Parsed } from './argv.ts'
  * operation fails with another error adds it here. */
 export type Operation = Effect.Effect<
   unknown,
-  EngineError | SqliteError,
+  EngineError | SqliteError | GitError,
   EngineServices | Run
 >
 
@@ -46,15 +47,26 @@ export interface CommandDefinition<S extends ArgSpec> extends CompareOptions {
    * the TypeScript side's work folder (a path argument as the adapter got
    * it): compared byte for byte, with the work folders written `{work}`. */
   readonly files?: (args: Parsed<S>) => readonly string[]
+  /** The calls this adapter answers, when it ports only part of the
+   * command (`importar --letterboxd`, not `--trakt`); the others stay not
+   * ported. Several adapters may share a command if each says which calls
+   * it takes. */
+  readonly handles?: (args: Parsed<S>) => boolean
 }
 
 /** A command, with its argument types erased: what the adapter holds. */
 export interface Command extends CompareOptions {
   readonly command: string
+  /** Whether it answers only some calls (`handles`). */
+  readonly partial?: boolean
+  /** The operation for one call; null for a call it does not answer. */
   readonly prepare: (
     argv: readonly string[],
     stdin: string | null,
-  ) => { readonly operation: Operation; readonly files: readonly string[] }
+  ) => {
+    readonly operation: Operation
+    readonly files: readonly string[]
+  } | null
 }
 
 /** Declares the adapter of one Python command. Arguments argparse would
@@ -62,9 +74,10 @@ export interface Command extends CompareOptions {
 export function defineCommand<const S extends ArgSpec>(
   definition: CommandDefinition<S>,
 ): Command {
-  const { command, unordered, tolerance } = definition
+  const { command, unordered, tolerance, handles } = definition
   return {
     command,
+    ...(handles && { partial: true }),
     ...(unordered && { unordered }),
     ...(tolerance && { tolerance }),
     prepare: (argv, stdin) => {
@@ -78,6 +91,7 @@ export function defineCommand<const S extends ArgSpec>(
           files: [],
         }
       }
+      if (handles && !handles(args)) return null
       return {
         operation: definition.run(args, { stdin }),
         files: definition.files?.(args) ?? [],

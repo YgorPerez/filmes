@@ -45,8 +45,30 @@ export const pyParseFloat = (text: string): number => {
   return Number(lower)
 }
 
+const INT = /^[+-]?[0-9](?:_?[0-9])*$/
+
+/** Python's `int(text)` of a str in base 10 (whitespace around, digits of
+ * any script, "_" between digits), or null where Python raises
+ * ValueError. */
+export const pyParseInt = (text: string): number | null => {
+  const ascii = text
+    .replace(FLOAT_SPACE, '')
+    .replace(/\p{Nd}/gu, (d) => (/[0-9]/.test(d) ? d : asciiDigit(d)))
+  return INT.test(ascii) ? Number(ascii.replaceAll('_', '')) : null
+}
+
 const isLeap = (year: number) =>
   year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0)
+
+/** A real date of the proleptic Gregorian calendar, years 1 to 9999, as
+ * `datetime.date` takes it. */
+export const isValidDate = (year: number, month: number, day: number) =>
+  year >= 1 &&
+  year <= 9999 &&
+  month >= 1 &&
+  month <= 12 &&
+  day >= 1 &&
+  day <= daysIn(year, month)
 
 const daysIn = (year: number, month: number) =>
   month === 2

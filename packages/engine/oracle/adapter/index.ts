@@ -64,11 +64,12 @@ export function commandOf(argv: readonly string[]): {
  * an `invalid_usage`, as argparse makes it. */
 export function makeAdapter(commands: readonly Command[]): Adapter {
   const known = pythonCommands()
-  const byName = new Map<string, Command>()
+  const byName = new Map<string, Command[]>()
   for (const command of commands) {
-    if (byName.has(command.command))
+    const same = byName.get(command.command) ?? []
+    if (same.length > 0 && !(command.partial && same.every((c) => c.partial)))
       throw new Error(`two adapters for '${command.command}'`)
-    byName.set(command.command, command)
+    byName.set(command.command, [...same, command])
   }
   return {
     ported: new Set(byName.keys()),
@@ -89,17 +90,20 @@ export function makeAdapter(commands: readonly Command[]): Adapter {
             ),
           ),
         }
-      const found = byName.get(command)
-      if (!found) return { kind: 'not_ported', command }
-      const { operation, files } = found.prepare(rest, stdin)
-      return {
-        kind: 'ported',
-        command,
-        operation,
-        files,
-        ...(found.unordered && { unordered: found.unordered }),
-        ...(found.tolerance && { tolerance: found.tolerance }),
+      for (const found of byName.get(command) ?? []) {
+        const prepared = found.prepare(rest, stdin)
+        if (prepared === null) continue
+        const { operation, files } = prepared
+        return {
+          kind: 'ported',
+          command,
+          operation,
+          files,
+          ...(found.unordered && { unordered: found.unordered }),
+          ...(found.tolerance && { tolerance: found.tolerance }),
+        }
       }
+      return { kind: 'not_ported', command }
     },
   }
 }

@@ -1,0 +1,51 @@
+// `importar --letterboxd <zip>`. The other origins of `importar` (the RSS,
+// Trakt, `--remover`) are other tickets' (#100, #101): each adds its own
+// file with the same `args` and its own `handles`.
+
+import { Effect } from 'effect'
+import {
+  engineError,
+  importLetterboxd,
+  readUpload,
+} from '../../../src/index.ts'
+import { defineCommand } from '../command.ts'
+
+/** The CLI has no logged-in Pessoa; the oracle's data folder is no git
+ * repository, so no commit is made with it. */
+const CLI_AUTHOR = { name: 'filmes', email: '' }
+
+export default defineCommand({
+  command: 'importar',
+  args: {
+    positionals: [],
+    options: {
+      pessoa: { kind: 'value' },
+      letterboxd: { kind: 'value' },
+      'letterboxd-rss': { kind: 'value' },
+      trakt: { kind: 'value' },
+      remover: { kind: 'value' },
+    },
+    exclusive: [
+      {
+        options: ['letterboxd', 'letterboxd-rss', 'trakt', 'remover'],
+        required: true,
+      },
+    ],
+  },
+  handles: (args) => args.letterboxd !== undefined,
+  run: (args) =>
+    Effect.gen(function* () {
+      if (!args.pessoa)
+        return yield* engineError(
+          'invalid_usage',
+          'importar precisa de --pessoa',
+        )
+      const { original, content } = yield* readUpload(args.letterboxd ?? '')
+      return yield* importLetterboxd({
+        person: args.pessoa,
+        original,
+        content,
+        author: CLI_AUTHOR,
+      })
+    }),
+})
