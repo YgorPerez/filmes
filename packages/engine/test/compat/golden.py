@@ -361,6 +361,158 @@ def compare_vectors(r):
     return rows
 
 
+# --- text, float() and dates (Pessoa files, #86) -------------------------------
+
+SPACES_AND_BREAKS = " \t\n\r\x0b\x0c\x1c\x1d\x1e\x1f\x85\xa0\u1680\u2000\u200a\u2028\u2029\u202f\u205f\u3000\ufeff"
+
+
+def spaced_text(r):
+    """Random text with whitespace and line breaks around and inside it."""
+    edge = lambda: "".join(r.choice(SPACES_AND_BREAKS) for _ in range(r.randint(0, 3)))
+    middle = "".join(r.choice(SPACES_AND_BREAKS) if r.random() < 0.2 else c for c in random_text(r))
+    return edge() + middle + edge()
+
+
+def text_vectors(r):
+    non_printable = [cp for cp in range(0x110000) if not chr(cp).isprintable()]
+    rows = [{"assigned": ranges(ASSIGNED), "space": ranges([cp for cp in ASSIGNED if chr(cp).isspace()]),
+             "nonPrintable": ranges(non_printable)}]
+    for _ in range(N):
+        s = spaced_text(r) if r.random() < 0.7 else r.choice(["", "'", '"', "'\"", "\\", "a'b", 'a"b'] ) + random_text(r)
+        rows.append({"s": s, "strip": s.strip(), "lines": s.splitlines(), "repr": repr(s)})
+    return rows
+
+
+FLOAT_CHARS = "0123456789" * 4 + "+-._eE " + "infINFatyNAy" + "\u0663\u0e52\U0001D7D9\u3000\xa0x"
+
+
+def float_vectors(r):
+    edges = ["", " ", "1", " 4 ", "4,5", "4.5", "+4", "-0", "1_0", "1__0", "_1", "1_", "1_.5", "1._5", ".5", "5.",
+             ".", "e5", "1e", "1e_5", "1e5", "1E+5", "1e-5_0", "0x10", "+-1", "inf", "-Infinity", "+nan", "NaN",
+             "infinit", "nan1", "\u0664,\u0665", "\U0001D7D9", "1\u3000", "\xa01", "\x1c1\x1f", "1\x85", "4/10"]
+    rows = [{"s": s, "out": attempt(float, s)} for s in edges]
+    for _ in range(N):
+        s = "".join(r.choice(FLOAT_CHARS) for _ in range(r.randint(0, 8)))
+        rows.append({"s": s, "out": attempt(float, s)})
+    return rows
+
+
+def iso_date(s):
+    import datetime as dt
+    try:
+        dt.date.fromisoformat(s)
+    except ValueError:
+        return False
+    return True
+
+
+DATE_CHARS = "0123456789" * 5 + "-" * 6 + "W" * 2 + "T: x\xe9"
+
+
+def date_vectors(r):
+    edges = ["2026-11-20", "20261120", "2026-W47", "2026W47", "2026-W47-5", "2026W475", "20261120xx", "2026-11-2x",
+             "2026-1120", "0000-01-01", "2026-W53", "2025-W53", "2020-W53-7", "2026-02-29", "2024-02-29",
+             "2026-11-20 ", "2026-W47-8", "2026-W00", "2026-W4", "2026-W475", "2026W475xx", "20261120\xe9", "9999-12-31",
+             "9999-W52-7", "0001-W01-1", "0001-01-01", "2026-13-01", "2026-00-10", "2026-11-31", "2026-12-31"]
+    rows = [{"s": s, "out": iso_date(s)} for s in edges]
+    for _ in range(N):
+        if r.random() < 0.5:
+            s = "".join(r.choice(DATE_CHARS) for _ in range(r.choice([7, 8, 9, 10, 10, 10])))
+        else:
+            year = r.choice(["2026", "2020", "0001", "9999", "1999", "2004", "2015"])
+            if r.random() < 0.3:
+                s = f"{year}{r.choice(['-', ''])}W{r.randint(0, 54):02}" + r.choice(["", f"-{r.randint(0, 8)}", str(r.randint(0, 8))])
+            else:
+                sep = r.choice(["-", "-", ""])
+                s = f"{year}{sep}{r.randint(0, 13):02}{sep}{r.randint(0, 32):02}"
+        rows.append({"s": s, "out": iso_date(s)})
+    return rows
+
+
+# --- YAML 1.1 as PyYAML reads and writes it ----------------------------------
+
+def tag_yaml(v):
+    """`tag`, plus what YAML adds: a date or a datetime goes as its str(), as the
+    port keeps it; a dict as {"m": [[key, value], ...]}."""
+    import datetime as dt
+    if isinstance(v, (dt.date, dt.datetime)):
+        return str(v)
+    if isinstance(v, dict):
+        return {"m": [[tag_yaml(k), tag_yaml(x)] for k, x in v.items()]}
+    if isinstance(v, list):
+        return [tag_yaml(x) for x in v]
+    if isinstance(v, bytes):
+        raise TypeError(type(v))
+    return tag(v)
+
+
+SCALAR_EDGES = [
+    "", "~", "null", "Null", "NULL", "nULL", "y", "Y", "n", "N", "yes", "Yes", "YES", "yEs", "no", "No", "ON", "On",
+    "on", "off", "Off", "OFF", "True", "TRUE", "true", "tRue", "False", "1", "-1", "+1", "0", "-0", "+0", "00", "09",
+    "010", "-010", "0o10", "0x1F", "-0x1f", "0X1F", "0b101", "+0b1", "0b2", "1_000", "1:30", "-1:30:00", "1:60",
+    "1:5", "01:30", "190:20:30.15", "1.0", "1.", "-1.", ".5", "-.5", "+.5", "1e3", "1e+3", "1.e3", "1.5e3", "1.5e+3",
+    "1.5E-3", "1.0e-05", ".5e+1", ".inf", "-.Inf", "+.INF", ".nan", ".NaN", "-.nan", "NaN", "inf", "2026-11-20",
+    "2026-1-5", "2026-01-05", "2026-11-20 10:00:00", "2026-11-20T10:00:00Z", "2026-11-20t10:00:00.5+03",
+    "2026-11-20 1:02:03.1234567 -03:30", "2026-11-20T10:00:00 Z", "2026-11-20 10:00:00.000000", "2026-11-20x",
+    "2026-11-20T10:00", "1_", "_1", "0_7", "0x_1", "1__0", "12:5", "1,5", "4.5", "0.5", "1_0.5", "1:2.5", "123456789012345678901234567890",
+    "0.1", "1e-05", "-", "=", "<<", "abc", "a b", "Q9000001", "tt9000101",
+]
+SCALAR_CHARS = "0123456789" * 3 + "+-._:" * 2 + "eExXbBoO " + "infaNtrusyl" + "TZ"
+
+
+def scalar_vectors(r):
+    import yaml
+    rows = []
+    texts = SCALAR_EDGES + ["".join(r.choice(SCALAR_CHARS) for _ in range(r.randint(1, 10))) for _ in range(N)]
+    for s in texts:
+        try:
+            value = yaml.safe_load(f"v: {s}\n")
+        except Exception as e:  # the vector records which one
+            rows.append({"s": s, "out": {"error": type(e).__name__}})
+            continue
+        if isinstance(value, dict) and list(value) == ["v"] and not isinstance(value["v"], (dict, list)):
+            rows.append({"s": s, "out": tag_yaml(value["v"])})
+    return rows
+
+
+def any_yaml_scalar(r):
+    k = r.random()
+    if k < 0.45:
+        return random_text(r, r.randint(0, 40)) if r.random() < 0.7 else spaced_text(r)
+    if k < 0.55:
+        return r.choice(SCALAR_EDGES)
+    if k < 0.65:
+        return f"{r.randint(1990, 2030)}-{r.randint(1, 12):02}-{r.randint(1, 28):02}"
+    if k < 0.75:
+        return any_int(r)
+    if k < 0.88:
+        return any_float(r)
+    if k < 0.95:
+        return r.choice([True, False])
+    return None
+
+
+def any_yaml_tree(r, depth=0):
+    k = r.random()
+    if depth < 3 and k < 0.25:
+        return [any_yaml_tree(r, depth + 1) for _ in range(r.randint(0, 4))]
+    if depth < 3 and k < 0.5:
+        keys = [random_text(r, r.randint(1, 8)) if r.random() < 0.6 else r.choice(SCALAR_EDGES) for _ in range(r.randint(0, 4))]
+        return {key: any_yaml_tree(r, depth + 1) for key in keys}
+    return any_yaml_scalar(r)
+
+
+def dump_vectors(r):
+    """Frontmatter as `filmes/dados/markdown.py` writes it, and the value PyYAML reads back."""
+    import yaml
+    rows = []
+    while len(rows) < N // 4:
+        tree = {random_text(r, r.randint(1, 8)): any_yaml_tree(r, 1) for _ in range(r.randint(1, 5))}
+        text = yaml.safe_dump(tree, allow_unicode=True, sort_keys=False, default_flow_style=None)
+        rows.append({"yaml": text, "value": tag_yaml(yaml.safe_load(text))})
+    return rows
+
+
 def main():
     for name, make, seed in [
         ("py-sum", sum_vectors, 1),
@@ -374,6 +526,11 @@ def main():
         ("slug", slug_vectors, 9),
         ("fact-id", fact_id_vectors, 10),
         ("compare-tuple", compare_vectors, 11),
+        ("py-text", text_vectors, 12),
+        ("py-float", float_vectors, 13),
+        ("iso-date", date_vectors, 14),
+        ("yaml-scalar", scalar_vectors, 15),
+        ("yaml-dump", dump_vectors, 16),
     ]:
         write(name, make(random.Random(seed)))
 

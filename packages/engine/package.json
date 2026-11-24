@@ -12,7 +12,8 @@
   },
   "dependencies": {
     "effect": "catalog:",
-    "smol-toml": "1.9.1"
+    "smol-toml": "1.9.1",
+    "yaml": "2.9.1"
   },
   "devDependencies": {
     "@filmes/key-migration": "workspace:*",
