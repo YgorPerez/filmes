@@ -52,7 +52,7 @@ packages/engine/           o motor em TypeScript, com Effect v4 (ADR 0003); sem 
   src/<área>/              o resto do porte, uma área por pasta
   test/                    Vitest pela costura de test/fixture.ts; o global-setup monta a fixture com o Python
 frontend/                  app TanStack Start: MCP por HTTP, OAuth, app web e o Cartaz (MCP Apps e web)
-  scripts/                 deploy na VPS (deploy-plan.ts, vps.ts, check-live.ts, prepare-vps.sh, deploy-wizard.sh; ADR 0006)
+  scripts/                 deploy na VPS (deploy-plan.ts, vps.ts, db-publish.ts, check-live.ts, prepare-vps.sh, deploy-wizard.sh; ADR 0006)
   nginx/                   vhost, TLS, formato de log sem query e rotação que o deploy instala na VPS
   Dockerfile               a imagem: só o .output do build
 mcp/                       o servidor de hoje, já no workspace sem mudar de comportamento, até o porte; testes em Vitest

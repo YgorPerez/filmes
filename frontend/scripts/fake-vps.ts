@@ -3,8 +3,9 @@
 // temporary folder that plays `/`, and the `docker`, `curl`, `nginx`,
 // `systemctl`, `pgrep`, `chown` and `sleep` on the `PATH` are fake. The
 // `docker` remembers, in files, the images and the containers (the image,
-// the port, the volume, whether they stopped and their `--env-file`). Each
-// call goes to `calls`, in order.
+// the port, the volume, whether they stopped, their `--env-file` and their
+// `-e`). `df` reports the free bytes the test sets, and `send` copies the
+// file where rsync would put it. Each call goes to `calls`, in order.
 //
 // The VPS is not empty: like the real one, it already serves temestudo, with
 // its containers (temestudo-app, temestudo-stats, saude-app), their images, its vhost and the package's default site, so the
@@ -46,10 +47,12 @@ case "$1" in
       shift
     done ;;
   run)
-    shift; NAME=; PORT=; IMAGE=; ENV_FILE=; VOLUME=
+    shift; NAME=; PORT=; IMAGE=; ENV_FILE=; VOLUME=; VARS=
     while [ $# -gt 0 ]; do
       case "$1" in
         --name) NAME=$2; shift 2 ;;
+        -e) VARS="$VARS$2
+"; shift 2 ;;
         -p) PORT=$(echo "$2" | cut -d: -f2); shift 2 ;;
         --env-file) ENV_FILE=$2; shift 2 ;;
         -v) VOLUME=$2; shift 2 ;;
@@ -61,13 +64,14 @@ case "$1" in
     grep -qxF "$IMAGE" "$E/images" || { echo "Unable to find image $IMAGE" >&2; exit 125; }
     [ ! -f "$C/$NAME" ] || { echo "Conflict: $NAME already exists" >&2; exit 125; }
     echo "$IMAGE" > "$C/$NAME"; echo "$PORT" > "$C/$NAME.port"; echo "$VOLUME" > "$C/$NAME.volume"
-    if [ -n "$ENV_FILE" ]; then cp "$ENV_FILE" "$C/$NAME.env"; fi ;;
+    if [ -n "$ENV_FILE" ]; then cp "$ENV_FILE" "$C/$NAME.env"; fi
+    printf '%s' "$VARS" > "$C/$NAME.vars" ;;
   rm)
     [ -f "$C/$LAST" ] || { echo "No such container: $LAST" >&2; exit 1; }
-    rm -f "$C/$LAST" "$C/$LAST.port" "$C/$LAST.volume" "$C/$LAST.stopped" "$C/$LAST.env" ;;
+    rm -f "$C/$LAST" "$C/$LAST.port" "$C/$LAST.volume" "$C/$LAST.stopped" "$C/$LAST.env" "$C/$LAST.vars" ;;
   stop) [ -f "$C/$LAST" ] && touch "$C/$LAST.stopped" ;;
   rename)
-    for EXT in "" .port .volume .stopped .env; do
+    for EXT in "" .port .volume .stopped .env .vars; do
       if [ -f "$C/$2$EXT" ]; then mv "$C/$2$EXT" "$C/$3$EXT"; fi
     done ;;
   logs) echo "the log of $LAST" ;;
@@ -92,6 +96,15 @@ echo "nginx $*" >> "$STATE/calls"
 if [ -f "$STATE/nginx-refuses" ]; then
   echo "nginx: [emerg] unknown directive \"proxy_pas\"" >&2; exit 1
 fi
+`
+
+/** `df -PB1 <folder>`: a header and one line whose fourth column is the
+ * free bytes, 100 GB unless the test set fewer. */
+const DF = String.raw`#!/usr/bin/env bash
+echo "df $*" >> "$STATE/calls"
+FREE=$(cat "$STATE/free-bytes" 2>/dev/null || echo 107374182400)
+echo "Filesystem 1-blocks Used Available Capacity Mounted"
+echo "/dev/sda1 0 0 $FREE 0% /"
 `
 
 /** Only records the call and exits fine. */
@@ -178,6 +191,8 @@ export function fakeVps() {
     pgrep: '#!/usr/bin/env bash\nexit 1\n',
     sleep: '#!/usr/bin/env bash\n',
     install: INSTALL,
+    df: DF,
+    rsync: RECORD,
   }
   for (const [name, text] of Object.entries(programs)) {
     writeFileSync(join(bin, name), text)
@@ -206,6 +221,12 @@ export function fakeVps() {
       for (const name of names)
         copyFileSync(join(folder, name), join(paths.upload, name))
     },
+    send(file, to) {
+      writeFileSync(join(state, 'calls'), `send ${file} ${to}\n`, {
+        flag: 'a',
+      })
+      copyFileSync(file, to)
+    },
   }
 
   const read = (path: string) =>
@@ -220,12 +241,16 @@ export function fakeVps() {
       running: !existsSync(`${base}.stopped`),
     }
   }
+  /** The `-e` variables a container was started with. */
+  const variables = (name: string) =>
+    (read(join(state, 'c', `${name}.vars`)) ?? '').split('\n').filter(Boolean)
 
   return {
     vps,
     paths,
     read,
     container,
+    variables,
     /** temestudo's files, by path from the root, with what they hold now. */
     neighbour: () =>
       Object.fromEntries(
@@ -250,6 +275,10 @@ export function fakeVps() {
     },
     breakWith(fault: Fault) {
       writeFileSync(join(state, fault), '')
+    },
+    /** What `df` reports free on the disk from now on. */
+    freeBytes(bytes: number) {
+      writeFileSync(join(state, 'free-bytes'), `${bytes}\n`)
     },
   }
 }
