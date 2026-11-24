@@ -20,4 +20,10 @@ export {
   thousandsDot,
   truncate2,
 } from './number.ts'
-export { casefold, isalnum, letterboxdSlug, personSlug } from './text.ts'
+export {
+  casefold,
+  isalnum,
+  letterboxdSlug,
+  personSlug,
+  pyStrip,
+} from './text.ts'

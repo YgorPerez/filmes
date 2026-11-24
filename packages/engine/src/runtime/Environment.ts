@@ -16,6 +16,8 @@
 //     FILMES_CACHE       the on-demand sources' cache         [paths] cache
 //     FILMES_GRAVACOES   recorded source answers, not the net [paths] recordings
 //     FILMES_AVALIACOES  `avaliar`'s reports                  [paths] evaluations
+//     FILMES_OMDB_CHAVE  FILMES_DDD_CHAVE  FILMES_TMDB_CHAVE  the on-demand
+//                        sources' API keys (environment only, never local.toml)
 //
 // A variable wins over `[paths]` in local.toml. An empty variable counts as
 // unset, as in Python.
@@ -23,7 +25,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { basename, dirname, extname, join } from 'node:path'
-import { Context, Effect, Layer, Schema } from 'effect'
+import { Context, Effect, Layer, Redacted, Schema } from 'effect'
 import { parse as parseToml } from 'smol-toml'
 import { engineError, type EngineError } from './EngineError.ts'
 import { Weights } from './Weights.ts'
@@ -42,6 +44,15 @@ const PATH_VARIABLES = {
 } as const
 
 export type PathName = keyof typeof PATH_VARIABLES
+
+/** The variables with the on-demand sources' API keys. */
+export const SOURCE_KEY_VARIABLES = [
+  'FILMES_OMDB_CHAVE',
+  'FILMES_DDD_CHAVE',
+  'FILMES_TMDB_CHAVE',
+] as const
+
+export type SourceKeyVariable = (typeof SOURCE_KEY_VARIABLES)[number]
 
 /** The config files besides `weights.toml` and `local.toml`, by the stem of
  * their English name. */
@@ -122,6 +133,10 @@ export interface EnvironmentShape {
   readonly paths: Readonly<Partial<Record<PathName, string>>>
   /** `weights.toml`, decoded. */
   readonly weights: Weights
+  /** The on-demand sources' API keys that are set. */
+  readonly sourceKeys: Readonly<
+    Partial<Record<SourceKeyVariable, Redacted.Redacted<string>>>
+  >
   /** `FILMES_HOJE` when set. Code asks `Run` (or `Today`) for today, never
    * this. */
   readonly fixedToday: string | undefined
@@ -187,6 +202,14 @@ const makeEnvironment = Effect.fnUntraced(function* (vars: Vars) {
     get('FILMES_PESOS') ?? join(config, 'weights.toml'),
     Weights,
   )
+  const sourceKeys: Partial<
+    Record<SourceKeyVariable, Redacted.Redacted<string>>
+  > = {}
+  for (const name of SOURCE_KEY_VARIABLES) {
+    const value = get(name)
+    if (value !== undefined) sourceKeys[name] = Redacted.make(value)
+  }
+
   const pinned = get('FILMES_HOJE')
   const today = pinned === undefined ? undefined : yield* checkToday(pinned)
 
@@ -194,6 +217,7 @@ const makeEnvironment = Effect.fnUntraced(function* (vars: Vars) {
     config,
     paths,
     weights,
+    sourceKeys,
     fixedToday: today,
     path: (name) => {
       const value = paths[name]

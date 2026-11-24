@@ -15,6 +15,7 @@ import {
   pyInt,
   pyRound,
   pyStr,
+  pyStrip,
   pySum,
   thousandsDot,
   truncate2,
@@ -177,6 +178,21 @@ describe('text', () => {
         ({ s }) => personSlug(s),
       ),
     ).toEqual([])
+  })
+
+  test('pyStrip strips what str.strip() strips', () => {
+    const [table, ...rows] = golden<{
+      space: Range[]
+      s: string
+      out: string
+    }>('strip')
+    const space = new Set(codePoints(table?.space ?? []))
+    const wrong = [...codePoints([[0, 0x10ffff]])].filter(
+      (cp) => (pyStrip(String.fromCodePoint(cp)) === '') !== space.has(cp),
+    )
+    expect(wrong).toEqual([])
+    atLeast10k(rows)
+    expect(misses(rows, ({ s }) => pyStrip(s))).toEqual([])
   })
 })
 

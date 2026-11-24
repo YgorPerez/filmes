@@ -269,6 +269,16 @@ def slug_vectors(r):
     return rows
 
 
+def strip_vectors(r):
+    rows = [{"space": ranges([cp for cp in range(0x110000) if chr(cp).isspace()])}]
+    spaces = [chr(cp) for cp in range(0x110000) if chr(cp).isspace()] + ["\ufeff", "\u200b", "\u180e"]
+    for _ in range(N):
+        pad = lambda: "".join(r.choice(spaces) for _ in range(r.randint(0, 3)))
+        s = pad() + random_text(r, r.randint(0, 5)) + pad()
+        rows.append({"s": s, "out": s.strip()})
+    return rows
+
+
 # --- fact ids and tuples -----------------------------------------------------
 
 def fato_id(tabela, *valores):
@@ -374,6 +384,7 @@ def main():
         ("slug", slug_vectors, 9),
         ("fact-id", fact_id_vectors, 10),
         ("compare-tuple", compare_vectors, 11),
+        ("strip", strip_vectors, 12),
     ]:
         write(name, make(random.Random(seed)))
 
