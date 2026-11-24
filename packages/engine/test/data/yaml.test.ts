@@ -99,7 +99,8 @@ describe('YAML as PyYAML reads it', () => {
       return same(read, value) && same(again, value) ? [] : [{ yaml, value }]
     })
     expect(wrong).toEqual([])
-  })
+    // ~2 s of parsing alone; the default 5 s is not enough on a loaded machine.
+  }, 30_000)
 
   test('collections of scalars go in flow style, like default_flow_style=None', () => {
     const value = new Map<string, YamlValue>([

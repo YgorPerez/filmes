@@ -246,6 +246,11 @@ export class Sqlite extends Context.Service<
     readonly write: <A, E, R>(
       use: (connection: Connection) => Effect.Effect<A, E, R>,
     ) => Effect.Effect<A, E | EngineError | SqliteError, R>
+    /** Runs `effect` holding the write lock, with no connection: a write
+     * to filmes-dados when there is no database file to sync. */
+    readonly exclusive: <A, E, R>(
+      effect: Effect.Effect<A, E, R>,
+    ) => Effect.Effect<A, E, R>
   }
 >()('@filmes/engine/sqlite/Sqlite') {
   static readonly layer: Layer.Layer<Sqlite, never, Environment> = Layer.effect(
@@ -313,6 +318,7 @@ export class Sqlite extends Context.Service<
               close,
             ),
           ),
+        exclusive: (effect) => writeLock.withPermits(1)(effect),
       })
     }),
   )
