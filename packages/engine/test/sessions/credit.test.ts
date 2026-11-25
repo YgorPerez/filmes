@@ -15,7 +15,7 @@
 //   and Quim little.
 //
 // Not here yet: the film that rises only by an on-demand Restrição
-// (`--gatilho`, #91) and regenerating with kept films (`--manter`, #95).
+// (`--gatilho`, #92).
 
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -389,5 +389,53 @@ describe('the Crédito’s window', () => {
     expect(
       (await recommend(fixture, vars, { attendees: ['dono', 'quim'] })).credit,
     ).toEqual({ bruno: 0.1, quim: 0 })
+  })
+})
+
+describe('regenerating with the Crédito', () => {
+  const creditLines = (f: Recommendation['films'][number]) =>
+    f.filmLines.filter((line) => line.text.startsWith('na Sessão de'))
+
+  test('only the free places compete, and a kept film gets no Crédito line', async () => {
+    // With Bruno's Crédito, As Horas Lentas goes past Ruído Branco and Voo
+    // Noturno. Version 1, by Quim's taste, showed Casa Cheia and Explosão
+    // Final on top; kept there, As Horas Lentas takes the first free place
+    // (3), which without the Crédito would be Ruído Branco's.
+    const { fixture, vars } = useCreditFixture()
+    await withFeedback(fixture, vars, ['dono', 'quim'], {
+      ratings: ['dono=1', 'quim=5'],
+    })
+    const byQuim = await recommend(fixture, vars, {
+      attendees: ['dono', 'quim'],
+      rule: 'by',
+      by: 'quim',
+    })
+    const session = byQuim.session.id
+    expect(titles(byQuim).slice(0, 2)).toEqual(['Casa Cheia', 'Explosão Final'])
+
+    const redone = await recommend(fixture, vars, {
+      attendees: ['dono', 'quim'],
+      session,
+      keep: [
+        byQuim.films
+          .slice(0, 2)
+          .map((f) => f.id)
+          .join(','),
+      ],
+    })
+
+    const third = redone.films[2]!
+    expect([third.title, third.new]).toEqual(['As Horas Lentas', true])
+    expect(creditLines(third).map((line) => line.person)).toEqual(['bruno'])
+
+    const keepingWhatRose = await recommend(fixture, vars, {
+      attendees: ['dono', 'quim'],
+      session,
+      keep: [third.id],
+    })
+
+    const kept = keepingWhatRose.films.filter((f) => !f.new)
+    expect(kept.map((f) => f.title)).toEqual(['As Horas Lentas'])
+    expect(creditLines(kept[0]!)).toEqual([])
   })
 })

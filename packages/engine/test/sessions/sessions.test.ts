@@ -437,6 +437,25 @@ describe('every Session', () => {
     ])
     expect(Object.keys(still[0] ?? {})).not.toContain('open')
   })
+
+  test('a Restrição stored with no module left is not labelled', async () => {
+    const fixture = useFixture()
+    mkdirSync(join(fixture.data, 'sessions'))
+    writeFileSync(
+      sessionFile(fixture, '2026-11-20-iara'),
+      '---\ndate: 2026-11-20\nattendees: [bruno, iara]\nrule: {name: default}\n' +
+        'context:\n  constraints:\n' +
+        '  - {name: similar, films: [tt9000101, tt9000601], titles: [O Farol de Areia, Pequenos Milagres]}\n' +
+        '  - {name: no_repeat}\n  - {name: out_of_session}\n---\n',
+    )
+
+    const { sessions } = await fixture.ok(listSessions)
+
+    expect(sessions[0]?.constraints).toEqual([
+      'parecidos com O Farol de Areia e Pequenos Milagres',
+      'nada trocado nem já visto nesta Sessão',
+    ])
+  })
 })
 
 describe('the Session file', () => {

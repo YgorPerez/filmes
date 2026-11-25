@@ -42,7 +42,9 @@ import {
   isMapping,
   isSequence,
   pyDate,
+  pyStrValue,
   pyTruthy,
+  yamlToJson,
   type YamlMapping,
   type YamlValue,
 } from '../data/yaml.ts'
@@ -252,6 +254,26 @@ export const onScreen = (version: YamlMapping): ReadonlyArray<YamlValue> => {
   }
   return []
 }
+
+/** A film of a version's screen, as the Dono saw it. */
+export interface ShownFilm {
+  readonly position: number
+  readonly id: string
+  readonly title: string | null
+}
+
+/** The films on a version's screen (`onScreen`), as plain values. */
+export const shownFilms = (version: YamlMapping): ReadonlyArray<ShownFilm> =>
+  onScreen(version)
+    .filter(isMapping)
+    .map((film) => {
+      const title = film.get('title')
+      return {
+        position: Number(yamlToJson(film.get('position') ?? null)),
+        id: pyStrValue(film.get('id') ?? null),
+        title: title === undefined || title === null ? null : pyStrValue(title),
+      }
+    })
 
 /** `<date>-<attendees>`, with -2, -3... when that name is taken
  * (`arquivo.novo_id`). */
