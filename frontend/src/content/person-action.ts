@@ -165,3 +165,7 @@ export const isPersonRefusal = within(PERSON_REFUSALS)
 /** Why `/pessoas` shows a refusal: the Pessoa of a form is gone. */
 export const isPeopleRefusal = (value: unknown): value is 'pessoa' =>
   value === 'pessoa'
+
+/** A Relato's source when the form gives none: who told it, since several
+ * Donos may tell (and be told about). */
+export const reportSource = (teller: string) => `descrição de ${teller}`

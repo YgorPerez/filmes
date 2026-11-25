@@ -21,6 +21,7 @@ const IARA: PersonPage = {
   name: 'Iara',
   aliases: ['ia'],
   owner: false,
+  viewer: { person: 'bruno', name: 'Bruno' },
   vetoes: [
     {
       text: 'nunca vê terror',
@@ -125,11 +126,11 @@ const show = (page: PersonPage = IARA) =>
   render(<PersonScreen slug={page.person} page={page} />)
 
 /** The form's action as the server reads it. */
-const posted = (form: HTMLElement) => {
+const posted = (form: HTMLElement, person = 'iara') => {
   expect(form).toBeInstanceOf(HTMLFormElement)
   const element = form as HTMLFormElement
   expect(element.method).toBe('post')
-  expect(new URL(element.action).pathname).toBe('/pessoas/iara/acao')
+  expect(new URL(element.action).pathname).toBe(`/pessoas/${person}/acao`)
   return parseAction(new FormData(element))
 }
 
@@ -347,12 +348,40 @@ describe('PersonScreen', () => {
     ).toBeTruthy()
   })
 
-  it('has no Relatos for the Dono: what he says is Declarado', () => {
-    show({ ...IARA, owner: true })
+  it('has no Relato form on the logged-in Dono\'s own page: what he says is Declarado', () => {
+    const own = { ...IARA, person: 'bruno', name: 'Bruno', owner: true }
+    show({ ...own, reports: [] })
     expect(
       screen.queryByRole('region', { name: PERSON.reports.title }),
     ).toBeNull()
     expect(screen.getByText(PERSON.owner)).toBeTruthy()
+    cleanup()
+    // What another Dono told of his taste, he sees; he cannot add to it.
+    show(own)
+    const reports = section(PERSON.reports.title)
+    expect(within(reports).getByText('“odeia filme lento”')).toBeTruthy()
+    expect(within(reports).queryByText(PERSON.reports.add)).toBeNull()
+  })
+
+  it('takes a Relato about another Dono, told by the logged-in one', async () => {
+    show({ ...IARA, person: 'vera', name: 'Vera', owner: true })
+    expect(screen.getByText(PERSON.owner)).toBeTruthy()
+    const { user, form } = await open(
+      section(PERSON.reports.title),
+      PERSON.reports.add,
+    )
+    const fields = within(form)
+    expect(
+      fields.getByText(PERSON.sourceHint(PERSON.reports.source('Bruno'))),
+    ).toBeTruthy()
+    await user.type(fields.getByLabelText(PERSON.text), 'adora suspense')
+    expect(posted(form, 'vera')).toEqual({
+      kind: 'report',
+      text: 'adora suspense',
+      target: undefined,
+      reaction: undefined,
+      source: undefined,
+    })
   })
 
   it.each(PERSON_NOTICES)('says what happened: %s', (notice) => {
