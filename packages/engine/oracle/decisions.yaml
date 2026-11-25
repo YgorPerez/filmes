@@ -33,12 +33,19 @@
 # after the cutover (ADR 0002): `sessions/<id>.md`, not `sessoes/<id>.md`.
 # The oracle maps absolute paths, not this relative one.
 - id: session-file-is-in-the-english-folder
-  commands: [recomendar, sessoes-abertas, feedback]
+  commands: [recomendar, sessoes-abertas, feedback, cartaz responder]
   path: output.session*.file
   python: '^sessoes/[^/]+\.md$'
   ts: '^sessions/[^/]+\.md$'
   reason: filmes-dados keeps the Sessions in sessions/ after the key migration
   link: https://github.com/YgorPerez/filmes/issues/94
+
+- id: billboard-is-a-model-not-a-file
+  commands: [cartaz]
+  path: output.file
+  ts: '^<absent>$'
+  reason: the engine returns the Cartaz as data (billboardModel); the app (#114) and the MCP Apps view (#111) render it, so no HTML file is written
+  link: https://github.com/YgorPerez/filmes/issues/97
 
 # Decided in #86 (Pessoa files). No fixture scenario reaches these yet, so
 # they are not entries (an entry no difference uses goes stale in a full
