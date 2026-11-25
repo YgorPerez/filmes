@@ -1,17 +1,13 @@
 // `recomendar` → `recommendSession` (#90, #94): the Recomendação and the
 // Session it opens or redoes (`--sessao`, `--manter`, `--trocar`, #95), with
-// the local Restrições (#91). The on-demand Restrições (#92) are ported
-// later, so a step with those arguments stays `not_ported`.
+// the local Restrições (#91), the on-demand ones (#92) and the similar one
+// (#93).
 
 import { data } from '@filmes/key-migration'
 import { recommendSession, type RuleName } from '../../../src/index.ts'
 import { engineError } from '../../../src/runtime/EngineError.ts'
 import { Effect } from 'effect'
 import { defineCommand } from '../command.ts'
-
-/** Arguments of later tickets: the Restrições' (#92, `restricoes/*.py`
- * `configurar`). */
-const LATER = ['--crianca', '--gatilho']
 
 /** Python's `int()` on an argument: spaces around, a sign, digits with
  * single underscores between them. */
@@ -44,20 +40,25 @@ export default defineCommand({
       'sem-ja-visto': { kind: 'flag' },
       'sem-lento': { kind: 'flag' },
       'sem-tristeza': { kind: 'flag' },
+      // The on-demand Restrições (#92); `--crianca` alone is age 0.
+      crianca: { kind: 'optional', const: '0' },
+      gatilho: { kind: 'append' },
       // The similar Restrição (#93).
       parecido: { kind: 'extend' },
       'sem-parecido': { kind: 'flag' },
     },
   },
-  ported: (argv) =>
-    !argv.some((token) =>
-      LATER.some((flag) => token === flag || token.startsWith(`${flag}=`)),
-    ),
   run: (args) => {
     // argparse's `type=int` (the oracle does not compare an invalid_usage
     // message, so which bad one is named first does not matter).
     const ints: Record<string, number | undefined> = {}
-    for (const name of ['quantos', 'duracao-max', 'desde', 'ate'] as const) {
+    for (const name of [
+      'quantos',
+      'duracao-max',
+      'desde',
+      'ate',
+      'crianca',
+    ] as const) {
       const value = args[name]
       if (value === undefined) continue
       ints[name] = pyInt(value)
@@ -89,6 +90,8 @@ export default defineCommand({
       ...(args['sem-ja-visto'] && { unseen: true }),
       ...(args['sem-lento'] && { noSlow: true }),
       ...(args['sem-tristeza'] && { noSad: true }),
+      ...(ints['crianca'] !== undefined && { child: ints['crianca'] }),
+      ...(args.gatilho.length > 0 && { triggers: args.gatilho }),
       ...(args.parecido.length > 0 && { similar: args.parecido }),
       ...(args['sem-parecido'] && { noSimilar: true }),
       ...(args.sessao !== undefined && { session: args.sessao }),
