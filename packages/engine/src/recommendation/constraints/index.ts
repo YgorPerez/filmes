@@ -13,17 +13,26 @@ import type {
   ConstraintModule,
   StoredConstraint,
 } from '../constraints.ts'
+import { childModule, type ChildRequest } from './child.ts'
 import { durationModule, type DurationRequest } from './duration.ts'
 import { languageModule, type LanguageRequest } from './language.ts'
 import { noSadModule, type NoSadRequest } from './no-sad.ts'
 import { noSlowModule, type NoSlowRequest } from './no-slow.ts'
+import {
+  outOfSessionModule,
+  type OutOfSessionRequest,
+} from './out-of-session.ts'
 import { similarModule, type SimilarRequest } from './similar.ts'
+import { triggerModule, type TriggerRequest } from './trigger.ts'
 import { unseenModule, type UnseenRequest } from './unseen.ts'
 import { yearModule, type YearRequest } from './year.ts'
 
 /** What a request can ask of the Restrições: each file's part. */
 export type ConstraintRequest = YearRequest &
+  ChildRequest &
   DurationRequest &
+  OutOfSessionRequest &
+  TriggerRequest &
   LanguageRequest &
   SimilarRequest &
   UnseenRequest &
@@ -35,7 +44,10 @@ export const CONSTRAINT_MODULES: ReadonlyArray<
   ConstraintModule<ConstraintRequest>
 > = [
   yearModule,
+  childModule,
   durationModule,
+  outOfSessionModule,
+  triggerModule,
   languageModule,
   similarModule,
   unseenModule,

@@ -23,15 +23,21 @@ import {
   pyStrValue,
   pyTruthy,
   yamlToJson,
+  type YamlMapping,
   type YamlValue,
 } from '../data/yaml.ts'
 import { peopleFolder, readPerson } from '../people/people.ts'
-import type { Constraint } from '../recommendation/constraints.ts'
-import { storedConstraints } from '../recommendation/constraints/index.ts'
+import type {
+  Constraint,
+  StoredConstraint,
+} from '../recommendation/constraints.ts'
 import {
-  recommendAsked,
-  type Recommendation,
-  type RecommendRequest,
+  constraintLabel,
+  storedConstraints,
+} from '../recommendation/constraints/index.ts'
+import type {
+  Recommendation,
+  RecommendRequest,
 } from '../recommendation/recommend.ts'
 import type { EngineServices } from '../runtime/Engine.ts'
 import type { EngineError } from '../runtime/EngineError.ts'
@@ -214,25 +220,6 @@ export const openSession = (
     )
   })
 
-/** `recomendar`: the Recomendação, and the Session it opens. */
-export const recommendSession = (
-  request: RecommendSessionRequest,
-): Effect.Effect<
-  SessionRecommendation,
-  EngineError | SqliteError | GitError,
-  EngineServices | Run
-> =>
-  Effect.gen(function* () {
-    const { recommendation, asked } = yield* recommendAsked(request)
-    const context = sessionContext(
-      request.request ?? null,
-      recommendation.moods,
-      asked,
-    )
-    const session = yield* openSession(recommendation, context)
-    return { ...recommendation, session }
-  })
-
 /** A Session without Feedback, as `sessoes-abertas` lists it. */
 export interface OpenSession {
   readonly id: string
@@ -246,39 +233,96 @@ export interface OpenSession {
   readonly version: number
 }
 
-/** The Sessions without Feedback, the latest first (`sessao.abertas`).
- * Reads the files only. */
-export const openSessions: Effect.Effect<
-  { readonly sessions: ReadonlyArray<OpenSession> },
+/** Any Session, as the app's list shows it: `OpenSession` and whether it
+ * is still open, the film the Feedback chose, the Climas and the
+ * Restrições of the current version (their labels, `rotulo`). */
+export interface SessionSummary extends OpenSession {
+  readonly open: boolean
+  /** The chosen film's IMDb id, or null (open, or "não vimos nada"). */
+  readonly chosen: string | null
+  readonly moods: ReadonlyArray<string>
+  readonly constraints: ReadonlyArray<string>
+}
+
+const contextOf = (front: YamlMapping): YamlMapping | null => {
+  const context = front.get('context')
+  return pyTruthy(context) && isMapping(context) ? context : null
+}
+
+/** The labels of the Restrições a context keeps: the duration first (the
+ * Session keeps it apart, in `max_duration`), then the others in their
+ * order. A Restrição no module knows has no label and is left out. */
+const contextLabels = (context: YamlMapping | null): string[] => {
+  if (context === null) return []
+  const maxDuration = yamlToJson(context.get('max_duration') ?? null)
+  const stored = yamlToJson(context.get('constraints') ?? null)
+  const asked = [
+    ...(typeof maxDuration === 'number'
+      ? [{ name: 'duration', max_minutes: maxDuration }]
+      : []),
+    ...(Array.isArray(stored) ? (stored as StoredConstraint[]) : []),
+  ]
+  return asked.flatMap((c) => constraintLabel(c) ?? [])
+}
+
+const summary = (id: string, front: YamlMapping): SessionSummary => {
+  const context = contextOf(front)
+  const recommendation = front.get('recommendation')
+  const moods = yamlToJson(context?.get('moods') ?? null)
+  const chosen = front.get('chosen')
+  return {
+    id,
+    file: sessionRelative(id),
+    date: pyStrValue(front.get('date') ?? null),
+    attendees: yamlToJson(front.get('attendees') ?? null),
+    request: context ? yamlToJson(context.get('request') ?? null) : null,
+    recommendation: yamlToJson(
+      pyTruthy(recommendation) && isSequence(recommendation)
+        ? recommendation
+        : [],
+    ),
+    version: Number(yamlToJson(currentVersion(front).get('version') ?? null)),
+    open: isOpen(front),
+    chosen: typeof chosen === 'string' ? chosen : null,
+    moods: Array.isArray(moods) ? moods.map(String) : [],
+    constraints: contextLabels(context),
+  }
+}
+
+/** The fields `sessoes-abertas` gives, as Python's (the oracle compares
+ * them). */
+const openFields = (s: SessionSummary): OpenSession => ({
+  id: s.id,
+  file: s.file,
+  date: s.date,
+  attendees: s.attendees,
+  request: s.request,
+  recommendation: s.recommendation,
+  version: s.version,
+})
+
+/** Every Session, the latest first. Reads the files only. */
+export const listSessions: Effect.Effect<
+  { readonly sessions: ReadonlyArray<SessionSummary> },
   EngineError,
   EngineServices
 > = Effect.gen(function* () {
-  const list: OpenSession[] = []
-  for (const id of yield* sessionIds) {
-    const { frontmatter: front } = yield* readSession(id)
-    if (!isOpen(front)) continue
-    const context = front.get('context')
-    const recommendation = front.get('recommendation')
-    list.push({
-      id,
-      file: sessionRelative(id),
-      date: pyStrValue(front.get('date') ?? null),
-      attendees: yamlToJson(front.get('attendees') ?? null),
-      request:
-        pyTruthy(context) && isMapping(context)
-          ? yamlToJson(context.get('request') ?? null)
-          : null,
-      recommendation: yamlToJson(
-        pyTruthy(recommendation) && isSequence(recommendation)
-          ? recommendation
-          : [],
-      ),
-      version: Number(yamlToJson(currentVersion(front).get('version') ?? null)),
-    })
-  }
+  const list: SessionSummary[] = []
+  for (const id of yield* sessionIds)
+    list.push(summary(id, (yield* readSession(id)).frontmatter))
   // `sorted(..., reverse=True)`: stable, so equal keys keep the file order.
   const sessions = list.toSorted((a, b) =>
     compareTuple([...sessionOrder(b)], [...sessionOrder(a)]),
   )
   return { sessions }
 })
+
+/** The Sessions without Feedback, the latest first (`sessao.abertas`).
+ * Reads the files only. */
+export const openSessions: Effect.Effect<
+  { readonly sessions: ReadonlyArray<OpenSession> },
+  EngineError,
+  EngineServices
+> = Effect.map(listSessions, ({ sessions }) => ({
+  sessions: sessions.filter((s) => s.open).map(openFields),
+}))

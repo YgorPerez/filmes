@@ -445,7 +445,7 @@ const writtenFacts = (
 
 /** The Session's Dono, who signs the commit: the logged-in Pessoa, else
  * the Session's `owner`. */
-const sessionOwner = (id: string) =>
+export const sessionOwner = (id: string) =>
   Effect.gen(function* () {
     const owner = yield* Owner
     if (owner !== null) return owner
