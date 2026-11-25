@@ -229,12 +229,12 @@ write_env VPS_USER "$VPS_USER"
 write_env VPS_PORT "$VPS_PORT"
 
 # ── 2 ─────────────────────────────────────────────────────────────────────
-stage "The DNS at Cloudflare"
-say "temestudo.cloud's DNS lives at Cloudflare. One A record, $HOST → $VPS_HOST,"
-say "unproxied (grey cloud): certbot validates the name right on the VPS."
-open_url "https://dash.cloudflare.com/"
-step "Open temestudo.cloud → DNS → Records."
-step "Add record: type A, name cinema, IPv4 $VPS_HOST, Proxy status off (grey cloud), TTL Auto."
+stage "The DNS at Hostinger"
+say "temestudo.cloud's DNS lives at Hostinger (hPanel). One A record, $HOST → $VPS_HOST:"
+say "certbot validates the name right on the VPS."
+open_url "https://hpanel.hostinger.com/"
+step "Open Domains → temestudo.cloud → DNS / Nameservers → DNS records."
+step "Add record: type A, name cinema, points to $VPS_HOST, TTL 300."
 step "No AAAA for cinema: Let's Encrypt would try IPv6 first."
 pause "Enter after saving the record."
 if command -v dig >/dev/null 2>&1; then
