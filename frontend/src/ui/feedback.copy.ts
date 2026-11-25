@@ -40,6 +40,8 @@ export const FEEDBACK = {
     comment: 'Comentário',
     commentHint: 'opcional: o que ela achou, junto da Nota ou do Relato',
     submit: 'Gravar e fechar a Sessão',
+    searchFold: 'Viram outro filme?',
+    searchFoldHint: 'ache o título ou o ID no Catálogo',
   },
 
   credit: {
