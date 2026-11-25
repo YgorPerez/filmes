@@ -161,6 +161,17 @@
   /* The 44px tap target, every control's minimum height. */
   --spacing-touch: 44px;
 
+  /* The one authored motion: a sticker being stuck on (DESIGN.md, Motion).
+   * It animates `scale` alone, so the sticker's `rotate` and `translate`
+   * hold. */
+  --animate-stick: stick 160ms cubic-bezier(0.16, 1, 0.3, 1);
+  @keyframes stick {
+    from {
+      scale: 1.15;
+      opacity: 0;
+    }
+  }
+
   /* Flat: no blurred or offset shadow (The No Shadow Rule). */
   --shadow-*: initial;
   --blur-*: initial;

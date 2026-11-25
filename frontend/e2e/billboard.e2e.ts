@@ -58,10 +58,13 @@ test('the Dono marks, reloads, sends, and the Cartaz comes back redone', async (
   await expect(page.getByText('Nada marcado ainda.')).toBeVisible()
   await expect(page).toHaveURL(new RegExp(`/sessoes/${id}$`))
 
-  await card(page, 1).getByRole('checkbox', { name: 'Nina' }).check()
-  await page.getByLabel('nota de Nina para o filme 1, de 1 a 10').fill('8')
+  await card(page, 1).getByRole('button', { name: 'Nina' }).click()
+  await page
+    .getByRole('group', { name: 'nota de Nina para o filme 1, de 1 a 10' })
+    .getByRole('button', { name: '8', exact: true })
+    .click()
   await page.getByLabel('o que Nina achou do filme 1').fill('lindo')
-  await card(page, 2).getByRole('checkbox', { name: 'Trocar' }).check()
+  await card(page, 2).getByRole('button', { name: 'Trocar' }).click()
   // The stamp on the poster.
   await expect(
     card(page, 2).getByRole('link').first().getByText('Trocar'),
@@ -73,14 +76,14 @@ test('the Dono marks, reloads, sends, and the Cartaz comes back redone', async (
   // A reload gives the marks back (one key per Session and version).
   await page.reload()
   await expect(
-    card(page, 1).getByRole('checkbox', { name: 'Nina' }),
-  ).toBeChecked()
+    card(page, 1).getByRole('button', { name: 'Nina' }),
+  ).toHaveAttribute('aria-pressed', 'true')
   await expect(page.getByLabel('o que Nina achou do filme 1')).toHaveValue(
     'lindo',
   )
   await expect(
-    card(page, 2).getByRole('checkbox', { name: 'Trocar' }),
-  ).toBeChecked()
+    card(page, 2).getByRole('button', { name: 'Trocar' }),
+  ).toHaveAttribute('aria-pressed', 'true')
   await expect(
     card(page, 3).getByRole('button', { name: '4 de 5' }),
   ).toHaveAttribute('aria-pressed', 'true')
@@ -89,7 +92,10 @@ test('the Dono marks, reloads, sends, and the Cartaz comes back redone', async (
 
   await send(page, id, 'regerada', 'Recomendação refeita')
   await expect(
-    page.getByText(`Saiu: 1 ${seen} (Nina já viu) · 2 ${swapped} (trocado)`),
+    page.getByText(`Saiu da prateleira: ${seen} (Nina já viu)`),
+  ).toBeVisible()
+  await expect(
+    page.getByText(`Saiu da prateleira: ${swapped} (trocado)`),
   ).toBeVisible()
   // The kept films stay at their number; the ones that came in are new.
   expect(await titleOf(page, 3)).toBe(third)
@@ -102,8 +108,8 @@ test('the Dono marks, reloads, sends, and the Cartaz comes back redone', async (
     )
   // The new version starts with no marks.
   await expect(
-    card(page, 2).getByRole('checkbox', { name: 'Trocar' }),
-  ).not.toBeChecked()
+    card(page, 2).getByRole('button', { name: 'Trocar' }),
+  ).toHaveAttribute('aria-pressed', 'false')
   await snap(page, info, 'cartaz-regerado')
 })
 
@@ -134,7 +140,7 @@ test('in the dark, Copiar pro chat gives the text, and stars alone only note', a
   await snap(page, info, 'cartaz-escuro')
 
   await send(page, id, 'anotada', 'Estrelas e comentários')
-  await expect(page.getByText('Saiu:')).toHaveCount(0)
+  await expect(page.getByText('Saiu da prateleira:')).toHaveCount(0)
   await expect(
     card(page, 1).getByRole('button', { name: '5 de 5' }),
   ).toHaveAttribute('aria-pressed', 'false')

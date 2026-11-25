@@ -61,7 +61,7 @@ const status = () => screen.getByRole('status').textContent
 
 async function swapFirstAndSend() {
   const user = userEvent.setup()
-  await user.click(card(1).getByRole('checkbox', { name: 'Trocar' }))
+  await user.click(card(1).getByRole('button', { name: 'Trocar' }))
   await user.click(screen.getByRole('button', { name: copy.send }))
   return user
 }
@@ -281,7 +281,7 @@ describe('mountView', () => {
     root.remove()
   })
 
-  it('offers fullscreen while inline, when the host has it', async () => {
+  it('inline, the compact card: one line per film, Marcar asks for fullscreen', async () => {
     const app = fakeApp({
       displayMode: 'inline',
       availableDisplayModes: ['inline', 'fullscreen'],
@@ -292,19 +292,47 @@ describe('mountView', () => {
     )
     await act(async () => app.ontoolresult?.(shown))
 
+    expect(within(root).queryByRole('article')).toBeNull()
+    const films = within(root).getByRole('list', { name: view.list })
+    expect(
+      within(films)
+        .getAllByRole('listitem')
+        .map((li) => li.textContent),
+    ).toEqual(['1As Horas Lentas2021 · 1h44', '2Sal & Ferrugem'])
+
     const user = userEvent.setup()
-    await user.click(
-      within(root).getByRole('button', { name: view.fullscreen }),
-    )
+    await user.click(within(root).getByRole('button', { name: view.mark }))
     expect(app.requestDisplayMode).toHaveBeenCalledWith({ mode: 'fullscreen' })
+    expect(document.documentElement.dataset.theme).toBeUndefined()
+    root.remove()
+  })
+
+  it('the marks made in fullscreen go with Enviar back inline', async () => {
+    const modes = { availableDisplayModes: ['inline', 'fullscreen'] }
+    const app = fakeApp({ displayMode: 'fullscreen', ...modes })
+    const root = document.body.appendChild(document.createElement('div'))
+    await act(() =>
+      mountView(app as unknown as ViewApp, root, () => Promise.resolve()),
+    )
+    await act(async () => app.ontoolresult?.(shown))
+
+    const user = userEvent.setup()
+    expect(within(root).queryByRole('button', { name: view.mark })).toBeNull()
+    await user.click(card(1).getByRole('button', { name: 'Trocar' }))
+    expect(within(root).getByText('1 Trocar marcado')).toBeTruthy()
 
     await act(async () =>
-      app.onhostcontextchanged?.({ displayMode: 'fullscreen' }),
+      app.onhostcontextchanged?.({ displayMode: 'inline', ...modes }),
     )
-    expect(
-      within(root).queryByRole('button', { name: view.fullscreen }),
-    ).toBeNull()
-    expect(document.documentElement.dataset.theme).toBeUndefined()
+    expect(within(root).queryByRole('article')).toBeNull()
+    await user.click(within(root).getByRole('button', { name: copy.send }))
+    expect(app.callServerTool).toHaveBeenCalledWith({
+      name: 'answer_billboard',
+      arguments: {
+        session: MODEL.session,
+        text: '#cartaz 2026-11-20-iara v2\n1 tt9000104 · trocar\n',
+      },
+    })
     root.remove()
   })
 })
