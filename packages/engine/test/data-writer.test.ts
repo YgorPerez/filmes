@@ -23,6 +23,7 @@ import {
   DataWriter,
   engineError,
   makeEngine,
+  personCreate,
   personSkip,
   personVeto,
   resolvePerson,
@@ -374,6 +375,30 @@ describe('the pessoa actions', () => {
       'Bruno <bruno@example.org>|Bruno <bruno@example.org>|pessoa vetar teo: Q9001801',
       'Setup <setup@example.org>|Setup <setup@example.org>|initial',
     ])
+    expect(gitIn(fixture.data, 'status', '--porcelain')).toBe('')
+  })
+
+  test('a new Dono with her e-mail is one commit by the Dono who created her', async () => {
+    const { fixture, vars, log } = useScratchRepo()
+
+    await ok(
+      makeEngineRun(
+        vars,
+        personCreate({
+          name: 'Luana',
+          owner: true,
+          email: 'Luana@Example.org',
+          author: BRUNO,
+        }),
+      ),
+    )
+
+    expect(log(fixture.data, 'master~1..master')).toEqual([
+      'Bruno <bruno@example.org>|Bruno <bruno@example.org>|pessoa criar Luana',
+    ])
+    expect(
+      gitIn(fixture.data, 'show', 'master:people/luana.md'),
+    ).toContain('email: luana@example.org\n')
     expect(gitIn(fixture.data, 'status', '--porcelain')).toBe('')
   })
 })
