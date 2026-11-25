@@ -34,7 +34,7 @@ import { weightsWith } from '../recommendation/support.ts'
 
 /** The IMDb bonus of As Horas Lentas (7,4) would change the order without
  * the Crédito: the margins here are small, so only the Crédito moves it. */
-const setUp = (): { fixture: Fixture; vars: Vars } => {
+const useCreditFixture = (): { fixture: Fixture; vars: Vars } => {
   const fixture = useFixture()
   const vars = weightsWith(
     fixture,
@@ -79,7 +79,7 @@ const withFeedback = async (
 
 describe('the Crédito', () => {
   test('who fell behind gets Crédito, and her film rises with the Crédito line', async () => {
-    const { fixture, vars } = setUp()
+    const { fixture, vars } = useCreditFixture()
     const before = await recommend(fixture, vars, DONO_QUIM)
     expect(before.credit).toEqual({ bruno: 0, quim: 0 })
     expect(titles(before).indexOf('Voo Noturno')).toBeLessThan(
@@ -123,7 +123,7 @@ describe('the Crédito', () => {
     // O Farol de Areia pleases Bruno (0,784) a bit more than Quim (0,574).
     // With the Crédito Bruno becomes its minimum (0,562): it rises only
     // because others fell more, and it is not Bruno's film.
-    const { fixture, vars } = setUp()
+    const { fixture, vars } = useCreditFixture()
     const before = await recommend(fixture, vars, DONO_QUIM)
     await fixture.ok(
       recordFeedback({
@@ -142,7 +142,7 @@ describe('the Crédito', () => {
   })
 
   test('the Dono’s Relato counts in three levels', async () => {
-    const { fixture, vars } = setUp()
+    const { fixture, vars } = useCreditFixture()
     await withFeedback(fixture, vars, ['dono', 'quim'], {
       ratings: ['dono=5'],
       reports: ['quim=não gostou'],
@@ -171,7 +171,7 @@ describe('the Crédito', () => {
   test('the Crédito leaves alone the neutral of who has no Fato', async () => {
     // Quim gets Crédito 0,5 (u' = u − 0,25). On Voo Noturno he has a Fato
     // and falls to 0,407. On Maré Cheia he has none and counts 0,5.
-    const { fixture, vars } = setUp()
+    const { fixture, vars } = useCreditFixture()
     await withFeedback(fixture, vars, ['dono', 'quim'], {
       ratings: ['dono=5'],
       reports: ['quim=não gostou'],
@@ -186,7 +186,7 @@ describe('the Crédito', () => {
   })
 
   test('without Crédito the film of who fell behind comes later', async () => {
-    const { fixture, vars } = setUp()
+    const { fixture, vars } = useCreditFixture()
 
     const out = await recommend(fixture, vars, DONO_QUIM)
 
@@ -196,7 +196,7 @@ describe('the Crédito', () => {
   })
 
   test('a Presente with no reaction is not in the Crédito', async () => {
-    const { fixture, vars } = setUp()
+    const { fixture, vars } = useCreditFixture()
     await withFeedback(fixture, vars, ['dono', 'quim'], { ratings: ['dono=1'] })
 
     expect(
@@ -205,7 +205,7 @@ describe('the Crédito', () => {
   })
 
   test('"não vimos nada" leaves the Crédito alone', async () => {
-    const { fixture, vars } = setUp()
+    const { fixture, vars } = useCreditFixture()
     const { session } = await recommend(fixture, vars, {
       attendees: ['dono', 'quim'],
     })
@@ -217,7 +217,7 @@ describe('the Crédito', () => {
   })
 
   test('an open Session is not in the Crédito', async () => {
-    const { fixture, vars } = setUp()
+    const { fixture, vars } = useCreditFixture()
     await recommend(fixture, vars, { attendees: ['dono', 'quim'] })
 
     const out = await recommend(
@@ -229,7 +229,7 @@ describe('the Crédito', () => {
   })
 
   test('the average Regra and "de fulano" use no Crédito', async () => {
-    const { fixture, vars } = setUp()
+    const { fixture, vars } = useCreditFixture()
     await withFeedback(fixture, vars, ['dono', 'quim'], {
       ratings: ['dono=1', 'quim=5'],
     })
@@ -247,7 +247,7 @@ describe('the Crédito', () => {
   })
 
   test('the Dono alone has no Crédito', async () => {
-    const { fixture, vars } = setUp()
+    const { fixture, vars } = useCreditFixture()
     await withFeedback(fixture, vars, ['dono', 'quim'], {
       ratings: ['dono=1', 'quim=5'],
     })
@@ -284,12 +284,18 @@ const writeSession = (
 
 describe('the Crédito’s window', () => {
   test('looks at the 5 latest Sessions with someone here today', async () => {
-    const { fixture, vars } = setUp()
+    const { fixture, vars } = useCreditFixture()
     // With Quim: in the oldest Bruno fell behind; in the next 5, a tie.
-    writeSession(fixture, '2026-10-01-quim', '2026-10-01', ['bruno', 'quim'], [
-      ['bruno', 0.5],
-      ['quim', 5],
-    ])
+    writeSession(
+      fixture,
+      '2026-10-01-quim',
+      '2026-10-01',
+      ['bruno', 'quim'],
+      [
+        ['bruno', 0.5],
+        ['quim', 5],
+      ],
+    )
     for (let day = 2; day < 7; day++)
       writeSession(
         fixture,
@@ -302,13 +308,23 @@ describe('the Crédito’s window', () => {
         ],
       )
     // With Iara, and alone: Bruno fell behind, but none of it is with Quim.
-    writeSession(fixture, '2026-11-01-iara', '2026-11-01', ['bruno', 'iara'], [
-      ['bruno', 0.5],
-      ['iara', 5],
-    ])
-    writeSession(fixture, '2026-11-02-bruno', '2026-11-02', ['bruno'], [
-      ['bruno', 0.5],
-    ])
+    writeSession(
+      fixture,
+      '2026-11-01-iara',
+      '2026-11-01',
+      ['bruno', 'iara'],
+      [
+        ['bruno', 0.5],
+        ['iara', 5],
+      ],
+    )
+    writeSession(
+      fixture,
+      '2026-11-02-bruno',
+      '2026-11-02',
+      ['bruno'],
+      [['bruno', 0.5]],
+    )
     await fixture.ok(reloadSessions)
 
     const credit = async (attendees: string[]) =>
@@ -320,17 +336,29 @@ describe('the Crédito’s window', () => {
   })
 
   test('cuts the window by the numeric suffixes on the same day', async () => {
-    const { fixture, vars } = setUp()
+    const { fixture, vars } = useCreditFixture()
     const date = '2026-11-20'
     for (let n = 5; n < 10; n++)
-      writeSession(fixture, `${date}-quim-${n}`, date, ['bruno', 'quim'], [
-        ['bruno', 5],
+      writeSession(
+        fixture,
+        `${date}-quim-${n}`,
+        date,
+        ['bruno', 'quim'],
+        [
+          ['bruno', 5],
+          ['quim', 5],
+        ],
+      )
+    writeSession(
+      fixture,
+      `${date}-quim-10`,
+      date,
+      ['bruno', 'quim'],
+      [
+        ['bruno', 0.5],
         ['quim', 5],
-      ])
-    writeSession(fixture, `${date}-quim-10`, date, ['bruno', 'quim'], [
-      ['bruno', 0.5],
-      ['quim', 5],
-    ])
+      ],
+    )
     await fixture.ok(reloadSessions)
 
     expect(

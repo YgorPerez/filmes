@@ -49,7 +49,8 @@ import { engineError, type EngineError } from '../runtime/EngineError.ts'
 import type { Environment } from '../runtime/Environment.ts'
 import { Owner } from '../runtime/Owner.ts'
 import { Run } from '../runtime/Run.ts'
-import type { Connection, SqliteError } from '../sqlite/Sqlite.ts'
+import { numOrNull, text, textOrNull } from '../sqlite/row.ts'
+import type { Connection, Row, SqliteError } from '../sqlite/Sqlite.ts'
 import { ownersOf, syncSession } from './database.ts'
 import { comments, reactions, sessionSeen, type ReportLevel } from './facts.ts'
 import { isOpen, readSession, sessionRelative, writeSession } from './file.ts'
@@ -105,7 +106,10 @@ const LEVELS: Readonly<Record<string, ReportLevel>> = {
   'não gostou': 'disliked',
 }
 
-const LEVEL_SEPARATORS = new RegExp(`[-_${PY_WHITESPACE_CLASS.slice(1, -1)}]+`, 'gu')
+const LEVEL_SEPARATORS = new RegExp(
+  `[-_${PY_WHITESPACE_CLASS.slice(1, -1)}]+`,
+  'gu',
+)
 
 /** The level the Dono said, or null (`_nivel`). */
 const levelOf = (value: string): ReportLevel | null => {
@@ -116,6 +120,10 @@ const levelOf = (value: string): ReportLevel | null => {
 }
 
 type Reaction = Map<string, YamlValue>
+
+/** The Pessoa of a reaction this module built. */
+const personOf = (reaction: Reaction): string =>
+  pyStrValue(reaction.get('person') ?? null)
 
 /** `PESSOA=VALOR`, the Pessoa resolved and among the Presentes (`_par`). */
 const pair = (
@@ -144,7 +152,7 @@ const pair = (
 
 const onePerPerson = (byPerson: Map<string, Reaction>, reaction: Reaction) =>
   Effect.gen(function* () {
-    const person = String(reaction.get('person'))
+    const person = personOf(reaction)
     if (byPerson.has(person))
       return yield* engineError(
         'invalid_usage',
@@ -175,8 +183,7 @@ const readReactions = (
         ['kind', 'rating'],
         ['rating', pyFloat(read.rating)],
       ])
-      if (read.tenScale !== null)
-        reaction.set('original_rating', read.tenScale)
+      if (read.tenScale !== null) reaction.set('original_rating', read.tenScale)
       if (!owners.has(person)) reaction.set('relayed', true)
       yield* onePerPerson(byPerson, reaction)
     }
@@ -216,14 +223,9 @@ const addComments = (
   items: ReadonlyArray<string>,
 ) =>
   Effect.gen(function* () {
-    const byPerson = new Map(list.map((r) => [String(r.get('person')), r]))
+    const byPerson = new Map(list.map((r) => [personOf(r), r]))
     for (const item of items) {
-      const { person, value } = yield* pair(
-        db,
-        attendees,
-        '--comentario',
-        item,
-      )
+      const { person, value } = yield* pair(db, attendees, '--comentario', item)
       const reaction = byPerson.get(person)
       if (reaction === undefined)
         return yield* engineError(
@@ -269,10 +271,10 @@ const WITH_YEAR = new RegExp(
   'su',
 )
 
-const filmRow = (row: Record<string, unknown>): Film => ({
-  id: String(row['id']),
-  title: row['titulo'] === null ? null : String(row['titulo']),
-  year: row['ano'] === null ? null : Number(row['ano']),
+const filmRow = (row: Row): Film => ({
+  id: text(row, 'id'),
+  title: textOrNull(row, 'titulo'),
+  year: numOrNull(row, 'ano'),
 })
 
 /** The title of a Recomendação item, casefolded as Python's `str`. */
@@ -333,8 +335,7 @@ const findFilm = (
       if (inRecommendation.has(id) || foldedTitle(item) !== casefold(title))
         continue
       const row = yield* db.get('SELECT ano FROM filmes WHERE id = ?', id)
-      const filmYear =
-        row === undefined || row['ano'] === null ? null : Number(row['ano'])
+      const filmYear = row === undefined ? null : numOrNull(row, 'ano')
       if (year === null || year === filmYear)
         inRecommendation.set(id, {
           id,
@@ -361,10 +362,7 @@ const findFilm = (
   })
 
 /** The film's position in a list of `{position, id}` (`_posicao`). */
-const positionIn = (
-  list: ReadonlyArray<YamlValue>,
-  id: string,
-): YamlValue => {
+const positionIn = (list: ReadonlyArray<YamlValue>, id: string): YamlValue => {
   for (const item of list)
     if (isMapping(item) && item.get('id') === id)
       return item.get('position') ?? null
@@ -372,7 +370,11 @@ const positionIn = (
 }
 
 const positionNumber = (value: YamlValue): number | null =>
-  value === null ? null : isPyInt(value) ? Number(value.int) : (yamlToJson(value) as number)
+  value === null
+    ? null
+    : isPyInt(value)
+      ? Number(value.int)
+      : (yamlToJson(value) as number)
 
 const mappings = (value: YamlValue | undefined): YamlMapping[] =>
   pyTruthy(value) && isSequence(value)
@@ -468,83 +470,83 @@ export const recordFeedback = (
     const id = request.session
     const writer = yield* DataWriter
     const author = yield* authorFor(yield* sessionOwner(id))
-    return yield* writer.write(
-      { author, message: `feedback ${id}` },
-      (db) =>
-        Effect.gen(function* () {
-          const { frontmatter, body } = yield* readSession(id)
-          if (!isOpen(frontmatter))
+    return yield* writer.write({ author, message: `feedback ${id}` }, (db) =>
+      Effect.gen(function* () {
+        const { frontmatter, body } = yield* readSession(id)
+        if (!isOpen(frontmatter))
+          return yield* engineError(
+            'closed_session',
+            `a Sessão ${id} já tem Feedback`,
+          )
+        const front = new Map(frontmatter)
+        const owners = yield* ownersOf(db, front)
+        const attendees = (
+          isSequence(front.get('attendees'))
+            ? (front.get('attendees') as YamlValue[])
+            : []
+        ).map((p) => pyStrValue(p))
+        const list = yield* readReactions(
+          db,
+          attendees,
+          owners,
+          request.ratings ?? [],
+          request.reports ?? [],
+        )
+        yield* addComments(db, attendees, list, request.comments ?? [])
+        const recommendation = mappings(front.get('recommendation'))
+        const shown = front.get('shown')
+        let chosen: Film | null = null
+        let position: YamlValue = null
+        let shownPosition: YamlValue = null
+        if (request.film === null) {
+          if (list.length > 0)
             return yield* engineError(
-              'closed_session',
-              `a Sessão ${id} já tem Feedback`,
+              'invalid_usage',
+              '"não vimos nada" não leva reação',
             )
-          const front = new Map(frontmatter)
-          const owners = yield* ownersOf(db, front)
-          const attendees = (
-            isSequence(front.get('attendees')) ? (front.get('attendees') as YamlValue[]) : []
-          ).map((p) => pyStrValue(p))
-          const list = yield* readReactions(
-            db,
-            attendees,
-            owners,
-            request.ratings ?? [],
-            request.reports ?? [],
-          )
-          yield* addComments(db, attendees, list, request.comments ?? [])
-          const recommendation = mappings(front.get('recommendation'))
-          const shown = front.get('shown')
-          let chosen: Film | null = null
-          let position: YamlValue = null
-          let shownPosition: YamlValue = null
-          if (request.film === null) {
-            if (list.length > 0)
-              return yield* engineError(
-                'invalid_usage',
-                '"não vimos nada" não leva reação',
-              )
-          } else {
-            chosen = yield* findFilm(db, request.film, recommendation)
-            position = positionIn(recommendation, chosen.id)
-            shownPosition = positionIn(mappings(shown), chosen.id)
-          }
-          front.set('chosen', chosen?.id ?? null)
-          front.set('chosen_in_recommendation', position)
-          if (shown !== undefined && shown !== null)
-            front.set('chosen_in_shown', shownPosition)
-          front.set(
-            'feedback',
-            new Map<string, YamlValue>([
-              ['recorded_on', today],
-              ['reactions', list],
-            ]),
-          )
-          yield* syncSession(db, id, front)
-          yield* writeSession(id, front, body)
+        } else {
+          chosen = yield* findFilm(db, request.film, recommendation)
+          position = positionIn(recommendation, chosen.id)
+          shownPosition = positionIn(mappings(shown), chosen.id)
+        }
+        front.set('chosen', chosen?.id ?? null)
+        front.set('chosen_in_recommendation', position)
+        if (shown !== undefined && shown !== null)
+          front.set('chosen_in_shown', shownPosition)
+        front.set(
+          'feedback',
+          new Map<string, YamlValue>([
+            ['recorded_on', today],
+            ['reactions', list],
+          ]),
+        )
+        yield* syncSession(db, id, front)
+        yield* writeSession(id, front, body)
 
-          const withReaction = new Set(list.map((r) => String(r.get('person'))))
-          return {
-            session: { id, file: sessionRelative(id) },
-            chosen:
-              chosen === null
-                ? null
-                : {
-                    ...chosen,
-                    position: positionNumber(position),
-                    ...(shown !== undefined &&
-                      shown !== null && {
-                        shownPosition: positionNumber(shownPosition),
-                      }),
-                  },
-            facts:
-              chosen === null
-                ? []
-                : yield* writtenFacts(id, front, owners, chosen, today),
-            withoutReaction:
-              chosen === null
-                ? []
-                : attendees.filter((p) => !withReaction.has(p)),
-          }
-        }),
+        const withReaction = new Set(list.map((r) => personOf(r)))
+        return {
+          session: { id, file: sessionRelative(id) },
+          chosen:
+            chosen === null
+              ? null
+              : {
+                  ...chosen,
+                  position: positionNumber(position),
+                  ...(shown !== undefined &&
+                    shown !== null && {
+                      shownPosition: positionNumber(shownPosition),
+                    }),
+                },
+          facts:
+            chosen === null
+              ? []
+              : yield* writtenFacts(id, front, owners, chosen, today),
+          withoutReaction:
+            chosen === null
+              ? []
+              : attendees.filter((p) => !withReaction.has(p)),
+        }
+      }),
     )
   })
 

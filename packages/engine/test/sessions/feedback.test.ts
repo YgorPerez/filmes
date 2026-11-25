@@ -162,7 +162,7 @@ describe('feedback', () => {
     expect(
       out.facts
         .filter((f) => f.text !== 'já viu')
-        .map(({ factId: _, ...fact }) => fact),
+        .map((fact) => ({ ...fact, factId: undefined })),
     ).toEqual([
       // A 4 is moderate on the ruler; 2 is moderate against. From the
       // Feedback, both go up to strong.
@@ -223,7 +223,9 @@ describe('feedback', () => {
 
     expect(out.withoutReaction).toEqual(['iara', 'teo'])
     expect(
-      new Set(out.facts.filter((f) => f.text !== 'já viu').map((f) => f.person)),
+      new Set(
+        out.facts.filter((f) => f.text !== 'já viu').map((f) => f.person),
+      ),
     ).toEqual(new Set(['bruno']))
     const source = 'Feedback da Sessão 2026-11-20'
     expect(
@@ -334,9 +336,7 @@ describe('feedback', () => {
     expect(front.chosen).toBeNull()
     expect(front.feedback.reactions).toEqual([])
     expect(await fixture.ok(openSessions)).toEqual({ sessions: [] })
-    expect(await query(fixture, 'SELECT count(*) FROM ja_visto')).toEqual([
-      [0],
-    ])
+    expect(await query(fixture, 'SELECT count(*) FROM ja_visto')).toEqual([[0]])
   })
 
   test('a film outside the Recomendação is found by its title', async () => {
@@ -367,9 +367,9 @@ describe('feedback', () => {
     const id = await open(fixture, { attendees: ['dono'] })
     await feedback(fixture, { session: id, film: null })
 
-    expect(await errorOf(fixture, { session: id, film: 'Vento Norte' })).toEqual(
-      [1, 'closed_session'],
-    )
+    expect(
+      await errorOf(fixture, { session: id, film: 'Vento Norte' }),
+    ).toEqual([1, 'closed_session'])
   })
 
   test('refuses what does not fit the Session', async () => {
@@ -410,11 +410,11 @@ describe('feedback', () => {
       '--nota teo=4: teo não estava entre os Presentes da Sessão',
     )
     expect(await message({ film: 'Vento Norte', ratings: ['iara=6'] })).toBe(
-      "--nota iara=6: nota fora da escala de 0,5 a 5: '6' (se é de 1 a 10, escreva \"6/10\")",
+      '--nota iara=6: nota fora da escala de 0,5 a 5: \'6\' (se é de 1 a 10, escreva "6/10")',
     )
-    expect(await message({ film: 'Vento Norte', reports: ['dono=gostou'] })).toBe(
-      '--relato dono=gostou: o Dono fala por si com --nota',
-    )
+    expect(
+      await message({ film: 'Vento Norte', reports: ['dono=gostou'] }),
+    ).toBe('--relato dono=gostou: o Dono fala por si com --nota')
     expect(
       await message({
         film: 'Vento Norte',
@@ -674,7 +674,15 @@ describe('a Nota on the scale of 10, and a comment per Presente (#40)', () => {
         '2026-11-21',
         'enquadramento e diálogo muito bons',
       ],
-      ['iara', null, 'tt9000203', 1, relayed, '2026-11-21', 'bonito, mas comprido'],
+      [
+        'iara',
+        null,
+        'tt9000203',
+        1,
+        relayed,
+        '2026-11-21',
+        'bonito, mas comprido',
+      ],
       [
         'teo',
         'nao_gosta',
@@ -733,9 +741,9 @@ describe('a Nota on the scale of 10, and a comment per Presente (#40)', () => {
     const view = await fixture.ok(personView('teo'), {
       FILMES_HOJE: '2026-11-21',
     })
-    expect(
-      view.stated.map((s) => [s.text, s.reaction, s.strength]),
-    ).toEqual([['muita violência sem sentido', 'dislike', 'strong']])
+    expect(view.stated.map((s) => [s.text, s.reaction, s.strength])).toEqual([
+      ['muita violência sem sentido', 'dislike', 'strong'],
+    ])
 
     await fixture.ok(reloadSessions)
     expect((await query(fixture, STATED))[2]?.at(-1)).toBe(

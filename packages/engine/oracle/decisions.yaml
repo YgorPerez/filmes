@@ -80,7 +80,6 @@
   reason: the engine reads config/tag_vetoes.toml, whose group keys are English after the key migration
   link: https://github.com/YgorPerez/filmes/issues/88
 
-
 # An `internal` error names the exception's class. node:sqlite throws one
 # class for every SQLite failure; Python's sqlite3 splits them
 # (IntegrityError, OperationalError...). The text after the name is

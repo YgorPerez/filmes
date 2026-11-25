@@ -831,7 +831,8 @@ describe('pessoa remover', () => {
     expect(await personRows(fixture)).toEqual(synced)
   })
 
-  test('a Feedback comment is found but its removal waits for the Sessions', async () => {
+  // The removal itself is in test/sessions/feedback.test.ts (#96).
+  test('a Feedback comment whose Session file is gone is an unknown Session', async () => {
     const fixture = useFixture()
     await fixture.ok(
       Effect.gen(function* () {
@@ -850,6 +851,6 @@ describe('pessoa remover', () => {
         fixture,
         personRemove({ person: 'teo', kind: 'stated', id: 'feedback:1' }),
       ),
-    ).toMatchObject({ exitCode: 1, code: 'internal' })
+    ).toMatchObject({ exitCode: 1, code: 'unknown_session' })
   })
 })
