@@ -84,12 +84,12 @@ const CONFIG_VARIABLES: Readonly<Record<string, string>> = {
   FILMES_VERSOES: 'versoes-catalogo.json',
 }
 
-const resolve = (text: string, work: string) =>
+export const resolve = (text: string, work: string) =>
   text.replaceAll('{work}', work).replaceAll('{root}', ROOT)
 
 /** A path argument or variable as the TypeScript side names it:
  * `{work}/dados/sessoes/x.md` is `{work}/data/sessions/x.md`. */
-const resolveForTs = (text: string, work: string) =>
+export const resolveForTs = (text: string, work: string) =>
   resolve(
     text.replace(/^\{work\}\/dados(\/.*)?$/, (_, rest?: string) =>
       rest
@@ -99,14 +99,14 @@ const resolveForTs = (text: string, work: string) =>
     work,
   )
 
-const pythonVars = (step: Step, work: string): Record<string, string> =>
+export const pythonVars = (step: Step, work: string): Record<string, string> =>
   Object.fromEntries(
     Object.entries(step.env).map(([key, value]) => [key, resolve(value, work)]),
   )
 
 /** The TypeScript side's variables: the same, with filmes-dados in `data/`,
  * the English config, and any config file a variable names migrated. */
-function tsVars(
+export function tsVars(
   step: Step,
   work: string,
   config: string,
@@ -138,7 +138,7 @@ function tsVars(
 
 /** A Python outcome in English, for the parity check. Output the key map
  * does not know is itself a difference. */
-function pythonInEnglish(
+export function pythonInEnglish(
   command: string,
   outcome: Outcome,
 ): Outcome | Difference {

@@ -84,6 +84,9 @@ export function staleDecisions(
 ): Decision[] {
   return decisions.filter((decision) => {
     if (used.has(decision.id)) return false
+    // An entry for the real-database run (`pnpm oracle --real`, scenarios
+    // `real/...`) never meets a fixture scenario.
+    if (decision.scenarios?.startsWith('real/')) return false
     if ((decision.check ?? 'parity') === 'self-check') return selfCheck
     return decision.commands.some((command) => ported.has(command))
   })

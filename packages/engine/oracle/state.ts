@@ -234,6 +234,7 @@ interface Table {
 function readTables(
   file: string,
   rewrite: (text: string) => string,
+  only?: readonly string[],
 ): Map<string, Table> {
   const db = new DatabaseSync(file, { readOnly: true })
   try {
@@ -244,6 +245,7 @@ function readTables(
       )
       .all()
       .map((row) => String(row['name']))
+      .filter((name) => only === undefined || only.includes(name))
     const tables = new Map<string, Table>()
     for (const name of names) {
       const quoted = `"${name.replaceAll('"', '""')}"`
@@ -280,13 +282,75 @@ function readTables(
 /** At most this many rows of one table are reported. */
 const ROWS_REPORTED = 5
 
-/** Two databases, table by table: columns in order, rows as multisets.
- * Each side's rows are rewritten as in `TreeOptions` first. */
+/** REAL columns compared with a relative tolerance (#76 §4.4): the `ln`,
+ * `log1p` and `sqrt` of `70_parecenca`, where V8's `Math.log` and glibc's
+ * `log` may disagree in the last bit on the real catalog (#106: at most
+ * 3.1e-16 relative). Every other value compares exactly. */
+const DB_TOLERANCES: Readonly<Record<string, number>> = {
+  'tags_no_catalogo.valor': 1e-12,
+  'normas_tags_movielens.norma': 1e-12,
+}
+
+const closeEnough = (a: unknown, b: unknown, relative: number): boolean =>
+  a === b ||
+  (typeof a === 'number' &&
+    typeof b === 'number' &&
+    Math.abs(a - b) <= relative * Math.max(Math.abs(a), Math.abs(b)))
+
+/** Pairs the rows only one side has that differ just in a tolerant column
+ * by less than its tolerance, and drops them from both lists. */
+function withinTolerance(
+  table: string,
+  columns: readonly string[],
+  onlyLeft: string[],
+  onlyRight: string[],
+): void {
+  const tolerant = columns.flatMap((column, i) => {
+    const tolerance = DB_TOLERANCES[`${table}.${column}`]
+    return tolerance === undefined ? [] : [{ i, tolerance }]
+  })
+  if (tolerant.length === 0 || onlyLeft.length === 0) return
+  const key = (row: unknown[]) =>
+    canonical(row.filter((_, i) => !tolerant.some((t) => t.i === i)))
+  const right = new Map<string, number[]>()
+  for (const [j, row] of onlyRight.entries()) {
+    const k = key(JSON.parse(row) as unknown[])
+    right.set(k, [...(right.get(k) ?? []), j])
+  }
+  const pairedLeft = new Set<number>()
+  const pairedRight = new Set<number>()
+  for (const [i, row] of onlyLeft.entries()) {
+    const values = JSON.parse(row) as unknown[]
+    const candidates = right.get(key(values)) ?? []
+    const j = candidates.find((index) => {
+      if (pairedRight.has(index)) return false
+      const other = JSON.parse(onlyRight[index] as string) as unknown[]
+      return tolerant.every((t) =>
+        closeEnough(values[t.i], other[t.i], t.tolerance),
+      )
+    })
+    if (j === undefined) continue
+    pairedLeft.add(i)
+    pairedRight.add(j)
+  }
+  const keep = (rows: string[], paired: Set<number>) => {
+    const kept = rows.filter((_, i) => !paired.has(i))
+    rows.splice(0, rows.length, ...kept)
+  }
+  keep(onlyLeft, pairedLeft)
+  keep(onlyRight, pairedRight)
+}
+
+/** Two databases, table by table: columns in order, rows as multisets
+ * (REALs exact but for `DB_TOLERANCES`). Each side's rows are rewritten as
+ * in `TreeOptions` first. `tables` limits the comparison to those tables
+ * (the real-database run compares only what a request can write). */
 export function compareDatabases(
   python: string,
   ts: string,
   check: Check,
   rewrite: Pick<TreeOptions, 'python' | 'ts'>,
+  tables?: readonly string[],
 ): Difference[] {
   const hasLeft = existsSync(python)
   const hasRight = existsSync(ts)
@@ -300,8 +364,8 @@ export function compareDatabases(
         ts: hasRight ? 'present' : ABSENT,
       },
     ]
-  const left = readTables(python, rewrite.python)
-  const right = readTables(ts, rewrite.ts)
+  const left = readTables(python, rewrite.python, tables)
+  const right = readTables(ts, rewrite.ts, tables)
   const out: Difference[] = []
   for (const name of [...new Set([...left.keys(), ...right.keys()])].sort()) {
     const a = left.get(name)
@@ -335,6 +399,7 @@ export function compareDatabases(
     const onlyRight = [...pending].flatMap(([row, count]) =>
       Array.from({ length: count }, () => row),
     )
+    withinTolerance(name, a.columns, onlyLeft, onlyRight)
     for (const row of onlyLeft.slice(0, ROWS_REPORTED))
       out.push({ check, path: `db/${name}`, python: row, ts: ABSENT })
     for (const row of onlyRight.slice(0, ROWS_REPORTED))
