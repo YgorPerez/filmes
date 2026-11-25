@@ -93,6 +93,13 @@ describe('decisions', () => {
     expect(staleDecisions([selfCheck], new Set(), new Set(), false)).toEqual([])
   })
 
+  test('an entry for the real-database run is never stale in a fixture run', () => {
+    const real = { ...MESSAGE, id: 'real', scenarios: 'real/recomendar-*' }
+    expect(
+      staleDecisions([real], new Set(), new Set(['reconstruir']), true),
+    ).toEqual([])
+  })
+
   test('a file with a bad entry or a repeated id is refused', () => {
     const dir = mkdtempSync(join(tmpdir(), 'filmes-decisions-'))
     onTestFinished(() => rmSync(dir, { recursive: true, force: true }))
