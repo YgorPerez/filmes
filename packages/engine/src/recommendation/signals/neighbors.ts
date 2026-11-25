@@ -19,25 +19,27 @@ import {
 import { filmText, integerText, seedText } from '../../evidence/wording.ts'
 import { num, numOrNull, text, textOrNull } from '../../sqlite/row.ts'
 import { kindOf } from '../../sqlite/vocabulary.ts'
-import type { Signal } from './Signal.ts'
+import { candidatesJson, type Signal } from './Signal.ts'
 
+/** The neighbours of the Pessoa's Notas that are Candidates. The `+`
+ * keeps SQLite on the Notas (vizinhos has no index on `vizinho_id`), with
+ * the Candidates as a membership test. */
 const NEIGHBORS = `
 SELECT v.vizinho_id AS candidato, v.fato_id, v.base, v.ambos, v.fonte, v.data,
        n.nota, n.data AS nota_data, n.sessao, n.tipo AS nota_tipo, f.titulo, f.ano
 FROM notas_vigentes n
 JOIN vizinhos v ON v.filme_id = n.filme_id
 JOIN filmes f   ON f.id = n.filme_id
-WHERE n.pessoa = ?
+WHERE n.pessoa = ?1 AND +v.vizinho_id IN (SELECT value FROM json_each(?2))
 ORDER BY v.vizinho_id, v.fato_id
 `
 
 export const neighbors: Signal = {
   module: 'vizinhanca',
   forPerson: (round, person) =>
-    Effect.map(round.db.all(NEIGHBORS, person), (rows) =>
+    Effect.map(round.db.all(NEIGHBORS, person, candidatesJson(round)), (rows) =>
       rows.flatMap((row) => {
         const candidate = text(row, 'candidato')
-        if (!round.candidates.has(candidate)) return []
         const kind = kindOf(text(row, 'nota_tipo')) as SeedKind
         const [seed, direction] = seedStrength(
           kind,

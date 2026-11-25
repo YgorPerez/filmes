@@ -105,24 +105,40 @@ const BELOW = `
 
 type Paths = ReadonlyArray<readonly [VetoPath, ReadonlySet<string>]>
 
-/** The films of a Veto to a film or an entity, by path. */
+/** The films a query may return: all, or only those in a JSON list of ids
+ * (the Candidates), so SQL leaves the rest of the catalog out. */
+interface Scope {
+  readonly sql: string
+  readonly params: ReadonlyArray<string>
+}
+
+const scopeOf = (within: string | undefined): Scope =>
+  within === undefined
+    ? { sql: '', params: [] }
+    : {
+        sql: ' AND filme_id IN (SELECT value FROM json_each(?))',
+        params: [within],
+      }
+
+/** The films of a Veto to a film or an entity, by path, among `scope`. */
 const entityPaths = (
   db: Connection,
   target: string,
+  scope: Scope,
 ): Effect.Effect<Paths, SqliteError> =>
   Effect.gen(function* () {
     const direct = yield* column(
       db,
       'filme_id',
-      'SELECT filme_id FROM arestas WHERE entidade_id = ?',
-      [target],
+      `SELECT filme_id FROM arestas WHERE entidade_id = ?${scope.sql}`,
+      [target, ...scope.params],
     )
     const subgenres = yield* column(db, 'item', BELOW, [target])
     const ofSubgenres = yield* column(
       db,
       'filme_id',
-      `SELECT filme_id FROM arestas WHERE predicado = 'genero' AND entidade_id IN (${marks([...subgenres])})`,
-      [...subgenres],
+      `SELECT filme_id FROM arestas WHERE predicado = 'genero' AND entidade_id IN (${marks([...subgenres])})${scope.sql}`,
+      [...subgenres, ...scope.params],
     )
     const imdb = [...WIKIDATA_GENRE]
       .filter(([, qid]) => qid === target || subgenres.has(qid))
@@ -130,8 +146,8 @@ const entityPaths = (
     const ofImdbGenre = yield* column(
       db,
       'filme_id',
-      `SELECT filme_id FROM generos_imdb WHERE genero IN (${marks(imdb)})`,
-      imdb,
+      `SELECT filme_id FROM generos_imdb WHERE genero IN (${marks(imdb)})${scope.sql}`,
+      [...imdb, ...scope.params],
     )
     return [
       ['direct', new Set([target, ...direct])],
@@ -141,11 +157,13 @@ const entityPaths = (
   })
 
 /** The films a tag group takes: an IMDb genre of the group and a tag at
- * the minimum of `[tag_vetoes]`. `key` is the group's English key. */
+ * the minimum of `[tag_vetoes]`. `key` is the group's English key.
+ * `within`, a JSON list of film ids, limits the answer to those films. */
 export const markedByGroup = (
   db: Connection,
   key: string,
   minimums: Weights['tag_vetoes'],
+  within?: string,
 ): Effect.Effect<Set<string>, EngineError | SqliteError, Environment> =>
   Effect.gen(function* () {
     const group = (yield* readTagGroups).get(key)
@@ -156,25 +174,26 @@ export const markedByGroup = (
       )
     }
     const tags = group.tags.map((tag) => tag.toLowerCase())
+    const scope = scopeOf(within)
     const marked = yield* column(
       db,
       'filme_id',
-      `SELECT filme_id FROM genoma WHERE relevancia >= ? AND tag IN (${marks(tags)})`,
-      [minimums.min_relevance, ...tags],
+      `SELECT filme_id FROM genoma WHERE relevancia >= ? AND tag IN (${marks(tags)})${scope.sql}`,
+      [minimums.min_relevance, ...tags, ...scope.params],
     )
     for (const film of yield* column(
       db,
       'filme_id',
-      `SELECT filme_id FROM tags_movielens WHERE usuarios >= ? AND tag IN (${marks(tags)})`,
-      [minimums.min_users, ...tags],
+      `SELECT filme_id FROM tags_movielens WHERE usuarios >= ? AND tag IN (${marks(tags)})${scope.sql}`,
+      [minimums.min_users, ...tags, ...scope.params],
     ))
       marked.add(film)
     if (group.imdbGenres.length === 0) return marked
     const ofGenre = yield* column(
       db,
       'filme_id',
-      `SELECT filme_id FROM generos_imdb WHERE genero IN (${marks(group.imdbGenres)})`,
-      group.imdbGenres,
+      `SELECT filme_id FROM generos_imdb WHERE genero IN (${marks(group.imdbGenres)})${scope.sql}`,
+      [...group.imdbGenres, ...scope.params],
     )
     return new Set([...marked].filter((film) => ofGenre.has(film)))
   })
@@ -202,11 +221,13 @@ export const applyVetoes = <A>(
     )
     const remaining = new Map(candidates)
     const acted: VetoReport[] = []
+    // Only the Candidates can be removed, so SQL looks at no other film.
+    const within = JSON.stringify([...candidates.keys()])
     for (const veto of vetoes) {
       const target = targetOf(text(veto, 'alvo'))
       const paths: Paths = isTagGroup(target)
-        ? [['tags', yield* markedByGroup(db, target, minimums)]]
-        : yield* entityPaths(db, target)
+        ? [['tags', yield* markedByGroup(db, target, minimums, within)]]
+        : yield* entityPaths(db, target, scopeOf(within))
       const byPath: Partial<Record<VetoPath, number>> = {}
       const removed = new Set<string>()
       for (const [path, films] of paths) {

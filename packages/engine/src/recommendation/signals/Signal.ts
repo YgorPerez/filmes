@@ -40,3 +40,17 @@ export interface Signal {
   /** Film lines, about no one (`person` null). */
   readonly forFilm?: (round: Round) => SignalEffect
 }
+
+const candidateLists = new WeakMap<ReadonlyMap<string, Candidate>, string>()
+
+/** The round's Candidate ids as a JSON list, for
+ * `filme_id IN (SELECT value FROM json_each(?))`: a signal asks SQL for
+ * the Candidates' rows only instead of handing the whole catalog to JS.
+ * Built once per round. */
+export const candidatesJson = (round: Round): string => {
+  const cached = candidateLists.get(round.candidates)
+  if (cached !== undefined) return cached
+  const list = JSON.stringify([...round.candidates.keys()])
+  candidateLists.set(round.candidates, list)
+  return list
+}
