@@ -38,6 +38,7 @@ export {
 export { resolveAttendees } from './recommendation/attendees.ts'
 export {
   attributionsOf,
+  TRAKT_ATTRIBUTION,
   type Attribution,
 } from './recommendation/attributions.ts'
 export {
@@ -447,3 +448,24 @@ export {
   type Verification,
   type VerifyRequest,
 } from './verify/verify.ts'
+export {
+  readTraktExport,
+  type TraktFilm,
+  type TraktRow,
+} from './imports/trakt-export.ts'
+export {
+  importTrakt,
+  loadTrakt,
+  reloadPersonTrakt,
+  reloadTrakt,
+  TRAKT_KIND,
+  type TraktImport,
+  type TraktImportInput,
+  type TraktReport,
+  type TraktUnresolved,
+} from './imports/trakt.ts'
+export {
+  removeImport,
+  type ImportRemoval,
+  type ImportRemovalInput,
+} from './imports/remove.ts'
