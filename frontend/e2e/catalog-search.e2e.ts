@@ -47,6 +47,8 @@ test('Nova Sessão: two searches fill “Parecido com”', async ({
 }, info) => {
   await loginAsBruno(page)
   await page.goto('/sessoes/nova')
+  // Folded until it is needed; open after a search, so only the first time.
+  await page.getByText('Parecido com um filme?').click()
   await search(page, 'farol')
   await page.getByRole('link', { name: 'Usar O Farol de Areia (2012)' }).click()
   await search(page, 'mare baixa')
@@ -68,6 +70,7 @@ test('Feedback: the film the search found is “Outro filme”', async ({
   )
   await loginAsBruno(page)
   await page.goto(`/feedback/${encodeURIComponent(session.id)}`)
+  await page.getByText('Viram outro filme?').click()
   await search(page, 'fronteira (2012)')
   await expect(results(page)).toHaveCount(1)
   await page.getByRole('link', { name: 'Usar Fronteira II (2012)' }).click()

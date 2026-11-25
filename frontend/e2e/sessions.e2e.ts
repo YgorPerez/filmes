@@ -77,7 +77,7 @@ test('the Dono opens a Session with Restrições and finds it in the list', asyn
     })
   await expect(row).toContainText('eu e a Iara')
   await expect(
-    row.getByRole('link', { name: `Dar o Feedback da Sessão ${id}` }),
+    row.getByRole('link', { name: `Contar como foi a Sessão ${id}` }),
   ).toHaveAttribute('href', `/feedback/${id}`)
   await snap(page, info, 'sessoes-lista-com-sessao')
 })

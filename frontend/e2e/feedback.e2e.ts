@@ -34,7 +34,7 @@ test('the Dono closes a Session and the next one shows the Crédito', async ({
   await loginAsBruno(page)
   await snap(page, info, 'inicio')
 
-  await page.getByRole('link', { name: 'Feedback' }).click()
+  await page.getByRole('link', { name: 'Feedback', exact: true }).click()
   await expect(page).toHaveURL(/\/feedback$/)
   await snap(page, info, 'feedback-lista')
   await page.locator(`a[href="/feedback/${first}"]`).click()
