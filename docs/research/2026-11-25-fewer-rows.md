@@ -57,4 +57,4 @@ The next step is to filter the Restrições' catalog-wide reads (`no_sad`, `lang
 
 - 128 of 128 paired answers have the same SHA-256 over the whole `Recommendation` JSON, with no rounding.
 - The fixture oracle (`pnpm oracle`) is clean: 425 scenarios, 1,623 steps compared, 0 differences.
-- The #84 real-database run (seed 84) was repeated on copies; see the ticket.
+- The #84 real-database run (`pnpm oracle --real`, seed 84, 4 lanes, `--today 2026-11-25`, on copies) is clean, with the same counts as `docs/oracle/real-2026-11-25.md`: 316 scenarios, 1,432 steps compared, 938 explained by the same two decisions, 0 unexplained differences, 0 harness errors, 4 steps not run.
