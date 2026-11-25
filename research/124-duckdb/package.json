@@ -1,0 +1,7 @@
+{
+  "name": "research-124-duckdb",
+  "private": true,
+  "type": "module",
+  "description": "Throwaway prototype of #124: recomendar on SQLite vs DuckDB. Not part of the workspace.",
+  "dependencies": { "@duckdb/node-api": "2.0.1-r.1" }
+}
