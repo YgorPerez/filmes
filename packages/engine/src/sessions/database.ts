@@ -167,6 +167,24 @@ export const syncSession = (
       )
   })
 
+/** Loads every Session file into `db` (`carregar_todas`, the rebuild's
+ * step `40_sessoes`). Returns the ids, in file order. */
+export const loadSessions = (
+  db: Connection,
+): Effect.Effect<
+  ReadonlyArray<string>,
+  EngineError | SqliteError,
+  Environment
+> =>
+  Effect.gen(function* () {
+    const ids = yield* sessionIds
+    for (const id of ids) {
+      const { frontmatter } = yield* readSession(id)
+      yield* syncSession(db, id, frontmatter)
+    }
+    return ids
+  })
+
 /** Reloads every Session's rows from filmes-dados (`banco.carregar_todas`):
  * the start of a server whose database was built before the latest
  * writes. Returns the ids loaded. A Session whose file is gone keeps its
@@ -175,15 +193,4 @@ export const reloadSessions: Effect.Effect<
   ReadonlyArray<string>,
   EngineError | SqliteError,
   Environment | Sqlite
-> = Effect.gen(function* () {
-  const ids = yield* sessionIds
-  return yield* (yield* Sqlite).write((db) =>
-    Effect.gen(function* () {
-      for (const id of ids) {
-        const { frontmatter } = yield* readSession(id)
-        yield* syncSession(db, id, frontmatter)
-      }
-      return ids
-    }),
-  )
-})
+> = Effect.flatMap(Sqlite, (sqlite) => sqlite.write(loadSessions))

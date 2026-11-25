@@ -236,6 +236,55 @@ export function parameterCount(sql: string): number {
   return count
 }
 
+/** Opens a file with the functions of `functions.ts` (and the authorizer)
+ * registered; SQLite creates it when missing and writable. */
+const openFile = (
+  path: string,
+  readOnly: boolean,
+  options: ReadOptions = {},
+): Effect.Effect<DatabaseSync, SqliteError> =>
+  Effect.try({
+    try: () => {
+      const db = new DatabaseSync(path, {
+        readOnly,
+        timeout: BUSY_TIMEOUT_MS,
+        readBigInts: options.readBigInts ?? false,
+      })
+      try {
+        for (const { name, fn } of SQL_FUNCTIONS)
+          db.function(name, { deterministic: true }, fn)
+        if (options.authorizer) db.setAuthorizer(options.authorizer)
+      } catch (error) {
+        db.close()
+        throw error
+      }
+      return db
+    },
+    catch: fail,
+  })
+
+/** Closes a connection, rolling back a transaction a failed or interrupted
+ * use left open. */
+const close = (db: DatabaseSync) =>
+  Effect.sync(() => {
+    if (db.isTransaction) db.exec('ROLLBACK')
+    db.close()
+  })
+
+/** A read-write connection to a file of one's own, outside `FILMES_BANCO`
+ * and outside the write lock: the file a rebuild fills before it swaps it
+ * in. SQLite creates the file when it is missing. No transaction is opened;
+ * the use runs its own. */
+export const withDatabaseFile = <A, E, R>(
+  path: string,
+  use: (connection: Connection) => Effect.Effect<A, E, R>,
+): Effect.Effect<A, E | SqliteError, R> =>
+  Effect.acquireUseRelease(
+    openFile(path, false),
+    (db) => use(makeConnection(db)),
+    close,
+  )
+
 export class Sqlite extends Context.Service<
   Sqlite,
   {
@@ -267,33 +316,9 @@ export class Sqlite extends Context.Service<
           environment.path('database'),
           (path): Effect.Effect<DatabaseSync, EngineError | SqliteError> => {
             if (!existsSync(path)) return Effect.fail(missingDatabase(path))
-            return Effect.try({
-              try: () => {
-                const db = new DatabaseSync(path, {
-                  readOnly,
-                  timeout: BUSY_TIMEOUT_MS,
-                  readBigInts: options.readBigInts ?? false,
-                })
-                try {
-                  for (const { name, fn } of SQL_FUNCTIONS)
-                    db.function(name, { deterministic: true }, fn)
-                  if (options.authorizer) db.setAuthorizer(options.authorizer)
-                } catch (error) {
-                  db.close()
-                  throw error
-                }
-                return db
-              },
-              catch: fail,
-            })
+            return openFile(path, readOnly, options)
           },
         )
-
-      const close = (db: DatabaseSync) =>
-        Effect.sync(() => {
-          if (db.isTransaction) db.exec('ROLLBACK')
-          db.close()
-        })
 
       return Sqlite.of({
         read: (use, options) =>

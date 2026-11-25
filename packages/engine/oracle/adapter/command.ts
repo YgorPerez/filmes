@@ -19,6 +19,9 @@ export type Operation = Effect.Effect<
   EngineServices | Run
 >
 
+/** A step's `FILMES_*` variables, resolved for the Python side. */
+export type StepEnv = Readonly<Record<string, string>>
+
 /** How a command's output is compared, besides the defaults (§4.3 of #76):
  * arrays in order, numbers exact, strings exact. */
 export interface CompareOptions {
@@ -41,8 +44,10 @@ export interface CommandDefinition<S extends ArgSpec> extends CompareOptions {
    * (after the command and action words). A command ported in parts says
    * `false` for the arguments a later ticket ports, and the step stays
    * `not_ported`. Absent: every step. Several adapters may share a
-   * command when each has it (`importar --letterboxd`, `--trakt`...). */
-  readonly ported?: (argv: readonly string[]) => boolean
+   * command when each has it (`importar --letterboxd`, `--trakt`...).
+   * `env` is the step's variables as Python sees them (`reconstruir` over
+   * a real catalog is a later ticket's). */
+  readonly ported?: (argv: readonly string[], env: StepEnv) => boolean
   /** The engine operation for one call. `stdin` is what the step sent. */
   readonly run: (
     args: Parsed<S>,
@@ -64,6 +69,7 @@ export interface Command extends CompareOptions {
   readonly prepare: (
     argv: readonly string[],
     stdin: string | null,
+    env?: StepEnv,
   ) => {
     readonly operation: Operation
     readonly files: readonly string[]
@@ -81,8 +87,8 @@ export function defineCommand<const S extends ArgSpec>(
     ...(unordered && { unordered }),
     ...(tolerance && { tolerance }),
     ...(definition.ported && { partial: true }),
-    prepare: (argv, stdin) => {
-      if (definition.ported && !definition.ported(argv)) return null
+    prepare: (argv, stdin, env = {}) => {
+      if (definition.ported && !definition.ported(argv, env)) return null
       let args: Parsed<S>
       try {
         args = parseArgv(argv, definition.args)

@@ -187,6 +187,7 @@ export async function replayScenario(
       const adapted = options.adapter.adapt(
         step.argv.map((arg) => resolveForTs(arg, ts)),
         step.stdin === null ? null : resolve(step.stdin, ts),
+        pythonVars(step, folders[0] as string),
       )
       if (adapted.kind === 'ported') syncTypeScript(folders[0] as string, ts)
 

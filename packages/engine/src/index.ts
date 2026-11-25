@@ -154,7 +154,12 @@ export {
   type ReportLevel,
   type SessionSeen,
 } from './sessions/facts.ts'
-export { DB_RULES, reloadSessions, syncSession } from './sessions/database.ts'
+export {
+  DB_RULES,
+  loadSessions,
+  reloadSessions,
+  syncSession,
+} from './sessions/database.ts'
 export {
   openSession,
   openSessions,
@@ -469,3 +474,5 @@ export {
   type ImportRemoval,
   type ImportRemovalInput,
 } from './imports/remove.ts'
+export { rebuild, type Rebuilt } from './rebuild/rebuild.ts'
+export { withDatabaseFile } from './sqlite/Sqlite.ts'
