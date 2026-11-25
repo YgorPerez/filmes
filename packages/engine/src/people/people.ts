@@ -428,11 +428,10 @@ const newOwnerEmail = (
         'um Dono precisa do e-mail do Google, para entrar no site',
       )
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
-      return yield* engineError(
-        'invalid_usage',
-        `e-mail inválido: '${email}'`,
-      )
-    const holder = (yield* readPeople).find((p) => p.email?.toLowerCase() === email)
+      return yield* engineError('invalid_usage', `e-mail inválido: '${email}'`)
+    const holder = (yield* readPeople).find(
+      (p) => p.email?.toLowerCase() === email,
+    )
     if (holder !== undefined)
       return yield* engineError(
         'invalid_usage',

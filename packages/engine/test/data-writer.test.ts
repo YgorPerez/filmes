@@ -396,9 +396,9 @@ describe('the pessoa actions', () => {
     expect(log(fixture.data, 'master~1..master')).toEqual([
       'Bruno <bruno@example.org>|Bruno <bruno@example.org>|pessoa criar Luana',
     ])
-    expect(
-      gitIn(fixture.data, 'show', 'master:people/luana.md'),
-    ).toContain('email: luana@example.org\n')
+    expect(gitIn(fixture.data, 'show', 'master:people/luana.md')).toContain(
+      'email: luana@example.org\n',
+    )
     expect(gitIn(fixture.data, 'status', '--porcelain')).toBe('')
   })
 })
