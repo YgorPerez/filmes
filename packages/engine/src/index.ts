@@ -189,6 +189,7 @@ export {
   type FeedbackResult,
 } from './sessions/feedback.ts'
 export {
+  listSessions,
   openSession,
   openSessions,
   recommendationFields,
@@ -197,6 +198,7 @@ export {
   type RecommendSessionRequest,
   type SessionRecommendation,
   type SessionRef,
+  type SessionSummary,
 } from './sessions/open.ts'
 export {
   openSessionFront,

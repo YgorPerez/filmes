@@ -3,6 +3,9 @@
 // checks the Dono itself, and only takes a form of this site (the `Origin`,
 // as the logout checks). Server only.
 
+import { currentOwner } from './auth'
+import { serverEnv } from './server-env'
+
 /** Back to a page after a POST: the browser GETs `location`. */
 export const seeOther = (location: string) =>
   new Response(null, {
@@ -22,3 +25,10 @@ export function formPoster<Owner>(
     return new Response('Origem recusada', { status: 403 })
   return owner
 }
+
+/** Who posted a form to the app, and the site's origin it must come from:
+ * what `formPoster` checks, for a route's `serve…` function. */
+export const appPoster = (request: Request) => ({
+  owner: currentOwner(request),
+  origin: serverEnv().APP_ORIGIN,
+})

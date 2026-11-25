@@ -18,6 +18,7 @@ import {
   filmsInBody,
   KIND_IN_BODY,
   makeEngine,
+  listSessions,
   openSessions,
   readConstraints,
   parseYaml,
@@ -385,6 +386,75 @@ describe('sessoes-abertas', () => {
     )
 
     expect(await fixture.ok(openSessions)).toEqual({ sessions: [] })
+  })
+})
+
+describe('every Session', () => {
+  test('lists the open and the closed ones, with their Restrições', async () => {
+    const fixture = useFixture()
+    expect(await fixture.ok(listSessions)).toEqual({ sessions: [] })
+    await open(
+      fixture,
+      { attendees: ['dono', 'iara'], count: 2, maxDuration: 120, child: 7 },
+      { FILMES_HOJE: '2026-11-19' },
+    )
+    await open(fixture, { attendees: ['dono'], count: 1 })
+    writeFileSync(
+      sessionFile(fixture, '2026-11-18-teo'),
+      '---\ndate: 2026-11-18\nattendees: [bruno, teo]\nrule: {name: default}\n' +
+        'recommendation: [{position: 1, id: tt9000302, title: Casa Cheia}]\n' +
+        'chosen: tt9000302\nfeedback: {recorded_on: 2026-11-19, reactions: []}\n---\n',
+    )
+
+    const { sessions } = await fixture.ok(listSessions)
+
+    expect(
+      sessions.map(({ id, open, chosen, constraints }) => ({
+        id,
+        open,
+        chosen,
+        constraints,
+      })),
+    ).toEqual([
+      { id: '2026-11-20-bruno', open: true, chosen: null, constraints: [] },
+      {
+        id: '2026-11-19-iara',
+        open: true,
+        chosen: null,
+        constraints: ['até 2h', 'com criança de 7 anos'],
+      },
+      {
+        id: '2026-11-18-teo',
+        open: false,
+        chosen: 'tt9000302',
+        constraints: [],
+      },
+    ])
+    const { sessions: still } = await fixture.ok(openSessions)
+    expect(still.map((s) => s.id)).toEqual([
+      '2026-11-20-bruno',
+      '2026-11-19-iara',
+    ])
+    expect(Object.keys(still[0] ?? {})).not.toContain('open')
+  })
+
+  test('a Restrição stored with no module left is not labelled', async () => {
+    const fixture = useFixture()
+    mkdirSync(join(fixture.data, 'sessions'))
+    writeFileSync(
+      sessionFile(fixture, '2026-11-20-iara'),
+      '---\ndate: 2026-11-20\nattendees: [bruno, iara]\nrule: {name: default}\n' +
+        'context:\n  constraints:\n' +
+        '  - {name: similar, films: [tt9000101, tt9000601], titles: [O Farol de Areia, Pequenos Milagres]}\n' +
+        '  - {name: no_repeat}\n  - {name: out_of_session}\n---\n',
+    )
+
+    const { sessions } = await fixture.ok(listSessions)
+
+    expect(sessions[0]?.constraints).toEqual([
+      'parecidos com O Farol de Areia e Pequenos Milagres',
+      'nada trocado nem já visto nesta Sessão',
+    ])
   })
 })
 
