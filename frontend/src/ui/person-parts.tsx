@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { PERSON } from './person.copy'
-import { Button } from './shadcn/button'
+import { Button, buttonVariants } from './shadcn/button'
 
 // The pieces the Pessoas screens share: the alert and the notice, the Dono
 // tag, a section's card, the fields and the forms that post an action.
@@ -214,6 +214,9 @@ export function TextField({
   required = false,
   placeholder,
   pattern,
+  type = 'text',
+  min,
+  max,
 }: {
   name: string
   label: string
@@ -221,11 +224,16 @@ export function TextField({
   required?: boolean
   placeholder?: string
   pattern?: string
+  type?: 'text' | 'number'
+  min?: number
+  max?: number
 }) {
   return (
     <Label label={label} hint={hint}>
       <input
-        type="text"
+        type={type}
+        min={min}
+        max={max}
         name={name}
         required={required}
         placeholder={placeholder}
@@ -263,10 +271,40 @@ export function SelectField({
   )
 }
 
-export function Submit({ children }: { children: ReactNode }) {
+export function Submit({
+  variant = 'quiet',
+  children,
+}: {
+  variant?: 'primary' | 'quiet'
+  children: ReactNode
+}) {
   return (
-    <Button type="submit" variant="quiet" className="self-start">
+    <Button type="submit" variant={variant} className="self-start">
       {children}
     </Button>
+  )
+}
+
+/** A link that looks like a button: `primary` for the screen's main
+ * action, `quiet` for the others. */
+export function LinkButton({
+  href,
+  variant = 'quiet',
+  label,
+  children,
+}: {
+  href: string
+  variant?: 'primary' | 'quiet'
+  label?: string
+  children: ReactNode
+}) {
+  return (
+    <a
+      href={href}
+      aria-label={label}
+      className={buttonVariants({ variant, className: 'self-start' })}
+    >
+      {children}
+    </a>
   )
 }

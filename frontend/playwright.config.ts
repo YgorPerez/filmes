@@ -44,9 +44,12 @@ const appEnv = [
   `FILMES_DATABASE=${engine}/filmes.sqlite`,
   `FILMES_HOJE=${FIXTURE_TODAY}`,
   // Recorded answers, never the network: with a key, TMDB answers from the
-  // recordings too (the Imports' queue).
+  // recordings too (the Imports' queue), and OMDb and Does the Dog Die (the
+  // child and trigger Restrições of a new Session).
   'FILMES_GRAVACOES=../tests/fixture/gravacoes',
   'FILMES_TMDB_CHAVE=e2e',
+  'FILMES_OMDB_CHAVE=e2e',
+  'FILMES_DDD_CHAVE=e2e',
   `PORT=${port}`,
 ].join(' ')
 
