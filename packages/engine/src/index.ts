@@ -423,3 +423,8 @@ export {
 } from './imports/stored.ts'
 export { CsvDictReader, CsvError, type CsvRow } from './imports/csv.ts'
 export { Zip, ZipError } from './imports/zip.ts'
+export {
+  verifyAnswer,
+  type Verification,
+  type VerifyRequest,
+} from './verify/verify.ts'
