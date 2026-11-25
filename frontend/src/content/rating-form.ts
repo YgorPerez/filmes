@@ -28,7 +28,7 @@ export function parseRatings(form: FormData): GivenRating[] | null {
 }
 
 /** Why not, in `?erro=`. */
-export const RATING_REFUSALS = [
+const RATING_REFUSALS = [
   // A field is missing or holds what the screen does not send.
   'pedido',
   // A film is not in the Catálogo.

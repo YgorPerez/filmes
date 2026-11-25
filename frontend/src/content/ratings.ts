@@ -8,6 +8,6 @@ export const readRatingQueue = createServerFn({ method: 'GET' })
   .middleware([ownerMiddleware])
   .handler(async ({ context }) => {
     requireOwner(context.owner)
-    const { appRatingQueue } = await import('#/platform/ratings')
+    const { appRatingQueue } = await import('#/platform/imports')
     return appRatingQueue(context.owner)
   })

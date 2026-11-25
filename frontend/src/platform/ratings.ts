@@ -16,13 +16,18 @@ import {
   type GivenRating,
   type RatingRefusal,
 } from '#/content/rating-form'
-import { appEngine } from './engine'
-import { appPoster, formPoster, seeOther } from './form-post'
-import type { Owner } from './owners'
-import { ownerAuthor } from './people'
+import { formPoster, seeOther } from './form-post'
 
 /** Films the page gets: more than a sitting rates, fewer than a slow page. */
 const QUEUE_SIZE = 100
+
+/** The logged-in Dono who rates: her Pessoa, and her name and e-mail for
+ * the commit (an `Owner`). */
+export type Rater = {
+  readonly person: string
+  readonly name: string
+  readonly email: string
+}
 
 /** What the screen and Pronto need from the engine. */
 export interface Ratings {
@@ -30,7 +35,7 @@ export interface Ratings {
   /** Writes the Notas to the Dono `owner`, who signs the commit. */
   rate(
     ratings: readonly GivenRating[],
-    owner: Owner,
+    owner: Rater,
   ): Promise<Outcome<PersonRateResult>>
 }
 
@@ -43,7 +48,7 @@ export function ratingsFromEngine(engine: Engine): Ratings {
         personRate({
           person: owner.person,
           ratings,
-          author: ownerAuthor(owner),
+          author: { name: owner.name, email: owner.email },
         }),
         { owner: owner.person },
       ),
@@ -60,7 +65,7 @@ function logEngineError(outcome: { output: ErrorOutput }): void {
 /** What `/notas` shows the logged-in Dono: her Fila de Notas, or null when
  * the engine cannot run here. */
 export async function ratingQueuePage(
-  owner: Pick<Owner, 'person'>,
+  owner: Pick<Rater, 'person'>,
   ratings: Ratings,
 ): Promise<RatingQueue | null> {
   const queue = await ratings.queue(owner.person)
@@ -85,7 +90,7 @@ function refusalOf(outcome: { output: ErrorOutput }): RatingRefusal {
  * site: the page gate does not cover this route. */
 export async function rateAction(
   request: Request,
-  owner: Owner | null,
+  owner: Rater | null,
   ratings: Ratings,
   origin: string | undefined,
 ): Promise<Response> {
@@ -97,18 +102,4 @@ export async function rateAction(
   if (outcome.exitCode !== 0)
     return seeOther(`/notas?erro=${refusalOf(outcome)}`)
   return seeOther(`/notas?feito=${outcome.output.added}`)
-}
-
-// --- the app's -----------------------------------------------------------------
-
-const appRatings = () => ratingsFromEngine(appEngine())
-
-/** The Fila de Notas for the app, of the logged-in Dono. */
-export const appRatingQueue = (owner: Pick<Owner, 'person'>) =>
-  ratingQueuePage(owner, appRatings())
-
-/** Pronto's route for the app: the logged-in Dono, the process's engine. */
-export const serveRate = (request: Request) => {
-  const { owner, origin } = appPoster(request)
-  return rateAction(request, owner, appRatings(), origin)
 }

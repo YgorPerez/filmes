@@ -3,6 +3,8 @@
 // writes them. `sent` holds the films of the Pronto on its way: once the
 // screen hears they were written, they leave the draft; refused, they stay.
 
+import { openStorage } from './billboard-marks'
+
 /** A film with its Nota, as the draft lists it. */
 export type DraftRating = {
   title: string
@@ -16,23 +18,9 @@ export type Draft = {
   sent: string[]
 }
 
-export const emptyDraft = (): Draft => ({ ratings: {}, skipped: [], sent: [] })
+const emptyDraft = (): Draft => ({ ratings: {}, skipped: [], sent: [] })
 
 const storageKey = (person: string) => `filmes-notas:${person}`
-
-/** The browser's storage, or null when it is missing or blocked (a private
- * window): then the draft lives only while the page is open. */
-function openStorage(): Storage | null {
-  try {
-    const store = window.localStorage
-    const probe = 'filmes-notas:probe'
-    store.setItem(probe, '1')
-    store.removeItem(probe)
-    return store
-  } catch {
-    return null
-  }
-}
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -68,8 +56,12 @@ export function parseDraft(text: string | null): Draft {
   }
 }
 
+/** The stored draft's text, null when there is none or no storage. */
+export const storedDraft = (person: string): string | null =>
+  openStorage()?.getItem(storageKey(person)) ?? null
+
 export const loadDraft = (person: string): Draft =>
-  parseDraft(openStorage()?.getItem(storageKey(person)) ?? null)
+  parseDraft(storedDraft(person))
 
 export function saveDraft(person: string, draft: Draft): void {
   openStorage()?.setItem(storageKey(person), JSON.stringify(draft))
@@ -83,3 +75,35 @@ export function settle(draft: Draft, written: boolean): Draft {
   for (const id of draft.sent) delete ratings[id]
   return { ...draft, ratings, sent: [] }
 }
+
+/** The draft with the film's Nota, given or changed. */
+export const withRating = (
+  draft: Draft,
+  film: { id: string; title: string; year: number | null },
+  rating: number,
+): Draft => ({
+  ...draft,
+  ratings: {
+    ...draft.ratings,
+    [film.id]: { title: film.title, year: film.year, rating },
+  },
+})
+
+/** The draft with the film passed over ("Não vi"). */
+export const withSkipped = (draft: Draft, film: string): Draft => ({
+  ...draft,
+  skipped: [...draft.skipped, film],
+})
+
+/** The draft without the film's Nota ("Tirar"). */
+export function withoutRating(draft: Draft, film: string): Draft {
+  const ratings = { ...draft.ratings }
+  delete ratings[film]
+  return { ...draft, ratings }
+}
+
+/** The draft as Pronto leaves: its Notas on their way. */
+export const sending = (draft: Draft): Draft => ({
+  ...draft,
+  sent: Object.keys(draft.ratings),
+})

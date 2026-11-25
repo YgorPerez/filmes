@@ -8,7 +8,7 @@ export const Route = createFileRoute('/notas/enviar')({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const { serveRate } = await import('#/platform/ratings')
+        const { serveRate } = await import('#/platform/imports')
         return serveRate(request)
       },
     },

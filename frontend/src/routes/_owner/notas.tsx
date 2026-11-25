@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { filmParam, searchFor, searchParam } from '#/content/catalog-search'
 import { isRatingRefusal, writtenCount } from '#/content/rating-form'
 import { readRatingQueue } from '#/content/ratings'
-import { RatingScreen } from '#/ui/ratings'
+import { RatingScreen } from '#/ui/imports'
 
 export const Route = createFileRoute('/_owner/notas')({
   validateSearch: (search) => ({

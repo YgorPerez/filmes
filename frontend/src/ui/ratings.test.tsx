@@ -6,7 +6,7 @@ import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it } from 'vite-plus/test'
 import type { SearchAnswer } from '#/platform/catalog-search'
-import { RatingScreen } from './ratings'
+import { RatingScreen } from './imports'
 import { RATINGS } from './ratings.copy'
 
 const KEY = 'filmes-notas:teo'

@@ -6,15 +6,14 @@ import { join } from 'node:path'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { useFixture } from '../../../packages/engine/test/fixture.ts'
 import { parseRatings } from '#/content/rating-form'
-import type { Owner } from './owners'
-import { rateAction, ratingQueuePage, ratingsFromEngine } from './ratings'
+import {
+  rateAction,
+  ratingQueuePage,
+  ratingsFromEngine,
+  type Rater,
+} from './ratings'
 
-const TEO: Owner = {
-  person: 'teo',
-  name: 'Teo',
-  email: 'teo@example.org',
-  admin: false,
-}
+const TEO: Rater = { person: 'teo', name: 'Teo', email: 'teo@example.org' }
 
 const ORIGIN = 'http://localhost'
 
