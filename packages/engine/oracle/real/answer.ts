@@ -4,8 +4,10 @@
 // `- **Rótulo:** texto (fonte) *(força, tipo)*`, which is what the verifier
 // accepts. `broken` changes the first Evidence's Força and adds a line no
 // Session has, so the invalid path runs too. Only the first `films` (5, as
-// the skill shows): twenty films of Evidence pass the 128 KiB a single
-// argument may have on Linux (`--texto=...`, E2BIG).
+// the skill shows) and at most `evidence` lines per Presente and film (the
+// skill picks one per Presente): a real Session lists hundreds per film, and
+// the answer goes in one argument (`--texto=...`), which Linux caps at
+// 128 KiB (E2BIG).
 
 import { parse } from 'yaml'
 
@@ -31,7 +33,11 @@ function summary(line: string): string | undefined {
 
 export function answerFromSession(
   file: string,
-  options: { readonly broken?: boolean; readonly films?: number } = {},
+  options: {
+    readonly broken?: boolean
+    readonly films?: number
+    readonly evidence?: number
+  } = {},
 ): string {
   const front = /^---\n([\s\S]*?\n)---\n/.exec(file)
   const body = file.slice(front?.[0].length ?? 0)
@@ -45,11 +51,14 @@ export function answerFromSession(
   let label = ''
   let broken = options.broken ?? false
   const films = options.films ?? 5
+  const evidence = options.evidence ?? 3
+  let written = 0
   for (const line of body.split('\n')) {
     const position = /^(\d+)\. /.exec(line)?.[1]
     const title = position === undefined ? undefined : titles.get(position)
     if (title !== undefined) {
       if (Number(position) > films) break
+      written = 0
       const head = `${position}. ${title}`
       const end = line.lastIndexOf(' · tt')
       const guess = line.endsWith(` · ${GUESS_MARK}`) ? ` — ${GUESS_MARK}` : ''
@@ -61,9 +70,10 @@ export function answerFromSession(
     }
     if (line.startsWith('   - ') && !line.startsWith('   - Evidência')) {
       label = line.slice('   - '.length)
+      written = 0
       continue
     }
-    if (!line.startsWith('     - Evidência: ')) continue
+    if (!line.startsWith('     - Evidência: ') || written >= evidence) continue
     let text = summary(line.slice('     - Evidência: '.length))
     if (text === undefined) continue
     if (broken) {
@@ -75,9 +85,11 @@ export function answerFromSession(
         `- **${label}:** viu no cinema ontem *(forte, nota)*`,
       )
       broken = false
+      written++
       continue
     }
     out.push(`- **${label}:** ${text}`)
+    written++
   }
   out.push('', 'Depois, me conte o que viram e como foi.')
   return out.join('\n')

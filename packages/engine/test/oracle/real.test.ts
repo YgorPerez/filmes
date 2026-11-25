@@ -149,6 +149,21 @@ describe('answerFromSession', () => {
     expect(text).not.toContain('Sessão Maldita')
   })
 
+  test('at most `evidence` lines per Presente and film', () => {
+    const many = SESSION.replace(
+      '   - Teo\n',
+      `${'     - Evidência: deu 4 a Outro (2001) · Fonte: Letterboxd, 2025-01-01 · Força: moderada · Tipo: nota\n'.repeat(3)}   - Teo\n`,
+    )
+    const lines = answerFromSession(many, { evidence: 2 }).split('\n')
+    expect(
+      lines.filter((line) => line.startsWith('- **Bruno:**')),
+    ).toHaveLength(2)
+    expect(lines).toContain('- **Teo:** sem fato *(fraca, palpite)*')
+    expect(lines).toContain(
+      '- **Filme:** duração 1h26 (IMDb) *(forte, metadado)*',
+    )
+  })
+
   test('broken: the first Força changes and a made-up line follows', () => {
     const lines = answerFromSession(SESSION, { broken: true }).split('\n')
     expect(lines[4]).toBe(
