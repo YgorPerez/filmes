@@ -49,8 +49,9 @@ Workspace do mapa #72 (o esqueleto veio no #73; o resto chega pelos tickets segu
 packages/engine/           o motor em TypeScript, com Effect v4 (ADR 0003); sem nada de tela nem de HTTP
   src/runtime/             Environment, Today, Run, EngineError e makeEngine (a borda que o app, o MCP e a CLI chamam)
   src/sqlite/              o serviço Sqlite (leitura, escrita com BEGIN IMMEDIATE) e as funções SQL
+  src/rebuild/             `reconstruir`: schema/NN_area.sql e steps/<etapa>.ts, na ordem do nome da etapa do Python
   src/<área>/              o resto do porte, uma área por pasta
-  test/                    Vitest pela costura de test/fixture.ts; o global-setup monta a fixture com o Python
+  test/                    Vitest pela costura de test/fixture.ts; o global-setup monta a fixture com o `rebuild` do motor
   oracle/                  oráculo de paridade Python × TypeScript (`pnpm oracle`); sai com o Python
     adapter/commands/      um arquivo por comando portado: o argv do Python vira a operação do motor
     decisions.yaml         cada diferença aceita entre os motores, com o motivo
@@ -100,7 +101,7 @@ O oráculo de paridade (`pnpm oracle`, job `oracle` do CI) roda cada cenário do
 
 O e2e do app (`pnpm --filter frontend e2e`, Playwright no Chrome da máquina) faz o build, sobe o app com um Google falso (`frontend/e2e/fake-google.ts`) e as Pessoas da fixture; o CI roda no job `build`.
 
-Precisa de `uv`, pnpm e Node 24 (o MCP roda `.ts` direto, sem build). O `pnpm check` também usa o `uv`: os testes do motor partem de um banco que o Python constrói da fixture. `make check` instala o que faltar (`uv sync`, `pnpm install`) na primeira vez. Enquanto o Python existir, os dois ficam verdes antes de um push para um ramo de integração; o CI do PR roda os dois (`.github/workflows/pr.yml`).
+Precisa de `uv`, pnpm e Node 24 (o MCP roda `.ts` direto, sem build). O `pnpm check` também usa o `uv`: os testes de paridade e os vetores de ouro do motor rodam o Python. `make check` instala o que faltar (`uv sync`, `pnpm install`) na primeira vez. Enquanto o Python existir, os dois ficam verdes antes de um push para um ramo de integração; o CI do PR roda os dois (`.github/workflows/pr.yml`).
 
 O gancho de push (`node scripts/install-hooks.ts`, uma vez por clone) roda a auditoria de supressões e só os testes do que o push mudou. O teto de supressões é zero (`.github/suppression-ceiling.json`).
 

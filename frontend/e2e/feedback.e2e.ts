@@ -5,62 +5,24 @@
 // Teo and Iara (the Crédito only counts Sessions shared with today's
 // Presentes). `E2E_SCREENSHOTS=<folder>` saves a capture of each screen.
 
-import { join } from 'node:path'
-import { makeEngine, openSessions, recommendSession } from '@filmes/engine'
-import { expect, test, type Page, type TestInfo } from '@playwright/test'
-
-function fixtureEngine() {
-  const root = process.env.E2E_ENGINE
-  return makeEngine({
-    FILMES_CONFIG: `${root}/config`,
-    FILMES_DADOS: `${root}/data`,
-    FILMES_BANCO: `${root}/filmes.sqlite`,
-    FILMES_HOJE: '2026-11-20',
-  })
-}
+import { openSessions, recommendSession } from '@filmes/engine'
+import { expect, test, type Page } from '@playwright/test'
+import { loginAsBruno, engineRun, snap } from './support'
 
 /** Opens a Session for `attendees`, as Bruno; gives its id. */
-async function openSession(attendees: string[]): Promise<string> {
-  const engine = fixtureEngine()
-  try {
-    const outcome = await engine.run(
-      recommendSession({ attendees, count: 3 }),
-      { owner: 'bruno' },
+const openSession = async (attendees: string[]) =>
+  (
+    await engineRun((engine) =>
+      engine.run(recommendSession({ attendees, count: 3 }), {
+        owner: 'bruno',
+      }),
     )
-    if (outcome.exitCode !== 0) throw new Error(JSON.stringify(outcome.output))
-    return outcome.output.session.id
-  } finally {
-    await engine.dispose()
-  }
-}
+  ).session.id
 
-async function stillOpen(id: string): Promise<boolean> {
-  const engine = fixtureEngine()
-  try {
-    const outcome = await engine.run(openSessions)
-    if (outcome.exitCode !== 0) throw new Error(JSON.stringify(outcome.output))
-    return outcome.output.sessions.some((s) => s.id === id)
-  } finally {
-    await engine.dispose()
-  }
-}
-
-async function loginAsBruno(page: Page) {
-  await page.goto('/')
-  await page.getByRole('link', { name: 'Entrar com Google' }).click()
-  await page.getByLabel('E-mail').fill('bruno@example.org')
-  await page.getByRole('button', { name: 'Continuar' }).click()
-  await expect(page).toHaveURL(/\/$/)
-}
-
-async function snap(page: Page, info: TestInfo, name: string) {
-  const folder = process.env.E2E_SCREENSHOTS
-  if (!folder) return
-  await page.screenshot({
-    path: join(folder, `${info.project.name}-${name}.png`),
-    fullPage: true,
-  })
-}
+const stillOpen = async (id: string) =>
+  (await engineRun((engine) => engine.run(openSessions))).sessions.some(
+    (s) => s.id === id,
+  )
 
 const credit = (page: Page) => page.getByRole('region', { name: 'Crédito' })
 

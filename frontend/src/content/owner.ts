@@ -26,3 +26,17 @@ export const readOwner = createServerFn({ method: 'GET' })
       ? { name: context.owner.name, admin: context.owner.admin }
       : null,
   )
+
+/** A server function that acts as the Dono stops here without one: the
+ * page gate does not protect a server function. */
+export function requireOwner<O>(owner: O | null): asserts owner is O {
+  if (owner === null) throw new Error('Dono required')
+}
+
+/** The slug a Dono page names in its path (a Pessoa, a Session): a
+ * non-empty string, or the server function refuses the call. */
+export function pathSlug(value: unknown): string {
+  if (typeof value !== 'string' || value === '')
+    throw new Error('slug required')
+  return value
+}

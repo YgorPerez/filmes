@@ -30,6 +30,7 @@ import {
 } from '#/content/person-action'
 import { currentOwner } from './auth'
 import { appEngine } from './engine'
+import { formPoster, seeOther } from './form-post'
 import type { Owner } from './owners'
 import { serverEnv } from './server-env'
 
@@ -280,12 +281,6 @@ function refusalOf(outcome: { output: ErrorOutput }): PersonRefusal {
   return 'indisponivel'
 }
 
-const back = (location: string) =>
-  new Response(null, {
-    status: 303,
-    headers: { Location: location, 'Cache-Control': 'private, no-store' },
-  })
-
 const pageOf = (person: string) => `/pessoas/${encodeURIComponent(person)}`
 
 /** `POST /pessoas/<slug>/acao`: runs the form's action as the logged-in
@@ -300,18 +295,17 @@ export async function personAction(
   people: People,
   origin: string | undefined,
 ): Promise<Response> {
-  if (!owner) return back('/entrar')
-  if (request.headers.get('origin') !== origin)
-    return new Response('Origem recusada', { status: 403 })
+  const poster = formPoster(request, owner, origin)
+  if (poster instanceof Response) return poster
   const action = parseAction(await request.formData())
-  if (!action) return back(`${pageOf(person)}?erro=pedido`)
-  const outcome = await people.act(person, action, ownerAuthor(owner))
+  if (!action) return seeOther(`${pageOf(person)}?erro=pedido`)
+  const outcome = await people.act(person, action, ownerAuthor(poster))
   if (outcome.exitCode !== 0) {
     if (outcome.output.error.code === 'unknown_person')
-      return back('/pessoas?erro=pessoa')
-    return back(`${pageOf(person)}?erro=${refusalOf(outcome)}`)
+      return seeOther('/pessoas?erro=pessoa')
+    return seeOther(`${pageOf(person)}?erro=${refusalOf(outcome)}`)
   }
-  return back(`${pageOf(person)}?feito=${outcome.output}`)
+  return seeOther(`${pageOf(person)}?feito=${outcome.output}`)
 }
 
 /** The logged-in Dono as the commit's author: the engine's `authorOf` of her

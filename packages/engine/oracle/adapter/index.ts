@@ -8,7 +8,7 @@ import { pathToFileURL } from 'node:url'
 import { Effect } from 'effect'
 import { engineError } from '../../src/runtime/EngineError.ts'
 import { PYTHON_COMMANDS } from '../paths.ts'
-import type { Command, CompareOptions, Operation } from './command.ts'
+import type { Command, CompareOptions, Operation, StepEnv } from './command.ts'
 
 export type Adapted =
   | { readonly kind: 'not_ported'; readonly command: string }
@@ -22,7 +22,13 @@ export type Adapted =
 export interface Adapter {
   /** The Python commands the engine answers. */
   readonly ported: ReadonlySet<string>
-  readonly adapt: (argv: readonly string[], stdin: string | null) => Adapted
+  /** `env` is the step's `FILMES_*` as the Python side (seed 0) sees them,
+   * with the step's files already in place. */
+  readonly adapt: (
+    argv: readonly string[],
+    stdin: string | null,
+    env?: StepEnv,
+  ) => Adapted
 }
 
 /** Where each port ticket adds its commands. */
@@ -73,7 +79,7 @@ export function makeAdapter(commands: readonly Command[]): Adapter {
   }
   return {
     ported: new Set(byName.keys()),
-    adapt: (argv, stdin) => {
+    adapt: (argv, stdin, env = {}) => {
       // Every parser level has `--json`; the seam always passes it.
       const args = argv.filter((token) => token !== '--json')
       const { command, rest } = commandOf(args)
@@ -91,7 +97,7 @@ export function makeAdapter(commands: readonly Command[]): Adapter {
           ),
         }
       for (const found of byName.get(command) ?? []) {
-        const prepared = found.prepare(rest, stdin)
+        const prepared = found.prepare(rest, stdin, env)
         if (prepared === null) continue
         const { operation, files } = prepared
         return {
