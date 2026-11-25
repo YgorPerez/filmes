@@ -56,18 +56,3 @@ export function PushSection({ status }: { status: PushStatus | null }) {
     </Section>
   )
 }
-
-/** The banner on every Dono page of an admin while pushes keep failing
- * (`alert`, after three in a row). */
-export function PushBanner({ status }: { status: PushStatus }) {
-  return (
-    <div className="mx-auto max-w-[720px] px-2xl pt-3xl">
-      <Alert>
-        {COPY.banner(status.pending, status.failures)}{' '}
-        <a href="/operacoes#envio" className="font-semibold underline">
-          {COPY.bannerLink}
-        </a>
-      </Alert>
-    </div>
-  )
-}

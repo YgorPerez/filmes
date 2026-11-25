@@ -9,7 +9,6 @@ import type {
   EvaluationPanel,
   OperationsPage,
 } from '#/platform/operations'
-import { Brand } from './kit/brand'
 import { EvaluationSection, jobKey } from './operations-evaluation'
 import { OPERATIONS } from './operations.copy'
 import { PushSection } from './operations-push'
@@ -114,7 +113,6 @@ export function Operations({
   return (
     <main className="mx-auto flex max-w-[720px] flex-col gap-3xl px-2xl py-3xl">
       <header className="flex flex-wrap items-center justify-between gap-xl">
-        <Brand />
         <LinkButton href="/">{OPERATIONS.back}</LinkButton>
       </header>
       <div className="flex flex-col gap-xs">

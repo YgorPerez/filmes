@@ -1,7 +1,6 @@
 import type { PersonNotice, PersonRefusal } from '#/content/person-action'
 import type { SearchAnswer } from '#/platform/catalog-search'
 import type { PersonPage } from '#/platform/people'
-import { Brand } from './kit/brand'
 import {
   ActionForm,
   Alert,
@@ -60,7 +59,6 @@ export function PersonScreen({
   return (
     <main className="mx-auto flex max-w-[720px] flex-col gap-3xl px-2xl py-3xl">
       <header className="flex flex-wrap items-center justify-between gap-xl">
-        <Brand />
         <a href="/pessoas" className={buttonVariants({ variant: 'option' })}>
           {PERSON.back}
         </a>

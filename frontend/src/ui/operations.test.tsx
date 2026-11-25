@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // Operações as an admin uses it: the console's form and what it shows for
-// each answer, the evaluation's states and its live progress, the push's
-// card and the banner of the Dono pages.
+// each answer, the evaluation's states and its live progress, and the push's
+// card. The banner of the Dono pages is the shell's (`shell.test.tsx`).
 import type { PushStatus } from '@filmes/engine'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -19,7 +19,6 @@ import type {
 } from '#/platform/operations'
 import { Operations } from './operations'
 import { OPERATIONS } from './operations.copy'
-import { PushBanner } from './operations-push'
 import { EvaluationSection } from './operations-evaluation'
 
 afterEach(cleanup)
@@ -379,19 +378,6 @@ describe('the push', () => {
     expect(
       within(region(OPERATIONS.push.title)).getByRole('alert').textContent,
     ).toContain(OPERATIONS.push.unavailable)
-  })
-
-  it('has a banner for the other pages, with a link here', () => {
-    render(
-      <PushBanner
-        status={{ ...STATUS, pending: 4, failures: 5, alert: true }}
-      />,
-    )
-    const alert = screen.getByRole('alert')
-    expect(alert.textContent).toContain('falhou 5 vezes seguidas; 4 commits')
-    expect(
-      within(alert).getByRole('link', { name: 'Ver Operações' }),
-    ).toHaveProperty('pathname', '/operacoes')
   })
 })
 

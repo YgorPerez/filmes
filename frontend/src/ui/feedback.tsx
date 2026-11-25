@@ -12,7 +12,6 @@ import type {
   FeedbackSession,
 } from '#/platform/feedback'
 import { FEEDBACK } from './feedback.copy'
-import { Brand } from './kit/brand'
 import { PriceSticker } from './kit/sticker'
 import {
   Alert,
@@ -31,7 +30,6 @@ function Page({ back, children }: { back: string; children: ReactNode }) {
   return (
     <main className="mx-auto flex max-w-[720px] flex-col gap-3xl px-2xl py-3xl">
       <header className="flex flex-wrap items-center justify-between gap-xl">
-        <Brand />
         <a href={back} className={buttonVariants({ variant: 'option' })}>
           {FEEDBACK.back}
         </a>

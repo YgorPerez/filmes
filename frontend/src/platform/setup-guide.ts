@@ -24,15 +24,21 @@ export type SetupStepView = SetupStepState
 /** The Sessão the home shows. */
 export type LatestSession = SessionItem
 
+/** Where the Dono stands in the guide: every step, done, skipped or
+ * pending, and her Notas toward the 10 of Meu gosto. */
+export type SetupView = { steps: SetupStepView[]; ratings: number }
+
 /** What the home shows. */
 export type HomeData = {
   /** The Dono's slug: her Pessoa and import pages. */
   person: string
-  /** The steps, while one is pending and not skipped; otherwise null, as
-   * when the engine cannot say. */
-  guide: SetupStepView[] | null
+  /** The guide, also once complete (the home's membership card shows its
+   * stamps); null when the engine cannot say. */
+  setup: SetupView | null
   /** The latest Sessão she was in, or null. */
   latest: LatestSession | null
+  /** How many Sessões there are; null when the engine could not list them. */
+  sessions: number | null
   /** Where the Claude app connects (`/mcp`); null without `APP_ORIGIN`. */
   mcpUrl: string | null
 }
@@ -60,11 +66,15 @@ export async function homeData(
   const guide = valueOf(await source.guide(owner))
   return {
     person: owner.person,
-    guide: guide && !guide.complete ? guide.steps.map((s) => ({ ...s })) : null,
+    setup: guide && {
+      steps: guide.steps.map((s) => ({ ...s })),
+      ratings: guide.ratings,
+    },
     latest:
       sessions?.find((s) =>
         s.attendees.some((a) => a.person === owner.person),
       ) ?? null,
+    sessions: sessions?.length ?? null,
     mcpUrl: origin === undefined ? null : `${origin}/mcp`,
   }
 }

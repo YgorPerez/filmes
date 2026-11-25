@@ -1,12 +1,18 @@
-import { createFileRoute, Outlet, redirect } from '@tanstack/react-router'
+import {
+  createFileRoute,
+  Outlet,
+  redirect,
+  useLocation,
+} from '@tanstack/react-router'
 import { readPushAlert } from '#/content/operations'
 import { readOwner } from '#/content/owner'
-import { PushBanner } from '#/ui/operations-push'
+import { AppShell } from '#/ui/shell'
 
 // The Dono gate for the pages: every route under `_owner/` needs a Dono
 // logged in, and the others go to `/entrar`. Server functions check again on
-// their own (`content/owner.ts`): a page gate does not protect them. An
-// admin also sees, on every page, the banner of a push that keeps failing.
+// their own (`content/owner.ts`): a page gate does not protect them. Every
+// page sits in the app shell (`ui/shell.tsx`); an admin also sees there the
+// strip of a push that keeps failing.
 export const Route = createFileRoute('/_owner')({
   beforeLoad: async () => {
     const owner = await readOwner()
@@ -18,11 +24,11 @@ export const Route = createFileRoute('/_owner')({
 })
 
 function OwnerLayout() {
-  const alert = Route.useLoaderData()
+  const { owner } = Route.useRouteContext()
+  const { pathname } = useLocation()
   return (
-    <>
-      {alert && <PushBanner status={alert} />}
+    <AppShell owner={owner} path={pathname} alert={Route.useLoaderData()}>
       <Outlet />
-    </>
+    </AppShell>
   )
 }

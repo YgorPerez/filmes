@@ -1,170 +1,105 @@
-import type { ReactNode } from 'react'
-import type {
-  HomeData,
-  LatestSession,
-  SetupStepView,
-} from '#/platform/setup-guide'
+import type { HomeData, SetupView } from '#/platform/setup-guide'
+import {
+  AskBig,
+  AskEarly,
+  Guide,
+  isGuiding,
+  Latest,
+  MemberCard,
+  MemberStrip,
+} from './home-parts'
 import { HOME } from './home.copy'
-import { Brand } from './kit/brand'
-import { Button, buttonVariants } from './shadcn/button'
+import { Icon } from './kit/icon'
 
-/** A link that looks like a button, kept to the start of its column. */
-const linkClass = (variant: 'primary' | 'option') =>
-  buttonVariants({ variant, className: 'self-start' })
+// The home in the Locadora de bairro (DESIGN.md, Home: o guia como
+// carteirinha de sócio). While a step is pending: the membership card, the
+// steps and "pedir filme" as an option. Once none is: the compact card,
+// the big "pedir filme", the latest Sessão's stub and the shelf. The shelf
+// is there in both, so every screen stays one tap away; the guide never
+// blocks asking for a film.
 
-/** A card of the home: its title, then what it holds. */
-function Card({ id, children }: { id: string; children: ReactNode }) {
-  return (
-    <section
-      aria-labelledby={id}
-      className="flex flex-col gap-xl rounded-card border border-rule bg-surface p-xl"
-    >
-      {children}
-    </section>
-  )
+type ShelfItem = {
+  href: string
+  label: string
+  /** The dot's fixed colour: a reminder, not information. */
+  dot: string
+  count?: string
 }
 
-const sessionHref = (id: string) => `/sessoes/${encodeURIComponent(id)}`
-const feedbackHref = (id: string) => `/feedback/${encodeURIComponent(id)}`
-
-/** Where each step is done: Meu gosto on the rating screen (#144). */
-const stepHref = (step: SetupStepView['step'], person: string) =>
-  step === 'taste'
-    ? '/notas'
-    : step === 'import'
-      ? `/importar/${encodeURIComponent(person)}`
-      : null
-
-function StepState({ step }: { step: SetupStepView }) {
-  const { guide } = HOME
-  if (step.done)
-    return <span className="text-meta text-ink-2">✓ {guide.done}</span>
-  if (step.skipped)
-    return <span className="text-meta text-ink-2">{guide.skipped}</span>
+/** Every other screen, a row each: the dot, the name, its count, an arrow. */
+function Shelf({ items }: { items: ShelfItem[] }) {
   return (
-    <form method="post" action="/inicio/pular">
-      <input type="hidden" name="passo" value={step.step} />
-      <Button
-        type="submit"
-        variant="option"
-        aria-label={guide.skipLabel(guide.steps[step.step].title)}
-      >
-        {guide.skip}
-      </Button>
-    </form>
-  )
-}
-
-/** A step of the guide: what it asks, where to do it while pending, and its
- * state. */
-function Step({
-  step,
-  person,
-  mcpUrl,
-}: {
-  step: SetupStepView
-  person: string
-  mcpUrl: string | null
-}) {
-  const copy = HOME.guide.steps[step.step]
-  const pending = !step.done && !step.skipped
-  const href = stepHref(step.step, person)
-  return (
-    <li className="flex flex-col gap-sm border-rule py-sm not-first:border-t">
-      <div className="flex flex-wrap items-center justify-between gap-sm">
-        <h3 className="font-semibold">{copy.title}</h3>
-        <StepState step={step} />
-      </div>
-      {pending && (
-        <>
-          <p className="text-meta text-ink-2">{copy.text}</p>
-          {step.step === 'connector' && mcpUrl && (
-            <p className="break-all">
-              <code>{mcpUrl}</code>
-            </p>
-          )}
-          {href && copy.action && (
-            <a href={href} className={linkClass('primary')}>
-              {copy.action}
+    <nav aria-label={HOME.shelf.title}>
+      <ul className="flex flex-col gap-xs">
+        {items.map((item) => (
+          <li key={item.href}>
+            <a
+              href={item.href}
+              className="flex min-h-[52px] items-center gap-md rounded-nav-row border border-rule bg-surface px-lg font-display text-[15px] font-bold text-ink no-underline"
+            >
+              <span
+                aria-hidden="true"
+                className={`size-3 shrink-0 rounded-round ${item.dot}`}
+              />
+              {item.label}
+              {item.count && (
+                <span className="font-body text-meta font-normal text-ink-2 tabular-nums">
+                  {item.count}
+                </span>
+              )}
+              <Icon name="arrow" className="ml-auto size-4 text-ink-2" />
             </a>
-          )}
-        </>
-      )}
-    </li>
+          </li>
+        ))}
+      </ul>
+    </nav>
   )
 }
 
-function Guide({
-  steps,
-  person,
-  mcpUrl,
+const shelfItems = (home: HomeData, admin: boolean): ShelfItem[] => {
+  const { shelf } = HOME
+  return [
+    {
+      href: '/sessoes',
+      label: shelf.sessions,
+      dot: 'bg-genre-blue',
+      count: home.sessions === null ? undefined : String(home.sessions),
+    },
+    { href: '/pessoas', label: shelf.people, dot: 'bg-genre-green' },
+    {
+      href: '/notas',
+      label: shelf.ratings,
+      dot: 'bg-genre-orange',
+      count: home.setup ? shelf.given(home.setup.ratings) : undefined,
+    },
+    { href: '/feedback', label: shelf.feedback, dot: 'bg-genre-violet' },
+    { href: '/exportar', label: shelf.export, dot: 'bg-genre-pink' },
+    ...(admin
+      ? [{ href: '/operacoes', label: shelf.operations, dot: 'bg-ink-2' }]
+      : []),
+  ]
+}
+
+function Guiding({
+  first,
+  setup,
+  home,
 }: {
-  steps: SetupStepView[]
-  person: string
-  mcpUrl: string | null
+  first: string
+  setup: SetupView
+  home: HomeData
 }) {
   return (
-    <Card id="guia">
-      <h2 id="guia" className="font-display text-title">
-        {HOME.guide.title}
-      </h2>
-      <p className="text-meta text-ink-2">{HOME.guide.lead}</p>
-      <ol className="flex flex-col">
-        {steps.map((step) => (
-          <Step key={step.step} step={step} person={person} mcpUrl={mcpUrl} />
-        ))}
-      </ol>
-    </Card>
+    <>
+      <MemberCard name={first} setup={setup} />
+      <Guide setup={setup} person={home.person} mcpUrl={home.mcpUrl} />
+      <AskEarly />
+    </>
   )
 }
 
-/** The latest Sessão she was in, and its Feedback while open. */
-function Latest({ session: s }: { session: LatestSession }) {
-  const { latest } = HOME
-  return (
-    <Card id="ultima-sessao">
-      <h2 id="ultima-sessao" className="font-display text-title">
-        {latest.title}
-      </h2>
-      <div className="flex flex-wrap items-center gap-sm">
-        <a
-          href={sessionHref(s.id)}
-          className="flex min-h-touch min-w-0 flex-1 basis-[240px] flex-col justify-center gap-0.5 text-ink no-underline"
-        >
-          <span className="font-semibold">
-            {s.date} · {s.attendees.map((a) => a.name).join(', ')}
-          </span>
-          <span className="text-meta text-ink-2">
-            {[
-              s.request,
-              s.open
-                ? latest.open
-                : s.chosen
-                  ? latest.chosen(s.chosen.title)
-                  : latest.nothing,
-            ]
-              .filter(Boolean)
-              .join(' · ')}
-          </span>
-        </a>
-        {s.open && (
-          <a
-            href={feedbackHref(s.id)}
-            aria-label={latest.feedbackLabel(s.id)}
-            className={linkClass('option')}
-          >
-            {latest.feedback}
-          </a>
-        )}
-      </div>
-    </Card>
-  )
-}
-
-/** The home page, for the Dono who is logged in: the setup guide while a
- * step is pending (#143), "pedir filme", her latest Sessão and every
- * screen. The guide never blocks: "pedir filme" is always there. Operações
- * shows only to an admin. */
+/** The home page, for the Dono who is logged in. Operações shows only to
+ * an admin. */
 export function Home({
   name,
   admin,
@@ -174,49 +109,28 @@ export function Home({
   admin: boolean
   home: HomeData
 }) {
+  const first = name.split(/\s+/u)[0] ?? name
+  const setup = home.setup
   return (
-    <main className="mx-auto flex max-w-[720px] flex-col gap-3xl px-2xl py-3xl">
-      <header className="flex flex-wrap items-center justify-between gap-xl">
-        <Brand />
-        <form method="post" action="/auth/logout">
-          <Button type="submit" variant="option">
-            {HOME.logout}
-          </Button>
-        </form>
-      </header>
+    <main className="mx-auto flex max-w-[720px] flex-col gap-xl px-2xl py-2xl">
       <h1 className="font-display text-title">{HOME.greeting(name)}</h1>
-      {home.guide && (
-        <Guide steps={home.guide} person={home.person} mcpUrl={home.mcpUrl} />
+      {setup && isGuiding(setup) ? (
+        <Guiding first={first} setup={setup} home={home} />
+      ) : (
+        <>
+          {setup && (
+            <MemberStrip
+              name={first}
+              setup={setup}
+              person={home.person}
+              mcpUrl={home.mcpUrl}
+            />
+          )}
+          <AskBig />
+          {home.latest && <Latest session={home.latest} person={home.person} />}
+        </>
       )}
-      <a href="/sessoes/nova" className={linkClass('primary')}>
-        {HOME.request}
-      </a>
-      {home.latest && <Latest session={home.latest} />}
-      <nav aria-label={HOME.nav} className="flex flex-wrap gap-sm">
-        <a href="/sessoes" className={buttonVariants({ variant: 'option' })}>
-          {HOME.sessions}
-        </a>
-        <a href="/pessoas" className={buttonVariants({ variant: 'option' })}>
-          {HOME.people}
-        </a>
-        <a href="/importar" className={buttonVariants({ variant: 'option' })}>
-          {HOME.imports}
-        </a>
-        <a href="/exportar" className={buttonVariants({ variant: 'option' })}>
-          {HOME.export}
-        </a>
-        <a href="/feedback" className={buttonVariants({ variant: 'option' })}>
-          {HOME.feedback}
-        </a>
-        {admin && (
-          <a
-            href="/operacoes"
-            className={buttonVariants({ variant: 'option' })}
-          >
-            {HOME.operations}
-          </a>
-        )}
-      </nav>
+      <Shelf items={shelfItems(home, admin)} />
     </main>
   )
 }
