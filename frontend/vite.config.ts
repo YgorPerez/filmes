@@ -49,7 +49,7 @@ export default defineConfig({
       // `scp` and their command lines, by the deploy itself. The branch
       // floor came from a skeleton with no branches; #79's scripts set it
       // at their measured value.
-      thresholds: { statements: 87, branches: 85, functions: 84, lines: 88 },
+      thresholds: { statements: 88, branches: 87, functions: 86, lines: 89 },
     },
   },
 })
