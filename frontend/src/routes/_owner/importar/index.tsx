@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { readImportsOverview } from '#/content/imports'
-import { ImportsList } from '#/ui/imports'
+import { ImportsList } from '#/ui/imports-list'
 
 export const Route = createFileRoute('/_owner/importar/')({
   validateSearch: (search) => ({
