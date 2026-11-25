@@ -68,8 +68,9 @@ const RESTRICTIONS: ReadonlyArray<
   readonly [string, (pick: Picker, inputs: PlanInputs) => string[]]
 > = [
   ['duracao-max', (p) => ['--duracao-max', String(p.int(80, 180))]],
-  ['desde', (p) => ['--desde', String(p.int(1950, 2015))]],
-  ['ate', (p) => ['--ate', String(p.int(1970, 2024))]],
+  // Apart, so the pair never asks for `--desde` after `--ate`.
+  ['desde', (p) => ['--desde', String(p.int(1950, 1994))]],
+  ['ate', (p) => ['--ate', String(p.int(1995, 2024))]],
   ['idioma', (p) => ['--idioma', p.one(['pt', 'en', 'fr', 'ja', 'português'])]],
   ['sem-ja-visto', () => ['--sem-ja-visto']],
   ['sem-lento', () => ['--sem-lento']],
@@ -129,6 +130,10 @@ interface RecommendOutput {
  * as when no film is left): the rest of the scenario does not run. */
 export class NoSession extends Error {}
 
+/** This step has nothing to act on (a redo with no film on screen to keep
+ * or swap): it does not run, and the scenario goes on. */
+export class SkipStep extends Error {}
+
 /** The Session the scenario's first step opened, and its films now (the
  * last `recomendar` on it). */
 const sessionOf = (outputs: readonly unknown[]): string => {
@@ -142,6 +147,16 @@ const filmsOf = (outputs: readonly unknown[]): string[] => {
     if (Array.isArray(films)) return films.map((film) => film.id)
   }
   return []
+}
+
+/** Up to `n` films on screen from position `from` (moved back so `n` fit),
+ * or `SkipStep` when the screen is empty. */
+const someFilms = (outputs: readonly unknown[], from: number, n: number) => {
+  const films = filmsOf(outputs)
+  const start = Math.max(0, Math.min(from, films.length - n))
+  const taken = films.slice(start, start + n)
+  if (taken.length === 0) throw new SkipStep()
+  return taken
 }
 
 const fixed = (argv: readonly string[]): PlannedStep => ({
@@ -177,7 +192,7 @@ export function plan(
     const attendees = pick.some(inputs.people, 1, 3)
     // The Dono by its alias now and then, as the skill sends it.
     const named = pick.chance(0.15)
-      ? ['dono', ...attendees.slice(1)]
+      ? attendees.map((slug) => (slug === inputs.owner ? 'dono' : slug))
       : attendees
     const rule = RULES[i % RULES.length] as (typeof RULES)[number]
     const argv = ['recomendar', '--presentes', ...named, '--quantos', '20']
@@ -211,7 +226,7 @@ export function plan(
               '--sessao',
               sessionOf(outputs),
               '--manter',
-              ...filmsOf(outputs).slice(keep, keep + 2),
+              ...someFilms(outputs, keep, 2),
             ],
             stdin: null,
           }),
@@ -225,7 +240,7 @@ export function plan(
               '--sessao',
               sessionOf(outputs),
               '--trocar',
-              ...filmsOf(outputs).slice(0, 5),
+              ...someFilms(outputs, 0, 5),
             ],
             stdin: null,
           }),

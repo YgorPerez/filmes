@@ -87,7 +87,7 @@ export function formatRealReport(context: RealReportContext): string {
     '',
     '## Steps',
     '',
-    `- Scenarios: ${report.scenarios}; steps run: ${report.steps}; steps not run (no Session opened): ${facts.stopped}`,
+    `- Scenarios: ${report.scenarios}; steps run: ${report.steps}; steps not run (no Session opened, or no film to keep or swap): ${facts.stopped}`,
     `- Compared on both engines: ${total(report.compared)} (${list(report.compared)})`,
     `- Python only (not ported): ${total(report.notPorted)} (${list(report.notPorted)})`,
     `- Explained by \`decisions.yaml\`: ${total(report.explained)} (${list(report.explained)})`,

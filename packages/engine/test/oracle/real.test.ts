@@ -15,6 +15,7 @@ import { dataTables } from '../../oracle/real/lane.ts'
 import {
   plan,
   RESTRICTION_SETS,
+  SkipStep,
   type PlanInputs,
   type PlannedStep,
 } from '../../oracle/real/plan.ts'
@@ -78,6 +79,57 @@ describe('plan', () => {
     const ids = plan(INPUTS, { seed: 3, count: 20 }).map((s) => s.id)
     expect(ids.some((id) => /iara|teo|bruno|lia/.test(id))).toBe(false)
     expect(ids).toContain('real/pessoa-ver-004')
+  })
+
+  test('Feedback names only Presentes, and "desde" comes before "ate"', () => {
+    const output = { sessao: { id: 's' }, filmes: [{ id: 'tt9' }] }
+    const strays = plan(INPUTS, { seed: 7, count: 150 }).flatMap((scenario) => {
+      const first = scenario.steps[0]?.build({ outputs: [], work: '' }).argv
+      const present = new Set(
+        (first ?? [])
+          .slice(2, (first ?? []).indexOf('--quantos'))
+          .map((slug) => (slug === 'dono' ? INPUTS.owner : slug)),
+      )
+      return scenario.steps
+        .slice(1)
+        .flatMap((step) => {
+          try {
+            return [step.build({ outputs: [output], work: '' }).argv]
+          } catch {
+            return []
+          }
+        })
+        .filter((argv) => argv[0] === 'feedback')
+        .flatMap((argv) =>
+          argv.filter((_, i) =>
+            ['--nota', '--relato'].includes(argv[i - 1] ?? ''),
+          ),
+        )
+        .map((arg) => arg.split('=')[0])
+        .filter((slug) => !present.has(slug))
+    })
+    expect(strays).toEqual([])
+    const years = plan(INPUTS, { seed: 7, count: 150 })
+      .map(
+        (scenario) =>
+          scenario.steps[0]?.build({ outputs: [], work: '' }).argv ?? [],
+      )
+      .filter((argv) => argv.includes('--desde') && argv.includes('--ate'))
+      .map((argv) => [
+        Number(argv[argv.indexOf('--desde') + 1]),
+        Number(argv[argv.indexOf('--ate') + 1]),
+      ])
+    expect(years.length).toBeGreaterThan(0)
+    expect(years.filter(([from, to]) => (from ?? 0) > (to ?? 0))).toEqual([])
+  })
+
+  test('a redo with no film on screen is skipped', () => {
+    const scenario = plan(INPUTS, { seed: 1, count: 1 })[0]
+    const redo = scenario?.steps[1]
+    expect(redo).toBeDefined()
+    expect(() =>
+      redo?.build({ outputs: [{ sessao: { id: 's' }, filmes: [] }], work: '' }),
+    ).toThrow(SkipStep)
   })
 
   test('a Relato is never about the Dono, and "nada" takes no reaction', () => {

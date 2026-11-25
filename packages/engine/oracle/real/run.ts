@@ -58,7 +58,7 @@ import {
   type Lane,
   type RealSource,
 } from './lane.ts'
-import { NoSession, plan, type PlannedScenario } from './plan.ts'
+import { NoSession, plan, SkipStep, type PlannedScenario } from './plan.ts'
 
 /** The variables of the on-demand sources' API keys. */
 export const KEY_VARIABLES = [
@@ -222,7 +222,8 @@ export interface RealFacts {
   /** Cache rows Python's seed-0 pass added (fetched), per source, summed
    * over the scenarios (each starts from the base cache). */
   readonly fetched: Readonly<Record<string, number>>
-  /** Steps not run because an earlier step opened no Session. */
+  /** Steps not run: an earlier step opened no Session, or a redo had no
+   * film to keep or swap. */
   readonly stopped: number
   readonly seconds: number
 }
@@ -260,6 +261,7 @@ async function replayReal(
   const asWorkTs = placeholders(lane.ts, ROOT)
   const asWorkPy = (text: string) => pythonDataPaths(asWork0(text))
   const database = (folder: string) => join(folder, DATABASE)
+  let skipped = 0
   try {
     resetLane(lane, context.base, context.tables)
     for (const [index, planned] of scenario.steps.entries()) {
@@ -270,8 +272,13 @@ async function replayReal(
         if (error instanceof NoSession)
           return {
             result: { id: scenario.id, steps },
-            stopped: scenario.steps.length - index,
+            stopped: skipped + scenario.steps.length - index,
           }
+        if (error instanceof SkipStep) {
+          outputs.push(null)
+          skipped++
+          continue
+        }
         throw error
       }
       const adapted = context.adapter.adapt(
@@ -382,7 +389,7 @@ async function replayReal(
         python: seed0,
       })
     }
-    return { result: { id: scenario.id, steps }, stopped: 0 }
+    return { result: { id: scenario.id, steps }, stopped: skipped }
   } catch (error) {
     return {
       result: {
@@ -390,7 +397,7 @@ async function replayReal(
         steps,
         error: error instanceof Error ? error.message : String(error),
       },
-      stopped: 0,
+      stopped: skipped,
     }
   }
 }
