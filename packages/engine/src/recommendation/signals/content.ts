@@ -85,7 +85,7 @@ JOIN arestas s   ON s.filme_id = n.filme_id AND s.predicado = ?1
 JOIN entidades e ON e.id = s.entidade_id
 JOIN filmes f    ON f.id = n.filme_id
 WHERE n.pessoa = ?2
-ORDER BY s.entidade_id, n.nota DESC, f.titulo
+ORDER BY s.entidade_id, n.nota DESC, f.titulo, f.ano, n.filme_id
 `
 
 /** The films linked to those entities that are still Candidates: the

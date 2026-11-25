@@ -94,3 +94,15 @@ def test_ator_principal_em_tres_notas_altas_fica_no_maximo_moderado_e_o_diretor_
         ("dirigido por Clara Bastos, como 3 filmes a que deu 4 ou mais: Ensaio Geral (2014), "
          "Ato Final (2018) e Bastidores (2016)", "forte"),
     ]
+
+
+def test_sementes_de_mesmo_titulo_saem_na_ordem_do_ano(banco):
+    # A Rosa deu 4 às duas Reprise de Nina Vale, a de 2011 (tt9012601) e a de 2004
+    # (tt9012602). Mesma Nota e mesmo título: o ano desempata, e o ID depois dele.
+    saida = banco.ok("recomendar", "--presentes", "rosa")
+    [bis] = [f for f in saida["filmes"] if f["titulo"] == "Bis"]
+    assert [e["texto"] for e in bis["evidencias"]["rosa"]] == [
+        "dirigido por Nina Vale, como 2 filmes a que deu 4 ou mais: Reprise (2004) e Reprise (2011)",
+        "deu 4 a Reprise (2004), também de Nina Vale",
+        "deu 4 a Reprise (2011), também de Nina Vale",
+    ]

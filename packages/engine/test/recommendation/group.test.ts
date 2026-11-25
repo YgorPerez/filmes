@@ -265,6 +265,8 @@ const ONLY_GUESSES = new Set([
   'Ponto de Partida',
   'Mesmo Elenco',
   'Mesma Diretora',
+  'Reprise',
+  'Bis',
 ])
 
 describe('films with guesses only', () => {

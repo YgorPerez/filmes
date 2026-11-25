@@ -70,7 +70,7 @@ test('only the similar ones come, and the Regra orders them', async () => {
   expect(out.constraints['similar']).toEqual({
     films: [WRITING_LETTERS],
     titles: ['Escrever Cartas'],
-    removed: 72,
+    removed: 75,
   })
 })
 

@@ -184,6 +184,22 @@ describe('the content path', { timeout: PYTHON_TIMEOUT }, () => {
       ],
     ])
   })
+
+  test('seeds with the same title come out in year order', async () => {
+    // Rosa gave 4 to both of Nina Vale's Reprise, the 2011 one (tt9012601)
+    // and the 2004 one (tt9012602). Same Nota, same title: the year breaks
+    // the tie, then the id.
+    const out = await engineRecommendation(useFixture(), {
+      attendees: ['rosa'],
+    })
+    expect(
+      (film(out, 'Bis').evidence['rosa'] ?? []).map((e) => e.text),
+    ).toEqual([
+      'dirigido por Nina Vale, como 2 filmes a que deu 4 ou mais: Reprise (2004) e Reprise (2011)',
+      'deu 4 a Reprise (2004), também de Nina Vale',
+      'deu 4 a Reprise (2011), também de Nina Vale',
+    ])
+  })
 })
 
 describe('the Ajuste to a link', { timeout: PYTHON_TIMEOUT }, () => {
