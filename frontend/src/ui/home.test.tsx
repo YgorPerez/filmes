@@ -17,3 +17,11 @@ describe('Home', () => {
     )
   })
 })
+
+describe('Home, Pessoas', () => {
+  it('leads to the Pessoas', () => {
+    expect(renderToStaticMarkup(<Home name="Bruno" />)).toMatch(
+      /<a href="\/pessoas"[^>]*>Pessoas<\/a>/,
+    )
+  })
+})
