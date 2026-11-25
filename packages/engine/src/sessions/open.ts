@@ -27,12 +27,9 @@ import {
 } from '../data/yaml.ts'
 import { peopleFolder, readPerson } from '../people/people.ts'
 import type { Constraint } from '../recommendation/constraints.ts'
+import { storedConstraints } from '../recommendation/constraints/index.ts'
 import {
-  readConstraints,
-  storedConstraints,
-} from '../recommendation/constraints/index.ts'
-import {
-  recommend,
+  recommendAsked,
   type Recommendation,
   type RecommendRequest,
 } from '../recommendation/recommend.ts'
@@ -226,13 +223,11 @@ export const recommendSession = (
   EngineServices | Run
 > =>
   Effect.gen(function* () {
-    const recommendation = yield* recommend(request)
-    // `recommend` already read them, so this read cannot fail.
-    const asked = yield* readConstraints(request)
+    const { recommendation, asked } = yield* recommendAsked(request)
     const context = sessionContext(
       request.request ?? null,
       recommendation.moods,
-      [...asked, ...(request.constraints ?? [])],
+      asked,
     )
     const session = yield* openSession(recommendation, context)
     return { ...recommendation, session }
