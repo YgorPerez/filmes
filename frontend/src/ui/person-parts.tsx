@@ -29,13 +29,11 @@ export function Notice({ children }: { children: ReactNode }) {
   )
 }
 
-/** A form's submit button, of any variant (`Submit` is the quiet one). */
+/** A form's submit button with every Button prop (`disabled`...);
+ * `Submit` is the plain one. */
 export const SubmitButton = (
   props: Omit<ComponentProps<typeof Button>, 'type'>,
 ) => <Button type="submit" {...props} />
-
-/** A link with the quiet button's look. */
-export const quietLink = buttonVariants({ variant: 'quiet' })
 
 export function OwnerTag() {
   return (
@@ -223,6 +221,9 @@ export function TextField({
   required = false,
   placeholder,
   pattern,
+  type = 'text',
+  min,
+  max,
 }: {
   name: string
   label: string
@@ -230,11 +231,16 @@ export function TextField({
   required?: boolean
   placeholder?: string
   pattern?: string
+  type?: 'text' | 'number'
+  min?: number
+  max?: number
 }) {
   return (
     <Label label={label} hint={hint}>
       <input
-        type="text"
+        type={type}
+        min={min}
+        max={max}
         name={name}
         required={required}
         placeholder={placeholder}
@@ -272,11 +278,41 @@ export function SelectField({
   )
 }
 
-/** The quiet submit of a form. */
-export function Submit({ children }: { children: ReactNode }) {
+/** The submit of a form, quiet unless `variant` says otherwise. */
+export function Submit({
+  variant = 'quiet',
+  children,
+}: {
+  variant?: 'primary' | 'quiet'
+  children: ReactNode
+}) {
   return (
-    <Button type="submit" variant="quiet" className="self-start">
+    <Button type="submit" variant={variant} className="self-start">
       {children}
     </Button>
+  )
+}
+
+/** A link that looks like a button: `primary` for the screen's main
+ * action, `quiet` for the others. */
+export function LinkButton({
+  href,
+  variant = 'quiet',
+  label,
+  children,
+}: {
+  href: string
+  variant?: 'primary' | 'quiet'
+  label?: string
+  children: ReactNode
+}) {
+  return (
+    <a
+      href={href}
+      aria-label={label}
+      className={buttonVariants({ variant, className: 'self-start' })}
+    >
+      {children}
+    </a>
   )
 }

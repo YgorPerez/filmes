@@ -12,7 +12,7 @@ import { Marquee } from './marquee'
 import { EvaluationSection, jobKey } from './operations-evaluation'
 import { OPERATIONS } from './operations.copy'
 import { PushSection } from './operations-push'
-import { Alert, Notice, quietLink, Section, Submit } from './person-parts'
+import { Alert, LinkButton, Notice, Section, Submit } from './person-parts'
 
 const COPY = OPERATIONS.consult
 
@@ -114,9 +114,7 @@ export function Operations({
     <main className="mx-auto flex max-w-[720px] flex-col gap-xl px-lg py-xl">
       <header className="flex flex-wrap items-center justify-between gap-md">
         <Marquee words={['filmes']} />
-        <a href="/" className={quietLink}>
-          {OPERATIONS.back}
-        </a>
+        <LinkButton href="/">{OPERATIONS.back}</LinkButton>
       </header>
       <div className="flex flex-col gap-xs">
         <h1 className="text-title">{OPERATIONS.title}</h1>

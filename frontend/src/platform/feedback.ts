@@ -20,18 +20,21 @@ import {
   type FeedbackForm,
   type FeedbackRefusal,
 } from '#/content/feedback-form'
-import { currentOwner } from './auth'
-import { formPoster, seeOther } from './form-post'
-import { appEngine } from './engine'
+import { appPoster, formPoster, seeOther } from './form-post'
+import {
+  appEngine,
+  attendeeSlugs,
+  sessionFilms,
+  type SessionFilm,
+} from './engine'
 import type { Owner } from './owners'
-import { serverEnv } from './server-env'
 
 /** A Presente of the Session, with her name and whether she is Dono (the
  * Dono speaks for herself with a Nota; a Relato is for the others). */
 export type FeedbackAttendee = { person: string; name: string; owner: boolean }
 
 /** A film of the Session's current Recomendação. */
-export type FeedbackFilm = { position: number; id: string; title: string }
+export type FeedbackFilm = SessionFilm
 
 /** An open Session, as the list and the form show it. */
 export type FeedbackSession = {
@@ -65,20 +68,6 @@ export interface Feedback {
 
 const ok = <A>(output: A): Outcome<A> => ({ exitCode: 0, output })
 
-type Item = { position?: unknown; id?: unknown; title?: unknown }
-
-const films = (recommendation: unknown): FeedbackFilm[] =>
-  (Array.isArray(recommendation) ? (recommendation as Item[]) : []).map(
-    (item) => ({
-      position: Number(item.position),
-      id: String(item.id),
-      title: typeof item.title === 'string' ? item.title : String(item.id),
-    }),
-  )
-
-const slugs = (attendees: unknown): string[] =>
-  Array.isArray(attendees) ? attendees.map(String) : []
-
 /** The form's reactions as the engine's `PESSOA=VALOR` lists. */
 function requestOf(session: string, form: FeedbackForm) {
   const ratings: string[] = []
@@ -108,12 +97,12 @@ export function feedbackFromEngine(engine: Engine): Feedback {
           id: s.id,
           date: s.date,
           request: typeof s.request === 'string' ? s.request : null,
-          attendees: slugs(s.attendees).map((person) => ({
+          attendees: attendeeSlugs(s.attendees).map((person) => ({
             person,
             name: byslug.get(person)?.name ?? person,
             owner: byslug.get(person)?.owner ?? false,
           })),
-          recommendation: films(s.recommendation),
+          recommendation: sessionFilms(s.recommendation),
         })),
       )
     },
@@ -227,11 +216,7 @@ export const appFeedbackPage = (id: string) => feedbackPage(id, appFeedback())
 
 /** The form's route for the app: the logged-in Dono, the process's
  * engine. */
-export const serveFeedbackAction = (request: Request, session: string) =>
-  feedbackAction(
-    request,
-    session,
-    currentOwner(request),
-    appFeedback(),
-    serverEnv().APP_ORIGIN,
-  )
+export const serveFeedbackAction = (request: Request, session: string) => {
+  const { owner, origin } = appPoster(request)
+  return feedbackAction(request, session, owner, appFeedback(), origin)
+}
