@@ -439,22 +439,15 @@ export interface NewPerson {
   readonly email?: string
 }
 
-/** A Dono logs in with her Google e-mail, so she needs one; nobody else
- * has one. Lower case, as the login compares it, and nobody else's: two
- * Donos with one address would lock both out. */
-const newOwnerEmail = (
-  input: NewPerson,
-): Effect.Effect<string | null, EngineError, Environment> =>
+/** A Dono's Google e-mail, as the login compares it: lower case, an
+ * address, and nobody else's (two Donos with one address would lock both
+ * out). `self` is the Pessoa who gets it, whose own address is no clash. */
+export const ownerEmail = (
+  typed: string | undefined,
+  self?: string,
+): Effect.Effect<string, EngineError, Environment> =>
   Effect.gen(function* () {
-    const email = input.email?.trim().toLowerCase() || null
-    if (!input.owner)
-      return email === null
-        ? null
-        : yield* engineError(
-            'invalid_usage',
-            'só um Dono tem e-mail: ele serve para entrar no site',
-            'email_not_owner',
-          )
+    const email = typed?.trim().toLowerCase() || null
     if (email === null)
       return yield* engineError(
         'invalid_usage',
@@ -468,7 +461,7 @@ const newOwnerEmail = (
         'invalid_email',
       )
     const holder = (yield* readPeople).find(
-      (p) => p.email?.toLowerCase() === email,
+      (p) => p.slug !== self && p.email?.toLowerCase() === email,
     )
     if (holder !== undefined)
       return yield* engineError(
@@ -478,6 +471,23 @@ const newOwnerEmail = (
       )
     return email
   })
+
+/** A Dono logs in with her Google e-mail, so she needs one; nobody else
+ * has one. */
+const newOwnerEmail = (
+  input: NewPerson,
+): Effect.Effect<string | null, EngineError, Environment> =>
+  input.owner
+    ? ownerEmail(input.email)
+    : input.email?.trim()
+      ? Effect.fail(
+          engineError(
+            'invalid_usage',
+            'só um Dono tem e-mail: ele serve para entrar no site',
+            'email_not_owner',
+          ),
+        )
+      : Effect.succeed(null)
 
 /** Fails when one of the new Pessoa's names (slug, name, aliases) already
  * finds another Pessoa, compared as `resolvePerson` compares: a request by

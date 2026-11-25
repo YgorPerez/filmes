@@ -21,7 +21,7 @@ const IARA: PersonPage = {
   name: 'Iara',
   aliases: ['ia'],
   owner: false,
-  viewer: { person: 'bruno', name: 'Bruno' },
+  viewer: { person: 'bruno', name: 'Bruno', admin: false },
   vetoes: [
     {
       text: 'nunca vê terror',
@@ -448,6 +448,67 @@ describe('PersonScreen', () => {
       PERSON.ratings.noDatabase,
     ])
       expect(screen.getByText(empty)).toBeTruthy()
+  })
+})
+
+describe('the Acesso section', () => {
+  const ADMIN = { person: 'bruno', name: 'Bruno', admin: true }
+
+  it('is not there for a Dono who is not admin', () => {
+    show()
+    expect(screen.queryByRole('region', { name: PERSON.access.title })).toBe(
+      null,
+    )
+  })
+
+  it('gives an admin a Google e-mail field and "Dar acesso"', async () => {
+    show({ ...IARA, viewer: ADMIN, access: { email: null } })
+    const region = section(PERSON.access.title)
+    expect(within(region).getByText(PERSON.access.none)).toBeTruthy()
+    const form = within(region).getByRole('form', {
+      name: PERSON.access.grant,
+    })
+    const user = userEvent.setup()
+    await user.type(
+      within(form).getByLabelText(PERSON.access.email),
+      'iara@example.org',
+    )
+    expect(posted(form)).toEqual({ kind: 'grant', email: 'iara@example.org' })
+    const link = within(
+      screen.getByRole('navigation', { name: PERSON.contents }),
+    ).getByRole('link', { name: PERSON.access.title })
+    expect(link.getAttribute('href')).toBe('#acesso')
+  })
+
+  it('shows a Dono her e-mail and "Tirar acesso"', () => {
+    show({
+      ...IARA,
+      owner: true,
+      viewer: ADMIN,
+      access: { email: 'iara@example.org' },
+    })
+    const region = section(PERSON.access.title)
+    expect(
+      within(region).getByText(PERSON.access.owner('iara@example.org')),
+    ).toBeTruthy()
+    const form = within(region).getByRole('form', {
+      name: PERSON.access.revoke,
+    })
+    expect(posted(form)).toEqual({ kind: 'revoke' })
+  })
+
+  it("never offers the admin's own access", () => {
+    show({
+      ...IARA,
+      person: 'bruno',
+      name: 'Bruno',
+      owner: true,
+      viewer: ADMIN,
+      access: { email: 'bruno@example.org' },
+    })
+    const region = section(PERSON.access.title)
+    expect(within(region).getByText(PERSON.access.self)).toBeTruthy()
+    expect(within(region).queryByRole('form')).toBeNull()
   })
 })
 

@@ -454,6 +454,13 @@ export {
   type SkipSetupResult,
 } from './people/setup.ts'
 export {
+  grantAccess,
+  revokeAccess,
+  type AccessResult,
+  type GrantAccessInput,
+  type RevokeAccessInput,
+} from './people/access.ts'
+export {
   importLetterboxd,
   importLetterboxdRss,
   LETTERBOXD_KIND,

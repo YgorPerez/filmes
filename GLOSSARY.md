@@ -14,6 +14,10 @@ _Evitar_: usuário, amigo, perfil
 A Pessoa que opera o sistema: pede recomendações, descreve as outras Pessoas e registra o Feedback das Sessões dela. Pode haver mais de um (#131); cada Sessão tem um Dono, e online é quem está logado (mapa #72).
 _Evitar_: usuário, admin
 
+**Acesso** [access, `grantAccess`, `revokeAccess`]:
+O e-mail do Google que faz uma Pessoa ser Dono e entrar no site e no conector. Um admin dá o Acesso a uma Pessoa que já existe e o tira na página dela; sem ele, o próximo pedido da conta é recusado, e o gosto dela fica (#166).
+_Evitar_: conta, permissão
+
 ## Sessão
 
 **Sessão** [session, `Session`]:

@@ -15,6 +15,9 @@ const PERSON_ACTIONS = [
   'pular',
   'responder',
   'remover',
+  // Access (#166): only an admin, checked by the server.
+  'dar-acesso',
+  'tirar-acesso',
 ] as const
 
 type Reaction = 'love' | 'like' | 'dislike' | 'hate'
@@ -42,6 +45,8 @@ export type PersonAction =
       what: 'stated' | 'report' | 'veto' | 'seen'
       id: string
     }
+  | { kind: 'grant'; email: string }
+  | { kind: 'revoke' }
 
 const REACTIONS = ['love', 'like', 'dislike', 'hate'] as const
 const LINKS = ['director', 'writer', 'cast', 'series', 'genre'] as const
@@ -110,6 +115,11 @@ const remove: Reader = (form) => {
   return what && id ? { kind: 'remove', what, id } : null
 }
 
+const grant: Reader = (form) => {
+  const email = field(form, 'email')
+  return email ? { kind: 'grant', email } : null
+}
+
 const READERS: Record<(typeof PERSON_ACTIONS)[number], Reader> = {
   declarar: statement('state'),
   relatar: statement('report'),
@@ -119,7 +129,13 @@ const READERS: Record<(typeof PERSON_ACTIONS)[number], Reader> = {
   pular: skip,
   responder: answer,
   remover: remove,
+  'dar-acesso': grant,
+  'tirar-acesso': () => ({ kind: 'revoke' }),
 }
+
+/** An action only an admin may take: giving or taking a Pessoa's access. */
+export const isAccessAction = (action: PersonAction) =>
+  action.kind === 'grant' || action.kind === 'revoke'
 
 /** The form's action, or null when a field is missing or not one the page
  * offers. Whatever the engine itself checks (the target in the Catalog,
@@ -145,6 +161,9 @@ export const PERSON_NOTICES = [
   'respondida',
   // A new Pessoa, from the form of `/pessoas`.
   'criada',
+  // She is a Dono now, or no longer (#166).
+  'acesso-dado',
+  'acesso-tirado',
 ] as const
 export type PersonNotice = (typeof PERSON_NOTICES)[number]
 
@@ -156,6 +175,14 @@ export const PERSON_REFUSALS = [
   'pedido',
   // The item is not in her file any more (removed in another tab).
   'item',
+  // Access: no e-mail, or one that is not an address.
+  'email',
+  // Access: another Pessoa has that e-mail.
+  'email-usado',
+  // Access: she is a Dono already.
+  'ja-dono',
+  // Access: the logged-in Dono taking her own away.
+  'proprio-acesso',
   // The engine cannot run here, or failed: the reason is in the log.
   'indisponivel',
 ] as const
