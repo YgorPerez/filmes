@@ -1,8 +1,9 @@
 import type { PersonCreateRefusal, TypedPerson } from '#/content/person-create'
 import type { PersonEntry } from '#/platform/people'
-import { Marquee } from './marquee'
 import { PEOPLE } from './person.copy'
-import { Alert, Disclosure, OwnerTag, Submit, TextField } from './person-parts'
+import { OwnerTag } from './kit/owner-tag'
+import { Alert, Disclosure, Submit, TextField } from './person-parts'
+import { RowArrow } from './kit/row-arrow'
 import { buttonVariants } from './shadcn/button'
 
 /** The create form as it comes back: why it was refused, what was typed. */
@@ -23,15 +24,14 @@ export function PeopleList({
   create?: CreateState
 }) {
   return (
-    <main className="mx-auto flex max-w-[720px] flex-col gap-xl px-lg py-xl">
-      <header className="flex flex-wrap items-center justify-between gap-md">
-        <Marquee words={['filmes']} />
-        <a href="/" className={buttonVariants({ variant: 'quiet' })}>
+    <main className="mx-auto flex max-w-[720px] flex-col gap-3xl px-2xl py-3xl">
+      <header className="flex flex-wrap items-center justify-between gap-xl">
+        <a href="/" className={buttonVariants({ variant: 'option' })}>
           {PEOPLE.back}
         </a>
       </header>
       <div className="flex flex-col gap-sm">
-        <h1 className="text-title">{PEOPLE.title}</h1>
+        <h1 className="font-display text-title">{PEOPLE.title}</h1>
         <p className="text-ink-2">{PEOPLE.lead}</p>
       </div>
       {gone && <Alert>{PEOPLE.gone}</Alert>}
@@ -40,22 +40,27 @@ export function PeopleList({
       ) : people.length === 0 ? (
         <p className="text-ink-2">{PEOPLE.empty}</p>
       ) : (
-        <ul className="flex flex-col overflow-hidden rounded-card border border-rule bg-surface">
+        <ul className="flex flex-col gap-xs" aria-label={PEOPLE.title}>
           {people.map(({ person, name, aliases, owner }) => (
-            <li key={person} className="border-rule not-first:border-t">
+            <li key={person}>
               <a
                 href={`/pessoas/${encodeURIComponent(person)}`}
-                className="flex min-h-touch flex-wrap items-center gap-x-sm gap-y-xs px-md py-sm text-ink no-underline"
+                className="flex min-h-[52px] items-stretch overflow-hidden rounded-nav-row border border-rule bg-surface text-ink no-underline hover:bg-surface-2"
               >
-                <span className="font-semibold">{name}</span>
-                {owner && <OwnerTag />}
-                {aliases.length > 0 && (
-                  <span className="text-meta text-ink-2">
-                    {PEOPLE.aliases(aliases)}
+                <span aria-hidden="true" className="w-2 shrink-0 bg-case" />
+                <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-sm gap-y-2xs py-sm pl-xl">
+                  <span className="font-display text-[15px] font-bold">
+                    {name}
                   </span>
-                )}
-                <span aria-hidden="true" className="ml-auto text-ink-2">
-                  ›
+                  {owner && <OwnerTag />}
+                  {aliases.length > 0 && (
+                    <span className="text-meta text-ink-2">
+                      {PEOPLE.aliases(aliases)}
+                    </span>
+                  )}
+                </span>
+                <span className="flex items-center px-xl">
+                  <RowArrow />
                 </span>
               </a>
             </li>
@@ -78,7 +83,7 @@ function CreateForm({ state }: { state?: CreateState }) {
         method="post"
         action="/pessoas/nova/enviar"
         aria-label={create.title}
-        className="flex flex-col gap-md"
+        className="flex flex-col gap-xl"
       >
         {state?.refusal && <Alert>{create.refusals[state.refusal]}</Alert>}
         <TextField

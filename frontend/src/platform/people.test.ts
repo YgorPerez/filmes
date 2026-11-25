@@ -19,6 +19,7 @@ import {
   personAction,
   personCreateAction,
   personPage,
+  setupGuideFromEngine,
   type People,
 } from './people'
 
@@ -692,5 +693,51 @@ describe('peopleFromEngine', () => {
       'Bruno <bruno@example.org>|pessoa criar Luana Reis',
       'fixture <fixture@example.org>|initial',
     ])
+  }, 60_000)
+})
+
+describe('setupGuideFromEngine', () => {
+  it('asks whether the Claude app connected with her email', async () => {
+    const fixture = useFixture()
+    const asked: string[] = []
+    const guide = setupGuideFromEngine(makeEngine(fixture.vars), (email) => {
+      asked.push(email)
+      return true
+    })
+
+    const vera = await guide.guide(VERA)
+
+    expect(asked).toEqual(['vera@example.org'])
+    expect(vera).toEqual({
+      exitCode: 0,
+      output: {
+        person: 'vera',
+        steps: [
+          { step: 'taste', done: false, skipped: false },
+          { step: 'import', done: false, skipped: false },
+          { step: 'connector', done: true, skipped: false },
+        ],
+        ratings: 0,
+        complete: false,
+      },
+    })
+  })
+
+  it('keeps a skipped step in her file, in a commit she signs', async () => {
+    const fixture = useFixture()
+    commitFixture(fixture.data)
+    const guide = setupGuideFromEngine(makeEngine(fixture.vars), () => false)
+
+    expect(await guide.skip(VERA, 'import')).toEqual({
+      exitCode: 0,
+      output: { person: 'vera', step: 'import', new: true },
+    })
+
+    expect(
+      readFileSync(join(fixture.data, 'people', 'vera.md'), 'utf8'),
+    ).toContain('skipped_setup: [import]')
+    expect(git(fixture.data, 'log', '-1', '--format=%an <%ae>|%s').trim()).toBe(
+      'Vera <vera@example.org>|pessoa pular passo vera: import',
+    )
   }, 60_000)
 })

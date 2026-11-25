@@ -58,15 +58,19 @@ describe('the Sessions list', () => {
 
     const open = region(SESSIONS.list.open)
     const row = within(open).getAllByRole('listitem')[0]!
-    expect(row.textContent).toContain('2026-11-20 · Bruno, Iara')
-    expect(row.textContent).toContain(
-      'eu e a Iara · 2 filmes · até 2h · com criança de 7 anos',
-    )
+    // The stub: date, Presentes and how many films, a link to its page.
     expect(
       within(row)
-        .getByRole('link', { name: /2026-11-20 · Bruno, Iara/ })
+        .getByRole('link', { name: '2026-11-20 · Bruno, Iara · 2 filmes' })
         .getAttribute('href'),
     ).toBe('/sessoes/2026-11-20-iara')
+    // The request on the shelf label, the Dono's words on the paper.
+    expect(
+      within(row).getByRole('img', {
+        name: 'leve · até 2h · com criança de 7 anos',
+      }),
+    ).toBeTruthy()
+    expect(within(row).getByText('eu e a Iara')).toBeTruthy()
     expect(
       within(row)
         .getByRole('link', { name: SESSIONS.list.feedbackLabel(OPEN.id) })
@@ -75,7 +79,12 @@ describe('the Sessions list', () => {
 
     const closed = region(SESSIONS.list.closed)
     const [chosen, nothing] = within(closed).getAllByRole('listitem')
-    expect(chosen!.textContent).toContain('viram Pequenos Milagres')
+    expect(chosen!.textContent).toContain(
+      '2026-11-19 · viram Pequenos Milagres',
+    )
+    expect(within(chosen!).getByRole('link').getAttribute('href')).toBe(
+      '/sessoes/2026-11-19-quim',
+    )
     expect(nothing!.textContent).toContain('não viram nada')
     expect(within(closed).queryByText(SESSIONS.list.feedback)).toBeNull()
   })

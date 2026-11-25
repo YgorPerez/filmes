@@ -33,7 +33,10 @@ test('the Dono reads and changes a Pessoa’s taste', async ({ page }, info) => 
   const name = slug === 'rosa' ? 'Rosa' : 'Teo'
   await loginAsBruno(page)
 
-  await page.getByRole('link', { name: 'Pessoas' }).click()
+  await page
+    .getByRole('navigation', { name: 'Telas' })
+    .getByRole('link', { name: 'Pessoas' })
+    .click()
   await expect(page).toHaveURL(/\/pessoas$/)
   await expect(page.getByRole('heading', { name: 'Pessoas' })).toBeVisible()
   await expect(page.getByRole('link', { name: /Bruno.*Dono/ })).toBeVisible()
@@ -67,14 +70,14 @@ test('the Dono reads and changes a Pessoa’s taste', async ({ page }, info) => 
   await snap(page, info, 'pessoa-erro')
 
   // The cast Ajuste down to nothing.
-  const cast = page.getByLabel(/^Ajuste de elenco/)
-  await cast.selectOption({ label: 'nada' })
-  await cast
+  const cast = () => page.getByRole('group', { name: /^Ajuste de elenco/ })
+  await cast().getByText('nada', { exact: true }).click()
+  await cast()
     .locator('xpath=ancestor::form')
     .getByRole('button', { name: 'Mudar' })
     .click()
   await expect(notice(page)).toHaveText('Ajuste gravado.')
-  await expect(page.getByLabel(/^Ajuste de elenco/)).toHaveValue('none')
+  await expect(cast().getByRole('radio', { name: 'nada' })).toBeChecked()
 
   // A Declarado about an entity, a Relato, a Já visto with a Nota.
   form = await addForm(page, 'Declarados', 'Acrescentar Declarado')

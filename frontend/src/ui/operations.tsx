@@ -1,3 +1,4 @@
+import { FIELD } from './kit/field'
 import type { ConsultValue } from '@filmes/engine'
 import type {
   OperationsNotice,
@@ -8,7 +9,8 @@ import type {
   EvaluationPanel,
   OperationsPage,
 } from '#/platform/operations'
-import { Marquee } from './marquee'
+import { FieldLabel } from './kit/field-label'
+import { PageHead } from './kit/page-head'
 import { EvaluationSection, jobKey } from './operations-evaluation'
 import { OPERATIONS } from './operations.copy'
 import { PushSection } from './operations-push'
@@ -41,14 +43,14 @@ function ConsultResult({ answer }: { answer: ConsultAnswer }) {
         {COPY.rows(answer.total, answer.rows.length)}
       </p>
       <div className="max-h-[60vh] overflow-auto rounded-field border border-rule">
-        <table className="min-w-full text-left text-meta">
-          <thead className="sticky top-0 bg-surface-2">
+        <table className="min-w-full text-left text-meta tabular-nums">
+          <thead className="sticky top-0 bg-surface-2 font-display font-bold">
             <tr>
               {answer.columns.map((column) => (
                 <th
                   key={column.key}
                   scope="col"
-                  className="px-2 py-1 whitespace-nowrap"
+                  className="px-md py-xs whitespace-nowrap"
                 >
                   {column.name}
                 </th>
@@ -59,7 +61,7 @@ function ConsultResult({ answer }: { answer: ConsultAnswer }) {
             {answer.rows.map((row) => (
               <tr key={row.key} className="border-t border-rule">
                 {row.cells.map((cell) => (
-                  <td key={cell.key} className="px-2 py-1 align-top">
+                  <td key={cell.key} className="px-md py-xs align-top">
                     <Cell value={cell.value} />
                   </td>
                 ))}
@@ -77,9 +79,8 @@ function ConsultResult({ answer }: { answer: ConsultAnswer }) {
 function ConsultSection({ answer }: { answer: ConsultAnswer | null }) {
   return (
     <Section id="consultar" title={COPY.title} lead={COPY.lead}>
-      <form method="get" action="/operacoes" className="flex flex-col gap-md">
-        <label className="flex flex-col gap-xs">
-          <span className="text-[14px] font-semibold">{COPY.label}</span>
+      <form method="get" action="/operacoes" className="flex flex-col gap-xl">
+        <FieldLabel label={COPY.label}>
           <textarea
             name="sql"
             required
@@ -87,9 +88,9 @@ function ConsultSection({ answer }: { answer: ConsultAnswer | null }) {
             spellCheck={false}
             defaultValue={answer?.sql}
             placeholder={COPY.placeholder}
-            className="rounded-field border border-rule bg-surface px-3 py-[9px] text-[15px] text-ink"
+            className={`${FIELD} font-mono text-[14px] leading-[1.45]`}
           />
-        </label>
+        </FieldLabel>
         <Submit>{COPY.run}</Submit>
       </form>
       {answer && <ConsultResult answer={answer} />}
@@ -111,15 +112,11 @@ export function Operations({
   readEvaluation: () => Promise<EvaluationPanel>
 }) {
   return (
-    <main className="mx-auto flex max-w-[720px] flex-col gap-xl px-lg py-xl">
-      <header className="flex flex-wrap items-center justify-between gap-md">
-        <Marquee words={['filmes']} />
+    <main className="mx-auto flex max-w-[720px] flex-col gap-3xl px-2xl py-3xl">
+      <header className="flex flex-wrap items-center justify-between gap-xl">
         <LinkButton href="/">{OPERATIONS.back}</LinkButton>
       </header>
-      <div className="flex flex-col gap-xs">
-        <h1 className="text-title">{OPERATIONS.title}</h1>
-        <p className="text-ink-2">{OPERATIONS.lead}</p>
-      </div>
+      <PageHead title={OPERATIONS.title} lead={OPERATIONS.lead} />
       {notice && <Notice>{OPERATIONS.notices[notice]}</Notice>}
       {refusal && <Alert>{OPERATIONS.refusals[refusal]}</Alert>}
       <EvaluationSection

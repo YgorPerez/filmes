@@ -7,7 +7,7 @@ import type {
 } from '#/platform/operations'
 import { OPERATIONS } from './operations.copy'
 import { ActionPost } from './operations-parts'
-import { Alert, Section, SubmitButton } from './person-parts'
+import { Alert, Section, Submit } from './person-parts'
 
 const COPY = OPERATIONS.evaluation
 
@@ -25,14 +25,14 @@ function Running({
         aria-label={COPY.progress}
         max={100}
         value={job.progress}
-        className="h-2 w-full accent-marquee-red"
+        className="h-2.5 w-full appearance-none overflow-hidden rounded-pill bg-surface-2 [&::-moz-progress-bar]:bg-ink [&::-webkit-progress-bar]:bg-surface-2 [&::-webkit-progress-value]:bg-ink"
       />
-      <p>
+      <p className="tabular-nums">
         {Math.floor(job.progress)}% · {job.message || COPY.running}
       </p>
       <p className="text-meta text-ink-2">
         {COPY.startedBy(job.by, job.startedAt, job.grid)}{' '}
-        <a href="/operacoes" className="underline">
+        <a href="/operacoes" className="text-ink underline underline-offset-3">
           {COPY.refresh}
         </a>
       </p>
@@ -46,12 +46,12 @@ function Measures({ result }: { result: EvaluationSummary }) {
     [COPY.movielens, result.offline.movielens],
   ] as const
   return (
-    <table className="w-full text-left text-meta">
-      <caption className="text-left text-label text-ink-2 uppercase">
+    <table className="w-full text-left text-meta tabular-nums [&_td]:py-xs [&_td]:pr-md [&_th]:py-xs [&_th]:pr-md">
+      <caption className="pb-xs text-left font-display text-label text-ink-2 uppercase">
         {COPY.measures}
       </caption>
       <thead>
-        <tr className="border-b border-rule">
+        <tr className="border-b border-rule font-display">
           <th scope="col">{COPY.sample}</th>
           <th scope="col">{COPY.measured}</th>
           <th scope="col">{COPY.recall}</th>
@@ -74,8 +74,8 @@ function Measures({ result }: { result: EvaluationSummary }) {
 
 function Best({ best }: { best: NonNullable<EvaluationSummary['best']> }) {
   return (
-    <table className="w-full text-left text-meta">
-      <caption className="text-left text-label text-ink-2 uppercase">
+    <table className="w-full text-left text-meta tabular-nums [&_td]:py-xs [&_td]:pr-md [&_th]:py-xs [&_th]:pr-md">
+      <caption className="pb-xs text-left font-display text-label text-ink-2 uppercase">
         {COPY.best}
       </caption>
       <thead>
@@ -101,7 +101,7 @@ function Best({ best }: { best: NonNullable<EvaluationSummary['best']> }) {
 function Done({ job }: { job: Extract<EvaluationJob, { state: 'done' }> }) {
   const { result } = job
   return (
-    <div className="flex flex-col gap-md">
+    <div className="flex flex-col gap-xl">
       <p role="status">
         {COPY.done(job.finishedAt)} {COPY.file(result.file)}
       </p>
@@ -135,7 +135,7 @@ function Report({ report }: { report: EvaluationReport | null }) {
   if (report === null) return <p className="text-ink-2">{COPY.noReport}</p>
   return (
     <details className="rounded-field border border-rule">
-      <summary className="min-h-touch cursor-pointer content-center px-3 font-semibold">
+      <summary className="min-h-touch cursor-pointer content-center px-lg font-display text-[14px] font-bold">
         {COPY.report(report.date)}
       </summary>
       <pre className="overflow-x-auto border-t border-rule p-sm text-meta whitespace-pre-wrap">
@@ -147,16 +147,21 @@ function Report({ report }: { report: EvaluationReport | null }) {
 
 function RunForm({ running }: { running: boolean }) {
   return (
-    <ActionPost action="avaliar" className="flex flex-col gap-md">
-      <label className="flex min-h-touch items-center gap-sm">
-        <input type="checkbox" name="grade" value="sim" className="size-5" />
+    <ActionPost action="avaliar" className="flex flex-col gap-xl">
+      <label className="flex min-h-touch cursor-pointer items-center gap-md rounded-field bg-surface-2 px-lg py-sm">
+        <input
+          type="checkbox"
+          name="grade"
+          value="sim"
+          className="size-5 shrink-0 accent-ink"
+        />
         <span>
           {COPY.grid} <span className="text-ink-2">({COPY.gridHint})</span>
         </span>
       </label>
-      <SubmitButton className="self-start" disabled={running}>
+      <Submit variant="primary" disabled={running}>
         {running ? COPY.running : COPY.run}
-      </SubmitButton>
+      </Submit>
     </ActionPost>
   )
 }

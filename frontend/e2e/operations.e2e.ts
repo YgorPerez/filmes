@@ -20,7 +20,10 @@ test.beforeAll(() => {
 
 test('the admin consults the database, read-only', async ({ page }, info) => {
   await loginAsBruno(page)
-  await page.getByRole('link', { name: 'Operações' }).click()
+  await page
+    .getByRole('navigation', { name: 'Telas' })
+    .getByRole('link', { name: 'Operações' })
+    .click()
   await expect(page).toHaveURL(/\/operacoes$/)
   await expect(page.getByRole('heading', { name: 'Operações' })).toBeVisible()
   await snap(page, info, 'operacoes')

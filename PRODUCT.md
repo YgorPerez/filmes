@@ -2,7 +2,7 @@
 
 <!-- impeccable:product-schema 1 -->
 
-<!-- Escrito no #78 sem entrevista: as respostas vêm das decisões do mapa #72 (grilling de 2026-11-24 com o Dono). O que o mapa não decide está marcado "a decidir". -->
+<!-- Escrito no #78 sem entrevista: as respostas vêm das decisões do mapa #72 (grilling de 2026-11-24 com o Dono). Emendado no #142 com as decisões do mapa #140 (grilling de 2026-11-25) e a direção visual que o Dono escolheu. O que os mapas não decidem está marcado "a decidir". -->
 
 ## Platform
 
@@ -10,7 +10,7 @@ web
 
 ## Stack
 
-Decidida no mapa #72: a mesma do pesquisa-relacionamentos. Workspace pnpm neste repositório, com Vite+ (Oxfmt, Oxlint, Vitest), TypeScript 7, TanStack Start (React 19, Router, Query, Nitro), Base UI, shadcn, Tailwind 4, Storybook, Playwright, fallow e react-doctor. O motor vira `packages/engine`, em TypeScript com Effect; `frontend/` serve o app web, o MCP por HTTP, o OAuth e o Cartaz. Roda num contêiner Docker atrás do Nginx na VPS do temestudo, em `cinema.temestudo.cloud`, publicado a cada push na branch padrão.
+Decidida no mapa #72: a mesma do pesquisa-relacionamentos. Workspace pnpm neste repositório, com Vite+ (Oxfmt, Oxlint, Vitest), TypeScript 7, TanStack Start (React 19, Router, Query, Nitro), Base UI, shadcn, Tailwind 4, Storybook, Playwright, fallow e react-doctor. O motor vira `packages/engine`, em TypeScript com Effect; `frontend/` serve o app web, o MCP por HTTP, o OAuth e o Cartaz. Roda num contêiner Docker atrás do Nginx na VPS, em `cinema.finalsend.com.br`, publicado a cada push na branch padrão.
 
 ## Users
 
@@ -37,7 +37,7 @@ Cada linha de "Por que cada um vai gostar" aponta para um Fato guardado, com Fon
 
 - Dois caminhos para a mesma coisa:
   - **Claude**: o Dono conversa com o Claude no app (conta grátis, um conector personalizado, que funciona no celular). O filmes é esse conector, por MCP sobre HTTP. O Cartaz aparece dentro da conversa como view do MCP Apps, num WebView, no tema claro ou escuro do app. O Dono marca vários filmes e toca em Enviar; a resposta vai para a conversa e o Claude regera.
-  - **App web**: formulário estruturado para o pedido da Sessão, sem chamada a LLM. Telas de Sessões (pedido, Cartaz, regerar, Feedback), Pessoas (gosto, Vetos, Ajustes, perguntas abertas), import do Letterboxd e do Trakt com a fila de resolução, export, e Operações (consulta SQL, avaliar) só para quem é `admin`.
+  - **App web**: formulário estruturado para o pedido da Sessão, sem chamada a LLM. A home recebe quem acabou de chegar com um guia de 3 passos (Meu gosto, Importar do Letterboxd ou Trakt, Conector no Claude), cada um feito, pendente ou pulado; o pulado fica no frontmatter da Pessoa do Dono, em qualquer aparelho. Quem não tem histórico dá Notas numa tela própria, com os filmes de mais votos no IMDb. Telas de Sessões (pedido, Cartaz, regerar, Feedback), Pessoas (gosto, Vetos, Ajustes, perguntas abertas), import do Letterboxd e do Trakt com a fila de resolução, export, e Operações (consulta SQL, avaliar) só para quem é `admin`.
 - O Cartaz é um componente React só, usado nos dois caminhos.
 - Login com Google; só entra quem tem o e-mail numa Pessoa que é Dono.
 - Pessoas e Sessões são Markdown no repo privado filmes-dados. Cada gravação é um commit em nome de quem está logado. Push que falha fica na fila, e o admin vê um aviso quando falha de novo e de novo.
@@ -50,13 +50,14 @@ Cada linha de "Por que cada um vai gostar" aponta para um Fato guardado, com Fon
 - Todo texto de Evidência sai do motor. A interface nunca escreve nem reescreve uma linha de Evidência.
 - Sem capa (TMDB sem resposta), o filme sai com o título no lugar da capa.
 - Gosto permanente só é gravado depois de um sim do Dono. Contexto da noite regera direto.
+- O guia da home nunca bloqueia: dá para pedir filme desde o primeiro login.
 - Operações (`consult`, `evaluate`) só para `admin: true`.
 - Fora do escopo: cadastro aberto, outras línguas, rede social, streaming, notificações.
-- A decidir: o nome que aparece na tela (o repo se chama `filmes`; o domínio é `cinema.temestudo.cloud`), e se as atribuições do TMDB e do IMDb passam a aparecer na tela agora que mais de uma pessoa usa.
+- A decidir: o nome que aparece na tela (o repo se chama `filmes`; o domínio é `cinema.finalsend.com.br`), e se as atribuições do TMDB e do IMDb passam a aparecer na tela agora que mais de uma pessoa usa.
 
 ## Brand Commitments
 
-- Voz: PT-BR coloquial, direta, de quem conhece o gosto de cada um. Usa os termos do GLOSSARY. Nada de "IA", "algoritmo" ou entusiasmo de app de streaming.
+- Voz: PT-BR coloquial, direta, de quem conhece o gosto de cada um, como o balconista da locadora do bairro. Usa os termos do GLOSSARY. Nada de "IA", "algoritmo" ou entusiasmo de app de streaming.
 - "Sem fato" é dito com todas as letras. Falta de dado nunca vira "não gosta".
 - A Força nunca aparece só como cor: vai com o marcador e a palavra para o leitor de tela.
 - Cada Presente tem uma cor só dentro de uma Sessão, a mesma no ponto da capa e no avatar da Evidência.
@@ -65,7 +66,8 @@ Cada linha de "Por que cada um vai gostar" aponta para um Fato guardado, com Fon
 
 - O Cartaz de hoje, em HTML para o T3 Code: `filmes/cartaz/__init__.py`, `cartaz.css` e `cartaz.js`. Ele segue as variáveis de tema do T3 (claro e escuro) e não tem identidade própria.
 - Capas, títulos em português e sinopses vêm do TMDB; nota e votos, do IMDb. A fixture (`tests/fixture/`) tem filmes, Pessoas e respostas gravadas fictícios, bons para Storybook e testes.
-- Não há logo, marca, depoimentos nem métricas de uso. Nada disso pode ser inventado.
+- Três protótipos de direção visual do #141 em `prototypes/` (Letreiro de rua, Locadora de bairro, Catálogo da Mostra), cada um com o Cartaz (web, Claude inline e tela cheia) e a home nos 3 estados do guia. O Dono escolheu a **Locadora de bairro** no #142; ela é o mundo de `DESIGN.md`, e os outros dois ficam como histórico.
+- Não há logo, marca, depoimentos nem métricas de uso. Nada disso pode ser inventado; a carteirinha da home não leva número de sócio.
 
 ## Product Principles
 

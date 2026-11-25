@@ -8,7 +8,7 @@ import { Client, InMemoryTransport } from '@modelcontextprotocol/client'
 import { makeEngine, type Vars } from '@filmes/engine'
 import { onTestFinished } from 'vite-plus/test'
 import type { Fixture } from '../../engine/test/fixture.ts'
-import { createMcpServer } from '../src/index.ts'
+import { createMcpServer, type McpServerOptions } from '../src/index.ts'
 
 export interface Connected {
   readonly fixture: Fixture
@@ -41,18 +41,19 @@ const text = (result: ToolResult): string => {
 /** A client connected to a server over `fixture` (the test's
  * `useFixture()`), closed when the test ends. `owner` is the logged-in
  * Pessoa the server runs every call as; `vars` add to (or, `undefined`,
- * remove from) the fixture's; `admin` is what the edge says of her. */
+ * remove from) the fixture's; `edge` is what the HTTP edge adds: what it
+ * says of her (`admin`) and the app's address (`appOrigin`). */
 export async function connect(
   fixture: Fixture,
   owner: string | null = null,
   vars: Vars = {},
-  admin?: boolean,
+  edge: Pick<McpServerOptions, 'admin' | 'appOrigin'> = {},
 ): Promise<Connected> {
   const engine = makeEngine({ ...fixture.vars, ...vars })
   const server = createMcpServer({
     engine,
     owner,
-    ...(admin !== undefined && { admin }),
+    ...edge,
   })
   const [clientSide, serverSide] = InMemoryTransport.createLinkedPair()
   await server.connect(serverSide)

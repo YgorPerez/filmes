@@ -31,6 +31,8 @@ import {
   LEVELS,
   LINKS,
   sameQuestion,
+  SETUP_STEPS,
+  type SetupStep,
   SKIPS_TO_DROP,
   type Adjustment,
   type OpenQuestion,
@@ -212,6 +214,30 @@ const decodeOpenQuestions = (
     return Effect.succeed(questions)
   })
 
+const isSetupStep = (value: YamlValue): value is SetupStep =>
+  typeof value === 'string' &&
+  (SETUP_STEPS as readonly string[]).includes(value)
+
+/** The setup guide's skipped steps; one that is not a step is
+ * `invalid_data`, and a repeated one counts once. */
+const decodeSkippedSetup = (
+  file: string,
+  list: readonly YamlValue[],
+): Effect.Effect<SetupStep[], EngineError> =>
+  Effect.suspend(() => {
+    const steps: SetupStep[] = []
+    for (const item of list) {
+      if (!isSetupStep(item))
+        return Effect.fail(
+          invalid(
+            `${file}: passo pulado inválido: ${pyReprValue(item)} (use ${SETUP_STEPS.join(', ')})`,
+          ),
+        )
+      if (!steps.includes(item)) steps.push(item)
+    }
+    return Effect.succeed(steps)
+  })
+
 /** `frente.get(key) or []`, iterated as Python would. */
 const listOf = (map: YamlMapping, key: string): readonly YamlValue[] => {
   const value = field(map, key)
@@ -264,6 +290,10 @@ const decodeParts = (
         listOf(frontmatter, 'open_questions'),
       ),
       imports: listOf(frontmatter, 'imports'),
+      skippedSetup: yield* decodeSkippedSetup(
+        file,
+        listOf(frontmatter, 'skipped_setup'),
+      ),
       body,
     }
   })
@@ -337,6 +367,8 @@ export const encodePerson = (person: Person): YamlMapping => {
       }),
     )
   front.set('imports', [...person.imports])
+  if (person.skippedSetup.length > 0)
+    front.set('skipped_setup', [...person.skippedSetup])
   return front
 }
 
@@ -508,6 +540,7 @@ export const createPerson = (
       adjustments: [],
       openQuestions: [],
       imports: [],
+      skippedSetup: [],
       body: '',
     }
     yield* savePerson(person)

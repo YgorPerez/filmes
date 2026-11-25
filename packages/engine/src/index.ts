@@ -318,6 +318,7 @@ export {
   sameQuestion,
   seenLine,
   skipQuestion,
+  SETUP_STEPS,
   SKIPS_TO_DROP,
   STATEMENT_REACTIONS,
   statementLine,
@@ -327,6 +328,7 @@ export {
   type Section,
   type SectionItem,
   type Seen,
+  type SetupStep,
   type Statement,
   type StatementReaction,
   type Veto,
@@ -435,6 +437,16 @@ export {
   type RemoveInput,
   type RemoveResult,
 } from './people/remove.ts'
+export {
+  setupGuide,
+  SETUP_RATINGS,
+  skipSetupStep,
+  type SetupGuide,
+  type SetupGuideInput,
+  type SetupStepState,
+  type SkipSetupInput,
+  type SkipSetupResult,
+} from './people/setup.ts'
 export {
   importLetterboxd,
   importLetterboxdRss,
@@ -595,3 +607,16 @@ export {
   type BillboardRequestInput,
   type BillboardResult,
 } from './billboard/model.ts'
+export {
+  RATING_QUEUE_LIMIT,
+  RATING_QUEUE_LIMIT_MAX,
+  RATING_SCREEN_SOURCE,
+  personRate,
+  ratingQueue,
+  type GivenRating,
+  type PersonRateInput,
+  type PersonRateResult,
+  type QueueFilm,
+  type RatingQueue,
+  type RatingQueueRequest,
+} from './people/rating.ts'

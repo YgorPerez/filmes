@@ -1,6 +1,10 @@
 import type { ExportRefusal } from '#/content/export-refusal'
 import { EXPORT } from './export.copy'
-import { Marquee } from './marquee'
+import { FIELD } from './kit/field'
+import { FieldLabel } from './kit/field-label'
+import { Slip } from './kit/slip'
+import { PageHead } from './kit/page-head'
+import { Alert } from './kit/status'
 import { Button, buttonVariants } from './shadcn/button'
 
 export type ExportPeople = {
@@ -9,10 +13,59 @@ export type ExportPeople = {
   selected: string
 }
 
+/** The download: whose Notas, and the screen's one orange button. A plain
+ * GET to the file, so the browser saves it and the page stays. */
+function Download({ choices }: { choices: ExportPeople }) {
+  return (
+    <form
+      method="get"
+      action="/exportar/imdb.csv"
+      className="flex flex-col gap-xl rounded-card border border-rule bg-surface px-xl pt-2xl pb-xl"
+    >
+      <FieldLabel label={EXPORT.person} hint={EXPORT.personHint}>
+        <select
+          name="pessoa"
+          defaultValue={choices.selected}
+          className={`${FIELD} w-full`}
+        >
+          {choices.people.map(({ person, name, ratings }) => (
+            <option key={person} value={person}>
+              {EXPORT.option(name, ratings)}
+            </option>
+          ))}
+        </select>
+      </FieldLabel>
+      <Button type="submit" className="w-full sm:w-auto sm:self-start">
+        {EXPORT.download}
+      </Button>
+    </form>
+  )
+}
+
+/** Taking the file to the MovieLens, step by step. */
+function Movielens() {
+  return (
+    <Slip id="movielens" title={EXPORT.movielensTitle}>
+      <ol className="flex flex-col gap-md">
+        {EXPORT.movielens.map((step, index) => (
+          <li key={step} className="flex items-start gap-md">
+            <span
+              aria-hidden="true"
+              className="grid size-6 shrink-0 place-items-center rounded-round border-[1.5px] border-rule font-display text-[13px] font-bold tabular-nums"
+            >
+              {index + 1}
+            </span>
+            <span className="text-evidence">{step}</span>
+          </li>
+        ))}
+      </ol>
+    </Slip>
+  )
+}
+
 /** `/exportar`: a Pessoa's Notas as the IMDb CSV, and how to take it to the
- * MovieLens. The form is a plain GET to the download, so the browser saves
- * the file and the page stays; it works before the JavaScript loads.
- * `choices` is null when the engine cannot run on this server. */
+ * MovieLens. It works before the JavaScript loads. `choices` is null when
+ * the engine cannot run on this server. */
 export function Export({
   choices,
   refusal,
@@ -24,66 +77,16 @@ export function Export({
     ? EXPORT.unavailable
     : refusal && EXPORT.refusals[refusal]
   return (
-    <main className="mx-auto flex max-w-[720px] flex-col gap-xl px-lg py-xl">
-      <header className="flex flex-wrap items-center justify-between gap-md">
-        <Marquee words={['filmes']} />
-        <a href="/" className={buttonVariants({ variant: 'quiet' })}>
+    <main className="mx-auto flex max-w-[720px] flex-col gap-3xl px-2xl py-3xl">
+      <header className="flex flex-wrap items-center justify-between gap-xl">
+        <a href="/" className={buttonVariants({ variant: 'option' })}>
           {EXPORT.back}
         </a>
       </header>
-      <section className="flex flex-col gap-md rounded-card border border-rule bg-surface p-md">
-        <h1 className="text-title">{EXPORT.title}</h1>
-        <p className="text-ink-2">{EXPORT.lead}</p>
-        {alert && (
-          <p
-            role="alert"
-            className="flex gap-sm rounded-field border border-marquee-red-text px-3 py-2.5 text-marquee-red-text"
-          >
-            <span aria-hidden="true">⚠</span>
-            <span>{alert}</span>
-          </p>
-        )}
-        {choices && (
-          <form
-            method="get"
-            action="/exportar/imdb.csv"
-            className="flex flex-col gap-md"
-          >
-            <label className="flex flex-col gap-xs">
-              <span className="text-[14px] font-semibold">
-                {EXPORT.person}{' '}
-                <span className="font-normal text-ink-2">
-                  {EXPORT.personHint}
-                </span>
-              </span>
-              <select
-                name="pessoa"
-                defaultValue={choices.selected}
-                className="min-h-touch rounded-field border border-rule bg-surface px-3 py-[9px] text-[15px] text-ink"
-              >
-                {choices.people.map(({ person, name, ratings }) => (
-                  <option key={person} value={person}>
-                    {EXPORT.option(name, ratings)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <Button type="submit" className="self-start">
-              {EXPORT.download}
-            </Button>
-          </form>
-        )}
-      </section>
-      <section className="flex flex-col gap-sm">
-        <h2 className="text-label text-ink-2 uppercase">
-          {EXPORT.movielensTitle}
-        </h2>
-        <ol className="flex list-decimal flex-col gap-xs pl-lg text-ink-2">
-          {EXPORT.movielens.map((step) => (
-            <li key={step}>{step}</li>
-          ))}
-        </ol>
-      </section>
+      <PageHead title={EXPORT.title} lead={EXPORT.lead} />
+      {alert && <Alert>{alert}</Alert>}
+      {choices && <Download choices={choices} />}
+      <Movielens />
     </main>
   )
 }

@@ -4,48 +4,19 @@ import type { CatalogScope } from '#/content/catalog-search'
 import type { SearchAnswer } from '#/platform/catalog-search'
 import { CATALOG_SEARCH } from './catalog-search.copy'
 import { PERSON } from './person.copy'
+import { FIELD } from './kit/field'
+import { FieldLabel } from './kit/field-label'
+import { Alert, Notice } from './kit/status'
 import { Button, buttonVariants } from './shadcn/button'
 
 // The pieces the Pessoas screens share, and the other Dono screens with
-// them: the alert and the notice, the Dono tag, a section's card, the
-// fields, the forms that post an action and their submit button.
+// them: the alert and the notice, a section's card, the fields, the forms
+// that post an action and their submit button. The alert and the notice
+// are kit/status's; these screens take them from here with the rest of
+// their parts, which keeps kit/status under fallow's coupling threshold
+// (its fan-in at most the project's p95).
 
-export function Alert({ children }: { children: ReactNode }) {
-  return (
-    <p
-      role="alert"
-      className="flex gap-sm rounded-field border border-marquee-red-text px-3 py-2.5 text-marquee-red-text"
-    >
-      <span aria-hidden="true">⚠</span>
-      <span>{children}</span>
-    </p>
-  )
-}
-
-export function Notice({ children }: { children: ReactNode }) {
-  return (
-    <p
-      role="status"
-      className="rounded-field border border-rule bg-surface-2 px-3 py-2.5"
-    >
-      {children}
-    </p>
-  )
-}
-
-/** A form's submit button with every Button prop (`disabled`...);
- * `Submit` is the plain one. */
-export const SubmitButton = (
-  props: Omit<ComponentProps<typeof Button>, 'type'>,
-) => <Button type="submit" {...props} />
-
-export function OwnerTag() {
-  return (
-    <span className="rounded-pill border border-rule px-2 py-0.5 text-label text-ink-2 uppercase">
-      {PERSON.owner}
-    </span>
-  )
-}
+export { Alert, Notice }
 
 /** A section of the Pessoa's page: a card with its title. */
 export function Section({
@@ -62,10 +33,10 @@ export function Section({
   return (
     <section
       aria-labelledby={id}
-      className="flex flex-col gap-md rounded-card border border-rule bg-surface p-md"
+      className="flex flex-col gap-xl rounded-card border border-rule bg-surface p-xl"
     >
       <div className="flex flex-col gap-xs">
-        <h2 id={id} className="text-title">
+        <h2 id={id} className="font-display text-title">
           {title}
         </h2>
         {lead && <p className="text-meta text-ink-2">{lead}</p>}
@@ -137,7 +108,7 @@ export function ActionForm({
       method="post"
       action={`/pessoas/${encodeURIComponent(slug)}/acao`}
       aria-label={label}
-      className={className ?? 'flex flex-col gap-md'}
+      className={className ?? 'flex flex-col gap-xl'}
     >
       <input type="hidden" name="acao" value={action} />
       {children}
@@ -163,7 +134,7 @@ export function RemoveForm({
       <input type="hidden" name="id" value={id} />
       <Button
         type="submit"
-        variant="quiet"
+        variant="option"
         aria-label={PERSON.removeLabel(label)}
       >
         {PERSON.remove}
@@ -188,38 +159,12 @@ export function Disclosure({
       <summary className="flex min-h-touch cursor-pointer items-center px-3 font-semibold select-none">
         {summary}
       </summary>
-      <div className="border-t border-rule p-md">{children}</div>
+      <div className="border-t border-rule p-xl">{children}</div>
     </details>
   )
 }
 
-const control =
-  'min-h-touch w-full rounded-field border border-rule bg-surface px-3 py-[9px] text-[15px] text-ink'
-
-function Label({
-  label,
-  hint,
-  children,
-}: {
-  label: string
-  hint?: string
-  children: ReactNode
-}) {
-  return (
-    <label className="flex flex-col gap-xs">
-      <span className="text-[14px] font-semibold">
-        {label}
-        {hint && (
-          <>
-            {' '}
-            <span className="font-normal text-ink-2">{hint}</span>
-          </>
-        )}
-      </span>
-      {children}
-    </label>
-  )
-}
+const control = `${FIELD} w-full`
 
 export function TextField({
   name,
@@ -245,7 +190,7 @@ export function TextField({
   defaultValue?: string
 }) {
   return (
-    <Label label={label} hint={hint}>
+    <FieldLabel label={label} hint={hint}>
       <input
         type={type}
         min={min}
@@ -258,7 +203,7 @@ export function TextField({
         autoComplete="off"
         className={control}
       />
-    </Label>
+    </FieldLabel>
   )
 }
 
@@ -276,7 +221,7 @@ export function SelectField({
   defaultValue?: string
 }) {
   return (
-    <Label label={label} hint={hint}>
+    <FieldLabel label={label} hint={hint}>
       <select name={name} defaultValue={defaultValue} className={control}>
         {options.map(({ value, label: text }) => (
           <option key={value} value={value}>
@@ -284,35 +229,33 @@ export function SelectField({
           </option>
         ))}
       </select>
-    </Label>
+    </FieldLabel>
   )
 }
 
-/** The submit of a form, quiet unless `variant` says otherwise. */
+/** The submit of a form, with every Button prop (`disabled`...): an
+ * option at the start of its line unless `variant` or `className` say
+ * otherwise. */
 export function Submit({
-  variant = 'quiet',
-  children,
-}: {
-  variant?: 'primary' | 'quiet'
-  children: ReactNode
-}) {
+  variant = 'option',
+  className = 'self-start',
+  ...props
+}: Omit<ComponentProps<typeof Button>, 'type'>) {
   return (
-    <Button type="submit" variant={variant} className="self-start">
-      {children}
-    </Button>
+    <Button type="submit" variant={variant} className={className} {...props} />
   )
 }
 
 /** A link that looks like a button: `primary` for the screen's main
- * action, `quiet` for the others. */
+ * action, `option` for the others. */
 export function LinkButton({
   href,
-  variant = 'quiet',
+  variant = 'option',
   label,
   children,
 }: {
   href: string
-  variant?: 'primary' | 'quiet'
+  variant?: 'primary' | 'option'
   label?: string
   children: ReactNode
 }) {
@@ -396,7 +339,7 @@ function Group({ title, children }: { title: string; children: ReactNode[] }) {
   if (children.length === 0) return null
   return (
     <div className="flex flex-col gap-xs">
-      <h3 className="text-label text-ink-2 uppercase">{title}</h3>
+      <h3 className="font-display text-label text-ink-2 uppercase">{title}</h3>
       <ul className="flex flex-col">{children}</ul>
     </div>
   )
@@ -417,7 +360,7 @@ function Results({
   const empty =
     films.length + people.length + genres.length + series.length === 0
   return (
-    <div className="flex flex-col gap-md" aria-label={results(answer.query)}>
+    <div className="flex flex-col gap-xl" aria-label={results(answer.query)}>
       <p className="text-meta text-ink-2" role="status">
         {empty ? none : results(answer.query)}
       </p>
@@ -479,10 +422,10 @@ export function CatalogSearch({
             defaultValue={answer?.query}
             required
             autoComplete="off"
-            className="min-h-touch w-full rounded-field border border-rule bg-surface px-3 py-[9px] text-[15px] text-ink"
+            className={`${FIELD} w-full`}
           />
         </label>
-        <SubmitButton variant="quiet">{submit}</SubmitButton>
+        <Submit className="">{submit}</Submit>
       </form>
       {answer && <Results answer={answer} pick={pick} />}
     </Section>

@@ -1,0 +1,29 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "design-system-radius",
+        "value": "28px",
+        "files": ["prototypes/locadora-de-bairro.prototype.html"],
+        "createdAt": "2026-11-25T18:52:16.360Z",
+        "reason": "Board chrome: the phone frame the prototype lays screens on, not part of the system"
+      },
+      {
+        "rule": "design-system-radius",
+        "value": "18px",
+        "files": ["prototypes/locadora-de-bairro.prototype.html"],
+        "createdAt": "2026-11-25T18:52:16.375Z",
+        "reason": "Claude host mock: the user's message bubble, drawn by Claude, not by filmes"
+      },
+      {
+        "rule": "design-system-radius",
+        "value": "26px",
+        "files": ["prototypes/locadora-de-bairro.prototype.html"],
+        "createdAt": "2026-11-25T18:52:16.390Z",
+        "reason": "Claude host mock: Claude's message box, drawn by Claude, not by filmes"
+      }
+    ]
+  }
+}

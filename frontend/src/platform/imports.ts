@@ -38,6 +38,7 @@ import { currentOwner } from './auth'
 import { appEngine } from './engine'
 import { formPoster, seeOther } from './form-post'
 import { ownerAuthor } from './people'
+import { rateAction, ratingQueuePage, ratingsFromEngine } from './ratings'
 import { serverEnv } from './server-env'
 
 /** Whoever is logged in, as the login reads her (`currentOwner`). */
@@ -412,5 +413,23 @@ export const serveQueueAction = (request: Request) =>
     request,
     currentOwner(request),
     appImports(),
+    serverEnv().APP_ORIGIN,
+  )
+
+// The rating screen (#144), the Import's twin for a Dono with no Letterboxd
+// nor Trakt: here, since `engine.ts` is at fallow's coupling limit.
+
+const appRatings = () => ratingsFromEngine(appEngine())
+
+/** The Fila de Notas for the app, of the logged-in Dono. */
+export const appRatingQueue = (owner: { person: string }) =>
+  ratingQueuePage(owner, appRatings())
+
+/** Pronto's route for the app: the logged-in Dono, the process's engine. */
+export const serveRate = (request: Request) =>
+  rateAction(
+    request,
+    currentOwner(request),
+    appRatings(),
     serverEnv().APP_ORIGIN,
   )

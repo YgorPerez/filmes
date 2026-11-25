@@ -35,6 +35,13 @@ _Evitar_: peso da Pessoa, importância, preferência
 **Pergunta aberta** [open question, `OpenQuestion`]:
 Pergunta de gosto que o Claude fez sobre um Presente e ele pulou ("a Ana curte terror psicológico?"). Fica no arquivo da Pessoa com o assunto (entidade do Catálogo ou grupo de tags), a data e quantas vezes foi pulada; volta uma vez, quando o assunto aparece na tela, e pulada duas vezes, sai. Não é Fato: a resposta, quando vem, vira Declarado ou Relato.
 
+**Guia de início** [setup guide, `SetupGuide`; passo [setup step, `SetupStep`: `taste`, `import`, `connector`]]:
+Os três passos que a home mostra ao Dono que ainda não terminou de começar: Meu gosto (feito com 10 Notas ou um import), Importar do Letterboxd ou do Trakt (feito com um import) e Conector no Claude (feito quando o Claude se conectou ao filmes com o e-mail dele). Nunca bloqueia: pedir filme vale desde o primeiro dia. Some quando cada passo está feito ou pulado (mapa #140).
+_Evitar_: onboarding, tutorial, cadastro
+
+**Passo pulado** [skipped setup step, `skippedSetup`]:
+Um passo do Guia de início que o Dono pulou. Fica no frontmatter do arquivo dele (`skipped_setup: [import]`), e por isso vale em todo aparelho. Na carteirinha ele tem estado próprio, o carimbo "pulei", e não conta como feito; só para dar o guia por encerrado ele vale como feito.
+
 **Restrição** [constraint, `Constraint`]:
 Um limite que vale só numa Sessão, como "tem criança" ou "sem legenda". Tira o filme antes de qualquer ordenação, como o Veto.
 _Evitar_: filtro, veto da sessão
@@ -138,6 +145,10 @@ _Evitar_: upload, sincronização
 **Fila de resolução** [resolution queue, `queue`]:
 Os filmes de um Import do Letterboxd que o filmes não achou no Catálogo sozinho e esperam o Dono: confirmar com o tconst, o link do IMDb ou o do TMDB, ou descartar com um motivo. A fila é uma só para todas as Pessoas, e a decisão vale para quem tem o filme.
 _Evitar_: pendências
+
+**Fila de Notas** [rating queue, `ratingQueue`]:
+Os filmes que a tela de notas oferece a um Dono sem Import, um de cada vez, para ele dar Nota ou dizer "não vi": os de mais votos no IMDb que ele não viu, variando a década e o gênero. Cada Nota dada ali vira um Já visto com Nota, gravado num commit só quando ele diz "Pronto".
+_Evitar_: questionário
 
 **Motivo** [reason, `Reason`]:
 Uma razão para um filme estar na Recomendação.

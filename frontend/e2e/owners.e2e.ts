@@ -4,8 +4,12 @@
 // Cartaz, record its Feedback speaking for themselves, and write taste on
 // their own page; Bruno tells a Relato about Vera (#138). Only the desktop
 // runs it (the projects share the copy).
+//
+// A Dono who just arrived (#143) sees the home's setup guide. Each project
+// logs in as a Dona of its own, created here, since the skip writes to her
+// Pessoa file; the skip holds after a reload.
 
-import { consult } from '@filmes/engine'
+import { consult, personCreate } from '@filmes/engine'
 import { expect, test } from '@playwright/test'
 import { addPerson, engineRun, loginAs, notice, section, snap } from './support'
 
@@ -57,8 +61,8 @@ for (const dono of DONOS)
 
     // On the Cartaz she is "Você".
     const first = page.getByRole('article').first()
-    await expect(first.getByRole('checkbox', { name: 'Você' })).toBeVisible()
-    await expect(first.getByRole('checkbox', { name: 'Lara' })).toBeVisible()
+    await expect(first.getByRole('button', { name: 'Você' })).toBeVisible()
+    await expect(first.getByRole('button', { name: 'Lara' })).toBeVisible()
     await snap(page, info, `donos-cartaz-${dono.slug}`)
 
     // The Feedback: her Nota is hers; Lara's she relays.
@@ -129,4 +133,43 @@ test('Bruno tells a Relato about Vera, and Vera sees it on her page', async ({
   await expect(hers.getByText('Acrescentar Relato')).toHaveCount(0)
   await snap(vera, info, 'relato-vera-own-page')
   await vera.close()
+})
+
+const SKIP_IMPORT = 'Pular: Importar do Letterboxd ou do Trakt'
+
+test('a new Dono sees the setup guide, and a skipped step stays skipped', async ({
+  page,
+}, info) => {
+  const email = `nova-${info.project.name}@example.org`
+  await engineRun((engine) =>
+    engine.run(
+      personCreate({ name: `Nova ${info.project.name}`, owner: true, email }),
+    ),
+  ).catch((error: Error) => {
+    if (!error.message.includes('person_exists')) throw error
+  })
+  await loginAs(page, email)
+  const guide = page.getByRole('list', { name: 'Para começar', exact: true })
+  await expect(guide).toBeVisible()
+  await expect(guide.getByRole('heading', { name: 'Meu gosto' })).toBeVisible()
+  await expect(
+    guide.getByRole('button', { name: 'Copiar endereço' }),
+  ).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Pedir filme' })).toBeVisible()
+  await snap(page, info, 'home-guide')
+
+  await guide.getByRole('button', { name: SKIP_IMPORT }).click()
+  await expect(page).toHaveURL(/\/$/)
+  await page.reload()
+  await expect(guide.getByText('Retomar')).toBeVisible()
+  await expect(guide.getByRole('button', { name: SKIP_IMPORT })).toHaveCount(0)
+  await snap(page, info, 'home-guide-skipped')
+
+  // Every step out of the way: the guide leaves, "pedir filme" stays.
+  await guide.getByRole('button', { name: 'Pular: Meu gosto' }).click()
+  await expect(guide.getByText(/^http:\/\/localhost:\d+\/mcp$/)).toBeVisible()
+  await guide.getByRole('button', { name: 'Pular: Conector no Claude' }).click()
+  await expect(guide).toHaveCount(0)
+  await expect(page.getByRole('link', { name: 'Pedir filme' })).toBeVisible()
+  await snap(page, info, 'home-set-up')
 })
