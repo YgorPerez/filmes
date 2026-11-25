@@ -29,39 +29,15 @@
   reason: local.toml is English after the cutover, so the message names its English section and key
   link: https://github.com/YgorPerez/filmes/issues/82
 
-# #90 ports `recomendar` without the Session it opens; #94 opens it. Until
-# then a plain `recomendar` step differs only by that Session: the `session`
-# of the output, its file, and its rows. These go stale when #94 lands, and
-# #94 deletes them.
-- id: recommend-opens-no-session-until-94-output
-  commands: [recomendar]
-  path: output.session
-  ts: '^<absent>$'
-  reason: the Session is opened by #94; #90 ports the ranking only
-  link: https://github.com/YgorPerez/filmes/issues/94
-- id: recommend-opens-no-session-until-94-file
-  commands: [recomendar]
-  path: data/sessions/*
-  ts: '^<absent>$'
-  reason: the Session is opened by #94; #90 ports the ranking only
-  link: https://github.com/YgorPerez/filmes/issues/94
-- id: recommend-opens-no-session-until-94-sessoes
-  commands: [recomendar]
-  path: db/sessoes
-  ts: '^<absent>$'
-  reason: the Session is opened by #94; #90 ports the ranking only
-  link: https://github.com/YgorPerez/filmes/issues/94
-- id: recommend-opens-no-session-until-94-presentes
-  commands: [recomendar]
-  path: db/sessao_presentes
-  ts: '^<absent>$'
-  reason: the Session is opened by #94; #90 ports the ranking only
-  link: https://github.com/YgorPerez/filmes/issues/94
-- id: recommend-opens-no-session-until-94-recomendacao
-  commands: [recomendar]
-  path: db/sessao_recomendacao
-  ts: '^<absent>$'
-  reason: the Session is opened by #94; #90 ports the ranking only
+# A Session's `file` is relative to filmes-dados, whose folders are English
+# after the cutover (ADR 0002): `sessions/<id>.md`, not `sessoes/<id>.md`.
+# The oracle maps absolute paths, not this relative one.
+- id: session-file-is-in-the-english-folder
+  commands: [recomendar, sessoes-abertas]
+  path: output.session*.file
+  python: '^sessoes/[^/]+\.md$'
+  ts: '^sessions/[^/]+\.md$'
+  reason: filmes-dados keeps the Sessions in sessions/ after the key migration
   link: https://github.com/YgorPerez/filmes/issues/94
 
 # Decided in #86 (Pessoa files). No fixture scenario reaches these yet, so
