@@ -63,6 +63,13 @@ export interface Drop {
 }
 export type Verdict = Pass | Drop | 'pending'
 
+/** The films a Restrição evaluates, as a JSON list for
+ * `filme_id IN (SELECT value FROM json_each(?))`: it asks SQL for their rows
+ * only instead of reading the whole table (as the signals do with
+ * `candidatesJson`). */
+export const filmsJson = (films: ReadonlyMap<string, Candidate>): string =>
+  JSON.stringify([...films.keys()])
+
 export const pass = (lines: ReadonlyArray<Evidence> = []): Pass => ({
   _tag: 'Pass',
   lines,
