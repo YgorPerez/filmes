@@ -85,7 +85,9 @@ export {
 export { readMoods, resolveMoods, type Mood } from './recommendation/moods.ts'
 export {
   rank,
+  rankRequest,
   recommend,
+  requestCount,
   type RankOptions,
   type Recommendation,
   type RecommendedFilm,
@@ -107,6 +109,18 @@ export type {
   Signal,
   SignalEffect,
 } from './recommendation/signals/Signal.ts'
+export {
+  byConstraint,
+  droppedFilms,
+  isKept,
+  isNew,
+  keptWarning,
+  place,
+  prepareRegenerate,
+  type DropCause,
+  type Dropped,
+  type Regenerate,
+} from './recommendation/kept.ts'
 export { individualUtility } from './recommendation/utility.ts'
 export {
   applyVetoes,
@@ -134,6 +148,7 @@ export {
   sessionRelative,
   sessionsFolder,
   SESSIONS_FOLDER,
+  shownFilms,
   STRENGTH_IN_BODY,
   VERSION_EXTRAS,
   writeSession,
@@ -141,6 +156,7 @@ export {
   type BodyFilm,
   type FilmInBody,
   type SessionFile,
+  type ShownFilm,
 } from './sessions/file.ts'
 export {
   comments,
@@ -172,13 +188,17 @@ export {
   openSession,
   openSessions,
   recommendationFields,
-  recommendSession,
   sessionContext,
   type OpenSession,
   type RecommendSessionRequest,
   type SessionRecommendation,
   type SessionRef,
 } from './sessions/open.ts'
+export {
+  openSessionFront,
+  recommendSession,
+  redoSession,
+} from './sessions/redo.ts'
 export {
   engineLayer,
   errorOutcome,

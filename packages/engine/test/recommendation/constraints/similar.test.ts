@@ -266,10 +266,12 @@ describe('reading the request', () => {
         error: { message: '--parecido e --sem-parecido juntos: escolha um' },
       },
     })
-    expect(await read(fixture, { noSimilar: true, session: 's' })).toEqual({
-      exitCode: 0,
-      output: [],
-    })
+    // With a Session, the out-of-session Restrição turns on by itself (#95).
+    const alone = await read(fixture, { noSimilar: true, session: 's' })
+    expect(alone.exitCode).toBe(0)
+    expect(
+      (alone.output as ReadonlyArray<{ name: string }>).map((c) => c.name),
+    ).toEqual(['out_of_session'])
   })
 })
 

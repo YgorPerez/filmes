@@ -1,8 +1,7 @@
 // `recomendar` → `recommendSession` (#90, #94): the Recomendação and the
-// Session it opens, with the local Restrições (#91). Refazer (`--sessao`,
-// `--manter`, `--trocar`, #95) and the on-demand and Session Restrições
-// (#92) are ported later, so a step with those arguments stays
-// `not_ported`.
+// Session it opens or redoes (`--sessao`, `--manter`, `--trocar`, #95), with
+// the local Restrições (#91). The on-demand Restrições (#92) are ported
+// later, so a step with those arguments stays `not_ported`.
 
 import { data } from '@filmes/key-migration'
 import { recommendSession, type RuleName } from '../../../src/index.ts'
@@ -10,9 +9,9 @@ import { engineError } from '../../../src/runtime/EngineError.ts'
 import { Effect } from 'effect'
 import { defineCommand } from '../command.ts'
 
-/** Arguments of later tickets: refazer's (#95) and the Restrições'
- * (#92, `restricoes/*.py` `configurar`). */
-const LATER = ['--sessao', '--manter', '--trocar', '--crianca', '--gatilho']
+/** Arguments of later tickets: the Restrições' (#92, `restricoes/*.py`
+ * `configurar`). */
+const LATER = ['--crianca', '--gatilho']
 
 /** Python's `int()` on an argument: spaces around, a sign, digits with
  * single underscores between them. */
@@ -33,6 +32,10 @@ export default defineCommand({
       clima: { kind: 'extend' },
       quantos: { kind: 'value' },
       pedido: { kind: 'value' },
+      // Refazer (#95).
+      sessao: { kind: 'value' },
+      manter: { kind: 'extend' },
+      trocar: { kind: 'extend' },
       // The local Restrições (#91).
       'duracao-max': { kind: 'value' },
       desde: { kind: 'value' },
@@ -88,6 +91,9 @@ export default defineCommand({
       ...(args['sem-tristeza'] && { noSad: true }),
       ...(args.parecido.length > 0 && { similar: args.parecido }),
       ...(args['sem-parecido'] && { noSimilar: true }),
+      ...(args.sessao !== undefined && { session: args.sessao }),
+      ...(args.manter.length > 0 && { keep: args.manter }),
+      ...(args.trocar.length > 0 && { swap: args.trocar }),
     })
   },
 })
