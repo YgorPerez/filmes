@@ -1,0 +1,1758 @@
+<!doctype html>
+<!-- Protótipo descartável do #141, direção B: Locadora de bairro. Dados fictícios da fixture; capas sintéticas. Não é o componente. -->
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Locadora de bairro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Rubik:wght@500;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --board: #dde2e8;
+        --ground: #eef1f4;
+        --surface: #ffffff;
+        --surface-2: #e3e7ec;
+        --ink: #121417;
+        --ink-2: #535963;
+        --rule: #cfd5dd;
+        --case: #17181b;
+        --label: #f7f7f2;
+        --orange: #ff7a1a;
+        --yellow: #ffd23f;
+        --green: #45c463;
+        --pink: #ff5c9a;
+        --stamp: #5a3db5;
+        --stock: #d5e8fa;
+        --stock-ink: #17324f;
+        --star: #b07a00;
+        --p1: #2c62c4;
+        --p2: #1b7a50;
+        --on-p: #ffffff;
+        --focus: #2c62c4;
+        --select: #ffd23f88;
+        --chat: #e6e8eb;
+        --g-drama: #3a78e0;
+        --g-misterio: #7a52d1;
+        --g-comedia: #f2c200;
+        --g-familia: #36b35a;
+        --g-aventura: #ff7a1a;
+        --g-romance: #ff5c9a;
+        --hand: 'Permanent Marker', 'Comic Sans MS', cursive;
+        --sticker: 'Rubik', system-ui, sans-serif;
+        --sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        color-scheme: light;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme='light']) {
+          --board: #05070d;
+          --ground: #0d1220;
+          --surface: #161c2c;
+          --surface-2: #212a3e;
+          --ink: #f1f3f7;
+          --ink-2: #a5adbd;
+          --rule: #2a3348;
+          --case: #04060a;
+          --stamp: #b3a0ff;
+          --stock: #1b2b46;
+          --stock-ink: #dbe9ff;
+          --star: #ffd23f;
+          --p1: #6c9cf0;
+          --p2: #4cbf8a;
+          --on-p: #121417;
+          --focus: #6c9cf0;
+          --chat: #121726;
+          color-scheme: dark;
+        }
+      }
+      :root[data-theme='dark'] {
+        --board: #05070d;
+        --ground: #0d1220;
+        --surface: #161c2c;
+        --surface-2: #212a3e;
+        --ink: #f1f3f7;
+        --ink-2: #a5adbd;
+        --rule: #2a3348;
+        --case: #04060a;
+        --stamp: #b3a0ff;
+        --stock: #1b2b46;
+        --stock-ink: #dbe9ff;
+        --star: #ffd23f;
+        --p1: #6c9cf0;
+        --p2: #4cbf8a;
+        --on-p: #121417;
+        --focus: #6c9cf0;
+        --chat: #121726;
+        color-scheme: dark;
+      }
+      /* Board chrome: not part of the direction, only a table to lay the screens on. */
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        -webkit-text-size-adjust: 100%;
+      }
+      body {
+        margin: 0;
+        background: var(--board);
+        color: var(--ink);
+        font: 16px/1.5 var(--sans);
+      }
+      ::selection {
+        background: var(--select);
+        color: var(--ink);
+      }
+      :focus-visible {
+        outline: 2px solid var(--focus);
+        outline-offset: 2px;
+      }
+      button {
+        font: inherit;
+        color: inherit;
+        cursor: pointer;
+      }
+      .board-bar {
+        max-width: 1680px;
+        margin: 0 auto;
+        padding: 24px 16px 8px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px 32px;
+        align-items: end;
+        justify-content: space-between;
+      }
+      .board-bar h1 {
+        margin: 0;
+        font: 700 22px/1.2 var(--sans);
+      }
+      .board-bar p {
+        margin: 4px 0 0;
+        max-width: 72ch;
+        color: var(--ink-2);
+        font-size: 14px;
+        text-wrap: pretty;
+      }
+      .themes {
+        display: inline-flex;
+        gap: 4px;
+        padding: 4px;
+        border: 1px solid var(--rule);
+        border-radius: 999px;
+        background: var(--surface);
+      }
+      .themes button {
+        min-height: 36px;
+        padding: 0 14px;
+        border: 0;
+        border-radius: 999px;
+        background: none;
+        font-size: 14px;
+      }
+      .themes button[aria-pressed='true'] {
+        background: var(--ink);
+        color: var(--ground);
+        font-weight: 600;
+      }
+      #board {
+        max-width: 1680px;
+        margin: 0 auto;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 40px 28px;
+        padding: 16px 16px 64px;
+        justify-content: center;
+        align-items: flex-start;
+      }
+      .frame {
+        width: 390px;
+        max-width: 100%;
+      }
+      .frame-label {
+        margin: 0 0 10px;
+        font: 600 13px/1.3 var(--sans);
+        color: var(--ink-2);
+      }
+      .device {
+        position: relative;
+        border: 1px solid var(--rule);
+        border-radius: 28px;
+        background: var(--ground);
+        overflow: hidden;
+      }
+      .device.phone {
+        height: 844px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        scrollbar-width: thin;
+        scrollbar-color: var(--rule) transparent;
+      }
+      body.single {
+        background: var(--ground);
+      }
+      body.single .board-bar,
+      body.single .frame-label {
+        display: none;
+      }
+      body.single #board {
+        padding: 0;
+        display: block;
+      }
+      body.single .frame {
+        width: 100%;
+      }
+      body.single .device {
+        border: 0;
+        border-radius: 0;
+      }
+      .ic {
+        width: 20px;
+        height: 20px;
+        flex: none;
+      }
+      .sr {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+      }
+      .poster-art {
+        position: absolute;
+        inset: 0;
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          transition: none !important;
+          animation: none !important;
+        }
+      }
+      /* ---------- Shelf rail: the request printed on the shelf-front label ---------- */
+      .trilho {
+        display: grid;
+        gap: 10px;
+      }
+      .trilho .rail {
+        background: var(--case);
+        padding: 5px;
+        border-radius: 6px;
+      }
+      .trilho .etiqueta {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 2px 10px;
+        padding: 7px 10px 6px;
+        background: var(--label);
+        color: #121417;
+        border-radius: 2px;
+        font: 800 17px/1.15 var(--sticker);
+        text-transform: uppercase;
+        letter-spacing: 0.01em;
+      }
+      .trilho .etiqueta i {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--orange);
+      }
+      .trilho .etiqueta i:nth-of-type(2) {
+        background: var(--green);
+      }
+      .trilho .etiqueta i:nth-of-type(3) {
+        background: var(--pink);
+      }
+      .preco {
+        justify-self: start;
+        transform: rotate(-2deg);
+        padding: 5px 14px 4px;
+        background: var(--yellow);
+        color: #121417;
+        border-radius: 4px;
+        font: 400 18px/1.2 var(--hand);
+      }
+      .trilho.mini .etiqueta {
+        font-size: 15px;
+      }
+      .trilho.mini .preco {
+        font-size: 16px;
+      }
+
+      /* ---------- Shared app pieces ---------- */
+      .page {
+        padding: 16px;
+        display: grid;
+        gap: 16px;
+        align-content: start;
+        flex: 1;
+      }
+      .legenda {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 14px;
+        font-size: 13px;
+        color: var(--ink-2);
+        align-items: center;
+      }
+      .leg {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--ink);
+      }
+      .av {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: var(--c);
+        color: var(--on-p);
+        font: 700 11px/24px var(--sticker);
+        text-align: center;
+        display: inline-block;
+        flex: none;
+      }
+      .av.vazio {
+        background: transparent;
+        color: var(--c);
+        box-shadow: inset 0 0 0 2px var(--c);
+      }
+      .avs {
+        display: inline-flex;
+      }
+      .avs .av + .av {
+        margin-left: -7px;
+        box-shadow: 0 0 0 2px var(--surface);
+      }
+      .forca {
+        display: inline-flex;
+        gap: 3px;
+        padding-top: 7px;
+      }
+      .forca i {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        box-shadow: inset 0 0 0 1.5px var(--ink);
+      }
+      .forca i.on {
+        background: var(--ink);
+      }
+      .legenda .forca {
+        padding: 0;
+      }
+      .saiu {
+        font-size: 13px;
+        color: var(--ink-2);
+      }
+      .saiu b {
+        font: 400 15px var(--hand);
+        color: var(--ink);
+      }
+      .rot {
+        margin: 0 0 8px;
+        font: 700 12px/1.3 var(--sticker);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--ink-2);
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+      }
+      .rot span {
+        text-transform: none;
+        letter-spacing: 0;
+        font-weight: 500;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 44px;
+        padding: 0 22px;
+        border: 0;
+        border-radius: 999px;
+        background: var(--orange);
+        color: #121417;
+        font: 800 15px var(--sticker);
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+      }
+      .btn.big {
+        min-height: 60px;
+        font-size: 18px;
+        width: 100%;
+        border-radius: 14px;
+      }
+      .opcao {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 44px;
+        padding: 0 14px;
+        border: 0;
+        border-radius: 999px;
+        box-shadow: inset 0 0 0 1.5px var(--rule);
+        font: 500 14px var(--sticker);
+        background: var(--surface);
+      }
+      .opcao .ic {
+        width: 16px;
+        height: 16px;
+        display: none;
+      }
+      .opcao.on {
+        box-shadow: inset 0 0 0 2px var(--ink);
+        background: var(--surface-2);
+        font-weight: 700;
+      }
+      .opcao.on .ic {
+        display: block;
+      }
+      .link {
+        min-height: 44px;
+        padding: 0 6px;
+        border: 0;
+        background: none;
+        color: var(--ink-2);
+        font-size: 14px;
+        text-decoration: underline;
+        text-underline-offset: 3px;
+      }
+
+      /* ---------- Film card: the tape on the shelf ---------- */
+      .card {
+        position: relative;
+        display: grid;
+        grid-template-columns: 112px 1fr;
+        grid-template-areas: 'capa corpo' 'porque porque' 'responde responde';
+        gap: 14px;
+        padding: 16px 14px 14px;
+        background: var(--surface);
+        border: 1px solid var(--rule);
+        border-radius: 12px;
+      }
+      .estojo {
+        grid-area: capa;
+        position: relative;
+        align-self: start;
+        background: var(--case);
+        border-radius: 8px;
+        padding: 5px 5px 0 5px;
+      }
+      .capa {
+        position: relative;
+        aspect-ratio: 2/3;
+        border-radius: 3px;
+        overflow: hidden;
+        background: var(--surface-2);
+        display: grid;
+        place-items: center;
+        text-align: center;
+        font: 700 13px/1.25 var(--sticker);
+        color: var(--ink-2);
+      }
+      .capa .sem {
+        padding: 10px;
+      }
+      .estojo .pontos {
+        display: flex;
+        gap: 6px;
+        justify-content: center;
+        padding: 6px 0 7px;
+      }
+      .ponto {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--c);
+      }
+      .ponto.vazio {
+        background: transparent;
+        box-shadow: inset 0 0 0 2px var(--c);
+      }
+      .preco-n {
+        position: absolute;
+        top: -9px;
+        left: -9px;
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        background: var(--orange);
+        color: #121417;
+        display: grid;
+        place-items: center;
+        font: 800 18px/1 var(--sticker);
+        transform: rotate(-8deg);
+        box-shadow: 0 0 0 2px var(--surface);
+      }
+      .adesivo {
+        position: absolute;
+        font: 800 12px/1 var(--sticker);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        padding: 6px 8px 5px;
+        border-radius: 3px;
+        color: #121417;
+      }
+      .adesivo.novo {
+        top: 8px;
+        right: -10px;
+        background: var(--yellow);
+        transform: rotate(9deg);
+      }
+      .adesivo.troca {
+        top: 40%;
+        left: 50%;
+        translate: -50% 0;
+        background: var(--pink);
+        font-size: 15px;
+        padding: 7px 10px 6px;
+        transform: rotate(-9deg);
+      }
+      .corpo {
+        grid-area: corpo;
+        min-width: 0;
+        display: grid;
+        gap: 8px;
+        align-content: start;
+      }
+      .card h3 {
+        margin: 0;
+        font: 700 19px/1.2 var(--sticker);
+      }
+      .orig {
+        display: block;
+        margin-top: 2px;
+        font: 400 13px var(--sans);
+        color: var(--ink-2);
+      }
+      .sinopse {
+        margin: 0;
+        font-size: 15px;
+        line-height: 1.5;
+        text-wrap: pretty;
+      }
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font: 500 12px/1 var(--sticker);
+        padding: 5px 9px;
+        border-radius: 999px;
+        background: var(--surface-2);
+        font-variant-numeric: tabular-nums;
+      }
+      .chip i {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: var(--g);
+      }
+      .chip.imdb {
+        background: none;
+        box-shadow: inset 0 0 0 1.5px var(--rule);
+        font-weight: 700;
+      }
+      .card.trocado .capa svg,
+      .card.trocado .corpo,
+      .card.trocado .porque {
+        opacity: 0.7;
+      }
+      .porque {
+        grid-area: porque;
+        border-top: 1px dashed var(--rule);
+        padding-top: 12px;
+      }
+      .porque ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        gap: 9px;
+      }
+      .porque li {
+        display: grid;
+        grid-template-columns: 34px 28px 1fr;
+        gap: 6px;
+        font-size: 14px;
+        line-height: 1.45;
+      }
+      .fonte {
+        display: block;
+        color: var(--ink-2);
+        font-size: 12px;
+      }
+      .semfato {
+        color: var(--ink-2);
+      }
+      .responde {
+        grid-area: responde;
+        border-top: 1px dashed var(--rule);
+        padding-top: 12px;
+        display: grid;
+        gap: 8px;
+      }
+      .linha-r {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+      }
+      .linha-r .rot {
+        margin: 0;
+      }
+      .javi-nota {
+        display: grid;
+        gap: 8px;
+        padding: 10px 12px;
+        border-radius: 8px;
+        background: var(--stock);
+        color: var(--stock-ink);
+        font-size: 14px;
+      }
+      .javi-nota .quem {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font: 700 14px var(--sticker);
+      }
+      .escala {
+        display: grid;
+        grid-template-columns: repeat(10, 1fr);
+        gap: 3px;
+      }
+      .escala button {
+        min-height: 44px;
+        border: 0;
+        border-radius: 6px;
+        background: var(--surface);
+        color: var(--ink);
+        font: 700 14px var(--sticker);
+        font-variant-numeric: tabular-nums;
+        padding: 0;
+      }
+      .escala button.on {
+        background: var(--orange);
+        color: #121417;
+        border-radius: 50%;
+      }
+      .campo {
+        font: inherit;
+        font-size: 15px;
+        min-height: 44px;
+        padding: 9px 12px;
+        border: 1.5px solid var(--rule);
+        border-radius: 8px;
+        background: var(--surface);
+        color: var(--ink);
+        width: 100%;
+      }
+      .estrelas {
+        display: inline-flex;
+      }
+      .estrelas button {
+        width: 36px;
+        height: 44px;
+        border: 0;
+        padding: 0;
+        background: none;
+        color: var(--ink-2);
+        opacity: 0.45;
+      }
+      .estrelas button .st {
+        width: 24px;
+        height: 24px;
+      }
+      .estrelas button.on {
+        color: var(--star);
+        opacity: 1;
+      }
+      .estrelas button.on .st {
+        fill: currentColor;
+      }
+      .responder {
+        display: grid;
+        gap: 10px;
+        padding: 14px;
+        background: var(--surface);
+        border: 1px solid var(--rule);
+        border-radius: 12px;
+      }
+      .responder label {
+        display: grid;
+        gap: 4px;
+        font: 700 14px var(--sticker);
+      }
+      .responder label span {
+        font: 400 14px var(--sans);
+        color: var(--ink-2);
+      }
+      .resumo {
+        font-size: 13px;
+        color: var(--ink-2);
+      }
+
+      /* ---------- App chrome (web) ---------- */
+      .topo {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 16px;
+        background: var(--case);
+        color: #f7f7f2;
+        font: 800 18px/1 var(--sticker);
+        letter-spacing: 0.01em;
+      }
+      .topo small {
+        font: 500 13px var(--sticker);
+        color: #b9bec7;
+      }
+      .topo .av {
+        box-shadow: 0 0 0 2px var(--case);
+      }
+      .abas {
+        position: sticky;
+        bottom: 0;
+        margin-top: auto;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        background: var(--surface);
+        border-top: 1px solid var(--rule);
+        padding-bottom: 14px;
+      }
+      .abas a {
+        position: relative;
+        display: grid;
+        justify-items: center;
+        gap: 3px;
+        padding: 9px 0 4px;
+        min-height: 54px;
+        color: var(--ink-2);
+        font: 500 11.5px var(--sticker);
+        text-decoration: none;
+      }
+      .abas a[aria-current] {
+        color: var(--ink);
+        font-weight: 700;
+      }
+      .abas a[aria-current]::before {
+        content: '';
+        position: absolute;
+        top: 5px;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: var(--orange);
+        opacity: 0.85;
+        z-index: 0;
+      }
+      .abas a .ic {
+        position: relative;
+        margin-top: 5px;
+      }
+
+      /* ---------- Claude: inline card and fullscreen ---------- */
+      .conversa {
+        background: var(--chat);
+        padding: 16px 12px 12px;
+        display: grid;
+        gap: 12px;
+      }
+      .msg-eu {
+        justify-self: end;
+        max-width: 80%;
+        padding: 10px 14px;
+        border-radius: 18px;
+        background: var(--surface-2);
+        font-size: 15px;
+      }
+      .msg-claude {
+        font-size: 15px;
+        padding: 0 4px;
+      }
+      .caixa {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 52px;
+        padding: 0 12px 0 16px;
+        border-radius: 26px;
+        background: var(--surface);
+        border: 1px solid var(--rule);
+        color: var(--ink-2);
+        font-size: 15px;
+      }
+      .view-tag {
+        font: 700 11px/1 var(--sticker);
+        color: var(--ink-2);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+      .inline {
+        background: var(--ground);
+        border: 1px solid var(--rule);
+        border-radius: 14px;
+        padding: 12px;
+        display: grid;
+        gap: 10px;
+      }
+      .lista-inline {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        gap: 4px;
+      }
+      .lista-inline li {
+        display: grid;
+        grid-template-columns: 8px 28px 1fr auto;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 10px 6px 0;
+        background: var(--surface);
+        border-radius: 6px;
+        font: 500 15px var(--sticker);
+        overflow: hidden;
+      }
+      .lista-inline .lombada {
+        align-self: stretch;
+        background: var(--case);
+      }
+      .lista-inline .num {
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        background: var(--orange);
+        color: #121417;
+        display: grid;
+        place-items: center;
+        font: 800 14px/1 var(--sticker);
+      }
+      .lista-inline b {
+        font-weight: 700;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .lista-inline small {
+        color: var(--ink-2);
+        font: 400 13px var(--sans);
+        font-variant-numeric: tabular-nums;
+      }
+      .acoes {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+      .acoes .opcao {
+        justify-content: center;
+      }
+      .acoes .opcao .ic {
+        display: block;
+      }
+      .cheia-topo {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: var(--ground);
+        padding: 10px 16px;
+        border-bottom: 1px solid var(--rule);
+        display: grid;
+        gap: 8px;
+      }
+      .cheia-rodape {
+        position: sticky;
+        bottom: 0;
+        z-index: 2;
+        margin-top: auto;
+        background: var(--surface);
+        border-top: 1px solid var(--rule);
+        padding: 10px 16px 0;
+        display: grid;
+        gap: 8px;
+      }
+      .cheia-rodape .linha-r {
+        justify-content: space-between;
+        flex-wrap: nowrap;
+      }
+      .host-caixa {
+        margin: 2px -16px 0;
+        padding: 10px 12px 18px;
+        background: var(--chat);
+        border-top: 1px dashed var(--rule);
+      }
+
+      /* ---------- Home: the membership card ---------- */
+      .socio {
+        position: relative;
+        display: grid;
+        gap: 12px;
+        padding: 14px 14px 16px;
+        border-radius: 14px;
+        background: var(--stock);
+        color: var(--stock-ink);
+      }
+      .socio .cab {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        font: 800 12px/1 var(--sticker);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .socio .nome {
+        font: 400 30px/1 var(--hand);
+        margin: 2px 0 0;
+      }
+      .socio .desde {
+        font: 500 12.5px var(--sticker);
+        opacity: 0.8;
+      }
+      .carimbos {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+      }
+      .carimbos li {
+        position: relative;
+        display: grid;
+        place-items: center;
+        min-height: 92px;
+        padding: 6px 4px 22px;
+        border: 1.5px dashed currentColor;
+        border-radius: 8px;
+        text-align: center;
+      }
+      .carimbos li > small {
+        position: absolute;
+        bottom: 6px;
+        left: 0;
+        right: 0;
+        font: 700 11.5px/1.1 var(--sticker);
+      }
+      .carimbos .vago {
+        font: 800 26px/1 var(--sticker);
+        opacity: 0.35;
+      }
+      .carimbos .ok {
+        display: grid;
+        place-items: center;
+        width: 58px;
+        height: 58px;
+        border-radius: 50%;
+        border: 2.5px solid var(--stamp);
+        color: var(--stamp);
+        transform: rotate(-12deg);
+        font: 800 15px/1 var(--sticker);
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+      .carimbos .ok span {
+        display: block;
+        font: 700 9px/1.1 var(--sticker);
+        letter-spacing: 0.02em;
+        text-transform: none;
+        margin-top: -10px;
+      }
+      .carimbos .pulei {
+        font: 400 17px/1 var(--hand);
+        opacity: 0.75;
+        transform: rotate(-6deg);
+      }
+      .passos {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        gap: 10px;
+      }
+      .passo {
+        display: grid;
+        gap: 8px;
+        padding: 14px;
+        background: var(--surface);
+        border: 1px solid var(--rule);
+        border-radius: 12px;
+      }
+      .passo h3 {
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font: 700 17px/1.25 var(--sticker);
+      }
+      .passo h3 .num {
+        flex: none;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: var(--orange);
+        color: #121417;
+        display: grid;
+        place-items: center;
+        font: 800 15px/1 var(--sticker);
+      }
+      .passo.fechado {
+        padding: 6px 6px 6px 14px;
+        grid-template-columns: 1fr auto;
+        align-items: center;
+      }
+      .passo.fechado h3 {
+        font-size: 15.5px;
+      }
+      .passo.fechado .estado {
+        font-size: 13px;
+        color: var(--ink-2);
+      }
+      .passo p {
+        margin: 0;
+        font-size: 14.5px;
+        color: var(--ink-2);
+        text-wrap: pretty;
+      }
+      .contador {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+      .contador i {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        box-shadow: inset 0 0 0 1.5px var(--rule);
+      }
+      .contador i.on {
+        background: var(--orange);
+        box-shadow: none;
+      }
+      .contador span {
+        margin-left: 6px;
+        font: 700 13px var(--sticker);
+        color: var(--ink-2);
+      }
+      .url {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 48px;
+        padding: 0 4px 0 12px;
+        border-radius: 8px;
+        background: var(--case);
+        color: #f7f7f2;
+        font:
+          500 14px/1.3 ui-monospace,
+          'SF Mono',
+          Menlo,
+          Consolas,
+          monospace;
+        overflow-wrap: anywhere;
+      }
+      .url button {
+        margin-left: auto;
+        min-height: 40px;
+        padding: 0 10px;
+        border: 0;
+        border-radius: 6px;
+        background: var(--orange);
+        color: #121417;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font: 800 12px var(--sticker);
+        text-transform: uppercase;
+      }
+      .url button .ic {
+        width: 16px;
+        height: 16px;
+      }
+      .como {
+        margin: 0;
+        padding-left: 20px;
+        font-size: 14px;
+        display: grid;
+        gap: 4px;
+      }
+      .nota-auto {
+        font: 400 15px/1.3 var(--hand);
+        color: var(--stamp);
+      }
+      .pedir-cedo {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        font-size: 14px;
+        color: var(--ink-2);
+      }
+      .pedir-cedo .opcao {
+        color: var(--ink);
+        flex: none;
+      }
+      .pedir-cedo .opcao .ic {
+        display: block;
+      }
+      .ficha {
+        position: relative;
+        display: grid;
+        gap: 12px;
+        padding: 16px 14px 14px;
+        background: var(--surface);
+        border: 1px solid var(--rule);
+        border-radius: 4px 4px 12px 12px;
+        border-top: 2px dashed var(--rule);
+      }
+      .ficha header {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 8px;
+      }
+      .ficha h3 {
+        margin: 0;
+        font: 800 13px/1 var(--sticker);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--ink-2);
+      }
+      .ficha header small {
+        font: 400 16px var(--hand);
+      }
+      .fitas {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+      }
+      .fitas .estojo {
+        padding: 3px;
+        border-radius: 5px;
+      }
+      .devolver {
+        display: grid;
+        gap: 10px;
+        padding: 12px;
+        border-radius: 8px;
+        background: var(--stock);
+        color: var(--stock-ink);
+      }
+      .devolver b {
+        font: 400 19px/1.2 var(--hand);
+      }
+      .devolver span {
+        font-size: 14px;
+      }
+      .socio-mini {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        border-radius: 12px;
+        background: var(--stock);
+        color: var(--stock-ink);
+        font: 500 13px var(--sticker);
+      }
+      .socio-mini b {
+        font: 400 19px/1 var(--hand);
+      }
+      .socio-mini .selos {
+        margin-left: auto;
+        display: flex;
+        gap: 4px;
+      }
+      .socio-mini .selos i {
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        border: 2px solid var(--stamp);
+        background: radial-gradient(
+          circle,
+          var(--stamp) 0 4px,
+          transparent 4.5px
+        );
+      }
+      .prateleira {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        gap: 6px;
+      }
+      .prateleira a {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-height: 52px;
+        padding: 0 14px;
+        border-radius: 10px;
+        background: var(--surface);
+        border: 1px solid var(--rule);
+        color: var(--ink);
+        text-decoration: none;
+        font: 700 15px var(--sticker);
+      }
+      .prateleira a i {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--g);
+      }
+      .prateleira a small {
+        margin-left: auto;
+        font: 400 13px var(--sans);
+        color: var(--ink-2);
+      }
+      .prateleira a .ic {
+        width: 16px;
+        height: 16px;
+        color: var(--ink-2);
+      }
+    </style>
+  </head>
+  <body>
+    <header class="board-bar">
+      <div>
+        <h1>B · Locadora de bairro</h1>
+        <p>
+          A locadora da esquina: cada filme é uma fita no estojo preto, com o
+          número num adesivo de preço laranja, a etiqueta de gênero colorida e o
+          pedido impresso na etiqueta da prateleira. Trocar é um adesivo rosa,
+          novo é um adesivo amarelo. Na home, o guia é a carteirinha de sócia,
+          com um carimbo por passo. Capas sintéticas, dados fictícios da
+          fixture.
+        </p>
+      </div>
+      <div class="themes" role="group" aria-label="Tema">
+        <button type="button" data-set-theme="system">Sistema</button
+        ><button type="button" data-set-theme="light">Claro</button
+        ><button type="button" data-set-theme="dark">Escuro</button>
+      </div>
+    </header>
+    <main id="board"></main>
+    <script>
+      // Shared prototype data: synthetic, from the fixture's invented catalog.
+      const PEOPLE = [
+        { name: 'Iara', you: true, initial: 'I', color: 1 },
+        { name: 'Teo', initial: 'T', color: 2 },
+      ]
+      const REQUEST = {
+        plates: [
+          ['Vocês', 'dois'],
+          ['até', '1h50'],
+          ['algo', 'leve'],
+          ['IMDb', '7+'],
+        ],
+        line: 'Vocês dois · até 1h50 · algo leve · IMDb 7+',
+        aria: 'Pedido: vocês dois, até 1h50, algo leve, nota 7 ou mais no IMDb',
+        said: 'algo leve pra sexta',
+        left: { n: 2, title: 'Sessão Maldita', why: 'Teo já viu' },
+      }
+      const FILMS = [
+        {
+          n: 1,
+          title: 'As Horas Lentas',
+          year: 2021,
+          dur: '1h44',
+          genres: ['Drama', 'Mistério'],
+          imdb: '7,4',
+          votes: '28 mil',
+          synopsis:
+            'Numa cidade do interior, uma relojoeira percebe que os relógios da casa atrasam um minuto por noite.',
+          poster: {
+            bg: '#24463b',
+            fg: '#f3e6c4',
+            mark: '#e0913a',
+            motif: 'clock',
+          },
+          evidence: [
+            {
+              who: [0],
+              force: 3,
+              text: 'dirigido por Helena Prado, como 3 filmes a que deu 4 ou mais',
+              source: 'Wikidata',
+            },
+          ],
+          noFact: [1],
+          marks: { stars: 4 },
+        },
+        {
+          n: 2,
+          title: 'Pequenos Milagres',
+          original: 'Les Petits Miracles',
+          year: 2019,
+          dur: '1h36',
+          genres: ['Comédia', 'Família'],
+          imdb: '7,8',
+          votes: '80 mil',
+          synopsis:
+            'Um menino de nove anos convence a vila inteira de que o padeiro faz milagres, e o padeiro começa a acreditar.',
+          poster: {
+            bg: '#f0c43c',
+            fg: '#1d1b16',
+            mark: '#d4462f',
+            motif: 'sun',
+          },
+          evidence: [
+            {
+              who: [1],
+              force: 3,
+              text: 'disse que adora filme de família com criança esperta',
+              source: 'Declarado · 12 nov 2026',
+            },
+            {
+              who: [0],
+              force: 2,
+              text: 'roteiro de Ana Ruiz, que escreveu O Farol de Areia, a que deu 5',
+              source: 'Wikidata',
+            },
+          ],
+          noFact: [],
+          marks: { seen: { 1: { score: 8, said: 'bom, mas lento no meio' } } },
+        },
+        {
+          n: 3,
+          title: 'Noite de Estreia',
+          year: 2022,
+          dur: '1h49',
+          genres: ['Drama'],
+          imdb: '7,1',
+          votes: '9 mil',
+          synopsis:
+            'Na noite em que o teatro reabre, a atriz principal some vinte minutos antes de a cortina subir.',
+          poster: {
+            bg: '#5a1f3a',
+            fg: '#f6d9e3',
+            mark: '#f08a5d',
+            motif: 'curtain',
+          },
+          evidence: [
+            {
+              who: [0],
+              force: 1,
+              text: 'deu 5 a O Farol de Areia (2012), e de 50 pessoas que deram 4+ a ele, 30% deram 4+ a este',
+              source: 'MovieLens ml-32m',
+            },
+          ],
+          noFact: [1],
+          marks: { swap: true },
+        },
+        {
+          n: 4,
+          title: 'Vento Norte',
+          year: 2020,
+          dur: '1h39',
+          genres: ['Aventura'],
+          imdb: '7,3',
+          votes: '7 mil',
+          synopsis:
+            'Dois irmãos atravessam o litoral de bicicleta para devolver um barco que nunca foi deles.',
+          poster: null,
+          isNew: true,
+          evidence: [
+            {
+              who: [1],
+              force: 1,
+              text: 'dirigido por Marta Quintal, como Jardim Suspenso, a que deu 4',
+              source: 'Wikidata',
+            },
+          ],
+          noFact: [0],
+          marks: {},
+        },
+        {
+          n: 5,
+          title: 'Ponte Aérea',
+          year: 2016,
+          dur: '1h41',
+          genres: ['Comédia', 'Romance'],
+          imdb: '7,0',
+          votes: '22 mil',
+          synopsis:
+            'Uma comissária e um passageiro frequente se cruzam toda segunda no voo das 6h, e nunca no mesmo assento.',
+          poster: {
+            bg: '#cfe3ef',
+            fg: '#14324a',
+            mark: '#ef6b4a',
+            motif: 'plane',
+          },
+          evidence: [
+            {
+              who: [0, 1],
+              force: 2,
+              text: 'os dois deram 4 ou mais a O Último Bonde, do mesmo diretor',
+              source: 'Wikidata',
+            },
+          ],
+          noFact: [],
+          marks: {},
+        },
+      ]
+      const MCP_URL = 'https://cinema.finalsend.com.br/mcp'
+      const STEP_TEXT = {
+        taste: {
+          title: 'Meu gosto',
+          body: 'Dê nota a 10 filmes que você já viu, ou importe o seu histórico. É o que faz a lista acertar.',
+          action: 'Dar notas',
+        },
+        import: {
+          title: 'Importar do Letterboxd ou Trakt',
+          body: 'Traz de uma vez as suas notas e o que você já viu.',
+          action: 'Importar',
+        },
+        claude: {
+          title: 'Conector no Claude',
+          body: 'Para pedir filme conversando com o Claude, no celular.',
+          action: 'Copiar endereço',
+          how: [
+            'No Claude, abra Configurações e depois Conectores.',
+            'Toque em Adicionar conector personalizado.',
+            'Cole o endereço e entre com a sua conta Google.',
+          ],
+          auto: 'Este passo se marca sozinho quando o Claude entrar com o seu e-mail.',
+        },
+      }
+      // The three home states of #141.
+      const HOME = {
+        arrived: {
+          notes: 0,
+          steps: { taste: 'pending', import: 'pending', claude: 'pending' },
+          open: 'taste',
+        },
+        partial: {
+          notes: 12,
+          steps: { taste: 'done', import: 'skipped', claude: 'pending' },
+          open: 'claude',
+        },
+        ready: {
+          notes: 12,
+          steps: { taste: 'done', import: 'skipped', claude: 'done' },
+          open: null,
+        },
+      }
+      const LAST_SESSION = {
+        when: 'Sexta, 21 nov',
+        who: 'Você e Teo',
+        films: [FILMS[0], FILMS[1], FILMS[4], FILMS[2]],
+        pending: 'Vocês viram alguma? Conte o que viram e como foi.',
+      }
+
+      const ICONS = {
+        check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+        star: '<path d="M12 3.6l2.6 5.4 5.9.7-4.4 4 1.2 5.9L12 16.7l-5.3 2.9 1.2-5.9-4.4-4 5.9-.7z"/>',
+        home: '<path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z"/>',
+        film: '<rect x="3.5" y="5" width="17" height="14" rx="1.5"/><path d="M3.5 9h17M3.5 15h17M8 5v4M16 5v4M8 15v4M16 15v4"/>',
+        people:
+          '<circle cx="9" cy="8.5" r="3"/><path d="M3.5 19c.6-3 2.8-4.6 5.5-4.6s4.9 1.6 5.5 4.6"/><circle cx="17" cy="9.5" r="2.4"/><path d="M15.6 14.6c2.4-.3 4.4 1.1 4.9 3.9"/>',
+        import: '<path d="M12 4v11M7.5 10.5L12 15l4.5-4.5M5 19.5h14"/>',
+        export: '<path d="M12 15V4M7.5 8.5L12 4l4.5 4.5M5 19.5h14"/>',
+        copy: '<rect x="9" y="9" width="11" height="11" rx="1.5"/><path d="M15 9V5.5A1.5 1.5 0 0 0 13.5 4h-8A1.5 1.5 0 0 0 4 5.5v8A1.5 1.5 0 0 0 5.5 15H9"/>',
+        arrow: '<path d="M5 12h14M13.5 6.5L19 12l-5.5 5.5"/>',
+        expand: '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',
+        send: '<path d="M4.5 12L20 4.5 15.5 20l-3-6.5z"/><path d="M12.5 13.5L20 4.5"/>',
+        plus: '<path d="M12 5v14M5 12h14"/>',
+        chat: '<path d="M4.5 5.5h15v10h-9l-4.5 4v-4h-1.5z"/>',
+        search: '<circle cx="11" cy="11" r="6"/><path d="M15.5 15.5L20 20"/>',
+      }
+      function icon(name, cls = 'ic') {
+        return `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]}</svg>`
+      }
+      // Synthetic poster art: flat fields, no gradient, labelled synthetic on the board.
+      function posterArt(film) {
+        const p = film.poster
+        const motifs = {
+          clock: `<circle cx="50" cy="62" r="30" fill="none" stroke="${p.fg}" stroke-width="5"/><path d="M50 62V42M50 62l14 9" stroke="${p.mark}" stroke-width="5" stroke-linecap="round"/>`,
+          sun: `<circle cx="50" cy="66" r="24" fill="${p.mark}"/><rect x="0" y="100" width="100" height="50" fill="${p.fg}"/>`,
+          curtain: `<path d="M0 0h46c-4 40 0 90-14 150H0z" fill="${p.mark}"/><path d="M100 0H54c4 40 0 90 14 150h32z" fill="${p.mark}"/><circle cx="50" cy="98" r="7" fill="${p.fg}"/>`,
+          plane: `<path d="M14 92L86 54" stroke="${p.fg}" stroke-width="2" stroke-dasharray="4 5"/><path d="M70 50l18 2-10 15-3-8z" fill="${p.mark}"/><rect x="0" y="118" width="100" height="32" fill="${p.fg}"/>`,
+        }
+        return `<svg class="poster-art" viewBox="0 0 100 150" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Capa de ${film.title}"><rect width="100" height="150" fill="${p.bg}"/>${motifs[p.motif]}<text x="50" y="24" text-anchor="middle" fill="${p.fg}" font-size="9" font-weight="700"${film.title.length > 12 ? ' textLength="86" lengthAdjust="spacingAndGlyphs"' : ''}>${film.title.toUpperCase()}</text></svg>`
+      }
+      const FORCE = ['', 'fraca', 'moderada', 'forte']
+      function forceDots(n) {
+        let dots = ''
+        for (let i = 1; i <= 3; i++)
+          dots += `<i class="${i <= n ? 'on' : ''}"></i>`
+        return `<span class="forca" role="img" aria-label="Força ${FORCE[n]}">${dots}</span>`
+      }
+      function avatar(i, empty = false) {
+        const p = PEOPLE[i]
+        return `<span class="av${empty ? ' vazio' : ''}" style="--c: var(--p${p.color})" title="${p.name}">${p.initial}</span>`
+      }
+      function personName(i) {
+        return PEOPLE[i].you ? 'Você' : PEOPLE[i].name
+      }
+      function stars(n, cls = 'estrelas') {
+        let s = ''
+        for (let i = 1; i <= 5; i++)
+          s += `<button type="button" class="${i <= n ? 'on' : ''}" aria-label="${i} de 5">${icon('star', 'st')}</button>`
+        return `<span class="${cls}" role="group" aria-label="Estrelas: ${n || 'nenhuma'} de 5">${s}</span>`
+      }
+      function factCount(f) {
+        const withFact = new Set(f.evidence.flatMap((e) => e.who))
+        return `Fato sobre ${withFact.size} de ${PEOPLE.length}`
+      }
+      function marksSummary() {
+        return '1 Já vi (Teo) · 1 Trocar · estrelas em 1 filme'
+      }
+
+      // Board: one frame per screen, light/dark switch, ?frame= and ?theme= for captures.
+      function mountBoard(frames) {
+        const params = new URLSearchParams(location.search)
+        const only = params.get('frame')
+        const theme = params.get('theme')
+        if (theme) document.documentElement.dataset.theme = theme
+        const board = document.getElementById('board')
+        board.innerHTML = frames
+          .filter(([id]) => !only || id === only)
+          .map(
+            ([id, label, render, kind]) =>
+              `<section class="frame" id="${id}"><h2 class="frame-label">${label}</h2><div class="device ${kind || ''}">${render()}</div></section>`,
+          )
+          .join('')
+        if (only) document.body.classList.add('single')
+        for (const b of document.querySelectorAll('[data-set-theme]')) {
+          b.setAttribute(
+            'aria-pressed',
+            String(
+              (document.documentElement.dataset.theme || 'system') ===
+                b.dataset.setTheme,
+            ),
+          )
+          b.addEventListener('click', () => {
+            const t = b.dataset.setTheme
+            if (t === 'system') delete document.documentElement.dataset.theme
+            else document.documentElement.dataset.theme = t
+            for (const o of document.querySelectorAll('[data-set-theme]'))
+              o.setAttribute('aria-pressed', String(o === b))
+          })
+        }
+        // Toggles and stars respond, so the owner can feel the controls.
+        board.addEventListener('click', (e) => {
+          const t = e.target.closest('.opcao, .estrelas button, .tg')
+          if (!t) return
+          if (t.matches('.estrelas button')) {
+            const all = [...t.parentElement.children]
+            const n = all.indexOf(t) + 1
+            all.forEach((s, i) => s.classList.toggle('on', i < n))
+            return
+          }
+          const on = !t.classList.contains('on')
+          t.classList.toggle('on', on)
+          t.setAttribute('aria-pressed', String(on))
+        })
+      }
+
+      const GENRE = {
+        Drama: 'drama',
+        Mistério: 'misterio',
+        Comédia: 'comedia',
+        Família: 'familia',
+        Aventura: 'aventura',
+        Romance: 'romance',
+      }
+      function rail(cls = '') {
+        const parts = REQUEST.line.split(' · ')
+        return `<div class="trilho ${cls}"><div class="rail"><div class="etiqueta" role="group" aria-label="${REQUEST.aria}">${parts.map((p, i) => (i ? '<i aria-hidden="true"></i>' : '') + `<span>${p}</span>`).join('')}</div></div><span class="preco">${REQUEST.said}</span></div>`
+      }
+      function legend() {
+        return `<div class="legenda">${PEOPLE.map((p, i) => `<span class="leg">${avatar(i)}${p.name}</span>`).join('')}<span class="leg">${forceDots(3)} forte</span><span class="leg">${forceDots(2)} moderada</span><span class="leg">${forceDots(1)} fraca</span></div>`
+      }
+      function tape(f, opts = {}) {
+        const dots = PEOPLE.map((p, i) => {
+          const has = f.evidence.some((e) => e.who.includes(i))
+          return `<span class="ponto${has ? '' : ' vazio'}" style="--c: var(--p${p.color})" title="${p.name}: ${has ? 'com fato' : 'sem fato'}"></span>`
+        }).join('')
+        const cover = f.poster
+          ? posterArt(f)
+          : `<span class="sem">${f.title}</span>`
+        return `<div class="estojo"><div class="capa">${cover}${f.marks.swap && !opts.small ? '<span class="adesivo troca">Trocar</span>' : ''}</div>${opts.small ? '' : `<span class="pontos">${dots}</span><span class="preco-n">${f.n}</span>`}${f.isNew && !opts.small ? '<span class="adesivo novo">Novo</span>' : ''}</div>`
+      }
+      function filmCard(f) {
+        const m = f.marks
+        const ev = f.evidence
+          .map(
+            (e) =>
+              `<li><span class="avs">${e.who.map((i) => avatar(i)).join('')}</span>${forceDots(e.force)}<span>${e.text}<span class="fonte">${e.source}</span></span></li>`,
+          )
+          .join('')
+        const none = f.noFact
+          .map(
+            (i) =>
+              `<li class="semfato"><span class="avs">${avatar(i, true)}</span><span></span><span>${PEOPLE[i].name}: sem fato sobre este filme</span></li>`,
+          )
+          .join('')
+        const seen = m.seen || {}
+        const seenBtns = PEOPLE.map(
+          (p, i) =>
+            `<button type="button" class="opcao${seen[i] ? ' on' : ''}" aria-pressed="${!!seen[i]}">${icon('check')}${personName(i)}</button>`,
+        ).join('')
+        const seenDetail = Object.entries(seen)
+          .map(
+            ([i, s]) =>
+              `<div class="javi-nota"><span class="quem">${avatar(+i)}Nota do ${PEOPLE[i].name}</span><div class="escala" role="group" aria-label="Nota de 1 a 10">${Array.from({ length: 10 }, (_, k) => `<button type="button" class="${k + 1 === s.score ? 'on' : ''}">${k + 1}</button>`).join('')}</div><input class="campo" value="${s.said}" aria-label="O que o ${PEOPLE[i].name} achou" /></div>`,
+          )
+          .join('')
+        return `<article class="card${m.swap ? ' trocado' : ''}" aria-label="${f.n}. ${f.title}">
+          ${tape(f)}
+          <div class="corpo">
+            <h3>${f.title}${f.original ? `<span class="orig">${f.original}</span>` : ''}</h3>
+            <p class="sinopse">${f.synopsis}</p>
+            <div class="chips"><span class="chip">${f.year}</span><span class="chip">${f.dur}</span>${f.genres.map((g) => `<span class="chip" style="--g: var(--g-${GENRE[g]})"><i></i>${g}</span>`).join('')}<span class="chip imdb">${f.imdb} IMDb · ${f.votes} votos</span></div>
+          </div>
+          <div class="porque"><p class="rot">Por que cada um vai gostar <span>${factCount(f)}</span></p><ul>${ev}${none}</ul></div>
+          <div class="responde">
+            <div class="linha-r"><span class="rot">Já vi</span>${seenBtns}<button type="button" class="opcao">${icon('check')}Todos</button></div>
+            ${seenDetail}
+            <div class="linha-r"><button type="button" class="opcao${m.swap ? ' on' : ''}" aria-pressed="${!!m.swap}">${icon('check')}Trocar</button>${stars(m.stars || 0)}</div>
+          </div>
+        </article>`
+      }
+      function addBox(withButton = true) {
+        return `<div class="responder">
+          <label>Acrescentar <span>contexto da noite ou gosto: “chegou a Ana”, “nada de terror”</span><textarea class="campo" rows="2"></textarea></label>
+          <span class="resumo">${marksSummary()}</span>
+          ${withButton ? '<button class="btn" type="button" style="justify-self:start">Enviar</button>' : ''}
+        </div>`
+      }
+      function tabs(current) {
+        const items = [
+          ['home', 'Início'],
+          ['film', 'Sessões'],
+          ['people', 'Pessoas'],
+          ['import', 'Importar'],
+        ]
+        return `<nav class="abas" aria-label="Seções">${items.map(([ic, l]) => `<a href="#"${l === current ? ' aria-current="page"' : ''}>${icon(ic)}${l}</a>`).join('')}</nav>`
+      }
+
+      function renderCartazWeb() {
+        return `<div class="topo">Sessão de quarta <small>versão 2</small></div>
+          <div class="page">${rail()}${legend()}<div class="saiu">Saiu da prateleira: <b>${REQUEST.left.title}</b> (${REQUEST.left.why})</div>
+          ${FILMS.map(filmCard).join('')}${addBox()}</div>${tabs('Sessões')}`
+      }
+      function renderInline() {
+        return `<div class="conversa">
+          <div class="msg-eu">algo leve pra sexta, eu e o Teo, até 1h50</div>
+          <div class="msg-claude">Cinco filmes para vocês dois. Toque em Marcar para dizer o que já viram ou querem trocar.</div>
+          <div class="inline">
+            <span class="view-tag">filmes · Cartaz</span>
+            ${rail('mini')}
+            <ol class="lista-inline">${FILMS.map((f) => `<li><span class="lombada"></span><span class="num">${f.n}</span><b>${f.title}</b><small>${f.year} · ${f.dur}</small></li>`).join('')}</ol>
+            <div class="acoes"><button type="button" class="opcao">${icon('expand')}Marcar</button><button type="button" class="btn">Enviar</button></div>
+          </div>
+          <div class="caixa">Responder…${icon('send')}</div>
+        </div>`
+      }
+      function renderFull() {
+        return `<div class="cheia-topo">${rail('mini')}${legend()}</div>
+          <div class="page">${FILMS.map(filmCard).join('')}${addBox(false)}</div>
+          <div class="cheia-rodape"><div class="linha-r"><span class="resumo">${marksSummary()}</span><button type="button" class="btn">Enviar</button></div>
+          <div class="host-caixa"><div class="caixa">Caixa de mensagem do Claude${icon('send')}</div></div></div>`
+      }
+
+      const SHORT = { taste: 'Meu gosto', import: 'Importar', claude: 'Claude' }
+      function stampBox(key, state, home) {
+        let inner = `<span class="vago">${{ taste: 1, import: 2, claude: 3 }[key]}</span>`
+        if (state === 'done')
+          inner = `<span class="ok">ok${key === 'taste' ? `<span>${home.notes} notas</span>` : ''}</span>`
+        if (state === 'skipped') inner = '<span class="pulei">pulei</span>'
+        const label = { done: 'feito', skipped: 'pulado', pending: 'falta' }[
+          state
+        ]
+        return `<li aria-label="${SHORT[key]}: ${label}">${inner}<small>${SHORT[key]}</small></li>`
+      }
+      function step(key, state, home) {
+        const t = STEP_TEXT[key]
+        const n = { taste: 1, import: 2, claude: 3 }[key]
+        if (state === 'done') return ''
+        if (state === 'skipped')
+          return `<li class="passo fechado"><h3><span class="num">${n}</span>${t.title}</h3><button type="button" class="link">Retomar</button></li>`
+        if (home.open !== key)
+          return `<li class="passo fechado"><h3><span class="num">${n}</span>${t.title}</h3><span><button type="button" class="opcao">${t.action}</button><button type="button" class="link">Pular</button></span></li>`
+        let extra = ''
+        if (key === 'taste')
+          extra = `<div class="contador" aria-label="${home.notes} de 10 Notas">${Array.from({ length: 10 }, (_, i) => `<i class="${i < home.notes ? 'on' : ''}"></i>`).join('')}<span>${home.notes} de 10</span></div>`
+        if (key === 'claude')
+          extra = `<div class="url"><span>${MCP_URL}</span><button type="button">${icon('copy')}Copiar</button></div><ol class="como">${t.how.map((s) => `<li>${s}</li>`).join('')}</ol><span class="nota-auto">${t.auto}</span>`
+        const action =
+          key === 'claude'
+            ? ''
+            : `<button type="button" class="btn">${t.action}</button>`
+        return `<li class="passo"><h3><span class="num">${n}</span>${t.title}</h3><p>${t.body}</p>${extra}<div class="linha-r">${action}<button type="button" class="link">Pular</button></div></li>`
+      }
+      function renderHome(which) {
+        const home = HOME[which]
+        const top = `<div class="topo">filmes <span class="avs">${avatar(0)}</span></div>`
+        if (which === 'ready') {
+          const last = LAST_SESSION
+          return `${top}<div class="page">
+            <div class="socio-mini"><span><b>Iara</b><br />sócia nº 0002</span><span class="selos" aria-label="3 carimbos">${'<i></i>'.repeat(3)}</span></div>
+            <button type="button" class="btn big">${icon('plus')}Pedir filme</button>
+            <section class="ficha"><header><h3>Última Sessão</h3><small>${last.when} · ${last.who}</small></header>
+              <div class="fitas">${last.films.map((f) => tape(f, { small: true })).join('')}</div>
+              <div class="devolver"><b>Falta contar como foi</b><span>${last.pending}</span><button type="button" class="opcao" style="justify-self:start">Contar como foi</button></div>
+            </section>
+            <ul class="prateleira">
+              <li><a href="#" style="--g: var(--g-drama)"><i></i>Sessões<small>7</small>${icon('arrow')}</a></li>
+              <li><a href="#" style="--g: var(--g-familia)"><i></i>Pessoas<small>6</small>${icon('arrow')}</a></li>
+              <li><a href="#" style="--g: var(--g-aventura)"><i></i>Dar notas<small>12 dadas</small>${icon('arrow')}</a></li>
+              <li><a href="#" style="--g: var(--g-romance)"><i></i>Exportar${icon('arrow')}</a></li>
+            </ul></div>${tabs('Início')}`
+        }
+        const left = Object.values(home.steps).filter(
+          (s) => s === 'pending',
+        ).length
+        return `${top}<div class="page">
+          <section class="socio" aria-label="Carteirinha de sócia: ${left} ${left === 1 ? 'passo pendente' : 'passos pendentes'}">
+            <div class="cab"><span>Carteirinha de sócia</span><span>nº 0002</span></div>
+            <div><p class="nome">Iara</p><span class="desde">desde 25 nov 2026 · ${left === 3 ? 'faltam 3 carimbos' : 'falta 1 carimbo'}</span></div>
+            <ol class="carimbos">${Object.entries(home.steps)
+              .map(([k, s]) => stampBox(k, s, home))
+              .join('')}</ol>
+          </section>
+          <ol class="passos">${Object.entries(home.steps)
+            .map(([k, s]) => step(k, s, home))
+            .join('')}</ol>
+          <div class="pedir-cedo"><span>Dá para pedir filme agora. Com gosto, a lista acerta mais.</span><button type="button" class="opcao">${icon('plus')}Pedir filme</button></div>
+          </div>${tabs('Início')}`
+      }
+
+      mountBoard([
+        ['cartaz-web', 'Cartaz · app web (rolagem inteira)', renderCartazWeb],
+        ['claude-inline', 'Cartaz · no Claude, na conversa', renderInline],
+        ['claude-cheia', 'Cartaz · no Claude, tela cheia', renderFull, 'phone'],
+        [
+          'home-chegou',
+          'Início · acabou de chegar',
+          () => renderHome('arrived'),
+          'phone',
+        ],
+        [
+          'home-meio',
+          'Início · 1 passo feito, 1 pulado',
+          () => renderHome('partial'),
+          'phone',
+        ],
+        [
+          'home-pronto',
+          'Início · tudo pronto',
+          () => renderHome('ready'),
+          'phone',
+        ],
+      ])
+    </script>
+  </body>
+</html>

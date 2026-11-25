@@ -1,0 +1,1591 @@
+<!doctype html>
+<!-- Protótipo descartável do #141, direção A: Letreiro de rua, o mundo do #78 revisto. Dados fictícios da fixture; capas sintéticas. Não é o componente. -->
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Letreiro de rua</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Antonio:wght@600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --board: #e6e6e1;
+        --ground: #f3f3f0;
+        --surface: #ffffff;
+        --surface-2: #e9e9e4;
+        --ink: #141414;
+        --ink-2: #5c5c58;
+        --rule: #d9d9d3;
+        --red: #c8102e;
+        --red-text: #c8102e;
+        --on-red: #ffffff;
+        --panel: #fbfaf5;
+        --panel-ink: #141414;
+        --bulb: #f2b632;
+        --bulb-off: #e2ddcc;
+        --star: #b07a00;
+        --p1: #2c62c4;
+        --p2: #1b7a50;
+        --on-p: #ffffff;
+        --focus: #2c62c4;
+        --select: #f2b63266;
+        --chat: #ecebe6;
+        --letter: 'Antonio', 'Arial Narrow', sans-serif;
+        --sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        color-scheme: light;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme='light']) {
+          --board: #070708;
+          --ground: #0f0f11;
+          --surface: #1a1a1d;
+          --surface-2: #26262a;
+          --ink: #f2f2ee;
+          --ink-2: #a3a39d;
+          --rule: #2e2e33;
+          --red: #d23347;
+          --red-text: #ec6273;
+          --panel: #f4f1e6;
+          --bulb-off: #3a3832;
+          --star: #f2b632;
+          --p1: #6c9cf0;
+          --p2: #4cbf8a;
+          --on-p: #141414;
+          --focus: #6c9cf0;
+          --chat: #1f1f22;
+          color-scheme: dark;
+        }
+      }
+      :root[data-theme='dark'] {
+        --board: #070708;
+        --ground: #0f0f11;
+        --surface: #1a1a1d;
+        --surface-2: #26262a;
+        --ink: #f2f2ee;
+        --ink-2: #a3a39d;
+        --rule: #2e2e33;
+        --red: #d23347;
+        --red-text: #ec6273;
+        --panel: #f4f1e6;
+        --bulb-off: #3a3832;
+        --star: #f2b632;
+        --p1: #6c9cf0;
+        --p2: #4cbf8a;
+        --on-p: #141414;
+        --focus: #6c9cf0;
+        --chat: #1f1f22;
+        color-scheme: dark;
+      }
+      /* Board chrome: not part of the direction, only a table to lay the screens on. */
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        -webkit-text-size-adjust: 100%;
+      }
+      body {
+        margin: 0;
+        background: var(--board);
+        color: var(--ink);
+        font: 16px/1.5 var(--sans);
+      }
+      ::selection {
+        background: var(--select);
+        color: var(--ink);
+      }
+      :focus-visible {
+        outline: 2px solid var(--focus);
+        outline-offset: 2px;
+      }
+      button {
+        font: inherit;
+        color: inherit;
+        cursor: pointer;
+      }
+      .board-bar {
+        max-width: 1680px;
+        margin: 0 auto;
+        padding: 24px 16px 8px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px 32px;
+        align-items: end;
+        justify-content: space-between;
+      }
+      .board-bar h1 {
+        margin: 0;
+        font: 700 22px/1.2 var(--sans);
+      }
+      .board-bar p {
+        margin: 4px 0 0;
+        max-width: 72ch;
+        color: var(--ink-2);
+        font-size: 14px;
+        text-wrap: pretty;
+      }
+      .themes {
+        display: inline-flex;
+        gap: 4px;
+        padding: 4px;
+        border: 1px solid var(--rule);
+        border-radius: 999px;
+        background: var(--surface);
+      }
+      .themes button {
+        min-height: 36px;
+        padding: 0 14px;
+        border: 0;
+        border-radius: 999px;
+        background: none;
+        font-size: 14px;
+      }
+      .themes button[aria-pressed='true'] {
+        background: var(--ink);
+        color: var(--ground);
+        font-weight: 600;
+      }
+      #board {
+        max-width: 1680px;
+        margin: 0 auto;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 40px 28px;
+        padding: 16px 16px 64px;
+        justify-content: center;
+        align-items: flex-start;
+      }
+      .frame {
+        width: 390px;
+        max-width: 100%;
+      }
+      .frame-label {
+        margin: 0 0 10px;
+        font: 600 13px/1.3 var(--sans);
+        color: var(--ink-2);
+      }
+      .device {
+        position: relative;
+        border: 1px solid var(--rule);
+        border-radius: 28px;
+        background: var(--ground);
+        overflow: hidden;
+      }
+      .device.phone {
+        height: 844px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        scrollbar-width: thin;
+        scrollbar-color: var(--rule) transparent;
+      }
+      body.single {
+        background: var(--ground);
+      }
+      body.single .board-bar,
+      body.single .frame-label {
+        display: none;
+      }
+      body.single #board {
+        padding: 0;
+        display: block;
+      }
+      body.single .frame {
+        width: 100%;
+      }
+      body.single .device {
+        border: 0;
+        border-radius: 0;
+      }
+      .ic {
+        width: 20px;
+        height: 20px;
+        flex: none;
+      }
+      .sr {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+      }
+      .poster-art {
+        position: absolute;
+        inset: 0;
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          transition: none !important;
+          animation: none !important;
+        }
+      }
+      /* ---------- Letreiro: the request as a lit street-cinema marquee ---------- */
+      .letreiro {
+        background: var(--panel);
+        color: var(--panel-ink);
+        border: 3px solid var(--red);
+        border-radius: 4px;
+        padding: 10px 12px 9px;
+        display: grid;
+        gap: 5px;
+      }
+      .letreiro .linha {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 3px;
+      }
+      .letreiro .t {
+        font: 700 22px/1 var(--letter);
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+        padding: 3px 4px 2px;
+        background: rgba(20, 20, 20, 0.045);
+        border-radius: 2px;
+      }
+      .letreiro .sp {
+        width: 6px;
+      }
+      .letreiro .fala {
+        font: italic 14px/1.4 var(--sans);
+        color: #4a4a46;
+        margin-top: 2px;
+      }
+      .letreiro.mini .t {
+        font-size: 18px;
+      }
+      /* Bulbs: a row of lamps along the marquee's bottom edge, lit per Nota on the home */
+      .lampadas {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        margin-top: 4px;
+      }
+      .lampadas i {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--bulb-off);
+        box-shadow: inset 0 0 0 1.5px rgba(20, 20, 20, 0.18);
+      }
+      .lampadas i.on {
+        background: var(--bulb);
+        box-shadow: inset 0 0 0 1.5px rgba(20, 20, 20, 0.28);
+      }
+      .lampadas span {
+        margin-left: 4px;
+        font: 600 12px/1 var(--sans);
+        color: #4a4a46;
+      }
+
+      /* ---------- Shared app pieces ---------- */
+      .page {
+        padding: 16px;
+        display: grid;
+        gap: 14px;
+        align-content: start;
+        flex: 1;
+      }
+      .legenda {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 14px;
+        font-size: 13px;
+        color: var(--ink-2);
+        align-items: center;
+      }
+      .leg {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--ink);
+      }
+      .av {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: var(--c);
+        color: var(--on-p);
+        font: 700 11px/24px var(--sans);
+        text-align: center;
+        display: inline-block;
+        flex: none;
+      }
+      .av.vazio {
+        background: transparent;
+        color: var(--c);
+        box-shadow: inset 0 0 0 2px var(--c);
+      }
+      .avs {
+        display: inline-flex;
+      }
+      .avs .av + .av {
+        margin-left: -7px;
+        box-shadow: 0 0 0 2px var(--surface);
+      }
+      .forca {
+        display: inline-flex;
+        gap: 3px;
+        padding-top: 7px;
+      }
+      .forca i {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        box-shadow: inset 0 0 0 1.5px var(--ink);
+      }
+      .forca i.on {
+        background: var(--ink);
+      }
+      .legenda .forca {
+        padding: 0;
+      }
+      .saiu {
+        font-size: 13px;
+        color: var(--ink-2);
+      }
+      .rot {
+        margin: 0 0 8px;
+        font: 600 12px/1.3 var(--sans);
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: var(--ink-2);
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+      }
+      .rot span {
+        text-transform: none;
+        letter-spacing: 0;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 44px;
+        padding: 0 22px;
+        border: 0;
+        border-radius: 999px;
+        background: var(--red);
+        color: var(--on-red);
+        font: 700 15px var(--sans);
+        text-decoration: none;
+      }
+      .btn.big {
+        min-height: 56px;
+        font-size: 17px;
+        width: 100%;
+      }
+      .opcao {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 44px;
+        padding: 0 14px;
+        border: 0;
+        border-radius: 999px;
+        box-shadow: inset 0 0 0 1px var(--rule);
+        font-size: 14px;
+        background: var(--surface);
+      }
+      .opcao .ic {
+        width: 16px;
+        height: 16px;
+        display: none;
+      }
+      .opcao.on {
+        box-shadow: inset 0 0 0 2px var(--ink);
+        background: var(--surface-2);
+        font-weight: 600;
+      }
+      .opcao.on .ic {
+        display: block;
+      }
+      .link {
+        min-height: 44px;
+        padding: 0 6px;
+        border: 0;
+        background: none;
+        color: var(--ink-2);
+        font-size: 14px;
+        text-decoration: underline;
+        text-underline-offset: 3px;
+      }
+
+      /* ---------- Film card ---------- */
+      .card {
+        position: relative;
+        display: grid;
+        grid-template-columns: 104px 1fr;
+        grid-template-areas: 'capa corpo' 'porque porque' 'responde responde';
+        gap: 14px;
+        padding: 14px;
+        background: var(--surface);
+        border: 1px solid var(--rule);
+        border-radius: 10px;
+      }
+      .capa {
+        grid-area: capa;
+        position: relative;
+        aspect-ratio: 2/3;
+        border-radius: 6px;
+        overflow: hidden;
+        background: var(--surface-2);
+        display: grid;
+        place-items: center;
+        text-align: center;
+        padding: 0;
+        font-size: 13px;
+        color: var(--ink-2);
+      }
+      .capa .sem {
+        padding: 10px;
+      }
+      .capa .pontos {
+        position: absolute;
+        inset: auto 0 0;
+        display: flex;
+        gap: 6px;
+        justify-content: center;
+        padding: 16px 0 8px;
+        background: linear-gradient(transparent, rgba(0, 0, 0, 0.72));
+      }
+      .ponto {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--c);
+        box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.45);
+      }
+      .ponto.vazio {
+        background: rgba(0, 0, 0, 0.35);
+        box-shadow: inset 0 0 0 2px var(--c);
+      }
+      .corpo {
+        grid-area: corpo;
+        min-width: 0;
+        display: grid;
+        gap: 8px;
+        align-content: start;
+      }
+      .card h3 {
+        margin: 0;
+        font: 700 19px/1.25 var(--sans);
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 2px 10px;
+      }
+      .n {
+        font: 700 26px/1 var(--letter);
+        color: var(--red-text);
+      }
+      .orig {
+        font: italic 400 13px var(--sans);
+        color: var(--ink-2);
+      }
+      .novo {
+        font: 700 11px/1 var(--sans);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 4px 8px;
+        border-radius: 999px;
+        background: var(--bulb);
+        color: #141414;
+        align-self: center;
+      }
+      .sinopse {
+        margin: 0;
+        font-size: 15.5px;
+        line-height: 1.5;
+        text-wrap: pretty;
+      }
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .chip {
+        font-size: 12px;
+        padding: 3px 9px;
+        border-radius: 999px;
+        background: var(--surface-2);
+        font-variant-numeric: tabular-nums;
+      }
+      .chip.imdb {
+        background: none;
+        box-shadow: inset 0 0 0 1px var(--rule);
+        font-weight: 600;
+      }
+      .porque {
+        grid-area: porque;
+        border-top: 1px solid var(--rule);
+        padding-top: 12px;
+      }
+      .porque ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        gap: 9px;
+      }
+      .porque li {
+        display: grid;
+        grid-template-columns: 34px 28px 1fr;
+        gap: 6px;
+        font-size: 14px;
+        line-height: 1.45;
+      }
+      .fonte {
+        display: block;
+        color: var(--ink-2);
+        font-size: 12px;
+      }
+      .semfato {
+        color: var(--ink-2);
+      }
+      .responde {
+        grid-area: responde;
+        border-top: 1px solid var(--rule);
+        padding-top: 12px;
+        display: grid;
+        gap: 8px;
+      }
+      .linha-r {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+      }
+      .linha-r .rot {
+        margin: 0;
+      }
+      .javi-nota {
+        display: grid;
+        gap: 8px;
+        padding: 10px 12px;
+        border-radius: 8px;
+        background: var(--surface-2);
+        font-size: 14px;
+      }
+      .javi-nota .quem {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 600;
+      }
+      .escala {
+        display: grid;
+        grid-template-columns: repeat(10, 1fr);
+        gap: 3px;
+      }
+      .escala button {
+        min-height: 44px;
+        border: 0;
+        border-radius: 6px;
+        background: var(--surface);
+        box-shadow: inset 0 0 0 1px var(--rule);
+        font: 600 14px var(--sans);
+        font-variant-numeric: tabular-nums;
+        padding: 0;
+      }
+      .escala button.on {
+        background: var(--ink);
+        color: var(--ground);
+        box-shadow: none;
+      }
+      .campo {
+        font: inherit;
+        font-size: 15px;
+        min-height: 44px;
+        padding: 9px 12px;
+        border: 1px solid var(--rule);
+        border-radius: 8px;
+        background: var(--surface);
+        color: inherit;
+        width: 100%;
+      }
+      .estrelas {
+        display: inline-flex;
+      }
+      .estrelas button {
+        width: 36px;
+        height: 44px;
+        border: 0;
+        padding: 0;
+        background: none;
+        color: var(--ink-2);
+        opacity: 0.45;
+      }
+      .estrelas button .st {
+        width: 24px;
+        height: 24px;
+      }
+      .estrelas button.on {
+        color: var(--star);
+        opacity: 1;
+      }
+      .estrelas button.on .st {
+        fill: currentColor;
+      }
+      /* Stamp: the state prints on the card, nothing disappears */
+      .carimbo {
+        position: absolute;
+        top: 38%;
+        left: 50%;
+        translate: -50% 0;
+        font: 700 15px/1 var(--letter);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        padding: 5px 8px 4px;
+        border: 2px solid var(--red-text);
+        color: var(--red-text);
+        border-radius: 3px;
+        transform: rotate(-4deg);
+        background: var(--surface);
+      }
+      .card.trocado .capa svg,
+      .card.trocado .capa .pontos,
+      .card.trocado .corpo,
+      .card.trocado .porque {
+        opacity: 0.72;
+      }
+      .responder {
+        display: grid;
+        gap: 10px;
+        padding: 14px;
+        background: var(--surface);
+        border: 1px solid var(--rule);
+        border-radius: 10px;
+      }
+      .responder label {
+        display: grid;
+        gap: 4px;
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .responder label span {
+        font-weight: 400;
+        color: var(--ink-2);
+      }
+      .resumo {
+        font-size: 13px;
+        color: var(--ink-2);
+      }
+
+      /* ---------- App chrome (web) ---------- */
+      .topo {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--rule);
+        background: var(--surface);
+        font: 700 17px/1 var(--sans);
+      }
+      .topo small {
+        font: 400 13px var(--sans);
+        color: var(--ink-2);
+      }
+      .abas {
+        position: sticky;
+        bottom: 0;
+        margin-top: auto;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        background: var(--surface);
+        border-top: 1px solid var(--rule);
+        padding-bottom: 14px;
+      }
+      .abas a {
+        display: grid;
+        justify-items: center;
+        gap: 3px;
+        padding: 9px 0 4px;
+        min-height: 54px;
+        color: var(--ink-2);
+        font-size: 11.5px;
+        text-decoration: none;
+        border-top: 2px solid transparent;
+        margin-top: -1px;
+      }
+      .abas a[aria-current] {
+        color: var(--ink);
+        font-weight: 600;
+        border-top-color: var(--red);
+      }
+
+      /* ---------- Claude: inline card and fullscreen ---------- */
+      .conversa {
+        background: var(--chat);
+        padding: 16px 12px 12px;
+        display: grid;
+        gap: 12px;
+      }
+      .msg-eu {
+        justify-self: end;
+        max-width: 80%;
+        padding: 10px 14px;
+        border-radius: 18px;
+        background: var(--surface-2);
+        font-size: 15px;
+      }
+      .msg-claude {
+        font-size: 15px;
+        color: var(--ink);
+        padding: 0 4px;
+      }
+      .caixa {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 52px;
+        padding: 0 8px 0 16px;
+        border-radius: 26px;
+        background: var(--surface);
+        border: 1px solid var(--rule);
+        color: var(--ink-2);
+        font-size: 15px;
+      }
+      .caixa .ic {
+        color: var(--ink-2);
+      }
+      .view-tag {
+        font: 600 11px/1 var(--sans);
+        color: var(--ink-2);
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+      .inline {
+        background: var(--ground);
+        border: 1px solid var(--rule);
+        border-radius: 14px;
+        padding: 12px;
+        display: grid;
+        gap: 10px;
+      }
+      .lista-inline {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        border-top: 1px solid var(--rule);
+      }
+      .lista-inline li {
+        display: grid;
+        grid-template-columns: 26px 1fr auto;
+        align-items: baseline;
+        gap: 8px;
+        padding: 8px 2px;
+        border-bottom: 1px solid var(--rule);
+        font-size: 15px;
+      }
+      .lista-inline .n {
+        font-size: 20px;
+      }
+      .lista-inline b {
+        font-weight: 600;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .lista-inline small {
+        color: var(--ink-2);
+        font-size: 13px;
+        font-variant-numeric: tabular-nums;
+      }
+      .acoes {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+      .acoes .opcao {
+        justify-content: center;
+      }
+      .cheia-topo {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: var(--ground);
+        padding: 10px 16px;
+        border-bottom: 1px solid var(--rule);
+        display: grid;
+        gap: 8px;
+      }
+      .cheia-rodape {
+        position: sticky;
+        bottom: 0;
+        z-index: 2;
+        margin-top: auto;
+        background: var(--surface);
+        border-top: 1px solid var(--rule);
+        padding: 10px 16px 0;
+        display: grid;
+        gap: 8px;
+      }
+      .cheia-rodape .linha-r {
+        justify-content: space-between;
+      }
+      .host-caixa {
+        margin: 2px -16px 0;
+        padding: 10px 12px 18px;
+        background: var(--chat);
+        border-top: 1px dashed var(--rule);
+      }
+
+      /* ---------- Home ---------- */
+      .passos {
+        display: grid;
+        background: var(--surface);
+        border: 1px solid var(--rule);
+        border-radius: 10px;
+      }
+      .passo {
+        position: relative;
+        display: grid;
+        grid-template-columns: 30px 1fr;
+        gap: 4px 10px;
+        padding: 14px;
+      }
+      .passo + .passo {
+        border-top: 1px solid var(--rule);
+      }
+      .passo .n {
+        font-size: 26px;
+        grid-row: span 2;
+      }
+      .passo h3 {
+        margin: 0;
+        font: 700 17px/1.3 var(--sans);
+        padding-right: 78px;
+      }
+      .passo p {
+        margin: 0;
+        font-size: 14.5px;
+        color: var(--ink-2);
+        text-wrap: pretty;
+      }
+      .passo .faz {
+        grid-column: 2;
+        display: grid;
+        gap: 10px;
+        margin-top: 8px;
+      }
+      .passo .faz .linha-r {
+        gap: 4px 10px;
+      }
+      .passo.feito .n,
+      .passo.pulado .n {
+        color: var(--ink-2);
+      }
+      .passo .selo {
+        position: absolute;
+        top: 14px;
+        right: 14px;
+        font: 700 14px/1 var(--letter);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        padding: 5px 7px 4px;
+        border: 2px solid var(--ink);
+        border-radius: 3px;
+        transform: rotate(-4deg);
+      }
+      .passo.pulado .selo {
+        border: 2px dashed var(--ink-2);
+        color: var(--ink-2);
+      }
+      .url {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 44px;
+        padding: 0 4px 0 12px;
+        border: 1px solid var(--rule);
+        border-radius: 8px;
+        background: var(--ground);
+        font:
+          500 14px/1.3 ui-monospace,
+          'SF Mono',
+          Menlo,
+          Consolas,
+          monospace;
+        overflow-wrap: anywhere;
+      }
+      .url button {
+        margin-left: auto;
+        min-height: 40px;
+        min-width: 40px;
+        border: 0;
+        border-radius: 6px;
+        background: none;
+        display: grid;
+        place-items: center;
+      }
+      .como {
+        margin: 0;
+        padding-left: 20px;
+        font-size: 14px;
+        display: grid;
+        gap: 4px;
+      }
+      .nota-auto {
+        font-size: 13px;
+        color: var(--ink-2);
+      }
+      .pedir-cedo {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        font-size: 14px;
+        color: var(--ink-2);
+      }
+      .pedir-cedo .opcao {
+        color: var(--ink);
+        flex: none;
+      }
+      .ultima {
+        display: grid;
+        gap: 12px;
+        padding: 14px;
+        background: var(--surface);
+        border: 1px solid var(--rule);
+        border-radius: 10px;
+      }
+      .ultima header {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 8px;
+      }
+      .ultima h3 {
+        margin: 0;
+        font: 700 17px/1.3 var(--sans);
+      }
+      .ultima header small {
+        color: var(--ink-2);
+        font-size: 13px;
+      }
+      .tiras {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+      }
+      .tiras .capa {
+        border-radius: 4px;
+      }
+      .pendente {
+        display: grid;
+        gap: 10px;
+        padding: 12px;
+        border-radius: 8px;
+        background: var(--surface-2);
+        font-size: 14.5px;
+      }
+      .pendente strong {
+        display: block;
+      }
+      .nav-lista {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        background: var(--surface);
+        border: 1px solid var(--rule);
+        border-radius: 10px;
+      }
+      .nav-lista a {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-height: 52px;
+        padding: 0 14px;
+        color: var(--ink);
+        text-decoration: none;
+        font-size: 15px;
+      }
+      .nav-lista a small {
+        margin-left: auto;
+        color: var(--ink-2);
+        font-size: 13px;
+      }
+      .nav-lista a .ic:last-child {
+        color: var(--ink-2);
+        width: 16px;
+        height: 16px;
+      }
+      .nav-lista li + li {
+        border-top: 1px solid var(--rule);
+      }
+      @media (min-width: 560px) {
+        body.single .card {
+          grid-template-columns: 160px 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="board-bar">
+      <div>
+        <h1>A · Letreiro de rua</h1>
+        <p>
+          O pedido da noite num letreiro de cinema de rua: painel aceso, letras
+          condensadas em placas, moldura vermelha. Abaixo dele, uma tela de
+          trabalho limpa. É o mundo do #78, revisto: o letreiro agora também diz
+          quanto falta para a primeira Sessão, e as lâmpadas acendem a cada
+          Nota. Capas sintéticas, dados fictícios da fixture.
+        </p>
+      </div>
+      <div class="themes" role="group" aria-label="Tema">
+        <button type="button" data-set-theme="system">Sistema</button
+        ><button type="button" data-set-theme="light">Claro</button
+        ><button type="button" data-set-theme="dark">Escuro</button>
+      </div>
+    </header>
+    <main id="board"></main>
+    <script>
+      // Shared prototype data: synthetic, from the fixture's invented catalog.
+      const PEOPLE = [
+        { name: 'Iara', you: true, initial: 'I', color: 1 },
+        { name: 'Teo', initial: 'T', color: 2 },
+      ]
+      const REQUEST = {
+        plates: [
+          ['Vocês', 'dois'],
+          ['até', '1h50'],
+          ['algo', 'leve'],
+          ['IMDb', '7+'],
+        ],
+        line: 'Vocês dois · até 1h50 · algo leve · IMDb 7+',
+        aria: 'Pedido: vocês dois, até 1h50, algo leve, nota 7 ou mais no IMDb',
+        said: 'algo leve pra sexta',
+        left: { n: 2, title: 'Sessão Maldita', why: 'Teo já viu' },
+      }
+      const FILMS = [
+        {
+          n: 1,
+          title: 'As Horas Lentas',
+          year: 2021,
+          dur: '1h44',
+          genres: ['Drama', 'Mistério'],
+          imdb: '7,4',
+          votes: '28 mil',
+          synopsis:
+            'Numa cidade do interior, uma relojoeira percebe que os relógios da casa atrasam um minuto por noite.',
+          poster: {
+            bg: '#24463b',
+            fg: '#f3e6c4',
+            mark: '#e0913a',
+            motif: 'clock',
+          },
+          evidence: [
+            {
+              who: [0],
+              force: 3,
+              text: 'dirigido por Helena Prado, como 3 filmes a que deu 4 ou mais',
+              source: 'Wikidata',
+            },
+          ],
+          noFact: [1],
+          marks: { stars: 4 },
+        },
+        {
+          n: 2,
+          title: 'Pequenos Milagres',
+          original: 'Les Petits Miracles',
+          year: 2019,
+          dur: '1h36',
+          genres: ['Comédia', 'Família'],
+          imdb: '7,8',
+          votes: '80 mil',
+          synopsis:
+            'Um menino de nove anos convence a vila inteira de que o padeiro faz milagres, e o padeiro começa a acreditar.',
+          poster: {
+            bg: '#f0c43c',
+            fg: '#1d1b16',
+            mark: '#d4462f',
+            motif: 'sun',
+          },
+          evidence: [
+            {
+              who: [1],
+              force: 3,
+              text: 'disse que adora filme de família com criança esperta',
+              source: 'Declarado · 12 nov 2026',
+            },
+            {
+              who: [0],
+              force: 2,
+              text: 'roteiro de Ana Ruiz, que escreveu O Farol de Areia, a que deu 5',
+              source: 'Wikidata',
+            },
+          ],
+          noFact: [],
+          marks: { seen: { 1: { score: 8, said: 'bom, mas lento no meio' } } },
+        },
+        {
+          n: 3,
+          title: 'Noite de Estreia',
+          year: 2022,
+          dur: '1h49',
+          genres: ['Drama'],
+          imdb: '7,1',
+          votes: '9 mil',
+          synopsis:
+            'Na noite em que o teatro reabre, a atriz principal some vinte minutos antes de a cortina subir.',
+          poster: {
+            bg: '#5a1f3a',
+            fg: '#f6d9e3',
+            mark: '#f08a5d',
+            motif: 'curtain',
+          },
+          evidence: [
+            {
+              who: [0],
+              force: 1,
+              text: 'deu 5 a O Farol de Areia (2012), e de 50 pessoas que deram 4+ a ele, 30% deram 4+ a este',
+              source: 'MovieLens ml-32m',
+            },
+          ],
+          noFact: [1],
+          marks: { swap: true },
+        },
+        {
+          n: 4,
+          title: 'Vento Norte',
+          year: 2020,
+          dur: '1h39',
+          genres: ['Aventura'],
+          imdb: '7,3',
+          votes: '7 mil',
+          synopsis:
+            'Dois irmãos atravessam o litoral de bicicleta para devolver um barco que nunca foi deles.',
+          poster: null,
+          isNew: true,
+          evidence: [
+            {
+              who: [1],
+              force: 1,
+              text: 'dirigido por Marta Quintal, como Jardim Suspenso, a que deu 4',
+              source: 'Wikidata',
+            },
+          ],
+          noFact: [0],
+          marks: {},
+        },
+        {
+          n: 5,
+          title: 'Ponte Aérea',
+          year: 2016,
+          dur: '1h41',
+          genres: ['Comédia', 'Romance'],
+          imdb: '7,0',
+          votes: '22 mil',
+          synopsis:
+            'Uma comissária e um passageiro frequente se cruzam toda segunda no voo das 6h, e nunca no mesmo assento.',
+          poster: {
+            bg: '#cfe3ef',
+            fg: '#14324a',
+            mark: '#ef6b4a',
+            motif: 'plane',
+          },
+          evidence: [
+            {
+              who: [0, 1],
+              force: 2,
+              text: 'os dois deram 4 ou mais a O Último Bonde, do mesmo diretor',
+              source: 'Wikidata',
+            },
+          ],
+          noFact: [],
+          marks: {},
+        },
+      ]
+      const MCP_URL = 'https://cinema.finalsend.com.br/mcp'
+      const STEP_TEXT = {
+        taste: {
+          title: 'Meu gosto',
+          body: 'Dê nota a 10 filmes que você já viu, ou importe o seu histórico. É o que faz a lista acertar.',
+          action: 'Dar notas',
+        },
+        import: {
+          title: 'Importar do Letterboxd ou Trakt',
+          body: 'Traz de uma vez as suas notas e o que você já viu.',
+          action: 'Importar',
+        },
+        claude: {
+          title: 'Conector no Claude',
+          body: 'Para pedir filme conversando com o Claude, no celular.',
+          action: 'Copiar endereço',
+          how: [
+            'No Claude, abra Configurações e depois Conectores.',
+            'Toque em Adicionar conector personalizado.',
+            'Cole o endereço e entre com a sua conta Google.',
+          ],
+          auto: 'Este passo se marca sozinho quando o Claude entrar com o seu e-mail.',
+        },
+      }
+      // The three home states of #141.
+      const HOME = {
+        arrived: {
+          notes: 0,
+          steps: { taste: 'pending', import: 'pending', claude: 'pending' },
+          open: 'taste',
+        },
+        partial: {
+          notes: 12,
+          steps: { taste: 'done', import: 'skipped', claude: 'pending' },
+          open: 'claude',
+        },
+        ready: {
+          notes: 12,
+          steps: { taste: 'done', import: 'skipped', claude: 'done' },
+          open: null,
+        },
+      }
+      const LAST_SESSION = {
+        when: 'Sexta, 21 nov',
+        who: 'Você e Teo',
+        films: [FILMS[0], FILMS[1], FILMS[4], FILMS[2]],
+        pending: 'Vocês viram alguma? Conte o que viram e como foi.',
+      }
+
+      const ICONS = {
+        check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+        star: '<path d="M12 3.6l2.6 5.4 5.9.7-4.4 4 1.2 5.9L12 16.7l-5.3 2.9 1.2-5.9-4.4-4 5.9-.7z"/>',
+        home: '<path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z"/>',
+        film: '<rect x="3.5" y="5" width="17" height="14" rx="1.5"/><path d="M3.5 9h17M3.5 15h17M8 5v4M16 5v4M8 15v4M16 15v4"/>',
+        people:
+          '<circle cx="9" cy="8.5" r="3"/><path d="M3.5 19c.6-3 2.8-4.6 5.5-4.6s4.9 1.6 5.5 4.6"/><circle cx="17" cy="9.5" r="2.4"/><path d="M15.6 14.6c2.4-.3 4.4 1.1 4.9 3.9"/>',
+        import: '<path d="M12 4v11M7.5 10.5L12 15l4.5-4.5M5 19.5h14"/>',
+        export: '<path d="M12 15V4M7.5 8.5L12 4l4.5 4.5M5 19.5h14"/>',
+        copy: '<rect x="9" y="9" width="11" height="11" rx="1.5"/><path d="M15 9V5.5A1.5 1.5 0 0 0 13.5 4h-8A1.5 1.5 0 0 0 4 5.5v8A1.5 1.5 0 0 0 5.5 15H9"/>',
+        arrow: '<path d="M5 12h14M13.5 6.5L19 12l-5.5 5.5"/>',
+        expand: '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',
+        send: '<path d="M4.5 12L20 4.5 15.5 20l-3-6.5z"/><path d="M12.5 13.5L20 4.5"/>',
+        plus: '<path d="M12 5v14M5 12h14"/>',
+        chat: '<path d="M4.5 5.5h15v10h-9l-4.5 4v-4h-1.5z"/>',
+        search: '<circle cx="11" cy="11" r="6"/><path d="M15.5 15.5L20 20"/>',
+      }
+      function icon(name, cls = 'ic') {
+        return `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]}</svg>`
+      }
+      // Synthetic poster art: flat fields, no gradient, labelled synthetic on the board.
+      function posterArt(film) {
+        const p = film.poster
+        const motifs = {
+          clock: `<circle cx="50" cy="62" r="30" fill="none" stroke="${p.fg}" stroke-width="5"/><path d="M50 62V42M50 62l14 9" stroke="${p.mark}" stroke-width="5" stroke-linecap="round"/>`,
+          sun: `<circle cx="50" cy="66" r="24" fill="${p.mark}"/><rect x="0" y="100" width="100" height="50" fill="${p.fg}"/>`,
+          curtain: `<path d="M0 0h46c-4 40 0 90-14 150H0z" fill="${p.mark}"/><path d="M100 0H54c4 40 0 90 14 150h32z" fill="${p.mark}"/><circle cx="50" cy="98" r="7" fill="${p.fg}"/>`,
+          plane: `<path d="M14 92L86 54" stroke="${p.fg}" stroke-width="2" stroke-dasharray="4 5"/><path d="M70 50l18 2-10 15-3-8z" fill="${p.mark}"/><rect x="0" y="118" width="100" height="32" fill="${p.fg}"/>`,
+        }
+        return `<svg class="poster-art" viewBox="0 0 100 150" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Capa de ${film.title}"><rect width="100" height="150" fill="${p.bg}"/>${motifs[p.motif]}<text x="50" y="24" text-anchor="middle" fill="${p.fg}" font-size="9" font-weight="700"${film.title.length > 12 ? ' textLength="86" lengthAdjust="spacingAndGlyphs"' : ''}>${film.title.toUpperCase()}</text></svg>`
+      }
+      const FORCE = ['', 'fraca', 'moderada', 'forte']
+      function forceDots(n) {
+        let dots = ''
+        for (let i = 1; i <= 3; i++)
+          dots += `<i class="${i <= n ? 'on' : ''}"></i>`
+        return `<span class="forca" role="img" aria-label="Força ${FORCE[n]}">${dots}</span>`
+      }
+      function avatar(i, empty = false) {
+        const p = PEOPLE[i]
+        return `<span class="av${empty ? ' vazio' : ''}" style="--c: var(--p${p.color})" title="${p.name}">${p.initial}</span>`
+      }
+      function personName(i) {
+        return PEOPLE[i].you ? 'Você' : PEOPLE[i].name
+      }
+      function stars(n, cls = 'estrelas') {
+        let s = ''
+        for (let i = 1; i <= 5; i++)
+          s += `<button type="button" class="${i <= n ? 'on' : ''}" aria-label="${i} de 5">${icon('star', 'st')}</button>`
+        return `<span class="${cls}" role="group" aria-label="Estrelas: ${n || 'nenhuma'} de 5">${s}</span>`
+      }
+      function factCount(f) {
+        const withFact = new Set(f.evidence.flatMap((e) => e.who))
+        return `Fato sobre ${withFact.size} de ${PEOPLE.length}`
+      }
+      function marksSummary() {
+        return '1 Já vi (Teo) · 1 Trocar · estrelas em 1 filme'
+      }
+
+      // Board: one frame per screen, light/dark switch, ?frame= and ?theme= for captures.
+      function mountBoard(frames) {
+        const params = new URLSearchParams(location.search)
+        const only = params.get('frame')
+        const theme = params.get('theme')
+        if (theme) document.documentElement.dataset.theme = theme
+        const board = document.getElementById('board')
+        board.innerHTML = frames
+          .filter(([id]) => !only || id === only)
+          .map(
+            ([id, label, render, kind]) =>
+              `<section class="frame" id="${id}"><h2 class="frame-label">${label}</h2><div class="device ${kind || ''}">${render()}</div></section>`,
+          )
+          .join('')
+        if (only) document.body.classList.add('single')
+        for (const b of document.querySelectorAll('[data-set-theme]')) {
+          b.setAttribute(
+            'aria-pressed',
+            String(
+              (document.documentElement.dataset.theme || 'system') ===
+                b.dataset.setTheme,
+            ),
+          )
+          b.addEventListener('click', () => {
+            const t = b.dataset.setTheme
+            if (t === 'system') delete document.documentElement.dataset.theme
+            else document.documentElement.dataset.theme = t
+            for (const o of document.querySelectorAll('[data-set-theme]'))
+              o.setAttribute('aria-pressed', String(o === b))
+          })
+        }
+        // Toggles and stars respond, so the owner can feel the controls.
+        board.addEventListener('click', (e) => {
+          const t = e.target.closest('.opcao, .estrelas button, .tg')
+          if (!t) return
+          if (t.matches('.estrelas button')) {
+            const all = [...t.parentElement.children]
+            const n = all.indexOf(t) + 1
+            all.forEach((s, i) => s.classList.toggle('on', i < n))
+            return
+          }
+          const on = !t.classList.contains('on')
+          t.classList.toggle('on', on)
+          t.setAttribute('aria-pressed', String(on))
+        })
+      }
+
+      function letreiro(lines, said, extra = '', cls = '') {
+        const plates = lines
+          .map(
+            (line) =>
+              `<div class="linha" aria-hidden="true">${line
+                .map((w) =>
+                  w
+                    ? `<span class="t">${w}</span>`
+                    : '<span class="sp"></span>',
+                )
+                .join('')}</div>`,
+          )
+          .join('')
+        const aria = lines.flat().filter(Boolean).join(' ')
+        return `<div class="letreiro ${cls}" role="group" aria-label="${aria}">${plates}${said ? `<div class="fala">“${said}”</div>` : ''}${extra}</div>`
+      }
+      function requestMarquee(cls = '') {
+        const [a, b, c, d] = REQUEST.plates
+        return letreiro(
+          [
+            [...a, '', ...b],
+            [...c, '', ...d],
+          ],
+          REQUEST.said,
+          '',
+          cls,
+        )
+      }
+      function legend() {
+        return `<div class="legenda">${PEOPLE.map((p, i) => `<span class="leg">${avatar(i)}${p.name}</span>`).join('')}<span class="leg">${forceDots(3)} forte</span><span class="leg">${forceDots(2)} moderada</span><span class="leg">${forceDots(1)} fraca</span></div>`
+      }
+      function filmCard(f) {
+        const m = f.marks
+        const dots = PEOPLE.map((p, i) => {
+          const has = f.evidence.some((e) => e.who.includes(i))
+          return `<span class="ponto${has ? '' : ' vazio'}" style="--c: var(--p${p.color})" title="${p.name}: ${has ? 'com fato' : 'sem fato'}"></span>`
+        }).join('')
+        const cover = f.poster
+          ? posterArt(f)
+          : `<span class="sem">${f.title}</span>`
+        const ev = f.evidence
+          .map(
+            (e) =>
+              `<li><span class="avs">${e.who.map((i) => avatar(i)).join('')}</span>${forceDots(e.force)}<span>${e.text}<span class="fonte">${e.source}</span></span></li>`,
+          )
+          .join('')
+        const none = f.noFact
+          .map(
+            (i) =>
+              `<li class="semfato"><span class="avs">${avatar(i, true)}</span><span></span><span>${PEOPLE[i].name}: sem fato sobre este filme</span></li>`,
+          )
+          .join('')
+        const seen = m.seen || {}
+        const seenBtns = PEOPLE.map(
+          (p, i) =>
+            `<button type="button" class="opcao${seen[i] ? ' on' : ''}" aria-pressed="${!!seen[i]}">${icon('check')}${personName(i)}</button>`,
+        ).join('')
+        const seenDetail = Object.entries(seen)
+          .map(
+            ([i, s]) =>
+              `<div class="javi-nota"><span class="quem">${avatar(+i)}Nota do ${PEOPLE[i].name}</span><div class="escala" role="group" aria-label="Nota de 1 a 10">${Array.from({ length: 10 }, (_, k) => `<button type="button" class="${k + 1 === s.score ? 'on' : ''}">${k + 1}</button>`).join('')}</div><input class="campo" value="${s.said}" aria-label="O que o ${PEOPLE[i].name} achou" /></div>`,
+          )
+          .join('')
+        return `<article class="card${m.swap ? ' trocado' : ''}">
+          <div class="capa">${cover}${m.swap ? '<span class="carimbo">Trocar</span>' : ''}<span class="pontos">${dots}</span></div>
+          <div class="corpo">
+            <h3><span class="n">${f.n}</span>${f.title}${f.original ? `<span class="orig">${f.original}</span>` : ''}${f.isNew ? '<span class="novo">novo</span>' : ''}</h3>
+            <p class="sinopse">${f.synopsis}</p>
+            <div class="chips"><span class="chip">${f.year}</span><span class="chip">${f.dur}</span>${f.genres.map((g) => `<span class="chip">${g}</span>`).join('')}<span class="chip imdb">${f.imdb} IMDb · ${f.votes} votos</span></div>
+          </div>
+          <div class="porque"><p class="rot">Por que cada um vai gostar <span>${factCount(f)}</span></p><ul>${ev}${none}</ul></div>
+          <div class="responde">
+            <div class="linha-r"><span class="rot">Já vi</span>${seenBtns}<button type="button" class="opcao">${icon('check')}Todos</button></div>
+            ${seenDetail}
+            <div class="linha-r"><button type="button" class="opcao${m.swap ? ' on' : ''}" aria-pressed="${!!m.swap}">${icon('check')}Trocar</button>${stars(m.stars || 0)}</div>
+          </div>
+        </article>`
+      }
+      function addBox(withButton = true) {
+        return `<div class="responder">
+          <label>Acrescentar <span>contexto da noite ou gosto: “chegou a Ana”, “nada de terror”</span><textarea class="campo" rows="2"></textarea></label>
+          <span class="resumo">${marksSummary()}</span>
+          ${withButton ? '<button class="btn" type="button" style="justify-self:start">Enviar</button>' : ''}
+        </div>`
+      }
+      function tabs(current) {
+        const items = [
+          ['home', 'Início'],
+          ['film', 'Sessões'],
+          ['people', 'Pessoas'],
+          ['import', 'Importar'],
+        ]
+        return `<nav class="abas" aria-label="Seções">${items.map(([ic, l]) => `<a href="#"${l === current ? ' aria-current="page"' : ''}>${icon(ic)}${l}</a>`).join('')}</nav>`
+      }
+
+      function renderCartazWeb() {
+        return `<div class="topo">Sessão de quarta <small>versão 2</small></div>
+          <div class="page">${requestMarquee()}${legend()}<div class="saiu">Saiu: ${REQUEST.left.n} ${REQUEST.left.title} (${REQUEST.left.why})</div>
+          ${FILMS.map(filmCard).join('')}${addBox()}</div>${tabs('Sessões')}`
+      }
+      function renderInline() {
+        return `<div class="conversa">
+          <div class="msg-eu">algo leve pra sexta, eu e o Teo, até 1h50</div>
+          <div class="msg-claude">Cinco filmes para vocês dois. Toque em Marcar para dizer o que já viram ou querem trocar.</div>
+          <div class="inline">
+            <span class="view-tag">filmes · Cartaz</span>
+            ${requestMarquee('mini')}
+            <ol class="lista-inline">${FILMS.map((f) => `<li><span class="n">${f.n}</span><b>${f.title}</b><small>${f.year} · ${f.dur}</small></li>`).join('')}</ol>
+            <div class="acoes"><button type="button" class="opcao">${icon('expand')}Marcar</button><button type="button" class="btn">Enviar</button></div>
+          </div>
+          <div class="caixa">Responder…${icon('send')}</div>
+        </div>`
+      }
+      function renderFull() {
+        return `<div class="cheia-topo">${requestMarquee('mini')}${legend()}</div>
+          <div class="page">${FILMS.map(filmCard).join('')}${addBox(false)}</div>
+          <div class="cheia-rodape"><div class="linha-r"><span class="resumo">${marksSummary()}</span><button type="button" class="btn">Enviar</button></div>
+          <div class="host-caixa"><div class="caixa">Caixa de mensagem do Claude${icon('send')}</div></div></div>`
+      }
+
+      function step(key, state, home) {
+        const t = STEP_TEXT[key]
+        const n = { taste: 1, import: 2, claude: 3 }[key]
+        const open = home.open === key
+        const selo =
+          state === 'done'
+            ? '<span class="selo">Feito</span>'
+            : state === 'skipped'
+              ? '<span class="selo">Pulado</span>'
+              : ''
+        let body = `<p>${t.body}</p>`
+        if (state === 'done' && key === 'taste')
+          body = `<p>${home.notes} Notas dadas. Pode dar mais quando quiser.</p>`
+        if (state === 'skipped')
+          body = `<p>${t.body}</p><div class="faz"><div class="linha-r"><button type="button" class="link">Retomar</button></div></div>`
+        if (state === 'pending') {
+          let extra = ''
+          if (key === 'taste') {
+            const lamps = Array.from(
+              { length: 10 },
+              (_, i) => `<i class="${i < home.notes ? 'on' : ''}"></i>`,
+            ).join('')
+            extra = `<div class="lampadas" aria-label="${home.notes} de 10 Notas">${lamps}<span>${home.notes} de 10</span></div>`
+          }
+          if (key === 'claude' && open)
+            extra = `<div class="url"><span>${MCP_URL}</span><button type="button" aria-label="Copiar endereço">${icon('copy')}</button></div><ol class="como">${t.how.map((s) => `<li>${s}</li>`).join('')}</ol><span class="nota-auto">${t.auto}</span>`
+          const action =
+            key === 'claude' && open
+              ? ''
+              : `<button type="button" class="${open ? 'btn' : 'opcao'}">${t.action}</button>`
+          body += `<div class="faz">${extra}<div class="linha-r">${action}<button type="button" class="link">Pular</button></div></div>`
+        }
+        return `<li class="passo ${state === 'done' ? 'feito' : state === 'skipped' ? 'pulado' : ''}"><span class="n">${n}</span><h3>${t.title}</h3>${selo}${body}</li>`
+      }
+      function renderHome(which) {
+        const home = HOME[which]
+        const top = `<div class="topo">filmes <span class="avs">${avatar(0)}</span></div>`
+        if (which === 'ready') {
+          const last = LAST_SESSION
+          return `${top}<div class="page">
+            ${letreiro(
+              [
+                ['O', 'que', 'vai', 'ser'],
+                ['hoje', 'à', 'noite?'],
+              ],
+              '',
+              '',
+            )}
+            <button type="button" class="btn big">${icon('plus')}Pedir filme</button>
+            <section class="ultima"><header><h3>Última Sessão</h3><small>${last.when} · ${last.who}</small></header>
+              <div class="tiras">${last.films.map((f) => `<div class="capa">${posterArt(f)}</div>`).join('')}</div>
+              <div class="pendente"><span><strong>Feedback pendente</strong>${last.pending}</span><button type="button" class="opcao" style="justify-self:start">Contar como foi</button></div>
+            </section>
+            <ul class="nav-lista">
+              <li><a href="#">${icon('film')}Sessões<small>7</small>${icon('arrow')}</a></li>
+              <li><a href="#">${icon('people')}Pessoas<small>6</small>${icon('arrow')}</a></li>
+              <li><a href="#">${icon('star')}Dar notas<small>12 dadas</small>${icon('arrow')}</a></li>
+              <li><a href="#">${icon('export')}Exportar${icon('arrow')}</a></li>
+            </ul></div>${tabs('Início')}`
+        }
+        const left = Object.values(home.steps).filter(
+          (s) => s === 'pending',
+        ).length
+        const marquee =
+          which === 'arrived'
+            ? letreiro(
+                [
+                  ['Oi,', 'Iara'],
+                  ['faltam', '3', 'passos'],
+                ],
+                'pra lista acertar no gosto de vocês',
+              )
+            : letreiro([['Falta', '1', 'passo']], 'o resto já está no jeito')
+        return `${top}<div class="page">${marquee}
+          <ol class="passos" aria-label="Primeiros passos, ${left} pendentes">${Object.entries(
+            home.steps,
+          )
+            .map(([k, s]) => step(k, s, home))
+            .join('')}</ol>
+          <div class="pedir-cedo"><span>Dá para pedir filme agora. Com gosto, a lista acerta mais.</span><button type="button" class="opcao">${icon('plus')}Pedir filme</button></div>
+          </div>${tabs('Início')}`
+      }
+
+      mountBoard([
+        ['cartaz-web', 'Cartaz · app web (rolagem inteira)', renderCartazWeb],
+        ['claude-inline', 'Cartaz · no Claude, na conversa', renderInline],
+        ['claude-cheia', 'Cartaz · no Claude, tela cheia', renderFull, 'phone'],
+        [
+          'home-chegou',
+          'Início · acabou de chegar',
+          () => renderHome('arrived'),
+          'phone',
+        ],
+        [
+          'home-meio',
+          'Início · 1 passo feito, 1 pulado',
+          () => renderHome('partial'),
+          'phone',
+        ],
+        [
+          'home-pronto',
+          'Início · tudo pronto',
+          () => renderHome('ready'),
+          'phone',
+        ],
+      ])
+    </script>
+  </body>
+</html>
