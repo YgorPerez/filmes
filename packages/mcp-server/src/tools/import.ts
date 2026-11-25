@@ -1,12 +1,7 @@
 import { Effect } from 'effect'
 import { importLetterboxdRss, removeImport } from '@filmes/engine'
 import { z } from 'zod'
-import {
-  defineTool,
-  invalidUsage,
-  ownerAuthor,
-  personName,
-} from '../tool.ts'
+import { defineTool, invalidUsage, ownerAuthor, personName } from '../tool.ts'
 
 export default defineTool({
   name: 'import',

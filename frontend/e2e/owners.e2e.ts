@@ -47,7 +47,9 @@ for (const dono of DONOS)
     await page.getByRole('checkbox', { name: 'Lara' }).check()
     await page.getByLabel('Quantos filmes', { exact: false }).fill('3')
     await page.getByRole('button', { name: 'Recomendar' }).click()
-    await expect(page).toHaveURL(/\/sessoes\/2026-11-20-lara[^/]*\?feito=aberta$/)
+    await expect(page).toHaveURL(
+      /\/sessoes\/2026-11-20-lara[^/]*\?feito=aberta$/,
+    )
     const id = decodeURIComponent(
       new URL(page.url()).pathname.split('/').at(-1) ?? '',
     )
@@ -82,7 +84,9 @@ for (const dono of DONOS)
     const area = section(page, 'Declarados')
     await area.getByText('Acrescentar Declarado', { exact: true }).click()
     const form = area.getByRole('form', { name: 'Acrescentar Declarado' })
-    await form.getByLabel('O que foi dito').fill(`a ${dono.name} gosta de drama`)
+    await form
+      .getByLabel('O que foi dito')
+      .fill(`a ${dono.name} gosta de drama`)
     await form.getByRole('button', { name: 'Gravar' }).click()
     await expect(notice(page)).toHaveText('Gravado no arquivo dela.')
     await expect(area).toContainText(`a ${dono.name} gosta de drama`)

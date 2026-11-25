@@ -6,12 +6,7 @@ import {
   viewQueue,
 } from '@filmes/engine'
 import { z } from 'zod'
-import {
-  defineTool,
-  invalidUsage,
-  ownerAuthor,
-  personName,
-} from '../tool.ts'
+import { defineTool, invalidUsage, ownerAuthor, personName } from '../tool.ts'
 
 /** The reason `discard` records when none is given, as the CLI's. */
 const IGNORE = 'ignorar'
@@ -57,8 +52,7 @@ export default defineTool({
       const author = yield* ownerAuthor
       if (i.action === 'reprocess')
         return yield* reprocessLetterboxd({
-          person:
-            i.person,
+          person: i.person,
           author,
         })
       if (i.id === undefined)
