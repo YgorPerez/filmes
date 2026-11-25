@@ -88,6 +88,17 @@ function write(root: string, path: string, content: Buffer | string): void {
   writeFileSync(full, content)
 }
 
+/** Whether a filmes-dados folder is already in `direction`'s target
+ * language: it has a target folder (`people/`, `sessions/` for to-en) and
+ * none of the source ones. */
+function alreadyIn(source: string, direction: Direction): boolean {
+  const pt = Object.keys(DATA_FOLDERS)
+  const en = Object.values(DATA_FOLDERS)
+  const [from, to] = direction === 'to-en' ? [pt, en] : [en, pt]
+  const has = (name: string) => existsSync(join(source, name))
+  return to.some(has) && !from.some(has)
+}
+
 /** Where a filmes-dados file goes, and which table rewrites it. */
 function dataTarget(
   path: string,
@@ -140,8 +151,14 @@ export function migrateData(
   direction: Direction,
 ): FileResult[] {
   prepareDestination(source, destination)
+  // A folder already in the target language (filmes-dados after cutover,
+  // read by `db:publish --build`) is copied as is: only the folder names
+  // tell the language, and `imports/letterboxd.md` keeps its path.
+  const done = alreadyIn(source, direction)
   return listFiles(source).map((from) => {
-    const { to, kind } = dataTarget(from, direction)
+    const { to, kind } = done
+      ? { to: from, kind: null }
+      : dataTarget(from, direction)
     const bytes = readFileSync(join(source, from))
     if (kind === null) {
       write(destination, to, bytes)

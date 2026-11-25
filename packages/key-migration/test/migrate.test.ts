@@ -106,6 +106,25 @@ feedback:
     expect(back['imports/ana/letterboxd-abc.zip']).toBe('PK-bytes')
   })
 
+  test('a checkout already in the target language is copied as is, imports/letterboxd.md too', () => {
+    const work = scratch()
+    const pt = join(work, 'dados')
+    writeTree(pt, {
+      'pessoas/ana.md': PERSON,
+      'sessoes/2026-11-20-bruno-iara.md': SESSION,
+      'imports/letterboxd.md': '---\nfilmes: []\n---\nResoluções.\n',
+    })
+    migrateData(pt, join(work, 'en'), 'to-en')
+    const en = readTree(join(work, 'en'))
+    // After cutover filmes-dados is English, and db:publish --build still
+    // migrates it to-en: nothing changes, nothing is refused.
+    migrateData(join(work, 'en'), join(work, 'en-again'), 'to-en')
+    expect(readTree(join(work, 'en-again'))).toEqual(en)
+    // And a Portuguese checkout passes to-pt unchanged the same way.
+    migrateData(pt, join(work, 'pt-again'), 'to-pt')
+    expect(readTree(join(work, 'pt-again'))).toEqual(readTree(pt))
+  })
+
   test('never writes inside the source, nor into a folder with files', () => {
     const work = scratch()
     const source = join(work, 'dados')
