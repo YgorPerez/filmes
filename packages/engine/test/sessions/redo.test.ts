@@ -24,6 +24,7 @@ import {
   personSeen,
   personState,
   personVeto,
+  pyInt,
   readSession,
   recommendSession,
   recordFeedback,
@@ -31,6 +32,7 @@ import {
   yamlToJson,
   type RecommendSessionRequest,
   type SessionRecommendation,
+  type YamlValue,
 } from '../../src/index.ts'
 import { useFixture, type Fixture } from '../fixture.ts'
 
@@ -490,6 +492,69 @@ describe('regenerating with kept films (test_regerar_mantidos)', () => {
         (w) => w.includes('Sombra Morna') && w.includes('mantido'),
       ),
     ).toBe(true)
+  })
+
+  test('a kept film with too few votes, or outside the Catálogo, leaves with the reason', async () => {
+    // Curta da Madrugada has 600 votes; tt0000001 is in no Catálogo. A
+    // Session written by hand showed them at 2 and 3, the second untitled.
+    const fixture = useFixture()
+    const { first, id } = await openAlone(fixture)
+    await fixture.ok(
+      Effect.gen(function* () {
+        const { frontmatter, body } = yield* readSession(id)
+        const top = new Map(frontmatter)
+        top.set(
+          'recommendation',
+          first.films.map((f) => {
+            if (f.position === 2)
+              return new Map<string, YamlValue>([
+                ['position', pyInt(2)],
+                ['id', 'tt9000106'],
+                ['title', 'Curta da Madrugada'],
+              ])
+            if (f.position === 3)
+              return new Map<string, YamlValue>([
+                ['position', pyInt(3)],
+                ['id', 'tt0000001'],
+              ])
+            return new Map<string, YamlValue>([
+              ['position', pyInt(f.position)],
+              ['id', f.id],
+              ['title', f.title],
+            ])
+          }),
+        )
+        yield* writeSession(id, top, body)
+      }),
+    )
+
+    const redone = await recommend(fixture, {
+      attendees: ['dono'],
+      session: id,
+      keep: ['tt9000106,tt0000001'],
+    })
+
+    expect(redone.kept).toEqual([])
+    expect(redone.dropped?.slice(1, 3)).toEqual([
+      {
+        position: 2,
+        id: 'tt9000106',
+        title: 'Curta da Madrugada',
+        cause: 'min_rating',
+        label: '600 votos no IMDb, abaixo de 1.000',
+      },
+      {
+        position: 3,
+        id: 'tt0000001',
+        title: null,
+        cause: 'min_rating',
+        label: 'fora do Catálogo',
+      },
+    ])
+    expect(withoutPosterWarning(redone.warnings)).toEqual([
+      'Curta da Madrugada saiu, apesar de mantido: 600 votos no IMDb, abaixo de 1.000',
+      'tt0000001 saiu, apesar de mantido: fora do Catálogo',
+    ])
   })
 
   test('a list shorter than a kept film’s number has no hole', async () => {

@@ -70,6 +70,10 @@ export interface Regenerate {
 export type DropCause =
   | { readonly cause: 'seen'; readonly people: ReadonlyArray<string> }
   | { readonly cause: 'swapped' }
+  | RemovalCause
+
+/** Why a kept film was removed: a Restrição, a Veto or the minimum rating. */
+export type RemovalCause =
   | {
       readonly cause: 'constraint'
       readonly constraint: string
@@ -87,10 +91,8 @@ export const isKept = (regenerate: Regenerate, filmId: string): boolean =>
 export const isNew = (regenerate: Regenerate, filmId: string): boolean =>
   regenerate.previous.every((f) => f.id !== filmId)
 
-const titleOf = (regenerate: Regenerate, filmId: string): string => {
-  const film = regenerate.previous.find((f) => f.id === filmId)
-  return film === undefined ? filmId : film.title || filmId
-}
+const titleOf = (regenerate: Regenerate, filmId: string): string =>
+  regenerate.previous.find((f) => f.id === filmId)?.title || filmId
 
 /** What stays and what was on the screen of the Session's current version,
  * and the warnings of the kept films that were not on it (`preparar`).
@@ -136,7 +138,7 @@ export const byMinRating = (
   db: Connection,
   filmId: string,
   catalog: Weights['catalog'],
-): Effect.Effect<DropCause, SqliteError> =>
+): Effect.Effect<RemovalCause, SqliteError> =>
   Effect.gen(function* () {
     const film = yield* db.get(
       'SELECT nota_imdb, votos FROM filmes WHERE id = ?',
@@ -162,7 +164,7 @@ export const byVeto = (
   attendees: ReadonlyArray<string>,
   film: Candidate,
   minimums: Weights['tag_vetoes'],
-): Effect.Effect<DropCause, EngineError | SqliteError, Environment> =>
+): Effect.Effect<RemovalCause, EngineError | SqliteError, Environment> =>
   Effect.gen(function* () {
     const { acted } = yield* applyVetoes(
       db,
@@ -177,7 +179,7 @@ export const byVeto = (
   })
 
 /** The cause of a kept film a Restrição removed (`pela_restricao`). */
-export const byConstraint = (constraint: Constraint): DropCause => ({
+export const byConstraint = (constraint: Constraint): RemovalCause => ({
   cause: 'constraint',
   constraint: constraint.name,
   label: constraintLabel(constraint.stored()),
@@ -202,9 +204,7 @@ export const place = <A>(
   for (let p = 1; p <= last; p++) if (!taken.has(p)) open.push(p)
   const inOrder = [
     ...fixed.map((item) => [at(item), item] as const),
-    ...free
-      .slice(0, open.length)
-      .map((item, i) => [open[i] ?? 0, item] as const),
+    ...free.slice(0, open.length).map((item, i) => [open[i], item] as const),
   ].toSorted(([a], [b]) => a - b)
   return inOrder.map(([, item], i) => [i + 1, item] as const)
 }
@@ -237,7 +237,7 @@ export const droppedFilms = (
   attendees: ReadonlyArray<string>,
   regenerate: Regenerate,
   stayed: ReadonlySet<string>,
-  removed: ReadonlyMap<string, DropCause>,
+  removed: ReadonlyMap<string, RemovalCause>,
 ): Effect.Effect<ReadonlyArray<Dropped>, SqliteError> =>
   Effect.gen(function* () {
     const list: Dropped[] = []
@@ -271,13 +271,11 @@ export const droppedFilms = (
 export const keptWarning = (
   regenerate: Regenerate,
   filmId: string,
-  cause: DropCause,
+  cause: RemovalCause,
 ): string => {
   const why =
     cause.cause === 'veto'
       ? `Veto de ${cause.person} (${cause.text})`
-      : 'label' in cause
-        ? cause.label
-        : ''
+      : cause.label
   return `${titleOf(regenerate, filmId)} saiu, apesar de mantido: ${why}`
 }

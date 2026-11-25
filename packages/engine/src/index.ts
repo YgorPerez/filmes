@@ -120,6 +120,7 @@ export {
   type DropCause,
   type Dropped,
   type Regenerate,
+  type RemovalCause,
 } from './recommendation/kept.ts'
 export { individualUtility } from './recommendation/utility.ts'
 export {

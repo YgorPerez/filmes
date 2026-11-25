@@ -60,8 +60,8 @@ import {
   isNew,
   keptWarning,
   place,
-  type DropCause,
   type Dropped,
+  type RemovalCause,
   type Regenerate,
 } from './kept.ts'
 import { resolveMoods } from './moods.ts'
@@ -236,7 +236,7 @@ export const rank = (
       moods: moods.moods,
     }
     // A kept film a Veto or a Restrição removed: the cause, for `dropped`.
-    const removed = new Map<string, DropCause>()
+    const removed = new Map<string, RemovalCause>()
     for (const filmId of regenerate?.positions.keys() ?? []) {
       const film = eligible.get(filmId)
       if (film === undefined)
