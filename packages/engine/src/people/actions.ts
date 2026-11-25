@@ -44,7 +44,12 @@ import {
   vetoId,
   type StatementTable,
 } from './facts.ts'
-import { createPerson, resolvePerson, savePerson } from './people.ts'
+import {
+  createPerson,
+  resolvePerson,
+  savePerson,
+  type NewPerson,
+} from './people.ts'
 import {
   addItem,
   items,
@@ -289,14 +294,7 @@ export const dateOf = (date: string | undefined) =>
 
 // --- actions -----------------------------------------------------------------
 
-export interface NewPersonInput extends WrittenBy {
-  readonly name: string
-  readonly aliases?: readonly string[]
-  /** The file name; by default the name without accents, with '-'. */
-  readonly slug?: string
-  /** This Pessoa is the Dono. */
-  readonly owner?: boolean
-}
+export interface NewPersonInput extends WrittenBy, NewPerson {}
 
 /** Creates the Pessoa's file (`pessoa criar`). */
 export const personCreate = (

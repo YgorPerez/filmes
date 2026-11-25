@@ -24,6 +24,7 @@ import {
 } from '@filmes/engine'
 import {
   parseAction,
+  reportSource,
   type PersonAction,
   type PersonNotice,
   type PersonRefusal,
@@ -47,11 +48,15 @@ export type PersonEntry = {
 /** A tag group a Veto or an open question can name. */
 export type TagGroupChoice = { key: string; label: string }
 
+/** The logged-in Dono, as a page may show her: no email. */
+export type Viewer = { person: string; name: string }
+
 /** What a Pessoa's page shows: `pessoa ver`, the tag groups for the Veto
- * form, and which Declarados and Relatos live in her file (the others came
- * from an import or a Feedback, and leave by their own way). */
+ * form, and who is looking (her own page has no Relatos: what a Dono says
+ * of herself is a Declarado). */
 export type PersonPage = Omit<PersonView, 'imports' | 'warning'> & {
   tagGroups: TagGroupChoice[]
+  viewer: Viewer
 }
 
 /** What the screens and the actions need from the engine. */
@@ -59,11 +64,12 @@ export interface People {
   list(): Promise<Outcome<PersonEntry[]>>
   view(person: string): Promise<Outcome<PersonView>>
   tagGroups(): Promise<Outcome<TagGroupChoice[]>>
-  /** Runs the action on the Pessoa, as `author`; says what happened. */
+  /** Runs the action on the Pessoa as the logged-in Dono, who signs the
+   * commit; says what happened. */
   act(
     person: string,
     action: PersonAction,
-    author: Author,
+    owner: Owner,
   ): Promise<Outcome<PersonNotice>>
 }
 
@@ -91,10 +97,9 @@ const newOrSame = (added: boolean): PersonNotice =>
   added ? 'gravado' : 'igual'
 
 export function peopleFromEngine(engine: Engine): People {
-  const run = engine.run
   return {
     list: () =>
-      map(run(readPeople), (people) =>
+      map(engine.run(readPeople), (people) =>
         people.map(({ slug, name, aliases, owner }) => ({
           person: slug,
           name,
@@ -102,21 +107,31 @@ export function peopleFromEngine(engine: Engine): People {
           owner,
         })),
       ),
-    view: (person) => run(personView(person)),
+    view: (person) => engine.run(personView(person)),
     tagGroups: () =>
-      map(run(readTagGroups), (groups) =>
+      map(engine.run(readTagGroups), (groups) =>
         [...groups].map(([key, { label }]) => ({ key, label })),
       ),
-    act(person, action, author) {
-      const by = { person, author }
+    act(person, action, owner) {
+      // As the Dono: the engine refuses a Relato only about her.
+      const run: Engine['run'] = (effect) =>
+        engine.run(effect, { owner: owner.person })
+      const by = { person, author: ownerAuthor(owner) }
       switch (action.kind) {
         case 'state':
           return map(run(personState({ ...by, ...statement(action) })), (r) =>
             newOrSame(r.new),
           )
         case 'report':
-          return map(run(personReport({ ...by, ...statement(action) })), (r) =>
-            newOrSame(r.new),
+          return map(
+            run(
+              personReport({
+                ...by,
+                ...statement(action),
+                source: action.source ?? reportSource(owner.name),
+              }),
+            ),
+            (r) => newOrSame(r.new),
           )
         case 'seen':
           return map(
@@ -251,11 +266,13 @@ export async function peopleList(
   return list.output
 }
 
-/** What `/pessoas/<slug>` shows: her page, `'unknown'` when no Pessoa has
- * that slug, or null when the engine cannot run here. */
+/** What `/pessoas/<slug>` shows to the logged-in Dono: her page,
+ * `'unknown'` when no Pessoa has that slug, or null when the engine cannot
+ * run here. */
 export async function personPage(
   person: string,
   people: People,
+  owner: Owner,
 ): Promise<PersonPage | 'unknown' | null> {
   const view = await people.view(person)
   if (view.exitCode !== 0) {
@@ -269,7 +286,11 @@ export async function personPage(
     return null
   }
   const { imports: _imports, warning: _warning, ...page } = view.output
-  return { ...page, tagGroups: groups.output }
+  return {
+    ...page,
+    tagGroups: groups.output,
+    viewer: { person: owner.person, name: owner.name },
+  }
 }
 
 /** Why an action was refused, from the engine's error. */
@@ -301,7 +322,7 @@ export async function personAction(
   if (poster instanceof Response) return poster
   const action = parseAction(await request.formData())
   if (!action) return seeOther(`${pageOf(person)}?erro=pedido`)
-  const outcome = await people.act(person, action, ownerAuthor(poster))
+  const outcome = await people.act(person, action, poster)
   if (outcome.exitCode !== 0) {
     if (outcome.output.error.code === 'unknown_person')
       return seeOther('/pessoas?erro=pessoa')
@@ -325,8 +346,9 @@ const appPeople = () => peopleFromEngine(appEngine())
 /** The list for the app. */
 export const appPeopleList = () => peopleList(appPeople())
 
-/** A Pessoa's page for the app. */
-export const appPersonPage = (person: string) => personPage(person, appPeople())
+/** A Pessoa's page for the app, as the logged-in Dono sees it. */
+export const appPersonPage = (person: string, owner: Owner) =>
+  personPage(person, appPeople(), owner)
 
 /** The action route for the app: the logged-in Dono, the process's
  * engine. */

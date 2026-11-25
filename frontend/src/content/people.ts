@@ -18,5 +18,5 @@ export const readPersonPage = createServerFn({ method: 'GET' })
   .handler(async ({ context, data }) => {
     requireOwner(context.owner)
     const { appPersonPage } = await import('#/platform/people')
-    return appPersonPage(data)
+    return appPersonPage(data, context.owner)
   })

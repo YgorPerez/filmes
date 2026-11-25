@@ -118,10 +118,13 @@ function Details({ slug, page }: { slug: string; page: PersonPage }) {
       <OpenQuestions slug={slug} page={page} />
       <Vetoes slug={slug} page={page} />
       <Adjustments slug={slug} page={page} />
-      <Statements slug={slug} kind="stated" items={page.stated} />
-      {!page.owner && (
-        <Statements slug={slug} kind="report" items={page.reports} />
-      )}
+      <Statements
+        slug={slug}
+        kind="stated"
+        items={page.stated}
+        source={PERSON.stated.source}
+      />
+      <Reports slug={slug} page={page} />
       <Seen slug={slug} page={page} />
       <Ratings ratings={page.ratings} />
     </>
@@ -129,6 +132,22 @@ function Details({ slug, page }: { slug: string; page: PersonPage }) {
 }
 
 type Part = { slug: string; page: PersonPage }
+
+/** What others told of her taste. On the logged-in Dono's own page there is
+ * no form (what she says of herself is a Declarado), and no section until
+ * another Dono tells something. */
+function Reports({ slug, page }: Part) {
+  const own = page.person === page.viewer.person
+  if (own && page.reports.length === 0) return null
+  return (
+    <Statements
+      slug={slug}
+      kind="report"
+      items={page.reports}
+      source={own ? null : PERSON.reports.source(page.viewer.name)}
+    />
+  )
+}
 
 function OpenQuestions({ slug, page }: Part) {
   const { questions } = PERSON
@@ -305,10 +324,14 @@ function Statements({
   slug,
   kind,
   items,
+  source,
 }: {
   slug: string
   kind: 'stated' | 'report'
   items: readonly Statement[]
+  /** The source the engine writes when the form gives none; null for no
+   * form. */
+  source: string | null
 }) {
   const copy = kind === 'stated' ? PERSON.stated : PERSON.reports
   return (
@@ -352,32 +375,34 @@ function Statements({
           )
         })}
       </Items>
-      <Disclosure summary={copy.add}>
-        <ActionForm
-          slug={slug}
-          action={kind === 'stated' ? 'declarar' : 'relatar'}
-          label={copy.add}
-        >
-          <TextField name="texto" label={PERSON.text} required />
-          <TextField
-            name="alvo"
-            label={PERSON.target}
-            hint={PERSON.targetHint}
-            pattern={ID_PATTERN}
-          />
-          <SelectField
-            name="reacao"
-            label={PERSON.reaction}
-            options={REACTION_OPTIONS}
-          />
-          <TextField
-            name="fonte"
-            label={PERSON.source}
-            hint={PERSON.sourceHint(copy.source)}
-          />
-          <Submit>{PERSON.save}</Submit>
-        </ActionForm>
-      </Disclosure>
+      {source !== null && (
+        <Disclosure summary={copy.add}>
+          <ActionForm
+            slug={slug}
+            action={kind === 'stated' ? 'declarar' : 'relatar'}
+            label={copy.add}
+          >
+            <TextField name="texto" label={PERSON.text} required />
+            <TextField
+              name="alvo"
+              label={PERSON.target}
+              hint={PERSON.targetHint}
+              pattern={ID_PATTERN}
+            />
+            <SelectField
+              name="reacao"
+              label={PERSON.reaction}
+              options={REACTION_OPTIONS}
+            />
+            <TextField
+              name="fonte"
+              label={PERSON.source}
+              hint={PERSON.sourceHint(source)}
+            />
+            <Submit>{PERSON.save}</Submit>
+          </ActionForm>
+        </Disclosure>
+      )}
     </Section>
   )
 }

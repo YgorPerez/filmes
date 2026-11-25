@@ -133,6 +133,24 @@ describe('pessoa criar and ver', () => {
     ])
   })
 
+  test('a Dono is created with her Google e-mail, in lower case', async () => {
+    const fixture = useFixture()
+
+    const created = await fixture.ok(
+      personCreate({
+        name: 'Luana',
+        owner: true,
+        email: ' Luana.Farias@Example.ORG ',
+      }),
+    )
+
+    expect(created).toMatchObject({ person: 'luana', owner: true })
+    expect(frontmatter(fixture, 'luana')).toMatchObject({
+      owner: true,
+      email: 'luana.farias@example.org',
+    })
+  })
+
   test('ver finds the Pessoa by an alias', async () => {
     const fixture = useFixture()
     await fixture.ok(
