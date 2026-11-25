@@ -38,6 +38,7 @@ import {
   type Vars,
 } from '../../src/index.ts'
 import { useFixture, type Fixture } from '../fixture.ts'
+import { expectRecorded } from '../expected.ts'
 import { PYTHON_TIMEOUT, pythonOk } from '../recommendation/support.ts'
 
 const sessionFile = (fixture: Fixture, id: string) =>
@@ -685,6 +686,7 @@ describe('the Feedback’s Fatos in the database', () => {
         'teo=neutro',
       ])
       const python = await sessionRows(fixture)
+      expectRecorded(fixture, python)
       expect(python['reacoes']?.length).toBeGreaterThan(0)
       expect(
         python['declarados']?.some((r) => (r as { sessao: unknown }).sessao),

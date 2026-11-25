@@ -17,6 +17,7 @@ import {
   type Vars,
 } from '../../src/index.ts'
 import { FIXTURE_TODAY, ROOT, type Fixture } from '../fixture.ts'
+import { expectRecorded } from '../expected.ts'
 
 /** For a test that runs the Python CLI: each call starts a process (`uv`,
  * the interpreter, the engine), about half a second on an idle machine. */
@@ -79,6 +80,7 @@ export const pythonRecommendation = (
     pythonOk(fixture, ['recomendar', ...args], vars),
   ) as Record<string, unknown>
   delete output['session']
+  expectRecorded(fixture, output)
   return output
 }
 

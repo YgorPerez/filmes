@@ -28,6 +28,7 @@ import {
 } from '../../src/index.ts'
 import { ROOT, useFixture, type Fixture } from '../fixture.ts'
 import { zipOf } from '../imports/zip.ts'
+import { expectRecorded } from '../expected.ts'
 import { PYTHON_TIMEOUT, pythonOk } from '../recommendation/support.ts'
 
 const reports = (fixture: Fixture) => ({
@@ -394,6 +395,11 @@ describe('avaliar, against Python', () => {
         pesos: weights,
         versoes: versions,
       }) as Record<string, unknown>
+      expectRecorded(fixture, {
+        result: pythonRest,
+        prose: theirs.prose,
+        blocks: [english['weights'], english['versions']],
+      })
       expect(ours.blocks).toEqual([english['weights'], english['versions']])
     },
   )
@@ -415,6 +421,11 @@ describe('avaliar, against Python', () => {
       }) as {
         grid: { best: unknown }
       }
+      expectRecorded(fixture, {
+        result: pythonRest,
+        prose: theirs.prose,
+        best: english.grid.best,
+      })
       expect(ours.blocks[2]).toEqual(english.grid.best)
     },
   )

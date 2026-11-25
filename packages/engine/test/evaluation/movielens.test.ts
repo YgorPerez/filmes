@@ -19,6 +19,7 @@ import {
 } from '../../src/index.ts'
 import { ROOT, useFixture, type Fixture } from '../fixture.ts'
 import { zipOf } from '../imports/zip.ts'
+import { expectRecorded } from '../expected.ts'
 import { python, PYTHON_TIMEOUT } from '../recommendation/support.ts'
 
 /** Fixture films, so the sample's training reaches real Candidates. */
@@ -73,7 +74,9 @@ const both = async (fixture: Fixture, vars: Vars, py: Vars = {}) => {
     delete output['file']
     return { exitCode: outcome.exitCode, output }
   }
-  return { python: strip(fromPython, true), engine: strip(engine, false) }
+  const recorded = strip(fromPython, true)
+  expectRecorded(fixture, recorded)
+  return { python: recorded, engine: strip(engine, false) }
 }
 
 const ratings = (rows: string[], header = 'userId,movieId,rating,timestamp') =>

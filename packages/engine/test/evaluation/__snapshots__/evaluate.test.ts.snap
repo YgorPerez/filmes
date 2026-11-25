@@ -1,0 +1,793 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`avaliar, against Python > gives the same result and the same report 1`] = `
+{
+  "blocks": [
+    {
+      "adjustment": {
+        "level": {
+          "high": 1.5,
+          "low": 0.5,
+          "none": 0,
+          "normal": 1,
+        },
+      },
+      "catalog": {
+        "minImdbRating": 7,
+        "minVotes": 1000,
+      },
+      "constraints": {
+        "onDemandReach": 50,
+      },
+      "credit": {
+        "factor": 0.5,
+        "window": 5,
+      },
+      "group": {
+        "weight": 0.05,
+      },
+      "imdbRating": {
+        "weight": 0.3,
+      },
+      "mood": {
+        "weight": 0.1,
+      },
+      "neighbors": {
+        "weight": 1,
+      },
+      "noSad": {
+        "minRelevance": 0.6,
+        "minUsersHeavyTheme": 2,
+        "minUsersSad": 3,
+      },
+      "path": {
+        "weight": {
+          "cast": 0.5,
+          "director": 1,
+          "genre": 0.3,
+          "series": 1,
+          "writer": 0.8,
+        },
+      },
+      "people": {
+        "statementWeight": 1,
+      },
+      "recommendation": {
+        "size": 5,
+      },
+      "seen": {
+        "weight": 1,
+      },
+      "similar": {
+        "candidates": 50,
+        "genomeTags": 15,
+        "genomeTagsConsidered": 40,
+        "movielensTags": 20,
+        "weight": {
+          "genome": 0.35,
+          "genre": 0.1,
+          "movielensTags": 0.25,
+          "neighbors": 0.2,
+          "people": 0.1,
+        },
+      },
+      "strength": {
+        "multiplier": {
+          "guess": 0,
+          "moderate": 0.6,
+          "strong": 1,
+          "weak": 0.3,
+        },
+      },
+      "tagVetoes": {
+        "minRelevance": 0.7,
+        "minUsers": 10,
+      },
+      "utility": {
+        "k": 1,
+        "maxEvidence": 5,
+      },
+    },
+    {
+      "adultos.csv": "cd83a7697b1ed11b0bffed5a6d0571eb4e6fd5f7be9d6309f6007cc4a83f5fe4",
+      "arestas.csv": "72f0e638a41218348b3f13f4c41a197875f7f5dbc2b0262c8cabb35094efc59c",
+      "atores_imdb.csv": "9cd70976800f6e8fb605c5630a0465614807c43afe88cb1569298b063d9f0e32",
+      "classificacoes.csv": "c3a70b77d1c21b31571296783da337367fb2a67cad3c945ab6310f7671b451aa",
+      "elenco_principal_imdb.csv": "559f381e49c30635a34a1469db33ef7c5de47619fd211b204e027736ead40262",
+      "entidades.csv": "a554083d3fdf5d805116adc00a348b28cf68de2072fb34a399a61b3420cb6432",
+      "filmes.csv": "2623fafc661095c67913aa2d5858724b99ab6ff36416f222b1571ed0693a8377",
+      "generos_imdb.csv": "ca9cb82915808484dcd3881bd375601d7daeb8d4e28c79cebf10e672ca5389e3",
+      "genoma.csv": "bf9e335eaec86c9fbe2d5ca1d55cf4a75f1a865c83f48750d359f07ac4169ed1",
+      "idiomas_originais.csv": "3fd72e324b22bdd4a924778d6826f20e648099c908c0a40de7af2cf7ee6dacbf",
+      "notas.csv": "fce6055d2fb915a21f46c4eea36d2bef360756974cc83e8713674103e9075f78",
+      "series_de_filmes.csv": "7f4cef1fbbf193e21f72d6101a0e1280b729cca9c57b334d4bab1769075cd03e",
+      "slugs_letterboxd.csv": "aef16df5bcb6b746236d595d8c29a29728a3f8bb45726201631f04ed2f5071aa",
+      "subclasses_wikidata.csv": "97f1dbb801f80d234d4923d3c86badf59f95e4258d56b5f6d6b7a7ae0956af3a",
+      "tags_movielens.csv": "0dfeb78915edc7a7e107945d2ebd7882c17aab3b5265ba3646e0b9e9cb25c0cd",
+      "vizinhos.csv": "40b71928cc268a6957391390d3be7194c5c17e812fe85973ba02f96803911d5d",
+    },
+  ],
+  "prose": "# Avaliação de 2026-11-20
+
+## Offline
+
+| Amostra | Pessoas | Recall@50 | Cobertura no top 5 |
+| --- | ---: | ---: | ---: |
+| Pessoas | 4 | 100.0% (5/5) | 70.0% (14/20) |
+| MovieLens | 0 | — (0/0) | — (0/0) |
+
+O corte retém os 20% mais recentes do histórico de cada Pessoa e de cada usuário sorteado.
+A amostra do MovieLens usou a semente 27 e sorteou 0 usuários.
+
+## Online
+
+- Sessões com Feedback na janela: 0
+- Sessões em que viram um filme: 0
+- Filme escolhido no top 5: —
+- Reação média: —
+- Medida que decide: offline
+
+## Pesos
+
+\`\`\`yaml
+<bloco>
+\`\`\`
+
+## Versões dos dados
+
+\`\`\`yaml
+<bloco>
+\`\`\`
+
+## Avisos
+
+- A amostra offline do MovieLens exige ml-32m/ratings.csv e ml-32m/links.csv no Catálogo.
+",
+  "result": {
+    "date": "2026-11-20",
+    "movielensSample": {
+      "seed": 27,
+      "users": 0,
+    },
+    "offline": {
+      "movielens": {
+        "coverageTop5": null,
+        "filmsTop5": 0,
+        "heldOut4Plus": 0,
+        "people": 0,
+        "recall50": null,
+        "retrieved": 0,
+        "withEvidence": 0,
+      },
+      "people": {
+        "coverageTop5": 0.7,
+        "filmsTop5": 20,
+        "heldOut4Plus": 5,
+        "people": 4,
+        "recall50": 1,
+        "retrieved": 5,
+        "withEvidence": 14,
+      },
+    },
+    "online": {
+      "chosenTop5": 0,
+      "meanReaction": null,
+      "rateTop5": null,
+      "reactions": 0,
+      "sessions": 0,
+      "withFilm": 0,
+    },
+    "priority": "offline",
+    "versions": {
+      "adultos.csv": "cd83a7697b1ed11b0bffed5a6d0571eb4e6fd5f7be9d6309f6007cc4a83f5fe4",
+      "arestas.csv": "72f0e638a41218348b3f13f4c41a197875f7f5dbc2b0262c8cabb35094efc59c",
+      "atores_imdb.csv": "9cd70976800f6e8fb605c5630a0465614807c43afe88cb1569298b063d9f0e32",
+      "classificacoes.csv": "c3a70b77d1c21b31571296783da337367fb2a67cad3c945ab6310f7671b451aa",
+      "elenco_principal_imdb.csv": "559f381e49c30635a34a1469db33ef7c5de47619fd211b204e027736ead40262",
+      "entidades.csv": "a554083d3fdf5d805116adc00a348b28cf68de2072fb34a399a61b3420cb6432",
+      "filmes.csv": "2623fafc661095c67913aa2d5858724b99ab6ff36416f222b1571ed0693a8377",
+      "generos_imdb.csv": "ca9cb82915808484dcd3881bd375601d7daeb8d4e28c79cebf10e672ca5389e3",
+      "genoma.csv": "bf9e335eaec86c9fbe2d5ca1d55cf4a75f1a865c83f48750d359f07ac4169ed1",
+      "idiomas_originais.csv": "3fd72e324b22bdd4a924778d6826f20e648099c908c0a40de7af2cf7ee6dacbf",
+      "notas.csv": "fce6055d2fb915a21f46c4eea36d2bef360756974cc83e8713674103e9075f78",
+      "series_de_filmes.csv": "7f4cef1fbbf193e21f72d6101a0e1280b729cca9c57b334d4bab1769075cd03e",
+      "slugs_letterboxd.csv": "aef16df5bcb6b746236d595d8c29a29728a3f8bb45726201631f04ed2f5071aa",
+      "subclasses_wikidata.csv": "97f1dbb801f80d234d4923d3c86badf59f95e4258d56b5f6d6b7a7ae0956af3a",
+      "tags_movielens.csv": "0dfeb78915edc7a7e107945d2ebd7882c17aab3b5265ba3646e0b9e9cb25c0cd",
+      "vizinhos.csv": "40b71928cc268a6957391390d3be7194c5c17e812fe85973ba02f96803911d5d",
+    },
+    "warnings": [
+      "A amostra offline do MovieLens exige ml-32m/ratings.csv e ml-32m/links.csv no Catálogo.",
+    ],
+    "weights": {
+      "adjustment": {
+        "level": {
+          "high": 1.5,
+          "low": 0.5,
+          "none": 0,
+          "normal": 1,
+        },
+      },
+      "catalog": {
+        "minImdbRating": 7,
+        "minVotes": 1000,
+      },
+      "constraints": {
+        "onDemandReach": 50,
+      },
+      "credit": {
+        "factor": 0.5,
+        "window": 5,
+      },
+      "group": {
+        "weight": 0.05,
+      },
+      "imdbRating": {
+        "weight": 0.3,
+      },
+      "mood": {
+        "weight": 0.1,
+      },
+      "neighbors": {
+        "weight": 1,
+      },
+      "noSad": {
+        "minRelevance": 0.6,
+        "minUsersHeavyTheme": 2,
+        "minUsersSad": 3,
+      },
+      "path": {
+        "weight": {
+          "cast": 0.5,
+          "director": 1,
+          "genre": 0.3,
+          "series": 1,
+          "writer": 0.8,
+        },
+      },
+      "people": {
+        "statementWeight": 1,
+      },
+      "recommendation": {
+        "size": 5,
+      },
+      "seen": {
+        "weight": 1,
+      },
+      "similar": {
+        "candidates": 50,
+        "genomeTags": 15,
+        "genomeTagsConsidered": 40,
+        "movielensTags": 20,
+        "weight": {
+          "genome": 0.35,
+          "genre": 0.1,
+          "movielensTags": 0.25,
+          "neighbors": 0.2,
+          "people": 0.1,
+        },
+      },
+      "strength": {
+        "multiplier": {
+          "guess": 0,
+          "moderate": 0.6,
+          "strong": 1,
+          "weak": 0.3,
+        },
+      },
+      "tagVetoes": {
+        "minRelevance": 0.7,
+        "minUsers": 10,
+      },
+      "utility": {
+        "k": 1,
+        "maxEvidence": 5,
+      },
+    },
+  },
+}
+`;
+
+exports[`avaliar, against Python > the grid gives the same best weights and report 1`] = `
+{
+  "best": [
+    {
+      "coverageTop5": 0.7,
+      "offline": {
+        "movielens": {
+          "coverageTop5": null,
+          "filmsTop5": 0,
+          "heldOut4Plus": 0,
+          "people": 0,
+          "recall50": null,
+          "retrieved": 0,
+          "withEvidence": 0,
+        },
+        "people": {
+          "coverageTop5": 0.7,
+          "filmsTop5": 20,
+          "heldOut4Plus": 5,
+          "people": 4,
+          "recall50": 1,
+          "retrieved": 5,
+          "withEvidence": 14,
+        },
+      },
+      "recall50": 1,
+      "weights": {
+        "path.weight": {
+          "cast": 0.5,
+          "director": 1,
+          "genre": 0.3,
+          "series": 1,
+          "writer": 0.8,
+        },
+        "strength.multiplier": {
+          "guess": 0,
+          "moderate": 0.6,
+          "strong": 1,
+          "weak": 0.3,
+        },
+        "utility": {
+          "maxEvidence": 5,
+        },
+      },
+    },
+    {
+      "coverageTop5": 0.7,
+      "offline": {
+        "movielens": {
+          "coverageTop5": null,
+          "filmsTop5": 0,
+          "heldOut4Plus": 0,
+          "people": 0,
+          "recall50": null,
+          "retrieved": 0,
+          "withEvidence": 0,
+        },
+        "people": {
+          "coverageTop5": 0.7,
+          "filmsTop5": 20,
+          "heldOut4Plus": 5,
+          "people": 4,
+          "recall50": 1,
+          "retrieved": 5,
+          "withEvidence": 14,
+        },
+      },
+      "recall50": 1,
+      "weights": {
+        "path.weight": {
+          "cast": 0.5,
+          "director": 0.75,
+          "genre": 0.3,
+          "series": 1,
+          "writer": 0.8,
+        },
+        "strength.multiplier": {
+          "guess": 0,
+          "moderate": 0.6,
+          "strong": 1,
+          "weak": 0.3,
+        },
+        "utility": {
+          "maxEvidence": 5,
+        },
+      },
+    },
+    {
+      "coverageTop5": 0.7,
+      "offline": {
+        "movielens": {
+          "coverageTop5": null,
+          "filmsTop5": 0,
+          "heldOut4Plus": 0,
+          "people": 0,
+          "recall50": null,
+          "retrieved": 0,
+          "withEvidence": 0,
+        },
+        "people": {
+          "coverageTop5": 0.7,
+          "filmsTop5": 20,
+          "heldOut4Plus": 5,
+          "people": 4,
+          "recall50": 1,
+          "retrieved": 5,
+          "withEvidence": 14,
+        },
+      },
+      "recall50": 1,
+      "weights": {
+        "path.weight": {
+          "cast": 0.375,
+          "director": 1,
+          "genre": 0.3,
+          "series": 1,
+          "writer": 0.8,
+        },
+        "strength.multiplier": {
+          "guess": 0,
+          "moderate": 0.6,
+          "strong": 1,
+          "weak": 0.3,
+        },
+        "utility": {
+          "maxEvidence": 5,
+        },
+      },
+    },
+  ],
+  "prose": "# Avaliação de 2026-11-20
+
+## Offline
+
+| Amostra | Pessoas | Recall@50 | Cobertura no top 5 |
+| --- | ---: | ---: | ---: |
+| Pessoas | 4 | 100.0% (5/5) | 70.0% (14/20) |
+| MovieLens | 0 | — (0/0) | — (0/0) |
+
+O corte retém os 20% mais recentes do histórico de cada Pessoa e de cada usuário sorteado.
+A amostra do MovieLens usou a semente 27 e sorteou 0 usuários.
+
+## Online
+
+- Sessões com Feedback na janela: 0
+- Sessões em que viram um filme: 0
+- Filme escolhido no top 5: —
+- Reação média: —
+- Medida que decide: offline
+
+## Pesos
+
+\`\`\`yaml
+<bloco>
+\`\`\`
+
+## Versões dos dados
+
+\`\`\`yaml
+<bloco>
+\`\`\`
+
+## Grade de pesos
+
+Foram testados 300 conjuntos. A ordem usa a média do Recall@50 entre as amostras. No empate, vale a cobertura no top 5 e depois o menor número de mudanças nos pesos.
+
+\`\`\`yaml
+<bloco>
+\`\`\`
+
+## Avisos
+
+- A amostra offline do MovieLens exige ml-32m/ratings.csv e ml-32m/links.csv no Catálogo.
+",
+  "result": {
+    "date": "2026-11-20",
+    "grid": {
+      "best": [
+        {
+          "coverageTop5": 0.7,
+          "offline": {
+            "movielens": {
+              "coverageTop5": null,
+              "filmsTop5": 0,
+              "heldOut4Plus": 0,
+              "people": 0,
+              "recall50": null,
+              "retrieved": 0,
+              "withEvidence": 0,
+            },
+            "people": {
+              "coverageTop5": 0.7,
+              "filmsTop5": 20,
+              "heldOut4Plus": 5,
+              "people": 4,
+              "recall50": 1,
+              "retrieved": 5,
+              "withEvidence": 14,
+            },
+          },
+          "recall50": 1,
+          "weights": {
+            "path.weight": {
+              "cast": 0.5,
+              "director": 1,
+              "genre": 0.3,
+              "series": 1,
+              "writer": 0.8,
+            },
+            "strength.multiplier": {
+              "guess": 0,
+              "moderate": 0.6,
+              "strong": 1,
+              "weak": 0.3,
+            },
+            "utility": {
+              "maxEvidence": 5,
+            },
+          },
+        },
+        {
+          "coverageTop5": 0.7,
+          "offline": {
+            "movielens": {
+              "coverageTop5": null,
+              "filmsTop5": 0,
+              "heldOut4Plus": 0,
+              "people": 0,
+              "recall50": null,
+              "retrieved": 0,
+              "withEvidence": 0,
+            },
+            "people": {
+              "coverageTop5": 0.7,
+              "filmsTop5": 20,
+              "heldOut4Plus": 5,
+              "people": 4,
+              "recall50": 1,
+              "retrieved": 5,
+              "withEvidence": 14,
+            },
+          },
+          "recall50": 1,
+          "weights": {
+            "path.weight": {
+              "cast": 0.5,
+              "director": 0.75,
+              "genre": 0.3,
+              "series": 1,
+              "writer": 0.8,
+            },
+            "strength.multiplier": {
+              "guess": 0,
+              "moderate": 0.6,
+              "strong": 1,
+              "weak": 0.3,
+            },
+            "utility": {
+              "maxEvidence": 5,
+            },
+          },
+        },
+        {
+          "coverageTop5": 0.7,
+          "offline": {
+            "movielens": {
+              "coverageTop5": null,
+              "filmsTop5": 0,
+              "heldOut4Plus": 0,
+              "people": 0,
+              "recall50": null,
+              "retrieved": 0,
+              "withEvidence": 0,
+            },
+            "people": {
+              "coverageTop5": 0.7,
+              "filmsTop5": 20,
+              "heldOut4Plus": 5,
+              "people": 4,
+              "recall50": 1,
+              "retrieved": 5,
+              "withEvidence": 14,
+            },
+          },
+          "recall50": 1,
+          "weights": {
+            "path.weight": {
+              "cast": 0.375,
+              "director": 1,
+              "genre": 0.3,
+              "series": 1,
+              "writer": 0.8,
+            },
+            "strength.multiplier": {
+              "guess": 0,
+              "moderate": 0.6,
+              "strong": 1,
+              "weak": 0.3,
+            },
+            "utility": {
+              "maxEvidence": 5,
+            },
+          },
+        },
+      ],
+      "combinations": 300,
+      "values": {
+        "path.weight": {
+          "cast": [
+            0.375,
+            0.5,
+            0.625,
+          ],
+          "director": [
+            0.75,
+            1,
+            1.25,
+          ],
+          "genre": [
+            0.225,
+            0.3,
+            0.375,
+          ],
+          "series": [
+            0.75,
+            1,
+            1.25,
+          ],
+          "writer": [
+            0.6,
+            0.8,
+            1,
+          ],
+        },
+        "strength.multiplier": {
+          "moderate": [
+            0.45,
+            0.6,
+            0.75,
+          ],
+          "strong": [
+            0.75,
+            1,
+            1.25,
+          ],
+          "weak": [
+            0.225,
+            0.3,
+            0.375,
+          ],
+        },
+        "utility": {
+          "maxEvidence": [
+            3,
+            5,
+            8,
+            10,
+          ],
+        },
+      },
+    },
+    "movielensSample": {
+      "seed": 27,
+      "users": 0,
+    },
+    "offline": {
+      "movielens": {
+        "coverageTop5": null,
+        "filmsTop5": 0,
+        "heldOut4Plus": 0,
+        "people": 0,
+        "recall50": null,
+        "retrieved": 0,
+        "withEvidence": 0,
+      },
+      "people": {
+        "coverageTop5": 0.7,
+        "filmsTop5": 20,
+        "heldOut4Plus": 5,
+        "people": 4,
+        "recall50": 1,
+        "retrieved": 5,
+        "withEvidence": 14,
+      },
+    },
+    "online": {
+      "chosenTop5": 0,
+      "meanReaction": null,
+      "rateTop5": null,
+      "reactions": 0,
+      "sessions": 0,
+      "withFilm": 0,
+    },
+    "priority": "offline",
+    "versions": {
+      "adultos.csv": "cd83a7697b1ed11b0bffed5a6d0571eb4e6fd5f7be9d6309f6007cc4a83f5fe4",
+      "arestas.csv": "72f0e638a41218348b3f13f4c41a197875f7f5dbc2b0262c8cabb35094efc59c",
+      "atores_imdb.csv": "9cd70976800f6e8fb605c5630a0465614807c43afe88cb1569298b063d9f0e32",
+      "classificacoes.csv": "c3a70b77d1c21b31571296783da337367fb2a67cad3c945ab6310f7671b451aa",
+      "elenco_principal_imdb.csv": "559f381e49c30635a34a1469db33ef7c5de47619fd211b204e027736ead40262",
+      "entidades.csv": "a554083d3fdf5d805116adc00a348b28cf68de2072fb34a399a61b3420cb6432",
+      "filmes.csv": "2623fafc661095c67913aa2d5858724b99ab6ff36416f222b1571ed0693a8377",
+      "generos_imdb.csv": "ca9cb82915808484dcd3881bd375601d7daeb8d4e28c79cebf10e672ca5389e3",
+      "genoma.csv": "bf9e335eaec86c9fbe2d5ca1d55cf4a75f1a865c83f48750d359f07ac4169ed1",
+      "idiomas_originais.csv": "3fd72e324b22bdd4a924778d6826f20e648099c908c0a40de7af2cf7ee6dacbf",
+      "notas.csv": "fce6055d2fb915a21f46c4eea36d2bef360756974cc83e8713674103e9075f78",
+      "series_de_filmes.csv": "7f4cef1fbbf193e21f72d6101a0e1280b729cca9c57b334d4bab1769075cd03e",
+      "slugs_letterboxd.csv": "aef16df5bcb6b746236d595d8c29a29728a3f8bb45726201631f04ed2f5071aa",
+      "subclasses_wikidata.csv": "97f1dbb801f80d234d4923d3c86badf59f95e4258d56b5f6d6b7a7ae0956af3a",
+      "tags_movielens.csv": "0dfeb78915edc7a7e107945d2ebd7882c17aab3b5265ba3646e0b9e9cb25c0cd",
+      "vizinhos.csv": "40b71928cc268a6957391390d3be7194c5c17e812fe85973ba02f96803911d5d",
+    },
+    "warnings": [
+      "A amostra offline do MovieLens exige ml-32m/ratings.csv e ml-32m/links.csv no Catálogo.",
+    ],
+    "weights": {
+      "adjustment": {
+        "level": {
+          "high": 1.5,
+          "low": 0.5,
+          "none": 0,
+          "normal": 1,
+        },
+      },
+      "catalog": {
+        "minImdbRating": 7,
+        "minVotes": 1000,
+      },
+      "constraints": {
+        "onDemandReach": 50,
+      },
+      "credit": {
+        "factor": 0.5,
+        "window": 5,
+      },
+      "group": {
+        "weight": 0.05,
+      },
+      "imdbRating": {
+        "weight": 0.3,
+      },
+      "mood": {
+        "weight": 0.1,
+      },
+      "neighbors": {
+        "weight": 1,
+      },
+      "noSad": {
+        "minRelevance": 0.6,
+        "minUsersHeavyTheme": 2,
+        "minUsersSad": 3,
+      },
+      "path": {
+        "weight": {
+          "cast": 0.5,
+          "director": 1,
+          "genre": 0.3,
+          "series": 1,
+          "writer": 0.8,
+        },
+      },
+      "people": {
+        "statementWeight": 1,
+      },
+      "recommendation": {
+        "size": 5,
+      },
+      "seen": {
+        "weight": 1,
+      },
+      "similar": {
+        "candidates": 50,
+        "genomeTags": 15,
+        "genomeTagsConsidered": 40,
+        "movielensTags": 20,
+        "weight": {
+          "genome": 0.35,
+          "genre": 0.1,
+          "movielensTags": 0.25,
+          "neighbors": 0.2,
+          "people": 0.1,
+        },
+      },
+      "strength": {
+        "multiplier": {
+          "guess": 0,
+          "moderate": 0.6,
+          "strong": 1,
+          "weak": 0.3,
+        },
+      },
+      "tagVetoes": {
+        "minRelevance": 0.7,
+        "minUsers": 10,
+      },
+      "utility": {
+        "k": 1,
+        "maxEvidence": 5,
+      },
+    },
+  },
+}
+`;

@@ -16,6 +16,7 @@ import {
   type Vars,
 } from '../../src/index.ts'
 import { useFixture, type Fixture } from '../fixture.ts'
+import { expectRecorded } from '../expected.ts'
 import { PYTHON_TIMEOUT, pythonOk } from '../recommendation/support.ts'
 import { RECORDINGS } from '../sources/support.ts'
 
@@ -400,6 +401,7 @@ Uma linha de cabeçalho.
       pythonOk(fixture, ['verificar', '--sessao', 'mao', '--texto', answer]),
     )
 
+    expectRecorded(fixture, python)
     expect(python).toMatchObject({ valid: false })
     expect(await verify(fixture, 'mao', answer)).toEqual(python)
   })
