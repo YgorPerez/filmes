@@ -67,14 +67,14 @@ test('the Dono reads and changes a Pessoa’s taste', async ({ page }, info) => 
   await snap(page, info, 'pessoa-erro')
 
   // The cast Ajuste down to nothing.
-  const cast = page.getByLabel(/^Ajuste de elenco/)
-  await cast.selectOption({ label: 'nada' })
-  await cast
+  const cast = () => page.getByRole('group', { name: /^Ajuste de elenco/ })
+  await cast().getByText('nada', { exact: true }).click()
+  await cast()
     .locator('xpath=ancestor::form')
     .getByRole('button', { name: 'Mudar' })
     .click()
   await expect(notice(page)).toHaveText('Ajuste gravado.')
-  await expect(page.getByLabel(/^Ajuste de elenco/)).toHaveValue('none')
+  await expect(cast().getByRole('radio', { name: 'nada' })).toBeChecked()
 
   // A Declarado about an entity, a Relato, a Já visto with a Nota.
   form = await addForm(page, 'Declarados', 'Acrescentar Declarado')
