@@ -1,4 +1,8 @@
-import type { PersonNotice, PersonRefusal } from '#/content/person-action'
+import {
+  reportSource,
+  type PersonNotice,
+  type PersonRefusal,
+} from '#/content/person-action'
 import type { PersonCreateRefusal } from '#/content/person-create'
 
 type Link = 'director' | 'writer' | 'cast' | 'series' | 'genre'
@@ -118,7 +122,7 @@ export const PERSON = {
     lead: 'O que o Dono contou do gosto dela.',
     empty: 'Nenhum Relato.',
     add: 'Acrescentar Relato',
-    source: 'descrição do Dono',
+    source: reportSource,
   },
   seen: {
     title: 'Já vistos',

@@ -24,6 +24,13 @@ const BRUNO: Owner = {
   admin: false,
 }
 
+const VERA: Owner = {
+  person: 'vera',
+  name: 'Vera',
+  email: 'vera@example.org',
+  admin: false,
+}
+
 const ORIGIN = 'http://localhost'
 
 const failure = (code: ErrorCode): Outcome<never> => ({
@@ -138,8 +145,8 @@ describe('parseAction', () => {
 function fakePeople(
   outcome: Outcome<'gravado'> = { exitCode: 0, output: 'gravado' },
 ) {
-  const acted: { person: string; action: PersonAction; author: unknown }[] = []
-  const created: { input: NewPersonForm; author: unknown }[] = []
+  const acted: { person: string; action: PersonAction; owner: Owner }[] = []
+  const created: { input: NewPersonForm; owner: Owner }[] = []
   const people: People = {
     list: async () => ({
       exitCode: 0,
@@ -147,12 +154,12 @@ function fakePeople(
     }),
     view: async () => failure('unknown_person'),
     tagGroups: async () => ({ exitCode: 0, output: [] }),
-    act: async (person, action, author) => {
-      acted.push({ person, action, author })
+    act: async (person, action, owner) => {
+      acted.push({ person, action, owner })
       return outcome
     },
-    create: async (input, author) => {
-      created.push({ input, author })
+    create: async (input, owner) => {
+      created.push({ input, owner })
       return outcome.exitCode === 0
         ? { exitCode: 0, output: 'luana-reis' }
         : outcome
@@ -191,7 +198,7 @@ describe('personAction', () => {
           target: 'Q9001801',
           group: false,
         },
-        author: { name: 'Bruno', email: 'bruno@example.org' },
+        owner: BRUNO,
       },
     ])
   })
@@ -294,7 +301,7 @@ describe('personCreateAction', () => {
     expect(created).toEqual([
       {
         input: { name: 'Luana Reis', aliases: ['Lu'], owner: false },
-        author: { name: 'Bruno', email: 'bruno@example.org' },
+        owner: BRUNO,
       },
     ])
   })
@@ -373,13 +380,14 @@ describe('the pages', () => {
       }),
     ).toBeNull()
     expect(
-      await personPage('bruno', {
-        ...people,
-        view: async () => failure('missing_config'),
-      }),
+      await personPage(
+        'bruno',
+        { ...people, view: async () => failure('missing_config') },
+        BRUNO,
+      ),
     ).toBeNull()
     log.mockRestore()
-    expect(await personPage('ninguem', people)).toBe('unknown')
+    expect(await personPage('ninguem', people, BRUNO)).toBe('unknown')
   })
 
   it('takes the author from the Dono', () => {
@@ -416,16 +424,58 @@ describe('peopleFromEngine', () => {
         aliases: ['eu'],
         owner: true,
       })
-      const page = await personPage('quim', people)
+      const page = await personPage('quim', people, BRUNO)
       if (page === null || page === 'unknown') throw new Error(String(page))
       expect(page.openQuestions.map((q) => q.label)).toEqual(['Helena Prado'])
       expect(page.ratings?.length).toBe(4)
       expect(page.tagGroups.map((g) => g.key)).toEqual(['silly_comedy', 'slow'])
       expect(page).not.toHaveProperty('imports')
+      expect(page.viewer).toEqual({ person: 'bruno', name: 'Bruno' })
     } finally {
       await engine.dispose()
     }
   })
+
+  it('takes a Relato about another Dono, never about the logged-in one', async () => {
+    const fixture = useFixture()
+    git(fixture.data, 'init', '--quiet', '-b', 'master')
+    git(fixture.data, 'add', '--all')
+    git(
+      fixture.data,
+      '-c',
+      'user.name=fixture',
+      '-c',
+      'user.email=fixture@example.org',
+      'commit',
+      '--quiet',
+      '-m',
+      'initial',
+    )
+    const engine = makeEngine(fixture.vars)
+    try {
+      const people = peopleFromEngine(engine)
+      const report = { kind: 'report', text: 'adora suspense' } as const
+      expect(await people.act('vera', report, BRUNO)).toEqual({
+        exitCode: 0,
+        output: 'gravado',
+      })
+      const own = await people.act('bruno', report, BRUNO)
+      expect(own.exitCode === 0 ? null : own.output.error.code).toBe(
+        'invalid_usage',
+      )
+      // Vera sees on her page what Bruno told of her taste.
+      const page = await personPage('vera', people, VERA)
+      if (page === null || page === 'unknown') throw new Error(String(page))
+      expect(page.reports.map((r) => [r.text, r.source])).toEqual([
+        ['adora suspense', 'descrição de Bruno'],
+      ])
+    } finally {
+      await engine.dispose()
+    }
+    const log = git(fixture.data, 'log', '--format=%an <%ae>|%s').trim()
+    expect(log.split('\n')[0]).toMatch(/^Bruno <bruno@example\.org>\|pessoa /)
+    expect(log.split('\n')).toHaveLength(2)
+  }, 30_000)
 
   it('writes each action to her file, one commit signed by the Dono', async () => {
     const fixture = useFixture()
@@ -445,11 +495,10 @@ describe('peopleFromEngine', () => {
     const engine = makeEngine(fixture.vars)
     const file = () =>
       readFileSync(join(fixture.data, 'people/iara.md'), 'utf8')
-    const author = ownerAuthor(BRUNO)
     try {
       const people = peopleFromEngine(engine)
       const act = async (action: PersonAction) => {
-        const outcome = await people.act('iara', action, author)
+        const outcome = await people.act('iara', action, BRUNO)
         if (outcome.exitCode !== 0)
           throw new Error(JSON.stringify(outcome.output))
         return outcome.output
@@ -517,10 +566,12 @@ describe('peopleFromEngine', () => {
       expect(text).toContain(
         '2026-11-20 · conversa com o Dono · específico · ama Sofia Rangel (Q9000018) · "adoro os filmes dela"',
       )
-      expect(text).toContain('odeia filme lento')
+      expect(text).toContain(
+        '2026-11-20 · descrição de Bruno · genérico · "odeia filme lento"',
+      )
       expect(text).toContain('Casa Cheia (tt9000602) · nota 4,5')
 
-      const page = await personPage('iara', people)
+      const page = await personPage('iara', people, BRUNO)
       if (page === null || page === 'unknown') throw new Error(String(page))
       expect(page.openQuestions).toHaveLength(2)
       const terror = page.openQuestions.find((q) => q.subject === 'Q9001801')!
@@ -536,11 +587,11 @@ describe('peopleFromEngine', () => {
       const again = await people.act(
         'iara',
         { kind: 'answer', question: terror.factId, text: 'de novo' },
-        author,
+        BRUNO,
       )
       expect(again.exitCode).toBe(1)
 
-      const after = await personPage('iara', people)
+      const after = await personPage('iara', people, BRUNO)
       if (after === null || after === 'unknown') throw new Error(String(after))
       expect(after.openQuestions.map((q) => q.subject)).toEqual([
         'silly_comedy',
@@ -551,14 +602,14 @@ describe('peopleFromEngine', () => {
       const removed = await people.act(
         'iara',
         { kind: 'remove', what: 'veto', id: after.vetoes[0]!.factId },
-        author,
+        BRUNO,
       )
       expect(removed).toEqual({ exitCode: 0, output: 'removido' })
       expect(file()).not.toContain('nunca terror')
       const skipped = await people.act(
         'iara',
         { kind: 'skip', text: 'curte comédia boba?', subject: 'silly_comedy' },
-        author,
+        BRUNO,
       )
       expect(skipped).toEqual({ exitCode: 0, output: 'saiu' })
     } finally {
@@ -610,7 +661,7 @@ describe('peopleFromEngine', () => {
       expect((await peopleList(people))?.map((p) => p.person)).toContain(
         'luana-reis',
       )
-      const page = await personPage('luana-reis', people)
+      const page = await personPage('luana-reis', people, BRUNO)
       if (page === null || page === 'unknown') throw new Error(String(page))
       expect(page.aliases).toEqual(['Lu', 'Luana'])
       expect(
