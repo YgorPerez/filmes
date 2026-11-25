@@ -167,13 +167,23 @@ export const neighborStrength = (
 /** A MovieLens `tags.csv` review: strong with 10+ distinct users, moderate
  * with 3 to 9; fewer than 3 gives no Evidence. */
 export const movielensTagStrength = (users: number): Strength | null =>
-  users >= 10 ? 'strong' : users >= 3 ? 'moderate' : null
+  users >= 10 ? 'strong' : users >= MOVIELENS_TAG_MIN_USERS ? 'moderate' : null
+
+/** Below it, a MovieLens tag gives no Evidence (`movielensTagStrength`). */
+export const MOVIELENS_TAG_MIN_USERS = 3
 
 /** A Tag Genome review: moderate at most (relevance 0.8 or more), weak
  * from 0.6 to 0.8; below 0.6 no Evidence. It is a model's guess, so it is
  * worth less than a count of users. */
 export const genomeStrength = (relevance: number): Strength | null =>
-  relevance >= 0.8 ? 'moderate' : relevance >= 0.6 ? 'weak' : null
+  relevance >= 0.8
+    ? 'moderate'
+    : relevance >= GENOME_MIN_RELEVANCE
+      ? 'weak'
+      : null
+
+/** Below it, a Tag Genome relevance gives no Evidence (`genomeStrength`). */
+export const GENOME_MIN_RELEVANCE = 0.6
 
 /** Genre metadata that answers a Clima [mood]: weak, because genre is too
  * broad (the same reason that caps it at weak on the taste path). */

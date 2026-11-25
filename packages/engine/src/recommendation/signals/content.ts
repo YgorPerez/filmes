@@ -56,7 +56,7 @@ import {
   LINK_PREDICATE,
   linkOf,
 } from '../../sqlite/vocabulary.ts'
-import type { Signal } from './Signal.ts'
+import { candidatesJson, type Signal } from './Signal.ts'
 
 /** How each link reads. `seed` null: the link makes no seed Evidence. */
 const WORDING: Readonly<
@@ -88,15 +88,31 @@ WHERE n.pessoa = ?2
 ORDER BY s.entidade_id, n.nota DESC, f.titulo, f.ano, n.filme_id
 `
 
-/** The films linked to those entities: the path's Candidates. */
+/** The films linked to those entities that are still Candidates: the
+ * path's Candidates. `?3` is the round's Candidate ids as a JSON list, so
+ * the rest of the catalog never reaches JS. The `+` makes SQLite walk the
+ * Candidates' edges (`arestas_por_filme`) and test the entity, which is
+ * faster than walking every film of every entity the Pessoa rated.
+ *
+ * `principal` is for the cast only (null on the other links): whether the
+ * actor is among the Candidate's first 3 IMDb credits (`elenco_principal`,
+ * spelled out on its two tables so SQLite looks up the one pair instead of
+ * building the whole view), and null when IMDb credits nobody on the film. */
 const EDGES = `
-SELECT c.filme_id AS candidato, c.entidade_id, c.fato_id, c.fonte, c.data
+SELECT c.filme_id AS candidato, c.entidade_id, c.fato_id, c.fonte, c.data,
+       CASE WHEN ?1 = 'elenco' AND EXISTS (
+           SELECT 1 FROM elenco_principal_imdb p WHERE p.filme_id = c.filme_id
+       ) THEN EXISTS (
+           SELECT 1 FROM elenco_principal_imdb p
+           JOIN atores_imdb a ON a.imdb = p.ator_imdb
+           WHERE p.filme_id = c.filme_id AND a.item = c.entidade_id
+       ) END AS principal
 FROM arestas c
-WHERE c.predicado = ?1 AND c.entidade_id IN (
+WHERE c.predicado = ?1 AND +c.entidade_id IN (
     SELECT s.entidade_id FROM notas_vigentes n
     JOIN arestas s ON s.filme_id = n.filme_id AND s.predicado = ?1
     WHERE n.pessoa = ?2
-)
+) AND c.filme_id IN (SELECT value FROM json_each(?3))
 ORDER BY c.filme_id, c.entidade_id
 `
 
@@ -121,10 +137,6 @@ export const content: Signal = {
       const { db, weights, today } = round
       const out: Evidence[] = []
       const seeds = new Map<string, Evidence>()
-      let principals: {
-        readonly credited: ReadonlySet<string>
-        readonly pairs: ReadonlySet<string>
-      } | null = null
       const adjustments = new Map<string, Level>()
       for (const row of yield* db.all(
         'SELECT elo, nivel FROM ajustes WHERE pessoa = ?',
@@ -154,36 +166,20 @@ export const content: Signal = {
           byEntity.set(entity, [...(byEntity.get(entity) ?? []), row])
         }
 
-        for (const edge of yield* db.all(EDGES, ...params)) {
+        for (const edge of yield* db.all(
+          EDGES,
+          ...params,
+          candidatesJson(round),
+        )) {
           const candidate = text(edge, 'candidato')
-          if (!round.candidates.has(candidate)) continue
           const linked = (byEntity.get(text(edge, 'entidade_id')) ?? []).filter(
             (s) => text(s, 'filme_id') !== candidate,
           )
           const [first] = linked
           if (first === undefined) continue
           const entity = text(first, 'entidade')
-          let principal: boolean | null = null
-          if (link === 'cast') {
-            principals ??= {
-              credited: new Set(
-                (yield* db.all(
-                  'SELECT DISTINCT filme_id FROM elenco_principal_imdb',
-                )).map((r) => text(r, 'filme_id')),
-              ),
-              pairs: new Set(
-                (yield* db.all(
-                  'SELECT filme_id, entidade_id FROM elenco_principal',
-                )).map(
-                  (r) => `${text(r, 'filme_id')}\0${text(r, 'entidade_id')}`,
-                ),
-              ),
-            }
-            if (principals.credited.has(candidate))
-              principal = principals.pairs.has(
-                `${candidate}\0${text(edge, 'entidade_id')}`,
-              )
-          }
+          const credited = numOrNull(edge, 'principal')
+          const principal = credited === null ? null : credited !== 0
           const adjust = (strength: Strength): Strength =>
             adjustedStrength(castStrength(strength, principal), level) ??
             strength
