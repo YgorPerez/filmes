@@ -131,7 +131,7 @@ Valem para o motor. As flags, chaves e caminhos citados são os da antiga CLI em
 
 - **Classificação etária.** EIRIN e CNC entram na cadeia de criança só quando restringem (PG12, -12...); o "livre" deles (G, tous publics) conta como sem informação.
 - **Import do Letterboxd.** O ano do export pode diferir em 1 do ano do Wikidata ou do TMDB (Year ± 1); o ano exato vence no empate.
-- **Nota mínima.** Candidato precisa de nota 7 ou mais no IMDb, além dos 1.000 votos (`[catalogo] nota_imdb_minima` em `config/pesos.toml`). Decisão do Dono de 2026-11-21: vale sempre.
+- **Nota mínima.** Candidato precisa de nota 7 ou mais no IMDb, além dos 1.000 votos (`[catalog] min_imdb_rating` em `config/weights.toml`). Decisão do Dono de 2026-11-21: vale sempre.
 - **Elenco coadjuvante.** No caminho de conteúdo, ator fora dos 3 primeiros créditos de ator do `title.principals` no Candidato gera Evidência no máximo fraca. Filme sem créditos carregados fica com a régua normal.
 - **Teto do elo.** No caminho de conteúdo, a Evidência sai com a menor Força entre a da semente e a do elo: diretor e série até forte, roteiro e elenco até moderada, gênero até fraca. Vale também para o metadado agregado ("como 3 filmes a que deu 4 ou mais"); não vale para o Declarado ou Relato sobre a própria entidade. Decisão do Dono de 2026-11-22.
 - **Ajuste.** Cada Pessoa pode ter um Ajuste por elo (`ajustes:` no frontmatter, `pessoa ajustar`): nada tira as Evidências do elo, pouco vale metade e desce a Força um nível, muito vale 1,5 vez sem subir a Força. O Declarado sobre a entidade vence o Ajuste. Decisão do Dono de 2026-11-22.
