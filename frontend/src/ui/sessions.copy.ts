@@ -1,3 +1,4 @@
+import type { ReplyRefusal, SessionNotice } from '#/content/billboard-reply'
 import type { SessionRequestRefusal } from '#/content/session-request'
 
 const films = (n: number) =>
@@ -26,14 +27,28 @@ export const SESSIONS = {
   session: {
     title: 'Sessão',
     unknown: 'Nenhuma Sessão com esse nome no repo de dados.',
-    opened: 'Sessão aberta. Depois do filme, dê o Feedback para fechá-la.',
-    films: 'Recomendação',
-    empty:
-      'Nenhum filme passou nas Restrições. Abra outra Sessão com menos limites.',
-    moods: (names: readonly string[]) => `Clima: ${names.join(', ')}`,
+    notices: {
+      aberta: 'Sessão aberta. Depois do filme, dê o Feedback para fechá-la.',
+      regerada:
+        'Recomendação refeita: quem ficou segue no mesmo número, quem entrou tem o selo “novo”.',
+      anotada:
+        'Estrelas e comentários ficaram na Sessão. Eles não mexem no gosto de ninguém.',
+    } satisfies Record<SessionNotice, string>,
+    refusals: {
+      nada: 'Nada marcado ainda.',
+      texto:
+        'A resposta não bate com o Cartaz desta Sessão. Recarregue a página e marque de novo.',
+      fechada: 'Esta Sessão já tem Feedback: ela não recebe mais resposta.',
+      regerar:
+        'A resposta ficou gravada, mas não deu para refazer a Recomendação agora. Tente de novo daqui a pouco.',
+      indisponivel:
+        'Não deu para gravar a resposta agora. Tente de novo daqui a pouco.',
+    } satisfies Record<ReplyRefusal, string>,
+    warnings: 'Avisos',
+    addition: (text: string) =>
+      `Acrescentar: “${text}” ficou anotado na Sessão. Se for gosto de alguém, só vale com o seu sim:`,
+    additionLink: 'diga na página da Pessoa.',
     closed: 'Fechada',
-    chosen: 'Filme escolhido',
-    another: 'Nova Sessão',
   },
 
   form: {

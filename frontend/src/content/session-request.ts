@@ -70,9 +70,6 @@ export type SessionRequestRefusal = (typeof SESSION_REQUEST_REFUSALS)[number]
 
 export const isSessionRequestRefusal = within(SESSION_REQUEST_REFUSALS)
 
-/** What the Session's page hears after the form: it was just opened. */
-export const isOpenedNotice = within(['aberta'] as const)
-
 class Refused extends Error {
   constructor(readonly refusal: SessionRequestRefusal) {
     super(refusal)

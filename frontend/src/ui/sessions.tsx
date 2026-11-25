@@ -4,11 +4,14 @@ import {
   RULE_CHOICES,
   type SessionRequestRefusal,
 } from '#/content/session-request'
+import type { ReplyRefusal, SessionNotice } from '#/content/billboard-reply'
+import type { CartazPage } from '#/platform/billboard'
 import type {
   RequestOptions,
   SessionItem,
   SessionPerson,
 } from '#/platform/sessions'
+import { Billboard } from './billboard'
 import { ImportsFrame } from './imports'
 import {
   Alert,
@@ -127,16 +130,19 @@ export function SessionList({ sessions }: { sessions: SessionItem[] | null }) {
   )
 }
 
-/** `/sessoes/<id>`: the Session and its Recomendação, as a plain list.
- * #114 puts the Cartaz here (Trocar, Já vi, acrescentar). `page` is
- * `'unknown'` when there is no Session by that id, null when the engine
- * cannot run on this server; `opened` when the form just opened it. */
+/** `/sessoes/<id>`: the Session and its Cartaz (Já vi, Trocar, stars,
+ * comments, acrescentar; Enviar posts to `/sessoes/<id>/responder`). `page`
+ * is `'unknown'` when there is no Session by that id, null when the engine
+ * cannot run on this server; `notice` and `refusal` are what the form or
+ * the last reply said. */
 export function SessionScreen({
   page,
-  opened = false,
+  notice,
+  refusal,
 }: {
-  page: SessionItem | 'unknown' | null
-  opened?: boolean
+  page: CartazPage | 'unknown' | null
+  notice?: SessionNotice
+  refusal?: ReplyRefusal
 }) {
   return (
     <ImportsFrame back={SESSIONS.back} backTo="/sessoes">
@@ -145,55 +151,76 @@ export function SessionScreen({
       ) : page === 'unknown' ? (
         <Alert>{SESSIONS.session.unknown}</Alert>
       ) : (
-        <SessionView session={page} opened={opened} />
+        <SessionView page={page} notice={notice} refusal={refusal} />
       )}
     </ImportsFrame>
   )
 }
 
+/** What the last reply or the form left to say: the warnings, and the
+ * acrescentar, which is gosto only after the Dono's yes. */
+function Said({ page }: { page: CartazPage }) {
+  const { session } = SESSIONS
+  return (
+    <>
+      {page.warnings.length > 0 && (
+        <div
+          role="status"
+          className="flex flex-col gap-xs rounded-field border border-rule bg-surface-2 px-3 py-2.5"
+        >
+          <span className="font-semibold">{session.warnings}</span>
+          <ul className="list-disc pl-5 text-meta">
+            {page.warnings.map((warning) => (
+              <li key={warning}>{warning}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {page.addition && (
+        <Notice>
+          {session.addition(page.addition)}{' '}
+          <a href="/pessoas" className="font-semibold text-ink">
+            {session.additionLink}
+          </a>
+        </Notice>
+      )}
+    </>
+  )
+}
+
 function SessionView({
-  session: s,
-  opened,
+  page,
+  notice,
+  refusal,
 }: {
-  session: SessionItem
-  opened: boolean
+  page: CartazPage
+  notice?: SessionNotice
+  refusal?: ReplyRefusal
 }) {
   const { session } = SESSIONS
+  const s = page.session
   return (
     <>
       <div className="flex flex-col gap-xs">
         <h1 className="text-title">
           {session.title} {s.date}
         </h1>
-        <Meta
-          parts={[
-            names(s.attendees),
-            s.request,
-            s.moods.length > 0 ? session.moods(s.moods) : null,
-            ...s.constraints,
-          ]}
-        />
+        <Meta parts={[names(s.attendees), s.request]} />
       </div>
-      {opened && <Notice>{session.opened}</Notice>}
-      <Section id="recomendacao" title={session.films}>
-        {s.recommendation.length === 0 ? (
-          <p className="text-ink-2">{session.empty}</p>
-        ) : (
-          <ol className="flex flex-col">
-            {s.recommendation.map((film) => (
-              <li
-                key={film.id}
-                className="flex items-baseline gap-sm border-rule py-sm not-first:border-t"
-              >
-                <span className="font-letter text-letter">{film.position}</span>
-                <span className="font-semibold">{film.title}</span>
-              </li>
-            ))}
-          </ol>
-        )}
-      </Section>
+      {notice && <Notice>{session.notices[notice]}</Notice>}
+      {refusal && <Alert>{session.refusals[refusal]}</Alert>}
+      <Said page={page} />
+      {page.billboard === null ? (
+        <Alert>{SESSIONS.unavailable}</Alert>
+      ) : (
+        <Billboard
+          billboard={page.billboard}
+          action={`${sessionHref(s.id)}/responder`}
+          sent={notice === 'regerada' || notice === 'anotada'}
+        />
+      )}
       {s.open ? (
-        <LinkButton href={feedbackHref(s.id)} variant="primary">
+        <LinkButton href={feedbackHref(s.id)}>
           {SESSIONS.list.feedback}
         </LinkButton>
       ) : (

@@ -3,7 +3,9 @@
 // links go.
 import { cleanup, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vite-plus/test'
+import type { CartazPage } from '#/platform/billboard'
 import type { SessionItem } from '#/platform/sessions'
+import { MODEL } from './billboard.fixture'
 import { SessionList, SessionScreen } from './sessions'
 import { SESSIONS } from './sessions.copy'
 
@@ -97,19 +99,25 @@ describe('the Sessions list', () => {
 })
 
 describe('a Session’s page', () => {
-  it('shows the Recomendação of a Session just opened, and the way to its Feedback', () => {
-    render(<SessionScreen page={OPEN} opened />)
-    expect(screen.getByRole('status').textContent).toBe(SESSIONS.session.opened)
-    expect(screen.getByText(/Clima: leve · até 2h/).textContent).toBe(
-      'Bruno, Iara · eu e a Iara · Clima: leve · até 2h · com criança de 7 anos',
+  const PAGE: CartazPage = {
+    session: OPEN,
+    billboard: MODEL,
+    warnings: [],
+    addition: null,
+  }
+
+  it('shows the Cartaz of a Session just opened, posting to its reply, and the way to its Feedback', () => {
+    render(<SessionScreen page={PAGE} notice="aberta" />)
+    expect(screen.getByRole('status').textContent).toBe(
+      SESSIONS.session.notices.aberta,
     )
-    const films = within(region(SESSIONS.session.films)).getAllByRole(
-      'listitem',
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
+      'Sessão 2026-11-20',
     )
-    expect(films.map((f) => f.textContent)).toEqual([
-      '1O Farol de Areia',
-      '2Pequenos Milagres',
-    ])
+    expect(screen.getAllByRole('article')).toHaveLength(2)
+    expect(
+      screen.getByRole('form', { name: 'Cartaz' }).getAttribute('action'),
+    ).toBe('/sessoes/2026-11-20-iara/responder')
     expect(
       screen
         .getByRole('link', { name: SESSIONS.list.feedback })
@@ -117,8 +125,42 @@ describe('a Session’s page', () => {
     ).toBe('/feedback/2026-11-20-iara')
   })
 
+  it('shows what the reply or the form left: the warnings, the acrescentar, a refusal', () => {
+    render(
+      <SessionScreen
+        page={{
+          ...PAGE,
+          warnings: ['só 2 passaram nas Restrições'],
+          addition: 'chegou a Ana',
+        }}
+        notice="regerada"
+        refusal="regerar"
+      />,
+    )
+    const [regenerated, warnings, addition] = screen.getAllByRole('status')
+    expect(regenerated!.textContent).toBe(SESSIONS.session.notices.regerada)
+    expect(warnings!.textContent).toBe(
+      `${SESSIONS.session.warnings}só 2 passaram nas Restrições`,
+    )
+    expect(addition!.textContent).toContain('“chegou a Ana”')
+    expect(within(addition!).getByRole('link').getAttribute('href')).toBe(
+      '/pessoas',
+    )
+    expect(screen.getByRole('alert').textContent).toContain(
+      SESSIONS.session.refusals.regerar,
+    )
+  })
+
   it('says a closed Session is closed, and what they saw', () => {
-    render(<SessionScreen page={CLOSED} />)
+    render(
+      <SessionScreen
+        page={{
+          ...PAGE,
+          session: CLOSED,
+          billboard: { ...MODEL, open: false },
+        }}
+      />,
+    )
     expect(screen.getByRole('status').textContent).toBe(
       'Fechada · viram Pequenos Milagres',
     )
@@ -127,14 +169,12 @@ describe('a Session’s page', () => {
     ).toBeNull()
   })
 
-  it('says when nothing passed the Restrições', () => {
-    render(<SessionScreen page={{ ...OPEN, recommendation: [] }} />)
-    expect(region(SESSIONS.session.films).textContent).toContain(
-      SESSIONS.session.empty,
+  it('says when the Cartaz could not be made, when there is no such Session, or the engine cannot run', () => {
+    render(<SessionScreen page={{ ...PAGE, billboard: null }} />)
+    expect(screen.getByRole('alert').textContent).toContain(
+      SESSIONS.unavailable,
     )
-  })
-
-  it('says when there is no such Session, or the engine cannot run', () => {
+    cleanup()
     render(<SessionScreen page="unknown" />)
     expect(screen.getByRole('alert').textContent).toContain(
       SESSIONS.session.unknown,
