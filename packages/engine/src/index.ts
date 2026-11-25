@@ -482,6 +482,7 @@ export {
   type ImportRemoval,
   type ImportRemovalInput,
 } from './imports/remove.ts'
+export { reloadData, type DataReload } from './data/reload.ts'
 export {
   evaluate,
   type EvaluateRequest,

@@ -14,11 +14,10 @@ isso a linha do filme que passou é palpite.
 
 from dataclasses import dataclass
 
-from filmes.ambiente import RAIZ, ler_toml
+from filmes.ambiente import config, ler_toml
 from filmes.evidencia import Evidencia, regua
 from filmes.recomendacao.restricoes import Passa, Sai
 
-VOCABULARIO = RAIZ / "config" / "tristeza.toml"
 SINAIS = ("triste", "tema_pesado")
 
 
@@ -47,7 +46,7 @@ class SemTristeza:
         return {"por_sinal": {sinal: saidas[sinal] for sinal in SINAIS}}
 
     def avaliar(self, contexto, filmes):
-        vocabulario = ler_toml(VOCABULARIO)
+        vocabulario = ler_toml(config("tristeza.toml"))
         minimos = contexto.amb.pesos["sem_tristeza"]
         achados = {}
         for sinal in SINAIS:

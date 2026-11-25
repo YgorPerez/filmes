@@ -17,6 +17,7 @@ import {
 import { tmpdir } from 'node:os'
 import { basename, isAbsolute, join, relative } from 'node:path'
 import {
+  migrateConfig,
   migrateConfigFile,
   migrateDataPath,
   outputToEnglish,
@@ -113,6 +114,13 @@ function tsVars(
   const vars: Record<string, string> = { FILMES_CONFIG: config }
   for (const [key, value] of Object.entries(step.env)) {
     const path = resolveForTs(value, work)
+    // A step's own config folder (`tests/test_config.py`), in English.
+    if (key === 'FILMES_CONFIG' && existsSync(path)) {
+      vars[key] = join(work, '.oracle-config-folder')
+      rmSync(vars[key], { recursive: true, force: true })
+      migrateConfig(path, vars[key], 'to-en')
+      continue
+    }
     const name = CONFIG_VARIABLES[key]
     const migrated =
       name !== undefined && existsSync(path)
