@@ -10,15 +10,14 @@ import type { SearchAnswer } from '#/platform/catalog-search'
 import type { ImportsOverview } from '#/platform/imports'
 import { IMPORTS } from './imports.copy'
 import { Brand } from './kit/brand'
+import { Chip } from './kit/chip'
+import { TapeCase } from './kit/tape-case'
 import {
   Alert,
   CatalogSearch,
-  Item,
-  Items,
   Meta,
   Notice,
   OwnerTag,
-  Section,
   SubmitButton,
 } from './person-parts'
 import {
@@ -33,6 +32,7 @@ import {
   withSkipped,
   type Draft,
 } from './rating-draft'
+import { Ficha, RatingDisc } from './person-marks'
 import { RATINGS } from './ratings.copy'
 import { Button, buttonVariants } from './shadcn/button'
 
@@ -144,12 +144,15 @@ export function ImportsList({
 const PATH = '/notas'
 const SCALE = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const
 
-/** The film on the card: its line under the title is the year and the
- * genres (from the Fila) or the directors (from the search). */
+/** The film on the card: the year and the genres (from the Fila) in chips,
+ * or the year and the directors (from the search). */
 type CardFilm = {
   id: string
   title: string
   year: number | null
+  /** The genres, in chips. */
+  chips: readonly string[]
+  /** The directors, under them. */
   meta: readonly string[]
 }
 
@@ -175,9 +178,9 @@ function cardFilm(
     film !== undefined && search && 'found' in search && !taken(film)
       ? search.found.films.find((f) => f.id === film)
       : undefined
-  if (picked) return { ...picked, meta: picked.directors }
+  if (picked) return { ...picked, chips: [], meta: picked.directors }
   const next = queue.films.find((f) => !taken(f.id))
-  return next ? { ...next, meta: next.genres } : null
+  return next ? { ...next, chips: next.genres, meta: [] } : null
 }
 
 /** `/notas`: the rating screen for a Dono with no Letterboxd nor Trakt. One
@@ -284,8 +287,8 @@ function Rating({
   )
 }
 
-/** The Notas not yet written, each with "Tirar", and Pronto, a plain POST
- * of them. */
+/** The Notas not yet written, each on its orange disc with "Tirar", and
+ * Pronto, a plain POST of them: the screen's one orange button. */
 function DraftSection({
   draft,
   onRemove,
@@ -297,26 +300,41 @@ function DraftSection({
 }) {
   const rated = Object.entries(draft.ratings)
   return (
-    <Section id="minhas-notas" title={RATINGS.draft} lead={RATINGS.draftLead}>
-      <Items empty={RATINGS.empty}>
-        {rated.map(([id, entry]) => (
-          <Item
-            key={id}
-            actions={
+    <Ficha
+      id="minhas-notas"
+      title={RATINGS.draft}
+      count={String(rated.length)}
+      lead={RATINGS.draftLead}
+    >
+      {rated.length === 0 ? (
+        <p className="text-ink-2">{RATINGS.empty}</p>
+      ) : (
+        <ul className="flex flex-col">
+          {rated.map(([id, entry]) => (
+            <li
+              key={id}
+              className="flex items-center gap-lg border-rule py-sm not-first:border-t"
+            >
+              <RatingDisc>{entry.rating}</RatingDisc>
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="font-display text-[15px] font-bold">
+                  {entry.title}
+                </span>
+                <Meta
+                  parts={[yearText(entry.year), RATINGS.rate(entry.rating)]}
+                />
+              </span>
               <Button
-                variant="option"
+                variant="link"
                 aria-label={RATINGS.remove(entry.title)}
                 onClick={() => onRemove(id)}
               >
                 {RATINGS.removeLabel}
               </Button>
-            }
-          >
-            <span className="font-semibold">{entry.title}</span>
-            <Meta parts={[yearText(entry.year), RATINGS.rate(entry.rating)]} />
-          </Item>
-        ))}
-      </Items>
+            </li>
+          ))}
+        </ul>
+      )}
       <form method="post" action={`${PATH}/enviar`} onSubmit={onSend}>
         {rated.map(([id, entry]) => (
           <input
@@ -326,14 +344,17 @@ function DraftSection({
             value={entry.rating}
           />
         ))}
-        <SubmitButton disabled={rated.length === 0}>
+        <SubmitButton disabled={rated.length === 0} className="w-full">
           {RATINGS.done(rated.length)}
         </SubmitButton>
       </form>
-    </Section>
+    </Ficha>
   )
 }
 
+/** The film to rate: on its tape (the title on the cover, as the Fila has
+ * no poster), its year and genres in chips, and the scale of 1 to 10
+ * (DESIGN.md, Escala de nota). A tap on a number is the Nota. */
 function FilmCard({
   film,
   onRate,
@@ -346,24 +367,51 @@ function FilmCard({
   return (
     <article
       aria-label={RATINGS.queueLabel}
-      className="flex flex-col gap-xl rounded-card border border-rule bg-surface p-xl"
+      className="flex flex-col gap-xl rounded-card border border-rule bg-surface p-xl pt-2xl"
     >
-      <div className="flex flex-col gap-xs">
-        <h2 className="font-display text-title">{film.title}</h2>
-        <Meta parts={[yearText(film.year), film.meta.join(', ')]} />
+      <div className="flex gap-xl">
+        <TapeCase
+          className="w-[88px] sm:w-[112px]"
+          cover={<span aria-hidden="true">{film.title}</span>}
+        />
+        <div className="flex min-w-0 flex-1 flex-col gap-md">
+          <h2 className="font-display text-title">{film.title}</h2>
+          <div className="flex flex-wrap gap-xs">
+            {film.year !== null && <Chip>{String(film.year)}</Chip>}
+            {film.chips.map((chip) => (
+              <Chip key={chip}>{chip}</Chip>
+            ))}
+          </div>
+          {film.meta.length > 0 && (
+            <p className="text-meta text-ink-2">{film.meta.join(', ')}</p>
+          )}
+        </div>
       </div>
-      <div className="flex flex-wrap gap-xs">
-        {SCALE.map((rating) => (
-          <Button
-            key={rating}
-            variant="option"
-            className="min-w-touch px-0"
-            aria-label={RATINGS.rate(rating)}
-            onClick={() => onRate(rating)}
-          >
-            {rating}
-          </Button>
-        ))}
+      <div className="flex flex-col gap-xs border-t border-dashed border-rule pt-xl">
+        <div
+          role="group"
+          aria-label={RATINGS.scale}
+          className="grid grid-cols-10 gap-[3px]"
+        >
+          {SCALE.map((rating) => (
+            <button
+              key={rating}
+              type="button"
+              aria-label={RATINGS.rate(rating)}
+              onClick={() => onRate(rating)}
+              className="min-h-touch cursor-pointer rounded-rail border-[1.5px] border-rule bg-surface font-display text-[14px] font-bold text-ink tabular-nums hover:border-ink active:border-sticker-orange active:bg-sticker-orange active:text-on-sticker"
+            >
+              {rating}
+            </button>
+          ))}
+        </div>
+        <div
+          aria-hidden="true"
+          className="flex justify-between text-meta text-ink-2"
+        >
+          <span>{RATINGS.scaleLow}</span>
+          <span>{RATINGS.scaleHigh}</span>
+        </div>
       </div>
       <Button variant="option" className="self-start" onClick={onSkip}>
         {RATINGS.notSeen}
