@@ -154,7 +154,7 @@ const requestOwners = (
 
 /** Who signs the commit: the Dono, from her file, or the engine itself
  * when there is no Dono. */
-const authorFor = (
+export const authorFor = (
   owner: string | undefined,
 ): Effect.Effect<Author, never, EngineServices> =>
   owner === undefined

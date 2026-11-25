@@ -6,6 +6,7 @@ type PythonException =
   | 'TypeError'
   | 'InvalidOperation'
   | 'KeyError'
+  | 'AttributeError'
 
 export const pythonError = (
   name: PythonException,
