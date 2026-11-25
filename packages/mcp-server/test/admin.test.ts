@@ -88,7 +88,7 @@ describe('evaluate', () => {
 
     const steps: { progress: number; total?: number; message?: string }[] = []
     const result = await c.client.callTool(
-      { name: 'evaluate', arguments: { grid: true } },
+      { name: 'evaluate', arguments: {} },
       { onprogress: (event) => void steps.push(event) },
     )
 
@@ -96,7 +96,6 @@ describe('evaluate', () => {
     const [block] = result.content as { text: string }[]
     const evaluation: any = JSON.parse(block!.text)
     assert.equal(evaluation.offline.people.heldOut4Plus, 5)
-    assert.equal(evaluation.grid.best.length, 3)
     assert.ok(existsSync(evaluation.file))
     assert.deepEqual(steps[0], {
       progress: 0,
@@ -110,7 +109,7 @@ describe('evaluate', () => {
     )
   })
 
-  test('runs without progress when the client asks none, and is admin only', async () => {
+  test('tries the weight grid without progress, and is admin only', async () => {
     const fixture = useFixture()
     const vars = { FILMES_AVALIACOES: join(fixture.root, 'avaliacoes') }
     assert.deepEqual(
@@ -121,9 +120,10 @@ describe('evaluate', () => {
 
     const evaluation = await (
       await connect(fixture, 'bruno', vars)
-    ).ok('evaluate')
+    ).ok('evaluate', { grid: true })
 
-    assert.equal(evaluation.grid, undefined)
+    assert.equal(evaluation.grid.best.length, 3)
     assert.ok(existsSync(evaluation.file))
-  })
+    // 300 weight sets × 4 Pessoas: about 20 s alone, more under a full check.
+  }, 180_000)
 })
