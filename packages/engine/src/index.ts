@@ -516,6 +516,7 @@ export {
   type Verification,
   type VerifyRequest,
 } from './verify/verify.ts'
+export { exportSource, type ExportSource } from './imports/export-source.ts'
 export {
   readTraktExport,
   type TraktFilm,
