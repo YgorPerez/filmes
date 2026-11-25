@@ -42,6 +42,7 @@ export {
   type Attribution,
 } from './recommendation/attributions.ts'
 export {
+  catalogFilm,
   chooseCandidates,
   prepareSelection,
   type Candidate,
@@ -534,3 +535,35 @@ export {
   dumpYaml as dumpReportYaml,
   type ReportValue,
 } from './evaluation/yaml.ts'
+export {
+  billboardText,
+  type BillboardMarks,
+  type BillboardState,
+} from './billboard/text.ts'
+export {
+  answerBillboard,
+  readReply,
+  type BillboardReply,
+  type BillboardReplyRequest,
+  type FilmNote,
+  type ReadMarks,
+  type ReadReply,
+  type ReplySeen,
+} from './billboard/reply.ts'
+export {
+  billboard,
+  billboardModel,
+  billboardPeople,
+  PERSON_COLORS,
+  imdbRatingLabel,
+  showFilms,
+  votesText,
+  type Billboard,
+  type BillboardDropped,
+  type BillboardFilm,
+  type BillboardLine,
+  type BillboardPerson,
+  type BillboardRequest,
+  type BillboardRequestInput,
+  type BillboardResult,
+} from './billboard/model.ts'

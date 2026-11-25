@@ -33,6 +33,7 @@ export interface Candidate {
 }
 
 const decodeFilms = Schema.decodeUnknownEffect(Schema.Array(FilmRow))
+const decodeFilm = Schema.decodeUnknownEffect(FilmRow)
 
 /** The Candidates, by id in id order. A film with no IMDb rating is not cut
  * by the rating; in the real Catálogo every film has one. */
@@ -51,22 +52,33 @@ export const chooseCandidates = (
       Effect.map(
         (rows) =>
           new Map(
-            rows.map((row): [string, Candidate] => [
-              row.id,
-              {
-                id: row.id,
-                title: row.titulo,
-                year: row.ano,
-                runtimeMinutes: row.duracao_min,
-                votes: row.votos,
-                imdbRating: row.nota_imdb,
-                imdbDate: row.data_imdb,
-                imdbVotesDate: row.data_votos_imdb,
-              },
-            ]),
+            rows.map((row): [string, Candidate] => [row.id, toCandidate(row)]),
           ),
       ),
     )
+
+const toCandidate = (row: typeof FilmRow.Type): Candidate => ({
+  id: row.id,
+  title: row.titulo,
+  year: row.ano,
+  runtimeMinutes: row.duracao_min,
+  votes: row.votos,
+  imdbRating: row.nota_imdb,
+  imdbDate: row.data_imdb,
+  imdbVotesDate: row.data_votos_imdb,
+})
+
+/** A film of the Catálogo by id, Candidate or not; undefined when it is
+ * not there. */
+export const catalogFilm = (
+  db: Connection,
+  id: string,
+): Effect.Effect<Candidate | undefined, SqliteError> =>
+  Effect.gen(function* () {
+    const row = yield* db.get('SELECT * FROM filmes WHERE id = ?', id)
+    if (row === undefined) return undefined
+    return toCandidate(yield* Effect.orDie(decodeFilm(row)))
+  })
 
 /** The Candidates and their ids from the most voted, reused across the
  * rounds of `avaliar` (Python's `Selecao`). */
