@@ -3,7 +3,7 @@
 // with enough votes, the ones with a Fact before the guesses. Each
 // Restrição removes films before the order and puts, in each film that
 // passed, a line (Evidence with `person` null) saying why. The child and
-// trigger cases are #92's.
+// trigger cases are in `child.test.ts` and `trigger.test.ts`.
 
 import { describe, expect, test } from 'vite-plus/test'
 import {
