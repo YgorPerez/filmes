@@ -17,16 +17,14 @@ subgêneros, gênero do IMDb.
 
 import sqlite3
 
-from filmes.ambiente import RAIZ, ler_toml
+from filmes.ambiente import config, ler_toml
 from filmes.catalogo.generos import WIKIDATA
 from filmes.erros import ErroFilmes
-
-GRUPOS = RAIZ / "config" / "vetos_por_tag.toml"
 
 
 def grupos() -> dict:
     """Chave do grupo -> {rotulo, generos_imdb, tags}."""
-    return ler_toml(GRUPOS)
+    return ler_toml(config("vetos_por_tag.toml"))
 
 
 def e_grupo(alvo: str) -> bool:
