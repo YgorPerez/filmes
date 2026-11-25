@@ -516,6 +516,13 @@ export {
   type ImportRemovalInput,
 } from './imports/remove.ts'
 export { rebuild, type Rebuilt } from './rebuild/rebuild.ts'
+export {
+  update,
+  type PinnedDump,
+  type Updated,
+  type UpdateProgress,
+  type UpdateRequest,
+} from './catalog/update.ts'
 export { withDatabaseFile } from './sqlite/Sqlite.ts'
 export { reloadData, type DataReload } from './data/reload.ts'
 export {

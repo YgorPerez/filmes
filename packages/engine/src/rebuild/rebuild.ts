@@ -28,7 +28,7 @@ import { STEPS } from './steps/index.ts'
 
 /** The code repository, which a database built from the real catalog must
  * stay out of (Python's `RAIZ`). */
-const REPOSITORY = resolve(import.meta.dirname, '../../../..')
+export const REPOSITORY = resolve(import.meta.dirname, '../../../..')
 
 export interface Rebuilt {
   /** The database's path, as configured. */
@@ -37,7 +37,7 @@ export interface Rebuilt {
   readonly tables: Readonly<Record<string, number>>
 }
 
-const isInside = (path: string, folder: string): boolean => {
+export const isInside = (path: string, folder: string): boolean => {
   const rest = relative(folder, path)
   return rest === '' || (!rest.startsWith('..') && !isAbsolute(rest))
 }

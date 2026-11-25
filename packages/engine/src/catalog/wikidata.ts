@@ -247,12 +247,15 @@ class SparqlScanner {
   }
 }
 
-/** `linhas`: the rows of a gzipped SPARQL JSON result, a batch per chunk.
- * A result with no `results.bindings`, cut short, or with fewer rows than
- * QLever's `meta.result-size-total` throws Python's `ValueError`. */
-export async function* sparqlRows(path: string): AsyncGenerator<Binding[]> {
+/** `resposta`: the rows of a SPARQL JSON result read from `bytes`, a batch
+ * per chunk. A result with no `results.bindings`, cut short, or with fewer
+ * rows than QLever's `meta.result-size-total` throws Python's
+ * `ValueError`. */
+export async function* sparqlBindings(
+  bytes: AsyncIterable<Buffer>,
+): AsyncGenerator<Binding[]> {
   const scanner = new SparqlScanner()
-  for await (const text of utf8Text(gzipBytes(path))) {
+  for await (const text of utf8Text(bytes)) {
     const rows = scanner.push(text)
     if (rows.length > 0) yield rows
   }
@@ -263,3 +266,52 @@ export async function* sparqlRows(path: string): AsyncGenerator<Binding[]> {
   )
     throw incomplete()
 }
+
+/** `linhas`: the rows of a gzipped SPARQL JSON result, a batch per chunk. */
+export const sparqlRows = (path: string): AsyncGenerator<Binding[]> =>
+  sparqlBindings(gzipBytes(path))
+
+/** Where `atualizar` asks first, and the per-property fallback. */
+export const QLEVER = 'https://qlever.dev/api/wikidata'
+export const WDQS = 'https://query.wikidata.org/sparql'
+
+const PREFIXES = `PREFIX wd: <http://www.wikidata.org/entity/>
+PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>`
+
+/** P179 also points at lists and rankings: a series is an item with P31
+ * under one of these classes (film series, media franchise). */
+const SERIES = ['Q24856', 'Q196600']
+
+const SCOPES: Readonly<Record<string, string>> = {
+  ids: '{ ?item wdt:P31 wd:Q11424 } UNION { ?item wdt:P6127 ?slug }',
+  atores: '?filme wdt:P31 wd:Q11424 ; wdt:P161 ?item .',
+  series:
+    '?filme wdt:P31 wd:Q11424 ; wdt:P179 ?item .\n' +
+    `    ?valor wdt:P279* ?raiz . VALUES ?raiz { ${SERIES.map((q) => `wd:${q}`).join(' ')} }`,
+  // The films' genres and every class above them, so the hierarchy stays
+  // whole even where no film uses an intermediate genre.
+  subgeneros:
+    '{ SELECT DISTINCT ?item WHERE { ?filme wdt:P31 wd:Q11424 ; wdt:P136/wdt:P279* ?item . } }',
+}
+
+/** `consulta`: the SPARQL query of a group, for some of its properties. */
+export const groupQuery = (
+  group: string,
+  properties: readonly string[],
+): string => `${PREFIXES}
+SELECT DISTINCT ?item ?p ?valor WHERE {
+    ${SCOPES[group] ?? '?item wdt:P31 wd:Q11424 .'}
+    VALUES ?p { ${properties.map((p) => `wdt:${p}`).join(' ')} }
+    ?item ?p ?valor .
+}`
+
+/** `consulta_rotulos`: the labels and language codes of some items. */
+export const labelsQuery = (items: readonly string[]): string => `${PREFIXES}
+SELECT ?valor ?pt ?en ?mul ?codigo WHERE {
+    VALUES ?valor { ${items.map((item) => `wd:${item}`).join(' ')} }
+    OPTIONAL { ?valor rdfs:label ?pt FILTER(LANG(?pt) = "pt") }
+    OPTIONAL { ?valor rdfs:label ?en FILTER(LANG(?en) = "en") }
+    OPTIONAL { ?valor rdfs:label ?mul FILTER(LANG(?mul) = "mul") }
+    OPTIONAL { ?valor wdt:P218 ?codigo }
+}`
