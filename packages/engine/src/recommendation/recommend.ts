@@ -51,6 +51,19 @@ import {
 import { readConstraints, type ConstraintRequest } from './constraints/index.ts'
 import { computeCredit, creditLine, type Credit } from './credit.ts'
 import { filmHeader, type FilmHeader } from './header.ts'
+import {
+  byConstraint,
+  byMinRating,
+  byVeto,
+  droppedFilms,
+  isKept,
+  isNew,
+  keptWarning,
+  place,
+  type Dropped,
+  type RemovalCause,
+  type Regenerate,
+} from './kept.ts'
 import { resolveMoods } from './moods.ts'
 import {
   DEFAULT_RULE,
@@ -85,6 +98,8 @@ export interface RecommendedFilm extends FilmHeader {
   readonly evidence: Readonly<Record<string, ReadonlyArray<EvidenceJson>>>
   /** The Restrições' lines, the film signals and the Crédito line. */
   readonly filmLines: ReadonlyArray<EvidenceJson>
+  /** Only when regenerating: the previous version did not show it. */
+  readonly new?: boolean
 }
 
 export interface Recommendation {
@@ -101,6 +116,10 @@ export interface Recommendation {
   >
   readonly warnings: ReadonlyArray<string>
   readonly attributions: ReadonlyArray<Attribution>
+  /** Only when regenerating: the kept films that stayed. */
+  readonly kept?: ReadonlyArray<string>
+  /** Only when regenerating: what left the previous version, and why. */
+  readonly dropped?: ReadonlyArray<Dropped>
 }
 
 export interface RankOptions {
@@ -113,6 +132,9 @@ export interface RankOptions {
   readonly moods?: ReadonlyArray<string>
   /** The Candidates prepared once for many rounds (`avaliar`). */
   readonly selection?: CandidateSelection
+  /** A refazer of a Session (Python's `regerar`): the kept films stay at
+   * their number, and each film says whether it is new. */
+  readonly regenerate?: Regenerate
 }
 
 type Key = readonly PyOrderable[]
@@ -183,7 +205,9 @@ export const rank = (
     const { weights } = yield* Environment
     const run = yield* Run
     const warningsBefore = (yield* run.warnings).length
-    const { attendees, count, selection } = options
+    const { attendees, count, selection, regenerate } = options
+    const kept = (id: string) =>
+      regenerate !== undefined && isKept(regenerate, id)
     const rule = options.rule ?? DEFAULT_RULE
 
     // Every Presente's Vetos hold, whatever the Regra.
@@ -210,6 +234,23 @@ export const rank = (
       candidates: yield* asked.candidates(vetoes.remaining),
       attendees,
       moods: moods.moods,
+    }
+    // A kept film a Veto or a Restrição removed: the cause, for `dropped`.
+    const removed = new Map<string, RemovalCause>()
+    for (const filmId of regenerate?.positions.keys() ?? []) {
+      const film = eligible.get(filmId)
+      if (film === undefined)
+        removed.set(filmId, yield* byMinRating(db, filmId, weights.catalog))
+      else if (!vetoes.remaining.has(filmId))
+        removed.set(
+          filmId,
+          yield* byVeto(db, attendees, film, weights.tag_vetoes),
+        )
+      else if (!round.candidates.has(filmId)) {
+        const by = asked.removedBy.get(filmId)
+        if (by === undefined) throw pythonError('KeyError', `'${filmId}'`)
+        removed.set(filmId, byConstraint(by))
+      }
     }
 
     const byFilm = new Map<string, Evidence[]>()
@@ -253,7 +294,11 @@ export const rank = (
       const popular = selection.popular
         .filter((id) => round.candidates.has(id))
         .slice(0, count)
-      ids = new Set([...byFilm.keys(), ...ofFilm.keys(), ...popular])
+      const some = new Set([...byFilm.keys(), ...ofFilm.keys(), ...popular])
+      if (regenerate !== undefined)
+        for (const id of regenerate.positions.keys())
+          if (round.candidates.has(id)) some.add(id)
+      ids = some
     }
     const ordered: Ordered[] = []
     const withoutCredit: { key: Key; id: string }[] = []
@@ -293,24 +338,55 @@ export const rank = (
         })
     }
     ordered.sort(byKey)
-    const approved = yield* asked.approve(
-      ordered,
-      count,
-      weights.constraints.on_demand_reach,
-      (item) => item.film,
-    )
-    const approvedIds = new Set(approved.map((item) => item.film.id))
+    const reach = weights.constraints.on_demand_reach
+    let placed: ReadonlyArray<readonly [number, Ordered]>
+    if (regenerate !== undefined) {
+      const fixed: Ordered[] = []
+      for (const item of ordered) {
+        if (!kept(item.film.id)) continue
+        if (yield* asked.passesOnDemand(item.film, true)) fixed.push(item)
+        else {
+          const by = asked.removedBy.get(item.film.id)
+          if (by === undefined)
+            throw pythonError('KeyError', `'${item.film.id}'`)
+          removed.set(item.film.id, byConstraint(by))
+        }
+      }
+      const others = ordered.filter((item) => !kept(item.film.id))
+      const free = yield* asked.approve(
+        others,
+        Math.max(count - fixed.length, 0),
+        reach,
+        (item) => item.film,
+      )
+      placed = place(regenerate, fixed, free, count, (item) => item.film.id)
+    } else {
+      const approved = yield* asked.approve(
+        ordered,
+        count,
+        reach,
+        (item) => item.film,
+      )
+      placed = approved.map((item, i) => [i + 1, item] as const)
+    }
+    const approvedIds = new Set(placed.map(([, item]) => item.film.id))
     // The two orders with the same verdicts, without asking an on-demand
-    // source for more answers.
+    // source for more answers. When regenerating, only the free places
+    // compete: each one's order is among the films not kept, and the kept
+    // film, there because the Dono asked, gets no Crédito line.
     const positionWithoutCredit = new Map(
       withoutCredit
         .sort(byKey)
         .filter(
-          ({ id }) => approvedIds.has(id) || !asked.pending.get(id)?.length,
+          ({ id }) =>
+            (approvedIds.has(id) || !asked.pending.get(id)?.length) &&
+            !kept(id),
         )
         .map(({ id }, i) => [id, i + 1]),
     )
-    const contested = new Map(approved.map((item, i) => [item.film.id, i + 1]))
+    const contested = new Map<string, number>()
+    for (const [, item] of placed)
+      if (!kept(item.film.id)) contested.set(item.film.id, contested.size + 1)
 
     const names = new Map<string, string>()
     if (adjustment.size > 0)
@@ -322,7 +398,7 @@ export const rank = (
         [-Math.abs(contribution(b, weights)), b.factId ?? ''],
       )
     const films: RecommendedFilm[] = []
-    for (const [i, { key, film, utilities, evidence }] of approved.entries()) {
+    for (const [position, { key, film, utilities, evidence }] of placed) {
       const all = [
         ...evidence,
         ...[...utilities]
@@ -352,7 +428,7 @@ export const rank = (
         .filter(([, u]) => u === null)
         .map(([p]) => p)
       films.push({
-        position: i + 1,
+        position,
         id: film.id,
         title: film.title,
         year: film.year,
@@ -379,10 +455,14 @@ export const rank = (
           ]),
         ),
         filmLines: lines.map((e) => evidenceToJson(e, weights)),
+        ...(regenerate !== undefined && { new: isNew(regenerate, film.id) }),
       })
     }
     for (const warning of asked.listWarnings(films.length, count))
       yield* run.warn(warning)
+    if (regenerate !== undefined)
+      for (const [filmId, cause] of removed)
+        yield* run.warn(keptWarning(regenerate, filmId, cause))
 
     return {
       attendees,
@@ -403,6 +483,16 @@ export const rank = (
         ),
         ...films.filter((f) => f.poster || f.titlePt).map(() => 'TMDB'),
       ]),
+      ...(regenerate !== undefined && {
+        kept: films.filter((f) => kept(f.id)).map((f) => f.id),
+        dropped: yield* droppedFilms(
+          db,
+          attendees,
+          regenerate,
+          new Set(films.map((f) => f.id)),
+          removed,
+        ),
+      }),
     }
   })
 
@@ -466,6 +556,53 @@ export const recommend = (
     Effect.map(({ recommendation }) => recommendation),
   )
 
+/** How many films the request asks for; `invalid_usage` below 1. */
+export const requestCount = (
+  request: Pick<RecommendRequest, 'count'>,
+): Effect.Effect<number, EngineError, Environment> =>
+  Effect.gen(function* () {
+    const { weights } = yield* Environment
+    const count = request.count ?? weights.recommendation.size
+    if (count < 1)
+      return yield* engineError(
+        'invalid_usage',
+        '--quantos precisa ser 1 ou mais',
+      )
+    return count
+  })
+
+/** The ranking of a request whose count and Restrições are already read:
+ * the Presentes resolved, the Regra checked, then `rank`. */
+export const rankRequest = (
+  request: RecommendRequest,
+  count: number,
+  asked: ReadonlyArray<Constraint>,
+  regenerate?: Regenerate,
+): Effect.Effect<
+  Recommendation,
+  EngineError | SqliteError,
+  EngineServices | Run
+> =>
+  Effect.gen(function* () {
+    const names = request.attendees
+      .flatMap((item) => item.split(','))
+      .filter((name) => pyStrip(name) !== '')
+    return yield* (yield* Sqlite).read((db) =>
+      Effect.gen(function* () {
+        const attendees = yield* resolveAttendees(db, names)
+        const rule = yield* resolveRule(db, request, attendees)
+        return yield* rank(db, {
+          attendees,
+          count,
+          rule,
+          constraints: asked,
+          moods: request.moods ?? [],
+          ...(regenerate !== undefined && { regenerate }),
+        })
+      }),
+    )
+  })
+
 /** `recommend`, with the Restrições it applied: the same values, so what
  * they learnt while evaluating (the similar's reference titles) reaches
  * the Session (Python's `_contexto` reads them after `recomendar`). */
@@ -480,32 +617,11 @@ export const recommendAsked = (
   EngineServices | Run
 > =>
   Effect.gen(function* () {
-    const { weights } = yield* Environment
-    const count = request.count ?? weights.recommendation.size
-    if (count < 1)
-      return yield* engineError(
-        'invalid_usage',
-        '--quantos precisa ser 1 ou mais',
-      )
-    const names = request.attendees
-      .flatMap((item) => item.split(','))
-      .filter((name) => pyStrip(name) !== '')
+    const count = yield* requestCount(request)
     const asked = [
       ...(yield* readConstraints(request)),
       ...(request.constraints ?? []),
     ]
-    const recommendation = yield* (yield* Sqlite).read((db) =>
-      Effect.gen(function* () {
-        const attendees = yield* resolveAttendees(db, names)
-        const rule = yield* resolveRule(db, request, attendees)
-        return yield* rank(db, {
-          attendees,
-          count,
-          rule,
-          constraints: asked,
-          moods: request.moods ?? [],
-        })
-      }),
-    )
+    const recommendation = yield* rankRequest(request, count, asked)
     return { recommendation, asked }
   })

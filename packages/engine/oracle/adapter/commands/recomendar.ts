@@ -1,17 +1,13 @@
 // `recomendar` → `recommendSession` (#90, #94): the Recomendação and the
-// Session it opens, with the local Restrições (#91), the on-demand ones
-// (#92) and the similar one (#93). Refazer (`--sessao`, `--manter`,
-// `--trocar`, #95) is ported later, so a step with those arguments stays
-// `not_ported`.
+// Session it opens or redoes (`--sessao`, `--manter`, `--trocar`, #95), with
+// the local Restrições (#91), the on-demand ones (#92) and the similar one
+// (#93).
 
 import { data } from '@filmes/key-migration'
 import { recommendSession, type RuleName } from '../../../src/index.ts'
 import { engineError } from '../../../src/runtime/EngineError.ts'
 import { Effect } from 'effect'
 import { defineCommand } from '../command.ts'
-
-/** Arguments of a later ticket: refazer's (#95). */
-const LATER = ['--sessao', '--manter', '--trocar']
 
 /** Python's `int()` on an argument: spaces around, a sign, digits with
  * single underscores between them. */
@@ -32,6 +28,10 @@ export default defineCommand({
       clima: { kind: 'extend' },
       quantos: { kind: 'value' },
       pedido: { kind: 'value' },
+      // Refazer (#95).
+      sessao: { kind: 'value' },
+      manter: { kind: 'extend' },
+      trocar: { kind: 'extend' },
       // The local Restrições (#91).
       'duracao-max': { kind: 'value' },
       desde: { kind: 'value' },
@@ -48,10 +48,6 @@ export default defineCommand({
       'sem-parecido': { kind: 'flag' },
     },
   },
-  ported: (argv) =>
-    !argv.some((token) =>
-      LATER.some((flag) => token === flag || token.startsWith(`${flag}=`)),
-    ),
   run: (args) => {
     // argparse's `type=int` (the oracle does not compare an invalid_usage
     // message, so which bad one is named first does not matter).
@@ -98,6 +94,9 @@ export default defineCommand({
       ...(args.gatilho.length > 0 && { triggers: args.gatilho }),
       ...(args.parecido.length > 0 && { similar: args.parecido }),
       ...(args['sem-parecido'] && { noSimilar: true }),
+      ...(args.sessao !== undefined && { session: args.sessao }),
+      ...(args.manter.length > 0 && { keep: args.manter }),
+      ...(args.trocar.length > 0 && { swap: args.trocar }),
     })
   },
 })

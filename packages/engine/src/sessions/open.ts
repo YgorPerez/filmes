@@ -28,10 +28,9 @@ import {
 import { peopleFolder, readPerson } from '../people/people.ts'
 import type { Constraint } from '../recommendation/constraints.ts'
 import { storedConstraints } from '../recommendation/constraints/index.ts'
-import {
-  recommendAsked,
-  type Recommendation,
-  type RecommendRequest,
+import type {
+  Recommendation,
+  RecommendRequest,
 } from '../recommendation/recommend.ts'
 import type { EngineServices } from '../runtime/Engine.ts'
 import type { EngineError } from '../runtime/EngineError.ts'
@@ -212,25 +211,6 @@ export const openSession = (
           return { id, file: sessionRelative(id), version: 1 }
         }),
     )
-  })
-
-/** `recomendar`: the Recomendação, and the Session it opens. */
-export const recommendSession = (
-  request: RecommendSessionRequest,
-): Effect.Effect<
-  SessionRecommendation,
-  EngineError | SqliteError | GitError,
-  EngineServices | Run
-> =>
-  Effect.gen(function* () {
-    const { recommendation, asked } = yield* recommendAsked(request)
-    const context = sessionContext(
-      request.request ?? null,
-      recommendation.moods,
-      asked,
-    )
-    const session = yield* openSession(recommendation, context)
-    return { ...recommendation, session }
   })
 
 /** A Session without Feedback, as `sessoes-abertas` lists it. */
