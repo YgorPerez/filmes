@@ -68,11 +68,19 @@ export const PERSON = {
     saiu: 'Pulada duas vezes: a pergunta saiu da lista.',
     respondida: 'Resposta gravada como Declarado; a pergunta saiu da lista.',
     criada: 'Pessoa criada. Conte o gosto dela aqui.',
+    'acesso-dado':
+      'Acesso dado: ela já entra no site e no conector com esse e-mail.',
+    'acesso-tirado':
+      'Acesso tirado: ela não entra mais. O gosto dela continua aqui.',
   } satisfies Record<PersonNotice, string>,
   refusals: {
     alvo: 'Esse ID não está no Catálogo. Confira o tt… do filme ou o Q… da entidade.',
     pedido: 'Faltou um campo, ou um valor não vale. Confira o formulário.',
     item: 'Esse item já não está no arquivo dela.',
+    email: 'Para entrar, ela precisa de um e-mail do Google válido.',
+    'email-usado': 'Esse e-mail já é de outra Pessoa.',
+    'ja-dono': 'Ela já tem acesso. Para trocar o e-mail, tire o acesso antes.',
+    'proprio-acesso': 'O seu próprio acesso não sai por aqui.',
     indisponivel: 'Não deu para gravar agora. Tente de novo daqui a pouco.',
   } satisfies Record<PersonRefusal, string>,
 
@@ -139,6 +147,21 @@ export const PERSON = {
     count: (n: number) => count(n, 'Nota', 'Notas'),
     empty: 'Nenhuma Nota.',
     noDatabase: 'As Notas aparecem depois que o banco for reconstruído.',
+  },
+
+  access: {
+    title: 'Acesso',
+    lead: 'Com acesso, ela vira Dono: entra no site e no conector do Claude com o e-mail do Google e vê tudo da casa.',
+    none: 'Sem acesso.',
+    owner: (email: string | null) =>
+      email === null ? 'Tem acesso.' : `Entra com ${email}.`,
+    email: PEOPLE.create.email,
+    grant: 'Dar acesso',
+    testUsers: PEOPLE.create.testUsers,
+    self: 'É você: o seu próprio acesso não sai por aqui.',
+    revoke: 'Tirar acesso',
+    revokeHint:
+      'O próximo pedido dela, no site ou no conector, já é recusado. O gosto dela fica.',
   },
 
   links: {

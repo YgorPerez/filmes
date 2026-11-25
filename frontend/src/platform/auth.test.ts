@@ -1,13 +1,16 @@
-import { createHash } from 'node:crypto'
+import { createHash, randomBytes } from 'node:crypto'
 import { cpSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { makeEngine, revokeAccess } from '@filmes/engine'
 import { describe, expect, it } from 'vite-plus/test'
+import { useFixture } from '../../../packages/engine/test/fixture.ts'
 import { Auth, authFromEnvironment } from './auth'
 import { ownersFromDataRepo } from './owners'
 import { serverEnv } from './server-env'
 
 const ORIGIN = 'http://localhost:3000'
+const CLAUDE = 'https://claude.ai/api/mcp/auth_callback'
 const FIXTURE = join(import.meta.dirname, '../../../tests/fixture/dados')
 
 type Identity = { email: string; email_verified: boolean }
@@ -64,7 +67,10 @@ function setup(
     auth.handle(new Request(`${ORIGIN}${path}`, init))
   /** Starts the login, lets Google give a code, and comes back. */
   async function login(cookie = '') {
-    const start = (await request('/auth/google'))!
+    return googleReturn((await request('/auth/google'))!, cookie)
+  }
+  /** Google gives a code to the login `start` began, and comes back. */
+  function googleReturn(start: Response, cookie = '') {
     const target = new URL(start.headers.get('location')!)
     const browser = start.headers.get('set-cookie')!.split(';')[0]!
     google.challenges.set('code', target.searchParams.get('code_challenge')!)
@@ -72,6 +78,41 @@ function setup(
     return request(`/auth/callback?state=${state}&code=code`, {
       headers: { cookie: [browser, cookie].filter(Boolean).join('; ') },
     })
+  }
+  /** The MCP connector's login (`oauth-server.ts`): a Claude client
+   * registers, the Dono logs in with Google, and the code buys a token. */
+  async function connector() {
+    const oauth = (path: string, init: RequestInit = {}) =>
+      auth.oauth!.handle(new Request(`${ORIGIN}${path}`, init))
+    const verifier = randomBytes(32).toString('base64url')
+    const registered = await oauth('/oauth/register', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ redirect_uris: [CLAUDE] }),
+    })
+    const { client_id } = (await registered!.json()) as { client_id: string }
+    const query = new URLSearchParams({
+      response_type: 'code',
+      client_id,
+      redirect_uri: CLAUDE,
+      code_challenge: createHash('sha256').update(verifier).digest('base64url'),
+      code_challenge_method: 'S256',
+      state: 's',
+    })
+    const start = (await oauth(`/oauth/authorize?${query}`))!
+    const back = (await googleReturn(start))!
+    const code = new URL(back.headers.get('location')!).searchParams.get('code')
+    const tokens = await oauth('/oauth/token', {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        code: code!,
+        client_id,
+        code_verifier: verifier,
+      }),
+    })
+    return ((await tokens!.json()) as { access_token: string }).access_token
   }
   const session = (response: Response) =>
     response.headers
@@ -87,6 +128,7 @@ function setup(
     google,
     request,
     login,
+    connector,
     session,
     owner,
     setIdentity: (next: Identity | 'down') => (identity = next),
@@ -219,6 +261,38 @@ describe('the session', () => {
       '---\nname: Bruno\nemail: bruno@example.org\n---\n',
     )
     expect(owner(cookie)).toBeNull()
+  })
+
+  it('ends on the web and on the MCP when an admin takes her access away (#166)', async () => {
+    const fixture = useFixture()
+    const { login, connector, session, owner, auth, setIdentity } = setup({
+      data: fixture.data,
+    })
+    setIdentity({ email: 'vera@example.org', email_verified: true })
+    const cookie = session((await login())!)
+    const token = await connector()
+    expect(owner(cookie)?.person).toBe('vera')
+    expect((await auth.oauth!.verifyAccessToken(token)).extra).toMatchObject({
+      owner: { person: 'vera' },
+    })
+
+    const engine = makeEngine(fixture.vars)
+    try {
+      const revoked = await engine.run(revokeAccess({ person: 'vera' }), {
+        owner: 'bruno',
+      })
+      expect(revoked).toEqual({
+        exitCode: 0,
+        output: { person: 'vera', new: true },
+      })
+    } finally {
+      await engine.dispose()
+    }
+
+    expect(owner(cookie)).toBeNull()
+    await expect(auth.oauth!.verifyAccessToken(token)).rejects.toThrow(
+      /invalid or expired/,
+    )
   })
 
   it('replaces the previous session on a new login', async () => {

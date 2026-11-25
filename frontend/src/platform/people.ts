@@ -5,6 +5,7 @@
 // what happened. Server only.
 
 import {
+  grantAccess,
   personAdjust,
   personCreate,
   personQuestions,
@@ -17,6 +18,8 @@ import {
   personView,
   readPeople,
   readTagGroups,
+  resolvePerson,
+  revokeAccess,
   setupGuide,
   skipSetupStep,
   type Author,
@@ -30,6 +33,7 @@ import {
   type SkipSetupResult,
 } from '@filmes/engine'
 import {
+  isAccessAction,
   parseAction,
   reportSource,
   type PersonAction,
@@ -71,7 +75,10 @@ export type TagGroupChoice = { key: string; label: string }
 export type PersonPage = Omit<PersonView, 'imports' | 'warning'> & {
   tagGroups: TagGroupChoice[]
   /** The logged-in Dono, as a page may show her: no email. */
-  viewer: Pick<Owner, 'person' | 'name'>
+  viewer: Pick<Owner, 'person' | 'name' | 'admin'>
+  /** Only for an admin (#166): the e-mail she logs in with, or the one
+   * her file holds while she is not a Dono; null for none. */
+  access?: { email: string | null }
 }
 
 /** What the screens and the actions need from the engine. */
@@ -79,6 +86,8 @@ export interface People {
   list(): Promise<Outcome<PersonEntry[]>>
   view(person: string): Promise<Outcome<PersonView>>
   tagGroups(): Promise<Outcome<TagGroupChoice[]>>
+  /** The e-mail in her file, for the admin's Acesso section. */
+  email(person: string): Promise<Outcome<string | null>>
   /** Runs the action on the Pessoa as the logged-in Dono, who signs the
    * commit; says what happened. */
   act(
@@ -126,6 +135,7 @@ export function peopleFromEngine(engine: Engine): People {
         })),
       ),
     view: (person) => engine.run(personView(person)),
+    email: (person) => map(engine.run(resolvePerson(person)), (p) => p.email),
     create: (input, owner) =>
       map(
         engine.run(personCreate({ ...input, author: ownerAuthor(owner) }), {
@@ -208,10 +218,26 @@ export function peopleFromEngine(engine: Engine): People {
             run(personRemove({ ...by, kind: action.what, id: action.id })),
             (): PersonNotice => 'removido',
           )
+        case 'grant':
+        case 'revoke':
+          return access(run, by, action)
       }
     },
   }
 }
+
+/** Gives or takes her access (#166); the route lets only an admin here. */
+const access = (
+  run: Engine['run'],
+  by: { person: string; author: Author },
+  action: Extract<PersonAction, { kind: 'grant' | 'revoke' }>,
+): Promise<Outcome<PersonNotice>> =>
+  action.kind === 'grant'
+    ? map(
+        run(grantAccess({ ...by, email: action.email })),
+        (): PersonNotice => 'acesso-dado',
+      )
+    : map(run(revokeAccess(by)), (r) => (r.new ? 'acesso-tirado' : 'igual'))
 
 /** A subject that is not a Catalog entity (Q...) is a tag group's key. */
 const isGroup = (subject: string) => !subject.startsWith('Q')
@@ -311,16 +337,39 @@ export async function personPage(
     return null
   }
   const { imports: _imports, warning: _warning, ...page } = view.output
-  return {
-    ...page,
-    tagGroups: groups.output,
-    viewer: { person: owner.person, name: owner.name },
-  }
+  const viewer = { person: owner.person, name: owner.name, admin: owner.admin }
+  if (!owner.admin) return { ...page, tagGroups: groups.output, viewer }
+  const access = await accessOf(page.person, people)
+  return access && { ...page, tagGroups: groups.output, viewer, access }
+}
+
+/** Her e-mail, for an admin's Acesso section; null when the engine
+ * cannot run here. */
+async function accessOf(
+  person: string,
+  people: People,
+): Promise<{ email: string | null } | null> {
+  const email = await people.email(person)
+  if (email.exitCode === 0) return { email: email.output }
+  logEngineError(email)
+  return null
+}
+
+/** The page's reason for each of the engine's that an action can meet:
+ * giving or taking access (#166). */
+const ACCESS_REFUSALS: Partial<Record<ErrorReason, PersonRefusal>> = {
+  email_required: 'email',
+  invalid_email: 'email',
+  email_taken: 'email-usado',
+  already_owner: 'ja-dono',
+  own_access: 'proprio-acesso',
 }
 
 /** Why an action was refused, from the engine's error. */
 function refusalOf(outcome: { output: ErrorOutput }): PersonRefusal {
-  const { code } = outcome.output.error
+  const { code, reason } = outcome.output.error
+  const access = reason === undefined ? undefined : ACCESS_REFUSALS[reason]
+  if (access !== undefined) return access
   if (code === 'unknown_target') return 'alvo'
   if (code === 'invalid_usage') return 'pedido'
   if (code.startsWith('unknown_') || code.startsWith('ambiguous_'))
@@ -335,7 +384,7 @@ const pageOf = (person: string) => `/pessoas/${encodeURIComponent(person)}`
  * Dono, who signs the commit, and goes back to her page saying what
  * happened (`?feito=`) or why not (`?erro=`). Only a Dono, and only a form
  * of this site (the `Origin`, as the logout checks): the page gate does not
- * cover this route. */
+ * cover this route. Giving or taking access is for an admin only. */
 export async function personAction(
   request: Request,
   person: string,
@@ -347,6 +396,8 @@ export async function personAction(
   if (poster instanceof Response) return poster
   const action = parseAction(await request.formData())
   if (!action) return seeOther(`${pageOf(person)}?erro=pedido`)
+  if (isAccessAction(action) && !poster.admin)
+    return new Response('Só um admin dá ou tira acesso', { status: 403 })
   const outcome = await people.act(person, action, poster)
   if (outcome.exitCode !== 0) {
     if (outcome.output.error.code === 'unknown_person')
@@ -366,6 +417,9 @@ const CREATE_REFUSALS: Record<ErrorReason, PersonCreateRefusal> = {
   invalid_email: 'email',
   email_not_owner: 'email',
   email_taken: 'email-usado',
+  // Not met on create: giving or taking access.
+  already_owner: 'indisponivel',
+  own_access: 'indisponivel',
 }
 
 /** Why the engine refused a new Pessoa, by its reason; without one, it

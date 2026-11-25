@@ -60,7 +60,8 @@ export const ERROR_CODES = [
 export type ErrorCode = (typeof ERROR_CODES)[number]
 
 /** Why, finer than the code, where a screen tells the cases apart: the app
- * reads it, never the PT-BR message. Only creating a Pessoa has them. */
+ * reads it, never the PT-BR message. Only creating a Pessoa and giving or
+ * taking her access have them. */
 export const ERROR_REASONS = [
   // A Pessoa with that slug exists (`person_exists`).
   'slug_taken',
@@ -75,6 +76,10 @@ export const ERROR_REASONS = [
   'invalid_email',
   'email_not_owner',
   'email_taken',
+  // Giving access to a Pessoa that is a Dono already (`invalid_usage`).
+  'already_owner',
+  // The logged-in Dono taking her own access away (`invalid_usage`).
+  'own_access',
 ] as const
 
 export type ErrorReason = (typeof ERROR_REASONS)[number]

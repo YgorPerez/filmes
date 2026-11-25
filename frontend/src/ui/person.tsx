@@ -129,6 +129,9 @@ function Contents({ page }: { page: PersonPage }) {
       : [['relatos', PERSON.reports.title, page.reports.length] as const]),
     ['vistos', PERSON.seen.title, page.seen.length],
     ['notas', PERSON.ratings.title, page.ratings?.length ?? null],
+    ...(page.access === undefined
+      ? []
+      : [['acesso', PERSON.access.title, null] as const]),
   ]
   return (
     <nav aria-label={PERSON.contents}>
@@ -168,6 +171,7 @@ function Details({ slug, page }: { slug: string; page: PersonPage }) {
       <Reports slug={slug} page={page} />
       <Seen slug={slug} page={page} />
       <Ratings ratings={page.ratings} />
+      <Access slug={slug} page={page} />
     </>
   )
 }
@@ -580,6 +584,47 @@ function Ratings({ ratings }: { ratings: PersonPage['ratings'] }) {
             ))}
           </ul>
         </Disclosure>
+      )}
+    </Slip>
+  )
+}
+
+/** The Acesso section of a Pessoa's page (#166), for an admin only: give
+ * her a Google e-mail and she is a Dono; take it away and her next request
+ * is refused. The admin's own access never leaves from here. */
+function Access({ slug, page }: { slug: string; page: PersonPage }) {
+  const { access } = page
+  if (!page.viewer.admin || access === undefined) return null
+  const copy = PERSON.access
+  return (
+    <Slip id="acesso" title={copy.title} lead={copy.lead}>
+      {page.owner ? (
+        <>
+          <p>{copy.owner(access.email)}</p>
+          {page.person === page.viewer.person ? (
+            <p className="text-meta text-ink-2">{copy.self}</p>
+          ) : (
+            <ActionForm slug={slug} action="tirar-acesso" label={copy.revoke}>
+              <p className="text-meta text-ink-2">{copy.revokeHint}</p>
+              <Submit>{copy.revoke}</Submit>
+            </ActionForm>
+          )}
+        </>
+      ) : (
+        <>
+          <p>{copy.none}</p>
+          <ActionForm slug={slug} action="dar-acesso" label={copy.grant}>
+            <TextField
+              type="email"
+              name="email"
+              label={copy.email}
+              defaultValue={access.email ?? undefined}
+              required
+            />
+            <p className="text-meta text-ink-2">{copy.testUsers}</p>
+            <Submit variant="primary">{copy.grant}</Submit>
+          </ActionForm>
+        </>
       )}
     </Slip>
   )
