@@ -153,7 +153,7 @@ function logEngineError(outcome: { output: ErrorOutput }): void {
 }
 
 /** The outcome's value, or null (logged) when the engine failed. */
-function valueOf<A>(outcome: Outcome<A>): A | null {
+export function valueOf<A>(outcome: Outcome<A>): A | null {
   if (outcome.exitCode === 0) return outcome.output
   logEngineError(outcome)
   return null

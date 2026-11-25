@@ -1,7 +1,8 @@
 // A Pessoa [Person] as her file `people/<slug>.md` holds her
 // (`filmes/dados/pessoas.py`). The frontmatter has her name, aliases,
 // `owner: true` on a Dono, `email` and `admin` for the online login, her
-// Vetos, Ajustes, open questions and imports; no age is kept. The body has
+// Vetos, Ajustes, open questions, imports and the setup guide's skipped
+// steps; no age is kept. The body has
 // the sections `## Declarados` (what she said of her own taste) and
 // `## Relatos` (what the Dono told of her), one item per line:
 //
@@ -58,6 +59,11 @@ export const LEVELS = [
 /** How a Declarado or a Relato feels about its target. */
 export const STATEMENT_REACTIONS = ['love', 'like', 'dislike', 'hate'] as const
 export type StatementReaction = (typeof STATEMENT_REACTIONS)[number]
+
+/** A step of the Guia de início [setup guide] of the home (#143), in the
+ * order the home shows them. */
+export const SETUP_STEPS = ['taste', 'import', 'connector'] as const
+export type SetupStep = (typeof SETUP_STEPS)[number]
 
 /** Skipped this many times, an open question leaves the list. */
 export const SKIPS_TO_DROP = 2
@@ -124,6 +130,9 @@ export interface Person {
   readonly openQuestions: readonly OpenQuestion[]
   /** The imports' records, as read: the import tickets give them a type. */
   readonly imports: readonly YamlValue[]
+  /** The setup guide's steps she skipped (`skipped_setup:`), in the order
+   * she skipped them. */
+  readonly skippedSetup: readonly SetupStep[]
   readonly body: string
 }
 

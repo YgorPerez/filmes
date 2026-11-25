@@ -17,12 +17,17 @@ import {
   personView,
   readPeople,
   readTagGroups,
+  setupGuide,
+  skipSetupStep,
   type Author,
   type Engine,
   type ErrorOutput,
   type ErrorReason,
   type Outcome,
   type PersonView,
+  type SetupGuide,
+  type SetupStep,
+  type SkipSetupResult,
 } from '@filmes/engine'
 import {
   parseAction,
@@ -45,6 +50,8 @@ import { catalogSearch } from './catalog-search'
 import { appEngine } from './engine'
 import { formPoster, seeOther } from './form-post'
 import type { Owner } from './owners'
+
+export type { Owner }
 import { serverEnv } from './server-env'
 
 /** A Pessoa in the list. */
@@ -413,6 +420,44 @@ export const ownerAuthor = (owner: Owner): Author => ({
   name: owner.name,
   email: owner.email,
 })
+
+// --- the home's setup guide (#143) ------------------------------------------
+
+/** What the home's setup guide needs from the engine: where the Dono stands,
+ * and keeping a step she skips in her file. */
+export interface SetupGuideSource {
+  guide(owner: Owner): Promise<Outcome<SetupGuide>>
+  /** Keeps the step skipped in her file, in a commit she signs. */
+  skip(owner: Owner, step: SetupStep): Promise<Outcome<SkipSetupResult>>
+}
+
+/** The guide over the engine; `connected` says whether the Claude app
+ * connected with an email, which only `auth.sqlite` knows. */
+export function setupGuideFromEngine(
+  engine: Engine,
+  connected: (email: string) => boolean,
+): SetupGuideSource {
+  return {
+    guide: (owner) =>
+      engine.run(
+        setupGuide({ person: owner.person, connected: connected(owner.email) }),
+        { owner: owner.person },
+      ),
+    skip: (owner, step) =>
+      engine.run(
+        skipSetupStep({
+          person: owner.person,
+          step,
+          author: ownerAuthor(owner),
+        }),
+        { owner: owner.person },
+      ),
+  }
+}
+
+/** The guide for the app. */
+export const appSetupGuide = (connected: (email: string) => boolean) =>
+  setupGuideFromEngine(appEngine(), connected)
 
 // --- the app's -----------------------------------------------------------------
 

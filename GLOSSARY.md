@@ -35,6 +35,13 @@ _Evitar_: peso da Pessoa, importância, preferência
 **Pergunta aberta** [open question, `OpenQuestion`]:
 Pergunta de gosto que o Claude fez sobre um Presente e ele pulou ("a Ana curte terror psicológico?"). Fica no arquivo da Pessoa com o assunto (entidade do Catálogo ou grupo de tags), a data e quantas vezes foi pulada; volta uma vez, quando o assunto aparece na tela, e pulada duas vezes, sai. Não é Fato: a resposta, quando vem, vira Declarado ou Relato.
 
+**Guia de início** [setup guide, `SetupGuide`; passo [setup step, `SetupStep`: `taste`, `import`, `connector`]]:
+Os três passos que a home mostra ao Dono que ainda não terminou de começar: Meu gosto (feito com 10 Notas ou um import), Importar do Letterboxd ou do Trakt (feito com um import) e Conector no Claude (feito quando o Claude se conectou ao filmes com o e-mail dele). Nunca bloqueia: pedir filme vale desde o primeiro dia. Some quando cada passo está feito ou pulado (mapa #140).
+_Evitar_: onboarding, tutorial, cadastro
+
+**Passo pulado** [skipped setup step, `skippedSetup`]:
+Um passo do Guia de início que o Dono pulou. Fica no frontmatter do arquivo dele (`skipped_setup: [import]`), e por isso vale em todo aparelho. O guia o trata como feito.
+
 **Restrição** [constraint, `Constraint`]:
 Um limite que vale só numa Sessão, como "tem criança" ou "sem legenda". Tira o filme antes de qualquer ordenação, como o Veto.
 _Evitar_: filtro, veto da sessão

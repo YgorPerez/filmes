@@ -72,7 +72,10 @@ test('the Dono imports a Letterboxd ZIP and works the queue', async ({
   test.skip(info.project.name !== 'desktop', 'the queue is shared: one project')
   await addPerson('Olga')
   await loginAsBruno(page)
-  await page.getByRole('link', { name: 'Importar' }).click()
+  await page
+    .getByRole('navigation', { name: 'Telas' })
+    .getByRole('link', { name: 'Importar' })
+    .click()
   await expect(page).toHaveURL(/\/importar$/)
   await expect(page.getByRole('heading', { name: 'Importar' })).toBeVisible()
   await snap(page, info, 'importar')

@@ -18,6 +18,7 @@ import { Route as OwnerNotasRouteImport } from './routes/_owner/notas'
 import { Route as OwnerOperacoesRouteImport } from './routes/_owner/operacoes'
 import { Route as ExportarImdbDotcsvRouteImport } from './routes/exportar/imdb[.]csv'
 import { Route as FilaAcaoRouteImport } from './routes/fila/acao'
+import { Route as InicioPularRouteImport } from './routes/inicio/pular'
 import { Route as NotasEnviarRouteImport } from './routes/notas/enviar'
 import { Route as OperacoesAcaoRouteImport } from './routes/operacoes/acao'
 import { Route as OwnerFeedbackIndexRouteImport } from './routes/_owner/feedback/index'
@@ -78,6 +79,11 @@ const ExportarImdbDotcsvRoute = ExportarImdbDotcsvRouteImport.update({
 const FilaAcaoRoute = FilaAcaoRouteImport.update({
   id: '/fila/acao',
   path: '/fila/acao',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InicioPularRoute = InicioPularRouteImport.update({
+  id: '/inicio/pular',
+  path: '/inicio/pular',
   getParentRoute: () => rootRouteImport,
 } as any)
 const NotasEnviarRoute = NotasEnviarRouteImport.update({
@@ -175,6 +181,7 @@ export interface FileRoutesByFullPath {
   '/operacoes': typeof OwnerOperacoesRoute
   '/exportar/imdb.csv': typeof ExportarImdbDotcsvRoute
   '/fila/acao': typeof FilaAcaoRoute
+  '/inicio/pular': typeof InicioPularRoute
   '/notas/enviar': typeof NotasEnviarRoute
   '/operacoes/acao': typeof OperacoesAcaoRoute
   '/feedback/$sessao': typeof OwnerFeedbackSessaoRoute
@@ -201,6 +208,7 @@ export interface FileRoutesByTo {
   '/operacoes': typeof OwnerOperacoesRoute
   '/exportar/imdb.csv': typeof ExportarImdbDotcsvRoute
   '/fila/acao': typeof FilaAcaoRoute
+  '/inicio/pular': typeof InicioPularRoute
   '/notas/enviar': typeof NotasEnviarRoute
   '/operacoes/acao': typeof OperacoesAcaoRoute
   '/': typeof OwnerIndexRoute
@@ -230,6 +238,7 @@ export interface FileRoutesById {
   '/_owner/operacoes': typeof OwnerOperacoesRoute
   '/exportar/imdb.csv': typeof ExportarImdbDotcsvRoute
   '/fila/acao': typeof FilaAcaoRoute
+  '/inicio/pular': typeof InicioPularRoute
   '/notas/enviar': typeof NotasEnviarRoute
   '/operacoes/acao': typeof OperacoesAcaoRoute
   '/_owner/': typeof OwnerIndexRoute
@@ -260,6 +269,7 @@ export interface FileRouteTypes {
     | '/operacoes'
     | '/exportar/imdb.csv'
     | '/fila/acao'
+    | '/inicio/pular'
     | '/notas/enviar'
     | '/operacoes/acao'
     | '/feedback/$sessao'
@@ -286,6 +296,7 @@ export interface FileRouteTypes {
     | '/operacoes'
     | '/exportar/imdb.csv'
     | '/fila/acao'
+    | '/inicio/pular'
     | '/notas/enviar'
     | '/operacoes/acao'
     | '/'
@@ -314,6 +325,7 @@ export interface FileRouteTypes {
     | '/_owner/operacoes'
     | '/exportar/imdb.csv'
     | '/fila/acao'
+    | '/inicio/pular'
     | '/notas/enviar'
     | '/operacoes/acao'
     | '/_owner/'
@@ -339,6 +351,7 @@ export interface RootRouteChildren {
   EntrarRoute: typeof EntrarRoute
   ExportarImdbDotcsvRoute: typeof ExportarImdbDotcsvRoute
   FilaAcaoRoute: typeof FilaAcaoRoute
+  InicioPularRoute: typeof InicioPularRoute
   NotasEnviarRoute: typeof NotasEnviarRoute
   OperacoesAcaoRoute: typeof OperacoesAcaoRoute
   FeedbackSessaoEnviarRoute: typeof FeedbackSessaoEnviarRoute
@@ -412,6 +425,13 @@ declare module '@tanstack/react-router' {
       path: '/fila/acao'
       fullPath: '/fila/acao'
       preLoaderRoute: typeof FilaAcaoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/inicio/pular': {
+      id: '/inicio/pular'
+      path: '/inicio/pular'
+      fullPath: '/inicio/pular'
+      preLoaderRoute: typeof InicioPularRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/notas/enviar': {
@@ -577,6 +597,7 @@ const rootRouteChildren: RootRouteChildren = {
   EntrarRoute: EntrarRoute,
   ExportarImdbDotcsvRoute: ExportarImdbDotcsvRoute,
   FilaAcaoRoute: FilaAcaoRoute,
+  InicioPularRoute: InicioPularRoute,
   NotasEnviarRoute: NotasEnviarRoute,
   OperacoesAcaoRoute: OperacoesAcaoRoute,
   FeedbackSessaoEnviarRoute: FeedbackSessaoEnviarRoute,
