@@ -1,8 +1,5 @@
-// The JSON the Python CLI prints (`python -m filmes <command> --json`), named
-// the way the TypeScript engine names it. The parity oracle (ADR 0004)
-// imports this table to read Python's output in English; the port tickets
-// read it for the names of each operation's result, so no ticket invents its
-// own.
+// The JSON the Python CLI printed, named the way the TypeScript engine names
+// it: the names of each operation's result, so no code invents its own.
 //
 // Keys are camelCase, as TypeScript fields are (ADR 0001). Closed-list values
 // keep the snake_case the data files use, so one value has one spelling

@@ -6,11 +6,11 @@
 // failure leaves the pinned versions as they were.
 //
 // With `FILMES_GRAVACOES`, the "network" is `<recordings>/catalogo/<name>`
-// (without `.gz`): tests and the oracle never download.
+// (without `.gz`): tests never download.
 //
 // The gzip files are compressed by Node's zlib, so their bytes (and SHA-256)
-// differ from Python's; what they inflate to is the same (decisions.yaml,
-// `update-gzip-bytes-differ`).
+// differ from Python's; what they inflate to is the same (a decision of
+// #107).
 
 import { createHash } from 'node:crypto'
 import {

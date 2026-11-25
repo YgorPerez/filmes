@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`equal to Python > ["--ate","2018"] 1`] = `
+exports[`the whole output, as recorded > {"until":2018} 1`] = `
 {
   "attendees": [
     "bruno",
@@ -3012,7 +3012,7 @@ exports[`equal to Python > ["--ate","2018"] 1`] = `
 }
 `;
 
-exports[`equal to Python > ["--desde","2015","--ate","2016"] 1`] = `
+exports[`the whole output, as recorded > {"since":2015,"until":2016} 1`] = `
 {
   "attendees": [
     "bruno",
@@ -3938,7 +3938,7 @@ exports[`equal to Python > ["--desde","2015","--ate","2016"] 1`] = `
 }
 `;
 
-exports[`equal to Python > ["--desde","2016"] 1`] = `
+exports[`the whole output, as recorded > {"since":2016} 1`] = `
 {
   "attendees": [
     "bruno",

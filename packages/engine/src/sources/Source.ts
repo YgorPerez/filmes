@@ -12,8 +12,8 @@
 // - What the API answered, "not found" included, goes to the cache with
 //   the source's validity. A failure does not.
 // - With `FILMES_GRAVACOES=<dir>` the "network" is `<dir>/<folder>/<key>.json`
-//   and a missing file is "not found": tests and the oracle run without the
-//   network. A network failure is recorded as `<key>.falha.json`,
+//   and a missing file is "not found": tests run without the network.
+//   A network failure is recorded as `<key>.falha.json`,
 //   `{"motivo": "...", "vezes": N}`: it fails the first N times in the
 //   request and then reads `<key>.json`; without `vezes` it always fails.
 

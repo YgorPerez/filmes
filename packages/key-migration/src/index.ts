@@ -1,7 +1,7 @@
 // The PT → EN key migration of filmes-dados and `config/` (ADR 0002), and the
-// tables it reads. The parity oracle imports `outputToEnglish` and the
-// migration; the port tickets read the tables for their names. Deleted with
-// the Python engine.
+// tables it reads. The build migrates `config/` and a filmes-dados checkout
+// still in Portuguese, the engine's tests the fixture; the tables name the
+// engine's results (`output`) after the old CLI's.
 
 export {
   migrateConfig,

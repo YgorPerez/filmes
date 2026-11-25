@@ -34,7 +34,7 @@ export default defineConfig({
     // fixture; they pass 5 s when other sessions load this machine.
     testTimeout: 30_000,
     // The engine's fixture (English filmes-dados and config, the database
-    // the Python engine builds), for the tests that run the real engine
+    // the engine builds), for the tests that run the real engine
     // (`useFixture`). Built once and cached, as in the engine's own tests.
     globalSetup: ['../packages/engine/test/global-setup.ts'],
     // The coverage serves `fallow health` (the `json` format) and has a

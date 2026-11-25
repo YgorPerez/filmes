@@ -20,6 +20,7 @@ import {
   consult,
   constraintLabel,
   readConstraints,
+  rebuild,
   recommend,
   storedConstraints,
   type EvidenceJson,
@@ -29,14 +30,12 @@ import {
 import { useFixture, type Fixture } from '../../fixture.ts'
 import { RECORDINGS } from '../../sources/support.ts'
 import {
-  bothEngines,
+  expectRecordedRecommendation,
   engineRecommendation,
   film,
-  pythonOk,
   titles,
   weightsWith,
   withoutPosterWarning,
-  PYTHON_TIMEOUT,
 } from '../support.ts'
 
 const ONLY_L = new Set(['O Farol de Areia', 'Maré Baixa'])
@@ -216,17 +215,13 @@ describe("OMDb's Rated, for a film with no local rating", () => {
     ).not.toContain('Vento Norte')
   })
 
-  test(
-    'the cache survives a rebuild',
-    { timeout: PYTHON_TIMEOUT },
-    async () => {
-      const fixture = useFixture()
-      await all(fixture, 10, WITH_OMDB)
-      pythonOk(fixture, ['reconstruir'])
+  test('the cache survives a rebuild', async () => {
+    const fixture = useFixture()
+    await all(fixture, 10, WITH_OMDB)
+    await fixture.ok(rebuild)
 
-      expect(titles(await all(fixture, 10, OFFLINE))).toContain('Vento Norte')
-    },
-  )
+    expect(titles(await all(fixture, 10, OFFLINE))).toContain('Vento Norte')
+  })
 
   test('only the films that would reach the top ask OMDb', async () => {
     // With a child of 10, Vento Norte is 6th in the order; with a reach of
@@ -239,7 +234,7 @@ describe("OMDb's Rated, for a film with no local rating", () => {
     )
 
     expect(
-      titles(await all(fixture, 10, { ...WITH_OMDB, ...weights.engine })),
+      titles(await all(fixture, 10, { ...WITH_OMDB, ...weights })),
     ).not.toContain('Vento Norte')
   })
 })
@@ -260,29 +255,21 @@ describe('what the Session keeps', () => {
   })
 })
 
-describe('parity with the Python engine', { timeout: PYTHON_TIMEOUT }, () => {
-  const cases: ReadonlyArray<[string, string[], number, Vars]> = [
-    ['no age', ['--crianca'], 0, {}],
-    ['12, local chain only', ['--crianca', '12'], 12, {}],
-    ['10 with OMDb', ['--crianca', '10'], 10, WITH_OMDB],
-    ['17 with OMDb', ['--crianca', '17'], 17, WITH_OMDB],
-    [
-      '10 without the OMDb key',
-      ['--crianca', '10'],
-      10,
-      { FILMES_GRAVACOES: RECORDINGS },
-    ],
+describe('the whole output, as recorded', () => {
+  const cases: ReadonlyArray<[string, number, Vars]> = [
+    ['no age', 0, {}],
+    ['12, local chain only', 12, {}],
+    ['10 with OMDb', 10, WITH_OMDB],
+    ['17 with OMDb', 17, WITH_OMDB],
+    ['10 without the OMDb key', 10, { FILMES_GRAVACOES: RECORDINGS }],
   ]
 
-  test.each(cases)('child %s', async (_, args, child, vars) => {
-    const { python, engine } = await bothEngines(
+  test.each(cases)('child %s', async (_, child, vars) => {
+    await expectRecordedRecommendation(
       useFixture(),
-      ['--presentes', 'dono', '--quantos', '100', ...args],
       { attendees: ['dono'], count: 100, child },
-      { python: vars, engine: vars },
+      vars,
     )
-
-    expect(engine).toEqual(python)
   })
 })
 

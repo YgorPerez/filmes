@@ -21,13 +21,12 @@ import {
 import { useFixture, type Fixture } from '../../fixture.ts'
 import { RECORDINGS } from '../../sources/support.ts'
 import {
-  bothEngines,
+  expectRecordedRecommendation,
   engineRecommendation,
   film,
   titles,
   weightsWith,
   withoutPosterWarning,
-  PYTHON_TIMEOUT,
 } from '../support.ts'
 
 const DOG = 'a dog dies'
@@ -140,7 +139,7 @@ describe('a trigger', () => {
       'alcance_sob_demanda = 50',
       'alcance_sob_demanda = 3',
     )
-    const out = await all(fixture, [DOG], { ...WITH_DDD, ...weights.engine })
+    const out = await all(fixture, [DOG], { ...WITH_DDD, ...weights })
 
     expect(filmLines(film(out, 'A Volta do Mar'))[0]?.kind).toBe('guess')
   })
@@ -199,7 +198,7 @@ test('what the Session keeps, and how it reads', () => {
   )
 })
 
-describe('parity with the Python engine', { timeout: PYTHON_TIMEOUT }, () => {
+describe('the whole output, as recorded', () => {
   const cases: ReadonlyArray<[string, string[], Vars]> = [
     ['one topic', [DOG], WITH_DDD],
     ['two topics', [DOG, 'there are jump scares'], WITH_DDD],
@@ -207,40 +206,19 @@ describe('parity with the Python engine', { timeout: PYTHON_TIMEOUT }, () => {
   ]
 
   test.each(cases)('trigger, %s', async (_, triggers, vars) => {
-    const { python, engine } = await bothEngines(
+    await expectRecordedRecommendation(
       useFixture(),
-      [
-        '--presentes',
-        'dono',
-        '--quantos',
-        '100',
-        ...triggers.flatMap((t) => ['--gatilho', t]),
-      ],
       { attendees: ['dono'], count: 100, triggers },
-      { python: vars, engine: vars },
+      vars,
     )
-
-    expect(engine).toEqual(python)
   })
 
   test('child and trigger together', async () => {
     const vars = { ...WITH_DDD, FILMES_OMDB_CHAVE: 'chave-de-teste' }
-    const { python, engine } = await bothEngines(
+    await expectRecordedRecommendation(
       useFixture(),
-      [
-        '--presentes',
-        'dono',
-        '--quantos',
-        '100',
-        '--crianca',
-        '14',
-        '--gatilho',
-        DOG,
-      ],
       { attendees: ['dono'], count: 100, child: 14, triggers: [DOG] },
-      { python: vars, engine: vars },
+      vars,
     )
-
-    expect(engine).toEqual(python)
   })
 })

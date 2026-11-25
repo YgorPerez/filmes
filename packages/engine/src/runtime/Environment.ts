@@ -1,14 +1,13 @@
-// Where the engine reads and writes, and its config: the Python `Ambiente`
-// (`filmes/ambiente.py`), built once per process from the environment
-// variables. The variables keep their Python names (`FILMES_*`) so the oracle
-// and the deploy hand both engines the same environment; what changes is the
-// config, read from English TOML (ADR 0002) in the folder `FILMES_CONFIG`
-// names.
+// Where the engine reads and writes, and its config, built once per process
+// from the environment variables. The variables keep the Portuguese names
+// the Python engine gave them (`FILMES_*`), which the deploy and the
+// machines already set; the config is read from English TOML (ADR 0002) in
+// the folder `FILMES_CONFIG` names.
 //
 //     FILMES_CONFIG      the config folder: weights.toml, moods.toml... (required)
 //     FILMES_PESOS       another weights file (default: <config>/weights.toml)
 //     FILMES_LOCAL       another local.toml (default: <config>/local.toml)
-//     FILMES_HOJE        today's date (YYYY-MM-DD), for tests and the oracle
+//     FILMES_HOJE        today's date (YYYY-MM-DD), for tests
 //     FILMES_DADOS       filmes-dados (People, Sessions)      [paths] data
 //     FILMES_CATALOGO    the pinned dumps and CSV tables      [paths] catalog
 //     FILMES_VERSOES     the dumps' manifest                  [paths] versions
@@ -22,8 +21,8 @@
 //     FILMES_DATA_KEY      the deploy key's file for that push (a path; the
 //                          key itself is never read here)
 //
-// The last two have no Python counterpart (the Python engine never commits),
-// so they are named in English like the app's `FILMES_DATABASE`. Environment
+// The last two came after the Python engine (which never committed), so
+// they are named in English like the app's `FILMES_DATABASE`. Environment
 // only, never local.toml: only the VPS pushes (ADR 0005).
 //
 // A variable wins over `[paths]` in local.toml. An empty variable counts as

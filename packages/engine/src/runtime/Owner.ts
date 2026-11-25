@@ -2,8 +2,8 @@
 // who signs the filmes-dados commit. The Python engine took the one Pessoa
 // with `dono: true`; with several Donos, it is the Pessoa logged in to the
 // app or the MCP, which the edge passes to `engine.run(op, { owner })`.
-// Without one (the CLI, the oracle, the tests), the database's Dono stands
-// in, as in Python: the first slug with `dono = 1`.
+// Without one (a script, the tests), the database's Dono stands in, as in
+// the Python engine: the first slug with `dono = 1`.
 
 import { Context, Effect } from 'effect'
 import type { Connection, SqliteError } from '../sqlite/Sqlite.ts'

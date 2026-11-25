@@ -16,5 +16,13 @@ A port without an oracle trusts that every rule written in prose in `AGENTS.md`,
 
 ## Consequences
 
-- `make check` (Python) stays in CI until Python leaves.
+- `make check` (Python) stayed in CI until Python left (#108).
 - A behaviour change during the port is its own ticket, after parity, so the oracle keeps comparing like with like.
+
+## How it ended (2026-11-25, #108)
+
+- The oracle ran as decided: every pytest scenario on both engines over the fixture (#83), a seeded sample of requests on a copy of the real database and filmes-dados (#84, `docs/oracle/real-2026-11-25.md`), and a full build of the real catalog by both rebuilds, compared row for row (#107, `docs/oracle/2026-11-25-full-build.md`). All three ended clean; the differences left were each decided (`decisions.yaml`, last in the commit before #108).
+- Reconstruct was ported last (#105, #106), and the site went online on the database Python built, as planned. filmes-dados was cut over to English the same day.
+- Python then left: `filmes/`, the pytest suite, `pyproject.toml` and `uv.lock`, the stdio MCP server and the skill that called its CLI, the oracle and the CI jobs that ran them. The image never had Python.
+- What the oracle proved stays as committed expected output: the Vitest tests that compared the two engines live now compare the engine with Vitest snapshots recorded from the Python engine while the comparison still passed, and the golden vectors (`*.jsonl.gz`) stay without the scripts that generated them. A snapshot of a whole output changes only with a decision about behaviour.
+- The engine keeps the Python engine's observable rules (text, rounding, ordering, error messages) in `packages/engine/src/compat/` and in comments that name the Python function they follow: they are the spec, not a dependency.

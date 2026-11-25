@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`with Python > --sem-lento is equal to Python 1`] = `
+exports[`the whole output, as recorded > nothing slow 1`] = `
 {
   "attendees": [
     "bruno",

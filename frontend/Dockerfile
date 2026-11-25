@@ -1,7 +1,7 @@
 # The TanStack Start server, modeled on pesquisa-relacionamentos. The image
 # only carries the build's `.output/`, and the `docker build` context is it:
 # nitro already bundles into `.output/server/` what the server imports, and
-# there is no `pnpm install` in here. No Python (map #72).
+# there is no `pnpm install` in here.
 #
 # The deploy builds the image on the VPS itself (`scripts/vps.ts`), with the
 # commit SHA in the name. To build and run it here:

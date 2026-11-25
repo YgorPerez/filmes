@@ -4,9 +4,7 @@
 // Vitest tests pick themselves: `--changed <base>` follows the import graph
 // from what changed. What is left to decide here is when to run everything,
 // because the graph does not see what changes outside it (the lockfile, a
-// config, the CI), which folders to run Vitest in, and whether the Python
-// suite and the MCP tests run. The MCP calls the Python CLI, so a change to
-// the Python engine runs both.
+// config, the CI), and which folders to run Vitest in.
 //
 // Runs on plain `node`, which reads TypeScript by itself: only syntax it
 // strips.
@@ -19,10 +17,6 @@ export type Plan = {
    * `.` for the root
    * scripts. */
   readonly vitest: readonly string[]
-  /** Whether the MCP tests (Vitest, over the real CLI) run. */
-  readonly mcp: boolean
-  /** Whether the Python suite (`uv run pytest`) runs. */
-  readonly python: boolean
 }
 
 /** What changes outside the import graph, or what everything else uses. */
@@ -32,30 +26,26 @@ const AFFECTS_ALL: ReadonlyArray<[RegExp, string]> = [
   [/(^|\/)tsconfig[^/]*\.json$/, 'a tsconfig changed'],
   [/(^|\/)[^/]+\.config\.(ts|js|mjs)$/, 'a config changed'],
   [/^\.github\/workflows\//, 'the CI changed'],
-  [/^Makefile$/, 'the Makefile changed'],
 ]
 
-/** The Python engine and what it reads. */
-const PYTHON = /^(filmes|tests|config)\/|^(pyproject\.toml|uv\.lock)$/
 /** Has no tests: text for people and for agents. */
-const TEXT_ONLY = /(\.md$|^docs\/|^skill\/|^\.claude\/)/
+const TEXT_ONLY = /(\.md$|^docs\/|^\.claude\/)/
+/** The engine's config: its Markdown is data too. */
+const CONFIG = /^config\//
 /** A test folder, whose files (fixtures, a corpus) are data. */
 const TEST_DATA = /(^|\/)tests?\//
 const FROM_ROOT = /^(\.github\/)?scripts\//
 /** What the key migration's round-trip test reads, outside its package. */
 const MIGRATED = /^(config\/|tests\/fixture\/dados\/)/
 /** What the engine's tests read outside its package: the fixture and the
- * config (`packages/engine/test/global-setup.ts`), the key migration that
- * puts them in English, and the Python engine its parity tests run. */
+ * config (`packages/engine/test/global-setup.ts`), and the key migration
+ * that puts them in English. */
 const ENGINE_FIXTURE =
-  /^(filmes\/|tests\/fixture\/|config\/|packages\/key-migration\/src\/|pyproject\.toml$|uv\.lock$)/
+  /^(tests\/fixture\/|config\/|packages\/key-migration\/src\/)/
 /** What the MCP server's tests read outside the import graph: the engine's
  * fixture, built from these (`packages/engine/test/global-setup.ts`). */
 const MCP_SERVER_FIXTURE =
   /^(tests\/fixture\/|config\/|packages\/key-migration\/src\/)/
-/** The pytest seam, whose trace hook the parity oracle's tests run
- * (`packages/engine/oracle/`). */
-const ORACLE_TRACE = /^tests\/conftest\.py$/
 const VITEST_FOLDERS = [
   'frontend',
   'packages/engine',
@@ -68,8 +58,6 @@ const VITEST_FOLDERS = [
  * repo root. */
 export function planForDiff(files: readonly string[]): Plan {
   const vitest = new Set<string>()
-  let mcp = false
-  let python = false
 
   for (const file of files) {
     const affectsAll = AFFECTS_ALL.find(([pattern]) => pattern.test(file))
@@ -77,22 +65,15 @@ export function planForDiff(files: readonly string[]): Plan {
       return {
         full: `${affectsAll[1]} (${file})`,
         vitest: VITEST_FOLDERS,
-        mcp: true,
-        python: true,
       }
     // Markdown under config/ or a test folder is data the tests read, not text.
-    if (TEXT_ONLY.test(file) && !PYTHON.test(file) && !TEST_DATA.test(file))
+    if (TEXT_ONLY.test(file) && !CONFIG.test(file) && !TEST_DATA.test(file))
       continue
     if (MIGRATED.test(file)) vitest.add('packages/key-migration')
-    if (ENGINE_FIXTURE.test(file) || ORACLE_TRACE.test(file))
-      vitest.add('packages/engine')
+    if (ENGINE_FIXTURE.test(file)) vitest.add('packages/engine')
     if (MCP_SERVER_FIXTURE.test(file)) vitest.add('packages/mcp-server')
-    if (PYTHON.test(file)) {
-      python = true
-      mcp = true
-    } else if (file.startsWith('packages/key-migration/'))
+    if (file.startsWith('packages/key-migration/'))
       vitest.add('packages/key-migration')
-    else if (file.startsWith('mcp/')) mcp = true
     else if (FROM_ROOT.test(file)) vitest.add('.')
     else if (file.startsWith('frontend/')) vitest.add('frontend')
     else if (file.startsWith('packages/mcp-server/'))
@@ -106,7 +87,5 @@ export function planForDiff(files: readonly string[]): Plan {
   return {
     full: null,
     vitest: VITEST_FOLDERS.filter((f) => vitest.has(f)),
-    mcp,
-    python,
   }
 }

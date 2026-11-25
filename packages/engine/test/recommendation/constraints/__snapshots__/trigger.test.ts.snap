@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`parity with the Python engine > child and trigger together 1`] = `
+exports[`the whole output, as recorded > child and trigger together 1`] = `
 {
   "attendees": [
     "bruno",
@@ -825,7 +825,7 @@ exports[`parity with the Python engine > child and trigger together 1`] = `
 }
 `;
 
-exports[`parity with the Python engine > trigger, one topic 1`] = `
+exports[`the whole output, as recorded > trigger, one topic 1`] = `
 {
   "attendees": [
     "bruno",
@@ -5169,7 +5169,7 @@ exports[`parity with the Python engine > trigger, one topic 1`] = `
 }
 `;
 
-exports[`parity with the Python engine > trigger, two topics 1`] = `
+exports[`the whole output, as recorded > trigger, two topics 1`] = `
 {
   "attendees": [
     "bruno",
@@ -10191,7 +10191,7 @@ exports[`parity with the Python engine > trigger, two topics 1`] = `
 }
 `;
 
-exports[`parity with the Python engine > trigger, without the key 1`] = `
+exports[`the whole output, as recorded > trigger, without the key 1`] = `
 {
   "attendees": [
     "bruno",

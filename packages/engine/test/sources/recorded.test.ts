@@ -1,5 +1,5 @@
 // The on-demand sources over the recordings (`FILMES_GRAVACOES`), as the
-// Python tests and the oracle run them: hits, misses, the cache and its
+// tests run them: hits, misses, the cache and its
 // expiry, a missing key, and recorded failures with and without `vezes`.
 
 import { existsSync, rmSync, writeFileSync } from 'node:fs'

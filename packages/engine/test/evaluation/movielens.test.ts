@@ -1,15 +1,10 @@
-// The MovieLens sample and the diaries of `avaliar` against Python, on
-// inputs test_avaliar does not reach: quoted and multi-line CSV fields, a
-// BOM and CRLF endings, repeated ratings, tags, and the files Python
-// refuses (with its messages). Each case runs both engines on the same
-// Catalog and database.
+// The MovieLens sample and the diaries of `avaliar` on messy inputs: quoted
+// and multi-line CSV fields, a BOM and CRLF endings, repeated ratings, tags,
+// and the files it refuses (with their messages). Each case checks the
+// whole outcome against the one recorded for it, which the Python engine
+// gave on the same Catalog and database.
 import { cpSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import {
-  migrateConfigFile,
-  output as tables,
-  outputToEnglish,
-} from '@filmes/key-migration'
 import { describe, expect, test } from 'vite-plus/test'
 import {
   dumpReportYaml,
@@ -20,7 +15,6 @@ import {
 import { ROOT, useFixture, type Fixture } from '../fixture.ts'
 import { zipOf } from '../imports/zip.ts'
 import { expectRecorded } from '../expected.ts'
-import { python, PYTHON_TIMEOUT } from '../recommendation/support.ts'
 
 /** Fixture films, so the sample's training reaches real Candidates. */
 const FILMS = ['9000101', '9000102', '9000103', '9000104', '9000105', '9000106']
@@ -38,45 +32,18 @@ const catalogWith = (
   return catalog
 }
 
-/** Both engines' outcomes, Python's in English keys; the report path and
- * the paths in messages read the same on both sides. */
-const both = async (fixture: Fixture, vars: Vars, py: Vars = {}) => {
-  const pyReports = join(fixture.root, 'py-avaliacoes')
-  const fromPython = python(fixture, ['avaliar'], {
-    ...vars,
-    ...py,
-    FILMES_AVALIACOES: pyReports,
-  })
-  const engine = await fixture.run(evaluate(), {
+/** The engine's outcome, without the report path, checked against the one
+ * recorded for the test (`expected.ts`). */
+const expectRecordedOutcome = async (fixture: Fixture, vars: Vars) => {
+  const { exitCode, output } = await fixture.run(evaluate(), {
     ...vars,
     FILMES_AVALIACOES: join(fixture.root, 'avaliacoes'),
   })
-  const strip = (
-    outcome: { exitCode: number; output: unknown },
-    english: boolean,
-  ) => {
-    const raw = outcome.output as Record<string, unknown>
-    const error = raw['erro'] as
-      | { codigo: string; mensagem: string }
-      | undefined
-    const output = (
-      !english
-        ? JSON.parse(JSON.stringify(raw))
-        : error
-          ? {
-              error: {
-                code: tables.ERROR_CODES[error.codigo],
-                message: error.mensagem,
-              },
-            }
-          : outputToEnglish('avaliar', raw)
-    ) as Record<string, unknown>
-    delete output['file']
-    return { exitCode: outcome.exitCode, output }
-  }
-  const recorded = strip(fromPython, true)
-  expectRecorded(fixture, recorded)
-  return { python: recorded, engine: strip(engine, false) }
+  const shown = JSON.parse(JSON.stringify(output)) as Record<string, unknown>
+  delete shown['file']
+  const outcome = { exitCode, output: shown }
+  expectRecorded(fixture, outcome)
+  return outcome
 }
 
 const ratings = (rows: string[], header = 'userId,movieId,rating,timestamp') =>
@@ -115,53 +82,43 @@ const TAGS =
   '86,4,,1\n' +
   '92,3,SLOW,1\n'
 
-describe('avaliar on MovieLens files, against Python', () => {
-  test(
-    'a messy sample with tags gives the same measures',
-    { timeout: PYTHON_TIMEOUT },
-    async () => {
-      const fixture = useFixture()
-      const catalog = catalogWith(fixture, {
-        'links.csv': links,
-        'ratings.csv': manyRatings(),
-        'tags.csv': TAGS,
-      })
-      const { python: py, engine } = await both(fixture, {
-        FILMES_CATALOGO: catalog,
-      })
-      expect(engine.exitCode).toBe(0)
-      expect(engine).toEqual(py)
-    },
-  )
+describe('avaliar on MovieLens files, as recorded', () => {
+  test('a messy sample with tags gives the same measures', async () => {
+    const fixture = useFixture()
+    const catalog = catalogWith(fixture, {
+      'links.csv': links,
+      'ratings.csv': manyRatings(),
+      'tags.csv': TAGS,
+    })
+    const engine = await expectRecordedOutcome(fixture, {
+      FILMES_CATALOGO: catalog,
+    })
+    expect(engine.exitCode).toBe(0)
+  })
 
-  test(
-    'a small sample warns that MovieLens had few users',
-    { timeout: PYTHON_TIMEOUT },
-    async () => {
-      const fixture = useFixture()
-      const rows = [
-        '1,1,5,100',
-        '1,2,4,200',
-        '1,3,2,300',
-        '2,1,5,100',
-        '2,2,"4.5",200',
-        '3,1,5,100',
-      ]
-      // A last line with no line break, inside quotes: not strict, it stays.
-      const catalog = catalogWith(fixture, {
-        'links.csv': links,
-        'ratings.csv': ratings(rows) + '4,4,5,"400',
-      })
-      const { python: py, engine } = await both(fixture, {
-        FILMES_CATALOGO: catalog,
-      })
-      expect(engine.exitCode).toBe(0)
-      expect((engine.output['warnings'] as string[])[0]).toMatch(
-        /^O MovieLens tinha só 4 usuários/,
-      )
-      expect(engine).toEqual(py)
-    },
-  )
+  test('a small sample warns that MovieLens had few users', async () => {
+    const fixture = useFixture()
+    const rows = [
+      '1,1,5,100',
+      '1,2,4,200',
+      '1,3,2,300',
+      '2,1,5,100',
+      '2,2,"4.5",200',
+      '3,1,5,100',
+    ]
+    // A last line with no line break, inside quotes: not strict, it stays.
+    const catalog = catalogWith(fixture, {
+      'links.csv': links,
+      'ratings.csv': ratings(rows) + '4,4,5,"400',
+    })
+    const engine = await expectRecordedOutcome(fixture, {
+      FILMES_CATALOGO: catalog,
+    })
+    expect(engine.exitCode).toBe(0)
+    expect((engine.output['warnings'] as string[])[0]).toMatch(
+      /^O MovieLens tinha só 4 usuários/,
+    )
+  })
 
   test.each([
     ['only links.csv', { 'links.csv': links }],
@@ -201,99 +158,69 @@ describe('avaliar on MovieLens files, against Python', () => {
         'tags.csv': 'userId,movieId,tag\nx,1,a\n',
       },
     ],
-  ])(
-    '%s is refused as Python refuses it',
-    { timeout: PYTHON_TIMEOUT },
-    async (_, files) => {
-      const fixture = useFixture()
-      const catalog = catalogWith(fixture, files)
-      const { python: py, engine } = await both(fixture, {
-        FILMES_CATALOGO: catalog,
-      })
-      expect(engine.exitCode).toBe(1)
-      expect(engine).toEqual(py)
-    },
-  )
+  ])('%s is refused', async (_, files) => {
+    const fixture = useFixture()
+    const catalog = catalogWith(fixture, files)
+    const engine = await expectRecordedOutcome(fixture, {
+      FILMES_CATALOGO: catalog,
+    })
+    expect(engine.exitCode).toBe(1)
+  })
 
-  test(
-    'a manifest without the MovieLens dump is invalid_versions',
-    { timeout: PYTHON_TIMEOUT },
-    async () => {
-      const fixture = useFixture()
-      const catalog = catalogWith(fixture, {
-        'links.csv': links,
-        'ratings.csv': manyRatings(),
-      })
-      const pt = join(fixture.root, 'versoes.json')
-      writeFileSync(pt, JSON.stringify({ dumps: {} }))
-      const en = join(fixture.root, 'catalog-versions.json')
-      writeFileSync(
-        en,
-        migrateConfigFile(
-          'versoes-catalogo.json',
-          readFileSync(pt, 'utf8'),
-          'to-en',
-        )!.text,
-      )
-      const { python: py, engine } = await both(
-        fixture,
-        { FILMES_CATALOGO: catalog, FILMES_VERSOES: en },
-        { FILMES_VERSOES: pt },
-      )
-      const message = (outcome: typeof engine) =>
-        (outcome.output['error'] as { message: string }).message.replace(
-          /^\S+: /,
-          '<manifest>: ',
-        )
-      expect(engine.output).toMatchObject({
-        error: { code: 'invalid_versions' },
-      })
-      expect(message(engine)).toBe(message(py))
-      const missing = await fixture.run(evaluate(), {
-        FILMES_CATALOGO: catalog,
-        FILMES_VERSOES: join(fixture.root, 'none.json'),
-        FILMES_AVALIACOES: join(fixture.root, 'avaliacoes'),
-      })
-      expect(missing.output).toEqual({
-        error: {
-          code: 'invalid_versions',
-          message: `${join(fixture.root, 'none.json')}: sem fonte e data de ml-32m.zip ([Errno 2] No such file or directory: '${join(fixture.root, 'none.json')}')`,
-        },
-      })
-    },
-  )
+  test('a manifest without the MovieLens dump is invalid_versions', async () => {
+    const fixture = useFixture()
+    const catalog = catalogWith(fixture, {
+      'links.csv': links,
+      'ratings.csv': manyRatings(),
+    })
+    const manifest = join(fixture.root, 'versoes.json')
+    writeFileSync(manifest, JSON.stringify({ dumps: {} }))
+    const engine = await expectRecordedOutcome(fixture, {
+      FILMES_CATALOGO: catalog,
+      FILMES_VERSOES: manifest,
+    })
+    expect(engine.output).toMatchObject({
+      error: { code: 'invalid_versions' },
+    })
+    const missing = await fixture.run(evaluate(), {
+      FILMES_CATALOGO: catalog,
+      FILMES_VERSOES: join(fixture.root, 'none.json'),
+      FILMES_AVALIACOES: join(fixture.root, 'avaliacoes'),
+    })
+    expect(missing.output).toEqual({
+      error: {
+        code: 'invalid_versions',
+        message: `${join(fixture.root, 'none.json')}: sem fonte e data de ml-32m.zip ([Errno 2] No such file or directory: '${join(fixture.root, 'none.json')}')`,
+      },
+    })
+  })
 })
 
-describe('the diaries, against Python', () => {
-  test(
-    'a Trakt history dates the cut',
-    { timeout: PYTHON_TIMEOUT },
-    async () => {
-      const fixture = useFixture()
-      const trakt = join(ROOT, 'tests/fixture/trakt')
-      await fixture.ok(
-        importTrakt({
-          person: 'teo',
-          original: 'trakt.zip',
-          content: zipOf(
-            ['ratings-movies.json', 'watched-history-1.json'].map(
-              (name) =>
-                [
-                  `trakt-export/${name}`,
-                  readFileSync(join(trakt, name)),
-                ] as const,
-            ),
+describe('the diaries, as recorded', () => {
+  test('a Trakt history dates the cut', async () => {
+    const fixture = useFixture()
+    const trakt = join(ROOT, 'tests/fixture/trakt')
+    await fixture.ok(
+      importTrakt({
+        person: 'teo',
+        original: 'trakt.zip',
+        content: zipOf(
+          ['ratings-movies.json', 'watched-history-1.json'].map(
+            (name) =>
+              [
+                `trakt-export/${name}`,
+                readFileSync(join(trakt, name)),
+              ] as const,
           ),
-          author: { name: 'Dono', email: 'dono@example.org' },
-        }),
-      )
-      const { python: py, engine } = await both(fixture, {})
-      expect(engine.exitCode).toBe(0)
-      expect(engine).toEqual(py)
-    },
-  )
+        ),
+        author: { name: 'Dono', email: 'dono@example.org' },
+      }),
+    )
+    const engine = await expectRecordedOutcome(fixture, {})
+    expect(engine.exitCode).toBe(0)
+  })
 
-  test('without a data folder the Letterboxd diaries are skipped, as Python', async () => {
+  test('without a data folder the Letterboxd diaries are skipped', async () => {
     const fixture = useFixture()
     const withData = await fixture.ok(evaluate(), {
       FILMES_AVALIACOES: join(fixture.root, 'a'),

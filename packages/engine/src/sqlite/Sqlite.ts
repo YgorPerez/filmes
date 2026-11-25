@@ -42,11 +42,11 @@ export class SqliteError extends Schema.TaggedError<
 
 export type Row = Readonly<Record<string, SQLOutputValue>>
 
-/** The database file is not there (Python `abrir_leitura`). */
+/** The database file is not there. */
 export const missingDatabase = (path: string): EngineError =>
   engineError(
     'missing_database',
-    `banco não encontrado em ${path}: rode \`python -m filmes reconstruir\``,
+    `banco não encontrado em ${path}: rode \`pnpm db:publish --build\``,
   )
 
 export interface RunResult {

@@ -5,11 +5,11 @@
 //   VPS_HOST=… [VPS_USER=root] [VPS_PORT=22] [VPS_SSH_KEY=…] \
 //     pnpm db:publish <file.sqlite> [--version <name>] [--dry-run]
 //   … pnpm db:publish --build [--data <filmes-dados>] [--config <config>]
-//     [--python] [--version <name>] [--dry-run]
+//     [--version <name>] [--dry-run]
 //   … pnpm db:publish --rollback [<version>] [--dry-run]
 //
-// `--build` first builds the file with the engine's `rebuild` (or, with
-// `--python`, the Python engine, until #108) from filmes-dados (`--data`,
+// `--build` first builds the file with the engine's `rebuild` from
+// filmes-dados (`--data`,
 // or `FILMES_DADOS`) and the config (`--config`, the repo's `config/` by
 // default), both migrated in a scratch folder (`db-build.ts`); the dumps
 // come from the caller's environment. A dry run
@@ -122,14 +122,13 @@ type Command =
       mode: 'build'
       data?: string
       config?: string
-      python: boolean
       version?: string
       dryRun: boolean
     }
   | { mode: 'rollback'; version?: string; dryRun: boolean }
 
 const USAGE =
-  'Usage: VPS_HOST=… [VPS_USER=root] [VPS_PORT=22] [VPS_SSH_KEY=…] pnpm db:publish <file.sqlite> | --build [--data <filmes-dados>] [--config <config>] [--python], then [--version <name>] [--dry-run] | --rollback [<version>] [--dry-run]'
+  'Usage: VPS_HOST=… [VPS_USER=root] [VPS_PORT=22] [VPS_SSH_KEY=…] pnpm db:publish <file.sqlite> | --build [--data <filmes-dados>] [--config <config>], then [--version <name>] [--dry-run] | --rollback [<version>] [--dry-run]'
 
 /** A publish's command line: a file, or `--build` and its folders. */
 function parsePublish(args: string[], dryRun: boolean): Command | string {
@@ -143,7 +142,6 @@ function parsePublish(args: string[], dryRun: boolean): Command | string {
         build: { type: 'boolean' },
         data: { type: 'string' },
         config: { type: 'string' },
-        python: { type: 'boolean' },
       },
     })
   } catch {
@@ -151,19 +149,13 @@ function parsePublish(args: string[], dryRun: boolean): Command | string {
   }
   const { positionals, values } = parsed
   if (values.version === '') return USAGE
-  const { version, build, data, config, python = false } = values
+  const { version, build, data, config } = values
   if (build)
     return positionals.length === 0
-      ? { mode: 'build', data, config, python, version, dryRun }
+      ? { mode: 'build', data, config, version, dryRun }
       : USAGE
   const [file, ...extra] = positionals
-  if (
-    !file ||
-    extra.length > 0 ||
-    data !== undefined ||
-    config !== undefined ||
-    python
-  )
+  if (!file || extra.length > 0 || data !== undefined || config !== undefined)
     return USAGE
   return { mode: 'publish', file, version, dryRun }
 }
@@ -242,10 +234,9 @@ export function runCommand({
     mkdtempSync(join(tmpdir(), 'filmes-db-')),
     `${version}.sqlite`,
   )
-  const builder = command.python ? 'python' : 'typescript'
-  say(`building ${version} from ${data} with ${config} (${builder})`)
+  say(`building ${version} from ${data} with ${config}`)
   try {
-    buildDatabase({ data, config, database: file, env, builder, run })
+    buildDatabase({ data, config, database: file, env, run })
   } catch (error) {
     rmSync(dirname(file), { recursive: true, force: true })
     throw error

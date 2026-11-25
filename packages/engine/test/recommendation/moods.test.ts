@@ -5,15 +5,17 @@
 // on taste. See the fixture's LEIAME.
 
 import { describe, expect, test } from 'vite-plus/test'
-import type { Recommendation, RecommendRequest } from '../../src/index.ts'
+import {
+  consult,
+  type Recommendation,
+  type RecommendRequest,
+} from '../../src/index.ts'
 import { useFixture, type Fixture } from '../fixture.ts'
 import {
   engineRecommendation,
   film,
-  pythonOk,
   titles,
   withoutPosterWarning,
-  PYTHON_TIMEOUT,
 } from './support.ts'
 
 const ask = (
@@ -30,7 +32,7 @@ const ask = (
 const lines = (out: Recommendation, title: string) =>
   film(out, title).filmLines.map((l) => [l.text, l.strength, l.kind])
 
-describe('the Clima', { timeout: PYTHON_TIMEOUT }, () => {
+describe('the Clima', () => {
   test('a Clima asked for gives a film line with the tag that backs it', async () => {
     const fixture = useFixture()
     const [line] = film(await ask(fixture, ['leve']), 'Dia de Feira').filmLines
@@ -45,11 +47,12 @@ describe('the Clima', { timeout: PYTHON_TIMEOUT }, () => {
       factId: line?.factId,
       contribution: 0.1,
     })
-    const ids = pythonOk(fixture, [
-      'consultar',
-      "SELECT fato_id FROM tags_movielens WHERE filme_id = 'tt9001101'",
-    ]) as { linhas: string[][] }
-    expect(ids.linhas.map(([id]) => id)).toContain(line?.factId)
+    const ids = await fixture.ok(
+      consult(
+        "SELECT fato_id FROM tags_movielens WHERE filme_id = 'tt9001101'",
+      ),
+    )
+    expect(ids.rows.map(([id]) => id)).toContain(line?.factId)
   })
 
   test('a Clima pulls the film up and removes none', async () => {
@@ -241,7 +244,7 @@ describe('the Clima', { timeout: PYTHON_TIMEOUT }, () => {
 
 // Sessão Maldita has "so bad it's good" (12 users); Silêncio no Lago has
 // "meditative" (12) and 0.90 of "slow" in the genome. No Clima asked.
-describe('group or alone', { timeout: PYTHON_TIMEOUT }, () => {
+describe('group or alone', () => {
   test('a Session alone gives a bonus to the film good alone', async () => {
     const out = await ask(useFixture())
 

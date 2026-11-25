@@ -120,8 +120,7 @@ function dataTarget(
 }
 
 /** Where a path inside filmes-dados (`sessoes/x.md`, or the folder
- * `pessoas` alone) lands after the migration. The parity oracle maps the
- * paths Python prints with it. */
+ * `pessoas` alone) lands after the migration. */
 export function migrateDataPath(path: string, direction: Direction): string {
   const [top, ...rest] = path.split('/')
   if (rest.length > 0) return dataTarget(path, direction).to

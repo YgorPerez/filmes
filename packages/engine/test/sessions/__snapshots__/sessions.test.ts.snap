@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`the Feedback’s Fatos in the database > a reload gives the rows Python’s Feedback wrote 1`] = `
+exports[`the Feedback’s Fatos in the database > a reload gives the rows the Feedback wrote 1`] = `
 {
   "declarados": [
     {

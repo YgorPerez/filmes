@@ -18,27 +18,19 @@ const IGNORED = [
   // The Cartaz's MCP Apps view, built into one HTML string by
   // `frontend/scripts/billboard-view.ts`; a test keeps it equal to the build.
   'packages/mcp-server/src/billboard-view.gen.ts',
-  // The Python engine's data: the test fixture (CSV, Markdown with
-  // frontmatter, recorded HTTP answers) and the versioned config, which the
-  // engine reads as written.
+  // The engine's data: the test fixture (CSV, Markdown with frontmatter,
+  // recorded HTTP answers) and the versioned config, which the engine reads
+  // as written.
   'tests/**',
   'config/**',
-  // The Cartaz the Python engine serves: its JS and CSS are read into the
-  // HTML byte by byte, and the Python tests check that text. They leave with
-  // the Python engine.
-  'filmes/**',
   // Files the Python engine wrote (frontmatter and CLI output), which the
   // key migration's tests read byte for byte.
   'packages/key-migration/test/corpus/**',
   'packages/key-migration/test/python-outputs.jsonl',
-  // The Claude skill: prose the agent reads, kept as written.
-  'skill/**',
   // Its sample of the Recommendation is the engine's Markdown, byte for
   // byte (`*` for italics); Oxfmt would rewrite the fenced block.
   'README.md',
   '.claude/**',
-  '.venv/**',
-  'uv.lock',
 ]
 
 export default defineConfig({
@@ -107,6 +99,21 @@ export default defineConfig({
       'react/rule-suppression': 'error',
       'react/syntax': 'error',
       'react/todo': 'error',
+      // A test may assert through a helper that checks the output recorded
+      // for it (`packages/engine/test/expected.ts`): `expectRecorded...`,
+      // besides Vitest's own.
+      'vitest/expect-expect': [
+        'error',
+        {
+          assertFunctionNames: [
+            'expect',
+            'expectTypeOf',
+            'assert',
+            'assertType',
+            'expectRecorded*',
+          ],
+        },
+      ],
     },
     overrides: [
       {

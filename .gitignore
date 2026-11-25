@@ -1,11 +1,6 @@
-__pycache__/
-*.pyc
-.venv/
-.pytest_cache/
-var/
 config/local.toml
 
-# The pnpm workspace (frontend/, mcp/, packages/).
+# The pnpm workspace (frontend/, packages/).
 node_modules/
 
 # What the frontend build leaves.

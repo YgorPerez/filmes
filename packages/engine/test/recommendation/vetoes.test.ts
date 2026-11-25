@@ -10,20 +10,24 @@
 // comédia de recasamento (Q9004802) is a subclass of comédia romântica.
 
 import { describe, expect, test } from 'vite-plus/test'
+import { personCreate, personRemove, personVeto } from '../../src/index.ts'
 import { useFixture, type Fixture } from '../fixture.ts'
-import {
-  engineRecommendation,
-  film,
-  pythonOk,
-  titles,
-  PYTHON_TIMEOUT,
-} from './support.ts'
+import { engineRecommendation, film, titles } from './support.ts'
+
+const vetoSillyComedy = (fixture: Fixture) =>
+  fixture.ok(
+    personVeto({
+      person: 'bruno',
+      text: 'não quer comédia boba',
+      target: 'silly_comedy',
+      group: true,
+    }),
+  )
 
 const all = (fixture: Fixture) =>
   engineRecommendation(fixture, { attendees: ['dono'], count: 100 })
 
-// `pessoa vetar` is not ported yet: the Python records the Vetos.
-describe('a Veto to a tag group', { timeout: PYTHON_TIMEOUT }, () => {
+describe('a Veto to a tag group', () => {
   test('removes the comedy with the tag above the minimum', async () => {
     const fixture = useFixture()
     const before = new Set(titles(await all(fixture)))
@@ -35,14 +39,7 @@ describe('a Veto to a tag group', { timeout: PYTHON_TIMEOUT }, () => {
     ])
       expect(before.has(t)).toBe(true)
 
-    pythonOk(fixture, [
-      'pessoa',
-      'vetar',
-      'bruno',
-      'não quer comédia boba',
-      '--grupo',
-      'comedia_boba',
-    ])
+    await vetoSillyComedy(fixture)
     const out = await all(fixture)
 
     const after = new Set(titles(out))
@@ -64,21 +61,16 @@ describe('a Veto to a tag group', { timeout: PYTHON_TIMEOUT }, () => {
 
   test('removed, it removes nothing', async () => {
     const fixture = useFixture()
-    pythonOk(fixture, [
-      'pessoa',
-      'vetar',
-      'bruno',
-      'não quer comédia boba',
-      '--grupo',
-      'comedia_boba',
-    ])
-    pythonOk(fixture, ['pessoa', 'remover', 'bruno', '--veto', 'comedia_boba'])
+    await vetoSillyComedy(fixture)
+    await fixture.ok(
+      personRemove({ person: 'bruno', kind: 'veto', id: 'silly_comedy' }),
+    )
 
     expect(titles(await all(fixture))).toContain('Turma do Recreio')
   })
 })
 
-describe('the IMDb rating bonus', { timeout: PYTHON_TIMEOUT }, () => {
+describe('the IMDb rating bonus', () => {
   test('gives the film a bonus and the film line', async () => {
     const obra = film(await all(useFixture()), 'Obra-Prima')
 
@@ -108,17 +100,16 @@ describe('the IMDb rating bonus', { timeout: PYTHON_TIMEOUT }, () => {
   })
 })
 
-describe('a Veto to a genre', { timeout: PYTHON_TIMEOUT }, () => {
+describe('a Veto to a genre', () => {
   const vetoRomance = async (fixture: Fixture, count?: number) => {
-    pythonOk(fixture, ['pessoa', 'criar', 'Lorenzo', '--slug', 'lorenzo'])
-    pythonOk(fixture, [
-      'pessoa',
-      'vetar',
-      'lorenzo',
-      'não vê romance',
-      '--entidade',
-      'Q1054574',
-    ])
+    await fixture.ok(personCreate({ name: 'Lorenzo', slug: 'lorenzo' }))
+    await fixture.ok(
+      personVeto({
+        person: 'lorenzo',
+        text: 'não vê romance',
+        target: 'Q1054574',
+      }),
+    )
     return engineRecommendation(fixture, {
       attendees: ['dono', 'lorenzo'],
       count,

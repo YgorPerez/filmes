@@ -1,5 +1,4 @@
-// Today's date, the engine's clock. `FILMES_HOJE` pins it (tests, the
-// oracle); otherwise it is the date in America/Sao_Paulo, from Effect's
+// Today's date, the engine's clock. `FILMES_HOJE` pins it (tests); otherwise it is the date in America/Sao_Paulo, from Effect's
 // `Clock`, so a `TestClock` moves it. Python's `date.today()` was the host's
 // local date, which is BRT on servidor-azul but UTC in a container (risk R9
 // of #76): the zone is fixed here instead.

@@ -1,10 +1,7 @@
 # The repo's workspace, in the shape of pesquisa-relacionamentos: one
-# `pnpm install` at the root installs everything, with a single lockfile. The
-# Python engine (`filmes/`, `tests/`) stays where it is, outside the
-# workspace, until the TypeScript port replaces it (map #72).
+# `pnpm install` at the root installs everything, with a single lockfile.
 packages:
   - frontend
-  - mcp
   - packages/*
 
 # The versions more than one package uses, written once. Whoever depends on

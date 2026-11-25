@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`avaliar, against Python > gives the same result and the same report 1`] = `
+exports[`avaliar, as recorded > gives the recorded result and report 1`] = `
 {
   "blocks": [
     {
@@ -288,7 +288,7 @@ A amostra do MovieLens usou a semente 27 e sorteou 0 usuários.
 }
 `;
 
-exports[`avaliar, against Python > the grid gives the same best weights and report 1`] = `
+exports[`avaliar, as recorded > the grid gives the recorded best weights and report 1`] = `
 {
   "best": [
     {

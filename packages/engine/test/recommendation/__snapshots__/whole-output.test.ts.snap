@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`the engine recommends as the Python does > Ajustes, a Declarado on an entity and a Relato on a film 1`] = `
+exports[`the whole output, as recorded > Ajustes, a Declarado on an entity and a Relato on a film 1`] = `
 {
   "attendees": [
     "bruno",
@@ -4532,7 +4532,7 @@ exports[`the engine recommends as the Python does > Ajustes, a Declarado on an e
 }
 `;
 
-exports[`the engine recommends as the Python does > Climas without accents or case, someone… 1`] = `
+exports[`the whole output, as recorded > Climas without accents or case, someone… 1`] = `
 {
   "attendees": [
     "teo",
@@ -6695,7 +6695,7 @@ exports[`the engine recommends as the Python does > Climas without accents or ca
 }
 `;
 
-exports[`the engine recommends as the Python does > Climas, one outside the vocabulary 1`] = `
+exports[`the whole output, as recorded > Climas, one outside the vocabulary 1`] = `
 {
   "attendees": [
     "bruno",
@@ -9264,7 +9264,7 @@ exports[`the engine recommends as the Python does > Climas, one outside the voca
 }
 `;
 
-exports[`the engine recommends as the Python does > Presentes by comma, with someone with n… 1`] = `
+exports[`the whole output, as recorded > Presentes by comma, with someone with n… 1`] = `
 {
   "attendees": [
     "bruno",
@@ -14113,7 +14113,7 @@ exports[`the engine recommends as the Python does > Presentes by comma, with som
 }
 `;
 
-exports[`the engine recommends as the Python does > Vetos to a tag group and to a genre 1`] = `
+exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`] = `
 {
   "attendees": [
     "bruno",
@@ -18559,7 +18559,7 @@ exports[`the engine recommends as the Python does > Vetos to a tag group and to 
 }
 `;
 
-exports[`the engine recommends as the Python does > someone's rule, from --de alone 1`] = `
+exports[`the whole output, as recorded > someone's rule, from --de alone 1`] = `
 {
   "attendees": [
     "bruno",
@@ -21832,7 +21832,7 @@ exports[`the engine recommends as the Python does > someone's rule, from --de al
 }
 `;
 
-exports[`the engine recommends as the Python does > someone's rule, named 1`] = `
+exports[`the whole output, as recorded > someone's rule, named 1`] = `
 {
   "attendees": [
     "bruno",
@@ -22290,7 +22290,7 @@ exports[`the engine recommends as the Python does > someone's rule, named 1`] = 
 }
 `;
 
-exports[`the engine recommends as the Python does > the Crédito, its line and the order it changes 1`] = `
+exports[`the whole output, as recorded > the Crédito, its line and the order it changes 1`] = `
 {
   "attendees": [
     "bruno",
@@ -25614,7 +25614,7 @@ exports[`the engine recommends as the Python does > the Crédito, its line and t
 }
 `;
 
-exports[`the engine recommends as the Python does > the Crédito, its line and the order it changes 2`] = `
+exports[`the whole output, as recorded > the Crédito, its line and the order it changes 2`] = `
 {
   "attendees": [
     "bruno",
@@ -27684,7 +27684,7 @@ exports[`the engine recommends as the Python does > the Crédito, its line and t
 }
 `;
 
-exports[`the engine recommends as the Python does > the Crédito, its line and the order it changes 3`] = `
+exports[`the whole output, as recorded > the Crédito, its line and the order it changes 3`] = `
 {
   "attendees": [
     "bruno",
@@ -29715,7 +29715,7 @@ exports[`the engine recommends as the Python does > the Crédito, its line and t
 }
 `;
 
-exports[`the engine recommends as the Python does > the Dono alone, every film 1`] = `
+exports[`the whole output, as recorded > the Dono alone, every film 1`] = `
 {
   "attendees": [
     "bruno",
@@ -33345,7 +33345,7 @@ exports[`the engine recommends as the Python does > the Dono alone, every film 1
 }
 `;
 
-exports[`the engine recommends as the Python does > the average rule 1`] = `
+exports[`the whole output, as recorded > the average rule 1`] = `
 {
   "attendees": [
     "bruno",
@@ -36617,7 +36617,7 @@ exports[`the engine recommends as the Python does > the average rule 1`] = `
 }
 `;
 
-exports[`the engine recommends as the Python does > the cast and director ceilings 1`] = `
+exports[`the whole output, as recorded > the cast and director ceilings 1`] = `
 {
   "attendees": [
     "rosa",
@@ -40091,7 +40091,7 @@ exports[`the engine recommends as the Python does > the cast and director ceilin
 }
 `;
 
-exports[`the engine recommends as the Python does > the cut of the strongest, and a link left out of the weights 1`] = `
+exports[`the whole output, as recorded > the cut of the strongest, and a link left out of the weights 1`] = `
 {
   "attendees": [
     "bruno",
@@ -43721,7 +43721,7 @@ exports[`the engine recommends as the Python does > the cut of the strongest, an
 }
 `;
 
-exports[`the engine recommends as the Python does > the cut of the strongest, and a link left out of the weights 2`] = `
+exports[`the whole output, as recorded > the cut of the strongest, and a link left out of the weights 2`] = `
 {
   "attendees": [
     "bruno",
@@ -47343,7 +47343,7 @@ exports[`the engine recommends as the Python does > the cut of the strongest, an
 }
 `;
 
-exports[`the engine recommends as the Python does > the default size, in a group 1`] = `
+exports[`the whole output, as recorded > the default size, in a group 1`] = `
 {
   "attendees": [
     "bruno",
@@ -47701,7 +47701,7 @@ exports[`the engine recommends as the Python does > the default size, in a group
 }
 `;
 
-exports[`the engine recommends as the Python does > the poster, title and synopsis from the TMDB 1`] = `
+exports[`the whole output, as recorded > the poster, title and synopsis from the TMDB 1`] = `
 {
   "attendees": [
     "bruno",

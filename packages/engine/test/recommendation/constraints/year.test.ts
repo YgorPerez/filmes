@@ -13,11 +13,10 @@ import {
 } from '../../../src/index.ts'
 import { useFixture, type Fixture } from '../../fixture.ts'
 import {
-  bothEngines,
+  expectRecordedRecommendation,
   engineRecommendation,
   film,
   titles,
-  PYTHON_TIMEOUT,
 } from '../support.ts'
 
 const all = (
@@ -122,17 +121,16 @@ test('the stored range reads as the Cartaz shows it', () => {
   expect(label(2012, 2016)).toBe('entre 2012 e 2016')
 })
 
-describe('equal to Python', { timeout: PYTHON_TIMEOUT }, () => {
-  test.each<[string[], Partial<RecommendRequest>]>([
-    [['--desde', '2016'], { since: 2016 }],
-    [['--ate', '2018'], { until: 2018 }],
-    [['--desde', '2015', '--ate', '2016'], { since: 2015, until: 2016 }],
-  ])('%j', async (args, request) => {
-    const { python, engine } = await bothEngines(
-      useFixture(),
-      ['--presentes', 'dono', '--quantos', '100', ...args],
-      { attendees: ['dono'], count: 100, ...request },
-    )
-    expect(engine).toEqual(python)
+describe('the whole output, as recorded', () => {
+  test.each<[Partial<RecommendRequest>]>([
+    [{ since: 2016 }],
+    [{ until: 2018 }],
+    [{ since: 2015, until: 2016 }],
+  ])('%j', async (request) => {
+    await expectRecordedRecommendation(useFixture(), {
+      attendees: ['dono'],
+      count: 100,
+      ...request,
+    })
   })
 })

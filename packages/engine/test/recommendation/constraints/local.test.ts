@@ -16,11 +16,10 @@ import {
 } from '../../../src/index.ts'
 import { useFixture, type Fixture } from '../../fixture.ts'
 import {
-  bothEngines,
+  expectRecordedRecommendation,
   engineRecommendation,
   film,
   titles,
-  PYTHON_TIMEOUT,
 } from '../support.ts'
 
 const all = (
@@ -179,24 +178,13 @@ test('"sem Já visto" removes the films some Presente has seen', async () => {
   expect(out.constraints['unseen']).toEqual({ removed: seenShown.length })
 })
 
-describe('equal to Python', { timeout: PYTHON_TIMEOUT }, () => {
-  test.each<[string, string[], Partial<RecommendRequest>]>([
-    ['duration', ['--duracao-max', '100'], { maxDuration: 100 }],
-    ['language', ['--idioma', 'Português'], { language: 'Português' }],
-    ['unseen', ['--sem-ja-visto'], { unseen: true }],
+describe('the whole output, as recorded', () => {
+  test.each<[string, Partial<RecommendRequest>]>([
+    ['duration', { maxDuration: 100 }],
+    ['language', { language: 'Português' }],
+    ['unseen', { unseen: true }],
     [
       'all of them',
-      [
-        '--duracao-max',
-        '110',
-        '--idioma',
-        'pt',
-        '--sem-ja-visto',
-        '--desde',
-        '2013',
-        '--sem-lento',
-        '--sem-tristeza',
-      ],
       {
         maxDuration: 110,
         language: 'pt',
@@ -206,12 +194,11 @@ describe('equal to Python', { timeout: PYTHON_TIMEOUT }, () => {
         noSad: true,
       },
     ],
-  ])('%s', async (_, args, request) => {
-    const { python, engine } = await bothEngines(
-      useFixture(),
-      ['--presentes', 'dono', '--quantos', '100', ...args],
-      { attendees: ['dono'], count: 100, ...request },
-    )
-    expect(engine).toEqual(python)
+  ])('%s', async (_, request) => {
+    await expectRecordedRecommendation(useFixture(), {
+      attendees: ['dono'],
+      count: 100,
+      ...request,
+    })
   })
 })

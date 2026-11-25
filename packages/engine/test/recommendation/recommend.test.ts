@@ -7,18 +7,13 @@
 
 import { describe, expect, test } from 'vite-plus/test'
 import {
+  consult,
   recommend,
   type Recommendation,
   type RecommendedFilm,
 } from '../../src/index.ts'
 import { useFixture, type Fixture } from '../fixture.ts'
-import {
-  engineRecommendation,
-  film,
-  pythonOk,
-  titles,
-  PYTHON_TIMEOUT,
-} from './support.ts'
+import { engineRecommendation, film, titles } from './support.ts'
 
 const EVIDENCE_FIELDS = [
   'contribution',
@@ -43,12 +38,10 @@ const metadata = (out: Recommendation, title: string) => {
   return found[0]
 }
 
-const factIds = (fixture: Fixture, sql: string): string[] =>
-  (pythonOk(fixture, ['consultar', sql]) as { linhas: string[][] }).linhas.map(
-    ([id]) => id ?? '',
-  )
+const factIds = async (fixture: Fixture, sql: string): Promise<string[]> =>
+  (await fixture.ok(consult(sql))).rows.map(([id]) => String(id ?? ''))
 
-describe('recommend for the Dono alone', { timeout: PYTHON_TIMEOUT }, () => {
+describe('recommend for the Dono alone', () => {
   test('the Dono alone gets five films with Evidence', async () => {
     const fixture = useFixture()
     const out = await engineRecommendation(fixture, { attendees: ['dono'] })
@@ -112,7 +105,7 @@ describe('recommend for the Dono alone', { timeout: PYTHON_TIMEOUT }, () => {
     expect(seed?.source).toBe('Letterboxd do Bruno')
     expect(seed?.date).toBe('2024-05-05')
     expect(
-      factIds(
+      await factIds(
         fixture,
         "SELECT fato_id FROM notas WHERE filme_id = 'tt9000301'",
       ),
@@ -205,7 +198,7 @@ describe('recommend for the Dono alone', { timeout: PYTHON_TIMEOUT }, () => {
       contribution: -1.0,
     })
     expect(
-      factIds(
+      await factIds(
         fixture,
         "SELECT fato_id FROM notas WHERE pessoa = 'bruno' AND filme_id = 'tt9000101'",
       ),

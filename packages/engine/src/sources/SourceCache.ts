@@ -4,11 +4,10 @@
 // what took API calls to gather. The file is `FILMES_CACHE` or, without it,
 // `<database stem>-cache.sqlite` beside the database.
 //
-// Same table, same keys and same dates as the Python, so either engine reads
-// what the other wrote (the oracle hands both a copy of one cache). One
-// connection per process, opened on first use, in WAL mode with a busy
-// timeout: the server's requests share it, and another process (the Python
-// CLI, a second app instance) may write the same file.
+// Same table, same keys and same dates as the Python engine's, so a cache it
+// filled still reads. One connection per process, opened on first use, in
+// WAL mode with a busy timeout: the server's requests share it, and another
+// process (a script, a second app instance) may write the same file.
 
 import { existsSync, mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'

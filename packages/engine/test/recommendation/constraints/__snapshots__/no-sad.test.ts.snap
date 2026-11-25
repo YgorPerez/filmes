@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`equal to Python > --sem-tristeza 1`] = `
+exports[`the whole output, as recorded > nothing sad 1`] = `
 {
   "attendees": [
     "bruno",

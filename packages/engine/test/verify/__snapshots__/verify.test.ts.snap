@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`answer verification > a hand-written Session gives what Python gives 1`] = `
+exports[`answer verification > a hand-written Session 1`] = `
 {
   "invalidLines": [
     "- **Bruno:** inventada *(forte, boato)*",

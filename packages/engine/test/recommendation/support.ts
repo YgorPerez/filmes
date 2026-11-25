@@ -1,13 +1,10 @@
-// What the recommendation tests share. The Python tests set up their data
-// through the CLI (`pessoa vetar`, `feedback`...), and those commands are
-// not ported yet: here the Python CLI does that setup over a Portuguese copy
-// of the fixture's data and the test's own database, which the engine then
-// reads. The same helper runs Python's `recomendar` for the parity tests.
+// What the recommendation tests share: the engine's recommendation as an
+// edge prints it, the same against the output recorded for the test
+// (`expected.ts`), and a weights file with one value changed.
 
-import { spawnSync } from 'node:child_process'
-import { cpSync, existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { migrateConfigFile, outputToEnglish } from '@filmes/key-migration'
+import { migrateConfigFile } from '@filmes/key-migration'
 import { expect } from 'vite-plus/test'
 import {
   recommend,
@@ -16,73 +13,8 @@ import {
   type RecommendRequest,
   type Vars,
 } from '../../src/index.ts'
-import { FIXTURE_TODAY, ROOT, type Fixture } from '../fixture.ts'
+import { ROOT, type Fixture } from '../fixture.ts'
 import { expectRecorded } from '../expected.ts'
-
-/** For a test that runs the Python CLI: each call starts a process (`uv`,
- * the interpreter, the engine), about half a second on an idle machine. */
-export const PYTHON_TIMEOUT = 120_000
-
-/** `python -m filmes <args> --json` over the fixture's Portuguese data
- * (copied once per test) and the test's database. `vars` add to or, with
- * `undefined`, remove from its environment. */
-export const python = (
-  fixture: Fixture,
-  args: ReadonlyArray<string>,
-  vars: Vars = {},
-): { readonly exitCode: number; readonly output: unknown } => {
-  const data = join(fixture.root, 'py-dados')
-  if (!existsSync(data))
-    cpSync(join(ROOT, 'tests/fixture/dados'), data, { recursive: true })
-  const env: Record<string, string | undefined> = Object.fromEntries(
-    Object.entries(process.env).filter(([key]) => !key.startsWith('FILMES_')),
-  )
-  Object.assign(env, {
-    FILMES_DADOS: data,
-    FILMES_CATALOGO: join(ROOT, 'tests/fixture/catalogo'),
-    FILMES_BANCO: fixture.database,
-    FILMES_HOJE: FIXTURE_TODAY,
-    FILMES_LOCAL: join(fixture.root, 'no-local.toml'),
-    ...vars,
-  })
-  const result = spawnSync(
-    'uv',
-    ['run', 'python', '-m', 'filmes', ...args, '--json'],
-    { cwd: ROOT, env, encoding: 'utf8' },
-  )
-  try {
-    return { exitCode: result.status ?? -1, output: JSON.parse(result.stdout) }
-  } catch {
-    throw new Error(`python gave no JSON:\n${result.stdout}\n${result.stderr}`)
-  }
-}
-
-/** `python`, requiring success. */
-export const pythonOk = (
-  fixture: Fixture,
-  args: ReadonlyArray<string>,
-  vars: Vars = {},
-): unknown => {
-  const { exitCode, output } = python(fixture, args, vars)
-  if (exitCode !== 0)
-    throw new Error(`python ${args.join(' ')}: ${JSON.stringify(output)}`)
-  return output
-}
-
-/** Python's `recomendar` in English keys, without the Session it opens. */
-export const pythonRecommendation = (
-  fixture: Fixture,
-  args: ReadonlyArray<string>,
-  vars: Vars = {},
-): unknown => {
-  const output = outputToEnglish(
-    'recomendar',
-    pythonOk(fixture, ['recomendar', ...args], vars),
-  ) as Record<string, unknown>
-  delete output['session']
-  expectRecorded(fixture, output)
-  return output
-}
 
 /** The engine's recommendation, as JSON (what an edge prints). */
 export const engineRecommendation = async (
@@ -94,35 +26,36 @@ export const engineRecommendation = async (
     JSON.stringify(await fixture.ok(recommend(request), vars)),
   ) as Recommendation
 
-/** Both engines on the same request: Python's argv and the engine's
- * request say the same thing. */
-export const bothEngines = async (
+/** The engine's recommendation, checked against the one recorded for the
+ * test: the whole output, as the Python engine gave it (`expected.ts`). */
+export const expectRecordedRecommendation = async (
   fixture: Fixture,
-  args: ReadonlyArray<string>,
   request: RecommendRequest,
-  vars: { readonly python?: Vars; readonly engine?: Vars } = {},
-): Promise<{ readonly python: unknown; readonly engine: Recommendation }> => ({
-  python: pythonRecommendation(fixture, args, vars.python),
-  engine: await engineRecommendation(fixture, request, vars.engine),
-})
+  vars: Vars = {},
+): Promise<Recommendation> => {
+  const out = await engineRecommendation(fixture, request, vars)
+  expectRecorded(fixture, out)
+  return out
+}
 
-/** A copy of `config/pesos.toml` with `from` replaced by `to`, for Python,
- * and its English migration, for the engine: the `FILMES_PESOS` of each. */
+/** A copy of `config/pesos.toml` with `from` replaced by `to`, migrated to
+ * English: the engine's `FILMES_PESOS`. */
 export const weightsWith = (
   fixture: Fixture,
   from: string,
   to: string,
-): { readonly python: Vars; readonly engine: Vars } => {
+): Vars => {
   const text = readFileSync(join(ROOT, 'config/pesos.toml'), 'utf8')
   if (!text.includes(from)) throw new Error(`pesos.toml has no ${from}`)
-  const changed = text.replace(from, to)
-  const english = migrateConfigFile('pesos.toml', changed, 'to-en')
+  const english = migrateConfigFile(
+    'pesos.toml',
+    text.replace(from, to),
+    'to-en',
+  )
   if (!english) throw new Error('pesos.toml did not migrate')
-  const pt = join(fixture.root, 'pesos-test.toml')
-  const en = join(fixture.root, 'weights-test.toml')
-  writeFileSync(pt, changed)
-  writeFileSync(en, english.text)
-  return { python: { FILMES_PESOS: pt }, engine: { FILMES_PESOS: en } }
+  const file = join(fixture.root, 'weights-test.toml')
+  writeFileSync(file, english.text)
+  return { FILMES_PESOS: file }
 }
 
 export const titles = (out: Recommendation): string[] =>

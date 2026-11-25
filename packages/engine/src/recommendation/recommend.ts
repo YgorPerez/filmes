@@ -496,8 +496,7 @@ export const rank = (
     }
   })
 
-/** A recommendation request, as an edge (the MCP, the app, the oracle's
- * argv adapter) gives it. The Restrições it asks for are its
+/** A recommendation request, as an edge (the MCP, the app) gives it. The Restrições it asks for are its
  * `ConstraintRequest` fields (`maxDuration`, `since`...). */
 export interface RecommendRequest extends ConstraintRequest {
   /** Slugs, names or nicknames, or "dono"; an item may hold several

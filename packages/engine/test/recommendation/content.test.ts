@@ -12,15 +12,20 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, test } from 'vite-plus/test'
-import { pyExp, pyRound, recommend } from '../../src/index.ts'
+import {
+  personAdjust,
+  personState,
+  pyExp,
+  pyRound,
+  recommend,
+  type Level,
+} from '../../src/index.ts'
 import { useFixture, type Fixture } from '../fixture.ts'
 import {
   engineRecommendation,
   evidenceOf,
   film,
-  pythonOk,
   weightsWith,
-  PYTHON_TIMEOUT,
 } from './support.ts'
 
 const all = (fixture: Fixture, count = 100, vars = {}) =>
@@ -29,7 +34,7 @@ const all = (fixture: Fixture, count = 100, vars = {}) =>
 const sortedRows = <T>(rows: T[]): T[] =>
   [...rows].sort((a, b) => (String(a) < String(b) ? -1 : 1))
 
-describe('the content path', { timeout: PYTHON_TIMEOUT }, () => {
+describe('the content path', () => {
   test('a shared writer links the Nota to the Candidate, at most moderate', async () => {
     // A seed of 5 would be strong; the writer's ceiling is moderate.
     expect(evidenceOf(await all(useFixture()), 'Maré Cheia', 'bruno')).toEqual([
@@ -131,7 +136,7 @@ describe('the content path', { timeout: PYTHON_TIMEOUT }, () => {
 
   test('a predicate left out of the weights is no path', async () => {
     const fixture = useFixture()
-    const { engine } = weightsWith(fixture, '\nroteiro = 0.8\n', '\n')
+    const engine = weightsWith(fixture, '\nroteiro = 0.8\n', '\n')
 
     expect(
       evidenceOf(await all(fixture, 100, engine), 'Maré Cheia', 'bruno'),
@@ -139,8 +144,7 @@ describe('the content path', { timeout: PYTHON_TIMEOUT }, () => {
   })
 
   test('a predicate the path cannot word is invalid config', async () => {
-    // Python's message names `[caminho.peso]`; a decision of #90 for the
-    // oracle, once a step reaches it (none of the fixture's does).
+    // Python's message named `[caminho.peso]` (a decision of #90).
     const fixture = useFixture()
     const weights = join(fixture.root, 'weights-test.toml')
     const text = readFileSync(join(fixture.config, 'weights.toml'), 'utf8')
@@ -202,22 +206,13 @@ describe('the content path', { timeout: PYTHON_TIMEOUT }, () => {
   })
 })
 
-describe('the Ajuste to a link', { timeout: PYTHON_TIMEOUT }, () => {
-  // `pessoa ajustar` is not ported yet: the Python sets the Ajuste up.
-  const adjust = (fixture: Fixture, level: string) =>
-    pythonOk(fixture, [
-      'pessoa',
-      'ajustar',
-      'bruno',
-      '--elo',
-      'elenco',
-      '--nivel',
-      level,
-    ])
+describe('the Ajuste to a link', () => {
+  const adjust = (fixture: Fixture, level: Level) =>
+    fixture.ok(personAdjust({ person: 'bruno', link: 'cast', level }))
 
   test('none removes the link Evidence', async () => {
     const fixture = useFixture()
-    adjust(fixture, 'nada')
+    await adjust(fixture, 'none')
 
     expect(evidenceOf(await all(fixture, 60), 'Voo Noturno', 'bruno')).toEqual([
       ['sem fato', 'weak', 'guess', 0],
@@ -226,7 +221,7 @@ describe('the Ajuste to a link', { timeout: PYTHON_TIMEOUT }, () => {
 
   test('low drops the strength and weighs half', async () => {
     const fixture = useFixture()
-    adjust(fixture, 'pouco')
+    await adjust(fixture, 'low')
 
     // Without the Ajuste: a moderate seed (0.5 × 0.6) and weak metadata.
     expect(
@@ -249,8 +244,8 @@ describe('the Ajuste to a link', { timeout: PYTHON_TIMEOUT }, () => {
 
   test('normal undoes it', async () => {
     const fixture = useFixture()
-    adjust(fixture, 'nada')
-    adjust(fixture, 'normal')
+    await adjust(fixture, 'none')
+    await adjust(fixture, 'normal')
 
     expect(
       evidenceOf(await all(fixture, 60), 'Voo Noturno', 'bruno')[0]?.[1],
@@ -259,8 +254,8 @@ describe('the Ajuste to a link', { timeout: PYTHON_TIMEOUT }, () => {
 
   test('a new Ajuste to the same link replaces the old; high weighs 1.5 without a stronger strength', async () => {
     const fixture = useFixture()
-    adjust(fixture, 'nada')
-    adjust(fixture, 'muito')
+    await adjust(fixture, 'none')
+    await adjust(fixture, 'high')
 
     expect(
       evidenceOf(await all(fixture, 60), 'Voo Noturno', 'bruno')[0],
@@ -274,17 +269,15 @@ describe('the Ajuste to a link', { timeout: PYTHON_TIMEOUT }, () => {
 
   test('a Declarado about the actor beats the Ajuste', async () => {
     const fixture = useFixture()
-    adjust(fixture, 'nada')
-    pythonOk(fixture, [
-      'pessoa',
-      'declarar',
-      'bruno',
-      'adoro o Davi Couto',
-      '--entidade',
-      'Q9001803',
-      '--reacao',
-      'gosta',
-    ])
+    await adjust(fixture, 'none')
+    await fixture.ok(
+      personState({
+        person: 'bruno',
+        text: 'adoro o Davi Couto',
+        target: 'Q9001803',
+        reaction: 'like',
+      }),
+    )
 
     const lines = evidenceOf(
       await all(fixture, 60),
@@ -296,7 +289,7 @@ describe('the Ajuste to a link', { timeout: PYTHON_TIMEOUT }, () => {
   })
 })
 
-describe('the cut of the N strongest', { timeout: PYTHON_TIMEOUT }, () => {
+describe('the cut of the N strongest', () => {
   const sigmoid = (sum: number) => pyRound(1 / (1 + pyExp(-sum)), 4)
   const largest = (values: number[]) =>
     values.reduce((best, v) => (Math.abs(v) > Math.abs(best) ? v : best))
@@ -305,7 +298,7 @@ describe('the cut of the N strongest', { timeout: PYTHON_TIMEOUT }, () => {
       fixture,
       '\nevidencias_maximas = 5\n',
       '\nevidencias_maximas = 1\n',
-    ).engine
+    )
 
   test('only the N strongest add to the utility', async () => {
     const fixture = useFixture()

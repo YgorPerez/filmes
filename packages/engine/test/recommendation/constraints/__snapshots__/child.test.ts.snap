@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`parity with the Python engine > child 10 with OMDb 1`] = `
+exports[`the whole output, as recorded > child 10 with OMDb 1`] = `
 {
   "attendees": [
     "bruno",
@@ -506,7 +506,7 @@ exports[`parity with the Python engine > child 10 with OMDb 1`] = `
 }
 `;
 
-exports[`parity with the Python engine > child 10 without the OMDb key 1`] = `
+exports[`the whole output, as recorded > child 10 without the OMDb key 1`] = `
 {
   "attendees": [
     "bruno",
@@ -944,7 +944,7 @@ exports[`parity with the Python engine > child 10 without the OMDb key 1`] = `
 }
 `;
 
-exports[`parity with the Python engine > child 12, local chain only 1`] = `
+exports[`the whole output, as recorded > child 12, local chain only 1`] = `
 {
   "attendees": [
     "bruno",
@@ -1626,7 +1626,7 @@ exports[`parity with the Python engine > child 12, local chain only 1`] = `
 }
 `;
 
-exports[`parity with the Python engine > child 17 with OMDb 1`] = `
+exports[`the whole output, as recorded > child 17 with OMDb 1`] = `
 {
   "attendees": [
     "bruno",
@@ -2701,7 +2701,7 @@ exports[`parity with the Python engine > child 17 with OMDb 1`] = `
 }
 `;
 
-exports[`parity with the Python engine > child no age 1`] = `
+exports[`the whole output, as recorded > child no age 1`] = `
 {
   "attendees": [
     "bruno",
