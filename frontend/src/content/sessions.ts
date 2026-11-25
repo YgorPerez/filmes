@@ -12,6 +12,16 @@ export const readSessions = createServerFn({ method: 'GET' })
     return appSessionList(context.owner.person)
   })
 
+/** What `/` shows (`homeData`): the setup guide, the latest Sessão and the
+ * MCP address. A request with no Dono is refused, as above. */
+export const readHome = createServerFn({ method: 'GET' })
+  .middleware([ownerMiddleware])
+  .handler(async ({ context }) => {
+    requireOwner(context.owner)
+    const { appHome } = await import('#/platform/setup-guide')
+    return appHome(context.owner)
+  })
+
 /** What the "Nova Sessão" form offers (`requestOptions`). */
 export const readRequestOptions = createServerFn({ method: 'GET' })
   .middleware([ownerMiddleware])
