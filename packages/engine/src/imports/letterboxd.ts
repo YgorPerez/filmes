@@ -987,8 +987,11 @@ export interface LetterboxdReprocess {
   readonly attributions: readonly (typeof TMDB_ATTRIBUTION)[]
 }
 
-const ITEM_STATUSES: Readonly<Record<ItemStatus, ReprocessedItem['status']>> =
-  { resolvido: 'resolved', descartado: 'discarded', fila: 'queued' }
+const ITEM_STATUSES: Readonly<Record<ItemStatus, ReprocessedItem['status']>> = {
+  resolvido: 'resolved',
+  descartado: 'discarded',
+  fila: 'queued',
+}
 
 /** Asks TMDB again for the queue's items it has not answered, of one
  * Pessoa or of all (`fila reprocessar`). What TMDB already answered comes

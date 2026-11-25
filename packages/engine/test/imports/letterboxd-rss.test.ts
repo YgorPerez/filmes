@@ -35,17 +35,14 @@ const TMDB_ON: Vars = {
   FILMES_GRAVACOES: RECORDINGS,
 }
 
-const useOlga = async () => {
-  const fixture = useFixture()
-  await fixture.ok(personCreate({ name: 'Olga' }))
-  return fixture
-}
+/** Creates Olga; the fixture's other Pessoas stay as they are. */
+const addOlga = (fixture: Fixture) => fixture.ok(personCreate({ name: 'Olga' }))
 
 const importRss = (fixture: Fixture, user = 'olga_farol', vars: Vars = {}) =>
-  fixture.ok(
-    importLetterboxdRss({ person: 'olga', user, author: AUTHOR }),
-    { ...TMDB_ON, ...vars },
-  )
+  fixture.ok(importLetterboxdRss({ person: 'olga', user, author: AUTHOR }), {
+    ...TMDB_ON,
+    ...vars,
+  })
 
 const query = (fixture: Fixture, sql: string) =>
   fixture.ok(
@@ -88,7 +85,8 @@ const importZip = (fixture: Fixture) =>
 
 describe('importLetterboxdRss', () => {
   test('the RSS becomes diary and Notas, and its copy stays in filmes-dados', async () => {
-    const fixture = await useOlga()
+    const fixture = useFixture()
+    await addOlga(fixture)
     const result = await importRss(fixture)
 
     expect(readFileSync(join(fixture.data, result.file))).toEqual(
@@ -109,7 +107,8 @@ describe('importLetterboxdRss', () => {
   })
 
   test("the RSS's TMDB id beats the slug", async () => {
-    const fixture = await useOlga()
+    const fixture = useFixture()
+    await addOlga(fixture)
     await importRss(fixture)
 
     // Maré Baixa (2014): the slug with -2015 would give tt9000102; the RSS's
@@ -132,7 +131,8 @@ describe('importLetterboxdRss', () => {
   })
 
   test('an entry without a diary date takes the day it was published, in its offset', async () => {
-    const fixture = await useOlga()
+    const fixture = useFixture()
+    await addOlga(fixture)
     await importRss(fixture)
     // Vento Norte was published on 16/07/2024 at 21h (-03:00), already
     // 17/07 in UTC.
@@ -145,7 +145,8 @@ describe('importLetterboxdRss', () => {
   })
 
   test('importing the RSS again, and the ZIP after it, repeat no Fato', async () => {
-    const fixture = await useOlga()
+    const fixture = useFixture()
+    await addOlga(fixture)
     const first = await importRss(fixture)
     expect(first.newFacts).toEqual({
       ratings: 4,
@@ -170,11 +171,14 @@ describe('importLetterboxdRss', () => {
     expect(notas).toContainEqual(['tt9000101', 5, '2024-05-05', SOURCE]) // only the RSS has the rewatch
     expect(zip.newFacts.ratings).toBe(2) // Rio Abaixo and Noite d'Estreia
     const facts = await seen(fixture)
-    expect(new Set(facts.map(([f, d]) => `${f} ${d}`)).size).toBe(facts.length)
+    expect(
+      new Set(facts.map(([f, d]) => `${String(f)} ${String(d)}`)).size,
+    ).toBe(facts.length)
   })
 
   test("the Dono's decision comes before the TMDB id", async () => {
-    const fixture = await useOlga()
+    const fixture = useFixture()
+    await addOlga(fixture)
     await importZip(fixture)
     const vento = (await fixture.ok(viewQueue, TMDB_ON)).items.find(
       (i) => i.name === 'Vento Norte',
@@ -197,7 +201,8 @@ describe('importLetterboxdRss', () => {
   })
 
   test('a user with no RSS records nothing', async () => {
-    const fixture = await useOlga()
+    const fixture = useFixture()
+    await addOlga(fixture)
     const op = (user: string) =>
       fixture.run(
         importLetterboxdRss({ person: 'olga', user, author: AUTHOR }),
@@ -231,7 +236,13 @@ describe('importLetterboxdRss', () => {
 const fakeFetch = (answer: () => Promise<Response>) => {
   const calls: { url: string; headers: unknown }[] = []
   const fetch = (input: string | URL | Request, init?: RequestInit) => {
-    calls.push({ url: String(input), headers: init?.headers })
+    const url =
+      typeof input === 'string'
+        ? input
+        : input instanceof URL
+          ? input.href
+          : input.url
+    calls.push({ url, headers: init?.headers })
     return answer()
   }
   return { fetch: fetch as typeof globalThis.fetch, calls }
@@ -262,9 +273,7 @@ describe('fetchLetterboxdRss', () => {
     )
     const result = await outcome
     expect(result.exitCode).toBe(0)
-    expect(Buffer.from(result.output as Uint8Array)).toEqual(
-      readFileSync(RSS),
-    )
+    expect(Buffer.from(result.output as Uint8Array)).toEqual(readFileSync(RSS))
     expect(net.calls).toEqual([
       {
         url: 'https://letterboxd.com/olga_farol/rss/',

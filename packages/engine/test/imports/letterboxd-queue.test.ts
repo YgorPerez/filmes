@@ -19,7 +19,11 @@ import {
   type Vars,
 } from '../../src/index.ts'
 import { ROOT, useFixture, type Fixture } from '../fixture.ts'
-import { RECORDINGS, recordFailure, recordingsCopy } from '../sources/support.ts'
+import {
+  RECORDINGS,
+  recordFailure,
+  recordingsCopy,
+} from '../sources/support.ts'
 import { zipOf } from './zip.ts'
 
 const OLGA = join(ROOT, 'tests/fixture/letterboxd/olga')
@@ -44,16 +48,17 @@ const importZip = (
   vars: Vars,
 ) =>
   fixture.ok(
-    importLetterboxd({ person, original: 'export.zip', content, author: AUTHOR }),
+    importLetterboxd({
+      person,
+      original: 'export.zip',
+      content,
+      author: AUTHOR,
+    }),
     vars,
   )
 
-/** Olga created, the fixture's other Pessoas as they are. */
-const useOlga = async () => {
-  const fixture = useFixture()
-  await fixture.ok(personCreate({ name: 'Olga' }))
-  return fixture
-}
+/** Creates Olga; the fixture's other Pessoas stay as they are. */
+const addOlga = (fixture: Fixture) => fixture.ok(personCreate({ name: 'Olga' }))
 
 const queued = async (fixture: Fixture) =>
   new Set((await fixture.ok(viewQueue, RECORDED)).items.map((i) => i.name))
@@ -73,7 +78,8 @@ const ratedFilms = async (fixture: Fixture) =>
 
 describe('reprocessLetterboxd', () => {
   test('resolves what TMDB was not asked in the import', async () => {
-    const fixture = await useOlga()
+    const fixture = useFixture()
+    await addOlga(fixture)
     await importZip(fixture, 'olga', olgaZip(), RECORDED) // no TMDB key
     expect(await queued(fixture)).toContain(RIO)
 
@@ -95,7 +101,8 @@ describe('reprocessLetterboxd', () => {
   })
 
   test("one Pessoa's reprocess does not ask for the others' queue", async () => {
-    const fixture = await useOlga()
+    const fixture = useFixture()
+    await addOlga(fixture)
     await fixture.ok(personCreate({ name: 'Bia' }))
     const bia = zipOf([
       [
@@ -117,7 +124,8 @@ describe('reprocessLetterboxd', () => {
   })
 
   test('a transient TMDB failure in the middle of the import is tried again', async () => {
-    const fixture = await useOlga()
+    const fixture = useFixture()
+    await addOlga(fixture)
     const recordings = recordingsCopy(fixture)
     recordFailure(recordings, 'tmdb', RIO_SEARCH, {
       motivo: 'Connection reset by peer',
@@ -134,7 +142,8 @@ describe('reprocessLetterboxd', () => {
   })
 
   test('TMDB out in the middle of the import leaves the queue to reprocess', async () => {
-    const fixture = await useOlga()
+    const fixture = useFixture()
+    await addOlga(fixture)
     const recordings = recordingsCopy(fixture)
     recordFailure(recordings, 'tmdb', RIO_SEARCH, {
       motivo: 'Connection reset by peer',
@@ -160,8 +169,8 @@ describe('reprocessLetterboxd', () => {
 
 describe("the Dono's decisions", () => {
   /** Olga's ZIP imported with TMDB on: Vento Norte and Filme Perdido wait. */
-  const imported = async () => {
-    const fixture = await useOlga()
+  const imported = async (fixture: Fixture) => {
+    await addOlga(fixture)
     await importZip(fixture, 'olga', olgaZip(), TMDB_ON)
     const { items } = await fixture.ok(viewQueue, RECORDED)
     const id = (name: string) => items.find((i) => i.name === name)?.id ?? ''
@@ -169,7 +178,7 @@ describe("the Dono's decisions", () => {
   }
 
   test('a decision is recorded with who and when, and the same again is not new', async () => {
-    const { fixture, perdido } = await imported()
+    const { fixture, perdido } = await imported(useFixture())
     const discard = (reason: string) =>
       fixture.ok(discardQueueItem({ id: perdido, reason, author: AUTHOR }))
 
@@ -208,9 +217,11 @@ describe("the Dono's decisions", () => {
   })
 
   test('a confirmation by tconst, again, answers what was recorded', async () => {
-    const { fixture, vento } = await imported()
+    const { fixture, vento } = await imported(useFixture())
     const confirm = () =>
-      fixture.ok(confirmQueueItem({ id: vento, film: 'tt9000302', author: AUTHOR }))
+      fixture.ok(
+        confirmQueueItem({ id: vento, film: 'tt9000302', author: AUTHOR }),
+      )
     expect(await confirm()).toMatchObject({
       status: 'confirmed',
       film: 'tt9000302',
@@ -221,7 +232,7 @@ describe("the Dono's decisions", () => {
   })
 
   test('a TMDB link the Catalog does not know asks TMDB for the tconst', async () => {
-    const { fixture, vento } = await imported()
+    const { fixture, vento } = await imported(useFixture())
     const result = await fixture.ok(
       confirmQueueItem({
         id: vento,
@@ -237,7 +248,7 @@ describe("the Dono's decisions", () => {
   })
 
   test('a TMDB link the Catalog knows needs no TMDB', async () => {
-    const { fixture, vento } = await imported()
+    const { fixture, vento } = await imported(useFixture())
     const result = await fixture.ok(
       confirmQueueItem({
         id: vento,
@@ -249,12 +260,14 @@ describe("the Dono's decisions", () => {
   })
 
   test('what cannot be decided is an error', async () => {
-    const { fixture, vento } = await imported()
+    const { fixture, vento } = await imported(useFixture())
     const error = async (
       op: ReturnType<typeof confirmQueueItem | typeof discardQueueItem>,
     ) => ((await fixture.run(op)).output as { error: unknown }).error
     expect(
-      await error(discardQueueItem({ id: vento, reason: '  ', author: AUTHOR })),
+      await error(
+        discardQueueItem({ id: vento, reason: '  ', author: AUTHOR }),
+      ),
     ).toEqual({ code: 'invalid_usage', message: 'informe a razão do descarte' })
     expect(
       await error(
@@ -280,7 +293,8 @@ describe("the Dono's decisions", () => {
   })
 
   test('an old database without the import tables is outdated', async () => {
-    const fixture = await useOlga()
+    const fixture = useFixture()
+    await addOlga(fixture)
     await fixture.ok(
       Effect.flatMap(Sqlite, (sqlite) =>
         sqlite.write((db) => db.run('DROP TABLE itens_letterboxd')),
@@ -288,6 +302,9 @@ describe("the Dono's decisions", () => {
     )
     expect(
       await fixture.run(reprocessLetterboxd({ author: AUTHOR })),
-    ).toMatchObject({ exitCode: 1, output: { error: { code: 'outdated_database' } } })
+    ).toMatchObject({
+      exitCode: 1,
+      output: { error: { code: 'outdated_database' } },
+    })
   })
 })

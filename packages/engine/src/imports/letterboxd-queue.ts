@@ -45,7 +45,7 @@ export interface QueueView {
 }
 
 const text = (value: unknown): string | null =>
-  value === null || value === undefined ? null : String(value)
+  typeof value === 'string' || typeof value === 'number' ? String(value) : null
 
 /** The queue (`fila ver`): offline, the candidates only from the cache. */
 export const viewQueue: Effect.Effect<
