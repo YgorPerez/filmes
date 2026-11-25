@@ -10,6 +10,9 @@
     // `db-build.ts` runs the engine's rebuild as a process of its own:
     // `node scripts/db-rebuild.ts`, by path. No import points to it.
     "scripts/db-rebuild.ts",
+    // The Cartaz's MCP Apps view: `scripts/billboard-view.ts` builds it
+    // from `src/mcp-view/index.html`, whose script tag points to it.
+    "src/mcp-view/main.tsx",
   ],
   "ignoreDependencies": [
     // `reactCompilerPreset()` in `vite.config.ts` names the Babel plugin by

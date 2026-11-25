@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@filmes/engine": "workspace:*",
+    "@modelcontextprotocol/ext-apps": "2.1.0",
     "@modelcontextprotocol/server": "2.4.0",
     "effect": "catalog:",
     "zod": "4.6.7"

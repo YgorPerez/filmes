@@ -16,6 +16,8 @@ export interface Tool<Input extends z.ZodObject = z.ZodObject> {
   readonly run: (
     input: z.infer<Input>,
   ) => Effect.Effect<unknown, unknown, EngineServices | Run>
+  /** The tool's `_meta`, e.g. the MCP Apps view its result shows. */
+  readonly meta?: Record<string, unknown>
 }
 
 export const defineTool = <Input extends z.ZodObject>(

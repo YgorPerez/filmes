@@ -5,6 +5,7 @@
 
 import type { Engine } from '@filmes/engine'
 import { McpServer } from '@modelcontextprotocol/server'
+import { registerBillboardView } from './billboard-view.ts'
 import { INSTRUCTIONS } from './instructions.ts'
 import type { Tool } from './tool.ts'
 import { TOOLS } from './tools/index.ts'
@@ -30,7 +31,11 @@ export function createMcpServer({
   for (const tool of tools)
     server.registerTool(
       tool.name,
-      { description: tool.description, inputSchema: tool.input },
+      {
+        description: tool.description,
+        inputSchema: tool.input,
+        ...(tool.meta && { _meta: tool.meta }),
+      },
       async (input: unknown) => {
         const outcome = await engine.run(
           tool.run(input as never),
@@ -42,5 +47,6 @@ export function createMcpServer({
         }
       },
     )
+  registerBillboardView(server)
   return server
 }
