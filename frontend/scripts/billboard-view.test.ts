@@ -149,7 +149,8 @@ describe('the bundled view', () => {
     const { dom, page, copied } = open()
     const [first] = await page.findAllByRole('article')
 
-    within(first!).getByRole('checkbox', { name: 'Trocar' }).click()
+    within(first!).getByRole('button', { name: 'Trocar' }).click()
+    await page.findByText('1 Trocar marcado')
     page.getByRole('button', { name: BILLBOARD.reply.copy }).click()
     await page.findByText(BILLBOARD.reply.copied)
 
@@ -193,7 +194,8 @@ describe('the bundled view', () => {
     const call = next('tools/call')
     const message = next('ui/message')
 
-    within(first!).getByRole('checkbox', { name: 'Trocar' }).click()
+    within(first!).getByRole('button', { name: 'Trocar' }).click()
+    await page.findByText('1 Trocar marcado')
     page.getByRole('button', { name: BILLBOARD.reply.send }).click()
 
     expect((await call).params).toMatchObject({

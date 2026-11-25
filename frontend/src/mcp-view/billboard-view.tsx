@@ -5,7 +5,10 @@
 // reply with `answer_billboard`, called through the host, and when a film
 // left or something was written (acrescentar, comments) tells Claude with a
 // `ui/message`, since the regenerate and the reading of the free text are
-// his. Copiar pro chat gives the `#cartaz` text, as on the web.
+// his. Copiar pro chat gives the `#cartaz` text, as on the web. When the
+// host has a fullscreen, the view starts as the compact inline card, whose
+// Marcar asks for it; in fullscreen it is the whole Cartaz with the top and
+// the foot fixed. A host without one gets the whole Cartaz inline.
 //
 // `mountView` takes the `App` of `@modelcontextprotocol/ext-apps` (or a
 // fake in the tests) so that this file never reaches the network or the
@@ -15,7 +18,7 @@ import type { Billboard as BillboardModel } from '@filmes/engine'
 import { useRef, useState, useSyncExternalStore } from 'react'
 import type { App, McpUiHostContext } from '@modelcontextprotocol/ext-apps'
 import { createRoot } from 'react-dom/client'
-import { Billboard, OPTION } from '../ui/billboard'
+import { Billboard } from '../ui/billboard'
 import { BILLBOARD } from '../ui/billboard.copy'
 import {
   billboardOf,
@@ -32,8 +35,11 @@ export type Host = {
     args: Record<string, unknown>,
   ) => Promise<ToolResult>
   readonly sendMessage: (text: string) => Promise<{ isError?: boolean }>
-  /** Asks for fullscreen; absent when the host has no fullscreen. */
+  /** Asks for fullscreen; absent when the host has no fullscreen or the
+   * view is in it already. */
   readonly fullscreen?: () => void
+  /** The view is in the host's fullscreen. */
+  readonly inFullscreen?: boolean
 }
 
 const { view } = BILLBOARD
@@ -89,8 +95,19 @@ function Cartaz({
     return status
   }
 
-  return <Billboard billboard={billboard} onSend={onSend} sent={sent} />
+  return (
+    <Billboard
+      billboard={billboard}
+      onSend={onSend}
+      sent={sent}
+      layout={layoutOf(host)}
+      onExpand={host.fullscreen}
+    />
+  )
 }
+
+const layoutOf = (host: Host) =>
+  host.inFullscreen ? 'fullscreen' : host.fullscreen ? 'inline' : 'page'
 
 /** The view for the last tool result the host gave, or the wait for it. */
 export function BillboardView({
@@ -104,16 +121,7 @@ export function BillboardView({
     return <p className="p-xl text-meta text-ink-2">{view.loading}</p>
   const shown = billboardOf(result)
   return (
-    <main className="flex flex-col gap-sm p-sm">
-      {host.fullscreen && (
-        <button
-          type="button"
-          onClick={host.fullscreen}
-          className={`${OPTION} self-end`}
-        >
-          {view.fullscreen}
-        </button>
-      )}
+    <main className={layoutOf(host) === 'page' ? 'p-2xl' : ''}>
       {'billboard' in shown ? (
         <Cartaz
           key={`${shown.billboard.session}:${shown.billboard.version}`}
@@ -121,7 +129,7 @@ export function BillboardView({
           host={host}
         />
       ) : (
-        <p role="alert" className="text-meta">
+        <p role="alert" className="p-2xl text-meta">
           {shown.error}
         </p>
       )}
@@ -177,10 +185,11 @@ export async function mountView(
     void app.requestDisplayMode({ mode: 'fullscreen' }).catch(() => {})
   }
   const hostOf = (c: HostContext): Host =>
-    c.displayMode !== 'fullscreen' &&
-    c.availableDisplayModes?.includes('fullscreen')
-      ? { callTool, sendMessage, fullscreen }
-      : { callTool, sendMessage }
+    c.displayMode === 'fullscreen'
+      ? { callTool, sendMessage, inFullscreen: true }
+      : c.availableDisplayModes?.includes('fullscreen')
+        ? { callTool, sendMessage, fullscreen }
+        : { callTool, sendMessage }
 
   // One Host per context, so the snapshot stays the same between changes.
   let cached: { context: HostContext; host: Host } | null = null

@@ -61,8 +61,8 @@ for (const dono of DONOS)
 
     // On the Cartaz she is "Você".
     const first = page.getByRole('article').first()
-    await expect(first.getByRole('checkbox', { name: 'Você' })).toBeVisible()
-    await expect(first.getByRole('checkbox', { name: 'Lara' })).toBeVisible()
+    await expect(first.getByRole('button', { name: 'Você' })).toBeVisible()
+    await expect(first.getByRole('button', { name: 'Lara' })).toBeVisible()
     await snap(page, info, `donos-cartaz-${dono.slug}`)
 
     // The Feedback: her Nota is hers; Lara's she relays.
