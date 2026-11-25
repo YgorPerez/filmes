@@ -474,11 +474,17 @@ export {
   reloadPersonTrakt,
   reloadTrakt,
   TRAKT_KIND,
+  type TraktFactCounts,
   type TraktImport,
   type TraktImportInput,
   type TraktReport,
   type TraktUnresolved,
 } from './imports/trakt.ts'
+export {
+  personImports,
+  type ImportRecord,
+  type PersonImports,
+} from './imports/report.ts'
 export {
   removeImport,
   type ImportRemoval,
@@ -487,3 +493,23 @@ export {
 export { rebuild, type Rebuilt } from './rebuild/rebuild.ts'
 export { withDatabaseFile } from './sqlite/Sqlite.ts'
 export { reloadData, type DataReload } from './data/reload.ts'
+export {
+  evaluate,
+  type EvaluateRequest,
+  type Evaluation,
+  type EvaluationProgress,
+  type OnlineMeasures,
+} from './evaluation/evaluate.ts'
+export type { Measures } from './evaluation/offline.ts'
+export {
+  BATCH as NEIGHBOR_BATCH,
+  computeNeighbors,
+  TOP_K as NEIGHBOR_TOP_K,
+  type NeighborOptions,
+  type NeighborPair,
+} from './catalog/neighbors.ts'
+export { countTags, reviewFacts } from './catalog/review.ts'
+export {
+  dumpYaml as dumpReportYaml,
+  type ReportValue,
+} from './evaluation/yaml.ts'

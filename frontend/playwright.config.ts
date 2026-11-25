@@ -43,8 +43,10 @@ const appEnv = [
   `FILMES_CONFIG=${engine}/config`,
   `FILMES_DATABASE=${engine}/filmes.sqlite`,
   `FILMES_HOJE=${FIXTURE_TODAY}`,
-  // Recorded answers, never the network.
+  // Recorded answers, never the network: with a key, TMDB answers from the
+  // recordings too (the Imports' queue).
   'FILMES_GRAVACOES=../tests/fixture/gravacoes',
+  'FILMES_TMDB_CHAVE=e2e',
   `PORT=${port}`,
 ].join(' ')
 

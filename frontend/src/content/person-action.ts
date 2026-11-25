@@ -3,6 +3,8 @@
 // the page and the server (`platform/people.ts`), so nothing here imports
 // the engine.
 
+import { field, oneOf, within } from './form-fields'
+
 /** The form's `acao`, one per `pessoa` action the page offers. */
 const PERSON_ACTIONS = [
   'declarar',
@@ -41,18 +43,6 @@ export type PersonAction =
       id: string
     }
 
-const field = (form: FormData, name: string): string | undefined => {
-  const value = form.get(name)
-  if (typeof value !== 'string') return undefined
-  const trimmed = value.trim()
-  return trimmed === '' ? undefined : trimmed
-}
-
-const oneOf = <T extends string>(
-  values: readonly T[],
-  value: string | undefined,
-): T | undefined => values.find((v) => v === value)
-
 const REACTIONS = ['love', 'like', 'dislike', 'hate'] as const
 const LINKS = ['director', 'writer', 'cast', 'series', 'genre'] as const
 const LEVELS = ['none', 'low', 'normal', 'high'] as const
@@ -60,67 +50,83 @@ const REMOVABLE = ['stated', 'report', 'veto', 'seen'] as const
 const RATING = /^(?:[1-4](?:,5)?|0,5|5)$/
 const ID = /^(?:tt|Q)\d+$/
 
+type Reader = (form: FormData) => PersonAction | null
+
+/** A Declarado or a Relato: a target must be an id, and a reaction needs
+ * one. */
+const statement =
+  (kind: 'state' | 'report'): Reader =>
+  (form) => {
+    const text = field(form, 'texto')
+    const target = field(form, 'alvo')
+    const reaction = oneOf(REACTIONS, field(form, 'reacao'))
+    if (!text) return null
+    if (target !== undefined && !ID.test(target)) return null
+    if (reaction !== undefined && target === undefined) return null
+    return { kind, text, target, reaction, source: field(form, 'fonte') }
+  }
+
+const seen: Reader = (form) => {
+  const film = field(form, 'filme')
+  const rating = field(form, 'nota')
+  if (!film || !/^tt\d+$/.test(film)) return null
+  if (rating !== undefined && !RATING.test(rating)) return null
+  return { kind: 'seen', film, rating, source: field(form, 'fonte') }
+}
+
+/** A Veto to a tag group (`grupo`) or to an id (`alvo`). */
+const veto: Reader = (form) => {
+  const text = field(form, 'texto')
+  const group = field(form, 'grupo')
+  const target = field(form, 'alvo')
+  if (!text) return null
+  if (group !== undefined)
+    return { kind: 'veto', text, target: group, group: true }
+  if (!target || !ID.test(target)) return null
+  return { kind: 'veto', text, target, group: false }
+}
+
+const adjust: Reader = (form) => {
+  const link = oneOf(LINKS, field(form, 'elo'))
+  const level = oneOf(LEVELS, field(form, 'nivel'))
+  return link && level ? { kind: 'adjust', link, level } : null
+}
+
+const skip: Reader = (form) => {
+  const text = field(form, 'texto')
+  return text ? { kind: 'skip', text, subject: field(form, 'assunto') } : null
+}
+
+const answer: Reader = (form) => {
+  const text = field(form, 'texto')
+  const question = field(form, 'pergunta')
+  const reaction = oneOf(REACTIONS, field(form, 'reacao'))
+  return text && question ? { kind: 'answer', question, text, reaction } : null
+}
+
+const remove: Reader = (form) => {
+  const what = oneOf(REMOVABLE, field(form, 'tipo'))
+  const id = field(form, 'id')
+  return what && id ? { kind: 'remove', what, id } : null
+}
+
+const READERS: Record<(typeof PERSON_ACTIONS)[number], Reader> = {
+  declarar: statement('state'),
+  relatar: statement('report'),
+  visto: seen,
+  vetar: veto,
+  ajustar: adjust,
+  pular: skip,
+  responder: answer,
+  remover: remove,
+}
+
 /** The form's action, or null when a field is missing or not one the page
  * offers. Whatever the engine itself checks (the target in the Catalog,
  * the text's words) it checks again. */
 export function parseAction(form: FormData): PersonAction | null {
   const kind = oneOf(PERSON_ACTIONS, field(form, 'acao'))
-  const text = field(form, 'texto')
-  const target = field(form, 'alvo')
-  const reaction = oneOf(REACTIONS, field(form, 'reacao'))
-  const source = field(form, 'fonte')
-  switch (kind) {
-    case 'declarar':
-    case 'relatar': {
-      if (!text) return null
-      if (target !== undefined && !ID.test(target)) return null
-      if (reaction !== undefined && target === undefined) return null
-      return {
-        kind: kind === 'declarar' ? 'state' : 'report',
-        text,
-        target,
-        reaction,
-        source,
-      }
-    }
-    case 'visto': {
-      const film = field(form, 'filme')
-      const rating = field(form, 'nota')
-      if (!film || !/^tt\d+$/.test(film)) return null
-      if (rating !== undefined && !RATING.test(rating)) return null
-      return { kind: 'seen', film, rating, source }
-    }
-    case 'vetar': {
-      const group = field(form, 'grupo')
-      if (!text) return null
-      if (group !== undefined)
-        return { kind: 'veto', text, target: group, group: true }
-      if (!target || !ID.test(target)) return null
-      return { kind: 'veto', text, target, group: false }
-    }
-    case 'ajustar': {
-      const link = oneOf(LINKS, field(form, 'elo'))
-      const level = oneOf(LEVELS, field(form, 'nivel'))
-      return link && level ? { kind: 'adjust', link, level } : null
-    }
-    case 'pular':
-      return text
-        ? { kind: 'skip', text, subject: field(form, 'assunto') }
-        : null
-    case 'responder': {
-      const question = field(form, 'pergunta')
-      return text && question
-        ? { kind: 'answer', question, text, reaction }
-        : null
-    }
-    case 'remover': {
-      const what = oneOf(REMOVABLE, field(form, 'tipo'))
-      const id = field(form, 'id')
-      return what && id ? { kind: 'remove', what, id } : null
-    }
-    case undefined:
-      return null
-  }
+  return kind ? READERS[kind](form) : null
 }
 
 /** What happened, in `?feito=`. */
@@ -152,11 +158,6 @@ export const PERSON_REFUSALS = [
   'indisponivel',
 ] as const
 export type PersonRefusal = (typeof PERSON_REFUSALS)[number]
-
-const within =
-  <T extends string>(values: readonly T[]) =>
-  (value: unknown): value is T =>
-    (values as readonly unknown[]).includes(value)
 
 export const isPersonNotice = within(PERSON_NOTICES)
 export const isPersonRefusal = within(PERSON_REFUSALS)

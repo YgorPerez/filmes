@@ -103,3 +103,20 @@
   ts: '^SqliteError: '
   reason: node:sqlite has a single error class where Python's sqlite3 names IntegrityError; SQLite's message after it is the same
   link: https://github.com/YgorPerez/filmes/issues/96
+
+# The evaluation report's YAML blocks (`## Pesos`, `## Versões dos dados`,
+# `## Grade de pesos`) dump the result's sections. Python dumped its
+# Portuguese dict (`ajuste:`, `caminho:`...); the engine dumps the output's
+# English sections (`adjustment:`, `path:`...), as the config it reads. The
+# oracle reports the first differing line, so this pins it to the first line
+# of the weights block: every line before it (the offline table, the online
+# Feedback, the prose) matched. test/evaluation/evaluate.test.ts compares the
+# whole report with Python's: the prose word for word, the blocks as data
+# through the key map.
+- id: evaluation-report-yaml-has-the-english-keys
+  commands: [avaliar]
+  path: files/avaliacoes/*.md:*
+  python: '^ajuste:$'
+  ts: '^adjustment:$'
+  reason: the report dumps the result's English sections, as the engine's config and output name them; the prose and the values are Python's
+  link: https://github.com/YgorPerez/filmes/issues/103
