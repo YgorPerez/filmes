@@ -6,7 +6,7 @@ import { useFixture } from '../../engine/test/fixture.ts'
 import { connect } from './connect.ts'
 
 describe('the server', () => {
-  test('lists the core tools, English names and PT-BR descriptions', async () => {
+  test('lists the tools, English names and PT-BR descriptions', async () => {
     const { client } = await connect(useFixture())
 
     const { tools } = await client.listTools()
@@ -20,9 +20,16 @@ describe('the server', () => {
         'answer_billboard',
         'verify_answer',
         'record_feedback',
+        'person',
+        'import',
+        'import_queue',
+        'export',
+        'consult',
+        'evaluate',
       ],
     )
-    for (const tool of tools) assert.match(tool.description ?? '', /Sessão/)
+    for (const tool of tools)
+      assert.match(tool.description ?? '', /Sessão|Pessoa|Recomendação|banco/)
     assert.deepEqual(
       TOOLS.map((t) => t.name),
       tools.map((t) => t.name),
@@ -40,7 +47,8 @@ describe('the server', () => {
       ...KIND_IN_BODY,
     }))
       assert.ok(instructions?.includes(`\`${value}\` é ${word}`), value)
-    // Every tool the instructions call by name is served or named as missing.
+    // Every tool is in the instructions, and none is said to be missing.
+    assert.doesNotMatch(instructions ?? '', /ainda não dá para fazer/)
     const named = new Set(
       [...(instructions ?? '').matchAll(/`([a-z]+(?:_[a-z]+)*)`/g)].map(
         (m) => m[1],

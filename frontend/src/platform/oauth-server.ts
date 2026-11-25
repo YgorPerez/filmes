@@ -27,8 +27,9 @@ import { tokenHash as hash } from './auth-database'
 import type { GoogleLogin } from './google-login'
 
 /** What a token carries of its Dono: her slug, the `Owner` of each call,
- * and the email the gate matched. */
-type Owner = { person: string; email: string }
+ * the email the gate matched, and whether she is admin (the MCP's admin
+ * tools). */
+type Owner = { person: string; email: string; admin?: boolean }
 
 export type OAuthServerOptions = {
   /** The site's address (`APP_ORIGIN`): the issuer. */
@@ -655,3 +656,7 @@ export class OAuthServer {
 /** The slug of the Dono `verifyAccessToken` put on a verified token. */
 export const ownerOf = (authInfo: AuthInfo | undefined): string | null =>
   (authInfo?.extra?.owner as Owner | undefined)?.person ?? null
+
+/** Whether that Dono has `admin: true` (read with her on every request). */
+export const adminOf = (authInfo: AuthInfo | undefined): boolean =>
+  (authInfo?.extra?.owner as Owner | undefined)?.admin === true

@@ -5,7 +5,7 @@
 
 import assert from 'node:assert/strict'
 import { Client, InMemoryTransport } from '@modelcontextprotocol/client'
-import { makeEngine } from '@filmes/engine'
+import { makeEngine, type Vars } from '@filmes/engine'
 import { onTestFinished } from 'vite-plus/test'
 import type { Fixture } from '../../engine/test/fixture.ts'
 import { createMcpServer } from '../src/index.ts'
@@ -40,13 +40,20 @@ const text = (result: ToolResult): string => {
 
 /** A client connected to a server over `fixture` (the test's
  * `useFixture()`), closed when the test ends. `owner` is the logged-in
- * Pessoa the server runs every call as. */
+ * Pessoa the server runs every call as; `vars` add to (or, `undefined`,
+ * remove from) the fixture's; `admin` is what the edge says of her. */
 export async function connect(
   fixture: Fixture,
   owner: string | null = null,
+  vars: Vars = {},
+  admin?: boolean,
 ): Promise<Connected> {
-  const engine = makeEngine(fixture.vars)
-  const server = createMcpServer({ engine, owner })
+  const engine = makeEngine({ ...fixture.vars, ...vars })
+  const server = createMcpServer({
+    engine,
+    owner,
+    ...(admin !== undefined && { admin }),
+  })
   const [clientSide, serverSide] = InMemoryTransport.createLinkedPair()
   await server.connect(serverSide)
   const client = new Client({ name: 'test', version: '0' })
