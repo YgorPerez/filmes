@@ -1,7 +1,7 @@
 // What the golden vectors do not pin: the Evidence a film line and a
 // Presente with no Fact get, the shape the result prints, and the names of
-// the closed lists, which are the key migration's.
-import { data, output, outputToEnglish } from '@filmes/key-migration'
+// the closed lists, which are Python's in English.
+import * as names from '../python-names.ts'
 import { expect, test } from 'vite-plus/test'
 import {
   evidenceToJson,
@@ -71,39 +71,28 @@ test('the contribution prints rounded to 4 places', () => {
 })
 
 test('the printed keys are the output table’s', () => {
-  const json = evidenceToJson(withoutFact('bruno', 'tt9000101'), weights)
-  const converted = outputToEnglish('recomendar', {
-    filmes: [
-      {
-        evidencias: {
-          bruno: [
-            {
-              pessoa: 'bruno',
-              texto: 'sem fato',
-              fonte: null,
-              data: null,
-              forca: 'fraca',
-              tipo: 'palpite',
-              fato_id: null,
-              contribuicao: 0,
-            },
-          ],
-        },
-      },
-    ],
-  }) as { films: [{ evidence: { bruno: [unknown] } }] }
-
-  expect(converted.films[0].evidence.bruno[0]).toEqual(json)
+  expect(
+    evidenceToJson(withoutFact('bruno', 'tt9000101'), weights),
+  ).toStrictEqual({
+    person: 'bruno',
+    text: 'sem fato',
+    source: null,
+    date: null,
+    strength: 'weak',
+    kind: 'guess',
+    factId: null,
+    contribution: 0,
+  })
 })
 
-test('Força, Tipo and Regra names are the key migration’s', () => {
+test('Força, Tipo and Regra names are Python’s, in English', () => {
   expect(new Set(STRENGTHS)).toEqual(
     new Set(
-      Object.entries(output.STRENGTHS)
+      Object.entries(names.STRENGTHS)
         .filter(([pt]) => pt !== 'palpite')
         .map(([, en]) => en),
     ),
   )
-  expect(new Set(KINDS)).toEqual(new Set(Object.values(output.KINDS)))
-  expect(new Set(RULE_NAMES)).toEqual(new Set(Object.values(data.RULES)))
+  expect(new Set(KINDS)).toEqual(new Set(Object.values(names.KINDS)))
+  expect(new Set(RULE_NAMES)).toEqual(new Set(Object.values(names.RULES)))
 })

@@ -136,7 +136,7 @@ describe('the content path', () => {
 
   test('a predicate left out of the weights is no path', async () => {
     const fixture = useFixture()
-    const engine = weightsWith(fixture, '\nroteiro = 0.8\n', '\n')
+    const engine = weightsWith(fixture, '\nwriter = 0.8\n', '\n')
 
     expect(
       evidenceOf(await all(fixture, 100, engine), 'Maré Cheia', 'bruno'),
@@ -296,8 +296,8 @@ describe('the cut of the N strongest', () => {
   const withCut = (fixture: Fixture) =>
     weightsWith(
       fixture,
-      '\nevidencias_maximas = 5\n',
-      '\nevidencias_maximas = 1\n',
+      '\nmax_evidence = 5\n',
+      '\nmax_evidence = 1\n',
     )
 
   test('only the N strongest add to the utility', async () => {

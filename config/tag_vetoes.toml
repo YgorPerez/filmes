@@ -6,13 +6,13 @@
 # tabelas tags_movielens e genoma. Mudar uma lista muda a Recomendação de quem
 # vetou o grupo.
 
-[comedia_boba]
+[silly_comedy]
 # Decisão do Dono de 2026-11-22: o Lorenzo não quer "comédia que parece bobinha",
 # filme "no brains", com vibe Malhação, foco no cotidiano, tema adolescente ou infantil.
 # Ficam de fora stupidity (pega os Coen), adolescence e coming of age (ele dá nota
 # acima da média), family (pega drama) e small town (pega Hot Fuzz e October Sky).
-rotulo = "comédia boba"
-generos_imdb = ["Comedy"]
+label = "comédia boba"
+imdb_genres = ["Comedy"]
 tags = [
     # sem cérebro
     "dumb", "stupid", "stupid as hell", "silly", "silly fun", "goofy", "cheesy", "slapstick", "childish", "juvenile",
@@ -24,10 +24,10 @@ tags = [
     "slice of life", "everyday life", "summer", "suburbia",
 ]
 
-[lento]
+[slow]
 # Decisão do Dono de 2026-11-22 (#57): também é a lista do `--sem-lento`, a Restrição
 # "nada lento" da Sessão. Só as tags de ritmo: atmospheric e thought-provoking ficam
 # de fora porque muito filme ágil tem. Vale para qualquer gênero.
-rotulo = "lento"
-generos_imdb = []
+label = "lento"
+imdb_genres = []
 tags = ["slow", "slow paced", "meditative", "contemplative", "boring"]

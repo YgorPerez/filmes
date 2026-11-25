@@ -155,15 +155,15 @@ describe('the whole output, as recorded', () => {
     const fixture = useFixture()
     const cut = weightsWith(
       fixture,
-      '\nevidencias_maximas = 5\n',
-      '\nevidencias_maximas = 1\n',
+      '\nmax_evidence = 5\n',
+      '\nmax_evidence = 1\n',
     )
     await expectRecordedRecommendation(
       fixture,
       { attendees: ['dono'], count: 100 },
       cut,
     )
-    const noWriter = weightsWith(fixture, '\nroteiro = 0.8\n', '\n')
+    const noWriter = weightsWith(fixture, '\nwriter = 0.8\n', '\n')
     await expectRecordedRecommendation(
       fixture,
       { attendees: ['dono'], count: 100 },
@@ -175,8 +175,8 @@ describe('the whole output, as recorded', () => {
     const fixture = useFixture()
     const noImdbBonus = weightsWith(
       fixture,
-      '\npeso = 0.3\n\n[sem_tristeza]',
-      '\npeso = 0.0\n\n[sem_tristeza]',
+      '\nweight = 0.3\n\n[no_sad]',
+      '\nweight = 0.0\n\n[no_sad]',
     )
     const opened = await fixture.ok(
       recommendSession({ attendees: ['dono', 'quim'], count: 50 }),

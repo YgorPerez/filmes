@@ -8,11 +8,11 @@
 # As tags estão em minúsculas, como nas tabelas tags_movielens e genoma.
 # Mudar uma lista muda a Recomendação.
 
-[triste]
+[sad]
 # O corte que o Claude fez à mão na Sessão de 2026-11-21.
 tags = ["sad", "depressing", "tearjerker", "bleak"]
 
-[tema_pesado]
+[heavy_theme]
 # Decisão do Dono de 2026-11-21: tema pesado conta como triste, mesmo sem tag
 # de tristeza (Polytechnique só tem "massacre"). Gênero do IMDb não entra.
 tags = [

@@ -2,120 +2,120 @@
 # A régua de Força (que Fato é forte, moderado ou fraco) é regra fixa no
 # código, em filmes/evidencia; aqui ficam só os números da ordenação.
 
-[forca.multiplicador]
+[strength.multiplier]
 # A Força multiplica a contribuição de cada Evidência. Palpite soma 0.
-forte = 1.0
-moderada = 0.6
-fraca = 0.3
-palpite = 0.0
+strong = 1.0
+moderate = 0.6
+weak = 0.3
+guess = 0.0
 
-[caminho.peso]
+[path.weight]
 # Peso de cada tipo de aresta de conteúdo no caminho de gosto. Um predicado fora
 # daqui não entra no caminho; o texto de cada um fica em sinais/conteudo.py.
 # Gênero só dá metadado, no máximo fraco (régua).
-diretor = 1.0
-roteiro = 0.8
-serie = 1.0
-elenco = 0.5
-genero = 0.3
+director = 1.0
+writer = 0.8
+series = 1.0
+cast = 0.5
+genre = 0.3
 
-[utilidade]
+[utility]
 # Utilidade individual de 0 a 1: u = 1 / (1 + exp(-k * soma das contribuições)).
 k = 1.0
 # Só as N contribuições de maior módulo de cada Pessoa no filme entram na soma; o
 # Já visto fica fora do corte e sempre conta. Sem o corte, quem tem mil Notas
 # encosta em dezenas de Evidências por filme e fica com utilidade ~1 em tudo.
-evidencias_maximas = 5
+max_evidence = 5
 
-[ajuste.nivel]
+[adjustment.level]
 # Ajuste de uma Pessoa a um elo do caminho de conteúdo (`pessoa ajustar`): o
 # nível multiplica o peso do elo. "nada" tira as Evidências do elo e "pouco"
 # também desce a Força um nível (régua).
-nada = 0.0
-pouco = 0.5
+none = 0.0
+low = 0.5
 normal = 1.0
-muito = 1.5
+high = 1.5
 
-[catalogo]
+[catalog]
 # Mínimo de votos no IMDb para um filme virar Candidato.
-votos_minimos = 1000
+min_votes = 1000
 # Nota mínima no IMDb para um filme virar Candidato (decisão do Dono, 2026-11-21).
-nota_imdb_minima = 7.0
+min_imdb_rating = 7.0
 
-[recomendacao]
+[recommendation]
 # Quantos filmes a Recomendação devolve quando o pedido não diz.
-tamanho = 5
+size = 5
 
-[ja_visto]
+[seen]
 # Já visto pesa contra o filme com esta base (a Força é sempre forte).
-peso = 1.0
+weight = 1.0
 
-[credito]
+[credit]
 # u' = u - fator x Crédito na Regra padrão. O Crédito olha as últimas `janela`
 # Sessões em grupo com Feedback que a Pessoa dividiu com algum Presente de hoje.
-fator = 0.5
-janela = 5
+factor = 0.5
+window = 5
 
-[vizinhanca]
+[neighbors]
 # Peso da Evidência de vizinhança item-item do MovieLens (Tipo review).
-peso = 1.0
+weight = 1.0
 
-[clima]
+[mood]
 # Bônus de cada Clima pedido que o filme sustenta, somado à pontuação da Regra
 # de escolha (que vai de 0 a 1), vezes o multiplicador da Força.
-peso = 0.1
+weight = 0.1
 
-[grupo]
+[group]
 # Bônus do filme com tag de grupo numa Sessão em grupo, ou de sozinho numa
 # Sessão sozinha, somado à pontuação da Regra, vezes o multiplicador da Força.
 # Menor que o do Clima: o Dono não pediu, e a leitura da tag é do projeto.
-peso = 0.05
+weight = 0.05
 
-[pessoas]
+[people]
 # Base de um Declarado ou Relato com alvo entidade (diretor, ator, gênero...):
 # positiva para ama e gosta, negativa para não gosta e odeia. A Força multiplica.
-peso_dito = 1.0
+statement_weight = 1.0
 
-[restricoes]
+[constraints]
 # Só os filmes que chegariam a estas primeiras posições consultam fonte sob
 # demanda (OMDb para a classificação, Does the Dog Die para gatilho).
-alcance_sob_demanda = 50
+on_demand_reach = 50
 
-[vetos_por_tag]
+[tag_vetoes]
 # Mínimos para uma tag de config/vetos_por_tag.toml tirar o filme de um Veto por grupo.
 # Mais firmes que os do "nada triste": "bobo" é mais subjetivo que "triste".
-relevancia_minima = 0.7
-usuarios_minimos = 10
+min_relevance = 0.7
+min_users = 10
 
-[nota_imdb]
+[imdb_rating]
 # Bônus do filme pela nota do IMDb, somado à pontuação da Regra como o do Clima:
 # peso × (nota − mínima) / (10 − mínima), com a mínima de [catalogo]. Nota 7 ganha 0.
 # 0,3 (decisão do Dono, 2026-11-22): com 0,1, um 8,0 ganhava só 0,033 e quase não mudava a ordem.
-peso = 0.3
+weight = 0.3
 
-[sem_tristeza]
+[no_sad]
 # Mínimos para uma tag de config/tristeza.toml tirar o filme em `--sem-tristeza`.
 # Tema pesado pede menos usuários: Polytechnique tem "massacre" de 2.
-usuarios_triste = 3
-usuarios_tema_pesado = 2
-relevancia_minima = 0.6
+min_users_sad = 3
+min_users_heavy_theme = 2
+min_relevance = 0.6
 
-[parecido]
+[similar]
 # `recomendar --parecido` (#67): só passam os `candidatos` filmes mais parecidos
 # com a referência, contados antes das outras Restrições e da nota mínima.
-candidatos = 50
+candidates = 50
 # Tags do genoma da referência que contam: as mais próprias dela (relevância
 # acima da média da tag no genoma). As candidatas a isso são as de maior relevância.
-tags_genoma = 15
-tags_genoma_consideradas = 40
+genome_tags = 15
+genome_tags_considered = 40
 # Tags do MovieLens da referência que buscam filmes: as de mais peso (TF-IDF).
-tags_movielens = 20
+movielens_tags = 20
 
-[parecido.peso]
+[similar.weight]
 # Parecença de 0 a 1: soma destes pesos vezes a parecença de cada fonte (0 a 1).
 # Fonte sem dado para o par fica de fora e o peso dela se redistribui entre as outras.
-genoma = 0.35
-tags_movielens = 0.25
-vizinhos = 0.2
-genero = 0.1
-pessoas = 0.1
+genome = 0.35
+movielens_tags = 0.25
+neighbors = 0.2
+genre = 0.1
+people = 0.1

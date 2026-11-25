@@ -9,7 +9,7 @@
 # o enredo ("party", "friends") ou o diário de alguém ("seen 2022 with family")
 # não entra.
 
-grupo = [
+group = [
     # genome e tags.csv
     "fun movie", "funny", "hilarious", "highly quotable", "quotable",
     "so bad it's good", "so bad it's funny", "cult classic", "campy", "cheesy",
@@ -19,7 +19,7 @@ grupo = [
     "drinking game", "mst3k", "date movie", "family friendly", "watch with kids",
 ]
 
-sozinho = [
+alone = [
     # genome e tags.csv
     "slow", "slow paced", "meditative", "atmospheric", "thought-provoking",
     "depressing", "disturbing", "hard to watch", "bleak",

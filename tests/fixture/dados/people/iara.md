@@ -1,7 +1,7 @@
 ---
-nome: Iara
-apelidos: []
+name: Iara
+aliases: []
 email: iara@example.org
-vetos: []
+vetoes: []
 imports: []
 ---

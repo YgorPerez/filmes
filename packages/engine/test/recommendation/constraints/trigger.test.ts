@@ -136,8 +136,8 @@ describe('a trigger', () => {
     const fixture = useFixture()
     const weights = weightsWith(
       fixture,
-      'alcance_sob_demanda = 50',
-      'alcance_sob_demanda = 3',
+      'on_demand_reach = 50',
+      'on_demand_reach = 3',
     )
     const out = await all(fixture, [DOG], { ...WITH_DDD, ...weights })
 

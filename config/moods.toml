@@ -15,37 +15,37 @@
 [leve]
 tags = ["feel-good", "feel good movie", "heartwarming", "cute", "whimsical", "light", "lighthearted"]
 # comédia cinematográfica, comédia romântica, filme familiar
-generos = ["Q157443", "Q860626", "Q1361932"]
+genres = ["Q157443", "Q860626", "Q1361932"]
 
 ["pra rir"]
 tags = ["funny", "hilarious", "comedy", "very funny", "witty", "silly", "goofy", "silly fun", "dumb but funny"]
 # comédia cinematográfica, comédia romântica, comédia de ação, filme de humor negro
-generos = ["Q157443", "Q860626", "Q2678111", "Q5778924"]
+genres = ["Q157443", "Q860626", "Q2678111", "Q5778924"]
 
 [tenso]
 tags = ["tense", "suspense", "suspenseful", "intense", "thriller"]
 # filme de suspense, thriller psicológico
-generos = ["Q2484376", "Q590103"]
+genres = ["Q2484376", "Q590103"]
 
 ["romântico"]
 tags = ["romantic", "romance", "love story", "good romantic comedies"]
 # romance, comédia romântica
-generos = ["Q1054574", "Q860626"]
+genres = ["Q1054574", "Q860626"]
 
 ["pra chorar"]
 tags = ["tearjerker", "sad", "emotional", "touching", "moving", "bittersweet"]
-generos = []
+genres = []
 
 ["pra pensar"]
 tags = ["thought-provoking", "philosophical", "mindfuck"]
-generos = []
+genres = []
 
 [assustador]
 tags = ["scary", "creepy", "horror", "frightening"]
 # filme de terror, slasher
-generos = ["Q200092", "Q853630"]
+genres = ["Q200092", "Q853630"]
 
 ["ação"]
 tags = ["action", "action packed", "fast paced", "adventure"]
 # filme de ação, filme de aventura, comédia de ação
-generos = ["Q188473", "Q319221", "Q2678111"]
+genres = ["Q188473", "Q319221", "Q2678111"]
