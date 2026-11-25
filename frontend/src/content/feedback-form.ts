@@ -9,6 +9,8 @@
 // `relato:<gostou|neutro|nao-gostou>` (empty: no reaction) and
 // `comentario.<slug>` what she thought.
 
+import { field, within } from './form-fields'
+
 /** The Relato levels the form offers, by their value in the form. */
 export const REPORT_CHOICES = {
   gostou: 'gostou',
@@ -64,13 +66,6 @@ export const FEEDBACK_REFUSALS = [
 ] as const
 export type FeedbackRefusal = (typeof FEEDBACK_REFUSALS)[number]
 
-const field = (form: FormData, name: string): string | undefined => {
-  const value = form.get(name)
-  if (typeof value !== 'string') return undefined
-  const trimmed = value.trim()
-  return trimmed === '' ? undefined : trimmed
-}
-
 const isRating = (value: string) =>
   (RATING_CHOICES as readonly string[]).includes(value)
 const isReport = (value: string): value is ReportChoice =>
@@ -89,50 +84,57 @@ function peopleIn(form: FormData): string[] {
   return [...people]
 }
 
-/** The form's Feedback, or why the page refuses it. The engine checks the
- * rest again (the Presentes, the film in the Catalog). */
-export function parseFeedback(
+type Parsed<A> = { ok: A } | { refused: FeedbackRefusal }
+
+/** One Presente's reaction: absent (a comment alone is refused), a Nota or
+ * a Relato. */
+function reactionOf(
   form: FormData,
-): { ok: FeedbackForm } | { refused: FeedbackRefusal } {
-  const reactions: FeedbackReaction[] = []
-  for (const person of peopleIn(form)) {
-    const said = field(form, `${REACTION}${person}`)
-    const comment = field(form, `${COMMENT}${person}`)
-    if (said === undefined) {
-      if (comment !== undefined) return { refused: 'comentario' }
-      continue
+  person: string,
+): Parsed<FeedbackReaction | null> {
+  const said = field(form, `${REACTION}${person}`)
+  const comment = field(form, `${COMMENT}${person}`)
+  if (said === undefined)
+    return comment === undefined ? { ok: null } : { refused: 'comentario' }
+  const sep = said.indexOf(':')
+  const kind = said.slice(0, sep)
+  const value = said.slice(sep + 1)
+  if (kind === 'nota' && isRating(value))
+    return { ok: { person, kind: 'rating', rating: value, comment } }
+  if (kind === 'relato' && isReport(value))
+    return {
+      ok: { person, kind: 'report', level: REPORT_CHOICES[value], comment },
     }
-    const sep = said.indexOf(':')
-    const kind = said.slice(0, sep)
-    const value = said.slice(sep + 1)
-    if (kind === 'nota' && isRating(value))
-      reactions.push({ person, kind: 'rating', rating: value, comment })
-    else if (kind === 'relato' && isReport(value))
-      reactions.push({
-        person,
-        kind: 'report',
-        level: REPORT_CHOICES[value],
-        comment,
-      })
-    else return { refused: 'pedido' }
-  }
+  return { refused: 'pedido' }
+}
+
+/** The film chosen: a tt… of the list, "nada" (null) or the search's
+ * text. Typing in the search is choosing "outro filme", even with no
+ * radio. */
+function filmOf(form: FormData): Parsed<string | null> {
   const chosen = field(form, 'filme')
-  if (chosen === 'nada')
-    return reactions.length > 0
-      ? { refused: 'nada' }
-      : { ok: { film: null, reactions } }
-  // Typing in the search is choosing "outro filme", even with no radio.
+  if (chosen === 'nada') return { ok: null }
   const search = chosen === undefined || chosen === 'outro'
   const film = search ? field(form, 'busca') : chosen
   if (film === undefined) return { refused: 'filme' }
   if (!search && !/^tt\d+$/.test(film)) return { refused: 'pedido' }
-  return { ok: { film, reactions } }
+  return { ok: film }
 }
 
-const within =
-  <T extends string>(values: readonly T[]) =>
-  (value: unknown): value is T =>
-    (values as readonly unknown[]).includes(value)
+/** The form's Feedback, or why the page refuses it. The engine checks the
+ * rest again (the Presentes, the film in the Catalog). */
+export function parseFeedback(form: FormData): Parsed<FeedbackForm> {
+  const reactions: FeedbackReaction[] = []
+  for (const person of peopleIn(form)) {
+    const reaction = reactionOf(form, person)
+    if ('refused' in reaction) return reaction
+    if (reaction.ok) reactions.push(reaction.ok)
+  }
+  const film = filmOf(form)
+  if ('refused' in film) return film
+  if (film.ok === null && reactions.length > 0) return { refused: 'nada' }
+  return { ok: { film: film.ok, reactions } }
+}
 
 export const isFeedbackRefusal = within(FEEDBACK_REFUSALS)
 

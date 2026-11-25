@@ -3,55 +3,13 @@
 // writes to its own Pessoas: the desktop to Rosa and Quim, the mobile to Teo
 // and Iara. `E2E_SCREENSHOTS=<folder>` saves a capture of each screen there.
 
-import { join } from 'node:path'
-import {
-  makeEngine,
-  personSkip,
-  personView,
-  type PersonView,
-} from '@filmes/engine'
-import { expect, test, type Page, type TestInfo } from '@playwright/test'
-
-function fixtureEngine() {
-  const root = process.env.E2E_ENGINE
-  return makeEngine({
-    FILMES_CONFIG: `${root}/config`,
-    FILMES_DADOS: `${root}/data`,
-    FILMES_BANCO: `${root}/filmes.sqlite`,
-    FILMES_HOJE: '2026-11-20',
-  })
-}
+import { personSkip, personView } from '@filmes/engine'
+import { expect, test, type Page } from '@playwright/test'
+import { engineRun, loginAsBruno, notice, section, snap } from './support'
 
 /** What the engine reads in her file now, after the app wrote it. */
-async function engineView(person: string): Promise<PersonView> {
-  const engine = fixtureEngine()
-  try {
-    const outcome = await engine.run(personView(person))
-    if (outcome.exitCode !== 0) throw new Error(JSON.stringify(outcome.output))
-    return outcome.output
-  } finally {
-    await engine.dispose()
-  }
-}
-
-async function loginAsBruno(page: Page) {
-  await page.goto('/')
-  await page.getByRole('link', { name: 'Entrar com Google' }).click()
-  await page.getByLabel('E-mail').fill('bruno@example.org')
-  await page.getByRole('button', { name: 'Continuar' }).click()
-  await expect(page).toHaveURL(/\/$/)
-}
-
-async function snap(page: Page, info: TestInfo, name: string) {
-  const folder = process.env.E2E_SCREENSHOTS
-  if (!folder) return
-  await page.screenshot({
-    path: join(folder, `${info.project.name}-${name}.png`),
-    fullPage: true,
-  })
-}
-
-const section = (page: Page, name: string) => page.getByRole('region', { name })
+const engineView = (person: string) =>
+  engineRun((engine) => engine.run(personView(person)))
 
 /** Opens the section's "Acrescentar …" and gives its form. */
 async function addForm(page: Page, region: string, summary: string) {
@@ -59,8 +17,6 @@ async function addForm(page: Page, region: string, summary: string) {
   await area.getByText(summary, { exact: true }).click()
   return area.getByRole('form', { name: summary })
 }
-
-const notice = (page: Page) => page.getByRole('status')
 
 test('the Dono reads and changes a Pessoa’s taste', async ({ page }, info) => {
   const slug = info.project.name === 'desktop' ? 'rosa' : 'teo'
@@ -172,23 +128,24 @@ test('the Dono answers or skips an open question', async ({ page }, info) => {
     )
     const view = await engineView('quim')
     expect(view.openQuestions).toEqual([])
-    expect(view.stated.map((s) => s.text)).toEqual(['adora'])
+    // Only her file's: the Feedback e2e gives Quim a Declarado of its own
+    // (`feedback:`), at any moment of this run.
+    const fromFile = view.stated.filter((s) =>
+      s.factId.startsWith('declarados:'),
+    )
+    expect(fromFile.map((s) => s.text)).toEqual(['adora'])
     return
   }
   // Iara has none in the fixture: the engine asks her one first.
-  const engine = fixtureEngine()
-  try {
-    const asked = await engine.run(
+  await engineRun((engine) =>
+    engine.run(
       personSkip({
         person: 'iara',
         text: 'a Iara curte terror?',
         subject: 'Q9001801',
       }),
-    )
-    expect(asked.exitCode).toBe(0)
-  } finally {
-    await engine.dispose()
-  }
+    ),
+  )
   await page.goto('/pessoas/iara')
   const questions = section(page, 'Perguntas abertas')
   await expect(questions).toContainText('pulada 1 vez')

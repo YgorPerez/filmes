@@ -13,12 +13,17 @@ import { Route as OwnerRouteImport } from './routes/_owner'
 import { Route as EntrarRouteImport } from './routes/entrar'
 import { Route as OwnerIndexRouteImport } from './routes/_owner/index'
 import { Route as OwnerExportarRouteImport } from './routes/_owner/exportar'
+import { Route as OwnerFilaRouteImport } from './routes/_owner/fila'
 import { Route as ExportarImdbDotcsvRouteImport } from './routes/exportar/imdb[.]csv'
+import { Route as FilaAcaoRouteImport } from './routes/fila/acao'
 import { Route as OwnerFeedbackIndexRouteImport } from './routes/_owner/feedback/index'
 import { Route as OwnerFeedbackSessaoRouteImport } from './routes/_owner/feedback/$sessao'
+import { Route as OwnerImportarIndexRouteImport } from './routes/_owner/importar/index'
+import { Route as OwnerImportarPessoaRouteImport } from './routes/_owner/importar/$pessoa'
 import { Route as OwnerPessoasIndexRouteImport } from './routes/_owner/pessoas/index'
 import { Route as OwnerPessoasPessoaRouteImport } from './routes/_owner/pessoas/$pessoa'
 import { Route as FeedbackSessaoEnviarRouteImport } from './routes/feedback/$sessao/enviar'
+import { Route as ImportarPessoaAcaoRouteImport } from './routes/importar/$pessoa/acao'
 import { Route as PessoasPessoaAcaoRouteImport } from './routes/pessoas/$pessoa/acao'
 
 const OwnerRoute = OwnerRouteImport.update({
@@ -40,9 +45,19 @@ const OwnerExportarRoute = OwnerExportarRouteImport.update({
   path: '/exportar',
   getParentRoute: () => OwnerRoute,
 } as any)
+const OwnerFilaRoute = OwnerFilaRouteImport.update({
+  id: '/fila',
+  path: '/fila',
+  getParentRoute: () => OwnerRoute,
+} as any)
 const ExportarImdbDotcsvRoute = ExportarImdbDotcsvRouteImport.update({
   id: '/exportar/imdb.csv',
   path: '/exportar/imdb.csv',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FilaAcaoRoute = FilaAcaoRouteImport.update({
+  id: '/fila/acao',
+  path: '/fila/acao',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OwnerFeedbackIndexRoute = OwnerFeedbackIndexRouteImport.update({
@@ -53,6 +68,16 @@ const OwnerFeedbackIndexRoute = OwnerFeedbackIndexRouteImport.update({
 const OwnerFeedbackSessaoRoute = OwnerFeedbackSessaoRouteImport.update({
   id: '/feedback/$sessao',
   path: '/feedback/$sessao',
+  getParentRoute: () => OwnerRoute,
+} as any)
+const OwnerImportarIndexRoute = OwnerImportarIndexRouteImport.update({
+  id: '/importar/',
+  path: '/importar/',
+  getParentRoute: () => OwnerRoute,
+} as any)
+const OwnerImportarPessoaRoute = OwnerImportarPessoaRouteImport.update({
+  id: '/importar/$pessoa',
+  path: '/importar/$pessoa',
   getParentRoute: () => OwnerRoute,
 } as any)
 const OwnerPessoasIndexRoute = OwnerPessoasIndexRouteImport.update({
@@ -70,6 +95,11 @@ const FeedbackSessaoEnviarRoute = FeedbackSessaoEnviarRouteImport.update({
   path: '/feedback/$sessao/enviar',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ImportarPessoaAcaoRoute = ImportarPessoaAcaoRouteImport.update({
+  id: '/importar/$pessoa/acao',
+  path: '/importar/$pessoa/acao',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PessoasPessoaAcaoRoute = PessoasPessoaAcaoRouteImport.update({
   id: '/pessoas/$pessoa/acao',
   path: '/pessoas/$pessoa/acao',
@@ -80,24 +110,34 @@ export interface FileRoutesByFullPath {
   '/': typeof OwnerIndexRoute
   '/entrar': typeof EntrarRoute
   '/exportar': typeof OwnerExportarRoute
+  '/fila': typeof OwnerFilaRoute
   '/exportar/imdb.csv': typeof ExportarImdbDotcsvRoute
+  '/fila/acao': typeof FilaAcaoRoute
   '/feedback/$sessao': typeof OwnerFeedbackSessaoRoute
+  '/importar/$pessoa': typeof OwnerImportarPessoaRoute
   '/pessoas/$pessoa': typeof OwnerPessoasPessoaRoute
   '/feedback/$sessao/enviar': typeof FeedbackSessaoEnviarRoute
+  '/importar/$pessoa/acao': typeof ImportarPessoaAcaoRoute
   '/pessoas/$pessoa/acao': typeof PessoasPessoaAcaoRoute
   '/feedback/': typeof OwnerFeedbackIndexRoute
+  '/importar/': typeof OwnerImportarIndexRoute
   '/pessoas/': typeof OwnerPessoasIndexRoute
 }
 export interface FileRoutesByTo {
   '/entrar': typeof EntrarRoute
   '/exportar': typeof OwnerExportarRoute
+  '/fila': typeof OwnerFilaRoute
   '/exportar/imdb.csv': typeof ExportarImdbDotcsvRoute
+  '/fila/acao': typeof FilaAcaoRoute
   '/': typeof OwnerIndexRoute
   '/feedback/$sessao': typeof OwnerFeedbackSessaoRoute
+  '/importar/$pessoa': typeof OwnerImportarPessoaRoute
   '/pessoas/$pessoa': typeof OwnerPessoasPessoaRoute
   '/feedback/$sessao/enviar': typeof FeedbackSessaoEnviarRoute
+  '/importar/$pessoa/acao': typeof ImportarPessoaAcaoRoute
   '/pessoas/$pessoa/acao': typeof PessoasPessoaAcaoRoute
   '/feedback': typeof OwnerFeedbackIndexRoute
+  '/importar': typeof OwnerImportarIndexRoute
   '/pessoas': typeof OwnerPessoasIndexRoute
 }
 export interface FileRoutesById {
@@ -105,13 +145,18 @@ export interface FileRoutesById {
   '/_owner': typeof OwnerRouteWithChildren
   '/entrar': typeof EntrarRoute
   '/_owner/exportar': typeof OwnerExportarRoute
+  '/_owner/fila': typeof OwnerFilaRoute
   '/exportar/imdb.csv': typeof ExportarImdbDotcsvRoute
+  '/fila/acao': typeof FilaAcaoRoute
   '/_owner/': typeof OwnerIndexRoute
   '/_owner/feedback/$sessao': typeof OwnerFeedbackSessaoRoute
+  '/_owner/importar/$pessoa': typeof OwnerImportarPessoaRoute
   '/_owner/pessoas/$pessoa': typeof OwnerPessoasPessoaRoute
   '/feedback/$sessao/enviar': typeof FeedbackSessaoEnviarRoute
+  '/importar/$pessoa/acao': typeof ImportarPessoaAcaoRoute
   '/pessoas/$pessoa/acao': typeof PessoasPessoaAcaoRoute
   '/_owner/feedback/': typeof OwnerFeedbackIndexRoute
+  '/_owner/importar/': typeof OwnerImportarIndexRoute
   '/_owner/pessoas/': typeof OwnerPessoasIndexRoute
 }
 export interface FileRouteTypes {
@@ -120,37 +165,52 @@ export interface FileRouteTypes {
     | '/'
     | '/entrar'
     | '/exportar'
+    | '/fila'
     | '/exportar/imdb.csv'
+    | '/fila/acao'
     | '/feedback/$sessao'
+    | '/importar/$pessoa'
     | '/pessoas/$pessoa'
     | '/feedback/$sessao/enviar'
+    | '/importar/$pessoa/acao'
     | '/pessoas/$pessoa/acao'
     | '/feedback/'
+    | '/importar/'
     | '/pessoas/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/entrar'
     | '/exportar'
+    | '/fila'
     | '/exportar/imdb.csv'
+    | '/fila/acao'
     | '/'
     | '/feedback/$sessao'
+    | '/importar/$pessoa'
     | '/pessoas/$pessoa'
     | '/feedback/$sessao/enviar'
+    | '/importar/$pessoa/acao'
     | '/pessoas/$pessoa/acao'
     | '/feedback'
+    | '/importar'
     | '/pessoas'
   id:
     | '__root__'
     | '/_owner'
     | '/entrar'
     | '/_owner/exportar'
+    | '/_owner/fila'
     | '/exportar/imdb.csv'
+    | '/fila/acao'
     | '/_owner/'
     | '/_owner/feedback/$sessao'
+    | '/_owner/importar/$pessoa'
     | '/_owner/pessoas/$pessoa'
     | '/feedback/$sessao/enviar'
+    | '/importar/$pessoa/acao'
     | '/pessoas/$pessoa/acao'
     | '/_owner/feedback/'
+    | '/_owner/importar/'
     | '/_owner/pessoas/'
   fileRoutesById: FileRoutesById
 }
@@ -158,7 +218,9 @@ export interface RootRouteChildren {
   OwnerRoute: typeof OwnerRouteWithChildren
   EntrarRoute: typeof EntrarRoute
   ExportarImdbDotcsvRoute: typeof ExportarImdbDotcsvRoute
+  FilaAcaoRoute: typeof FilaAcaoRoute
   FeedbackSessaoEnviarRoute: typeof FeedbackSessaoEnviarRoute
+  ImportarPessoaAcaoRoute: typeof ImportarPessoaAcaoRoute
   PessoasPessoaAcaoRoute: typeof PessoasPessoaAcaoRoute
 }
 
@@ -192,11 +254,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OwnerExportarRouteImport
       parentRoute: typeof OwnerRoute
     }
+    '/_owner/fila': {
+      id: '/_owner/fila'
+      path: '/fila'
+      fullPath: '/fila'
+      preLoaderRoute: typeof OwnerFilaRouteImport
+      parentRoute: typeof OwnerRoute
+    }
     '/exportar/imdb.csv': {
       id: '/exportar/imdb.csv'
       path: '/exportar/imdb.csv'
       fullPath: '/exportar/imdb.csv'
       preLoaderRoute: typeof ExportarImdbDotcsvRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/fila/acao': {
+      id: '/fila/acao'
+      path: '/fila/acao'
+      fullPath: '/fila/acao'
+      preLoaderRoute: typeof FilaAcaoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_owner/feedback/': {
@@ -211,6 +287,20 @@ declare module '@tanstack/react-router' {
       path: '/feedback/$sessao'
       fullPath: '/feedback/$sessao'
       preLoaderRoute: typeof OwnerFeedbackSessaoRouteImport
+      parentRoute: typeof OwnerRoute
+    }
+    '/_owner/importar/': {
+      id: '/_owner/importar/'
+      path: '/importar'
+      fullPath: '/importar/'
+      preLoaderRoute: typeof OwnerImportarIndexRouteImport
+      parentRoute: typeof OwnerRoute
+    }
+    '/_owner/importar/$pessoa': {
+      id: '/_owner/importar/$pessoa'
+      path: '/importar/$pessoa'
+      fullPath: '/importar/$pessoa'
+      preLoaderRoute: typeof OwnerImportarPessoaRouteImport
       parentRoute: typeof OwnerRoute
     }
     '/_owner/pessoas/': {
@@ -234,6 +324,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FeedbackSessaoEnviarRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/importar/$pessoa/acao': {
+      id: '/importar/$pessoa/acao'
+      path: '/importar/$pessoa/acao'
+      fullPath: '/importar/$pessoa/acao'
+      preLoaderRoute: typeof ImportarPessoaAcaoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/pessoas/$pessoa/acao': {
       id: '/pessoas/$pessoa/acao'
       path: '/pessoas/$pessoa/acao'
@@ -246,19 +343,25 @@ declare module '@tanstack/react-router' {
 
 interface OwnerRouteChildren {
   OwnerExportarRoute: typeof OwnerExportarRoute
+  OwnerFilaRoute: typeof OwnerFilaRoute
   OwnerIndexRoute: typeof OwnerIndexRoute
   OwnerFeedbackSessaoRoute: typeof OwnerFeedbackSessaoRoute
+  OwnerImportarPessoaRoute: typeof OwnerImportarPessoaRoute
   OwnerPessoasPessoaRoute: typeof OwnerPessoasPessoaRoute
   OwnerFeedbackIndexRoute: typeof OwnerFeedbackIndexRoute
+  OwnerImportarIndexRoute: typeof OwnerImportarIndexRoute
   OwnerPessoasIndexRoute: typeof OwnerPessoasIndexRoute
 }
 
 const OwnerRouteChildren: OwnerRouteChildren = {
   OwnerExportarRoute: OwnerExportarRoute,
+  OwnerFilaRoute: OwnerFilaRoute,
   OwnerIndexRoute: OwnerIndexRoute,
   OwnerFeedbackSessaoRoute: OwnerFeedbackSessaoRoute,
+  OwnerImportarPessoaRoute: OwnerImportarPessoaRoute,
   OwnerPessoasPessoaRoute: OwnerPessoasPessoaRoute,
   OwnerFeedbackIndexRoute: OwnerFeedbackIndexRoute,
+  OwnerImportarIndexRoute: OwnerImportarIndexRoute,
   OwnerPessoasIndexRoute: OwnerPessoasIndexRoute,
 }
 
@@ -268,7 +371,9 @@ const rootRouteChildren: RootRouteChildren = {
   OwnerRoute: OwnerRouteWithChildren,
   EntrarRoute: EntrarRoute,
   ExportarImdbDotcsvRoute: ExportarImdbDotcsvRoute,
+  FilaAcaoRoute: FilaAcaoRoute,
   FeedbackSessaoEnviarRoute: FeedbackSessaoEnviarRoute,
+  ImportarPessoaAcaoRoute: ImportarPessoaAcaoRoute,
   PessoasPessoaAcaoRoute: PessoasPessoaAcaoRoute,
 }
 export const routeTree = rootRouteImport

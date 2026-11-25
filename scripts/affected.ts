@@ -43,9 +43,9 @@ const TEST_DATA = /(^|\/)tests?\//
 const FROM_ROOT = /^(\.github\/)?scripts\//
 /** What the key migration's round-trip test reads, outside its package. */
 const MIGRATED = /^(config\/|tests\/fixture\/dados\/)/
-/** What the engine's test fixture is built from, outside its package: the
- * Python engine builds the database, the key migration the English data
- * and config (`packages/engine/test/global-setup.ts`). */
+/** What the engine's tests read outside its package: the fixture and the
+ * config (`packages/engine/test/global-setup.ts`), the key migration that
+ * puts them in English, and the Python engine its parity tests run. */
 const ENGINE_FIXTURE =
   /^(filmes\/|tests\/fixture\/|config\/|packages\/key-migration\/src\/|pyproject\.toml$|uv\.lock$)/
 /** The pytest seam, whose trace hook the parity oracle's tests run

@@ -55,9 +55,7 @@ jobs:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
-      # The engine's tests start from a fixture database the Python engine
-      # builds (`packages/engine/test/global-setup.ts`), until the TypeScript
-      # reconstruct exists.
+      # The engine's parity tests and golden vectors run the Python engine.
       - name: Setup uv
         uses: astral-sh/setup-uv@v6
         with:

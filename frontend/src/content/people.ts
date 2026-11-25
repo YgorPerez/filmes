@@ -1,12 +1,12 @@
 import { createServerFn } from '@tanstack/react-start'
-import { ownerMiddleware } from './owner'
+import { ownerMiddleware, pathSlug, requireOwner } from './owner'
 
 /** What `/pessoas` lists (`peopleList`). A request with no Dono is refused:
  * the page gate does not protect a server function. */
 export const readPeopleList = createServerFn({ method: 'GET' })
   .middleware([ownerMiddleware])
   .handler(async ({ context }) => {
-    if (!context.owner) throw new Error('Dono required')
+    requireOwner(context.owner)
     const { appPeopleList } = await import('#/platform/people')
     return appPeopleList()
   })
@@ -14,9 +14,9 @@ export const readPeopleList = createServerFn({ method: 'GET' })
 /** What `/pessoas/<slug>` shows (`personPage`). */
 export const readPersonPage = createServerFn({ method: 'GET' })
   .middleware([ownerMiddleware])
-  .validator((person: string) => person)
+  .validator(pathSlug)
   .handler(async ({ context, data }) => {
-    if (!context.owner) throw new Error('Dono required')
+    requireOwner(context.owner)
     const { appPersonPage } = await import('#/platform/people')
     return appPersonPage(data)
   })

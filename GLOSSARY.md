@@ -131,6 +131,14 @@ _Evitar_: dado, sinal
 De onde um Fato veio: uma base pública, o export de uma Pessoa, uma resposta de questionário, uma descrição do Dono ou o Feedback de uma Sessão.
 _Evitar_: origem
 
+**Import** [import, `import`; tipo [kind: `letterboxd`, `letterboxd-rss`, `trakt`]]:
+Um export de uma Pessoa (o ZIP do Letterboxd ou do Trakt, ou o RSS público do Letterboxd dela) guardado no repo de dados e registrado no arquivo dela. É a Fonte das Notas e dos Já vistos que traz; tirar o Import tira os Fatos que só ele trazia. O RSS só entra com o sim da Pessoa.
+_Evitar_: upload, sincronização
+
+**Fila de resolução** [resolution queue, `queue`]:
+Os filmes de um Import do Letterboxd que o filmes não achou no Catálogo sozinho e esperam o Dono: confirmar com o tconst, o link do IMDb ou o do TMDB, ou descartar com um motivo. A fila é uma só para todas as Pessoas, e a decisão vale para quem tem o filme.
+_Evitar_: pendências
+
 **Motivo** [reason, `Reason`]:
 Uma razão para um filme estar na Recomendação.
 _Evitar_: justificativa, explicação
