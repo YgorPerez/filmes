@@ -56,10 +56,10 @@ export interface EvaluateRequest {
 }
 
 /** `onProgress` from a plain callback, for an edge that writes no Effect
- * code (the web app's live progress). */
+ * code (the web app's live progress, `pnpm catalog:update`). */
 export const progressTo =
-  (listen: (event: EvaluationProgress) => void) =>
-  (event: EvaluationProgress): Effect.Effect<void> =>
+  <Event = EvaluationProgress>(listen: (event: Event) => void) =>
+  (event: Event): Effect.Effect<void> =>
     Effect.sync(() => listen(event))
 
 /** Where `evaluate` writes its reports (`FILMES_AVALIACOES`), or

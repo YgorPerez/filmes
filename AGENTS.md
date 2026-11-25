@@ -56,7 +56,7 @@ packages/engine/           o motor em TypeScript, com Effect v4 (ADR 0003); sem 
     adapter/commands/      um arquivo por comando portado: o argv do Python vira a operação do motor
     decisions.yaml         cada diferença aceita entre os motores, com o motivo
 frontend/                  app TanStack Start: MCP por HTTP, OAuth, app web e o Cartaz (MCP Apps e web)
-  scripts/                 deploy na VPS (deploy-plan.ts, vps.ts, db-publish.ts, check-live.ts, prepare-vps.sh, deploy-wizard.sh; ADR 0006)
+  scripts/                 deploy na VPS (deploy-plan.ts, vps.ts, db-publish.ts, db-build.ts, catalog-update.ts, check-live.ts, prepare-vps.sh, deploy-wizard.sh; ADR 0006)
   nginx/                   vhost, TLS, formato de log sem query e rotação que o deploy instala na VPS
   Dockerfile               a imagem: só o .output do build
 mcp/                       o servidor de hoje, já no workspace sem mudar de comportamento, até o porte; testes em Vitest

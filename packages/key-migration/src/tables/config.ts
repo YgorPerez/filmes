@@ -149,6 +149,7 @@ export const catalogDumps: Shape = entries(
   map({
     bytes: 'bytes',
     data: 'date',
+    fallback: 'fallback',
     fonte: 'source',
     sha256: 'sha256',
     url: 'url',

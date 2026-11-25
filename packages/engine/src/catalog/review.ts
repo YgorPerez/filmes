@@ -84,6 +84,30 @@ export const reviewFacts = (
   ...reviewFactRows(table, rows, sourceAndDate),
 ]
 
+/** `FONTES`: each GroupLens dump's Fonte, date and URL. The dumps never
+ * change, so `atualizar` pins them with this date. */
+export const GROUPLENS_SOURCES: ReadonlyMap<
+  string,
+  { readonly source: string; readonly date: string; readonly url: string }
+> = new Map([
+  [
+    MOVIELENS,
+    {
+      source: 'MovieLens ml-32m',
+      date: '2023-10-13',
+      url: 'https://files.grouplens.org/datasets/movielens/ml-32m.zip',
+    },
+  ],
+  [
+    GENOME,
+    {
+      source: 'Tag Genome 2021',
+      date: '2021-12-30',
+      url: 'https://files.grouplens.org/datasets/tag-genome-2021/genome_2021.zip',
+    },
+  ],
+])
+
 const MOVIELENS_MEMBERS = {
   links: 'ml-32m/links.csv',
   ratings: 'ml-32m/ratings.csv',
@@ -93,6 +117,17 @@ const GENOME_MEMBERS = {
   metadata: 'movie_dataset_public_final/raw/metadata.json',
   scores: 'movie_dataset_public_final/scores/glmer.csv',
 } as const
+
+/** `validar_zip`: reads every member the loading reads to its end, so a
+ * download cut short or corrupt fails here, before it is pinned. */
+export const validateZip = async (path: string, name: string) => {
+  const members =
+    name === MOVIELENS
+      ? Object.values(MOVIELENS_MEMBERS)
+      : Object.values(GENOME_MEMBERS)
+  for (const member of members)
+    for await (const chunk of zipMember(path, member)) void chunk
+}
 
 type Lookup = (column: string) => string | null
 
