@@ -7,16 +7,10 @@
 
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import {
-  makeEngine,
-  personCreate,
-  personImports,
-  viewQueue,
-  type PersonImports,
-  type QueueView,
-} from '@filmes/engine'
-import { expect, test, type Page, type TestInfo } from '@playwright/test'
+import { personCreate, personImports, viewQueue } from '@filmes/engine'
+import { expect, test, type Page } from '@playwright/test'
 import { zipOf } from '../../packages/engine/test/imports/zip.ts'
+import { engineRun, loginAsBruno, notice, section, snap } from './support'
 
 const FIXTURE = join(import.meta.dirname, '../../tests/fixture')
 
@@ -30,58 +24,19 @@ const folderZip = (folder: string, prefix = '') =>
       ),
   )
 
-/** What the engine reads now, after the app wrote. */
-async function engineRun<A>(
-  effect: Parameters<ReturnType<typeof makeEngine>['run']>[0],
-): Promise<A> {
-  const root = process.env.E2E_ENGINE
-  const engine = makeEngine({
-    FILMES_CONFIG: `${root}/config`,
-    FILMES_DADOS: `${root}/data`,
-    FILMES_BANCO: `${root}/filmes.sqlite`,
-    FILMES_HOJE: '2026-11-20',
-  })
-  try {
-    const outcome = await engine.run(effect)
-    if (outcome.exitCode !== 0) throw new Error(JSON.stringify(outcome.output))
-    return outcome.output as A
-  } finally {
-    await engine.dispose()
-  }
-}
-
 /** A Pessoa of this file alone: the other files' assertions read the
  * fixture's Pessoas, and an import changes their Declarados and Notas. On a
  * retry she is already there. */
 async function addPerson(name: string) {
-  await engineRun(personCreate({ name })).catch((error: Error) => {
-    if (!error.message.includes('person_exists')) throw error
-  })
+  await engineRun((engine) => engine.run(personCreate({ name }))).catch(
+    (error: Error) => {
+      if (!error.message.includes('person_exists')) throw error
+    },
+  )
 }
 
 const importsOf = (person: string) =>
-  engineRun<PersonImports>(personImports(person))
-
-async function loginAsBruno(page: Page) {
-  await page.goto('/')
-  await page.getByRole('link', { name: 'Entrar com Google' }).click()
-  await page.getByLabel('E-mail').fill('bruno@example.org')
-  await page.getByRole('button', { name: 'Continuar' }).click()
-  await expect(page).toHaveURL(/\/$/)
-}
-
-async function snap(page: Page, info: TestInfo, name: string) {
-  const folder = process.env.E2E_SCREENSHOTS
-  if (!folder) return
-  await page.screenshot({
-    path: join(folder, `${info.project.name}-${name}.png`),
-    fullPage: true,
-  })
-}
-
-const section = (page: Page, name: string) =>
-  page.getByRole('region', { name, exact: true })
-const notice = (page: Page) => page.getByRole('status')
+  engineRun((engine) => engine.run(personImports(person)))
 
 /** Opens the upload's `<details>` and sends the file. */
 async function upload(
@@ -181,7 +136,7 @@ test('the Dono imports a Letterboxd ZIP and works the queue', async ({
   await discard.getByLabel(/^Motivo/).fill('não é filme')
   await discard.getByRole('button', { name: 'Descartar' }).click()
   await expect(notice(page)).toHaveText('Filme descartado: saiu da fila.')
-  const queue = await engineRun<QueueView>(viewQueue)
+  const queue = await engineRun((engine) => engine.run(viewQueue))
   expect(queue.items.map((i) => i.name)).not.toContain('Filme Perdido')
   expect(queue.items.map((i) => i.name)).not.toContain('Vento Norte')
 

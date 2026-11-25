@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process'
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { makeEngine, type ErrorCode, type Outcome } from '@filmes/engine'
-import { describe, expect, it, vi } from 'vite-plus/test'
+import { describe, expect, it, onTestFinished, vi } from 'vite-plus/test'
 import { ROOT, useFixture } from '../../../packages/engine/test/fixture.ts'
 import { zipOf } from '../../../packages/engine/test/imports/zip.ts'
 import {
@@ -23,9 +23,8 @@ import {
   type Imports,
   type QueueDone,
 } from './imports'
-import type { Owner } from './owners'
 
-const BRUNO: Owner = {
+const BRUNO = {
   person: 'bruno',
   name: 'Bruno',
   email: 'bruno@example.org',
@@ -380,155 +379,135 @@ const folderZip = (folder: string, prefix = '') =>
       ),
   )
 
-describe('importsFromEngine', () => {
-  it('imports, decides the queue and removes, each a commit signed by the Dono', async () => {
-    const fixture = useFixture()
-    git(fixture.data, 'init', '--quiet', '-b', 'master')
-    git(fixture.data, 'add', '--all')
-    git(
-      fixture.data,
-      '-c',
-      'user.name=fixture',
-      '-c',
-      'user.email=fixture@example.org',
-      'commit',
-      '--quiet',
-      '-m',
-      'initial',
-    )
-    const engine = makeEngine({
-      ...fixture.vars,
-      FILMES_GRAVACOES: RECORDINGS,
-      FILMES_TMDB_CHAVE: 'chave-de-teste',
+const AUTHOR = { name: 'Bruno', email: 'bruno@example.org' }
+const LETTERBOXD: ImportAction = {
+  kind: 'letterboxd',
+  original: 'olga.zip',
+  content: folderZip(join(ROOT, 'tests/fixture/letterboxd/olga')),
+}
+const TRAKT: ImportAction = {
+  kind: 'trakt',
+  original: 'trakt.zip',
+  content: folderZip(join(ROOT, 'tests/fixture/trakt'), 'trakt-export/'),
+}
+const VENTO = 'vento-norte-2020-e2bf439e1af6'
+const LOST = 'filme-perdido-2001-91d7fc73cdee'
+
+/** The fixture with filmes-dados as a git repo, the app's `Imports` on it
+ * (TMDB from the recordings), and its commits after the first. */
+function useImportsRepo() {
+  const fixture = useFixture()
+  git(fixture.data, 'init', '--quiet', '-b', 'master')
+  git(fixture.data, 'add', '--all')
+  git(
+    fixture.data,
+    '-c',
+    'user.name=fixture',
+    '-c',
+    'user.email=fixture@example.org',
+    'commit',
+    '--quiet',
+    '-m',
+    'initial',
+  )
+  const engine = makeEngine({
+    ...fixture.vars,
+    FILMES_GRAVACOES: RECORDINGS,
+    FILMES_TMDB_CHAVE: 'chave-de-teste',
+  })
+  onTestFinished(() => engine.dispose())
+  const imports = importsFromEngine(engine)
+  const ok = async <A>(outcome: Promise<Outcome<A>>) => {
+    const done = await outcome
+    if (done.exitCode !== 0) throw new Error(JSON.stringify(done.output))
+    return done.output
+  }
+  /** Each commit after the first: author and subject, no stored path. */
+  const log = () =>
+    git(fixture.data, 'log', '--reverse', '--format=%an <%ae>|%s')
+      .trim()
+      .split('\n')
+      .slice(1)
+      .map((line) => line.replace(/: imports\/.*$/, ''))
+  return { fixture, imports, ok, log }
+}
+
+describe('importsFromEngine, imports', () => {
+  it('imports, reports and removes, each a commit signed by the Dono', async () => {
+    const { fixture, imports, ok, log } = useImportsRepo()
+    const run = (action: ImportAction) =>
+      ok(imports.run('quim', action, AUTHOR))
+    expect(await run(LETTERBOXD)).toEqual({ notice: 'letterboxd', facts: 14 })
+    expect(await run(LETTERBOXD)).toEqual({ notice: 'repetido', facts: 0 })
+    expect(await run(TRAKT)).toEqual({ notice: 'trakt', facts: 3, outside: 0 })
+
+    const page = await ok(imports.page('quim'))
+    expect(page.imports.map((i) => [i.kind, i.original])).toEqual([
+      ['letterboxd', 'olga.zip'],
+      ['trakt', 'trakt.zip'],
+    ])
+    expect(page.trakt).toEqual({ ratings: 2, seen: 1 })
+    const overview = await ok(imports.overview())
+    expect(overview.people.find((p) => p.person === 'quim')).toMatchObject({
+      imports: 2,
     })
-    const author = { name: 'Bruno', email: 'bruno@example.org' }
-    const ok = async <A>(outcome: Promise<Outcome<A>>) => {
-      const done = await outcome
-      if (done.exitCode !== 0) throw new Error(JSON.stringify(done.output))
-      return done.output
-    }
-    try {
-      const imports = importsFromEngine(engine)
-      const letterboxd = folderZip(join(ROOT, 'tests/fixture/letterboxd/olga'))
-      expect(
-        await ok(
-          imports.run(
-            'quim',
-            { kind: 'letterboxd', original: 'olga.zip', content: letterboxd },
-            author,
-          ),
-        ),
-      ).toEqual({ notice: 'letterboxd', facts: 14 })
-      expect(
-        await ok(
-          imports.run(
-            'quim',
-            { kind: 'letterboxd', original: 'olga.zip', content: letterboxd },
-            author,
-          ),
-        ),
-      ).toEqual({ notice: 'repetido', facts: 0 })
-      expect(
-        await ok(
-          imports.run(
-            'quim',
-            {
-              kind: 'trakt',
-              original: 'trakt.zip',
-              content: folderZip(
-                join(ROOT, 'tests/fixture/trakt'),
-                'trakt-export/',
-              ),
-            },
-            author,
-          ),
-        ),
-      ).toEqual({ notice: 'trakt', facts: 3, outside: 0 })
+    expect(overview.queued).toBe(2)
 
-      const page = await ok(imports.page('quim'))
-      expect(page.imports.map((i) => [i.kind, i.original])).toEqual([
-        ['letterboxd', 'olga.zip'],
-        ['trakt', 'trakt.zip'],
-      ])
-      expect(page.trakt).toEqual({ ratings: 2, seen: 1 })
+    expect(await run({ kind: 'rss', user: 'olga_farol' })).toMatchObject({
+      notice: 'rss',
+    })
+    const [, trakt] = page.imports
+    expect(await run({ kind: 'remove', file: String(trakt?.file) })).toEqual({
+      notice: 'removido',
+      facts: 3,
+    })
+    expect(existsSync(join(fixture.data, String(trakt?.file)))).toBe(false)
+    // The same file again changed nothing: no commit.
+    expect(log()).toEqual([
+      'Bruno <bruno@example.org>|import letterboxd quim: olga.zip',
+      'Bruno <bruno@example.org>|import trakt quim: trakt.zip',
+      'Bruno <bruno@example.org>|import letterboxd-rss quim: https://letterboxd.com/olga_farol/rss/',
+      'Bruno <bruno@example.org>|remove import quim',
+    ])
+  })
+})
 
-      const overview = await ok(imports.overview())
-      expect(overview.people.find((p) => p.person === 'quim')?.imports).toBe(2)
-      expect(overview.queued).toBe(2)
+describe('importsFromEngine, the queue', () => {
+  it('shows TMDB’s suggestions and records each decision as the Dono', async () => {
+    const { imports, ok, log } = useImportsRepo()
+    await ok(imports.run('quim', LETTERBOXD, AUTHOR))
+    const queue = await ok(imports.queue())
+    expect(queue.items.map((i) => [i.id, i.name])).toEqual([
+      [LOST, 'Filme Perdido'],
+      [VENTO, 'Vento Norte'],
+    ])
+    expect(queue.names.quim).toBe('Quim')
+    expect(
+      queue.items[1]?.candidates.map((c) => [c.title, c.originalTitle, c.link]),
+    ).toEqual([
+      ['Vento Norte', null, 'https://www.themoviedb.org/movie/9102'],
+      ['Vento Norte', 'Nordwind', 'https://www.themoviedb.org/movie/9103'],
+    ])
 
-      const queue = await ok(imports.queue())
-      expect(queue.items.map((i) => i.name)).toEqual([
-        'Filme Perdido',
-        'Vento Norte',
-      ])
-      expect(queue.names.quim).toBe('Quim')
-      const vento = queue.items[1]
-      expect(vento?.candidates.map((c) => [c.title, c.originalTitle])).toEqual([
-        ['Vento Norte', null],
-        ['Vento Norte', 'Nordwind'],
-      ])
-      expect(
-        await ok(
-          imports.decide(
-            {
-              kind: 'confirm',
-              id: vento?.id ?? '',
-              film: vento?.candidates[0]?.link ?? '',
-            },
-            author,
-          ),
-        ),
-      ).toEqual({ notice: 'confirmado' })
-      const lost = queue.items[0]?.id ?? ''
-      expect(
-        await ok(
-          imports.decide(
-            { kind: 'discard', id: lost, reason: 'ignorar' },
-            author,
-          ),
-        ),
-      ).toEqual({ notice: 'descartado' })
-      expect(
-        await ok(
-          imports.decide(
-            { kind: 'discard', id: lost, reason: 'ignorar' },
-            author,
-          ),
-        ),
-      ).toEqual({ notice: 'igual' })
-      expect(await ok(imports.decide({ kind: 'reprocess' }, author))).toEqual({
-        notice: 'reprocessado',
-        resolved: 0,
-        left: 0,
-      })
-
-      expect(
-        await ok(
-          imports.run('quim', { kind: 'rss', user: 'olga_farol' }, author),
-        ),
-      ).toMatchObject({ notice: 'rss' })
-      const trakt = page.imports[1]?.file ?? ''
-      expect(
-        await ok(imports.run('quim', { kind: 'remove', file: trakt }, author)),
-      ).toEqual({ notice: 'removido', facts: 3 })
-      expect(existsSync(join(fixture.data, trakt))).toBe(false)
-
-      const log = git(fixture.data, 'log', '--reverse', '--format=%an <%ae>|%s')
-        .trim()
-        .split('\n')
-        .slice(1)
-      // The same file again, the same decision again and a reprocess that
-      // found nothing changed nothing: no commit.
-      expect(log.map((line) => line.replace(/: imports\/.*$/, ''))).toEqual([
-        'Bruno <bruno@example.org>|import letterboxd quim: olga.zip',
-        'Bruno <bruno@example.org>|import trakt quim: trakt.zip',
-        `Bruno <bruno@example.org>|letterboxd queue confirm ${vento?.id}`,
-        `Bruno <bruno@example.org>|letterboxd queue discard ${lost}`,
-        'Bruno <bruno@example.org>|import letterboxd-rss quim: https://letterboxd.com/olga_farol/rss/',
-        'Bruno <bruno@example.org>|remove import quim',
-      ])
-    } finally {
-      await engine.dispose()
-    }
+    const decide = (action: QueueAction) => ok(imports.decide(action, AUTHOR))
+    const film = 'https://www.themoviedb.org/movie/9102'
+    expect(await decide({ kind: 'confirm', id: VENTO, film })).toEqual({
+      notice: 'confirmado',
+    })
+    const discard = { kind: 'discard', id: LOST, reason: 'ignorar' } as const
+    expect(await decide(discard)).toEqual({ notice: 'descartado' })
+    expect(await decide(discard)).toEqual({ notice: 'igual' })
+    expect(await decide({ kind: 'reprocess' })).toEqual({
+      notice: 'reprocessado',
+      resolved: 0,
+      left: 0,
+    })
+    // The same decision again and a reprocess that found nothing changed
+    // nothing: no commit.
+    expect(log()).toEqual([
+      'Bruno <bruno@example.org>|import letterboxd quim: olga.zip',
+      `Bruno <bruno@example.org>|letterboxd queue confirm ${VENTO}`,
+      `Bruno <bruno@example.org>|letterboxd queue discard ${LOST}`,
+    ])
   })
 })

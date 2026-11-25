@@ -36,9 +36,12 @@ import {
 } from '#/content/import-action'
 import { currentOwner } from './auth'
 import { appEngine } from './engine'
-import type { Owner } from './owners'
+import { formPoster, seeOther } from './form-post'
 import { ownerAuthor } from './people'
 import { serverEnv } from './server-env'
+
+/** Whoever is logged in, as the login reads her (`currentOwner`). */
+type LoggedIn = ReturnType<typeof currentOwner>
 
 /** A Pessoa in `/importar`, with how many imports she has. */
 export type ImportsEntry = {
@@ -136,6 +139,105 @@ const map = async <A, B>(
 const sum = (counts: Readonly<Record<string, number>>) =>
   Object.values(counts).reduce((a, b) => a + b, 0)
 
+type Run = Engine['run']
+
+/** The queue with the Pessoas' names, from the engine's queue and list. */
+async function queueOf(run: Run): Promise<Outcome<QueuePage>> {
+  const people = await run(listPeople)
+  if (people.exitCode !== 0) return people
+  return map(run(viewQueue), (queue) => ({
+    items: queue.items.map(entryOf),
+    attributions: queue.attributions.map(({ source, text }) => ({
+      source,
+      text,
+    })),
+    names: Object.fromEntries(
+      people.output.map(({ slug, name }) => [slug, name]),
+    ),
+  }))
+}
+
+/** An import or a removal on the Pessoa's files, as `author`. */
+function runImport(
+  run: Run,
+  person: string,
+  action: ImportAction,
+  author: Author,
+): Promise<Outcome<ImportDone>> {
+  switch (action.kind) {
+    case 'letterboxd':
+      return map(
+        run(importLetterboxd({ person, ...upload(action), author })),
+        (r): ImportDone => ({
+          notice: r.newFile ? 'letterboxd' : 'repetido',
+          facts: sum(r.newFacts),
+        }),
+      )
+    case 'rss':
+      return map(
+        run(importLetterboxdRss({ person, user: action.user, author })),
+        (r): ImportDone => ({
+          notice: r.newFile ? 'rss' : 'repetido',
+          facts: sum(r.newFacts),
+        }),
+      )
+    case 'trakt':
+      return map(
+        run(importTrakt({ person, ...upload(action), author })),
+        (r): ImportDone => ({
+          notice: r.newFile ? 'trakt' : 'repetido',
+          facts: sum(r.newFacts),
+          outside: r.unresolved.length,
+        }),
+      )
+    case 'remove':
+      return map(
+        run(removeImport({ file: action.file, person, author })),
+        (r): ImportDone => ({
+          notice: 'removido',
+          facts: sum(r.removedFacts),
+        }),
+      )
+  }
+}
+
+const upload = ({
+  original,
+  content,
+}: {
+  original: string
+  content: Uint8Array
+}) => ({
+  original,
+  content,
+})
+
+/** The Dono's decision on the queue, as `author`. */
+function runDecision(
+  run: Run,
+  action: QueueAction,
+  author: Author,
+): Promise<Outcome<QueueDone>> {
+  switch (action.kind) {
+    case 'confirm':
+      return map(
+        run(confirmQueueItem({ id: action.id, film: action.film, author })),
+        (r): QueueDone => ({ notice: r.new ? 'confirmado' : 'igual' }),
+      )
+    case 'discard':
+      return map(
+        run(discardQueueItem({ id: action.id, reason: action.reason, author })),
+        (r): QueueDone => ({ notice: r.new ? 'descartado' : 'igual' }),
+      )
+    case 'reprocess':
+      return map(run(reprocessLetterboxd({ author })), (r): QueueDone => ({
+        notice: 'reprocessado',
+        resolved: r.resolved.length + r.discarded.length,
+        left: r.queue.length,
+      }))
+  }
+}
+
 export function importsFromEngine(engine: Engine): Imports {
   const run = engine.run
   return {
@@ -153,92 +255,9 @@ export function importsFromEngine(engine: Engine): Imports {
       }))
     },
     page: (person) => run(personImports(person)),
-    async queue() {
-      const people = await run(listPeople)
-      if (people.exitCode !== 0) return people
-      return map(run(viewQueue), (queue) => ({
-        items: queue.items.map(entryOf),
-        attributions: queue.attributions.map(({ source, text }) => ({
-          source,
-          text,
-        })),
-        names: Object.fromEntries(
-          people.output.map(({ slug, name }) => [slug, name]),
-        ),
-      }))
-    },
-    run(person, action, author) {
-      switch (action.kind) {
-        case 'letterboxd':
-        case 'rss':
-          return map(
-            run(
-              action.kind === 'rss'
-                ? importLetterboxdRss({ person, user: action.user, author })
-                : importLetterboxd({
-                    person,
-                    original: action.original,
-                    content: action.content,
-                    author,
-                  }),
-            ),
-            (r): ImportDone => ({
-              notice: r.newFile ? action.kind : 'repetido',
-              facts: sum(r.newFacts),
-            }),
-          )
-        case 'trakt':
-          return map(
-            run(
-              importTrakt({
-                person,
-                original: action.original,
-                content: action.content,
-                author,
-              }),
-            ),
-            (r): ImportDone => ({
-              notice: r.newFile ? 'trakt' : 'repetido',
-              facts: sum(r.newFacts),
-              outside: r.unresolved.length,
-            }),
-          )
-        case 'remove':
-          return map(
-            run(removeImport({ file: action.file, person, author })),
-            (r): ImportDone => ({
-              notice: 'removido',
-              facts: sum(r.removedFacts),
-            }),
-          )
-      }
-    },
-    decide(action, author) {
-      switch (action.kind) {
-        case 'confirm':
-          return map(
-            run(confirmQueueItem({ id: action.id, film: action.film, author })),
-            (r): QueueDone => ({ notice: r.new ? 'confirmado' : 'igual' }),
-          )
-        case 'discard':
-          return map(
-            run(
-              discardQueueItem({
-                id: action.id,
-                reason: action.reason,
-                author,
-              }),
-            ),
-            (r): QueueDone => ({ notice: r.new ? 'descartado' : 'igual' }),
-          )
-        case 'reprocess':
-          return map(run(reprocessLetterboxd({ author })), (r): QueueDone => ({
-            notice: 'reprocessado',
-            resolved: r.resolved.length + r.discarded.length,
-            left: r.queue.length,
-          }))
-      }
-    },
+    queue: () => queueOf(run),
+    run: (person, action, author) => runImport(run, person, action, author),
+    decide: (action, author) => runDecision(run, action, author),
   }
 }
 
@@ -308,12 +327,6 @@ function queueRefusal(outcome: { output: ErrorOutput }): QueueRefusal {
   }
 }
 
-const back = (location: string) =>
-  new Response(null, {
-    status: 303,
-    headers: { Location: location, 'Cache-Control': 'private, no-store' },
-  })
-
 const query = (fields: Record<string, string | number | undefined>) => {
   const params = new URLSearchParams()
   for (const [name, value] of Object.entries(fields))
@@ -323,64 +336,53 @@ const query = (fields: Record<string, string | number | undefined>) => {
 
 const pageOf = (person: string) => `/importar/${encodeURIComponent(person)}`
 
-/** Who may post: a Dono, from a form of this site (the `Origin`, as the
- * logout checks). The page gate does not cover these routes. */
-function gate(
-  request: Request,
-  owner: Owner | null,
-  origin: string | undefined,
-): Owner | Response {
-  if (!owner) return back('/entrar')
-  if (request.headers.get('origin') !== origin)
-    return new Response('Origem recusada', { status: 403 })
-  return owner
-}
-
 /** `POST /importar/<slug>/acao`: an upload (multipart), the RSS (only with
  * the Pessoa's consent, which the engine does not ask), or removing an
  * import; as the logged-in Dono, who signs the commit. */
 export async function importAction(
   request: Request,
   person: string,
-  owner: Owner | null,
+  owner: LoggedIn,
   imports: Imports,
   origin: string | undefined,
 ): Promise<Response> {
-  const signer = gate(request, owner, origin)
+  const signer = formPoster(request, owner, origin)
   if (signer instanceof Response) return signer
   const page = pageOf(person)
   if (Number(request.headers.get('content-length')) > MAX_UPLOAD_BYTES)
-    return back(`${page}${query({ erro: 'grande' })}`)
+    return seeOther(`${page}${query({ erro: 'grande' })}`)
   const action = await parseImport(await request.formData())
   if (typeof action === 'string')
-    return back(`${page}${query({ erro: action })}`)
+    return seeOther(`${page}${query({ erro: action })}`)
   const outcome = await imports.run(person, action, ownerAuthor(signer))
   if (outcome.exitCode !== 0) {
     if (outcome.output.error.code === 'unknown_person')
-      return back('/importar?erro=pessoa')
-    return back(`${page}${query({ erro: importRefusal(outcome) })}`)
+      return seeOther('/importar?erro=pessoa')
+    return seeOther(`${page}${query({ erro: importRefusal(outcome) })}`)
   }
   const { notice, facts, outside } = outcome.output
-  return back(`${page}${query({ feito: notice, novos: facts, fora: outside })}`)
+  return seeOther(
+    `${page}${query({ feito: notice, novos: facts, fora: outside })}`,
+  )
 }
 
 /** `POST /fila/acao`: confirm or discard a queued film, or ask TMDB again;
  * as the logged-in Dono. */
 export async function queueAction(
   request: Request,
-  owner: Owner | null,
+  owner: LoggedIn,
   imports: Imports,
   origin: string | undefined,
 ): Promise<Response> {
-  const signer = gate(request, owner, origin)
+  const signer = formPoster(request, owner, origin)
   if (signer instanceof Response) return signer
   const action = parseQueue(await request.formData())
-  if (!action) return back(`/fila${query({ erro: 'pedido' })}`)
+  if (!action) return seeOther(`/fila${query({ erro: 'pedido' })}`)
   const outcome = await imports.decide(action, ownerAuthor(signer))
   if (outcome.exitCode !== 0)
-    return back(`/fila${query({ erro: queueRefusal(outcome) })}`)
+    return seeOther(`/fila${query({ erro: queueRefusal(outcome) })}`)
   const { notice, resolved, left } = outcome.output
-  return back(
+  return seeOther(
     `/fila${query({ feito: notice, resolvidos: resolved, restam: left })}`,
   )
 }

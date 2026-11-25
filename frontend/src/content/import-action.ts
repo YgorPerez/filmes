@@ -4,6 +4,8 @@
 // Shared by the pages and the server (`platform/imports.ts`), so nothing
 // here imports the engine.
 
+import { field, within } from './form-fields'
+
 /** What the Dono asks on a Pessoa's imports page. */
 export type ImportAction =
   | { kind: 'letterboxd' | 'trakt'; original: string; content: Uint8Array }
@@ -27,13 +29,6 @@ export const LETTERBOXD_USER = '[A-Za-z0-9_]+'
  * default). */
 const DEFAULT_DISCARD_REASON = 'ignorar'
 
-const text = (form: FormData, name: string): string | undefined => {
-  const value = form.get(name)
-  if (typeof value !== 'string') return undefined
-  const trimmed = value.trim()
-  return trimmed === '' ? undefined : trimmed
-}
-
 /** Why an import form cannot run, before the engine sees it. */
 export type ImportFormError = 'pedido' | 'arquivo' | 'consentimento'
 
@@ -42,7 +37,7 @@ export type ImportFormError = 'pedido' | 'arquivo' | 'consentimento'
 export async function parseImport(
   form: FormData,
 ): Promise<ImportAction | ImportFormError> {
-  const action = text(form, 'acao')
+  const action = field(form, 'acao')
   if (action === 'letterboxd' || action === 'trakt') {
     const file = form.get('arquivo')
     if (file === null || typeof file === 'string' || file.size === 0)
@@ -54,32 +49,32 @@ export async function parseImport(
     }
   }
   if (action === 'rss') {
-    const user = text(form, 'usuario')
+    const user = field(form, 'usuario')
     if (!user || !new RegExp(`^${LETTERBOXD_USER}$`).test(user)) return 'pedido'
-    if (text(form, 'consentimento') !== 'sim') return 'consentimento'
+    if (field(form, 'consentimento') !== 'sim') return 'consentimento'
     return { kind: 'rss', user }
   }
   if (action === 'remover') {
-    const file = text(form, 'arquivo')
+    const file = field(form, 'arquivo')
     return file ? { kind: 'remove', file } : 'pedido'
   }
   return 'pedido'
 }
 
 export function parseQueue(form: FormData): QueueAction | null {
-  const action = text(form, 'acao')
+  const action = field(form, 'acao')
   if (action === 'reprocessar') return { kind: 'reprocess' }
-  const id = text(form, 'id')
+  const id = field(form, 'id')
   if (!id) return null
   if (action === 'confirmar') {
-    const film = text(form, 'filme')
+    const film = field(form, 'filme')
     return film ? { kind: 'confirm', id, film } : null
   }
   if (action === 'descartar')
     return {
       kind: 'discard',
       id,
-      reason: text(form, 'motivo') ?? DEFAULT_DISCARD_REASON,
+      reason: field(form, 'motivo') ?? DEFAULT_DISCARD_REASON,
     }
   return null
 }
@@ -141,15 +136,10 @@ const QUEUE_REFUSALS = [
 
 export type QueueRefusal = (typeof QUEUE_REFUSALS)[number]
 
-const oneOf =
-  <T extends string>(values: readonly T[]) =>
-  (value: unknown): value is T =>
-    (values as readonly unknown[]).includes(value)
-
-export const isImportNotice = oneOf(IMPORT_NOTICES)
-export const isImportRefusal = oneOf(IMPORT_REFUSALS)
-export const isQueueNotice = oneOf(QUEUE_NOTICES)
-export const isQueueRefusal = oneOf(QUEUE_REFUSALS)
+export const isImportNotice = within(IMPORT_NOTICES)
+export const isImportRefusal = within(IMPORT_REFUSALS)
+export const isQueueNotice = within(QUEUE_NOTICES)
+export const isQueueRefusal = within(QUEUE_REFUSALS)
 
 /** A count of the query: a whole number, or nothing. */
 export const countOf = (value: unknown): number | undefined => {

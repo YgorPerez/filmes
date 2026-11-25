@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import type { QueueNotice, QueueRefusal } from '#/content/import-action'
-import type { QueueEntry, QueuePage } from '#/platform/imports'
+import type { QueueEntry, QueuePage, QueueSuggestion } from '#/platform/imports'
 import { ImportsFrame } from './imports'
 import { QUEUE } from './imports.copy'
 import {
@@ -135,91 +135,97 @@ function Card({
             ]}
           />
         </div>
-        {item.candidates.length > 0 && (
-          <div className="flex flex-col gap-sm">
-            <h3 className="text-label text-ink-2 uppercase">
-              {QUEUE.candidates}
-            </h3>
-            <ul className="flex flex-col">
-              {item.candidates.map((candidate) => {
-                const label = QUEUE.item(candidate.title, candidate.year)
-                return (
-                  <li
-                    key={candidate.tmdb}
-                    className="flex flex-wrap items-center justify-between gap-sm border-rule py-sm not-first:border-t"
-                  >
-                    <span className="flex min-w-0 flex-col">
-                      <a href={candidate.link} rel="noreferrer" target="_blank">
-                        {label}
-                      </a>
-                      {candidate.originalTitle && (
-                        <span className="text-meta text-ink-2">
-                          {candidate.originalTitle}
-                        </span>
-                      )}
-                    </span>
-                    <QueueForm
-                      action="confirmar"
-                      id={item.id}
-                      className="shrink-0"
-                    >
-                      <input
-                        type="hidden"
-                        name="filme"
-                        value={candidate.link}
-                      />
-                      <Button
-                        type="submit"
-                        variant="quiet"
-                        aria-label={QUEUE.pickLabel(label, candidate.tmdb)}
-                      >
-                        {QUEUE.pick}
-                      </Button>
-                    </QueueForm>
-                  </li>
-                )
-              })}
-            </ul>
-          </div>
-        )}
-        <QueueForm
-          action="confirmar"
-          id={item.id}
-          label={`${QUEUE.confirm} ${title}`}
-        >
-          <TextField
-            name="filme"
-            label={QUEUE.film}
-            hint={QUEUE.filmHint}
-            required
-          />
-          <Submit>{QUEUE.confirm}</Submit>
-        </QueueForm>
-        <Disclosure summary={QUEUE.discardOpen}>
-          <QueueForm
-            action="descartar"
-            id={item.id}
-            label={`${QUEUE.discard} ${title}`}
-          >
-            <label className="flex flex-col gap-xs">
-              <span className="text-[14px] font-semibold">
-                {QUEUE.reason}{' '}
-                <span className="font-normal text-ink-2">
-                  {QUEUE.reasonHint}
-                </span>
-              </span>
-              <input
-                type="text"
-                name="motivo"
-                list="motivos"
-                autoComplete="off"
-                className="min-h-touch w-full rounded-field border border-rule bg-surface px-3 py-[9px] text-[15px] text-ink"
-              />
-            </label>
-            <Submit>{QUEUE.discard}</Submit>
-          </QueueForm>
-        </Disclosure>
+        {item.candidates.length > 0 && <Suggestions item={item} />}
+        <Confirm id={item.id} title={title} />
+        <Discard id={item.id} title={title} />
       </section>
     </li>
+  )
+}
+
+/** TMDB's films with the title, each confirmed with one click. */
+function Suggestions({ item }: { item: QueueEntry }) {
+  return (
+    <div className="flex flex-col gap-sm">
+      <h3 className="text-label text-ink-2 uppercase">{QUEUE.candidates}</h3>
+      <ul className="flex flex-col">
+        {item.candidates.map((candidate) => (
+          <Suggestion key={candidate.tmdb} id={item.id} candidate={candidate} />
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+function Suggestion({
+  id,
+  candidate,
+}: {
+  id: string
+  candidate: QueueSuggestion
+}) {
+  const label = QUEUE.item(candidate.title, candidate.year)
+  return (
+    <li className="flex flex-wrap items-center justify-between gap-sm border-rule py-sm not-first:border-t">
+      <span className="flex min-w-0 flex-col">
+        <a href={candidate.link} rel="noreferrer" target="_blank">
+          {label}
+        </a>
+        {candidate.originalTitle && (
+          <span className="text-meta text-ink-2">
+            {candidate.originalTitle}
+          </span>
+        )}
+      </span>
+      <QueueForm action="confirmar" id={id} className="shrink-0">
+        <input type="hidden" name="filme" value={candidate.link} />
+        <Button
+          type="submit"
+          variant="quiet"
+          aria-label={QUEUE.pickLabel(label, candidate.tmdb)}
+        >
+          {QUEUE.pick}
+        </Button>
+      </QueueForm>
+    </li>
+  )
+}
+
+/** The film the Dono names: a tconst, an IMDb or a TMDB link. */
+function Confirm({ id, title }: { id: string; title: string }) {
+  return (
+    <QueueForm action="confirmar" id={id} label={`${QUEUE.confirm} ${title}`}>
+      <TextField
+        name="filme"
+        label={QUEUE.film}
+        hint={QUEUE.filmHint}
+        required
+      />
+      <Submit>{QUEUE.confirm}</Submit>
+    </QueueForm>
+  )
+}
+
+/** Out of the queue, with a reason (the page's datalist suggests some). */
+function Discard({ id, title }: { id: string; title: string }) {
+  return (
+    <Disclosure summary={QUEUE.discardOpen}>
+      <QueueForm action="descartar" id={id} label={`${QUEUE.discard} ${title}`}>
+        <label className="flex flex-col gap-xs">
+          <span className="text-[14px] font-semibold">
+            {QUEUE.reason}{' '}
+            <span className="font-normal text-ink-2">{QUEUE.reasonHint}</span>
+          </span>
+          <input
+            type="text"
+            name="motivo"
+            list="motivos"
+            autoComplete="off"
+            className="min-h-touch w-full rounded-field border border-rule bg-surface px-3 py-[9px] text-[15px] text-ink"
+          />
+        </label>
+        <Submit>{QUEUE.discard}</Submit>
+      </QueueForm>
+    </Disclosure>
   )
 }
