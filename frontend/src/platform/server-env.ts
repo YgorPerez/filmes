@@ -10,7 +10,7 @@ export const serverEnv = (env: NodeJS.ProcessEnv = process.env) => ({
   APP_ORIGIN: optional(env.APP_ORIGIN),
   GOOGLE_CLIENT_ID: optional(env.GOOGLE_CLIENT_ID),
   GOOGLE_CLIENT_SECRET: optional(env.GOOGLE_CLIENT_SECRET),
-  /** Web sessions and, with #120, the MCP OAuth tokens (ADR 0005). */
+  /** Web sessions and the MCP connector's OAuth clients and tokens (ADR 0005, 0007). */
   AUTH_DATABASE_PATH: optional(env.AUTH_DATABASE_PATH) ?? '/data/auth.sqlite',
   /** The filmes-dados checkout, where the Pessoas (and their `email:`) are. */
   DATA_REPO_PATH: optional(env.DATA_REPO_PATH) ?? '/data/filmes-dados',

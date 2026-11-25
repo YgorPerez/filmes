@@ -5,7 +5,8 @@
 //
 // Routes, all under `/auth/`:
 //   GET  /auth/google    starts the Google login
-//   GET  /auth/callback  Google's return, shared by every purpose (#120 too)
+//   GET  /auth/callback  Google's return, shared by the web login and the
+//                        MCP connector's `/oauth/authorize` (#120)
 //   POST /auth/logout    ends the session
 // A refusal goes back to `/entrar?recusa=<code>` (`LoginRefusal`).
 
@@ -17,6 +18,7 @@ import {
   stubEndpoints,
   type GoogleEndpoints,
 } from './google-login'
+import { OAuthServer } from './oauth-server'
 import { ownersFromDataRepo, type Owner, type OwnerDirectory } from './owners'
 import { serverEnv } from './server-env'
 import type { LoginRefusal } from '#/content/login-refusal'
@@ -62,6 +64,8 @@ export class Auth {
   private readonly secure: boolean
   private readonly sessionName: string
   readonly google: GoogleLogin | null
+  /** The MCP connector's authorization server (#120): on with the login. */
+  readonly oauth: OAuthServer | null
 
   constructor(options: AuthOptions) {
     this.options = options
@@ -82,6 +86,16 @@ export class Auth {
             secure: this.secure,
             endpoints: options.endpoints,
             fetch: options.fetch,
+            now: this.now,
+          })
+        : null
+    this.oauth =
+      this.google && origin
+        ? new OAuthServer({
+            origin,
+            google: this.google,
+            database: () => this.database(),
+            owners: options.owners,
             now: this.now,
           })
         : null
@@ -139,7 +153,10 @@ export class Auth {
       return refused(result.reason === 'expired' ? 'expirou' : 'google', [
         clear,
       ])
-    // One purpose today. #120 adds `mcp` here, with the same Dono check.
+    // The MCP connector's login (`oauth-server.ts`) answers its client,
+    // with the same Dono gate.
+    if (result.purpose === 'mcp' && this.oauth)
+      return this.oauth.resume(result.email, result.payload, clear)
     if (result.purpose !== 'web') return refused('expirou', [clear])
     if (!this.options.owners.ownerByEmail(result.email))
       return refused('nao-dono', [clear])
