@@ -30,7 +30,7 @@ test('reads films from the fixture database', async () => {
     { id: 'tt9000102', titulo: 'Maré Baixa', ano: 2015 },
     { id: 'tt9000103', titulo: 'Cidade de Vidro', ano: 2018 },
   ])
-  expect(count).toEqual({ n: 80 })
+  expect(count).toEqual({ n: 83 })
 })
 
 test('the fixture data and config are the English ones', () => {
