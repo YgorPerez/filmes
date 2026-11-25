@@ -43,7 +43,7 @@ def carregar(conn: sqlite3.Connection, sessao_id: str, frente: dict) -> None:
         if r.tipo == "nota":
             conn.execute("INSERT INTO notas (fato_id, pessoa, filme_id, nota, data, fonte, sessao) VALUES (?, ?, ?, ?, ?, ?, ?)",
                          (r.fato_id, r.pessoa, r.filme_id, r.nota, r.data, r.fonte, r.sessao))
-    dono = {slug for (slug,) in conn.execute("SELECT slug FROM pessoas WHERE dono = 1")}
+    dono = donos_da_sessao(conn, frente)
     for c in fatos.comentarios(sessao_id, frente, dono):
         conn.execute(
             """INSERT INTO declarados (fato_id, pessoa, data, fonte, especifico, reacao, alvo, rotulo, texto, sessao)
@@ -58,3 +58,10 @@ def _apagar(conn, sessao_id):
     for tabela in ("notas", "ja_visto", "reacoes", "declarados", "sessao_presentes", "sessao_recomendacao"):
         conn.execute(f"DELETE FROM {tabela} WHERE sessao = ?", (sessao_id,))
     conn.execute("DELETE FROM sessoes WHERE id = ?", (sessao_id,))
+
+
+def donos_da_sessao(conn, frente: dict) -> set[str]:
+    """Quem fala por si nos Fatos da Sessão: o `dono` dela; sem ele (protótipo), todo Dono (#131)."""
+    if frente.get("dono"):
+        return {str(frente["dono"])}
+    return {slug for (slug,) in conn.execute("SELECT slug FROM pessoas WHERE dono = 1")}

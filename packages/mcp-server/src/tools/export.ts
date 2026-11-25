@@ -1,7 +1,6 @@
 import { EXPORT_FORMATS, exportRatings } from '@filmes/engine'
 import { z } from 'zod'
-import { asPerson, defineTool, personName } from '../tool.ts'
-import { Effect } from 'effect'
+import { defineTool, personName } from '../tool.ts'
 
 export default defineTool({
   name: 'export',
@@ -16,6 +15,5 @@ export default defineTool({
       .enum(EXPORT_FORMATS)
       .describe('imdb: CSV de avaliações do IMDb, para importar no MovieLens'),
   }),
-  run: ({ person, format }) =>
-    Effect.flatMap(asPerson(person), (name) => exportRatings(name, format)),
+  run: ({ person, format }) => exportRatings(person, format),
 })

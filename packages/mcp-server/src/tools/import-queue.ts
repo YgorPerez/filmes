@@ -7,7 +7,6 @@ import {
 } from '@filmes/engine'
 import { z } from 'zod'
 import {
-  asPerson,
   defineTool,
   invalidUsage,
   ownerAuthor,
@@ -59,7 +58,7 @@ export default defineTool({
       if (i.action === 'reprocess')
         return yield* reprocessLetterboxd({
           person:
-            i.person === undefined ? undefined : yield* asPerson(i.person),
+            i.person,
           author,
         })
       if (i.id === undefined)

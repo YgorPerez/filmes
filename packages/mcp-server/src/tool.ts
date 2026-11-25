@@ -70,8 +70,9 @@ export const personName = (description: string) =>
     .regex(/^[^-]/, "nome de Pessoa não pode começar com '-'")
     .describe(description)
 
-/** The request's Dono: the logged-in Pessoa, or else the Pessoa with
- * `owner: true` (the stdio server, which has no login). */
+/** The request's Dono: the logged-in Pessoa, or else the first Pessoa
+ * with `owner: true` (the stdio server, which has no login). The engine's
+ * "dono" is she too. */
 export const requestOwner: Effect.Effect<
   Person,
   unknown,
@@ -90,15 +91,6 @@ export const ownerAuthor: Effect.Effect<Author, never, EngineServices | Run> =
   requestOwner.pipe(
     Effect.map(authorOf),
     Effect.orElseSucceed(() => ENGINE_AUTHOR),
-  )
-
-/** The name as the engine resolves it: "dono" is the logged-in Pessoa
- * (several Pessoas may be Donos; the engine alone would find them all). */
-export const asPerson = (
-  name: string,
-): Effect.Effect<string, never, EngineServices | Run> =>
-  Effect.map(Owner, (owner) =>
-    owner !== null && name.trim().toLowerCase() === 'dono' ? owner : name,
   )
 
 /** Whether the request's Dono has `admin: true`. */

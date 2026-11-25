@@ -287,6 +287,7 @@ describe('sessionsFromEngine', () => {
         'quim',
         'rosa',
         'teo',
+        'vera',
       ])
       expect(options?.moods).toContain('leve')
       expect(await sessionList(sessions)).toEqual([])

@@ -332,19 +332,16 @@ def pasta(repo: Path) -> Path:
 
 
 def ler_todas(repo: Path) -> list[Pessoa]:
-    pessoas = [_ler(arquivo) for arquivo in sorted(pasta(repo).glob("*.md"))]
-    donos = [p.slug for p in pessoas if p.dono]
-    if len(donos) > 1:
-        raise ErroFilmes("dados_invalidos", f"mais de uma Pessoa com dono: true ({', '.join(donos)})")
-    return pessoas
+    """Todas as Pessoas, pelo nome do arquivo. Mais de uma pode ser Dono (#131)."""
+    return [_ler(arquivo) for arquivo in sorted(pasta(repo).glob("*.md"))]
 
 
 def resolver(repo: Path, nome: str) -> Pessoa:
-    """Acha a Pessoa por slug, nome ou apelido, sem diferença de maiúscula; "dono" é o Dono."""
+    """Acha a Pessoa por slug, nome ou apelido, sem diferença de maiúscula; "dono" é o primeiro Dono por slug."""
     alvo = nome.strip().casefold()
     pessoas = ler_todas(repo)
     if alvo == "dono":
-        achadas = [p for p in pessoas if p.dono]
+        achadas = [p for p in pessoas if p.dono][:1]
         if not achadas:
             raise ErroFilmes("pessoa_desconhecida", "nenhuma Pessoa tem dono: true no repo de dados")
     else:
@@ -367,10 +364,6 @@ def criar(repo: Path, nome: str, apelidos: list[str], slug: str | None = None, d
     arquivo = pasta(repo) / f"{slug}.md"
     if arquivo.exists():
         raise ErroFilmes("pessoa_existente", f"já existe uma Pessoa com o slug '{slug}'")
-    if dono:
-        atual = [p.slug for p in ler_todas(repo) if p.dono]
-        if atual:
-            raise ErroFilmes("dono_existente", f"o Dono já é '{atual[0]}'")
     pessoa = Pessoa(slug=slug, nome=nome.strip(), apelidos=list(dict.fromkeys(apelidos)), dono=dono)
     salvar(repo, pessoa)
     return pessoa

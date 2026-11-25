@@ -335,7 +335,6 @@ export {
   decodePerson,
   decodePersonSync,
   encodePerson,
-  listPeople,
   peopleFolder,
   readPeople,
   readPerson,

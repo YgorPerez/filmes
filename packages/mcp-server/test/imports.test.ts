@@ -113,7 +113,7 @@ describe('import_queue', () => {
     // Without a Pessoa, every one.
     assert.deepEqual(
       (await c.ok('import_queue', { action: 'reprocess' })).people,
-      ['bruno', 'iara', 'quim', 'rosa', 'teo'],
+      ['bruno', 'iara', 'quim', 'rosa', 'teo', 'vera'],
     )
     assert.ok(
       result.resolved.some((i: { name: string }) => i.name === 'Rio Abaixo'),

@@ -306,6 +306,7 @@ describe('peopleFromEngine', () => {
         'quim',
         'rosa',
         'teo',
+        'vera',
       ])
       expect(list?.[0]).toEqual({
         person: 'bruno',

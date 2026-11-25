@@ -27,6 +27,7 @@ import {
 } from '../data/yaml.ts'
 import { engineError, type EngineError } from '../runtime/EngineError.ts'
 import { Environment } from '../runtime/Environment.ts'
+import { Owner } from '../runtime/Owner.ts'
 import {
   LEVELS,
   LINKS,
@@ -340,25 +341,9 @@ export const encodePerson = (person: Person): YamlMapping => {
   return front
 }
 
-/** Every Pessoa, by file name (`pessoas.ler_todas`). Two Donos are
- * `invalid_data`, as in Python: online, where the Dono is whoever logged in
- * (map #72), the Sessions tickets lift this. */
+/** Every Pessoa, by file name (`pessoas.ler_todas`). Several may be Donos
+ * (#131): each logs in to the app and the MCP with her own email. */
 export const readPeople: Effect.Effect<
-  readonly Person[],
-  EngineError,
-  Environment
-> = Effect.gen(function* () {
-  const people = yield* listPeople
-  const owners = people.filter((p) => p.owner).map((p) => p.slug)
-  if (owners.length > 1)
-    return yield* invalid(
-      `mais de uma Pessoa com dono: true (${owners.join(', ')})`,
-    )
-  return people
-})
-
-/** Every Pessoa, by file name, with no check across them. */
-export const listPeople: Effect.Effect<
   readonly Person[],
   EngineError,
   Environment
@@ -374,8 +359,9 @@ export const listPeople: Effect.Effect<
   return yield* Effect.forEach(files, (name) => readPerson(join(folder, name)))
 })
 
-/** The Pessoa by slug, name or alias, ignoring case; "dono" is the Dono
- * (`pessoas.resolver`). */
+/** The Pessoa by slug, name or alias, ignoring case (`pessoas.resolver`).
+ * "dono" is the request's Dono: the logged-in Pessoa (`Owner`), or, with no
+ * login (the CLI, the oracle), the first Dono by slug, as `ownerOf`. */
 export const resolvePerson = (
   name: string,
 ): Effect.Effect<Person, EngineError, Environment> =>
@@ -384,12 +370,16 @@ export const resolvePerson = (
     const people = yield* readPeople
     let found: readonly Person[]
     if (wanted === 'dono') {
-      found = people.filter((p) => p.owner)
-      if (found.length === 0)
+      const owner = yield* Owner
+      const donos = people.filter((p) =>
+        owner === null ? p.owner : p.slug === owner,
+      )
+      if (donos.length === 0)
         return yield* engineError(
           'unknown_person',
           'nenhuma Pessoa tem dono: true no repo de dados',
         )
+      found = donos.slice(0, 1)
     } else
       found = people.filter((p) =>
         [p.slug, p.name, ...p.aliases].some((n) => casefold(n) === wanted),
@@ -438,14 +428,6 @@ export const createPerson = (
         'person_exists',
         `já existe uma Pessoa com o slug '${slug}'`,
       )
-    if (input.owner) {
-      const current = (yield* readPeople).find((p) => p.owner)
-      if (current)
-        return yield* engineError(
-          'owner_exists',
-          `o Dono já é '${current.slug}'`,
-        )
-    }
     const person: Person = {
       slug,
       name: pyStrip(input.name),

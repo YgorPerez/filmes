@@ -17,7 +17,6 @@ import {
 } from '@filmes/engine'
 import { z } from 'zod'
 import {
-  asPerson,
   defineTool,
   invalidUsage,
   ownerAuthor,
@@ -175,7 +174,7 @@ const run = (i: Input) =>
     if (i.film !== undefined && i.entity !== undefined)
       return yield* invalidUsage('mande film ou entity, um só')
     const author = yield* ownerAuthor
-    const person = yield* asPerson(i.person ?? '')
+    const person = i.person ?? ''
     const dated = i.date === undefined ? {} : { date: i.date }
     switch (i.action) {
       case 'create':

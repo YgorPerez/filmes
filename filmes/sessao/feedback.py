@@ -31,7 +31,7 @@ def registrar(amb: Ambiente, sessao_id: str, filme: str | None, notas: list[str]
         frente, corpo = arquivo.ler(amb.dados, sessao_id)
         if not arquivo.aberta(frente):
             raise ErroFilmes("sessao_fechada", f"a Sessão {sessao_id} já tem Feedback")
-        dono = {slug for (slug,) in conn.execute("SELECT slug FROM pessoas WHERE dono = 1")}
+        dono = banco.donos_da_sessao(conn, frente)
         reacoes = _reacoes(conn, frente["presentes"], dono, notas, relatos)
         _comentarios(conn, frente["presentes"], reacoes, comentarios)
         recomendacao = frente.get("recomendacao") or []

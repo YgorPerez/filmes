@@ -69,14 +69,20 @@ test('loads the fixture catalog', async () => {
   ])
 })
 
-test('loads the Dono from filmes-dados', async () => {
+test('loads the Donos from filmes-dados', async () => {
   const fixture = useEmptyFixture()
 
   await fixture.ok(rebuild)
 
   expect(
-    await rows(fixture, 'SELECT slug, nome FROM pessoas WHERE dono = 1'),
-  ).toEqual([['bruno', 'Bruno']])
+    await rows(
+      fixture,
+      'SELECT slug, nome FROM pessoas WHERE dono = 1 ORDER BY slug',
+    ),
+  ).toEqual([
+    ['bruno', 'Bruno'],
+    ['vera', 'Vera'],
+  ])
 })
 
 test('says where the database is and how many rows each table has', async () => {

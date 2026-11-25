@@ -2,7 +2,6 @@ import { Effect } from 'effect'
 import { importLetterboxdRss, removeImport } from '@filmes/engine'
 import { z } from 'zod'
 import {
-  asPerson,
   defineTool,
   invalidUsage,
   ownerAuthor,
@@ -44,8 +43,7 @@ export default defineTool({
   run: (i) =>
     Effect.gen(function* () {
       const author = yield* ownerAuthor
-      const person =
-        i.person === undefined ? undefined : yield* asPerson(i.person)
+      const { person } = i
       if ((i.letterboxdRss === undefined) === (i.remove === undefined))
         return yield* invalidUsage('mande letterboxdRss ou remove, um dos dois')
       if (i.remove !== undefined)

@@ -14,7 +14,7 @@ import {
   personState,
   personVeto,
   personView,
-  listPeople,
+  readPeople,
   readTagGroups,
   type Author,
   type Engine,
@@ -94,7 +94,7 @@ export function peopleFromEngine(engine: Engine): People {
   const run = engine.run
   return {
     list: () =>
-      map(run(listPeople), (people) =>
+      map(run(readPeople), (people) =>
         people.map(({ slug, name, aliases, owner }) => ({
           person: slug,
           name,
