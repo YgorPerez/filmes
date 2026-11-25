@@ -49,6 +49,7 @@ export const PEOPLE = {
 
 export const PERSON = {
   back: 'Pessoas',
+  contents: 'Nesta página',
   owner: 'Dono',
   aliases: (aliases: readonly string[]) => `também ${aliases.join(', ')}`,
   unknown: 'Nenhuma Pessoa com esse nome no repo de dados.',

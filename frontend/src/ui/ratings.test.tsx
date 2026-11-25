@@ -62,7 +62,8 @@ describe('the rating screen', () => {
   it('shows the first film of the Fila with its year and genres', () => {
     render(<RatingScreen queue={QUEUE} search={null} />)
     expect(card().getByRole('heading').textContent).toBe('Pequenos Milagres')
-    expect(card().getByText('2019 · Comédia')).toBeTruthy()
+    expect(card().getByText('2019')).toBeTruthy()
+    expect(card().getByText('Comédia')).toBeTruthy()
     expect(
       card()
         .getAllByRole('button')
@@ -143,7 +144,8 @@ describe('the rating screen', () => {
   it('a film picked in the search is the one to rate', () => {
     render(<RatingScreen queue={QUEUE} search={SEARCH} film="tt9000401" />)
     expect(card().getByRole('heading').textContent).toBe('Fronteira')
-    expect(card().getByText('2008 · Rui Tavares')).toBeTruthy()
+    expect(card().getByText('2008')).toBeTruthy()
+    expect(card().getByText('Rui Tavares')).toBeTruthy()
   })
 
   it('says when the Fila is over, and when the engine cannot run', async () => {

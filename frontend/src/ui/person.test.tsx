@@ -247,18 +247,23 @@ describe('PersonScreen forms', () => {
 
   it('changes an Ajuste, starting from the level she has', async () => {
     const user = userEvent.setup()
-    const level = screen.getByLabelText(
-      PERSON.adjustments.level(PERSON.links.cast),
-      { exact: false },
-    )
-    expect(level).toHaveProperty('value', 'none')
+    const picker = (link: string) =>
+      screen.getByRole('group', {
+        name: new RegExp(`^${PERSON.adjustments.level(link)}`),
+      })
+    const cast = picker(PERSON.links.cast)
     expect(
-      screen.getByLabelText(PERSON.adjustments.level(PERSON.links.director), {
-        exact: false,
+      within(cast).getByRole('radio', { name: PERSON.levels.none }),
+    ).toHaveProperty('checked', true)
+    expect(
+      within(picker(PERSON.links.director)).getByRole('radio', {
+        name: PERSON.levels.normal,
       }),
-    ).toHaveProperty('value', 'normal')
-    await user.selectOptions(level, 'muito')
-    expect(posted(level.closest('form')!)).toEqual({
+    ).toHaveProperty('checked', true)
+    await user.click(
+      within(cast).getByRole('radio', { name: PERSON.levels.high }),
+    )
+    expect(posted(cast.closest('form')!)).toEqual({
       kind: 'adjust',
       link: 'cast',
       level: 'high',
@@ -339,12 +344,30 @@ describe('PersonScreen', () => {
     expect(screen.getByText(PERSON.imported)).toBeTruthy()
   })
 
+  it('opens with a link to each ficha, with how many it holds', () => {
+    show()
+    const contents = screen.getByRole('navigation', { name: PERSON.contents })
+    const vetoes = within(contents).getByRole('link', {
+      name: `${PERSON.vetoes.title} 1`,
+    })
+    expect(vetoes.getAttribute('href')).toBe('#vetos')
+    expect(document.getElementById('vetos')?.closest('section')).toBe(
+      section(PERSON.vetoes.title),
+    )
+  })
+
   it('shows her Notas with their count, and the Força of each Declarado', () => {
     show()
     expect(screen.getByText(PERSON.ratings.count(1))).toBeTruthy()
     expect(screen.getByText(/Fronteira/)).toBeTruthy()
+    const stated = screen
+      .getByText('“adoro os filmes dela”')
+      .closest('li') as HTMLElement
     expect(
-      screen.getByText(/ama Sofia Rangel \(Q9000018\) · específico · forte/),
+      within(stated).getByText(/ama Sofia Rangel \(Q9000018\) · específico/),
+    ).toBeTruthy()
+    expect(
+      within(stated).getByRole('img', { name: 'Força forte' }),
     ).toBeTruthy()
   })
 
