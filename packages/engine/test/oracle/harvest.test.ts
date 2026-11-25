@@ -3,7 +3,9 @@
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { Effect } from 'effect'
 import { describe, expect, onTestFinished, test } from 'vite-plus/test'
+import { defineCommand } from '../../oracle/adapter/command.ts'
 import {
   commandOf,
   loadAdapter,
@@ -90,6 +92,50 @@ describe('the argv adapter', () => {
     }
 
     expect(() => makeAdapter([command, command])).toThrow(/two adapters/)
+  })
+})
+
+describe('partial adapters', () => {
+  const importar = (origin: string) =>
+    defineCommand({
+      command: 'importar',
+      args: {
+        positionals: [],
+        options: {
+          letterboxd: { kind: 'value' },
+          trakt: { kind: 'value' },
+          remover: { kind: 'value' },
+        },
+        exclusive: [
+          { options: ['letterboxd', 'trakt', 'remover'], required: true },
+        ],
+      },
+      ported: (argv) => argv.includes(`--${origin}`),
+      run: () => Effect.succeed(origin),
+    })
+
+  test('each answers its calls; a call none takes is not ported', () => {
+    const adapter = makeAdapter([importar('letterboxd'), importar('trakt')])
+
+    expect(adapter.adapt(['importar', '--trakt', 'x.zip'], null)).toMatchObject(
+      { kind: 'ported' },
+    )
+    expect(
+      adapter.adapt(['importar', '--letterboxd', 'x.zip'], null),
+    ).toMatchObject({ kind: 'ported' })
+    expect(adapter.adapt(['importar', '--remover', 'x.zip'], null)).toEqual({
+      kind: 'not_ported',
+      command: 'importar',
+    })
+    expect([...adapter.ported]).toEqual(['importar'])
+  })
+
+  test('a whole adapter cannot share its command with a partial one', () => {
+    const whole = { command: 'importar', prepare: () => null }
+
+    expect(() => makeAdapter([importar('letterboxd'), whole])).toThrow(
+      /two adapters/,
+    )
   })
 })
 

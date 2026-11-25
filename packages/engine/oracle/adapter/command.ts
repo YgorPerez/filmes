@@ -40,7 +40,8 @@ export interface CommandDefinition<S extends ArgSpec> extends CompareOptions {
   /** Whether the engine answers this step yet, from its raw arguments
    * (after the command and action words). A command ported in parts says
    * `false` for the arguments a later ticket ports, and the step stays
-   * `not_ported`. Absent: every step. */
+   * `not_ported`. Absent: every step. Several adapters may share a
+   * command when each has it (`importar --letterboxd`, `--trakt`...). */
   readonly ported?: (argv: readonly string[]) => boolean
   /** The engine operation for one call. `stdin` is what the step sent. */
   readonly run: (
@@ -57,6 +58,8 @@ export interface CommandDefinition<S extends ArgSpec> extends CompareOptions {
 /** A command, with its argument types erased: what the adapter holds. */
 export interface Command extends CompareOptions {
   readonly command: string
+  /** It answers only some steps of the command (`ported`). */
+  readonly partial?: boolean
   /** `null` when the command does not answer these arguments yet. */
   readonly prepare: (
     argv: readonly string[],
@@ -77,6 +80,7 @@ export function defineCommand<const S extends ArgSpec>(
     command,
     ...(unordered && { unordered }),
     ...(tolerance && { tolerance }),
+    ...(definition.ported && { partial: true }),
     prepare: (argv, stdin) => {
       if (definition.ported && !definition.ported(argv)) return null
       let args: Parsed<S>
