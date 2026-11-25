@@ -181,10 +181,11 @@ const IN_WORDS: Readonly<Record<number, string>> = {
   10: 'dez',
 }
 
-const STRENGTH_ORDER: Readonly<Record<string, number>> = {
+const STRENGTH_ORDER: Readonly<Record<Strength | 'guess', number>> = {
   strong: 0,
   moderate: 1,
   weak: 2,
+  guess: 3,
 }
 
 const get = (map: YamlValue | undefined, key: string): YamlValue | undefined =>
@@ -354,13 +355,9 @@ const isFact = (e: BodyEvidence) => e.kind !== 'guess'
 
 /** The strongest Evidence of each Presente with a Fato, the ones with the
  * same sharing a line, the strongest lines first (`_linhas`). */
-const linesOf = (
-  film: FilmInBody,
-  withoutFact: ReadonlyArray<string>,
-): BillboardLine[] => {
+const linesOf = (film: FilmInBody): BillboardLine[] => {
   const groups = new Map<string, { evidence: BodyEvidence; people: string[] }>()
   for (const [person, evidence] of Object.entries(film.evidence)) {
-    if (withoutFact.includes(person)) continue
     const strongest = evidence.find(isFact)
     if (strongest === undefined) continue
     const key = JSON.stringify([
@@ -378,8 +375,8 @@ const linesOf = (
     .map((g, index) => ({ g, index }))
     .sort(
       (a, b) =>
-        (STRENGTH_ORDER[a.g.evidence.strength] ?? 3) -
-          (STRENGTH_ORDER[b.g.evidence.strength] ?? 3) || a.index - b.index,
+        STRENGTH_ORDER[a.g.evidence.strength] -
+          STRENGTH_ORDER[b.g.evidence.strength] || a.index - b.index,
     )
     .map(({ g }) => ({
       people: g.people,
@@ -484,7 +481,7 @@ export const billboardModel = (
             votesText: votesText(header.imdbVotes),
             chips,
             synopsis: header.synopsis,
-            lines: linesOf(film, withoutFact),
+            lines: linesOf(film),
             withoutFact,
             coverage: `Fato sobre ${people.length - withoutFact.length} de ${people.length}`,
           })

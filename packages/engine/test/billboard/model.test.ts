@@ -3,7 +3,7 @@
 // test_parecido_na_sessao.py that check what the page says rather than its
 // HTML (the HTML checks are the React Cartaz's, #114).
 
-import { readFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { Effect } from 'effect'
 import { describe, expect, test } from 'vite-plus/test'
@@ -444,6 +444,48 @@ describe('the Cartaz model', () => {
         code: 'invalid_data',
         message: `Sessão ${id}: tt0000001 não está no Catálogo`,
       },
+    })
+  })
+
+  test('a stored Restrição that no longer exists is not on the top', async () => {
+    const fixture = useFixture()
+    const session = await recommend(fixture, { attendees: ['dono'] })
+    const id = session.session.id
+    const file = join(fixture.data, 'sessions', `${id}.md`)
+    const text = readFileSync(file, 'utf8')
+    expect(text).toContain('constraints: []')
+    writeFileSync(
+      file,
+      text.replace('constraints: []', 'constraints:\n    - {name: no_repeat}'),
+    )
+
+    const { request } = await fixture.ok(billboardModel({ session: id }))
+
+    expect(front(fixture, id)['context']['constraints']).toEqual([
+      { name: 'no_repeat' },
+    ])
+    expect(request.parts.join(' · ')).toBe('nota 7+ no IMDb')
+  })
+
+  test('a Session written by hand with no context reads as an empty request', async () => {
+    const fixture = useFixture()
+    const session = await recommend(fixture, { attendees: ['dono'] })
+    const id = session.session.id
+    await fixture.ok(
+      Effect.gen(function* () {
+        const { frontmatter, body } = yield* readSession(id)
+        const top = new Map(frontmatter)
+        top.delete('context')
+        yield* writeSession(id, top, body)
+      }),
+    )
+
+    const { request } = await fixture.ok(billboardModel({ session: id }))
+
+    expect(request).toEqual({
+      speech: null,
+      who: 'Você',
+      parts: ['nota 7+ no IMDb'],
     })
   })
 

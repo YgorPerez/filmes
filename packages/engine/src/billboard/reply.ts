@@ -496,16 +496,25 @@ export const answerBillboard = (
           const seen: ReplySeen[] = []
           if (asked.length > 0) {
             const connection = yield* required(db)
-            const labels = new Map<string, string>()
-            for (const { film } of asked)
-              if (!labels.has(film))
-                labels.set(film, yield* targetLabel(connection, film))
+            // Every label first: a film outside the Catálogo writes nothing.
+            const labelled = []
+            for (const item of asked)
+              labelled.push({
+                ...item,
+                label: yield* targetLabel(connection, item.film),
+              })
             const people = new Map<string, Person>()
             const changed = new Set<string>()
+            const toSave = new Map<string, Person>()
             const source = `cartaz ${id}`
-            for (const { slug, film, rating: given, thought } of asked) {
+            for (const {
+              slug,
+              film,
+              rating: given,
+              thought,
+              label,
+            } of labelled) {
               let person = people.get(slug) ?? (yield* resolvePerson(slug))
-              const label = labels.get(film) ?? film
               const earlier = (yield* items(person, 'seen')).find(
                 (s) => s.source === source && s.target === film,
               )
@@ -546,6 +555,8 @@ export const answerBillboard = (
                 }
               }
               people.set(slug, person)
+              // In the order each Pessoa first changed, as Python saves them.
+              if (changed.has(slug)) toSave.set(slug, person)
               seen.push({
                 person: slug,
                 film,
@@ -555,10 +566,8 @@ export const answerBillboard = (
                 ...(thought !== null && { comment: thought }),
               })
             }
-            for (const slug of changed) {
-              const person = people.get(slug)
-              if (person !== undefined) yield* savePersonAndSync(db, person)
-            }
+            for (const person of toSave.values())
+              yield* savePersonAndSync(db, person)
           }
 
           // Stars, comments and acrescentar (`_gravar_resposta`).
