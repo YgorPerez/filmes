@@ -490,3 +490,23 @@ export {
   type ImportRemovalInput,
 } from './imports/remove.ts'
 export { reloadData, type DataReload } from './data/reload.ts'
+export {
+  evaluate,
+  type EvaluateRequest,
+  type Evaluation,
+  type EvaluationProgress,
+  type OnlineMeasures,
+} from './evaluation/evaluate.ts'
+export type { Measures } from './evaluation/offline.ts'
+export {
+  BATCH as NEIGHBOR_BATCH,
+  computeNeighbors,
+  TOP_K as NEIGHBOR_TOP_K,
+  type NeighborOptions,
+  type NeighborPair,
+} from './catalog/neighbors.ts'
+export { countTags, reviewFacts } from './catalog/review.ts'
+export {
+  dumpYaml as dumpReportYaml,
+  type ReportValue,
+} from './evaluation/yaml.ts'
