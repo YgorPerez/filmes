@@ -13,11 +13,11 @@ import {
   Notice,
   OwnerTag,
   RemoveForm,
-  Section,
   SelectField,
   Submit,
   TextField,
 } from './person-parts'
+import { Ficha, StrengthDots } from './person-marks'
 import { PERSON, RATING_CHOICES } from './person.copy'
 import { Button, buttonVariants } from './shadcn/button'
 
@@ -96,18 +96,60 @@ function PersonHeader({
 }) {
   return (
     <>
-      <div className="flex flex-col gap-xs">
-        <h1 className="flex flex-wrap items-center gap-sm font-display text-title">
-          {page.name}
-          {page.owner && <OwnerTag />}
-        </h1>
-        {page.aliases.length > 0 && (
-          <p className="text-meta text-ink-2">{PERSON.aliases(page.aliases)}</p>
-        )}
+      <div className="flex flex-col gap-md">
+        <div className="flex flex-col gap-xs">
+          <h1 className="flex flex-wrap items-center gap-sm font-display text-title">
+            {page.name}
+            {page.owner && <OwnerTag />}
+          </h1>
+          {page.aliases.length > 0 && (
+            <p className="text-meta text-ink-2">
+              {PERSON.aliases(page.aliases)}
+            </p>
+          )}
+        </div>
+        <Contents page={page} />
       </div>
       {refusal && <Alert>{PERSON.refusals[refusal]}</Alert>}
       {notice && <Notice>{PERSON.notices[notice]}</Notice>}
     </>
+  )
+}
+
+/** The page's fichas as a row of links, each with how many it holds: the
+ * page is long, and the Dono comes for one of them. */
+function Contents({ page }: { page: PersonPage }) {
+  const own = page.person === page.viewer.person
+  const entries: readonly (readonly [string, string, number | null])[] = [
+    ['perguntas', PERSON.questions.title, page.openQuestions.length],
+    ['vetos', PERSON.vetoes.title, page.vetoes.length],
+    ['ajustes', PERSON.adjustments.title, page.adjustments.length],
+    ['declarados', PERSON.stated.title, page.stated.length],
+    ...(own && page.reports.length === 0
+      ? []
+      : [['relatos', PERSON.reports.title, page.reports.length] as const]),
+    ['vistos', PERSON.seen.title, page.seen.length],
+    ['notas', PERSON.ratings.title, page.ratings?.length ?? null],
+  ]
+  return (
+    <nav aria-label={PERSON.contents}>
+      <ul className="flex flex-wrap gap-xs">
+        {entries.map(([id, title, n]) => (
+          <li key={id}>
+            <a
+              href={`#${id}`}
+              className="inline-flex min-h-touch items-center gap-xs rounded-pill border-[1.5px] border-rule bg-surface px-lg font-display text-control text-ink no-underline hover:bg-surface-2"
+            >
+              {title}
+              {n !== null && ' '}
+              {n !== null && (
+                <span className="text-ink-2 tabular-nums">{n}</span>
+              )}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
   )
 }
 
@@ -133,6 +175,9 @@ function Details({ slug, page }: { slug: string; page: PersonPage }) {
 
 type Part = { slug: string; page: PersonPage }
 
+/** How many a ficha holds, on its stub. */
+const countOf = (items: readonly unknown[]) => String(items.length)
+
 /** What others told of her taste. On the logged-in Dono's own page there is
  * no form (what she says of herself is a Declarado), and no section until
  * another Dono tells something. */
@@ -152,7 +197,11 @@ function Reports({ slug, page }: Part) {
 function OpenQuestions({ slug, page }: Part) {
   const { questions } = PERSON
   return (
-    <Section id="perguntas" title={questions.title}>
+    <Ficha
+      id="perguntas"
+      title={questions.title}
+      count={countOf(page.openQuestions)}
+    >
       <Items empty={questions.empty}>
         {page.openQuestions.map((q) => (
           <Item key={q.factId}>
@@ -195,7 +244,7 @@ function OpenQuestions({ slug, page }: Part) {
                 )}
                 <Button
                   type="submit"
-                  variant="option"
+                  variant="link"
                   aria-label={`${questions.skip}: ${q.text}`}
                 >
                   {questions.skip}
@@ -205,14 +254,14 @@ function OpenQuestions({ slug, page }: Part) {
           </Item>
         ))}
       </Items>
-    </Section>
+    </Ficha>
   )
 }
 
 function Vetoes({ slug, page }: Part) {
   const { vetoes } = PERSON
   return (
-    <Section id="vetos" title={vetoes.title}>
+    <Ficha id="vetos" title={vetoes.title} count={countOf(page.vetoes)}>
       <Items empty={vetoes.empty}>
         {page.vetoes.map((v) => (
           <Item
@@ -259,38 +308,35 @@ function Vetoes({ slug, page }: Part) {
           <Submit>{PERSON.save}</Submit>
         </ActionForm>
       </Disclosure>
-    </Section>
+    </Ficha>
   )
 }
 
 function Adjustments({ slug, page }: Part) {
   const { adjustments } = PERSON
-  const levels = Object.entries(PERSON.levels).map(([value, label]) => ({
-    value,
-    label,
-  }))
   return (
-    <Section id="ajustes" title={adjustments.title} lead={adjustments.lead}>
+    <Ficha
+      id="ajustes"
+      title={adjustments.title}
+      count={countOf(page.adjustments)}
+      lead={adjustments.lead}
+    >
       <ul className="flex flex-col">
         {Object.entries(PERSON.links).map(([link, name]) => {
           const current = page.adjustments.find((a) => a.link === link)
           return (
-            <li key={link} className="border-rule py-sm not-first:border-t">
+            <li key={link} className="border-rule py-md not-first:border-t">
               <ActionForm
                 slug={slug}
                 action="ajustar"
                 className="flex flex-wrap items-end gap-sm"
               >
                 <input type="hidden" name="elo" value={link} />
-                <div className="min-w-0 flex-1 basis-[180px]">
-                  <SelectField
-                    name="nivel"
-                    label={adjustments.level(name)}
-                    hint={current?.date}
-                    options={levels}
-                    defaultValue={current?.level ?? 'normal'}
-                  />
-                </div>
+                <LevelPicker
+                  legend={adjustments.level(name)}
+                  hint={current?.date}
+                  level={current?.level ?? 'normal'}
+                />
                 <Button type="submit" variant="option">
                   {adjustments.change}
                 </Button>
@@ -299,7 +345,46 @@ function Adjustments({ slug, page }: Part) {
           )
         })}
       </ul>
-    </Section>
+    </Ficha>
+  )
+}
+
+/** The four levels of an Ajuste side by side, one marked: radios, so the
+ * form posts the marked one without JavaScript. */
+function LevelPicker({
+  legend,
+  hint,
+  level,
+}: {
+  legend: string
+  hint?: string
+  level: string
+}) {
+  return (
+    <fieldset className="flex min-w-0 flex-1 basis-[240px] flex-col gap-xs">
+      <legend className="mb-xs font-display text-[14px] font-bold">
+        {legend}
+        {hint && (
+          <span className="font-body font-normal text-ink-2"> {hint}</span>
+        )}
+      </legend>
+      <div className="grid grid-cols-4 rounded-pill border-[1.5px] border-rule bg-surface p-[3px]">
+        {Object.entries(PERSON.levels).map(([value, label]) => (
+          <label key={value} className="flex">
+            <input
+              type="radio"
+              name="nivel"
+              value={value}
+              defaultChecked={value === level}
+              className="peer sr-only"
+            />
+            <span className="flex min-h-[38px] flex-1 cursor-pointer items-center justify-center rounded-pill px-xs font-display text-control text-ink-2 select-none peer-checked:bg-surface-2 peer-checked:font-bold peer-checked:text-ink peer-checked:ring-2 peer-checked:ring-ink peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-focus">
+              {label}
+            </span>
+          </label>
+        ))}
+      </div>
+    </fieldset>
   )
 }
 
@@ -335,9 +420,10 @@ function Statements({
 }) {
   const copy = kind === 'stated' ? PERSON.stated : PERSON.reports
   return (
-    <Section
+    <Ficha
       id={kind === 'stated' ? 'declarados' : 'relatos'}
       title={copy.title}
+      count={countOf(items)}
       lead={copy.lead}
     >
       <Items empty={copy.empty}>
@@ -362,15 +448,20 @@ function Statements({
               }
             >
               <span>“{s.text}”</span>
-              <Meta
-                parts={[
-                  statementTarget(s),
-                  s.specific ? PERSON.specific : PERSON.generic,
-                  PERSON.strengths[s.strength],
-                  s.date,
-                  s.source,
-                ]}
-              />
+              <span className="flex flex-wrap items-center gap-x-sm gap-y-2xs">
+                <StrengthDots
+                  strength={s.strength}
+                  word={PERSON.strengths[s.strength]}
+                />
+                <Meta
+                  parts={[
+                    statementTarget(s),
+                    s.specific ? PERSON.specific : PERSON.generic,
+                    s.date,
+                    s.source,
+                  ]}
+                />
+              </span>
             </Item>
           )
         })}
@@ -403,14 +494,14 @@ function Statements({
           </ActionForm>
         </Disclosure>
       )}
-    </Section>
+    </Ficha>
   )
 }
 
 function Seen({ slug, page }: Part) {
   const { seen } = PERSON
   return (
-    <Section id="vistos" title={seen.title}>
+    <Ficha id="vistos" title={seen.title} count={countOf(page.seen)}>
       <Items empty={seen.empty}>
         {page.seen.map((s) => (
           <Item
@@ -459,14 +550,19 @@ function Seen({ slug, page }: Part) {
           <Submit>{PERSON.save}</Submit>
         </ActionForm>
       </Disclosure>
-    </Section>
+    </Ficha>
   )
 }
 
 function Ratings({ ratings }: { ratings: PersonPage['ratings'] }) {
   const copy = PERSON.ratings
   return (
-    <Section id="notas" title={copy.title} lead={copy.lead}>
+    <Ficha
+      id="notas"
+      title={copy.title}
+      count={ratings === null ? undefined : countOf(ratings)}
+      lead={copy.lead}
+    >
       {ratings === null ? (
         <p className="text-ink-2">{copy.noDatabase}</p>
       ) : ratings.length === 0 ? (
@@ -486,6 +582,6 @@ function Ratings({ ratings }: { ratings: PersonPage['ratings'] }) {
           </ul>
         </Disclosure>
       )}
-    </Section>
+    </Ficha>
   )
 }
