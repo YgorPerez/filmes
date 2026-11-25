@@ -8,6 +8,7 @@
 import {
   confirmQueueItem,
   discardQueueItem,
+  exportSource,
   importLetterboxd,
   importLetterboxdRss,
   importTrakt,
@@ -30,6 +31,7 @@ import {
   type ImportAction,
   type ImportNotice,
   type ImportRefusal,
+  type ImportRun,
   type QueueAction,
   type QueueNotice,
   type QueueRefusal,
@@ -123,7 +125,7 @@ export interface Imports {
   queue(): Promise<Outcome<QueuePage>>
   run(
     person: string,
-    action: ImportAction,
+    action: ImportRun,
     author: Author,
   ): Promise<Outcome<ImportDone>>
   decide(action: QueueAction, author: Author): Promise<Outcome<QueueDone>>
@@ -162,7 +164,7 @@ async function queueOf(run: Run): Promise<Outcome<QueuePage>> {
 function runImport(
   run: Run,
   person: string,
-  action: ImportAction,
+  action: ImportRun,
   author: Author,
 ): Promise<Outcome<ImportDone>> {
   switch (action.kind) {
@@ -280,15 +282,27 @@ async function shown<A>(outcome: Promise<Outcome<A>>): Promise<A | null> {
 /** What `/importar` lists. */
 export const importsOverview = (imports: Imports) => shown(imports.overview())
 
-/** What `/importar/<slug>` shows: `'unknown'` when no Pessoa has that slug. */
+/** What `/importar/<slug>` shows to `viewer` (the logged-in Dono's slug),
+ * with whether it is her own page (no consent box there: she answers for
+ * herself); `'unknown'` when no Pessoa has that slug. */
 export async function importsPage(
   person: string,
+  viewer: string,
   imports: Imports,
-): Promise<PersonImports | 'unknown' | null> {
+): Promise<(PersonImports & { own: boolean }) | 'unknown' | null> {
   const page = await imports.page(person)
   if (page.exitCode !== 0 && page.output.error.code === 'unknown_person')
     return 'unknown'
-  return shown(Promise.resolve(page))
+  const shownPage = await shown(Promise.resolve(page))
+  return shownPage && { ...shownPage, own: shownPage.person === viewer }
+}
+
+/** The upload once its service is known by what the ZIP holds; null when
+ * it is neither Letterboxd's nor Trakt's. */
+function runOf(action: ImportAction): ImportRun | null {
+  if (action.kind !== 'upload') return action
+  const source = exportSource(action.content)
+  return source && { ...action, kind: source }
 }
 
 /** What `/fila` shows. */
@@ -337,9 +351,11 @@ const query = (fields: Record<string, string | number | undefined>) => {
 
 const pageOf = (person: string) => `/importar/${encodeURIComponent(person)}`
 
-/** `POST /importar/<slug>/acao`: an upload (multipart), the RSS (only with
- * the Pessoa's consent, which the engine does not ask), or removing an
- * import; as the logged-in Dono, who signs the commit. */
+/** `POST /importar/<slug>/acao`: a Letterboxd or Trakt ZIP (multipart,
+ * told apart by what it holds), the RSS (only with the Pessoa's consent,
+ * which the engine does not ask; on her own page the Dono answers for
+ * herself), or removing an import; as the logged-in Dono, who signs the
+ * commit. */
 export async function importAction(
   request: Request,
   person: string,
@@ -352,10 +368,15 @@ export async function importAction(
   const page = pageOf(person)
   if (Number(request.headers.get('content-length')) > MAX_UPLOAD_BYTES)
     return seeOther(`${page}${query({ erro: 'grande' })}`)
-  const action = await parseImport(await request.formData())
+  const action = await parseImport(
+    await request.formData(),
+    person === signer.person,
+  )
   if (typeof action === 'string')
     return seeOther(`${page}${query({ erro: action })}`)
-  const outcome = await imports.run(person, action, ownerAuthor(signer))
+  const run = runOf(action)
+  if (run === null) return seeOther(`${page}${query({ erro: 'origem' })}`)
+  const outcome = await imports.run(person, run, ownerAuthor(signer))
   if (outcome.exitCode !== 0) {
     if (outcome.output.error.code === 'unknown_person')
       return seeOther('/importar?erro=pessoa')
@@ -394,8 +415,8 @@ const appImports = () => importsFromEngine(appEngine())
 
 export const appImportsOverview = () => importsOverview(appImports())
 
-export const appImportsPage = (person: string) =>
-  importsPage(person, appImports())
+export const appImportsPage = (person: string, viewer: string) =>
+  importsPage(person, viewer, appImports())
 
 export const appQueuePage = () => queuePage(appImports())
 

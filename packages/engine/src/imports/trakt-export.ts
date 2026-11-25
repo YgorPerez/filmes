@@ -43,6 +43,10 @@ export const posixName = (path: string): string =>
     .filter((part) => part !== '' && part !== '.')
     .at(-1) ?? ''
 
+/** A member the Trakt reader takes: a ratings or history JSON. */
+export const isTraktFile = (path: string): boolean =>
+  !path.endsWith('/') && FILE.test(posixName(path))
+
 const invalid = (message: string) => engineError('invalid_file', message)
 
 const isObject = (value: PyJson | undefined): value is Map<string, PyJson> =>

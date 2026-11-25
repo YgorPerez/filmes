@@ -84,7 +84,7 @@ export const rowDay = (row: LetterboxdRow): string => row.watchedOn ?? row.date
 const invalid = (message: string) => engineError('invalid_file', message)
 
 /** Each CSV's path in the ZIP: at the top or inside one folder. */
-const findCsvs = (names: readonly string[]): Map<ExportFile, string> => {
+export const findCsvs = (names: readonly string[]): Map<ExportFile, string> => {
   const found = new Map<ExportFile, string>()
   const byDepth = names
     .map((name, i) => ({ name, i, depth: name.split('/').length - 1 }))
