@@ -4,18 +4,30 @@
 // #102). The forms post to `/operacoes/acao`; the console is a GET of the
 // page. Server only.
 
-import { readdirSync, readFileSync } from 'node:fs'
+import {
+  existsSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+} from 'node:fs'
+import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
+import { backup, DatabaseSync } from 'node:sqlite'
 import {
   consult,
   evaluate,
+  evaluationDatabase,
   evaluationsFolder,
+  makeEngine,
+  missingDatabase,
   progressTo,
   pushNow,
   pushStatus,
   type ConsultResult,
   type ConsultValue,
   type Engine,
+  type ErrorCode,
   type ErrorOutput,
   type Evaluation,
   type EvaluationProgress,
@@ -23,13 +35,14 @@ import {
   type OnlineMeasures,
   type Outcome,
   type PushStatus,
+  type Vars,
 } from '@filmes/engine'
 import {
   parseOperation,
   type OperationsRefusal,
 } from '#/content/operations-form'
 import { currentOwner } from './auth'
-import { appEngine } from './engine'
+import { appEngine, engineVars } from './engine'
 import { formPoster, seeOther } from './form-post'
 import { serverEnv } from './server-env'
 
@@ -118,14 +131,64 @@ export interface Operations {
   ): Promise<Outcome<Evaluation>>
 }
 
-export function operationsFromEngine(engine: Engine): Operations {
+/** `evaluate` on a copy of the database, made with SQLite's online backup:
+ * the run reads in one transaction for as long as it measures (minutes on
+ * the whole MovieLens), and on the live file that read lock would make every
+ * write in the meantime (a Feedback, an import) fail as busy. The copy goes
+ * when the run ends. */
+const failed = (code: ErrorCode, message: string): Outcome<never> => ({
+  exitCode: 1,
+  output: { error: { code, message } },
+})
+
+async function evaluateOnCopy(
+  engine: Engine,
+  vars: Vars,
+  grid: boolean,
+  listen: (event: EvaluationProgress) => void,
+): Promise<Outcome<Evaluation>> {
+  const files = await engine.run(evaluationDatabase)
+  if (files.exitCode !== 0) return files
+  if (!existsSync(files.output.database))
+    return failed(
+      'missing_database',
+      missingDatabase(files.output.database).message,
+    )
+  const folder = mkdtempSync(join(tmpdir(), 'filmes-evaluate-'))
+  try {
+    const copy = join(folder, 'filmes.sqlite')
+    const source = new DatabaseSync(files.output.database, { readOnly: true })
+    try {
+      await backup(source, copy)
+    } finally {
+      source.close()
+    }
+    const onCopy = makeEngine({
+      ...vars,
+      FILMES_BANCO: copy,
+      FILMES_CACHE: files.output.cache ?? undefined,
+    })
+    try {
+      return await onCopy.run(
+        evaluate({ grid, onProgress: progressTo(listen) }),
+      )
+    } finally {
+      await onCopy.dispose()
+    }
+  } finally {
+    rmSync(folder, { recursive: true, force: true })
+  }
+}
+
+/** The screen's operations on `engine`, built from `vars` (`evaluate` runs
+ * on an engine of its own over a copy of the database). */
+export function operationsFromEngine(engine: Engine, vars: Vars): Operations {
   return {
     consult: (sql) => engine.run(consult(sql)),
     pushStatus: () => engine.run(pushStatus),
     push: () => engine.run(pushNow),
     evaluationsFolder: () => engine.run(evaluationsFolder),
-    evaluate: (grid, listen) =>
-      engine.run(evaluate({ grid, onProgress: progressTo(listen) })),
+    evaluate: (grid, listen) => evaluateOnCopy(engine, vars, grid, listen),
   }
 }
 
@@ -209,6 +272,12 @@ export class EvaluationRuns {
       .evaluate(grid, ({ progress, message }) => {
         this.#job = { ...start, state: 'running', progress, message }
       })
+      .catch((error: unknown) =>
+        failed(
+          'internal',
+          error instanceof Error ? error.message : String(error),
+        ),
+      )
       .then((outcome) => {
         const finishedAt = this.#now().toISOString()
         if (outcome.exitCode === 0)
@@ -345,7 +414,8 @@ export async function operationsAction(
 
 // --- the app's -----------------------------------------------------------------
 
-const appOperations = () => operationsFromEngine(appEngine())
+const appOperations = () =>
+  operationsFromEngine(appEngine(), engineVars(process.env))
 
 let runs: EvaluationRuns | undefined
 /** The process's one evaluation at a time. */

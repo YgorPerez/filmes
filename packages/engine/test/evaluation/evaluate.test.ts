@@ -16,6 +16,7 @@ import { parse } from 'yaml'
 import { describe, expect, test } from 'vite-plus/test'
 import {
   evaluate,
+  evaluationDatabase,
   evaluationsFolder,
   importLetterboxd,
   openSessions,
@@ -103,6 +104,17 @@ describe('avaliar', () => {
     expect(unset.exitCode === 1 && unset.output.error.message).toContain(
       'FILMES_AVALIACOES',
     )
+  })
+
+  test('names the database and the cache an edge copies to evaluate', async () => {
+    const fixture = useFixture()
+    expect(await fixture.ok(evaluationDatabase)).toEqual({
+      database: fixture.database,
+      cache: join(fixture.root, 'filmes-cache.sqlite'),
+    })
+    expect(
+      await fixture.ok(evaluationDatabase, { FILMES_CACHE: '/x/cache.sqlite' }),
+    ).toMatchObject({ cache: '/x/cache.sqlite' })
   })
 
   test(

@@ -497,6 +497,7 @@ export { withDatabaseFile } from './sqlite/Sqlite.ts'
 export { reloadData, type DataReload } from './data/reload.ts'
 export {
   evaluate,
+  evaluationDatabase,
   evaluationsFolder,
   progressTo,
   type EvaluateRequest,

@@ -73,6 +73,21 @@ export const evaluationsFolder: Effect.Effect<
   return yield* (yield* Environment).path('evaluations')
 })
 
+/** The database and the sources' cache an engine over this environment
+ * reads: an edge copies the database and runs `evaluate` on the copy, so
+ * its long read transaction never holds the lock writers need. */
+export const evaluationDatabase: Effect.Effect<
+  { readonly database: string; readonly cache: string | null },
+  EngineError,
+  Environment
+> = Effect.gen(function* () {
+  const env = yield* Environment
+  return {
+    database: yield* env.path('database'),
+    cache: env.paths.cache ?? null,
+  }
+})
+
 /** The Feedback of the latest Sessions (`online`). */
 export interface OnlineMeasures {
   readonly sessions: number

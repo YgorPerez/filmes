@@ -1,5 +1,6 @@
 import { execFileSync } from 'node:child_process'
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { DatabaseSync } from 'node:sqlite'
 import { join } from 'node:path'
 import {
   makeEngine,
@@ -265,6 +266,21 @@ describe('EvaluationRuns', () => {
   })
 })
 
+describe('EvaluationRuns, when the run throws', () => {
+  it('ends failed, not running forever', async () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const runs = new EvaluationRuns(
+      fake({ evaluate: () => Promise.reject(new Error('disco cheio')) }),
+    )
+    await runs.start('Bruno', false)
+    expect(runs.current).toMatchObject({
+      state: 'failed',
+      error: { code: 'internal', message: 'disco cheio' },
+    })
+    log.mockRestore()
+  })
+})
+
 describe('the page', () => {
   it('says the evaluation is not configured without FILMES_AVALIACOES', async () => {
     const ops = fake()
@@ -414,7 +430,7 @@ describe('operationsFromEngine', () => {
     const fixture = useFixture()
     const engine = makeEngine(fixture.vars)
     try {
-      const ops = operationsFromEngine(engine)
+      const ops = operationsFromEngine(engine, fixture.vars)
       const table = await consultAnswer(
         ops,
         "SELECT slug FROM pessoas WHERE slug IN ('bruno', 'iara') ORDER BY slug",
@@ -439,26 +455,63 @@ describe('operationsFromEngine', () => {
   it('evaluates the fixture with progress, and writes the report', async () => {
     const fixture = useFixture()
     const folder = join(fixture.root, 'avaliacoes')
-    const engine = makeEngine({ ...fixture.vars, FILMES_AVALIACOES: folder })
+    const vars = { ...fixture.vars, FILMES_AVALIACOES: folder }
+    const engine = makeEngine(vars)
     try {
-      const ops = operationsFromEngine(engine)
+      const ops = operationsFromEngine(engine, vars)
       const runs = new EvaluationRuns(ops)
       const seen: number[] = []
+      // A writer that never waits: if the run held a read lock on the live
+      // database, this commit would fail as busy.
+      const live = new DatabaseSync(fixture.database, { timeout: 0 })
+      live.exec('CREATE TABLE written_meanwhile (at REAL)')
       const watched: Operations = {
         ...ops,
         evaluate: (grid, listen) =>
           ops.evaluate(grid, (event) => {
             seen.push(event.progress)
+            live.exec('BEGIN IMMEDIATE')
+            live
+              .prepare('INSERT INTO written_meanwhile VALUES (?)')
+              .run(event.progress)
+            live.exec('COMMIT')
             listen(event)
           }),
       }
       await new EvaluationRuns(watched).start('Bruno', false)
+      expect(
+        live.prepare('SELECT count(*) AS n FROM written_meanwhile').get(),
+      ).toEqual({ n: seen.length })
+      live.close()
       expect(seen[0]).toBe(0)
       expect(seen.at(-1)).toBe(100)
       const panel = await evaluationPanel(ops, runs)
       expect(panel.folder).toBe('ready')
       expect(panel.report?.date).toBe('2026-11-20')
       expect(panel.report?.text).toContain('Recall@50')
+    } finally {
+      await engine.dispose()
+    }
+  })
+
+  it('says so when there is no database to copy', async () => {
+    const fixture = useFixture()
+    const vars = { ...fixture.vars, FILMES_AVALIACOES: fixture.root }
+    const engine = makeEngine({
+      ...vars,
+      FILMES_BANCO: join(fixture.root, 'none.sqlite'),
+    })
+    try {
+      const ops = operationsFromEngine(engine, vars)
+      const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+      const runs = new EvaluationRuns(ops)
+      await runs.start('Bruno', false)
+      expect(runs.current).toMatchObject({
+        state: 'failed',
+        error: { code: 'missing_database' },
+      })
+      expect(existsSync(join(fixture.root, 'none.sqlite'))).toBe(false)
+      log.mockRestore()
     } finally {
       await engine.dispose()
     }
@@ -484,7 +537,7 @@ describe('operationsFromEngine', () => {
       FILMES_DATA_REMOTE: join(fixture.root, 'nowhere.git'),
     })
     try {
-      const ops = operationsFromEngine(engine)
+      const ops = operationsFromEngine(engine, fixture.vars)
       for (let i = 0; i < 3; i++) await ops.push()
       const alert = await pushAlert(ADMIN, ops)
       expect(alert).toMatchObject({ enabled: true, alert: true })
