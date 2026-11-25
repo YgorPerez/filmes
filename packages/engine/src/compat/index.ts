@@ -33,4 +33,13 @@ export {
   pySplitlines,
   pyStrip,
 } from './text.ts'
-export { isIsoDate, pyIsoDate, pyParseFloat } from './parse.ts'
+export {
+  isIsoDate,
+  isValidDate,
+  pyIsoDate,
+  pyParseFloat,
+  pyParseInt,
+} from './parse.ts'
+export { pyEmailDate } from './email-date.ts'
+export { pyHtmlUnescape } from './html.ts'
+export { pyDecodeUtf8, type Decoded } from './utf8.ts'
