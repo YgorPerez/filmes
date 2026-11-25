@@ -1,7 +1,12 @@
 import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { makeEngine, type ErrorCode, type Outcome } from '@filmes/engine'
+import {
+  makeEngine,
+  type ErrorCode,
+  type ErrorReason,
+  type Outcome,
+} from '@filmes/engine'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { useFixture } from '../../../packages/engine/test/fixture.ts'
 import { parseAction, type PersonAction } from '#/content/person-action'
@@ -334,22 +339,24 @@ describe('personCreateAction', () => {
     expect(created).toEqual([])
   })
 
-  it.each<[ErrorCode, string, string]>([
-    ['person_exists', "já existe uma Pessoa com o slug 'iara'", 'existe'],
-    ['invalid_usage', "slug inválido: '' (só letras...)", 'nome'],
-    ['invalid_usage', "'dono' é reservado para achar o Dono", 'reservado'],
-    ['invalid_usage', "e-mail inválido: 'x@y'", 'email'],
-    [
-      'invalid_usage',
-      "o e-mail 'bruno@example.org' já é de bruno",
-      'email-usado',
-    ],
-    ['missing_database', 'sem banco', 'indisponivel'],
-  ])('says why the engine refused: %s %s', async (code, message, refusal) => {
+  // By the engine's reason, never its wording: the message here says
+  // nothing the app could read.
+  it.each<[ErrorCode, ErrorReason | undefined, string]>([
+    ['person_exists', 'slug_taken', 'existe'],
+    ['person_exists', 'name_taken', 'nome-usado'],
+    ['invalid_usage', 'invalid_slug', 'nome'],
+    ['invalid_usage', 'reserved_name', 'reservado'],
+    ['invalid_usage', 'email_required', 'email'],
+    ['invalid_usage', 'invalid_email', 'email'],
+    ['invalid_usage', 'email_not_owner', 'email'],
+    ['invalid_usage', 'email_taken', 'email-usado'],
+    ['invalid_usage', undefined, 'indisponivel'],
+    ['missing_database', undefined, 'indisponivel'],
+  ])('says why the engine refused: %s %s', async (code, reason, refusal) => {
     const log = vi.spyOn(console, 'error').mockImplementation(() => {})
     const { people } = fakePeople({
       exitCode: 1,
-      output: { error: { code, message } },
+      output: { error: { code, message: 'recusado', reason } },
     })
     const response = await personCreateAction(
       postNew(LUANA),
@@ -402,6 +409,24 @@ describe('the pages', () => {
 const git = (cwd: string, ...args: string[]) =>
   execFileSync('git', args, { cwd, encoding: 'utf8' })
 
+/** The fixture's data folder as a git repo with one commit, as the engine's
+ * writes need: each one commits on top. */
+const commitFixture = (data: string) => {
+  git(data, 'init', '--quiet', '-b', 'master')
+  git(data, 'add', '--all')
+  git(
+    data,
+    '-c',
+    'user.name=fixture',
+    '-c',
+    'user.email=fixture@example.org',
+    'commit',
+    '--quiet',
+    '-m',
+    'initial',
+  )
+}
+
 describe('peopleFromEngine', () => {
   it('lists the fixture Pessoas and shows one with her Notas', async () => {
     const fixture = useFixture()
@@ -437,19 +462,7 @@ describe('peopleFromEngine', () => {
 
   it('takes a Relato about another Dono, never about the logged-in one', async () => {
     const fixture = useFixture()
-    git(fixture.data, 'init', '--quiet', '-b', 'master')
-    git(fixture.data, 'add', '--all')
-    git(
-      fixture.data,
-      '-c',
-      'user.name=fixture',
-      '-c',
-      'user.email=fixture@example.org',
-      'commit',
-      '--quiet',
-      '-m',
-      'initial',
-    )
+    commitFixture(fixture.data)
     const engine = makeEngine(fixture.vars)
     try {
       const people = peopleFromEngine(engine)
@@ -478,19 +491,7 @@ describe('peopleFromEngine', () => {
 
   it('writes each action to her file, one commit signed by the Dono', async () => {
     const fixture = useFixture()
-    git(fixture.data, 'init', '--quiet', '-b', 'master')
-    git(fixture.data, 'add', '--all')
-    git(
-      fixture.data,
-      '-c',
-      'user.name=fixture',
-      '-c',
-      'user.email=fixture@example.org',
-      'commit',
-      '--quiet',
-      '-m',
-      'initial',
-    )
+    commitFixture(fixture.data)
     const engine = makeEngine(fixture.vars)
     const file = () =>
       readFileSync(join(fixture.data, 'people/iara.md'), 'utf8')
@@ -630,19 +631,7 @@ describe('peopleFromEngine', () => {
 
   it('creates a Pessoa and a Dono from the form, one commit each signed by the Dono', async () => {
     const fixture = useFixture()
-    git(fixture.data, 'init', '--quiet', '-b', 'master')
-    git(fixture.data, 'add', '--all')
-    git(
-      fixture.data,
-      '-c',
-      'user.name=fixture',
-      '-c',
-      'user.email=fixture@example.org',
-      'commit',
-      '--quiet',
-      '-m',
-      'initial',
-    )
+    commitFixture(fixture.data)
     const engine = makeEngine(fixture.vars)
     try {
       const people = peopleFromEngine(engine)
@@ -674,6 +663,9 @@ describe('peopleFromEngine', () => {
       // What the engine refuses comes back with its reason.
       expect(await send({ nome: 'Iara' })).toBe(
         '/pessoas?erro=existe&nome=Iara',
+      )
+      expect(await send({ nome: 'Lia', apelidos: 'eu' })).toBe(
+        '/pessoas?erro=nome-usado&nome=Lia&apelidos=eu',
       )
       expect(await send({ nome: 'Dono' })).toBe(
         '/pessoas?erro=reservado&nome=Dono',

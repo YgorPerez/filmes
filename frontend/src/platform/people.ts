@@ -20,6 +20,7 @@ import {
   type Author,
   type Engine,
   type ErrorOutput,
+  type ErrorReason,
   type Outcome,
   type PersonView,
 } from '@filmes/engine'
@@ -32,6 +33,7 @@ import {
 } from '#/content/person-action'
 import {
   parseNewPerson,
+  queryOfTyped,
   typedPerson,
   type NewPersonForm,
   type PersonCreateRefusal,
@@ -56,15 +58,13 @@ export type PersonEntry = {
 /** A tag group a Veto or an open question can name. */
 export type TagGroupChoice = { key: string; label: string }
 
-/** The logged-in Dono, as a page may show her: no email. */
-export type Viewer = { person: string; name: string }
-
 /** What a Pessoa's page shows: `pessoa ver`, the tag groups for the Veto
  * form, and who is looking (her own page has no Relatos: what a Dono says
  * of herself is a Declarado). */
 export type PersonPage = Omit<PersonView, 'imports' | 'warning'> & {
   tagGroups: TagGroupChoice[]
-  viewer: Viewer
+  /** The logged-in Dono, as a page may show her: no email. */
+  viewer: Pick<Owner, 'person' | 'name'>
 }
 
 /** What the screens and the actions need from the engine. */
@@ -349,20 +349,25 @@ export async function personAction(
   return seeOther(`${pageOf(person)}?feito=${outcome.output}`)
 }
 
-/** Why the engine refused a new Pessoa. Its `invalid_usage` covers the
- * slug, the reserved "dono" and the e-mail; its message says which
- * (`createPerson`), and the platform test runs each on the real engine. */
+/** The create form's reason for each of the engine's (`createPerson`). */
+const CREATE_REFUSALS: Record<ErrorReason, PersonCreateRefusal> = {
+  slug_taken: 'existe',
+  name_taken: 'nome-usado',
+  invalid_slug: 'nome',
+  reserved_name: 'reservado',
+  email_required: 'email',
+  invalid_email: 'email',
+  email_not_owner: 'email',
+  email_taken: 'email-usado',
+}
+
+/** Why the engine refused a new Pessoa, by its reason; without one, it
+ * failed, and the log says how. */
 function createRefusalOf(outcome: {
   output: ErrorOutput
 }): PersonCreateRefusal {
-  const { code, message } = outcome.output.error
-  if (code === 'person_exists') return 'existe'
-  if (code === 'invalid_usage') {
-    if (message.startsWith('slug inválido')) return 'nome'
-    if (message.startsWith("'dono'")) return 'reservado'
-    if (message.startsWith('o e-mail')) return 'email-usado'
-    if (message.includes('e-mail')) return 'email'
-  }
+  const { reason } = outcome.output.error
+  if (reason !== undefined) return CREATE_REFUSALS[reason]
   logEngineError(outcome)
   return 'indisponivel'
 }
@@ -373,7 +378,7 @@ function refusedCreate(
   typed: TypedPerson,
 ): Response {
   const params = new URLSearchParams({ erro: refusal })
-  for (const [name, value] of Object.entries(typed))
+  for (const [name, value] of Object.entries(queryOfTyped(typed)))
     if (value !== undefined) params.set(name, value)
   return seeOther(`/pessoas?${params.toString()}`)
 }
