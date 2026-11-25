@@ -69,6 +69,12 @@ export interface Connection {
     sql: string,
     ...params: SQLInputValue[]
   ) => Effect.Effect<RunResult, SqliteError>
+  /** One statement run once per row, as Python's `executemany`. A row
+   * source that throws is a defect, not a `SqliteError`. */
+  readonly runMany: (
+    sql: string,
+    rows: Iterable<ReadonlyArray<SQLInputValue>>,
+  ) => Effect.Effect<void, SqliteError>
   /** Several statements, no parameters. */
   readonly exec: (sql: string) => Effect.Effect<void, SqliteError>
   /** The first statement of a text someone typed (`consultar`), prepared
@@ -144,6 +150,22 @@ const makeConnection = (db: DatabaseSync): Connection => {
           .map((column) => column.name),
       ),
     run: (sql, ...params) => attempt(() => prepare(sql).run(...params)),
+    runMany: (sql, rows) =>
+      Effect.suspend(() => {
+        let statement: StatementSync
+        try {
+          statement = prepare(sql)
+        } catch (error) {
+          return Effect.fail(fail(error))
+        }
+        for (const row of rows)
+          try {
+            statement.run(...row)
+          } catch (error) {
+            return Effect.fail(fail(error))
+          }
+        return Effect.void
+      }),
     exec: (sql) => attempt(() => db.exec(sql)),
     prepareTyped: (sql) =>
       attempt(() => {

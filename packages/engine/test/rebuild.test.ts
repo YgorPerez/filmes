@@ -1,7 +1,7 @@
 // `reconstruir` (tests/test_reconstruir.py), over the fixture's catalog of
 // ready tables: the schema, the CSV tables, the loading steps, and the swap
-// that never leaves a half-built database. The real catalog's dumps are
-// #106's.
+// that never leaves a half-built database. The dumps of the real catalog
+// are in rebuild-real.test.ts.
 import {
   appendFileSync,
   cpSync,
@@ -193,13 +193,15 @@ describe('a catalog the schema does not take is refused and the database stays',
   test('no catalog folder', async () => {
     const fixture = useFixture()
     const missing = join(fixture.root, 'nada')
-    // With no filmes.csv the dumps would be read: outside the repo here.
-    expect(
-      errorOf(await fixture.run(rebuild, { FILMES_CATALOGO: missing })),
-    ).toEqual({
-      code: 'missing_catalog',
-      message: `${missing}/filmes.csv não encontrado: o motor em TypeScript ainda não lê os dumps do catálogo`,
-    })
+    // With no filmes.csv the dumps are read (the database is outside the
+    // repo here), and the config's manifest pins dumps the folder lacks.
+    const error = errorOf(
+      await fixture.run(rebuild, { FILMES_CATALOGO: missing }),
+    )
+    expect(error.code).toBe('invalid_versions')
+    expect(error.message).toMatch(
+      new RegExp(`: dump fixado ausente: ${missing}/[0-9a-f]{64}/`),
+    )
   })
 })
 

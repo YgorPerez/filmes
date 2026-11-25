@@ -17,7 +17,7 @@ export class ZipError extends Error {
   }
 }
 
-const badZip = (message: string) => new ZipError('bad_zip', message)
+export const badZip = (message: string) => new ZipError('bad_zip', message)
 
 interface Entry {
   readonly name: string
@@ -38,7 +38,7 @@ const MAX_COMMENT = 0xffff
 const CP437_HIGH =
   'ÇüéâäàåçêëèïîìÄÅÉæÆôöòûùÿÖÜ¢£¥₧ƒáíóúñÑªº¿⌐¬½¼¡«»░▒▓│┤╡╢╖╕╣║╗╝╜╛┐└┴┬├─┼╞╟╚╔╩╦╠═╬╧╨╤╥╙╘╒╓╫╪┘┌█▄▌▐▀αßΓπΣσµτΦΘΩδ∞φε∩≡±≥≤⌠⌡÷≈°∙·√ⁿ²■\u{A0}'
 
-const decodeName = (bytes: Uint8Array, utf8: boolean): string => {
+export const decodeName = (bytes: Uint8Array, utf8: boolean): string => {
   const text = utf8
     ? new TextDecoder('utf-8').decode(bytes)
     : Array.from(bytes, (b) =>
