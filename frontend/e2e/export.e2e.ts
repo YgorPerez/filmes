@@ -1,33 +1,13 @@
 import { readFileSync } from 'node:fs'
-import { exportRatings, makeEngine } from '@filmes/engine'
-import { expect, test, type Page } from '@playwright/test'
+import { exportRatings } from '@filmes/engine'
+import { expect, test } from '@playwright/test'
+import { engineRun, loginAsBruno } from './support'
 
 /** The file the engine writes for `person`, over the same fixture copy the
- * app serves (`playwright.config.ts`). */
-async function engineFile(person: string): Promise<string> {
-  const root = process.env.E2E_ENGINE
-  const engine = makeEngine({
-    FILMES_CONFIG: `${root}/config`,
-    FILMES_DADOS: `${root}/data`,
-    FILMES_BANCO: `${root}/filmes.sqlite`,
-    FILMES_HOJE: '2026-11-20',
-  })
-  try {
-    const outcome = await engine.run(exportRatings(person, 'imdb'))
-    if (outcome.exitCode !== 0) throw new Error(JSON.stringify(outcome.output))
-    return outcome.output.content
-  } finally {
-    await engine.dispose()
-  }
-}
-
-async function loginAsBruno(page: Page) {
-  await page.goto('/')
-  await page.getByRole('link', { name: 'Entrar com Google' }).click()
-  await page.getByLabel('E-mail').fill('bruno@example.org')
-  await page.getByRole('button', { name: 'Continuar' }).click()
-  await expect(page).toHaveURL(/\/$/)
-}
+ * app serves. */
+const engineFile = async (person: string) =>
+  (await engineRun((engine) => engine.run(exportRatings(person, 'imdb'))))
+    .content
 
 test('the Dono downloads a Pessoa’s IMDb CSV, equal to the engine’s', async ({
   page,

@@ -21,6 +21,7 @@ import {
   type FeedbackRefusal,
 } from '#/content/feedback-form'
 import { currentOwner } from './auth'
+import { formPoster, seeOther } from './form-post'
 import { appEngine } from './engine'
 import type { Owner } from './owners'
 import { serverEnv } from './server-env'
@@ -186,12 +187,6 @@ function refusalOf(outcome: { output: ErrorOutput }): FeedbackRefusal {
   }
 }
 
-const back = (location: string) =>
-  new Response(null, {
-    status: 303,
-    headers: { Location: location, 'Cache-Control': 'private, no-store' },
-  })
-
 const pageOf = (session: string) => `/feedback/${encodeURIComponent(session)}`
 
 /** `POST /feedback/<sessao>/enviar`: records the form's Feedback as the
@@ -206,19 +201,18 @@ export async function feedbackAction(
   feedback: Feedback,
   origin: string | undefined,
 ): Promise<Response> {
-  if (!owner) return back('/entrar')
-  if (request.headers.get('origin') !== origin)
-    return new Response('Origem recusada', { status: 403 })
+  const poster = formPoster(request, owner, origin)
+  if (poster instanceof Response) return poster
   const parsed = parseFeedback(await request.formData())
   if ('refused' in parsed)
-    return back(`${pageOf(session)}?erro=${parsed.refused}`)
-  const outcome = await feedback.record(session, parsed.ok, owner.person)
+    return seeOther(`${pageOf(session)}?erro=${parsed.refused}`)
+  const outcome = await feedback.record(session, parsed.ok, poster.person)
   if (outcome.exitCode !== 0) {
     if (outcome.output.error.code === 'unknown_session')
-      return back('/feedback?erro=sessao')
-    return back(`${pageOf(session)}?erro=${refusalOf(outcome)}`)
+      return seeOther('/feedback?erro=sessao')
+    return seeOther(`${pageOf(session)}?erro=${refusalOf(outcome)}`)
   }
-  return back(`/feedback?feito=${encodeURIComponent(session)}`)
+  return seeOther(`/feedback?feito=${encodeURIComponent(session)}`)
 }
 
 // --- the app's -----------------------------------------------------------------
