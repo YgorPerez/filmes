@@ -19,6 +19,12 @@ export interface Attribution {
 
 const ALWAYS = 'IMDb'
 
+/** What Trakt asks to be shown wherever its data is (the import too). */
+export const TRAKT_ATTRIBUTION: Attribution = {
+  source: 'Trakt',
+  text: 'filmes uses Trakt but is not endorsed or certified by Trakt',
+}
+
 /** Source → the text it requires, in the order they come out. */
 const TEXTS: ReadonlyArray<Attribution> = [
   {
@@ -33,10 +39,7 @@ const TEXTS: ReadonlyArray<Attribution> = [
       '(https://grouplens.org/datasets/movielens/tag-genome-2021/), sob licença CC BY-NC 3.0 ' +
       '(https://creativecommons.org/licenses/by-nc/3.0/)',
   },
-  {
-    source: 'Trakt',
-    text: 'filmes uses Trakt but is not endorsed or certified by Trakt',
-  },
+  TRAKT_ATTRIBUTION,
   TMDB_ATTRIBUTION,
 ]
 

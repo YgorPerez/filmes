@@ -1,7 +1,7 @@
-// Reading a copy of a Pessoa's public Letterboxd RSS (`importar/
-// rss_letterboxd.py` `ler`), which is fetched only with her consent
-// (licences decision, #12). The fetch and the `--letterboxd-rss` command
-// are #100's; the Letterboxd load reads the copies kept in filmes-dados.
+// A Pessoa's public Letterboxd RSS (`importar/rss_letterboxd.py`), which
+// is fetched only with her consent (licences decision, #12): the fetch
+// (`baixar`) and the reader (`ler`). The Letterboxd load reads the copies
+// kept in filmes-dados.
 //
 // Each film entry has:
 //
@@ -14,14 +14,83 @@
 // Lists have no `filmTitle` and stay out. So does the review's text: the
 // `description` mixes the poster and the text.
 
+import { existsSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { Effect } from 'effect'
 import { SaxesParser } from 'saxes'
 import { pyEmailDate } from '../compat/email-date.ts'
 import { pyIsoDate, pyParseFloat } from '../compat/parse.ts'
 import { pyReprStr, pyStrip } from '../compat/text.ts'
-import { engineError } from '../runtime/EngineError.ts'
+import { engineError, type EngineError } from '../runtime/EngineError.ts'
+import { Environment } from '../runtime/Environment.ts'
+import { Fetch, networkReason } from '../sources/Source.ts'
 import { RSS_FILE, type LetterboxdRow } from './letterboxd-export.ts'
 
 export const RSS_ORIGIN = 'RSS do Letterboxd'
+
+/** Seconds the fetch waits for Letterboxd. */
+const TIMEOUT = '20 seconds'
+
+/** The feed of a Letterboxd user. */
+export const letterboxdRssUrl = (user: string): string =>
+  `https://letterboxd.com/${user}/rss/`
+
+const missingRss = (user: string) =>
+  engineError(
+    'missing_rss',
+    `o Letterboxd não tem o usuário ${user} (ou o perfil é privado)`,
+  )
+
+/** The user's RSS (`baixar`). With FILMES_GRAVACOES it reads
+ * `<recordings>/letterboxd/rss-<user>.xml` instead of the network. */
+export const fetchLetterboxdRss = (
+  user: string,
+): Effect.Effect<Uint8Array, EngineError, Environment> =>
+  Effect.gen(function* () {
+    if (!/^[A-Za-z0-9_]+$/.test(user))
+      return yield* engineError(
+        'invalid_usage',
+        `usuário do Letterboxd inválido: ${pyReprStr(user)}`,
+      )
+    const recordings = (yield* Environment).paths.recordings
+    if (recordings !== undefined) {
+      const file = join(recordings, 'letterboxd', `rss-${user}.xml`)
+      if (!(yield* Effect.sync(() => existsSync(file))))
+        return yield* missingRss(user)
+      return yield* Effect.sync(() => new Uint8Array(readFileSync(file)))
+    }
+    const fetch = yield* Fetch
+    const unreachable = (reason: string) =>
+      engineError(
+        'source_unavailable',
+        `não deu para baixar o RSS de ${user}: ${reason}`,
+      )
+    return yield* Effect.gen(function* () {
+      const response = yield* Effect.tryPromise({
+        try: (signal) =>
+          fetch(letterboxdRssUrl(user), {
+            headers: { 'User-Agent': 'filmes' },
+            signal,
+          }),
+        catch: (error) => unreachable(networkReason(error)),
+      })
+      if (response.status === 404) return yield* missingRss(user)
+      if (response.status >= 400)
+        return yield* engineError(
+          'source_unavailable',
+          `o Letterboxd respondeu HTTP ${response.status} ao RSS de ${user}`,
+        )
+      return yield* Effect.tryPromise({
+        try: async () => new Uint8Array(await response.arrayBuffer()),
+        catch: (error) => unreachable(networkReason(error)),
+      })
+    }).pipe(
+      Effect.timeoutOrElse({
+        duration: TIMEOUT,
+        orElse: () => Effect.fail(unreachable('timed out')),
+      }),
+    )
+  })
 
 const LETTERBOXD = 'https://letterboxd.com'
 const TMDB = 'https://themoviedb.org'
