@@ -1,16 +1,15 @@
 // `pnpm catalog:update` over the recorded dumps (`FILMES_GRAVACOES`): the
-// manifest goes back into the config folder in its own language.
+// manifest goes into the config folder, which the engine reads as it is.
 import {
   cpSync,
-  existsSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   writeFileSync,
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { migrateConfig } from '@filmes/key-migration'
 import { afterEach, expect, it } from 'vite-plus/test'
 import { FIXTURE_TODAY, ROOT } from '../../packages/engine/test/fixture.ts'
 import { runUpdate } from './catalog-update.ts'
@@ -21,21 +20,16 @@ afterEach(() => {
     rmSync(folder, { recursive: true, force: true })
 })
 
-/** The repo's config (Portuguese, without local.toml), the catalog and the
+/** The repo's config (without local.toml), the catalog and the
  * recordings in a scratch folder. */
-function setUp(language: 'pt' | 'en' = 'pt') {
+function setUp() {
   const root = mkdtempSync(join(tmpdir(), 'filmes-catalog-update-test-'))
   folders.push(root)
   const config = join(root, 'config')
-  if (language === 'pt')
-    cpSync(join(ROOT, 'config'), config, {
-      recursive: true,
-      filter: (path) => !path.endsWith('local.toml'),
-    })
-  else {
-    migrateConfig(join(ROOT, 'config'), config, 'to-en')
-    rmSync(join(config, 'local.toml'), { force: true })
-  }
+  cpSync(join(ROOT, 'config'), config, {
+    recursive: true,
+    filter: (path) => !path.endsWith('local.toml'),
+  })
   const recordings = join(root, 'recordings')
   cpSync(
     join(ROOT, 'tests/fixture/gravacoes/catalogo'),
@@ -71,26 +65,34 @@ const manifestOf = (path: string) =>
     dumps: Record<string, Record<string, unknown>>
   }
 
-it('pins the dumps in the Portuguese manifest of a Portuguese config', async () => {
-  const { config, env } = setUp('pt')
+it("pins the dumps in the config folder's manifest", async () => {
+  const { config, env } = setUp()
 
   const { code, events } = await updateWith(env, ['--config', config])
 
   expect(code).toBe(0)
-  const dumps = manifestOf(join(config, 'versoes-catalogo.json')).dumps
+  const dumps = manifestOf(join(config, 'catalog-versions.json')).dumps
   expect(Object.keys(dumps)).toHaveLength(12)
   expect(Object.keys(dumps['title.basics.tsv.gz']!)).toEqual([
     'bytes',
-    'data',
-    'fonte',
+    'date',
     'sha256',
+    'source',
     'url',
   ])
   expect(dumps['title.basics.tsv.gz']).toMatchObject({
-    data: FIXTURE_TODAY,
-    fonte: 'IMDb',
+    date: FIXTURE_TODAY,
+    source: 'IMDb',
   })
-  expect(existsSync(join(config, 'catalog-versions.json'))).toBe(false)
+  expect(dumps['ml-32m.zip']).toMatchObject({
+    date: '2023-10-13',
+    source: 'MovieLens ml-32m',
+  })
+  expect(readdirSync(config).sort()).toEqual(
+    readdirSync(join(ROOT, 'config'))
+      .filter((name) => name !== 'local.toml')
+      .sort(),
+  )
   expect(events.at(-1)).toEqual({
     progress: 12,
     total: 12,
@@ -98,20 +100,9 @@ it('pins the dumps in the Portuguese manifest of a Portuguese config', async () 
   })
 })
 
-it('pins the dumps in the English manifest of an English config', async () => {
-  const { config, env } = setUp('en')
-
-  const { code } = await updateWith(env, ['--config', config])
-
-  expect(code).toBe(0)
-  expect(
-    manifestOf(join(config, 'catalog-versions.json')).dumps['ml-32m.zip'],
-  ).toMatchObject({ date: '2023-10-13', source: 'MovieLens ml-32m' })
-})
-
 it('a failed update prints the error and keeps the manifest', async () => {
-  const { config, recordings, env } = setUp('pt')
-  const before = readFileSync(join(config, 'versoes-catalogo.json'))
+  const { config, recordings, env } = setUp()
+  const before = readFileSync(join(config, 'catalog-versions.json'))
   writeFileSync(join(recordings, 'catalogo', 'ml-32m.zip'), 'nada')
 
   const { code, printed } = await updateWith(env, ['--config', config])
@@ -123,12 +114,12 @@ it('a failed update prints the error and keeps the manifest', async () => {
       message: 'ml-32m.zip: File is not a zip file',
     },
   })
-  expect(readFileSync(join(config, 'versoes-catalogo.json'))).toEqual(before)
+  expect(readFileSync(join(config, 'catalog-versions.json'))).toEqual(before)
 })
 
 it('a FILMES_VERSOES of the caller gets the manifest instead', async () => {
-  const { root, config, env } = setUp('pt')
-  const before = readFileSync(join(config, 'versoes-catalogo.json'))
+  const { root, config, env } = setUp()
+  const before = readFileSync(join(config, 'catalog-versions.json'))
   const versions = join(root, 'elsewhere.json')
 
   const { code } = await updateWith({ ...env, FILMES_VERSOES: versions }, [
@@ -140,7 +131,7 @@ it('a FILMES_VERSOES of the caller gets the manifest instead', async () => {
   expect(manifestOf(versions).dumps['ml-32m.zip']).toMatchObject({
     source: 'MovieLens ml-32m',
   })
-  expect(readFileSync(join(config, 'versoes-catalogo.json'))).toEqual(before)
+  expect(readFileSync(join(config, 'catalog-versions.json'))).toEqual(before)
 })
 
 it('anything else gets the usage', async () => {

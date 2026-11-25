@@ -1,15 +1,11 @@
 // Who may log in: a Pessoa with `owner: true` and an `email:` in filmes-dados
-// (map #72). Each file is read by the engine's Pessoa reader
-// (`decodePersonSync`), the same one every engine operation uses.
-//
-// Until the cutover of ADR 0002 the files are Portuguese (`pessoas/`, `dono`,
-// `nome`); after it, English (`people/`, `owner`, `name`). A Portuguese file
-// is migrated in memory by the key migration first.
+// (map #72). Each file (`people/<slug>.md`, English keys, ADR 0002) is read
+// by the engine's Pessoa reader (`decodePersonSync`), the same one every
+// engine operation uses.
 
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { decodePersonSync, type Person } from '@filmes/engine'
-import { migrateDataFile } from '@filmes/key-migration'
 
 /** The Dono of the request: whoever is logged in. Server only: the email
  * never goes to the browser. */
@@ -32,14 +28,10 @@ export const normalizeEmail = (email: string) => email.trim().toLowerCase()
 /** The Dono in the file, or null. A file the engine cannot read (no
  * name, a broken frontmatter) lets no one in, as the engine would refuse
  * it too. */
-function readOwner(path: string, portuguese: boolean): Owner | null {
+function readOwner(path: string): Owner | null {
   let person: Person
   try {
-    const text = readFileSync(path, 'utf8')
-    person = decodePersonSync(
-      path,
-      portuguese ? migrateDataFile('person', text, 'to-en') : text,
-    )
+    person = decodePersonSync(path, readFileSync(path, 'utf8'))
   } catch {
     return null
   }
@@ -53,13 +45,12 @@ function readOwner(path: string, portuguese: boolean): Owner | null {
 export function ownersFromDataRepo(root: string): OwnerDirectory {
   return {
     ownerByEmail(email) {
-      const portuguese = !existsSync(join(root, 'people'))
-      const folder = join(root, portuguese ? 'pessoas' : 'people')
+      const folder = join(root, 'people')
       if (!existsSync(folder)) return null
       const wanted = normalizeEmail(email)
       const found = readdirSync(folder)
         .filter((file) => file.endsWith('.md'))
-        .map((file) => readOwner(join(folder, file), portuguese))
+        .map((file) => readOwner(join(folder, file)))
         .filter((owner) => owner?.email === wanted)
       return found.length === 1 ? found[0]! : null
     },

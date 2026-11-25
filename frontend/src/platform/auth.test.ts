@@ -215,8 +215,8 @@ describe('the session', () => {
     expect(owner(cookie)?.person).toBe('bruno')
 
     writeFileSync(
-      join(data, 'pessoas/bruno.md'),
-      '---\nnome: Bruno\nemail: bruno@example.org\n---\n',
+      join(data, 'people/bruno.md'),
+      '---\nname: Bruno\nemail: bruno@example.org\n---\n',
     )
     expect(owner(cookie)).toBeNull()
   })
