@@ -33,7 +33,7 @@
 # after the cutover (ADR 0002): `sessions/<id>.md`, not `sessoes/<id>.md`.
 # The oracle maps absolute paths, not this relative one.
 - id: session-file-is-in-the-english-folder
-  commands: [recomendar, sessoes-abertas]
+  commands: [recomendar, sessoes-abertas, feedback]
   path: output.session*.file
   python: '^sessoes/[^/]+\.md$'
   ts: '^sessions/[^/]+\.md$'
@@ -80,13 +80,15 @@
   reason: the engine reads config/tag_vetoes.toml, whose group keys are English after the key migration
   link: https://github.com/YgorPerez/filmes/issues/88
 
-# Removing a Feedback comment edits a Session's file, which comes with the
-# Sessions' port. Until then `pessoa remover` finds the comment (so a target
-# it shares is still ambiguous) and refuses with `internal`. #96 removes
-# this entry.
-- id: removing-a-feedback-comment-waits-for-sessions
-  commands: [pessoa remover]
-  scenarios: 'tests/test_pessoa_remover.py::test_comentario_do_feedback_sai_do_arquivo_da_sessao_e_do_banco'
-  path: '*'
-  reason: removing a Feedback comment edits the Session's file, ported by #96 (ticket #88 leaves the comment case out)
-  link: https://github.com/YgorPerez/filmes/issues/88
+
+# An `internal` error names the exception's class. node:sqlite throws one
+# class for every SQLite failure; Python's sqlite3 splits them
+# (IntegrityError, OperationalError...). The text after the name is
+# SQLite's own and matches.
+- id: internal-sqlite-error-names-one-class
+  commands: [feedback]
+  path: error.message
+  python: '^IntegrityError: '
+  ts: '^SqliteError: '
+  reason: node:sqlite has a single error class where Python's sqlite3 names IntegrityError; SQLite's message after it is the same
+  link: https://github.com/YgorPerez/filmes/issues/96

@@ -142,7 +142,20 @@ export {
   type ReportLevel,
   type SessionSeen,
 } from './sessions/facts.ts'
-export { DB_RULES, reloadSessions, syncSession } from './sessions/database.ts'
+export {
+  DB_RULES,
+  ownersOf,
+  reloadSessions,
+  syncSession,
+} from './sessions/database.ts'
+export {
+  dropComment,
+  recordFeedback,
+  type ChosenFilm,
+  type FeedbackFact,
+  type FeedbackRequest,
+  type FeedbackResult,
+} from './sessions/feedback.ts'
 export {
   openSession,
   openSessions,

@@ -4,8 +4,8 @@
 // by its target when only one item has it.
 //
 // A Declarado can also be a Feedback comment, which lives in a Session's
-// file: it is found (so a target shared with one is ambiguous, as in
-// Python), but removing it waits for the Sessions' port (#96).
+// file: removing it takes the comment out of that Session's reaction
+// (`dropComment`), in the same write.
 
 import { Effect } from 'effect'
 import { pyReprStr } from '../compat/text.ts'
@@ -28,6 +28,7 @@ import {
   type VetoJson,
   type WrittenBy,
 } from './actions.ts'
+import { dropComment } from '../sessions/feedback.ts'
 import { resolvePerson } from './people.ts'
 import {
   items,
@@ -81,7 +82,12 @@ type Found =
       readonly json: RemovedJson
       readonly remove: Effect.Effect<Person, EngineError>
     }
-  | { readonly from: 'feedback'; readonly json: StatementJson }
+  | {
+      readonly from: 'feedback'
+      readonly json: StatementJson
+      readonly db: Connection
+      readonly session: string
+    }
 
 /** The target an item is found by (`_alvo_de`). */
 const targetOf = (json: RemovedJson): string | null => {
@@ -133,13 +139,18 @@ const feedbackComments = (db: Connection | null, slug: string, today: string) =>
   Effect.gen(function* () {
     if (db === null) return []
     const rows = yield* db.all(
-      'SELECT fato_id FROM declarados WHERE pessoa = ? AND sessao IS NOT NULL',
+      'SELECT fato_id, sessao FROM declarados WHERE pessoa = ? AND sessao IS NOT NULL',
       slug,
     )
-    const ids = new Set(rows.map((row) => String(row.fato_id)))
-    return (yield* importedStated(db, slug, today))
-      .filter((json) => ids.has(json.factId))
-      .map((json): Found => ({ from: 'feedback', json }))
+    const sessions = new Map(
+      rows.map((row) => [String(row.fato_id), String(row.sessao)]),
+    )
+    return (yield* importedStated(db, slug, today)).flatMap((json): Found[] => {
+      const session = sessions.get(json.factId)
+      return session === undefined
+        ? []
+        : [{ from: 'feedback', json, db, session }]
+    })
   })
 
 const notFound = (person: Person, kind: Removable, id: string) => {
@@ -184,11 +195,8 @@ export const personRemove = (
               `escolha pelo fato_id: ${found.map((f) => f.json.factId).join(', ')}`,
           )
         if (first.from === 'feedback')
-          return yield* engineError(
-            'internal',
-            'tirar um Comentário do Feedback espera o porte das Sessões (#96)',
-          )
-        yield* savePersonAndSync(db, yield* first.remove)
+          yield* dropComment(first.db, first.session, person.slug)
+        else yield* savePersonAndSync(db, yield* first.remove)
         return { person: person.slug, kind, removed: first.json }
       }),
   )

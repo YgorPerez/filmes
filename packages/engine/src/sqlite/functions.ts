@@ -3,11 +3,11 @@
 // `math` raised (a NULL, a value outside the domain), so a query fails the
 // same way on both sides instead of returning -Infinity.
 //
-// Still missing: `dobrar` (Python's `str.casefold`, used by `feedback` to
-// match titles), which comes with the `casefold` helper of #76's E1. A new
-// function is one more entry here.
+// `dobrar` is Python's `str.casefold` (`feedback` matches titles with it).
+// A new function is one more entry here.
 
 import type { SQLInputValue, SQLOutputValue } from 'node:sqlite'
+import { casefold } from '../compat/text.ts'
 
 export interface SqlFunction {
   readonly name: string
@@ -39,5 +39,11 @@ export const SQL_FUNCTIONS: ReadonlyArray<SqlFunction> = [
       if (x <= -1) throw domainError('ln1p')
       return Math.log1p(x)
     },
+  },
+  {
+    // `lambda t: t.casefold() if t else t`
+    name: 'dobrar',
+    fn: (value) =>
+      typeof value === 'string' && value !== '' ? casefold(value) : value,
   },
 ]
