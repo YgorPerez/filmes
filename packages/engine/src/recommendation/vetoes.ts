@@ -106,17 +106,24 @@ const BELOW = `
 type Paths = ReadonlyArray<readonly [VetoPath, ReadonlySet<string>]>
 
 /** The films a query may return: all, or only those in a JSON list of ids
- * (the Candidates), so SQL leaves the rest of the catalog out. */
+ * (the Candidates), so SQL leaves the rest of the catalog out.
+ *
+ * `test` keeps SQLite on the query's own index (tag, entity) and checks the
+ * list per row: the unary `+` stops it from walking the list instead, which
+ * on `genoma` is 7× slower. `walk` lets it walk the list, for `generos_imdb`,
+ * which has no index on the genre. */
 interface Scope {
-  readonly sql: string
+  readonly test: string
+  readonly walk: string
   readonly params: ReadonlyArray<string>
 }
 
 const scopeOf = (within: string | undefined): Scope =>
   within === undefined
-    ? { sql: '', params: [] }
+    ? { test: '', walk: '', params: [] }
     : {
-        sql: ' AND filme_id IN (SELECT value FROM json_each(?))',
+        test: ' AND +filme_id IN (SELECT value FROM json_each(?))',
+        walk: ' AND filme_id IN (SELECT value FROM json_each(?))',
         params: [within],
       }
 
@@ -130,14 +137,14 @@ const entityPaths = (
     const direct = yield* column(
       db,
       'filme_id',
-      `SELECT filme_id FROM arestas WHERE entidade_id = ?${scope.sql}`,
+      `SELECT filme_id FROM arestas WHERE entidade_id = ?${scope.test}`,
       [target, ...scope.params],
     )
     const subgenres = yield* column(db, 'item', BELOW, [target])
     const ofSubgenres = yield* column(
       db,
       'filme_id',
-      `SELECT filme_id FROM arestas WHERE predicado = 'genero' AND entidade_id IN (${marks([...subgenres])})${scope.sql}`,
+      `SELECT filme_id FROM arestas WHERE predicado = 'genero' AND entidade_id IN (${marks([...subgenres])})${scope.test}`,
       [...subgenres, ...scope.params],
     )
     const imdb = [...WIKIDATA_GENRE]
@@ -146,7 +153,7 @@ const entityPaths = (
     const ofImdbGenre = yield* column(
       db,
       'filme_id',
-      `SELECT filme_id FROM generos_imdb WHERE genero IN (${marks(imdb)})${scope.sql}`,
+      `SELECT filme_id FROM generos_imdb WHERE genero IN (${marks(imdb)})${scope.walk}`,
       [...imdb, ...scope.params],
     )
     return [
@@ -178,13 +185,13 @@ export const markedByGroup = (
     const marked = yield* column(
       db,
       'filme_id',
-      `SELECT filme_id FROM genoma WHERE relevancia >= ? AND tag IN (${marks(tags)})${scope.sql}`,
+      `SELECT filme_id FROM genoma WHERE relevancia >= ? AND tag IN (${marks(tags)})${scope.test}`,
       [minimums.min_relevance, ...tags, ...scope.params],
     )
     for (const film of yield* column(
       db,
       'filme_id',
-      `SELECT filme_id FROM tags_movielens WHERE usuarios >= ? AND tag IN (${marks(tags)})${scope.sql}`,
+      `SELECT filme_id FROM tags_movielens WHERE usuarios >= ? AND tag IN (${marks(tags)})${scope.test}`,
       [minimums.min_users, ...tags, ...scope.params],
     ))
       marked.add(film)
@@ -192,7 +199,7 @@ export const markedByGroup = (
     const ofGenre = yield* column(
       db,
       'filme_id',
-      `SELECT filme_id FROM generos_imdb WHERE genero IN (${marks(group.imdbGenres)})${scope.sql}`,
+      `SELECT filme_id FROM generos_imdb WHERE genero IN (${marks(group.imdbGenres)})${scope.walk}`,
       [...group.imdbGenres, ...scope.params],
     )
     return new Set([...marked].filter((film) => ofGenre.has(film)))
