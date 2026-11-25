@@ -184,6 +184,28 @@ describe.skipIf(process.platform === 'win32')('db:publish on the VPS', () => {
     )
   })
 
+  it('keeps the -wal and -shm of the live version and the previous one: a rollback opens the file with them', () => {
+    const vps = aVps()
+    vps.publishDatabase(aDatabase('v1'), 'v1')
+    for (const companion of ['-wal', '-shm'])
+      writeFileSync(join(vps.db, `v1.sqlite${companion}`), 'pages')
+    vps.publishDatabase(aDatabase('v2'), 'v2')
+    for (const companion of ['-wal', '-shm'])
+      writeFileSync(join(vps.db, `v2.sqlite${companion}`), 'pages')
+
+    vps.rollbackDatabase()
+
+    expect(readdirSync(vps.db).sort()).toEqual([
+      'v1.sqlite',
+      'v1.sqlite-shm',
+      'v1.sqlite-wal',
+      'v2.sqlite',
+      'v2.sqlite-shm',
+      'v2.sqlite-wal',
+    ])
+    expect(vps.live()).toMatchObject({ database: opens('v1'), dbLive: 'v1\n' })
+  })
+
   it('deletes the part an interrupted upload of another version left behind', () => {
     const vps = aVps()
     vps.publishDatabase(aDatabase('v1'), 'v1')
@@ -593,6 +615,10 @@ describe('db:publish --build', () => {
       )
 
       expect(built).toMatch(/v1\.sqlite$/)
+      // One file, in WAL mode (the header's read and write versions are 2),
+      // with no -wal or -shm left beside it.
+      expect(readdirSync(dirname(built!))).toEqual(['v1.sqlite'])
+      expect([...readFileSync(built!).subarray(18, 20)]).toEqual([2, 2])
       expect(printed).toContain(
         `# Then sends ${built} to /opt/filmes/data/db/v1.sqlite.part.`,
       )

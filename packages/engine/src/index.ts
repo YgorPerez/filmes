@@ -529,7 +529,6 @@ export { withDatabaseFile } from './sqlite/Sqlite.ts'
 export { reloadData, type DataReload } from './data/reload.ts'
 export {
   evaluate,
-  evaluationDatabase,
   evaluationsFolder,
   progressTo,
   type EvaluateRequest,
@@ -537,7 +536,6 @@ export {
   type EvaluationProgress,
   type OnlineMeasures,
 } from './evaluation/evaluate.ts'
-export { evaluateOnCopy } from './evaluation/on-copy.ts'
 export type { Measures } from './evaluation/offline.ts'
 export {
   BATCH as NEIGHBOR_BATCH,

@@ -73,21 +73,6 @@ export const evaluationsFolder: Effect.Effect<
   return yield* (yield* Environment).path('evaluations')
 })
 
-/** The database and the sources' cache an engine over this environment
- * reads: an edge copies the database and runs `evaluate` on the copy, so
- * its long read transaction never holds the lock writers need. */
-export const evaluationDatabase: Effect.Effect<
-  { readonly database: string; readonly cache: string | null },
-  EngineError,
-  Environment
-> = Effect.gen(function* () {
-  const env = yield* Environment
-  return {
-    database: yield* env.path('database'),
-    cache: env.paths.cache ?? null,
-  }
-})
-
 /** The Feedback of the latest Sessions (`online`). */
 export interface OnlineMeasures {
   readonly sessions: number
@@ -286,6 +271,10 @@ export const evaluate = (
     const catalog = yield* env.path('catalog')
     const manifest = yield* env.path('versions')
     const movielensFolder = join(catalog, 'ml-32m')
+    // One read transaction for the whole run (never committed: `close` rolls
+    // it back), from the first SELECT on, so every measure sees one state of
+    // the database. In WAL mode it blocks no writer; it only keeps the `-wal`
+    // from being checkpointed past it, so the `-wal` grows until it ends.
     const measured = yield* sqlite.read((db) =>
       Effect.gen(function* () {
         yield* db.exec('BEGIN')

@@ -1,4 +1,4 @@
-import { constants } from 'node:sqlite'
+import { constants, DatabaseSync } from 'node:sqlite'
 import { Effect } from 'effect'
 import { describe, expect, test } from 'vite-plus/test'
 import {
@@ -184,6 +184,50 @@ describe('write', () => {
       { x: 3 },
       { x: 4 },
     ])
+  })
+
+  test('commits while a read transaction is open (WAL)', async () => {
+    const fixture = useFixture()
+    await fixture.ok(withScratchTable)
+
+    const seen = await fixture.ok(
+      Effect.gen(function* () {
+        const sqlite = yield* Sqlite
+        return yield* sqlite.read((db) =>
+          Effect.gen(function* () {
+            yield* db.exec('BEGIN')
+            const before = yield* db.all('SELECT x FROM scratch')
+            yield* sqlite.write((w) => w.run('INSERT INTO scratch VALUES (1)'))
+            // The read keeps the state it began with.
+            const after = yield* db.all('SELECT x FROM scratch')
+            return { before, after }
+          }),
+        )
+      }),
+    )
+
+    expect(seen).toEqual({ before: [], after: [] })
+    expect(await fixture.ok(scratchRows)).toEqual([{ x: 1 }])
+  })
+
+  test('switches a database built in rollback mode to WAL', async () => {
+    const fixture = useFixture()
+    const mode = () => {
+      const db = new DatabaseSync(fixture.database)
+      try {
+        return db.prepare('PRAGMA journal_mode').get()?.['journal_mode']
+      } finally {
+        db.close()
+      }
+    }
+    const old = new DatabaseSync(fixture.database)
+    old.exec('PRAGMA journal_mode = DELETE')
+    old.close()
+    expect(mode()).toBe('delete')
+
+    await fixture.ok(withScratchTable)
+
+    expect(mode()).toBe('wal')
   })
 
   test('without a database it is missing_database too', async () => {
