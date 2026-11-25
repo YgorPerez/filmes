@@ -66,7 +66,7 @@ function engineError({ status, stdout, stderr }: Ran) {
 }
 
 /** The engine's `rebuild` as a process. */
-export const REBUILD_SCRIPT = join(import.meta.dirname, 'db-rebuild.ts')
+const REBUILD_SCRIPT = join(import.meta.dirname, 'db-rebuild.ts')
 
 /** How each builder runs, and the language of what it reads. */
 const BUILDERS: Readonly<

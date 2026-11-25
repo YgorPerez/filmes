@@ -7,6 +7,9 @@
     // React Doctor finds `doctor.config.ts` by name, at the root of the
     // project it scans. No import points to it.
     "doctor.config.ts",
+    // `db-build.ts` runs the engine's rebuild as a process of its own:
+    // `node scripts/db-rebuild.ts`, by path. No import points to it.
+    "scripts/db-rebuild.ts",
   ],
   "ignoreDependencies": [
     // `reactCompilerPreset()` in `vite.config.ts` names the Babel plugin by

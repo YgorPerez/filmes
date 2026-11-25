@@ -6,7 +6,7 @@
 import { createHash } from 'node:crypto'
 import { cpSync, existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { gzipSync } from 'node:zlib'
+import { crc32, gzipSync } from 'node:zlib'
 import { Effect } from 'effect'
 import { expect, test } from 'vite-plus/test'
 import {
@@ -582,4 +582,149 @@ test('a group QLever fails is asked to the WDQS by property', async () => {
     message:
       'QLever falhou (ids): HTTP Error 500: Server Error. Consultando o WDQS por predicado.',
   })
+})
+
+/** The update over the recordings with one of them replaced by `bytes`. */
+async function failWithRecording(
+  catalog: Catalog,
+  name: string,
+  bytes: string | Buffer,
+) {
+  const recordings = copyRecordings(catalog.fixture)
+  writeFileSync(join(recordings, 'catalogo', name), bytes)
+  return errorOf(
+    await catalog.fixture.run(update(), {
+      ...catalog.vars,
+      FILMES_GRAVACOES: recordings,
+    }),
+  )
+}
+
+test('an IMDb dump shorter than its header fails', async () => {
+  expect(
+    await failWithRecording(useCatalog(), 'title.basics.tsv', 'tcon'),
+  ).toEqual({
+    code: 'update_failed',
+    message: 'cabeçalho inesperado em title.basics.tsv.gz',
+  })
+})
+
+test('a SPARQL result that is not UTF-8 fails', async () => {
+  const error = await failWithRecording(
+    useCatalog(),
+    'wikidata-rotulos.json',
+    Buffer.from([0x7b, 0xff, 0x7d]),
+  )
+
+  expect(error.code).toBe('update_failed')
+  expect(error.message).toMatch(/^'utf-8' codec can't decode/)
+})
+
+test('a SPARQL row that is not JSON fails', async () => {
+  const error = await failWithRecording(
+    useCatalog(),
+    'wikidata-rotulos.json',
+    '{"results":{"bindings":[{"valor": nope}]}}',
+  )
+
+  expect(error.code).toBe('update_failed')
+})
+
+test('a downloaded IMDb dump cut short or not gzip fails', async () => {
+  const basics = gzipSync(recorded('title.basics.tsv'))
+  for (const [body, message] of [
+    [
+      basics.subarray(0, basics.length - 20),
+      'Compressed file ended before the end-of-stream marker was reached',
+    ],
+    [Buffer.from('not gzip at all'), /header/],
+  ] as const) {
+    const catalog = useCatalog('network')
+    const { fetch } = fakeFetch(({ url }) =>
+      url.pathname === '/title.basics.tsv.gz' ? new Response(body) : undefined,
+    )
+
+    const error = errorOf(
+      await catalog.fixture.run(update({ fetch }), catalog.vars),
+    )
+
+    expect(error.code).toBe('update_failed')
+    expect(error.message).toMatch(message)
+  }
+})
+
+test('an IMDb answer without its run date is pinned with today', async () => {
+  const catalog = useCatalog('network')
+  const { fetch } = fakeFetch(({ url }) =>
+    url.host === 'datasets.imdbws.com'
+      ? new Response(
+          gzipSync(recorded(url.pathname.slice(1).replace(/\.gz$/, ''))),
+        )
+      : undefined,
+  )
+
+  const updated = await catalog.fixture.ok(update({ fetch }), catalog.vars)
+
+  expect(updated.dumps['title.ratings.tsv.gz']?.date).toBe('2026-11-20')
+})
+
+/** A ZIP of one member stored under compression `method`. */
+function zipWithMethod(name: string, text: string, method: number): Buffer {
+  const data = Buffer.from(text)
+  const fileName = Buffer.from(name)
+  const crc = crc32(data)
+  const local = Buffer.alloc(30)
+  local.writeUInt32LE(0x04034b50, 0)
+  local.writeUInt16LE(20, 4)
+  local.writeUInt16LE(method, 8)
+  local.writeUInt32LE(crc, 14)
+  local.writeUInt32LE(data.length, 18)
+  local.writeUInt32LE(data.length, 22)
+  local.writeUInt16LE(fileName.length, 26)
+  const entry = Buffer.alloc(46)
+  entry.writeUInt32LE(0x02014b50, 0)
+  entry.writeUInt16LE(20, 4)
+  entry.writeUInt16LE(20, 6)
+  entry.writeUInt16LE(method, 10)
+  entry.writeUInt32LE(crc, 16)
+  entry.writeUInt32LE(data.length, 20)
+  entry.writeUInt32LE(data.length, 24)
+  entry.writeUInt16LE(fileName.length, 28)
+  const end = Buffer.alloc(22)
+  end.writeUInt32LE(0x06054b50, 0)
+  end.writeUInt16LE(1, 8)
+  end.writeUInt16LE(1, 10)
+  end.writeUInt32LE(46 + fileName.length, 12)
+  end.writeUInt32LE(30 + fileName.length + data.length, 16)
+  return Buffer.concat([local, fileName, data, entry, fileName, end])
+}
+
+test('a ZIP member in a method Python cannot read either is an internal error', async () => {
+  const catalog = useCatalog()
+  const recordings = copyRecordings(catalog.fixture)
+  writeFileSync(
+    join(recordings, 'catalogo', 'ml-32m.zip'),
+    zipWithMethod('ml-32m/links.csv', 'movieId,imdbId,tmdbId\n', 12),
+  )
+
+  const outcome = await catalog.fixture.run(update(), {
+    ...catalog.vars,
+    FILMES_GRAVACOES: recordings,
+  })
+
+  expect(errorOf(outcome).code).toBe('internal')
+  expect(existsSync(catalog.manifest)).toBe(false)
+})
+
+test('a GroupLens answer without a body is not a ZIP', async () => {
+  const catalog = useCatalog('network')
+  const { fetch } = fakeFetch(({ url }) =>
+    url.host === 'files.grouplens.org' ? new Response(null) : undefined,
+  )
+
+  const error = errorOf(
+    await catalog.fixture.run(update({ fetch }), catalog.vars),
+  )
+
+  expect(error.message).toBe('ml-32m.zip: File is not a zip file')
 })

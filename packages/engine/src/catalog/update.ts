@@ -123,13 +123,10 @@ const failure = (message: string) => new Failure({ message })
 /** Python's `OSError` text, from Node's: `[Errno 2] No such file or
  * directory: '<path>'`. */
 const osErrorText = (error: NodeJS.ErrnoException): string => {
-  const [, strerror = error.message] =
-    /^[A-Z]+: ([^,]*)/.exec(error.message) ?? []
+  const strerror = /^[A-Z]+: ([^,]*)/.exec(error.message)?.[1]
+  if (strerror === undefined || error.errno === undefined) return error.message
   const text = strerror.charAt(0).toUpperCase() + strerror.slice(1)
-  const errno = error.errno === undefined ? '' : `[Errno ${-error.errno}] `
-  return error.path === undefined
-    ? `${errno}${text}`
-    : `${errno}${text}: '${error.path}'`
+  return `[Errno ${-error.errno}] ${text}: '${String(error.path)}'`
 }
 
 const PYTHON_PREFIX = /^(ValueError|KeyError): /
@@ -187,7 +184,8 @@ async function* responseBytes(
   } catch (error) {
     throw controller.signal.aborted
       ? failure('The read operation timed out')
-      : failure(error instanceof Error ? error.message : String(error))
+      : // undici fails a body read with an Error (`terminated`...).
+        failure((error as Error).message)
   } finally {
     clearTimeout(timer)
   }
@@ -229,10 +227,7 @@ const requestOnce = async (
   }
   return {
     headers: response.headers,
-    bytes:
-      response.body === null
-        ? Readable.from([])
-        : responseBytes(response.body, controller),
+    bytes: responseBytes(response.body ?? new Blob().stream(), controller),
   }
 }
 
@@ -317,24 +312,21 @@ const sha256 = (path: string): string => {
 
 const IMDB_HEADER = Buffer.from('tconst\t')
 
-/** The IMDb dump's first line starts with its header, and the whole file
- * inflates. */
+/** The IMDb dump's first line starts with its header (its first bytes
+ * are the header's), checked before the rest inflates, as Python's
+ * `readline` then `read`. */
 const checkImdb = async (file: string, name: string) => {
-  let first: Buffer | undefined = Buffer.alloc(0)
-  const check = (line: Buffer) => {
-    if (!line.subarray(0, IMDB_HEADER.length).equals(IMDB_HEADER))
+  let head = Buffer.alloc(0)
+  const check = () => {
+    if (!head.subarray(0, IMDB_HEADER.length).equals(IMDB_HEADER))
       throw failure(`cabeçalho inesperado em ${name}`)
   }
-  for await (const chunk of gzipBytes(file)) {
-    if (first === undefined) continue
-    first = Buffer.concat([first, chunk])
-    const newline = first.indexOf(10)
-    if (newline >= 0 || first.length >= IMDB_HEADER.length) {
-      check(newline >= 0 ? first.subarray(0, newline + 1) : first)
-      first = undefined
+  for await (const chunk of gzipBytes(file))
+    if (head.length < IMDB_HEADER.length) {
+      head = Buffer.concat([head, chunk])
+      if (head.length >= IMDB_HEADER.length) check()
     }
-  }
-  if (first !== undefined) check(first)
+  if (head.length < IMDB_HEADER.length) check()
 }
 
 /** Each key's keys sorted, as `json.dump(..., sort_keys=True)`. */
@@ -342,7 +334,8 @@ const sortedKeys = (value: unknown): unknown =>
   typeof value === 'object' && value !== null
     ? Object.fromEntries(
         Object.entries(value)
-          .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+          // Code-unit order, as Python sorts str keys.
+          .sort(([a], [b]) => Number(a > b) - Number(a < b))
           .map(([key, inner]) => [key, sortedKeys(inner)]),
       )
     : value
