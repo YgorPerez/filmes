@@ -15,6 +15,7 @@ import {
   type SessionItem,
   type Sessions,
 } from './sessions'
+import { Notes } from './notes'
 
 const BRUNO = {
   person: 'bruno',
@@ -46,10 +47,17 @@ const SESSION: SessionItem = {
 /** Sessions that answer from fixed outcomes, and remember what they were
  * asked to open. */
 function fake(
-  outcomes: { list?: Outcome<SessionItem[]>; open?: Outcome<string> } = {},
+  outcomes: {
+    list?: Outcome<SessionItem[]>
+    open?: Outcome<{ id: string; warnings: string[] }>
+  } = {},
 ) {
   const open = vi.fn<Sessions['open']>(
-    async () => outcomes.open ?? { exitCode: 0, output: '2026-11-20-iara' },
+    async () =>
+      outcomes.open ?? {
+        exitCode: 0,
+        output: { id: '2026-11-20-iara', warnings: [] },
+      },
   )
   const sessions: Sessions = {
     list: async () => outcomes.list ?? { exitCode: 0, output: [SESSION] },
@@ -155,7 +163,8 @@ describe('sessionRequestAction', () => {
     request: Request,
     sessions: Sessions,
     owner: typeof BRUNO | null = BRUNO,
-  ) => sessionRequestAction(request, owner, sessions, ORIGIN)
+    notes = new Notes(),
+  ) => sessionRequestAction(request, owner, sessions, notes, ORIGIN)
 
   it('opens the Session as the logged-in Dono and goes to its page', async () => {
     const { sessions, open } = fake()
@@ -173,6 +182,21 @@ describe('sessionRequestAction', () => {
       },
       'bruno',
     )
+  })
+
+  it('keeps the Recomendação’s warnings for the page in a note', async () => {
+    const warnings = ['sem chave do OMDb: a classificação vem só do banco']
+    const { sessions } = fake({
+      open: { exitCode: 0, output: { id: '2026-11-20-iara', warnings } },
+    })
+    const notes = new Notes()
+    const location =
+      (await act(post(BASIC), sessions, BRUNO, notes)).headers.get(
+        'Location',
+      ) ?? ''
+    const token = /&nota=([\w-]+)$/.exec(location)?.[1]
+    expect(location).toMatch(/^\/sessoes\/2026-11-20-iara\?feito=aberta&nota=/)
+    expect(notes.recall(token)).toEqual({ warnings, addition: null })
   })
 
   it('sends who is not logged in to the login, and refuses another site', async () => {
@@ -279,7 +303,10 @@ describe('sessionsFromEngine', () => {
       )
       if (!('ok' in parsed)) throw new Error(parsed.refused)
       const opened = await sessions.open(parsed.ok, 'bruno')
-      expect(opened).toEqual({ exitCode: 0, output: '2026-11-20-iara' })
+      expect(opened).toEqual({
+        exitCode: 0,
+        output: { id: '2026-11-20-iara', warnings: expect.any(Array) },
+      })
       const log = execFileSync('git', ['log', '-1', '--format=%an <%ae>|%s'], {
         cwd: fixture.data,
         encoding: 'utf8',

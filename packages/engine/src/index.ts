@@ -205,6 +205,7 @@ export {
   recommendSession,
   redoSession,
 } from './sessions/redo.ts'
+export { sessionRedoRequest } from './sessions/redo-request.ts'
 export {
   engineLayer,
   errorOutcome,

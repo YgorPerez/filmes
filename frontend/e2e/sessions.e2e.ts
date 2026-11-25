@@ -48,8 +48,10 @@ test('the Dono opens a Session with Restrições and finds it in the list', asyn
   await expect(page).toHaveURL(/\/sessoes\/2026-11-20-iara[^/]*\?feito=aberta$/)
   const id = openedId(page)
   await expect(page.getByRole('status')).toContainText('Sessão aberta')
-  await expect(page.getByText(/até 2h10 · com criança de 7 anos/)).toBeVisible()
-  const films = section(page, 'Recomendação').getByRole('listitem')
+  await expect(
+    page.getByRole('img', { name: /até 2h10 · .*com criança de 7 anos/ }),
+  ).toBeVisible()
+  const films = page.getByRole('article')
   await expect(films.first()).toBeVisible()
   expect(await films.count()).toBeLessThanOrEqual(3)
   await snap(page, info, 'sessoes-aberta')
