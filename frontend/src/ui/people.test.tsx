@@ -106,6 +106,18 @@ describe('PeopleList create form', () => {
     expect(posted()).toBe('email')
   })
 
+  it('says a name another Pessoa has apart from a taken file name', () => {
+    render(
+      <PeopleList
+        people={[BRUNO]}
+        create={{ refusal: 'nome-usado', typed: { name: 'Eu' } }}
+      />,
+    )
+    const alert = screen.getByRole('alert').textContent
+    expect(alert).toContain(PEOPLE.create.refusals['nome-usado'])
+    expect(alert).not.toContain(PEOPLE.create.refusals.existe)
+  })
+
   it('comes back open with the reason and what the Dono typed', () => {
     render(
       <PeopleList
@@ -113,9 +125,9 @@ describe('PeopleList create form', () => {
         create={{
           refusal: 'email-usado',
           typed: {
-            nome: 'Farias',
-            apelidos: 'Fa',
-            dono: 'sim',
+            name: 'Farias',
+            aliases: 'Fa',
+            owner: true,
             email: 'bruno@example.org',
           },
         }}

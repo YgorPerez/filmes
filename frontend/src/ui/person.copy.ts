@@ -38,6 +38,8 @@ export const PEOPLE = {
       nome: 'Esse nome não dá um nome de arquivo válido. Use letras, números ou espaços.',
       reservado: '“dono” é reservado para achar o Dono. Escolha outro nome.',
       existe: 'Já existe uma Pessoa com esse nome.',
+      'nome-usado':
+        'Esse nome ou um desses apelidos já é de outra Pessoa. Escolha outro.',
       email: 'Um Dono precisa de um e-mail do Google válido para entrar.',
       'email-usado': 'Esse e-mail já é de outra Pessoa.',
       indisponivel: 'Não deu para gravar agora. Tente de novo daqui a pouco.',

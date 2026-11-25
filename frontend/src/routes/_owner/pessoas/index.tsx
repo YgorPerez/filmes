@@ -1,6 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { isPeopleRefusal } from '#/content/person-action'
-import { isPersonCreateRefusal, typedFromSearch } from '#/content/person-create'
+import {
+  isPersonCreateRefusal,
+  typedOfQuery,
+  typedQuery,
+} from '#/content/person-create'
 import { readPeopleList } from '#/content/people'
 import { PeopleList } from '#/ui/people'
 
@@ -13,20 +17,22 @@ export const Route = createFileRoute('/_owner/pessoas/')({
         ? search.erro
         : undefined
     if (!isPersonCreateRefusal(erro)) return { erro }
-    return { erro, ...typedFromSearch(search) }
+    return { erro, ...typedQuery(search) }
   },
   loader: () => readPeopleList(),
   component: PeoplePage,
 })
 
 function PeoplePage() {
-  const { erro, ...typed } = Route.useSearch()
+  const { erro, ...query } = Route.useSearch()
   return (
     <PeopleList
       people={Route.useLoaderData()}
       gone={erro === 'pessoa'}
       create={
-        isPersonCreateRefusal(erro) ? { refusal: erro, typed } : undefined
+        isPersonCreateRefusal(erro)
+          ? { refusal: erro, typed: typedOfQuery(query) }
+          : undefined
       }
     />
   )

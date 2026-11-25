@@ -85,21 +85,21 @@ function CreateForm({ state }: { state?: CreateState }) {
           name="nome"
           label={create.name}
           required
-          defaultValue={typed.nome}
+          defaultValue={typed.name}
         />
         <TextField
           name="apelidos"
           label={create.aliases}
           hint={create.aliasesHint}
           placeholder="Lu, Luana"
-          defaultValue={typed.apelidos}
+          defaultValue={typed.aliases}
         />
         <label className="flex min-h-touch items-center gap-sm">
           <input
             type="checkbox"
             name="dono"
             value="sim"
-            defaultChecked={typed.dono === 'sim'}
+            defaultChecked={typed.owner}
           />
           <span className="font-semibold">{create.owner}</span>
         </label>
