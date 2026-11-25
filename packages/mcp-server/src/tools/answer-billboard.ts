@@ -16,7 +16,9 @@ export default defineTool({
     '`addition` e `comments` ({position, id, title, comment}) como vieram, `stars`, ' +
     '`seen` ({person, film, title, rating, new}), `version`, `currentVersion` e `warnings`. ' +
     'Com `regenerate`, refaça com recommend (session, keep) e um pedido montado do acrescentar; ' +
-    'o texto livre não é interpretado aqui.',
+    'o texto livre não é interpretado aqui. ' +
+    'O Enviar da tela do Cartaz chama esta ferramenta sozinho; a mensagem `Enviei o Cartaz <sessao> v<n> pela tela` que vem depois ' +
+    'já foi gravada: não chame de novo, refaça com o `manter` dela.',
   input: z.object({
     session: sessionId('ID da Sessão do Cartaz'),
     text: z.string().min(1).describe('o texto do Cartaz, como veio'),

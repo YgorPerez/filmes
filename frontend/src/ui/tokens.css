@@ -9,8 +9,10 @@
  * `bg-red-500` does not exist here. The 4px `--spacing` stays.
  *
  * Dark: the `dark-*` pairs replace the light ones under
- * `prefers-color-scheme: dark`. The marquee panel stays lit in both themes
- * (The Lit Panel Rule). */
+ * `prefers-color-scheme: dark`, unless the page says otherwise in
+ * `data-theme` on the root: the MCP Apps view follows the host's theme
+ * that way. The marquee panel stays lit in both themes (The Lit Panel
+ * Rule). */
 
 @theme static {
   --color-*: initial;
@@ -87,8 +89,19 @@
   --blur-*: initial;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
+@custom-variant theme-dark {
+  @media (prefers-color-scheme: dark) {
+    &:not([data-theme='light']) {
+      @slot;
+    }
+  }
+  &[data-theme='dark'] {
+    @slot;
+  }
+}
+
+:root {
+  @variant theme-dark {
     --color-ground: #0f0f11;
     --color-surface: #1a1a1d;
     --color-surface-2: #26262a;

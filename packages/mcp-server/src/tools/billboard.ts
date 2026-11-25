@@ -1,5 +1,6 @@
 import { billboard } from '@filmes/engine'
 import { z } from 'zod'
+import { billboardViewTool } from '../billboard-view.ts'
 import { defineTool, imdbId, sessionId } from '../tool.ts'
 
 export default defineTool({
@@ -12,7 +13,10 @@ export default defineTool({
     'numerados de 1 em diante, e a Sessão guarda a lista como mostrada, para o Feedback registrar a posição do Filme escolhido nela. ' +
     'O Cartaz responde: em cada filme, Já vi (por Presente, com nota de 1 a 10 e o que achou), Trocar, estrelas e comentário; ' +
     'embaixo, o acrescentar. O texto que volta começa com `#cartaz <sessao> v<n>` e vai para `answer_billboard`. ' +
-    'Devolve também `session`, `films` (quantos cards) e `warnings`.',
+    'Devolve também `session`, `films` (quantos cards) e `warnings`. ' +
+    'Onde o app mostra telas (MCP Apps), o resultado aparece como o Cartaz (`ui://filmes/cartaz.html`): o Dono marca ali, e o Enviar ' +
+    'grava a resposta com `answer_billboard` sem passar por você e, se algo caiu ou veio texto livre, manda uma mensagem que começa com ' +
+    '`Enviei o Cartaz <sessao> v<n> pela tela`.',
   input: z.object({
     session: sessionId('ID da Sessão, o session.id que recommend devolveu'),
     films: z
@@ -23,6 +27,7 @@ export default defineTool({
         'IDs do IMDb dos filmes que vão para a tela, na ordem da tela; sem ele, todos os da Recomendação',
       ),
   }),
+  meta: billboardViewTool,
   run: ({ session, films }) =>
     billboard({ session, ...(films !== undefined && { shown: films }) }),
 })

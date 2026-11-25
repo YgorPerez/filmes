@@ -15,6 +15,9 @@ const IGNORED = [
   'frontend/.nitro/**',
   'frontend/.tanstack/**',
   '**/coverage/**',
+  // The Cartaz's MCP Apps view, built into one HTML string by
+  // `frontend/scripts/billboard-view.ts`; a test keeps it equal to the build.
+  'packages/mcp-server/src/billboard-view.gen.ts',
   // The Python engine's data: the test fixture (CSV, Markdown with
   // frontmatter, recorded HTTP answers) and the versioned config, which the
   // engine reads as written.

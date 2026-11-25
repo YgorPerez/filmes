@@ -6,6 +6,7 @@
 import { Effect } from 'effect'
 import type { Engine, EvaluationProgress } from '@filmes/engine'
 import { McpServer, type ServerContext } from '@modelcontextprotocol/server'
+import { registerBillboardView } from './billboard-view.ts'
 import { INSTRUCTIONS } from './instructions.ts'
 import { isAdmin, type Tool, type ToolContext } from './tool.ts'
 import { TOOLS } from './tools/index.ts'
@@ -71,7 +72,11 @@ export function createMcpServer({
   for (const tool of tools.filter((t) => !t.admin || admin !== false))
     server.registerTool(
       tool.name,
-      { description: tool.description, inputSchema: tool.input },
+      {
+        description: tool.description,
+        inputSchema: tool.input,
+        ...(tool.meta && { _meta: tool.meta }),
+      },
       async (input: unknown, ctx: ServerContext) => {
         const options = owner === null ? {} : { owner }
         if (tool.admin && admin === undefined) {
@@ -86,5 +91,6 @@ export function createMcpServer({
         return answer(outcome.output, outcome.exitCode !== 0)
       },
     )
+  registerBillboardView(server)
   return server
 }
