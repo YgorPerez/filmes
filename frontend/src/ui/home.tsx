@@ -24,6 +24,9 @@ export function Home({ name }: { name: string }) {
         <a href="/exportar" className={buttonVariants({ variant: 'quiet' })}>
           {HOME.export}
         </a>
+        <a href="/feedback" className={buttonVariants({ variant: 'quiet' })}>
+          {HOME.feedback}
+        </a>
       </nav>
     </main>
   )

@@ -4,7 +4,16 @@
 //
 //   VPS_HOST=… [VPS_USER=root] [VPS_PORT=22] [VPS_SSH_KEY=…] \
 //     pnpm db:publish <file.sqlite> [--version <name>] [--dry-run]
+//   … pnpm db:publish --build [--data <filmes-dados>] [--config <config>]
+//     [--version <name>] [--dry-run]
 //   … pnpm db:publish --rollback [<version>] [--dry-run]
+//
+// `--build` first builds the file with the Python engine from filmes-dados
+// (`--data`, or `FILMES_DADOS`) and the config (`--config`, the repo's
+// `config/` by default), both migrated to Portuguese in a scratch folder
+// (`db-build.ts`); the dumps come from Python's own environment. A dry run
+// builds too, and keeps the file to look at; a publish deletes it after the
+// swap, and keeps it when the publish stops, to send again by path.
 //
 // The file goes up with rsync to `/opt/filmes/data/db/<version>.sqlite`
 // (an interrupted upload resumes when run again with the same `--version`),
@@ -21,8 +30,18 @@
 // Runs on plain `node`, which reads TypeScript by itself: only syntax it
 // strips.
 
-import { closeSync, openSync, readSync, statSync } from 'node:fs'
-import { resolve } from 'node:path'
+import {
+  closeSync,
+  mkdtempSync,
+  openSync,
+  readSync,
+  rmSync,
+  statSync,
+} from 'node:fs'
+import { tmpdir } from 'node:os'
+import { dirname, join, resolve } from 'node:path'
+import { parseArgs } from 'node:util'
+import { REPO, type Runner, buildDatabase, spawnRunner } from './db-build.ts'
 import { keyFile } from './ssh-key.ts'
 import {
   type Step,
@@ -98,10 +117,47 @@ function describePlan(steps: Step[]) {
 
 type Command =
   | { mode: 'publish'; file: string; version?: string; dryRun: boolean }
+  | {
+      mode: 'build'
+      data?: string
+      config?: string
+      version?: string
+      dryRun: boolean
+    }
   | { mode: 'rollback'; version?: string; dryRun: boolean }
 
 const USAGE =
-  'Usage: VPS_HOST=… [VPS_USER=root] [VPS_PORT=22] [VPS_SSH_KEY=…] pnpm db:publish <file.sqlite> [--version <name>] [--dry-run] | --rollback [<version>] [--dry-run]'
+  'Usage: VPS_HOST=… [VPS_USER=root] [VPS_PORT=22] [VPS_SSH_KEY=…] pnpm db:publish <file.sqlite> | --build [--data <filmes-dados>] [--config <config>], then [--version <name>] [--dry-run] | --rollback [<version>] [--dry-run]'
+
+/** A publish's command line: a file, or `--build` and its folders. */
+function parsePublish(args: string[], dryRun: boolean): Command | string {
+  let parsed
+  try {
+    parsed = parseArgs({
+      args,
+      allowPositionals: true,
+      options: {
+        version: { type: 'string' },
+        build: { type: 'boolean' },
+        data: { type: 'string' },
+        config: { type: 'string' },
+      },
+    })
+  } catch {
+    return USAGE
+  }
+  const { positionals, values } = parsed
+  if (values.version === '') return USAGE
+  const { version, build, data, config } = values
+  if (build)
+    return positionals.length === 0
+      ? { mode: 'build', data, config, version, dryRun }
+      : USAGE
+  const [file, ...extra] = positionals
+  if (!file || extra.length > 0 || data !== undefined || config !== undefined)
+    return USAGE
+  return { mode: 'publish', file, version, dryRun }
+}
 
 /** The command line, or the usage when it does not parse. */
 function parseArguments(argv: readonly string[]): Command | string {
@@ -111,29 +167,26 @@ function parseArguments(argv: readonly string[]): Command | string {
     if (rest.length > 2 || rest[1]?.startsWith('-')) return USAGE
     return { mode: 'rollback', version: rest[1], dryRun }
   }
-  const [file, flag, version, ...extra] = rest
-  if (!file || file.startsWith('-') || extra.length > 0) return USAGE
-  if (flag === undefined) return { mode: 'publish', file, dryRun }
-  if (flag !== '--version' || !version) return USAGE
-  return { mode: 'publish', file, version, dryRun }
+  return parsePublish(rest, dryRun)
 }
 
-/** The plan the command asks for. A publish checks the local file first, and
- * a relative path is from `here`. */
-function planFor(
-  command: Command,
-  { here, date, paths }: { here: string; date: Date; paths?: VpsPaths },
-): Step[] {
-  if (command.mode === 'rollback')
-    return databaseRollbackPlan({ version: command.version, paths })
-  const file = resolve(here, command.file)
-  return databasePublishPlan({
-    file,
-    size: checkDatabase(file),
-    version: command.version ?? versionAt(date),
-    paths,
-  })
+/** Where `--build` takes filmes-dados from, as an absolute path. */
+function dataFolder(
+  data: string | undefined,
+  env: Record<string, string | undefined>,
+  here: string,
+) {
+  const folder = data ?? env.FILMES_DADOS
+  if (!folder)
+    throw new Error(
+      '--build needs filmes-dados: pass --data <folder> or set FILMES_DADOS.',
+    )
+  return resolve(here, folder)
 }
+
+/** The plan for a database file, after checking it. */
+const publishPlan = (file: string, version: string, paths?: VpsPaths) =>
+  databasePublishPlan({ file, size: checkDatabase(file), version, paths })
 
 /** Runs the command line: prints the plan on a dry run, which needs no VPS,
  * or follows it on the VPS from the `VPS_*` variables. Whatever stops it
@@ -156,14 +209,47 @@ export function runCommand({
   /** The time the default version is named after. */
   date: Date
   paths?: VpsPaths
+  /** Runs the Python engine for `--build`. */
+  run?: Runner
 }) {
+  const { here, date, paths, run = spawnRunner } = where
   const command = parseArguments(argv)
   if (typeof command === 'string') throw new Error(command)
   const target = command.dryRun ? undefined : targetFrom(env)
   if (typeof target === 'string') throw new Error(target)
-  const steps = planFor(command, where)
-  if (target) followThePlan({ steps, vps: connect(target), say })
-  else print(describePlan(steps))
+  const follow = (steps: Step[]) => {
+    if (target) followThePlan({ steps, vps: connect(target), say })
+    else print(describePlan(steps))
+  }
+  if (command.mode === 'rollback')
+    return follow(databaseRollbackPlan({ version: command.version, paths }))
+  const version = command.version ?? versionAt(date)
+  if (command.mode === 'publish')
+    return follow(publishPlan(resolve(here, command.file), version, paths))
+
+  const data = dataFolder(command.data, env, here)
+  const config = resolve(here, command.config ?? join(REPO, 'config'))
+  const file = join(
+    mkdtempSync(join(tmpdir(), 'filmes-db-')),
+    `${version}.sqlite`,
+  )
+  say(`building ${version} from ${data} with ${config}`)
+  try {
+    buildDatabase({ data, config, database: file, env, run })
+  } catch (error) {
+    rmSync(dirname(file), { recursive: true, force: true })
+    throw error
+  }
+  say(`built ${file}`)
+  try {
+    follow(publishPlan(file, version, paths))
+  } catch (error) {
+    throw new Error(
+      `${error instanceof Error ? error.message : String(error)}\nThe database stays at ${file}: pnpm db:publish ${file} --version ${version}`,
+      { cause: error },
+    )
+  }
+  if (target) rmSync(dirname(file), { recursive: true, force: true })
 }
 
 if (import.meta.main) {

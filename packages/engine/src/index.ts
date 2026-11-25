@@ -161,6 +161,7 @@ export {
   reloadSessions,
   syncSession,
 } from './sessions/database.ts'
+export { creditNow, type CreditNow } from './sessions/credit.ts'
 export {
   dropComment,
   recordFeedback,
@@ -485,3 +486,4 @@ export {
 } from './imports/remove.ts'
 export { rebuild, type Rebuilt } from './rebuild/rebuild.ts'
 export { withDatabaseFile } from './sqlite/Sqlite.ts'
+export { reloadData, type DataReload } from './data/reload.ts'

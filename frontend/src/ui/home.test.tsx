@@ -25,3 +25,11 @@ describe('Home, Pessoas', () => {
     )
   })
 })
+
+describe('Home, Feedback', () => {
+  it('leads to the open Sessions’ Feedback', () => {
+    expect(renderToStaticMarkup(<Home name="Bruno" />)).toMatch(
+      /<a href="\/feedback"[^>]*>Feedback<\/a>/,
+    )
+  })
+})

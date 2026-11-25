@@ -5,4 +5,5 @@ export const HOME = {
   nav: 'Telas',
   people: 'Pessoas',
   export: 'Exportar Notas',
+  feedback: 'Feedback',
 } as const

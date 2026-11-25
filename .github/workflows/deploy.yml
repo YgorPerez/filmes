@@ -16,6 +16,8 @@ name: Deploy
     paths:
       - 'frontend/**'
       - 'packages/**'
+      # The engine's config, which the image carries.
+      - 'config/**'
       - 'package.json'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'

@@ -14,8 +14,11 @@ import { Route as EntrarRouteImport } from './routes/entrar'
 import { Route as OwnerIndexRouteImport } from './routes/_owner/index'
 import { Route as OwnerExportarRouteImport } from './routes/_owner/exportar'
 import { Route as ExportarImdbDotcsvRouteImport } from './routes/exportar/imdb[.]csv'
+import { Route as OwnerFeedbackIndexRouteImport } from './routes/_owner/feedback/index'
+import { Route as OwnerFeedbackSessaoRouteImport } from './routes/_owner/feedback/$sessao'
 import { Route as OwnerPessoasIndexRouteImport } from './routes/_owner/pessoas/index'
 import { Route as OwnerPessoasPessoaRouteImport } from './routes/_owner/pessoas/$pessoa'
+import { Route as FeedbackSessaoEnviarRouteImport } from './routes/feedback/$sessao/enviar'
 import { Route as PessoasPessoaAcaoRouteImport } from './routes/pessoas/$pessoa/acao'
 
 const OwnerRoute = OwnerRouteImport.update({
@@ -42,6 +45,16 @@ const ExportarImdbDotcsvRoute = ExportarImdbDotcsvRouteImport.update({
   path: '/exportar/imdb.csv',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OwnerFeedbackIndexRoute = OwnerFeedbackIndexRouteImport.update({
+  id: '/feedback/',
+  path: '/feedback/',
+  getParentRoute: () => OwnerRoute,
+} as any)
+const OwnerFeedbackSessaoRoute = OwnerFeedbackSessaoRouteImport.update({
+  id: '/feedback/$sessao',
+  path: '/feedback/$sessao',
+  getParentRoute: () => OwnerRoute,
+} as any)
 const OwnerPessoasIndexRoute = OwnerPessoasIndexRouteImport.update({
   id: '/pessoas/',
   path: '/pessoas/',
@@ -51,6 +64,11 @@ const OwnerPessoasPessoaRoute = OwnerPessoasPessoaRouteImport.update({
   id: '/pessoas/$pessoa',
   path: '/pessoas/$pessoa',
   getParentRoute: () => OwnerRoute,
+} as any)
+const FeedbackSessaoEnviarRoute = FeedbackSessaoEnviarRouteImport.update({
+  id: '/feedback/$sessao/enviar',
+  path: '/feedback/$sessao/enviar',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const PessoasPessoaAcaoRoute = PessoasPessoaAcaoRouteImport.update({
   id: '/pessoas/$pessoa/acao',
@@ -63,8 +81,11 @@ export interface FileRoutesByFullPath {
   '/entrar': typeof EntrarRoute
   '/exportar': typeof OwnerExportarRoute
   '/exportar/imdb.csv': typeof ExportarImdbDotcsvRoute
+  '/feedback/$sessao': typeof OwnerFeedbackSessaoRoute
   '/pessoas/$pessoa': typeof OwnerPessoasPessoaRoute
+  '/feedback/$sessao/enviar': typeof FeedbackSessaoEnviarRoute
   '/pessoas/$pessoa/acao': typeof PessoasPessoaAcaoRoute
+  '/feedback/': typeof OwnerFeedbackIndexRoute
   '/pessoas/': typeof OwnerPessoasIndexRoute
 }
 export interface FileRoutesByTo {
@@ -72,8 +93,11 @@ export interface FileRoutesByTo {
   '/exportar': typeof OwnerExportarRoute
   '/exportar/imdb.csv': typeof ExportarImdbDotcsvRoute
   '/': typeof OwnerIndexRoute
+  '/feedback/$sessao': typeof OwnerFeedbackSessaoRoute
   '/pessoas/$pessoa': typeof OwnerPessoasPessoaRoute
+  '/feedback/$sessao/enviar': typeof FeedbackSessaoEnviarRoute
   '/pessoas/$pessoa/acao': typeof PessoasPessoaAcaoRoute
+  '/feedback': typeof OwnerFeedbackIndexRoute
   '/pessoas': typeof OwnerPessoasIndexRoute
 }
 export interface FileRoutesById {
@@ -83,8 +107,11 @@ export interface FileRoutesById {
   '/_owner/exportar': typeof OwnerExportarRoute
   '/exportar/imdb.csv': typeof ExportarImdbDotcsvRoute
   '/_owner/': typeof OwnerIndexRoute
+  '/_owner/feedback/$sessao': typeof OwnerFeedbackSessaoRoute
   '/_owner/pessoas/$pessoa': typeof OwnerPessoasPessoaRoute
+  '/feedback/$sessao/enviar': typeof FeedbackSessaoEnviarRoute
   '/pessoas/$pessoa/acao': typeof PessoasPessoaAcaoRoute
+  '/_owner/feedback/': typeof OwnerFeedbackIndexRoute
   '/_owner/pessoas/': typeof OwnerPessoasIndexRoute
 }
 export interface FileRouteTypes {
@@ -94,8 +121,11 @@ export interface FileRouteTypes {
     | '/entrar'
     | '/exportar'
     | '/exportar/imdb.csv'
+    | '/feedback/$sessao'
     | '/pessoas/$pessoa'
+    | '/feedback/$sessao/enviar'
     | '/pessoas/$pessoa/acao'
+    | '/feedback/'
     | '/pessoas/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -103,8 +133,11 @@ export interface FileRouteTypes {
     | '/exportar'
     | '/exportar/imdb.csv'
     | '/'
+    | '/feedback/$sessao'
     | '/pessoas/$pessoa'
+    | '/feedback/$sessao/enviar'
     | '/pessoas/$pessoa/acao'
+    | '/feedback'
     | '/pessoas'
   id:
     | '__root__'
@@ -113,8 +146,11 @@ export interface FileRouteTypes {
     | '/_owner/exportar'
     | '/exportar/imdb.csv'
     | '/_owner/'
+    | '/_owner/feedback/$sessao'
     | '/_owner/pessoas/$pessoa'
+    | '/feedback/$sessao/enviar'
     | '/pessoas/$pessoa/acao'
+    | '/_owner/feedback/'
     | '/_owner/pessoas/'
   fileRoutesById: FileRoutesById
 }
@@ -122,6 +158,7 @@ export interface RootRouteChildren {
   OwnerRoute: typeof OwnerRouteWithChildren
   EntrarRoute: typeof EntrarRoute
   ExportarImdbDotcsvRoute: typeof ExportarImdbDotcsvRoute
+  FeedbackSessaoEnviarRoute: typeof FeedbackSessaoEnviarRoute
   PessoasPessoaAcaoRoute: typeof PessoasPessoaAcaoRoute
 }
 
@@ -162,6 +199,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ExportarImdbDotcsvRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_owner/feedback/': {
+      id: '/_owner/feedback/'
+      path: '/feedback'
+      fullPath: '/feedback/'
+      preLoaderRoute: typeof OwnerFeedbackIndexRouteImport
+      parentRoute: typeof OwnerRoute
+    }
+    '/_owner/feedback/$sessao': {
+      id: '/_owner/feedback/$sessao'
+      path: '/feedback/$sessao'
+      fullPath: '/feedback/$sessao'
+      preLoaderRoute: typeof OwnerFeedbackSessaoRouteImport
+      parentRoute: typeof OwnerRoute
+    }
     '/_owner/pessoas/': {
       id: '/_owner/pessoas/'
       path: '/pessoas'
@@ -176,6 +227,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OwnerPessoasPessoaRouteImport
       parentRoute: typeof OwnerRoute
     }
+    '/feedback/$sessao/enviar': {
+      id: '/feedback/$sessao/enviar'
+      path: '/feedback/$sessao/enviar'
+      fullPath: '/feedback/$sessao/enviar'
+      preLoaderRoute: typeof FeedbackSessaoEnviarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/pessoas/$pessoa/acao': {
       id: '/pessoas/$pessoa/acao'
       path: '/pessoas/$pessoa/acao'
@@ -189,14 +247,18 @@ declare module '@tanstack/react-router' {
 interface OwnerRouteChildren {
   OwnerExportarRoute: typeof OwnerExportarRoute
   OwnerIndexRoute: typeof OwnerIndexRoute
+  OwnerFeedbackSessaoRoute: typeof OwnerFeedbackSessaoRoute
   OwnerPessoasPessoaRoute: typeof OwnerPessoasPessoaRoute
+  OwnerFeedbackIndexRoute: typeof OwnerFeedbackIndexRoute
   OwnerPessoasIndexRoute: typeof OwnerPessoasIndexRoute
 }
 
 const OwnerRouteChildren: OwnerRouteChildren = {
   OwnerExportarRoute: OwnerExportarRoute,
   OwnerIndexRoute: OwnerIndexRoute,
+  OwnerFeedbackSessaoRoute: OwnerFeedbackSessaoRoute,
   OwnerPessoasPessoaRoute: OwnerPessoasPessoaRoute,
+  OwnerFeedbackIndexRoute: OwnerFeedbackIndexRoute,
   OwnerPessoasIndexRoute: OwnerPessoasIndexRoute,
 }
 
@@ -206,6 +268,7 @@ const rootRouteChildren: RootRouteChildren = {
   OwnerRoute: OwnerRouteWithChildren,
   EntrarRoute: EntrarRoute,
   ExportarImdbDotcsvRoute: ExportarImdbDotcsvRoute,
+  FeedbackSessaoEnviarRoute: FeedbackSessaoEnviarRoute,
   PessoasPessoaAcaoRoute: PessoasPessoaAcaoRoute,
 }
 export const routeTree = rootRouteImport
