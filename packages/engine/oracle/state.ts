@@ -10,6 +10,7 @@ import {
   readdirSync,
   readFileSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from 'node:fs'
 import { dirname, join, relative, sep } from 'node:path'
@@ -133,6 +134,24 @@ export interface TreeOptions {
   readonly ts: (text: string) => string
 }
 
+/** A listed path that is a folder on either side stands for every file
+ * under it on both sides (a command that names its file by the date). */
+function expandFolder(python: string, ts: string, file: string): string[] {
+  const isFolder = (root: string) => {
+    const path = join(root, file)
+    return existsSync(path) && statSync(path).isDirectory()
+  }
+  if (!isFolder(python) && !isFolder(ts)) return [file]
+  return [
+    ...new Set([
+      ...listFiles(join(python, file)),
+      ...listFiles(join(ts, file)),
+    ]),
+  ]
+    .sort()
+    .map((inner) => `${file}/${inner}`)
+}
+
 /** Two folders, file by file, as `<prefix>/<file>` differences. */
 export function compareTrees(
   python: string,
@@ -144,7 +163,9 @@ export function compareTrees(
 ): Difference[] {
   const out: Difference[] = []
   const files =
-    only ?? [...new Set([...listFiles(python), ...listFiles(ts)])].sort()
+    only === undefined
+      ? [...new Set([...listFiles(python), ...listFiles(ts)])].sort()
+      : only.flatMap((file) => expandFolder(python, ts, file))
   for (const file of files) {
     const path = `${prefix}/${file}`
     const left = join(python, file)
