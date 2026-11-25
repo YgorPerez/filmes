@@ -127,6 +127,10 @@ export interface ReadReply {
 
 const invalid = (message: string) => engineError('invalid_usage', message)
 
+/** A regex group, '' when it did not take part. */
+const group = (match: RegExpExecArray, index: number): string =>
+  match[index] ?? ''
+
 /** Python's `int()` of digits of any script. */
 const digits = (text: string): number => pyParseInt(text) ?? Number.NaN
 
@@ -199,18 +203,22 @@ export const readReply = (
       if (!pyStrip(line)) continue
       const added = ADDITION.exec(line)
       if (added && addition === null && films.length === 0) {
-        addition = pyJoinWords(added[1] ?? '') || null
+        addition = pyJoinWords(group(added, 1)) || null
         continue
       }
       const film = FILM.exec(line)
       if (film === null) break
       films.push(
-        yield* readMarks(digits(film[1] ?? ''), film[2] ?? '', film[3] ?? ''),
+        yield* readMarks(
+          digits(group(film, 1)),
+          group(film, 2),
+          group(film, 3),
+        ),
       )
     }
     return {
-      session: header[1] ?? '',
-      version: digits(header[2] ?? ''),
+      session: group(header, 1),
+      version: digits(group(header, 2)),
       addition,
       films,
     }
@@ -289,9 +297,9 @@ const whoSaw = (
       .map(pyStrip)
       .filter((p) => p !== '')) {
       const rated = RATED.exec(item)
-      const name = rated ? (rated[1] ?? '') : item
+      const name = rated ? group(rated, 1) : item
       const rating = rated
-        ? (yield* readRating(`${rated[2] ?? ''}/10`)).rating
+        ? (yield* readRating(`${group(rated, 2)}/10`)).rating
         : null
       const { slug } = yield* resolvePerson(name)
       if (!attendees.includes(slug))
@@ -626,12 +634,12 @@ export const answerBillboard = (
             keep,
             dropped,
             addition: read.addition,
-            comments: films
-              .filter((m) => m.comment !== null)
-              .map((m) => ({ ...note(m), comment: m.comment ?? '' })),
-            stars: films
-              .filter((m) => m.stars !== null)
-              .map((m) => ({ ...note(m), stars: m.stars ?? 0 })),
+            comments: films.flatMap((m) =>
+              m.comment === null ? [] : [{ ...note(m), comment: m.comment }],
+            ),
+            stars: films.flatMap((m) =>
+              m.stars === null ? [] : [{ ...note(m), stars: m.stars }],
+            ),
             seen,
             warnings,
           }

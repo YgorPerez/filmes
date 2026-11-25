@@ -190,8 +190,20 @@ const STRENGTH_ORDER: Readonly<Record<string, number>> = {
 const get = (map: YamlValue | undefined, key: string): YamlValue | undefined =>
   isMapping(map) ? map.get(key) : undefined
 
+/** A list field, or none: Python's `x.get(k) or []`. */
+const listOf = (value: YamlValue | undefined): ReadonlyArray<YamlValue> =>
+  value !== undefined && pyTruthy(value) && isSequence(value) ? value : []
+
+/** A mapping list field, its items as maps. */
+const mappings = (value: YamlValue | undefined): ReadonlyArray<YamlMapping> =>
+  listOf(value).filter(isMapping)
+
+/** A text field, or null when missing or empty. */
+const textOf = (value: YamlValue | undefined): string | null =>
+  value !== undefined && pyTruthy(value) ? pyStrValue(value) : null
+
 const texts = (value: YamlValue | undefined): string[] =>
-  pyTruthy(value) && isSequence(value) ? value.map((v) => pyStrValue(v)) : []
+  listOf(value).map((v) => pyStrValue(v))
 
 /** Python's `str.capitalize`, by code point. */
 const capitalize = (text: string): string => {
@@ -261,33 +273,29 @@ const requestOf = (
       : `Vocês ${IN_WORDS[people.length] ?? people.length}`
   const parts: string[] = []
   const max = get(context, 'max_duration')
-  if (pyTruthy(max ?? null))
-    parts.push(`até ${sessionDuration(Number(yamlToJson(max ?? null)))}`)
+  if (max !== undefined && pyTruthy(max))
+    parts.push(`até ${sessionDuration(Number(yamlToJson(max)))}`)
   parts.push(`nota ${numberText(minRating)}+ no IMDb`)
   parts.push(...texts(get(context, 'moods')))
   // A stored Restrição that no longer exists (an old Session's no_repeat)
   // does not show.
   const stored = get(context, 'constraints')
-  for (const item of pyTruthy(stored ?? null) && isSequence(stored)
-    ? stored
-    : []) {
-    const label = isMapping(item)
-      ? constraintLabel(yamlToJson(item) as StoredConstraint)
-      : null
+  for (const item of mappings(stored)) {
+    const label = constraintLabel(yamlToJson(item) as StoredConstraint)
     if (label) parts.push(label)
   }
   const rule = front.get('rule')
   const name = get(rule, 'name')
   if (name === 'average') parts.push('pela média')
   else if (name === 'by') {
-    const slug = pyStrValue(get(rule, 'person') ?? null)
+    const slug = textOf(get(rule, 'person')) ?? ''
     parts.push(
       `pelo gosto de ${people.find((p) => p.slug === slug)?.name ?? slug}`,
     )
   }
   const speech = get(context, 'request')
   return {
-    speech: pyTruthy(speech ?? null) ? pyStrValue(speech ?? null) : null,
+    speech: textOf(speech),
     who,
     parts,
   }
@@ -305,8 +313,7 @@ const droppedOf = (
       ? 'você'
       : (people.find((p) => p.slug === slug)?.name ?? slug)
   const out: BillboardDropped[] = []
-  for (const item of pyTruthy(list ?? null) && isSequence(list) ? list : []) {
-    if (!isMapping(item)) continue
+  for (const item of mappings(list)) {
     // A file written by hand may lack a field: Python reads it with `.get`.
     const drop = yamlToJson(item) as unknown as Omit<
       BillboardDropped,
@@ -421,20 +428,14 @@ export const billboardModel = (
       films = yield* onlyShown(id, films, input.shown)
     const { weights } = yield* Environment
     const ownerField = front.get('owner')
-    const owner = pyTruthy(ownerField ?? null)
-      ? pyStrValue(ownerField ?? null)
-      : null
+    const owner = textOf(ownerField)
     const newOnes = new Map<string, boolean>()
     const recommendation = front.get('recommendation')
-    for (const item of pyTruthy(recommendation ?? null) &&
-    isSequence(recommendation)
-      ? recommendation
-      : [])
-      if (isMapping(item))
-        newOnes.set(
-          pyStrValue(item.get('id') ?? null),
-          pyTruthy(item.get('new') ?? false),
-        )
+    for (const item of mappings(recommendation))
+      newOnes.set(
+        pyStrValue(item.get('id') ?? null),
+        pyTruthy(item.get('new') ?? false),
+      )
     return yield* (yield* Sqlite).read((db) =>
       Effect.gen(function* () {
         const names = new Map(
@@ -524,15 +525,11 @@ export const showFilms = (
         if (!isOpen(frontmatter)) return
         const titles = new Map<string, YamlValue>()
         const recommendation = frontmatter.get('recommendation')
-        for (const item of pyTruthy(recommendation ?? null) &&
-        isSequence(recommendation)
-          ? recommendation
-          : [])
-          if (isMapping(item))
-            titles.set(
-              pyStrValue(item.get('id') ?? null),
-              item.get('title') ?? null,
-            )
+        for (const item of mappings(recommendation))
+          titles.set(
+            pyStrValue(item.get('id') ?? null),
+            item.get('title') ?? null,
+          )
         const front = new Map(frontmatter)
         front.set(
           'shown',

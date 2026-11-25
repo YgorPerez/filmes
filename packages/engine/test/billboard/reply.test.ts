@@ -475,6 +475,39 @@ describe('cartaz responder (test_cartaz_responder)', () => {
     expect(iara).toEqual([['dislike', 'chato']])
   })
 
+  test('an empty acrescentar or comment is none, and a Nota of 5 or 6 gives no reaction', async () => {
+    const fixture = useFixture()
+    const { id, f } = await open(fixture, 'iara')
+
+    const out = await answer(
+      fixture,
+      id,
+      `#cartaz ${id} v1\nacrescentar:   \nacrescentar: algo leve\n` +
+        `1 ${f[0]!.id} · já vi: iara=5 · achou: ok · comentário:  \n`,
+    )
+
+    expect(out.addition).toBe('algo leve')
+    expect(out.comments).toEqual([])
+    const stated = (await view(fixture, 'iara')).stated.filter(fromCartaz(id))
+    expect(stated.map((d) => [d.text, d.reaction])).toEqual([['ok', null]])
+  })
+
+  test('only acrescentar is a reply with no films, and it regenerates', async () => {
+    const fixture = useFixture()
+    const { id, f } = await open(fixture, 'iara')
+
+    const out = await answer(
+      fixture,
+      id,
+      `#cartaz ${id} v1\nacrescentar: chegou a Ana\n`,
+    )
+
+    expect(front(fixture, id)['replies']).toEqual([
+      { date: '2026-11-20', addition: 'chegou a Ana' },
+    ])
+    expect([out.regenerate, out.keep]).toEqual([true, f.map((x) => x.id)])
+  })
+
   test('what someone not in the Já vi thought is invalid_usage', async () => {
     const fixture = useFixture()
     const { id, f } = await open(fixture, 'iara')

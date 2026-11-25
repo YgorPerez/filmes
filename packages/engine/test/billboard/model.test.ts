@@ -8,6 +8,7 @@ import { join } from 'node:path'
 import { Effect } from 'effect'
 import { describe, expect, test } from 'vite-plus/test'
 import {
+  answerBillboard,
   billboard,
   billboardModel,
   billboardPeople,
@@ -358,6 +359,92 @@ describe('the Cartaz model', () => {
       'parecidos com Escrever Cartas e Estrada Afora',
     )
     expect(without.request.parts.join(' ')).not.toContain('parecido')
+  })
+
+  test('the top names the Regra, and one Presente is "Você"', async () => {
+    const fixture = useFixture()
+    const average = await recommend(fixture, {
+      attendees: ['dono', 'iara'],
+      rule: 'average',
+    })
+    const by = await recommend(fixture, {
+      attendees: ['dono', 'iara'],
+      rule: 'by',
+      by: 'iara',
+    })
+    const alone = await recommend(fixture, { attendees: ['dono'] })
+
+    const top = async (id: string) =>
+      (await fixture.ok(billboardModel({ session: id }))).request
+
+    expect((await top(average.session.id)).parts).toContain('pela média')
+    expect((await top(by.session.id)).parts).toContain('pelo gosto de Iara')
+    expect(await top(alone.session.id)).toMatchObject({
+      who: 'Você',
+      speech: null,
+    })
+  })
+
+  test('another Presente’s Veto and a Já visto of two read by name', async () => {
+    const fixture = useFixture()
+    const first = await recommend(fixture, {
+      attendees: ['dono', 'iara', 'teo'],
+    })
+    const id = first.session.id
+    const f = first.films
+    await fixture.ok(
+      personVeto({ person: 'iara', text: 'não gosto', target: f[0]!.id }),
+    )
+    await fixture.ok(
+      answerBillboard({
+        session: id,
+        text: `#cartaz ${id} v1\n2 ${f[1]!.id} · já vi: iara, teo\n`,
+      }),
+    )
+    await recommend(fixture, {
+      attendees: ['dono', 'iara', 'teo'],
+      session: id,
+      keep: [
+        f
+          .filter((g) => g.id !== f[1]!.id)
+          .map((g) => g.id)
+          .join(','),
+      ],
+    })
+
+    const reasons = (
+      await fixture.ok(billboardModel({ session: id }))
+    ).dropped.map((s) => s.reason)
+
+    expect(reasons).toEqual([
+      'Veto de Iara: “não gosto”',
+      'Iara e Teo já viram',
+    ])
+  })
+
+  test('a film the Catálogo no longer has is invalid_data', async () => {
+    const fixture = useFixture()
+    const session = await recommend(fixture, { attendees: ['dono'] })
+    const id = session.session.id
+    await fixture.ok(
+      Effect.gen(function* () {
+        const { frontmatter, body } = yield* readSession(id)
+        yield* writeSession(
+          id,
+          frontmatter,
+          body.replace(session.films[0]!.id, 'tt0000001'),
+        )
+      }),
+    )
+
+    const outcome = await fixture.run(billboardModel({ session: id }))
+
+    expect(outcome.output).toMatchObject({
+      error: {
+        code: 'invalid_data',
+        message: `Sessão ${id}: tt0000001 não está no Catálogo`,
+      },
+    })
   })
 
   test('an unknown Session is unknown_session', async () => {
