@@ -160,6 +160,7 @@ export {
   reloadSessions,
   syncSession,
 } from './sessions/database.ts'
+export { creditNow, type CreditNow } from './sessions/credit.ts'
 export {
   dropComment,
   recordFeedback,

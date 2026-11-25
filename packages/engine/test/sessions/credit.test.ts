@@ -21,6 +21,7 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, test } from 'vite-plus/test'
 import {
+  creditNow,
   recommendSession,
   recordFeedback,
   reloadSessions,
@@ -78,6 +79,30 @@ const withFeedback = async (
 }
 
 describe('the Crédito', () => {
+  test('the Crédito now names the Session where each one fell behind', async () => {
+    const { fixture, vars } = useCreditFixture()
+    expect(await fixture.ok(creditNow(['bruno', 'quim']), vars)).toEqual([
+      { person: 'bruno', value: 0, line: null },
+      { person: 'quim', value: 0, line: null },
+    ])
+    await withFeedback(fixture, vars, ['dono', 'quim'], {
+      ratings: ['dono=1', 'quim=5'],
+    })
+
+    expect(await fixture.ok(creditNow(['bruno', 'quim']), vars)).toEqual([
+      {
+        person: 'bruno',
+        value: 0.4444,
+        line: 'na Sessão de 2026-11-20 (Pequenos Milagres), Bruno deu 1 e a média dos Presentes foi 3',
+      },
+      { person: 'quim', value: 0, line: null },
+    ])
+    // Alone, nobody has Crédito.
+    expect(await fixture.ok(creditNow(['bruno']), vars)).toEqual([
+      { person: 'bruno', value: 0, line: null },
+    ])
+  })
+
   test('who fell behind gets Crédito, and her film rises with the Crédito line', async () => {
     const { fixture, vars } = useCreditFixture()
     const before = await recommend(fixture, vars, DONO_QUIM)
