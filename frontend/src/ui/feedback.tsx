@@ -15,6 +15,7 @@ import { FIELD } from './kit/field'
 import { FieldLabel } from './kit/field-label'
 import { Option } from './kit/option'
 import { PriceSticker } from './kit/sticker'
+import { OwnerTag } from './kit/owner-tag'
 import {
   Alert,
   CatalogSearch,
@@ -22,9 +23,8 @@ import {
   Items,
   Meta,
   Notice,
-  OwnerTag,
   Section,
-  SubmitButton,
+  Submit,
   TextField,
 } from './person-parts'
 import {
@@ -185,9 +185,9 @@ function FeedbackForm({
         </div>
       </Section>
 
-      <SubmitButton className="w-full sm:w-auto sm:self-start">
+      <Submit variant="primary" className="w-full sm:w-auto sm:self-start">
         {form.submit}
-      </SubmitButton>
+      </Submit>
     </form>
   )
 }

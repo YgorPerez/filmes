@@ -1,6 +1,8 @@
-// The app's drawn icons (DESIGN.md, from the Locadora de bairro prototype):
-// a 24px grid, a 1.8 stroke in the text's colour, round caps. Always
-// beside a word, so they are hidden from screen readers.
+// The app's one set of drawn icons (DESIGN.md, from the Locadora de bairro
+// prototype): authored SVG on a 24px grid, a 1.8 stroke in the text's
+// colour, round caps, never a glyph or an emoji. Always beside a word, so
+// they are hidden from screen readers. The Cartaz keeps its own copy
+// (billboard-icons.tsx), since the MCP Apps view is self-contained.
 
 const PATHS = {
   home: <path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z" />,
@@ -35,6 +37,7 @@ const PATHS = {
   ),
   arrow: <path d="M5 12h14M13.5 6.5L19 12l-5.5 5.5" />,
   plus: <path d="M12 5v14M5 12h14" />,
+  check: <path d="M5 12.5l4.5 4.5L19 7.5" />,
   alert: (
     <>
       <path d="M12 4l9 16H3z" />

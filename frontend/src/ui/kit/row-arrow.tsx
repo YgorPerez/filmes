@@ -1,19 +1,8 @@
-// The 16px arrow at the end of a row that leads to another page (DESIGN.md,
-// Prateleira de navegação), drawn, in the row's text colour.
+import { Icon } from './icon'
 
-export function RowArrow() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 16 16"
-      className="size-4 shrink-0 text-ink-2"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M6 3.5 10.5 8 6 12.5" />
-    </svg>
-  )
+// The 16px arrow at the end of a row that leads to another page (DESIGN.md,
+// Prateleira de navegação), drawn, in `ink-2`.
+
+export function RowArrow({ className = '' }: { className?: string }) {
+  return <Icon name="arrow" className={`size-4 text-ink-2 ${className}`} />
 }

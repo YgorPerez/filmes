@@ -6,22 +6,17 @@ import { CATALOG_SEARCH } from './catalog-search.copy'
 import { PERSON } from './person.copy'
 import { FIELD } from './kit/field'
 import { FieldLabel } from './kit/field-label'
-import { OwnerTag } from './kit/owner-tag'
 import { Alert, Notice } from './kit/status'
 import { Button, buttonVariants } from './shadcn/button'
 
 // The pieces the Pessoas screens share, and the other Dono screens with
-// them: the alert and the notice (kit/status), the Dono tag (kit/owner-tag),
-// a section's card, the fields, the forms that post an action and their
-// submit button.
+// them: the alert and the notice, a section's card, the fields, the forms
+// that post an action and their submit button. The alert and the notice
+// are kit/status's; these screens take them from here with the rest of
+// their parts, which keeps kit/status under fallow's coupling threshold
+// (its fan-in at most the project's p95).
 
-export { Alert, Notice, OwnerTag }
-
-/** A form's submit button with every Button prop (`disabled`...);
- * `Submit` is the plain one. */
-export const SubmitButton = (
-  props: Omit<ComponentProps<typeof Button>, 'type'>,
-) => <Button type="submit" {...props} />
+export { Alert, Notice }
 
 /** A section of the Pessoa's page: a card with its title. */
 export function Section({
@@ -238,18 +233,16 @@ export function SelectField({
   )
 }
 
-/** The submit of a form, an option unless `variant` says otherwise. */
+/** The submit of a form, with every Button prop (`disabled`...): an
+ * option at the start of its line unless `variant` or `className` say
+ * otherwise. */
 export function Submit({
   variant = 'option',
-  children,
-}: {
-  variant?: 'primary' | 'option'
-  children: ReactNode
-}) {
+  className = 'self-start',
+  ...props
+}: Omit<ComponentProps<typeof Button>, 'type'>) {
   return (
-    <Button type="submit" variant={variant} className="self-start">
-      {children}
-    </Button>
+    <Button type="submit" variant={variant} className={className} {...props} />
   )
 }
 
@@ -432,7 +425,7 @@ export function CatalogSearch({
             className={`${FIELD} w-full`}
           />
         </label>
-        <SubmitButton variant="option">{submit}</SubmitButton>
+        <Submit className="">{submit}</Submit>
       </form>
       {answer && <Results answer={answer} pick={pick} />}
     </Section>

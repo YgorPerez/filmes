@@ -11,22 +11,22 @@ import type { RequestOptions, SessionItem } from '#/platform/sessions'
 import { Billboard } from './billboard'
 import { ImportsFrame } from './imports'
 import { Option } from './kit/option'
+import { OwnerTag } from './kit/owner-tag'
+import { Slip } from './kit/slip'
 import {
   Alert,
   CatalogSearch,
   LinkButton,
   Meta,
   Notice,
-  OwnerTag,
   Section,
   SelectField,
-  SubmitButton,
+  Submit,
   TextField,
 } from './person-parts'
 import {
   Avatars,
   DateLabel,
-  Ficha,
   GroupHeading,
   names,
   NewSessionLink,
@@ -53,7 +53,8 @@ function OpenRow({ session: s }: { session: SessionItem }) {
   const films = SESSIONS.films(s.recommendation.length)
   return (
     <li>
-      <Ficha
+      <Slip
+        as="article"
         head={
           <a
             href={sessionHref(s.id)}
@@ -81,7 +82,7 @@ function OpenRow({ session: s }: { session: SessionItem }) {
           label={list.feedbackLabel(s.id)}
           action={list.feedback}
         />
-      </Ficha>
+      </Slip>
     </li>
   )
 }
@@ -359,9 +360,9 @@ function NewSessionForm({
       <Rule options={options} />
       <Moods moods={options.moods} />
       <Constraints similar={similar} />
-      <SubmitButton className="w-full sm:w-auto sm:self-start">
+      <Submit variant="primary" className="w-full sm:w-auto sm:self-start">
         {form.submit}
-      </SubmitButton>
+      </Submit>
     </form>
   )
 }

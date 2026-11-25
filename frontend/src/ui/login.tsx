@@ -1,6 +1,6 @@
 import type { LoginRefusal } from '#/content/login-refusal'
 import { LOGIN } from './login.copy'
-import { Icon } from './kit/icon'
+import { Alert } from './kit/status'
 import { buttonVariants } from './shadcn/button'
 
 // `/entrar`, the only page without a Dono, so outside the app shell: the
@@ -34,13 +34,9 @@ export function Login({ refusal }: { refusal?: LoginRefusal }) {
           </h1>
           <p className="text-[15px] text-pretty">{LOGIN.lead}</p>
           {refusal && (
-            <p
-              role="alert"
-              className="flex gap-sm rounded-field border-[1.5px] border-ink bg-surface px-lg py-md text-evidence text-ink"
-            >
-              <Icon name="alert" className="mt-px size-[18px]" />
-              <span>{LOGIN.refusals[refusal]}</span>
-            </p>
+            <Alert className="bg-surface text-evidence">
+              {LOGIN.refusals[refusal]}
+            </Alert>
           )}
           <a
             href="/auth/google"

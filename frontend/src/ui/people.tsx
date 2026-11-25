@@ -1,8 +1,9 @@
 import type { PersonCreateRefusal, TypedPerson } from '#/content/person-create'
 import type { PersonEntry } from '#/platform/people'
 import { PEOPLE } from './person.copy'
-import { Alert, Disclosure, OwnerTag, Submit, TextField } from './person-parts'
-import { Chevron } from './person-marks'
+import { OwnerTag } from './kit/owner-tag'
+import { Alert, Disclosure, Submit, TextField } from './person-parts'
+import { RowArrow } from './kit/row-arrow'
 import { buttonVariants } from './shadcn/button'
 
 /** The create form as it comes back: why it was refused, what was typed. */
@@ -59,7 +60,7 @@ export function PeopleList({
                   )}
                 </span>
                 <span className="flex items-center px-xl">
-                  <Chevron />
+                  <RowArrow />
                 </span>
               </a>
             </li>

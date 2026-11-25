@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react'
-import { ArrowIcon, PlusIcon } from './kit/icons'
+import { Icon } from './kit/icon'
 import { Avatar } from './kit/person'
+import { RowArrow } from './kit/row-arrow'
 import { ShelfLabel } from './kit/shelf-label'
 import { buttonVariants } from './shadcn/button'
 
 // The pieces the Sessões and the Feedback screens share (DESIGN.md, Locadora
-// de bairro): who is in a Session, its "ficha", the card-stock box of a
+// de bairro): who is in a Session, the card-stock box of a
 // Session still to return ("devolver a fita"), the Label heading of a
 // group, the row of a closed Session, and the Catálogo search folded away
 // until it is needed.
@@ -54,24 +55,6 @@ export function PersonAvatar({
 
 export const names = (people: readonly Named[]) =>
   people.map((p) => p.name).join(', ')
-
-/** A Session's card, like the home's "Última Sessão": `surface`, a 1px
- * `rule`, 12px; the head (its stub) parted from the rest by a dashed 1px
- * line. */
-export function Ficha({
-  head,
-  children,
-}: {
-  head: ReactNode
-  children: ReactNode
-}) {
-  return (
-    <article className="flex flex-col gap-lg rounded-card border border-rule bg-surface px-xl pt-2xl pb-xl">
-      <div className="border-b border-dashed border-rule pb-md">{head}</div>
-      {children}
-    </article>
-  )
-}
 
 /** The date of a Session, as a Label: Rubik 700 12px in capitals, `ink-2`,
  * tabular. */
@@ -160,7 +143,7 @@ export function ShelfRow({
       >
         {before}
         <span className="flex min-w-0 flex-1 flex-col gap-0.5">{children}</span>
-        <ArrowIcon className="text-ink-2" />
+        <RowArrow />
       </a>
     </li>
   )
@@ -186,7 +169,7 @@ export function SearchFold({
           <span className="font-display text-control font-bold">{summary}</span>
           <span className="text-[14px] text-ink-2">{hint}</span>
         </span>
-        <ArrowIcon className="rotate-90 text-ink-2 group-open:-rotate-90" />
+        <RowArrow className="rotate-90 group-open:-rotate-90" />
       </summary>
       <div className="pt-sm">{children}</div>
     </details>
@@ -200,7 +183,7 @@ export function NewSessionLink({ children }: { children: ReactNode }) {
       href="/sessoes/nova"
       className={buttonVariants({ className: 'self-start' })}
     >
-      <PlusIcon />
+      <Icon name="plus" className="size-[18px]" />
       {children}
     </a>
   )
