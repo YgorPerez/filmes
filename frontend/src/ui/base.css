@@ -1,5 +1,6 @@
 /* The page's base over the tokens: the app (`styles.css`) and the Cartaz's
- * MCP Apps view (`mcp-view/view.css`) both import it. */
+ * MCP Apps view (`mcp-view/view.css`) both import it. DESIGN.md, Browser
+ * surfaces. */
 @layer base {
   html {
     color-scheme: light dark;
@@ -14,8 +15,22 @@
     line-height: var(--text-body--line-height);
   }
 
+  ::selection {
+    background: color-mix(
+      in srgb,
+      var(--color-sticker-yellow) 53%,
+      transparent
+    );
+    color: var(--color-ink);
+  }
+
+  input,
+  textarea {
+    caret-color: var(--color-ink);
+  }
+
   :focus-visible {
-    outline: 2px solid var(--color-ink);
+    outline: 2px solid var(--color-focus);
     outline-offset: 2px;
   }
 }

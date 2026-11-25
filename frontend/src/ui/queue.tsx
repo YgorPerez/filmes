@@ -1,3 +1,4 @@
+import { FIELD } from './kit/field'
 import type { ReactNode } from 'react'
 import type { QueueNotice, QueueRefusal } from '#/content/import-action'
 import type { QueueEntry, QueuePage, QueueSuggestion } from '#/platform/imports'
@@ -25,7 +26,7 @@ function QueueForm({
   action,
   id,
   label,
-  className = 'flex flex-col gap-md',
+  className = 'flex flex-col gap-xl',
   children,
 }: {
   action: 'confirmar' | 'descartar' | 'reprocessar'
@@ -63,7 +64,7 @@ export function QueueScreen({
   return (
     <ImportsFrame back={QUEUE.back} backTo="/importar">
       <div className="flex flex-col gap-sm">
-        <h1 className="text-title">{QUEUE.title}</h1>
+        <h1 className="font-display text-title">{QUEUE.title}</h1>
         <p className="text-ink-2">{QUEUE.lead}</p>
       </div>
       {refusal && <Alert>{QUEUE.refusals[refusal]}</Alert>}
@@ -77,7 +78,7 @@ export function QueueScreen({
           {queue.items.length === 0 ? (
             <p className="text-ink-2">{QUEUE.empty}</p>
           ) : (
-            <ul className="flex flex-col gap-md">
+            <ul className="flex flex-col gap-xl">
               {queue.items.map((item) => (
                 <Card key={item.id} item={item} names={queue.names} />
               ))}
@@ -122,10 +123,10 @@ function Card({
     <li>
       <section
         aria-labelledby={headingId}
-        className="flex flex-col gap-md rounded-card border border-rule bg-surface p-md"
+        className="flex flex-col gap-xl rounded-card border border-rule bg-surface p-xl"
       >
         <div className="flex flex-col gap-xs">
-          <h2 id={headingId} className="text-title">
+          <h2 id={headingId} className="font-display text-title">
             {title}
           </h2>
           <Meta
@@ -147,7 +148,9 @@ function Card({
 function Suggestions({ item }: { item: QueueEntry }) {
   return (
     <div className="flex flex-col gap-sm">
-      <h3 className="text-label text-ink-2 uppercase">{QUEUE.candidates}</h3>
+      <h3 className="font-display text-label text-ink-2 uppercase">
+        {QUEUE.candidates}
+      </h3>
       <ul className="flex flex-col">
         {item.candidates.map((candidate) => (
           <Suggestion key={candidate.tmdb} id={item.id} candidate={candidate} />
@@ -181,7 +184,7 @@ function Suggestion({
         <input type="hidden" name="filme" value={candidate.link} />
         <Button
           type="submit"
-          variant="quiet"
+          variant="option"
           aria-label={QUEUE.pickLabel(label, candidate.tmdb)}
         >
           {QUEUE.pick}
@@ -221,7 +224,7 @@ function Discard({ id, title }: { id: string; title: string }) {
             name="motivo"
             list="motivos"
             autoComplete="off"
-            className="min-h-touch w-full rounded-field border border-rule bg-surface px-3 py-[9px] text-[15px] text-ink"
+            className={`${FIELD} w-full`}
           />
         </label>
         <Submit>{QUEUE.discard}</Submit>

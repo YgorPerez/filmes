@@ -43,7 +43,7 @@ const outcome = (s: SessionItem) =>
 function Row({ session: s }: { session: SessionItem }) {
   const { list } = SESSIONS
   return (
-    <li className="flex flex-wrap items-center gap-sm border-rule px-md py-sm not-first:border-t">
+    <li className="flex flex-wrap items-center gap-sm border-rule px-xl py-sm not-first:border-t">
       <a
         href={sessionHref(s.id)}
         className="flex min-h-touch min-w-0 flex-1 basis-[240px] flex-col justify-center gap-0.5 text-ink no-underline"
@@ -81,7 +81,7 @@ function Group({
 }) {
   return (
     <section aria-labelledby={id} className="flex flex-col gap-sm">
-      <h2 id={id} className="text-title">
+      <h2 id={id} className="font-display text-title">
         {title}
       </h2>
       {sessions.length === 0 ? (
@@ -104,7 +104,7 @@ export function SessionList({ sessions }: { sessions: SessionItem[] | null }) {
   return (
     <ImportsFrame back={SESSIONS.back} backTo="/">
       <div className="flex flex-col gap-sm">
-        <h1 className="text-title">{list.title}</h1>
+        <h1 className="font-display text-title">{list.title}</h1>
         <p className="text-ink-2">{list.lead}</p>
       </div>
       <LinkButton href="/sessoes/nova" variant="primary">
@@ -204,7 +204,7 @@ function SessionView({
   return (
     <>
       <div className="flex flex-col gap-xs">
-        <h1 className="text-title">
+        <h1 className="font-display text-title">
           {session.title} {s.date}
         </h1>
         <Meta parts={[names(s.attendees), s.request]} />
@@ -306,7 +306,7 @@ export function NewSession({
   return (
     <ImportsFrame back={SESSIONS.back} backTo="/sessoes">
       <div className="flex flex-col gap-sm">
-        <h1 className="text-title">{form.title}</h1>
+        <h1 className="font-display text-title">{form.title}</h1>
         <p className="text-ink-2">{form.lead}</p>
       </div>
       {refusal && <Alert>{SESSIONS.refusals[refusal]}</Alert>}
@@ -341,7 +341,7 @@ function NewSessionForm({
       method="post"
       action="/sessoes/nova/enviar"
       aria-label={form.label}
-      className="flex flex-col gap-xl"
+      className="flex flex-col gap-3xl"
     >
       <Attendees options={options} />
       <Rule options={options} />

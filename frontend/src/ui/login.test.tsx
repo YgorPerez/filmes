@@ -17,9 +17,9 @@ describe('Login', () => {
     expect(html).toContain(LOGIN.refusals[refusal])
   })
 
-  it('reads the whole letreiro to screen readers', () => {
-    expect(renderToStaticMarkup(<Login />)).toContain(
-      'role="img" aria-label="filmes"',
+  it('opens with the brand on the case', () => {
+    expect(renderToStaticMarkup(<Login />)).toMatch(
+      /<p class="[^"]*bg-case[^"]*">filmes<\/p>/u,
     )
   })
 })

@@ -25,7 +25,7 @@ function Running({
         aria-label={COPY.progress}
         max={100}
         value={job.progress}
-        className="h-2 w-full accent-marquee-red"
+        className="h-2 w-full accent-ink"
       />
       <p>
         {Math.floor(job.progress)}% · {job.message || COPY.running}
@@ -47,7 +47,7 @@ function Measures({ result }: { result: EvaluationSummary }) {
   ] as const
   return (
     <table className="w-full text-left text-meta">
-      <caption className="text-left text-label text-ink-2 uppercase">
+      <caption className="text-left font-display text-label text-ink-2 uppercase">
         {COPY.measures}
       </caption>
       <thead>
@@ -75,7 +75,7 @@ function Measures({ result }: { result: EvaluationSummary }) {
 function Best({ best }: { best: NonNullable<EvaluationSummary['best']> }) {
   return (
     <table className="w-full text-left text-meta">
-      <caption className="text-left text-label text-ink-2 uppercase">
+      <caption className="text-left font-display text-label text-ink-2 uppercase">
         {COPY.best}
       </caption>
       <thead>
@@ -101,7 +101,7 @@ function Best({ best }: { best: NonNullable<EvaluationSummary['best']> }) {
 function Done({ job }: { job: Extract<EvaluationJob, { state: 'done' }> }) {
   const { result } = job
   return (
-    <div className="flex flex-col gap-md">
+    <div className="flex flex-col gap-xl">
       <p role="status">
         {COPY.done(job.finishedAt)} {COPY.file(result.file)}
       </p>
@@ -147,7 +147,7 @@ function Report({ report }: { report: EvaluationReport | null }) {
 
 function RunForm({ running }: { running: boolean }) {
   return (
-    <ActionPost action="avaliar" className="flex flex-col gap-md">
+    <ActionPost action="avaliar" className="flex flex-col gap-xl">
       <label className="flex min-h-touch items-center gap-sm">
         <input type="checkbox" name="grade" value="sim" className="size-5" />
         <span>

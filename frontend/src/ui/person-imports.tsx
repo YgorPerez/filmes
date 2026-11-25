@@ -1,3 +1,4 @@
+import { FIELD } from './kit/field'
 import type { ReactNode } from 'react'
 import type { PersonImports } from '@filmes/engine'
 import {
@@ -53,7 +54,7 @@ export function PersonImportsScreen({
         <Alert>{COPY.unknown}</Alert>
       ) : (
         <>
-          <h1 className="text-title">{COPY.title(page.name)}</h1>
+          <h1 className="font-display text-title">{COPY.title(page.name)}</h1>
           {refusal && <Alert>{COPY.refusals[refusal]}</Alert>}
           {done && (
             <Notice>
@@ -93,7 +94,7 @@ function ImportForm({
       action={actionOf(slug)}
       encType={upload ? 'multipart/form-data' : undefined}
       aria-label={label}
-      className="flex flex-col gap-md"
+      className="flex flex-col gap-xl"
     >
       <input type="hidden" name="acao" value={action} />
       {children}
@@ -116,7 +117,7 @@ function Files({ slug, page }: Part) {
                 <summary
                   aria-label={files.removeLabel(record.original)}
                   className={buttonVariants({
-                    variant: 'quiet',
+                    variant: 'option',
                     className: 'list-none [&::-webkit-details-marker]:hidden',
                   })}
                 >
@@ -128,7 +129,7 @@ function Files({ slug, page }: Part) {
                     <input type="hidden" name="arquivo" value={record.file} />
                     <Button
                       type="submit"
-                      variant="quiet"
+                      variant="option"
                       className="self-start"
                     >
                       {files.removeConfirm}
@@ -159,7 +160,7 @@ function Letterboxd({ page }: { page: PersonImports }) {
   return (
     <Section id="letterboxd" title={copy.title} lead={copy.films(report.films)}>
       {report.films > 0 && (
-        <dl className="grid grid-cols-[auto_1fr] gap-x-md gap-y-xs">
+        <dl className="grid grid-cols-[auto_1fr] gap-x-xl gap-y-xs">
           <dt className="font-semibold">{copy.resolved}</dt>
           <dd className="text-ink-2">{resolved.join(' · ') || '0'}</dd>
           <dt className="font-semibold">{copy.discarded}</dt>
@@ -179,7 +180,7 @@ function Letterboxd({ page }: { page: PersonImports }) {
           <a
             href="/fila"
             className={buttonVariants({
-              variant: 'quiet',
+              variant: 'option',
               className: 'self-start',
             })}
           >
@@ -202,8 +203,7 @@ function Trakt({ page }: { page: PersonImports }) {
   )
 }
 
-const control =
-  'min-h-touch w-full rounded-field border border-rule bg-surface px-3 py-[9px] text-[15px] text-ink file:mr-sm file:rounded-pill file:border file:border-rule file:bg-surface-2 file:px-3 file:py-1 file:text-ink'
+const control = `${FIELD} w-full file:mr-sm file:rounded-pill file:border file:border-rule file:bg-surface-2 file:px-3 file:py-1 file:text-ink`
 
 function FileField() {
   return (
@@ -265,7 +265,7 @@ function Rss({ slug, name }: { slug: string; name: string }) {
             name="consentimento"
             value="sim"
             required
-            className="mt-1 size-5 shrink-0 accent-marquee-red"
+            className="mt-1 size-5 shrink-0 accent-ink"
           />
           <span>{rss.consent(name)}</span>
         </label>

@@ -25,6 +25,9 @@ export interface McpServerOptions {
    * them. Unset (stdio), each call of an admin tool reads the Dono's file
    * and answers `ADMIN_ONLY` to a non-admin. */
   readonly admin?: boolean
+  /** The app's address (`APP_ORIGIN`), when the server runs in the app:
+   * the Cartaz's view loads the fonts from it. */
+  readonly appOrigin?: string
 }
 
 export const SERVER_INFO = { name: 'filmes', version: '0.2.0' }
@@ -67,6 +70,7 @@ export function createMcpServer({
   owner,
   tools = TOOLS,
   admin,
+  appOrigin,
 }: McpServerOptions): McpServer {
   const server = new McpServer(SERVER_INFO, { instructions: INSTRUCTIONS })
   for (const tool of tools.filter((t) => !t.admin || admin !== false))
@@ -91,6 +95,6 @@ export function createMcpServer({
         return answer(outcome.output, outcome.exitCode !== 0)
       },
     )
-  registerBillboardView(server)
+  registerBillboardView(server, appOrigin)
   return server
 }

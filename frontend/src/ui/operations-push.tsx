@@ -21,7 +21,7 @@ function PushLines({ status }: { status: PushStatus }) {
       ))}
       {status.lastError && (
         <div className="flex flex-col gap-xs">
-          <span className="text-label text-ink-2 uppercase">
+          <span className="font-display text-label text-ink-2 uppercase">
             {COPY.lastError}
           </span>
           <pre className="overflow-x-auto rounded-field bg-surface-2 p-sm text-meta whitespace-pre-wrap">
@@ -61,7 +61,7 @@ export function PushSection({ status }: { status: PushStatus | null }) {
  * (`alert`, after three in a row). */
 export function PushBanner({ status }: { status: PushStatus }) {
   return (
-    <div className="mx-auto max-w-[720px] px-lg pt-xl">
+    <div className="mx-auto max-w-[720px] px-2xl pt-3xl">
       <Alert>
         {COPY.banner(status.pending, status.failures)}{' '}
         <a href="/operacoes#envio" className="font-semibold underline">

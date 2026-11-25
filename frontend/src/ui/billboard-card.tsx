@@ -1,3 +1,4 @@
+import { FIELD } from './kit/field'
 import type {
   BillboardFilm,
   BillboardLine,
@@ -5,52 +6,16 @@ import type {
 } from '@filmes/engine'
 import type { ReactNode } from 'react'
 import type { FilmMarks } from './billboard-marks'
+import { Chip } from './kit/chip'
+import { Avatar, PersonDot } from './kit/person'
+import { PriceSticker, Sticker } from './kit/sticker'
+import { TapeCase } from './kit/tape-case'
 import { BILLBOARD } from './billboard.copy'
 
 // One film of the Cartaz: the poster with a dot per Presente, the header,
 // "Por que cada um vai gostar" and, while the Session takes a reply, the
 // marks (Já vi per Presente with her Nota and what she thought, Trocar,
 // stars, comment). The state is the Cartaz's (`billboard.tsx`).
-
-// One class list per person colour, written out so Tailwind finds them.
-const FILLED = [
-  'bg-person-1 border-person-1',
-  'bg-person-2 border-person-2',
-  'bg-person-3 border-person-3',
-  'bg-person-4 border-person-4',
-  'bg-person-5 border-person-5',
-  'bg-person-6 border-person-6',
-]
-const HOLLOW = [
-  'border-person-1 text-person-1',
-  'border-person-2 text-person-2',
-  'border-person-3 text-person-3',
-  'border-person-4 text-person-4',
-  'border-person-5 text-person-5',
-  'border-person-6 text-person-6',
-]
-const colorOf = (person: BillboardPerson, hollow: boolean) =>
-  (hollow ? HOLLOW : FILLED)[(person.color - 1) % FILLED.length]
-
-/** A Presente's initial in her colour; hollow when she has no Fato. */
-export function Avatar({
-  person,
-  hollow = false,
-}: {
-  person: BillboardPerson
-  hollow?: boolean
-}) {
-  return (
-    <span
-      title={person.name}
-      className={`inline-flex size-6 shrink-0 items-center justify-center rounded-full border-2 text-[11px] font-bold ${
-        hollow ? 'bg-transparent' : 'text-on-person'
-      } ${colorOf(person, hollow)}`}
-    >
-      {person.initial}
-    </span>
-  )
-}
 
 const byslug = (people: readonly BillboardPerson[]) =>
   new Map(people.map((p) => [p.slug, p]))
@@ -67,7 +32,7 @@ function Poster({
   film: BillboardFilm
   people: readonly BillboardPerson[]
   first: boolean
-  stamp: string | null
+  stamp: 'swap' | 'seen' | null
 }) {
   const { card } = BILLBOARD
   const without = new Set(film.withoutFact)
@@ -76,43 +41,51 @@ function Poster({
       href={film.imdbUrl}
       target="_blank"
       rel="noopener noreferrer"
-      className="relative grid aspect-[2/3] w-[104px] shrink-0 place-items-center self-start overflow-hidden rounded-poster bg-surface-2 p-2.5 text-center text-meta text-ink-2 no-underline sm:w-[160px]"
+      className="relative shrink-0 self-start no-underline"
     >
-      {film.poster ? (
-        <img
-          src={film.poster}
-          alt={card.poster(film.title)}
-          loading={first ? 'eager' : 'lazy'}
-          className="absolute inset-0 size-full object-cover group-data-swap/card:opacity-72"
-        />
-      ) : (
-        <span>{film.title}</span>
-      )}
-      {stamp && (
-        <span
-          className={`absolute top-[38%] left-1/2 -translate-x-1/2 -rotate-4 rounded-stamp border-2 bg-surface px-2 pt-[5px] pb-1 font-letter text-[15px] leading-none tracking-[0.06em] uppercase ${
-            stamp === card.swapStamp
-              ? 'border-marquee-red-text text-marquee-red-text'
-              : 'border-ink text-ink'
-          }`}
-        >
-          {stamp}
-        </span>
-      )}
-      <span className="absolute inset-x-0 bottom-0 flex justify-center gap-xs bg-linear-to-b from-transparent to-black/70 pt-4 pb-2">
+      <TapeCase
+        className="w-[112px] sm:w-[160px]"
+        cover={
+          film.poster ? (
+            <img
+              src={film.poster}
+              alt={card.poster(film.title)}
+              loading={first ? 'eager' : 'lazy'}
+              className="absolute inset-0 size-full object-cover group-data-swap/card:opacity-70"
+            />
+          ) : (
+            <span>{film.title}</span>
+          )
+        }
+      >
         {people.map((p) => {
           const hollow = without.has(p.slug)
           return (
-            <span
+            <PersonDot
               key={p.slug}
+              person={p}
+              hollow={hollow}
               title={hollow ? card.noFact(p.name) : p.name}
-              className={`size-3 rounded-full border-2 ${
-                hollow ? 'bg-black/35' : ''
-              } ${colorOf(p, hollow)}`}
             />
           )
         })}
-      </span>
+      </TapeCase>
+      {stamp && (
+        <Sticker
+          kind={stamp}
+          className="absolute top-[40%] left-1/2 -translate-x-1/2"
+        >
+          {stamp === 'swap' ? card.swapStamp : card.seenStamp}
+        </Sticker>
+      )}
+      {film.new && (
+        <Sticker kind="new" className="absolute -top-sm -right-md">
+          {card.isNew}
+        </Sticker>
+      )}
+      <PriceSticker className="absolute -top-[9px] -left-[9px]">
+        {film.position}
+      </PriceSticker>
     </a>
   )
 }
@@ -120,45 +93,30 @@ function Poster({
 function Header({ film, id }: { film: BillboardFilm; id: string }) {
   const { card } = BILLBOARD
   return (
-    <div className="flex min-w-0 flex-col gap-sm group-data-swap/card:opacity-72">
-      <h2
-        id={id}
-        className="flex flex-wrap items-baseline gap-x-2.5 gap-y-0.5 text-title"
-      >
-        <span className="font-letter text-position text-marquee-red-text">
-          {film.position}
-        </span>
+    <div className="flex min-w-0 flex-col gap-sm">
+      <h2 id={id} className="flex flex-col gap-y-0.5 font-display text-title">
+        <span className="sr-only">{film.position}</span>
         <span>{film.title}</span>
         {film.originalTitle && (
-          <span className="text-meta text-ink-2 italic">
+          <span className="font-body text-meta text-ink-2">
             {film.originalTitle}
-          </span>
-        )}
-        {film.new && (
-          <span className="self-center rounded-pill bg-bulb px-2 py-1 text-[11px] leading-none font-bold tracking-[0.05em] text-[#141414] uppercase">
-            {card.isNew}
           </span>
         )}
       </h2>
       {film.synopsis && (
-        <p className="text-[15.5px] leading-normal text-pretty">
+        <p className="max-w-[60ch] text-synopsis text-pretty">
           {film.synopsis}
         </p>
       )}
       <div className="flex flex-wrap gap-xs">
         {film.chips.map((chip) => (
-          <span
-            key={chip}
-            className="rounded-pill bg-surface-2 px-[9px] py-[3px] text-[12px]"
-          >
-            {chip}
-          </span>
+          <Chip key={chip}>{chip}</Chip>
         ))}
         <a
           href={film.imdbUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="rounded-pill border border-rule px-[9px] py-[3px] text-[12px] font-semibold text-ink no-underline"
+          className="rounded-pill border-[1.5px] border-rule px-[9px] py-[5px] font-display text-chip font-bold text-ink no-underline"
         >
           {card.imdb(film.imdbRatingText, film.votesText)}
         </a>
@@ -211,7 +169,7 @@ function Why({
   const without = film.withoutFact.flatMap((slug) => known.get(slug) ?? [])
   return (
     <div className="flex flex-col gap-sm border-t border-rule pt-3">
-      <h3 className="flex justify-between gap-sm text-label text-ink-2 uppercase">
+      <h3 className="flex justify-between gap-sm font-display text-label text-ink-2 uppercase">
         {card.why}
         <span className="tracking-normal normal-case">{film.coverage}</span>
       </h3>
@@ -240,7 +198,7 @@ function Why({
 }
 
 const toggle =
-  'relative inline-flex min-h-touch cursor-pointer items-center gap-xs rounded-pill border border-rule bg-surface px-[14px] text-[14px] has-checked:border-2 has-checked:border-ink has-checked:bg-surface-2 has-checked:font-semibold has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-ink'
+  'relative inline-flex min-h-touch cursor-pointer items-center gap-xs rounded-pill border-[1.5px] border-rule bg-surface px-xl font-display text-control has-checked:border-2 has-checked:border-ink has-checked:bg-surface-2 has-checked:font-bold has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-focus'
 
 /** A toggle pill: a checkbox, with a ✓ once it is on. */
 function Toggle({
@@ -267,8 +225,7 @@ function Toggle({
   )
 }
 
-const field =
-  'min-h-touch rounded-field border border-rule bg-surface px-3 py-[9px] text-[15px] text-ink'
+const field = FIELD
 
 /** Her Nota and what she thought, once she marked Já vi. */
 function SeenDetail({
@@ -384,7 +341,9 @@ function Marks({
         aria-label={copy.seenGroup(film.position)}
         className="flex flex-wrap items-center gap-sm"
       >
-        <span className="text-label text-ink-2 uppercase">{copy.seen}</span>
+        <span className="font-display text-label text-ink-2 uppercase">
+          {copy.seen}
+        </span>
         {people.map((p) => (
           <Toggle
             key={p.slug}
@@ -455,19 +414,18 @@ export function BillboardCard({
   marks?: FilmMarks
   onChange?: (marks: FilmMarks) => void
 }) {
-  const { card } = BILLBOARD
   const allSeen =
     marks !== undefined &&
     people.length > 0 &&
     marks.seen.length === people.length
-  const stamp = marks?.swap ? card.swapStamp : allSeen ? card.seenStamp : null
+  const stamp = marks?.swap ? 'swap' : allSeen ? 'seen' : null
   return (
     <article
       aria-labelledby={`filme-${film.id}`}
       data-swap={marks?.swap || undefined}
-      className="group/card flex flex-col gap-md rounded-card border border-rule bg-surface p-md sm:p-lg"
+      className="group/card flex flex-col gap-xl rounded-card border border-rule bg-surface p-xl sm:p-2xl"
     >
-      <div className="flex gap-md">
+      <div className="flex gap-xl">
         <Poster film={film} people={people} first={first} stamp={stamp} />
         <Header film={film} id={`filme-${film.id}`} />
       </div>

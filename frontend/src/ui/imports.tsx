@@ -9,7 +9,7 @@ import { ratingField, type RatingRefusal } from '#/content/rating-form'
 import type { SearchAnswer } from '#/platform/catalog-search'
 import type { ImportsOverview } from '#/platform/imports'
 import { IMPORTS } from './imports.copy'
-import { Marquee } from './marquee'
+import { Brand } from './kit/brand'
 import {
   Alert,
   CatalogSearch,
@@ -47,10 +47,10 @@ export function ImportsFrame({
   children: ReactNode
 }) {
   return (
-    <main className="mx-auto flex max-w-[720px] flex-col gap-xl px-lg py-xl">
-      <header className="flex flex-wrap items-center justify-between gap-md">
-        <Marquee words={['filmes']} />
-        <a href={backTo} className={buttonVariants({ variant: 'quiet' })}>
+    <main className="mx-auto flex max-w-[720px] flex-col gap-3xl px-2xl py-3xl">
+      <header className="flex flex-wrap items-center justify-between gap-xl">
+        <Brand />
+        <a href={backTo} className={buttonVariants({ variant: 'option' })}>
           {back}
         </a>
       </header>
@@ -65,7 +65,7 @@ function LinkRow({ href, children }: { href: string; children: ReactNode }) {
     <li className="border-rule not-first:border-t">
       <a
         href={href}
-        className="flex min-h-touch flex-wrap items-center gap-x-sm gap-y-xs px-md py-sm text-ink no-underline"
+        className="flex min-h-touch flex-wrap items-center gap-x-sm gap-y-xs px-xl py-sm text-ink no-underline"
       >
         {children}
         <span aria-hidden="true" className="ml-auto text-ink-2">
@@ -91,7 +91,7 @@ export function ImportsList({
   return (
     <ImportsFrame back={IMPORTS.back} backTo="/">
       <div className="flex flex-col gap-sm">
-        <h1 className="text-title">{IMPORTS.title}</h1>
+        <h1 className="font-display text-title">{IMPORTS.title}</h1>
         <p className="text-ink-2">{IMPORTS.lead}</p>
       </div>
       {gone && <Alert>{IMPORTS.gone}</Alert>}
@@ -108,7 +108,10 @@ export function ImportsList({
             </LinkRow>
           </ul>
           <section aria-labelledby="pessoas" className="flex flex-col gap-sm">
-            <h2 id="pessoas" className="text-label text-ink-2 uppercase">
+            <h2
+              id="pessoas"
+              className="font-display text-label text-ink-2 uppercase"
+            >
               {IMPORTS.people}
             </h2>
             {overview.people.length === 0 ? (
@@ -199,7 +202,7 @@ export function RatingScreen({
   return (
     <ImportsFrame back={RATINGS.back} backTo="/">
       <div className="flex flex-col gap-sm">
-        <h1 className="text-title">{RATINGS.title}</h1>
+        <h1 className="font-display text-title">{RATINGS.title}</h1>
         <p className="text-ink-2">{RATINGS.lead}</p>
       </div>
       {written !== undefined && <Notice>{RATINGS.written(written)}</Notice>}
@@ -301,7 +304,7 @@ function DraftSection({
             key={id}
             actions={
               <Button
-                variant="quiet"
+                variant="option"
                 aria-label={RATINGS.remove(entry.title)}
                 onClick={() => onRemove(id)}
               >
@@ -343,17 +346,17 @@ function FilmCard({
   return (
     <article
       aria-label={RATINGS.queueLabel}
-      className="flex flex-col gap-md rounded-card border border-rule bg-surface p-md"
+      className="flex flex-col gap-xl rounded-card border border-rule bg-surface p-xl"
     >
       <div className="flex flex-col gap-xs">
-        <h2 className="text-title">{film.title}</h2>
+        <h2 className="font-display text-title">{film.title}</h2>
         <Meta parts={[yearText(film.year), film.meta.join(', ')]} />
       </div>
       <div className="flex flex-wrap gap-xs">
         {SCALE.map((rating) => (
           <Button
             key={rating}
-            variant="quiet"
+            variant="option"
             className="min-w-touch px-0"
             aria-label={RATINGS.rate(rating)}
             onClick={() => onRate(rating)}
@@ -362,7 +365,7 @@ function FilmCard({
           </Button>
         ))}
       </div>
-      <Button variant="quiet" className="self-start" onClick={onSkip}>
+      <Button variant="option" className="self-start" onClick={onSkip}>
         {RATINGS.notSeen}
       </Button>
     </article>

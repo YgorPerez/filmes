@@ -29,17 +29,19 @@ describe('the Cartaz shows', () => {
       cards().map(
         (c) => within(c).getByRole('heading', { level: 2 }).textContent,
       ),
-    ).toEqual(['1As Horas Lentas', '2Sal & FerrugemSal e Ferrugemnovo'])
+    ).toEqual(['1As Horas Lentas', '2Sal & FerrugemSal e Ferrugem'])
+    expect(within(cards()[1]!).getByText(BILLBOARD.card.isNew)).toBeTruthy()
+    expect(within(cards()[0]!).queryByText(BILLBOARD.card.isNew)).toBeNull()
   })
 
-  it('the request on the letreiro, the legend and what left', () => {
+  it('the request on the shelf label, the legend and what left', () => {
     render(<Billboard billboard={MODEL} />)
     expect(
       screen
         .getByRole('img', { name: /^Vocês dois/ })
         .getAttribute('aria-label'),
     ).toBe('Vocês dois · até 2h05 · nota 7+ no IMDb · leve')
-    expect(screen.getByText('“algo leve pra hoje”')).toBeTruthy()
+    expect(screen.getByText('algo leve pra hoje')).toBeTruthy()
     expect(screen.getByText(BILLBOARD.legend)).toBeTruthy()
     expect(screen.getByText(/^Saiu:/).textContent).toBe(
       'Saiu: 2 Sessão Maldita (Iara já viu)',

@@ -19,6 +19,7 @@ import {
 import { authFromEnvironment, type Auth } from './auth'
 import { appEngine } from './engine'
 import { adminOf, MCP_SCOPE, ownerOf, type OAuthServer } from './oauth-server'
+import { serverEnv } from './server-env'
 
 const METADATA_PATH = '/.well-known/oauth-protected-resource'
 
@@ -37,11 +38,14 @@ export function mcpHandler(engine: () => Engine): McpHttpHandler {
     const owner = ownerOf(ctx.authInfo)
     // `mcpRequest` passes a verified token on every request.
     if (!owner) throw new Error('MCP request without a verified owner')
-    // A non-admin's server has no `consult` nor `evaluate` at all.
+    // A non-admin's server has no `consult` nor `evaluate` at all. The
+    // Cartaz's view loads the fonts from the app's address.
+    const { APP_ORIGIN } = serverEnv()
     return createMcpServer({
       engine: engine(),
       owner,
       admin: adminOf(ctx.authInfo),
+      ...(APP_ORIGIN && { appOrigin: APP_ORIGIN }),
     })
   })
 }

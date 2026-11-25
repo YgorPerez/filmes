@@ -1,9 +1,11 @@
-/* The DESIGN.md tokens ("Letreiro de rua") as the Tailwind theme, named as in
- * its YAML header: the color `ground` is `--color-ground` (`bg-ground`), the
- * radius `card` is `--radius-card` (`rounded-card`), the spacing `md` is
- * `--spacing-md` (`p-md`) and the type `label` is `--text-label` with its
- * line height, weight and letter spacing. DESIGN.md is still a seed (#78):
- * when it changes, this file follows.
+/* The DESIGN.md tokens ("Locadora de bairro", #142) as the Tailwind theme,
+ * named as in its YAML header: the color `ground` is `--color-ground`
+ * (`bg-ground`), the radius `card` is `--radius-card` (`rounded-card`), the
+ * spacing `md` is `--spacing-md` (`p-md`) and the type `label` is
+ * `--text-label` with its line height, weight and letter spacing. A type
+ * role's family is separate: `font-display` (Rubik), `font-hand`
+ * (Permanent Marker), `font-body` (the system's) and `font-mono`. When
+ * DESIGN.md changes, this file follows.
  *
  * The Tailwind scales DESIGN.md does not have are dropped (`initial`), so a
  * `bg-red-500` does not exist here. The 4px `--spacing` stays.
@@ -11,80 +13,155 @@
  * Dark: the `dark-*` pairs replace the light ones under
  * `prefers-color-scheme: dark`, unless the page says otherwise in
  * `data-theme` on the root: the MCP Apps view follows the host's theme
- * that way. The marquee panel stays lit in both themes (The Lit Panel
- * Rule). */
+ * that way. The case, the shelf label and the stickers stay the same in
+ * both themes (The Same Objects Rule). */
 
 @theme static {
   --color-*: initial;
-  --color-ground: #f3f3f0;
+  /* Neutrals: the screen. */
+  --color-ground: #eef1f4;
   --color-surface: #ffffff;
-  --color-surface-2: #e9e9e4;
-  --color-ink: #141414;
-  --color-ink-2: #5c5c58;
-  --color-rule: #d9d9d3;
-  --color-marquee-red: #c8102e;
-  --color-marquee-red-text: #c8102e;
-  --color-on-red: #ffffff;
-  --color-marquee-panel: #fbfaf5;
-  --color-marquee-ink: #141414;
-  --color-bulb: #f2b632;
+  --color-surface-2: #e3e7ec;
+  --color-ink: #121417;
+  --color-ink-2: #535963;
+  --color-rule: #cfd5dd;
+  /* The tape's black case, and what is written on it. */
+  --color-case: #17181b;
+  --color-case-ink: #f7f7f2;
+  --color-case-ink-2: #b9bec7;
+  --color-shelf-label: #f7f7f2;
+  /* The four stickers, one role each (The Four Stickers Rule); their text
+   * is always `on-sticker` (The Sticker Ink Rule). */
+  --color-on-sticker: #121417;
+  --color-sticker-orange: #ff7a1a;
+  --color-sticker-yellow: #ffd23f;
+  --color-sticker-pink: #ff5c9a;
+  --color-sticker-green: #45c463;
+  --color-stamp: #5a3db5;
+  /* The membership card's blue card stock. */
+  --color-card-stock: #d5e8fa;
+  --color-card-stock-ink: #17324f;
   --color-star: #b07a00;
+  --color-focus: #2c62c4;
   /* One per Presente, by her order in the Session (The One Color Per
    * Person Rule); the initial on top is `on-person`. */
+  --color-on-person: #ffffff;
   --color-person-1: #2c62c4;
   --color-person-2: #1b7a50;
   --color-person-3: #a63d8d;
-  --color-person-4: #b9580f;
+  --color-person-4: #8a5a2b;
   --color-person-5: #6650c4;
   --color-person-6: #0b7676;
-  --color-on-person: #ffffff;
+  /* The dot in a genre chip, by the fixed map in `kit/chip.tsx`. */
+  --color-genre-blue: #3a78e0;
+  --color-genre-violet: #7a52d1;
+  --color-genre-yellow: #f2c200;
+  --color-genre-green: #36b35a;
+  --color-genre-orange: #ff7a1a;
+  --color-genre-pink: #ff5c9a;
 
   --font-*: initial;
-  --font-letter: Antonio, Arial Narrow, sans-serif;
+  --font-display: Rubik, system-ui, sans-serif;
+  --font-hand: 'Permanent Marker', 'Comic Sans MS', cursive;
   --font-body: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  --font-mono: ui-monospace, SF Mono, Menlo, Consolas, monospace;
 
   --text-*: initial;
-  --text-letter: 22px;
-  --text-letter--line-height: 1;
-  --text-letter--font-weight: 700;
-  --text-letter--letter-spacing: 0.02em;
-  --text-position: 26px;
-  --text-position--line-height: 1;
-  --text-position--font-weight: 700;
+  /* Rubik (`font-display`). */
+  --text-shelf-label: 17px;
+  --text-shelf-label--line-height: 1.15;
+  --text-shelf-label--font-weight: 800;
+  --text-shelf-label--letter-spacing: 0.01em;
+  --text-price: 18px;
+  --text-price--line-height: 1;
+  --text-price--font-weight: 800;
+  --text-sticker: 12px;
+  --text-sticker--line-height: 1;
+  --text-sticker--font-weight: 800;
+  --text-sticker--letter-spacing: 0.06em;
   --text-title: 19px;
-  --text-title--line-height: 1.25;
+  --text-title--line-height: 1.2;
   --text-title--font-weight: 700;
+  --text-step-title: 17px;
+  --text-step-title--line-height: 1.25;
+  --text-step-title--font-weight: 700;
+  --text-brand: 18px;
+  --text-brand--line-height: 1;
+  --text-brand--font-weight: 800;
+  --text-brand--letter-spacing: 0.01em;
+  --text-button: 15px;
+  --text-button--line-height: 1;
+  --text-button--font-weight: 800;
+  --text-button--letter-spacing: 0.02em;
+  --text-control: 14px;
+  --text-control--line-height: 1.2;
+  --text-control--font-weight: 500;
+  --text-label: 12px;
+  --text-label--line-height: 1.3;
+  --text-label--font-weight: 700;
+  --text-label--letter-spacing: 0.06em;
+  --text-chip: 12px;
+  --text-chip--line-height: 1;
+  --text-chip--font-weight: 500;
+  --text-tab: 11.5px;
+  --text-tab--line-height: 1.2;
+  --text-tab--font-weight: 500;
+  /* Permanent Marker (`font-hand`): short phrases only (The Hand Is Short
+   * Rule). */
+  --text-hand: 18px;
+  --text-hand--line-height: 1.2;
+  --text-hand--font-weight: 400;
+  --text-hand-name: 30px;
+  --text-hand-name--line-height: 1;
+  --text-hand-name--font-weight: 400;
+  /* The system's font (`font-body`): what the engine says and what is read
+   * (The Engine Speaks Plain Rule). */
   --text-body: 16px;
   --text-body--line-height: 1.5;
   --text-body--font-weight: 400;
-  --text-label: 12px;
-  --text-label--line-height: 1.3;
-  --text-label--font-weight: 600;
-  --text-label--letter-spacing: 0.05em;
+  --text-synopsis: 15px;
+  --text-synopsis--line-height: 1.5;
+  --text-synopsis--font-weight: 400;
+  --text-evidence: 14px;
+  --text-evidence--line-height: 1.45;
+  --text-evidence--font-weight: 400;
   --text-meta: 13px;
   --text-meta--line-height: 1.4;
   --text-meta--font-weight: 400;
-  --text-button: 15px;
-  --text-button--line-height: 1;
-  --text-button--font-weight: 700;
+  --text-source: 12px;
+  --text-source--line-height: 1.4;
+  --text-source--font-weight: 400;
+  /* `font-mono`: the connector's address. */
+  --text-url: 14px;
+  --text-url--line-height: 1.3;
+  --text-url--font-weight: 500;
 
   --radius-*: initial;
-  --radius-panel: 4px;
   --radius-plate: 2px;
-  --radius-stamp: 3px;
-  --radius-poster: 6px;
+  --radius-cover: 3px;
+  --radius-note: 4px;
+  --radius-tape-small: 5px;
+  --radius-rail: 6px;
+  --radius-case: 8px;
   --radius-field: 8px;
-  --radius-card: 10px;
+  --radius-nav-row: 10px;
+  --radius-card: 12px;
+  --radius-panel: 14px;
   --radius-pill: 999px;
+  --radius-round: 50%;
 
+  --spacing-2xs: 4px;
   --spacing-xs: 6px;
   --spacing-sm: 8px;
-  --spacing-md: 14px;
-  --spacing-lg: 16px;
-  --spacing-xl: 20px;
+  --spacing-md: 10px;
+  --spacing-lg: 12px;
+  --spacing-xl: 14px;
+  --spacing-2xl: 16px;
+  --spacing-3xl: 22px;
   /* The 44px tap target, every control's minimum height. */
   --spacing-touch: 44px;
 
+  /* Flat: no blurred or offset shadow (The No Shadow Rule). */
   --shadow-*: initial;
   --blur-*: initial;
 }
@@ -102,22 +179,24 @@
 
 :root {
   @variant theme-dark {
-    --color-ground: #0f0f11;
-    --color-surface: #1a1a1d;
-    --color-surface-2: #26262a;
-    --color-ink: #f2f2ee;
-    --color-ink-2: #a3a39d;
-    --color-rule: #2e2e33;
-    --color-marquee-red: #d23347;
-    --color-marquee-red-text: #ec6273;
-    --color-marquee-panel: #f4f1e6;
-    --color-star: #f2b632;
+    --color-ground: #0d1220;
+    --color-surface: #161c2c;
+    --color-surface-2: #212a3e;
+    --color-ink: #f1f3f7;
+    --color-ink-2: #a5adbd;
+    --color-rule: #2a3348;
+    --color-case: #04060a;
+    --color-stamp: #b3a0ff;
+    --color-card-stock: #1b2b46;
+    --color-card-stock-ink: #dbe9ff;
+    --color-star: #ffd23f;
+    --color-focus: #6c9cf0;
+    --color-on-person: #121417;
     --color-person-1: #6c9cf0;
     --color-person-2: #4cbf8a;
     --color-person-3: #e07ccb;
-    --color-person-4: #f0954a;
+    --color-person-4: #d0a06a;
     --color-person-5: #a593f5;
     --color-person-6: #3fc1c1;
-    --color-on-person: #141414;
   }
 }
