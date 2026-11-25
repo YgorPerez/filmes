@@ -28,6 +28,20 @@ export {
 export * from './evidence/wording.ts'
 export { genreInPortuguese, WIKIDATA_GENRE } from './catalog/genres.ts'
 export {
+  SEARCH_KINDS,
+  SEARCH_LIMIT,
+  SEARCH_LIMIT_MAX,
+  SEARCH_MIN_LENGTH,
+  searchCatalog,
+  type CatalogSearch,
+  type CatalogSearchRequest,
+  type EntityMatch,
+  type FilmMatch,
+  type FilmRef,
+  type SearchKind,
+} from './catalog/search.ts'
+export { searchKey } from './catalog/search-key.ts'
+export {
   EXPORT_FORMATS,
   exportRatings,
   IMDB_HEADER,

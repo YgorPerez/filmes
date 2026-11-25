@@ -4,9 +4,11 @@
 // same way on both sides instead of returning -Infinity.
 //
 // `dobrar` is Python's `str.casefold` (`feedback` matches titles with it).
+// `search_key` is the engine's own, for `searchCatalog`.
 // A new function is one more entry here.
 
 import type { SQLInputValue, SQLOutputValue } from 'node:sqlite'
+import { searchKey } from '../catalog/search-key.ts'
 import { casefold } from '../compat/text.ts'
 
 export interface SqlFunction {
@@ -45,5 +47,11 @@ export const SQL_FUNCTIONS: ReadonlyArray<SqlFunction> = [
     name: 'dobrar',
     fn: (value) =>
       typeof value === 'string' && value !== '' ? casefold(value) : value,
+  },
+  {
+    // The Catálogo search's matching text (`catalog/search-key.ts`); no Python
+    // twin.
+    name: 'search_key',
+    fn: (value) => (typeof value === 'string' ? searchKey(value) : value),
   },
 ]

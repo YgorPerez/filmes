@@ -1,4 +1,8 @@
+import type { EntityMatch, FilmMatch, FilmRef } from '@filmes/engine'
 import type { ComponentProps, ReactNode } from 'react'
+import type { CatalogScope } from '#/content/catalog-search'
+import type { SearchAnswer } from '#/platform/catalog-search'
+import { CATALOG_SEARCH } from './catalog-search.copy'
 import { PERSON } from './person.copy'
 import { Button, buttonVariants } from './shadcn/button'
 
@@ -224,6 +228,7 @@ export function TextField({
   type = 'text',
   min,
   max,
+  defaultValue,
 }: {
   name: string
   label: string
@@ -234,6 +239,7 @@ export function TextField({
   type?: 'text' | 'number'
   min?: number
   max?: number
+  defaultValue?: string
 }) {
   return (
     <Label label={label} hint={hint}>
@@ -245,6 +251,7 @@ export function TextField({
         required={required}
         placeholder={placeholder}
         pattern={pattern}
+        defaultValue={defaultValue}
         autoComplete="off"
         className={control}
       />
@@ -314,5 +321,167 @@ export function LinkButton({
     >
       {children}
     </a>
+  )
+}
+
+// --- the Catálogo search ----------------------------------------------------
+//
+// The Catálogo search of the screens that take IDs (#128): a plain GET form
+// to the page itself (`?buscar=`), so it works before the JavaScript, and
+// the results with their IDs. A film can carry a "Usar" link that puts its
+// ID in the page's form (`pick`).
+
+const filmText = (film: FilmRef) =>
+  film.year === null ? film.title : `${film.title} (${film.year})`
+
+/** The ID, selected whole with one tap, to copy into a field. */
+function Id({ id }: { id: string }) {
+  return (
+    <code className="rounded-field bg-surface-2 px-1.5 py-0.5 text-meta select-all">
+      {id}
+    </code>
+  )
+}
+
+function FilmItem({
+  film,
+  pick,
+}: {
+  film: FilmMatch
+  pick?: (id: string) => string
+}) {
+  const { votes, pickLabel } = CATALOG_SEARCH
+  const title = filmText(film)
+  return (
+    <Item
+      actions={
+        pick && (
+          <LinkButton href={pick(film.id)} label={pickLabel(title)}>
+            {CATALOG_SEARCH.pick}
+          </LinkButton>
+        )
+      }
+    >
+      <span className="flex flex-wrap items-center gap-sm">
+        <span className="font-semibold">{title}</span> <Id id={film.id} />
+      </span>
+      <Meta parts={[film.directors.join(', '), votes(film.votes)]} />
+    </Item>
+  )
+}
+
+function EntityItem({ entity }: { entity: EntityMatch }) {
+  const { links, films } = CATALOG_SEARCH
+  return (
+    <Item>
+      <span className="flex flex-wrap items-center gap-sm">
+        <span className="font-semibold">{entity.label}</span>{' '}
+        <Id id={entity.id} />
+      </span>
+      <Meta
+        parts={[
+          entity.links.map((link) => links[link]).join(', '),
+          films(entity.filmCount),
+          entity.knownFor.map(filmText).join(', '),
+        ]}
+      />
+    </Item>
+  )
+}
+
+function Group({ title, children }: { title: string; children: ReactNode[] }) {
+  if (children.length === 0) return null
+  return (
+    <div className="flex flex-col gap-xs">
+      <h3 className="text-label text-ink-2 uppercase">{title}</h3>
+      <ul className="flex flex-col">{children}</ul>
+    </div>
+  )
+}
+
+function Results({
+  answer,
+  pick,
+}: {
+  answer: SearchAnswer
+  pick?: (id: string) => string
+}) {
+  const { groups, results, none, refusals } = CATALOG_SEARCH
+  if ('refused' in answer) return <Alert>{refusals[answer.refused]}</Alert>
+  const { films, people, genres, series } = answer.found
+  const entities = (list: readonly EntityMatch[]) =>
+    list.map((e) => <EntityItem key={e.id} entity={e} />)
+  const empty =
+    films.length + people.length + genres.length + series.length === 0
+  return (
+    <div className="flex flex-col gap-md" aria-label={results(answer.query)}>
+      <p className="text-meta text-ink-2" role="status">
+        {empty ? none : results(answer.query)}
+      </p>
+      <Group title={groups.films}>
+        {films.map((f) => (
+          <FilmItem key={f.id} film={f} pick={pick} />
+        ))}
+      </Group>
+      <Group title={groups.people}>{entities(people)}</Group>
+      <Group title={groups.genres}>{entities(genres)}</Group>
+      <Group title={groups.series}>{entities(series)}</Group>
+    </div>
+  )
+}
+
+/** The search card: the form, then the answer of the page's `?buscar=`.
+ * `keep` are the page's other query values the search must not lose (the
+ * films Nova Sessão already took for "Parecido com"). */
+export function CatalogSearch({
+  action,
+  scope,
+  answer,
+  keep = {},
+  pick,
+}: {
+  action: string
+  scope: CatalogScope
+  answer: SearchAnswer | null
+  keep?: Readonly<Record<string, string | undefined>>
+  pick?: (id: string) => string
+}) {
+  const { title, leadFilms, leadAll, label, hint, submit } = CATALOG_SEARCH
+  return (
+    <Section
+      id="buscar-catalogo"
+      title={title}
+      lead={scope === 'films' ? leadFilms : leadAll}
+    >
+      <form
+        method="get"
+        action={action}
+        role="search"
+        aria-label={title}
+        className="flex flex-wrap items-end gap-sm"
+      >
+        {Object.entries(keep).map(
+          ([name, value]) =>
+            value !== undefined && (
+              <input key={name} type="hidden" name={name} value={value} />
+            ),
+        )}
+        <label className="flex min-w-0 flex-1 basis-[220px] flex-col gap-xs">
+          <span className="text-[14px] font-semibold">
+            {label} <span className="font-normal text-ink-2">{hint}</span>
+          </span>
+          <input
+            type="search"
+            name="buscar"
+            defaultValue={answer?.query}
+            required
+            autoComplete="off"
+            className="min-h-touch w-full rounded-field border border-rule bg-surface px-3 py-[9px] text-[15px] text-ink"
+          />
+        </label>
+        <SubmitButton variant="quiet">{submit}</SubmitButton>
+      </form>
+      {answer && <Results answer={answer} pick={pick} />}
+    </Section>
   )
 }

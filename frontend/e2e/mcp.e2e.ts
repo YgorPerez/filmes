@@ -17,6 +17,17 @@ const json = async (response: Response | null) =>
 
 const CALLBACK = 'http://127.0.0.1:43999/callback'
 
+/** The first film `search_catalog` finds for `query`, a tool any Dono has. */
+async function firstFilm(client: Client, query: string) {
+  const found = await client.callTool({
+    name: 'search_catalog',
+    arguments: { query, kinds: ['film'] },
+  })
+  const [block] = found.content as Array<{ text: string }>
+  return (JSON.parse(block!.text) as { films: Array<{ id: string }> }).films[0]
+    ?.id
+}
+
 test('a client connects through Google and calls a tool with its token', async ({
   page,
   baseURL,
@@ -89,6 +100,7 @@ test('a client connects through Google and calls a tool with its token', async (
     expect(result.isError).toBeFalsy()
     const [block] = result.content as Array<{ text: string }>
     expect(JSON.parse(block!.text)).toHaveProperty('sessions')
+    expect(await firstFilm(client, 'cidade de vidro')).toBe('tt9000103')
   } finally {
     await client.close()
   }
