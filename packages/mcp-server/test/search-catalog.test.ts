@@ -8,7 +8,7 @@ import { connect } from './connect.ts'
 describe('search_catalog', () => {
   test('is listed and answers a Dono without admin, where consult does not', async () => {
     // The edge says she is no admin: consult is not even served.
-    const c = await connect(useFixture(), 'bruno', {}, false)
+    const c = await connect(useFixture(), 'bruno', {}, { admin: false })
 
     const names = (await c.client.listTools()).tools.map((t) => t.name)
     const found = await c.ok('search_catalog', {

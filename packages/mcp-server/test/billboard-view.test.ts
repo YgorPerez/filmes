@@ -33,6 +33,34 @@ describe('the Cartaz view', () => {
     })
   })
 
+  test("served by the app, it loads the fonts from the app's origin", async () => {
+    const origin = 'https://cinema.example'
+    const { client } = await connect(
+      useFixture(),
+      null,
+      {},
+      {
+        appOrigin: origin,
+      },
+    )
+
+    const { contents } = await client.readResource({ uri: BILLBOARD_VIEW_URI })
+
+    const [view] = contents
+    assert.ok(view && 'text' in view)
+    const links = view.text.match(/<link [^>]+>/gu)
+    assert.deepEqual(links, [
+      `<link rel="stylesheet" href="${origin}/fonts/fonts.css">`,
+    ])
+    assert.ok(
+      view.text.indexOf(links[0]) < view.text.indexOf('</head>'),
+      'in the head',
+    )
+    assert.deepEqual(view._meta, {
+      ui: { csp: { resourceDomains: ['https://image.tmdb.org', origin] } },
+    })
+  })
+
   test('billboard links its result to the view; the others do not', async () => {
     const { client } = await connect(useFixture())
 

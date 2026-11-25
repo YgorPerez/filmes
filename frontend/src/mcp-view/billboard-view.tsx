@@ -15,7 +15,7 @@ import type { Billboard as BillboardModel } from '@filmes/engine'
 import { useRef, useState, useSyncExternalStore } from 'react'
 import type { App, McpUiHostContext } from '@modelcontextprotocol/ext-apps'
 import { createRoot } from 'react-dom/client'
-import { Billboard } from '../ui/billboard'
+import { Billboard, OPTION } from '../ui/billboard'
 import { BILLBOARD } from '../ui/billboard.copy'
 import {
   billboardOf,
@@ -101,7 +101,7 @@ export function BillboardView({
   host: Host
 }) {
   if (result === null)
-    return <p className="p-md text-meta text-ink-2">{view.loading}</p>
+    return <p className="p-xl text-meta text-ink-2">{view.loading}</p>
   const shown = billboardOf(result)
   return (
     <main className="flex flex-col gap-sm p-sm">
@@ -109,7 +109,7 @@ export function BillboardView({
         <button
           type="button"
           onClick={host.fullscreen}
-          className="inline-flex min-h-touch cursor-pointer items-center self-end rounded-pill border border-rule bg-surface px-[22px] text-button text-ink"
+          className={`${OPTION} self-end`}
         >
           {view.fullscreen}
         </button>

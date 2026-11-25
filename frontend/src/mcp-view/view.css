@@ -1,7 +1,9 @@
 /* The Cartaz view's CSS: the app's Tailwind theme and tokens (as
- * `styles.css`), without the self-hosted Antonio. MCP Apps' CSP has no
- * `data:` in `font-src`, so the letreiro falls back to the stack in
- * `--font-letter`. Only the Cartaz's files are scanned for classes. */
+ * `styles.css`). The fonts are not inline: MCP Apps' CSP has no `data:` in
+ * `font-src`, so the MCP server links them from the app's origin
+ * (`packages/mcp-server/src/billboard-view.ts`), and without it each role
+ * falls back to its stack. Only the Cartaz's files are scanned for
+ * classes. */
 @layer theme, base, components, utilities;
 @import 'tailwindcss/theme.css' layer(theme);
 @import 'tailwindcss/preflight.css' layer(base);
@@ -11,4 +13,4 @@
 @source './billboard-view.tsx';
 @source '../ui/billboard.tsx';
 @source '../ui/billboard-card.tsx';
-@source '../ui/marquee.tsx';
+@source '../ui/kit';

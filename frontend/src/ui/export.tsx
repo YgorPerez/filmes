@@ -1,6 +1,7 @@
+import { FIELD } from './kit/field'
 import type { ExportRefusal } from '#/content/export-refusal'
 import { EXPORT } from './export.copy'
-import { Marquee } from './marquee'
+import { Brand } from './kit/brand'
 import { Button, buttonVariants } from './shadcn/button'
 
 export type ExportPeople = {
@@ -24,20 +25,20 @@ export function Export({
     ? EXPORT.unavailable
     : refusal && EXPORT.refusals[refusal]
   return (
-    <main className="mx-auto flex max-w-[720px] flex-col gap-xl px-lg py-xl">
-      <header className="flex flex-wrap items-center justify-between gap-md">
-        <Marquee words={['filmes']} />
-        <a href="/" className={buttonVariants({ variant: 'quiet' })}>
+    <main className="mx-auto flex max-w-[720px] flex-col gap-3xl px-2xl py-3xl">
+      <header className="flex flex-wrap items-center justify-between gap-xl">
+        <Brand />
+        <a href="/" className={buttonVariants({ variant: 'option' })}>
           {EXPORT.back}
         </a>
       </header>
-      <section className="flex flex-col gap-md rounded-card border border-rule bg-surface p-md">
-        <h1 className="text-title">{EXPORT.title}</h1>
+      <section className="flex flex-col gap-xl rounded-card border border-rule bg-surface p-xl">
+        <h1 className="font-display text-title">{EXPORT.title}</h1>
         <p className="text-ink-2">{EXPORT.lead}</p>
         {alert && (
           <p
             role="alert"
-            className="flex gap-sm rounded-field border border-marquee-red-text px-3 py-2.5 text-marquee-red-text"
+            className="flex gap-sm rounded-field border-[1.5px] border-ink px-lg py-2.5 text-ink"
           >
             <span aria-hidden="true">⚠</span>
             <span>{alert}</span>
@@ -47,7 +48,7 @@ export function Export({
           <form
             method="get"
             action="/exportar/imdb.csv"
-            className="flex flex-col gap-md"
+            className="flex flex-col gap-xl"
           >
             <label className="flex flex-col gap-xs">
               <span className="text-[14px] font-semibold">
@@ -59,7 +60,7 @@ export function Export({
               <select
                 name="pessoa"
                 defaultValue={choices.selected}
-                className="min-h-touch rounded-field border border-rule bg-surface px-3 py-[9px] text-[15px] text-ink"
+                className={FIELD}
               >
                 {choices.people.map(({ person, name, ratings }) => (
                   <option key={person} value={person}>
@@ -75,10 +76,10 @@ export function Export({
         )}
       </section>
       <section className="flex flex-col gap-sm">
-        <h2 className="text-label text-ink-2 uppercase">
+        <h2 className="font-display text-label text-ink-2 uppercase">
           {EXPORT.movielensTitle}
         </h2>
-        <ol className="flex list-decimal flex-col gap-xs pl-lg text-ink-2">
+        <ol className="flex list-decimal flex-col gap-xs pl-2xl text-ink-2">
           {EXPORT.movielens.map((step) => (
             <li key={step}>{step}</li>
           ))}

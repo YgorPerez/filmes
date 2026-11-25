@@ -1,3 +1,4 @@
+import { FIELD } from './kit/field'
 import type { ConsultValue } from '@filmes/engine'
 import type {
   OperationsNotice,
@@ -8,7 +9,7 @@ import type {
   EvaluationPanel,
   OperationsPage,
 } from '#/platform/operations'
-import { Marquee } from './marquee'
+import { Brand } from './kit/brand'
 import { EvaluationSection, jobKey } from './operations-evaluation'
 import { OPERATIONS } from './operations.copy'
 import { PushSection } from './operations-push'
@@ -77,7 +78,7 @@ function ConsultResult({ answer }: { answer: ConsultAnswer }) {
 function ConsultSection({ answer }: { answer: ConsultAnswer | null }) {
   return (
     <Section id="consultar" title={COPY.title} lead={COPY.lead}>
-      <form method="get" action="/operacoes" className="flex flex-col gap-md">
+      <form method="get" action="/operacoes" className="flex flex-col gap-xl">
         <label className="flex flex-col gap-xs">
           <span className="text-[14px] font-semibold">{COPY.label}</span>
           <textarea
@@ -87,7 +88,7 @@ function ConsultSection({ answer }: { answer: ConsultAnswer | null }) {
             spellCheck={false}
             defaultValue={answer?.sql}
             placeholder={COPY.placeholder}
-            className="rounded-field border border-rule bg-surface px-3 py-[9px] text-[15px] text-ink"
+            className={FIELD}
           />
         </label>
         <Submit>{COPY.run}</Submit>
@@ -111,13 +112,13 @@ export function Operations({
   readEvaluation: () => Promise<EvaluationPanel>
 }) {
   return (
-    <main className="mx-auto flex max-w-[720px] flex-col gap-xl px-lg py-xl">
-      <header className="flex flex-wrap items-center justify-between gap-md">
-        <Marquee words={['filmes']} />
+    <main className="mx-auto flex max-w-[720px] flex-col gap-3xl px-2xl py-3xl">
+      <header className="flex flex-wrap items-center justify-between gap-xl">
+        <Brand />
         <LinkButton href="/">{OPERATIONS.back}</LinkButton>
       </header>
       <div className="flex flex-col gap-xs">
-        <h1 className="text-title">{OPERATIONS.title}</h1>
+        <h1 className="font-display text-title">{OPERATIONS.title}</h1>
         <p className="text-ink-2">{OPERATIONS.lead}</p>
       </div>
       {notice && <Notice>{OPERATIONS.notices[notice]}</Notice>}

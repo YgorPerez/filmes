@@ -13,7 +13,12 @@ export const Route = createRootRoute({
       { name: 'viewport', content: 'width=device-width, initial-scale=1' },
       { title: 'filmes' },
     ],
-    links: [{ rel: 'stylesheet', href: css }],
+    // The self-hosted fonts (`platform/fonts.ts`), the same file the MCP
+    // Apps view links from the app's origin.
+    links: [
+      { rel: 'stylesheet', href: '/fonts/fonts.css' },
+      { rel: 'stylesheet', href: css },
+    ],
   }),
   component: Root,
 })

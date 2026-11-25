@@ -1,3 +1,4 @@
+import { FIELD } from './kit/field'
 import type { Billboard as BillboardModel } from '@filmes/engine'
 import {
   useEffect,
@@ -6,7 +7,8 @@ import {
   useSyncExternalStore,
   type FormEvent,
 } from 'react'
-import { Avatar, BillboardCard } from './billboard-card'
+import { BillboardCard } from './billboard-card'
+import { Avatar } from './kit/person'
 import {
   forgetMarks,
   hasMarks,
@@ -21,7 +23,7 @@ import {
   type Marks,
 } from './billboard-marks'
 import { BILLBOARD } from './billboard.copy'
-import { Marquee } from './marquee'
+import { ShelfLabel } from './kit/shelf-label'
 
 // The Cartaz [billboard] of a Session (`cartaz/__init__.py`, `cartaz.js`):
 // the reading of the request on the letreiro, what left the previous
@@ -48,13 +50,10 @@ type Props = {
 function Top({ billboard: b }: { billboard: BillboardModel }) {
   return (
     <div className="flex flex-col gap-sm">
-      <Marquee
-        words={[b.request.who, ...b.request.parts]}
-        label={[b.request.who, ...b.request.parts].join(' · ')}
+      <ShelfLabel
+        items={[b.request.who, ...b.request.parts]}
+        note={b.request.speech}
       />
-      {b.request.speech && (
-        <p className="text-[14px] text-ink-2 italic">“{b.request.speech}”</p>
-      )}
       <p className="flex flex-wrap items-center gap-x-[14px] gap-y-xs text-meta text-ink-2">
         {b.attendees.map((p) => (
           <span
@@ -90,9 +89,12 @@ async function copyText(text: string): Promise<boolean> {
 }
 
 // DESIGN.md's buttons (`ui/shadcn/button.tsx`), drawn here so the Cartaz
-// stands alone in the MCP Apps view: Enviar is the screen's red one.
+// stands alone in the MCP Apps view: Enviar is the screen's orange one,
+// Copiar an option.
 const button =
-  'inline-flex min-h-touch cursor-pointer items-center justify-center rounded-pill px-[22px] text-button select-none'
+  'inline-flex min-h-touch cursor-pointer items-center justify-center rounded-pill font-display select-none'
+const SEND = `${button} bg-sticker-orange px-3xl text-button text-on-sticker uppercase`
+export const OPTION = `${button} border-[1.5px] border-rule bg-surface px-xl text-control text-ink`
 
 function Reply({
   billboard,
@@ -142,7 +144,7 @@ function Reply({
   return (
     <section
       aria-labelledby="responder"
-      className="flex flex-col gap-[10px] rounded-card border border-rule bg-surface p-md"
+      className="flex flex-col gap-[10px] rounded-card border border-rule bg-surface p-xl"
     >
       <h2 id="responder" className="sr-only">
         {reply.title}
@@ -156,7 +158,7 @@ function Reply({
           rows={2}
           value={marks.addition}
           onChange={(e) => onAddition(e.target.value)}
-          className="min-h-touch rounded-field border border-rule bg-surface px-3 py-[9px] text-[15px] text-ink"
+          className={FIELD}
         />
       </label>
       <input type="hidden" name="texto" value={text} />
@@ -165,15 +167,11 @@ function Reply({
         <button
           type={onSend ? 'button' : 'submit'}
           onClick={onSend}
-          className={`${button} bg-marquee-red text-on-red`}
+          className={SEND}
         >
           {reply.send}
         </button>
-        <button
-          type="button"
-          onClick={() => void copy()}
-          className={`${button} border border-rule bg-surface text-ink`}
-        >
+        <button type="button" onClick={() => void copy()} className={OPTION}>
           {reply.copy}
         </button>
       </div>
@@ -266,7 +264,7 @@ export function Billboard({ billboard, action, onSend, sent = false }: Props) {
   ))
 
   return (
-    <div className="flex flex-col gap-md">
+    <div className="flex flex-col gap-xl">
       <Top billboard={billboard} />
       {billboard.films.length === 0 && (
         <p className="text-ink-2">{BILLBOARD.empty}</p>
@@ -277,7 +275,7 @@ export function Billboard({ billboard, action, onSend, sent = false }: Props) {
           action={action}
           onSubmit={submit}
           aria-label={BILLBOARD.label}
-          className="flex flex-col gap-md"
+          className="flex flex-col gap-xl"
         >
           {cards}
           <Reply

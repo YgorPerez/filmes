@@ -1,3 +1,4 @@
+import { FIELD } from './kit/field'
 import type { ReactNode } from 'react'
 import {
   RATING_CHOICES,
@@ -11,7 +12,8 @@ import type {
   FeedbackSession,
 } from '#/platform/feedback'
 import { FEEDBACK } from './feedback.copy'
-import { Marquee } from './marquee'
+import { Brand } from './kit/brand'
+import { PriceSticker } from './kit/sticker'
 import {
   Alert,
   CatalogSearch,
@@ -27,10 +29,10 @@ import { Button, buttonVariants } from './shadcn/button'
 
 function Page({ back, children }: { back: string; children: ReactNode }) {
   return (
-    <main className="mx-auto flex max-w-[720px] flex-col gap-xl px-lg py-xl">
-      <header className="flex flex-wrap items-center justify-between gap-md">
-        <Marquee words={['filmes']} />
-        <a href={back} className={buttonVariants({ variant: 'quiet' })}>
+    <main className="mx-auto flex max-w-[720px] flex-col gap-3xl px-2xl py-3xl">
+      <header className="flex flex-wrap items-center justify-between gap-xl">
+        <Brand />
+        <a href={back} className={buttonVariants({ variant: 'option' })}>
           {FEEDBACK.back}
         </a>
       </header>
@@ -58,7 +60,7 @@ export function OpenSessions({
   return (
     <Page back="/">
       <div className="flex flex-col gap-sm">
-        <h1 className="text-title">{list.title}</h1>
+        <h1 className="font-display text-title">{list.title}</h1>
         <p className="text-ink-2">{list.lead}</p>
       </div>
       {recorded && <Notice>{list.recorded(recorded)}</Notice>}
@@ -73,7 +75,7 @@ export function OpenSessions({
             <li key={s.id} className="border-rule not-first:border-t">
               <a
                 href={`/feedback/${encodeURIComponent(s.id)}`}
-                className="flex min-h-touch items-center gap-sm px-md py-sm text-ink no-underline"
+                className="flex min-h-touch items-center gap-sm px-xl py-sm text-ink no-underline"
               >
                 <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                   <span className="font-semibold">
@@ -129,7 +131,7 @@ export function FeedbackScreen({
       ) : (
         <>
           <div className="flex flex-col gap-xs">
-            <h1 className="text-title">{FEEDBACK.form.title}</h1>
+            <h1 className="font-display text-title">{FEEDBACK.form.title}</h1>
             <Meta parts={[page.date, names(page.attendees), page.request]} />
           </div>
           {refusal && <Alert>{FEEDBACK.refusals[refusal]}</Alert>}
@@ -165,7 +167,7 @@ function FeedbackForm({
       method="post"
       action={`/feedback/${encodeURIComponent(session)}/enviar`}
       aria-label={form.label}
-      className="flex flex-col gap-xl"
+      className="flex flex-col gap-3xl"
     >
       <FilmChoice page={page} film={film} />
 
@@ -189,8 +191,8 @@ function FilmChoice({ page, film }: { page: FeedbackPage; film?: string }) {
   const listed = page.recommendation.some((f) => f.id === film)
   const other = film !== undefined && !listed
   return (
-    <fieldset className="flex flex-col gap-sm rounded-card border border-rule bg-surface p-md">
-      <legend className="px-xs text-title">{form.film}</legend>
+    <fieldset className="flex flex-col gap-sm rounded-card border border-rule bg-surface p-xl">
+      <legend className="px-xs font-display text-title">{form.film}</legend>
       {page.recommendation.map((item) => (
         <label key={item.id} className={choice}>
           <input
@@ -199,8 +201,8 @@ function FilmChoice({ page, film }: { page: FeedbackPage; film?: string }) {
             value={item.id}
             defaultChecked={item.id === film}
           />
-          <span>
-            <span className="font-letter text-letter">{item.position}</span>{' '}
+          <span className="inline-flex items-center gap-sm">
+            <PriceSticker compact>{item.position}</PriceSticker>
             {item.title}
           </span>
         </label>
@@ -243,7 +245,7 @@ function Reaction({ attendee }: { attendee: FeedbackAttendee }) {
         id={id}
         name={`reacao.${attendee.person}`}
         defaultValue=""
-        className="min-h-touch w-full rounded-field border border-rule bg-surface px-3 py-[9px] text-[15px] text-ink"
+        className={`${FIELD} w-full`}
       >
         <option value="">{form.none}</option>
         <optgroup label={form.ratings}>

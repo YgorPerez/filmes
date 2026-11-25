@@ -1,7 +1,7 @@
 import type { PersonNotice, PersonRefusal } from '#/content/person-action'
 import type { SearchAnswer } from '#/platform/catalog-search'
 import type { PersonPage } from '#/platform/people'
-import { Marquee } from './marquee'
+import { Brand } from './kit/brand'
 import {
   ActionForm,
   Alert,
@@ -58,10 +58,10 @@ export function PersonScreen({
   search?: SearchAnswer | null
 }) {
   return (
-    <main className="mx-auto flex max-w-[720px] flex-col gap-xl px-lg py-xl">
-      <header className="flex flex-wrap items-center justify-between gap-md">
-        <Marquee words={['filmes']} />
-        <a href="/pessoas" className={buttonVariants({ variant: 'quiet' })}>
+    <main className="mx-auto flex max-w-[720px] flex-col gap-3xl px-2xl py-3xl">
+      <header className="flex flex-wrap items-center justify-between gap-xl">
+        <Brand />
+        <a href="/pessoas" className={buttonVariants({ variant: 'option' })}>
           {PERSON.back}
         </a>
       </header>
@@ -97,7 +97,7 @@ function PersonHeader({
   return (
     <>
       <div className="flex flex-col gap-xs">
-        <h1 className="flex flex-wrap items-center gap-sm text-title">
+        <h1 className="flex flex-wrap items-center gap-sm font-display text-title">
           {page.name}
           {page.owner && <OwnerTag />}
         </h1>
@@ -195,7 +195,7 @@ function OpenQuestions({ slug, page }: Part) {
                 )}
                 <Button
                   type="submit"
-                  variant="quiet"
+                  variant="option"
                   aria-label={`${questions.skip}: ${q.text}`}
                 >
                   {questions.skip}
@@ -291,7 +291,7 @@ function Adjustments({ slug, page }: Part) {
                     defaultValue={current?.level ?? 'normal'}
                   />
                 </div>
-                <Button type="submit" variant="quiet">
+                <Button type="submit" variant="option">
                   {adjustments.change}
                 </Button>
               </ActionForm>
@@ -355,7 +355,7 @@ function Statements({
                     label={s.text}
                   />
                 ) : (
-                  <span className="text-label text-ink-2 uppercase">
+                  <span className="font-display text-label text-ink-2 uppercase">
                     {origin}
                   </span>
                 )

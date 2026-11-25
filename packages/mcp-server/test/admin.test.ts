@@ -133,7 +133,7 @@ describe('the admin option of an edge that knows the Pessoa', () => {
     const fixture = useFixture()
     // Her file says admin, but the edge's word is the one that counts.
     makeAdmin(fixture, 'bruno')
-    const c = await connect(fixture, 'bruno', {}, false)
+    const c = await connect(fixture, 'bruno', {}, { admin: false })
 
     const names = (await c.client.listTools()).tools.map((t) => t.name)
 
@@ -147,7 +147,7 @@ describe('the admin option of an edge that knows the Pessoa', () => {
   })
 
   test('true serves them without reading her file', async () => {
-    const c = await connect(useFixture(), 'bruno', {}, true)
+    const c = await connect(useFixture(), 'bruno', {}, { admin: true })
 
     assert.deepEqual(await c.ok('consult', { sql: 'SELECT 1 AS n' }), {
       columns: ['n'],
