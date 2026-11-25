@@ -186,6 +186,8 @@ export const childModule: ConstraintModule<ChildRequest> = {
     }),
   label: (stored) => {
     const age = stored['age']
-    return age ? `com criança de ${String(age)} anos` : 'com criança'
+    return typeof age === 'number' && age !== 0
+      ? `com criança de ${age} anos`
+      : 'com criança'
   },
 }
