@@ -5,15 +5,10 @@ const plural = (n: number, one: string, many: string) =>
 
 export const BILLBOARD = {
   label: 'Cartaz',
-  legend: '●●● forte · ●●○ moderada · ●○○ fraca',
-  dropped: 'Saiu:',
+  dropped: 'Saiu da prateleira:',
   empty:
     'Nenhum filme passou nas Restrições. Abra outra Sessão com menos limites.',
-  strength: {
-    strong: { mark: '●●●', name: 'forte' },
-    moderate: { mark: '●●○', name: 'moderada' },
-    weak: { mark: '●○○', name: 'fraca' },
-  },
+  strength: { strong: 'forte', moderate: 'moderada', weak: 'fraca' },
   strengthLabel: (name: string) => `Força ${name}`,
 
   card: {
@@ -21,7 +16,7 @@ export const BILLBOARD = {
     noFact: (name: string) => `${name}: sem fato`,
     isNew: 'novo',
     imdb: (rating: string | null, votes: string) =>
-      `${rating === null ? '' : `★ ${rating} `}IMDb · ${votes} votos`,
+      `${rating === null ? '' : `${rating} `}IMDb · ${votes} votos`,
     why: 'Por que cada um vai gostar',
     withoutFact: (names: string) => `${names}: sem fato sobre este filme`,
     swapStamp: 'Trocar',
@@ -32,9 +27,10 @@ export const BILLBOARD = {
     seen: 'Já vi',
     seenGroup: (n: number) => `Já vi o filme ${n}`,
     all: 'Todos',
-    rating: 'nota',
     ratingLabel: (who: string, n: number) =>
       `nota de ${who} para o filme ${n}, de 1 a 10`,
+    note: (name: string | null) =>
+      name === null ? 'Sua nota' : `Nota de ${name}`,
     thought: 'o que achou',
     thoughtLabel: (who: string, n: number) =>
       `o que ${who} achou do filme ${n}`,
@@ -84,7 +80,10 @@ export const BILLBOARD = {
   // through the host, and Claude gets a message when it has to regenerate.
   view: {
     loading: 'Montando o Cartaz…',
-    fullscreen: 'Tela cheia',
+    tag: 'filmes · Cartaz',
+    list: 'Os filmes do Cartaz',
+    mark: 'Marcar',
+    open: 'Ver o Cartaz',
     sending: 'Enviando…',
     recorded: 'Anotado.',
     regenerating: 'Anotado. O Claude refaz a lista no chat.',
