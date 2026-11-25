@@ -112,6 +112,19 @@ export class Zip {
     const entry = this.byName.get(name)
     if (entry === undefined)
       throw badZip(`There is no item named ${pyReprStr(name)} in the archive`)
+    return this.readEntry(entry)
+  }
+
+  /** `infolist()` then `read(info)`: every entry in directory order, each
+   * read on demand (two entries of one name are two members). */
+  members(): readonly { readonly name: string; read: () => Buffer }[] {
+    return this.entries.map((entry) => ({
+      name: entry.name,
+      read: () => this.readEntry(entry),
+    }))
+  }
+
+  private readEntry(entry: Entry): Buffer {
     const data = this.data
     const at = entry.headerOffset
     if (at + 30 > data.length || data.readUInt32LE(at) !== LOCAL)

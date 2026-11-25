@@ -114,7 +114,7 @@ const weekday = (days: number) => (((days + 3) % 7) + 7) % 7
 
 /** The date of an ISO week date, or null when the week or the day is out
  * of range (CPython's `iso_to_ymd`). */
-const fromIsoWeek = (
+export const fromIsoWeek = (
   year: number,
   week: number,
   day: number,

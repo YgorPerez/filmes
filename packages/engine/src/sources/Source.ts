@@ -167,7 +167,7 @@ const transient = (reason: string) =>
 
 /** What failed on the way: the deepest cause's message ("connect
  * ECONNREFUSED ..."), as Python shows the `URLError`'s reason. */
-const networkReason = (error: unknown): string => {
+export const networkReason = (error: unknown): string => {
   let message = String(error)
   let cause = error
   while (cause instanceof Error) {

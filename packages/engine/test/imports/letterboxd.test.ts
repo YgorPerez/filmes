@@ -1,12 +1,11 @@
-// The Letterboxd ZIP import (ticket #99), the Vitest twin of the ZIP cases
-// of tests/test_letterboxd.py. Olga's ZIP comes from
+// The Letterboxd ZIP import (tickets #99, #100), the Vitest twin of
+// tests/test_letterboxd.py. Olga's ZIP comes from
 // tests/fixture/letterboxd/olga/ (CSVs in the real export's format);
 // Wikidata's P6127 is the fixture's `slugs_letterboxd` and TMDB answers from
 // tests/fixture/gravacoes/tmdb/. Where Python rebuilt the database, these
 // reload the Letterboxd Fatos (`reloadLetterboxd`, the loading step of a
 // rebuild); where Python changed the Catalog's CSV and rebuilt, these change
-// the `slugs_letterboxd` row. The queue's commands (`fila`) are #100's: here
-// the Dono's decisions are written to imports/letterboxd.md directly.
+// the `slugs_letterboxd` row.
 import {
   existsSync,
   mkdirSync,
@@ -19,21 +18,21 @@ import { join } from 'node:path'
 import { Effect } from 'effect'
 import { describe, expect, test } from 'vite-plus/test'
 import {
-  filmKey,
+  confirmQueueItem,
+  discardQueueItem,
   importLetterboxd,
   letterboxdReport,
   parseYaml,
   personCreate,
   personState,
   personView,
-  readResolutions,
   reloadLetterboxd,
-  saveResolutions,
   Sqlite,
   TMDB_ATTRIBUTION,
   type EngineServices,
   type Run,
   type Vars,
+  viewQueue,
 } from '../../src/index.ts'
 import { ROOT, useFixture, type Fixture } from '../fixture.ts'
 import { RECORDINGS } from '../sources/support.ts'
@@ -94,29 +93,8 @@ const report = (fixture: Fixture, person = 'olga') =>
     }),
   )
 
-/** What `fila confirmar` / `fila descartar` record (#100 ports them). */
-const decide = (
-  fixture: Fixture,
-  name: string,
-  year: number,
-  fields: [string, string][],
-) =>
-  fixture.ok(
-    Effect.gen(function* () {
-      const resolutions = yield* readResolutions
-      const id = filmKey(name, year)
-      resolutions.set(
-        id,
-        new Map([
-          ['id', id],
-          ['name', name],
-          ['date', '2026-11-20'],
-          ...fields,
-        ]),
-      )
-      yield* saveResolutions(resolutions)
-    }),
-  )
+const queue = (fixture: Fixture, vars: Vars = TMDB_ON) =>
+  fixture.ok(viewQueue, vars)
 
 const resolutionsText = (fixture: Fixture) =>
   readFileSync(join(fixture.data, 'imports/letterboxd.md'), 'utf8')
@@ -241,19 +219,27 @@ describe('importLetterboxd', () => {
       new Set(['tmdb', 'wikidata']),
     )
 
-    const [vento] = result.queue.filter((i) => i.name === 'Vento Norte')
-    const [perdido] = result.queue.filter((i) => i.name === 'Filme Perdido')
-    await decide(fixture, 'Vento Norte', vento?.year ?? 0, [
-      ['status', 'confirmed'],
-      ['film', 'tt9000302'],
-    ])
-    await decide(fixture, 'Filme Perdido', perdido?.year ?? 0, [
-      ['status', 'discarded'],
-      ['discard_reason', 'ignorar'],
-    ])
-    await fixture.ok(reloadLetterboxd)
+    const items = (await queue(fixture)).items
+    const vento = items.find((i) => i.name === 'Vento Norte')
+    const perdido = items.find((i) => i.name === 'Filme Perdido')
+    expect(vento?.candidates.map((c) => c.tmdb)).toEqual([9102, 9103])
+    expect(vento?.people).toEqual(['olga'])
+    await ok(
+      confirmQueueItem({
+        id: vento?.id ?? '',
+        film: vento?.candidates[0]?.link ?? '',
+        author: AUTHOR,
+      }),
+    )
+    await ok(
+      discardQueueItem({
+        id: perdido?.id ?? '',
+        reason: 'ignorar',
+        author: AUTHOR,
+      }),
+    )
+    expect((await queue(fixture)).items).toEqual([])
     const after = await report(fixture)
-    expect(after.queue).toEqual([])
     expect(after.resolved.manual).toBe(1)
     expect(after.discardedItems).toContainEqual({
       id: perdido?.id,
@@ -262,12 +248,11 @@ describe('importLetterboxd', () => {
       resolvedBy: 'manual',
       reason: 'ignorar',
     })
-    expect(await ratings(fixture)).toContainEqual([
-      'tt9000302',
-      3.5,
-      '2024-07-16',
-      'Letterboxd de Olga',
-    ])
+    const rating = ['tt9000302', 3.5, '2024-07-16', 'Letterboxd de Olga']
+    expect(await ratings(fixture)).toContainEqual(rating)
+    await fixture.ok(reloadLetterboxd)
+    expect((await queue(fixture)).items).toEqual([])
+    expect(await ratings(fixture)).toContainEqual(rating)
   })
 
   test('reviews and tags stay with the Pessoa after a Declarado', async () => {
@@ -331,14 +316,15 @@ describe('importLetterboxd', () => {
     expect(result.queued).toBe(2)
     expect(result.warnings).toHaveLength(1)
     expect(new Set(result.queue.map((i) => i.id)).size).toBe(2)
-    await decide(fixture, '冬', 2020, [
-      ['status', 'confirmed'],
-      ['film', 'tt1112223'],
-    ])
-    await fixture.ok(reloadLetterboxd)
-    expect((await report(fixture, 'iara')).queue.map((i) => i.name)).toEqual([
-      '春',
-    ])
+    const winter = (await queue(fixture, {})).items.find((i) => i.name === '冬')
+    await fixture.ok(
+      confirmQueueItem({
+        id: winter?.id ?? '',
+        film: 'https://www.imdb.com/title/tt1112223/?ref_=abc',
+        author: AUTHOR,
+      }),
+    )
+    expect((await queue(fixture, {})).items.map((i) => i.name)).toEqual(['春'])
     expect(await ratings(fixture, 'iara')).toContainEqual([
       'tt1112223',
       4,
@@ -372,7 +358,16 @@ describe('importLetterboxd', () => {
         })
       ).queued,
     ).toBe(2)
-    // 182 days: Rio Abaixo (recorded) and Vento Norte (asked again).
+    // 182 days: the queue shows no candidate, and the import asks again
+    // (Rio Abaixo recorded, Vento Norte asked again).
+    const expired = await queue(fixture, {
+      ...TMDB_ON,
+      ...vars,
+      FILMES_HOJE: '2027-05-21',
+    })
+    expect(
+      expired.items.find((i) => i.name === 'Vento Norte')?.candidates,
+    ).toEqual([])
     const later = await ok(importZip('olga', olgaZip()), {
       ...vars,
       FILMES_HOJE: '2027-05-21',
@@ -499,5 +494,7 @@ describe('importLetterboxd', () => {
     expect(result.queue.map((i) => [i.name, i.reason])).toEqual([
       ['Duas Margens', 'o TMDB achou mais de um filme com esse título'],
     ])
+    const [margens] = (await queue(fixture)).items
+    expect(margens?.candidates).toHaveLength(2)
   })
 })
