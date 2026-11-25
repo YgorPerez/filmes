@@ -3,14 +3,13 @@ import { getRequest, setResponseHeader } from '@tanstack/react-start/server'
 
 /** The request-scoped Owner: whoever is logged in, looked up again on each
  * request (`platform/auth.ts`). A server function that acts as the Dono
- * takes it from `context.owner` and refuses when it is null (the first
- * ticket that does exports this):
+ * takes it from `context.owner` and refuses when it is null:
  *
  *   createServerFn().middleware([ownerMiddleware]).handler(({ context }) => …)
  *
  * The import is inside the handler, so the browser bundle never sees
  * `node:sqlite` nor filmes-dados. */
-const ownerMiddleware = createMiddleware({ type: 'function' }).server(
+export const ownerMiddleware = createMiddleware({ type: 'function' }).server(
   async ({ next }) => {
     const { currentOwner } = await import('#/platform/auth')
     setResponseHeader('Cache-Control', 'private, no-store')
