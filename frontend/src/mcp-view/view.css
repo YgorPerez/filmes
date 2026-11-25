@@ -11,6 +11,5 @@
 @import '../ui/tokens.css';
 @import '../ui/base.css';
 @source './billboard-view.tsx';
-@source '../ui/billboard.tsx';
-@source '../ui/billboard-card.tsx';
+@source '../ui/billboard*.tsx';
 @source '../ui/kit';
