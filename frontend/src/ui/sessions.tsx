@@ -6,6 +6,7 @@ import {
 } from '#/content/session-request'
 import type { ReplyRefusal, SessionNotice } from '#/content/billboard-reply'
 import type { CartazPage } from '#/platform/billboard'
+import type { SearchAnswer } from '#/platform/catalog-search'
 import type {
   RequestOptions,
   SessionItem,
@@ -15,6 +16,7 @@ import { Billboard } from './billboard'
 import { ImportsFrame } from './imports'
 import {
   Alert,
+  CatalogSearch,
   LinkButton,
   Meta,
   Notice,
@@ -275,15 +277,30 @@ const CHILD_OPTIONS = [
   })),
 ]
 
+/** Nova Sessão with `similar` and the search of `query`: "Usar" adds a
+ * film to "Parecido com". */
+const similarHref =
+  (similar: string | undefined, query: string | undefined) => (id: string) => {
+    const ids = [...new Set([...(similar?.split(',') ?? []), id])]
+    const params = new URLSearchParams({ parecido: ids.join(',') })
+    if (query !== undefined) params.set('buscar', query)
+    return `/sessoes/nova?${params.toString()}`
+  }
+
 /** `/sessoes/nova`: the form that opens a Session (`recommendSession`). A
  * plain POST to `/sessoes/nova/enviar`: it works before the JavaScript.
- * `options` is null when the engine cannot run on this server. */
+ * `options` is null when the engine cannot run on this server. Above it,
+ * the Catálogo search (`search`) fills "Parecido com" (`similar`). */
 export function NewSession({
   options,
   refusal,
+  search = null,
+  similar,
 }: {
   options: RequestOptions | null
   refusal?: SessionRequestRefusal
+  search?: SearchAnswer | null
+  similar?: string
 }) {
   const { form } = SESSIONS
   return (
@@ -296,20 +313,42 @@ export function NewSession({
       {options === null ? (
         <Alert>{SESSIONS.unavailable}</Alert>
       ) : (
-        <form
-          method="post"
-          action="/sessoes/nova/enviar"
-          aria-label={form.label}
-          className="flex flex-col gap-xl"
-        >
-          <Attendees options={options} />
-          <Rule options={options} />
-          <Moods moods={options.moods} />
-          <Constraints />
-          <Submit variant="primary">{form.submit}</Submit>
-        </form>
+        <>
+          <CatalogSearch
+            action="/sessoes/nova"
+            scope="films"
+            answer={search}
+            keep={{ parecido: similar }}
+            pick={similarHref(similar, search?.query)}
+          />
+          <NewSessionForm options={options} similar={similar} />
+        </>
       )}
     </ImportsFrame>
+  )
+}
+
+function NewSessionForm({
+  options,
+  similar,
+}: {
+  options: RequestOptions
+  similar?: string
+}) {
+  const { form } = SESSIONS
+  return (
+    <form
+      method="post"
+      action="/sessoes/nova/enviar"
+      aria-label={form.label}
+      className="flex flex-col gap-xl"
+    >
+      <Attendees options={options} />
+      <Rule options={options} />
+      <Moods moods={options.moods} />
+      <Constraints similar={similar} />
+      <Submit variant="primary">{form.submit}</Submit>
+    </form>
   )
 }
 
@@ -398,7 +437,7 @@ function Moods({ moods }: { moods: readonly string[] }) {
   )
 }
 
-function Constraints() {
+function Constraints({ similar }: { similar?: string }) {
   const { form } = SESSIONS
   const year = { type: 'number', min: 1870, max: 2100 } as const
   return (
@@ -445,6 +484,7 @@ function Constraints() {
         label={form.similar}
         hint={form.similarHint}
         placeholder="tt…"
+        defaultValue={similar}
       />
       <div className="flex flex-col gap-sm">
         <Choice name="sem-ja-visto">

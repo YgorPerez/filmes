@@ -1,9 +1,11 @@
 import type { PersonNotice, PersonRefusal } from '#/content/person-action'
+import type { SearchAnswer } from '#/platform/catalog-search'
 import type { PersonPage } from '#/platform/people'
 import { Marquee } from './marquee'
 import {
   ActionForm,
   Alert,
+  CatalogSearch,
   Disclosure,
   Item,
   Items,
@@ -40,17 +42,20 @@ const RATING_OPTIONS = [
 /** `/pessoas/<slug>`: what the filmes knows of the Pessoa's taste, and a
  * form for each `pessoa` action. Every form is a plain POST that comes back
  * here with `notice` or `refusal`. `page` is `'unknown'` when no Pessoa has
- * the slug, null when the engine cannot run on this server. */
+ * the slug, null when the engine cannot run on this server. `search` is the
+ * Catálogo search of `?buscar=`, for the targets' IDs. */
 export function PersonScreen({
   slug,
   page,
   notice,
   refusal,
+  search = null,
 }: {
   slug: string
   page: PersonPage | 'unknown' | null
   notice?: PersonNotice
   refusal?: PersonRefusal
+  search?: SearchAnswer | null
 }) {
   return (
     <main className="mx-auto flex max-w-[720px] flex-col gap-xl px-lg py-xl">
@@ -65,19 +70,26 @@ export function PersonScreen({
       ) : page === 'unknown' ? (
         <Alert>{PERSON.unknown}</Alert>
       ) : (
-        <Person slug={slug} page={page} notice={notice} refusal={refusal} />
+        <>
+          <PersonHeader page={page} notice={notice} refusal={refusal} />
+          <CatalogSearch
+            action={`/pessoas/${encodeURIComponent(slug)}`}
+            scope="all"
+            answer={search}
+          />
+          <Details slug={slug} page={page} />
+        </>
       )}
     </main>
   )
 }
 
-function Person({
-  slug,
+/** Her name and aliases, and what the last form did. */
+function PersonHeader({
   page,
   notice,
   refusal,
 }: {
-  slug: string
   page: PersonPage
   notice?: PersonNotice
   refusal?: PersonRefusal
@@ -95,6 +107,14 @@ function Person({
       </div>
       {refusal && <Alert>{PERSON.refusals[refusal]}</Alert>}
       {notice && <Notice>{PERSON.notices[notice]}</Notice>}
+    </>
+  )
+}
+
+/** The Pessoa's sections, one per kind of taste. */
+function Details({ slug, page }: { slug: string; page: PersonPage }) {
+  return (
+    <>
       <OpenQuestions slug={slug} page={page} />
       <Vetoes slug={slug} page={page} />
       <Adjustments slug={slug} page={page} />

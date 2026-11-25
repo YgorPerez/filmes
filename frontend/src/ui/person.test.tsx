@@ -11,6 +11,7 @@ import {
 } from '#/content/person-action'
 import type { PersonPage } from '#/platform/people'
 import { PERSON } from './person.copy'
+import { CATALOG_SEARCH } from './catalog-search.copy'
 import { PersonScreen } from './person'
 
 afterEach(cleanup)
@@ -368,6 +369,7 @@ describe('PersonScreen', () => {
 
   it('says when no Pessoa has the name, or the engine cannot run', () => {
     render(<PersonScreen slug="ninguem" page="unknown" />)
+    expect(screen.queryByRole('search')).toBeNull()
     expect(screen.getByRole('alert').textContent).toContain(PERSON.unknown)
     cleanup()
     render(<PersonScreen slug="iara" page={null} />)
@@ -394,5 +396,24 @@ describe('PersonScreen', () => {
       PERSON.ratings.noDatabase,
     ])
       expect(screen.getByText(empty)).toBeTruthy()
+  })
+})
+
+describe('the Catálogo search', () => {
+  it('looks for any kind and comes back to her page', () => {
+    render(
+      <PersonScreen
+        slug="iara"
+        page={IARA}
+        search={{ query: 'é', refused: 'curta' }}
+      />,
+    )
+    const form = screen.getByRole('search') as HTMLFormElement
+    expect(form.method).toBe('get')
+    expect(new URL(form.action).pathname).toBe('/pessoas/iara')
+    expect(screen.getByText(CATALOG_SEARCH.leadAll)).toBeTruthy()
+    expect(screen.getByRole('alert').textContent).toContain(
+      CATALOG_SEARCH.refusals.curta,
+    )
   })
 })

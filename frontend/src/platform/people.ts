@@ -28,7 +28,9 @@ import {
   type PersonNotice,
   type PersonRefusal,
 } from '#/content/person-action'
+import type { CatalogScope } from '#/content/catalog-search'
 import { currentOwner } from './auth'
+import { catalogSearch } from './catalog-search'
 import { appEngine } from './engine'
 import { formPoster, seeOther } from './form-post'
 import type { Owner } from './owners'
@@ -336,3 +338,8 @@ export const servePersonAction = (request: Request, person: string) =>
     appPeople(),
     serverEnv().APP_ORIGIN,
   )
+
+/** The Catálogo search for the app's screens (`catalog-search.ts`): the
+ * Pessoa page's first, and Nova Sessão's and Feedback's. */
+export const appCatalogSearch = (query: string, scope: CatalogScope) =>
+  catalogSearch(appEngine().run, query, scope)

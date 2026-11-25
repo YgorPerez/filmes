@@ -150,3 +150,54 @@ describe('the Nova Sessão form', () => {
     expect(screen.queryByRole('form')).toBeNull()
   })
 })
+
+describe('the Catálogo search', () => {
+  it('adds the film the Catálogo search found to “parecido com”', () => {
+    const search = {
+      query: 'mare',
+      found: {
+        query: 'mare',
+        films: [
+          {
+            id: 'tt9000102',
+            title: 'Maré Baixa',
+            year: 2015,
+            votes: 32000,
+            rating: null,
+            directors: ['Helena Prado'],
+          },
+        ],
+        people: [],
+        genres: [],
+        series: [],
+      },
+    }
+    render(<NewSession options={OPTIONS} search={search} similar="tt9000101" />)
+    const form = screen.getByRole('form', { name: SESSIONS.form.label })
+
+    expect(
+      screen
+        .getByRole('link', { name: 'Usar Maré Baixa (2015)' })
+        .getAttribute('href'),
+    ).toBe('/sessoes/nova?parecido=tt9000101%2Ctt9000102&buscar=mare')
+    expect(posted(form as HTMLFormElement)).toMatchObject({
+      ok: { similar: ['tt9000101'] },
+    })
+    const searchForm = screen.getByRole('search') as HTMLFormElement
+    expect(new FormData(searchForm).get('parecido')).toBe('tt9000101')
+  })
+
+  it('starts “parecido com” with no search', () => {
+    render(<NewSession options={OPTIONS} search={null} />)
+    expect(
+      (
+        screen.getByLabelText(copy.similar, {
+          exact: false,
+        }) as HTMLInputElement
+      ).value,
+    ).toBe('')
+    expect(
+      screen.getByRole('search').querySelector('input[type=hidden]'),
+    ).toBeNull()
+  })
+})
