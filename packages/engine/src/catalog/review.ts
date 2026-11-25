@@ -1,12 +1,27 @@
-// The parts of `catalogo/review.py` the evaluation shares with the Catalog
-// (#106 adds the ZIP loading): counting MovieLens tags by distinct user and
-// giving each row its Fonte, date and `fato_id`.
+// `catalogo/review.py`: the GroupLens dumps behind the Review Signals.
+// From ml-32m, the item-item neighbourhood of the 4+ ratings and the tags
+// counted by distinct user; from the Tag Genome 2021, each tag's relevance.
+// The evaluation shares the tag counting and the Fatos with the Catalog.
 
+import { Effect } from 'effect'
 import { compareTuple } from '../compat/compare.ts'
 import { factId, pyInt, type PyValue } from '../compat/fact-id.ts'
-import { pyParseInt } from '../compat/parse.ts'
+import { pyParseFloat, pyParseInt } from '../compat/parse.ts'
 import { pythonError } from '../compat/python-error.ts'
 import { pyReprStr, pyStrip } from '../compat/text.ts'
+import { HIGH_RATING } from '../evidence/ruler.ts'
+import type { Connection, SqliteError } from '../sqlite/Sqlite.ts'
+import { CsvDictRows, CsvRecords } from './csv-stream.ts'
+import { computeNeighbors } from './neighbors.ts'
+import { forEachBatch, lineBatches, utf8Text } from './text-source.ts'
+import {
+  dumpPath,
+  GENOME,
+  MOVIELENS,
+  type Dump,
+  type Dumps,
+} from './versions.ts'
+import { zipMember } from './zip-file.ts'
 
 /** `contar_tags`: distinct users by (film, tag), as `(film, tag, users)`,
  * by film then tag. `rows` gives (userId, movieId, tag) of tags.csv; `map`
@@ -45,19 +60,233 @@ export const countTags = (
 }
 
 /** `fatos`: each row with Fonte and date after it and its `fato_id` in
- * front. Numbers are Python ints. */
-export const reviewFacts = (
+ * front, one at a time. Numbers are Python ints. */
+export function* reviewFactRows(
   table: string,
   rows: Iterable<ReadonlyArray<string | number>>,
   [source, date]: readonly [string, string],
-): Array<Array<string | number>> => {
-  const out: Array<Array<string | number>> = []
+): Generator<Array<string | number>> {
   for (const row of rows) {
     const values = [...row, source, date]
     const typed: PyValue[] = values.map((v) =>
       typeof v === 'number' ? pyInt(v) : v,
     )
-    out.push([factId(table, ...typed), ...values])
+    yield [factId(table, ...typed), ...values]
   }
-  return out
 }
+
+/** `fatos`, collected. */
+export const reviewFacts = (
+  table: string,
+  rows: Iterable<ReadonlyArray<string | number>>,
+  sourceAndDate: readonly [string, string],
+): Array<Array<string | number>> => [
+  ...reviewFactRows(table, rows, sourceAndDate),
+]
+
+const MOVIELENS_MEMBERS = {
+  links: 'ml-32m/links.csv',
+  ratings: 'ml-32m/ratings.csv',
+  tags: 'ml-32m/tags.csv',
+} as const
+const GENOME_MEMBERS = {
+  metadata: 'movie_dataset_public_final/raw/metadata.json',
+  scores: 'movie_dataset_public_final/scores/glmer.csv',
+} as const
+
+type Lookup = (column: string) => string | null
+
+/** `csv.DictReader` over a ZIP member (`utf-8`, `newline=""`), a batch of
+ * rows per chunk. */
+async function* csvRows(zip: string, member: string): AsyncGenerator<Lookup[]> {
+  const records = new CsvRecords()
+  const dict = new CsvDictRows()
+  for await (const lines of lineBatches(utf8Text(zipMember(zip, member)))) {
+    const rows = dict.push(records.push(lines))
+    if (rows.length > 0) yield rows
+  }
+  const rows = dict.push(records.push([], true))
+  if (rows.length > 0) yield rows
+}
+
+/** A column a row lacks is Python's `None`, which the next step refuses. */
+const present = (value: string | null, column: string): string => {
+  if (value === null)
+    throw pythonError(
+      'TypeError',
+      `column ${pyReprStr(column)} is None in a short row`,
+    )
+  return value
+}
+
+/** `_imdb`: "tt" and the digits, or `undefined`. */
+const imdbId = (value: unknown): string | undefined => {
+  if (value === null || value === undefined || value === '') return undefined
+  if (typeof value !== 'string')
+    throw pythonError(
+      'AttributeError',
+      `'${typeof value === 'number' ? 'int' : typeof value}' object has no attribute 'isdecimal'`,
+    )
+  return /^\p{Nd}+$/u.test(value) ? `tt${value}` : undefined
+}
+
+const sourceOf = (dump: Dump): readonly [string, string] => {
+  if (dump.source === undefined) throw pythonError('KeyError', "'source'")
+  return [dump.source, dump.date]
+}
+
+/** `vizinhos(notas, links)` and the tags of ml-32m. */
+const loadMovielens = (db: Connection, zip: string, dump: Dump) =>
+  Effect.gen(function* () {
+    const sourceAndDate = sourceOf(dump)
+    const map = new Map<string, string>()
+    yield* forEachBatch(csvRows(zip, MOVIELENS_MEMBERS.links), (rows) =>
+      Effect.sync(() => {
+        for (const row of rows) {
+          const imdb = imdbId(row('imdbId'))
+          if (imdb !== undefined)
+            map.set(present(row('movieId'), 'movieId'), imdb)
+        }
+      }),
+    )
+    const films = [...new Set(map.values())].sort((a, b) =>
+      compareTuple([a], [b]),
+    )
+    const index = new Map(films.map((film, i) => [film, i] as const))
+    const byMovieId = new Map(
+      [...map].map(([movieId, film]) => [movieId, index.get(film)!] as const),
+    )
+    let items = new Int32Array(1 << 20)
+    let users = new Int32Array(1 << 20)
+    let votes = 0
+    yield* forEachBatch(csvRows(zip, MOVIELENS_MEMBERS.ratings), (rows) =>
+      Effect.sync(() => {
+        for (const row of rows) {
+          const movieId = row('movieId')
+          const item = movieId === null ? undefined : byMovieId.get(movieId)
+          if (item === undefined) continue
+          if (!(pyParseFloat(present(row('rating'), 'rating')) >= HIGH_RATING))
+            continue
+          const user = pyParseInt(present(row('userId'), 'userId'))
+          if (user === null)
+            throw pythonError(
+              'ValueError',
+              `invalid literal for int() with base 10: ${pyReprStr(row('userId')!)}`,
+            )
+          if (votes === items.length) {
+            const grownItems = new Int32Array(votes * 2)
+            grownItems.set(items)
+            items = grownItems
+            const grownUsers = new Int32Array(votes * 2)
+            grownUsers.set(users)
+            users = grownUsers
+          }
+          items[votes] = item
+          users[votes] = user
+          votes += 1
+        }
+      }),
+    )
+    yield* db.runMany(
+      'INSERT INTO vizinhos VALUES (?, ?, ?, ?, ?, ?, ?)',
+      reviewFactRows(
+        'vizinhos',
+        computeNeighbors(
+          films,
+          items.subarray(0, votes),
+          users.subarray(0, votes),
+        ),
+        sourceAndDate,
+      ),
+    )
+    const tagRows: Array<readonly [string, string, string]> = []
+    yield* forEachBatch(csvRows(zip, MOVIELENS_MEMBERS.tags), (rows) =>
+      Effect.sync(() => {
+        for (const row of rows)
+          tagRows.push([
+            present(row('userId'), 'userId'),
+            present(row('movieId'), 'movieId'),
+            present(row('tag'), 'tag'),
+          ])
+      }),
+    )
+    yield* db.runMany(
+      'INSERT INTO tags_movielens VALUES (?, ?, ?, ?, ?, ?)',
+      reviewFactRows('tags_movielens', countTags(tagRows, map), sourceAndDate),
+    )
+  })
+
+/** The lines of a binary stream split on "\n" only (Python iterating a
+ * binary file), decoded. */
+async function* binaryLines(
+  bytes: AsyncIterable<Buffer>,
+): AsyncGenerator<string[]> {
+  let pending = ''
+  for await (const text of utf8Text(bytes)) {
+    const parts = (pending + text).split('\n')
+    pending = parts.pop()!
+    if (parts.length > 0) yield parts
+  }
+  if (pending.length > 0) yield [pending]
+}
+
+/** `_carregar_genoma`: each tag's relevance, the highest kept when two
+ * Tag Genome items share a tconst. */
+const loadGenome = (db: Connection, zip: string, dump: Dump) =>
+  Effect.gen(function* () {
+    const sourceAndDate = sourceOf(dump)
+    const map = new Map<string, string>()
+    yield* forEachBatch(
+      binaryLines(zipMember(zip, GENOME_MEMBERS.metadata)),
+      (lines) =>
+        Effect.sync(() => {
+          for (const line of lines) {
+            const row = JSON.parse(line) as Record<string, unknown>
+            const imdb = imdbId(row['imdbId'])
+            if (imdb !== undefined) map.set(String(row['item_id']), imdb)
+          }
+        }),
+    )
+    yield* forEachBatch(csvRows(zip, GENOME_MEMBERS.scores), (rows) =>
+      db.runMany(
+        `INSERT INTO genoma VALUES (?, ?, ?, ?, ?, ?)
+         ON CONFLICT(filme_id, tag) DO UPDATE SET
+             fato_id = excluded.fato_id, relevancia = excluded.relevancia
+         WHERE excluded.relevancia > genoma.relevancia`,
+        (function* () {
+          for (const row of rows) {
+            const itemId = row('item_id')
+            const film = itemId === null ? undefined : map.get(itemId)
+            const tag = pyStrip(present(row('tag'), 'tag')).toLowerCase()
+            if (film === undefined || tag === '') continue
+            const score = present(row('score'), 'score')
+            // The `fato_id` hashes the score as written, not the float.
+            const [source, date] = sourceAndDate
+            yield [
+              factId('genoma', film, tag, score, source, date),
+              film,
+              tag,
+              pyParseFloat(score),
+              source,
+              date,
+            ]
+          }
+        })(),
+      ),
+    )
+  })
+
+/** `carregar`: nothing without ml-32m in the manifest (the manifest check
+ * already asked for both GroupLens dumps together). */
+export const loadReview = (
+  db: Connection,
+  catalog: string,
+  dumps: Dumps,
+): Effect.Effect<void, SqliteError> =>
+  Effect.gen(function* () {
+    const movielens = dumps.get(MOVIELENS)
+    if (movielens === undefined) return
+    yield* loadMovielens(db, dumpPath(catalog, MOVIELENS, movielens), movielens)
+    const genome = dumps.get(GENOME)!
+    yield* loadGenome(db, dumpPath(catalog, GENOME, genome), genome)
+  })

@@ -43,6 +43,9 @@ const appEnv = [
   `FILMES_CONFIG=${engine}/config`,
   `FILMES_DATABASE=${engine}/filmes.sqlite`,
   `FILMES_HOJE=${FIXTURE_TODAY}`,
+  // Operações: the Catalog `evaluate` measures, and its reports' folder.
+  'FILMES_CATALOGO=../tests/fixture/catalogo',
+  `FILMES_AVALIACOES=${engine}/evaluations`,
   // Recorded answers, never the network: with a key, TMDB answers from the
   // recordings too (the Imports' queue), and OMDb and Does the Dog Die (the
   // child and trigger Restrições of a new Session).
@@ -67,9 +70,23 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
   projects: [
-    { name: 'mobile', use: { ...devices['Pixel 7'], channel: 'chrome' } },
+    // Before the others: Bruno, the fixture's one Dono, is not admin yet
+    // (`operations.e2e.ts` makes him admin on the copy).
+    {
+      name: 'not-admin',
+      testMatch: '**/not-admin.e2e.ts',
+      use: { ...devices['Desktop Chrome'], channel: 'chrome' },
+    },
+    {
+      name: 'mobile',
+      testIgnore: '**/not-admin.e2e.ts',
+      dependencies: ['not-admin'],
+      use: { ...devices['Pixel 7'], channel: 'chrome' },
+    },
     {
       name: 'desktop',
+      testIgnore: '**/not-admin.e2e.ts',
+      dependencies: ['not-admin'],
       use: { ...devices['Desktop Chrome'], channel: 'chrome' },
     },
   ],

@@ -8,4 +8,5 @@ export const HOME = {
   imports: 'Importar',
   export: 'Exportar Notas',
   feedback: 'Feedback',
+  operations: 'Operações',
 } as const

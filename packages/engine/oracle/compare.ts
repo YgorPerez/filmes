@@ -152,10 +152,16 @@ export function mapStrings(
   return value
 }
 
-/** Writes a side's work folder as `{work}` and the repo as `{root}`. */
+/** Writes a side's work folder as `{work}` and the repo as `{root}`. A
+ * config file the harness migrated for the TypeScript side
+ * (`{work}/.oracle-config/versoes.json`, see `replay.ts`) is named as the
+ * Python file it stands for (`{work}/versoes.json`). */
 export function placeholders(work: string, root: string) {
   return (text: string): string =>
-    text.replaceAll(work, '{work}').replaceAll(root, '{root}')
+    text
+      .replaceAll(work, '{work}')
+      .replaceAll(root, '{root}')
+      .replaceAll('{work}/.oracle-config/', '{work}/')
 }
 
 const PYTHON_DATA_PATH = /\{work\}\/dados((?:\/[^/\s'"`,;:()]+)*)/g

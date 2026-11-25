@@ -55,6 +55,39 @@ export interface EvaluateRequest {
   readonly onProgress?: (event: EvaluationProgress) => Effect.Effect<void>
 }
 
+/** `onProgress` from a plain callback, for an edge that writes no Effect
+ * code (the web app's live progress). */
+export const progressTo =
+  (listen: (event: EvaluationProgress) => void) =>
+  (event: EvaluationProgress): Effect.Effect<void> =>
+    Effect.sync(() => listen(event))
+
+/** Where `evaluate` writes its reports (`FILMES_AVALIACOES`), or
+ * `missing_config`: an edge asks before a run, since `evaluate` asks only
+ * after measuring. */
+export const evaluationsFolder: Effect.Effect<
+  string,
+  EngineError,
+  Environment
+> = Effect.gen(function* () {
+  return yield* (yield* Environment).path('evaluations')
+})
+
+/** The database and the sources' cache an engine over this environment
+ * reads: an edge copies the database and runs `evaluate` on the copy, so
+ * its long read transaction never holds the lock writers need. */
+export const evaluationDatabase: Effect.Effect<
+  { readonly database: string; readonly cache: string | null },
+  EngineError,
+  Environment
+> = Effect.gen(function* () {
+  const env = yield* Environment
+  return {
+    database: yield* env.path('database'),
+    cache: env.paths.cache ?? null,
+  }
+})
+
 /** The Feedback of the latest Sessions (`online`). */
 export interface OnlineMeasures {
   readonly sessions: number

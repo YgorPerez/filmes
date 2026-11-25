@@ -18,18 +18,18 @@ import sys
 from array import array
 from pathlib import Path
 
+import yaml
+
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[3]
 sys.path.insert(0, str(ROOT))
+
+from filmes.catalogo.vizinhos import calcular
 
 _spec = importlib.util.spec_from_file_location("compat_golden", HERE.parent / "compat" / "golden.py")
 compat = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(compat)
 compat.OUT = HERE / "golden"
-
-import yaml  # noqa: E402 (after the path: the engine's environment)
-
-from filmes.catalogo.vizinhos import calcular  # noqa: E402
 
 N = 500
 
