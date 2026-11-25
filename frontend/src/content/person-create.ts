@@ -78,8 +78,7 @@ export function parseNewPerson(
     .split(',')
     .map((alias) => alias.trim())
     .filter((alias) => alias !== '')
-  if (typed.dono !== 'sim')
-    return { name: typed.nome, aliases, owner: false }
+  if (typed.dono !== 'sim') return { name: typed.nome, aliases, owner: false }
   if (!typed.email) return 'email'
   return { name: typed.nome, aliases, owner: true, email: typed.email }
 }

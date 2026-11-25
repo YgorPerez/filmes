@@ -121,10 +121,9 @@ export function peopleFromEngine(engine: Engine): People {
     view: (person) => engine.run(personView(person)),
     create: (input, owner) =>
       map(
-        engine.run(
-          personCreate({ ...input, author: ownerAuthor(owner) }),
-          { owner: owner.person },
-        ),
+        engine.run(personCreate({ ...input, author: ownerAuthor(owner) }), {
+          owner: owner.person,
+        }),
         (made) => made.person,
       ),
     tagGroups: () =>

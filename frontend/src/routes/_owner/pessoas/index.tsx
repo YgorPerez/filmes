@@ -1,9 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { isPeopleRefusal } from '#/content/person-action'
-import {
-  isPersonCreateRefusal,
-  typedFromSearch,
-} from '#/content/person-create'
+import { isPersonCreateRefusal, typedFromSearch } from '#/content/person-create'
 import { readPeopleList } from '#/content/people'
 import { PeopleList } from '#/ui/people'
 

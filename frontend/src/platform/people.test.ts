@@ -308,12 +308,7 @@ describe('personCreateAction', () => {
 
   it('sends whoever is not a Dono to the login, and refuses another site', async () => {
     const { people, created } = fakePeople()
-    const login = await personCreateAction(
-      postNew(LUANA),
-      null,
-      people,
-      ORIGIN,
-    )
+    const login = await personCreateAction(postNew(LUANA), null, people, ORIGIN)
     expect(login.headers.get('Location')).toBe('/entrar')
     const other = await personCreateAction(
       postNew(LUANA, 'https://elsewhere.example'),
@@ -344,7 +339,11 @@ describe('personCreateAction', () => {
     ['invalid_usage', "slug inválido: '' (só letras...)", 'nome'],
     ['invalid_usage', "'dono' é reservado para achar o Dono", 'reservado'],
     ['invalid_usage', "e-mail inválido: 'x@y'", 'email'],
-    ['invalid_usage', "o e-mail 'bruno@example.org' já é de bruno", 'email-usado'],
+    [
+      'invalid_usage',
+      "o e-mail 'bruno@example.org' já é de bruno",
+      'email-usado',
+    ],
     ['missing_database', 'sem banco', 'indisponivel'],
   ])('says why the engine refused: %s %s', async (code, message, refusal) => {
     const log = vi.spyOn(console, 'error').mockImplementation(() => {})
@@ -655,7 +654,11 @@ describe('peopleFromEngine', () => {
         '/pessoas/luana-reis?feito=criada',
       )
       expect(
-        await send({ nome: 'Farias', dono: 'sim', email: 'Farias@Example.org' }),
+        await send({
+          nome: 'Farias',
+          dono: 'sim',
+          email: 'Farias@Example.org',
+        }),
       ).toBe('/pessoas/farias?feito=criada')
       // The new Pessoas are in the database at once: no reload.
       expect((await peopleList(people))?.map((p) => p.person)).toContain(
@@ -669,11 +672,15 @@ describe('peopleFromEngine', () => {
       ).toMatch(/owner: true[\s\S]*email: farias@example\.org/)
 
       // What the engine refuses comes back with its reason.
-      expect(await send({ nome: 'Iara' })).toBe('/pessoas?erro=existe&nome=Iara')
+      expect(await send({ nome: 'Iara' })).toBe(
+        '/pessoas?erro=existe&nome=Iara',
+      )
       expect(await send({ nome: 'Dono' })).toBe(
         '/pessoas?erro=reservado&nome=Dono',
       )
-      expect(await send({ nome: '!!!' })).toBe('/pessoas?erro=nome&nome=%21%21%21')
+      expect(await send({ nome: '!!!' })).toBe(
+        '/pessoas?erro=nome&nome=%21%21%21',
+      )
       expect(await send({ nome: 'Ana', dono: 'sim', email: 'ana@x' })).toBe(
         '/pessoas?erro=email&nome=Ana&dono=sim&email=ana%40x',
       )

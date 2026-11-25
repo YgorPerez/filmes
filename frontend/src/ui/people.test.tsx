@@ -5,10 +5,7 @@ import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { afterEach, describe, expect, it } from 'vite-plus/test'
-import {
-  parseNewPerson,
-  PERSON_CREATE_REFUSALS,
-} from '#/content/person-create'
+import { parseNewPerson, PERSON_CREATE_REFUSALS } from '#/content/person-create'
 import { PEOPLE } from './person.copy'
 import { PeopleList } from './people'
 

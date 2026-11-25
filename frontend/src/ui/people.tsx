@@ -1,7 +1,4 @@
-import type {
-  PersonCreateRefusal,
-  TypedPerson,
-} from '#/content/person-create'
+import type { PersonCreateRefusal, TypedPerson } from '#/content/person-create'
 import type { PersonEntry } from '#/platform/people'
 import { Marquee } from './marquee'
 import { PEOPLE } from './person.copy'
