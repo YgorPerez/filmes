@@ -1,8 +1,8 @@
 // The app in the browser, over the build's SSR server (`pnpm build`), as it
 // goes to production, with a stand-in for Google (`e2e/fake-google.ts`) and
 // the engine's fixture: the fixture's Pessoas in English (Bruno is Dono, Iara
-// is not), the English config and the database the Python engine builds from
-// `tests/fixture` (so it needs `uv`, as the engine's tests do). `pnpm e2e`
+// is not), the English config and the database the engine's `rebuild` builds
+// from `tests/fixture`. `pnpm e2e`
 // builds and starts both servers. The files end in `.e2e.ts`, so Vitest
 // leaves them alone.
 
@@ -26,7 +26,7 @@ process.env.E2E_AUTH_DATABASE ??= join(
 // A copy of the engine's fixture for this run alone (the app may write the
 // sources' cache next to the database), built once: the workers inherit it.
 if (!process.env.E2E_ENGINE) {
-  buildEngineFixture()
+  await buildEngineFixture()
   const copy = mkdtempSync(join(tmpdir(), 'e2e-engine-'))
   cpSync(process.env[FIXTURE_ENV]!, copy, { recursive: true })
   process.env.E2E_ENGINE = copy

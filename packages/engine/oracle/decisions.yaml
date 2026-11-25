@@ -51,8 +51,9 @@
 #   list the English values ("(use director, writer, cast, series, genre)",
 #   "(use none, low ou high)"), and a body line error names
 #   "people/<slug>.md, linha N do corpo" (Python: "pessoas/"), because the
-#   Python text would point at a wrong value or file. `{item!r}` shows the
-#   item's English keys.
+#   Python text would point at a wrong value or file (`reconstruir` reaches
+#   the body line one: entry below). `{item!r}` shows the item's English
+#   keys.
 # - The repr of a YAML date in an error message is '2026-11-20' (TS keeps
 #   dates as text); Python shows datetime.date(2026, 11, 20). Invalid data
 #   only.
@@ -66,6 +67,17 @@
 #   parsed YAML, so this needs no entry.
 # - Two Donos stays invalid_data in readPeople/resolvePerson/createPerson;
 #   the login decodes each file alone. The Sessions tickets decide.
+
+# The body line error of a Pessoa file (#86's exception above), reached by
+# `reconstruir` over a file with a Declarado out of format: it names the
+# file under people/, where filmes-dados keeps it after the key migration.
+- id: body-line-error-names-the-english-people-folder
+  commands: [reconstruir]
+  path: error.message
+  python: '^pessoas/[^/]+\.md, linha \d+ do corpo: '
+  ts: '^people/[^/]+\.md, linha \d+ do corpo: '
+  reason: filmes-dados keeps the Pessoas in people/ after the key migration, so the error points at that file
+  link: https://github.com/YgorPerez/filmes/issues/86
 
 # The TypeScript engine reads tag_vetoes.toml with English group keys
 # (ADR 0002), so the message names that file and lists the keys it has: a
