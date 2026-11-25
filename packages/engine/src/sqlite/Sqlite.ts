@@ -13,6 +13,12 @@
 //
 // Both fail with `missing_database` when the file is not there, and both
 // register the functions of `functions.ts`.
+//
+// The database is in WAL mode (#125): readers never block the writer, so
+// `evaluate`'s one read transaction of minutes leaves Feedback and imports
+// alone. `rebuild` leaves its file in WAL, and `write` switches a file built
+// before that (the mode is kept in the file). The `-wal` and `-shm` beside
+// the file belong to it: a copy of the file alone may miss committed pages.
 
 import { existsSync } from 'node:fs'
 import {
@@ -285,6 +291,13 @@ const openFile = (
     catch: fail,
   })
 
+/** Switches a database built in rollback mode to WAL; a no-op once it is.
+ * Another connection reading at that moment makes the switch wait for the
+ * busy timeout and then refuse: the write goes on, and a later one
+ * switches. */
+const toWal = (connection: Connection) =>
+  Effect.ignore(connection.exec('PRAGMA journal_mode = WAL'))
+
 /** Closes a connection, rolling back a transaction a failed or interrupted
  * use left open. */
 const close = (db: DatabaseSync) =>
@@ -355,7 +368,8 @@ export class Sqlite extends Context.Service<
               open(false),
               (db) => {
                 const connection = makeConnection(db)
-                return connection.exec('BEGIN IMMEDIATE').pipe(
+                return toWal(connection).pipe(
+                  Effect.andThen(() => connection.exec('BEGIN IMMEDIATE')),
                   Effect.andThen(() => use(connection)),
                   Effect.tap(() => connection.exec('COMMIT')),
                 )

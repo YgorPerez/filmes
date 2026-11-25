@@ -430,7 +430,7 @@ describe('operationsFromEngine', () => {
     const fixture = useFixture()
     const engine = makeEngine(fixture.vars)
     try {
-      const ops = operationsFromEngine(engine, fixture.vars)
+      const ops = operationsFromEngine(engine)
       const table = await consultAnswer(
         ops,
         "SELECT slug FROM pessoas WHERE slug IN ('bruno', 'iara') ORDER BY slug",
@@ -458,7 +458,7 @@ describe('operationsFromEngine', () => {
     const vars = { ...fixture.vars, FILMES_AVALIACOES: folder }
     const engine = makeEngine(vars)
     try {
-      const ops = operationsFromEngine(engine, vars)
+      const ops = operationsFromEngine(engine)
       const runs = new EvaluationRuns(ops)
       const seen: number[] = []
       // A writer that never waits: if the run held a read lock on the live
@@ -494,7 +494,7 @@ describe('operationsFromEngine', () => {
     }
   })
 
-  it('says so when there is no database to copy', async () => {
+  it('says so when there is no database', async () => {
     const fixture = useFixture()
     const vars = { ...fixture.vars, FILMES_AVALIACOES: fixture.root }
     const engine = makeEngine({
@@ -502,7 +502,7 @@ describe('operationsFromEngine', () => {
       FILMES_BANCO: join(fixture.root, 'none.sqlite'),
     })
     try {
-      const ops = operationsFromEngine(engine, vars)
+      const ops = operationsFromEngine(engine)
       const log = vi.spyOn(console, 'error').mockImplementation(() => {})
       const runs = new EvaluationRuns(ops)
       await runs.start('Bruno', false)
@@ -537,7 +537,7 @@ describe('operationsFromEngine', () => {
       FILMES_DATA_REMOTE: join(fixture.root, 'nowhere.git'),
     })
     try {
-      const ops = operationsFromEngine(engine, fixture.vars)
+      const ops = operationsFromEngine(engine)
       for (let i = 0; i < 3; i++) await ops.push()
       const alert = await pushAlert(ADMIN, ops)
       expect(alert).toMatchObject({ enabled: true, alert: true })
