@@ -345,6 +345,7 @@ describe('person', () => {
     assert.deepEqual(refused.error, {
       code: 'invalid_usage',
       message: 'um Dono precisa do e-mail do Google, para entrar no site',
+      reason: 'email_required',
     })
     assert.deepEqual(created, {
       person: 'luana',

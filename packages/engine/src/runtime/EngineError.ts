@@ -59,6 +59,26 @@ export const ERROR_CODES = [
 
 export type ErrorCode = (typeof ERROR_CODES)[number]
 
+/** Why, finer than the code, where a screen tells the cases apart: the app
+ * reads it, never the PT-BR message. Only creating a Pessoa has them. */
+export const ERROR_REASONS = [
+  // A Pessoa with that slug exists (`person_exists`).
+  'slug_taken',
+  // The slug, the name or an alias already finds another Pessoa
+  // (`person_exists`).
+  'name_taken',
+  // The rest are `invalid_usage`.
+  'invalid_slug',
+  // "dono" finds the Dono.
+  'reserved_name',
+  'email_required',
+  'invalid_email',
+  'email_not_owner',
+  'email_taken',
+] as const
+
+export type ErrorReason = (typeof ERROR_REASONS)[number]
+
 export class EngineError extends Schema.TaggedError<
   EngineError,
   { readonly brand: unique symbol }
@@ -66,8 +86,15 @@ export class EngineError extends Schema.TaggedError<
   code: Schema.Literals(ERROR_CODES),
   /** PT-BR, shown as is. */
   message: Schema.String,
+  reason: Schema.optionalKey(Schema.Literals(ERROR_REASONS)),
 }) {}
 
-/** Shorthand for `new EngineError({ code, message })`. */
-export const engineError = (code: ErrorCode, message: string): EngineError =>
-  new EngineError({ code, message })
+/** Shorthand for `new EngineError({ code, message, reason })`. */
+export const engineError = (
+  code: ErrorCode,
+  message: string,
+  reason?: ErrorReason,
+): EngineError =>
+  new EngineError(
+    reason === undefined ? { code, message } : { code, message, reason },
+  )
