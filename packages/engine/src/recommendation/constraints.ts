@@ -20,6 +20,12 @@
 // `makeConstraintSet` applies the ones asked for, in Python's module order
 // (`CONSTRAINT_ORDER`): that order is the order of the film lines and says
 // which Restrição gets the credit for a film several would remove.
+//
+// Each Restrição lives in its own file under `constraints/`, which exports a
+// `ConstraintModule`: how it reads the request (`read`, Python's `pedido`),
+// how a stored one reads (`label`, `rotulo`) and, optionally, how a refazer
+// carries it over (`inherit`, `herdar`). `constraints/index.ts` holds the
+// modules and the functions over all of them.
 
 import { Effect } from 'effect'
 import type { Evidence } from '../evidence/Evidence.ts'
@@ -81,11 +87,26 @@ export type ConstraintEffect<A> = Effect.Effect<
   EngineServices | Run
 >
 
+/** A Restrição as the Session stores it in `context.constraints` (Python's
+ * `{"nome", **como_json()}`), with the data's English keys (key-migration's
+ * `constraint` map: `since`, `language`, `max_age_rating`...). */
+export interface StoredConstraint {
+  readonly name: string
+  readonly [field: string]: unknown
+}
+
 export interface Constraint {
   readonly name: ConstraintName
   /** What was asked, for reading the request back ("restricoes" of the
-   * result and of the Session). */
+   * result), with the output's English keys. */
   readonly toJson: () => Readonly<Record<string, unknown>>
+  /** What was asked, as the Session stores it. */
+  readonly stored: () => StoredConstraint
+  /** On a refazer: whether this request is new against the one `stored` in
+   * the current version and replaces the whole list (`--manter` is
+   * ignored, and whoever leaves leaves through this Restrição). Python's
+   * `troca_a_lista`. */
+  readonly replacesList?: (stored: StoredConstraint | undefined) => boolean
   /** What the Restrição found, next to `removed`; `drops` is cause → films. */
   readonly result: (
     drops: ReadonlyMap<string, number>,
@@ -103,6 +124,27 @@ export interface Constraint {
   /** A warning about the finished list (the "parecido" says when fewer
    * films passed than asked). */
   readonly listWarning?: (found: number, count: number) => string | null
+}
+
+/** A Restrição's file: how the request asks for it. `R` is the part of
+ * the request it reads (Python's `configurar` arguments). */
+export interface ConstraintModule<R> {
+  readonly name: ConstraintName
+  /** The Restrição the request asks for, `undefined` when it asks for none;
+   * fails `invalid_usage` on a request that makes no sense (Python's
+   * `pedido`). */
+  readonly read: (
+    request: R,
+  ) => Effect.Effect<Constraint | undefined, EngineError>
+  /** How a stored request reads ("nada triste", "até 1h40"; `rotulo`). */
+  readonly label: (stored: StoredConstraint) => string
+  /** On a refazer (`--sessao`): gets this Restrição as the current version
+   * stored it (or `undefined`) and may put it back in the request, so it
+   * keeps holding (Python's `herdar`). Returns the request. */
+  readonly inherit?: <Q extends R>(
+    request: Q,
+    stored: StoredConstraint | undefined,
+  ) => Q
 }
 
 /** Applies the Restrições asked for: before the order, and on demand after

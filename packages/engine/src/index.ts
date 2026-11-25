@@ -54,12 +54,23 @@ export {
   type Constraint,
   type ConstraintContext,
   type ConstraintEffect,
+  type ConstraintModule,
   type ConstraintName,
   type ConstraintSet,
   type Drop,
   type Pass,
+  type StoredConstraint,
   type Verdict,
 } from './recommendation/constraints.ts'
+export {
+  CONSTRAINT_MODULES,
+  constraintLabel,
+  inheritConstraints,
+  readConstraints,
+  replacingList,
+  storedConstraints,
+  type ConstraintRequest,
+} from './recommendation/constraints/index.ts'
 export {
   computeCredit,
   creditLine,

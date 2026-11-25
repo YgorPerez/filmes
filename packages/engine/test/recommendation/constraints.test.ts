@@ -37,6 +37,7 @@ const local = (
 ): Constraint => ({
   name,
   toJson: () => ({ asked: name }),
+  stored: () => ({ name }),
   result: (drops) =>
     drops.size > 0 ? { byCause: Object.fromEntries(drops) } : {},
   evaluate: (_, films) =>
@@ -54,6 +55,7 @@ const local = (
 const onDemand = (out: ReadonlyArray<string>, asked: string[]): Constraint => ({
   name: 'child',
   toJson: () => ({}),
+  stored: () => ({ name: 'child' }),
   result: () => ({}),
   evaluate: (_, films) =>
     Effect.succeed(

@@ -48,6 +48,7 @@ import {
   type Constraint,
   type ConstraintContext,
 } from './constraints.ts'
+import { readConstraints, type ConstraintRequest } from './constraints/index.ts'
 import { computeCredit, creditLine, type Credit } from './credit.ts'
 import { filmHeader, type FilmHeader } from './header.ts'
 import { resolveMoods } from './moods.ts'
@@ -406,8 +407,9 @@ export const rank = (
   })
 
 /** A recommendation request, as an edge (the MCP, the app, the oracle's
- * argv adapter) gives it. */
-export interface RecommendRequest {
+ * argv adapter) gives it. The Restrições it asks for are its
+ * `ConstraintRequest` fields (`maxDuration`, `since`...). */
+export interface RecommendRequest extends ConstraintRequest {
   /** Slugs, names or nicknames, or "dono"; an item may hold several
    * separated by commas. */
   readonly attendees: ReadonlyArray<string>
@@ -418,6 +420,7 @@ export interface RecommendRequest {
   /** With the `by` rule, the Pessoa whose taste orders. */
   readonly by?: string
   readonly moods?: ReadonlyArray<string>
+  /** Restrições already built, after the ones the fields ask for. */
   readonly constraints?: ReadonlyArray<Constraint>
 }
 
@@ -470,6 +473,7 @@ export const recommend = (
     const names = request.attendees
       .flatMap((item) => item.split(','))
       .filter((name) => pyStrip(name) !== '')
+    const asked = yield* readConstraints(request)
     return yield* (yield* Sqlite).read((db) =>
       Effect.gen(function* () {
         const attendees = yield* resolveAttendees(db, names)
@@ -478,7 +482,7 @@ export const recommend = (
           attendees,
           count,
           rule,
-          constraints: request.constraints ?? [],
+          constraints: [...asked, ...(request.constraints ?? [])],
           moods: request.moods ?? [],
         })
       }),
