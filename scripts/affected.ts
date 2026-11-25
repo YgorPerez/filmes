@@ -15,7 +15,8 @@ export type Plan = {
   /** Why everything runs, or `null` when only the affected part runs. */
   readonly full: string | null
   /** The folders where Vitest runs (with `--changed`, unless `full`): `frontend`,
-   * `packages/engine`, `packages/key-migration`, or `.` for the root
+   * `packages/engine`, `packages/key-migration`, `packages/mcp-server`, or
+   * `.` for the root
    * scripts. */
   readonly vitest: readonly string[]
   /** Whether the MCP tests (Vitest, over the real CLI) run. */
@@ -48,6 +49,10 @@ const MIGRATED = /^(config\/|tests\/fixture\/dados\/)/
  * puts them in English, and the Python engine its parity tests run. */
 const ENGINE_FIXTURE =
   /^(filmes\/|tests\/fixture\/|config\/|packages\/key-migration\/src\/|pyproject\.toml$|uv\.lock$)/
+/** What the MCP server's tests read outside the import graph: the engine's
+ * fixture, built from these (`packages/engine/test/global-setup.ts`). */
+const MCP_SERVER_FIXTURE =
+  /^(tests\/fixture\/|config\/|packages\/key-migration\/src\/)/
 /** The pytest seam, whose trace hook the parity oracle's tests run
  * (`packages/engine/oracle/`). */
 const ORACLE_TRACE = /^tests\/conftest\.py$/
@@ -55,6 +60,7 @@ const VITEST_FOLDERS = [
   'frontend',
   'packages/engine',
   'packages/key-migration',
+  'packages/mcp-server',
   '.',
 ]
 
@@ -80,6 +86,7 @@ export function planForDiff(files: readonly string[]): Plan {
     if (MIGRATED.test(file)) vitest.add('packages/key-migration')
     if (ENGINE_FIXTURE.test(file) || ORACLE_TRACE.test(file))
       vitest.add('packages/engine')
+    if (MCP_SERVER_FIXTURE.test(file)) vitest.add('packages/mcp-server')
     if (PYTHON.test(file)) {
       python = true
       mcp = true
@@ -88,9 +95,12 @@ export function planForDiff(files: readonly string[]): Plan {
     else if (file.startsWith('mcp/')) mcp = true
     else if (FROM_ROOT.test(file)) vitest.add('.')
     else if (file.startsWith('frontend/')) vitest.add('frontend')
+    else if (file.startsWith('packages/mcp-server/'))
+      vitest.add('packages/mcp-server')
     else if (file.startsWith('packages/engine/')) {
       vitest.add('packages/engine')
       vitest.add('frontend')
+      vitest.add('packages/mcp-server')
     }
   }
   return {
