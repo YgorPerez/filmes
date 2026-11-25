@@ -313,7 +313,7 @@ components:
     size: '24px'
 ---
 
-<!-- SEED: mundo escolhido pelo Dono no #142 entre os três protótipos do #141, conferido só em prototypes/locadora-de-bairro.prototype.html. Rode /impeccable document de novo quando o Cartaz e o shell existirem em frontend/, para trocar o seed pelos tokens do código. -->
+<!-- Mundo escolhido pelo Dono no #142 entre os três protótipos do #141 (prototypes/locadora-de-bairro.prototype.html). O Cartaz e o shell já existem em frontend/, e os tokens do código (frontend/src/ui/tokens.css) seguem este arquivo; quando os dois divergirem, acerte um pelo outro. -->
 
 # Design System: filmes
 

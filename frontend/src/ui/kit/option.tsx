@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { CheckIcon } from './icons'
+import { Icon } from './icon'
 
 // An option to mark (DESIGN.md, Opções): a 44px pill with a 1.5px `rule`
 // outline on `surface`, Rubik 500 14px; marked, a 2px `ink` outline on
@@ -47,7 +47,7 @@ export function Option({
       ) : (
         <input type="checkbox" {...input} />
       )}
-      <CheckIcon className="hidden group-has-checked:block" />
+      <Icon name="check" className="hidden size-4 group-has-checked:block" />
       <span className="min-w-0">{children}</span>
     </label>
   )

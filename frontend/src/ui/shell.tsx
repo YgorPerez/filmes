@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import type { PushStatus } from '@filmes/engine'
 import { Icon, type IconName } from './kit/icon'
 import { Avatar } from './kit/person'
+import { Alert } from './kit/status'
 import { OPERATIONS } from './operations.copy'
 import { SHELL } from './shell.copy'
 
@@ -110,21 +111,18 @@ function PushStrip({ status }: { status: PushStatus }) {
   const copy = OPERATIONS.push
   return (
     <div className="border-b border-rule bg-surface-2 text-ink">
-      <p
-        role="alert"
-        className="mx-auto flex max-w-[720px] items-start gap-sm px-2xl py-md text-meta min-[900px]:max-w-[1040px]"
+      <Alert
+        strip
+        className="mx-auto max-w-[720px] px-2xl py-md text-meta min-[900px]:max-w-[1040px]"
       >
-        <Icon name="alert" className="mt-px size-[18px]" />
-        <span>
-          {copy.banner(status.pending, status.failures)}{' '}
-          <a
-            href="/operacoes#envio"
-            className="font-semibold text-ink underline underline-offset-3"
-          >
-            {copy.bannerLink}
-          </a>
-        </span>
-      </p>
+        {copy.banner(status.pending, status.failures)}{' '}
+        <a
+          href="/operacoes#envio"
+          className="font-semibold text-ink underline underline-offset-3"
+        >
+          {copy.bannerLink}
+        </a>
+      </Alert>
     </div>
   )
 }

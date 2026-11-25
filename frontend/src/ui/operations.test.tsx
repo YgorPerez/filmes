@@ -232,7 +232,7 @@ describe('the evaluation', () => {
     expect(
       within(region(OPERATIONS.evaluation.title)).getByRole('alert')
         .textContent,
-    ).toBe(`⚠${OPERATIONS.evaluation.unavailable}`)
+    ).toBe(OPERATIONS.evaluation.unavailable)
   })
 
   it('shows the progress while it runs, and no second run', () => {

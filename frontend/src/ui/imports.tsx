@@ -9,13 +9,8 @@ import { ratingField, type RatingRefusal } from '#/content/rating-form'
 import type { SearchAnswer } from '#/platform/catalog-search'
 import { Chip } from './kit/chip'
 import { TapeCase } from './kit/tape-case'
-import {
-  Alert,
-  CatalogSearch,
-  Meta,
-  Notice,
-  SubmitButton,
-} from './person-parts'
+import { Slip } from './kit/slip'
+import { Alert, CatalogSearch, Meta, Notice, Submit } from './person-parts'
 import {
   loadDraft,
   parseDraft,
@@ -28,7 +23,7 @@ import {
   withSkipped,
   type Draft,
 } from './rating-draft'
-import { Ficha, RatingDisc } from './person-marks'
+import { RatingDisc } from './person-marks'
 import { RATINGS } from './ratings.copy'
 import { Button, buttonVariants } from './shadcn/button'
 
@@ -215,10 +210,10 @@ function DraftSection({
 }) {
   const rated = Object.entries(draft.ratings)
   return (
-    <Ficha
+    <Slip
       id="minhas-notas"
       title={RATINGS.draft}
-      count={String(rated.length)}
+      aside={String(rated.length)}
       lead={RATINGS.draftLead}
     >
       {rated.length === 0 ? (
@@ -259,11 +254,15 @@ function DraftSection({
             value={entry.rating}
           />
         ))}
-        <SubmitButton disabled={rated.length === 0} className="w-full">
+        <Submit
+          variant="primary"
+          disabled={rated.length === 0}
+          className="w-full"
+        >
           {RATINGS.done(rated.length)}
-        </SubmitButton>
+        </Submit>
       </form>
-    </Ficha>
+    </Slip>
   )
 }
 

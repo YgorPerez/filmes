@@ -40,7 +40,7 @@ Os três passos que a home mostra ao Dono que ainda não terminou de começar: M
 _Evitar_: onboarding, tutorial, cadastro
 
 **Passo pulado** [skipped setup step, `skippedSetup`]:
-Um passo do Guia de início que o Dono pulou. Fica no frontmatter do arquivo dele (`skipped_setup: [import]`), e por isso vale em todo aparelho. O guia o trata como feito.
+Um passo do Guia de início que o Dono pulou. Fica no frontmatter do arquivo dele (`skipped_setup: [import]`), e por isso vale em todo aparelho. Na carteirinha ele tem estado próprio, o carimbo "pulei", e não conta como feito; só para dar o guia por encerrado ele vale como feito.
 
 **Restrição** [constraint, `Constraint`]:
 Um limite que vale só numa Sessão, como "tem criança" ou "sem legenda". Tira o filme antes de qualquer ordenação, como o Veto.

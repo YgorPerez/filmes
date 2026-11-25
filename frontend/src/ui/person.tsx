@@ -1,6 +1,8 @@
 import type { PersonNotice, PersonRefusal } from '#/content/person-action'
 import type { SearchAnswer } from '#/platform/catalog-search'
 import type { PersonPage } from '#/platform/people'
+import { OwnerTag } from './kit/owner-tag'
+import { Slip } from './kit/slip'
 import {
   ActionForm,
   Alert,
@@ -10,13 +12,12 @@ import {
   Items,
   Meta,
   Notice,
-  OwnerTag,
   RemoveForm,
   SelectField,
   Submit,
   TextField,
 } from './person-parts'
-import { Ficha, StrengthDots } from './person-marks'
+import { StrengthDots } from './person-marks'
 import { PERSON, RATING_CHOICES } from './person.copy'
 import { Button, buttonVariants } from './shadcn/button'
 
@@ -195,10 +196,10 @@ function Reports({ slug, page }: Part) {
 function OpenQuestions({ slug, page }: Part) {
   const { questions } = PERSON
   return (
-    <Ficha
+    <Slip
       id="perguntas"
       title={questions.title}
-      count={countOf(page.openQuestions)}
+      aside={countOf(page.openQuestions)}
     >
       <Items empty={questions.empty}>
         {page.openQuestions.map((q) => (
@@ -252,14 +253,14 @@ function OpenQuestions({ slug, page }: Part) {
           </Item>
         ))}
       </Items>
-    </Ficha>
+    </Slip>
   )
 }
 
 function Vetoes({ slug, page }: Part) {
   const { vetoes } = PERSON
   return (
-    <Ficha id="vetos" title={vetoes.title} count={countOf(page.vetoes)}>
+    <Slip id="vetos" title={vetoes.title} aside={countOf(page.vetoes)}>
       <Items empty={vetoes.empty}>
         {page.vetoes.map((v) => (
           <Item
@@ -306,17 +307,17 @@ function Vetoes({ slug, page }: Part) {
           <Submit>{PERSON.save}</Submit>
         </ActionForm>
       </Disclosure>
-    </Ficha>
+    </Slip>
   )
 }
 
 function Adjustments({ slug, page }: Part) {
   const { adjustments } = PERSON
   return (
-    <Ficha
+    <Slip
       id="ajustes"
       title={adjustments.title}
-      count={countOf(page.adjustments)}
+      aside={countOf(page.adjustments)}
       lead={adjustments.lead}
     >
       <ul className="flex flex-col">
@@ -343,7 +344,7 @@ function Adjustments({ slug, page }: Part) {
           )
         })}
       </ul>
-    </Ficha>
+    </Slip>
   )
 }
 
@@ -418,10 +419,10 @@ function Statements({
 }) {
   const copy = kind === 'stated' ? PERSON.stated : PERSON.reports
   return (
-    <Ficha
+    <Slip
       id={kind === 'stated' ? 'declarados' : 'relatos'}
       title={copy.title}
-      count={countOf(items)}
+      aside={countOf(items)}
       lead={copy.lead}
     >
       <Items empty={copy.empty}>
@@ -492,14 +493,14 @@ function Statements({
           </ActionForm>
         </Disclosure>
       )}
-    </Ficha>
+    </Slip>
   )
 }
 
 function Seen({ slug, page }: Part) {
   const { seen } = PERSON
   return (
-    <Ficha id="vistos" title={seen.title} count={countOf(page.seen)}>
+    <Slip id="vistos" title={seen.title} aside={countOf(page.seen)}>
       <Items empty={seen.empty}>
         {page.seen.map((s) => (
           <Item
@@ -548,17 +549,17 @@ function Seen({ slug, page }: Part) {
           <Submit>{PERSON.save}</Submit>
         </ActionForm>
       </Disclosure>
-    </Ficha>
+    </Slip>
   )
 }
 
 function Ratings({ ratings }: { ratings: PersonPage['ratings'] }) {
   const copy = PERSON.ratings
   return (
-    <Ficha
+    <Slip
       id="notas"
       title={copy.title}
-      count={ratings === null ? undefined : countOf(ratings)}
+      aside={ratings === null ? undefined : countOf(ratings)}
       lead={copy.lead}
     >
       {ratings === null ? (
@@ -580,6 +581,6 @@ function Ratings({ ratings }: { ratings: PersonPage['ratings'] }) {
           </ul>
         </Disclosure>
       )}
-    </Ficha>
+    </Slip>
   )
 }

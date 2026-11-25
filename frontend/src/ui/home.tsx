@@ -9,7 +9,7 @@ import {
   MemberStrip,
 } from './home-parts'
 import { HOME } from './home.copy'
-import { Icon } from './kit/icon'
+import { RowArrow } from './kit/row-arrow'
 
 // The home in the Locadora de bairro (DESIGN.md, Home: o guia como
 // carteirinha de sócio). While a step is pending: the membership card, the
@@ -47,7 +47,7 @@ function Shelf({ items }: { items: ShelfItem[] }) {
                   {item.count}
                 </span>
               )}
-              <Icon name="arrow" className="ml-auto size-4 text-ink-2" />
+              <RowArrow className="ml-auto" />
             </a>
           </li>
         ))}

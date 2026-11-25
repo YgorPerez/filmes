@@ -7,7 +7,7 @@ import type {
 } from '#/platform/operations'
 import { OPERATIONS } from './operations.copy'
 import { ActionPost } from './operations-parts'
-import { Alert, Section, SubmitButton } from './person-parts'
+import { Alert, Section, Submit } from './person-parts'
 
 const COPY = OPERATIONS.evaluation
 
@@ -159,9 +159,9 @@ function RunForm({ running }: { running: boolean }) {
           {COPY.grid} <span className="text-ink-2">({COPY.gridHint})</span>
         </span>
       </label>
-      <SubmitButton className="self-start" disabled={running}>
+      <Submit variant="primary" disabled={running}>
         {running ? COPY.running : COPY.run}
-      </SubmitButton>
+      </Submit>
     </ActionPost>
   )
 }
