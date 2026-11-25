@@ -4,5 +4,6 @@ export const HOME = {
   logout: 'Sair',
   nav: 'Telas',
   people: 'Pessoas',
+  imports: 'Importar',
   export: 'Exportar Notas',
 } as const

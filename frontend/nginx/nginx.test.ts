@@ -6,6 +6,7 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, test } from 'vite-plus/test'
 import { HOST_CONFIG } from '../scripts/deploy-plan.ts'
+import { MAX_UPLOAD_BYTES } from '../src/content/import-action.ts'
 
 const folder = new URL('./', import.meta.url)
 const read = (name: string) => readFileSync(new URL(name, folder), 'utf8')
@@ -147,6 +148,15 @@ describe('the cinema.temestudo.cloud vhost', () => {
     expect(
       named(tlsDirectives, 'ssl_certificate').map((d) => d.args[0]),
     ).toEqual(['/etc/letsencrypt/live/cinema.temestudo.cloud/fullchain.pem'])
+  })
+
+  test('lets an Imports upload through, up to a bit more than the app takes', () => {
+    const https = servers.find((s) =>
+      named(s.children, 'listen').some((l) => l.args.includes('ssl')),
+    )
+    const [size] = named(https?.children, 'client_max_body_size')
+    const megabytes = Number(size?.args[0]?.replace(/m$/, ''))
+    expect(megabytes * 1024 * 1024).toBeGreaterThan(MAX_UPLOAD_BYTES)
   })
 
   test('the deploy installs every file here, each under a filmes name', () => {

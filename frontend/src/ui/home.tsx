@@ -21,6 +21,9 @@ export function Home({ name }: { name: string }) {
         <a href="/pessoas" className={buttonVariants({ variant: 'quiet' })}>
           {HOME.people}
         </a>
+        <a href="/importar" className={buttonVariants({ variant: 'quiet' })}>
+          {HOME.imports}
+        </a>
         <a href="/exportar" className={buttonVariants({ variant: 'quiet' })}>
           {HOME.export}
         </a>

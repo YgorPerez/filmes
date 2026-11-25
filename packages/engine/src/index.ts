@@ -459,11 +459,17 @@ export {
   reloadPersonTrakt,
   reloadTrakt,
   TRAKT_KIND,
+  type TraktFactCounts,
   type TraktImport,
   type TraktImportInput,
   type TraktReport,
   type TraktUnresolved,
 } from './imports/trakt.ts'
+export {
+  personImports,
+  type ImportRecord,
+  type PersonImports,
+} from './imports/report.ts'
 export {
   removeImport,
   type ImportRemoval,

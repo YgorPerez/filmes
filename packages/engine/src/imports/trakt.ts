@@ -237,7 +237,7 @@ export const reloadPersonTrakt = (
 
 export type TraktFactCounts = Readonly<Record<'ratings' | 'seen', number>>
 
-const countFacts = (
+export const traktFactCounts = (
   db: Connection,
   slug: string,
 ): Effect.Effect<TraktFactCounts, SqliteError> =>
@@ -298,10 +298,10 @@ export const importTrakt = (
         Effect.gen(function* () {
           yield* requireImportTables(db)
           const person = yield* resolvePerson(input.person)
-          const before = yield* countFacts(db, person.slug)
+          const before = yield* traktFactCounts(db, person.slug)
           const stored = yield* personTraktRows(person)
           const report = yield* loadPerson(db, person, [...stored, ...rows])
-          const after = yield* countFacts(db, person.slug)
+          const after = yield* traktFactCounts(db, person.slug)
           const kept = yield* storeImport(
             person,
             TRAKT_KIND,

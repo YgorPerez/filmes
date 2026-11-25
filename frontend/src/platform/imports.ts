@@ -1,0 +1,414 @@
+// Imports (map #72, W5): a Pessoa's Letterboxd and Trakt exports, her
+// Letterboxd RSS, and the resolution queue the Letterboxd imports share.
+// The pages read through `Imports`; a Pessoa's forms post to
+// `/importar/<slug>/acao` and the queue's to `/fila/acao`, which run as the
+// logged-in Dono (the commit's author) and go back with what happened.
+// Server only.
+
+import {
+  confirmQueueItem,
+  discardQueueItem,
+  importLetterboxd,
+  importLetterboxdRss,
+  importTrakt,
+  listPeople,
+  personImports,
+  removeImport,
+  reprocessLetterboxd,
+  viewQueue,
+  type Author,
+  type Engine,
+  type ErrorOutput,
+  type Outcome,
+  type PersonImports,
+  type QueueItem,
+} from '@filmes/engine'
+import {
+  MAX_UPLOAD_BYTES,
+  parseImport,
+  parseQueue,
+  type ImportAction,
+  type ImportNotice,
+  type ImportRefusal,
+  type QueueAction,
+  type QueueNotice,
+  type QueueRefusal,
+} from '#/content/import-action'
+import { currentOwner } from './auth'
+import { appEngine } from './engine'
+import type { Owner } from './owners'
+import { ownerAuthor } from './people'
+import { serverEnv } from './server-env'
+
+/** A Pessoa in `/importar`, with how many imports she has. */
+export type ImportsEntry = {
+  person: string
+  name: string
+  owner: boolean
+  imports: number
+}
+
+export type ImportsOverview = {
+  people: ImportsEntry[]
+  /** Films waiting in the queue, of every Pessoa. */
+  queued: number
+}
+
+/** A TMDB suggestion for a queued film, as the page shows it. */
+export type QueueSuggestion = {
+  tmdb: string
+  title: string
+  originalTitle: string | null
+  year: number | null
+  /** The TMDB film's page: confirming with it records the film. */
+  link: string
+}
+
+export type QueueEntry = Omit<QueueItem, 'candidates' | 'people'> & {
+  people: string[]
+  candidates: QueueSuggestion[]
+}
+
+/** The queue, with the names of the Pessoas who have each film. */
+export type QueuePage = {
+  items: QueueEntry[]
+  names: Record<string, string>
+  /** TMDB's notice, when a suggestion came from it. */
+  attributions: { source: string; text: string }[]
+}
+
+const textOr = (value: unknown, fallback: string | null) =>
+  typeof value === 'string' && value !== '' ? value : fallback
+
+const entryOf = (item: QueueItem): QueueEntry => ({
+  ...item,
+  people: [...item.people],
+  candidates: item.candidates.map((c) => {
+    const title = textOr(c.title, null) ?? textOr(c.originalTitle, '') ?? ''
+    const original = textOr(c.originalTitle, null)
+    return {
+      tmdb: String(c.tmdb),
+      title,
+      originalTitle: original === title ? null : original,
+      year: c.year,
+      link: c.link,
+    }
+  }),
+})
+
+/** What an import or a removal did, for the page's notice. */
+export type ImportDone = {
+  notice: ImportNotice
+  /** Fatos that came in (or went, for a removal). */
+  facts: number
+  /** Trakt films the Catalog could not resolve. */
+  outside?: number
+}
+
+export type QueueDone = {
+  notice: QueueNotice
+  /** Reprocessing: films that left the queue, films still there. */
+  resolved?: number
+  left?: number
+}
+
+/** What the screens and the actions need from the engine. */
+export interface Imports {
+  overview(): Promise<Outcome<ImportsOverview>>
+  page(person: string): Promise<Outcome<PersonImports>>
+  queue(): Promise<Outcome<QueuePage>>
+  run(
+    person: string,
+    action: ImportAction,
+    author: Author,
+  ): Promise<Outcome<ImportDone>>
+  decide(action: QueueAction, author: Author): Promise<Outcome<QueueDone>>
+}
+
+const map = async <A, B>(
+  outcome: Promise<Outcome<A>>,
+  f: (a: A) => B,
+): Promise<Outcome<B>> => {
+  const done = await outcome
+  return done.exitCode === 0 ? { exitCode: 0, output: f(done.output) } : done
+}
+
+const sum = (counts: Readonly<Record<string, number>>) =>
+  Object.values(counts).reduce((a, b) => a + b, 0)
+
+export function importsFromEngine(engine: Engine): Imports {
+  const run = engine.run
+  return {
+    async overview() {
+      const people = await run(listPeople)
+      if (people.exitCode !== 0) return people
+      return map(run(viewQueue), (queue) => ({
+        people: people.output.map(({ slug, name, owner, imports }) => ({
+          person: slug,
+          name,
+          owner,
+          imports: imports.length,
+        })),
+        queued: queue.items.length,
+      }))
+    },
+    page: (person) => run(personImports(person)),
+    async queue() {
+      const people = await run(listPeople)
+      if (people.exitCode !== 0) return people
+      return map(run(viewQueue), (queue) => ({
+        items: queue.items.map(entryOf),
+        attributions: queue.attributions.map(({ source, text }) => ({
+          source,
+          text,
+        })),
+        names: Object.fromEntries(
+          people.output.map(({ slug, name }) => [slug, name]),
+        ),
+      }))
+    },
+    run(person, action, author) {
+      switch (action.kind) {
+        case 'letterboxd':
+        case 'rss':
+          return map(
+            run(
+              action.kind === 'rss'
+                ? importLetterboxdRss({ person, user: action.user, author })
+                : importLetterboxd({
+                    person,
+                    original: action.original,
+                    content: action.content,
+                    author,
+                  }),
+            ),
+            (r): ImportDone => ({
+              notice: r.newFile ? action.kind : 'repetido',
+              facts: sum(r.newFacts),
+            }),
+          )
+        case 'trakt':
+          return map(
+            run(
+              importTrakt({
+                person,
+                original: action.original,
+                content: action.content,
+                author,
+              }),
+            ),
+            (r): ImportDone => ({
+              notice: r.newFile ? 'trakt' : 'repetido',
+              facts: sum(r.newFacts),
+              outside: r.unresolved.length,
+            }),
+          )
+        case 'remove':
+          return map(
+            run(removeImport({ file: action.file, person, author })),
+            (r): ImportDone => ({
+              notice: 'removido',
+              facts: sum(r.removedFacts),
+            }),
+          )
+      }
+    },
+    decide(action, author) {
+      switch (action.kind) {
+        case 'confirm':
+          return map(
+            run(confirmQueueItem({ id: action.id, film: action.film, author })),
+            (r): QueueDone => ({ notice: r.new ? 'confirmado' : 'igual' }),
+          )
+        case 'discard':
+          return map(
+            run(
+              discardQueueItem({
+                id: action.id,
+                reason: action.reason,
+                author,
+              }),
+            ),
+            (r): QueueDone => ({ notice: r.new ? 'descartado' : 'igual' }),
+          )
+        case 'reprocess':
+          return map(run(reprocessLetterboxd({ author })), (r): QueueDone => ({
+            notice: 'reprocessado',
+            resolved: r.resolved.length + r.discarded.length,
+            left: r.queue.length,
+          }))
+      }
+    },
+  }
+}
+
+/** An engine error the Dono cannot fix from the page goes to the server log
+ * (`docker logs`), so whoever runs the server sees why. */
+function logEngineError(outcome: { output: ErrorOutput }): void {
+  const { code, message } = outcome.output.error
+  console.error(`engine: ${code}: ${message}`)
+}
+
+/** What a page shows, or null (logged) when the engine cannot run here. */
+async function shown<A>(outcome: Promise<Outcome<A>>): Promise<A | null> {
+  const done = await outcome
+  if (done.exitCode === 0) return done.output
+  logEngineError(done)
+  return null
+}
+
+/** What `/importar` lists. */
+export const importsOverview = (imports: Imports) => shown(imports.overview())
+
+/** What `/importar/<slug>` shows: `'unknown'` when no Pessoa has that slug. */
+export async function importsPage(
+  person: string,
+  imports: Imports,
+): Promise<PersonImports | 'unknown' | null> {
+  const page = await imports.page(person)
+  if (page.exitCode !== 0 && page.output.error.code === 'unknown_person')
+    return 'unknown'
+  return shown(Promise.resolve(page))
+}
+
+/** What `/fila` shows. */
+export const queuePage = (imports: Imports) => shown(imports.queue())
+
+function importRefusal(outcome: { output: ErrorOutput }): ImportRefusal {
+  switch (outcome.output.error.code) {
+    case 'invalid_file':
+    case 'missing_file':
+      return 'arquivo'
+    case 'invalid_usage':
+      return 'pedido'
+    case 'missing_rss':
+      return 'rss'
+    case 'source_unavailable':
+      return 'fonte'
+    case 'unknown_import':
+    case 'ambiguous_import':
+      return 'item'
+    default:
+      logEngineError(outcome)
+      return 'indisponivel'
+  }
+}
+
+function queueRefusal(outcome: { output: ErrorOutput }): QueueRefusal {
+  switch (outcome.output.error.code) {
+    case 'invalid_usage':
+      return 'filme'
+    case 'film_without_imdb':
+      return 'sem-imdb'
+    case 'item_not_queued':
+      return 'item'
+    default:
+      logEngineError(outcome)
+      return 'indisponivel'
+  }
+}
+
+const back = (location: string) =>
+  new Response(null, {
+    status: 303,
+    headers: { Location: location, 'Cache-Control': 'private, no-store' },
+  })
+
+const query = (fields: Record<string, string | number | undefined>) => {
+  const params = new URLSearchParams()
+  for (const [name, value] of Object.entries(fields))
+    if (value !== undefined) params.set(name, String(value))
+  return `?${params.toString()}`
+}
+
+const pageOf = (person: string) => `/importar/${encodeURIComponent(person)}`
+
+/** Who may post: a Dono, from a form of this site (the `Origin`, as the
+ * logout checks). The page gate does not cover these routes. */
+function gate(
+  request: Request,
+  owner: Owner | null,
+  origin: string | undefined,
+): Owner | Response {
+  if (!owner) return back('/entrar')
+  if (request.headers.get('origin') !== origin)
+    return new Response('Origem recusada', { status: 403 })
+  return owner
+}
+
+/** `POST /importar/<slug>/acao`: an upload (multipart), the RSS (only with
+ * the Pessoa's consent, which the engine does not ask), or removing an
+ * import; as the logged-in Dono, who signs the commit. */
+export async function importAction(
+  request: Request,
+  person: string,
+  owner: Owner | null,
+  imports: Imports,
+  origin: string | undefined,
+): Promise<Response> {
+  const signer = gate(request, owner, origin)
+  if (signer instanceof Response) return signer
+  const page = pageOf(person)
+  if (Number(request.headers.get('content-length')) > MAX_UPLOAD_BYTES)
+    return back(`${page}${query({ erro: 'grande' })}`)
+  const action = await parseImport(await request.formData())
+  if (typeof action === 'string')
+    return back(`${page}${query({ erro: action })}`)
+  const outcome = await imports.run(person, action, ownerAuthor(signer))
+  if (outcome.exitCode !== 0) {
+    if (outcome.output.error.code === 'unknown_person')
+      return back('/importar?erro=pessoa')
+    return back(`${page}${query({ erro: importRefusal(outcome) })}`)
+  }
+  const { notice, facts, outside } = outcome.output
+  return back(`${page}${query({ feito: notice, novos: facts, fora: outside })}`)
+}
+
+/** `POST /fila/acao`: confirm or discard a queued film, or ask TMDB again;
+ * as the logged-in Dono. */
+export async function queueAction(
+  request: Request,
+  owner: Owner | null,
+  imports: Imports,
+  origin: string | undefined,
+): Promise<Response> {
+  const signer = gate(request, owner, origin)
+  if (signer instanceof Response) return signer
+  const action = parseQueue(await request.formData())
+  if (!action) return back(`/fila${query({ erro: 'pedido' })}`)
+  const outcome = await imports.decide(action, ownerAuthor(signer))
+  if (outcome.exitCode !== 0)
+    return back(`/fila${query({ erro: queueRefusal(outcome) })}`)
+  const { notice, resolved, left } = outcome.output
+  return back(
+    `/fila${query({ feito: notice, resolvidos: resolved, restam: left })}`,
+  )
+}
+
+// --- the app's -----------------------------------------------------------------
+
+const appImports = () => importsFromEngine(appEngine())
+
+export const appImportsOverview = () => importsOverview(appImports())
+
+export const appImportsPage = (person: string) =>
+  importsPage(person, appImports())
+
+export const appQueuePage = () => queuePage(appImports())
+
+export const serveImportAction = (request: Request, person: string) =>
+  importAction(
+    request,
+    person,
+    currentOwner(request),
+    appImports(),
+    serverEnv().APP_ORIGIN,
+  )
+
+export const serveQueueAction = (request: Request) =>
+  queueAction(
+    request,
+    currentOwner(request),
+    appImports(),
+    serverEnv().APP_ORIGIN,
+  )
