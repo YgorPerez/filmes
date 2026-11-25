@@ -147,7 +147,10 @@ const MAX_INT_DIGITS = 4300
 
 class Parser {
   private at = 0
-  constructor(private readonly text: string) {}
+  private readonly text: string
+  constructor(text: string) {
+    this.text = text
+  }
 
   document(): PyJson {
     const value = this.value()

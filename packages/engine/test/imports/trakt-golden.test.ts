@@ -47,7 +47,8 @@ const read = ({ bytes, field }: JsonVector) => {
   }
 }
 
-describe('golden vectors', () => {
+// 5,000 vectors each: under coverage on a busy machine they pass 5 s.
+describe('golden vectors', { timeout: 30_000 }, () => {
   test('datetime.fromisoformat, to UTC', () => {
     const vectors = golden<{ text: string; instant: string | null }>(
       'iso-instant',
