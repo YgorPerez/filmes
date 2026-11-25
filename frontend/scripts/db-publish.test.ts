@@ -1,10 +1,24 @@
 // `db:publish` against the fake VPS (`fake-vps.ts`): the same plan that goes
 // over SSH, run in a bash with a fake docker, on a VPS that already serves
 // temestudo and has filmes' app live.
-import { mkdtempSync, readdirSync, writeFileSync } from 'node:fs'
+import {
+  existsSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
+import { DatabaseSync } from 'node:sqlite'
 import { describe, expect, it } from 'vite-plus/test'
+import {
+  FIXTURE_TODAY,
+  ROOT,
+  useFixture,
+} from '../../packages/engine/test/fixture.ts'
+import type { Runner } from './db-build.ts'
 import { runCommand } from './db-publish.ts'
 import { fakeFrontend, fakeVps, NEIGHBOUR_CONTAINERS } from './fake-vps.ts'
 import { type Vps, publish } from './vps.ts'
@@ -455,7 +469,247 @@ describe('the command line', () => {
       ['db.sqlite', '--version', 'v1', 'extra'],
       ['--rollback', 'v1', 'v2'],
       ['--rollback', '--version'],
+      ['--build', 'db.sqlite'],
+      ['db.sqlite', '--data', 'dados'],
+      ['db.sqlite', '--version', ''],
     ])
       expect(() => dbPublish(argv)).toThrow(/^Usage: /)
+  })
+})
+
+/** Row counts of every table, by name. */
+function rowCounts(file: string) {
+  const db = new DatabaseSync(file, { readOnly: true })
+  try {
+    const counts: Record<string, number> = {}
+    for (const { name } of db
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'table'")
+      .all() as { name: string }[])
+      counts[name] = Number(
+        (
+          db.prepare(`SELECT count(*) AS n FROM "${name}"`).get() as {
+            n: number
+          }
+        ).n,
+      )
+    return counts
+  } finally {
+    db.close()
+  }
+}
+
+/** `runCommand` with `--build`: what it printed and said. */
+function build(
+  argv: string[],
+  {
+    env = {},
+    run,
+    connect = () => {
+      throw new Error('This run should not reach the VPS.')
+    },
+    paths,
+  }: {
+    env?: Record<string, string | undefined>
+    run?: Runner
+    connect?: Parameters<typeof runCommand>[0]['connect']
+    paths?: Parameters<typeof runCommand>[0]['paths']
+  } = {},
+) {
+  const printed: string[] = []
+  const said: string[] = []
+  runCommand({
+    argv: ['--build', ...argv],
+    env,
+    connect,
+    print: (text) => printed.push(text),
+    say: (line) => said.push(line),
+    here: '/',
+    date: DATE,
+    paths,
+    run,
+  })
+  const built = said.find((line) => line.startsWith('built '))?.slice(6)
+  return { printed: printed.join('\n'), said, built }
+}
+
+/** A Python that writes a SQLite header where it is told, and keeps what it
+ * was given. */
+function fakePython() {
+  const calls: {
+    args: readonly string[]
+    env: Record<string, string | undefined>
+    seen: string[]
+  }[] = []
+  const run: Runner = (_, args, { env }) => {
+    calls.push({
+      args,
+      env,
+      seen: [
+        ...readdirSync(env.FILMES_DADOS!).map((name) => `dados/${name}`),
+        ...readdirSync(env.FILMES_CONFIG!).map((name) => `config/${name}`),
+      ],
+    })
+    writeFileSync(env.FILMES_BANCO!, 'SQLite format 3\0built')
+    return { status: 0, stdout: '{}', stderr: '' }
+  }
+  return { run, calls }
+}
+
+describe('db:publish --build', () => {
+  it('a dry run builds the fixture with the Python engine and prints the plan for it', () => {
+    const fixture = useFixture()
+    const env = Object.fromEntries(
+      Object.entries(process.env).filter(([key]) => !key.startsWith('FILMES_')),
+    )
+
+    const { printed, built } = build(
+      [
+        '--data',
+        fixture.data,
+        '--config',
+        fixture.config,
+        '--version',
+        'v1',
+        '--dry-run',
+      ],
+      {
+        env: {
+          ...env,
+          FILMES_CATALOGO: join(ROOT, 'tests/fixture/catalogo'),
+          FILMES_HOJE: FIXTURE_TODAY,
+          FILMES_LOCAL: join(fixture.root, 'no-local.toml'),
+        },
+      },
+    )
+
+    expect(built).toMatch(/v1\.sqlite$/)
+    expect(printed).toContain(
+      `# Then sends ${built} to /opt/filmes/data/db/v1.sqlite.part.`,
+    )
+    // The same database Python built from the Portuguese fixture.
+    expect(rowCounts(built!)).toEqual(rowCounts(fixture.database))
+    expect(rowCounts(built!)['pessoas']).toBe(5)
+    rmSync(dirname(built!), { recursive: true })
+  }, 120_000)
+
+  it('gives Python filmes-dados and the config in Portuguese, and deletes the file after the swap', () => {
+    const fixture = useFixture()
+    const vps = aVps()
+    const python = fakePython()
+
+    const { built } = build(
+      ['--data', fixture.data, '--config', fixture.config, '--version', 'v1'],
+      {
+        env: { VPS_HOST: 'vps.test', FILMES_CATALOGO: '/dumps' },
+        run: python.run,
+        connect: () => vps.vps,
+        paths: vps.paths,
+      },
+    )
+
+    const [call] = python.calls
+    expect(call!.args).toEqual([
+      'run',
+      'python',
+      '-m',
+      'filmes',
+      'reconstruir',
+      '--json',
+    ])
+    expect(call!.env.FILMES_CATALOGO).toBe('/dumps')
+    expect(call!.seen).toContain('dados/pessoas')
+    expect(call!.seen).toContain('config/pesos.toml')
+    expect(call!.seen).not.toContain('config/weights.toml')
+    expect(vps.live()).toMatchObject({ dbLive: 'v1\n' })
+    expect(vps.read(join(vps.db, 'v1.sqlite'))).toBe('SQLite format 3\0built')
+    // Neither the scratch folders nor the built file stay behind.
+    expect(existsSync(dirname(built!))).toBe(false)
+    expect(existsSync(call!.env.FILMES_DADOS!)).toBe(false)
+  })
+
+  it('takes filmes-dados from FILMES_DADOS', () => {
+    const fixture = useFixture()
+    const python = fakePython()
+
+    build(['--config', fixture.config, '--dry-run'], {
+      env: { FILMES_DADOS: fixture.data },
+      run: python.run,
+    })
+
+    expect(python.calls).toHaveLength(1)
+  })
+
+  it('without filmes-dados it says how to give it', () => {
+    expect(() => build(['--dry-run'])).toThrow(
+      '--build needs filmes-dados: pass --data <folder> or set FILMES_DADOS.',
+    )
+  })
+
+  it("stops with Python's error, and leaves nothing behind", () => {
+    const fixture = useFixture()
+    let database = ''
+    const failing: Runner = (_, __, { env }) => {
+      database = env.FILMES_BANCO!
+      return {
+        status: 1,
+        stdout:
+          '{"erro": {"codigo": "config_ausente", "mensagem": "sem dumps"}}',
+        stderr: '',
+      }
+    }
+
+    expect(() =>
+      build(['--data', fixture.data, '--config', fixture.config, '--dry-run'], {
+        run: failing,
+      }),
+    ).toThrow(
+      'the Python engine could not build the database: config_ausente: sem dumps',
+    )
+    expect(existsSync(dirname(database))).toBe(false)
+  })
+
+  it('a Python that never started says what it printed', () => {
+    const fixture = useFixture()
+    const failing: Runner = () => ({
+      status: null,
+      stdout: '',
+      stderr: 'spawn uv ENOENT',
+    })
+
+    expect(() =>
+      build(['--data', fixture.data, '--config', fixture.config, '--dry-run'], {
+        run: failing,
+      }),
+    ).toThrow(
+      'the Python engine could not build the database: exit signal\nspawn uv ENOENT',
+    )
+  })
+
+  it('a publish that stops keeps the built file and says how to send it again', () => {
+    const fixture = useFixture()
+    const vps = aVps({ appLive: false })
+    const python = fakePython()
+    let message = ''
+    try {
+      build(
+        ['--data', fixture.data, '--config', fixture.config, '--version', 'v1'],
+        {
+          env: { VPS_HOST: 'vps.test' },
+          run: python.run,
+          connect: () => vps.vps,
+          paths: vps.paths,
+        },
+      )
+    } catch (error) {
+      message = (error as Error).message
+    }
+
+    const file =
+      /The database stays at (\S+): pnpm db:publish \S+ --version v1$/m.exec(
+        message,
+      )?.[1]
+    expect(message).toContain('No app is live on the VPS')
+    expect(readFileSync(file!, 'utf8')).toBe('SQLite format 3\0built')
+    rmSync(dirname(file!), { recursive: true })
   })
 })

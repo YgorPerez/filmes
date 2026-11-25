@@ -10,9 +10,7 @@ sem ele, porque um Clima só puxa a ordem.
 import unicodedata
 from dataclasses import dataclass
 
-from filmes.ambiente import RAIZ, ler_toml
-
-VOCABULARIO = RAIZ / "config" / "climas.toml"
+from filmes.ambiente import config, ler_toml
 
 
 @dataclass(frozen=True)
@@ -23,7 +21,7 @@ class Clima:
 
 
 def todos() -> list[Clima]:
-    tabela = ler_toml(VOCABULARIO)
+    tabela = ler_toml(config("climas.toml"))
     return [Clima(nome, tuple(t.lower() for t in d.get("tags", [])), tuple(d.get("generos", [])))
             for nome, d in tabela.items()]
 

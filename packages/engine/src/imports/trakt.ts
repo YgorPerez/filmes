@@ -218,12 +218,23 @@ export const loadTrakt = (
     }
   })
 
-/** `loadTrakt` in its own write: what the app runs on start (E23). */
+/** Every Trakt Fato wiped and loaded again, in its own write: what the app
+ * runs on start (#104). Unlike `loadTrakt`, which a rebuild runs on an
+ * empty database, it also drops the Fatos of a Pessoa who has no export
+ * left (removed after the database was built). */
 export const reloadTrakt: Effect.Effect<
   void,
   EngineError | SqliteError,
   Environment | Sqlite
-> = Effect.flatMap(Sqlite, (sqlite) => sqlite.write((db) => loadTrakt(db)))
+> = Effect.flatMap(Sqlite, (sqlite) =>
+  sqlite.write((db) =>
+    Effect.gen(function* () {
+      for (const table of FACT_TABLES)
+        yield* db.run(`DELETE FROM ${table} WHERE fato_id LIKE 'trakt:%'`)
+      yield* loadTrakt(db)
+    }),
+  ),
+)
 
 /** Redoes the Pessoa's Trakt Fatos from the exports she has now, even none
  * (`recarregar`). */
