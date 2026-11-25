@@ -1,9 +1,10 @@
-import type { ReactNode } from 'react'
+import type { ComponentProps, ReactNode } from 'react'
 import { PERSON } from './person.copy'
 import { Button, buttonVariants } from './shadcn/button'
 
-// The pieces the Pessoas screens share: the alert and the notice, the Dono
-// tag, a section's card, the fields and the forms that post an action.
+// The pieces the Pessoas screens share, and the other Dono screens with
+// them: the alert and the notice, the Dono tag, a section's card, the
+// fields, the forms that post an action and their submit button.
 
 export function Alert({ children }: { children: ReactNode }) {
   return (
@@ -27,6 +28,12 @@ export function Notice({ children }: { children: ReactNode }) {
     </p>
   )
 }
+
+/** A form's submit button with every Button prop (`disabled`...);
+ * `Submit` is the plain one. */
+export const SubmitButton = (
+  props: Omit<ComponentProps<typeof Button>, 'type'>,
+) => <Button type="submit" {...props} />
 
 export function OwnerTag() {
   return (
@@ -271,6 +278,7 @@ export function SelectField({
   )
 }
 
+/** The submit of a form, quiet unless `variant` says otherwise. */
 export function Submit({
   variant = 'quiet',
   children,

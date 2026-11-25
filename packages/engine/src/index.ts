@@ -257,6 +257,8 @@ export {
   authorOf,
   DataWriter,
   ENGINE_AUTHOR,
+  pushNow,
+  pushStatus,
   type Author,
   type PushStatus,
   type WriteOptions,
@@ -518,6 +520,9 @@ export { withDatabaseFile } from './sqlite/Sqlite.ts'
 export { reloadData, type DataReload } from './data/reload.ts'
 export {
   evaluate,
+  evaluationDatabase,
+  evaluationsFolder,
+  progressTo,
   type EvaluateRequest,
   type Evaluation,
   type EvaluationProgress,

@@ -35,6 +35,8 @@ import {
   type Run,
   type Vars,
   type WriteOptions,
+  pushNow,
+  pushStatus,
 } from '../src/index.ts'
 import { useFixture, type Fixture } from './fixture.ts'
 
@@ -105,15 +107,6 @@ const scratchRows = Effect.gen(function* () {
   return yield* sqlite.read((db) => db.all('SELECT x FROM scratch'))
 })
 
-const push = Effect.gen(function* () {
-  const writer = yield* DataWriter
-  return yield* writer.push
-})
-const status = Effect.gen(function* () {
-  const writer = yield* DataWriter
-  return yield* writer.status
-})
-
 /** A use that writes one file in filmes-dados. */
 const writeFile = (data: string, name: string, text: string) =>
   Effect.sync(() => writeFileSync(join(data, name), text))
@@ -165,7 +158,7 @@ describe('write', () => {
           }),
         ),
       )
-      const after = await ok(engine.run(push))
+      const after = await ok(engine.run(pushNow))
       expect(after).toMatchObject({ enabled: true, pending: 0, failures: 0 })
     })
 
@@ -316,12 +309,12 @@ describe('write', () => {
         },
       },
     })
-    expect(await fixture.ok(status)).toMatchObject({
+    expect(await fixture.ok(pushStatus)).toMatchObject({
       enabled: false,
       pending: 0,
     })
     expect(
-      await fixture.ok(status, {
+      await fixture.ok(pushStatus, {
         FILMES_DATA_REMOTE: join(fixture.root, 'remote.git'),
       }),
     ).toMatchObject({
@@ -401,20 +394,20 @@ describe('push', () => {
       )
       // The background fiber may have tried too (the start and the write
       // kick it), so these are lower bounds.
-      const first = await ok(engine.run(push))
+      const first = await ok(engine.run(pushNow))
       expect(first).toMatchObject({ enabled: true, pending: 1 })
       expect(first.failures).toBeGreaterThanOrEqual(1)
       expect(first.lastError).toMatch(/git push exited with/)
       expect(first.failingSince).toMatch(/^\d{4}-\d{2}-\d{2}T/)
 
-      await ok(engine.run(push))
-      const third = await ok(engine.run(push))
+      await ok(engine.run(pushNow))
+      const third = await ok(engine.run(pushNow))
       expect(third.failures).toBeGreaterThanOrEqual(ALERT_AFTER_FAILURES)
       expect(third.alert).toBe(true)
       expect(third.failingSince).toBe(first.failingSince)
 
       renameSync(away, remote)
-      const pushed = await ok(engine.run(push))
+      const pushed = await ok(engine.run(pushNow))
       expect(pushed).toEqual({
         enabled: true,
         pending: 0,
@@ -446,8 +439,8 @@ describe('push', () => {
     renameSync(away, remote)
 
     await withEngine(vars, async (engine) => {
-      expect((await ok(engine.run(status))).pending).toBeLessThanOrEqual(1)
-      expect(await ok(engine.run(push))).toMatchObject({ pending: 0 })
+      expect((await ok(engine.run(pushStatus))).pending).toBeLessThanOrEqual(1)
+      expect(await ok(engine.run(pushNow))).toMatchObject({ pending: 0 })
     })
 
     expect(log(remote)[0]).toMatch(/\|before restart$/)
@@ -465,7 +458,7 @@ describe('push', () => {
           ),
         ),
       )
-      expect(await ok(engine.run(push))).toMatchObject({ pending: 0 })
+      expect(await ok(engine.run(pushNow))).toMatchObject({ pending: 0 })
     })
 
     expect(gitIn(fixture.data, 'remote', 'get-url', 'origin').trim()).toBe(
@@ -482,7 +475,7 @@ describe('push', () => {
         yield* write({ author: BRUNO, message: 'local' }, () =>
           writeFile(fixture.data, 'l.md', 'l'),
         )
-        return yield* push
+        return yield* pushNow
       }),
     )
 
@@ -530,12 +523,12 @@ cd '${fixture.root}' && exec sh -c "$last"
           ),
         ),
       )
-      const failed = await ok(engine.run(push))
+      const failed = await ok(engine.run(pushNow))
       expect(failed.lastError).toContain('<chave>')
       expect(failed.lastError).not.toContain(key)
 
       rmSync(down)
-      expect(await ok(engine.run(push))).toMatchObject({ pending: 0 })
+      expect(await ok(engine.run(pushNow))).toMatchObject({ pending: 0 })
     })
     vi.unstubAllEnvs()
 
