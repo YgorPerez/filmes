@@ -16,13 +16,13 @@ def resolver(conn: sqlite3.Connection, nomes: list[str]) -> list[str]:
 
 def _resolver_um(conn, nome):
     if nome.casefold() == "dono":
-        linha = conn.execute("SELECT slug FROM pessoas WHERE dono = 1").fetchone()
+        linha = conn.execute("SELECT slug FROM pessoas WHERE dono = 1 ORDER BY slug").fetchone()
         if not linha:
             raise ErroFilmes("pessoa_desconhecida", "nenhuma Pessoa tem dono: true no repo de dados")
         return linha["slug"]
     linhas = conn.execute(
         """SELECT slug FROM pessoas WHERE slug = :n COLLATE NOCASE OR nome = :n COLLATE NOCASE
-           UNION SELECT pessoa FROM apelidos WHERE apelido = :n COLLATE NOCASE""",
+           UNION SELECT pessoa FROM apelidos WHERE apelido = :n COLLATE NOCASE ORDER BY 1""",
         {"n": nome},
     ).fetchall()
     if not linhas:

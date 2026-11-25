@@ -1,6 +1,10 @@
 """Reconstrói o banco do zero: esquema, depois as etapas de carga, em ordem.
 
 Monta num arquivo temporário e troca no fim, para nunca deixar banco pela metade.
+O banco sai em modo WAL (#125): uma leitura longa (`avaliar`) não trava a escrita.
+Fechar o arquivo faz o checkpoint, então a troca move um arquivo só; o `-wal` e o
+`-shm` que o banco antigo deixou ao lado do destino saem antes, porque o SQLite os
+leria como do arquivo novo.
 """
 
 import importlib
@@ -39,8 +43,11 @@ def reconstruir(amb: Ambiente) -> dict:
                 "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name"
             )
         }
+        conn.execute("PRAGMA journal_mode = WAL")
         conn.close()
         conn = None
+        for companheiro in ("-wal", "-shm", "-journal"):
+            Path(f"{destino}{companheiro}").unlink(missing_ok=True)
         os.replace(temporario, destino)
     finally:
         if conn is not None:

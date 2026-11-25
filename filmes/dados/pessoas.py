@@ -1,6 +1,6 @@
 """Pessoas no repo de dados: um arquivo `pessoas/<slug>.md` por Pessoa.
 
-Frontmatter com nome, apelidos, `dono: true` no Dono, Vetos, Ajustes e imports. Nenhuma
+Frontmatter com nome, apelidos, `dono: true` no Dono, `email` e `admin` do login online, Vetos, Ajustes e imports. Nenhuma
 idade é guardada. O corpo tem as seções `## Declarados` (o que a Pessoa disse do
 próprio gosto) e `## Relatos` (o que o Dono contou dela), um item por linha:
 
@@ -150,6 +150,9 @@ class Pessoa:
     nome: str
     apelidos: list[str] = field(default_factory=list)
     dono: bool = False
+    # Do login online (mapa #72): o motor não usa, só guarda ao regravar.
+    email: str | None = None
+    admin: bool = False
     vetos: list[Veto] = field(default_factory=list)
     ajustes: list[Ajuste] = field(default_factory=list)
     perguntas_abertas: list[PerguntaAberta] = field(default_factory=list)
@@ -377,6 +380,10 @@ def salvar(repo: Path, pessoa: Pessoa) -> None:
     frente = {"nome": pessoa.nome, "apelidos": pessoa.apelidos}
     if pessoa.dono:
         frente["dono"] = True
+    if pessoa.email is not None:
+        frente["email"] = pessoa.email
+    if pessoa.admin:
+        frente["admin"] = True
     frente["vetos"] = [v.como_dict() for v in pessoa.vetos]
     if pessoa.ajustes:
         frente["ajustes"] = [a.como_dict() for a in pessoa.ajustes]
@@ -400,6 +407,8 @@ def _ler(arquivo: Path) -> Pessoa:
         nome=str(frente["nome"]),
         apelidos=[str(a) for a in frente.get("apelidos") or []],
         dono=bool(frente.get("dono", False)),
+        email=str(frente["email"]) if frente.get("email") is not None else None,
+        admin=bool(frente.get("admin", False)),
         vetos=[_veto(arquivo, v) for v in frente.get("vetos") or []],
         ajustes=_ajustes(arquivo, frente.get("ajustes") or []),
         perguntas_abertas=_perguntas_abertas(arquivo, frente.get("perguntas_abertas") or []),

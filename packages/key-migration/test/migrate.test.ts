@@ -6,6 +6,7 @@ import {
   migrateConfigFile,
   migrateData,
   migrateDataFile,
+  migrateDataPath,
   roundTrip,
 } from '../src/migrate.ts'
 import { MigrationError } from '../src/error.ts'
@@ -295,5 +296,22 @@ describe('config/', () => {
     expect(() => migrateConfigFile('pesos.toml', '[nada]\n', 'to-en')).toThrow(
       'pesos.toml: line 1: unknown table [nada]',
     )
+  })
+})
+
+describe('migrateDataPath', () => {
+  test('renames the top folder, alone or with a file under it', () => {
+    expect(migrateDataPath('sessoes/2026-11-20-bruno.md', 'to-en')).toBe(
+      'sessions/2026-11-20-bruno.md',
+    )
+    expect(migrateDataPath('pessoas', 'to-en')).toBe('people')
+    expect(migrateDataPath('people/ana.md', 'to-pt')).toBe('pessoas/ana.md')
+  })
+
+  test('keeps what has no English name', () => {
+    expect(migrateDataPath('imports/letterboxd.md', 'to-en')).toBe(
+      'imports/letterboxd.md',
+    )
+    expect(migrateDataPath('imports', 'to-en')).toBe('imports')
   })
 })

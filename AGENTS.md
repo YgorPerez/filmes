@@ -1,6 +1,6 @@
 # filmes
 
-Recomendador de filmes com evidência. Hoje: motor em Python (`python -m filmes <comando> --json`), servidor MCP por stdio que chama essa CLI como subprocesso, e uma skill para o Claude. O mapa #72 leva tudo para um workspace pnpm na stack do pesquisa-relacionamentos e põe o filmes online em `cinema.finalsend.com.br`: motor em TypeScript (`packages/engine`), app TanStack Start (`frontend/`) que serve o MCP por HTTP, o login e o app web. A v1 do motor é a spec #16 e continua valendo para o comportamento.
+Recomendador de filmes com evidência. Hoje: motor em Python (`python -m filmes <comando> --json`), servidor MCP por stdio que chama essa CLI como subprocesso, e uma skill para o Claude. O mapa #72 leva tudo para um workspace pnpm na stack do pesquisa-relacionamentos e põe o filmes online em `cinema.temestudo.cloud`: motor em TypeScript (`packages/engine`), app TanStack Start (`frontend/`) que serve o MCP por HTTP, o login e o app web. A v1 do motor é a spec #16 e continua valendo para o comportamento.
 
 ## Issue tracker
 
@@ -47,8 +47,17 @@ Workspace do mapa #72 (o esqueleto veio no #73; o resto chega pelos tickets segu
 
 ```
 packages/engine/           o motor em TypeScript, com Effect v4 (ADR 0003); sem nada de tela nem de HTTP
+  src/runtime/             Environment, Today, Run, EngineError e makeEngine (a borda que o app, o MCP e a CLI chamam)
+  src/sqlite/              o serviço Sqlite (leitura, escrita com BEGIN IMMEDIATE) e as funções SQL
+  src/rebuild/             `reconstruir`: schema/NN_area.sql e steps/<etapa>.ts, na ordem do nome da etapa do Python
+  src/<área>/              o resto do porte, uma área por pasta
+  test/                    Vitest pela costura de test/fixture.ts; o global-setup monta a fixture com o `rebuild` do motor
+  oracle/                  oráculo de paridade Python × TypeScript (`pnpm oracle`); sai com o Python
+    adapter/commands/      um arquivo por comando portado: o argv do Python vira a operação do motor
+    decisions.yaml         cada diferença aceita entre os motores, com o motivo
+packages/mcp-server/       o servidor MCP sobre o motor, sem transporte: createMcpServer({ engine, owner }), instructions.ts e tools/<nome>.ts, um por arquivo, listados em tools/index.ts
 frontend/                  app TanStack Start: MCP por HTTP, OAuth, app web e o Cartaz (MCP Apps e web)
-  scripts/                 deploy na VPS (deploy-plan.ts, vps.ts, check-live.ts, prepare-vps.sh, deploy-wizard.sh; ADR 0006)
+  scripts/                 deploy na VPS (deploy-plan.ts, vps.ts, db-publish.ts, db-build.ts, catalog-update.ts, check-live.ts, prepare-vps.sh, deploy-wizard.sh; ADR 0006)
   nginx/                   vhost, TLS, formato de log sem query e rotação que o deploy instala na VPS
   Dockerfile               a imagem: só o .output do build
 mcp/                       o servidor de hoje, já no workspace sem mudar de comportamento, até o porte; testes em Vitest
@@ -76,7 +85,7 @@ O motor em TypeScript usa o Effect v4, cuja API difere da que você lembra (v3 e
 
 Adaptado do `AGENTS.md` do pesquisa-relacionamentos.
 
-1. **Um push no ramo padrão publica o site.** Com o deploy do #79, o GitHub Actions publica em `cinema.finalsend.com.br` a cada push no `master`. Dê push no `master` só quando o usuário pedir; trabalho de ticket vai para o ramo `ticket/*`.
+1. **Um push no ramo padrão publica o site.** Com o deploy do #79, o GitHub Actions publica em `cinema.temestudo.cloud` a cada push no `master`. Dê push no `master` só quando o usuário pedir; trabalho de ticket vai para o ramo `ticket/*`.
 2. **O checkout principal é compartilhado.** Outras sessões trabalham nele enquanto você trabalha. Lá, nunca troque de ramo, nunca `git add -A` (adicione por caminho) e nunca reformate arquivo que você não tocou. Trabalhe num worktree.
 3. **Matar por padrão.** Pare só o PID que você guardou ao subir, ou o dono da porta do seu worktree. Nunca pare `node`, `vite`, `python` ou Chrome por nome ou padrão (`pkill`, `killall`): outras sessões rodam os seus.
 4. **Segredos e dados privados.** O filmes-dados é privado (gosto e e-mail de Pessoas reais), e a deploy key dele, as chaves `FILMES_*_CHAVE`, `config/local.toml`, o cliente OAuth do Google e o acesso à VPS são segredos. Nunca os leia para um log, um commit ou um comentário, e nunca troque um secret do GitHub sem perguntar. Teste e experimento usam `tests/fixture/dados` ou uma cópia; só a VPS escreve no filmes-dados (ADR 0005).
@@ -89,7 +98,11 @@ pnpm check        # formato e lint (Oxfmt, Oxlint com tipos), tipos, testes com 
 make check        # testes Python (uv run pytest), typecheck e testes do MCP (Vitest, com a CLI de verdade)
 ```
 
-Precisa de `uv`, pnpm e Node 24 (o MCP roda `.ts` direto, sem build). `make check` instala o que faltar (`uv sync`, `pnpm install`) na primeira vez. Enquanto o Python existir, os dois ficam verdes antes de um push para um ramo de integração; o CI do PR roda os dois (`.github/workflows/pr.yml`).
+O oráculo de paridade (`pnpm oracle`, job `oracle` do CI) roda cada cenário do pytest nos dois motores e falha em diferença que `packages/engine/oracle/decisions.yaml` não explica; `--command "pessoa ver"` roda só os cenários com um passo do comando.
+
+O e2e do app (`pnpm --filter frontend e2e`, Playwright no Chrome da máquina) faz o build, sobe o app com um Google falso (`frontend/e2e/fake-google.ts`) e as Pessoas da fixture; o CI roda no job `build`.
+
+Precisa de `uv`, pnpm e Node 24 (o MCP roda `.ts` direto, sem build). O `pnpm check` também usa o `uv`: os testes de paridade e os vetores de ouro do motor rodam o Python. `make check` instala o que faltar (`uv sync`, `pnpm install`) na primeira vez. Enquanto o Python existir, os dois ficam verdes antes de um push para um ramo de integração; o CI do PR roda os dois (`.github/workflows/pr.yml`).
 
 O gancho de push (`node scripts/install-hooks.ts`, uma vez por clone) roda a auditoria de supressões e só os testes do que o push mudou. O teto de supressões é zero (`.github/suppression-ceiling.json`).
 

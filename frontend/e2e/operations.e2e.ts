@@ -1,0 +1,82 @@
+// Operações over the build, on the fixture copy (never the real
+// filmes-dados). Bruno, the fixture's one Dono, becomes admin here, on the
+// copy: `not-admin.e2e.ts` ran before, while he was not. The other files do
+// not mind (an admin only sees one more link, and a banner the e2e never
+// raises: no remote). Only the desktop evaluates (one run at a time per
+// server, and the two projects share it). `E2E_SCREENSHOTS=<folder>` saves
+// each screen there.
+
+import { readFileSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { expect, test } from '@playwright/test'
+import { loginAsBruno, section, snap } from './support'
+
+test.beforeAll(() => {
+  const file = join(process.env.E2E_ENGINE!, 'data/people/bruno.md')
+  const text = readFileSync(file, 'utf8')
+  if (!/^admin: true$/m.test(text))
+    writeFileSync(file, text.replace(/^---\n/, '---\nadmin: true\n'))
+})
+
+test('the admin consults the database, read-only', async ({ page }, info) => {
+  await loginAsBruno(page)
+  await page.getByRole('link', { name: 'Operações' }).click()
+  await expect(page).toHaveURL(/\/operacoes$/)
+  await expect(page.getByRole('heading', { name: 'Operações' })).toBeVisible()
+  await snap(page, info, 'operacoes')
+
+  const consult = section(page, 'Consultar o banco')
+  await consult
+    .getByLabel('SQL')
+    .fill(
+      "SELECT slug, nome FROM pessoas WHERE slug IN ('bruno', 'iara') ORDER BY slug",
+    )
+  await consult.getByRole('button', { name: 'Consultar' }).click()
+  await expect(page).toHaveURL(/\/operacoes\?sql=/)
+  const table = consult.getByRole('table')
+  await expect(table.getByRole('columnheader')).toHaveText(['slug', 'nome'])
+  await expect(table.getByRole('row')).toHaveText([
+    'slugnome',
+    'brunoBruno',
+    'iaraIara',
+  ])
+  await expect(consult.getByRole('status')).toHaveText('2 linhas.')
+  await snap(page, info, 'operacoes-consulta')
+
+  await consult.getByLabel('SQL').fill('DELETE FROM pessoas')
+  await consult.getByRole('button', { name: 'Consultar' }).click()
+  await expect(consult.getByRole('alert')).toContainText(
+    'Só leitura: o console aceita só SELECT.',
+  )
+  await expect(consult.getByRole('alert')).toContainText('read_only')
+  await snap(page, info, 'operacoes-consulta-recusada')
+})
+
+test('the admin evaluates the Recommendation and reads the report', async ({
+  page,
+}, info) => {
+  test.skip(info.project.name === 'mobile', 'one evaluation per server')
+  await loginAsBruno(page)
+  await page.goto('/operacoes')
+
+  // No remote in the e2e: the push is off, and says so.
+  await expect(section(page, 'Envio do repo de dados')).toContainText(
+    'O envio está desligado neste servidor',
+  )
+
+  const evaluation = section(page, 'Avaliar a Recomendação')
+  await evaluation.getByRole('button', { name: 'Avaliar' }).click()
+  await expect(page).toHaveURL(/\/operacoes\?feito=avaliando$/)
+  await expect(evaluation.getByRole('status')).toContainText(
+    'Relatório gravado em 2026-11-20.md',
+    { timeout: 30_000 },
+  )
+  // Other files add Pessoas and Notas meanwhile: the numbers vary.
+  await expect(evaluation.getByRole('row', { name: /^Pessoas/ })).toBeVisible()
+  await evaluation.getByText('Relatório de 2026-11-20').click()
+  await expect(evaluation.getByText(/Recall@50/).first()).toBeVisible()
+  await snap(page, info, 'operacoes-avaliacao')
+
+  const report = join(process.env.E2E_ENGINE!, 'evaluations/2026-11-20.md')
+  expect(readFileSync(report, 'utf8')).toContain('Recall@50')
+})

@@ -11,10 +11,22 @@
 #   docker run --rm -p 127.0.0.1:4391:3000 filmes-app
 FROM node:24-alpine
 
+# The engine commits each write to filmes-dados and pushes it over ssh with
+# the deploy key (ADR 0005, `packages/engine/src/data/DataWriter.ts`).
+RUN apk add --no-cache git openssh-client
+
+# `FILMES_CONFIG`: the engine's config, in English, that `pnpm build`
+# bundles (`scripts/bundle-config.ts`). `FILMES_CACHE`: the sources' cache
+# outlives every database version, so it sits in the volume, not in `db/`
+# (whose retention deletes all but two versions). The rest of the engine's
+# paths come from `/opt/filmes/app.env` and the swap
+# (`scripts/deploy-plan.ts`).
 ENV NODE_ENV=production \
     PORT=3000 \
     HOST=0.0.0.0 \
-    TZ=America/Sao_Paulo
+    TZ=America/Sao_Paulo \
+    FILMES_CONFIG=/app/config \
+    FILMES_CACHE=/data/cache.sqlite
 
 WORKDIR /app
 
@@ -23,6 +35,7 @@ WORKDIR /app
 COPY --link server ./server
 COPY --link public ./public
 COPY --link nitro.json ./
+COPY --link config ./config
 
 # UID 1000, the owner of the `/opt/filmes/data` volume the deploy mounts at
 # `/data` (`scripts/deploy-plan.ts`).

@@ -1,0 +1,98 @@
+// The Cartaz's words, for the app and for the MCP Apps view (#111).
+
+const plural = (n: number, one: string, many: string) =>
+  `${n} ${n === 1 ? one : many}`
+
+export const BILLBOARD = {
+  label: 'Cartaz',
+  legend: '●●● forte · ●●○ moderada · ●○○ fraca',
+  dropped: 'Saiu:',
+  empty:
+    'Nenhum filme passou nas Restrições. Abra outra Sessão com menos limites.',
+  strength: {
+    strong: { mark: '●●●', name: 'forte' },
+    moderate: { mark: '●●○', name: 'moderada' },
+    weak: { mark: '●○○', name: 'fraca' },
+  },
+  strengthLabel: (name: string) => `Força ${name}`,
+
+  card: {
+    poster: (title: string) => `Capa de ${title}`,
+    noFact: (name: string) => `${name}: sem fato`,
+    isNew: 'novo',
+    imdb: (rating: string | null, votes: string) =>
+      `${rating === null ? '' : `★ ${rating} `}IMDb · ${votes} votos`,
+    why: 'Por que cada um vai gostar',
+    withoutFact: (names: string) => `${names}: sem fato sobre este filme`,
+    swapStamp: 'Trocar',
+    seenStamp: 'Já vi',
+  },
+
+  marks: {
+    seen: 'Já vi',
+    seenGroup: (n: number) => `Já vi o filme ${n}`,
+    all: 'Todos',
+    rating: 'nota',
+    ratingLabel: (who: string, n: number) =>
+      `nota de ${who} para o filme ${n}, de 1 a 10`,
+    thought: 'o que achou',
+    thoughtLabel: (who: string, n: number) =>
+      `o que ${who} achou do filme ${n}`,
+    swap: 'Trocar',
+    stars: 'quanto animou',
+    star: (value: number) => `${value} de 5`,
+    comment: 'comentário',
+    commentLabel: (n: number) => `comentário sobre o filme ${n}`,
+  },
+
+  reply: {
+    title: 'Responder',
+    addition: 'Acrescentar',
+    additionHint: 'contexto da noite ou gosto: “chegou a Ana”, “algo leve”',
+    send: 'Enviar',
+    copy: 'Copiar pro chat',
+    output: 'texto pra colar no chat',
+    nothing: 'Nada marcado ainda.',
+    copied: 'Copiado. Cole no chat.',
+    select:
+      'Não deu pra copiar sozinho: o texto está selecionado na caixa, copie e cole no chat.',
+    kept: 'O que você marcar fica guardado neste navegador, mesmo trocando de aba.',
+    noScript:
+      'Sem JavaScript as marcações não saem daqui: responda no chat ou ative o JavaScript.',
+    summary: (counts: {
+      swap: number
+      seen: number
+      stars: number
+      comments: number
+      addition: boolean
+    }) =>
+      [
+        counts.swap > 0 &&
+          plural(counts.swap, 'Trocar marcado', 'Trocar marcados'),
+        counts.seen > 0 && plural(counts.seen, 'Já vi', 'Já vi'),
+        counts.stars > 0 &&
+          plural(counts.stars, 'filme com estrelas', 'filmes com estrelas'),
+        counts.comments > 0 &&
+          plural(counts.comments, 'comentário', 'comentários'),
+        counts.addition && 'acrescentar',
+      ]
+        .filter(Boolean)
+        .join(' · '),
+  },
+
+  // The MCP Apps view (`mcp-view/`): Enviar goes to `answer_billboard`
+  // through the host, and Claude gets a message when it has to regenerate.
+  view: {
+    loading: 'Montando o Cartaz…',
+    fullscreen: 'Tela cheia',
+    sending: 'Enviando…',
+    recorded: 'Anotado.',
+    regenerating: 'Anotado. O Claude refaz a lista no chat.',
+    toClaude: 'Anotado. O Claude lê o que você escreveu no chat.',
+    notNotified:
+      'Anotado, mas o aviso pro Claude não saiu: peça no chat pra ele refazer a lista.',
+    failed: (message: string) =>
+      `Não deu pra enviar: ${message} Use Copiar pro chat.`,
+    unavailable: 'Este app não envia daqui. Use Copiar pro chat.',
+  },
+} as const

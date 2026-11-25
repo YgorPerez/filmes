@@ -120,7 +120,8 @@ def _genoma(conn, referencia, config, par) -> bool:
     if not total:
         return False
     for l in conn.execute(
-            "SELECT filme_id, tag, relevancia, fonte, data FROM genoma WHERE tag IN (SELECT value FROM json_each(?))",
+            "SELECT filme_id, tag, relevancia, fonte, data FROM genoma WHERE tag IN (SELECT value FROM json_each(?)) "
+            "ORDER BY filme_id, tag",
             (lista_json(proprias),)):
         comum = min(proprias[l["tag"]], max(l["relevancia"] - media[l["tag"]], 0.0))
         p = par(l["filme_id"])
@@ -131,7 +132,7 @@ def _genoma(conn, referencia, config, par) -> bool:
 
 def _tags(conn, referencia, config, par) -> bool:
     da_ref = {l["tag"]: l["usuarios"] for l in conn.execute(
-        "SELECT tag, usuarios FROM tags_movielens WHERE filme_id = ?", (referencia,))}
+        "SELECT tag, usuarios FROM tags_movielens WHERE filme_id = ? ORDER BY tag", (referencia,))}
     if not da_ref:
         return False
     # TF-IDF: log(1 + usuários) vezes a raridade da tag. "overrated" e "love" estão em
@@ -149,7 +150,8 @@ def _tags(conn, referencia, config, par) -> bool:
             "SELECT t.filme_id, t.tag, t.usuarios, t.fonte, t.data, n.norma FROM tags_movielens t "
             "JOIN normas_tags_movielens n ON n.filme_id = t.filme_id "
             "WHERE t.tag IN (SELECT value FROM json_each(?1)) AND t.filme_id IN "
-            "(SELECT filme_id FROM tags_movielens WHERE tag IN (SELECT value FROM json_each(?2)))",
+            "(SELECT filme_id FROM tags_movielens WHERE tag IN (SELECT value FROM json_each(?2))) "
+            "ORDER BY t.filme_id, t.tag",
             (lista_json(vetor_ref), lista_json(busca))):
         if not l["norma"]:
             continue
@@ -177,7 +179,7 @@ def _vizinhos(conn, referencia, par) -> bool:
     mundo ama. A parecença divide os dois lados: ambos / raiz(base de X × base de Y), com
     a base de Y da linha em que ele é a semente (sem ela, a de X)."""
     da_ref = conn.execute(
-        "SELECT vizinho_id, base, ambos, fonte, data FROM vizinhos WHERE filme_id = ?", (referencia,),
+        "SELECT vizinho_id, base, ambos, fonte, data FROM vizinhos WHERE filme_id = ? ORDER BY vizinho_id", (referencia,),
     ).fetchall()
     if not da_ref:
         return False
@@ -197,9 +199,10 @@ def _vizinhos(conn, referencia, par) -> bool:
 
 def _pessoas(conn, referencia, par) -> bool:
     diretores = {l[0] for l in conn.execute(
-        "SELECT entidade_id FROM arestas WHERE filme_id = ? AND predicado = 'diretor'", (referencia,))}
+        "SELECT entidade_id FROM arestas WHERE filme_id = ? AND predicado = 'diretor' ORDER BY entidade_id",
+        (referencia,))}
     atores = {l[0] for l in conn.execute(
-        "SELECT ator_imdb FROM elenco_principal_imdb WHERE filme_id = ?", (referencia,))}
+        "SELECT ator_imdb FROM elenco_principal_imdb WHERE filme_id = ? ORDER BY ator_imdb", (referencia,))}
     if diretores:
         for filme_id, fonte, data in conn.execute(
                 "SELECT filme_id, fonte, data FROM arestas WHERE predicado = 'diretor' "
@@ -211,19 +214,21 @@ def _pessoas(conn, referencia, par) -> bool:
     if atores:
         for filme_id, comuns in conn.execute(
                 "SELECT filme_id, count(*) FROM elenco_principal_imdb "
-                "WHERE ator_imdb IN (SELECT value FROM json_each(?)) GROUP BY filme_id", (lista_json(atores),)):
+                "WHERE ator_imdb IN (SELECT value FROM json_each(?)) GROUP BY filme_id ORDER BY filme_id",
+                (lista_json(atores),)):
             p = par(filme_id)
             p.fontes["pessoas"] = max(p.fontes.get("pessoas", 0.0), min(comuns / 3, 1.0))
     return bool(diretores or atores)
 
 
 def _generos(conn, referencia, pares) -> None:
-    da_ref = {l[0] for l in conn.execute("SELECT genero FROM generos_imdb WHERE filme_id = ?", (referencia,))}
+    da_ref = {l[0] for l in conn.execute("SELECT genero FROM generos_imdb WHERE filme_id = ? ORDER BY genero", (referencia,))}
     if not da_ref or not pares:
         return
     generos = {}
     for filme_id, genero in conn.execute(
-            "SELECT filme_id, genero FROM generos_imdb WHERE filme_id IN (SELECT value FROM json_each(?))",
+            "SELECT filme_id, genero FROM generos_imdb WHERE filme_id IN (SELECT value FROM json_each(?)) "
+            "ORDER BY filme_id, genero",
             (lista_json(pares),)):
         generos.setdefault(filme_id, set()).add(genero)
     for filme_id, dele in generos.items():

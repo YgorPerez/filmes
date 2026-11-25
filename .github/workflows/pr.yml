@@ -2,9 +2,11 @@
 # is where the whole suite runs; on the machine, the push hook runs only the
 # affected tests (`scripts/verify-push.ts`).
 #
-# Three jobs in parallel, each on its own runner: `check` (the workspace),
-# `build` (the app builds and serves `/`) and `python` (the Python engine and
-# the MCP that calls its CLI, until the port replaces them).
+# Four jobs in parallel, each on its own runner: `check` (the workspace),
+# `build` (the app builds, serves `/` and passes the e2e), `python` (the
+# Python engine and the MCP that calls its CLI, until the port replaces
+# them) and `oracle` (the parity oracle between the two engines on the
+# fixture, until the same).
 #
 # Every job has `timeout-minutes`: without it, a stuck job holds the PR for
 # GitHub's default six hours.
@@ -53,8 +55,16 @@ jobs:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
+      # The engine's parity tests and golden vectors run the Python engine.
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: |
+          uv sync --frozen
+          pnpm install --frozen-lockfile
 
       # The suppression ceiling and the reason on each new directive
       # (`.github/scripts/suppressions.ts`). A `pull_request` checkout is the
@@ -73,10 +83,10 @@ jobs:
       - name: Check
         run: pnpm check
 
-  # The app build, as the deploy will do it, and its `/` answering.
+  # The app build, as the deploy will do it, its `/` answering, and the e2e.
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -91,25 +101,41 @@ jobs:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
+      # The e2e serves the engine's fixture, whose database the Python
+      # engine builds (`playwright.config.ts`).
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: |
+          uv sync --frozen
+          pnpm install --frozen-lockfile
 
       - name: Build
         run: pnpm build
 
-      - name: Serve /
+      # Without a Dono logged in, `/` leads to the login page.
+      - name: Serve /entrar
         working-directory: frontend
         run: |
           PORT=3000 node .output/server/index.mjs &
           for _ in $(seq 1 20); do
-            if curl -fsS http://localhost:3000/ -o "$RUNNER_TEMP/home.html"; then
-              grep -q '<h1>filmes</h1>' "$RUNNER_TEMP/home.html"
+            if curl -fsSL http://localhost:3000/ -o "$RUNNER_TEMP/home.html"; then
+              grep -q 'Entrar com Google' "$RUNNER_TEMP/home.html"
               exit $?
             fi
             sleep 1
           done
           echo '::error::The built app did not answer on /.'
           exit 1
+
+      # The app in Chrome, with a stand-in for Google (`e2e/fake-google.ts`)
+      # and the engine's fixture (`playwright.config.ts`).
+      - name: E2E
+        working-directory: frontend
+        run: pnpm e2e
 
   # The Python suite (`uv run pytest`) and the MCP tests over the real CLI:
   # `make check`.
@@ -142,3 +168,45 @@ jobs:
 
       - name: make check
         run: make check
+
+  # The parity oracle on the fixture (`packages/engine/oracle/`, #76 §4):
+  # every pytest scenario on the Python engine, twice with different hash
+  # seeds, and the steps the TypeScript engine ports on it too. Fails on a
+  # difference `decisions.yaml` does not explain.
+  oracle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: |
+          uv sync --frozen
+          pnpm install --frozen-lockfile
+
+      - name: Oracle
+        run: pnpm oracle --report "$RUNNER_TEMP/oracle.json"
+
+      - name: Oracle report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oracle-report
+          path: ${{ runner.temp }}/oracle.json
+          if-no-files-found: ignore

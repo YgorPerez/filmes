@@ -139,7 +139,7 @@ describe('verifyPush', () => {
     expect(vitest[0]?.command).toContain(first)
   })
 
-  it('a change to the Python engine runs pytest and the MCP tests, which call its CLI', () => {
+  it("a change to the Python engine runs pytest, the MCP tests, which call its CLI, and the engine's, whose fixture it builds", () => {
     const { clone, commit } = repositories()
     const sha = commit('filmes/cli.py')
     const { run, runs } = fakeRun()
@@ -151,7 +151,9 @@ describe('verifyPush', () => {
       say: () => {},
       env: {},
     })
-    expect(runs.slice(1)).toEqual([
+    const [engine, ...rest] = runs.slice(1)
+    expect(engine?.folder).toBe(join(clone, 'packages/engine'))
+    expect(rest).toEqual([
       { command: ['uv', 'run', 'pytest', '-q'], folder: clone },
       {
         command: ['pnpm', '--filter', '@filmes/mcp', 'test'],
@@ -177,6 +179,7 @@ describe('verifyPush', () => {
       join(clone, 'frontend'),
       join(clone, 'packages/engine'),
       join(clone, 'packages/key-migration'),
+      join(clone, 'packages/mcp-server'),
       clone,
     ])
     for (const { command } of vitest)

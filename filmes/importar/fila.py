@@ -75,7 +75,7 @@ def _filme(conn, amb, entrada):
     if id_tmdb is None:
         raise ErroFilmes("uso_invalido", "use um tconst (tt...) ou um link de filme do IMDb ou do TMDB")
     ids = conn.execute(
-        "SELECT DISTINCT imdb FROM slugs_letterboxd WHERE tmdb = ? AND imdb IS NOT NULL", (id_tmdb[1],)
+        "SELECT DISTINCT imdb FROM slugs_letterboxd WHERE tmdb = ? AND imdb IS NOT NULL ORDER BY imdb", (id_tmdb[1],)
     ).fetchall()
     if len(ids) == 1:
         return ids[0]["imdb"], []

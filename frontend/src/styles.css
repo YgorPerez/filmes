@@ -1,0 +1,10 @@
+/* The app's base in the DESIGN.md system: neutral ground, one column, mobile
+ * first. Components dress in Tailwind classes over the tokens
+ * (`ui/tokens.css`). */
+@layer theme, base, components, utilities;
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/preflight.css' layer(base);
+@import 'tailwindcss/utilities.css' layer(utilities);
+@import '@fontsource/antonio/latin-700.css';
+@import './ui/tokens.css';
+@import './ui/base.css';

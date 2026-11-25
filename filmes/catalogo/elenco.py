@@ -15,7 +15,7 @@ PRIMEIROS = 3
 def carregar(conn, pasta, dumps):
     if versoes.PRINCIPAIS in dumps:
         arquivo = pasta / dumps[versoes.PRINCIPAIS]["sha256"] / versoes.PRINCIPAIS
-        filmes = {filme for (filme,) in conn.execute("SELECT id FROM filmes")}
+        filmes = {filme for (filme,) in conn.execute("SELECT id FROM filmes ORDER BY id")}
         conn.executemany(
             "INSERT INTO elenco_principal_imdb (filme_id, ordem, ator_imdb) VALUES (?, ?, ?)",
             _primeiros(arquivo, filmes),

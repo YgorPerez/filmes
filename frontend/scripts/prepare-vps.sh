@@ -8,7 +8,7 @@
 # The VPS already serves temestudo.cloud and saude.temestudo.cloud, so this
 # script only adds: the `/opt/filmes` folders (the volume with `db/` for the
 # database versions and room for `auth.sqlite`), a temporary vhost on port 80
-# that only serves certbot's challenge for cinema.finalsend.com.br, and that
+# that only serves certbot's challenge for cinema.temestudo.cloud, and that
 # certificate, by webroot. It installs Docker, Nginx and certbot only when one
 # is missing, never upgrades them, and touches no other site's file, port or
 # container. The real vhost comes with the first deploy (`vps.ts`). It can run
@@ -16,7 +16,7 @@
 set -euo pipefail
 
 EMAIL=${1:?"Usage: bash -s -- <e-mail for the certificate notices>"}
-HOST=cinema.finalsend.com.br
+HOST=cinema.temestudo.cloud
 ROOT=/opt/filmes
 ACME=$ROOT/acme
 CERT=/etc/letsencrypt/live/$HOST/fullchain.pem
@@ -26,6 +26,10 @@ command -v docker >/dev/null || MISSING+=(docker.io)
 command -v nginx >/dev/null || MISSING+=(nginx)
 command -v certbot >/dev/null || MISSING+=(certbot)
 command -v flock >/dev/null || MISSING+=(util-linux)
+# db:publish sends the database with rsync, which resumes.
+command -v rsync >/dev/null || MISSING+=(rsync)
+# The deploy clones filmes-dados into the volume once (ADR 0005).
+command -v git >/dev/null || MISSING+=(git)
 if [ ${#MISSING[@]} -gt 0 ]; then
   export DEBIAN_FRONTEND=noninteractive
   apt-get update -qq

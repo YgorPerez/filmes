@@ -22,3 +22,10 @@ coverage/
 
 # The deploy wizard's answers (`frontend/scripts/deploy-wizard.sh`).
 .env.deploy
+
+# Read-only source checkouts agents read (AGENTS.md "Código do Effect").
+.repos/
+
+# What the e2e leaves (`frontend/playwright.config.ts`).
+test-results/
+playwright-report/
