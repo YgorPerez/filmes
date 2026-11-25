@@ -3,14 +3,8 @@
 // outside the Evidence. Bruno's top 5 in the fixture is As Horas Lentas,
 // Sal e Ferrugem, Noite de Estreia, Cidade de Vidro and A Volta do Mar.
 
-import { Effect } from 'effect'
 import { describe, expect, test } from 'vite-plus/test'
-import {
-  drop,
-  pass,
-  type Constraint,
-  type Recommendation,
-} from '../../src/index.ts'
+import { type ConstraintRequest, type Recommendation } from '../../src/index.ts'
 import { useFixture, type Fixture } from '../fixture.ts'
 import { RECORDINGS } from '../sources/support.ts'
 import {
@@ -25,27 +19,9 @@ const TMDB = { FILMES_TMDB_CHAVE: 'x', FILMES_GRAVACOES: RECORDINGS }
 const ask = (
   fixture: Fixture,
   vars = {},
-  constraints: Constraint[] = [],
+  constraints: ConstraintRequest = {},
 ): Promise<Recommendation> =>
-  engineRecommendation(fixture, { attendees: ['dono'], constraints }, vars)
-
-/** A stand-in for `--duracao-max` (#91): only films up to `minutes` pass. */
-const maxDuration = (minutes: number): Constraint => ({
-  name: 'duration',
-  toJson: () => ({ maxMinutes: minutes }),
-  result: () => ({}),
-  evaluate: (_, films) =>
-    Effect.succeed(
-      new Map(
-        [...films].map(([id, f]) => [
-          id,
-          f.runtimeMinutes !== null && f.runtimeMinutes <= minutes
-            ? pass()
-            : drop(),
-        ]),
-      ),
-    ),
-})
+  engineRecommendation(fixture, { attendees: ['dono'], ...constraints }, vars)
 
 describe('the card header', { timeout: PYTHON_TIMEOUT }, () => {
   test('each film has its IMDb link', async () => {
@@ -107,7 +83,7 @@ describe('the card header', { timeout: PYTHON_TIMEOUT }, () => {
     const fixture = useFixture()
     const withPoster = await ask(fixture, TMDB)
     // None of the films that fit has a recorded poster.
-    const withoutPoster = await ask(fixture, TMDB, [maxDuration(100)])
+    const withoutPoster = await ask(fixture, TMDB, { maxDuration: 100 })
 
     expect(withoutPoster.films.every((f) => f.poster === null)).toBe(true)
     expect(withoutPoster.attributions.map((a) => a.source)).toEqual(['IMDb'])

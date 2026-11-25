@@ -1,13 +1,17 @@
-// The login in the browser, over the build's SSR server (`pnpm build`), as it
+// The app in the browser, over the build's SSR server (`pnpm build`), as it
 // goes to production, with a stand-in for Google (`e2e/fake-google.ts`) and
-// the fixture's Pessoas (`tests/fixture/dados`: Bruno is Dono, Iara is not).
-// `pnpm e2e` builds and starts both servers. The files end in `.e2e.ts`, so
-// Vitest leaves them alone.
+// the engine's fixture: the fixture's Pessoas in English (Bruno is Dono, Iara
+// is not), the English config and the database the Python engine builds from
+// `tests/fixture` (so it needs `uv`, as the engine's tests do). `pnpm e2e`
+// builds and starts both servers. The files end in `.e2e.ts`, so Vitest
+// leaves them alone.
 
-import { mkdtempSync } from 'node:fs'
+import { cpSync, mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { defineConfig, devices } from '@playwright/test'
+import buildEngineFixture from '../packages/engine/test/global-setup.ts'
+import { FIXTURE_ENV, FIXTURE_TODAY } from '../packages/engine/test/paths.ts'
 
 const port = Number(process.env.E2E_PORT ?? 4512)
 const googlePort = Number(process.env.E2E_GOOGLE_PORT ?? port + 1)
@@ -19,13 +23,28 @@ process.env.E2E_AUTH_DATABASE ??= join(
   'auth.sqlite',
 )
 
+// A copy of the engine's fixture for this run alone (the app may write the
+// sources' cache next to the database), built once: the workers inherit it.
+if (!process.env.E2E_ENGINE) {
+  buildEngineFixture()
+  const copy = mkdtempSync(join(tmpdir(), 'e2e-engine-'))
+  cpSync(process.env[FIXTURE_ENV]!, copy, { recursive: true })
+  process.env.E2E_ENGINE = copy
+}
+const engine = process.env.E2E_ENGINE
+
 const appEnv = [
   `APP_ORIGIN=http://localhost:${port}`,
   'GOOGLE_CLIENT_ID=e2e',
   'GOOGLE_CLIENT_SECRET=e2e',
   `GOOGLE_STUB_ORIGIN=http://localhost:${googlePort}`,
   `AUTH_DATABASE_PATH=${process.env.E2E_AUTH_DATABASE}`,
-  'DATA_REPO_PATH=../tests/fixture/dados',
+  `DATA_REPO_PATH=${engine}/data`,
+  `FILMES_CONFIG=${engine}/config`,
+  `FILMES_DATABASE=${engine}/filmes.sqlite`,
+  `FILMES_HOJE=${FIXTURE_TODAY}`,
+  // Recorded answers, never the network.
+  'FILMES_GRAVACOES=../tests/fixture/gravacoes',
   `PORT=${port}`,
 ].join(' ')
 

@@ -28,6 +28,10 @@ import {
 import { peopleFolder, readPerson } from '../people/people.ts'
 import type { Constraint } from '../recommendation/constraints.ts'
 import {
+  readConstraints,
+  storedConstraints,
+} from '../recommendation/constraints/index.ts'
+import {
   recommend,
   type Recommendation,
   type RecommendRequest,
@@ -83,11 +87,6 @@ const toYaml = (value: unknown): YamlValue => {
   )
 }
 
-/** A Restrição's report key that the Session file names otherwise. */
-const CONTEXT_KEYS: Readonly<Record<string, string>> = {
-  maxAgeRating: 'max_age_rating',
-}
-
 /** The request's context, as the Session keeps it (`_contexto`): the
  * request, the duration, the accepted Climas and the other Restrições. */
 export const sessionContext = (
@@ -101,17 +100,7 @@ export const sessionContext = (
     request,
     max_duration: maxDuration,
     moods,
-    constraints: constraints
-      .filter((c) => c.name !== 'duration')
-      .map((c) => ({
-        name: c.name,
-        ...Object.fromEntries(
-          Object.entries(c.toJson()).map(([key, value]) => [
-            CONTEXT_KEYS[key] ?? key,
-            value,
-          ]),
-        ),
-      })),
+    constraints: storedConstraints(constraints),
   })
 }
 
@@ -238,10 +227,12 @@ export const recommendSession = (
 > =>
   Effect.gen(function* () {
     const recommendation = yield* recommend(request)
+    // `recommend` already read them, so this read cannot fail.
+    const asked = yield* readConstraints(request)
     const context = sessionContext(
       request.request ?? null,
       recommendation.moods,
-      request.constraints ?? [],
+      [...asked, ...(request.constraints ?? [])],
     )
     const session = yield* openSession(recommendation, context)
     return { ...recommendation, session }

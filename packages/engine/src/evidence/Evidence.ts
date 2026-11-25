@@ -96,7 +96,7 @@ export const requestLine = (
   filmId: string,
   text: string,
   source: string,
-  date: string,
+  date: string | null,
   factId: string,
 ): Evidence =>
   makeEvidence({

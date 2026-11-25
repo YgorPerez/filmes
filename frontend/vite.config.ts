@@ -30,6 +30,13 @@ export default defineConfig({
       'nginx/**/*.test.ts',
     ],
     environment: 'node',
+    // The deploy tests run real ssh/rsync fakes and the engine tests read the
+    // fixture; they pass 5 s when other sessions load this machine.
+    testTimeout: 30_000,
+    // The engine's fixture (English filmes-dados and config, the database
+    // the Python engine builds), for the tests that run the real engine
+    // (`useFixture`). Built once and cached, as in the engine's own tests.
+    globalSetup: ['../packages/engine/test/global-setup.ts'],
     // The coverage serves `fallow health` (the `json` format) and has a
     // floor: the measured value, which rises with it and never falls.
     coverage: {
@@ -42,7 +49,7 @@ export default defineConfig({
       // `scp` and their command lines, by the deploy itself. The branch
       // floor came from a skeleton with no branches; #79's scripts set it
       // at their measured value.
-      thresholds: { statements: 84, branches: 78, functions: 78, lines: 85 },
+      thresholds: { statements: 87, branches: 85, functions: 84, lines: 88 },
     },
   },
 })
