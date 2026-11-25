@@ -127,3 +127,31 @@ describe('evaluate', () => {
     // 300 weight sets × 4 Pessoas: about 20 s alone, more under a full check.
   }, 180_000)
 })
+
+describe('the admin option of an edge that knows the Pessoa', () => {
+  test('false leaves consult and evaluate out: not listed, not callable', async () => {
+    const fixture = useFixture()
+    // Her file says admin, but the edge's word is the one that counts.
+    makeAdmin(fixture, 'bruno')
+    const c = await connect(fixture, 'bruno', {}, false)
+
+    const names = (await c.client.listTools()).tools.map((t) => t.name)
+
+    assert.ok(names.includes('person'))
+    assert.ok(!names.includes('consult'))
+    assert.ok(!names.includes('evaluate'))
+    await assert.rejects(
+      c.call('consult', { sql: 'SELECT 1' }),
+      /Tool consult not found/,
+    )
+  })
+
+  test('true serves them without reading her file', async () => {
+    const c = await connect(useFixture(), 'bruno', {}, true)
+
+    assert.deepEqual(await c.ok('consult', { sql: 'SELECT 1 AS n' }), {
+      columns: ['n'],
+      rows: [[1]],
+    })
+  })
+})

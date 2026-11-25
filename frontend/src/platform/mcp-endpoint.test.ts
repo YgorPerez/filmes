@@ -54,6 +54,7 @@ class Connector {
   email = 'bruno@example.org'
   /** The Donos' emails (the login's gate, `owners.ts`, is tested there). */
   readonly donos = new Set(['bruno@example.org'])
+  readonly admins = new Set<string>()
   readonly auth: Auth
   readonly handler: McpHttpHandler
 
@@ -75,7 +76,12 @@ class Connector {
       owners: {
         ownerByEmail: (email) =>
           this.donos.has(email)
-            ? { person: email.split('@')[0]!, name: '', email, admin: false }
+            ? {
+                person: email.split('@')[0]!,
+                name: '',
+                email,
+                admin: this.admins.has(email),
+              }
             : null,
       },
       endpoints: {
@@ -275,6 +281,39 @@ describe('a tool call with the token', () => {
     expect(await connector.status(tokens.access_token)).toBe(200)
     connector.donos.delete('bruno@example.org')
     expect(await connector.status(tokens.access_token)).toBe(401)
+  })
+})
+
+describe('the admin tools', () => {
+  it('a non-admin token neither lists nor calls consult and evaluate', async () => {
+    const connector = new Connector(useFixture())
+    const { tokens } = await connector.tokens('bruno@example.org')
+    const client = await connector.mcp(tokens.access_token)
+
+    const names = (await client.listTools()).tools.map((tool) => tool.name)
+
+    expect(names).toContain('person')
+    expect(names).not.toContain('consult')
+    expect(names).not.toContain('evaluate')
+    await expect(
+      client.callTool({ name: 'consult', arguments: { sql: 'SELECT 1' } }),
+    ).rejects.toThrow(/consult not found/)
+  })
+
+  it('an admin token lists and calls them', async () => {
+    const connector = new Connector(useFixture())
+    connector.admins.add('bruno@example.org')
+    const { tokens } = await connector.tokens('bruno@example.org')
+    const client = await connector.mcp(tokens.access_token)
+
+    const names = (await client.listTools()).tools.map((tool) => tool.name)
+    const result = await client.callTool({
+      name: 'consult',
+      arguments: { sql: 'SELECT 1 AS n' },
+    })
+
+    expect(names).toEqual(expect.arrayContaining(['consult', 'evaluate']))
+    expect(toolOutput(result)).toEqual({ columns: ['n'], rows: [[1]] })
   })
 })
 

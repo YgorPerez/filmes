@@ -18,7 +18,7 @@ import {
 } from '@modelcontextprotocol/server'
 import { authFromEnvironment, type Auth } from './auth'
 import { appEngine } from './engine'
-import { MCP_SCOPE, ownerOf, type OAuthServer } from './oauth-server'
+import { adminOf, MCP_SCOPE, ownerOf, type OAuthServer } from './oauth-server'
 
 const METADATA_PATH = '/.well-known/oauth-protected-resource'
 
@@ -37,7 +37,12 @@ export function mcpHandler(engine: () => Engine): McpHttpHandler {
     const owner = ownerOf(ctx.authInfo)
     // `mcpRequest` passes a verified token on every request.
     if (!owner) throw new Error('MCP request without a verified owner')
-    return createMcpServer({ engine: engine(), owner })
+    // A non-admin's server has no `consult` nor `evaluate` at all.
+    return createMcpServer({
+      engine: engine(),
+      owner,
+      admin: adminOf(ctx.authInfo),
+    })
   })
 }
 

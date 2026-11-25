@@ -18,6 +18,12 @@ export interface McpServerOptions {
   readonly owner: string | null
   /** The tools to serve; all of them by default. */
   readonly tools?: ReadonlyArray<Tool>
+  /** Whether the Pessoa has `admin: true`, when the edge knows it (the
+   * HTTP login reads it with the Owner): false leaves the admin tools out
+   * of the server, so they are neither listed nor callable; true serves
+   * them. Unset (stdio), each call of an admin tool reads the Dono's file
+   * and answers `ADMIN_ONLY` to a non-admin. */
+  readonly admin?: boolean
 }
 
 export const SERVER_INFO = { name: 'filmes', version: '0.2.0' }
@@ -59,17 +65,18 @@ export function createMcpServer({
   engine,
   owner,
   tools = TOOLS,
+  admin,
 }: McpServerOptions): McpServer {
   const server = new McpServer(SERVER_INFO, { instructions: INSTRUCTIONS })
-  for (const tool of tools)
+  for (const tool of tools.filter((t) => !t.admin || admin !== false))
     server.registerTool(
       tool.name,
       { description: tool.description, inputSchema: tool.input },
       async (input: unknown, ctx: ServerContext) => {
         const options = owner === null ? {} : { owner }
-        if (tool.admin) {
-          const admin = await engine.run(isAdmin, options)
-          if (admin.exitCode !== 0 || !admin.output)
+        if (tool.admin && admin === undefined) {
+          const allowed = await engine.run(isAdmin, options)
+          if (allowed.exitCode !== 0 || !allowed.output)
             return answer(ADMIN_ONLY, true)
         }
         const outcome = await engine.run(
