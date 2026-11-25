@@ -1,0 +1,346 @@
+// @vitest-environment jsdom
+// The Cartaz component (#114): what test_cartaz.py checked in the HTML
+// (cards in order, the header, the shared Evidence lines, the dots, the
+// top) and test_cartaz_guarda.py in the browser (the marks come back after
+// a reload, and without storage the Cartaz still works, saying nothing),
+// plus the text the marks make, the same `answerBillboard` reads.
+import { cleanup, render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
+import { Billboard } from './billboard'
+import { MODEL } from './billboard.fixture'
+import { parseMarks } from './billboard-marks'
+import { BILLBOARD } from './billboard.copy'
+
+const KEY = 'filmes-cartaz:2026-11-20-iara:v2'
+
+beforeEach(() => localStorage.clear())
+afterEach(cleanup)
+
+const cards = () => screen.getAllByRole('article')
+const card = (n: number) => within(cards()[n - 1]!)
+const text = () =>
+  (document.querySelector('input[name="texto"]') as HTMLInputElement).value
+
+describe('the Cartaz shows', () => {
+  it('one card per film, in the order of the screen', () => {
+    render(<Billboard billboard={MODEL} action="/x" />)
+    expect(
+      cards().map(
+        (c) => within(c).getByRole('heading', { level: 2 }).textContent,
+      ),
+    ).toEqual(['1As Horas Lentas', '2Sal & FerrugemSal e Ferrugemnovo'])
+  })
+
+  it('the request on the letreiro, the legend and what left', () => {
+    render(<Billboard billboard={MODEL} />)
+    expect(
+      screen
+        .getByRole('img', { name: /^Vocês dois/ })
+        .getAttribute('aria-label'),
+    ).toBe('Vocês dois · até 2h05 · nota 7+ no IMDb · leve')
+    expect(screen.getByText('“algo leve pra hoje”')).toBeTruthy()
+    expect(screen.getByText(BILLBOARD.legend)).toBeTruthy()
+    expect(screen.getByText(/^Saiu:/).textContent).toBe(
+      'Saiu: 2 Sessão Maldita (Iara já viu)',
+    )
+  })
+
+  it('the header: the w500 poster, the IMDb chip, the synopsis', () => {
+    render(<Billboard billboard={MODEL} />)
+    const horas = card(1)
+    expect(
+      horas
+        .getByRole('img', { name: 'Capa de As Horas Lentas' })
+        .getAttribute('src'),
+    ).toBe('https://image.tmdb.org/t/p/w500/hOrAsLeNtAs9104.jpg')
+    const imdb = horas.getByRole('link', { name: /IMDb/ })
+    expect(imdb.textContent).toBe('★ 7,4 IMDb · 28 mil votos')
+    expect(imdb.getAttribute('href')).toBe(
+      'https://www.imdb.com/title/tt9000104/',
+    )
+    expect(horas.getByText(/relojoeira/)).toBeTruthy()
+    expect(horas.getByText('Mistério')).toBeTruthy()
+    const sal = card(2)
+    expect(sal.queryByRole('img')).toBeNull()
+    expect(sal.getByRole('link', { name: /IMDb/ }).textContent).toBe(
+      'IMDb · 870 votos',
+    )
+  })
+
+  it('a shared Evidence on one line, and who has no Fato on hers, with no Força', () => {
+    render(<Billboard billboard={MODEL} />)
+    const [shared] = card(1).getAllByRole('listitem')
+    expect(within(shared!).getByLabelText('Bruno, Iara').textContent).toBe('BI')
+    expect(within(shared!).getByLabelText('Força moderada').textContent).toBe(
+      '●●○',
+    )
+    expect(card(1).getByText('Fato sobre 2 de 2')).toBeTruthy()
+    const [strong, without] = card(2).getAllByRole('listitem')
+    expect(within(strong!).getByLabelText('Força forte')).toBeTruthy()
+    expect(without!.textContent).toBe('IIara: sem fato sobre este filme')
+    expect(within(without!).queryByLabelText(/Força/)).toBeNull()
+  })
+
+  it('a dot per Presente on the poster, hollow for who has no Fato', () => {
+    render(<Billboard billboard={MODEL} />)
+    expect(card(2).getByTitle('Iara: sem fato')).toBeTruthy()
+    expect(card(2).getAllByTitle('Bruno').length).toBeGreaterThan(0)
+  })
+
+  it('no marks once the Session has its Feedback', () => {
+    render(<Billboard billboard={{ ...MODEL, open: false }} />)
+    expect(cards()).toHaveLength(2)
+    expect(screen.queryByRole('checkbox')).toBeNull()
+    expect(
+      screen.queryByRole('button', { name: BILLBOARD.reply.send }),
+    ).toBeNull()
+  })
+
+  it('that nothing passed the Restrições', () => {
+    render(<Billboard billboard={{ ...MODEL, films: [] }} />)
+    expect(screen.getByText(BILLBOARD.empty)).toBeTruthy()
+    expect(screen.queryByRole('form')).toBeNull()
+  })
+})
+
+describe('the marks', () => {
+  it('make the text `answerBillboard` reads', async () => {
+    const user = userEvent.setup()
+    render(<Billboard billboard={MODEL} action="/x" />)
+    expect(text()).toBe('#cartaz 2026-11-20-iara v2\n')
+
+    await user.click(card(1).getByRole('checkbox', { name: 'Iara' }))
+    await user.type(
+      screen.getByLabelText('nota de Iara para o filme 1, de 1 a 10'),
+      '8',
+    )
+    await user.type(
+      screen.getByLabelText('o que Iara achou do filme 1'),
+      'lindo · demais',
+    )
+    await user.click(card(2).getByRole('checkbox', { name: 'Trocar' }))
+    await user.click(card(2).getByRole('button', { name: '4 de 5' }))
+    await user.type(
+      screen.getByLabelText('comentário sobre o filme 2'),
+      'longo',
+    )
+    await user.type(screen.getByLabelText(/Acrescentar/), 'chegou a Ana')
+
+    expect(text()).toBe(
+      '#cartaz 2026-11-20-iara v2\n' +
+        'acrescentar: chegou a Ana\n' +
+        '1 tt9000104 · já vi: iara=8 · achou iara: lindo - demais\n' +
+        '2 tt9000105 · trocar · estrelas: 4 · comentário: longo\n',
+    )
+    expect(
+      screen.getByText(
+        '1 Trocar marcado · 1 Já vi · 1 filme com estrelas · 1 comentário · acrescentar',
+      ),
+    ).toBeTruthy()
+    // Trocar stamps the poster.
+    expect(card(2).getAllByText(BILLBOARD.card.swapStamp)).toHaveLength(2)
+  })
+
+  it('Todos marks every Presente and stamps Já vi; a Nota out of 1 to 10 is left out', async () => {
+    const user = userEvent.setup()
+    render(<Billboard billboard={MODEL} action="/x" />)
+    await user.click(card(1).getByRole('checkbox', { name: 'Todos' }))
+    expect(card(1).getByRole('checkbox', { name: /Você/ })).toHaveProperty(
+      'checked',
+      true,
+    )
+    expect(card(1).getAllByText(BILLBOARD.card.seenStamp)).toHaveLength(2)
+    expect(text()).toContain('1 tt9000104 · já vi: todos\n')
+    await user.type(
+      screen.getByLabelText('nota de você para o filme 1, de 1 a 10'),
+      '11',
+    )
+    expect(text()).toContain('1 tt9000104 · já vi: todos\n')
+    await user.click(card(1).getByRole('checkbox', { name: /Você/ }))
+    expect(text()).toContain('1 tt9000104 · já vi: iara\n')
+    expect(screen.queryByLabelText(/nota de você/)).toBeNull()
+    await user.click(card(1).getByRole('checkbox', { name: /Todos/ }))
+    await user.click(card(1).getByRole('checkbox', { name: /Todos/ }))
+    expect(text()).toBe('#cartaz 2026-11-20-iara v2\n')
+  })
+
+  it('the same star again takes the stars off', async () => {
+    const user = userEvent.setup()
+    render(<Billboard billboard={MODEL} action="/x" />)
+    const three = card(1).getByRole('button', { name: '3 de 5' })
+    await user.click(three)
+    expect(three.getAttribute('aria-pressed')).toBe('true')
+    await user.click(three)
+    expect(three.getAttribute('aria-pressed')).toBe('false')
+    expect(text()).toBe('#cartaz 2026-11-20-iara v2\n')
+  })
+})
+
+describe('Enviar and Copiar pro chat', () => {
+  it('with nothing marked, say so and send nothing', async () => {
+    const user = userEvent.setup()
+    const onSend = vi.fn<(text: string) => void>()
+    render(<Billboard billboard={MODEL} onSend={onSend} />)
+    await user.click(screen.getByRole('button', { name: BILLBOARD.reply.send }))
+    expect(screen.getByRole('status').textContent).toBe(BILLBOARD.reply.nothing)
+    await user.click(screen.getByRole('button', { name: BILLBOARD.reply.copy }))
+    expect(screen.getByRole('status').textContent).toBe(BILLBOARD.reply.nothing)
+    expect(onSend).not.toHaveBeenCalled()
+  })
+
+  it('Enviar hands the text to `onSend` (the MCP Apps view)', async () => {
+    const user = userEvent.setup()
+    const onSend = vi.fn<(text: string) => void>()
+    render(<Billboard billboard={MODEL} onSend={onSend} />)
+    await user.click(card(1).getByRole('checkbox', { name: 'Trocar' }))
+    await user.click(screen.getByRole('button', { name: BILLBOARD.reply.send }))
+    expect(onSend).toHaveBeenCalledWith(
+      '#cartaz 2026-11-20-iara v2\n1 tt9000104 · trocar\n',
+    )
+  })
+
+  it('Copiar puts the text on the clipboard, or selected in a box', async () => {
+    const user = userEvent.setup()
+    const writeText = vi
+      .spyOn(navigator.clipboard, 'writeText')
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error('negado'))
+    render(<Billboard billboard={MODEL} action="/x" />)
+    await user.click(card(2).getByRole('checkbox', { name: 'Trocar' }))
+    const copy = screen.getByRole('button', { name: BILLBOARD.reply.copy })
+    await user.click(copy)
+    expect(writeText).toHaveBeenCalledWith(
+      '#cartaz 2026-11-20-iara v2\n2 tt9000105 · trocar\n',
+    )
+    expect(screen.getByRole('status').textContent).toBe(BILLBOARD.reply.copied)
+    await user.click(copy)
+    expect(screen.getByRole('status').textContent).toBe(BILLBOARD.reply.select)
+    const box = screen.getByLabelText(BILLBOARD.reply.output)
+    expect((box as HTMLTextAreaElement).value).toBe(
+      '#cartaz 2026-11-20-iara v2\n2 tt9000105 · trocar\n',
+    )
+    expect(document.activeElement).toBe(box)
+    writeText.mockRestore()
+  })
+})
+
+describe('the marks kept in the browser', () => {
+  it('come back when the Cartaz loads again, under one key per Session and version', async () => {
+    const user = userEvent.setup()
+    render(<Billboard billboard={MODEL} action="/x" />)
+    await user.click(card(1).getByRole('checkbox', { name: 'Iara' }))
+    await user.type(
+      screen.getByLabelText('nota de Iara para o filme 1, de 1 a 10'),
+      '8',
+    )
+    await user.click(card(2).getByRole('checkbox', { name: 'Trocar' }))
+    await user.type(screen.getByLabelText(/Acrescentar/), 'chegou a Ana')
+    expect(screen.getByText(BILLBOARD.reply.kept)).toBeTruthy()
+    expect(Object.keys(localStorage)).toEqual([KEY])
+    const before = text()
+    cleanup()
+
+    render(<Billboard billboard={MODEL} action="/x" />)
+    expect(text()).toBe(before)
+    expect(card(1).getByRole('checkbox', { name: 'Iara' })).toHaveProperty(
+      'checked',
+      true,
+    )
+    cleanup()
+
+    // Another version starts with none.
+    render(<Billboard billboard={{ ...MODEL, version: 3 }} action="/x" />)
+    expect(text()).toBe('#cartaz 2026-11-20-iara v3\n')
+  })
+
+  it('are forgotten once sent', () => {
+    localStorage.setItem(KEY, JSON.stringify({ addition: 'x', films: {} }))
+    render(<Billboard billboard={MODEL} action="/x" sent />)
+    expect(localStorage.getItem(KEY)).toBeNull()
+    expect(text()).toBe('#cartaz 2026-11-20-iara v2\n')
+  })
+
+  it('without storage, the Cartaz works and says nothing about keeping', async () => {
+    const user = userEvent.setup()
+    const blocked = vi
+      .spyOn(window, 'localStorage', 'get')
+      .mockImplementation(() => {
+        throw new Error('bloqueado')
+      })
+    render(<Billboard billboard={MODEL} action="/x" />)
+    await user.click(card(1).getByRole('checkbox', { name: 'Trocar' }))
+    expect(text()).toContain('1 tt9000104 · trocar')
+    expect(screen.queryByText(BILLBOARD.reply.kept)).toBeNull()
+    blocked.mockRestore()
+  })
+
+  it('a full storage goes on without keeping', async () => {
+    const user = userEvent.setup()
+    render(<Billboard billboard={MODEL} action="/x" />)
+    const full = vi
+      .spyOn(Storage.prototype, 'setItem')
+      .mockImplementation(() => {
+        throw new Error('cheio')
+      })
+    await user.click(card(1).getByRole('checkbox', { name: 'Trocar' }))
+    expect(text()).toContain('1 tt9000104 · trocar')
+    full.mockRestore()
+  })
+})
+
+describe('parseMarks', () => {
+  const store = (value: string) => value
+
+  it('keeps only what reads, for the films and Presentes of the Cartaz', () => {
+    const marks = parseMarks(
+      store(
+        JSON.stringify({
+          addition: 7,
+          films: {
+            tt9000104: {
+              seen: ['iara', 'zeca'],
+              ratings: { iara: '8', zeca: 9 },
+              thoughts: 'x',
+              swap: 'sim',
+              stars: 9,
+              comment: 2,
+            },
+            tt9000105: 'x',
+            tt1: { swap: true },
+          },
+        }),
+      ),
+      MODEL,
+    )
+    expect(marks).toEqual({
+      addition: '',
+      films: {
+        tt9000104: {
+          seen: ['iara'],
+          ratings: { iara: '8' },
+          thoughts: {},
+          swap: false,
+          stars: 0,
+          comment: '',
+        },
+        tt9000105: {
+          seen: [],
+          ratings: {},
+          thoughts: {},
+          swap: false,
+          stars: 0,
+          comment: '',
+        },
+      },
+    })
+  })
+
+  it('gives none for what does not read', () => {
+    const none = { addition: '', films: {} }
+    expect(parseMarks(store('{'), MODEL)).toEqual(none)
+    expect(parseMarks(store('[]'), MODEL)).toEqual(none)
+    expect(parseMarks(store('{"films": 1}'), MODEL)).toEqual(none)
+    expect(parseMarks(null, MODEL)).toEqual(none)
+  })
+})

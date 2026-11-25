@@ -42,6 +42,7 @@ export {
   type Attribution,
 } from './recommendation/attributions.ts'
 export {
+  catalogFilm,
   chooseCandidates,
   prepareSelection,
   type Candidate,
@@ -204,6 +205,7 @@ export {
   recommendSession,
   redoSession,
 } from './sessions/redo.ts'
+export { sessionRedoRequest } from './sessions/redo-request.ts'
 export {
   engineLayer,
   errorOutcome,
@@ -516,11 +518,17 @@ export {
   type ImportRemovalInput,
 } from './imports/remove.ts'
 export { rebuild, type Rebuilt } from './rebuild/rebuild.ts'
+export {
+  update,
+  type PinnedDump,
+  type Updated,
+  type UpdateProgress,
+  type UpdateRequest,
+} from './catalog/update.ts'
 export { withDatabaseFile } from './sqlite/Sqlite.ts'
 export { reloadData, type DataReload } from './data/reload.ts'
 export {
   evaluate,
-  evaluationDatabase,
   evaluationsFolder,
   progressTo,
   type EvaluateRequest,
@@ -541,3 +549,35 @@ export {
   dumpYaml as dumpReportYaml,
   type ReportValue,
 } from './evaluation/yaml.ts'
+export {
+  billboardText,
+  type BillboardMarks,
+  type BillboardState,
+} from './billboard/text.ts'
+export {
+  answerBillboard,
+  readReply,
+  type BillboardReply,
+  type BillboardReplyRequest,
+  type FilmNote,
+  type ReadMarks,
+  type ReadReply,
+  type ReplySeen,
+} from './billboard/reply.ts'
+export {
+  billboard,
+  billboardModel,
+  billboardPeople,
+  PERSON_COLORS,
+  imdbRatingLabel,
+  showFilms,
+  votesText,
+  type Billboard,
+  type BillboardDropped,
+  type BillboardFilm,
+  type BillboardLine,
+  type BillboardPerson,
+  type BillboardRequest,
+  type BillboardRequestInput,
+  type BillboardResult,
+} from './billboard/model.ts'

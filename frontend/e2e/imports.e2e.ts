@@ -7,10 +7,17 @@
 
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { personCreate, personImports, viewQueue } from '@filmes/engine'
+import { personImports, viewQueue } from '@filmes/engine'
 import { expect, test, type Page } from '@playwright/test'
 import { zipOf } from '../../packages/engine/test/imports/zip.ts'
-import { engineRun, loginAsBruno, notice, section, snap } from './support'
+import {
+  addPerson,
+  engineRun,
+  loginAsBruno,
+  notice,
+  section,
+  snap,
+} from './support'
 
 const FIXTURE = join(import.meta.dirname, '../../tests/fixture')
 
@@ -23,17 +30,6 @@ const folderZip = (folder: string, prefix = '') =>
           [prefix + name, readFileSync(join(FIXTURE, folder, name))] as const,
       ),
   )
-
-/** A Pessoa of this file alone: the other files' assertions read the
- * fixture's Pessoas, and an import changes their Declarados and Notas. On a
- * retry she is already there. */
-async function addPerson(name: string) {
-  await engineRun((engine) => engine.run(personCreate({ name }))).catch(
-    (error: Error) => {
-      if (!error.message.includes('person_exists')) throw error
-    },
-  )
-}
 
 const importsOf = (person: string) =>
   engineRun((engine) => engine.run(personImports(person)))

@@ -11,18 +11,33 @@ describe('planForDiff', () => {
     })
   })
 
-  it('the engine package also runs the app, which imports it', () => {
+  it('the engine package also runs the app and the MCP server, which import it', () => {
     expect(planForDiff(['packages/engine/src/index.ts']).vitest).toEqual([
       'frontend',
       'packages/engine',
+      'packages/mcp-server',
     ])
+  })
+
+  it('the MCP server runs only its own tests', () => {
+    expect(
+      planForDiff(['packages/mcp-server/src/tools/recommend.ts']),
+    ).toMatchObject({
+      vitest: ['packages/mcp-server'],
+      mcp: false,
+      python: false,
+    })
   })
 
   it('the key migration runs its own tests and the engine, whose fixture it migrates', () => {
     expect(
       planForDiff(['packages/key-migration/src/migrate.ts']),
     ).toMatchObject({
-      vitest: ['packages/engine', 'packages/key-migration'],
+      vitest: [
+        'packages/engine',
+        'packages/key-migration',
+        'packages/mcp-server',
+      ],
       mcp: false,
       python: false,
     })
@@ -35,7 +50,11 @@ describe('planForDiff', () => {
     ])
       expect({ file, ...planForDiff([file]) }).toMatchObject({
         file,
-        vitest: ['packages/engine', 'packages/key-migration'],
+        vitest: [
+          'packages/engine',
+          'packages/key-migration',
+          'packages/mcp-server',
+        ],
         mcp: true,
         python: true,
       })
@@ -60,17 +79,19 @@ describe('planForDiff', () => {
   })
 
   it("what the engine's fixture is built from also runs the engine's tests", () => {
-    for (const file of [
-      'filmes/cli.py',
-      'tests/fixture/catalogo/filmes.csv',
-      'uv.lock',
-    ])
+    for (const file of ['filmes/cli.py', 'uv.lock'])
       expect({ file, ...planForDiff([file]) }).toMatchObject({
         file,
         vitest: ['packages/engine'],
         mcp: true,
         python: true,
       })
+    // The MCP server's tests run the engine on the same fixture.
+    expect(planForDiff(['tests/fixture/catalogo/filmes.csv'])).toMatchObject({
+      vitest: ['packages/engine', 'packages/mcp-server'],
+      mcp: true,
+      python: true,
+    })
   })
 
   it("the pytest seam also runs the engine's tests: the oracle reads its trace", () => {
@@ -112,7 +133,13 @@ describe('planForDiff', () => {
       const plan = planForDiff(['frontend/src/ui/home.tsx', file])
       expect(plan.full).toContain(file)
       expect(plan).toMatchObject({
-        vitest: ['frontend', 'packages/engine', 'packages/key-migration', '.'],
+        vitest: [
+          'frontend',
+          'packages/engine',
+          'packages/key-migration',
+          'packages/mcp-server',
+          '.',
+        ],
         mcp: true,
         python: true,
       })

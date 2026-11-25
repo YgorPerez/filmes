@@ -184,6 +184,28 @@ describe.skipIf(process.platform === 'win32')('db:publish on the VPS', () => {
     )
   })
 
+  it('keeps the -wal and -shm of the live version and the previous one: a rollback opens the file with them', () => {
+    const vps = aVps()
+    vps.publishDatabase(aDatabase('v1'), 'v1')
+    for (const companion of ['-wal', '-shm'])
+      writeFileSync(join(vps.db, `v1.sqlite${companion}`), 'pages')
+    vps.publishDatabase(aDatabase('v2'), 'v2')
+    for (const companion of ['-wal', '-shm'])
+      writeFileSync(join(vps.db, `v2.sqlite${companion}`), 'pages')
+
+    vps.rollbackDatabase()
+
+    expect(readdirSync(vps.db).sort()).toEqual([
+      'v1.sqlite',
+      'v1.sqlite-shm',
+      'v1.sqlite-wal',
+      'v2.sqlite',
+      'v2.sqlite-shm',
+      'v2.sqlite-wal',
+    ])
+    expect(vps.live()).toMatchObject({ database: opens('v1'), dbLive: 'v1\n' })
+  })
+
   it('deletes the part an interrupted upload of another version left behind', () => {
     const vps = aVps()
     vps.publishDatabase(aDatabase('v1'), 'v1')
@@ -471,6 +493,7 @@ describe('the command line', () => {
       ['--rollback', '--version'],
       ['--build', 'db.sqlite'],
       ['db.sqlite', '--data', 'dados'],
+      ['db.sqlite', '--python'],
       ['db.sqlite', '--version', ''],
     ])
       expect(() => dbPublish(argv)).toThrow(/^Usage: /)
@@ -532,20 +555,22 @@ function build(
   return { printed: printed.join('\n'), said, built }
 }
 
-/** A Python that writes a SQLite header where it is told, and keeps what it
- * was given. */
-function fakePython() {
+/** A build process that writes a SQLite header where it is told, and
+ * keeps what it was given. */
+function fakeBuilder() {
   const calls: {
+    command: string
     args: readonly string[]
     env: Record<string, string | undefined>
     seen: string[]
   }[] = []
-  const run: Runner = (_, args, { env }) => {
+  const run: Runner = (command, args, { env }) => {
     calls.push({
+      command,
       args,
       env,
       seen: [
-        ...readdirSync(env.FILMES_DADOS!).map((name) => `dados/${name}`),
+        ...readdirSync(env.FILMES_DADOS!).map((name) => `data/${name}`),
         ...readdirSync(env.FILMES_CONFIG!).map((name) => `config/${name}`),
       ],
     })
@@ -556,13 +581,77 @@ function fakePython() {
 }
 
 describe('db:publish --build', () => {
-  it('a dry run builds the fixture with the Python engine and prints the plan for it', () => {
-    const fixture = useFixture()
-    const env = Object.fromEntries(
-      Object.entries(process.env).filter(([key]) => !key.startsWith('FILMES_')),
-    )
+  for (const [builder, flags] of [
+    ['engine', []],
+    ['Python engine', ['--python']],
+  ] as const)
+    it(`a dry run builds the fixture with the ${builder} and prints the plan for it`, () => {
+      const fixture = useFixture()
+      const env = Object.fromEntries(
+        Object.entries(process.env).filter(
+          ([key]) => !key.startsWith('FILMES_'),
+        ),
+      )
 
-    const { printed, built } = build(
+      const { printed, built } = build(
+        [
+          '--data',
+          fixture.data,
+          '--config',
+          fixture.config,
+          '--version',
+          'v1',
+          '--dry-run',
+          ...flags,
+        ],
+        {
+          env: {
+            ...env,
+            FILMES_CATALOGO: join(ROOT, 'tests/fixture/catalogo'),
+            FILMES_HOJE: FIXTURE_TODAY,
+            FILMES_LOCAL: join(fixture.root, 'no-local.toml'),
+          },
+        },
+      )
+
+      expect(built).toMatch(/v1\.sqlite$/)
+      // One file, in WAL mode (the header's read and write versions are 2),
+      // with no -wal or -shm left beside it.
+      expect(readdirSync(dirname(built!))).toEqual(['v1.sqlite'])
+      expect([...readFileSync(built!).subarray(18, 20)]).toEqual([2, 2])
+      expect(printed).toContain(
+        `# Then sends ${built} to /opt/filmes/data/db/v1.sqlite.part.`,
+      )
+      // The same database the engine built from the fixture.
+      expect(rowCounts(built!)).toEqual(rowCounts(fixture.database))
+      expect(rowCounts(built!)['pessoas']).toBe(5)
+      rmSync(dirname(built!), { recursive: true })
+    }, 120_000)
+
+  it('gives the engine filmes-dados and the config in English', () => {
+    const fixture = useFixture()
+    const builder = fakeBuilder()
+
+    build(['--data', fixture.data, '--config', fixture.config, '--dry-run'], {
+      env: { FILMES_CATALOGO: '/dumps' },
+      run: builder.run,
+    })
+
+    const [call] = builder.calls
+    expect(call!.command).toBe(process.execPath)
+    expect(call!.args).toEqual([join(import.meta.dirname, 'db-rebuild.ts')])
+    expect(call!.env.FILMES_CATALOGO).toBe('/dumps')
+    expect(call!.seen).toContain('data/people')
+    expect(call!.seen).toContain('config/weights.toml')
+    expect(call!.seen).not.toContain('config/pesos.toml')
+  })
+
+  it('with --python gives Python filmes-dados and the config in Portuguese, and deletes the file after the swap', () => {
+    const fixture = useFixture()
+    const vps = aVps()
+    const builder = fakeBuilder()
+
+    const { built } = build(
       [
         '--data',
         fixture.data,
@@ -570,44 +659,17 @@ describe('db:publish --build', () => {
         fixture.config,
         '--version',
         'v1',
-        '--dry-run',
+        '--python',
       ],
       {
-        env: {
-          ...env,
-          FILMES_CATALOGO: join(ROOT, 'tests/fixture/catalogo'),
-          FILMES_HOJE: FIXTURE_TODAY,
-          FILMES_LOCAL: join(fixture.root, 'no-local.toml'),
-        },
-      },
-    )
-
-    expect(built).toMatch(/v1\.sqlite$/)
-    expect(printed).toContain(
-      `# Then sends ${built} to /opt/filmes/data/db/v1.sqlite.part.`,
-    )
-    // The same database Python built from the Portuguese fixture.
-    expect(rowCounts(built!)).toEqual(rowCounts(fixture.database))
-    expect(rowCounts(built!)['pessoas']).toBe(5)
-    rmSync(dirname(built!), { recursive: true })
-  }, 120_000)
-
-  it('gives Python filmes-dados and the config in Portuguese, and deletes the file after the swap', () => {
-    const fixture = useFixture()
-    const vps = aVps()
-    const python = fakePython()
-
-    const { built } = build(
-      ['--data', fixture.data, '--config', fixture.config, '--version', 'v1'],
-      {
         env: { VPS_HOST: 'vps.test', FILMES_CATALOGO: '/dumps' },
-        run: python.run,
+        run: builder.run,
         connect: () => vps.vps,
         paths: vps.paths,
       },
     )
 
-    const [call] = python.calls
+    const [call] = builder.calls
     expect(call!.args).toEqual([
       'run',
       'python',
@@ -617,7 +679,7 @@ describe('db:publish --build', () => {
       '--json',
     ])
     expect(call!.env.FILMES_CATALOGO).toBe('/dumps')
-    expect(call!.seen).toContain('dados/pessoas')
+    expect(call!.seen).toContain('data/pessoas')
     expect(call!.seen).toContain('config/pesos.toml')
     expect(call!.seen).not.toContain('config/weights.toml')
     expect(vps.live()).toMatchObject({ dbLive: 'v1\n' })
@@ -629,14 +691,14 @@ describe('db:publish --build', () => {
 
   it('takes filmes-dados from FILMES_DADOS', () => {
     const fixture = useFixture()
-    const python = fakePython()
+    const builder = fakeBuilder()
 
     build(['--config', fixture.config, '--dry-run'], {
       env: { FILMES_DADOS: fixture.data },
-      run: python.run,
+      run: builder.run,
     })
 
-    expect(python.calls).toHaveLength(1)
+    expect(builder.calls).toHaveLength(1)
   })
 
   it('without filmes-dados it says how to give it', () => {
@@ -645,7 +707,7 @@ describe('db:publish --build', () => {
     )
   })
 
-  it("stops with Python's error, and leaves nothing behind", () => {
+  it("stops with the engine's error, and leaves nothing behind", () => {
     const fixture = useFixture()
     let database = ''
     const failing: Runner = (_, __, { env }) => {
@@ -653,7 +715,7 @@ describe('db:publish --build', () => {
       return {
         status: 1,
         stdout:
-          '{"erro": {"codigo": "config_ausente", "mensagem": "sem dumps"}}',
+          '{"error": {"code": "missing_catalog", "message": "sem dumps"}}',
         stderr: '',
       }
     }
@@ -663,17 +725,42 @@ describe('db:publish --build', () => {
         run: failing,
       }),
     ).toThrow(
-      'the Python engine could not build the database: config_ausente: sem dumps',
+      'the engine could not build the database: missing_catalog: sem dumps',
     )
     expect(existsSync(dirname(database))).toBe(false)
   })
 
-  it('a Python that never started says what it printed', () => {
+  it("with --python stops with Python's error", () => {
+    const fixture = useFixture()
+    const failing: Runner = () => ({
+      status: 1,
+      stdout: '{"erro": {"codigo": "config_ausente", "mensagem": "sem dumps"}}',
+      stderr: '',
+    })
+
+    expect(() =>
+      build(
+        [
+          '--data',
+          fixture.data,
+          '--config',
+          fixture.config,
+          '--dry-run',
+          '--python',
+        ],
+        { run: failing },
+      ),
+    ).toThrow(
+      'the Python engine could not build the database: config_ausente: sem dumps',
+    )
+  })
+
+  it('a build that never started says what it printed', () => {
     const fixture = useFixture()
     const failing: Runner = () => ({
       status: null,
       stdout: '',
-      stderr: 'spawn uv ENOENT',
+      stderr: 'spawn node ENOENT',
     })
 
     expect(() =>
@@ -681,21 +768,21 @@ describe('db:publish --build', () => {
         run: failing,
       }),
     ).toThrow(
-      'the Python engine could not build the database: exit signal\nspawn uv ENOENT',
+      'the engine could not build the database: exit signal\nspawn node ENOENT',
     )
   })
 
   it('a publish that stops keeps the built file and says how to send it again', () => {
     const fixture = useFixture()
     const vps = aVps({ appLive: false })
-    const python = fakePython()
+    const builder = fakeBuilder()
     let message = ''
     try {
       build(
         ['--data', fixture.data, '--config', fixture.config, '--version', 'v1'],
         {
           env: { VPS_HOST: 'vps.test' },
-          run: python.run,
+          run: builder.run,
           connect: () => vps.vps,
           paths: vps.paths,
         },

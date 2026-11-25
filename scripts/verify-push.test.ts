@@ -179,6 +179,7 @@ describe('verifyPush', () => {
       join(clone, 'frontend'),
       join(clone, 'packages/engine'),
       join(clone, 'packages/key-migration'),
+      join(clone, 'packages/mcp-server'),
       clone,
     ])
     for (const { command } of vitest)

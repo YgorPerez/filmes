@@ -3,6 +3,13 @@
 // next to `FILMES_BANCO`, and swaps it in at the end, so there is never a
 // half-built database. The write lock is held throughout: a write that
 // landed during the build would be lost by the swap.
+//
+// The file comes out in WAL mode (#125), so a long read (`evaluate`) never
+// blocks a write. The mode is switched after the build, not before: in WAL
+// the one big transaction would first go whole into the `-wal`. Closing the
+// file checkpoints it, so the swap moves one file, and the `-wal`/`-shm` the
+// old database left beside the target go first: SQLite would read them as
+// the new file's.
 
 import { randomBytes } from 'node:crypto'
 import { existsSync, mkdirSync, renameSync, rmSync } from 'node:fs'
@@ -28,7 +35,7 @@ import { STEPS } from './steps/index.ts'
 
 /** The code repository, which a database built from the real catalog must
  * stay out of (Python's `RAIZ`). */
-const REPOSITORY = resolve(import.meta.dirname, '../../../..')
+export const REPOSITORY = resolve(import.meta.dirname, '../../../..')
 
 export interface Rebuilt {
   /** The database's path, as configured. */
@@ -37,7 +44,7 @@ export interface Rebuilt {
   readonly tables: Readonly<Record<string, number>>
 }
 
-const isInside = (path: string, folder: string): boolean => {
+export const isInside = (path: string, folder: string): boolean => {
   const rest = relative(folder, path)
   return rest === '' || (!rest.startsWith('..') && !isAbsolute(rest))
 }
@@ -62,7 +69,17 @@ const build = (db: Connection) =>
     yield* db.exec('BEGIN')
     for (const step of STEPS) yield* step.load(db)
     yield* db.exec('COMMIT')
-    return yield* countTables(db)
+    const tables = yield* countTables(db)
+    yield* db.exec('PRAGMA journal_mode = WAL')
+    return tables
+  })
+
+/** The old database's companions beside the target: the new file must not
+ * open with them. */
+const removeCompanions = (target: string) =>
+  Effect.sync(() => {
+    for (const companion of ['-wal', '-shm', '-journal'])
+      rmSync(`${target}${companion}`, { force: true })
   })
 
 export const rebuild: Effect.Effect<
@@ -92,6 +109,7 @@ export const rebuild: Effect.Effect<
       (file) =>
         Effect.gen(function* () {
           const tables = yield* withDatabaseFile(file, build)
+          yield* removeCompanions(target)
           yield* Effect.sync(() => renameSync(file, target))
           return { database: target, tables }
         }),

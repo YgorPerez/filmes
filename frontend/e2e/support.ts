@@ -4,7 +4,12 @@
 // app wrote or to prepare what a screen needs.
 
 import { join } from 'node:path'
-import { makeEngine, type Engine, type Outcome } from '@filmes/engine'
+import {
+  makeEngine,
+  personCreate,
+  type Engine,
+  type Outcome,
+} from '@filmes/engine'
 import { expect, type Page, type TestInfo } from '@playwright/test'
 
 /** Runs `task` on an engine over the fixture copy and gives its output; an
@@ -26,6 +31,17 @@ export async function engineRun<A>(
   } finally {
     await engine.dispose()
   }
+}
+
+/** A Pessoa of one e2e file alone: the other files' assertions read the
+ * fixture's Pessoas, and an import or a Já vi changes their Declarados and
+ * Notas. On a retry she is already there. */
+export async function addPerson(name: string) {
+  await engineRun((engine) => engine.run(personCreate({ name }))).catch(
+    (error: Error) => {
+      if (!error.message.includes('person_exists')) throw error
+    },
+  )
 }
 
 /** Through the stand-in Google as Bruno, the fixture's Dono, to the home. */

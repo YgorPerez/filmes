@@ -11,7 +11,8 @@ import {
   rmSync,
   writeFileSync,
 } from 'node:fs'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
+import { DatabaseSync } from 'node:sqlite'
 import { describe, expect, test } from 'vite-plus/test'
 import { consult, rebuild, type Outcome } from '../src/index.ts'
 import { ROOT, useFixture, type Fixture } from './fixture.ts'
@@ -96,6 +97,28 @@ test('says where the database is and how many rows each table has', async () => 
   expect(readdirSync(fixture.root).filter((f) => f.endsWith('.novo'))).toEqual(
     [],
   )
+})
+
+test('leaves one file, in WAL mode, and drops what the old one left beside it', async () => {
+  const fixture = useEmptyFixture()
+  // A `-wal` of some other database: SQLite would replay it onto the new file.
+  writeFileSync(`${fixture.database}-wal`, 'not this database')
+  writeFileSync(`${fixture.database}-shm`, '')
+
+  await fixture.ok(rebuild)
+
+  const name = basename(fixture.database)
+  expect(
+    readdirSync(fixture.root).filter((file) => file.startsWith(name)),
+  ).toEqual([name])
+  const db = new DatabaseSync(fixture.database, { readOnly: true })
+  try {
+    expect(db.prepare('PRAGMA journal_mode').get()).toEqual({
+      journal_mode: 'wal',
+    })
+  } finally {
+    db.close()
+  }
 })
 
 test('twice gives the same database', async () => {
