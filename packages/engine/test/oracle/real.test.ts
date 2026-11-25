@@ -408,7 +408,8 @@ describe('runReal on the fixture', () => {
       expect(report.errors).toEqual([])
       expect(report.ok).toBe(true)
       expect(report.compared['recomendar']).toBeGreaterThanOrEqual(4)
-      expect(report.notPorted).toEqual({ cartaz: 4 })
+      expect(report.notPorted).toEqual({})
+      expect(report.compared['cartaz']).toBe(4)
       const verdicts = results
         .flatMap((r) => r.steps)
         .filter((s) => s.command === 'verificar')
