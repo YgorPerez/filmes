@@ -267,6 +267,14 @@ const ONLY_GUESSES = new Set([
   'Mesma Diretora',
   'Reprise',
   'Bis',
+  // #165's films, but Cais 2 and Cais 3, which neither has seen the film
+  // before (the Série na ordem).
+  'Cais',
+  'Cais: Origens',
+  'Estelar',
+  'Estelar: Retorno',
+  'Lado A',
+  'Lado B',
 ])
 
 describe('films with guesses only', () => {

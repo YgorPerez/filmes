@@ -454,6 +454,24 @@ test('downloads every dump and pins the IMDb run date', async () => {
   ).toEqual([['Steven Spielberg']])
 })
 
+test('the series query asks which root each class falls under (#165)', async () => {
+  const catalog = useCatalog('network')
+  const { fetch, asked } = fakeFetch()
+
+  await catalog.fixture.ok(update({ fetch }), catalog.vars)
+
+  const series = asked.filter(
+    (request) => request.query && groupOf(request.query) === 'series',
+  )
+  expect(series.length).toBeGreaterThan(0)
+  for (const request of series)
+    expect(request.query).toContain('SELECT DISTINCT ?item ?p ?valor ?raiz')
+  await catalog.fixture.ok(rebuild, catalog.vars)
+  expect(
+    await rows(catalog, 'SELECT item, raiz FROM series_de_filmes'),
+  ).toEqual([['Q1210827', 'Q24856']])
+})
+
 test('tries a busy host again after its Retry-After', async () => {
   const catalog = useCatalog('network')
   let busy = 2

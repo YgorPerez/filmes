@@ -2,11 +2,7 @@ import { FIELD } from './kit/field'
 import { FieldLabel } from './kit/field-label'
 import type { ReactNode } from 'react'
 import type { PersonImports } from '@filmes/engine'
-import {
-  LETTERBOXD_USER,
-  type ImportNotice,
-  type ImportRefusal,
-} from '#/content/import-action'
+import type { ImportNotice, ImportRefusal } from '#/content/import-action'
 import { ImportsFrame } from './imports'
 import { PERSON_IMPORTS } from './imports.copy'
 import { Slip } from './kit/slip'
@@ -26,6 +22,9 @@ import { Button, buttonVariants } from './shadcn/button'
 
 const COPY = PERSON_IMPORTS
 
+/** A Pessoa's imports, and whether she is the Dono looking at them. */
+export type PersonImportsView = PersonImports & { own: boolean }
+
 /** What the last action did: the notice and its counts. */
 export type ImportDoneView = {
   notice: ImportNotice
@@ -33,11 +32,12 @@ export type ImportDoneView = {
   outside?: number
 }
 
-/** `/importar/<slug>`: the Pessoa's imports, what they gave, and the forms
- * to bring an export, link her RSS or take an import out. Every form is a
- * plain POST (the uploads multipart) that comes back here. `page` is
- * `'unknown'` when no Pessoa has the slug, null when the engine cannot run
- * on this server. */
+/** `/importar/<slug>`: the upload first (one file field: the server tells
+ * Letterboxd from Trakt by the ZIP), then the Letterboxd profile, what the
+ * imports gave (only once they gave something) and the files, each with
+ * its Tirar. Every form is a plain POST (the upload multipart) that comes
+ * back here. `page` is `'unknown'` when no Pessoa has the slug, null when
+ * the engine cannot run on this server. */
 export function PersonImportsScreen({
   slug,
   page,
@@ -45,7 +45,7 @@ export function PersonImportsScreen({
   refusal,
 }: {
   slug: string
-  page: PersonImports | 'unknown' | null
+  page: PersonImportsView | 'unknown' | null
   done?: ImportDoneView
   refusal?: ImportRefusal
 }) {
@@ -58,18 +58,15 @@ export function PersonImportsScreen({
       ) : (
         <>
           <PageHead title={COPY.title(page.name)} />
-          {refusal && <Alert>{COPY.refusals[refusal]}</Alert>}
+          {refusal && <Refusal refusal={refusal} />}
           {done && (
             <Notice>
               {COPY.notices[done.notice](done.facts, done.outside)}
             </Notice>
           )}
-          <div className="grid gap-2xl sm:grid-cols-[3fr_2fr]">
-            <Letterboxd page={page} />
-            <Trakt page={page} />
-          </div>
           <Upload slug={slug} />
-          <Rss slug={slug} name={page.name} />
+          <Rss slug={slug} name={page.name} own={page.own} />
+          <Summaries page={page} />
           <Files slug={slug} page={page} />
         </>
       )}
@@ -210,6 +207,27 @@ function Waiting({ report }: { report: PersonImports['letterboxd'] }) {
   )
 }
 
+const hasLetterboxd = (page: PersonImports) =>
+  page.letterboxd.films > 0 || page.letterboxd.queued > 0
+
+const hasTrakt = (page: PersonImports) =>
+  page.trakt.ratings > 0 || page.trakt.seen > 0
+
+/** What the imports gave, by service: a card only once it gave something. */
+function Summaries({ page }: { page: PersonImports }) {
+  const letterboxd = hasLetterboxd(page)
+  const trakt = hasTrakt(page)
+  if (!letterboxd && !trakt) return null
+  return (
+    <div
+      className={`grid gap-2xl ${letterboxd && trakt ? 'sm:grid-cols-[3fr_2fr]' : ''}`}
+    >
+      {letterboxd && <Letterboxd page={page} />}
+      {trakt && <Trakt page={page} />}
+    </div>
+  )
+}
+
 function Letterboxd({ page }: { page: PersonImports }) {
   const { letterboxd: copy } = COPY
   const report = page.letterboxd
@@ -247,77 +265,82 @@ function Trakt({ page }: { page: PersonImports }) {
 
 const fileControl = `${FIELD} w-full cursor-pointer file:mr-lg file:min-h-9 file:cursor-pointer file:rounded-pill file:border-[1.5px] file:border-rule file:bg-surface-2 file:px-xl file:font-display file:text-control file:text-ink`
 
-function FileField() {
+/** How to download the ZIP: one line per service, its name a link to its
+ * data settings. Spans, so it also fits inside the alert's paragraph. */
+function HowTo() {
   return (
-    <FieldLabel label={COPY.upload.file}>
-      <input
-        type="file"
-        name="arquivo"
-        required
-        accept=".zip,application/zip"
-        className={fileControl}
-      />
-    </FieldLabel>
-  )
-}
-
-/** One of the two exports: a row that opens its form. Both rows share a
- * name, so opening one closes the other and the screen shows one orange
- * Importar at a time (The One Orange Button Rule). */
-function ExportChoice({
-  slug,
-  kind,
-  summary,
-  how,
-}: {
-  slug: string
-  kind: 'letterboxd' | 'trakt'
-  summary: string
-  how: string
-}) {
-  return (
-    <details
-      name="trazer"
-      className="group rounded-field border-[1.5px] border-rule open:border-ink"
-    >
-      <summary className="flex min-h-[52px] cursor-pointer list-none items-center justify-between gap-sm px-xl font-display text-[15px] font-bold select-none [&::-webkit-details-marker]:hidden">
-        {summary}
-        <span className="transition-transform group-open:rotate-90 motion-reduce:transition-none">
-          <RowArrow />
+    <span className="flex flex-col gap-2xs text-meta text-ink-2">
+      {COPY.upload.how.map(({ service, href, steps }) => (
+        <span key={service}>
+          <a
+            href={href}
+            target="_blank"
+            rel="noreferrer"
+            className="font-semibold text-ink underline underline-offset-3"
+          >
+            {service}
+          </a>
+          : {steps}
         </span>
-      </summary>
-      <div className="border-t border-dashed border-rule p-xl">
-        <ImportForm slug={slug} action={kind} label={summary} upload>
-          <p className="text-meta text-ink-2">{how}</p>
-          <FileField />
-          <Submit variant="primary">{COPY.upload.submit}</Submit>
-        </ImportForm>
-      </div>
-    </details>
+      ))}
+    </span>
   )
 }
 
+/** The refusal; a ZIP of neither service also says how to get the right
+ * one. */
+function Refusal({ refusal }: { refusal: ImportRefusal }) {
+  return (
+    <Alert>
+      {COPY.refusals[refusal]}
+      {refusal === 'origem' && (
+        <span className="mt-xs block">
+          <HowTo />
+        </span>
+      )}
+    </Alert>
+  )
+}
+
+/** The page's main action, always open: one file field for either
+ * service, and the only orange button on the screen (The One Orange Button
+ * Rule). The import starts on the button, not on picking the file. */
 function Upload({ slug }: { slug: string }) {
   const { upload } = COPY
   return (
     <Section id="trazer" title={upload.title}>
-      <ExportChoice
-        slug={slug}
-        kind="letterboxd"
-        summary={upload.letterboxd}
-        how={upload.letterboxdHow}
-      />
-      <ExportChoice
-        slug={slug}
-        kind="trakt"
-        summary={upload.trakt}
-        how={upload.traktHow}
-      />
+      <ImportForm slug={slug} action="arquivo" label={upload.title} upload>
+        <div className="flex flex-col gap-sm">
+          <FieldLabel label={upload.file}>
+            <input
+              type="file"
+              name="arquivo"
+              required
+              accept=".zip,application/zip"
+              className={fileControl}
+            />
+          </FieldLabel>
+          <HowTo />
+        </div>
+        <Submit variant="primary">{upload.submit}</Submit>
+      </ImportForm>
     </Section>
   )
 }
 
-function Rss({ slug, name }: { slug: string; name: string }) {
+/** The Letterboxd profile's public diary, secondary to the ZIP. The
+ * server reads the user out of a name, an @name or the profile's address.
+ * Another Pessoa's diary needs her yes; on the Dono's own page there is
+ * nothing to ask. */
+function Rss({
+  slug,
+  name,
+  own,
+}: {
+  slug: string
+  name: string
+  own: boolean
+}) {
   const { rss } = COPY
   return (
     <Section id="rss" title={rss.title} lead={rss.lead}>
@@ -327,18 +350,19 @@ function Rss({ slug, name }: { slug: string; name: string }) {
           label={rss.user}
           hint={rss.userHint}
           required
-          pattern={LETTERBOXD_USER}
         />
-        <label className="flex min-h-touch cursor-pointer items-start gap-md rounded-field bg-surface-2 p-lg">
-          <input
-            type="checkbox"
-            name="consentimento"
-            value="sim"
-            required
-            className="mt-0.5 size-5 shrink-0 accent-ink"
-          />
-          <span>{rss.consent(name)}</span>
-        </label>
+        {!own && (
+          <label className="flex min-h-touch cursor-pointer items-start gap-md rounded-field bg-surface-2 p-lg">
+            <input
+              type="checkbox"
+              name="consentimento"
+              value="sim"
+              required
+              className="mt-0.5 size-5 shrink-0 accent-ink"
+            />
+            <span>{rss.consent(name)}</span>
+          </label>
+        )}
         <Submit>{rss.submit}</Submit>
       </ImportForm>
     </Section>

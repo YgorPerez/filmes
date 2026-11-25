@@ -22,6 +22,7 @@ import {
   outOfSessionModule,
   type OutOfSessionRequest,
 } from './out-of-session.ts'
+import { seriesOrderModule, type SeriesOrderRequest } from './series-order.ts'
 import { similarModule, type SimilarRequest } from './similar.ts'
 import { triggerModule, type TriggerRequest } from './trigger.ts'
 import { unseenModule, type UnseenRequest } from './unseen.ts'
@@ -37,7 +38,8 @@ export type ConstraintRequest = YearRequest &
   SimilarRequest &
   UnseenRequest &
   NoSlowRequest &
-  NoSadRequest
+  NoSadRequest &
+  SeriesOrderRequest
 
 /** The Restrições ported so far, in `CONSTRAINT_ORDER`. */
 export const CONSTRAINT_MODULES: ReadonlyArray<
@@ -53,6 +55,7 @@ export const CONSTRAINT_MODULES: ReadonlyArray<
   unseenModule,
   noSlowModule,
   noSadModule,
+  seriesOrderModule,
 ]
 
 type Modules<R> = ReadonlyArray<ConstraintModule<R>>
@@ -111,8 +114,11 @@ export const replacingList = (
 }
 
 /** What the Session stores of the Restrições asked for: all but the
- * duration, which `max_duration` holds (Python's `_contexto`). */
+ * duration, which `max_duration` holds (Python's `_contexto`), and the
+ * ones a refazer brings by itself (`unstored`). */
 export const storedConstraints = (
   asked: ReadonlyArray<Constraint>,
 ): ReadonlyArray<StoredConstraint> =>
-  asked.filter((c) => c.name !== 'duration').map((c) => c.stored())
+  asked
+    .filter((c) => c.name !== 'duration' && !c.unstored)
+    .map((c) => c.stored())

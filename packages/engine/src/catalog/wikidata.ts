@@ -280,8 +280,12 @@ PREFIX wdt: <http://www.wikidata.org/prop/direct/>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>`
 
 /** P179 also points at lists and rankings: a series is an item with P31
- * under one of these classes (film series, media franchise). */
-const SERIES = ['Q24856', 'Q196600']
+ * under one of these classes (film series, media franchise). Only a film
+ * series counts for the Série na ordem (#165), so the series dump says
+ * which of the two each class falls under (`?raiz`). */
+export const FILM_SERIES = 'Q24856'
+export const MEDIA_FRANCHISE = 'Q196600'
+const SERIES = [FILM_SERIES, MEDIA_FRANCHISE]
 
 const SCOPES: Readonly<Record<string, string>> = {
   ids: '{ ?item wdt:P31 wd:Q11424 } UNION { ?item wdt:P6127 ?slug }',
@@ -295,12 +299,17 @@ const SCOPES: Readonly<Record<string, string>> = {
     '{ SELECT DISTINCT ?item WHERE { ?filme wdt:P31 wd:Q11424 ; wdt:P136/wdt:P279* ?item . } }',
 }
 
+/** The variables a group's scope binds besides `?item ?p ?valor`. */
+const EXTRA_VARIABLES: Readonly<Record<string, string>> = {
+  series: ' ?raiz',
+}
+
 /** `consulta`: the SPARQL query of a group, for some of its properties. */
 export const groupQuery = (
   group: string,
   properties: readonly string[],
 ): string => `${PREFIXES}
-SELECT DISTINCT ?item ?p ?valor WHERE {
+SELECT DISTINCT ?item ?p ?valor${EXTRA_VARIABLES[group] ?? ''} WHERE {
     ${SCOPES[group] ?? '?item wdt:P31 wd:Q11424 .'}
     VALUES ?p { ${properties.map((p) => `wdt:${p}`).join(' ')} }
     ?item ?p ?valor .

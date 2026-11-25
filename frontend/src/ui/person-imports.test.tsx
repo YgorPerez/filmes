@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 // A Pessoa's imports page and the list: what they show, and what each form
 // posts (`parseImport`, the same reader the route uses).
-import type { PersonImports } from '@filmes/engine'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it } from 'vite-plus/test'
@@ -12,7 +11,7 @@ import {
 } from '#/content/import-action'
 import { ImportsList } from './imports-list'
 import { IMPORTS, PERSON_IMPORTS } from './imports.copy'
-import { PersonImportsScreen } from './person-imports'
+import { PersonImportsScreen, type PersonImportsView } from './person-imports'
 
 afterEach(cleanup)
 
@@ -20,8 +19,9 @@ const COPY = PERSON_IMPORTS
 const NONE = { wikidata: 0, tmdb: 0, manual: 0 }
 const TRAKT_FILE = 'imports/quim/trakt-b1.zip'
 
-const QUIM: PersonImports = {
+const QUIM: PersonImportsView = {
   person: 'quim',
+  own: false,
   name: 'Quim',
   imports: [
     {
@@ -56,7 +56,22 @@ const QUIM: PersonImports = {
   trakt: { ratings: 2, seen: 1 },
 }
 
-const show = (page: PersonImports = QUIM) =>
+/** Quim with nothing imported yet. */
+const EMPTY: PersonImportsView = {
+  ...QUIM,
+  imports: [],
+  letterboxd: {
+    ...QUIM.letterboxd,
+    films: 0,
+    resolved: NONE,
+    discarded: NONE,
+    queued: 0,
+    queue: [],
+  },
+  trakt: { ratings: 0, seen: 0 },
+}
+
+const show = (page: PersonImportsView = QUIM) =>
   render(<PersonImportsScreen slug={page.person} page={page} />)
 
 const section = (name: string) => screen.getByRole('region', { name })
@@ -95,8 +110,8 @@ describe('PersonImportsScreen', () => {
     show()
     const files = section(COPY.files.title)
     expect(files.textContent).toContain('letterboxd-quim.zip')
-    expect(files.textContent).toContain('Export do Letterboxd · em 2026-11-20')
-    expect(files.textContent).toContain('Export do Trakt · em 2026-11-21')
+    expect(files.textContent).toContain('Arquivo do Letterboxd · em 2026-11-20')
+    expect(files.textContent).toContain('Arquivo do Trakt · em 2026-11-21')
     const letterboxd = section(COPY.letterboxd.title)
     expect(letterboxd.textContent).toContain('10 filmes')
     expect(letterboxd.textContent).toContain('5 pelo Wikidata · 1 pelo TMDB')
@@ -130,23 +145,39 @@ describe('PersonImportsScreen', () => {
     })
   })
 
-  it.each([
-    ['letterboxd', COPY.upload.letterboxd],
-    ['trakt', COPY.upload.trakt],
-  ] as const)('uploads a %s ZIP as multipart', async (kind, summary) => {
-    show()
+  it('opens with the upload: one file field, the only orange button', async () => {
+    const { container } = show()
     const user = userEvent.setup()
-    const upload = section(COPY.upload.title)
-    await user.click(within(upload).getByText(summary, { selector: 'summary' }))
-    const form = within(upload).getByRole('form', { name: summary })
+    const headings = screen
+      .getAllByRole('heading', { level: 2 })
+      .map((h) => h.textContent)
+    expect(headings.slice(0, 2)).toEqual([COPY.upload.title, COPY.rss.title])
+    expect(headings.at(-1)).toBe(COPY.files.title)
+    const form = within(section(COPY.upload.title)).getByRole('form', {
+      name: COPY.upload.title,
+    })
     expect(form.getAttribute('enctype')).toBe('multipart/form-data')
+    expect(
+      within(form)
+        .getAllByRole('link')
+        .map((link) => [link.textContent, link.getAttribute('href')]),
+    ).toEqual([
+      ['Letterboxd', 'https://letterboxd.com/settings/data/'],
+      ['Trakt', 'https://trakt.tv/settings/data'],
+    ])
+    // The One Orange Button Rule.
+    expect(
+      [...container.querySelectorAll('.bg-sticker-orange')].map(
+        (b) => b.textContent,
+      ),
+    ).toEqual([COPY.upload.submit])
     // jsdom's File takes text: a Uint8Array of Node's realm would be empty.
     const file = new File(['PK'], 'export.zip', {
       type: 'application/zip',
     })
     await user.upload(within(form).getByLabelText(COPY.upload.file), file)
     expect(await posted(form)).toEqual({
-      kind,
+      kind: 'upload',
       original: 'export.zip',
       content: new Uint8Array([80, 75]),
     })
@@ -160,34 +191,51 @@ describe('PersonImportsScreen', () => {
     })
     await user.type(
       within(form).getByLabelText(COPY.rss.user, { exact: false }),
-      'olga_farol',
+      'https://letterboxd.com/olga_farol/',
     )
     expect(await posted(form)).toBe('consentimento')
     await user.click(within(form).getByLabelText(COPY.rss.consent('Quim')))
     expect(await posted(form)).toEqual({ kind: 'rss', user: 'olga_farol' })
   })
 
-  it('says when she has nothing yet', () => {
-    show({
-      ...QUIM,
-      imports: [],
-      letterboxd: {
-        ...QUIM.letterboxd,
-        films: 0,
-        resolved: NONE,
-        discarded: NONE,
-        queued: 0,
-        queue: [],
-      },
-      trakt: { ratings: 0, seen: 0 },
-    })
+  it('asks no consent on the Dono’s own page', () => {
+    show({ ...QUIM, own: true })
+    const rss = section(COPY.rss.title)
+    expect(within(rss).queryByRole('checkbox')).toBeNull()
+    expect(rss.textContent).not.toContain(COPY.rss.consent('Quim'))
+  })
+
+  it('hides the summaries while they are empty', () => {
+    show(EMPTY)
     expect(section(COPY.files.title).textContent).toContain(COPY.files.empty)
-    expect(section(COPY.letterboxd.title).textContent).toContain(
-      'Nenhum filme importado.',
-    )
+    expect(
+      screen.queryByRole('region', { name: COPY.letterboxd.title }),
+    ).toBeNull()
+    expect(screen.queryByRole('region', { name: COPY.trakt.title })).toBeNull()
+    cleanup()
+    show({ ...EMPTY, trakt: QUIM.trakt })
+    expect(
+      screen.queryByRole('region', { name: COPY.letterboxd.title }),
+    ).toBeNull()
     expect(section(COPY.trakt.title).textContent).toContain(
-      '0 Notas e 0 Já vistos do Trakt.',
+      '2 Notas e 1 Já visto do Trakt.',
     )
+  })
+
+  it('says how to download each ZIP when one is of neither service', () => {
+    render(<PersonImportsScreen slug="quim" page={QUIM} refusal="origem" />)
+    const alert = screen.getByRole('alert')
+    expect(alert.textContent).toContain(
+      'Esse ZIP não parece ser do Letterboxd nem do Trakt.',
+    )
+    expect(
+      within(alert)
+        .getAllByRole('link')
+        .map((link) => link.getAttribute('href')),
+    ).toEqual([
+      'https://letterboxd.com/settings/data/',
+      'https://trakt.tv/settings/data',
+    ])
   })
 
   it('says when no Pessoa has the name, or the engine cannot run', () => {
@@ -213,13 +261,13 @@ describe('PersonImportsScreen', () => {
 
   it('counts in the notices', () => {
     expect(COPY.notices.letterboxd(0)).toBe(
-      'Export do Letterboxd importado: nenhum Fato novo.',
+      'Arquivo do Letterboxd importado: nenhum Fato novo.',
     )
     expect(COPY.notices.trakt(1, 2)).toBe(
-      'Export do Trakt importado: 1 Fato novo. 2 filmes ficaram de fora: o Catálogo não tem.',
+      'Arquivo do Trakt importado: 1 Fato novo. 2 filmes ficaram de fora: o Catálogo não tem.',
     )
     expect(COPY.notices.trakt(3)).toBe(
-      'Export do Trakt importado: 3 Fatos novos.',
+      'Arquivo do Trakt importado: 3 Fatos novos.',
     )
     expect(COPY.notices.removido(0)).toContain('Nenhum Fato saiu')
     expect(COPY.notices.removido(1)).toBe('Import tirado: 1 Fato saiu.')

@@ -50,6 +50,10 @@ Um passo do Guia de início que o Dono pulou. Fica no frontmatter do arquivo del
 Um limite que vale só numa Sessão, como "tem criança" ou "sem legenda". Tira o filme antes de qualquer ordenação, como o Veto.
 _Evitar_: filtro, veto da sessão
 
+**Série na ordem** [series order, `series_order`; modo [mode: `previous`, `all`, `off`]]:
+A Restrição, ligada por padrão, que tira a continuação de uma série de filmes quando algum Presente não viu o filme antes dela. A série é a do Wikidata com classe "série de filmes"; franquia (Marvel, Star Wars) não conta. A ordem vem da data de estreia, e data igual ou ausente não põe um filme antes do outro. Três modos: só se viram o anterior (o padrão), só se viram todos os anteriores, ou tanto faz. O filme só sai; o anterior não é empurrado para a lista.
+_Evitar_: sequência, franquia, saga
+
 **Clima** [mood, `Mood`]:
 O que uma Sessão quer sem excluir nenhum filme: a energia ("algo leve"), a ocasião ("aniversário da Ana"), a vontade do momento. Puxa a ordem, nunca tira um filme.
 _Evitar_: desejo, mood, preferência

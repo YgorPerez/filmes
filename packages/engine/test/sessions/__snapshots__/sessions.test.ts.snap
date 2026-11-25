@@ -177,6 +177,16 @@ exports[`the Feedback’s Fatos in the database > a reload gives the rows the Fe
       "tipo": "nota",
     },
     {
+      "data": "2025-07-01",
+      "fato_id": "notas:4617b2220fd7",
+      "filme_id": "tt9016502",
+      "fonte": "Letterboxd da Rosa",
+      "nota": 3,
+      "pessoa": "rosa",
+      "sessao": null,
+      "tipo": "nota",
+    },
+    {
       "data": "2025-05-20",
       "fato_id": "notas:4b38c8922ac7",
       "filme_id": "tt9000501",
