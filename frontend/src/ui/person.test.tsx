@@ -348,7 +348,7 @@ describe('PersonScreen', () => {
     ).toBeTruthy()
   })
 
-  it('has no Relato form on the logged-in Dono\'s own page: what he says is Declarado', () => {
+  it("has no Relato form on the logged-in Dono's own page: what he says is Declarado", () => {
     const own = { ...IARA, person: 'bruno', name: 'Bruno', owner: true }
     show({ ...own, reports: [] })
     expect(

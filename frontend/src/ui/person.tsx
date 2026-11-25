@@ -376,32 +376,32 @@ function Statements({
         })}
       </Items>
       {source !== null && (
-      <Disclosure summary={copy.add}>
-        <ActionForm
-          slug={slug}
-          action={kind === 'stated' ? 'declarar' : 'relatar'}
-          label={copy.add}
-        >
-          <TextField name="texto" label={PERSON.text} required />
-          <TextField
-            name="alvo"
-            label={PERSON.target}
-            hint={PERSON.targetHint}
-            pattern={ID_PATTERN}
-          />
-          <SelectField
-            name="reacao"
-            label={PERSON.reaction}
-            options={REACTION_OPTIONS}
-          />
-          <TextField
-            name="fonte"
-            label={PERSON.source}
-            hint={PERSON.sourceHint(source)}
-          />
-          <Submit>{PERSON.save}</Submit>
-        </ActionForm>
-      </Disclosure>
+        <Disclosure summary={copy.add}>
+          <ActionForm
+            slug={slug}
+            action={kind === 'stated' ? 'declarar' : 'relatar'}
+            label={copy.add}
+          >
+            <TextField name="texto" label={PERSON.text} required />
+            <TextField
+              name="alvo"
+              label={PERSON.target}
+              hint={PERSON.targetHint}
+              pattern={ID_PATTERN}
+            />
+            <SelectField
+              name="reacao"
+              label={PERSON.reaction}
+              options={REACTION_OPTIONS}
+            />
+            <TextField
+              name="fonte"
+              label={PERSON.source}
+              hint={PERSON.sourceHint(source)}
+            />
+            <Submit>{PERSON.save}</Submit>
+          </ActionForm>
+        </Disclosure>
       )}
     </Section>
   )
