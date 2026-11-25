@@ -6,48 +6,22 @@ import { CATALOG_SEARCH } from './catalog-search.copy'
 import { PERSON } from './person.copy'
 import { FIELD } from './kit/field'
 import { FieldLabel } from './kit/field-label'
+import { OwnerTag } from './kit/owner-tag'
+import { Alert, Notice } from './kit/status'
 import { Button, buttonVariants } from './shadcn/button'
 
 // The pieces the Pessoas screens share, and the other Dono screens with
-// them: the alert (ink and the alert sign, no sticker colour) and the notice, the Dono tag, a section's card, the
-// fields, the forms that post an action and their submit button.
+// them: the alert and the notice (kit/status), the Dono tag (kit/owner-tag),
+// a section's card, the fields, the forms that post an action and their
+// submit button.
 
-export function Alert({ children }: { children: ReactNode }) {
-  return (
-    <p
-      role="alert"
-      className="flex gap-sm rounded-field border-[1.5px] border-ink px-lg py-2.5 text-ink"
-    >
-      <span aria-hidden="true">⚠</span>
-      <span>{children}</span>
-    </p>
-  )
-}
-
-export function Notice({ children }: { children: ReactNode }) {
-  return (
-    <p
-      role="status"
-      className="rounded-field border border-rule bg-surface-2 px-3 py-2.5"
-    >
-      {children}
-    </p>
-  )
-}
+export { Alert, Notice, OwnerTag }
 
 /** A form's submit button with every Button prop (`disabled`...);
  * `Submit` is the plain one. */
 export const SubmitButton = (
   props: Omit<ComponentProps<typeof Button>, 'type'>,
 ) => <Button type="submit" {...props} />
-
-export function OwnerTag() {
-  return (
-    <span className="rounded-pill border border-rule px-2 py-0.5 font-display text-label text-ink-2 uppercase">
-      {PERSON.owner}
-    </span>
-  )
-}
 
 /** A section of the Pessoa's page: a card with its title. */
 export function Section({

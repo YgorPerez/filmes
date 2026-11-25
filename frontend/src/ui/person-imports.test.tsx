@@ -10,7 +10,7 @@ import {
   IMPORT_REFUSALS,
   parseImport,
 } from '#/content/import-action'
-import { ImportsList } from './imports'
+import { ImportsList } from './imports-list'
 import { IMPORTS, PERSON_IMPORTS } from './imports.copy'
 import { PersonImportsScreen } from './person-imports'
 
