@@ -1,46 +1,178 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-24T18:02:03.107658+00:00",
+  "generatedAt": "2026-11-25T18:52:05.119573+00:00",
   "title": "Design System: filmes",
   "extensions": {
     "colorMeta": {
-      "marquee-red": {
+      "sticker-orange": {
         "role": "primary",
-        "displayName": "Vermelho-cinema"
+        "displayName": "Laranja-preço"
       },
-      "bulb": {
+      "sticker-yellow": {
         "role": "secondary",
-        "displayName": "Lâmpada âmbar"
+        "displayName": "Amarelo-novo"
+      },
+      "sticker-pink": {
+        "role": "secondary",
+        "displayName": "Rosa-troca"
+      },
+      "stamp": {
+        "role": "secondary",
+        "displayName": "Violeta-carimbo"
+      },
+      "sticker-green": {
+        "role": "secondary",
+        "displayName": "Verde-etiqueta"
       },
       "person-1": {
         "role": "tertiary",
         "displayName": "Presente 1"
       },
-      "marquee-panel": {
-        "role": "neutral",
-        "displayName": "Painel do letreiro"
+      "person-2": {
+        "role": "tertiary",
+        "displayName": "Presente 2"
+      },
+      "person-3": {
+        "role": "tertiary",
+        "displayName": "Presente 3"
+      },
+      "person-4": {
+        "role": "tertiary",
+        "displayName": "Presente 4"
+      },
+      "person-5": {
+        "role": "tertiary",
+        "displayName": "Presente 5"
+      },
+      "person-6": {
+        "role": "tertiary",
+        "displayName": "Presente 6"
+      },
+      "genre-blue": {
+        "role": "tertiary",
+        "displayName": "Gênero azul (drama)"
+      },
+      "genre-violet": {
+        "role": "tertiary",
+        "displayName": "Gênero violeta (mistério)"
+      },
+      "genre-yellow": {
+        "role": "tertiary",
+        "displayName": "Gênero amarelo (comédia)"
+      },
+      "genre-green": {
+        "role": "tertiary",
+        "displayName": "Gênero verde (família)"
+      },
+      "genre-orange": {
+        "role": "tertiary",
+        "displayName": "Gênero laranja (aventura)"
+      },
+      "genre-pink": {
+        "role": "tertiary",
+        "displayName": "Gênero rosa (romance)"
       },
       "ground": {
         "role": "neutral",
         "displayName": "Chão"
       },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Superfície"
+      },
+      "surface-2": {
+        "role": "neutral",
+        "displayName": "Superfície 2"
+      },
       "ink": {
         "role": "neutral",
         "displayName": "Tinta"
+      },
+      "ink-2": {
+        "role": "neutral",
+        "displayName": "Tinta clara"
+      },
+      "rule": {
+        "role": "neutral",
+        "displayName": "Fio"
+      },
+      "case": {
+        "role": "neutral",
+        "displayName": "Estojo"
+      },
+      "case-ink": {
+        "role": "neutral",
+        "displayName": "Tinta do estojo"
+      },
+      "case-ink-2": {
+        "role": "neutral",
+        "displayName": "Tinta clara do estojo"
+      },
+      "shelf-label": {
+        "role": "neutral",
+        "displayName": "Etiqueta"
+      },
+      "on-sticker": {
+        "role": "neutral",
+        "displayName": "Tinta de adesivo"
+      },
+      "card-stock": {
+        "role": "neutral",
+        "displayName": "Cartão"
+      },
+      "card-stock-ink": {
+        "role": "neutral",
+        "displayName": "Tinta do cartão"
+      },
+      "star": {
+        "role": "secondary",
+        "displayName": "Estrela"
+      },
+      "focus": {
+        "role": "neutral",
+        "displayName": "Foco"
+      },
+      "on-person": {
+        "role": "neutral",
+        "displayName": "Inicial do Presente"
       }
     },
     "typographyMeta": {
-      "letter": {
-        "displayName": "Placa do letreiro",
-        "purpose": "Só letreiro, número de posição e carimbo."
+      "shelf-label": {
+        "displayName": "Etiqueta da prateleira",
+        "purpose": "O pedido da noite na etiqueta."
+      },
+      "hand": {
+        "displayName": "Mão do balconista",
+        "purpose": "Frases curtas escritas à mão: a fala do Dono, o que saiu, pulei, notas do balconista."
+      },
+      "hand-name": {
+        "displayName": "Nome na carteirinha",
+        "purpose": "O primeiro nome do Dono na carteirinha."
+      },
+      "price": {
+        "displayName": "Adesivo de preço",
+        "purpose": "Número de posição e de passo."
+      },
+      "sticker": {
+        "displayName": "Adesivo",
+        "purpose": "NOVO e TROCAR."
+      },
+      "title": {
+        "displayName": "Título do filme",
+        "purpose": "Título em português no card."
+      },
+      "url": {
+        "displayName": "Endereço",
+        "purpose": "Só o endereço do conector."
       }
     },
     "shadows": [],
     "motion": [
       {
-        "name": "plate-flip",
-        "value": "180ms ease-out, rotateX",
-        "purpose": "Troca das placas do letreiro ao regerar; nenhuma em prefers-reduced-motion."
+        "name": "sticker-slap",
+        "value": "160ms cubic-bezier(0.16, 1, 0.3, 1), scale 1.15→1 e opacity 0→1",
+        "purpose": "Adesivo colado ao regerar ou ao marcar Trocar, e carimbo da carteirinha; nada em prefers-reduced-motion."
       }
     ],
     "breakpoints": [
@@ -56,61 +188,95 @@
   },
   "components": [
     {
-      "name": "Letreiro",
+      "name": "Etiqueta da prateleira",
       "kind": "custom",
-      "refersTo": "marquee",
-      "description": "Leitura do pedido em placas.",
-      "html": "<div class=\"ds-letreiro\"><span>Vocês</span><span>dois</span><span>até</span><span>1h40</span></div>",
-      "css": ".ds-letreiro{background:#fbfaf5;color:#141414;border:3px solid #c8102e;border-radius:4px;padding:10px 12px 9px;display:flex;flex-wrap:wrap;gap:3px}.ds-letreiro span{font:700 22px/1 Antonio,'Arial Narrow',sans-serif;text-transform:uppercase;letter-spacing:.02em;padding:3px 4px 2px;background:rgba(20,20,20,.045);border-radius:2px}"
+      "refersTo": "shelf-label",
+      "description": "O pedido da noite na etiqueta da prateleira, com a fala do Dono no papel amarelo.",
+      "html": "<div class=\"ds-trilho\"><div class=\"ds-rail\"><div class=\"ds-etiqueta\" role=\"group\" aria-label=\"Pedido: vocês dois, até 1h50, algo leve, nota 7 ou mais no IMDb\"><span>Vocês dois</span><i aria-hidden=\"true\"></i><span>até 1h50</span><i aria-hidden=\"true\"></i><span>algo leve</span><i aria-hidden=\"true\"></i><span>IMDb 7+</span></div></div><span class=\"ds-fala\">algo leve pra sexta</span></div>",
+      "css": ".ds-trilho{display:grid;gap:10px}.ds-rail{background:#17181b;padding:5px;border-radius:6px}.ds-etiqueta{display:flex;flex-wrap:wrap;align-items:center;gap:2px 10px;padding:7px 10px 6px;background:#f7f7f2;color:#121417;border-radius:2px;font:800 17px/1.15 'Rubik',system-ui,sans-serif;text-transform:uppercase;letter-spacing:.01em}.ds-etiqueta i{width:8px;height:8px;border-radius:50%;background:#ff7a1a}.ds-etiqueta i:nth-of-type(3n+2){background:#45c463}.ds-etiqueta i:nth-of-type(3n){background:#ff5c9a}.ds-fala{justify-self:start;transform:rotate(-2deg);padding:5px 14px 4px;background:#ffd23f;color:#121417;border-radius:4px;font:400 18px/1.2 'Permanent Marker','Comic Sans MS',cursive}"
+    },
+    {
+      "name": "Fita",
+      "kind": "custom",
+      "refersTo": "tape-case",
+      "description": "Estojo preto com a capa, os pontos dos Presentes e o adesivo de preço da posição.",
+      "html": "<div class=\"ds-estojo\"><div class=\"ds-capa\">As Horas Lentas</div><span class=\"ds-pontos\"><span class=\"ds-ponto\" title=\"Iara: com fato\"></span><span class=\"ds-ponto ds-vazio\" title=\"Teo: sem fato\" style=\"--c:#1b7a50\"></span></span><span class=\"ds-preco\">1</span></div>",
+      "css": ".ds-estojo{position:relative;width:112px;background:#17181b;border-radius:8px;padding:5px 5px 0}.ds-capa{aspect-ratio:2/3;border-radius:3px;background:#e3e7ec;color:#535963;display:grid;place-items:center;text-align:center;padding:10px;font:700 13px/1.25 'Rubik',system-ui,sans-serif}.ds-pontos{display:flex;gap:6px;justify-content:center;padding:6px 0 7px}.ds-ponto{--c:#2c62c4;width:12px;height:12px;border-radius:50%;background:var(--c)}.ds-vazio{background:transparent;box-shadow:inset 0 0 0 2px var(--c)}.ds-preco{position:absolute;top:-9px;left:-9px;width:34px;height:34px;border-radius:50%;background:#ff7a1a;color:#121417;display:grid;place-items:center;font:800 18px/1 'Rubik',system-ui,sans-serif;transform:rotate(-8deg);box-shadow:0 0 0 2px #fff}"
+    },
+    {
+      "name": "Adesivos de estado",
+      "kind": "chip",
+      "refersTo": "sticker-swap",
+      "description": "TROCAR rosa colado na capa; NOVO amarelo no canto do estojo.",
+      "html": "<span class=\"ds-adesivo ds-troca\">Trocar</span> <span class=\"ds-adesivo ds-novo\">Novo</span>",
+      "css": ".ds-adesivo{display:inline-block;margin:12px;font:800 12px/1 'Rubik',system-ui,sans-serif;text-transform:uppercase;letter-spacing:.06em;padding:6px 8px 5px;border-radius:3px;color:#121417}.ds-troca{background:#ff5c9a;font-size:15px;padding:7px 10px 6px;transform:rotate(-9deg)}.ds-novo{background:#ffd23f;transform:rotate(9deg)}"
     },
     {
       "name": "Botão principal",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "Enviar no Cartaz, Pedir no app.",
-      "html": "<button class=\"ds-btn\">Enviar</button>",
-      "css": ".ds-btn{min-height:44px;padding:0 22px;border:0;border-radius:999px;background:#c8102e;color:#fff;font:700 15px system-ui,sans-serif;cursor:pointer}.ds-btn:hover{background:#a90d26}.ds-btn:focus-visible{outline:2px solid #141414;outline-offset:2px}"
+      "description": "Enviar no Cartaz, Pedir filme e o passo aberto na home. Um por tela.",
+      "html": "<button class=\"ds-btn\" type=\"button\">Enviar</button>",
+      "css": ".ds-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 22px;border:0;border-radius:999px;background:#ff7a1a;color:#121417;font:800 15px 'Rubik',system-ui,sans-serif;letter-spacing:.02em;text-transform:uppercase;cursor:pointer}.ds-btn:hover{background:#f06a0a}.ds-btn:active{transform:translateY(1px)}.ds-btn:focus-visible{outline:2px solid #2c62c4;outline-offset:2px}"
     },
     {
-      "name": "Toggle",
+      "name": "Opção",
       "kind": "chip",
-      "refersTo": "toggle",
-      "description": "Já vi, Trocar, Todos.",
-      "html": "<label class=\"ds-tg\"><input type=\"checkbox\"> Trocar</label>",
-      "css": ".ds-tg{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 14px;border-radius:999px;box-shadow:inset 0 0 0 1px #d9d9d3;font:14px system-ui,sans-serif;background:#fff;cursor:pointer}.ds-tg:has(input:checked){box-shadow:inset 0 0 0 2px #141414;background:#e9e9e4;font-weight:600}.ds-tg:focus-within{outline:2px solid #2c62c4;outline-offset:2px}"
+      "refersTo": "option",
+      "description": "Já vi, Trocar, Todos e ações secundárias.",
+      "html": "<button class=\"ds-opcao\" type=\"button\" aria-pressed=\"false\">Teo</button> <button class=\"ds-opcao ds-on\" type=\"button\" aria-pressed=\"true\"><svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 12.5l4.5 4.5L19 7.5\"/></svg>Trocar</button>",
+      "css": ".ds-opcao{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 14px;border:0;border-radius:999px;box-shadow:inset 0 0 0 1.5px #cfd5dd;background:#fff;color:#121417;font:500 14px 'Rubik',system-ui,sans-serif;cursor:pointer}.ds-opcao:hover{box-shadow:inset 0 0 0 1.5px #535963}.ds-on{box-shadow:inset 0 0 0 2px #121417;background:#e3e7ec;font-weight:700}.ds-opcao:focus-visible{outline:2px solid #2c62c4;outline-offset:2px}"
     },
     {
-      "name": "Carimbo",
-      "kind": "custom",
-      "refersTo": "stamp",
-      "description": "Estado Trocar sobre a capa.",
-      "html": "<span class=\"ds-carimbo\">Trocar</span>",
-      "css": ".ds-carimbo{display:inline-block;font:700 15px/1 Antonio,'Arial Narrow',sans-serif;text-transform:uppercase;letter-spacing:.06em;padding:5px 8px 4px;border:2px solid #c8102e;color:#c8102e;border-radius:3px;transform:rotate(-4deg);background:#fff}"
+      "name": "Campo",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "Acrescentar, o que achou, buscas e formulários.",
+      "html": "<label class=\"ds-campo-l\">Acrescentar <span>contexto da noite ou gosto</span><input class=\"ds-campo\" placeholder=\"chegou a Ana\" /></label>",
+      "css": ".ds-campo-l{display:grid;gap:4px;font:700 14px 'Rubik',system-ui,sans-serif;color:#121417}.ds-campo-l span{font:400 14px system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:#535963}.ds-campo{font:400 15px system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;min-height:44px;padding:9px 12px;border:1.5px solid #cfd5dd;border-radius:8px;background:#fff;color:#121417;caret-color:#121417}.ds-campo::placeholder{color:#535963}.ds-campo:focus-visible{outline:2px solid #2c62c4;outline-offset:2px}"
     },
     {
-      "name": "Selo novo",
-      "kind": "chip",
-      "refersTo": "badge-new",
-      "description": "Filme que entrou ao regerar.",
-      "html": "<span class=\"ds-novo\">novo</span>",
-      "css": ".ds-novo{font:700 11px/1 system-ui,sans-serif;text-transform:uppercase;letter-spacing:.05em;padding:4px 8px;border-radius:999px;background:#f2b632;color:#141414}"
+      "name": "Carteirinha",
+      "kind": "card",
+      "refersTo": "membership-card",
+      "description": "O guia de configuração da home: um carimbo por passo.",
+      "html": "<section class=\"ds-socio\" aria-label=\"Carteirinha: 1 passo pendente\"><div class=\"ds-cab\"><span>Carteirinha</span><span>filmes</span></div><div><p class=\"ds-nome\">Iara</p><span class=\"ds-falta\">falta 1 carimbo</span></div><ol class=\"ds-casas\"><li aria-label=\"Meu gosto: feito\"><span class=\"ds-ok\">ok</span><small>Meu gosto</small></li><li aria-label=\"Importar: pulado\"><span class=\"ds-pulei\">pulei</span><small>Importar</small></li><li aria-label=\"Claude: falta\"><span class=\"ds-vago\">3</span><small>Claude</small></li></ol></section>",
+      "css": ".ds-socio{display:grid;gap:12px;padding:14px 14px 16px;border-radius:14px;background:#d5e8fa;color:#17324f;max-width:360px}.ds-cab{display:flex;justify-content:space-between;font:800 12px/1 'Rubik',system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase}.ds-nome{font:400 30px/1 'Permanent Marker','Comic Sans MS',cursive;margin:2px 0 0}.ds-falta{font:500 12.5px 'Rubik',system-ui,sans-serif;opacity:.8}.ds-casas{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.ds-casas li{position:relative;display:grid;place-items:center;min-height:92px;padding:6px 4px 22px;border:1.5px dashed currentColor;border-radius:8px}.ds-casas small{position:absolute;bottom:6px;left:0;right:0;text-align:center;font:700 11.5px/1.1 'Rubik',system-ui,sans-serif}.ds-vago{font:800 26px/1 'Rubik',system-ui,sans-serif;opacity:.35}.ds-ok{display:grid;place-items:center;width:58px;height:58px;border-radius:50%;border:2.5px solid #5a3db5;color:#5a3db5;transform:rotate(-12deg);font:800 15px/1 'Rubik',system-ui,sans-serif;text-transform:uppercase}.ds-pulei{font:400 17px/1 'Permanent Marker','Comic Sans MS',cursive;opacity:.75;transform:rotate(-6deg)}"
+    },
+    {
+      "name": "Abas",
+      "kind": "nav",
+      "refersTo": "tab-bar",
+      "description": "Navegação do app web no celular; a atual com o disco laranja.",
+      "html": "<nav class=\"ds-abas\" aria-label=\"Seções\"><a href=\"#\" aria-current=\"page\"><svg viewBox=\"0 0 24 24\" width=\"20\" height=\"20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M4 11l8-7 8 7v9h-5v-6H9v6H4z\"/></svg>Início</a><a href=\"#\"><svg viewBox=\"0 0 24 24\" width=\"20\" height=\"20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" aria-hidden=\"true\"><rect x=\"3.5\" y=\"5\" width=\"17\" height=\"14\" rx=\"1.5\"/><path d=\"M3.5 9h17M3.5 15h17\"/></svg>Sessões</a><a href=\"#\"><svg viewBox=\"0 0 24 24\" width=\"20\" height=\"20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" aria-hidden=\"true\"><circle cx=\"9\" cy=\"8.5\" r=\"3\"/><path d=\"M3.5 19c.6-3 2.8-4.6 5.5-4.6s4.9 1.6 5.5 4.6\"/></svg>Pessoas</a><a href=\"#\"><svg viewBox=\"0 0 24 24\" width=\"20\" height=\"20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" aria-hidden=\"true\"><path d=\"M12 4v11M7.5 10.5L12 15l4.5-4.5M5 19.5h14\"/></svg>Importar</a></nav>",
+      "css": ".ds-abas{display:grid;grid-template-columns:repeat(4,1fr);background:#fff;border-top:1px solid #cfd5dd;max-width:390px}.ds-abas a{position:relative;display:grid;justify-items:center;gap:3px;padding:9px 0 4px;min-height:54px;color:#535963;font:500 11.5px 'Rubik',system-ui,sans-serif;text-decoration:none}.ds-abas a svg{position:relative;margin-top:5px}.ds-abas a[aria-current]{color:#121417;font-weight:700}.ds-abas a[aria-current]::before{content:'';position:absolute;top:5px;width:30px;height:30px;border-radius:50%;background:#ff7a1a;opacity:.85}.ds-abas a:hover{color:#121417}.ds-abas a:focus-visible{outline:2px solid #2c62c4;outline-offset:-2px}"
     }
   ],
   "narrative": {
-    "northStar": "Letreiro de rua",
-    "overview": "O pedido da noite aparece como o letreiro de um cinema de rua: painel aceso, letras pretas condensadas em placas, moldura vermelha. É a primeira coisa da tela, e é onde o Dono confere que o pedido foi entendido (\"VOCÊS DOIS · ATÉ 1H40 · ALGO LEVE\"). Abaixo do letreiro, o filmes é uma tela de trabalho limpa: cards, listas, toggles e campos que qualquer um sabe usar. A capa do filme é a única imagem forte; nada compete com ela.\n\nO mundo parte do Cartaz de hoje (`filmes/cartaz/cartaz.css`), que já tinha a estrutura certa e nenhuma identidade: ele herdava as cores do T3 Code. Ficam o card com capa à esquerda, os pontos por Presente sobre a capa, os avatares com inicial, a Força em três pontos e os chips de ano, duração e gêneros. Entram o letreiro, o vermelho-cinema, as cores fixas por Presente, a letra condensada nos números de posição e o carimbo de estado.\n\nO letreiro de rua venceu por sorteio entre sete mundos do cinema de casa brasileiro (locadora de bairro, ingresso, programação do jornal, catálogo da Mostra, ficha da Cinemateca, letreiro de rua, saco de pipoca). Recusa o cartaz de streaming (grade escura de capas com brilho) e o formulário cinza. Quatro disciplinas vieram dos desafiantes do sorteio: o carimbo de estado (da carteira de passagens), a Força por preenchimento e não por opacidade (da notação de dança), cor chapada sem gradiente fora da capa (do mapa de zoológico) e um destaque raro (do canon monocromático).\n\nCelular primeiro. O Cartaz roda em dois lugares, com o mesmo componente: dentro do Claude, como view do MCP Apps num WebView, e no app web.",
+    "northStar": "Locadora de bairro",
+    "overview": "**Creative North Star: \"Locadora de bairro\"**\n\nO filmes é a locadora da esquina de quem usa. Cada filme é uma fita no estojo preto da prateleira, com o número num adesivo de preço laranja e o gênero num adesivo colorido. O pedido da noite está impresso na etiqueta da frente da prateleira (\"VOCÊS DOIS · ATÉ 1H50 · ALGO LEVE\"), e a fala do Dono vai escrita à mão, de pincel atômico, num papel amarelo colado ao lado. Trocar é um adesivo rosa batido na capa; \"novo\" é um adesivo amarelo no canto do estojo. Na home, o guia de configuração é a carteirinha de sócio, com um carimbo por passo. Depois da Sessão, contar como foi é \"devolver a fita\".\n\nPor baixo dos objetos, o filmes é uma tela de trabalho clara: cards, listas, opções em pílula e campos que qualquer um sabe usar com uma mão, no sofá. Os objetos da locadora (estojo, etiqueta, adesivo, carimbo, carteirinha) ficam nas bordas da informação, nunca no lugar dela. A capa do filme continua sendo a imagem do produto.\n\nO Dono escolheu este mundo no #142, vendo lado a lado os três protótipos do #141 (A · Letreiro de rua, B · Locadora de bairro, C · Catálogo da Mostra). Ele substitui o \"Letreiro de rua\" do #78, que tinha sido escolhido sem o Dono ver as alternativas. Os protótipos A e C, e o `prototypes/cartaz.prototype.html` do #78, ficam no repo como histórico: não são o sistema, e o detector do impeccable acusa neles cores e fontes que não estão aqui.\n\nRecusa o cartaz de streaming (grade escura de capas com brilho), o formulário cinza e a nostalgia de enfeite (fita VHS rasgada, chiado, textura de papel envelhecido). A locadora aqui é cor chapada, adesivo e etiqueta, não filtro.\n\nCelular primeiro. O Cartaz roda em dois lugares, com o mesmo componente React: dentro do Claude, como view do MCP Apps num WebView, e no app web.",
     "keyCharacteristics": [
-      "Tela neutra, sem tom quente nem frio; o vermelho-cinema é raro e quer dizer \"letreiro\" ou \"ação principal\".",
-      "Letreiro de painel aceso no topo do Cartaz e das telas de Sessão. Ele fica aceso também no tema escuro, como um letreiro na rua à noite.",
-      "Letra condensada (Antonio 700) só no letreiro, no número de posição e no carimbo. O resto é a fonte do sistema.",
+      "Tela fria e clara de dia, azul-noite no escuro; os objetos da locadora (estojo preto, etiqueta clara, adesivos vivos) são os mesmos nos dois temas.",
+      "Quatro adesivos com um papel cada: laranja é número e ação principal, amarelo é \"novo\" e a letra do Dono, rosa é Trocar, violeta é carimbo.",
+      "Rubik (500, 700, 800) é a letra dos objetos e dos controles; Permanent Marker é a mão do balconista, em frases curtas; a fonte do sistema fica com o texto que se lê (sinopse, Evidência, legenda).",
       "Uma cor por Presente, sempre com a inicial junto.",
-      "Estados se imprimem no card (carimbo, selo, faixa), e nada some sem dizer por quê.",
+      "Estados se colam no objeto (adesivo, carimbo), e nada some sem dizer por quê.",
       "Claro e escuro desde o primeiro componente."
     ],
     "rules": [
       {
-        "name": "The Rare Red Rule",
-        "body": "O vermelho-cinema aparece em quatro lugares e só neles: moldura do letreiro, número de posição, carimbo Trocar e o botão principal da tela. Erro e perigo usam o mesmo vermelho com ícone e texto, nunca um quinto uso decorativo.",
+        "name": "The Four Stickers Rule",
+        "body": "Laranja, amarelo, rosa e violeta são adesivos e carimbos, e cada um tem só os papéis listados acima. Um quinto uso (um título laranja, um fundo amarelo de seção, um rosa de alerta) é proibido. Erro usa tinta com ícone de alerta e texto, sem cor de adesivo.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Orange Button Rule",
+        "body": "Cada tela, ou cada modo da view do Claude, tem no máximo um botão laranja. As outras ações são opções em pílula (contorno) ou links sublinhados.",
+        "section": "colors"
+      },
+      {
+        "name": "The Sticker Ink Rule",
+        "body": "Texto sobre adesivo é sempre on-sticker (#121417), no claro e no escuro. Adesivo nunca leva texto branco.",
         "section": "colors"
       },
       {
@@ -119,51 +285,62 @@
         "section": "colors"
       },
       {
-        "name": "The Lit Panel Rule",
-        "body": "O letreiro é claro nos dois temas. No escuro, ele é a única área clara da tela.",
+        "name": "The Same Objects Rule",
+        "body": "Estojo, etiqueta e adesivos têm a mesma cor no claro e no escuro. Só o chão, as superfícies, a tinta, o fio, o cartão e o carimbo trocam com o tema.",
         "section": "colors"
       },
       {
         "name": "The Flat Color Rule",
-        "body": "Cor chapada. O único gradiente é a faixa escura no pé da capa, para os pontos lerem sobre qualquer pôster.",
+        "body": "Cor chapada. Nenhum gradiente, nem na capa: os pontos dos Presentes ficam no estojo, sob a capa, e não precisam de faixa escura.",
         "section": "colors"
       },
       {
-        "name": "The Sign Letters Only Rule",
-        "body": "A Antonio não entra em botão, rótulo, título de filme nem texto corrido. Fora do letreiro, do número e do carimbo, é fonte do sistema.",
+        "name": "The Hand Is Short Rule",
+        "body": "A Permanent Marker só escreve o que o balconista escreveria num papel: no máximo uma frase, nunca um número que o Dono precise conferir (posição, nota, duração), nunca botão, rótulo, título de filme, campo, Evidência nem texto corrido.",
         "section": "typography"
       },
       {
-        "name": "The Words In Plates Rule",
-        "body": "No letreiro, cada palavra fica na sua placa (fundo de tinta a 4,5%, raio de 2px), como as letras trocáveis de um painel. O texto inteiro vai no `aria-label` do letreiro; as placas ficam `aria-hidden`.",
+        "name": "The Engine Speaks Plain Rule",
+        "body": "Tudo que sai do motor (Evidência, Fonte, \"sem fato\", sinopse) vai na fonte do sistema, sem maiúsculas forçadas e sem letra de mão. O mundo da locadora não fantasia o Fato.",
+        "section": "typography"
+      },
+      {
+        "name": "The Shelf Label Rule",
+        "body": "O pedido na etiqueta é uma linha de itens separados por pontos coloridos (laranja, verde, rosa, nessa ordem, repetindo), não placas. O texto inteiro vai no `aria-label` da etiqueta, com as palavras por extenso (\"nota 7 ou mais no IMDb\"); os pontos são `aria-hidden`.",
         "section": "typography"
       },
       {
         "name": "The No Shadow Rule",
-        "body": "Cards e painéis se separam do chão pelo tom e pelo fio, nunca por box-shadow.",
+        "body": "Cards, passos e painéis se separam do chão pelo tom e pelo fio, nunca por box-shadow com desfoque. Adesivo não flutua: ele está colado.",
         "section": "elevation"
       }
     ],
     "dos": [
-      "**Do** abrir o Cartaz e as telas de Sessão com o letreiro do pedido.",
-      "**Do** manter o letreiro claro nos dois temas.",
-      "**Do** dar a cada Presente a mesma cor no ponto e no avatar, sempre com a inicial.",
+      "**Do** abrir o Cartaz e as telas de Sessão com a etiqueta da prateleira do pedido, e a fala do Dono no papel amarelo quando houver.",
+      "**Do** pôr cada filme num estojo preto, com o número no adesivo de preço laranja.",
+      "**Do** colar o estado no objeto: TROCAR rosa, NOVO amarelo, JÁ VI de todos; e dizer em \"Saiu da prateleira\" o que saiu e por quê.",
+      "**Do** manter estojo, etiqueta e adesivos iguais no claro e no escuro, com texto #121417 nos adesivos.",
+      "**Do** dar a cada Presente a mesma cor no ponto, no avatar e na legenda, sempre com a inicial.",
       "**Do** mostrar a Força pelo preenchimento dos três pontos, com `aria-label`.",
-      "**Do** carimbar o estado no card (Trocar, Já vi) e dizer em \"Saiu\" o que saiu e por quê.",
+      "**Do** escrever o nome do gênero no chip; a cor do ponto só lembra.",
+      "**Do** manter um só botão laranja por tela ou modo.",
       "**Do** manter alvos de toque de 44px ou mais.",
       "**Do** conferir cada componente no claro e no escuro, a 360px e a 390px.",
-      "**Do** servir a Antonio da origem do app, declarada no CSP do recurso do MCP Apps; nunca em `data:`.",
-      "**Do** manter o card inline do Claude compacto (até duas ações, 4 ou 5 dados por filme) e marcar vários filmes na tela cheia."
+      "**Do** servir Rubik e Permanent Marker da origem do app, declarada no CSP do recurso do MCP Apps; nunca em `data:` nem do Google Fonts.",
+      "**Do** manter o card inline do Claude compacto (duas ações, 4 dados por filme) e marcar vários filmes na tela cheia."
     ],
     "donts": [
-      "**Don't** usar o vermelho-cinema fora dos quatro lugares dele.",
-      "**Don't** usar a Antonio em botão, rótulo, título de filme ou texto corrido.",
+      "**Don't** usar laranja, amarelo, rosa ou violeta fora dos papéis deles.",
+      "**Don't** pôr texto branco sobre adesivo.",
+      "**Don't** usar a Permanent Marker em botão, rótulo, título de filme, campo, número a conferir, Evidência ou texto corrido.",
       "**Don't** fazer grade escura de capas com brilho, como streaming.",
-      "**Don't** usar fundo creme ou azulado; o chão é neutro.",
-      "**Don't** usar sombra com desfoque nem gradiente fora da faixa da capa.",
-      "**Don't** mostrar Força, Presente ou estado só por cor.",
-      "**Don't** esconder um filme marcado: ele fica, carimbado, até regerar.",
-      "**Don't** escrever ou resumir uma linha de Evidência na interface; o texto é do motor."
+      "**Don't** fantasiar a locadora com textura, ruído, fita rasgada, chiado ou papel envelhecido.",
+      "**Don't** usar sombra com desfoque, sombra deslocada ou gradiente.",
+      "**Don't** girar card, botão, campo ou texto do motor, nem adesivo mais de 12°.",
+      "**Don't** mostrar Força, Presente, gênero ou estado só por cor.",
+      "**Don't** esconder um filme marcado: ele fica, com o adesivo, até regerar.",
+      "**Don't** escrever ou resumir uma linha de Evidência na interface; o texto é do motor.",
+      "**Don't** pôr gênero gramatical ou número de sócio inventado na carteirinha."
     ]
   }
 }
