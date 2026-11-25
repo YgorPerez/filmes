@@ -1,4 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
+import { isNoteToken } from './billboard-reply'
 import { ownerMiddleware, pathSlug, requireOwner } from './owner'
 
 /** What `/sessoes` lists (`sessionList`). A request with no Dono is
@@ -20,12 +21,19 @@ export const readRequestOptions = createServerFn({ method: 'GET' })
     return appRequestOptions()
   })
 
-/** What `/sessoes/<id>` shows (`sessionPage`). */
+/** What `/sessoes/<id>` shows (`cartazPage`): the Session, its Cartaz,
+ * and the note `nota` names (warnings, the acrescentar). */
 export const readSessionPage = createServerFn({ method: 'GET' })
   .middleware([ownerMiddleware])
-  .validator(pathSlug)
+  .validator((value: unknown) => {
+    const { session, note } = (value ?? {}) as Record<string, unknown>
+    return {
+      session: pathSlug(session),
+      note: isNoteToken(note) ? note : undefined,
+    }
+  })
   .handler(async ({ context, data }) => {
     requireOwner(context.owner)
-    const { appSessionPage } = await import('#/platform/sessions')
-    return appSessionPage(data)
+    const { appCartazPage } = await import('#/platform/billboard')
+    return appCartazPage(data.session, data.note)
   })

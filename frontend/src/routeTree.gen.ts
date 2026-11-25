@@ -30,6 +30,7 @@ import { Route as OwnerSessoesNovaRouteImport } from './routes/_owner/sessoes/no
 import { Route as FeedbackSessaoEnviarRouteImport } from './routes/feedback/$sessao/enviar'
 import { Route as ImportarPessoaAcaoRouteImport } from './routes/importar/$pessoa/acao'
 import { Route as PessoasPessoaAcaoRouteImport } from './routes/pessoas/$pessoa/acao'
+import { Route as SessoesSessaoResponderRouteImport } from './routes/sessoes/$sessao/responder'
 import { Route as SessoesNovaEnviarRouteImport } from './routes/sessoes/nova/enviar'
 
 const OwnerRoute = OwnerRouteImport.update({
@@ -136,6 +137,11 @@ const PessoasPessoaAcaoRoute = PessoasPessoaAcaoRouteImport.update({
   path: '/pessoas/$pessoa/acao',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SessoesSessaoResponderRoute = SessoesSessaoResponderRouteImport.update({
+  id: '/sessoes/$sessao/responder',
+  path: '/sessoes/$sessao/responder',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SessoesNovaEnviarRoute = SessoesNovaEnviarRouteImport.update({
   id: '/sessoes/nova/enviar',
   path: '/sessoes/nova/enviar',
@@ -159,6 +165,7 @@ export interface FileRoutesByFullPath {
   '/feedback/$sessao/enviar': typeof FeedbackSessaoEnviarRoute
   '/importar/$pessoa/acao': typeof ImportarPessoaAcaoRoute
   '/pessoas/$pessoa/acao': typeof PessoasPessoaAcaoRoute
+  '/sessoes/$sessao/responder': typeof SessoesSessaoResponderRoute
   '/sessoes/nova/enviar': typeof SessoesNovaEnviarRoute
   '/feedback/': typeof OwnerFeedbackIndexRoute
   '/importar/': typeof OwnerImportarIndexRoute
@@ -182,6 +189,7 @@ export interface FileRoutesByTo {
   '/feedback/$sessao/enviar': typeof FeedbackSessaoEnviarRoute
   '/importar/$pessoa/acao': typeof ImportarPessoaAcaoRoute
   '/pessoas/$pessoa/acao': typeof PessoasPessoaAcaoRoute
+  '/sessoes/$sessao/responder': typeof SessoesSessaoResponderRoute
   '/sessoes/nova/enviar': typeof SessoesNovaEnviarRoute
   '/feedback': typeof OwnerFeedbackIndexRoute
   '/importar': typeof OwnerImportarIndexRoute
@@ -207,6 +215,7 @@ export interface FileRoutesById {
   '/feedback/$sessao/enviar': typeof FeedbackSessaoEnviarRoute
   '/importar/$pessoa/acao': typeof ImportarPessoaAcaoRoute
   '/pessoas/$pessoa/acao': typeof PessoasPessoaAcaoRoute
+  '/sessoes/$sessao/responder': typeof SessoesSessaoResponderRoute
   '/sessoes/nova/enviar': typeof SessoesNovaEnviarRoute
   '/_owner/feedback/': typeof OwnerFeedbackIndexRoute
   '/_owner/importar/': typeof OwnerImportarIndexRoute
@@ -232,6 +241,7 @@ export interface FileRouteTypes {
     | '/feedback/$sessao/enviar'
     | '/importar/$pessoa/acao'
     | '/pessoas/$pessoa/acao'
+    | '/sessoes/$sessao/responder'
     | '/sessoes/nova/enviar'
     | '/feedback/'
     | '/importar/'
@@ -255,6 +265,7 @@ export interface FileRouteTypes {
     | '/feedback/$sessao/enviar'
     | '/importar/$pessoa/acao'
     | '/pessoas/$pessoa/acao'
+    | '/sessoes/$sessao/responder'
     | '/sessoes/nova/enviar'
     | '/feedback'
     | '/importar'
@@ -279,6 +290,7 @@ export interface FileRouteTypes {
     | '/feedback/$sessao/enviar'
     | '/importar/$pessoa/acao'
     | '/pessoas/$pessoa/acao'
+    | '/sessoes/$sessao/responder'
     | '/sessoes/nova/enviar'
     | '/_owner/feedback/'
     | '/_owner/importar/'
@@ -295,6 +307,7 @@ export interface RootRouteChildren {
   FeedbackSessaoEnviarRoute: typeof FeedbackSessaoEnviarRoute
   ImportarPessoaAcaoRoute: typeof ImportarPessoaAcaoRoute
   PessoasPessoaAcaoRoute: typeof PessoasPessoaAcaoRoute
+  SessoesSessaoResponderRoute: typeof SessoesSessaoResponderRoute
   SessoesNovaEnviarRoute: typeof SessoesNovaEnviarRoute
 }
 
@@ -447,6 +460,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PessoasPessoaAcaoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/sessoes/$sessao/responder': {
+      id: '/sessoes/$sessao/responder'
+      path: '/sessoes/$sessao/responder'
+      fullPath: '/sessoes/$sessao/responder'
+      preLoaderRoute: typeof SessoesSessaoResponderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sessoes/nova/enviar': {
       id: '/sessoes/nova/enviar'
       path: '/sessoes/nova/enviar'
@@ -500,6 +520,7 @@ const rootRouteChildren: RootRouteChildren = {
   FeedbackSessaoEnviarRoute: FeedbackSessaoEnviarRoute,
   ImportarPessoaAcaoRoute: ImportarPessoaAcaoRoute,
   PessoasPessoaAcaoRoute: PessoasPessoaAcaoRoute,
+  SessoesSessaoResponderRoute: SessoesSessaoResponderRoute,
   SessoesNovaEnviarRoute: SessoesNovaEnviarRoute,
 }
 export const routeTree = rootRouteImport

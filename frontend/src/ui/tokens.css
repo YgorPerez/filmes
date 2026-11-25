@@ -27,6 +27,15 @@
   --color-marquee-ink: #141414;
   --color-bulb: #f2b632;
   --color-star: #b07a00;
+  /* One per Presente, by her order in the Session (The One Color Per
+   * Person Rule); the initial on top is `on-person`. */
+  --color-person-1: #2c62c4;
+  --color-person-2: #1b7a50;
+  --color-person-3: #a63d8d;
+  --color-person-4: #b9580f;
+  --color-person-5: #6650c4;
+  --color-person-6: #0b7676;
+  --color-on-person: #ffffff;
 
   --font-*: initial;
   --font-letter: Antonio, Arial Narrow, sans-serif;
@@ -37,6 +46,9 @@
   --text-letter--line-height: 1;
   --text-letter--font-weight: 700;
   --text-letter--letter-spacing: 0.02em;
+  --text-position: 26px;
+  --text-position--line-height: 1;
+  --text-position--font-weight: 700;
   --text-title: 19px;
   --text-title--line-height: 1.25;
   --text-title--font-weight: 700;
@@ -57,6 +69,8 @@
   --radius-*: initial;
   --radius-panel: 4px;
   --radius-plate: 2px;
+  --radius-stamp: 3px;
+  --radius-poster: 6px;
   --radius-field: 8px;
   --radius-card: 10px;
   --radius-pill: 999px;
@@ -85,5 +99,12 @@
     --color-marquee-red-text: #ec6273;
     --color-marquee-panel: #f4f1e6;
     --color-star: #f2b632;
+    --color-person-1: #6c9cf0;
+    --color-person-2: #4cbf8a;
+    --color-person-3: #e07ccb;
+    --color-person-4: #f0954a;
+    --color-person-5: #a593f5;
+    --color-person-6: #3fc1c1;
+    --color-on-person: #141414;
   }
 }
