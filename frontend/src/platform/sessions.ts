@@ -26,6 +26,7 @@ import {
   type SessionFilm,
 } from './engine'
 import { appPoster, formPoster, seeOther } from './form-post'
+import { appNotes, type Notes } from './notes'
 
 /** A Pessoa as the Sessions screens name her. */
 export type SessionPerson = { person: string; name: string; owner: boolean }
@@ -55,8 +56,11 @@ export interface Sessions {
   list(): Promise<Outcome<SessionItem[]>>
   options(): Promise<Outcome<RequestOptions>>
   /** Opens a Session for the form's request, as the Dono `owner` (a
-   * slug); gives its id. */
-  open(form: SessionRequestForm, owner: string): Promise<Outcome<string>>
+   * slug); gives its id and the Recomendação's warnings. */
+  open(
+    form: SessionRequestForm,
+    owner: string,
+  ): Promise<Outcome<{ id: string; warnings: string[] }>>
 }
 
 const ok = <A>(output: A): Outcome<A> => ({ exitCode: 0, output })
@@ -120,7 +124,12 @@ export function sessionsFromEngine(engine: Engine): Sessions {
     },
     async open(form, owner) {
       const opened = await run(recommendSession(form), { owner })
-      return opened.exitCode === 0 ? ok(opened.output.session.id) : opened
+      return opened.exitCode === 0
+        ? ok({
+            id: opened.output.session.id,
+            warnings: [...opened.output.warnings],
+          })
+        : opened
     },
   }
 }
@@ -176,13 +185,15 @@ function refusalOf(outcome: { output: ErrorOutput }): SessionRequestRefusal {
 }
 
 /** `POST /sessoes/nova/enviar`: opens the Session the form asks for as the
- * logged-in Dono and goes to its page (`?feito=aberta`), or back to the
- * form saying why not (`?erro=`). Only a Dono, and only a form of this site
- * (the `Origin`): the page gate does not cover this route. */
+ * logged-in Dono and goes to its page (`?feito=aberta`, with `?nota=` for
+ * the Recomendação's warnings), or back to the form saying why not
+ * (`?erro=`). Only a Dono, and only a form of this site (the `Origin`): the
+ * page gate does not cover this route. */
 export async function sessionRequestAction(
   request: Request,
   owner: { readonly person: string } | null,
   sessions: Sessions,
+  notes: Notes,
   origin: string | undefined,
 ): Promise<Response> {
   const poster = formPoster(request, owner, origin)
@@ -193,7 +204,11 @@ export async function sessionRequestAction(
   const opened = await sessions.open(parsed.ok, poster.person)
   if (opened.exitCode !== 0)
     return seeOther(`/sessoes/nova?erro=${refusalOf(opened)}`)
-  return seeOther(`/sessoes/${encodeURIComponent(opened.output)}?feito=aberta`)
+  const { id, warnings } = opened.output
+  const token = notes.remember({ warnings, addition: null })
+  return seeOther(
+    `/sessoes/${encodeURIComponent(id)}?feito=aberta${token ? `&nota=${token}` : ''}`,
+  )
 }
 
 // --- the app's -----------------------------------------------------------------
@@ -206,12 +221,9 @@ export const appSessionList = () => sessionList(appSessions())
 /** The form's choices for the app. */
 export const appRequestOptions = () => requestOptions(appSessions())
 
-/** One Session's page for the app. */
-export const appSessionPage = (id: string) => sessionPage(id, appSessions())
-
 /** The form's route for the app: the logged-in Dono, the process's
  * engine. */
 export const serveSessionRequest = (request: Request) => {
   const { owner, origin } = appPoster(request)
-  return sessionRequestAction(request, owner, appSessions(), origin)
+  return sessionRequestAction(request, owner, appSessions(), appNotes(), origin)
 }
