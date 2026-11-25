@@ -18,7 +18,7 @@ export const readImportsPage = createServerFn({ method: 'GET' })
   .handler(async ({ context, data }) => {
     requireOwner(context.owner)
     const { appImportsPage } = await import('#/platform/imports')
-    return appImportsPage(data)
+    return appImportsPage(data, context.owner.person)
   })
 
 /** What `/fila` shows (`queuePage`). */

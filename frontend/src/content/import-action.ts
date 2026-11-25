@@ -6,11 +6,20 @@
 
 import { field, within } from './form-fields'
 
-/** What the Dono asks on a Pessoa's imports page. */
+/** A ZIP as uploaded: its name and its bytes. */
+type Upload = { original: string; content: Uint8Array }
+
+/** What the Dono asks on a Pessoa's imports page. The upload says nothing
+ * of where the ZIP came from: the server tells it by what is inside. */
 export type ImportAction =
-  | { kind: 'letterboxd' | 'trakt'; original: string; content: Uint8Array }
+  | ({ kind: 'upload' } & Upload)
   | { kind: 'rss'; user: string }
   | { kind: 'remove'; file: string }
+
+/** What the engine runs: the upload once its service is known. */
+export type ImportRun =
+  | ({ kind: 'letterboxd' | 'trakt' } & Upload)
+  | Exclude<ImportAction, { kind: 'upload' }>
 
 /** What the Dono decides on the queue. */
 export type QueueAction =
@@ -23,7 +32,26 @@ export type QueueAction =
 export const MAX_UPLOAD_BYTES = 20 * 1024 * 1024
 
 /** A Letterboxd user, as the engine takes it. */
-export const LETTERBOXD_USER = '[A-Za-z0-9_]+'
+const LETTERBOXD_USER = '[A-Za-z0-9_]+'
+
+const USER_FORMS = [
+  new RegExp(`^@?(${LETTERBOXD_USER})$`),
+  new RegExp(
+    `^(?:https?://)?(?:www\\.)?letterboxd\\.com/(${LETTERBOXD_USER})(?:[/?#].*)?$`,
+    'i',
+  ),
+]
+
+/** The user in what the Dono typed: `ygorperez`, `@ygorperez` or the
+ * profile's address (`https://letterboxd.com/ygorperez/`); null when it is
+ * none of them. */
+function letterboxdUser(typed: string): string | null {
+  for (const form of USER_FORMS) {
+    const user = form.exec(typed)?.[1]
+    if (user !== undefined) return user
+  }
+  return null
+}
 
 /** The reason a discard records when the Dono gives none (the CLI's
  * default). */
@@ -33,25 +61,27 @@ const DEFAULT_DISCARD_REASON = 'ignorar'
 export type ImportFormError = 'pedido' | 'arquivo' | 'consentimento'
 
 /** The form → the action. An upload with no file is `arquivo`; the RSS
- * without the Pessoa's consent is `consentimento`. */
+ * without the Pessoa's consent is `consentimento`, unless `own` (the Dono's
+ * own page, where she answers for herself). */
 export async function parseImport(
   form: FormData,
+  own = false,
 ): Promise<ImportAction | ImportFormError> {
   const action = field(form, 'acao')
-  if (action === 'letterboxd' || action === 'trakt') {
+  if (action === 'arquivo') {
     const file = form.get('arquivo')
     if (file === null || typeof file === 'string' || file.size === 0)
       return 'arquivo'
     return {
-      kind: action,
-      original: file.name || `${action}.zip`,
+      kind: 'upload',
+      original: file.name || 'import.zip',
       content: new Uint8Array(await file.arrayBuffer()),
     }
   }
   if (action === 'rss') {
-    const user = field(form, 'usuario')
-    if (!user || !new RegExp(`^${LETTERBOXD_USER}$`).test(user)) return 'pedido'
-    if (field(form, 'consentimento') !== 'sim') return 'consentimento'
+    const user = letterboxdUser(field(form, 'usuario') ?? '')
+    if (user === null) return 'pedido'
+    if (!own && field(form, 'consentimento') !== 'sim') return 'consentimento'
     return { kind: 'rss', user }
   }
   if (action === 'remover') {
@@ -82,7 +112,7 @@ export function parseQueue(form: FormData): QueueAction | null {
 // --- what comes back -------------------------------------------------------------
 
 const IMPORT_NOTICES = [
-  // An export or the RSS imported: `novos` Fatos more.
+  // A ZIP or the RSS imported: `novos` Fatos more.
   'letterboxd',
   'rss',
   'trakt',
@@ -96,8 +126,10 @@ export type ImportNotice = (typeof IMPORT_NOTICES)[number]
 
 const IMPORT_REFUSALS = [
   'pedido',
-  // No file, or a file that is not the export the form asked for.
+  // No file, or a ZIP its service's reader refused.
   'arquivo',
+  // A ZIP neither of Letterboxd nor of Trakt.
+  'origem',
   'grande',
   // The RSS without the Pessoa's yes.
   'consentimento',

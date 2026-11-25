@@ -10,6 +10,7 @@ import {
   parseImport,
   parseQueue,
   type ImportAction,
+  type ImportRun,
   type QueueAction,
 } from '#/content/import-action'
 import {
@@ -47,29 +48,65 @@ const form = (fields: Record<string, string | Blob>) => {
 const zipFile = (name = 'export.zip', bytes = [80, 75, 3, 4]) =>
   new File([new Uint8Array(bytes)], name, { type: 'application/zip' })
 
+const letterboxdZip = new File(
+  [new Uint8Array(zipOf([['letterboxd/ratings.csv', 'Date,Name,Year\n']]))],
+  'letterboxd.zip',
+)
+const traktZip = new File(
+  [new Uint8Array(zipOf([['trakt/ratings-movies.json', '[]']]))],
+  'trakt.zip',
+)
+
 describe('parseImport', () => {
-  it('reads an upload with its name and bytes', async () => {
+  it('reads an upload with its name and bytes, of either service', async () => {
     expect(
-      await parseImport(form({ acao: 'letterboxd', arquivo: zipFile() })),
+      await parseImport(form({ acao: 'arquivo', arquivo: zipFile() })),
     ).toEqual({
-      kind: 'letterboxd',
+      kind: 'upload',
       original: 'export.zip',
       content: new Uint8Array([80, 75, 3, 4]),
     })
+  })
+
+  it.each([
+    'ygorperez',
+    '@ygorperez',
+    'https://letterboxd.com/ygorperez/',
+    'http://www.letterboxd.com/ygorperez',
+    'letterboxd.com/ygorperez/films/',
+    ' https://Letterboxd.com/ygorperez/rss/ ',
+  ])('reads the Letterboxd user out of %o', async (typed) => {
     expect(
-      await parseImport(form({ acao: 'trakt', arquivo: zipFile('t.zip') })),
-    ).toMatchObject({ kind: 'trakt', original: 't.zip' })
+      await parseImport(
+        form({ acao: 'rss', usuario: typed, consentimento: 'sim' }),
+      ),
+    ).toEqual({ kind: 'rss', user: 'ygorperez' })
+  })
+
+  it('asks no consent on the Dono’s own page', async () => {
+    expect(
+      await parseImport(form({ acao: 'rss', usuario: 'ygorperez' }), true),
+    ).toEqual({ kind: 'rss', user: 'ygorperez' })
   })
 
   it.each<[Record<string, string | Blob>, ImportAction | string]>([
-    [{ acao: 'letterboxd' }, 'arquivo'],
-    [{ acao: 'trakt', arquivo: zipFile('vazio.zip', []) }, 'arquivo'],
+    [{ acao: 'arquivo' }, 'arquivo'],
+    [{ acao: 'arquivo', arquivo: zipFile('vazio.zip', []) }, 'arquivo'],
     [
       { acao: 'rss', usuario: 'olga_farol', consentimento: 'sim' },
       { kind: 'rss', user: 'olga_farol' },
     ],
     [{ acao: 'rss', usuario: 'olga_farol' }, 'consentimento'],
     [{ acao: 'rss', usuario: 'olga farol', consentimento: 'sim' }, 'pedido'],
+    [{ acao: 'rss', usuario: '@', consentimento: 'sim' }, 'pedido'],
+    [
+      {
+        acao: 'rss',
+        usuario: 'https://trakt.tv/users/olga_farol',
+        consentimento: 'sim',
+      },
+      'pedido',
+    ],
     [{ acao: 'rss', consentimento: 'sim' }, 'pedido'],
     [
       { acao: 'remover', arquivo: ' imports/teo/trakt-1.zip ' },
@@ -185,7 +222,7 @@ describe('importAction', () => {
       output: { notice: 'trakt', facts: 3, outside: 2 },
     })
     const response = await importAction(
-      post('/importar/teo/acao', { acao: 'trakt', arquivo: zipFile() }),
+      post('/importar/teo/acao', { acao: 'arquivo', arquivo: traktZip }),
       'teo',
       BRUNO,
       imports,
@@ -194,6 +231,50 @@ describe('importAction', () => {
     expect(response.headers.get('Location')).toBe(
       '/importar/teo?feito=trakt&novos=3&fora=2',
     )
+  })
+
+  it('tells Letterboxd from Trakt by what the ZIP holds', async () => {
+    const { imports, calls } = fakeImports()
+    const upload = (file: File) =>
+      importAction(
+        post('/importar/teo/acao', { acao: 'arquivo', arquivo: file }),
+        'teo',
+        BRUNO,
+        imports,
+        ORIGIN,
+      )
+    await upload(letterboxdZip)
+    await upload(traktZip)
+    expect(
+      calls.map((call) => {
+        const { action } = call as { action: ImportRun }
+        return action.kind
+      }),
+    ).toEqual(['letterboxd', 'trakt'])
+    const neither = await upload(
+      new File([new Uint8Array(zipOf([['notas.csv', 'x']]))], 'outro.zip'),
+    )
+    expect(neither.headers.get('Location')).toBe('/importar/teo?erro=origem')
+    const notZip = await upload(zipFile())
+    expect(notZip.headers.get('Location')).toBe('/importar/teo?erro=origem')
+    expect(calls).toHaveLength(2)
+  })
+
+  it('takes the RSS without the consent box on the Dono’s own page', async () => {
+    const { imports, calls } = fakeImports()
+    const response = await importAction(
+      post('/importar/bruno/acao', { acao: 'rss', usuario: '@olga_farol' }),
+      'bruno',
+      BRUNO,
+      imports,
+      ORIGIN,
+    )
+    expect(response.headers.get('Location')).toBe(
+      '/importar/bruno?feito=letterboxd&novos=12',
+    )
+    expect(calls).toMatchObject([
+      { action: { kind: 'rss', user: 'olga_farol' } },
+    ])
   })
 
   it('sends whoever is not a Dono to the login, and refuses another site', async () => {
@@ -347,6 +428,38 @@ describe('queueAction', () => {
 })
 
 describe('the pages', () => {
+  it('say whether the page is the Dono’s own', async () => {
+    const none = { wikidata: 0, tmdb: 0, manual: 0 }
+    const { imports } = fakeImports()
+    const bruno: Imports = {
+      ...imports,
+      page: async () => ({
+        exitCode: 0,
+        output: {
+          person: 'bruno',
+          name: 'Bruno',
+          imports: [],
+          letterboxd: {
+            person: 'bruno',
+            films: 0,
+            resolved: none,
+            discarded: none,
+            queued: 0,
+            queue: [],
+            discardedItems: [],
+          },
+          trakt: { ratings: 0, seen: 0 },
+        },
+      }),
+    }
+    expect(await importsPage('bruno', 'bruno', bruno)).toMatchObject({
+      own: true,
+    })
+    expect(await importsPage('bruno', 'quim', bruno)).toMatchObject({
+      own: false,
+    })
+  })
+
   it('give what the engine read, unknown, or null when it cannot run', async () => {
     const log = vi.spyOn(console, 'error').mockImplementation(() => {})
     const { imports } = fakeImports()
@@ -354,8 +467,8 @@ describe('the pages', () => {
       people: [{ person: 'teo', name: 'Teo', owner: false, imports: 1 }],
       queued: 2,
     })
-    expect(await importsPage('ninguem', imports)).toBe('unknown')
-    expect(await importsPage('teo', imports)).toBeNull()
+    expect(await importsPage('ninguem', 'bruno', imports)).toBe('unknown')
+    expect(await importsPage('teo', 'bruno', imports)).toBeNull()
     expect(await queuePage(imports)).toBeNull()
     expect(log.mock.calls).toEqual([
       ['engine: missing_database: mensagem de missing_database'],
@@ -380,12 +493,12 @@ const folderZip = (folder: string, prefix = '') =>
   )
 
 const AUTHOR = { name: 'Bruno', email: 'bruno@example.org' }
-const LETTERBOXD: ImportAction = {
+const LETTERBOXD: ImportRun = {
   kind: 'letterboxd',
   original: 'olga.zip',
   content: folderZip(join(ROOT, 'tests/fixture/letterboxd/olga')),
 }
-const TRAKT: ImportAction = {
+const TRAKT: ImportRun = {
   kind: 'trakt',
   original: 'trakt.zip',
   content: folderZip(join(ROOT, 'tests/fixture/trakt'), 'trakt-export/'),
@@ -435,8 +548,7 @@ function useImportsRepo() {
 describe('importsFromEngine, imports', () => {
   it('imports, reports and removes, each a commit signed by the Dono', async () => {
     const { fixture, imports, ok, log } = useImportsRepo()
-    const run = (action: ImportAction) =>
-      ok(imports.run('quim', action, AUTHOR))
+    const run = (action: ImportRun) => ok(imports.run('quim', action, AUTHOR))
     expect(await run(LETTERBOXD)).toEqual({ notice: 'letterboxd', facts: 14 })
     expect(await run(LETTERBOXD)).toEqual({ notice: 'repetido', facts: 0 })
     expect(await run(TRAKT)).toEqual({ notice: 'trakt', facts: 3, outside: 0 })
