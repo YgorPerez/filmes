@@ -13,6 +13,7 @@ import openSessions from './open-sessions.ts'
 import person from './person.ts'
 import recommend from './recommend.ts'
 import recordFeedback from './record-feedback.ts'
+import searchCatalog from './search-catalog.ts'
 import verifyAnswer from './verify-answer.ts'
 
 export const TOOLS: ReadonlyArray<Tool> = [
@@ -22,6 +23,7 @@ export const TOOLS: ReadonlyArray<Tool> = [
   answerBillboard,
   verifyAnswer,
   recordFeedback,
+  searchCatalog,
   person,
   importTool,
   importQueue,

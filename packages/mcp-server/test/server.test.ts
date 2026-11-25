@@ -20,6 +20,7 @@ describe('the server', () => {
         'answer_billboard',
         'verify_answer',
         'record_feedback',
+        'search_catalog',
         'person',
         'import',
         'import_queue',

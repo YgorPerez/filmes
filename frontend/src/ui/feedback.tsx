@@ -4,6 +4,7 @@ import {
   REPORT_CHOICES,
   type FeedbackRefusal,
 } from '#/content/feedback-form'
+import type { SearchAnswer } from '#/platform/catalog-search'
 import type {
   FeedbackAttendee,
   FeedbackPage,
@@ -13,8 +14,9 @@ import { FEEDBACK } from './feedback.copy'
 import { Marquee } from './marquee'
 import {
   Alert,
-  Items,
+  CatalogSearch,
   Item,
+  Items,
   Meta,
   Notice,
   OwnerTag,
@@ -97,16 +99,27 @@ export function OpenSessions({
  * closes it, and the Crédito of its Presentes now. A plain POST to
  * `/feedback/<sessao>/enviar`: it works before the JavaScript. `page` is
  * `'unknown'` when no open Session has that id, null when the engine cannot
- * run on this server. */
+ * run on this server. The Catálogo search (`search`) comes first: its
+ * "Usar" comes back with `film` chosen, from the list or as "Outro filme". */
 export function FeedbackScreen({
   session,
   page,
   refusal,
+  search = null,
+  film,
 }: {
   session: string
   page: FeedbackPage | 'unknown' | null
   refusal?: FeedbackRefusal
+  search?: SearchAnswer | null
+  film?: string
 }) {
+  const path = `/feedback/${encodeURIComponent(session)}`
+  const pick = (id: string) => {
+    const params = new URLSearchParams({ filme: id })
+    if (search) params.set('buscar', search.query)
+    return `${path}?${params.toString()}`
+  }
   return (
     <Page back="/feedback">
       {page === null ? (
@@ -120,7 +133,13 @@ export function FeedbackScreen({
             <Meta parts={[page.date, names(page.attendees), page.request]} />
           </div>
           {refusal && <Alert>{FEEDBACK.refusals[refusal]}</Alert>}
-          <FeedbackForm session={session} page={page} />
+          <CatalogSearch
+            action={path}
+            scope="films"
+            answer={search}
+            pick={pick}
+          />
+          <FeedbackForm session={session} page={page} film={film} />
           {page.attendees.length > 1 && <Credit page={page} />}
         </>
       )}
@@ -134,9 +153,11 @@ const choice =
 function FeedbackForm({
   session,
   page,
+  film,
 }: {
   session: string
   page: FeedbackPage
+  film?: string
 }) {
   const { form } = FEEDBACK
   return (
@@ -146,35 +167,7 @@ function FeedbackForm({
       aria-label={form.label}
       className="flex flex-col gap-xl"
     >
-      <fieldset className="flex flex-col gap-sm rounded-card border border-rule bg-surface p-md">
-        <legend className="px-xs text-title">{form.film}</legend>
-        {page.recommendation.map((film) => (
-          <label key={film.id} className={choice}>
-            <input type="radio" name="filme" value={film.id} />
-            <span>
-              <span className="font-letter text-letter">{film.position}</span>{' '}
-              {film.title}
-            </span>
-          </label>
-        ))}
-        <label className={choice}>
-          <input type="radio" name="filme" value="outro" />
-          <span>{form.other}</span>
-        </label>
-        <TextField
-          name="busca"
-          label={form.search}
-          hint={form.searchHint}
-          placeholder="tt…"
-        />
-        <label className={choice}>
-          <input type="radio" name="filme" value="nada" />
-          <span>
-            {form.nothing}{' '}
-            <span className="text-meta text-ink-2">{form.nothingHint}</span>
-          </span>
-        </label>
-      </fieldset>
+      <FilmChoice page={page} film={film} />
 
       <Section id="reacoes" title={form.reactions} lead={form.reactionsLead}>
         {page.attendees.map((attendee) => (
@@ -186,6 +179,51 @@ function FeedbackForm({
         {form.submit}
       </Button>
     </form>
+  )
+}
+
+/** Which film they saw: one of the list, another (`busca`), or none.
+ * `film` comes chosen (the Catálogo search's "Usar"). */
+function FilmChoice({ page, film }: { page: FeedbackPage; film?: string }) {
+  const { form } = FEEDBACK
+  const listed = page.recommendation.some((f) => f.id === film)
+  const other = film !== undefined && !listed
+  return (
+    <fieldset className="flex flex-col gap-sm rounded-card border border-rule bg-surface p-md">
+      <legend className="px-xs text-title">{form.film}</legend>
+      {page.recommendation.map((item) => (
+        <label key={item.id} className={choice}>
+          <input
+            type="radio"
+            name="filme"
+            value={item.id}
+            defaultChecked={item.id === film}
+          />
+          <span>
+            <span className="font-letter text-letter">{item.position}</span>{' '}
+            {item.title}
+          </span>
+        </label>
+      ))}
+      <label className={choice}>
+        <input type="radio" name="filme" value="outro" defaultChecked={other} />
+        <span>{form.other}</span>
+      </label>
+      <TextField
+        name="busca"
+        label={form.search}
+        hint={form.searchHint}
+        placeholder="tt…"
+        defaultValue={other ? film : undefined}
+      />
+      <label className={choice}>
+        <input type="radio" name="filme" value="nada" />
+        <span>
+          {form.nothing}{' '}
+          <span className="text-meta text-ink-2">{form.nothingHint}</span>
+        </span>
+      </label>
+    </fieldset>
   )
 }
 

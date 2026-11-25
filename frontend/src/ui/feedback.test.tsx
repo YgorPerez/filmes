@@ -260,3 +260,52 @@ describe('parseFeedback', () => {
     expect(form(fields)).toEqual({ refused: 'pedido' })
   })
 })
+
+describe('the Catálogo search', () => {
+  it('comes back from the Catálogo search with its film chosen', () => {
+    const search = {
+      query: 'cheia',
+      found: {
+        query: 'cheia',
+        films: [
+          {
+            id: 'tt9000602',
+            title: 'Casa Cheia',
+            year: 2021,
+            votes: 50000,
+            rating: null,
+            directors: [],
+          },
+        ],
+        people: [],
+        genres: [],
+        series: [],
+      },
+    }
+    render(<FeedbackScreen session={PAGE.id} page={PAGE} search={search} />)
+    const use = screen.getByRole('link', { name: 'Usar Casa Cheia (2021)' })
+    expect(use.getAttribute('href')).toBe(
+      '/feedback/2026-11-20-iara-quim?filme=tt9000602&buscar=cheia',
+    )
+    const form = () => screen.getByRole('form', { name: FEEDBACK.form.label })
+
+    // The form's defaults are set when the page loads, as after the link.
+    cleanup()
+    render(<FeedbackScreen session={PAGE.id} page={PAGE} film="tt9000602" />)
+    expect(posted(form())).toEqual({ ok: { film: 'tt9000602', reactions: [] } })
+    expect(
+      (screen.getByLabelText(FEEDBACK.form.other) as HTMLInputElement).checked,
+    ).toBe(true)
+
+    cleanup()
+    render(<FeedbackScreen session={PAGE.id} page={PAGE} film="tt9000601" />)
+    expect(posted(form())).toEqual({ ok: { film: 'tt9000601', reactions: [] } })
+    expect(
+      (
+        screen.getByLabelText(FEEDBACK.form.search, {
+          exact: false,
+        }) as HTMLInputElement
+      ).value,
+    ).toBe('')
+  })
+})
