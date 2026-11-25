@@ -233,6 +233,8 @@ export {
   authorOf,
   DataWriter,
   ENGINE_AUTHOR,
+  pushNow,
+  pushStatus,
   type Author,
   type PushStatus,
   type WriteOptions,
@@ -492,6 +494,8 @@ export {
 export { reloadData, type DataReload } from './data/reload.ts'
 export {
   evaluate,
+  evaluationsFolder,
+  progressTo,
   type EvaluateRequest,
   type Evaluation,
   type EvaluationProgress,

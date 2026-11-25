@@ -55,6 +55,24 @@ export interface EvaluateRequest {
   readonly onProgress?: (event: EvaluationProgress) => Effect.Effect<void>
 }
 
+/** `onProgress` from a plain callback, for an edge that writes no Effect
+ * code (the web app's live progress). */
+export const progressTo =
+  (listen: (event: EvaluationProgress) => void) =>
+  (event: EvaluationProgress): Effect.Effect<void> =>
+    Effect.sync(() => listen(event))
+
+/** Where `evaluate` writes its reports (`FILMES_AVALIACOES`), or
+ * `missing_config`: an edge asks before a run, since `evaluate` asks only
+ * after measuring. */
+export const evaluationsFolder: Effect.Effect<
+  string,
+  EngineError,
+  Environment
+> = Effect.gen(function* () {
+  return yield* (yield* Environment).path('evaluations')
+})
+
 /** The Feedback of the latest Sessions (`online`). */
 export interface OnlineMeasures {
   readonly sessions: number

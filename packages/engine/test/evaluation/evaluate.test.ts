@@ -12,13 +12,14 @@ import {
 } from 'node:fs'
 import { join } from 'node:path'
 import { migrateConfigFile, outputToEnglish } from '@filmes/key-migration'
-import { Effect } from 'effect'
 import { parse } from 'yaml'
 import { describe, expect, test } from 'vite-plus/test'
 import {
   evaluate,
+  evaluationsFolder,
   importLetterboxd,
   openSessions,
+  progressTo,
   PyRandom,
   recommendSession,
   recordFeedback,
@@ -51,9 +52,7 @@ describe('avaliar', () => {
     const before = await fixture.ok(openSessions)
     const events: EvaluationProgress[] = []
     const result = await fixture.ok(
-      evaluate({
-        onProgress: (event) => Effect.sync(() => void events.push(event)),
-      }),
+      evaluate({ onProgress: progressTo((event) => void events.push(event)) }),
       reports(fixture),
     )
 
@@ -89,6 +88,21 @@ describe('avaliar', () => {
     })
     const values = events.map((e) => e.progress)
     expect([...values].sort((a, b) => a - b)).toEqual(values)
+  })
+
+  test('says where the reports go, or that nothing says so', async () => {
+    const fixture = useFixture()
+    expect(await fixture.ok(evaluationsFolder, reports(fixture))).toBe(
+      join(fixture.root, 'avaliacoes'),
+    )
+    const unset = await fixture.run(evaluationsFolder)
+    expect(unset).toMatchObject({
+      exitCode: 1,
+      output: { error: { code: 'missing_config' } },
+    })
+    expect(unset.exitCode === 1 && unset.output.error.message).toContain(
+      'FILMES_AVALIACOES',
+    )
   })
 
   test(

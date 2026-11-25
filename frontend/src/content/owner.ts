@@ -40,3 +40,12 @@ export function pathSlug(value: unknown): string {
     throw new Error('slug required')
   return value
 }
+
+/** As `requireOwner`, for the admin screens: a Dono without `admin: true`
+ * is refused too. */
+export function requireAdmin<O extends { admin: boolean }>(
+  owner: O | null,
+): asserts owner is O {
+  requireOwner(owner)
+  if (!owner.admin) throw new Error('admin required')
+}

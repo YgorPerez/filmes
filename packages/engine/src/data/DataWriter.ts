@@ -413,3 +413,17 @@ export class DataWriter extends Context.Service<
       }),
     )
 }
+
+/** The push queue now, for an edge that shows it (the admin's Operações
+ * screen and banner). */
+export const pushStatus: Effect.Effect<PushStatus, never, DataWriter> =
+  Effect.gen(function* () {
+    return yield* (yield* DataWriter).status
+  })
+
+/** A push attempt now, after any one already running ("tentar de novo"). */
+export const pushNow: Effect.Effect<PushStatus, never, DataWriter> = Effect.gen(
+  function* () {
+    return yield* (yield* DataWriter).push
+  },
+)
