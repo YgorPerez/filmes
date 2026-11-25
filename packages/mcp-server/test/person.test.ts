@@ -325,6 +325,44 @@ describe('person', () => {
     )
   })
 
+  test('create makes a Dono with her e-mail, signed by the logged-in Dono; without the e-mail, no', async () => {
+    const fixture = useFixture()
+    asRepo(fixture.data)
+    const c = await connect(fixture, 'bruno')
+
+    const refused = await c.error('person', {
+      action: 'create',
+      name: 'Luana',
+      owner: true,
+    })
+    const created = await person(c, {
+      action: 'create',
+      name: 'Luana',
+      owner: true,
+      email: 'Luana@Example.org',
+    })
+
+    assert.deepEqual(refused.error, {
+      code: 'invalid_usage',
+      message: 'um Dono precisa do e-mail do Google, para entrar no site',
+      reason: 'email_required',
+    })
+    assert.deepEqual(created, {
+      person: 'luana',
+      name: 'Luana',
+      aliases: [],
+      owner: true,
+    })
+    assert.match(
+      readFileSync(join(fixture.data, 'people', 'luana.md'), 'utf8'),
+      /^email: luana@example\.org$/m,
+    )
+    assert.equal(
+      git(fixture.data, 'log', '-1', '--format=%an <%ae>|%s').trim(),
+      'Bruno <bruno@example.org>|pessoa criar Luana',
+    )
+  })
+
   test('with no Dono in the data, the engine signs; create makes the slug', async () => {
     const fixture = useFixture()
     for (const slug of ['bruno', 'vera']) {

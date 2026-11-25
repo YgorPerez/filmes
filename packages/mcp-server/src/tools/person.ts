@@ -66,6 +66,12 @@ const input = z.object({
     .optional()
     .describe('create: nome do arquivo; padrão é o nome sem acento'),
   owner: z.boolean().optional().describe('create: esta Pessoa é Dono'),
+  email: z
+    .string()
+    .optional()
+    .describe(
+      'create: o e-mail do Google do Dono, com que ele entra no site e no conector; obrigatório com owner, só com owner',
+    ),
   text: z
     .string()
     .regex(/\S/, 'o texto não pode ser vazio')
@@ -179,6 +185,7 @@ const run = (i: Input) =>
           aliases: i.aliases ?? [],
           ...(i.slug !== undefined && { slug: i.slug }),
           owner: i.owner ?? false,
+          ...(i.email !== undefined && { email: i.email }),
         })
       case 'view':
         return yield* personView(person)
@@ -256,7 +263,7 @@ const run = (i: Input) =>
 export default defineTool({
   name: 'person',
   description:
-    'As Pessoas no repo de dados e o gosto delas. create: nome, apelidos, slug, owner (Dono). view: tudo o que se sabe da ' +
+    'As Pessoas no repo de dados e o gosto delas. create: nome, apelidos, slug, owner (Dono) com o email do Google dele. view: tudo o que se sabe da ' +
     'Pessoa (Vetos, Ajustes, Declarados, Relatos com Força, Já vistos, Notas, perguntas abertas, imports). ' +
     'state (Declarado): o que a própria Pessoa disse do gosto dela; report (Relato): o que o Dono sabe do gosto de outra ' +
     'Pessoa; veto: um tipo de filme que ela nunca vê. Alvo por ID: film (tt...) ou entity (Q... de diretor, ator ou gênero). ' +

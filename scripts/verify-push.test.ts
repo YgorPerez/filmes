@@ -173,7 +173,6 @@ describe('verifyPush', () => {
     expect(vitest.map((r) => r.folder)).toEqual([
       join(clone, 'frontend'),
       join(clone, 'packages/engine'),
-      join(clone, 'packages/key-migration'),
       join(clone, 'packages/mcp-server'),
       clone,
     ])

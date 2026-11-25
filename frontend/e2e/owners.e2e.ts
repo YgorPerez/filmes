@@ -2,7 +2,8 @@
 // filmes-dados): Bruno and Vera each log in through the stand-in Google,
 // open a Session with Lara (a Pessoa of this file alone), are "Você" on its
 // Cartaz, record its Feedback speaking for themselves, and write taste on
-// their own page. Only the desktop runs it (the projects share the copy).
+// their own page; Bruno tells a Relato about Vera (#138). Only the desktop
+// runs it (the projects share the copy).
 
 import { consult } from '@filmes/engine'
 import { expect, test } from '@playwright/test'
@@ -91,3 +92,41 @@ for (const dono of DONOS)
     await expect(notice(page)).toHaveText('Gravado no arquivo dela.')
     await expect(area).toContainText(`a ${dono.name} gosta de drama`)
   })
+
+test('Bruno tells a Relato about Vera, and Vera sees it on her page', async ({
+  browser,
+}, info) => {
+  test.skip(info.project.name !== 'desktop', 'the projects share the copy')
+  const bruno = await browser.newPage()
+  await loginAs(bruno, 'bruno@example.org')
+
+  // On his own page, no Relato form: what he says of himself is Declarado.
+  await bruno.goto('/pessoas/bruno')
+  await expect(section(bruno, 'Declarados')).toBeVisible()
+  await expect(section(bruno, 'Relatos')).toHaveCount(0)
+  await snap(bruno, info, 'relato-bruno-own-page')
+
+  // On Vera's, a Dono too, he tells what he saw her like.
+  await bruno.goto('/pessoas/vera')
+  const told = section(bruno, 'Relatos')
+  await told.getByText('Acrescentar Relato', { exact: true }).click()
+  const form = told.getByRole('form', { name: 'Acrescentar Relato' })
+  await expect(form).toContainText('descrição de Bruno')
+  await snap(bruno, info, 'relato-bruno-on-vera-form')
+  await form.getByLabel('O que foi dito').fill('a Vera adora suspense')
+  await form.getByRole('button', { name: 'Gravar' }).click()
+  await expect(notice(bruno)).toHaveText('Gravado no arquivo dela.')
+  await expect(told).toContainText('a Vera adora suspense')
+  await bruno.close()
+
+  // Vera sees it on her page, told by Bruno, and cannot add one herself.
+  const vera = await browser.newPage()
+  await loginAs(vera, 'vera@example.org')
+  await vera.goto('/pessoas/vera')
+  const hers = section(vera, 'Relatos')
+  await expect(hers).toContainText('a Vera adora suspense')
+  await expect(hers).toContainText('descrição de Bruno')
+  await expect(hers.getByText('Acrescentar Relato')).toHaveCount(0)
+  await snap(vera, info, 'relato-vera-own-page')
+  await vera.close()
+})

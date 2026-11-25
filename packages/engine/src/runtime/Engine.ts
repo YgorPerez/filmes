@@ -13,7 +13,7 @@ import { Transport } from '../sources/Source.ts'
 import { SourceCache } from '../sources/SourceCache.ts'
 import { Tmdb } from '../sources/Tmdb.ts'
 import { Sqlite } from '../sqlite/Sqlite.ts'
-import { EngineError, type ErrorCode } from './EngineError.ts'
+import { EngineError, type ErrorCode, type ErrorReason } from './EngineError.ts'
 import { Environment, type Vars } from './Environment.ts'
 import { Owner } from './Owner.ts'
 import { Run } from './Run.ts'
@@ -50,7 +50,12 @@ export const engineLayer = (
   ).pipe(Layer.provideMerge(Environment.layerFrom(vars)))
 
 export interface ErrorOutput {
-  readonly error: { readonly code: ErrorCode; readonly message: string }
+  readonly error: {
+    readonly code: ErrorCode
+    readonly message: string
+    /** Only on the errors that have one (`ERROR_REASONS`). */
+    readonly reason?: ErrorReason
+  }
 }
 
 export type Outcome<A> =
@@ -65,7 +70,13 @@ export const errorOutcome = (cause: Cause.Cause<unknown>): Outcome<never> => {
   if (error instanceof EngineError)
     return {
       exitCode: error.code === 'invalid_usage' ? 2 : 1,
-      output: { error: { code: error.code, message: error.message } },
+      output: {
+        error: {
+          code: error.code,
+          message: error.message,
+          ...(error.reason !== undefined && { reason: error.reason }),
+        },
+      },
     }
   const message =
     error instanceof Error

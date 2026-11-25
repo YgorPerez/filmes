@@ -175,13 +175,16 @@ export function RemoveForm({
 /** A form that opens on demand, as a `<details>`: no JavaScript needed. */
 export function Disclosure({
   summary,
+  open,
   children,
 }: {
   summary: string
+  /** Open from the start: the form came back refused. */
+  open?: boolean
   children: ReactNode
 }) {
   return (
-    <details className="group rounded-field border border-rule">
+    <details open={open} className="group rounded-field border border-rule">
       <summary className="flex min-h-touch cursor-pointer items-center px-3 font-semibold select-none">
         {summary}
       </summary>
@@ -236,7 +239,7 @@ export function TextField({
   required?: boolean
   placeholder?: string
   pattern?: string
-  type?: 'text' | 'number'
+  type?: 'text' | 'number' | 'email'
   min?: number
   max?: number
   defaultValue?: string

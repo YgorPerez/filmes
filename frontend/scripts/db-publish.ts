@@ -11,7 +11,7 @@
 // `--build` first builds the file with the engine's `rebuild` from
 // filmes-dados (`--data`,
 // or `FILMES_DADOS`) and the config (`--config`, the repo's `config/` by
-// default), both migrated in a scratch folder (`db-build.ts`); the dumps
+// default), read where they are (`db-build.ts`); the dumps
 // come from the caller's environment. A dry run
 // builds too, and keeps the file to look at; a publish deletes it after the
 // swap, and keeps it when the publish stops, to send again by path.

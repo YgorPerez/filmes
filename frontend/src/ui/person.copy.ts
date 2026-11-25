@@ -1,4 +1,9 @@
-import type { PersonNotice, PersonRefusal } from '#/content/person-action'
+import {
+  reportSource,
+  type PersonNotice,
+  type PersonRefusal,
+} from '#/content/person-action'
+import type { PersonCreateRefusal } from '#/content/person-create'
 
 type Link = 'director' | 'writer' | 'cast' | 'series' | 'genre'
 type Level = 'none' | 'low' | 'normal' | 'high'
@@ -18,6 +23,28 @@ export const PEOPLE = {
   unavailable:
     'As Pessoas ainda não estão prontas neste servidor: falta o banco do filmes.',
   gone: 'Essa Pessoa não está mais no repo de dados.',
+  create: {
+    title: 'Acrescentar Pessoa',
+    name: 'Nome',
+    aliases: 'Apelidos',
+    aliasesHint: 'opcional, separados por vírgula',
+    owner: 'É Dono: entra no site e no conector',
+    email: 'E-mail do Google',
+    emailHint: 'só para um Dono',
+    testUsers:
+      'Enquanto a tela de consentimento do Google estiver em teste, um Dono novo também precisa estar em Test users no Google Cloud, ou o primeiro login dele falha.',
+    submit: 'Acrescentar',
+    refusals: {
+      nome: 'Esse nome não dá um nome de arquivo válido. Use letras, números ou espaços.',
+      reservado: '“dono” é reservado para achar o Dono. Escolha outro nome.',
+      existe: 'Já existe uma Pessoa com esse nome.',
+      'nome-usado':
+        'Esse nome ou um desses apelidos já é de outra Pessoa. Escolha outro.',
+      email: 'Um Dono precisa de um e-mail do Google válido para entrar.',
+      'email-usado': 'Esse e-mail já é de outra Pessoa.',
+      indisponivel: 'Não deu para gravar agora. Tente de novo daqui a pouco.',
+    } satisfies Record<PersonCreateRefusal, string>,
+  },
 } as const
 
 export const PERSON = {
@@ -39,6 +66,7 @@ export const PERSON = {
     pulada: 'Pergunta pulada: ela volta uma vez, quando o assunto aparecer.',
     saiu: 'Pulada duas vezes: a pergunta saiu da lista.',
     respondida: 'Resposta gravada como Declarado; a pergunta saiu da lista.',
+    criada: 'Pessoa criada. Conte o gosto dela aqui.',
   } satisfies Record<PersonNotice, string>,
   refusals: {
     alvo: 'Esse ID não está no Catálogo. Confira o tt… do filme ou o Q… da entidade.',
@@ -96,7 +124,7 @@ export const PERSON = {
     lead: 'O que o Dono contou do gosto dela.',
     empty: 'Nenhum Relato.',
     add: 'Acrescentar Relato',
-    source: 'descrição do Dono',
+    source: reportSource,
   },
   seen: {
     title: 'Já vistos',

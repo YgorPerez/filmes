@@ -2,7 +2,7 @@
 // (`sessao/arquivo.py`). The file is the truth; the database keeps a copy
 // (`database.ts`).
 //
-// Frontmatter, in English keys (key-migration's `session` table):
+// Frontmatter, in English keys (ADR 0002):
 //
 //     date: 2026-11-20
 //     owner: bruno                        # the Dono who opened it
@@ -293,7 +293,7 @@ export const newSessionId = (
 // --- the body ----------------------------------------------------------------
 
 /** Força and Tipo as the body writes them, in Portuguese (a test keeps
- * them equal to key-migration's tables). */
+ * them equal to Python's names). */
 export const STRENGTH_IN_BODY: Readonly<Record<Strength | 'guess', string>> = {
   strong: 'forte',
   moderate: 'moderada',

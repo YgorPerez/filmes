@@ -1,16 +1,23 @@
 import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { makeEngine, type ErrorCode, type Outcome } from '@filmes/engine'
+import {
+  makeEngine,
+  type ErrorCode,
+  type ErrorReason,
+  type Outcome,
+} from '@filmes/engine'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { useFixture } from '../../../packages/engine/test/fixture.ts'
 import { parseAction, type PersonAction } from '#/content/person-action'
+import type { NewPersonForm } from '#/content/person-create'
 import type { Owner } from './owners'
 import {
   ownerAuthor,
   peopleFromEngine,
   peopleList,
   personAction,
+  personCreateAction,
   personPage,
   type People,
 } from './people'
@@ -19,6 +26,13 @@ const BRUNO: Owner = {
   person: 'bruno',
   name: 'Bruno',
   email: 'bruno@example.org',
+  admin: false,
+}
+
+const VERA: Owner = {
+  person: 'vera',
+  name: 'Vera',
+  email: 'vera@example.org',
   admin: false,
 }
 
@@ -136,7 +150,8 @@ describe('parseAction', () => {
 function fakePeople(
   outcome: Outcome<'gravado'> = { exitCode: 0, output: 'gravado' },
 ) {
-  const acted: { person: string; action: PersonAction; author: unknown }[] = []
+  const acted: { person: string; action: PersonAction; owner: Owner }[] = []
+  const created: { input: NewPersonForm; owner: Owner }[] = []
   const people: People = {
     list: async () => ({
       exitCode: 0,
@@ -144,12 +159,18 @@ function fakePeople(
     }),
     view: async () => failure('unknown_person'),
     tagGroups: async () => ({ exitCode: 0, output: [] }),
-    act: async (person, action, author) => {
-      acted.push({ person, action, author })
+    act: async (person, action, owner) => {
+      acted.push({ person, action, owner })
       return outcome
     },
+    create: async (input, owner) => {
+      created.push({ input, owner })
+      return outcome.exitCode === 0
+        ? { exitCode: 0, output: 'luana-reis' }
+        : outcome
+    },
   }
-  return { people, acted }
+  return { people, acted, created }
 }
 
 const post = (fields: Record<string, string>, origin: string | null = ORIGIN) =>
@@ -182,7 +203,7 @@ describe('personAction', () => {
           target: 'Q9001801',
           group: false,
         },
-        author: { name: 'Bruno', email: 'bruno@example.org' },
+        owner: BRUNO,
       },
     ])
   })
@@ -257,6 +278,100 @@ describe('personAction', () => {
   })
 })
 
+const postNew = (
+  fields: Record<string, string>,
+  origin: string | null = ORIGIN,
+) =>
+  new Request(`${ORIGIN}/pessoas/nova/enviar`, {
+    method: 'POST',
+    headers: origin ? { Origin: origin } : {},
+    body: form(fields),
+  })
+
+const LUANA = { nome: 'Luana Reis', apelidos: 'Lu' }
+
+describe('personCreateAction', () => {
+  it('creates the Pessoa as the logged-in Dono and opens her page', async () => {
+    const { people, created } = fakePeople()
+    const response = await personCreateAction(
+      postNew(LUANA),
+      BRUNO,
+      people,
+      ORIGIN,
+    )
+    expect(response.status).toBe(303)
+    expect(response.headers.get('Location')).toBe(
+      '/pessoas/luana-reis?feito=criada',
+    )
+    expect(created).toEqual([
+      {
+        input: { name: 'Luana Reis', aliases: ['Lu'], owner: false },
+        owner: BRUNO,
+      },
+    ])
+  })
+
+  it('sends whoever is not a Dono to the login, and refuses another site', async () => {
+    const { people, created } = fakePeople()
+    const login = await personCreateAction(postNew(LUANA), null, people, ORIGIN)
+    expect(login.headers.get('Location')).toBe('/entrar')
+    const other = await personCreateAction(
+      postNew(LUANA, 'https://elsewhere.example'),
+      BRUNO,
+      people,
+      ORIGIN,
+    )
+    expect(other.status).toBe(403)
+    expect(created).toEqual([])
+  })
+
+  it('goes back to the list with the reason and what was typed', async () => {
+    const { people, created } = fakePeople()
+    const response = await personCreateAction(
+      postNew({ nome: 'Farias', dono: 'sim', email: '' }),
+      BRUNO,
+      people,
+      ORIGIN,
+    )
+    expect(response.headers.get('Location')).toBe(
+      '/pessoas?erro=email&nome=Farias&dono=sim',
+    )
+    expect(created).toEqual([])
+  })
+
+  // By the engine's reason, never its wording: the message here says
+  // nothing the app could read.
+  it.each<[ErrorCode, ErrorReason | undefined, string]>([
+    ['person_exists', 'slug_taken', 'existe'],
+    ['person_exists', 'name_taken', 'nome-usado'],
+    ['invalid_usage', 'invalid_slug', 'nome'],
+    ['invalid_usage', 'reserved_name', 'reservado'],
+    ['invalid_usage', 'email_required', 'email'],
+    ['invalid_usage', 'invalid_email', 'email'],
+    ['invalid_usage', 'email_not_owner', 'email'],
+    ['invalid_usage', 'email_taken', 'email-usado'],
+    ['invalid_usage', undefined, 'indisponivel'],
+    ['missing_database', undefined, 'indisponivel'],
+  ])('says why the engine refused: %s %s', async (code, reason, refusal) => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const { people } = fakePeople({
+      exitCode: 1,
+      output: { error: { code, message: 'recusado', reason } },
+    })
+    const response = await personCreateAction(
+      postNew(LUANA),
+      BRUNO,
+      people,
+      ORIGIN,
+    )
+    expect(response.headers.get('Location')).toBe(
+      `/pessoas?erro=${refusal}&nome=Luana+Reis&apelidos=Lu`,
+    )
+    expect(log.mock.calls.length).toBe(refusal === 'indisponivel' ? 1 : 0)
+    log.mockRestore()
+  })
+})
+
 describe('the pages', () => {
   it('lists the Pessoas, or null when the engine cannot run', async () => {
     const { people } = fakePeople()
@@ -271,13 +386,14 @@ describe('the pages', () => {
       }),
     ).toBeNull()
     expect(
-      await personPage('bruno', {
-        ...people,
-        view: async () => failure('missing_config'),
-      }),
+      await personPage(
+        'bruno',
+        { ...people, view: async () => failure('missing_config') },
+        BRUNO,
+      ),
     ).toBeNull()
     log.mockRestore()
-    expect(await personPage('ninguem', people)).toBe('unknown')
+    expect(await personPage('ninguem', people, BRUNO)).toBe('unknown')
   })
 
   it('takes the author from the Dono', () => {
@@ -292,6 +408,24 @@ describe('the pages', () => {
 
 const git = (cwd: string, ...args: string[]) =>
   execFileSync('git', args, { cwd, encoding: 'utf8' })
+
+/** The fixture's data folder as a git repo with one commit, as the engine's
+ * writes need: each one commits on top. */
+const commitFixture = (data: string) => {
+  git(data, 'init', '--quiet', '-b', 'master')
+  git(data, 'add', '--all')
+  git(
+    data,
+    '-c',
+    'user.name=fixture',
+    '-c',
+    'user.email=fixture@example.org',
+    'commit',
+    '--quiet',
+    '-m',
+    'initial',
+  )
+}
 
 describe('peopleFromEngine', () => {
   it('lists the fixture Pessoas and shows one with her Notas', async () => {
@@ -314,40 +448,57 @@ describe('peopleFromEngine', () => {
         aliases: ['eu'],
         owner: true,
       })
-      const page = await personPage('quim', people)
+      const page = await personPage('quim', people, BRUNO)
       if (page === null || page === 'unknown') throw new Error(String(page))
       expect(page.openQuestions.map((q) => q.label)).toEqual(['Helena Prado'])
       expect(page.ratings?.length).toBe(4)
       expect(page.tagGroups.map((g) => g.key)).toEqual(['silly_comedy', 'slow'])
       expect(page).not.toHaveProperty('imports')
+      expect(page.viewer).toEqual({ person: 'bruno', name: 'Bruno' })
     } finally {
       await engine.dispose()
     }
   })
 
+  it('takes a Relato about another Dono, never about the logged-in one', async () => {
+    const fixture = useFixture()
+    commitFixture(fixture.data)
+    const engine = makeEngine(fixture.vars)
+    try {
+      const people = peopleFromEngine(engine)
+      const report = { kind: 'report', text: 'adora suspense' } as const
+      expect(await people.act('vera', report, BRUNO)).toEqual({
+        exitCode: 0,
+        output: 'gravado',
+      })
+      const own = await people.act('bruno', report, BRUNO)
+      expect(own.exitCode === 0 ? null : own.output.error.code).toBe(
+        'invalid_usage',
+      )
+      // Vera sees on her page what Bruno told of her taste.
+      const page = await personPage('vera', people, VERA)
+      if (page === null || page === 'unknown') throw new Error(String(page))
+      expect(page.reports.map((r) => [r.text, r.source])).toEqual([
+        ['adora suspense', 'descrição de Bruno'],
+      ])
+    } finally {
+      await engine.dispose()
+    }
+    const log = git(fixture.data, 'log', '--format=%an <%ae>|%s').trim()
+    expect(log.split('\n')[0]).toMatch(/^Bruno <bruno@example\.org>\|pessoa /)
+    expect(log.split('\n')).toHaveLength(2)
+  }, 30_000)
+
   it('writes each action to her file, one commit signed by the Dono', async () => {
     const fixture = useFixture()
-    git(fixture.data, 'init', '--quiet', '-b', 'master')
-    git(fixture.data, 'add', '--all')
-    git(
-      fixture.data,
-      '-c',
-      'user.name=fixture',
-      '-c',
-      'user.email=fixture@example.org',
-      'commit',
-      '--quiet',
-      '-m',
-      'initial',
-    )
+    commitFixture(fixture.data)
     const engine = makeEngine(fixture.vars)
     const file = () =>
       readFileSync(join(fixture.data, 'people/iara.md'), 'utf8')
-    const author = ownerAuthor(BRUNO)
     try {
       const people = peopleFromEngine(engine)
       const act = async (action: PersonAction) => {
-        const outcome = await people.act('iara', action, author)
+        const outcome = await people.act('iara', action, BRUNO)
         if (outcome.exitCode !== 0)
           throw new Error(JSON.stringify(outcome.output))
         return outcome.output
@@ -415,10 +566,12 @@ describe('peopleFromEngine', () => {
       expect(text).toContain(
         '2026-11-20 · conversa com o Dono · específico · ama Sofia Rangel (Q9000018) · "adoro os filmes dela"',
       )
-      expect(text).toContain('odeia filme lento')
+      expect(text).toContain(
+        '2026-11-20 · descrição de Bruno · genérico · "odeia filme lento"',
+      )
       expect(text).toContain('Casa Cheia (tt9000602) · nota 4,5')
 
-      const page = await personPage('iara', people)
+      const page = await personPage('iara', people, BRUNO)
       if (page === null || page === 'unknown') throw new Error(String(page))
       expect(page.openQuestions).toHaveLength(2)
       const terror = page.openQuestions.find((q) => q.subject === 'Q9001801')!
@@ -434,11 +587,11 @@ describe('peopleFromEngine', () => {
       const again = await people.act(
         'iara',
         { kind: 'answer', question: terror.factId, text: 'de novo' },
-        author,
+        BRUNO,
       )
       expect(again.exitCode).toBe(1)
 
-      const after = await personPage('iara', people)
+      const after = await personPage('iara', people, BRUNO)
       if (after === null || after === 'unknown') throw new Error(String(after))
       expect(after.openQuestions.map((q) => q.subject)).toEqual([
         'silly_comedy',
@@ -449,14 +602,14 @@ describe('peopleFromEngine', () => {
       const removed = await people.act(
         'iara',
         { kind: 'remove', what: 'veto', id: after.vetoes[0]!.factId },
-        author,
+        BRUNO,
       )
       expect(removed).toEqual({ exitCode: 0, output: 'removido' })
       expect(file()).not.toContain('nunca terror')
       const skipped = await people.act(
         'iara',
         { kind: 'skip', text: 'curte comédia boba?', subject: 'silly_comedy' },
-        author,
+        BRUNO,
       )
       expect(skipped).toEqual({ exitCode: 0, output: 'saiu' })
     } finally {
@@ -475,4 +628,69 @@ describe('peopleFromEngine', () => {
     for (const line of writes)
       expect(line).toMatch(/^Bruno <bruno@example\.org>\|pessoa /)
   }, 60_000) // twelve real git commits: slow on a loaded machine
+
+  it('creates a Pessoa and a Dono from the form, one commit each signed by the Dono', async () => {
+    const fixture = useFixture()
+    commitFixture(fixture.data)
+    const engine = makeEngine(fixture.vars)
+    try {
+      const people = peopleFromEngine(engine)
+      const send = async (fields: Record<string, string>) =>
+        (
+          await personCreateAction(postNew(fields), BRUNO, people, ORIGIN)
+        ).headers.get('Location')
+      expect(await send({ nome: 'Luana Reis', apelidos: 'Lu, Luana' })).toBe(
+        '/pessoas/luana-reis?feito=criada',
+      )
+      expect(
+        await send({
+          nome: 'Farias',
+          dono: 'sim',
+          email: 'Farias@Example.org',
+        }),
+      ).toBe('/pessoas/farias?feito=criada')
+      // The new Pessoas are in the database at once: no reload.
+      expect((await peopleList(people))?.map((p) => p.person)).toContain(
+        'luana-reis',
+      )
+      const page = await personPage('luana-reis', people, BRUNO)
+      if (page === null || page === 'unknown') throw new Error(String(page))
+      expect(page.aliases).toEqual(['Lu', 'Luana'])
+      expect(
+        readFileSync(join(fixture.data, 'people/farias.md'), 'utf8'),
+      ).toMatch(/owner: true[\s\S]*email: farias@example\.org/)
+
+      // What the engine refuses comes back with its reason.
+      expect(await send({ nome: 'Iara' })).toBe(
+        '/pessoas?erro=existe&nome=Iara',
+      )
+      expect(await send({ nome: 'Lia', apelidos: 'eu' })).toBe(
+        '/pessoas?erro=nome-usado&nome=Lia&apelidos=eu',
+      )
+      expect(await send({ nome: 'Dono' })).toBe(
+        '/pessoas?erro=reservado&nome=Dono',
+      )
+      expect(await send({ nome: '!!!' })).toBe(
+        '/pessoas?erro=nome&nome=%21%21%21',
+      )
+      expect(await send({ nome: 'Ana', dono: 'sim', email: 'ana@x' })).toBe(
+        '/pessoas?erro=email&nome=Ana&dono=sim&email=ana%40x',
+      )
+      expect(
+        await send({ nome: 'Ana', dono: 'sim', email: 'BRUNO@example.org' }),
+      ).toBe(
+        '/pessoas?erro=email-usado&nome=Ana&dono=sim&email=BRUNO%40example.org',
+      )
+    } finally {
+      await engine.dispose()
+    }
+    const log = git(fixture.data, 'log', '--format=%an <%ae>|%s')
+      .trim()
+      .split('\n')
+    expect(log).toEqual([
+      'Bruno <bruno@example.org>|pessoa criar Farias',
+      'Bruno <bruno@example.org>|pessoa criar Luana Reis',
+      'fixture <fixture@example.org>|initial',
+    ])
+  }, 60_000)
 })

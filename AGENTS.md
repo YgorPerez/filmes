@@ -32,13 +32,12 @@ packages/engine/           o motor, com Effect v4 (ADR 0003); sem nada de tela n
     **/__snapshots__/      saídas inteiras gravadas do motor em Python antes de ele sair (test/expected.ts)
     **/golden/             vetores de ouro (*.jsonl.gz) do Python, gravados uma vez
 packages/mcp-server/       o servidor MCP sobre o motor, sem transporte: createMcpServer({ engine, owner }), instructions.ts e tools/<nome>.ts, um por arquivo, listados em tools/index.ts
-packages/key-migration/    a migração das chaves PT → EN (ADR 0002) e as tabelas de nomes
 frontend/                  app TanStack Start: MCP por HTTP, OAuth, app web e o Cartaz (MCP Apps e web)
   scripts/                 deploy na VPS (deploy-plan.ts, vps.ts, db-publish.ts, db-build.ts, db-rebuild.ts, catalog-update.ts, check-live.ts, prepare-vps.sh, deploy-wizard.sh; ADR 0006)
   nginx/                   vhost, TLS, formato de log sem query e rotação que o deploy instala na VPS
   Dockerfile               a imagem: só o .output do build
-config/                    pesos e vocabulários fixos (*.toml) e o manifesto dos dumps (versoes-catalogo.json), ainda com as chaves em português; o build e os testes migram uma cópia para o inglês
-tests/fixture/             a fixture do motor: catalogo/, dados/ (em português, migrada nos testes), gravacoes/, letterboxd/, trakt/
+config/                    pesos e vocabulários fixos (*.toml) e o manifesto dos dumps (catalog-versions.json), com as chaves em inglês (ADR 0002), lidos como estão
+tests/fixture/             a fixture do motor: catalogo/, dados/ (people/, com as chaves em inglês), gravacoes/, letterboxd/, trakt/
 scripts/                   gancho de push (verify-push.ts, affected.ts, install-hooks.ts)
 ```
 
@@ -51,7 +50,7 @@ O código é em inglês: nomes de arquivo e pasta, identificadores, comentários
 - **Testes só pelas costuras.** Motor: `useFixture()` (`packages/engine/test/fixture.ts`) dá uma cópia da fixture já construída e roda as operações públicas por `makeEngine`, a mesma borda do app e do MCP; nada de importar o interno de uma área. MCP: cliente do SDK sobre `InMemoryTransport`, com o motor de verdade (`packages/mcp-server/test/connect.ts`). Nenhum teste usa rede.
 - **Saída gravada.** Um snapshot em `__snapshots__/` que guarda uma saída inteira foi gravado do motor em Python enquanto o teste de paridade passava. Ele só muda com uma decisão de comportamento (abaixo); nunca rode `vitest -u` para fazer um teste passar.
 - **Fixture.** `tests/fixture/catalogo/<tabela>.csv` vai direto para a tabela de mesmo nome; coluna `fato_id` ausente é calculada do conteúdo da linha. O `LEIAME.md` da fixture diz quem deu Nota a quê; acrescente filmes com IDs novos em vez de mudar os existentes.
-- **Força** só sai da régua (`packages/engine/src/evidence/ruler.ts`), por regra fixa. Números que se calibram ficam em `config/pesos.toml`.
+- **Força** só sai da régua (`packages/engine/src/evidence/ruler.ts`), por regra fixa. Números que se calibram ficam em `config/weights.toml`.
 - **Fato** tem `fato_id` estável entre reconstruções, Fonte e data.
 - **Hoje** vem do serviço `Today` (`FILMES_HOJE` o fixa; os testes usam `2026-11-20`), nunca do relógio direto.
 
@@ -132,7 +131,7 @@ Valem para o motor. As flags, chaves e caminhos citados são os da antiga CLI em
 
 - **Classificação etária.** EIRIN e CNC entram na cadeia de criança só quando restringem (PG12, -12...); o "livre" deles (G, tous publics) conta como sem informação.
 - **Import do Letterboxd.** O ano do export pode diferir em 1 do ano do Wikidata ou do TMDB (Year ± 1); o ano exato vence no empate.
-- **Nota mínima.** Candidato precisa de nota 7 ou mais no IMDb, além dos 1.000 votos (`[catalogo] nota_imdb_minima` em `config/pesos.toml`). Decisão do Dono de 2026-11-21: vale sempre.
+- **Nota mínima.** Candidato precisa de nota 7 ou mais no IMDb, além dos 1.000 votos (`[catalog] min_imdb_rating` em `config/weights.toml`). Decisão do Dono de 2026-11-21: vale sempre.
 - **Elenco coadjuvante.** No caminho de conteúdo, ator fora dos 3 primeiros créditos de ator do `title.principals` no Candidato gera Evidência no máximo fraca. Filme sem créditos carregados fica com a régua normal.
 - **Teto do elo.** No caminho de conteúdo, a Evidência sai com a menor Força entre a da semente e a do elo: diretor e série até forte, roteiro e elenco até moderada, gênero até fraca. Vale também para o metadado agregado ("como 3 filmes a que deu 4 ou mais"); não vale para o Declarado ou Relato sobre a própria entidade. Decisão do Dono de 2026-11-22.
 - **Ajuste.** Cada Pessoa pode ter um Ajuste por elo (`ajustes:` no frontmatter, `pessoa ajustar`): nada tira as Evidências do elo, pouco vale metade e desce a Força um nível, muito vale 1,5 vez sem subir a Força. O Declarado sobre a entidade vence o Ajuste. Decisão do Dono de 2026-11-22.

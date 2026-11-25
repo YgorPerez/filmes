@@ -2,7 +2,7 @@
 // against the golden vectors the Python engine's own modules wrote
 // (`golden.py`): 10,000 inputs each, around the 2-year and 5-year edges and
 // on every 29 February from 1988 to 2040.
-import { data, output } from '@filmes/key-migration'
+import * as names from '../python-names.ts'
 import { describe, expect, test } from 'vite-plus/test'
 import {
   adjustedStrength,
@@ -54,14 +54,14 @@ import { float, golden, outcome, same, type Tagged } from '../compat/golden.ts'
 
 const FOLDER = new URL('./golden/', import.meta.url)
 
-/** Python's names, in English through the key migration's tables. */
+/** Python's names, in English (`python-names.ts`). */
 const english = (table: Record<string, string>, pt: string): string =>
   table[pt] ?? pt
-const strength = (pt: string) => english(output.STRENGTHS, pt) as Strength
-const kind = (pt: string) => english(output.KINDS, pt) as Kind
-const link = (pt: string) => english(data.LINKS, pt)
-const level = (pt: string) => english(data.LEVELS, pt)
-const rule = (pt: string) => english(data.RULES, pt)
+const strength = (pt: string) => english(names.STRENGTHS, pt) as Strength
+const kind = (pt: string) => english(names.KINDS, pt) as Kind
+const link = (pt: string) => english(names.LINKS, pt)
+const level = (pt: string) => english(names.LEVELS, pt)
+const rule = (pt: string) => english(names.RULES, pt)
 
 /** A result against a tagged expected value: lists item by item, floats by
  * their bits, a thrown Python exception by its name. */

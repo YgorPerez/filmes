@@ -236,6 +236,7 @@ export {
   EngineError,
   engineError,
   type ErrorCode,
+  type ErrorReason,
 } from './runtime/EngineError.ts'
 export {
   Environment,

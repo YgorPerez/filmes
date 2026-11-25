@@ -4,7 +4,6 @@
 
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { migrateConfigFile } from '@filmes/key-migration'
 import { expect } from 'vite-plus/test'
 import {
   recommend,
@@ -38,23 +37,17 @@ export const expectRecordedRecommendation = async (
   return out
 }
 
-/** A copy of `config/pesos.toml` with `from` replaced by `to`, migrated to
- * English: the engine's `FILMES_PESOS`. */
+/** A copy of `config/weights.toml` with `from` replaced by `to`: the
+ * engine's `FILMES_PESOS`. */
 export const weightsWith = (
   fixture: Fixture,
   from: string,
   to: string,
 ): Vars => {
-  const text = readFileSync(join(ROOT, 'config/pesos.toml'), 'utf8')
-  if (!text.includes(from)) throw new Error(`pesos.toml has no ${from}`)
-  const english = migrateConfigFile(
-    'pesos.toml',
-    text.replace(from, to),
-    'to-en',
-  )
-  if (!english) throw new Error('pesos.toml did not migrate')
+  const text = readFileSync(join(ROOT, 'config/weights.toml'), 'utf8')
+  if (!text.includes(from)) throw new Error(`weights.toml has no ${from}`)
   const file = join(fixture.root, 'weights-test.toml')
-  writeFileSync(file, english.text)
+  writeFileSync(file, text.replace(from, to))
   return { FILMES_PESOS: file }
 }
 

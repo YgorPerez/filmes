@@ -1,5 +1,5 @@
-// `weights.toml`, the numbers `avaliar` calibrates (the Python
-// `config/pesos.toml`, with the English keys of ADR 0002). The Força rules
+// `weights.toml`, the numbers `avaliar` calibrates (Python's
+// weights file, with the English keys of ADR 0002). The Força rules
 // are not here: they are fixed in code.
 //
 // A table whose keys are data (`path.weight`, by predicate) is a `Record`, so

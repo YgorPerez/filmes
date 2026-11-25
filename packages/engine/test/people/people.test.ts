@@ -4,7 +4,7 @@
 // the `pessoa` command and the DB sync come with #87.
 import { readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { data, migrateDataFile, output } from '@filmes/key-migration'
+import * as names from '../python-names.ts'
 import { Effect } from 'effect'
 import { describe, expect, test } from 'vite-plus/test'
 import {
@@ -31,17 +31,15 @@ import {
 } from '../../src/index.ts'
 import { useFixture, type Fixture } from '../fixture.ts'
 
-/** Carol, as tests/test_pessoa.py writes her, migrated to English keys. */
-const CAROL = migrateDataFile(
-  'person',
-  `---
-nome: Carol
-apelidos: [Carolzinha]
-vetos:
-- texto: nada da Sofia Rangel
-  alvo: Q9000018
-  rotulo: Sofia Rangel
-  data: 2026-01-05
+/** Carol, as tests/test_pessoa.py wrote her, in English keys. */
+const CAROL = `---
+name: Carol
+aliases: [Carolzinha]
+vetoes:
+- text: nada da Sofia Rangel
+  target: Q9000018
+  label: Sofia Rangel
+  date: 2026-01-05
 imports: []
 ---
 Amiga da faculdade.
@@ -54,9 +52,7 @@ Amiga da faculdade.
 ## Relatos
 
 - 2026-04-04 · descrição do Dono · específico · não gosta de Davi Couto (Q9001803) · "acha o Davi Couto canastrão"
-`,
-  'to-en',
-)
+`
 
 const file = (fixture: Fixture, slug: string) =>
   join(fixture.data, 'people', `${slug}.md`)
@@ -450,7 +446,9 @@ describe('creating a Pessoa', () => {
   test('one more Dono beside the ones there are (#131)', async () => {
     const fixture = useFixture()
 
-    await fixture.ok(createPerson({ name: 'Ana', owner: true }))
+    await fixture.ok(
+      createPerson({ name: 'Ana', owner: true, email: 'ana@example.org' }),
+    )
 
     expect(frontmatter(fixture, 'ana')).toMatchObject({ owner: true })
   })
@@ -460,33 +458,93 @@ describe('creating a Pessoa', () => {
       { name: 'Outro Bruno', slug: 'bruno' },
       'person_exists',
       "já existe uma Pessoa com o slug 'bruno'",
+      'slug_taken',
     ],
     [
       { name: 'Ana', slug: 'Ana' },
       'invalid_usage',
       "slug inválido: 'Ana' (só letras minúsculas sem acento, números e '-')",
+      'invalid_slug',
     ],
     [
       { name: '日本' },
       'invalid_usage',
       "slug inválido: '' (só letras minúsculas sem acento, números e '-')",
+      'invalid_slug',
     ],
     [
       { name: ' DONO ' },
       'invalid_usage',
       "'dono' é reservado para achar o Dono",
+      'reserved_name',
     ],
     [
       { name: 'Ana', slug: 'dono' },
       'invalid_usage',
       "'dono' é reservado para achar o Dono",
+      'reserved_name',
     ],
-  ])('%j is an error', async (input, code, message) => {
+    [
+      { name: 'Ana', owner: true },
+      'invalid_usage',
+      'um Dono precisa do e-mail do Google, para entrar no site',
+      'email_required',
+    ],
+    [
+      { name: 'Ana', owner: true, email: 'ana@example' },
+      'invalid_usage',
+      "e-mail inválido: 'ana@example'",
+      'invalid_email',
+    ],
+    [
+      { name: 'Ana', owner: true, email: 'ana lima@example.org' },
+      'invalid_usage',
+      "e-mail inválido: 'ana lima@example.org'",
+      'invalid_email',
+    ],
+    [
+      { name: 'Ana', email: 'ana@example.org' },
+      'invalid_usage',
+      'só um Dono tem e-mail: ele serve para entrar no site',
+      'email_not_owner',
+    ],
+    [
+      { name: 'Ana', owner: true, email: 'Bruno@Example.org' },
+      'invalid_usage',
+      "o e-mail 'bruno@example.org' já é de bruno",
+      'email_taken',
+    ],
+    [
+      { name: ' VERA ', slug: 'vera-lima' },
+      'person_exists',
+      "já existe uma Pessoa chamada 'VERA': vera",
+      'name_taken',
+    ],
+    [
+      { name: 'Ana', aliases: ['Aninha', 'EU'] },
+      'person_exists',
+      "já existe uma Pessoa chamada 'EU': bruno",
+      'name_taken',
+    ],
+    [
+      { name: 'Joana', aliases: ['quim'] },
+      'person_exists',
+      "já existe uma Pessoa chamada 'quim': quim",
+      'name_taken',
+    ],
+    [
+      { name: 'Teodoro', slug: 'eu' },
+      'person_exists',
+      "já existe uma Pessoa chamada 'eu': bruno",
+      'name_taken',
+    ],
+  ])('%j is an error', async (input, code, message, reason) => {
     const fixture = useFixture()
 
     expect(await errorOf(fixture, createPerson(input))).toEqual({
       code,
       message,
+      reason,
     })
   })
 })
@@ -792,11 +850,11 @@ describe('the sections of a Pessoa', () => {
 })
 
 describe('closed lists', () => {
-  test('are the code names of the key migration', () => {
-    expect(LINKS).toEqual(Object.values(data.LINKS))
-    expect(LEVELS).toEqual(Object.values(data.LEVELS))
+  test('are Python’s, in English', () => {
+    expect(LINKS).toEqual(Object.values(names.LINKS))
+    expect(LEVELS).toEqual(Object.values(names.LEVELS))
     expect(STATEMENT_REACTIONS).toEqual(
-      Object.values(output.STATEMENT_REACTIONS),
+      Object.values(names.STATEMENT_REACTIONS),
     )
   })
 })

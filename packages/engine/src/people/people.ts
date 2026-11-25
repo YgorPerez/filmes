@@ -403,7 +403,72 @@ export interface NewPerson {
   /** From the name when missing. */
   readonly slug?: string
   readonly owner?: boolean
+  /** A Dono's Google e-mail, for the login; stored in lower case. */
+  readonly email?: string
 }
+
+/** A Dono logs in with her Google e-mail, so she needs one; nobody else
+ * has one. Lower case, as the login compares it, and nobody else's: two
+ * Donos with one address would lock both out. */
+const newOwnerEmail = (
+  input: NewPerson,
+): Effect.Effect<string | null, EngineError, Environment> =>
+  Effect.gen(function* () {
+    const email = input.email?.trim().toLowerCase() || null
+    if (!input.owner)
+      return email === null
+        ? null
+        : yield* engineError(
+            'invalid_usage',
+            'só um Dono tem e-mail: ele serve para entrar no site',
+            'email_not_owner',
+          )
+    if (email === null)
+      return yield* engineError(
+        'invalid_usage',
+        'um Dono precisa do e-mail do Google, para entrar no site',
+        'email_required',
+      )
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+      return yield* engineError(
+        'invalid_usage',
+        `e-mail inválido: '${email}'`,
+        'invalid_email',
+      )
+    const holder = (yield* readPeople).find(
+      (p) => p.email?.toLowerCase() === email,
+    )
+    if (holder !== undefined)
+      return yield* engineError(
+        'invalid_usage',
+        `o e-mail '${email}' já é de ${holder.slug}`,
+        'email_taken',
+      )
+    return email
+  })
+
+/** Fails when one of the new Pessoa's names (slug, name, aliases) already
+ * finds another Pessoa, compared as `resolvePerson` compares: a request by
+ * that name would no longer know whom it means. */
+const nameFree = (
+  names: readonly string[],
+): Effect.Effect<void, EngineError, Environment> =>
+  Effect.gen(function* () {
+    const people = yield* readPeople
+    for (const name of names.map(pyStrip)) {
+      const holder = people.find((p) =>
+        [p.slug, p.name, ...p.aliases].some(
+          (n) => casefold(n) === casefold(name),
+        ),
+      )
+      if (holder !== undefined)
+        return yield* engineError(
+          'person_exists',
+          `já existe uma Pessoa chamada '${name}': ${holder.slug}`,
+          'name_taken',
+        )
+    }
+  })
 
 /** Creates the Pessoa's file (`pessoas.criar`). */
 export const createPerson = (
@@ -415,24 +480,29 @@ export const createPerson = (
       return yield* engineError(
         'invalid_usage',
         `slug inválido: '${slug}' (só letras minúsculas sem acento, números e '-')`,
+        'invalid_slug',
       )
     if (slug === 'dono' || casefold(pyStrip(input.name)) === 'dono')
       return yield* engineError(
         'invalid_usage',
         "'dono' é reservado para achar o Dono",
+        'reserved_name',
       )
     const folder = yield* peopleFolder
     if (yield* Effect.sync(() => existsSync(join(folder, `${slug}.md`))))
       return yield* engineError(
         'person_exists',
         `já existe uma Pessoa com o slug '${slug}'`,
+        'slug_taken',
       )
+    yield* nameFree([slug, input.name, ...(input.aliases ?? [])])
+    const email = yield* newOwnerEmail(input)
     const person: Person = {
       slug,
       name: pyStrip(input.name),
       aliases: [...new Set(input.aliases ?? [])],
       owner: input.owner ?? false,
-      email: null,
+      email,
       admin: false,
       vetoes: [],
       adjustments: [],

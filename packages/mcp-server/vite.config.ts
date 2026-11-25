@@ -17,7 +17,6 @@ export default defineConfig({
       '**/tests/fixture/**',
       '**/engine/src/rebuild/schema/*.sql',
       '**/config/*.{toml,json}',
-      '**/key-migration/src/**',
     ],
     coverage: {
       provider: 'v8',
