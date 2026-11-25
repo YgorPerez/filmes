@@ -3,7 +3,7 @@
 // Python leaves (#76 §2.2): a Nota's `tipo` is `nota`, an edge's `predicado`
 // is `diretor`, a Veto to a tag group keeps the Portuguese group key. The
 // engine reads them here into its English names, and a test keeps every map
-// equal to the key migration's tables.
+// equal to Python's names (`test/python-names.ts`).
 
 import type { Kind, Level, Link } from '../evidence/strength.ts'
 
@@ -69,5 +69,5 @@ export const linkOf = (predicate: string): Link | undefined =>
  * a film or entity id as it is. */
 export const targetOf = (value: string): string => TAG_GROUP[value] ?? value
 
-/** The maps, for the test that keeps them equal to the key migration's. */
+/** The maps, for the test that keeps them equal to Python's names. */
 export const DATABASE_VALUES = { KIND, LEVEL, TAG_GROUP } as const

@@ -28,7 +28,7 @@ export interface ToolContext {
 }
 
 export interface Tool<Input extends z.ZodObject = z.ZodObject> {
-  /** English, as key-migration's `output.COMMANDS` names the command. */
+  /** English: the Python command's name, translated (ADR 0001). */
   readonly name: string
   /** PT-BR, with the GLOSSARY terms: the model reads it. */
   readonly description: string

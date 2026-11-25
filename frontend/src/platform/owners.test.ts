@@ -65,8 +65,8 @@ describe('the Donos in filmes-dados', () => {
       list: '---\n- a\n---\n',
       // No name: the engine refuses the file, so no one gets in by it.
       ana: '---\nowner: true\nemail: ana@example.org\n---\n',
-      // An unknown key: the key migration refuses it.
-      teo: '---\nnome: Teo\ndono: true\nemail: teo@example.org\nidade: 9\n---\n',
+      // An unknown key: the engine's Pessoa reader refuses it.
+      teo: '---\nname: Teo\nowner: true\nemail: teo@example.org\nidade: 9\n---\n',
       rosa: '---\nname: Rosa\nowner: true\nemail: rosa@example.org\n---\n',
       'notes.txt':
         '---\nname: Notes\nowner: true\nemail: notes@example.org\n---\n',

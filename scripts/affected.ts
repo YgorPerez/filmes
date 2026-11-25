@@ -13,8 +13,7 @@ export type Plan = {
   /** Why everything runs, or `null` when only the affected part runs. */
   readonly full: string | null
   /** The folders where Vitest runs (with `--changed`, unless `full`): `frontend`,
-   * `packages/engine`, `packages/key-migration`, `packages/mcp-server`, or
-   * `.` for the root
+   * `packages/engine`, `packages/mcp-server`, or `.` for the root
    * scripts. */
   readonly vitest: readonly string[]
 }
@@ -35,21 +34,13 @@ const CONFIG = /^config\//
 /** A test folder, whose files (fixtures, a corpus) are data. */
 const TEST_DATA = /(^|\/)tests?\//
 const FROM_ROOT = /^(\.github\/)?scripts\//
-/** What the key migration's round-trip test reads, outside its package. */
-const MIGRATED = /^(config\/|tests\/fixture\/dados\/)/
-/** What the engine's tests read outside its package: the fixture and the
- * config (`packages/engine/test/global-setup.ts`), and the key migration
- * that puts them in English. */
-const ENGINE_FIXTURE =
-  /^(tests\/fixture\/|config\/|packages\/key-migration\/src\/)/
-/** What the MCP server's tests read outside the import graph: the engine's
- * fixture, built from these (`packages/engine/test/global-setup.ts`). */
-const MCP_SERVER_FIXTURE =
-  /^(tests\/fixture\/|config\/|packages\/key-migration\/src\/)/
+/** What the engine's and the MCP server's tests read outside the import
+ * graph: the fixture and the config the engine's fixture is built from
+ * (`packages/engine/test/global-setup.ts`). */
+const ENGINE_FIXTURE = /^(tests\/fixture\/|config\/)/
 const VITEST_FOLDERS = [
   'frontend',
   'packages/engine',
-  'packages/key-migration',
   'packages/mcp-server',
   '.',
 ]
@@ -69,12 +60,11 @@ export function planForDiff(files: readonly string[]): Plan {
     // Markdown under config/ or a test folder is data the tests read, not text.
     if (TEXT_ONLY.test(file) && !CONFIG.test(file) && !TEST_DATA.test(file))
       continue
-    if (MIGRATED.test(file)) vitest.add('packages/key-migration')
-    if (ENGINE_FIXTURE.test(file)) vitest.add('packages/engine')
-    if (MCP_SERVER_FIXTURE.test(file)) vitest.add('packages/mcp-server')
-    if (file.startsWith('packages/key-migration/'))
-      vitest.add('packages/key-migration')
-    else if (FROM_ROOT.test(file)) vitest.add('.')
+    if (ENGINE_FIXTURE.test(file)) {
+      vitest.add('packages/engine')
+      vitest.add('packages/mcp-server')
+    }
+    if (FROM_ROOT.test(file)) vitest.add('.')
     else if (file.startsWith('frontend/')) vitest.add('frontend')
     else if (file.startsWith('packages/mcp-server/'))
       vitest.add('packages/mcp-server')

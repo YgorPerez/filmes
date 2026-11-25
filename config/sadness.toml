@@ -1,7 +1,7 @@
 # Vocabulário fixo da Restrição "nada triste" (#42), que `recomendar --sem-tristeza` aplica.
 #
 # O filme sai quando tem uma das tags abaixo no tags.csv do MovieLens (com o
-# mínimo de usuários de [sem_tristeza] em pesos.toml) ou no Tag Genome 2021
+# mínimo de usuários de [no_sad] em weights.toml) ou no Tag Genome 2021
 # (relevância mínima, idem), ou quando o Wikidata dá a ele um dos itens de
 # `wikidata` como tema (P921) ou como base (P144).
 #

@@ -39,8 +39,8 @@ import { measuredPeople, type MeasuredPerson } from './people.ts'
 import { dataVersions, writeReport } from './report.ts'
 import type { ReportValue } from './yaml.ts'
 
-/** A progress event, as `avaliar --progresso` wrote it on stderr (EN keys
- * of key-migration's `progress` table). */
+/** A progress event, as `avaliar --progresso` wrote it on stderr (in English
+ * keys, ADR 0002). */
 export interface EvaluationProgress {
   readonly progress: number
   readonly total: 100
@@ -83,8 +83,7 @@ export interface OnlineMeasures {
   readonly meanReaction: number | null
 }
 
-/** `avaliar`'s result, with the EN keys of key-migration's `evaluate`
- * table. */
+/** `avaliar`'s result, in English keys (ADR 0002). */
 export interface Evaluation {
   readonly date: string
   readonly offline: OfflineResult

@@ -82,7 +82,7 @@ statement_weight = 1.0
 on_demand_reach = 50
 
 [tag_vetoes]
-# Mínimos para uma tag de config/vetos_por_tag.toml tirar o filme de um Veto por grupo.
+# Mínimos para uma tag de config/tag_vetoes.toml tirar o filme de um Veto por grupo.
 # Mais firmes que os do "nada triste": "bobo" é mais subjetivo que "triste".
 min_relevance = 0.7
 min_users = 10
@@ -94,7 +94,7 @@ min_users = 10
 weight = 0.3
 
 [no_sad]
-# Mínimos para uma tag de config/tristeza.toml tirar o filme em `--sem-tristeza`.
+# Mínimos para uma tag de config/sadness.toml tirar o filme em `--sem-tristeza`.
 # Tema pesado pede menos usuários: Polytechnique tem "massacre" de 2.
 min_users_sad = 3
 min_users_heavy_theme = 2

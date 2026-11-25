@@ -1,7 +1,7 @@
 # Grupos de tags que um Veto pode nomear (#56): `pessoa vetar <pessoa> <texto> --grupo <chave>`.
 #
 # Um filme sai quando tem um dos `generos_imdb` (vazio: qualquer gênero) e uma das
-# tags com o mínimo de [vetos_por_tag] em pesos.toml: relevância no Tag Genome ou
+# tags com o mínimo de [tag_vetoes] em weights.toml: relevância no Tag Genome ou
 # usuários no tags.csv do MovieLens. As tags estão em minúsculas, como nas
 # tabelas tags_movielens e genoma. Mudar uma lista muda a Recomendação de quem
 # vetou o grupo.

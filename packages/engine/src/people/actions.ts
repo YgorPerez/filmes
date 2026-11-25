@@ -7,8 +7,8 @@
 // alone, as in Python. The commit is by `author`, the logged-in Pessoa who
 // asked (the edge passes her); without one, by `ENGINE_AUTHOR`.
 //
-// The results are named as key-migration's output table names the Python
-// JSON (`pessoa ver` → `person view`); messages are Python's, word for word.
+// The results are the Python JSON in English names (ADR 0002; `pessoa ver`
+// → `person view`); messages are Python's, word for word.
 
 import { existsSync } from 'node:fs'
 import { Effect } from 'effect'

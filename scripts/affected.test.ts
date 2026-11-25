@@ -25,38 +25,22 @@ describe('planForDiff', () => {
     })
   })
 
-  it('the key migration runs its own tests and the engine, whose fixture it migrates', () => {
-    expect(
-      planForDiff(['packages/key-migration/src/migrate.ts']),
-    ).toMatchObject({
-      vitest: [
-        'packages/engine',
-        'packages/key-migration',
-        'packages/mcp-server',
-      ],
-    })
-  })
-
-  it('config/ and the fixture data also run the key migration, which round-trips them, and the engine', () => {
+  it("config/ and the fixture data run the engine's and the MCP server's tests", () => {
     for (const file of [
-      'config/pesos.toml',
-      'tests/fixture/dados/pessoas/ana.md',
+      'config/weights.toml',
+      'tests/fixture/dados/people/ana.md',
     ])
       expect({ file, ...planForDiff([file]) }).toMatchObject({
         file,
-        vitest: [
-          'packages/engine',
-          'packages/key-migration',
-          'packages/mcp-server',
-        ],
+        vitest: ['packages/engine', 'packages/mcp-server'],
       })
   })
 
   it("Markdown a package's tests read is data: it runs that package's tests", () => {
     expect(
-      planForDiff(['packages/key-migration/test/corpus/person/ana.md']),
+      planForDiff(['packages/mcp-server/test/fixture/note.md']),
     ).toMatchObject({
-      vitest: ['packages/key-migration'],
+      vitest: ['packages/mcp-server'],
     })
   })
 
@@ -90,13 +74,7 @@ describe('planForDiff', () => {
       const plan = planForDiff(['frontend/src/ui/home.tsx', file])
       expect(plan.full).toContain(file)
       expect(plan).toMatchObject({
-        vitest: [
-          'frontend',
-          'packages/engine',
-          'packages/key-migration',
-          'packages/mcp-server',
-          '.',
-        ],
+        vitest: ['frontend', 'packages/engine', 'packages/mcp-server', '.'],
       })
     }
   })

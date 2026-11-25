@@ -95,8 +95,8 @@ export type ConstraintEffect<A> = Effect.Effect<
 >
 
 /** A Restrição as the Session stores it in `context.constraints` (Python's
- * `{"nome", **como_json()}`), with the data's English keys (key-migration's
- * `constraint` map: `since`, `language`, `max_age_rating`...). */
+ * `{"nome", **como_json()}`), with the data's English keys (`since`, `language`,
+ * `max_age_rating`...). */
 export interface StoredConstraint {
   readonly name: string
   readonly [field: string]: unknown

@@ -294,11 +294,7 @@ describe('the cut of the N strongest', () => {
   const largest = (values: number[]) =>
     values.reduce((best, v) => (Math.abs(v) > Math.abs(best) ? v : best))
   const withCut = (fixture: Fixture) =>
-    weightsWith(
-      fixture,
-      '\nmax_evidence = 5\n',
-      '\nmax_evidence = 1\n',
-    )
+    weightsWith(fixture, '\nmax_evidence = 5\n', '\nmax_evidence = 1\n')
 
   test('only the N strongest add to the utility', async () => {
     const fixture = useFixture()

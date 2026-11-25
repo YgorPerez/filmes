@@ -87,8 +87,8 @@ export interface Updated {
   readonly dumps: Readonly<Record<string, PinnedDump>>
 }
 
-/** A progress event, as `atualizar` wrote it on stderr (EN keys of
- * key-migration's `progress` table). `progress` counts steps and may be a
+/** A progress event, as `atualizar` wrote it on stderr (in English
+ * keys, ADR 0002). `progress` counts steps and may be a
  * fraction inside one. */
 export interface UpdateProgress {
   readonly progress: number

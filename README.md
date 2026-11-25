@@ -84,10 +84,10 @@ de antes. Se uma consulta falhar
 no QLever, busca aquele conjunto por predicado no WDQS. O progresso sai em
 stderr, uma linha JSON por passo.
 
-O manifesto [config/versoes-catalogo.json](config/versoes-catalogo.json) é o
+O manifesto [config/catalog-versions.json](config/catalog-versions.json) é o
 único arquivo da atualização que vai para o git. Ele fixa a data e o SHA-256
 de cada dump. Para escrever ou ler outro manifesto, use `FILMES_VERSOES` ou
-`[caminhos] versoes` em `config/local.toml`.
+`[paths] versions` em `config/local.toml`.
 
 Para reconstruir uma versão anterior, use seu manifesto e guarde os arquivos
 que ele lista, cada um em `<catalogo>/<sha256>/<nome do dump>`.

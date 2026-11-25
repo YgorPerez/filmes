@@ -8,9 +8,9 @@
 
 import { Schema } from 'effect'
 
-/** Every code the engine can fail with, in English (ADR 0001). The same set
- * as the values of `ERROR_CODES` in the key migration's output table, which
- * a test checks: a new code goes in both. */
+/** Every code the engine can fail with, in English (ADR 0001). The English
+ * names of Python's codes, which a test checks (`test/python-names.ts`): a
+ * new code goes in both. */
 export const ERROR_CODES = [
   'invalid_usage',
   'invalid_file',
