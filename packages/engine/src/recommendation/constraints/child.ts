@@ -26,6 +26,7 @@ import { Omdb, OMDB_NAME } from '../../sources/Omdb.ts'
 import { num, text } from '../../sqlite/row.ts'
 import {
   drop,
+  filmsJson,
   pass,
   type Constraint,
   type ConstraintModule,
@@ -104,6 +105,8 @@ const child = (age: number): Constraint => {
     result: () => ({}),
     evaluate: (context, films) =>
       Effect.gen(function* () {
+        // `adultos` is a few hundred rows: read whole, it costs less than
+        // building the `json_each` list.
         const adults = new Set(
           (yield* context.db.all('SELECT filme_id FROM adultos')).map((row) =>
             text(row, 'filme_id'),
@@ -111,7 +114,10 @@ const child = (age: number): Constraint => {
         )
         const ratings = new Map<string, RatingRow>()
         for (const row of yield* context.db.all(
-          'SELECT * FROM faixas_etarias ORDER BY filme_id, fato_id',
+          `SELECT * FROM faixas_etarias
+             WHERE filme_id IN (SELECT value FROM json_each(?))
+             ORDER BY filme_id, fato_id`,
+          filmsJson(films),
         )) {
           const next: RatingRow = {
             factId: text(row, 'fato_id'),

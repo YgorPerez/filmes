@@ -21,6 +21,7 @@ import type { SQLInputValue } from 'node:sqlite'
 import type { Connection, SqliteError } from '../../sqlite/Sqlite.ts'
 import {
   drop,
+  filmsJson,
   pass,
   type Constraint,
   type ConstraintModule,
@@ -52,7 +53,10 @@ const MIN_USERS: Record<SadSignal, keyof Weights['no_sad']> = {
 
 const marks = (items: ReadonlyArray<unknown>) => items.map(() => '?').join(',')
 
-/** The films one signal marks, in Python's query order. */
+/** The films one signal marks, in Python's query order. These stay
+ * catalog-wide: the tag and entity indexes keep them to a few thousand rows,
+ * and filtering them to a 14k-id `json_each` cost more than it saved
+ * (#129). */
 const marked = (
   db: Connection,
   list: typeof SignalList.Type,
@@ -126,8 +130,13 @@ const noSad: Constraint = {
           signal,
         ))
           if (films.has(filmId) && !found.has(filmId)) found.set(filmId, signal)
+      // Whether the film has any tag: two lookups on the `(filme_id, tag)`
+      // index per film, instead of the catalog-wide UNION.
       const tagged = yield* context.db.all(
-        'SELECT filme_id FROM tags_movielens UNION SELECT filme_id FROM genoma ORDER BY filme_id',
+        `SELECT value AS filme_id FROM json_each(?)
+           WHERE EXISTS (SELECT 1 FROM tags_movielens WHERE filme_id = value)
+              OR EXISTS (SELECT 1 FROM genoma WHERE filme_id = value)`,
+        filmsJson(films),
       )
       const withTags = new Set(tagged.map((row) => text(row, 'filme_id')))
       return new Map<string, Verdict>(

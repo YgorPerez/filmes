@@ -9,6 +9,7 @@ import { requestLine } from '../../evidence/Evidence.ts'
 import { engineError } from '../../runtime/EngineError.ts'
 import { text, textOrNull } from '../../sqlite/row.ts'
 import {
+  filmsJson,
   pass,
   type Constraint,
   type ConstraintModule,
@@ -30,10 +31,13 @@ const language = (asked: string): Constraint => ({
       const target = casefold(asked)
       const verdicts = new Map<string, Pass>()
       for (const row of yield* context.db.all(
-        'SELECT * FROM idiomas_originais ORDER BY filme_id, fato_id',
+        `SELECT * FROM idiomas_originais
+           WHERE filme_id IN (SELECT value FROM json_each(?))
+           ORDER BY filme_id, fato_id`,
+        filmsJson(films),
       )) {
         const filmId = text(row, 'filme_id')
-        if (!films.has(filmId) || verdicts.has(filmId)) continue
+        if (verdicts.has(filmId)) continue
         const names = [
           textOrNull(row, 'codigo') ?? '',
           text(row, 'rotulo'),
