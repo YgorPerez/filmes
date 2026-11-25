@@ -72,7 +72,7 @@ Erro \`invalid_usage\` (Sessão errada, marcação desconhecida, Já vi de quem 
 
 Tudo em \`person\`, com \`action\`. Cada gravação é um commit no repo de dados em nome do Dono e vale já na próxima Recomendação. "dono" é o Dono.
 
-- \`create\` cadastra nome e apelidos (\`name\`, \`aliases\`). \`view\` mostra o que se sabe da Pessoa. A idade da criança mais nova só entra no pedido da Sessão.
+- \`create\` cadastra nome e apelidos (\`name\`, \`aliases\`). Um Dono novo vai com \`owner: true\` e o e-mail do Google dele (\`email\`): é com ele que entra no site e no conector. Enquanto a tela de consentimento do Google estiver em teste, avise que o e-mail também precisa entrar nos usuários de teste dela. \`view\` mostra o que se sabe da Pessoa. A idade da criança mais nova só entra no pedido da Sessão.
 - Para achar alvos, resolva títulos (\`film\`) e entidades (\`person\`: diretor, roteirista, ator; \`genre\`; \`series\`) com \`search_catalog\`. O \`links\` de uma entidade diz por que elo ela pesa (o \`link\` do Ajuste). Nome ambíguo: pergunte com o ano ou um filme de cada (\`knownFor\`) antes de gravar.
 
 ### Questionário

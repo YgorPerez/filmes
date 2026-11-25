@@ -450,7 +450,9 @@ describe('creating a Pessoa', () => {
   test('one more Dono beside the ones there are (#131)', async () => {
     const fixture = useFixture()
 
-    await fixture.ok(createPerson({ name: 'Ana', owner: true }))
+    await fixture.ok(
+      createPerson({ name: 'Ana', owner: true, email: 'ana@example.org' }),
+    )
 
     expect(frontmatter(fixture, 'ana')).toMatchObject({ owner: true })
   })
@@ -480,6 +482,31 @@ describe('creating a Pessoa', () => {
       { name: 'Ana', slug: 'dono' },
       'invalid_usage',
       "'dono' é reservado para achar o Dono",
+    ],
+    [
+      { name: 'Ana', owner: true },
+      'invalid_usage',
+      'um Dono precisa do e-mail do Google, para entrar no site',
+    ],
+    [
+      { name: 'Ana', owner: true, email: 'ana@example' },
+      'invalid_usage',
+      "e-mail inválido: 'ana@example'",
+    ],
+    [
+      { name: 'Ana', owner: true, email: 'ana lima@example.org' },
+      'invalid_usage',
+      "e-mail inválido: 'ana lima@example.org'",
+    ],
+    [
+      { name: 'Ana', email: 'ana@example.org' },
+      'invalid_usage',
+      'só um Dono tem e-mail: ele serve para entrar no site',
+    ],
+    [
+      { name: 'Ana', owner: true, email: 'Bruno@Example.org' },
+      'invalid_usage',
+      "o e-mail 'bruno@example.org' já é de bruno",
     ],
   ])('%j is an error', async (input, code, message) => {
     const fixture = useFixture()
