@@ -38,8 +38,9 @@ type Props = {
   billboard: BillboardModel
   /** Where Enviar posts the text (field `texto`): the web. */
   action?: string
-  /** Gets the text instead of the post: the MCP Apps view. */
-  onSend?: (text: string) => void
+  /** Gets the text instead of the post: the MCP Apps view. What its
+   * promise gives is the status line. */
+  onSend?: (text: string) => void | Promise<string>
   /** The marks of this version were sent: forget the kept ones. */
   sent?: boolean
 }
@@ -100,6 +101,7 @@ function Reply({
   message,
   onMessage: setMessage,
   onAddition,
+  onSend,
 }: {
   billboard: BillboardModel
   marks: Marks
@@ -107,6 +109,9 @@ function Reply({
   message: string
   onMessage: (message: string) => void
   onAddition: (text: string) => void
+  /** Enviar without the form's submit: a sandboxed frame without
+   * `allow-forms` (the MCP Apps host's) never fires it. */
+  onSend?: () => void
 }) {
   const { reply } = BILLBOARD
   const [manual, setManual] = useState<string | null>(null)
@@ -158,7 +163,8 @@ function Reply({
       {summary && <p className="text-meta text-ink-2">{summary}</p>}
       <div className="flex flex-wrap gap-sm">
         <button
-          type="submit"
+          type={onSend ? 'button' : 'submit'}
+          onClick={onSend}
           className={`${button} bg-marquee-red text-on-red`}
         >
           {reply.send}
@@ -228,11 +234,24 @@ export function Billboard({ billboard, action, onSend, sent = false }: Props) {
   const changeFilm = (id: string) => (film: FilmMarks) =>
     change({ ...marks, films: { ...marks.films, [id]: film } })
 
+  // The web posts the form; nothing marked stays here.
   const submit = (event: FormEvent<HTMLFormElement>) => {
+    if (hasMarks(replyText(billboard, marks))) return
+    event.preventDefault()
+    setMessage(BILLBOARD.reply.nothing)
+  }
+  // The view hands the text over instead.
+  const send = (handOver: NonNullable<Props['onSend']>) => () => {
     const text = replyText(billboard, marks)
-    if (!hasMarks(text) || onSend) event.preventDefault()
-    if (!hasMarks(text)) setMessage(BILLBOARD.reply.nothing)
-    else onSend?.(text)
+    if (!hasMarks(text)) {
+      setMessage(BILLBOARD.reply.nothing)
+      return
+    }
+    const status = handOver(text)
+    if (status) {
+      setMessage(BILLBOARD.view.sending)
+      void status.then(setMessage)
+    }
   }
 
   const cards = billboard.films.map((film, i) => (
@@ -268,6 +287,7 @@ export function Billboard({ billboard, action, onSend, sent = false }: Props) {
             message={message}
             onMessage={setMessage}
             onAddition={(addition) => change({ ...marks, addition })}
+            onSend={onSend && send(onSend)}
           />
         </form>
       ) : (

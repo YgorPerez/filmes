@@ -64,6 +64,8 @@ O texto que começa com \`#cartaz <sessao> v<n>\` vai inteiro, como veio, para \
 3. Com \`regenerate\` verdadeiro, chame \`recommend\` com \`session\` e \`keep\` igual ao \`keep\` devolvido, e o pedido inteiro: os Presentes, o tempo, os Climas e as Restrições da versão anterior, mais o contexto da noite nos campos de \`recommend\` ("chegou a Ana" entra em \`attendees\`, "nada pesado" vira \`noSad\`). Em \`request\`, junte o pedido anterior e o acrescentar. Depois mostre o Cartaz novo.
 4. Para cada gosto permanente, um por vez, mostre a frase que vai gravar e espere o sim ("Gravar como Relato do Leo: 'o Leo odeia musical'?"). Só com o sim, grave com \`person\`, como em "Pessoas e gosto".
 
+Uma mensagem que começa com \`Enviei o Cartaz <sessao> v<n> pela tela\` veio do Enviar da tela do Cartaz, que já chamou \`answer_billboard\`: não chame de novo. Ela traz o que a ferramenta devolveu: a linha \`refazer · manter: ...\` (o \`keep\`, ou "nenhum"; sem ela, \`regenerate\` é falso), \`acrescentar: ...\` (o \`addition\`) e uma linha \`comentário <posição> <id> (<título>): ...\` por comentário. Siga os passos acima com esses valores.
+
 Erro \`invalid_usage\` (Sessão errada, marcação desconhecida, Já vi de quem não estava) não grava nada: diga o erro numa linha e peça o texto certo.
 
 ## Pessoas e gosto
