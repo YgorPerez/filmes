@@ -18,8 +18,13 @@ export const SESSIONS = {
     openEmpty: 'Nenhuma Sessão aberta.',
     closed: 'Fechadas',
     closedEmpty: 'Nenhuma Sessão fechada ainda.',
-    feedback: 'Dar o Feedback',
-    feedbackLabel: (id: string) => `Dar o Feedback da Sessão ${id}`,
+    feedback: 'Contar como foi',
+    feedbackLabel: (id: string) => `Contar como foi a Sessão ${id}`,
+    stub: (date: string, people: string, films: string) =>
+      `${date} · ${people} · ${films}`,
+    returnTitle: 'Falta contar como foi',
+    returnText:
+      'Diga o filme que viram e o que cada um achou. O Feedback fecha a Sessão.',
     chosen: (title: string) => `viram ${title}`,
     nothing: 'não viram nada',
   },
@@ -96,6 +101,8 @@ export const SESSIONS = {
     noSlow: 'Nada lento',
     noSad: 'Nada triste',
     submit: 'Recomendar',
+    searchFold: 'Parecido com um filme?',
+    searchFoldHint: 'ache o ID no Catálogo',
   },
 
   refusals: {

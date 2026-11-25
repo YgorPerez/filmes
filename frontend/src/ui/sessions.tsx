@@ -7,13 +7,10 @@ import {
 import type { ReplyRefusal, SessionNotice } from '#/content/billboard-reply'
 import type { CartazPage } from '#/platform/billboard'
 import type { SearchAnswer } from '#/platform/catalog-search'
-import type {
-  RequestOptions,
-  SessionItem,
-  SessionPerson,
-} from '#/platform/sessions'
+import type { RequestOptions, SessionItem } from '#/platform/sessions'
 import { Billboard } from './billboard'
 import { ImportsFrame } from './imports'
+import { Option } from './kit/option'
 import {
   Alert,
   CatalogSearch,
@@ -23,13 +20,22 @@ import {
   OwnerTag,
   Section,
   SelectField,
-  Submit,
+  SubmitButton,
   TextField,
 } from './person-parts'
+import {
+  Avatars,
+  DateLabel,
+  Ficha,
+  GroupHeading,
+  names,
+  NewSessionLink,
+  NightRequest,
+  ReturnBox,
+  SearchFold,
+  ShelfRow,
+} from './session-parts'
 import { SESSIONS } from './sessions.copy'
-
-const names = (attendees: readonly SessionPerson[]) =>
-  attendees.map((a) => a.name).join(', ')
 
 const sessionHref = (id: string) => `/sessoes/${encodeURIComponent(id)}`
 const feedbackHref = (id: string) => `/feedback/${encodeURIComponent(id)}`
@@ -38,33 +44,60 @@ const feedbackHref = (id: string) => `/feedback/${encodeURIComponent(id)}`
 const outcome = (s: SessionItem) =>
   s.chosen ? SESSIONS.list.chosen(s.chosen.title) : SESSIONS.list.nothing
 
-/** A Session in the list: a link to its page, and, while open, to its
- * Feedback (#115's form, outside `/sessoes`). */
-function Row({ session: s }: { session: SessionItem }) {
+/** An open Session: its ficha, with the Presentes and the date on the
+ * stub (a link to its page), the request on the shelf label with the
+ * Dono's words on the yellow paper, and the box to return it (its
+ * Feedback, #115's form, outside `/sessoes`). */
+function OpenRow({ session: s }: { session: SessionItem }) {
   const { list } = SESSIONS
+  const films = SESSIONS.films(s.recommendation.length)
   return (
-    <li className="flex flex-wrap items-center gap-sm border-rule px-xl py-sm not-first:border-t">
-      <a
-        href={sessionHref(s.id)}
-        className="flex min-h-touch min-w-0 flex-1 basis-[240px] flex-col justify-center gap-0.5 text-ink no-underline"
+    <li>
+      <Ficha
+        head={
+          <a
+            href={sessionHref(s.id)}
+            aria-label={list.stub(s.date, names(s.attendees), films)}
+            className="flex min-h-touch items-center gap-lg text-ink no-underline"
+          >
+            <Avatars people={s.attendees} />
+            <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <DateLabel>{s.date}</DateLabel>
+              <span className="font-display text-step-title">
+                {names(s.attendees)}
+              </span>
+            </span>
+            <span className="shrink-0 text-meta text-ink-2 tabular-nums">
+              {films}
+            </span>
+          </a>
+        }
       >
-        <span className="font-semibold">
-          {s.date} · {names(s.attendees)}
-        </span>
-        <Meta
-          parts={[
-            s.request,
-            s.open ? SESSIONS.films(s.recommendation.length) : outcome(s),
-            ...s.constraints,
-          ]}
+        <NightRequest items={[...s.moods, ...s.constraints]} note={s.request} />
+        <ReturnBox
+          title={list.returnTitle}
+          text={list.returnText}
+          href={feedbackHref(s.id)}
+          label={list.feedbackLabel(s.id)}
+          action={list.feedback}
         />
-      </a>
-      {s.open && (
-        <LinkButton href={feedbackHref(s.id)} label={list.feedbackLabel(s.id)}>
-          {list.feedback}
-        </LinkButton>
-      )}
+      </Ficha>
     </li>
+  )
+}
+
+/** A closed Session: a row of the shelf, what they saw under the names. */
+function ClosedRow({ session: s }: { session: SessionItem }) {
+  return (
+    <ShelfRow
+      href={sessionHref(s.id)}
+      before={<Avatars people={s.attendees} />}
+    >
+      <span className="font-display text-[15px] font-bold">
+        {names(s.attendees)}
+      </span>
+      <Meta parts={[s.date, outcome(s), s.request, ...s.constraints]} />
+    </ShelfRow>
   )
 }
 
@@ -73,21 +106,21 @@ function Group({
   title,
   empty,
   sessions,
+  Row,
 }: {
   id: string
   title: string
   empty: string
   sessions: SessionItem[]
+  Row: (props: { session: SessionItem }) => ReactNode
 }) {
   return (
-    <section aria-labelledby={id} className="flex flex-col gap-sm">
-      <h2 id={id} className="font-display text-title">
-        {title}
-      </h2>
+    <section aria-labelledby={id} className="flex flex-col gap-md">
+      <GroupHeading id={id} title={title} count={sessions.length} />
       {sessions.length === 0 ? (
         <p className="text-ink-2">{empty}</p>
       ) : (
-        <ul className="flex flex-col overflow-hidden rounded-card border border-rule bg-surface">
+        <ul className="flex flex-col gap-md">
           {sessions.map((s) => (
             <Row key={s.id} session={s} />
           ))}
@@ -97,19 +130,18 @@ function Group({
   )
 }
 
-/** `/sessoes`: the open Sessions, then the closed ones, and the way to a
- * new one. `sessions` is null when the engine cannot run on this server. */
+/** `/sessoes`: the way to a new Session, then the open Sessions, then the
+ * closed ones. `sessions` is null when the engine cannot run on this
+ * server. */
 export function SessionList({ sessions }: { sessions: SessionItem[] | null }) {
   const { list } = SESSIONS
   return (
     <ImportsFrame back={SESSIONS.back} backTo="/">
-      <div className="flex flex-col gap-sm">
+      <div className="flex flex-col gap-lg">
         <h1 className="font-display text-title">{list.title}</h1>
-        <p className="text-ink-2">{list.lead}</p>
+        <p className="max-w-[60ch] text-ink-2">{list.lead}</p>
+        <NewSessionLink>{list.create}</NewSessionLink>
       </div>
-      <LinkButton href="/sessoes/nova" variant="primary">
-        {list.create}
-      </LinkButton>
       {sessions === null ? (
         <Alert>{SESSIONS.unavailable}</Alert>
       ) : (
@@ -119,12 +151,14 @@ export function SessionList({ sessions }: { sessions: SessionItem[] | null }) {
             title={list.open}
             empty={list.openEmpty}
             sessions={sessions.filter((s) => s.open)}
+            Row={OpenRow}
           />
           <Group
             id="fechadas"
             title={list.closed}
             empty={list.closedEmpty}
             sessions={sessions.filter((s) => !s.open)}
+            Row={ClosedRow}
           />
         </>
       )}
@@ -236,37 +270,8 @@ function SessionView({
 
 // --- the Nova Sessão form ------------------------------------------------------
 
-const choice =
-  'flex min-h-touch cursor-pointer items-center gap-sm rounded-field border border-rule px-3 py-2 has-checked:border-ink has-checked:bg-surface-2'
-
-/** A checkbox or a radio, as a whole row to tap. */
-function Choice({
-  type = 'checkbox',
-  name,
-  value = 'sim',
-  defaultChecked,
-  children,
-}: {
-  type?: 'checkbox' | 'radio'
-  name: string
-  value?: string
-  defaultChecked?: boolean
-  children: ReactNode
-}) {
-  const input = { name, value, defaultChecked }
-  return (
-    <label className={choice}>
-      {type === 'radio' ? (
-        <input type="radio" {...input} />
-      ) : (
-        <input type="checkbox" {...input} />
-      )}
-      <span>{children}</span>
-    </label>
-  )
-}
-
-const grid = 'grid grid-cols-1 gap-sm sm:grid-cols-2'
+const grid = 'grid grid-cols-1 gap-lg sm:grid-cols-2'
+const pills = 'flex flex-wrap gap-sm'
 
 const CHILD_OPTIONS = [
   { value: '', label: SESSIONS.form.childNone },
@@ -290,7 +295,8 @@ const similarHref =
 /** `/sessoes/nova`: the form that opens a Session (`recommendSession`). A
  * plain POST to `/sessoes/nova/enviar`: it works before the JavaScript.
  * `options` is null when the engine cannot run on this server. Above it,
- * the Catálogo search (`search`) fills "Parecido com" (`similar`). */
+ * folded until it is needed, the Catálogo search (`search`) fills
+ * "Parecido com" (`similar`). */
 export function NewSession({
   options,
   refusal,
@@ -307,20 +313,26 @@ export function NewSession({
     <ImportsFrame back={SESSIONS.back} backTo="/sessoes">
       <div className="flex flex-col gap-sm">
         <h1 className="font-display text-title">{form.title}</h1>
-        <p className="text-ink-2">{form.lead}</p>
+        <p className="max-w-[60ch] text-ink-2">{form.lead}</p>
       </div>
       {refusal && <Alert>{SESSIONS.refusals[refusal]}</Alert>}
       {options === null ? (
         <Alert>{SESSIONS.unavailable}</Alert>
       ) : (
         <>
-          <CatalogSearch
-            action="/sessoes/nova"
-            scope="films"
-            answer={search}
-            keep={{ parecido: similar }}
-            pick={similarHref(similar, search?.query)}
-          />
+          <SearchFold
+            summary={form.searchFold}
+            hint={form.searchFoldHint}
+            open={search !== null || similar !== undefined}
+          >
+            <CatalogSearch
+              action="/sessoes/nova"
+              scope="films"
+              answer={search}
+              keep={{ parecido: similar }}
+              pick={similarHref(similar, search?.query)}
+            />
+          </SearchFold>
           <NewSessionForm options={options} similar={similar} />
         </>
       )}
@@ -347,7 +359,9 @@ function NewSessionForm({
       <Rule options={options} />
       <Moods moods={options.moods} />
       <Constraints similar={similar} />
-      <Submit variant="primary">{form.submit}</Submit>
+      <SubmitButton className="w-full sm:w-auto sm:self-start">
+        {form.submit}
+      </SubmitButton>
     </form>
   )
 }
@@ -356,9 +370,9 @@ function Attendees({ options }: { options: RequestOptions }) {
   const { form } = SESSIONS
   return (
     <Section id="presentes" title={form.attendees} lead={form.attendeesLead}>
-      <div className={grid}>
+      <div className={pills}>
         {options.people.map((p) => (
-          <Choice
+          <Option
             key={p.person}
             name="presentes"
             value={p.person}
@@ -368,7 +382,7 @@ function Attendees({ options }: { options: RequestOptions }) {
               {p.name}
               {p.owner && <OwnerTag />}
             </span>
-          </Choice>
+          </Option>
         ))}
       </div>
       <div className={grid}>
@@ -397,15 +411,16 @@ function Rule({ options }: { options: RequestOptions }) {
     <Section id="regra" title={form.rule}>
       <div className="flex flex-col gap-sm" role="radiogroup">
         {Object.keys(RULE_CHOICES).map((value) => (
-          <Choice
+          <Option
             key={value}
             type="radio"
+            shape="row"
             name="regra"
             value={value}
             defaultChecked={value === 'padrao'}
           >
             {form.rules[value as keyof typeof RULE_CHOICES]}
-          </Choice>
+          </Option>
         ))}
       </div>
       <SelectField
@@ -426,11 +441,11 @@ function Moods({ moods }: { moods: readonly string[] }) {
   const { form } = SESSIONS
   return (
     <Section id="climas" title={form.moods} lead={form.moodsLead}>
-      <div className={grid}>
+      <div className={pills}>
         {moods.map((mood) => (
-          <Choice key={mood} name="climas" value={mood}>
+          <Option key={mood} name="climas" value={mood}>
             {mood}
-          </Choice>
+          </Option>
         ))}
       </div>
     </Section>
@@ -446,6 +461,18 @@ function Constraints({ similar }: { similar?: string }) {
       title={form.constraints}
       lead={form.constraintsLead}
     >
+      <div className="flex flex-col gap-sm">
+        <Option name="sem-ja-visto" shape="row">
+          {form.unseen}{' '}
+          <span className="font-body text-meta font-normal text-ink-2">
+            {form.unseenHint}
+          </span>
+        </Option>
+        <div className={pills}>
+          <Option name="sem-lento">{form.noSlow}</Option>
+          <Option name="sem-tristeza">{form.noSad}</Option>
+        </div>
+      </div>
       <div className={grid}>
         <TextField
           name="duracao"
@@ -486,14 +513,6 @@ function Constraints({ similar }: { similar?: string }) {
         placeholder="tt…"
         defaultValue={similar}
       />
-      <div className="flex flex-col gap-sm">
-        <Choice name="sem-ja-visto">
-          {form.unseen}{' '}
-          <span className="text-meta text-ink-2">{form.unseenHint}</span>
-        </Choice>
-        <Choice name="sem-lento">{form.noSlow}</Choice>
-        <Choice name="sem-tristeza">{form.noSad}</Choice>
-      </div>
     </Section>
   )
 }
