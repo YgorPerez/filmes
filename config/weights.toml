@@ -1,0 +1,121 @@
+# Pesos do motor. Valores iniciais da spec (#16), calibrados por `avaliar`.
+# A régua de Força (que Fato é forte, moderado ou fraco) é regra fixa no
+# código, em filmes/evidencia; aqui ficam só os números da ordenação.
+
+[strength.multiplier]
+# A Força multiplica a contribuição de cada Evidência. Palpite soma 0.
+strong = 1.0
+moderate = 0.6
+weak = 0.3
+guess = 0.0
+
+[path.weight]
+# Peso de cada tipo de aresta de conteúdo no caminho de gosto. Um predicado fora
+# daqui não entra no caminho; o texto de cada um fica em sinais/conteudo.py.
+# Gênero só dá metadado, no máximo fraco (régua).
+director = 1.0
+writer = 0.8
+series = 1.0
+cast = 0.5
+genre = 0.3
+
+[utility]
+# Utilidade individual de 0 a 1: u = 1 / (1 + exp(-k * soma das contribuições)).
+k = 1.0
+# Só as N contribuições de maior módulo de cada Pessoa no filme entram na soma; o
+# Já visto fica fora do corte e sempre conta. Sem o corte, quem tem mil Notas
+# encosta em dezenas de Evidências por filme e fica com utilidade ~1 em tudo.
+max_evidence = 5
+
+[adjustment.level]
+# Ajuste de uma Pessoa a um elo do caminho de conteúdo (`pessoa ajustar`): o
+# nível multiplica o peso do elo. "nada" tira as Evidências do elo e "pouco"
+# também desce a Força um nível (régua).
+none = 0.0
+low = 0.5
+normal = 1.0
+high = 1.5
+
+[catalog]
+# Mínimo de votos no IMDb para um filme virar Candidato.
+min_votes = 1000
+# Nota mínima no IMDb para um filme virar Candidato (decisão do Dono, 2026-11-21).
+min_imdb_rating = 7.0
+
+[recommendation]
+# Quantos filmes a Recomendação devolve quando o pedido não diz.
+size = 5
+
+[seen]
+# Já visto pesa contra o filme com esta base (a Força é sempre forte).
+weight = 1.0
+
+[credit]
+# u' = u - fator x Crédito na Regra padrão. O Crédito olha as últimas `janela`
+# Sessões em grupo com Feedback que a Pessoa dividiu com algum Presente de hoje.
+factor = 0.5
+window = 5
+
+[neighbors]
+# Peso da Evidência de vizinhança item-item do MovieLens (Tipo review).
+weight = 1.0
+
+[mood]
+# Bônus de cada Clima pedido que o filme sustenta, somado à pontuação da Regra
+# de escolha (que vai de 0 a 1), vezes o multiplicador da Força.
+weight = 0.1
+
+[group]
+# Bônus do filme com tag de grupo numa Sessão em grupo, ou de sozinho numa
+# Sessão sozinha, somado à pontuação da Regra, vezes o multiplicador da Força.
+# Menor que o do Clima: o Dono não pediu, e a leitura da tag é do projeto.
+weight = 0.05
+
+[people]
+# Base de um Declarado ou Relato com alvo entidade (diretor, ator, gênero...):
+# positiva para ama e gosta, negativa para não gosta e odeia. A Força multiplica.
+statement_weight = 1.0
+
+[constraints]
+# Só os filmes que chegariam a estas primeiras posições consultam fonte sob
+# demanda (OMDb para a classificação, Does the Dog Die para gatilho).
+on_demand_reach = 50
+
+[tag_vetoes]
+# Mínimos para uma tag de config/tag_vetoes.toml tirar o filme de um Veto por grupo.
+# Mais firmes que os do "nada triste": "bobo" é mais subjetivo que "triste".
+min_relevance = 0.7
+min_users = 10
+
+[imdb_rating]
+# Bônus do filme pela nota do IMDb, somado à pontuação da Regra como o do Clima:
+# peso × (nota − mínima) / (10 − mínima), com a mínima de [catalogo]. Nota 7 ganha 0.
+# 0,3 (decisão do Dono, 2026-11-22): com 0,1, um 8,0 ganhava só 0,033 e quase não mudava a ordem.
+weight = 0.3
+
+[no_sad]
+# Mínimos para uma tag de config/sadness.toml tirar o filme em `--sem-tristeza`.
+# Tema pesado pede menos usuários: Polytechnique tem "massacre" de 2.
+min_users_sad = 3
+min_users_heavy_theme = 2
+min_relevance = 0.6
+
+[similar]
+# `recomendar --parecido` (#67): só passam os `candidatos` filmes mais parecidos
+# com a referência, contados antes das outras Restrições e da nota mínima.
+candidates = 50
+# Tags do genoma da referência que contam: as mais próprias dela (relevância
+# acima da média da tag no genoma). As candidatas a isso são as de maior relevância.
+genome_tags = 15
+genome_tags_considered = 40
+# Tags do MovieLens da referência que buscam filmes: as de mais peso (TF-IDF).
+movielens_tags = 20
+
+[similar.weight]
+# Parecença de 0 a 1: soma destes pesos vezes a parecença de cada fonte (0 a 1).
+# Fonte sem dado para o par fica de fora e o peso dela se redistribui entre as outras.
+genome = 0.35
+movielens_tags = 0.25
+neighbors = 0.2
+genre = 0.1
+people = 0.1

@@ -57,7 +57,7 @@ const similarLines = (out: Recommendation, id: string): string[] =>
     .filter((text) => text.startsWith('parecido com'))
 
 const candidates = (fixture: Fixture, n: number) =>
-  weightsWith(fixture, '\ncandidatos = 50\n', `\ncandidatos = ${n}\n`)
+  weightsWith(fixture, '\ncandidates = 50\n', `\ncandidates = ${n}\n`)
 
 test('only the similar ones come, and the Regra orders them', async () => {
   const out = await similarTo(useFixture(), [WRITING_LETTERS], 10)

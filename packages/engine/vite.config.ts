@@ -19,7 +19,6 @@ export default defineConfig({
       // The schema the rebuild applies, read at run time.
       '**/engine/src/rebuild/schema/*.sql',
       '**/config/*.{toml,json}',
-      '**/key-migration/src/**',
     ],
     coverage: {
       provider: 'v8',

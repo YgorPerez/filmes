@@ -7,7 +7,7 @@
 // Recomendação's port, so these check the rows it feeds.
 import { readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { config, data, migrateDataFile, output } from '@filmes/key-migration'
+import * as names from '../python-names.ts'
 import { Effect } from 'effect'
 import { describe, expect, test } from 'vite-plus/test'
 import {
@@ -88,14 +88,14 @@ const personRows = (fixture: Fixture) =>
   Promise.all(PERSON_ROWS.map((sql) => query(fixture, sql)))
 
 describe('the database spellings', () => {
-  test('are the Portuguese values the key migration renames', () => {
+  test('are the Portuguese values Python stored', () => {
     const flip = (table: Record<string, string>) =>
       Object.fromEntries(Object.entries(table).map(([pt, en]) => [en, pt]))
-    expect(DB_LINKS).toEqual(flip(data.LINKS))
-    const { normal: _, ...levels } = flip(data.LEVELS)
+    expect(DB_LINKS).toEqual(flip(names.LINKS))
+    const { normal: _, ...levels } = flip(names.LEVELS)
     expect(DB_LEVELS).toEqual(levels)
-    expect(DB_REACTIONS).toEqual(flip(output.STATEMENT_REACTIONS))
-    expect(DB_TAG_GROUPS).toEqual(flip(config.TAG_GROUPS))
+    expect(DB_REACTIONS).toEqual(flip(names.STATEMENT_REACTIONS))
+    expect(DB_TAG_GROUPS).toEqual(flip(names.TAG_GROUPS))
     expect(dbTarget('slow')).toBe('lento')
     expect(dbTarget('Q9001801')).toBe('Q9001801')
     expect(dbTarget('toString')).toBe('toString')
@@ -270,36 +270,32 @@ describe('pessoa criar and ver', () => {
     const fixture = useFixture()
     writeFileSync(
       file(fixture, 'carol'),
-      migrateDataFile(
-        'person',
-        `---
-nome: Carol
-apelidos: []
-vetos:
-- texto: nada de comédia boba
-  alvo: comedia_boba
-  rotulo: comédia boba
-  data: 2026-01-05
-ajustes:
-- elo: elenco
-  nivel: pouco
-  data: 2026-01-06
-perguntas_abertas:
-- texto: a Carol curte terror?
-  assunto: lento
-  rotulo: filme lento
-  data: 2026-01-07
-  puladas: 1
+      `---
+name: Carol
+aliases: []
+vetoes:
+- text: nada de comédia boba
+  target: silly_comedy
+  label: comédia boba
+  date: 2026-01-05
+adjustments:
+- link: cast
+  level: low
+  date: 2026-01-06
+open_questions:
+- text: a Carol curte terror?
+  subject: slow
+  label: filme lento
+  date: 2026-01-07
+  skips: 1
 imports:
-- tipo: letterboxd
-  arquivo: imports/carol.zip
-  data: '2026-01-08'
+- kind: letterboxd
+  file: imports/carol.zip
+  date: '2026-01-08'
   original: carol.zip
   sha256: abc
 ---
 `,
-        'to-en',
-      ),
     )
 
     const view = await fixture.ok(personView('carol'))
@@ -772,17 +768,15 @@ describe('pessoa declarar and relatar', () => {
   })
 })
 
-/** Carol, as tests/test_pessoa.py writes her, migrated to English keys. */
-const CAROL = migrateDataFile(
-  'person',
-  `---
-nome: Carol
-apelidos: [Carolzinha]
-vetos:
-- texto: nada da Sofia Rangel
-  alvo: Q9000018
-  rotulo: Sofia Rangel
-  data: 2026-01-05
+/** Carol, as tests/test_pessoa.py wrote her, in English keys. */
+const CAROL = `---
+name: Carol
+aliases: [Carolzinha]
+vetoes:
+- text: nada da Sofia Rangel
+  target: Q9000018
+  label: Sofia Rangel
+  date: 2026-01-05
 imports: []
 ---
 Amiga da faculdade.
@@ -795,9 +789,7 @@ Amiga da faculdade.
 ## Relatos
 
 - 2026-04-04 · descrição do Dono · específico · não gosta de Davi Couto (Q9001803) · "acha o Davi Couto canastrão"
-`,
-  'to-en',
-)
+`
 
 describe('the Pessoa sync and the reload', () => {
   test('reloading the fixture Pessoas gives the rows Python loaded', async () => {

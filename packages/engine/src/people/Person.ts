@@ -16,7 +16,7 @@
 //
 //     - 2026-11-21 · conversa com o Dono · Casa Cheia (tt9000602) · nota 4
 //
-// The body stays in Portuguese after the key migration (ADR 0002); the rest
+// The body stays in Portuguese (ADR 0002); the rest
 // of it is free text and is kept as written.
 //
 // `SECTIONS` says where each kind of item lives: Vetos, Ajustes and open

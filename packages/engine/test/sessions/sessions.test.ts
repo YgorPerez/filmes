@@ -10,7 +10,7 @@
 import { spawnSync } from 'node:child_process'
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { migrateDataFile, output } from '@filmes/key-migration'
+import * as names from '../python-names.ts'
 import { Effect } from 'effect'
 import { describe, expect, test } from 'vite-plus/test'
 import {
@@ -319,8 +319,8 @@ describe('recomendar opens the Session', () => {
   test('the body writes Força and Tipo as the Python engine', () => {
     const invert = (table: Readonly<Record<string, string>>) =>
       Object.fromEntries(Object.entries(table).map(([pt, en]) => [en, pt]))
-    expect(STRENGTH_IN_BODY).toEqual(invert(output.STRENGTHS))
-    expect(KIND_IN_BODY).toEqual(invert(output.KINDS))
+    expect(STRENGTH_IN_BODY).toEqual(invert(names.STRENGTHS))
+    expect(KIND_IN_BODY).toEqual(invert(names.KINDS))
   })
 })
 
@@ -472,13 +472,16 @@ describe('the Session file', () => {
     write(
       fixture,
       '2026-11-20-iara',
-      migrateDataFile(
-        'session',
-        '---\ndata: 2026-11-20\npresentes: [bruno, iara]\n' +
-          'regra: media-sem-miseria-com-justica\n---\n\n' +
-          '## Recomendação\n\n1. Vento Norte (tt9000302)\n',
-        'to-en',
-      ),
+      `---
+date: 2026-11-20
+attendees: [bruno, iara]
+rule: {name: default}
+---
+
+## Recomendação
+
+1. Vento Norte (tt9000302)
+`,
     )
 
     await fixture.ok(reloadSessions)

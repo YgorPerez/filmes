@@ -41,8 +41,7 @@ const NAMES = new RegExp(
 )
 
 /** History and data recorded from the Python engine, read as they are. */
-const HISTORY =
-  /^docs\/|^packages\/key-migration\/test\/python-outputs\.jsonl$|\.(gz|png|jpg|ico|woff2?)$/
+const HISTORY = /^docs\/|\.(gz|png|jpg|ico|woff2?)$/
 
 describe('the repository without Python', () => {
   const files = tracked()

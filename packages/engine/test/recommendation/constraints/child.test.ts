@@ -229,8 +229,8 @@ describe("OMDb's Rated, for a film with no local rating", () => {
     const fixture = useFixture()
     const weights = weightsWith(
       fixture,
-      'alcance_sob_demanda = 50',
-      'alcance_sob_demanda = 3',
+      'on_demand_reach = 50',
+      'on_demand_reach = 3',
     )
 
     expect(

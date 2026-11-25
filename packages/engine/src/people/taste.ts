@@ -38,8 +38,7 @@ import type { Level, Link } from '../evidence/strength.ts'
 
 /** The tag group's label; a key that is not a group is `unknown_target`
  * (`_rotulo_do_grupo`). The message names the English file and keys the
- * engine reads, where Python's names `config/vetos_por_tag.toml` and its
- * Portuguese keys. */
+ * engine reads, where Python named its Portuguese file and keys. */
 export const tagGroupLabel = (
   key: string,
 ): Effect.Effect<string, EngineError, Environment> =>

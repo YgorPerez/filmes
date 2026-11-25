@@ -2,7 +2,7 @@
 // (`makeEngine`).
 
 import { join } from 'node:path'
-import { output } from '@filmes/key-migration'
+import * as names from './python-names.ts'
 import { Effect } from 'effect'
 import { describe, expect, test } from 'vite-plus/test'
 import {
@@ -103,9 +103,9 @@ describe('the error contract', () => {
     expect(outcome.output.error.message).toContain('FILMES_DADOS')
   })
 
-  test('the codes are the English codes of the key migration', () => {
+  test('the codes are the English names of Python’s codes', () => {
     expect([...ERROR_CODES].sort()).toEqual(
-      [...new Set(Object.values(output.ERROR_CODES))].sort(),
+      [...new Set(Object.values(names.ERROR_CODES))].sort(),
     )
   })
 })

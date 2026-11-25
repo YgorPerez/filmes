@@ -1,0 +1,43 @@
+# Vocabulário fixo da Restrição "nada triste" (#42), que `recomendar --sem-tristeza` aplica.
+#
+# O filme sai quando tem uma das tags abaixo no tags.csv do MovieLens (com o
+# mínimo de usuários de [no_sad] em weights.toml) ou no Tag Genome 2021
+# (relevância mínima, idem), ou quando o Wikidata dá a ele um dos itens de
+# `wikidata` como tema (P921) ou como base (P144).
+#
+# As tags estão em minúsculas, como nas tabelas tags_movielens e genoma.
+# Mudar uma lista muda a Recomendação.
+
+[sad]
+# O corte que o Claude fez à mão na Sessão de 2026-11-21.
+tags = ["sad", "depressing", "tearjerker", "bleak"]
+
+[heavy_theme]
+# Decisão do Dono de 2026-11-21: tema pesado conta como triste, mesmo sem tag
+# de tristeza (Polytechnique só tem "massacre"). Gênero do IMDb não entra.
+tags = [
+    "massacre", "mass murder", "school shooting", "genocide", "holocaust",
+    "war crimes", "suicide", "rape", "child abuse", "terminal illness",
+    "death of a child",
+    # Luto, aceito pelo Dono em 2026-11-23 (#58): Demolition só tem estas.
+    "grief", "tragic loss", "death of wife",
+]
+wikidata = [
+    "Q2763",      # Holocausto
+    "Q41397",     # genocídio
+    "Q131297",    # Genocídio em Ruanda
+    "Q80034",     # genocídio arménio
+    "Q2885072",   # Genocídio cambojano
+    "Q170334",    # Genocídio de Srebrenica
+    "Q3199915",   # massacre
+    "Q192055",    # Massacre de Nanquim
+    "Q10737",     # suicídio
+    "Q944142",    # idealização suicida
+    "Q142824",    # suicídio coletivo
+    "Q47092",     # violação (estupro)
+    "Q43414",     # abuso sexual
+    "Q26553",     # abuso sexual de menor
+    "Q167191",    # abuso infantil
+    "Q1364787",   # doença terminal
+    "Q90130733",  # death of one's child
+]

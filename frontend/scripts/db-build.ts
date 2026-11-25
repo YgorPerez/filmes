@@ -1,22 +1,16 @@
 // `pnpm db:publish --build`: the derived SQLite, built on servidor-azul by
-// the engine's `rebuild` (map #72). The engine reads English keys (ADR
-// 0002) and the repo's `config/` is still in Portuguese: the key migration
-// (#77) writes filmes-dados and the config into a scratch folder in English,
-// and the build reads them from there (`FILMES_DADOS`, `FILMES_CONFIG`), so
-// neither the checkout nor the repo's `config/` is touched. A folder already
-// in English goes through unchanged.
+// the engine's `rebuild` (map #72). The build reads filmes-dados and the
+// config where they are (`FILMES_DADOS`, `FILMES_CONFIG`), both in English
+// keys (ADR 0002), and only reads them.
 //
 // The rest of the build's environment is the caller's: the dumps
-// (`FILMES_CATALOGO`, or the catalog path of the config's `local.toml`,
-// which the scratch config keeps), `FILMES_HOJE`...
+// (`FILMES_CATALOGO`, or the catalog path of the config's `local.toml`),
+// `FILMES_HOJE`...
 //
 // Runs on plain `node`, which reads TypeScript by itself.
 
 import { spawnSync } from 'node:child_process'
-import { mkdtempSync, rmSync } from 'node:fs'
-import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
-import { migrateConfig, migrateData } from '@filmes/key-migration'
 
 /** The repository root, where the build runs. */
 export const REPO = resolve(import.meta.dirname, '../..')
@@ -62,8 +56,8 @@ function engineError({ status, stdout, stderr }: Ran) {
 const REBUILD_SCRIPT = join(import.meta.dirname, 'db-rebuild.ts')
 
 /** Builds `database` from the filmes-dados checkout `data` and the config
- * folder `config`. Throws, with the engine's error, when the rebuild fails;
- * leaves no scratch folder behind. */
+ * folder `config`. Throws, with the engine's error, when the rebuild
+ * fails. */
 export function buildDatabase({
   data,
   config,
@@ -77,26 +71,17 @@ export function buildDatabase({
   env: Record<string, string | undefined>
   run?: Runner
 }): void {
-  const scratch = mkdtempSync(join(tmpdir(), 'filmes-db-build-'))
-  try {
-    const scratchData = join(scratch, 'data')
-    const scratchConfig = join(scratch, 'config')
-    migrateData(data, scratchData, 'to-en')
-    migrateConfig(config, scratchConfig, 'to-en')
-    const result = run(process.execPath, [REBUILD_SCRIPT], {
-      cwd: REPO,
-      env: {
-        ...env,
-        FILMES_DADOS: scratchData,
-        FILMES_CONFIG: scratchConfig,
-        FILMES_BANCO: database,
-      },
-    })
-    if (result.status !== 0)
-      throw new Error(
-        `the engine could not build the database: ${engineError(result)}`,
-      )
-  } finally {
-    rmSync(scratch, { recursive: true, force: true })
-  }
+  const result = run(process.execPath, [REBUILD_SCRIPT], {
+    cwd: REPO,
+    env: {
+      ...env,
+      FILMES_DADOS: resolve(data),
+      FILMES_CONFIG: resolve(config),
+      FILMES_BANCO: database,
+    },
+  })
+  if (result.status !== 0)
+    throw new Error(
+      `the engine could not build the database: ${engineError(result)}`,
+    )
 }

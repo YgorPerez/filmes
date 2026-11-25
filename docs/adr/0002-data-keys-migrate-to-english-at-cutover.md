@@ -18,3 +18,11 @@ Migrating at cutover keeps one shape of the data alive at a time: a dual-read la
 
 - The Python engine cannot read filmes-dados after cutover. Cutover therefore happens when the TypeScript engine serves every read and write, and Python only remains for reconstruct (ADR 0004), which also reads filmes-dados: either reconstruct is ported by then or it reads a PT copy made by the script's reverse direction.
 - A new frontmatter key or closed-list value is born in English, in the TypeScript schema, with a GLOSSARY code name.
+
+## Status: the cutover is finished
+
+- filmes-dados was cut over on 2026-11-25, and the test fixture's data (`tests/fixture/dados`) and `config/` in #135, each in one commit made with the script's `to-en`.
+- Nothing migrates at run time any more: the fixture build, `db:publish --build`, `catalog:update`, the image's config bundle and the login read the files as they are, and the login reads only `people/`. The dual shape is gone.
+- The migration package (`packages/key-migration`), its tests and its corpus were deleted in #135. The Python names the engine still maps to (the derived database keeps Portuguese values) are recorded for the tests in `packages/engine/test/python-names.ts`.
+- `scripts/one-data-shape.test.ts` fails if any source outside the tests imports the key migration again, or reads a Portuguese data folder or config file name.
+- A machine's `config/local.toml` (outside git) is English too: `[paths]` with `data`, `catalog`, `versions`, `database`, `cache`, `recordings`, `evaluations`.

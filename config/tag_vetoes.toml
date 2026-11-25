@@ -1,0 +1,33 @@
+# Grupos de tags que um Veto pode nomear (#56): `pessoa vetar <pessoa> <texto> --grupo <chave>`.
+#
+# Um filme sai quando tem um dos `generos_imdb` (vazio: qualquer gênero) e uma das
+# tags com o mínimo de [tag_vetoes] em weights.toml: relevância no Tag Genome ou
+# usuários no tags.csv do MovieLens. As tags estão em minúsculas, como nas
+# tabelas tags_movielens e genoma. Mudar uma lista muda a Recomendação de quem
+# vetou o grupo.
+
+[silly_comedy]
+# Decisão do Dono de 2026-11-22: o Lorenzo não quer "comédia que parece bobinha",
+# filme "no brains", com vibe Malhação, foco no cotidiano, tema adolescente ou infantil.
+# Ficam de fora stupidity (pega os Coen), adolescence e coming of age (ele dá nota
+# acima da média), family (pega drama) e small town (pega Hot Fuzz e October Sky).
+label = "comédia boba"
+imdb_genres = ["Comedy"]
+tags = [
+    # sem cérebro
+    "dumb", "stupid", "stupid as hell", "silly", "silly fun", "goofy", "cheesy", "slapstick", "childish", "juvenile",
+    # adolescente
+    "teen", "teen movie", "teenager", "teenagers", "teens", "high school", "teen comedy",
+    # infantil
+    "kids", "kids and family", "children", "disney", "cute",
+    # cotidiano
+    "slice of life", "everyday life", "summer", "suburbia",
+]
+
+[slow]
+# Decisão do Dono de 2026-11-22 (#57): também é a lista do `--sem-lento`, a Restrição
+# "nada lento" da Sessão. Só as tags de ritmo: atmospheric e thought-provoking ficam
+# de fora porque muito filme ágil tem. Vale para qualquer gênero.
+label = "lento"
+imdb_genres = []
+tags = ["slow", "slow paced", "meditative", "contemplative", "boring"]

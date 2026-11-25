@@ -1,18 +1,18 @@
 // Vitest global setup: the fixture every engine test starts from, built once.
 //
-// - the fixture's filmes-dados and the repo's `config/`, migrated to English
-//   keys by the key migration (ADR 0002): the TypeScript engine reads only
-//   those;
+// - the fixture's filmes-dados and the repo's `config/`, copied as they are
+//   (English keys, ADR 0002);
 // - the derived database, built from them by the engine's own `rebuild`
 //   over `tests/fixture/catalogo` (#105).
 //
 // The result is cached in `node_modules/.cache/filmes-engine-fixture/<hash>`,
 // where the hash covers everything that could change it: the fixture, the
-// engine, the config and the key migration. A run with nothing changed only
+// engine and the config. A run with nothing changed only
 // hashes. Tests copy it per test (`fixture.ts`) and never write here.
 
 import { createHash } from 'node:crypto'
 import {
+  cpSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -22,8 +22,7 @@ import {
   rmSync,
   statSync,
 } from 'node:fs'
-import { join, relative } from 'node:path'
-import { migrateConfig, migrateData } from '@filmes/key-migration'
+import { basename, join, relative } from 'node:path'
 import { makeEngine, rebuild } from '../src/index.ts'
 import { FIXTURE_ENV, FIXTURE_TODAY, ROOT } from './paths.ts'
 
@@ -34,7 +33,6 @@ const INPUTS = [
   'tests/fixture/gravacoes',
   'packages/engine/src',
   'config',
-  'packages/key-migration/src',
 ]
 
 /** Not inputs: bytecode, and `config/local.toml`, which is outside
@@ -66,7 +64,7 @@ function inputsHash(): string {
 }
 
 /** The engine's `rebuild` over the fixture, into `database`, from the
- * migrated filmes-dados and config already in `work`. */
+ * filmes-dados and config already copied into `work`. */
 async function buildDatabase(work: string, database: string): Promise<void> {
   const engine = makeEngine({
     FILMES_CONFIG: join(work, 'config'),
@@ -92,9 +90,13 @@ async function build(target: string): Promise<void> {
   mkdirSync(CACHE, { recursive: true })
   const work = mkdtempSync(join(CACHE, '.build-'))
   try {
-    migrateData(join(ROOT, 'tests/fixture/dados'), join(work, 'data'), 'to-en')
-    migrateConfig(join(ROOT, 'config'), join(work, 'config'), 'to-en')
-    rmSync(join(work, 'config', 'local.toml'), { force: true })
+    cpSync(join(ROOT, 'tests/fixture/dados'), join(work, 'data'), {
+      recursive: true,
+    })
+    cpSync(join(ROOT, 'config'), join(work, 'config'), {
+      recursive: true,
+      filter: (path) => !SKIPPED.has(basename(path)),
+    })
     await buildDatabase(work, join(work, 'filmes.sqlite'))
     renameSync(work, target)
   } catch (error) {

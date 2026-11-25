@@ -55,7 +55,7 @@ export const DB_REACTIONS: Readonly<Record<StatementReaction, string>> = {
 
 /** A tag group of `tag_vetoes.toml` (a Veto target, an open question's
  * subject), as the database keeps it. A group with no Portuguese name, born
- * after the key migration, keeps its own. */
+ * after the English cutover, keeps its own. */
 export const DB_TAG_GROUPS: Readonly<Record<string, string>> = {
   silly_comedy: 'comedia_boba',
   slow: 'lento',
