@@ -19,6 +19,7 @@ import {
   parseYaml,
   personRemove,
   personView,
+  readConstraints,
   recommendSession,
   recordFeedback,
   reloadSessions,
@@ -457,6 +458,29 @@ describe('feedback', () => {
     expect(exitCode).not.toBe(0)
     expect(readFileSync(sessionFile(fixture, id), 'utf8')).toBe(opened)
     expect((await fixture.ok(openSessions)).sessions[0]?.id).toBe(id)
+  })
+
+  test('sem Já visto takes out the Session’s film for a Presente with no reaction', async () => {
+    const fixture = useFixture()
+    const id = await open(fixture, { attendees: ['dono', 'teo'] })
+    await feedback(fixture, {
+      session: id,
+      film: 'Vento Norte',
+      ratings: ['dono=4'],
+    })
+
+    const constraints = await Effect.runPromise(
+      readConstraints({ unseen: true }),
+    )
+    const out = JSON.parse(
+      JSON.stringify(
+        await fixture.ok(
+          recommendSession({ attendees: ['teo'], constraints, count: 50 }),
+        ),
+      ),
+    ) as Recommendation & { constraints: Record<string, { removed: number }> }
+    expect(out.films.every((f) => f.id !== 'tt9000302')).toBe(true)
+    expect(out.constraints['unseen']?.removed).toBe(1)
   })
 
   test('finds by title a recommended film that left the Catalog', async () => {
