@@ -38,6 +38,7 @@ export {
 export { resolveAttendees } from './recommendation/attendees.ts'
 export {
   attributionsOf,
+  TRAKT_ATTRIBUTION,
   type Attribution,
 } from './recommendation/attributions.ts'
 export {
@@ -153,7 +154,20 @@ export {
   type ReportLevel,
   type SessionSeen,
 } from './sessions/facts.ts'
-export { DB_RULES, reloadSessions, syncSession } from './sessions/database.ts'
+export {
+  DB_RULES,
+  ownersOf,
+  reloadSessions,
+  syncSession,
+} from './sessions/database.ts'
+export {
+  dropComment,
+  recordFeedback,
+  type ChosenFilm,
+  type FeedbackFact,
+  type FeedbackRequest,
+  type FeedbackResult,
+} from './sessions/feedback.ts'
 export {
   openSession,
   openSessions,
@@ -380,12 +394,14 @@ export {
 } from './people/remove.ts'
 export {
   importLetterboxd,
+  importLetterboxdRss,
   LETTERBOXD_KIND,
   LETTERBOXD_RSS_KIND,
   letterboxdReport,
   loadLetterboxd,
   personLetterboxdRows,
   reloadLetterboxd,
+  reprocessLetterboxd,
   RESOLUTION_PATHS,
   type CountsByPath,
   type DiscardedItem,
@@ -394,8 +410,20 @@ export {
   type LetterboxdImport,
   type LetterboxdImportInput,
   type LetterboxdReport,
+  type LetterboxdReprocess,
+  type LetterboxdRssImportInput,
+  type QueueCandidate,
+  type ReprocessedItem,
   type ResolutionPath,
 } from './imports/letterboxd.ts'
+export {
+  confirmQueueItem,
+  discardQueueItem,
+  viewQueue,
+  type QueueDecision,
+  type QueueItem,
+  type QueueView,
+} from './imports/letterboxd-queue.ts'
 export {
   EXPORT_FILES,
   filmKey,
@@ -413,7 +441,12 @@ export {
   type Resolution,
   type Resolutions,
 } from './imports/letterboxd-resolutions.ts'
-export { readLetterboxdRss, RSS_ORIGIN } from './imports/letterboxd-rss.ts'
+export {
+  fetchLetterboxdRss,
+  letterboxdRssUrl,
+  readLetterboxdRss,
+  RSS_ORIGIN,
+} from './imports/letterboxd-rss.ts'
 export {
   readUpload,
   storedImports,
@@ -428,3 +461,24 @@ export {
   type Verification,
   type VerifyRequest,
 } from './verify/verify.ts'
+export {
+  readTraktExport,
+  type TraktFilm,
+  type TraktRow,
+} from './imports/trakt-export.ts'
+export {
+  importTrakt,
+  loadTrakt,
+  reloadPersonTrakt,
+  reloadTrakt,
+  TRAKT_KIND,
+  type TraktImport,
+  type TraktImportInput,
+  type TraktReport,
+  type TraktUnresolved,
+} from './imports/trakt.ts'
+export {
+  removeImport,
+  type ImportRemoval,
+  type ImportRemovalInput,
+} from './imports/remove.ts'
