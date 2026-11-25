@@ -13,7 +13,9 @@ import { forEachBatch } from './text-source.ts'
 import { dumpPath, type Dump, type Dumps } from './versions.ts'
 import {
   EDGES,
+  FILM_SERIES,
   lastSegment,
+  MEDIA_FRANCHISE,
   qid,
   RATING_PROPERTIES,
   sparqlRows,
@@ -98,13 +100,63 @@ const loadLabels = (db: Connection, catalog: string, dumps: Dumps) =>
     ),
   )
 
+/** The root a series class falls under: the dump's `?raiz` or, in a dump
+ * from before #165, the class itself when it is one of the roots. */
+const seriesRoot = (row: Binding): string | null => {
+  const root = qid(row['raiz'])
+  if (root !== undefined) return root
+  const type = qid(row['valor'])
+  return type === FILM_SERIES || type === MEDIA_FRANCHISE ? type : null
+}
+
 const loadSeries = (db: Connection, catalog: string, dumps: Dumps) =>
   forEachRow(catalog, dumps, 'wikidata-series', (rows) =>
     db.runMany(
-      'INSERT INTO series_de_filmes (item, classe) VALUES (?, ?) ON CONFLICT DO NOTHING',
-      rows.map((row) => [qid(row['item']) ?? null, qid(row['valor']) ?? null]),
+      'INSERT INTO series_de_filmes (item, classe, raiz) VALUES (?, ?, ?) ON CONFLICT DO NOTHING',
+      rows.map((row) => [
+        qid(row['item']) ?? null,
+        qid(row['valor']) ?? null,
+        seriesRoot(row),
+      ]),
     ),
   )
+
+/** A film's release date from its P577 values (#165): the earliest year
+ * and, in it, the earliest day. Wikidata writes a date known only to the
+ * year as the 1st of January, so a year with nothing but that keeps only
+ * the year. `undefined` with no dated value. */
+const releaseDate = (values: ReadonlyArray<string>): string | undefined => {
+  const dates = values
+    .filter((v) => /^\d{4}-\d{2}-\d{2}/.test(v))
+    .map((v) => v.slice(0, 10))
+    .sort()
+  const year = dates[0]?.slice(0, 4)
+  if (year === undefined) return undefined
+  const day = dates.find((d) => d.startsWith(year) && !d.endsWith('-01-01'))
+  return day ?? year
+}
+
+/** Each film's release date, of the item its IMDb id (P345) names. */
+const loadReleaseDates = (db: Connection) =>
+  Effect.gen(function* () {
+    const byFilm = new Map<string, string[]>()
+    for (const row of yield* db.all(`
+      SELECT f.id, d.valor FROM metadados_wikidata i
+      JOIN filmes f ON f.id = i.valor
+      JOIN metadados_wikidata d ON d.item = i.item AND d.propriedade = 'P577'
+      WHERE i.propriedade = 'P345'
+    `)) {
+      const id = text(row, 'id')
+      byFilm.set(id, [...(byFilm.get(id) ?? []), text(row, 'valor')])
+    }
+    yield* db.runMany(
+      'INSERT INTO estreias (filme_id, data) VALUES (?, ?)',
+      [...byFilm].flatMap(([id, values]) => {
+        const date = releaseDate(values)
+        return date === undefined ? [] : [[id, date]]
+      }),
+    )
+  })
 
 /** An entity's label, its pt/en/mul labels and its language code. */
 interface Entity {
@@ -208,6 +260,7 @@ export const loadGraph = (
     yield* loadIds(db, catalog, dumps)
     yield* loadLabels(db, catalog, dumps)
     yield* loadSeries(db, catalog, dumps)
+    yield* loadReleaseDates(db)
     const filmsByItem = new Map<string, string[]>()
     for (const row of yield* db.all(`
       SELECT m.item, f.id FROM metadados_wikidata m JOIN filmes f ON f.id = m.valor
