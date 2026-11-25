@@ -88,6 +88,12 @@ export {
   type ConstraintRequest,
 } from './recommendation/constraints/index.ts'
 export {
+  DEFAULT_SERIES_ORDER,
+  SERIES_ORDER_MODES,
+  type SeriesOrderMode,
+  type UnseenBefore,
+} from './recommendation/constraints/series-order.ts'
+export {
   computeCredit,
   creditLine,
   type Credit,

@@ -83,7 +83,9 @@ describe('recommend', () => {
     assert.ok(
       dashed.startsWith("o Clima '--sem-ja-visto' não está no vocabulário"),
     )
-    assert.deepEqual(output.constraints, {})
+    // A Clima that looks like a flag asks for no Restrição: only the Série
+    // na ordem, on by default (#165).
+    assert.deepEqual(Object.keys(output.constraints), ['series_order'])
     assert.ok(Array.isArray(output.films[0].filmLines))
   })
 
@@ -103,6 +105,7 @@ describe('recommend', () => {
       'child',
       'duration',
       'language',
+      'series_order',
       'trigger',
     ])
     assert.equal(output.constraints.child.age, 7)
@@ -338,5 +341,73 @@ describe('recommend with similar (#67, #68)', () => {
       ['tt9006713'],
     )
     assert.equal(third.constraints.similar, undefined)
+  })
+})
+
+describe('recommend with the Série na ordem (#165)', () => {
+  test('a sequel only when every Presente saw the film before; seriesOrder changes it', async () => {
+    const { ok } = await connect(useFixture())
+    const all = { attendees: ['teo'], count: 100 }
+
+    const byDefault = titles(await ok('recommend', all))
+    const off = titles(await ok('recommend', { ...all, seriesOrder: 'off' }))
+
+    assert.ok(byDefault.includes('Cais'))
+    assert.ok(!byDefault.includes('Cais 2'))
+    assert.ok(off.includes('Cais 2'))
+  })
+
+  test('the mode stays in the Session, and a kept film that leaves says who did not see what', async () => {
+    const { ok } = await connect(useFixture())
+    const first = await ok('recommend', {
+      attendees: ['rosa'],
+      count: 100,
+      seriesOrder: 'off',
+    })
+    const session = first.session.id
+
+    const second = await ok('recommend', {
+      attendees: ['rosa', 'teo'],
+      count: 100,
+      session,
+      keep: ['tt9016503'],
+    })
+
+    assert.deepEqual(second.constraints.series_order, {
+      mode: 'off',
+      removed: 0,
+    })
+    const third = await ok('recommend', {
+      attendees: ['rosa', 'teo'],
+      count: 100,
+      session,
+      keep: ['tt9016503'],
+      seriesOrder: 'previous',
+    })
+    const { position: _, ...cais3 } = third.dropped.find(
+      (d: { id: string }) => d.id === 'tt9016503',
+    )
+    assert.deepEqual(cais3, {
+      id: 'tt9016503',
+      title: 'Cais 3',
+      cause: 'constraint',
+      constraint: 'series_order',
+      label: 'Teo não viu Cais 2',
+      unseen: [{ people: ['teo'], films: ['Cais 2'] }],
+    })
+  })
+
+  test('a mode outside the three is refused before the engine', async () => {
+    const { call } = await connect(useFixture())
+
+    assert.match(
+      failureText(
+        await call('recommend', {
+          attendees: ['teo'],
+          seriesOrder: 'sometimes',
+        }),
+      ),
+      /seriesOrder/,
+    )
   })
 })

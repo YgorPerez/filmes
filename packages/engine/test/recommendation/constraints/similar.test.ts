@@ -69,7 +69,7 @@ test('only the similar ones come, and the Regra orders them', async () => {
   expect(out.constraints['similar']).toEqual({
     films: [WRITING_LETTERS],
     titles: ['Escrever Cartas'],
-    removed: 75,
+    removed: 83,
   })
 })
 
@@ -235,15 +235,14 @@ describe('reading the request', () => {
       readConstraints({ similar: [' tt1, tt2', 'tt1,,', ' '] }),
     )
 
-    expect(asked.map((c) => c.toJson())).toEqual([
-      { films: ['tt1', 'tt2'], titles: [] },
-    ])
+    expect(
+      asked.filter((c) => c.name === 'similar').map((c) => c.toJson()),
+    ).toEqual([{ films: ['tt1', 'tt2'], titles: [] }])
   })
 
   test('no id is no request', async () => {
-    expect(
-      await Effect.runPromise(readConstraints({ similar: [' , '] })),
-    ).toEqual([])
+    const asked = await Effect.runPromise(readConstraints({ similar: [' , '] }))
+    expect(asked.filter((c) => c.name === 'similar')).toEqual([])
   })
 
   test('--sem-parecido holds only with --sessao, and not with --parecido', async () => {
@@ -265,12 +264,13 @@ describe('reading the request', () => {
         error: { message: '--parecido e --sem-parecido juntos: escolha um' },
       },
     })
-    // With a Session, the out-of-session Restrição turns on by itself (#95).
+    // With a Session, the out-of-session Restrição turns on by itself (#95);
+    // the Série na ordem is on in any request (#165).
     const alone = await read(fixture, { noSimilar: true, session: 's' })
     expect(alone.exitCode).toBe(0)
     expect(
       (alone.output as ReadonlyArray<{ name: string }>).map((c) => c.name),
-    ).toEqual(['out_of_session'])
+    ).toEqual(['out_of_session', 'series_order'])
   })
 })
 
