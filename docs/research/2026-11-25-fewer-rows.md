@@ -102,4 +102,9 @@ The same as above, with these differences. Requests: #124's generator with seed 
 - The cold p95 of the language and "any" rows is set by a few requests whose cost is elsewhere (the content signal on a cold page cache); it barely moves.
 - 108 of 108 paired answers have the same SHA-256 over the whole `Recommendation` JSON.
 
+### Parity
+
+- The fixture oracle (`pnpm oracle`) is clean: 426 scenarios, 1,625 steps compared, 0 differences.
+- The #84 real-database run (seed 84, 4 lanes, `--today 2026-11-25`, on copies) is clean, with the same counts as #127: 316 scenarios, 1,432 steps compared, 938 explained by the same two decisions, 0 unexplained differences, 0 harness errors.
+
 The slowest statement left is the content signal's `EDGES`, as before (#126 and later).
