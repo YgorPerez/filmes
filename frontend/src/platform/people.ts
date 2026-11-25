@@ -6,6 +6,7 @@
 
 import {
   personAdjust,
+  personCreate,
   personQuestions,
   personRemove,
   personReport,
@@ -29,6 +30,13 @@ import {
   type PersonNotice,
   type PersonRefusal,
 } from '#/content/person-action'
+import {
+  parseNewPerson,
+  typedPerson,
+  type NewPersonForm,
+  type PersonCreateRefusal,
+  type TypedPerson,
+} from '#/content/person-create'
 import type { CatalogScope } from '#/content/catalog-search'
 import { currentOwner } from './auth'
 import { catalogSearch } from './catalog-search'
@@ -71,6 +79,9 @@ export interface People {
     action: PersonAction,
     owner: Owner,
   ): Promise<Outcome<PersonNotice>>
+  /** Creates a Pessoa as the logged-in Dono, who signs the commit; gives
+   * her slug. */
+  create(input: NewPersonForm, owner: Owner): Promise<Outcome<string>>
 }
 
 const ok = <A>(output: A): Outcome<A> => ({ exitCode: 0, output })
@@ -108,6 +119,13 @@ export function peopleFromEngine(engine: Engine): People {
         })),
       ),
     view: (person) => engine.run(personView(person)),
+    create: (input, owner) =>
+      map(
+        engine.run(personCreate({ ...input, author: ownerAuthor(owner) }), {
+          owner: owner.person,
+        }),
+        (made) => made.person,
+      ),
     tagGroups: () =>
       map(engine.run(readTagGroups), (groups) =>
         [...groups].map(([key, { label }]) => ({ key, label })),
@@ -331,6 +349,58 @@ export async function personAction(
   return seeOther(`${pageOf(person)}?feito=${outcome.output}`)
 }
 
+/** Why the engine refused a new Pessoa. Its `invalid_usage` covers the
+ * slug, the reserved "dono" and the e-mail; its message says which
+ * (`createPerson`), and the platform test runs each on the real engine. */
+function createRefusalOf(outcome: {
+  output: ErrorOutput
+}): PersonCreateRefusal {
+  const { code, message } = outcome.output.error
+  if (code === 'person_exists') return 'existe'
+  if (code === 'invalid_usage') {
+    if (message.startsWith('slug inválido')) return 'nome'
+    if (message.startsWith("'dono'")) return 'reservado'
+    if (message.startsWith('o e-mail')) return 'email-usado'
+    if (message.includes('e-mail')) return 'email'
+  }
+  logEngineError(outcome)
+  return 'indisponivel'
+}
+
+/** Back to the list with the reason and what was typed. */
+function refusedCreate(
+  refusal: PersonCreateRefusal,
+  typed: TypedPerson,
+): Response {
+  const params = new URLSearchParams({ erro: refusal })
+  for (const [name, value] of Object.entries(typed))
+    if (value !== undefined) params.set(name, value)
+  return seeOther(`/pessoas?${params.toString()}`)
+}
+
+/** `POST /pessoas/nova/enviar`: creates the Pessoa of the form as the
+ * logged-in Dono, who signs the commit, and opens her page
+ * (`?feito=criada`); refused, back to `/pessoas` with why and what was
+ * typed. The engine syncs her into the database in the same write, so she
+ * is a Presente at once. */
+export async function personCreateAction(
+  request: Request,
+  owner: Owner | null,
+  people: People,
+  origin: string | undefined,
+): Promise<Response> {
+  const poster = formPoster(request, owner, origin)
+  if (poster instanceof Response) return poster
+  const form = await request.formData()
+  const typed = typedPerson(form)
+  const input = parseNewPerson(form)
+  if (typeof input === 'string') return refusedCreate(input, typed)
+  const outcome = await people.create(input, poster)
+  if (outcome.exitCode !== 0)
+    return refusedCreate(createRefusalOf(outcome), typed)
+  return seeOther(`${pageOf(outcome.output)}?feito=criada`)
+}
+
 /** The logged-in Dono as the commit's author: the engine's `authorOf` of her
  * file, which the login read with the engine's own reader (the email in
  * lower case). */
@@ -356,6 +426,15 @@ export const servePersonAction = (request: Request, person: string) =>
   personAction(
     request,
     person,
+    currentOwner(request),
+    appPeople(),
+    serverEnv().APP_ORIGIN,
+  )
+
+/** The create route for the app. */
+export const servePersonCreate = (request: Request) =>
+  personCreateAction(
+    request,
     currentOwner(request),
     appPeople(),
     serverEnv().APP_ORIGIN,
