@@ -103,8 +103,17 @@ jobs:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
+      # The e2e serves the engine's fixture, whose database the Python
+      # engine builds (`playwright.config.ts`).
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: |
+          uv sync --frozen
+          pnpm install --frozen-lockfile
 
       - name: Build
         run: pnpm build
@@ -124,8 +133,8 @@ jobs:
           echo '::error::The built app did not answer on /.'
           exit 1
 
-      # The login in Chrome, with a stand-in for Google (`e2e/fake-google.ts`)
-      # and the fixture's Pessoas (`playwright.config.ts`).
+      # The app in Chrome, with a stand-in for Google (`e2e/fake-google.ts`)
+      # and the engine's fixture (`playwright.config.ts`).
       - name: E2E
         working-directory: frontend
         run: pnpm e2e

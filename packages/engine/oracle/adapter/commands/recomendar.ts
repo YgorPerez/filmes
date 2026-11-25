@@ -1,7 +1,8 @@
 // `recomendar` → `recommendSession` (#90, #94): the Recomendação and the
-// Session it opens. Refazer (`--sessao`, `--manter`, `--trocar`, #95) and
-// the Restrições (#91, #92) are ported later, so a step with those
-// arguments stays `not_ported`.
+// Session it opens, with the local Restrições (#91). Refazer (`--sessao`,
+// `--manter`, `--trocar`, #95) and the on-demand and Session Restrições
+// (#92, #93) are ported later, so a step with those arguments stays
+// `not_ported`.
 
 import { data } from '@filmes/key-migration'
 import { recommendSession, type RuleName } from '../../../src/index.ts'
@@ -10,22 +11,15 @@ import { Effect } from 'effect'
 import { defineCommand } from '../command.ts'
 
 /** Arguments of later tickets: refazer's (#95) and the Restrições'
- * (#91, #92, `restricoes/*.py` `configurar`). */
+ * (#92, #93, `restricoes/*.py` `configurar`). */
 const LATER = [
   '--sessao',
   '--manter',
   '--trocar',
-  '--duracao-max',
-  '--desde',
-  '--ate',
   '--crianca',
-  '--sem-lento',
-  '--sem-ja-visto',
   '--parecido',
   '--sem-parecido',
-  '--idioma',
   '--gatilho',
-  '--sem-tristeza',
 ]
 
 /** Python's `int()` on an argument: spaces around, a sign, digits with
@@ -47,6 +41,14 @@ export default defineCommand({
       clima: { kind: 'extend' },
       quantos: { kind: 'value' },
       pedido: { kind: 'value' },
+      // The local Restrições (#91).
+      'duracao-max': { kind: 'value' },
+      desde: { kind: 'value' },
+      ate: { kind: 'value' },
+      idioma: { kind: 'value' },
+      'sem-ja-visto': { kind: 'flag' },
+      'sem-lento': { kind: 'flag' },
+      'sem-tristeza': { kind: 'flag' },
     },
   },
   ported: (argv) =>
@@ -54,17 +56,22 @@ export default defineCommand({
       LATER.some((flag) => token === flag || token.startsWith(`${flag}=`)),
     ),
   run: (args) => {
-    let count: number | undefined
-    if (args.quantos !== undefined) {
-      count = pyInt(args.quantos)
-      if (count === undefined)
+    // argparse's `type=int` (the oracle does not compare an invalid_usage
+    // message, so which bad one is named first does not matter).
+    const ints: Record<string, number | undefined> = {}
+    for (const name of ['quantos', 'duracao-max', 'desde', 'ate'] as const) {
+      const value = args[name]
+      if (value === undefined) continue
+      ints[name] = pyInt(value)
+      if (ints[name] === undefined)
         return Effect.fail(
           engineError(
             'invalid_usage',
-            `argument --quantos: invalid int value: '${args.quantos}'`,
+            `argument --${name}: invalid int value: '${value}'`,
           ),
         )
     }
+    const count = ints['quantos']
     const rule = args.regra
       ? ((data.RULES as Record<string, string>)[args.regra] as RuleName)
       : undefined
@@ -75,6 +82,15 @@ export default defineCommand({
       ...(rule && { rule }),
       ...(args.de !== undefined && { by: args.de }),
       moods: args.clima,
+      ...(ints['duracao-max'] !== undefined && {
+        maxDuration: ints['duracao-max'],
+      }),
+      ...(ints['desde'] !== undefined && { since: ints['desde'] }),
+      ...(ints['ate'] !== undefined && { until: ints['ate'] }),
+      ...(args.idioma !== undefined && { language: args.idioma }),
+      ...(args['sem-ja-visto'] && { unseen: true }),
+      ...(args['sem-lento'] && { noSlow: true }),
+      ...(args['sem-tristeza'] && { noSad: true }),
     })
   },
 })

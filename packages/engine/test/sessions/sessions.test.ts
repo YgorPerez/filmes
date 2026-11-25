@@ -20,6 +20,7 @@ import {
   makeEngine,
   openSessions,
   pass,
+  readConstraints,
   parseYaml,
   currentVersion,
   onScreen,
@@ -279,34 +280,47 @@ describe('recomendar opens the Session', () => {
   })
 
   test('the Session keeps the Restrições asked and the Climas accepted', () => {
-    const asked = (
-      name: Constraint['name'],
-      json: Readonly<Record<string, unknown>>,
-    ): Constraint => ({
-      name,
-      toJson: () => json,
+    // A stand-in for the child Restrição (#92), whose report and stored
+    // keys differ.
+    const child: Constraint = {
+      name: 'child',
+      toJson: () => ({ age: 7, maxAgeRating: '10' }),
+      stored: () => ({ name: 'child', age: 7, max_age_rating: '10' }),
       result: () => ({}),
       evaluate: (_context, films) =>
         Effect.succeed(new Map([...films.keys()].map((id) => [id, pass([])]))),
-    })
-
-    const context = sessionContext(
-      'duas horas',
-      ['leve'],
-      [
-        asked('duration', { maxMinutes: 120 }),
-        asked('child', { age: 7, maxAgeRating: '10' }),
-        asked('unseen', {}),
-      ],
+    }
+    const local = Effect.runSync(
+      readConstraints({ maxDuration: 120, unseen: true }),
     )
+
+    const context = sessionContext('duas horas', ['leve'], [...local, child])
 
     expect(yamlToJson(context)).toEqual({
       request: 'duas horas',
       max_duration: 120,
       moods: ['leve'],
       constraints: [
-        { name: 'child', age: 7, max_age_rating: '10' },
         { name: 'unseen' },
+        { name: 'child', age: 7, max_age_rating: '10' },
+      ],
+    })
+  })
+
+  test('the Session file stores the Restrições the request asks for, without the counts', async () => {
+    const fixture = useFixture()
+    const { session } = await open(fixture, {
+      attendees: ['dono'],
+      since: 1990,
+      noSlow: true,
+      noSad: true,
+    })
+
+    expect(readFile(fixture, session.id).front['context']).toMatchObject({
+      constraints: [
+        { name: 'year', since: 1990, until: null },
+        { name: 'no_slow' },
+        { name: 'no_sad' },
       ],
     })
   })
