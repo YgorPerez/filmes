@@ -27,11 +27,10 @@ function Card({ id, children }: { id: string; children: ReactNode }) {
 const sessionHref = (id: string) => `/sessoes/${encodeURIComponent(id)}`
 const feedbackHref = (id: string) => `/feedback/${encodeURIComponent(id)}`
 
-/** Where each step is done. Meu gosto leads to her Pessoa page until the
- * rating screen (#144) arrives. */
+/** Where each step is done: Meu gosto on the rating screen (#144). */
 const stepHref = (step: SetupStepView['step'], person: string) =>
   step === 'taste'
-    ? `/pessoas/${encodeURIComponent(person)}`
+    ? '/notas'
     : step === 'import'
       ? `/importar/${encodeURIComponent(person)}`
       : null

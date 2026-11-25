@@ -607,3 +607,16 @@ export {
   type BillboardRequestInput,
   type BillboardResult,
 } from './billboard/model.ts'
+export {
+  RATING_QUEUE_LIMIT,
+  RATING_QUEUE_LIMIT_MAX,
+  RATING_SCREEN_SOURCE,
+  personRate,
+  ratingQueue,
+  type GivenRating,
+  type PersonRateInput,
+  type PersonRateResult,
+  type QueueFilm,
+  type RatingQueue,
+  type RatingQueueRequest,
+} from './people/rating.ts'

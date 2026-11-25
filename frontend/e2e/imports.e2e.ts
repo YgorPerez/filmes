@@ -7,12 +7,18 @@
 
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { personImports, viewQueue } from '@filmes/engine'
+import {
+  personCreate,
+  personImports,
+  personView,
+  viewQueue,
+} from '@filmes/engine'
 import { expect, test, type Page } from '@playwright/test'
 import { zipOf } from '../../packages/engine/test/imports/zip.ts'
 import {
   addPerson,
   engineRun,
+  loginAs,
   loginAsBruno,
   notice,
   section,
@@ -66,7 +72,10 @@ test('the Dono imports a Letterboxd ZIP and works the queue', async ({
   test.skip(info.project.name !== 'desktop', 'the queue is shared: one project')
   await addPerson('Olga')
   await loginAsBruno(page)
-  await page.getByRole('link', { name: 'Importar' }).click()
+  await page
+    .getByRole('navigation', { name: 'Telas' })
+    .getByRole('link', { name: 'Importar' })
+    .click()
   await expect(page).toHaveURL(/\/importar$/)
   await expect(page.getByRole('heading', { name: 'Importar' })).toBeVisible()
   await snap(page, info, 'importar')
@@ -234,4 +243,57 @@ test('a name no Pessoa has says so', async ({ page }) => {
   await expect(page.getByRole('alert')).toContainText(
     'Nenhuma Pessoa com esse nome',
   )
+})
+
+// The rating screen (#144), the Import's twin for a Dona with no Letterboxd
+// nor Trakt: she gives Notas from her Fila and from the search, passes a
+// film over, and Pronto writes them to her file in one go. Each project has
+// its own Dona, so the other tests never see her Notas.
+test('a Dona with no history rates from the Fila and the search, then Pronto', async ({
+  page,
+}, info) => {
+  const slug = `nina-${info.project.name}`
+  const email = `${slug}@example.org`
+  await engineRun((engine) =>
+    engine.run(
+      personCreate({ name: `Nina ${info.project.name}`, owner: true, email }),
+    ),
+  ).catch((error: Error) => {
+    if (!/taken|exists/.test(error.message)) throw error
+  })
+  await loginAs(page, email)
+  await page.goto('/notas')
+
+  const card = page.getByRole('article', { name: 'Filme para dar Nota' })
+  await expect(card.getByRole('heading')).toHaveText('Pequenos Milagres')
+  await snap(page, info, 'notas')
+  await card.getByRole('button', { name: 'Nota 8' }).click()
+  await expect(card.getByRole('heading')).toHaveText('Casa Cheia')
+  await card.getByRole('button', { name: 'Não vi' }).click()
+  await expect(card.getByRole('heading')).not.toHaveText('Casa Cheia')
+
+  const search = section(page, 'Buscar no Catálogo')
+  await search.getByRole('searchbox').fill('fronteira')
+  await search.getByRole('button', { name: 'Buscar' }).click()
+  await page.getByRole('link', { name: 'Usar Fronteira (2008)' }).click()
+  await expect(card.getByRole('heading')).toHaveText('Fronteira')
+  await card.getByRole('button', { name: 'Nota 6' }).click()
+
+  const mine = section(page, 'Suas Notas')
+  await expect(mine.getByRole('listitem')).toHaveCount(2)
+  await snap(page, info, 'notas-rascunho')
+  await mine.getByRole('button', { name: 'Pronto (2 Notas)' }).click()
+
+  await expect(notice(page)).toHaveText('2 Notas gravadas no seu gosto.')
+  await expect(mine.getByRole('listitem')).toHaveCount(0)
+  await expect(card.getByRole('heading')).not.toHaveText('Pequenos Milagres')
+  const view = await engineRun((engine) => engine.run(personView(slug)))
+  expect(
+    (view.ratings ?? [])
+      .map((r) => [r.filmId, r.rating])
+      .sort(([a], [b]) => String(a).localeCompare(String(b))),
+  ).toEqual([
+    ['tt9000401', 3],
+    ['tt9000601', 4],
+  ])
 })

@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { readHome } from '#/content/home'
+import { readHome } from '#/content/sessions'
 import { Home } from '#/ui/home'
 
 export const Route = createFileRoute('/_owner/')({

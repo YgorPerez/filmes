@@ -115,7 +115,7 @@ describe('Home, the setup guide', () => {
 
   it('leads each step to where it is done', () => {
     const html = render({ guide: steps() })
-    expect(html).toMatch(/<a href="\/pessoas\/bruno"[^>]*>Dar Notas<\/a>/)
+    expect(html).toMatch(/<a href="\/notas"[^>]*>Dar Notas<\/a>/)
     expect(html).toMatch(/<a href="\/importar\/bruno"[^>]*>Importar<\/a>/)
   })
 
