@@ -39,8 +39,8 @@ const useCreditFixture = (): { fixture: Fixture; vars: Vars } => {
   const fixture = useFixture()
   const vars = weightsWith(
     fixture,
-    '\npeso = 0.3\n\n[sem_tristeza]',
-    '\npeso = 0.0\n\n[sem_tristeza]',
+    '\nweight = 0.3\n\n[no_sad]',
+    '\nweight = 0.0\n\n[no_sad]',
   )
   return { fixture, vars }
 }

@@ -621,7 +621,7 @@ describe('db:publish --build', () => {
     rmSync(dirname(built!), { recursive: true })
   }, 120_000)
 
-  it('gives the engine filmes-dados and the config in English', () => {
+  it('gives the engine filmes-dados and the config where they are', () => {
     const fixture = useFixture()
     const builder = fakeBuilder()
 
@@ -634,9 +634,10 @@ describe('db:publish --build', () => {
     expect(call!.command).toBe(process.execPath)
     expect(call!.args).toEqual([join(import.meta.dirname, 'db-rebuild.ts')])
     expect(call!.env.FILMES_CATALOGO).toBe('/dumps')
+    expect(call!.env.FILMES_DADOS).toBe(fixture.data)
+    expect(call!.env.FILMES_CONFIG).toBe(fixture.config)
     expect(call!.seen).toContain('data/people')
     expect(call!.seen).toContain('config/weights.toml')
-    expect(call!.seen).not.toContain('config/pesos.toml')
   })
 
   it('a publish deletes the built file after the swap', () => {
@@ -657,9 +658,9 @@ describe('db:publish --build', () => {
     const [call] = builder.calls
     expect(vps.live()).toMatchObject({ dbLive: 'v1\n' })
     expect(vps.read(join(vps.db, 'v1.sqlite'))).toBe('SQLite format 3\0built')
-    // Neither the scratch folders nor the built file stay behind.
+    // The built file does not stay behind; filmes-dados does.
     expect(existsSync(dirname(built!))).toBe(false)
-    expect(existsSync(call!.env.FILMES_DADOS!)).toBe(false)
+    expect(existsSync(call!.env.FILMES_DADOS!)).toBe(true)
   })
 
   it('takes filmes-dados from FILMES_DADOS', () => {

@@ -8,7 +8,7 @@ import { bundleConfig } from './bundle-config.ts'
 const ROOT = join(import.meta.dirname, '../..')
 
 describe('bundleConfig', () => {
-  it("puts the repo's config, in English, where the engine reads it", async () => {
+  it("puts the repo's config, as it is, where the engine reads it", async () => {
     const fixture = useFixture()
     const config = join(fixture.root, 'bundled')
 
@@ -30,8 +30,8 @@ describe('bundleConfig', () => {
     const fixture = useFixture()
     const source = join(fixture.root, 'source')
     mkdirSync(source)
-    writeFileSync(join(source, 'pesos.toml'), '[catalogo]\nvotos_minimos = 1\n')
-    writeFileSync(join(source, 'local.toml'), '[caminhos]\nbanco = "/x"\n')
+    writeFileSync(join(source, 'weights.toml'), '[catalog]\nmin_votes = 1\n')
+    writeFileSync(join(source, 'local.toml'), '[paths]\ndatabase = "/x"\n')
     const destination = join(fixture.root, 'out')
     mkdirSync(destination)
     writeFileSync(join(destination, 'stale.toml'), '')
@@ -42,17 +42,5 @@ describe('bundleConfig', () => {
     expect(readFileSync(join(destination, 'weights.toml'), 'utf8')).toBe(
       '[catalog]\nmin_votes = 1\n',
     )
-  })
-
-  it('takes a config already in English as it is', () => {
-    const fixture = useFixture()
-    const destination = join(fixture.root, 'again')
-
-    bundleConfig(fixture.config, destination)
-
-    for (const name of ['weights.toml', 'moods.toml', 'tag_vetoes.toml'])
-      expect(readFileSync(join(destination, name), 'utf8')).toBe(
-        readFileSync(join(fixture.config, name), 'utf8'),
-      )
   })
 })

@@ -1,0 +1,51 @@
+# Vocabulário fixo de Climas (spec #16, histórias 33 a 35).
+#
+# Cada Clima puxa para cima os filmes que têm uma das suas tags do MovieLens
+# (tags.csv do ml-32m ou Tag Genome 2021) ou um dos seus gêneros (QID do
+# Wikidata, como nas arestas "genero" do Catálogo). Nunca tira filme.
+# `recomendar --clima` aceita só os nomes daqui, sem diferença de maiúscula
+# nem de acento; os de fora voltam como aviso.
+#
+# As tags estão em minúsculas, como nas tabelas tags_movielens e genoma. Todas
+# existem no tags.csv do MovieLens; as que o genome não tem só pegam no tags.csv.
+# Lista fechada, escrita à mão: tag que descreve o enredo (p. ex. "party", que
+# é Superbad e Project X) não entra. Mudar uma lista muda a Recomendação, então
+# vale rodar `avaliar` depois.
+
+[leve]
+tags = ["feel-good", "feel good movie", "heartwarming", "cute", "whimsical", "light", "lighthearted"]
+# comédia cinematográfica, comédia romântica, filme familiar
+genres = ["Q157443", "Q860626", "Q1361932"]
+
+["pra rir"]
+tags = ["funny", "hilarious", "comedy", "very funny", "witty", "silly", "goofy", "silly fun", "dumb but funny"]
+# comédia cinematográfica, comédia romântica, comédia de ação, filme de humor negro
+genres = ["Q157443", "Q860626", "Q2678111", "Q5778924"]
+
+[tenso]
+tags = ["tense", "suspense", "suspenseful", "intense", "thriller"]
+# filme de suspense, thriller psicológico
+genres = ["Q2484376", "Q590103"]
+
+["romântico"]
+tags = ["romantic", "romance", "love story", "good romantic comedies"]
+# romance, comédia romântica
+genres = ["Q1054574", "Q860626"]
+
+["pra chorar"]
+tags = ["tearjerker", "sad", "emotional", "touching", "moving", "bittersweet"]
+genres = []
+
+["pra pensar"]
+tags = ["thought-provoking", "philosophical", "mindfuck"]
+genres = []
+
+[assustador]
+tags = ["scary", "creepy", "horror", "frightening"]
+# filme de terror, slasher
+genres = ["Q200092", "Q853630"]
+
+["ação"]
+tags = ["action", "action packed", "fast paced", "adventure"]
+# filme de ação, filme de aventura, comédia de ação
+genres = ["Q188473", "Q319221", "Q2678111"]

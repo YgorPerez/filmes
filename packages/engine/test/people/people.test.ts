@@ -4,7 +4,7 @@
 // the `pessoa` command and the DB sync come with #87.
 import { readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { data, migrateDataFile, output } from '@filmes/key-migration'
+import * as names from '../python-names.ts'
 import { Effect } from 'effect'
 import { describe, expect, test } from 'vite-plus/test'
 import {
@@ -31,17 +31,15 @@ import {
 } from '../../src/index.ts'
 import { useFixture, type Fixture } from '../fixture.ts'
 
-/** Carol, as tests/test_pessoa.py writes her, migrated to English keys. */
-const CAROL = migrateDataFile(
-  'person',
-  `---
-nome: Carol
-apelidos: [Carolzinha]
-vetos:
-- texto: nada da Sofia Rangel
-  alvo: Q9000018
-  rotulo: Sofia Rangel
-  data: 2026-01-05
+/** Carol, as tests/test_pessoa.py wrote her, in English keys. */
+const CAROL = `---
+name: Carol
+aliases: [Carolzinha]
+vetoes:
+- text: nada da Sofia Rangel
+  target: Q9000018
+  label: Sofia Rangel
+  date: 2026-01-05
 imports: []
 ---
 Amiga da faculdade.
@@ -54,9 +52,7 @@ Amiga da faculdade.
 ## Relatos
 
 - 2026-04-04 · descrição do Dono · específico · não gosta de Davi Couto (Q9001803) · "acha o Davi Couto canastrão"
-`,
-  'to-en',
-)
+`
 
 const file = (fixture: Fixture, slug: string) =>
   join(fixture.data, 'people', `${slug}.md`)
@@ -819,11 +815,11 @@ describe('the sections of a Pessoa', () => {
 })
 
 describe('closed lists', () => {
-  test('are the code names of the key migration', () => {
-    expect(LINKS).toEqual(Object.values(data.LINKS))
-    expect(LEVELS).toEqual(Object.values(data.LEVELS))
+  test('are Python’s, in English', () => {
+    expect(LINKS).toEqual(Object.values(names.LINKS))
+    expect(LEVELS).toEqual(Object.values(names.LEVELS))
     expect(STATEMENT_REACTIONS).toEqual(
-      Object.values(output.STATEMENT_REACTIONS),
+      Object.values(names.STATEMENT_REACTIONS),
     )
   })
 })

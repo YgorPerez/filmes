@@ -23,10 +23,6 @@ const IGNORED = [
   // as written.
   'tests/**',
   'config/**',
-  // Files the Python engine wrote (frontmatter and CLI output), which the
-  // key migration's tests read byte for byte.
-  'packages/key-migration/test/corpus/**',
-  'packages/key-migration/test/python-outputs.jsonl',
   // Its sample of the Recommendation is the engine's Markdown, byte for
   // byte (`*` for italics); Oxfmt would rewrite the fenced block.
   'README.md',

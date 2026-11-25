@@ -132,18 +132,20 @@ Respostas das fontes sob demanda como a API devolve, em `<fonte>/<tconst>.json`.
 
 Repo de dados fictício. Cada teste trabalha numa cópia, então comandos podem escrever nele.
 
-- `pessoas/bruno.md`: o Dono (`dono: true`, apelido `eu`), com `email: bruno@example.org`, que entra no login online (#112).
-- `pessoas/iara.md` e `pessoas/teo.md`: Pessoas para os testes de grupo. A Iara tem `email: iara@example.org` sem ser Dona: o login a recusa (#112).
-- `pessoas/vera.md`: a segunda Dona (`dono: true`, `email: vera@example.org`), sem Nota, para os testes com dois Donos (#131): cada uma entra no login, e sem login "dono" é o primeiro Dono por slug, o Bruno.
-- `pessoas/quim.md`: Pessoa para os testes de Crédito; tem uma pergunta aberta sobre a Helena Prado (Q9000001), para os testes de perguntas abertas (#62).
-- `pessoas/rosa.md`: Pessoa do teste do teto do elenco no metadado agregado (#55).
-- Não há `sessoes/`: os testes criam as Sessões com `recomendar` e `feedback`, ou escrevem o arquivo direto quando precisam de várias datas (veja `test_credito.py`).
+As chaves do frontmatter estão em inglês (ADR 0002), como no filmes-dados; o corpo da Pessoa continua em português.
+
+- `people/bruno.md`: o Dono (`owner: true`, apelido `eu`), com `email: bruno@example.org`, que entra no login online (#112).
+- `people/iara.md` e `people/teo.md`: Pessoas para os testes de grupo. A Iara tem `email: iara@example.org` sem ser Dona: o login a recusa (#112).
+- `people/vera.md`: a segunda Dona (`owner: true`, `email: vera@example.org`), sem Nota, para os testes com dois Donos (#131): cada uma entra no login, e sem login "dono" é o primeiro Dono por slug, o Bruno.
+- `people/quim.md`: Pessoa para os testes de Crédito; tem uma pergunta aberta sobre a Helena Prado (Q9000001), para os testes de perguntas abertas (#62).
+- `people/rosa.md`: Pessoa do teste do teto do elenco no metadado agregado (#55).
+- Não há `sessions/`: os testes criam as Sessões com `recomendar` e `feedback`, ou escrevem o arquivo direto quando precisam de várias datas (veja `test_credito.py`).
 
 Os testes de Pessoa (#18) criam a Ana pela CLI e escrevem a Carol direto no repo de dados do teste; nenhuma das duas fica na fixture.
 
 ## Para estender
 
-Acrescente linhas e filmes novos com IDs novos (um diretor novo `10`, `11`... ou filmes `tt90DD9NN`) em vez de mudar os existentes: outros testes contam com eles. Uma Pessoa nova é um arquivo em `dados/pessoas/`; as Notas dela vão em `catalogo/notas.csv`. Se a mudança alterar o top 5 do Bruno, rode a suíte inteira e ajuste a tabela acima.
+Acrescente linhas e filmes novos com IDs novos (um diretor novo `10`, `11`... ou filmes `tt90DD9NN`) em vez de mudar os existentes: outros testes contam com eles. Uma Pessoa nova é um arquivo em `dados/people/`, com as chaves em inglês; as Notas dela vão em `catalogo/notas.csv`. Se a mudança alterar o top 5 do Bruno, rode a suíte inteira e ajuste a tabela acima.
 
 ## Export do Letterboxd
 

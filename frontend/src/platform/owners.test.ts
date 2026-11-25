@@ -16,9 +16,10 @@ function repo(folder: string, people: Record<string, string>) {
 }
 
 describe('the Donos in filmes-dados', () => {
-  it('reads the Portuguese keys before the cutover', () => {
-    const owners = repo('pessoas', {
-      ygor: '---\nnome: Ygor\ndono: true\nemail: Ygor@Example.org\nadmin: true\n---\n',
+  it('reads the Pessoa files of people/', () => {
+    const owners = repo('people', {
+      ygor: '---\nname: Ygor\nowner: true\nemail: Ygor@Example.org\nadmin: true\n---\nbody\n',
+      ana: '---\nname: Ana\nowner: true\nemail: ana@example.org\n---\n',
     })
     expect(owners.ownerByEmail(' ygor@example.ORG ')).toEqual({
       person: 'ygor',
@@ -26,17 +27,18 @@ describe('the Donos in filmes-dados', () => {
       email: 'ygor@example.org',
       admin: true,
     })
-  })
-
-  it('reads the English keys after the cutover', () => {
-    const owners = repo('people', {
-      ana: '---\nname: Ana\nowner: true\nemail: ana@example.org\n---\nbody\n',
-    })
     expect(owners.ownerByEmail('ana@example.org')).toMatchObject({
       person: 'ana',
       name: 'Ana',
       admin: false,
     })
+  })
+
+  it('reads no Portuguese folder: filmes-dados is English since the cutover', () => {
+    const owners = repo('pessoas', {
+      ygor: '---\nnome: Ygor\ndono: true\nemail: ygor@example.org\n---\n',
+    })
+    expect(owners.ownerByEmail('ygor@example.org')).toBeNull()
   })
 
   it('lets two Donos in, each with her own email', () => {
@@ -63,8 +65,8 @@ describe('the Donos in filmes-dados', () => {
       list: '---\n- a\n---\n',
       // No name: the engine refuses the file, so no one gets in by it.
       ana: '---\nowner: true\nemail: ana@example.org\n---\n',
-      // An unknown key: the key migration refuses it.
-      teo: '---\nnome: Teo\ndono: true\nemail: teo@example.org\nidade: 9\n---\n',
+      // An unknown key: the engine's Pessoa reader refuses it.
+      teo: '---\nname: Teo\nowner: true\nemail: teo@example.org\nidade: 9\n---\n',
       rosa: '---\nname: Rosa\nowner: true\nemail: rosa@example.org\n---\n',
       'notes.txt':
         '---\nname: Notes\nowner: true\nemail: notes@example.org\n---\n',
