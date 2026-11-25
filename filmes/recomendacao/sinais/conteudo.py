@@ -55,7 +55,7 @@ JOIN arestas s   ON s.filme_id = n.filme_id AND s.predicado = :predicado
 JOIN entidades e ON e.id = s.entidade_id
 JOIN filmes f    ON f.id = n.filme_id
 WHERE n.pessoa = :pessoa
-ORDER BY s.entidade_id, n.nota DESC, f.titulo
+ORDER BY s.entidade_id, n.nota DESC, f.titulo, f.ano, n.filme_id
 """
 
 # Os filmes ligados a essas entidades: os Candidatos do caminho.
