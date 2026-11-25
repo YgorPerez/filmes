@@ -139,6 +139,10 @@ _Evitar_: upload, sincronização
 Os filmes de um Import do Letterboxd que o filmes não achou no Catálogo sozinho e esperam o Dono: confirmar com o tconst, o link do IMDb ou o do TMDB, ou descartar com um motivo. A fila é uma só para todas as Pessoas, e a decisão vale para quem tem o filme.
 _Evitar_: pendências
 
+**Fila de Notas** [rating queue, `ratingQueue`]:
+Os filmes que a tela de notas oferece a um Dono sem Import, um de cada vez, para ele dar Nota ou dizer "não vi": os de mais votos no IMDb que ele não viu, variando a década e o gênero. Cada Nota dada ali vira um Já visto com Nota, gravado num commit só quando ele diz "Pronto".
+_Evitar_: questionário
+
 **Motivo** [reason, `Reason`]:
 Uma razão para um filme estar na Recomendação.
 _Evitar_: justificativa, explicação

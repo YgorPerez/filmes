@@ -14,9 +14,11 @@ import { Route as EntrarRouteImport } from './routes/entrar'
 import { Route as OwnerIndexRouteImport } from './routes/_owner/index'
 import { Route as OwnerExportarRouteImport } from './routes/_owner/exportar'
 import { Route as OwnerFilaRouteImport } from './routes/_owner/fila'
+import { Route as OwnerNotasRouteImport } from './routes/_owner/notas'
 import { Route as OwnerOperacoesRouteImport } from './routes/_owner/operacoes'
 import { Route as ExportarImdbDotcsvRouteImport } from './routes/exportar/imdb[.]csv'
 import { Route as FilaAcaoRouteImport } from './routes/fila/acao'
+import { Route as NotasEnviarRouteImport } from './routes/notas/enviar'
 import { Route as OperacoesAcaoRouteImport } from './routes/operacoes/acao'
 import { Route as OwnerFeedbackIndexRouteImport } from './routes/_owner/feedback/index'
 import { Route as OwnerFeedbackSessaoRouteImport } from './routes/_owner/feedback/$sessao'
@@ -58,6 +60,11 @@ const OwnerFilaRoute = OwnerFilaRouteImport.update({
   path: '/fila',
   getParentRoute: () => OwnerRoute,
 } as any)
+const OwnerNotasRoute = OwnerNotasRouteImport.update({
+  id: '/notas',
+  path: '/notas',
+  getParentRoute: () => OwnerRoute,
+} as any)
 const OwnerOperacoesRoute = OwnerOperacoesRouteImport.update({
   id: '/operacoes',
   path: '/operacoes',
@@ -71,6 +78,11 @@ const ExportarImdbDotcsvRoute = ExportarImdbDotcsvRouteImport.update({
 const FilaAcaoRoute = FilaAcaoRouteImport.update({
   id: '/fila/acao',
   path: '/fila/acao',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NotasEnviarRoute = NotasEnviarRouteImport.update({
+  id: '/notas/enviar',
+  path: '/notas/enviar',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OperacoesAcaoRoute = OperacoesAcaoRouteImport.update({
@@ -159,9 +171,11 @@ export interface FileRoutesByFullPath {
   '/entrar': typeof EntrarRoute
   '/exportar': typeof OwnerExportarRoute
   '/fila': typeof OwnerFilaRoute
+  '/notas': typeof OwnerNotasRoute
   '/operacoes': typeof OwnerOperacoesRoute
   '/exportar/imdb.csv': typeof ExportarImdbDotcsvRoute
   '/fila/acao': typeof FilaAcaoRoute
+  '/notas/enviar': typeof NotasEnviarRoute
   '/operacoes/acao': typeof OperacoesAcaoRoute
   '/feedback/$sessao': typeof OwnerFeedbackSessaoRoute
   '/importar/$pessoa': typeof OwnerImportarPessoaRoute
@@ -183,9 +197,11 @@ export interface FileRoutesByTo {
   '/entrar': typeof EntrarRoute
   '/exportar': typeof OwnerExportarRoute
   '/fila': typeof OwnerFilaRoute
+  '/notas': typeof OwnerNotasRoute
   '/operacoes': typeof OwnerOperacoesRoute
   '/exportar/imdb.csv': typeof ExportarImdbDotcsvRoute
   '/fila/acao': typeof FilaAcaoRoute
+  '/notas/enviar': typeof NotasEnviarRoute
   '/operacoes/acao': typeof OperacoesAcaoRoute
   '/': typeof OwnerIndexRoute
   '/feedback/$sessao': typeof OwnerFeedbackSessaoRoute
@@ -210,9 +226,11 @@ export interface FileRoutesById {
   '/entrar': typeof EntrarRoute
   '/_owner/exportar': typeof OwnerExportarRoute
   '/_owner/fila': typeof OwnerFilaRoute
+  '/_owner/notas': typeof OwnerNotasRoute
   '/_owner/operacoes': typeof OwnerOperacoesRoute
   '/exportar/imdb.csv': typeof ExportarImdbDotcsvRoute
   '/fila/acao': typeof FilaAcaoRoute
+  '/notas/enviar': typeof NotasEnviarRoute
   '/operacoes/acao': typeof OperacoesAcaoRoute
   '/_owner/': typeof OwnerIndexRoute
   '/_owner/feedback/$sessao': typeof OwnerFeedbackSessaoRoute
@@ -238,9 +256,11 @@ export interface FileRouteTypes {
     | '/entrar'
     | '/exportar'
     | '/fila'
+    | '/notas'
     | '/operacoes'
     | '/exportar/imdb.csv'
     | '/fila/acao'
+    | '/notas/enviar'
     | '/operacoes/acao'
     | '/feedback/$sessao'
     | '/importar/$pessoa'
@@ -262,9 +282,11 @@ export interface FileRouteTypes {
     | '/entrar'
     | '/exportar'
     | '/fila'
+    | '/notas'
     | '/operacoes'
     | '/exportar/imdb.csv'
     | '/fila/acao'
+    | '/notas/enviar'
     | '/operacoes/acao'
     | '/'
     | '/feedback/$sessao'
@@ -288,9 +310,11 @@ export interface FileRouteTypes {
     | '/entrar'
     | '/_owner/exportar'
     | '/_owner/fila'
+    | '/_owner/notas'
     | '/_owner/operacoes'
     | '/exportar/imdb.csv'
     | '/fila/acao'
+    | '/notas/enviar'
     | '/operacoes/acao'
     | '/_owner/'
     | '/_owner/feedback/$sessao'
@@ -315,6 +339,7 @@ export interface RootRouteChildren {
   EntrarRoute: typeof EntrarRoute
   ExportarImdbDotcsvRoute: typeof ExportarImdbDotcsvRoute
   FilaAcaoRoute: typeof FilaAcaoRoute
+  NotasEnviarRoute: typeof NotasEnviarRoute
   OperacoesAcaoRoute: typeof OperacoesAcaoRoute
   FeedbackSessaoEnviarRoute: typeof FeedbackSessaoEnviarRoute
   ImportarPessoaAcaoRoute: typeof ImportarPessoaAcaoRoute
@@ -361,6 +386,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OwnerFilaRouteImport
       parentRoute: typeof OwnerRoute
     }
+    '/_owner/notas': {
+      id: '/_owner/notas'
+      path: '/notas'
+      fullPath: '/notas'
+      preLoaderRoute: typeof OwnerNotasRouteImport
+      parentRoute: typeof OwnerRoute
+    }
     '/_owner/operacoes': {
       id: '/_owner/operacoes'
       path: '/operacoes'
@@ -380,6 +412,13 @@ declare module '@tanstack/react-router' {
       path: '/fila/acao'
       fullPath: '/fila/acao'
       preLoaderRoute: typeof FilaAcaoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/notas/enviar': {
+      id: '/notas/enviar'
+      path: '/notas/enviar'
+      fullPath: '/notas/enviar'
+      preLoaderRoute: typeof NotasEnviarRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/operacoes/acao': {
@@ -500,6 +539,7 @@ declare module '@tanstack/react-router' {
 interface OwnerRouteChildren {
   OwnerExportarRoute: typeof OwnerExportarRoute
   OwnerFilaRoute: typeof OwnerFilaRoute
+  OwnerNotasRoute: typeof OwnerNotasRoute
   OwnerOperacoesRoute: typeof OwnerOperacoesRoute
   OwnerIndexRoute: typeof OwnerIndexRoute
   OwnerFeedbackSessaoRoute: typeof OwnerFeedbackSessaoRoute
@@ -516,6 +556,7 @@ interface OwnerRouteChildren {
 const OwnerRouteChildren: OwnerRouteChildren = {
   OwnerExportarRoute: OwnerExportarRoute,
   OwnerFilaRoute: OwnerFilaRoute,
+  OwnerNotasRoute: OwnerNotasRoute,
   OwnerOperacoesRoute: OwnerOperacoesRoute,
   OwnerIndexRoute: OwnerIndexRoute,
   OwnerFeedbackSessaoRoute: OwnerFeedbackSessaoRoute,
@@ -536,6 +577,7 @@ const rootRouteChildren: RootRouteChildren = {
   EntrarRoute: EntrarRoute,
   ExportarImdbDotcsvRoute: ExportarImdbDotcsvRoute,
   FilaAcaoRoute: FilaAcaoRoute,
+  NotasEnviarRoute: NotasEnviarRoute,
   OperacoesAcaoRoute: OperacoesAcaoRoute,
   FeedbackSessaoEnviarRoute: FeedbackSessaoEnviarRoute,
   ImportarPessoaAcaoRoute: ImportarPessoaAcaoRoute,
