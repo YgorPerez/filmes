@@ -14,6 +14,7 @@ import {
   pyFormatG,
   pyInt,
   pyExp,
+  pyLog1pInt,
   pyRound,
   pyStrip,
   pyStr,
@@ -72,6 +73,12 @@ describe('numbers', () => {
     const rows = golden<{ x: { f: string }; out: Tagged }>('exp')
     expect(rows.length).toBeGreaterThanOrEqual(20_000)
     expect(misses(rows, ({ x }) => pyExp(float(x.f)))).toEqual([])
+  })
+
+  test('pyLog1pInt gives math.log1p bit for bit on an int', () => {
+    const rows = golden<{ n: { i: string }; out: Tagged }>('log1p')
+    atLeast10k(rows)
+    expect(misses(rows, ({ n }) => pyLog1pInt(Number(n.i)))).toEqual([])
   })
 
   test('pyRound rounds as round()', () => {

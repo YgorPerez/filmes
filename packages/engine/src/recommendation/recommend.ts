@@ -462,6 +462,23 @@ export const recommend = (
   EngineError | SqliteError,
   EngineServices | Run
 > =>
+  recommendAsked(request).pipe(
+    Effect.map(({ recommendation }) => recommendation),
+  )
+
+/** `recommend`, with the Restrições it applied: the same values, so what
+ * they learnt while evaluating (the similar's reference titles) reaches
+ * the Session (Python's `_contexto` reads them after `recomendar`). */
+export const recommendAsked = (
+  request: RecommendRequest,
+): Effect.Effect<
+  {
+    readonly recommendation: Recommendation
+    readonly asked: ReadonlyArray<Constraint>
+  },
+  EngineError | SqliteError,
+  EngineServices | Run
+> =>
   Effect.gen(function* () {
     const { weights } = yield* Environment
     const count = request.count ?? weights.recommendation.size
@@ -473,8 +490,11 @@ export const recommend = (
     const names = request.attendees
       .flatMap((item) => item.split(','))
       .filter((name) => pyStrip(name) !== '')
-    const asked = yield* readConstraints(request)
-    return yield* (yield* Sqlite).read((db) =>
+    const asked = [
+      ...(yield* readConstraints(request)),
+      ...(request.constraints ?? []),
+    ]
+    const recommendation = yield* (yield* Sqlite).read((db) =>
       Effect.gen(function* () {
         const attendees = yield* resolveAttendees(db, names)
         const rule = yield* resolveRule(db, request, attendees)
@@ -482,9 +502,10 @@ export const recommend = (
           attendees,
           count,
           rule,
-          constraints: [...asked, ...(request.constraints ?? [])],
+          constraints: asked,
           moods: request.moods ?? [],
         })
       }),
     )
+    return { recommendation, asked }
   })
