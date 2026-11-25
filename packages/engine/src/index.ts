@@ -156,6 +156,7 @@ export {
 } from './sessions/facts.ts'
 export {
   DB_RULES,
+  loadSessions,
   ownersOf,
   reloadSessions,
   syncSession,
@@ -491,6 +492,8 @@ export {
   type ImportRemoval,
   type ImportRemovalInput,
 } from './imports/remove.ts'
+export { rebuild, type Rebuilt } from './rebuild/rebuild.ts'
+export { withDatabaseFile } from './sqlite/Sqlite.ts'
 export { reloadData, type DataReload } from './data/reload.ts'
 export {
   evaluate,

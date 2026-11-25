@@ -57,6 +57,23 @@ describe('parseArgv', () => {
     })
   })
 
+  test('an optional value: the next value, inline, `const` with none, or absent', () => {
+    const spec = {
+      options: {
+        crianca: { kind: 'optional', const: '0' },
+        'sem-lento': { kind: 'flag' },
+      },
+    } as const
+    const read = (argv: string[]) => parseArgv(argv, spec).crianca
+
+    expect(read(['--crianca', '7'])).toBe('7')
+    expect(read(['--crianca=12'])).toBe('12')
+    expect(read(['--crianca', '-1'])).toBe('-1')
+    expect(read(['--crianca'])).toBe('0')
+    expect(read(['--crianca', '--sem-lento'])).toBe('0')
+    expect(read([])).toBeUndefined()
+  })
+
   test('a unique prefix names its option; a negative number is a value', () => {
     const args = parseArgv(['--pres', 'dono', '--man', '-1', '-2.5'], RECOMMEND)
 

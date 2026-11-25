@@ -27,8 +27,11 @@ const EOL = null
 const lines = (text: string): string[] =>
   text.match(/[^\r\n]*(?:\r\n|\r|\n)|[^\r\n]+$/g) ?? []
 
-/** `csv.reader`: one record per `next()`, `null` at the end. */
-class Reader {
+/** `csv.reader`: one record per `next()`, `null` at the end (a blank line
+ * is an empty record, as Python's). `strict: false` is the default
+ * dialect's leniency: a character after a closing quote joins the field,
+ * and a file ending inside quotes keeps the field. */
+export class CsvReader {
   lineNum = 0
   private readonly lines: string[]
   private at = 0
@@ -37,8 +40,11 @@ class Reader {
   private field = ''
   private fieldLength = 0
 
-  constructor(text: string) {
+  private readonly strict: boolean
+
+  constructor(text: string, strict = true) {
     this.lines = lines(text)
+    this.strict = strict
   }
 
   private save() {
@@ -94,7 +100,11 @@ class Reader {
           this.save()
           this.state = 'start_field'
         } else if (newline || char === EOL) this.endOfLine(char)
-        else throw new CsvError(`',' expected after '"'`)
+        else if (this.strict) throw new CsvError(`',' expected after '"'`)
+        else {
+          this.add(char)
+          this.state = 'in_field'
+        }
         return
       case 'eat_crnl':
         if (newline) return
@@ -130,8 +140,11 @@ class Reader {
     do {
       const line = this.lines[this.at]
       if (line === undefined) {
-        if (this.fieldLength !== 0 || this.inQuotedField())
-          throw new CsvError('unexpected end of data')
+        if (this.fieldLength !== 0 || this.inQuotedField()) {
+          if (this.strict) throw new CsvError('unexpected end of data')
+          this.save()
+          return this.fields
+        }
         return null
       }
       this.at += 1
@@ -151,11 +164,11 @@ export type CsvRow = ReadonlyMap<string, string | null>
  * for an empty text); `rows()` yields each non-blank row with the line the
  * reader stopped at, lazily, so an error surfaces where Python's would. */
 export class CsvDictReader {
-  private readonly reader: Reader
+  private readonly reader: CsvReader
   private header: readonly string[] | null | undefined
 
   constructor(text: string) {
-    this.reader = new Reader(text)
+    this.reader = new CsvReader(text)
   }
 
   get fieldnames(): readonly string[] | null {
