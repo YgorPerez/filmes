@@ -17,8 +17,8 @@ from filmes.sessao import arquivo, banco
 def abrir(amb: Ambiente, recomendacao: dict, contexto: dict) -> dict:
     """Grava a Sessão de uma Recomendação, ainda sem Feedback, e devolve {id, arquivo, versao}."""
     with escrita(amb) as conn:
-        nomes = dict(conn.execute("SELECT slug, nome FROM pessoas"))
-        dono = {slug for (slug,) in conn.execute("SELECT slug FROM pessoas WHERE dono = 1")}
+        nomes = dict(conn.execute("SELECT slug, nome FROM pessoas ORDER BY slug"))
+        dono = [slug for (slug,) in conn.execute("SELECT slug FROM pessoas WHERE dono = 1 ORDER BY slug")]
         presentes = recomendacao["presentes"]
         partes = [p for p in presentes if p not in dono] or presentes
         sessao_id = arquivo.novo_id(amb.dados, amb.hoje, partes)
@@ -44,7 +44,7 @@ def refazer(amb: Ambiente, sessao_id: str, recomendacao: dict, contexto: dict, t
     Presentes. Devolve {id, arquivo, versao}."""
     with escrita(amb) as conn:
         frente = conferir_aberta(amb, sessao_id)
-        nomes = dict(conn.execute("SELECT slug, nome FROM pessoas"))
+        nomes = dict(conn.execute("SELECT slug, nome FROM pessoas ORDER BY slug"))
         if trocados:
             frente["trocados"] = sorted({*(frente.get("trocados") or []), *trocados})
         versoes = [*(frente.get("versoes") or []), arquivo.versao_atual(frente)]

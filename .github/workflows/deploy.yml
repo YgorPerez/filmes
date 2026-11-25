@@ -1,0 +1,189 @@
+# Each push to master publishes the app at https://cinema.temestudo.cloud
+# (#79, ADR 0006), modeled on pesquisa-relacionamentos' `deploy.yml`. The
+# `build` job runs the frontend's types and tests and builds it. `publish`
+# sends that same build to the VPS over SSH, and `frontend/scripts/vps.ts`
+# swaps the container without taking the site down.
+#
+# Without the `VPS_*` secrets, `publish` is skipped with a warning, and the
+# workflow ends green. They come in through `frontend/scripts/deploy-wizard.sh`.
+name: Deploy
+
+'on':
+  push:
+    branches: [master]
+    # What changes the app. A docs-only or Python-only commit publishes
+    # nothing.
+    paths:
+      - 'frontend/**'
+      - 'packages/**'
+      # The engine's config, which the image carries.
+      - 'config/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.github/workflows/deploy.yml'
+  # From the Actions tab: publishes the current master, or, with `rollback`,
+  # switches to an image the VPS kept ("previous" for the one from the
+  # previous deploy).
+  workflow_dispatch:
+    inputs:
+      rollback:
+        description: 'Roll back to a version: "previous" or the SHA. Empty publishes master.'
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+# One deploy at a time, and the newest waits for the previous one instead of
+# cutting it off mid-swap.
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  # Secrets cannot go in an `if:`. This job says whether they exist.
+  secrets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      ready: ${{ steps.check.outputs.ready }}
+    steps:
+      - id: check
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          if [ -n "$VPS_HOST" ] && [ -n "$VPS_SSH_KEY" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::warning title=Deploy skipped::Missing the VPS_HOST and VPS_SSH_KEY secrets (VPS_USER, root by default, and VPS_PORT, 22, are optional). Run frontend/scripts/deploy-wizard.sh. Nothing was published."
+          fi
+
+  build:
+    if: inputs.rollback == ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # The frontend's own: the deploy scripts' tests on the fake VPS live
+      # there. The whole suite already ran in the PR (`pr.yml`).
+      - name: Types and tests
+        run: |
+          pnpm --filter frontend typecheck
+          pnpm --filter frontend test
+
+      - name: Build
+        run: pnpm build
+
+      # upload-artifact skips dot folders, like `.output`: it goes in a tar.
+      - name: Pack the build
+        run: tar -czf build.tar.gz -C frontend .output
+
+      - name: Upload the build
+        uses: actions/upload-artifact@v4
+        with:
+          name: build
+          path: build.tar.gz
+          retention-days: 7
+
+  publish:
+    needs: [secrets, build]
+    if: needs.secrets.outputs.ready == 'true' && inputs.rollback == ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: production
+      url: https://cinema.temestudo.cloud
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # `scripts/vps.ts` only imports Node's own modules: no install.
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Download the build
+        uses: actions/download-artifact@v4
+        with:
+          name: build
+          path: frontend
+
+      - name: Unpack the build
+        run: tar -xzf build.tar.gz && rm build.tar.gz
+
+      - name: Publish to the VPS
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT || '22' }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          # Both or neither: the push of filmes-dados (ADR 0005). Without
+          # them the VPS keeps the remote and key it already has.
+          FILMES_DATA_REMOTE: ${{ secrets.FILMES_DATA_REMOTE }}
+          FILMES_DATA_DEPLOY_KEY: ${{ secrets.FILMES_DATA_DEPLOY_KEY }}
+        run: node scripts/vps.ts --publish .output "$GITHUB_SHA"
+
+      # From outside, over the internet: the page arrives as HTML, each asset
+      # it cites arrives with its own type, and http leads to https with the
+      # query kept.
+      - name: Verify the live site
+        run: node scripts/check-live.ts cinema.temestudo.cloud "$GITHUB_SHA"
+
+  rollback:
+    needs: secrets
+    if: needs.secrets.outputs.ready == 'true' && inputs.rollback != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: production
+      url: https://cinema.temestudo.cloud
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Roll back to the requested version
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT || '22' }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          ROLLBACK_TO: ${{ inputs.rollback }}
+        run: |
+          if [ "$ROLLBACK_TO" = previous ]; then
+            node scripts/vps.ts --rollback
+          else
+            node scripts/vps.ts --rollback "$ROLLBACK_TO"
+          fi
+
+      - name: Verify the live site
+        run: node scripts/check-live.ts cinema.temestudo.cloud "$GITHUB_SHA"

@@ -1,0 +1,169 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-24T18:02:03.107658+00:00",
+  "title": "Design System: filmes",
+  "extensions": {
+    "colorMeta": {
+      "marquee-red": {
+        "role": "primary",
+        "displayName": "Vermelho-cinema"
+      },
+      "bulb": {
+        "role": "secondary",
+        "displayName": "Lâmpada âmbar"
+      },
+      "person-1": {
+        "role": "tertiary",
+        "displayName": "Presente 1"
+      },
+      "marquee-panel": {
+        "role": "neutral",
+        "displayName": "Painel do letreiro"
+      },
+      "ground": {
+        "role": "neutral",
+        "displayName": "Chão"
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Tinta"
+      }
+    },
+    "typographyMeta": {
+      "letter": {
+        "displayName": "Placa do letreiro",
+        "purpose": "Só letreiro, número de posição e carimbo."
+      }
+    },
+    "shadows": [],
+    "motion": [
+      {
+        "name": "plate-flip",
+        "value": "180ms ease-out, rotateX",
+        "purpose": "Troca das placas do letreiro ao regerar; nenhuma em prefers-reduced-motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "card-wide",
+        "value": "560px"
+      },
+      {
+        "name": "app-top-bar",
+        "value": "900px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Letreiro",
+      "kind": "custom",
+      "refersTo": "marquee",
+      "description": "Leitura do pedido em placas.",
+      "html": "<div class=\"ds-letreiro\"><span>Vocês</span><span>dois</span><span>até</span><span>1h40</span></div>",
+      "css": ".ds-letreiro{background:#fbfaf5;color:#141414;border:3px solid #c8102e;border-radius:4px;padding:10px 12px 9px;display:flex;flex-wrap:wrap;gap:3px}.ds-letreiro span{font:700 22px/1 Antonio,'Arial Narrow',sans-serif;text-transform:uppercase;letter-spacing:.02em;padding:3px 4px 2px;background:rgba(20,20,20,.045);border-radius:2px}"
+    },
+    {
+      "name": "Botão principal",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Enviar no Cartaz, Pedir no app.",
+      "html": "<button class=\"ds-btn\">Enviar</button>",
+      "css": ".ds-btn{min-height:44px;padding:0 22px;border:0;border-radius:999px;background:#c8102e;color:#fff;font:700 15px system-ui,sans-serif;cursor:pointer}.ds-btn:hover{background:#a90d26}.ds-btn:focus-visible{outline:2px solid #141414;outline-offset:2px}"
+    },
+    {
+      "name": "Toggle",
+      "kind": "chip",
+      "refersTo": "toggle",
+      "description": "Já vi, Trocar, Todos.",
+      "html": "<label class=\"ds-tg\"><input type=\"checkbox\"> Trocar</label>",
+      "css": ".ds-tg{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 14px;border-radius:999px;box-shadow:inset 0 0 0 1px #d9d9d3;font:14px system-ui,sans-serif;background:#fff;cursor:pointer}.ds-tg:has(input:checked){box-shadow:inset 0 0 0 2px #141414;background:#e9e9e4;font-weight:600}.ds-tg:focus-within{outline:2px solid #2c62c4;outline-offset:2px}"
+    },
+    {
+      "name": "Carimbo",
+      "kind": "custom",
+      "refersTo": "stamp",
+      "description": "Estado Trocar sobre a capa.",
+      "html": "<span class=\"ds-carimbo\">Trocar</span>",
+      "css": ".ds-carimbo{display:inline-block;font:700 15px/1 Antonio,'Arial Narrow',sans-serif;text-transform:uppercase;letter-spacing:.06em;padding:5px 8px 4px;border:2px solid #c8102e;color:#c8102e;border-radius:3px;transform:rotate(-4deg);background:#fff}"
+    },
+    {
+      "name": "Selo novo",
+      "kind": "chip",
+      "refersTo": "badge-new",
+      "description": "Filme que entrou ao regerar.",
+      "html": "<span class=\"ds-novo\">novo</span>",
+      "css": ".ds-novo{font:700 11px/1 system-ui,sans-serif;text-transform:uppercase;letter-spacing:.05em;padding:4px 8px;border-radius:999px;background:#f2b632;color:#141414}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Letreiro de rua",
+    "overview": "O pedido da noite aparece como o letreiro de um cinema de rua: painel aceso, letras pretas condensadas em placas, moldura vermelha. É a primeira coisa da tela, e é onde o Dono confere que o pedido foi entendido (\"VOCÊS DOIS · ATÉ 1H40 · ALGO LEVE\"). Abaixo do letreiro, o filmes é uma tela de trabalho limpa: cards, listas, toggles e campos que qualquer um sabe usar. A capa do filme é a única imagem forte; nada compete com ela.\n\nO mundo parte do Cartaz de hoje (`filmes/cartaz/cartaz.css`), que já tinha a estrutura certa e nenhuma identidade: ele herdava as cores do T3 Code. Ficam o card com capa à esquerda, os pontos por Presente sobre a capa, os avatares com inicial, a Força em três pontos e os chips de ano, duração e gêneros. Entram o letreiro, o vermelho-cinema, as cores fixas por Presente, a letra condensada nos números de posição e o carimbo de estado.\n\nO letreiro de rua venceu por sorteio entre sete mundos do cinema de casa brasileiro (locadora de bairro, ingresso, programação do jornal, catálogo da Mostra, ficha da Cinemateca, letreiro de rua, saco de pipoca). Recusa o cartaz de streaming (grade escura de capas com brilho) e o formulário cinza. Quatro disciplinas vieram dos desafiantes do sorteio: o carimbo de estado (da carteira de passagens), a Força por preenchimento e não por opacidade (da notação de dança), cor chapada sem gradiente fora da capa (do mapa de zoológico) e um destaque raro (do canon monocromático).\n\nCelular primeiro. O Cartaz roda em dois lugares, com o mesmo componente: dentro do Claude, como view do MCP Apps num WebView, e no app web.",
+    "keyCharacteristics": [
+      "Tela neutra, sem tom quente nem frio; o vermelho-cinema é raro e quer dizer \"letreiro\" ou \"ação principal\".",
+      "Letreiro de painel aceso no topo do Cartaz e das telas de Sessão. Ele fica aceso também no tema escuro, como um letreiro na rua à noite.",
+      "Letra condensada (Antonio 700) só no letreiro, no número de posição e no carimbo. O resto é a fonte do sistema.",
+      "Uma cor por Presente, sempre com a inicial junto.",
+      "Estados se imprimem no card (carimbo, selo, faixa), e nada some sem dizer por quê.",
+      "Claro e escuro desde o primeiro componente."
+    ],
+    "rules": [
+      {
+        "name": "The Rare Red Rule",
+        "body": "O vermelho-cinema aparece em quatro lugares e só neles: moldura do letreiro, número de posição, carimbo Trocar e o botão principal da tela. Erro e perigo usam o mesmo vermelho com ícone e texto, nunca um quinto uso decorativo.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Color Per Person Rule",
+        "body": "Dentro de uma Sessão, cada Presente tem uma cor só, dada pela ordem dos Presentes. A cor nunca aparece sem a inicial ou o nome.",
+        "section": "colors"
+      },
+      {
+        "name": "The Lit Panel Rule",
+        "body": "O letreiro é claro nos dois temas. No escuro, ele é a única área clara da tela.",
+        "section": "colors"
+      },
+      {
+        "name": "The Flat Color Rule",
+        "body": "Cor chapada. O único gradiente é a faixa escura no pé da capa, para os pontos lerem sobre qualquer pôster.",
+        "section": "colors"
+      },
+      {
+        "name": "The Sign Letters Only Rule",
+        "body": "A Antonio não entra em botão, rótulo, título de filme nem texto corrido. Fora do letreiro, do número e do carimbo, é fonte do sistema.",
+        "section": "typography"
+      },
+      {
+        "name": "The Words In Plates Rule",
+        "body": "No letreiro, cada palavra fica na sua placa (fundo de tinta a 4,5%, raio de 2px), como as letras trocáveis de um painel. O texto inteiro vai no `aria-label` do letreiro; as placas ficam `aria-hidden`.",
+        "section": "typography"
+      },
+      {
+        "name": "The No Shadow Rule",
+        "body": "Cards e painéis se separam do chão pelo tom e pelo fio, nunca por box-shadow.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** abrir o Cartaz e as telas de Sessão com o letreiro do pedido.",
+      "**Do** manter o letreiro claro nos dois temas.",
+      "**Do** dar a cada Presente a mesma cor no ponto e no avatar, sempre com a inicial.",
+      "**Do** mostrar a Força pelo preenchimento dos três pontos, com `aria-label`.",
+      "**Do** carimbar o estado no card (Trocar, Já vi) e dizer em \"Saiu\" o que saiu e por quê.",
+      "**Do** manter alvos de toque de 44px ou mais.",
+      "**Do** conferir cada componente no claro e no escuro, a 360px e a 390px.",
+      "**Do** servir a Antonio da origem do app, declarada no CSP do recurso do MCP Apps; nunca em `data:`.",
+      "**Do** manter o card inline do Claude compacto (até duas ações, 4 ou 5 dados por filme) e marcar vários filmes na tela cheia."
+    ],
+    "donts": [
+      "**Don't** usar o vermelho-cinema fora dos quatro lugares dele.",
+      "**Don't** usar a Antonio em botão, rótulo, título de filme ou texto corrido.",
+      "**Don't** fazer grade escura de capas com brilho, como streaming.",
+      "**Don't** usar fundo creme ou azulado; o chão é neutro.",
+      "**Don't** usar sombra com desfoque nem gradiente fora da faixa da capa.",
+      "**Don't** mostrar Força, Presente ou estado só por cor.",
+      "**Don't** esconder um filme marcado: ele fica, carimbado, até regerar.",
+      "**Don't** escrever ou resumir uma linha de Evidência na interface; o texto é do motor."
+    ]
+  }
+}

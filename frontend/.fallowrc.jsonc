@@ -1,0 +1,32 @@
+// What fallow's static graph does not see. Nothing here loosens a limit: the
+// three analyses (`dead-code`, `dupes`, `health`) run raw, as in
+// pesquisa-relacionamentos.
+{
+  "$schema": "./node_modules/fallow/schema.json",
+  "dynamicallyLoaded": [
+    // React Doctor finds `doctor.config.ts` by name, at the root of the
+    // project it scans. No import points to it.
+    "doctor.config.ts",
+    // `db-build.ts` runs the engine's rebuild as a process of its own:
+    // `node scripts/db-rebuild.ts`, by path. No import points to it.
+    "scripts/db-rebuild.ts",
+    // The Cartaz's MCP Apps view: `scripts/billboard-view.ts` builds it
+    // from `src/mcp-view/index.html`, whose script tag points to it.
+    "src/mcp-view/main.tsx",
+  ],
+  "ignoreDependencies": [
+    // `reactCompilerPreset()` in `vite.config.ts` names the Babel plugin by
+    // string, and Babel resolves it from here. No import points to it.
+    "babel-plugin-react-compiler",
+    // TanStack Start's client and server entries import React DOM (hydrate,
+    // stream); the app itself does not, yet.
+    "react-dom",
+  ],
+  "duplicates": {
+    "ignore": [
+      // TanStack Router generates this file on every build: a clone nobody
+      // can refactor, because the generator rewrites it.
+      "src/routeTree.gen.ts",
+    ],
+  },
+}

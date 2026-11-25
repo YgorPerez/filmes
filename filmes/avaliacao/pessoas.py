@@ -67,7 +67,7 @@ def _diarios(conn, amb):
     resolvidos = {
         (pessoa, item): filme
         for pessoa, item, filme in conn.execute(
-            "SELECT pessoa, id, filme_id FROM itens_letterboxd WHERE situacao = 'resolvido'"
+            "SELECT pessoa, id, filme_id FROM itens_letterboxd WHERE situacao = 'resolvido' ORDER BY pessoa, id"
         )
     }
     if resolvidos and repo is not None:
@@ -80,6 +80,7 @@ def _diarios(conn, amb):
     for pessoa, filme, data in conn.execute("""
         SELECT pessoa, filme_id, data FROM ja_visto
         WHERE sessao IS NULL AND fonte LIKE 'Trakt %' AND data <= ?
+        ORDER BY pessoa, filme_id, data
     """, (hoje,)):
         _primeira_data(diarios[pessoa], filme, data)
     return diarios

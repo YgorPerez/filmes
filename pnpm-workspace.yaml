@@ -1,0 +1,64 @@
+# The repo's workspace, in the shape of pesquisa-relacionamentos: one
+# `pnpm install` at the root installs everything, with a single lockfile. The
+# Python engine (`filmes/`, `tests/`) stays where it is, outside the
+# workspace, until the TypeScript port replaces it (map #72).
+packages:
+  - frontend
+  - mcp
+  - packages/*
+
+# The versions more than one package uses, written once. Whoever depends on
+# one of them asks for `catalog:` in its `package.json`.
+catalog:
+  # The root `prepare` applies its patch to `typescript` and to the Vite+
+  # Oxlint. Each version of it accepts a short list of Oxlint and
+  # `oxlint-tsgolint` versions: bump the two together with `vite-plus`.
+  '@effect/tsgo': 0.53.4
+  '@total-typescript/ts-reset': 0.6.1
+  '@types/node': 24.19.1
+  '@vitest/coverage-v8': 5.0.5
+  # Schema only decodes the same with the same `effect` in the engine and in
+  # the app.
+  effect: 4.0.2
+  typescript: 7.0.2
+  # The workspace's Vite is the Vite+ core, and Vitest is the one it brings
+  # (`vp toolchain`). The three go up together.
+  vite: npm:@voidzero-dev/vite-plus-core@1.3.0
+  vite-plus: 1.3.0
+  vitest: 5.0.5
+
+# Packages whose post-install script may run. pnpm blocks the ones not on the
+# list and fails the install.
+allowBuilds:
+  esbuild: true
+
+# A single Vite and a single Vitest in the workspace, the Vite+ ones, so the
+# app, the plugins and `vp test` see the same copy. Two Vites break TanStack
+# Start's `instanceof` (vite-plus#1391).
+overrides:
+  vite@*: 'catalog:'
+  vitest@*: 'catalog:'
+
+# React Doctor brings its own Oxlint, and its plugin only runs on that
+# version. It keeps its own, but outside `node_modules/.pnpm/node_modules`:
+# from there, the `NODE_PATH` pnpm gives scripts would hand it to the
+# `@effect/tsgo` patch in `prepare`, which refuses it. This way the patch only
+# finds the Vite+ Oxlint.
+hoistPattern:
+  - '*'
+  - '!oxlint'
+
+# A freshly published version only gets in after a day, the time npm usually
+# takes to unpublish one that came with malware.
+minimumReleaseAge: 1440
+
+# An update cannot arrive with less assurance (provenance, signature) than
+# the version it replaces.
+trustPolicy: no-downgrade
+
+# The plugins ask for `vite` and `vitest` by version range, and the Vite+ core
+# has its own numbering (1.3.0). What `vp migrate` writes.
+peerDependencyRules:
+  allowAny:
+    - vite
+    - vitest

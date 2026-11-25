@@ -101,7 +101,8 @@ def pelo_id_do_tmdb(conn, tmdb_id: str, decisao: dict | None) -> Resolucao | Non
         """SELECT imdb FROM slugs_letterboxd WHERE tmdb = ? AND imdb IS NOT NULL
            UNION SELECT i.valor FROM metadados_wikidata t
            JOIN metadados_wikidata i ON i.item = t.item AND i.propriedade = 'P345'
-           WHERE t.propriedade = 'P4947' AND t.valor = ?""",
+           WHERE t.propriedade = 'P4947' AND t.valor = ?
+           ORDER BY 1""",
         (tmdb_id, tmdb_id),
     )}
     if len(imdbs) == 1:
@@ -364,7 +365,7 @@ def reprocessar(amb, nome: str | None = None) -> dict:
         slugs = [p.slug for p in todas]
         marcas = ",".join("?" * len(slugs))
         antes = {l["id"] for l in conn.execute(
-            f"SELECT id FROM itens_letterboxd WHERE situacao = 'fila' AND pessoa IN ({marcas})", slugs)}
+            f"SELECT id FROM itens_letterboxd WHERE situacao = 'fila' AND pessoa IN ({marcas}) ORDER BY id", slugs)}
         decididos, usou_tmdb = _registrar_respostas_do_tmdb(
             conn, amb, contexto, [l for p in todas for l in linhas_da_pessoa(amb.dados, p)])
         carregar(conn, amb, decididos=decididos)
@@ -445,7 +446,7 @@ def _usa_tmdb(conn, slug) -> bool:
 def relatorio(conn, slug) -> dict:
     """Quantos filmes da Pessoa foram resolvidos por cada caminho, descartados e estão na fila."""
     contagem = Counter((l["situacao"], l["caminho"]) for l in conn.execute(
-        "SELECT situacao, caminho FROM itens_letterboxd WHERE pessoa = ?", (slug,)))
+        "SELECT situacao, caminho FROM itens_letterboxd WHERE pessoa = ? ORDER BY situacao, caminho, id", (slug,)))
     fila = [dict(l) for l in conn.execute(
         "SELECT id, nome, ano, razao FROM itens_letterboxd WHERE pessoa = ? AND situacao = 'fila' ORDER BY id", (slug,))]
     descartados = [dict(l) for l in conn.execute(

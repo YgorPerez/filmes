@@ -1,0 +1,35 @@
+# The site's logs in the host's Nginx (`filmes.conf`). The deploy installs
+# this file at `/etc/logrotate.d/filmes`.
+#
+# The error_log copies the request line, with the query, when something
+# fails: it rotates daily and never exceeds 3 days, today's file plus 2
+# rotated. `delaycompress` is left out so that yesterday already comes out
+# compressed.
+/var/log/nginx/filmes/error.log {
+	daily
+	rotate 2
+	missingok
+	notifempty
+	compress
+	create 0640 www-data adm
+	sharedscripts
+	postrotate
+		invoke-rc.d nginx rotate >/dev/null 2>&1 || true
+	endscript
+}
+
+# The access_log has neither query nor Referer. It keeps 14 days, like
+# Ubuntu's default.
+/var/log/nginx/filmes/access.log {
+	daily
+	rotate 14
+	missingok
+	notifempty
+	compress
+	delaycompress
+	create 0640 www-data adm
+	sharedscripts
+	postrotate
+		invoke-rc.d nginx rotate >/dev/null 2>&1 || true
+	endscript
+}

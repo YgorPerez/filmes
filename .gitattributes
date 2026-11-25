@@ -1,0 +1,13 @@
+# git keeps LF in the index, but with `core.autocrlf=true` (Windows' default)
+# it hands out CRLF in the working copy. Oxfmt writes LF, and without this a
+# fresh clone would fail `vp check` on every file.
+* text=auto eol=lf
+
+# Binaries: never converted, never diffed as text.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.zip binary
+*.gz binary
+*.sqlite binary

@@ -3,12 +3,7 @@ name = "filmes"
 version = "0.1.0"
 description = "Motor do recomendador de filmes com evidência"
 requires-python = ">=3.12"
-dependencies = [
-    "ijson>=3.6.0",
-    "numpy>=1.26",
-    "pyyaml>=6.0",
-    "scipy>=1.14",
-]
+dependencies = ["ijson>=3.6.0", "numpy>=1.26", "pyyaml>=6.0", "scipy>=1.14"]
 
 [dependency-groups]
 dev = ["pytest>=8"]

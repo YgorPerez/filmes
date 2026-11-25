@@ -1,0 +1,46 @@
+// The closed lists the database stores in Portuguese, read into the
+// engine's English names: the same maps as the key migration's.
+
+import { data, output, config } from '@filmes/key-migration'
+import { expect, test } from 'vite-plus/test'
+import {
+  kindOf,
+  levelOf,
+  LINK_PREDICATE,
+  linkOf,
+  targetOf,
+  CONSTRAINT_ORDER,
+} from '../../src/index.ts'
+
+test('every stored Tipo, level, link and tag group has its English name', () => {
+  for (const [pt, en] of Object.entries(output.KINDS))
+    expect(kindOf(pt)).toBe(en)
+  for (const [pt, en] of Object.entries(data.LEVELS))
+    expect(levelOf(pt)).toBe(en)
+  expect(
+    Object.fromEntries(
+      Object.entries(LINK_PREDICATE).map(([en, pt]) => [pt, en]),
+    ),
+  ).toEqual(data.LINKS)
+  for (const [pt, en] of Object.entries(data.LINKS)) expect(linkOf(pt)).toBe(en)
+  for (const [pt, en] of Object.entries(config.TAG_GROUPS))
+    expect(targetOf(pt)).toBe(en)
+})
+
+test('an id is no tag group, and a predicate outside the links is none', () => {
+  expect(targetOf('Q1054574')).toBe('Q1054574')
+  expect(targetOf('tt9000104')).toBe('tt9000104')
+  expect(linkOf('pais')).toBeUndefined()
+  expect(() => kindOf('outro')).toThrow("unknown tipo: 'outro'")
+})
+
+test("the Restrições' order is the Python modules', in English", () => {
+  const pythonModules = Object.keys(data.CONSTRAINTS)
+    .filter((name) => name !== 'sem_repetido')
+    .sort()
+  expect([...CONSTRAINT_ORDER]).toEqual(
+    pythonModules.map(
+      (name) => (data.CONSTRAINTS as Record<string, string>)[name],
+    ),
+  )
+})

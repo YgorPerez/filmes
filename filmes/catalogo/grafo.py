@@ -14,6 +14,7 @@ def carregar(conn, pasta, dumps):
     for item, filme in conn.execute("""
         SELECT m.item, f.id FROM metadados_wikidata m JOIN filmes f ON f.id = m.valor
         WHERE m.propriedade = 'P345'
+        ORDER BY m.item, f.id
     """):
         filmes_por_item.setdefault(item, []).append(filme)
     entidades = {}

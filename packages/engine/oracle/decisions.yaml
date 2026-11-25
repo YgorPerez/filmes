@@ -1,0 +1,143 @@
+# Differences between the Python and the TypeScript engine that stay on
+# purpose (#76 §4.5). The oracle fails on any difference no entry here
+# explains, and, in a full run, on an entry that explained nothing.
+#
+# Only the port tickets add entries, each with its reason and link. Fields:
+#
+#   id         unique, kebab-case
+#   check      parity (default) or self-check (Python against itself)
+#   commands   the Python commands whose steps it covers (`pessoa ver`);
+#              a parity entry stays dormant, never stale, until one of
+#              them is ported
+#   scenarios  glob over the pytest id (default '*')
+#   path       glob over the difference path (`error.message`,
+#              `output.films[*].evidence.*`, `data/sessions/*#body:*`)
+#   python     regex the Python value matches (default: anything);
+#              `<absent>` stands for no value
+#   ts         regex the TypeScript value matches
+#   reason     why the difference stays
+#   link       the ADR, issue or PR comment that decided it
+
+# The path error names the `local.toml` key, and that file is in English
+# after the cutover (ADR 0002): `[paths] data`, not `[caminhos] dados`.
+# Add each command whose steps reach this error when you port it.
+- id: missing-config-names-the-english-local-toml-key
+  commands: [reconstruir]
+  path: error.message
+  python: "^caminho '\\w+' não configurado: defina FILMES_\\w+ ou \\[caminhos\\] \\w+ em config/local\\.toml$"
+  ts: "^caminho '\\w+' não configurado: defina FILMES_\\w+ ou \\[paths\\] \\w+ em config/local\\.toml$"
+  reason: local.toml is English after the cutover, so the message names its English section and key
+  link: https://github.com/YgorPerez/filmes/issues/82
+
+# A Session's `file` is relative to filmes-dados, whose folders are English
+# after the cutover (ADR 0002): `sessions/<id>.md`, not `sessoes/<id>.md`.
+# The oracle maps absolute paths, not this relative one.
+- id: session-file-is-in-the-english-folder
+  commands: [recomendar, sessoes-abertas, feedback, cartaz responder]
+  path: output.session*.file
+  python: '^sessoes/[^/]+\.md$'
+  ts: '^sessions/[^/]+\.md$'
+  reason: filmes-dados keeps the Sessions in sessions/ after the key migration
+  link: https://github.com/YgorPerez/filmes/issues/94
+
+- id: billboard-is-a-model-not-a-file
+  commands: [cartaz]
+  path: output.file
+  ts: '^<absent>$'
+  reason: the engine returns the Cartaz as data (billboardModel); the app (#114) and the MCP Apps view (#111) render it, so no HTML file is written
+  link: https://github.com/YgorPerez/filmes/issues/97
+
+# Decided in #86 (Pessoa files). No fixture scenario reaches these yet, so
+# they are not entries (an entry no difference uses goes stale in a full
+# run). Whoever ports a command whose steps show one adds the entry, with
+# this reason and the link
+# https://github.com/YgorPerez/filmes/issues/86:
+#
+# - Error messages stay Python's word for word, even where they name the
+#   Portuguese key of an English file. Two exceptions: the Ajuste hints
+#   list the English values ("(use director, writer, cast, series, genre)",
+#   "(use none, low ou high)"), and a body line error names
+#   "people/<slug>.md, linha N do corpo" (Python: "pessoas/"), because the
+#   Python text would point at a wrong value or file (`reconstruir` reaches
+#   the body line one: entry below). `{item!r}` shows the item's English
+#   keys.
+# - The repr of a YAML date in an error message is '2026-11-20' (TS keeps
+#   dates as text); Python shows datetime.date(2026, 11, 20). Invalid data
+#   only.
+# - A raw U+2028 or U+2029 in a frontmatter is invalid_data ("frontmatter
+#   inválido"): YAML 1.1 reads them as line breaks and the `yaml` package
+#   does not. The TS writer escapes them; real filmes-dados has none.
+# - An impossible YAML date (2026-02-30) is invalid_data ("frontmatter
+#   inválido: ValueError: ...") where Python crashed with `interno`.
+# - The TS writer lays out a frontmatter its own way (one flow collection
+#   per line, PyYAML's quoting rule). The oracle compares frontmatter as
+#   parsed YAML, so this needs no entry.
+# - Two Donos stays invalid_data in readPeople/resolvePerson/createPerson;
+#   the login decodes each file alone. The Sessions tickets decide.
+
+# The body line error of a Pessoa file (#86's exception above), reached by
+# `reconstruir` over a file with a Declarado out of format: it names the
+# file under people/, where filmes-dados keeps it after the key migration.
+- id: body-line-error-names-the-english-people-folder
+  commands: [reconstruir]
+  path: error.message
+  python: '^pessoas/[^/]+\.md, linha \d+ do corpo: '
+  ts: '^people/[^/]+\.md, linha \d+ do corpo: '
+  reason: filmes-dados keeps the Pessoas in people/ after the key migration, so the error points at that file
+  link: https://github.com/YgorPerez/filmes/issues/86
+
+# The TypeScript engine reads tag_vetoes.toml with English group keys
+# (ADR 0002), so the message names that file and lists the keys it has: a
+# Python file name and Portuguese keys would point the user at a file and
+# values the engine does not read (the exception #86 made for the Ajuste
+# hints).
+- id: unknown-tag-group-names-the-english-file-and-keys
+  commands: [pessoa vetar, pessoa pular]
+  path: error.message
+  python: "^'.*' não é um grupo de config/vetos_por_tag\\.toml \\(há: comedia_boba, lento\\)$"
+  ts: "^'.*' não é um grupo de config/tag_vetoes\\.toml \\(há: silly_comedy, slow\\)$"
+  reason: the engine reads config/tag_vetoes.toml, whose group keys are English after the key migration
+  link: https://github.com/YgorPerez/filmes/issues/88
+
+# An `internal` error names the exception's class. node:sqlite throws one
+# class for every SQLite failure; Python's sqlite3 splits them
+# (IntegrityError, OperationalError...). The text after the name is
+# SQLite's own and matches.
+- id: internal-sqlite-error-names-one-class
+  commands: [feedback]
+  path: error.message
+  python: '^IntegrityError: '
+  ts: '^SqliteError: '
+  reason: node:sqlite has a single error class where Python's sqlite3 names IntegrityError; SQLite's message after it is the same
+  link: https://github.com/YgorPerez/filmes/issues/96
+
+# The evaluation report's YAML blocks (`## Pesos`, `## Versões dos dados`,
+# `## Grade de pesos`) dump the result's sections. Python dumped its
+# Portuguese dict (`ajuste:`, `caminho:`...); the engine dumps the output's
+# English sections (`adjustment:`, `path:`...), as the config it reads. The
+# oracle reports the first differing line, so this pins it to the first line
+# of the weights block: every line before it (the offline table, the online
+# Feedback, the prose) matched. test/evaluation/evaluate.test.ts compares the
+# whole report with Python's: the prose word for word, the blocks as data
+# through the key map.
+- id: evaluation-report-yaml-has-the-english-keys
+  commands: [avaliar]
+  path: files/avaliacoes/*.md:*
+  python: '^ajuste:$'
+  ts: '^adjustment:$'
+  reason: the report dumps the result's English sections, as the engine's config and output name them; the prose and the values are Python's
+  link: https://github.com/YgorPerez/filmes/issues/103
+
+# `atualizar` gzips the recorded IMDb TSVs and SPARQL results (and, live,
+# the SPARQL answers) with Node's zlib, a Chromium fork whose deflate output
+# differs from the zlib Python links: the .gz bytes, so their size and
+# SHA-256, differ, while what they inflate to is the same (the rebuild
+# after it is row-identical). The ZIPs and the IMDb downloads are kept as
+# downloaded, so their entries match.
+- id: update-gzip-bytes-differ
+  commands: [atualizar]
+  path: output.dumps.*.gz.*
+  python: '^([0-9a-f]{64}|[0-9]+)$'
+  ts: '^([0-9a-f]{64}|[0-9]+)$'
+  reason: the gzip bytes depend on the zlib build; the inflated dumps are the same
+  link: https://github.com/YgorPerez/filmes/issues/107
