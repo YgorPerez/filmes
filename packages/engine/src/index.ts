@@ -318,6 +318,7 @@ export {
   sameQuestion,
   seenLine,
   skipQuestion,
+  SETUP_STEPS,
   SKIPS_TO_DROP,
   STATEMENT_REACTIONS,
   statementLine,
@@ -327,6 +328,7 @@ export {
   type Section,
   type SectionItem,
   type Seen,
+  type SetupStep,
   type Statement,
   type StatementReaction,
   type Veto,
@@ -435,6 +437,16 @@ export {
   type RemoveInput,
   type RemoveResult,
 } from './people/remove.ts'
+export {
+  setupGuide,
+  SETUP_RATINGS,
+  skipSetupStep,
+  type SetupGuide,
+  type SetupGuideInput,
+  type SetupStepState,
+  type SkipSetupInput,
+  type SkipSetupResult,
+} from './people/setup.ts'
 export {
   importLetterboxd,
   importLetterboxdRss,

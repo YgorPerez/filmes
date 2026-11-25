@@ -17,6 +17,7 @@ import { Route as OwnerFilaRouteImport } from './routes/_owner/fila'
 import { Route as OwnerOperacoesRouteImport } from './routes/_owner/operacoes'
 import { Route as ExportarImdbDotcsvRouteImport } from './routes/exportar/imdb[.]csv'
 import { Route as FilaAcaoRouteImport } from './routes/fila/acao'
+import { Route as InicioPularRouteImport } from './routes/inicio/pular'
 import { Route as OperacoesAcaoRouteImport } from './routes/operacoes/acao'
 import { Route as OwnerFeedbackIndexRouteImport } from './routes/_owner/feedback/index'
 import { Route as OwnerFeedbackSessaoRouteImport } from './routes/_owner/feedback/$sessao'
@@ -71,6 +72,11 @@ const ExportarImdbDotcsvRoute = ExportarImdbDotcsvRouteImport.update({
 const FilaAcaoRoute = FilaAcaoRouteImport.update({
   id: '/fila/acao',
   path: '/fila/acao',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InicioPularRoute = InicioPularRouteImport.update({
+  id: '/inicio/pular',
+  path: '/inicio/pular',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OperacoesAcaoRoute = OperacoesAcaoRouteImport.update({
@@ -162,6 +168,7 @@ export interface FileRoutesByFullPath {
   '/operacoes': typeof OwnerOperacoesRoute
   '/exportar/imdb.csv': typeof ExportarImdbDotcsvRoute
   '/fila/acao': typeof FilaAcaoRoute
+  '/inicio/pular': typeof InicioPularRoute
   '/operacoes/acao': typeof OperacoesAcaoRoute
   '/feedback/$sessao': typeof OwnerFeedbackSessaoRoute
   '/importar/$pessoa': typeof OwnerImportarPessoaRoute
@@ -186,6 +193,7 @@ export interface FileRoutesByTo {
   '/operacoes': typeof OwnerOperacoesRoute
   '/exportar/imdb.csv': typeof ExportarImdbDotcsvRoute
   '/fila/acao': typeof FilaAcaoRoute
+  '/inicio/pular': typeof InicioPularRoute
   '/operacoes/acao': typeof OperacoesAcaoRoute
   '/': typeof OwnerIndexRoute
   '/feedback/$sessao': typeof OwnerFeedbackSessaoRoute
@@ -213,6 +221,7 @@ export interface FileRoutesById {
   '/_owner/operacoes': typeof OwnerOperacoesRoute
   '/exportar/imdb.csv': typeof ExportarImdbDotcsvRoute
   '/fila/acao': typeof FilaAcaoRoute
+  '/inicio/pular': typeof InicioPularRoute
   '/operacoes/acao': typeof OperacoesAcaoRoute
   '/_owner/': typeof OwnerIndexRoute
   '/_owner/feedback/$sessao': typeof OwnerFeedbackSessaoRoute
@@ -241,6 +250,7 @@ export interface FileRouteTypes {
     | '/operacoes'
     | '/exportar/imdb.csv'
     | '/fila/acao'
+    | '/inicio/pular'
     | '/operacoes/acao'
     | '/feedback/$sessao'
     | '/importar/$pessoa'
@@ -265,6 +275,7 @@ export interface FileRouteTypes {
     | '/operacoes'
     | '/exportar/imdb.csv'
     | '/fila/acao'
+    | '/inicio/pular'
     | '/operacoes/acao'
     | '/'
     | '/feedback/$sessao'
@@ -291,6 +302,7 @@ export interface FileRouteTypes {
     | '/_owner/operacoes'
     | '/exportar/imdb.csv'
     | '/fila/acao'
+    | '/inicio/pular'
     | '/operacoes/acao'
     | '/_owner/'
     | '/_owner/feedback/$sessao'
@@ -315,6 +327,7 @@ export interface RootRouteChildren {
   EntrarRoute: typeof EntrarRoute
   ExportarImdbDotcsvRoute: typeof ExportarImdbDotcsvRoute
   FilaAcaoRoute: typeof FilaAcaoRoute
+  InicioPularRoute: typeof InicioPularRoute
   OperacoesAcaoRoute: typeof OperacoesAcaoRoute
   FeedbackSessaoEnviarRoute: typeof FeedbackSessaoEnviarRoute
   ImportarPessoaAcaoRoute: typeof ImportarPessoaAcaoRoute
@@ -380,6 +393,13 @@ declare module '@tanstack/react-router' {
       path: '/fila/acao'
       fullPath: '/fila/acao'
       preLoaderRoute: typeof FilaAcaoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/inicio/pular': {
+      id: '/inicio/pular'
+      path: '/inicio/pular'
+      fullPath: '/inicio/pular'
+      preLoaderRoute: typeof InicioPularRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/operacoes/acao': {
@@ -536,6 +556,7 @@ const rootRouteChildren: RootRouteChildren = {
   EntrarRoute: EntrarRoute,
   ExportarImdbDotcsvRoute: ExportarImdbDotcsvRoute,
   FilaAcaoRoute: FilaAcaoRoute,
+  InicioPularRoute: InicioPularRoute,
   OperacoesAcaoRoute: OperacoesAcaoRoute,
   FeedbackSessaoEnviarRoute: FeedbackSessaoEnviarRoute,
   ImportarPessoaAcaoRoute: ImportarPessoaAcaoRoute,
