@@ -9,7 +9,7 @@ export const readSessions = createServerFn({ method: 'GET' })
   .handler(async ({ context }) => {
     requireOwner(context.owner)
     const { appSessionList } = await import('#/platform/sessions')
-    return appSessionList()
+    return appSessionList(context.owner.person)
   })
 
 /** What the "Nova Sessão" form offers (`requestOptions`). */
@@ -18,7 +18,7 @@ export const readRequestOptions = createServerFn({ method: 'GET' })
   .handler(async ({ context }) => {
     requireOwner(context.owner)
     const { appRequestOptions } = await import('#/platform/sessions')
-    return appRequestOptions()
+    return appRequestOptions(context.owner.person)
   })
 
 /** What `/sessoes/<id>` shows (`cartazPage`): the Session, its Cartaz,
@@ -35,5 +35,5 @@ export const readSessionPage = createServerFn({ method: 'GET' })
   .handler(async ({ context, data }) => {
     requireOwner(context.owner)
     const { appCartazPage } = await import('#/platform/billboard')
-    return appCartazPage(data.session, data.note)
+    return appCartazPage(data.session, data.note, context.owner.person)
   })

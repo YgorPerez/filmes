@@ -308,7 +308,7 @@ describe('person', () => {
     assert.equal(view.person, 'iara')
     assert.equal(
       git(fixture.data, 'log', '-1', '--format=%an <%ae>|%s').trim(),
-      'Iara <iara@example.org>|pessoa declarar iara: gosto de drama',
+      'Iara <iara@example.org>|pessoa declarar dono: gosto de drama',
     )
   })
 
@@ -327,11 +327,13 @@ describe('person', () => {
 
   test('with no Dono in the data, the engine signs; create makes the slug', async () => {
     const fixture = useFixture()
-    const bruno = join(fixture.data, 'people', 'bruno.md')
-    writeFileSync(
-      bruno,
-      readFileSync(bruno, 'utf8').replace(/^owner: true\n/m, ''),
-    )
+    for (const slug of ['bruno', 'vera']) {
+      const file = join(fixture.data, 'people', `${slug}.md`)
+      writeFileSync(
+        file,
+        readFileSync(file, 'utf8').replace(/^owner: true\n/m, ''),
+      )
+    }
     asRepo(fixture.data)
     const c = await connect(fixture)
 

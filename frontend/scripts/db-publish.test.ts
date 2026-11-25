@@ -617,7 +617,7 @@ describe('db:publish --build', () => {
     )
     // The same database the engine built from the fixture.
     expect(rowCounts(built!)).toEqual(rowCounts(fixture.database))
-    expect(rowCounts(built!)['pessoas']).toBe(5)
+    expect(rowCounts(built!)['pessoas']).toBe(6)
     rmSync(dirname(built!), { recursive: true })
   }, 120_000)
 

@@ -19,6 +19,7 @@ import {
   type EngineServices,
   type Outcome,
   type Run,
+  type RunOptions,
   type Vars,
 } from '../src/index.ts'
 import { FIXTURE_ENV, FIXTURE_TODAY, ROOT } from './paths.ts'
@@ -37,15 +38,18 @@ export interface Fixture {
   /** The variables of an engine over this copy. */
   readonly vars: Vars
   /** Runs `effect` on a fresh engine over this copy. `vars` add to or, with
-   * `undefined`, remove from `fixture.vars`. */
+   * `undefined`, remove from `fixture.vars`; `options.owner` is the
+   * logged-in Pessoa, as the app and the MCP pass her. */
   readonly run: <A, E>(
     effect: Effect.Effect<A, E, EngineServices | Run>,
     vars?: Vars,
+    options?: RunOptions,
   ) => Promise<Outcome<A>>
   /** `run`, and the value; a failure throws with the error output. */
   readonly ok: <A, E>(
     effect: Effect.Effect<A, E, EngineServices | Run>,
     vars?: Vars,
+    options?: RunOptions,
   ) => Promise<A>
 }
 
@@ -71,16 +75,16 @@ export function useFixture(): Fixture {
     FILMES_LOCAL: join(root, 'no-local.toml'),
   }
 
-  const run: Fixture['run'] = async (effect, extra = {}) => {
+  const run: Fixture['run'] = async (effect, extra = {}, options) => {
     const engine = makeEngine({ ...vars, ...extra })
     try {
-      return await engine.run(effect)
+      return await engine.run(effect, options)
     } finally {
       await engine.dispose()
     }
   }
-  const ok: Fixture['ok'] = async (effect, extra) => {
-    const outcome = await run(effect, extra)
+  const ok: Fixture['ok'] = async (effect, extra, options) => {
+    const outcome = await run(effect, extra, options)
     if (outcome.exitCode !== 0)
       throw new Error(`expected success, got ${JSON.stringify(outcome)}`)
     return outcome.output

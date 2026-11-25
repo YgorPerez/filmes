@@ -1,16 +1,17 @@
 // Operações for a Dono who is not admin: no link, no page, no form; the
-// Catálogo search is for any Dono (#128). Its own
-// project, run before the others (`playwright.config.ts`): after it,
-// `operations.e2e.ts` makes Bruno admin on the copy.
+// Catálogo search is for any Dono (#128). Vera, the fixture's second Dona,
+// is never admin (`operations.e2e.ts` makes Bruno admin).
 
-import { expect, test } from '@playwright/test'
-import { loginAsBruno } from './support'
+import { expect, test, type Page } from '@playwright/test'
+import { loginAs } from './support'
+
+const loginAsVera = (page: Page) => loginAs(page, 'vera@example.org')
 
 test('a Dono who is not admin neither sees nor reaches Operações', async ({
   page,
   baseURL,
 }) => {
-  await loginAsBruno(page)
+  await loginAsVera(page)
   await expect(page.getByRole('link', { name: 'Feedback' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Operações' })).toHaveCount(0)
 
@@ -27,7 +28,7 @@ test('a Dono who is not admin neither sees nor reaches Operações', async ({
 })
 
 test('a Dono who is not admin finds a film by name', async ({ page }) => {
-  await loginAsBruno(page)
+  await loginAsVera(page)
   await page.goto('/pessoas/bruno?buscar=Cidade%20de%20Vidro')
 
   await expect(

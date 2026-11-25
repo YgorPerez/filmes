@@ -1,4 +1,4 @@
-// What the e2e files share: logging in as the fixture's Dono, a screenshot
+// What the e2e files share: logging in as one of the fixture's Donos, a screenshot
 // per screen, the regions and the notice of a page, and the engine over the
 // fixture copy the app serves (`playwright.config.ts`), to check what the
 // app wrote or to prepare what a screen needs.
@@ -44,14 +44,19 @@ export async function addPerson(name: string) {
   )
 }
 
-/** Through the stand-in Google as Bruno, the fixture's Dono, to the home. */
-export async function loginAsBruno(page: Page) {
+/** Through the stand-in Google as the Dono with `email`, to the home. The
+ * fixture has two: Bruno (`bruno@example.org`), whom `operations.e2e.ts`
+ * makes admin, and Vera (`vera@example.org`), who is not. */
+export async function loginAs(page: Page, email: string) {
   await page.goto('/')
   await page.getByRole('link', { name: 'Entrar com Google' }).click()
-  await page.getByLabel('E-mail').fill('bruno@example.org')
+  await page.getByLabel('E-mail').fill(email)
   await page.getByRole('button', { name: 'Continuar' }).click()
   await expect(page).toHaveURL(/\/$/)
 }
+
+/** `loginAs` Bruno. */
+export const loginAsBruno = (page: Page) => loginAs(page, 'bruno@example.org')
 
 /** With `E2E_SCREENSHOTS=<folder>`, a full-page capture named by project. */
 export async function snap(page: Page, info: TestInfo, name: string) {

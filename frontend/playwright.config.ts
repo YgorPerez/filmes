@@ -1,7 +1,7 @@
 // The app in the browser, over the build's SSR server (`pnpm build`), as it
 // goes to production, with a stand-in for Google (`e2e/fake-google.ts`) and
-// the engine's fixture: the fixture's Pessoas in English (Bruno is Dono, Iara
-// is not), the English config and the database the engine's `rebuild` builds
+// the engine's fixture: the fixture's Pessoas in English (Bruno and Vera are
+// Donos, Iara is not), the English config and the database the engine's `rebuild` builds
 // from `tests/fixture`. `pnpm e2e`
 // builds and starts both servers. The files end in `.e2e.ts`, so Vitest
 // leaves them alone.
@@ -70,23 +70,12 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
   projects: [
-    // Before the others: Bruno, the fixture's one Dono, is not admin yet
-    // (`operations.e2e.ts` makes him admin on the copy).
-    {
-      name: 'not-admin',
-      testMatch: '**/not-admin.e2e.ts',
-      use: { ...devices['Desktop Chrome'], channel: 'chrome' },
-    },
     {
       name: 'mobile',
-      testIgnore: '**/not-admin.e2e.ts',
-      dependencies: ['not-admin'],
       use: { ...devices['Pixel 7'], channel: 'chrome' },
     },
     {
       name: 'desktop',
-      testIgnore: '**/not-admin.e2e.ts',
-      dependencies: ['not-admin'],
       use: { ...devices['Desktop Chrome'], channel: 'chrome' },
     },
   ],

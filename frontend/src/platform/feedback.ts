@@ -6,7 +6,7 @@
 
 import {
   creditNow,
-  listPeople,
+  readPeople,
   openSessions,
   recordFeedback,
   type CreditNow,
@@ -29,8 +29,9 @@ import {
 } from './engine'
 import type { Owner } from './owners'
 
-/** A Presente of the Session, with her name and whether she is Dono (the
- * Dono speaks for herself with a Nota; a Relato is for the others). */
+/** A Presente of the Session, with her name and whether she is the Dono
+ * who records it, the logged-in one (she speaks for herself with a Nota; a
+ * Relato is for the others). */
 export type FeedbackAttendee = { person: string; name: string; owner: boolean }
 
 /** A film of the Session's current Recomendação. */
@@ -83,13 +84,17 @@ function requestOf(session: string, form: FeedbackForm) {
   return { session, film: form.film, ratings, reports, comments }
 }
 
-export function feedbackFromEngine(engine: Engine): Feedback {
+/** The Feedback as `viewer` (the logged-in Dono's slug) records it. */
+export function feedbackFromEngine(
+  engine: Engine,
+  viewer: string | null = null,
+): Feedback {
   const run = engine.run
   return {
     async sessions() {
       const open = await run(openSessions)
       if (open.exitCode !== 0) return open
-      const people = await run(listPeople)
+      const people = await run(readPeople)
       if (people.exitCode !== 0) return people
       const byslug = new Map(people.output.map((p) => [p.slug, p]))
       return ok(
@@ -100,7 +105,10 @@ export function feedbackFromEngine(engine: Engine): Feedback {
           attendees: attendeeSlugs(s.attendees).map((person) => ({
             person,
             name: byslug.get(person)?.name ?? person,
-            owner: byslug.get(person)?.owner ?? false,
+            owner:
+              viewer === null
+                ? (byslug.get(person)?.owner ?? false)
+                : person === viewer,
           })),
           recommendation: sessionFilms(s.recommendation),
         })),
@@ -206,13 +214,17 @@ export async function feedbackAction(
 
 // --- the app's -----------------------------------------------------------------
 
-const appFeedback = () => feedbackFromEngine(appEngine())
+const appFeedback = (viewer: string | null = null) =>
+  feedbackFromEngine(appEngine(), viewer)
 
-/** The open Sessions for the app. */
-export const appOpenSessions = () => openSessionList(appFeedback())
+/** The open Sessions for the app, for the logged-in Dono `viewer`. */
+export const appOpenSessions = (viewer: string) =>
+  openSessionList(appFeedback(viewer))
 
-/** A Session's Feedback form for the app. */
-export const appFeedbackPage = (id: string) => feedbackPage(id, appFeedback())
+/** A Session's Feedback form for the app, for the logged-in Dono
+ * `viewer`. */
+export const appFeedbackPage = (id: string, viewer: string) =>
+  feedbackPage(id, appFeedback(viewer))
 
 /** The form's route for the app: the logged-in Dono, the process's
  * engine. */

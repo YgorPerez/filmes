@@ -94,6 +94,7 @@ describe('reading the Pessoas', () => {
       'quim',
       'rosa',
       'teo',
+      'vera',
     ])
     const [bruno, iara, quim] = people
     expect(bruno).toMatchObject({
@@ -192,16 +193,6 @@ describe('reading the Pessoas', () => {
     )
 
     expect(error.message).toContain('linha 10 do corpo: Relato fora do formato')
-  })
-
-  test('two Donos are invalid_data', async () => {
-    const fixture = useFixture()
-    write(fixture, 'ana', '---\nname: Ana\nowner: yes\n---\n')
-
-    expect(await errorOf(fixture, readPeople)).toEqual({
-      code: 'invalid_data',
-      message: 'mais de uma Pessoa com dono: true (ana, bruno)',
-    })
   })
 
   test('no filmes-dados is missing_data', async () => {
@@ -394,6 +385,7 @@ describe('resolving a Pessoa', () => {
   test('no Dono to find', async () => {
     const fixture = useFixture()
     write(fixture, 'bruno', '---\nname: Bruno\n---\n')
+    write(fixture, 'vera', '---\nname: Vera\n---\n')
 
     expect(await errorOf(fixture, resolvePerson('dono'))).toEqual({
       code: 'unknown_person',
@@ -455,9 +447,8 @@ describe('creating a Pessoa', () => {
     expect((await person(fixture, 'leo-araujo')).name).toBe('Léo Araújo')
   })
 
-  test('a Dono when there is none', async () => {
+  test('one more Dono beside the ones there are (#131)', async () => {
     const fixture = useFixture()
-    write(fixture, 'bruno', '---\nname: Bruno\n---\n')
 
     await fixture.ok(createPerson({ name: 'Ana', owner: true }))
 
@@ -470,7 +461,6 @@ describe('creating a Pessoa', () => {
       'person_exists',
       "já existe uma Pessoa com o slug 'bruno'",
     ],
-    [{ name: 'Ana', owner: true }, 'owner_exists', "o Dono já é 'bruno'"],
     [
       { name: 'Ana', slug: 'Ana' },
       'invalid_usage',

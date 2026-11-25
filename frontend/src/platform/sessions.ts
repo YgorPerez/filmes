@@ -5,7 +5,7 @@
 // commit's author, and who "dono" is) and goes to its page. Server only.
 
 import {
-  listPeople,
+  readPeople,
   listSessions,
   readMoods,
   recommendSession,
@@ -28,7 +28,8 @@ import {
 import { appPoster, formPoster, seeOther } from './form-post'
 import { appNotes, type Notes } from './notes'
 
-/** A Pessoa as the Sessions screens name her. */
+/** A Pessoa as the Sessions screens name her. `owner`: she is the Dono
+ * looking (the logged-in Pessoa), or, with no one logged in, any Dono. */
 export type SessionPerson = { person: string; name: string; owner: boolean }
 
 /** A Session, as the list and its page show it. */
@@ -47,7 +48,8 @@ export type SessionItem = {
   constraints: string[]
 }
 
-/** What the form offers: every Pessoa (the Dono first) and the Climas. */
+/** What the form offers: every Pessoa (the logged-in Dono first, and
+ * checked) and the Climas. */
 export type RequestOptions = { people: SessionPerson[]; moods: string[] }
 
 /** What the screens and the form need from the engine. */
@@ -92,14 +94,23 @@ function item(
   }
 }
 
-export function sessionsFromEngine(engine: Engine): Sessions {
+/** The Sessions as `viewer` (the logged-in Dono's slug) sees them: she is
+ * the Dono among several (#131). */
+export function sessionsFromEngine(
+  engine: Engine,
+  viewer: string | null = null,
+): Sessions {
   const run = engine.run
   const people = async (): Promise<Outcome<SessionPerson[]>> => {
-    const listed = await run(listPeople)
+    const listed = await run(readPeople)
     if (listed.exitCode !== 0) return listed
     return ok(
       listed.output
-        .map((p) => ({ person: p.slug, name: p.name, owner: p.owner }))
+        .map((p) => ({
+          person: p.slug,
+          name: p.name,
+          owner: viewer === null ? p.owner : p.slug === viewer,
+        }))
         .toSorted((a, b) => Number(b.owner) - Number(a.owner)),
     )
   }
@@ -213,13 +224,16 @@ export async function sessionRequestAction(
 
 // --- the app's -----------------------------------------------------------------
 
-const appSessions = () => sessionsFromEngine(appEngine())
+const appSessions = (viewer: string | null = null) =>
+  sessionsFromEngine(appEngine(), viewer)
 
-/** Every Session for the app. */
-export const appSessionList = () => sessionList(appSessions())
+/** Every Session for the app, as the logged-in Dono `viewer` sees them. */
+export const appSessionList = (viewer: string) =>
+  sessionList(appSessions(viewer))
 
-/** The form's choices for the app. */
-export const appRequestOptions = () => requestOptions(appSessions())
+/** The form's choices for the app, for the logged-in Dono `viewer`. */
+export const appRequestOptions = (viewer: string) =>
+  requestOptions(appSessions(viewer))
 
 /** The form's route for the app: the logged-in Dono, the process's
  * engine. */

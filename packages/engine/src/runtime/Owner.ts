@@ -1,9 +1,9 @@
 // The Dono of a request (#76 §6.4): who "dono" is, who opens a Session, and
-// who signs the filmes-dados commit. The Python engine took the one Pessoa
-// with `dono: true`; with several Donos, it is the Pessoa logged in to the
-// app or the MCP, which the edge passes to `engine.run(op, { owner })`.
-// Without one (a script, the tests), the database's Dono stands in, as in
-// the Python engine: the first slug with `dono = 1`.
+// who signs the filmes-dados commit, and "Você" on the Cartaz. Several
+// Pessoas may be Donos (#131): it is the one logged in to the app or the
+// MCP, which the edge passes to `engine.run(op, { owner })`. Without one
+// (a script, the tests), the first slug with `dono = 1` stands
+// in, as Python's single Dono did.
 
 import { Context, Effect } from 'effect'
 import type { Connection, SqliteError } from '../sqlite/Sqlite.ts'

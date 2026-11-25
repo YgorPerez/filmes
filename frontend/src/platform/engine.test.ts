@@ -2,7 +2,7 @@ import { writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { describe, expect, it } from 'vite-plus/test'
-import { listPeople, makeEngine } from '@filmes/engine'
+import { readPeople, makeEngine } from '@filmes/engine'
 import { useFixture } from '../../../packages/engine/test/fixture.ts'
 import { appEngine, engineReady, engineVars, reloadOnStart } from './engine'
 
@@ -32,7 +32,7 @@ describe('appEngine', () => {
   it('is one engine per process, which answers even when misconfigured', async () => {
     const engine = appEngine()
     expect(appEngine()).toBe(engine)
-    const outcome = await engine.run(listPeople)
+    const outcome = await engine.run(readPeople)
     // Its result depends on the shell's FILMES_*; it answers, never throws.
     expect(outcome).toHaveProperty('exitCode')
   })
@@ -61,7 +61,7 @@ describe('reloadOnStart', () => {
     expect(olga).toEqual({ nome: 'Olga' })
     expect(lines).toEqual([
       expect.stringMatching(
-        /^engine: reloaded 6 Pessoas and 0 Sessions in \d+ms$/,
+        /^engine: reloaded 7 Pessoas and 0 Sessions in \d+ms$/,
       ),
     ])
   })

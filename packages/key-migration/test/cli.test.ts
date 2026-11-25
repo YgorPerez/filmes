@@ -48,7 +48,7 @@ describe('the command line', () => {
     const en = run('to-en', '--data', FIXTURE_DATA, '--out', join(work, 'en'))
     expect(en).toEqual({
       code: 0,
-      out: ['5 rewritten, 0 copied as is'],
+      out: ['6 rewritten, 0 copied as is'],
       err: [],
     })
     expect(Object.keys(readTree(join(work, 'en')))).toContain('people/quim.md')

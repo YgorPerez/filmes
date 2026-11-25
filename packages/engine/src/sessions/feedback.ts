@@ -479,6 +479,11 @@ export const recordFeedback = (
             `a Sessão ${id} já tem Feedback`,
           )
         const front = new Map(frontmatter)
+        // The logged-in Dono records it and speaks for herself: she becomes
+        // the Session's `owner`, so her reactions are not relayed, now and
+        // on every reload. With no login, the Session's own `owner`.
+        const speaker = yield* Owner
+        if (speaker !== null) front.set('owner', speaker)
         const owners = yield* ownersOf(db, front)
         const attendees = (
           isSequence(front.get('attendees'))

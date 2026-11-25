@@ -11,7 +11,7 @@ Alguém cujo gosto o sistema guarda: o Dono ou qualquer pessoa que assiste com e
 _Evitar_: usuário, amigo, perfil
 
 **Dono** [owner, `owner`]:
-A Pessoa que opera o sistema: pede recomendações, descreve as outras Pessoas e registra o Feedback das Sessões dela. Cada Sessão tem um Dono; online, é quem está logado (mapa #72).
+A Pessoa que opera o sistema: pede recomendações, descreve as outras Pessoas e registra o Feedback das Sessões dela. Pode haver mais de um (#131); cada Sessão tem um Dono, e online é quem está logado (mapa #72).
 _Evitar_: usuário, admin
 
 ## Sessão
