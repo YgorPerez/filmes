@@ -157,9 +157,18 @@ export {
 export {
   DB_RULES,
   loadSessions,
+  ownersOf,
   reloadSessions,
   syncSession,
 } from './sessions/database.ts'
+export {
+  dropComment,
+  recordFeedback,
+  type ChosenFilm,
+  type FeedbackFact,
+  type FeedbackRequest,
+  type FeedbackResult,
+} from './sessions/feedback.ts'
 export {
   openSession,
   openSessions,

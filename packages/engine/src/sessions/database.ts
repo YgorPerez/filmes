@@ -52,7 +52,7 @@ const bind = (
 /** The Dono slugs a Session's Fatos are told by: the Session's `owner`,
  * or, in a file without one (the #10 prototype), every Pessoa with
  * `dono = 1`, as Python. */
-const ownersOf = (db: Connection, front: YamlMapping) =>
+export const ownersOf = (db: Connection, front: YamlMapping) =>
   Effect.gen(function* () {
     const owner = front.get('owner')
     if (pyTruthy(owner)) return new Set([pyStrValue(owner ?? null)])

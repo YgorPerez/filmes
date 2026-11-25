@@ -3,6 +3,7 @@
 // these, so its output matches the Python's (map #72, ticket #81).
 export { compareTuple, type PyOrderable } from './compare.ts'
 export { pyExp } from './exp.ts'
+export { pyLog1pInt } from './log1p.ts'
 export {
   factId,
   pyFloat,
