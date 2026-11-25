@@ -1,8 +1,8 @@
 import { createHash } from 'node:crypto'
 import { DatabaseSync } from 'node:sqlite'
 
-// `auth.sqlite`: web sessions and Google login attempts now, the MCP OAuth
-// clients, codes and tokens with #120 (ADR 0005: no backup, losing it only
+// `auth.sqlite`: web sessions, Google login attempts and the MCP OAuth
+// clients, codes and tokens of #120 (ADR 0005: no backup, losing it only
 // forces a new login). Append migrations here and never edit an applied one;
 // during blue/green both images open the same file, so a change must be
 // additive while the previous image can still run.
@@ -14,6 +14,27 @@ const migrations: readonly string[] = [
   CREATE TABLE google_attempts (state_hash TEXT PRIMARY KEY,
     browser_hash TEXT NOT NULL, verifier TEXT NOT NULL, purpose TEXT NOT NULL,
     payload TEXT NOT NULL, expires_at INTEGER NOT NULL) STRICT;`,
+  // The MCP connector's OAuth (#120, `oauth-server.ts`). Clients come from
+  // dynamic registration and are public (no secret). A grant is one
+  // connection of one client for one email; its codes and tokens are stored
+  // by their hash and go when the grant goes. `email`, as in `web_sessions`:
+  // the Dono gate runs again on every token use.
+  `CREATE TABLE oauth_clients (client_id TEXT PRIMARY KEY, name TEXT NOT NULL,
+    redirect_uris TEXT NOT NULL, created_at INTEGER NOT NULL) STRICT;
+  CREATE TABLE oauth_codes (code_hash TEXT PRIMARY KEY,
+    client_id TEXT NOT NULL REFERENCES oauth_clients ON DELETE CASCADE,
+    redirect_uri TEXT NOT NULL, code_challenge TEXT NOT NULL,
+    scope TEXT NOT NULL, resource TEXT NOT NULL, email TEXT NOT NULL,
+    expires_at INTEGER NOT NULL) STRICT;
+  CREATE TABLE oauth_grants (grant_id TEXT PRIMARY KEY,
+    client_id TEXT NOT NULL REFERENCES oauth_clients ON DELETE CASCADE,
+    email TEXT NOT NULL, scope TEXT NOT NULL, resource TEXT NOT NULL,
+    created_at INTEGER NOT NULL) STRICT;
+  CREATE TABLE oauth_tokens (token_hash TEXT PRIMARY KEY,
+    grant_id TEXT NOT NULL REFERENCES oauth_grants ON DELETE CASCADE,
+    kind TEXT NOT NULL CHECK (kind IN ('access', 'refresh')),
+    expires_at INTEGER NOT NULL) STRICT;
+  CREATE INDEX oauth_tokens_grant ON oauth_tokens (grant_id);`,
 ]
 
 export const tokenHash = (token: string) =>
@@ -26,7 +47,9 @@ export function openAuthDatabase(
 ) {
   const db = new DatabaseSync(path)
   try {
-    db.exec('PRAGMA busy_timeout = 10000; PRAGMA journal_mode = WAL;')
+    db.exec(
+      'PRAGMA busy_timeout = 10000; PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;',
+    )
     db.exec('BEGIN IMMEDIATE')
     try {
       db.exec(
