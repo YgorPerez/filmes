@@ -7,14 +7,12 @@ filme, a mais forte (veja `_tags.py`). O peso está em [grupo] da config.
 """
 
 
-from filmes.ambiente import RAIZ, ler_toml
+from filmes.ambiente import config, ler_toml
 from filmes.recomendacao.sinais import _tags
-
-VOCABULARIO = RAIZ / "config" / "grupo_sozinho.toml"
 
 
 def sinais_do_filme(rodada):
-    eixos = ler_toml(VOCABULARIO)
+    eixos = ler_toml(config("grupo_sozinho.toml"))
     eixo, rotulo = ("grupo", "para ver em grupo") if rodada.em_grupo else ("sozinho", "para ver sozinho")
     tags = [t.lower() for t in eixos.get(eixo, [])]
     yield from _tags.melhores(rodada, rotulo, tags, peso=rodada.pesos["grupo"]["peso"]).values()
