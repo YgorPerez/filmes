@@ -9,16 +9,17 @@
 // and what a Presente marked Já vi in it stay out of the Session (#66); a
 // similar request stays in it until the Dono asks for something else (#68).
 //
-// The Cartaz's reply (`cartaz responder`, #97) is not ported: its Trocar is
-// written here as the reply writes it (`swapped` of the current version),
-// and its Já vi as the Já visto it records. The Cartaz's own checks (the
-// "saiu" line, the top of the page) are #113's.
+// The Trocar and the Já vi go through the Cartaz's reply (`answerBillboard`,
+// #97), as the Python tests paste them; the Cartaz's own checks (the "saiu"
+// line, the top of the page) are in test/billboard/model.test.ts.
 
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { Effect } from 'effect'
 import { describe, expect, test } from 'vite-plus/test'
 import {
+  answerBillboard,
+  currentVersion,
   openSessions,
   parseYaml,
   personSeen,
@@ -28,6 +29,7 @@ import {
   readSession,
   recommendSession,
   recordFeedback,
+  shownFilms,
   writeSession,
   yamlToJson,
   type RecommendSessionRequest,
@@ -60,17 +62,34 @@ const front = (fixture: Fixture, id: string) => {
   }
 }
 
-/** The Cartaz's Trocar, as `cartaz responder` writes it: in `swapped` of
- * the current version. */
-const swapOnCartaz = (fixture: Fixture, id: string, films: string[]) =>
+/** The Cartaz's marks, pasted back (`cartaz responder`): `marks` after
+ * each film's position and id, on the current version's screen. */
+const answerOnCartaz = (
+  fixture: Fixture,
+  id: string,
+  films: ReadonlyArray<string>,
+  marks: string,
+) =>
   fixture.ok(
     Effect.gen(function* () {
-      const { frontmatter, body } = yield* readSession(id)
-      const top = new Map(frontmatter)
-      top.set('swapped', [...films].sort())
-      yield* writeSession(id, top, body)
+      const { frontmatter } = yield* readSession(id)
+      const version = currentVersion(frontmatter)
+      const screen = shownFilms(version)
+      const lines = films.map((film) => {
+        const position = screen.find((f) => f.id === film)?.position
+        return `${position} ${film} · ${marks}`
+      })
+      const number = String(yamlToJson(version.get('version') ?? null))
+      return yield* answerBillboard({
+        session: id,
+        text: [`#cartaz ${id} v${number}`, ...lines, ''].join('\n'),
+      })
     }),
   )
+
+/** The Cartaz's Trocar: `swapped` of the current version. */
+const swapOnCartaz = (fixture: Fixture, id: string, films: string[]) =>
+  answerOnCartaz(fixture, id, films, 'trocar')
 
 /** The Cartaz's Já vi: a Já visto of today, from the Cartaz. */
 const seenOnCartaz = (
@@ -78,7 +97,7 @@ const seenOnCartaz = (
   id: string,
   person: string,
   film: string,
-) => fixture.ok(personSeen({ person, film, source: `cartaz ${id}` }))
+) => answerOnCartaz(fixture, id, [film], `já vi: ${person}`)
 
 const withoutPosterWarning = (warnings: ReadonlyArray<string>) =>
   warnings.filter((w) => !w.startsWith('TMDB '))
