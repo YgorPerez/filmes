@@ -369,12 +369,14 @@ export {
 } from './people/remove.ts'
 export {
   importLetterboxd,
+  importLetterboxdRss,
   LETTERBOXD_KIND,
   LETTERBOXD_RSS_KIND,
   letterboxdReport,
   loadLetterboxd,
   personLetterboxdRows,
   reloadLetterboxd,
+  reprocessLetterboxd,
   RESOLUTION_PATHS,
   type CountsByPath,
   type DiscardedItem,
@@ -383,8 +385,20 @@ export {
   type LetterboxdImport,
   type LetterboxdImportInput,
   type LetterboxdReport,
+  type LetterboxdReprocess,
+  type LetterboxdRssImportInput,
+  type QueueCandidate,
+  type ReprocessedItem,
   type ResolutionPath,
 } from './imports/letterboxd.ts'
+export {
+  confirmQueueItem,
+  discardQueueItem,
+  viewQueue,
+  type QueueDecision,
+  type QueueItem,
+  type QueueView,
+} from './imports/letterboxd-queue.ts'
 export {
   EXPORT_FILES,
   filmKey,
@@ -402,7 +416,12 @@ export {
   type Resolution,
   type Resolutions,
 } from './imports/letterboxd-resolutions.ts'
-export { readLetterboxdRss, RSS_ORIGIN } from './imports/letterboxd-rss.ts'
+export {
+  fetchLetterboxdRss,
+  letterboxdRssUrl,
+  readLetterboxdRss,
+  RSS_ORIGIN,
+} from './imports/letterboxd-rss.ts'
 export {
   readUpload,
   storedImports,

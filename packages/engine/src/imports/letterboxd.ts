@@ -56,7 +56,11 @@ import {
   type Resolution,
   type Resolutions,
 } from './letterboxd-resolutions.ts'
-import { readLetterboxdRss } from './letterboxd-rss.ts'
+import {
+  fetchLetterboxdRss,
+  letterboxdRssUrl,
+  readLetterboxdRss,
+} from './letterboxd-rss.ts'
 import { storedImports, storeImport } from './stored.ts'
 
 /** The kinds of a Pessoa's `imports:` records this module reads. */
@@ -282,12 +286,18 @@ const SHORT_MINUTES = 40
 const SHORT_VOTES = 10
 
 type TmdbService = Tmdb['Service']
-type SourceError = EngineError | SqliteError
+export type SourceError = EngineError | SqliteError
+
+/** A TMDB film search: the results, or undefined with no answer. */
+export type MovieSearch = (
+  title: string,
+  year: number,
+) => Effect.Effect<ReadonlyArray<unknown> | undefined, SourceError, Run>
 
 /** The films titled as the name, in the year, then in year ± 1; null when
- * TMDB stopped answering (`filmes_com_mesmo_titulo`). */
-const moviesTitled = (
-  tmdb: TmdbService,
+ * the search stopped answering (`filmes_com_mesmo_titulo`). */
+export const moviesTitled = (
+  search: MovieSearch,
   name: string,
   year: number,
 ): Effect.Effect<unknown[] | null, SourceError, Run> =>
@@ -295,7 +305,7 @@ const moviesTitled = (
     for (const years of [[year], [year - 1, year + 1]]) {
       const same = new Map<unknown, unknown>()
       for (const tried of years) {
-        const results = yield* tmdb.movies(name, tried)
+        const results = yield* search(name, tried)
         if (results === undefined) return null
         for (const film of results)
           if (sameTitle(name, film, 'title', 'original_title'))
@@ -305,6 +315,28 @@ const moviesTitled = (
     }
     return []
   })
+
+/** A TMDB search result as the queue shows it (`candidato`). */
+export interface QueueCandidate {
+  readonly tmdb: unknown
+  readonly title: unknown
+  readonly originalTitle: unknown
+  readonly year: number | null
+  readonly link: string
+}
+
+export const queueCandidate = (result: unknown): QueueCandidate => {
+  const released = field(result, 'release_date')
+  const head = (truthy(released) ? String(released) : '').slice(0, 4)
+  const id = field(result, 'id')
+  return {
+    tmdb: id,
+    title: field(result, 'title') ?? null,
+    originalTitle: field(result, 'original_title') ?? null,
+    year: /^[0-9]+$/.test(head) ? Number(head) : null,
+    link: `https://www.themoviedb.org/movie/${String(id)}`,
+  }
+}
 
 /** The candidates without the shorts, when any is left; null when TMDB
  * stopped answering. The runtime is asked only for those with few votes. */
@@ -363,7 +395,7 @@ const askTmdb = (
       if (imdb) return answer(['status', 'tmdb'], ['film', imdb])
       if (yield* tmdb.searchDisabled) return null
     }
-    const titled = yield* moviesTitled(tmdb, name, year)
+    const titled = yield* moviesTitled(tmdb.movies, name, year)
     if (titled === null) return null
     const same = yield* withoutShorts(tmdb, titled)
     if (same === null) return null
@@ -788,6 +820,91 @@ export interface LetterboxdImportInput {
   readonly author: Author
 }
 
+/** The check Python's `abrir_escrita` makes before a Letterboxd write. */
+export const ensureLetterboxdTables = (
+  db: Connection,
+): Effect.Effect<void, EngineError | SqliteError> =>
+  Effect.gen(function* () {
+    const current = yield* db.get(
+      "SELECT 1 FROM sqlite_master WHERE name = 'itens_letterboxd'",
+    )
+    if (current === undefined)
+      return yield* engineError(
+        'outdated_database',
+        'o banco ainda não tem o import do Letterboxd. Rode `reconstruir`.',
+      )
+  })
+
+/** What an import keeps: the kind of record, the name the record shows,
+ * the bytes and the extension of the copy. */
+interface ImportOriginal {
+  readonly kind: string
+  readonly name: string
+  readonly content: Uint8Array
+  readonly extension: string
+}
+
+/** Keeps the file, resolves the films of the new rows and of the
+ * Pessoa's earlier imports, asks TMDB for what Wikidata did not resolve,
+ * and reloads the Letterboxd Fatos (`_importar`). */
+const importRows = (
+  person: string,
+  rows: readonly LetterboxdRow[],
+  original: ImportOriginal,
+  author: Author,
+): Effect.Effect<
+  LetterboxdImport,
+  EngineError | SqliteError | GitError,
+  Services | Tmdb | DataWriter
+> =>
+  Effect.gen(function* () {
+    const writer = yield* DataWriter
+    return yield* writer.write(
+      {
+        author,
+        message: `import ${original.kind} ${person}: ${original.name}`,
+      },
+      (db) =>
+        Effect.gen(function* () {
+          yield* ensureLetterboxdTables(db)
+          const found = yield* resolvePerson(person)
+          const before = yield* countFacts(db, found.slug)
+          const { resolutions, usedTmdb } = yield* recordTmdbAnswers(db, [
+            ...rows,
+            ...(yield* personLetterboxdRows(found)),
+          ])
+          const stored = yield* storeImport(
+            found,
+            original.kind,
+            original.name,
+            original.content,
+            original.extension,
+          )
+          yield* loadLetterboxd(db, resolutions)
+          const after = yield* countFacts(db, found.slug)
+          const tmdbItem = yield* db.get(
+            "SELECT 1 FROM itens_letterboxd WHERE pessoa = ? AND caminho = 'tmdb'",
+            found.slug,
+          )
+          return {
+            ...(yield* letterboxdReport(db, found.slug)),
+            file: stored.file,
+            newFile: stored.new,
+            facts: after,
+            newFacts: Object.fromEntries(
+              Object.entries(after).map(([k, n]) => [
+                k,
+                n - before[k as keyof FactCounts],
+              ]),
+            ) as FactCounts,
+            warnings: yield* (yield* Run).warnings,
+            attributions:
+              usedTmdb || tmdbItem !== undefined ? [TMDB_ATTRIBUTION] : [],
+          }
+        }),
+    )
+  })
+
 /** Imports a Pessoa's Letterboxd export (`importar --letterboxd`): keeps
  * the ZIP, resolves its films, asks TMDB for what Wikidata did not resolve,
  * and reloads the Letterboxd Fatos. */
@@ -802,55 +919,148 @@ export const importLetterboxd = (
     const rows = yield* attempt(() =>
       readLetterboxdExport(input.original, input.content),
     )
+    return yield* importRows(
+      input.person,
+      rows,
+      {
+        kind: LETTERBOXD_KIND,
+        name: input.original,
+        content: input.content,
+        extension: 'zip',
+      },
+      input.author,
+    )
+  })
+
+export interface LetterboxdRssImportInput {
+  /** Slug, name or alias; "dono" is the Dono. */
+  readonly person: string
+  /** Her Letterboxd user: only with her consent. */
+  readonly user: string
+  /** Who asked: the commit's author. */
+  readonly author: Author
+}
+
+/** Imports a Pessoa's public Letterboxd RSS (`importar --letterboxd-rss`):
+ * fetches it, keeps the copy and imports it as a ZIP. */
+export const importLetterboxdRss = (
+  input: LetterboxdRssImportInput,
+): Effect.Effect<
+  LetterboxdImport,
+  EngineError | SqliteError | GitError,
+  Services | Tmdb | DataWriter
+> =>
+  Effect.gen(function* () {
+    const content = yield* fetchLetterboxdRss(input.user)
+    const rows = yield* attempt(() =>
+      readLetterboxdRss(`rss-${input.user}.xml`, content),
+    )
+    return yield* importRows(
+      input.person,
+      rows,
+      {
+        kind: LETTERBOXD_RSS_KIND,
+        name: letterboxdRssUrl(input.user),
+        content,
+        extension: 'xml',
+      },
+      input.author,
+    )
+  })
+
+// --- reprocessing ---------------------------------------------------------------
+
+/** A film of the queue after `fila reprocessar`, and whose it is. */
+export interface ReprocessedItem extends ImportItem {
+  readonly status: 'resolved' | 'discarded' | 'queued'
+  readonly resolvedBy: ResolutionPath | null
+  readonly filmId: string | null
+  readonly people: readonly string[]
+}
+
+export interface LetterboxdReprocess {
+  readonly people: readonly string[]
+  readonly resolved: readonly ReprocessedItem[]
+  readonly discarded: readonly ReprocessedItem[]
+  readonly queue: readonly ReprocessedItem[]
+  readonly warnings: readonly string[]
+  readonly attributions: readonly (typeof TMDB_ATTRIBUTION)[]
+}
+
+const ITEM_STATUSES: Readonly<Record<ItemStatus, ReprocessedItem['status']>> =
+  { resolvido: 'resolved', descartado: 'discarded', fila: 'queued' }
+
+/** Asks TMDB again for the queue's items it has not answered, of one
+ * Pessoa or of all (`fila reprocessar`). What TMDB already answered comes
+ * from the cache, offline. */
+export const reprocessLetterboxd = (input: {
+  /** Slug, name or alias; every Pessoa when absent. */
+  readonly person?: string | undefined
+  readonly author: Author
+}): Effect.Effect<
+  LetterboxdReprocess,
+  EngineError | SqliteError | GitError,
+  Services | Tmdb | DataWriter
+> =>
+  Effect.gen(function* () {
     const writer = yield* DataWriter
     return yield* writer.write(
       {
         author: input.author,
-        message: `import letterboxd ${input.person}: ${input.original}`,
+        message: `reprocess letterboxd queue${input.person === undefined ? '' : ` ${input.person}`}`,
       },
       (db) =>
         Effect.gen(function* () {
-          const current = yield* db.get(
-            "SELECT 1 FROM sqlite_master WHERE name = 'itens_letterboxd'",
+          yield* ensureLetterboxdTables(db)
+          const people =
+            input.person === undefined
+              ? yield* readPeople
+              : [yield* resolvePerson(input.person)]
+          const slugs = people.map((p) => p.slug)
+          const marks = slugs.map(() => '?').join(',')
+          const before = new Set(
+            (yield* db.all(
+              `SELECT id FROM itens_letterboxd WHERE situacao = 'fila' AND pessoa IN (${marks}) ORDER BY id`,
+              ...slugs,
+            )).map((row) => String(row.id)),
           )
-          if (current === undefined)
-            return yield* engineError(
-              'outdated_database',
-              'o banco ainda não tem o import do Letterboxd. Rode `reconstruir`.',
-            )
-          const person = yield* resolvePerson(input.person)
-          const before = yield* countFacts(db, person.slug)
-          const { resolutions, usedTmdb } = yield* recordTmdbAnswers(db, [
-            ...rows,
-            ...(yield* personLetterboxdRows(person)),
-          ])
-          const stored = yield* storeImport(
-            person,
-            LETTERBOXD_KIND,
-            input.original,
-            input.content,
-            'zip',
-          )
+          const rows: LetterboxdRow[] = []
+          for (const person of people)
+            rows.push(...(yield* personLetterboxdRows(person)))
+          const { resolutions, usedTmdb } = yield* recordTmdbAnswers(db, rows)
           yield* loadLetterboxd(db, resolutions)
-          const after = yield* countFacts(db, person.slug)
-          const tmdbItem = yield* db.get(
-            "SELECT 1 FROM itens_letterboxd WHERE pessoa = ? AND caminho = 'tmdb'",
-            person.slug,
-          )
+          const items = new Map<
+            string,
+            ReprocessedItem & { people: string[] }
+          >()
+          for (const row of yield* db.all(
+            `SELECT id, nome, ano, situacao, caminho, filme_id, razao, pessoa FROM itens_letterboxd
+             WHERE pessoa IN (${marks}) ORDER BY nome, ano, id, pessoa`,
+            ...slugs,
+          )) {
+            const id = String(row.id)
+            if (!before.has(id)) continue
+            let found = items.get(id)
+            if (found === undefined) {
+              found = {
+                ...item(row),
+                status: ITEM_STATUSES[row.situacao as ItemStatus],
+                resolvedBy: PATHS_BY_DB[String(row.caminho)] ?? null,
+                filmId: asText(row.filme_id),
+                people: [],
+              }
+              items.set(id, found)
+            }
+            found.people.push(String(row.pessoa))
+          }
+          const all = [...items.values()]
           return {
-            ...(yield* letterboxdReport(db, person.slug)),
-            file: stored.file,
-            newFile: stored.new,
-            facts: after,
-            newFacts: Object.fromEntries(
-              Object.entries(after).map(([k, n]) => [
-                k,
-                n - before[k as keyof FactCounts],
-              ]),
-            ) as FactCounts,
+            people: slugs,
+            resolved: all.filter((i) => i.status === 'resolved'),
+            discarded: all.filter((i) => i.status === 'discarded'),
+            queue: all.filter((i) => i.status === 'queued'),
             warnings: yield* (yield* Run).warnings,
-            attributions:
-              usedTmdb || tmdbItem !== undefined ? [TMDB_ATTRIBUTION] : [],
+            attributions: usedTmdb ? [TMDB_ATTRIBUTION] : [],
           }
         }),
     )
