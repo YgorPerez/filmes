@@ -79,6 +79,24 @@ test('"Título (ano)" keeps only the film of that year', async () => {
   expect(result.films.map((f) => f.id)).toEqual(['tt9001903'])
 })
 
+test('two films with the same title come apart by year, and the year picks one', async () => {
+  const fixture = useFixture()
+
+  const both = await fixture.ok(
+    searchCatalog({ query: 'reprise', kinds: ['film'] }),
+  )
+  const one = await fixture.ok(
+    searchCatalog({ query: 'Reprise (2004)', kinds: ['film'] }),
+  )
+
+  // Same votes: the id breaks the tie.
+  expect(both.films.map((f) => [f.id, f.year, f.directors])).toEqual([
+    ['tt9012601', 2011, ['Nina Vale']],
+    ['tt9012602', 2004, ['Nina Vale']],
+  ])
+  expect(one.films.map((f) => f.id)).toEqual(['tt9012602'])
+})
+
 test('two people with the same name come apart by their films', async () => {
   const fixture = useFixture()
 
