@@ -1,14 +1,15 @@
-// `pnpm db:publish --build`: the derived SQLite, built by the Python engine
-// on servidor-azul until the TypeScript reconstruct exists (map #72, ADR
-// 0004). The app writes filmes-dados with English keys and the image carries
-// the config in English (ADR 0002), while Python reads only Portuguese: the
-// key migration (#77) writes both, in Portuguese, into a scratch folder, and
-// Python rebuilds from there (`FILMES_DADOS`, `FILMES_CONFIG`), so neither
-// the checkout nor the repo's `config/` is touched. A folder already in
-// Portuguese goes through unchanged.
+// `pnpm db:publish --build`: the derived SQLite, built on servidor-azul by
+// the engine's `rebuild` (map #72), or, with `--python`, by the Python
+// engine until it leaves (#108). The app writes filmes-dados with English
+// keys and the image carries the config in English (ADR 0002), while Python
+// reads only Portuguese: the key migration (#77) writes both into a scratch
+// folder, in English for the engine and in Portuguese for Python, and the
+// build reads them from there (`FILMES_DADOS`, `FILMES_CONFIG`), so neither
+// the checkout nor the repo's `config/` is touched. A folder already in the
+// target language goes through unchanged.
 //
-// The rest of Python's environment is the caller's: the dumps
-// (`FILMES_CATALOGO`, or `[caminhos] catalogo` of the config's `local.toml`,
+// The rest of the build's environment is the caller's: the dumps
+// (`FILMES_CATALOGO`, or the catalog path of the config's `local.toml`,
 // which the scratch config keeps), `FILMES_HOJE`...
 //
 // Runs on plain `node`, which reads TypeScript by itself.
@@ -45,57 +46,92 @@ export const spawnRunner: Runner = (command, args, { cwd, env }) => {
   }
 }
 
-/** Python's error, from its `{"erro": {...}}` output when it gave one. */
-function pythonError({ status, stdout, stderr }: Ran) {
+/** Which engine builds: the TypeScript one, or Python until #108. */
+export type Builder = 'typescript' | 'python'
+
+/** The engine's error, from its `{"error": {...}}` (or Python's
+ * `{"erro": {...}}`) output when it gave one. */
+function engineError({ status, stdout, stderr }: Ran) {
   try {
-    const { erro } = JSON.parse(stdout) as {
+    const { error, erro } = JSON.parse(stdout) as {
+      error?: { code: string; message: string }
       erro?: { codigo: string; mensagem: string }
     }
+    if (error) return `${error.code}: ${error.message}`
     if (erro) return `${erro.codigo}: ${erro.mensagem}`
   } catch {
-    // Not JSON: Python never started, or crashed before printing.
+    // Not JSON: the process never started, or crashed before printing.
   }
   return `exit ${status ?? 'signal'}\n${stdout}${stderr}`.trim()
 }
 
+/** The engine's `rebuild` as a process. */
+const REBUILD_SCRIPT = join(import.meta.dirname, 'db-rebuild.ts')
+
+/** How each builder runs, and the language of what it reads. */
+const BUILDERS: Readonly<
+  Record<
+    Builder,
+    {
+      readonly name: string
+      readonly language: 'to-en' | 'to-pt'
+      readonly command: string
+      readonly args: readonly string[]
+    }
+  >
+> = {
+  typescript: {
+    name: 'the engine',
+    language: 'to-en',
+    command: process.execPath,
+    args: [REBUILD_SCRIPT],
+  },
+  python: {
+    name: 'the Python engine',
+    language: 'to-pt',
+    command: 'uv',
+    args: ['run', 'python', '-m', 'filmes', 'reconstruir', '--json'],
+  },
+}
+
 /** Builds `database` from the filmes-dados checkout `data` and the config
- * folder `config`, either in English or in Portuguese. Throws, with Python's
- * error, when the rebuild fails; leaves no scratch folder behind. */
+ * folder `config`, either in English or in Portuguese. Throws, with the
+ * engine's error, when the rebuild fails; leaves no scratch folder
+ * behind. */
 export function buildDatabase({
   data,
   config,
   database,
   env,
+  builder = 'typescript',
   run = spawnRunner,
 }: {
   data: string
   config: string
   database: string
   env: Record<string, string | undefined>
+  builder?: Builder
   run?: Runner
 }): void {
+  const { name, language, command, args } = BUILDERS[builder]
   const scratch = mkdtempSync(join(tmpdir(), 'filmes-db-build-'))
   try {
-    const dados = join(scratch, 'dados')
-    const pt = join(scratch, 'config')
-    migrateData(data, dados, 'to-pt')
-    migrateConfig(config, pt, 'to-pt')
-    const result = run(
-      'uv',
-      ['run', 'python', '-m', 'filmes', 'reconstruir', '--json'],
-      {
-        cwd: REPO,
-        env: {
-          ...env,
-          FILMES_DADOS: dados,
-          FILMES_CONFIG: pt,
-          FILMES_BANCO: database,
-        },
+    const scratchData = join(scratch, 'data')
+    const scratchConfig = join(scratch, 'config')
+    migrateData(data, scratchData, language)
+    migrateConfig(config, scratchConfig, language)
+    const result = run(command, args, {
+      cwd: REPO,
+      env: {
+        ...env,
+        FILMES_DADOS: scratchData,
+        FILMES_CONFIG: scratchConfig,
+        FILMES_BANCO: database,
       },
-    )
+    })
     if (result.status !== 0)
       throw new Error(
-        `the Python engine could not build the database: ${pythonError(result)}`,
+        `${name} could not build the database: ${engineError(result)}`,
       )
   } finally {
     rmSync(scratch, { recursive: true, force: true })

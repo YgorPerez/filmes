@@ -127,3 +127,17 @@
   ts: '^adjustment:$'
   reason: the report dumps the result's English sections, as the engine's config and output name them; the prose and the values are Python's
   link: https://github.com/YgorPerez/filmes/issues/103
+
+# `atualizar` gzips the recorded IMDb TSVs and SPARQL results (and, live,
+# the SPARQL answers) with Node's zlib, a Chromium fork whose deflate output
+# differs from the zlib Python links: the .gz bytes, so their size and
+# SHA-256, differ, while what they inflate to is the same (the rebuild
+# after it is row-identical). The ZIPs and the IMDb downloads are kept as
+# downloaded, so their entries match.
+- id: update-gzip-bytes-differ
+  commands: [atualizar]
+  path: output.dumps.*.gz.*
+  python: '^([0-9a-f]{64}|[0-9]+)$'
+  ts: '^([0-9a-f]{64}|[0-9]+)$'
+  reason: the gzip bytes depend on the zlib build; the inflated dumps are the same
+  link: https://github.com/YgorPerez/filmes/issues/107
