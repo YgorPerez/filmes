@@ -92,7 +92,9 @@ const scalar = (
       ? repr.replace('e', '.0e')
       : repr
   }
-  if (/[\n\r\x85\u2028\u2029]/.test(value)) return JSON.stringify(value)
+  // PyYAML folds a line break into a quoted block; no report has one.
+  if (/[\n\r\x85\u2028\u2029]/.test(value))
+    throw new RangeError('quebra de linha no YAML do relatório')
   if (!needsQuotes(value)) return folded(value, column, indent, split)
   return `'${folded(value.replaceAll("'", "''"), column + 1, indent, split)}'`
 }
