@@ -493,7 +493,7 @@ describe('the command line', () => {
       ['--rollback', '--version'],
       ['--build', 'db.sqlite'],
       ['db.sqlite', '--data', 'dados'],
-      ['db.sqlite', '--python'],
+      ['db.sqlite', '--config', 'config'],
       ['db.sqlite', '--version', ''],
     ])
       expect(() => dbPublish(argv)).toThrow(/^Usage: /)
@@ -581,52 +581,45 @@ function fakeBuilder() {
 }
 
 describe('db:publish --build', () => {
-  for (const [builder, flags] of [
-    ['engine', []],
-    ['Python engine', ['--python']],
-  ] as const)
-    it(`a dry run builds the fixture with the ${builder} and prints the plan for it`, () => {
-      const fixture = useFixture()
-      const env = Object.fromEntries(
-        Object.entries(process.env).filter(
-          ([key]) => !key.startsWith('FILMES_'),
-        ),
-      )
+  it('a dry run builds the fixture with the engine and prints the plan for it', () => {
+    const fixture = useFixture()
+    const env = Object.fromEntries(
+      Object.entries(process.env).filter(([key]) => !key.startsWith('FILMES_')),
+    )
 
-      const { printed, built } = build(
-        [
-          '--data',
-          fixture.data,
-          '--config',
-          fixture.config,
-          '--version',
-          'v1',
-          '--dry-run',
-          ...flags,
-        ],
-        {
-          env: {
-            ...env,
-            FILMES_CATALOGO: join(ROOT, 'tests/fixture/catalogo'),
-            FILMES_HOJE: FIXTURE_TODAY,
-            FILMES_LOCAL: join(fixture.root, 'no-local.toml'),
-          },
+    const { printed, built } = build(
+      [
+        '--data',
+        fixture.data,
+        '--config',
+        fixture.config,
+        '--version',
+        'v1',
+        '--dry-run',
+      ],
+      {
+        env: {
+          ...env,
+          FILMES_CATALOGO: join(ROOT, 'tests/fixture/catalogo'),
+          FILMES_HOJE: FIXTURE_TODAY,
+          FILMES_LOCAL: join(fixture.root, 'no-local.toml'),
         },
-      )
+      },
+    )
 
-      expect(built).toMatch(/v1\.sqlite$/)
-      // One file, in WAL mode (the header's read and write versions are 2),
-      // with no -wal or -shm left beside it.
-      expect(readdirSync(dirname(built!))).toEqual(['v1.sqlite'])
-      expect([...readFileSync(built!).subarray(18, 20)]).toEqual([2, 2])
-      expect(printed).toContain(
-        `# Then sends ${built} to /opt/filmes/data/db/v1.sqlite.part.`,
-      )
-      // The same database the engine built from the fixture.
-      expect(rowCounts(built!)).toEqual(rowCounts(fixture.database))
-      expect(rowCounts(built!)['pessoas']).toBe(6)
-      rmSync(dirname(built!), { recursive: true })
-    }, 120_000)
+    expect(built).toMatch(/v1\.sqlite$/)
+    // One file, in WAL mode (the header's read and write versions are 2),
+    // with no -wal or -shm left beside it.
+    expect(readdirSync(dirname(built!))).toEqual(['v1.sqlite'])
+    expect([...readFileSync(built!).subarray(18, 20)]).toEqual([2, 2])
+    expect(printed).toContain(
+      `# Then sends ${built} to /opt/filmes/data/db/v1.sqlite.part.`,
+    )
+    // The same database the engine built from the fixture.
+    expect(rowCounts(built!)).toEqual(rowCounts(fixture.database))
+    expect(rowCounts(built!)['pessoas']).toBe(6)
+    rmSync(dirname(built!), { recursive: true })
+  }, 120_000)
 
   it('gives the engine filmes-dados and the config in English', () => {
     const fixture = useFixture()
@@ -646,21 +639,13 @@ describe('db:publish --build', () => {
     expect(call!.seen).not.toContain('config/pesos.toml')
   })
 
-  it('with --python gives Python filmes-dados and the config in Portuguese, and deletes the file after the swap', () => {
+  it('a publish deletes the built file after the swap', () => {
     const fixture = useFixture()
     const vps = aVps()
     const builder = fakeBuilder()
 
     const { built } = build(
-      [
-        '--data',
-        fixture.data,
-        '--config',
-        fixture.config,
-        '--version',
-        'v1',
-        '--python',
-      ],
+      ['--data', fixture.data, '--config', fixture.config, '--version', 'v1'],
       {
         env: { VPS_HOST: 'vps.test', FILMES_CATALOGO: '/dumps' },
         run: builder.run,
@@ -670,18 +655,6 @@ describe('db:publish --build', () => {
     )
 
     const [call] = builder.calls
-    expect(call!.args).toEqual([
-      'run',
-      'python',
-      '-m',
-      'filmes',
-      'reconstruir',
-      '--json',
-    ])
-    expect(call!.env.FILMES_CATALOGO).toBe('/dumps')
-    expect(call!.seen).toContain('data/pessoas')
-    expect(call!.seen).toContain('config/pesos.toml')
-    expect(call!.seen).not.toContain('config/weights.toml')
     expect(vps.live()).toMatchObject({ dbLive: 'v1\n' })
     expect(vps.read(join(vps.db, 'v1.sqlite'))).toBe('SQLite format 3\0built')
     // Neither the scratch folders nor the built file stay behind.
@@ -728,31 +701,6 @@ describe('db:publish --build', () => {
       'the engine could not build the database: missing_catalog: sem dumps',
     )
     expect(existsSync(dirname(database))).toBe(false)
-  })
-
-  it("with --python stops with Python's error", () => {
-    const fixture = useFixture()
-    const failing: Runner = () => ({
-      status: 1,
-      stdout: '{"erro": {"codigo": "config_ausente", "mensagem": "sem dumps"}}',
-      stderr: '',
-    })
-
-    expect(() =>
-      build(
-        [
-          '--data',
-          fixture.data,
-          '--config',
-          fixture.config,
-          '--dry-run',
-          '--python',
-        ],
-        { run: failing },
-      ),
-    ).toThrow(
-      'the Python engine could not build the database: config_ausente: sem dumps',
-    )
   })
 
   it('a build that never started says what it printed', () => {

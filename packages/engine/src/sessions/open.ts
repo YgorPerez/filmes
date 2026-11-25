@@ -289,8 +289,7 @@ const summary = (id: string, front: YamlMapping): SessionSummary => {
   }
 }
 
-/** The fields `sessoes-abertas` gives, as Python's (the oracle compares
- * them). */
+/** The fields `sessoes-abertas` gives, as the Python engine's. */
 const openFields = (s: SessionSummary): OpenSession => ({
   id: s.id,
   file: s.file,

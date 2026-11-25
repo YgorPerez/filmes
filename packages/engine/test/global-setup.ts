@@ -4,8 +4,7 @@
 //   keys by the key migration (ADR 0002): the TypeScript engine reads only
 //   those;
 // - the derived database, built from them by the engine's own `rebuild`
-//   over `tests/fixture/catalogo` (#105; the oracle checks it row for row
-//   against Python's `reconstruir`).
+//   over `tests/fixture/catalogo` (#105).
 //
 // The result is cached in `node_modules/.cache/filmes-engine-fixture/<hash>`,
 // where the hash covers everything that could change it: the fixture, the

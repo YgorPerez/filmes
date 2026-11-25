@@ -3,10 +3,9 @@
 // `sessions/<date>-<attendees>.md`: a frontmatter with the date, the
 // Presentes, the context, the Regra and no Feedback yet, and in the body
 // the whole Recomendação with every Evidence in the full line format.
-// `sessoes-abertas` lists the ones without Feedback. Where Python rebuilt
-// the database with `reconstruir`, these reload the Sessions
-// (`reloadSessions`), the loading step of a rebuild; the Feedback is
-// written by Python until its port (#96).
+// `sessoes-abertas` lists the ones without Feedback. Where a test needs the
+// database rebuilt, it reloads the Sessions (`reloadSessions`), the loading
+// step of a rebuild.
 
 import { spawnSync } from 'node:child_process'
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
@@ -27,6 +26,7 @@ import {
   readSession,
   writeSession,
   recommendSession,
+  recordFeedback,
   reloadSessions,
   sessionContext,
   Sqlite,
@@ -38,7 +38,7 @@ import {
   type Vars,
 } from '../../src/index.ts'
 import { useFixture, type Fixture } from '../fixture.ts'
-import { PYTHON_TIMEOUT, pythonOk } from '../recommendation/support.ts'
+import { expectRecorded } from '../expected.ts'
 
 const sessionFile = (fixture: Fixture, id: string) =>
   join(fixture.data, 'sessions', `${id}.md`)
@@ -624,79 +624,41 @@ describe('a redone Session', () => {
 })
 
 describe('the Feedback’s Fatos in the database', () => {
-  /** Python opens and closes the Sessions; the engine reloads them from
-   * the same files, migrated to English. */
-  const pythonSessions = (fixture: Fixture) => {
-    const folder = join(fixture.root, 'py-dados', 'sessoes')
-    mkdirSync(join(fixture.data, 'sessions'), { recursive: true })
-    for (const name of readdirSync(folder))
-      writeFileSync(
-        join(fixture.data, 'sessions', name),
-        migrateDataFile(
-          'session',
-          readFileSync(join(folder, name), 'utf8'),
-          'to-en',
-        ),
-      )
-  }
+  test('a reload gives the rows the Feedback wrote', async () => {
+    const fixture = useFixture()
+    const opened = await fixture.ok(
+      recommendSession({ attendees: ['dono', 'iara', 'teo'] }),
+    )
+    await fixture.ok(
+      recordFeedback({
+        session: opened.session.id,
+        film: 'Vento Norte',
+        ratings: ['dono=4', 'iara=9/10'],
+        reports: ['teo=gostou'],
+        comments: ['iara=lindo demais', 'dono=longo'],
+      }),
+    )
+    const other = await fixture.ok(
+      recommendSession({ attendees: ['dono', 'teo'] }),
+    )
+    await fixture.ok(
+      recordFeedback({
+        session: other.session.id,
+        film: 'Vento Norte',
+        reports: ['teo=neutro'],
+      }),
+    )
+    const written = await sessionRows(fixture)
+    expectRecorded(fixture, written)
+    expect(written['reacoes']?.length).toBeGreaterThan(0)
+    expect(
+      written['declarados']?.some((r) => (r as { sessao: unknown }).sessao),
+    ).toBe(true)
 
-  test(
-    'a reload gives the rows Python’s Feedback wrote',
-    async () => {
-      const fixture = useFixture()
-      const opened = pythonOk(fixture, [
-        'recomendar',
-        '--presentes',
-        'dono',
-        'iara',
-        'teo',
-      ])
-      const id = (opened as { sessao: { id: string } }).sessao.id
-      pythonOk(fixture, [
-        'feedback',
-        '--sessao',
-        id,
-        '--filme',
-        'Vento Norte',
-        '--nota',
-        'dono=4',
-        '--nota',
-        'iara=9/10',
-        '--relato',
-        'teo=gostou',
-        '--comentario',
-        'iara=lindo demais',
-        '--comentario',
-        'dono=longo',
-      ])
-      const other = pythonOk(fixture, [
-        'recomendar',
-        '--presentes',
-        'dono',
-        'teo',
-      ])
-      pythonOk(fixture, [
-        'feedback',
-        '--sessao',
-        (other as { sessao: { id: string } }).sessao.id,
-        '--filme',
-        'Vento Norte',
-        '--relato',
-        'teo=neutro',
-      ])
-      const python = await sessionRows(fixture)
-      expect(python['reacoes']?.length).toBeGreaterThan(0)
-      expect(
-        python['declarados']?.some((r) => (r as { sessao: unknown }).sessao),
-      ).toBe(true)
-      pythonSessions(fixture)
+    await fixture.ok(reloadSessions)
 
-      await fixture.ok(reloadSessions)
-
-      expect(await sessionRows(fixture)).toEqual(python)
-    },
-    PYTHON_TIMEOUT,
-  )
+    expect(await sessionRows(fixture)).toEqual(written)
+  })
 
   test('a reaction outside the list is invalid data', async () => {
     const fixture = useFixture()

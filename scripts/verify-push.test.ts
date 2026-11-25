@@ -139,9 +139,9 @@ describe('verifyPush', () => {
     expect(vitest[0]?.command).toContain(first)
   })
 
-  it("a change to the Python engine runs pytest, the MCP tests, which call its CLI, and the engine's, whose fixture it builds", () => {
+  it("a change to the engine's fixture runs the engine's and the MCP server's tests", () => {
     const { clone, commit } = repositories()
-    const sha = commit('filmes/cli.py')
+    const sha = commit('tests/fixture/catalogo/filmes.csv')
     const { run, runs } = fakeRun()
     verifyPush({
       root: clone,
@@ -151,14 +151,9 @@ describe('verifyPush', () => {
       say: () => {},
       env: {},
     })
-    const [engine, ...rest] = runs.slice(1)
-    expect(engine?.folder).toBe(join(clone, 'packages/engine'))
-    expect(rest).toEqual([
-      { command: ['uv', 'run', 'pytest', '-q'], folder: clone },
-      {
-        command: ['pnpm', '--filter', '@filmes/mcp', 'test'],
-        folder: clone,
-      },
+    expect(runs.slice(1).map((r) => r.folder)).toEqual([
+      join(clone, 'packages/engine'),
+      join(clone, 'packages/mcp-server'),
     ])
   })
 

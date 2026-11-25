@@ -2,8 +2,7 @@
 // (`filmes/dados/pessoas.py`). Read them all, find one by slug, name or
 // alias, create one, and write one back.
 //
-// Every message is Python's, word for word, so the oracle compares them
-// as they are (a key is named as the Portuguese file had it). Two point at
+// Every message is the Python engine's, word for word (a key is named as the Portuguese file had it). Two point at
 // something else in an English file: the link and level hints list the
 // English values, and a body line names `people/<slug>.md`.
 

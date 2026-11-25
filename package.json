@@ -9,7 +9,6 @@
     "start": "pnpm --filter frontend start",
     "catalog:update": "node frontend/scripts/catalog-update.ts",
     "db:publish": "node frontend/scripts/db-publish.ts",
-    "oracle": "node packages/engine/oracle/cli.ts",
     "check": "vp check && vp run -r --cache test:coverage && vp test run --coverage && vp run --filter frontend fallow && vp run --filter frontend doctor",
     "fmt": "vp fmt",
     "lint": "vp lint",

@@ -1,7 +1,5 @@
-// `avaliar` (#103), the Vitest twin of tests/test_avaliar.py. Where Python
-// rebuilt the database or pinned the dumps (`reconstruir`, `atualizar`,
-// not ported here), the test runs the Python CLI for that setup step over
-// the test's database (`python` from the recommendation support).
+// `avaliar` (#103): the offline cut, the online measures, the weights grid
+// and the report.
 import {
   cpSync,
   mkdirSync,
@@ -11,7 +9,6 @@ import {
   appendFileSync,
 } from 'node:fs'
 import { join } from 'node:path'
-import { migrateConfigFile, outputToEnglish } from '@filmes/key-migration'
 import { parse } from 'yaml'
 import { describe, expect, test } from 'vite-plus/test'
 import {
@@ -21,14 +18,16 @@ import {
   openSessions,
   progressTo,
   PyRandom,
+  rebuild,
   recommendSession,
   recordFeedback,
+  update,
   type Evaluation,
   type EvaluationProgress,
 } from '../../src/index.ts'
 import { ROOT, useFixture, type Fixture } from '../fixture.ts'
 import { zipOf } from '../imports/zip.ts'
-import { PYTHON_TIMEOUT, pythonOk } from '../recommendation/support.ts'
+import { expectRecorded } from '../expected.ts'
 
 const reports = (fixture: Fixture) => ({
   FILMES_AVALIACOES: join(fixture.root, 'avaliacoes'),
@@ -154,60 +153,55 @@ describe('avaliar', () => {
     },
   )
 
-  test(
-    'leaves the sampled users out of the neighbourhood',
-    { timeout: PYTHON_TIMEOUT },
-    async () => {
-      const fixture = useFixture()
-      const catalog = join(fixture.root, 'catalogo')
-      cpSync(join(ROOT, 'tests/fixture/catalogo'), catalog, { recursive: true })
-      rmSync(join(catalog, 'genoma.csv'))
-      for (let i = 0; i < 55; i++)
-        // Rating 9: the IMDb rating bonus (#56) keeps them ahead of As Horas
-        // Lentas (7.4).
-        appendFileSync(
-          join(catalog, 'filmes.csv'),
-          `tt927${String(i).padStart(4, '0')},Filme popular ${i},2020,90,999999,9.0\n`,
-        )
-      const ml = join(catalog, 'ml-32m')
-      mkdirSync(ml)
-      writeFileSync(
-        join(ml, 'links.csv'),
-        'movieId,imdbId,tmdbId\n' +
-          [1, 2, 3, 4, 5, 6]
-            .map((i) => `${i},90010${String(i).padStart(2, '0')},${i}\n`)
-            .join(''),
+  test('leaves the sampled users out of the neighbourhood', async () => {
+    const fixture = useFixture()
+    const catalog = join(fixture.root, 'catalogo')
+    cpSync(join(ROOT, 'tests/fixture/catalogo'), catalog, { recursive: true })
+    rmSync(join(catalog, 'genoma.csv'))
+    for (let i = 0; i < 55; i++)
+      // Rating 9: the IMDb rating bonus (#56) keeps them ahead of As Horas
+      // Lentas (7.4).
+      appendFileSync(
+        join(catalog, 'filmes.csv'),
+        `tt927${String(i).padStart(4, '0')},Filme popular ${i},2020,90,999999,9.0\n`,
       )
-      // The 30 users outside the sample only gave 4+ to films 1 and 3. Film
-      // 2 enters the top 50 if the held-out ratings leak into the
-      // neighbours.
-      const users = Array.from({ length: 1030 }, (_, i) => i + 1)
-      const drawn = new Set(new PyRandom(27).sample(users, 1000))
-      const lines = ['userId,movieId,rating,timestamp']
-      for (const user of users) {
-        lines.push(`${user},1,5,1700000000`)
-        if (drawn.has(user)) {
-          for (const film of [4, 5, 6])
-            lines.push(`${user},${film},2,1700000000`)
-          lines.push(`${user},2,5,1700000001`)
-        }
-        lines.push(`${user},3,5,1700000002`)
+    const ml = join(catalog, 'ml-32m')
+    mkdirSync(ml)
+    writeFileSync(
+      join(ml, 'links.csv'),
+      'movieId,imdbId,tmdbId\n' +
+        [1, 2, 3, 4, 5, 6]
+          .map((i) => `${i},90010${String(i).padStart(2, '0')},${i}\n`)
+          .join(''),
+    )
+    // The 30 users outside the sample only gave 4+ to films 1 and 3. Film
+    // 2 enters the top 50 if the held-out ratings leak into the
+    // neighbours.
+    const users = Array.from({ length: 1030 }, (_, i) => i + 1)
+    const drawn = new Set(new PyRandom(27).sample(users, 1000))
+    const lines = ['userId,movieId,rating,timestamp']
+    for (const user of users) {
+      lines.push(`${user},1,5,1700000000`)
+      if (drawn.has(user)) {
+        for (const film of [4, 5, 6]) lines.push(`${user},${film},2,1700000000`)
+        lines.push(`${user},2,5,1700000001`)
       }
-      writeFileSync(join(ml, 'ratings.csv'), lines.join('\n') + '\n')
-      pythonOk(fixture, ['reconstruir'], { FILMES_CATALOGO: catalog })
+      lines.push(`${user},3,5,1700000002`)
+    }
+    writeFileSync(join(ml, 'ratings.csv'), lines.join('\n') + '\n')
+    await fixture.ok(rebuild, { FILMES_CATALOGO: catalog })
 
-      const result = await evaluated(fixture, { FILMES_CATALOGO: catalog })
-      const sample = result.offline.movielens
-      expect(sample.people).toBe(1000)
-      expect(sample.retrieved).toBe(1000)
-      expect(sample.heldOut4Plus).toBe(2000)
-      expect(sample.coverageTop5).toBe(0)
-      expect(sample.recall50).toBe(0.5)
-      expect(result.versions).toHaveProperty(['ml-32m/ratings.csv'])
-      expect(result.movielensSample).toEqual({ seed: 27, users: 1000 })
-      expect(result.warnings).toEqual([])
-    },
-  )
+    const result = await evaluated(fixture, { FILMES_CATALOGO: catalog })
+    const sample = result.offline.movielens
+    expect(sample.people).toBe(1000)
+    expect(sample.retrieved).toBe(1000)
+    expect(sample.heldOut4Plus).toBe(2000)
+    expect(sample.coverageTop5).toBe(0)
+    expect(sample.recall50).toBe(0.5)
+    expect(result.versions).toHaveProperty(['ml-32m/ratings.csv'])
+    expect(result.movielensSample).toEqual({ seed: 27, users: 1000 })
+    expect(result.warnings).toEqual([])
+  })
 
   test(
     'the grid tries three values per weight and keeps the config',
@@ -273,44 +267,26 @@ describe('avaliar', () => {
     expect(result.heldOut4Plus).toBe(5)
   })
 
-  test(
-    'the report keeps the manifest of the pinned Catalog',
-    { timeout: PYTHON_TIMEOUT },
-    async () => {
-      const fixture = useFixture()
-      const catalog = join(fixture.root, 'catalogo')
-      const versions = join(fixture.root, 'versoes.json')
-      const pinned = pythonOk(fixture, ['atualizar'], {
-        FILMES_CATALOGO: catalog,
-        FILMES_VERSOES: versions,
-        FILMES_GRAVACOES: join(ROOT, 'tests/fixture/gravacoes'),
-      }) as { dumps: Record<string, { sha256: string }> }
-      pythonOk(fixture, ['reconstruir'], {
-        FILMES_CATALOGO: catalog,
-        FILMES_VERSOES: versions,
-      })
-      const english = migrateConfigFile(
-        'versoes-catalogo.json',
-        readFileSync(versions, 'utf8'),
-        'to-en',
-      )
-      const versionsEn = join(fixture.root, 'catalog-versions.json')
-      writeFileSync(versionsEn, english!.text)
+  test('the report keeps the manifest of the pinned Catalog', async () => {
+    const fixture = useFixture()
+    const vars = {
+      FILMES_CATALOGO: join(fixture.root, 'catalogo'),
+      FILMES_VERSOES: join(fixture.root, 'catalog-versions.json'),
+    }
+    const pinned = await fixture.ok(update(), {
+      ...vars,
+      FILMES_GRAVACOES: join(ROOT, 'tests/fixture/gravacoes'),
+    })
+    await fixture.ok(rebuild, vars)
 
-      const result = await evaluated(fixture, {
-        FILMES_CATALOGO: catalog,
-        FILMES_VERSOES: versionsEn,
-      })
+    const result = await evaluated(fixture, vars)
 
-      const manifest = result.versions['manifest'] as { dumps: unknown }
-      expect(manifest.dumps).toEqual(
-        (outputToEnglish('atualizar', pinned) as { dumps: unknown }).dumps,
-      )
-      expect(readFileSync(result.file, 'utf8')).toContain(
-        pinned.dumps['title.basics.tsv.gz']!.sha256,
-      )
-    },
-  )
+    const manifest = result.versions['manifest'] as { dumps: unknown }
+    expect(manifest.dumps).toEqual(JSON.parse(JSON.stringify(pinned.dumps)))
+    expect(readFileSync(result.file, 'utf8')).toContain(
+      pinned.dumps['title.basics.tsv.gz']!.sha256,
+    )
+  })
 
   test('a missing MovieLens file is invalid data; no report folder is missing_config', async () => {
     const fixture = useFixture()
@@ -352,70 +328,36 @@ const splitReport = (text: string) => {
   return { prose, blocks }
 }
 
-describe('avaliar, against Python', () => {
-  const both = async (
-    fixture: Fixture,
-    grid: boolean,
-    vars: Record<string, string> = {},
-  ) => {
-    const pyReports = join(fixture.root, 'py-avaliacoes')
-    const python = outputToEnglish(
-      'avaliar',
-      pythonOk(fixture, ['avaliar', ...(grid ? ['--grade'] : [])], {
-        FILMES_AVALIACOES: pyReports,
-        ...vars,
-      }),
-    ) as Record<string, unknown>
-    const engine = await evaluated(fixture, vars, grid)
-    return {
-      python,
-      engine,
-      pyReport: readFileSync(String(python['file']), 'utf8'),
-    }
+describe('avaliar, as recorded', () => {
+  /** The result without the report's path, and the report split. */
+  const evaluatedWithReport = async (fixture: Fixture, grid: boolean) => {
+    const { file, ...result } = await evaluated(fixture, {}, grid)
+    return { result, report: splitReport(readFileSync(file, 'utf8')) }
   }
 
-  test(
-    'gives the same result and the same report',
-    { timeout: PYTHON_TIMEOUT },
-    async () => {
-      const fixture = useFixture()
-      const { python, engine, pyReport } = await both(fixture, false)
-      const { file: _py, ...pythonRest } = python
-      const { file, ...engineRest } = engine
-      expect(engineRest).toEqual(pythonRest)
+  test('gives the recorded result and report', async () => {
+    const fixture = useFixture()
+    const { result, report } = await evaluatedWithReport(fixture, false)
 
-      const ours = splitReport(readFileSync(file, 'utf8'))
-      const theirs = splitReport(pyReport)
-      expect(ours.prose).toBe(theirs.prose)
-      // Python dumped its Portuguese dict; the report now holds the output's
-      // English sections.
-      const [weights, versions] = theirs.blocks
-      const english = outputToEnglish('avaliar', {
-        pesos: weights,
-        versoes: versions,
-      }) as Record<string, unknown>
-      expect(ours.blocks).toEqual([english['weights'], english['versions']])
-    },
-  )
+    expectRecorded(fixture, {
+      result,
+      prose: report.prose,
+      blocks: report.blocks,
+    })
+  })
 
   test(
-    'the grid gives the same best weights and report',
+    'the grid gives the recorded best weights and report',
     { timeout: 600_000 },
     async () => {
       const fixture = useFixture()
-      const { python, engine, pyReport } = await both(fixture, true)
-      const { file: _py, ...pythonRest } = python
-      const { file, ...engineRest } = engine
-      expect(engineRest).toEqual(pythonRest)
-      const ours = splitReport(readFileSync(file, 'utf8'))
-      const theirs = splitReport(pyReport)
-      expect(ours.prose).toBe(theirs.prose)
-      const english = outputToEnglish('avaliar', {
-        grade: { melhores: theirs.blocks[2] },
-      }) as {
-        grid: { best: unknown }
-      }
-      expect(ours.blocks[2]).toEqual(english.grid.best)
+      const { result, report } = await evaluatedWithReport(fixture, true)
+
+      expectRecorded(fixture, {
+        result,
+        prose: report.prose,
+        best: report.blocks[2],
+      })
     },
   )
 })

@@ -41,7 +41,7 @@ const useCreditFixture = (): { fixture: Fixture; vars: Vars } => {
     fixture,
     '\npeso = 0.3\n\n[sem_tristeza]',
     '\npeso = 0.0\n\n[sem_tristeza]',
-  ).engine
+  )
   return { fixture, vars }
 }
 

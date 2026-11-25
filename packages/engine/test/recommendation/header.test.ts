@@ -4,15 +4,14 @@
 // Sal e Ferrugem, Noite de Estreia, Cidade de Vidro and A Volta do Mar.
 
 import { describe, expect, test } from 'vite-plus/test'
-import { type ConstraintRequest, type Recommendation } from '../../src/index.ts'
+import {
+  rebuild,
+  type ConstraintRequest,
+  type Recommendation,
+} from '../../src/index.ts'
 import { useFixture, type Fixture } from '../fixture.ts'
 import { RECORDINGS } from '../sources/support.ts'
-import {
-  engineRecommendation,
-  film,
-  pythonOk,
-  PYTHON_TIMEOUT,
-} from './support.ts'
+import { engineRecommendation, film } from './support.ts'
 
 const TMDB = { FILMES_TMDB_CHAVE: 'x', FILMES_GRAVACOES: RECORDINGS }
 
@@ -23,7 +22,7 @@ const ask = (
 ): Promise<Recommendation> =>
   engineRecommendation(fixture, { attendees: ['dono'], ...constraints }, vars)
 
-describe('the card header', { timeout: PYTHON_TIMEOUT }, () => {
+describe('the card header', () => {
   test('each film has its IMDb link', async () => {
     expect(film(await ask(useFixture()), 'As Horas Lentas').imdbUrl).toBe(
       'https://www.imdb.com/title/tt9000104/',
@@ -133,9 +132,8 @@ describe('the card header', { timeout: PYTHON_TIMEOUT }, () => {
   test('the poster stays six months in the cache and survives a rebuild', async () => {
     const fixture = useFixture()
     await ask(fixture, TMDB)
-    // Reconstruct is not ported: the Python rebuilds the database, and the
-    // cache beside it stays.
-    pythonOk(fixture, ['reconstruir'])
+    // The rebuild replaces the database; the cache beside it stays.
+    await fixture.ok(rebuild)
     const offline = {
       FILMES_TMDB_CHAVE: undefined,
       FILMES_GRAVACOES: `${fixture.root}/no-recordings`,

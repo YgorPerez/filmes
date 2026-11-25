@@ -62,7 +62,7 @@ export const authorOf = (person: Person): Author => ({
 })
 
 /** The author of a write no logged-in Pessoa asked for: the command line,
- * the oracle, a script. */
+ * a script. */
 export const ENGINE_AUTHOR: Author = { name: 'filmes', email: '' }
 
 export interface WriteOptions {

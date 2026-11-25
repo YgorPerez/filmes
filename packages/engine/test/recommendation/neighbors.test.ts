@@ -3,14 +3,17 @@
 // films 1001 to 1005 link to Bruno's and Iara's Notas only through it.
 
 import { describe, expect, test } from 'vite-plus/test'
-import type { Recommendation } from '../../src/index.ts'
-import { useFixture, type Fixture } from '../fixture.ts'
 import {
-  engineRecommendation,
-  film,
-  pythonOk,
-  PYTHON_TIMEOUT,
-} from './support.ts'
+  consult,
+  personCreate,
+  personReport,
+  personState,
+  recommendSession,
+  recordFeedback,
+  type Recommendation,
+} from '../../src/index.ts'
+import { useFixture, type Fixture } from '../fixture.ts'
+import { engineRecommendation, film } from './support.ts'
 
 const all = (fixture: Fixture, ...attendees: string[]) =>
   engineRecommendation(fixture, {
@@ -27,7 +30,7 @@ const one = (out: Recommendation, title: string, person = 'bruno') => {
   return found[0]
 }
 
-describe('the neighbourhood path', { timeout: PYTHON_TIMEOUT }, () => {
+describe('the neighbourhood path', () => {
   test('a large base and a high share give strong Evidence', async () => {
     const fixture = useFixture()
     const e = one(await all(fixture), 'A Casa das Marés')
@@ -41,11 +44,10 @@ describe('the neighbourhood path', { timeout: PYTHON_TIMEOUT }, () => {
       '2023-10-13',
     ])
     expect(e?.contribution).toBe(1.0)
-    const ids = pythonOk(fixture, [
-      'consultar',
-      "SELECT fato_id FROM vizinhos WHERE vizinho_id = 'tt9001001'",
-    ]) as { linhas: string[][] }
-    expect(ids.linhas.map(([id]) => id)).toContain(e?.factId)
+    const ids = await fixture.ok(
+      consult("SELECT fato_id FROM vizinhos WHERE vizinho_id = 'tt9001001'"),
+    )
+    expect(ids.rows.map(([id]) => id)).toContain(e?.factId)
   })
 
   test('a smaller base and share give moderate or weak Evidence', async () => {
@@ -93,25 +95,17 @@ describe('the neighbourhood path', { timeout: PYTHON_TIMEOUT }, () => {
   })
 
   test("a Feedback Nota raises the neighbourhood's strength", async () => {
-    // Sessions and Feedback are not ported yet: the Python opens and closes
-    // the Session.
     const fixture = useFixture()
-    const opened = pythonOk(fixture, [
-      'recomendar',
-      '--presentes',
-      'dono',
-      '--quantos',
-      '50',
-    ]) as { sessao: { id: string } }
-    pythonOk(fixture, [
-      'feedback',
-      '--sessao',
-      opened.sessao.id,
-      '--filme',
-      'Rio Abaixo',
-      '--nota',
-      'dono=3,5',
-    ])
+    const opened = await fixture.ok(
+      recommendSession({ attendees: ['dono'], count: 50 }),
+    )
+    await fixture.ok(
+      recordFeedback({
+        session: opened.session.id,
+        film: 'Rio Abaixo',
+        ratings: ['dono=3,5'],
+      }),
+    )
 
     const [e] = reviews(await all(fixture), 'Luz de Inverno').filter((x) =>
       x.text.startsWith('deu 3,5 a Rio Abaixo'),
@@ -143,24 +137,21 @@ describe('the neighbourhood path', { timeout: PYTHON_TIMEOUT }, () => {
     expect(e?.strength).toBe('moderate')
   })
 
-  const anaSays = (fixture: Fixture, action: 'declarar' | 'relatar') => {
-    pythonOk(fixture, ['pessoa', 'criar', 'Ana', '--slug', 'ana'])
-    pythonOk(fixture, [
-      'pessoa',
-      action,
-      'ana',
-      'ama O Farol',
-      '--filme',
-      'tt9000101',
-      '--reacao',
-      'ama',
-    ])
-    pythonOk(fixture, ['reconstruir'])
+  const anaSays = async (fixture: Fixture, how: 'states' | 'reports') => {
+    await fixture.ok(personCreate({ name: 'Ana', slug: 'ana' }))
+    const said = {
+      person: 'ana',
+      text: 'ama O Farol',
+      target: 'tt9000101',
+      reaction: 'love',
+    } as const
+    if (how === 'states') await fixture.ok(personState(said))
+    else await fixture.ok(personReport(said))
   }
 
   test('a stated rating is a seed, with the stated wording and ruler', async () => {
     const fixture = useFixture()
-    anaSays(fixture, 'declarar')
+    await anaSays(fixture, 'states')
 
     const e = one(await all(fixture, 'ana'), 'A Casa das Marés', 'ana')
     expect(e?.text).toBe(
@@ -171,7 +162,7 @@ describe('the neighbourhood path', { timeout: PYTHON_TIMEOUT }, () => {
 
   test('a Relato that she loves a film is a seed one level below', async () => {
     const fixture = useFixture()
-    anaSays(fixture, 'relatar')
+    await anaSays(fixture, 'reports')
 
     const e = one(await all(fixture, 'ana'), 'A Casa das Marés', 'ana')
     expect(

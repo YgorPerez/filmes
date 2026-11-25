@@ -1,6 +1,5 @@
-// Reads a parsed Python CLI output in English, with the tables of
-// `tables/output.ts`: what the parity oracle (ADR 0004) compares with the
-// TypeScript engine's result.
+// Reads a parsed output of the Python CLI in English, with the tables of
+// `tables/output.ts`.
 
 import { MigrationError } from './error.ts'
 import { invert, type Shape } from './shape.ts'
@@ -43,7 +42,7 @@ export function renameValue(value: unknown, shape: Shape, path = '$'): unknown {
   throw new MigrationError(`${path}: unknown value ${JSON.stringify(value)}`)
 }
 
-/** A Python command's JSON output (`python -m filmes <command> --json`), in
+/** A JSON output of the old Python CLI, in
  * English. `command` is the Python name, with the subcommand after a space
  * (`pessoa ver`, `fila confirmar`, `cartaz responder`). An error output reads
  * the same for every command. */

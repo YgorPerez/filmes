@@ -18,5 +18,5 @@
     // `effecttsgo` plugin in the root `vite.config.ts`.
     "plugins": [{ "name": "@effect/language-service" }]
   },
-  "include": ["src/**/*.ts", "test/**/*.ts", "oracle/**/*.ts"]
+  "include": ["src/**/*.ts", "test/**/*.ts"]
 }

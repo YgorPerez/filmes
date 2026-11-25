@@ -10,7 +10,6 @@
     "@effect-diagnostics": 0,
     "fallow-ignore": 0,
     "coverage ignore": 0,
-    "use no memo": 0,
-    "# noqa": 0
+    "use no memo": 0
   }
 }

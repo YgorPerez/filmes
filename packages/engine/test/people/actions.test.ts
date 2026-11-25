@@ -749,7 +749,7 @@ describe('pessoa declarar and relatar', () => {
     expect(error).toEqual({
       exitCode: 1,
       code: 'missing_database',
-      message: `banco não encontrado em ${fixture.database}: rode \`python -m filmes reconstruir\``,
+      message: `banco não encontrado em ${fixture.database}: rode \`pnpm db:publish --build\``,
     })
   })
 })

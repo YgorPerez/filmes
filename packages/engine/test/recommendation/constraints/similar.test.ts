@@ -19,12 +19,11 @@ import {
 } from '../../../src/index.ts'
 import { useFixture, type Fixture } from '../../fixture.ts'
 import {
-  bothEngines,
+  expectRecordedRecommendation,
   engineRecommendation,
   film,
   weightsWith,
   withoutPosterWarning,
-  PYTHON_TIMEOUT,
 } from '../support.ts'
 
 const WRITING_LETTERS = 'tt9006701' // in the genome, the tags and the neighbours
@@ -82,7 +81,7 @@ test('cuts at the most similar, counted before the minimum rating, and warns', a
     fixture,
     [WRITING_LETTERS],
     undefined,
-    candidates(fixture, 3).engine,
+    candidates(fixture, 3),
   )
 
   expect(ids(out)).toEqual([SUNDAY_TABLE, INK_AND_PAPER])
@@ -97,7 +96,7 @@ test('a single one passing says so in the singular', async () => {
   const out = await engineRecommendation(
     fixture,
     { attendees: ['dono'], similar: [WRITING_LETTERS], count: 3 },
-    candidates(fixture, 1).engine,
+    candidates(fixture, 1),
   )
 
   expect(withoutPosterWarning(out.warnings)).toContain(
@@ -113,7 +112,7 @@ test('a missing source spreads its weight', async () => {
     fixture,
     [WRITING_LETTERS],
     undefined,
-    candidates(fixture, 1).engine,
+    candidates(fixture, 1),
   )
 
   expect(ids(out)).toEqual([INK_AND_PAPER])
@@ -314,31 +313,28 @@ describe('the card header', () => {
   })
 })
 
-describe('with Python', { timeout: PYTHON_TIMEOUT }, () => {
+describe('the whole output, as recorded', () => {
   test.each([
     [[WRITING_LETTERS]],
     [[DOWN_THE_ROAD]],
     [[WRITING_LETTERS, DOWN_THE_ROAD]],
     [[STARTING_POINT]],
     [[`${WRITING_LETTERS},${SUNDAY_TABLE}`]],
-  ])('--parecido %j is equal to Python', async (similar) => {
-    const { python, engine } = await bothEngines(
-      useFixture(),
-      ['--presentes', 'dono', '--quantos', '10', '--parecido', ...similar],
-      { attendees: ['dono'], count: 10, similar },
-    )
-    expect(engine).toEqual(python)
+  ])('similar to %j', async (similar) => {
+    await expectRecordedRecommendation(useFixture(), {
+      attendees: ['dono'],
+      count: 10,
+      similar,
+    })
   })
 
-  test('the cut and its warning are equal to Python', async () => {
+  test('the cut and its warning', async () => {
     const fixture = useFixture()
     const weights = candidates(fixture, 3)
-    const { python, engine } = await bothEngines(
+    await expectRecordedRecommendation(
       fixture,
-      ['--presentes', 'dono', '--parecido', WRITING_LETTERS, '--sem-lento'],
       { attendees: ['dono'], similar: [WRITING_LETTERS], noSlow: true },
       weights,
     )
-    expect(engine).toEqual(python)
   })
 })

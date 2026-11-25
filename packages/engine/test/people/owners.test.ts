@@ -1,8 +1,8 @@
 // Several Donos (#131). The fixture has two: Bruno and Vera, each with her
 // own email. The logged-in one (`engine.run(op, { owner })`) is "dono",
 // "Você" on the Cartaz, the Dono who opens a Session and speaks for herself
-// in its Feedback, and signs the commit. With no login (the CLI, the
-// oracle), the first Dono by slug, Bruno, as Python.
+// in its Feedback, and signs the commit. With no login (a script, the
+// tests), the first Dono by slug, Bruno.
 
 import { spawnSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'

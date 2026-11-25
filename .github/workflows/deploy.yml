@@ -11,8 +11,7 @@ name: Deploy
 'on':
   push:
     branches: [master]
-    # What changes the app. A docs-only or Python-only commit publishes
-    # nothing.
+    # What changes the app. A docs-only commit publishes nothing.
     paths:
       - 'frontend/**'
       - 'packages/**'
@@ -79,17 +78,8 @@ jobs:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
-      # The frontend's tests build the fixture database, and db:publish's
-      # dry-run test builds it with the Python engine too (as in pr.yml).
-      - name: Setup uv
-        uses: astral-sh/setup-uv@v6
-        with:
-          enable-cache: true
-
       - name: Install dependencies
-        run: |
-          uv sync --frozen
-          pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       # The frontend's own: the deploy scripts' tests on the fake VPS live
       # there. The whole suite already ran in the PR (`pr.yml`).

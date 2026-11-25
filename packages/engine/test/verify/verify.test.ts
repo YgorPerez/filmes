@@ -1,52 +1,32 @@
-// Answer verification (ticket #98); the pytest twin is
-// tests/test_verificar.py. `verificar` reads only the Session's file, so
-// most tests let Python open the Session (and record a Feedback, #96) over
-// the Portuguese copy of the data and migrate it into the engine's data, as
-// the Sessions tests do.
+// Answer verification (ticket #98). `verifyAnswer` reads only the
+// Session's file: most tests open the Session with the engine (and record a
+// Feedback, #96) first.
 
-import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { migrateDataFile, outputToEnglish } from '@filmes/key-migration'
 import { describe, expect, test } from 'vite-plus/test'
 import {
   recommendSession,
+  recordFeedback,
   verifyAnswer,
   type RecommendedFilm,
+  type RecommendSessionRequest,
   type SessionRecommendation,
   type Vars,
 } from '../../src/index.ts'
 import { useFixture, type Fixture } from '../fixture.ts'
-import { PYTHON_TIMEOUT, pythonOk } from '../recommendation/support.ts'
+import { expectRecorded } from '../expected.ts'
 import { RECORDINGS } from '../sources/support.ts'
 
-/** Copies Python's Sessions, in English, into the engine's data. */
-const migrateSessions = (fixture: Fixture) => {
-  const folder = join(fixture.root, 'py-dados', 'sessoes')
-  mkdirSync(join(fixture.data, 'sessions'), { recursive: true })
-  for (const name of readdirSync(folder))
-    writeFileSync(
-      join(fixture.data, 'sessions', name),
-      migrateDataFile(
-        'session',
-        readFileSync(join(folder, name), 'utf8'),
-        'to-en',
-      ),
-    )
-}
-
-/** Python's `recomendar` opens the Session; its output in English. */
-const pythonSession = (
+/** The engine opens the Session; its output as an edge prints it. */
+const openSession = async (
   fixture: Fixture,
-  args: ReadonlyArray<string>,
+  request: RecommendSessionRequest,
   vars: Vars = {},
-): SessionRecommendation => {
-  const output = outputToEnglish(
-    'recomendar',
-    pythonOk(fixture, ['recomendar', ...args], vars),
+): Promise<SessionRecommendation> =>
+  JSON.parse(
+    JSON.stringify(await fixture.ok(recommendSession(request), vars)),
   ) as SessionRecommendation
-  migrateSessions(fixture)
-  return output
-}
 
 const verify = (fixture: Fixture, session: string, text: string) =>
   fixture.ok(verifyAnswer({ session, text }))
@@ -55,19 +35,9 @@ const TMDB = { FILMES_TMDB_CHAVE: 'x', FILMES_GRAVACOES: RECORDINGS }
 
 /** Dono and Teo, the Dono's turn, up to 2h: the setup most tests share. */
 const ownerAndTeo = (fixture: Fixture, count: number, vars: Vars = {}) =>
-  pythonSession(
+  openSession(
     fixture,
-    [
-      '--presentes',
-      'dono',
-      'teo',
-      '--de',
-      'dono',
-      '--duracao-max',
-      '120',
-      '--quantos',
-      String(count),
-    ],
+    { attendees: ['dono', 'teo'], by: 'dono', maxDuration: 120, count },
     vars,
   )
 
@@ -78,10 +48,10 @@ const duration = (minutes: number) =>
 // film and the top is the films with a group bonus. On Bruno's turn, As
 // Horas Lentas comes first.
 
-describe('answer verification', { timeout: PYTHON_TIMEOUT }, () => {
+describe('answer verification', () => {
   test('checks the answer per person against the Session', async () => {
     const fixture = useFixture()
-    const out = ownerAndTeo(fixture, 1)
+    const out = await ownerAndTeo(fixture, 1)
     const answer = `Você e Teo · até 2h · vez do Bruno.
 
 **1. As Horas Lentas** (2021, 1h44)
@@ -99,7 +69,7 @@ Depois, me conte o que viram e como foi.`
 
   test('the poster, genres and IMDb link in the header are not Evidence', async () => {
     const fixture = useFixture()
-    const out = ownerAndTeo(fixture, 2, TMDB)
+    const out = await ownerAndTeo(fixture, 2, TMDB)
     const answer = `Você e Teo · até 2h · vez do Bruno.
 
 ![capa](https://image.tmdb.org/t/p/w92/hOrAsLeNtAs9104.jpg) **1. As Horas Lentas** (2021, 1h44)\\
@@ -161,7 +131,7 @@ Depois, me conte o que viram e como foi.`
 
   test('takes the answer in blocks per film with the Força marker', async () => {
     const fixture = useFixture()
-    const out = ownerAndTeo(fixture, 2, TMDB)
+    const out = await ownerAndTeo(fixture, 2, TMDB)
 
     expect(
       out.films.map(
@@ -176,7 +146,7 @@ Depois, me conte o que viram e como foi.`
 
   test('in blocks, a wrong Força marker or a changed text is invalid', async () => {
     const fixture = useFixture()
-    const out = ownerAndTeo(fixture, 2, TMDB)
+    const out = await ownerAndTeo(fixture, 2, TMDB)
     const invalid = [
       '- ●●○ **Você:** deu 5 a O Farol de Areia (2012), também de Helena Prado (Letterboxd do Bruno, 2025-06-01) *(nota)*',
       '- ●●● **Teo:** sem fato *(palpite)*',
@@ -204,7 +174,7 @@ Depois, me conte o que viram e como foi.`
 
   test('in blocks, the original title in parentheses must be the Session’s', async () => {
     const fixture = useFixture()
-    const out = ownerAndTeo(fixture, 2, TMDB)
+    const out = await ownerAndTeo(fixture, 2, TMDB)
     const swapped = '### 2. Sal & Ferrugem *(As Horas Lentas)*'
     const answer = IN_BLOCKS.replace(
       '### 2. Sal & Ferrugem *(Sal e Ferrugem)*',
@@ -280,14 +250,11 @@ Fato sobre 1 de 3; sem fato: Teo e Iara
 
   test('does not take Evidence of another film of the same Session', async () => {
     const fixture = useFixture()
-    const out = pythonSession(fixture, [
-      '--presentes',
-      'dono',
-      '--duracao-max',
-      '120',
-      '--quantos',
-      '5',
-    ])
+    const out = await openSession(fixture, {
+      attendees: ['dono'],
+      maxDuration: 120,
+      count: 5,
+    })
     expect(out.films[0]?.runtimeMinutes).toBe(104)
     const other = out.films.slice(1).find((f) => f.runtimeMinutes !== 104)
     const text = other?.filmLines.find((e) => e.source === 'IMDb')?.text
@@ -302,45 +269,37 @@ Fato sobre 1 de 3; sem fato: Teo e Iara
 
   test('checks a closed Session without recomputing Evidence', async () => {
     const fixture = useFixture()
-    const out = pythonSession(fixture, [
-      '--presentes',
-      'teo',
-      '--quantos',
-      '50',
-    ])
+    const out = await openSession(fixture, { attendees: ['teo'], count: 50 })
     const film = out.films.find((f) => f.onlyGuesses)
     const answer =
       `Teo.\n\n**${film?.position}. ${film?.title}** (${film?.year}, ${duration(film?.runtimeMinutes ?? 0)}) — sem fato que o sustente\n` +
       '- **Teo:** sem fato *(fraca, palpite)*'
-    pythonOk(fixture, [
-      'feedback',
-      '--sessao',
-      out.session.id,
-      '--filme',
-      film?.id ?? '',
-      '--nota',
-      'teo=5',
-    ])
-    migrateSessions(fixture)
+    await fixture.ok(
+      recordFeedback({
+        session: out.session.id,
+        film: film?.id ?? '',
+        ratings: ['teo=5'],
+      }),
+    )
 
     expect((await verify(fixture, out.session.id, answer)).valid).toBe(true)
   })
 
-  test('a hand-written Session gives what Python gives', async () => {
+  test('a hand-written Session', async () => {
     const fixture = useFixture()
     // No `dono:` line: the Dono comes from the Pessoas. Positions 3 to 6
     // have a header the old format cannot rebuild; an Evidence of an unknown
     // Tipo is not allowed.
     const session = `---
-data: 2026-11-20
-presentes: [bruno, teo, iara]
-regra: {nome: padrao}
-recomendacao:
-  - {posicao: 1, id: tt1, titulo: Um}
-  - {posicao: 2, id: tt2, titulo: Dois}
-  - {posicao: 3, id: tt3, titulo: Três}
-  - {posicao: 4, id: tt4, titulo: Quatro}
-  - {posicao: 5, id: tt5, titulo: Cinco}
+date: 2026-11-20
+attendees: [bruno, teo, iara]
+rule: {name: default}
+recommendation:
+  - {position: 1, id: tt1, title: Um}
+  - {position: 2, id: tt2, title: Dois}
+  - {position: 3, id: tt3, title: Três}
+  - {position: 4, id: tt4, title: Quatro}
+  - {position: 5, id: tt5, title: Cinco}
 ---
 ## Recomendação
 
@@ -390,18 +349,13 @@ Uma linha de cabeçalho.
 **4. Quatro** (2020)
 **5. Cinco**
 ### 9. Nada`
-    const folder = join(fixture.root, 'py-dados', 'sessoes')
-    pythonOk(fixture, ['sessoes-abertas'])
+    const folder = join(fixture.data, 'sessions')
     mkdirSync(folder, { recursive: true })
     writeFileSync(join(folder, 'mao.md'), session)
-    migrateSessions(fixture)
-    const python = outputToEnglish(
-      'verificar',
-      pythonOk(fixture, ['verificar', '--sessao', 'mao', '--texto', answer]),
-    )
 
-    expect(python).toMatchObject({ valid: false })
-    expect(await verify(fixture, 'mao', answer)).toEqual(python)
+    const verified = await verify(fixture, 'mao', answer)
+    expect(verified).toMatchObject({ valid: false })
+    expectRecorded(fixture, verified)
   })
 
   test('an unknown Session is an error', async () => {

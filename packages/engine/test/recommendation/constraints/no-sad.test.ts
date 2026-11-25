@@ -21,11 +21,10 @@ import {
 import { Effect } from 'effect'
 import { useFixture, type Fixture } from '../../fixture.ts'
 import {
-  bothEngines,
+  expectRecordedRecommendation,
   engineRecommendation,
   film,
   titles,
-  PYTHON_TIMEOUT,
 } from '../support.ts'
 
 const all = (fixture: Fixture, noSad = true): Promise<Recommendation> =>
@@ -141,13 +140,12 @@ test('the Session stores the request without the counts, and it reads "nada tris
   expect(constraintLabel({ name: 'no_sad' })).toBe('nada triste')
 })
 
-describe('equal to Python', { timeout: PYTHON_TIMEOUT }, () => {
-  test('--sem-tristeza', async () => {
-    const { python, engine } = await bothEngines(
-      useFixture(),
-      ['--presentes', 'dono', '--quantos', '100', '--sem-tristeza'],
-      { attendees: ['dono'], count: 100, noSad: true },
-    )
-    expect(engine).toEqual(python)
+describe('the whole output, as recorded', () => {
+  test('nothing sad', async () => {
+    await expectRecordedRecommendation(useFixture(), {
+      attendees: ['dono'],
+      count: 100,
+      noSad: true,
+    })
   })
 })

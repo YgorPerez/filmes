@@ -1,7 +1,5 @@
-// `tests/test_erros.py`, ported. The Python tests go through argv; here the
-// same contract goes through the edge (`makeEngine`), and the argv part
-// (an unknown command is `invalid_usage`) belongs to the oracle's argv
-// adapter (#83).
+// The error contract (once `tests/test_erros.py`), through the edge
+// (`makeEngine`).
 
 import { join } from 'node:path'
 import { output } from '@filmes/key-migration'
@@ -75,7 +73,7 @@ describe('the error contract', () => {
     })
   })
 
-  test('without a database, the error asks for reconstruir', async () => {
+  test('without a database, the error says how to build it', async () => {
     const fixture = useFixture()
 
     const outcome = await fixture.run(readDatabase, {
@@ -85,7 +83,7 @@ describe('the error contract', () => {
     expect(outcome.exitCode).not.toBe(0)
     if (outcome.exitCode === 0) return
     expect(outcome.output.error.code).toBe('missing_database')
-    expect(outcome.output.error.message).toContain('reconstruir')
+    expect(outcome.output.error.message).toContain('db:publish --build')
   })
 
   test('without the data repo configured, the error says what is missing', async () => {

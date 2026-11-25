@@ -6,8 +6,6 @@ describe('planForDiff', () => {
     expect(planForDiff(['frontend/src/ui/home.tsx'])).toMatchObject({
       full: null,
       vitest: ['frontend'],
-      mcp: false,
-      python: false,
     })
   })
 
@@ -24,8 +22,6 @@ describe('planForDiff', () => {
       planForDiff(['packages/mcp-server/src/tools/recommend.ts']),
     ).toMatchObject({
       vitest: ['packages/mcp-server'],
-      mcp: false,
-      python: false,
     })
   })
 
@@ -38,8 +34,6 @@ describe('planForDiff', () => {
         'packages/key-migration',
         'packages/mcp-server',
       ],
-      mcp: false,
-      python: false,
     })
   })
 
@@ -55,8 +49,6 @@ describe('planForDiff', () => {
           'packages/key-migration',
           'packages/mcp-server',
         ],
-        mcp: true,
-        python: true,
       })
   })
 
@@ -65,48 +57,13 @@ describe('planForDiff', () => {
       planForDiff(['packages/key-migration/test/corpus/person/ana.md']),
     ).toMatchObject({
       vitest: ['packages/key-migration'],
-      mcp: false,
-      python: false,
     })
   })
 
-  it('the Python engine runs pytest and the MCP tests, which call its CLI', () => {
-    expect(planForDiff(['tests/test_recomendar.py'])).toMatchObject({
-      vitest: [],
-      mcp: true,
-      python: true,
-    })
-  })
-
-  it("what the engine's fixture is built from also runs the engine's tests", () => {
-    for (const file of ['filmes/cli.py', 'uv.lock'])
-      expect({ file, ...planForDiff([file]) }).toMatchObject({
-        file,
-        vitest: ['packages/engine'],
-        mcp: true,
-        python: true,
-      })
+  it("the engine's fixture also runs the engine's and the MCP server's tests", () => {
     // The MCP server's tests run the engine on the same fixture.
     expect(planForDiff(['tests/fixture/catalogo/filmes.csv'])).toMatchObject({
       vitest: ['packages/engine', 'packages/mcp-server'],
-      mcp: true,
-      python: true,
-    })
-  })
-
-  it("the pytest seam also runs the engine's tests: the oracle reads its trace", () => {
-    expect(planForDiff(['tests/conftest.py'])).toMatchObject({
-      vitest: ['packages/engine'],
-      mcp: true,
-      python: true,
-    })
-  })
-
-  it('the MCP runs only its own tests', () => {
-    expect(planForDiff(['mcp/src/cli.ts'])).toMatchObject({
-      vitest: [],
-      mcp: true,
-      python: false,
     })
   })
 
@@ -118,8 +75,8 @@ describe('planForDiff', () => {
 
   it('text runs nothing', () => {
     expect(
-      planForDiff(['README.md', 'docs/x.md', 'skill/filmes/SKILL.md']),
-    ).toMatchObject({ vitest: [], mcp: false, python: false })
+      planForDiff(['README.md', 'docs/x.md', '.claude/x.md']),
+    ).toMatchObject({ vitest: [] })
   })
 
   it('the lockfile, a config or the CI runs everything, and says why', () => {
@@ -140,8 +97,6 @@ describe('planForDiff', () => {
           'packages/mcp-server',
           '.',
         ],
-        mcp: true,
-        python: true,
       })
     }
   })

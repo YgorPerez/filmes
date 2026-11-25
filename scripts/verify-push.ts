@@ -9,7 +9,7 @@
 //   branch the commit is closest to, `master` or a `spec/*`.
 // - And through the tests of only what the push affects (`affected.ts`):
 //   Vitest with `--changed` in the affected folders (without it when the
-//   plan runs everything), the MCP tests and the Python suite. On the branch's first push, since the merge-base with the
+//   plan runs everything). On the branch's first push, since the merge-base with the
 //   target; on later ones, since what the remote already had. The full suite
 //   belongs to the PR's CI.
 // - `master` only moves forward.
@@ -168,8 +168,8 @@ export function verifyPush({
       .split('\n')
       .filter(Boolean)
     const plan = planForDiff(files)
-    const commands: { command: string[]; folder: string }[] = [
-      ...plan.vitest.map((folder) => ({
+    const commands: { command: string[]; folder: string }[] = plan.vitest.map(
+      (folder) => ({
         // A full plan runs every test: what changed is outside the import
         // graph, so `--changed` would pick none.
         command: [
@@ -182,19 +182,8 @@ export function verifyPush({
           '--passWithNoTests',
         ],
         folder: join(root, folder),
-      })),
-      ...(plan.python
-        ? [{ command: ['uv', 'run', 'pytest', '-q'], folder: root }]
-        : []),
-      ...(plan.mcp
-        ? [
-            {
-              command: ['pnpm', '--filter', '@filmes/mcp', 'test'],
-              folder: root,
-            },
-          ]
-        : []),
-    ]
+      }),
+    )
     if (commands.length === 0) {
       say(`${ref}: nothing to test since ${base.slice(0, 7)}.`)
       continue

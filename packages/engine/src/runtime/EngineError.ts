@@ -3,7 +3,8 @@
 // edges as `{"error": {"code", "message"}}` (see `Engine.ts`).
 //
 // One class with a typed `code`, not one class per code: the codes are the
-// CLI contract the oracle compares, and there are fifty of them.
+// contract the edges print (once the Python CLI's), and there are fifty of
+// them.
 
 import { Schema } from 'effect'
 
@@ -63,8 +64,7 @@ export class EngineError extends Schema.TaggedError<
   { readonly brand: unique symbol }
 >()('EngineError', {
   code: Schema.Literals(ERROR_CODES),
-  /** PT-BR, shown as is: the oracle compares it with Python's word for
-   * word (except for `invalid_usage`). */
+  /** PT-BR, shown as is. */
   message: Schema.String,
 }) {}
 

@@ -7,16 +7,15 @@ import { Effect } from 'effect'
 import { describe, expect, test } from 'vite-plus/test'
 import {
   constraintLabel,
+  personVeto,
   readConstraints,
   storedConstraints,
 } from '../../../src/index.ts'
 import { useFixture, type Fixture } from '../../fixture.ts'
 import {
-  bothEngines,
+  expectRecordedRecommendation,
   engineRecommendation,
-  pythonOk,
   titles,
-  PYTHON_TIMEOUT,
 } from '../support.ts'
 
 const all = (fixture: Fixture, noSlow = false) =>
@@ -49,28 +48,26 @@ test('the Session stores the request, and it reads "nada lento"', async () => {
   expect(constraintLabel({ name: 'no_slow' })).toBe('nada lento')
 })
 
-describe('with Python', { timeout: PYTHON_TIMEOUT }, () => {
-  // `pessoa vetar` is not ported yet: the Python records the Veto.
+describe('the whole output, as recorded', () => {
   test('slow is also a group for a Veto', async () => {
     const fixture = useFixture()
-    pythonOk(fixture, [
-      'pessoa',
-      'vetar',
-      'bruno',
-      'não aguenta filme lento',
-      '--grupo',
-      'lento',
-    ])
+    await fixture.ok(
+      personVeto({
+        person: 'bruno',
+        text: 'não aguenta filme lento',
+        target: 'slow',
+        group: true,
+      }),
+    )
 
     expect(titles(await all(fixture))).not.toContain('Drama Juvenil')
   })
 
-  test('--sem-lento is equal to Python', async () => {
-    const { python, engine } = await bothEngines(
-      useFixture(),
-      ['--presentes', 'dono', '--quantos', '100', '--sem-lento'],
-      { attendees: ['dono'], count: 100, noSlow: true },
-    )
-    expect(engine).toEqual(python)
+  test('nothing slow', async () => {
+    await expectRecordedRecommendation(useFixture(), {
+      attendees: ['dono'],
+      count: 100,
+      noSlow: true,
+    })
   })
 })

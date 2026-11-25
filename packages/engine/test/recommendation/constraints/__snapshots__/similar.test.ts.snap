@@ -1,0 +1,1074 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`the whole output, as recorded > similar to ["tt9006701","tt9006702"] 1`] = `
+{
+  "attendees": [
+    "bruno",
+  ],
+  "attributions": [
+    {
+      "source": "IMDb",
+      "text": "Information courtesy of IMDb (https://www.imdb.com). Used with permission.",
+    },
+    {
+      "source": "Tag Genome",
+      "text": "Tag Genome 2021, de Kotkov, Maslov e Neovius (https://grouplens.org/datasets/movielens/tag-genome-2021/), sob licença CC BY-NC 3.0 (https://creativecommons.org/licenses/by-nc/3.0/)",
+    },
+  ],
+  "constraints": {
+    "similar": {
+      "films": [
+        "tt9006701",
+        "tt9006702",
+      ],
+      "removed": 75,
+      "titles": [
+        "Escrever Cartas",
+        "Estrada Afora",
+      ],
+    },
+  },
+  "credit": {},
+  "films": [
+    {
+      "coverage": {
+        "attendees": 1,
+        "withFact": 0,
+        "withoutFact": [
+          "bruno",
+        ],
+      },
+      "evidence": {
+        "bruno": [
+          {
+            "contribution": 0,
+            "date": null,
+            "factId": null,
+            "kind": "guess",
+            "person": "bruno",
+            "source": null,
+            "strength": "weak",
+            "text": "sem fato",
+          },
+        ],
+      },
+      "filmLines": [
+        {
+          "contribution": 0,
+          "date": "2023-10-13",
+          "factId": "parecido:df153a75797e",
+          "kind": "review",
+          "person": null,
+          "source": "MovieLens ml-32m",
+          "strength": "weak",
+          "text": "parecido com Escrever Cartas: family, writers, bittersweet; de 500 pessoas que deram 4+ a ele, 40% deram 4+ a este",
+        },
+      ],
+      "genres": [
+        "Drama",
+        "Família",
+      ],
+      "id": "tt9006711",
+      "imdbRating": null,
+      "imdbUrl": "https://www.imdb.com/title/tt9006711/",
+      "imdbVotes": 3000,
+      "onlyGuesses": true,
+      "position": 1,
+      "poster": null,
+      "runtimeMinutes": 104,
+      "synopsis": null,
+      "title": "Mesa de Domingo",
+      "titlePt": null,
+      "utility": {
+        "bruno": null,
+      },
+      "year": 2016,
+    },
+    {
+      "coverage": {
+        "attendees": 1,
+        "withFact": 0,
+        "withoutFact": [
+          "bruno",
+        ],
+      },
+      "evidence": {
+        "bruno": [
+          {
+            "contribution": 0,
+            "date": null,
+            "factId": null,
+            "kind": "guess",
+            "person": "bruno",
+            "source": null,
+            "strength": "weak",
+            "text": "sem fato",
+          },
+        ],
+      },
+      "filmLines": [
+        {
+          "contribution": 0,
+          "date": "2023-10-13",
+          "factId": "parecido:c83c23b35b33",
+          "kind": "review",
+          "person": null,
+          "source": "MovieLens ml-32m",
+          "strength": "weak",
+          "text": "parecido com Escrever Cartas: de 500 pessoas que deram 4+ a ele, 10% deram 4+ a este",
+        },
+        {
+          "contribution": 0,
+          "date": "2023-10-13",
+          "factId": "parecido:f6d9eca9b840",
+          "kind": "review",
+          "person": null,
+          "source": "MovieLens ml-32m",
+          "strength": "weak",
+          "text": "parecido com Estrada Afora: road trip",
+        },
+      ],
+      "genres": [
+        "Comédia",
+      ],
+      "id": "tt9006713",
+      "imdbRating": null,
+      "imdbUrl": "https://www.imdb.com/title/tt9006713/",
+      "imdbVotes": 2500,
+      "onlyGuesses": true,
+      "position": 2,
+      "poster": null,
+      "runtimeMinutes": 99,
+      "synopsis": null,
+      "title": "Pé na Estrada",
+      "titlePt": null,
+      "utility": {
+        "bruno": null,
+      },
+      "year": 2018,
+    },
+    {
+      "coverage": {
+        "attendees": 1,
+        "withFact": 0,
+        "withoutFact": [
+          "bruno",
+        ],
+      },
+      "evidence": {
+        "bruno": [
+          {
+            "contribution": 0,
+            "date": null,
+            "factId": null,
+            "kind": "guess",
+            "person": "bruno",
+            "source": null,
+            "strength": "weak",
+            "text": "sem fato",
+          },
+        ],
+      },
+      "filmLines": [
+        {
+          "contribution": 0,
+          "date": "2021-12-30",
+          "factId": "parecido:386ac601554b",
+          "kind": "review",
+          "person": null,
+          "source": "Tag Genome 2021",
+          "strength": "weak",
+          "text": "parecido com Escrever Cartas: family",
+        },
+      ],
+      "genres": [
+        "Drama",
+      ],
+      "id": "tt9006712",
+      "imdbRating": null,
+      "imdbUrl": "https://www.imdb.com/title/tt9006712/",
+      "imdbVotes": 2000,
+      "onlyGuesses": true,
+      "position": 3,
+      "poster": null,
+      "runtimeMinutes": 95,
+      "synopsis": null,
+      "title": "Rascunho",
+      "titlePt": null,
+      "utility": {
+        "bruno": null,
+      },
+      "year": 2017,
+    },
+    {
+      "coverage": {
+        "attendees": 1,
+        "withFact": 0,
+        "withoutFact": [
+          "bruno",
+        ],
+      },
+      "evidence": {
+        "bruno": [
+          {
+            "contribution": 0,
+            "date": null,
+            "factId": null,
+            "kind": "guess",
+            "person": "bruno",
+            "source": null,
+            "strength": "weak",
+            "text": "sem fato",
+          },
+        ],
+      },
+      "filmLines": [
+        {
+          "contribution": 0,
+          "date": "2023-10-13",
+          "factId": "parecido:8468abfc8875",
+          "kind": "review",
+          "person": null,
+          "source": "MovieLens ml-32m",
+          "strength": "weak",
+          "text": "parecido com Escrever Cartas: family, writers",
+        },
+      ],
+      "genres": [
+        "Drama",
+        "Família",
+      ],
+      "id": "tt9006716",
+      "imdbRating": null,
+      "imdbUrl": "https://www.imdb.com/title/tt9006716/",
+      "imdbVotes": 1500,
+      "onlyGuesses": true,
+      "position": 4,
+      "poster": null,
+      "runtimeMinutes": 102,
+      "synopsis": null,
+      "title": "Tinta e Papel",
+      "titlePt": null,
+      "utility": {
+        "bruno": null,
+      },
+      "year": 2020,
+    },
+  ],
+  "moods": [],
+  "rule": {
+    "name": "default",
+  },
+  "vetoes": [],
+  "warnings": [
+    "TMDB sem chave de API (defina FILMES_TMDB_CHAVE); os filmes saem sem capa, sem título em português e sem sinopse",
+    "só 4 parecidos com Escrever Cartas e Estrada Afora passaram nas Restrições",
+  ],
+}
+`;
+
+exports[`the whole output, as recorded > similar to ["tt9006701"] 1`] = `
+{
+  "attendees": [
+    "bruno",
+  ],
+  "attributions": [
+    {
+      "source": "IMDb",
+      "text": "Information courtesy of IMDb (https://www.imdb.com). Used with permission.",
+    },
+    {
+      "source": "Tag Genome",
+      "text": "Tag Genome 2021, de Kotkov, Maslov e Neovius (https://grouplens.org/datasets/movielens/tag-genome-2021/), sob licença CC BY-NC 3.0 (https://creativecommons.org/licenses/by-nc/3.0/)",
+    },
+  ],
+  "constraints": {
+    "similar": {
+      "films": [
+        "tt9006701",
+      ],
+      "removed": 75,
+      "titles": [
+        "Escrever Cartas",
+      ],
+    },
+  },
+  "credit": {},
+  "films": [
+    {
+      "coverage": {
+        "attendees": 1,
+        "withFact": 0,
+        "withoutFact": [
+          "bruno",
+        ],
+      },
+      "evidence": {
+        "bruno": [
+          {
+            "contribution": 0,
+            "date": null,
+            "factId": null,
+            "kind": "guess",
+            "person": "bruno",
+            "source": null,
+            "strength": "weak",
+            "text": "sem fato",
+          },
+        ],
+      },
+      "filmLines": [
+        {
+          "contribution": 0,
+          "date": "2023-10-13",
+          "factId": "parecido:df153a75797e",
+          "kind": "review",
+          "person": null,
+          "source": "MovieLens ml-32m",
+          "strength": "weak",
+          "text": "parecido com Escrever Cartas: family, writers, bittersweet; de 500 pessoas que deram 4+ a ele, 40% deram 4+ a este",
+        },
+      ],
+      "genres": [
+        "Drama",
+        "Família",
+      ],
+      "id": "tt9006711",
+      "imdbRating": null,
+      "imdbUrl": "https://www.imdb.com/title/tt9006711/",
+      "imdbVotes": 3000,
+      "onlyGuesses": true,
+      "position": 1,
+      "poster": null,
+      "runtimeMinutes": 104,
+      "synopsis": null,
+      "title": "Mesa de Domingo",
+      "titlePt": null,
+      "utility": {
+        "bruno": null,
+      },
+      "year": 2016,
+    },
+    {
+      "coverage": {
+        "attendees": 1,
+        "withFact": 0,
+        "withoutFact": [
+          "bruno",
+        ],
+      },
+      "evidence": {
+        "bruno": [
+          {
+            "contribution": 0,
+            "date": null,
+            "factId": null,
+            "kind": "guess",
+            "person": "bruno",
+            "source": null,
+            "strength": "weak",
+            "text": "sem fato",
+          },
+        ],
+      },
+      "filmLines": [
+        {
+          "contribution": 0,
+          "date": "2023-10-13",
+          "factId": "parecido:c83c23b35b33",
+          "kind": "review",
+          "person": null,
+          "source": "MovieLens ml-32m",
+          "strength": "weak",
+          "text": "parecido com Escrever Cartas: de 500 pessoas que deram 4+ a ele, 10% deram 4+ a este",
+        },
+      ],
+      "genres": [
+        "Comédia",
+      ],
+      "id": "tt9006713",
+      "imdbRating": null,
+      "imdbUrl": "https://www.imdb.com/title/tt9006713/",
+      "imdbVotes": 2500,
+      "onlyGuesses": true,
+      "position": 2,
+      "poster": null,
+      "runtimeMinutes": 99,
+      "synopsis": null,
+      "title": "Pé na Estrada",
+      "titlePt": null,
+      "utility": {
+        "bruno": null,
+      },
+      "year": 2018,
+    },
+    {
+      "coverage": {
+        "attendees": 1,
+        "withFact": 0,
+        "withoutFact": [
+          "bruno",
+        ],
+      },
+      "evidence": {
+        "bruno": [
+          {
+            "contribution": 0,
+            "date": null,
+            "factId": null,
+            "kind": "guess",
+            "person": "bruno",
+            "source": null,
+            "strength": "weak",
+            "text": "sem fato",
+          },
+        ],
+      },
+      "filmLines": [
+        {
+          "contribution": 0,
+          "date": "2021-12-30",
+          "factId": "parecido:386ac601554b",
+          "kind": "review",
+          "person": null,
+          "source": "Tag Genome 2021",
+          "strength": "weak",
+          "text": "parecido com Escrever Cartas: family",
+        },
+      ],
+      "genres": [
+        "Drama",
+      ],
+      "id": "tt9006712",
+      "imdbRating": null,
+      "imdbUrl": "https://www.imdb.com/title/tt9006712/",
+      "imdbVotes": 2000,
+      "onlyGuesses": true,
+      "position": 3,
+      "poster": null,
+      "runtimeMinutes": 95,
+      "synopsis": null,
+      "title": "Rascunho",
+      "titlePt": null,
+      "utility": {
+        "bruno": null,
+      },
+      "year": 2017,
+    },
+    {
+      "coverage": {
+        "attendees": 1,
+        "withFact": 0,
+        "withoutFact": [
+          "bruno",
+        ],
+      },
+      "evidence": {
+        "bruno": [
+          {
+            "contribution": 0,
+            "date": null,
+            "factId": null,
+            "kind": "guess",
+            "person": "bruno",
+            "source": null,
+            "strength": "weak",
+            "text": "sem fato",
+          },
+        ],
+      },
+      "filmLines": [
+        {
+          "contribution": 0,
+          "date": "2023-10-13",
+          "factId": "parecido:8468abfc8875",
+          "kind": "review",
+          "person": null,
+          "source": "MovieLens ml-32m",
+          "strength": "weak",
+          "text": "parecido com Escrever Cartas: family, writers",
+        },
+      ],
+      "genres": [
+        "Drama",
+        "Família",
+      ],
+      "id": "tt9006716",
+      "imdbRating": null,
+      "imdbUrl": "https://www.imdb.com/title/tt9006716/",
+      "imdbVotes": 1500,
+      "onlyGuesses": true,
+      "position": 4,
+      "poster": null,
+      "runtimeMinutes": 102,
+      "synopsis": null,
+      "title": "Tinta e Papel",
+      "titlePt": null,
+      "utility": {
+        "bruno": null,
+      },
+      "year": 2020,
+    },
+  ],
+  "moods": [],
+  "rule": {
+    "name": "default",
+  },
+  "vetoes": [],
+  "warnings": [
+    "TMDB sem chave de API (defina FILMES_TMDB_CHAVE); os filmes saem sem capa, sem título em português e sem sinopse",
+    "só 4 parecidos com Escrever Cartas passaram nas Restrições",
+  ],
+}
+`;
+
+exports[`the whole output, as recorded > similar to ["tt9006701,tt9006711"] 1`] = `
+{
+  "attendees": [
+    "bruno",
+  ],
+  "attributions": [
+    {
+      "source": "IMDb",
+      "text": "Information courtesy of IMDb (https://www.imdb.com). Used with permission.",
+    },
+    {
+      "source": "Tag Genome",
+      "text": "Tag Genome 2021, de Kotkov, Maslov e Neovius (https://grouplens.org/datasets/movielens/tag-genome-2021/), sob licença CC BY-NC 3.0 (https://creativecommons.org/licenses/by-nc/3.0/)",
+    },
+  ],
+  "constraints": {
+    "similar": {
+      "films": [
+        "tt9006701",
+        "tt9006711",
+      ],
+      "removed": 76,
+      "titles": [
+        "Escrever Cartas",
+        "Mesa de Domingo",
+      ],
+    },
+  },
+  "credit": {},
+  "films": [
+    {
+      "coverage": {
+        "attendees": 1,
+        "withFact": 0,
+        "withoutFact": [
+          "bruno",
+        ],
+      },
+      "evidence": {
+        "bruno": [
+          {
+            "contribution": 0,
+            "date": null,
+            "factId": null,
+            "kind": "guess",
+            "person": "bruno",
+            "source": null,
+            "strength": "weak",
+            "text": "sem fato",
+          },
+        ],
+      },
+      "filmLines": [
+        {
+          "contribution": 0,
+          "date": "2023-10-13",
+          "factId": "parecido:c83c23b35b33",
+          "kind": "review",
+          "person": null,
+          "source": "MovieLens ml-32m",
+          "strength": "weak",
+          "text": "parecido com Escrever Cartas: de 500 pessoas que deram 4+ a ele, 10% deram 4+ a este",
+        },
+      ],
+      "genres": [
+        "Comédia",
+      ],
+      "id": "tt9006713",
+      "imdbRating": null,
+      "imdbUrl": "https://www.imdb.com/title/tt9006713/",
+      "imdbVotes": 2500,
+      "onlyGuesses": true,
+      "position": 1,
+      "poster": null,
+      "runtimeMinutes": 99,
+      "synopsis": null,
+      "title": "Pé na Estrada",
+      "titlePt": null,
+      "utility": {
+        "bruno": null,
+      },
+      "year": 2018,
+    },
+    {
+      "coverage": {
+        "attendees": 1,
+        "withFact": 0,
+        "withoutFact": [
+          "bruno",
+        ],
+      },
+      "evidence": {
+        "bruno": [
+          {
+            "contribution": 0,
+            "date": null,
+            "factId": null,
+            "kind": "guess",
+            "person": "bruno",
+            "source": null,
+            "strength": "weak",
+            "text": "sem fato",
+          },
+        ],
+      },
+      "filmLines": [
+        {
+          "contribution": 0,
+          "date": "2021-12-30",
+          "factId": "parecido:386ac601554b",
+          "kind": "review",
+          "person": null,
+          "source": "Tag Genome 2021",
+          "strength": "weak",
+          "text": "parecido com Escrever Cartas: family",
+        },
+        {
+          "contribution": 0,
+          "date": "2021-12-30",
+          "factId": "parecido:4d3cecd048c2",
+          "kind": "review",
+          "person": null,
+          "source": "Tag Genome 2021",
+          "strength": "weak",
+          "text": "parecido com Mesa de Domingo: family",
+        },
+      ],
+      "genres": [
+        "Drama",
+      ],
+      "id": "tt9006712",
+      "imdbRating": null,
+      "imdbUrl": "https://www.imdb.com/title/tt9006712/",
+      "imdbVotes": 2000,
+      "onlyGuesses": true,
+      "position": 2,
+      "poster": null,
+      "runtimeMinutes": 95,
+      "synopsis": null,
+      "title": "Rascunho",
+      "titlePt": null,
+      "utility": {
+        "bruno": null,
+      },
+      "year": 2017,
+    },
+    {
+      "coverage": {
+        "attendees": 1,
+        "withFact": 0,
+        "withoutFact": [
+          "bruno",
+        ],
+      },
+      "evidence": {
+        "bruno": [
+          {
+            "contribution": 0,
+            "date": null,
+            "factId": null,
+            "kind": "guess",
+            "person": "bruno",
+            "source": null,
+            "strength": "weak",
+            "text": "sem fato",
+          },
+        ],
+      },
+      "filmLines": [
+        {
+          "contribution": 0,
+          "date": "2023-10-13",
+          "factId": "parecido:8468abfc8875",
+          "kind": "review",
+          "person": null,
+          "source": "MovieLens ml-32m",
+          "strength": "weak",
+          "text": "parecido com Escrever Cartas: family, writers",
+        },
+        {
+          "contribution": 0,
+          "date": "2023-10-13",
+          "factId": "parecido:978036be9f74",
+          "kind": "review",
+          "person": null,
+          "source": "MovieLens ml-32m",
+          "strength": "weak",
+          "text": "parecido com Mesa de Domingo: family, writers",
+        },
+      ],
+      "genres": [
+        "Drama",
+        "Família",
+      ],
+      "id": "tt9006716",
+      "imdbRating": null,
+      "imdbUrl": "https://www.imdb.com/title/tt9006716/",
+      "imdbVotes": 1500,
+      "onlyGuesses": true,
+      "position": 3,
+      "poster": null,
+      "runtimeMinutes": 102,
+      "synopsis": null,
+      "title": "Tinta e Papel",
+      "titlePt": null,
+      "utility": {
+        "bruno": null,
+      },
+      "year": 2020,
+    },
+  ],
+  "moods": [],
+  "rule": {
+    "name": "default",
+  },
+  "vetoes": [],
+  "warnings": [
+    "TMDB sem chave de API (defina FILMES_TMDB_CHAVE); os filmes saem sem capa, sem título em português e sem sinopse",
+    "só 3 parecidos com Escrever Cartas e Mesa de Domingo passaram nas Restrições",
+  ],
+}
+`;
+
+exports[`the whole output, as recorded > similar to ["tt9006702"] 1`] = `
+{
+  "attendees": [
+    "bruno",
+  ],
+  "attributions": [
+    {
+      "source": "IMDb",
+      "text": "Information courtesy of IMDb (https://www.imdb.com). Used with permission.",
+    },
+  ],
+  "constraints": {
+    "similar": {
+      "films": [
+        "tt9006702",
+      ],
+      "removed": 78,
+      "titles": [
+        "Estrada Afora",
+      ],
+    },
+  },
+  "credit": {},
+  "films": [
+    {
+      "coverage": {
+        "attendees": 1,
+        "withFact": 0,
+        "withoutFact": [
+          "bruno",
+        ],
+      },
+      "evidence": {
+        "bruno": [
+          {
+            "contribution": 0,
+            "date": null,
+            "factId": null,
+            "kind": "guess",
+            "person": "bruno",
+            "source": null,
+            "strength": "weak",
+            "text": "sem fato",
+          },
+        ],
+      },
+      "filmLines": [
+        {
+          "contribution": 0,
+          "date": "2023-10-13",
+          "factId": "parecido:f6d9eca9b840",
+          "kind": "review",
+          "person": null,
+          "source": "MovieLens ml-32m",
+          "strength": "weak",
+          "text": "parecido com Estrada Afora: road trip",
+        },
+      ],
+      "genres": [
+        "Comédia",
+      ],
+      "id": "tt9006713",
+      "imdbRating": null,
+      "imdbUrl": "https://www.imdb.com/title/tt9006713/",
+      "imdbVotes": 2500,
+      "onlyGuesses": true,
+      "position": 1,
+      "poster": null,
+      "runtimeMinutes": 99,
+      "synopsis": null,
+      "title": "Pé na Estrada",
+      "titlePt": null,
+      "utility": {
+        "bruno": null,
+      },
+      "year": 2018,
+    },
+  ],
+  "moods": [],
+  "rule": {
+    "name": "default",
+  },
+  "vetoes": [],
+  "warnings": [
+    "TMDB sem chave de API (defina FILMES_TMDB_CHAVE); os filmes saem sem capa, sem título em português e sem sinopse",
+    "só 1 parecido com Estrada Afora passou nas Restrições",
+  ],
+}
+`;
+
+exports[`the whole output, as recorded > similar to ["tt9006720"] 1`] = `
+{
+  "attendees": [
+    "bruno",
+  ],
+  "attributions": [
+    {
+      "source": "IMDb",
+      "text": "Information courtesy of IMDb (https://www.imdb.com). Used with permission.",
+    },
+  ],
+  "constraints": {
+    "similar": {
+      "films": [
+        "tt9006720",
+      ],
+      "removed": 78,
+      "titles": [
+        "Ponto de Partida",
+      ],
+    },
+  },
+  "credit": {},
+  "films": [
+    {
+      "coverage": {
+        "attendees": 1,
+        "withFact": 0,
+        "withoutFact": [
+          "bruno",
+        ],
+      },
+      "evidence": {
+        "bruno": [
+          {
+            "contribution": 0,
+            "date": null,
+            "factId": null,
+            "kind": "guess",
+            "person": "bruno",
+            "source": null,
+            "strength": "weak",
+            "text": "sem fato",
+          },
+        ],
+      },
+      "filmLines": [
+        {
+          "contribution": 0,
+          "date": "2026-11-20",
+          "factId": "parecido:757ba6c7f43c",
+          "kind": "review",
+          "person": null,
+          "source": "Wikidata",
+          "strength": "weak",
+          "text": "parecido com Ponto de Partida: mesmo diretor",
+        },
+      ],
+      "genres": [
+        "Drama",
+      ],
+      "id": "tt9006722",
+      "imdbRating": null,
+      "imdbUrl": "https://www.imdb.com/title/tt9006722/",
+      "imdbVotes": 1200,
+      "onlyGuesses": true,
+      "position": 1,
+      "poster": null,
+      "runtimeMinutes": 100,
+      "synopsis": null,
+      "title": "Mesma Diretora",
+      "titlePt": null,
+      "utility": {
+        "bruno": null,
+      },
+      "year": 2017,
+    },
+  ],
+  "moods": [],
+  "rule": {
+    "name": "default",
+  },
+  "vetoes": [],
+  "warnings": [
+    "TMDB sem chave de API (defina FILMES_TMDB_CHAVE); os filmes saem sem capa, sem título em português e sem sinopse",
+    "só 1 parecido com Ponto de Partida passou nas Restrições",
+  ],
+}
+`;
+
+exports[`the whole output, as recorded > the cut and its warning 1`] = `
+{
+  "attendees": [
+    "bruno",
+  ],
+  "attributions": [
+    {
+      "source": "IMDb",
+      "text": "Information courtesy of IMDb (https://www.imdb.com). Used with permission.",
+    },
+  ],
+  "constraints": {
+    "no_slow": {
+      "removed": 0,
+    },
+    "similar": {
+      "films": [
+        "tt9006701",
+      ],
+      "removed": 77,
+      "titles": [
+        "Escrever Cartas",
+      ],
+    },
+  },
+  "credit": {},
+  "films": [
+    {
+      "coverage": {
+        "attendees": 1,
+        "withFact": 0,
+        "withoutFact": [
+          "bruno",
+        ],
+      },
+      "evidence": {
+        "bruno": [
+          {
+            "contribution": 0,
+            "date": null,
+            "factId": null,
+            "kind": "guess",
+            "person": "bruno",
+            "source": null,
+            "strength": "weak",
+            "text": "sem fato",
+          },
+        ],
+      },
+      "filmLines": [
+        {
+          "contribution": 0,
+          "date": "2023-10-13",
+          "factId": "parecido:df153a75797e",
+          "kind": "review",
+          "person": null,
+          "source": "MovieLens ml-32m",
+          "strength": "weak",
+          "text": "parecido com Escrever Cartas: family, writers, bittersweet; de 500 pessoas que deram 4+ a ele, 40% deram 4+ a este",
+        },
+      ],
+      "genres": [
+        "Drama",
+        "Família",
+      ],
+      "id": "tt9006711",
+      "imdbRating": null,
+      "imdbUrl": "https://www.imdb.com/title/tt9006711/",
+      "imdbVotes": 3000,
+      "onlyGuesses": true,
+      "position": 1,
+      "poster": null,
+      "runtimeMinutes": 104,
+      "synopsis": null,
+      "title": "Mesa de Domingo",
+      "titlePt": null,
+      "utility": {
+        "bruno": null,
+      },
+      "year": 2016,
+    },
+    {
+      "coverage": {
+        "attendees": 1,
+        "withFact": 0,
+        "withoutFact": [
+          "bruno",
+        ],
+      },
+      "evidence": {
+        "bruno": [
+          {
+            "contribution": 0,
+            "date": null,
+            "factId": null,
+            "kind": "guess",
+            "person": "bruno",
+            "source": null,
+            "strength": "weak",
+            "text": "sem fato",
+          },
+        ],
+      },
+      "filmLines": [
+        {
+          "contribution": 0,
+          "date": "2023-10-13",
+          "factId": "parecido:8468abfc8875",
+          "kind": "review",
+          "person": null,
+          "source": "MovieLens ml-32m",
+          "strength": "weak",
+          "text": "parecido com Escrever Cartas: family, writers",
+        },
+      ],
+      "genres": [
+        "Drama",
+        "Família",
+      ],
+      "id": "tt9006716",
+      "imdbRating": null,
+      "imdbUrl": "https://www.imdb.com/title/tt9006716/",
+      "imdbVotes": 1500,
+      "onlyGuesses": true,
+      "position": 2,
+      "poster": null,
+      "runtimeMinutes": 102,
+      "synopsis": null,
+      "title": "Tinta e Papel",
+      "titlePt": null,
+      "utility": {
+        "bruno": null,
+      },
+      "year": 2020,
+    },
+  ],
+  "moods": [],
+  "rule": {
+    "name": "default",
+  },
+  "vetoes": [],
+  "warnings": [
+    "TMDB sem chave de API (defina FILMES_TMDB_CHAVE); os filmes saem sem capa, sem título em português e sem sinopse",
+    "só 2 parecidos com Escrever Cartas passaram nas Restrições",
+  ],
+}
+`;

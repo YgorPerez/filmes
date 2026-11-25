@@ -2,7 +2,7 @@
 // who signs the filmes-dados commit, and "Você" on the Cartaz. Several
 // Pessoas may be Donos (#131): it is the one logged in to the app or the
 // MCP, which the edge passes to `engine.run(op, { owner })`. Without one
-// (the CLI, the oracle, the tests), the first slug with `dono = 1` stands
+// (a script, the tests), the first slug with `dono = 1` stands
 // in, as Python's single Dono did.
 
 import { Context, Effect } from 'effect'
