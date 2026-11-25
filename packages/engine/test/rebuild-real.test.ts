@@ -322,6 +322,78 @@ test('keeps only the series that is a film series', async () => {
   ).toEqual([['tt0133093', 'Q1210827']])
 })
 
+test('says whether each series falls under film series or media franchise (#165)', async () => {
+  const recorded = JSON.parse(
+    readFileSync(join(RECORDED, 'catalogo/wikidata-series.json'), 'utf8'),
+  ) as { results: { bindings: Array<Record<string, unknown>> } }
+  const uri = (q: string) => ({
+    type: 'uri',
+    value: `http://www.wikidata.org/entity/${q}`,
+  })
+  const p31 = { type: 'uri', value: 'http://www.wikidata.org/prop/direct/P31' }
+  const bindings = [
+    ...recorded.results.bindings,
+    // A franchise class below Q196600.
+    { item: uri('Q1'), p: p31, valor: uri('Q2'), raiz: uri('Q196600') },
+    // A dump from before #165, without ?raiz: the root only when the class
+    // is one.
+    { item: uri('Q3'), p: p31, valor: uri('Q196600') },
+    { item: uri('Q4'), p: p31, valor: uri('Q5') },
+  ]
+  const query = await rebuilt(
+    usePinnedDumps(
+      replacing(
+        'wikidata-series.json.gz',
+        gzipSync(JSON.stringify({ results: { bindings } })),
+      ),
+    ),
+  )
+
+  expect(
+    await query(
+      'SELECT item, classe, raiz FROM series_de_filmes ORDER BY item',
+    ),
+  ).toEqual([
+    ['Q1', 'Q2', 'Q196600'],
+    ['Q1210827', 'Q24856', 'Q24856'],
+    ['Q3', 'Q196600', 'Q196600'],
+    ['Q4', 'Q5', null],
+  ])
+})
+
+test('the release date is the first day of the earliest year (#165)', async () => {
+  // Schindler's List: 1993-01-01 (Wikidata's year-only date), 1993-12-15
+  // and two dates in 1994. Matrix has no P577.
+  const query = await rebuilt(usePinnedDumps())
+
+  expect(await query('SELECT filme_id, data FROM estreias')).toEqual([
+    ['tt0108052', '1993-12-15'],
+  ])
+})
+
+test('a year with only the 1st of January keeps only the year (#165)', async () => {
+  const recorded = JSON.parse(
+    readFileSync(join(RECORDED, 'catalogo/wikidata-ids.json'), 'utf8'),
+  ) as { results: { bindings: Array<Record<string, { value: string }>> } }
+  const bindings = recorded.results.bindings.filter(
+    (b) =>
+      !b['p']?.value.endsWith('/P577') ||
+      b['valor']?.value.startsWith('1993-01-01'),
+  )
+  const query = await rebuilt(
+    usePinnedDumps(
+      replacing(
+        'wikidata-ids.json.gz',
+        gzipSync(JSON.stringify({ results: { bindings } })),
+      ),
+    ),
+  )
+
+  expect(await query('SELECT filme_id, data FROM estreias')).toEqual([
+    ['tt0108052', '1993'],
+  ])
+})
+
 test('without the series dump keeps every series edge', async () => {
   const query = await rebuilt(
     usePinnedDumps(without('wikidata-series.json.gz')),

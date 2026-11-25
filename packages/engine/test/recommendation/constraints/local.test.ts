@@ -90,7 +90,10 @@ describe('the maximum duration', () => {
 test('with no Restrição there is no film line', async () => {
   const out = await all(useFixture())
 
-  expect(out.constraints).toEqual({})
+  // Only the Série na ordem, on by default (#165), which writes no line.
+  expect(out.constraints).toEqual({
+    series_order: { mode: 'previous', removed: 2 },
+  })
   // Only the group/alone line (#21), which every Session has, and the IMDb
   // rating's (#56) are left.
   for (const f of out.films)
@@ -165,8 +168,8 @@ test('"sem Já visto" removes the films some Presente has seen', async () => {
   const seen = new Set(rows.map(([title]) => title))
   // With the whole list, a seen film's place does not pull in a film from
   // outside the 50.
-  const withSeen = titles(await all(fixture, { count: 80 }))
-  const out = await all(fixture, { count: 80, unseen: true })
+  const withSeen = titles(await all(fixture, { count: 100 }))
+  const out = await all(fixture, { count: 100, unseen: true })
 
   const seenShown = withSeen.filter((t) => seen.has(t))
   expect(seenShown).toContain('O Farol de Areia')

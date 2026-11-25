@@ -249,7 +249,7 @@ export const rank = (
       else if (!round.candidates.has(filmId)) {
         const by = asked.removedBy.get(filmId)
         if (by === undefined) throw pythonError('KeyError', `'${filmId}'`)
-        removed.set(filmId, byConstraint(by))
+        removed.set(filmId, byConstraint(by, asked.dropDetails.get(filmId)))
       }
     }
 
@@ -349,7 +349,10 @@ export const rank = (
           const by = asked.removedBy.get(item.film.id)
           if (by === undefined)
             throw pythonError('KeyError', `'${item.film.id}'`)
-          removed.set(item.film.id, byConstraint(by))
+          removed.set(
+            item.film.id,
+            byConstraint(by, asked.dropDetails.get(item.film.id)),
+          )
         }
       }
       const others = ordered.filter((item) => !kept(item.film.id))

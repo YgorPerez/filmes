@@ -3,7 +3,8 @@
         "vars": [
             "item",
             "p",
-            "valor"
+            "valor",
+            "raiz"
         ]
     },
     "results": {
@@ -18,6 +19,10 @@
                     "value": "http://www.wikidata.org/prop/direct/P31"
                 },
                 "valor": {
+                    "type": "uri",
+                    "value": "http://www.wikidata.org/entity/Q24856"
+                },
+                "raiz": {
                     "type": "uri",
                     "value": "http://www.wikidata.org/entity/Q24856"
                 }

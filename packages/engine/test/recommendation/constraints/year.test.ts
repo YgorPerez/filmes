@@ -54,8 +54,9 @@ test('since and until together ask for the range', async () => {
 
 test('the answer repeats the range and how many films it removed', async () => {
   const fixture = useFixture()
-  const without = await all(fixture)
-  const out = await all(fixture, { since: 2016 })
+  // Off, the Série na ordem (#165) takes no film the year left.
+  const without = await all(fixture, { seriesOrder: 'off' })
+  const out = await all(fixture, { since: 2016, seriesOrder: 'off' })
 
   expect(out.constraints['year']).toMatchObject({ since: 2016, until: null })
   const before = titles(without).filter((t) => !titles(out).includes(t))

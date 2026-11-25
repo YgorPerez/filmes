@@ -5,9 +5,9 @@
 //
 // It reads the current version: the Presentes, the Regra, the Climas, the
 // words, the maximum duration and each stored Restrição back into its
-// request field. Two stored Restrições are not repeated, because the
-// refazer brings them itself: the similar (`inherit`) and the out of
-// session (on with any `session`). A stored Restrição with no field (the
+// request field. Three stored Restrições are not repeated, because the
+// refazer brings them itself: the similar and the Série na ordem
+// (`inherit`) and the out of session (on with any `session`). A stored Restrição with no field (the
 // legacy no_repeat) is left out, as the Cartaz's top leaves it out. The
 // count is the size of the current Recomendação, so the screen keeps its
 // size.

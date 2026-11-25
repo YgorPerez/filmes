@@ -85,8 +85,11 @@ describe('the Restrições seam', () => {
 
     expect(plain).toContain('As Horas Lentas')
     expect(titles(out)).not.toContain('As Horas Lentas')
+    // The Série na ordem is on by default (#165): the Dono saw no film of
+    // the Trilogia do Cais, so Cais 2 and Cais 3 leave.
     expect(out.constraints).toEqual({
       year: { asked: 'year', byCause: { antes: 1 }, removed: 1 },
+      series_order: { mode: 'previous', removed: 2 },
     })
     expect(out.films[0]?.filmLines[0]?.text).toBe('passa em year')
   })
@@ -100,7 +103,11 @@ describe('the Restrições seam', () => {
       ],
     })
 
-    expect(Object.keys(out.constraints)).toEqual(['duration', 'no_sad'])
+    expect(Object.keys(out.constraints)).toEqual([
+      'duration',
+      'no_sad',
+      'series_order',
+    ])
     expect(out.constraints['duration']?.['removed']).toBe(1)
     expect(out.constraints['no_sad']?.['removed']).toBe(0)
     expect(out.films[0]?.filmLines.slice(0, 2).map((l) => l.text)).toEqual([
@@ -126,7 +133,10 @@ describe('the Restrições seam', () => {
 
     expect(out.films[0]?.id).toBe(second)
     expect(out.films[0]?.filmLines[0]?.text).toBe('livre')
-    expect(out.constraints).toEqual({ child: { removed: 1 } })
+    expect(out.constraints).toEqual({
+      child: { removed: 1 },
+      series_order: { mode: 'previous', removed: 2 },
+    })
     // `[constraints] on_demand_reach` is 50: the films past it are decided
     // without asking.
     expect(asked).toHaveLength(50)
