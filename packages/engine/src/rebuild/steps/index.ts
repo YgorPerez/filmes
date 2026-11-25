@@ -11,11 +11,13 @@ import { people } from './people.ts'
 import { realCatalog } from './real-catalog.ts'
 import { sessions } from './sessions.ts'
 import { similarity } from './similarity.ts'
+import { subgenres } from './subgenres.ts'
 import type { Step } from './Step.ts'
 
 export const STEPS: ReadonlyArray<Step> = [
   people,
   realCatalog,
+  subgenres,
   csvTables,
   filmSeries,
   letterboxd,

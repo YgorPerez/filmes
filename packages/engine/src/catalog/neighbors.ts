@@ -1,6 +1,6 @@
 // Item-item neighbourhood from the MovieLens ratings of 4 or more
 // (`catalogo/vizinhos.py` `calcular`). It is the one rule: the Catalog
-// (`vizinhos`, #106) and the offline evaluation (`avaliar`) call it, so the
+// (`vizinhos`) and the offline evaluation (`avaliar`) call it, so the
 // evaluation measures the neighbourhood that goes to production.
 //
 // Python builds a scipy CSR matrix and multiplies a batch of rows by its
