@@ -143,6 +143,8 @@ export const PERSON_NOTICES = [
   'saiu',
   // Answered: a Declarado, and the question left the list.
   'respondida',
+  // A new Pessoa, from the form of `/pessoas`.
+  'criada',
 ] as const
 export type PersonNotice = (typeof PERSON_NOTICES)[number]
 
