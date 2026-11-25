@@ -18,6 +18,7 @@ import { durationModule, type DurationRequest } from './duration.ts'
 import { languageModule, type LanguageRequest } from './language.ts'
 import { noSadModule, type NoSadRequest } from './no-sad.ts'
 import { noSlowModule, type NoSlowRequest } from './no-slow.ts'
+import { similarModule, type SimilarRequest } from './similar.ts'
 import { triggerModule, type TriggerRequest } from './trigger.ts'
 import { unseenModule, type UnseenRequest } from './unseen.ts'
 import { yearModule, type YearRequest } from './year.ts'
@@ -28,6 +29,7 @@ export type ConstraintRequest = YearRequest &
   DurationRequest &
   TriggerRequest &
   LanguageRequest &
+  SimilarRequest &
   UnseenRequest &
   NoSlowRequest &
   NoSadRequest
@@ -41,6 +43,7 @@ export const CONSTRAINT_MODULES: ReadonlyArray<
   durationModule,
   triggerModule,
   languageModule,
+  similarModule,
   unseenModule,
   noSlowModule,
   noSadModule,

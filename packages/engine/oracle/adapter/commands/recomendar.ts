@@ -1,7 +1,7 @@
 // `recomendar` → `recommendSession` (#90, #94): the Recomendação and the
-// Session it opens, with the local Restrições (#91) and the on-demand ones
-// (#92). Refazer (`--sessao`, `--manter`, `--trocar`, #95) and the Session
-// Restrições (#93) are ported later, so a step with those arguments stays
+// Session it opens, with the local Restrições (#91), the on-demand ones
+// (#92) and the similar one (#93). Refazer (`--sessao`, `--manter`,
+// `--trocar`, #95) is ported later, so a step with those arguments stays
 // `not_ported`.
 
 import { data } from '@filmes/key-migration'
@@ -10,15 +10,8 @@ import { engineError } from '../../../src/runtime/EngineError.ts'
 import { Effect } from 'effect'
 import { defineCommand } from '../command.ts'
 
-/** Arguments of later tickets: refazer's (#95) and the Restrições'
- * (#93, `restricoes/*.py` `configurar`). */
-const LATER = [
-  '--sessao',
-  '--manter',
-  '--trocar',
-  '--parecido',
-  '--sem-parecido',
-]
+/** Arguments of a later ticket: refazer's (#95). */
+const LATER = ['--sessao', '--manter', '--trocar']
 
 /** Python's `int()` on an argument: spaces around, a sign, digits with
  * single underscores between them. */
@@ -50,6 +43,9 @@ export default defineCommand({
       // The on-demand Restrições (#92); `--crianca` alone is age 0.
       crianca: { kind: 'optional', const: '0' },
       gatilho: { kind: 'append' },
+      // The similar Restrição (#93).
+      parecido: { kind: 'extend' },
+      'sem-parecido': { kind: 'flag' },
     },
   },
   ported: (argv) =>
@@ -100,6 +96,8 @@ export default defineCommand({
       ...(args['sem-tristeza'] && { noSad: true }),
       ...(ints['crianca'] !== undefined && { child: ints['crianca'] }),
       ...(args.gatilho.length > 0 && { triggers: args.gatilho }),
+      ...(args.parecido.length > 0 && { similar: args.parecido }),
+      ...(args['sem-parecido'] && { noSimilar: true }),
     })
   },
 })

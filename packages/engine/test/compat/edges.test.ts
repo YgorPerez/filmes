@@ -9,6 +9,7 @@ import {
   pyFloat,
   pyFormatG,
   pyInt,
+  pyLog1pInt,
   pyRepr,
   pyRound,
   pyStr,
@@ -92,5 +93,21 @@ describe('what Python refuses', () => {
 
   test('None against a number', () => {
     expect(() => compareTuple([null], [1])).toThrow(/^TypeError/)
+  })
+})
+
+describe('pyLog1pInt', () => {
+  test('175 users weigh as in Python, not as Math.log1p', () => {
+    expect(Math.log1p(175)).not.toBe(5.170483995038151)
+    expect(pyLog1pInt(175)).toBe(5.170483995038151)
+  })
+
+  test('above the checked ints it is Math.log1p', () => {
+    expect(pyLog1pInt(3_000_000)).toBe(Math.log1p(3_000_000))
+  })
+
+  test('takes only an int from 0 up', () => {
+    expect(() => pyLog1pInt(-1)).toThrow(RangeError)
+    expect(() => pyLog1pInt(1.5)).toThrow(RangeError)
   })
 })
