@@ -38,6 +38,7 @@ export {
 export { resolveAttendees } from './recommendation/attendees.ts'
 export {
   attributionsOf,
+  TRAKT_ATTRIBUTION,
   type Attribution,
 } from './recommendation/attributions.ts'
 export {
@@ -412,3 +413,24 @@ export {
 } from './imports/stored.ts'
 export { CsvDictReader, CsvError, type CsvRow } from './imports/csv.ts'
 export { Zip, ZipError } from './imports/zip.ts'
+export {
+  readTraktExport,
+  type TraktFilm,
+  type TraktRow,
+} from './imports/trakt-export.ts'
+export {
+  importTrakt,
+  loadTrakt,
+  reloadPersonTrakt,
+  reloadTrakt,
+  TRAKT_KIND,
+  type TraktImport,
+  type TraktImportInput,
+  type TraktReport,
+  type TraktUnresolved,
+} from './imports/trakt.ts'
+export {
+  removeImport,
+  type ImportRemoval,
+  type ImportRemovalInput,
+} from './imports/remove.ts'
