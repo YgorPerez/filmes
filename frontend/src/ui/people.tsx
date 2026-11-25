@@ -1,6 +1,5 @@
 import type { PersonCreateRefusal, TypedPerson } from '#/content/person-create'
 import type { PersonEntry } from '#/platform/people'
-import { Brand } from './kit/brand'
 import { PEOPLE } from './person.copy'
 import { Alert, Disclosure, OwnerTag, Submit, TextField } from './person-parts'
 import { Chevron } from './person-marks'
@@ -26,7 +25,6 @@ export function PeopleList({
   return (
     <main className="mx-auto flex max-w-[720px] flex-col gap-3xl px-2xl py-3xl">
       <header className="flex flex-wrap items-center justify-between gap-xl">
-        <Brand />
         <a href="/" className={buttonVariants({ variant: 'option' })}>
           {PEOPLE.back}
         </a>

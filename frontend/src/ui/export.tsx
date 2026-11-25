@@ -1,6 +1,5 @@
 import type { ExportRefusal } from '#/content/export-refusal'
 import { EXPORT } from './export.copy'
-import { Brand } from './kit/brand'
 import { FIELD } from './kit/field'
 import { FieldLabel } from './kit/field-label'
 import { Slip } from './kit/slip'
@@ -80,7 +79,6 @@ export function Export({
   return (
     <main className="mx-auto flex max-w-[720px] flex-col gap-3xl px-2xl py-3xl">
       <header className="flex flex-wrap items-center justify-between gap-xl">
-        <Brand />
         <a href="/" className={buttonVariants({ variant: 'option' })}>
           {EXPORT.back}
         </a>

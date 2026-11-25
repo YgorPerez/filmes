@@ -17,9 +17,9 @@ describe('Login', () => {
     expect(html).toContain(LOGIN.refusals[refusal])
   })
 
-  it('opens with the brand on the case', () => {
+  it('opens with the brand on the case-black bar', () => {
     expect(renderToStaticMarkup(<Login />)).toMatch(
-      /<p class="[^"]*bg-case[^"]*">filmes<\/p>/u,
+      /<header class="bg-case"><p[^>]*>filmes<\/p><\/header>/u,
     )
   })
 })

@@ -9,7 +9,6 @@ import type {
   EvaluationPanel,
   OperationsPage,
 } from '#/platform/operations'
-import { Brand } from './kit/brand'
 import { FieldLabel } from './kit/field-label'
 import { PageHead } from './kit/page-head'
 import { EvaluationSection, jobKey } from './operations-evaluation'
@@ -115,7 +114,6 @@ export function Operations({
   return (
     <main className="mx-auto flex max-w-[720px] flex-col gap-3xl px-2xl py-3xl">
       <header className="flex flex-wrap items-center justify-between gap-xl">
-        <Brand />
         <LinkButton href="/">{OPERATIONS.back}</LinkButton>
       </header>
       <PageHead title={OPERATIONS.title} lead={OPERATIONS.lead} />

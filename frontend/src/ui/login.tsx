@@ -1,30 +1,55 @@
 import type { LoginRefusal } from '#/content/login-refusal'
 import { LOGIN } from './login.copy'
-import { Brand } from './kit/brand'
+import { Icon } from './kit/icon'
 import { buttonVariants } from './shadcn/button'
 
-/** `/entrar`: the only page without a Dono. The button is a link, since
- * `/auth/google` answers a GET with the redirect to Google. */
+// `/entrar`, the only page without a Dono, so outside the app shell: the
+// case-black bar with "filmes", and the membership card shown at the
+// counter (DESIGN.md, Home: o guia como carteirinha de sócio) with the one
+// orange button. The button is a link, since `/auth/google` answers a GET
+// with the redirect to Google.
+
 export function Login({ refusal }: { refusal?: LoginRefusal }) {
   return (
-    <main className="mx-auto flex min-h-dvh max-w-[420px] flex-col justify-center gap-3xl px-2xl py-3xl">
-      <Brand />
-      <section className="flex flex-col gap-xl rounded-card border border-rule bg-surface p-xl">
-        <h1 className="font-display text-title">{LOGIN.title}</h1>
-        <p className="text-ink-2">{LOGIN.lead}</p>
-        {refusal && (
+    <div className="flex min-h-dvh flex-col">
+      <header className="bg-case">
+        <p className="mx-auto flex min-h-[56px] max-w-[1040px] items-center px-2xl font-display text-brand text-case-ink">
+          {LOGIN.brand}
+        </p>
+      </header>
+      <main className="mx-auto flex w-full max-w-[420px] flex-1 flex-col justify-center px-2xl py-3xl">
+        <section
+          aria-labelledby="entrar"
+          className="flex flex-col gap-xl rounded-panel bg-card-stock px-xl pt-xl pb-2xl text-card-stock-ink"
+        >
           <p
-            role="alert"
-            className="flex gap-sm rounded-field border-[1.5px] border-ink px-lg py-2.5 text-ink"
+            aria-hidden="true"
+            className="flex items-baseline justify-between font-display text-[12px] leading-none font-extrabold tracking-[0.08em] uppercase"
           >
-            <span aria-hidden="true">⚠</span>
-            <span>{LOGIN.refusals[refusal]}</span>
+            <span>{LOGIN.card}</span>
+            <span>{LOGIN.brand}</span>
           </p>
-        )}
-        <a href="/auth/google" className={buttonVariants()}>
-          {LOGIN.google}
-        </a>
-      </section>
-    </main>
+          <h1 id="entrar" className="font-display text-title">
+            {LOGIN.title}
+          </h1>
+          <p className="text-[15px] text-pretty">{LOGIN.lead}</p>
+          {refusal && (
+            <p
+              role="alert"
+              className="flex gap-sm rounded-field border-[1.5px] border-ink bg-surface px-lg py-md text-evidence text-ink"
+            >
+              <Icon name="alert" className="mt-px size-[18px]" />
+              <span>{LOGIN.refusals[refusal]}</span>
+            </p>
+          )}
+          <a
+            href="/auth/google"
+            className={buttonVariants({ className: 'self-start' })}
+          >
+            {LOGIN.google}
+          </a>
+        </section>
+      </main>
+    </div>
   )
 }

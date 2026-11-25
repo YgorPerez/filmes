@@ -7,7 +7,6 @@ import {
 } from 'react'
 import { ratingField, type RatingRefusal } from '#/content/rating-form'
 import type { SearchAnswer } from '#/platform/catalog-search'
-import { Brand } from './kit/brand'
 import { Chip } from './kit/chip'
 import { TapeCase } from './kit/tape-case'
 import {
@@ -46,7 +45,6 @@ export function ImportsFrame({
   return (
     <main className="mx-auto flex max-w-[720px] flex-col gap-3xl px-2xl py-3xl">
       <header className="flex flex-wrap items-center justify-between gap-xl">
-        <Brand />
         <a href={backTo} className={buttonVariants({ variant: 'option' })}>
           {back}
         </a>

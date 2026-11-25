@@ -59,7 +59,7 @@ function fakeSource(complete = false, outcome?: Outcome<never>) {
     guide: async () =>
       outcome ?? {
         exitCode: 0,
-        output: { person: 'bruno', steps: STEPS, complete },
+        output: { person: 'bruno', steps: STEPS, ratings: 4, complete },
       },
     skip: async (_owner, step) => {
       skipped.push(step)
@@ -86,19 +86,20 @@ const session = (id: string, attendees: string[]): LatestSession => ({
 })
 
 describe('homeData', () => {
-  it('gives the guide while a step is pending, and the MCP URL', async () => {
+  it('gives the steps, her Notas, how many Sessões and the MCP URL', async () => {
     const home = await homeData(BRUNO, fakeSource().source, [], ORIGIN)
     expect(home).toEqual({
       person: 'bruno',
-      guide: STEPS,
+      setup: { steps: STEPS, ratings: 4 },
       latest: null,
+      sessions: 0,
       mcpUrl: 'http://localhost/mcp',
     })
   })
 
-  it('gives no guide once every step is done or skipped', async () => {
+  it('keeps the steps once every one is done or skipped, for the card', async () => {
     const home = await homeData(BRUNO, fakeSource(true).source, [], ORIGIN)
-    expect(home.guide).toBeNull()
+    expect(home.setup?.steps).toEqual(STEPS)
   })
 
   it('takes the latest Sessão the Dono was in', async () => {
@@ -109,6 +110,7 @@ describe('homeData', () => {
     ]
     const home = await homeData(BRUNO, fakeSource().source, list, ORIGIN)
     expect(home.latest?.id).toBe('2026-11-19-1')
+    expect(home.sessions).toBe(3)
   })
 
   it('shows no guide and no Sessão when the engine cannot run', async () => {
@@ -120,8 +122,9 @@ describe('homeData', () => {
     )
     expect(home).toEqual({
       person: 'bruno',
-      guide: null,
+      setup: null,
       latest: null,
+      sessions: null,
       mcpUrl: null,
     })
   })

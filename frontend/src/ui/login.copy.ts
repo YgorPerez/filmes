@@ -1,6 +1,8 @@
 import type { LoginRefusal } from '#/content/login-refusal'
 
 export const LOGIN = {
+  brand: 'filmes',
+  card: 'Carteirinha',
   title: 'Entrar no filmes',
   lead: 'Use a conta Google que está no seu cadastro de Dono.',
   google: 'Entrar com Google',

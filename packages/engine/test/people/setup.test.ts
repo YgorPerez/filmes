@@ -87,6 +87,8 @@ describe('the setup guide', () => {
       connector: { step: 'connector', done: true, skipped: false },
     })
     expect(bruno.complete).toBe(false)
+    // The home counts them toward the 10 of Meu gosto.
+    expect(bruno.ratings).toBeGreaterThanOrEqual(10)
   })
 
   test('a Dono with no Notas and no import has every step pending', async () => {
@@ -101,6 +103,7 @@ describe('the setup guide', () => {
     expect(vera.person).toBe('vera')
     expect(vera.steps.every((s) => !s.done && !s.skipped)).toBe(true)
     expect(vera.complete).toBe(false)
+    expect(vera.ratings).toBe(0)
   })
 
   test('one import does both Meu gosto and the import', async () => {
@@ -131,6 +134,7 @@ describe('the setup guide', () => {
     )
 
     expect(stepsOf(bruno).taste?.done).toBe(false)
+    expect(bruno.ratings).toBe(0)
   })
 })
 

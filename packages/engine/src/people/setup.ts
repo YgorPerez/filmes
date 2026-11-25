@@ -34,6 +34,8 @@ export interface SetupGuide {
   readonly person: string
   /** In `SETUP_STEPS` order. */
   readonly steps: readonly SetupStepState[]
+  /** Her Notas in force, toward the `SETUP_RATINGS` of Meu gosto. */
+  readonly ratings: number
   /** Every step done or skipped: the home leaves the guide. */
   readonly complete: boolean
 }
@@ -70,8 +72,9 @@ export const setupGuide = (
   Effect.gen(function* () {
     const person = yield* resolvePerson(input.person)
     const imported = person.imports.length > 0
+    const ratings = yield* ratingCount(person)
     const done: Record<SetupStep, boolean> = {
-      taste: imported || (yield* ratingCount(person)) >= SETUP_RATINGS,
+      taste: imported || ratings >= SETUP_RATINGS,
       import: imported,
       connector: input.connected,
     }
@@ -83,6 +86,7 @@ export const setupGuide = (
     return {
       person: person.slug,
       steps,
+      ratings,
       complete: steps.every((s) => s.done || s.skipped),
     }
   })

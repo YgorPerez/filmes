@@ -717,6 +717,7 @@ describe('setupGuideFromEngine', () => {
           { step: 'import', done: false, skipped: false },
           { step: 'connector', done: true, skipped: false },
         ],
+        ratings: 0,
         complete: false,
       },
     })

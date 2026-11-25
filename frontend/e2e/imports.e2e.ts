@@ -73,7 +73,7 @@ test('the Dono imports a Letterboxd ZIP and works the queue', async ({
   await addPerson('Olga')
   await loginAsBruno(page)
   await page
-    .getByRole('navigation', { name: 'Telas' })
+    .getByRole('navigation', { name: 'Seções' })
     .getByRole('link', { name: 'Importar' })
     .click()
   await expect(page).toHaveURL(/\/importar$/)
