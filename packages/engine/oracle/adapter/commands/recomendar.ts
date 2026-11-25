@@ -1,7 +1,7 @@
 // `recomendar` → `recommendSession` (#90, #94): the Recomendação and the
 // Session it opens, with the local Restrições (#91). Refazer (`--sessao`,
 // `--manter`, `--trocar`, #95) and the on-demand and Session Restrições
-// (#92, #93) are ported later, so a step with those arguments stays
+// (#92) are ported later, so a step with those arguments stays
 // `not_ported`.
 
 import { data } from '@filmes/key-migration'
@@ -11,16 +11,8 @@ import { Effect } from 'effect'
 import { defineCommand } from '../command.ts'
 
 /** Arguments of later tickets: refazer's (#95) and the Restrições'
- * (#92, #93, `restricoes/*.py` `configurar`). */
-const LATER = [
-  '--sessao',
-  '--manter',
-  '--trocar',
-  '--crianca',
-  '--parecido',
-  '--sem-parecido',
-  '--gatilho',
-]
+ * (#92, `restricoes/*.py` `configurar`). */
+const LATER = ['--sessao', '--manter', '--trocar', '--crianca', '--gatilho']
 
 /** Python's `int()` on an argument: spaces around, a sign, digits with
  * single underscores between them. */
@@ -49,6 +41,9 @@ export default defineCommand({
       'sem-ja-visto': { kind: 'flag' },
       'sem-lento': { kind: 'flag' },
       'sem-tristeza': { kind: 'flag' },
+      // The similar Restrição (#93).
+      parecido: { kind: 'extend' },
+      'sem-parecido': { kind: 'flag' },
     },
   },
   ported: (argv) =>
@@ -91,6 +86,8 @@ export default defineCommand({
       ...(args['sem-ja-visto'] && { unseen: true }),
       ...(args['sem-lento'] && { noSlow: true }),
       ...(args['sem-tristeza'] && { noSad: true }),
+      ...(args.parecido.length > 0 && { similar: args.parecido }),
+      ...(args['sem-parecido'] && { noSimilar: true }),
     })
   },
 })

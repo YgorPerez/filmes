@@ -1,21 +1,16 @@
 // What holds over every Restrição (`restricoes/__init__.py`): reading the
 // request in the modules' order, the label of a stored one, and the two
 // hooks a refazer uses, `inherit` (`herdar`) and `replacesList`
-// (`troca_a_lista`). No local Restrição has the hooks (the "parecido" will):
-// stand-ins exercise them.
+// (`troca_a_lista`). Only the "parecido" (`similar`) has them.
 
 import { Effect } from 'effect'
 import { expect, test } from 'vite-plus/test'
 import {
   constraintLabel,
-  drop,
   inheritConstraints,
   readConstraints,
   replacingList,
   storedConstraints,
-  type Constraint,
-  type ConstraintModule,
-  type ConstraintRequest,
 } from '../../../src/index.ts'
 import { useFixture } from '../../fixture.ts'
 
@@ -45,6 +40,7 @@ test('the Restrições asked come in the modules order, and the Session stores a
       until: 2000,
       unseen: true,
       noSlow: true,
+      similar: ['tt1'],
     }),
   )
 
@@ -52,6 +48,7 @@ test('the Restrições asked come in the modules order, and the Session stores a
     'year',
     'duration',
     'language',
+    'similar',
     'unseen',
     'no_slow',
     'no_sad',
@@ -59,6 +56,7 @@ test('the Restrições asked come in the modules order, and the Session stores a
   expect(storedConstraints(asked)).toEqual([
     { name: 'year', since: null, until: 2000 },
     { name: 'language', language: 'pt' },
+    { name: 'similar', films: ['tt1'], titles: [] },
     { name: 'unseen' },
     { name: 'no_slow' },
     { name: 'no_sad' },
@@ -67,6 +65,7 @@ test('the Restrições asked come in the modules order, and the Session stores a
     'até 2000',
     'até 1h30',
     'idioma original: pt',
+    'parecidos com tt1',
     'nada repetido',
     'nada lento',
     'nada triste',
@@ -77,38 +76,6 @@ test('a stored Restrição no file knows has no label', () => {
   expect(constraintLabel({ name: 'no_repeat' })).toBeNull()
 })
 
-interface SimilarRequest extends ConstraintRequest {
-  readonly similar?: ReadonlyArray<string>
-  readonly noSimilar?: boolean
-}
-
-const similar = (films: ReadonlyArray<string>): Constraint => ({
-  name: 'similar',
-  toJson: () => ({ films }),
-  stored: () => ({ name: 'similar', films }),
-  result: () => ({}),
-  evaluate: () => Effect.succeed(new Map([['tt1', drop()]])),
-  // References the current version did not have: a new request.
-  replacesList: (stored) => {
-    const before = new Set((stored?.['films'] as string[] | undefined) ?? [])
-    return (
-      before.size !== new Set(films).size || films.some((f) => !before.has(f))
-    )
-  },
-})
-
-/** A stand-in for the "parecido": the refazer keeps the stored films. */
-const similarModule: ConstraintModule<SimilarRequest> = {
-  name: 'similar',
-  read: (request) =>
-    Effect.succeed(request.similar ? similar(request.similar) : undefined),
-  label: (stored) => `parecidos com ${String(stored['films'])}`,
-  inherit: (request, stored) =>
-    stored && !request.similar && !request.noSimilar
-      ? { ...request, similar: stored['films'] as string[] }
-      : request,
-}
-
 test('on a refazer, a module with inherit gets its stored Restrição and puts it back', () => {
   const stored = [
     { name: 'no_sad' },
@@ -116,38 +83,39 @@ test('on a refazer, a module with inherit gets its stored Restrição and puts i
     { name: 'similar', films: ['tt2'] },
   ]
 
+  // The last stored with a name wins, as in Python's dict.
+  expect(inheritConstraints({ noSad: true }, stored)).toEqual({
+    noSad: true,
+    similar: ['tt2'],
+  })
+  // --sem-parecido drops it; --parecido with others replaces it.
+  expect(inheritConstraints({ noSimilar: true }, stored)).toEqual({
+    noSimilar: true,
+  })
+  expect(inheritConstraints({ similar: ['tt3'] }, stored)).toEqual({
+    similar: ['tt3'],
+  })
+  // A stored one without films puts nothing back.
   expect(
-    inheritConstraints<SimilarRequest>({ noSad: true }, stored, [
-      similarModule,
-    ]),
-  ).toEqual({ noSad: true, similar: ['tt2'] })
-  expect(
-    inheritConstraints<SimilarRequest>({ noSimilar: true }, stored, [
-      similarModule,
-    ]),
-  ).toEqual({ noSimilar: true })
-  expect(inheritConstraints<SimilarRequest>({}, [], [similarModule])).toEqual(
-    {},
-  )
+    inheritConstraints({}, [{ name: 'similar', films: [] }]),
+  ).toStrictEqual({ similar: undefined })
+  expect(inheritConstraints({}, [])).toEqual({})
   // The local Restrições inherit nothing: a refazer asks them again.
-  expect(inheritConstraints({ unseen: true }, stored)).toEqual({
+  expect(inheritConstraints({ unseen: true }, [{ name: 'unseen' }])).toEqual({
     unseen: true,
   })
 })
 
 test('on a refazer, only a Restrição new against the stored one replaces the list', async () => {
-  const local = await Effect.runPromise(readConstraints({ noSad: true }))
-  const stored = [{ name: 'similar', films: ['tt1'] }]
+  const read = (similar: ReadonlyArray<string>) =>
+    Effect.runPromise(readConstraints({ noSad: true, similar }))
+  const stored = [{ name: 'similar', films: ['tt1', 'tt2'] }]
+  const replacing = async (similar: ReadonlyArray<string>, before = stored) =>
+    replacingList(await read(similar), before).map((c) => c.name)
 
-  expect(
-    replacingList([...local, similar(['tt1'])], stored).map((c) => c.name),
-  ).toEqual([])
-  expect(
-    replacingList([...local, similar(['tt1', 'tt2'])], stored).map(
-      (c) => c.name,
-    ),
-  ).toEqual(['similar'])
-  expect(replacingList([similar(['tt3'])], []).map((c) => c.name)).toEqual([
-    'similar',
-  ])
+  // The same references, in any order, are no new request.
+  expect(await replacing(['tt2', 'tt1'])).toEqual([])
+  expect(await replacing(['tt1'])).toEqual(['similar'])
+  expect(await replacing(['tt1', 'tt2', 'tt3'])).toEqual(['similar'])
+  expect(await replacing(['tt3'], [])).toEqual(['similar'])
 })

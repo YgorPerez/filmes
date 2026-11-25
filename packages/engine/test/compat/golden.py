@@ -551,6 +551,15 @@ def exp_vectors(r):
     return rows
 
 
+# --- log1p ------------------------------------------------------------------
+
+
+def log1p_vectors(r):
+    """`math.log1p` on the ints the similarity gives it (MovieLens user counts)."""
+    ints = list(range(20_001)) + [r.randint(0, 2_000_000) for _ in range(N)]
+    return [{"n": tag(n), "out": attempt(math.log1p, n)} for n in ints]
+
+
 def main():
     for name, make, seed in [
         ("py-sum", sum_vectors, 1),
@@ -571,6 +580,7 @@ def main():
         ("iso-date", date_vectors, 16),
         ("yaml-scalar", scalar_vectors, 17),
         ("yaml-dump", dump_vectors, 18),
+        ("log1p", log1p_vectors, 19),
     ]:
         write(name, make(random.Random(seed)))
 
