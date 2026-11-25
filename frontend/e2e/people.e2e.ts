@@ -33,7 +33,10 @@ test('the Dono reads and changes a Pessoa’s taste', async ({ page }, info) => 
   const name = slug === 'rosa' ? 'Rosa' : 'Teo'
   await loginAsBruno(page)
 
-  await page.getByRole('link', { name: 'Pessoas' }).click()
+  await page
+    .getByRole('navigation', { name: 'Telas' })
+    .getByRole('link', { name: 'Pessoas' })
+    .click()
   await expect(page).toHaveURL(/\/pessoas$/)
   await expect(page.getByRole('heading', { name: 'Pessoas' })).toBeVisible()
   await expect(page.getByRole('link', { name: /Bruno.*Dono/ })).toBeVisible()

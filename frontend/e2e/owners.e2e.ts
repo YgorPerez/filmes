@@ -149,22 +149,25 @@ test('a new Dono sees the setup guide, and a skipped step stays skipped', async 
     if (!error.message.includes('person_exists')) throw error
   })
   await loginAs(page, email)
-  const guide = section(page, 'Para começar')
+  const guide = page.getByRole('list', { name: 'Para começar', exact: true })
   await expect(guide).toBeVisible()
   await expect(guide.getByRole('heading', { name: 'Meu gosto' })).toBeVisible()
-  await expect(guide.getByText(/^http:\/\/localhost:\d+\/mcp$/)).toBeVisible()
+  await expect(
+    guide.getByRole('button', { name: 'Copiar endereço' }),
+  ).toBeVisible()
   await expect(page.getByRole('link', { name: 'Pedir filme' })).toBeVisible()
   await snap(page, info, 'home-guide')
 
   await guide.getByRole('button', { name: SKIP_IMPORT }).click()
   await expect(page).toHaveURL(/\/$/)
   await page.reload()
-  await expect(guide.getByText('Pulado')).toBeVisible()
+  await expect(guide.getByText('Retomar')).toBeVisible()
   await expect(guide.getByRole('button', { name: SKIP_IMPORT })).toHaveCount(0)
   await snap(page, info, 'home-guide-skipped')
 
   // Every step out of the way: the guide leaves, "pedir filme" stays.
   await guide.getByRole('button', { name: 'Pular: Meu gosto' }).click()
+  await expect(guide.getByText(/^http:\/\/localhost:\d+\/mcp$/)).toBeVisible()
   await guide.getByRole('button', { name: 'Pular: Conector no Claude' }).click()
   await expect(guide).toHaveCount(0)
   await expect(page.getByRole('link', { name: 'Pedir filme' })).toBeVisible()

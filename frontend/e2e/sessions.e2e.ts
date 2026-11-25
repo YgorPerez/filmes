@@ -28,7 +28,10 @@ test('the Dono opens a Session with Restrições and finds it in the list', asyn
   test.skip(info.project.name !== 'desktop', 'one group per project')
   await loginAsBruno(page)
   await snap(page, info, 'inicio')
-  await page.getByRole('link', { name: 'Sessões' }).click()
+  await page
+    .getByRole('navigation', { name: 'Telas' })
+    .getByRole('link', { name: /^Sessões/ })
+    .click()
   await expect(page).toHaveURL(/\/sessoes$/)
   await snap(page, info, 'sessoes-lista')
 
