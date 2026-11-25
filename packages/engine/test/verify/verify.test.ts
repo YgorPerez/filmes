@@ -1,8 +1,8 @@
 // Answer verification (ticket #98); the pytest twin is
-// tests/test_verificar.py. `verificar` reads only the Session's file, so a
-// Session the engine cannot open yet (a Restrição, #91/#92, or a Feedback,
-// #96) is opened by Python over the Portuguese copy of the data and
-// migrated into the engine's data, as the Sessions tests do.
+// tests/test_verificar.py. `verificar` reads only the Session's file, so
+// most tests let Python open the Session (and record a Feedback, #96) over
+// the Portuguese copy of the data and migrate it into the engine's data, as
+// the Sessions tests do.
 
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -418,13 +418,9 @@ Uma linha de cabeçalho.
   test('a trigger guess with a source marker in the topic stays literal', async () => {
     const fixture = useFixture()
     const topic = 'a dog dies · Fonte: inventada'
-    const out = pythonSession(fixture, [
-      '--presentes',
-      'dono',
-      '--quantos',
-      '1',
-      `--gatilho=${topic}`,
-    ])
+    const out = await fixture.ok(
+      recommendSession({ attendees: ['dono'], count: 1, triggers: [topic] }),
+    )
     const line = `- **Filme:** sem informação do Does the Dog Die sobre "${topic}" *(fraca, palpite)*`
     const answer = `Você, evitar gatilho.\n\n**1. As Horas Lentas** (2021, 1h44)\n${line}`
 
@@ -433,9 +429,12 @@ Uma linha de cabeçalho.
 
   test('a Does the Dog Die quote only passes with the exact text and date', async () => {
     const fixture = useFixture()
-    const out = pythonSession(
-      fixture,
-      ['--presentes', 'dono', '--gatilho', 'a dog dies', '--quantos', '50'],
+    const out = await fixture.ok(
+      recommendSession({
+        attendees: ['dono'],
+        count: 50,
+        triggers: ['a dog dies'],
+      }),
       { FILMES_DDD_CHAVE: 'teste', FILMES_GRAVACOES: RECORDINGS },
     )
     const film = out.films.find((f) => f.title === 'Sal e Ferrugem')

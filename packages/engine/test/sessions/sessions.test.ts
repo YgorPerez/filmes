@@ -19,7 +19,6 @@ import {
   KIND_IN_BODY,
   makeEngine,
   openSessions,
-  pass,
   readConstraints,
   parseYaml,
   currentVersion,
@@ -32,7 +31,6 @@ import {
   Sqlite,
   STRENGTH_IN_BODY,
   yamlToJson,
-  type Constraint,
   type Outcome,
   type YamlMapping,
   type SessionRecommendation,
@@ -280,29 +278,21 @@ describe('recomendar opens the Session', () => {
   })
 
   test('the Session keeps the Restrições asked and the Climas accepted', () => {
-    // A stand-in for the child Restrição (#92), whose report and stored
-    // keys differ.
-    const child: Constraint = {
-      name: 'child',
-      toJson: () => ({ age: 7, maxAgeRating: '10' }),
-      stored: () => ({ name: 'child', age: 7, max_age_rating: '10' }),
-      result: () => ({}),
-      evaluate: (_context, films) =>
-        Effect.succeed(new Map([...films.keys()].map((id) => [id, pass([])]))),
-    }
-    const local = Effect.runSync(
-      readConstraints({ maxDuration: 120, unseen: true }),
+    // The child Restrição's report and stored keys differ
+    // (`maxAgeRating`, `max_age_rating`).
+    const asked = Effect.runSync(
+      readConstraints({ maxDuration: 120, unseen: true, child: 7 }),
     )
 
-    const context = sessionContext('duas horas', ['leve'], [...local, child])
+    const context = sessionContext('duas horas', ['leve'], asked)
 
     expect(yamlToJson(context)).toEqual({
       request: 'duas horas',
       max_duration: 120,
       moods: ['leve'],
       constraints: [
+        { name: 'child', age: 7, max_age_rating: '6' },
         { name: 'unseen' },
-        { name: 'child', age: 7, max_age_rating: '10' },
       ],
     })
   })

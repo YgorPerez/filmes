@@ -1,7 +1,7 @@
 // The part of Python's argparse the CLI uses, so the argv adapter reads a
 // step's arguments as `python -m filmes` does: `--opt value` and
-// `--opt=value`, flags, `action="append"`, `nargs="+"` (with or without
-// `action="extend"`), positionals (optional with `nargs="?"`), `choices`,
+// `--opt=value`, flags, `action="append"`, `nargs="?"` with a `const`,
+// `nargs="+"` (with or without `action="extend"`), positionals (optional with `nargs="?"`), `choices`,
 // `required`, mutually exclusive groups, `--` and unique prefixes of a long
 // option (argparse's `allow_abbrev`).
 //
@@ -17,6 +17,9 @@ export type OptionSpec =
       readonly required?: boolean
       readonly choices?: readonly string[]
     }
+  /** `nargs="?"` with `const`: the value, `const` when given with none,
+   * `undefined` when absent. */
+  | { readonly kind: 'optional'; readonly const: string }
   /** `action="append"`: every occurrence, `[]` when absent. */
   | { readonly kind: 'append' }
   /** `nargs="+"`: the values of the last occurrence. */
@@ -47,7 +50,7 @@ type OptionValue<O> = O extends { readonly kind: 'flag' }
   ? boolean
   : O extends { readonly kind: 'value'; readonly required: true }
     ? string
-    : O extends { readonly kind: 'value' }
+    : O extends { readonly kind: 'value' | 'optional' }
       ? string | undefined
       : O extends { readonly kind: 'list'; readonly required: true }
         ? readonly string[]
@@ -154,6 +157,15 @@ export function parseArgv<const S extends ArgSpec>(
         option.kind === 'extend'
           ? [...((values[name] as string[] | undefined) ?? []), ...taken]
           : taken
+      continue
+    }
+    if (option.kind === 'optional') {
+      const next = argv[i + 1]
+      if (inline !== undefined) values[name] = inline
+      else if (next !== undefined && !isOption(next)) {
+        values[name] = next
+        i++
+      } else values[name] = option.const
       continue
     }
     let value = inline

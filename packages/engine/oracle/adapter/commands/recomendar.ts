@@ -1,7 +1,7 @@
 // `recomendar` → `recommendSession` (#90, #94): the Recomendação and the
-// Session it opens, with the local Restrições (#91). Refazer (`--sessao`,
-// `--manter`, `--trocar`, #95) and the on-demand and Session Restrições
-// (#92, #93) are ported later, so a step with those arguments stays
+// Session it opens, with the local Restrições (#91) and the on-demand ones
+// (#92). Refazer (`--sessao`, `--manter`, `--trocar`, #95) and the Session
+// Restrições (#93) are ported later, so a step with those arguments stays
 // `not_ported`.
 
 import { data } from '@filmes/key-migration'
@@ -11,15 +11,13 @@ import { Effect } from 'effect'
 import { defineCommand } from '../command.ts'
 
 /** Arguments of later tickets: refazer's (#95) and the Restrições'
- * (#92, #93, `restricoes/*.py` `configurar`). */
+ * (#93, `restricoes/*.py` `configurar`). */
 const LATER = [
   '--sessao',
   '--manter',
   '--trocar',
-  '--crianca',
   '--parecido',
   '--sem-parecido',
-  '--gatilho',
 ]
 
 /** Python's `int()` on an argument: spaces around, a sign, digits with
@@ -49,6 +47,9 @@ export default defineCommand({
       'sem-ja-visto': { kind: 'flag' },
       'sem-lento': { kind: 'flag' },
       'sem-tristeza': { kind: 'flag' },
+      // The on-demand Restrições (#92); `--crianca` alone is age 0.
+      crianca: { kind: 'optional', const: '0' },
+      gatilho: { kind: 'append' },
     },
   },
   ported: (argv) =>
@@ -59,7 +60,13 @@ export default defineCommand({
     // argparse's `type=int` (the oracle does not compare an invalid_usage
     // message, so which bad one is named first does not matter).
     const ints: Record<string, number | undefined> = {}
-    for (const name of ['quantos', 'duracao-max', 'desde', 'ate'] as const) {
+    for (const name of [
+      'quantos',
+      'duracao-max',
+      'desde',
+      'ate',
+      'crianca',
+    ] as const) {
       const value = args[name]
       if (value === undefined) continue
       ints[name] = pyInt(value)
@@ -91,6 +98,8 @@ export default defineCommand({
       ...(args['sem-ja-visto'] && { unseen: true }),
       ...(args['sem-lento'] && { noSlow: true }),
       ...(args['sem-tristeza'] && { noSad: true }),
+      ...(ints['crianca'] !== undefined && { child: ints['crianca'] }),
+      ...(args.gatilho.length > 0 && { triggers: args.gatilho }),
     })
   },
 })
