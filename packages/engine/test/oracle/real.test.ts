@@ -419,7 +419,7 @@ describe('runReal on the fixture', () => {
       expect(verdicts).toContain(true)
       expect(verdicts).toContain(false)
       expect(facts.fetched).toEqual({})
-      expect(facts.people).toBe(5)
+      expect(facts.people).toBe(6)
     },
   )
 })

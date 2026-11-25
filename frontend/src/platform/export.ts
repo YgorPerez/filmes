@@ -5,7 +5,7 @@
 
 import {
   exportRatings,
-  listPeople,
+  readPeople,
   type Engine,
   type ErrorOutput,
   type ExportResult,
@@ -32,7 +32,7 @@ export function exporterFromEngine(engine: Engine): Exporter {
   return {
     imdb,
     async choices() {
-      const people = await engine.run(listPeople)
+      const people = await engine.run(readPeople)
       if (people.exitCode !== 0) return people
       const choices: ExportChoice[] = []
       for (const { slug, name } of people.output) {

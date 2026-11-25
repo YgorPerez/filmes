@@ -11,7 +11,7 @@ import {
   importLetterboxd,
   importLetterboxdRss,
   importTrakt,
-  listPeople,
+  readPeople,
   personImports,
   removeImport,
   reprocessLetterboxd,
@@ -143,7 +143,7 @@ type Run = Engine['run']
 
 /** The queue with the Pessoas' names, from the engine's queue and list. */
 async function queueOf(run: Run): Promise<Outcome<QueuePage>> {
-  const people = await run(listPeople)
+  const people = await run(readPeople)
   if (people.exitCode !== 0) return people
   return map(run(viewQueue), (queue) => ({
     items: queue.items.map(entryOf),
@@ -242,7 +242,7 @@ export function importsFromEngine(engine: Engine): Imports {
   const run = engine.run
   return {
     async overview() {
-      const people = await run(listPeople)
+      const people = await run(readPeople)
       if (people.exitCode !== 0) return people
       return map(run(viewQueue), (queue) => ({
         people: people.output.map(({ slug, name, owner, imports }) => ({

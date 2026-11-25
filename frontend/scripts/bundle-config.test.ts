@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vite-plus/test'
-import { makeEngine, listPeople } from '@filmes/engine'
+import { makeEngine, readPeople } from '@filmes/engine'
 import { useFixture } from '../../packages/engine/test/fixture.ts'
 import { bundleConfig } from './bundle-config.ts'
 
@@ -20,7 +20,7 @@ describe('bundleConfig', () => {
     )
     const engine = makeEngine({ ...fixture.vars, FILMES_CONFIG: config })
     try {
-      expect(await engine.run(listPeople)).toMatchObject({ exitCode: 0 })
+      expect(await engine.run(readPeople)).toMatchObject({ exitCode: 0 })
     } finally {
       await engine.dispose()
     }

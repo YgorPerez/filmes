@@ -44,11 +44,19 @@ export interface Billboards {
   ): Promise<Outcome<ReplyDone> & { stage?: 'answer' | 'redo' }>
 }
 
-export function billboardsFromEngine(engine: Engine): Billboards {
+/** The Cartaz as `viewer` (the logged-in Dono's slug) sees it: she is
+ * "Você". */
+export function billboardsFromEngine(
+  engine: Engine,
+  viewer: string | null = null,
+): Billboards {
   const run = engine.run
   return {
     async model(id) {
-      const made = await run(billboard({ session: id }))
+      const made = await run(
+        billboard({ session: id }),
+        viewer === null ? {} : { owner: viewer },
+      )
       if (made.exitCode !== 0) return made
       return {
         exitCode: 0,
@@ -174,13 +182,18 @@ export async function replyAction(
 
 const appBillboards = () => billboardsFromEngine(appEngine())
 
-/** One Session's page for the app. */
-export const appCartazPage = (id: string, note: string | undefined) =>
+/** One Session's page for the app, as the logged-in Dono `viewer` sees
+ * it. */
+export const appCartazPage = (
+  id: string,
+  note: string | undefined,
+  viewer: string,
+) =>
   cartazPage(
     id,
     note,
-    sessionsFromEngine(appEngine()),
-    appBillboards(),
+    sessionsFromEngine(appEngine(), viewer),
+    billboardsFromEngine(appEngine(), viewer),
     appNotes(),
   )
 

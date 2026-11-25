@@ -158,6 +158,7 @@ describe('on the engine fixture', () => {
         'quim',
         'rosa',
         'teo',
+        'vera',
       ])
       expect(choices?.people.find((p) => p.person === 'quim')).toEqual({
         person: 'quim',

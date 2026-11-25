@@ -9,10 +9,11 @@ def test_reconstruir_carrega_o_catalogo_da_fixture(cli):
     assert filmes == linhas_do_csv
 
 
-def test_reconstruir_carrega_o_dono_do_repo_de_dados(cli):
+def test_reconstruir_carrega_os_donos_do_repo_de_dados(cli):
     cli.ok("reconstruir")
 
-    assert cli.consultar("SELECT slug, nome FROM pessoas WHERE dono = 1") == [["bruno", "Bruno"]]
+    assert cli.consultar("SELECT slug, nome FROM pessoas WHERE dono = 1 ORDER BY slug") == [
+        ["bruno", "Bruno"], ["vera", "Vera"]]
 
 
 def _conteudo(cli):

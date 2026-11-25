@@ -44,6 +44,7 @@ import type { DropCause } from '../recommendation/kept.ts'
 import type { EngineServices } from '../runtime/Engine.ts'
 import { engineError, type EngineError } from '../runtime/EngineError.ts'
 import { Environment } from '../runtime/Environment.ts'
+import { Owner } from '../runtime/Owner.ts'
 import { Run } from '../runtime/Run.ts'
 import { Sqlite, type SqliteError } from '../sqlite/Sqlite.ts'
 import { pyInt } from '../compat/fact-id.ts'
@@ -424,8 +425,8 @@ export const billboardModel = (
     if (input.shown !== undefined)
       films = yield* onlyShown(id, films, input.shown)
     const { weights } = yield* Environment
-    const ownerField = front.get('owner')
-    const owner = textOf(ownerField)
+    // "Você" is whoever looks: the logged-in Pessoa, else the Session's Dono.
+    const owner = (yield* Owner) ?? textOf(front.get('owner'))
     const newOnes = new Map<string, boolean>()
     const recommendation = front.get('recommendation')
     for (const item of mappings(recommendation))

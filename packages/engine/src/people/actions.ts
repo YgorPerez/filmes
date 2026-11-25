@@ -21,6 +21,7 @@ import { yamlToJson } from '../data/yaml.ts'
 import { statedStrength } from '../evidence/ruler.ts'
 import type { Kind, Strength } from '../evidence/strength.ts'
 import { Environment } from '../runtime/Environment.ts'
+import { Owner } from '../runtime/Owner.ts'
 import { engineError, type EngineError } from '../runtime/EngineError.ts'
 import { Run } from '../runtime/Run.ts'
 import {
@@ -449,7 +450,11 @@ const recordStatement = (
     (db) =>
       Effect.gen(function* () {
         const person = yield* resolvePerson(input.person)
-        if (table === 'relatos' && person.owner)
+        // The logged-in Dono speaks for herself; another Dono's taste can
+        // come as a Relato. With no login, any Dono, as Python.
+        const owner = yield* Owner
+        const speaker = owner === null ? person.owner : person.slug === owner
+        if (table === 'relatos' && speaker)
           return yield* invalidUsage(
             'o Dono falando do próprio gosto é Declarado, não Relato',
           )

@@ -1,7 +1,7 @@
 // Operações over the build, on the fixture copy (never the real
-// filmes-dados). Bruno, the fixture's one Dono, becomes admin here, on the
-// copy: `not-admin.e2e.ts` ran before, while he was not. The other files do
-// not mind (an admin only sees one more link, and a banner the e2e never
+// filmes-dados). Bruno, one of the fixture's two Donos, becomes admin here,
+// on the copy; `not-admin.e2e.ts` logs in as Vera, who stays not admin.
+// The other files do not mind (an admin only sees one more link, and a banner the e2e never
 // raises: no remote). Only the desktop evaluates (one run at a time per
 // server, and the two projects share it). `E2E_SCREENSHOTS=<folder>` saves
 // each screen there.

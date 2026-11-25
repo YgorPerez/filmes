@@ -788,7 +788,7 @@ describe('the Pessoa sync and the reload', () => {
 
     const slugs = await fixture.ok(reloadPeople)
 
-    expect(slugs).toEqual(['bruno', 'iara', 'quim', 'rosa', 'teo'])
+    expect(slugs).toEqual(['bruno', 'iara', 'quim', 'rosa', 'teo', 'vera'])
     expect(await personRows(fixture)).toEqual(built)
   })
 
