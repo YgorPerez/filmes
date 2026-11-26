@@ -195,6 +195,64 @@ describe('a Session’s page', () => {
     )
   })
 
+  it('says what the acrescentar put in the request and what it did not understand', () => {
+    render(
+      <SessionScreen
+        page={{
+          ...PAGE,
+          addition: 'chegou a Iara e o Zeca, parecido com Reprise e Amélie',
+          reading: {
+            added: ['Presente: Iara', 'até 1h50'],
+            notUnderstood: ['Zeca'],
+            ambiguous: [
+              {
+                words: 'Reprise',
+                candidates: ['Reprise (2011)', 'Reprise (2004)'],
+              },
+              { words: 'Amélie', candidates: [] },
+            ],
+          },
+        }}
+        notice="regerada"
+      />,
+    )
+    const [, addition] = screen.getAllByRole('status')
+    expect(addition!.textContent).toBe(
+      'Acrescentar: “chegou a Iara e o Zeca, parecido com Reprise e Amélie”. ' +
+        'Entrou no pedido: Presente: Iara; até 1h50. ' +
+        'Não entendi, ficou só anotado na Sessão: “Zeca”. ' +
+        '“Reprise” pode ser Reprise (2011) ou Reprise (2004): diga qual no próximo acrescentar. ' +
+        '“Amélie” não está no Catálogo. ' +
+        'Se for gosto de alguém, só vale com o seu sim: diga na página da Pessoa.',
+    )
+    expect(within(addition!).getByRole('link').getAttribute('href')).toBe(
+      '/pessoas',
+    )
+  })
+
+  it('says an acrescentar with nothing understood was only noted', () => {
+    render(
+      <SessionScreen
+        page={{
+          ...PAGE,
+          addition: 'a Iara odeia terror',
+          reading: {
+            added: [],
+            notUnderstood: ['Iara odeia terror'],
+            ambiguous: [],
+          },
+        }}
+        notice="anotada"
+      />,
+    )
+    const [, addition] = screen.getAllByRole('status')
+    expect(addition!.textContent).toBe(
+      'Acrescentar: “a Iara odeia terror”. ' +
+        'Não entendi, ficou só anotado na Sessão: “Iara odeia terror”. ' +
+        'Se for gosto de alguém, só vale com o seu sim: diga na página da Pessoa.',
+    )
+  })
+
   it('says a closed Session is closed, and what they saw', () => {
     render(
       <SessionScreen
