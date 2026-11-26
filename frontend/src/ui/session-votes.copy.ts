@@ -16,7 +16,8 @@ export const VOTES = {
   refresh: 'Ver se chegou filme novo',
   list: 'Ver a lista',
   notices: {
-    votado: 'Votos enviados.',
+    votado: 'Votos contados.',
+    atualizada: 'Votos contados. A lista foi atualizada.',
     regerada:
       'Votos enviados. Cada não tirou o filme, e outro entrou no lugar.',
   },

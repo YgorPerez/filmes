@@ -126,8 +126,18 @@ test('a Presente’s no swaps the film and redoes the Session; her yes stays and
       new URL(yes.headers.get('location') ?? '', ORIGIN).searchParams.get(
         'feito',
       ),
+    ).toBe('atualizada')
+    const newcomer = now?.find((film) => film !== a && film !== c)
+    expect(await films()).toEqual([a, c, newcomer])
+    expect((await deck('bruno'))?.version).toBe(3)
+
+    const repeated = await post(as('bruno'), `versao=3&sim=${c}`)
+    expect(
+      new URL(repeated.headers.get('location') ?? '', ORIGIN).searchParams.get(
+        'feito',
+      ),
     ).toBe('votado')
-    expect(await films()).toEqual(now)
+    expect((await deck('bruno'))?.version).toBe(3)
 
     await fixture.ok(
       recordFeedback({ session, film: null }),

@@ -55,7 +55,7 @@ import type { Weights } from '../runtime/Weights.ts'
 import { numOrNull, text } from '../sqlite/row.ts'
 import type { Connection, SqliteError } from '../sqlite/Sqlite.ts'
 import { currentVersion, shownFilms, type ShownFilm } from '../sessions/file.ts'
-import { yesVotes } from '../sessions/votes.ts'
+import { orderByYes, yesVotes } from '../sessions/votes.ts'
 import type { Candidate } from './candidates.ts'
 import type { Constraint } from './constraints.ts'
 import { constraintLabel } from './constraints/index.ts'
@@ -121,11 +121,11 @@ const liftKept = (
   yes: ReadonlyMap<string, number>,
 ): ReadonlyMap<string, number> => {
   const onScreen = kept.toSorted(([, p], [, q]) => p - q)
-  // A stable sort: on a tie in yes, the screen's order.
-  const lifted = onScreen.toSorted(
-    ([a], [b]) => (yes.get(b) ?? 0) - (yes.get(a) ?? 0),
+  const lifted = orderByYes(
+    onScreen.map(([id]) => id),
+    yes,
   )
-  return new Map(onScreen.map(([, position], i) => [lifted[i]![0], position]))
+  return new Map(onScreen.map(([, position], i) => [lifted[i]!, position]))
 }
 
 /** What stays and what was on the screen of the Session's current version,

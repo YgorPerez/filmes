@@ -4,9 +4,9 @@
 
 import { within } from './form-fields'
 
-/** `votado`: the Votos were recorded and nothing left the screen;
- * `regerada`: a no took a film off and the Recomendação was redone. */
-const VOTE_NOTICES = ['votado', 'regerada'] as const
+/** `votado`: the Votos were recorded and the screen stayed as is;
+ * `atualizada`: yes votes prompted a redo; `regerada`: a no prompted it. */
+const VOTE_NOTICES = ['votado', 'atualizada', 'regerada'] as const
 export type VoteNotice = (typeof VOTE_NOTICES)[number]
 
 /** `regerar`: the Votos were recorded, but the redo failed;

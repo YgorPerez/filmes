@@ -2,8 +2,8 @@
 // on each film of the screen; the deck's form posts the Votos to
 // `/participar/votos`. A no is a Trocar from that Presente: the Session is
 // redone with the films that stay (`recommendSession` with `keep`, from
-// the request the current version asked), and a yes lifts the film in
-// that redo. Votos never touch taste. Server only.
+// the request the current version asked). A yes can also redo the Session
+// on its own by changing the order. Votos never touch taste. Server only.
 //
 // Every post revalidates the link first (`resolveSessionLink`, with a
 // Presente chosen) and takes only a form of this site (`same-site.ts`). The Session is
@@ -75,9 +75,8 @@ const filmsOf = (form: FormData, name: string) =>
   form.getAll(name).filter((v): v is string => typeof v === 'string')
 
 /** `POST /participar/votos?sessao=…&chave=…&presente=…`: records the
- * chosen Presente's Votos and, when one is a no, redoes the Session; back
- * to the deck with what happened. A dead link or no Presente goes back to
- * the link's page, which says why. */
+ * chosen Presente's Votos, redoes the Session if a film left or the order
+ * changed, and returns to the deck with what happened. */
 export async function voteAction(
   request: Request,
   engine: Engine,
@@ -130,6 +129,8 @@ export async function voteAction(
       logEngineError(redone)
       return deck({ erro: 'regerar' })
     }
-    return deck({ feito: 'regerada' })
+    return deck({
+      feito: cast.output.dropped.length > 0 ? 'regerada' : 'atualizada',
+    })
   })
 }
