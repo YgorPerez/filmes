@@ -102,16 +102,16 @@ describe('the IMDb rating bonus', () => {
 
 describe('a Veto to a genre', () => {
   const vetoRomance = async (fixture: Fixture, count?: number) => {
-    await fixture.ok(personCreate({ name: 'Lorenzo', slug: 'lorenzo' }))
+    await fixture.ok(personCreate({ name: 'Lopo', slug: 'lopo' }))
     await fixture.ok(
       personVeto({
-        person: 'lorenzo',
+        person: 'lopo',
         text: 'não vê romance',
         target: 'Q1054574',
       }),
     )
     return engineRecommendation(fixture, {
-      attendees: ['dono', 'lorenzo'],
+      attendees: ['dono', 'lopo'],
       count,
     })
   }
@@ -132,7 +132,7 @@ describe('a Veto to a genre', () => {
 
     expect(out.vetoes).toEqual([
       {
-        person: 'lorenzo',
+        person: 'lopo',
         text: 'não vê romance',
         target: 'Q1054574',
         label: 'romance',
