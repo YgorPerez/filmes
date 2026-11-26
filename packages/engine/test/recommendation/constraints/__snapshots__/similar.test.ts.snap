@@ -28,7 +28,7 @@ exports[`the whole output, as recorded > similar to ["tt9006701","tt9006702"] 1`
       ],
     },
   },
-  "credit": {},
+  "disagreement": null,
   "films": [
     {
       "coverage": {
@@ -259,6 +259,7 @@ exports[`the whole output, as recorded > similar to ["tt9006701","tt9006702"] 1`
   "rule": {
     "name": "default",
   },
+  "satisfaction": {},
   "vetoes": [],
   "warnings": [
     "TMDB sem chave de API (defina FILMES_TMDB_CHAVE); os filmes saem sem capa, sem título em português e sem sinopse",
@@ -293,7 +294,7 @@ exports[`the whole output, as recorded > similar to ["tt9006701"] 1`] = `
       ],
     },
   },
-  "credit": {},
+  "disagreement": null,
   "films": [
     {
       "coverage": {
@@ -514,6 +515,7 @@ exports[`the whole output, as recorded > similar to ["tt9006701"] 1`] = `
   "rule": {
     "name": "default",
   },
+  "satisfaction": {},
   "vetoes": [],
   "warnings": [
     "TMDB sem chave de API (defina FILMES_TMDB_CHAVE); os filmes saem sem capa, sem título em português e sem sinopse",
@@ -550,7 +552,7 @@ exports[`the whole output, as recorded > similar to ["tt9006701,tt9006711"] 1`] 
       ],
     },
   },
-  "credit": {},
+  "disagreement": null,
   "films": [
     {
       "coverage": {
@@ -737,6 +739,7 @@ exports[`the whole output, as recorded > similar to ["tt9006701,tt9006711"] 1`] 
   "rule": {
     "name": "default",
   },
+  "satisfaction": {},
   "vetoes": [],
   "warnings": [
     "TMDB sem chave de API (defina FILMES_TMDB_CHAVE); os filmes saem sem capa, sem título em português e sem sinopse",
@@ -767,7 +770,7 @@ exports[`the whole output, as recorded > similar to ["tt9006702"] 1`] = `
       ],
     },
   },
-  "credit": {},
+  "disagreement": null,
   "films": [
     {
       "coverage": {
@@ -827,6 +830,7 @@ exports[`the whole output, as recorded > similar to ["tt9006702"] 1`] = `
   "rule": {
     "name": "default",
   },
+  "satisfaction": {},
   "vetoes": [],
   "warnings": [
     "TMDB sem chave de API (defina FILMES_TMDB_CHAVE); os filmes saem sem capa, sem título em português e sem sinopse",
@@ -857,7 +861,7 @@ exports[`the whole output, as recorded > similar to ["tt9006720"] 1`] = `
       ],
     },
   },
-  "credit": {},
+  "disagreement": null,
   "films": [
     {
       "coverage": {
@@ -917,6 +921,7 @@ exports[`the whole output, as recorded > similar to ["tt9006720"] 1`] = `
   "rule": {
     "name": "default",
   },
+  "satisfaction": {},
   "vetoes": [],
   "warnings": [
     "TMDB sem chave de API (defina FILMES_TMDB_CHAVE); os filmes saem sem capa, sem título em português e sem sinopse",
@@ -950,7 +955,7 @@ exports[`the whole output, as recorded > the cut and its warning 1`] = `
       ],
     },
   },
-  "credit": {},
+  "disagreement": null,
   "films": [
     {
       "coverage": {
@@ -1065,6 +1070,7 @@ exports[`the whole output, as recorded > the cut and its warning 1`] = `
   "rule": {
     "name": "default",
   },
+  "satisfaction": {},
   "vetoes": [],
   "warnings": [
     "TMDB sem chave de API (defina FILMES_TMDB_CHAVE); os filmes saem sem capa, sem título em português e sem sinopse",
