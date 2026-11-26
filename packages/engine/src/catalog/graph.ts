@@ -25,7 +25,7 @@ import {
 const SOURCE = 'Wikidata'
 
 /** The dumps whose name starts with one of `prefixes`, by name. */
-export const dumpsNamed = (
+const dumpsNamed = (
   dumps: Dumps,
   ...prefixes: string[]
 ): Array<readonly [string, Dump]> =>
