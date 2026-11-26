@@ -6,15 +6,17 @@ import {
   type SessionRequestRefusal,
 } from '#/content/session-request'
 import type { ReplyRefusal, SessionNotice } from '#/content/billboard-reply'
+import { similarParam } from '#/content/catalog-search'
 import type { CartazPage } from '#/platform/billboard'
-import type { AdditionReading } from '#/platform/notes'
 import type { SearchAnswer } from '#/platform/catalog-search'
+import type { PageReading } from '#/platform/reading'
 import type {
+  NewSessionDraft,
   RequestOptions,
-  SentenceReading,
   SessionItem,
 } from '#/platform/sessions'
 import { Billboard } from './billboard'
+import { CATALOG_SEARCH } from './catalog-search.copy'
 import { ImportsFrame } from './imports'
 import { Option } from './kit/option'
 import { OwnerTag } from './kit/owner-tag'
@@ -22,6 +24,7 @@ import { Slip } from './kit/slip'
 import {
   Alert,
   CatalogSearch,
+  Item,
   LinkButton,
   Meta,
   Notice,
@@ -202,17 +205,20 @@ export function SessionScreen({
   )
 }
 
+const labels = (candidates: readonly { label: string }[]) =>
+  candidates.map((c) => c.label)
+
 /** The acrescentar, what went into the request from it, and what did
  * not. */
-function readingText(addition: string, reading: AdditionReading): string {
+function readingText(addition: string, reading: PageReading): string {
   const { session } = SESSIONS
   return [
     session.additionRead(addition),
-    reading.added.length > 0 && session.additionAdded(reading.added),
+    reading.understood.length > 0 && session.additionAdded(reading.understood),
     reading.notUnderstood.length > 0 &&
       session.additionNotUnderstood(reading.notUnderstood),
-    ...reading.ambiguous.map((a) =>
-      session.additionAmbiguous(a.words, a.candidates),
+    ...reading.ambiguities.map((a) =>
+      session.additionAmbiguous(a.words, labels(a.candidates)),
     ),
     session.additionTaste,
   ]
@@ -308,32 +314,83 @@ function SessionView({
 //
 // The Dono's sentence, kept with the Session, and "Ler" (#199), which
 // posts the form with `ler=sim` to come back with it filled from the
-// sentence. Under it, once read, what the sentence filled, what it left out
-// and what it could not decide.
+// sentence on top of what she had set. Under it, once read, what the
+// sentence filled, what it left out and what it could not decide: a title
+// of several films lists them, each with "Usar", as the Catálogo search.
 
-/** What the reading of `reading` says, one line each. */
-function ReadingSaid({ reading }: { reading: SentenceReading }) {
+/** What the reading of `reading` says, one line each; `pick` is the link
+ * that takes a film for "Parecido com". */
+function ReadingSaid({
+  reading,
+  pick,
+}: {
+  reading: PageReading
+  pick: (id: string) => string
+}) {
   const said = SESSIONS.form.reading
+  // A title of several films lists them, with "Usar"; the rest is a line.
+  const isFilms = (a: PageReading['ambiguities'][number]) =>
+    a.field === 'similar' && a.candidates.length > 0
+  const films = reading.ambiguities.filter(isFilms)
+  const others = reading.ambiguities.filter((a) => !isFilms(a))
   const lines = [
     reading.understood.length > 0
       ? said.understood(reading.understood)
       : said.nothing,
     reading.notUnderstood.length > 0 &&
       said.notUnderstood(reading.notUnderstood),
-    reading.ambiguities.length > 0 && said.ambiguous(reading.ambiguities),
+    others.length > 0 &&
+      said.ambiguous(
+        others.map((a) => ({
+          words: a.words,
+          candidates: labels(a.candidates),
+        })),
+      ),
   ].filter((line) => line !== false)
   return (
-    <Notice>
-      {lines.map((line) => (
-        <span key={line} className="block">
-          {line}
-        </span>
+    <>
+      <Notice>
+        {lines.map((line) => (
+          <span key={line} className="block">
+            {line}
+          </span>
+        ))}
+      </Notice>
+      {films.map((a) => (
+        <div key={a.words} className="flex flex-col gap-xs">
+          <p className="text-meta">{said.similarAmbiguous(a.words)}</p>
+          <ul className="flex flex-col">
+            {a.candidates.map((film) => (
+              <Item
+                key={film.id}
+                actions={
+                  <LinkButton
+                    href={pick(film.id)}
+                    label={CATALOG_SEARCH.pickLabel(film.label)}
+                  >
+                    {CATALOG_SEARCH.pick}
+                  </LinkButton>
+                }
+              >
+                <span className="font-semibold">{film.label}</span>
+              </Item>
+            ))}
+          </ul>
+        </div>
       ))}
-    </Notice>
+    </>
   )
 }
 
-function Sentence({ reading }: { reading: SentenceReading | null }) {
+function Sentence({
+  text,
+  reading,
+  pick,
+}: {
+  text?: string
+  reading: PageReading | null
+  pick: (id: string) => string
+}) {
   const { form } = SESSIONS
   return (
     <div className="flex flex-col gap-lg rounded-card border border-rule bg-surface p-xl">
@@ -344,14 +401,14 @@ function Sentence({ reading }: { reading: SentenceReading | null }) {
             label={form.words}
             hint={form.wordsHint}
             placeholder={form.wordsPlaceholder}
-            defaultValue={reading?.text}
+            defaultValue={text}
           />
         </div>
         <Submit name="ler" value="sim" className="self-start sm:self-auto">
           {form.read}
         </Submit>
       </div>
-      {reading && <ReadingSaid reading={reading} />}
+      {reading && <ReadingSaid reading={reading} pick={pick} />}
     </div>
   )
 }
@@ -370,40 +427,33 @@ const CHILD_OPTIONS = [
   })),
 ]
 
-/** The form's fields a sentence filled ("Ler"); none before a reading. */
+/** The form's fields as "Ler" left them; none before a reading. */
 type Asked = Partial<SessionRequestForm>
 
-/** The form's value of the Regra the sentence asked for. */
+/** The form's value of the Regra asked for. */
 const ruleChoice = (rule: Asked['rule']) =>
   (Object.keys(RULE_CHOICES) as (keyof typeof RULE_CHOICES)[]).find(
     (choice) => RULE_CHOICES[choice] === (rule ?? 'default'),
   )
 
-const text = (value: number | string | undefined) =>
+/** A number field's value as the input holds it. */
+const inputValue = (value: number | string | undefined) =>
   value === undefined ? undefined : String(value)
 
-/** "Parecido com": the films the Catálogo search took, then the ones the
- * sentence named, each once. */
-const similarIds = (similar: string | undefined, asked: Asked) => {
-  const ids = [
-    ...new Set([...(similar?.split(',') ?? []), ...(asked.similar ?? [])]),
-  ]
-  return ids.length === 0 ? undefined : ids.join(',')
-}
-
-/** Nova Sessão with `similar`, the search of `query` and the sentence
- * read: "Usar" adds a film to "Parecido com". */
+/** Nova Sessão with the search of `query` and the draft of `note`: "Usar"
+ * adds a film to the ones "Parecido com" already has (`similar`). */
 const similarHref =
   (
     similar: string | undefined,
     query: string | undefined,
-    sentence: string | undefined,
+    note: string | undefined,
   ) =>
   (id: string) => {
-    const ids = [...new Set([...(similar?.split(',') ?? []), id])]
-    const params = new URLSearchParams({ parecido: ids.join(',') })
+    const params = new URLSearchParams({
+      parecido: similarParam(`${similar ?? ''},${id}`) ?? id,
+    })
     if (query !== undefined) params.set('buscar', query)
-    if (sentence !== undefined) params.set('frase', sentence)
+    if (note !== undefined) params.set('nota', note)
     return `/sessoes/nova?${params.toString()}`
   }
 
@@ -411,22 +461,29 @@ const similarHref =
  * plain POST to `/sessoes/nova/enviar`: it works before the JavaScript.
  * `options` is null when the engine cannot run on this server. Above it,
  * folded until it is needed, the Catálogo search (`search`) fills
- * "Parecido com" (`similar`). `reading` is the sentence "Ler" read: the
- * form comes back filled with it. */
+ * "Parecido com" (`similar`). `draft` is the form "Ler" filled, kept in the
+ * note `note`: the form comes back with it. */
 export function NewSession({
   options,
   refusal,
   search = null,
   similar,
-  reading = null,
+  draft = null,
+  note,
 }: {
   options: RequestOptions | null
   refusal?: SessionRequestRefusal
   search?: SearchAnswer | null
   similar?: string
-  reading?: SentenceReading | null
+  draft?: NewSessionDraft | null
+  note?: string
 }) {
   const { form } = SESSIONS
+  // The films of the draft, then the ones "Usar" took since.
+  const films = similarParam(
+    [...(draft?.fields.similar ?? []), similar ?? ''].join(','),
+  )
+  const pick = similarHref(films, search?.query, note)
   return (
     <ImportsFrame back={SESSIONS.back} backTo="/sessoes">
       <div className="flex flex-col gap-sm">
@@ -447,15 +504,16 @@ export function NewSession({
               action="/sessoes/nova"
               scope="films"
               answer={search}
-              keep={{ parecido: similar, frase: reading?.text }}
-              pick={similarHref(similar, search?.query, reading?.text)}
+              keep={{ parecido: films, nota: note }}
+              pick={pick}
             />
           </SearchFold>
           <NewSessionForm
-            key={reading?.text}
+            key={`${note ?? ''} ${films ?? ''}`}
             options={options}
-            similar={similar}
-            reading={reading}
+            similar={films}
+            draft={draft}
+            pick={pick}
           />
         </>
       )}
@@ -466,14 +524,16 @@ export function NewSession({
 function NewSessionForm({
   options,
   similar,
-  reading,
+  draft,
+  pick,
 }: {
   options: RequestOptions
   similar?: string
-  reading: SentenceReading | null
+  draft: NewSessionDraft | null
+  pick: (id: string) => string
 }) {
   const { form } = SESSIONS
-  const asked = reading?.request ?? {}
+  const asked = draft?.fields ?? {}
   return (
     <form
       method="post"
@@ -486,11 +546,15 @@ function NewSessionForm({
       <button type="submit" hidden>
         {form.submit}
       </button>
-      <Sentence reading={reading} />
+      <Sentence
+        text={asked.request}
+        reading={draft?.reading ?? null}
+        pick={pick}
+      />
       <Attendees options={options} asked={asked} />
       <Rule options={options} asked={asked} />
       <Moods moods={options.moods} asked={asked} />
-      <Constraints similar={similarIds(similar, asked)} asked={asked} />
+      <Constraints similar={similar} asked={asked} />
       <Submit variant="primary" className="w-full sm:w-auto sm:self-start">
         {form.submit}
       </Submit>
@@ -532,7 +596,7 @@ function Attendees({
           max={50}
           label={form.count}
           hint={form.countHint}
-          defaultValue={text(asked.count)}
+          defaultValue={inputValue(asked.count)}
         />
       </div>
     </Section>
@@ -625,27 +689,27 @@ function Constraints({ similar, asked }: { similar?: string; asked: Asked }) {
           min={1}
           label={form.duration}
           hint={form.durationHint}
-          defaultValue={text(asked.maxDuration)}
+          defaultValue={inputValue(asked.maxDuration)}
         />
         <SelectField
           name="crianca"
           label={form.child}
           options={CHILD_OPTIONS}
-          defaultValue={text(asked.child) ?? ''}
+          defaultValue={inputValue(asked.child) ?? ''}
         />
         <TextField
           name="desde"
           {...year}
           label={form.since}
           hint={form.yearHint}
-          defaultValue={text(asked.since)}
+          defaultValue={inputValue(asked.since)}
         />
         <TextField
           name="ate"
           {...year}
           label={form.until}
           hint={form.yearHint}
-          defaultValue={text(asked.until)}
+          defaultValue={inputValue(asked.until)}
         />
       </div>
       <TextField
@@ -658,6 +722,7 @@ function Constraints({ similar, asked }: { similar?: string; asked: Asked }) {
         name="gatilhos"
         label={form.triggers}
         hint={form.triggersHint}
+        defaultValue={asked.triggers?.join(', ')}
       />
       <TextField
         name="parecido"

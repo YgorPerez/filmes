@@ -1,3 +1,4 @@
+import { REQUEST_READING_MAX_LENGTH } from '@filmes/engine/reading-limits'
 import type { ReplyRefusal, SessionNotice } from '#/content/billboard-reply'
 import type { SessionRequestRefusal } from '#/content/session-request'
 
@@ -8,6 +9,15 @@ const either = (items: readonly string[]) =>
   items.length <= 1
     ? items.join('')
     : `${items.slice(0, -1).join(', ')} ou ${items.at(-1)}`
+
+/** The runs of words a reading did not understand: “a”, “b”. */
+const runs = (words: readonly string[]) => words.map(quoted).join(', ')
+
+/** A name or title a reading could not decide: “X” pode ser A ou B. */
+const ambiguity = (words: string, candidates: readonly string[]) =>
+  candidates.length === 0
+    ? `${quoted(words)} não está no Catálogo`
+    : `${quoted(words)} pode ser ${either(candidates)}`
 
 const films = (n: number) =>
   n === 0 ? 'nenhum filme' : n === 1 ? '1 filme' : `${n} filmes`
@@ -69,12 +79,12 @@ export const SESSIONS = {
     additionRead: (text: string) => `Acrescentar: “${text}”.`,
     additionAdded: (labels: readonly string[]) =>
       `Entrou no pedido: ${labels.join('; ')}.`,
-    additionNotUnderstood: (runs: readonly string[]) =>
-      `Não entendi, ficou só anotado na Sessão: ${runs.map((r) => `“${r}”`).join(', ')}.`,
+    additionNotUnderstood: (words: readonly string[]) =>
+      `Não entendi, ficou só anotado na Sessão: ${runs(words)}.`,
     additionAmbiguous: (words: string, candidates: readonly string[]) =>
       candidates.length === 0
-        ? `“${words}” não está no Catálogo.`
-        : `“${words}” pode ser ${candidates.join(' ou ')}: diga qual no próximo acrescentar.`,
+        ? `${ambiguity(words, candidates)}.`
+        : `${ambiguity(words, candidates)}: diga qual no próximo acrescentar.`,
     additionTaste: 'Se for gosto de alguém, só vale com o seu sim:',
     closed: 'Fechada',
   },
@@ -107,18 +117,17 @@ export const SESSIONS = {
       understood: (labels: readonly string[]) =>
         `Lido da frase: ${labels.join('; ')}.`,
       nothing: 'Nada da frase preencheu o formulário.',
-      notUnderstood: (runs: readonly string[]) =>
-        `Ficou de fora: ${runs.map(quoted).join(', ')}.`,
+      notUnderstood: (words: readonly string[]) =>
+        `Ficou de fora: ${runs(words)}.`,
       ambiguous: (
         items: readonly { words: string; candidates: readonly string[] }[],
       ) =>
         `Em dúvida, escolha no formulário: ${items
-          .map(({ words, candidates }) =>
-            candidates.length === 0
-              ? `${quoted(words)} não está no Catálogo`
-              : `${quoted(words)} pode ser ${either(candidates)}`,
-          )
+          .map(({ words, candidates }) => ambiguity(words, candidates))
           .join('; ')}.`,
+      /** A title of several films: each with “Usar”, as the search. */
+      similarAmbiguous: (words: string) =>
+        `${quoted(words)} pode ser um destes; use um para “Parecido com”:`,
     },
     constraints: 'Restrições',
     constraintsLead:
@@ -149,8 +158,7 @@ export const SESSIONS = {
 
   refusals: {
     frase: 'Escreva a frase antes de tocar em “Ler”.',
-    'frase-longa':
-      'A frase passa de 500 caracteres. Encurte e toque em “Ler” de novo.',
+    'frase-longa': `A frase passa de ${REQUEST_READING_MAX_LENGTH} caracteres. Encurte e toque em “Ler” de novo.`,
     presentes: 'Marque pelo menos um Presente.',
     de: '“O gosto de uma Pessoa” precisa de uma Pessoa entre os Presentes.',
     quantos: 'Quantos filmes: um número de 1 a 50.',

@@ -2,7 +2,8 @@
 // (no age: 0, as `--crianca` with none). An age out of 0 to 17 is not read.
 
 import { Effect, Schema } from 'effect'
-import { makeReader, restrictionLabel, scan } from '../reader.ts'
+import { childModule } from '../../recommendation/constraints/child.ts'
+import { makeReader, scan } from '../reader.ts'
 import { phrasesOf } from '../words.ts'
 
 const MAX_AGE = 17
@@ -33,7 +34,7 @@ export const childReader = makeReader({
           end,
           found: {
             request: { child: age ?? 0 },
-            label: restrictionLabel({ name: 'child', age: age ?? 0 }),
+            label: childModule.label({ name: 'child', age: age ?? 0 }),
           },
         }
       }),

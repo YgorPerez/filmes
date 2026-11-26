@@ -16,22 +16,25 @@ import { engineError, type EngineError } from '../runtime/EngineError.ts'
 import { ownerOf } from '../runtime/Owner.ts'
 import { text } from '../sqlite/row.ts'
 import { Sqlite, type Connection, type SqliteError } from '../sqlite/Sqlite.ts'
+import { REQUEST_READING_MAX_LENGTH } from './limits.ts'
 import type {
   Claim,
   PersonName,
   ReadCandidate,
   ReadField,
+  ReadFields,
   ReadingContext,
-  ReadRequest,
 } from './reader.ts'
 import { READERS } from './readers/index.ts'
 import { phraseOf, phrasesOf, sentenceOf, wordsOf } from './words.ts'
 
-/** The longest sentence read, in characters. */
-export const REQUEST_READING_MAX_LENGTH = 500
+export { REQUEST_READING_MAX_LENGTH }
 
-export interface RequestReadingRequest {
+export interface RequestReadingInput {
   readonly text: string
+  /** The kinds of field to apply; the words of an item of any other kind
+   * come back not understood. All of them when absent. */
+  readonly fields?: ReadonlyArray<ReadField>
 }
 
 /** One thing understood, with the words it came from as typed. */
@@ -41,7 +44,7 @@ export interface ReadItem {
   /** How it reads on the page ("Presente: Iara", "nada lento"). */
   readonly label: string
   /** Its part of the request. */
-  readonly request: ReadRequest
+  readonly request: ReadFields
 }
 
 /** A name of several Pessoas, or a title of several films or of none. */
@@ -55,7 +58,7 @@ export interface RequestReading {
   readonly text: string
   /** Every item's part, merged: the lists joined in order, each value
    * once; another field, the last item's. */
-  readonly request: ReadRequest
+  readonly request: ReadFields
   /** In the order of the sentence. */
   readonly understood: ReadonlyArray<ReadItem>
   /** Each run of words no item took, as typed, without the words that
@@ -67,22 +70,26 @@ export interface RequestReading {
 const Common = Schema.Struct({
   fillers: Schema.Array(Schema.String),
   numbers: Schema.Record(Schema.String, Schema.Int),
+  negation: Schema.Struct({ words: Schema.Array(Schema.String) }),
   taste: Schema.Struct({ words: Schema.Array(Schema.String) }),
 })
 
 const LISTS = ['attendees', 'moods', 'similar'] as const
 
-const merge = (into: ReadRequest, part: ReadRequest): ReadRequest => {
-  const merged: { -readonly [K in keyof ReadRequest]: ReadRequest[K] } = {
-    ...into,
-    ...part,
-  }
+/** `part` over `into`: a list joined to the one there, in order and each
+ * value once; any other field, `part`'s when it has one. How a reading's
+ * items make its request, and how the web puts a reading on a request. */
+export const mergeReadFields = <R extends ReadFields>(
+  into: R,
+  part: ReadFields,
+): R => {
+  const lists: { [K in (typeof LISTS)[number]]?: ReadonlyArray<string> } = {}
   for (const key of LISTS) {
     const before = into[key]
     const added = part[key]
-    if (before && added) merged[key] = [...new Set([...before, ...added])]
+    if (before && added) lists[key] = [...new Set([...before, ...added])]
   }
-  return merged
+  return { ...into, ...part, ...lists }
 }
 
 /** The Pessoas by each key they answer to, and the Dono. */
@@ -152,10 +159,11 @@ const choose = (
   }
 }
 
-/** Reads `request.text` into the request fields it understood. A
- * sentence over `REQUEST_READING_MAX_LENGTH` is `invalid_usage`. */
+/** Reads `request.text` into the request fields it understood, applying
+ * only the items of `request.fields`. A sentence over
+ * `REQUEST_READING_MAX_LENGTH` is `invalid_usage`. */
 export const readRequest = (
-  request: RequestReadingRequest,
+  request: RequestReadingInput,
 ): Effect.Effect<
   RequestReading,
   EngineError | SqliteError,
@@ -180,6 +188,7 @@ export const readRequest = (
     const context: ReadingContext = {
       ...(yield* sqlite.read(peopleOf)),
       fillers: new Set(phrasesOf(common.fillers).map((p) => p.join(' '))),
+      negations: phrasesOf(common.negation.words),
     }
     const numbers = new Map(
       Object.entries(common.numbers).map(([name, n]) => [
@@ -218,12 +227,14 @@ export const readRequest = (
     yield* phase(false)
     yield* phase(true)
 
+    const applied = new Set(request.fields ?? READERS.map((r) => r.field))
     const chosen = [...new Set(used.values())].sort((a, b) => a.start - b.start)
     const quoted = ({ quote, start, end }: Claim) =>
       all.text(quote?.start ?? start, quote?.end ?? end)
     const understood: ReadItem[] = []
     const ambiguities: ReadAmbiguity[] = []
     for (const claim of chosen) {
+      if (!applied.has(claim.field)) continue
       const words = quoted(claim)
       if ('candidates' in claim.found)
         ambiguities.push({
@@ -247,17 +258,20 @@ export const readRequest = (
       run = undefined
     }
     for (const [i, token] of tokens.entries()) {
-      if (used.has(i) || (run && tokens[run.start]?.clause !== token.clause))
-        flush()
-      if (used.has(i) || context.fillers.has(token.key)) continue
+      const claim = used.get(i)
+      if (claim || (run && tokens[run.start]?.clause !== token.clause)) flush()
+      // An item of a field not applied comes back whole, as typed.
+      if (claim && !applied.has(claim.field) && claim.start === i)
+        notUnderstood.push(all.text(claim.start, claim.end))
+      if (claim || context.fillers.has(token.key)) continue
       run = { start: run?.start ?? i, end: i + 1 }
     }
     flush()
 
     return {
       text: request.text,
-      request: understood.reduce<ReadRequest>(
-        (merged, item) => merge(merged, item.request),
+      request: understood.reduce<ReadFields>(
+        (merged, item) => mergeReadFields(merged, item.request),
         {},
       ),
       understood,

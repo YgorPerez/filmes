@@ -5,7 +5,12 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { Effect } from 'effect'
 import { describe, expect, test } from 'vite-plus/test'
-import { readRequest, Sqlite } from '../../src/index.ts'
+import {
+  ADDITION_FIELDS,
+  readRequest,
+  Sqlite,
+  withAddition,
+} from '../../src/index.ts'
 import { useFixture, type Fixture } from '../fixture.ts'
 
 const change = (sql: string) =>
@@ -396,6 +401,24 @@ describe('the whole sentence', () => {
     })
   })
 
+  test('a Clima after a negation in its clause is not understood', async () => {
+    const fixture = useFixture()
+
+    const reading = await read(fixture, 'algo leve, nada de terror')
+
+    expect(reading.request).toEqual({ moods: ['leve'] })
+    expect(reading.understood.map((i) => i.label)).toEqual(['Clima: leve'])
+    expect(reading.notUnderstood).toEqual(['nada de terror'])
+    expect((await read(fixture, 'sem comédia')).request).toEqual({})
+    expect((await read(fixture, 'não quero terror')).request).toEqual({})
+  })
+
+  test('a negation in another clause does not deny the Clima', async () => {
+    expect(await fields(useFixture(), 'nada de terror; leve')).toEqual({
+      moods: ['leve'],
+    })
+  })
+
   test('the clauses around one about taste are still read', async () => {
     const reading = await read(useFixture(), 'chegou a Iara; ela adora terror')
 
@@ -481,6 +504,91 @@ describe('the whole sentence', () => {
           message: 'a frase tem mais de 500 caracteres',
         },
       },
+    })
+  })
+})
+
+describe('the Acrescentar', () => {
+  const add = (fixture: Fixture, text: string) =>
+    fixture.ok(readRequest({ text, fields: ADDITION_FIELDS }), {})
+
+  test('applies Presentes, Climas, Restrições and Parecido', async () => {
+    const reading = await add(
+      useFixture(),
+      'chegou a Iara, leve, até 2h, nada lento, parecido com Poeira',
+    )
+
+    expect(reading.request).toEqual({
+      attendees: ['iara'],
+      moods: ['leve'],
+      maxDuration: 120,
+      noSlow: true,
+      similar: ['tt9001904'],
+    })
+    expect(reading.notUnderstood).toEqual([])
+  })
+
+  test('reads no count, Regra or "de": their words are not understood', async () => {
+    const fixture = useFixture()
+    await fixture.ok(change("INSERT INTO apelidos VALUES ('rosa', 'Teo')"))
+
+    const reading = await add(
+      fixture,
+      '3 filmes, pelo gosto da Iara, leve, pelo gosto do Teo',
+    )
+
+    expect(reading.request).toEqual({ moods: ['leve'] })
+    expect(reading.understood.map((i) => i.label)).toEqual(['Clima: leve'])
+    expect(reading.notUnderstood).toEqual([
+      '3 filmes',
+      'pelo gosto da Iara',
+      'pelo gosto do Teo',
+    ])
+    expect(reading.ambiguities).toEqual([])
+  })
+
+  test('adds Presentes and Climas, replaces a Restrição, the year range and the Parecido', () => {
+    expect(
+      withAddition(
+        {
+          attendees: ['bruno'],
+          moods: ['leve'],
+          count: 3,
+          maxDuration: 90,
+          since: 2010,
+          similar: ['tt9000101'],
+          noSad: true,
+        },
+        {
+          attendees: ['iara', 'bruno'],
+          moods: ['tenso'],
+          maxDuration: 120,
+          until: 2021,
+          similar: ['tt9001904'],
+        },
+      ),
+    ).toEqual({
+      attendees: ['bruno', 'iara'],
+      moods: ['leve', 'tenso'],
+      count: 3,
+      maxDuration: 120,
+      until: 2021,
+      similar: ['tt9001904'],
+      noSad: true,
+    })
+  })
+
+  test('keeps the year range and the Parecido it does not name', () => {
+    expect(
+      withAddition(
+        { attendees: ['bruno'], since: 2010, similar: ['tt9000101'] },
+        { noSlow: true },
+      ),
+    ).toEqual({
+      attendees: ['bruno'],
+      since: 2010,
+      similar: ['tt9000101'],
+      noSlow: true,
     })
   })
 })

@@ -11,11 +11,11 @@ import {
   type FilmMatch,
 } from '../../catalog/search.ts'
 import { searchKey } from '../../catalog/search-key.ts'
+import { similarModule } from '../../recommendation/constraints/similar.ts'
 import type { EngineError } from '../../runtime/EngineError.ts'
 import type { Sqlite, SqliteError } from '../../sqlite/Sqlite.ts'
 import {
   makeReader,
-  restrictionLabel,
   type Claim,
   type Found,
   type ReadEffect,
@@ -70,7 +70,7 @@ const found = ({ films, clear }: Search): Found =>
   clear
     ? {
         request: { similar: [clear.id] },
-        label: restrictionLabel({
+        label: similarModule.label({
           name: 'similar',
           films: [clear.id],
           titles: [clear.title],
@@ -114,12 +114,13 @@ export const similarReader = makeReader({
 
       const claims: Claim[] = []
       for (let i = 0; i < words.length; i += 1) {
-        const pair = words.longest(i, between)
-        const one = pair > 0 ? 0 : words.longest(i, like)
-        const start = i + pair + one
-        const end = pair + one > 0 ? titleEnd(start) : start
+        // The words of "entre" (two titles) or of "parecido com" (one).
+        const betweenLength = words.longest(i, between)
+        const likeLength = betweenLength > 0 ? 0 : words.longest(i, like)
+        const start = i + betweenLength + likeLength
+        const end = start > i ? titleEnd(start) : start
         if (end === start) continue
-        if (one > 0) {
+        if (likeLength > 0) {
           const read = yield* title(words, start, end, context.fillers)
           claims.push({
             start: i,

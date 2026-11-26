@@ -3,8 +3,6 @@
 // kind is a new file in `readers/`, listed in `readers/index.ts`.
 
 import { Effect, Schema } from 'effect'
-import type { StoredConstraint } from '../recommendation/constraints.ts'
-import { constraintLabel } from '../recommendation/constraints/index.ts'
 import type { RecommendRequest } from '../recommendation/recommend.ts'
 import type { Environment } from '../runtime/Environment.ts'
 import { engineError, type EngineError } from '../runtime/EngineError.ts'
@@ -27,8 +25,8 @@ export type ReadField =
   | 'by'
 
 /** The fields of a recommendation request a sentence can fill, with the
- * same names and values. */
-export type ReadRequest = Partial<
+ * same names and values: what one item read, or a whole reading. */
+export type ReadFields = Partial<
   Pick<
     RecommendRequest,
     | 'attendees'
@@ -58,7 +56,7 @@ export interface ReadCandidate {
 /** What a reader found in some words: an item of the request, or a name
  * or title that is more than one thing (or, for a title, nothing). */
 export type Found =
-  | { readonly request: ReadRequest; readonly label: string }
+  | { readonly request: ReadFields; readonly label: string }
   | { readonly candidates: ReadonlyArray<ReadCandidate> }
 
 export interface Claim {
@@ -87,6 +85,9 @@ export interface ReadingContext {
   readonly owner: PersonName | null
   /** The keys of the words that only join the others. */
   readonly fillers: ReadonlySet<string>
+  /** The phrases that deny what follows them in their clause ("nada de",
+   * "sem", "não"). */
+  readonly negations: ReadonlyArray<Phrase>
 }
 
 export type ReadEffect = Effect.Effect<
@@ -172,7 +173,7 @@ export const Phrases = Schema.Struct({ phrases: Schema.Array(Schema.String) })
 export const flagReader = (
   field: ReadField,
   section: string,
-  request: ReadRequest,
+  request: ReadFields,
   label: string,
 ): Reader =>
   makeReader({
@@ -191,7 +192,3 @@ export const flagReader = (
       )
     },
   })
-
-/** How a Restrição reads, as the Session shows it ("nada lento"). */
-export const restrictionLabel = (stored: StoredConstraint): string =>
-  constraintLabel(stored) ?? stored.name

@@ -1,8 +1,9 @@
-// Idioma original: "filme nacional", "em português", "francês", as the
-// code the Restrição takes.
+// The original language: "filme nacional", "em português", "francês", as
+// the code the Restrição takes.
 
 import { Effect, Schema } from 'effect'
-import { longestOf, makeReader, restrictionLabel, scan } from '../reader.ts'
+import { languageModule } from '../../recommendation/constraints/language.ts'
+import { longestOf, makeReader, scan } from '../reader.ts'
 import { phraseOf } from '../words.ts'
 
 export const languageReader = makeReader({
@@ -22,7 +23,7 @@ export const languageReader = makeReader({
             end: i + best.length,
             found: {
               request: { language: best.value },
-              label: restrictionLabel({
+              label: languageModule.label({
                 name: 'language',
                 language: best.value,
               }),

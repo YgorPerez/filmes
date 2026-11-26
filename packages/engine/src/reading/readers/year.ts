@@ -1,9 +1,10 @@
-// Ano: "dos anos 90", "depois de 2010", "a partir de 2010", "antes de
-// 1980", "até 2015", "entre 1990 e 2000". "Depois" and "antes" leave the
-// year out: "depois de 2010" is from 2011.
+// The release years: "dos anos 90", "depois de 2010", "a partir de 2010",
+// "antes de 1980", "até 2015", "entre 1990 e 2000". "Depois" and "antes"
+// leave the year out: "depois de 2010" is from 2011.
 
 import { Effect, Schema } from 'effect'
-import { makeReader, restrictionLabel, scan, type Claim } from '../reader.ts'
+import { yearModule } from '../../recommendation/constraints/year.ts'
+import { makeReader, scan, type Claim } from '../reader.ts'
 import { phrasesOf, type Words } from '../words.ts'
 
 const Vocabulary = Schema.Struct({
@@ -15,6 +16,15 @@ const Vocabulary = Schema.Struct({
   between: Schema.Array(Schema.String),
   and: Schema.Array(Schema.String),
 })
+
+/** The phrases of one end of the range, which end it sets, and what it
+ * adds to the year it names. */
+const BOUNDS = [
+  { kind: 'after', end: 'since', offset: 1 },
+  { kind: 'since', end: 'since', offset: 0 },
+  { kind: 'before', end: 'until', offset: -1 },
+  { kind: 'until', end: 'until', offset: 0 },
+] as const
 
 const YEAR = /^\d{4}$/u
 const DECADE = /^(?:\d0|\d{3}0)$/u
@@ -44,7 +54,7 @@ const claim = (
       ...(since === null ? {} : { since }),
       ...(until === null ? {} : { until }),
     },
-    label: restrictionLabel({ name: 'year', since, until }),
+    label: yearModule.label({ name: 'year', since, until }),
   },
 })
 
@@ -62,8 +72,8 @@ export const yearReader = makeReader({
       between: phrasesOf(vocabulary.between),
       and: phrasesOf(vocabulary.and),
     }
-    /** The phrase of `kind` at `i` and the year after it. */
-    const then = (
+    /** The year a phrase of `kind` at `i` names, and the word after it. */
+    const yearAfter = (
       i: number,
       kind: keyof typeof phrases,
       read: (words: Words, i: number) => number | undefined = yearAt,
@@ -76,25 +86,26 @@ export const yearReader = makeReader({
     }
     return Effect.succeed(
       scan(words, (i) => {
-        const decade = then(i, 'decade', decadeAt)
+        const decade = yearAfter(i, 'decade', decadeAt)
         if (decade) return claim(i, decade.end, decade.value, decade.value + 9)
-        const between = then(i, 'between')
-        const last = between && then(between.end, 'and')
-        if (between && last)
+        const first = yearAfter(i, 'between')
+        const last = first && yearAfter(first.end, 'and')
+        if (first && last)
           return claim(
             i,
             last.end,
-            Math.min(between.value, last.value),
-            Math.max(between.value, last.value),
+            Math.min(first.value, last.value),
+            Math.max(first.value, last.value),
           )
-        const after = then(i, 'after')
-        if (after) return claim(i, after.end, after.value + 1, null)
-        const since = then(i, 'since')
-        if (since) return claim(i, since.end, since.value, null)
-        const before = then(i, 'before')
-        if (before) return claim(i, before.end, null, before.value - 1)
-        const until = then(i, 'until')
-        return until && claim(i, until.end, null, until.value)
+        for (const { kind, end, offset } of BOUNDS) {
+          const bound = yearAfter(i, kind)
+          if (bound === undefined) continue
+          const year = bound.value + offset
+          return end === 'since'
+            ? claim(i, bound.end, year, null)
+            : claim(i, bound.end, null, year)
+        }
+        return undefined
       }),
     )
   },

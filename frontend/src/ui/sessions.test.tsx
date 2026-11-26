@@ -202,14 +202,18 @@ describe('a Session’s page', () => {
           ...PAGE,
           addition: 'chegou a Iara e o Zeca, parecido com Reprise e Amélie',
           reading: {
-            added: ['Presente: Iara', 'até 1h50'],
+            understood: ['Presente: Iara', 'até 1h50'],
             notUnderstood: ['Zeca'],
-            ambiguous: [
+            ambiguities: [
               {
+                field: 'similar',
                 words: 'Reprise',
-                candidates: ['Reprise (2011)', 'Reprise (2004)'],
+                candidates: [
+                  { id: 'tt9012601', label: 'Reprise (2011)' },
+                  { id: 'tt9012602', label: 'Reprise (2004)' },
+                ],
               },
-              { words: 'Amélie', candidates: [] },
+              { field: 'similar', words: 'Amélie', candidates: [] },
             ],
           },
         }}
@@ -237,9 +241,9 @@ describe('a Session’s page', () => {
           ...PAGE,
           addition: 'a Iara odeia terror',
           reading: {
-            added: [],
+            understood: [],
             notUnderstood: ['Iara odeia terror'],
-            ambiguous: [],
+            ambiguities: [],
           },
         }}
         notice="anotada"

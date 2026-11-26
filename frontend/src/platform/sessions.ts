@@ -3,14 +3,15 @@
 // Restrições, and the page of one Session. The form posts to
 // `/sessoes/nova/enviar`, which opens the Session as the logged-in Dono (the
 // commit's author, and who "dono" is) and goes to its page. Its "Ler"
-// (#199) posts the same form with `ler=sim`: the route goes back to the
-// form with the sentence in `?frase=`, and the page reads it as it loads
-// (`sentenceReading`, the engine's Leitura do pedido) and comes back filled.
-// Server only.
+// (#199) posts the same form with `ler=sim`: the route reads the sentence
+// (the engine's Leitura do pedido), puts what it understood on top of what
+// the Dono had set, and goes back to the form with that in a note
+// (`?nota=`, `notes.ts`). Server only.
 
 import {
   readPeople,
   listSessions,
+  mergeReadFields,
   readMoods,
   readRequest,
   recommendSession,
@@ -22,8 +23,8 @@ import {
 } from '@filmes/engine'
 import { field } from '#/content/form-fields'
 import {
+  draftOf,
   parseSessionRequest,
-  SENTENCE_MAX_LENGTH,
   type SessionRequestForm,
   type SessionRequestRefusal,
 } from '#/content/session-request'
@@ -31,6 +32,7 @@ import { appEngine } from './engine'
 import { attendeeSlugs, sessionFilms, type SessionFilm } from './session-fields'
 import { appPoster, formPoster, seeOther } from './form-post'
 import { appNotes, type Notes } from './notes'
+import { pageReading, type PageReading } from './reading'
 
 /** A Pessoa as the Sessions screens name her. `owner`: she is the Dono
  * looking (the logged-in Pessoa), or, with no one logged in, any Dono. */
@@ -67,6 +69,9 @@ export interface Sessions {
     form: SessionRequestForm,
     owner: string,
   ): Promise<Outcome<{ id: string; warnings: string[] }>>
+  /** Reads `text` into the fields of a request (the Leitura do pedido),
+   * with "eu" as the Dono `owner`. Writes nothing. */
+  read(text: string, owner: string): Promise<Outcome<RequestReading>>
 }
 
 const ok = <A>(output: A): Outcome<A> => ({ exitCode: 0, output })
@@ -146,6 +151,7 @@ export function sessionsFromEngine(
           })
         : opened
     },
+    read: (text, owner) => run(readRequest({ text }), { owner }),
   }
 }
 
@@ -199,21 +205,40 @@ function refusalOf(outcome: { output: ErrorOutput }): SessionRequestRefusal {
   }
 }
 
-/** "Ler": back to the form with its sentence (`pedido`) to read
- * (`?frase=`), or saying why not (`?erro=frase`, `frase-longa`). */
-function readingRedirect(form: FormData): Response {
+/** "Ler": reads the sentence (`pedido`) and goes back to the form with
+ * what the Dono had set and, on top, what the sentence asked
+ * (`mergeReadFields`: Presentes, Climas and Parecido added, any other field
+ * the sentence's), in a note (`?nota=`); or says why not (`?erro=frase`
+ * with no sentence, `frase-longa` when the engine will not read it). */
+async function readSentence(
+  form: FormData,
+  owner: string,
+  sessions: Sessions,
+  notes: Notes,
+): Promise<Response> {
   const text = field(form, 'pedido')
   if (text === undefined) return seeOther('/sessoes/nova?erro=frase')
-  if (text.length > SENTENCE_MAX_LENGTH)
-    return seeOther('/sessoes/nova?erro=frase-longa')
-  return seeOther(`/sessoes/nova?${new URLSearchParams({ frase: text })}`)
+  const read = await sessions.read(text, owner)
+  if (read.exitCode !== 0) {
+    if (read.output.error.code === 'invalid_usage')
+      return seeOther('/sessoes/nova?erro=frase-longa')
+    logEngineError(read)
+    return seeOther('/sessoes/nova?erro=indisponivel')
+  }
+  const token = notes.remember({
+    warnings: [],
+    addition: null,
+    form: mergeReadFields(draftOf(form), read.output.request),
+    reading: pageReading(read.output),
+  })
+  return seeOther(`/sessoes/nova${token ? `?nota=${token}` : ''}`)
 }
 
 /** `POST /sessoes/nova/enviar`: opens the Session the form asks for as the
  * logged-in Dono and goes to its page (`?feito=aberta`, with `?nota=` for
  * the Recomendação's warnings), or back to the form saying why not
- * (`?erro=`). With `ler=sim` ("Ler"), opens nothing: back to the form to
- * read its sentence (`readingRedirect`). Only a Dono, and only a form of
+ * (`?erro=`). With `ler=sim` ("Ler"), opens nothing: back to the form
+ * filled from its sentence (`readSentence`). Only a Dono, and only a form of
  * this site (the `Origin`): the page gate does not cover this route. */
 export async function sessionRequestAction(
   request: Request,
@@ -225,7 +250,8 @@ export async function sessionRequestAction(
   const poster = formPoster(request, owner, origin)
   if (poster instanceof Response) return poster
   const form = await request.formData()
-  if (form.get('ler') === 'sim') return readingRedirect(form)
+  if (form.get('ler') === 'sim')
+    return readSentence(form, poster.person, sessions, notes)
   const parsed = parseSessionRequest(form)
   if ('refused' in parsed)
     return seeOther(`/sessoes/nova?erro=${parsed.refused}`)
@@ -241,66 +267,23 @@ export async function sessionRequestAction(
 
 // --- "Ler" ---------------------------------------------------------------------
 
-/** Reads `text` into the fields of a request (the Leitura do pedido), with
- * "eu" as the Dono `owner`. Writes nothing. */
-export type SentenceReader = (
-  text: string,
-  owner: string,
-) => Promise<Outcome<RequestReading>>
-
-export const readerFromEngine =
-  (engine: Engine): SentenceReader =>
-  (text, owner) =>
-    engine.run(readRequest({ text }), { owner })
-
-/** A sentence as the form shows it read. */
-export type SentenceReading = {
-  text: string
-  /** The form's fields the sentence filled, with the engine's names. */
-  request: Partial<SessionRequestForm>
-  /** What it understood, as the page says it ("Presente: Iara"). */
-  understood: string[]
-  /** Each run of words it did not understand, as typed. */
-  notUnderstood: string[]
-  /** A name or title of several Pessoas or films, or of no film: the
-   * Dono picks in the form. */
-  ambiguities: { words: string; candidates: string[] }[]
+/** Nova Sessão as "Ler" left it: the form's fields, and what the page says
+ * of the sentence. */
+export type NewSessionDraft = {
+  fields: Partial<SessionRequestForm>
+  reading: PageReading | null
 }
 
-/** The reading's request as the form's fields: the same names, with lists
- * the page may hold. */
-const formFields = ({
-  attendees,
-  moods,
-  similar,
-  ...rest
-}: RequestReading['request']): Partial<SessionRequestForm> => ({
-  ...rest,
-  ...(attendees && { attendees: [...attendees] }),
-  ...(moods && { moods: [...moods] }),
-  ...(similar && { similar: [...similar] }),
-})
-
-/** `text` read as the Dono `owner` ("eu"); null (logged) when the engine
- * cannot read it. */
-export async function sentenceReading(
-  text: string,
-  owner: string,
-  read: SentenceReader,
-): Promise<SentenceReading | null> {
-  const reading = valueOf(await read(text, owner))
-  return (
-    reading && {
-      text: reading.text,
-      request: formFields(reading.request),
-      understood: reading.understood.map((item) => item.label),
-      notUnderstood: [...reading.notUnderstood],
-      ambiguities: reading.ambiguities.map((a) => ({
-        words: a.words,
-        candidates: a.candidates.map((c) => c.label),
-      })),
-    }
-  )
+/** The draft the note `token` holds; null when there is none (gone after
+ * a restart, or a note of another form). */
+export function newSessionDraft(
+  token: string | undefined,
+  notes: Notes,
+): NewSessionDraft | null {
+  const note = notes.recall(token)
+  return note?.form
+    ? { fields: note.form, reading: note.reading ?? null }
+    : null
 }
 
 // --- the app's -----------------------------------------------------------------
@@ -323,7 +306,6 @@ export const serveSessionRequest = (request: Request) => {
   return sessionRequestAction(request, owner, appSessions(), appNotes(), origin)
 }
 
-/** The sentence of `/sessoes/nova?frase=` read for the app, as the
- * logged-in Dono. */
-export const appSentenceReading = (text: string, owner: string) =>
-  sentenceReading(text, owner, readerFromEngine(appEngine()))
+/** The draft of `/sessoes/nova?nota=`, for the app. */
+export const appNewSessionDraft = (token: string) =>
+  newSessionDraft(token, appNotes())

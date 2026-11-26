@@ -99,14 +99,16 @@ export {
 } from './recommendation/header.ts'
 export { readMoods, resolveMoods, type Mood } from './recommendation/moods.ts'
 export {
+  mergeReadFields,
   readRequest,
   REQUEST_READING_MAX_LENGTH,
   type ReadAmbiguity,
   type ReadItem,
   type RequestReading,
-  type RequestReadingRequest,
+  type RequestReadingInput,
 } from './reading/read-request.ts'
-export type { ReadCandidate, ReadField, ReadRequest } from './reading/reader.ts'
+export { ADDITION_FIELDS, withAddition } from './reading/addition.ts'
+export type { ReadCandidate, ReadField, ReadFields } from './reading/reader.ts'
 export {
   rank,
   rankRequest,

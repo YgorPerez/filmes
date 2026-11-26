@@ -1,10 +1,11 @@
 // The Restrição unseen: "que ninguém viu".
 
-import { flagReader, restrictionLabel } from '../reader.ts'
+import { unseenModule } from '../../recommendation/constraints/unseen.ts'
+import { flagReader } from '../reader.ts'
 
 export const unseenReader = flagReader(
   'unseen',
   'unseen',
   { unseen: true },
-  restrictionLabel({ name: 'unseen' }),
+  unseenModule.label({ name: 'unseen' }),
 )

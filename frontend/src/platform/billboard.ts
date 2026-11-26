@@ -9,23 +9,24 @@
 // kept films at their number, the new ones "novo", and "Saiu" with why.
 //
 // The acrescentar is read by the Leitura do pedido (#200) and what it
-// understood goes into the redo request: Presentes and Climas added, a
-// Restrição added or replacing the same one, a Parecido replacing the one
-// there. An acrescentar with nothing understood redoes nothing by itself.
+// understood goes into the redo request (the engine's `ADDITION_FIELDS` and
+// `withAddition`): Presentes and Climas added, a Restrição added or
+// replacing the same one, a Parecido replacing the one there; how many
+// films, the Regra and "de" are not read from it. An acrescentar with
+// nothing understood redoes nothing by itself.
 // It is never read for taste: gosto permanente is written only after the
 // Dono's yes, and on the web that yes is hers on the Pessoa's page. The
 // page says so. Server only.
 
 import {
+  ADDITION_FIELDS,
   answerBillboard,
   billboard,
   readRequest,
   recommendSession,
   sessionRedoRequest,
+  withAddition,
   type Billboard,
-  type ReadRequest,
-  type RecommendSessionRequest,
-  type RequestReading,
   type Engine,
   type WaitingAnswers,
   type ErrorOutput,
@@ -35,13 +36,14 @@ import type { ReplyRefusal, SessionNotice } from '#/content/billboard-reply'
 import type { SessionLinkSearch } from '#/content/session-link-address'
 import { appEngine } from './engine'
 import { appPoster, formPoster, seeOther } from './form-post'
-import { appNotes, type AdditionReading, type Note, type Notes } from './notes'
+import { appNotes, type Note, type Notes } from './notes'
 import {
   pairwiseAnswerAction,
   pairwiseDecisionAction,
   pairwisePage,
   pairwiseWaiting,
 } from './pairwise'
+import { pageReading, type PageReading } from './reading'
 import { serverEnv } from './server-env'
 import { issueSessionLink, resolveSessionLink } from './session-link'
 import { voteAction, voteDeck } from './session-votes'
@@ -63,38 +65,6 @@ export interface Billboards {
     owner: string,
   ): Promise<Outcome<ReplyDone> & { stage?: 'answer' | 'redo' }>
 }
-
-const union = (a: readonly string[], b: readonly string[]) => [
-  ...new Set([...a, ...b]),
-]
-
-/** The redo request with what the acrescentar's reading understood: the
- * Presentes and Climas added to the ones asked; any other field replaces
- * its own (the year range as a whole). */
-function withReading(
-  asked: RecommendSessionRequest,
-  read: ReadRequest,
-): RecommendSessionRequest {
-  const { attendees = [], moods = [], ...rest } = read
-  const year = read.since !== undefined || read.until !== undefined
-  return {
-    ...asked,
-    ...(year && { since: undefined, until: undefined }),
-    ...rest,
-    attendees: union(asked.attendees, attendees),
-    moods: union(asked.moods ?? [], moods),
-  }
-}
-
-/** What the page says of a reading. */
-const readingNote = (reading: RequestReading): AdditionReading => ({
-  added: reading.understood.map((item) => item.label),
-  notUnderstood: [...reading.notUnderstood],
-  ambiguous: reading.ambiguities.map(({ words, candidates }) => ({
-    words,
-    candidates: candidates.map((c) => c.label),
-  })),
-})
 
 /** The Cartaz as `viewer` (the logged-in Dono's slug) sees it: she is
  * "Você". */
@@ -127,14 +97,23 @@ export function billboardsFromEngine(
       const read =
         addition === null
           ? null
-          : await run(readRequest({ text: addition }), { owner })
+          : await run(
+              readRequest({ text: addition, fields: ADDITION_FIELDS }),
+              {
+                owner,
+              },
+            )
       if (read !== null && read.exitCode !== 0) logEngineError(read)
       const reading = read?.exitCode === 0 ? read.output : null
       const note = (more: readonly string[] = []): Note => ({
         warnings: [...warnings, ...more],
         addition,
-        ...(reading && { reading: readingNote(reading) }),
+        ...(reading && { reading: pageReading(reading) }),
       })
+      // The web decides here, by the Leitura do pedido (#184, 2026-11-26):
+      // an acrescentar with nothing understood and no film dropped does not
+      // redo. The MCP keeps `answerBillboard`'s own `regenerate`, since
+      // there Claude reads the acrescentar.
       const regenerate =
         dropped.length > 0 ||
         moods !== null ||
@@ -149,7 +128,7 @@ export function billboardsFromEngine(
       }
       const redone = await run(
         recommendSession({
-          ...(reading ? withReading(chosen, reading.request) : chosen),
+          ...(reading ? withAddition(chosen, reading.request) : chosen),
           keep: [keep.join(',')],
         }),
         { owner },
@@ -179,7 +158,7 @@ export type CartazPage = {
   warnings: string[]
   addition: string | null
   /** What the reading made of the acrescentar (#200). */
-  reading?: AdditionReading
+  reading?: PageReading
   sessionLink?: string | null
   /** The Presentes' Perguntas par a par that wait for the Dono (#181). */
   pairwise?: ReadonlyArray<WaitingAnswers>

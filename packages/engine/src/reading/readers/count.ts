@@ -1,5 +1,5 @@
-// Quantos filmes: "5 filmes", "três opções", "só 3". "Um filme" by name
-// is an article, not a count.
+// How many films: "5 filmes", "três opções", "só 3". "Um filme", with the
+// number in words, is an article, not a count.
 
 import { Effect, Schema } from 'effect'
 import { makeReader, scan, type Claim } from '../reader.ts'
