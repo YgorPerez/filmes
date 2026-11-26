@@ -36,6 +36,7 @@ import {
   type QueueNotice,
   type QueueRefusal,
 } from '#/content/import-action'
+import { importsPath, QUEUE_PATH } from '#/content/paths'
 import { currentOwner } from './auth'
 import { appEngine } from './engine'
 import { formPoster, seeOther } from './form-post'
@@ -46,7 +47,7 @@ import { serverEnv } from './server-env'
 /** Whoever is logged in, as the login reads her (`currentOwner`). */
 type LoggedIn = ReturnType<typeof currentOwner>
 
-/** A Pessoa in `/importar`, with how many imports she has. */
+/** A Pessoa with how many imports she has. */
 export type ImportsEntry = {
   person: string
   name: string
@@ -279,10 +280,10 @@ async function shown<A>(outcome: Promise<Outcome<A>>): Promise<A | null> {
   return null
 }
 
-/** What `/importar` lists. */
+/** Every Pessoa with how many imports she has, and the queue's size. */
 export const importsOverview = (imports: Imports) => shown(imports.overview())
 
-/** What `/importar/<slug>` shows to `viewer` (the logged-in Dono's slug),
+/** What a Pessoa's import page shows to `viewer` (the logged-in Dono's slug),
  * with whether it is her own page (no consent box there: she answers for
  * herself); `'unknown'` when no Pessoa has that slug. */
 export async function importsPage(
@@ -305,7 +306,7 @@ function runOf(action: ImportAction): ImportRun | null {
   return source && { ...action, kind: source }
 }
 
-/** What `/fila` shows. */
+/** What the resolution queue (`QUEUE_PATH`) shows. */
 export const queuePage = (imports: Imports) => shown(imports.queue())
 
 function importRefusal(outcome: { output: ErrorOutput }): ImportRefusal {
@@ -349,8 +350,6 @@ const query = (fields: Record<string, string | number | undefined>) => {
   return `?${params.toString()}`
 }
 
-const pageOf = (person: string) => `/importar/${encodeURIComponent(person)}`
-
 /** `POST /importar/<slug>/acao`: a Letterboxd or Trakt ZIP (multipart,
  * told apart by what it holds), the RSS (only with the Pessoa's consent,
  * which the engine does not ask; on her own page the Dono answers for
@@ -365,7 +364,7 @@ export async function importAction(
 ): Promise<Response> {
   const signer = formPoster(request, owner, origin)
   if (signer instanceof Response) return signer
-  const page = pageOf(person)
+  const page = importsPath(person, person === signer.person)
   if (Number(request.headers.get('content-length')) > MAX_UPLOAD_BYTES)
     return seeOther(`${page}${query({ erro: 'grande' })}`)
   const action = await parseImport(
@@ -379,7 +378,7 @@ export async function importAction(
   const outcome = await imports.run(person, run, ownerAuthor(signer))
   if (outcome.exitCode !== 0) {
     if (outcome.output.error.code === 'unknown_person')
-      return seeOther('/importar?erro=pessoa')
+      return seeOther('/pessoas?erro=pessoa')
     return seeOther(`${page}${query({ erro: importRefusal(outcome) })}`)
   }
   const { notice, facts, outside } = outcome.output
@@ -399,21 +398,19 @@ export async function queueAction(
   const signer = formPoster(request, owner, origin)
   if (signer instanceof Response) return signer
   const action = parseQueue(await request.formData())
-  if (!action) return seeOther(`/fila${query({ erro: 'pedido' })}`)
+  if (!action) return seeOther(`${QUEUE_PATH}${query({ erro: 'pedido' })}`)
   const outcome = await imports.decide(action, ownerAuthor(signer))
   if (outcome.exitCode !== 0)
-    return seeOther(`/fila${query({ erro: queueRefusal(outcome) })}`)
+    return seeOther(`${QUEUE_PATH}${query({ erro: queueRefusal(outcome) })}`)
   const { notice, resolved, left } = outcome.output
   return seeOther(
-    `/fila${query({ feito: notice, resolvidos: resolved, restam: left })}`,
+    `${QUEUE_PATH}${query({ feito: notice, resolvidos: resolved, restam: left })}`,
   )
 }
 
 // --- the app's -----------------------------------------------------------------
 
 const appImports = () => importsFromEngine(appEngine())
-
-export const appImportsOverview = () => importsOverview(appImports())
 
 export const appImportsPage = (person: string, viewer: string) =>
   importsPage(person, viewer, appImports())

@@ -2,7 +2,14 @@ import { FIELD } from './kit/field'
 import { FieldLabel } from './kit/field-label'
 import type { ReactNode } from 'react'
 import type { PersonImports } from '@filmes/engine'
-import type { ImportNotice, ImportRefusal } from '#/content/import-action'
+import {
+  countOf,
+  isImportNotice,
+  isImportRefusal,
+  type ImportNotice,
+  type ImportRefusal,
+} from '#/content/import-action'
+import { personPath, QUEUE_PATH } from '#/content/paths'
 import { ImportsFrame } from './imports'
 import { PERSON_IMPORTS } from './imports.copy'
 import { Slip } from './kit/slip'
@@ -32,7 +39,16 @@ export type ImportDoneView = {
   outside?: number
 }
 
-/** `/importar/<slug>`: the upload first (one file field: the server tells
+/** The import page's query, as its routes keep it: what the last form
+ * did (`feito`, with `novos` and `fora`) or why not (`erro`). */
+export const importsSearch = (search: Record<string, unknown>) => ({
+  feito: isImportNotice(search.feito) ? search.feito : undefined,
+  erro: isImportRefusal(search.erro) ? search.erro : undefined,
+  novos: countOf(search.novos),
+  fora: countOf(search.fora),
+})
+
+/** A Pessoa's imports (`importsPath`): the upload first (one file field: the server tells
  * Letterboxd from Trakt by the ZIP), then the Letterboxd profile, what the
  * imports gave (only once they gave something) and the files, each with
  * its Tirar. Every form is a plain POST (the upload multipart) that comes
@@ -50,7 +66,10 @@ export function PersonImportsScreen({
   refusal?: ImportRefusal
 }) {
   return (
-    <ImportsFrame back={COPY.back} backTo="/importar">
+    <ImportsFrame
+      back={COPY.back}
+      backTo={personPath(slug, typeof page === 'object' && page?.own === true)}
+    >
       {page === null ? (
         <Alert>{COPY.unavailable}</Alert>
       ) : page === 'unknown' ? (
@@ -194,7 +213,7 @@ function Waiting({ report }: { report: PersonImports['letterboxd'] }) {
         ))}
       </ul>
       <a
-        href="/fila"
+        href={QUEUE_PATH}
         className={buttonVariants({
           variant: 'option',
           className: 'self-start border-transparent',

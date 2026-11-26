@@ -16,6 +16,7 @@ import {
   type GivenRating,
   type RatingRefusal,
 } from '#/content/rating-form'
+import { RATINGS_PATH } from '#/content/paths'
 import { formPoster, seeOther } from './form-post'
 
 /** Films the page gets: more than a sitting rates, fewer than a slow page. */
@@ -97,9 +98,9 @@ export async function rateAction(
   const poster = formPoster(request, owner, origin)
   if (poster instanceof Response) return poster
   const given = parseRatings(await request.formData())
-  if (given === null) return seeOther('/notas?erro=pedido')
+  if (given === null) return seeOther(`${RATINGS_PATH}?erro=pedido`)
   const outcome = await ratings.rate(given, poster)
   if (outcome.exitCode !== 0)
-    return seeOther(`/notas?erro=${refusalOf(outcome)}`)
-  return seeOther(`/notas?feito=${outcome.output.added}`)
+    return seeOther(`${RATINGS_PATH}?erro=${refusalOf(outcome)}`)
+  return seeOther(`${RATINGS_PATH}?feito=${outcome.output.added}`)
 }

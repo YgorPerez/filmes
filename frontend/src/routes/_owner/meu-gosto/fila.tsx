@@ -3,7 +3,7 @@ import { countOf, isQueueNotice, isQueueRefusal } from '#/content/import-action'
 import { readQueue } from '#/content/imports'
 import { QueueScreen } from '#/ui/queue'
 
-export const Route = createFileRoute('/_owner/fila')({
+export const Route = createFileRoute('/_owner/meu-gosto/fila')({
   validateSearch: (search) => ({
     feito: isQueueNotice(search.feito) ? search.feito : undefined,
     erro: isQueueRefusal(search.erro) ? search.erro : undefined,

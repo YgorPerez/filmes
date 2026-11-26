@@ -1,8 +1,5 @@
 import type { SetupStep } from '@filmes/engine'
 
-const plural = (n: number, one: string, many: string) =>
-  n === 1 ? `1 ${one}` : `${n} ${many}`
-
 const WEEKDAYS = [
   'Domingo',
   'Segunda',
@@ -43,42 +40,33 @@ const together = (names: readonly string[]) =>
     : `${names.slice(0, -1).join(', ')} e ${names.at(-1)}`
 
 export const HOME = {
-  greeting: (name: string) => `Olá, ${name}`,
   request: 'Pedir filme',
-  card: {
-    label: 'Carteirinha',
-    brand: 'filmes',
-    left: (n: number) => (n === 1 ? 'falta 1 carimbo' : `faltam ${n} carimbos`),
-    region: (n: number) =>
-      `Carteirinha: ${plural(n, 'passo pendente', 'passos pendentes')}`,
-    stamps: 'Carimbos',
-    resume: 'Passos pulados, para retomar',
-    ok: 'ok',
-    skipped: 'pulei',
-    ratings: (n: number) => plural(n, 'nota', 'notas'),
-    state: { done: 'feito', skipped: 'pulado', pending: 'pendente' },
-    short: {
-      taste: 'Meu gosto',
-      import: 'Importar',
-      connector: 'Claude',
-    } satisfies Record<SetupStep, string>,
+  ask: {
+    title: 'O que vai ser hoje?',
+    blanks: ['Quem está', 'Quanto tempo', 'O que a noite pede'],
+    blanksLabel:
+      'O pedido: quem está, quanto tempo vocês têm e o que a noite pede.',
+    lead: 'Saem 5 filmes, cada um com o motivo de cada Presente gostar.',
   },
   guide: {
     title: 'Para começar',
+    progress: (done: number, total: number) => `${done} de ${total} feitos`,
+    progressLabel: 'Passos feitos',
+    state: { done: 'feito', skipped: 'pulado', pending: 'falta fazer' },
+    doneRatings: (n: number) =>
+      n === 1 ? 'feito, 1 nota' : `feito, ${n} notas`,
     skip: 'Pular',
     skipLabel: (title: string) => `Pular: ${title}`,
     resume: 'Retomar',
     counter: (n: number) => `${Math.min(n, 10)} de 10`,
     counterLabel: (n: number) => `${Math.min(n, 10)} de 10 Notas`,
-    early: 'Dá para pedir filme agora. Com gosto, a lista acerta mais.',
-    copy: 'Copiar',
     copied: 'Copiado',
     copyAddress: 'Copiar endereço',
     copyFailed: 'Não deu para copiar. Selecione o endereço e copie.',
     steps: {
       taste: {
         title: 'Meu gosto',
-        text: 'Dê nota a 10 filmes que você já viu, ou importe o seu histórico. É o que faz a lista acertar.',
+        text: 'Dê nota a 10 filmes que você já viu, ou importe o seu histórico. É com isso que a lista acerta.',
         action: 'Dar notas',
       },
       import: {
@@ -109,20 +97,10 @@ export const HOME = {
     you: 'Você',
     films: 'Filmes da Sessão',
     open: 'Falta contar como foi',
-    openText: 'Vocês viram alguma? Conte o que viram e como foi.',
+    openText: 'Viram algum? Conte qual e o que cada um achou.',
     feedback: 'Contar como foi',
     feedbackLabel: (id: string) => `Contar como foi a Sessão ${id}`,
     chosen: (title: string) => `vimos ${title}`,
     nothing: 'não vimos nada',
-  },
-  shelf: {
-    title: 'Telas',
-    sessions: 'Sessões',
-    people: 'Pessoas',
-    ratings: 'Dar notas',
-    given: (n: number) => `${n} dadas`,
-    feedback: 'Feedback',
-    export: 'Exportar Notas',
-    operations: 'Operações',
   },
 } as const

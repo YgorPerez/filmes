@@ -7,10 +7,11 @@ import { OPERATIONS } from './operations.copy'
 import { SHELL } from './shell.copy'
 
 // The app shell (DESIGN.md, Barra do topo e abas): the case-black top bar
-// with "filmes" and the Dono's avatar; on the phone the tabs sit fixed at
-// the bottom, and from 900px they move up into the top bar. An admin also
-// sees, under the bar, the strip of a push that keeps failing. Every Dono
-// page sits in it; `/entrar` and the Cartaz's MCP Apps view do not.
+// with "filmes" and the Dono's avatar, which opens her menu (Operações for
+// an admin, and Sair); on the phone the four tabs sit fixed at the bottom,
+// and from 900px they move up into the top bar. An admin also sees, under
+// the bar, the strip of a push that keeps failing. Every Dono page sits in
+// it; `/entrar` and the Cartaz's MCP Apps view do not.
 
 type Tab = {
   key: keyof typeof SHELL.items
@@ -22,11 +23,10 @@ type Tab = {
 
 const TABS: readonly Tab[] = [
   { key: 'home', href: '/', icon: 'home' },
-  { key: 'sessions', href: '/sessoes', icon: 'film', also: ['/feedback'] },
+  { key: 'sessions', href: '/sessoes', icon: 'film' },
   { key: 'people', href: '/pessoas', icon: 'people' },
-  { key: 'imports', href: '/importar', icon: 'import', also: ['/fila'] },
+  { key: 'taste', href: '/meu-gosto', icon: 'taste' },
 ]
-const ADMIN_TAB: Tab = { key: 'operations', href: '/operacoes', icon: 'tools' }
 
 const under = (path: string, root: string) =>
   path === root || path.startsWith(`${root}/`)
@@ -51,15 +51,7 @@ function TabIcon({ icon, current }: { icon: IconName; current: boolean }) {
   )
 }
 
-function Tabs({
-  tabs,
-  path,
-  place,
-}: {
-  tabs: readonly Tab[]
-  path: string
-  place: 'top' | 'bottom'
-}) {
+function Tabs({ path, place }: { path: string; place: 'top' | 'bottom' }) {
   const bottom = place === 'bottom'
   return (
     <nav
@@ -75,7 +67,7 @@ function Tabs({
           bottom ? 'mx-auto flex max-w-[720px]' : 'flex items-center gap-2xs'
         }
       >
-        {tabs.map((tab) => {
+        {TABS.map((tab) => {
           const current = isCurrent(tab, path)
           return (
             <li key={tab.key} className={bottom ? 'flex-1' : undefined}>
@@ -129,6 +121,76 @@ function PushStrip({ status }: { status: PushStatus }) {
 
 export type ShellOwner = { name: string; admin: boolean }
 
+const MENU_ROW =
+  'flex min-h-touch w-full cursor-pointer items-center gap-md rounded-rail px-md font-display text-control text-ink no-underline hover:bg-surface-2'
+
+/** The Dono's avatar, a button that opens her menu: her name, Operações
+ * for an admin (saying so while the push keeps failing), and Sair by
+ * POST. A native popover: it opens without the JavaScript, and a tap
+ * outside or Esc closes it. */
+function AccountMenu({
+  owner,
+  alert,
+}: {
+  owner: ShellOwner
+  alert: PushStatus | null
+}) {
+  return (
+    <>
+      <button
+        type="button"
+        popoverTarget="conta"
+        aria-label={SHELL.account(owner.name)}
+        className="grid size-touch cursor-pointer place-items-center rounded-round"
+      >
+        <span className="grid place-items-center rounded-round ring-2 ring-case">
+          <Avatar
+            person={{
+              color: 1,
+              initial: owner.name.slice(0, 1).toUpperCase(),
+              name: owner.name,
+            }}
+          />
+        </span>
+      </button>
+      <nav
+        id="conta"
+        popover="auto"
+        aria-label={SHELL.menu}
+        className="fixed inset-auto top-[60px] right-[max(16px,calc((100vw-1040px)/2+16px))] m-0 w-[240px] rounded-card border border-rule bg-surface p-xs text-ink"
+      >
+        <p className="truncate px-md pt-sm pb-xs font-display text-[15px] font-bold">
+          {owner.name}
+        </p>
+        <ul className="flex flex-col">
+          {owner.admin && (
+            <li>
+              <a href="/operacoes" className={MENU_ROW}>
+                <Icon name="tools" />
+                {SHELL.operations}
+                {alert && (
+                  <span className="ml-auto inline-flex items-center gap-2xs font-body text-meta text-ink-2">
+                    <Icon name="alert" className="size-4" />
+                    {SHELL.pushFailing}
+                  </span>
+                )}
+              </a>
+            </li>
+          )}
+          <li>
+            <form method="post" action="/auth/logout">
+              <button type="submit" className={MENU_ROW}>
+                <Icon name="logout" />
+                {SHELL.logout}
+              </button>
+            </form>
+          </li>
+        </ul>
+      </nav>
+    </>
+  )
+}
+
 /** Every Dono page: the top bar, the push strip for an admin, the page,
  * and the tabs. `path` is the page's, to mark its tab. */
 export function AppShell({
@@ -142,11 +204,10 @@ export function AppShell({
   alert: PushStatus | null
   children: ReactNode
 }) {
-  const tabs = owner.admin ? [...TABS, ADMIN_TAB] : TABS
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="bg-case text-case-ink">
-        <div className="mx-auto flex min-h-[56px] max-w-[1040px] items-center gap-3xl px-2xl py-sm">
+        <div className="mx-auto flex min-h-[56px] max-w-[1040px] items-center gap-3xl px-2xl py-2xs">
           <a
             href="/"
             aria-label={SHELL.home}
@@ -154,29 +215,9 @@ export function AppShell({
           >
             {SHELL.brand}
           </a>
-          <Tabs tabs={tabs} path={path} place="top" />
-          <div className="ml-auto flex items-center gap-xs">
-            <span
-              role="img"
-              aria-label={SHELL.you(owner.name)}
-              className="grid place-items-center rounded-round ring-2 ring-case"
-            >
-              <Avatar
-                person={{
-                  color: 1,
-                  initial: owner.name.slice(0, 1).toUpperCase(),
-                  name: owner.name,
-                }}
-              />
-            </span>
-            <form method="post" action="/auth/logout">
-              <button
-                type="submit"
-                className="min-h-touch cursor-pointer px-sm font-display text-control text-case-ink-2 underline underline-offset-3 hover:text-case-ink"
-              >
-                {SHELL.logout}
-              </button>
-            </form>
+          <Tabs path={path} place="top" />
+          <div className="ml-auto flex items-center">
+            <AccountMenu owner={owner} alert={alert} />
           </div>
         </div>
       </header>
@@ -184,7 +225,7 @@ export function AppShell({
       <div className="flex-1 pb-[calc(68px+env(safe-area-inset-bottom))] min-[900px]:pb-0">
         {children}
       </div>
-      <Tabs tabs={tabs} path={path} place="bottom" />
+      <Tabs path={path} place="bottom" />
     </div>
   )
 }

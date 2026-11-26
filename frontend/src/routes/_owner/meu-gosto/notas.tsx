@@ -4,7 +4,7 @@ import { isRatingRefusal, writtenCount } from '#/content/rating-form'
 import { readRatingQueue } from '#/content/ratings'
 import { RatingScreen } from '#/ui/imports'
 
-export const Route = createFileRoute('/_owner/notas')({
+export const Route = createFileRoute('/_owner/meu-gosto/notas')({
   validateSearch: (search) => ({
     feito: writtenCount(search.feito),
     erro: isRatingRefusal(search.erro) ? search.erro : undefined,

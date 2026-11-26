@@ -12,6 +12,7 @@ import {
   type Outcome,
 } from '@filmes/engine'
 import type { ExportRefusal } from '#/content/export-refusal'
+import { EXPORT_PATH } from '#/content/paths'
 import { currentOwner } from './auth'
 import { appEngine } from './engine'
 import type { Owner } from './owners'
@@ -75,7 +76,7 @@ const refused = (refusal: ExportRefusal) =>
   new Response(null, {
     status: 303,
     headers: {
-      Location: `/exportar?erro=${refusal}`,
+      Location: `${EXPORT_PATH}?erro=${refusal}`,
       'Cache-Control': 'private, no-store',
     },
   })

@@ -3,7 +3,7 @@ import { isExportRefusal } from '#/content/export-refusal'
 import { readExportChoices } from '#/content/export'
 import { Export } from '#/ui/export'
 
-export const Route = createFileRoute('/_owner/exportar')({
+export const Route = createFileRoute('/_owner/meu-gosto/exportar')({
   validateSearch: (search) => ({
     erro: isExportRefusal(search.erro) ? search.erro : undefined,
   }),

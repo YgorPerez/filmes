@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vite-plus/test'
 import { Route as Send } from '#/routes/notas/enviar'
-import { Route as Screen } from '#/routes/_owner/notas'
+import { Route as Screen } from '#/routes/_owner/meu-gosto/notas'
 
 describe('the rating screen routes', () => {
   it('keeps only a count, a reason, a search and a film the page knows in the query', () => {

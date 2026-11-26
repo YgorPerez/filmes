@@ -60,6 +60,8 @@ export const SESSIONS = {
         'Respostas gravadas: o escolhido de cada par virou Nota fraca, e o outro, Já visto.',
       'perguntas-descartadas':
         'Respostas descartadas. Nada mudou no gosto de ninguém.',
+      contada:
+        'Feedback gravado e Sessão fechada. A próxima Recomendação deste grupo já conta com ele.',
     } satisfies Record<SessionNotice, string>,
     refusals: {
       nada: 'Nada marcado ainda.',

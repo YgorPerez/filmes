@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-// A Pessoa's imports page and the list: what they show, and what each form
+// A Pessoa's imports page: what it shows, and what each form
 // posts (`parseImport`, the same reader the route uses).
 import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -9,8 +9,7 @@ import {
   IMPORT_REFUSALS,
   parseImport,
 } from '#/content/import-action'
-import { ImportsList } from './imports-list'
-import { IMPORTS, PERSON_IMPORTS } from './imports.copy'
+import { PERSON_IMPORTS } from './imports.copy'
 import { PersonImportsScreen, type PersonImportsView } from './person-imports'
 
 afterEach(cleanup)
@@ -123,7 +122,7 @@ describe('PersonImportsScreen', () => {
       within(letterboxd)
         .getByRole('link', { name: COPY.letterboxd.toQueue })
         .getAttribute('href'),
-    ).toBe('/fila')
+    ).toBe('/meu-gosto/fila')
     expect(section(COPY.trakt.title).textContent).toContain(
       '2 Notas e 1 Já visto do Trakt.',
     )
@@ -278,46 +277,5 @@ describe('PersonImportsScreen', () => {
     expect(screen.getByRole('alert').textContent).toContain(
       COPY.refusals[refusal],
     )
-  })
-})
-
-describe('ImportsList', () => {
-  it('leads to each Pessoa and to the queue', () => {
-    render(
-      <ImportsList
-        overview={{
-          people: [
-            { person: 'bruno', name: 'Bruno', owner: true, imports: 0 },
-            { person: 'quim', name: 'Quim', owner: false, imports: 2 },
-          ],
-          queued: 1,
-        }}
-      />,
-    )
-    expect(
-      screen
-        .getByRole('link', { name: /Fila de resolução.*1 filme esperando/ })
-        .getAttribute('href'),
-    ).toBe('/fila')
-    expect(
-      screen
-        .getByRole('link', { name: /Bruno.*Dono.*nenhum import/ })
-        .getAttribute('href'),
-    ).toBe('/importar/bruno')
-    expect(
-      screen
-        .getByRole('link', { name: /Quim.*2 imports/ })
-        .getAttribute('href'),
-    ).toBe('/importar/quim')
-  })
-
-  it('says when there is no one, a Pessoa is gone, or the engine cannot run', () => {
-    render(<ImportsList overview={{ people: [], queued: 0 }} gone />)
-    expect(screen.getByText(IMPORTS.empty)).toBeTruthy()
-    expect(screen.getByRole('alert').textContent).toContain(IMPORTS.gone)
-    expect(screen.getByText(IMPORTS.queued(0))).toBeTruthy()
-    cleanup()
-    render(<ImportsList overview={null} />)
-    expect(screen.getByRole('alert').textContent).toContain(IMPORTS.unavailable)
   })
 })

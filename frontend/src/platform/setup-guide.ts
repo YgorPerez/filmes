@@ -32,13 +32,11 @@ export type SetupView = { steps: SetupStepView[]; ratings: number }
 export type HomeData = {
   /** The Dono's slug: her Pessoa and import pages. */
   person: string
-  /** The guide, also once complete (the home's membership card shows its
-   * stamps); null when the engine cannot say. */
+  /** The guide, also once complete (the home hides it then); null when the
+   * engine cannot say. */
   setup: SetupView | null
   /** The latest Sessão she was in, or null. */
   latest: LatestSession | null
-  /** How many Sessões there are; null when the engine could not list them. */
-  sessions: number | null
   /** Where the Claude app connects (`/mcp`); null without `APP_ORIGIN`. */
   mcpUrl: string | null
 }
@@ -74,7 +72,6 @@ export async function homeData(
       sessions?.find((s) =>
         s.attendees.some((a) => a.person === owner.person),
       ) ?? null,
-    sessions: sessions?.length ?? null,
     mcpUrl: origin === undefined ? null : `${origin}/mcp`,
   }
 }

@@ -4,7 +4,7 @@ import { isFeedbackRefusal } from '#/content/feedback-form'
 import { readFeedbackPage } from '#/content/feedback'
 import { FeedbackScreen } from '#/ui/feedback'
 
-export const Route = createFileRoute('/_owner/feedback/$sessao')({
+export const Route = createFileRoute('/_owner/sessoes/$sessao/contar')({
   validateSearch: (search) => ({
     erro: isFeedbackRefusal(search.erro) ? search.erro : undefined,
     buscar: searchParam(search.buscar),

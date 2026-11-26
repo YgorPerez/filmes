@@ -3,7 +3,7 @@
 // is never admin.
 
 import { type Page } from '@playwright/test'
-import { expect, loginAs, test } from './support'
+import { accountMenu, expect, loginAs, tab, test } from './support'
 
 const loginAsVera = (page: Page) => loginAs(page, 'vera@example.org')
 
@@ -12,7 +12,9 @@ test('a Dono who is not admin neither sees nor reaches Operações', async ({
   baseURL,
 }) => {
   await loginAsVera(page)
-  await expect(page.getByRole('link', { name: 'Feedback' })).toBeVisible()
+  await expect(tab(page, 'Meu gosto')).toBeVisible()
+  const menu = await accountMenu(page)
+  await expect(menu.getByRole('button', { name: 'Sair' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Operações' })).toHaveCount(0)
 
   const response = await page.goto('/operacoes?sql=SELECT%201')

@@ -10,17 +10,26 @@ async function loginAs(page: Page, email: string) {
   await page.getByRole('button', { name: 'Continuar' }).click()
 }
 
-test('a Dono logs in with Google, sees her name and logs out', async ({
+test('a Dono logs in with Google, sees her name in the menu and logs out', async ({
   page,
 }) => {
   await loginAs(page, 'bruno@example.org')
   await expect(page).toHaveURL(/\/$/)
-  await expect(page.getByRole('heading', { name: 'Olá, Bruno' })).toBeVisible()
+  await expect(
+    page.getByRole('heading', { name: 'O que vai ser hoje?' }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: 'Sua conta: Bruno' }),
+  ).toBeVisible()
 
   await page.goto('/entrar')
   await expect(page).toHaveURL(/\/$/)
 
-  await page.getByRole('button', { name: 'Sair' }).click()
+  await page.getByRole('button', { name: 'Sua conta: Bruno' }).click()
+  await page
+    .getByRole('navigation', { name: 'Conta' })
+    .getByRole('button', { name: 'Sair' })
+    .click()
   await expect(page).toHaveURL(/\/entrar$/)
   await page.goto('/')
   await expect(page).toHaveURL(/\/entrar$/)

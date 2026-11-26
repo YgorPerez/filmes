@@ -8,8 +8,5 @@ export const Route = createFileRoute('/_owner/')({
 })
 
 function HomePage() {
-  const { owner } = Route.useRouteContext()
-  return (
-    <Home name={owner.name} admin={owner.admin} home={Route.useLoaderData()} />
-  )
+  return <Home home={Route.useLoaderData()} />
 }

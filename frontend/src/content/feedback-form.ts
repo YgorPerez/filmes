@@ -1,6 +1,6 @@
 // What the Feedback form posts (`POST /feedback/<sessao>/enviar`) and what
-// the pages hear back in their query: `/feedback?feito=<sessao>` or
-// `/feedback/<sessao>?erro=<refusal>`. Shared by the page and the server
+// the form hears back in its query when refused:
+// `/sessoes/<sessao>/contar?erro=<refusal>`. Shared by the page and the server
 // (`platform/feedback.ts`), so nothing here imports the engine.
 //
 // Fields (PT, as the other forms): `filme` is a film of the Recomendação
@@ -137,12 +137,3 @@ export function parseFeedback(form: FormData): Parsed<FeedbackForm> {
 }
 
 export const isFeedbackRefusal = within(FEEDBACK_REFUSALS)
-
-/** A Session id as the engine writes it (`2026-11-20-iara`, `-2`...):
- * what `?feito=` may carry back to the list. */
-export const isSessionId = (value: unknown): value is string =>
-  typeof value === 'string' && /^[\w-]{1,120}$/.test(value)
-
-/** Why `/feedback` shows a refusal: the form's Session is gone. */
-export const isSessionsRefusal = (value: unknown): value is 'sessao' =>
-  value === 'sessao'

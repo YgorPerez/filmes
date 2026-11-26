@@ -1,17 +1,8 @@
 import { createServerFn } from '@tanstack/react-start'
 import { ownerMiddleware, pathSlug, requireOwner } from './owner'
 
-/** What `/importar` lists (`importsOverview`). A request with no Dono is
- * refused: the page gate does not protect a server function. */
-export const readImportsOverview = createServerFn({ method: 'GET' })
-  .middleware([ownerMiddleware])
-  .handler(async ({ context }) => {
-    requireOwner(context.owner)
-    const { appImportsOverview } = await import('#/platform/imports')
-    return appImportsOverview()
-  })
-
-/** What `/importar/<slug>` shows (`importsPage`). */
+/** What a Pessoa's import page shows (`importsPage`). A request with no
+ * Dono is refused: the page gate does not protect a server function. */
 export const readImportsPage = createServerFn({ method: 'GET' })
   .middleware([ownerMiddleware])
   .validator(pathSlug)
@@ -21,7 +12,7 @@ export const readImportsPage = createServerFn({ method: 'GET' })
     return appImportsPage(data, context.owner.person)
   })
 
-/** What `/fila` shows (`queuePage`). */
+/** What the resolution queue shows (`queuePage`). */
 export const readQueue = createServerFn({ method: 'GET' })
   .middleware([ownerMiddleware])
   .handler(async ({ context }) => {

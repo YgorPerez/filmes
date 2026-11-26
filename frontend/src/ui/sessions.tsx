@@ -9,6 +9,7 @@ import {
   type SessionRequestRefusal,
 } from '#/content/session-request'
 import type { ReplyRefusal, SessionNotice } from '#/content/billboard-reply'
+import { feedbackPath, sessionPath } from '#/content/session-paths'
 import { similarParam } from '#/content/catalog-search'
 import type { CartazPage } from '#/platform/billboard'
 import type { SearchAnswer } from '#/platform/catalog-search'
@@ -51,8 +52,8 @@ import { PairwiseAnswers } from './pairwise-answers'
 import { ShareSessionLink } from './session-link-share'
 import { SESSIONS } from './sessions.copy'
 
-const sessionHref = (id: string) => `/sessoes/${encodeURIComponent(id)}`
-const feedbackHref = (id: string) => `/feedback/${encodeURIComponent(id)}`
+const sessionHref = sessionPath
+const feedbackHref = feedbackPath
 
 /** What a closed Session ended with: the chosen film or nothing. */
 const outcome = (s: SessionItem) =>

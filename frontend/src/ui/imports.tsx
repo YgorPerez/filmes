@@ -1,4 +1,5 @@
 import type { RatingQueue } from '@filmes/engine'
+import { MY_TASTE, RATINGS_PATH } from '#/content/paths'
 import {
   useEffect,
   useState,
@@ -51,7 +52,6 @@ export function ImportsFrame({
 
 // --- the rating screen (#144), the Import's twin ------------------------------
 
-const PATH = '/notas'
 const SCALE = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const
 
 /** The film on the card: the year and the genres (from the Fila) in chips,
@@ -93,7 +93,7 @@ function cardFilm(
   return next ? { ...next, chips: next.genres, meta: [] } : null
 }
 
-/** `/notas`: the rating screen for a Dono with no Letterboxd nor Trakt. One
+/** The rating screen (`RATINGS_PATH`) for a Dono with no Letterboxd nor Trakt. One
  * film of her Fila de Notas at a time, a Nota of 1 to 10 or "Não vi"; the
  * Catálogo search picks another film. The Notas wait in the browser's draft
  * until Pronto posts them to `/notas/enviar`, which writes them in one
@@ -113,7 +113,7 @@ export function RatingScreen({
   refusal?: RatingRefusal
 }) {
   return (
-    <ImportsFrame back={RATINGS.back} backTo="/">
+    <ImportsFrame back={RATINGS.back} backTo={MY_TASTE}>
       <div className="flex flex-col gap-sm">
         <h1 className="font-display text-title">{RATINGS.title}</h1>
         <p className="text-ink-2">{RATINGS.lead}</p>
@@ -174,7 +174,7 @@ function Rating({
   const pick = (id: string) => {
     const params = new URLSearchParams({ filme: id })
     if (search) params.set('buscar', search.query)
-    return `${PATH}?${params.toString()}`
+    return `${RATINGS_PATH}?${params.toString()}`
   }
   return (
     <>
@@ -187,7 +187,12 @@ function Rating({
       ) : (
         <p className="text-ink-2">{RATINGS.over}</p>
       )}
-      <CatalogSearch action={PATH} scope="films" answer={search} pick={pick} />
+      <CatalogSearch
+        action={RATINGS_PATH}
+        scope="films"
+        answer={search}
+        pick={pick}
+      />
       <DraftSection
         draft={draft}
         onRemove={(id) => change(withoutRating(draft, id))}
@@ -245,7 +250,7 @@ function DraftSection({
           ))}
         </ul>
       )}
-      <form method="post" action={`${PATH}/enviar`} onSubmit={onSend}>
+      <form method="post" action="/notas/enviar" onSubmit={onSend}>
         {rated.map(([id, entry]) => (
           <input
             key={id}

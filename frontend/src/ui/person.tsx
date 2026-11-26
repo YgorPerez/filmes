@@ -1,4 +1,10 @@
 import type { PersonNotice, PersonRefusal } from '#/content/person-action'
+import {
+  EXPORT_PATH,
+  importsPath,
+  personPath,
+  RATINGS_PATH,
+} from '#/content/paths'
 import type { SearchAnswer } from '#/platform/catalog-search'
 import type { PersonPage } from '#/platform/people'
 import { OwnerTag } from './kit/owner-tag'
@@ -39,9 +45,9 @@ const RATING_OPTIONS = [
   ...RATING_CHOICES.map((value) => ({ value, label: value })),
 ]
 
-/** `/pessoas/<slug>`: what the filmes knows of the Pessoa's taste, and a
- * form for each `pessoa` action. Every form is a plain POST that comes back
- * here with `notice` or `refusal`. `page` is `'unknown'` when no Pessoa has
+/** `/pessoas/<slug>`, or Meu gosto for the Dono's own: what the filmes
+ * knows of the Pessoa's taste, and a form for each `pessoa` action. Every
+ * form is a plain POST that comes back here with `notice` or `refusal`. `page` is `'unknown'` when no Pessoa has
  * the slug, null when the engine cannot run on this server. `search` is the
  * Catálogo search of `?buscar=`, for the targets' IDs. */
 export function PersonScreen({
@@ -59,20 +65,16 @@ export function PersonScreen({
 }) {
   return (
     <main className="mx-auto flex max-w-[720px] flex-col gap-3xl px-2xl py-3xl">
-      <header className="flex flex-wrap items-center justify-between gap-xl">
-        <a href="/pessoas" className={buttonVariants({ variant: 'option' })}>
-          {PERSON.back}
-        </a>
-      </header>
       {page === null ? (
         <Alert>{PERSON.unavailable}</Alert>
       ) : page === 'unknown' ? (
         <Alert>{PERSON.unknown}</Alert>
       ) : (
         <>
+          <NotesLinks slug={slug} own={page.person === page.viewer.person} />
           <PersonHeader page={page} notice={notice} refusal={refusal} />
           <CatalogSearch
-            action={`/pessoas/${encodeURIComponent(slug)}`}
+            action={personPath(slug, page.person === page.viewer.person)}
             scope="all"
             answer={search}
           />
@@ -80,6 +82,39 @@ export function PersonScreen({
         </>
       )}
     </main>
+  )
+}
+
+/** Where her Notas come and go: rate (only the Dono's own: the queue is
+ * hers), import and export. Back to Pessoas on anyone else's page. Until
+ * #222 brings the Notas section here, these are links to their screens. */
+function NotesLinks({ slug, own }: { slug: string; own: boolean }) {
+  const { notes } = PERSON
+  const option = buttonVariants({ variant: 'option' })
+  return (
+    <nav
+      aria-label={notes.label}
+      className="flex flex-wrap items-center gap-sm"
+    >
+      {!own && (
+        <a href="/pessoas" className={option}>
+          {PERSON.back}
+        </a>
+      )}
+      {own && (
+        <a href={RATINGS_PATH} className={option}>
+          {notes.rate}
+        </a>
+      )}
+      <a href={importsPath(slug, own)} className={option}>
+        {notes.import}
+      </a>
+      {own && (
+        <a href={EXPORT_PATH} className={option}>
+          {notes.export}
+        </a>
+      )}
+    </nav>
   )
 }
 

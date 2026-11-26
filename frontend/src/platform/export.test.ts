@@ -85,7 +85,9 @@ describe('imdbDownload', () => {
     async (query) => {
       const { fake, asked } = exporter({ exitCode: 0, output: CSV })
       const response = await imdbDownload(download(query), BRUNO, fake)
-      expect(response.headers.get('Location')).toBe('/exportar?erro=pessoa')
+      expect(response.headers.get('Location')).toBe(
+        '/meu-gosto/exportar?erro=pessoa',
+      )
       expect(asked).toEqual([])
     },
   )
@@ -94,7 +96,9 @@ describe('imdbDownload', () => {
     const { fake } = exporter(failure('unknown_person'))
     const response = await imdbDownload(download('?pessoa=leo'), BRUNO, fake)
     expect(response.status).toBe(303)
-    expect(response.headers.get('Location')).toBe('/exportar?erro=pessoa')
+    expect(response.headers.get('Location')).toBe(
+      '/meu-gosto/exportar?erro=pessoa',
+    )
   })
 
   it('logs any other engine error and says the export is unavailable', async () => {
@@ -107,7 +111,7 @@ describe('imdbDownload', () => {
         fake,
       )
       expect(response.headers.get('Location')).toBe(
-        '/exportar?erro=indisponivel',
+        '/meu-gosto/exportar?erro=indisponivel',
       )
       expect(log).toHaveBeenCalledWith(
         'engine: missing_database: mensagem de missing_database',

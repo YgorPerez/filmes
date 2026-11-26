@@ -119,7 +119,7 @@ describe('feedbackAction', () => {
     )
     expect(response.status).toBe(303)
     expect(response.headers.get('Location')).toBe(
-      '/feedback?feito=2026-11-20-quim',
+      '/sessoes/2026-11-20-quim?feito=contada',
     )
     expect(response.headers.get('Cache-Control')).toBe('private, no-store')
     expect(record).toHaveBeenCalledWith(
@@ -160,19 +160,19 @@ describe('feedbackAction', () => {
     const { feedback, record } = fake()
     const response = await act(post({ 'comentario.quim': 'x' }), feedback)
     expect(response.headers.get('Location')).toBe(
-      '/feedback/2026-11-20-quim?erro=comentario',
+      '/sessoes/2026-11-20-quim/contar?erro=comentario',
     )
     expect(record).not.toHaveBeenCalled()
   })
 
   it.each<[ErrorCode, string]>([
-    ['closed_session', '/feedback/2026-11-20-quim?erro=fechada'],
-    ['unknown_film', '/feedback/2026-11-20-quim?erro=desconhecido'],
-    ['ambiguous_film', '/feedback/2026-11-20-quim?erro=ambiguo'],
-    ['invalid_usage', '/feedback/2026-11-20-quim?erro=pedido'],
-    ['unknown_person', '/feedback/2026-11-20-quim?erro=pedido'],
-    ['unknown_session', '/feedback?erro=sessao'],
-    ['missing_database', '/feedback/2026-11-20-quim?erro=indisponivel'],
+    ['closed_session', '/sessoes/2026-11-20-quim/contar?erro=fechada'],
+    ['unknown_film', '/sessoes/2026-11-20-quim/contar?erro=desconhecido'],
+    ['ambiguous_film', '/sessoes/2026-11-20-quim/contar?erro=ambiguo'],
+    ['invalid_usage', '/sessoes/2026-11-20-quim/contar?erro=pedido'],
+    ['unknown_person', '/sessoes/2026-11-20-quim/contar?erro=pedido'],
+    ['unknown_session', '/sessoes/2026-11-20-quim'],
+    ['missing_database', '/sessoes/2026-11-20-quim/contar?erro=indisponivel'],
   ])('says why the engine refused %s', async (code, location) => {
     const log = vi.spyOn(console, 'error').mockImplementation(() => {})
     const { feedback } = fake({ record: failure(code) })
@@ -289,7 +289,7 @@ describe('feedbackFromEngine', () => {
         ORIGIN,
       )
       expect(response.headers.get('Location')).toBe(
-        `/feedback?feito=${first.session.id}`,
+        `/sessoes/${first.session.id}?feito=contada`,
       )
       expect(await openSessionList(feedback)).toEqual([])
       const log = git(fixture.data, 'log', '-1', '--format=%an <%ae>|%s')

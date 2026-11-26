@@ -16,6 +16,7 @@ import {
 import { type Page } from '@playwright/test'
 import { zipOf } from '../../packages/engine/test/imports/zip.ts'
 import {
+  tab,
   addPerson,
   engineRun,
   expect,
@@ -70,16 +71,15 @@ test('the Dono imports a Letterboxd ZIP and works the queue', async ({
   test.skip(info.project.name !== 'desktop', 'the queue is shared: one project')
   await addPerson('Olga')
   await loginAsBruno(page)
+  // A Pessoa's imports are on her page, under Pessoas.
+  await tab(page, 'Pessoas').click()
+  await page.getByRole('link', { name: /Olga/ }).click()
+  await expect(page).toHaveURL(/\/pessoas\/olga$/)
   await page
-    .getByRole('navigation', { name: 'Seções' })
+    .getByRole('navigation', { name: 'Notas' })
     .getByRole('link', { name: 'Importar' })
     .click()
-  await expect(page).toHaveURL(/\/importar$/)
-  await expect(page.getByRole('heading', { name: 'Importar' })).toBeVisible()
-  await snap(page, info, 'importar')
-
-  await page.getByRole('link', { name: /Olga/ }).click()
-  await expect(page).toHaveURL(/\/importar\/olga$/)
+  await expect(page).toHaveURL(/\/pessoas\/olga\/importar$/)
   await expect(
     page.getByRole('heading', { name: 'Imports de Olga' }),
   ).toBeVisible()
@@ -107,7 +107,7 @@ test('the Dono imports a Letterboxd ZIP and works the queue', async ({
   await snap(page, info, 'importar-letterboxd')
 
   await letterboxd.getByRole('link', { name: 'Abrir a fila' }).click()
-  await expect(page).toHaveURL(/\/fila$/)
+  await expect(page).toHaveURL(/\/meu-gosto\/fila$/)
   const wind = section(page, 'Vento Norte (2020)')
   const lost = section(page, 'Filme Perdido (2001)')
   await expect(wind).toContainText('Nordwind')
@@ -120,7 +120,7 @@ test('the Dono imports a Letterboxd ZIP and works the queue', async ({
   })
   await confirmLost.getByLabel(/^Filme/).fill('um filme qualquer')
   await confirmLost.getByRole('button', { name: 'Confirmar' }).click()
-  await expect(page).toHaveURL(/\/fila\?erro=filme$/)
+  await expect(page).toHaveURL(/\/meu-gosto\/fila\?erro=filme$/)
   await expect(page.getByRole('alert')).toContainText('Use um tt…')
 
   await wind
@@ -228,7 +228,7 @@ test('the RSS needs her consent, a Dono and this site', async ({
     maxRedirects: 0,
   })
   expect(noConsent.headers()['location']).toBe(
-    '/importar/teo?erro=consentimento',
+    '/pessoas/teo/importar?erro=consentimento',
   )
   const elsewhere = await page.request.post('/fila/acao', {
     form: { acao: 'reprocessar' },
@@ -242,7 +242,9 @@ test('the Dono’s own page asks no consent for her profile', async ({
   page,
 }) => {
   await loginAsBruno(page)
+  // The old address of his imports leads to Meu gosto's.
   await page.goto('/importar/bruno')
+  await expect(page).toHaveURL(/\/meu-gosto\/importar$/)
   const rss = section(page, PROFILE)
   await expect(rss.getByLabel(/^Perfil no Letterboxd/)).toBeVisible()
   await expect(rss.getByRole('checkbox')).toHaveCount(0)
@@ -273,7 +275,8 @@ test('a Dona with no history rates from the Fila and the search, then Pronto', a
     if (!/taken|exists/.test(error.message)) throw error
   })
   await loginAs(page, email)
-  await page.goto('/notas')
+  await page.getByRole('link', { name: 'Dar notas' }).click()
+  await expect(page).toHaveURL(/\/meu-gosto\/notas$/)
 
   const card = page.getByRole('article', { name: 'Filme para dar Nota' })
   await expect(card.getByRole('heading')).toHaveText('Pequenos Milagres')

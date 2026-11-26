@@ -1,6 +1,7 @@
 import { FIELD } from './kit/field'
 import type { ReactNode } from 'react'
 import type { QueueNotice, QueueRefusal } from '#/content/import-action'
+import { MY_TASTE } from '#/content/paths'
 import type { QueueEntry, QueuePage, QueueSuggestion } from '#/platform/imports'
 import { ImportsFrame } from './imports'
 import { QUEUE } from './imports.copy'
@@ -45,7 +46,7 @@ function QueueForm({
   )
 }
 
-/** `/fila`: the films of the Letterboxd imports that wait for the Dono, one
+/** The resolution queue (`QUEUE_PATH`): the films of the Letterboxd imports that wait for the Dono, one
  * card each, with TMDB's suggestions and the forms to confirm or discard;
  * and asking TMDB again. `queue` is null when the engine cannot run here. */
 export function QueueScreen({
@@ -58,7 +59,7 @@ export function QueueScreen({
   refusal?: QueueRefusal
 }) {
   return (
-    <ImportsFrame back={QUEUE.back} backTo="/importar">
+    <ImportsFrame back={QUEUE.back} backTo={`${MY_TASTE}/importar`}>
       <PageHead title={QUEUE.title} lead={QUEUE.lead} />
       {refusal && <Alert>{QUEUE.refusals[refusal]}</Alert>}
       {done && (

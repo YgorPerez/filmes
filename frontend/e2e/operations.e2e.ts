@@ -7,6 +7,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
+  accountMenu,
   engineRoot,
   expect,
   loginAsBruno,
@@ -22,10 +23,8 @@ test.beforeAll(() => {
 
 test('the admin consults the database, read-only', async ({ page }, info) => {
   await loginAsBruno(page)
-  await page
-    .getByRole('navigation', { name: 'Telas' })
-    .getByRole('link', { name: 'Operações' })
-    .click()
+  const menu = await accountMenu(page)
+  await menu.getByRole('link', { name: 'Operações' }).click()
   await expect(page).toHaveURL(/\/operacoes$/)
   await expect(page.getByRole('heading', { name: 'Operações' })).toBeVisible()
   await snap(page, info, 'operacoes')

@@ -76,7 +76,7 @@ describe('the Sessions list', () => {
       within(row)
         .getByRole('link', { name: SESSIONS.list.feedbackLabel(OPEN.id) })
         .getAttribute('href'),
-    ).toBe('/feedback/2026-11-20-iara')
+    ).toBe('/sessoes/2026-11-20-iara/contar')
 
     const closed = region(SESSIONS.list.closed)
     const [chosen, nothing] = within(closed).getAllByRole('listitem')
@@ -132,7 +132,7 @@ describe('a Session’s page', () => {
       screen
         .getByRole('link', { name: SESSIONS.list.feedback })
         .getAttribute('href'),
-    ).toBe('/feedback/2026-11-20-iara')
+    ).toBe('/sessoes/2026-11-20-iara/contar')
   })
 
   it('copies the shareable Link da Sessão', async () => {

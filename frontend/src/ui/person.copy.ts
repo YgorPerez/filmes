@@ -49,6 +49,12 @@ export const PEOPLE = {
 
 export const PERSON = {
   back: 'Pessoas',
+  notes: {
+    label: 'Notas',
+    rate: 'Dar notas',
+    import: 'Importar',
+    export: 'Exportar',
+  },
   contents: 'Nesta página',
   owner: 'Dono',
   aliases: (aliases: readonly string[]) => `também ${aliases.join(', ')}`,
