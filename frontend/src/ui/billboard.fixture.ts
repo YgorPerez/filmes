@@ -32,6 +32,8 @@ export const MODEL: Billboard = {
     who: 'Vocês dois',
     parts: ['até 2h05', 'nota 7+ no IMDb', 'leve'],
   },
+  moods: ['leve'],
+  moodChoices: ['leve', 'pra rir', 'tenso'],
   dropped: [
     {
       position: 2,

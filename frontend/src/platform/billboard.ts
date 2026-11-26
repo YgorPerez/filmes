@@ -1,10 +1,11 @@
 // The Cartaz [billboard] on the web (#114): a Session's page shows the
 // engine's `billboardModel`, and the Cartaz's Enviar posts its text to
 // `/sessoes/<id>/responder`. There the reply is recorded as the logged-in
-// Dono (`answerBillboard`); when a film left the screen (Já vi, Trocar) or
-// acrescentar came, the Recomendação is redone with the films that stay
-// (`recommendSession` with `keep`, from the request the current version
-// asked, `sessionRedoRequest`). The page then shows the new version: the
+// Dono (`answerBillboard`); when a film left the screen (Já vi, Trocar),
+// acrescentar came or the Dono chose other Climas, the Recomendação is
+// redone with the films that stay (`recommendSession` with `keep`, from the
+// request the current version asked, `sessionRedoRequest`, and the Climas
+// the reply chose). The page then shows the new version: the
 // kept films at their number, the new ones "novo", and "Saiu" with why.
 //
 // The acrescentar is not read for taste: gosto permanente is written only
@@ -74,7 +75,7 @@ export function billboardsFromEngine(
         owner,
       })
       if (reply.exitCode !== 0) return { ...reply, stage: 'answer' }
-      const { regenerate, keep, warnings, addition } = reply.output
+      const { regenerate, keep, moods, warnings, addition } = reply.output
       const note = (more: readonly string[] = []): Note => ({
         warnings: [...warnings, ...more],
         addition,
@@ -84,7 +85,11 @@ export function billboardsFromEngine(
       const asked = await run(sessionRedoRequest(id))
       if (asked.exitCode !== 0) return { ...asked, stage: 'redo' }
       const redone = await run(
-        recommendSession({ ...asked.output, keep: [keep.join(',')] }),
+        recommendSession({
+          ...asked.output,
+          ...(moods !== null && { moods: [...moods] }),
+          keep: [keep.join(',')],
+        }),
         { owner },
       )
       if (redone.exitCode !== 0) return { ...redone, stage: 'redo' }
