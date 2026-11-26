@@ -1,6 +1,12 @@
 // @vitest-environment jsdom
 // The Sessions list and a Session's page: what each shows, and where its
 // links go.
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRouter,
+  RouterProvider,
+} from '@tanstack/react-router'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
@@ -10,7 +16,11 @@ import { MODEL } from './billboard.fixture'
 import { SessionList, SessionScreen } from './sessions'
 import { SESSIONS } from './sessions.copy'
 
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  localStorage.clear()
+  vi.unstubAllGlobals()
+})
 
 const OPEN: SessionItem = {
   id: '2026-11-20-iara',
@@ -133,6 +143,67 @@ describe('a Session’s page', () => {
         .getByRole('link', { name: SESSIONS.list.feedback })
         .getAttribute('href'),
     ).toBe('/sessoes/2026-11-20-iara/contar')
+  })
+
+  it('keeps a refused Cartaz reply ready to retry and clears it when saved', async () => {
+    const path = '/sessoes/2026-11-20-iara'
+    const pending = Promise.withResolvers<Response>()
+    vi.stubGlobal('scrollTo', vi.fn())
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn<typeof fetch>()
+        .mockReturnValueOnce(pending.promise)
+        .mockResolvedValueOnce(Response.json({ to: `${path}?feito=anotada` })),
+    )
+    const scroll = Object.getOwnPropertyDescriptor(
+      Element.prototype,
+      'scrollIntoView',
+    )
+    Object.defineProperty(Element.prototype, 'scrollIntoView', {
+      configurable: true,
+      value: () => {},
+    })
+    try {
+      const router = createRouter({
+        routeTree: createRootRoute({
+          component: () => <SessionScreen page={PAGE} />,
+        }),
+        history: createMemoryHistory({ initialEntries: [path] }),
+      })
+      render(<RouterProvider router={router} />)
+      const user = userEvent.setup()
+      const addition = () =>
+        screen.getByRole<HTMLTextAreaElement>('textbox', {
+          name: /Acrescentar/,
+        })
+      await screen.findByRole('textbox', { name: /Acrescentar/ })
+      await user.type(addition(), 'na próxima vez')
+      await user.click(screen.getByRole('button', { name: 'Enviar' }))
+      expect(
+        screen
+          .getByRole<HTMLButtonElement>('button', { name: 'Enviando…' })
+          .matches(':disabled'),
+      ).toBe(true)
+
+      pending.resolve(Response.json({ to: `${path}?erro=indisponivel` }))
+      expect((await screen.findByRole('alert')).textContent).toContain(
+        SESSIONS.session.refusals.indisponivel,
+      )
+      expect(router.state.location.href).toBe(path)
+      expect(addition().value).toBe('na próxima vez')
+
+      await user.click(screen.getByRole('button', { name: 'Enviar' }))
+      await vi.waitFor(() => {
+        expect(router.state.location.href).toBe(`${path}?feito=anotada`)
+        expect(addition().value).toBe('')
+        expect(screen.queryByRole('alert')).toBeNull()
+      })
+    } finally {
+      if (scroll)
+        Object.defineProperty(Element.prototype, 'scrollIntoView', scroll)
+      else Reflect.deleteProperty(Element.prototype, 'scrollIntoView')
+    }
   })
 
   it('copies the shareable Link da Sessão', async () => {
