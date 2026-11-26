@@ -102,6 +102,10 @@ _Evitar_: fixado, travado
 A Recomendação mostrada como página no T3 Code. Ele responde: em cada filme o Dono marca Já vi, Trocar, estrelas e comentário, e embaixo, depois do último filme, acrescenta contexto ou gosto; o botão Copiar pro chat junta tudo num texto que começa com `#cartaz <sessao> v<n>`, e o Dono cola no chat. Estrelas e comentário medem a Recomendação e ficam na Sessão, sem mexer no gosto; só o Trocar troca filme.
 _Evitar_: formulário, painel
 
+**Seção do Cartaz** [billboard section, `BillboardSection`]:
+Os filmes vizinhos do Cartaz que estão ali pelo mesmo Motivo, sob um título com ele e com quem o tem ("Porque você e Iara gostam de Rui Tavares", "Gente de gosto parecido com você gostou"). O Motivo de um filme é o da Evidência a favor mais forte dele entre os Presentes: uma entidade de que gostam, um filme de que gostaram ou os vizinhos de gosto; é gravado na Sessão quando a Recomendação sai. A Aposta tem a seção dela, e o filme sem Motivo a favor fica em "Outras escolhas". A ordem e o tamanho da Recomendação não mudam: um Motivo que volta depois de outro abre outra seção, com o mesmo título e "de novo" (#183).
+_Evitar_: grupo, fileira, categoria
+
 **Resposta** [reply, `replies`]:
 O que o Dono colou do Cartaz (o texto `#cartaz <sessao> v<n>`), gravado na versão da Sessão: a data, as estrelas e o comentário de cada filme e o Acrescentar.
 _Evitar_: retorno, devolutiva

@@ -18,6 +18,7 @@ import { join } from 'node:path'
 import { Effect } from 'effect'
 import { describe, expect, test } from 'vite-plus/test'
 import {
+  filmReason,
   answerBillboard,
   currentVersion,
   openSessions,
@@ -134,6 +135,7 @@ describe('recomendar --sessao (test_refazer_sessao)', () => {
         id: f.id,
         title: f.title,
         new: !before.has(f.id),
+        reason: filmReason(f.evidence),
       })),
     )
     expect(top['versions']).toEqual([
@@ -152,6 +154,7 @@ describe('recomendar --sessao (test_refazer_sessao)', () => {
           position: f.position,
           id: f.id,
           title: f.title,
+          reason: filmReason(f.evidence),
         })),
       },
     ])
@@ -329,6 +332,7 @@ describe('regenerating with kept films (test_regerar_mantidos)', () => {
         id: f.id,
         title: f.title,
         new: f.new,
+        reason: filmReason(f.evidence),
       })),
     )
     expect(top['kept']).toEqual([p[1]])

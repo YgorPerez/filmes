@@ -11,7 +11,14 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { recommend, recommendSession } from '@filmes/engine'
 import { expect, test, type Page } from '@playwright/test'
-import { addPerson, engineRun, loginAsBruno, notice, snap } from './support'
+import {
+  addPerson,
+  engineRun,
+  loginAsBruno,
+  notice,
+  section,
+  snap,
+} from './support'
 
 /** Opens a Session for Bruno and `person`, as Bruno; gives its id. */
 const openSession = async (person: string, count: number) =>
@@ -71,12 +78,14 @@ const hydrated = (page: Page) =>
 const cards = (page: Page) => page.getByRole('article')
 const card = (page: Page, n: number) => cards(page).nth(n - 1)
 const titleOf = async (page: Page, n: number) =>
-  (await card(page, n).getByRole('heading', { level: 2 }).innerText())
+  (await card(page, n).getByRole('heading', { level: 3 }).innerText())
     .replace(/^\d+\s*/, '')
     .split('\n')[0]!
     .trim()
 
-test('the Aposta has its stamp, in both themes', async ({ page }, info) => {
+test('the Aposta has its stamp and its section; the films stand under their Motivo, in both themes', async ({
+  page,
+}, info) => {
   const mobile = info.project.name === 'mobile'
   if (mobile) await page.emulateMedia({ colorScheme: 'dark' })
   const name = mobile ? 'Rui' : 'Pia'
@@ -90,6 +99,25 @@ test('the Aposta has its stamp, in both themes', async ({ page }, info) => {
     await expect(
       card(page, n).getByText('aposta', { exact: true }),
     ).toHaveCount(0)
+
+  // Only Bruno has Notas: every Motivo is his (#183).
+  const sections = page.getByRole('region', { name: /^(Porque você|Aposta)/ })
+  const titles = await sections
+    .getByRole('heading', { level: 2 })
+    .allInnerTexts()
+  expect(titles[0]).toMatch(/^Porque você (gosta|gostou) de /)
+  expect(titles.at(-1)).toBe('Aposta')
+  // Same films, same order: the sections hold the five cards.
+  const counts = await Promise.all(
+    titles.map((_, i) => sections.nth(i).getByRole('article').count()),
+  )
+  expect(counts.reduce((a, b) => a + b, 0)).toBe(5)
+  await expect(
+    section(page, 'Aposta').getByRole('article').getByText('aposta', {
+      exact: true,
+    }),
+  ).toBeVisible()
+  await snap(page, info, 'cartaz-secoes')
   await card(page, 5).scrollIntoViewIfNeeded()
   await snap(page, info, 'cartaz-aposta')
 })

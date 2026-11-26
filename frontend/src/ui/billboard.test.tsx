@@ -36,11 +36,61 @@ describe('the Cartaz shows', () => {
     render(<Billboard billboard={MODEL} action="/x" />)
     expect(
       cards().map(
-        (c) => within(c).getByRole('heading', { level: 2 }).textContent,
+        (c) => within(c).getByRole('heading', { level: 3 }).textContent,
       ),
     ).toEqual(['1As Horas Lentas', '2Sal & FerrugemSal e Ferrugem'])
     expect(within(cards()[1]!).getByText(BILLBOARD.card.isNew)).toBeTruthy()
     expect(within(cards()[0]!).queryByText(BILLBOARD.card.isNew)).toBeNull()
+  })
+
+  it('the films under the title of their Motivo, in the same order', () => {
+    render(<Billboard billboard={MODEL} />)
+    const helena = screen.getByRole('region', {
+      name: 'Porque você e Iara gostam de Helena Prado',
+    })
+    const bet = screen.getByRole('region', { name: 'Aposta' })
+    expect(within(helena).getAllByRole('article')).toEqual([cards()[0]])
+    expect(within(bet).getAllByRole('article')).toEqual([cards()[1]])
+    expect(
+      within(helena)
+        .getByRole('heading', { level: 2 })
+        .compareDocumentPosition(cards()[0]!) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+  })
+
+  it('a Motivo that comes back after another says so', () => {
+    const [first, second] = MODEL.films
+    const helena = MODEL.sections[0]!
+    render(
+      <Billboard
+        billboard={{
+          ...MODEL,
+          films: [first!, { ...second!, bet: false }],
+          sections: [helena, { ...helena, again: true, films: [second!.id] }],
+        }}
+      />,
+    )
+    const [once, again] = screen.getAllByRole('region', {
+      name: /Helena Prado/,
+    })
+    expect(within(once!).getByRole('heading', { level: 2 }).textContent).toBe(
+      'Porque você e Iara gostam de Helena Prado',
+    )
+    expect(within(again!).getByRole('heading', { level: 2 }).textContent).toBe(
+      `Porque você e Iara gostam de Helena Prado ${BILLBOARD.section.again}`,
+    )
+    expect(within(again!).getAllByRole('article')).toEqual([cards()[1]])
+  })
+
+  it('a Session from before the Motivos: the cards with no section, as before', () => {
+    render(<Billboard billboard={{ ...MODEL, sections: [] }} />)
+    expect(cards().some((c) => c.closest('section') !== null)).toBe(false)
+    expect(
+      cards().map(
+        (c) => within(c).getByRole('heading', { level: 2 }).textContent,
+      ),
+    ).toEqual(['1As Horas Lentas', '2Sal & FerrugemSal e Ferrugem'])
   })
 
   it('the Aposta’s stamp on the bet only, beside its NOVO', () => {

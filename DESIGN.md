@@ -495,6 +495,10 @@ Trilho preto (estojo, 5px, raio 6px) e, dentro, a etiqueta clara (shelf-label, r
 - **Adesivo de preço:** círculo laranja de 34px, número da posição em Rubik 800 18px, girado -8°, 9px para fora do canto de cima à esquerda, com anel de 2px na cor da superfície.
 - **Versão pequena** (ficha da última Sessão): estojo com 3px de borda e raio 5px, só a capa, sem pontos nem adesivos.
 
+### Seção do Cartaz
+
+Os cards ficam sob o título do Motivo deles, na ordem da Recomendação: um título por sequência de filmes vizinhos com o mesmo Motivo, 14px acima do primeiro card dela. O título é step-title (Rubik 700 17px) em tinta, com uma barra de 4px em tinta à esquerda e 8px de respiro; na Aposta, barra e texto em carimbo violeta. É texto de leitura, então não vai em maiúsculas nem em letra de mão. Quando o Motivo já teve uma seção acima, o título se repete com "de novo" depois, em meta tinta clara. Dentro de uma seção, o título do filme desce um nível (h3) e "Por que cada um vai gostar" também (h4). Sessão de antes do #183, sem Motivo gravado, mostra os cards sem seção. No card inline do Claude não há seção: ele continua com 4 dados por filme.
+
 ### Card do filme
 
 - **Corner Style:** 12px.

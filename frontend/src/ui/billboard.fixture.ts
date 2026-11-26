@@ -99,4 +99,13 @@ export const MODEL: Billboard = {
       predictedRatings: [],
     },
   ],
+  sections: [
+    {
+      kind: 'entity',
+      title: 'Porque você e Iara gostam de Helena Prado',
+      again: false,
+      films: ['tt9000104'],
+    },
+    { kind: 'bet', title: 'Aposta', again: false, films: ['tt9000105'] },
+  ],
 }
