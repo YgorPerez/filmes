@@ -12,6 +12,11 @@ exports[`avaliar, as recorded > gives the recorded result and report 1`] = `
           "normal": 1,
         },
       },
+      "bet": {
+        "maxFacts": 1,
+        "minPredicted": 7,
+        "position": 5,
+      },
       "catalog": {
         "minImdbRating": 7,
         "minVotes": 1000,
@@ -19,9 +24,10 @@ exports[`avaliar, as recorded > gives the recorded result and report 1`] = `
       "constraints": {
         "onDemandReach": 50,
       },
-      "credit": {
-        "factor": 0.5,
-        "window": 5,
+      "diversity": {
+        "depth": 10,
+        "lambda": 1,
+        "pool": 30,
       },
       "group": {
         "weight": 0.05,
@@ -40,6 +46,9 @@ exports[`avaliar, as recorded > gives the recorded result and report 1`] = `
         "minUsersHeavyTheme": 2,
         "minUsersSad": 3,
       },
+      "pairwise": {
+        "pairs": 10,
+      },
       "path": {
         "weight": {
           "cast": 0.5,
@@ -52,8 +61,24 @@ exports[`avaliar, as recorded > gives the recorded result and report 1`] = `
       "people": {
         "statementWeight": 1,
       },
+      "ratingDecay": {
+        "floor": 0.25,
+        "halfLifeYears": 5,
+      },
+      "ratingPercentile": {
+        "minRatings": 20,
+        "moderate": 0.7,
+        "moderateAgainst": 0.1,
+        "strong": 0.9,
+        "weak": 0.4,
+        "weakAgainst": 0.2,
+      },
       "recommendation": {
         "size": 5,
+      },
+      "satisfaction": {
+        "factor": 0.25,
+        "window": 5,
       },
       "seen": {
         "weight": 1,
@@ -83,6 +108,12 @@ exports[`avaliar, as recorded > gives the recorded result and report 1`] = `
         "minRelevance": 0.7,
         "minUsers": 10,
       },
+      "tasteNeighbors": {
+        "k": 50,
+        "minShared": 10,
+        "neutralBand": 0.05,
+        "weight": 1,
+      },
       "utility": {
         "k": 1,
         "maxEvidence": 5,
@@ -95,12 +126,16 @@ exports[`avaliar, as recorded > gives the recorded result and report 1`] = `
       "classificacoes.csv": "c3a70b77d1c21b31571296783da337367fb2a67cad3c945ab6310f7671b451aa",
       "elenco_principal_imdb.csv": "559f381e49c30635a34a1469db33ef7c5de47619fd211b204e027736ead40262",
       "entidades.csv": "5a2e92d5a59ff472f7c6ae75756570d3f1ff9f77f57a397966e36af849e7be50",
+      "entropia_movielens.csv": "54e8912b088438c2f77c5ba7671c3cf29c2e528ccafbdec5f8e9423b6f2e498e",
       "estreias.csv": "880d7cedc13ca6b4219cb65ec8bd5fa81f08aee038295689d0ec2b269baf48a3",
       "filmes.csv": "2b0d4ad04f1007999cf77b33796c695d2e0223ca171ac74248496faf908a986a",
+      "fonte_gosto_movielens.csv": "bd0e4d5aac3969eb131926c4a3fe9dc12b220d13543832caee9c72717cac4a9a",
       "generos_imdb.csv": "ca9cb82915808484dcd3881bd375601d7daeb8d4e28c79cebf10e672ca5389e3",
       "genoma.csv": "bf9e335eaec86c9fbe2d5ca1d55cf4a75f1a865c83f48750d359f07ac4169ed1",
       "idiomas_originais.csv": "3fd72e324b22bdd4a924778d6826f20e648099c908c0a40de7af2cf7ee6dacbf",
       "notas.csv": "ca2a3b8a88cc51a06428b4ecc48695f268ad9473128fa4b1de8cb09236210df4",
+      "notas_gosto_movielens.csv": "cf29b7d42d9b621c199733204f4e7f96e723e4f4f01b59a2e4225fe4133a9047",
+      "notas_movielens.csv": "732f70f4971aca938e7cc266ded071f301ddf13cda14e7f3e008eebcbb3e17b2",
       "series_de_filmes.csv": "c190c9b62c3f5391fbb12cb679915c497f8a443cdb5fd0d90fcce09ec62f2276",
       "slugs_letterboxd.csv": "aef16df5bcb6b746236d595d8c29a29728a3f8bb45726201631f04ed2f5071aa",
       "subclasses_wikidata.csv": "97f1dbb801f80d234d4923d3c86badf59f95e4258d56b5f6d6b7a7ae0956af3a",
@@ -114,11 +149,31 @@ exports[`avaliar, as recorded > gives the recorded result and report 1`] = `
 
 | Amostra | Pessoas | Recall@50 | Cobertura no top 5 |
 | --- | ---: | ---: | ---: |
-| Pessoas | 4 | 100.0% (5/5) | 70.0% (14/20) |
+| Pessoas | 4 | 80.0% (4/5) | 70.0% (14/20) |
 | MovieLens | 0 | — (0/0) | — (0/0) |
+
+Parecença média no top 5 (quanto menor, mais variada a lista): Pessoas 0.277, MovieLens —.
 
 O corte retém os 20% mais recentes do histórico de cada Pessoa e de cada usuário sorteado.
 A amostra do MovieLens usou a semente 27 e sorteou 0 usuários.
+
+## Calibração da Força
+
+Quanto das Notas retidas foi 4 ou mais, pela Força mais alta a favor do filme no dia do corte. Uma Força calibrada acerta mais que as mais fracas.
+
+| Quem | Fraca | Moderada | Forte | Nada a favor | Sobe? |
+| --- | ---: | ---: | ---: | ---: | :---: |
+| Pessoas | — (0/0) | — (0/0) | 100.0% (2/2) | 60.0% (3/5) | — |
+| MovieLens | — (0/0) | — (0/0) | — (0/0) | — (0/0) | — |
+| bruno | — (0/0) | — (0/0) | 100.0% (2/2) | 0.0% (0/1) | — |
+| iara | — (0/0) | — (0/0) | — (0/0) | 100.0% (1/1) | — |
+| quim | — (0/0) | — (0/0) | — (0/0) | 100.0% (1/1) | — |
+| rosa | — (0/0) | — (0/0) | — (0/0) | 50.0% (1/2) | — |
+
+## Nota prevista
+
+- Erro médio (Pessoas): ausente, nenhum filme retido tem Nota prevista.
+- Erro médio (MovieLens): ausente, nenhum filme retido tem Nota prevista.
 
 ## Online
 
@@ -126,6 +181,9 @@ A amostra do MovieLens usou a semente 27 e sorteou 0 usuários.
 - Sessões em que viram um filme: 0
 - Filme escolhido no top 5: —
 - Reação média: —
+- Sessões em grupo com reações: 0
+- Satisfação mínima: —
+- Discordância: —
 - Medida que decide: offline
 
 ## Pesos
@@ -152,21 +210,176 @@ A amostra do MovieLens usou a semente 27 e sorteou 0 usuários.
     },
     "offline": {
       "movielens": {
+        "calibration": {
+          "overall": {
+            "moderate": {
+              "heldOut": 0,
+              "hitRate": null,
+              "hits": 0,
+            },
+            "none": {
+              "heldOut": 0,
+              "hitRate": null,
+              "hits": 0,
+            },
+            "rises": null,
+            "strong": {
+              "heldOut": 0,
+              "hitRate": null,
+              "hits": 0,
+            },
+            "weak": {
+              "heldOut": 0,
+              "hitRate": null,
+              "hits": 0,
+            },
+          },
+          "people": {},
+        },
         "coverageTop5": null,
         "filmsTop5": 0,
         "heldOut4Plus": 0,
         "people": 0,
+        "predictedRatingError": {
+          "films": 0,
+          "meanAbsoluteError": null,
+        },
         "recall50": null,
         "retrieved": 0,
+        "similarityTop5": null,
         "withEvidence": 0,
       },
       "people": {
+        "calibration": {
+          "overall": {
+            "moderate": {
+              "heldOut": 0,
+              "hitRate": null,
+              "hits": 0,
+            },
+            "none": {
+              "heldOut": 5,
+              "hitRate": 0.6,
+              "hits": 3,
+            },
+            "rises": null,
+            "strong": {
+              "heldOut": 2,
+              "hitRate": 1,
+              "hits": 2,
+            },
+            "weak": {
+              "heldOut": 0,
+              "hitRate": null,
+              "hits": 0,
+            },
+          },
+          "people": {
+            "bruno": {
+              "moderate": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "none": {
+                "heldOut": 1,
+                "hitRate": 0,
+                "hits": 0,
+              },
+              "rises": null,
+              "strong": {
+                "heldOut": 2,
+                "hitRate": 1,
+                "hits": 2,
+              },
+              "weak": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+            },
+            "iara": {
+              "moderate": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "none": {
+                "heldOut": 1,
+                "hitRate": 1,
+                "hits": 1,
+              },
+              "rises": null,
+              "strong": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "weak": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+            },
+            "quim": {
+              "moderate": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "none": {
+                "heldOut": 1,
+                "hitRate": 1,
+                "hits": 1,
+              },
+              "rises": null,
+              "strong": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "weak": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+            },
+            "rosa": {
+              "moderate": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "none": {
+                "heldOut": 2,
+                "hitRate": 0.5,
+                "hits": 1,
+              },
+              "rises": null,
+              "strong": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "weak": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+            },
+          },
+        },
         "coverageTop5": 0.7,
         "filmsTop5": 20,
         "heldOut4Plus": 5,
         "people": 4,
-        "recall50": 1,
-        "retrieved": 5,
+        "predictedRatingError": {
+          "films": 0,
+          "meanAbsoluteError": null,
+        },
+        "recall50": 0.8,
+        "retrieved": 4,
+        "similarityTop5": 0.27708333333333335,
         "withEvidence": 14,
       },
     },
@@ -175,6 +388,12 @@ A amostra do MovieLens usou a semente 27 e sorteou 0 usuários.
       "meanReaction": null,
       "rateTop5": null,
       "reactions": 0,
+      "satisfaction": {
+        "disagreement": null,
+        "groupSessions": 0,
+        "minimum": null,
+        "people": {},
+      },
       "sessions": 0,
       "withFilm": 0,
     },
@@ -186,12 +405,16 @@ A amostra do MovieLens usou a semente 27 e sorteou 0 usuários.
       "classificacoes.csv": "c3a70b77d1c21b31571296783da337367fb2a67cad3c945ab6310f7671b451aa",
       "elenco_principal_imdb.csv": "559f381e49c30635a34a1469db33ef7c5de47619fd211b204e027736ead40262",
       "entidades.csv": "5a2e92d5a59ff472f7c6ae75756570d3f1ff9f77f57a397966e36af849e7be50",
+      "entropia_movielens.csv": "54e8912b088438c2f77c5ba7671c3cf29c2e528ccafbdec5f8e9423b6f2e498e",
       "estreias.csv": "880d7cedc13ca6b4219cb65ec8bd5fa81f08aee038295689d0ec2b269baf48a3",
       "filmes.csv": "2b0d4ad04f1007999cf77b33796c695d2e0223ca171ac74248496faf908a986a",
+      "fonte_gosto_movielens.csv": "bd0e4d5aac3969eb131926c4a3fe9dc12b220d13543832caee9c72717cac4a9a",
       "generos_imdb.csv": "ca9cb82915808484dcd3881bd375601d7daeb8d4e28c79cebf10e672ca5389e3",
       "genoma.csv": "bf9e335eaec86c9fbe2d5ca1d55cf4a75f1a865c83f48750d359f07ac4169ed1",
       "idiomas_originais.csv": "3fd72e324b22bdd4a924778d6826f20e648099c908c0a40de7af2cf7ee6dacbf",
       "notas.csv": "ca2a3b8a88cc51a06428b4ecc48695f268ad9473128fa4b1de8cb09236210df4",
+      "notas_gosto_movielens.csv": "cf29b7d42d9b621c199733204f4e7f96e723e4f4f01b59a2e4225fe4133a9047",
+      "notas_movielens.csv": "732f70f4971aca938e7cc266ded071f301ddf13cda14e7f3e008eebcbb3e17b2",
       "series_de_filmes.csv": "c190c9b62c3f5391fbb12cb679915c497f8a443cdb5fd0d90fcce09ec62f2276",
       "slugs_letterboxd.csv": "aef16df5bcb6b746236d595d8c29a29728a3f8bb45726201631f04ed2f5071aa",
       "subclasses_wikidata.csv": "97f1dbb801f80d234d4923d3c86badf59f95e4258d56b5f6d6b7a7ae0956af3a",
@@ -210,6 +433,11 @@ A amostra do MovieLens usou a semente 27 e sorteou 0 usuários.
           "normal": 1,
         },
       },
+      "bet": {
+        "maxFacts": 1,
+        "minPredicted": 7,
+        "position": 5,
+      },
       "catalog": {
         "minImdbRating": 7,
         "minVotes": 1000,
@@ -217,9 +445,10 @@ A amostra do MovieLens usou a semente 27 e sorteou 0 usuários.
       "constraints": {
         "onDemandReach": 50,
       },
-      "credit": {
-        "factor": 0.5,
-        "window": 5,
+      "diversity": {
+        "depth": 10,
+        "lambda": 1,
+        "pool": 30,
       },
       "group": {
         "weight": 0.05,
@@ -238,6 +467,9 @@ A amostra do MovieLens usou a semente 27 e sorteou 0 usuários.
         "minUsersHeavyTheme": 2,
         "minUsersSad": 3,
       },
+      "pairwise": {
+        "pairs": 10,
+      },
       "path": {
         "weight": {
           "cast": 0.5,
@@ -250,8 +482,24 @@ A amostra do MovieLens usou a semente 27 e sorteou 0 usuários.
       "people": {
         "statementWeight": 1,
       },
+      "ratingDecay": {
+        "floor": 0.25,
+        "halfLifeYears": 5,
+      },
+      "ratingPercentile": {
+        "minRatings": 20,
+        "moderate": 0.7,
+        "moderateAgainst": 0.1,
+        "strong": 0.9,
+        "weak": 0.4,
+        "weakAgainst": 0.2,
+      },
       "recommendation": {
         "size": 5,
+      },
+      "satisfaction": {
+        "factor": 0.25,
+        "window": 5,
       },
       "seen": {
         "weight": 1,
@@ -281,6 +529,12 @@ A amostra do MovieLens usou a semente 27 e sorteou 0 usuários.
         "minRelevance": 0.7,
         "minUsers": 10,
       },
+      "tasteNeighbors": {
+        "k": 50,
+        "minShared": 10,
+        "neutralBand": 0.05,
+        "weight": 1,
+      },
       "utility": {
         "k": 1,
         "maxEvidence": 5,
@@ -297,25 +551,180 @@ exports[`avaliar, as recorded > the grid gives the recorded best weights and rep
       "coverageTop5": 0.7,
       "offline": {
         "movielens": {
+          "calibration": {
+            "overall": {
+              "moderate": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "none": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "rises": null,
+              "strong": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "weak": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+            },
+            "people": {},
+          },
           "coverageTop5": null,
           "filmsTop5": 0,
           "heldOut4Plus": 0,
           "people": 0,
+          "predictedRatingError": {
+            "films": 0,
+            "meanAbsoluteError": null,
+          },
           "recall50": null,
           "retrieved": 0,
+          "similarityTop5": null,
           "withEvidence": 0,
         },
         "people": {
+          "calibration": {
+            "overall": {
+              "moderate": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "none": {
+                "heldOut": 5,
+                "hitRate": 0.6,
+                "hits": 3,
+              },
+              "rises": null,
+              "strong": {
+                "heldOut": 2,
+                "hitRate": 1,
+                "hits": 2,
+              },
+              "weak": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+            },
+            "people": {
+              "bruno": {
+                "moderate": {
+                  "heldOut": 0,
+                  "hitRate": null,
+                  "hits": 0,
+                },
+                "none": {
+                  "heldOut": 1,
+                  "hitRate": 0,
+                  "hits": 0,
+                },
+                "rises": null,
+                "strong": {
+                  "heldOut": 2,
+                  "hitRate": 1,
+                  "hits": 2,
+                },
+                "weak": {
+                  "heldOut": 0,
+                  "hitRate": null,
+                  "hits": 0,
+                },
+              },
+              "iara": {
+                "moderate": {
+                  "heldOut": 0,
+                  "hitRate": null,
+                  "hits": 0,
+                },
+                "none": {
+                  "heldOut": 1,
+                  "hitRate": 1,
+                  "hits": 1,
+                },
+                "rises": null,
+                "strong": {
+                  "heldOut": 0,
+                  "hitRate": null,
+                  "hits": 0,
+                },
+                "weak": {
+                  "heldOut": 0,
+                  "hitRate": null,
+                  "hits": 0,
+                },
+              },
+              "quim": {
+                "moderate": {
+                  "heldOut": 0,
+                  "hitRate": null,
+                  "hits": 0,
+                },
+                "none": {
+                  "heldOut": 1,
+                  "hitRate": 1,
+                  "hits": 1,
+                },
+                "rises": null,
+                "strong": {
+                  "heldOut": 0,
+                  "hitRate": null,
+                  "hits": 0,
+                },
+                "weak": {
+                  "heldOut": 0,
+                  "hitRate": null,
+                  "hits": 0,
+                },
+              },
+              "rosa": {
+                "moderate": {
+                  "heldOut": 0,
+                  "hitRate": null,
+                  "hits": 0,
+                },
+                "none": {
+                  "heldOut": 2,
+                  "hitRate": 0.5,
+                  "hits": 1,
+                },
+                "rises": null,
+                "strong": {
+                  "heldOut": 0,
+                  "hitRate": null,
+                  "hits": 0,
+                },
+                "weak": {
+                  "heldOut": 0,
+                  "hitRate": null,
+                  "hits": 0,
+                },
+              },
+            },
+          },
           "coverageTop5": 0.7,
           "filmsTop5": 20,
           "heldOut4Plus": 5,
           "people": 4,
-          "recall50": 1,
-          "retrieved": 5,
+          "predictedRatingError": {
+            "films": 0,
+            "meanAbsoluteError": null,
+          },
+          "recall50": 0.8,
+          "retrieved": 4,
+          "similarityTop5": 0.27708333333333335,
           "withEvidence": 14,
         },
       },
-      "recall50": 1,
+      "recall50": 0.8,
       "weights": {
         "path.weight": {
           "cast": 0.5,
@@ -323,6 +732,9 @@ exports[`avaliar, as recorded > the grid gives the recorded best weights and rep
           "genre": 0.3,
           "series": 1,
           "writer": 0.8,
+        },
+        "rating_decay": {
+          "halfLifeYears": 5,
         },
         "strength.multiplier": {
           "guess": 0,
@@ -339,25 +751,180 @@ exports[`avaliar, as recorded > the grid gives the recorded best weights and rep
       "coverageTop5": 0.7,
       "offline": {
         "movielens": {
+          "calibration": {
+            "overall": {
+              "moderate": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "none": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "rises": null,
+              "strong": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "weak": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+            },
+            "people": {},
+          },
           "coverageTop5": null,
           "filmsTop5": 0,
           "heldOut4Plus": 0,
           "people": 0,
+          "predictedRatingError": {
+            "films": 0,
+            "meanAbsoluteError": null,
+          },
           "recall50": null,
           "retrieved": 0,
+          "similarityTop5": null,
           "withEvidence": 0,
         },
         "people": {
+          "calibration": {
+            "overall": {
+              "moderate": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "none": {
+                "heldOut": 5,
+                "hitRate": 0.6,
+                "hits": 3,
+              },
+              "rises": null,
+              "strong": {
+                "heldOut": 2,
+                "hitRate": 1,
+                "hits": 2,
+              },
+              "weak": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+            },
+            "people": {
+              "bruno": {
+                "moderate": {
+                  "heldOut": 0,
+                  "hitRate": null,
+                  "hits": 0,
+                },
+                "none": {
+                  "heldOut": 1,
+                  "hitRate": 0,
+                  "hits": 0,
+                },
+                "rises": null,
+                "strong": {
+                  "heldOut": 2,
+                  "hitRate": 1,
+                  "hits": 2,
+                },
+                "weak": {
+                  "heldOut": 0,
+                  "hitRate": null,
+                  "hits": 0,
+                },
+              },
+              "iara": {
+                "moderate": {
+                  "heldOut": 0,
+                  "hitRate": null,
+                  "hits": 0,
+                },
+                "none": {
+                  "heldOut": 1,
+                  "hitRate": 1,
+                  "hits": 1,
+                },
+                "rises": null,
+                "strong": {
+                  "heldOut": 0,
+                  "hitRate": null,
+                  "hits": 0,
+                },
+                "weak": {
+                  "heldOut": 0,
+                  "hitRate": null,
+                  "hits": 0,
+                },
+              },
+              "quim": {
+                "moderate": {
+                  "heldOut": 0,
+                  "hitRate": null,
+                  "hits": 0,
+                },
+                "none": {
+                  "heldOut": 1,
+                  "hitRate": 1,
+                  "hits": 1,
+                },
+                "rises": null,
+                "strong": {
+                  "heldOut": 0,
+                  "hitRate": null,
+                  "hits": 0,
+                },
+                "weak": {
+                  "heldOut": 0,
+                  "hitRate": null,
+                  "hits": 0,
+                },
+              },
+              "rosa": {
+                "moderate": {
+                  "heldOut": 0,
+                  "hitRate": null,
+                  "hits": 0,
+                },
+                "none": {
+                  "heldOut": 2,
+                  "hitRate": 0.5,
+                  "hits": 1,
+                },
+                "rises": null,
+                "strong": {
+                  "heldOut": 0,
+                  "hitRate": null,
+                  "hits": 0,
+                },
+                "weak": {
+                  "heldOut": 0,
+                  "hitRate": null,
+                  "hits": 0,
+                },
+              },
+            },
+          },
           "coverageTop5": 0.7,
           "filmsTop5": 20,
           "heldOut4Plus": 5,
           "people": 4,
-          "recall50": 1,
-          "retrieved": 5,
+          "predictedRatingError": {
+            "films": 0,
+            "meanAbsoluteError": null,
+          },
+          "recall50": 0.8,
+          "retrieved": 4,
+          "similarityTop5": 0.23094424672172714,
           "withEvidence": 14,
         },
       },
-      "recall50": 1,
+      "recall50": 0.8,
       "weights": {
         "path.weight": {
           "cast": 0.5,
@@ -366,6 +933,9 @@ exports[`avaliar, as recorded > the grid gives the recorded best weights and rep
           "series": 1,
           "writer": 0.8,
         },
+        "rating_decay": {
+          "halfLifeYears": 5,
+        },
         "strength.multiplier": {
           "guess": 0,
           "moderate": 0.6,
@@ -381,25 +951,180 @@ exports[`avaliar, as recorded > the grid gives the recorded best weights and rep
       "coverageTop5": 0.7,
       "offline": {
         "movielens": {
+          "calibration": {
+            "overall": {
+              "moderate": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "none": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "rises": null,
+              "strong": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "weak": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+            },
+            "people": {},
+          },
           "coverageTop5": null,
           "filmsTop5": 0,
           "heldOut4Plus": 0,
           "people": 0,
+          "predictedRatingError": {
+            "films": 0,
+            "meanAbsoluteError": null,
+          },
           "recall50": null,
           "retrieved": 0,
+          "similarityTop5": null,
           "withEvidence": 0,
         },
         "people": {
+          "calibration": {
+            "overall": {
+              "moderate": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "none": {
+                "heldOut": 5,
+                "hitRate": 0.6,
+                "hits": 3,
+              },
+              "rises": null,
+              "strong": {
+                "heldOut": 2,
+                "hitRate": 1,
+                "hits": 2,
+              },
+              "weak": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+            },
+            "people": {
+              "bruno": {
+                "moderate": {
+                  "heldOut": 0,
+                  "hitRate": null,
+                  "hits": 0,
+                },
+                "none": {
+                  "heldOut": 1,
+                  "hitRate": 0,
+                  "hits": 0,
+                },
+                "rises": null,
+                "strong": {
+                  "heldOut": 2,
+                  "hitRate": 1,
+                  "hits": 2,
+                },
+                "weak": {
+                  "heldOut": 0,
+                  "hitRate": null,
+                  "hits": 0,
+                },
+              },
+              "iara": {
+                "moderate": {
+                  "heldOut": 0,
+                  "hitRate": null,
+                  "hits": 0,
+                },
+                "none": {
+                  "heldOut": 1,
+                  "hitRate": 1,
+                  "hits": 1,
+                },
+                "rises": null,
+                "strong": {
+                  "heldOut": 0,
+                  "hitRate": null,
+                  "hits": 0,
+                },
+                "weak": {
+                  "heldOut": 0,
+                  "hitRate": null,
+                  "hits": 0,
+                },
+              },
+              "quim": {
+                "moderate": {
+                  "heldOut": 0,
+                  "hitRate": null,
+                  "hits": 0,
+                },
+                "none": {
+                  "heldOut": 1,
+                  "hitRate": 1,
+                  "hits": 1,
+                },
+                "rises": null,
+                "strong": {
+                  "heldOut": 0,
+                  "hitRate": null,
+                  "hits": 0,
+                },
+                "weak": {
+                  "heldOut": 0,
+                  "hitRate": null,
+                  "hits": 0,
+                },
+              },
+              "rosa": {
+                "moderate": {
+                  "heldOut": 0,
+                  "hitRate": null,
+                  "hits": 0,
+                },
+                "none": {
+                  "heldOut": 2,
+                  "hitRate": 0.5,
+                  "hits": 1,
+                },
+                "rises": null,
+                "strong": {
+                  "heldOut": 0,
+                  "hitRate": null,
+                  "hits": 0,
+                },
+                "weak": {
+                  "heldOut": 0,
+                  "hitRate": null,
+                  "hits": 0,
+                },
+              },
+            },
+          },
           "coverageTop5": 0.7,
           "filmsTop5": 20,
           "heldOut4Plus": 5,
           "people": 4,
-          "recall50": 1,
-          "retrieved": 5,
+          "predictedRatingError": {
+            "films": 0,
+            "meanAbsoluteError": null,
+          },
+          "recall50": 0.8,
+          "retrieved": 4,
+          "similarityTop5": 0.27708333333333335,
           "withEvidence": 14,
         },
       },
-      "recall50": 1,
+      "recall50": 0.8,
       "weights": {
         "path.weight": {
           "cast": 0.375,
@@ -407,6 +1132,9 @@ exports[`avaliar, as recorded > the grid gives the recorded best weights and rep
           "genre": 0.3,
           "series": 1,
           "writer": 0.8,
+        },
+        "rating_decay": {
+          "halfLifeYears": 5,
         },
         "strength.multiplier": {
           "guess": 0,
@@ -426,11 +1154,31 @@ exports[`avaliar, as recorded > the grid gives the recorded best weights and rep
 
 | Amostra | Pessoas | Recall@50 | Cobertura no top 5 |
 | --- | ---: | ---: | ---: |
-| Pessoas | 4 | 100.0% (5/5) | 70.0% (14/20) |
+| Pessoas | 4 | 80.0% (4/5) | 70.0% (14/20) |
 | MovieLens | 0 | — (0/0) | — (0/0) |
+
+Parecença média no top 5 (quanto menor, mais variada a lista): Pessoas 0.277, MovieLens —.
 
 O corte retém os 20% mais recentes do histórico de cada Pessoa e de cada usuário sorteado.
 A amostra do MovieLens usou a semente 27 e sorteou 0 usuários.
+
+## Calibração da Força
+
+Quanto das Notas retidas foi 4 ou mais, pela Força mais alta a favor do filme no dia do corte. Uma Força calibrada acerta mais que as mais fracas.
+
+| Quem | Fraca | Moderada | Forte | Nada a favor | Sobe? |
+| --- | ---: | ---: | ---: | ---: | :---: |
+| Pessoas | — (0/0) | — (0/0) | 100.0% (2/2) | 60.0% (3/5) | — |
+| MovieLens | — (0/0) | — (0/0) | — (0/0) | — (0/0) | — |
+| bruno | — (0/0) | — (0/0) | 100.0% (2/2) | 0.0% (0/1) | — |
+| iara | — (0/0) | — (0/0) | — (0/0) | 100.0% (1/1) | — |
+| quim | — (0/0) | — (0/0) | — (0/0) | 100.0% (1/1) | — |
+| rosa | — (0/0) | — (0/0) | — (0/0) | 50.0% (1/2) | — |
+
+## Nota prevista
+
+- Erro médio (Pessoas): ausente, nenhum filme retido tem Nota prevista.
+- Erro médio (MovieLens): ausente, nenhum filme retido tem Nota prevista.
 
 ## Online
 
@@ -438,6 +1186,9 @@ A amostra do MovieLens usou a semente 27 e sorteou 0 usuários.
 - Sessões em que viram um filme: 0
 - Filme escolhido no top 5: —
 - Reação média: —
+- Sessões em grupo com reações: 0
+- Satisfação mínima: —
+- Discordância: —
 - Medida que decide: offline
 
 ## Pesos
@@ -454,7 +1205,7 @@ A amostra do MovieLens usou a semente 27 e sorteou 0 usuários.
 
 ## Grade de pesos
 
-Foram testados 300 conjuntos. A ordem usa a média do Recall@50 entre as amostras. No empate, vale a cobertura no top 5 e depois o menor número de mudanças nos pesos.
+Foram testados 303 conjuntos. A ordem usa a média do Recall@50 entre as amostras. No empate, vale a cobertura no top 5 e depois o menor número de mudanças nos pesos.
 
 \`\`\`yaml
 <bloco>
@@ -472,25 +1223,180 @@ Foram testados 300 conjuntos. A ordem usa a média do Recall@50 entre as amostra
           "coverageTop5": 0.7,
           "offline": {
             "movielens": {
+              "calibration": {
+                "overall": {
+                  "moderate": {
+                    "heldOut": 0,
+                    "hitRate": null,
+                    "hits": 0,
+                  },
+                  "none": {
+                    "heldOut": 0,
+                    "hitRate": null,
+                    "hits": 0,
+                  },
+                  "rises": null,
+                  "strong": {
+                    "heldOut": 0,
+                    "hitRate": null,
+                    "hits": 0,
+                  },
+                  "weak": {
+                    "heldOut": 0,
+                    "hitRate": null,
+                    "hits": 0,
+                  },
+                },
+                "people": {},
+              },
               "coverageTop5": null,
               "filmsTop5": 0,
               "heldOut4Plus": 0,
               "people": 0,
+              "predictedRatingError": {
+                "films": 0,
+                "meanAbsoluteError": null,
+              },
               "recall50": null,
               "retrieved": 0,
+              "similarityTop5": null,
               "withEvidence": 0,
             },
             "people": {
+              "calibration": {
+                "overall": {
+                  "moderate": {
+                    "heldOut": 0,
+                    "hitRate": null,
+                    "hits": 0,
+                  },
+                  "none": {
+                    "heldOut": 5,
+                    "hitRate": 0.6,
+                    "hits": 3,
+                  },
+                  "rises": null,
+                  "strong": {
+                    "heldOut": 2,
+                    "hitRate": 1,
+                    "hits": 2,
+                  },
+                  "weak": {
+                    "heldOut": 0,
+                    "hitRate": null,
+                    "hits": 0,
+                  },
+                },
+                "people": {
+                  "bruno": {
+                    "moderate": {
+                      "heldOut": 0,
+                      "hitRate": null,
+                      "hits": 0,
+                    },
+                    "none": {
+                      "heldOut": 1,
+                      "hitRate": 0,
+                      "hits": 0,
+                    },
+                    "rises": null,
+                    "strong": {
+                      "heldOut": 2,
+                      "hitRate": 1,
+                      "hits": 2,
+                    },
+                    "weak": {
+                      "heldOut": 0,
+                      "hitRate": null,
+                      "hits": 0,
+                    },
+                  },
+                  "iara": {
+                    "moderate": {
+                      "heldOut": 0,
+                      "hitRate": null,
+                      "hits": 0,
+                    },
+                    "none": {
+                      "heldOut": 1,
+                      "hitRate": 1,
+                      "hits": 1,
+                    },
+                    "rises": null,
+                    "strong": {
+                      "heldOut": 0,
+                      "hitRate": null,
+                      "hits": 0,
+                    },
+                    "weak": {
+                      "heldOut": 0,
+                      "hitRate": null,
+                      "hits": 0,
+                    },
+                  },
+                  "quim": {
+                    "moderate": {
+                      "heldOut": 0,
+                      "hitRate": null,
+                      "hits": 0,
+                    },
+                    "none": {
+                      "heldOut": 1,
+                      "hitRate": 1,
+                      "hits": 1,
+                    },
+                    "rises": null,
+                    "strong": {
+                      "heldOut": 0,
+                      "hitRate": null,
+                      "hits": 0,
+                    },
+                    "weak": {
+                      "heldOut": 0,
+                      "hitRate": null,
+                      "hits": 0,
+                    },
+                  },
+                  "rosa": {
+                    "moderate": {
+                      "heldOut": 0,
+                      "hitRate": null,
+                      "hits": 0,
+                    },
+                    "none": {
+                      "heldOut": 2,
+                      "hitRate": 0.5,
+                      "hits": 1,
+                    },
+                    "rises": null,
+                    "strong": {
+                      "heldOut": 0,
+                      "hitRate": null,
+                      "hits": 0,
+                    },
+                    "weak": {
+                      "heldOut": 0,
+                      "hitRate": null,
+                      "hits": 0,
+                    },
+                  },
+                },
+              },
               "coverageTop5": 0.7,
               "filmsTop5": 20,
               "heldOut4Plus": 5,
               "people": 4,
-              "recall50": 1,
-              "retrieved": 5,
+              "predictedRatingError": {
+                "films": 0,
+                "meanAbsoluteError": null,
+              },
+              "recall50": 0.8,
+              "retrieved": 4,
+              "similarityTop5": 0.27708333333333335,
               "withEvidence": 14,
             },
           },
-          "recall50": 1,
+          "recall50": 0.8,
           "weights": {
             "path.weight": {
               "cast": 0.5,
@@ -498,6 +1404,9 @@ Foram testados 300 conjuntos. A ordem usa a média do Recall@50 entre as amostra
               "genre": 0.3,
               "series": 1,
               "writer": 0.8,
+            },
+            "rating_decay": {
+              "halfLifeYears": 5,
             },
             "strength.multiplier": {
               "guess": 0,
@@ -514,25 +1423,180 @@ Foram testados 300 conjuntos. A ordem usa a média do Recall@50 entre as amostra
           "coverageTop5": 0.7,
           "offline": {
             "movielens": {
+              "calibration": {
+                "overall": {
+                  "moderate": {
+                    "heldOut": 0,
+                    "hitRate": null,
+                    "hits": 0,
+                  },
+                  "none": {
+                    "heldOut": 0,
+                    "hitRate": null,
+                    "hits": 0,
+                  },
+                  "rises": null,
+                  "strong": {
+                    "heldOut": 0,
+                    "hitRate": null,
+                    "hits": 0,
+                  },
+                  "weak": {
+                    "heldOut": 0,
+                    "hitRate": null,
+                    "hits": 0,
+                  },
+                },
+                "people": {},
+              },
               "coverageTop5": null,
               "filmsTop5": 0,
               "heldOut4Plus": 0,
               "people": 0,
+              "predictedRatingError": {
+                "films": 0,
+                "meanAbsoluteError": null,
+              },
               "recall50": null,
               "retrieved": 0,
+              "similarityTop5": null,
               "withEvidence": 0,
             },
             "people": {
+              "calibration": {
+                "overall": {
+                  "moderate": {
+                    "heldOut": 0,
+                    "hitRate": null,
+                    "hits": 0,
+                  },
+                  "none": {
+                    "heldOut": 5,
+                    "hitRate": 0.6,
+                    "hits": 3,
+                  },
+                  "rises": null,
+                  "strong": {
+                    "heldOut": 2,
+                    "hitRate": 1,
+                    "hits": 2,
+                  },
+                  "weak": {
+                    "heldOut": 0,
+                    "hitRate": null,
+                    "hits": 0,
+                  },
+                },
+                "people": {
+                  "bruno": {
+                    "moderate": {
+                      "heldOut": 0,
+                      "hitRate": null,
+                      "hits": 0,
+                    },
+                    "none": {
+                      "heldOut": 1,
+                      "hitRate": 0,
+                      "hits": 0,
+                    },
+                    "rises": null,
+                    "strong": {
+                      "heldOut": 2,
+                      "hitRate": 1,
+                      "hits": 2,
+                    },
+                    "weak": {
+                      "heldOut": 0,
+                      "hitRate": null,
+                      "hits": 0,
+                    },
+                  },
+                  "iara": {
+                    "moderate": {
+                      "heldOut": 0,
+                      "hitRate": null,
+                      "hits": 0,
+                    },
+                    "none": {
+                      "heldOut": 1,
+                      "hitRate": 1,
+                      "hits": 1,
+                    },
+                    "rises": null,
+                    "strong": {
+                      "heldOut": 0,
+                      "hitRate": null,
+                      "hits": 0,
+                    },
+                    "weak": {
+                      "heldOut": 0,
+                      "hitRate": null,
+                      "hits": 0,
+                    },
+                  },
+                  "quim": {
+                    "moderate": {
+                      "heldOut": 0,
+                      "hitRate": null,
+                      "hits": 0,
+                    },
+                    "none": {
+                      "heldOut": 1,
+                      "hitRate": 1,
+                      "hits": 1,
+                    },
+                    "rises": null,
+                    "strong": {
+                      "heldOut": 0,
+                      "hitRate": null,
+                      "hits": 0,
+                    },
+                    "weak": {
+                      "heldOut": 0,
+                      "hitRate": null,
+                      "hits": 0,
+                    },
+                  },
+                  "rosa": {
+                    "moderate": {
+                      "heldOut": 0,
+                      "hitRate": null,
+                      "hits": 0,
+                    },
+                    "none": {
+                      "heldOut": 2,
+                      "hitRate": 0.5,
+                      "hits": 1,
+                    },
+                    "rises": null,
+                    "strong": {
+                      "heldOut": 0,
+                      "hitRate": null,
+                      "hits": 0,
+                    },
+                    "weak": {
+                      "heldOut": 0,
+                      "hitRate": null,
+                      "hits": 0,
+                    },
+                  },
+                },
+              },
               "coverageTop5": 0.7,
               "filmsTop5": 20,
               "heldOut4Plus": 5,
               "people": 4,
-              "recall50": 1,
-              "retrieved": 5,
+              "predictedRatingError": {
+                "films": 0,
+                "meanAbsoluteError": null,
+              },
+              "recall50": 0.8,
+              "retrieved": 4,
+              "similarityTop5": 0.23094424672172714,
               "withEvidence": 14,
             },
           },
-          "recall50": 1,
+          "recall50": 0.8,
           "weights": {
             "path.weight": {
               "cast": 0.5,
@@ -541,6 +1605,9 @@ Foram testados 300 conjuntos. A ordem usa a média do Recall@50 entre as amostra
               "series": 1,
               "writer": 0.8,
             },
+            "rating_decay": {
+              "halfLifeYears": 5,
+            },
             "strength.multiplier": {
               "guess": 0,
               "moderate": 0.6,
@@ -556,25 +1623,180 @@ Foram testados 300 conjuntos. A ordem usa a média do Recall@50 entre as amostra
           "coverageTop5": 0.7,
           "offline": {
             "movielens": {
+              "calibration": {
+                "overall": {
+                  "moderate": {
+                    "heldOut": 0,
+                    "hitRate": null,
+                    "hits": 0,
+                  },
+                  "none": {
+                    "heldOut": 0,
+                    "hitRate": null,
+                    "hits": 0,
+                  },
+                  "rises": null,
+                  "strong": {
+                    "heldOut": 0,
+                    "hitRate": null,
+                    "hits": 0,
+                  },
+                  "weak": {
+                    "heldOut": 0,
+                    "hitRate": null,
+                    "hits": 0,
+                  },
+                },
+                "people": {},
+              },
               "coverageTop5": null,
               "filmsTop5": 0,
               "heldOut4Plus": 0,
               "people": 0,
+              "predictedRatingError": {
+                "films": 0,
+                "meanAbsoluteError": null,
+              },
               "recall50": null,
               "retrieved": 0,
+              "similarityTop5": null,
               "withEvidence": 0,
             },
             "people": {
+              "calibration": {
+                "overall": {
+                  "moderate": {
+                    "heldOut": 0,
+                    "hitRate": null,
+                    "hits": 0,
+                  },
+                  "none": {
+                    "heldOut": 5,
+                    "hitRate": 0.6,
+                    "hits": 3,
+                  },
+                  "rises": null,
+                  "strong": {
+                    "heldOut": 2,
+                    "hitRate": 1,
+                    "hits": 2,
+                  },
+                  "weak": {
+                    "heldOut": 0,
+                    "hitRate": null,
+                    "hits": 0,
+                  },
+                },
+                "people": {
+                  "bruno": {
+                    "moderate": {
+                      "heldOut": 0,
+                      "hitRate": null,
+                      "hits": 0,
+                    },
+                    "none": {
+                      "heldOut": 1,
+                      "hitRate": 0,
+                      "hits": 0,
+                    },
+                    "rises": null,
+                    "strong": {
+                      "heldOut": 2,
+                      "hitRate": 1,
+                      "hits": 2,
+                    },
+                    "weak": {
+                      "heldOut": 0,
+                      "hitRate": null,
+                      "hits": 0,
+                    },
+                  },
+                  "iara": {
+                    "moderate": {
+                      "heldOut": 0,
+                      "hitRate": null,
+                      "hits": 0,
+                    },
+                    "none": {
+                      "heldOut": 1,
+                      "hitRate": 1,
+                      "hits": 1,
+                    },
+                    "rises": null,
+                    "strong": {
+                      "heldOut": 0,
+                      "hitRate": null,
+                      "hits": 0,
+                    },
+                    "weak": {
+                      "heldOut": 0,
+                      "hitRate": null,
+                      "hits": 0,
+                    },
+                  },
+                  "quim": {
+                    "moderate": {
+                      "heldOut": 0,
+                      "hitRate": null,
+                      "hits": 0,
+                    },
+                    "none": {
+                      "heldOut": 1,
+                      "hitRate": 1,
+                      "hits": 1,
+                    },
+                    "rises": null,
+                    "strong": {
+                      "heldOut": 0,
+                      "hitRate": null,
+                      "hits": 0,
+                    },
+                    "weak": {
+                      "heldOut": 0,
+                      "hitRate": null,
+                      "hits": 0,
+                    },
+                  },
+                  "rosa": {
+                    "moderate": {
+                      "heldOut": 0,
+                      "hitRate": null,
+                      "hits": 0,
+                    },
+                    "none": {
+                      "heldOut": 2,
+                      "hitRate": 0.5,
+                      "hits": 1,
+                    },
+                    "rises": null,
+                    "strong": {
+                      "heldOut": 0,
+                      "hitRate": null,
+                      "hits": 0,
+                    },
+                    "weak": {
+                      "heldOut": 0,
+                      "hitRate": null,
+                      "hits": 0,
+                    },
+                  },
+                },
+              },
               "coverageTop5": 0.7,
               "filmsTop5": 20,
               "heldOut4Plus": 5,
               "people": 4,
-              "recall50": 1,
-              "retrieved": 5,
+              "predictedRatingError": {
+                "films": 0,
+                "meanAbsoluteError": null,
+              },
+              "recall50": 0.8,
+              "retrieved": 4,
+              "similarityTop5": 0.27708333333333335,
               "withEvidence": 14,
             },
           },
-          "recall50": 1,
+          "recall50": 0.8,
           "weights": {
             "path.weight": {
               "cast": 0.375,
@@ -582,6 +1804,9 @@ Foram testados 300 conjuntos. A ordem usa a média do Recall@50 entre as amostra
               "genre": 0.3,
               "series": 1,
               "writer": 0.8,
+            },
+            "rating_decay": {
+              "halfLifeYears": 5,
             },
             "strength.multiplier": {
               "guess": 0,
@@ -595,7 +1820,7 @@ Foram testados 300 conjuntos. A ordem usa a média do Recall@50 entre as amostra
           },
         },
       ],
-      "combinations": 300,
+      "combinations": 303,
       "values": {
         "path.weight": {
           "cast": [
@@ -622,6 +1847,14 @@ Foram testados 300 conjuntos. A ordem usa a média do Recall@50 entre as amostra
             0.6,
             0.8,
             1,
+          ],
+        },
+        "rating_decay": {
+          "halfLifeYears": [
+            2.5,
+            5,
+            10,
+            20,
           ],
         },
         "strength.multiplier": {
@@ -657,21 +1890,176 @@ Foram testados 300 conjuntos. A ordem usa a média do Recall@50 entre as amostra
     },
     "offline": {
       "movielens": {
+        "calibration": {
+          "overall": {
+            "moderate": {
+              "heldOut": 0,
+              "hitRate": null,
+              "hits": 0,
+            },
+            "none": {
+              "heldOut": 0,
+              "hitRate": null,
+              "hits": 0,
+            },
+            "rises": null,
+            "strong": {
+              "heldOut": 0,
+              "hitRate": null,
+              "hits": 0,
+            },
+            "weak": {
+              "heldOut": 0,
+              "hitRate": null,
+              "hits": 0,
+            },
+          },
+          "people": {},
+        },
         "coverageTop5": null,
         "filmsTop5": 0,
         "heldOut4Plus": 0,
         "people": 0,
+        "predictedRatingError": {
+          "films": 0,
+          "meanAbsoluteError": null,
+        },
         "recall50": null,
         "retrieved": 0,
+        "similarityTop5": null,
         "withEvidence": 0,
       },
       "people": {
+        "calibration": {
+          "overall": {
+            "moderate": {
+              "heldOut": 0,
+              "hitRate": null,
+              "hits": 0,
+            },
+            "none": {
+              "heldOut": 5,
+              "hitRate": 0.6,
+              "hits": 3,
+            },
+            "rises": null,
+            "strong": {
+              "heldOut": 2,
+              "hitRate": 1,
+              "hits": 2,
+            },
+            "weak": {
+              "heldOut": 0,
+              "hitRate": null,
+              "hits": 0,
+            },
+          },
+          "people": {
+            "bruno": {
+              "moderate": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "none": {
+                "heldOut": 1,
+                "hitRate": 0,
+                "hits": 0,
+              },
+              "rises": null,
+              "strong": {
+                "heldOut": 2,
+                "hitRate": 1,
+                "hits": 2,
+              },
+              "weak": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+            },
+            "iara": {
+              "moderate": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "none": {
+                "heldOut": 1,
+                "hitRate": 1,
+                "hits": 1,
+              },
+              "rises": null,
+              "strong": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "weak": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+            },
+            "quim": {
+              "moderate": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "none": {
+                "heldOut": 1,
+                "hitRate": 1,
+                "hits": 1,
+              },
+              "rises": null,
+              "strong": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "weak": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+            },
+            "rosa": {
+              "moderate": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "none": {
+                "heldOut": 2,
+                "hitRate": 0.5,
+                "hits": 1,
+              },
+              "rises": null,
+              "strong": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "weak": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+            },
+          },
+        },
         "coverageTop5": 0.7,
         "filmsTop5": 20,
         "heldOut4Plus": 5,
         "people": 4,
-        "recall50": 1,
-        "retrieved": 5,
+        "predictedRatingError": {
+          "films": 0,
+          "meanAbsoluteError": null,
+        },
+        "recall50": 0.8,
+        "retrieved": 4,
+        "similarityTop5": 0.27708333333333335,
         "withEvidence": 14,
       },
     },
@@ -680,6 +2068,12 @@ Foram testados 300 conjuntos. A ordem usa a média do Recall@50 entre as amostra
       "meanReaction": null,
       "rateTop5": null,
       "reactions": 0,
+      "satisfaction": {
+        "disagreement": null,
+        "groupSessions": 0,
+        "minimum": null,
+        "people": {},
+      },
       "sessions": 0,
       "withFilm": 0,
     },
@@ -691,12 +2085,16 @@ Foram testados 300 conjuntos. A ordem usa a média do Recall@50 entre as amostra
       "classificacoes.csv": "c3a70b77d1c21b31571296783da337367fb2a67cad3c945ab6310f7671b451aa",
       "elenco_principal_imdb.csv": "559f381e49c30635a34a1469db33ef7c5de47619fd211b204e027736ead40262",
       "entidades.csv": "5a2e92d5a59ff472f7c6ae75756570d3f1ff9f77f57a397966e36af849e7be50",
+      "entropia_movielens.csv": "54e8912b088438c2f77c5ba7671c3cf29c2e528ccafbdec5f8e9423b6f2e498e",
       "estreias.csv": "880d7cedc13ca6b4219cb65ec8bd5fa81f08aee038295689d0ec2b269baf48a3",
       "filmes.csv": "2b0d4ad04f1007999cf77b33796c695d2e0223ca171ac74248496faf908a986a",
+      "fonte_gosto_movielens.csv": "bd0e4d5aac3969eb131926c4a3fe9dc12b220d13543832caee9c72717cac4a9a",
       "generos_imdb.csv": "ca9cb82915808484dcd3881bd375601d7daeb8d4e28c79cebf10e672ca5389e3",
       "genoma.csv": "bf9e335eaec86c9fbe2d5ca1d55cf4a75f1a865c83f48750d359f07ac4169ed1",
       "idiomas_originais.csv": "3fd72e324b22bdd4a924778d6826f20e648099c908c0a40de7af2cf7ee6dacbf",
       "notas.csv": "ca2a3b8a88cc51a06428b4ecc48695f268ad9473128fa4b1de8cb09236210df4",
+      "notas_gosto_movielens.csv": "cf29b7d42d9b621c199733204f4e7f96e723e4f4f01b59a2e4225fe4133a9047",
+      "notas_movielens.csv": "732f70f4971aca938e7cc266ded071f301ddf13cda14e7f3e008eebcbb3e17b2",
       "series_de_filmes.csv": "c190c9b62c3f5391fbb12cb679915c497f8a443cdb5fd0d90fcce09ec62f2276",
       "slugs_letterboxd.csv": "aef16df5bcb6b746236d595d8c29a29728a3f8bb45726201631f04ed2f5071aa",
       "subclasses_wikidata.csv": "97f1dbb801f80d234d4923d3c86badf59f95e4258d56b5f6d6b7a7ae0956af3a",
@@ -715,6 +2113,11 @@ Foram testados 300 conjuntos. A ordem usa a média do Recall@50 entre as amostra
           "normal": 1,
         },
       },
+      "bet": {
+        "maxFacts": 1,
+        "minPredicted": 7,
+        "position": 5,
+      },
       "catalog": {
         "minImdbRating": 7,
         "minVotes": 1000,
@@ -722,9 +2125,10 @@ Foram testados 300 conjuntos. A ordem usa a média do Recall@50 entre as amostra
       "constraints": {
         "onDemandReach": 50,
       },
-      "credit": {
-        "factor": 0.5,
-        "window": 5,
+      "diversity": {
+        "depth": 10,
+        "lambda": 1,
+        "pool": 30,
       },
       "group": {
         "weight": 0.05,
@@ -743,6 +2147,9 @@ Foram testados 300 conjuntos. A ordem usa a média do Recall@50 entre as amostra
         "minUsersHeavyTheme": 2,
         "minUsersSad": 3,
       },
+      "pairwise": {
+        "pairs": 10,
+      },
       "path": {
         "weight": {
           "cast": 0.5,
@@ -755,8 +2162,24 @@ Foram testados 300 conjuntos. A ordem usa a média do Recall@50 entre as amostra
       "people": {
         "statementWeight": 1,
       },
+      "ratingDecay": {
+        "floor": 0.25,
+        "halfLifeYears": 5,
+      },
+      "ratingPercentile": {
+        "minRatings": 20,
+        "moderate": 0.7,
+        "moderateAgainst": 0.1,
+        "strong": 0.9,
+        "weak": 0.4,
+        "weakAgainst": 0.2,
+      },
       "recommendation": {
         "size": 5,
+      },
+      "satisfaction": {
+        "factor": 0.25,
+        "window": 5,
       },
       "seen": {
         "weight": 1,
@@ -785,6 +2208,12 @@ Foram testados 300 conjuntos. A ordem usa a média do Recall@50 entre as amostra
       "tagVetoes": {
         "minRelevance": 0.7,
         "minUsers": 10,
+      },
+      "tasteNeighbors": {
+        "k": 50,
+        "minShared": 10,
+        "neutralBand": 0.05,
+        "weight": 1,
       },
       "utility": {
         "k": 1,

@@ -14,6 +14,7 @@ import * as names from '../python-names.ts'
 import { Effect } from 'effect'
 import { describe, expect, test } from 'vite-plus/test'
 import {
+  filmReason,
   filmsInBody,
   KIND_IN_BODY,
   makeEngine,
@@ -118,6 +119,7 @@ describe('recomendar opens the Session', () => {
         position: f.position,
         id: f.id,
         title: f.title,
+        reason: filmReason(f.evidence),
       })),
       chosen: null,
       chosen_in_recommendation: null,
@@ -140,7 +142,7 @@ describe('recomendar opens the Session', () => {
         ' · Fonte: Letterboxd do Bruno, 2025-06-01 · Força: forte · Tipo: nota\n',
     )
     expect(body).toContain(
-      '     - Evidência: dirigido por Helena Prado, como 3 filmes a que deu 4 ou mais:' +
+      '     - Evidência: dirigido por Helena Prado, como 3 filmes a que deu Nota alta:' +
         ' O Farol de Areia (2012), Maré Baixa (2015) e Cidade de Vidro (2018)' +
         ' · Fonte: Wikidata, 2026-11-20 · Força: forte · Tipo: metadado\n',
     )
@@ -348,8 +350,26 @@ describe('sessoes-abertas', () => {
       attendees: ['bruno', 'iara'],
       request: 'eu e a Iara',
       recommendation: [
-        { position: 1, id: 'tt9000403', title: 'A Volta do Mar' },
-        { position: 2, id: 'tt9001903', title: 'Fronteira II' },
+        {
+          position: 1,
+          id: 'tt9000403',
+          title: 'A Volta do Mar',
+          reason: {
+            kind: 'entity',
+            name: 'Rui Tavares',
+            people: ['bruno', 'iara'],
+          },
+        },
+        {
+          position: 2,
+          id: 'tt9001903',
+          title: 'Fronteira II',
+          reason: {
+            kind: 'entity',
+            name: 'Trilogia da Fronteira',
+            people: ['bruno', 'iara'],
+          },
+        },
       ],
       version: 1,
     })

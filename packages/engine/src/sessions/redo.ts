@@ -10,6 +10,8 @@
 // The Restrições the current version stored carry over where their file
 // says so (`inherit`, the similar's references), and a new request that
 // replaces the whole list (`replacesList`) ignores `keep`, with a warning.
+// So does a request with other Climas than the current version's (#179):
+// a Clima only pulls the order, so keeping the screen would keep it all.
 
 import { Effect } from 'effect'
 import { compareTuple } from '../compat/compare.ts'
@@ -39,6 +41,7 @@ import {
   swappedNow,
 } from '../recommendation/constraints/out-of-session.ts'
 import { prepareRegenerate, type Regenerate } from '../recommendation/kept.ts'
+import { resolveMoods } from '../recommendation/moods.ts'
 import {
   rankRequest,
   requestCount,
@@ -62,6 +65,7 @@ import {
 } from './file.ts'
 import {
   authorFor,
+  nextSessionId,
   openSession,
   recommendationFields,
   sessionContext,
@@ -99,6 +103,20 @@ const storedIn = (front: YamlMapping): ReadonlyArray<StoredConstraint> => {
 
 const idsOf = (value: YamlValue | undefined): string[] =>
   pyTruthy(value) && isSequence(value) ? value.map((v) => pyStrValue(v)) : []
+
+/** Whether `asked` are other Climas than the current version's: by name,
+ * in any order or case. */
+const otherMoods = (
+  front: YamlMapping,
+  asked: ReadonlyArray<string> | undefined,
+): Effect.Effect<boolean, EngineError, Environment> =>
+  Effect.gen(function* () {
+    const context = front.get('context')
+    const stored = isMapping(context) ? context.get('moods') : undefined
+    const before = new Set(idsOf(stored))
+    const names = (yield* resolveMoods(asked ?? [])).moods.map((m) => m.name)
+    return names.length !== before.size || names.some((n) => !before.has(n))
+  })
 
 /** Puts the new Recomendação in an open Session, in the same file
  * (`sessao.refazer`): the version that leaves goes to the end of
@@ -204,14 +222,19 @@ export const recommendSession = (
         asked,
         storedIn(front),
       )[0]
-      if (replacing !== undefined && keep.length > 0) {
+      const newMood = yield* otherMoods(front, asking.moods)
+      if ((replacing !== undefined || newMood) && keep.length > 0) {
+        const why =
+          replacing === undefined
+            ? 'o Clima novo'
+            : (constraintLabel(replacing.stored()) ?? '')
         warnings.push(
-          `--manter ${keep.join(',')}: ignorado, ${constraintLabel(replacing.stored()) ?? ''} troca a lista inteira`,
+          `--manter ${keep.join(',')}: ignorado, ${why} troca a lista inteira`,
         )
         keep = []
         asking = { ...asking, keep: undefined }
         asked = yield* read(asking)
-        const name = replacing.name
+        const name = replacing?.name
         replacing = asked.find((c) => c.name === name)
       }
       const swapped = swappedNow(
@@ -219,11 +242,26 @@ export const recommendSession = (
         keep,
         requestIds(asking.swap),
       )
-      const prepared = prepareRegenerate(front, keep, swapped, replacing)
+      const prepared = prepareRegenerate(
+        front,
+        keep,
+        swapped,
+        replacing,
+        newMood,
+      )
       regenerate = prepared.regenerate
       warnings.push(...prepared.warnings)
     }
-    const ranked = yield* rankRequest(asking, count, asked, regenerate)
+    // The Aposta's draws come from the Session id (#178).
+    const ranked = yield* rankRequest(
+      asking,
+      count,
+      asked,
+      regenerate,
+      session !== undefined
+        ? () => Effect.succeed(session)
+        : (db, attendees) => nextSessionId(db, attendees),
+    )
     const recommendation: Recommendation = {
       ...ranked,
       warnings: [...warnings, ...ranked.warnings],

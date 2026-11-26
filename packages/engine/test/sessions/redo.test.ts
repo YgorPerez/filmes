@@ -18,6 +18,7 @@ import { join } from 'node:path'
 import { Effect } from 'effect'
 import { describe, expect, test } from 'vite-plus/test'
 import {
+  filmReason,
   answerBillboard,
   currentVersion,
   openSessions,
@@ -134,6 +135,7 @@ describe('recomendar --sessao (test_refazer_sessao)', () => {
         id: f.id,
         title: f.title,
         new: !before.has(f.id),
+        reason: filmReason(f.evidence),
       })),
     )
     expect(top['versions']).toEqual([
@@ -152,6 +154,7 @@ describe('recomendar --sessao (test_refazer_sessao)', () => {
           position: f.position,
           id: f.id,
           title: f.title,
+          reason: filmReason(f.evidence),
         })),
       },
     ])
@@ -329,6 +332,7 @@ describe('regenerating with kept films (test_regerar_mantidos)', () => {
         id: f.id,
         title: f.title,
         new: f.new,
+        reason: filmReason(f.evidence),
       })),
     )
     expect(top['kept']).toEqual([p[1]])
@@ -940,6 +944,66 @@ describe('the similar in the Session (test_parecido_na_sessao)', () => {
 
     const second = await redoTen(fixture, id, { similar: [ESTRADA_AFORA] })
 
+    expect(second.dropped?.filter((s) => s.id === swapped)).toMatchObject([
+      { cause: 'swapped' },
+    ])
+  })
+})
+
+describe('the Clima in the Session (#179)', () => {
+  // Iara alone, 10 films: with "leve" the films 1101 to 1110 with its tags
+  // go up, and five of the first screen leave.
+  test('a new Clima redoes the whole list and ignores keep, with a warning', async () => {
+    const fixture = useFixture()
+    const iara = { attendees: ['iara'] }
+    const { first, id } = await openTen(fixture, iara)
+    const screen = ids(first)
+
+    const second = await redoTen(fixture, id, {
+      ...iara,
+      moods: ['leve'],
+      keep: [screen[0]!],
+    })
+
+    expect(second.kept).toEqual([])
+    expect(
+      withoutPosterWarning(second.warnings).filter((w) =>
+        w.startsWith('--manter'),
+      ),
+    ).toEqual([
+      `--manter ${screen[0]}: ignorado, o Clima novo troca a lista inteira`,
+    ])
+    expect(second.dropped?.length).toBe(5)
+    expect(new Set(second.dropped?.map((s) => s.cause))).toEqual(
+      new Set(['mood']),
+    )
+    expect(second.films.filter((f) => !f.new).map((f) => f.id)).toEqual(
+      screen.filter((f) => ids(second).includes(f)),
+    )
+  })
+
+  test('the same Climas, in another order or case, keep the list', async () => {
+    const fixture = useFixture()
+    const { first, id } = await openTen(fixture, { moods: ['leve', 'tenso'] })
+    const stays = first.films[1]!.id
+
+    const second = await redoTen(fixture, id, {
+      moods: ['Tenso', 'leve'],
+      keep: [stays],
+    })
+
+    expect(second.kept).toEqual([stays])
+  })
+
+  test('what the Dono swapped stays swapped under the new Clima', async () => {
+    const fixture = useFixture()
+    const { first, id } = await openTen(fixture)
+    const swapped = first.films[1]!.id
+    await swapOnCartaz(fixture, id, [swapped])
+
+    const second = await redoTen(fixture, id, { moods: ['assustador'] })
+
+    expect(ids(second)).not.toContain(swapped)
     expect(second.dropped?.filter((s) => s.id === swapped)).toMatchObject([
       { cause: 'swapped' },
     ])

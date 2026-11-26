@@ -1,7 +1,9 @@
 // The Força ruler, the PT wording, the individual utility and the Regra key
 // against the golden vectors the Python engine's own modules wrote
 // (`golden.py`): 10,000 inputs each, around the 2-year and 5-year edges and
-// on every 29 February from 1988 to 2040.
+// on every 29 February from 1988 to 2040. A Nota more than 5 years old
+// dropped one Força level in Python; the Decaimento replaced that step
+// (#173), so those vectors are left out of the comparison.
 import * as names from '../python-names.ts'
 import { describe, expect, test } from 'vite-plus/test'
 import {
@@ -10,7 +12,6 @@ import {
   contribution,
   durationText,
   evidenceToJson,
-  feedbackStrength,
   filmText,
   genomeStrength,
   imdbRatingStrength,
@@ -25,20 +26,17 @@ import {
   movielensTagStrength,
   neighborStrength,
   pathStrength,
-  ratingStrength,
   ratingText,
   requestMetadataStrength,
   ruleKey,
   ruleToJson,
-  seedStrength,
   seedText,
   similarStrength,
   statedStrength,
   strengthen,
-  usesCredit,
+  usesSatisfaction,
   weaken,
   guessStrength,
-  FRESH_YEARS,
   HIGH_RATING,
   MIN_NEIGHBOR_BASE,
   MIN_NEIGHBOR_PERCENT,
@@ -107,26 +105,15 @@ const englishOut = (value: Tagged): Tagged => {
 
 describe('the Força ruler', () => {
   type RulerRow = { fn: string; args: Tagged[]; out: Tagged }
-  const rows = golden<RulerRow & { constant?: string }>('ruler', FOLDER)
+  /** Python read a Nota by absolute thresholds; the engine reads it by its
+   * percentile on the Pessoa's scale (#172, `percentile.test.ts`), so the
+   * vectors of the Nota, seed and Feedback rulers no longer apply. */
+  const PERCENTILE = new Set(['forca_nota', 'forca_semente', 'forca_feedback'])
+  const rows = golden<RulerRow & { constant?: string }>('ruler', FOLDER).filter(
+    (row) => !PERCENTILE.has(row.fn),
+  )
 
   const call: Record<string, (args: Tagged[]) => unknown> = {
-    forca_nota: ([rating, date, today, fromFeedback]) =>
-      ratingStrength(num(rating), str(date), str(today), bool(fromFeedback)),
-    forca_semente: ([seed, rating, date, today, fromFeedback]) =>
-      seedStrength(
-        kind(str(seed)) as SeedKind,
-        num(rating),
-        str(date),
-        str(today),
-        bool(fromFeedback),
-      ),
-    forca_feedback: ([reaction, rating, date, today]) =>
-      feedbackStrength(
-        kind(str(reaction)) as 'rating' | 'report',
-        num(rating),
-        str(date),
-        str(today),
-      ),
     forca_dito: ([said, specific, date, today]) =>
       statedStrength(
         kind(str(said)) as 'stated' | 'report',
@@ -162,7 +149,7 @@ describe('the Força ruler', () => {
 
   test('every function gives what regua.py gives', () => {
     const calls = rows.filter((row) => row.constant === undefined)
-    expect(calls.length).toBeGreaterThanOrEqual(10_000)
+    expect(calls.length).toBeGreaterThanOrEqual(7_000)
     expect(
       misses(
         calls.map((row) => ({ ...row, out: englishOut(row.out) })),
@@ -181,7 +168,7 @@ describe('the Força ruler', () => {
 
   test('the leap-day and edge vectors are there', () => {
     const dated = rows.filter((row) =>
-      ['forca_nota', 'forca_dito', 'mais_velha_que'].includes(row.fn),
+      ['forca_dito', 'mais_velha_que'].includes(row.fn),
     )
     const today = (row: RulerRow) =>
       str(row.args[row.fn === 'forca_dito' ? 3 : 2] ?? null)
@@ -198,16 +185,9 @@ describe('the Força ruler', () => {
     )
     expect(
       matches(
-        [
-          HIGH_RATING,
-          FRESH_YEARS,
-          STATED_YEARS,
-          MIN_NEIGHBOR_BASE,
-          MIN_NEIGHBOR_PERCENT,
-        ],
+        [HIGH_RATING, STATED_YEARS, MIN_NEIGHBOR_BASE, MIN_NEIGHBOR_PERCENT],
         [
           constants['NOTA_ALTA'],
-          constants['ANOS_FRESCOR'],
           constants['ANOS_DITO'],
           constants['BASE_MINIMA_VIZINHANCA'],
           constants['PORCENTO_MINIMO_VIZINHANCA'],
@@ -344,7 +324,7 @@ describe('the Regra key', () => {
     out: Tagged
   }>('rule', FOLDER)
 
-  test('the key, the credit and the JSON are regra.py’s', () => {
+  test('the key, the satisfaction adjustment and the JSON are regra.py’s', () => {
     expect(rows.length).toBeGreaterThanOrEqual(10_000)
     const wrong = rows.flatMap((row) => {
       const name = rule(row.nome)
@@ -369,7 +349,7 @@ describe('the Regra key', () => {
         ...(row.json.pessoa ? { person: row.json.pessoa } : {}),
       }
       return matches(key, row.out) &&
-        usesCredit(r) === row.usa_credito &&
+        usesSatisfaction(r) === row.usa_credito &&
         JSON.stringify(json) === JSON.stringify(expectedJson)
         ? []
         : [{ row, key, json }]

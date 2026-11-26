@@ -5,8 +5,8 @@
 // `E2E_SCREENSHOTS=<folder>` saves a capture of each screen.
 
 import { recommendSession } from '@filmes/engine'
-import { expect, test, type Page } from '@playwright/test'
-import { engineRun, loginAsBruno, section, snap } from './support'
+import { type Page } from '@playwright/test'
+import { engineRun, expect, loginAsBruno, section, snap, test } from './support'
 
 test.use({ javaScriptEnabled: false })
 

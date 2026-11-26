@@ -17,6 +17,10 @@
 //
 //     - 2026-11-21 · conversa com o Dono · Casa Cheia (tt9000602) · nota 4
 //
+// A Nota from an answer to the Perguntas par a par ends with `· par a par`,
+// whatever its Fonte says: the ruler keeps it weak and her scale leaves it
+// out.
+//
 // The body stays in Portuguese (ADR 0002); the rest
 // of it is free text and is kept as written.
 //
@@ -114,6 +118,8 @@ export interface Seen {
   readonly label: string
   /** On the scale of 0,5 to 5. */
   readonly rating: number | null
+  /** The Nota came from an answer to the Perguntas par a par (#181). */
+  readonly pairwise?: boolean
 }
 
 export interface Person {
@@ -177,7 +183,7 @@ const STATEMENT_LINE = new RegExp(
 
 const SEEN_LINE = new RegExp(
   `^- (?<date>[0-9]{4}-[0-9]{2}-[0-9]{2}) · (?<source>.+?) · (?<label>.+?) \\((?<target>tt${NOT_SPACE_OR_PARENS}+)\\)` +
-    '(?: · nota (?<rating>\\p{Nd}+(?:,\\p{Nd}+)?))?$',
+    '(?: · nota (?<rating>\\p{Nd}+(?:,\\p{Nd}+)?)(?<pairwise> · par a par)?)?$',
   'u',
 )
 
@@ -192,11 +198,15 @@ export const statementLine = (s: Statement): string => {
   return `- ${fields.join(' · ')}`
 }
 
+/** The end of a pairwise answer's Nota line. */
+const PAIRWISE_MARK = 'par a par'
+
 /** The body line of a Já visto. */
 export const seenLine = (s: Seen): string => {
   const fields = [s.date, s.source, `${s.label} (${s.target})`]
   if (s.rating !== null)
     fields.push(`nota ${pyFormatG(s.rating).replace('.', ',')}`)
+  if (s.rating !== null && s.pairwise === true) fields.push(PAIRWISE_MARK)
   return `- ${fields.join(' · ')}`
 }
 
@@ -222,6 +232,7 @@ const seen = (g: Groups): Seen => ({
   label: g.label ?? '',
   rating:
     g.rating === undefined ? null : pyParseFloat(g.rating.replace(',', '.')),
+  ...(g.pairwise === undefined ? {} : { pairwise: true }),
 })
 
 // --- sections --------------------------------------------------------------

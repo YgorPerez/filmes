@@ -15,8 +15,14 @@
 // only when Candidates with Facts run out. Then the most voted first, then
 // the id. Each film carries each Presente's utility and Evidence, grouped by
 // slug in the Presentes' order; whoever has no Fact on the film gets the
-// "sem fato" line. The Crédito line also goes in `filmLines` when the
-// adjustment changes the order.
+// "sem fato" line. The satisfaction line also goes in `filmLines` when
+// weighing who is behind changes the order. Then MMR (`diversity.ts`, #177)
+// picks the first places for Diversidade, before the on-demand Restrições.
+//
+// With a seed (the Session id), the Aposta (`bet.ts`, #178) takes the place
+// `[bet] position`: the Regra (and MMR) fills the other places, and the bet
+// is drawn among the Candidates left, with a good Nota prevista and little
+// Evidence. MMR does not move the bet.
 
 import { Effect } from 'effect'
 import { compareTuple, type PyOrderable } from '../compat/compare.ts'
@@ -30,6 +36,7 @@ import {
   type Evidence,
   type EvidenceJson,
 } from '../evidence/Evidence.ts'
+import type { RatingScale } from '../evidence/ruler.ts'
 import type { EngineServices } from '../runtime/Engine.ts'
 import { Environment } from '../runtime/Environment.ts'
 import { engineError, type EngineError } from '../runtime/EngineError.ts'
@@ -38,6 +45,12 @@ import { text } from '../sqlite/row.ts'
 import { Sqlite, type Connection, type SqliteError } from '../sqlite/Sqlite.ts'
 import { resolveAttendees } from './attendees.ts'
 import { attributionsOf, type Attribution } from './attributions.ts'
+import {
+  drawBets,
+  hasLittleEvidence,
+  type BetCandidate,
+  type BetOdds,
+} from './bet.ts'
 import {
   chooseCandidates,
   type Candidate,
@@ -49,7 +62,12 @@ import {
   type ConstraintContext,
 } from './constraints.ts'
 import { readConstraints, type ConstraintRequest } from './constraints/index.ts'
-import { computeCredit, creditLine, type Credit } from './credit.ts'
+import { diversify, type Scored } from './diversity.ts'
+import {
+  groupSatisfaction,
+  satisfactionLine,
+  type GroupSatisfaction,
+} from './group-satisfaction.ts'
 import { filmHeader, type FilmHeader } from './header.ts'
 import {
   byConstraint,
@@ -69,14 +87,28 @@ import {
   DEFAULT_RULE,
   ruleKey,
   ruleToJson,
-  usesCredit,
+  usesSatisfaction,
   type Rule,
   type RuleName,
 } from './rule.ts'
+import { readRatingScale } from '../people/rating-scale.ts'
 import { SIGNALS } from './signals/index.ts'
-import type { Round } from './signals/Signal.ts'
+import { predictRatings } from './taste-neighbors.ts'
+import { scaleOf, type Round } from './signals/Signal.ts'
 import { individualUtility } from './utility.ts'
 import { applyVetoes, type VetoReport } from './vetoes.ts'
+
+/** A Presente's Nota prevista [predicted rating] of a film (#174), from
+ * her taste neighbours. */
+export interface PredictedRating {
+  /** 1 to 10, on her scale, rounded to 2 places. */
+  readonly value: number
+  /** How many taste neighbours rated the film. */
+  readonly raters: number
+  /** How uncertain `value` is: the standard deviation of each neighbour's
+   * reading on her scale, 1 to 10, rounded to 2 places. */
+  readonly deviation: number
+}
 
 export interface RecommendedFilm extends FilmHeader {
   readonly position: number
@@ -94,20 +126,28 @@ export interface RecommendedFilm extends FilmHeader {
   readonly onlyGuesses: boolean
   /** By Presente, rounded to 4 places; `null` with no Fact. */
   readonly utility: Readonly<Record<string, number | null>>
+  /** By Presente, only those whose taste neighbours predict a rating;
+   * absent when nobody's do. */
+  readonly predictedRating?: Readonly<Record<string, PredictedRating>>
   /** By Presente, in the Presentes' order; the strongest first. */
   readonly evidence: Readonly<Record<string, ReadonlyArray<EvidenceJson>>>
-  /** The Restrições' lines, the film signals and the Crédito line. */
+  /** The Restrições' lines, the film signals and the satisfaction line. */
   readonly filmLines: ReadonlyArray<EvidenceJson>
   /** Only when regenerating: the previous version did not show it. */
   readonly new?: boolean
+  /** Only on the Aposta [bet] (#178). */
+  readonly bet?: true
 }
 
 export interface Recommendation {
   readonly attendees: ReadonlyArray<string>
   readonly rule: ReturnType<typeof ruleToJson>
-  /** By Presente, rounded to 4 places; empty when the Regra or a Session
-   * alone takes no Crédito. */
-  readonly credit: Readonly<Record<string, number>>
+  /** By Presente with a reaction in her recent shared Sessions, rounded to
+   * 4 places; empty when the Regra or a Session alone does not weigh it. */
+  readonly satisfaction: Readonly<Record<string, number>>
+  /** The highest satisfaction minus the lowest, rounded to 4 places; null
+   * with fewer than two. */
+  readonly disagreement: number | null
   readonly vetoes: ReadonlyArray<VetoReport>
   readonly moods: ReadonlyArray<string>
   readonly films: ReadonlyArray<RecommendedFilm>
@@ -135,47 +175,53 @@ export interface RankOptions {
   /** A refazer of a Session (Python's `regerar`): the kept films stay at
    * their number, and each film says whether it is new. */
   readonly regenerate?: Regenerate
+  /** The Aposta's draws (the Session id); without it, no bet. */
+  readonly seed?: string
 }
 
 type Key = readonly PyOrderable[]
 
-interface Ordered {
+interface Ordered extends Scored {
   readonly key: Key
   readonly film: Candidate
   readonly utilities: ReadonlyMap<string, number | null>
   readonly evidence: ReadonlyArray<Evidence>
 }
 
+/** 0 with some known utility, 1 with Facts only in the film signals, 2
+ * with guesses only. */
+const bandOf = (byRule: readonly number[] | null, hasFact: boolean): number =>
+  byRule !== null ? 0 : hasFact ? 1 : 2
+
 const orderKey = (
   byRule: readonly number[] | null,
   hasFact: boolean,
   film: Candidate,
   bonus: number,
-): Key => {
-  const band: Key =
-    byRule !== null
-      ? [0, byRule.map((v) => -(v + bonus))]
-      : [hasFact ? 1 : 2, [-bonus]]
-  return [...band, -film.votes, film.id]
-}
+): Key => [
+  bandOf(byRule, hasFact),
+  byRule !== null ? byRule.map((v) => -(v + bonus)) : [-bonus],
+  -film.votes,
+  film.id,
+]
 
 const byKey = (a: { key: Key }, b: { key: Key }) =>
   compareTuple([...a.key], [...b.key])
 
-/** Who has Crédito and made this film go up: the film gained places with
- * the Crédito, the Pessoa has a Fact on it and is not the default Regra's
- * minimum (the film is hers: with the Crédito, the films where she is the
- * minimum fell and this one stayed). The minimum is among those with a
- * Fact: the 0.5 of whoever has none does not count. */
-const wentUpByCredit = (
+/** Who is behind in satisfaction and made this film go up: the film gained
+ * places with the satisfaction, the Pessoa has a Fact on it and is not the
+ * default Regra's minimum (the film is hers: weighed by the satisfaction,
+ * the films where she is the minimum fell and this one stayed). The minimum
+ * is among those with a Fact: the 0.5 of whoever has none does not count. */
+const wentUpBySatisfaction = (
   filmId: string,
   contested: ReadonlyMap<string, number>,
-  positionWithoutCredit: ReadonlyMap<string, number>,
+  positionUnweighed: ReadonlyMap<string, number>,
   utilities: ReadonlyMap<string, number | null>,
   adjustment: ReadonlyMap<string, number>,
 ): ReadonlyArray<string> => {
   const position = contested.get(filmId)
-  const before = positionWithoutCredit.get(filmId)
+  const before = positionUnweighed.get(filmId)
   if (adjustment.size === 0 || position === undefined) return []
   if (before === undefined) throw pythonError('KeyError', `'${filmId}'`)
   if (position >= before) return []
@@ -227,6 +273,9 @@ export const rank = (
       attendees,
     }
     const asked = makeConstraintSet(context, options.constraints ?? [])
+    const scales = new Map<string, RatingScale>()
+    for (const p of attendees)
+      scales.set(p, yield* readRatingScale(db, p, weights))
     const round: Round = {
       db,
       weights,
@@ -234,6 +283,7 @@ export const rank = (
       candidates: yield* asked.candidates(vetoes.remaining),
       attendees,
       moods: moods.moods,
+      scales,
     }
     // A kept film a Veto or a Restrição removed: the cause, for `dropped`.
     const removed = new Map<string, RemovalCause>()
@@ -269,17 +319,17 @@ export const rank = (
       if (signal.forFilm) collect(ofFilm, yield* signal.forFilm(round))
     }
 
-    // Crédito (#20): only in the default Regra and in a group.
-    // `adjustment` is each Pessoa's factor × Crédito.
-    const credits: ReadonlyMap<string, Credit> =
-      usesCredit(rule) && attendees.length > 1
-        ? yield* computeCredit(db, attendees, weights.credit.window)
-        : new Map()
-    const factor = weights.credit.factor
+    // Satisfação (#176): only in the default Regra and in a group.
+    // `adjustment` is factor × how far each Pessoa is below the highest.
+    const group: GroupSatisfaction | null =
+      usesSatisfaction(rule) && attendees.length > 1
+        ? yield* groupSatisfaction(db, attendees, weights.satisfaction.window)
+        : null
+    const factor = weights.satisfaction.factor
     const adjustment = new Map(
-      [...credits]
-        .filter(([, c]) => factor && c.value > 0)
-        .map(([p, c]) => [p, factor * c.value]),
+      factor && group !== null
+        ? [...group.behind].map(([p, gap]) => [p, factor * gap])
+        : [],
     )
 
     let ids: Iterable<string> = round.candidates.keys()
@@ -301,7 +351,7 @@ export const rank = (
       ids = some
     }
     const ordered: Ordered[] = []
-    const withoutCredit: { key: Key; id: string }[] = []
+    const unweighed: { key: Key; id: string }[] = []
     for (const filmId of ids) {
       const film = round.candidates.get(filmId)
       if (film === undefined) throw pythonError('KeyError', `'${filmId}'`)
@@ -320,25 +370,87 @@ export const rank = (
       const hasFact = [...evidence, ...filmSignals].some(
         (e) => e.kind !== 'guess' && e.countsAsFact,
       )
+      const byRule = ruleKey(rule, utilities, adjustment)
       ordered.push({
-        key: orderKey(
-          ruleKey(rule, utilities, adjustment),
-          hasFact,
-          film,
-          bonus,
-        ),
+        key: orderKey(byRule, hasFact, film, bonus),
+        id: film.id,
+        band: bandOf(byRule, hasFact),
+        score: (byRule?.[0] ?? 0) + bonus,
         film,
         utilities,
         evidence,
       })
       if (adjustment.size > 0)
-        withoutCredit.push({
+        unweighed.push({
           key: orderKey(ruleKey(rule, utilities), hasFact, film, bonus),
           id: filmId,
         })
     }
     ordered.sort(byKey)
     const reach = weights.constraints.on_demand_reach
+    const fill = (pool: ReadonlyArray<Ordered>, places: number) =>
+      asked.approve(pool, places, reach, (item) => item.film)
+    /** The Regra's places, with MMR over `chosen` (#177). */
+    const regularFill = (
+      pool: ReadonlyArray<Ordered>,
+      chosen: ReadonlyArray<Ordered>,
+      places: number,
+    ) =>
+      Effect.flatMap(diversify(db, pool, chosen, places, weights), (order) =>
+        fill(order, places),
+      )
+    // The Aposta (#178): the films that may be the bet, with each
+    // Presente's Nota prevista.
+    const seed = options.seed
+    const betAt = seed === undefined ? 0 : weights.bet.position
+    const betOdds = new Map<string, BetCandidate>()
+    if (betAt > 0 && count >= betAt)
+      for (const { film, utilities, evidence } of ordered) {
+        if (!hasLittleEvidence(evidence, utilities, weights)) continue
+        const odds = new Map<string, BetOdds>()
+        for (const p of attendees) {
+          const prediction = (yield* predictRatings(round, p)).get(film.id)
+          if (prediction !== undefined) odds.set(p, prediction)
+        }
+        if (odds.size > 0) betOdds.set(film.id, { id: film.id, odds })
+      }
+    /** The Regra's films for `places` places of `pool`, and the bet for
+     * one of them when some film may be it. */
+    const withBet = (
+      pool: ReadonlyArray<Ordered>,
+      chosen: ReadonlyArray<Ordered>,
+      places: number,
+    ) =>
+      Effect.gen(function* () {
+        const candidates = pool.filter((item) => betOdds.has(item.film.id))
+        if (seed === undefined || candidates.length === 0 || places < 1)
+          return {
+            regular: yield* regularFill(pool, chosen, places),
+            bet: undefined,
+          }
+        const regular = yield* regularFill(pool, chosen, places - 1)
+        const taken = new Set(regular.map((item) => item.film.id))
+        const byId = new Map(candidates.map((item) => [item.film.id, item]))
+        const drawn = drawBets(
+          seed,
+          candidates
+            .filter((item) => !taken.has(item.film.id))
+            .flatMap((item) => betOdds.get(item.film.id) ?? []),
+          weights.bet.min_predicted,
+        ).flatMap((id) => byId.get(id) ?? [])
+        const [bet] = yield* fill(drawn, 1)
+        if (bet !== undefined) return { regular, bet }
+        // No bet passed: the place goes back to the Regra.
+        const tried = new Set(drawn.map((item) => item.film.id))
+        const more = yield* fill(
+          pool.filter(
+            (item) => !taken.has(item.film.id) && !tried.has(item.film.id),
+          ),
+          1,
+        )
+        return { regular: [...regular, ...more], bet: undefined }
+      })
+    let betId: string | undefined
     let placed: ReadonlyArray<readonly [number, Ordered]>
     if (regenerate !== undefined) {
       const fixed: Ordered[] = []
@@ -356,40 +468,82 @@ export const rank = (
         }
       }
       const others = ordered.filter((item) => !kept(item.film.id))
-      const free = yield* asked.approve(
-        others,
-        Math.max(count - fixed.length, 0),
-        reach,
-        (item) => item.film,
+      const places = Math.max(count - fixed.length, 0)
+      const idOf = (item: Ordered) => item.film.id
+      // A kept bet stays the bet; else a new one, if its place is free.
+      const keptBet = fixed.find((item) => item.film.id === regenerate.bet)
+      const betPlaceFree = fixed.every(
+        (item) => regenerate.positions.get(item.film.id) !== betAt,
       )
-      placed = place(regenerate, fixed, free, count, (item) => item.film.id)
+      if (keptBet !== undefined) {
+        betId = keptBet.film.id
+        placed = place(
+          regenerate,
+          fixed,
+          yield* regularFill(others, fixed, places),
+          count,
+          idOf,
+        )
+      } else if (betAt > 0 && count >= betAt && betPlaceFree) {
+        const { regular, bet } = yield* withBet(others, fixed, places)
+        betId = bet?.film.id
+        placed =
+          bet === undefined
+            ? place(regenerate, fixed, regular, count, idOf)
+            : place(
+                {
+                  ...regenerate,
+                  positions: new Map([
+                    ...regenerate.positions,
+                    [bet.film.id, betAt],
+                  ]),
+                },
+                [...fixed, bet],
+                regular,
+                count,
+                idOf,
+              )
+      } else
+        placed = place(
+          regenerate,
+          fixed,
+          yield* regularFill(others, fixed, places),
+          count,
+          idOf,
+        )
     } else {
-      const approved = yield* asked.approve(
-        ordered,
-        count,
-        reach,
-        (item) => item.film,
-      )
+      const { regular, bet } =
+        betAt > 0 && count >= betAt
+          ? yield* withBet(ordered, [], count)
+          : { regular: yield* regularFill(ordered, [], count), bet: undefined }
+      betId = bet?.film.id
+      const approved =
+        bet === undefined ? regular : regular.toSpliced(betAt - 1, 0, bet)
       placed = approved.map((item, i) => [i + 1, item] as const)
     }
     const approvedIds = new Set(placed.map(([, item]) => item.film.id))
-    // The two orders with the same verdicts, without asking an on-demand
-    // source for more answers. When regenerating, only the free places
-    // compete: each one's order is among the films not kept, and the kept
-    // film, there because the Dono asked, gets no Crédito line.
-    const positionWithoutCredit = new Map(
-      withoutCredit
+    // The two orders by the Regra, with and without weighing the
+    // satisfaction, over the same films: the ones with the same verdicts,
+    // without asking an on-demand source for more answers. MMR does not
+    // enter: a film it moved up did not go up by the satisfaction. When
+    // regenerating, only the free places compete: each one's order is among
+    // the films not kept, and the kept film, there because the Dono asked,
+    // gets no satisfaction line.
+    const competes = (id: string) =>
+      (approvedIds.has(id) || !asked.pending.get(id)?.length) &&
+      !kept(id) &&
+      id !== betId
+    const positionUnweighed = new Map(
+      unweighed
         .sort(byKey)
-        .filter(
-          ({ id }) =>
-            (approvedIds.has(id) || !asked.pending.get(id)?.length) &&
-            !kept(id),
-        )
+        .filter(({ id }) => competes(id))
         .map(({ id }, i) => [id, i + 1]),
     )
-    const contested = new Map<string, number>()
-    for (const [, item] of placed)
-      if (!kept(item.film.id)) contested.set(item.film.id, contested.size + 1)
+    const contested = new Map(
+      ordered
+        .filter((item) => competes(item.id))
+        .map((item, i) => [item.id, i + 1]),
+    )
 
     const names = new Map<string, string>()
     if (adjustment.size > 0)
@@ -415,18 +569,43 @@ export const rank = (
           Math.abs(contribution(b, weights)) -
           Math.abs(contribution(a, weights)),
       )
-      const creditLines = wentUpByCredit(
-        film.id,
-        contested,
-        positionWithoutCredit,
-        utilities,
-        adjustment,
-      ).map((p) => {
-        const credit = credits.get(p)
-        if (credit === undefined) throw pythonError('KeyError', `'${p}'`)
-        return creditLine(p, names.get(p) ?? p, credit, film.id, run.today)
-      })
-      const lines = [...asked.linesOf(film.id), ...signalLines, ...creditLines]
+      const satisfactionLines =
+        group === null || film.id === betId
+          ? []
+          : wentUpBySatisfaction(
+              film.id,
+              contested,
+              positionUnweighed,
+              utilities,
+              adjustment,
+            ).map((p) => {
+              return satisfactionLine(
+                p,
+                names.get(p) ?? p,
+                group,
+                scaleOf(round, p),
+                film.id,
+                run.today,
+              )
+            })
+      const lines = [
+        ...asked.linesOf(film.id),
+        ...signalLines,
+        ...satisfactionLines,
+      ]
+      const predicted: Array<[string, PredictedRating]> = []
+      for (const p of attendees) {
+        const prediction = (yield* predictRatings(round, p)).get(film.id)
+        if (prediction !== undefined)
+          predicted.push([
+            p,
+            {
+              value: pyRound(prediction.value, 2),
+              raters: prediction.raters,
+              deviation: pyRound(prediction.deviation, 2),
+            },
+          ])
+      }
       const withoutFactOn = [...utilities]
         .filter(([, u]) => u === null)
         .map(([p]) => p)
@@ -449,6 +628,9 @@ export const rank = (
             u === null ? null : pyRound(u, 4),
           ]),
         ),
+        ...(predicted.length > 0 && {
+          predictedRating: Object.fromEntries(predicted),
+        }),
         evidence: Object.fromEntries(
           attendees.map((p) => [
             p,
@@ -459,6 +641,7 @@ export const rank = (
         ),
         filmLines: lines.map((e) => evidenceToJson(e, weights)),
         ...(regenerate !== undefined && { new: isNew(regenerate, film.id) }),
+        ...(film.id === betId && { bet: true as const }),
       })
     }
     for (const warning of asked.listWarnings(films.length, count))
@@ -470,9 +653,16 @@ export const rank = (
     return {
       attendees,
       rule: ruleToJson(rule),
-      credit: Object.fromEntries(
-        [...credits].map(([p, c]) => [p, pyRound(c.value, 4)]),
+      satisfaction: Object.fromEntries(
+        [...(group?.people ?? [])].map(([p, s]) => [
+          p,
+          pyRound(s.satisfaction, 4),
+        ]),
       ),
+      disagreement:
+        group === null || group.disagreement === null
+          ? null
+          : pyRound(group.disagreement, 4),
       vetoes: vetoes.acted,
       moods: moods.moods.map((m) => m.name),
       films,
@@ -514,6 +704,9 @@ export interface RecommendRequest extends ConstraintRequest {
   readonly moods?: ReadonlyArray<string>
   /** Restrições already built, after the ones the fields ask for. */
   readonly constraints?: ReadonlyArray<Constraint>
+  /** The Aposta's draws (#178); a Session gives its id. Without it, no
+   * bet. */
+  readonly seed?: string
 }
 
 const resolveRule = (
@@ -574,12 +767,17 @@ export const requestCount = (
   })
 
 /** The ranking of a request whose count and Restrições are already read:
- * the Presentes resolved, the Regra checked, then `rank`. */
+ * the Presentes resolved, the Regra checked, then `rank`. `seedOf` gives
+ * the Aposta's seed from the Presentes when the request has none. */
 export const rankRequest = (
   request: RecommendRequest,
   count: number,
   asked: ReadonlyArray<Constraint>,
   regenerate?: Regenerate,
+  seedOf?: (
+    db: Connection,
+    attendees: ReadonlyArray<string>,
+  ) => Effect.Effect<string, EngineError | SqliteError, EngineServices | Run>,
 ): Effect.Effect<
   Recommendation,
   EngineError | SqliteError,
@@ -593,6 +791,9 @@ export const rankRequest = (
       Effect.gen(function* () {
         const attendees = yield* resolveAttendees(db, names)
         const rule = yield* resolveRule(db, request, attendees)
+        const seed =
+          request.seed ??
+          (seedOf === undefined ? undefined : yield* seedOf(db, attendees))
         return yield* rank(db, {
           attendees,
           count,
@@ -600,6 +801,7 @@ export const rankRequest = (
           constraints: asked,
           moods: request.moods ?? [],
           ...(regenerate !== undefined && { regenerate }),
+          ...(seed !== undefined && { seed }),
         })
       }),
     )

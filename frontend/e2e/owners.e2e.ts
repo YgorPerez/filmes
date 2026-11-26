@@ -14,15 +14,16 @@
 // away her next request goes to the login. Only the desktop runs it.
 
 import { consult, personCreate } from '@filmes/engine'
-import { expect, test } from '@playwright/test'
 import {
   addPerson,
   engineRun,
+  expect,
   loginAs,
   makeBrunoAdmin,
   notice,
   section,
   snap,
+  test,
 } from './support'
 
 const DONOS = [

@@ -1,11 +1,12 @@
-// The Crédito (ticket #96); the pytest twin is tests/test_credito.py. Who
-// fell behind in recent Sessions weighs more in the default Regra.
+// Satisfação replaces the Crédito (ticket #176, map #169). Whoever left the
+// recent shared Sessions less satisfied weighs more in the default Regra.
 //
-// For each group Session with Feedback, the gap is the Presentes' average
-// reaction minus the Pessoa's, from 0 to 1 (a Nota n is (n − 0,5) / 4,5; a
-// Relato gostou 1, neutro 0,5, não gostou 0). The Crédito is the average of
-// those gaps over the 5 latest Sessions she shared with someone here today,
-// floored at 0. In the default Regra, u' = u − 0,5 × Crédito.
+// A reaction goes from 0 to 1 (a Nota n is (n − 0,5) / 4,5; a Relato gostou
+// 1, neutro 0,5, não gostou 0). Each Presente's satisfaction is the mean of
+// her reactions over the 5 latest group Sessions she shared with someone
+// here today. The disagreement is the highest satisfaction minus the
+// lowest. In the default Regra, u' = u − 0,25 × (highest − hers): with two
+// Presentes, the same as the Crédito's u − 0,5 × (average − hers).
 //
 // In the fixture Quim gave 5 to Ponte Aérea, 3,5 to Maré Baixa, 4,5 to
 // Barulho and 2 to Fronteira. With Bruno:
@@ -13,15 +14,12 @@
 //   pleases both the same, less than As Horas Lentas pleases Bruno.
 // - Asfalto Quente pleases Quim and not Bruno; A Volta do Mar pleases Bruno
 //   and Quim little.
-//
-// Not here yet: the film that rises only by an on-demand Restrição
-// (`--gatilho`, #92).
 
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, test } from 'vite-plus/test'
 import {
-  creditNow,
+  satisfactionNow,
   recommendSession,
   recordFeedback,
   reloadSessions,
@@ -34,13 +32,16 @@ import { useFixture, type Fixture } from '../fixture.ts'
 import { weightsWith } from '../recommendation/support.ts'
 
 /** The IMDb bonus of As Horas Lentas (7,4) would change the order without
- * the Crédito: the margins here are small, so only the Crédito moves it. */
-const useCreditFixture = (): { fixture: Fixture; vars: Vars } => {
+ * the satisfaction, and so would the Decaimento of the Notas (#173): the
+ * margins here are small, so only the satisfaction moves it. A floor of 1
+ * keeps every Nota at its full weight. */
+const useSatisfactionFixture = (): { fixture: Fixture; vars: Vars } => {
   const fixture = useFixture()
   const vars = weightsWith(
     fixture,
     '\nweight = 0.3\n\n[no_sad]',
     '\nweight = 0.0\n\n[no_sad]',
+    [['floor = 0.25', 'floor = 1.0']],
   )
   return { fixture, vars }
 }
@@ -78,35 +79,41 @@ const withFeedback = async (
   )
 }
 
-describe('the Crédito', () => {
-  test('the Crédito now names the Session where each one fell behind', async () => {
-    const { fixture, vars } = useCreditFixture()
-    expect(await fixture.ok(creditNow(['bruno', 'quim']), vars)).toEqual([
-      { person: 'bruno', value: 0, line: null },
-      { person: 'quim', value: 0, line: null },
-    ])
+const LINE =
+  'satisfação de Bruno nas últimas Sessões: 11%, e a mais alta do grupo, 100%; na de 2026-11-20 (Pequenos Milagres), deu 1'
+
+describe('the satisfaction', () => {
+  test('the satisfaction now names the Session of who fell behind', async () => {
+    const { fixture, vars } = useSatisfactionFixture()
+    expect(await fixture.ok(satisfactionNow(['bruno', 'quim']), vars)).toEqual({
+      people: [
+        { person: 'bruno', satisfaction: null, line: null },
+        { person: 'quim', satisfaction: null, line: null },
+      ],
+      disagreement: null,
+    })
     await withFeedback(fixture, vars, ['dono', 'quim'], {
       ratings: ['dono=1', 'quim=5'],
     })
 
-    expect(await fixture.ok(creditNow(['bruno', 'quim']), vars)).toEqual([
-      {
-        person: 'bruno',
-        value: 0.4444,
-        line: 'na Sessão de 2026-11-20 (Pequenos Milagres), Bruno deu 1 e a média dos Presentes foi 3',
-      },
-      { person: 'quim', value: 0, line: null },
-    ])
-    // Alone, nobody has Crédito.
-    expect(await fixture.ok(creditNow(['bruno']), vars)).toEqual([
-      { person: 'bruno', value: 0, line: null },
-    ])
+    expect(await fixture.ok(satisfactionNow(['bruno', 'quim']), vars)).toEqual({
+      people: [
+        { person: 'bruno', satisfaction: 0.1111, line: LINE },
+        { person: 'quim', satisfaction: 1, line: null },
+      ],
+      disagreement: 0.8889,
+    })
+    // Alone, nobody is behind anybody.
+    expect(await fixture.ok(satisfactionNow(['bruno']), vars)).toEqual({
+      people: [{ person: 'bruno', satisfaction: null, line: null }],
+      disagreement: null,
+    })
   })
 
-  test('who fell behind gets Crédito, and her film rises with the Crédito line', async () => {
-    const { fixture, vars } = useCreditFixture()
+  test('who left less satisfied weighs more, and her film rises with the satisfaction line', async () => {
+    const { fixture, vars } = useSatisfactionFixture()
     const before = await recommend(fixture, vars, DONO_QUIM)
-    expect(before.credit).toEqual({ bruno: 0, quim: 0 })
+    expect([before.satisfaction, before.disagreement]).toEqual([{}, null])
     expect(titles(before).indexOf('Voo Noturno')).toBeLessThan(
       titles(before).indexOf('As Horas Lentas'),
     )
@@ -122,16 +129,16 @@ describe('the Crédito', () => {
     )
     const after = await recommend(fixture, vars, DONO_QUIM)
 
-    // Reactions 0,111 and 1; average 0,556. Bruno fell 0,444 behind; Quim,
-    // ahead, loses nothing.
-    expect(after.credit).toEqual({ bruno: 0.4444, quim: 0 })
+    // Reactions 0,111 and 1: Bruno is 0,889 below Quim, who loses nothing.
+    expect(after.satisfaction).toEqual({ bruno: 0.1111, quim: 1 })
+    expect(after.disagreement).toBe(0.8889)
     expect(titles(after).indexOf('As Horas Lentas')).toBeLessThan(
       titles(after).indexOf('Voo Noturno'),
     )
     const [line] = film(after, 'As Horas Lentas').filmLines
     expect(line).toEqual({
       person: 'bruno',
-      text: 'na Sessão de 2026-11-20 (Pequenos Milagres), Bruno deu 1 e a média dos Presentes foi 3',
+      text: LINE,
       source: 'Feedback da Sessão 2026-11-20',
       date: '2026-11-20',
       strength: 'strong',
@@ -144,11 +151,40 @@ describe('the Crédito', () => {
     expect(film(before, 'As Horas Lentas').filmLines).toEqual([])
   })
 
-  test('a film that rose but where who has Crédito is the minimum gets no line', async () => {
+  test("the line's Força reads her Nota on her own scale", async () => {
+    // Bruno rates high: with his Feedback, 12 Notas, five of them a 4.
+    // Below the config's 20, his 4 is read on the population: its 77th
+    // percentile, moderate, strong as a Feedback. With min_ratings 10 it is
+    // read on his own scale: his 46th, weak, moderate as a Feedback.
+    const { fixture, vars } = useSatisfactionFixture()
+    await withFeedback(fixture, vars, ['dono', 'quim'], {
+      ratings: ['dono=4', 'quim=5'],
+    })
+    const strengths = async (weights: Vars) =>
+      (await recommend(fixture, weights, DONO_QUIM)).films.flatMap((f) =>
+        f.filmLines
+          .filter((l) => l.text.startsWith('satisfação de Bruno'))
+          .map((l) => l.strength),
+      )
+
+    const onPopulation = await strengths(vars)
+    expect(onPopulation.length).toBeGreaterThan(0)
+    expect(new Set(onPopulation)).toEqual(new Set(['strong']))
+    // Written after the run above: it replaces the same weights file.
+    const own = weightsWith(fixture, 'min_ratings = 20', 'min_ratings = 10', [
+      ['\nweight = 0.3\n\n[no_sad]', '\nweight = 0.0\n\n[no_sad]'],
+      ['floor = 0.25', 'floor = 1.0'],
+    ])
+    const onHisOwn = await strengths(own)
+    expect(onHisOwn.length).toBeGreaterThan(0)
+    expect(new Set(onHisOwn)).toEqual(new Set(['moderate']))
+  })
+
+  test('a film that rose but where who fell behind is the minimum gets no line', async () => {
     // O Farol de Areia pleases Bruno (0,784) a bit more than Quim (0,574).
-    // With the Crédito Bruno becomes its minimum (0,562): it rises only
-    // because others fell more, and it is not Bruno's film.
-    const { fixture, vars } = useCreditFixture()
+    // Weighed by his satisfaction, Bruno becomes its minimum (0,562): it
+    // rises only because others fell more, and it is not Bruno's film.
+    const { fixture, vars } = useSatisfactionFixture()
     const before = await recommend(fixture, vars, DONO_QUIM)
     await fixture.ok(
       recordFeedback({
@@ -167,7 +203,7 @@ describe('the Crédito', () => {
   })
 
   test('the Dono’s Relato counts in three levels', async () => {
-    const { fixture, vars } = useCreditFixture()
+    const { fixture, vars } = useSatisfactionFixture()
     await withFeedback(fixture, vars, ['dono', 'quim'], {
       ratings: ['dono=5'],
       reports: ['quim=não gostou'],
@@ -175,9 +211,9 @@ describe('the Crédito', () => {
 
     const out = await recommend(fixture, vars, DONO_QUIM)
 
-    // Reactions 1 and 0: average 0,5, and Quim fell 0,5 behind. An
-    // average of 0,5 is 2,75 on the Nota scale.
-    expect(out.credit).toEqual({ bruno: 0, quim: 0.5 })
+    // Reactions 1 and 0: Quim is 1 below Bruno.
+    expect(out.satisfaction).toEqual({ bruno: 1, quim: 0 })
+    expect(out.disagreement).toBe(1)
     expect(titles(out).indexOf('Asfalto Quente')).toBeLessThan(
       titles(out).indexOf('A Volta do Mar'),
     )
@@ -189,14 +225,14 @@ describe('the Crédito', () => {
       'strong',
     ])
     expect(line?.text).toBe(
-      'na Sessão de 2026-11-20 (Pequenos Milagres), Quim não gostou e a média dos Presentes foi 2,8',
+      'satisfação de Quim nas últimas Sessões: 0%, e a mais alta do grupo, 100%; na de 2026-11-20 (Pequenos Milagres), não gostou',
     )
   })
 
-  test('the Crédito leaves alone the neutral of who has no Fato', async () => {
-    // Quim gets Crédito 0,5 (u' = u − 0,25). On Voo Noturno he has a Fato
+  test('the satisfaction leaves alone the neutral of who has no Fato', async () => {
+    // Quim is 1 below Bruno (u' = u − 0,25). On Voo Noturno he has a Fato
     // and falls to 0,407. On Maré Cheia he has none and counts 0,5.
-    const { fixture, vars } = useCreditFixture()
+    const { fixture, vars } = useSatisfactionFixture()
     await withFeedback(fixture, vars, ['dono', 'quim'], {
       ratings: ['dono=5'],
       reports: ['quim=não gostou'],
@@ -204,14 +240,14 @@ describe('the Crédito', () => {
 
     const out = await recommend(fixture, vars, DONO_QUIM)
 
-    expect(out.credit['quim']).toBe(0.5)
+    expect(out.satisfaction['quim']).toBe(0)
     expect(titles(out).indexOf('Maré Cheia')).toBeLessThan(
       titles(out).indexOf('Voo Noturno'),
     )
   })
 
-  test('without Crédito the film of who fell behind comes later', async () => {
-    const { fixture, vars } = useCreditFixture()
+  test('with nobody behind, the film of who fell behind comes later', async () => {
+    const { fixture, vars } = useSatisfactionFixture()
 
     const out = await recommend(fixture, vars, DONO_QUIM)
 
@@ -220,29 +256,33 @@ describe('the Crédito', () => {
     )
   })
 
-  test('a Presente with no reaction is not in the Crédito', async () => {
-    const { fixture, vars } = useCreditFixture()
+  test('a Presente with no reaction has no satisfaction, and nobody is behind', async () => {
+    const { fixture, vars } = useSatisfactionFixture()
     await withFeedback(fixture, vars, ['dono', 'quim'], { ratings: ['dono=1'] })
 
-    expect(
-      (await recommend(fixture, vars, { attendees: ['dono', 'quim'] })).credit,
-    ).toEqual({ bruno: 0, quim: 0 })
+    const out = await recommend(fixture, vars, DONO_QUIM)
+    expect([out.satisfaction, out.disagreement]).toEqual([
+      { bruno: 0.1111 },
+      null,
+    ])
+    expect(out.films.flatMap((f) => f.filmLines)).not.toContainEqual(
+      expect.objectContaining({ person: 'bruno' }),
+    )
   })
 
-  test('"não vimos nada" leaves the Crédito alone', async () => {
-    const { fixture, vars } = useCreditFixture()
+  test('"não vimos nada" leaves the satisfaction alone', async () => {
+    const { fixture, vars } = useSatisfactionFixture()
     const { session } = await recommend(fixture, vars, {
       attendees: ['dono', 'quim'],
     })
     await fixture.ok(recordFeedback({ session: session.id, film: null }), vars)
 
-    expect(
-      (await recommend(fixture, vars, { attendees: ['dono', 'quim'] })).credit,
-    ).toEqual({ bruno: 0, quim: 0 })
+    const out = await recommend(fixture, vars, { attendees: ['dono', 'quim'] })
+    expect([out.satisfaction, out.disagreement]).toEqual([{}, null])
   })
 
-  test('an open Session is not in the Crédito', async () => {
-    const { fixture, vars } = useCreditFixture()
+  test('an open Session is not in the satisfaction', async () => {
+    const { fixture, vars } = useSatisfactionFixture()
     await recommend(fixture, vars, { attendees: ['dono', 'quim'] })
 
     const out = await recommend(
@@ -250,11 +290,11 @@ describe('the Crédito', () => {
       { ...vars, FILMES_HOJE: '2026-11-21' },
       { attendees: ['dono', 'quim'] },
     )
-    expect(out.credit).toEqual({ bruno: 0, quim: 0 })
+    expect([out.satisfaction, out.disagreement]).toEqual([{}, null])
   })
 
-  test('the average Regra and "de fulano" use no Crédito', async () => {
-    const { fixture, vars } = useCreditFixture()
+  test('the average Regra and "de fulano" do not weigh the satisfaction', async () => {
+    const { fixture, vars } = useSatisfactionFixture()
     await withFeedback(fixture, vars, ['dono', 'quim'], {
       ratings: ['dono=1', 'quim=5'],
     })
@@ -264,22 +304,21 @@ describe('the Crédito', () => {
       { rule: 'by' as const, by: 'quim' },
     ]) {
       const out = await recommend(fixture, vars, { ...DONO_QUIM, ...rule })
-      expect(out.credit).toEqual({})
+      expect([out.satisfaction, out.disagreement]).toEqual([{}, null])
       const lines = out.films.flatMap((f) => f.filmLines)
       expect(lines.length).toBeGreaterThan(0)
       expect(lines.every((l) => l.person === null)).toBe(true)
     }
   })
 
-  test('the Dono alone has no Crédito', async () => {
-    const { fixture, vars } = useCreditFixture()
+  test('the Dono alone is behind nobody', async () => {
+    const { fixture, vars } = useSatisfactionFixture()
     await withFeedback(fixture, vars, ['dono', 'quim'], {
       ratings: ['dono=1', 'quim=5'],
     })
 
-    expect(
-      (await recommend(fixture, vars, { attendees: ['dono'] })).credit,
-    ).toEqual({})
+    const out = await recommend(fixture, vars, { attendees: ['dono'] })
+    expect([out.satisfaction, out.disagreement]).toEqual([{}, null])
   })
 })
 
@@ -307,9 +346,9 @@ const writeSession = (
   )
 }
 
-describe('the Crédito’s window', () => {
+describe('the satisfaction’s window', () => {
   test('looks at the 5 latest Sessions with someone here today', async () => {
-    const { fixture, vars } = useCreditFixture()
+    const { fixture, vars } = useSatisfactionFixture()
     // With Quim: in the oldest Bruno fell behind; in the next 5, a tie.
     writeSession(
       fixture,
@@ -352,16 +391,26 @@ describe('the Crédito’s window', () => {
     )
     await fixture.ok(reloadSessions)
 
-    const credit = async (attendees: string[]) =>
-      (await recommend(fixture, vars, { attendees })).credit
-    expect(await credit(['dono', 'quim'])).toEqual({ bruno: 0, quim: 0 })
-    expect(await credit(['dono', 'iara'])).toEqual({ bruno: 0.5, iara: 0 })
-    // With the three, the 5 latest Bruno shared with Quim or Iara count.
-    expect((await credit(['dono', 'quim', 'iara']))['bruno']).toBe(0.1)
+    const measured = async (attendees: string[]) => {
+      const out = await recommend(fixture, vars, { attendees })
+      return [out.satisfaction, out.disagreement]
+    }
+    // A 4 is 0,778.
+    expect(await measured(['dono', 'quim'])).toEqual([
+      { bruno: 0.7778, quim: 0.7778 },
+      0,
+    ])
+    expect(await measured(['dono', 'iara'])).toEqual([{ bruno: 0, iara: 1 }, 1])
+    // With the three, each one's 5 latest shared with someone here: Bruno's
+    // are the one with Iara and 4 ties with Quim; Quim's, the 5 ties.
+    expect(await measured(['dono', 'quim', 'iara'])).toEqual([
+      { bruno: 0.6222, quim: 0.7778, iara: 1 },
+      0.3778,
+    ])
   })
 
   test('cuts the window by the numeric suffixes on the same day', async () => {
-    const { fixture, vars } = useCreditFixture()
+    const { fixture, vars } = useSatisfactionFixture()
     const date = '2026-11-20'
     for (let n = 5; n < 10; n++)
       writeSession(
@@ -387,21 +436,22 @@ describe('the Crédito’s window', () => {
     await fixture.ok(reloadSessions)
 
     expect(
-      (await recommend(fixture, vars, { attendees: ['dono', 'quim'] })).credit,
-    ).toEqual({ bruno: 0.1, quim: 0 })
+      (await recommend(fixture, vars, { attendees: ['dono', 'quim'] }))
+        .satisfaction,
+    ).toEqual({ bruno: 0.8, quim: 1 })
   })
 })
 
-describe('regenerating with the Crédito', () => {
-  const creditLines = (f: Recommendation['films'][number]) =>
-    f.filmLines.filter((line) => line.text.startsWith('na Sessão de'))
+describe('regenerating with the satisfaction', () => {
+  const satisfactionLines = (f: Recommendation['films'][number]) =>
+    f.filmLines.filter((line) => line.text.startsWith('satisfação de'))
 
-  test('only the free places compete, and a kept film gets no Crédito line', async () => {
-    // With Bruno's Crédito, As Horas Lentas goes past Ruído Branco and Voo
+  test('only the free places compete, and a kept film gets no satisfaction line', async () => {
+    // With Bruno behind, As Horas Lentas goes past Ruído Branco and Voo
     // Noturno. Version 1, by Quim's taste, showed Casa Cheia and Explosão
     // Final on top; kept there, As Horas Lentas takes the first free place
-    // (3), which without the Crédito would be Ruído Branco's.
-    const { fixture, vars } = useCreditFixture()
+    // (3), which without the satisfaction would be Ruído Branco's.
+    const { fixture, vars } = useSatisfactionFixture()
     await withFeedback(fixture, vars, ['dono', 'quim'], {
       ratings: ['dono=1', 'quim=5'],
     })
@@ -426,7 +476,9 @@ describe('regenerating with the Crédito', () => {
 
     const third = redone.films[2]!
     expect([third.title, third.new]).toEqual(['As Horas Lentas', true])
-    expect(creditLines(third).map((line) => line.person)).toEqual(['bruno'])
+    expect(satisfactionLines(third).map((line) => line.person)).toEqual([
+      'bruno',
+    ])
 
     const keepingWhatRose = await recommend(fixture, vars, {
       attendees: ['dono', 'quim'],
@@ -436,6 +488,6 @@ describe('regenerating with the Crédito', () => {
 
     const kept = keepingWhatRose.films.filter((f) => !f.new)
     expect(kept.map((f) => f.title)).toEqual(['As Horas Lentas'])
-    expect(creditLines(kept[0]!)).toEqual([])
+    expect(satisfactionLines(kept[0]!)).toEqual([])
   })
 })

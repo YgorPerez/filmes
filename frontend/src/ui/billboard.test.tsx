@@ -36,11 +36,69 @@ describe('the Cartaz shows', () => {
     render(<Billboard billboard={MODEL} action="/x" />)
     expect(
       cards().map(
-        (c) => within(c).getByRole('heading', { level: 2 }).textContent,
+        (c) => within(c).getByRole('heading', { level: 3 }).textContent,
       ),
     ).toEqual(['1As Horas Lentas', '2Sal & FerrugemSal e Ferrugem'])
     expect(within(cards()[1]!).getByText(BILLBOARD.card.isNew)).toBeTruthy()
     expect(within(cards()[0]!).queryByText(BILLBOARD.card.isNew)).toBeNull()
+  })
+
+  it('the films under the title of their Motivo, in the same order', () => {
+    render(<Billboard billboard={MODEL} />)
+    const helena = screen.getByRole('region', {
+      name: 'Porque você e Iara gostam de Helena Prado',
+    })
+    const bet = screen.getByRole('region', { name: 'Aposta' })
+    expect(within(helena).getAllByRole('article')).toEqual([cards()[0]])
+    expect(within(bet).getAllByRole('article')).toEqual([cards()[1]])
+    expect(
+      within(helena)
+        .getByRole('heading', { level: 2 })
+        .compareDocumentPosition(cards()[0]!) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+  })
+
+  it('a Motivo that comes back after another says so', () => {
+    const [first, second] = MODEL.films
+    const helena = MODEL.sections[0]!
+    render(
+      <Billboard
+        billboard={{
+          ...MODEL,
+          films: [first!, { ...second!, bet: false }],
+          sections: [helena, { ...helena, again: true, films: [second!.id] }],
+        }}
+      />,
+    )
+    const [once, again] = screen.getAllByRole('region', {
+      name: /Helena Prado/,
+    })
+    expect(within(once!).getByRole('heading', { level: 2 }).textContent).toBe(
+      'Porque você e Iara gostam de Helena Prado',
+    )
+    expect(within(again!).getByRole('heading', { level: 2 }).textContent).toBe(
+      `Porque você e Iara gostam de Helena Prado ${BILLBOARD.section.again}`,
+    )
+    expect(within(again!).getAllByRole('article')).toEqual([cards()[1]])
+  })
+
+  it('a Session from before the Motivos: the cards with no section, as before', () => {
+    render(<Billboard billboard={{ ...MODEL, sections: [] }} />)
+    expect(cards().some((c) => c.closest('section') !== null)).toBe(false)
+    expect(
+      cards().map(
+        (c) => within(c).getByRole('heading', { level: 2 }).textContent,
+      ),
+    ).toEqual(['1As Horas Lentas', '2Sal & FerrugemSal e Ferrugem'])
+  })
+
+  it('the Aposta’s stamp on the bet only, beside its NOVO', () => {
+    render(<Billboard billboard={MODEL} />)
+    const stamp = card(2).getByText(BILLBOARD.card.bet)
+    expect(stamp.getAttribute('title')).toBe(BILLBOARD.card.betHint)
+    expect(card(2).getByText(BILLBOARD.card.isNew)).toBeTruthy()
+    expect(card(1).queryByText(BILLBOARD.card.bet)).toBeNull()
   })
 
   it('the request on the shelf label, the legend and what left', () => {
@@ -82,18 +140,31 @@ describe('the Cartaz shows', () => {
 
   it('a shared Evidence on one line, and who has no Fato on hers, with no Força', () => {
     render(<Billboard billboard={MODEL} />)
-    const [shared] = card(1).getAllByRole('listitem')
+    const why = (n: number) =>
+      within(card(n).getByRole('list', { name: BILLBOARD.card.why }))
+    const [shared] = why(1).getAllByRole('listitem')
     expect(within(shared!).getByLabelText('Bruno, Iara').textContent).toBe('BI')
     expect(within(shared!).getByLabelText('Força moderada').dataset.level).toBe(
       '2',
     )
     expect(card(1).getByText('Fato sobre 2 de 2')).toBeTruthy()
-    const [strong, without] = card(2).getAllByRole('listitem')
+    const [strong, without] = why(2).getAllByRole('listitem')
     expect(within(strong!).getByLabelText('Força forte').dataset.level).toBe(
       '3',
     )
     expect(without!.textContent).toBe('IIara: sem fato sobre este filme')
     expect(within(without!).queryByLabelText(/Força/)).toBeNull()
+  })
+
+  it('the Nota prevista of each Presente who has one, and none for who has not', () => {
+    render(<Billboard billboard={MODEL} />)
+    const predicted = card(1).getByRole('list', { name: 'Nota prevista' })
+    expect(
+      within(predicted)
+        .getAllByRole('listitem')
+        .map((item) => item.textContent),
+    ).toEqual(['B8,3Bruno: 8,3 de 10'])
+    expect(card(2).queryByRole('list', { name: 'Nota prevista' })).toBeNull()
   })
 
   it('a dot per Presente on the poster, hollow for who has no Fato', () => {
@@ -153,6 +224,30 @@ describe('the marks', () => {
     expect(card(2).getAllByText(BILLBOARD.card.swapStamp)).toHaveLength(2)
   })
 
+  it('the Clima chips start at the version’s and ask for another in the text', async () => {
+    const user = userEvent.setup()
+    render(<Billboard billboard={MODEL} action="/x" />)
+    const chip = (name: string) =>
+      within(screen.getByRole('group', { name: /^Clima/ })).getByRole(
+        'checkbox',
+        { name },
+      )
+    expect(chip('leve')).toHaveProperty('checked', true)
+    expect(chip('pra rir')).toHaveProperty('checked', false)
+
+    await user.click(chip('tenso'))
+    expect(text()).toBe('#cartaz 2026-11-20-iara v2\nclima: leve, tenso\n')
+    expect(screen.getByText('outro Clima')).toBeTruthy()
+
+    await user.click(chip('leve'))
+    await user.click(chip('tenso'))
+    expect(text()).toBe('#cartaz 2026-11-20-iara v2\nclima: nenhum\n')
+
+    // Back to the version's: nothing to ask.
+    await user.click(chip('leve'))
+    expect(text()).toBe('#cartaz 2026-11-20-iara v2\n')
+  })
+
   it('Todos marks every Presente and stamps Já vi; the same Nota again takes it off', async () => {
     const user = userEvent.setup()
     render(<Billboard billboard={MODEL} action="/x" />)
@@ -194,6 +289,13 @@ describe('Enviar and Copiar pro chat', () => {
     await user.click(screen.getByRole('button', { name: BILLBOARD.reply.copy }))
     expect(screen.getByRole('status').textContent).toBe(BILLBOARD.reply.nothing)
     expect(onSend).not.toHaveBeenCalled()
+  })
+
+  it('on the web, the empty form is not posted and says so', async () => {
+    const user = userEvent.setup()
+    render(<Billboard billboard={MODEL} action="/x" />)
+    await user.click(screen.getByRole('button', { name: BILLBOARD.reply.send }))
+    expect(screen.getByRole('status').textContent).toBe(BILLBOARD.reply.nothing)
   })
 
   it('Enviar hands the text to `onSend` (the MCP Apps view)', async () => {
@@ -316,6 +418,7 @@ describe('parseMarks', () => {
     )
     expect(marks).toEqual({
       addition: '',
+      moods: null,
       films: {
         tt9000104: {
           seen: ['iara'],
@@ -337,8 +440,17 @@ describe('parseMarks', () => {
     })
   })
 
+  it('keeps the chosen Climas that are chips of the Cartaz, in their order', () => {
+    const marks = (moods: unknown) =>
+      parseMarks(store(JSON.stringify({ moods, films: {} })), MODEL).moods
+
+    expect(marks(['tenso', 'épico', 'leve', 3])).toEqual(['leve', 'tenso'])
+    expect(marks([])).toEqual([])
+    expect(marks('leve')).toBeNull()
+  })
+
   it('gives none for what does not read', () => {
-    const none = { addition: '', films: {} }
+    const none = { addition: '', moods: null, films: {} }
     expect(parseMarks(store('{'), MODEL)).toEqual(none)
     expect(parseMarks(store('[]'), MODEL)).toEqual(none)
     expect(parseMarks(store('{"films": 1}'), MODEL)).toEqual(none)

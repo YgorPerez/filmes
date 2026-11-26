@@ -149,6 +149,13 @@ describe('avaliar', () => {
         rateTop5: 8 / 9,
         reactions: 9,
         meanReaction: 1.0,
+        // Alone, there is no group to disagree (#171).
+        satisfaction: {
+          people: { bruno: { sessions: 9, satisfaction: 1 } },
+          groupSessions: 0,
+          minimum: null,
+          disagreement: null,
+        },
       })
     },
   )
@@ -196,11 +203,33 @@ describe('avaliar', () => {
     expect(sample.people).toBe(1000)
     expect(sample.retrieved).toBe(1000)
     expect(sample.heldOut4Plus).toBe(2000)
-    expect(sample.coverageTop5).toBe(0)
+    // Her training films are Já vistos: with that Fact they sort ahead of
+    // the popular films, and its strong "já viu" counts as backed.
+    expect(sample.coverageTop5).toBe(0.8)
     expect(sample.recall50).toBe(0.5)
     expect(result.versions).toHaveProperty(['ml-32m/ratings.csv'])
     expect(result.movielensSample).toEqual({ seed: 27, users: 1000 })
     expect(result.warnings).toEqual([])
+  })
+
+  test('a held-out film is not a Já visto before the cut', async () => {
+    const fixture = useFixture()
+    const catalog = join(fixture.root, 'catalogo')
+    cpSync(join(ROOT, 'tests/fixture/catalogo'), catalog, { recursive: true })
+    for (let i = 0; i < 55; i++)
+      appendFileSync(
+        join(catalog, 'filmes.csv'),
+        `tt928${String(i).padStart(4, '0')},Filme popular ${i},2020,90,999999,9.0\n`,
+      )
+    await fixture.ok(rebuild, { FILMES_CATALOGO: catalog })
+
+    const { people } = (await evaluated(fixture, { FILMES_CATALOGO: catalog }))
+      .offline
+    // Bruno's two held-out 4+ films have Evidence from his earlier Notas.
+    // Iara's, Quim's and Rosa's have nothing before their cuts: only
+    // guesses, behind the 55 popular ones. Their own later Notas, read as
+    // a Já visto, would give each a Fact and lift it into the top 50.
+    expect([people.retrieved, people.heldOut4Plus]).toEqual([2, 5])
   })
 
   test(
@@ -217,7 +246,8 @@ describe('avaliar', () => {
       const values = grid.values as Record<string, Record<string, unknown[]>>
       // 27 sets of multipliers; the five path weights vary one at a time (1
       // current set + 5 × 2 variations); the cut's N (3, 8 and 10 besides
-      // 5) varies alone, with the rest as the config has it.
+      // 5) and the Decaimento's half-life (2.5, 10 and 20 years besides 5)
+      // vary alone, with the rest as the config has it.
       expect(Object.keys(values['path.weight']!).sort()).toEqual([
         'cast',
         'director',
@@ -225,17 +255,22 @@ describe('avaliar', () => {
         'series',
         'writer',
       ])
-      expect(grid.combinations).toBe(27 * 11 + 3)
+      expect(grid.combinations).toBe(27 * 11 + 3 + 3)
       for (const section of ['path.weight', 'strength.multiplier'])
         for (const tried of Object.values(values[section]!))
           expect(tried).toHaveLength(3)
       expect(values['utility']).toEqual({ maxEvidence: [3, 5, 8, 10] })
+      expect(values['rating_decay']).toEqual({
+        halfLifeYears: [2.5, 5, 10, 20],
+      })
       const best = grid.best as Array<{
-        weights: { utility: Record<string, number> }
+        weights: Record<string, Record<string, number>>
       }>
       expect(best).toHaveLength(3)
-      for (const entry of best)
-        expect(entry.weights.utility).toHaveProperty('maxEvidence')
+      for (const entry of best) {
+        expect(entry.weights['utility']).toHaveProperty('maxEvidence')
+        expect(entry.weights['rating_decay']).toHaveProperty('halfLifeYears')
+      }
       expect(readFileSync(weights)).toEqual(before)
       expect(await fixture.ok(openSessions)).toEqual({ sessions: [] })
       expect(readFileSync(result.file, 'utf8')).toContain('## Grade de pesos')

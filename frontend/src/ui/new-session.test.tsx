@@ -8,7 +8,7 @@ import {
   parseSessionRequest,
   SESSION_REQUEST_REFUSALS,
 } from '#/content/session-request'
-import type { RequestOptions } from '#/platform/sessions'
+import type { NewSessionDraft, RequestOptions } from '#/platform/sessions'
 import { NewSession } from './sessions'
 import { SESSIONS } from './sessions.copy'
 
@@ -224,5 +224,168 @@ describe('the Catálogo search', () => {
     expect(
       screen.getByRole('search').querySelector('input[type=hidden]'),
     ).toBeNull()
+  })
+})
+
+const NOTE = '6f1c2a90-0000-4000-8000-000000000001'
+
+const DRAFT: NewSessionDraft = {
+  fields: {
+    request:
+      'a Iara, pelo gosto dela, leve, 3 filmes, até 2h, dos anos 90, nacional',
+    attendees: ['iara'],
+    rule: 'by',
+    by: 'iara',
+    moods: ['leve'],
+    count: 3,
+    maxDuration: 120,
+    since: 1990,
+    until: 1999,
+    language: 'pt',
+    child: 7,
+    triggers: ['aranha'],
+    similar: ['tt9001904'],
+    unseen: true,
+    noSlow: true,
+    noSad: true,
+  },
+  reading: {
+    understood: ['Presente: Iara', 'Clima: leve'],
+    notUnderstood: ['pipoca', 'traz o vinho'],
+    ambiguities: [
+      {
+        field: 'attendees',
+        words: 'Teo',
+        candidates: [
+          { id: 'rosa', label: 'Rosa' },
+          { id: 'teo', label: 'Teo' },
+        ],
+      },
+      { field: 'similar', words: 'Amélie', candidates: [] },
+    ],
+  },
+}
+
+const showDraft = (draft: NewSessionDraft, similar?: string) => {
+  render(
+    <NewSession
+      options={OPTIONS}
+      draft={draft}
+      note={NOTE}
+      similar={similar}
+    />,
+  )
+  return screen.getByRole('form', {
+    name: SESSIONS.form.label,
+  }) as HTMLFormElement
+}
+
+describe('reading a sentence (“Ler”)', () => {
+  it('posts the form with “ler” from its button, and Enter still sends it', () => {
+    const { form } = show()
+    const read = screen.getByRole('button', {
+      name: copy.read,
+    }) as HTMLButtonElement
+    expect([read.form, read.name, read.value]).toEqual([form, 'ler', 'sim'])
+    // Enter presses the first submit button: the one with no “ler”.
+    const first = form.querySelector('button[type=submit]')
+    expect(first?.hasAttribute('name')).toBe(false)
+  })
+
+  it('comes back with every field “Ler” left, and the sentence kept', () => {
+    const form = showDraft(DRAFT)
+    expect(posted(form)).toEqual({ ok: DRAFT.fields })
+  })
+
+  it('checks exactly the Presentes it left, the Dono too only if there', () => {
+    const form = showDraft({
+      ...DRAFT,
+      fields: { attendees: ['quim'], rule: 'default' },
+    })
+    expect(posted(form)).toEqual({
+      ok: { attendees: ['quim'], rule: 'default', moods: [] },
+    })
+  })
+
+  it('keeps the form’s defaults for a field it did not leave', () => {
+    const form = showDraft({ ...DRAFT, fields: { request: 'pipoca' } })
+    expect(posted(form)).toEqual({
+      ok: {
+        attendees: ['bruno'],
+        rule: 'default',
+        moods: [],
+        request: 'pipoca',
+      },
+    })
+  })
+})
+
+describe('the form “Ler” filled', () => {
+  it('adds the films “Usar” took since to the ones it left, and keeps its note', () => {
+    const form = showDraft(
+      { ...DRAFT, fields: { similar: ['tt9001904'] } },
+      'tt9001904,tt9000101',
+    )
+    expect(posted(form)).toMatchObject({
+      ok: { similar: ['tt9001904', 'tt9000101'] },
+    })
+    const search = new FormData(screen.getByRole('search') as HTMLFormElement)
+    expect([search.get('parecido'), search.get('nota')]).toEqual([
+      'tt9001904,tt9000101',
+      NOTE,
+    ])
+  })
+
+  it('says what it understood, what it did not and what it could not decide', () => {
+    showDraft(DRAFT)
+    const said = screen.getByRole('status').textContent
+    const { reading } = DRAFT
+    expect(said).toContain(copy.reading.understood(reading!.understood))
+    expect(said).toContain(copy.reading.notUnderstood(reading!.notUnderstood))
+    expect(said).toContain(
+      copy.reading.ambiguous([
+        { words: 'Teo', candidates: ['Rosa', 'Teo'] },
+        { words: 'Amélie', candidates: [] },
+      ]),
+    )
+  })
+
+  it('lists the films of an unclear title, each with “Usar”', () => {
+    showDraft({
+      fields: { similar: ['tt9000101'] },
+      reading: {
+        understood: [],
+        notUnderstood: [],
+        ambiguities: [
+          {
+            field: 'similar',
+            words: 'Reprise',
+            candidates: [
+              { id: 'tt9012601', label: 'Reprise (2011)' },
+              { id: 'tt9012602', label: 'Reprise (2004)' },
+            ],
+          },
+        ],
+      },
+    })
+    expect(
+      screen.getByText(copy.reading.similarAmbiguous('Reprise')),
+    ).toBeTruthy()
+    expect(
+      screen
+        .getByRole('link', { name: 'Usar Reprise (2004)' })
+        .getAttribute('href'),
+    ).toBe(`/sessoes/nova?parecido=tt9000101%2Ctt9012602&nota=${NOTE}`)
+    expect(screen.getByRole('status').textContent).not.toContain('Reprise')
+  })
+
+  it('says when it understood nothing', () => {
+    showDraft({
+      fields: {},
+      reading: { understood: [], notUnderstood: ['pipoca'], ambiguities: [] },
+    })
+    const said = screen.getByRole('status').textContent
+    expect(said).toContain(copy.reading.nothing)
+    expect(said).toContain(copy.reading.notUnderstood(['pipoca']))
   })
 })

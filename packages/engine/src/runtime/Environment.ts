@@ -62,7 +62,12 @@ export type SourceKeyVariable = (typeof SOURCE_KEY_VARIABLES)[number]
 
 /** The config files besides `weights.toml` and `local.toml`, by the stem of
  * their English name. */
-export type ConfigName = 'moods' | 'group_alone' | 'sadness' | 'tag_vetoes'
+export type ConfigName =
+  | 'moods'
+  | 'group_alone'
+  | 'sadness'
+  | 'tag_vetoes'
+  | 'request_reading'
 
 const LocalToml = Schema.Struct({
   paths: Schema.optionalKey(

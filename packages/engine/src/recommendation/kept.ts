@@ -18,6 +18,7 @@
 //     {position, id, title, cause: 'constraint', constraint: name, label: 'nada triste'}
 //     {position, id, title, cause: 'veto', person: slug, text: 'the Veto as said'}
 //     {position, id, title, cause: 'min_rating', label: 'nota 6,5 no IMDb, abaixo de 7'}
+//     {position, id, title, cause: 'mood'}
 //
 // `position` is the film's number in the previous version. `seen` holds when
 // some Presente, of now or of the previous version, has a Já visto of the
@@ -30,12 +31,23 @@
 // the Dono (`swapped`: the Cartaz's Trocar, `swap` and what did not stay of
 // `keep`).
 //
+// Another Clima (#179) also replaces the whole list: whoever leaves without
+// being a Já vi nor swapped by the Dono has the `mood` cause. It stays
+// eligible: the Clima only pulls the order, and the film fell below the cut.
+//
 // The film that comes back from the previous version does not get the "novo"
 // mark, kept or not.
 
 import { Effect } from 'effect'
 import { thousandsDot } from '../compat/number.ts'
-import { pyStrValue, yamlToJson, type YamlMapping } from '../data/yaml.ts'
+import {
+  isMapping,
+  isSequence,
+  pyStrValue,
+  pyTruthy,
+  yamlToJson,
+  type YamlMapping,
+} from '../data/yaml.ts'
 import { ratingText } from '../evidence/wording.ts'
 import type { EngineError } from '../runtime/EngineError.ts'
 import type { Environment } from '../runtime/Environment.ts'
@@ -43,6 +55,7 @@ import type { Weights } from '../runtime/Weights.ts'
 import { numOrNull, text } from '../sqlite/row.ts'
 import type { Connection, SqliteError } from '../sqlite/Sqlite.ts'
 import { currentVersion, shownFilms, type ShownFilm } from '../sessions/file.ts'
+import { yesVotes } from '../sessions/votes.ts'
 import type { Candidate } from './candidates.ts'
 import type { Constraint, DropDetail } from './constraints.ts'
 import { constraintLabel } from './constraints/index.ts'
@@ -64,6 +77,11 @@ export interface Regenerate {
   readonly swapped: ReadonlySet<string>
   /** The new Restrição that replaces the whole list, if any. */
   readonly replacing: Constraint | undefined
+  /** The request asks for other Climas than the previous version's, which
+   * also replaces the whole list. */
+  readonly newMood: boolean
+  /** The previous version's Aposta (#178), if any. */
+  readonly bet?: string
 }
 
 /** Why a film of the previous version left (an item of `dropped`, without
@@ -71,6 +89,7 @@ export interface Regenerate {
 export type DropCause =
   | { readonly cause: 'seen'; readonly people: ReadonlyArray<string> }
   | { readonly cause: 'swapped' }
+  | { readonly cause: 'mood' }
   | RemovalCause
 
 /** Why a kept film was removed: a Restrição, a Veto or the minimum rating. */
@@ -97,15 +116,32 @@ export const isNew = (regenerate: Regenerate, filmId: string): boolean =>
 const titleOf = (regenerate: Regenerate, filmId: string): string =>
   regenerate.previous.find((f) => f.id === filmId)?.title || filmId
 
+/** The kept films' numbers after the Votos (#182): the same numbers, but
+ * the film with more yes in the Session takes the first one; on a tie, the
+ * one that was higher. With no yes, nothing moves. */
+const liftKept = (
+  kept: ReadonlyArray<readonly [string, number]>,
+  yes: ReadonlyMap<string, number>,
+): ReadonlyMap<string, number> => {
+  const onScreen = kept.toSorted(([, p], [, q]) => p - q)
+  // A stable sort: on a tie in yes, the screen's order.
+  const lifted = onScreen.toSorted(
+    ([a], [b]) => (yes.get(b) ?? 0) - (yes.get(a) ?? 0),
+  )
+  return new Map(onScreen.map(([, position], i) => [lifted[i]![0], position]))
+}
+
 /** What stays and what was on the screen of the Session's current version,
  * and the warnings of the kept films that were not on it (`preparar`).
  * `swapped` is what the Dono swapped from it; `replacing`, the new
- * Restrição that replaces the whole list. */
+ * Restrição that replaces the whole list; `newMood`, whether the Climas
+ * changed. */
 export const prepareRegenerate = (
   front: YamlMapping,
   keep: ReadonlyArray<string>,
   swapped: ReadonlySet<string>,
   replacing: Constraint | undefined,
+  newMood: boolean,
 ): { readonly regenerate: Regenerate; readonly warnings: string[] } => {
   const version = currentVersion(front)
   const screen = shownFilms(version)
@@ -117,19 +153,27 @@ export const prepareRegenerate = (
         `--manter ${id}: o filme não estava na versão anterior da Sessão; ficou de fora`,
     )
   const attendees = yamlToJson(version.get('attendees') ?? null)
+  const recommendation = version.get('recommendation')
+  const bet = (isSequence(recommendation) ? recommendation : [])
+    .filter(isMapping)
+    .find((film) => pyTruthy(film.get('bet') ?? false))
+    ?.get('id')
   return {
     regenerate: {
       previous: screen,
       date: pyStrValue(version.get('date') ?? null),
-      positions: new Map(
+      positions: liftKept(
         keep.flatMap((id) => {
           const position = positions.get(id)
           return position === undefined ? [] : [[id, position] as const]
         }),
+        yesVotes(front),
       ),
       attendees: Array.isArray(attendees) ? attendees.map(String) : [],
       swapped,
       replacing,
+      newMood,
+      ...(bet !== undefined && bet !== null && { bet: pyStrValue(bet) }),
     },
     warnings,
   }
@@ -270,6 +314,8 @@ export const droppedFilms = (
         !regenerate.swapped.has(film.id)
       )
         list.push({ ...base, ...byConstraint(regenerate.replacing) })
+      else if (regenerate.newMood && !regenerate.swapped.has(film.id))
+        list.push({ ...base, cause: 'mood' })
       else list.push({ ...base, cause: 'swapped' })
     }
     return list

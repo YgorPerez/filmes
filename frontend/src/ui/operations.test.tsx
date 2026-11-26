@@ -62,6 +62,18 @@ const MEASURES = {
   filmsTop5: 1,
   recall50: 0.4,
   coverageTop5: 0.25,
+  calibration: {
+    overall: {
+      weak: { heldOut: 0, hits: 0, hitRate: null },
+      moderate: { heldOut: 0, hits: 0, hitRate: null },
+      strong: { heldOut: 1, hits: 1, hitRate: 1 },
+      none: { heldOut: 0, hits: 0, hitRate: null },
+      rises: null,
+    },
+    people: {},
+  },
+  predictedRatingError: { films: 0, meanAbsoluteError: null },
+  similarityTop5: null,
 }
 
 const DONE: EvaluationJob = {
@@ -83,6 +95,12 @@ const DONE: EvaluationJob = {
       rateTop5: 1,
       reactions: 1,
       meanReaction: 1,
+      satisfaction: {
+        people: {},
+        groupSessions: 0,
+        minimum: null,
+        disagreement: null,
+      },
     },
     priority: 'offline',
     warnings: ['A amostra offline do MovieLens exige ml-32m.'],

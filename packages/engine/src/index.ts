@@ -94,10 +94,10 @@ export {
   type UnseenBefore,
 } from './recommendation/constraints/series-order.ts'
 export {
-  computeCredit,
-  creditLine,
-  type Credit,
-} from './recommendation/credit.ts'
+  groupSatisfaction,
+  satisfactionLine,
+  type GroupSatisfaction,
+} from './recommendation/group-satisfaction.ts'
 export {
   filmHeader,
   firstSentence,
@@ -105,12 +105,34 @@ export {
 } from './recommendation/header.ts'
 export { readMoods, resolveMoods, type Mood } from './recommendation/moods.ts'
 export {
+  mergeReadFields,
+  readRequest,
+  REQUEST_READING_MAX_LENGTH,
+  type ReadAmbiguity,
+  type ReadItem,
+  type RequestReading,
+  type RequestReadingInput,
+} from './reading/read-request.ts'
+export { ADDITION_FIELDS, withAddition } from './reading/addition.ts'
+export type { ReadCandidate, ReadField, ReadFields } from './reading/reader.ts'
+export {
+  drawBets,
+  type BetCandidate,
+  type BetOdds,
+} from './recommendation/bet.ts'
+export {
+  filmReason,
+  type FilmReason,
+  type ReasonKind,
+} from './recommendation/reason.ts'
+export {
   rank,
   rankRequest,
   recommend,
   requestCount,
   type RankOptions,
   type Recommendation,
+  type PredictedRating,
   type RecommendedFilm,
   type RecommendRequest,
 } from './recommendation/recommend.ts'
@@ -120,7 +142,7 @@ export {
   RULE_NAMES,
   ruleKey,
   ruleToJson,
-  usesCredit,
+  usesSatisfaction,
   type Rule,
   type RuleName,
 } from './recommendation/rule.ts'
@@ -199,7 +221,11 @@ export {
   reloadSessions,
   syncSession,
 } from './sessions/database.ts'
-export { creditNow, type CreditNow } from './sessions/credit.ts'
+export {
+  satisfactionNow,
+  type PersonSatisfactionNow,
+  type SatisfactionNow,
+} from './sessions/satisfaction-now.ts'
 export {
   dropComment,
   recordFeedback,
@@ -226,6 +252,28 @@ export {
   redoSession,
 } from './sessions/redo.ts'
 export { sessionRedoRequest } from './sessions/redo-request.ts'
+export {
+  answerPairwise,
+  decidePairwise,
+  pairwiseAnswers,
+  pairwiseQuestions,
+  pairwiseSource,
+  PAIRWISE_RATING,
+  type PairwiseAnswer,
+  type PairwiseDecision,
+  type PairwiseQuestions,
+  type PairwiseRequest,
+  type WaitingAnswer,
+  type WaitingAnswers,
+} from './sessions/pairwise.ts'
+export {
+  castVotes,
+  votedBy,
+  yesVotes,
+  type CastVotes,
+  type CastVotesRequest,
+  type VoteValue,
+} from './sessions/votes.ts'
 export {
   engineLayer,
   errorOutcome,
@@ -616,10 +664,12 @@ export {
   type BillboardDropped,
   type BillboardFilm,
   type BillboardLine,
+  type BillboardPrediction,
   type BillboardPerson,
   type BillboardRequest,
   type BillboardRequestInput,
   type BillboardResult,
+  type BillboardSection,
 } from './billboard/model.ts'
 export {
   RATING_QUEUE_LIMIT,

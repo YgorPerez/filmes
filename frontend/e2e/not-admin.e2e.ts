@@ -1,9 +1,9 @@
 // Operações for a Dono who is not admin: no link, no page, no form; the
 // Catálogo search is for any Dono (#128). Vera, the fixture's second Dona,
-// is never admin (`operations.e2e.ts` makes Bruno admin).
+// is never admin.
 
-import { expect, test, type Page } from '@playwright/test'
-import { loginAs } from './support'
+import { type Page } from '@playwright/test'
+import { expect, loginAs, test } from './support'
 
 const loginAsVera = (page: Page) => loginAs(page, 'vera@example.org')
 

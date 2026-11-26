@@ -9,7 +9,7 @@ import {
   Client,
   StreamableHTTPClientTransport,
 } from '@modelcontextprotocol/client'
-import { expect, test } from '@playwright/test'
+import { expect, test } from './server-test'
 
 /** A JSON answer's fields. */
 const json = async (response: Response | null) =>

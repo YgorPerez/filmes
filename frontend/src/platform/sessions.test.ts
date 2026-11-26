@@ -1,12 +1,21 @@
 import { execFileSync } from 'node:child_process'
-import { makeEngine, type ErrorCode, type Outcome } from '@filmes/engine'
+import {
+  makeEngine,
+  REQUEST_READING_MAX_LENGTH,
+  type ErrorCode,
+  type Outcome,
+} from '@filmes/engine'
 import { describe, expect, it, vi } from 'vite-plus/test'
-import { useFixture } from '../../../packages/engine/test/fixture.ts'
+import {
+  useFixture,
+  type Fixture,
+} from '../../../packages/engine/test/fixture.ts'
 import {
   parseSessionRequest,
   type SessionRequestForm,
 } from '#/content/session-request'
 import {
+  newSessionDraft,
   requestOptions,
   sessionList,
   sessionPage,
@@ -63,6 +72,7 @@ function fake(
     list: async () => outcomes.list ?? { exitCode: 0, output: [SESSION] },
     options: async () => failure('missing_database'),
     open,
+    read: async () => failure('missing_database'),
   }
   return { sessions, open }
 }
@@ -244,6 +254,171 @@ describe('sessionRequestAction', () => {
     )
     expect(log.mock.calls.length > 0).toBe(refusal === 'indisponivel')
     log.mockRestore()
+  })
+})
+
+const ler = (fields: [string, string][], origin: string | null = ORIGIN) =>
+  post([...fields, ['ler', 'sim']], origin)
+
+/** "Ler" posted with `fields` as the Dono `owner`, with the real engine on
+ * `fixture`: where it went and the draft its note holds. Opens nothing. */
+async function readForm(
+  fixture: Fixture,
+  fields: [string, string][],
+  owner = 'bruno',
+) {
+  const engine = makeEngine(fixture.vars)
+  const open = vi.fn<Sessions['open']>()
+  const notes = new Notes()
+  try {
+    const response = await sessionRequestAction(
+      ler(fields),
+      { ...BRUNO, person: owner },
+      { ...sessionsFromEngine(engine), open },
+      notes,
+      ORIGIN,
+    )
+    expect(open).not.toHaveBeenCalled()
+    const location = response.headers.get('Location') ?? ''
+    const token = new URL(location, ORIGIN).searchParams.get('nota')
+    return {
+      location,
+      draft: newSessionDraft(token ?? undefined, notes),
+    }
+  } finally {
+    await engine.dispose()
+  }
+}
+
+describe('“Ler” in sessionRequestAction', () => {
+  it('goes back to the form with the sentence read on top of what the Dono set', async () => {
+    const { location, draft } = await readForm(useFixture(), [
+      ...BASIC,
+      ['climas', 'tenso'],
+      ['sem-tristeza', 'sim'],
+      ['duracao', '90'],
+      ['pedido', 'eu e o Quim, algo leve, até 2h, 3 filmes, com pipoca'],
+    ])
+
+    expect(location).toMatch(/^\/sessoes\/nova\?nota=[\w-]+$/)
+    expect(draft).toEqual({
+      fields: {
+        attendees: ['bruno', 'iara', 'quim'],
+        rule: 'default',
+        moods: ['tenso', 'leve'],
+        count: 3,
+        request: 'eu e o Quim, algo leve, até 2h, 3 filmes, com pipoca',
+        maxDuration: 120,
+        noSad: true,
+      },
+      reading: {
+        understood: [
+          'Presente: Bruno',
+          'Presente: Quim',
+          'Clima: leve',
+          'até 2h',
+          '3 filmes',
+        ],
+        notUnderstood: ['pipoca'],
+        ambiguities: [],
+      },
+    })
+  })
+
+  it('keeps the Parecido “Usar” took, and adds the one the sentence names', async () => {
+    const { draft } = await readForm(useFixture(), [
+      ...BASIC,
+      ['parecido', 'tt9000101'],
+      ['pedido', 'algo leve'],
+    ])
+    expect(draft?.fields).toMatchObject({
+      moods: ['leve'],
+      similar: ['tt9000101'],
+    })
+
+    const both = await readForm(useFixture(), [
+      ...BASIC,
+      ['parecido', 'tt9000101'],
+      ['pedido', 'parecido com Poeira'],
+    ])
+    expect(both.draft?.fields.similar).toEqual(['tt9000101', 'tt9001904'])
+  })
+
+  it('keeps the films of an unclear title, with their ids, for “Usar”', async () => {
+    const { draft } = await readForm(useFixture(), [
+      ...BASIC,
+      ['pedido', 'parecido com Reprise; tipo Amélie'],
+    ])
+    expect(draft?.reading?.ambiguities).toEqual([
+      {
+        field: 'similar',
+        words: 'Reprise',
+        candidates: [
+          { id: 'tt9012601', label: 'Reprise (2011)' },
+          { id: 'tt9012602', label: 'Reprise (2004)' },
+        ],
+      },
+      { field: 'similar', words: 'Amélie', candidates: [] },
+    ])
+  })
+
+  it('takes "eu" as the logged-in Dono and reads nothing of taste', async () => {
+    const { draft } = await readForm(
+      useFixture(),
+      [['pedido', 'eu; a Iara odeia terror']],
+      'vera',
+    )
+    expect(draft?.fields.attendees).toEqual(['vera'])
+    expect(draft?.reading?.notUnderstood).toEqual(['Iara odeia terror'])
+  })
+
+  it('refuses an empty sentence and one longer than the engine reads', async () => {
+    const empty = await readForm(useFixture(), [...BASIC, ['pedido', '  ']])
+    expect(empty.location).toBe('/sessoes/nova?erro=frase')
+    const long = await readForm(useFixture(), [
+      ...BASIC,
+      ['pedido', 'a'.repeat(REQUEST_READING_MAX_LENGTH + 1)],
+    ])
+    expect(long.location).toBe('/sessoes/nova?erro=frase-longa')
+  })
+
+  it('says so, and logs why, when the engine cannot read', async () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const response = await sessionRequestAction(
+      ler([...BASIC, ['pedido', 'leve']]),
+      BRUNO,
+      fake().sessions,
+      new Notes(),
+      ORIGIN,
+    )
+    expect(response.headers.get('Location')).toBe(
+      '/sessoes/nova?erro=indisponivel',
+    )
+    expect(log).toHaveBeenCalledWith(
+      'engine: missing_database: mensagem de missing_database',
+    )
+    log.mockRestore()
+  })
+
+  it('sends who is not logged in to the login, and refuses another site', async () => {
+    const act = (request: Request, owner: typeof BRUNO | null = BRUNO) =>
+      sessionRequestAction(request, owner, fake().sessions, new Notes(), ORIGIN)
+    expect(
+      (await act(ler([['pedido', 'eu']]), null)).headers.get('Location'),
+    ).toBe('/entrar')
+    expect(
+      (await act(ler([['pedido', 'eu']], 'https://evil.example'))).status,
+    ).toBe(403)
+  })
+})
+
+describe('newSessionDraft', () => {
+  it('is null with no note, a forgotten one, or one of another form', () => {
+    const notes = new Notes()
+    const other = notes.remember({ warnings: ['aviso'], addition: null })
+    expect(newSessionDraft(undefined, notes)).toBeNull()
+    expect(newSessionDraft('nada', notes)).toBeNull()
+    expect(newSessionDraft(other, notes)).toBeNull()
   })
 })
 

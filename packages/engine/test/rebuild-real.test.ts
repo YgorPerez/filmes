@@ -584,6 +584,33 @@ test('limits the neighbourhood and breaks ties by IMDb id', async () => {
   ])
 })
 
+test("measures how each film's MovieLens ratings spread", async () => {
+  const movielens = zip({
+    'ml-32m/links.csv':
+      'movieId,imdbId,tmdbId\n1,0000001,\n2,0000002,\n3,0000003,\n',
+    // Film 1: four users split over two values (1 bit). Film 2: one rating
+    // twice by the same value (0 bits). Film 3 is not in the ratings.
+    'ml-32m/ratings.csv':
+      'userId,movieId,rating,timestamp\n1,1,5.0,1\n2,1,5.0,1\n3,1,2.5,1\n4,1,2.5,1\n1,2,4.0,1\n2,2,4.0,1\n',
+    'ml-32m/tags.csv': 'userId,movieId,tag,timestamp\n',
+  })
+  const query = await rebuilt(
+    usePinnedDumps((dumps) => [
+      ...without('ml-32m.zip')(dumps),
+      ['ml-32m.zip', movielens],
+    ]),
+  )
+
+  expect(
+    await query(
+      'SELECT filme_id, avaliacoes, entropia FROM entropia_movielens ORDER BY filme_id',
+    ),
+  ).toEqual([
+    ['tt0000001', 4, 1],
+    ['tt0000002', 2, 0],
+  ])
+})
+
 test('aggregates the normalized tags by distinct user', async () => {
   const query = await rebuilt(usePinnedDumps())
 
@@ -822,6 +849,70 @@ const neighbours = (query: (sql: string) => Promise<unknown>) =>
   query(
     'SELECT filme_id, vizinho_id, base, ambos FROM vizinhos ORDER BY filme_id',
   )
+
+test("counts the population's ratings by value, for the ruler (#172)", async () => {
+  const movielens = zip({
+    ...SMALL_MOVIELENS,
+    // Film 9 has no IMDb link: its rating still counts, as the population's.
+    'ml-32m/ratings.csv':
+      'userId,movieId,rating,timestamp\n1,1,4,1\n1,2,5,1\n2,1,4.5,1\n2,2,4,1\n3,2,nan,1\n3,9,0.5,1\n',
+  })
+  const query = await rebuilt(
+    usePinnedDumps(replacing('ml-32m.zip', movielens)),
+  )
+
+  expect(
+    await query('SELECT nota, quantidade FROM notas_movielens ORDER BY nota'),
+  ).toEqual([
+    [0.5, 1],
+    [4, 2],
+    [4.5, 1],
+    [5, 1],
+  ])
+})
+
+test("keeps a sample of users' ratings for the taste neighbours (#174)", async () => {
+  // 60 linked films. User 10 rated 50 of them and stays; user 20 rated
+  // 49, too few; user 15 rated 60 but his id is not a multiple of 10.
+  const films = Array.from({ length: 60 }, (_, i) => i + 1)
+  const rows = [
+    ...films.slice(0, 50).map((f) => `10,${f},${(f % 10) / 2 + 0.5},1`),
+    ...films.slice(0, 49).map((f) => `20,${f},4,1`),
+    ...films.map((f) => `15,${f},3,1`),
+    '10,999,5,1',
+  ]
+  const movielens = zip({
+    ...SMALL_MOVIELENS,
+    'ml-32m/links.csv': `movieId,imdbId,tmdbId\n${films.map((f) => `${f},${String(f).padStart(7, '0')},`).join('\n')}\n`,
+    'ml-32m/ratings.csv': `userId,movieId,rating,timestamp\n${rows.join('\n')}\n`,
+  })
+  const query = await rebuilt(
+    usePinnedDumps(replacing('ml-32m.zip', movielens)),
+  )
+
+  expect(
+    await query(
+      'SELECT usuario, count(*), min(nota), max(nota) FROM notas_gosto_movielens GROUP BY usuario',
+    ),
+  ).toEqual([[10, 50, 0.5, 5]])
+  expect(
+    await query(
+      "SELECT filme_id, nota FROM notas_gosto_movielens WHERE filme_id = 'tt0000007'",
+    ),
+  ).toEqual([['tt0000007', 4]])
+  // Five of each value: 0,5 is his 0,05, 5 his 0,95.
+  expect(
+    await query(
+      'SELECT nota, percentil FROM percentis_gosto_movielens WHERE nota IN (0.5, 5) ORDER BY nota',
+    ),
+  ).toEqual([
+    [0.5, 0.05],
+    [5, 0.95],
+  ])
+  expect(await query('SELECT fonte, data FROM fonte_gosto_movielens')).toEqual([
+    ['MovieLens ml-32m', '2023-10-13'],
+  ])
+})
 
 test('reads a deflated ZIP64 archive behind a stub', async () => {
   const movielens = zip(SMALL_MOVIELENS, {

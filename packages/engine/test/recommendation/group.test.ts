@@ -50,10 +50,11 @@ describe('several Presentes', () => {
       'deu 3 a O Farol de Areia (2012), também de Helena Prado',
     )
     expect(hers?.source).toBe('Letterboxd da Iara')
+    // Weak (0.3), ×0.8003 for the 3 of 2025-04-12 (a half-life of 5 years).
     expect([hers?.strength, hers?.kind, hers?.contribution]).toEqual([
       'weak',
       'rating',
-      0.3,
+      0.2401,
     ])
   })
 

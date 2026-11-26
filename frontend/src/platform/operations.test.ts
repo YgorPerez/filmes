@@ -55,6 +55,18 @@ const MEASURES = {
   filmsTop5: 1,
   recall50: 0.4,
   coverageTop5: 0.25,
+  calibration: {
+    overall: {
+      weak: { heldOut: 0, hits: 0, hitRate: null },
+      moderate: { heldOut: 0, hits: 0, hitRate: null },
+      strong: { heldOut: 1, hits: 1, hitRate: 1 },
+      none: { heldOut: 0, hits: 0, hitRate: null },
+      rises: null,
+    },
+    people: {},
+  },
+  predictedRatingError: { films: 0, meanAbsoluteError: null },
+  similarityTop5: null,
 }
 
 const EVALUATION = {
@@ -70,6 +82,12 @@ const EVALUATION = {
     rateTop5: null,
     reactions: 0,
     meanReaction: null,
+    satisfaction: {
+      people: {},
+      groupSessions: 0,
+      minimum: null,
+      disagreement: null,
+    },
   },
   priority: 'offline',
   weights: {},

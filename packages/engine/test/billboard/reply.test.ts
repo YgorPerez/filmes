@@ -508,6 +508,38 @@ describe('cartaz responder (test_cartaz_responder)', () => {
     expect([out.regenerate, out.keep]).toEqual([true, f.map((x) => x.id)])
   })
 
+  test('another Clima redoes the whole list, and the same one asks nothing', async () => {
+    const fixture = useFixture()
+    const { id } = await open(fixture, 'iara')
+
+    const lighter = await answer(fixture, id, `#cartaz ${id} v1\nclima: Leve\n`)
+    const same = await answer(fixture, id, `#cartaz ${id} v1\nclima: nenhum\n`)
+
+    expect([lighter.regenerate, lighter.moods, lighter.keep]).toEqual([
+      true,
+      ['leve'],
+      [],
+    ])
+    expect([same.regenerate, same.moods]).toEqual([false, null])
+    expect(front(fixture, id)['replies']).toBeUndefined()
+  })
+
+  test('a Clima outside the vocabulary is a warning', async () => {
+    const fixture = useFixture()
+    const { id } = await open(fixture, 'iara')
+
+    const out = await answer(
+      fixture,
+      id,
+      `#cartaz ${id} v1\nclima: tenso, épico\n`,
+    )
+
+    expect(out.moods).toEqual(['tenso'])
+    expect(out.warnings).toEqual([
+      expect.stringContaining("o Clima 'épico' não está no vocabulário"),
+    ])
+  })
+
   test('what someone not in the Já vi thought is invalid_usage', async () => {
     const fixture = useFixture()
     const { id, f } = await open(fixture, 'iara')
@@ -647,6 +679,18 @@ describe('the text the Cartaz copies (test_cartaz_responde)', () => {
         ]),
       ),
     ).toBe('#cartaz s v1\n1 tt1 · já vi: bruno=10 · achou bruno: obra-prima\n')
+  })
+
+  test('the Climas the Dono chose go after acrescentar; none is nenhum', () => {
+    const chose = (moods: string[]) =>
+      billboardText({ ...state('s', 2, ['bruno'], 'chegou a Ana'), moods })
+
+    expect(chose(['leve', 'pra rir'])).toBe(
+      '#cartaz s v2\nacrescentar: chegou a Ana\nclima: leve, pra rir\n',
+    )
+    expect(chose([])).toBe(
+      '#cartaz s v2\nacrescentar: chegou a Ana\nclima: nenhum\n',
+    )
   })
 
   test('with nothing marked the text is only the header', () => {

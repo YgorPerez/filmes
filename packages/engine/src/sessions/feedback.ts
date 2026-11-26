@@ -10,7 +10,7 @@
 //   impression.
 // - a comment `iara=texto`: what she thought, with her Nota or Relato. It
 //   becomes a specific Declarado about the chosen film (`facts.ts`).
-// - a Presente with no reaction gives no Fato and no Crédito, but gets the
+// - a Presente with no reaction gives no Fato and no satisfaction, but gets the
 //   Já visto.
 //
 // When the Session has `shown` (the Cartaz's films), the Feedback also
@@ -41,12 +41,14 @@ import {
   feedbackStrength,
   SEEN_STRENGTH,
   statedStrength,
+  type RatingScale,
 } from '../evidence/ruler.ts'
 import { filmText } from '../evidence/wording.ts'
+import { readRatingScale } from '../people/rating-scale.ts'
 import { resolveAttendees } from '../recommendation/attendees.ts'
 import type { EngineServices } from '../runtime/Engine.ts'
 import { engineError, type EngineError } from '../runtime/EngineError.ts'
-import type { Environment } from '../runtime/Environment.ts'
+import { Environment } from '../runtime/Environment.ts'
 import { Owner } from '../runtime/Owner.ts'
 import { Run } from '../runtime/Run.ts'
 import { numOrNull, text, textOrNull } from '../sqlite/row.ts'
@@ -396,8 +398,10 @@ const REPORT_TEXT: Readonly<Record<ReportLevel, (film: string) => string>> = {
 
 const SEEN_KIND = { declarado: 'stated', relato: 'report' } as const
 
-/** The Fatos written, as Evidence lines about the chosen film (`_fatos`). */
+/** The Fatos written, as Evidence lines about the chosen film (`_fatos`).
+ * A Nota is read on the Pessoa's scale, which already has it. */
 const writtenFacts = (
+  db: Connection,
   id: string,
   front: YamlMapping,
   owners: ReadonlySet<string>,
@@ -405,8 +409,17 @@ const writtenFacts = (
   today: string,
 ) =>
   Effect.gen(function* () {
+    const { weights } = yield* Environment
     const name = filmText(chosen.title ?? chosen.id, chosen.year)
     const lines: FeedbackFact[] = []
+    const scales = new Map<string, RatingScale>()
+    const scaleOf = (person: string) =>
+      Effect.gen(function* () {
+        const scale =
+          scales.get(person) ?? (yield* readRatingScale(db, person, weights))
+        scales.set(person, scale)
+        return scale
+      })
     for (const r of yield* reactions(id, front))
       lines.push({
         person: r.person,
@@ -416,7 +429,13 @@ const writtenFacts = (
             : REPORT_TEXT[r.reaction ?? 'neutral'](name),
         source: r.source,
         date: r.date,
-        strength: feedbackStrength(r.kind, r.rating ?? 0, r.date, today),
+        strength: feedbackStrength(
+          r.kind,
+          yield* scaleOf(r.person),
+          r.rating ?? 0,
+          r.date,
+          today,
+        ),
         kind: r.kind,
         factId: r.factId,
       })
@@ -545,7 +564,7 @@ export const recordFeedback = (
           facts:
             chosen === null
               ? []
-              : yield* writtenFacts(id, front, owners, chosen, today),
+              : yield* writtenFacts(db, id, front, owners, chosen, today),
           withoutReaction:
             chosen === null
               ? []

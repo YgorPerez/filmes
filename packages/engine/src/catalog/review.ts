@@ -1,6 +1,8 @@
 // `catalogo/review.py`: the GroupLens dumps behind the Review Signals.
-// From ml-32m, the item-item neighbourhood of the 4+ ratings and the tags
-// counted by distinct user; from the Tag Genome 2021, each tag's relevance.
+// From ml-32m, the item-item neighbourhood of the 4+ ratings, the tags
+// counted by distinct user and every rating counted by value (the
+// population's scale the ruler falls back on, #172); from the Tag Genome
+// 2021, each tag's relevance.
 // The evaluation shares the tag counting and the Fatos with the Catalog.
 
 import { Effect } from 'effect'
@@ -170,7 +172,69 @@ const sourceOf = (dump: Dump): readonly [string, string] => {
   return [dump.source, dump.date]
 }
 
-/** `vizinhos(notas, links)` and the tags of ml-32m. */
+/** MovieLens rates from 0.5 to 5 in half steps. */
+const RATING_STEPS = 10
+
+/** `(film, ratings, entropy)` of each film with a rating: the entropy, in
+ * bits, of its ratings' histogram by half step (`entropia_movielens`). */
+function* spreadRows(
+  films: readonly string[],
+  spread: Int32Array,
+): Generator<readonly [string, number, number]> {
+  for (const [index, film] of films.entries()) {
+    const counts = spread.subarray(
+      index * RATING_STEPS,
+      (index + 1) * RATING_STEPS,
+    )
+    const total = counts.reduce((sum, count) => sum + count, 0)
+    if (total === 0) continue
+    let entropy = 0
+    for (const count of counts)
+      if (count > 0) entropy += (count / total) * Math.log2(total / count)
+    yield [film, total, entropy]
+  }
+}
+
+/** Ratings in typed arrays that grow: ml-32m's sample holds millions. */
+class TasteRatings {
+  private users = new Int32Array(1 << 16)
+  private items = new Int32Array(1 << 16)
+  // Halves from 0.5 to 5 are exact in 32 bits.
+  private ratings = new Float32Array(1 << 16)
+  private size = 0
+
+  push(user: number, item: number, rating: number): void {
+    if (this.size === this.users.length) {
+      const grow = <T extends Int32Array | Float32Array>(old: T, next: T) => {
+        next.set(old)
+        return next
+      }
+      this.users = grow(this.users, new Int32Array(this.size * 2))
+      this.items = grow(this.items, new Int32Array(this.size * 2))
+      this.ratings = grow(this.ratings, new Float32Array(this.size * 2))
+    }
+    this.users[this.size] = user
+    this.items[this.size] = item
+    this.ratings[this.size] = rating
+    this.size += 1
+  }
+
+  *rows(
+    films: readonly string[],
+  ): Generator<readonly [number, string, number]> {
+    for (let i = 0; i < this.size; i++)
+      yield [this.users[i]!, films[this.items[i]!]!, this.ratings[i]!]
+  }
+}
+
+/** The taste neighbours' sample (#174): the users whose id is a multiple of
+ * this, with at least `TASTE_SAMPLE_MIN_RATINGS` ratings of linked films. On
+ * ml-32m, about one user in ten. */
+export const TASTE_SAMPLE_STRIDE = 10
+export const TASTE_SAMPLE_MIN_RATINGS = 50
+
+/** `vizinhos(notas, links)`, the ratings' spread, the tags, the ratings by
+ * value of ml-32m, and the taste neighbours' sample. */
 const loadMovielens = (db: Connection, zip: string, dump: Dump) =>
   Effect.gen(function* () {
     const sourceAndDate = sourceOf(dump)
@@ -194,14 +258,33 @@ const loadMovielens = (db: Connection, zip: string, dump: Dump) =>
     let items = new Int32Array(1 << 20)
     let users = new Int32Array(1 << 20)
     let votes = 0
+    const spread = new Int32Array(films.length * RATING_STEPS)
+    // Every rating, linked or not, by value: the population's scale (#172).
+    const population = new Map<number, number>()
+    // The taste neighbours' sample (#174), one rating per index.
+    const taste = new TasteRatings()
     yield* forEachBatch(csvRows(zip, MOVIELENS_MEMBERS.ratings), (rows) =>
       Effect.sync(() => {
         for (const row of rows) {
+          const rating = pyParseFloat(present(row('rating'), 'rating'))
+          if (rating >= 0.5 && rating <= 5)
+            population.set(rating, (population.get(rating) ?? 0) + 1)
           const movieId = row('movieId')
           const item = movieId === null ? undefined : byMovieId.get(movieId)
           if (item === undefined) continue
-          if (!(pyParseFloat(present(row('rating'), 'rating')) >= HIGH_RATING))
-            continue
+          const step = Math.round(rating * 2) - 1
+          const bin = Math.min(RATING_STEPS - 1, Math.max(0, step))
+          spread[item * RATING_STEPS + bin]! += 1
+          const sampled = row('userId')
+          if (
+            sampled !== null &&
+            /^\d+$/.test(sampled) &&
+            Number(sampled) % TASTE_SAMPLE_STRIDE === 0 &&
+            rating >= 0.5 &&
+            rating <= 5
+          )
+            taste.push(Number(sampled), item, rating)
+          if (!(rating >= HIGH_RATING)) continue
           const user = pyParseInt(present(row('userId'), 'userId'))
           if (user === null)
             throw pythonError(
@@ -223,6 +306,25 @@ const loadMovielens = (db: Connection, zip: string, dump: Dump) =>
       }),
     )
     yield* db.runMany(
+      'INSERT INTO notas_movielens VALUES (?, ?)',
+      [...population].sort(([a], [b]) => a - b),
+    )
+    // Two movieIds may link to the same film: the later rating stays.
+    yield* db.runMany(
+      'INSERT OR REPLACE INTO notas_gosto_movielens VALUES (?, ?, ?)',
+      taste.rows(films),
+    )
+    yield* db.run(
+      `DELETE FROM notas_gosto_movielens WHERE usuario IN (
+         SELECT usuario FROM notas_gosto_movielens
+         GROUP BY usuario HAVING count(*) < ?)`,
+      TASTE_SAMPLE_MIN_RATINGS,
+    )
+    yield* db.run(
+      'INSERT INTO fonte_gosto_movielens VALUES (?, ?)',
+      ...sourceAndDate,
+    )
+    yield* db.runMany(
       'INSERT INTO vizinhos VALUES (?, ?, ?, ?, ?, ?, ?)',
       reviewFactRows(
         'vizinhos',
@@ -233,6 +335,10 @@ const loadMovielens = (db: Connection, zip: string, dump: Dump) =>
         ),
         sourceAndDate,
       ),
+    )
+    yield* db.runMany(
+      'INSERT INTO entropia_movielens VALUES (?, ?, ?)',
+      spreadRows(films, spread),
     )
     const tagRows: Array<readonly [string, string, string]> = []
     yield* forEachBatch(csvRows(zip, MOVIELENS_MEMBERS.tags), (rows) =>
