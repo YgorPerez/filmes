@@ -349,7 +349,7 @@ describe('decidePairwise', () => {
     }
   })
 
-  test("a Nota from an answer stays out of her scale: her other Notas read the same", async () => {
+  test('a Nota from an answer stays out of her scale: her other Notas read the same', async () => {
     const fixture = useFixture()
     const session = await answered(fixture)
     // Six Notas of her own (minimum 5): her 3 is her median, weak in

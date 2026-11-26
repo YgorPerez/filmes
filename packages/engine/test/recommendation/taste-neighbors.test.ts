@@ -156,9 +156,12 @@ describe('the taste neighbours path', () => {
     const choose = (floor: string) =>
       bruno(
         fixture,
-        weightsWith(fixture, 'k = 50\nmin_shared = 10', 'k = 3\nmin_shared = 4', [
-          ['floor = 0.25', floor],
-        ]),
+        weightsWith(
+          fixture,
+          'k = 50\nmin_shared = 10',
+          'k = 3\nmin_shared = 4',
+          [['floor = 0.25', floor]],
+        ),
       )
     const evenly = neighbours(await choose('floor = 1.0'), 'Deserto Branco')
     const byAge = neighbours(await choose('floor = 0.25'), 'Deserto Branco')
