@@ -28,7 +28,6 @@ import { Route as ParticiparIndexRouteImport } from './routes/participar/index'
 import { Route as ParticiparVotarRouteImport } from './routes/participar/votar'
 import { Route as ParticiparVotosRouteImport } from './routes/participar/votos'
 import { Route as OwnerMeuGostoIndexRouteImport } from './routes/_owner/meu-gosto/index'
-import { Route as OwnerMeuGostoExportarRouteImport } from './routes/_owner/meu-gosto/exportar'
 import { Route as OwnerMeuGostoFilaRouteImport } from './routes/_owner/meu-gosto/fila'
 import { Route as OwnerMeuGostoImportarRouteImport } from './routes/_owner/meu-gosto/importar'
 import { Route as OwnerMeuGostoNotasRouteImport } from './routes/_owner/meu-gosto/notas'
@@ -143,11 +142,6 @@ const ParticiparVotosRoute = ParticiparVotosRouteImport.update({
 const OwnerMeuGostoIndexRoute = OwnerMeuGostoIndexRouteImport.update({
   id: '/meu-gosto/',
   path: '/meu-gosto/',
-  getParentRoute: () => OwnerRoute,
-} as any)
-const OwnerMeuGostoExportarRoute = OwnerMeuGostoExportarRouteImport.update({
-  id: '/meu-gosto/exportar',
-  path: '/meu-gosto/exportar',
   getParentRoute: () => OwnerRoute,
 } as any)
 const OwnerMeuGostoFilaRoute = OwnerMeuGostoFilaRouteImport.update({
@@ -278,7 +272,6 @@ export interface FileRoutesByFullPath {
   '/importar/': typeof ImportarIndexRoute
   '/notas/': typeof NotasIndexRoute
   '/participar/': typeof ParticiparIndexRoute
-  '/meu-gosto/exportar': typeof OwnerMeuGostoExportarRoute
   '/meu-gosto/fila': typeof OwnerMeuGostoFilaRoute
   '/meu-gosto/importar': typeof OwnerMeuGostoImportarRoute
   '/meu-gosto/notas': typeof OwnerMeuGostoNotasRoute
@@ -319,7 +312,6 @@ export interface FileRoutesByTo {
   '/importar': typeof ImportarIndexRoute
   '/notas': typeof NotasIndexRoute
   '/participar': typeof ParticiparIndexRoute
-  '/meu-gosto/exportar': typeof OwnerMeuGostoExportarRoute
   '/meu-gosto/fila': typeof OwnerMeuGostoFilaRoute
   '/meu-gosto/importar': typeof OwnerMeuGostoImportarRoute
   '/meu-gosto/notas': typeof OwnerMeuGostoNotasRoute
@@ -363,7 +355,6 @@ export interface FileRoutesById {
   '/importar/': typeof ImportarIndexRoute
   '/notas/': typeof NotasIndexRoute
   '/participar/': typeof ParticiparIndexRoute
-  '/_owner/meu-gosto/exportar': typeof OwnerMeuGostoExportarRoute
   '/_owner/meu-gosto/fila': typeof OwnerMeuGostoFilaRoute
   '/_owner/meu-gosto/importar': typeof OwnerMeuGostoImportarRoute
   '/_owner/meu-gosto/notas': typeof OwnerMeuGostoNotasRoute
@@ -407,7 +398,6 @@ export interface FileRouteTypes {
     | '/importar/'
     | '/notas/'
     | '/participar/'
-    | '/meu-gosto/exportar'
     | '/meu-gosto/fila'
     | '/meu-gosto/importar'
     | '/meu-gosto/notas'
@@ -448,7 +438,6 @@ export interface FileRouteTypes {
     | '/importar'
     | '/notas'
     | '/participar'
-    | '/meu-gosto/exportar'
     | '/meu-gosto/fila'
     | '/meu-gosto/importar'
     | '/meu-gosto/notas'
@@ -491,7 +480,6 @@ export interface FileRouteTypes {
     | '/importar/'
     | '/notas/'
     | '/participar/'
-    | '/_owner/meu-gosto/exportar'
     | '/_owner/meu-gosto/fila'
     | '/_owner/meu-gosto/importar'
     | '/_owner/meu-gosto/notas'
@@ -676,13 +664,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OwnerMeuGostoIndexRouteImport
       parentRoute: typeof OwnerRoute
     }
-    '/_owner/meu-gosto/exportar': {
-      id: '/_owner/meu-gosto/exportar'
-      path: '/meu-gosto/exportar'
-      fullPath: '/meu-gosto/exportar'
-      preLoaderRoute: typeof OwnerMeuGostoExportarRouteImport
-      parentRoute: typeof OwnerRoute
-    }
     '/_owner/meu-gosto/fila': {
       id: '/_owner/meu-gosto/fila'
       path: '/meu-gosto/fila'
@@ -836,7 +817,6 @@ declare module '@tanstack/react-router' {
 interface OwnerRouteChildren {
   OwnerOperacoesRoute: typeof OwnerOperacoesRoute
   OwnerIndexRoute: typeof OwnerIndexRoute
-  OwnerMeuGostoExportarRoute: typeof OwnerMeuGostoExportarRoute
   OwnerMeuGostoFilaRoute: typeof OwnerMeuGostoFilaRoute
   OwnerMeuGostoImportarRoute: typeof OwnerMeuGostoImportarRoute
   OwnerMeuGostoNotasRoute: typeof OwnerMeuGostoNotasRoute
@@ -853,7 +833,6 @@ interface OwnerRouteChildren {
 const OwnerRouteChildren: OwnerRouteChildren = {
   OwnerOperacoesRoute: OwnerOperacoesRoute,
   OwnerIndexRoute: OwnerIndexRoute,
-  OwnerMeuGostoExportarRoute: OwnerMeuGostoExportarRoute,
   OwnerMeuGostoFilaRoute: OwnerMeuGostoFilaRoute,
   OwnerMeuGostoImportarRoute: OwnerMeuGostoImportarRoute,
   OwnerMeuGostoNotasRoute: OwnerMeuGostoNotasRoute,

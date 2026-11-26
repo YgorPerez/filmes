@@ -12,6 +12,10 @@ import {
 import type { PersonPage } from '#/platform/people'
 import { PERSON } from './person.copy'
 import { CATALOG_SEARCH } from './catalog-search.copy'
+import { SETUP_STEPS, type SetupStep } from '@filmes/engine'
+import type { SetupView } from '#/platform/setup-guide'
+import { MY_START } from './my-start.copy'
+import type { MyStart } from './my-start'
 import { PersonScreen } from './person'
 
 afterEach(cleanup)
@@ -356,10 +360,8 @@ describe('PersonScreen', () => {
     )
   })
 
-  it('shows her Notas with their count, and the Força of each Declarado', () => {
+  it('shows the Força of each Declarado', () => {
     show()
-    expect(screen.getByText(PERSON.ratings.count(1))).toBeTruthy()
-    expect(screen.getByText(/Fronteira/)).toBeTruthy()
     const stated = screen
       .getByText('“adoro os filmes dela”')
       .closest('li') as HTMLElement
@@ -377,7 +379,6 @@ describe('PersonScreen', () => {
     expect(
       screen.queryByRole('region', { name: PERSON.reports.title }),
     ).toBeNull()
-    expect(screen.getByText(PERSON.owner)).toBeTruthy()
     cleanup()
     // What another Dono told of his taste, he sees; he cannot add to it.
     show(own)
@@ -445,9 +446,135 @@ describe('PersonScreen', () => {
       PERSON.reports.empty,
       PERSON.seen.empty,
       PERSON.questions.empty,
-      PERSON.ratings.noDatabase,
+      PERSON.notes.noDatabase,
     ])
       expect(screen.getByText(empty)).toBeTruthy()
+  })
+})
+
+const link = (region: HTMLElement, name: string) =>
+  within(region).getByRole('link', { name }).getAttribute('href')
+
+describe('the Notas section', () => {
+  it('comes first, with her Notas, her import and her CSV', async () => {
+    show()
+    const notes = section(PERSON.notes.title)
+    expect(screen.getAllByRole('region')[0], 'Notas is the first section').toBe(
+      notes,
+    )
+    expect(link(notes, PERSON.notes.import)).toBe('/pessoas/iara/importar')
+    expect(link(notes, PERSON.notes.download)).toBe(
+      '/exportar/imdb.csv?pessoa=iara',
+    )
+    expect(within(notes).getByText(PERSON.notes.movielens)).toBeTruthy()
+    // The rating queue is the logged-in Dono's: not on another's page.
+    expect(
+      within(notes).queryByRole('link', { name: PERSON.notes.rate }),
+    ).toBeNull()
+    await userEvent.setup().click(within(notes).getByText(PERSON.notes.list(1)))
+    expect(within(notes).getByText(/Fronteira/)).toBeTruthy()
+  })
+
+  it('offers no CSV without a Nota, and says how to get some', () => {
+    show({ ...IARA, ratings: [] })
+    const notes = section(PERSON.notes.title)
+    expect(
+      within(notes).queryByRole('link', { name: PERSON.notes.download }),
+    ).toBeNull()
+    expect(within(notes).getByText(PERSON.notes.empty(false))).toBeTruthy()
+  })
+
+  it('is Meu gosto’s first section, with Dar notas as its one orange button', () => {
+    show({ ...IARA, person: 'bruno', name: 'Bruno', owner: true })
+    expect(
+      screen.getByRole('heading', { level: 1, name: PERSON.myTaste }),
+    ).toBeTruthy()
+    const notes = section(PERSON.notes.title)
+    expect(link(notes, PERSON.notes.rate)).toBe('/meu-gosto/notas')
+    expect(link(notes, PERSON.notes.import)).toBe('/meu-gosto/importar')
+    expect(link(notes, PERSON.notes.download)).toBe(
+      '/exportar/imdb.csv?pessoa=bruno',
+    )
+    // No way back to Pessoas: Meu gosto is a tab of its own.
+    expect(screen.queryByRole('link', { name: PERSON.back })).toBeNull()
+  })
+})
+
+describe('Meu gosto’s start', () => {
+  const OWN = { ...IARA, person: 'bruno', name: 'Bruno', owner: true }
+  const MCP = 'https://filmes.example/mcp'
+  const setup = (
+    state: Partial<Record<SetupStep, 'done' | 'skipped'>> = {},
+  ): SetupView => ({
+    ratings: 3,
+    steps: SETUP_STEPS.map((step) => ({
+      step,
+      done: state[step] === 'done',
+      skipped: state[step] === 'skipped',
+    })),
+  })
+  const mine = (start: MyStart) =>
+    render(<PersonScreen slug="bruno" page={OWN} start={start} />)
+
+  it('always shows the connector’s address, and how to add it', () => {
+    mine({ setup: setup(), mcpUrl: MCP })
+    const connector = section(MY_START.connector.title)
+    expect(within(connector).getByText(MCP)).toBeTruthy()
+    expect(
+      within(connector).getByRole('button', { name: /Copiar endereço/ }),
+    ).toBeTruthy()
+    expect(within(connector).getByText(MY_START.connector.pending)).toBeTruthy()
+    cleanup()
+    mine({ setup: setup({ connector: 'done' }), mcpUrl: MCP })
+    const done = section(MY_START.connector.title)
+    expect(within(done).getByText(MCP)).toBeTruthy()
+    expect(within(done).getByText(MY_START.connector.done)).toBeTruthy()
+  })
+
+  it('resumes a skipped step, even once the home has no guide', async () => {
+    mine({
+      setup: setup({ taste: 'done', import: 'skipped', connector: 'done' }),
+      mcpUrl: MCP,
+    })
+    const skipped = section(MY_START.skipped.title)
+    const resume = within(skipped).getByText(MY_START.resume)
+    expect(within(skipped).queryByText(/Meu gosto/)).toBeNull()
+    await userEvent.setup().click(resume)
+    expect(link(skipped, 'Importar')).toBe('/meu-gosto/importar')
+  })
+
+  it('keeps a skipped connector behind its Retomar, not twice', async () => {
+    mine({ setup: setup({ connector: 'skipped' }), mcpUrl: MCP })
+    expect(
+      screen.queryByRole('region', { name: MY_START.connector.title }),
+    ).toBeNull()
+    const skipped = section(MY_START.skipped.title)
+    await userEvent.setup().click(within(skipped).getByText(MY_START.resume))
+    expect(within(skipped).getByText(MCP)).toBeTruthy()
+  })
+
+  it('has neither on another Pessoa’s page, nor what the server cannot say', () => {
+    render(
+      <PersonScreen
+        slug="iara"
+        page={IARA}
+        start={{ setup: setup({ import: 'skipped' }), mcpUrl: MCP }}
+      />,
+    )
+    expect(
+      screen.queryByRole('region', { name: MY_START.connector.title }),
+    ).toBeNull()
+    expect(
+      screen.queryByRole('region', { name: MY_START.skipped.title }),
+    ).toBeNull()
+    cleanup()
+    mine({ setup: null, mcpUrl: null })
+    expect(
+      screen.queryByRole('region', { name: MY_START.connector.title }),
+    ).toBeNull()
+    expect(
+      screen.queryByRole('region', { name: MY_START.skipped.title }),
+    ).toBeNull()
   })
 })
 

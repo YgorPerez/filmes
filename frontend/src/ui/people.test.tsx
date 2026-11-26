@@ -28,6 +28,28 @@ describe('PeopleList', () => {
     expect(html).not.toContain('role="alert"')
   })
 
+  it('lists the logged-in Dono first, linking to Meu gosto', () => {
+    render(
+      <PeopleList
+        self="vera"
+        people={[
+          { person: 'bruno', name: 'Bruno', aliases: [], owner: true },
+          { person: 'iara', name: 'Iara', aliases: [], owner: false },
+          { person: 'vera', name: 'Vera', aliases: [], owner: true },
+        ]}
+      />,
+    )
+    const links = within(
+      screen.getByRole('list', { name: PEOPLE.title }),
+    ).getAllByRole('link')
+    expect(links.map((a) => a.getAttribute('href'))).toEqual([
+      '/meu-gosto',
+      '/pessoas/bruno',
+      '/pessoas/iara',
+    ])
+    expect(links[0]?.textContent).toContain(PEOPLE.myTaste)
+  })
+
   it('says when there is no one, when one is gone, when the engine cannot run', () => {
     expect(renderToStaticMarkup(<PeopleList people={[]} />)).toContain(
       PEOPLE.empty,

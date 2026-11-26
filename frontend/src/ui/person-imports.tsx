@@ -65,18 +65,17 @@ export function PersonImportsScreen({
   done?: ImportDoneView
   refusal?: ImportRefusal
 }) {
+  const own = typeof page === 'object' && page?.own === true
+  const name = typeof page === 'object' && page !== null ? page.name : slug
   return (
-    <ImportsFrame
-      back={COPY.back}
-      backTo={personPath(slug, typeof page === 'object' && page?.own === true)}
-    >
+    <ImportsFrame back={COPY.back(name, own)} backTo={personPath(slug, own)}>
       {page === null ? (
         <Alert>{COPY.unavailable}</Alert>
       ) : page === 'unknown' ? (
         <Alert>{COPY.unknown}</Alert>
       ) : (
         <>
-          <PageHead title={COPY.title(page.name)} />
+          <PageHead title={COPY.title(page.name, page.own)} />
           {refusal && <Refusal refusal={refusal} />}
           {done && (
             <Notice>

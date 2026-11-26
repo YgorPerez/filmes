@@ -21,8 +21,10 @@ const KINDS: Record<string, string> = {
 }
 
 export const PERSON_IMPORTS = {
-  back: 'Voltar',
-  title: (name: string) => `Imports de ${name}`,
+  /** Back to her page: Meu gosto, or her name. */
+  back: (name: string, own: boolean) => (own ? 'Meu gosto' : name),
+  title: (name: string, own: boolean) =>
+    own ? 'Importar Notas' : `Importar as Notas de ${name}`,
   unknown: 'Nenhuma Pessoa com esse nome no repo de dados.',
   unavailable: UNAVAILABLE,
   notices: {
@@ -88,7 +90,7 @@ export const PERSON_IMPORTS = {
       `${count(ratings, 'Nota', 'Notas')} e ${count(seen, 'Já visto', 'Já vistos')} do Trakt.`,
   },
   upload: {
-    title: 'Trazer seus filmes do Letterboxd ou do Trakt',
+    title: 'O arquivo do Letterboxd ou do Trakt',
     file: 'Arquivo que o Letterboxd ou o Trakt te deu (ZIP)',
     /** How to download the ZIP, one line per service: the service's name
      * links to its data settings. */

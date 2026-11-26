@@ -52,6 +52,23 @@ export function hasConnector(db: DatabaseSync, email: string): boolean {
   )
 }
 
+/** The guide and the connector's address, as the home and Meu gosto
+ * show them (#222): what the engine cannot say is null. */
+async function startData(
+  owner: Owner,
+  source: SetupGuideSource,
+  origin: string | undefined,
+): Promise<Pick<HomeData, 'setup' | 'mcpUrl'>> {
+  const guide = valueOf(await source.guide(owner))
+  return {
+    setup: guide && {
+      steps: guide.steps.map((s) => ({ ...s })),
+      ratings: guide.ratings,
+    },
+    mcpUrl: origin === undefined ? null : `${origin}/mcp`,
+  }
+}
+
 /** What `/` shows to the logged-in Dono, from the guide and every Sessão
  * (the latest first; null when the engine could not list them). The home
  * never fails: what the engine cannot say is left out. */
@@ -61,18 +78,13 @@ export async function homeData(
   sessions: readonly SessionItem[] | null,
   origin: string | undefined,
 ): Promise<HomeData> {
-  const guide = valueOf(await source.guide(owner))
   return {
     person: owner.person,
-    setup: guide && {
-      steps: guide.steps.map((s) => ({ ...s })),
-      ratings: guide.ratings,
-    },
+    ...(await startData(owner, source, origin)),
     latest:
       sessions?.find((s) =>
         s.attendees.some((a) => a.person === owner.person),
       ) ?? null,
-    mcpUrl: origin === undefined ? null : `${origin}/mcp`,
   }
 }
 
@@ -116,6 +128,10 @@ export const appHome = async (owner: Owner) =>
     await appSessionList(owner.person),
     serverEnv().APP_ORIGIN,
   )
+
+/** Meu gosto's part of the guide for the app, for the logged-in Dono. */
+export const appMyStart = (owner: Owner) =>
+  startData(owner, appSetupGuide(appConnected), serverEnv().APP_ORIGIN)
 
 /** The skip form's route for the app. */
 export const serveSetupSkip = (request: Request) => {
