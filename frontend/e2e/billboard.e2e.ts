@@ -236,7 +236,8 @@ test('in the dark, Copiar pro chat gives the text, and stars alone only note', a
 })
 
 // Pequenos Milagres, which Bruno's taste neighbours in the fixture's sample
-// rated (#174): with k = 3 and min_shared = 5 they predict 8,3 for him.
+// rated (#174): with k = 3 and min_shared = 5 they predict 8,3 for him, which the
+// Calibration against his own Notas (#210) lifts to 8,8.
 const PEQUENOS_MILAGRES = 'tt9000601'
 
 test('the Nota prevista the Session recorded, per Presente who has one', async ({
@@ -268,5 +269,5 @@ test('the Nota prevista the Session recorded, per Presente who has one', async (
   const predicted = card(page, at).getByRole('list', {
     name: 'Nota prevista',
   })
-  await expect(predicted.getByRole('listitem')).toHaveText([/Bruno: 8,3 de 10/])
+  await expect(predicted.getByRole('listitem')).toHaveText([/Bruno: 8,8 de 10/])
 })
