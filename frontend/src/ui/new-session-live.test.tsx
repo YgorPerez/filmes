@@ -9,7 +9,7 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, expect, it, vi } from 'vite-plus/test'
 import { CATALOG_SEARCH } from './catalog-search.copy'
@@ -164,7 +164,7 @@ it.each([
     .setup()
     .click(screen.getByRole('button', { name: SESSIONS.form.read }))
 
-  await vi.waitFor(() => expect(plain).toHaveBeenCalledOnce())
+  await waitFor(() => expect(plain).toHaveBeenCalledOnce())
   expect(new FormData(form()).get('ler')).toBe('sim')
   plain.mockRestore()
 })
@@ -199,7 +199,7 @@ it('goes to the Session the post opened, through the router', async () => {
     .setup()
     .click(await screen.findByRole('button', { name: SESSIONS.form.submit }))
 
-  await vi.waitFor(() =>
+  await waitFor(() =>
     expect(router.state.location.href).toBe(
       '/sessoes/2026-11-20-bruno?feito=aberta',
     ),
@@ -208,7 +208,7 @@ it('goes to the Session the post opened, through the router', async () => {
 
 it('keeps the id of a film it cannot name', async () => {
   render(<NewSession options={OPTIONS} similar="tt0000000" />)
-  await vi.waitFor(() => expect(searched).toEqual(['tt0000000']))
+  await waitFor(() => expect(searched).toEqual(['tt0000000']))
   expect(
     screen.getByRole('button', { name: CATALOG_SEARCH.remove('tt0000000') }),
   ).toBeTruthy()

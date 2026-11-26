@@ -639,7 +639,7 @@ export function ChosenFilms({
 
   return (
     <div className="flex flex-col gap-xs">
-      <span className="text-[14px] font-semibold">{label}</span>
+      <span className="font-display text-field-label">{label}</span>
       <input
         type="hidden"
         name={name}
