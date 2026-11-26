@@ -4,11 +4,13 @@
 // For each Candidate linked to an entity (director, writer, actor, series,
 // genre) of a film the Pessoa rated, two kinds of Evidence come out:
 //
-// - one per seed rating, with the strength of the rating ruler (value and
-//   age). A stated rating ("love" is 5, "hate" is 1) is a seed of Tipo
+// - one per seed rating, with the strength of the rating ruler (its
+//   percentile on the Pessoa's scale, and its age). A stated rating ("love" is 5, "hate" is 1) is a seed of Tipo
 //   stated, or report when the Dono said it, with the stated ruler;
 // - one of Tipo metadata for the entity, when there are high ratings, with
 //   the strength of how many high ratings the Pessoa has on the same node.
+//   A Nota is high by its percentile (`isHighRating`), a stated rating
+//   when it is "ama" (5).
 //
 // A genre only gives the second, at most weak: a genre joins thousands of
 // films, and one Evidence per rating in it would add dozens of Motivos that
@@ -35,18 +37,16 @@ import {
   adjustedStrength,
   castStrength,
   HIGH_RATING,
+  isHighRating,
   linkStrength,
   pathStrength,
   seedStrength,
+  type RatingScale,
   type SeedKind,
 } from '../../evidence/ruler.ts'
 import type { Level, Link, Strength } from '../../evidence/strength.ts'
-import {
-  filmText,
-  listText,
-  ratingText,
-  seedText,
-} from '../../evidence/wording.ts'
+import { filmText, listText, seedText } from '../../evidence/wording.ts'
+import { readRatingScale } from '../../people/rating-scale.ts'
 import { engineError } from '../../runtime/EngineError.ts'
 import { num, numOrNull, text, textOrNull } from '../../sqlite/row.ts'
 import type { Row } from '../../sqlite/Sqlite.ts'
@@ -119,12 +119,18 @@ ORDER BY c.filme_id, c.entidade_id
 const fill = (template: string, entity: string): string =>
   template.replace('{}', () => entity)
 
+/** A high seed: a Nota by its percentile, a stated rating by its value. */
+const isHigh = (scale: RatingScale, seed: Row): boolean =>
+  kindOf(text(seed, 'nota_tipo')) === 'rating'
+    ? isHighRating(scale, num(seed, 'nota'))
+    : num(seed, 'nota') >= HIGH_RATING
+
 const highRatings = (high: ReadonlyArray<Row>): string => {
   const n = high.length
   const films = high
     .slice(0, LIST_MAX)
     .map((s) => filmText(text(s, 'titulo'), numOrNull(s, 'ano')))
-  const start = `como ${n} ${n === 1 ? 'filme' : 'filmes'} a que deu ${ratingText(HIGH_RATING)} ou mais`
+  const start = `como ${n} ${n === 1 ? 'filme' : 'filmes'} a que deu Nota alta`
   return n > LIST_MAX
     ? `${start}, entre eles ${listText(films)}`
     : `${start}: ${listText(films)}`
@@ -135,6 +141,7 @@ export const content: Signal = {
   forPerson: (round, person) =>
     Effect.gen(function* () {
       const { db, weights, today } = round
+      const scale = yield* readRatingScale(db, person, weights)
       const out: Evidence[] = []
       const seeds = new Map<string, Evidence>()
       const adjustments = new Map<string, Level>()
@@ -191,6 +198,7 @@ export const content: Signal = {
               const date = text(s, 'nota_data')
               const [seedStrengthValue, direction] = seedStrength(
                 kind,
+                scale,
                 rating,
                 date,
                 today,
@@ -224,7 +232,7 @@ export const content: Signal = {
                 seeds.set(key, evidence)
             }
 
-          const high = linked.filter((s) => num(s, 'nota') >= HIGH_RATING)
+          const high = linked.filter((s) => isHigh(scale, s))
           const nodeStrength = pathStrength(high.length, link)
           if (nodeStrength)
             out.push(
