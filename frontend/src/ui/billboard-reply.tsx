@@ -1,12 +1,19 @@
 import type { Billboard as BillboardModel } from '@filmes/engine'
 import { useEffect, useRef, useState } from 'react'
 import { BILLBOARD } from './billboard.copy'
-import { hasMarks, markCounts, replyText, type Marks } from './billboard-marks'
+import {
+  chosenMoods,
+  hasMarks,
+  markCounts,
+  replyText,
+  type Marks,
+} from './billboard-marks'
 import { buttonVariants } from './kit/button-variants'
 import { FIELD } from './kit/field'
+import { Option } from './kit/option'
 
 // The reply's pieces (DESIGN.md, Botão principal and Acrescentar): the
-// acrescentar box after the last film, Enviar (the screen's one orange
+// acrescentar box after the last film, with the Clima chips (#179) under it, Enviar (the screen's one orange
 // button), Copiar pro chat (an option), the summary of what was marked and
 // the status line. The Cartaz (`billboard.tsx`) places them per layout.
 
@@ -110,6 +117,47 @@ function Copy({
   )
 }
 
+/** The Clima chips: the version's on, and a tap asks for another Clima,
+ * which redoes the whole list. */
+function MoodChips({
+  billboard,
+  marks,
+  onMoods,
+}: {
+  billboard: BillboardModel
+  marks: Marks
+  onMoods: (moods: string[]) => void
+}) {
+  const on = chosenMoods(billboard, marks)
+  const toggle = (mood: string) => (checked: boolean) =>
+    onMoods(
+      billboard.moodChoices.filter((m) => (m === mood ? checked : on.has(m))),
+    )
+  return (
+    <fieldset className="flex flex-col gap-xs">
+      <legend className="mb-xs font-display text-[14px] font-bold">
+        {reply.moods}{' '}
+        <span className="font-body font-normal text-ink-2">
+          {reply.moodsHint}
+        </span>
+      </legend>
+      <div className="flex flex-wrap gap-sm">
+        {billboard.moodChoices.map((mood) => (
+          <Option
+            key={mood}
+            name="clima"
+            value={mood}
+            checked={on.has(mood)}
+            onChange={toggle(mood)}
+          >
+            {mood}
+          </Option>
+        ))}
+      </div>
+    </fieldset>
+  )
+}
+
 /** The acrescentar box, after the last film. `send` is the Enviar that
  * goes in it (the web, Claude without fullscreen); in Claude's fullscreen
  * Enviar and the status live in the fixed foot instead. */
@@ -120,6 +168,7 @@ export function ReplyBox({
   message,
   onMessage,
   onAddition,
+  onMoods,
   send,
 }: {
   billboard: BillboardModel
@@ -128,6 +177,7 @@ export function ReplyBox({
   message: string
   onMessage: (message: string) => void
   onAddition: (text: string) => void
+  onMoods: (moods: string[]) => void
   send?: { onSend?: () => void }
 }) {
   const text = replyText(billboard, marks)
@@ -154,6 +204,9 @@ export function ReplyBox({
           className={FIELD}
         />
       </label>
+      {billboard.moodChoices.length > 0 && (
+        <MoodChips billboard={billboard} marks={marks} onMoods={onMoods} />
+      )}
       <input type="hidden" name="texto" value={text} />
       {send && summary && <p className="text-meta text-ink-2">{summary}</p>}
       <div className="flex flex-wrap items-center gap-sm">

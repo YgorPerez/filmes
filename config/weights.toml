@@ -1,6 +1,7 @@
 # Pesos do motor. Valores iniciais da spec (#16), calibrados por `avaliar`.
 # A régua de Força (que Fato é forte, moderado ou fraco) é regra fixa no
-# código, em filmes/evidencia; aqui ficam só os números da ordenação.
+# código, em packages/engine/src/evidence; aqui ficam os números da ordenação
+# e os cortes de percentil com que a régua lê uma Nota.
 
 [strength.multiplier]
 # A Força multiplica a contribuição de cada Evidência. Palpite soma 0.
@@ -8,6 +9,23 @@ strong = 1.0
 moderate = 0.6
 weak = 0.3
 guess = 0.0
+
+[rating_percentile]
+# A régua lê cada Nota pelo percentil dela na escala da Pessoa (#172, decisão do
+# Dono de 2026-11-25): a parte das Notas abaixo desta, mais metade das iguais,
+# de 0 a 1. Com `min_ratings` Notas ou mais, a escala são as Notas dela (as do
+# Letterboxd e as do Trakt já estão na mesma escala de 0,5 a 5); com menos, as
+# notas da população do MovieLens. Do percentil a Força sai por estes cortes:
+# a partir de `strong` é forte a favor (o top 10%), de `moderate` moderada (e
+# conta como Nota alta no caminho de conteúdo), de `weak` fraca; abaixo de
+# `weak` é contra: fraca até `weak_against`, moderada até `moderate_against`,
+# forte abaixo dele.
+min_ratings = 20
+strong = 0.9
+moderate = 0.7
+weak = 0.4
+weak_against = 0.2
+moderate_against = 0.1
 
 [rating_decay]
 # Decaimento de uma Nota (#173): a contribuição dela vale 2^(−idade / meia-vida),
@@ -57,10 +75,12 @@ size = 5
 # Já visto pesa contra o filme com esta base (a Força é sempre forte).
 weight = 1.0
 
-[credit]
-# u' = u - fator x Crédito na Regra padrão. O Crédito olha as últimas `janela`
-# Sessões em grupo com Feedback que a Pessoa dividiu com algum Presente de hoje.
-factor = 0.5
+[satisfaction]
+# u' = u - fator x (Satisfação mais alta de hoje - a da Pessoa) na Regra padrão.
+# A Satisfação olha as últimas `window` Sessões em grupo com Feedback que a
+# Pessoa dividiu com algum Presente de hoje. Com dois Presentes, 0,25 dá o mesmo
+# que o Crédito de antes (0,5 x a distância até a média).
+factor = 0.25
 window = 5
 
 [neighbors]

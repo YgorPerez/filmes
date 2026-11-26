@@ -18,7 +18,7 @@ exports[`the whole output, as recorded > child 10 with OMDb 1`] = `
       "removed": 73,
     },
   },
-  "credit": {},
+  "disagreement": null,
   "films": [
     {
       "coverage": {
@@ -66,7 +66,7 @@ exports[`the whole output, as recorded > child 10 with OMDb 1`] = `
             "person": "bruno",
             "source": "Wikidata",
             "strength": "moderate",
-            "text": "dirigido por Helena Prado, como 2 filmes a que deu 4 ou mais: O Farol de Areia (2012) e Maré Baixa (2015)",
+            "text": "dirigido por Helena Prado, como 2 filmes a que deu Nota alta: O Farol de Areia (2012) e Maré Baixa (2015)",
           },
           {
             "contribution": 0.09,
@@ -76,7 +76,7 @@ exports[`the whole output, as recorded > child 10 with OMDb 1`] = `
             "person": "bruno",
             "source": "Wikidata",
             "strength": "weak",
-            "text": "do gênero faroeste, como 3 filmes a que deu 4 ou mais: O Farol de Areia (2012), Maré Baixa (2015) e Jardim Suspenso (2017)",
+            "text": "do gênero faroeste, como 3 filmes a que deu Nota alta: O Farol de Areia (2012), Maré Baixa (2015) e Jardim Suspenso (2017)",
           },
         ],
       },
@@ -128,7 +128,7 @@ exports[`the whole output, as recorded > child 10 with OMDb 1`] = `
             "person": "bruno",
             "source": "Wikidata",
             "strength": "moderate",
-            "text": "dirigido por Rui Tavares, como 2 filmes a que deu 4 ou mais: Fronteira (2008) e Inverno em Lisboa (2011)",
+            "text": "dirigido por Rui Tavares, como 2 filmes a que deu Nota alta: Fronteira (2008) e Inverno em Lisboa (2011)",
           },
           {
             "contribution": 0.3363,
@@ -209,7 +209,7 @@ exports[`the whole output, as recorded > child 10 with OMDb 1`] = `
             "person": "bruno",
             "source": "Wikidata",
             "strength": "weak",
-            "text": "dirigido por Marta Quintal, como 1 filme a que deu 4 ou mais: Jardim Suspenso (2017)",
+            "text": "dirigido por Marta Quintal, como 1 filme a que deu Nota alta: Jardim Suspenso (2017)",
           },
           {
             "contribution": 0.1792,
@@ -288,7 +288,7 @@ exports[`the whole output, as recorded > child 10 with OMDb 1`] = `
             "person": "bruno",
             "source": "Wikidata",
             "strength": "moderate",
-            "text": "dirigido por Helena Prado, como 2 filmes a que deu 4 ou mais: O Farol de Areia (2012) e Cidade de Vidro (2018)",
+            "text": "dirigido por Helena Prado, como 2 filmes a que deu Nota alta: O Farol de Areia (2012) e Cidade de Vidro (2018)",
           },
           {
             "contribution": 0.386,
@@ -308,7 +308,7 @@ exports[`the whole output, as recorded > child 10 with OMDb 1`] = `
             "person": "bruno",
             "source": "Wikidata",
             "strength": "weak",
-            "text": "do gênero faroeste, como 3 filmes a que deu 4 ou mais: O Farol de Areia (2012), Cidade de Vidro (2018) e Jardim Suspenso (2017)",
+            "text": "do gênero faroeste, como 3 filmes a que deu Nota alta: O Farol de Areia (2012), Cidade de Vidro (2018) e Jardim Suspenso (2017)",
           },
         ],
       },
@@ -380,7 +380,7 @@ exports[`the whole output, as recorded > child 10 with OMDb 1`] = `
             "person": "bruno",
             "source": "Wikidata",
             "strength": "moderate",
-            "text": "dirigido por Helena Prado, como 2 filmes a que deu 4 ou mais: Maré Baixa (2015) e Cidade de Vidro (2018)",
+            "text": "dirigido por Helena Prado, como 2 filmes a que deu Nota alta: Maré Baixa (2015) e Cidade de Vidro (2018)",
           },
           {
             "contribution": 0.386,
@@ -400,7 +400,7 @@ exports[`the whole output, as recorded > child 10 with OMDb 1`] = `
             "person": "bruno",
             "source": "Wikidata",
             "strength": "weak",
-            "text": "do gênero faroeste, como 3 filmes a que deu 4 ou mais: Maré Baixa (2015), Cidade de Vidro (2018) e Jardim Suspenso (2017)",
+            "text": "do gênero faroeste, como 3 filmes a que deu Nota alta: Maré Baixa (2015), Cidade de Vidro (2018) e Jardim Suspenso (2017)",
           },
         ],
       },
@@ -499,6 +499,7 @@ exports[`the whole output, as recorded > child 10 with OMDb 1`] = `
   "rule": {
     "name": "default",
   },
+  "satisfaction": {},
   "vetoes": [],
   "warnings": [
     "TMDB sem chave de API (defina FILMES_TMDB_CHAVE); os filmes saem sem capa, sem título em português e sem sinopse",
@@ -524,7 +525,7 @@ exports[`the whole output, as recorded > child 10 without the OMDb key 1`] = `
       "removed": 74,
     },
   },
-  "credit": {},
+  "disagreement": null,
   "films": [
     {
       "coverage": {
@@ -572,7 +573,7 @@ exports[`the whole output, as recorded > child 10 without the OMDb key 1`] = `
             "person": "bruno",
             "source": "Wikidata",
             "strength": "moderate",
-            "text": "dirigido por Helena Prado, como 2 filmes a que deu 4 ou mais: O Farol de Areia (2012) e Maré Baixa (2015)",
+            "text": "dirigido por Helena Prado, como 2 filmes a que deu Nota alta: O Farol de Areia (2012) e Maré Baixa (2015)",
           },
           {
             "contribution": 0.09,
@@ -582,7 +583,7 @@ exports[`the whole output, as recorded > child 10 without the OMDb key 1`] = `
             "person": "bruno",
             "source": "Wikidata",
             "strength": "weak",
-            "text": "do gênero faroeste, como 3 filmes a que deu 4 ou mais: O Farol de Areia (2012), Maré Baixa (2015) e Jardim Suspenso (2017)",
+            "text": "do gênero faroeste, como 3 filmes a que deu Nota alta: O Farol de Areia (2012), Maré Baixa (2015) e Jardim Suspenso (2017)",
           },
         ],
       },
@@ -634,7 +635,7 @@ exports[`the whole output, as recorded > child 10 without the OMDb key 1`] = `
             "person": "bruno",
             "source": "Wikidata",
             "strength": "moderate",
-            "text": "dirigido por Rui Tavares, como 2 filmes a que deu 4 ou mais: Fronteira (2008) e Inverno em Lisboa (2011)",
+            "text": "dirigido por Rui Tavares, como 2 filmes a que deu Nota alta: Fronteira (2008) e Inverno em Lisboa (2011)",
           },
           {
             "contribution": 0.3363,
@@ -725,7 +726,7 @@ exports[`the whole output, as recorded > child 10 without the OMDb key 1`] = `
             "person": "bruno",
             "source": "Wikidata",
             "strength": "moderate",
-            "text": "dirigido por Helena Prado, como 2 filmes a que deu 4 ou mais: O Farol de Areia (2012) e Cidade de Vidro (2018)",
+            "text": "dirigido por Helena Prado, como 2 filmes a que deu Nota alta: O Farol de Areia (2012) e Cidade de Vidro (2018)",
           },
           {
             "contribution": 0.386,
@@ -745,7 +746,7 @@ exports[`the whole output, as recorded > child 10 without the OMDb key 1`] = `
             "person": "bruno",
             "source": "Wikidata",
             "strength": "weak",
-            "text": "do gênero faroeste, como 3 filmes a que deu 4 ou mais: O Farol de Areia (2012), Cidade de Vidro (2018) e Jardim Suspenso (2017)",
+            "text": "do gênero faroeste, como 3 filmes a que deu Nota alta: O Farol de Areia (2012), Cidade de Vidro (2018) e Jardim Suspenso (2017)",
           },
         ],
       },
@@ -817,7 +818,7 @@ exports[`the whole output, as recorded > child 10 without the OMDb key 1`] = `
             "person": "bruno",
             "source": "Wikidata",
             "strength": "moderate",
-            "text": "dirigido por Helena Prado, como 2 filmes a que deu 4 ou mais: Maré Baixa (2015) e Cidade de Vidro (2018)",
+            "text": "dirigido por Helena Prado, como 2 filmes a que deu Nota alta: Maré Baixa (2015) e Cidade de Vidro (2018)",
           },
           {
             "contribution": 0.386,
@@ -837,7 +838,7 @@ exports[`the whole output, as recorded > child 10 without the OMDb key 1`] = `
             "person": "bruno",
             "source": "Wikidata",
             "strength": "weak",
-            "text": "do gênero faroeste, como 3 filmes a que deu 4 ou mais: Maré Baixa (2015), Cidade de Vidro (2018) e Jardim Suspenso (2017)",
+            "text": "do gênero faroeste, como 3 filmes a que deu Nota alta: Maré Baixa (2015), Cidade de Vidro (2018) e Jardim Suspenso (2017)",
           },
         ],
       },
@@ -936,6 +937,7 @@ exports[`the whole output, as recorded > child 10 without the OMDb key 1`] = `
   "rule": {
     "name": "default",
   },
+  "satisfaction": {},
   "vetoes": [],
   "warnings": [
     "OMDb sem chave de API (defina FILMES_OMDB_CHAVE); filmes sem classificação local saem da Sessão com criança",
@@ -962,7 +964,7 @@ exports[`the whole output, as recorded > child 12, local chain only 1`] = `
       "removed": 71,
     },
   },
-  "credit": {},
+  "disagreement": null,
   "films": [
     {
       "coverage": {
@@ -980,7 +982,7 @@ exports[`the whole output, as recorded > child 12, local chain only 1`] = `
             "person": "bruno",
             "source": "Wikidata",
             "strength": "strong",
-            "text": "dirigido por Helena Prado, como 3 filmes a que deu 4 ou mais: O Farol de Areia (2012), Maré Baixa (2015) e Cidade de Vidro (2018)",
+            "text": "dirigido por Helena Prado, como 3 filmes a que deu Nota alta: O Farol de Areia (2012), Maré Baixa (2015) e Cidade de Vidro (2018)",
           },
           {
             "contribution": 0.8156,
@@ -1072,7 +1074,7 @@ exports[`the whole output, as recorded > child 12, local chain only 1`] = `
             "person": "bruno",
             "source": "Wikidata",
             "strength": "strong",
-            "text": "dirigido por Helena Prado, como 3 filmes a que deu 4 ou mais: O Farol de Areia (2012), Maré Baixa (2015) e Cidade de Vidro (2018)",
+            "text": "dirigido por Helena Prado, como 3 filmes a que deu Nota alta: O Farol de Areia (2012), Maré Baixa (2015) e Cidade de Vidro (2018)",
           },
           {
             "contribution": 0.8156,
@@ -1185,7 +1187,7 @@ exports[`the whole output, as recorded > child 12, local chain only 1`] = `
             "person": "bruno",
             "source": "Wikidata",
             "strength": "moderate",
-            "text": "dirigido por Helena Prado, como 2 filmes a que deu 4 ou mais: O Farol de Areia (2012) e Maré Baixa (2015)",
+            "text": "dirigido por Helena Prado, como 2 filmes a que deu Nota alta: O Farol de Areia (2012) e Maré Baixa (2015)",
           },
           {
             "contribution": 0.09,
@@ -1195,7 +1197,7 @@ exports[`the whole output, as recorded > child 12, local chain only 1`] = `
             "person": "bruno",
             "source": "Wikidata",
             "strength": "weak",
-            "text": "do gênero faroeste, como 3 filmes a que deu 4 ou mais: O Farol de Areia (2012), Maré Baixa (2015) e Jardim Suspenso (2017)",
+            "text": "do gênero faroeste, como 3 filmes a que deu Nota alta: O Farol de Areia (2012), Maré Baixa (2015) e Jardim Suspenso (2017)",
           },
         ],
       },
@@ -1247,7 +1249,7 @@ exports[`the whole output, as recorded > child 12, local chain only 1`] = `
             "person": "bruno",
             "source": "Wikidata",
             "strength": "moderate",
-            "text": "dirigido por Rui Tavares, como 2 filmes a que deu 4 ou mais: Fronteira (2008) e Inverno em Lisboa (2011)",
+            "text": "dirigido por Rui Tavares, como 2 filmes a que deu Nota alta: Fronteira (2008) e Inverno em Lisboa (2011)",
           },
           {
             "contribution": 0.3363,
@@ -1338,7 +1340,7 @@ exports[`the whole output, as recorded > child 12, local chain only 1`] = `
             "person": "bruno",
             "source": "Wikidata",
             "strength": "moderate",
-            "text": "dirigido por Helena Prado, como 2 filmes a que deu 4 ou mais: O Farol de Areia (2012) e Cidade de Vidro (2018)",
+            "text": "dirigido por Helena Prado, como 2 filmes a que deu Nota alta: O Farol de Areia (2012) e Cidade de Vidro (2018)",
           },
           {
             "contribution": 0.386,
@@ -1358,7 +1360,7 @@ exports[`the whole output, as recorded > child 12, local chain only 1`] = `
             "person": "bruno",
             "source": "Wikidata",
             "strength": "weak",
-            "text": "do gênero faroeste, como 3 filmes a que deu 4 ou mais: O Farol de Areia (2012), Cidade de Vidro (2018) e Jardim Suspenso (2017)",
+            "text": "do gênero faroeste, como 3 filmes a que deu Nota alta: O Farol de Areia (2012), Cidade de Vidro (2018) e Jardim Suspenso (2017)",
           },
         ],
       },
@@ -1430,7 +1432,7 @@ exports[`the whole output, as recorded > child 12, local chain only 1`] = `
             "person": "bruno",
             "source": "Wikidata",
             "strength": "moderate",
-            "text": "dirigido por Helena Prado, como 2 filmes a que deu 4 ou mais: Maré Baixa (2015) e Cidade de Vidro (2018)",
+            "text": "dirigido por Helena Prado, como 2 filmes a que deu Nota alta: Maré Baixa (2015) e Cidade de Vidro (2018)",
           },
           {
             "contribution": 0.386,
@@ -1450,7 +1452,7 @@ exports[`the whole output, as recorded > child 12, local chain only 1`] = `
             "person": "bruno",
             "source": "Wikidata",
             "strength": "weak",
-            "text": "do gênero faroeste, como 3 filmes a que deu 4 ou mais: Maré Baixa (2015), Cidade de Vidro (2018) e Jardim Suspenso (2017)",
+            "text": "do gênero faroeste, como 3 filmes a que deu Nota alta: Maré Baixa (2015), Cidade de Vidro (2018) e Jardim Suspenso (2017)",
           },
         ],
       },
@@ -1521,7 +1523,7 @@ exports[`the whole output, as recorded > child 12, local chain only 1`] = `
             "person": "bruno",
             "source": "Wikidata",
             "strength": "weak",
-            "text": "dirigido por Otávio Lins, como 1 filme a que deu 4 ou mais: Ponte Aérea (2016)",
+            "text": "dirigido por Otávio Lins, como 1 filme a que deu Nota alta: Ponte Aérea (2016)",
           },
         ],
       },
@@ -1618,6 +1620,7 @@ exports[`the whole output, as recorded > child 12, local chain only 1`] = `
   "rule": {
     "name": "default",
   },
+  "satisfaction": {},
   "vetoes": [],
   "warnings": [
     "OMDb sem chave de API (defina FILMES_OMDB_CHAVE); filmes sem classificação local saem da Sessão com criança",
@@ -1644,7 +1647,7 @@ exports[`the whole output, as recorded > child 17 with OMDb 1`] = `
       "removed": 65,
     },
   },
-  "credit": {},
+  "disagreement": null,
   "films": [
     {
       "coverage": {
@@ -1662,7 +1665,7 @@ exports[`the whole output, as recorded > child 17 with OMDb 1`] = `
             "person": "bruno",
             "source": "Wikidata",
             "strength": "strong",
-            "text": "dirigido por Helena Prado, como 3 filmes a que deu 4 ou mais: O Farol de Areia (2012), Maré Baixa (2015) e Cidade de Vidro (2018)",
+            "text": "dirigido por Helena Prado, como 3 filmes a que deu Nota alta: O Farol de Areia (2012), Maré Baixa (2015) e Cidade de Vidro (2018)",
           },
           {
             "contribution": 0.8156,
@@ -1754,7 +1757,7 @@ exports[`the whole output, as recorded > child 17 with OMDb 1`] = `
             "person": "bruno",
             "source": "Wikidata",
             "strength": "strong",
-            "text": "dirigido por Helena Prado, como 3 filmes a que deu 4 ou mais: O Farol de Areia (2012), Maré Baixa (2015) e Cidade de Vidro (2018)",
+            "text": "dirigido por Helena Prado, como 3 filmes a que deu Nota alta: O Farol de Areia (2012), Maré Baixa (2015) e Cidade de Vidro (2018)",
           },
           {
             "contribution": 0.8156,
@@ -1847,7 +1850,7 @@ exports[`the whole output, as recorded > child 17 with OMDb 1`] = `
             "person": "bruno",
             "source": "Wikidata",
             "strength": "moderate",
-            "text": "dirigido por Otávio Lins, como 2 filmes a que deu 4 ou mais: Ponte Aérea (2016) e O Último Bonde (2019)",
+            "text": "dirigido por Otávio Lins, como 2 filmes a que deu Nota alta: Ponte Aérea (2016) e O Último Bonde (2019)",
           },
           {
             "contribution": 0.4655,
@@ -1936,7 +1939,7 @@ exports[`the whole output, as recorded > child 17 with OMDb 1`] = `
             "person": "bruno",
             "source": "Wikidata",
             "strength": "moderate",
-            "text": "dirigido por Helena Prado, como 2 filmes a que deu 4 ou mais: O Farol de Areia (2012) e Maré Baixa (2015)",
+            "text": "dirigido por Helena Prado, como 2 filmes a que deu Nota alta: O Farol de Areia (2012) e Maré Baixa (2015)",
           },
           {
             "contribution": 0.09,
@@ -1946,7 +1949,7 @@ exports[`the whole output, as recorded > child 17 with OMDb 1`] = `
             "person": "bruno",
             "source": "Wikidata",
             "strength": "weak",
-            "text": "do gênero faroeste, como 3 filmes a que deu 4 ou mais: O Farol de Areia (2012), Maré Baixa (2015) e Jardim Suspenso (2017)",
+            "text": "do gênero faroeste, como 3 filmes a que deu Nota alta: O Farol de Areia (2012), Maré Baixa (2015) e Jardim Suspenso (2017)",
           },
         ],
       },
@@ -1998,7 +2001,7 @@ exports[`the whole output, as recorded > child 17 with OMDb 1`] = `
             "person": "bruno",
             "source": "Wikidata",
             "strength": "moderate",
-            "text": "dirigido por Rui Tavares, como 2 filmes a que deu 4 ou mais: Fronteira (2008) e Inverno em Lisboa (2011)",
+            "text": "dirigido por Rui Tavares, como 2 filmes a que deu Nota alta: Fronteira (2008) e Inverno em Lisboa (2011)",
           },
           {
             "contribution": 0.3363,
@@ -2079,7 +2082,7 @@ exports[`the whole output, as recorded > child 17 with OMDb 1`] = `
             "person": "bruno",
             "source": "Wikidata",
             "strength": "weak",
-            "text": "dirigido por Marta Quintal, como 1 filme a que deu 4 ou mais: Jardim Suspenso (2017)",
+            "text": "dirigido por Marta Quintal, como 1 filme a que deu Nota alta: Jardim Suspenso (2017)",
           },
           {
             "contribution": 0.1792,
@@ -2158,7 +2161,7 @@ exports[`the whole output, as recorded > child 17 with OMDb 1`] = `
             "person": "bruno",
             "source": "Wikidata",
             "strength": "moderate",
-            "text": "dirigido por Helena Prado, como 2 filmes a que deu 4 ou mais: O Farol de Areia (2012) e Cidade de Vidro (2018)",
+            "text": "dirigido por Helena Prado, como 2 filmes a que deu Nota alta: O Farol de Areia (2012) e Cidade de Vidro (2018)",
           },
           {
             "contribution": 0.386,
@@ -2178,7 +2181,7 @@ exports[`the whole output, as recorded > child 17 with OMDb 1`] = `
             "person": "bruno",
             "source": "Wikidata",
             "strength": "weak",
-            "text": "do gênero faroeste, como 3 filmes a que deu 4 ou mais: O Farol de Areia (2012), Cidade de Vidro (2018) e Jardim Suspenso (2017)",
+            "text": "do gênero faroeste, como 3 filmes a que deu Nota alta: O Farol de Areia (2012), Cidade de Vidro (2018) e Jardim Suspenso (2017)",
           },
         ],
       },
@@ -2250,7 +2253,7 @@ exports[`the whole output, as recorded > child 17 with OMDb 1`] = `
             "person": "bruno",
             "source": "Wikidata",
             "strength": "moderate",
-            "text": "dirigido por Helena Prado, como 2 filmes a que deu 4 ou mais: Maré Baixa (2015) e Cidade de Vidro (2018)",
+            "text": "dirigido por Helena Prado, como 2 filmes a que deu Nota alta: Maré Baixa (2015) e Cidade de Vidro (2018)",
           },
           {
             "contribution": 0.386,
@@ -2270,7 +2273,7 @@ exports[`the whole output, as recorded > child 17 with OMDb 1`] = `
             "person": "bruno",
             "source": "Wikidata",
             "strength": "weak",
-            "text": "do gênero faroeste, como 3 filmes a que deu 4 ou mais: Maré Baixa (2015), Cidade de Vidro (2018) e Jardim Suspenso (2017)",
+            "text": "do gênero faroeste, como 3 filmes a que deu Nota alta: Maré Baixa (2015), Cidade de Vidro (2018) e Jardim Suspenso (2017)",
           },
         ],
       },
@@ -2341,7 +2344,7 @@ exports[`the whole output, as recorded > child 17 with OMDb 1`] = `
             "person": "bruno",
             "source": "Wikidata",
             "strength": "weak",
-            "text": "dirigido por Otávio Lins, como 1 filme a que deu 4 ou mais: Ponte Aérea (2016)",
+            "text": "dirigido por Otávio Lins, como 1 filme a que deu Nota alta: Ponte Aérea (2016)",
           },
         ],
       },
@@ -2410,7 +2413,7 @@ exports[`the whole output, as recorded > child 17 with OMDb 1`] = `
             "person": "bruno",
             "source": "Wikidata",
             "strength": "weak",
-            "text": "dirigido por Marta Quintal, como 1 filme a que deu 4 ou mais: Jardim Suspenso (2017)",
+            "text": "dirigido por Marta Quintal, como 1 filme a que deu Nota alta: Jardim Suspenso (2017)",
           },
         ],
       },
@@ -2469,7 +2472,7 @@ exports[`the whole output, as recorded > child 17 with OMDb 1`] = `
             "person": "bruno",
             "source": "Wikidata",
             "strength": "weak",
-            "text": "dirigido por Rui Tavares, como 1 filme a que deu 4 ou mais: Inverno em Lisboa (2011)",
+            "text": "dirigido por Rui Tavares, como 1 filme a que deu Nota alta: Inverno em Lisboa (2011)",
           },
           {
             "contribution": 0.188,
@@ -2694,6 +2697,7 @@ exports[`the whole output, as recorded > child 17 with OMDb 1`] = `
   "rule": {
     "name": "default",
   },
+  "satisfaction": {},
   "vetoes": [],
   "warnings": [
     "TMDB sem chave de API (defina FILMES_TMDB_CHAVE); os filmes saem sem capa, sem título em português e sem sinopse",
@@ -2719,7 +2723,7 @@ exports[`the whole output, as recorded > child no age 1`] = `
       "removed": 77,
     },
   },
-  "credit": {},
+  "disagreement": null,
   "films": [
     {
       "coverage": {
@@ -2757,7 +2761,7 @@ exports[`the whole output, as recorded > child no age 1`] = `
             "person": "bruno",
             "source": "Wikidata",
             "strength": "moderate",
-            "text": "dirigido por Helena Prado, como 2 filmes a que deu 4 ou mais: O Farol de Areia (2012) e Cidade de Vidro (2018)",
+            "text": "dirigido por Helena Prado, como 2 filmes a que deu Nota alta: O Farol de Areia (2012) e Cidade de Vidro (2018)",
           },
           {
             "contribution": 0.386,
@@ -2777,7 +2781,7 @@ exports[`the whole output, as recorded > child no age 1`] = `
             "person": "bruno",
             "source": "Wikidata",
             "strength": "weak",
-            "text": "do gênero faroeste, como 3 filmes a que deu 4 ou mais: O Farol de Areia (2012), Cidade de Vidro (2018) e Jardim Suspenso (2017)",
+            "text": "do gênero faroeste, como 3 filmes a que deu Nota alta: O Farol de Areia (2012), Cidade de Vidro (2018) e Jardim Suspenso (2017)",
           },
         ],
       },
@@ -2849,7 +2853,7 @@ exports[`the whole output, as recorded > child no age 1`] = `
             "person": "bruno",
             "source": "Wikidata",
             "strength": "moderate",
-            "text": "dirigido por Helena Prado, como 2 filmes a que deu 4 ou mais: Maré Baixa (2015) e Cidade de Vidro (2018)",
+            "text": "dirigido por Helena Prado, como 2 filmes a que deu Nota alta: Maré Baixa (2015) e Cidade de Vidro (2018)",
           },
           {
             "contribution": 0.386,
@@ -2869,7 +2873,7 @@ exports[`the whole output, as recorded > child no age 1`] = `
             "person": "bruno",
             "source": "Wikidata",
             "strength": "weak",
-            "text": "do gênero faroeste, como 3 filmes a que deu 4 ou mais: Maré Baixa (2015), Cidade de Vidro (2018) e Jardim Suspenso (2017)",
+            "text": "do gênero faroeste, como 3 filmes a que deu Nota alta: Maré Baixa (2015), Cidade de Vidro (2018) e Jardim Suspenso (2017)",
           },
         ],
       },
@@ -2909,6 +2913,7 @@ exports[`the whole output, as recorded > child no age 1`] = `
   "rule": {
     "name": "default",
   },
+  "satisfaction": {},
   "vetoes": [],
   "warnings": [
     "OMDb sem chave de API (defina FILMES_OMDB_CHAVE); filmes sem classificação local saem da Sessão com criança",

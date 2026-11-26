@@ -32,6 +32,8 @@ export const MODEL: Billboard = {
     who: 'Vocês dois',
     parts: ['até 2h05', 'nota 7+ no IMDb', 'leve'],
   },
+  moods: ['leve'],
+  moodChoices: ['leve', 'pra rir', 'tenso'],
   dropped: [
     {
       position: 2,
@@ -61,7 +63,7 @@ export const MODEL: Billboard = {
         {
           people: ['bruno', 'iara'],
           strength: 'moderate',
-          text: 'dirigido por Helena Prado, como 2 filmes a que deu 4 ou mais',
+          text: 'dirigido por Helena Prado, como 2 filmes a que deu Nota alta',
           source: 'Wikidata',
         },
       ],

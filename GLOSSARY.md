@@ -66,16 +66,12 @@ Um filme do Catálogo que sobreviveu aos Vetos e às Restrições de uma Sessão
 Como uma Sessão junta o gosto dos Presentes para ordenar os Candidatos. Cada Sessão pode usar uma; a padrão é média sem miséria com justiça entre sessões.
 _Evitar_: regra de grupo, acordo, agregação
 
-**Crédito** [credit, `credit`]:
-O quanto uma Pessoa ficou atrás dos outros Presentes nas Sessões recentes que dividiu com quem está na Sessão de hoje, medido pelo Feedback. Quem tem Crédito pesa mais na Regra de escolha; quem gostou mais que a média não perde nada.
-_Evitar_: dívida, vez, saldo
-
 **Satisfação** [satisfaction, `satisfaction`]:
-O quanto um Presente gostou dos Filmes escolhidos nas Sessões recentes: a média das reações dele no Feedback, de 0 a 1. A satisfação mínima de uma Sessão é a reação mais baixa entre os Presentes (Stratigi et al., #170). Hoje só o `evaluate` a mede; o mapa #169 vai trocar o Crédito por ela.
-_Evitar_: felicidade, nota média
+O quanto um Presente gostou dos Filmes escolhidos nas Sessões recentes: a média das reações dele no Feedback, de 0 a 1. Na Regra padrão em grupo, conta a satisfação acumulada nas últimas Sessões que ele dividiu com alguém da Sessão de hoje; quem ficou abaixo do mais satisfeito de hoje pesa mais, na medida da diferença (Stratigi et al., #170). Quem está no topo não perde nada. No `evaluate`, a satisfação mínima de uma Sessão é a reação mais baixa entre os Presentes.
+_Evitar_: crédito, dívida, vez, saldo, felicidade, nota média
 
 **Discordância** [disagreement, `disagreement`]:
-Numa Sessão em que dois ou mais Presentes reagiram, a reação mais alta menos a mais baixa. Mede o quanto o Filme escolhido dividiu o grupo.
+A satisfação mais alta menos a mais baixa. Na Recomendação, entre os Presentes de hoje: é o quanto a Regra padrão pode puxar a ordem para quem ficou atrás. No `evaluate`, entre as reações de cada Sessão em que dois ou mais Presentes reagiram: o quanto o Filme escolhido dividiu o grupo.
 _Evitar_: conflito, variância
 
 **Recomendação** [recommendation, `Recommendation`]:
@@ -106,8 +102,8 @@ _Evitar_: observação, extra
 Um filme que o Dono tirou da tela de uma versão: o Trocar do Cartaz e, ao refazer, o que ele mandou trocar e o que não ficou como Mantido. Fica fora da Sessão até o fim.
 _Evitar_: descartado, rejeitado
 
-**Saída** [dropped, `dropped`; causa: `seen`, `swapped`, `constraint`, `veto`, `min_rating`]:
-Um filme da versão anterior que não está na nova, com a causa. A causa não é Motivo: Motivo é por que um filme está na Recomendação.
+**Saída** [dropped, `dropped`; causa: `seen`, `swapped`, `constraint`, `veto`, `min_rating`, `mood`]:
+Um filme da versão anterior que não está na nova, com a causa. A causa `mood` é de quem caiu porque o Dono pediu outro Clima: o filme continua elegível na Sessão. A causa não é Motivo: Motivo é por que um filme está na Recomendação.
 
 **Capa** [poster, `poster`]:
 O pôster do filme, vindo do TMDB. Não é o Cartaz, que é a Recomendação inteira.
@@ -183,6 +179,16 @@ Um Fato sobre o filme em si, vindo de uma base pública: elenco, diretor, gêner
 **Nota** [rating, `Rating`]:
 A avaliação que uma Pessoa deu a um filme, sempre dita com o nome de quem deu.
 _Evitar_: nota própria, nota de amigo, rating
+
+**Percentil da Nota** [rating percentile, `ratingPercentile`]:
+Onde uma Nota fica na Escala da Pessoa, de 0 a 1: a parte das Notas da escala abaixo dela, mais metade das iguais. A régua tira a Força de uma Nota do percentil, pelos cortes de `[rating_percentile]` em `config/weights.toml`: o top 10% é forte.
+_Evitar_: posição, ranking
+
+**Escala da Pessoa** [rating scale, `RatingScale`]:
+As Notas contra as quais a régua lê uma Nota dela: as próprias Notas da Pessoa, quando ela tem pelo menos o mínimo de `[rating_percentile]`; abaixo dele, as notas da população do MovieLens, na mesma escala de 0,5 a 5. As do Letterboxd e as do Trakt entram juntas.
+
+**Nota alta** [high rating, `isHighRating`]:
+Uma Nota que a régua lê a favor com Força moderada ou forte, só pelo percentil, sem o Feedback. É o que o metadado agregado do caminho de conteúdo conta ("como 3 filmes a que deu Nota alta"). Num Declarado de filme, só o "ama".
 
 **Decaimento** [rating decay, `ratingDecay`]:
 O quanto o tempo apaga uma Nota: a contribuição dela cai à metade a cada meia-vida (`half_life_years`) e nunca fica abaixo de um piso (`floor`). A Força da Nota não muda com a idade. Declarado, Relato e Já visto não decaem.

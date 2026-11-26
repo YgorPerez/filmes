@@ -17,6 +17,10 @@
 // (#68), the top reads "parecidos com X"; a stored Restrição that no longer
 // exists (the legacy no_repeat) is left out.
 //
+// The Cartaz also carries the Climas the version asked and the whole
+// vocabulary, in the file's order: the chips the Dono toggles to ask for
+// another Clima (#179), which the text's `clima:` line takes back.
+//
 // With `shown` (IMDb ids), the Cartaz has only those films of the
 // Recomendação, in that order and numbered from 1: the list the Dono sees.
 // `billboard` then records them in `shown` (`sessao.mostrar`).
@@ -40,6 +44,7 @@ import { catalogFilm } from '../recommendation/candidates.ts'
 import type { StoredConstraint } from '../recommendation/constraints.ts'
 import { constraintLabel } from '../recommendation/constraints/index.ts'
 import { filmHeader } from '../recommendation/header.ts'
+import { readMoods } from '../recommendation/moods.ts'
 import type { DropCause } from '../recommendation/kept.ts'
 import type { EngineServices } from '../runtime/Engine.ts'
 import { engineError, type EngineError } from '../runtime/EngineError.ts'
@@ -151,6 +156,10 @@ export interface Billboard {
   /** What left the previous version (`dropped`), in order. */
   readonly dropped: ReadonlyArray<BillboardDropped>
   readonly films: ReadonlyArray<BillboardFilm>
+  /** The Climas the version asked, as the vocabulary names them. */
+  readonly moods: ReadonlyArray<string>
+  /** Every Clima of the vocabulary, in its order: the Cartaz's chips. */
+  readonly moodChoices: ReadonlyArray<string>
   /** The Session is still open: it can take a reply. */
   readonly open: boolean
 }
@@ -346,7 +355,8 @@ const droppedOf = (
           ? 'seu Veto'
           : `Veto de ${name(drop.person ?? '')}`
       reason = `${by}: “${drop.text ?? ''}”`
-    } else reason = 'trocado'
+    } else if (drop.cause === 'mood') reason = 'outro Clima'
+    else reason = 'trocado'
     out.push({ ...drop, reason } as BillboardDropped)
   }
   return out
@@ -497,6 +507,8 @@ export const billboardModel = (
           request: requestOf(front, people, weights.catalog.min_imdb_rating),
           dropped: droppedOf(front, people, owner),
           films: cards,
+          moods: texts(get(front.get('context'), 'moods')),
+          moodChoices: (yield* readMoods).map((m) => m.name),
           open: isOpen(front),
         }
       }),

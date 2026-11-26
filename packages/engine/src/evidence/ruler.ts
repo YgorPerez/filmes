@@ -1,13 +1,16 @@
 // The Força [strength] ruler: how strong each Evidence is, by its Tipo, its
 // value and, for a Declarado or Relato, its age (`evidencia/regua.py`, issue
-// #7). Fixed rules, no config: the numbers that are calibrated live in
-// `weights.toml`, the Decaimento of a Nota among them (`decay.ts`, #173). The
-// strength of an Evidence comes only from here.
+// #7). Fixed rules; the numbers that are calibrated live in `weights.toml`,
+// the percentile cuts of a Nota (#172) and its Decaimento (`decay.ts`, #173)
+// among them. The strength of an Evidence comes only from here.
 
 import { pythonError } from '../compat/python-error.ts'
+import type { Weights } from '../runtime/Weights.ts'
 import { STRENGTHS, type Strength } from './strength.ts'
 
-/** A "high rating" on the taste path. */
+/** MovieLens's "gave 4+" (the item-item neighbourhood and the evaluation's
+ * hit), and the stated rating that counts as high ("ama" is 5). A Nota is
+ * high by its percentile instead (`isHighRating`). */
 export const HIGH_RATING = 4.0
 /** A Declarado or Relato older than this many years drops one level. */
 export const STATED_YEARS = 2
@@ -31,28 +34,85 @@ const weaker = (a: Strength, b: Strength): Strength =>
 /** +1 when the Fact speaks for the film, -1 against. */
 export type Direction = 1 | -1
 
+/** `[rating_percentile]`: the minimum of own Notas and the cut points. */
+export type RatingPercentile = Weights['rating_percentile']
+
+/** The Notas a Nota is read against (Escala da Pessoa [rating scale]): how
+ * many of each value, on the scale of 0,5 to 5, with the cut points. */
+export interface RatingScale {
+  readonly counts: ReadonlyMap<number, number>
+  readonly cuts: RatingPercentile
+  /** Her own Notas, or the MovieLens population's. */
+  readonly source: 'own' | 'population'
+}
+
+const total = (counts: ReadonlyMap<number, number>): number => {
+  let n = 0
+  for (const count of counts.values()) n += count
+  return n
+}
+
+/** The Pessoa's scale: her own Notas from `min_ratings` on, or with no
+ * population to fall back on; the population's below. */
+export const ratingScale = (
+  own: ReadonlyMap<number, number>,
+  population: ReadonlyMap<number, number>,
+  cuts: RatingPercentile,
+): RatingScale =>
+  total(own) >= cuts.min_ratings || total(population) === 0
+    ? { counts: own, cuts, source: 'own' }
+    : { counts: population, cuts, source: 'population' }
+
+/** Percentil da Nota [rating percentile]: the share of the scale's Notas
+ * below `rating`, plus half of the equal ones, from 0 to 1. One half on an
+ * empty scale. */
+export const ratingPercentile = (
+  scale: RatingScale,
+  rating: number,
+): number => {
+  const n = total(scale.counts)
+  if (n === 0) return 0.5
+  let below = 0
+  let equal = 0
+  for (const [value, count] of scale.counts) {
+    if (value < rating) below += count
+    else if (value === rating) equal += count
+  }
+  return (below + equal / 2) / n
+}
+
+/** Nota alta [high rating]: in favour, moderate or strong, by the
+ * percentile alone (age and Feedback do not count). */
+export const isHighRating = (scale: RatingScale, rating: number): boolean =>
+  ratingPercentile(scale, rating) >= scale.cuts.moderate
+
+/** The level of a Nota by its percentile on the Pessoa's scale. */
+const ratingLevel = (
+  scale: RatingScale,
+  rating: number,
+): [Strength, Direction] => {
+  const p = ratingPercentile(scale, rating)
+  const cuts = scale.cuts
+  if (p >= cuts.strong) return ['strong', 1]
+  if (p >= cuts.moderate) return ['moderate', 1]
+  if (p >= cuts.weak) return ['weak', 1]
+  if (p >= cuts.weak_against) return ['weak', -1]
+  if (p >= cuts.moderate_against) return ['moderate', -1]
+  return ['strong', -1]
+}
+
 /** Strength and direction of a Nota [rating] on a similar film.
  *
- * Strong: 4.5–5 (or 0.5–1.5 against). Moderate: 4 (or 2). Weak: 3–3.5, and
- * 2.5 is weak against. From a Session's Feedback, it goes up one level, up
- * to strong. Age does not change it: the Decaimento lowers the Nota's
- * contribution instead (`decay.ts`, #173). */
+ * By its percentile on the Pessoa's scale and the cuts of
+ * `[rating_percentile]`: her top 10% is strong in favour. From a Session's
+ * Feedback, it goes up one level, up to strong. Age does not change it: the
+ * Decaimento lowers the Nota's contribution instead (`decay.ts`, #173). */
 export const ratingStrength = (
+  scale: RatingScale,
   rating: number,
   fromFeedback = false,
 ): readonly [Strength, Direction] => {
-  const [strength, direction]: [Strength, Direction] =
-    rating >= 4.5
-      ? ['strong', 1]
-      : rating >= 4
-        ? ['moderate', 1]
-        : rating >= 3
-          ? ['weak', 1]
-          : rating >= 2.5
-            ? ['weak', -1]
-            : rating >= 2
-              ? ['moderate', -1]
-              : ['strong', -1]
+  const [strength, direction] = ratingLevel(scale, rating)
   return [fromFeedback ? strengthen(strength) : strength, direction]
 }
 
@@ -65,13 +125,14 @@ export type SeedKind = 'rating' | 'stated' | 'report'
  * the Relato rulers. */
 export const seedStrength = (
   kind: SeedKind,
+  scale: RatingScale,
   rating: number,
   date: string,
   today: string,
   fromFeedback = false,
 ): readonly [Strength, Direction] =>
   kind === 'rating'
-    ? ratingStrength(rating, fromFeedback)
+    ? ratingStrength(scale, rating, fromFeedback)
     : [statedStrength(kind, true, date, today), rating >= 3 ? 1 : -1]
 
 /** Strength of a Feedback reaction (a Nota or a Relato) on the chosen film.
@@ -81,12 +142,13 @@ export const seedStrength = (
  * drops one more after 2 years and goes up one for coming from Feedback. */
 export const feedbackStrength = (
   kind: 'rating' | 'report',
+  scale: RatingScale,
   rating: number,
   date: string,
   today: string,
 ): Strength =>
   kind === 'rating'
-    ? ratingStrength(rating, true)[0]
+    ? ratingStrength(scale, rating, true)[0]
     : strengthen(statedStrength('report', true, date, today))
 
 /** Metadata on the taste path: 3 or more high Notas of the Pessoa on the

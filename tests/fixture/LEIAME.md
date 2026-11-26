@@ -63,9 +63,13 @@ Notas de outras Pessoas, para os testes de grupo (`test_grupo.py`):
 | Iara | 3 em O Farol de Areia (101), 4 em Fronteira (401) | Fraca a favor nos outros de Helena Prado, moderada nos outros de Rui Tavares. Sobre 101 e 401 em si, só o Já visto da própria Nota. Bruno e Iara discordam em As Horas Lentas e quase concordam em A Volta do Mar: a Regra padrão e a média simples ordenam os dois ao contrário |
 | Rosa | 5 em Ensaio Geral, 4,5 em Bastidores e em Ato Final (`tt9005501`–`03`) | Teto do elenco no metadado agregado (#55): Duda Alves e Clara Bastos em 3 Notas altas. Recomenda sozinha; para os outros, os filmes dela são só palpites |
 | Teo | nenhuma | "sem fato" em todo filme |
-| Quim | 5 em Ponte Aérea (201), 3,5 em Maré Baixa (102), 4,5 em Barulho (501), 2 em Fronteira (401) | Testes de Crédito (`test_credito.py`). Com o Bruno, o Quim é o mínimo em As Horas Lentas e em A Volta do Mar, e o Bruno é o mínimo em Asfalto Quente: o Crédito de um faz subir os filmes dele |
+| Quim | 5 em Ponte Aérea (201), 3,5 em Maré Baixa (102), 4,5 em Barulho (501), 2 em Fronteira (401) | Testes de Satisfação (`packages/engine/test/sessions/satisfaction.test.ts`). Com o Bruno, o Quim é o mínimo em As Horas Lentas e em A Volta do Mar, e o Bruno é o mínimo em Asfalto Quente: quem saiu menos satisfeito faz subir os filmes dele |
 
 Os filmes de Lia Moura, Tomás Reis, Beatriz Sá e Jorge Amaral não ligam a Nota nenhuma: são os filmes só com palpites, que completam a lista com `--quantos 50`.
+
+### Régua por percentil (#172)
+
+`notas_movielens.csv` é a população do MovieLens da fixture: 50 notas inventadas, distribuídas para que, com os cortes de `[rating_percentile]` em `config/weights.toml`, a leitura pela população dê o que a régua absoluta antiga dava (5 e 4,5 forte, 4 moderada, 3,5 e 3 fraca a favor, 2,5 fraca contra, 2 moderada contra, 1,5 ou menos forte contra). Toda Pessoa da fixture tem menos de 20 Notas, o mínimo, e é lida por ela; assim as tabelas acima continuam valendo. Os testes da escala própria baixam o mínimo (`weightsWith`) para o Bruno, com 11 Notas, ser lido pelas dele: 5 forte, 4,5 moderada, 4 fraca, 3,5 fraca contra. Mudou um corte em `weights.toml`? Refaça esta distribuição.
 
 ### Sinais de Review (#21)
 
@@ -137,9 +141,9 @@ As chaves do frontmatter estão em inglês (ADR 0002), como no filmes-dados; o c
 - `people/bruno.md`: o Dono (`owner: true`, apelido `eu`), com `email: bruno@example.org`, que entra no login online (#112).
 - `people/iara.md` e `people/teo.md`: Pessoas para os testes de grupo. A Iara tem `email: iara@example.org` sem ser Dona: o login a recusa (#112).
 - `people/vera.md`: a segunda Dona (`owner: true`, `email: vera@example.org`), sem Nota, para os testes com dois Donos (#131): cada uma entra no login, e sem login "dono" é o primeiro Dono por slug, o Bruno.
-- `people/quim.md`: Pessoa para os testes de Crédito; tem uma pergunta aberta sobre a Helena Prado (Q9000001), para os testes de perguntas abertas (#62).
+- `people/quim.md`: Pessoa para os testes de Satisfação; tem uma pergunta aberta sobre a Helena Prado (Q9000001), para os testes de perguntas abertas (#62).
 - `people/rosa.md`: Pessoa do teste do teto do elenco no metadado agregado (#55).
-- Não há `sessions/`: os testes criam as Sessões com `recomendar` e `feedback`, ou escrevem o arquivo direto quando precisam de várias datas (veja `test_credito.py`).
+- Não há `sessions/`: os testes criam as Sessões com `recomendar` e `feedback`, ou escrevem o arquivo direto quando precisam de várias datas (veja `satisfaction.test.ts`).
 
 Os testes de Pessoa (#18) criam a Ana pela CLI e escrevem a Carol direto no repo de dados do teste; nenhuma das duas fica na fixture.
 
@@ -223,7 +227,7 @@ Filmes `tt90056NN`, sem diretor nem Nota, para `test_veto_por_tag_e_nota_imdb.py
 | Drama Juvenil (5604) | Drama | teen 0,95 | não é comédia: fica |
 | Obra-Prima (5605) | — | — | nota 8,5 e 1.000 votos: o bônus da nota o põe à frente dos outros só com palpites |
 
-As Horas Lentas (7,4) também ganha o bônus da nota; `test_credito.py` zera o peso para isolar o Crédito.
+As Horas Lentas (7,4) também ganha o bônus da nota; `satisfaction.test.ts` zera o peso para isolar a Satisfação.
 
 ### Nada lento (#57)
 

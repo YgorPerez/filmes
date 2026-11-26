@@ -1,7 +1,8 @@
 // MovieLens item-item neighbourhood: a Pessoa's Nota → MovieLens neighbour →
 // Candidate (`recomendacao/sinais/vizinhanca.py`).
 //
-// Each rating for the film (3 or more) of the Pessoa on a film X is a seed.
+// Each Nota in favour of the Pessoa on a film X (by its percentile on her
+// scale), or her stated "ama", is a seed.
 // For each neighbour Y of X that is a Candidate, one review Evidence: "deu 5
 // a X, e de 3.104 pessoas que deram 4+ a ele, 64% deram 4+ a este". The
 // strength comes from the base and the share, capped by the seed's
@@ -19,6 +20,7 @@ import {
   type SeedKind,
 } from '../../evidence/ruler.ts'
 import { filmText, integerText, seedText } from '../../evidence/wording.ts'
+import { readRatingScale } from '../../people/rating-scale.ts'
 import { num, numOrNull, text, textOrNull } from '../../sqlite/row.ts'
 import { kindOf } from '../../sqlite/vocabulary.ts'
 import { candidatesJson, type Signal } from './Signal.ts'
@@ -39,12 +41,15 @@ ORDER BY v.vizinho_id, v.fato_id
 export const neighbors: Signal = {
   module: 'vizinhanca',
   forPerson: (round, person) =>
-    Effect.map(round.db.all(NEIGHBORS, person, candidatesJson(round)), (rows) =>
-      rows.flatMap((row) => {
+    Effect.gen(function* () {
+      const scale = yield* readRatingScale(round.db, person, round.weights)
+      const rows = yield* round.db.all(NEIGHBORS, person, candidatesJson(round))
+      return rows.flatMap((row) => {
         const candidate = text(row, 'candidato')
         const kind = kindOf(text(row, 'nota_tipo')) as SeedKind
         const [seed, direction] = seedStrength(
           kind,
+          scale,
           num(row, 'nota'),
           text(row, 'nota_data'),
           round.today,
@@ -80,6 +85,6 @@ export const neighbors: Signal = {
                 : 1),
           }),
         ]
-      }),
-    ),
+      })
+    }),
 }

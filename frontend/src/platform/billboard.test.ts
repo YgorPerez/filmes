@@ -313,4 +313,39 @@ describe('billboardsFromEngine', () => {
       await engine.dispose()
     }
   }, 60_000) // real git commits: slow on a loaded machine
+
+  it('redoes with the Climas the Dono chose on the Cartaz', async () => {
+    const fixture = useFixture()
+    commitAll(fixture.data)
+    const engine = makeEngine(fixture.vars)
+    try {
+      const opened = await engine.run(
+        recommendSession({ attendees: ['iara'], count: 10 }),
+        { owner: 'bruno' },
+      )
+      if (opened.exitCode !== 0) throw new Error('not opened')
+      const id = opened.output.session.id
+      const billboards = billboardsFromEngine(engine)
+
+      const chose = await billboards.answer(
+        id,
+        `#cartaz ${id} v1\nclima: leve\n`,
+        'bruno',
+      )
+
+      expect(chose).toMatchObject({
+        exitCode: 0,
+        output: { regenerated: true },
+      })
+      const redone = await billboards.model(id)
+      if (redone.exitCode !== 0) throw new Error('no model')
+      expect(redone.output.model.moods).toEqual(['leve'])
+      expect(redone.output.model.request.parts).toContain('leve')
+      expect(new Set(redone.output.model.dropped.map((d) => d.reason))).toEqual(
+        new Set(['outro Clima']),
+      )
+    } finally {
+      await engine.dispose()
+    }
+  }, 60_000) // real git commits: slow on a loaded machine
 })

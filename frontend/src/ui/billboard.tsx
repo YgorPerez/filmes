@@ -28,8 +28,8 @@ import { ShelfLabel } from './kit/shelf-label'
 // The Cartaz [billboard] of a Session (`cartaz/__init__.py`, `cartaz.js`):
 // the request on the shelf label, the legend, what left the previous
 // version, a card per film and, while the Session is open, the reply: the
-// marks per film, the acrescentar below the last film, Enviar and Copiar
-// pro chat. It renders the engine's `billboardModel` and builds the text
+// marks per film, the acrescentar and the Clima chips below the last film,
+// Enviar and Copiar pro chat. It renders the engine's `billboardModel` and builds the text
 // `answerBillboard` reads (`billboardText`).
 //
 // Nothing of the app here, so the MCP Apps view (#111) renders the same
@@ -175,6 +175,7 @@ export function Billboard({
           message={message}
           onMessage={setMessage}
           onAddition={(addition) => change({ ...marks, addition })}
+          onMoods={(moods) => change({ ...marks, moods })}
           send={fullscreen ? undefined : { onSend: onSendClick }}
         />
       )}
