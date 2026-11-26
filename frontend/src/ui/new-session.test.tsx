@@ -9,6 +9,7 @@ import {
   parseSessionRequest,
   SESSION_REQUEST_REFUSALS,
 } from '#/content/session-request'
+import { CATALOG_SEARCH } from './catalog-search.copy'
 import { NewSession } from './new-session'
 
 // The screen's own props: the test leaves the server module alone.
@@ -80,10 +81,6 @@ describe('the Nova Sessão form', () => {
       screen.getByLabelText(copy.triggers, { exact: false }),
       'animal morre',
     )
-    await user.type(
-      screen.getByLabelText(copy.similar, { exact: false }),
-      'tt9000101',
-    )
     await user.click(screen.getByRole('checkbox', { name: copy.unseen }))
     await user.click(screen.getByRole('checkbox', { name: copy.noSlow }))
     await user.click(screen.getByRole('checkbox', { name: copy.noSad }))
@@ -105,7 +102,6 @@ describe('the Nova Sessão form', () => {
         language: 'pt',
         child: 7,
         triggers: ['animal morre'],
-        similar: ['tt9000101'],
         unseen: true,
         noSlow: true,
         noSad: true,
@@ -160,15 +156,6 @@ describe('the Nova Sessão form', () => {
     expect(posted(form)).toEqual({ refused: 'presentes' })
   })
 
-  it('refuses a title in “parecido com”', async () => {
-    const { user, form } = show()
-    await user.type(
-      screen.getByLabelText(copy.similar, { exact: false }),
-      'Casa Cheia',
-    )
-    expect(posted(form)).toEqual({ refused: 'parecido' })
-  })
-
   it.each(SESSION_REQUEST_REFUSALS)('says why it refused %s', (refusal) => {
     render(<NewSession options={OPTIONS} refusal={refusal} />)
     expect(screen.getByRole('alert').textContent).toContain(
@@ -186,7 +173,7 @@ describe('the Nova Sessão form', () => {
 })
 
 describe('the Catálogo search', () => {
-  it('adds the film the Catálogo search found to “parecido com”', () => {
+  it('adds the film the Catálogo search found to “parecido com”, in place', async () => {
     const search = {
       query: 'mare',
       found: {
@@ -207,29 +194,38 @@ describe('the Catálogo search', () => {
       },
     }
     render(<NewSession options={OPTIONS} search={search} similar="tt9000101" />)
-    const form = screen.getByRole('form', { name: SESSIONS.form.label })
+    const form = screen.getByRole('form', {
+      name: SESSIONS.form.label,
+    }) as HTMLFormElement
+    const user = userEvent.setup()
 
-    expect(
-      screen
-        .getByRole('link', { name: 'Usar Maré Baixa (2015)' })
-        .getAttribute('href'),
-    ).toBe('/sessoes/nova?parecido=tt9000101%2Ctt9000102&buscar=mare')
-    expect(posted(form as HTMLFormElement)).toMatchObject({
-      ok: { similar: ['tt9000101'] },
-    })
-    expect(new FormData(form as HTMLFormElement).get('parecido')).toBe(
-      'tt9000101',
+    await user.click(
+      screen.getByRole('button', { name: 'Usar Maré Baixa (2015)' }),
     )
+    expect(posted(form)).toMatchObject({
+      ok: { similar: ['tt9000101', 'tt9000102'] },
+    })
+    // Taken twice, it is still one film; its × lets it go.
+    await user.click(
+      screen.getByRole('button', { name: 'Usar Maré Baixa (2015)' }),
+    )
+    await user.click(
+      screen.getByRole('button', {
+        name: CATALOG_SEARCH.remove('Maré Baixa (2015)'),
+      }),
+    )
+    expect(new FormData(form).get('parecido')).toBe('tt9000101')
   })
 
   it('starts “parecido com” with no search', () => {
     render(<NewSession options={OPTIONS} search={null} />)
+    expect(screen.getByText(copy.similarNone)).toBeTruthy()
     expect(
-      (
-        screen.getByLabelText(copy.similar, {
-          exact: false,
-        }) as HTMLInputElement
-      ).value,
+      new FormData(
+        screen.getByRole('form', {
+          name: SESSIONS.form.label,
+        }) as HTMLFormElement,
+      ).get('parecido'),
     ).toBe('')
     expect(screen.getByText(copy.searchFold).closest('details')?.open).toBe(
       false,
@@ -361,8 +357,8 @@ describe('the form “Ler” filled', () => {
     )
   })
 
-  it('lists the films of an unclear title, each with “Usar”', () => {
-    showDraft({
+  it('lists the films of an unclear title, each with “Usar”', async () => {
+    const form = showDraft({
       fields: { similar: ['tt9000101'] },
       reading: {
         understood: [],
@@ -382,12 +378,11 @@ describe('the form “Ler” filled', () => {
     expect(
       screen.getByText(copy.reading.similarAmbiguous('Reprise')),
     ).toBeTruthy()
-    expect(
-      screen
-        .getByRole('link', { name: 'Usar Reprise (2004)' })
-        .getAttribute('href'),
-    ).toBe(`/sessoes/nova?parecido=tt9000101%2Ctt9012602&nota=${NOTE}`)
     expect(screen.getByRole('status').textContent).not.toContain('Reprise')
+    await userEvent
+      .setup()
+      .click(screen.getByRole('button', { name: 'Usar Reprise (2004)' }))
+    expect(new FormData(form).get('parecido')).toBe('tt9000101,tt9012602')
   })
 
   it('says when it understood nothing', () => {

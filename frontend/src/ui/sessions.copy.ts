@@ -119,6 +119,7 @@ export const SESSIONS = {
       /** A title of several films: each with “Usar”, as the search. */
       similarAmbiguous: (words: string) =>
         `Qual destes filmes você quis dizer com ${quoted(words)}?`,
+      busy: 'Lendo…',
     },
     constraints: 'Restrições',
     constraintsLead: 'Marque só os limites desta noite.',
@@ -137,6 +138,7 @@ export const SESSIONS = {
     triggersHint: 'separe os temas por vírgula',
     similar: 'Parecido com',
     similarHint: 'IDs do IMDb (tt…), separados por vírgula',
+    similarNone: 'Nenhum filme ainda. Busque acima e toque em Usar.',
     unseen: 'Só filmes que ninguém viu',
     noSlow: 'Nada lento',
     noSad: 'Nada triste',
@@ -150,6 +152,7 @@ export const SESSIONS = {
     },
     seriesOrderDefault: 'padrão',
     submit: 'Recomendar',
+    submitting: 'Abrindo…',
     searchFold: 'Parecido com um filme?',
     searchLabel: 'Buscar pelo título ou ID do IMDb',
     details: 'Mais opções',
