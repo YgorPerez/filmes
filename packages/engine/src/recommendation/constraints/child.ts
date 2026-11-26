@@ -24,6 +24,8 @@ import { requestLine } from '../../evidence/Evidence.ts'
 import { engineError } from '../../runtime/EngineError.ts'
 import { Omdb, OMDB_NAME } from '../../sources/Omdb.ts'
 import { num, text } from '../../sqlite/row.ts'
+import type { Connection, SqliteError } from '../../sqlite/Sqlite.ts'
+import type { Candidate } from '../candidates.ts'
 import {
   drop,
   filmsJson,
@@ -67,36 +69,71 @@ const beats = (next: RatingRow, current: RatingRow): boolean => {
   )
 }
 
+/** A rating to judge, with the Fact it comes from. */
+interface Judged {
+  readonly rating: string
+  readonly system: string
+  readonly label: string
+  readonly converted: boolean
+  readonly source: string
+  readonly date: string
+  readonly factId: string
+}
+
+const judge = (age: number, filmId: string, judged: Judged): Pass | Drop => {
+  const { rating, system, label, converted } = judged
+  if (ratingAge(rating) > age) return drop()
+  // Some systems already put their name in the label ("FSK 6"); others do
+  // not ("12A" of the BBFC).
+  const fullLabel = label.startsWith(`${system} `)
+    ? label
+    : `${system} ${label}`
+  const from = converted ? `${fullLabel} convertida` : system
+  return pass([
+    requestLine(
+      filmId,
+      `classificação ${rating} (${from})`,
+      judged.source,
+      judged.date,
+      judged.factId,
+    ),
+  ])
+}
+
+/** Film → the rating that holds among its stored ones. */
+const readRatings = (
+  db: Connection,
+  films: ReadonlyMap<string, Candidate>,
+): Effect.Effect<ReadonlyMap<string, RatingRow>, SqliteError> =>
+  Effect.gen(function* () {
+    const ratings = new Map<string, RatingRow>()
+    for (const row of yield* db.all(
+      `SELECT * FROM faixas_etarias
+             WHERE filme_id IN (SELECT value FROM json_each(?))
+             ORDER BY filme_id, fato_id`,
+      filmsJson(films),
+    )) {
+      const next: RatingRow = {
+        factId: text(row, 'fato_id'),
+        rating: text(row, 'faixa'),
+        age: num(row, 'idade'),
+        system: text(row, 'sistema'),
+        property: text(row, 'propriedade'),
+        label: text(row, 'rotulo'),
+        converted: num(row, 'convertida') !== 0,
+        source: text(row, 'fonte'),
+        date: text(row, 'data'),
+      }
+      const filmId = text(row, 'filme_id')
+      const current = ratings.get(filmId)
+      if (current === undefined || beats(next, current))
+        ratings.set(filmId, next)
+    }
+    return ratings
+  })
+
 const child = (age: number): Constraint => {
   const maxRating = AGE_SCALE.filter((r) => ratingAge(r) <= age).at(-1)
-
-  const judge = (
-    filmId: string,
-    rating: string,
-    system: string,
-    label: string,
-    converted: boolean,
-    source: string,
-    date: string,
-    factId: string,
-  ): Pass | Drop => {
-    if (ratingAge(rating) > age) return drop()
-    // Some systems already put their name in the label ("FSK 6"); others do
-    // not ("12A" of the BBFC).
-    const fullLabel = label.startsWith(`${system} `)
-      ? label
-      : `${system} ${label}`
-    const from = converted ? `${fullLabel} convertida` : system
-    return pass([
-      requestLine(
-        filmId,
-        `classificação ${rating} (${from})`,
-        source,
-        date,
-        factId,
-      ),
-    ])
-  }
 
   return {
     name: 'child',
@@ -112,29 +149,7 @@ const child = (age: number): Constraint => {
             text(row, 'filme_id'),
           ),
         )
-        const ratings = new Map<string, RatingRow>()
-        for (const row of yield* context.db.all(
-          `SELECT * FROM faixas_etarias
-             WHERE filme_id IN (SELECT value FROM json_each(?))
-             ORDER BY filme_id, fato_id`,
-          filmsJson(films),
-        )) {
-          const next: RatingRow = {
-            factId: text(row, 'fato_id'),
-            rating: text(row, 'faixa'),
-            age: num(row, 'idade'),
-            system: text(row, 'sistema'),
-            property: text(row, 'propriedade'),
-            label: text(row, 'rotulo'),
-            converted: num(row, 'convertida') !== 0,
-            source: text(row, 'fonte'),
-            date: text(row, 'data'),
-          }
-          const filmId = text(row, 'filme_id')
-          const current = ratings.get(filmId)
-          if (current === undefined || beats(next, current))
-            ratings.set(filmId, next)
-        }
+        const ratings = yield* readRatings(context.db, films)
         return new Map<string, Verdict>(
           [...films.keys()].map((filmId) => {
             if (adults.has(filmId)) return [filmId, drop()]
@@ -142,16 +157,15 @@ const child = (age: number): Constraint => {
             if (row === undefined) return [filmId, 'pending']
             return [
               filmId,
-              judge(
-                filmId,
-                row.rating,
-                row.system,
-                row.label,
-                row.converted,
-                `${row.source} ${row.property}`,
-                row.date,
-                row.factId,
-              ),
+              judge(age, filmId, {
+                rating: row.rating,
+                system: row.system,
+                label: row.label,
+                converted: row.converted,
+                source: `${row.source} ${row.property}`,
+                date: row.date,
+                factId: row.factId,
+              }),
             ]
           }),
         )
@@ -164,16 +178,15 @@ const child = (age: number): Constraint => {
         const converted = convertRating(MPA, answer.rated)
         if (converted === undefined) return drop()
         const [system, rating] = converted
-        return judge(
-          film.id,
+        return judge(age, film.id, {
           rating,
           system,
-          answer.rated,
-          true,
-          OMDB_NAME,
-          answer.date,
-          answer.factId,
-        )
+          label: answer.rated,
+          converted: true,
+          source: OMDB_NAME,
+          date: answer.date,
+          factId: answer.factId,
+        })
       }),
   }
 }

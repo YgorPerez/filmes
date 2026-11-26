@@ -41,12 +41,17 @@ export interface GroupSatisfaction {
   readonly behind: ReadonlyMap<string, number>
 }
 
-/** The satisfaction of today's Presentes (slugs, in the request's order). */
-export const groupSatisfaction = (
-  db: Connection,
-  attendees: ReadonlyArray<string>,
-  window: number,
-): Effect.Effect<GroupSatisfaction, SqliteError> =>
+/** The Sessions with Feedback and a chosen film, the most recent first,
+ * with who was there and each one's reaction. */
+interface History {
+  readonly sessions: ReadonlyArray<Row>
+  /** Session → its Presentes. */
+  readonly attendeesOf: ReadonlyMap<string, ReadonlySet<string>>
+  /** Session → Pessoa → her reaction. */
+  readonly reactionsOf: ReadonlyMap<string, ReadonlyMap<string, Row>>
+}
+
+const readHistory = (db: Connection): Effect.Effect<History, SqliteError> =>
   Effect.gen(function* () {
     const sessions = [
       ...(yield* db.all(
@@ -80,24 +85,46 @@ export const groupSatisfaction = (
       reactions.set(text(row, 'pessoa'), row)
       reactionsOf.set(session, reactions)
     }
+    return { sessions, attendeesOf, reactionsOf }
+  })
 
+/** The Pessoa's window: her most recent reactions in Sessions she shared
+ * with another of today's Presentes. */
+const windowOf = (
+  history: History,
+  person: string,
+  attendees: ReadonlyArray<string>,
+  window: number,
+): Array<PersonSatisfaction['lowest']> => {
+  const othersToday = new Set(attendees.filter((p) => p !== person))
+  const shared: Array<PersonSatisfaction['lowest']> = []
+  for (const session of history.sessions) {
+    const id = text(session, 'id')
+    const there = history.attendeesOf.get(id) ?? new Set<string>()
+    const reaction = history.reactionsOf.get(id)?.get(person)
+    if (
+      reaction === undefined ||
+      there.size < 2 ||
+      ![...there].some((p) => p !== person && othersToday.has(p))
+    )
+      continue
+    shared.push({ session, reaction })
+    if (shared.length === window) break
+  }
+  return shared
+}
+
+/** The satisfaction of today's Presentes (slugs, in the request's order). */
+export const groupSatisfaction = (
+  db: Connection,
+  attendees: ReadonlyArray<string>,
+  window: number,
+): Effect.Effect<GroupSatisfaction, SqliteError> =>
+  Effect.gen(function* () {
+    const history = yield* readHistory(db)
     const people = new Map<string, PersonSatisfaction>()
     for (const person of attendees) {
-      const othersToday = new Set(attendees.filter((p) => p !== person))
-      const shared: Array<PersonSatisfaction['lowest']> = []
-      for (const session of sessions) {
-        const id = text(session, 'id')
-        const there = attendeesOf.get(id) ?? new Set<string>()
-        const reaction = reactionsOf.get(id)?.get(person)
-        if (
-          reaction === undefined ||
-          there.size < 2 ||
-          ![...there].some((p) => p !== person && othersToday.has(p))
-        )
-          continue
-        shared.push({ session, reaction })
-        if (shared.length === window) break
-      }
+      const shared = windowOf(history, person, attendees, window)
       if (shared.length === 0) continue
       const measured = yield* satisfaction(
         db,

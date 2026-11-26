@@ -243,7 +243,7 @@ const byTag = (
       ),
     )
 
-const valueOf = (values: Map<string, number>, tag: string): number => {
+const valueOf = (values: ReadonlyMap<string, number>, tag: string): number => {
   const value = values.get(tag)
   if (value === undefined) throw new TypeError(`KeyError: '${tag}'`)
   return value
@@ -302,13 +302,19 @@ const genome = (
     return true
   })
 
-const tags = (
+/** The reference's MovieLens tags as a TF-IDF vector, with each tag's
+ * rarity and the vector's norm; null with no tags or a zero norm. */
+const tagVector = (
   db: Connection,
   reference: string,
-  config: Weights['similar'],
-  limit: Among,
-  pairOf: (filmId: string) => Pair,
-): Effect.Effect<boolean, SqliteError> =>
+): Effect.Effect<
+  {
+    readonly vector: ReadonlyMap<string, number>
+    readonly rarity: ReadonlyMap<string, number>
+    readonly norm: number
+  } | null,
+  SqliteError
+> =>
   Effect.gen(function* () {
     const ofReference = new Map(
       (yield* db.all(
@@ -316,7 +322,7 @@ const tags = (
         reference,
       )).map((row) => [text(row, 'tag'), num(row, 'usuarios')]),
     )
-    if (ofReference.size === 0) return false
+    if (ofReference.size === 0) return null
     // TF-IDF: log(1 + users) times the tag's rarity. "overrated" and "love"
     // are on thousands of films and say little; "writers" says more.
     const rarity = yield* byTag(db, 'tags_movielens', ofReference.keys())
@@ -327,7 +333,21 @@ const tags = (
       ),
     )
     const norm = Math.sqrt(pySum([...vector.values()].map((w) => w * w)))
-    if (!norm) return false
+    if (!norm) return null
+    return { vector, rarity, norm }
+  })
+
+const tags = (
+  db: Connection,
+  reference: string,
+  config: Weights['similar'],
+  limit: Among,
+  pairOf: (filmId: string) => Pair,
+): Effect.Effect<boolean, SqliteError> =>
+  Effect.gen(function* () {
+    const tf = yield* tagVector(db, reference)
+    if (tf === null) return false
+    const { vector, rarity, norm } = tf
     // Only the reference's heaviest tags look for films; the product uses
     // them all.
     const search = new Set(

@@ -83,6 +83,66 @@ const found = ({ films, clear }: Search): Found =>
         })),
       }
 
+/** Where the title from `start` ends, without the words that only join
+ * the others at its end. */
+const titleEnd = (
+  words: Words,
+  triggers: ReadonlyArray<Phrase>,
+  fillers: ReadonlySet<string>,
+  start: number,
+) => {
+  let end = start
+  while (
+    words.span(start, end + 1) &&
+    (end === start || words.longest(end, triggers) === 0)
+  )
+    end += 1
+  while (end > start && fillers.has(words.key(end - 1))) end -= 1
+  return end
+}
+
+/** "entre X e Y" from `i`, the titles from `start` to before `end`: the
+ * first "e" where both titles are clear, or else the first "e". */
+const betweenClaims = (
+  words: Words,
+  and: ReadonlyArray<Phrase>,
+  fillers: ReadonlySet<string>,
+  span: { readonly i: number; readonly start: number; readonly end: number },
+): Effect.Effect<ReadonlyArray<Claim>, EngineError | SqliteError, Sqlite> =>
+  Effect.gen(function* () {
+    const { i, start, end } = span
+    const splits: Split[] = []
+    for (let at = start + 1; at < end - 1; at += 1) {
+      const gap = words.longest(at, and)
+      if (gap === 0) continue
+      splits.push({
+        left: yield* title(words, start, at, fillers),
+        right: yield* title(words, at + gap, end, fillers),
+        and: at,
+        rightStart: at + gap,
+      })
+      if (splits.at(-1)?.left.clear && splits.at(-1)?.right.clear) break
+    }
+    const chosen =
+      splits.find((s) => s.left.clear && s.right.clear) ?? splits[0]
+    if (!chosen) return []
+    const { left, right, rightStart } = chosen
+    return [
+      {
+        start: i,
+        end: rightStart,
+        quote: { start: left.start, end: chosen.and },
+        found: found(left),
+      },
+      {
+        start: rightStart,
+        end,
+        quote: { start: right.start, end },
+        found: found(right),
+      },
+    ]
+  })
+
 export const similarReader = makeReader({
   field: 'similar',
   section: 'similar',
@@ -99,26 +159,14 @@ export const similarReader = makeReader({
       const and = phrasesOf(vocabulary.and)
       const triggers: Phrase[] = [...like, ...between]
 
-      /** Where the title from `start` ends, without the words that only
-       * join the others at its end. */
-      const titleEnd = (start: number) => {
-        let end = start
-        while (
-          words.span(start, end + 1) &&
-          (end === start || words.longest(end, triggers) === 0)
-        )
-          end += 1
-        while (end > start && context.fillers.has(words.key(end - 1))) end -= 1
-        return end
-      }
-
       const claims: Claim[] = []
       for (let i = 0; i < words.length; i += 1) {
         // The words of "entre" (two titles) or of "parecido com" (one).
         const betweenLength = words.longest(i, between)
         const likeLength = betweenLength > 0 ? 0 : words.longest(i, like)
         const start = i + betweenLength + likeLength
-        const end = start > i ? titleEnd(start) : start
+        const end =
+          start > i ? titleEnd(words, triggers, context.fillers, start) : start
         if (end === start) continue
         if (likeLength > 0) {
           const read = yield* title(words, start, end, context.fillers)
@@ -130,37 +178,12 @@ export const similarReader = makeReader({
           })
           continue
         }
-        // "entre X e Y": the first "e" where both titles are clear, or else
-        // the first "e".
-        const splits: Split[] = []
-        for (let at = start + 1; at < end - 1; at += 1) {
-          const gap = words.longest(at, and)
-          if (gap === 0) continue
-          splits.push({
-            left: yield* title(words, start, at, context.fillers),
-            right: yield* title(words, at + gap, end, context.fillers),
-            and: at,
-            rightStart: at + gap,
-          })
-          if (splits.at(-1)?.left.clear && splits.at(-1)?.right.clear) break
-        }
-        const chosen =
-          splits.find((s) => s.left.clear && s.right.clear) ?? splits[0]
-        if (!chosen) continue
-        const { left, right, rightStart } = chosen
         claims.push(
-          {
-            start: i,
-            end: rightStart,
-            quote: { start: left.start, end: chosen.and },
-            found: found(left),
-          },
-          {
-            start: rightStart,
+          ...(yield* betweenClaims(words, and, context.fillers, {
+            i,
+            start,
             end,
-            quote: { start: right.start, end },
-            found: found(right),
-          },
+          })),
         )
       }
       return claims

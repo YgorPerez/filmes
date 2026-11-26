@@ -41,6 +41,7 @@ import type { EngineServices } from '../runtime/Engine.ts'
 import { Environment } from '../runtime/Environment.ts'
 import { engineError, type EngineError } from '../runtime/EngineError.ts'
 import { Run } from '../runtime/Run.ts'
+import type { Weights } from '../runtime/Weights.ts'
 import { readBetRecord } from '../sessions/bet-record.ts'
 import { text } from '../sqlite/row.ts'
 import { Sqlite, type Connection, type SqliteError } from '../sqlite/Sqlite.ts'
@@ -63,6 +64,7 @@ import {
   makeConstraintSet,
   type Constraint,
   type ConstraintContext,
+  type ConstraintSet,
 } from './constraints.ts'
 import { readConstraints, type ConstraintRequest } from './constraints/index.ts'
 import { diversify, type Scored } from './diversity.ts'
@@ -246,25 +248,35 @@ const wentUpBySatisfaction = (
     .map(([p]) => p)
 }
 
-/** The recommendation for Presentes already resolved, on an open read
- * connection (Python's `recomendar(conn, ...)`). Warnings go to the
- * request's `Run`; the result carries the ones this call added. */
-export const rank = (
-  db: Connection,
-  options: RankOptions,
-): Effect.Effect<
-  Recommendation,
+type RankEffect<A> = Effect.Effect<
+  A,
   EngineError | SqliteError,
   EngineServices | Run
-> =>
+>
+
+/** What every step of `rank` reads. */
+interface Ranking {
+  readonly db: Connection
+  readonly weights: Weights
+  readonly run: Run['Service']
+  readonly options: RankOptions
+  readonly rule: Rule
+  /** Before the Vetos. */
+  readonly eligible: ReadonlyMap<string, Candidate>
+  readonly vetoes: {
+    readonly remaining: ReadonlyMap<string, Candidate>
+    readonly acted: ReadonlyArray<VetoReport>
+  }
+  readonly asked: ConstraintSet
+  readonly round: Round
+  readonly kept: (id: string) => boolean
+}
+
+const prepare = (db: Connection, options: RankOptions): RankEffect<Ranking> =>
   Effect.gen(function* () {
     const { weights } = yield* Environment
     const run = yield* Run
-    const warningsBefore = (yield* run.warnings).length
-    const { attendees, count, selection, regenerate } = options
-    const kept = (id: string) =>
-      regenerate !== undefined && isKept(regenerate, id)
-    const rule = options.rule ?? DEFAULT_RULE
+    const { attendees, selection, regenerate } = options
 
     // Every Presente's Vetos hold, whatever the Regra.
     const eligible = selection?.films ?? (yield* chooseCandidates(db, weights))
@@ -295,16 +307,33 @@ export const rank = (
       moods: moods.moods,
       scales,
     }
-    // A kept film a Veto or a Restrição removed: the cause, for `dropped`.
+    return {
+      db,
+      weights,
+      run,
+      options,
+      rule: options.rule ?? DEFAULT_RULE,
+      eligible,
+      vetoes,
+      asked,
+      round,
+      kept: (id) => regenerate !== undefined && isKept(regenerate, id),
+    }
+  })
+
+/** A kept film a Veto or a Restrição removed: the cause, for `dropped`. */
+const keptRemovals = (r: Ranking): RankEffect<Map<string, RemovalCause>> =>
+  Effect.gen(function* () {
+    const { db, weights, eligible, vetoes, round, asked } = r
     const removed = new Map<string, RemovalCause>()
-    for (const filmId of regenerate?.positions.keys() ?? []) {
+    for (const filmId of r.options.regenerate?.positions.keys() ?? []) {
       const film = eligible.get(filmId)
       if (film === undefined)
         removed.set(filmId, yield* byMinRating(db, filmId, weights.catalog))
       else if (!vetoes.remaining.has(filmId))
         removed.set(
           filmId,
-          yield* byVeto(db, attendees, film, weights.tag_vetoes),
+          yield* byVeto(db, r.options.attendees, film, weights.tag_vetoes),
         )
       else if (!round.candidates.has(filmId)) {
         const by = asked.removedBy.get(filmId)
@@ -312,381 +341,624 @@ export const rank = (
         removed.set(filmId, byConstraint(by, asked.dropDetails.get(filmId)))
       }
     }
+    return removed
+  })
 
+type ByFilm = ReadonlyMap<string, ReadonlyArray<Evidence>>
+
+const collect = (
+  into: Map<string, Evidence[]>,
+  evidence: ReadonlyArray<Evidence>,
+) => {
+  for (const e of evidence)
+    into.set(e.filmId, [...(into.get(e.filmId) ?? []), e])
+}
+
+/** The Evidence of the Pessoa signals (`byFilm`) and the film signals
+ * (`ofFilm`), by film. */
+const signalEvidence = (
+  round: Round,
+): RankEffect<{ readonly byFilm: ByFilm; readonly ofFilm: ByFilm }> =>
+  Effect.gen(function* () {
     const byFilm = new Map<string, Evidence[]>()
     const ofFilm = new Map<string, Evidence[]>()
-    const collect = (
-      into: Map<string, Evidence[]>,
-      evidence: ReadonlyArray<Evidence>,
-    ) => {
-      for (const e of evidence)
-        into.set(e.filmId, [...(into.get(e.filmId) ?? []), e])
-    }
     for (const signal of SIGNALS) {
       if (signal.forPerson)
-        for (const person of attendees)
+        for (const person of round.attendees)
           collect(byFilm, yield* signal.forPerson(round, person))
       if (signal.forFilm) collect(ofFilm, yield* signal.forFilm(round))
     }
+    return { byFilm, ofFilm }
+  })
 
-    // Satisfação (#176): only in the default Regra and in a group.
-    // `adjustment` is factor × how far each Pessoa is below the highest.
+/** Satisfação (#176): only in the default Regra and in a group.
+ * `adjustment` is factor × how far each Pessoa is below the highest. */
+const satisfactionOf = (
+  r: Ranking,
+): RankEffect<{
+  readonly group: GroupSatisfaction | null
+  readonly adjustment: ReadonlyMap<string, number>
+}> =>
+  Effect.gen(function* () {
+    const { attendees } = r.options
     const group: GroupSatisfaction | null =
-      usesSatisfaction(rule) && attendees.length > 1
-        ? yield* groupSatisfaction(db, attendees, weights.satisfaction.window)
+      usesSatisfaction(r.rule) && attendees.length > 1
+        ? yield* groupSatisfaction(
+            r.db,
+            attendees,
+            r.weights.satisfaction.window,
+          )
         : null
-    const factor = weights.satisfaction.factor
+    const factor = r.weights.satisfaction.factor
     const adjustment = new Map(
       factor && group !== null
         ? [...group.behind].map(([p, gap]) => [p, factor * gap])
         : [],
     )
+    return { group, adjustment }
+  })
 
-    let ids: Iterable<string> = round.candidates.keys()
-    if (
-      selection !== undefined &&
-      adjustment.size === 0 &&
-      asked.pending.size === 0
-    ) {
-      // With no lookup that could refuse a film after the order, the other
-      // guesses never reach the top when there are already `count` more
-      // voted ones.
-      const popular = selection.popular
-        .filter((id) => round.candidates.has(id))
-        .slice(0, count)
-      const some = new Set([...byFilm.keys(), ...ofFilm.keys(), ...popular])
-      if (regenerate !== undefined)
-        for (const id of regenerate.positions.keys())
-          if (round.candidates.has(id)) some.add(id)
-      ids = some
-    }
-    const ordered: Ordered[] = []
-    const unweighed: { key: Key; id: string }[] = []
-    for (const filmId of ids) {
-      const film = round.candidates.get(filmId)
-      if (film === undefined) throw pythonError('KeyError', `'${filmId}'`)
-      const evidence = byFilm.get(filmId) ?? []
-      const utilities = new Map(
-        attendees.map((person) => [
-          person,
-          individualUtility(
-            evidence.filter((e) => e.person === person),
-            weights,
-          ),
-        ]),
-      )
-      const filmSignals = ofFilm.get(filmId) ?? []
-      const bonus = pySum(filmSignals.map((e) => contribution(e, weights)))
-      const hasFact = [...evidence, ...filmSignals].some(
-        (e) => e.kind !== 'guess' && e.countsAsFact,
-      )
-      const byRule = ruleKey(rule, utilities, adjustment)
-      ordered.push({
-        key: orderKey(byRule, hasFact, film, bonus),
-        id: film.id,
-        band: bandOf(byRule, hasFact),
-        score: (byRule?.[0] ?? 0) + bonus,
-        film,
-        utilities,
-        evidence,
+/** What the signals read on the films to order. */
+interface Signals {
+  readonly byFilm: ByFilm
+  readonly ofFilm: ByFilm
+  readonly adjustment: ReadonlyMap<string, number>
+}
+
+const idsToOrder = (r: Ranking, signals: Signals): Iterable<string> => {
+  const { selection, regenerate, count } = r.options
+  const { candidates } = r.round
+  if (
+    selection === undefined ||
+    signals.adjustment.size > 0 ||
+    r.asked.pending.size > 0
+  )
+    return candidates.keys()
+  // With no lookup that could refuse a film after the order, the other
+  // guesses never reach the top when there are already `count` more
+  // voted ones.
+  const popular = selection.popular
+    .filter((id) => candidates.has(id))
+    .slice(0, count)
+  const some = new Set([
+    ...signals.byFilm.keys(),
+    ...signals.ofFilm.keys(),
+    ...popular,
+  ])
+  if (regenerate !== undefined)
+    for (const id of regenerate.positions.keys())
+      if (candidates.has(id)) some.add(id)
+  return some
+}
+
+/** The films by the Regra (`ordered`) and, with a satisfaction
+ * adjustment, their keys without it (`unweighed`). */
+const orderFilms = (
+  r: Ranking,
+  signals: Signals,
+): {
+  readonly ordered: ReadonlyArray<Ordered>
+  readonly unweighed: { key: Key; id: string }[]
+} => {
+  const { weights, rule } = r
+  const { byFilm, ofFilm, adjustment } = signals
+  const ordered: Ordered[] = []
+  const unweighed: { key: Key; id: string }[] = []
+  for (const filmId of idsToOrder(r, signals)) {
+    const film = r.round.candidates.get(filmId)
+    if (film === undefined) throw pythonError('KeyError', `'${filmId}'`)
+    const evidence = byFilm.get(filmId) ?? []
+    const utilities = new Map(
+      r.options.attendees.map((person) => [
+        person,
+        individualUtility(
+          evidence.filter((e) => e.person === person),
+          weights,
+        ),
+      ]),
+    )
+    const filmSignals = ofFilm.get(filmId) ?? []
+    const bonus = pySum(filmSignals.map((e) => contribution(e, weights)))
+    const hasFact = [...evidence, ...filmSignals].some(
+      (e) => e.kind !== 'guess' && e.countsAsFact,
+    )
+    const byRule = ruleKey(rule, utilities, adjustment)
+    ordered.push({
+      key: orderKey(byRule, hasFact, film, bonus),
+      id: film.id,
+      band: bandOf(byRule, hasFact),
+      score: (byRule?.[0] ?? 0) + bonus,
+      film,
+      utilities,
+      evidence,
+    })
+    if (adjustment.size > 0)
+      unweighed.push({
+        key: orderKey(ruleKey(rule, utilities), hasFact, film, bonus),
+        id: filmId,
       })
-      if (adjustment.size > 0)
-        unweighed.push({
-          key: orderKey(ruleKey(rule, utilities), hasFact, film, bonus),
-          id: filmId,
-        })
-    }
-    ordered.sort(byKey)
-    const reach = weights.constraints.on_demand_reach
-    const fill = (pool: ReadonlyArray<Ordered>, places: number) =>
-      asked.approve(pool, places, reach, (item) => item.film)
-    /** The Regra's places, with MMR over `chosen` (#177). */
-    const regularFill = (
-      pool: ReadonlyArray<Ordered>,
-      chosen: ReadonlyArray<Ordered>,
-      places: number,
-    ) =>
-      Effect.flatMap(diversify(db, pool, chosen, places, weights), (order) =>
-        fill(order, places),
-      )
-    // The Aposta (#178): the films that may be the bet, with each
-    // Presente's Nota prevista.
-    const seed = options.seed
-    const betAt = seed === undefined ? 0 : weights.bet.position
+  }
+  ordered.sort(byKey)
+  return { ordered, unweighed }
+}
+
+const fill = (r: Ranking, pool: ReadonlyArray<Ordered>, places: number) =>
+  r.asked.approve(
+    pool,
+    places,
+    r.weights.constraints.on_demand_reach,
+    (item) => item.film,
+  )
+
+/** The Regra's places, with MMR over `chosen` (#177). */
+const regularFill = (
+  r: Ranking,
+  pool: ReadonlyArray<Ordered>,
+  chosen: ReadonlyArray<Ordered>,
+  places: number,
+) =>
+  Effect.flatMap(diversify(r.db, pool, chosen, places, r.weights), (order) =>
+    fill(r, order, places),
+  )
+
+/** The Aposta (#178): the films that may be the bet, with each
+ * Presente's Nota prevista. */
+const betCandidates = (
+  r: Ranking,
+  ordered: ReadonlyArray<Ordered>,
+  betAt: number,
+): RankEffect<ReadonlyMap<string, BetCandidate>> =>
+  Effect.gen(function* () {
     const betOdds = new Map<string, BetCandidate>()
-    if (betAt > 0 && count >= betAt)
+    if (betAt > 0 && r.options.count >= betAt)
       for (const { film, utilities, evidence } of ordered) {
-        if (!hasLittleEvidence(evidence, utilities, weights)) continue
+        if (!hasLittleEvidence(evidence, utilities, r.weights)) continue
         const odds = new Map<string, BetOdds>()
-        for (const p of attendees) {
-          const prediction = (yield* predictRatings(round, p)).get(film.id)
+        for (const p of r.options.attendees) {
+          const prediction = (yield* predictRatings(r.round, p)).get(film.id)
           if (prediction !== undefined) odds.set(p, prediction)
         }
         if (odds.size > 0) betOdds.set(film.id, { id: film.id, odds })
       }
-    /** The Regra's films for `places` places of `pool`, and the bet for
-     * one of them when some film may be it. */
-    let cautiousBet = false
-    const withBet = (
-      pool: ReadonlyArray<Ordered>,
-      chosen: ReadonlyArray<Ordered>,
-      places: number,
-    ) =>
-      Effect.gen(function* () {
-        const candidates = pool.filter((item) => betOdds.has(item.film.id))
-        if (seed === undefined || candidates.length === 0 || places < 1)
-          return {
-            regular: yield* regularFill(pool, chosen, places),
-            bet: undefined,
-          }
-        const policy = betPolicy(
-          seed,
-          attendees,
-          yield* readBetRecord(round, options.session),
-          weights.bet,
-        )
-        if (!policy.offer)
-          return {
-            regular: yield* regularFill(pool, chosen, places),
-            bet: undefined,
-          }
-        const regular = yield* regularFill(pool, chosen, places - 1)
-        const taken = new Set(regular.map((item) => item.film.id))
-        const byId = new Map(candidates.map((item) => [item.film.id, item]))
-        const drawn = drawBets(
-          seed,
-          candidates
-            .filter((item) => !taken.has(item.film.id))
-            .flatMap((item) => betOdds.get(item.film.id) ?? []),
-          weights.bet.min_predicted,
-          policy.floors,
-        ).flatMap((id) => byId.get(id) ?? [])
-        const [bet] = yield* fill(drawn, 1)
-        if (bet !== undefined) {
-          cautiousBet = [...policy.floors].some(
-            ([p, minimum]) =>
-              minimum > weights.bet.min_predicted &&
-              betOdds.get(bet.id)?.odds.has(p),
-          )
-          return { regular, bet }
-        }
-        // No bet passed: the place goes back to the Regra.
-        const tried = new Set(drawn.map((item) => item.film.id))
-        const more = yield* fill(
-          pool.filter(
-            (item) => !taken.has(item.film.id) && !tried.has(item.film.id),
-          ),
-          1,
-        )
-        return { regular: [...regular, ...more], bet: undefined }
-      })
-    let betId: string | undefined
-    let placed: ReadonlyArray<readonly [number, Ordered]>
-    if (regenerate !== undefined) {
-      const fixed: Ordered[] = []
-      for (const item of ordered) {
-        if (!kept(item.film.id)) continue
-        if (yield* asked.passesOnDemand(item.film, true)) fixed.push(item)
-        else {
-          const by = asked.removedBy.get(item.film.id)
-          if (by === undefined)
-            throw pythonError('KeyError', `'${item.film.id}'`)
-          removed.set(
-            item.film.id,
-            byConstraint(by, asked.dropDetails.get(item.film.id)),
-          )
-        }
-      }
-      const others = ordered.filter((item) => !kept(item.film.id))
-      const places = Math.max(count - fixed.length, 0)
-      const idOf = (item: Ordered) => item.film.id
-      // A kept bet stays the bet; else a new one, if its place is free.
-      const keptBet = fixed.find((item) => item.film.id === regenerate.bet)
-      const betPlaceFree = fixed.every(
-        (item) => regenerate.positions.get(item.film.id) !== betAt,
-      )
-      if (keptBet !== undefined) {
-        betId = keptBet.film.id
-        cautiousBet = regenerate.cautiousBet ?? false
-        placed = place(
-          regenerate,
-          fixed,
-          yield* regularFill(others, fixed, places),
-          count,
-          idOf,
-        )
-      } else if (betAt > 0 && count >= betAt && betPlaceFree) {
-        const { regular, bet } = yield* withBet(others, fixed, places)
-        betId = bet?.film.id
-        placed =
-          bet === undefined
-            ? place(regenerate, fixed, regular, count, idOf)
-            : place(
-                {
-                  ...regenerate,
-                  positions: new Map([
-                    ...regenerate.positions,
-                    [bet.film.id, betAt],
-                  ]),
-                },
-                [...fixed, bet],
-                regular,
-                count,
-                idOf,
-              )
-      } else
-        placed = place(
-          regenerate,
-          fixed,
-          yield* regularFill(others, fixed, places),
-          count,
-          idOf,
-        )
-    } else {
-      const { regular, bet } =
-        betAt > 0 && count >= betAt
-          ? yield* withBet(ordered, [], count)
-          : { regular: yield* regularFill(ordered, [], count), bet: undefined }
-      betId = bet?.film.id
-      const approved =
-        bet === undefined ? regular : regular.toSpliced(betAt - 1, 0, bet)
-      placed = approved.map((item, i) => [i + 1, item] as const)
-    }
-    const approvedIds = new Set(placed.map(([, item]) => item.film.id))
-    // The two orders by the Regra, with and without weighing the
-    // satisfaction, over the same films: the ones with the same verdicts,
-    // without asking an on-demand source for more answers. MMR does not
-    // enter: a film it moved up did not go up by the satisfaction. When
-    // regenerating, only the free places compete: each one's order is among
-    // the films not kept, and the kept film, there because the Dono asked,
-    // gets no satisfaction line.
-    const competes = (id: string) =>
-      (approvedIds.has(id) || !asked.pending.get(id)?.length) &&
-      !kept(id) &&
-      id !== betId
-    const positionUnweighed = new Map(
-      unweighed
-        .sort(byKey)
-        .filter(({ id }) => competes(id))
-        .map(({ id }, i) => [id, i + 1]),
-    )
-    const contested = new Map(
-      ordered
-        .filter((item) => competes(item.id))
-        .map((item, i) => [item.id, i + 1]),
-    )
+    return betOdds
+  })
 
+interface BetFill {
+  readonly regular: ReadonlyArray<Ordered>
+  readonly bet: Ordered | undefined
+  /** The Histórico de apostas required a higher Nota prevista. */
+  readonly cautious: boolean
+}
+
+/** The bet among the films the Regra did not take, else one more film
+ * of the Regra. */
+const drawBet = (
+  r: Ranking,
+  draw: {
+    readonly seed: string
+    readonly betOdds: ReadonlyMap<string, BetCandidate>
+    readonly policy: ReturnType<typeof betPolicy>
+    readonly pool: ReadonlyArray<Ordered>
+    readonly candidates: ReadonlyArray<Ordered>
+    readonly regular: ReadonlyArray<Ordered>
+  },
+): RankEffect<BetFill> =>
+  Effect.gen(function* () {
+    const { seed, betOdds, policy, pool, candidates, regular } = draw
+    const { weights } = r
+    const taken = new Set(regular.map((item) => item.film.id))
+    const byId = new Map(candidates.map((item) => [item.film.id, item]))
+    const drawn = drawBets(
+      seed,
+      candidates
+        .filter((item) => !taken.has(item.film.id))
+        .flatMap((item) => betOdds.get(item.film.id) ?? []),
+      weights.bet.min_predicted,
+      policy.floors,
+    ).flatMap((id) => byId.get(id) ?? [])
+    const [bet] = yield* fill(r, drawn, 1)
+    if (bet !== undefined) {
+      const cautious = [...policy.floors].some(
+        ([p, minimum]) =>
+          minimum > weights.bet.min_predicted &&
+          betOdds.get(bet.id)?.odds.has(p),
+      )
+      return { regular, bet, cautious }
+    }
+    // No bet passed: the place goes back to the Regra.
+    const tried = new Set(drawn.map((item) => item.film.id))
+    const more = yield* fill(
+      r,
+      pool.filter(
+        (item) => !taken.has(item.film.id) && !tried.has(item.film.id),
+      ),
+      1,
+    )
+    return { regular: [...regular, ...more], bet: undefined, cautious: false }
+  })
+
+/** The Regra's films for `places` places of `pool`, and the bet for one
+ * of them when some film may be it. */
+const withBet = (
+  r: Ranking,
+  betOdds: ReadonlyMap<string, BetCandidate>,
+  pool: ReadonlyArray<Ordered>,
+  chosen: ReadonlyArray<Ordered>,
+  places: number,
+): RankEffect<BetFill> =>
+  Effect.gen(function* () {
+    const { seed } = r.options
+    const candidates = pool.filter((item) => betOdds.has(item.film.id))
+    if (seed === undefined || candidates.length === 0 || places < 1)
+      return {
+        regular: yield* regularFill(r, pool, chosen, places),
+        bet: undefined,
+        cautious: false,
+      }
+    const policy = betPolicy(
+      seed,
+      r.options.attendees,
+      yield* readBetRecord(r.round, r.options.session),
+      r.weights.bet,
+    )
+    if (!policy.offer)
+      return {
+        regular: yield* regularFill(r, pool, chosen, places),
+        bet: undefined,
+        cautious: false,
+      }
+    const regular = yield* regularFill(r, pool, chosen, places - 1)
+    return yield* drawBet(r, {
+      seed,
+      betOdds,
+      policy,
+      pool,
+      candidates,
+      regular,
+    })
+  })
+
+/** The films in their places, and which one is the bet. */
+interface Placement {
+  readonly placed: ReadonlyArray<readonly [number, Ordered]>
+  readonly betId: string | undefined
+  readonly cautiousBet: boolean
+}
+
+interface Bets {
+  readonly betAt: number
+  readonly betOdds: ReadonlyMap<string, BetCandidate>
+}
+
+const placeFresh = (
+  r: Ranking,
+  ordered: ReadonlyArray<Ordered>,
+  { betAt, betOdds }: Bets,
+): RankEffect<Placement> =>
+  Effect.gen(function* () {
+    const { count } = r.options
+    const { regular, bet, cautious } =
+      betAt > 0 && count >= betAt
+        ? yield* withBet(r, betOdds, ordered, [], count)
+        : {
+            regular: yield* regularFill(r, ordered, [], count),
+            bet: undefined,
+            cautious: false,
+          }
+    const approved =
+      bet === undefined ? regular : regular.toSpliced(betAt - 1, 0, bet)
+    return {
+      placed: approved.map((item, i) => [i + 1, item] as const),
+      betId: bet?.film.id,
+      cautiousBet: cautious,
+    }
+  })
+
+/** The kept films that still pass the on-demand Restrições; the others
+ * go to `removed`. */
+const keptThatPass = (
+  r: Ranking,
+  ordered: ReadonlyArray<Ordered>,
+  removed: Map<string, RemovalCause>,
+): RankEffect<ReadonlyArray<Ordered>> =>
+  Effect.gen(function* () {
+    const { asked } = r
+    const fixed: Ordered[] = []
+    for (const item of ordered) {
+      if (!r.kept(item.film.id)) continue
+      if (yield* asked.passesOnDemand(item.film, true)) fixed.push(item)
+      else {
+        const by = asked.removedBy.get(item.film.id)
+        if (by === undefined) throw pythonError('KeyError', `'${item.film.id}'`)
+        removed.set(
+          item.film.id,
+          byConstraint(by, asked.dropDetails.get(item.film.id)),
+        )
+      }
+    }
+    return fixed
+  })
+
+const idOf = (item: Ordered) => item.film.id
+
+/** The refazer with the new bet kept at `betAt`. */
+const withBetAt = (
+  regenerate: Regenerate,
+  bet: Ordered,
+  betAt: number,
+): Regenerate => ({
+  ...regenerate,
+  positions: new Map([...regenerate.positions, [bet.film.id, betAt]]),
+})
+
+const placeRegenerated = (
+  r: Ranking,
+  regenerate: Regenerate,
+  ordered: ReadonlyArray<Ordered>,
+  removed: Map<string, RemovalCause>,
+  { betAt, betOdds }: Bets,
+): RankEffect<Placement> =>
+  Effect.gen(function* () {
+    const { count } = r.options
+    const fixed = yield* keptThatPass(r, ordered, removed)
+    const others = ordered.filter((item) => !r.kept(item.film.id))
+    const places = Math.max(count - fixed.length, 0)
+    // A kept bet stays the bet; else a new one, if its place is free.
+    const keptBet = fixed.find((item) => item.film.id === regenerate.bet)
+    const canBet =
+      betAt > 0 &&
+      count >= betAt &&
+      fixed.every((item) => regenerate.positions.get(item.film.id) !== betAt)
+    const regularPlaces = Effect.map(
+      regularFill(r, others, fixed, places),
+      (regular) => place(regenerate, fixed, regular, count, idOf),
+    )
+    if (keptBet !== undefined)
+      return {
+        placed: yield* regularPlaces,
+        betId: keptBet.film.id,
+        cautiousBet: regenerate.cautiousBet ?? false,
+      }
+    if (!canBet)
+      return {
+        placed: yield* regularPlaces,
+        betId: undefined,
+        cautiousBet: false,
+      }
+    const { regular, bet, cautious } = yield* withBet(
+      r,
+      betOdds,
+      others,
+      fixed,
+      places,
+    )
+    return {
+      placed:
+        bet === undefined
+          ? place(regenerate, fixed, regular, count, idOf)
+          : place(
+              withBetAt(regenerate, bet, betAt),
+              [...fixed, bet],
+              regular,
+              count,
+              idOf,
+            ),
+      betId: bet?.film.id,
+      cautiousBet: cautious,
+    }
+  })
+
+const placeFilms = (
+  r: Ranking,
+  ordered: ReadonlyArray<Ordered>,
+  removed: Map<string, RemovalCause>,
+): RankEffect<Placement> =>
+  Effect.gen(function* () {
+    const betAt = r.options.seed === undefined ? 0 : r.weights.bet.position
+    const bets = { betAt, betOdds: yield* betCandidates(r, ordered, betAt) }
+    const { regenerate } = r.options
+    return regenerate !== undefined
+      ? yield* placeRegenerated(r, regenerate, ordered, removed, bets)
+      : yield* placeFresh(r, ordered, bets)
+  })
+
+/** The two orders by the Regra, with and without weighing the
+ * satisfaction, over the same films: the ones with the same verdicts,
+ * without asking an on-demand source for more answers. MMR does not
+ * enter: a film it moved up did not go up by the satisfaction. When
+ * regenerating, only the free places compete: each one's order is among
+ * the films not kept, and the kept film, there because the Dono asked,
+ * gets no satisfaction line. */
+const satisfactionPositions = (
+  r: Ranking,
+  ordered: ReadonlyArray<Ordered>,
+  unweighed: { key: Key; id: string }[],
+  { placed, betId }: Placement,
+) => {
+  const approvedIds = new Set(placed.map(([, item]) => item.film.id))
+  const competes = (id: string) =>
+    (approvedIds.has(id) || !r.asked.pending.get(id)?.length) &&
+    !r.kept(id) &&
+    id !== betId
+  const positionUnweighed = new Map(
+    unweighed
+      .sort(byKey)
+      .filter(({ id }) => competes(id))
+      .map(({ id }, i) => [id, i + 1]),
+  )
+  const contested = new Map(
+    ordered
+      .filter((item) => competes(item.id))
+      .map((item, i) => [item.id, i + 1]),
+  )
+  return { positionUnweighed, contested }
+}
+
+const personNames = (
+  db: Connection,
+  adjustment: ReadonlyMap<string, number>,
+): Effect.Effect<ReadonlyMap<string, string>, SqliteError> =>
+  Effect.gen(function* () {
     const names = new Map<string, string>()
     if (adjustment.size > 0)
       for (const row of yield* db.all('SELECT slug, nome FROM pessoas'))
         names.set(text(row, 'slug'), text(row, 'nome'))
-    const strongestFirst = (a: Evidence, b: Evidence) =>
-      compareTuple(
-        [-Math.abs(contribution(a, weights)), a.factId ?? ''],
-        [-Math.abs(contribution(b, weights)), b.factId ?? ''],
-      )
-    const films: RecommendedFilm[] = []
-    for (const [position, { key, film, utilities, evidence }] of placed) {
-      const all = [
-        ...evidence,
-        ...[...utilities]
-          .filter(([, u]) => u === null)
-          .map(([p]) => withoutFact(p, film.id)),
-      ].sort(strongestFirst)
-      // Film signals: the strongest first; on a tie, the order of the
-      // Climas asked for.
-      const signalLines = [...(ofFilm.get(film.id) ?? [])].sort(
-        (a, b) =>
-          Math.abs(contribution(b, weights)) -
-          Math.abs(contribution(a, weights)),
-      )
-      const satisfactionLines =
-        group === null || film.id === betId
-          ? []
-          : wentUpBySatisfaction(
-              film.id,
-              contested,
-              positionUnweighed,
-              utilities,
-              adjustment,
-            ).map((p) => {
-              return satisfactionLine(
-                p,
-                names.get(p) ?? p,
-                group,
-                scaleOf(round, p),
-                film.id,
-                run.today,
-              )
-            })
-      const lines = [
-        ...asked.linesOf(film.id),
-        ...signalLines,
-        ...satisfactionLines,
-        ...(film.id === betId && cautiousBet ? [cautiousBetLine(film.id)] : []),
-      ]
-      const predicted: Array<[string, PredictedRating]> = []
-      for (const p of attendees) {
-        const prediction = (yield* predictRatings(round, p)).get(film.id)
-        if (prediction !== undefined)
-          predicted.push([
-            p,
-            {
-              value: pyRound(prediction.value, 2),
-              raw: pyRound(prediction.raw, 2),
-              raters: prediction.raters,
-              deviation: pyRound(prediction.deviation, 2),
-            },
-          ])
-      }
-      const withoutFactOn = [...utilities]
-        .filter(([, u]) => u === null)
-        .map(([p]) => p)
-      films.push({
-        position,
-        id: film.id,
-        title: film.title,
-        year: film.year,
-        runtimeMinutes: film.runtimeMinutes,
-        ...(yield* filmHeader(db, film)),
-        coverage: {
-          withFact: utilities.size - withoutFactOn.length,
-          attendees: utilities.size,
-          withoutFact: withoutFactOn,
-        },
-        onlyGuesses: key[0] === 2,
-        utility: Object.fromEntries(
-          [...utilities].map(([p, u]) => [
-            p,
-            u === null ? null : pyRound(u, 4),
-          ]),
-        ),
-        ...(predicted.length > 0 && {
-          predictedRating: Object.fromEntries(predicted),
-        }),
-        evidence: Object.fromEntries(
-          attendees.map((p) => [
-            p,
-            all
-              .filter((e) => e.person === p)
-              .map((e) => evidenceToJson(e, weights)),
-          ]),
-        ),
-        filmLines: lines.map((e) => evidenceToJson(e, weights)),
-        ...(regenerate !== undefined && { new: isNew(regenerate, film.id) }),
-        ...(film.id === betId && { bet: true as const }),
-        ...(film.id === betId && cautiousBet && { cautiousBet: true as const }),
-      })
-    }
-    for (const warning of asked.listWarnings(films.length, count))
-      yield* run.warn(warning)
-    if (regenerate !== undefined)
-      for (const [filmId, cause] of removed)
-        yield* run.warn(keptWarning(regenerate, filmId, cause))
+    return names
+  })
 
+/** What the placed films' lines read, besides the ranking. */
+interface Finish {
+  readonly ofFilm: ByFilm
+  readonly group: GroupSatisfaction | null
+  readonly adjustment: ReadonlyMap<string, number>
+  readonly contested: ReadonlyMap<string, number>
+  readonly positionUnweighed: ReadonlyMap<string, number>
+  readonly names: ReadonlyMap<string, string>
+  readonly betId: string | undefined
+  readonly cautiousBet: boolean
+}
+
+const strongestFirst = (weights: Weights) => (a: Evidence, b: Evidence) =>
+  compareTuple(
+    [-Math.abs(contribution(a, weights)), a.factId ?? ''],
+    [-Math.abs(contribution(b, weights)), b.factId ?? ''],
+  )
+
+/** The Restrições' lines, the film signals, the satisfaction line and the
+ * cautious bet's line. */
+const filmLinesOf = (
+  r: Ranking,
+  finish: Finish,
+  { film, utilities }: Ordered,
+): ReadonlyArray<Evidence> => {
+  const { weights } = r
+  const { group, betId } = finish
+  // Film signals: the strongest first; on a tie, the order of the
+  // Climas asked for.
+  const signalLines = [...(finish.ofFilm.get(film.id) ?? [])].sort(
+    (a, b) =>
+      Math.abs(contribution(b, weights)) - Math.abs(contribution(a, weights)),
+  )
+  const satisfactionLines =
+    group === null || film.id === betId
+      ? []
+      : wentUpBySatisfaction(
+          film.id,
+          finish.contested,
+          finish.positionUnweighed,
+          utilities,
+          finish.adjustment,
+        ).map((p) => {
+          return satisfactionLine(
+            p,
+            finish.names.get(p) ?? p,
+            group,
+            scaleOf(r.round, p),
+            film.id,
+            r.run.today,
+          )
+        })
+  return [
+    ...r.asked.linesOf(film.id),
+    ...signalLines,
+    ...satisfactionLines,
+    ...(film.id === betId && finish.cautiousBet
+      ? [cautiousBetLine(film.id)]
+      : []),
+  ]
+}
+
+const predictedRatingsOf = (
+  round: Round,
+  filmId: string,
+): RankEffect<ReadonlyArray<[string, PredictedRating]>> =>
+  Effect.gen(function* () {
+    const predicted: Array<[string, PredictedRating]> = []
+    for (const p of round.attendees) {
+      const prediction = (yield* predictRatings(round, p)).get(filmId)
+      if (prediction !== undefined)
+        predicted.push([
+          p,
+          {
+            value: pyRound(prediction.value, 2),
+            raw: pyRound(prediction.raw, 2),
+            raters: prediction.raters,
+            deviation: pyRound(prediction.deviation, 2),
+          },
+        ])
+    }
+    return predicted
+  })
+
+const recommendedFilm = (
+  r: Ranking,
+  finish: Finish,
+  position: number,
+  item: Ordered,
+): RankEffect<RecommendedFilm> =>
+  Effect.gen(function* () {
+    const { weights } = r
+    const { attendees, regenerate } = r.options
+    const { key, film, utilities, evidence } = item
+    const withoutFactOn = [...utilities]
+      .filter(([, u]) => u === null)
+      .map(([p]) => p)
+    const all = [
+      ...evidence,
+      ...withoutFactOn.map((p) => withoutFact(p, film.id)),
+    ].sort(strongestFirst(weights))
+    const lines = filmLinesOf(r, finish, item)
+    const predicted = yield* predictedRatingsOf(r.round, film.id)
+    const isBet = film.id === finish.betId
+    return {
+      position,
+      id: film.id,
+      title: film.title,
+      year: film.year,
+      runtimeMinutes: film.runtimeMinutes,
+      ...(yield* filmHeader(r.db, film)),
+      coverage: {
+        withFact: utilities.size - withoutFactOn.length,
+        attendees: utilities.size,
+        withoutFact: withoutFactOn,
+      },
+      onlyGuesses: key[0] === 2,
+      utility: Object.fromEntries(
+        [...utilities].map(([p, u]) => [p, u === null ? null : pyRound(u, 4)]),
+      ),
+      ...(predicted.length > 0 && {
+        predictedRating: Object.fromEntries(predicted),
+      }),
+      evidence: Object.fromEntries(
+        attendees.map((p) => [
+          p,
+          all
+            .filter((e) => e.person === p)
+            .map((e) => evidenceToJson(e, weights)),
+        ]),
+      ),
+      filmLines: lines.map((e) => evidenceToJson(e, weights)),
+      ...(regenerate !== undefined && { new: isNew(regenerate, film.id) }),
+      ...(isBet && { bet: true as const }),
+      ...(isBet && finish.cautiousBet && { cautiousBet: true as const }),
+    }
+  })
+
+const recommendation = (
+  r: Ranking,
+  done: {
+    readonly films: ReadonlyArray<RecommendedFilm>
+    readonly removed: ReadonlyMap<string, RemovalCause>
+    readonly group: GroupSatisfaction | null
+    readonly warningsBefore: number
+  },
+): RankEffect<Recommendation> =>
+  Effect.gen(function* () {
+    const { films, group } = done
+    const { attendees, regenerate } = r.options
     return {
       attendees,
-      rule: ruleToJson(rule),
+      rule: ruleToJson(r.rule),
       satisfaction: Object.fromEntries(
         [...(group?.people ?? [])].map(([p, s]) => [
           p,
@@ -697,11 +969,11 @@ export const rank = (
         group === null || group.disagreement === null
           ? null
           : pyRound(group.disagreement, 4),
-      vetoes: vetoes.acted,
-      moods: moods.moods.map((m) => m.name),
+      vetoes: r.vetoes.acted,
+      moods: r.round.moods.map((m) => m.name),
       films,
-      constraints: asked.toJson(),
-      warnings: (yield* run.warnings).slice(warningsBefore),
+      constraints: r.asked.toJson(),
+      warnings: (yield* r.run.warnings).slice(done.warningsBefore),
       attributions: attributionsOf([
         ...films.flatMap((f) =>
           [f.filmLines, ...Object.values(f.evidence)].flatMap((lines) =>
@@ -711,16 +983,56 @@ export const rank = (
         ...films.filter((f) => f.poster || f.titlePt).map(() => 'TMDB'),
       ]),
       ...(regenerate !== undefined && {
-        kept: films.filter((f) => kept(f.id)).map((f) => f.id),
+        kept: films.filter((f) => r.kept(f.id)).map((f) => f.id),
         dropped: yield* droppedFilms(
-          db,
+          r.db,
           attendees,
           regenerate,
           new Set(films.map((f) => f.id)),
-          removed,
+          done.removed,
         ),
       }),
     }
+  })
+
+/** The recommendation for Presentes already resolved, on an open read
+ * connection (Python's `recomendar(conn, ...)`). Warnings go to the
+ * request's `Run`; the result carries the ones this call added. */
+export const rank = (
+  db: Connection,
+  options: RankOptions,
+): RankEffect<Recommendation> =>
+  Effect.gen(function* () {
+    const run = yield* Run
+    const warningsBefore = (yield* run.warnings).length
+    const r = yield* prepare(db, options)
+    const removed = yield* keptRemovals(r)
+    const { byFilm, ofFilm } = yield* signalEvidence(r.round)
+    const { group, adjustment } = yield* satisfactionOf(r)
+    const { ordered, unweighed } = orderFilms(r, {
+      byFilm,
+      ofFilm,
+      adjustment,
+    })
+    const placement = yield* placeFilms(r, ordered, removed)
+    const finish: Finish = {
+      ofFilm,
+      group,
+      adjustment,
+      ...satisfactionPositions(r, ordered, unweighed, placement),
+      names: yield* personNames(db, adjustment),
+      betId: placement.betId,
+      cautiousBet: placement.cautiousBet,
+    }
+    const films: RecommendedFilm[] = []
+    for (const [position, item] of placement.placed)
+      films.push(yield* recommendedFilm(r, finish, position, item))
+    for (const warning of r.asked.listWarnings(films.length, options.count))
+      yield* run.warn(warning)
+    if (options.regenerate !== undefined)
+      for (const [filmId, cause] of removed)
+        yield* run.warn(keptWarning(options.regenerate, filmId, cause))
+    return yield* recommendation(r, { films, removed, group, warningsBefore })
   })
 
 /** A recommendation request, as an edge (the MCP, the app) gives it. The Restrições it asks for are its
