@@ -1,13 +1,7 @@
 import type { Billboard as BillboardModel } from '@filmes/engine'
 import { useEffect, useRef, useState } from 'react'
 import { BILLBOARD } from './billboard.copy'
-import {
-  chosenMoods,
-  hasMarks,
-  markCounts,
-  replyText,
-  type Marks,
-} from './billboard-marks'
+import { chosenMoods, hasMarks, replyText, type Marks } from './billboard-marks'
 import { buttonVariants } from './kit/button-variants'
 import { FIELD } from './kit/field'
 import { Option } from './kit/option'
@@ -19,10 +13,6 @@ import { Option } from './kit/option'
 // screen's one orange button). The Cartaz (`billboard.tsx`) places them.
 
 const { reply } = BILLBOARD
-
-/** What was marked, in a sentence ("1 Trocar e 1 Já vi"). */
-export const summaryOf = (billboard: BillboardModel, marks: Marks) =>
-  reply.summary(markCounts(billboard, marks))
 
 /** Enviar: the form's submit on the web; without `onSend` there is no
  * other way. In the MCP Apps view a plain button, since a sandboxed frame
@@ -111,7 +101,7 @@ function Copy({
           aria-label={reply.output}
           value={manual}
           rows={4}
-          className={`${FIELD} basis-full font-mono text-[13px]`}
+          className={`${FIELD} basis-full font-mono text-url`}
         />
       )}
     </>
@@ -136,7 +126,7 @@ function MoodChips({
     )
   return (
     <fieldset className="flex flex-col gap-xs">
-      <legend className="mb-xs font-display text-[14px] font-bold">
+      <legend className="mb-xs font-display text-field-label">
         {reply.moods}{' '}
         <span className="font-body font-normal text-ink-2">
           {reply.moodsHint}
@@ -186,7 +176,7 @@ export function ReplyBox({
         {reply.title}
       </h2>
       <label className="flex flex-col gap-xs">
-        <span className="font-display text-[14px] font-bold">
+        <span className="font-display text-field-label">
           {reply.addition}{' '}
           <span className="font-body font-normal text-ink-2">
             {reply.additionHint}

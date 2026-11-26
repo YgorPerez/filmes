@@ -21,9 +21,7 @@ export function PriceSticker({
   return (
     <span
       className={`inline-grid shrink-0 -rotate-8 place-items-center rounded-round bg-sticker-orange font-display text-on-sticker tabular-nums ring-2 ring-surface ${
-        compact
-          ? 'size-[26px] text-[14px]/none font-extrabold'
-          : 'size-[34px] text-price'
+        compact ? 'size-[26px] text-price-compact' : 'size-[34px] text-price'
       } ${className}`}
     >
       {children}

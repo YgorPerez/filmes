@@ -11,7 +11,7 @@ import type { Connection, SqliteError } from '../sqlite/Sqlite.ts'
 const SCHEMA = join(import.meta.dirname, 'schema')
 
 /** The schema files, in the order a rebuild applies them. */
-export const schemaFiles = (): readonly string[] =>
+const schemaFiles = (): readonly string[] =>
   readdirSync(SCHEMA)
     .filter((file) => file.endsWith('.sql'))
     .sort()

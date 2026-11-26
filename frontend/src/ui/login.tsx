@@ -1,7 +1,7 @@
 import type { LoginRefusal } from '#/content/login-refusal'
 import { LOGIN } from './login.copy'
 import { Alert } from './kit/status'
-import { buttonVariants } from './shadcn/button'
+import { buttonVariants } from './kit/button-variants'
 
 // `/entrar`, the only page without a Dono, so outside the app shell: the
 // case-black bar with "filmes" and one card with the one orange button.

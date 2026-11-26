@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useState } from 'react'
 import {
   DEFAULT_SERIES_ORDER_CHOICE,
   isSessionRequestRefusal,
@@ -13,7 +13,7 @@ import type { SearchAnswer } from '#/platform/catalog-search'
 import type { PageReading } from '#/platform/reading'
 import type { NewSessionDraft, RequestOptions } from '#/platform/sessions'
 import { ImportsFrame } from './imports'
-import { useFetchForm, useHydrated } from './kit/fetch-form'
+import { useFetchForm, useHydrated, useRefusalInPlace } from './kit/fetch-form'
 import { Option } from './kit/option'
 import { OwnerTag } from './kit/owner-tag'
 import {
@@ -291,7 +291,11 @@ function NewSessionForm({
   const { form } = SESSIONS
   const asked = draft?.fields ?? {}
   const live = useHydrated()
-  const { refused, alert, onAnswer } = useRefusalInPlace(refusal)
+  const { refused, alert, onAnswer } = useRefusalInPlace(
+    '/sessoes/nova',
+    isSessionRequestRefusal,
+    refusal,
+  )
   const { onSubmit, busy } = useFetchForm(onAnswer)
   const films = useChosenFilms(similar)
   const onPick = live ? films.take : undefined
@@ -361,28 +365,6 @@ function NewSessionForm({
       </Submit>
     </form>
   )
-}
-
-/** A refusal the post by `fetch` came back with (#235): shown in place,
- * over the form as the Dono left it, and scrolled into view. `refusal`
- * is the one the page came with (a plain POST). */
-function useRefusalInPlace(refusal: SessionRequestRefusal | undefined) {
-  const [refused, setRefused] = useState(refusal)
-  const [refusals, setRefusals] = useState(0)
-  const alert = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    if (refusals > 0) alert.current?.scrollIntoView({ block: 'center' })
-  }, [refusals])
-  const onAnswer = (to: string) => {
-    const url = new URL(to, window.location.origin)
-    const why = url.searchParams.get('erro')
-    if (url.pathname !== '/sessoes/nova' || !isSessionRequestRefusal(why))
-      return false
-    setRefused(why)
-    setRefusals((n) => n + 1)
-    return true
-  }
-  return { refused, alert, onAnswer }
 }
 
 /** The films "Parecido com" took, from the ids the page came with. */

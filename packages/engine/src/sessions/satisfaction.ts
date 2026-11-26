@@ -12,7 +12,7 @@ import { Effect } from 'effect'
 import { num, text } from '../sqlite/row.ts'
 import type { Connection, SqliteError } from '../sqlite/Sqlite.ts'
 
-export interface PersonSatisfaction {
+export interface WindowSatisfaction {
   /** Sessions in the window where she reacted. */
   readonly sessions: number
   readonly satisfaction: number
@@ -20,7 +20,7 @@ export interface PersonSatisfaction {
 
 export interface Satisfaction {
   /** By Pessoa, in slug order. */
-  readonly people: Readonly<Record<string, PersonSatisfaction>>
+  readonly people: Readonly<Record<string, WindowSatisfaction>>
   readonly groupSessions: number
   readonly minimum: number | null
   readonly disagreement: number | null

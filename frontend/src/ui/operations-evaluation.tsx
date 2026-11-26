@@ -6,8 +6,7 @@ import type {
   EvaluationSummary,
 } from '#/platform/operations'
 import { OPERATIONS } from './operations.copy'
-import { ActionPost, Detail } from './operations-parts'
-import { Alert, Section, Submit } from './person-parts'
+import { ActionPost, Alert, Detail, Section, Submit } from './operations-parts'
 
 const COPY = OPERATIONS.evaluation
 
@@ -155,7 +154,7 @@ function Report({ report }: { report: EvaluationReport | null }) {
   if (report === null) return <p className="text-ink-2">{COPY.noReport}</p>
   return (
     <details className="rounded-field border border-rule">
-      <summary className="min-h-touch cursor-pointer content-center px-lg font-display text-[14px] font-bold">
+      <summary className="min-h-touch cursor-pointer content-center px-lg font-display text-field-label">
         {COPY.report(report.date)}
       </summary>
       <pre className="overflow-x-auto border-t border-rule p-sm text-meta whitespace-pre-wrap">
@@ -245,8 +244,3 @@ export function EvaluationSection({
     </Section>
   )
 }
-
-/** A key that changes with each run, so a page loaded after a new run
- * starts from the loader's panel. */
-export const jobKey = (job: EvaluationJob) =>
-  job.state === 'idle' ? 'idle' : job.startedAt

@@ -52,7 +52,7 @@ export function Option({
   }
   return (
     <label
-      className={`group relative inline-flex min-h-touch cursor-pointer items-center gap-sm border-[1.5px] border-rule bg-surface font-display text-control text-ink select-none has-checked:border-2 has-checked:border-ink has-checked:bg-surface-2 has-checked:font-bold has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-focus ${SHAPES[shape]}`}
+      className={`group relative inline-flex min-h-touch cursor-pointer items-center gap-sm border-(length:--border-width-stroke) border-rule bg-surface font-display text-control text-ink select-none has-checked:border-2 has-checked:border-ink has-checked:bg-surface-2 has-checked:font-bold has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-focus ${SHAPES[shape]}`}
     >
       {type === 'radio' ? (
         <input type="radio" {...input} />

@@ -1,7 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { readImportsPage } from '#/content/imports'
 import { moved, MOVED_TO } from '#/content/moved'
-import { importsSearch, PersonImportsScreen } from '#/ui/person-imports'
+import { importsSearch } from '#/content/imports-search'
+import { PersonImportsScreen } from '#/ui/person-imports'
 
 // A Pessoa's imports, under her page. The Dono's own are under Meu gosto.
 export const Route = createFileRoute('/_owner/pessoas/$pessoa/importar')({

@@ -1,5 +1,6 @@
 import type { SetupView } from '#/platform/setup-guide'
-import { ConnectorBody, CopyAddress, isSkipped, StepList } from './home-parts'
+import { ConnectorBody, CopyAddress, StepList } from './home-parts'
+import { isSkipped } from './setup-steps'
 import { Slip } from './kit/slip'
 import { MY_START } from './my-start.copy'
 

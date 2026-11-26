@@ -1,7 +1,6 @@
 import type { PushStatus } from '@filmes/engine'
 import { OPERATIONS } from './operations.copy'
-import { ActionPost, Detail } from './operations-parts'
-import { Alert, Section, Submit } from './person-parts'
+import { ActionPost, Alert, Detail, Section, Submit } from './operations-parts'
 
 const COPY = OPERATIONS.push
 

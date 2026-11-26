@@ -86,7 +86,7 @@ const calibrationRow = (name: string, c: StrengthCalibration) =>
 const yamlBlock = (value: ReportValue) => '```yaml\n' + dumpYaml(value) + '```'
 
 /** The report's Markdown text (`gravar`, before the file). */
-export const reportText = (r: ReportContent): string => {
+const reportText = (r: ReportContent): string => {
   const lines = [
     `# Avaliação de ${r.date}`,
     '',

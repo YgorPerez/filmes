@@ -11,7 +11,8 @@ import { usePostedFeedback } from './kit/posted-feedback'
 import { PageHead } from './kit/page-head'
 import { TapeCase } from './kit/tape-case'
 import { Alert, Notice, Submit, TextField } from './person-parts'
-import { Button, buttonVariants } from './shadcn/button'
+import { buttonVariants } from './kit/button-variants'
+import { Button } from './shadcn/button'
 
 /** What the last decision did. */
 export type QueueDoneView = {
@@ -138,11 +139,7 @@ function BlankTape() {
   return (
     <div aria-hidden="true" className="w-16 sm:w-20">
       <TapeCase
-        cover={
-          <span className="font-display text-[26px] leading-none font-extrabold">
-            ?
-          </span>
-        }
+        cover={<span className="font-display text-cover-mark">?</span>}
       />
     </div>
   )
@@ -214,7 +211,7 @@ function Suggestion({
           href={candidate.link}
           rel="noreferrer"
           target="_blank"
-          className="font-display text-[15px] font-bold text-ink underline decoration-rule underline-offset-3 hover:decoration-ink"
+          className="font-display text-row-title text-ink underline decoration-rule underline-offset-3 hover:decoration-ink"
         >
           {label}
         </a>

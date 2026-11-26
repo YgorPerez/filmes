@@ -18,10 +18,10 @@ import type { Weights } from '../runtime/Weights.ts'
 import { LINK_PREDICATE } from '../sqlite/vocabulary.ts'
 import type { Measures } from './offline.ts'
 
-export const MAX_EVIDENCE = [3, 5, 8, 10] as const
+const MAX_EVIDENCE = [3, 5, 8, 10] as const
 
 /** The Decaimento half-lives tried, in years (#173). */
-export const HALF_LIFE_YEARS = [2.5, 5, 10, 20] as const
+const HALF_LIFE_YEARS = [2.5, 5, 10, 20] as const
 
 /** The Forças, weakest first (Python's `FORCAS`). */
 const STRENGTHS = ['weak', 'moderate', 'strong'] as const

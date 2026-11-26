@@ -10,7 +10,8 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vp test run",
-    "test:coverage": "vp test run --coverage"
+    "test:coverage": "vp test run --coverage",
+    "fallow": "fallow dead-code && fallow dupes"
   },
   "dependencies": {
     "effect": "catalog:",
@@ -22,6 +23,7 @@
     "@total-typescript/ts-reset": "catalog:",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
+    "fallow": "3.34.0",
     "typescript": "catalog:",
     "vite-plus": "catalog:",
     "yaml": "2.9.1"

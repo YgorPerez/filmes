@@ -1,0 +1,33 @@
+/* The app's faces (`src/platform/fonts.ts`), for Storybook, which has no
+ * `/fonts/*` server: the same woff2 files, read from `src/fonts/`. */
+@font-face {
+  font-family: 'Rubik';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('../src/fonts/rubik-latin-500.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Rubik';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('../src/fonts/rubik-latin-700.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Rubik';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url('../src/fonts/rubik-latin-800.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Permanent Marker';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../src/fonts/permanent-marker-latin-400.woff2') format('woff2');
+}
