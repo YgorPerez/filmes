@@ -76,9 +76,22 @@ import {
 } from './rule.ts'
 import { readRatingScale } from '../people/rating-scale.ts'
 import { SIGNALS } from './signals/index.ts'
+import { predictRatings } from './taste-neighbors.ts'
 import type { Round } from './signals/Signal.ts'
 import { individualUtility } from './utility.ts'
 import { applyVetoes, type VetoReport } from './vetoes.ts'
+
+/** A Presente's Nota prevista [predicted rating] of a film (#174), from
+ * her taste neighbours. */
+export interface PredictedRating {
+  /** 1 to 10, on her scale, rounded to 2 places. */
+  readonly value: number
+  /** How many taste neighbours rated the film. */
+  readonly raters: number
+  /** How uncertain `value` is: the standard deviation of each neighbour's
+   * reading on her scale, 1 to 10, rounded to 2 places. */
+  readonly deviation: number
+}
 
 export interface RecommendedFilm extends FilmHeader {
   readonly position: number
@@ -96,6 +109,9 @@ export interface RecommendedFilm extends FilmHeader {
   readonly onlyGuesses: boolean
   /** By Presente, rounded to 4 places; `null` with no Fact. */
   readonly utility: Readonly<Record<string, number | null>>
+  /** By Presente, only those whose taste neighbours predict a rating;
+   * absent when nobody's do. */
+  readonly predictedRating?: Readonly<Record<string, PredictedRating>>
   /** By Presente, in the Presentes' order; the strongest first. */
   readonly evidence: Readonly<Record<string, ReadonlyArray<EvidenceJson>>>
   /** The Restrições' lines, the film signals and the Crédito line. */
@@ -438,6 +454,19 @@ export const rank = (
         )
       })
       const lines = [...asked.linesOf(film.id), ...signalLines, ...creditLines]
+      const predicted: Array<[string, PredictedRating]> = []
+      for (const p of attendees) {
+        const prediction = (yield* predictRatings(round, p)).get(film.id)
+        if (prediction !== undefined)
+          predicted.push([
+            p,
+            {
+              value: pyRound(prediction.value, 2),
+              raters: prediction.raters,
+              deviation: pyRound(prediction.deviation, 2),
+            },
+          ])
+      }
       const withoutFactOn = [...utilities]
         .filter(([, u]) => u === null)
         .map(([p]) => p)
@@ -460,6 +489,9 @@ export const rank = (
             u === null ? null : pyRound(u, 4),
           ]),
         ),
+        ...(predicted.length > 0 && {
+          predictedRating: Object.fromEntries(predicted),
+        }),
         evidence: Object.fromEntries(
           attendees.map((p) => [
             p,

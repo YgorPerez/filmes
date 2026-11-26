@@ -1,0 +1,141 @@
+// The taste neighbours (#174): the MovieLens users of the fixture's sample
+// (`notas_gosto_movielens.csv`) closest to a Pessoa by the percentiles of
+// the films they share, and what they gave a Candidate. Users 10, 20 and 30
+// rate Bruno's films as he does, user 40 the other way round, and user 50
+// shares only 2 of his films. All of them rated Pequenos Milagres (601)
+// and Deserto Branco (701), where Bruno has no Fact. Nobody shares the
+// default minimum of 10 films with him, so the other tests do not see them.
+import { readFileSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { describe, expect, test } from 'vite-plus/test'
+import type { Recommendation, Vars } from '../../src/index.ts'
+import { ROOT, useFixture, type Fixture } from '../fixture.ts'
+import { engineRecommendation, film } from './support.ts'
+
+/** `config/weights.toml` with `[taste_neighbors]`'s `k` and `min_shared`
+ * changed, and `[rating_percentile] min_ratings` when given. */
+const tasteWeights = (
+  fixture: Fixture,
+  k: number,
+  minShared: number,
+  minRatings?: number,
+): Vars => {
+  let text = readFileSync(join(ROOT, 'config/weights.toml'), 'utf8')
+  text = text.replace(
+    'k = 50\nmin_shared = 10',
+    `k = ${k}\nmin_shared = ${minShared}`,
+  )
+  if (minRatings !== undefined)
+    text = text.replace('min_ratings = 20', `min_ratings = ${minRatings}`)
+  const file = join(fixture.root, 'weights-test.toml')
+  writeFileSync(file, text)
+  return { FILMES_PESOS: file }
+}
+
+const bruno = (fixture: Fixture, vars: Vars) =>
+  engineRecommendation(fixture, { attendees: ['bruno'], count: 50 }, vars)
+
+const neighbours = (out: Recommendation, title: string) =>
+  (film(out, title).evidence['bruno'] ?? []).filter((e) =>
+    e.text.includes('gosto parecido'),
+  )
+
+describe('the taste neighbours path', () => {
+  test('the closest neighbours speak for the film they liked', async () => {
+    const fixture = useFixture()
+    const out = await bruno(fixture, tasteWeights(fixture, 3, 5))
+
+    const [e] = neighbours(out, 'Pequenos Milagres')
+    // Users 10, 20 and 30 gave it 5, 4,5 and 5; user 40, who rates the
+    // other way round, is not among the 3 closest.
+    expect(e?.text).toBe(
+      '3 pessoas de gosto parecido deram 4,8 em média a este',
+    )
+    expect([e?.strength, e?.kind, e?.source, e?.date]).toEqual([
+      'weak',
+      'review',
+      'MovieLens ml-32m',
+      '2023-10-13',
+    ])
+    // Their mean percentile is 0,817: weight × 2 × (0,817 − 0,5), weak.
+    expect(e?.contribution).toBeCloseTo(0.3 * 2 * (0.8167 - 0.5), 3)
+  })
+
+  test('and against the film they disliked', async () => {
+    const fixture = useFixture()
+    const out = await bruno(fixture, tasteWeights(fixture, 3, 5))
+
+    const [e] = neighbours(out, 'Deserto Branco')
+    expect(e?.text).toBe(
+      '3 pessoas de gosto parecido deram 1,5 em média a este',
+    )
+    expect(e?.contribution).toBeLessThan(0)
+  })
+
+  test('with more neighbours, farther ones count too', async () => {
+    const fixture = useFixture()
+    const out = await bruno(fixture, tasteWeights(fixture, 4, 5))
+
+    expect(neighbours(out, 'Pequenos Milagres')[0]?.text).toBe(
+      '4 pessoas de gosto parecido deram 3,9 em média a este',
+    )
+  })
+
+  test('a user who shares too few films is no neighbour', async () => {
+    const fixture = useFixture()
+    // With 2 films shared, user 50 (who gave Pequenos Milagres 1) is the
+    // fifth neighbour; with 3 or more, he is out.
+    const out = await bruno(fixture, tasteWeights(fixture, 5, 3))
+
+    expect(neighbours(out, 'Pequenos Milagres')[0]?.text).toMatch(/^4 pessoas/)
+  })
+
+  test('below the minimum of films shared, there is no neighbour', async () => {
+    const fixture = useFixture()
+    const out = await bruno(fixture, {})
+
+    expect(neighbours(out, 'Pequenos Milagres')).toEqual([])
+    expect(film(out, 'Pequenos Milagres').predictedRating).toBeUndefined()
+  })
+})
+
+describe('the predicted rating', () => {
+  test('is the neighbours’ percentile read back on her scale, from 1 to 10', async () => {
+    const fixture = useFixture()
+    const out = await bruno(fixture, tasteWeights(fixture, 3, 5))
+
+    // 0,817 lies between the population's 4 (0,77) and 4,5 (0,92): 4,16.
+    const predicted = film(out, 'Pequenos Milagres').predictedRating?.['bruno']
+    expect(predicted?.value).toBeCloseTo(8.31, 2)
+    expect(predicted?.raters).toBe(3)
+    // Each neighbour's percentile read on her scale: 8,53, 7,61 and 8,87.
+    expect(predicted?.deviation).toBeCloseTo(0.53, 2)
+    expect(
+      film(out, 'Deserto Branco').predictedRating?.['bruno']?.value,
+    ).toBeLessThan(5)
+  })
+
+  test('is calibrated on her own Notas once she has enough of them', async () => {
+    const fixture = useFixture()
+    // Bruno's 11 Notas are his scale: 4,5 is his 0,73 and 5 his 0,91, so
+    // the same 0,817 is a 4,75.
+    const out = await bruno(fixture, tasteWeights(fixture, 3, 5, 10))
+
+    expect(
+      film(out, 'Pequenos Milagres').predictedRating?.['bruno']?.value,
+    ).toBeCloseTo(9.49, 2)
+  })
+
+  test('is absent for a Presente with no neighbour', async () => {
+    const fixture = useFixture()
+    const out = await engineRecommendation(
+      fixture,
+      { attendees: ['bruno', 'teo'], count: 50 },
+      tasteWeights(fixture, 3, 5),
+    )
+
+    expect(
+      Object.keys(film(out, 'Pequenos Milagres').predictedRating ?? {}),
+    ).toEqual(['bruno'])
+  })
+})

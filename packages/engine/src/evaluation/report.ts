@@ -130,7 +130,7 @@ export const reportText = (r: ReportContent): string => {
         r.offline[sample].predictedRatingError
       const name = sample === 'people' ? 'Pessoas' : 'MovieLens'
       return meanAbsoluteError === null
-        ? `- Erro médio (${name}): ausente, o motor ainda não prevê nota.`
+        ? `- Erro médio (${name}): ausente, nenhum filme retido tem Nota prevista.`
         : `- Erro médio (${name}): ${pyFixed(meanAbsoluteError, 2)} em ${films} filmes, de 1 a 10.`
     }),
   )

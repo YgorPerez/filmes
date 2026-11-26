@@ -1,7 +1,7 @@
 // How Evidence lines read, in Portuguese (`evidencia/texto.py`). The Claude
 // copies these lines word for word, and the verifier parses them.
 
-import { pyFormatG, pyRepr, thousandsDot } from '../compat/number.ts'
+import { pyFormatG, pyRepr, pyRound, thousandsDot } from '../compat/number.ts'
 import { pythonError } from '../compat/python-error.ts'
 import type { SeedKind } from './ruler.ts'
 
@@ -52,3 +52,11 @@ export const durationText = (minutes: number): string => {
   if (!hours) return `${rest}min`
   return rest ? `${hours}h${String(rest).padStart(2, '0')}` : `${hours}h`
 }
+
+/** The taste neighbours' line (#174): "23 pessoas de gosto parecido deram
+ * 4,3 em média a este", their mean rating to one place. */
+export const tasteNeighborsText = (
+  raters: number,
+  meanRating: number,
+): string =>
+  `${integerText(raters)} pessoas de gosto parecido deram ${ratingText(pyRound(meanRating, 1))} em média a este`
