@@ -39,6 +39,7 @@ const REPLY = {
   keep: ['tt9000105'],
   dropped: [],
   addition: null,
+  moods: null,
   comments: [],
   stars: [],
   seen: [],
@@ -76,6 +77,19 @@ describe('the view shows', () => {
     render(<BillboardView result={shown} host={fakeHost(json({}))} />)
     expect(screen.getAllByRole('article')).toHaveLength(2)
     expect(screen.getByRole('form', { name: BILLBOARD.label })).toBeTruthy()
+  })
+
+  it('the Aposta’s stamp on the bet', () => {
+    render(<BillboardView result={shown} host={fakeHost(json({}))} />)
+    expect(card(2).getByText(BILLBOARD.card.bet)).toBeTruthy()
+    expect(card(1).queryByText(BILLBOARD.card.bet)).toBeNull()
+  })
+
+  it('the Nota prevista the tool result carries', () => {
+    render(<BillboardView result={shown} host={fakeHost(json({}))} />)
+    expect(
+      card(1).getByRole('list', { name: BILLBOARD.card.predicted }).textContent,
+    ).toBe('B8,3Bruno: 8,3 de 10')
   })
 
   it("the engine's error when the tool failed", () => {
@@ -215,6 +229,19 @@ describe('the message Claude gets', () => {
         'acrescentar: chegou a Ana\n' +
         'comentário 2 tt2 (Sal e Ferrugem): lindo',
     )
+  })
+
+  it('the Climas the Dono chose, or nenhum', () => {
+    const clima = (moods: string[]) =>
+      replyMessage({ ...REPLY, keep: [], moods })
+        ?.split('\n')
+        .slice(1)
+
+    expect(clima(['leve', 'pra rir'])).toEqual([
+      'refazer · manter: nenhum',
+      'clima: leve, pra rir',
+    ])
+    expect(clima([])).toEqual(['refazer · manter: nenhum', 'clima: nenhum'])
   })
 
   it('none when Claude has nothing to do', () => {

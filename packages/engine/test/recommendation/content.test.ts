@@ -42,10 +42,11 @@ describe('the content path', () => {
         'deu 5 a O Farol de Areia (2012), também escrito por Ana Ruiz',
         'moderate',
         'rating',
-        0.48,
+        // 0.8 × 0.6, ×0.8156 for the 5 of 2025-06-01 (a half-life of 5 years).
+        0.3915,
       ],
       [
-        'escrito por Ana Ruiz, como 1 filme a que deu 4 ou mais: O Farol de Areia (2012)',
+        'escrito por Ana Ruiz, como 1 filme a que deu Nota alta: O Farol de Areia (2012)',
         'weak',
         'metadata',
         0.24,
@@ -60,10 +61,11 @@ describe('the content path', () => {
           'deu 4,5 a Ponte Aérea (2016), também com Rita Lobo',
           'moderate',
           'rating',
-          0.3,
+          // 0.5 × 0.6, ×0.7528 for the 4.5 of 2024-11-02.
+          0.2259,
         ],
         [
-          'com Rita Lobo no elenco, como 1 filme a que deu 4 ou mais: Ponte Aérea (2016)',
+          'com Rita Lobo no elenco, como 1 filme a que deu Nota alta: Ponte Aérea (2016)',
           'weak',
           'metadata',
           0.15,
@@ -79,7 +81,7 @@ describe('the content path', () => {
       ),
     ).toEqual([
       [
-        'com Rita Lobo no elenco, como 1 filme a que deu 4 ou mais: Ponte Aérea (2016)',
+        'com Rita Lobo no elenco, como 1 filme a que deu Nota alta: Ponte Aérea (2016)',
         'weak',
         'metadata',
         0.15,
@@ -88,24 +90,25 @@ describe('the content path', () => {
         'deu 4,5 a Ponte Aérea (2016), também com Rita Lobo',
         'weak',
         'rating',
-        0.15,
+        0.1129,
       ],
     ])
   })
 
   test('a shared series links the Nota to the Candidate', async () => {
-    // The Nota on Fronteira is more than 5 years old: a moderate seed.
+    // The Nota on Fronteira is from 2019: still a strong seed, but it keeps
+    // only ×0.3363 of its weight (a half-life of 5 years).
     expect(
       evidenceOf(await all(useFixture()), 'Fronteira II', 'bruno'),
     ).toEqual([
       [
         'deu 5 a Fronteira (2008), também da série Trilogia da Fronteira',
-        'moderate',
+        'strong',
         'rating',
-        0.6,
+        0.3363,
       ],
       [
-        'da série Trilogia da Fronteira, como 1 filme a que deu 4 ou mais: Fronteira (2008)',
+        'da série Trilogia da Fronteira, como 1 filme a que deu Nota alta: Fronteira (2008)',
         'weak',
         'metadata',
         0.3,
@@ -125,7 +128,7 @@ describe('the content path', () => {
   test('a shared genre is weak at most and makes no seed', async () => {
     expect(evidenceOf(await all(useFixture()), 'Poeira', 'bruno')).toEqual([
       [
-        'do gênero faroeste, como 4 filmes a que deu 4 ou mais, entre eles O Farol de Areia (2012), ' +
+        'do gênero faroeste, como 4 filmes a que deu Nota alta, entre eles O Farol de Areia (2012), ' +
           'Maré Baixa (2015) e Cidade de Vidro (2018)',
         'weak',
         'metadata',
@@ -177,12 +180,12 @@ describe('the content path', () => {
       .map((e) => [e.text, e.strength])
     expect(sortedRows(metadata)).toEqual([
       [
-        'com Duda Alves no elenco, como 3 filmes a que deu 4 ou mais: Ensaio Geral (2014), ' +
+        'com Duda Alves no elenco, como 3 filmes a que deu Nota alta: Ensaio Geral (2014), ' +
           'Ato Final (2018) e Bastidores (2016)',
         'moderate',
       ],
       [
-        'dirigido por Clara Bastos, como 3 filmes a que deu 4 ou mais: Ensaio Geral (2014), ' +
+        'dirigido por Clara Bastos, como 3 filmes a que deu Nota alta: Ensaio Geral (2014), ' +
           'Ato Final (2018) e Bastidores (2016)',
         'strong',
       ],
@@ -199,7 +202,7 @@ describe('the content path', () => {
     expect(
       (film(out, 'Bis').evidence['rosa'] ?? []).map((e) => e.text),
     ).toEqual([
-      'dirigido por Nina Vale, como 2 filmes a que deu 4 ou mais: Reprise (2004) e Reprise (2011)',
+      'dirigido por Nina Vale, como 2 filmes a que deu Nota alta: Reprise (2004) e Reprise (2011)',
       'deu 4 a Reprise (2004), também de Nina Vale',
       'deu 4 a Reprise (2011), também de Nina Vale',
     ])
@@ -223,12 +226,13 @@ describe('the Ajuste to a link', () => {
     const fixture = useFixture()
     await adjust(fixture, 'low')
 
-    // Without the Ajuste: a moderate seed (0.5 × 0.6) and weak metadata.
+    // Without the Ajuste: a moderate seed (0.5 × 0.6, ×0.7528 for its age)
+    // and weak metadata.
     expect(
       sortedRows(evidenceOf(await all(fixture, 60), 'Voo Noturno', 'bruno')),
     ).toEqual([
       [
-        'com Rita Lobo no elenco, como 1 filme a que deu 4 ou mais: Ponte Aérea (2016)',
+        'com Rita Lobo no elenco, como 1 filme a que deu Nota alta: Ponte Aérea (2016)',
         'weak',
         'metadata',
         0.075,
@@ -237,7 +241,7 @@ describe('the Ajuste to a link', () => {
         'deu 4,5 a Ponte Aérea (2016), também com Rita Lobo',
         'weak',
         'rating',
-        0.075,
+        0.0565,
       ],
     ])
   })
@@ -263,7 +267,8 @@ describe('the Ajuste to a link', () => {
       'deu 4,5 a Ponte Aérea (2016), também com Rita Lobo',
       'moderate',
       'rating',
-      0.45,
+      // 0.5 × 1.5 × 0.6, ×0.7528 for its age.
+      0.3388,
     ])
   })
 

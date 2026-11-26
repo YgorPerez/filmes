@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as OwnerRouteImport } from './routes/_owner'
 import { Route as EntrarRouteImport } from './routes/entrar'
+import { Route as ParticiparRouteImport } from './routes/participar'
 import { Route as OwnerIndexRouteImport } from './routes/_owner/index'
 import { Route as OwnerExportarRouteImport } from './routes/_owner/exportar'
 import { Route as OwnerFilaRouteImport } from './routes/_owner/fila'
@@ -21,6 +22,9 @@ import { Route as FilaAcaoRouteImport } from './routes/fila/acao'
 import { Route as InicioPularRouteImport } from './routes/inicio/pular'
 import { Route as NotasEnviarRouteImport } from './routes/notas/enviar'
 import { Route as OperacoesAcaoRouteImport } from './routes/operacoes/acao'
+import { Route as ParticiparIndexRouteImport } from './routes/participar/index'
+import { Route as ParticiparVotarRouteImport } from './routes/participar/votar'
+import { Route as ParticiparVotosRouteImport } from './routes/participar/votos'
 import { Route as OwnerFeedbackIndexRouteImport } from './routes/_owner/feedback/index'
 import { Route as OwnerFeedbackSessaoRouteImport } from './routes/_owner/feedback/$sessao'
 import { Route as OwnerImportarIndexRouteImport } from './routes/_owner/importar/index'
@@ -32,8 +36,11 @@ import { Route as OwnerSessoesSessaoRouteImport } from './routes/_owner/sessoes/
 import { Route as OwnerSessoesNovaRouteImport } from './routes/_owner/sessoes/nova'
 import { Route as FeedbackSessaoEnviarRouteImport } from './routes/feedback/$sessao/enviar'
 import { Route as ImportarPessoaAcaoRouteImport } from './routes/importar/$pessoa/acao'
+import { Route as ParticiparPerguntasIndexRouteImport } from './routes/participar/perguntas/index'
+import { Route as ParticiparPerguntasEnviarRouteImport } from './routes/participar/perguntas/enviar'
 import { Route as PessoasPessoaAcaoRouteImport } from './routes/pessoas/$pessoa/acao'
 import { Route as PessoasNovaEnviarRouteImport } from './routes/pessoas/nova/enviar'
+import { Route as SessoesSessaoPerguntasRouteImport } from './routes/sessoes/$sessao/perguntas'
 import { Route as SessoesSessaoResponderRouteImport } from './routes/sessoes/$sessao/responder'
 import { Route as SessoesNovaEnviarRouteImport } from './routes/sessoes/nova/enviar'
 
@@ -44,6 +51,11 @@ const OwnerRoute = OwnerRouteImport.update({
 const EntrarRoute = EntrarRouteImport.update({
   id: '/entrar',
   path: '/entrar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ParticiparRoute = ParticiparRouteImport.update({
+  id: '/participar',
+  path: '/participar',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OwnerIndexRoute = OwnerIndexRouteImport.update({
@@ -95,6 +107,21 @@ const OperacoesAcaoRoute = OperacoesAcaoRouteImport.update({
   id: '/operacoes/acao',
   path: '/operacoes/acao',
   getParentRoute: () => rootRouteImport,
+} as any)
+const ParticiparIndexRoute = ParticiparIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ParticiparRoute,
+} as any)
+const ParticiparVotarRoute = ParticiparVotarRouteImport.update({
+  id: '/votar',
+  path: '/votar',
+  getParentRoute: () => ParticiparRoute,
+} as any)
+const ParticiparVotosRoute = ParticiparVotosRouteImport.update({
+  id: '/votos',
+  path: '/votos',
+  getParentRoute: () => ParticiparRoute,
 } as any)
 const OwnerFeedbackIndexRoute = OwnerFeedbackIndexRouteImport.update({
   id: '/feedback/',
@@ -151,6 +178,18 @@ const ImportarPessoaAcaoRoute = ImportarPessoaAcaoRouteImport.update({
   path: '/importar/$pessoa/acao',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ParticiparPerguntasIndexRoute =
+  ParticiparPerguntasIndexRouteImport.update({
+    id: '/perguntas/',
+    path: '/perguntas/',
+    getParentRoute: () => ParticiparRoute,
+  } as any)
+const ParticiparPerguntasEnviarRoute =
+  ParticiparPerguntasEnviarRouteImport.update({
+    id: '/perguntas/enviar',
+    path: '/perguntas/enviar',
+    getParentRoute: () => ParticiparRoute,
+  } as any)
 const PessoasPessoaAcaoRoute = PessoasPessoaAcaoRouteImport.update({
   id: '/pessoas/$pessoa/acao',
   path: '/pessoas/$pessoa/acao',
@@ -159,6 +198,11 @@ const PessoasPessoaAcaoRoute = PessoasPessoaAcaoRouteImport.update({
 const PessoasNovaEnviarRoute = PessoasNovaEnviarRouteImport.update({
   id: '/pessoas/nova/enviar',
   path: '/pessoas/nova/enviar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SessoesSessaoPerguntasRoute = SessoesSessaoPerguntasRouteImport.update({
+  id: '/sessoes/$sessao/perguntas',
+  path: '/sessoes/$sessao/perguntas',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SessoesSessaoResponderRoute = SessoesSessaoResponderRouteImport.update({
@@ -175,6 +219,7 @@ const SessoesNovaEnviarRoute = SessoesNovaEnviarRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof OwnerIndexRoute
   '/entrar': typeof EntrarRoute
+  '/participar': typeof ParticiparRouteWithChildren
   '/exportar': typeof OwnerExportarRoute
   '/fila': typeof OwnerFilaRoute
   '/notas': typeof OwnerNotasRoute
@@ -184,6 +229,9 @@ export interface FileRoutesByFullPath {
   '/inicio/pular': typeof InicioPularRoute
   '/notas/enviar': typeof NotasEnviarRoute
   '/operacoes/acao': typeof OperacoesAcaoRoute
+  '/participar/votar': typeof ParticiparVotarRoute
+  '/participar/votos': typeof ParticiparVotosRoute
+  '/participar/': typeof ParticiparIndexRoute
   '/feedback/$sessao': typeof OwnerFeedbackSessaoRoute
   '/importar/$pessoa': typeof OwnerImportarPessoaRoute
   '/pessoas/$pessoa': typeof OwnerPessoasPessoaRoute
@@ -191,14 +239,17 @@ export interface FileRoutesByFullPath {
   '/sessoes/nova': typeof OwnerSessoesNovaRoute
   '/feedback/$sessao/enviar': typeof FeedbackSessaoEnviarRoute
   '/importar/$pessoa/acao': typeof ImportarPessoaAcaoRoute
+  '/participar/perguntas/enviar': typeof ParticiparPerguntasEnviarRoute
   '/pessoas/$pessoa/acao': typeof PessoasPessoaAcaoRoute
   '/pessoas/nova/enviar': typeof PessoasNovaEnviarRoute
+  '/sessoes/$sessao/perguntas': typeof SessoesSessaoPerguntasRoute
   '/sessoes/$sessao/responder': typeof SessoesSessaoResponderRoute
   '/sessoes/nova/enviar': typeof SessoesNovaEnviarRoute
   '/feedback/': typeof OwnerFeedbackIndexRoute
   '/importar/': typeof OwnerImportarIndexRoute
   '/pessoas/': typeof OwnerPessoasIndexRoute
   '/sessoes/': typeof OwnerSessoesIndexRoute
+  '/participar/perguntas/': typeof ParticiparPerguntasIndexRoute
 }
 export interface FileRoutesByTo {
   '/entrar': typeof EntrarRoute
@@ -211,7 +262,10 @@ export interface FileRoutesByTo {
   '/inicio/pular': typeof InicioPularRoute
   '/notas/enviar': typeof NotasEnviarRoute
   '/operacoes/acao': typeof OperacoesAcaoRoute
+  '/participar/votar': typeof ParticiparVotarRoute
+  '/participar/votos': typeof ParticiparVotosRoute
   '/': typeof OwnerIndexRoute
+  '/participar': typeof ParticiparIndexRoute
   '/feedback/$sessao': typeof OwnerFeedbackSessaoRoute
   '/importar/$pessoa': typeof OwnerImportarPessoaRoute
   '/pessoas/$pessoa': typeof OwnerPessoasPessoaRoute
@@ -219,19 +273,23 @@ export interface FileRoutesByTo {
   '/sessoes/nova': typeof OwnerSessoesNovaRoute
   '/feedback/$sessao/enviar': typeof FeedbackSessaoEnviarRoute
   '/importar/$pessoa/acao': typeof ImportarPessoaAcaoRoute
+  '/participar/perguntas/enviar': typeof ParticiparPerguntasEnviarRoute
   '/pessoas/$pessoa/acao': typeof PessoasPessoaAcaoRoute
   '/pessoas/nova/enviar': typeof PessoasNovaEnviarRoute
+  '/sessoes/$sessao/perguntas': typeof SessoesSessaoPerguntasRoute
   '/sessoes/$sessao/responder': typeof SessoesSessaoResponderRoute
   '/sessoes/nova/enviar': typeof SessoesNovaEnviarRoute
   '/feedback': typeof OwnerFeedbackIndexRoute
   '/importar': typeof OwnerImportarIndexRoute
   '/pessoas': typeof OwnerPessoasIndexRoute
   '/sessoes': typeof OwnerSessoesIndexRoute
+  '/participar/perguntas': typeof ParticiparPerguntasIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_owner': typeof OwnerRouteWithChildren
   '/entrar': typeof EntrarRoute
+  '/participar': typeof ParticiparRouteWithChildren
   '/_owner/exportar': typeof OwnerExportarRoute
   '/_owner/fila': typeof OwnerFilaRoute
   '/_owner/notas': typeof OwnerNotasRoute
@@ -241,7 +299,10 @@ export interface FileRoutesById {
   '/inicio/pular': typeof InicioPularRoute
   '/notas/enviar': typeof NotasEnviarRoute
   '/operacoes/acao': typeof OperacoesAcaoRoute
+  '/participar/votar': typeof ParticiparVotarRoute
+  '/participar/votos': typeof ParticiparVotosRoute
   '/_owner/': typeof OwnerIndexRoute
+  '/participar/': typeof ParticiparIndexRoute
   '/_owner/feedback/$sessao': typeof OwnerFeedbackSessaoRoute
   '/_owner/importar/$pessoa': typeof OwnerImportarPessoaRoute
   '/_owner/pessoas/$pessoa': typeof OwnerPessoasPessoaRoute
@@ -249,20 +310,24 @@ export interface FileRoutesById {
   '/_owner/sessoes/nova': typeof OwnerSessoesNovaRoute
   '/feedback/$sessao/enviar': typeof FeedbackSessaoEnviarRoute
   '/importar/$pessoa/acao': typeof ImportarPessoaAcaoRoute
+  '/participar/perguntas/enviar': typeof ParticiparPerguntasEnviarRoute
   '/pessoas/$pessoa/acao': typeof PessoasPessoaAcaoRoute
   '/pessoas/nova/enviar': typeof PessoasNovaEnviarRoute
+  '/sessoes/$sessao/perguntas': typeof SessoesSessaoPerguntasRoute
   '/sessoes/$sessao/responder': typeof SessoesSessaoResponderRoute
   '/sessoes/nova/enviar': typeof SessoesNovaEnviarRoute
   '/_owner/feedback/': typeof OwnerFeedbackIndexRoute
   '/_owner/importar/': typeof OwnerImportarIndexRoute
   '/_owner/pessoas/': typeof OwnerPessoasIndexRoute
   '/_owner/sessoes/': typeof OwnerSessoesIndexRoute
+  '/participar/perguntas/': typeof ParticiparPerguntasIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/entrar'
+    | '/participar'
     | '/exportar'
     | '/fila'
     | '/notas'
@@ -272,6 +337,9 @@ export interface FileRouteTypes {
     | '/inicio/pular'
     | '/notas/enviar'
     | '/operacoes/acao'
+    | '/participar/votar'
+    | '/participar/votos'
+    | '/participar/'
     | '/feedback/$sessao'
     | '/importar/$pessoa'
     | '/pessoas/$pessoa'
@@ -279,14 +347,17 @@ export interface FileRouteTypes {
     | '/sessoes/nova'
     | '/feedback/$sessao/enviar'
     | '/importar/$pessoa/acao'
+    | '/participar/perguntas/enviar'
     | '/pessoas/$pessoa/acao'
     | '/pessoas/nova/enviar'
+    | '/sessoes/$sessao/perguntas'
     | '/sessoes/$sessao/responder'
     | '/sessoes/nova/enviar'
     | '/feedback/'
     | '/importar/'
     | '/pessoas/'
     | '/sessoes/'
+    | '/participar/perguntas/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/entrar'
@@ -299,7 +370,10 @@ export interface FileRouteTypes {
     | '/inicio/pular'
     | '/notas/enviar'
     | '/operacoes/acao'
+    | '/participar/votar'
+    | '/participar/votos'
     | '/'
+    | '/participar'
     | '/feedback/$sessao'
     | '/importar/$pessoa'
     | '/pessoas/$pessoa'
@@ -307,18 +381,22 @@ export interface FileRouteTypes {
     | '/sessoes/nova'
     | '/feedback/$sessao/enviar'
     | '/importar/$pessoa/acao'
+    | '/participar/perguntas/enviar'
     | '/pessoas/$pessoa/acao'
     | '/pessoas/nova/enviar'
+    | '/sessoes/$sessao/perguntas'
     | '/sessoes/$sessao/responder'
     | '/sessoes/nova/enviar'
     | '/feedback'
     | '/importar'
     | '/pessoas'
     | '/sessoes'
+    | '/participar/perguntas'
   id:
     | '__root__'
     | '/_owner'
     | '/entrar'
+    | '/participar'
     | '/_owner/exportar'
     | '/_owner/fila'
     | '/_owner/notas'
@@ -328,7 +406,10 @@ export interface FileRouteTypes {
     | '/inicio/pular'
     | '/notas/enviar'
     | '/operacoes/acao'
+    | '/participar/votar'
+    | '/participar/votos'
     | '/_owner/'
+    | '/participar/'
     | '/_owner/feedback/$sessao'
     | '/_owner/importar/$pessoa'
     | '/_owner/pessoas/$pessoa'
@@ -336,19 +417,23 @@ export interface FileRouteTypes {
     | '/_owner/sessoes/nova'
     | '/feedback/$sessao/enviar'
     | '/importar/$pessoa/acao'
+    | '/participar/perguntas/enviar'
     | '/pessoas/$pessoa/acao'
     | '/pessoas/nova/enviar'
+    | '/sessoes/$sessao/perguntas'
     | '/sessoes/$sessao/responder'
     | '/sessoes/nova/enviar'
     | '/_owner/feedback/'
     | '/_owner/importar/'
     | '/_owner/pessoas/'
     | '/_owner/sessoes/'
+    | '/participar/perguntas/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   OwnerRoute: typeof OwnerRouteWithChildren
   EntrarRoute: typeof EntrarRoute
+  ParticiparRoute: typeof ParticiparRouteWithChildren
   ExportarImdbDotcsvRoute: typeof ExportarImdbDotcsvRoute
   FilaAcaoRoute: typeof FilaAcaoRoute
   InicioPularRoute: typeof InicioPularRoute
@@ -358,6 +443,7 @@ export interface RootRouteChildren {
   ImportarPessoaAcaoRoute: typeof ImportarPessoaAcaoRoute
   PessoasPessoaAcaoRoute: typeof PessoasPessoaAcaoRoute
   PessoasNovaEnviarRoute: typeof PessoasNovaEnviarRoute
+  SessoesSessaoPerguntasRoute: typeof SessoesSessaoPerguntasRoute
   SessoesSessaoResponderRoute: typeof SessoesSessaoResponderRoute
   SessoesNovaEnviarRoute: typeof SessoesNovaEnviarRoute
 }
@@ -376,6 +462,13 @@ declare module '@tanstack/react-router' {
       path: '/entrar'
       fullPath: '/entrar'
       preLoaderRoute: typeof EntrarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/participar': {
+      id: '/participar'
+      path: '/participar'
+      fullPath: '/participar'
+      preLoaderRoute: typeof ParticiparRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_owner/': {
@@ -447,6 +540,27 @@ declare module '@tanstack/react-router' {
       fullPath: '/operacoes/acao'
       preLoaderRoute: typeof OperacoesAcaoRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/participar/': {
+      id: '/participar/'
+      path: '/'
+      fullPath: '/participar/'
+      preLoaderRoute: typeof ParticiparIndexRouteImport
+      parentRoute: typeof ParticiparRoute
+    }
+    '/participar/votar': {
+      id: '/participar/votar'
+      path: '/votar'
+      fullPath: '/participar/votar'
+      preLoaderRoute: typeof ParticiparVotarRouteImport
+      parentRoute: typeof ParticiparRoute
+    }
+    '/participar/votos': {
+      id: '/participar/votos'
+      path: '/votos'
+      fullPath: '/participar/votos'
+      preLoaderRoute: typeof ParticiparVotosRouteImport
+      parentRoute: typeof ParticiparRoute
     }
     '/_owner/feedback/': {
       id: '/_owner/feedback/'
@@ -525,6 +639,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ImportarPessoaAcaoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/participar/perguntas/': {
+      id: '/participar/perguntas/'
+      path: '/perguntas'
+      fullPath: '/participar/perguntas/'
+      preLoaderRoute: typeof ParticiparPerguntasIndexRouteImport
+      parentRoute: typeof ParticiparRoute
+    }
+    '/participar/perguntas/enviar': {
+      id: '/participar/perguntas/enviar'
+      path: '/perguntas/enviar'
+      fullPath: '/participar/perguntas/enviar'
+      preLoaderRoute: typeof ParticiparPerguntasEnviarRouteImport
+      parentRoute: typeof ParticiparRoute
+    }
     '/pessoas/$pessoa/acao': {
       id: '/pessoas/$pessoa/acao'
       path: '/pessoas/$pessoa/acao'
@@ -537,6 +665,13 @@ declare module '@tanstack/react-router' {
       path: '/pessoas/nova/enviar'
       fullPath: '/pessoas/nova/enviar'
       preLoaderRoute: typeof PessoasNovaEnviarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sessoes/$sessao/perguntas': {
+      id: '/sessoes/$sessao/perguntas'
+      path: '/sessoes/$sessao/perguntas'
+      fullPath: '/sessoes/$sessao/perguntas'
+      preLoaderRoute: typeof SessoesSessaoPerguntasRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sessoes/$sessao/responder': {
@@ -592,9 +727,30 @@ const OwnerRouteChildren: OwnerRouteChildren = {
 
 const OwnerRouteWithChildren = OwnerRoute._addFileChildren(OwnerRouteChildren)
 
+interface ParticiparRouteChildren {
+  ParticiparVotarRoute: typeof ParticiparVotarRoute
+  ParticiparVotosRoute: typeof ParticiparVotosRoute
+  ParticiparIndexRoute: typeof ParticiparIndexRoute
+  ParticiparPerguntasEnviarRoute: typeof ParticiparPerguntasEnviarRoute
+  ParticiparPerguntasIndexRoute: typeof ParticiparPerguntasIndexRoute
+}
+
+const ParticiparRouteChildren: ParticiparRouteChildren = {
+  ParticiparVotarRoute: ParticiparVotarRoute,
+  ParticiparVotosRoute: ParticiparVotosRoute,
+  ParticiparIndexRoute: ParticiparIndexRoute,
+  ParticiparPerguntasEnviarRoute: ParticiparPerguntasEnviarRoute,
+  ParticiparPerguntasIndexRoute: ParticiparPerguntasIndexRoute,
+}
+
+const ParticiparRouteWithChildren = ParticiparRoute._addFileChildren(
+  ParticiparRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   OwnerRoute: OwnerRouteWithChildren,
   EntrarRoute: EntrarRoute,
+  ParticiparRoute: ParticiparRouteWithChildren,
   ExportarImdbDotcsvRoute: ExportarImdbDotcsvRoute,
   FilaAcaoRoute: FilaAcaoRoute,
   InicioPularRoute: InicioPularRoute,
@@ -604,6 +760,7 @@ const rootRouteChildren: RootRouteChildren = {
   ImportarPessoaAcaoRoute: ImportarPessoaAcaoRoute,
   PessoasPessoaAcaoRoute: PessoasPessoaAcaoRoute,
   PessoasNovaEnviarRoute: PessoasNovaEnviarRoute,
+  SessoesSessaoPerguntasRoute: SessoesSessaoPerguntasRoute,
   SessoesSessaoResponderRoute: SessoesSessaoResponderRoute,
   SessoesNovaEnviarRoute: SessoesNovaEnviarRoute,
 }

@@ -43,7 +43,8 @@ describe('the neighbourhood path', () => {
       'MovieLens ml-32m',
       '2023-10-13',
     ])
-    expect(e?.contribution).toBe(1.0)
+    // Strong, ×0.8156 for the 5 of 2025-06-01 (a half-life of 5 years).
+    expect(e?.contribution).toBe(0.8156)
     const ids = await fixture.ok(
       consult("SELECT fato_id FROM vizinhos WHERE vizinho_id = 'tt9001001'"),
     )
@@ -55,16 +56,17 @@ describe('the neighbourhood path', () => {
 
     const moderate = one(out, 'Segunda Chamada')
     const weak = one(out, 'O Mapa Rasgado')
+    // Both from the 4.5 of 2024-02-10, which keeps ×0.6805.
     expect([moderate?.strength, moderate?.contribution]).toEqual([
       'moderate',
-      0.6,
+      0.4083,
     ])
     expect(
       moderate?.text.endsWith(
         'de 250 pessoas que deram 4+ a ele, 44% deram 4+ a este',
       ),
     ).toBe(true)
-    expect([weak?.strength, weak?.contribution]).toEqual(['weak', 0.3])
+    expect([weak?.strength, weak?.contribution]).toEqual(['weak', 0.2042])
   })
 
   test('a neighbourhood below the floor is no Evidence', async () => {
@@ -80,7 +82,7 @@ describe('the neighbourhood path', () => {
     const out = await all(useFixture())
 
     // Both would be strong. Rio Abaixo got 3.5 (a weak seed); Fronteira got
-    // 5 in 2019, more than 5 years ago (a moderate seed).
+    // 5 in 2019 (a strong seed: age does not lower a Nota's Força).
     expect(
       Object.fromEntries(
         reviews(out, 'Luz de Inverno').map((e) => [
@@ -90,7 +92,25 @@ describe('the neighbourhood path', () => {
       ),
     ).toEqual({
       'deu 3,5 a Rio Abaixo (2014)': 'weak',
-      'deu 5 a Fronteira (2008)': 'moderate',
+      'deu 5 a Fronteira (2008)': 'strong',
+    })
+  })
+
+  test("the seed Nota's Decaimento scales the neighbourhood's weight", async () => {
+    const out = await all(useFixture())
+
+    // A half-life of 5 years: the 3.5 of 2023-03-03 keeps ×0.5972 of the
+    // weak 0.3, the 5 of 2019-01-10 ×0.3363 of the strong 1.
+    expect(
+      Object.fromEntries(
+        reviews(out, 'Luz de Inverno').map((e) => [
+          e.text.split(', e de')[0],
+          e.contribution,
+        ]),
+      ),
+    ).toEqual({
+      'deu 3,5 a Rio Abaixo (2014)': 0.1792,
+      'deu 5 a Fronteira (2008)': 0.3363,
     })
   })
 

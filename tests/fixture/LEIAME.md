@@ -13,7 +13,7 @@ Os IDs de filme seguem `tt90DDNNN`: `DD` é o diretor (`Q90000DD`), `NNN` a orde
 | Helena Prado (01) | 101–106 | 5 (2025), 4,5 (2024), 4 (2023) em 101–103 | 3 Notas altas: caminho forte. 106 tem 600 votos, abaixo do mínimo |
 | Otávio Lins (02) | 201–203 | 4,5 e 4 em 201–202 | 2 Notas altas: moderada |
 | Marta Quintal (03) | 301–303 | 4 em 301, 3,5 em 303 | 1 Nota alta: fraca; 3,5 é semente fraca a favor |
-| Rui Tavares (04) | 401–403 | 5 (2019), 4 (2018) | Notas com mais de 5 anos caem um nível |
+| Rui Tavares (04) | 401–403 | 5 (2019), 4 (2018) | Notas antigas: a Força fica, a contribuição decai pela meia-vida (#173) |
 | Caio Brandão (05) | 501–503 | 1 e 2 | Notas baixas: Evidência contra |
 | Lia Moura, Tomás Reis, Beatriz Sá, Jorge Amaral (06–09) | 601–903 | nenhuma | Sem Fato para o Bruno. 903 tem 999 votos |
 | Sofia Rangel (18) | 1801–1803 | nenhuma | Alvo de Declarado, Relato e Veto nos testes de Pessoa (#18) |
@@ -63,9 +63,26 @@ Notas de outras Pessoas, para os testes de grupo (`test_grupo.py`):
 | Iara | 3 em O Farol de Areia (101), 4 em Fronteira (401) | Fraca a favor nos outros de Helena Prado, moderada nos outros de Rui Tavares. Sobre 101 e 401 em si, só o Já visto da própria Nota. Bruno e Iara discordam em As Horas Lentas e quase concordam em A Volta do Mar: a Regra padrão e a média simples ordenam os dois ao contrário |
 | Rosa | 5 em Ensaio Geral, 4,5 em Bastidores e em Ato Final (`tt9005501`–`03`) | Teto do elenco no metadado agregado (#55): Duda Alves e Clara Bastos em 3 Notas altas. Recomenda sozinha; para os outros, os filmes dela são só palpites |
 | Teo | nenhuma | "sem fato" em todo filme |
-| Quim | 5 em Ponte Aérea (201), 3,5 em Maré Baixa (102), 4,5 em Barulho (501), 2 em Fronteira (401) | Testes de Crédito (`test_credito.py`). Com o Bruno, o Quim é o mínimo em As Horas Lentas e em A Volta do Mar, e o Bruno é o mínimo em Asfalto Quente: o Crédito de um faz subir os filmes dele |
+| Quim | 5 em Ponte Aérea (201), 3,5 em Maré Baixa (102), 4,5 em Barulho (501), 2 em Fronteira (401) | Testes de Satisfação (`packages/engine/test/sessions/satisfaction.test.ts`). Com o Bruno, o Quim é o mínimo em As Horas Lentas e em A Volta do Mar, e o Bruno é o mínimo em Asfalto Quente: quem saiu menos satisfeito faz subir os filmes dele |
 
 Os filmes de Lia Moura, Tomás Reis, Beatriz Sá e Jorge Amaral não ligam a Nota nenhuma: são os filmes só com palpites, que completam a lista com `--quantos 50`.
+
+### Régua por percentil (#172)
+
+`notas_movielens.csv` é a população do MovieLens da fixture: 50 notas inventadas, distribuídas para que, com os cortes de `[rating_percentile]` em `config/weights.toml`, a leitura pela população dê o que a régua absoluta antiga dava (5 e 4,5 forte, 4 moderada, 3,5 e 3 fraca a favor, 2,5 fraca contra, 2 moderada contra, 1,5 ou menos forte contra). Toda Pessoa da fixture tem menos de 20 Notas, o mínimo, e é lida por ela; assim as tabelas acima continuam valendo. Os testes da escala própria baixam o mínimo (`weightsWith`) para o Bruno, com 11 Notas, ser lido pelas dele: 5 forte, 4,5 moderada, 4 fraca, 3,5 fraca contra. Mudou um corte em `weights.toml`? Refaça esta distribuição.
+
+### Vizinhos de gosto (#174)
+
+`notas_gosto_movielens.csv` é a amostra de usuários do MovieLens da fixture, com a Fonte em `fonte_gosto_movielens.csv`. A etapa `71_escalas_de_gosto` calcula o percentil de cada nota na escala do próprio usuário.
+
+| Usuário | Notas | Para que serve |
+|---|---|---|
+| 10, 20 e 30 | As de Bruno em 101, 102, 103, 201, 202, 401, 501 e 503, quase iguais às dele; 5, 4,5 e 5 em Pequenos Milagres (601); 1, 1,5 e 2 em Deserto Branco (701) | Os vizinhos mais próximos do Bruno: a favor de 601, contra 701 |
+| 40 | Os mesmos 8 filmes ao contrário do Bruno; 1 em 601 e 5 em 701 | Vizinho distante: só entra com `k` 4 ou mais |
+| 50 | 5 em 101, 4,5 em 102, 1 em 601 | Divide só 2 filmes com o Bruno |
+| 60 | Como o Bruno em 101, 202 e 501, ao contrário em 401 (a Nota dele de 2019); 3 em 701 | Divide 4 filmes com o Bruno: com o Decaimento, a Nota velha pesa menos e ele entra entre os 3 mais próximos (`min_shared` 4) |
+
+Ninguém divide 10 filmes com o Bruno, o `min_shared` de `config/weights.toml`, então os outros testes não veem esse caminho. Os testes dele baixam `k` e `min_shared`.
 
 ### Sinais de Review (#21)
 
@@ -137,9 +154,9 @@ As chaves do frontmatter estão em inglês (ADR 0002), como no filmes-dados; o c
 - `people/bruno.md`: o Dono (`owner: true`, apelido `eu`), com `email: bruno@example.org`, que entra no login online (#112).
 - `people/iara.md` e `people/teo.md`: Pessoas para os testes de grupo. A Iara tem `email: iara@example.org` sem ser Dona: o login a recusa (#112).
 - `people/vera.md`: a segunda Dona (`owner: true`, `email: vera@example.org`), sem Nota, para os testes com dois Donos (#131): cada uma entra no login, e sem login "dono" é o primeiro Dono por slug, o Bruno.
-- `people/quim.md`: Pessoa para os testes de Crédito; tem uma pergunta aberta sobre a Helena Prado (Q9000001), para os testes de perguntas abertas (#62).
+- `people/quim.md`: Pessoa para os testes de Satisfação; tem uma pergunta aberta sobre a Helena Prado (Q9000001), para os testes de perguntas abertas (#62).
 - `people/rosa.md`: Pessoa do teste do teto do elenco no metadado agregado (#55).
-- Não há `sessions/`: os testes criam as Sessões com `recomendar` e `feedback`, ou escrevem o arquivo direto quando precisam de várias datas (veja `test_credito.py`).
+- Não há `sessions/`: os testes criam as Sessões com `recomendar` e `feedback`, ou escrevem o arquivo direto quando precisam de várias datas (veja `satisfaction.test.ts`).
 
 Os testes de Pessoa (#18) criam a Ana pela CLI e escrevem a Carol direto no repo de dados do teste; nenhuma das duas fica na fixture.
 
@@ -223,7 +240,7 @@ Filmes `tt90056NN`, sem diretor nem Nota, para `test_veto_por_tag_e_nota_imdb.py
 | Drama Juvenil (5604) | Drama | teen 0,95 | não é comédia: fica |
 | Obra-Prima (5605) | — | — | nota 8,5 e 1.000 votos: o bônus da nota o põe à frente dos outros só com palpites |
 
-As Horas Lentas (7,4) também ganha o bônus da nota; `test_credito.py` zera o peso para isolar o Crédito.
+As Horas Lentas (7,4) também ganha o bônus da nota; `satisfaction.test.ts` zera o peso para isolar a Satisfação.
 
 ### Nada lento (#57)
 
@@ -273,3 +290,5 @@ Filmes `tt90126NN`, de Nina Vale (`Q9012601`), para o teste de ordem das semente
 | Reprise (9012601, 2011) | 4 (2025) | mesmo título e mesma Nota que a de 2004, com o ID menor: o ano desempata antes do ID |
 | Reprise (9012602, 2004) | 4 (2025) | |
 | Bis (9012603, 2019) | nenhuma | Candidato: as duas Reprise saem em ordem de ano na linha do diretor e nas sementes |
+
+Perguntas par a par (#181, `entropia_movielens.csv`): sete filmes com a entropia das notas do MovieLens, na ordem de entropia × ln(avaliações): Jardim Suspenso (301, adulto, nunca é perguntado), Ponte Aérea (201, que o Quim já viu), O Farol de Areia (101), A Última Estação (702), Sal e Ferrugem (105), Pequenos Milagres (601, o mais popular, mas sem discordância) e O Último Bonde (202). Os outros filmes vêm depois, pelos votos do IMDb.

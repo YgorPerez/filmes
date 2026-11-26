@@ -14,7 +14,7 @@ export const FEEDBACK = {
     empty: 'Nenhuma Sessão aberta.',
     films,
     recorded: (id: string) =>
-      `Feedback gravado: a Sessão ${id} fechou. O Crédito da próxima Sessão já conta com ele.`,
+      `Feedback gravado: a Sessão ${id} fechou. A satisfação da próxima Sessão já conta com ele.`,
     gone: 'Essa Sessão não está mais no repo de dados.',
   },
 
@@ -44,12 +44,11 @@ export const FEEDBACK = {
     searchFoldHint: 'ache o título ou o ID no Catálogo',
   },
 
-  credit: {
-    title: 'Crédito',
-    lead: 'Quem ficou atrás dos outros Presentes nas Sessões recentes. Na Regra padrão, o Crédito ajuda os filmes dessa Pessoa na próxima Recomendação deste grupo.',
-    empty: 'Ninguém deste grupo tem Crédito agora.',
-    value: (value: number) =>
-      `Crédito ${value.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}`,
+  satisfaction: {
+    title: 'Satisfação',
+    lead: 'Quem saiu das Sessões recentes menos satisfeito que os outros Presentes. Na Regra padrão, os filmes dessa Pessoa sobem na próxima Recomendação deste grupo.',
+    empty: 'Ninguém deste grupo está atrás dos outros agora.',
+    value: (value: number) => `Satisfação ${Math.round(value * 100)}%`,
   },
 
   refusals: {

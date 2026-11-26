@@ -32,6 +32,8 @@ export const MODEL: Billboard = {
     who: 'Vocês dois',
     parts: ['até 2h05', 'nota 7+ no IMDb', 'leve'],
   },
+  moods: ['leve'],
+  moodChoices: ['leve', 'pra rir', 'tenso'],
   dropped: [
     {
       position: 2,
@@ -49,6 +51,7 @@ export const MODEL: Billboard = {
       title: 'As Horas Lentas',
       originalTitle: null,
       new: false,
+      bet: false,
       poster: 'https://image.tmdb.org/t/p/w500/hOrAsLeNtAs9104.jpg',
       imdbUrl: 'https://www.imdb.com/title/tt9000104/',
       imdbRating: 7.4,
@@ -61,12 +64,13 @@ export const MODEL: Billboard = {
         {
           people: ['bruno', 'iara'],
           strength: 'moderate',
-          text: 'dirigido por Helena Prado, como 2 filmes a que deu 4 ou mais',
+          text: 'dirigido por Helena Prado, como 2 filmes a que deu Nota alta',
           source: 'Wikidata',
         },
       ],
       withoutFact: [],
       coverage: 'Fato sobre 2 de 2',
+      predictedRatings: [{ person: 'bruno', value: 8.31, text: '8,3' }],
     },
     {
       position: 2,
@@ -74,6 +78,7 @@ export const MODEL: Billboard = {
       title: 'Sal & Ferrugem',
       originalTitle: 'Sal e Ferrugem',
       new: true,
+      bet: true,
       poster: null,
       imdbUrl: 'https://www.imdb.com/title/tt9000105/',
       imdbRating: null,
@@ -91,6 +96,16 @@ export const MODEL: Billboard = {
       ],
       withoutFact: ['iara'],
       coverage: 'Fato sobre 1 de 2',
+      predictedRatings: [],
     },
+  ],
+  sections: [
+    {
+      kind: 'entity',
+      title: 'Porque você e Iara gostam de Helena Prado',
+      again: false,
+      films: ['tt9000104'],
+    },
+    { kind: 'bet', title: 'Aposta', again: false, films: ['tt9000105'] },
   ],
 }

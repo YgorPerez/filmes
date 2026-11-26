@@ -26,6 +26,7 @@ import {
   type SessionRecommendation,
 } from '../../src/index.ts'
 import { useFixture, type Fixture } from '../fixture.ts'
+import { tasteWeights } from '../recommendation/support.ts'
 import { RECORDINGS } from '../sources/support.ts'
 
 const recommend = (
@@ -253,6 +254,49 @@ describe('the Cartaz model', () => {
     expect(request.speech).toBe('algo leve pra hoje')
     expect([request.who, ...request.parts].join(' · ')).toContain(
       'Vocês dois · até 2h05 · nota 7+ no IMDb · leve · nada repetido',
+    )
+  })
+
+  test('the Cartaz has the version’s Climas and the whole vocabulary for the chips', async () => {
+    const fixture = useFixture()
+    const session = await recommend(fixture, {
+      attendees: ['dono'],
+      moods: ['Tenso', 'leve'],
+    })
+
+    const model = await fixture.ok(
+      billboardModel({ session: session.session.id }),
+    )
+
+    expect(model.moods).toEqual(['tenso', 'leve'])
+    expect(model.moodChoices).toEqual([
+      'leve',
+      'pra rir',
+      'tenso',
+      'romântico',
+      'pra chorar',
+      'pra pensar',
+      'assustador',
+      'ação',
+      'sombrio',
+    ])
+  })
+
+  test('what another Clima took off reads so', async () => {
+    const fixture = useFixture()
+    const first = await recommend(fixture, { attendees: ['iara'], count: 10 })
+    const id = first.session.id
+    await recommend(fixture, {
+      attendees: ['iara'],
+      count: 10,
+      session: id,
+      moods: ['leve'],
+    })
+
+    const model = await fixture.ok(billboardModel({ session: id }))
+
+    expect(new Set(model.dropped.map((s) => s.reason))).toEqual(
+      new Set(['outro Clima']),
     )
   })
 
@@ -523,5 +567,63 @@ describe('the Cartaz model', () => {
       '1,2 mi',
       '1,4 mi',
     ])
+  })
+})
+
+// Bruno's taste neighbours in the fixture's sample (#174) rated Pequenos
+// Milagres; Teo has none. With k = 3 and min_shared = 5 the prediction for
+// Bruno is 8,31 (test/recommendation/taste-neighbors.test.ts).
+describe('the predicted rating (#175)', () => {
+  const pequenosMilagres = async (fixture: Fixture) => {
+    const session = await fixture.ok(
+      recommendSession({ attendees: ['bruno', 'teo'], count: 50 }),
+      tasteWeights(fixture, 3, 5),
+    )
+    const id = session.session.id
+    return {
+      id,
+      film: session.films.find((f) => f.title === 'Pequenos Milagres')!,
+    }
+  }
+
+  test('each Presente with a prediction has it on the 1 to 10 scale; one without has none', async () => {
+    const fixture = useFixture()
+    const { id, film } = await pequenosMilagres(fixture)
+
+    const model = await fixture.ok(
+      billboardModel({ session: id }),
+      tasteWeights(fixture, 3, 5),
+    )
+
+    const card = model.films.find((f) => f.id === film.id)
+    expect(card?.predictedRatings).toEqual([
+      { person: 'bruno', value: 8.31, text: '8,3' },
+    ])
+  })
+
+  test('stays what the Session recorded when the neighbours change', async () => {
+    const fixture = useFixture()
+    const { id, film } = await pequenosMilagres(fixture)
+
+    // With the default minimum of 10 shared films Bruno has no neighbour
+    // now; the version the Dono saw keeps its prediction.
+    const model = await fixture.ok(billboardModel({ session: id }))
+
+    expect(model.films.find((f) => f.id === film.id)?.predictedRatings).toEqual(
+      [{ person: 'bruno', value: 8.31, text: '8,3' }],
+    )
+  })
+
+  test('a film nobody has a prediction for has none', async () => {
+    const fixture = useFixture()
+    const session = await recommend(fixture, { attendees: ['dono', 'iara'] })
+
+    const model = await fixture.ok(
+      billboardModel({ session: session.session.id }),
+    )
+
+    expect(model.films.map((f) => f.predictedRatings)).toEqual(
+      model.films.map(() => []),
+    )
   })
 })

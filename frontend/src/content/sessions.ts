@@ -31,6 +31,26 @@ export const readRequestOptions = createServerFn({ method: 'GET' })
     return appRequestOptions(context.owner.person)
   })
 
+/** Nova Sessão as "Ler" left it, in the note `/sessoes/nova?nota=` names
+ * (`newSessionDraft`). */
+const readNewSessionDraft = createServerFn({ method: 'GET' })
+  .middleware([ownerMiddleware])
+  .validator((value: unknown) => {
+    if (!isNoteToken(value)) throw new Error('note token required')
+    return value
+  })
+  .handler(async ({ context, data }) => {
+    requireOwner(context.owner)
+    const { appNewSessionDraft } = await import('#/platform/sessions')
+    return appNewSessionDraft(data)
+  })
+
+/** The draft for a page's loader: none without `?nota=`. */
+export const draftFor = (token: string | undefined) =>
+  token === undefined
+    ? Promise.resolve(null)
+    : readNewSessionDraft({ data: token })
+
 /** What `/sessoes/<id>` shows (`cartazPage`): the Session, its Cartaz,
  * and the note `nota` names (warnings, the acrescentar). */
 export const readSessionPage = createServerFn({ method: 'GET' })

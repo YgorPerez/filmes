@@ -14,6 +14,9 @@
 // - The header is always the first line: `#cartaz <session id> v<n>`, with
 //   `n` the version the Cartaz shows.
 // - `acrescentar: <text>` comes second, only when the field has text.
+// - `clima: <name>, <name>` comes next, only when the Dono changed the
+//   Climas on the Cartaz: the ones she chose, in the vocabulary's order;
+//   `clima: nenhum` when she took them all off.
 // - One line per marked film, in screen order: `<position> <IMDb id>`, then
 //   the marks joined by ` · `, always in this order:
 //   - `já vi: <slug>, <slug>=<nota>, ...`: each marked Pessoa, with
@@ -55,8 +58,14 @@ export interface BillboardState {
   /** The Presentes' slugs, in order. */
   readonly attendees: ReadonlyArray<string>
   readonly addition: string
+  /** The Climas the Dono chose, when she changed them; absent or null
+   * when she left the version's. */
+  readonly moods?: ReadonlyArray<string> | null
   readonly films: ReadonlyArray<BillboardMarks>
 }
+
+/** The Clima line's value when the Dono took every Clima off. */
+export const NO_MOOD = 'nenhum'
 
 const oneLine = (text: string | undefined): string =>
   (text ?? '').replace(/\s+/g, ' ').trim()
@@ -66,6 +75,10 @@ export const billboardText = (state: BillboardState): string => {
   const lines = [`#cartaz ${state.session} v${state.version}`]
   const addition = oneLine(state.addition)
   if (addition) lines.push(`acrescentar: ${addition}`)
+  if (state.moods)
+    lines.push(
+      `clima: ${state.moods.length > 0 ? state.moods.map(oneLine).join(', ') : NO_MOOD}`,
+    )
   for (const film of state.films) {
     const parts: string[] = []
     const seen = state.attendees.filter((p) => film.seen.includes(p))

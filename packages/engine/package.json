@@ -4,7 +4,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./billboard-text": "./src/billboard/text.ts"
+    "./billboard-text": "./src/billboard/text.ts",
+    "./reading-limits": "./src/reading/limits.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

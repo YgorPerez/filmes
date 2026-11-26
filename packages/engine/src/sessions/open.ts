@@ -35,6 +35,7 @@ import {
   constraintLabel,
   storedConstraints,
 } from '../recommendation/constraints/index.ts'
+import { filmReason } from '../recommendation/reason.ts'
 import type {
   Recommendation,
   RecommendRequest,
@@ -108,7 +109,8 @@ export const sessionContext = (
 }
 
 /** The frontmatter fields that change when the Recomendação is redone
- * (`_campos_da_recomendacao`). */
+ * (`_campos_da_recomendacao`). Each film keeps its Motivo [reason] (#183),
+ * which the Cartaz groups by: the body has no sign to find it again. */
 export const recommendationFields = (
   recommendation: Recommendation,
   context: YamlValue,
@@ -125,6 +127,12 @@ export const recommendationFields = (
           id: f.id,
           title: f.title,
           ...('new' in f && { new: f.new }),
+          ...(f.bet && { bet: true }),
+          // The Nota prevista the Cartaz shows (#175), kept with the
+          // version so an old version's Cartaz does not move when the
+          // neighbours do.
+          ...(f.predictedRating && { predicted_rating: f.predictedRating }),
+          reason: filmReason(f.evidence),
         })),
       ),
     ],
@@ -154,6 +162,30 @@ const requestOwners = (
   Effect.flatMap(Owner, (owner) =>
     owner !== null ? Effect.succeed([owner]) : databaseOwners(db),
   )
+
+/** The Presentes a new Session's id names: all but the Dono, or all when
+ * she is alone. */
+const idParts = (
+  attendees: ReadonlyArray<string>,
+  owners: ReadonlyArray<string>,
+): ReadonlyArray<string> => {
+  const others = attendees.filter((p) => !owners.includes(p))
+  return others.length > 0 ? others : attendees
+}
+
+/** The id a new Session of these Presentes gets today, if no other
+ * Session takes it first: the Aposta's seed (#178). */
+export const nextSessionId = (
+  db: Connection,
+  attendees: ReadonlyArray<string>,
+): Effect.Effect<string, EngineError | SqliteError, EngineServices | Run> =>
+  Effect.gen(function* () {
+    const { today } = yield* Run
+    return yield* newSessionId(
+      today,
+      idParts(attendees, yield* requestOwners(db)),
+    )
+  })
 
 /** Who signs the commit: the Dono, from her file, or the engine itself
  * when there is no Dono. */
@@ -196,11 +228,7 @@ export const openSession = (
               (row) => [String(row['slug']), String(row['nome'])],
             ),
           )
-          const others = attendees.filter((p) => !owners.includes(p))
-          const id = yield* newSessionId(
-            today,
-            others.length > 0 ? others : attendees,
-          )
+          const id = yield* newSessionId(today, idParts(attendees, owners))
           const front = new Map<string, YamlValue>([
             ['date', today],
             ['owner', owners[0] ?? null],
@@ -228,7 +256,8 @@ export interface OpenSession {
   readonly attendees: unknown
   /** The request as the Dono said it, or null. */
   readonly request: unknown
-  /** The current version's films: `{position, id, title, new?}`. */
+  /** The current version's films: `{position, id, title, new?, bet?,
+   * reason}`. */
   readonly recommendation: unknown
   readonly version: number
 }

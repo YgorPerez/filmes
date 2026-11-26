@@ -1,15 +1,16 @@
 // Feedback (map #72, W3): the open Sessions, the form that records what the
-// Presentes saw and thought (`recordFeedback`, #96), and the Crédito it
-// changes. The form posts to `/feedback/<sessao>/enviar`, which records it
+// Presentes saw and thought (`recordFeedback`, #96), and the satisfaction
+// it changes (#176). The form posts to `/feedback/<sessao>/enviar`, which records it
 // as the logged-in Dono (the commit's author, and whose reactions are not
 // relayed) and goes back to the list. Server only.
 
 import {
-  creditNow,
   readPeople,
   openSessions,
   recordFeedback,
-  type CreditNow,
+  satisfactionNow,
+  type PersonSatisfactionNow,
+  type SatisfactionNow,
   type Engine,
   type ErrorOutput,
   type FeedbackResult,
@@ -21,12 +22,8 @@ import {
   type FeedbackRefusal,
 } from '#/content/feedback-form'
 import { appPoster, formPoster, seeOther } from './form-post'
-import {
-  appEngine,
-  attendeeSlugs,
-  sessionFilms,
-  type SessionFilm,
-} from './engine'
+import { appEngine } from './engine'
+import { attendeeSlugs, sessionFilms, type SessionFilm } from './session-fields'
 import type { Owner } from './owners'
 
 /** A Presente of the Session, with her name and whether she is the Dono
@@ -46,18 +43,20 @@ export type FeedbackSession = {
   recommendation: FeedbackFilm[]
 }
 
-/** A Presente's Crédito now: what the next Recomendação of this group
- * uses. */
-export type FeedbackCredit = CreditNow & { name: string }
+/** A Presente's satisfaction now: what the next Recomendação of this group
+ * weighs. */
+export type FeedbackSatisfaction = PersonSatisfactionNow & { name: string }
 
 /** What `/feedback/<sessao>` shows. */
-export type FeedbackPage = FeedbackSession & { credit: FeedbackCredit[] }
+export type FeedbackPage = FeedbackSession & {
+  satisfaction: FeedbackSatisfaction[]
+}
 
 /** What the screens and the form need from the engine. */
 export interface Feedback {
   /** The open Sessions, the latest first. */
   sessions(): Promise<Outcome<FeedbackSession[]>>
-  credit(attendees: readonly string[]): Promise<Outcome<readonly CreditNow[]>>
+  satisfaction(attendees: readonly string[]): Promise<Outcome<SatisfactionNow>>
   /** Records the Feedback and closes the Session, as the Dono `owner`
    * (a slug). */
   record(
@@ -114,7 +113,7 @@ export function feedbackFromEngine(
         })),
       )
     },
-    credit: (attendees) => run(creditNow(attendees)),
+    satisfaction: (attendees) => run(satisfactionNow(attendees)),
     record: (session, form, owner) =>
       run(recordFeedback(requestOf(session, form)), { owner }),
   }
@@ -140,7 +139,7 @@ export async function openSessionList(
 }
 
 /** What `/feedback/<sessao>` shows: the open Session with its Presentes'
- * Crédito, `'unknown'` when no open Session has that id (it has its
+ * satisfaction, `'unknown'` when no open Session has that id (it has its
  * Feedback already, or never was), or null when the engine cannot run
  * here. */
 export async function feedbackPage(
@@ -151,15 +150,17 @@ export async function feedbackPage(
   if (list === null) return null
   const session = list.find((s) => s.id === id)
   if (!session) return 'unknown'
-  const credit = await feedback.credit(session.attendees.map((a) => a.person))
-  if (credit.exitCode !== 0) {
-    logEngineError(credit)
+  const satisfaction = await feedback.satisfaction(
+    session.attendees.map((a) => a.person),
+  )
+  if (satisfaction.exitCode !== 0) {
+    logEngineError(satisfaction)
     return null
   }
   const names = new Map(session.attendees.map((a) => [a.person, a.name]))
   return {
     ...session,
-    credit: credit.output.map((c) => ({
+    satisfaction: satisfaction.output.people.map((c) => ({
       ...c,
       name: names.get(c.person) ?? c.person,
     })),

@@ -1,6 +1,7 @@
 # Pesos do motor. Valores iniciais da spec (#16), calibrados por `avaliar`.
 # A régua de Força (que Fato é forte, moderado ou fraco) é regra fixa no
-# código, em filmes/evidencia; aqui ficam só os números da ordenação.
+# código, em packages/engine/src/evidence; aqui ficam os números da ordenação
+# e os cortes de percentil com que a régua lê uma Nota.
 
 [strength.multiplier]
 # A Força multiplica a contribuição de cada Evidência. Palpite soma 0.
@@ -8,6 +9,30 @@ strong = 1.0
 moderate = 0.6
 weak = 0.3
 guess = 0.0
+
+[rating_percentile]
+# A régua lê cada Nota pelo percentil dela na escala da Pessoa (#172, decisão do
+# Dono de 2026-11-25): a parte das Notas abaixo desta, mais metade das iguais,
+# de 0 a 1. Com `min_ratings` Notas ou mais, a escala são as Notas dela (as do
+# Letterboxd e as do Trakt já estão na mesma escala de 0,5 a 5); com menos, as
+# notas da população do MovieLens. Do percentil a Força sai por estes cortes:
+# a partir de `strong` é forte a favor (o top 10%), de `moderate` moderada (e
+# conta como Nota alta no caminho de conteúdo), de `weak` fraca; abaixo de
+# `weak` é contra: fraca até `weak_against`, moderada até `moderate_against`,
+# forte abaixo dele.
+min_ratings = 20
+strong = 0.9
+moderate = 0.7
+weak = 0.4
+weak_against = 0.2
+moderate_against = 0.1
+
+[rating_decay]
+# Decaimento de uma Nota (#173): a contribuição dela vale 2^(−idade / meia-vida),
+# com a idade em anos até hoje, e nunca menos que o piso. A Força não muda com a
+# idade. Declarado e Relato não decaem; o Já visto também não.
+half_life_years = 5.0
+floor = 0.25
 
 [path.weight]
 # Peso de cada tipo de aresta de conteúdo no caminho de gosto. Um predicado fora
@@ -50,15 +75,48 @@ size = 5
 # Já visto pesa contra o filme com esta base (a Força é sempre forte).
 weight = 1.0
 
-[credit]
-# u' = u - fator x Crédito na Regra padrão. O Crédito olha as últimas `janela`
-# Sessões em grupo com Feedback que a Pessoa dividiu com algum Presente de hoje.
-factor = 0.5
+[satisfaction]
+# u' = u - fator x (Satisfação mais alta de hoje - a da Pessoa) na Regra padrão.
+# A Satisfação olha as últimas `window` Sessões em grupo com Feedback que a
+# Pessoa dividiu com algum Presente de hoje. Com dois Presentes, 0,25 dá o mesmo
+# que o Crédito de antes (0,5 x a distância até a média).
+factor = 0.25
 window = 5
 
 [neighbors]
 # Peso da Evidência de vizinhança item-item do MovieLens (Tipo review).
 weight = 1.0
+
+[taste_neighbors]
+# Vizinhos de gosto (#174): os `k` usuários da amostra do MovieLens mais próximos
+# da Pessoa, pela diferença média entre o percentil da Nota dela e o da nota
+# deles (cada um na própria escala) nos filmes que os dois viram; só conta quem
+# viu pelo menos `min_shared` filmes dela. O percentil médio dos vizinhos que
+# viram o filme, de 0 a 1, dá a Evidência (Tipo review) com base
+# `weight` × 2 × (percentil − 0,5): a favor acima da mediana dela, contra abaixo.
+# A menos de `neutral_band` da mediana, eles não dizem nada. A Força vem da
+# régua, por quantos são, quanto concordam e quanto dividem com ela.
+k = 50
+min_shared = 10
+weight = 1.0
+neutral_band = 0.05
+
+[bet]
+# A Aposta (#178): a vaga `position` da Recomendação (0 desliga) vai para um
+# Candidato que a Regra deixou de fora, com Nota prevista média de pelo menos
+# `min_predicted` (de 1 a 10) entre os Presentes que têm uma e no máximo
+# `max_facts` Fatos dos Presentes sobre ele, fora a linha dos vizinhos de gosto.
+# Já visto de um Presente ou utilidade abaixo da neutra (0,5) tiram o filme.
+# Sorteio de Thompson: cada Presente sorteia uma Nota de
+# Normal(Nota prevista, desvio / √vizinhos); vence a maior média dos sorteios.
+position = 5
+min_predicted = 7.0
+max_facts = 1
+
+[pairwise]
+# Perguntas par a par (#181): quantos pares cada Presente responde (ou pula)
+# por Sessão, pelo Link da Sessão.
+pairs = 10
 
 [mood]
 # Bônus de cada Clima pedido que o filme sustenta, somado à pontuação da Regra
@@ -119,3 +177,20 @@ movielens_tags = 0.25
 neighbors = 0.2
 genre = 0.1
 people = 0.1
+
+[diversity]
+# Diversidade (#177): MMR na ordem final. Cada lugar seguinte vai para o filme
+# com o maior λ × pontuação − (1 − λ) × a maior Parecença (a do `--parecido`,
+# medida a partir do filme de cima) com os filmes já escolhidos acima dele.
+# A pontuação é a primeira da Regra de escolha, com os bônus do filme; a faixa
+# (com Fato, só sinais do filme, só palpites) continua vindo antes. λ = 1 desliga.
+# Desligado até o `evaluate` no banco real e as Sessões do Dono provarem um
+# valor (mapa #169). Na fixture, 0,9 baixa a parecença média do top 5 de 0,277
+# para 0,188 sem perder recall nem cobertura; 0,8 baixa para 0,163, mas a
+# cobertura do top 5 cai de 70% para 65%.
+lambda = 1.0
+# Só os `depth` primeiros lugares saem do MMR, escolhidos entre os `pool`
+# primeiros filmes da ordem; os demais seguem a Regra. A Parecença só é medida
+# entre esses filmes.
+depth = 10
+pool = 30

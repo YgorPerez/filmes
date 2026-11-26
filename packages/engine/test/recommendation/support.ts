@@ -37,17 +37,41 @@ export const expectRecordedRecommendation = async (
   return out
 }
 
-/** A copy of `config/weights.toml` with `from` replaced by `to`: the
- * engine's `FILMES_PESOS`. */
+/** A copy of `config/weights.toml` with `from` replaced by `to`, and each
+ * pair of `more` too: the engine's `FILMES_PESOS`. */
 export const weightsWith = (
   fixture: Fixture,
   from: string,
   to: string,
+  more: ReadonlyArray<readonly [string, string]> = [],
 ): Vars => {
-  const text = readFileSync(join(ROOT, 'config/weights.toml'), 'utf8')
-  if (!text.includes(from)) throw new Error(`weights.toml has no ${from}`)
+  let text = readFileSync(join(ROOT, 'config/weights.toml'), 'utf8')
+  for (const [a, b] of [[from, to] as const, ...more]) {
+    if (!text.includes(a)) throw new Error(`weights.toml has no ${a}`)
+    text = text.replace(a, b)
+  }
   const file = join(fixture.root, 'weights-test.toml')
-  writeFileSync(file, text.replace(from, to))
+  writeFileSync(file, text)
+  return { FILMES_PESOS: file }
+}
+
+/** `config/weights.toml` with `[taste_neighbors]`'s `k` and `min_shared`
+ * changed, and `[rating_percentile] min_ratings` when given. */
+export const tasteWeights = (
+  fixture: Fixture,
+  k: number,
+  minShared: number,
+  minRatings?: number,
+): Vars => {
+  let text = readFileSync(join(ROOT, 'config/weights.toml'), 'utf8')
+  text = text.replace(
+    'k = 50\nmin_shared = 10',
+    `k = ${k}\nmin_shared = ${minShared}`,
+  )
+  if (minRatings !== undefined)
+    text = text.replace('min_ratings = 20', `min_ratings = ${minRatings}`)
+  const file = join(fixture.root, 'weights-test.toml')
+  writeFileSync(file, text)
   return { FILMES_PESOS: file }
 }
 

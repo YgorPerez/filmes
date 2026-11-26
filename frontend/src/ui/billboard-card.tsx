@@ -9,6 +9,7 @@ import { Avatar, PersonDot } from './kit/person'
 import { PriceSticker, Sticker } from './kit/sticker'
 import { TapeCase } from './kit/tape-case'
 import { BILLBOARD } from './billboard.copy'
+import { BetStamp } from './billboard-bet'
 import { FilmMarksControls } from './billboard-card-marks'
 import { Strength } from './billboard-top'
 
@@ -18,7 +19,11 @@ import { Strength } from './billboard-top'
 // (`billboard-card-marks.tsx`). A grid: the case on the left (112px, 160px
 // from 560px), the header on the right; "Por que" and the marks across
 // below, each opened by a dashed rule, "Por que" going up under the chips
-// from 560px. The state is the Cartaz's (`billboard.tsx`).
+// from 560px. The state is the Cartaz's (`billboard.tsx`). Inside a
+// section by Motivo (#183) the title is a level below the section's.
+
+/** The film's title level: 2 alone, 3 under a section's title. */
+type Level = 2 | 3
 
 const byslug = (people: readonly BillboardPerson[]) =>
   new Map(people.map((p) => [p.slug, p]))
@@ -86,6 +91,14 @@ function Poster({
           {card.isNew}
         </Sticker>
       )}
+      {film.bet && (
+        <BetStamp
+          hint={card.betHint}
+          className="absolute bottom-[38px] -left-sm"
+        >
+          {card.bet}
+        </BetStamp>
+      )}
       <PriceSticker className="absolute -top-[9px] -left-[9px]">
         {film.position}
       </PriceSticker>
@@ -93,11 +106,72 @@ function Poster({
   )
 }
 
-function Header({ film, id }: { film: BillboardFilm; id: string }) {
+/** Each Presente's Nota prevista (#175), her avatar and the number on the
+ * 1 to 10 scale of the Já vi; a Presente with none is not there. */
+function Predicted({
+  film,
+  people,
+}: {
+  film: BillboardFilm
+  people: readonly BillboardPerson[]
+}) {
   const { card } = BILLBOARD
+  const known = byslug(people)
+  const predicted = film.predictedRatings.flatMap((p) => {
+    const person = known.get(p.person)
+    return person ? [{ person, text: p.text }] : []
+  })
+  if (predicted.length === 0) return null
+  return (
+    <div
+      className="flex flex-wrap items-center gap-xs"
+      title={card.predictedHint}
+    >
+      <span
+        aria-hidden="true"
+        className="font-display text-label text-ink-2 uppercase"
+      >
+        {card.predicted}
+      </span>
+      <ul aria-label={card.predicted} className="flex flex-wrap gap-xs">
+        {predicted.map(({ person, text }) => (
+          <li
+            key={person.slug}
+            className="inline-flex items-center gap-[5px] rounded-pill border-[1.5px] border-rule py-[2px] pr-[9px] pl-[2px] font-display text-chip font-bold text-ink tabular-nums"
+          >
+            <span aria-hidden="true" className="contents">
+              <Avatar person={person} />
+              {text}
+            </span>
+            <span className="sr-only">
+              {card.predictedOf(person.name, text)}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+function Header({
+  film,
+  people,
+  id,
+  level,
+}: {
+  film: BillboardFilm
+  people: readonly BillboardPerson[]
+  id: string
+  level: Level
+}) {
+  const { card } = BILLBOARD
+  const Title = level === 3 ? 'h3' : 'h2'
   return (
     <div className="flex min-w-0 flex-col gap-sm">
-      <h2 id={id} className="flex flex-col gap-y-0.5 font-display text-title">
+      <Title
+        id={id}
+        className="flex flex-col gap-y-0.5 font-display text-title"
+      >
         <span className="sr-only">{film.position}</span>
         <span>{film.title}</span>
         {film.originalTitle && (
@@ -105,7 +179,7 @@ function Header({ film, id }: { film: BillboardFilm; id: string }) {
             {film.originalTitle}
           </span>
         )}
-      </h2>
+      </Title>
       {film.synopsis && (
         <p className="max-w-[60ch] text-synopsis text-pretty">
           {film.synopsis}
@@ -124,6 +198,7 @@ function Header({ film, id }: { film: BillboardFilm; id: string }) {
           {card.imdb(film.imdbRatingText, film.votesText)}
         </a>
       </div>
+      <Predicted film={film} people={people} />
     </div>
   )
 }
@@ -181,22 +256,25 @@ function Line({
 function Why({
   film,
   people,
+  level,
 }: {
   film: BillboardFilm
   people: readonly BillboardPerson[]
+  level: Level
 }) {
   const { card } = BILLBOARD
+  const Label = level === 3 ? 'h4' : 'h3'
   const known = byslug(people)
   const without = film.withoutFact.flatMap((slug) => known.get(slug) ?? [])
   return (
     <div className="col-span-2 flex flex-col gap-sm border-t border-dashed border-rule pt-lg min-[560px]:col-span-1 min-[560px]:col-start-2">
-      <h3 className="flex justify-between gap-sm font-display text-label text-ink-2 uppercase">
+      <Label className="flex justify-between gap-sm font-display text-label text-ink-2 uppercase">
         {card.why}
         <span className="font-medium tracking-normal normal-case">
           {film.coverage}
         </span>
-      </h3>
-      <ul className="flex flex-col gap-[9px]">
+      </Label>
+      <ul aria-label={card.why} className="flex flex-col gap-[9px]">
         {film.lines.map((line) => (
           <Line
             key={`${line.people.join(' ')}:${line.text}`}
@@ -217,17 +295,20 @@ function Why({
 }
 
 /** A film of the Cartaz. `marks` and `onChange` are absent when the
- * Session takes no reply (it has its Feedback). */
+ * Session takes no reply (it has its Feedback). `level` 3 under a
+ * section's title. */
 export function BillboardCard({
   film,
   people,
   first,
+  level = 2,
   marks,
   onChange,
 }: {
   film: BillboardFilm
   people: readonly BillboardPerson[]
   first: boolean
+  level?: Level
   marks?: FilmMarks
   onChange?: (marks: FilmMarks) => void
 }) {
@@ -243,8 +324,13 @@ export function BillboardCard({
       className="group/card grid grid-cols-[112px_1fr] content-start gap-xl rounded-card border border-rule bg-surface px-xl pt-2xl pb-xl min-[560px]:grid-cols-[160px_1fr]"
     >
       <Poster film={film} people={people} first={first} stamp={stamp} />
-      <Header film={film} id={`filme-${film.id}`} />
-      <Why film={film} people={people} />
+      <Header
+        film={film}
+        people={people}
+        id={`filme-${film.id}`}
+        level={level}
+      />
+      <Why film={film} people={people} level={level} />
       {marks && onChange && (
         <FilmMarksControls
           film={film}

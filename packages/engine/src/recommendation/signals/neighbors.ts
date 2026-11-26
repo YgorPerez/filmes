@@ -1,15 +1,18 @@
 // MovieLens item-item neighbourhood: a Pessoa's Nota → MovieLens neighbour →
 // Candidate (`recomendacao/sinais/vizinhanca.py`).
 //
-// Each rating for the film (3 or more) of the Pessoa on a film X is a seed.
+// Each Nota in favour of the Pessoa on a film X (by its percentile on her
+// scale), or her stated "ama", is a seed.
 // For each neighbour Y of X that is a Candidate, one review Evidence: "deu 5
 // a X, e de 3.104 pessoas que deram 4+ a ele, 64% deram 4+ a este". The
 // strength comes from the base and the share, capped by the seed's
-// strength. A stated rating opens the line as on the content path and has
+// strength; a Nota seed's Decaimento (`decay.ts`) scales the weight. A
+// stated rating opens the line as on the content path and has
 // the stated seed strength. A rating against is not a seed: liking Y when
 // you liked X says nothing about someone who did not like X.
 
 import { Effect } from 'effect'
+import { seedDecay } from '../../evidence/decay.ts'
 import { makeEvidence } from '../../evidence/Evidence.ts'
 import {
   neighborStrength,
@@ -19,14 +22,14 @@ import {
 import { filmText, integerText, seedText } from '../../evidence/wording.ts'
 import { num, numOrNull, text, textOrNull } from '../../sqlite/row.ts'
 import { kindOf } from '../../sqlite/vocabulary.ts'
-import { candidatesJson, type Signal } from './Signal.ts'
+import { candidatesJson, scaleOf, type Signal } from './Signal.ts'
 
 /** The neighbours of the Pessoa's Notas that are Candidates. The `+`
  * keeps SQLite on the Notas (vizinhos has no index on `vizinho_id`), with
  * the Candidates as a membership test. */
 const NEIGHBORS = `
 SELECT v.vizinho_id AS candidato, v.fato_id, v.base, v.ambos, v.fonte, v.data,
-       n.nota, n.data AS nota_data, n.sessao, n.tipo AS nota_tipo, f.titulo, f.ano
+       n.nota, n.data AS nota_data, n.sessao, n.par_a_par, n.tipo AS nota_tipo, f.titulo, f.ano
 FROM notas_vigentes n
 JOIN vizinhos v ON v.filme_id = n.filme_id
 JOIN filmes f   ON f.id = n.filme_id
@@ -37,16 +40,22 @@ ORDER BY v.vizinho_id, v.fato_id
 export const neighbors: Signal = {
   module: 'vizinhanca',
   forPerson: (round, person) =>
-    Effect.map(round.db.all(NEIGHBORS, person, candidatesJson(round)), (rows) =>
-      rows.flatMap((row) => {
+    Effect.gen(function* () {
+      const scale = scaleOf(round, person)
+      const rows = yield* round.db.all(NEIGHBORS, person, candidatesJson(round))
+      return rows.flatMap((row) => {
         const candidate = text(row, 'candidato')
         const kind = kindOf(text(row, 'nota_tipo')) as SeedKind
         const [seed, direction] = seedStrength(
           kind,
+          scale,
           num(row, 'nota'),
           text(row, 'nota_data'),
           round.today,
-          textOrNull(row, 'sessao') !== null,
+          {
+            fromFeedback: textOrNull(row, 'sessao') !== null,
+            pairwise: num(row, 'par_a_par') === 1,
+          },
         )
         if (direction < 0) return []
         const base = num(row, 'base')
@@ -67,9 +76,16 @@ export const neighbors: Signal = {
             strength,
             kind: 'review',
             factId: text(row, 'fato_id'),
-            base: round.weights.neighbors.weight,
+            base:
+              round.weights.neighbors.weight *
+              seedDecay(
+                kind,
+                text(row, 'nota_data'),
+                round.today,
+                round.weights.rating_decay,
+              ),
           }),
         ]
-      }),
-    ),
+      })
+    }),
 }

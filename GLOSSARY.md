@@ -20,6 +20,9 @@ _Evitar_: usuário, admin
 Um encontro para ver um filme. Nasce no pedido do Dono, guarda os Presentes, o contexto, a Recomendação e o Filme escolhido, e fecha quando o Feedback é registrado. Sessão sem Feedback fica aberta.
 _Evitar_: pedido, noite, rolê
 
+**Link da Sessão** [session link, `sessionLink`]:
+O endereço que o Dono da Sessão compartilha com os Presentes. Cada Presente se identifica pelo nome e pode participar enquanto a Sessão estiver aberta, sem login. O link dá acesso aos filmes da versão atual e às interações da Sessão, sem expor o gosto das Pessoas (#180).
+
 **Presentes** [attendees, `attendees`]:
 As Pessoas de uma Sessão. Não existe grupo guardado: cada Sessão tem os seus Presentes.
 _Evitar_: grupo, turma
@@ -63,13 +66,29 @@ Um filme do Catálogo que sobreviveu aos Vetos e às Restrições de uma Sessão
 Como uma Sessão junta o gosto dos Presentes para ordenar os Candidatos. Cada Sessão pode usar uma; a padrão é média sem miséria com justiça entre sessões.
 _Evitar_: regra de grupo, acordo, agregação
 
-**Crédito** [credit, `credit`]:
-O quanto uma Pessoa ficou atrás dos outros Presentes nas Sessões recentes que dividiu com quem está na Sessão de hoje, medido pelo Feedback. Quem tem Crédito pesa mais na Regra de escolha; quem gostou mais que a média não perde nada.
-_Evitar_: dívida, vez, saldo
+**Satisfação** [satisfaction, `satisfaction`]:
+O quanto um Presente gostou dos Filmes escolhidos nas Sessões recentes: a média das reações dele no Feedback, de 0 a 1. Na Regra padrão em grupo, conta a satisfação acumulada nas últimas Sessões que ele dividiu com alguém da Sessão de hoje; quem ficou abaixo do mais satisfeito de hoje pesa mais, na medida da diferença (Stratigi et al., #170). Quem está no topo não perde nada. No `evaluate`, a satisfação mínima de uma Sessão é a reação mais baixa entre os Presentes.
+_Evitar_: crédito, dívida, vez, saldo, felicidade, nota média
+
+**Discordância** [disagreement, `disagreement`]:
+A satisfação mais alta menos a mais baixa. Na Recomendação, entre os Presentes de hoje: é o quanto a Regra padrão pode puxar a ordem para quem ficou atrás. No `evaluate`, entre as reações de cada Sessão em que dois ou mais Presentes reagiram: o quanto o Filme escolhido dividiu o grupo.
+_Evitar_: conflito, variância
 
 **Recomendação** [recommendation, `Recommendation`]:
 O top 5 que uma Sessão recebe, cada filme com os seus Motivos.
 _Evitar_: sugestão, lista
+
+**Aposta** [bet, `bet`]:
+O filme da 5ª vaga da Recomendação (`[bet] position`): um Candidato com Nota prevista boa e pouca Evidência, que a Regra deixaria de fora. Sai por amostragem de Thompson: cada Presente com Nota prevista sorteia uma Nota em torno dela, tanto mais espalhada quanto mais incerta, e vence a maior média dos sorteios. O sorteio parte do id da Sessão, então refazer a mesma Sessão sorteia o mesmo. Vetos e Restrições valem para ela. O Já vi e o Trocar tiram a Aposta da Sessão, e a Nota do Já vi muda os vizinhos de gosto do próximo sorteio. Mantida, continua Aposta. No Cartaz, leva o selo "aposta".
+_Evitar_: exploração, coringa, surpresa
+
+**Parecença** [similarity, `similarity`]:
+O quanto um filme se parece com um filme de referência, de 0 a 1: genoma, tags do MovieLens, vizinhos, gênero e diretor ou atores em comum, com os pesos de `[similar.weight]`. Mede-se a partir da referência, então não é simétrica. É o que o `--parecido` usa para filtrar.
+_Evitar_: semelhança, distância
+
+**Diversidade** [diversity, `diversity`]:
+O quanto a Recomendação evita filmes parecidos entre si. Na ordem final (MMR, #177), cada lugar vai para o filme com a melhor pontuação da Regra de escolha descontada da maior Parecença com os filmes já escolhidos acima dele (`[diversity]` em `config/weights.toml`). O `evaluate` a mede pela Parecença média no top 5.
+_Evitar_: variedade, mistura
 
 **Versão da Sessão** [session version, `SessionVersion`]:
 Uma Recomendação de uma Sessão aberta. Quando o Dono pede outra lista na mesma Sessão, a atual vira uma versão anterior, guardada com o pedido e os Presentes dela, e a nova passa a valer. O número da versão conta a partir de 1. Um filme de uma versão anterior pode voltar na nova; só o que o Dono trocou em alguma versão e o que algum Presente marcou Já vi na Sessão ficam fora dela até o fim.
@@ -83,6 +102,10 @@ _Evitar_: fixado, travado
 A Recomendação mostrada como página no T3 Code. Ele responde: em cada filme o Dono marca Já vi, Trocar, estrelas e comentário, e embaixo, depois do último filme, acrescenta contexto ou gosto; o botão Copiar pro chat junta tudo num texto que começa com `#cartaz <sessao> v<n>`, e o Dono cola no chat. Estrelas e comentário medem a Recomendação e ficam na Sessão, sem mexer no gosto; só o Trocar troca filme.
 _Evitar_: formulário, painel
 
+**Seção do Cartaz** [billboard section, `BillboardSection`]:
+Os filmes vizinhos do Cartaz que estão ali pelo mesmo Motivo, sob um título com ele e com quem o tem ("Porque você e Iara gostam de Rui Tavares", "Gente de gosto parecido com você gostou"). O Motivo de um filme é o da Evidência a favor mais forte dele entre os Presentes: uma entidade de que gostam, um filme de que gostaram ou os vizinhos de gosto; é gravado na Sessão quando a Recomendação sai. A Aposta tem a seção dela, e o filme sem Motivo a favor fica em "Outras escolhas". A ordem e o tamanho da Recomendação não mudam: um Motivo que volta depois de outro abre outra seção, com o mesmo título e "de novo" (#183).
+_Evitar_: grupo, fileira, categoria
+
 **Resposta** [reply, `replies`]:
 O que o Dono colou do Cartaz (o texto `#cartaz <sessao> v<n>`), gravado na versão da Sessão: a data, as estrelas e o comentário de cada filme e o Acrescentar.
 _Evitar_: retorno, devolutiva
@@ -91,12 +114,20 @@ _Evitar_: retorno, devolutiva
 O texto livre que o Dono escreve embaixo do Cartaz, depois do último filme: contexto da noite ou gosto novo. O contexto regera direto; o gosto só é gravado com um sim do Dono.
 _Evitar_: observação, extra
 
+**Leitura do pedido** [request reading, `RequestReading`]:
+O que o motor entende, sem modelo de linguagem, de uma frase que o Dono digita no app web ("eu e a Iara, algo leve, até 2h"): os Presentes, o Clima, as Restrições, quantos filmes e a Regra "de", cada item com as palavras de onde veio, o que ficou sem entender e o nome ou o título que pode ser mais de um. O vocabulário fica em `config/request_reading.toml`; a mesma frase sai sempre igual. Nunca lê gosto: uma oração como "a Ana odeia terror" volta sem entender. No chat, quem lê a frase é o Claude.
+_Evitar_: parser, interpretação
+
 **Trocado** [swapped, `swapped`]:
-Um filme que o Dono tirou da tela de uma versão: o Trocar do Cartaz e, ao refazer, o que ele mandou trocar e o que não ficou como Mantido. Fica fora da Sessão até o fim.
+Um filme que o Dono tirou da tela de uma versão: o Trocar do Cartaz, o não de um Presente no Voto e, ao refazer, o que ele mandou trocar e o que não ficou como Mantido. Fica fora da Sessão até o fim.
 _Evitar_: descartado, rejeitado
 
-**Saída** [dropped, `dropped`; causa: `seen`, `swapped`, `constraint`, `veto`, `min_rating`]:
-Um filme da versão anterior que não está na nova, com a causa. A causa não é Motivo: Motivo é por que um filme está na Recomendação.
+**Voto** [vote, `votes`; `yes`, `no`]:
+O sim ou o não de um Presente a um filme da tela, dado no celular pelo Link da Sessão, um filme de cada vez (o swipe do grupo, #182). Fica na versão da Sessão com quem votou e a data. O não é um Trocado daquele Presente: o filme sai e a Sessão regera. O sim sobe o filme: ao regerar, os Mantidos com mais sins, na Sessão inteira, vêm primeiro, nos números que os Mantidos já tinham, e as vagas não mudam. Voto não é Fato e não mexe no gosto.
+_Evitar_: curtida, like
+
+**Saída** [dropped, `dropped`; causa: `seen`, `swapped`, `constraint`, `veto`, `min_rating`, `mood`]:
+Um filme da versão anterior que não está na nova, com a causa. A causa `mood` é de quem caiu porque o Dono pediu outro Clima: o filme continua elegível na Sessão. A causa não é Motivo: Motivo é por que um filme está na Recomendação.
 
 **Capa** [poster, `poster`]:
 O pôster do filme, vindo do TMDB. Não é o Cartaz, que é a Recomendação inteira.
@@ -150,6 +181,10 @@ _Evitar_: pendências
 Os filmes que a tela de notas oferece a um Dono sem Import, um de cada vez, para ele dar Nota ou dizer "não vi": os de mais votos no IMDb que ele não viu, variando a década e o gênero. Cada Nota dada ali vira um Já visto com Nota, gravado num commit só quando ele diz "Pronto".
 _Evitar_: questionário
 
+**Pergunta par a par** [pairwise question, `PairwiseQuestion`]:
+"Qual dos dois você gostou mais?", feita a um Presente pelo Link da Sessão: dois filmes que ele ainda não tem como Já visto, escolhidos pela entropia das notas do MovieLens vezes a popularidade (Rashid et al. 2002, #170), porque um filme que muita gente viu e que divide opiniões diz mais sobre quem responde. Escolher um diz que viu os dois; "não vi os dois" pula o par. A resposta fica na Sessão até o Dono gravar ou descartar: gravada, o escolhido vira Nota 3,5 (Força fraca) e o outro, Já visto sem Nota (#181).
+_Evitar_: quiz, duelo, questionário
+
 **Motivo** [reason, `Reason`]:
 Uma razão para um filme estar na Recomendação.
 _Evitar_: justificativa, explicação
@@ -173,6 +208,20 @@ Um Fato sobre o filme em si, vindo de uma base pública: elenco, diretor, gêner
 A avaliação que uma Pessoa deu a um filme, sempre dita com o nome de quem deu.
 _Evitar_: nota própria, nota de amigo, rating
 
+**Percentil da Nota** [rating percentile, `ratingPercentile`]:
+Onde uma Nota fica na Escala da Pessoa, de 0 a 1: a parte das Notas da escala abaixo dela, mais metade das iguais. A régua tira a Força de uma Nota do percentil, pelos cortes de `[rating_percentile]` em `config/weights.toml`: o top 10% é forte.
+_Evitar_: posição, ranking
+
+**Escala da Pessoa** [rating scale, `RatingScale`]:
+As Notas contra as quais a régua lê uma Nota dela: as próprias Notas da Pessoa, quando ela tem pelo menos o mínimo de `[rating_percentile]`; abaixo dele, as notas da população do MovieLens, na mesma escala de 0,5 a 5. As do Letterboxd e as do Trakt entram juntas.
+
+**Nota alta** [high rating, `isHighRating`]:
+Uma Nota que a régua lê a favor com Força moderada ou forte, só pelo percentil, sem o Feedback. É o que o metadado agregado do caminho de conteúdo conta ("como 3 filmes a que deu Nota alta"). Num Declarado de filme, só o "ama".
+
+**Decaimento** [rating decay, `ratingDecay`]:
+O quanto o tempo apaga uma Nota: a contribuição dela cai à metade a cada meia-vida (`half_life_years`) e nunca fica abaixo de um piso (`floor`). A Força da Nota não muda com a idade. Declarado, Relato e Já visto não decaem.
+_Evitar_: envelhecimento, validade
+
 **Declarado** [stated, `stated`]:
 O que uma Pessoa disse sobre o próprio gosto ou sobre um filme, por exemplo num questionário ou numa review que ela escreveu.
 
@@ -182,6 +231,14 @@ _Evitar_: descrição, declarado
 
 **Review** [review, `review`]:
 Um sinal tirado de opiniões de terceiros, que não estão entre as Pessoas, como as tags de uma base pública ou quantos estranhos que gostaram de um filme gostaram de outro.
+
+**Vizinhos de gosto** [taste neighbors, `tasteNeighbors`]:
+Os usuários do MovieLens mais perto do gosto de uma Pessoa: os que, nos filmes que ela também viu, deram notas no mesmo percentil que as dela, cada um lido na própria escala. Quantos e com quantos filmes em comum ficam em `[taste_neighbors]` de `config/weights.toml`. O que eles deram a um Candidato é uma Review ("23 pessoas de gosto parecido deram 4,3 em média a este"), com Força pela régua: quantos o viram, quanto concordam e quanto dividem com ela.
+_Evitar_: usuários parecidos, almas gêmeas
+
+**Nota prevista** [predicted rating, `predictedRating`]:
+A Nota que o motor espera que uma Pessoa dê a um filme, de 1 a 10 como o Já vi do Cartaz: o percentil médio dos vizinhos de gosto que viram o filme, lido de volta na Escala da Pessoa, de modo que o mesmo percentil é uma Nota mais alta para quem dá Notas altas. Sai com quantos vizinhos a sustentam e com o desvio entre eles [deviation, `deviation`], que diz quanto ela é incerta. Não é Fato nem Nota: é uma previsão, e o `evaluate` mede o erro dela contra as Notas retidas. A Sessão guarda a de cada filme da versão, e o Cartaz mostra a guardada, mesmo que os vizinhos mudem depois.
+_Evitar_: nota esperada, match
 
 **Palpite** [guess, `guess`]:
 Um Motivo sem Fato que o sustente.

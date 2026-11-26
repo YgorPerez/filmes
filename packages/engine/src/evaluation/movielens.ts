@@ -14,7 +14,9 @@ import { pythonError } from '../compat/python-error.ts'
 import { PyRandom } from '../compat/random.ts'
 import { pyReprStr } from '../compat/text.ts'
 import { HIGH_RATING } from '../evidence/ruler.ts'
+import { similarity } from '../rebuild/steps/similarity.ts'
 import { engineError, type EngineError } from '../runtime/EngineError.ts'
+import type { Environment } from '../runtime/Environment.ts'
 import type { Connection, SqliteError } from '../sqlite/Sqlite.ts'
 import { text } from '../sqlite/row.ts'
 import { CsvLineError, csvColumns } from './csv.ts'
@@ -252,16 +254,33 @@ const insertMany = (
   })
 
 /** `preparar`: TEMP `vizinhos` from the votes outside the sample (only for
- * films someone uses as a seed) and TEMP `tags_movielens` without the
- * sampled users. Runs after the offline views, since the seeds come from
- * the TEMP `notas_vigentes`. */
+ * films someone uses as a seed), TEMP `tags_movielens` without the sampled
+ * users, and a TEMP view of the taste neighbours' MovieLens ratings
+ * without them either (#174): a sampled user would otherwise be his own
+ * closest neighbour, held-out films included. Runs after the offline views, since the seeds come from
+ * the TEMP `notas_vigentes`. The similarity's tag rarities and norms are
+ * computed again over those tags (#171: the top 5's similarity reads
+ * them), with the rebuild's own step, into TEMP tables. */
 export const prepareSample = (
   db: Connection,
   folder: string,
   sample: Sample,
   progress: Progress,
-): Effect.Effect<void, EngineError | SqliteError> =>
+): Effect.Effect<void, EngineError | SqliteError, Environment> =>
   Effect.gen(function* () {
+    yield* db.exec(
+      'CREATE TEMP TABLE usuarios_sorteados (usuario INTEGER PRIMARY KEY)',
+    )
+    yield* insertMany(
+      db,
+      'INSERT INTO usuarios_sorteados VALUES (?)',
+      [...sample.users].map((user) => [user]),
+    )
+    yield* db.exec(`
+      CREATE TEMP VIEW notas_gosto_movielens AS
+      SELECT g.* FROM main.notas_gosto_movielens g
+      WHERE g.usuario NOT IN (SELECT usuario FROM usuarios_sorteados)
+    `)
     yield* db.exec(`
       CREATE TEMP TABLE vizinhos AS SELECT * FROM main.vizinhos WHERE 0;
       CREATE INDEX temp.vizinhos_por_filme ON vizinhos(filme_id);
@@ -314,4 +333,9 @@ export const prepareSample = (
         reviewFacts('tags_movielens', counted, sample.sourceAndDate),
       )
     }
+    yield* db.exec(`
+      CREATE TEMP TABLE tags_no_catalogo AS SELECT * FROM main.tags_no_catalogo WHERE 0;
+      CREATE TEMP TABLE normas_tags_movielens AS SELECT * FROM main.normas_tags_movielens WHERE 0;
+    `)
+    yield* similarity.load(db)
   })

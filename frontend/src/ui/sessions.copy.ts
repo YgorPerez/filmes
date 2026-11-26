@@ -1,5 +1,23 @@
+import { REQUEST_READING_MAX_LENGTH } from '@filmes/engine/reading-limits'
 import type { ReplyRefusal, SessionNotice } from '#/content/billboard-reply'
 import type { SessionRequestRefusal } from '#/content/session-request'
+
+const quoted = (words: string) => `“${words}”`
+
+/** "A", "A ou B", "A, B ou C". */
+const either = (items: readonly string[]) =>
+  items.length <= 1
+    ? items.join('')
+    : `${items.slice(0, -1).join(', ')} ou ${items.at(-1)}`
+
+/** The runs of words a reading did not understand: “a”, “b”. */
+const runs = (words: readonly string[]) => words.map(quoted).join(', ')
+
+/** A name or title a reading could not decide: “X” pode ser A ou B. */
+const ambiguity = (words: string, candidates: readonly string[]) =>
+  candidates.length === 0
+    ? `${quoted(words)} não está no Catálogo`
+    : `${quoted(words)} pode ser ${either(candidates)}`
 
 const films = (n: number) =>
   n === 0 ? 'nenhum filme' : n === 1 ? '1 filme' : `${n} filmes`
@@ -38,6 +56,10 @@ export const SESSIONS = {
         'Recomendação refeita: quem ficou segue no mesmo número, quem entrou tem o selo “novo”.',
       anotada:
         'Estrelas e comentários ficaram na Sessão. Eles não mexem no gosto de ninguém.',
+      'perguntas-gravadas':
+        'Respostas gravadas: o escolhido de cada par virou Nota fraca, e o outro, Já visto.',
+      'perguntas-descartadas':
+        'Respostas descartadas. Nada mudou no gosto de ninguém.',
     } satisfies Record<SessionNotice, string>,
     refusals: {
       nada: 'Nada marcado ainda.',
@@ -53,6 +75,17 @@ export const SESSIONS = {
     addition: (text: string) =>
       `Acrescentar: “${text}” ficou anotado na Sessão. Se for gosto de alguém, só vale com o seu sim:`,
     additionLink: 'diga na página da Pessoa.',
+    /** The acrescentar as the Leitura do pedido read it (#200). */
+    additionRead: (text: string) => `Acrescentar: “${text}”.`,
+    additionAdded: (labels: readonly string[]) =>
+      `Entrou no pedido: ${labels.join('; ')}.`,
+    additionNotUnderstood: (words: readonly string[]) =>
+      `Não entendi, ficou só anotado na Sessão: ${runs(words)}.`,
+    additionAmbiguous: (words: string, candidates: readonly string[]) =>
+      candidates.length === 0
+        ? `${ambiguity(words, candidates)}.`
+        : `${ambiguity(words, candidates)}: diga qual no próximo acrescentar.`,
+    additionTaste: 'Se for gosto de alguém, só vale com o seu sim:',
     closed: 'Fechada',
   },
 
@@ -64,7 +97,8 @@ export const SESSIONS = {
     attendeesLead: 'Quem vai assistir.',
     rule: 'Regra de escolha',
     rules: {
-      padrao: 'Padrão: média sem miséria, com o Crédito de quem ficou atrás',
+      padrao:
+        'Padrão: média sem miséria, a favor de quem saiu menos satisfeito',
       media: 'Média dos Presentes',
       de: 'O gosto de uma Pessoa',
     },
@@ -76,8 +110,25 @@ export const SESSIONS = {
     count: 'Quantos filmes',
     countHint: 'em branco: o padrão',
     words: 'Em uma frase',
-    wordsHint: 'opcional, fica na Sessão',
-    wordsPlaceholder: 'eu e a Iara, algo leve',
+    wordsHint: 'opcional, fica na Sessão; “Ler” preenche o formulário com ela',
+    wordsPlaceholder: 'eu e a Iara, algo leve, até 2h',
+    read: 'Ler',
+    reading: {
+      understood: (labels: readonly string[]) =>
+        `Lido da frase: ${labels.join('; ')}.`,
+      nothing: 'Nada da frase preencheu o formulário.',
+      notUnderstood: (words: readonly string[]) =>
+        `Ficou de fora: ${runs(words)}.`,
+      ambiguous: (
+        items: readonly { words: string; candidates: readonly string[] }[],
+      ) =>
+        `Em dúvida, escolha no formulário: ${items
+          .map(({ words, candidates }) => ambiguity(words, candidates))
+          .join('; ')}.`,
+      /** A title of several films: each with “Usar”, as the search. */
+      similarAmbiguous: (words: string) =>
+        `${quoted(words)} pode ser um destes; use um para “Parecido com”:`,
+    },
     constraints: 'Restrições',
     constraintsLead:
       'Valem só nesta Sessão e tiram o filme antes de qualquer ordem. Deixe em branco o que não vale.',
@@ -106,6 +157,8 @@ export const SESSIONS = {
   },
 
   refusals: {
+    frase: 'Escreva a frase antes de tocar em “Ler”.',
+    'frase-longa': `A frase passa de ${REQUEST_READING_MAX_LENGTH} caracteres. Encurte e toque em “Ler” de novo.`,
     presentes: 'Marque pelo menos um Presente.',
     de: '“O gosto de uma Pessoa” precisa de uma Pessoa entre os Presentes.',
     quantos: 'Quantos filmes: um número de 1 a 50.',

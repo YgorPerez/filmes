@@ -62,6 +62,7 @@ function open() {
         keep: ['tt9000105'],
         dropped: [],
         addition: null,
+        moods: null,
         comments: [],
         stars: [],
         seen: [],

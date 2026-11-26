@@ -35,21 +35,176 @@ exports[`avaliar on MovieLens files, as recorded > a messy sample with tags give
     },
     "offline": {
       "movielens": {
-        "coverageTop5": 0.9096,
+        "calibration": {
+          "overall": {
+            "moderate": {
+              "heldOut": 0,
+              "hitRate": null,
+              "hits": 0,
+            },
+            "none": {
+              "heldOut": 66,
+              "hitRate": 0,
+              "hits": 0,
+            },
+            "rises": null,
+            "strong": {
+              "heldOut": 274,
+              "hitRate": 0,
+              "hits": 0,
+            },
+            "weak": {
+              "heldOut": 0,
+              "hitRate": null,
+              "hits": 0,
+            },
+          },
+          "people": {},
+        },
+        "coverageTop5": 0.8176,
         "filmsTop5": 5000,
         "heldOut4Plus": 264,
         "people": 1000,
+        "predictedRatingError": {
+          "films": 0,
+          "meanAbsoluteError": null,
+        },
         "recall50": 0,
         "retrieved": 0,
-        "withEvidence": 4548,
+        "similarityTop5": 0.23452738772156173,
+        "withEvidence": 4088,
       },
       "people": {
+        "calibration": {
+          "overall": {
+            "moderate": {
+              "heldOut": 0,
+              "hitRate": null,
+              "hits": 0,
+            },
+            "none": {
+              "heldOut": 4,
+              "hitRate": 0.75,
+              "hits": 3,
+            },
+            "rises": null,
+            "strong": {
+              "heldOut": 2,
+              "hitRate": 1,
+              "hits": 2,
+            },
+            "weak": {
+              "heldOut": 0,
+              "hitRate": null,
+              "hits": 0,
+            },
+          },
+          "people": {
+            "bruno": {
+              "moderate": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "none": {
+                "heldOut": 1,
+                "hitRate": 0,
+                "hits": 0,
+              },
+              "rises": null,
+              "strong": {
+                "heldOut": 2,
+                "hitRate": 1,
+                "hits": 2,
+              },
+              "weak": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+            },
+            "iara": {
+              "moderate": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "none": {
+                "heldOut": 1,
+                "hitRate": 1,
+                "hits": 1,
+              },
+              "rises": null,
+              "strong": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "weak": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+            },
+            "quim": {
+              "moderate": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "none": {
+                "heldOut": 1,
+                "hitRate": 1,
+                "hits": 1,
+              },
+              "rises": null,
+              "strong": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "weak": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+            },
+            "rosa": {
+              "moderate": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "none": {
+                "heldOut": 1,
+                "hitRate": 1,
+                "hits": 1,
+              },
+              "rises": null,
+              "strong": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "weak": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+            },
+          },
+        },
         "coverageTop5": 0.7,
         "filmsTop5": 20,
         "heldOut4Plus": 5,
         "people": 4,
-        "recall50": 1,
-        "retrieved": 5,
+        "predictedRatingError": {
+          "films": 0,
+          "meanAbsoluteError": null,
+        },
+        "recall50": 0.8,
+        "retrieved": 4,
+        "similarityTop5": 0.31704280277115016,
         "withEvidence": 14,
       },
     },
@@ -58,6 +213,12 @@ exports[`avaliar on MovieLens files, as recorded > a messy sample with tags give
       "meanReaction": null,
       "rateTop5": null,
       "reactions": 0,
+      "satisfaction": {
+        "disagreement": null,
+        "groupSessions": 0,
+        "minimum": null,
+        "people": {},
+      },
       "sessions": 0,
       "withFilm": 0,
     },
@@ -69,7 +230,9 @@ exports[`avaliar on MovieLens files, as recorded > a messy sample with tags give
       "classificacoes.csv": "c3a70b77d1c21b31571296783da337367fb2a67cad3c945ab6310f7671b451aa",
       "elenco_principal_imdb.csv": "559f381e49c30635a34a1469db33ef7c5de47619fd211b204e027736ead40262",
       "entidades.csv": "a554083d3fdf5d805116adc00a348b28cf68de2072fb34a399a61b3420cb6432",
+      "entropia_movielens.csv": "54e8912b088438c2f77c5ba7671c3cf29c2e528ccafbdec5f8e9423b6f2e498e",
       "filmes.csv": "2623fafc661095c67913aa2d5858724b99ab6ff36416f222b1571ed0693a8377",
+      "fonte_gosto_movielens.csv": "bd0e4d5aac3969eb131926c4a3fe9dc12b220d13543832caee9c72717cac4a9a",
       "generos_imdb.csv": "ca9cb82915808484dcd3881bd375601d7daeb8d4e28c79cebf10e672ca5389e3",
       "genoma.csv": "bf9e335eaec86c9fbe2d5ca1d55cf4a75f1a865c83f48750d359f07ac4169ed1",
       "idiomas_originais.csv": "3fd72e324b22bdd4a924778d6826f20e648099c908c0a40de7af2cf7ee6dacbf",
@@ -77,6 +240,8 @@ exports[`avaliar on MovieLens files, as recorded > a messy sample with tags give
       "ml-32m/ratings.csv": "b031f470a578ded291c9030aa96b963f3332ace36beb2078b1b1fef0550ff2bd",
       "ml-32m/tags.csv": "9d715c5a9a99222d7685b7b2a37c54eb051a3c6dcfef43482282a104692a823c",
       "notas.csv": "fce6055d2fb915a21f46c4eea36d2bef360756974cc83e8713674103e9075f78",
+      "notas_gosto_movielens.csv": "cf29b7d42d9b621c199733204f4e7f96e723e4f4f01b59a2e4225fe4133a9047",
+      "notas_movielens.csv": "732f70f4971aca938e7cc266ded071f301ddf13cda14e7f3e008eebcbb3e17b2",
       "series_de_filmes.csv": "7f4cef1fbbf193e21f72d6101a0e1280b729cca9c57b334d4bab1769075cd03e",
       "slugs_letterboxd.csv": "aef16df5bcb6b746236d595d8c29a29728a3f8bb45726201631f04ed2f5071aa",
       "subclasses_wikidata.csv": "97f1dbb801f80d234d4923d3c86badf59f95e4258d56b5f6d6b7a7ae0956af3a",
@@ -93,6 +258,11 @@ exports[`avaliar on MovieLens files, as recorded > a messy sample with tags give
           "normal": 1,
         },
       },
+      "bet": {
+        "maxFacts": 1,
+        "minPredicted": 7,
+        "position": 5,
+      },
       "catalog": {
         "minImdbRating": 7,
         "minVotes": 1000,
@@ -100,9 +270,10 @@ exports[`avaliar on MovieLens files, as recorded > a messy sample with tags give
       "constraints": {
         "onDemandReach": 50,
       },
-      "credit": {
-        "factor": 0.5,
-        "window": 5,
+      "diversity": {
+        "depth": 10,
+        "lambda": 1,
+        "pool": 30,
       },
       "group": {
         "weight": 0.05,
@@ -121,6 +292,9 @@ exports[`avaliar on MovieLens files, as recorded > a messy sample with tags give
         "minUsersHeavyTheme": 2,
         "minUsersSad": 3,
       },
+      "pairwise": {
+        "pairs": 10,
+      },
       "path": {
         "weight": {
           "cast": 0.5,
@@ -133,8 +307,24 @@ exports[`avaliar on MovieLens files, as recorded > a messy sample with tags give
       "people": {
         "statementWeight": 1,
       },
+      "ratingDecay": {
+        "floor": 0.25,
+        "halfLifeYears": 5,
+      },
+      "ratingPercentile": {
+        "minRatings": 20,
+        "moderate": 0.7,
+        "moderateAgainst": 0.1,
+        "strong": 0.9,
+        "weak": 0.4,
+        "weakAgainst": 0.2,
+      },
       "recommendation": {
         "size": 5,
+      },
+      "satisfaction": {
+        "factor": 0.25,
+        "window": 5,
       },
       "seen": {
         "weight": 1,
@@ -163,6 +353,12 @@ exports[`avaliar on MovieLens files, as recorded > a messy sample with tags give
       "tagVetoes": {
         "minRelevance": 0.7,
         "minUsers": 10,
+      },
+      "tasteNeighbors": {
+        "k": 50,
+        "minShared": 10,
+        "neutralBand": 0.05,
+        "weight": 1,
       },
       "utility": {
         "k": 1,
@@ -232,21 +428,176 @@ exports[`avaliar on MovieLens files, as recorded > a small sample warns that Mov
     },
     "offline": {
       "movielens": {
+        "calibration": {
+          "overall": {
+            "moderate": {
+              "heldOut": 0,
+              "hitRate": null,
+              "hits": 0,
+            },
+            "none": {
+              "heldOut": 0,
+              "hitRate": null,
+              "hits": 0,
+            },
+            "rises": null,
+            "strong": {
+              "heldOut": 2,
+              "hitRate": 0.5,
+              "hits": 1,
+            },
+            "weak": {
+              "heldOut": 0,
+              "hitRate": null,
+              "hits": 0,
+            },
+          },
+          "people": {},
+        },
         "coverageTop5": 1,
         "filmsTop5": 10,
         "heldOut4Plus": 1,
         "people": 2,
+        "predictedRatingError": {
+          "films": 0,
+          "meanAbsoluteError": null,
+        },
         "recall50": 1,
         "retrieved": 1,
+        "similarityTop5": 0.35,
         "withEvidence": 10,
       },
       "people": {
+        "calibration": {
+          "overall": {
+            "moderate": {
+              "heldOut": 0,
+              "hitRate": null,
+              "hits": 0,
+            },
+            "none": {
+              "heldOut": 4,
+              "hitRate": 0.75,
+              "hits": 3,
+            },
+            "rises": null,
+            "strong": {
+              "heldOut": 2,
+              "hitRate": 1,
+              "hits": 2,
+            },
+            "weak": {
+              "heldOut": 0,
+              "hitRate": null,
+              "hits": 0,
+            },
+          },
+          "people": {
+            "bruno": {
+              "moderate": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "none": {
+                "heldOut": 1,
+                "hitRate": 0,
+                "hits": 0,
+              },
+              "rises": null,
+              "strong": {
+                "heldOut": 2,
+                "hitRate": 1,
+                "hits": 2,
+              },
+              "weak": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+            },
+            "iara": {
+              "moderate": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "none": {
+                "heldOut": 1,
+                "hitRate": 1,
+                "hits": 1,
+              },
+              "rises": null,
+              "strong": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "weak": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+            },
+            "quim": {
+              "moderate": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "none": {
+                "heldOut": 1,
+                "hitRate": 1,
+                "hits": 1,
+              },
+              "rises": null,
+              "strong": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "weak": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+            },
+            "rosa": {
+              "moderate": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "none": {
+                "heldOut": 1,
+                "hitRate": 1,
+                "hits": 1,
+              },
+              "rises": null,
+              "strong": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "weak": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+            },
+          },
+        },
         "coverageTop5": 0.6,
         "filmsTop5": 20,
         "heldOut4Plus": 5,
         "people": 4,
-        "recall50": 1,
-        "retrieved": 5,
+        "predictedRatingError": {
+          "films": 0,
+          "meanAbsoluteError": null,
+        },
+        "recall50": 0.8,
+        "retrieved": 4,
+        "similarityTop5": 0.3604166666666666,
         "withEvidence": 12,
       },
     },
@@ -255,6 +606,12 @@ exports[`avaliar on MovieLens files, as recorded > a small sample warns that Mov
       "meanReaction": null,
       "rateTop5": null,
       "reactions": 0,
+      "satisfaction": {
+        "disagreement": null,
+        "groupSessions": 0,
+        "minimum": null,
+        "people": {},
+      },
       "sessions": 0,
       "withFilm": 0,
     },
@@ -266,13 +623,17 @@ exports[`avaliar on MovieLens files, as recorded > a small sample warns that Mov
       "classificacoes.csv": "c3a70b77d1c21b31571296783da337367fb2a67cad3c945ab6310f7671b451aa",
       "elenco_principal_imdb.csv": "559f381e49c30635a34a1469db33ef7c5de47619fd211b204e027736ead40262",
       "entidades.csv": "a554083d3fdf5d805116adc00a348b28cf68de2072fb34a399a61b3420cb6432",
+      "entropia_movielens.csv": "54e8912b088438c2f77c5ba7671c3cf29c2e528ccafbdec5f8e9423b6f2e498e",
       "filmes.csv": "2623fafc661095c67913aa2d5858724b99ab6ff36416f222b1571ed0693a8377",
+      "fonte_gosto_movielens.csv": "bd0e4d5aac3969eb131926c4a3fe9dc12b220d13543832caee9c72717cac4a9a",
       "generos_imdb.csv": "ca9cb82915808484dcd3881bd375601d7daeb8d4e28c79cebf10e672ca5389e3",
       "genoma.csv": "bf9e335eaec86c9fbe2d5ca1d55cf4a75f1a865c83f48750d359f07ac4169ed1",
       "idiomas_originais.csv": "3fd72e324b22bdd4a924778d6826f20e648099c908c0a40de7af2cf7ee6dacbf",
       "ml-32m/links.csv": "d8e1d4a9be5d5f36887488aa18d4088e9ce5ff13a56cc1dc8c2d7239ee295d6e",
       "ml-32m/ratings.csv": "17815b6b621ab2a8bec43788881b371e87522a0dd0e38052369aa6d360b67e38",
       "notas.csv": "fce6055d2fb915a21f46c4eea36d2bef360756974cc83e8713674103e9075f78",
+      "notas_gosto_movielens.csv": "cf29b7d42d9b621c199733204f4e7f96e723e4f4f01b59a2e4225fe4133a9047",
+      "notas_movielens.csv": "732f70f4971aca938e7cc266ded071f301ddf13cda14e7f3e008eebcbb3e17b2",
       "series_de_filmes.csv": "7f4cef1fbbf193e21f72d6101a0e1280b729cca9c57b334d4bab1769075cd03e",
       "slugs_letterboxd.csv": "aef16df5bcb6b746236d595d8c29a29728a3f8bb45726201631f04ed2f5071aa",
       "subclasses_wikidata.csv": "97f1dbb801f80d234d4923d3c86badf59f95e4258d56b5f6d6b7a7ae0956af3a",
@@ -291,6 +652,11 @@ exports[`avaliar on MovieLens files, as recorded > a small sample warns that Mov
           "normal": 1,
         },
       },
+      "bet": {
+        "maxFacts": 1,
+        "minPredicted": 7,
+        "position": 5,
+      },
       "catalog": {
         "minImdbRating": 7,
         "minVotes": 1000,
@@ -298,9 +664,10 @@ exports[`avaliar on MovieLens files, as recorded > a small sample warns that Mov
       "constraints": {
         "onDemandReach": 50,
       },
-      "credit": {
-        "factor": 0.5,
-        "window": 5,
+      "diversity": {
+        "depth": 10,
+        "lambda": 1,
+        "pool": 30,
       },
       "group": {
         "weight": 0.05,
@@ -319,6 +686,9 @@ exports[`avaliar on MovieLens files, as recorded > a small sample warns that Mov
         "minUsersHeavyTheme": 2,
         "minUsersSad": 3,
       },
+      "pairwise": {
+        "pairs": 10,
+      },
       "path": {
         "weight": {
           "cast": 0.5,
@@ -331,8 +701,24 @@ exports[`avaliar on MovieLens files, as recorded > a small sample warns that Mov
       "people": {
         "statementWeight": 1,
       },
+      "ratingDecay": {
+        "floor": 0.25,
+        "halfLifeYears": 5,
+      },
+      "ratingPercentile": {
+        "minRatings": 20,
+        "moderate": 0.7,
+        "moderateAgainst": 0.1,
+        "strong": 0.9,
+        "weak": 0.4,
+        "weakAgainst": 0.2,
+      },
       "recommendation": {
         "size": 5,
+      },
+      "satisfaction": {
+        "factor": 0.25,
+        "window": 5,
       },
       "seen": {
         "weight": 1,
@@ -361,6 +747,12 @@ exports[`avaliar on MovieLens files, as recorded > a small sample warns that Mov
       "tagVetoes": {
         "minRelevance": 0.7,
         "minUsers": 10,
+      },
+      "tasteNeighbors": {
+        "k": 50,
+        "minShared": 10,
+        "neutralBand": 0.05,
+        "weight": 1,
       },
       "utility": {
         "k": 1,
@@ -430,21 +822,176 @@ exports[`the diaries, as recorded > a Trakt history dates the cut 1`] = `
     },
     "offline": {
       "movielens": {
+        "calibration": {
+          "overall": {
+            "moderate": {
+              "heldOut": 0,
+              "hitRate": null,
+              "hits": 0,
+            },
+            "none": {
+              "heldOut": 0,
+              "hitRate": null,
+              "hits": 0,
+            },
+            "rises": null,
+            "strong": {
+              "heldOut": 0,
+              "hitRate": null,
+              "hits": 0,
+            },
+            "weak": {
+              "heldOut": 0,
+              "hitRate": null,
+              "hits": 0,
+            },
+          },
+          "people": {},
+        },
         "coverageTop5": null,
         "filmsTop5": 0,
         "heldOut4Plus": 0,
         "people": 0,
+        "predictedRatingError": {
+          "films": 0,
+          "meanAbsoluteError": null,
+        },
         "recall50": null,
         "retrieved": 0,
+        "similarityTop5": null,
         "withEvidence": 0,
       },
       "people": {
+        "calibration": {
+          "overall": {
+            "moderate": {
+              "heldOut": 0,
+              "hitRate": null,
+              "hits": 0,
+            },
+            "none": {
+              "heldOut": 4,
+              "hitRate": 0.75,
+              "hits": 3,
+            },
+            "rises": null,
+            "strong": {
+              "heldOut": 2,
+              "hitRate": 1,
+              "hits": 2,
+            },
+            "weak": {
+              "heldOut": 0,
+              "hitRate": null,
+              "hits": 0,
+            },
+          },
+          "people": {
+            "bruno": {
+              "moderate": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "none": {
+                "heldOut": 1,
+                "hitRate": 0,
+                "hits": 0,
+              },
+              "rises": null,
+              "strong": {
+                "heldOut": 2,
+                "hitRate": 1,
+                "hits": 2,
+              },
+              "weak": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+            },
+            "iara": {
+              "moderate": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "none": {
+                "heldOut": 1,
+                "hitRate": 1,
+                "hits": 1,
+              },
+              "rises": null,
+              "strong": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "weak": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+            },
+            "quim": {
+              "moderate": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "none": {
+                "heldOut": 1,
+                "hitRate": 1,
+                "hits": 1,
+              },
+              "rises": null,
+              "strong": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "weak": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+            },
+            "rosa": {
+              "moderate": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "none": {
+                "heldOut": 1,
+                "hitRate": 1,
+                "hits": 1,
+              },
+              "rises": null,
+              "strong": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "weak": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+            },
+          },
+        },
         "coverageTop5": 0.7,
         "filmsTop5": 20,
         "heldOut4Plus": 5,
         "people": 4,
-        "recall50": 1,
-        "retrieved": 5,
+        "predictedRatingError": {
+          "films": 0,
+          "meanAbsoluteError": null,
+        },
+        "recall50": 0.8,
+        "retrieved": 4,
+        "similarityTop5": 0.27708333333333335,
         "withEvidence": 14,
       },
     },
@@ -453,6 +1000,12 @@ exports[`the diaries, as recorded > a Trakt history dates the cut 1`] = `
       "meanReaction": null,
       "rateTop5": null,
       "reactions": 0,
+      "satisfaction": {
+        "disagreement": null,
+        "groupSessions": 0,
+        "minimum": null,
+        "people": {},
+      },
       "sessions": 0,
       "withFilm": 0,
     },
@@ -464,11 +1017,15 @@ exports[`the diaries, as recorded > a Trakt history dates the cut 1`] = `
       "classificacoes.csv": "c3a70b77d1c21b31571296783da337367fb2a67cad3c945ab6310f7671b451aa",
       "elenco_principal_imdb.csv": "559f381e49c30635a34a1469db33ef7c5de47619fd211b204e027736ead40262",
       "entidades.csv": "a554083d3fdf5d805116adc00a348b28cf68de2072fb34a399a61b3420cb6432",
+      "entropia_movielens.csv": "54e8912b088438c2f77c5ba7671c3cf29c2e528ccafbdec5f8e9423b6f2e498e",
       "filmes.csv": "2623fafc661095c67913aa2d5858724b99ab6ff36416f222b1571ed0693a8377",
+      "fonte_gosto_movielens.csv": "bd0e4d5aac3969eb131926c4a3fe9dc12b220d13543832caee9c72717cac4a9a",
       "generos_imdb.csv": "ca9cb82915808484dcd3881bd375601d7daeb8d4e28c79cebf10e672ca5389e3",
       "genoma.csv": "bf9e335eaec86c9fbe2d5ca1d55cf4a75f1a865c83f48750d359f07ac4169ed1",
       "idiomas_originais.csv": "3fd72e324b22bdd4a924778d6826f20e648099c908c0a40de7af2cf7ee6dacbf",
       "notas.csv": "fce6055d2fb915a21f46c4eea36d2bef360756974cc83e8713674103e9075f78",
+      "notas_gosto_movielens.csv": "cf29b7d42d9b621c199733204f4e7f96e723e4f4f01b59a2e4225fe4133a9047",
+      "notas_movielens.csv": "732f70f4971aca938e7cc266ded071f301ddf13cda14e7f3e008eebcbb3e17b2",
       "series_de_filmes.csv": "7f4cef1fbbf193e21f72d6101a0e1280b729cca9c57b334d4bab1769075cd03e",
       "slugs_letterboxd.csv": "aef16df5bcb6b746236d595d8c29a29728a3f8bb45726201631f04ed2f5071aa",
       "subclasses_wikidata.csv": "97f1dbb801f80d234d4923d3c86badf59f95e4258d56b5f6d6b7a7ae0956af3a",
@@ -487,6 +1044,11 @@ exports[`the diaries, as recorded > a Trakt history dates the cut 1`] = `
           "normal": 1,
         },
       },
+      "bet": {
+        "maxFacts": 1,
+        "minPredicted": 7,
+        "position": 5,
+      },
       "catalog": {
         "minImdbRating": 7,
         "minVotes": 1000,
@@ -494,9 +1056,10 @@ exports[`the diaries, as recorded > a Trakt history dates the cut 1`] = `
       "constraints": {
         "onDemandReach": 50,
       },
-      "credit": {
-        "factor": 0.5,
-        "window": 5,
+      "diversity": {
+        "depth": 10,
+        "lambda": 1,
+        "pool": 30,
       },
       "group": {
         "weight": 0.05,
@@ -515,6 +1078,9 @@ exports[`the diaries, as recorded > a Trakt history dates the cut 1`] = `
         "minUsersHeavyTheme": 2,
         "minUsersSad": 3,
       },
+      "pairwise": {
+        "pairs": 10,
+      },
       "path": {
         "weight": {
           "cast": 0.5,
@@ -527,8 +1093,24 @@ exports[`the diaries, as recorded > a Trakt history dates the cut 1`] = `
       "people": {
         "statementWeight": 1,
       },
+      "ratingDecay": {
+        "floor": 0.25,
+        "halfLifeYears": 5,
+      },
+      "ratingPercentile": {
+        "minRatings": 20,
+        "moderate": 0.7,
+        "moderateAgainst": 0.1,
+        "strong": 0.9,
+        "weak": 0.4,
+        "weakAgainst": 0.2,
+      },
       "recommendation": {
         "size": 5,
+      },
+      "satisfaction": {
+        "factor": 0.25,
+        "window": 5,
       },
       "seen": {
         "weight": 1,
@@ -557,6 +1139,12 @@ exports[`the diaries, as recorded > a Trakt history dates the cut 1`] = `
       "tagVetoes": {
         "minRelevance": 0.7,
         "minUsers": 10,
+      },
+      "tasteNeighbors": {
+        "k": 50,
+        "minShared": 10,
+        "neutralBand": 0.05,
+        "weight": 1,
       },
       "utility": {
         "k": 1,

@@ -7,14 +7,16 @@
 // capture of each screen there.
 
 import { personSkip, personView } from '@filmes/engine'
-import { expect, test, type Page } from '@playwright/test'
+import { type Page } from '@playwright/test'
 import {
   engineRun,
+  expect,
   loginAs,
   loginAsBruno,
   notice,
   section,
   snap,
+  test,
 } from './support'
 
 /** What the engine reads in her file now, after the app wrote it. */

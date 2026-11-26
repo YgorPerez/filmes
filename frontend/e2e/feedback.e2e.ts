@@ -2,12 +2,12 @@
 // filmes-dados). The Sessions are opened with the engine, as the Sessions
 // screen (W1) will. The two projects run at once on the same copy, so each
 // one has its own group: the desktop Bruno, Rosa and Quim, the mobile Bruno,
-// Teo and Iara (the Crédito only counts Sessions shared with today's
+// Teo and Iara (the satisfaction only counts Sessions shared with today's
 // Presentes). `E2E_SCREENSHOTS=<folder>` saves a capture of each screen.
 
 import { openSessions, recommendSession } from '@filmes/engine'
-import { expect, test, type Page } from '@playwright/test'
-import { loginAsBruno, engineRun, snap } from './support'
+import { type Page } from '@playwright/test'
+import { engineRun, expect, loginAsBruno, snap, test } from './support'
 
 /** Opens a Session for `attendees`, as Bruno; gives its id. */
 const openSession = async (attendees: string[]) =>
@@ -24,9 +24,10 @@ const stillOpen = async (id: string) =>
     (s) => s.id === id,
   )
 
-const credit = (page: Page) => page.getByRole('region', { name: 'Crédito' })
+const satisfaction = (page: Page) =>
+  page.getByRole('region', { name: 'Satisfação' })
 
-test('the Dono closes a Session and the next one shows the Crédito', async ({
+test('the Dono closes a Session and the next one shows the satisfaction', async ({
   page,
 }, info) => {
   test.skip(info.project.name !== 'desktop', 'one group per project')
@@ -39,7 +40,9 @@ test('the Dono closes a Session and the next one shows the Crédito', async ({
   await snap(page, info, 'feedback-lista')
   await page.locator(`a[href="/feedback/${first}"]`).click()
   await expect(page).toHaveURL(new RegExp(`/feedback/${first}$`))
-  await expect(credit(page)).toContainText('Ninguém deste grupo tem Crédito')
+  await expect(satisfaction(page)).toContainText(
+    'Ninguém deste grupo está atrás dos outros',
+  )
   await snap(page, info, 'feedback-form')
 
   // Bruno and Quim loved the first film; Rosa did not.
@@ -58,14 +61,14 @@ test('the Dono closes a Session and the next one shows the Crédito', async ({
   await snap(page, info, 'feedback-gravado')
   expect(await stillOpen(first)).toBe(false)
 
-  // The same group again: Rosa fell behind in the first Session.
+  // The same group again: Rosa left the first Session the least satisfied.
   const next = await openSession(['dono', 'rosa', 'quim'])
   await page.goto(`/feedback/${next}`)
-  await expect(credit(page)).toContainText('Rosa')
-  await expect(credit(page)).toContainText(
-    /na Sessão de 2026-11-20 \(.+\), Rosa deu 1 e a média dos Presentes foi/,
+  await expect(satisfaction(page)).toContainText('Rosa')
+  await expect(satisfaction(page)).toContainText(
+    /satisfação de Rosa nas últimas Sessões: 11%, e a mais alta do grupo, 100%; na de 2026-11-20 \(.+\), deu 1/,
   )
-  await snap(page, info, 'feedback-credito')
+  await snap(page, info, 'feedback-satisfacao')
 })
 
 test('a relayed Relato, a film by its title, and a refusal', async ({
@@ -90,7 +93,7 @@ test('a relayed Relato, a film by its title, and a refusal', async ({
   await page.getByLabel('Outro filme').check()
   await page
     .getByLabel('Título ou ID do IMDb', { exact: false })
-    .fill('Pequenos Milagres')
+    .fill('Café Amargo')
   await page.getByLabel('Reação: Bruno').selectOption('nota:4')
   await page.getByLabel('Reação: Iara').selectOption('relato:gostou')
   await page.getByLabel('Comentário: Iara').fill('riu muito')
