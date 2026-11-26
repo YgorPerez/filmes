@@ -1,0 +1,137 @@
+# Vocabulário da Leitura do pedido (#184): o que o app web entende de uma
+# frase livre do Dono, sem modelo de linguagem.
+#
+# Cada frase daqui casa com palavras inteiras e seguidas da frase do Dono, sem
+# diferença de maiúscula, de acento nem de pontuação dentro dela; a vírgula,
+# o ponto e o ponto e vírgula separam orações, e nenhuma frase passa de uma
+# oração para a outra. Quando duas frases disputam as mesmas palavras, a mais
+# longa ganha, e cada palavra vale para um item só. Os números (horas,
+# minutos, idade, ano, década) saem de padrões fixos no leitor de cada campo.
+#
+# Mudar uma lista muda quais pedidos saem, não como se pontuam: não precisa
+# rodar `evaluate` depois.
+
+# Palavras que só ligam as outras: não voltam como "não entendi".
+fillers = [
+    "e", "a", "o", "as", "os", "à", "ao", "aos", "um", "uma", "uns", "umas",
+    "de", "da", "do", "das", "dos", "em", "no", "na", "nos", "nas", "com",
+    "pra", "para", "por", "que", "tem", "só", "também", "mais", "bem", "algo",
+    "alguma", "coisa", "hoje", "agora", "aqui", "filme", "filmes", "quero",
+    "queremos", "ver", "assistir", "chegou", "chegaram", "veio", "vieram",
+    "vamos", "somos", "estamos", "sessão",
+]
+
+# Os números por extenso; os escritos com algarismos valem sempre.
+[numbers]
+um = 1
+uma = 1
+dois = 2
+duas = 2
+"três" = 3
+quatro = 4
+cinco = 5
+seis = 6
+sete = 7
+oito = 8
+nove = 9
+dez = 10
+onze = 11
+doze = 12
+
+# Uma destas nega o que vem depois na mesma oração: o Clima depois dela
+# ("nada de terror", "sem comédia") volta como "não entendi".
+[negation]
+words = ["nada", "nada de", "sem", "não"]
+
+[attendees]
+# Quem diz uma destas é o Dono logado.
+me = ["eu", "comigo"]
+
+[moods]
+# Sinônimos de cada Clima de moods.toml; o nome do Clima já vale sozinho.
+leve = ["levinho", "tranquilo", "feel good"]
+"pra rir" = ["engraçado", "engraçada", "comédia", "rir", "divertido", "dar risada"]
+tenso = ["suspense", "tensão"]
+"romântico" = ["romance", "romântica", "de amor"]
+"pra chorar" = ["triste", "chorar", "emocionante"]
+"pra pensar" = ["reflexivo", "pensar", "profundo"]
+assustador = ["terror", "medo", "de medo", "horror"]
+"ação" = ["aventura", "de ação"]
+sombrio = ["sombria", "dark"]
+
+[duration]
+# "até 2h", "no máximo 90 minutos", "uma hora e meia". As palavras antes
+# do tempo são opcionais e entram no item.
+before = ["até", "no máximo", "máximo", "menos de", "em até"]
+hours = ["h", "hora", "horas"]
+minutes = ["min", "minuto", "minutos"]
+half = ["e meia"]
+# Sem número: o filme curto.
+short = ["curto", "curtinho", "filme curto", "rapidinho"]
+short_minutes = 100
+
+[child]
+# "criança de 7", "criança de 7 anos", "com criança" (sem idade vale L).
+words = ["criança", "crianças", "criancinha", "filho", "filha", "sobrinho", "sobrinha", "neto", "neta"]
+of = ["de"]
+years = ["ano", "anos", "aninhos"]
+
+[year]
+# "anos 90", "dos anos 2000": a década. "anos 00" e "anos 10" são 2000 e
+# 2010; as outras de dois algarismos, do século XX.
+decade = ["anos", "década de"]
+# "depois de 2010" é de 2011 em diante; "antes de 1980", até 1979.
+after = ["depois de", "após"]
+since = ["desde", "a partir de"]
+before = ["antes de"]
+until = ["até"]
+# "entre 1990 e 2000".
+between = ["entre"]
+and = ["e"]
+
+[language]
+# Idioma original, pelo código que a Restrição aceita. "Dublado" não entra:
+# a Restrição é do idioma original, não da dublagem.
+pt = ["nacional", "filme nacional", "brasileiro", "português", "em português"]
+en = ["inglês", "em inglês"]
+fr = ["francês", "em francês"]
+es = ["espanhol", "em espanhol"]
+it = ["italiano", "em italiano"]
+de = ["alemão", "em alemão"]
+ja = ["japonês", "em japonês"]
+ko = ["coreano", "em coreano"]
+
+[unseen]
+phrases = ["que ninguém viu", "ninguém viu", "nada repetido", "sem repetir", "nada que a gente já viu", "inédito"]
+
+[no_slow]
+phrases = ["nada lento", "sem nada lento", "nada parado", "nada arrastado"]
+
+[no_sad]
+phrases = ["nada triste", "sem tristeza", "nada deprimente", "nada de chorar"]
+
+[count]
+# "5 filmes", "três opções", "só 3". "Um filme" é artigo, não quantidade.
+films = ["filmes", "filme", "opções", "sugestões"]
+only = ["só", "apenas", "somente"]
+
+[by]
+# A Regra "de": "pelo gosto da Iara". A Pessoa também entra nos Presentes.
+phrases = ["pelo gosto da", "pelo gosto do", "pelo gosto de", "no gosto da", "no gosto do", "do jeito da", "do jeito do"]
+
+[similar]
+# "parecido com Amélie", "tipo Amélie": o título vai até o fim da oração ou
+# até o próximo item entendido, e a busca do Catálogo o resolve.
+phrases = ["parecido com", "parecida com", "parecidos com", "igual", "igual a", "tipo", "no estilo de", "na linha de"]
+# "entre Amélie e Her": dois filmes.
+between = ["entre"]
+and = ["e"]
+
+[taste]
+# Uma oração com uma destas fala de gosto, e a Leitura não lê nada dela:
+# gosto permanente só se grava com um sim do Dono, na página da Pessoa.
+words = [
+    "odeia", "odeio", "odeiam", "detesta", "detesto", "detestam", "ama", "amo",
+    "amam", "adora", "adoro", "adoram", "gosta", "gostam", "curte", "curtem",
+    "não suporta", "não aguenta",
+]

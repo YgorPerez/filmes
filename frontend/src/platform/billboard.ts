@@ -8,15 +8,24 @@
 // the reply chose). The page then shows the new version: the
 // kept films at their number, the new ones "novo", and "Saiu" with why.
 //
-// The acrescentar is not read for taste: gosto permanente is written only
-// after the Dono's yes, and on the web that yes is hers on the Pessoa's
-// page. The page says so. Server only.
+// The acrescentar is read by the Leitura do pedido (#200) and what it
+// understood goes into the redo request (the engine's `ADDITION_FIELDS` and
+// `withAddition`): Presentes and Climas added, a Restrição added or
+// replacing the same one, a Parecido replacing the one there; how many
+// films, the Regra and "de" are not read from it. An acrescentar with
+// nothing understood redoes nothing by itself.
+// It is never read for taste: gosto permanente is written only after the
+// Dono's yes, and on the web that yes is hers on the Pessoa's page. The
+// page says so. Server only.
 
 import {
+  ADDITION_FIELDS,
   answerBillboard,
   billboard,
+  readRequest,
   recommendSession,
   sessionRedoRequest,
+  withAddition,
   type Billboard,
   type Engine,
   type WaitingAnswers,
@@ -34,6 +43,7 @@ import {
   pairwisePage,
   pairwiseWaiting,
 } from './pairwise'
+import { pageReading, type PageReading } from './reading'
 import { serverEnv } from './server-env'
 import { issueSessionLink, resolveSessionLink } from './session-link'
 import { voteAction, voteDeck } from './session-votes'
@@ -83,19 +93,42 @@ export function billboardsFromEngine(
         owner,
       })
       if (reply.exitCode !== 0) return { ...reply, stage: 'answer' }
-      const { regenerate, keep, moods, warnings, addition } = reply.output
+      const { keep, moods, dropped, warnings, addition } = reply.output
+      const read =
+        addition === null
+          ? null
+          : await run(
+              readRequest({ text: addition, fields: ADDITION_FIELDS }),
+              {
+                owner,
+              },
+            )
+      if (read !== null && read.exitCode !== 0) logEngineError(read)
+      const reading = read?.exitCode === 0 ? read.output : null
       const note = (more: readonly string[] = []): Note => ({
         warnings: [...warnings, ...more],
         addition,
+        ...(reading && { reading: pageReading(reading) }),
       })
+      // The web decides here, by the Leitura do pedido (#184, 2026-11-26):
+      // an acrescentar with nothing understood and no film dropped does not
+      // redo. The MCP keeps `answerBillboard`'s own `regenerate`, since
+      // there Claude reads the acrescentar.
+      const regenerate =
+        dropped.length > 0 ||
+        moods !== null ||
+        (reading?.understood.length ?? 0) > 0
       if (!regenerate)
         return { exitCode: 0, output: { regenerated: false, note: note() } }
       const asked = await run(sessionRedoRequest(id))
       if (asked.exitCode !== 0) return { ...asked, stage: 'redo' }
+      const chosen = {
+        ...asked.output,
+        ...(moods !== null && { moods: [...moods] }),
+      }
       const redone = await run(
         recommendSession({
-          ...asked.output,
-          ...(moods !== null && { moods: [...moods] }),
+          ...(reading ? withAddition(chosen, reading.request) : chosen),
           keep: [keep.join(',')],
         }),
         { owner },
@@ -124,6 +157,8 @@ export type CartazPage = {
   billboard: Billboard | null
   warnings: string[]
   addition: string | null
+  /** What the reading made of the acrescentar (#200). */
+  reading?: PageReading
   sessionLink?: string | null
   /** The Presentes' Perguntas par a par that wait for the Dono (#181). */
   pairwise?: ReadonlyArray<WaitingAnswers>
@@ -150,6 +185,7 @@ export async function cartazPage(
     billboard: made.exitCode === 0 ? made.output.model : null,
     warnings: [...new Set(warnings)],
     addition: recalled?.addition ?? null,
+    ...(recalled?.reading && { reading: recalled.reading }),
   }
 }
 
