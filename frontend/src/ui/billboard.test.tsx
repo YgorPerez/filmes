@@ -43,6 +43,14 @@ describe('the Cartaz shows', () => {
     expect(within(cards()[0]!).queryByText(BILLBOARD.card.isNew)).toBeNull()
   })
 
+  it('the Aposta’s stamp on the bet only, beside its NOVO', () => {
+    render(<Billboard billboard={MODEL} />)
+    const stamp = card(2).getByText(BILLBOARD.card.bet)
+    expect(stamp.getAttribute('title')).toBe(BILLBOARD.card.betHint)
+    expect(card(2).getByText(BILLBOARD.card.isNew)).toBeTruthy()
+    expect(card(1).queryByText(BILLBOARD.card.bet)).toBeNull()
+  })
+
   it('the request on the shelf label, the legend and what left', () => {
     render(<Billboard billboard={MODEL} />)
     expect(

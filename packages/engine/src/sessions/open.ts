@@ -125,6 +125,7 @@ export const recommendationFields = (
           id: f.id,
           title: f.title,
           ...('new' in f && { new: f.new }),
+          ...(f.bet && { bet: true }),
         })),
       ),
     ],
@@ -154,6 +155,30 @@ const requestOwners = (
   Effect.flatMap(Owner, (owner) =>
     owner !== null ? Effect.succeed([owner]) : databaseOwners(db),
   )
+
+/** The Presentes a new Session's id names: all but the Dono, or all when
+ * she is alone. */
+const idParts = (
+  attendees: ReadonlyArray<string>,
+  owners: ReadonlyArray<string>,
+): ReadonlyArray<string> => {
+  const others = attendees.filter((p) => !owners.includes(p))
+  return others.length > 0 ? others : attendees
+}
+
+/** The id a new Session of these Presentes gets today, if no other
+ * Session takes it first: the Aposta's seed (#178). */
+export const nextSessionId = (
+  db: Connection,
+  attendees: ReadonlyArray<string>,
+): Effect.Effect<string, EngineError | SqliteError, EngineServices | Run> =>
+  Effect.gen(function* () {
+    const { today } = yield* Run
+    return yield* newSessionId(
+      today,
+      idParts(attendees, yield* requestOwners(db)),
+    )
+  })
 
 /** Who signs the commit: the Dono, from her file, or the engine itself
  * when there is no Dono. */
@@ -196,11 +221,7 @@ export const openSession = (
               (row) => [String(row['slug']), String(row['nome'])],
             ),
           )
-          const others = attendees.filter((p) => !owners.includes(p))
-          const id = yield* newSessionId(
-            today,
-            others.length > 0 ? others : attendees,
-          )
+          const id = yield* newSessionId(today, idParts(attendees, owners))
           const front = new Map<string, YamlValue>([
             ['date', today],
             ['owner', owners[0] ?? null],

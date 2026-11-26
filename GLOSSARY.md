@@ -78,6 +78,10 @@ _Evitar_: conflito, variância
 O top 5 que uma Sessão recebe, cada filme com os seus Motivos.
 _Evitar_: sugestão, lista
 
+**Aposta** [bet, `bet`]:
+O filme da 5ª vaga da Recomendação (`[bet] position`): um Candidato com Nota prevista boa e pouca Evidência, que a Regra deixaria de fora. Sai por amostragem de Thompson: cada Presente com Nota prevista sorteia uma Nota em torno dela, tanto mais espalhada quanto mais incerta, e vence a maior média dos sorteios. O sorteio parte do id da Sessão, então refazer a mesma Sessão sorteia o mesmo. Vetos e Restrições valem para ela. O Já vi e o Trocar tiram a Aposta da Sessão, e a Nota do Já vi muda os vizinhos de gosto do próximo sorteio. Mantida, continua Aposta. No Cartaz, leva o selo "aposta".
+_Evitar_: exploração, coringa, surpresa
+
 **Versão da Sessão** [session version, `SessionVersion`]:
 Uma Recomendação de uma Sessão aberta. Quando o Dono pede outra lista na mesma Sessão, a atual vira uma versão anterior, guardada com o pedido e os Presentes dela, e a nova passa a valer. O número da versão conta a partir de 1. Um filme de uma versão anterior pode voltar na nova; só o que o Dono trocou em alguma versão e o que algum Presente marcou Já vi na Sessão ficam fora dela até o fim.
 _Evitar_: rodada, tentativa

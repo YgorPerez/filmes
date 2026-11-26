@@ -40,7 +40,14 @@
 
 import { Effect } from 'effect'
 import { thousandsDot } from '../compat/number.ts'
-import { pyStrValue, yamlToJson, type YamlMapping } from '../data/yaml.ts'
+import {
+  isMapping,
+  isSequence,
+  pyStrValue,
+  pyTruthy,
+  yamlToJson,
+  type YamlMapping,
+} from '../data/yaml.ts'
 import { ratingText } from '../evidence/wording.ts'
 import type { EngineError } from '../runtime/EngineError.ts'
 import type { Environment } from '../runtime/Environment.ts'
@@ -71,6 +78,8 @@ export interface Regenerate {
   /** The request asks for other Climas than the previous version's, which
    * also replaces the whole list. */
   readonly newMood: boolean
+  /** The previous version's Aposta (#178), if any. */
+  readonly bet?: string
 }
 
 /** Why a film of the previous version left (an item of `dropped`, without
@@ -125,6 +134,11 @@ export const prepareRegenerate = (
         `--manter ${id}: o filme não estava na versão anterior da Sessão; ficou de fora`,
     )
   const attendees = yamlToJson(version.get('attendees') ?? null)
+  const recommendation = version.get('recommendation')
+  const bet = (isSequence(recommendation) ? recommendation : [])
+    .filter(isMapping)
+    .find((film) => pyTruthy(film.get('bet') ?? false))
+    ?.get('id')
   return {
     regenerate: {
       previous: screen,
@@ -139,6 +153,7 @@ export const prepareRegenerate = (
       swapped,
       replacing,
       newMood,
+      ...(bet !== undefined && bet !== null && { bet: pyStrValue(bet) }),
     },
     warnings,
   }

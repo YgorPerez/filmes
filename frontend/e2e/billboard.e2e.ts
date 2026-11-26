@@ -7,6 +7,7 @@
 // (the other files read the fixture's Pessoas). `E2E_SCREENSHOTS=<folder>`
 // saves each screen.
 
+import { readFileSync, writeFileSync } from 'node:fs'
 import { recommendSession } from '@filmes/engine'
 import { expect, test, type Page } from '@playwright/test'
 import { addPerson, engineRun, loginAsBruno, notice, snap } from './support'
@@ -20,6 +21,29 @@ const openSession = async (person: string, count: number) =>
       }),
     )
   ).session.id
+
+/** Opens a Session for Bruno and `person` with Bruno's taste neighbours
+ * on (the fixture's users 10, 20 and 30), so the 5th place is the Aposta
+ * (#178); gives its id. */
+const openBetSession = async (person: string) => {
+  const root = process.env.E2E_ENGINE!
+  const weights = `${root}/weights-bet.toml`
+  writeFileSync(
+    weights,
+    readFileSync(`${root}/config/weights.toml`, 'utf8').replace(
+      'k = 50\nmin_shared = 10',
+      'k = 3\nmin_shared = 5',
+    ),
+  )
+  const opened = await engineRun(
+    (engine) =>
+      engine.run(recommendSession({ attendees: ['bruno', person] }), {
+        owner: 'bruno',
+      }),
+    { FILMES_PESOS: weights },
+  )
+  return opened.session.id
+}
 
 /** Enviar, and the Session's page saying what it did. */
 async function send(page: Page, id: string, done: string, says: string) {
@@ -37,6 +61,24 @@ const titleOf = async (page: Page, n: number) =>
     .replace(/^\d+\s*/, '')
     .split('\n')[0]!
     .trim()
+
+test('the Aposta has its stamp, in both themes', async ({ page }, info) => {
+  const mobile = info.project.name === 'mobile'
+  if (mobile) await page.emulateMedia({ colorScheme: 'dark' })
+  const name = mobile ? 'Rui' : 'Pia'
+  await addPerson(name)
+  const id = await openBetSession(name.toLowerCase())
+  await loginAsBruno(page)
+  await page.goto(`/sessoes/${id}`)
+  await expect(cards(page)).toHaveCount(5)
+  await expect(card(page, 5).getByText('aposta', { exact: true })).toBeVisible()
+  for (const n of [1, 2, 3, 4])
+    await expect(
+      card(page, n).getByText('aposta', { exact: true }),
+    ).toHaveCount(0)
+  await card(page, 5).scrollIntoViewIfNeeded()
+  await snap(page, info, 'cartaz-aposta')
+})
 
 test('the Dono marks, reloads, sends, and the Cartaz comes back redone', async ({
   page,

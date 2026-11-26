@@ -99,6 +99,11 @@ export {
 } from './recommendation/header.ts'
 export { readMoods, resolveMoods, type Mood } from './recommendation/moods.ts'
 export {
+  drawBets,
+  type BetCandidate,
+  type BetOdds,
+} from './recommendation/bet.ts'
+export {
   rank,
   rankRequest,
   recommend,

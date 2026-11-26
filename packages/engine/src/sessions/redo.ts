@@ -65,6 +65,7 @@ import {
 } from './file.ts'
 import {
   authorFor,
+  nextSessionId,
   openSession,
   recommendationFields,
   sessionContext,
@@ -251,7 +252,16 @@ export const recommendSession = (
       regenerate = prepared.regenerate
       warnings.push(...prepared.warnings)
     }
-    const ranked = yield* rankRequest(asking, count, asked, regenerate)
+    // The Aposta's draws come from the Session id (#178).
+    const ranked = yield* rankRequest(
+      asking,
+      count,
+      asked,
+      regenerate,
+      session !== undefined
+        ? () => Effect.succeed(session)
+        : (db, attendees) => nextSessionId(db, attendees),
+    )
     const recommendation: Recommendation = {
       ...ranked,
       warnings: [...warnings, ...ranked.warnings],

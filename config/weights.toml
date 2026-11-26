@@ -94,6 +94,18 @@ min_shared = 10
 weight = 1.0
 neutral_band = 0.05
 
+[bet]
+# A Aposta (#178): a vaga `position` da Recomendação (0 desliga) vai para um
+# Candidato que a Regra deixou de fora, com Nota prevista média de pelo menos
+# `min_predicted` (de 1 a 10) entre os Presentes que têm uma e no máximo
+# `max_facts` Fatos dos Presentes sobre ele, fora a linha dos vizinhos de gosto.
+# Já visto de um Presente ou utilidade abaixo da neutra (0,5) tiram o filme.
+# Sorteio de Thompson: cada Presente sorteia uma Nota de
+# Normal(Nota prevista, desvio / √vizinhos); vence a maior média dos sorteios.
+position = 5
+min_predicted = 7.0
+max_facts = 1
+
 [mood]
 # Bônus de cada Clima pedido que o filme sustenta, somado à pontuação da Regra
 # de escolha (que vai de 0 a 1), vezes o multiplicador da Força.

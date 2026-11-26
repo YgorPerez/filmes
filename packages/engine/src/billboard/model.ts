@@ -124,6 +124,8 @@ export interface BillboardFilm {
   readonly originalTitle: string | null
   /** Came in with this version (a regenerate). */
   readonly new: boolean
+  /** The Aposta [bet] of this version (#178). */
+  readonly bet: boolean
   /** The TMDB poster at w500, or null. */
   readonly poster: string | null
   readonly imdbUrl: string
@@ -438,12 +440,13 @@ export const billboardModel = (
     // "Você" is whoever looks: the logged-in Pessoa, else the Session's Dono.
     const owner = (yield* Owner) ?? textOf(front.get('owner'))
     const newOnes = new Map<string, boolean>()
+    const bets = new Set<string>()
     const recommendation = front.get('recommendation')
-    for (const item of mappings(recommendation))
-      newOnes.set(
-        pyStrValue(item.get('id') ?? null),
-        pyTruthy(item.get('new') ?? false),
-      )
+    for (const item of mappings(recommendation)) {
+      const filmId = pyStrValue(item.get('id') ?? null)
+      newOnes.set(filmId, pyTruthy(item.get('new') ?? false))
+      if (pyTruthy(item.get('bet') ?? false)) bets.add(filmId)
+    }
     return yield* (yield* Sqlite).read((db) =>
       Effect.gen(function* () {
         const names = new Map(
@@ -480,6 +483,7 @@ export const billboardModel = (
             originalTitle:
               header.titlePt && header.titlePt !== row.title ? row.title : null,
             new: newOnes.get(film.id) ?? false,
+            bet: bets.has(film.id),
             poster: header.poster
               ? header.poster.replace('/w185/', '/w500/')
               : null,

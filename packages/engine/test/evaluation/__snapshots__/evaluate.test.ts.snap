@@ -12,6 +12,11 @@ exports[`avaliar, as recorded > gives the recorded result and report 1`] = `
           "normal": 1,
         },
       },
+      "bet": {
+        "maxFacts": 1,
+        "minPredicted": 7,
+        "position": 5,
+      },
       "catalog": {
         "minImdbRating": 7,
         "minVotes": 1000,
@@ -411,6 +416,11 @@ Quanto das Notas retidas foi 4 ou mais, pela Força mais alta a favor do filme n
           "none": 0,
           "normal": 1,
         },
+      },
+      "bet": {
+        "maxFacts": 1,
+        "minPredicted": 7,
+        "position": 5,
       },
       "catalog": {
         "minImdbRating": 7,
@@ -2046,6 +2056,11 @@ Foram testados 300 conjuntos. A ordem usa a média do Recall@50 entre as amostra
           "none": 0,
           "normal": 1,
         },
+      },
+      "bet": {
+        "maxFacts": 1,
+        "minPredicted": 7,
+        "position": 5,
       },
       "catalog": {
         "minImdbRating": 7,

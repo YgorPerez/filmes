@@ -13,9 +13,10 @@ import {
 import { expect, type Page, type TestInfo } from '@playwright/test'
 
 /** Runs `task` on an engine over the fixture copy and gives its output; an
- * engine error fails the test. */
+ * engine error fails the test. `vars` add to the engine's variables. */
 export async function engineRun<A>(
   task: (engine: Engine) => Promise<Outcome<A>>,
+  vars: Readonly<Record<string, string>> = {},
 ): Promise<A> {
   const root = process.env.E2E_ENGINE
   const engine = makeEngine({
@@ -23,6 +24,7 @@ export async function engineRun<A>(
     FILMES_DADOS: `${root}/data`,
     FILMES_BANCO: `${root}/filmes.sqlite`,
     FILMES_HOJE: '2026-11-20',
+    ...vars,
   })
   try {
     const outcome = await task(engine)
