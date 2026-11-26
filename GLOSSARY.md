@@ -78,6 +78,10 @@ _Evitar_: conflito, variância
 O top 5 que uma Sessão recebe, cada filme com os seus Motivos.
 _Evitar_: sugestão, lista
 
+**Aposta** [bet, `bet`]:
+O filme da 5ª vaga da Recomendação (`[bet] position`): um Candidato com Nota prevista boa e pouca Evidência, que a Regra deixaria de fora. Sai por amostragem de Thompson: cada Presente com Nota prevista sorteia uma Nota em torno dela, tanto mais espalhada quanto mais incerta, e vence a maior média dos sorteios. O sorteio parte do id da Sessão, então refazer a mesma Sessão sorteia o mesmo. Vetos e Restrições valem para ela. O Já vi e o Trocar tiram a Aposta da Sessão, e a Nota do Já vi muda os vizinhos de gosto do próximo sorteio. Mantida, continua Aposta. No Cartaz, leva o selo "aposta".
+_Evitar_: exploração, coringa, surpresa
+
 **Parecença** [similarity, `similarity`]:
 O quanto um filme se parece com um filme de referência, de 0 a 1: genoma, tags do MovieLens, vizinhos, gênero e diretor ou atores em comum, com os pesos de `[similar.weight]`. Mede-se a partir da referência, então não é simétrica. É o que o `--parecido` usa para filtrar.
 _Evitar_: semelhança, distância

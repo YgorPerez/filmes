@@ -79,6 +79,12 @@ describe('the view shows', () => {
     expect(screen.getByRole('form', { name: BILLBOARD.label })).toBeTruthy()
   })
 
+  it('the Aposta’s stamp on the bet', () => {
+    render(<BillboardView result={shown} host={fakeHost(json({}))} />)
+    expect(card(2).getByText(BILLBOARD.card.bet)).toBeTruthy()
+    expect(card(1).queryByText(BILLBOARD.card.bet)).toBeNull()
+  })
+
   it('the Nota prevista the tool result carries', () => {
     render(<BillboardView result={shown} host={fakeHost(json({}))} />)
     expect(

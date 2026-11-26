@@ -65,6 +65,13 @@ export const Weights = Schema.Struct({
     weight: Weight,
     neutral_band: Weight,
   }),
+  /** The Aposta (#178): its place (0: none), the lowest mean Nota
+   * prevista, 1 to 10, and how many Facts it may have. */
+  bet: Schema.Struct({
+    position: Count,
+    min_predicted: Weight,
+    max_facts: Count,
+  }),
   mood: Schema.Struct({ weight: Weight }),
   group: Schema.Struct({ weight: Weight }),
   people: Schema.Struct({ statement_weight: Weight }),

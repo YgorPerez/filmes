@@ -352,7 +352,7 @@ Neutros frios fazem a tela. Os adesivos e as cores dos Presentes têm um papel c
 
 - **Amarelo-novo** (sticker-yellow): o adesivo "NOVO" de quem entrou ao regerar, o papel com a fala do Dono ao lado da etiqueta da prateleira e a cor de seleção de texto (a 53% de opacidade). Texto em on-sticker.
 - **Rosa-troca** (sticker-pink): só o adesivo "TROCAR". Texto em on-sticker.
-- **Violeta-carimbo** (stamp; dark-stamp no escuro): os carimbos da carteirinha e as notas do balconista em letra de mão ("Este passo se marca sozinho..."). No escuro vira lilás claro para ler sobre o cartão escuro.
+- **Violeta-carimbo** (stamp; dark-stamp no escuro): os carimbos da carteirinha, o carimbo APOSTA no Cartaz e as notas do balconista em letra de mão ("Este passo se marca sozinho..."). No escuro vira lilás claro para ler sobre o cartão escuro.
 - **Verde-etiqueta** (sticker-green): só os pontos que separam os itens na etiqueta da prateleira, junto com o laranja e o rosa, como as bolinhas coloridas de uma etiqueta de preço.
 
 ### Tertiary
@@ -508,6 +508,7 @@ Trilho preto (estojo, 5px, raio 6px) e, dentro, a etiqueta clara (shelf-label, r
 
 - **TROCAR:** rosa, Rubik 800 15px maiúsculo, girado -9°, colado no meio da capa (40% da altura). Desmarcar Trocar tira o adesivo.
 - **NOVO:** amarelo, Rubik 800 12px maiúsculo, girado 9°, no canto de cima à direita do estojo, 10px para fora. Só em quem entrou ao regerar.
+- **APOSTA:** carimbo violeta (stamp; dark-stamp no escuro) num retalho de superfície com contorno de 2px, Rubik 800 12px maiúsculo, girado -6°, no canto de baixo à esquerda da capa, 38px acima do pé do estojo e para fora como o adesivo de preço. Só na Aposta da Recomendação. É carimbo, não adesivo: o palpite do balconista. Fica longe do NOVO, porque a Aposta que entrou ao regerar leva os dois. O título do carimbo diz por quê ("pouca Evidência, mas quem tem gosto parecido deu nota alta").
 - **JÁ VI:** quando todos os Presentes marcaram Já vi, um adesivo em superfície com contorno de 2px e texto em tinta, mesmo tamanho e rotação do TROCAR, no mesmo lugar. Já vi de só parte dos Presentes não cola adesivo: aparece nas opções marcadas e na nota de Já vi.
 - **Saiu da prateleira:** acima do primeiro card, em meta tinta clara, "Saiu da prateleira:" e o título do que saiu em letra de mão 15px tinta, com o motivo entre parênteses ("Teo já viu"). Um por linha quando sai mais de um.
 

@@ -134,6 +134,8 @@ export interface BillboardFilm {
   readonly originalTitle: string | null
   /** Came in with this version (a regenerate). */
   readonly new: boolean
+  /** The Aposta [bet] of this version (#178). */
+  readonly bet: boolean
   /** The TMDB poster at w500, or null. */
   readonly poster: string | null
   readonly imdbUrl: string
@@ -506,6 +508,7 @@ export const billboardModel = (
             originalTitle:
               header.titlePt && header.titlePt !== row.title ? row.title : null,
             new: pyTruthy(listed.get(film.id)?.get('new') ?? false),
+            bet: pyTruthy(listed.get(film.id)?.get('bet') ?? false),
             poster: header.poster
               ? header.poster.replace('/w185/', '/w500/')
               : null,

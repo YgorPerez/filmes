@@ -258,6 +258,11 @@ exports[`avaliar on MovieLens files, as recorded > a messy sample with tags give
           "normal": 1,
         },
       },
+      "bet": {
+        "maxFacts": 1,
+        "minPredicted": 7,
+        "position": 5,
+      },
       "catalog": {
         "minImdbRating": 7,
         "minVotes": 1000,
@@ -644,6 +649,11 @@ exports[`avaliar on MovieLens files, as recorded > a small sample warns that Mov
           "normal": 1,
         },
       },
+      "bet": {
+        "maxFacts": 1,
+        "minPredicted": 7,
+        "position": 5,
+      },
       "catalog": {
         "minImdbRating": 7,
         "minVotes": 1000,
@@ -1027,6 +1037,11 @@ exports[`the diaries, as recorded > a Trakt history dates the cut 1`] = `
           "none": 0,
           "normal": 1,
         },
+      },
+      "bet": {
+        "maxFacts": 1,
+        "minPredicted": 7,
+        "position": 5,
       },
       "catalog": {
         "minImdbRating": 7,

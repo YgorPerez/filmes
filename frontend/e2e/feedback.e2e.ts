@@ -90,10 +90,12 @@ test('a relayed Relato, a film by its title, and a refusal', async ({
   await snap(page, info, 'feedback-recusa')
   expect(await stillOpen(id)).toBe(true)
 
+  // Not Pequenos Milagres: the Feedback makes the film a Já visto of each
+  // Presente, and that one is Bruno's Aposta in `billboard.e2e.ts`.
   await page.getByLabel('Outro filme').check()
   await page
     .getByLabel('Título ou ID do IMDb', { exact: false })
-    .fill('Pequenos Milagres')
+    .fill('Café Amargo')
   await page.getByLabel('Reação: Bruno').selectOption('nota:4')
   await page.getByLabel('Reação: Iara').selectOption('relato:gostou')
   await page.getByLabel('Comentário: Iara').fill('riu muito')

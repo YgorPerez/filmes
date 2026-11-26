@@ -9,6 +9,7 @@ import { Avatar, PersonDot } from './kit/person'
 import { PriceSticker, Sticker } from './kit/sticker'
 import { TapeCase } from './kit/tape-case'
 import { BILLBOARD } from './billboard.copy'
+import { BetStamp } from './billboard-bet'
 import { FilmMarksControls } from './billboard-card-marks'
 import { Strength } from './billboard-top'
 
@@ -85,6 +86,14 @@ function Poster({
         <Sticker kind="new" className="absolute top-sm -right-md">
           {card.isNew}
         </Sticker>
+      )}
+      {film.bet && (
+        <BetStamp
+          hint={card.betHint}
+          className="absolute bottom-[38px] -left-sm"
+        >
+          {card.bet}
+        </BetStamp>
       )}
       <PriceSticker className="absolute -top-[9px] -left-[9px]">
         {film.position}
