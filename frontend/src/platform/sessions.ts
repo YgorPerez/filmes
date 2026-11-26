@@ -19,12 +19,8 @@ import {
   type SessionRequestForm,
   type SessionRequestRefusal,
 } from '#/content/session-request'
-import {
-  appEngine,
-  attendeeSlugs,
-  sessionFilms,
-  type SessionFilm,
-} from './engine'
+import { appEngine } from './engine'
+import { attendeeSlugs, sessionFilms, type SessionFilm } from './session-fields'
 import { appPoster, formPoster, seeOther } from './form-post'
 import { appNotes, type Notes } from './notes'
 
