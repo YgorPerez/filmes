@@ -449,14 +449,13 @@ Os adesivos saem para fora do estojo: o de preço fica 9px para cima e para a es
 No Claude, o Cartaz é uma view do MCP Apps: um só arquivo HTML com o JS e o CSS dentro, e só as fontes e as capas vindas de fora, das origens declaradas no CSP do recurso. O tema segue o `theme` do contexto do host (`light` ou `dark`) quando ele vier, e `prefers-color-scheme` quando não. Ele tem dois modos:
 
 - **Card inline, compacto.** É o que aparece na conversa. No celular a conversa é dona da rolagem vertical: a altura do card inline tem teto, o que passa dele é cortado e não há rolagem interna. Por isso o card inline mostra, de cima para baixo, em fundo chão com fio de 1px e raio 14px:
-  1. a etiqueta "FILMES · CARTAZ" (label, tinta clara);
-  2. a etiqueta da prateleira compacta (15px) com o papel amarelo da fala do Dono (16px);
-  3. a lista das 5 fitas, uma linha cada, de 6px de raio sobre superfície: lombada preta de 8px à esquerda, adesivo de preço de 26px, título em Rubik 700 15px (corta com reticências) e "2021 · 1h44" em meta à direita;
-  4. duas ações lado a lado, metade cada: "Marcar" (opção com ícone de expandir, abre a tela cheia) e "Enviar" (botão laranja).
+  1. a etiqueta da prateleira compacta (15px) com o papel amarelo da fala do Dono (16px); o Claude já diz de que app é o card, então não há rótulo acima dela;
+  2. a lista das 5 fitas, uma linha cada, de 6px de raio sobre superfície: lombada preta de 8px à esquerda, adesivo de preço de 26px, título em Rubik 700 15px (corta com reticências) e "2021 · 1h44" em meta à direita;
+  3. sem nada marcado, uma ação na largura toda: "Marcar" (opção com ícone de expandir, que abre a tela cheia). Depois de marcar na tela cheia, o resumo do que foi marcado em meta ("1 Trocar e 1 Já vi") e duas ações lado a lado, metade cada: "Marcar" e "Enviar" (botão laranja). Não há Enviar para mandar nada.
 
-  São 4 dados por filme (posição, título, ano, duração). Nada de capa, Evidência, chips nem adesivos de estado no inline: um filme marcado só aparece na tela cheia.
+  São 4 dados por filme (posição, título, ano, duração). Nada de capa, Evidência, chips nem adesivos de estado no inline: um filme marcado só aparece na tela cheia, e o resumo diz o que vai com o Enviar.
 
-- **Tela cheia, para marcar vários filmes.** "Marcar" pede `fullscreen` (`ui/request-display-mode`). No topo, fixo, sobre o chão com fio embaixo: a etiqueta compacta e a legenda dos Presentes e da Força. No meio, rolando, os cards inteiros e a caixa do acrescentar sem botão. No pé, fixo, sobre superfície com fio em cima: o resumo do que foi marcado à esquerda e o Enviar laranja à direita, dentro da área segura e acima da caixa de mensagem que o Claude sobrepõe. Não há painel lateral no celular: são só esses dois modos.
+- **Tela cheia, para marcar vários filmes.** "Marcar" pede `fullscreen` ao host. No topo, fixa, sobre o chão com fio embaixo, só a etiqueta compacta. No meio, rolando, a legenda dos Presentes e da Força, os cards inteiros e a caixa do acrescentar. No pé, fixa, a barra de envio na largura toda, sobre superfície com fio em cima, dentro da área segura e acima da caixa de mensagem que o Claude sobrepõe. Não há painel lateral no celular: são só esses dois modos.
 
 Em qualquer modo, alvos de toque de 44px ou mais, como no resto do filmes.
 
@@ -538,7 +537,7 @@ Três pontos de 7px em tinta: ●●● forte, ●●○ moderada, ●○○ fra
 - **Style:** pílula, 44px de altura, 0 14px, contorno interno de 1,5px em fio, Rubik 500 14px, sobre superfície.
 - **State:** marcada ganha contorno de 2px em tinta, fundo superfície 2, peso 700 e um ícone de ✓ de 16px antes do texto. `aria-pressed` acompanha.
 - **Foco:** anel de 2px em focus (dark-focus no escuro), afastado 2px. Vale para todo controle.
-- A linha de Já vi começa com o rótulo "JÁ VI" e tem uma opção por Presente ("Você", "Teo") e "Todos".
+- Os controles do card vêm em duas linhas: primeiro Trocar, as estrelas e o link "Comentar" (no celular o link pode descer); depois a linha de Já vi, que começa com o rótulo "JÁ VI" e tem uma opção por Presente ("Você", "Teo") e "Todos". O campo do comentário só aparece depois do toque em Comentar (já com o foco) ou quando já tem texto, no fim dos controles: o card não carrega campo vazio.
 - Marcar Já vi de uma Pessoa abre, logo abaixo, a **nota de Já vi**: cartão azul (card-stock, raio 8px, 10px 12px) com o avatar e "Nota do Teo" em Rubik 700 14px, a escala de 1 a 10 e o campo "o que achou".
 
 ### Escala de nota (1 a 10)
@@ -551,7 +550,7 @@ Cinco estrelas de 24px, cada uma num alvo de 36×44px. Acesas em star e preenchi
 
 ### Botão principal
 
-Laranja-preço, Rubik 800 15px maiúsculo em on-sticker, pílula de 44px, 0 22px. No Cartaz é "Enviar", que manda as marcações para a conversa no Claude ou regera no app; ao lado ou acima dele, em meta, o resumo do que foi marcado ("1 Já vi (Teo) · 1 Trocar · estrelas em 1 filme"). Sem nada marcado, o botão fica e, ao tocar, avisa "Nada marcado ainda".
+Laranja-preço, Rubik 800 15px maiúsculo em on-sticker, pílula de 44px, 0 22px. No Cartaz é "Enviar", que manda as marcações para a conversa no Claude ou regera no app. Ele mora na barra de envio, com o resumo do que foi marcado ao lado. Sem nada marcado, o botão fica e, ao tocar, avisa "Nada marcado ainda".
 
 O **botão grande** da home ("Pedir filme", com ícone de +) ocupa a largura toda, 60px de altura, raio 14px, Rubik 800 18px.
 
@@ -559,7 +558,11 @@ No Claude, o Enviar manda o texto por `ui/message`, e o Claude só age com o sim
 
 ### Acrescentar
 
-Caixa em superfície, fio de 1px, raio 12px, 14px de padding, depois do último card. Rótulo "Acrescentar" em Rubik 700 14px com a dica em sistema 14px tinta clara ("contexto da noite ou gosto: “chegou a Ana”, “nada de terror”"), textarea de 2 linhas, o resumo em meta e, no app web e no Claude inline, o Enviar. Na tela cheia do Claude o Enviar mora no pé fixo, não aqui.
+Caixa em superfície, fio de 1px, raio 12px, 14px de padding, depois do último card. Rótulo "Acrescentar" em Rubik 700 14px com a dica em sistema 14px tinta clara ("contexto da noite ou gosto: “chegou a Ana”, “nada de terror”"), textarea de 2 linhas, os chips de Clima, "Copiar pro chat" (opção) e, no app, a nota de que as marcações ficam neste navegador. O Enviar não mora aqui: fica na barra de envio.
+
+### Barra de envio
+
+O resumo do que foi marcado e o Enviar ficam numa barra que gruda no pé da tela enquanto o Cartaz está nela, a um polegar de qualquer filme (#221). Superfície, fio de 1px, 8px 12px, o resumo em meta tinta clara à esquerda (em frase: "1 Trocar, 1 Já vi e estrelas em 1 filme"; vazio sem nada marcado) e o Enviar à direita; a linha de status ("Copiado. Cole no chat.", "Nada marcado ainda.") embaixo. No app, a barra encosta na barra de abas do celular (68px acima do pé) e, a partir de 900px, no pé da janela, com raio de 14px só em cima e fio em cima e dos lados. Na tela cheia do Claude ela é o pé fixo, na largura toda. No Claude sem tela cheia, a view tem a altura do conteúdo e a barra fica no fim. Sem resposta (Sessão com Feedback), não há barra.
 
 ### Campos
 
@@ -598,6 +601,33 @@ O guia nunca bloqueia: "Pedir filme" fica sempre em cima. Quando nenhum passo fa
 - **Nova Sessão.** A frase, os Presentes e o Clima ficam à vista. "Parecido com um filme?" abre a busca e "Mais opções" reúne os limites, a Regra e a Série na ordem, e só vem aberto quando o rascunho ou a recusa mexe num campo dele. Cada dobra tem o + desenhado, que vira × aberta. Buscar volta ao formulário com o rascunho que a pessoa preencheu. O botão "Recomendar" ocupa a largura da coluna no celular.
 - **Contar como foi.** A lista de filmes mantém o adesivo de preço em cada opção. "Outro filme" abre um campo que aceita o título ou o ID e busca no Catálogo. "Não vimos nada" recolhe as reações. Notas, Relatos e comentários ficam juntos por Presente. O único botão laranja grava e fecha a Sessão.
 
+### Entrar
+
+A barra preta leva a marca. O cartão azul começa perto do topo e traz o título na etiqueta clara. O botão laranja ocupa a largura interna no celular. Uma recusa ocupa o lugar da instrução inicial e diz o que fazer. Se a conta está sem acesso, o botão diz "Usar outra conta Google". Se a entrada está indisponível, o cartão mostra só o aviso.
+
+### Operações
+
+O console SQL, a fila de envio e a avaliação têm títulos próprios. A partir de 900px, a fila fica à direita do console e a avaliação ocupa a linha de baixo. No celular, a ordem é consulta, envio, avaliação. O botão laranja executa a consulta. A tabela e a contagem ficam logo abaixo do formulário, com rolagem dentro da área de resultados.
+
+O quadro de envio mostra a fila e, se houver falha, quando ela começou e quantas tentativas falharam. O último erro do Git abre sob demanda. Depois de tentar enviar, o estado da fila aparece no próprio quadro.
+
+A avaliação mostra o progresso no lugar do formulário enquanto roda. As medidas vêm antes do relatório, que abre sob demanda. A opção de testar outras combinações de pesos explica por que leva mais tempo.
+
+Um erro ou um aviso de configuração diz primeiro, em frase, o que houve e o que fazer. Embaixo, menor e em ink-2, vem o detalhe técnico que o admin procura: o código do erro, ou a variável do servidor que falta.
+
+### Pessoas e Meu gosto
+
+**Pessoas** (`/pessoas`) é uma lista de linhas de 52px em superfície, raio 10px, com a lombada preta de 8px à esquerda, o nome em Rubik 700 15px, a etiqueta DONO de quem tem acesso, os apelidos em meta e a seta à direita. Quem entrou vem primeiro, com "Meu gosto" em meta ao lado do nome, e a linha dela leva a `/meu-gosto`; as outras seguem a ordem do motor. Embaixo, "Acrescentar Pessoa" abre o formulário. Não há "Voltar": Pessoas é aba.
+
+**A página de uma Pessoa** e **Meu gosto** (a página da Pessoa de quem entrou) são a mesma tela, uma coluna de fichas (`Slip`: superfície, fio de 1px, raio 12px, canhoto tracejado com o título em Rubik 800 13px maiúsculo e a contagem à direita), 16px entre elas. De cima para baixo:
+
+1. **Cabeçalho.** Na página de outra Pessoa, a opção "Pessoas" para voltar e o nome dela em title, com DONO quando ela tem acesso. Em Meu gosto, o h1 é "Meu gosto" e, embaixo, em meta, o nome e os apelidos de quem entrou. O aviso ou a recusa do último formulário vêm logo depois.
+2. **Notas** (sempre a primeira ficha). Sem Nota, uma linha diz como ter alguma. Depois, as ações numa fila de pílulas: em Meu gosto, "Dar notas" é o botão laranja, o único da tela (a fila de Notas grava para quem entrou, então só existe aqui); "Importar do Letterboxd ou do Trakt" em opção, que leva ao import dela (`/meu-gosto/importar` ou `/pessoas/<ela>/importar`); "Baixar CSV do IMDb" em opção, só com Notas, um link direto para o arquivo. Embaixo, em meta, onde o CSV entra no MovieLens. Por último, "Ver as 11 Notas" abre a lista, que pode ser longa.
+3. **Só em Meu gosto, o que o guia da home deixou.** "Conector no Claude": o endereço no preto do estojo, "Copiar endereço" em opção e, à direita do canhoto, "conectado" ou "falta conectar". Enquanto falta, os 3 passos de como adicionar e a nota do balconista; conectado, uma linha diz para usar o mesmo endereço em outro aparelho. "Passos pulados", só com algum passo pulado e não feito: os passos do guia nesse estado (marca tracejada, "pulado"), cada um com "Retomar" em link, que abre o que o passo pede e a ação, como na home. Um conector pulado mostra o endereço só atrás do "Retomar" dele, e a ficha do conector sai: o endereço aparece uma vez.
+4. **O gosto.** Os atalhos das fichas em pílula, com a contagem, a busca no Catálogo (acha o tt… ou Q… dos formulários) e as fichas: Perguntas abertas, Vetos, Ajustes, Declarados, Relatos, Já vistos e, só para admin, Acesso.
+
+Dar notas e o import seguem como telas próprias, com "Meu gosto" (ou o nome dela) no botão de voltar: a escala de 1 a 10, um filme por vez, e os formulários do import não cabem numa ficha. Exportar deixou de ser tela: o download sai da ficha de Notas, e uma falha volta para a página dela com o motivo.
+
 ### Avatares
 
 Círculo de 24px na cor do Presente, inicial em Rubik 700 11px em on-person. Vazado: fundo transparente, anel de 2px na cor e inicial na cor. Sobrepostos: -7px de margem e anel de 2px na cor da superfície.
@@ -625,7 +655,8 @@ Círculo de 24px na cor do Presente, inicial em Rubik 700 11px em on-person. Vaz
 - **Do** manter alvos de toque de 44px ou mais.
 - **Do** conferir cada componente no claro e no escuro, a 360px e a 390px.
 - **Do** servir Rubik e Permanent Marker da origem do app, declarada no CSP do recurso do MCP Apps; nunca em `data:` nem do Google Fonts.
-- **Do** manter o card inline do Claude compacto (duas ações, 4 dados por filme) e marcar vários filmes na tela cheia.
+- **Do** manter o card inline do Claude compacto (Marcar e, com algo marcado, o resumo e o Enviar; 4 dados por filme) e marcar vários filmes na tela cheia.
+- **Do** deixar o Enviar na barra de envio, que gruda no pé, e não no fim da página.
 
 ### Don't:
 

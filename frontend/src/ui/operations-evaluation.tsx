@@ -6,7 +6,7 @@ import type {
   EvaluationSummary,
 } from '#/platform/operations'
 import { OPERATIONS } from './operations.copy'
-import { ActionPost } from './operations-parts'
+import { ActionPost, Detail } from './operations-parts'
 import { Alert, Section, Submit } from './person-parts'
 
 const COPY = OPERATIONS.evaluation
@@ -20,22 +20,29 @@ function Running({
   job: Extract<EvaluationJob, { state: 'running' }>
 }) {
   return (
-    <div className="flex flex-col gap-xs" aria-live="polite">
+    <div className="flex flex-col gap-sm rounded-field bg-surface-2 p-lg">
+      <div
+        aria-live="polite"
+        className="flex justify-between gap-lg font-semibold"
+      >
+        <p>{job.message || COPY.running}</p>
+        <p className="tabular-nums">{Math.floor(job.progress)}%</p>
+      </div>
       <progress
         aria-label={COPY.progress}
         max={100}
         value={job.progress}
-        className="h-2.5 w-full appearance-none overflow-hidden rounded-pill bg-surface-2 [&::-moz-progress-bar]:bg-ink [&::-webkit-progress-bar]:bg-surface-2 [&::-webkit-progress-value]:bg-ink"
+        className="h-2.5 w-full appearance-none overflow-hidden rounded-pill bg-surface [&::-moz-progress-bar]:bg-ink [&::-webkit-progress-bar]:bg-surface [&::-webkit-progress-value]:bg-ink"
       />
-      <p className="tabular-nums">
-        {Math.floor(job.progress)}% · {job.message || COPY.running}
-      </p>
-      <p className="text-meta text-ink-2">
-        {COPY.startedBy(job.by, job.startedAt, job.grid)}{' '}
-        <a href="/operacoes" className="text-ink underline underline-offset-3">
+      <div className="flex flex-wrap items-center justify-between gap-sm text-meta text-ink-2">
+        <p>{COPY.startedBy(job.by, job.startedAt, job.grid)}</p>
+        <a
+          href="/operacoes#avaliar"
+          className="inline-flex min-h-touch items-center text-ink underline underline-offset-3"
+        >
           {COPY.refresh}
         </a>
-      </p>
+      </div>
     </div>
   )
 }
@@ -80,7 +87,7 @@ function Best({ best }: { best: NonNullable<EvaluationSummary['best']> }) {
       </caption>
       <thead>
         <tr className="border-b border-rule">
-          <th scope="col" aria-label="Posição" />
+          <th scope="col" aria-label={COPY.rank} />
           <th scope="col">{COPY.recall}</th>
           <th scope="col">{COPY.coverage}</th>
         </tr>
@@ -105,14 +112,20 @@ function Done({ job }: { job: Extract<EvaluationJob, { state: 'done' }> }) {
       <p role="status">
         {COPY.done(job.finishedAt)} {COPY.file(result.file)}
       </p>
-      <Measures result={result} />
-      <p>{COPY.online(result.online.sessions, result.online.rateTop5)}</p>
-      <p className="text-ink-2">{COPY.priority(result.priority)}</p>
-      {result.warnings.map((warning) => (
-        <p key={warning} className="text-meta text-ink-2">
-          {warning}
-        </p>
-      ))}
+      <div className="grid gap-2xl sm:grid-cols-2 sm:items-start">
+        <Measures result={result} />
+        <div className="flex flex-col gap-xs text-evidence">
+          <p>{COPY.online(result.online.sessions, result.online.rateTop5)}</p>
+          <p className="text-ink-2">{COPY.priority(result.priority)}</p>
+        </div>
+      </div>
+      {result.warnings.length > 0 && (
+        <ul className="list-disc space-y-xs pl-2xl text-meta text-ink-2">
+          {result.warnings.map((warning) => (
+            <li key={warning}>{warning}</li>
+          ))}
+        </ul>
+      )}
       {result.best && <Best best={result.best} />}
     </div>
   )
@@ -125,7 +138,14 @@ function Job({ job }: { job: EvaluationJob }) {
     case 'done':
       return <Done job={job} />
     case 'failed':
-      return <Alert>{COPY.failed(job.error.code, job.error.message)}</Alert>
+      return (
+        <Alert>
+          {COPY.failed}
+          <Detail>
+            <code>{job.error.code}</code> ({job.error.message})
+          </Detail>
+        </Alert>
+      )
     default:
       return null
   }
@@ -145,23 +165,31 @@ function Report({ report }: { report: EvaluationReport | null }) {
   )
 }
 
-function RunForm({ running }: { running: boolean }) {
+function RunForm() {
   return (
-    <ActionPost action="avaliar" className="flex flex-col gap-xl">
-      <label className="flex min-h-touch cursor-pointer items-center gap-md rounded-field bg-surface-2 px-lg py-sm">
+    <ActionPost
+      action="avaliar"
+      className="flex flex-wrap items-center gap-xl border-t border-rule pt-xl"
+    >
+      <label className="flex min-h-touch cursor-pointer items-center gap-md">
         <input
           type="checkbox"
           name="grade"
           value="sim"
+          aria-labelledby="avaliar-pesos"
+          aria-describedby="avaliar-pesos-ajuda"
           className="size-5 shrink-0 accent-ink"
         />
         <span>
-          {COPY.grid} <span className="text-ink-2">({COPY.gridHint})</span>
+          <span id="avaliar-pesos" className="block font-semibold">
+            {COPY.grid}
+          </span>
+          <span id="avaliar-pesos-ajuda" className="block text-meta text-ink-2">
+            {COPY.gridHint}
+          </span>
         </span>
       </label>
-      <Submit variant="primary" disabled={running}>
-        {running ? COPY.running : COPY.run}
-      </Submit>
+      <Submit className="sm:ml-auto">{COPY.run}</Submit>
     </ActionPost>
   )
 }
@@ -198,11 +226,22 @@ export function EvaluationSection({
 
   return (
     <Section id="avaliar" title={COPY.title} lead={COPY.lead}>
-      {panel.folder === 'unset' && <Alert>{COPY.unset}</Alert>}
+      {panel.folder === 'unset' && (
+        <Alert>
+          {OPERATIONS.refusals['sem-pasta']}
+          <Detail>
+            <code>{COPY.folderSetting}</code>
+          </Detail>
+        </Alert>
+      )}
       {panel.folder === 'unavailable' && <Alert>{COPY.unavailable}</Alert>}
-      {panel.folder === 'ready' && <RunForm running={running} />}
       <Job job={panel.job} />
-      {panel.folder === 'ready' && <Report report={panel.report} />}
+      {panel.folder === 'ready' && (
+        <>
+          <Report report={panel.report} />
+          {!running && <RunForm />}
+        </>
+      )}
     </Section>
   )
 }

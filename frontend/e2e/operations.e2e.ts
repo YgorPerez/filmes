@@ -50,7 +50,7 @@ test('the admin consults the database, read-only', async ({ page }, info) => {
   await consult.getByLabel('SQL').fill('DELETE FROM pessoas')
   await consult.getByRole('button', { name: 'Consultar' }).click()
   await expect(consult.getByRole('alert')).toContainText(
-    'Só leitura: o console aceita só SELECT.',
+    'O console só lê o banco. Use um SELECT.',
   )
   await expect(consult.getByRole('alert')).toContainText('read_only')
   await snap(page, info, 'operacoes-consulta-recusada')
@@ -64,7 +64,7 @@ test('the admin evaluates the Recommendation and reads the report', async ({
   await page.goto('/operacoes')
 
   // No remote in the e2e: the push is off, and says so.
-  await expect(section(page, 'Envio do repo de dados')).toContainText(
+  await expect(section(page, 'Envio dos dados')).toContainText(
     'O envio está desligado neste servidor',
   )
 

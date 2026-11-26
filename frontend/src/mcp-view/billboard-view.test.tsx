@@ -327,6 +327,8 @@ describe('mountView', () => {
         .map((li) => li.textContent),
     ).toEqual(['1As Horas Lentas2021 · 1h44', '2Sal & Ferrugem'])
 
+    // Nothing marked yet: Marcar alone, no Enviar to send nothing.
+    expect(within(root).queryByRole('button', { name: copy.send })).toBeNull()
     const user = userEvent.setup()
     await user.click(within(root).getByRole('button', { name: view.mark }))
     expect(app.requestDisplayMode).toHaveBeenCalledWith({ mode: 'fullscreen' })
@@ -346,12 +348,14 @@ describe('mountView', () => {
     const user = userEvent.setup()
     expect(within(root).queryByRole('button', { name: view.mark })).toBeNull()
     await user.click(card(1).getByRole('button', { name: 'Trocar' }))
-    expect(within(root).getByText('1 Trocar marcado')).toBeTruthy()
+    expect(within(root).getByText('1 Trocar')).toBeTruthy()
 
     await act(async () =>
       app.onhostcontextchanged?.({ displayMode: 'inline', ...modes }),
     )
     expect(within(root).queryByRole('article')).toBeNull()
+    // Inline says what goes with Enviar.
+    expect(within(root).getByText('1 Trocar')).toBeTruthy()
     await user.click(within(root).getByRole('button', { name: copy.send }))
     expect(app.callServerTool).toHaveBeenCalledWith({
       name: 'answer_billboard',

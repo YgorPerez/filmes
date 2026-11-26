@@ -203,6 +203,7 @@ describe('the marks', () => {
     )
     await user.click(card(2).getByRole('button', { name: 'Trocar' }))
     await user.click(card(2).getByRole('button', { name: '4 de 5' }))
+    await user.click(card(2).getByRole('button', { name: 'Comentar' }))
     await user.type(
       screen.getByLabelText('comentário sobre o filme 2'),
       'longo',
@@ -217,7 +218,7 @@ describe('the marks', () => {
     )
     expect(
       screen.getByText(
-        '1 Trocar marcado · 1 Já vi · 1 filme com estrelas · 1 comentário · acrescentar',
+        '1 Trocar, 1 Já vi, estrelas em 1 filme, 1 comentário e o acrescentar',
       ),
     ).toBeTruthy()
     // Trocar stamps the poster.
@@ -267,6 +268,20 @@ describe('the marks', () => {
     expect(text()).toBe('#cartaz 2026-11-20-iara v2\n')
   })
 
+  it('the comment opens from Comentar, focused, and stays open with text', async () => {
+    const user = userEvent.setup()
+    render(<Billboard billboard={MODEL} action="/x" />)
+    expect(screen.queryByLabelText('comentário sobre o filme 1')).toBeNull()
+    const open = card(1).getByRole('button', { name: 'Comentar' })
+    expect(open.getAttribute('aria-expanded')).toBe('false')
+    await user.click(open)
+    const box = screen.getByLabelText('comentário sobre o filme 1')
+    expect(document.activeElement).toBe(box)
+    await user.type(box, 'curto')
+    expect(text()).toContain('1 tt9000104 · comentário: curto\n')
+    expect(card(1).queryByRole('button', { name: 'Comentar' })).toBeNull()
+  })
+
   it('the same star again takes the stars off', async () => {
     const user = userEvent.setup()
     render(<Billboard billboard={MODEL} action="/x" />)
@@ -280,6 +295,34 @@ describe('the marks', () => {
 })
 
 describe('Enviar and Copiar pro chat', () => {
+  it('Enviar and the summary sit in the bar at the foot, apart from the acrescentar', async () => {
+    const user = userEvent.setup()
+    render(<Billboard billboard={MODEL} action="/x" />)
+    const bar = screen.getByRole('region', { name: BILLBOARD.reply.bar })
+    const box = screen.getByRole('region', { name: BILLBOARD.reply.title })
+    expect(
+      within(bar).getByRole('button', { name: BILLBOARD.reply.send }),
+    ).toBeTruthy()
+    expect(
+      within(box).queryByRole('button', { name: BILLBOARD.reply.send }),
+    ).toBeNull()
+    expect(
+      within(box).getByRole('button', { name: BILLBOARD.reply.copy }),
+    ).toBeTruthy()
+    expect(
+      box.compareDocumentPosition(bar) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    await user.click(card(2).getByRole('button', { name: 'Trocar' }))
+    expect(within(bar).getByText('1 Trocar')).toBeTruthy()
+  })
+
+  it('a closed Session has no bar', () => {
+    render(<Billboard billboard={{ ...MODEL, open: false }} action="/x" />)
+    expect(
+      screen.queryByRole('region', { name: BILLBOARD.reply.bar }),
+    ).toBeNull()
+  })
+
   it('with nothing marked, say so and send nothing', async () => {
     const user = userEvent.setup()
     const onSend = vi.fn<(text: string) => void>()

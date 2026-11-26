@@ -130,7 +130,9 @@ describe('AppShell', () => {
   it('shows an admin the strip of a push that keeps failing, with a link to Operações', () => {
     show({ admin: true, alert: ALERT })
     const alert = screen.getByRole('alert')
-    expect(alert.textContent).toContain('falhou 5 vezes seguidas; 4 commits')
+    expect(alert.textContent).toContain(
+      'falhou 5 vezes seguidas. 4 commits na fila.',
+    )
     expect(
       within(alert).getByRole('link', { name: 'Ver Operações' }),
     ).toHaveProperty('pathname', '/operacoes')

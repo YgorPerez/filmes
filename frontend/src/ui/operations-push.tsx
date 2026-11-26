@@ -1,65 +1,86 @@
 import type { PushStatus } from '@filmes/engine'
 import { OPERATIONS } from './operations.copy'
-import { ActionPost } from './operations-parts'
+import { ActionPost, Detail } from './operations-parts'
 import { Alert, Section, Submit } from './person-parts'
 
 const COPY = OPERATIONS.push
 
-/** The push's state, line by line: what waits, how many failures, since
- * when, and what git said last. */
-function PushLines({ status }: { status: PushStatus }) {
-  if (!status.enabled) return <p className="text-ink-2">{COPY.off}</p>
-  const lines = [
-    status.pending === 0 ? COPY.ok : COPY.pending(status.pending),
-    status.failures > 0 && COPY.failures(status.failures),
-    status.failingSince && COPY.since(status.failingSince),
-  ].filter((line) => typeof line === 'string')
+/** The queue, the run of failures with when it began, git's last error
+ * on demand, and a push now. After a push now (`retried`), the queue line
+ * is the status that says how it went. A last error with no failure means
+ * the queue itself could not be read. */
+function PushQueue({
+  status,
+  retried,
+}: {
+  status: PushStatus
+  retried: boolean
+}) {
+  const unreadable = status.failures === 0 && status.lastError !== null
+  const queue =
+    status.pending === 0 && status.failures === 0
+      ? COPY.ok
+      : COPY.pending(status.pending)
   return (
-    <div className="flex flex-col gap-md">
-      <ul className="flex flex-col gap-2xs">
-        {lines.map((line) => (
-          <li key={line} className="flex items-baseline gap-sm tabular-nums">
-            <span
-              aria-hidden="true"
-              className={`size-2 shrink-0 translate-y-[-1px] rounded-round ${status.pending === 0 && status.failures === 0 ? 'bg-ink-2' : 'border-[1.5px] border-ink'}`}
-            />
-            {line}
-          </li>
-        ))}
-      </ul>
-      {status.lastError && (
-        <div className="flex flex-col gap-xs">
-          <span className="font-display text-label text-ink-2 uppercase">
-            {COPY.lastError}
-          </span>
-          <pre className="overflow-x-auto rounded-field bg-case p-lg font-mono text-meta whitespace-pre-wrap text-case-ink">
-            {status.lastError}
-          </pre>
+    <>
+      {status.failures > 0 && <Alert>{COPY.failing}</Alert>}
+      {unreadable ? (
+        <Alert>{COPY.unavailable}</Alert>
+      ) : (
+        <div
+          className="flex flex-col gap-xs"
+          role={retried ? 'status' : undefined}
+        >
+          <p className="font-semibold tabular-nums">{queue}</p>
+          {status.failures > 0 && (
+            <p className="text-meta text-ink-2">
+              {COPY.failures(status.failures)}{' '}
+              {status.failingSince && COPY.since(status.failingSince)}
+            </p>
+          )}
         </div>
       )}
-    </div>
+      {status.lastError && (
+        <details className="rounded-field border border-rule">
+          <summary className="min-h-touch cursor-pointer content-center px-lg font-semibold">
+            {COPY.lastError}
+          </summary>
+          <pre className="border-t border-rule p-lg text-meta break-words whitespace-pre-wrap">
+            {status.lastError}
+          </pre>
+        </details>
+      )}
+      {(status.pending > 0 || status.failures > 0) && (
+        <ActionPost action="enviar">
+          <Submit>{COPY.retry}</Submit>
+        </ActionPost>
+      )}
+    </>
   )
 }
 
-/** The push of filmes-dados (#121): the queue and the failures, with a
- * push now. `status` is null when the engine cannot run here. */
-export function PushSection({ status }: { status: PushStatus | null }) {
+/** The push of filmes-dados (#121). `status` is null when the engine
+ * cannot run here. */
+export function PushSection({
+  status,
+  retried,
+}: {
+  status: PushStatus | null
+  retried: boolean
+}) {
   return (
     <Section id="envio" title={COPY.title} lead={COPY.lead}>
       {status === null ? (
         <Alert>{COPY.unavailable}</Alert>
+      ) : status.enabled ? (
+        <PushQueue status={status} retried={retried} />
       ) : (
-        <>
-          {status.alert && (
-            <Alert>{COPY.banner(status.pending, status.failures)}</Alert>
-          )}
-          <PushLines status={status} />
-          {status.enabled && (
-            <ActionPost action="enviar">
-              <Submit>{COPY.retry}</Submit>
-            </ActionPost>
-          )}
-        </>
+        <p className="text-ink-2">
+          {COPY.off}
+          <Detail>
+            <code>{COPY.remoteSetting}</code>
+          </Detail>
+        </p>
       )}
     </Section>
   )

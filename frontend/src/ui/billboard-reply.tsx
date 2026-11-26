@@ -12,14 +12,15 @@ import { buttonVariants } from './kit/button-variants'
 import { FIELD } from './kit/field'
 import { Option } from './kit/option'
 
-// The reply's pieces (DESIGN.md, Botão principal and Acrescentar): the
-// acrescentar box after the last film, with the Clima chips (#179) under it, Enviar (the screen's one orange
-// button), Copiar pro chat (an option), the summary of what was marked and
-// the status line. The Cartaz (`billboard.tsx`) places them per layout.
+// The reply's pieces (DESIGN.md, Botão principal, Acrescentar and Barra
+// de envio): the acrescentar box after the last film, with the Clima chips
+// (#179) and Copiar pro chat under it, and the bar that follows the Dono
+// down the Cartaz with what she marked, the status line and Enviar (the
+// screen's one orange button). The Cartaz (`billboard.tsx`) places them.
 
 const { reply } = BILLBOARD
 
-/** What was marked, in a line ("1 Trocar marcado · 1 Já vi"). */
+/** What was marked, in a sentence ("1 Trocar e 1 Já vi"). */
 export const summaryOf = (billboard: BillboardModel, marks: Marks) =>
   reply.summary(markCounts(billboard, marks))
 
@@ -46,7 +47,7 @@ export function SendButton({
 
 export function Status({ message }: { message: string }) {
   return message ? (
-    <p role="status" className="text-meta">
+    <p role="status" className="text-meta text-pretty">
       {message}
     </p>
   ) : null
@@ -158,30 +159,24 @@ function MoodChips({
   )
 }
 
-/** The acrescentar box, after the last film. `send` is the Enviar that
- * goes in it (the web, Claude without fullscreen); in Claude's fullscreen
- * Enviar and the status live in the fixed foot instead. */
+/** The acrescentar box, after the last film: the acrescentar, the Clima
+ * chips, Copiar pro chat and the hidden field the web posts. */
 export function ReplyBox({
   billboard,
   marks,
   kept,
-  message,
   onMessage,
   onAddition,
   onMoods,
-  send,
 }: {
   billboard: BillboardModel
   marks: Marks
   kept: boolean
-  message: string
   onMessage: (message: string) => void
   onAddition: (text: string) => void
   onMoods: (moods: string[]) => void
-  send?: { onSend?: () => void }
 }) {
   const text = replyText(billboard, marks)
-  const summary = summaryOf(billboard, marks)
   return (
     <section
       aria-labelledby="responder"
@@ -208,16 +203,54 @@ export function ReplyBox({
         <MoodChips billboard={billboard} marks={marks} onMoods={onMoods} />
       )}
       <input type="hidden" name="texto" value={text} />
-      {send && summary && <p className="text-meta text-ink-2">{summary}</p>}
       <div className="flex flex-wrap items-center gap-sm">
-        {send && <SendButton onSend={send.onSend} />}
         <Copy text={text} onMessage={onMessage} />
       </div>
-      {send && <Status message={message} />}
       {kept && <p className="text-meta text-ink-2">{reply.kept}</p>}
       <noscript>
         <p className="text-meta text-ink-2">{reply.noScript}</p>
       </noscript>
+    </section>
+  )
+}
+
+/** Where the bar sticks: `tabs` flush on the app's bottom tabs on a
+ * phone and on the window's bottom from 900px (the web), `foot` at the
+ * bottom of the frame, full width (Claude's fullscreen), `end` at the
+ * bottom of a frame the host sizes to the content, where sticking does
+ * nothing. */
+export type BarPlace = 'tabs' | 'foot' | 'end'
+
+const BAR: Record<BarPlace, string> = {
+  tabs: 'bottom-[calc(68px+env(safe-area-inset-bottom))] rounded-t-panel border-x border-t min-[900px]:bottom-0',
+  foot: 'bottom-0 border-t px-2xl pb-[max(10px,env(safe-area-inset-bottom))]',
+  end: 'bottom-0 rounded-panel border',
+}
+
+/** The bar with what was marked, the status line and Enviar. It sticks
+ * to the bottom while the Cartaz is on screen, so Enviar is a thumb away
+ * from any film. */
+export function ReplyBar({
+  summary,
+  message,
+  onSend,
+  place,
+}: {
+  summary: string
+  message: string
+  onSend?: () => void
+  place: BarPlace
+}) {
+  return (
+    <section
+      aria-label={reply.bar}
+      className={`sticky z-10 flex flex-col gap-2xs border-rule bg-surface px-lg py-sm ${BAR[place]}`}
+    >
+      <div className="flex items-center justify-between gap-md">
+        <p className="min-w-0 text-meta text-ink-2">{summary}</p>
+        <SendButton onSend={onSend} className="shrink-0" />
+      </div>
+      <Status message={message} />
     </section>
   )
 }

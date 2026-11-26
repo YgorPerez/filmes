@@ -6,11 +6,7 @@ import type { PushStatus } from '@filmes/engine'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
-import {
-  OPERATIONS_NOTICES,
-  OPERATIONS_REFUSALS,
-  parseOperation,
-} from '#/content/operations-form'
+import { OPERATIONS_REFUSALS, parseOperation } from '#/content/operations-form'
 import type {
   ConsultAnswer,
   EvaluationJob,
@@ -181,7 +177,7 @@ describe('the console', () => {
         .map((r) => r.textContent),
     ).toEqual(['brunoNULL', 'iara7'])
     expect(within(area).getByRole('status').textContent).toBe(
-      '250 linhas; mostrando as primeiras 2.',
+      'Mostrando 2 de 250 linhas.',
     )
   })
 
@@ -195,8 +191,8 @@ describe('the console', () => {
   })
 
   it.each([
-    ['read_only', 'Só leitura: o console aceita só SELECT.'],
-    ['invalid_sql', 'SQL inválido.'],
+    ['read_only', 'O console só lê o banco. Use um SELECT.'],
+    ['invalid_sql', 'O banco recusou o SQL.'],
   ])('says why it refused the query: %s', (code, text) => {
     show(
       page({
@@ -206,7 +202,7 @@ describe('the console', () => {
     const alert = within(region(OPERATIONS.consult.title)).getByRole('alert')
     expect(alert.textContent).toContain(text)
     expect(alert.textContent).toContain(code)
-    expect(alert.textContent).toContain('near "x"')
+    expect(alert.textContent?.includes('near "x"')).toBe(code === 'invalid_sql')
   })
 
   it('does not show an unexpected error’s message', () => {
@@ -229,7 +225,7 @@ describe('the evaluation', () => {
   it('runs from a form, with the grid as a choice', async () => {
     show(page())
     const area = region(OPERATIONS.evaluation.title)
-    await userEvent.click(within(area).getByLabelText(/pesos da grade/))
+    await userEvent.click(within(area).getByLabelText(/combinações de pesos/))
     const button = within(area).getByRole('button', { name: 'Avaliar' })
     const form = button.closest('form')!
     expect(form.getAttribute('action')).toBe('/operacoes/acao')
@@ -240,12 +236,12 @@ describe('the evaluation', () => {
     expect(within(area).getByText(OPERATIONS.evaluation.noReport)).toBeTruthy()
   })
 
-  it('says it is not configured without a folder for the reports', () => {
+  it('says it is not configured without a folder for the reports, and names the setting', () => {
     show(page({ evaluation: { ...IDLE, folder: 'unset' } }))
     const area = region(OPERATIONS.evaluation.title)
-    expect(within(area).getByRole('alert').textContent).toContain(
-      'FILMES_AVALIACOES',
-    )
+    const alert = within(area).getByRole('alert').textContent
+    expect(alert).toContain('Configure a pasta de relatórios no servidor')
+    expect(alert).toContain('FILMES_AVALIACOES')
     expect(within(area).queryByRole('button')).toBeNull()
   })
 
@@ -263,13 +259,10 @@ describe('the evaluation', () => {
     expect(
       within(area).getByRole('progressbar', { name: 'Progresso da avaliação' }),
     ).toHaveProperty('value', 35.5)
-    expect(
-      within(area).getByText('35% · Medindo recall e cobertura'),
-    ).toBeTruthy()
-    expect(within(area).getByText(/iniciada por Bruno/)).toBeTruthy()
-    expect(
-      within(area).getByRole('button', { name: 'Avaliando…' }),
-    ).toHaveProperty('disabled', true)
+    expect(within(area).getByText('35%')).toBeTruthy()
+    expect(within(area).getByText('Medindo recall e cobertura')).toBeTruthy()
+    expect(within(area).getByText(/Bruno iniciou/)).toBeTruthy()
+    expect(within(area).queryByRole('button', { name: 'Avaliar' })).toBeNull()
   })
 
   it('follows the run until it ends', async () => {
@@ -312,7 +305,7 @@ describe('the evaluation', () => {
         .getAllByRole('row')
         .map((r) => r.textContent),
     ).toEqual([
-      'AmostraMedidasRecall@50Cobertura no top 5',
+      'AmostraPerfisRecall@50Cobertura no top 5',
       'Pessoas440%25%',
       'MovieLens0——',
     ])
@@ -323,7 +316,9 @@ describe('the evaluation', () => {
         .map((r) => r.textContent),
     ).toEqual(['1º50%—'])
     expect(
-      within(area).getByText('Feedback de 1 Sessão; escolhido no top 5: 100%.'),
+      within(area).getByText(
+        'Feedback de 1 Sessão. O filme escolhido estava no top 5 em 100% delas.',
+      ),
     ).toBeTruthy()
     expect(within(area).getByText(/ml-32m/)).toBeTruthy()
     expect(within(area).getByText(/poucas Sessões/)).toBeTruthy()
@@ -348,7 +343,7 @@ describe('the evaluation', () => {
     expect(
       within(region(OPERATIONS.evaluation.title)).getByRole('alert')
         .textContent,
-    ).toContain('(missing_config): falta a pasta')
+    ).toContain('missing_config (falta a pasta)')
   })
 })
 
@@ -356,13 +351,22 @@ describe('the push', () => {
   it('shows the queue and offers a push now', () => {
     show(page({ push: { ...STATUS, pending: 2 } }))
     const area = region(OPERATIONS.push.title)
-    expect(
-      within(area).getByText('2 commits na fila para enviar.'),
-    ).toBeTruthy()
+    expect(within(area).getByText('2 commits na fila.')).toBeTruthy()
     const form = within(area)
       .getByRole('button', { name: 'Tentar enviar agora' })
       .closest('form')!
     expect(parseOperation(new FormData(form))).toEqual({ kind: 'push' })
+  })
+
+  it('shows a failed retry in the queue, even after a single failure', () => {
+    show(page({ push: { ...STATUS, pending: 1, failures: 1 } }), {
+      notice: 'enviado',
+    })
+    const area = region(OPERATIONS.push.title)
+    expect(within(area).getByRole('alert').textContent).toContain(
+      'Envio falhando',
+    )
+    expect(within(area).getByText('1 commit na fila.')).toBeTruthy()
   })
 
   it('warns after three failures, with git’s last error', () => {
@@ -379,19 +383,37 @@ describe('the push', () => {
       }),
     )
     const area = region(OPERATIONS.push.title)
-    expect(within(area).getByRole('alert').textContent).toContain(
-      'falhou 3 vezes seguidas; 1 commit esperando',
-    )
-    expect(within(area).getByText('3 falhas seguidas.')).toBeTruthy()
-    expect(within(area).getByText(/^Falhando desde/)).toBeTruthy()
+    expect(within(area).getByRole('alert').textContent).toBe('Envio falhando')
+    expect(
+      within(area).getByText(/3 falhas seguidas.*A primeira falha foi em/),
+    ).toBeTruthy()
     expect(within(area).getByText('git push exited with 128')).toBeTruthy()
+  })
+
+  it('shows that the queue is clear after a successful retry', () => {
+    show(page(), { notice: 'enviado' })
+    const area = region(OPERATIONS.push.title)
+    expect(within(area).getByRole('status').textContent).toBe(
+      'Fila em dia. Todos os commits foram enviados.',
+    )
+  })
+
+  it('does not report an empty queue when Git could not count the commits', () => {
+    show(page({ push: { ...STATUS, lastError: 'not a git repository' } }))
+    const area = region(OPERATIONS.push.title)
+    expect(within(area).getByRole('alert').textContent).toContain(
+      'Não foi possível ler a fila de envio.',
+    )
+    expect(within(area).queryByText(/Fila em dia/)).toBeNull()
   })
 
   it('says when pushing is off, or cannot be read', () => {
     show(page({ push: { ...STATUS, enabled: false } }))
-    expect(
-      within(region(OPERATIONS.push.title)).getByText(OPERATIONS.push.off),
-    ).toBeTruthy()
+    const off = within(region(OPERATIONS.push.title)).getByText(
+      /O envio está desligado/,
+    ).textContent
+    expect(off).toContain(OPERATIONS.push.off)
+    expect(off).toContain('FILMES_DATA_REMOTE')
     expect(
       within(region(OPERATIONS.push.title)).queryByRole('button'),
     ).toBeNull()
@@ -404,13 +426,6 @@ describe('the push', () => {
 })
 
 describe('the page', () => {
-  it.each(OPERATIONS_NOTICES)('says what a form did: %s', (notice) => {
-    show(page(), { notice })
-    expect(screen.getAllByRole('status')[0]!.textContent).toBe(
-      OPERATIONS.notices[notice],
-    )
-  })
-
   it.each(OPERATIONS_REFUSALS)('says why a form did nothing: %s', (refusal) => {
     show(page(), { refusal })
     expect(screen.getAllByRole('alert')[0]!.textContent).toContain(

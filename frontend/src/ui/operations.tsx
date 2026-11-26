@@ -13,8 +13,9 @@ import { FieldLabel } from './kit/field-label'
 import { PageHead } from './kit/page-head'
 import { EvaluationSection, jobKey } from './operations-evaluation'
 import { OPERATIONS } from './operations.copy'
+import { Detail } from './operations-parts'
 import { PushSection } from './operations-push'
-import { Alert, LinkButton, Notice, Section, Submit } from './person-parts'
+import { Alert, Section, Submit } from './person-parts'
 
 const COPY = OPERATIONS.consult
 
@@ -31,18 +32,34 @@ function ConsultResult({ answer }: { answer: ConsultAnswer }) {
     const known = COPY.errors[code]
     return (
       <Alert>
-        {known ?? COPY.other} <code>{code}</code>
-        {known !== undefined && <> · {message}</>}
+        {known ?? COPY.other}
+        <Detail>
+          <code>{code}</code>
+          {code === 'invalid_sql' && <> ({message})</>}
+        </Detail>
       </Alert>
     )
   }
-  if (answer.total === 0) return <p className="text-ink-2">{COPY.empty}</p>
+  if (answer.total === 0)
+    return (
+      <p role="status" className="text-ink-2">
+        {COPY.empty}
+      </p>
+    )
   return (
-    <div className="flex flex-col gap-xs">
+    <div className="flex flex-col gap-xs border-t border-rule pt-xl">
+      <h3 id="resultado-consulta" className="font-display text-step-title">
+        {COPY.results}
+      </h3>
       <p role="status" className="text-meta text-ink-2">
         {COPY.rows(answer.total, answer.rows.length)}
       </p>
-      <div className="max-h-[60vh] overflow-auto rounded-field border border-rule">
+      <div
+        role="region"
+        aria-labelledby="resultado-consulta"
+        tabIndex={0}
+        className="max-h-[60vh] overflow-auto rounded-field border border-rule"
+      >
         <table className="min-w-full text-left text-meta tabular-nums">
           <thead className="sticky top-0 bg-surface-2 font-display font-bold">
             <tr>
@@ -61,7 +78,10 @@ function ConsultResult({ answer }: { answer: ConsultAnswer }) {
             {answer.rows.map((row) => (
               <tr key={row.key} className="border-t border-rule">
                 {row.cells.map((cell) => (
-                  <td key={cell.key} className="px-md py-xs align-top">
+                  <td
+                    key={cell.key}
+                    className="px-md py-sm align-top wrap-anywhere"
+                  >
                     <Cell value={cell.value} />
                   </td>
                 ))}
@@ -84,14 +104,14 @@ function ConsultSection({ answer }: { answer: ConsultAnswer | null }) {
           <textarea
             name="sql"
             required
-            rows={4}
+            rows={5}
             spellCheck={false}
             defaultValue={answer?.sql}
             placeholder={COPY.placeholder}
-            className={`${FIELD} font-mono text-[14px] leading-[1.45]`}
+            className={`${FIELD} resize-y font-mono`}
           />
         </FieldLabel>
-        <Submit>{COPY.run}</Submit>
+        <Submit variant="primary">{COPY.run}</Submit>
       </form>
       {answer && <ConsultResult answer={answer} />}
     </Section>
@@ -111,21 +131,21 @@ export function Operations({
   refusal?: OperationsRefusal
   readEvaluation: () => Promise<EvaluationPanel>
 }) {
+  const showRefusal =
+    refusal && (refusal !== 'sem-pasta' || page.evaluation.folder !== 'unset')
   return (
-    <main className="mx-auto flex max-w-[720px] flex-col gap-3xl px-2xl py-3xl">
-      <header className="flex flex-wrap items-center justify-between gap-xl">
-        <LinkButton href="/">{OPERATIONS.back}</LinkButton>
-      </header>
-      <PageHead title={OPERATIONS.title} lead={OPERATIONS.lead} />
-      {notice && <Notice>{OPERATIONS.notices[notice]}</Notice>}
-      {refusal && <Alert>{OPERATIONS.refusals[refusal]}</Alert>}
+    <main className="mx-auto flex max-w-[1040px] flex-col gap-3xl px-2xl py-3xl">
+      <PageHead title={OPERATIONS.title} />
+      {showRefusal && <Alert>{OPERATIONS.refusals[refusal]}</Alert>}
+      <div className="grid grid-cols-1 gap-3xl min-[900px]:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] min-[900px]:items-start">
+        <ConsultSection answer={page.consult} />
+        <PushSection status={page.push} retried={notice === 'enviado'} />
+      </div>
       <EvaluationSection
         key={jobKey(page.evaluation.job)}
         initial={page.evaluation}
         read={readEvaluation}
       />
-      <ConsultSection answer={page.consult} />
-      <PushSection status={page.push} />
     </main>
   )
 }

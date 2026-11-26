@@ -3,13 +3,7 @@
 // is Meu gosto. Client-safe.
 
 import { redirect } from '@tanstack/react-router'
-import {
-  EXPORT_PATH,
-  importsPath,
-  MY_TASTE,
-  QUEUE_PATH,
-  RATINGS_PATH,
-} from './paths'
+import { importsPath, MY_TASTE, QUEUE_PATH, RATINGS_PATH } from './paths'
 import { feedbackPath } from './session-paths'
 
 /** Where each old page went. */
@@ -17,7 +11,8 @@ export const MOVED_TO = {
   myTaste: MY_TASTE,
   ratings: RATINGS_PATH,
   queue: QUEUE_PATH,
-  export: EXPORT_PATH,
+  // The export page became the download in Meu gosto's Notas (#222).
+  export: MY_TASTE,
   imports: `${MY_TASTE}/importar`,
   personImports: (person: string) => importsPath(person, false),
   feedback: feedbackPath,

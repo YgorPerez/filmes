@@ -3,9 +3,9 @@
 //
 // The Evidence lines are read back from their wording, which lives with each
 // path: the content path (`signals/content.ts`: "dirigido por X, como 3
-// filmes a que deu Nota alta" and "deu 5 a F, também de X"), Declarados and
+// filmes a que deu nota alta" and "deu 5 a F, também de X"), Declarados and
 // Relatos about an entity (`signals/stated.ts`: `disse "..."; dirigido por
-// X`), the MovieLens neighbours (`signals/neighbors.ts`: "deu 5 a F, e de
+// X`), the MovieLens neighbours (`signals/neighbors.ts`: "deu 5 a F; das
 // 1.000 pessoas...") and the taste neighbours (`wording.ts`). Any other line
 // (Já visto, a film line, a guess) is no Motivo.
 //
@@ -32,13 +32,13 @@ export interface FilmReason {
 type Line = Pick<EvidenceJson, 'text' | 'kind' | 'contribution'>
 
 const SEED = String.raw`(?:deu [\d,]+ a|disse que ama|segundo o Dono, ama)`
-const HIGH = String.raw`como \d+ filmes? a que deu Nota alta`
+const HIGH = String.raw`como \d+ filmes? a que deu nota alta`
 
 /** Each wording and what it is about, the more specific first. */
 const READINGS: ReadonlyArray<readonly [RegExp, ReasonKind]> = [
   [
     new RegExp(
-      String.raw`^${SEED} (.+), e de [\d.]+ pessoas que deram 4\+ a ele, \d+% deram 4\+ a este$`,
+      String.raw`^${SEED} (.+); das [\d.]+ pessoas que deram 4 ou mais a ele, \d+% fizeram o mesmo com este$`,
       'u',
     ),
     'film',

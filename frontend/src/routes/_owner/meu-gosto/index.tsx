@@ -1,12 +1,12 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { searchFor, searchParam } from '#/content/catalog-search'
 import { isPersonNotice, isPersonRefusal } from '#/content/person-action'
-import { readPersonPage } from '#/content/people'
+import { readMyStart, readPersonPage } from '#/content/people'
 import { PersonScreen } from '#/ui/person'
 
-// Meu gosto: the logged-in Dono's own Pessoa page (map #218). For now it is
-// her Pessoa page as `/pessoas/<slug>` drew it, with the way to her Notas,
-// import and export; #222 redoes it.
+// Meu gosto: the logged-in Dono's own Pessoa page (map #218): her Notas,
+// what the setup guide left (the connector, the skipped steps), then her
+// taste (#222).
 export const Route = createFileRoute('/_owner/meu-gosto/')({
   validateSearch: (search) => ({
     feito: isPersonNotice(search.feito) ? search.feito : undefined,
@@ -15,11 +15,12 @@ export const Route = createFileRoute('/_owner/meu-gosto/')({
   }),
   loaderDeps: ({ search }) => ({ buscar: search.buscar }),
   loader: async ({ context, deps }) => {
-    const [page, search] = await Promise.all([
+    const [page, search, start] = await Promise.all([
       readPersonPage({ data: context.owner.person }),
       searchFor(deps.buscar, 'all'),
+      readMyStart(),
     ])
-    return { page, search }
+    return { page, search, start }
   },
   component: MyTasteRoute,
 })
@@ -27,12 +28,13 @@ export const Route = createFileRoute('/_owner/meu-gosto/')({
 function MyTasteRoute() {
   const { owner } = Route.useRouteContext()
   const { feito, erro } = Route.useSearch()
-  const { page, search } = Route.useLoaderData()
+  const { page, search, start } = Route.useLoaderData()
   return (
     <PersonScreen
       slug={owner.person}
       page={page}
       search={search}
+      start={start}
       notice={feito}
       refusal={erro}
     />
