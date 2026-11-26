@@ -33,6 +33,8 @@ export const PEOPLE = {
       email: 'Um Dono precisa de um e-mail do Google válido para entrar.',
       'email-usado': 'Esse e-mail já é de outra Pessoa.',
       indisponivel: 'Não deu para gravar agora. Tente de novo daqui a pouco.',
+      falha:
+        'O site está com um problema, e ele ficou registrado no log do servidor. Tentar de novo não resolve.',
     } satisfies Record<PersonCreateRefusal, string>,
   },
 } as const

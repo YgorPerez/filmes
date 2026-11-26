@@ -329,7 +329,7 @@ describe('importAction', () => {
     ['source_unavailable', '/pessoas/teo/importar?erro=fonte'],
     ['unknown_import', '/pessoas/teo/importar?erro=item'],
     ['unknown_person', '/pessoas?erro=pessoa'],
-    ['outdated_database', '/pessoas/teo/importar?erro=indisponivel'],
+    ['outdated_database', '/pessoas/teo/importar?erro=falha'],
   ])('says why the engine refused: %s', async (code, location) => {
     const log = vi.spyOn(console, 'error').mockImplementation(() => {})
     const { imports } = fakeImports(failure(code))
@@ -414,7 +414,7 @@ describe('queueAction', () => {
     ['invalid_usage', '/meu-gosto/fila?erro=filme'],
     ['film_without_imdb', '/meu-gosto/fila?erro=sem-imdb'],
     ['item_not_queued', '/meu-gosto/fila?erro=item'],
-    ['internal', '/meu-gosto/fila?erro=indisponivel'],
+    ['internal', '/meu-gosto/fila?erro=falha'],
   ])('says why the engine refused: %s', async (code, location) => {
     const log = vi.spyOn(console, 'error').mockImplementation(() => {})
     const { imports } = fakeImports(undefined, failure(code))

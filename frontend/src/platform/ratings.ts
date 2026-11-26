@@ -17,7 +17,7 @@ import {
   type RatingRefusal,
 } from '#/content/rating-form'
 import { RATINGS_PATH } from '#/content/paths'
-import { formPoster, seeOther } from './form-post'
+import { failureOf, formPoster, seeOther } from './form-post'
 
 /** Films the page gets: more than a sitting rates, fewer than a slow page. */
 const QUEUE_SIZE = 100
@@ -82,7 +82,7 @@ function refusalOf(outcome: { output: ErrorOutput }): RatingRefusal {
   if (code === 'unknown_target') return 'alvo'
   if (code === 'invalid_usage') return 'pedido'
   logEngineError(outcome)
-  return 'indisponivel'
+  return failureOf(outcome)
 }
 
 /** `POST /notas/enviar`: writes the form's Notas to the logged-in Dono, who

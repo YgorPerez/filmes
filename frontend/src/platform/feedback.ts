@@ -25,7 +25,7 @@ import {
   type FeedbackRefusal,
 } from '#/content/feedback-form'
 import { feedbackPath, sessionPath } from '#/content/session-paths'
-import { appPoster, formPoster, seeOther } from './form-post'
+import { appPoster, failureOf, formPoster, seeOther } from './form-post'
 import { appEngine } from './engine'
 import { appNotes, type Notes } from './notes'
 import { attendeeSlugs, sessionFilms, type SessionFilm } from './session-fields'
@@ -192,7 +192,7 @@ function refusalOf(outcome: { output: ErrorOutput }): FeedbackRefusal {
       return 'pedido'
     default:
       logEngineError(outcome)
-      return 'indisponivel'
+      return failureOf(outcome)
   }
 }
 

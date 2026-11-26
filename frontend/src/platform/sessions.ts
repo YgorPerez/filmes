@@ -30,7 +30,7 @@ import {
 } from '#/content/session-request'
 import { appEngine } from './engine'
 import { attendeeSlugs, sessionFilms, type SessionFilm } from './session-fields'
-import { appPoster, formPoster, seeOther } from './form-post'
+import { appPoster, failureOf, formPoster, seeOther } from './form-post'
 import { appNotes, type Notes } from './notes'
 import { pageReading, type PageReading } from './reading'
 
@@ -201,7 +201,7 @@ function refusalOf(outcome: { output: ErrorOutput }): SessionRequestRefusal {
       return 'pessoa'
     default:
       logEngineError(outcome)
-      return 'indisponivel'
+      return failureOf(outcome)
   }
 }
 
@@ -223,7 +223,7 @@ async function readSentence(
     if (read.output.error.code === 'invalid_usage')
       return seeOther('/sessoes/nova?erro=frase-longa')
     logEngineError(read)
-    return seeOther('/sessoes/nova?erro=indisponivel')
+    return seeOther(`/sessoes/nova?erro=${failureOf(read)}`)
   }
   const token = notes.remember({
     warnings: [],

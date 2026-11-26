@@ -140,6 +140,8 @@ const IMPORT_REFUSALS = [
   // The import to remove is gone.
   'item',
   'indisponivel',
+  // The engine failed in a way waiting does not fix (#258).
+  'falha',
 ] as const
 
 export type ImportRefusal = (typeof IMPORT_REFUSALS)[number]
@@ -164,6 +166,8 @@ const QUEUE_REFUSALS = [
   // Someone decided on it first.
   'item',
   'indisponivel',
+  // The engine failed in a way waiting does not fix (#258).
+  'falha',
 ] as const
 
 export type QueueRefusal = (typeof QUEUE_REFUSALS)[number]

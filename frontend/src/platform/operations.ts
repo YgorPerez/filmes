@@ -7,6 +7,7 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import { basename, join } from 'node:path'
 import {
+  checkDatabase,
   consult,
   evaluate,
   evaluationsFolder,
@@ -31,7 +32,7 @@ import {
 } from '#/content/operations-form'
 import { currentOwner } from './auth'
 import { appEngine } from './engine'
-import { formPoster, seeOther } from './form-post'
+import { failureOf, formPoster, seeOther } from './form-post'
 import { serverEnv } from './server-env'
 
 /** What Operações needs of the logged-in Dono (`platform/owners.ts`'s
@@ -323,7 +324,7 @@ async function evaluateAction(
     if (folder.output.error.code === 'missing_config')
       return refused('sem-pasta')
     logEngineError(folder)
-    return refused('indisponivel')
+    return refused(failureOf(folder))
   }
   // The run goes on after the answer; the page follows its progress.
   const run = runs.start(by, grid)
@@ -352,7 +353,7 @@ export async function operationsAction(
   const pushed = await operations.push()
   if (pushed.exitCode !== 0) {
     logEngineError(pushed)
-    return refused('indisponivel')
+    return refused(failureOf(pushed))
   }
   return back('feito=enviado')
 }
@@ -386,3 +387,34 @@ export const serveOperationsAction = (request: Request) =>
     appRuns(),
     serverEnv().APP_ORIGIN,
   )
+
+// --- `/saude` -----------------------------------------------------------------
+
+// `GET /saude` (#258): whether this app can serve from the database it was
+// given. The deploy's swap probes it on the new container before Nginx moves
+// over (`scripts/deploy-plan.ts`), so code whose schema does not match the
+// live database never goes live. Says one word, nothing about the server.
+
+/** The word for each state; anything else the engine refused is `falha`. */
+const WORDS: Readonly<Record<string, string>> = {
+  outdated_database: 'banco-desatualizado',
+  missing_database: 'sem-banco',
+}
+
+export async function health(engine: Engine): Promise<Response> {
+  const outcome = await engine.run(checkDatabase)
+  const word =
+    outcome.exitCode === 0
+      ? 'ok'
+      : (WORDS[outcome.output.error.code] ?? 'falha')
+  return new Response(`${word}\n`, {
+    status: word === 'ok' ? 200 : 503,
+    headers: {
+      'content-type': 'text/plain; charset=utf-8',
+      'cache-control': 'no-store',
+    },
+  })
+}
+
+/** `/saude` for the app: the process's engine. */
+export const serveHealth = () => health(appEngine())

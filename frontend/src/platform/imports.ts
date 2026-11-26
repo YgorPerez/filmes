@@ -39,7 +39,7 @@ import {
 import { importsPath, QUEUE_PATH } from '#/content/paths'
 import { currentOwner } from './auth'
 import { appEngine } from './engine'
-import { formPoster, seeOther } from './form-post'
+import { failureOf, formPoster, seeOther } from './form-post'
 import { ownerAuthor } from './people'
 import { rateAction, ratingQueuePage, ratingsFromEngine } from './ratings'
 import { serverEnv } from './server-env'
@@ -294,7 +294,7 @@ function importRefusal(outcome: { output: ErrorOutput }): ImportRefusal {
       return 'item'
     default:
       logEngineError(outcome)
-      return 'indisponivel'
+      return failureOf(outcome)
   }
 }
 
@@ -308,7 +308,7 @@ function queueRefusal(outcome: { output: ErrorOutput }): QueueRefusal {
       return 'item'
     default:
       logEngineError(outcome)
-      return 'indisponivel'
+      return failureOf(outcome)
   }
 }
 

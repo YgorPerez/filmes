@@ -55,6 +55,8 @@ export const PERSON_IMPORTS = {
     fonte: 'O Letterboxd não respondeu agora. Tente de novo daqui a pouco.',
     item: 'Esse import já não está no arquivo dela.',
     indisponivel: 'Não deu para importar agora. Tente de novo daqui a pouco.',
+    falha:
+      'O site está com um problema, e ele ficou registrado no log do servidor. Tentar de novo não resolve.',
   } satisfies Record<ImportRefusal, string>,
 
   files: {
@@ -167,5 +169,7 @@ export const QUEUE = {
       'O TMDB não tem o ID do IMDb desse filme. Confirme com o tt… ou com o link do IMDb.',
     item: 'Esse filme já saiu da fila: alguém decidiu antes.',
     indisponivel: 'Não deu para gravar agora. Tente de novo daqui a pouco.',
+    falha:
+      'O site está com um problema, e ele ficou registrado no log do servidor. Tentar de novo não resolve.',
   } satisfies Record<QueueRefusal, string>,
 } as const

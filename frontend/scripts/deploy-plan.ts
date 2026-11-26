@@ -311,15 +311,27 @@ docker run -d --name "$NEW" --restart unless-stopped --init \
   --log-opt max-size=10m --log-opt max-file=3 "${'$'}{ENV_FILE[@]}" "${'$'}{DB_ENV[@]}" \
   -v ${paths.data}:/data \
   -p "127.0.0.1:$PORT:3000" "${container}:sha-$SHA" >/dev/null
+# With a database, the probe is /saude, which opens it: code of another
+# schema than the database's says banco-desatualizado and is refused at once.
+# Before the first db:publish there is none, and / is enough.
+PROBE=/saude
+[ -n "$DB" ] || PROBE=/
 UP=0
 for i in $(seq 1 30); do
-  if curl -fs -o /dev/null -H 'Host: ${host}' -H 'X-Forwarded-Proto: https' "http://127.0.0.1:$PORT/"; then
-    UP=1; break
-  fi
+  ANSWER=$(curl -s -H 'Host: ${host}' -H 'X-Forwarded-Proto: https' -w ' %{http_code}' "http://127.0.0.1:$PORT$PROBE" 2>/dev/null || true)
+  case "$ANSWER" in
+    *' 200') UP=1; break ;;
+    banco-desatualizado*) UP=outdated; break ;;
+  esac
   sleep 2
 done
+if [ "$UP" = outdated ]; then
+  echo "The image sha-$SHA was built for another schema than the database ${'$'}{DB}; what was live stays. Build and publish its database: pnpm db:publish --build --sha $SHA." >&2
+  docker rm -f "$NEW" >/dev/null
+  exit 1
+fi
 if [ "$UP" != 1 ]; then
-  echo "The new app did not answer on / at port $PORT; what was live stays. Last logs:" >&2
+  echo "The new app did not answer on $PROBE at port $PORT; what was live stays. Last logs:" >&2
   docker logs --tail 50 "$NEW" >&2
   docker rm -f "$NEW" >/dev/null
   exit 1
@@ -431,13 +443,20 @@ function checkVersion(version: string) {
     )
 }
 
-/** Before the database goes up: an app is live to swap, the version is new,
+/** Before the database goes up: the image to swap onto it is on the VPS
+ * (the live one, or the SHA asked for), the version is new,
  * and the disk keeps its margin after it. A part left by an interrupted
  * upload of the same version counts as already there, and rsync resumes
  * it. */
-function makeRoom(version: string, size: number, paths: VpsPaths) {
+function makeRoom(
+  version: string,
+  size: number,
+  image: Image,
+  paths: VpsPaths,
+) {
   const db = `${paths.data}/db`
-  return String.raw`${chooseImage('live')}
+  return String.raw`${chooseImage(image)}
+docker image inspect "${APP.container}:sha-$SHA" >/dev/null 2>&1 || { echo "The VPS does not have the image ${APP.container}:sha-$SHA: deploy it first (a deploy its database refused leaves it there)." >&2; exit 1; }
 command -v rsync >/dev/null || { echo "The VPS has no rsync: run prepare-vps.sh again." >&2; exit 1; }
 ${ensureVolume(paths)}[ ! -e "${db}/${version}.sqlite" ] || { echo "The VPS already has the database ${version}." >&2; exit 1; }
 FREE=$(df -PB1 "${db}" | awk 'NR == 2 { print $4 }')
@@ -486,13 +505,17 @@ done
 }
 
 /** Publishing a database built on servidor-azul (ADR 0005): the upload to
- * `db/<version>.sqlite`, then the swap of the live image onto it, then the
- * retention. `auth.sqlite` and the sources' cache, beside `db/`, are not
+ * `db/<version>.sqlite`, then the swap onto it, then the retention. The
+ * swap starts the live image, or with `sha` that commit's (#258): when the
+ * schema changes, the deploy of the new code is refused on the old database,
+ * and the new database is refused by the old code, so both go live
+ * together here. `auth.sqlite` and the sources' cache, beside `db/`, are not
  * touched. */
 export function databasePublishPlan({
   file,
   size,
   version,
+  sha,
   paths = ON_VPS,
 }: {
   /** The local database file. */
@@ -500,22 +523,26 @@ export function databasePublishPlan({
   /** Its size in bytes, checked against the upload. */
   size: number
   version: string
+  /** The image that goes live with it; the live one when absent. */
+  sha?: string
   paths?: VpsPaths
 }): Step[] {
   checkVersion(version)
+  if (sha !== undefined) checkSha(sha)
+  const image: Image = sha === undefined ? 'live' : { sha }
   if (!Number.isSafeInteger(size) || size <= 0)
     throw new Error(`${size} is not a file size.`)
   return [
     {
       name: 'Upload',
-      script: makeRoom(version, size, paths),
+      script: makeRoom(version, size, image, paths),
       send: { file, to: `${paths.data}/db/${version}.sqlite.part` },
     },
     { name: 'Install', script: installDatabase(version, size, paths) },
     {
       name: 'Swap',
       script: swapApp(
-        { image: 'live', database: { version }, withConfig: false },
+        { image, database: { version }, withConfig: false },
         paths,
       ),
     },

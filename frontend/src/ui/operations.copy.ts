@@ -23,6 +23,8 @@ export const OPERATIONS = {
       'Configure a pasta de relatórios no servidor para rodar a avaliação.',
     pedido: 'Esse pedido não veio desta tela. Use o botão da ação.',
     indisponivel: 'A ação falhou. Tente de novo daqui a pouco.',
+    falha:
+      'O site está com um problema, e ele ficou registrado no log do servidor. Tentar de novo não resolve.',
   } satisfies Record<OperationsRefusal, string>,
   percent,
   push: {

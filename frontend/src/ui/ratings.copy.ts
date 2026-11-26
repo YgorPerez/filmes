@@ -33,5 +33,7 @@ export const RATINGS = {
     alvo: 'Um dos filmes não está no Catálogo: tire-o e tente de novo.',
     indisponivel:
       'Não deu para gravar agora: as Notas continuam aqui. Tente de novo mais tarde.',
+    falha:
+      'O site está com um problema, e ele ficou registrado no log do servidor. Tentar de novo não resolve.',
   } satisfies Record<RatingRefusal, string>,
 }

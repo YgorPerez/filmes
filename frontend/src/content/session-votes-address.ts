@@ -10,8 +10,9 @@ const VOTE_NOTICES = ['votado', 'atualizada', 'regerada'] as const
 export type VoteNotice = (typeof VOTE_NOTICES)[number]
 
 /** `regerar`: the Votos were recorded, but the redo failed;
- * `indisponivel`: nothing was recorded. */
-const VOTE_REFUSALS = ['regerar', 'indisponivel'] as const
+ * `indisponivel`: nothing was recorded; `falha`: nothing was recorded, and
+ * waiting does not fix it (#258). */
+const VOTE_REFUSALS = ['regerar', 'indisponivel', 'falha'] as const
 export type VoteRefusal = (typeof VOTE_REFUSALS)[number]
 
 export const voteSearch = (search: Record<string, unknown>) => ({

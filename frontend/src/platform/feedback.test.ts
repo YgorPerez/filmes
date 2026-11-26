@@ -176,7 +176,7 @@ describe('feedbackAction', () => {
     ['invalid_usage', '/sessoes/2026-11-20-quim/contar?erro=pedido'],
     ['unknown_person', '/sessoes/2026-11-20-quim/contar?erro=pedido'],
     ['unknown_session', '/sessoes/2026-11-20-quim'],
-    ['missing_database', '/sessoes/2026-11-20-quim/contar?erro=indisponivel'],
+    ['missing_database', '/sessoes/2026-11-20-quim/contar?erro=falha'],
   ])('says why the engine refused %s', async (code, location) => {
     const log = vi.spyOn(console, 'error').mockImplementation(() => {})
     const { feedback } = fake({ record: failure(code) })

@@ -3,23 +3,27 @@
 // root:
 //
 //   VPS_HOST=… [VPS_USER=root] [VPS_PORT=22] [VPS_SSH_KEY=…] \
-//     pnpm db:publish <file.sqlite> [--version <name>] [--dry-run]
+//     pnpm db:publish <file.sqlite> [--version <name>] [--sha <commit>] [--dry-run]
 //   … pnpm db:publish --build [--data <filmes-dados>] [--config <config>]
-//     [--version <name>] [--dry-run]
+//     [--version <name>] [--sha <commit>] [--dry-run]
 //   … pnpm db:publish --rollback [<version>] [--dry-run]
 //
 // `--build` first builds the file with the engine's `rebuild` from
 // filmes-dados (`--data`,
 // or `FILMES_DADOS`) and the config (`--config`, the repo's `config/` by
 // default), read where they are (`db-build.ts`); the dumps
-// come from the caller's environment. A dry run
+// come from the caller's environment. It refuses a filmes-dados with
+// changes or behind its remote. A dry run
 // builds too, and keeps the file to look at; a publish deletes it after the
 // swap, and keeps it when the publish stops, to send again by path.
 //
 // The file goes up with rsync to `/opt/filmes/data/db/<version>.sqlite`
 // (an interrupted upload resumes when run again with the same `--version`),
-// then the live image starts on the other port of the pair with
-// `FILMES_DATABASE=/data/db/<version>.sqlite`, and the old container stops
+// then an image starts on the other port of the pair with
+// `FILMES_DATABASE=/data/db/<version>.sqlite`: the commit's of `--sha`,
+// with `--build` the checkout's HEAD by default, or else the live one. The
+// app's `/saude` must answer before the swap, so code of another schema
+// than the database's never goes live (#258). The old container stops
 // after Nginx moves over. The VPS keeps the live version and the previous
 // one; `--rollback` swaps back to the previous one, or to the version asked
 // for. `--dry-run` prints the plan and touches nothing.
@@ -42,7 +46,14 @@ import {
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { parseArgs } from 'node:util'
-import { REPO, type Runner, buildDatabase, spawnRunner } from './db-build.ts'
+import {
+  REPO,
+  type Runner,
+  buildDatabase,
+  checkDataCheckout,
+  headOf,
+  spawnRunner,
+} from './db-build.ts'
 import { keyFile } from './ssh-key.ts'
 import {
   type Step,
@@ -117,18 +128,25 @@ function describePlan(steps: Step[]) {
 }
 
 type Command =
-  | { mode: 'publish'; file: string; version?: string; dryRun: boolean }
+  | {
+      mode: 'publish'
+      file: string
+      version?: string
+      sha?: string
+      dryRun: boolean
+    }
   | {
       mode: 'build'
       data?: string
       config?: string
       version?: string
+      sha?: string
       dryRun: boolean
     }
   | { mode: 'rollback'; version?: string; dryRun: boolean }
 
 const USAGE =
-  'Usage: VPS_HOST=… [VPS_USER=root] [VPS_PORT=22] [VPS_SSH_KEY=…] pnpm db:publish <file.sqlite> | --build [--data <filmes-dados>] [--config <config>], then [--version <name>] [--dry-run] | --rollback [<version>] [--dry-run]'
+  'Usage: VPS_HOST=… [VPS_USER=root] [VPS_PORT=22] [VPS_SSH_KEY=…] pnpm db:publish <file.sqlite> | --build [--data <filmes-dados>] [--config <config>], then [--version <name>] [--sha <commit>] [--dry-run] | --rollback [<version>] [--dry-run]'
 
 /** A publish's command line: a file, or `--build` and its folders. */
 function parsePublish(args: string[], dryRun: boolean): Command | string {
@@ -139,6 +157,7 @@ function parsePublish(args: string[], dryRun: boolean): Command | string {
       allowPositionals: true,
       options: {
         version: { type: 'string' },
+        sha: { type: 'string' },
         build: { type: 'boolean' },
         data: { type: 'string' },
         config: { type: 'string' },
@@ -148,16 +167,16 @@ function parsePublish(args: string[], dryRun: boolean): Command | string {
     return USAGE
   }
   const { positionals, values } = parsed
-  if (values.version === '') return USAGE
-  const { version, build, data, config } = values
+  if (values.version === '' || values.sha === '') return USAGE
+  const { version, sha, build, data, config } = values
   if (build)
     return positionals.length === 0
-      ? { mode: 'build', data, config, version, dryRun }
+      ? { mode: 'build', data, config, version, sha, dryRun }
       : USAGE
   const [file, ...extra] = positionals
   if (!file || extra.length > 0 || data !== undefined || config !== undefined)
     return USAGE
-  return { mode: 'publish', file, version, dryRun }
+  return { mode: 'publish', file, version, sha, dryRun }
 }
 
 /** The command line, or the usage when it does not parse. */
@@ -186,8 +205,13 @@ function dataFolder(
 }
 
 /** The plan for a database file, after checking it. */
-const publishPlan = (file: string, version: string, paths?: VpsPaths) =>
-  databasePublishPlan({ file, size: checkDatabase(file), version, paths })
+const publishPlan = (
+  file: string,
+  version: string,
+  sha: string | undefined,
+  paths?: VpsPaths,
+) =>
+  databasePublishPlan({ file, size: checkDatabase(file), version, sha, paths })
 
 /** Runs the command line: prints the plan on a dry run, which needs no VPS,
  * or follows it on the VPS from the `VPS_*` variables. Whatever stops it
@@ -212,8 +236,19 @@ export function runCommand({
   paths?: VpsPaths
   /** Runs the engine's build process for `--build`. */
   run?: Runner
+  /** The commit `--build` publishes the image of, without `--sha`. */
+  head?: () => string
+  /** Refuses a filmes-dados `--build` must not build from. */
+  checkData?: (data: string, say: (line: string) => void) => void
 }) {
-  const { here, date, paths, run = spawnRunner } = where
+  const {
+    here,
+    date,
+    paths,
+    run = spawnRunner,
+    head = headOf,
+    checkData = checkDataCheckout,
+  } = where
   const command = parseArguments(argv)
   if (typeof command === 'string') throw new Error(command)
   const target = command.dryRun ? undefined : targetFrom(env)
@@ -226,15 +261,20 @@ export function runCommand({
     return follow(databaseRollbackPlan({ version: command.version, paths }))
   const version = command.version ?? versionAt(date)
   if (command.mode === 'publish')
-    return follow(publishPlan(resolve(here, command.file), version, paths))
+    return follow(
+      publishPlan(resolve(here, command.file), version, command.sha, paths),
+    )
 
   const data = dataFolder(command.data, env, here)
+  checkData(data, say)
+  // The image of the code that builds the database goes live with it.
+  const sha = command.sha ?? head()
   const config = resolve(here, command.config ?? join(REPO, 'config'))
   const file = join(
     mkdtempSync(join(tmpdir(), 'filmes-db-')),
     `${version}.sqlite`,
   )
-  say(`building ${version} from ${data} with ${config}`)
+  say(`building ${version} from ${data} with ${config}, for sha-${sha}`)
   try {
     buildDatabase({ data, config, database: file, env, run })
   } catch (error) {
@@ -243,10 +283,10 @@ export function runCommand({
   }
   say(`built ${file}`)
   try {
-    follow(publishPlan(file, version, paths))
+    follow(publishPlan(file, version, sha, paths))
   } catch (error) {
     throw new Error(
-      `${error instanceof Error ? error.message : String(error)}\nThe database stays at ${file}: pnpm db:publish ${file} --version ${version}`,
+      `${error instanceof Error ? error.message : String(error)}\nThe database stays at ${file}: pnpm db:publish ${file} --version ${version} --sha ${sha}`,
       { cause: error },
     )
   }

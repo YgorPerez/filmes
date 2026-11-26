@@ -27,6 +27,8 @@ const REPLY_REFUSALS = [
   'fechada',
   'regerar',
   'indisponivel',
+  // The engine failed in a way waiting does not fix (#258).
+  'falha',
 ] as const
 export type ReplyRefusal = (typeof REPLY_REFUSALS)[number]
 export const isReplyRefusal = within(REPLY_REFUSALS)

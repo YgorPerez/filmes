@@ -15,6 +15,8 @@ export const OPERATIONS_REFUSALS = [
   'sem-pasta',
   'pedido',
   'indisponivel',
+  // The engine failed in a way waiting does not fix (#258).
+  'falha',
 ] as const
 export type OperationsRefusal = (typeof OPERATIONS_REFUSALS)[number]
 export const isOperationsRefusal = within(OPERATIONS_REFUSALS)

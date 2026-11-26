@@ -14,7 +14,13 @@ import {
 import { basename, join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { describe, expect, test } from 'vite-plus/test'
-import { consult, rebuild, type Outcome } from '../src/index.ts'
+import {
+  consult,
+  rebuild,
+  SCHEMA_VERSION,
+  schemaHash,
+  type Outcome,
+} from '../src/index.ts'
 import { ROOT, useFixture, type Fixture } from './fixture.ts'
 
 const CATALOG = join(ROOT, 'tests/fixture/catalogo')
@@ -276,4 +282,24 @@ test('without filmes-dados configured, says what is missing', async () => {
   expect(readdirSync(fixture.root).filter((f) => f.endsWith('.novo'))).toEqual(
     [],
   )
+})
+
+test('the schema version is the hash of the schema files', () => {
+  const hash = schemaHash()
+  expect(
+    SCHEMA_VERSION,
+    `schema/*.sql changed: put ${hash} in rebuild/schema-version.ts, and publish the database with the deploy`,
+  ).toBe(hash)
+})
+
+test('stamps the schema version in the database', async () => {
+  const fixture = useFixture()
+  const db = new DatabaseSync(fixture.database, { readOnly: true })
+  try {
+    expect(db.prepare('PRAGMA user_version').get()).toEqual({
+      user_version: SCHEMA_VERSION,
+    })
+  } finally {
+    db.close()
+  }
 })
