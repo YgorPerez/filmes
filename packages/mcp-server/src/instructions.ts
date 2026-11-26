@@ -48,7 +48,9 @@ Por padrão, a continuação de uma série de filmes só entra se todos os Prese
 
 Depois de \`recommend\`, chame \`billboard\` com o \`session.id\`. Se você pediu mais Candidatos e escolheu alguns para a tela, passe os IDs em \`films\`, na ordem da tela: o Cartaz numera esses de 1 em diante e a Sessão guarda a lista para o Feedback achar a posição do Filme escolhido.
 
-Onde o Cartaz aparece como tela, escreva só os \`warnings\` de \`recommend\` e de \`billboard\` e o convite para o Dono marcar (Já vi, Trocar, estrelas, comentário e, lá embaixo, acrescentar) e mandar. Onde não aparece, monte a resposta em Markdown, como em "Resposta em Markdown". Depois, faça 1 ou 2 perguntas de gosto sobre os Presentes.
+Onde o Cartaz aparece como tela, escreva só os \`warnings\` de \`recommend\` e de \`billboard\`, uma linha por filme com a Nota prevista (abaixo) e o convite para o Dono marcar (Já vi, Trocar, estrelas, comentário e, lá embaixo, acrescentar) e mandar. Onde não aparece, monte a resposta em Markdown, como em "Resposta em Markdown". Depois, faça 1 ou 2 perguntas de gosto sobre os Presentes.
+
+Ao apresentar o Cartaz no chat, a linha de cada filme cita a Nota prevista de cada Presente, do \`text\` de \`predictedRatings\` no card do \`billboard\`: "Fronteira (2008) — previsto: Ana 8,3, Bruno 7,1". Os Presentes vão na ordem de \`attendees\`, pelo nome cadastrado, e o Dono como "Você". Presente sem Nota prevista fica fora da lista, e filme sem nenhuma não tem "previsto". Não invente uma que não veio.
 
 ## Pedido que muda
 
@@ -135,7 +137,7 @@ Um bloco por filme, na ordem devolvida, com uma linha em branco entre as partes:
 
 1. \`### <position>. <titlePt>\` (sem \`titlePt\`, \`title\`; quando diferirem, acrescente \` *(<title>)*\`). Com \`onlyGuesses\`, termine com \` — sem fato que o sustente\`.
 2. \`![capa](<poster>)\`, quando vier.
-3. A ficha numa linha, partes separadas por \` · \`: \`year\`, a duração (\`1h44\`, \`2h00\` ou \`45min\`), os \`genres\`, \`★ <imdbRating>\` com vírgula decimal, \`<imdbVotes> votos\` com ponto no milhar e \`[IMDb](<imdbUrl>)\`. Pule a parte nula.
+3. A ficha numa linha, partes separadas por \` · \`: \`year\`, a duração (\`1h44\`, \`2h00\` ou \`45min\`), os \`genres\`, \`★ <imdbRating>\` com vírgula decimal, \`<imdbVotes> votos\` com ponto no milhar, \`[IMDb](<imdbUrl>)\` e \`previsto: Você 8,3, Ana 7,1\`, como em "O Cartaz". Pule a parte nula.
 4. A \`synopsis\` em itálico, quando vier.
 5. \`Fato sobre <withFact> de <attendees>; sem fato: <nomes>\` (todos com Fato: só \`Fato sobre 2 de 2\`).
 6. As Evidências, em lista: uma linha por Presente, a primeira \`strong\`, senão \`moderate\`, senão \`weak\`, na ordem do motor; os Presentes sem fato juntos numa linha (\`**Teo e Ana:**\`). Até uma linha de \`filmLines\`, com o rótulo \`Filme\`, quando ela importar para o pedido.
@@ -146,7 +148,7 @@ Cada linha de Evidência começa pelo marcador da Força (\`●●●\` forte, \
 \`\`\`markdown
 ### 1. As Horas Lentas
 
-2021 · 1h44 · Drama, Mistério · ★ 7,4 · 28.000 votos · [IMDb](https://www.imdb.com/title/tt9000104/)
+2021 · 1h44 · Drama, Mistério · ★ 7,4 · 28.000 votos · [IMDb](https://www.imdb.com/title/tt9000104/) · previsto: Você 8,1
 
 Fato sobre 1 de 2; sem fato: Teo
 

@@ -650,3 +650,67 @@ describe('the predicted rating (#175)', () => {
     )
   })
 })
+
+// A Session with Feedback (#264): on the chosen film, each Presente's
+// Nota prevista as the version stored it, next to her Reação.
+describe('the closed Cartaz (#264)', () => {
+  const closed = async (
+    fixture: Fixture,
+    feedback: { ratings?: string[]; reports?: string[] },
+  ) => {
+    const session = await fixture.ok(
+      recommendSession({ attendees: ['bruno', 'teo'], count: 50 }),
+      tasteWeights(fixture, 3, 5),
+    )
+    const id = session.session.id
+    const film = session.films.find((f) => f.title === 'Pequenos Milagres')!
+    await fixture.ok(
+      recordFeedback({ session: id, film: film.id, ...feedback }),
+    )
+    return { id, film }
+  }
+
+  test('the chosen film has the stored Nota prevista next to each Reação', async () => {
+    const fixture = useFixture()
+    const { id, film } = await closed(fixture, {
+      ratings: ['bruno=3'],
+      reports: ['teo=gostou'],
+    })
+
+    // With the default minimum of 10 shared films Bruno has no neighbour
+    // now: the 8,8 is the one the version stored.
+    const model = await fixture.ok(billboardModel({ session: id }))
+
+    const chosen = model.films.find((f) => f.id === film.id)
+    expect(chosen?.reactions).toEqual([
+      { person: 'bruno', predicted: '8,8', rating: '6', reaction: null },
+      { person: 'teo', predicted: null, rating: null, reaction: 'liked' },
+    ])
+    expect(
+      model.films.filter((f) => f.reactions !== undefined).map((f) => f.id),
+    ).toEqual([film.id])
+  })
+
+  test('a Presente with neither a Nota prevista nor a Reação is left out', async () => {
+    const fixture = useFixture()
+    const { id, film } = await closed(fixture, {})
+
+    const model = await fixture.ok(billboardModel({ session: id }))
+
+    expect(model.films.find((f) => f.id === film.id)?.reactions).toEqual([
+      { person: 'bruno', predicted: '8,8', rating: null, reaction: null },
+    ])
+  })
+
+  test('an open Session and "não vimos nada" have no reactions', async () => {
+    const fixture = useFixture()
+    const session = await recommend(fixture, { attendees: ['dono', 'iara'] })
+    const id = session.session.id
+    const open = await fixture.ok(billboardModel({ session: id }))
+    await fixture.ok(recordFeedback({ session: id, film: null }))
+    const none = await fixture.ok(billboardModel({ session: id }))
+
+    for (const model of [open, none])
+      expect(model.films.every((f) => f.reactions === undefined)).toBe(true)
+  })
+})

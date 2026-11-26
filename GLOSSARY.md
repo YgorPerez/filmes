@@ -259,6 +259,9 @@ _Evitar_: nota esperada, match
 A correção da Nota prevista de uma Pessoa pelas Notas dela: nos filmes a que ela deu Nota, o que os vizinhos de gosto teriam previsto sem aquela Nota (cada filme deixado de fora na escolha deles) contra o percentil que ela deu, numa reta (deslocamento e inclinação no percentil). Quem tem vizinhos mais generosos que ela recebe uma Nota prevista mais baixa. Com poucos filmes assim, a reta vale pouco: pesa n / (n + `[prediction_calibration] pseudo_count`), e o resto fica sem correção. A Nota da Pergunta par a par fica fora, e no `evaluate` só entram as Notas de antes do corte. Muda o número, não a Evidência dos vizinhos nem a Força dela.
 _Evitar_: ajuste (é outra coisa), correção de viés
 
+**Erro da Nota prevista** [prediction error, `predictionError`]:
+A média das diferenças absolutas [mean absolute error, `meanAbsoluteError`] entre a Nota prevista calibrada e a Nota da Pessoa, na escala de 1 a 10. A página da Pessoa usa os filmes comparados na Calibração e mostra a média junto do número de filmes, a partir de `[rating_percentile] min_ratings`.
+
 **Palpite** [guess, `guess`]:
 Um Motivo sem Fato que o sustente.
 _Evitar_: chute, inferência
