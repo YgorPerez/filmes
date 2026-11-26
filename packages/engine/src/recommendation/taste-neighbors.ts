@@ -323,7 +323,10 @@ export interface PersonPredictionError {
   readonly meanAbsoluteError: number
 }
 
-/** Error on the films used to fit her calibration, in points out of 10. */
+/** How far her calibrated Nota prevista is from her Nota, in points out
+ * of 10, on average over the films she rated: each film scored with the
+ * calibration fitted on the others, as `evaluate` scores a film the
+ * calibration never saw. */
 export const personPredictionError = (
   db: Connection,
   person: string,
@@ -342,11 +345,11 @@ export const personPredictionError = (
     )
     const films = comparisons.length
     if (films < Math.max(1, weights.rating_percentile.min_ratings)) return null
-    const calibration = fitCalibration(
-      comparisons,
-      weights.prediction_calibration.pseudo_count,
-    )
-    const errors = comparisons.map(({ predicted, rating }) => {
+    const errors = comparisons.map(({ predicted, rating }, i) => {
+      const calibration = fitCalibration(
+        comparisons.filter((_, j) => j !== i),
+        weights.prediction_calibration.pseudo_count,
+      )
       const value = onHerScale(scale, calibrate(calibration, predicted))!
       return Math.abs(value - 2 * rating)
     })

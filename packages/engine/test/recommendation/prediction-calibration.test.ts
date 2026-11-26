@@ -97,7 +97,7 @@ const veraOnProva = async (
 }
 
 describe('the Pessoa’s prediction error', () => {
-  test('averages the calibrated errors on the Já vi scale', async () => {
+  test('averages the calibrated errors on the Já vi scale, each Nota left out', async () => {
     const fixture = useFixture()
     const catalog = await withKinderNeighbours(fixture)
     const view = await fixture.ok(
@@ -109,9 +109,11 @@ describe('the Pessoa’s prediction error', () => {
     )
 
     expect(view.predictionError?.films).toBe(9)
-    // The 9/29 weight on the fit (665/369 × percentile − 611/738)
-    // brings the mean absolute error from 2.10234 to 1.45536 points.
-    expect(view.predictionError?.meanAbsoluteError).toBeCloseTo(1.45536, 5)
+    // Each film is scored with the calibration fitted on the other 8, as
+    // `evaluate` scores a film the calibration never saw: 1.50951 points.
+    // Fitted on all 9 and scored on the same 9 (665/369 × percentile −
+    // 611/738, weight 9/29), it would flatter her with 1.45536.
+    expect(view.predictionError?.meanAbsoluteError).toBeCloseTo(1.50951, 5)
   })
 
   test('is absent below the minimum number of comparable films', async () => {
