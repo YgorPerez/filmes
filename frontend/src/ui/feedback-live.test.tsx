@@ -10,7 +10,7 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, expect, it, vi } from 'vite-plus/test'
 import { parseFeedback } from '#/content/feedback-form'
@@ -155,7 +155,7 @@ it('goes to the Sessão the post closed, through the router', async () => {
   )
   await user.click(submit())
 
-  await vi.waitFor(() =>
+  await waitFor(() =>
     expect(router.state.location.href).toBe(
       `/sessoes/${PAGE.id}?feito=contada`,
     ),
