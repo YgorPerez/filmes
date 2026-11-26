@@ -9,7 +9,7 @@
     "start": "pnpm --filter frontend start",
     "catalog:update": "node frontend/scripts/catalog-update.ts",
     "db:publish": "node frontend/scripts/db-publish.ts",
-    "check": "vp check && vp run -r --cache test:coverage && vp test run --coverage && vp run --filter frontend fallow && vp run --filter frontend doctor",
+    "check": "vp check && node frontend/lint/folders.ts && vp run -r --cache test:coverage && vp test run --coverage && vp run --filter frontend --filter @filmes/engine fallow && vp run --filter frontend doctor",
     "fmt": "vp fmt",
     "lint": "vp lint",
     "test": "vp test run && vp run -r --cache test",
@@ -17,6 +17,7 @@
   },
   "devDependencies": {
     "@effect/tsgo": "catalog:",
+    "@shadcn/lint": "0.2.5",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "typescript": "catalog:",

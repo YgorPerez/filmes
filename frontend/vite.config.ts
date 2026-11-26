@@ -28,6 +28,7 @@ export default defineConfig({
       'src/**/*.test.{ts,tsx}',
       'scripts/**/*.test.ts',
       'nginx/**/*.test.ts',
+      'lint/**/*.test.ts',
     ],
     environment: 'node',
     // The deploy tests run real ssh/rsync fakes and the engine tests read the
@@ -42,7 +43,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text-summary', 'json'],
-      include: ['src/**/*.{ts,tsx}', 'scripts/**/*.ts'],
+      include: ['src/**/*.{ts,tsx}', 'scripts/**/*.ts', 'lint/**/*.ts'],
       exclude: ['src/routeTree.gen.ts'],
       // The routes and the router are covered by the build and its `/`
       // (CI's `build` job), not by Vitest; the deploy scripts' `ssh` and

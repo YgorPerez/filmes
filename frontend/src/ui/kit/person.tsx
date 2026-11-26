@@ -42,8 +42,7 @@ export function Avatar({
 }) {
   return (
     <span
-      title={person.name}
-      className={`inline-flex size-6 shrink-0 items-center justify-center rounded-round border-2 font-display text-[11px] font-bold ${
+      className={`inline-flex size-6 shrink-0 items-center justify-center rounded-round border-2 font-display text-avatar ${
         hollow ? 'bg-transparent' : 'text-on-person'
       } ${colorOf(person, hollow)}`}
     >
@@ -52,19 +51,18 @@ export function Avatar({
   )
 }
 
-/** Her 12px dot on the case, under the cover; `title` says who it is. */
+/** Her 12px dot on the case, under the cover. Only a picture: the card
+ * says in its text who has no Fato ("Fulano: sem fato sobre este filme"). */
 export function PersonDot({
   person,
   hollow = false,
-  title,
 }: {
   person: Person
   hollow?: boolean
-  title: string
 }) {
   return (
     <span
-      title={title}
+      aria-hidden="true"
       className={`size-3 rounded-round border-2 ${hollow ? 'bg-transparent' : ''} ${colorOf(person, hollow)}`}
     />
   )

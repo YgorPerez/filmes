@@ -222,7 +222,7 @@ const skipPast = (sql: string, from: number, end: string): number => {
  * which node:sqlite does not expose: the parser's numbering, from SQLite's
  * tokenizer. `?` takes the next number, `?NNN` the number NNN, and a name
  * (`:a`, `@a`, `$a`) the next number the first time it shows up. */
-export function parameterCount(sql: string): number {
+function parameterCount(sql: string): number {
   let count = 0
   const names = new Set<string>()
   let i = 0

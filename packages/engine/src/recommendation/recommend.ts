@@ -845,7 +845,7 @@ export const rankRequest = (
 /** `recommend`, with the Restrições it applied: the same values, so what
  * they learnt while evaluating (the similar's reference titles) reaches
  * the Session (Python's `_contexto` reads them after `recomendar`). */
-export const recommendAsked = (
+const recommendAsked = (
   request: RecommendRequest,
 ): Effect.Effect<
   {

@@ -25,7 +25,7 @@ import { split, type MeasuredPerson, type TrainingRating } from './people.ts'
 export const SEED = 27
 export const SAMPLE_SIZE = 1000
 /** The MovieLens dump's name in the versions manifest. */
-export const MOVIELENS_DUMP = 'ml-32m.zip'
+const MOVIELENS_DUMP = 'ml-32m.zip'
 
 /** Progress as Python's callback: (percent, message). */
 export type Progress = (value: number, message: string) => Effect.Effect<void>
@@ -48,7 +48,7 @@ export interface Sample {
 const isFile = (path: string) => existsSync(path) && statSync(path).isFile()
 
 /** `versoes.fonte_e_data`: the dump's Fonte and date from the manifest. */
-export const sourceAndDate = (
+const sourceAndDate = (
   manifest: string,
   name: string,
 ): Effect.Effect<readonly [string, string], EngineError> =>

@@ -78,7 +78,28 @@ export default defineConfig({
     jsPlugins: [
       // `vite-plus/prefer-vite-plus-imports`: Vitest and Vite come from Vite+.
       { name: 'vite-plus', specifier: 'vite-plus/oxlint-plugin' },
+      // The local plugins, from pesquisa-relacionamentos' `frontend/lint/`:
+      // localStorage through its owner, DESIGN.md's icons and No Shadow
+      // Rule, a color that is not a token, a `title` that does not open on
+      // touch, a relative import with `.js`, and the screen tests' wait.
+      // `frontend/lint/rule-config.test.ts` checks that each plugin here has
+      // its rules turned on.
+      './frontend/lint/state.ts',
+      './frontend/lint/cohesion.ts',
+      './frontend/lint/theme-color.ts',
+      './frontend/lint/no-native-title.ts',
+      './frontend/lint/no-js-import.ts',
+      './frontend/lint/no-vi-waitfor-in-screens.ts',
+      // The design system: Tailwind classes against the theme in
+      // `frontend/src/ui/tokens.css` and the components in `src/ui/shadcn/`,
+      // found through `frontend/components.json`.
+      '@shadcn/lint',
     ],
+    settings: {
+      shadcn: {
+        note: 'The tokens and components are in DESIGN.md; the theme is frontend/src/ui/tokens.css.',
+      },
+    },
     rules: {
       'vite-plus/prefer-vite-plus-imports': 'error',
       // The hooks rules and the React Compiler rules. The `correctness`
@@ -95,6 +116,9 @@ export default defineConfig({
       'react/rule-suppression': 'error',
       'react/syntax': 'error',
       'react/todo': 'error',
+      // A `.js` in a relative import does not resolve under the `node` that
+      // runs the repo scripts, anywhere.
+      'modules/no-js-import': 'error',
       // A test may assert through a helper that checks the output recorded
       // for it (`packages/engine/test/expected.ts`): `expectRecorded...`,
       // besides Vitest's own.
@@ -112,6 +136,63 @@ export default defineConfig({
       ],
     },
     overrides: [
+      {
+        // The app: localStorage only through `openStorage()`, which owns
+        // it. The tests read and clear it to check what a screen kept.
+        files: ['frontend/src/**'],
+        excludeFiles: [
+          'frontend/src/ui/billboard-marks.ts',
+          'frontend/src/**/*.test.{ts,tsx}',
+        ],
+        rules: { 'state/localstorage-through-open-storage': 'error' },
+      },
+      {
+        // The app's classes against the design system. `ui/shadcn/` is where
+        // the design system is drawn: there a class defines the variant, it
+        // does not retouch it.
+        files: ['frontend/src/**'],
+        excludeFiles: ['frontend/src/ui/shadcn/**'],
+        rules: {
+          'shadcn/no-unknown-classes': 'error',
+          'shadcn/no-raw-colors': 'error',
+          'shadcn/require-static-classes': 'error',
+          'shadcn/no-arbitrary-values': [
+            'error',
+            {
+              // `layout`: width, height, position and margin measured for one
+              // screen are not tokens. `transition`: which properties move is
+              // the component's choice.
+              allow: ['layout', 'transition'],
+            },
+          ],
+          'shadcn/no-restyle': [
+            'error',
+            // Placement belongs to the caller: margin, width, height, position.
+            { allow: ['layout'] },
+          ],
+        },
+      },
+      {
+        // The app: the HTML `title` does not open on touch, no ready-made
+        // icon package gets in, and no shadow or gradient (DESIGN.md).
+        files: ['frontend/src/**'],
+        rules: {
+          'html/no-native-title': 'error',
+          'cohesion/hand-drawn-icons': 'error',
+          'cohesion/no-shadow': 'error',
+        },
+      },
+      {
+        // Screen tests wait the Testing Library way.
+        files: ['frontend/src/**/*.test.tsx'],
+        rules: { 'screens/no-vi-waitfor-in-screens': 'error' },
+      },
+      {
+        // Hand-written colors. The tests are not screens.
+        files: ['frontend/src/**'],
+        excludeFiles: ['frontend/src/**/*.test.{ts,tsx}'],
+        rules: { 'theme/raw-color': 'error' },
+      },
       {
         // The Effect diagnostics, through the `@effect/tsgo` patch. Only the
         // engine uses Effect. The preset's `typeAware` is already on above.

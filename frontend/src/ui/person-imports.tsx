@@ -176,7 +176,7 @@ function Files({ slug, page }: Part) {
               />
             }
           >
-            <span className="font-display text-[15px] font-bold break-all">
+            <span className="font-display text-row-title break-all">
               {record.original}
             </span>
             <Meta parts={[files.kind(record.kind), files.on(record.date)]} />
@@ -281,7 +281,7 @@ function Trakt({ page }: { page: PersonImports }) {
   )
 }
 
-const fileControl = `${FIELD} w-full cursor-pointer file:mr-lg file:min-h-9 file:cursor-pointer file:rounded-pill file:border-[1.5px] file:border-rule file:bg-surface-2 file:px-xl file:font-display file:text-control file:text-ink`
+const fileControl = `${FIELD} w-full cursor-pointer file:mr-lg file:min-h-9 file:cursor-pointer file:rounded-pill file:border-(length:--border-width-stroke) file:border-rule file:bg-surface-2 file:px-xl file:font-display file:text-control file:text-ink`
 
 /** How to download the ZIP: one line per service, its name a link to its
  * data settings. Spans, so it also fits inside the alert's paragraph. */

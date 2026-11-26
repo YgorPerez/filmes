@@ -53,9 +53,7 @@ export function PeopleList({
               >
                 <span aria-hidden="true" className="w-2 shrink-0 bg-case" />
                 <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-sm gap-y-2xs py-sm pl-xl">
-                  <span className="font-display text-[15px] font-bold">
-                    {name}
-                  </span>
+                  <span className="font-display text-row-title">{name}</span>
                   {owner && <OwnerTag />}
                   {person === self && (
                     <span className="text-meta text-ink-2">

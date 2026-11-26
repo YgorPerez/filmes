@@ -61,14 +61,38 @@ typography:
     fontWeight: 800
     lineHeight: 1.15
     letterSpacing: '0.01em'
+  shelf-label-compact:
+    fontFamily: 'Rubik, system-ui, sans-serif'
+    fontSize: '15px'
+    fontWeight: 800
+    lineHeight: 1.15
+    letterSpacing: '0.01em'
   hand:
     fontFamily: 'Permanent Marker, Comic Sans MS, cursive'
     fontSize: '18px'
     fontWeight: 400
     lineHeight: 1.2
+  hand-compact:
+    fontFamily: 'Permanent Marker, Comic Sans MS, cursive'
+    fontSize: '16px'
+    fontWeight: 400
+    lineHeight: 1.2
+  hand-small:
+    fontFamily: 'Permanent Marker, Comic Sans MS, cursive'
+    fontSize: '15px'
+    fontWeight: 400
+  hand-large:
+    fontFamily: 'Permanent Marker, Comic Sans MS, cursive'
+    fontSize: '19px'
+    fontWeight: 400
   price:
     fontFamily: 'Rubik, system-ui, sans-serif'
     fontSize: '18px'
+    fontWeight: 800
+    lineHeight: 1
+  price-compact:
+    fontFamily: 'Rubik, system-ui, sans-serif'
+    fontSize: '14px'
     fontWeight: 800
     lineHeight: 1
   sticker:
@@ -82,6 +106,15 @@ typography:
     fontSize: '19px'
     fontWeight: 700
     lineHeight: 1.2
+  row-title:
+    fontFamily: 'Rubik, system-ui, sans-serif'
+    fontSize: '15px'
+    fontWeight: 700
+  page-title:
+    fontFamily: 'Rubik, system-ui, sans-serif'
+    fontSize: '24px'
+    fontWeight: 700
+    lineHeight: 1.15
   counter-title:
     fontFamily: 'Rubik, system-ui, sans-serif'
     fontSize: '24px'
@@ -90,6 +123,11 @@ typography:
   step-title:
     fontFamily: 'Rubik, system-ui, sans-serif'
     fontSize: '17px'
+    fontWeight: 700
+    lineHeight: 1.25
+  step-title-small:
+    fontFamily: 'Rubik, system-ui, sans-serif'
+    fontSize: '15.5px'
     fontWeight: 700
     lineHeight: 1.25
   brand:
@@ -104,17 +142,37 @@ typography:
     fontWeight: 800
     lineHeight: 1
     letterSpacing: '0.02em'
+  button-big:
+    fontFamily: 'Rubik, system-ui, sans-serif'
+    fontSize: '18px'
+    fontWeight: 800
+    lineHeight: 1
+    letterSpacing: '0.02em'
   control:
     fontFamily: 'Rubik, system-ui, sans-serif'
     fontSize: '14px'
     fontWeight: 500
     lineHeight: 1.2
+  field-label:
+    fontFamily: 'Rubik, system-ui, sans-serif'
+    fontSize: '14px'
+    fontWeight: 700
   label:
     fontFamily: 'Rubik, system-ui, sans-serif'
     fontSize: '12px'
     fontWeight: 700
     lineHeight: 1.3
     letterSpacing: '0.06em'
+  slip-title:
+    fontFamily: 'Rubik, system-ui, sans-serif'
+    fontSize: '13px'
+    fontWeight: 800
+    lineHeight: 1
+    letterSpacing: '0.08em'
+  meta-strong:
+    fontFamily: 'Rubik, system-ui, sans-serif'
+    fontSize: '13px'
+    fontWeight: 700
   chip:
     fontFamily: 'Rubik, system-ui, sans-serif'
     fontSize: '12px'
@@ -125,6 +183,19 @@ typography:
     fontSize: '11.5px'
     fontWeight: 500
     lineHeight: 1.2
+  avatar:
+    fontFamily: 'Rubik, system-ui, sans-serif'
+    fontSize: '11px'
+    fontWeight: 700
+  rating-disc:
+    fontFamily: 'Rubik, system-ui, sans-serif'
+    fontSize: '15px'
+    fontWeight: 800
+  cover-mark:
+    fontFamily: 'Rubik, system-ui, sans-serif'
+    fontSize: '26px'
+    fontWeight: 800
+    lineHeight: 1
   body:
     fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, sans-serif'
     fontSize: '16px'
@@ -140,6 +211,14 @@ typography:
     fontSize: '14px'
     fontWeight: 400
     lineHeight: 1.45
+  evidence-step:
+    fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, sans-serif'
+    fontSize: '14.5px'
+    fontWeight: 400
+  link:
+    fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, sans-serif'
+    fontSize: '14px'
+    fontWeight: 400
   meta:
     fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, sans-serif'
     fontSize: '13px'
@@ -427,6 +506,18 @@ As duas fontes vão auto-hospedadas no app, em woff2, só nos pesos usados (Rubi
 - **Source** (sistema 400, 12px, tinta clara): a Fonte embaixo de cada Evidência.
 - **Meta** (sistema 400, 13px, 1.4): legenda, resumo do que foi marcado, contagens, ano e duração na lista compacta.
 - **Url** (mono 500, 14px, 1.3): o endereço do conector, que quebra em qualquer ponto.
+
+As variantes acima têm nome no tema, para nenhum tamanho ir escrito à mão: shelf-compact (15px; no tema o tipo da etiqueta se chama `shelf`, porque `shelf-label` também é cor), hand-compact (16px), hand-small (15px), hand-large (19px), price-compact (14px), step-title-small (15.5px), button-big (18px), evidence-step (14.5px). E mais estes papéis, que as telas do app usam:
+
+- **Page title** (Rubik 700, 24px, 1.15): o título de uma tela do app, com a frase do que ela faz embaixo.
+- **Row title** (Rubik 700, 15px): o nome numa linha (o filme na lista compacta, a Pessoa, o Dono no menu do avatar); a linha decide a entrelinha.
+- **Field label** (Rubik 700, 14px): o rótulo do campo, a legenda do grupo, o resumo que abre, "Nota do Teo" e o número da escala de 1 a 10.
+- **Slip title** (Rubik 800, 13px, 1, 0.08em, maiúsculas): o canhoto da ficha ("ÚLTIMA SESSÃO").
+- **Meta strong** (Rubik 700, 13px): a contagem do guia e de Meu gosto ("1 de 3 feitos", "4 de 10") e o título na capa sem pôster.
+- **Avatar** (Rubik 700, 11px): a inicial no avatar.
+- **Rating disc** (Rubik 800, 15px): a Nota já dada, no disco laranja da tela de notas.
+- **Cover mark** (Rubik 800, 26px, 1): o "?" na capa do filme que falta dar nota.
+- **Link** (sistema 400, 14px): "Pular", "Retomar" e as ações menores.
 
 ### Named Rules
 
