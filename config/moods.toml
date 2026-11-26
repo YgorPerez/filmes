@@ -3,14 +3,18 @@
 # Cada Clima puxa para cima os filmes que têm uma das suas tags do MovieLens
 # (tags.csv do ml-32m ou Tag Genome 2021) ou um dos seus gêneros (QID do
 # Wikidata, como nas arestas "genero" do Catálogo). Nunca tira filme.
-# `recomendar --clima` aceita só os nomes daqui, sem diferença de maiúscula
-# nem de acento; os de fora voltam como aviso.
+# O `moods` do recommend, os chips do Cartaz e os da nova Sessão aceitam só
+# os nomes daqui, sem diferença de maiúscula nem de acento; os de fora voltam
+# como aviso. No chat, o Claude traduz o pedido livre ("algo leve e
+# engraçado", "tipo X, só que mais sombrio") nesses nomes.
+#
+# Os nomes aparecem como chips no Cartaz, na ordem do arquivo.
 #
 # As tags estão em minúsculas, como nas tabelas tags_movielens e genoma. Todas
 # existem no tags.csv do MovieLens; as que o genome não tem só pegam no tags.csv.
 # Lista fechada, escrita à mão: tag que descreve o enredo (p. ex. "party", que
 # é Superbad e Project X) não entra. Mudar uma lista muda a Recomendação, então
-# vale rodar `avaliar` depois.
+# vale rodar `evaluate` depois.
 
 [leve]
 tags = ["feel-good", "feel good movie", "heartwarming", "cute", "whimsical", "light", "lighthearted"]
@@ -49,3 +53,8 @@ genres = ["Q200092", "Q853630"]
 tags = ["action", "action packed", "fast paced", "adventure"]
 # filme de ação, filme de aventura, comédia de ação
 genres = ["Q188473", "Q319221", "Q2678111"]
+
+[sombrio]
+tags = ["dark", "bleak", "gritty", "grim", "disturbing"]
+# filme noir
+genres = ["Q185867"]

@@ -25,6 +25,12 @@
 //   screen is ignored, with a warning. The Trocar goes in `swapped` of the
 //   current version, and the film never comes back in the Session (#66).
 //
+// - Clima (`clima: <name>, ...`, `clima: nenhum`): the Climas the Dono
+//   chose on the Cartaz, resolved by the vocabulary (a name outside it is a
+//   warning). When they differ from the current version's, the whole list
+//   is redone with them: `moods` says which, and `keep` is empty. It is the
+//   night's context, not taste, so nothing about it is written here.
+//
 // It regenerates nothing. It returns what regenerating needs: `regenerate`
 // (a film dropped or acrescentar came), `keep` (the ids that stay, in
 // screen order), `dropped` (with the cause), `addition` and `comments` as
@@ -68,6 +74,7 @@ import {
 } from '../people/Person.ts'
 import { resolvePerson } from '../people/people.ts'
 import type { DropCause } from '../recommendation/kept.ts'
+import { resolveMoods, type Mood } from '../recommendation/moods.ts'
 import type { EngineServices } from '../runtime/Engine.ts'
 import { engineError, type EngineError } from '../runtime/EngineError.ts'
 import type { Environment } from '../runtime/Environment.ts'
@@ -85,6 +92,7 @@ import {
   type ShownFilm,
 } from '../sessions/file.ts'
 import { authorFor } from '../sessions/open.ts'
+import { NO_MOOD } from './text.ts'
 
 // --- reading the text --------------------------------------------------------
 
@@ -97,6 +105,7 @@ const HEADER = new RegExp(
   'u',
 )
 const ADDITION = new RegExp(`^${S}*acrescentar:${S}*(.*?)${S}*$`, 'u')
+const MOOD = new RegExp(`^${S}*clima:${S}*(.*?)${S}*$`, 'u')
 const FILM = new RegExp(
   `^${S}*(${D}+)${S}+(tt${D}+)((?:${S}+·${S}+.*)?)${S}*$`,
   'u',
@@ -122,6 +131,8 @@ export interface ReadReply {
   readonly session: string
   readonly version: number
   readonly addition: string | null
+  /** The Climas of the `clima:` line, `[]` for `nenhum`; null without it. */
+  readonly moods: ReadonlyArray<string> | null
   readonly films: ReadonlyArray<ReadMarks>
 }
 
@@ -198,12 +209,21 @@ export const readReply = (
         "o texto não é de cartaz: falta a linha '#cartaz <sessão> v<n>'",
       )
     let addition: string | null = null
+    let moods: string[] | null = null
     const films: ReadMarks[] = []
     for (const line of lines.slice(start + 1)) {
       if (!pyStrip(line)) continue
       const added = ADDITION.exec(line)
       if (added && addition === null && films.length === 0) {
         addition = pyJoinWords(group(added, 1)) || null
+        continue
+      }
+      const mood = MOOD.exec(line)
+      if (mood && moods === null && films.length === 0) {
+        moods = group(mood, 1)
+          .split(',')
+          .map(pyStrip)
+          .filter((name) => name !== '' && name !== NO_MOOD)
         continue
       }
       const film = FILM.exec(line)
@@ -220,6 +240,7 @@ export const readReply = (
       session: group(header, 1),
       version: digits(group(header, 2)),
       addition,
+      moods,
       films,
     }
   })
@@ -260,13 +281,17 @@ export interface BillboardReply {
   /** The version the text was of. */
   readonly version: number
   readonly currentVersion: number
-  /** A film left the current screen or acrescentar came. */
+  /** A film left the current screen, acrescentar came or the Clima
+   * changed. */
   readonly regenerate: boolean
-  /** The ids that stay, in the current screen's order. */
+  /** The ids that stay, in the current screen's order; none when the
+   * Clima changed, since it redoes the whole list. */
   readonly keep: ReadonlyArray<string>
   /** What left the current screen, and why (`seen` or `swapped`). */
   readonly dropped: ReadonlyArray<ShownFilm & DropCause>
   readonly addition: string | null
+  /** The Climas to redo with, when the Dono changed them; null when not. */
+  readonly moods: ReadonlyArray<string> | null
   readonly comments: ReadonlyArray<FilmNote>
   readonly stars: ReadonlyArray<FilmNote>
   readonly seen: ReadonlyArray<ReplySeen>
@@ -414,6 +439,25 @@ const replyOf = (read: ReadReply, today: string): YamlMapping | null => {
   return reply
 }
 
+/** The Climas chosen, by name, when they are not the current version's;
+ * null when they are, or when the text chose none. */
+const changedMoods = (
+  current: YamlMapping,
+  chosen: ReadonlyArray<Mood> | undefined,
+): string[] | null => {
+  if (chosen === undefined) return null
+  const context = current.get('context')
+  const before = new Set(
+    listOf(isMapping(context) ? context.get('moods') : undefined).map((v) =>
+      pyStrValue(v),
+    ),
+  )
+  const names = chosen.map((m) => m.name)
+  return names.length === before.size && names.every((n) => before.has(n))
+    ? null
+    : names
+}
+
 /** Records the text pasted from the Cartaz (`cartaz responder`): Já vistos,
  * Notas and what each one thought, stars, comments and acrescentar, and
  * the Trocar; says whether the Session must be regenerated and what stays.
@@ -428,6 +472,7 @@ export const answerBillboard = (
       return yield* invalid(
         `o texto é do cartaz da Sessão ${read.session}, não da ${id}`,
       )
+    const chosen = read.moods === null ? null : yield* resolveMoods(read.moods)
     const { today } = yield* Run
     const writer = yield* DataWriter
     const author = yield* authorFor(yield* sessionOwner(id))
@@ -464,7 +509,8 @@ export const answerBillboard = (
                 ? earlierVersion
                 : new Map()
 
-          const warnings: string[] = []
+          const warnings: string[] = [...(chosen?.warnings ?? [])]
+          const moods = changedMoods(current, chosen?.moods)
           const ofVersion = new Set(shownFilms(version).map((f) => f.id))
           for (const marks of read.films)
             if (!ofVersion.has(marks.id))
@@ -639,10 +685,12 @@ export const answerBillboard = (
             session: { id, file: sessionRelative(id) },
             version: read.version,
             currentVersion: currentNumber,
-            regenerate: dropped.length > 0 || read.addition !== null,
-            keep,
+            regenerate:
+              dropped.length > 0 || read.addition !== null || moods !== null,
+            keep: moods === null ? keep : [],
             dropped,
             addition: read.addition,
+            moods,
             comments: films.flatMap((m) =>
               m.comment === null ? [] : [{ ...note(m), comment: m.comment }],
             ),
