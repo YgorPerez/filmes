@@ -24,6 +24,21 @@ describe('answerFetch', () => {
     expect(await answer.json()).toEqual({ to: '/sessoes/nova?erro=presentes' })
   })
 
+  it("keeps the 303's other headers, as a cookie it sets", () => {
+    const back = seeOther('/entrar')
+    back.headers.append('Set-Cookie', 'a=1; Path=/')
+    back.headers.append('Set-Cookie', 'b=2; Path=/')
+    back.headers.set('Content-Length', '0')
+    const answer = answerFetch(post({ [FETCH_HEADER]: '1' }), back)
+    expect(answer.headers.getSetCookie()).toEqual([
+      'a=1; Path=/',
+      'b=2; Path=/',
+    ])
+    expect(answer.headers.get('Location')).toBeNull()
+    expect(answer.headers.get('Content-Length')).not.toBe('0')
+    expect(answer.headers.get('Content-Type')).toBe('application/json')
+  })
+
   it('leaves a plain post, and any answer but a 303, as they were', () => {
     const back = seeOther('/sessoes/nova')
     expect(answerFetch(post(), back)).toBe(back)

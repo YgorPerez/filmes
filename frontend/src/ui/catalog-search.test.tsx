@@ -111,12 +111,8 @@ it('shows each kind with its IDs, and "Usar" only on films', () => {
   expect(within(films).getByText('tt9000401')).toBeTruthy()
   expect(within(films).getByText('Rui Tavares · 40.000 votos')).toBeTruthy()
   expect(within(films).getByText('Fronteira II')).toBeTruthy()
-  expect(
-    screen
-      .getByRole('link', { name: 'Usar Fronteira (2008)' })
-      .getAttribute('href'),
-  ).toBe('/sessoes/2026-11-20-bruno/contar?filme=tt9000401&buscar=fronteira')
-  expect(screen.getAllByRole('link', { name: /^Usar/ })).toHaveLength(2)
+  // With the JavaScript in, "Usar" takes the film in place: a button.
+  expect(screen.getAllByRole('button', { name: /^Usar/ })).toHaveLength(2)
   expect(
     screen.getByText('direção, elenco · 2 filmes · Pequenos Milagres (2019)'),
   ).toBeTruthy()

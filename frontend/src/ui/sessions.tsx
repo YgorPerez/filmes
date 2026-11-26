@@ -1,4 +1,9 @@
-import type { ReplyRefusal, SessionNotice } from '#/content/billboard-reply'
+import { useEffect, useRef, useState } from 'react'
+import {
+  isReplyRefusal,
+  type ReplyRefusal,
+  type SessionNotice,
+} from '#/content/billboard-reply'
 import {
   feedbackPath,
   sessionPath,
@@ -9,11 +14,13 @@ import type { CartazPage } from '#/platform/billboard'
 import type { PageReading } from '#/platform/reading'
 import type { SessionItem } from '#/platform/sessions'
 import { Billboard } from './billboard'
+import { forgetMarks, openStorage } from './billboard-marks'
+import { useFetchForm } from './kit/fetch-form'
 import { ImportsFrame } from './imports'
 import { RowArrow } from './kit/row-arrow'
 import { Slip } from './kit/slip'
 import { buttonVariants } from './kit/button-variants'
-import { Alert, Notice } from './kit/status'
+import { Alert, Notice, PostFailed } from './kit/status'
 import { names } from './session-names'
 import { Avatars, SessionDate, NewSessionLink } from './session-parts'
 import { PairwiseAnswers } from './pairwise-answers'
@@ -158,7 +165,12 @@ export function SessionScreen({
       ) : page === 'unknown' ? (
         <Alert>{SESSIONS.session.unknown}</Alert>
       ) : (
-        <SessionView page={page} notice={notice} refusal={refusal} />
+        <SessionView
+          key={page.session.id}
+          page={page}
+          notice={notice}
+          refusal={refusal}
+        />
       )}
     </ImportsFrame>
   )
@@ -229,6 +241,38 @@ function SessionView({
 }) {
   const { session } = SESSIONS
   const s = page.session
+  const billboard = page.billboard
+  const [sentReplies, setSentReplies] = useState(0)
+  const [rejection, setRejection] = useState<{ reason: ReplyRefusal } | null>(
+    null,
+  )
+
+  const { onSubmit, busy, failed } = useFetchForm((to) => {
+    const url = new URL(to, window.location.origin)
+    if (
+      url.origin !== window.location.origin ||
+      url.pathname !== sessionPath(s.id)
+    )
+      return false
+    const reason = url.searchParams.get('erro')
+    if (isReplyRefusal(reason)) {
+      setRejection({ reason })
+      return true
+    }
+    setRejection(null)
+    const done = url.searchParams.get('feito')
+    if (!billboard || (done !== 'regerada' && done !== 'anotada')) return false
+    // The marks go once the new Cartaz is in: kept if it fails to load.
+    return () => {
+      forgetMarks(openStorage(), billboard)
+      setSentReplies((n) => n + 1)
+    }
+  })
+  const refused = rejection?.reason ?? refusal
+  const alert = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (rejection || failed) alert.current?.scrollIntoView({ block: 'nearest' })
+  }, [rejection, failed])
   return (
     <>
       <header className="flex flex-col gap-xl border-b border-dashed border-rule pb-xl">
@@ -255,19 +299,29 @@ function SessionView({
         )}
       </header>
       {notice && <Notice>{session.notices[notice]}</Notice>}
-      {refusal && <Alert>{session.refusals[refusal]}</Alert>}
+      {(refused || failed) && (
+        <div ref={alert}>
+          {refused && <Alert>{session.refusals[refused]}</Alert>}
+          <PostFailed failed={failed} />
+        </div>
+      )}
       <Said page={page} />
       <PairwiseAnswers
         action={`${sessionPath(s.id)}/perguntas`}
         waiting={page.pairwise ?? []}
+        post={{ onSubmit, busy }}
       />
-      {page.billboard === null ? (
+      {billboard === null ? (
         <Alert>{SESSIONS.unavailable}</Alert>
       ) : (
         <Billboard
-          billboard={page.billboard}
+          key={`${billboard.version}:${sentReplies}`}
+          billboard={billboard}
           action={`${sessionPath(s.id)}/responder`}
-          sent={notice === 'regerada' || notice === 'anotada'}
+          post={{ onSubmit, busy: busy !== null, sending: busy === '' }}
+          sent={
+            sentReplies === 0 && (notice === 'regerada' || notice === 'anotada')
+          }
         />
       )}
     </>

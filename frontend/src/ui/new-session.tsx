@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useState } from 'react'
 import {
   DEFAULT_SERIES_ORDER_CHOICE,
   isSessionRequestRefusal,
@@ -14,10 +14,12 @@ import type { PageReading } from '#/platform/reading'
 import type { NewSessionDraft, RequestOptions } from '#/platform/sessions'
 import { ImportsFrame } from './imports'
 import { useFetchForm, useHydrated } from './kit/fetch-form'
+import { refusalOn, useRefusalInPlace } from './kit/refusal-in-place'
 import { Option } from './kit/option'
 import { OwnerTag } from './kit/owner-tag'
 import {
   Alert,
+  PostFailed,
   ChosenFilms,
   Disclosure,
   Item,
@@ -291,8 +293,11 @@ function NewSessionForm({
   const { form } = SESSIONS
   const asked = draft?.fields ?? {}
   const live = useHydrated()
-  const { refused, alert, onAnswer } = useRefusalInPlace(refusal)
-  const { onSubmit, busy } = useFetchForm(onAnswer)
+  const { refused, alert, onAnswer } = useRefusalInPlace(
+    refusal,
+    refusalOn(isSessionRequestRefusal, '/sessoes/nova'),
+  )
+  const { onSubmit, busy, failed } = useFetchForm(onAnswer)
   const films = useChosenFilms(similar)
   const onPick = live ? films.take : undefined
   return (
@@ -316,6 +321,7 @@ function NewSessionForm({
           <Alert>{SESSIONS.refusals[refused]}</Alert>
         </div>
       )}
+      <PostFailed failed={failed} />
       <Sentence
         text={asked.request}
         reading={draft?.reading ?? null}
@@ -361,28 +367,6 @@ function NewSessionForm({
       </Submit>
     </form>
   )
-}
-
-/** A refusal the post by `fetch` came back with (#235): shown in place,
- * over the form as the Dono left it, and scrolled into view. `refusal`
- * is the one the page came with (a plain POST). */
-function useRefusalInPlace(refusal: SessionRequestRefusal | undefined) {
-  const [refused, setRefused] = useState(refusal)
-  const [refusals, setRefusals] = useState(0)
-  const alert = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    if (refusals > 0) alert.current?.scrollIntoView({ block: 'center' })
-  }, [refusals])
-  const onAnswer = (to: string) => {
-    const url = new URL(to, window.location.origin)
-    const why = url.searchParams.get('erro')
-    if (url.pathname !== '/sessoes/nova' || !isSessionRequestRefusal(why))
-      return false
-    setRefused(why)
-    setRefusals((n) => n + 1)
-    return true
-  }
-  return { refused, alert, onAnswer }
 }
 
 /** The films "Parecido com" took, from the ids the page came with. */

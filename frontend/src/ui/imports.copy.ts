@@ -68,6 +68,7 @@ export const PERSON_IMPORTS = {
     removeWarning:
       'Os Fatos deste arquivo saem do gosto dela. As decisões da fila continuam valendo.',
     removeConfirm: 'Tirar este import',
+    removeBusy: 'Tirando…',
   },
   letterboxd: {
     title: 'Letterboxd',
@@ -107,6 +108,8 @@ export const PERSON_IMPORTS = {
       },
     ],
     submit: 'Importar',
+    /** Importar while its post runs. */
+    busy: 'Importando…',
   },
   rss: {
     title: 'Ou só o recente, pelo perfil',
@@ -116,6 +119,7 @@ export const PERSON_IMPORTS = {
     consent: (name: string) =>
       `${name} concordou que o filmes leia o diário público do Letterboxd e guarde as Notas`,
     submit: 'Importar do perfil',
+    busy: 'Lendo o perfil…',
   },
 } as const
 
@@ -140,6 +144,12 @@ export const QUEUE = {
   reprocess: 'Perguntar ao TMDB de novo',
   reprocessLead:
     'O TMDB pode achar agora o que não achou no import. O que ele já respondeu vem do cache.',
+  /** A button while its post runs. */
+  busy: {
+    confirm: 'Confirmando…',
+    discard: 'Descartando…',
+    reprocess: 'Perguntando ao TMDB…',
+  },
   item: (name: string, year: number | null) =>
     year === null ? name : `${name} (${year})`,
   notices: {

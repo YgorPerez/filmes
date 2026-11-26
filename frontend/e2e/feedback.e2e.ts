@@ -84,7 +84,7 @@ test('the Dono closes a Session and the next one shows the satisfaction', async 
   await snap(page, info, 'feedback-satisfacao')
 })
 
-test('a relayed Relato, a film by its title, and a refusal', async ({
+test('a relayed Relato, a film by its title, and a refusal in place', async ({
   page,
 }, info) => {
   test.skip(info.project.name !== 'mobile', 'one group per project')
@@ -94,24 +94,30 @@ test('a relayed Relato, a film by its title, and a refusal', async ({
   await page.goto(`/feedback/${id}`)
   await expect(page).toHaveURL(new RegExp(`/sessoes/${id}/contar$`))
 
-  // A comment with no reaction is refused, and the Session stays open.
+  // "Usar" takes the film in place: its id goes in the field.
+  const field = page.getByLabel('Título ou ID do IMDb', { exact: false })
   await page.getByLabel('Outro filme').check()
-  await page.getByLabel('Título ou ID do IMDb', { exact: false }).fill('x')
+  await field.fill('fronteira (2012)')
+  await page.getByRole('button', { name: 'Usar Fronteira II (2012)' }).click()
+  await expect(field).toHaveValue('tt9001903')
+  await expect(page).toHaveURL(new RegExp(`/sessoes/${id}/contar$`))
+
+  // A comment with no reaction is refused on top, in place, and the
+  // Session stays open.
   await page.getByLabel('Comentário: Teo').fill('dormiu')
   await page.getByRole('button', { name: 'Gravar e fechar a Sessão' }).click()
-  await expect(page).toHaveURL(
-    new RegExp(`/sessoes/${id}/contar\\?erro=comentario$`),
-  )
   await expect(page.getByRole('alert')).toContainText(
     'O comentário vai junto da Nota ou do Relato',
   )
+  await expect(page).toHaveURL(new RegExp(`/sessoes/${id}/contar$`))
+  await expect(page.getByLabel('Comentário: Teo')).toHaveValue('dormiu')
+  await expect(field).toHaveValue('tt9001903')
   await snap(page, info, 'feedback-recusa')
   expect(await stillOpen(id)).toBe(true)
 
-  await page.getByLabel('Outro filme').check()
-  await page
-    .getByLabel('Título ou ID do IMDb', { exact: false })
-    .fill('Café Amargo')
+  // Typed over, the field is a title again.
+  await page.getByLabel('Comentário: Teo').fill('')
+  await field.fill('Café Amargo')
   await page.getByLabel('Reação: Bruno').selectOption('nota:4')
   await page.getByLabel('Reação: Iara').selectOption('relato:gostou')
   await page.getByLabel('Comentário: Iara').fill('riu muito')
@@ -124,4 +130,23 @@ test('a relayed Relato, a film by its title, and a refusal', async ({
   await expect(page.getByRole('alert')).toContainText(
     'A Sessão pode já estar fechada',
   )
+})
+
+test.describe('without the JavaScript', () => {
+  test.use({ javaScriptEnabled: false })
+
+  test('the plain post comes back with the refusal', async ({ page }) => {
+    const id = await openSession(['dono'])
+    await loginAsBruno(page)
+    await page.goto(`/sessoes/${id}/contar`)
+
+    await page.getByRole('button', { name: 'Gravar e fechar a Sessão' }).click()
+    await expect(page).toHaveURL(
+      new RegExp(`/sessoes/${id}/contar\\?erro=filme$`),
+    )
+    await expect(page.getByRole('alert')).toContainText(
+      'Escolha o filme que vocês viram',
+    )
+    expect(await stillOpen(id)).toBe(true)
+  })
 })

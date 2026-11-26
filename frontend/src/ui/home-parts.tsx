@@ -7,6 +7,7 @@ import type {
   SetupView,
 } from '#/platform/setup-guide'
 import { HOME } from './home.copy'
+import { PostForm } from './kit/post-form'
 import { isSkipped, stateOf } from './setup-steps'
 import { Icon } from './kit/icon'
 import { ShelfLabel } from './kit/shelf-label'
@@ -194,18 +195,25 @@ function Mark({ state, n }: { state: StepState; n: number }) {
 }
 
 function Skip({ step }: { step: SetupStepView['step'] }) {
-  const title = HOME.guide.steps[step].title
+  const { guide } = HOME
   return (
-    <form method="post" action="/inicio/pular">
-      <input type="hidden" name="passo" value={step} />
-      <button
-        type="submit"
-        aria-label={HOME.guide.skipLabel(title)}
-        className={buttonVariants({ variant: 'link', className: 'px-sm' })}
-      >
-        {HOME.guide.skip}
-      </button>
-    </form>
+    <PostForm action="/inicio/pular">
+      {(skipping) => (
+        <>
+          <input type="hidden" name="passo" value={step} />
+          <button
+            type="submit"
+            aria-label={
+              skipping ? undefined : guide.skipLabel(guide.steps[step].title)
+            }
+            disabled={skipping}
+            className={buttonVariants({ variant: 'link', className: 'px-sm' })}
+          >
+            {skipping ? guide.skipping : guide.skip}
+          </button>
+        </>
+      )}
+    </PostForm>
   )
 }
 

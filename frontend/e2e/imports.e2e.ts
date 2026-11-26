@@ -310,3 +310,22 @@ test('a Dona with no history rates from the Fila and the search, then Pronto', a
     ['tt9000601', 4],
   ])
 })
+
+// Before the JavaScript (#240), the forms are the plain POST they always
+// were: the upload goes multipart and the page comes back with what the
+// server said.
+test.describe('with the JavaScript off', () => {
+  test.use({ javaScriptEnabled: false })
+
+  test('the upload is a plain POST that comes back with the refusal', async ({
+    page,
+  }) => {
+    await loginAsBruno(page)
+    await page.goto('/meu-gosto/importar')
+    await upload(page, 'outro.zip', zipOf([['notas.csv', 'Nome,Nota\n']]))
+    await expect(page).toHaveURL(/\/meu-gosto\/importar\?erro=origem$/)
+    await expect(page.getByRole('alert')).toContainText(
+      'Esse ZIP não parece ser do Letterboxd nem do Trakt.',
+    )
+  })
+})

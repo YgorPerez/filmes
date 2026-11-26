@@ -1,4 +1,5 @@
 import handler, { createServerEntry } from '@tanstack/react-start/server-entry'
+import { answerFetch } from '#/content/fetch-answer'
 import { handleAuthRequest } from '#/platform/auth'
 import { engineReady } from '#/platform/engine'
 import { fontRequest } from '#/platform/fonts'
@@ -13,7 +14,9 @@ const ready = engineReady()
 // (`platform/request-log.ts`). The login's `/auth/*` answers before the app
 // (`platform/auth.ts`), and so do the MCP connector's `/mcp`, `/oauth/*` and
 // their `/.well-known/` metadata (`platform/mcp-endpoint.ts`), and the
-// fonts' `/fonts/*` (`platform/fonts.ts`), which needs no database.
+// fonts' `/fonts/*` (`platform/fonts.ts`), which needs no database. A form
+// the app posts by `fetch` (#235) gets its route's 303 as `{ to }`
+// (`content/fetch-answer.ts`), whichever route it posted to.
 export default createServerEntry({
   fetch: withRequestLog(
     async (
@@ -26,7 +29,7 @@ export default createServerEntry({
       return (
         (await handleAuthRequest(request)) ??
         (await handleMcpRequest(request)) ??
-        handler.fetch(request, ...rest)
+        answerFetch(request, await handler.fetch(request, ...rest))
       )
     },
   ),

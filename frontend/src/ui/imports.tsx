@@ -8,10 +8,19 @@ import {
 } from 'react'
 import { ratingField, type RatingRefusal } from '#/content/rating-form'
 import type { SearchAnswer } from '#/platform/catalog-search'
+import { useFetchForm, type Answered } from './kit/fetch-form'
+import { usePostedFeedback } from './kit/posted-feedback'
 import { Chip } from './kit/chip'
 import { TapeCase } from './kit/tape-case'
 import { Slip } from './kit/slip'
-import { Alert, CatalogSearch, Meta, Notice, Submit } from './person-parts'
+import {
+  Alert,
+  CatalogSearch,
+  Meta,
+  Notice,
+  PostFailed,
+  Submit,
+} from './person-parts'
 import {
   loadDraft,
   parseDraft,
@@ -98,8 +107,9 @@ function cardFilm(
  * film of her Fila de Notas at a time, a Nota of 1 to 10 or "Não vi"; the
  * Catálogo search picks another film. The Notas wait in the browser's draft
  * until Pronto posts them to `/notas/enviar`, which writes them in one
- * commit and comes back saying how many (`written`). `queue` is null when
- * the engine cannot run on this server. */
+ * commit and comes back saying how many (`written`); with the JavaScript,
+ * by `fetch`, without a reload (#240). `queue` is null when the engine
+ * cannot run on this server. */
 export function RatingScreen({
   queue,
   search,
@@ -113,14 +123,19 @@ export function RatingScreen({
   written?: number
   refusal?: RatingRefusal
 }) {
+  const { feedback, onAnswer } = usePostedFeedback()
   return (
     <ImportsFrame back={RATINGS.back} backTo={MY_TASTE}>
       <div className="flex flex-col gap-sm">
         <h1 className="font-display text-title">{RATINGS.title}</h1>
         <p className="text-ink-2">{RATINGS.lead}</p>
       </div>
-      {written !== undefined && <Notice>{RATINGS.written(written)}</Notice>}
-      {refusal && <Alert>{RATINGS.refusals[refusal]}</Alert>}
+      {(written !== undefined || refusal) && (
+        <div ref={feedback}>
+          {written !== undefined && <Notice>{RATINGS.written(written)}</Notice>}
+          {refusal && <Alert>{RATINGS.refusals[refusal]}</Alert>}
+        </div>
+      )}
       {queue === null ? (
         <Alert>{RATINGS.unavailable}</Alert>
       ) : (
@@ -129,6 +144,7 @@ export function RatingScreen({
           search={search}
           film={film}
           settled={written !== undefined ? 'written' : refusal && 'refused'}
+          onAnswer={onAnswer}
         />
       )}
     </ImportsFrame>
@@ -158,19 +174,31 @@ function useDraft(person: string, settled?: 'written' | 'refused') {
   return [draft, change] as const
 }
 
+/** Pronto's answer, heard without a reload: written, the sent Notas leave
+ * the draft; refused, they stay. */
+type OnAnswer = (to: string, form: HTMLFormElement) => Answered
+
 function Rating({
   queue,
   search,
   film,
   settled,
+  onAnswer,
 }: {
   queue: RatingQueue
   search: SearchAnswer | null
   film?: string
   settled?: 'written' | 'refused'
+  onAnswer: OnAnswer
 }) {
   const person = queue.person
   const [draft, change] = useDraft(person, settled)
+  const sent: OnAnswer = (to, form) => {
+    const answer = new URL(to, window.location.origin).searchParams
+    if (answer.has('feito') || answer.has('erro'))
+      change(settle(loadDraft(person), answer.has('feito')))
+    return onAnswer(to, form)
+  }
   const current = cardFilm(queue, draft, search, film)
   const pick = (id: string) => {
     const params = new URLSearchParams({ filme: id })
@@ -198,23 +226,28 @@ function Rating({
         draft={draft}
         onRemove={(id) => change(withoutRating(draft, id))}
         onSend={() => saveDraft(person, sending(draft))}
+        onAnswer={sent}
       />
     </>
   )
 }
 
 /** The Notas not yet written, each on its orange disc with "Tirar", and
- * Pronto, a plain POST of them: the screen's one orange button. */
+ * Pronto, a POST of them (by `fetch` once the JavaScript is in): the
+ * screen's one orange button. */
 function DraftSection({
   draft,
   onRemove,
   onSend,
+  onAnswer,
 }: {
   draft: Draft
   onRemove: (id: string) => void
   onSend: () => void
+  onAnswer: OnAnswer
 }) {
   const rated = Object.entries(draft.ratings)
+  const { onSubmit, busy, failed } = useFetchForm(onAnswer)
   return (
     <Slip
       id="minhas-notas"
@@ -251,7 +284,14 @@ function DraftSection({
           ))}
         </ul>
       )}
-      <form method="post" action="/notas/enviar" onSubmit={onSend}>
+      <form
+        method="post"
+        action="/notas/enviar"
+        onSubmit={(event) => {
+          onSend()
+          onSubmit(event)
+        }}
+      >
         {rated.map(([id, entry]) => (
           <input
             key={id}
@@ -260,12 +300,13 @@ function DraftSection({
             value={entry.rating}
           />
         ))}
+        <PostFailed failed={failed} />
         <Submit
           variant="primary"
-          disabled={rated.length === 0}
+          disabled={rated.length === 0 || busy !== null}
           className="w-full"
         >
-          {RATINGS.done(rated.length)}
+          {busy === null ? RATINGS.done(rated.length) : RATINGS.writing}
         </Submit>
       </form>
     </Slip>

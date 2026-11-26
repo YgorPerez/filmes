@@ -19,6 +19,8 @@ export const Route = createFileRoute('/_owner/operacoes')({
   beforeLoad: ({ context }) => {
     if (!context.owner.admin) throw notFound()
   },
+  // A post loads the page again itself, once (`useFetchForm`), the shell's
+  // strip of a failing push with it.
   loader: ({ deps }) => readOperationsPage({ data: deps }),
   component: OperationsPage,
 })

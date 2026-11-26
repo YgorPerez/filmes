@@ -11,6 +11,7 @@ import { OwnerTag } from './kit/owner-tag'
 import { Slip } from './kit/slip'
 import {
   ActionForm,
+  ActionForms,
   Alert,
   CatalogSearch,
   Disclosure,
@@ -22,12 +23,12 @@ import {
   SelectField,
   Submit,
   TextField,
+  useRefusedInPlace,
 } from './person-parts'
 import { MyStartSections, type MyStart } from './my-start'
 import { StrengthDots } from './person-marks'
 import { PERSON, RATING_CHOICES } from './person.copy'
 import { buttonVariants } from './kit/button-variants'
-import { Button } from './shadcn/button'
 
 type Statement = PersonPage['stated'][number]
 type Reaction = keyof typeof PERSON.reactions
@@ -51,7 +52,8 @@ const RATING_OPTIONS = [
  * (rate, import, the CSV), then, on Meu gosto, the setup guide's leftovers
  * (`start`), then what the filmes knows of her taste, with a form for each
  * `pessoa` action. Every form is a plain POST that comes back here with
- * `notice` or `refusal`. `page` is `'unknown'` when no Pessoa has the slug,
+ * `notice` or `refusal`; with the JavaScript, it goes by `fetch` and
+ * reloads the page in place (`ActionForm`). `page` is `'unknown'` when no Pessoa has the slug,
  * null when the engine cannot run on this server. `search` is the Catálogo
  * search of `?buscar=`, for the targets' IDs. */
 export function PersonScreen({
@@ -89,7 +91,7 @@ export function PersonScreen({
       ) : page === 'unknown' ? (
         <Alert>{PERSON.unknown}</Alert>
       ) : (
-        <>
+        <ActionForms>
           <PersonHeader
             page={page}
             own={own}
@@ -100,7 +102,7 @@ export function PersonScreen({
           {own && start && <MyStartSections start={start} person={slug} />}
           <Contents page={page} />
           <Details slug={slug} page={page} search={search} />
-        </>
+        </ActionForms>
       )}
     </main>
   )
@@ -120,6 +122,8 @@ function PersonHeader({
   refusal?: PersonRefusal
 }) {
   const aliases = page.aliases.length > 0 ? PERSON.aliases(page.aliases) : null
+  // A form's refusal in place says what the last post did now.
+  const stale = useRefusedInPlace()
   return (
     <>
       <div className="flex flex-col gap-xs">
@@ -131,8 +135,8 @@ function PersonHeader({
           <Meta parts={own ? [page.name, aliases] : [aliases]} />
         )}
       </div>
-      {refusal && <Alert>{PERSON.refusals[refusal]}</Alert>}
-      {notice && <Notice>{PERSON.notices[notice]}</Notice>}
+      {refusal && !stale && <Alert>{PERSON.refusals[refusal]}</Alert>}
+      {notice && !stale && <Notice>{PERSON.notices[notice]}</Notice>}
     </>
   )
 }
@@ -335,18 +339,23 @@ function OpenQuestions({ slug, page }: Part) {
                   <Submit>{PERSON.save}</Submit>
                 </ActionForm>
               </Disclosure>
-              <ActionForm slug={slug} action="pular" className="self-start">
+              <ActionForm
+                slug={slug}
+                action="pular"
+                className="self-start"
+                busy={questions.skipping}
+              >
                 <input type="hidden" name="texto" value={q.text} />
                 {q.subject && (
                   <input type="hidden" name="assunto" value={q.subject} />
                 )}
-                <Button
-                  type="submit"
+                <Submit
                   variant="link"
+                  className=""
                   aria-label={`${questions.skip}: ${q.text}`}
                 >
                   {questions.skip}
-                </Button>
+                </Submit>
               </ActionForm>
             </div>
           </Item>
@@ -435,9 +444,7 @@ function Adjustments({ slug, page }: Part) {
                   hint={current?.date}
                   level={current?.level ?? 'normal'}
                 />
-                <Button type="submit" variant="option">
-                  {adjustments.change}
-                </Button>
+                <Submit className="">{adjustments.change}</Submit>
               </ActionForm>
             </li>
           )

@@ -71,11 +71,15 @@ const openBetSession = async (person: string, project: string) => {
 
 /** Enviar, and the Session's page saying what it did. */
 async function send(page: Page, id: string, done: string, says: string) {
+  await page.evaluate(() => {
+    document.documentElement.dataset.cartaz = 'original'
+  })
   await page.getByRole('button', { name: 'Enviar' }).click()
   await expect(page).toHaveURL(
     new RegExp(`/sessoes/${id}\\?feito=${done}(&nota=[\\w-]+)?$`),
   )
   await expect(notice(page).first()).toContainText(says)
+  await expect(page.locator('html')).toHaveAttribute('data-cartaz', 'original')
 }
 
 /** The note on keeping the marks shows once the page has hydrated: a click
@@ -225,10 +229,13 @@ test('the Dono marks, reloads, sends, and the Cartaz comes back redone', async (
   await card(page, 3).getByRole('button', { name: '4 de 5' }).click()
   await card(page, 3).getByRole('button', { name: 'Comentar' }).click()
   await page.getByLabel('comentário sobre o filme 3').fill('longo')
+  await page.getByLabel(/Acrescentar/).fill('na próxima vez')
   // What was marked goes with Enviar, in the bar at the foot.
   const bar = page.getByRole('region', { name: 'O que você marcou' })
   await expect(
-    bar.getByText('1 Trocar, 1 Já vi, estrelas em 1 filme e 1 comentário'),
+    bar.getByText(
+      '1 Trocar, 1 Já vi, estrelas em 1 filme, 1 comentário e o acrescentar',
+    ),
   ).toBeVisible()
   await expect(bar.getByRole('button', { name: 'Enviar' })).toBeInViewport()
 
@@ -249,7 +256,37 @@ test('the Dono marks, reloads, sends, and the Cartaz comes back redone', async (
   await expect(page.getByText('fica guardado neste navegador')).toBeVisible()
   await snap(page, info, 'cartaz-marcado')
 
+  // A refused post leaves the reply ready to retry.
+  const refusal = Promise.withResolvers<void>()
+  await page.route(
+    `**/sessoes/${id}/responder`,
+    async (route) => {
+      await refusal.promise
+      await route.fulfill({ json: { to: `/sessoes/${id}?erro=indisponivel` } })
+    },
+    { times: 1 },
+  )
+  await bar.getByRole('button', { name: 'Enviar' }).click()
+  try {
+    await expect(bar.getByRole('button', { name: 'Enviando…' })).toBeDisabled()
+    await expect(
+      card(page, 2).getByRole('button', { name: 'Trocar' }),
+    ).toBeDisabled()
+    await snap(page, info, 'cartaz-enviando', bar)
+  } finally {
+    refusal.resolve()
+  }
+  await expect(page.getByRole('alert')).toContainText('Não deu para gravar')
+  await expect(page).toHaveURL(new RegExp(`/sessoes/${id}$`))
+  await expect(page.getByLabel('o que Nina achou do filme 1')).toHaveValue(
+    'lindo',
+  )
+  await expect(page.getByLabel('comentário sobre o filme 3')).toHaveValue(
+    'longo',
+  )
+
   await send(page, id, 'regerada', 'Recomendação refeita')
+  await expect(page.getByText(/na próxima vez/)).toBeVisible()
   await expect(
     page.getByText(`Saiu da prateleira: ${seen} (Nina já viu)`),
   ).toBeVisible()

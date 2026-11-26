@@ -40,6 +40,7 @@ export const OPERATIONS = {
     since: (iso: string) => `A primeira falha foi em ${time(iso)}.`,
     lastError: 'Último erro do Git',
     retry: 'Tentar enviar agora',
+    sending: 'Enviando…',
     banner: (pending: number, failures: number) =>
       `O envio dos dados falhou ${failures} vezes seguidas. ${commits(pending)} na fila.`,
     bannerLink: 'Ver Operações',

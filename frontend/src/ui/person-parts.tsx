@@ -1,15 +1,20 @@
 import type { EntityMatch, FilmMatch, FilmRef } from '@filmes/engine'
 import {
+  createContext,
+  useContext,
   useEffect,
+  useId,
   useRef,
   useState,
   type ComponentProps,
   type ReactNode,
 } from 'react'
+import { isPersonRefusal } from '#/content/person-action'
 import { CATALOG_SEARCH } from './catalog-search.copy'
 import { PERSON } from './person.copy'
 import { FIELD } from './kit/field'
-import { useHydrated } from './kit/fetch-form'
+import { useFetchForm, useGetForm, useHydrated } from './kit/fetch-form'
+import { refusalOn, useRefusalInPlace } from './kit/refusal-in-place'
 import {
   searchFilms,
   type CatalogScope,
@@ -17,7 +22,7 @@ import {
 } from './kit/film-search'
 import { FieldLabel } from './kit/field-label'
 import { Icon } from './kit/icon'
-import { Alert, Notice } from './kit/status'
+import { Alert, Notice, PostFailed } from './kit/status'
 import { buttonVariants } from './kit/button-variants'
 import { Button } from './shadcn/button'
 
@@ -28,7 +33,7 @@ import { Button } from './shadcn/button'
 // their parts, which keeps kit/status under fallow's coupling threshold
 // (its fan-in at most the project's p95).
 
-export { Alert, Notice }
+export { Alert, Notice, PostFailed }
 
 /** A section of the Pessoa's page: a card with its title. */
 export function Section({
@@ -100,30 +105,99 @@ export function Meta({ parts }: { parts: readonly (string | null)[] }) {
   )
 }
 
+/** What the submit buttons of a form say while its post runs (they are
+ * disabled then), null when none runs: `Submit` reads it. */
+const Posting = createContext<string | null>(null)
+
+/** After a post that went through: a form in a fold empties and the fold
+ * closes, as a new page would have it, the focus on its summary. */
+function settle(form: HTMLFormElement) {
+  const fold = form.closest('details')
+  if (!fold) return
+  form.reset()
+  fold.open = false
+  fold.querySelector('summary')?.focus()
+}
+
+/** The `ActionForm` showing the refusal its post got (its id), null when
+ * none does, and how a form says it: one alert at a time says what the
+ * last post did. */
+const RefusedIn = createContext<{
+  form: string | null
+  show: (form: string | null) => void
+} | null>(null)
+
+/** The Pessoa's page's forms (`ActionForm`): the refusal one of them
+ * shows in place hides the page's own notice and the refusals the others
+ * showed before. */
+export function ActionForms({ children }: { children: ReactNode }) {
+  const [form, show] = useState<string | null>(null)
+  return (
+    <RefusedIn.Provider value={{ form, show }}>{children}</RefusedIn.Provider>
+  )
+}
+
+/** True while an `ActionForm` shows its refusal in place: the notice or
+ * refusal the page came with is no longer what the last post did. */
+export const useRefusedInPlace = () =>
+  (useContext(RefusedIn)?.form ?? null) !== null
+
 /** A form that posts one action to the Pessoa's route
- * (`platform/people.ts`). A plain POST: it works before the JavaScript. */
+ * (`platform/people.ts`). A plain POST: it works before the JavaScript.
+ * With it (#235), it posts by `fetch`: a refusal shows here, over what was
+ * typed; what went through reloads the page through the router. Its
+ * submits say `busy` while the post runs. */
 export function ActionForm({
   slug,
   action,
   label,
   className,
+  busy = PERSON.saving,
   children,
 }: {
   slug: string
   action: string
   label?: string
   className?: string
+  busy?: string
   children: ReactNode
 }) {
+  const id = useId()
+  const shared = useContext(RefusedIn)
+  const { refused, alert, onAnswer } = useRefusalInPlace(
+    undefined,
+    refusalOn(isPersonRefusal),
+  )
+  const {
+    onSubmit,
+    busy: running,
+    failed,
+  } = useFetchForm((to, form) => {
+    const kept = onAnswer(to)
+    shared?.show(kept ? id : null)
+    if (kept) return true
+    settle(form)
+    return false
+  })
+  const shown = shared === null || shared.form === id ? refused : undefined
   return (
     <form
       method="post"
       action={`/pessoas/${encodeURIComponent(slug)}/acao`}
       aria-label={label}
+      onSubmit={onSubmit}
       className={className ?? 'flex flex-col gap-xl'}
     >
+      {shown && (
+        <div ref={alert} className="basis-full">
+          <Alert>{PERSON.refusals[shown]}</Alert>
+        </div>
+      )}
+      <PostFailed failed={failed} />
       <input type="hidden" name="acao" value={action} />
-      {children}
+      <Posting.Provider value={running === null ? null : busy}>
+        {children}
+      </Posting.Provider>
     </form>
   )
 }
@@ -141,16 +215,17 @@ export function RemoveForm({
   label: string
 }) {
   return (
-    <ActionForm slug={slug} action="remover" className="shrink-0">
+    <ActionForm
+      slug={slug}
+      action="remover"
+      className="shrink-0"
+      busy={PERSON.removing}
+    >
       <input type="hidden" name="tipo" value={what} />
       <input type="hidden" name="id" value={id} />
-      <Button
-        type="submit"
-        variant="option"
-        aria-label={PERSON.removeLabel(label)}
-      >
+      <Submit className="" aria-label={PERSON.removeLabel(label)}>
         {PERSON.remove}
-      </Button>
+      </Submit>
     </ActionForm>
   )
 }
@@ -252,14 +327,29 @@ export function SelectField({
 
 /** The submit of a form, with every Button prop (`disabled`...): an
  * option at the start of its line unless `variant` or `className` say
- * otherwise. */
+ * otherwise. In an `ActionForm` whose post runs, it is disabled and says
+ * what the form is doing, in its name too. */
 export function Submit({
   variant = 'option',
   className = 'self-start',
+  disabled,
+  children,
+  'aria-label': label,
   ...props
 }: Omit<ComponentProps<typeof Button>, 'type'>) {
+  const posting = useContext(Posting)
   return (
-    <Button type="submit" variant={variant} className={className} {...props} />
+    <Button
+      type="submit"
+      variant={variant}
+      className={className}
+      disabled={disabled === true || posting !== null}
+      // While posting, its name is what it does, as its text says.
+      aria-label={posting === null ? label : undefined}
+      {...props}
+    >
+      {posting ?? children}
+    </Button>
   )
 }
 
@@ -433,6 +523,7 @@ export function CatalogSearch({
   pick?: (id: string) => string
 }) {
   const { title, leadFilms, leadAll, label, hint, submit } = CATALOG_SEARCH
+  const onSubmit = useGetForm()
   return (
     <Section
       id="buscar-catalogo"
@@ -444,6 +535,7 @@ export function CatalogSearch({
         action={action}
         role="search"
         aria-label={title}
+        onSubmit={onSubmit}
         className="flex flex-wrap items-end gap-sm"
       >
         {Object.entries(keep).map(
@@ -531,9 +623,20 @@ function useLiveSearch(
     return () => clearTimeout(timer)
   }, [on, query])
 
-  return { query, setQuery, answer, searching }
+  /** Puts `text` in the field as searched already: the answer stays. */
+  const fill = (text: string) => {
+    latest.current++
+    searched.current = text
+    setSearching(false)
+    setQuery(text)
+  }
+
+  return { query, setQuery, fill, answer, searching }
 }
 
+/** The Catálogo search of a form that posts. With `fill`, the field is the
+ * film the form sends (Contar como foi): "Usar" puts the film's id in it,
+ * and `onType` hears the Dono typing over it. */
 export function SessionFilmLookup({
   name,
   label,
@@ -541,19 +644,29 @@ export function SessionFilmLookup({
   value,
   pick,
   onPick,
+  fill: fills = false,
+  onType,
 }: Pick & {
   name: 'buscar' | 'busca'
   label: string
   answer: SearchAnswer | null
   value?: string
+  fill?: boolean
+  onType?: () => void
 }) {
   const live = useHydrated()
   const typed = value ?? initial?.query ?? ''
-  const { query, setQuery, answer, searching } = useLiveSearch(
+  const { query, setQuery, fill, answer, searching } = useLiveSearch(
     live,
     typed,
     initial,
   )
+  const take =
+    onPick &&
+    ((film: { id: string; label: string }) => {
+      if (fills) fill(film.id)
+      onPick(film)
+    })
   return (
     <section aria-label={CATALOG_SEARCH.title} className="flex flex-col gap-lg">
       <div className="grid items-end gap-sm sm:grid-cols-[1fr_auto]">
@@ -563,7 +676,10 @@ export function SessionFilmLookup({
               type="search"
               name={name}
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => {
+                setQuery(event.target.value)
+                onType?.()
+              }}
               onKeyDown={(event) => {
                 if (live && event.key === 'Enter') event.preventDefault()
               }}
@@ -589,7 +705,7 @@ export function SessionFilmLookup({
         )}
       </div>
       <input type="hidden" name="buscado" value={query.trim()} />
-      {answer && <CatalogResults answer={answer} pick={pick} onPick={onPick} />}
+      {answer && <CatalogResults answer={answer} pick={pick} onPick={take} />}
     </section>
   )
 }

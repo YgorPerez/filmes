@@ -13,6 +13,7 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, expect, it, vi } from 'vite-plus/test'
 import { CATALOG_SEARCH } from './catalog-search.copy'
+import { POST_FAILED } from './kit/status'
 import { NewSession } from './new-session'
 import { SESSIONS } from './sessions.copy'
 
@@ -153,9 +154,11 @@ it.each([
     () => Promise.resolve(new Response('Origem recusada', { status: 403 })),
   ],
   ['cannot be reached', () => Promise.reject(new TypeError('offline'))],
-])('sends the plain post when the route %s', async (_, answer) => {
-  vi.stubGlobal('fetch', vi.fn<typeof fetch>(answer))
-  // jsdom does not navigate: the plain post is the form's own submit().
+])('says so, sending nothing again, when the route %s', async (_, answer) => {
+  const answered = vi.fn<typeof fetch>(answer)
+  vi.stubGlobal('fetch', answered)
+  // The plain post would be the form's own submit(): it must not run, as
+  // the server may have done the post already.
   const plain = vi
     .spyOn(HTMLFormElement.prototype, 'submit')
     .mockImplementation(() => {})
@@ -164,8 +167,9 @@ it.each([
     .setup()
     .click(screen.getByRole('button', { name: SESSIONS.form.read }))
 
-  await waitFor(() => expect(plain).toHaveBeenCalledOnce())
-  expect(new FormData(form()).get('ler')).toBe('sim')
+  expect((await screen.findByRole('alert')).textContent).toBe(POST_FAILED)
+  expect(answered).toHaveBeenCalledOnce()
+  expect(plain).not.toHaveBeenCalled()
   plain.mockRestore()
 })
 
