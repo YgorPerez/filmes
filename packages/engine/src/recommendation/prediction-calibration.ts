@@ -27,7 +27,7 @@ export interface PredictionCalibration {
   readonly films: number
 }
 
-export const NO_CALIBRATION: PredictionCalibration = {
+const NO_CALIBRATION: PredictionCalibration = {
   offset: 0,
   slope: 1,
   films: 0,

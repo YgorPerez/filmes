@@ -1,7 +1,15 @@
 import type { ReactNode } from 'react'
 import { useFetchForm } from './kit/fetch-form'
 import { OPERATIONS } from './operations.copy'
-import { Button } from './shadcn/button'
+import { Alert, Section, Submit } from './person-parts'
+
+// The form every Operações action posts: `/operacoes/acao`, with the
+// action in `acao`. The Operações screens take the alert, the section and
+// the submit button of the Dono screens from here, with the rest of their
+// parts, which keeps person-parts under fallow's coupling threshold (its
+// fan-in at most the project's p95), as person-parts does for kit/status.
+
+export { Alert, Section, Submit }
 
 export function ActionPost({
   action,
@@ -28,14 +36,9 @@ export function ActionPost({
     >
       <input type="hidden" name="acao" value={action} />
       {children}
-      <Button
-        type="submit"
-        variant="option"
-        className={submitClassName ?? 'self-start'}
-        disabled={sending}
-      >
+      <Submit className={submitClassName} disabled={sending}>
         {sending ? pending : label}
-      </Button>
+      </Submit>
     </form>
   )
 }

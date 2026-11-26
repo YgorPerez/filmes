@@ -18,12 +18,12 @@ export function StrengthDots({
       <span
         role="img"
         aria-label={`Força ${word}`}
-        className="inline-flex gap-[3px]"
+        className="inline-flex gap-0.75"
       >
         {[1, 2, 3].map((dot) => (
           <span
             key={dot}
-            className={`size-[7px] rounded-round border-[1.5px] border-ink ${
+            className={`size-[7px] rounded-round border-(length:--border-width-stroke) border-ink ${
               dot <= FILLED[strength] ? 'bg-ink' : ''
             }`}
           />
@@ -39,7 +39,7 @@ export function RatingDisc({ children }: { children: number }) {
   return (
     <span
       aria-hidden="true"
-      className="inline-grid size-9 shrink-0 place-items-center rounded-round bg-sticker-orange font-display text-[15px] font-extrabold text-on-sticker tabular-nums"
+      className="inline-grid size-9 shrink-0 place-items-center rounded-round bg-sticker-orange font-display text-rating-disc text-on-sticker tabular-nums"
     >
       {children}
     </span>

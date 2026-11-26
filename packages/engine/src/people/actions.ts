@@ -273,7 +273,7 @@ export const textOf = (text: string) => {
 }
 
 /** Where it came from: never empty, never with the body's separator. */
-export const sourceOf = (source: string) => {
+const sourceOf = (source: string) => {
   const words = pyJoinWords(source)
   return words === '' || words.includes(' · ')
     ? Effect.fail(invalidUsage("a fonte não pode ser vazia nem ter ' · '"))

@@ -2,8 +2,9 @@
 # is where the whole suite runs; on the machine, the push hook runs only the
 # affected tests (`scripts/verify-push.ts`).
 #
-# Two jobs in parallel, each on its own runner: `check` (the workspace) and
-# `build` (the app builds, serves `/` and passes the e2e).
+# Three jobs in parallel, each on its own runner: `check` (the workspace),
+# `stories` (each Storybook story in Chrome) and `build` (the app builds,
+# serves `/` and passes the e2e).
 #
 # Every job has `timeout-minutes`: without it, a stuck job holds the PR for
 # GitHub's default six hours.
@@ -71,6 +72,45 @@ jobs:
 
       - name: Check
         run: pnpm check
+
+  # Storybook builds, and each story opens in a real Chrome at phone and
+  # desktop width (`frontend/vitest.stories.config.ts`), with the ubuntu
+  # image's Chrome.
+  stories:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Storybook
+        run: pnpm build-storybook
+
+      - name: Story tests
+        run: pnpm test:stories
+
+      # A failing story leaves its screenshot in `frontend/.vitest/`.
+      - name: Upload story screenshots
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: stories-failures
+          path: frontend/.vitest/
+          if-no-files-found: ignore
+          retention-days: 14
 
   # The app build, as the deploy will do it, its `/` answering, and the e2e.
   build:

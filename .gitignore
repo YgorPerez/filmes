@@ -24,3 +24,8 @@ coverage/
 # What the e2e leaves (`frontend/playwright.config.ts`).
 test-results/
 playwright-report/
+
+# What Storybook leaves: its build (`pnpm build-storybook`) and the
+# screenshots of a failing story (`pnpm test:stories`).
+storybook-static/
+.vitest/

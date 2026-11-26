@@ -6,7 +6,7 @@ import { defineConfig } from 'react-doctor/api'
 
 export default defineConfig({
   ignore: {
-    // The build is not source code.
-    files: ['.output/**'],
+    // The builds (the app's and Storybook's) are not source code.
+    files: ['.output/**', 'storybook-static/**'],
   },
 })

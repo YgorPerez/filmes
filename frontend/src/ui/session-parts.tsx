@@ -46,9 +46,6 @@ export function PersonAvatar({
   )
 }
 
-export const names = (people: readonly Named[]) =>
-  people.map((p) => p.name).join(', ')
-
 const dateFormat = new Intl.DateTimeFormat('pt-BR', {
   day: 'numeric',
   month: 'long',
@@ -87,7 +84,7 @@ export function NightRequest({
 }) {
   if (items.length > 0) return <ShelfLabel items={items} note={note} />
   return note ? (
-    <p className="-rotate-2 self-start rounded-note bg-sticker-yellow px-xl pt-[5px] pb-2xs font-hand text-hand text-on-sticker">
+    <p className="-rotate-2 self-start rounded-note bg-sticker-yellow px-xl pt-1.25 pb-2xs font-hand text-hand text-on-sticker">
       {note}
     </p>
   ) : null

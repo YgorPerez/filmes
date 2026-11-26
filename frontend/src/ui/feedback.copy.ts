@@ -23,6 +23,7 @@ export const FEEDBACK = {
     rating: (value: string) => `Nota ${value}`,
     comment: 'Comentário',
     submit: 'Gravar e fechar a Sessão',
+    submitting: 'Gravando…',
   },
 
   satisfaction: {

@@ -8,26 +8,17 @@ import type {
 } from '#/platform/setup-guide'
 import { HOME } from './home.copy'
 import { useFetchForm } from './kit/fetch-form'
+import { isSkipped, stateOf } from './setup-steps'
 import { Icon } from './kit/icon'
 import { ShelfLabel } from './kit/shelf-label'
 import { PriceSticker } from './kit/sticker'
-import { buttonVariants } from './shadcn/button'
+import { buttonVariants } from './kit/button-variants'
 
 // The home's parts as the Locadora de bairro draws them (DESIGN.md, Home):
 // the counter where the Dono asks for a film, the latest Sessão's stub and
 // the setup guide as one list of three steps. "Pedir filme" is the screen's
 // one orange button, so every step's action is an option. The guide is
 // never in the way of asking for a film.
-
-type StepState = keyof typeof HOME.guide.state
-
-/** Done wins over skipped: a step she skipped and did anyway is done. */
-const stateOf = (step: SetupStepView): StepState =>
-  step.done ? 'done' : step.skipped ? 'skipped' : 'pending'
-
-/** A step is pending: the home shows the guide. Skipped does not count. */
-export const isGuiding = (setup: SetupView) =>
-  setup.steps.some((s) => stateOf(s) === 'pending')
 
 // --- the counter ---------------------------------------------------------------
 
@@ -87,11 +78,11 @@ export function Latest({
       >
         <h2
           id="ultima-sessao"
-          className="font-display text-[13px] leading-none font-extrabold tracking-[0.08em] text-ink-2 uppercase"
+          className="font-display text-slip-title text-ink-2 uppercase"
         >
           {latest.title}
         </h2>
-        <span className="font-hand text-[16px] leading-tight">
+        <span className="font-hand text-hand-compact leading-tight">
           {latest.when(s.date, attendeesOf(s, person))}
         </span>
       </a>
@@ -108,7 +99,7 @@ export function Latest({
             >
               <span aria-hidden="true" className="w-2 self-stretch bg-case" />
               <PriceSticker compact>{i + 1}</PriceSticker>
-              <span className="truncate font-display text-[15px] font-bold">
+              <span className="truncate font-display text-row-title">
                 {film.title}
               </span>
             </li>
@@ -117,7 +108,9 @@ export function Latest({
       )}
       {s.open ? (
         <div className="flex flex-col items-start gap-md rounded-field bg-card-stock p-lg text-card-stock-ink">
-          <p className="font-hand text-[19px] leading-tight">{latest.open}</p>
+          <p className="font-hand text-hand-large leading-tight">
+            {latest.open}
+          </p>
           <p className="text-evidence">{latest.openText}</p>
           <a
             href={feedbackPath(s.id)}
@@ -172,7 +165,7 @@ function Progress({ setup }: { setup: SetupView }) {
       </div>
       <span
         aria-hidden="true"
-        className="font-display text-[13px] font-bold text-ink-2 tabular-nums"
+        className="font-display text-meta-strong text-ink-2 tabular-nums"
       >
         {HOME.guide.progress(done, total)}
       </span>
@@ -182,16 +175,18 @@ function Progress({ setup }: { setup: SetupView }) {
 
 /** The step's mark: its number in a ring while pending, a violet check
  * when done, its number in a dashed ring when skipped. */
+type StepState = keyof typeof HOME.guide.state
+
 function Mark({ state, n }: { state: StepState; n: number }) {
   return (
     <span
       aria-hidden="true"
-      className={`grid size-7 shrink-0 place-items-center rounded-round font-display text-[14px] leading-none font-extrabold ${
+      className={`grid size-7 shrink-0 place-items-center rounded-round font-display text-price-compact ${
         state === 'done'
           ? 'border-2 border-stamp text-stamp'
           : state === 'skipped'
-            ? 'border-[1.5px] border-dashed border-ink-2 text-ink-2'
-            : 'border-[1.5px] border-ink text-ink'
+            ? 'border-(length:--border-width-stroke) border-dashed border-ink-2 text-ink-2'
+            : 'border-(length:--border-width-stroke) border-ink text-ink'
       }`}
     >
       {state === 'done' ? <Icon name="check" className="size-4" /> : n}
@@ -280,7 +275,7 @@ function ConnectorHow() {
           <li key={line}>{line}</li>
         ))}
       </ol>
-      <p className="font-hand text-[15px] leading-snug text-stamp">
+      <p className="font-hand text-hand-small leading-snug text-stamp">
         {guide.auto}
       </p>
     </>
@@ -293,17 +288,19 @@ function Counter({ ratings }: { ratings: number }) {
     <div
       role="img"
       aria-label={HOME.guide.counterLabel(ratings)}
-      className="flex items-center gap-[5px]"
+      className="flex items-center gap-1.25"
     >
       {Array.from({ length: 10 }, (_, i) => (
         <span
           key={i}
           className={`size-3.5 rounded-round ${
-            i < ratings ? 'bg-stamp' : 'border-[1.5px] border-rule'
+            i < ratings
+              ? 'bg-stamp'
+              : 'border-(length:--border-width-stroke) border-rule'
           }`}
         />
       ))}
-      <span className="ml-xs font-display text-[13px] font-bold text-ink-2 tabular-nums">
+      <span className="ml-xs font-display text-meta-strong text-ink-2 tabular-nums">
         {HOME.guide.counter(ratings)}
       </span>
     </div>
@@ -361,7 +358,7 @@ function StepBody({
 }: Pick<StepProps, 'step' | 'mcpUrl' | 'ratings'>) {
   return (
     <>
-      <p className="text-[14.5px] text-pretty text-ink-2">
+      <p className="text-evidence-step text-pretty text-ink-2">
         {HOME.guide.steps[step.step].text}
       </p>
       {step.step === 'taste' && <Counter ratings={ratings} />}
@@ -381,7 +378,7 @@ function Step({ step, n, person, mcpUrl, ratings, first }: StepProps) {
     <li className="flex gap-md py-lg first:pt-0 last:pb-0 [&+li]:border-t [&+li]:border-dashed [&+li]:border-rule">
       <Mark state={state} n={n} />
       <div className="flex min-w-0 flex-1 flex-col gap-sm">
-        <h3 className="flex min-h-7 flex-wrap items-center gap-x-sm font-display text-[15.5px] leading-tight font-bold">
+        <h3 className="flex min-h-7 flex-wrap items-center gap-x-sm font-display text-step-title-small">
           {title}
           {state !== 'pending' && (
             <span className="font-body text-meta font-normal text-ink-2">
@@ -407,7 +404,7 @@ function Step({ step, n, person, mcpUrl, ratings, first }: StepProps) {
         )}
         {state === 'skipped' && (
           <details className="group">
-            <summary className="inline-flex min-h-touch cursor-pointer list-none items-center font-body text-[14px] text-ink-2 underline underline-offset-3 group-open:hidden [&::-webkit-details-marker]:hidden">
+            <summary className="inline-flex min-h-touch cursor-pointer list-none items-center font-body text-link text-ink-2 underline underline-offset-3 group-open:hidden [&::-webkit-details-marker]:hidden">
               {guide.resume}
             </summary>
             <div className="flex flex-col items-start gap-sm">
@@ -448,10 +445,6 @@ export function Guide({
     </section>
   )
 }
-
-/** A step she skipped and has not done: Meu gosto resumes it from here
- * once the home has no guide. */
-export const isSkipped = (step: SetupStepView) => stateOf(step) === 'skipped'
 
 /** The guide's steps, numbered in order: all of them, or, for Meu gosto,
  * only the skipped ones (`skippedOnly`), each with its "Retomar". */

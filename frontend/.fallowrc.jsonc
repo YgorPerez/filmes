@@ -13,6 +13,11 @@
     // The Cartaz's MCP Apps view: `scripts/billboard-view.ts` builds it
     // from `src/mcp-view/index.html`, whose script tag points to it.
     "src/mcp-view/main.tsx",
+    // The stories' `@tanstack/react-start` and its `/server`:
+    // `.storybook/vite.config.ts` points to them by alias, and no import
+    // does.
+    "src/platform/storybook/start-stand-in.ts",
+    "src/platform/storybook/start-server-stand-in.ts",
   ],
   "ignoreDependencies": [
     // `reactCompilerPreset()` in `vite.config.ts` names the Babel plugin by

@@ -459,7 +459,7 @@ export {
   type Topic,
   type Topics,
 } from './sources/DoesTheDogDie.ts'
-export { OMDB_NAME, Omdb, type AgeRating } from './sources/Omdb.ts'
+export { OMDB_NAME, Omdb, type OmdbRating } from './sources/Omdb.ts'
 export {
   Fetch,
   SourceFailure,

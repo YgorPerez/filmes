@@ -62,7 +62,7 @@ export type ErrorCode = (typeof ERROR_CODES)[number]
 /** Why, finer than the code, where a screen tells the cases apart: the app
  * reads it, never the PT-BR message. Only creating a Pessoa and giving or
  * taking her access have them. */
-export const ERROR_REASONS = [
+const ERROR_REASONS = [
   // A Pessoa with that slug exists (`person_exists`).
   'slug_taken',
   // The slug, the name or an alias already finds another Pessoa

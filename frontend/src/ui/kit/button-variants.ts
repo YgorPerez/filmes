@@ -18,10 +18,10 @@ export const buttonVariants = cva(
       variant: {
         primary:
           'rounded-pill bg-sticker-orange px-3xl font-display text-button text-on-sticker uppercase',
-        big: 'min-h-[60px] w-full rounded-panel bg-sticker-orange px-3xl font-display text-button text-[18px] text-on-sticker uppercase',
+        big: 'min-h-[60px] w-full rounded-panel bg-sticker-orange px-3xl font-display text-button-big text-on-sticker uppercase',
         option:
-          'rounded-pill border-[1.5px] border-rule bg-surface px-xl font-display text-control text-ink aria-pressed:border-2 aria-pressed:border-ink aria-pressed:bg-surface-2 aria-pressed:font-bold',
-        link: 'justify-start px-0 font-body text-[14px] text-ink-2 underline underline-offset-3',
+          'rounded-pill border-(length:--border-width-stroke) border-rule bg-surface px-xl font-display text-control text-ink aria-pressed:border-2 aria-pressed:border-ink aria-pressed:bg-surface-2 aria-pressed:font-bold',
+        link: 'justify-start px-0 font-body text-link text-ink-2 underline underline-offset-3',
       },
     },
     defaultVariants: { variant: 'primary' },

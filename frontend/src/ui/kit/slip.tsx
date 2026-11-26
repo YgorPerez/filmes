@@ -31,7 +31,7 @@ export function Slip({
         <header className="flex flex-wrap items-baseline justify-between gap-x-sm gap-y-2xs border-b border-dashed border-rule pb-md">
           <h2
             id={stub.id}
-            className="font-display text-[13px] leading-none font-extrabold tracking-[0.08em] text-ink-2 uppercase"
+            className="font-display text-slip-title text-ink-2 uppercase"
           >
             {stub.title}
           </h2>
