@@ -36,7 +36,7 @@ A recusa permanente de uma Pessoa a um tipo de filme, como "Leo nunca vê terror
 _Evitar_: filtro, bloqueio
 
 **Ajuste** [adjustment, `Adjustment`; elo [link: `director`, `writer`, `cast`, `series`, `genre`]; nível [level: `none`, `low`, `normal`, `high`]]:
-Quanto um elo entre filmes (diretor, roteiro, elenco, série, gênero) pesa para uma Pessoa: nada, pouco, normal ou muito. "Pro Lorenzo ator não importa" é o Ajuste de elenco dele em nada. Vale para o que o motor deduz das Notas dela; o que a Pessoa disse sobre um ator ou diretor nomeado continua valendo.
+Quanto um elo entre filmes (diretor, roteiro, elenco, série, gênero) pesa para uma Pessoa: nada, pouco, normal ou muito. "Pro Lopo ator não importa" é o Ajuste de elenco dele em nada. Vale para o que o motor deduz das Notas dela; o que a Pessoa disse sobre um ator ou diretor nomeado continua valendo.
 _Evitar_: peso da Pessoa, importância, preferência
 
 **Pergunta aberta** [open question, `OpenQuestion`]:

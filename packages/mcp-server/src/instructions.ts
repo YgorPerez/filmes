@@ -99,11 +99,11 @@ Ao terminar, diga o que entrou e quais alvos ficaram sem identificação.
 
 ### Ajuste
 
-"Pro Lorenzo ator não importa", "a Duda vê tudo do diretor que ela gosta": \`action: "adjust"\` com \`link\` (\`director\`, \`writer\`, \`cast\`, \`series\`, \`genre\`) e \`level\`. "Não importa" é \`none\` (tira as Evidências do elo); "importa pouco" é \`low\` (metade, uma Força abaixo); "importa muito" é \`high\`; \`normal\` desfaz. O Declarado sobre um ator ou diretor nomeado continua valendo. Confirme o elo e o nível com o Dono antes de gravar.
+"Pro Lopo ator não importa", "a Duda vê tudo do diretor que ela gosta": \`action: "adjust"\` com \`link\` (\`director\`, \`writer\`, \`cast\`, \`series\`, \`genre\`) e \`level\`. "Não importa" é \`none\` (tira as Evidências do elo); "importa pouco" é \`low\` (metade, uma Força abaixo); "importa muito" é \`high\`; \`normal\` desfaz. O Declarado sobre um ator ou diretor nomeado continua valendo. Confirme o elo e o nível com o Dono antes de gravar.
 
 ### Já visto
 
-"Lorenzo viu, nota 8", "esse todo mundo já viu": \`action: "seen"\`, a Pessoa e \`film\`, uma chamada por Pessoa. Nota dita de 0 a 10 vai em \`rating\` como "8/10"; em estrelas, "4,5". A nota grava uma Nota, que pesa no gosto como as do Letterboxd. Com \`unseen\`, a próxima \`recommend\` deixa o filme de fora.
+"Lopo viu, nota 8", "esse todo mundo já viu": \`action: "seen"\`, a Pessoa e \`film\`, uma chamada por Pessoa. Nota dita de 0 a 10 vai em \`rating\` como "8/10"; em estrelas, "4,5". A nota grava uma Nota, que pesa no gosto como as do Letterboxd. Com \`unseen\`, a próxima \`recommend\` deixa o filme de fora.
 
 ### Perguntas de gosto
 

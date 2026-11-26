@@ -14783,7 +14783,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
 {
   "attendees": [
     "bruno",
-    "lorenzo",
+    "lopo",
   ],
   "attributions": [
     {
@@ -14808,7 +14808,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "attendees": 2,
         "withFact": 1,
         "withoutFact": [
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -14824,13 +14824,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "deu 5 a O Farol de Areia (2012); das 50 pessoas que deram 4 ou mais a ele, 30% fizeram o mesmo com este",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -14863,7 +14863,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": 0.5609,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2016,
     },
@@ -14872,7 +14872,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "attendees": 2,
         "withFact": 1,
         "withoutFact": [
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -14888,13 +14888,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "deu 5 a O Farol de Areia (2012); das 50 pessoas que deram 4 ou mais a ele, 30% fizeram o mesmo com este",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -14927,7 +14927,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": 0.5609,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2005,
     },
@@ -14936,7 +14936,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "attendees": 2,
         "withFact": 1,
         "withoutFact": [
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -14952,13 +14952,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "deu 5 a O Farol de Areia (2012); das 50 pessoas que deram 4 ou mais a ele, 30% fizeram o mesmo com este",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -14991,7 +14991,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": 0.5609,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2017,
     },
@@ -15000,7 +15000,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "attendees": 2,
         "withFact": 1,
         "withoutFact": [
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -15046,13 +15046,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "deu 4 a Cidade de Vidro (2018), também de Helena Prado",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -15088,7 +15088,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": 0.947,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2021,
     },
@@ -15097,7 +15097,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "attendees": 2,
         "withFact": 1,
         "withoutFact": [
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -15113,13 +15113,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "deu 5 a O Farol de Areia (2012); das 50 pessoas que deram 4 ou mais a ele, 30% fizeram o mesmo com este",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -15152,7 +15152,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": 0.5609,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2019,
     },
@@ -15161,7 +15161,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "attendees": 2,
         "withFact": 1,
         "withoutFact": [
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -15177,13 +15177,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "deu 5 a O Farol de Areia (2012); das 50 pessoas que deram 4 ou mais a ele, 30% fizeram o mesmo com este",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -15216,7 +15216,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": 0.5609,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2021,
     },
@@ -15225,7 +15225,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "attendees": 2,
         "withFact": 1,
         "withoutFact": [
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -15241,13 +15241,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "deu 5 a O Farol de Areia (2012); das 50 pessoas que deram 4 ou mais a ele, 30% fizeram o mesmo com este",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -15280,7 +15280,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": 0.5609,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2014,
     },
@@ -15289,7 +15289,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "attendees": 2,
         "withFact": 1,
         "withoutFact": [
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -15305,13 +15305,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "deu 5 a O Farol de Areia (2012); das 50 pessoas que deram 4 ou mais a ele, 30% fizeram o mesmo com este",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -15344,7 +15344,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": 0.5609,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2013,
     },
@@ -15353,7 +15353,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "attendees": 2,
         "withFact": 1,
         "withoutFact": [
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -15399,13 +15399,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "deu 4 a Cidade de Vidro (2018), também de Helena Prado",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -15431,7 +15431,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": 0.947,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2023,
     },
@@ -15440,7 +15440,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "attendees": 2,
         "withFact": 1,
         "withoutFact": [
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -15476,13 +15476,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "deu 4 a O Último Bonde (2019), também de Otávio Lins",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -15504,7 +15504,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": 0.8604,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2022,
     },
@@ -15513,7 +15513,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "attendees": 2,
         "withFact": 1,
         "withoutFact": [
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -15569,13 +15569,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "do gênero faroeste, como 3 filmes a que deu nota alta: O Farol de Areia (2012), Maré Baixa (2015) e Jardim Suspenso (2017)",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -15600,7 +15600,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": 0.7661,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2018,
     },
@@ -15609,7 +15609,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "attendees": 2,
         "withFact": 1,
         "withoutFact": [
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -15645,13 +15645,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "deu 4 a Inverno em Lisboa (2011), também de Rui Tavares",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -15675,7 +15675,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": 0.7548,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2016,
     },
@@ -15684,7 +15684,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "attendees": 2,
         "withFact": 1,
         "withoutFact": [
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -15720,13 +15720,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "deu 3,5 a Rio Abaixo (2014), também de Marta Quintal",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -15748,7 +15748,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": 0.7111,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2020,
     },
@@ -15757,7 +15757,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "attendees": 2,
         "withFact": 1,
         "withoutFact": [
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -15773,13 +15773,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "deu 5 a O Farol de Areia (2012); das 3.104 pessoas que deram 4 ou mais a ele, 64% fizeram o mesmo com este",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -15801,7 +15801,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": 0.6933,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2019,
     },
@@ -15810,7 +15810,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "attendees": 2,
         "withFact": 1,
         "withoutFact": [
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -15866,13 +15866,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "do gênero faroeste, como 3 filmes a que deu nota alta: Maré Baixa (2015), Cidade de Vidro (2018) e Jardim Suspenso (2017)",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -15896,7 +15896,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": 0.6806,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2012,
     },
@@ -15905,7 +15905,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "attendees": 2,
         "withFact": 1,
         "withoutFact": [
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -15931,13 +15931,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "da série Trilogia da Fronteira, como 1 filme a que deu nota alta: Fronteira (2008)",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -15959,7 +15959,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": 0.6539,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2012,
     },
@@ -15968,7 +15968,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "attendees": 2,
         "withFact": 1,
         "withoutFact": [
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -15994,13 +15994,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "escrito por Ana Ruiz, como 1 filme a que deu nota alta: O Farol de Areia (2012)",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -16022,7 +16022,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": 0.6528,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2022,
     },
@@ -16031,7 +16031,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "attendees": 2,
         "withFact": 1,
         "withoutFact": [
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -16057,13 +16057,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "deu 3,5 a Rio Abaixo (2014); das 900 pessoas que deram 4 ou mais a ele, 70% fizeram o mesmo com este",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -16085,7 +16085,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": 0.6261,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2020,
     },
@@ -16094,7 +16094,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "attendees": 2,
         "withFact": 1,
         "withoutFact": [
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -16110,13 +16110,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "deu 4,5 a Maré Baixa (2015); das 250 pessoas que deram 4 ou mais a ele, 44% fizeram o mesmo com este",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -16138,7 +16138,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": 0.6007,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2017,
     },
@@ -16147,7 +16147,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "attendees": 2,
         "withFact": 1,
         "withoutFact": [
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -16163,13 +16163,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "deu 4 a Cidade de Vidro (2018); das 600 pessoas que deram 4 ou mais a ele, 40% fizeram o mesmo com este",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -16191,7 +16191,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": 0.5953,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2016,
     },
@@ -16200,7 +16200,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "attendees": 2,
         "withFact": 1,
         "withoutFact": [
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -16226,13 +16226,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "com Rita Lobo no elenco, como 1 filme a que deu nota alta: Ponte Aérea (2016)",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -16254,7 +16254,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": 0.5929,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2021,
     },
@@ -16263,7 +16263,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "attendees": 2,
         "withFact": 1,
         "withoutFact": [
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -16289,13 +16289,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "deu 4,5 a Ponte Aérea (2016), também com Rita Lobo",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -16317,7 +16317,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": 0.5654,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2020,
     },
@@ -16326,7 +16326,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "attendees": 2,
         "withFact": 1,
         "withoutFact": [
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -16342,13 +16342,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "deu 5 a O Farol de Areia (2012); das 50 pessoas que deram 4 ou mais a ele, 30% fizeram o mesmo com este",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -16370,7 +16370,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": 0.5609,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2015,
     },
@@ -16379,7 +16379,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "attendees": 2,
         "withFact": 1,
         "withoutFact": [
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -16395,13 +16395,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "deu 5 a O Farol de Areia (2012); das 50 pessoas que deram 4 ou mais a ele, 30% fizeram o mesmo com este",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -16423,7 +16423,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": 0.5609,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2010,
     },
@@ -16432,7 +16432,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "attendees": 2,
         "withFact": 1,
         "withoutFact": [
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -16448,13 +16448,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "deu 5 a O Farol de Areia (2012); das 50 pessoas que deram 4 ou mais a ele, 30% fizeram o mesmo com este",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -16476,7 +16476,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": 0.5609,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2018,
     },
@@ -16485,7 +16485,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "attendees": 2,
         "withFact": 1,
         "withoutFact": [
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -16501,13 +16501,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "deu 4,5 a Maré Baixa (2015); das 40 pessoas que deram 4 ou mais a ele, 30% fizeram o mesmo com este",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -16529,7 +16529,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": 0.5509,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2014,
     },
@@ -16538,7 +16538,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "attendees": 2,
         "withFact": 1,
         "withoutFact": [
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -16554,13 +16554,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "deu 5 a Fronteira (2008); das 150 pessoas que deram 4 ou mais a ele, 42% fizeram o mesmo com este",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -16582,7 +16582,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": 0.5503,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2018,
     },
@@ -16591,7 +16591,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "attendees": 2,
         "withFact": 1,
         "withoutFact": [
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -16607,13 +16607,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "deu 4 a Cidade de Vidro (2018); das 600 pessoas que deram 4 ou mais a ele, 25% fizeram o mesmo com este",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -16635,7 +16635,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": 0.5481,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2015,
     },
@@ -16644,7 +16644,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "attendees": 2,
         "withFact": 1,
         "withoutFact": [
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -16660,13 +16660,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "do gênero faroeste, como 4 filmes a que deu nota alta, entre eles O Farol de Areia (2012), Maré Baixa (2015) e Cidade de Vidro (2018)",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -16688,7 +16688,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": 0.5225,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2019,
     },
@@ -16697,7 +16697,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "attendees": 2,
         "withFact": 1,
         "withoutFact": [
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -16733,13 +16733,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "dirigido por Otávio Lins, como 1 filme a que deu nota alta: Ponte Aérea (2016)",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -16761,7 +16761,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": 0.5132,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2019,
     },
@@ -16770,7 +16770,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "attendees": 2,
         "withFact": 1,
         "withoutFact": [
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -16806,13 +16806,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "dirigido por Otávio Lins, como 1 filme a que deu nota alta: O Último Bonde (2019)",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -16834,7 +16834,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": 0.4416,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2016,
     },
@@ -16843,7 +16843,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "attendees": 2,
         "withFact": 1,
         "withoutFact": [
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -16879,13 +16879,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "dirigido por Marta Quintal, como 1 filme a que deu nota alta: Jardim Suspenso (2017)",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -16907,7 +16907,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": 0.4309,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2014,
     },
@@ -16916,7 +16916,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "attendees": 2,
         "withFact": 1,
         "withoutFact": [
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -16952,13 +16952,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "dirigido por Rui Tavares, como 1 filme a que deu nota alta: Fronteira (2008)",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -16980,7 +16980,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": 0.4101,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2011,
     },
@@ -16989,7 +16989,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "attendees": 2,
         "withFact": 1,
         "withoutFact": [
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -17025,13 +17025,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "deu 4 a Inverno em Lisboa (2011), também de Rui Tavares",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -17053,7 +17053,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": 0.3747,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2008,
     },
@@ -17062,7 +17062,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "attendees": 2,
         "withFact": 1,
         "withoutFact": [
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -17098,13 +17098,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "do gênero faroeste, como 3 filmes a que deu nota alta: O Farol de Areia (2012), Maré Baixa (2015) e Cidade de Vidro (2018)",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -17126,7 +17126,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": 0.325,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2017,
     },
@@ -17135,7 +17135,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "attendees": 2,
         "withFact": 1,
         "withoutFact": [
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -17161,13 +17161,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "deu 2 a Asfalto Quente (2020), também de Caio Brandão",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -17189,7 +17189,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": 0.2271,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2017,
     },
@@ -17198,7 +17198,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "attendees": 2,
         "withFact": 1,
         "withoutFact": [
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -17224,13 +17224,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "deu 2 a Asfalto Quente (2020), também de Caio Brandão",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -17252,7 +17252,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": 0.192,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2013,
     },
@@ -17261,7 +17261,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "attendees": 2,
         "withFact": 1,
         "withoutFact": [
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -17287,13 +17287,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "deu 1 a Barulho (2013), também de Caio Brandão",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -17315,7 +17315,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": 0.1434,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2020,
     },
@@ -17325,7 +17325,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "withFact": 0,
         "withoutFact": [
           "bruno",
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -17341,13 +17341,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "sem fato",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -17380,7 +17380,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": null,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2014,
     },
@@ -17390,7 +17390,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "withFact": 0,
         "withoutFact": [
           "bruno",
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -17406,13 +17406,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "sem fato",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -17434,7 +17434,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": null,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2019,
     },
@@ -17444,7 +17444,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "withFact": 0,
         "withoutFact": [
           "bruno",
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -17460,13 +17460,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "sem fato",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -17488,7 +17488,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": null,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2015,
     },
@@ -17498,7 +17498,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "withFact": 0,
         "withoutFact": [
           "bruno",
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -17514,13 +17514,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "sem fato",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -17542,7 +17542,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": null,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2021,
     },
@@ -17552,7 +17552,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "withFact": 0,
         "withoutFact": [
           "bruno",
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -17568,13 +17568,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "sem fato",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -17596,7 +17596,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": null,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2018,
     },
@@ -17606,7 +17606,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "withFact": 0,
         "withoutFact": [
           "bruno",
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -17622,13 +17622,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "sem fato",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -17650,7 +17650,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": null,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2019,
     },
@@ -17660,7 +17660,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "withFact": 0,
         "withoutFact": [
           "bruno",
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -17676,13 +17676,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "sem fato",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -17704,7 +17704,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": null,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2021,
     },
@@ -17714,7 +17714,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "withFact": 0,
         "withoutFact": [
           "bruno",
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -17730,13 +17730,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "sem fato",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -17758,7 +17758,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": null,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2020,
     },
@@ -17768,7 +17768,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "withFact": 0,
         "withoutFact": [
           "bruno",
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -17784,13 +17784,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "sem fato",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -17812,7 +17812,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": null,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2012,
     },
@@ -17822,7 +17822,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "withFact": 0,
         "withoutFact": [
           "bruno",
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -17838,13 +17838,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "sem fato",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -17868,7 +17868,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": null,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2012,
     },
@@ -17878,7 +17878,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "withFact": 0,
         "withoutFact": [
           "bruno",
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -17894,13 +17894,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "sem fato",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -17924,7 +17924,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": null,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2013,
     },
@@ -17934,7 +17934,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "withFact": 0,
         "withoutFact": [
           "bruno",
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -17950,13 +17950,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "sem fato",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -17978,7 +17978,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": null,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2015,
     },
@@ -17988,7 +17988,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "withFact": 0,
         "withoutFact": [
           "bruno",
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -18004,13 +18004,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "sem fato",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -18032,7 +18032,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": null,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2016,
     },
@@ -18042,7 +18042,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "withFact": 0,
         "withoutFact": [
           "bruno",
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -18058,13 +18058,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "sem fato",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -18086,7 +18086,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": null,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2017,
     },
@@ -18096,7 +18096,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "withFact": 0,
         "withoutFact": [
           "bruno",
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -18112,13 +18112,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "sem fato",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -18143,7 +18143,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": null,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2013,
     },
@@ -18153,7 +18153,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "withFact": 0,
         "withoutFact": [
           "bruno",
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -18169,13 +18169,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "sem fato",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -18200,7 +18200,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": null,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2014,
     },
@@ -18210,7 +18210,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "withFact": 0,
         "withoutFact": [
           "bruno",
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -18226,13 +18226,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "sem fato",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -18256,7 +18256,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": null,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2015,
     },
@@ -18266,7 +18266,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "withFact": 0,
         "withoutFact": [
           "bruno",
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -18282,13 +18282,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "sem fato",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -18310,7 +18310,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": null,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2022,
     },
@@ -18320,7 +18320,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "withFact": 0,
         "withoutFact": [
           "bruno",
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -18336,13 +18336,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "sem fato",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -18366,7 +18366,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": null,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2016,
     },
@@ -18376,7 +18376,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "withFact": 0,
         "withoutFact": [
           "bruno",
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -18392,13 +18392,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "sem fato",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -18420,7 +18420,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": null,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2024,
     },
@@ -18430,7 +18430,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "withFact": 0,
         "withoutFact": [
           "bruno",
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -18446,13 +18446,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "sem fato",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -18477,7 +18477,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": null,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2016,
     },
@@ -18487,7 +18487,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "withFact": 0,
         "withoutFact": [
           "bruno",
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -18503,13 +18503,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "sem fato",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -18533,7 +18533,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": null,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2018,
     },
@@ -18543,7 +18543,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "withFact": 0,
         "withoutFact": [
           "bruno",
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -18559,13 +18559,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "sem fato",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -18589,7 +18589,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": null,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2017,
     },
@@ -18599,7 +18599,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "withFact": 0,
         "withoutFact": [
           "bruno",
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -18615,13 +18615,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "sem fato",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -18643,7 +18643,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": null,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2016,
     },
@@ -18653,7 +18653,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "withFact": 0,
         "withoutFact": [
           "bruno",
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -18669,13 +18669,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "sem fato",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -18700,7 +18700,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": null,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2020,
     },
@@ -18710,7 +18710,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "withFact": 0,
         "withoutFact": [
           "bruno",
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -18726,13 +18726,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "sem fato",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -18756,7 +18756,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": null,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2017,
     },
@@ -18766,7 +18766,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "withFact": 0,
         "withoutFact": [
           "bruno",
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -18782,13 +18782,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "sem fato",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -18810,7 +18810,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": null,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2018,
     },
@@ -18820,7 +18820,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "withFact": 0,
         "withoutFact": [
           "bruno",
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -18836,13 +18836,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "sem fato",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -18864,7 +18864,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": null,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2014,
     },
@@ -18874,7 +18874,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "withFact": 0,
         "withoutFact": [
           "bruno",
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -18890,13 +18890,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "sem fato",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -18918,7 +18918,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": null,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2016,
     },
@@ -18928,7 +18928,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "withFact": 0,
         "withoutFact": [
           "bruno",
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -18944,13 +18944,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "sem fato",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -18972,7 +18972,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": null,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2018,
     },
@@ -18982,7 +18982,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "withFact": 0,
         "withoutFact": [
           "bruno",
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -18998,13 +18998,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "sem fato",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -19026,7 +19026,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": null,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2020,
     },
@@ -19036,7 +19036,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "withFact": 0,
         "withoutFact": [
           "bruno",
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -19052,13 +19052,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "sem fato",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -19080,7 +19080,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": null,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2011,
     },
@@ -19090,7 +19090,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "withFact": 0,
         "withoutFact": [
           "bruno",
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -19106,13 +19106,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "sem fato",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -19134,7 +19134,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": null,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2004,
     },
@@ -19144,7 +19144,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "withFact": 0,
         "withoutFact": [
           "bruno",
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -19160,13 +19160,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "sem fato",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -19188,7 +19188,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": null,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2019,
     },
@@ -19198,7 +19198,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "withFact": 0,
         "withoutFact": [
           "bruno",
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -19214,13 +19214,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "sem fato",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -19242,7 +19242,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": null,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2010,
     },
@@ -19252,7 +19252,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "withFact": 0,
         "withoutFact": [
           "bruno",
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -19268,13 +19268,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "sem fato",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -19296,7 +19296,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": null,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2016,
     },
@@ -19306,7 +19306,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "withFact": 0,
         "withoutFact": [
           "bruno",
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -19322,13 +19322,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "sem fato",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -19350,7 +19350,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": null,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2001,
     },
@@ -19360,7 +19360,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "withFact": 0,
         "withoutFact": [
           "bruno",
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -19376,13 +19376,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "sem fato",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -19404,7 +19404,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": null,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2005,
     },
@@ -19414,7 +19414,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "withFact": 0,
         "withoutFact": [
           "bruno",
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -19430,13 +19430,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "sem fato",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -19458,7 +19458,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": null,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2018,
     },
@@ -19468,7 +19468,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
         "withFact": 0,
         "withoutFact": [
           "bruno",
-          "lorenzo",
+          "lopo",
         ],
       },
       "evidence": {
@@ -19484,13 +19484,13 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
             "text": "sem fato",
           },
         ],
-        "lorenzo": [
+        "lopo": [
           {
             "contribution": 0,
             "date": null,
             "factId": null,
             "kind": "guess",
-            "person": "lorenzo",
+            "person": "lopo",
             "source": null,
             "strength": "weak",
             "text": "sem fato",
@@ -19512,7 +19512,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       "titlePt": null,
       "utility": {
         "bruno": null,
-        "lorenzo": null,
+        "lopo": null,
       },
       "year": 2018,
     },
@@ -19541,7 +19541,7 @@ exports[`the whole output, as recorded > Vetos to a tag group and to a genre 1`]
       },
       "filmsRemoved": 5,
       "label": "romance",
-      "person": "lorenzo",
+      "person": "lopo",
       "target": "Q1054574",
       "text": "não vê romance",
     },

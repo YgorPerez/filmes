@@ -17,7 +17,7 @@ Decidida no mapa #72: a mesma do pesquisa-relacionamentos. Workspace pnpm neste 
 Duas pessoas usam a interface, as duas como Dono das próprias Sessões:
 
 - **Ygor**, que criou o filmes e é o único `admin` (consultar o banco, avaliar pesos).
-- **A irmã dele**, que entra pelo celular.
+- **Outra Dona da casa**, que entra pelo celular.
 
 As duas pedem filme para uma noite concreta: sozinhas, em casal, com amigos ou com criança, quase sempre no celular, no sofá, pouco antes de ver. Querem uma lista curta em que confiem e, para cada filme, o motivo de cada pessoa da sala gostar.
 

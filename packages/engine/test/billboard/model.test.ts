@@ -544,17 +544,17 @@ describe('the Cartaz model', () => {
 
   test('initials are the shortest start no other Presente shares', () => {
     const people = billboardPeople(
-      ['leo', 'lorenzo', 'ana'],
+      ['leo', 'lopo', 'ana'],
       new Map([
         ['leo', 'Léo'],
-        ['lorenzo', 'Lorenzo'],
+        ['lopo', 'Lopo'],
       ]),
       'ana',
     )
 
     expect(people.map((p) => [p.initial, p.label, p.color])).toEqual([
       ['Lé', 'Léo', 1],
-      ['Lo', 'Lorenzo', 2],
+      ['Lo', 'Lopo', 2],
       ['A', 'Você', 3],
     ])
   })
