@@ -20,7 +20,7 @@ import { Option } from './kit/option'
 
 const { reply } = BILLBOARD
 
-/** What was marked, in a line ("1 Trocar marcado · 1 Já vi"). */
+/** What was marked, in a sentence ("1 Trocar e 1 Já vi"). */
 export const summaryOf = (billboard: BillboardModel, marks: Marks) =>
   reply.summary(markCounts(billboard, marks))
 
