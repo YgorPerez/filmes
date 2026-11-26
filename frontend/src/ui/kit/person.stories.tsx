@@ -32,18 +32,14 @@ export const Colors: Story = {
       {[false, true].map((hollow) => (
         <div key={String(hollow)} className="flex items-center gap-xs">
           {PEOPLE.map((person) => (
-            <PersonDot
-              key={person.name}
-              person={person}
-              hollow={hollow}
-              title={person.name}
-            />
+            <PersonDot key={person.name} person={person} hollow={hollow} />
           ))}
         </div>
       ))}
     </div>
   ),
   play: async ({ canvasElement }) => {
-    await expect(within(canvasElement).getAllByTitle('Bruno')).toHaveLength(4)
+    // The avatars show the initial; the dots are only a picture.
+    await expect(within(canvasElement).getAllByText('B')).toHaveLength(2)
   },
 }

@@ -96,7 +96,10 @@ describe('the Cartaz shows', () => {
   it('the Aposta’s stamp on the bet only, beside its NOVO', () => {
     render(<Billboard billboard={MODEL} />)
     const stamp = card(2).getByText(BILLBOARD.card.bet)
-    expect(stamp.getAttribute('title')).toBe(BILLBOARD.card.betHint)
+    // Why it is a bet goes in its text, for the screen reader: a hover
+    // `title` never opens on the phone.
+    expect(card(2).getByText(BILLBOARD.card.betHint)).toBeTruthy()
+    expect(stamp.hasAttribute('title')).toBe(false)
     expect(card(2).getByText(BILLBOARD.card.isNew)).toBeTruthy()
     expect(card(1).queryByText(BILLBOARD.card.bet)).toBeNull()
   })
@@ -167,10 +170,10 @@ describe('the Cartaz shows', () => {
     expect(card(2).queryByRole('list', { name: 'Nota prevista' })).toBeNull()
   })
 
-  it('a dot per Presente on the poster, hollow for who has no Fato', () => {
+  it('who has no Fato is said in the text, not on a hover over her dot', () => {
     render(<Billboard billboard={MODEL} />)
-    expect(card(2).getByTitle('Iara: sem fato')).toBeTruthy()
-    expect(card(2).getAllByTitle('Bruno').length).toBeGreaterThan(0)
+    expect(card(2).getByText(BILLBOARD.card.withoutFact('Iara'))).toBeTruthy()
+    expect(card(2).queryByTitle(/Iara|Bruno/)).toBeNull()
   })
 
   it('no marks once the Session has its Feedback', () => {

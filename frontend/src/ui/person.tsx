@@ -222,7 +222,7 @@ function Contents({ page }: { page: PersonPage }) {
           <li key={id}>
             <a
               href={`#${id}`}
-              className="inline-flex min-h-touch items-center gap-xs rounded-pill border-[1.5px] border-rule bg-surface px-lg font-display text-control text-ink no-underline hover:bg-surface-2"
+              className="inline-flex min-h-touch items-center gap-xs rounded-pill border-(length:--border-width-stroke) border-rule bg-surface px-lg font-display text-control text-ink no-underline hover:bg-surface-2"
             >
               {title}
               {n !== null && ' '}
@@ -460,13 +460,13 @@ function LevelPicker({
 }) {
   return (
     <fieldset className="flex min-w-0 flex-1 basis-[240px] flex-col gap-xs">
-      <legend className="mb-xs font-display text-[14px] font-bold">
+      <legend className="mb-xs font-display text-field-label">
         {legend}
         {hint && (
           <span className="font-body font-normal text-ink-2"> {hint}</span>
         )}
       </legend>
-      <div className="grid grid-cols-4 rounded-pill border-[1.5px] border-rule bg-surface p-[3px]">
+      <div className="grid grid-cols-4 rounded-pill border-(length:--border-width-stroke) border-rule bg-surface p-0.75">
         {Object.entries(PERSON.levels).map(([value, label]) => (
           <label key={value} className="flex">
             <input

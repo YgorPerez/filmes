@@ -17,15 +17,8 @@ export const WithDots: Story = {
   args: {
     children: (
       <>
-        <PersonDot
-          person={{ color: 1, initial: 'B', name: 'Bruno' }}
-          title="Bruno"
-        />
-        <PersonDot
-          person={{ color: 2, initial: 'V', name: 'Vera' }}
-          hollow
-          title="Vera, sem fato"
-        />
+        <PersonDot person={{ color: 1, initial: 'B', name: 'Bruno' }} />
+        <PersonDot person={{ color: 2, initial: 'V', name: 'Vera' }} hollow />
       </>
     ),
   },

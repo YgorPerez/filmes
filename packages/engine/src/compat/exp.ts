@@ -233,7 +233,7 @@ const special = (tmp: number, sbits: bigint, ki: bigint): number => {
 }
 
 /** glibc's `exp(x)`. */
-export const libmExp = (x: number): number => {
+const libmExp = (x: number): number => {
   let abstop = top12(x) & 0x7ff
   if (
     (abstop - top12(5.551115123125783e-17)) >>> 0 >=

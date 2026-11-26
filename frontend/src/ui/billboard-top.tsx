@@ -20,12 +20,12 @@ export function Strength({
       role="img"
       aria-label={BILLBOARD.strengthLabel(BILLBOARD.strength[strength])}
       data-level={filled}
-      className="inline-flex gap-[3px]"
+      className="inline-flex gap-0.75"
     >
       {[1, 2, 3].map((dot) => (
         <span
           key={dot}
-          className={`size-[7px] rounded-round border-[1.5px] border-ink ${
+          className={`size-[7px] rounded-round border-(length:--border-width-stroke) border-ink ${
             dot <= filled ? 'bg-ink' : ''
           }`}
         />
@@ -63,8 +63,8 @@ export function Dropped({ billboard }: { billboard: BillboardModel }) {
       {billboard.dropped.map((d) => (
         <li key={d.id} className="text-meta text-ink-2">
           {BILLBOARD.dropped}{' '}
-          <span className="font-hand text-[15px] text-ink">{d.title}</span> (
-          {d.reason})
+          <span className="font-hand text-hand-small text-ink">{d.title}</span>{' '}
+          ({d.reason})
         </li>
       ))}
     </ul>

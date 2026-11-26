@@ -63,7 +63,7 @@ export const countTags = (
 
 /** `fatos`: each row with Fonte and date after it and its `fato_id` in
  * front, one at a time. Numbers are Python ints. */
-export function* reviewFactRows(
+function* reviewFactRows(
   table: string,
   rows: Iterable<ReadonlyArray<string | number>>,
   [source, date]: readonly [string, string],
@@ -230,8 +230,8 @@ class TasteRatings {
 /** The taste neighbours' sample (#174): the users whose id is a multiple of
  * this, with at least `TASTE_SAMPLE_MIN_RATINGS` ratings of linked films. On
  * ml-32m, about one user in ten. */
-export const TASTE_SAMPLE_STRIDE = 10
-export const TASTE_SAMPLE_MIN_RATINGS = 50
+const TASTE_SAMPLE_STRIDE = 10
+const TASTE_SAMPLE_MIN_RATINGS = 50
 
 /** `vizinhos(notas, links)`, the ratings' spread, the tags, the ratings by
  * value of ml-32m, and the taste neighbours' sample. */

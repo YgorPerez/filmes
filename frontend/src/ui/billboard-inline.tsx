@@ -54,7 +54,7 @@ export function InlineBillboard({
           >
             <span aria-hidden="true" className="self-stretch bg-case" />
             <PriceSticker compact>{film.position}</PriceSticker>
-            <span className="truncate font-display text-[15px] font-bold">
+            <span className="truncate font-display text-row-title">
               {film.title}
             </span>
             <span className="text-meta text-ink-2 tabular-nums">

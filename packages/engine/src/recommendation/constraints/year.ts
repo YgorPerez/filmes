@@ -17,10 +17,7 @@ export interface YearRequest {
 
 /** The range as it reads: "de 1990 em diante", "até 2015", "entre 2012 e
  * 2016". */
-export const rangeText = (
-  since: number | null,
-  until: number | null,
-): string => {
+const rangeText = (since: number | null, until: number | null): string => {
   if (until === null) return `de ${since} em diante`
   if (since === null) return `até ${until}`
   return `entre ${since} e ${until}`

@@ -101,7 +101,7 @@ function Copy({
           aria-label={reply.output}
           value={manual}
           rows={4}
-          className={`${FIELD} basis-full font-mono text-[13px]`}
+          className={`${FIELD} basis-full font-mono text-url`}
         />
       )}
     </>
@@ -126,7 +126,7 @@ function MoodChips({
     )
   return (
     <fieldset className="flex flex-col gap-xs">
-      <legend className="mb-xs font-display text-[14px] font-bold">
+      <legend className="mb-xs font-display text-field-label">
         {reply.moods}{' '}
         <span className="font-body font-normal text-ink-2">
           {reply.moodsHint}
@@ -176,7 +176,7 @@ export function ReplyBox({
         {reply.title}
       </h2>
       <label className="flex flex-col gap-xs">
-        <span className="font-display text-[14px] font-bold">
+        <span className="font-display text-field-label">
           {reply.addition}{' '}
           <span className="font-body font-normal text-ink-2">
             {reply.additionHint}

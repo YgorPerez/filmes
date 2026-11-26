@@ -7,7 +7,7 @@
 import { Effect } from 'effect'
 import type { Step } from './Step.ts'
 
-export const TASTE_SCALES_SQL = `
+const TASTE_SCALES_SQL = `
   INSERT INTO percentis_gosto_movielens (usuario, nota, percentil)
   SELECT usuario, nota,
          (coalesce(sum(quantidade) OVER abaixo, 0) + quantidade / 2.0)

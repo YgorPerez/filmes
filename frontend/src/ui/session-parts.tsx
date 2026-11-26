@@ -84,7 +84,7 @@ export function NightRequest({
 }) {
   if (items.length > 0) return <ShelfLabel items={items} note={note} />
   return note ? (
-    <p className="-rotate-2 self-start rounded-note bg-sticker-yellow px-xl pt-[5px] pb-2xs font-hand text-hand text-on-sticker">
+    <p className="-rotate-2 self-start rounded-note bg-sticker-yellow px-xl pt-1.25 pb-2xs font-hand text-hand text-on-sticker">
       {note}
     </p>
   ) : null
