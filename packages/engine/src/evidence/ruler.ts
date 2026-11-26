@@ -164,18 +164,11 @@ export const ratingStrength = (
   return [fromFeedback ? strengthen(strength) : strength, direction]
 }
 
-/** The start of the Fonte of a Nota written from an answer to the
- * Perguntas par a par, followed by the Session (`pairwiseSource`). */
-export const PAIRWISE_SOURCE = 'perguntas par a par'
-
-/** Whether a Fonte is that of a pairwise answer's Nota. */
-export const isPairwiseSource = (source: string | undefined): boolean =>
-  source?.startsWith(`${PAIRWISE_SOURCE} `) === true
-
-/** Where a seed rating came from: a Session's Feedback, and its Fonte. */
+/** Where a seed rating came from: a Session's Feedback, or an answer to
+ * the Perguntas par a par (`notas.par_a_par`). */
 export interface SeedOrigin {
   readonly fromFeedback?: boolean
-  readonly source?: string
+  readonly pairwise?: boolean
 }
 
 /** The Tipo of a seed rating: a Nota, or a rating stated by the Pessoa
@@ -196,7 +189,7 @@ export const seedStrength = (
 ): readonly [Strength, Direction] => {
   if (kind !== 'rating')
     return [statedStrength(kind, true, date, today), rating >= 3 ? 1 : -1]
-  if (isPairwiseSource(origin.source)) return ['weak', 1]
+  if (origin.pairwise === true) return ['weak', 1]
   return ratingStrength(scale, rating, origin.fromFeedback)
 }
 

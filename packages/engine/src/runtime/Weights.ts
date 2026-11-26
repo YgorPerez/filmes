@@ -72,6 +72,9 @@ export const Weights = Schema.Struct({
     min_predicted: Weight,
     max_facts: Count,
   }),
+  /** The Perguntas par a par (#181): how many pairs each Presente is
+   * asked in a Session. */
+  pairwise: Schema.Struct({ pairs: Count }),
   mood: Schema.Struct({ weight: Weight }),
   group: Schema.Struct({ weight: Weight }),
   people: Schema.Struct({ statement_weight: Weight }),

@@ -94,7 +94,7 @@ import {
 import { readRatingScale } from '../people/rating-scale.ts'
 import { SIGNALS } from './signals/index.ts'
 import { predictRatings } from './taste-neighbors.ts'
-import type { Round } from './signals/Signal.ts'
+import { scaleOf, type Round } from './signals/Signal.ts'
 import { individualUtility } from './utility.ts'
 import { applyVetoes, type VetoReport } from './vetoes.ts'
 
@@ -273,6 +273,9 @@ export const rank = (
       attendees,
     }
     const asked = makeConstraintSet(context, options.constraints ?? [])
+    const scales = new Map<string, RatingScale>()
+    for (const p of attendees)
+      scales.set(p, yield* readRatingScale(db, p, weights))
     const round: Round = {
       db,
       weights,
@@ -280,6 +283,7 @@ export const rank = (
       candidates: yield* asked.candidates(vetoes.remaining),
       attendees,
       moods: moods.moods,
+      scales,
     }
     // A kept film a Veto or a Restrição removed: the cause, for `dropped`.
     const removed = new Map<string, RemovalCause>()
@@ -547,9 +551,6 @@ export const rank = (
         [-Math.abs(contribution(a, weights)), a.factId ?? ''],
         [-Math.abs(contribution(b, weights)), b.factId ?? ''],
       )
-    const scales = new Map<string, RatingScale>()
-    for (const p of group?.people.keys() ?? [])
-      scales.set(p, yield* readRatingScale(db, p, weights))
     const films: RecommendedFilm[] = []
     for (const [position, { key, film, utilities, evidence }] of placed) {
       const all = [
@@ -575,13 +576,11 @@ export const rank = (
               utilities,
               adjustment,
             ).map((p) => {
-              const scale = scales.get(p)
-              if (scale === undefined) throw pythonError('KeyError', `'${p}'`)
               return satisfactionLine(
                 p,
                 names.get(p) ?? p,
                 group,
-                scale,
+                scaleOf(round, p),
                 film.id,
                 run.today,
               )

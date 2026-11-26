@@ -6,6 +6,7 @@
 // and a Já visto do not decay.
 
 import type { Weights } from '../runtime/Weights.ts'
+import type { SeedKind } from './ruler.ts'
 
 const DAY_MS = 86_400_000
 const YEAR_DAYS = 365.25
@@ -24,3 +25,12 @@ export const ratingDecay = (
     Math.min(1, 2 ** (-years / decay.half_life_years)),
   )
 }
+
+/** The factor for a seed rating of any Tipo: a Nota's Decaimento by its
+ * age; a Declarado or a Relato ("ama", "odeia") does not decay. */
+export const seedDecay = (
+  kind: SeedKind,
+  date: string,
+  today: string,
+  decay: Weights['rating_decay'],
+): number => (kind === 'rating' ? ratingDecay(date, today, decay) : 1)

@@ -1,18 +1,22 @@
-// Operações over the build, on the fixture copy (never the real
+// Operações over the build, on this file's fixture copy (never the real
 // filmes-dados). Bruno, one of the fixture's two Donos, becomes admin here,
-// on the copy; `not-admin.e2e.ts` logs in as Vera, who stays not admin.
-// The other files do not mind (an admin only sees one more link, and a banner the e2e never
-// raises: no remote). Only the desktop evaluates (one run at a time per
-// server, and the two projects share it). `E2E_SCREENSHOTS=<folder>` saves
-// each screen there.
+// on the copy. Only the desktop evaluates (one run at a time per server,
+// and the two projects share it). `E2E_SCREENSHOTS=<folder>` saves each
+// screen there.
 
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { expect, test } from '@playwright/test'
-import { loginAsBruno, section, snap } from './support'
+import {
+  engineRoot,
+  expect,
+  loginAsBruno,
+  section,
+  snap,
+  test,
+} from './support'
 
 test.beforeAll(() => {
-  const file = join(process.env.E2E_ENGINE!, 'data/people/bruno.md')
+  const file = join(engineRoot(), 'data/people/bruno.md')
   const text = readFileSync(file, 'utf8')
   if (!/^admin: true$/m.test(text))
     writeFileSync(file, text.replace(/^---\n/, '---\nadmin: true\n'))
@@ -80,6 +84,6 @@ test('the admin evaluates the Recommendation and reads the report', async ({
   await expect(evaluation.getByText(/Recall@50/).first()).toBeVisible()
   await snap(page, info, 'operacoes-avaliacao')
 
-  const report = join(process.env.E2E_ENGINE!, 'evaluations/2026-11-20.md')
+  const report = join(engineRoot(), 'evaluations/2026-11-20.md')
   expect(readFileSync(report, 'utf8')).toContain('Recall@50')
 })

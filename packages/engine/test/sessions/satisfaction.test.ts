@@ -151,6 +151,35 @@ describe('the satisfaction', () => {
     expect(film(before, 'As Horas Lentas').filmLines).toEqual([])
   })
 
+  test("the line's Força reads her Nota on her own scale", async () => {
+    // Bruno rates high: with his Feedback, 12 Notas, five of them a 4.
+    // Below the config's 20, his 4 is read on the population: its 77th
+    // percentile, moderate, strong as a Feedback. With min_ratings 10 it is
+    // read on his own scale: his 46th, weak, moderate as a Feedback.
+    const { fixture, vars } = useSatisfactionFixture()
+    await withFeedback(fixture, vars, ['dono', 'quim'], {
+      ratings: ['dono=4', 'quim=5'],
+    })
+    const strengths = async (weights: Vars) =>
+      (await recommend(fixture, weights, DONO_QUIM)).films.flatMap((f) =>
+        f.filmLines
+          .filter((l) => l.text.startsWith('satisfação de Bruno'))
+          .map((l) => l.strength),
+      )
+
+    const onPopulation = await strengths(vars)
+    expect(onPopulation.length).toBeGreaterThan(0)
+    expect(new Set(onPopulation)).toEqual(new Set(['strong']))
+    // Written after the run above: it replaces the same weights file.
+    const own = weightsWith(fixture, 'min_ratings = 20', 'min_ratings = 10', [
+      ['\nweight = 0.3\n\n[no_sad]', '\nweight = 0.0\n\n[no_sad]'],
+      ['floor = 0.25', 'floor = 1.0'],
+    ])
+    const onHisOwn = await strengths(own)
+    expect(onHisOwn.length).toBeGreaterThan(0)
+    expect(new Set(onHisOwn)).toEqual(new Set(['moderate']))
+  })
+
   test('a film that rose but where who fell behind is the minimum gets no line', async () => {
     // O Farol de Areia pleases Bruno (0,784) a bit more than Quim (0,574).
     // Weighed by his satisfaction, Bruno becomes its minimum (0,562): it

@@ -299,13 +299,14 @@ export const loadPerson = (
       // Every Nota is a Já visto too (view ja_vistos): no row in ja_visto.
       else
         yield* db.run(
-          "INSERT OR IGNORE INTO notas (fato_id, pessoa, filme_id, nota, data, fonte, tipo) VALUES (?, ?, ?, ?, ?, ?, 'nota')",
+          "INSERT OR IGNORE INTO notas (fato_id, pessoa, filme_id, nota, data, fonte, tipo, par_a_par) VALUES (?, ?, ?, ?, ?, ?, 'nota', ?)",
           id,
           slug,
           seen.target,
           seen.rating,
           seen.date,
           seen.source,
+          seen.pairwise === true ? 1 : 0,
         )
     }
   })

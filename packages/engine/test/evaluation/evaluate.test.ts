@@ -203,11 +203,33 @@ describe('avaliar', () => {
     expect(sample.people).toBe(1000)
     expect(sample.retrieved).toBe(1000)
     expect(sample.heldOut4Plus).toBe(2000)
-    expect(sample.coverageTop5).toBe(0)
+    // Her training films are Já vistos: with that Fact they sort ahead of
+    // the popular films, and its strong "já viu" counts as backed.
+    expect(sample.coverageTop5).toBe(0.8)
     expect(sample.recall50).toBe(0.5)
     expect(result.versions).toHaveProperty(['ml-32m/ratings.csv'])
     expect(result.movielensSample).toEqual({ seed: 27, users: 1000 })
     expect(result.warnings).toEqual([])
+  })
+
+  test('a held-out film is not a Já visto before the cut', async () => {
+    const fixture = useFixture()
+    const catalog = join(fixture.root, 'catalogo')
+    cpSync(join(ROOT, 'tests/fixture/catalogo'), catalog, { recursive: true })
+    for (let i = 0; i < 55; i++)
+      appendFileSync(
+        join(catalog, 'filmes.csv'),
+        `tt928${String(i).padStart(4, '0')},Filme popular ${i},2020,90,999999,9.0\n`,
+      )
+    await fixture.ok(rebuild, { FILMES_CATALOGO: catalog })
+
+    const { people } = (await evaluated(fixture, { FILMES_CATALOGO: catalog }))
+      .offline
+    // Bruno's two held-out 4+ films have Evidence from his earlier Notas.
+    // Iara's, Quim's and Rosa's have nothing before their cuts: only
+    // guesses, behind the 55 popular ones. Their own later Notas, read as
+    // a Já visto, would give each a Fact and lift it into the top 50.
+    expect([people.retrieved, people.heldOut4Plus]).toEqual([2, 5])
   })
 
   test(

@@ -6,8 +6,8 @@
 // Presentes). `E2E_SCREENSHOTS=<folder>` saves a capture of each screen.
 
 import { openSessions, recommendSession } from '@filmes/engine'
-import { expect, test, type Page } from '@playwright/test'
-import { loginAsBruno, engineRun, snap } from './support'
+import { type Page } from '@playwright/test'
+import { engineRun, expect, loginAsBruno, snap, test } from './support'
 
 /** Opens a Session for `attendees`, as Bruno; gives its id. */
 const openSession = async (attendees: string[]) =>
@@ -90,8 +90,6 @@ test('a relayed Relato, a film by its title, and a refusal', async ({
   await snap(page, info, 'feedback-recusa')
   expect(await stillOpen(id)).toBe(true)
 
-  // Not Pequenos Milagres: the Feedback makes the film a Já visto of each
-  // Presente, and that one is Bruno's Aposta in `billboard.e2e.ts`.
   await page.getByLabel('Outro filme').check()
   await page
     .getByLabel('Título ou ID do IMDb', { exact: false })

@@ -1,7 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { exportRatings } from '@filmes/engine'
-import { expect, test } from '@playwright/test'
-import { engineRun, loginAsBruno } from './support'
+import { engineRun, expect, loginAsBruno, test } from './support'
 
 /** The file the engine writes for `person`, over the same fixture copy the
  * app serves. */

@@ -113,6 +113,11 @@ position = 5
 min_predicted = 7.0
 max_facts = 1
 
+[pairwise]
+# Perguntas par a par (#181): quantos pares cada Presente responde (ou pula)
+# por Sessão, pelo Link da Sessão.
+pairs = 10
+
 [mood]
 # Bônus de cada Clima pedido que o filme sustenta, somado à pontuação da Regra
 # de escolha (que vai de 0 a 1), vezes o multiplicador da Força.
@@ -180,7 +185,9 @@ people = 0.1
 # A pontuação é a primeira da Regra de escolha, com os bônus do filme; a faixa
 # (com Fato, só sinais do filme, só palpites) continua vindo antes. λ = 1 desliga.
 # Desligado até o `evaluate` no banco real e as Sessões do Dono provarem um
-# valor (mapa #169); nas Notas da fixture, 0,8 baixa a parecença do top 5.
+# valor (mapa #169). Na fixture, 0,9 baixa a parecença média do top 5 de 0,277
+# para 0,188 sem perder recall nem cobertura; 0,8 baixa para 0,163, mas a
+# cobertura do top 5 cai de 70% para 65%.
 lambda = 1.0
 # Só os `depth` primeiros lugares saem do MMR, escolhidos entre os `pool`
 # primeiros filmes da ordem; os demais seguem a Regra. A Parecença só é medida

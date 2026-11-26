@@ -241,7 +241,6 @@ export {
   pairwiseAnswers,
   pairwiseQuestions,
   pairwiseSource,
-  PAIRWISE_PAIRS,
   PAIRWISE_RATING,
   type PairwiseAnswer,
   type PairwiseDecision,

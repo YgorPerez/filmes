@@ -5,6 +5,8 @@
 // pessoas de gosto parecido deram 4,3 em média a este". Its base is
 // `[taste_neighbors] weight × 2 × (percentile − 0.5)`: for the film above
 // her median, against below it, and nothing within `neutral_band` of it.
+// It fades with the raters' freshness, the Decaimento of her Notas the
+// match rests on, as a Nota seed fades on the content path.
 // The strength comes from the ruler, by how many neighbours rated it, how
 // much they agree and how many films they share with her.
 
@@ -46,7 +48,7 @@ export const tasteNeighbors: Signal = {
             strength,
             kind: 'review',
             factId: factId(TASTE_NEIGHBORS_TABLE, person, filmId),
-            base: weight * 2 * tilt,
+            base: weight * 2 * tilt * p.freshness,
           }),
         )
       }

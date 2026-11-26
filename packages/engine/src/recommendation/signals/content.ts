@@ -35,13 +35,12 @@ import {
   contribution,
   type Evidence,
 } from '../../evidence/Evidence.ts'
-import { ratingDecay } from '../../evidence/decay.ts'
+import { seedDecay } from '../../evidence/decay.ts'
 import {
   adjustedStrength,
   castStrength,
   HIGH_RATING,
   isHighRating,
-  isPairwiseSource,
   linkStrength,
   pathStrength,
   seedStrength,
@@ -50,7 +49,6 @@ import {
 } from '../../evidence/ruler.ts'
 import type { Level, Link, Strength } from '../../evidence/strength.ts'
 import { filmText, listText, seedText } from '../../evidence/wording.ts'
-import { readRatingScale } from '../../people/rating-scale.ts'
 import { engineError } from '../../runtime/EngineError.ts'
 import { num, numOrNull, text, textOrNull } from '../../sqlite/row.ts'
 import type { Row } from '../../sqlite/Sqlite.ts'
@@ -60,7 +58,7 @@ import {
   LINK_PREDICATE,
   linkOf,
 } from '../../sqlite/vocabulary.ts'
-import { candidatesJson, type Signal } from './Signal.ts'
+import { candidatesJson, scaleOf, type Signal } from './Signal.ts'
 
 /** How each link reads. `seed` null: the link makes no seed Evidence. */
 const WORDING: Readonly<
@@ -82,7 +80,7 @@ const LIST_MAX = 3
 const SEEDS = `
 SELECT s.entidade_id, s.filme_id, e.rotulo AS entidade,
        n.fato_id AS nota_fato, n.nota, n.data AS nota_data, n.fonte AS nota_fonte,
-       n.tipo AS nota_tipo, n.sessao AS nota_sessao,
+       n.tipo AS nota_tipo, n.sessao AS nota_sessao, n.par_a_par,
        f.titulo, f.ano
 FROM notas_vigentes n
 JOIN arestas s   ON s.filme_id = n.filme_id AND s.predicado = ?1
@@ -127,8 +125,7 @@ const fill = (template: string, entity: string): string =>
  * pairwise answer's Nota is weak (`seedStrength`), so never high. */
 const isHigh = (scale: RatingScale, seed: Row): boolean =>
   kindOf(text(seed, 'nota_tipo')) === 'rating'
-    ? !isPairwiseSource(text(seed, 'nota_fonte')) &&
-      isHighRating(scale, num(seed, 'nota'))
+    ? num(seed, 'par_a_par') === 0 && isHighRating(scale, num(seed, 'nota'))
     : num(seed, 'nota') >= HIGH_RATING
 
 const highRatings = (high: ReadonlyArray<Row>): string => {
@@ -147,7 +144,7 @@ export const content: Signal = {
   forPerson: (round, person) =>
     Effect.gen(function* () {
       const { db, weights, today } = round
-      const scale = yield* readRatingScale(db, person, weights)
+      const scale = scaleOf(round, person)
       const out: Evidence[] = []
       const seeds = new Map<string, Evidence>()
       const adjustments = new Map<string, Level>()
@@ -210,7 +207,7 @@ export const content: Signal = {
                 today,
                 {
                   fromFeedback: textOrNull(s, 'nota_sessao') !== null,
-                  source: text(s, 'nota_fonte'),
+                  pairwise: num(s, 'par_a_par') === 1,
                 },
               )
               const start = seedText(
@@ -230,9 +227,7 @@ export const content: Signal = {
                 base:
                   weight *
                   direction *
-                  (kind === 'rating'
-                    ? ratingDecay(date, today, weights.rating_decay)
-                    : 1),
+                  seedDecay(kind, date, today, weights.rating_decay),
               })
               // The same Nota can reach the Candidate through more than one
               // node: the strongest link counts.

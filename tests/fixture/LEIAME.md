@@ -80,6 +80,7 @@ Os filmes de Lia Moura, Tomás Reis, Beatriz Sá e Jorge Amaral não ligam a Not
 | 10, 20 e 30 | As de Bruno em 101, 102, 103, 201, 202, 401, 501 e 503, quase iguais às dele; 5, 4,5 e 5 em Pequenos Milagres (601); 1, 1,5 e 2 em Deserto Branco (701) | Os vizinhos mais próximos do Bruno: a favor de 601, contra 701 |
 | 40 | Os mesmos 8 filmes ao contrário do Bruno; 1 em 601 e 5 em 701 | Vizinho distante: só entra com `k` 4 ou mais |
 | 50 | 5 em 101, 4,5 em 102, 1 em 601 | Divide só 2 filmes com o Bruno |
+| 60 | Como o Bruno em 101, 202 e 501, ao contrário em 401 (a Nota dele de 2019); 3 em 701 | Divide 4 filmes com o Bruno: com o Decaimento, a Nota velha pesa menos e ele entra entre os 3 mais próximos (`min_shared` 4) |
 
 Ninguém divide 10 filmes com o Bruno, o `min_shared` de `config/weights.toml`, então os outros testes não veem esse caminho. Os testes dele baixam `k` e `min_shared`.
 
