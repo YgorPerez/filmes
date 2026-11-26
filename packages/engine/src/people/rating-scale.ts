@@ -1,6 +1,7 @@
 // The Escala da Pessoa [rating scale] the ruler reads her Notas on (#172):
 // her own Notas (Tipo nota, the current one of each film), or the MovieLens
-// population's below `[rating_percentile] min_ratings`.
+// population's below `[rating_percentile] min_ratings`. A pairwise answer's
+// Nota is not hers to count: it only says which of two films she liked more.
 
 import { Effect } from 'effect'
 import { ratingScale, type RatingScale } from '../evidence/ruler.ts'
@@ -10,7 +11,7 @@ import { num } from '../sqlite/row.ts'
 
 const OWN = `
 SELECT nota, count(*) AS quantidade FROM notas_vigentes
-WHERE pessoa = ? AND tipo = 'nota' GROUP BY nota
+WHERE pessoa = ? AND tipo = 'nota' AND NOT par_a_par GROUP BY nota
 `
 
 const counts = (rows: ReadonlyArray<Row>): Map<number, number> =>

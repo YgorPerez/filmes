@@ -30,7 +30,7 @@ import { candidatesJson, type Signal } from './Signal.ts'
  * the Candidates as a membership test. */
 const NEIGHBORS = `
 SELECT v.vizinho_id AS candidato, v.fato_id, v.base, v.ambos, v.fonte, v.data,
-       n.nota, n.data AS nota_data, n.sessao, n.fonte AS nota_fonte, n.tipo AS nota_tipo, f.titulo, f.ano
+       n.nota, n.data AS nota_data, n.sessao, n.par_a_par, n.tipo AS nota_tipo, f.titulo, f.ano
 FROM notas_vigentes n
 JOIN vizinhos v ON v.filme_id = n.filme_id
 JOIN filmes f   ON f.id = n.filme_id
@@ -55,7 +55,7 @@ export const neighbors: Signal = {
           round.today,
           {
             fromFeedback: textOrNull(row, 'sessao') !== null,
-            source: text(row, 'nota_fonte'),
+            pairwise: num(row, 'par_a_par') === 1,
           },
         )
         if (direction < 0) return []

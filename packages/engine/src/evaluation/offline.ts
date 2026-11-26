@@ -68,8 +68,8 @@ export const prepareOffline = (
     for (const measured of sample)
       for (const rating of measured.training)
         yield* db.run(
-          `INSERT INTO treino_movielens (fato_id, pessoa, filme_id, nota, data, fonte, tipo)
-           VALUES (?, ?, ?, ?, ?, ?, 'nota')`,
+          `INSERT INTO treino_movielens (fato_id, pessoa, filme_id, nota, data, fonte, tipo, par_a_par)
+           VALUES (?, ?, ?, ?, ?, ?, 'nota', 0)`,
           ...rating,
         )
     for (const [table, target] of CUT_TABLES) {

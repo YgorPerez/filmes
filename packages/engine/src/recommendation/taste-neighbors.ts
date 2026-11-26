@@ -59,9 +59,11 @@ export interface TastePrediction {
   readonly deviation: number
 }
 
+/** Her Notas, without a pairwise answer's: it says only which of two
+ * films she liked more, not where it sits on her scale. */
 const OWN_RATINGS = `
 SELECT filme_id, nota FROM notas_vigentes
-WHERE pessoa = ? AND tipo = 'nota' ORDER BY filme_id
+WHERE pessoa = ? AND tipo = 'nota' AND NOT par_a_par ORDER BY filme_id
 `
 
 /** The percentiles of every sample user who rated one of these films. */

@@ -34,7 +34,6 @@ import {
   type YamlMapping,
   type YamlValue,
 } from '../data/yaml.ts'
-import { PAIRWISE_SOURCE } from '../evidence/ruler.ts'
 import { required, savePersonAndSync } from '../people/actions.ts'
 import { hasFewRatings } from '../people/rating-scale.ts'
 import { resolvePerson } from '../people/people.ts'
@@ -57,9 +56,10 @@ import { authorFor } from './open.ts'
 /** The chosen film's Nota: 3,5 of 5, weak on the ruler. */
 export const PAIRWISE_RATING = 3.5
 
-/** The Fonte of what the answers become. */
+/** The Fonte of what the answers become. The Nota says it came from an
+ * answer by its own mark (`Seen.pairwise`), not by this text. */
 export const pairwiseSource = (session: string) =>
-  `${PAIRWISE_SOURCE} ${session}`
+  `perguntas par a par ${session}`
 
 export interface PairwiseRequest {
   readonly session: string
@@ -406,6 +406,7 @@ export const decidePairwise = (
                   target: film,
                   label: labels.get(film)!,
                   rating: film === answer.choice ? PAIRWISE_RATING : null,
+                  pairwise: film === answer.choice,
                 })
                 person = result.person
                 added += Number(result.added)

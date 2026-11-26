@@ -6,7 +6,14 @@
 // and Deserto Branco (701), where Bruno has no Fact. Nobody shares the
 // default minimum of 10 films with him, so the other tests do not see them.
 import { describe, expect, test } from 'vite-plus/test'
-import type { Recommendation, Vars } from '../../src/index.ts'
+import {
+  answerPairwise,
+  decidePairwise,
+  pairwiseQuestions,
+  recommendSession,
+  type Recommendation,
+  type Vars,
+} from '../../src/index.ts'
 import { useFixture, type Fixture } from '../fixture.ts'
 import { engineRecommendation, film, tasteWeights } from './support.ts'
 
@@ -66,6 +73,51 @@ describe('the taste neighbours path', () => {
     const out = await bruno(fixture, tasteWeights(fixture, 5, 3))
 
     expect(neighbours(out, 'Pequenos Milagres')[0]?.text).toMatch(/^4 pessoas/)
+  })
+
+  test('a Nota from a pairwise answer does not choose the neighbours', async () => {
+    const fixture = useFixture()
+    // User 50 shares 2 of Bruno's films, one short of the minimum.
+    const weights = tasteWeights(fixture, 5, 3)
+    const before = await bruno(fixture, weights)
+    expect(neighbours(before, 'Pequenos Milagres')[0]?.text).toMatch(
+      /^4 pessoas/,
+    )
+    // Bruno prefers Pequenos Milagres, which every sample user rated, in a
+    // pair; the Dono records it as a Nota of 3,5. It would be the third
+    // film user 50 shares with him.
+    const { session } = await fixture.ok(
+      recommendSession({ attendees: ['bruno'], count: 2 }),
+      {},
+      { owner: 'bruno' },
+    )
+    const { pairs } = await fixture.ok(
+      pairwiseQuestions({ session: session.id, person: 'bruno' }),
+    )
+    const pair = pairs.find((p) => p.some((f) => f.id === 'tt9000601'))!
+    await fixture.ok(
+      answerPairwise({
+        session: session.id,
+        person: 'bruno',
+        films: [pair[0].id, pair[1].id],
+        choice: 'tt9000601',
+      }),
+      {},
+      { owner: 'bruno' },
+    )
+    await fixture.ok(
+      decidePairwise({ session: session.id, person: 'bruno', record: true }),
+      {},
+      { owner: 'bruno' },
+    )
+
+    const after = await bruno(fixture, weights)
+    expect(film(after, 'Pequenos Milagres').predictedRating).toEqual(
+      film(before, 'Pequenos Milagres').predictedRating,
+    )
+    expect(neighbours(after, 'Pequenos Milagres')[0]?.text).toMatch(
+      /^4 pessoas/,
+    )
   })
 
   test('below the minimum of films shared, there is no neighbour', async () => {

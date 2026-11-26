@@ -13,6 +13,7 @@ import {
   pairwiseAnswers,
   pairwiseQuestions,
   personRate,
+  rebuild,
   recommend,
   recommendSession,
   recordFeedback,
@@ -320,6 +321,8 @@ describe('decidePairwise', () => {
       {},
       { owner: 'bruno' },
     )
+    // From her file: the Nota keeps its mark, whatever the Fonte says.
+    await fixture.ok(rebuild)
 
     const source = `perguntas par a par ${session}`
     const { films } = await fixture.ok(
@@ -336,8 +339,53 @@ describe('decidePairwise', () => {
       expect(seed.strength).toBe('weak')
       expect(seed.contribution).toBeGreaterThan(0)
     }
-    // Nor is it a Nota alta for the aggregated metadata: her own are low.
-    expect(evidence.filter((e) => e.text.includes('Nota alta'))).toEqual([])
+    // Nor is it a Nota alta for the aggregated metadata: those lines name
+    // her own top Notas, never an answered film.
+    const high = evidence.filter((e) => e.text.includes('Nota alta'))
+    expect(high.length).toBeGreaterThan(0)
+    for (const line of high) {
+      expect(line.text).not.toContain('O Farol de Areia')
+      expect(line.text).not.toContain('Pequenos Milagres')
+    }
+  })
+
+  test("a Nota from an answer stays out of her scale: her other Notas read the same", async () => {
+    const fixture = useFixture()
+    const session = await answered(fixture)
+    // Six Notas of her own (minimum 5): her 3 is her median, weak in
+    // favour. The two answers' 3,5 would put it at her 37th percentile,
+    // against the film.
+    await fixture.ok(
+      personRate({
+        person: 'teo',
+        ratings: [
+          { film: 'tt9000301', rating: 4 },
+          { film: 'tt9000302', rating: 4 },
+          { film: 'tt9000303', rating: 6 },
+          { film: 'tt9000401', rating: 6 },
+          { film: 'tt9000402', rating: 8 },
+          { film: 'tt9000403', rating: 8 },
+        ],
+      }),
+    )
+    await fixture.ok(
+      decidePairwise({ session, person: 'teo', record: true }),
+      {},
+      { owner: 'bruno' },
+    )
+
+    const { films } = await fixture.ok(
+      recommend({ attendees: ['teo'], count: 50 }),
+      weightsWith(fixture, 'min_ratings = 20', 'min_ratings = 5'),
+    )
+    const threes = films.flatMap((film) =>
+      (film.evidence['teo'] ?? []).filter((e) => e.text.startsWith('deu 3 a')),
+    )
+    expect(threes.length).toBeGreaterThan(0)
+    for (const seed of threes) {
+      expect(seed.strength).toBe('weak')
+      expect(seed.contribution).toBeGreaterThan(0)
+    }
   })
 
   test('a Nota from an answer decays with age, like any Nota', async () => {

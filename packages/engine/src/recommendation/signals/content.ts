@@ -41,7 +41,6 @@ import {
   castStrength,
   HIGH_RATING,
   isHighRating,
-  isPairwiseSource,
   linkStrength,
   pathStrength,
   seedStrength,
@@ -82,7 +81,7 @@ const LIST_MAX = 3
 const SEEDS = `
 SELECT s.entidade_id, s.filme_id, e.rotulo AS entidade,
        n.fato_id AS nota_fato, n.nota, n.data AS nota_data, n.fonte AS nota_fonte,
-       n.tipo AS nota_tipo, n.sessao AS nota_sessao,
+       n.tipo AS nota_tipo, n.sessao AS nota_sessao, n.par_a_par,
        f.titulo, f.ano
 FROM notas_vigentes n
 JOIN arestas s   ON s.filme_id = n.filme_id AND s.predicado = ?1
@@ -127,8 +126,7 @@ const fill = (template: string, entity: string): string =>
  * pairwise answer's Nota is weak (`seedStrength`), so never high. */
 const isHigh = (scale: RatingScale, seed: Row): boolean =>
   kindOf(text(seed, 'nota_tipo')) === 'rating'
-    ? !isPairwiseSource(text(seed, 'nota_fonte')) &&
-      isHighRating(scale, num(seed, 'nota'))
+    ? num(seed, 'par_a_par') === 0 && isHighRating(scale, num(seed, 'nota'))
     : num(seed, 'nota') >= HIGH_RATING
 
 const highRatings = (high: ReadonlyArray<Row>): string => {
@@ -210,7 +208,7 @@ export const content: Signal = {
                 today,
                 {
                   fromFeedback: textOrNull(s, 'nota_sessao') !== null,
-                  source: text(s, 'nota_fonte'),
+                  pairwise: num(s, 'par_a_par') === 1,
                 },
               )
               const start = seedText(
