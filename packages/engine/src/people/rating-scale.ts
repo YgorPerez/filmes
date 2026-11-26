@@ -16,6 +16,22 @@ WHERE pessoa = ? AND tipo = 'nota' GROUP BY nota
 const counts = (rows: ReadonlyArray<Row>): Map<number, number> =>
   new Map(rows.map((row) => [num(row, 'nota'), num(row, 'quantidade')]))
 
+const ownCounts = (db: Connection, person: string) =>
+  Effect.map(db.all(OWN, person), counts)
+
+/** Whether `person` has fewer Notas of her own than `[rating_percentile]
+ * min_ratings`: a guest or someone new, read on the population. */
+export const hasFewRatings = (
+  db: Connection,
+  person: string,
+  weights: Pick<Weights, 'rating_percentile'>,
+): Effect.Effect<boolean, SqliteError> =>
+  Effect.map(ownCounts(db, person), (own) => {
+    let n = 0
+    for (const count of own.values()) n += count
+    return n < weights.rating_percentile.min_ratings
+  })
+
 /** The scale of `person` in `db`, with the cuts of `weights`. */
 export const readRatingScale = (
   db: Connection,
@@ -23,7 +39,7 @@ export const readRatingScale = (
   weights: Pick<Weights, 'rating_percentile'>,
 ): Effect.Effect<RatingScale, SqliteError> =>
   Effect.gen(function* () {
-    const own = counts(yield* db.all(OWN, person))
+    const own = yield* ownCounts(db, person)
     const population = counts(
       yield* db.all('SELECT nota, quantidade FROM notas_movielens'),
     )

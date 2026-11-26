@@ -84,6 +84,19 @@ describe('pairwiseQuestions', () => {
     ])
   })
 
+  test('only for a Presente with fewer Notas than `min_ratings`: a guest or someone new', async () => {
+    const fixture = useFixture()
+    const session = await open(fixture)
+    const fewer = weightsWith(fixture, 'min_ratings = 20', 'min_ratings = 5')
+    const asked = async (person: string) =>
+      (await fixture.ok(pairwiseQuestions({ session, person }), fewer)).pairs
+
+    // Bruno has 11 Notas, his own scale; Quim has 4 and Teo none.
+    expect(await asked('bruno')).toEqual([])
+    expect(await asked('quim')).toHaveLength(10)
+    expect(await asked('teo')).toHaveLength(10)
+  })
+
   test('only for a Presente of an open Session', async () => {
     const fixture = useFixture()
     const session = await open(fixture)

@@ -6,7 +6,9 @@
 // 2002, `entropia_movielens`): a film many people saw and that splits them
 // says more about whoever answers. Past those, by IMDb votes. Adult films
 // are never asked. Pairs go in that order, two films at a time, up to
-// `[pairwise] pairs` per Presente and Session, answered or skipped.
+// `[pairwise] pairs` per Presente and Session, answered or skipped. Only a
+// Presente with fewer Notas than `[rating_percentile] min_ratings` (a guest,
+// someone new) is asked: whoever has her own scale has said enough.
 //
 // The answers wait in the Session's `pairwise:` until the Dono decides,
 // since gosto permanente is written only after her yes:
@@ -34,6 +36,7 @@ import {
 } from '../data/yaml.ts'
 import { PAIRWISE_SOURCE } from '../evidence/ruler.ts'
 import { required, savePersonAndSync } from '../people/actions.ts'
+import { hasFewRatings } from '../people/rating-scale.ts'
 import { resolvePerson } from '../people/people.ts'
 import { addItem } from '../people/Person.ts'
 import type { EngineServices } from '../runtime/Engine.ts'
@@ -216,6 +219,8 @@ const questionsIn = (
   Effect.gen(function* () {
     const { weights } = yield* Environment
     const { answered, films } = askedOf(front, person)
+    if (!(yield* hasFewRatings(db, person, weights)))
+      return { answered, pairs: [] }
     const pairs = yield* pairsLeft(
       db,
       person,
