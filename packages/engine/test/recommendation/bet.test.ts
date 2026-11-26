@@ -251,7 +251,9 @@ describe('the bet in the Session', () => {
       id: PEQUENOS_MILAGRES,
       title: 'Pequenos Milagres',
       bet: true,
-      predicted_rating: { bruno: { value: 8.31, raters: 3, deviation: 0.53 } },
+      predicted_rating: {
+        bruno: { value: 8.31, deviation: 0.53, raters: 3 },
+      },
       reason: { kind: 'taste', people: ['bruno'] },
     })
     expect(front(fixture, out.session.id).recommendation[0]).not.toHaveProperty(

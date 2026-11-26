@@ -30,26 +30,33 @@ const openSession = async (person: string, count: number) =>
     )
   ).session.id
 
-/** Opens a Session for Bruno and `person` with Bruno's taste neighbours
- * on (the fixture's users 10, 20 and 30), so the 5th place is the Aposta
- * (#178), Pequenos Milagres; gives its id. No other file may make that film
- * a Já visto of Bruno's. */
-const openBetSession = async (person: string) => {
-  const root = process.env.E2E_ENGINE!
-  const weights = `${root}/weights-bet.toml`
+/** `config/weights.toml` of the fixture copy with Bruno's taste neighbours
+ * on, written next to it for this project alone; the app keeps the
+ * default, where nobody has neighbours. */
+const tasteWeights = (project: string) => {
+  const root = process.env.E2E_ENGINE ?? ''
+  const file = join(root, `weights-taste-${project}.toml`)
   writeFileSync(
-    weights,
-    readFileSync(`${root}/config/weights.toml`, 'utf8').replace(
+    file,
+    readFileSync(join(root, 'config/weights.toml'), 'utf8').replace(
       'k = 50\nmin_shared = 10',
       'k = 3\nmin_shared = 5',
     ),
   )
+  return { FILMES_PESOS: file }
+}
+
+/** Opens a Session for Bruno and `person` with Bruno's taste neighbours
+ * on (the fixture's users 10, 20 and 30), so the 5th place is the Aposta
+ * (#178), Pequenos Milagres; gives its id. No other file may make that film
+ * a Já visto of Bruno's. */
+const openBetSession = async (person: string, project: string) => {
   const opened = await engineRun(
     (engine) =>
       engine.run(recommendSession({ attendees: ['bruno', person] }), {
         owner: 'bruno',
       }),
-    { FILMES_PESOS: weights },
+    tasteWeights(project),
   )
   return opened.session.id
 }
@@ -83,7 +90,7 @@ test('the Aposta has its stamp and its section; the films stand under their Moti
   if (mobile) await page.emulateMedia({ colorScheme: 'dark' })
   const name = mobile ? 'Rui' : 'Pia'
   await addPerson(name)
-  const id = await openBetSession(name.toLowerCase())
+  const id = await openBetSession(name.toLowerCase(), info.project.name)
   await loginAsBruno(page)
   await page.goto(`/sessoes/${id}`)
   await expect(cards(page)).toHaveCount(5)
@@ -230,28 +237,13 @@ test('in the dark, Copiar pro chat gives the text, and stars alone only note', a
 // rated (#174): with k = 3 and min_shared = 5 they predict 8,3 for him.
 const PEQUENOS_MILAGRES = 'tt9000601'
 
-/** `config/weights.toml` of the fixture copy with Bruno's taste neighbours
- * on, written next to it for this project alone; the app keeps the
- * default, where nobody has neighbours. */
-const tasteWeights = (project: string) => {
-  const root = process.env.E2E_ENGINE ?? ''
-  const file = join(root, `weights-taste-${project}.toml`)
-  writeFileSync(
-    file,
-    readFileSync(join(root, 'config/weights.toml'), 'utf8').replace(
-      'k = 50\nmin_shared = 10',
-      'k = 3\nmin_shared = 5',
-    ),
-  )
-  return { FILMES_PESOS: file }
-}
-
 test('the Nota prevista the Session recorded, per Presente who has one', async ({
   page,
 }, info) => {
   const vars = tasteWeights(info.project.name)
   const request = { attendees: ['bruno', 'iara'] }
-  // The Session is as long as Pequenos Milagres' place without a draw.
+  // A Session long enough to reach Pequenos Milagres; the Aposta (#178) may
+  // move it up, so its card is found by the Session's own position.
   const { films } = await engineRun(
     (engine) => engine.run(recommend({ ...request, count: 50 })),
     vars,
@@ -263,8 +255,6 @@ test('the Nota prevista the Session recorded, per Presente who has one', async (
     vars,
   )
   const id = session.session.id
-  // The Session draws the Aposta (#178): Pequenos Milagres may come up to
-  // the 5th place.
   const at =
     session.films.find((f) => f.id === PEQUENOS_MILAGRES)?.position ?? 0
   await loginAsBruno(page)
