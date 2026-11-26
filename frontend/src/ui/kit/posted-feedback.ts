@@ -1,30 +1,26 @@
 // What a screen says about a form it posted by `fetch` (#240): the page
 // stays where the Dono was, so the notice or the alert the answer brought
-// scrolls into view, and a form that went through is emptied, as the
-// reload emptied it (a file picked, a name typed). A refusal keeps the
-// form as the Dono left it.
+// scrolls into view once the page has it, even when it says what it said
+// before, and a form that went through is emptied, as the reload emptied
+// it (a file picked, a name typed). A refusal keeps the form as the Dono
+// left it.
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import type { Answered } from './fetch-form'
 
 /** `feedback`, the box of the notice or alert, and `onAnswer`, for
- * `useFetchForm`: it lets the page go to the answer. `shown` names what
- * the box says; when it changes after a post, the box scrolls into view. */
-export function usePostedFeedback(shown: string) {
+ * `useFetchForm`: it lets the page go to the answer, and scrolls the box
+ * into view once the page loaded it. */
+export function usePostedFeedback() {
   const feedback = useRef<HTMLDivElement>(null)
-  const posted = useRef(false)
-  const last = useRef(shown)
+  const [answers, setAnswers] = useState(0)
   useEffect(() => {
-    if (last.current === shown) return
-    last.current = shown
-    if (!posted.current) return
-    posted.current = false
-    feedback.current?.scrollIntoView({ block: 'nearest' })
-  }, [shown])
-  const onAnswer = (to: string, form: HTMLFormElement) => {
-    posted.current = true
+    if (answers > 0) feedback.current?.scrollIntoView({ block: 'nearest' })
+  }, [answers])
+  const onAnswer = (to: string, form: HTMLFormElement): Answered => {
     if (!new URL(to, window.location.origin).searchParams.has('erro'))
       form.reset()
-    return false
+    return () => setAnswers((n) => n + 1)
   }
   return { feedback, onAnswer }
 }

@@ -12,7 +12,7 @@ import {
 import type { VoteDeck } from '#/platform/session-votes'
 import { buttonVariants } from './kit/button-variants'
 import { useFetchForm } from './kit/fetch-form'
-import { Alert, Notice } from './kit/status'
+import { Alert, Notice, PostFailed } from './kit/status'
 import { VOTES } from './session-votes.copy'
 
 // The group swipe's deck (#182): one film at a time, Não or Sim, by the
@@ -163,7 +163,11 @@ export function VoteScreen({
 }) {
   const { feito, erro } = search
   const [failed, setFailed] = useState(false)
-  const { onSubmit, busy } = useFetchForm((to) => {
+  const {
+    onSubmit,
+    busy,
+    failed: lost,
+  } = useFetchForm((to) => {
     const url = new URL(to, window.location.origin)
     // A failed write can be retried. A failed redo still needs a fresh deck:
     // the server already counted the votes in that case.
@@ -181,6 +185,7 @@ export function VoteScreen({
       </h1>
       {feito && !failed && <Notice>{VOTES.notices[feito]}</Notice>}
       {refusal && <Alert>{VOTES.refusals[refusal]}</Alert>}
+      <PostFailed failed={lost} />
       {deck && deck.films.length > 0 ? (
         <VoteCards
           key={`${deck.version}:${deck.films.map((f) => f.id).join(',')}`}

@@ -61,9 +61,7 @@ export function QueueScreen({
   done?: QueueDoneView
   refusal?: QueueRefusal
 }) {
-  const { feedback, onAnswer } = usePostedFeedback(
-    done ? `${done.notice}:${done.resolved}:${done.left}` : (refusal ?? ''),
-  )
+  const { feedback, onAnswer } = usePostedFeedback()
   return (
     <PostAnswers onAnswer={onAnswer}>
       <ImportsFrame back={QUEUE.back} backTo={`${MY_TASTE}/importar`}>

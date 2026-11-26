@@ -19,9 +19,6 @@ export const Route = createFileRoute('/_owner')({
     if (!owner) throw redirect({ to: '/entrar', search: { recusa: undefined } })
     return { owner }
   },
-  // A manual push can clear the banner even on a same-page navigation.
-  shouldReload: ({ location }) =>
-    location.pathname === '/operacoes' ? true : undefined,
   loader: ({ context }) => (context.owner.admin ? readPushAlert() : null),
   component: OwnerLayout,
 })

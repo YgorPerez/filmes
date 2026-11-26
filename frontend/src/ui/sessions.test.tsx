@@ -212,6 +212,46 @@ describe('a Session’s page', () => {
     }
   })
 
+  it('keeps the Cartaz marks until the new Cartaz is in', async () => {
+    const path = '/sessoes/2026-11-20-iara'
+    vi.stubGlobal('scrollTo', vi.fn())
+    vi.stubGlobal(
+      'fetch',
+      vi.fn<typeof fetch>(() =>
+        Promise.resolve(Response.json({ to: `${path}?feito=regerada` })),
+      ),
+    )
+    const reload = Promise.withResolvers<void>()
+    let first = true
+    const loads = vi.fn<() => Promise<void> | void>(() => {
+      if (first) first = false
+      else return reload.promise
+    })
+    const router = createRouter({
+      routeTree: createRootRoute({
+        loader: loads,
+        component: () => <SessionScreen page={PAGE} />,
+      }),
+      history: createMemoryHistory({ initialEntries: [path] }),
+    })
+    render(<RouterProvider router={router} />)
+    const user = userEvent.setup()
+    const addition = () =>
+      screen.getByRole<HTMLTextAreaElement>('textbox', { name: /Acrescentar/ })
+    await screen.findByRole('textbox', { name: /Acrescentar/ })
+    await user.type(addition(), 'na próxima vez')
+    expect(localStorage.length).toBe(1)
+
+    await user.click(screen.getByRole('button', { name: 'Enviar' }))
+
+    await waitFor(() => expect(loads).toHaveBeenCalledTimes(2))
+    expect(addition().value).toBe('na próxima vez')
+    expect(localStorage.length).toBe(1)
+    reload.resolve()
+    await waitFor(() => expect(addition().value).toBe(''))
+    expect(localStorage.length).toBe(0)
+  })
+
   it('copies the shareable Link da Sessão', async () => {
     const user = userEvent.setup()
     const sessionLink = 'https://cinema.example/participar?sessao=x&chave=y'

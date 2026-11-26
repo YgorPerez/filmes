@@ -19,6 +19,7 @@ import { Option } from './kit/option'
 import { OwnerTag } from './kit/owner-tag'
 import {
   Alert,
+  PostFailed,
   ChosenFilms,
   Disclosure,
   Item,
@@ -296,7 +297,7 @@ function NewSessionForm({
     refusal,
     refusalOn(isSessionRequestRefusal, '/sessoes/nova'),
   )
-  const { onSubmit, busy } = useFetchForm(onAnswer)
+  const { onSubmit, busy, failed } = useFetchForm(onAnswer)
   const films = useChosenFilms(similar)
   const onPick = live ? films.take : undefined
   return (
@@ -320,6 +321,7 @@ function NewSessionForm({
           <Alert>{SESSIONS.refusals[refused]}</Alert>
         </div>
       )}
+      <PostFailed failed={failed} />
       <Sentence
         text={asked.request}
         reading={draft?.reading ?? null}

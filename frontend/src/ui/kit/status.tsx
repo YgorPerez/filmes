@@ -40,3 +40,13 @@ export function Notice({ children }: { children: ReactNode }) {
     </p>
   )
 }
+
+/** What a form posted by `fetch` says when its post got no answer to go
+ * by (`useFetchForm`'s `failed`): the server may have done it, so the Dono
+ * looks before sending it again. */
+export const POST_FAILED =
+  'Não deu para confirmar o envio. Confira a conexão e, se nada mudou, tente de novo.'
+
+export function PostFailed({ failed }: { failed: boolean }) {
+  return failed ? <Alert>{POST_FAILED}</Alert> : null
+}

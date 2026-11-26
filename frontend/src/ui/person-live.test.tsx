@@ -9,6 +9,7 @@ import {
   createRootRoute,
   createRouter,
   RouterProvider,
+  useSearch,
 } from '@tanstack/react-router'
 import {
   cleanup,
@@ -21,6 +22,7 @@ import userEvent from '@testing-library/user-event'
 import type { ComponentProps } from 'react'
 import { renderToString } from 'react-dom/server'
 import { afterEach, expect, it, vi } from 'vite-plus/test'
+import { isPersonNotice } from '#/content/person-action'
 import { CATALOG_SEARCH } from './catalog-search.copy'
 import { PersonScreen } from './person'
 import { PERSON } from './person.copy'
@@ -85,7 +87,16 @@ function showRouted(href = '/pessoas/iara') {
   const router = createRouter({
     routeTree: createRootRoute({
       loader: () => loads(),
-      component: () => <PersonScreen slug="iara" page={IARA} />,
+      component: function Person() {
+        const { feito } = useSearch({ strict: false })
+        return (
+          <PersonScreen
+            slug="iara"
+            page={IARA}
+            notice={isPersonNotice(feito) ? feito : undefined}
+          />
+        )
+      },
     }),
     history: createMemoryHistory({ initialEntries: [href] }),
   })
@@ -180,16 +191,60 @@ it('says what “Tirar” and “Pular” are doing while they post', async () =
     }),
   )
 
+  // Their names say it too, not what they do when idle.
   expect(
-    within(vetoes()).getByRole('button', {
+    (
+      within(vetoes()).getByRole('button', {
+        name: PERSON.removing,
+      }) as HTMLButtonElement
+    ).disabled,
+  ).toBe(true)
+  expect(
+    screen.queryByRole('button', {
       name: PERSON.removeLabel('nunca vê terror'),
-    }).textContent,
-  ).toBe(PERSON.removing)
+    }),
+  ).toBeNull()
   expect(
+    screen.getByRole('button', { name: PERSON.questions.skipping }),
+  ).toBeTruthy()
+})
+
+it('hides the notice of the last post while a form shows its refusal', async () => {
+  answering('/pessoas/iara?erro=alvo')
+  Element.prototype.scrollIntoView = vi.fn<() => void>()
+  showRouted('/pessoas/iara?feito=gravado')
+  expect((await screen.findByRole('status')).textContent).toBe(
+    PERSON.notices.gravado,
+  )
+  const { user, form } = await typeVeto('nunca')
+
+  await user.click(within(form).getByRole('button', { name: PERSON.save }))
+
+  await within(form).findByRole('alert')
+  expect(screen.queryByRole('status')).toBeNull()
+})
+
+it('clears a refusal a form showed once a later post goes through', async () => {
+  const answered = answering('/pessoas/iara?erro=alvo')
+  Element.prototype.scrollIntoView = vi.fn<() => void>()
+  const router = showRouted()
+  const { user, form } = await typeVeto('nunca')
+  await user.click(within(form).getByRole('button', { name: PERSON.save }))
+  await within(form).findByRole('alert')
+
+  answered.mockImplementation(() =>
+    Promise.resolve(Response.json({ to: '/pessoas/iara?feito=removido' })),
+  )
+  await user.click(
     screen.getByRole('button', {
       name: `${PERSON.questions.skip}: a Iara curte terror?`,
-    }).textContent,
-  ).toBe(PERSON.questions.skipping)
+    }),
+  )
+
+  await waitFor(() =>
+    expect(router.state.location.href).toBe('/pessoas/iara?feito=removido'),
+  )
+  expect(within(form).queryByRole('alert')).toBeNull()
 })
 
 it('goes to the list when her Pessoa is gone', async () => {

@@ -3,9 +3,10 @@
 // plain `<form method="post">` before it (`useFetchForm`).
 
 import { createContext, useContext, type ReactNode } from 'react'
-import { useFetchForm } from './fetch-form'
+import { useFetchForm, type Answered } from './fetch-form'
+import { PostFailed } from './status'
 
-type OnAnswer = (to: string, form: HTMLFormElement) => boolean
+type OnAnswer = (to: string, form: HTMLFormElement) => Answered
 
 const PostAnswer = createContext<OnAnswer | undefined>(undefined)
 
@@ -24,7 +25,8 @@ export function PostAnswers({
 
 /** A `<form method="post">` to `action` (multipart when it sends a file)
  * that posts by `fetch` once the JavaScript is in. `children` see whether
- * its post is running, to disable its buttons and say what it does. */
+ * its post is running, to disable its buttons and say what it does; a
+ * post that got no answer says so over them. */
 export function PostForm({
   action,
   label,
@@ -38,7 +40,7 @@ export function PostForm({
   upload?: boolean
   children: (busy: boolean) => ReactNode
 }) {
-  const { onSubmit, busy } = useFetchForm(useContext(PostAnswer))
+  const { onSubmit, busy, failed } = useFetchForm(useContext(PostAnswer))
   return (
     <form
       method="post"
@@ -48,6 +50,7 @@ export function PostForm({
       onSubmit={onSubmit}
       className={className}
     >
+      <PostFailed failed={failed} />
       {children(busy !== null)}
     </form>
   )

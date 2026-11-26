@@ -1,8 +1,8 @@
 // The alert of a refusal, boxed and as the shell's strip, and the notice of
-// what went through.
+// what went through, and the alert of a post that got no answer.
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, within } from 'storybook/test'
-import { Alert, Notice } from './status'
+import { Alert, Notice, POST_FAILED, PostFailed } from './status'
 
 const meta = {
   component: Alert,
@@ -25,5 +25,14 @@ export const NoticeOfSuccess: Story = {
   render: () => <Notice>Nota salva.</Notice>,
   play: async ({ canvasElement }) => {
     await expect(within(canvasElement).getByRole('status')).toBeVisible()
+  },
+}
+
+export const PostFailedToConfirm: Story = {
+  render: () => <PostFailed failed />,
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByRole('alert')).toHaveTextContent(
+      POST_FAILED,
+    )
   },
 }

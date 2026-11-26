@@ -11,7 +11,13 @@ import {
   RouterProvider,
   useSearch,
 } from '@tanstack/react-router'
-import { cleanup, render, screen, within } from '@testing-library/react'
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, expect, it, vi } from 'vite-plus/test'
 import { PERSON_IMPORTS } from './imports.copy'
@@ -98,6 +104,31 @@ it('imports the profile by fetch, says what came, and empties the form', async (
   expect(new Headers(init?.headers).get('x-filmes-fetch')).toBe('1')
   expect((init?.body as FormData | undefined)?.get('usuario')).toBe('bruno')
   expect((field as HTMLInputElement).value).toBe('')
+})
+
+it('brings the notice into view again when a second import says the same', async () => {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn<typeof fetch>(() =>
+      Promise.resolve(
+        Response.json({ to: '/meu-gosto/importar?feito=rss&novos=3' }),
+      ),
+    ),
+  )
+  const scrolled = vi.fn<() => void>()
+  Element.prototype.scrollIntoView = scrolled
+  renderRouted()
+  const user = userEvent.setup()
+  const rss = await rssForm()
+  const field = rss.getByLabelText(COPY.rss.user, { exact: false })
+
+  await user.type(field, 'bruno')
+  await user.click(rss.getByRole('button', { name: COPY.rss.submit }))
+  await waitFor(() => expect(scrolled).toHaveBeenCalledOnce())
+  await user.type(field, 'bruno')
+  await user.click(rss.getByRole('button', { name: COPY.rss.submit }))
+
+  await waitFor(() => expect(scrolled).toHaveBeenCalledTimes(2))
 })
 
 it('keeps the profile typed when the post is refused', async () => {

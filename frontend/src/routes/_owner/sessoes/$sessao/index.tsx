@@ -14,13 +14,9 @@ export const Route = createFileRoute('/_owner/sessoes/$sessao/')({
     nota: isNoteToken(search.nota) ? search.nota : undefined,
   }),
   loaderDeps: ({ search }) => ({ nota: search.nota }),
-  shouldReload: true,
-  loader: {
-    // After a POST, keep the forms busy until we have the new Cartaz and answers.
-    staleReloadMode: 'blocking',
-    handler: ({ params, deps }) =>
-      readSessionPage({ data: { session: params.sessao, note: deps.nota } }),
-  },
+  // A post loads the page again itself, once (`useFetchForm`).
+  loader: ({ params, deps }) =>
+    readSessionPage({ data: { session: params.sessao, note: deps.nota } }),
   component: SessionRoute,
 })
 
