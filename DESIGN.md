@@ -437,7 +437,7 @@ Neutros frios fazem a tela. Os adesivos e as cores dos Presentes têm um papel c
 
 ### Tertiary
 
-- **Cores dos Presentes** (person-1 a person-6, e dark-person no escuro): uma por Presente, na ordem dos Presentes da Sessão, a mesma no ponto sob a capa, no avatar da Evidência e na legenda. Azul, verde, magenta, marrom, violeta e petróleo. Nenhuma é laranja nem rosa vivo, para um avatar não ser lido como adesivo de preço ou de troca. No claro a inicial vai em on-person branco (4,7:1 ou mais); no escuro, em dark-on-person (#121417, 6,5:1 ou mais).
+- **Cores dos Presentes** (person-1 a person-6, e dark-person no escuro): uma por Presente, na ordem dos Presentes da Sessão, a mesma no ponto sob a capa, no avatar da legenda e no das marcações. Azul, verde, magenta, marrom, violeta e petróleo. Nenhuma é laranja nem rosa vivo, para um avatar não ser lido como adesivo de preço ou de troca. No claro a inicial vai em on-person branco (4,7:1 ou mais); no escuro, em dark-on-person (#121417, 6,5:1 ou mais).
 - **Cores de gênero** (genre-*): o ponto de 9px dentro do chip de gênero, como a etiqueta colorida na lombada. O nome do gênero está sempre escrito ao lado; a cor é só lembrete. Mapa fixo dos gêneros do IMDb:
   - genre-blue: Drama, Biography, History, War
   - genre-violet: Mystery, Crime, Thriller, Horror, Sci-Fi, Fantasy, Film-Noir
@@ -582,7 +582,8 @@ Trilho preto (estojo, 5px, raio 6px) e, dentro, a etiqueta clara (shelf-label, r
 
 - **Estojo:** preto, raio 8px, 5px de borda em cima e dos lados. Dentro, a capa.
 - **Capa:** pôster do TMDB 2:3, raio 3px. Sem capa, o título em Rubik 700 13px, tinta clara, no centro sobre superfície 2.
-- **Pontos dos Presentes:** embaixo da capa, ainda no estojo, um ponto de 12px por Presente, 6px entre eles, centrados: cheio quem tem Fato, vazado (anel de 2px) quem não tem. O `title` diz "Teo: sem fato".
+- **Pontos dos Presentes:** embaixo da capa, ainda no estojo, um ponto de 12px por Presente, 6px entre eles, centrados, quebrando em mais linhas quando não cabem: cheio quem tem Fato, vazado (anel de 2px) quem não tem. Cada Presente aparece só aqui no card. Quem tem Nota prevista leva o número ao lado do ponto (ver Nota prevista); o ponto sozinho é só desenho, e quem não tem Fato se lê no texto de "Por que".
+- **Link:** só a capa é link para o IMDb; os pontos e os adesivos ficam fora dele.
 - **Adesivo de preço:** círculo laranja de 34px, número da posição em Rubik 800 18px, girado -8°, 9px para fora do canto de cima à esquerda, com anel de 2px na cor da superfície.
 - **Versão pequena** (ficha da última Sessão): estojo com 3px de borda e raio 5px, só a capa, sem pontos nem adesivos.
 
@@ -609,11 +610,11 @@ Os cards ficam sob o título do Motivo deles, na ordem da Recomendação: um tí
 
 ### Nota prevista
 
-Abaixo dos chips, quando algum Presente tem Nota prevista: o rótulo "NOTA PREVISTA" em label, tinta clara, e uma pílula por Presente que tem uma, na ordem dos Presentes: contorno de 1,5px em fio, o avatar de 24px e o número em Rubik 700 12px tabular, com uma casa ("8,3"), na escala de 1 a 10 do Já vi. Quem não tem Nota prevista não aparece: nunca um palpite. O leitor de tela ouve "Bruno: 8,3 de 10". A nota é a que a versão gravou na Sessão; ela não muda depois.
+No ponto do Presente, no estojo: o número em Rubik 700 11px tabular, case-ink, 2px depois do ponto, com uma casa ("8,3"), na escala de 1 a 10 do Já vi; no ponto vazado também. Quem não tem Nota prevista fica só com o ponto: nunca um palpite nem um traço. O ponto com número é um botão: o toque, o clique ou o mouse em cima abrem embaixo dele, correndo para a direita, um balão em superfície com fio de 1px, raio 8px e texto meta, "Bruno: 8,3 de 10 · 12 vizinhos" (os vizinhos de gosto que a sustentam); tocar fora ou Esc fecha. O leitor de tela ouve o mesmo texto no botão. A nota é a que a versão gravou na Sessão; ela não muda depois.
 
 ### Por que cada um vai gostar
 
-Rótulo em label, com "Fato sobre N de M" à direita. Uma linha por Evidência, grade de 34px, 28px e o resto: avatar de 24px (ou avatares sobrepostos com anel de 2px quando a Evidência é a mesma), a Força em três pontos, e o texto do motor com a Fonte embaixo. Quem não tem Fato fecha a lista com o avatar vazado e "Fulano: sem fato sobre este filme", em tinta clara.
+Rótulo em label, com "Fato sobre N de M" à direita. Uma linha por Evidência, grade de 28px e o resto: a Força em três pontos, centrada na primeira linha, e o texto, que abre com o nome de quem é a Evidência em semibold ("Bruno:", "Bruno e Iara:") e segue com o texto do motor, a Fonte embaixo. Sem avatar: a pessoa aparece no ponto do estojo. Quem não tem Fato fecha a lista só com o texto "Fulano: sem fato sobre este filme", em tinta clara.
 
 ### Legenda
 

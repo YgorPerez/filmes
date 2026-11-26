@@ -84,8 +84,9 @@ describe('the view shows', () => {
   it('the Nota prevista the tool result carries', () => {
     render(<BillboardView result={shown} host={fakeHost(json({}))} />)
     expect(
-      card(1).getByRole('list', { name: BILLBOARD.card.predicted }).textContent,
-    ).toBe('B8,3Bruno: 8,3 de 10')
+      card(1).getByRole('button', { name: 'Bruno: 8,3 de 10 · 12 vizinhos' })
+        .textContent,
+    ).toBe('8,3')
   })
 
   it("the engine's error when the tool failed", () => {
