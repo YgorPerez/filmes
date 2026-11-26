@@ -86,14 +86,13 @@ it('puts the film lookup in the same form as the request', () => {
     name: 'Nova Sessão',
   }) as HTMLFormElement
   const lookup = screen.getByRole('region', { name: CATALOG_SEARCH.title })
-  const search = within(lookup).getByRole('button', {
-    name: 'Buscar',
-  }) as HTMLButtonElement
+  const search = within(lookup).getByRole('searchbox') as HTMLInputElement
 
+  // With the JavaScript in, the search runs as the Dono types: no button.
   expect(search.form).toBe(form)
   expect(form.method).toBe('post')
-  expect(new FormData(form, search).get('parecido')).toBe('tt1')
-  expect(new FormData(form, search).get('buscar-catalogo')).toBe('sim')
+  expect(within(lookup).queryByRole('button', { name: 'Buscar' })).toBeNull()
+  expect(new FormData(form).get('parecido')).toBe('tt1')
   expect(screen.queryByRole('status')).toBeNull()
 })
 
