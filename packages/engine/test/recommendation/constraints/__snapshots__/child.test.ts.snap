@@ -15,7 +15,11 @@ exports[`the whole output, as recorded > child 10 with OMDb 1`] = `
     "child": {
       "age": 10,
       "maxAgeRating": "10",
-      "removed": 73,
+      "removed": 79,
+    },
+    "series_order": {
+      "mode": "previous",
+      "removed": 2,
     },
   },
   "disagreement": null,
@@ -522,7 +526,11 @@ exports[`the whole output, as recorded > child 10 without the OMDb key 1`] = `
     "child": {
       "age": 10,
       "maxAgeRating": "10",
-      "removed": 74,
+      "removed": 80,
+    },
+    "series_order": {
+      "mode": "previous",
+      "removed": 2,
     },
   },
   "disagreement": null,
@@ -961,7 +969,11 @@ exports[`the whole output, as recorded > child 12, local chain only 1`] = `
     "child": {
       "age": 12,
       "maxAgeRating": "12",
-      "removed": 71,
+      "removed": 77,
+    },
+    "series_order": {
+      "mode": "previous",
+      "removed": 2,
     },
   },
   "disagreement": null,
@@ -1644,7 +1656,11 @@ exports[`the whole output, as recorded > child 17 with OMDb 1`] = `
     "child": {
       "age": 17,
       "maxAgeRating": "16",
-      "removed": 65,
+      "removed": 71,
+    },
+    "series_order": {
+      "mode": "previous",
+      "removed": 2,
     },
   },
   "disagreement": null,
@@ -2720,7 +2736,11 @@ exports[`the whole output, as recorded > child no age 1`] = `
     "child": {
       "age": 0,
       "maxAgeRating": "L",
-      "removed": 77,
+      "removed": 83,
+    },
+    "series_order": {
+      "mode": "previous",
+      "removed": 2,
     },
   },
   "disagreement": null,

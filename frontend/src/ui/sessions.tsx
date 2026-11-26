@@ -1,7 +1,10 @@
 import type { ReactNode } from 'react'
 import {
+  DEFAULT_SERIES_ORDER_CHOICE,
   MAX_CHILD_AGE,
   RULE_CHOICES,
+  SERIES_ORDER_CHOICES,
+  type SeriesOrderChoice,
   type SessionRequestForm,
   type SessionRequestRefusal,
 } from '#/content/session-request'
@@ -555,6 +558,7 @@ function NewSessionForm({
       <Rule options={options} asked={asked} />
       <Moods moods={options.moods} asked={asked} />
       <Constraints similar={similar} asked={asked} />
+      <SeriesOrder />
       <Submit variant="primary" className="w-full sm:w-auto sm:self-start">
         {form.submit}
       </Submit>
@@ -632,6 +636,38 @@ function Rule({ options, asked }: { options: RequestOptions; asked: Asked }) {
         ]}
         defaultValue={asked.by ?? ''}
       />
+    </Section>
+  )
+}
+
+/** The Série na ordem (#165): three modes, the default checked and
+ * marked. */
+function SeriesOrder() {
+  const { form } = SESSIONS
+  return (
+    <Section id="serie" title={form.seriesOrder} lead={form.seriesOrderLead}>
+      <div className="flex flex-col gap-sm" role="radiogroup">
+        {(Object.keys(SERIES_ORDER_CHOICES) as SeriesOrderChoice[]).map(
+          (value) => (
+            <Option
+              key={value}
+              type="radio"
+              shape="row"
+              name="serie"
+              value={value}
+              defaultChecked={value === DEFAULT_SERIES_ORDER_CHOICE}
+            >
+              {form.seriesOrders[value]}
+              {value === DEFAULT_SERIES_ORDER_CHOICE && (
+                <span className="font-body text-meta font-normal text-ink-2">
+                  {' · '}
+                  {form.seriesOrderDefault}
+                </span>
+              )}
+            </Option>
+          ),
+        )}
+      </div>
     </Section>
   )
 }

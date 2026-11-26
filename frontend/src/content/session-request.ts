@@ -9,7 +9,8 @@
 // `quantos`, `pedido` (the Dono's words), and the Restrições: `duracao`
 // (minutes), `desde`/`ate` (years), `idioma`, `crianca` (age, 0 = no age),
 // `gatilhos` and `parecido` (lists separated by commas), `sem-ja-visto`,
-// `sem-lento`, `sem-tristeza` (checkboxes).
+// `sem-lento`, `sem-tristeza` (checkboxes), and `serie` (`anterior` |
+// `todos` | `tanto-faz`, the Série na ordem, #165).
 
 import { field, oneOf, within } from './form-fields'
 
@@ -21,6 +22,19 @@ export const RULE_CHOICES = {
 } as const
 type RuleChoice = keyof typeof RULE_CHOICES
 const ruleChoices = Object.keys(RULE_CHOICES) as RuleChoice[]
+
+/** The Série na ordem's modes the form offers, by their value in the form
+ * (the engine's `SERIES_ORDER_MODES`); `anterior` is the engine's default. */
+export const SERIES_ORDER_CHOICES = {
+  anterior: 'previous',
+  todos: 'all',
+  'tanto-faz': 'off',
+} as const
+export type SeriesOrderChoice = keyof typeof SERIES_ORDER_CHOICES
+export const DEFAULT_SERIES_ORDER_CHOICE: SeriesOrderChoice = 'anterior'
+const seriesOrderChoices = Object.keys(
+  SERIES_ORDER_CHOICES,
+) as SeriesOrderChoice[]
 
 /** The oldest child the Restrição takes (the engine's `MAX_CHILD_AGE`). */
 export const MAX_CHILD_AGE = 17
@@ -44,6 +58,7 @@ export type SessionRequestForm = {
   unseen?: boolean
   noSlow?: boolean
   noSad?: boolean
+  seriesOrder?: (typeof SERIES_ORDER_CHOICES)[SeriesOrderChoice]
 }
 
 /** Why not, in `?erro=`. */
@@ -146,6 +161,15 @@ function similar(form: FormData) {
   return ids
 }
 
+/** The Série na ordem asked for; nothing for the default mode, which the
+ * engine applies by itself, or for a value the form does not offer. */
+function seriesOrder(form: FormData) {
+  const choice = oneOf(seriesOrderChoices, field(form, 'serie'))
+  return choice === undefined || choice === DEFAULT_SERIES_ORDER_CHOICE
+    ? undefined
+    : SERIES_ORDER_CHOICES[choice]
+}
+
 /** Drops the absent fields, so the request holds only what was asked. */
 const present = <T extends object>(value: T): T =>
   Object.fromEntries(
@@ -167,6 +191,7 @@ function read(form: FormData): SessionRequestForm {
     unseen: checked(form, 'sem-ja-visto'),
     noSlow: checked(form, 'sem-lento'),
     noSad: checked(form, 'sem-tristeza'),
+    seriesOrder: seriesOrder(form),
   })
 }
 

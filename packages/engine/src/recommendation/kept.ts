@@ -57,8 +57,9 @@ import type { Connection, SqliteError } from '../sqlite/Sqlite.ts'
 import { currentVersion, shownFilms, type ShownFilm } from '../sessions/file.ts'
 import { yesVotes } from '../sessions/votes.ts'
 import type { Candidate } from './candidates.ts'
-import type { Constraint } from './constraints.ts'
+import type { Constraint, DropDetail } from './constraints.ts'
 import { constraintLabel } from './constraints/index.ts'
+import type { UnseenBefore } from './constraints/series-order.ts'
 import { applyVetoes } from './vetoes.ts'
 
 /** What a refazer carries into the ranking (Python's `Regerar`). */
@@ -97,6 +98,8 @@ export type RemovalCause =
       readonly cause: 'constraint'
       readonly constraint: string
       readonly label: string | null
+      /** The Série na ordem: who did not see the films before (#165). */
+      readonly unseen?: ReadonlyArray<UnseenBefore>
     }
   | { readonly cause: 'veto'; readonly person: string; readonly text: string }
   | { readonly cause: 'min_rating'; readonly label: string }
@@ -222,11 +225,16 @@ export const byVeto = (
     return { cause: 'veto', person: veto.person, text: veto.text }
   })
 
-/** The cause of a kept film a Restrição removed (`pela_restricao`). */
-export const byConstraint = (constraint: Constraint): RemovalCause => ({
+/** The cause of a kept film a Restrição removed (`pela_restricao`), with
+ * what the Restrição said about the film, when it said more. */
+export const byConstraint = (
+  constraint: Constraint,
+  detail?: DropDetail,
+): RemovalCause => ({
   cause: 'constraint',
   constraint: constraint.name,
   label: constraintLabel(constraint.stored()),
+  ...detail,
 })
 
 /** (position, item): the kept films at their number and the free places,

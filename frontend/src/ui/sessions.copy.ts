@@ -151,6 +151,15 @@ export const SESSIONS = {
     unseenHint: 'tira o filme que um Presente já viu',
     noSlow: 'Nada lento',
     noSad: 'Nada triste',
+    seriesOrder: 'Série na ordem',
+    seriesOrderLead:
+      'A continuação de uma série de filmes só entra se todos os Presentes viram o filme antes dela. Franquia, como Marvel ou Star Wars, não conta.',
+    seriesOrders: {
+      anterior: 'Só se viram o anterior',
+      todos: 'Só se viram todos os anteriores',
+      'tanto-faz': 'Tanto faz',
+    },
+    seriesOrderDefault: 'padrão',
     submit: 'Recomendar',
     searchFold: 'Parecido com um filme?',
     searchFoldHint: 'ache o ID no Catálogo',

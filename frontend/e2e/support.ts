@@ -4,6 +4,7 @@
 // engine over the file's fixture copy (`servers.ts`), to check what the app
 // wrote or to prepare what a screen needs.
 
+import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
   makeEngine,
@@ -65,6 +66,15 @@ export async function loginAs(page: Page, email: string) {
   await page.getByLabel('E-mail').fill(email)
   await page.getByRole('button', { name: 'Continuar' }).click()
   await expect(page).toHaveURL(/\/$/)
+}
+
+/** Makes Bruno admin on the copy (`operations.e2e.ts`, `owners.e2e.ts`):
+ * the other files do not mind. */
+export function makeBrunoAdmin() {
+  const file = join(engineRoot(), 'data/people/bruno.md')
+  const text = readFileSync(file, 'utf8')
+  if (!/^admin: true$/m.test(text))
+    writeFileSync(file, text.replace(/^---\n/, '---\nadmin: true\n'))
 }
 
 /** `loginAs` Bruno. */

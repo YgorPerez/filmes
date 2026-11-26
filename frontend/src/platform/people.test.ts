@@ -11,7 +11,7 @@ import { describe, expect, it, vi } from 'vite-plus/test'
 import { useFixture } from '../../../packages/engine/test/fixture.ts'
 import { parseAction, type PersonAction } from '#/content/person-action'
 import type { NewPersonForm } from '#/content/person-create'
-import type { Owner } from './owners'
+import { ownersFromDataRepo, type Owner } from './owners'
 import {
   ownerAuthor,
   peopleFromEngine,
@@ -124,6 +124,11 @@ describe('parseAction', () => {
       { acao: 'remover', tipo: 'veto', id: 'vetos:abc' },
       { kind: 'remove', what: 'veto', id: 'vetos:abc' },
     ],
+    [
+      { acao: 'dar-acesso', email: ' iara@example.org ' },
+      { kind: 'grant', email: 'iara@example.org' },
+    ],
+    [{ acao: 'tirar-acesso' }, { kind: 'revoke' }],
   ])('reads the form %j', (fields, action) => {
     expect(parseAction(form(fields))).toEqual(action)
   })
@@ -142,6 +147,7 @@ describe('parseAction', () => {
     { acao: 'pular' },
     { acao: 'responder', texto: 'sim' },
     { acao: 'remover', tipo: 'open_question', id: 'x' },
+    { acao: 'dar-acesso', email: '  ' },
   ])('refuses the form %j', (fields) => {
     expect(parseAction(form(fields))).toBeNull()
   })
@@ -160,6 +166,7 @@ function fakePeople(
     }),
     view: async () => failure('unknown_person'),
     tagGroups: async () => ({ exitCode: 0, output: [] }),
+    email: async () => ({ exitCode: 0, output: null }),
     act: async (person, action, owner) => {
       acted.push({ person, action, owner })
       return outcome
@@ -455,7 +462,11 @@ describe('peopleFromEngine', () => {
       expect(page.ratings?.length).toBe(4)
       expect(page.tagGroups.map((g) => g.key)).toEqual(['silly_comedy', 'slow'])
       expect(page).not.toHaveProperty('imports')
-      expect(page.viewer).toEqual({ person: 'bruno', name: 'Bruno' })
+      expect(page.viewer).toEqual({
+        person: 'bruno',
+        name: 'Bruno',
+        admin: false,
+      })
     } finally {
       await engine.dispose()
     }
@@ -693,6 +704,133 @@ describe('peopleFromEngine', () => {
       'Bruno <bruno@example.org>|pessoa criar Luana Reis',
       'fixture <fixture@example.org>|initial',
     ])
+  }, 60_000)
+})
+
+describe('access (#166)', () => {
+  const ADMIN: Owner = { ...BRUNO, admin: true }
+
+  /** The fixture as a git repo and the page's form, posted as `owner`. */
+  const useAccessForm = () => {
+    const fixture = useFixture()
+    commitFixture(fixture.data)
+    const engine = makeEngine(fixture.vars)
+    const people = peopleFromEngine(engine)
+    const send = async (
+      owner: Owner,
+      person: string,
+      fields: Record<string, string>,
+    ) => {
+      const request = new Request(`${ORIGIN}/pessoas/${person}/acao`, {
+        method: 'POST',
+        headers: { Origin: ORIGIN },
+        body: form(fields),
+      })
+      const response = await personAction(
+        request,
+        person,
+        owner,
+        people,
+        ORIGIN,
+      )
+      return response.status === 303
+        ? response.headers.get('Location')
+        : response.status
+    }
+    const owners = ownersFromDataRepo(fixture.data)
+    return { fixture, engine, people, send, owners }
+  }
+
+  it('lets an admin make a Pessoa a Dono, who is not admin', async () => {
+    const { fixture, engine, send, owners } = useAccessForm()
+    try {
+      expect(owners.ownerByEmail('quim@example.org')).toBeNull()
+      expect(
+        await send(ADMIN, 'quim', {
+          acao: 'dar-acesso',
+          email: 'Quim@Example.org',
+        }),
+      ).toBe('/pessoas/quim?feito=acesso-dado')
+      expect(owners.ownerByEmail('quim@example.org')).toEqual({
+        person: 'quim',
+        name: 'Quim',
+        email: 'quim@example.org',
+        admin: false,
+      })
+    } finally {
+      await engine.dispose()
+    }
+    expect(git(fixture.data, 'log', '-1', '--format=%an <%ae>|%s').trim()).toBe(
+      'Bruno <bruno@example.org>|pessoa dar acesso quim',
+    )
+  }, 60_000)
+
+  it('refuses an e-mail another Pessoa has, a bad one and a Dono already', async () => {
+    const { engine, send, owners } = useAccessForm()
+    try {
+      const grant = (person: string, email: string) =>
+        send(ADMIN, person, { acao: 'dar-acesso', email })
+      expect(await grant('quim', 'VERA@example.org')).toBe(
+        '/pessoas/quim?erro=email-usado',
+      )
+      expect(await grant('quim', 'quim@x')).toBe('/pessoas/quim?erro=email')
+      expect(await grant('vera', 'v@example.org')).toBe(
+        '/pessoas/vera?erro=ja-dono',
+      )
+      expect(owners.ownerByEmail('quim@x')).toBeNull()
+      expect(owners.ownerByEmail('v@example.org')).toBeNull()
+    } finally {
+      await engine.dispose()
+    }
+  }, 60_000)
+
+  it('refuses a Dono who is not admin', async () => {
+    const { engine, send, owners } = useAccessForm()
+    try {
+      expect(
+        await send(BRUNO, 'quim', {
+          acao: 'dar-acesso',
+          email: 'quim@example.org',
+        }),
+      ).toBe(403)
+      expect(await send(BRUNO, 'vera', { acao: 'tirar-acesso' })).toBe(403)
+      expect(owners.ownerByEmail('quim@example.org')).toBeNull()
+      expect(owners.ownerByEmail('vera@example.org')?.person).toBe('vera')
+    } finally {
+      await engine.dispose()
+    }
+  }, 60_000)
+
+  it('takes it away and keeps her, but never the admin her own', async () => {
+    const { engine, people, send, owners } = useAccessForm()
+    try {
+      expect(await send(ADMIN, 'bruno', { acao: 'tirar-acesso' })).toBe(
+        '/pessoas/bruno?erro=proprio-acesso',
+      )
+      expect(owners.ownerByEmail('bruno@example.org')?.person).toBe('bruno')
+      expect(await send(ADMIN, 'vera', { acao: 'tirar-acesso' })).toBe(
+        '/pessoas/vera?feito=acesso-tirado',
+      )
+      expect(owners.ownerByEmail('vera@example.org')).toBeNull()
+      const page = await personPage('vera', people, ADMIN)
+      expect(page).toMatchObject({ owner: false, access: { email: null } })
+    } finally {
+      await engine.dispose()
+    }
+  }, 60_000)
+
+  it('shows her e-mail only to an admin', async () => {
+    const { engine, people } = useAccessForm()
+    try {
+      expect(await personPage('vera', people, ADMIN)).toMatchObject({
+        access: { email: 'vera@example.org' },
+      })
+      expect(await personPage('vera', people, BRUNO)).not.toHaveProperty(
+        'access',
+      )
+    } finally {
+      await engine.dispose()
+    }
   }, 60_000)
 })
 

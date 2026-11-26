@@ -32,9 +32,9 @@ export const IMPORTS = {
 } as const
 
 const KINDS: Record<string, string> = {
-  letterboxd: 'Export do Letterboxd',
+  letterboxd: 'Arquivo do Letterboxd',
   'letterboxd-rss': 'RSS do Letterboxd',
-  trakt: 'Export do Trakt',
+  trakt: 'Arquivo do Trakt',
 }
 
 export const PERSON_IMPORTS = {
@@ -43,10 +43,10 @@ export const PERSON_IMPORTS = {
   unknown: 'Nenhuma Pessoa com esse nome no repo de dados.',
   unavailable: UNAVAILABLE,
   notices: {
-    letterboxd: (n: number) => `Export do Letterboxd importado: ${facts(n)}.`,
+    letterboxd: (n: number) => `Arquivo do Letterboxd importado: ${facts(n)}.`,
     rss: (n: number) => `RSS do Letterboxd importado: ${facts(n)}.`,
     trakt: (n: number, outside = 0) =>
-      `Export do Trakt importado: ${facts(n)}.` +
+      `Arquivo do Trakt importado: ${facts(n)}.` +
       (outside === 0
         ? ''
         : ` ${count(outside, 'filme ficou', 'filmes ficaram')} de fora: o Catálogo não tem.`),
@@ -60,12 +60,13 @@ export const PERSON_IMPORTS = {
   refusals: {
     pedido: 'Faltou um campo, ou um valor não vale. Confira o formulário.',
     arquivo:
-      'Esse arquivo não é o export que o formulário pede. Envie o ZIP como veio, sem descompactar.',
+      'Não deu para ler esse arquivo. Envie o ZIP como o Letterboxd ou o Trakt te deu, sem descompactar.',
+    origem: 'Esse ZIP não parece ser do Letterboxd nem do Trakt.',
     grande:
-      'O arquivo passa de 20 MB. Um export do Letterboxd ou do Trakt costuma ter poucos MB: confira se é o certo.',
+      'O arquivo passa de 20 MB. O ZIP do Letterboxd ou do Trakt costuma ter poucos MB: confira se é o certo.',
     consentimento:
-      'Sem o sim dela, o filmes não baixa o RSS. Pergunte a ela e marque a caixa.',
-    rss: 'O Letterboxd não tem RSS para esse usuário. Confira o nome no endereço do perfil.',
+      'Sem o sim da Pessoa, o filmes não lê o diário do Letterboxd. Pergunte e marque a caixa.',
+    rss: 'O Letterboxd não achou esse perfil. Confira o nome no endereço do perfil.',
     fonte: 'O Letterboxd não respondeu agora. Tente de novo daqui a pouco.',
     item: 'Esse import já não está no arquivo dela.',
     indisponivel: 'Não deu para importar agora. Tente de novo daqui a pouco.',
@@ -104,31 +105,39 @@ export const PERSON_IMPORTS = {
       `${count(ratings, 'Nota', 'Notas')} e ${count(seen, 'Já visto', 'Já vistos')} do Trakt.`,
   },
   upload: {
-    title: 'Trazer um export',
-    letterboxd: 'Export do Letterboxd',
-    letterboxdHow:
-      'No Letterboxd: Settings › Data › Export your data. Envie o ZIP que ele baixar.',
-    trakt: 'Export do Trakt',
-    traktHow:
-      'No Trakt: Settings › Data › Export. Envie o ZIP do export, com os arquivos JSON.',
-    file: 'Arquivo ZIP',
+    title: 'Trazer seus filmes do Letterboxd ou do Trakt',
+    file: 'Arquivo que o Letterboxd ou o Trakt te deu (ZIP)',
+    /** How to download the ZIP, one line per service: the service's name
+     * links to its data settings. */
+    how: [
+      {
+        service: 'Letterboxd',
+        href: 'https://letterboxd.com/settings/data/',
+        steps: 'Settings › Data › Export your data.',
+      },
+      {
+        service: 'Trakt',
+        href: 'https://trakt.tv/settings/data',
+        steps: 'Settings › Data › Export.',
+      },
+    ],
     submit: 'Importar',
   },
   rss: {
-    title: 'RSS do Letterboxd',
-    lead: 'Para quem não exporta: o filmes baixa o RSS público do perfil, com as entradas mais recentes do diário, e guarda uma cópia no repo de dados.',
-    user: 'Usuário no Letterboxd',
-    userHint: 'o nome no endereço do perfil, letterboxd.com/…',
+    title: 'Ou só o recente, pelo perfil',
+    lead: 'Sem o ZIP, o filmes lê as entradas mais recentes do diário público no Letterboxd. Para o histórico inteiro, use o arquivo acima.',
+    user: 'Perfil no Letterboxd',
+    userHint: 'o nome, @nome ou o endereço do perfil',
     consent: (name: string) =>
-      `${name} concordou que o filmes baixe o RSS público dela e guarde as Notas.`,
-    submit: 'Baixar e importar',
+      `${name} concordou que o filmes leia o diário público do Letterboxd e guarde as Notas`,
+    submit: 'Importar do perfil',
   },
 } as const
 
 export const QUEUE = {
   back: 'Importar',
   title: 'Fila de resolução',
-  lead: 'Filmes dos exports do Letterboxd que o filmes não achou no Catálogo sozinho. A decisão vale para todas as Pessoas que têm o filme.',
+  lead: 'Filmes dos arquivos do Letterboxd que o filmes não achou no Catálogo sozinho. A decisão vale para todas as Pessoas que têm o filme.',
   unavailable: UNAVAILABLE,
   empty: 'Nenhum filme esperando. Tudo resolvido.',
   of: 'de',

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // The "Nova Sessão" form as the Dono fills it: what it posts is what the
 // server reads (`parseSessionRequest`, the same reader the route uses).
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it } from 'vite-plus/test'
 import {
@@ -81,6 +81,9 @@ describe('the Nova Sessão form', () => {
     await user.click(screen.getByRole('checkbox', { name: /Nenhum Já visto/ }))
     await user.click(screen.getByRole('checkbox', { name: copy.noSlow }))
     await user.click(screen.getByRole('checkbox', { name: copy.noSad }))
+    await user.click(
+      screen.getByRole('radio', { name: copy.seriesOrders.todos }),
+    )
 
     expect(posted(form)).toEqual({
       ok: {
@@ -100,8 +103,30 @@ describe('the Nova Sessão form', () => {
         unseen: true,
         noSlow: true,
         noSad: true,
+        seriesOrder: 'all',
       },
     })
+  })
+
+  it('starts the Série na ordem at its default, marked, and offers the other two', async () => {
+    const { user, form } = show()
+    const group = screen.getByRole('region', { name: copy.seriesOrder })
+    const radios = within(group).getAllByRole('radio')
+
+    expect(radios.map((r) => r.closest('label')?.textContent)).toEqual([
+      `${copy.seriesOrders.anterior} · ${copy.seriesOrderDefault}`,
+      copy.seriesOrders.todos,
+      copy.seriesOrders['tanto-faz'],
+    ])
+    expect(radios.map((r) => (r as HTMLInputElement).checked)).toEqual([
+      true,
+      false,
+      false,
+    ])
+    await user.click(
+      screen.getByRole('radio', { name: copy.seriesOrders['tanto-faz'] }),
+    )
+    expect(posted(form)).toMatchObject({ ok: { seriesOrder: 'off' } })
   })
 
   it('offers a child with no age (only “livre”)', async () => {

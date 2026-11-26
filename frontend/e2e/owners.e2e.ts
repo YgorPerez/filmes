@@ -8,6 +8,10 @@
 // A Dono who just arrived (#143) sees the home's setup guide. Each project
 // logs in as a Dona of its own, created here, since the skip writes to her
 // Pessoa file; the skip holds after a reload.
+//
+// An admin (Bruno, made admin as in `operations.e2e.ts`) gives a Pessoa of
+// this file alone her Acesso (#166), she logs in, and once it is taken
+// away her next request goes to the login. Only the desktop runs it.
 
 import { consult, personCreate } from '@filmes/engine'
 import {
@@ -15,6 +19,7 @@ import {
   engineRun,
   expect,
   loginAs,
+  makeBrunoAdmin,
   notice,
   section,
   snap,
@@ -180,4 +185,54 @@ test('a new Dono sees the setup guide, and a skipped step stays skipped', async 
   await expect(guide).toHaveCount(0)
   await expect(page.getByRole('link', { name: 'Pedir filme' })).toBeVisible()
   await snap(page, info, 'home-set-up')
+})
+
+test('the admin gives a Pessoa access and takes it away', async ({
+  browser,
+  page,
+}, info) => {
+  test.skip(info.project.name !== 'desktop', 'the projects share the copy')
+  makeBrunoAdmin()
+  await addPerson('Odete')
+  await loginAs(page, 'bruno@example.org')
+  await page.goto('/pessoas/odete')
+  const access = section(page, 'Acesso')
+  await expect(access).toContainText('Sem acesso.')
+  await snap(page, info, 'access-none')
+  await access.getByLabel('E-mail do Google').fill('odete@example.org')
+  await access.getByRole('button', { name: 'Dar acesso' }).click()
+  await expect(notice(page)).toContainText('Acesso dado')
+  await expect(access).toContainText('Entra com odete@example.org.')
+  await snap(page, info, 'access-owner')
+
+  const odete = await browser.newPage()
+  await loginAs(odete, 'odete@example.org')
+
+  await access.getByRole('button', { name: 'Tirar acesso' }).click()
+  await expect(notice(page)).toContainText('Acesso tirado')
+  await expect(access).toContainText('Sem acesso.')
+
+  await odete.goto('/pessoas')
+  await expect(odete).toHaveURL(/\/entrar/)
+  await odete.close()
+})
+
+test("the admin's own page offers no way out", async ({ page }, info) => {
+  test.skip(info.project.name !== 'desktop', 'the projects share the copy')
+  makeBrunoAdmin()
+  await loginAs(page, 'bruno@example.org')
+  await page.goto('/pessoas/bruno')
+  const access = section(page, 'Acesso')
+  await expect(access).toContainText('o seu próprio acesso não sai por aqui')
+  await expect(access.getByRole('button')).toHaveCount(0)
+})
+
+test('a Dono who is not admin sees no Acesso', async ({ page }, info) => {
+  test.skip(info.project.name !== 'desktop', 'the projects share the copy')
+  await addPerson('Odete')
+  await loginAs(page, 'vera@example.org')
+  await page.goto('/pessoas/odete')
+  await expect(page.getByRole('heading', { name: 'Odete' })).toBeVisible()
+  await expect(section(page, 'Acesso')).toHaveCount(0)
+  await snap(page, info, 'access-not-admin')
 })

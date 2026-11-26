@@ -40,6 +40,10 @@ Título ou nome vira ID com \`search_catalog\`, que serve a qualquer Dono: filme
 
 Com \`session\`, o filtro fica nos refazeres seguintes sem repetir \`similar\`. Referências novas trocam a lista inteira, mesmo com \`keep\`. "Esquece o parecido" ou uma noite diferente ("agora quero terror") vai com \`noSimilar: true\`.
 
+## Série na ordem
+
+Por padrão, a continuação de uma série de filmes só entra se todos os Presentes viram o filme anterior dela; franquia (Marvel, Star Wars) não conta. Não passe \`seriesOrder\` sem o Dono pedir. "Só se viram todos os anteriores" é \`seriesOrder: "all"\`; "tanto faz a ordem", "pode ser continuação" ou "a gente lembra da história" é \`"off"\`; "volta ao normal" é \`"previous"\`. Com \`session\`, o modo fica nos refazeres seguintes sem repetir. Quando um mantido sai por isso, \`dropped\` traz \`unseen\` e o \`label\` diz quem não viu o quê ("Teo não viu Cais 2"); conte assim ao Dono e não empurre o anterior: ele só entra se passar pelo resto.
+
 ## O Cartaz
 
 Depois de \`recommend\`, chame \`billboard\` com o \`session.id\`. Se você pediu mais Candidatos e escolheu alguns para a tela, passe os IDs em \`films\`, na ordem da tela: o Cartaz numera esses de 1 em diante e a Sessão guarda a lista para o Feedback achar a posição do Filme escolhido.

@@ -99,6 +99,14 @@ describe('parseSessionRequest', () => {
   const parse = (fields: [string, string][]) =>
     parseSessionRequest(form([...BASIC, ...fields]))
 
+  it('asks for no Série na ordem in its default mode, nor for a mode it does not offer', () => {
+    expect(parse([['serie', 'anterior']])).toEqual(parse([]))
+    expect(parse([['serie', 'sempre']])).toEqual(parse([]))
+    expect(parse([['serie', 'tanto-faz']])).toMatchObject({
+      ok: { seriesOrder: 'off' },
+    })
+  })
+
   it('reads every Restrição into the engine’s request', () => {
     expect(
       parse([
@@ -118,6 +126,7 @@ describe('parseSessionRequest', () => {
         ['sem-ja-visto', 'sim'],
         ['sem-lento', 'sim'],
         ['sem-tristeza', 'sim'],
+        ['serie', 'todos'],
       ]),
     ).toEqual({
       ok: {
@@ -137,6 +146,7 @@ describe('parseSessionRequest', () => {
         unseen: true,
         noSlow: true,
         noSad: true,
+        seriesOrder: 'all',
       } satisfies SessionRequestForm,
     })
   })

@@ -35,13 +35,14 @@ test('an id is no tag group, and a predicate outside the links is none', () => {
   expect(() => kindOf('outro')).toThrow("unknown tipo: 'outro'")
 })
 
-test("the Restrições' order is the Python modules', in English", () => {
+test("the Restrições' order is the Python modules', in English, then the ones born after Python left", () => {
   const pythonModules = Object.keys(names.CONSTRAINTS)
     .filter((name) => name !== 'sem_repetido')
     .sort()
-  expect([...CONSTRAINT_ORDER]).toEqual(
-    pythonModules.map(
+  expect([...CONSTRAINT_ORDER]).toEqual([
+    ...pythonModules.map(
       (name) => (names.CONSTRAINTS as Record<string, string>)[name],
     ),
-  )
+    'series_order',
+  ])
 })

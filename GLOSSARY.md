@@ -14,6 +14,10 @@ _Evitar_: usuário, amigo, perfil
 A Pessoa que opera o sistema: pede recomendações, descreve as outras Pessoas e registra o Feedback das Sessões dela. Pode haver mais de um (#131); cada Sessão tem um Dono, e online é quem está logado (mapa #72).
 _Evitar_: usuário, admin
 
+**Acesso** [access, `grantAccess`, `revokeAccess`]:
+O e-mail do Google que faz uma Pessoa ser Dono e entrar no site e no conector. Um admin dá o Acesso a uma Pessoa que já existe e o tira na página dela; sem ele, o próximo pedido da conta é recusado, e o gosto dela fica (#166).
+_Evitar_: conta, permissão
+
 ## Sessão
 
 **Sessão** [session, `Session`]:
@@ -48,6 +52,10 @@ Um passo do Guia de início que o Dono pulou. Fica no frontmatter do arquivo del
 **Restrição** [constraint, `Constraint`]:
 Um limite que vale só numa Sessão, como "tem criança" ou "sem legenda". Tira o filme antes de qualquer ordenação, como o Veto.
 _Evitar_: filtro, veto da sessão
+
+**Série na ordem** [series order, `series_order`; modo [mode: `previous`, `all`, `off`]]:
+A Restrição, ligada por padrão, que tira a continuação de uma série de filmes quando algum Presente não viu o filme antes dela. A série é a do Wikidata com classe "série de filmes"; franquia (Marvel, Star Wars) não conta. A ordem vem da data de estreia, e data igual ou ausente não põe um filme antes do outro. Três modos: só se viram o anterior (o padrão), só se viram todos os anteriores, ou tanto faz. O filme só sai; o anterior não é empurrado para a lista.
+_Evitar_: sequência, franquia, saga
 
 **Clima** [mood, `Mood`]:
 O que uma Sessão quer sem excluir nenhum filme: a energia ("algo leve"), a ocasião ("aniversário da Ana"), a vontade do momento. Puxa a ordem, nunca tira um filme.

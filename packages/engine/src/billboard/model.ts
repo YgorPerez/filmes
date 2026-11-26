@@ -13,9 +13,11 @@
 // as in the Markdown answer (the Dono's decision of 2026-11-21).
 //
 // In a version redone with `keep` (#59), a film that came in is `new`, and
-// `dropped` says what left and why. While the similar holds in the Session
-// (#68), the top reads "parecidos com X"; a stored Restrição that no longer
-// exists (the legacy no_repeat) is left out.
+// `dropped` says what left and why ("Teo não viu Cais 2" for the Série na
+// ordem, #165). While the similar holds in the Session (#68), the top reads
+// "parecidos com X", and a Série na ordem out of its default mode says the
+// mode; a stored Restrição that no longer exists (the legacy no_repeat) is
+// left out.
 //
 // The Cartaz also carries the Climas the version asked and the whole
 // vocabulary, in the file's order: the chips the Dono toggles to ask for
@@ -51,6 +53,10 @@ import { listText } from '../evidence/wording.ts'
 import { catalogFilm } from '../recommendation/candidates.ts'
 import type { StoredConstraint } from '../recommendation/constraints.ts'
 import { constraintLabel } from '../recommendation/constraints/index.ts'
+import {
+  unseenText,
+  type UnseenBefore,
+} from '../recommendation/constraints/series-order.ts'
 import { filmHeader } from '../recommendation/header.ts'
 import { readMoods } from '../recommendation/moods.ts'
 import type { DropCause } from '../recommendation/kept.ts'
@@ -392,6 +398,7 @@ const droppedOf = (
         text: string
         constraint: string
         label: string
+        unseen: UnseenBefore[]
       }>
     let reason: string
     if (drop.cause === 'seen') {
@@ -403,7 +410,10 @@ const droppedOf = (
         .filter(Boolean)
         .join(' e ')
       reason = pyStrip(`${names} já ${who.length === 1 ? 'viu' : 'viram'}`)
-    } else if (drop.cause === 'constraint' || drop.cause === 'min_rating')
+    } else if (drop.cause === 'constraint' && drop.unseen?.length)
+      // The Série na ordem: who did not see the film before (#165).
+      reason = unseenText(drop.unseen, name)
+    else if (drop.cause === 'constraint' || drop.cause === 'min_rating')
       reason = drop.label || drop.constraint || ''
     else if (drop.cause === 'veto') {
       const by =

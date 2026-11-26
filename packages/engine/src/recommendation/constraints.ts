@@ -49,6 +49,7 @@ export const CONSTRAINT_ORDER = [
   'unseen', // sem_ja_visto
   'no_slow', // sem_lento
   'no_sad', // sem_tristeza
+  'series_order', // serie_na_ordem (#165, after Python left)
 ] as const
 export type ConstraintName = (typeof CONSTRAINT_ORDER)[number]
 
@@ -60,6 +61,15 @@ export interface Drop {
   readonly _tag: 'Drop'
   /** The cause it is counted by in `result`, or `null`. */
   readonly cause: string | null
+  /** What the film's item in `dropped` says instead of the Restrição's
+   * label, when it says more (the Série na ordem: who did not see what). */
+  readonly detail?: DropDetail
+}
+
+/** A dropped film's own label, and the data it was written from. */
+export interface DropDetail {
+  readonly label: string
+  readonly [field: string]: unknown
 }
 export type Verdict = Pass | Drop | 'pending'
 
@@ -74,9 +84,13 @@ export const pass = (lines: ReadonlyArray<Evidence> = []): Pass => ({
   _tag: 'Pass',
   lines,
 })
-export const drop = (cause: string | null = null): Drop => ({
+export const drop = (
+  cause: string | null = null,
+  detail?: DropDetail,
+): Drop => ({
   _tag: 'Drop',
   cause,
+  ...(detail !== undefined && { detail }),
 })
 
 /** What a Restrição can read (Python's `Contexto`). Warnings go to
@@ -109,6 +123,9 @@ export interface Constraint {
   readonly toJson: () => Readonly<Record<string, unknown>>
   /** What was asked, as the Session stores it. */
   readonly stored: () => StoredConstraint
+  /** The Session does not store it: a refazer brings it by itself (the
+   * Série na ordem's default mode). */
+  readonly unstored?: boolean
   /** On a refazer: whether this request is new against the one `stored` in
    * the current version and replaces the whole list (`--manter` is
    * ignored, and whoever leaves leaves through this Restrição). Python's
@@ -163,6 +180,8 @@ export interface ConstraintSet {
   readonly pending: ReadonlyMap<string, ReadonlyArray<Constraint>>
   /** Film → the Restrição that removed it. */
   readonly removedBy: ReadonlyMap<string, Constraint>
+  /** Film → what its Restrição said about it, when it said more. */
+  readonly dropDetails: ReadonlyMap<string, DropDetail>
   /** The film lines of the Restrições the film passed. */
   readonly linesOf: (filmId: string) => ReadonlyArray<Evidence>
   /** The films that pass every Restrição or are pending on some, in the
@@ -203,6 +222,7 @@ export const makeConstraintSet = (
   const lines = new Map<string, ReadonlyArray<Evidence>>()
   const pending = new Map<string, ReadonlyArray<Constraint>>()
   const removedBy = new Map<string, Constraint>()
+  const dropDetails = new Map<string, DropDetail>()
   const removed = new Map<ConstraintName, number>()
   const drops = new Map<ConstraintName, Map<string, number>>()
 
@@ -211,6 +231,7 @@ export const makeConstraintSet = (
     lines.set(filmId, [...linesOf(filmId), ...more])
   const countDrop = (constraint: Constraint, verdict: Drop, filmId: string) => {
     removedBy.set(filmId, constraint)
+    if (verdict.detail !== undefined) dropDetails.set(filmId, verdict.detail)
     removed.set(constraint.name, (removed.get(constraint.name) ?? 0) + 1)
     if (verdict.cause !== null) {
       const causes = drops.get(constraint.name) ?? new Map<string, number>()
@@ -245,6 +266,7 @@ export const makeConstraintSet = (
     constraints,
     pending,
     removedBy,
+    dropDetails,
     linesOf,
     candidates: (films) =>
       Effect.gen(function* () {

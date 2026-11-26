@@ -135,6 +135,21 @@ Tabelas que só as Restrições da Sessão leem. Os filmes são os de cima; a ta
 - `generos_imdb.csv`: gêneros do IMDb como o title.basics escreve, na ordem dele. Têm gênero 101–105 e 403; Noite de Estreia (203) não tem, para o caso da lista vazia. Nada lê esta tabela fora do cabeçalho, então acrescentar gênero não muda a ordem.
 - `filmes.csv`, coluna `nota_imdb`: só As Horas Lentas (104) tem nota (7,4); os outros saem com `nota_imdb` nulo.
 
+### Série na ordem (#165)
+
+Filmes `tt90165NN`, sem diretor, com 1.000 votos, para `series-order.test.ts`. As séries estão em `series_de_filmes.csv` com a raiz (Q24856, série de filmes; Q196600, franquia), e as datas de estreia em `estreias.csv`. A Trilogia da Fronteira (Q9001903) ganhou a raiz Q24856; os filmes dela não têm data, então a regra não mexe neles.
+
+| Filme | Série | Estreia | Quem viu |
+|---|---|---|---|
+| Cais (9016501) | Trilogia do Cais (Q9016501), série de filmes | 2010-05-07 | ninguém |
+| Cais 2 (9016502) | Trilogia do Cais | 2012-06-15 | Rosa (Nota 3, que não é semente de 4+) |
+| Cais 3 (9016503) | Trilogia do Cais | 2014-07-04 | ninguém |
+| Cais: Origens (9016504) | Trilogia do Cais | sem data: não vem antes nem depois de nenhum | ninguém |
+| Estelar (9016511) e Estelar: Retorno (9016512) | Universo Estelar (Q9016502), franquia | 2001 e 2005 | ninguém: a franquia não conta |
+| Lado A (9016521) e Lado B (9016522) | Díptico dos Lados (Q9016503), classe Q9016504 sob série de filmes | os dois 2018-03-10 | ninguém: mesma data, nenhum vem antes |
+
+Na regra padrão, para quem não viu nada (o Teo, o Bruno) saem Cais 2 e Cais 3; para a Rosa sai só Cais 2, porque ela viu Cais 2, o anterior de Cais 3. Com "todos os anteriores", Cais 3 também sai para ela, que nunca viu Cais.
+
 ## gravacoes/
 
 Respostas das fontes sob demanda como a API devolve, em `<fonte>/<tconst>.json`. Os testes ligam com `FILMES_GRAVACOES` e uma chave qualquer; arquivo ausente vale como "a fonte não conhece o filme". Uma falha de rede se grava em `<fonte>/<chave>.falha.json` (`{"motivo": "Connection reset by peer", "vezes": 2}` falha duas vezes e depois lê `<chave>.json`; sem `vezes`, falha sempre). A fixture não tem nenhuma: `test_fila_reprocessar.py` cria as suas numa cópia das gravações.
@@ -143,7 +158,7 @@ Respostas das fontes sob demanda como a API devolve, em `<fonte>/<tconst>.json`.
 - `ddd/`: o tema "a dog dies" tem 12 sim e 2 não em As Horas Lentas, 3 e 2 em A Volta do Mar (os dois saem), 1 e 14 em Sal e Ferrugem, 2 e 0 em Cidade de Vidro (poucos votos), 3 e 3 em Noite de Estreia (empate). O Farol de Areia só tem "there are jump scares"; Maré Baixa não tem arquivo.
 - `tmdb/find-<tconst>-pt-BR.json`: respostas do `/find` com `language=pt-BR`, de onde saem capa, título em português e sinopse. `find-tt0133093-pt-BR.json` (Matrix) foi gravada do TMDB em 2026-11-21; as outras copiam o formato dela. As Horas Lentas tem pôster e sinopse de duas frases; Sal e Ferrugem vem sem pôster, com o título "Sal & Ferrugem" e um "Dr." na primeira frase; Noite de Estreia vem sem pôster e com o overview vazio; os demais não têm arquivo. Os outros arquivos de `tmdb/` são do import do Letterboxd, descrito abaixo.
 
-- `catalogo/`: trechos dos TSVs do IMDb e das respostas SPARQL JSON do QLever, coletados em 2026-11-20. Exercitam o corte de 100 votos, a exclusão de adultos, a ponte de IDs, o elenco, os créditos do `title.principals` (Schindler's List, Matrix e Miss Jerry) e o P345 de dois atores, os idiomas e os rótulos reais de classificação. `atualizar` lê essas gravações em vez de acessar a rede. O P179 de Matrix (The Matrix series, `Q1210827`) e a linha dela em `wikidata-series.json` são reais, de 2026-11-21. O P179 de Schindler's List para a lista da BBC (`Q26705935`) é inventado: a lista existe, mas o filme não está nela. Serve para a aresta que a reconstrução tira.
+- `catalogo/`: trechos dos TSVs do IMDb e das respostas SPARQL JSON do QLever, coletados em 2026-11-20. Exercitam o corte de 100 votos, a exclusão de adultos, a ponte de IDs, o elenco, os créditos do `title.principals` (Schindler's List, Matrix e Miss Jerry) e o P345 de dois atores, os idiomas e os rótulos reais de classificação. `atualizar` lê essas gravações em vez de acessar a rede. O P179 de Matrix (The Matrix series, `Q1210827`) e a linha dela em `wikidata-series.json` são reais, de 2026-11-21; a variável `raiz` dessa linha (Q24856) entrou no #165, com o que a consulta nova responde para uma série que é instância direta de série de filmes. As datas P577 de Schindler's List em `wikidata-ids.json` têm um 1993-01-01, a data só com ano do Wikidata. O P179 de Schindler's List para a lista da BBC (`Q26705935`) é inventado: a lista existe, mas o filme não está nela. Serve para a aresta que a reconstrução tira.
 
 ## dados/
 

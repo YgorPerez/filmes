@@ -31,7 +31,7 @@ test('the first request that makes no sense fails, in the modules order', async 
   })
 })
 
-test('the Restrições asked come in the modules order, and the Session stores all but the duration', async () => {
+test('the Restrições asked come in the modules order, and the Session stores all but the duration and the default series order', async () => {
   const asked = await Effect.runPromise(
     readConstraints({
       noSad: true,
@@ -52,6 +52,7 @@ test('the Restrições asked come in the modules order, and the Session stores a
     'unseen',
     'no_slow',
     'no_sad',
+    'series_order',
   ])
   expect(storedConstraints(asked)).toEqual([
     { name: 'year', since: null, until: 2000 },
@@ -69,6 +70,7 @@ test('the Restrições asked come in the modules order, and the Session stores a
     'nada repetido',
     'nada lento',
     'nada triste',
+    'série na ordem: só se viram o anterior',
   ])
 })
 

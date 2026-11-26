@@ -4,22 +4,20 @@
 // and the two projects share it). `E2E_SCREENSHOTS=<folder>` saves each
 // screen there.
 
-import { readFileSync, writeFileSync } from 'node:fs'
+import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
   engineRoot,
   expect,
   loginAsBruno,
+  makeBrunoAdmin,
   section,
   snap,
   test,
 } from './support'
 
 test.beforeAll(() => {
-  const file = join(engineRoot(), 'data/people/bruno.md')
-  const text = readFileSync(file, 'utf8')
-  if (!/^admin: true$/m.test(text))
-    writeFileSync(file, text.replace(/^---\n/, '---\nadmin: true\n'))
+  makeBrunoAdmin()
 })
 
 test('the admin consults the database, read-only', async ({ page }, info) => {

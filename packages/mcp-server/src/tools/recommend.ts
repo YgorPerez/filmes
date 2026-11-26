@@ -1,4 +1,4 @@
-import { recommendSession } from '@filmes/engine'
+import { recommendSession, SERIES_ORDER_MODES } from '@filmes/engine'
 import { z } from 'zod'
 import { defineTool, imdbId, sessionId } from '../tool.ts'
 
@@ -45,10 +45,12 @@ export default defineTool({
     'O que a Sessão já mostrou pode voltar; só sai, sozinho, o que o Dono trocou em alguma versão dela e o que algum Presente marcou Já vi nela, ' +
     'em `constraints.out_of_session` ({swapped, seen, removed}). O parecido fica na Sessão: o refazer sem `similar` continua com as referências da versão anterior; ' +
     '`similar` com outras referências substitui e `noSimilar` tira o filtro. Parecido novo troca a lista inteira: ignora `keep`, com aviso. ' +
+    'A Série na ordem vale sempre: um filme de série de filmes (não franquia) sai quando algum Presente não viu o anterior dela; ' +
+    '`seriesOrder` muda isso, e `constraints.series_order` traz {mode, removed}. ' +
     'Com `swap`, os filmes dados viram Trocados da Sessão antes de refazer ("outras opções" no chat: passe os da tela); sem `swap` nem `keep`, o refazer devolve a mesma lista. ' +
     'Com `keep`, os mantidos ficam no número da versão anterior e só as vagas ganham filme novo; cada filme traz `new` ' +
     '(false no que já estava na tela anterior), e a resposta traz `kept` e `dropped` ({position, id, title, cause}: `seen` com `people`, ' +
-    '`swapped`, `constraint` com `constraint` e `label`, `veto` com `person` e `text`, `min_rating` com `label`, ou `mood`). ' +
+    '`swapped`, `constraint` com `constraint` e `label` (e `unseen`: [{people, films}] na Série na ordem), `veto` com `person` e `text`, `min_rating` com `label`, ou `mood`). ' +
     'O Clima puxa a ordem e nunca tira filme. Com `session`, Climas diferentes dos da versão anterior (por nome, em qualquer ordem) trocam a lista inteira: ' +
     'ignoram `keep`, com aviso, e quem sai sem ser Já vi nem Trocado sai com `cause: mood` e pode voltar. Num refazer, repita os Climas da versão anterior. ' +
     'Uma Restrição ou um Veto do pedido tiram também o mantido que os viola, e o mantido abaixo da nota ou dos votos mínimos do IMDb sai, com aviso; gosto novo não tira mantido. ' +
@@ -178,6 +180,14 @@ export default defineTool({
           'mais parecidos com eles (média entre as referências), e a Regra de escolha ordena entre esses. Faltando ' +
           'parecidos, a lista sai menor, com aviso. O pedido é da noite: não grava gosto. Com session, fica nos ' +
           'refazeres seguintes sem repetir; referências novas trocam a lista inteira',
+      ),
+    seriesOrder: z
+      .enum(SERIES_ORDER_MODES)
+      .optional()
+      .describe(
+        'Série na ordem: previous (o padrão: a continuação só entra se todos os Presentes viram o filme anterior da série), ' +
+          'all ("só se viram todos os anteriores") ou off ("tanto faz"). Só com pedido do Dono. Com session, ' +
+          'fica nos refazeres seguintes sem repetir; mudar no meio da Sessão vale para os filmes que entram e tira o mantido que não passa',
       ),
     noSimilar: z
       .boolean()
