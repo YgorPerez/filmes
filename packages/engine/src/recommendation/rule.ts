@@ -9,9 +9,10 @@
 // - `by` someone: only that Pessoa's utility. Everyone's Vetos and
 //   Restrições still hold, because they remove films before the order.
 //
-// The Crédito [credit] only enters the default rule, as
-// `u' = u − factor × credit`: the adjustment carries each Pessoa's
-// `factor × credit`. It does not touch the 0.5 of someone with no Fact.
+// The Satisfação [satisfaction] only enters the default rule, as
+// `u' = u − factor × (highest − hers)`: the adjustment carries that for each
+// Pessoa behind the most satisfied. It does not touch the 0.5 of someone
+// with no Fact.
 
 import { pySum } from '../compat/number.ts'
 import { pythonError } from '../compat/python-error.ts'
@@ -28,8 +29,8 @@ export const NEUTRAL_UTILITY = 0.5
 
 export const DEFAULT_RULE: Rule = { name: 'default' }
 
-/** Only the default rule takes the Crédito. */
-export const usesCredit = (rule: Rule): boolean => rule.name === 'default'
+/** Only the default rule weighs the satisfaction. */
+export const usesSatisfaction = (rule: Rule): boolean => rule.name === 'default'
 
 /** Python's `min`: the first of the smallest. */
 const minimum = (values: ReadonlyArray<number>): number =>
@@ -51,10 +52,10 @@ export const ruleKey = (
     }
     counted = [[rule.person, utility]]
   }
-  const credit: ReadonlyMap<string, number> =
-    usesCredit(rule) && adjustment ? adjustment : new Map()
+  const behind: ReadonlyMap<string, number> =
+    usesSatisfaction(rule) && adjustment ? adjustment : new Map()
   const values = counted.map(([person, u]) =>
-    u === null ? NEUTRAL_UTILITY : u - (credit.get(person) ?? 0),
+    u === null ? NEUTRAL_UTILITY : u - (behind.get(person) ?? 0),
   )
   const mean = pySum(values) / values.length
   return rule.name === 'default' ? [minimum(values), mean] : [mean]

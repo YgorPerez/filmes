@@ -33,8 +33,9 @@ export default defineTool({
     'Presentes por slug, nome ou apelido; "dono" é o Dono. ' +
     'Restrições opcionais (duração, ano de lançamento, idioma, criança, gatilhos, sem Já visto, nada triste, nada lento, parecido) tiram filmes antes da ordenação; ' +
     '`constraints` diz o que cada uma tirou. Cada filme que passa traz em `filmLines` as linhas das Restrições, do Clima, de grupo ou sozinho, ' +
-    'da nota do IMDb acima de 7 e do Crédito, quando o Crédito fez o filme subir. Clima, grupo ou sozinho e a nota do IMDb puxam a ordem. ' +
-    '`credit` traz o Crédito de cada Presente na Regra padrão em grupo. ' +
+    'da nota do IMDb acima de 7 e da Satisfação, quando um Presente que saiu das Sessões recentes menos satisfeito fez o filme subir. Clima, grupo ou sozinho e a nota do IMDb puxam a ordem. ' +
+    '`satisfaction` traz a Satisfação de cada Presente (0 a 1, média das reações nas últimas Sessões em grupo com alguém de hoje) e `disagreement` a mais alta menos a mais baixa, na Regra padrão em grupo; ' +
+    'quem está abaixo da mais alta pesa mais na ordem. ' +
     'Com `similar`, só passam os parecidos com as referências, e cada filme traz a linha "parecido com X: ...", que não é Fato. ' +
     'Com `session`, refaz a Recomendação nessa Sessão aberta em vez de abrir outra, e `session.version` conta as versões. ' +
     'O que a Sessão já mostrou pode voltar; só sai, sozinho, o que o Dono trocou em alguma versão dela e o que algum Presente marcou Já vi nela, ' +

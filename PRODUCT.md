@@ -25,13 +25,13 @@ As outras Pessoas (quem assiste junto) não entram no app. Elas aparecem como Pr
 
 ## Product Purpose
 
-O filmes recomenda filmes para quem vai assistir junto e mostra, para cada Presente, o Fato que sustenta o motivo. O Dono diz quem está, quanto tempo tem e o que a noite pede; recebe uma Recomendação de 5 filmes; marca no Cartaz o que já viu, o que quer trocar e o que achou; e, depois da Sessão, conta o que viram e como foi, o que alimenta o gosto e o Crédito.
+O filmes recomenda filmes para quem vai assistir junto e mostra, para cada Presente, o Fato que sustenta o motivo. O Dono diz quem está, quanto tempo tem e o que a noite pede; recebe uma Recomendação de 5 filmes; marca no Cartaz o que já viu, o que quer trocar e o que achou; e, depois da Sessão, conta o que viram e como foi, o que alimenta o gosto e a Satisfação.
 
 Deu certo quando a escolha sai em poucos minutos e ninguém da sala sente que foi ignorado.
 
 ## Positioning
 
-Cada linha de "Por que cada um vai gostar" aponta para um Fato guardado, com Fonte, data, Força e Tipo. Quando não há Fato sobre um Presente, a linha diz "sem fato" em vez de inventar. O motor junta o gosto de todos os Presentes, respeita os Vetos de cada um e favorece, pelo Crédito, quem ficou atrás nas últimas Sessões. Streaming e apps de recomendação não sabem quem está na sala nem dizem de onde vem a sugestão.
+Cada linha de "Por que cada um vai gostar" aponta para um Fato guardado, com Fonte, data, Força e Tipo. Quando não há Fato sobre um Presente, a linha diz "sem fato" em vez de inventar. O motor junta o gosto de todos os Presentes, respeita os Vetos de cada um e favorece quem saiu menos satisfeito das últimas Sessões. Streaming e apps de recomendação não sabem quem está na sala nem dizem de onde vem a sugestão.
 
 ## Operating Context
 

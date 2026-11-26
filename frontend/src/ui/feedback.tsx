@@ -84,7 +84,7 @@ export function OpenSessions({
 }
 
 /** `/feedback/<sessao>`: the form that records the Session's Feedback and
- * closes it, and the Crédito of its Presentes now. A plain POST to
+ * closes it, and the satisfaction of its Presentes now. A plain POST to
  * `/feedback/<sessao>/enviar`: it works before the JavaScript. `page` is
  * `'unknown'` when no open Session has that id, null when the engine cannot
  * run on this server. The Catálogo search (`search`) comes first: its
@@ -131,7 +131,7 @@ export function FeedbackScreen({
             />
           </SearchFold>
           <FeedbackForm session={session} page={page} film={film} />
-          {page.attendees.length > 1 && <Credit page={page} />}
+          {page.attendees.length > 1 && <Satisfaction page={page} />}
         </>
       )}
     </ImportsFrame>
@@ -302,20 +302,26 @@ function Reaction({
   )
 }
 
-function Credit({ page }: { page: FeedbackPage }) {
-  const { credit } = FEEDBACK
+function Satisfaction({ page }: { page: FeedbackPage }) {
+  const { satisfaction } = FEEDBACK
   return (
-    <Section id="credito" title={credit.title} lead={credit.lead}>
-      <Items empty={credit.empty}>
-        {page.credit
-          .filter((c) => c.line !== null)
-          .map((c) => (
-            <Item key={c.person}>
-              <span className="font-semibold">{c.name}</span>
-              <span>{c.line}</span>
-              <Meta parts={[credit.value(c.value)]} />
-            </Item>
-          ))}
+    <Section
+      id="satisfacao"
+      title={satisfaction.title}
+      lead={satisfaction.lead}
+    >
+      <Items empty={satisfaction.empty}>
+        {page.satisfaction.flatMap((c) =>
+          c.line === null || c.satisfaction === null
+            ? []
+            : [
+                <Item key={c.person}>
+                  <span className="font-semibold">{c.name}</span>
+                  <span>{c.line}</span>
+                  <Meta parts={[satisfaction.value(c.satisfaction)]} />
+                </Item>,
+              ],
+        )}
       </Items>
     </Section>
   )

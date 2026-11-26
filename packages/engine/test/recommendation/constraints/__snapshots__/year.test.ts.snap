@@ -18,7 +18,7 @@ exports[`the whole output, as recorded > {"since":2015,"until":2016} 1`] = `
       "until": 2016,
     },
   },
-  "credit": {},
+  "disagreement": null,
   "films": [
     {
       "coverage": {
@@ -919,6 +919,7 @@ exports[`the whole output, as recorded > {"since":2015,"until":2016} 1`] = `
   "rule": {
     "name": "default",
   },
+  "satisfaction": {},
   "vetoes": [],
   "warnings": [
     "TMDB sem chave de API (defina FILMES_TMDB_CHAVE); os filmes saem sem capa, sem título em português e sem sinopse",
@@ -944,7 +945,7 @@ exports[`the whole output, as recorded > {"since":2016} 1`] = `
       "until": null,
     },
   },
-  "credit": {},
+  "disagreement": null,
   "films": [
     {
       "coverage": {
@@ -3830,6 +3831,7 @@ exports[`the whole output, as recorded > {"since":2016} 1`] = `
   "rule": {
     "name": "default",
   },
+  "satisfaction": {},
   "vetoes": [],
   "warnings": [
     "TMDB sem chave de API (defina FILMES_TMDB_CHAVE); os filmes saem sem capa, sem título em português e sem sinopse",
@@ -3855,7 +3857,7 @@ exports[`the whole output, as recorded > {"until":2018} 1`] = `
       "until": 2018,
     },
   },
-  "credit": {},
+  "disagreement": null,
   "films": [
     {
       "coverage": {
@@ -6842,6 +6844,7 @@ exports[`the whole output, as recorded > {"until":2018} 1`] = `
   "rule": {
     "name": "default",
   },
+  "satisfaction": {},
   "vetoes": [],
   "warnings": [
     "TMDB sem chave de API (defina FILMES_TMDB_CHAVE); os filmes saem sem capa, sem título em português e sem sinopse",

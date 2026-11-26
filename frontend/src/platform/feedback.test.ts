@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process'
 import {
   makeEngine,
   recommendSession,
-  type CreditNow,
+  type SatisfactionNow,
   type ErrorCode,
   type FeedbackResult,
   type Outcome,
@@ -56,7 +56,7 @@ const RECORDED: FeedbackResult = {
 function fake(
   outcomes: {
     sessions?: Outcome<FeedbackSession[]>
-    credit?: Outcome<readonly CreditNow[]>
+    satisfaction?: Outcome<SatisfactionNow>
     record?: Outcome<FeedbackResult>
   } = {},
 ) {
@@ -66,10 +66,17 @@ function fake(
   const feedback: Feedback = {
     sessions: async () =>
       outcomes.sessions ?? { exitCode: 0, output: [SESSION] },
-    credit: async (attendees) =>
-      outcomes.credit ?? {
+    satisfaction: async (attendees) =>
+      outcomes.satisfaction ?? {
         exitCode: 0,
-        output: attendees.map((person) => ({ person, value: 0, line: null })),
+        output: {
+          people: attendees.map((person) => ({
+            person,
+            satisfaction: null,
+            line: null,
+          })),
+          disagreement: null,
+        },
       },
     record,
   }
@@ -177,22 +184,26 @@ describe('feedbackAction', () => {
 })
 
 describe('the pages', () => {
-  it('shows the open Session with its Presentes’ Crédito', async () => {
-    const line = 'na Sessão de 2026-11-19 (Casa Cheia), Quim deu 1'
+  it('shows the open Session with its Presentes’ satisfaction', async () => {
+    const line =
+      'satisfação de Quim nas últimas Sessões: 0%, e a mais alta do grupo, 100%; na de 2026-11-19 (Casa Cheia), deu 0,5'
     const { feedback } = fake({
-      credit: {
+      satisfaction: {
         exitCode: 0,
-        output: [
-          { person: 'bruno', value: 0, line: null },
-          { person: 'quim', value: 0.5, line },
-        ],
+        output: {
+          people: [
+            { person: 'bruno', satisfaction: 1, line: null },
+            { person: 'quim', satisfaction: 0, line },
+          ],
+          disagreement: 1,
+        },
       },
     })
     expect(await feedbackPage(SESSION.id, feedback)).toEqual({
       ...SESSION,
-      credit: [
-        { person: 'bruno', name: 'Bruno', value: 0, line: null },
-        { person: 'quim', name: 'Quim', value: 0.5, line },
+      satisfaction: [
+        { person: 'bruno', name: 'Bruno', satisfaction: 1, line: null },
+        { person: 'quim', name: 'Quim', satisfaction: 0, line },
       ],
     })
     expect(await feedbackPage('2026-11-19', feedback)).toBe('unknown')
@@ -203,8 +214,8 @@ describe('the pages', () => {
     const broken = fake({ sessions: failure('missing_database') }).feedback
     expect(await openSessionList(broken)).toBe(null)
     expect(await feedbackPage(SESSION.id, broken)).toBe(null)
-    const noCredit = fake({ credit: failure('internal') }).feedback
-    expect(await feedbackPage(SESSION.id, noCredit)).toBe(null)
+    const noSatisfaction = fake({ satisfaction: failure('internal') }).feedback
+    expect(await feedbackPage(SESSION.id, noSatisfaction)).toBe(null)
     expect(log).toHaveBeenCalledWith(
       'engine: missing_database: mensagem de missing_database',
     )
@@ -218,7 +229,7 @@ const git = (cwd: string, ...args: string[]) =>
   execFileSync('git', args, { cwd, encoding: 'utf8' })
 
 describe('feedbackFromEngine', () => {
-  it('closes a Session with one commit signed by the Dono, and the next one sees the Crédito', async () => {
+  it('closes a Session with one commit signed by the Dono, and the next one sees the satisfaction', async () => {
     const fixture = useFixture()
     git(fixture.data, 'init', '--quiet', '-b', 'master')
     git(fixture.data, 'add', '--all')
@@ -289,14 +300,14 @@ describe('feedbackFromEngine', () => {
       const next = await open()
       const page = await feedbackPage(next.session.id, feedback)
       if (page === null || page === 'unknown') throw new Error(String(page))
-      expect(page.credit).toEqual([
+      expect(page.satisfaction).toEqual([
         {
           person: 'bruno',
           name: 'Bruno',
-          value: 0.4444,
-          line: 'na Sessão de 2026-11-20 (Pequenos Milagres), Bruno deu 1 e a média dos Presentes foi 3',
+          satisfaction: 0.1111,
+          line: 'satisfação de Bruno nas últimas Sessões: 11%, e a mais alta do grupo, 100%; na de 2026-11-20 (Pequenos Milagres), deu 1',
         },
-        { person: 'quim', name: 'Quim', value: 0, line: null },
+        { person: 'quim', name: 'Quim', satisfaction: 1, line: null },
       ])
     } finally {
       await engine.dispose()
