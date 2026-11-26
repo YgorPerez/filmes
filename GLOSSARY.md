@@ -70,6 +70,14 @@ _Evitar_: regra de grupo, acordo, agregação
 O quanto uma Pessoa ficou atrás dos outros Presentes nas Sessões recentes que dividiu com quem está na Sessão de hoje, medido pelo Feedback. Quem tem Crédito pesa mais na Regra de escolha; quem gostou mais que a média não perde nada.
 _Evitar_: dívida, vez, saldo
 
+**Satisfação** [satisfaction, `satisfaction`]:
+O quanto um Presente gostou dos Filmes escolhidos nas Sessões recentes: a média das reações dele no Feedback, de 0 a 1. A satisfação mínima de uma Sessão é a reação mais baixa entre os Presentes (Stratigi et al., #170). Hoje só o `evaluate` a mede; o mapa #169 vai trocar o Crédito por ela.
+_Evitar_: felicidade, nota média
+
+**Discordância** [disagreement, `disagreement`]:
+Numa Sessão em que dois ou mais Presentes reagiram, a reação mais alta menos a mais baixa. Mede o quanto o Filme escolhido dividiu o grupo.
+_Evitar_: conflito, variância
+
 **Recomendação** [recommendation, `Recommendation`]:
 O top 5 que uma Sessão recebe, cada filme com os seus Motivos.
 _Evitar_: sugestão, lista
@@ -185,6 +193,10 @@ _Evitar_: descrição, declarado
 
 **Review** [review, `review`]:
 Um sinal tirado de opiniões de terceiros, que não estão entre as Pessoas, como as tags de uma base pública ou quantos estranhos que gostaram de um filme gostaram de outro.
+
+**Nota prevista** [predicted rating, `predictedRating`]:
+A Nota que o motor espera que uma Pessoa dê a um filme que ela não viu, de 1 a 10 como o Já vi do Cartaz. Não é Fato nem Nota: é uma previsão, e o `evaluate` mede o erro dela contra as Notas retidas. Ainda não existe; vem dos vizinhos de gosto (#174).
+_Evitar_: nota esperada, match
 
 **Palpite** [guess, `guess`]:
 Um Motivo sem Fato que o sustente.

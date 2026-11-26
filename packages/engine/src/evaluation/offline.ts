@@ -8,6 +8,8 @@
 // database file is never written.
 
 import { Effect } from 'effect'
+import { compareTuple } from '../compat/compare.ts'
+import { HIGH_RATING } from '../evidence/ruler.ts'
 import type { RecommendedFilm } from '../recommendation/recommend.ts'
 import { rank } from '../recommendation/recommend.ts'
 import type { CandidateSelection } from '../recommendation/candidates.ts'
@@ -19,7 +21,20 @@ import { Run } from '../runtime/Run.ts'
 import type { Weights } from '../runtime/Weights.ts'
 import type { Connection, SqliteError } from '../sqlite/Sqlite.ts'
 import { text } from '../sqlite/row.ts'
+import {
+  bucketOf,
+  calibration,
+  type Calibration,
+  type Scored,
+} from './calibration.ts'
+import { meanSimilarity, type ListSimilarity } from './diversity.ts'
 import type { MeasuredPerson } from './people.ts'
+import {
+  onTenScale,
+  predictedRating,
+  predictedRatingError,
+  type PredictedRatingError,
+} from './predicted-rating.ts'
 
 /** The tables cut per Pessoa, with the column that names the film. */
 const CUT_TABLES = [
@@ -90,6 +105,20 @@ export interface Measures {
   readonly filmsTop5: number
   readonly recall50: number | null
   readonly coverageTop5: number | null
+  /** Força calibration on the held-out films (#171). */
+  readonly calibration: Calibration
+  /** Predicted rating against the held-out Nota (#171; absent until
+   * #174). */
+  readonly predictedRatingError: PredictedRatingError
+  /** Mean similarity of the pairs in each top 5, over the lists (#171);
+   * lower is more diverse. */
+  readonly similarityTop5: number | null
+}
+
+export interface MeasureOptions {
+  /** Keeps each Pessoa's calibration. */
+  readonly perPerson: boolean
+  readonly similarity: ListSimilarity
 }
 
 /** `_sustentado`: a film with strong or moderate Evidence; the IMDb rating
@@ -104,14 +133,38 @@ const backed = (film: RecommendedFilm): boolean =>
     ),
   )
 
-/** `medir`: each Pessoa's top 50 on the day of her cut, with `weights`;
- * `advance` runs after each Pessoa. */
+/** The selection narrowed to the held-out films with a Nota that are still
+ * Candidates, most votes first as in `prepareSelection`. It walks only
+ * those films: the Catálogo is large, and this runs for every Pessoa of
+ * every set of the grid. */
+const heldOutSelection = (
+  selection: CandidateSelection,
+  rated: ReadonlyMap<string, number>,
+): CandidateSelection => {
+  const films = new Map(
+    [...rated.keys()].flatMap((id) => {
+      const film = selection.films.get(id)
+      return film ? [[id, film] as const] : []
+    }),
+  )
+  return {
+    films,
+    popular: [...films.values()]
+      .sort((a, b) => compareTuple([-a.votes, a.id], [-b.votes, b.id]))
+      .map((film) => film.id),
+  }
+}
+
+/** `medir`: each Pessoa's top 50 on the day of her cut, with `weights`,
+ * and the films she held out, scored on that same day; `advance` runs after
+ * each Pessoa. */
 export const measure = <R>(
   db: Connection,
   weights: Weights,
   people: ReadonlyArray<MeasuredPerson>,
   selection: CandidateSelection,
   advance: Effect.Effect<void, never, R>,
+  options: MeasureOptions,
 ): Effect.Effect<
   Measures,
   EngineError | SqliteError,
@@ -125,22 +178,38 @@ export const measure = <R>(
     let heldOut4Plus = 0
     let withEvidence = 0
     let filmsTop5 = 0
+    const scored: Scored[] = []
+    const predicted: Array<readonly [number, number]> = []
+    const similarities: Array<number | null> = []
     for (const person of people) {
       // The ranking sees the day of the cut and these weights; its warnings
       // are not the evaluation's (Python's were a list of its own).
-      const films = (yield* rank(db, {
-        attendees: [person.person],
-        count: 50,
-        selection,
-      }).pipe(
-        Effect.provideService(Environment, { ...env, weights }),
-        Effect.provideService(Run, {
-          ...run,
-          today: person.cut,
-          warn: () => Effect.void,
-        }),
-      )).films
+      const ranked = (count: number, among: CandidateSelection) =>
+        rank(db, { attendees: [person.person], count, selection: among }).pipe(
+          Effect.map((recommendation) => recommendation.films),
+          Effect.provideService(Environment, { ...env, weights }),
+          Effect.provideService(Run, {
+            ...run,
+            today: person.cut,
+            warn: () => Effect.void,
+          }),
+        )
+      const films = yield* ranked(50, selection)
+      const heldOut = heldOutSelection(selection, person.heldOutRatings)
+      if (heldOut.films.size > 0)
+        for (const film of yield* ranked(heldOut.films.size, heldOut)) {
+          const rating = person.heldOutRatings.get(film.id)!
+          scored.push({
+            person: person.person,
+            bucket: bucketOf(film, person.person),
+            hit: rating >= HIGH_RATING,
+          })
+          const prediction = predictedRating(film, person.person)
+          if (prediction !== null)
+            predicted.push([prediction, onTenScale(rating)])
+        }
       const top = films.slice(0, 5)
+      similarities.push(yield* options.similarity(top.map((film) => film.id)))
       measured += 1
       retrieved += films.filter((film) => person.targets.has(film.id)).length
       heldOut4Plus += person.targets.size
@@ -156,5 +225,8 @@ export const measure = <R>(
       filmsTop5,
       recall50: heldOut4Plus ? retrieved / heldOut4Plus : null,
       coverageTop5: filmsTop5 ? withEvidence / filmsTop5 : null,
+      calibration: calibration(scored, options.perPerson),
+      predictedRatingError: predictedRatingError(predicted),
+      similarityTop5: meanSimilarity(similarities),
     }
   })
