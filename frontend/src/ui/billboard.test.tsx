@@ -8,7 +8,7 @@ import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { Billboard } from './billboard'
-import { MODEL } from './billboard.fixture'
+import { CHOSEN_OUTSIDE, MODEL } from './billboard.fixture'
 import { parseMarks } from './billboard-marks'
 import { BILLBOARD } from './billboard.copy'
 
@@ -141,39 +141,90 @@ describe('the Cartaz shows', () => {
     )
   })
 
-  it('a shared Evidence on one line, and who has no Fato on hers, with no Força', () => {
+  it('a shared Evidence on one line, opened by the names, and who has no Fato on hers, with no Força', () => {
     render(<Billboard billboard={MODEL} />)
     const why = (n: number) =>
       within(card(n).getByRole('list', { name: BILLBOARD.card.why }))
     const [shared] = why(1).getAllByRole('listitem')
-    expect(within(shared!).getByLabelText('Bruno, Iara').textContent).toBe('BI')
+    expect(shared!.textContent).toBe(
+      'Bruno e Iara: dirigido por Helena Prado, como 2 filmes a que deu nota altaWikidata',
+    )
     expect(within(shared!).getByLabelText('Força moderada').dataset.level).toBe(
       '2',
     )
     expect(card(1).getByText('Fato sobre 2 de 2')).toBeTruthy()
     const [strong, without] = why(2).getAllByRole('listitem')
+    expect(strong!.textContent).toBe('Bruno: deu 5 a Maré Baixa')
     expect(within(strong!).getByLabelText('Força forte').dataset.level).toBe(
       '3',
     )
-    expect(without!.textContent).toBe('IIara: sem fato sobre este filme')
+    expect(without!.textContent).toBe('Iara: sem fato sobre este filme')
     expect(within(without!).queryByLabelText(/Força/)).toBeNull()
   })
 
-  it('the Nota prevista of each Presente who has one, and none for who has not', () => {
+  it('the Nota prevista next to the dot of each Presente who has one, and the neighbours behind it in its hint', () => {
     render(<Billboard billboard={MODEL} />)
-    const predicted = card(1).getByRole('list', { name: 'Nota prevista' })
-    expect(
-      within(predicted)
-        .getAllByRole('listitem')
-        .map((item) => item.textContent),
-    ).toEqual(['B8,3Bruno: 8,3 de 10'])
-    expect(card(2).queryByRole('list', { name: 'Nota prevista' })).toBeNull()
+    const hint = 'Bruno: 8,3 de 10 · 12 vizinhos'
+    const dot = card(1).getByRole('button', { name: hint })
+    expect(dot.textContent).toBe('8,3')
+    const popover = document.getElementById(dot.getAttribute('popovertarget')!)!
+    expect(popover.getAttribute('popover')).toBe('auto')
+    expect(popover.textContent).toBe(hint)
+    expect(card(1).queryByRole('button', { name: /^Iara:/ })).toBeNull()
+    expect(card(1).queryByText('Nota prevista')).toBeNull()
+    expect(card(2).queryByRole('button', { name: /vizinho/ })).toBeNull()
   })
 
-  it('who has no Fato is said in the text, not on a hover over her dot', () => {
+  it('a Nota prevista stored without its neighbours, with a hint without them', () => {
+    const [hours] = MODEL.films
+    const film = {
+      ...hours!,
+      predictedRatings: [{ person: 'bruno', value: 8.31, text: '8,3' }],
+    }
+    render(<Billboard billboard={{ ...MODEL, films: [film] }} />)
+    expect(
+      card(1).getByRole('button', { name: 'Bruno: 8,3 de 10' }).textContent,
+    ).toBe('8,3')
+  })
+
+  it('an Evidence about no Presente of the Cartaz, without a name before it', () => {
+    const [, salt] = MODEL.films
+    const film = {
+      ...salt!,
+      lines: [{ ...salt!.lines[0]!, people: ['ninguem'] }],
+      withoutFact: [],
+    }
+    render(<Billboard billboard={{ ...MODEL, films: [film] }} />)
+    const why = within(card(1).getByRole('list', { name: BILLBOARD.card.why }))
+    expect(why.getAllByRole('listitem').map((li) => li.textContent)).toEqual([
+      'deu 5 a Maré Baixa',
+    ])
+  })
+
+  it('a number on a hollow dot, and "sem fato" only in the text', () => {
+    const [, bet] = MODEL.films
+    const film = {
+      ...bet!,
+      predictedRatings: [
+        { person: 'iara', value: 6.94, text: '6,9', raters: 1 },
+      ],
+    }
+    render(<Billboard billboard={{ ...MODEL, films: [film] }} />)
+    expect(
+      card(1).getByRole('button', { name: 'Iara: 6,9 de 10 · 1 vizinho' })
+        .textContent,
+    ).toBe('6,9')
+    expect(card(1).getByText(BILLBOARD.card.withoutFact('Iara'))).toBeTruthy()
+    expect(card(1).queryByRole('button', { name: /sem fato/ })).toBeNull()
+  })
+
+  it('the cover opens the film on the IMDb, the dots apart from the link', () => {
     render(<Billboard billboard={MODEL} />)
-    expect(card(2).getByText(BILLBOARD.card.withoutFact('Iara'))).toBeTruthy()
-    expect(card(2).queryByTitle(/Iara|Bruno/)).toBeNull()
+    const cover = card(1).getByRole('link', { name: 'Capa de As Horas Lentas' })
+    expect(cover.getAttribute('href')).toBe(
+      'https://www.imdb.com/title/tt9000104/',
+    )
+    expect(within(cover).queryByRole('button')).toBeNull()
   })
 
   it('no marks once the Session has its Feedback', () => {
@@ -183,6 +234,19 @@ describe('the Cartaz shows', () => {
     expect(
       screen.queryByRole('button', { name: BILLBOARD.reply.send }),
     ).toBeNull()
+  })
+
+  it('a chosen film without a card in a block of its own, with each Reação', () => {
+    render(<Billboard billboard={CHOSEN_OUTSIDE} />)
+    const block = within(
+      screen.getByRole('region', { name: 'Filme escolhido' }),
+    )
+    expect(block.getByText('Curta da Madrugada (2010)')).toBeTruthy()
+    expect(block.getAllByRole('listitem').map((li) => li.textContent)).toEqual([
+      'Bruno: achou 8',
+      'Iara: não gostou',
+    ])
+    expect(cards()).toHaveLength(2)
   })
 
   it('that nothing passed the Restrições', () => {

@@ -30,6 +30,7 @@
 // `notas_gosto_movielens`, which `evaluate` shadows without its own
 // sampled users.
 
+import { statSync } from 'node:fs'
 import { Effect } from 'effect'
 import { ratingDecay } from '../evidence/decay.ts'
 import {
@@ -38,6 +39,7 @@ import {
   ratingPercentile,
   type RatingScale,
 } from '../evidence/ruler.ts'
+import { readRatingScale } from '../people/rating-scale.ts'
 import type { Weights } from '../runtime/Weights.ts'
 import {
   calibrate,
@@ -115,6 +117,7 @@ ORDER BY g.filme_id, g.usuario
 
 /** One of her Notas: its percentile on her scale and its Decaimento. */
 interface OwnRating {
+  readonly rating: number
   readonly percentile: number
   readonly decay: number
 }
@@ -141,11 +144,15 @@ const closer = (
   b: Pick<TasteNeighbor, 'user' | 'distance' | 'shared'>,
 ): number => a.distance - b.distance || b.shared - a.shared || a.user - b.user
 
+interface RatedComparison extends Comparison {
+  readonly rating: number
+}
+
 /** Her taste neighbours, and the comparisons the calibration is fitted
  * on. */
 interface Neighbourhood {
   readonly neighbors: ReadonlyArray<TasteNeighbor>
-  readonly comparisons: ReadonlyArray<Comparison>
+  readonly comparisons: ReadonlyArray<RatedComparison>
 }
 
 /** Every user who shares `minShared` of her films or more, the closest
@@ -255,13 +262,17 @@ const tasteNeighbourhood = (
 ): Effect.Effect<Neighbourhood, SqliteError> =>
   Effect.gen(function* () {
     const own = new Map<string, OwnRating>(
-      (yield* db.all(OWN_RATINGS, person)).map((row) => [
-        text(row, 'filme_id'),
-        {
-          percentile: ratingPercentile(scale, num(row, 'nota')),
-          decay: ratingDecay(text(row, 'data'), today, weights.rating_decay),
-        },
-      ]),
+      (yield* db.all(OWN_RATINGS, person)).map((row) => {
+        const rating = num(row, 'nota')
+        return [
+          text(row, 'filme_id'),
+          {
+            rating,
+            percentile: ratingPercentile(scale, rating),
+            decay: ratingDecay(text(row, 'data'), today, weights.rating_decay),
+          },
+        ]
+      }),
     )
     const { k, min_shared } = weights.taste_neighbors
     const key = JSON.stringify([person, k, min_shared, [...own]])
@@ -275,7 +286,7 @@ const tasteNeighbourhood = (
         : []
     const { sums, byFilm } = sharedRatings(rows, own)
     const everyone = ranked(sums, min_shared)
-    const comparisons: Comparison[] = []
+    const comparisons: RatedComparison[] = []
     for (const [film, mine] of own) {
       const predicted = leftOut(
         mine,
@@ -286,7 +297,11 @@ const tasteNeighbourhood = (
         min_shared,
       )
       if (predicted !== null)
-        comparisons.push({ predicted, own: mine.percentile })
+        comparisons.push({
+          predicted,
+          own: mine.percentile,
+          rating: mine.rating,
+        })
     }
     const result = { neighbors: everyone.slice(0, k), comparisons }
     cache.set(key, result)
@@ -303,6 +318,85 @@ const onHerScale = (scale: RatingScale, p: number): number | null => {
   const rating = ratingAtPercentile(scale, p)
   return rating === null ? null : 2 * rating
 }
+
+export interface PersonPredictionError {
+  readonly films: number
+  readonly meanAbsoluteError: number
+}
+
+/** Her prediction error by database file and all it depends on. The
+ * Pessoa page reads it on each visit, on a connection of its own, and on
+ * the real sample building her neighbourhood takes seconds. A rebuild
+ * puts a new file in place, so the MovieLens sample is the file's; her
+ * Notas, her scale, the weights and today are in the key. */
+const errors = new Map<string, PersonPredictionError | null>()
+/** Enough for every Pessoa of the house a few times over. */
+const MAX_ERRORS = 64
+
+/** The file's identity and its last change, so a file rebuilt or
+ * replaced at the same path is another. */
+const fileVersion = (file: string): string => {
+  const { dev, ino, size, mtimeNs } = statSync(file, { bigint: true })
+  return [file, dev, ino, size, mtimeNs].join(':')
+}
+
+/** How far her calibrated Nota prevista is from her Nota, in points out
+ * of 10, on average over the films she rated: each film scored with the
+ * calibration fitted on the others, as `evaluate` scores a film the
+ * calibration never saw. `file` is the database `db` reads. */
+export const personPredictionError = (
+  db: Connection,
+  file: string,
+  person: string,
+  weights: Weights,
+  today: string,
+): Effect.Effect<PersonPredictionError | null, SqliteError> =>
+  Effect.gen(function* () {
+    const scale = yield* readRatingScale(db, person, weights)
+    if (scale.source === 'population') return null
+    const key = JSON.stringify([
+      yield* Effect.sync(() => fileVersion(file)),
+      person,
+      today,
+      [...scale.counts],
+      weights.taste_neighbors,
+      weights.rating_decay,
+      weights.rating_percentile,
+      weights.prediction_calibration,
+      yield* db.all(OWN_RATINGS, person),
+    ])
+    if (errors.has(key)) return errors.get(key)!
+    const { comparisons } = yield* tasteNeighbourhood(
+      db,
+      person,
+      scale,
+      weights,
+      today,
+    )
+    const films = comparisons.length
+    const error =
+      films < Math.max(1, weights.rating_percentile.min_ratings)
+        ? null
+        : {
+            films,
+            meanAbsoluteError: mean(
+              comparisons.map(({ predicted, rating }, i) => {
+                const calibration = fitCalibration(
+                  comparisons.filter((_, j) => j !== i),
+                  weights.prediction_calibration.pseudo_count,
+                )
+                const value = onHerScale(
+                  scale,
+                  calibrate(calibration, predicted),
+                )!
+                return Math.abs(value - 2 * rating)
+              }),
+            ),
+          }
+    if (errors.size >= MAX_ERRORS) errors.delete(errors.keys().next().value!)
+    errors.set(key, error)
+    return error
+  })
 
 /** A neighbour's rating of a Candidate. */
 interface Rater {

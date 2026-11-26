@@ -25,10 +25,14 @@ export const BILLBOARD = {
       'Aposta: pouca Evidência, mas quem tem gosto parecido deu nota alta',
     imdb: (rating: string | null, votes: string) =>
       `${rating === null ? '' : `${rating} `}IMDb · ${votes} votos`,
-    predicted: 'Nota prevista',
-    predictedOf: (name: string, rating: string) => `${name}: ${rating} de 10`,
-    predictedHint:
-      'Vem de quem tem gosto parecido no MovieLens, de 1 a 10 como no Já vi',
+    /** The hint of a Presente's dot: "Ana: 8,3 de 10 · 12 vizinhos", or
+     * "Ana: 8,3 de 10" when the version did not keep how many. */
+    predicted: (name: string, rating: string, raters?: number) =>
+      raters === undefined
+        ? `${name}: ${rating} de 10`
+        : `${name}: ${rating} de 10 · ${plural(raters, 'vizinho', 'vizinhos')}`,
+    /** Who an Evidência is about, opening its line: "Ana e Bruno". */
+    whose: (names: readonly string[]) => andList(names),
     why: 'Por que cada um vai gostar',
     withoutFact: (names: string) => `${names}: sem fato sobre este filme`,
     swapStamp: 'Trocar',

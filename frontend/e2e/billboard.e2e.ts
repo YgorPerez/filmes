@@ -222,9 +222,11 @@ test('the Dono marks, reloads, sends, and the Cartaz comes back redone', async (
     .click()
   await page.getByLabel('o que Nina achou do filme 1').fill('lindo')
   await card(page, 2).getByRole('button', { name: 'Trocar' }).click()
-  // The stamp on the poster.
+  // The stamp on the poster, beside the cover link since #263.
   await expect(
-    card(page, 2).getByRole('link').first().getByText('Trocar'),
+    card(page, 2)
+      .locator('span')
+      .filter({ hasText: /^Trocar$/ }),
   ).toBeVisible()
   await card(page, 3).getByRole('button', { name: '4 de 5' }).click()
   await card(page, 3).getByRole('button', { name: 'Comentar' }).click()
@@ -375,8 +377,10 @@ test('the Nota prevista the Session recorded, per Presente who has one', async (
   await snap(page, info, 'cartaz-nota-prevista')
   await snap(page, info, 'cartaz-nota-prevista-card', card(page, at))
 
-  const predicted = card(page, at).getByRole('list', {
-    name: 'Nota prevista',
+  const dot = card(page, at).getByRole('button', {
+    name: 'Bruno: 8,8 de 10 · 3 vizinhos',
   })
-  await expect(predicted.getByRole('listitem')).toHaveText([/Bruno: 8,8 de 10/])
+  await expect(dot).toHaveText('8,8')
+  await dot.click()
+  await expect(page.getByText('Bruno: 8,8 de 10 · 3 vizinhos')).toBeVisible()
 })

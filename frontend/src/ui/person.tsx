@@ -98,7 +98,12 @@ export function PersonScreen({
             notice={notice}
             refusal={refusal}
           />
-          <Notes slug={slug} own={own} ratings={page.ratings} />
+          <Notes
+            slug={slug}
+            own={own}
+            ratings={page.ratings}
+            predictionError={page.predictionError}
+          />
           {own && start && <MyStartSections start={start} person={slug} />}
           <Contents page={page} />
           <Details slug={slug} page={page} search={search} />
@@ -148,10 +153,12 @@ function Notes({
   slug,
   own,
   ratings,
+  predictionError,
 }: {
   slug: string
   own: boolean
   ratings: PersonPage['ratings']
+  predictionError: PersonPage['predictionError']
 }) {
   const { notes } = PERSON
   const option = buttonVariants({ variant: 'option' })
@@ -164,6 +171,14 @@ function Notes({
       {ratings === null && <p className="text-ink-2">{notes.noDatabase}</p>}
       {ratings?.length === 0 && (
         <p className="text-ink-2">{notes.empty(own)}</p>
+      )}
+      {predictionError && (
+        <p className="text-meta text-ink-2">
+          {notes.predictionError(
+            predictionError.meanAbsoluteError,
+            predictionError.films,
+          )}
+        </p>
       )}
       <div className="flex flex-wrap items-center gap-xs">
         {own && (

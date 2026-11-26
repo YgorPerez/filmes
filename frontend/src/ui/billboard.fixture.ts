@@ -70,7 +70,9 @@ export const MODEL: Billboard = {
       ],
       withoutFact: [],
       coverage: 'Fato sobre 2 de 2',
-      predictedRatings: [{ person: 'bruno', value: 8.31, text: '8,3' }],
+      predictedRatings: [
+        { person: 'bruno', value: 8.31, text: '8,3', raters: 12 },
+      ],
     },
     {
       position: 2,
@@ -108,4 +110,41 @@ export const MODEL: Billboard = {
     },
     { kind: 'bet', title: 'Aposta', again: false, films: ['tt9000105'] },
   ],
+}
+
+const [HOURS, SALT] = MODEL.films
+
+/** The same Cartaz once the Session has its Feedback (#264): they chose
+ * As Horas Lentas; Bruno, with a Nota prevista of 8,3, gave it 6 out of 10;
+ * Iara, with none, liked it. */
+export const CLOSED: Billboard = {
+  ...MODEL,
+  open: false,
+  films: [
+    {
+      ...HOURS!,
+      reactions: [
+        { person: 'bruno', predicted: '8,3', rating: '6', reaction: null },
+        { person: 'iara', predicted: null, rating: null, reaction: 'liked' },
+      ],
+    },
+    SALT!,
+  ],
+}
+
+/** A closed Cartaz whose chosen film has no card: they watched Curta da
+ * Madrugada, outside the Recomendação. Bruno gave it 8; Iara did not
+ * like it. */
+export const CHOSEN_OUTSIDE: Billboard = {
+  ...MODEL,
+  open: false,
+  chosen: {
+    id: 'tt9000106',
+    title: 'Curta da Madrugada',
+    year: 2010,
+    reactions: [
+      { person: 'bruno', predicted: null, rating: '8', reaction: null },
+      { person: 'iara', predicted: null, rating: null, reaction: 'disliked' },
+    ],
+  },
 }

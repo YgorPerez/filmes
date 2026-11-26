@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from 'react'
 import { BillboardCard } from './billboard-card'
+import { ChosenFilm } from './billboard-chosen'
 import { InlineBillboard } from './billboard-inline'
 import {
   forgetMarks,
@@ -207,6 +208,7 @@ export function Billboard({
     <>
       {empty && <p className="text-ink-2">{BILLBOARD.empty}</p>}
       <Dropped billboard={billboard} />
+      <ChosenFilm chosen={billboard.chosen} people={billboard.attendees} />
       {cards}
       {replying && (
         <ReplyBox

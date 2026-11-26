@@ -15,6 +15,11 @@ export const PERSON = {
   myTaste: 'Meu gosto',
   notes: {
     title: 'Notas',
+    predictionError: (error: number, films: number) => {
+      const rounded = Math.round(error * 10) / 10
+      const points = rounded < 2 ? 'ponto' : 'pontos'
+      return `a previsão erra ${rounded.toLocaleString('pt-BR')} ${points} em média, em ${films.toLocaleString('pt-BR')} filmes`
+    },
     rate: 'Dar notas',
     import: 'Importar do Letterboxd ou do Trakt',
     download: 'Baixar CSV do IMDb',
