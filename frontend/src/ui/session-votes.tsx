@@ -66,7 +66,7 @@ export function VoteCards({
             onPointerCancel={() => {
               start.current = null
             }}
-            className="flex min-h-[220px] touch-pan-y flex-col justify-between gap-lg rounded-card border border-rule bg-surface px-[14px] pt-lg pb-[14px] select-none"
+            className="flex min-h-[220px] touch-pan-y flex-col justify-between gap-lg rounded-card border border-rule bg-surface px-3.5 pt-lg pb-3.5 select-none"
           >
             <p className="text-meta">
               {VOTES.of(votes.length + 1, films.length)}

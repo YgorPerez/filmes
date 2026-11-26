@@ -4,23 +4,20 @@ import type { ReactNode } from 'react'
 // violet stamp, on a patch of surface so it reads over any poster in both
 // themes, at the bottom left of the cover, away from NOVO at the top
 // right (a bet that came in on regenerating has both). The caller places
-// it and gives its words (`BILLBOARD.card.bet` and `betHint`), as with the
-// stickers.
+// it and gives its word (`BILLBOARD.card.bet`), as with the stickers. Why
+// it is a bet (`betHint`) the card says in its text, beside the stamp: a
+// hover `title` never opens on the phone.
 
 export function BetStamp({
-  hint,
   children,
   className = '',
 }: {
-  /** Why it is a bet, on hover. */
-  hint: string
   children: ReactNode
   className?: string
 }) {
   return (
     <span
-      title={hint}
-      className={`inline-block -rotate-6 rounded-cover border-2 border-stamp bg-surface px-sm pt-xs pb-[5px] font-display text-sticker text-stamp uppercase motion-safe:animate-stick ${className}`}
+      className={`inline-block -rotate-6 rounded-cover border-2 border-stamp bg-surface px-sm pt-xs pb-1.25 font-display text-sticker text-stamp uppercase motion-safe:animate-stick ${className}`}
     >
       {children}
     </span>

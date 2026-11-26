@@ -35,6 +35,7 @@ packages/engine/           o motor, com Effect v4 (ADR 0003); sem nada de tela n
 packages/mcp-server/       o servidor MCP sobre o motor, sem transporte: createMcpServer({ engine, owner }), instructions.ts e tools/<nome>.ts, um por arquivo, listados em tools/index.ts
 frontend/                  app TanStack Start: MCP por HTTP, OAuth, app web e o Cartaz (MCP Apps e web)
   scripts/                 deploy na VPS (deploy-plan.ts, vps.ts, db-publish.ts, db-build.ts, db-rebuild.ts, catalog-update.ts, check-live.ts, prepare-vps.sh, deploy-wizard.sh; ADR 0006)
+  lint/                    plugins locais do Oxlint, um por arquivo e com teste (rule-config.test.ts confere que cada um está ligado), e folders.ts, que confere esta árvore no `pnpm check`
   nginx/                   vhost, TLS, formato de log sem query e rotação que o deploy instala na VPS
   Dockerfile               a imagem: só o .output do build
 config/                    pesos e vocabulários fixos (*.toml) e o manifesto dos dumps (catalog-versions.json), com as chaves em inglês (ADR 0002), lidos como estão

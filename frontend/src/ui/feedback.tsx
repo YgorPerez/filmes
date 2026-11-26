@@ -219,7 +219,7 @@ function FilmChoice({
           >
             <span className="flex items-center gap-md">
               <PriceSticker compact>{item.position}</PriceSticker>
-              <span className="text-[15px] font-bold">{item.title}</span>
+              <span className="font-display text-row-title">{item.title}</span>
             </span>
           </Option>
         ))}
@@ -269,7 +269,7 @@ function Reaction({
   return (
     <fieldset className="border-dashed border-rule py-xl first:pt-0 not-first:border-t">
       <legend className="float-left w-full">
-        <span className="flex items-center gap-sm font-display text-[15px] font-bold">
+        <span className="flex items-center gap-sm font-display text-row-title">
           <PersonAvatar person={attendee} index={index} />
           {attendee.name}
           {attendee.owner && <OwnerTag />}

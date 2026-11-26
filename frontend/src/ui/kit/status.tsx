@@ -16,7 +16,9 @@ export function Alert({
   className?: string
   children: ReactNode
 }) {
-  const box = strip ? '' : 'rounded-field border-[1.5px] border-ink px-lg py-md'
+  const box = strip
+    ? ''
+    : 'rounded-field border-(length:--border-width-stroke) border-ink px-lg py-md'
   return (
     <p
       role="alert"

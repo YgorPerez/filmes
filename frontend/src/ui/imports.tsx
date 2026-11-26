@@ -232,7 +232,7 @@ function DraftSection({
             >
               <RatingDisc>{entry.rating}</RatingDisc>
               <span className="flex min-w-0 flex-1 flex-col">
-                <span className="font-display text-[15px] font-bold">
+                <span className="font-display text-row-title">
                   {entry.title}
                 </span>
                 <Meta
@@ -310,7 +310,7 @@ function FilmCard({
         <div
           role="group"
           aria-label={RATINGS.scale}
-          className="grid grid-cols-10 gap-[3px]"
+          className="grid grid-cols-10 gap-0.75"
         >
           {SCALE.map((rating) => (
             <button
@@ -318,7 +318,7 @@ function FilmCard({
               type="button"
               aria-label={RATINGS.rate(rating)}
               onClick={() => onRate(rating)}
-              className="min-h-touch cursor-pointer rounded-rail border-[1.5px] border-rule bg-surface font-display text-[14px] font-bold text-ink tabular-nums hover:border-ink active:border-sticker-orange active:bg-sticker-orange active:text-on-sticker"
+              className="min-h-touch cursor-pointer rounded-rail border-(length:--border-width-stroke) border-rule bg-surface font-display text-field-label text-ink tabular-nums hover:border-ink active:border-sticker-orange active:bg-sticker-orange active:text-on-sticker"
             >
               {rating}
             </button>

@@ -86,11 +86,11 @@ export function Latest({
       >
         <h2
           id="ultima-sessao"
-          className="font-display text-[13px] leading-none font-extrabold tracking-[0.08em] text-ink-2 uppercase"
+          className="font-display text-slip-title text-ink-2 uppercase"
         >
           {latest.title}
         </h2>
-        <span className="font-hand text-[16px] leading-tight">
+        <span className="font-hand text-hand-compact leading-tight">
           {latest.when(s.date, attendeesOf(s, person))}
         </span>
       </a>
@@ -107,7 +107,7 @@ export function Latest({
             >
               <span aria-hidden="true" className="w-2 self-stretch bg-case" />
               <PriceSticker compact>{i + 1}</PriceSticker>
-              <span className="truncate font-display text-[15px] font-bold">
+              <span className="truncate font-display text-row-title">
                 {film.title}
               </span>
             </li>
@@ -116,7 +116,9 @@ export function Latest({
       )}
       {s.open ? (
         <div className="flex flex-col items-start gap-md rounded-field bg-card-stock p-lg text-card-stock-ink">
-          <p className="font-hand text-[19px] leading-tight">{latest.open}</p>
+          <p className="font-hand text-hand-large leading-tight">
+            {latest.open}
+          </p>
           <p className="text-evidence">{latest.openText}</p>
           <a
             href={feedbackPath(s.id)}
@@ -171,7 +173,7 @@ function Progress({ setup }: { setup: SetupView }) {
       </div>
       <span
         aria-hidden="true"
-        className="font-display text-[13px] font-bold text-ink-2 tabular-nums"
+        className="font-display text-meta-strong text-ink-2 tabular-nums"
       >
         {HOME.guide.progress(done, total)}
       </span>
@@ -185,12 +187,12 @@ function Mark({ state, n }: { state: StepState; n: number }) {
   return (
     <span
       aria-hidden="true"
-      className={`grid size-7 shrink-0 place-items-center rounded-round font-display text-[14px] leading-none font-extrabold ${
+      className={`grid size-7 shrink-0 place-items-center rounded-round font-display text-price-compact ${
         state === 'done'
           ? 'border-2 border-stamp text-stamp'
           : state === 'skipped'
-            ? 'border-[1.5px] border-dashed border-ink-2 text-ink-2'
-            : 'border-[1.5px] border-ink text-ink'
+            ? 'border-(length:--border-width-stroke) border-dashed border-ink-2 text-ink-2'
+            : 'border-(length:--border-width-stroke) border-ink text-ink'
       }`}
     >
       {state === 'done' ? <Icon name="check" className="size-4" /> : n}
@@ -274,7 +276,7 @@ function ConnectorHow() {
           <li key={line}>{line}</li>
         ))}
       </ol>
-      <p className="font-hand text-[15px] leading-snug text-stamp">
+      <p className="font-hand text-hand-small leading-snug text-stamp">
         {guide.auto}
       </p>
     </>
@@ -287,17 +289,19 @@ function Counter({ ratings }: { ratings: number }) {
     <div
       role="img"
       aria-label={HOME.guide.counterLabel(ratings)}
-      className="flex items-center gap-[5px]"
+      className="flex items-center gap-1.25"
     >
       {Array.from({ length: 10 }, (_, i) => (
         <span
           key={i}
           className={`size-3.5 rounded-round ${
-            i < ratings ? 'bg-stamp' : 'border-[1.5px] border-rule'
+            i < ratings
+              ? 'bg-stamp'
+              : 'border-(length:--border-width-stroke) border-rule'
           }`}
         />
       ))}
-      <span className="ml-xs font-display text-[13px] font-bold text-ink-2 tabular-nums">
+      <span className="ml-xs font-display text-meta-strong text-ink-2 tabular-nums">
         {HOME.guide.counter(ratings)}
       </span>
     </div>
@@ -355,7 +359,7 @@ function StepBody({
 }: Pick<StepProps, 'step' | 'mcpUrl' | 'ratings'>) {
   return (
     <>
-      <p className="text-[14.5px] text-pretty text-ink-2">
+      <p className="text-evidence-step text-pretty text-ink-2">
         {HOME.guide.steps[step.step].text}
       </p>
       {step.step === 'taste' && <Counter ratings={ratings} />}
@@ -375,7 +379,7 @@ function Step({ step, n, person, mcpUrl, ratings, first }: StepProps) {
     <li className="flex gap-md py-lg first:pt-0 last:pb-0 [&+li]:border-t [&+li]:border-dashed [&+li]:border-rule">
       <Mark state={state} n={n} />
       <div className="flex min-w-0 flex-1 flex-col gap-sm">
-        <h3 className="flex min-h-7 flex-wrap items-center gap-x-sm font-display text-[15.5px] leading-tight font-bold">
+        <h3 className="flex min-h-7 flex-wrap items-center gap-x-sm font-display text-step-title-small">
           {title}
           {state !== 'pending' && (
             <span className="font-body text-meta font-normal text-ink-2">
@@ -401,7 +405,7 @@ function Step({ step, n, person, mcpUrl, ratings, first }: StepProps) {
         )}
         {state === 'skipped' && (
           <details className="group">
-            <summary className="inline-flex min-h-touch cursor-pointer list-none items-center font-body text-[14px] text-ink-2 underline underline-offset-3 group-open:hidden [&::-webkit-details-marker]:hidden">
+            <summary className="inline-flex min-h-touch cursor-pointer list-none items-center font-body text-link text-ink-2 underline underline-offset-3 group-open:hidden [&::-webkit-details-marker]:hidden">
               {guide.resume}
             </summary>
             <div className="flex flex-col items-start gap-sm">
