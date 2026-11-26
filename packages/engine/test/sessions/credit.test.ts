@@ -34,13 +34,16 @@ import { useFixture, type Fixture } from '../fixture.ts'
 import { weightsWith } from '../recommendation/support.ts'
 
 /** The IMDb bonus of As Horas Lentas (7,4) would change the order without
- * the Crédito: the margins here are small, so only the Crédito moves it. */
+ * the Crédito, and so would the Decaimento of the Notas (#173): the margins
+ * here are small, so only the Crédito moves it. A floor of 1 keeps every
+ * Nota at its full weight. */
 const useCreditFixture = (): { fixture: Fixture; vars: Vars } => {
   const fixture = useFixture()
   const vars = weightsWith(
     fixture,
     '\nweight = 0.3\n\n[no_sad]',
     '\nweight = 0.0\n\n[no_sad]',
+    ['floor = 0.25', 'floor = 1.0'],
   )
   return { fixture, vars }
 }

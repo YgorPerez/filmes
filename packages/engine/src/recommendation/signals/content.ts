@@ -4,9 +4,10 @@
 // For each Candidate linked to an entity (director, writer, actor, series,
 // genre) of a film the Pessoa rated, two kinds of Evidence come out:
 //
-// - one per seed rating, with the strength of the rating ruler (value and
-//   age). A stated rating ("love" is 5, "hate" is 1) is a seed of Tipo
-//   stated, or report when the Dono said it, with the stated ruler;
+// - one per seed rating, with the strength of the rating ruler (by value)
+//   and the weight of its Decaimento (by age, `decay.ts`). A stated rating
+//   ("love" is 5, "hate" is 1) is a seed of Tipo stated, or report when the
+//   Dono said it, with the stated ruler and no Decaimento;
 // - one of Tipo metadata for the entity, when there are high ratings, with
 //   the strength of how many high ratings the Pessoa has on the same node.
 //
@@ -31,6 +32,7 @@ import {
   contribution,
   type Evidence,
 } from '../../evidence/Evidence.ts'
+import { ratingDecay } from '../../evidence/decay.ts'
 import {
   adjustedStrength,
   castStrength,
@@ -210,7 +212,12 @@ export const content: Signal = {
                 strength: adjust(linkStrength(seedStrengthValue, link)),
                 kind,
                 factId: text(s, 'nota_fato'),
-                base: weight * direction,
+                base:
+                  weight *
+                  direction *
+                  (kind === 'rating'
+                    ? ratingDecay(date, today, weights.rating_decay)
+                    : 1),
               })
               // The same Nota can reach the Candidate through more than one
               // node: the strongest link counts.

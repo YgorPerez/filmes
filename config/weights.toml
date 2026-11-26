@@ -9,6 +9,13 @@ moderate = 0.6
 weak = 0.3
 guess = 0.0
 
+[rating_decay]
+# Decaimento de uma Nota (#173): a contribuição dela vale 2^(−idade / meia-vida),
+# com a idade em anos até hoje, e nunca menos que o piso. A Força não muda com a
+# idade. Declarado e Relato não decaem; o Já visto também não.
+half_life_years = 5.0
+floor = 0.25
+
 [path.weight]
 # Peso de cada tipo de aresta de conteúdo no caminho de gosto. Um predicado fora
 # daqui não entra no caminho; o texto de cada um fica em sinais/conteudo.py.

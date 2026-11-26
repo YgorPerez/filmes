@@ -2,7 +2,7 @@
 // through the content path "same director".
 //
 // In the fixture, Bruno gave high Notas to three films by Helena Prado, to
-// two by Otávio Lins and by Rui Tavares (those more than 5 years ago), to
+// two by Otávio Lins and by Rui Tavares (those 8 years ago), to
 // one by Marta Quintal, and low Notas to two by Caio Brandão.
 
 import { describe, expect, test } from 'vite-plus/test'
@@ -11,9 +11,10 @@ import {
   recommend,
   type Recommendation,
   type RecommendedFilm,
+  type Vars,
 } from '../../src/index.ts'
 import { useFixture, type Fixture } from '../fixture.ts'
-import { engineRecommendation, film, titles } from './support.ts'
+import { engineRecommendation, film, titles, weightsWith } from './support.ts'
 
 const EVIDENCE_FIELDS = [
   'contribution',
@@ -26,8 +27,8 @@ const EVIDENCE_FIELDS = [
   'text',
 ]
 
-const all = (fixture: Fixture) =>
-  engineRecommendation(fixture, { attendees: ['dono'], count: 50 })
+const all = (fixture: Fixture, vars: Vars = {}) =>
+  engineRecommendation(fixture, { attendees: ['dono'], count: 50 }, vars)
 
 const ofKind = (f: RecommendedFilm, kind: string) =>
   (f.evidence['bruno'] ?? []).filter((e) => e.kind === kind)
@@ -87,12 +88,42 @@ describe('recommend for the Dono alone', () => {
     })
   })
 
-  test('a seed Nota more than five years old drops one level', async () => {
+  test('a seed Nota keeps its Força however old it is', async () => {
     const f = film(await all(useFixture()), 'A Volta do Mar')
 
     expect(
       Object.fromEntries(ofKind(f, 'rating').map((e) => [e.date, e.strength])),
-    ).toEqual({ '2019-01-10': 'moderate', '2018-07-07': 'weak' })
+    ).toEqual({ '2019-01-10': 'strong', '2018-07-07': 'moderate' })
+  })
+
+  test("a seed Nota's contribution halves with every half-life of age", async () => {
+    // A half-life of 5 years: the 5 of 2019 is 2,871 days old (×0.3363),
+    // the 4 of 2018 is 3,058 days old (×0.3133 of the moderate 0.6).
+    const f = film(await all(useFixture()), 'A Volta do Mar')
+
+    expect(
+      Object.fromEntries(
+        ofKind(f, 'rating').map((e) => [e.date, e.contribution]),
+      ),
+    ).toEqual({ '2019-01-10': 0.3363, '2018-07-07': 0.188 })
+  })
+
+  test('an old Nota never weighs less than the floor', async () => {
+    const fixture = useFixture()
+    const f = film(
+      await all(
+        fixture,
+        weightsWith(fixture, 'half_life_years = 5.0', 'half_life_years = 1.0'),
+      ),
+      'A Volta do Mar',
+    )
+
+    // Over 7 half-lives old, both stop at the floor of 0.25.
+    expect(
+      Object.fromEntries(
+        ofKind(f, 'rating').map((e) => [e.date, e.contribution]),
+      ),
+    ).toEqual({ '2019-01-10': 0.25, '2018-07-07': 0.15 })
   })
 
   test('a seed Nota has its source, date and Fact', async () => {
@@ -131,13 +162,18 @@ describe('recommend for the Dono alone', () => {
   })
 
   test('the strength multiplies the contribution', async () => {
-    const f = film(await all(useFixture()), 'A Volta do Mar')
+    // A floor of 1 leaves every Nota undecayed.
+    const fixture = useFixture()
+    const f = film(
+      await all(fixture, weightsWith(fixture, 'floor = 0.25', 'floor = 1.0')),
+      'A Volta do Mar',
+    )
 
     expect(
       Object.fromEntries(
         ofKind(f, 'rating').map((e) => [e.strength, e.contribution]),
       ),
-    ).toEqual({ moderate: 0.6, weak: 0.3 })
+    ).toEqual({ strong: 1.0, moderate: 0.6 })
   })
 
   test('the film with stronger Evidence comes first', async () => {

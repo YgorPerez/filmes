@@ -1,6 +1,7 @@
 // The Força [strength] ruler: how strong each Evidence is, by its Tipo, its
-// value and its age (`evidencia/regua.py`, issue #7). Fixed rules, no
-// config: the numbers that are calibrated live in `weights.toml`. The
+// value and, for a Declarado or Relato, its age (`evidencia/regua.py`, issue
+// #7). Fixed rules, no config: the numbers that are calibrated live in
+// `weights.toml`, the Decaimento of a Nota among them (`decay.ts`, #173). The
 // strength of an Evidence comes only from here.
 
 import { pythonError } from '../compat/python-error.ts'
@@ -8,8 +9,6 @@ import { STRENGTHS, type Strength } from './strength.ts'
 
 /** A "high rating" on the taste path. */
 export const HIGH_RATING = 4.0
-/** A Nota older than this many years drops one level. */
-export const FRESH_YEARS = 5
 /** A Declarado or Relato older than this many years drops one level. */
 export const STATED_YEARS = 2
 export const SEEN_STRENGTH: Strength = 'strong'
@@ -35,15 +34,14 @@ export type Direction = 1 | -1
 /** Strength and direction of a Nota [rating] on a similar film.
  *
  * Strong: 4.5–5 (or 0.5–1.5 against). Moderate: 4 (or 2). Weak: 3–3.5, and
- * 2.5 is weak against. Given more than 5 years ago, it drops one level.
- * From a Session's Feedback, it then goes up one level, up to strong. */
+ * 2.5 is weak against. From a Session's Feedback, it goes up one level, up
+ * to strong. Age does not change it: the Decaimento lowers the Nota's
+ * contribution instead (`decay.ts`, #173). */
 export const ratingStrength = (
   rating: number,
-  date: string,
-  today: string,
   fromFeedback = false,
 ): readonly [Strength, Direction] => {
-  let [strength, direction]: [Strength, Direction] =
+  const [strength, direction]: [Strength, Direction] =
     rating >= 4.5
       ? ['strong', 1]
       : rating >= 4
@@ -55,9 +53,7 @@ export const ratingStrength = (
             : rating >= 2
               ? ['moderate', -1]
               : ['strong', -1]
-  if (isOlderThan(date, FRESH_YEARS, today)) strength = weaken(strength)
-  if (fromFeedback) strength = strengthen(strength)
-  return [strength, direction]
+  return [fromFeedback ? strengthen(strength) : strength, direction]
 }
 
 /** The Tipo of a seed rating: a Nota, or a rating stated by the Pessoa
@@ -75,7 +71,7 @@ export const seedStrength = (
   fromFeedback = false,
 ): readonly [Strength, Direction] =>
   kind === 'rating'
-    ? ratingStrength(rating, date, today, fromFeedback)
+    ? ratingStrength(rating, fromFeedback)
     : [statedStrength(kind, true, date, today), rating >= 3 ? 1 : -1]
 
 /** Strength of a Feedback reaction (a Nota or a Relato) on the chosen film.
@@ -90,7 +86,7 @@ export const feedbackStrength = (
   today: string,
 ): Strength =>
   kind === 'rating'
-    ? ratingStrength(rating, date, today, true)[0]
+    ? ratingStrength(rating, true)[0]
     : strengthen(statedStrength('report', true, date, today))
 
 /** Metadata on the taste path: 3 or more high Notas of the Pessoa on the

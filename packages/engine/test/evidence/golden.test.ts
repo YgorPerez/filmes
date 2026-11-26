@@ -1,7 +1,9 @@
 // The Força ruler, the PT wording, the individual utility and the Regra key
 // against the golden vectors the Python engine's own modules wrote
 // (`golden.py`): 10,000 inputs each, around the 2-year and 5-year edges and
-// on every 29 February from 1988 to 2040.
+// on every 29 February from 1988 to 2040. A Nota more than 5 years old
+// dropped one Força level in Python; the Decaimento replaced that step
+// (#173), so those vectors are left out of the comparison.
 import * as names from '../python-names.ts'
 import { describe, expect, test } from 'vite-plus/test'
 import {
@@ -38,7 +40,6 @@ import {
   usesCredit,
   weaken,
   guessStrength,
-  FRESH_YEARS,
   HIGH_RATING,
   MIN_NEIGHBOR_BASE,
   MIN_NEIGHBOR_PERCENT,
@@ -110,8 +111,8 @@ describe('the Força ruler', () => {
   const rows = golden<RulerRow & { constant?: string }>('ruler', FOLDER)
 
   const call: Record<string, (args: Tagged[]) => unknown> = {
-    forca_nota: ([rating, date, today, fromFeedback]) =>
-      ratingStrength(num(rating), str(date), str(today), bool(fromFeedback)),
+    forca_nota: ([rating, , , fromFeedback]) =>
+      ratingStrength(num(rating), bool(fromFeedback)),
     forca_semente: ([seed, rating, date, today, fromFeedback]) =>
       seedStrength(
         kind(str(seed)) as SeedKind,
@@ -160,9 +161,36 @@ describe('the Força ruler', () => {
     forca_palpite: () => guessStrength(),
   }
 
+  /** Python's step: a Nota more than this many years old dropped a level. */
+  const PYTHON_FRESH_YEARS = 5
+
+  /** Python's 5-year step on a Nota: true when it weakened the Nota, or
+   * when reading its date threw (the step no longer reads it). */
+  const steppedOn = (date: Tagged, today: Tagged): boolean => {
+    try {
+      return isOlderThan(str(date), PYTHON_FRESH_YEARS, str(today))
+    } catch {
+      return true
+    }
+  }
+
+  /** Whether the row is a Nota that Python's 5-year step touched. */
+  const agedNota = ({ fn, args }: RulerRow): boolean => {
+    if (fn === 'forca_nota') return steppedOn(args[1] ?? null, args[2] ?? null)
+    if (fn !== 'forca_semente' && fn !== 'forca_feedback') return false
+    return (
+      kind(str(args[0] ?? null)) === 'rating' &&
+      steppedOn(args[2] ?? null, args[3] ?? null)
+    )
+  }
+
   test('every function gives what regua.py gives', () => {
-    const calls = rows.filter((row) => row.constant === undefined)
-    expect(calls.length).toBeGreaterThanOrEqual(10_000)
+    const all = rows.filter((row) => row.constant === undefined)
+    const calls = all.filter((row) => !agedNota(row))
+    // The Decaimento took the step out (#173): the aged Notas are a part of
+    // the vectors, not most of them.
+    expect(all.length - calls.length).toBeGreaterThan(100)
+    expect(calls.length).toBeGreaterThanOrEqual(9_000)
     expect(
       misses(
         calls.map((row) => ({ ...row, out: englishOut(row.out) })),
@@ -200,7 +228,7 @@ describe('the Força ruler', () => {
       matches(
         [
           HIGH_RATING,
-          FRESH_YEARS,
+          PYTHON_FRESH_YEARS,
           STATED_YEARS,
           MIN_NEIGHBOR_BASE,
           MIN_NEIGHBOR_PERCENT,

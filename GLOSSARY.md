@@ -181,6 +181,10 @@ Um Fato sobre o filme em si, vindo de uma base pública: elenco, diretor, gêner
 A avaliação que uma Pessoa deu a um filme, sempre dita com o nome de quem deu.
 _Evitar_: nota própria, nota de amigo, rating
 
+**Decaimento** [rating decay, `ratingDecay`]:
+O quanto o tempo apaga uma Nota: a contribuição dela cai à metade a cada meia-vida (`half_life_years`) e nunca fica abaixo de um piso (`floor`). A Força da Nota não muda com a idade. Declarado, Relato e Já visto não decaem.
+_Evitar_: envelhecimento, validade
+
 **Declarado** [stated, `stated`]:
 O que uma Pessoa disse sobre o próprio gosto ou sobre um filme, por exemplo num questionário ou numa review que ela escreveu.
 
