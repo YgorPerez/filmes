@@ -2,8 +2,6 @@ import { Button as ButtonPrimitive } from '@base-ui/react/button'
 import type { VariantProps } from 'class-variance-authority'
 import { buttonVariants } from '../kit/button-variants'
 
-export { buttonVariants }
-
 export function Button({
   className,
   variant,

@@ -18,7 +18,8 @@ import {
 import { FieldLabel } from './kit/field-label'
 import { Icon } from './kit/icon'
 import { Alert, Notice } from './kit/status'
-import { Button, buttonVariants } from './shadcn/button'
+import { buttonVariants } from './kit/button-variants'
+import { Button } from './shadcn/button'
 
 // The pieces the Pessoas screens share, and the other Dono screens with
 // them: the alert and the notice, a section's card, the fields, the forms
@@ -452,8 +453,9 @@ export function CatalogSearch({
             ),
         )}
         <label className="flex min-w-0 flex-1 basis-[220px] flex-col gap-xs">
-          <span className="text-[14px] font-semibold">
-            {label} <span className="font-normal text-ink-2">{hint}</span>
+          <span className="font-display text-field-label">
+            {label}{' '}
+            <span className="font-body font-normal text-ink-2">{hint}</span>
           </span>
           <input
             type="search"
@@ -638,7 +640,7 @@ export function ChosenFilms({
 
   return (
     <div className="flex flex-col gap-xs">
-      <span className="text-[14px] font-semibold">{label}</span>
+      <span className="font-display text-field-label">{label}</span>
       <input
         type="hidden"
         name={name}

@@ -1,5 +1,6 @@
 import type { HomeData } from '#/platform/setup-guide'
-import { Ask, Guide, isGuiding, Latest } from './home-parts'
+import { Ask, Guide, Latest } from './home-parts'
+import { isGuiding } from './setup-steps'
 
 // The home in the Locadora de bairro (DESIGN.md, Home): the counter where
 // the Dono asks for a film, the latest Sessão she was in with its pending

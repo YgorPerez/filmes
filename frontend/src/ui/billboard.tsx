@@ -11,6 +11,7 @@ import { InlineBillboard } from './billboard-inline'
 import {
   forgetMarks,
   hasMarks,
+  markCounts,
   marksOf,
   openStorage,
   parseMarks,
@@ -20,7 +21,7 @@ import {
   type FilmMarks,
   type Marks,
 } from './billboard-marks'
-import { ReplyBar, ReplyBox, summaryOf, type BarPlace } from './billboard-reply'
+import { ReplyBar, ReplyBox, type BarPlace } from './billboard-reply'
 import { Dropped, Legend } from './billboard-top'
 import { BILLBOARD } from './billboard.copy'
 import { ShelfLabel } from './kit/shelf-label'
@@ -144,7 +145,8 @@ export function Billboard({
   const empty = billboard.films.length === 0
   const replying = billboard.open && !empty
 
-  const summary = summaryOf(billboard, marks)
+  // What was marked, in a sentence ("1 Trocar e 1 Já vi").
+  const summary = BILLBOARD.reply.summary(markCounts(billboard, marks))
   if (layout === 'inline' && onExpand)
     return (
       <InlineBillboard

@@ -13,7 +13,7 @@ export function FieldLabel({
 }) {
   return (
     <label className="flex flex-col gap-xs">
-      <span className="font-display text-[14px] font-bold">
+      <span className="font-display text-field-label">
         {label}
         {hint && (
           <>

@@ -48,7 +48,7 @@ const toneOf = (text: string) =>
 export function Chip({ children }: { children: string }) {
   const tone = toneOf(children)
   return (
-    <span className="inline-flex items-center gap-[5px] rounded-pill bg-surface-2 px-[9px] py-[5px] font-display text-chip text-ink tabular-nums">
+    <span className="inline-flex items-center gap-1.25 rounded-pill bg-surface-2 px-2.25 py-1.25 font-display text-chip text-ink tabular-nums">
       {tone && (
         <span
           aria-hidden="true"
