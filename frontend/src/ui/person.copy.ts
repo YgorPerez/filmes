@@ -31,7 +31,8 @@ export const PERSON = {
   owner: 'Dono',
   aliases: (aliases: readonly string[]) => `também ${aliases.join(', ')}`,
   unknown: 'Nenhuma Pessoa com esse nome no repo de dados.',
-  unavailable: PEOPLE.unavailable,
+  unavailable:
+    'Não deu para abrir a Pessoa: o site está com um problema, e ele ficou registrado no log do servidor.',
   remove: 'Tirar',
   removeLabel: (what: string) => `Tirar ${what}`,
   removing: 'Tirando…',

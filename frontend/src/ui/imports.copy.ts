@@ -12,7 +12,7 @@ const facts = (n: number) =>
   n === 0 ? 'nenhum Fato novo' : count(n, 'Fato novo', 'Fatos novos')
 
 const UNAVAILABLE =
-  'Os imports ainda não estão prontos neste servidor: falta o banco do filmes.'
+  'Não deu para abrir os imports: o site está com um problema, e ele ficou registrado no log do servidor.'
 
 const KINDS: Record<string, string> = {
   letterboxd: 'Arquivo do Letterboxd',

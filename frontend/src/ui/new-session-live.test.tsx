@@ -173,7 +173,7 @@ it.each([
   plain.mockRestore()
 })
 
-it('says the search is not ready when the server fails it', async () => {
+it('says the search failed when the server fails it', async () => {
   render(<NewSession options={OPTIONS} />)
   await userEvent.setup().type(screen.getByRole('searchbox'), 'tt0000000')
 

@@ -10,7 +10,7 @@ export const PEOPLE = {
   aliases: (aliases: readonly string[]) => `também ${aliases.join(', ')}`,
   empty: 'Nenhuma Pessoa no repo de dados ainda.',
   unavailable:
-    'As Pessoas ainda não estão prontas neste servidor: falta o banco do filmes.',
+    'Não deu para abrir as Pessoas: o site está com um problema, e ele ficou registrado no log do servidor.',
   gone: 'Essa Pessoa não está mais no repo de dados.',
   create: {
     title: 'Acrescentar Pessoa',

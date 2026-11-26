@@ -25,7 +25,7 @@ const films = (n: number) =>
 export const SESSIONS = {
   back: 'Voltar',
   unavailable:
-    'Não deu para abrir as Sessões agora. Tente de novo daqui a pouco.',
+    'Não deu para abrir as Sessões: o site está com um problema, e ele ficou registrado no log do servidor.',
   films,
 
   list: {
