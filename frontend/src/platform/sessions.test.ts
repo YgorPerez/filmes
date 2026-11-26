@@ -244,7 +244,11 @@ describe('sessionRequestAction', () => {
     ['invalid_usage', '--idioma vazio', 'pedido'],
     ['unknown_person', 'não há Pessoa', 'pessoa'],
     ['ambiguous_person', 'duas Pessoas', 'pessoa'],
-    ['missing_database', 'sem banco', 'indisponivel'],
+    ['missing_database', 'sem banco', 'falha'],
+    ['outdated_database', 'outro schema', 'falha'],
+    ['internal', 'SqliteError: no such column: par_a_par', 'falha'],
+    ['internal', 'SqliteError: database is locked', 'indisponivel'],
+    ['source_unavailable', 'TMDB fora do ar', 'indisponivel'],
   ])('says why the engine refused %s (%s)', async (code, message, refusal) => {
     const log = vi.spyOn(console, 'error').mockImplementation(() => {})
     const { sessions } = fake({ open: failure(code, message) })
@@ -252,7 +256,9 @@ describe('sessionRequestAction', () => {
     expect(response.headers.get('Location')).toBe(
       `/sessoes/nova?erro=${refusal}`,
     )
-    expect(log.mock.calls.length > 0).toBe(refusal === 'indisponivel')
+    expect(log.mock.calls.length > 0).toBe(
+      refusal === 'indisponivel' || refusal === 'falha',
+    )
     log.mockRestore()
   })
 })
@@ -391,9 +397,7 @@ describe('“Ler” in sessionRequestAction', () => {
       new Notes(),
       ORIGIN,
     )
-    expect(response.headers.get('Location')).toBe(
-      '/sessoes/nova?erro=indisponivel',
-    )
+    expect(response.headers.get('Location')).toBe('/sessoes/nova?erro=falha')
     expect(log).toHaveBeenCalledWith(
       'engine: missing_database: mensagem de missing_database',
     )

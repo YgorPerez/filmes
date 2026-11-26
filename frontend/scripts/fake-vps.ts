@@ -20,6 +20,7 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  rmSync,
   writeFileSync,
 } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -79,14 +80,23 @@ case "$1" in
 esac
 `
 
-/** The app's `curl` passes if some answering container is on the requested
- * port. */
+/** The app's `curl` answers if some container is on the requested port:
+ * the body, then the ` %{http_code}` the swap asks for. `/saude` says
+ * `banco-desatualizado` with 503 when the test broke the schema. */
 const CURL = String.raw`#!/usr/bin/env bash
 echo "curl $*" >> "$STATE/calls"
-PORT=$(echo "${'$'}{!#}" | sed -E 's|.*:([0-9]+)/.*|\1|')
+URL="${'$'}{!#}"
+PORT=$(echo "$URL" | sed -E 's|.*:([0-9]+)/.*|\1|')
 [ ! -f "$STATE/app-does-not-answer" ] || exit 7
 for P in "$STATE"/c/*.port; do
-  if [ -f "$P" ] && [ "$(cat "$P")" = "$PORT" ]; then exit 0; fi
+  if [ -f "$P" ] && [ "$(cat "$P")" = "$PORT" ]; then
+    if [ -f "$STATE/schema-does-not-match" ] && [ "${'$'}{URL##*/}" = saude ]; then
+      printf 'banco-desatualizado\n 503'
+    else
+      printf 'ok\n 200'
+    fi
+    exit 0
+  fi
 done
 exit 7
 `
@@ -126,7 +136,7 @@ exec /usr/bin/install "${'$'}{ARGS[@]}"
 `
 
 /** What the VPS has, or comes to have, before the next script. */
-type Fault = 'app-does-not-answer' | 'nginx-refuses'
+type Fault = 'app-does-not-answer' | 'nginx-refuses' | 'schema-does-not-match'
 
 /** What temestudo already has on the VPS: a path from the root and its
  * content. */
@@ -275,6 +285,10 @@ export function fakeVps() {
     },
     breakWith(fault: Fault) {
       writeFileSync(join(state, fault), '')
+    },
+    /** The fault is gone from the next script on. */
+    heal(fault: Fault) {
+      rmSync(join(state, fault), { force: true })
     },
     /** What `df` reports free on the disk from now on. */
     freeBytes(bytes: number) {

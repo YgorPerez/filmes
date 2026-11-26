@@ -98,8 +98,16 @@ function aVps({ appLive = true } = {}) {
     log,
     neighbourBefore,
     deploy,
-    publishDatabase: (file: string, version: string, through?: Vps) =>
-      follow([file, '--version', version], through),
+    publishDatabase: (
+      file: string,
+      version: string,
+      through?: Vps,
+      sha?: string,
+    ) =>
+      follow(
+        [file, '--version', version, ...(sha ? ['--sha', sha] : [])],
+        through,
+      ),
     rollbackDatabase: (version?: string) =>
       follow(version ? ['--rollback', version] : ['--rollback']),
     /** What `db/` holds, by name. */
@@ -311,11 +319,54 @@ describe.skipIf(process.platform === 'win32')('db:publish on the VPS', () => {
     vps.breakWith('app-does-not-answer')
 
     expect(() => vps.publishDatabase(aDatabase('v2'), 'v2')).toThrow(
-      /The new app did not answer on \/ at port 3091/,
+      /The new app did not answer on \/saude at port 3091/,
     )
     expect(vps.live()).toEqual(before)
     expect(vps.versions()).toEqual(['v1.sqlite', 'v2.sqlite'])
     expect(vps.containers()).not.toContain('filmes-app-next')
+  })
+
+  it('a deploy of code of another schema than the live database is refused at once, and what was live stays', () => {
+    const vps = aVps()
+    vps.publishDatabase(aDatabase('v1'), 'v1')
+    const before = vps.live()
+    vps.calls()
+    vps.breakWith('schema-does-not-match')
+
+    expect(() => vps.deploy(SHA_2)).toThrow(
+      `The image sha-${SHA_2} was built for another schema than the database v1; what was live stays. Build and publish its database: pnpm db:publish --build --sha ${SHA_2}.`,
+    )
+    expect(vps.live()).toEqual(before)
+    expect(vps.containers()).not.toContain('filmes-app-next')
+    // Refused on the first answer, not after the 30 tries of an app that is
+    // not up.
+    expect(vps.calls().filter((c) => c.startsWith('curl'))).toHaveLength(1)
+  })
+
+  it('with --sha, the database goes live with the image a refused deploy left', () => {
+    const vps = aVps()
+    vps.publishDatabase(aDatabase('v1'), 'v1')
+    vps.breakWith('schema-does-not-match')
+    expect(() => vps.deploy(SHA_2)).toThrow(/another schema/)
+    // The new database is the schema of the new image.
+    vps.heal('schema-does-not-match')
+
+    vps.publishDatabase(aDatabase('v2'), 'v2', undefined, SHA_2)
+
+    expect(vps.live()).toMatchObject({
+      database: opens('v2'),
+      dbLive: 'v2\n',
+      image: `filmes-app:sha-${SHA_2}`,
+    })
+  })
+
+  it('with --sha of an image the VPS does not have, stops before the upload', () => {
+    const vps = aVps()
+
+    expect(() =>
+      vps.publishDatabase(aDatabase('v1'), 'v1', undefined, 'ccccccc'),
+    ).toThrow('The VPS does not have the image filmes-app:sha-ccccccc')
+    expect(vps.calls().filter((c) => c.startsWith('send'))).toEqual([])
   })
 
   it('with no app live, stops before the upload', () => {
@@ -550,6 +601,8 @@ function build(
     date: DATE,
     paths,
     run,
+    // The image the fake VPS has: the one `aVps` deploys.
+    head: () => SHA_1,
   })
   const built = said.find((line) => line.startsWith('built '))?.slice(6)
   return { printed: printed.join('\n'), said, built }
@@ -741,10 +794,12 @@ describe('db:publish --build', () => {
     }
 
     const file =
-      /The database stays at (\S+): pnpm db:publish \S+ --version v1$/m.exec(
+      /The database stays at (\S+): pnpm db:publish \S+ --version v1 --sha aaaaaaa$/m.exec(
         message,
       )?.[1]
-    expect(message).toContain('No app is live on the VPS')
+    expect(message).toContain(
+      'The VPS does not have the image filmes-app:sha-aaaaaaa: deploy it first',
+    )
     expect(readFileSync(file!, 'utf8')).toBe('SQLite format 3\0built')
     rmSync(dirname(file!), { recursive: true })
   })

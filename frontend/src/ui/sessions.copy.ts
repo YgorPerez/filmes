@@ -64,6 +64,8 @@ export const SESSIONS = {
         'A resposta ficou gravada, mas não deu para refazer a Recomendação agora. Tente de novo daqui a pouco.',
       indisponivel:
         'Não deu para gravar a resposta agora. Tente de novo daqui a pouco.',
+      falha:
+        'O site está com um problema, e ele ficou registrado no log do servidor. Tentar de novo não resolve.',
     } satisfies Record<ReplyRefusal, string>,
     warnings: 'Avisos',
     addition: (text: string) =>
@@ -173,5 +175,7 @@ export const SESSIONS = {
       'Alguém da lista saiu do cadastro. Recarregue a página e marque quem vai assistir.',
     pedido: 'Um valor do formulário não vale. Confira e peça de novo.',
     indisponivel: 'Não deu para recomendar agora. Tente de novo daqui a pouco.',
+    falha:
+      'O site está com um problema, e ele ficou registrado no log do servidor. Tentar de novo não resolve.',
   } satisfies Record<SessionRequestRefusal, string>,
 } as const

@@ -10,6 +10,7 @@
 // Runs on plain `node`, which reads TypeScript by itself.
 
 import { spawnSync } from 'node:child_process'
+import { realpathSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 
 /** The repository root, where the build runs. */
@@ -83,5 +84,49 @@ export function buildDatabase({
   if (result.status !== 0)
     throw new Error(
       `the engine could not build the database: ${engineError(result)}`,
+    )
+}
+
+/** What `git -C cwd <args>` printed, trimmed, or null when it failed. */
+function git(cwd: string, ...args: string[]): string | null {
+  const result = spawnSync('git', ['-C', cwd, ...args], { encoding: 'utf8' })
+  return result.status === 0 ? result.stdout.trim() : null
+}
+
+/** The commit the code is at: its image goes live with the database it
+ * builds (#258). */
+export function headOf(repo: string = REPO): string {
+  const head = git(repo, 'rev-parse', 'HEAD')
+  if (head === null) throw new Error(`${repo} is not a git checkout.`)
+  return head
+}
+
+/** Refuses a filmes-dados checkout with changes or behind its remote: the
+ * VPS writes to filmes-dados (ADR 0005), and a build from an old copy would
+ * publish a database without what it wrote (#258). A folder that is not a
+ * checkout of its own, such as a test's copy, is built as it is. */
+export function checkDataCheckout(
+  data: string,
+  say: (line: string) => void,
+): void {
+  const top = git(data, 'rev-parse', '--show-toplevel')
+  if (top === null || realpathSync(top) !== realpathSync(data)) {
+    say(`${data} is not a git checkout of its own: built as it is`)
+    return
+  }
+  if (git(data, 'fetch', '--quiet') === null)
+    throw new Error(
+      `git fetch failed in ${data}: it cannot tell whether the copy is behind.`,
+    )
+  if (git(data, 'status', '--porcelain'))
+    throw new Error(
+      `${data} has uncommitted changes: commit or discard them, then build.`,
+    )
+  const behind = git(data, 'rev-list', '--count', 'HEAD..@{upstream}')
+  if (behind === null)
+    throw new Error(`${data} has no upstream branch to compare with.`)
+  if (Number(behind) > 0)
+    throw new Error(
+      `${data} is ${behind} commits behind its remote: git -C ${data} pull, then build.`,
     )
 }

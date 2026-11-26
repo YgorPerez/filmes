@@ -26,5 +26,7 @@ export const VOTES = {
     regerar:
       'Os votos foram gravados, mas a lista não pôde ser refeita. Avise quem abriu a Sessão.',
     indisponivel: 'Não deu para gravar os votos agora. Tente de novo.',
+    falha:
+      'O site está com um problema, e ele ficou registrado no log do servidor. Tentar de novo não resolve.',
   },
 } as const

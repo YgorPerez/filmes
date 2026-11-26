@@ -29,7 +29,7 @@ import {
   type VoteNotice,
   type VoteRefusal,
 } from '#/content/session-votes-address'
-import { seeOther } from './form-post'
+import { failureOf, seeOther } from './form-post'
 import type { SessionFilm } from './session-fields'
 import { resolveSessionLink } from './session-link'
 import { fromThisSite } from './same-site'
@@ -114,7 +114,7 @@ export async function voteAction(
     )
     if (cast.exitCode !== 0) {
       logEngineError(cast)
-      return deck({ erro: 'indisponivel' })
+      return deck({ erro: failureOf(cast) })
     }
     if (!cast.output.regenerate) return deck({ feito: 'votado' })
     const asked = await engine.run(sessionRedoRequest(link.session))

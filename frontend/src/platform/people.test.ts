@@ -264,7 +264,7 @@ describe('personAction', () => {
     ['unknown_veto', '/pessoas/iara?erro=item'],
     ['ambiguous_stated', '/pessoas/iara?erro=item'],
     ['unknown_person', '/pessoas?erro=pessoa'],
-    ['missing_database', '/pessoas/iara?erro=indisponivel'],
+    ['missing_database', '/pessoas/iara?erro=falha'],
   ])('says why the engine refused: %s', async (code, location) => {
     const log = vi.spyOn(console, 'error').mockImplementation(() => {})
     const { people } = fakePeople(failure(code))
@@ -359,7 +359,7 @@ describe('personCreateAction', () => {
     ['invalid_usage', 'email_not_owner', 'email'],
     ['invalid_usage', 'email_taken', 'email-usado'],
     ['invalid_usage', undefined, 'indisponivel'],
-    ['missing_database', undefined, 'indisponivel'],
+    ['missing_database', undefined, 'falha'],
   ])('says why the engine refused: %s %s', async (code, reason, refusal) => {
     const log = vi.spyOn(console, 'error').mockImplementation(() => {})
     const { people } = fakePeople({
@@ -375,7 +375,9 @@ describe('personCreateAction', () => {
     expect(response.headers.get('Location')).toBe(
       `/pessoas?erro=${refusal}&nome=Luana+Reis&apelidos=Lu`,
     )
-    expect(log.mock.calls.length).toBe(refusal === 'indisponivel' ? 1 : 0)
+    expect(log.mock.calls.length).toBe(
+      refusal === 'indisponivel' || refusal === 'falha' ? 1 : 0,
+    )
     log.mockRestore()
   })
 })

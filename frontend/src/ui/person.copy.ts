@@ -63,6 +63,8 @@ export const PERSON = {
     'proprio-acesso': 'O seu próprio acesso não sai por aqui.',
     exportar: 'Não deu para gerar o CSV agora. Tente de novo daqui a pouco.',
     indisponivel: 'Não deu para gravar agora. Tente de novo daqui a pouco.',
+    falha:
+      'O site está com um problema, e ele ficou registrado no log do servidor. Tentar de novo não resolve.',
   } satisfies Record<PersonRefusal, string>,
 
   // Fields.

@@ -11,8 +11,10 @@
 //   both inside the same `write` (#76, "a process per command becomes a
 //   long-lived server").
 //
-// Both fail with `missing_database` when the file is not there, and both
-// register the functions of `functions.ts`.
+// Both fail with `missing_database` when the file is not there and with
+// `outdated_database` when a rebuild of another schema made it (its
+// `user_version`, `rebuild/schema-version.ts`), and both register the functions of
+// `functions.ts`.
 //
 // The database is in WAL mode (#125): readers never block the writer, so
 // `evaluate`'s one read transaction of minutes leaves Feedback and imports
@@ -30,6 +32,7 @@ import {
 import { Context, Effect, Layer, Schema, Semaphore } from 'effect'
 import { Environment } from '../runtime/Environment.ts'
 import { engineError, type EngineError } from '../runtime/EngineError.ts'
+import { SCHEMA_VERSION } from '../rebuild/schema-version.ts'
 import { SQL_FUNCTIONS } from './functions.ts'
 
 /** What SQLite itself refused: a bad query, a constraint, a busy database,
@@ -47,6 +50,13 @@ export const missingDatabase = (path: string): EngineError =>
   engineError(
     'missing_database',
     `banco não encontrado em ${path}: rode \`pnpm db:publish --build\``,
+  )
+
+/** The file was built by another schema than this code's. */
+const outdatedDatabase = (path: string): EngineError =>
+  engineError(
+    'outdated_database',
+    `o banco em ${path} foi construído com outro schema: rode \`pnpm db:publish --build\``,
   )
 
 export interface RunResult {
@@ -311,6 +321,10 @@ const openFile = (
 const toWal = (connection: Connection) =>
   Effect.ignore(connection.exec('PRAGMA journal_mode = WAL'))
 
+/** The schema version a rebuild stamped in the file; 0 when none did. */
+const stampOf = (db: DatabaseSync): number =>
+  Number(db.prepare('PRAGMA user_version').get()?.['user_version'] ?? 0)
+
 /** Closes a connection, rolling back a transaction a failed or interrupted
  * use left open. */
 const close = (db: DatabaseSync) =>
@@ -364,7 +378,19 @@ export class Sqlite extends Context.Service<
           environment.path('database'),
           (path): Effect.Effect<DatabaseSync, EngineError | SqliteError> => {
             if (!existsSync(path)) return Effect.fail(missingDatabase(path))
-            return openFile(path, readOnly, options)
+            const { authorizer, ...rest } = options
+            return Effect.flatMap(openFile(path, readOnly, rest), (db) =>
+              Effect.gen(function* () {
+                // The stamp is read before the authorizer, which may deny a
+                // PRAGMA (`consultar`'s).
+                const stamp = yield* attempt(() => stampOf(db))
+                if (stamp !== SCHEMA_VERSION)
+                  return yield* outdatedDatabase(path)
+                if (authorizer)
+                  yield* attempt(() => db.setAuthorizer(authorizer))
+                return db
+              }).pipe(Effect.tapError(() => close(db))),
+            )
           },
         )
 
@@ -397,3 +423,16 @@ export class Sqlite extends Context.Service<
     }),
   )
 }
+
+/** Whether this code can read the database: it is there and a rebuild of
+ * this schema made it. The app's `/saude` and the deploy's probe ask it
+ * (#258). */
+export const checkDatabase: Effect.Effect<
+  { readonly database: 'ok' },
+  EngineError | SqliteError,
+  Sqlite
+> = Effect.gen(function* () {
+  const sqlite = yield* Sqlite
+  yield* sqlite.read((db) => db.get('SELECT 1'))
+  return { database: 'ok' } as const
+})

@@ -53,7 +53,7 @@ import { personPath } from '#/content/paths'
 import { currentOwner } from './auth'
 import { catalogSearch } from './catalog-search'
 import { appEngine } from './engine'
-import { formPoster, seeOther } from './form-post'
+import { failureOf, formPoster, seeOther } from './form-post'
 import type { Owner } from './owners'
 
 export type { Owner }
@@ -376,7 +376,7 @@ function refusalOf(outcome: { output: ErrorOutput }): PersonRefusal {
   if (code.startsWith('unknown_') || code.startsWith('ambiguous_'))
     return 'item'
   logEngineError(outcome)
-  return 'indisponivel'
+  return failureOf(outcome)
 }
 
 /** `POST /pessoas/<slug>/acao`: runs the form's action as the logged-in
@@ -436,7 +436,7 @@ function createRefusalOf(outcome: {
   const { reason } = outcome.output.error
   if (reason !== undefined) return CREATE_REFUSALS[reason]
   logEngineError(outcome)
-  return 'indisponivel'
+  return failureOf(outcome)
 }
 
 /** Back to the list with the reason and what was typed. */

@@ -44,5 +44,7 @@ export const FEEDBACK = {
     pedido: 'Um valor do formulário não vale. Confira e grave de novo.',
     fechada: 'Essa Sessão já está fechada.',
     indisponivel: 'Não deu para gravar agora. Tente de novo daqui a pouco.',
+    falha:
+      'O site está com um problema, e ele ficou registrado no log do servidor. Tentar de novo não resolve.',
   } satisfies Record<FeedbackRefusal, string>,
 } as const

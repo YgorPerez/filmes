@@ -313,6 +313,7 @@ export {
   targetOf,
 } from './sqlite/vocabulary.ts'
 export {
+  checkDatabase,
   missingDatabase,
   Sqlite,
   SqliteError,
@@ -606,6 +607,8 @@ export {
   type ImportRemovalInput,
 } from './imports/remove.ts'
 export { rebuild, type Rebuilt } from './rebuild/rebuild.ts'
+export { schemaHash } from './rebuild/schema.ts'
+export { SCHEMA_VERSION } from './rebuild/schema-version.ts'
 export {
   update,
   type PinnedDump,

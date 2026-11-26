@@ -33,8 +33,12 @@ export const PERSON_CREATE_REFUSALS = [
   'email',
   // Another Pessoa has that e-mail.
   'email-usado',
-  // The engine cannot run here, or failed: the reason is in the log.
+  // The engine cannot run here, or failed in a way that passes: the reason
+  // is in the log.
   'indisponivel',
+  // The engine failed in a way waiting does not fix (#258): the reason is
+  // in the log.
+  'falha',
 ] as const
 export type PersonCreateRefusal = (typeof PERSON_CREATE_REFUSALS)[number]
 

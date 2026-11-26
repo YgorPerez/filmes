@@ -248,3 +248,29 @@ describe('write', () => {
     expect(outcome.output.error.code).toBe('missing_database')
   })
 })
+
+describe('a database built by another schema', () => {
+  const stamp = (path: string, version: number) => {
+    const db = new DatabaseSync(path)
+    try {
+      db.exec(`PRAGMA user_version = ${version}`)
+    } finally {
+      db.close()
+    }
+  }
+
+  test.each([
+    ['read', scratchRows],
+    ['write', withScratchTable],
+  ] as const)('%s refuses it as outdated_database', async (_, use) => {
+    const fixture = useFixture()
+    stamp(fixture.database, 0)
+
+    const outcome = await fixture.run(use)
+
+    expect(outcome.exitCode).toBe(1)
+    if (outcome.exitCode === 0) return
+    expect(outcome.output.error.code).toBe('outdated_database')
+    expect(outcome.output.error.message).toContain('pnpm db:publish --build')
+  })
+})

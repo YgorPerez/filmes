@@ -103,6 +103,8 @@ pnpm db:publish --build --dry-run    # monta o SQLite com o `rebuild` a partir d
 pnpm db:publish --build              # monta e publica na VPS (ADR 0006)
 ```
 
+Uma mudança em `packages/engine/src/rebuild/schema/*.sql` muda o `SCHEMA_VERSION` (um teste dá o número novo), e o deploy dela é recusado até o banco acompanhar: depois do merge, `git -C <filmes-dados> pull` e `pnpm db:publish --build` a partir daquele commit, que sobe a imagem e o banco juntos (#258).
+
 Para brincar com a fixture, os testes já montam o banco: `useFixture()` no Vitest e, no app, o `frontend/playwright.config.ts` mostra as variáveis que sobem o app sobre ela.
 
 As fontes sob demanda leem a chave de `FILMES_OMDB_CHAVE`, `FILMES_DDD_CHAVE` e `FILMES_TMDB_CHAVE`; sem chave, a Recomendação sai com um aviso em `warnings`. As respostas ficam 30 dias em `FILMES_CACHE` (ou `<banco>-cache.sqlite`), que o `rebuild` não apaga. Com `FILMES_GRAVACOES=tests/fixture/gravacoes`, as fontes leem respostas gravadas em vez da rede, como nos testes. Falha passageira é tentada até 3 vezes; se persistir, a fonte fica desligada até o fim da execução.

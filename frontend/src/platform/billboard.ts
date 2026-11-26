@@ -35,7 +35,7 @@ import {
 import type { ReplyRefusal, SessionNotice } from '#/content/billboard-reply'
 import type { SessionLinkSearch } from '#/content/session-link-address'
 import { appEngine } from './engine'
-import { appPoster, formPoster, seeOther } from './form-post'
+import { appPoster, failureOf, formPoster, seeOther } from './form-post'
 import { appNotes, type Note, type Notes } from './notes'
 import {
   pairwiseAnswerAction,
@@ -198,7 +198,7 @@ function refusalOf(
   if (stage === 'answer' && code === 'invalid_usage') return 'texto'
   if (code === 'closed_session') return 'fechada'
   logEngineError(outcome)
-  return stage === 'redo' ? 'regerar' : 'indisponivel'
+  return stage === 'redo' ? 'regerar' : failureOf(outcome)
 }
 
 /** `POST /sessoes/<id>/responder`: records the Cartaz's text and, when it
