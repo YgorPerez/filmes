@@ -1,10 +1,20 @@
 import type { EntityMatch, FilmMatch, FilmRef } from '@filmes/engine'
-import type { ComponentProps, ReactNode } from 'react'
-import type { CatalogScope } from '#/content/catalog-search'
-import type { SearchAnswer } from '#/platform/catalog-search'
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ComponentProps,
+  type ReactNode,
+} from 'react'
 import { CATALOG_SEARCH } from './catalog-search.copy'
 import { PERSON } from './person.copy'
 import { FIELD } from './kit/field'
+import { useHydrated } from './kit/fetch-form'
+import {
+  searchFilms,
+  type CatalogScope,
+  type SearchAnswer,
+} from './kit/film-search'
 import { FieldLabel } from './kit/field-label'
 import { Icon } from './kit/icon'
 import { Alert, Notice } from './kit/status'
@@ -254,7 +264,7 @@ export function Submit({
 
 /** A link that looks like a button: `primary` for the screen's main
  * action, `option` for the others. */
-export function LinkButton({
+function LinkButton({
   href,
   variant = 'option',
   label,
@@ -295,23 +305,48 @@ function Id({ id }: { id: string }) {
   )
 }
 
-function FilmItem({
-  film,
-  pick,
-}: {
-  film: FilmMatch
+/** How a film's "Usar" takes it: a link to the page with it (`pick`,
+ * before the JavaScript), or in place (`onPick`). */
+export type Pick = {
   pick?: (id: string) => string
-}) {
-  const { votes, pickLabel } = CATALOG_SEARCH
+  onPick?: (film: { id: string; label: string }) => void
+}
+
+/** "Usar": the link, or the button that takes the film in place. */
+export function PickFilm({
+  id,
+  label,
+  pick,
+  onPick,
+}: Pick & { id: string; label: string }) {
+  const { pickLabel } = CATALOG_SEARCH
+  if (onPick)
+    return (
+      <Button
+        type="button"
+        variant="option"
+        className="self-start"
+        aria-label={pickLabel(label)}
+        onClick={() => onPick({ id, label })}
+      >
+        {CATALOG_SEARCH.pick}
+      </Button>
+    )
+  if (!pick) return null
+  return (
+    <LinkButton href={pick(id)} label={pickLabel(label)}>
+      {CATALOG_SEARCH.pick}
+    </LinkButton>
+  )
+}
+
+function FilmItem({ film, pick, onPick }: Pick & { film: FilmMatch }) {
+  const { votes } = CATALOG_SEARCH
   const title = filmText(film)
   return (
     <Item
       actions={
-        pick && (
-          <LinkButton href={pick(film.id)} label={pickLabel(title)}>
-            {CATALOG_SEARCH.pick}
-          </LinkButton>
-        )
+        <PickFilm id={film.id} label={title} pick={pick} onPick={onPick} />
       }
     >
       <span className="flex flex-wrap items-center gap-sm">
@@ -354,10 +389,8 @@ function Group({ title, children }: { title: string; children: ReactNode[] }) {
 function CatalogResults({
   answer,
   pick,
-}: {
-  answer: SearchAnswer
-  pick?: (id: string) => string
-}) {
+  onPick,
+}: Pick & { answer: SearchAnswer }) {
   const { groups, results, none, refusals } = CATALOG_SEARCH
   if ('refused' in answer) return <Alert>{refusals[answer.refused]}</Alert>
   const { films, people, genres, series } = answer.found
@@ -372,7 +405,7 @@ function CatalogResults({
       </p>
       <Group title={groups.films}>
         {films.map((f) => (
-          <FilmItem key={f.id} film={f} pick={pick} />
+          <FilmItem key={f.id} film={f} pick={pick} onPick={onPick} />
         ))}
       </Group>
       <Group title={groups.people}>{entities(people)}</Group>
@@ -438,47 +471,202 @@ export function CatalogSearch({
   )
 }
 
-/** The Catálogo search inside a form that posts (Nova Sessão, Contar como
- * foi): its button sends the form with `buscar-catalogo=sim`, so the
- * server keeps what the form holds and comes back with the search. Enter
- * in the field searches too: the form's default button says `tecla=enter`,
- * and `buscado`, what the field came back with, tells a new search from
- * one already run (`searchAsked`). */
+// The Catálogo search inside a form that posts (Nova Sessão, Contar como
+// foi), and the films "Parecido com" took.
+//
+// Before the JavaScript, the search is a button that sends the form with
+// `buscar-catalogo=sim`, so the server keeps what the form holds and comes
+// back with the search; Enter in the field searches too (the form's
+// default button says `tecla=enter`, and `buscado`, what the field came
+// back with, tells a new search from one already run: `searchAsked`).
+// With the JavaScript (#235), it searches while the Dono types, the
+// button goes, and Enter in the field sends nothing.
+
+/** How long the search waits after the last key. */
+const DEBOUNCE_MS = 300
+/** The shortest text the engine searches. */
+const MIN_LENGTH = 2
+/** A whole IMDb id: searched at once. */
+const IMDB_ID = /^tt\d{7,}$/
+
+/** The search of what the Dono types: `answer` for the text `query`,
+ * `searching` while one runs. Only the latest search lands. */
+function useLiveSearch(
+  on: boolean,
+  typed: string,
+  initial: SearchAnswer | null,
+) {
+  const [query, setQuery] = useState(typed)
+  const [answer, setAnswer] = useState(initial)
+  const [searching, setSearching] = useState(false)
+  const latest = useRef(0)
+  const searched = useRef(typed)
+
+  useEffect(() => {
+    if (!on) return
+    const text = query.trim()
+    if (text === searched.current) return
+    const run = ++latest.current
+    const land = (found: SearchAnswer | null) => {
+      if (run !== latest.current) return
+      searched.current = text
+      setAnswer(found)
+      setSearching(false)
+    }
+    if (text.length < MIN_LENGTH) {
+      land(null)
+      return
+    }
+    const timer = setTimeout(
+      () => {
+        setSearching(true)
+        searchFilms(text).then(land, () =>
+          land({ query: text, refused: 'indisponivel' }),
+        )
+      },
+      IMDB_ID.test(text) ? 0 : DEBOUNCE_MS,
+    )
+    return () => clearTimeout(timer)
+  }, [on, query])
+
+  return { query, setQuery, answer, searching }
+}
+
 export function SessionFilmLookup({
   name,
   label,
-  answer,
+  answer: initial,
   value,
   pick,
-}: {
+  onPick,
+}: Pick & {
   name: 'buscar' | 'busca'
   label: string
   answer: SearchAnswer | null
   value?: string
-  pick: (id: string) => string
 }) {
+  const live = useHydrated()
+  const typed = value ?? initial?.query ?? ''
+  const { query, setQuery, answer, searching } = useLiveSearch(
+    live,
+    typed,
+    initial,
+  )
   return (
     <section aria-label={CATALOG_SEARCH.title} className="flex flex-col gap-lg">
       <div className="grid items-end gap-sm sm:grid-cols-[1fr_auto]">
         <FieldLabel label={label}>
-          <input
-            type="search"
-            name={name}
-            defaultValue={value ?? answer?.query}
-            autoComplete="off"
-            className={`${FIELD} w-full`}
-          />
+          <span className="relative flex">
+            <input
+              type="search"
+              name={name}
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              onKeyDown={(event) => {
+                if (live && event.key === 'Enter') event.preventDefault()
+              }}
+              autoComplete="off"
+              enterKeyHint="search"
+              aria-busy={searching}
+              className={`${FIELD} w-full ${searching ? 'pr-28' : ''}`}
+            />
+            {searching && (
+              <span
+                role="status"
+                className="pointer-events-none absolute top-1/2 right-10 -translate-y-1/2 text-meta text-ink-2"
+              >
+                {CATALOG_SEARCH.searching}
+              </span>
+            )}
+          </span>
         </FieldLabel>
-        <Submit name="buscar-catalogo" value="sim" formNoValidate>
-          {CATALOG_SEARCH.submit}
-        </Submit>
+        {!live && (
+          <Submit name="buscar-catalogo" value="sim" formNoValidate>
+            {CATALOG_SEARCH.submit}
+          </Submit>
+        )}
       </div>
+      <input type="hidden" name="buscado" value={query.trim()} />
+      {answer && <CatalogResults answer={answer} pick={pick} onPick={onPick} />}
+    </section>
+  )
+}
+
+/** A film "Parecido com" took: its id, and its title once known. */
+export type ChosenFilm = { readonly id: string; readonly label?: string }
+
+/** The films "Parecido com" took, each with a × to let it go, over the
+ * field the form posts (`name`, the ids by comma). The titles it does not
+ * know yet (films that came in the URL) it looks up by id. */
+export function ChosenFilms({
+  name,
+  label,
+  empty,
+  films,
+  onRemove,
+  onLabel,
+}: {
+  name: string
+  label: string
+  empty: string
+  films: readonly ChosenFilm[]
+  onRemove: (id: string) => void
+  onLabel: (id: string, label: string) => void
+}) {
+  const unknown = films
+    .filter((film) => film.label === undefined)
+    .map((film) => film.id)
+    .join(',')
+  useEffect(() => {
+    if (unknown === '') return
+    let live = true
+    for (const id of unknown.split(','))
+      searchFilms(id).then(
+        (answer) => {
+          const film =
+            answer && 'found' in answer
+              ? answer.found.films.find((f) => f.id === id)
+              : undefined
+          if (live && film) onLabel(id, filmText(film))
+        },
+        () => undefined,
+      )
+    return () => {
+      live = false
+    }
+  }, [unknown, onLabel])
+
+  return (
+    <div className="flex flex-col gap-xs">
+      <span className="text-[14px] font-semibold">{label}</span>
       <input
         type="hidden"
-        name="buscado"
-        value={value ?? answer?.query ?? ''}
+        name={name}
+        value={films.map((film) => film.id).join(',')}
       />
-      {answer && <CatalogResults answer={answer} pick={pick} />}
-    </section>
+      {films.length === 0 ? (
+        <p className="text-meta text-ink-2">{empty}</p>
+      ) : (
+        <ul className="flex flex-wrap gap-sm">
+          {films.map((film) => (
+            <li
+              key={film.id}
+              className="flex items-center gap-xs rounded-pill border border-rule bg-surface-2 py-1 pr-1 pl-3"
+            >
+              <span>{film.label ?? film.id}</span>
+              <button
+                type="button"
+                aria-label={CATALOG_SEARCH.remove(film.label ?? film.id)}
+                onClick={() => onRemove(film.id)}
+                className="flex size-touch cursor-pointer items-center justify-center rounded-pill text-ink-2"
+              >
+                {/* The drawn +, turned into a ×, as the folds' close. */}
+                <Icon name="plus" className="size-[16px] rotate-45" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   )
 }

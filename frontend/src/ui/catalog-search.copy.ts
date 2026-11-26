@@ -12,6 +12,8 @@ export const CATALOG_SEARCH = {
   label: 'Título ou nome',
   hint: '“Título (ano)” filtra pelo ano',
   submit: 'Buscar',
+  searching: 'Buscando…',
+  remove: (title: string) => `Tirar ${title}`,
   results: (query: string) => `Resultado para “${query}”`,
   none: 'Nada no Catálogo com esse nome. Tente o título original.',
   pick: 'Usar',
