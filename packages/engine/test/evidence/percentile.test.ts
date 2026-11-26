@@ -8,7 +8,8 @@ import {
   type RatingPercentile,
 } from '../../src/index.ts'
 
-/** The cut points of `config/weights.toml`. */
+/** The cut points of `config/weights.toml`, with `min_ratings` lowered
+ * from 20 to 10 so that a scale of ten Notas is her own. */
 const CUTS: RatingPercentile = {
   min_ratings: 10,
   strong: 0.9,
