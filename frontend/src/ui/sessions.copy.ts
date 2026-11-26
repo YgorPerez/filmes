@@ -1,6 +1,14 @@
 import type { ReplyRefusal, SessionNotice } from '#/content/billboard-reply'
 import type { SessionRequestRefusal } from '#/content/session-request'
 
+const quoted = (words: string) => `“${words}”`
+
+/** "A", "A ou B", "A, B ou C". */
+const either = (items: readonly string[]) =>
+  items.length <= 1
+    ? items.join('')
+    : `${items.slice(0, -1).join(', ')} ou ${items.at(-1)}`
+
 const films = (n: number) =>
   n === 0 ? 'nenhum filme' : n === 1 ? '1 filme' : `${n} filmes`
 
@@ -81,8 +89,26 @@ export const SESSIONS = {
     count: 'Quantos filmes',
     countHint: 'em branco: o padrão',
     words: 'Em uma frase',
-    wordsHint: 'opcional, fica na Sessão',
-    wordsPlaceholder: 'eu e a Iara, algo leve',
+    wordsHint: 'opcional, fica na Sessão; “Ler” preenche o formulário com ela',
+    wordsPlaceholder: 'eu e a Iara, algo leve, até 2h',
+    read: 'Ler',
+    reading: {
+      understood: (labels: readonly string[]) =>
+        `Lido da frase: ${labels.join('; ')}.`,
+      nothing: 'Nada da frase preencheu o formulário.',
+      notUnderstood: (runs: readonly string[]) =>
+        `Ficou de fora: ${runs.map(quoted).join(', ')}.`,
+      ambiguous: (
+        items: readonly { words: string; candidates: readonly string[] }[],
+      ) =>
+        `Em dúvida, escolha no formulário: ${items
+          .map(({ words, candidates }) =>
+            candidates.length === 0
+              ? `${quoted(words)} não está no Catálogo`
+              : `${quoted(words)} pode ser ${either(candidates)}`,
+          )
+          .join('; ')}.`,
+    },
     constraints: 'Restrições',
     constraintsLead:
       'Valem só nesta Sessão e tiram o filme antes de qualquer ordem. Deixe em branco o que não vale.',
@@ -111,6 +137,9 @@ export const SESSIONS = {
   },
 
   refusals: {
+    frase: 'Escreva a frase antes de tocar em “Ler”.',
+    'frase-longa':
+      'A frase passa de 500 caracteres. Encurte e toque em “Ler” de novo.',
     presentes: 'Marque pelo menos um Presente.',
     de: '“O gosto de uma Pessoa” precisa de uma Pessoa entre os Presentes.',
     quantos: 'Quantos filmes: um número de 1 a 50.',

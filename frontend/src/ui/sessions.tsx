@@ -2,12 +2,17 @@ import type { ReactNode } from 'react'
 import {
   MAX_CHILD_AGE,
   RULE_CHOICES,
+  type SessionRequestForm,
   type SessionRequestRefusal,
 } from '#/content/session-request'
 import type { ReplyRefusal, SessionNotice } from '#/content/billboard-reply'
 import type { CartazPage } from '#/platform/billboard'
 import type { SearchAnswer } from '#/platform/catalog-search'
-import type { RequestOptions, SessionItem } from '#/platform/sessions'
+import type {
+  RequestOptions,
+  SentenceReading,
+  SessionItem,
+} from '#/platform/sessions'
 import { Billboard } from './billboard'
 import { ImportsFrame } from './imports'
 import { Option } from './kit/option'
@@ -278,6 +283,58 @@ function SessionView({
   )
 }
 
+// --- "Em uma frase" ------------------------------------------------------------
+//
+// The Dono's sentence, kept with the Session, and "Ler" (#199), which
+// posts the form with `ler=sim` to come back with it filled from the
+// sentence. Under it, once read, what the sentence filled, what it left out
+// and what it could not decide.
+
+/** What the reading of `reading` says, one line each. */
+function ReadingSaid({ reading }: { reading: SentenceReading }) {
+  const said = SESSIONS.form.reading
+  const lines = [
+    reading.understood.length > 0
+      ? said.understood(reading.understood)
+      : said.nothing,
+    reading.notUnderstood.length > 0 &&
+      said.notUnderstood(reading.notUnderstood),
+    reading.ambiguities.length > 0 && said.ambiguous(reading.ambiguities),
+  ].filter((line) => line !== false)
+  return (
+    <Notice>
+      {lines.map((line) => (
+        <span key={line} className="block">
+          {line}
+        </span>
+      ))}
+    </Notice>
+  )
+}
+
+function Sentence({ reading }: { reading: SentenceReading | null }) {
+  const { form } = SESSIONS
+  return (
+    <div className="flex flex-col gap-lg rounded-card border border-rule bg-surface p-xl">
+      <div className="flex flex-col gap-sm sm:flex-row sm:items-end">
+        <div className="min-w-0 flex-1">
+          <TextField
+            name="pedido"
+            label={form.words}
+            hint={form.wordsHint}
+            placeholder={form.wordsPlaceholder}
+            defaultValue={reading?.text}
+          />
+        </div>
+        <Submit name="ler" value="sim" className="self-start sm:self-auto">
+          {form.read}
+        </Submit>
+      </div>
+      {reading && <ReadingSaid reading={reading} />}
+    </div>
+  )
+}
+
 // --- the Nova Sessão form ------------------------------------------------------
 
 const grid = 'grid grid-cols-1 gap-lg sm:grid-cols-2'
@@ -292,13 +349,40 @@ const CHILD_OPTIONS = [
   })),
 ]
 
-/** Nova Sessão with `similar` and the search of `query`: "Usar" adds a
- * film to "Parecido com". */
+/** The form's fields a sentence filled ("Ler"); none before a reading. */
+type Asked = Partial<SessionRequestForm>
+
+/** The form's value of the Regra the sentence asked for. */
+const ruleChoice = (rule: Asked['rule']) =>
+  (Object.keys(RULE_CHOICES) as (keyof typeof RULE_CHOICES)[]).find(
+    (choice) => RULE_CHOICES[choice] === (rule ?? 'default'),
+  )
+
+const text = (value: number | string | undefined) =>
+  value === undefined ? undefined : String(value)
+
+/** "Parecido com": the films the Catálogo search took, then the ones the
+ * sentence named, each once. */
+const similarIds = (similar: string | undefined, asked: Asked) => {
+  const ids = [
+    ...new Set([...(similar?.split(',') ?? []), ...(asked.similar ?? [])]),
+  ]
+  return ids.length === 0 ? undefined : ids.join(',')
+}
+
+/** Nova Sessão with `similar`, the search of `query` and the sentence
+ * read: "Usar" adds a film to "Parecido com". */
 const similarHref =
-  (similar: string | undefined, query: string | undefined) => (id: string) => {
+  (
+    similar: string | undefined,
+    query: string | undefined,
+    sentence: string | undefined,
+  ) =>
+  (id: string) => {
     const ids = [...new Set([...(similar?.split(',') ?? []), id])]
     const params = new URLSearchParams({ parecido: ids.join(',') })
     if (query !== undefined) params.set('buscar', query)
+    if (sentence !== undefined) params.set('frase', sentence)
     return `/sessoes/nova?${params.toString()}`
   }
 
@@ -306,17 +390,20 @@ const similarHref =
  * plain POST to `/sessoes/nova/enviar`: it works before the JavaScript.
  * `options` is null when the engine cannot run on this server. Above it,
  * folded until it is needed, the Catálogo search (`search`) fills
- * "Parecido com" (`similar`). */
+ * "Parecido com" (`similar`). `reading` is the sentence "Ler" read: the
+ * form comes back filled with it. */
 export function NewSession({
   options,
   refusal,
   search = null,
   similar,
+  reading = null,
 }: {
   options: RequestOptions | null
   refusal?: SessionRequestRefusal
   search?: SearchAnswer | null
   similar?: string
+  reading?: SentenceReading | null
 }) {
   const { form } = SESSIONS
   return (
@@ -339,11 +426,16 @@ export function NewSession({
               action="/sessoes/nova"
               scope="films"
               answer={search}
-              keep={{ parecido: similar }}
-              pick={similarHref(similar, search?.query)}
+              keep={{ parecido: similar, frase: reading?.text }}
+              pick={similarHref(similar, search?.query, reading?.text)}
             />
           </SearchFold>
-          <NewSessionForm options={options} similar={similar} />
+          <NewSessionForm
+            key={reading?.text}
+            options={options}
+            similar={similar}
+            reading={reading}
+          />
         </>
       )}
     </ImportsFrame>
@@ -353,11 +445,14 @@ export function NewSession({
 function NewSessionForm({
   options,
   similar,
+  reading,
 }: {
   options: RequestOptions
   similar?: string
+  reading: SentenceReading | null
 }) {
   const { form } = SESSIONS
+  const asked = reading?.request ?? {}
   return (
     <form
       method="post"
@@ -365,10 +460,16 @@ function NewSessionForm({
       aria-label={form.label}
       className="flex flex-col gap-3xl"
     >
-      <Attendees options={options} />
-      <Rule options={options} />
-      <Moods moods={options.moods} />
-      <Constraints similar={similar} />
+      {/* Enter in any field sends the form, as before "Ler" came above:
+          the first submit button is the one Enter presses. */}
+      <button type="submit" hidden>
+        {form.submit}
+      </button>
+      <Sentence reading={reading} />
+      <Attendees options={options} asked={asked} />
+      <Rule options={options} asked={asked} />
+      <Moods moods={options.moods} asked={asked} />
+      <Constraints similar={similarIds(similar, asked)} asked={asked} />
       <Submit variant="primary" className="w-full sm:w-auto sm:self-start">
         {form.submit}
       </Submit>
@@ -376,8 +477,15 @@ function NewSessionForm({
   )
 }
 
-function Attendees({ options }: { options: RequestOptions }) {
+function Attendees({
+  options,
+  asked,
+}: {
+  options: RequestOptions
+  asked: Asked
+}) {
   const { form } = SESSIONS
+  const attending = asked.attendees && new Set(asked.attendees)
   return (
     <Section id="presentes" title={form.attendees} lead={form.attendeesLead}>
       <div className={pills}>
@@ -386,7 +494,7 @@ function Attendees({ options }: { options: RequestOptions }) {
             key={p.person}
             name="presentes"
             value={p.person}
-            defaultChecked={p.owner}
+            defaultChecked={attending ? attending.has(p.person) : p.owner}
           >
             <span className="flex items-center gap-sm">
               {p.name}
@@ -403,20 +511,16 @@ function Attendees({ options }: { options: RequestOptions }) {
           max={50}
           label={form.count}
           hint={form.countHint}
-        />
-        <TextField
-          name="pedido"
-          label={form.words}
-          hint={form.wordsHint}
-          placeholder={form.wordsPlaceholder}
+          defaultValue={text(asked.count)}
         />
       </div>
     </Section>
   )
 }
 
-function Rule({ options }: { options: RequestOptions }) {
+function Rule({ options, asked }: { options: RequestOptions; asked: Asked }) {
   const { form } = SESSIONS
+  const chosen = ruleChoice(asked.rule)
   return (
     <Section id="regra" title={form.rule}>
       <div className="flex flex-col gap-sm" role="radiogroup">
@@ -427,7 +531,7 @@ function Rule({ options }: { options: RequestOptions }) {
             shape="row"
             name="regra"
             value={value}
-            defaultChecked={value === 'padrao'}
+            defaultChecked={value === chosen}
           >
             {form.rules[value as keyof typeof RULE_CHOICES]}
           </Option>
@@ -441,19 +545,25 @@ function Rule({ options }: { options: RequestOptions }) {
           { value: '', label: form.byNone },
           ...options.people.map((p) => ({ value: p.person, label: p.name })),
         ]}
-        defaultValue=""
+        defaultValue={asked.by ?? ''}
       />
     </Section>
   )
 }
 
-function Moods({ moods }: { moods: readonly string[] }) {
+function Moods({ moods, asked }: { moods: readonly string[]; asked: Asked }) {
   const { form } = SESSIONS
+  const chosen = new Set(asked.moods)
   return (
     <Section id="climas" title={form.moods} lead={form.moodsLead}>
       <div className={pills}>
         {moods.map((mood) => (
-          <Option key={mood} name="climas" value={mood}>
+          <Option
+            key={mood}
+            name="climas"
+            value={mood}
+            defaultChecked={chosen.has(mood)}
+          >
             {mood}
           </Option>
         ))}
@@ -462,7 +572,7 @@ function Moods({ moods }: { moods: readonly string[] }) {
   )
 }
 
-function Constraints({ similar }: { similar?: string }) {
+function Constraints({ similar, asked }: { similar?: string; asked: Asked }) {
   const { form } = SESSIONS
   const year = { type: 'number', min: 1870, max: 2100 } as const
   return (
@@ -472,15 +582,19 @@ function Constraints({ similar }: { similar?: string }) {
       lead={form.constraintsLead}
     >
       <div className="flex flex-col gap-sm">
-        <Option name="sem-ja-visto" shape="row">
+        <Option name="sem-ja-visto" shape="row" defaultChecked={asked.unseen}>
           {form.unseen}{' '}
           <span className="font-body text-meta font-normal text-ink-2">
             {form.unseenHint}
           </span>
         </Option>
         <div className={pills}>
-          <Option name="sem-lento">{form.noSlow}</Option>
-          <Option name="sem-tristeza">{form.noSad}</Option>
+          <Option name="sem-lento" defaultChecked={asked.noSlow}>
+            {form.noSlow}
+          </Option>
+          <Option name="sem-tristeza" defaultChecked={asked.noSad}>
+            {form.noSad}
+          </Option>
         </div>
       </div>
       <div className={grid}>
@@ -490,27 +604,35 @@ function Constraints({ similar }: { similar?: string }) {
           min={1}
           label={form.duration}
           hint={form.durationHint}
+          defaultValue={text(asked.maxDuration)}
         />
         <SelectField
           name="crianca"
           label={form.child}
           options={CHILD_OPTIONS}
-          defaultValue=""
+          defaultValue={text(asked.child) ?? ''}
         />
         <TextField
           name="desde"
           {...year}
           label={form.since}
           hint={form.yearHint}
+          defaultValue={text(asked.since)}
         />
         <TextField
           name="ate"
           {...year}
           label={form.until}
           hint={form.yearHint}
+          defaultValue={text(asked.until)}
         />
       </div>
-      <TextField name="idioma" label={form.language} hint={form.languageHint} />
+      <TextField
+        name="idioma"
+        label={form.language}
+        hint={form.languageHint}
+        defaultValue={asked.language}
+      />
       <TextField
         name="gatilhos"
         label={form.triggers}

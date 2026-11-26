@@ -1,6 +1,7 @@
-// What the "Nova Sessão" form posts (`POST /sessoes/nova/enviar`) and what
-// the pages hear back in their query: `/sessoes/<id>?feito=aberta` or
-// `/sessoes/nova?erro=<refusal>`. Shared by the page and the server
+// What the "Nova Sessão" form posts (`POST /sessoes/nova/enviar`, or its
+// sentence alone to `POST /sessoes/nova/ler`) and what the pages hear back
+// in their query: `/sessoes/<id>?feito=aberta`, `/sessoes/nova?frase=<the
+// sentence to read>` or `/sessoes/nova?erro=<refusal>`. Shared by the page and the server
 // (`platform/sessions.ts`), so nothing here imports the engine.
 //
 // Fields (PT, as the other forms): `presentes` (repeated, slugs), `regra`
@@ -45,8 +46,23 @@ export type SessionRequestForm = {
   noSad?: boolean
 }
 
+/** The longest sentence "Ler" takes, in characters (the engine's
+ * `REQUEST_READING_MAX_LENGTH`). */
+export const SENTENCE_MAX_LENGTH = 500
+
+/** The sentence a page's `?frase=` asks to read: the text, trimmed, or
+ * undefined when there is none or it is longer than the engine reads. */
+export const sentenceParam = (value: unknown): string | undefined => {
+  if (typeof value !== 'string') return undefined
+  const text = value.trim()
+  return text !== '' && text.length <= SENTENCE_MAX_LENGTH ? text : undefined
+}
+
 /** Why not, in `?erro=`. */
 export const SESSION_REQUEST_REFUSALS = [
+  // "Ler" with no sentence, or one longer than `SENTENCE_MAX_LENGTH`.
+  'frase',
+  'frase-longa',
   // Nobody checked.
   'presentes',
   // "De fulano" with no Pessoa, or one who is not among the Presentes.

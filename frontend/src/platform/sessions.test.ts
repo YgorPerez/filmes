@@ -1,13 +1,25 @@
 import { execFileSync } from 'node:child_process'
-import { makeEngine, type ErrorCode, type Outcome } from '@filmes/engine'
+import {
+  makeEngine,
+  REQUEST_READING_MAX_LENGTH,
+  type ErrorCode,
+  type Outcome,
+} from '@filmes/engine'
 import { describe, expect, it, vi } from 'vite-plus/test'
-import { useFixture } from '../../../packages/engine/test/fixture.ts'
+import {
+  useFixture,
+  type Fixture,
+} from '../../../packages/engine/test/fixture.ts'
 import {
   parseSessionRequest,
+  SENTENCE_MAX_LENGTH,
+  sentenceParam,
   type SessionRequestForm,
 } from '#/content/session-request'
 import {
+  readerFromEngine,
   requestOptions,
+  sentenceReading,
   sessionList,
   sessionPage,
   sessionRequestAction,
@@ -158,6 +170,15 @@ describe('parseSessionRequest', () => {
   })
 })
 
+describe('sentenceParam', () => {
+  it('keeps in `?frase=` only a sentence the engine reads', () => {
+    expect(sentenceParam('  eu e a Iara ')).toBe('eu e a Iara')
+    expect(sentenceParam('  ')).toBeUndefined()
+    expect(sentenceParam(3)).toBeUndefined()
+    expect(sentenceParam('a'.repeat(SENTENCE_MAX_LENGTH + 1))).toBeUndefined()
+  })
+})
+
 describe('sessionRequestAction', () => {
   const act = (
     request: Request,
@@ -233,6 +254,166 @@ describe('sessionRequestAction', () => {
       `/sessoes/nova?erro=${refusal}`,
     )
     expect(log.mock.calls.length > 0).toBe(refusal === 'indisponivel')
+    log.mockRestore()
+  })
+})
+
+describe('“Ler” in sessionRequestAction', () => {
+  const act = (request: Request, owner: typeof BRUNO | null = BRUNO) =>
+    sessionRequestAction(request, owner, fake().sessions, new Notes(), ORIGIN)
+  const read = (sentence: string | null, origin: string | null = ORIGIN) =>
+    post(
+      [
+        ...BASIC,
+        ['ler', 'sim'],
+        ...(sentence === null
+          ? []
+          : ([['pedido', sentence]] as [string, string][])),
+      ],
+      origin,
+    )
+
+  it('opens nothing and takes the sentence back to the form, which reads it', async () => {
+    const { sessions, open } = fake()
+    const response = await sessionRequestAction(
+      read('  eu e a Iara, algo leve  '),
+      BRUNO,
+      sessions,
+      new Notes(),
+      ORIGIN,
+    )
+    expect(response.status).toBe(303)
+    expect(response.headers.get('Location')).toBe(
+      '/sessoes/nova?frase=eu+e+a+Iara%2C+algo+leve',
+    )
+    expect(open).not.toHaveBeenCalled()
+  })
+
+  it('refuses an empty sentence and one longer than the engine reads', async () => {
+    expect(SENTENCE_MAX_LENGTH).toBe(REQUEST_READING_MAX_LENGTH)
+    expect((await act(read('  '))).headers.get('Location')).toBe(
+      '/sessoes/nova?erro=frase',
+    )
+    expect((await act(read(null))).headers.get('Location')).toBe(
+      '/sessoes/nova?erro=frase',
+    )
+    expect(
+      (await act(read('a'.repeat(SENTENCE_MAX_LENGTH + 1)))).headers.get(
+        'Location',
+      ),
+    ).toBe('/sessoes/nova?erro=frase-longa')
+  })
+
+  it('sends who is not logged in to the login, and refuses another site', async () => {
+    expect((await act(read('eu'), null)).headers.get('Location')).toBe(
+      '/entrar',
+    )
+    expect((await act(read('eu', 'https://evil.example'))).status).toBe(403)
+  })
+})
+
+/** Reads `text` as the Dono `owner` with the real engine on `fixture`. */
+async function read(fixture: Fixture, text: string, owner = 'bruno') {
+  const engine = makeEngine(fixture.vars)
+  try {
+    return await sentenceReading(text, owner, readerFromEngine(engine))
+  } finally {
+    await engine.dispose()
+  }
+}
+
+describe('sentenceReading', () => {
+  it('fills the form with what it understood and lists what it did not', async () => {
+    expect(
+      await read(
+        useFixture(),
+        'eu e a Iara, algo leve, até 2h, tem criança de 7, 3 filmes, com pipoca',
+      ),
+    ).toEqual({
+      text: 'eu e a Iara, algo leve, até 2h, tem criança de 7, 3 filmes, com pipoca',
+      request: {
+        attendees: ['bruno', 'iara'],
+        moods: ['leve'],
+        maxDuration: 120,
+        child: 7,
+        count: 3,
+      },
+      understood: [
+        'Presente: Bruno',
+        'Presente: Iara',
+        'Clima: leve',
+        'até 2h',
+        'com criança de 7 anos',
+        '3 filmes',
+      ],
+      notUnderstood: ['pipoca'],
+      ambiguities: [],
+    })
+  })
+
+  it('reads the Regra, the years, the language and the Restrições the form has', async () => {
+    const reading = await read(
+      useFixture(),
+      'pelo gosto da Iara, dos anos 90, filme nacional, nada lento, nada triste, que ninguém viu',
+    )
+    expect(reading?.request).toEqual({
+      attendees: ['iara'],
+      rule: 'by',
+      by: 'iara',
+      since: 1990,
+      until: 1999,
+      language: 'pt',
+      noSlow: true,
+      noSad: true,
+      unseen: true,
+    })
+    expect(reading?.notUnderstood).toEqual([])
+  })
+
+  it('takes "eu" as the logged-in Dono', async () => {
+    expect((await read(useFixture(), 'eu e a Iara', 'vera'))?.request).toEqual({
+      attendees: ['vera', 'iara'],
+    })
+  })
+})
+
+describe('sentenceReading, with what it cannot fill', () => {
+  it('names the candidates of a title it cannot pin down, and a title with none', async () => {
+    const reading = await read(
+      useFixture(),
+      'parecido com Reprise; tipo Amélie',
+    )
+    expect(reading?.request).toEqual({})
+    expect(reading?.ambiguities).toEqual([
+      { words: 'Reprise', candidates: ['Reprise (2011)', 'Reprise (2004)'] },
+      { words: 'Amélie', candidates: [] },
+    ])
+  })
+
+  it('takes a title it pins down as Parecido', async () => {
+    expect((await read(useFixture(), 'entre Poeira e Coxia'))?.request).toEqual(
+      {
+        similar: ['tt9001904', 'tt9005504'],
+      },
+    )
+  })
+
+  it('reads nothing of taste', async () => {
+    expect(await read(useFixture(), 'a Iara odeia terror')).toMatchObject({
+      request: {},
+      understood: [],
+      notUnderstood: ['Iara odeia terror'],
+    })
+  })
+
+  it('is null, and logs why, when the engine cannot run', async () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const failed = {
+      exitCode: 1,
+      output: { error: { code: 'missing_database', message: 'sem banco' } },
+    } as Outcome<never>
+    expect(await sentenceReading('eu', 'bruno', async () => failed)).toBeNull()
+    expect(log).toHaveBeenCalledWith('engine: missing_database: sem banco')
     log.mockRestore()
   })
 })
