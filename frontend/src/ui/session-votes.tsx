@@ -1,4 +1,9 @@
-import { useRef, useState, type PointerEvent } from 'react'
+import {
+  useRef,
+  useState,
+  type FormEventHandler,
+  type PointerEvent,
+} from 'react'
 import {
   votePath,
   type VoteNotice,
@@ -6,6 +11,7 @@ import {
 } from '#/content/session-votes-address'
 import type { VoteDeck } from '#/platform/session-votes'
 import { buttonVariants } from './kit/button-variants'
+import { useFetchForm } from './kit/fetch-form'
 import { Alert, Notice } from './kit/status'
 import { VOTES } from './session-votes.copy'
 
@@ -22,9 +28,13 @@ const SWIPE = 60
 export function VoteCards({
   deck,
   action,
+  onSubmit,
+  sending = false,
 }: {
   deck: VoteDeck
   action: string
+  onSubmit?: FormEventHandler<HTMLFormElement>
+  sending?: boolean
 }) {
   const [votes, setVotes] = useState<Vote[]>([])
   const start = useRef<number | null>(null)
@@ -46,7 +56,12 @@ export function VoteCards({
   }
 
   return (
-    <form method="post" action={action} className="flex flex-col gap-lg">
+    <form
+      method="post"
+      action={action}
+      onSubmit={onSubmit}
+      className="flex flex-col gap-lg"
+    >
       <input type="hidden" name="versao" value={deck.version} />
       {votes.map((vote, i) => (
         <input
@@ -106,12 +121,17 @@ export function VoteCards({
           </p>
           <p className="text-meta">{VOTES.rule}</p>
           <div className="flex flex-wrap items-center gap-lg">
-            <button type="submit" className={buttonVariants()}>
-              {VOTES.send}
+            <button
+              type="submit"
+              className={buttonVariants()}
+              disabled={sending}
+            >
+              {sending ? VOTES.sending : VOTES.send}
             </button>
             <button
               type="button"
               onClick={() => setVotes([])}
+              disabled={sending}
               className={buttonVariants({ variant: 'link' })}
             >
               {VOTES.restart}
@@ -142,18 +162,32 @@ export function VoteScreen({
   home: string | null
 }) {
   const { feito, erro } = search
+  const [failed, setFailed] = useState(false)
+  const { onSubmit, busy } = useFetchForm((to) => {
+    const url = new URL(to, window.location.origin)
+    // A failed write can be retried. A failed redo still needs a fresh deck:
+    // the server already counted the votes in that case.
+    const retry =
+      url.pathname === '/participar/votar' &&
+      url.searchParams.get('erro') === 'indisponivel'
+    setFailed(retry)
+    return retry
+  })
+  const refusal = failed ? 'indisponivel' : erro
   return (
     <section aria-labelledby="votar" className="flex flex-col gap-lg">
       <h1 id="votar" className="font-display text-title">
         {VOTES.title}
       </h1>
-      {feito && <Notice>{VOTES.notices[feito]}</Notice>}
-      {erro && <Alert>{VOTES.refusals[erro]}</Alert>}
+      {feito && !failed && <Notice>{VOTES.notices[feito]}</Notice>}
+      {refusal && <Alert>{VOTES.refusals[refusal]}</Alert>}
       {deck && deck.films.length > 0 ? (
         <VoteCards
           key={`${deck.version}:${deck.films.map((f) => f.id).join(',')}`}
           deck={deck}
           action={votePath('votos', search)}
+          onSubmit={onSubmit}
+          sending={busy !== null}
         />
       ) : (
         <>
