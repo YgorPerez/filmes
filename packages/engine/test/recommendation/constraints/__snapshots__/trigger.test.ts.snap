@@ -28,7 +28,7 @@ exports[`the whole output, as recorded > child and trigger together 1`] = `
       ],
     },
   },
-  "credit": {},
+  "disagreement": null,
   "films": [
     {
       "coverage": {
@@ -818,6 +818,7 @@ exports[`the whole output, as recorded > child and trigger together 1`] = `
   "rule": {
     "name": "default",
   },
+  "satisfaction": {},
   "vetoes": [],
   "warnings": [
     "TMDB sem chave de API (defina FILMES_TMDB_CHAVE); os filmes saem sem capa, sem título em português e sem sinopse",
@@ -848,7 +849,7 @@ exports[`the whole output, as recorded > trigger, one topic 1`] = `
       ],
     },
   },
-  "credit": {},
+  "disagreement": null,
   "films": [
     {
       "coverage": {
@@ -5162,6 +5163,7 @@ exports[`the whole output, as recorded > trigger, one topic 1`] = `
   "rule": {
     "name": "default",
   },
+  "satisfaction": {},
   "vetoes": [],
   "warnings": [
     "TMDB sem chave de API (defina FILMES_TMDB_CHAVE); os filmes saem sem capa, sem título em português e sem sinopse",
@@ -5193,7 +5195,7 @@ exports[`the whole output, as recorded > trigger, two topics 1`] = `
       ],
     },
   },
-  "credit": {},
+  "disagreement": null,
   "films": [
     {
       "coverage": {
@@ -10184,6 +10186,7 @@ exports[`the whole output, as recorded > trigger, two topics 1`] = `
   "rule": {
     "name": "default",
   },
+  "satisfaction": {},
   "vetoes": [],
   "warnings": [
     "TMDB sem chave de API (defina FILMES_TMDB_CHAVE); os filmes saem sem capa, sem título em português e sem sinopse",
@@ -10210,7 +10213,7 @@ exports[`the whole output, as recorded > trigger, without the key 1`] = `
       ],
     },
   },
-  "credit": {},
+  "disagreement": null,
   "films": [
     {
       "coverage": {
@@ -14687,6 +14690,7 @@ exports[`the whole output, as recorded > trigger, without the key 1`] = `
   "rule": {
     "name": "default",
   },
+  "satisfaction": {},
   "vetoes": [],
   "warnings": [
     "Does the Dog Die sem chave de API (defina FILMES_DDD_CHAVE); o gatilho fica sem informação e nenhum filme sai por ele",

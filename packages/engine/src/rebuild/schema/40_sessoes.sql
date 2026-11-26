@@ -28,7 +28,7 @@ CREATE TABLE sessao_recomendacao (
 
 -- Cada reação do Feedback é um Fato. A de Tipo nota tem o mesmo fato_id da linha
 -- que ela gera em notas; a de Tipo relato só existe aqui.
--- valor é a reação de 0 a 1 que o Crédito usa: (nota - 0,5) / 4,5, ou 1 / 0,5 / 0.
+-- valor é a reação de 0 a 1 que a Satisfação usa: (nota - 0,5) / 4,5, ou 1 / 0,5 / 0.
 CREATE TABLE reacoes (
     fato_id   TEXT PRIMARY KEY,
     sessao    TEXT NOT NULL REFERENCES sessoes(id),

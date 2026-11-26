@@ -48,7 +48,7 @@ export const Weights = Schema.Struct({
   catalog: Schema.Struct({ min_votes: Count, min_imdb_rating: Weight }),
   recommendation: Schema.Struct({ size: Count }),
   seen: Schema.Struct({ weight: Weight }),
-  credit: Schema.Struct({ factor: Weight, window: Count }),
+  satisfaction: Schema.Struct({ factor: Weight, window: Count }),
   neighbors: Schema.Struct({ weight: Weight }),
   mood: Schema.Struct({ weight: Weight }),
   group: Schema.Struct({ weight: Weight }),

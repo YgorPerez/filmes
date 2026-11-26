@@ -19,10 +19,6 @@ exports[`avaliar, as recorded > gives the recorded result and report 1`] = `
       "constraints": {
         "onDemandReach": 50,
       },
-      "credit": {
-        "factor": 0.5,
-        "window": 5,
-      },
       "group": {
         "weight": 0.05,
       },
@@ -62,6 +58,10 @@ exports[`avaliar, as recorded > gives the recorded result and report 1`] = `
       },
       "recommendation": {
         "size": 5,
+      },
+      "satisfaction": {
+        "factor": 0.25,
+        "window": 5,
       },
       "seen": {
         "weight": 1,
@@ -409,10 +409,6 @@ Quanto das Notas retidas foi 4 ou mais, pela Força mais alta a favor do filme n
       "constraints": {
         "onDemandReach": 50,
       },
-      "credit": {
-        "factor": 0.5,
-        "window": 5,
-      },
       "group": {
         "weight": 0.05,
       },
@@ -452,6 +448,10 @@ Quanto das Notas retidas foi 4 ou mais, pela Força mais alta a favor do filme n
       },
       "recommendation": {
         "size": 5,
+      },
+      "satisfaction": {
+        "factor": 0.25,
+        "window": 5,
       },
       "seen": {
         "weight": 1,
@@ -2036,10 +2036,6 @@ Foram testados 300 conjuntos. A ordem usa a média do Recall@50 entre as amostra
       "constraints": {
         "onDemandReach": 50,
       },
-      "credit": {
-        "factor": 0.5,
-        "window": 5,
-      },
       "group": {
         "weight": 0.05,
       },
@@ -2079,6 +2075,10 @@ Foram testados 300 conjuntos. A ordem usa a média do Recall@50 entre as amostra
       },
       "recommendation": {
         "size": 5,
+      },
+      "satisfaction": {
+        "factor": 0.25,
+        "window": 5,
       },
       "seen": {
         "weight": 1,
