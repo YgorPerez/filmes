@@ -261,7 +261,7 @@ test('the Nota prevista the Session recorded, per Presente who has one', async (
 }, info) => {
   const vars = tasteWeights(info.project.name)
   const request = { attendees: ['bruno', 'iara'] }
-  // The Session ends at Pequenos Milagres, so its card is the last.
+  // The Session is as long as Pequenos Milagres' place without a draw.
   const { films } = await engineRun(
     (engine) => engine.run(recommend({ ...request, count: 50 })),
     vars,
@@ -273,13 +273,17 @@ test('the Nota prevista the Session recorded, per Presente who has one', async (
     vars,
   )
   const id = session.session.id
+  // The Session draws the Aposta (#178): Pequenos Milagres may come up to
+  // the 5th place.
+  const at =
+    session.films.find((f) => f.id === PEQUENOS_MILAGRES)?.position ?? 0
   await loginAsBruno(page)
   await page.goto(`/sessoes/${id}`)
   await expect(cards(page)).toHaveCount(count)
   await snap(page, info, 'cartaz-nota-prevista')
-  await snap(page, info, 'cartaz-nota-prevista-card', card(page, count))
+  await snap(page, info, 'cartaz-nota-prevista-card', card(page, at))
 
-  const predicted = card(page, count).getByRole('list', {
+  const predicted = card(page, at).getByRole('list', {
     name: 'Nota prevista',
   })
   await expect(predicted.getByRole('listitem')).toHaveText([/Bruno: 8,3 de 10/])
