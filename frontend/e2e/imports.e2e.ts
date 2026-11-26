@@ -13,16 +13,18 @@ import {
   personView,
   viewQueue,
 } from '@filmes/engine'
-import { expect, test, type Page } from '@playwright/test'
+import { type Page } from '@playwright/test'
 import { zipOf } from '../../packages/engine/test/imports/zip.ts'
 import {
   addPerson,
   engineRun,
+  expect,
   loginAs,
   loginAsBruno,
   notice,
   section,
   snap,
+  test,
 } from './support'
 
 const FIXTURE = join(import.meta.dirname, '../../tests/fixture')

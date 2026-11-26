@@ -12,6 +12,11 @@ exports[`avaliar, as recorded > gives the recorded result and report 1`] = `
           "normal": 1,
         },
       },
+      "bet": {
+        "maxFacts": 1,
+        "minPredicted": 7,
+        "position": 5,
+      },
       "catalog": {
         "minImdbRating": 7,
         "minVotes": 1000,
@@ -40,6 +45,9 @@ exports[`avaliar, as recorded > gives the recorded result and report 1`] = `
         "minRelevance": 0.6,
         "minUsersHeavyTheme": 2,
         "minUsersSad": 3,
+      },
+      "pairwise": {
+        "pairs": 10,
       },
       "path": {
         "weight": {
@@ -125,7 +133,7 @@ exports[`avaliar, as recorded > gives the recorded result and report 1`] = `
       "genoma.csv": "bf9e335eaec86c9fbe2d5ca1d55cf4a75f1a865c83f48750d359f07ac4169ed1",
       "idiomas_originais.csv": "3fd72e324b22bdd4a924778d6826f20e648099c908c0a40de7af2cf7ee6dacbf",
       "notas.csv": "fce6055d2fb915a21f46c4eea36d2bef360756974cc83e8713674103e9075f78",
-      "notas_gosto_movielens.csv": "c7931ecb50aad10c030a8e85c3b90d247d4e444a833d641992028f7bdd57f33a",
+      "notas_gosto_movielens.csv": "cf29b7d42d9b621c199733204f4e7f96e723e4f4f01b59a2e4225fe4133a9047",
       "notas_movielens.csv": "732f70f4971aca938e7cc266ded071f301ddf13cda14e7f3e008eebcbb3e17b2",
       "series_de_filmes.csv": "7f4cef1fbbf193e21f72d6101a0e1280b729cca9c57b334d4bab1769075cd03e",
       "slugs_letterboxd.csv": "aef16df5bcb6b746236d595d8c29a29728a3f8bb45726201631f04ed2f5071aa",
@@ -140,10 +148,10 @@ exports[`avaliar, as recorded > gives the recorded result and report 1`] = `
 
 | Amostra | Pessoas | Recall@50 | Cobertura no top 5 |
 | --- | ---: | ---: | ---: |
-| Pessoas | 4 | 100.0% (5/5) | 70.0% (14/20) |
+| Pessoas | 4 | 80.0% (4/5) | 70.0% (14/20) |
 | MovieLens | 0 | — (0/0) | — (0/0) |
 
-Parecença média no top 5 (quanto menor, mais variada a lista): Pessoas 0.246, MovieLens —.
+Parecença média no top 5 (quanto menor, mais variada a lista): Pessoas 0.277, MovieLens —.
 
 O corte retém os 20% mais recentes do histórico de cada Pessoa e de cada usuário sorteado.
 A amostra do MovieLens usou a semente 27 e sorteou 0 usuários.
@@ -368,9 +376,9 @@ Quanto das Notas retidas foi 4 ou mais, pela Força mais alta a favor do filme n
           "films": 0,
           "meanAbsoluteError": null,
         },
-        "recall50": 1,
-        "retrieved": 5,
-        "similarityTop5": 0.24583333333333332,
+        "recall50": 0.8,
+        "retrieved": 4,
+        "similarityTop5": 0.27708333333333335,
         "withEvidence": 14,
       },
     },
@@ -403,7 +411,7 @@ Quanto das Notas retidas foi 4 ou mais, pela Força mais alta a favor do filme n
       "genoma.csv": "bf9e335eaec86c9fbe2d5ca1d55cf4a75f1a865c83f48750d359f07ac4169ed1",
       "idiomas_originais.csv": "3fd72e324b22bdd4a924778d6826f20e648099c908c0a40de7af2cf7ee6dacbf",
       "notas.csv": "fce6055d2fb915a21f46c4eea36d2bef360756974cc83e8713674103e9075f78",
-      "notas_gosto_movielens.csv": "c7931ecb50aad10c030a8e85c3b90d247d4e444a833d641992028f7bdd57f33a",
+      "notas_gosto_movielens.csv": "cf29b7d42d9b621c199733204f4e7f96e723e4f4f01b59a2e4225fe4133a9047",
       "notas_movielens.csv": "732f70f4971aca938e7cc266ded071f301ddf13cda14e7f3e008eebcbb3e17b2",
       "series_de_filmes.csv": "7f4cef1fbbf193e21f72d6101a0e1280b729cca9c57b334d4bab1769075cd03e",
       "slugs_letterboxd.csv": "aef16df5bcb6b746236d595d8c29a29728a3f8bb45726201631f04ed2f5071aa",
@@ -422,6 +430,11 @@ Quanto das Notas retidas foi 4 ou mais, pela Força mais alta a favor do filme n
           "none": 0,
           "normal": 1,
         },
+      },
+      "bet": {
+        "maxFacts": 1,
+        "minPredicted": 7,
+        "position": 5,
       },
       "catalog": {
         "minImdbRating": 7,
@@ -451,6 +464,9 @@ Quanto das Notas retidas foi 4 ou mais, pela Força mais alta a favor do filme n
         "minRelevance": 0.6,
         "minUsersHeavyTheme": 2,
         "minUsersSad": 3,
+      },
+      "pairwise": {
+        "pairs": 10,
       },
       "path": {
         "weight": {
@@ -700,13 +716,13 @@ exports[`avaliar, as recorded > the grid gives the recorded best weights and rep
             "films": 0,
             "meanAbsoluteError": null,
           },
-          "recall50": 1,
-          "retrieved": 5,
-          "similarityTop5": 0.24583333333333332,
+          "recall50": 0.8,
+          "retrieved": 4,
+          "similarityTop5": 0.27708333333333335,
           "withEvidence": 14,
         },
       },
-      "recall50": 1,
+      "recall50": 0.8,
       "weights": {
         "path.weight": {
           "cast": 0.5,
@@ -900,13 +916,13 @@ exports[`avaliar, as recorded > the grid gives the recorded best weights and rep
             "films": 0,
             "meanAbsoluteError": null,
           },
-          "recall50": 1,
-          "retrieved": 5,
-          "similarityTop5": 0.19969424672172714,
+          "recall50": 0.8,
+          "retrieved": 4,
+          "similarityTop5": 0.23094424672172714,
           "withEvidence": 14,
         },
       },
-      "recall50": 1,
+      "recall50": 0.8,
       "weights": {
         "path.weight": {
           "cast": 0.5,
@@ -1100,13 +1116,13 @@ exports[`avaliar, as recorded > the grid gives the recorded best weights and rep
             "films": 0,
             "meanAbsoluteError": null,
           },
-          "recall50": 1,
-          "retrieved": 5,
-          "similarityTop5": 0.24583333333333332,
+          "recall50": 0.8,
+          "retrieved": 4,
+          "similarityTop5": 0.27708333333333335,
           "withEvidence": 14,
         },
       },
-      "recall50": 1,
+      "recall50": 0.8,
       "weights": {
         "path.weight": {
           "cast": 0.375,
@@ -1136,10 +1152,10 @@ exports[`avaliar, as recorded > the grid gives the recorded best weights and rep
 
 | Amostra | Pessoas | Recall@50 | Cobertura no top 5 |
 | --- | ---: | ---: | ---: |
-| Pessoas | 4 | 100.0% (5/5) | 70.0% (14/20) |
+| Pessoas | 4 | 80.0% (4/5) | 70.0% (14/20) |
 | MovieLens | 0 | — (0/0) | — (0/0) |
 
-Parecença média no top 5 (quanto menor, mais variada a lista): Pessoas 0.246, MovieLens —.
+Parecença média no top 5 (quanto menor, mais variada a lista): Pessoas 0.277, MovieLens —.
 
 O corte retém os 20% mais recentes do histórico de cada Pessoa e de cada usuário sorteado.
 A amostra do MovieLens usou a semente 27 e sorteou 0 usuários.
@@ -1372,13 +1388,13 @@ Foram testados 303 conjuntos. A ordem usa a média do Recall@50 entre as amostra
                 "films": 0,
                 "meanAbsoluteError": null,
               },
-              "recall50": 1,
-              "retrieved": 5,
-              "similarityTop5": 0.24583333333333332,
+              "recall50": 0.8,
+              "retrieved": 4,
+              "similarityTop5": 0.27708333333333335,
               "withEvidence": 14,
             },
           },
-          "recall50": 1,
+          "recall50": 0.8,
           "weights": {
             "path.weight": {
               "cast": 0.5,
@@ -1572,13 +1588,13 @@ Foram testados 303 conjuntos. A ordem usa a média do Recall@50 entre as amostra
                 "films": 0,
                 "meanAbsoluteError": null,
               },
-              "recall50": 1,
-              "retrieved": 5,
-              "similarityTop5": 0.19969424672172714,
+              "recall50": 0.8,
+              "retrieved": 4,
+              "similarityTop5": 0.23094424672172714,
               "withEvidence": 14,
             },
           },
-          "recall50": 1,
+          "recall50": 0.8,
           "weights": {
             "path.weight": {
               "cast": 0.5,
@@ -1772,13 +1788,13 @@ Foram testados 303 conjuntos. A ordem usa a média do Recall@50 entre as amostra
                 "films": 0,
                 "meanAbsoluteError": null,
               },
-              "recall50": 1,
-              "retrieved": 5,
-              "similarityTop5": 0.24583333333333332,
+              "recall50": 0.8,
+              "retrieved": 4,
+              "similarityTop5": 0.27708333333333335,
               "withEvidence": 14,
             },
           },
-          "recall50": 1,
+          "recall50": 0.8,
           "weights": {
             "path.weight": {
               "cast": 0.375,
@@ -2039,9 +2055,9 @@ Foram testados 303 conjuntos. A ordem usa a média do Recall@50 entre as amostra
           "films": 0,
           "meanAbsoluteError": null,
         },
-        "recall50": 1,
-        "retrieved": 5,
-        "similarityTop5": 0.24583333333333332,
+        "recall50": 0.8,
+        "retrieved": 4,
+        "similarityTop5": 0.27708333333333335,
         "withEvidence": 14,
       },
     },
@@ -2074,7 +2090,7 @@ Foram testados 303 conjuntos. A ordem usa a média do Recall@50 entre as amostra
       "genoma.csv": "bf9e335eaec86c9fbe2d5ca1d55cf4a75f1a865c83f48750d359f07ac4169ed1",
       "idiomas_originais.csv": "3fd72e324b22bdd4a924778d6826f20e648099c908c0a40de7af2cf7ee6dacbf",
       "notas.csv": "fce6055d2fb915a21f46c4eea36d2bef360756974cc83e8713674103e9075f78",
-      "notas_gosto_movielens.csv": "c7931ecb50aad10c030a8e85c3b90d247d4e444a833d641992028f7bdd57f33a",
+      "notas_gosto_movielens.csv": "cf29b7d42d9b621c199733204f4e7f96e723e4f4f01b59a2e4225fe4133a9047",
       "notas_movielens.csv": "732f70f4971aca938e7cc266ded071f301ddf13cda14e7f3e008eebcbb3e17b2",
       "series_de_filmes.csv": "7f4cef1fbbf193e21f72d6101a0e1280b729cca9c57b334d4bab1769075cd03e",
       "slugs_letterboxd.csv": "aef16df5bcb6b746236d595d8c29a29728a3f8bb45726201631f04ed2f5071aa",
@@ -2093,6 +2109,11 @@ Foram testados 303 conjuntos. A ordem usa a média do Recall@50 entre as amostra
           "none": 0,
           "normal": 1,
         },
+      },
+      "bet": {
+        "maxFacts": 1,
+        "minPredicted": 7,
+        "position": 5,
       },
       "catalog": {
         "minImdbRating": 7,
@@ -2122,6 +2143,9 @@ Foram testados 303 conjuntos. A ordem usa a média do Recall@50 entre as amostra
         "minRelevance": 0.6,
         "minUsersHeavyTheme": 2,
         "minUsersSad": 3,
+      },
+      "pairwise": {
+        "pairs": 10,
       },
       "path": {
         "weight": {

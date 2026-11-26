@@ -6,7 +6,9 @@
 // 2002, `entropia_movielens`): a film many people saw and that splits them
 // says more about whoever answers. Past those, by IMDb votes. Adult films
 // are never asked. Pairs go in that order, two films at a time, up to
-// `PAIRWISE_PAIRS` per Presente and Session, answered or skipped.
+// `[pairwise] pairs` per Presente and Session, answered or skipped. Only a
+// Presente with fewer Notas than `[rating_percentile] min_ratings` (a guest,
+// someone new) is asked: whoever has her own scale has said enough.
 //
 // The answers wait in the Session's `pairwise:` until the Dono decides,
 // since gosto permanente is written only after her yes:
@@ -32,13 +34,13 @@ import {
   type YamlMapping,
   type YamlValue,
 } from '../data/yaml.ts'
-import { PAIRWISE_SOURCE } from '../evidence/ruler.ts'
 import { required, savePersonAndSync } from '../people/actions.ts'
+import { hasFewRatings } from '../people/rating-scale.ts'
 import { resolvePerson } from '../people/people.ts'
 import { addItem } from '../people/Person.ts'
 import type { EngineServices } from '../runtime/Engine.ts'
 import { engineError, type EngineError } from '../runtime/EngineError.ts'
-import type { Environment } from '../runtime/Environment.ts'
+import { Environment } from '../runtime/Environment.ts'
 import { Run } from '../runtime/Run.ts'
 import { numOrNull, text } from '../sqlite/row.ts'
 import {
@@ -51,14 +53,13 @@ import { sessionOwner } from './feedback.ts'
 import { isOpen, readSession, writeSession } from './file.ts'
 import { authorFor } from './open.ts'
 
-/** Pairs asked of each Presente in a Session. */
-export const PAIRWISE_PAIRS = 10
 /** The chosen film's Nota: 3,5 of 5, weak on the ruler. */
 export const PAIRWISE_RATING = 3.5
 
-/** The Fonte of what the answers become. */
+/** The Fonte of what the answers become. The Nota says it came from an
+ * answer by its own mark (`Seen.pairwise`), not by this text. */
 export const pairwiseSource = (session: string) =>
-  `${PAIRWISE_SOURCE} ${session}`
+  `perguntas par a par ${session}`
 
 export interface PairwiseRequest {
   readonly session: string
@@ -214,13 +215,20 @@ const questionsIn = (
   db: Connection,
   front: YamlMapping,
   person: string,
-): Effect.Effect<PairwiseQuestions, SqliteError> => {
-  const { answered, films } = askedOf(front, person)
-  return Effect.map(
-    pairsLeft(db, person, films, Math.max(0, PAIRWISE_PAIRS - answered)),
-    (pairs) => ({ answered, pairs }),
-  )
-}
+): Effect.Effect<PairwiseQuestions, SqliteError, Environment> =>
+  Effect.gen(function* () {
+    const { weights } = yield* Environment
+    const { answered, films } = askedOf(front, person)
+    if (!(yield* hasFewRatings(db, person, weights)))
+      return { answered, pairs: [] }
+    const pairs = yield* pairsLeft(
+      db,
+      person,
+      films,
+      Math.max(0, weights.pairwise.pairs - answered),
+    )
+    return { answered, pairs }
+  })
 
 /** The pairs left for a Presente of an open Session. */
 export const pairwiseQuestions = (
@@ -398,6 +406,7 @@ export const decidePairwise = (
                   target: film,
                   label: labels.get(film)!,
                   rating: film === answer.choice ? PAIRWISE_RATING : null,
+                  pairwise: film === answer.choice,
                 })
                 person = result.person
                 added += Number(result.added)

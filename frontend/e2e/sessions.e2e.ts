@@ -7,8 +7,16 @@
 // of each screen.
 
 import { listSessions, recommendSession, recordFeedback } from '@filmes/engine'
-import { expect, test, type Page } from '@playwright/test'
-import { engineRun, loginAs, loginAsBruno, section, snap } from './support'
+import { type Page } from '@playwright/test'
+import {
+  engineRun,
+  expect,
+  loginAs,
+  loginAsBruno,
+  section,
+  snap,
+  test,
+} from './support'
 
 const ask = (page: Page) =>
   page.getByRole('button', { name: 'Recomendar' }).click()
@@ -417,7 +425,7 @@ test('each Presente votes on the films; a no swaps the film and the Session is r
     await page.reload()
     await expect(page.getByText(/Saiu da prateleira/u)).toBeVisible()
     const onCartaz = (title?: string) =>
-      page.getByRole('heading', { level: 2 }).filter({ hasText: title })
+      page.getByRole('heading', { level: 3 }).filter({ hasText: title })
     await expect(onCartaz(second)).toHaveCount(0)
     await expect(onCartaz(first)).toHaveCount(1)
     await expect(onCartaz(third)).toHaveCount(1)

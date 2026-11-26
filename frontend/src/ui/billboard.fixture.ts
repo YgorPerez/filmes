@@ -51,6 +51,7 @@ export const MODEL: Billboard = {
       title: 'As Horas Lentas',
       originalTitle: null,
       new: false,
+      bet: false,
       poster: 'https://image.tmdb.org/t/p/w500/hOrAsLeNtAs9104.jpg',
       imdbUrl: 'https://www.imdb.com/title/tt9000104/',
       imdbRating: 7.4,
@@ -77,6 +78,7 @@ export const MODEL: Billboard = {
       title: 'Sal & Ferrugem',
       originalTitle: 'Sal e Ferrugem',
       new: true,
+      bet: true,
       poster: null,
       imdbUrl: 'https://www.imdb.com/title/tt9000105/',
       imdbRating: null,
@@ -96,5 +98,14 @@ export const MODEL: Billboard = {
       coverage: 'Fato sobre 1 de 2',
       predictedRatings: [],
     },
+  ],
+  sections: [
+    {
+      kind: 'entity',
+      title: 'Porque você e Iara gostam de Helena Prado',
+      again: false,
+      films: ['tt9000104'],
+    },
+    { kind: 'bet', title: 'Aposta', again: false, films: ['tt9000105'] },
   ],
 }

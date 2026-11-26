@@ -13,10 +13,10 @@ import {
   pairwiseAnswers,
   pairwiseQuestions,
   personRate,
+  rebuild,
   recommend,
   recommendSession,
   recordFeedback,
-  PAIRWISE_PAIRS,
 } from '../../src/index.ts'
 import { useFixture, type Fixture } from '../fixture.ts'
 import { weightsWith } from '../recommendation/support.ts'
@@ -44,7 +44,8 @@ describe('pairwiseQuestions', () => {
     const teo = await fixture.ok(pairwiseQuestions({ session, person: 'teo' }))
     expect(teo.answered).toBe(0)
     expect(await fixture.ok(pairwiseAnswers(session))).toEqual([])
-    expect(teo.pairs).toHaveLength(PAIRWISE_PAIRS)
+    // `[pairwise] pairs` of `config/weights.toml`.
+    expect(teo.pairs).toHaveLength(10)
     expect(ids(teo.pairs).slice(0, 4)).toEqual([
       ['tt9000201', 'tt9000101'],
       ['tt9000702', 'tt9000105'],
@@ -67,6 +68,34 @@ describe('pairwiseQuestions', () => {
     expect(ids(quim.pairs)[0]).toEqual(['tt9000101', 'tt9000702'])
     for (const seen of ['tt9000201', 'tt9000102', 'tt9000501', 'tt9000401'])
       expect(ids(quim.pairs).flat()).not.toContain(seen)
+  })
+
+  test('asks as many pairs as `[pairwise] pairs` says', async () => {
+    const fixture = useFixture()
+    const session = await open(fixture)
+
+    const teo = await fixture.ok(
+      pairwiseQuestions({ session, person: 'teo' }),
+      weightsWith(fixture, 'pairs = 10', 'pairs = 3'),
+    )
+    expect(ids(teo.pairs)).toEqual([
+      ['tt9000201', 'tt9000101'],
+      ['tt9000702', 'tt9000105'],
+      ['tt9000601', 'tt9000202'],
+    ])
+  })
+
+  test('only for a Presente with fewer Notas than `min_ratings`: a guest or someone new', async () => {
+    const fixture = useFixture()
+    const session = await open(fixture)
+    const fewer = weightsWith(fixture, 'min_ratings = 20', 'min_ratings = 5')
+    const asked = async (person: string) =>
+      (await fixture.ok(pairwiseQuestions({ session, person }), fewer)).pairs
+
+    // Bruno has 11 Notas, his own scale; Quim has 4 and Teo none.
+    expect(await asked('bruno')).toEqual([])
+    expect(await asked('quim')).toHaveLength(10)
+    expect(await asked('teo')).toHaveLength(10)
   })
 
   test('only for a Presente of an open Session', async () => {
@@ -116,7 +145,7 @@ describe('answerPairwise', () => {
 
     const next = await fixture.ok(pairwiseQuestions({ session, person: 'teo' }))
     expect(next.answered).toBe(2)
-    expect(next.pairs).toHaveLength(PAIRWISE_PAIRS - 2)
+    expect(next.pairs).toHaveLength(10 - 2)
     expect(ids(next.pairs)[0]).toEqual(['tt9000601', 'tt9000202'])
     // Another Presente's questions do not move.
     const quim = await fixture.ok(
@@ -292,6 +321,8 @@ describe('decidePairwise', () => {
       {},
       { owner: 'bruno' },
     )
+    // From her file: the Nota keeps its mark, whatever the Fonte says.
+    await fixture.ok(rebuild)
 
     const source = `perguntas par a par ${session}`
     const { films } = await fixture.ok(
@@ -308,8 +339,53 @@ describe('decidePairwise', () => {
       expect(seed.strength).toBe('weak')
       expect(seed.contribution).toBeGreaterThan(0)
     }
-    // Nor is it a Nota alta for the aggregated metadata: her own are low.
-    expect(evidence.filter((e) => e.text.includes('Nota alta'))).toEqual([])
+    // Nor is it a Nota alta for the aggregated metadata: those lines name
+    // her own top Notas, never an answered film.
+    const high = evidence.filter((e) => e.text.includes('Nota alta'))
+    expect(high.length).toBeGreaterThan(0)
+    for (const line of high) {
+      expect(line.text).not.toContain('O Farol de Areia')
+      expect(line.text).not.toContain('Pequenos Milagres')
+    }
+  })
+
+  test('a Nota from an answer stays out of her scale: her other Notas read the same', async () => {
+    const fixture = useFixture()
+    const session = await answered(fixture)
+    // Six Notas of her own (minimum 5): her 3 is her median, weak in
+    // favour. The two answers' 3,5 would put it at her 37th percentile,
+    // against the film.
+    await fixture.ok(
+      personRate({
+        person: 'teo',
+        ratings: [
+          { film: 'tt9000301', rating: 4 },
+          { film: 'tt9000302', rating: 4 },
+          { film: 'tt9000303', rating: 6 },
+          { film: 'tt9000401', rating: 6 },
+          { film: 'tt9000402', rating: 8 },
+          { film: 'tt9000403', rating: 8 },
+        ],
+      }),
+    )
+    await fixture.ok(
+      decidePairwise({ session, person: 'teo', record: true }),
+      {},
+      { owner: 'bruno' },
+    )
+
+    const { films } = await fixture.ok(
+      recommend({ attendees: ['teo'], count: 50 }),
+      weightsWith(fixture, 'min_ratings = 20', 'min_ratings = 5'),
+    )
+    const threes = films.flatMap((film) =>
+      (film.evidence['teo'] ?? []).filter((e) => e.text.startsWith('deu 3 a')),
+    )
+    expect(threes.length).toBeGreaterThan(0)
+    for (const seed of threes) {
+      expect(seed.strength).toBe('weak')
+      expect(seed.contribution).toBeGreaterThan(0)
+    }
   })
 
   test('a Nota from an answer decays with age, like any Nota', async () => {

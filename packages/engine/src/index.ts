@@ -110,6 +110,16 @@ export {
 export { ADDITION_FIELDS, withAddition } from './reading/addition.ts'
 export type { ReadCandidate, ReadField, ReadFields } from './reading/reader.ts'
 export {
+  drawBets,
+  type BetCandidate,
+  type BetOdds,
+} from './recommendation/bet.ts'
+export {
+  filmReason,
+  type FilmReason,
+  type ReasonKind,
+} from './recommendation/reason.ts'
+export {
   rank,
   rankRequest,
   recommend,
@@ -242,7 +252,6 @@ export {
   pairwiseAnswers,
   pairwiseQuestions,
   pairwiseSource,
-  PAIRWISE_PAIRS,
   PAIRWISE_RATING,
   type PairwiseAnswer,
   type PairwiseDecision,
@@ -646,6 +655,7 @@ export {
   type BillboardRequest,
   type BillboardRequestInput,
   type BillboardResult,
+  type BillboardSection,
 } from './billboard/model.ts'
 export {
   RATING_QUEUE_LIMIT,

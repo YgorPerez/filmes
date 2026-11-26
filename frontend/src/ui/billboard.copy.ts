@@ -15,6 +15,9 @@ export const BILLBOARD = {
     poster: (title: string) => `Capa de ${title}`,
     noFact: (name: string) => `${name}: sem fato`,
     isNew: 'novo',
+    bet: 'aposta',
+    betHint:
+      'Aposta: pouca Evidência, mas quem tem gosto parecido deu nota alta',
     imdb: (rating: string | null, votes: string) =>
       `${rating === null ? '' : `${rating} `}IMDb · ${votes} votos`,
     predicted: 'Nota prevista',
@@ -25,6 +28,10 @@ export const BILLBOARD = {
     withoutFact: (names: string) => `${names}: sem fato sobre este filme`,
     swapStamp: 'Trocar',
     seenStamp: 'Já vi',
+  },
+
+  section: {
+    again: 'de novo',
   },
 
   marks: {

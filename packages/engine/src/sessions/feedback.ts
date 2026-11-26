@@ -41,6 +41,7 @@ import {
   feedbackStrength,
   SEEN_STRENGTH,
   statedStrength,
+  type RatingScale,
 } from '../evidence/ruler.ts'
 import { filmText } from '../evidence/wording.ts'
 import { readRatingScale } from '../people/rating-scale.ts'
@@ -411,6 +412,14 @@ const writtenFacts = (
     const { weights } = yield* Environment
     const name = filmText(chosen.title ?? chosen.id, chosen.year)
     const lines: FeedbackFact[] = []
+    const scales = new Map<string, RatingScale>()
+    const scaleOf = (person: string) =>
+      Effect.gen(function* () {
+        const scale =
+          scales.get(person) ?? (yield* readRatingScale(db, person, weights))
+        scales.set(person, scale)
+        return scale
+      })
     for (const r of yield* reactions(id, front))
       lines.push({
         person: r.person,
@@ -422,7 +431,7 @@ const writtenFacts = (
         date: r.date,
         strength: feedbackStrength(
           r.kind,
-          yield* readRatingScale(db, r.person, weights),
+          yield* scaleOf(r.person),
           r.rating ?? 0,
           r.date,
           today,
