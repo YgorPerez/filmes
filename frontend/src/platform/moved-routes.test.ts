@@ -46,7 +46,7 @@ describe('the moved paths', () => {
     ['/meu-gosto/exportar?erro=pessoa', Export, {}, '?erro=pessoa'],
     ['/meu-gosto/importar', Imports, {}, ''],
     ['/pessoas/teo/importar', PersonImportsOld, { pessoa: 'teo' }, ''],
-    ['/sessoes', FeedbackList, {}, ''],
+    ['/sessoes?filtro=para-contar', FeedbackList, {}, ''],
     [
       '/sessoes/2026-11-20-teo/contar',
       Feedback,

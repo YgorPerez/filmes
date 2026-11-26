@@ -1,6 +1,5 @@
 // The Catálogo search of the screens that take IDs (#128), over the build
-// and on the fixture copy, with the JavaScript off: each search is a plain
-// GET, each "Usar" a plain link. Read only but for one Session the engine
+// and on the fixture copy, with JavaScript off. Each "Usar" is a plain link. Read only but for one Session the engine
 // opens for Bruno alone, whose Feedback is filled and never sent.
 // `E2E_SCREENSHOTS=<folder>` saves a capture of each screen.
 
@@ -48,6 +47,8 @@ test('Nova Sessão: two searches fill “Parecido com”', async ({
   await loginAsBruno(page)
   await page.goto('/sessoes/nova')
   // Folded until it is needed; open after a search, so only the first time.
+  await page.getByRole('checkbox', { name: 'Iara' }).check()
+  await page.getByLabel('Em uma frase', { exact: false }).fill('eu e a Iara')
   await page.getByText('Parecido com um filme?').click()
   await search(page, 'farol')
   await page.getByRole('link', { name: 'Usar O Farol de Areia (2012)' }).click()
@@ -56,6 +57,10 @@ test('Nova Sessão: two searches fill “Parecido com”', async ({
 
   await expect(page.getByLabel('Parecido com', { exact: false })).toHaveValue(
     'tt9000101,tt9000102',
+  )
+  await expect(page.getByRole('checkbox', { name: 'Iara' })).toBeChecked()
+  await expect(page.getByLabel('Em uma frase', { exact: false })).toHaveValue(
+    'eu e a Iara',
   )
   await snap(page, info, 'busca-nova-sessao')
 })
@@ -70,7 +75,7 @@ test('Feedback: the film the search found is “Outro filme”', async ({
   )
   await loginAsBruno(page)
   await page.goto(`/sessoes/${encodeURIComponent(session.id)}/contar`)
-  await page.getByText('Viram outro filme?').click()
+  await page.getByLabel('Outro filme').check()
   await search(page, 'fronteira (2012)')
   await expect(results(page)).toHaveCount(1)
   await page.getByRole('link', { name: 'Usar Fronteira II (2012)' }).click()

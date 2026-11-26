@@ -3,6 +3,8 @@
 // (`moved.ts`). Client-safe.
 
 export const SESSIONS_PATH = '/sessoes'
+export const PENDING_FEEDBACK_FILTER = 'para-contar'
+export const PENDING_FEEDBACK_PATH = `${SESSIONS_PATH}?filtro=${PENDING_FEEDBACK_FILTER}`
 
 export const sessionPath = (session: string) =>
   `${SESSIONS_PATH}/${encodeURIComponent(session)}`

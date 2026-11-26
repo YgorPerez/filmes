@@ -42,62 +42,62 @@ const CLOSED: SessionItem = {
   constraints: [],
 }
 
-const region = (name: string) => screen.getByRole('region', { name })
-
 describe('the Sessions list', () => {
-  it('shows the open Sessions with their Feedback, then the closed ones', () => {
+  it('shows dates, outcomes and a way to tell how an open Session went', () => {
     render(
       <SessionList
-        sessions={[OPEN, CLOSED, { ...CLOSED, id: 'x', chosen: null }]}
+        sessions={[CLOSED, OPEN, { ...CLOSED, id: 'x', chosen: null }]}
       />,
     )
     expect(
-      screen
-        .getByRole('link', { name: SESSIONS.list.create })
-        .getAttribute('href'),
+      screen.getByRole('link', { name: 'Nova Sessão' }).getAttribute('href'),
     ).toBe('/sessoes/nova')
-
-    const open = region(SESSIONS.list.open)
-    const row = within(open).getAllByRole('listitem')[0]!
-    // The stub: date, Presentes and how many films, a link to its page.
+    const [closed, open, nothing] = screen.getAllByRole('listitem')
     expect(
-      within(row)
-        .getByRole('link', { name: '2026-11-20 · Bruno, Iara · 2 filmes' })
+      within(closed!).getByRole('link', { name: /Quim/ }).getAttribute('href'),
+    ).toBe('/sessoes/2026-11-19-quim')
+    expect(closed!.textContent).toContain('Viram Pequenos Milagres')
+    expect(closed!.textContent).toContain('19 de novembro de 2026')
+    expect(
+      within(closed!).queryByRole('link', { name: 'Contar como foi' }),
+    ).toBeNull()
+    expect(
+      within(open!)
+        .getByRole('link', { name: /Bruno, Iara/ })
         .getAttribute('href'),
     ).toBe('/sessoes/2026-11-20-iara')
-    // The request on the shelf label, the Dono's words on the paper.
+    expect(open!.textContent).toContain('eu e a Iara')
+    expect(open!.textContent).toContain('até 2h')
     expect(
-      within(row).getByRole('img', {
-        name: 'leve · até 2h · com criança de 7 anos',
-      }),
-    ).toBeTruthy()
-    expect(within(row).getByText('eu e a Iara')).toBeTruthy()
-    expect(
-      within(row)
-        .getByRole('link', { name: SESSIONS.list.feedbackLabel(OPEN.id) })
+      within(open!)
+        .getByRole('link', { name: 'Contar como foi' })
         .getAttribute('href'),
     ).toBe('/sessoes/2026-11-20-iara/contar')
-
-    const closed = region(SESSIONS.list.closed)
-    const [chosen, nothing] = within(closed).getAllByRole('listitem')
-    expect(chosen!.textContent).toContain(
-      '2026-11-19 · viram Pequenos Milagres',
-    )
-    expect(within(chosen!).getByRole('link').getAttribute('href')).toBe(
-      '/sessoes/2026-11-19-quim',
-    )
-    expect(nothing!.textContent).toContain('não viram nada')
-    expect(within(closed).queryByText(SESSIONS.list.feedback)).toBeNull()
+    expect(nothing!.textContent).toContain('Não viram nada')
   })
 
-  it('says when there is no Session yet', () => {
+  it('explains an empty list and highlights its current filter', () => {
+    render(<SessionList sessions={[]} pendingOnly />)
+    expect(
+      screen
+        .getByRole('link', { name: 'Para contar' })
+        .getAttribute('aria-current'),
+    ).toBe('page')
+    expect(
+      screen.getByRole('link', { name: 'Todas' }).getAttribute('href'),
+    ).toBe('/sessoes')
+    expect(screen.getByText('Nenhuma Sessão para contar.')).toBeTruthy()
+  })
+
+  it('names the list by its filter, and says when there is no Session at all', () => {
+    render(<SessionList sessions={[OPEN]} pendingOnly />)
+    expect(screen.getByRole('list', { name: 'Para contar' })).toBeTruthy()
+    cleanup()
     render(<SessionList sessions={[]} />)
-    expect(region(SESSIONS.list.open).textContent).toContain(
-      SESSIONS.list.openEmpty,
-    )
-    expect(region(SESSIONS.list.closed).textContent).toContain(
-      SESSIONS.list.closedEmpty,
-    )
+    expect(
+      screen.getByRole('link', { name: 'Todas' }).getAttribute('aria-current'),
+    ).toBe('page')
+    expect(screen.getByText(SESSIONS.list.empty)).toBeTruthy()
   })
 
   it('says when the engine cannot run here', () => {
@@ -122,7 +122,7 @@ describe('a Session’s page', () => {
       SESSIONS.session.notices.aberta,
     )
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
-      'Sessão 2026-11-20',
+      'Sessão de 20 de novembro de 2026',
     )
     expect(screen.getAllByRole('article')).toHaveLength(2)
     expect(
@@ -186,7 +186,7 @@ describe('a Session’s page', () => {
     expect(warnings!.textContent).toBe(
       `${SESSIONS.session.warnings}só 2 passaram nas Restrições`,
     )
-    expect(addition!.textContent).toContain('“chegou a Ana”')
+    expect(addition!.textContent).toContain('chegou a Ana')
     expect(within(addition!).getByRole('link').getAttribute('href')).toBe(
       '/pessoas',
     )
@@ -222,12 +222,12 @@ describe('a Session’s page', () => {
     )
     const [, addition] = screen.getAllByRole('status')
     expect(addition!.textContent).toBe(
-      'Acrescentar: “chegou a Iara e o Zeca, parecido com Reprise e Amélie”. ' +
-        'Entrou no pedido: Presente: Iara; até 1h50. ' +
-        'Não entendi, ficou só anotado na Sessão: “Zeca”. ' +
-        '“Reprise” pode ser Reprise (2011) ou Reprise (2004): diga qual no próximo acrescentar. ' +
+      'Você acrescentou “chegou a Iara e o Zeca, parecido com Reprise e Amélie”. ' +
+        'Acrescentei ao pedido Presente: Iara, até 1h50. ' +
+        'Deixei “Zeca” só como anotação. ' +
+        '“Reprise” pode ser Reprise (2011) ou Reprise (2004). Diga qual na próxima vez. ' +
         '“Amélie” não está no Catálogo. ' +
-        'Se for gosto de alguém, só vale com o seu sim: diga na página da Pessoa.',
+        'Para guardar um gosto, vá à página da Pessoa.',
     )
     expect(within(addition!).getByRole('link').getAttribute('href')).toBe(
       '/pessoas',
@@ -251,9 +251,9 @@ describe('a Session’s page', () => {
     )
     const [, addition] = screen.getAllByRole('status')
     expect(addition!.textContent).toBe(
-      'Acrescentar: “a Iara odeia terror”. ' +
-        'Não entendi, ficou só anotado na Sessão: “Iara odeia terror”. ' +
-        'Se for gosto de alguém, só vale com o seu sim: diga na página da Pessoa.',
+      'Você acrescentou “a Iara odeia terror”. ' +
+        'Deixei “Iara odeia terror” só como anotação. ' +
+        'Para guardar um gosto, vá à página da Pessoa.',
     )
   })
 
@@ -267,9 +267,8 @@ describe('a Session’s page', () => {
         }}
       />,
     )
-    expect(screen.getByRole('status').textContent).toBe(
-      'Fechada · viram Pequenos Milagres',
-    )
+    expect(screen.getByText('Fechada.')).toBeTruthy()
+    expect(screen.getByText('Viram Pequenos Milagres.')).toBeTruthy()
     expect(
       screen.queryByRole('link', { name: SESSIONS.list.feedback }),
     ).toBeNull()

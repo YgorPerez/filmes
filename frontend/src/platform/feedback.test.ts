@@ -42,6 +42,8 @@ const SESSION: FeedbackSession = {
     { person: 'quim', name: 'Quim', owner: false },
   ],
   recommendation: [{ position: 1, id: 'tt9000101', title: 'O Farol de Areia' }],
+  moods: [],
+  constraints: [],
 }
 
 const RECORDED: FeedbackResult = {
@@ -105,7 +107,7 @@ describe('feedbackAction', () => {
     owner: Owner | null = BRUNO,
   ) => feedbackAction(request, SESSION.id, owner, feedback, ORIGIN)
 
-  it('records the form as the logged-in Dono and goes back to the list', async () => {
+  it('records the form as the logged-in Dono and goes back to the Session', async () => {
     const { feedback, record } = fake()
     const response = await act(
       post({
@@ -180,6 +182,27 @@ describe('feedbackAction', () => {
     expect(response.headers.get('Location')).toBe(location)
     expect(log.mock.calls.length > 0).toBe(code === 'missing_database')
     log.mockRestore()
+  })
+})
+
+describe('the Catálogo search in feedbackAction', () => {
+  it('comes back to the form with the search, recording nothing', async () => {
+    const { feedback, record } = fake()
+    const search = (busca: string) =>
+      feedbackAction(
+        post({ filme: 'outro', busca, 'buscar-catalogo': 'sim' }),
+        SESSION.id,
+        BRUNO,
+        feedback,
+        ORIGIN,
+      )
+    expect((await search(' Fronteira (2012) ')).headers.get('Location')).toBe(
+      '/sessoes/2026-11-20-quim/contar?buscar=Fronteira+%282012%29',
+    )
+    expect((await search('  ')).headers.get('Location')).toBe(
+      '/sessoes/2026-11-20-quim/contar?erro=filme',
+    )
+    expect(record).not.toHaveBeenCalled()
   })
 })
 
@@ -262,6 +285,8 @@ describe('feedbackFromEngine', () => {
           id: first.session.id,
           date: '2026-11-20',
           request: null,
+          moods: [],
+          constraints: [],
           attendees: [
             { person: 'bruno', name: 'Bruno', owner: true },
             { person: 'quim', name: 'Quim', owner: false },

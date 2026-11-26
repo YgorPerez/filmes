@@ -25,49 +25,41 @@ const films = (n: number) =>
 export const SESSIONS = {
   back: 'Voltar',
   unavailable:
-    'As Sessões ainda não estão prontas neste servidor: falta o banco do filmes.',
+    'Não deu para abrir as Sessões agora. Tente de novo daqui a pouco.',
   films,
 
   list: {
     title: 'Sessões',
-    lead: 'Cada Sessão guarda os Presentes, o contexto e a Recomendação. Fica aberta até o Feedback.',
     create: 'Nova Sessão',
-    open: 'Abertas',
-    openEmpty: 'Nenhuma Sessão aberta.',
-    closed: 'Fechadas',
-    closedEmpty: 'Nenhuma Sessão fechada ainda.',
+    filters: 'Filtrar Sessões',
+    all: 'Todas',
+    pending: 'Para contar',
+    empty: 'Você ainda não abriu nenhuma Sessão.',
+    pendingEmpty: 'Nenhuma Sessão para contar.',
     feedback: 'Contar como foi',
-    feedbackLabel: (id: string) => `Contar como foi a Sessão ${id}`,
-    stub: (date: string, people: string, films: string) =>
-      `${date} · ${people} · ${films}`,
-    returnTitle: 'Falta contar como foi',
-    returnText:
-      'Diga o filme que viram e o que cada um achou. O Feedback fecha a Sessão.',
-    chosen: (title: string) => `viram ${title}`,
-    nothing: 'não viram nada',
+    chosen: (title: string) => `Viram ${title}`,
+    nothing: 'Não viram nada',
   },
 
   session: {
-    title: 'Sessão',
-    unknown: 'Nenhuma Sessão com esse nome no repo de dados.',
+    title: 'Sessão de',
+    unknown: 'Não encontrei essa Sessão.',
     notices: {
-      aberta: 'Sessão aberta. Depois do filme, dê o Feedback para fechá-la.',
+      aberta: 'Sessão aberta.',
       regerada:
-        'Recomendação refeita: quem ficou segue no mesmo número, quem entrou tem o selo “novo”.',
+        'Recomendação refeita. Os filmes que entraram têm o selo “novo”.',
       anotada:
         'Estrelas e comentários ficaram na Sessão. Eles não mexem no gosto de ninguém.',
       'perguntas-gravadas':
-        'Respostas gravadas: o escolhido de cada par virou Nota fraca, e o outro, Já visto.',
-      'perguntas-descartadas':
-        'Respostas descartadas. Nada mudou no gosto de ninguém.',
-      contada:
-        'Feedback gravado e Sessão fechada. A próxima Recomendação deste grupo já conta com ele.',
+        'Respostas gravadas. O escolhido de cada par ganhou uma Nota fraca e o outro ficou como Já visto.',
+      'perguntas-descartadas': 'Respostas descartadas.',
+      contada: 'Feedback gravado e Sessão fechada.',
     } satisfies Record<SessionNotice, string>,
     refusals: {
       nada: 'Nada marcado ainda.',
       texto:
         'A resposta não bate com o Cartaz desta Sessão. Recarregue a página e marque de novo.',
-      fechada: 'Esta Sessão já tem Feedback: ela não recebe mais resposta.',
+      fechada: 'Esta Sessão já está fechada.',
       regerar:
         'A resposta ficou gravada, mas não deu para refazer a Recomendação agora. Tente de novo daqui a pouco.',
       indisponivel:
@@ -75,87 +67,82 @@ export const SESSIONS = {
     } satisfies Record<ReplyRefusal, string>,
     warnings: 'Avisos',
     addition: (text: string) =>
-      `Acrescentar: “${text}” ficou anotado na Sessão. Se for gosto de alguém, só vale com o seu sim:`,
-    additionLink: 'diga na página da Pessoa.',
+      `Anotei “${text}” nesta Sessão. Para guardar um gosto,`,
+    additionLink: 'vá à página da Pessoa.',
     /** The acrescentar as the Leitura do pedido read it (#200). */
-    additionRead: (text: string) => `Acrescentar: “${text}”.`,
+    additionRead: (text: string) => `Você acrescentou “${text}”.`,
     additionAdded: (labels: readonly string[]) =>
-      `Entrou no pedido: ${labels.join('; ')}.`,
+      `Acrescentei ao pedido ${labels.join(', ')}.`,
     additionNotUnderstood: (words: readonly string[]) =>
-      `Não entendi, ficou só anotado na Sessão: ${runs(words)}.`,
+      `Deixei ${runs(words)} só como anotação.`,
     additionAmbiguous: (words: string, candidates: readonly string[]) =>
       candidates.length === 0
         ? `${ambiguity(words, candidates)}.`
-        : `${ambiguity(words, candidates)}: diga qual no próximo acrescentar.`,
-    additionTaste: 'Se for gosto de alguém, só vale com o seu sim:',
+        : `${ambiguity(words, candidates)}. Diga qual na próxima vez.`,
+    additionTaste: 'Para guardar um gosto,',
     closed: 'Fechada',
   },
 
   form: {
     title: 'Nova Sessão',
-    lead: 'Quem vai assistir e o que vale hoje. A Recomendação sai com a Evidência de cada filme, e a Sessão fica aberta até o Feedback.',
     label: 'Nova Sessão',
-    attendees: 'Presentes',
-    attendeesLead: 'Quem vai assistir.',
+    attendees: 'Quem vai assistir?',
     rule: 'Regra de escolha',
     rules: {
-      padrao:
-        'Padrão: média sem miséria, a favor de quem saiu menos satisfeito',
+      padrao: 'Padrão, favorece quem gostou menos nas últimas Sessões',
       media: 'Média dos Presentes',
       de: 'O gosto de uma Pessoa',
     },
     by: 'De quem',
-    byHint: 'com “o gosto de uma Pessoa”',
+    byHint: 'se a Regra for pelo gosto de uma Pessoa',
     byNone: 'ninguém',
     moods: 'Clima',
     moodsLead: 'Puxa a ordem, nunca tira um filme.',
     count: 'Quantos filmes',
-    countHint: 'em branco: o padrão',
+    countHint: 'deixe em branco para usar o padrão',
     words: 'Em uma frase',
-    wordsHint: 'opcional, fica na Sessão; “Ler” preenche o formulário com ela',
+    wordsHint: 'opcional. Toque em Ler para preencher o pedido.',
     wordsPlaceholder: 'eu e a Iara, algo leve, até 2h',
     read: 'Ler',
     reading: {
       understood: (labels: readonly string[]) =>
-        `Lido da frase: ${labels.join('; ')}.`,
-      nothing: 'Nada da frase preencheu o formulário.',
+        `Pelo que entendi, ${labels.join(', ')}.`,
+      nothing: 'Não consegui preencher o pedido pela frase.',
       notUnderstood: (words: readonly string[]) =>
-        `Ficou de fora: ${runs(words)}.`,
+        `Deixei ${runs(words)} de fora.`,
       ambiguous: (
         items: readonly { words: string; candidates: readonly string[] }[],
       ) =>
-        `Em dúvida, escolha no formulário: ${items
+        `Confira no formulário. ${items
           .map(({ words, candidates }) => ambiguity(words, candidates))
-          .join('; ')}.`,
+          .join('. ')}.`,
       /** A title of several films: each with “Usar”, as the search. */
       similarAmbiguous: (words: string) =>
-        `${quoted(words)} pode ser um destes; use um para “Parecido com”:`,
+        `Qual destes filmes você quis dizer com ${quoted(words)}?`,
     },
     constraints: 'Restrições',
-    constraintsLead:
-      'Valem só nesta Sessão e tiram o filme antes de qualquer ordem. Deixe em branco o que não vale.',
+    constraintsLead: 'Marque só os limites desta noite.',
     duration: 'Duração máxima',
     durationHint: 'em minutos',
     since: 'Lançado desde',
     until: 'Lançado até',
     yearHint: 'ano',
     language: 'Idioma original',
-    languageHint: '“pt”, “português” ou o QID',
+    languageHint: 'ex.: português',
     child: 'Criança',
     childNone: 'sem criança',
-    childNoAge: 'com criança (idade não informada: só livre)',
+    childNoAge: 'com criança, só filmes livres',
     childAge: (age: number) => (age === 1 ? '1 ano' : `${age} anos`),
     triggers: 'Gatilhos',
-    triggersHint: 'temas do Does the Dog Die, separados por vírgula',
+    triggersHint: 'separe os temas por vírgula',
     similar: 'Parecido com',
     similarHint: 'IDs do IMDb (tt…), separados por vírgula',
-    unseen: 'Nenhum Já visto',
-    unseenHint: 'tira o filme que um Presente já viu',
+    unseen: 'Só filmes que ninguém viu',
     noSlow: 'Nada lento',
     noSad: 'Nada triste',
     seriesOrder: 'Série na ordem',
     seriesOrderLead:
-      'A continuação de uma série de filmes só entra se todos os Presentes viram o filme antes dela. Franquia, como Marvel ou Star Wars, não conta.',
+      'Na opção padrão, a continuação só entra se todo mundo viu o filme anterior. Vale para séries de filmes, não para franquias como Marvel ou Star Wars.',
     seriesOrders: {
       anterior: 'Só se viram o anterior',
       todos: 'Só se viram todos os anteriores',
@@ -164,7 +151,8 @@ export const SESSIONS = {
     seriesOrderDefault: 'padrão',
     submit: 'Recomendar',
     searchFold: 'Parecido com um filme?',
-    searchFoldHint: 'ache o ID no Catálogo',
+    searchLabel: 'Buscar pelo título ou ID do IMDb',
+    details: 'Mais opções',
   },
 
   refusals: {
@@ -172,14 +160,14 @@ export const SESSIONS = {
     'frase-longa': `A frase passa de ${REQUEST_READING_MAX_LENGTH} caracteres. Encurte e toque em “Ler” de novo.`,
     presentes: 'Marque pelo menos um Presente.',
     de: '“O gosto de uma Pessoa” precisa de uma Pessoa entre os Presentes.',
-    quantos: 'Quantos filmes: um número de 1 a 50.',
-    duracao: 'Duração máxima: um número de minutos, 1 ou mais.',
-    anos: 'Os anos são números de quatro dígitos, e “desde” não vem depois de “até”.',
+    quantos: 'Escolha de 1 a 50 filmes.',
+    duracao: 'A duração máxima precisa ser de pelo menos um minuto.',
+    anos: 'Use anos de quatro dígitos, do mais antigo para o mais recente.',
     crianca: 'A idade da criança vai de 0 a 17.',
     parecido:
       '“Parecido com” leva IDs do IMDb (tt…) de filmes do Catálogo, separados por vírgula.',
     pessoa:
-      'Uma das Pessoas marcadas não está mais no repo de dados. Recarregue a página.',
+      'Alguém da lista saiu do cadastro. Recarregue a página e marque quem vai assistir.',
     pedido: 'Um valor do formulário não vale. Confira e peça de novo.',
     indisponivel: 'Não deu para recomendar agora. Tente de novo daqui a pouco.',
   } satisfies Record<SessionRequestRefusal, string>,

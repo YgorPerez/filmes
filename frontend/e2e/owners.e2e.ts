@@ -63,6 +63,7 @@ for (const dono of DONOS)
       page.getByRole('checkbox', { name: dono.other, exact: true }),
     ).not.toBeChecked()
     await page.getByRole('checkbox', { name: 'Lara' }).check()
+    await page.getByText('Mais opções', { exact: true }).click()
     await page.getByLabel('Quantos filmes', { exact: false }).fill('3')
     await page.getByRole('button', { name: 'Recomendar' }).click()
     await expect(page).toHaveURL(

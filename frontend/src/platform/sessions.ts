@@ -234,6 +234,22 @@ async function readSentence(
   return seeOther(`/sessoes/nova${token ? `?nota=${token}` : ''}`)
 }
 
+/** The search redirects without putting the request's fields in the URL. */
+function searchSimilar(form: FormData, notes: Notes): Response {
+  const previous = notes.recall(field(form, 'nota'))
+  const token = notes.remember({
+    warnings: [],
+    addition: null,
+    form: draftOf(form),
+    reading: previous?.reading,
+  })
+  const params = new URLSearchParams()
+  const query = field(form, 'buscar')?.slice(0, 200)
+  if (query) params.set('buscar', query)
+  if (token) params.set('nota', token)
+  return seeOther(`/sessoes/nova?${params}`)
+}
+
 /** `POST /sessoes/nova/enviar`: opens the Session the form asks for as the
  * logged-in Dono and goes to its page (`?feito=aberta`, with `?nota=` for
  * the Recomendação's warnings), or back to the form saying why not
@@ -250,6 +266,7 @@ export async function sessionRequestAction(
   const poster = formPoster(request, owner, origin)
   if (poster instanceof Response) return poster
   const form = await request.formData()
+  if (form.get('buscar-catalogo') === 'sim') return searchSimilar(form, notes)
   if (form.get('ler') === 'sim')
     return readSentence(form, poster.person, sessions, notes)
   const parsed = parseSessionRequest(form)

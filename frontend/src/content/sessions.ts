@@ -6,10 +6,15 @@ import { ownerMiddleware, pathSlug, requireOwner } from './owner'
  * refused: the page gate does not protect a server function. */
 export const readSessions = createServerFn({ method: 'GET' })
   .middleware([ownerMiddleware])
-  .handler(async ({ context }) => {
+  .validator((value: unknown) => value === true)
+  .handler(async ({ context, data: pendingOnly }) => {
     requireOwner(context.owner)
     const { appSessionList } = await import('#/platform/sessions')
-    return appSessionList(context.owner.person)
+    const sessions = await appSessionList(context.owner.person)
+    // "Para contar": the open ones, which still wait for their Feedback.
+    return pendingOnly
+      ? (sessions?.filter((session) => session.open) ?? null)
+      : sessions
   })
 
 /** What `/` shows (`homeData`): the setup guide, the latest Sessão and the

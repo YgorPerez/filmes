@@ -38,8 +38,14 @@ test('the Dono closes a Session and the next one shows the satisfaction', async 
   // Sessões leads to its Feedback (the home shows only the latest, and the
   // other project opens its own at the same time).
   await tab(page, 'Sessões').click()
+  await page.getByRole('link', { name: 'Para contar' }).click()
+  await expect(page).toHaveURL(/\/sessoes\?filtro=para-contar$/)
   await page
-    .getByRole('link', { name: `Contar como foi a Sessão ${first}` })
+    .getByRole('listitem')
+    .filter({
+      has: page.locator(`a[href="/sessoes/${first}"]`),
+    })
+    .getByRole('link', { name: 'Contar como foi' })
     .click()
   await expect(page).toHaveURL(new RegExp(`/sessoes/${first}/contar$`))
   await expect(satisfaction(page)).toContainText(
@@ -62,6 +68,11 @@ test('the Dono closes a Session and the next one shows the satisfaction', async 
   ).toContainText('Feedback gravado e Sessão fechada')
   await snap(page, info, 'feedback-gravado')
   expect(await stillOpen(first)).toBe(false)
+  await page.goto('/feedback')
+  await expect(page).toHaveURL(/\/sessoes\?filtro=para-contar$/)
+  await expect(page.locator(`a[href="/sessoes/${first}"]`)).toHaveCount(0)
+  await page.getByRole('link', { name: 'Todas' }).click()
+  await expect(page.locator(`a[href="/sessoes/${first}"]`)).toBeVisible()
 
   // The same group again: Rosa left the first Session the least satisfied.
   const next = await openSession(['dono', 'rosa', 'quim'])
@@ -84,6 +95,7 @@ test('a relayed Relato, a film by its title, and a refusal', async ({
   await expect(page).toHaveURL(new RegExp(`/sessoes/${id}/contar$`))
 
   // A comment with no reaction is refused, and the Session stays open.
+  await page.getByLabel('Outro filme').check()
   await page.getByLabel('Título ou ID do IMDb', { exact: false }).fill('x')
   await page.getByLabel('Comentário: Teo').fill('dormiu')
   await page.getByRole('button', { name: 'Gravar e fechar a Sessão' }).click()
@@ -109,5 +121,7 @@ test('a relayed Relato, a film by its title, and a refusal', async ({
 
   // The form of a closed Session says so.
   await page.goto(`/sessoes/${id}/contar`)
-  await expect(page.getByRole('alert')).toContainText('ela já tem Feedback')
+  await expect(page.getByRole('alert')).toContainText(
+    'A Sessão pode já estar fechada',
+  )
 })

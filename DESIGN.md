@@ -591,6 +591,13 @@ Uma coluna, de cima para baixo, com 16px entre os blocos. Não há lista de tela
 
 O guia nunca bloqueia: "Pedir filme" fica sempre em cima. Quando nenhum passo falta, o guia some da home inteira; não há carteirinha nem selo.
 
+### Sessões, pedido e Feedback
+
+- **Sessões.** A lista segue a ordem do histórico. Ao lado do título fica "Nova Sessão", o botão laranja. Embaixo, "Todas" e "Para contar" são links com um contorno mais forte no filtro atual. Cada ficha tem um canhoto tracejado com os Presentes e a data, que leva à Sessão. Sob o canhoto, uma Sessão aberta mostra o pedido e "Contar como foi". A fechada mostra o filme visto ou "Não viram nada". O endereço `/feedback` abre "Para contar".
+- **Página da Sessão.** Data, Presentes, "Contar como foi" e o Link da Sessão ficam juntos acima do Cartaz. Depois de gravar, a confirmação aparece ali, com o filme escolhido no cabeçalho. O Cartaz traz a etiqueta com o pedido.
+- **Nova Sessão.** A frase, os Presentes e o Clima ficam à vista. "Parecido com um filme?" abre a busca e "Mais opções" reúne os limites, a Regra e a Série na ordem, e só vem aberto quando o rascunho ou a recusa mexe num campo dele. Cada dobra tem o + desenhado, que vira × aberta. Buscar volta ao formulário com o rascunho que a pessoa preencheu. O botão "Recomendar" ocupa a largura da coluna no celular.
+- **Contar como foi.** A lista de filmes mantém o adesivo de preço em cada opção. "Outro filme" abre um campo que aceita o título ou o ID e busca no Catálogo. "Não vimos nada" recolhe as reações. Notas, Relatos e comentários ficam juntos por Presente. O único botão laranja grava e fecha a Sessão.
+
 ### Avatares
 
 Círculo de 24px na cor do Presente, inicial em Rubik 700 11px em on-person. Vazado: fundo transparente, anel de 2px na cor e inicial na cor. Sobrepostos: -7px de margem e anel de 2px na cor da superfície.

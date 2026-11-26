@@ -21,6 +21,8 @@ const SESSION: FeedbackSession = {
     { person: 'iara', name: 'Iara', owner: false },
     { person: 'quim', name: 'Quim', owner: false },
   ],
+  moods: [],
+  constraints: [],
   recommendation: [
     { position: 1, id: 'tt9000101', title: 'O Farol de Areia' },
     { position: 2, id: 'tt9000601', title: 'Pequenos Milagres' },
@@ -142,26 +144,18 @@ describe('FeedbackScreen', () => {
     })
   })
 
-  it('takes the search as the film even with no radio chosen', async () => {
-    const { user, form } = show()
-    await user.type(
-      screen.getByLabelText(FEEDBACK.form.search, { exact: false }),
-      'tt9000602',
-    )
-    expect(posted(form)).toEqual({ ok: { film: 'tt9000602', reactions: [] } })
-  })
-
   it('records "não vimos nada", with no reaction', async () => {
     const { user, form } = show()
     await user.click(screen.getByLabelText(/Não vimos nada/))
     expect(posted(form)).toEqual({ ok: { film: null, reactions: [] } })
   })
 
-  it('refuses "não vimos nada" with a reaction', async () => {
+  it('omits reactions when the choice changes to "não vimos nada"', async () => {
     const { user, form } = show()
-    await user.click(screen.getByLabelText(/Não vimos nada/))
+    await user.click(screen.getByLabelText(/O Farol de Areia/))
     await user.selectOptions(reaction('Bruno'), 'Nota 3')
-    expect(posted(form)).toEqual({ refused: 'nada' })
+    await user.click(screen.getByLabelText(/Não vimos nada/))
+    expect(posted(form)).toEqual({ ok: { film: null, reactions: [] } })
   })
 
   it('refuses a comment with no Nota or Relato', async () => {
@@ -183,7 +177,7 @@ describe('FeedbackScreen', () => {
     })
     expect(region.textContent).toMatch(/Iara/)
     expect(region.textContent).toMatch(/Casa Cheia/)
-    expect(region.textContent).toContain('Satisfação 11%')
+    expect(region.textContent).toContain('11%')
     expect(region.textContent).not.toMatch(/Quim/)
   })
 
