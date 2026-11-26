@@ -12,14 +12,11 @@ import {
 } from '../../../packages/engine/test/fixture.ts'
 import {
   parseSessionRequest,
-  SENTENCE_MAX_LENGTH,
-  sentenceParam,
   type SessionRequestForm,
 } from '#/content/session-request'
 import {
-  readerFromEngine,
+  newSessionDraft,
   requestOptions,
-  sentenceReading,
   sessionList,
   sessionPage,
   sessionRequestAction,
@@ -75,6 +72,7 @@ function fake(
     list: async () => outcomes.list ?? { exitCode: 0, output: [SESSION] },
     options: async () => failure('missing_database'),
     open,
+    read: async () => failure('missing_database'),
   }
   return { sessions, open }
 }
@@ -170,15 +168,6 @@ describe('parseSessionRequest', () => {
   })
 })
 
-describe('sentenceParam', () => {
-  it('keeps in `?frase=` only a sentence the engine reads', () => {
-    expect(sentenceParam('  eu e a Iara ')).toBe('eu e a Iara')
-    expect(sentenceParam('  ')).toBeUndefined()
-    expect(sentenceParam(3)).toBeUndefined()
-    expect(sentenceParam('a'.repeat(SENTENCE_MAX_LENGTH + 1))).toBeUndefined()
-  })
-})
-
 describe('sessionRequestAction', () => {
   const act = (
     request: Request,
@@ -258,163 +247,168 @@ describe('sessionRequestAction', () => {
   })
 })
 
-describe('“Ler” in sessionRequestAction', () => {
-  const act = (request: Request, owner: typeof BRUNO | null = BRUNO) =>
-    sessionRequestAction(request, owner, fake().sessions, new Notes(), ORIGIN)
-  const read = (sentence: string | null, origin: string | null = ORIGIN) =>
-    post(
-      [
-        ...BASIC,
-        ['ler', 'sim'],
-        ...(sentence === null
-          ? []
-          : ([['pedido', sentence]] as [string, string][])),
-      ],
-      origin,
-    )
+const ler = (fields: [string, string][], origin: string | null = ORIGIN) =>
+  post([...fields, ['ler', 'sim']], origin)
 
-  it('opens nothing and takes the sentence back to the form, which reads it', async () => {
-    const { sessions, open } = fake()
+/** "Ler" posted with `fields` as the Dono `owner`, with the real engine on
+ * `fixture`: where it went and the draft its note holds. Opens nothing. */
+async function readForm(
+  fixture: Fixture,
+  fields: [string, string][],
+  owner = 'bruno',
+) {
+  const engine = makeEngine(fixture.vars)
+  const open = vi.fn<Sessions['open']>()
+  const notes = new Notes()
+  try {
     const response = await sessionRequestAction(
-      read('  eu e a Iara, algo leve  '),
-      BRUNO,
-      sessions,
-      new Notes(),
+      ler(fields),
+      { ...BRUNO, person: owner },
+      { ...sessionsFromEngine(engine), open },
+      notes,
       ORIGIN,
     )
-    expect(response.status).toBe(303)
-    expect(response.headers.get('Location')).toBe(
-      '/sessoes/nova?frase=eu+e+a+Iara%2C+algo+leve',
-    )
     expect(open).not.toHaveBeenCalled()
-  })
-
-  it('refuses an empty sentence and one longer than the engine reads', async () => {
-    expect(SENTENCE_MAX_LENGTH).toBe(REQUEST_READING_MAX_LENGTH)
-    expect((await act(read('  '))).headers.get('Location')).toBe(
-      '/sessoes/nova?erro=frase',
-    )
-    expect((await act(read(null))).headers.get('Location')).toBe(
-      '/sessoes/nova?erro=frase',
-    )
-    expect(
-      (await act(read('a'.repeat(SENTENCE_MAX_LENGTH + 1)))).headers.get(
-        'Location',
-      ),
-    ).toBe('/sessoes/nova?erro=frase-longa')
-  })
-
-  it('sends who is not logged in to the login, and refuses another site', async () => {
-    expect((await act(read('eu'), null)).headers.get('Location')).toBe(
-      '/entrar',
-    )
-    expect((await act(read('eu', 'https://evil.example'))).status).toBe(403)
-  })
-})
-
-/** Reads `text` as the Dono `owner` with the real engine on `fixture`. */
-async function read(fixture: Fixture, text: string, owner = 'bruno') {
-  const engine = makeEngine(fixture.vars)
-  try {
-    return await sentenceReading(text, owner, readerFromEngine(engine))
+    const location = response.headers.get('Location') ?? ''
+    const token = new URL(location, ORIGIN).searchParams.get('nota')
+    return {
+      location,
+      draft: newSessionDraft(token ?? undefined, notes),
+    }
   } finally {
     await engine.dispose()
   }
 }
 
-describe('sentenceReading', () => {
-  it('fills the form with what it understood and lists what it did not', async () => {
-    expect(
-      await read(
-        useFixture(),
-        'eu e a Iara, algo leve, até 2h, tem criança de 7, 3 filmes, com pipoca',
-      ),
-    ).toEqual({
-      text: 'eu e a Iara, algo leve, até 2h, tem criança de 7, 3 filmes, com pipoca',
-      request: {
-        attendees: ['bruno', 'iara'],
-        moods: ['leve'],
-        maxDuration: 120,
-        child: 7,
+describe('“Ler” in sessionRequestAction', () => {
+  it('goes back to the form with the sentence read on top of what the Dono set', async () => {
+    const { location, draft } = await readForm(useFixture(), [
+      ...BASIC,
+      ['climas', 'tenso'],
+      ['sem-tristeza', 'sim'],
+      ['duracao', '90'],
+      ['pedido', 'eu e o Quim, algo leve, até 2h, 3 filmes, com pipoca'],
+    ])
+
+    expect(location).toMatch(/^\/sessoes\/nova\?nota=[\w-]+$/)
+    expect(draft).toEqual({
+      fields: {
+        attendees: ['bruno', 'iara', 'quim'],
+        rule: 'default',
+        moods: ['tenso', 'leve'],
         count: 3,
+        request: 'eu e o Quim, algo leve, até 2h, 3 filmes, com pipoca',
+        maxDuration: 120,
+        noSad: true,
       },
-      understood: [
-        'Presente: Bruno',
-        'Presente: Iara',
-        'Clima: leve',
-        'até 2h',
-        'com criança de 7 anos',
-        '3 filmes',
-      ],
-      notUnderstood: ['pipoca'],
-      ambiguities: [],
+      reading: {
+        understood: [
+          'Presente: Bruno',
+          'Presente: Quim',
+          'Clima: leve',
+          'até 2h',
+          '3 filmes',
+        ],
+        notUnderstood: ['pipoca'],
+        ambiguities: [],
+      },
     })
   })
 
-  it('reads the Regra, the years, the language and the Restrições the form has', async () => {
-    const reading = await read(
-      useFixture(),
-      'pelo gosto da Iara, dos anos 90, filme nacional, nada lento, nada triste, que ninguém viu',
-    )
-    expect(reading?.request).toEqual({
-      attendees: ['iara'],
-      rule: 'by',
-      by: 'iara',
-      since: 1990,
-      until: 1999,
-      language: 'pt',
-      noSlow: true,
-      noSad: true,
-      unseen: true,
+  it('keeps the Parecido “Usar” took, and adds the one the sentence names', async () => {
+    const { draft } = await readForm(useFixture(), [
+      ...BASIC,
+      ['parecido', 'tt9000101'],
+      ['pedido', 'algo leve'],
+    ])
+    expect(draft?.fields).toMatchObject({
+      moods: ['leve'],
+      similar: ['tt9000101'],
     })
-    expect(reading?.notUnderstood).toEqual([])
+
+    const both = await readForm(useFixture(), [
+      ...BASIC,
+      ['parecido', 'tt9000101'],
+      ['pedido', 'parecido com Poeira'],
+    ])
+    expect(both.draft?.fields.similar).toEqual(['tt9000101', 'tt9001904'])
   })
 
-  it('takes "eu" as the logged-in Dono', async () => {
-    expect((await read(useFixture(), 'eu e a Iara', 'vera'))?.request).toEqual({
-      attendees: ['vera', 'iara'],
-    })
-  })
-})
-
-describe('sentenceReading, with what it cannot fill', () => {
-  it('names the candidates of a title it cannot pin down, and a title with none', async () => {
-    const reading = await read(
-      useFixture(),
-      'parecido com Reprise; tipo Amélie',
-    )
-    expect(reading?.request).toEqual({})
-    expect(reading?.ambiguities).toEqual([
-      { words: 'Reprise', candidates: ['Reprise (2011)', 'Reprise (2004)'] },
-      { words: 'Amélie', candidates: [] },
+  it('keeps the films of an unclear title, with their ids, for “Usar”', async () => {
+    const { draft } = await readForm(useFixture(), [
+      ...BASIC,
+      ['pedido', 'parecido com Reprise; tipo Amélie'],
+    ])
+    expect(draft?.reading?.ambiguities).toEqual([
+      {
+        field: 'similar',
+        words: 'Reprise',
+        candidates: [
+          { id: 'tt9012601', label: 'Reprise (2011)' },
+          { id: 'tt9012602', label: 'Reprise (2004)' },
+        ],
+      },
+      { field: 'similar', words: 'Amélie', candidates: [] },
     ])
   })
 
-  it('takes a title it pins down as Parecido', async () => {
-    expect((await read(useFixture(), 'entre Poeira e Coxia'))?.request).toEqual(
-      {
-        similar: ['tt9001904', 'tt9005504'],
-      },
+  it('takes "eu" as the logged-in Dono and reads nothing of taste', async () => {
+    const { draft } = await readForm(
+      useFixture(),
+      [['pedido', 'eu; a Iara odeia terror']],
+      'vera',
     )
+    expect(draft?.fields.attendees).toEqual(['vera'])
+    expect(draft?.reading?.notUnderstood).toEqual(['Iara odeia terror'])
   })
 
-  it('reads nothing of taste', async () => {
-    expect(await read(useFixture(), 'a Iara odeia terror')).toMatchObject({
-      request: {},
-      understood: [],
-      notUnderstood: ['Iara odeia terror'],
-    })
+  it('refuses an empty sentence and one longer than the engine reads', async () => {
+    const empty = await readForm(useFixture(), [...BASIC, ['pedido', '  ']])
+    expect(empty.location).toBe('/sessoes/nova?erro=frase')
+    const long = await readForm(useFixture(), [
+      ...BASIC,
+      ['pedido', 'a'.repeat(REQUEST_READING_MAX_LENGTH + 1)],
+    ])
+    expect(long.location).toBe('/sessoes/nova?erro=frase-longa')
   })
 
-  it('is null, and logs why, when the engine cannot run', async () => {
+  it('says so, and logs why, when the engine cannot read', async () => {
     const log = vi.spyOn(console, 'error').mockImplementation(() => {})
-    const failed = {
-      exitCode: 1,
-      output: { error: { code: 'missing_database', message: 'sem banco' } },
-    } as Outcome<never>
-    expect(await sentenceReading('eu', 'bruno', async () => failed)).toBeNull()
-    expect(log).toHaveBeenCalledWith('engine: missing_database: sem banco')
+    const response = await sessionRequestAction(
+      ler([...BASIC, ['pedido', 'leve']]),
+      BRUNO,
+      fake().sessions,
+      new Notes(),
+      ORIGIN,
+    )
+    expect(response.headers.get('Location')).toBe(
+      '/sessoes/nova?erro=indisponivel',
+    )
+    expect(log).toHaveBeenCalledWith(
+      'engine: missing_database: mensagem de missing_database',
+    )
     log.mockRestore()
+  })
+
+  it('sends who is not logged in to the login, and refuses another site', async () => {
+    const act = (request: Request, owner: typeof BRUNO | null = BRUNO) =>
+      sessionRequestAction(request, owner, fake().sessions, new Notes(), ORIGIN)
+    expect(
+      (await act(ler([['pedido', 'eu']]), null)).headers.get('Location'),
+    ).toBe('/entrar')
+    expect(
+      (await act(ler([['pedido', 'eu']], 'https://evil.example'))).status,
+    ).toBe(403)
+  })
+})
+
+describe('newSessionDraft', () => {
+  it('is null with no note, a forgotten one, or one of another form', () => {
+    const notes = new Notes()
+    const other = notes.remember({ warnings: ['aviso'], addition: null })
+    expect(newSessionDraft(undefined, notes)).toBeNull()
+    expect(newSessionDraft('nada', notes)).toBeNull()
+    expect(newSessionDraft(other, notes)).toBeNull()
   })
 })
 

@@ -32,6 +32,8 @@ export interface Words {
   readonly length: number
   /** The key of the word at `i`, or '' past the end. */
   readonly key: (i: number) => string
+  /** The clause of the word at `i`, or -1 past the end. */
+  readonly clause: (i: number) => number
   /** Whether the word at `i` is there for a reader: inside the sentence,
    * not in a clause about taste, not taken by an item already. */
   readonly free: (i: number) => boolean
@@ -89,6 +91,7 @@ export const wordsOf = (
   return {
     length: tokens.length,
     key,
+    clause: (i) => tokens[i]?.clause ?? -1,
     free,
     span,
     longest: (i, phrases) =>

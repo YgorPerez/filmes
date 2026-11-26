@@ -1,7 +1,7 @@
-// What the "Nova Sessão" form posts (`POST /sessoes/nova/enviar`, or its
-// sentence alone to `POST /sessoes/nova/ler`) and what the pages hear back
-// in their query: `/sessoes/<id>?feito=aberta`, `/sessoes/nova?frase=<the
-// sentence to read>` or `/sessoes/nova?erro=<refusal>`. Shared by the page and the server
+// What the "Nova Sessão" form posts (`POST /sessoes/nova/enviar`, with
+// `ler=sim` for "Ler") and what the pages hear back in their query:
+// `/sessoes/<id>?feito=aberta`, `/sessoes/nova?nota=<the form "Ler" filled>`
+// or `/sessoes/nova?erro=<refusal>`. Shared by the page and the server
 // (`platform/sessions.ts`), so nothing here imports the engine.
 //
 // Fields (PT, as the other forms): `presentes` (repeated, slugs), `regra`
@@ -46,21 +46,9 @@ export type SessionRequestForm = {
   noSad?: boolean
 }
 
-/** The longest sentence "Ler" takes, in characters (the engine's
- * `REQUEST_READING_MAX_LENGTH`). */
-export const SENTENCE_MAX_LENGTH = 500
-
-/** The sentence a page's `?frase=` asks to read: the text, trimmed, or
- * undefined when there is none or it is longer than the engine reads. */
-export const sentenceParam = (value: unknown): string | undefined => {
-  if (typeof value !== 'string') return undefined
-  const text = value.trim()
-  return text !== '' && text.length <= SENTENCE_MAX_LENGTH ? text : undefined
-}
-
 /** Why not, in `?erro=`. */
 export const SESSION_REQUEST_REFUSALS = [
-  // "Ler" with no sentence, or one longer than `SENTENCE_MAX_LENGTH`.
+  // "Ler" with no sentence, or one longer than the engine reads.
   'frase',
   'frase-longa',
   // Nobody checked.
@@ -193,4 +181,38 @@ export function parseSessionRequest(
     if (error instanceof Refused) return { refused: error.refusal }
     throw error
   }
+}
+
+/** A field's value, or undefined where the form would refuse it. */
+function loose<A>(value: () => A): A | undefined {
+  try {
+    return value()
+  } catch (error) {
+    if (error instanceof Refused) return undefined
+    throw error
+  }
+}
+
+/** The form as the Dono left it, for "Ler" to fill on top: every field she
+ * set, refusing nothing; a number that would be refused is left out, and
+ * sending the form says why. */
+export function draftOf(form: FormData): Partial<SessionRequestForm> {
+  return present({
+    attendees: all(form, 'presentes'),
+    rule: RULE_CHOICES[oneOf(ruleChoices, field(form, 'regra')) ?? 'padrao'],
+    by: field(form, 'de'),
+    moods: all(form, 'climas'),
+    count: loose(() => integer(form, 'quantos', [1, 50], 'quantos')),
+    request: field(form, 'pedido'),
+    maxDuration: loose(() => integer(form, 'duracao', [1, 1000], 'duracao')),
+    since: loose(() => integer(form, 'desde', YEARS, 'anos')),
+    until: loose(() => integer(form, 'ate', YEARS, 'anos')),
+    language: field(form, 'idioma'),
+    child: loose(() => integer(form, 'crianca', [0, MAX_CHILD_AGE], 'crianca')),
+    triggers: list(form, 'gatilhos'),
+    similar: list(form, 'parecido'),
+    unseen: checked(form, 'sem-ja-visto'),
+    noSlow: checked(form, 'sem-lento'),
+    noSad: checked(form, 'sem-tristeza'),
+  })
 }

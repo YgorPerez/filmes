@@ -1,29 +1,25 @@
 // What a form route has to tell the page it redirects to and does not fit
 // the query: the Recomendação's warnings (a missing key, "só N passaram nas
-// Restrições") and the acrescentar the Dono wrote. The Session file does
+// Restrições"), the acrescentar the Dono wrote, and Nova Sessão as "Ler"
+// filled it, with what it read (the sentence never goes in the URL, which
+// logs and history keep). The Session file does
 // not keep them, so the route keeps them here, in the process, under a
 // random token the redirect carries (`?nota=`), for a while. A restart
 // forgets them: the page then shows the Cartaz without them. Server only.
 
 import { randomUUID } from 'node:crypto'
-
-/** What the Leitura do pedido made of the acrescentar (#200): the labels
- * of what went into the request, the words it did not understand, and the
- * names or titles of several things (or of none). */
-export type AdditionReading = {
-  readonly added: readonly string[]
-  readonly notUnderstood: readonly string[]
-  readonly ambiguous: ReadonlyArray<{
-    readonly words: string
-    readonly candidates: readonly string[]
-  }>
-}
+import type { SessionRequestForm } from '#/content/session-request'
+import type { PageReading } from './reading'
 
 export type Note = {
   readonly warnings: readonly string[]
   readonly addition: string | null
-  /** Absent when there was no acrescentar or it could not be read. */
-  readonly reading?: AdditionReading
+  /** What the Leitura do pedido made of the acrescentar or of the
+   * sentence "Ler" read; absent when there was none or it could not be
+   * read. */
+  readonly reading?: PageReading
+  /** Nova Sessão's fields as "Ler" left them (#199). */
+  readonly form?: Partial<SessionRequestForm>
 }
 
 /** How long a note lasts, and how many the process keeps at most. */
@@ -38,7 +34,8 @@ export class Notes {
   /** Keeps `note` and gives its token; none when there is nothing to
    * say. */
   remember(note: Note): string | undefined {
-    if (note.warnings.length === 0 && !note.addition) return undefined
+    if (note.warnings.length === 0 && !note.addition && !note.form)
+      return undefined
     this.#forgetOld()
     const token = randomUUID()
     this.#notes.set(token, { note, at: this.now() })

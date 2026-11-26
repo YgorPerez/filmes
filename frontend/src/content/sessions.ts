@@ -1,7 +1,6 @@
 import { createServerFn } from '@tanstack/react-start'
 import { isNoteToken } from './billboard-reply'
 import { ownerMiddleware, pathSlug, requireOwner } from './owner'
-import { sentenceParam } from './session-request'
 
 /** What `/sessoes` lists (`sessionList`). A request with no Dono is
  * refused: the page gate does not protect a server function. */
@@ -32,24 +31,25 @@ export const readRequestOptions = createServerFn({ method: 'GET' })
     return appRequestOptions(context.owner.person)
   })
 
-/** The sentence of `/sessoes/nova?frase=` read into the form's fields
- * (`sentenceReading`), with "eu" as the logged-in Dono. */
-const readSentence = createServerFn({ method: 'GET' })
+/** Nova Sessão as "Ler" left it, in the note `/sessoes/nova?nota=` names
+ * (`newSessionDraft`). */
+const readNewSessionDraft = createServerFn({ method: 'GET' })
   .middleware([ownerMiddleware])
   .validator((value: unknown) => {
-    const text = sentenceParam(value)
-    if (text === undefined) throw new Error('sentence required')
-    return text
+    if (!isNoteToken(value)) throw new Error('note token required')
+    return value
   })
   .handler(async ({ context, data }) => {
     requireOwner(context.owner)
-    const { appSentenceReading } = await import('#/platform/sessions')
-    return appSentenceReading(data, context.owner.person)
+    const { appNewSessionDraft } = await import('#/platform/sessions')
+    return appNewSessionDraft(data)
   })
 
-/** The reading for a page's loader: none without `?frase=`. */
-export const readingFor = (text: string | undefined) =>
-  text === undefined ? Promise.resolve(null) : readSentence({ data: text })
+/** The draft for a page's loader: none without `?nota=`. */
+export const draftFor = (token: string | undefined) =>
+  token === undefined
+    ? Promise.resolve(null)
+    : readNewSessionDraft({ data: token })
 
 /** What `/sessoes/<id>` shows (`cartazPage`): the Session, its Cartaz,
  * and the note `nota` names (warnings, the acrescentar). */

@@ -95,17 +95,21 @@ test('“Ler” fills the form from one sentence and says what it left out', asy
   await expect(page).toHaveURL(/\/sessoes\/nova\?erro=frase$/)
   await expect(page.getByRole('alert')).toContainText('Escreva a frase')
 
+  // What the Dono set before "Ler" stays: the reading fills on top.
+  await page.getByRole('checkbox', { name: 'pra rir' }).check()
   const sentence =
     'eu e a Iara, algo leve, até 2h, tem criança de 7, nada lento, parecido com Reprise, com pipoca'
   await page.getByLabel('Em uma frase', { exact: false }).fill(sentence)
   await page.getByRole('button', { name: 'Ler' }).click()
-  await expect(page).toHaveURL(/\/sessoes\/nova\?frase=/)
+  // The sentence travels in a note, never in the URL.
+  await expect(page).toHaveURL(/\/sessoes\/nova\?nota=[\w-]+$/)
 
   await expect(page.getByLabel('Em uma frase', { exact: false })).toHaveValue(
     sentence,
   )
   await expect(page.getByRole('checkbox', { name: /Bruno/ })).toBeChecked()
   await expect(page.getByRole('checkbox', { name: 'Iara' })).toBeChecked()
+  await expect(page.getByRole('checkbox', { name: 'pra rir' })).toBeChecked()
   await expect(page.getByRole('checkbox', { name: 'leve' })).toBeChecked()
   await expect(page.getByRole('checkbox', { name: 'Nada lento' })).toBeChecked()
   await expect(page.getByLabel('Duração máxima', { exact: false })).toHaveValue(
@@ -115,10 +119,18 @@ test('“Ler” fills the form from one sentence and says what it left out', asy
   const said = page.getByRole('status')
   await expect(said).toContainText('Lido da frase: Presente: Bruno')
   await expect(said).toContainText('Ficou de fora: “pipoca”')
-  await expect(said).toContainText(
-    '“Reprise” pode ser Reprise (2011) ou Reprise (2004)',
-  )
+  await expect(page.getByText('“Reprise” pode ser um destes')).toBeVisible()
   await snap(page, info, 'sessoes-nova-frase-lida')
+
+  // "Usar" on one of the films takes it for "Parecido com", and the form
+  // keeps what "Ler" filled.
+  await page.getByRole('link', { name: 'Usar Reprise (2004)' }).click()
+  await expect(page).toHaveURL(/parecido=tt9012602/)
+  await expect(page.getByLabel('Parecido com', { exact: false })).toHaveValue(
+    'tt9012602',
+  )
+  await expect(page.getByRole('checkbox', { name: 'pra rir' })).toBeChecked()
+  await expect(page.getByLabel('Criança')).toHaveValue('7')
 })
 
 test('the form says why it refused, and “o gosto de uma Pessoa” orders', async ({

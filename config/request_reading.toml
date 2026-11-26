@@ -38,6 +38,11 @@ dez = 10
 onze = 11
 doze = 12
 
+# Uma destas nega o que vem depois na mesma oração: o Clima depois dela
+# ("nada de terror", "sem comédia") volta como "não entendi".
+[negation]
+words = ["nada", "nada de", "sem", "não"]
+
 [attendees]
 # Quem diz uma destas é o Dono logado.
 me = ["eu", "comigo"]

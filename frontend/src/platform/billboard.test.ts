@@ -43,6 +43,7 @@ const sessions = (list: Outcome<SessionItem[]>): Sessions => ({
   list: async () => list,
   options: async () => failure('missing_database'),
   open: async () => failure('missing_database'),
+  read: async () => failure('missing_database'),
 })
 
 function fake(answer?: Awaited<ReturnType<Billboards['answer']>>) {
@@ -145,7 +146,7 @@ describe('replyAction', () => {
 describe('cartazPage', () => {
   it('has the Session, its Cartaz, the note’s reading, and the note’s and the sources’ warnings once', async () => {
     const notes = new Notes()
-    const reading = { added: [], notUnderstood: ['Ana'], ambiguous: [] }
+    const reading = { understood: [], notUnderstood: ['Ana'], ambiguities: [] }
     const token = notes.remember({
       warnings: ['só 1 passou', 'sem chave do TMDB'],
       addition: 'chegou a Ana',
@@ -394,9 +395,9 @@ describe('billboardsFromEngine', () => {
             note: {
               addition: 'chegou a Iara e o Zeca',
               reading: {
-                added: ['Presente: Iara'],
+                understood: ['Presente: Iara'],
                 notUnderstood: ['Zeca'],
-                ambiguous: [],
+                ambiguities: [],
               },
             },
           },
@@ -423,7 +424,7 @@ describe('billboardsFromEngine', () => {
           exitCode: 0,
           output: {
             regenerated: true,
-            note: { reading: { added: ['até 1h50'], notUnderstood: [] } },
+            note: { reading: { understood: ['até 1h50'], notUnderstood: [] } },
           },
         })
         const redone = await model()
@@ -436,6 +437,33 @@ describe('billboardsFromEngine', () => {
           [1, 'tt9000104'],
           [3, 'tt9000203'],
         ])
+      } finally {
+        await engine.dispose()
+      }
+    }, 60_000) // real git commits: slow on a loaded machine
+
+    it('applies no count, Regra or “de” from it: their words are not understood', async () => {
+      const { engine, add, model } = await opened(useFixture())
+      try {
+        const done = await add('5 filmes, pelo gosto da Iara, leve')
+
+        expect(done).toMatchObject({
+          exitCode: 0,
+          output: {
+            regenerated: true,
+            note: {
+              reading: {
+                understood: ['Clima: leve'],
+                notUnderstood: ['5 filmes', 'pelo gosto da Iara'],
+                ambiguities: [],
+              },
+            },
+          },
+        })
+        const redone = await model()
+        expect(redone.version).toBe(2)
+        expect(redone.films).toHaveLength(3)
+        expect(redone.attendees.map((a) => a.slug)).toEqual(['bruno'])
       } finally {
         await engine.dispose()
       }
@@ -454,9 +482,9 @@ describe('billboardsFromEngine', () => {
               warnings: [],
               addition: 'a Iara odeia terror',
               reading: {
-                added: [],
+                understood: [],
                 notUnderstood: ['Iara odeia terror'],
-                ambiguous: [],
+                ambiguities: [],
               },
             },
           },
@@ -478,12 +506,16 @@ describe('billboardsFromEngine', () => {
             regenerated: true,
             note: {
               reading: {
-                added: ['até 2021'],
+                understood: ['até 2021'],
                 notUnderstood: [],
-                ambiguous: [
+                ambiguities: [
                   {
+                    field: 'similar',
                     words: 'Reprise',
-                    candidates: ['Reprise (2011)', 'Reprise (2004)'],
+                    candidates: [
+                      { id: 'tt9012601', label: 'Reprise (2011)' },
+                      { id: 'tt9012602', label: 'Reprise (2004)' },
+                    ],
                   },
                 ],
               },

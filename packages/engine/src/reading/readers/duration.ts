@@ -1,8 +1,9 @@
-// Duração máxima: "até 2h", "no máximo 90 minutos", "uma hora e meia",
-// "curto". "2h", "1h30" and "90min" are one word each.
+// The longest a film may last: "até 2h", "no máximo 90 minutos", "uma
+// hora e meia", "curto". "2h", "1h30" and "90min" are one word each.
 
 import { Effect, Schema } from 'effect'
-import { makeReader, restrictionLabel, scan, type Claim } from '../reader.ts'
+import { durationModule } from '../../recommendation/constraints/duration.ts'
+import { makeReader, scan, type Claim } from '../reader.ts'
 import { phrasesOf, type Words } from '../words.ts'
 
 const Vocabulary = Schema.Struct({
@@ -24,7 +25,7 @@ const claim = (start: number, end: number, minutes: number): Claim => ({
   end,
   found: {
     request: { maxDuration: minutes },
-    label: restrictionLabel({ name: 'duration', max_minutes: minutes }),
+    label: durationModule.label({ name: 'duration', max_minutes: minutes }),
   },
 })
 
