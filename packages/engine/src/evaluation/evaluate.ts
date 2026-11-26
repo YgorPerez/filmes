@@ -34,9 +34,11 @@ import {
   SEED,
   type Progress,
 } from './movielens.ts'
+import { listSimilarity } from './diversity.ts'
 import { measure, prepareOffline } from './offline.ts'
 import { measuredPeople, type MeasuredPerson } from './people.ts'
 import { dataVersions, writeReport } from './report.ts'
+import { satisfaction, type Satisfaction } from './satisfaction.ts'
 import type { ReportValue } from './yaml.ts'
 
 /** A progress event, as `avaliar --progresso` wrote it on stderr (in English
@@ -81,6 +83,8 @@ export interface OnlineMeasures {
   readonly rateTop5: number | null
   readonly reactions: number
   readonly meanReaction: number | null
+  /** Satisfaction and disagreement over the same Sessions (#171). */
+  readonly satisfaction: Satisfaction
 }
 
 /** `avaliar`'s result, in English keys (ADR 0002). */
@@ -180,6 +184,10 @@ const online = (db: Connection): Effect.Effect<OnlineMeasures, SqliteError> =>
       rateTop5: withFilm ? chosenTop5 / withFilm : null,
       reactions: num(reactions!, 'reacoes'),
       meanReaction: numOrNull(reactions!, 'media'),
+      satisfaction: yield* satisfaction(
+        db,
+        sessions.map((s) => s.id),
+      ),
     }
   })
 
@@ -203,6 +211,7 @@ const measureAll = (
   Effect.gen(function* () {
     const count = people.length + sample.length
     const selection = yield* prepareSelection(db, weights)
+    const similarity = listSimilarity(db, weights.similar)
     const space = withGrid ? gridSpace(weights) : null
     const configs = space && count ? combinations(weights, space) : []
     const total =
@@ -230,8 +239,14 @@ const measureAll = (
     const measureWith = (config: Weights) =>
       Effect.gen(function* () {
         return {
-          people: yield* measure(db, config, people, selection, advance),
-          movielens: yield* measure(db, config, sample, selection, advance),
+          people: yield* measure(db, config, people, selection, advance, {
+            perPerson: true,
+            similarity,
+          }),
+          movielens: yield* measure(db, config, sample, selection, advance, {
+            perPerson: false,
+            similarity,
+          }),
         }
       })
 
@@ -309,6 +324,14 @@ export const evaluate = (
       warnings.push(
         `O MovieLens tinha só ${sample.users.size} usuários para sortear.`,
       )
+    for (const [name, measures] of [
+      ['Pessoas', current.people],
+      ['MovieLens', current.movielens],
+    ] as const)
+      if (measures.calibration.overall.rises === false)
+        warnings.push(
+          `Na amostra ${name}, a Força não sobe de fraca para forte: uma Força acerta menos que outra mais fraca.`,
+        )
 
     yield* progress(96, 'Gravando o relatório')
     const result = {
