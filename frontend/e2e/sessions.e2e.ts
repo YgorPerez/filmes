@@ -14,6 +14,7 @@ import {
 } from '@filmes/engine'
 import { type Page } from '@playwright/test'
 import {
+  tab,
   engineRun,
   expect,
   loginAs,
@@ -51,10 +52,7 @@ test('the Dono opens a Session with Restrições and finds it in the list', asyn
   test.skip(info.project.name !== 'desktop', 'one group per project')
   await loginAsBruno(page)
   await snap(page, info, 'inicio')
-  await page
-    .getByRole('navigation', { name: 'Telas' })
-    .getByRole('link', { name: /^Sessões/ })
-    .click()
+  await tab(page, 'Sessões').click()
   await expect(page).toHaveURL(/\/sessoes$/)
   await snap(page, info, 'sessoes-lista')
 
@@ -101,7 +99,7 @@ test('the Dono opens a Session with Restrições and finds it in the list', asyn
   await expect(row).toContainText('eu e a Iara')
   await expect(
     row.getByRole('link', { name: `Contar como foi a Sessão ${id}` }),
-  ).toHaveAttribute('href', `/feedback/${id}`)
+  ).toHaveAttribute('href', `/sessoes/${id}/contar`)
   await snap(page, info, 'sessoes-lista-com-sessao')
 })
 

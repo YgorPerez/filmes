@@ -3,12 +3,9 @@ import {
   REPORT_CHOICES,
   type FeedbackRefusal,
 } from '#/content/feedback-form'
+import { feedbackPath, sessionPath } from '#/content/session-paths'
 import type { SearchAnswer } from '#/platform/catalog-search'
-import type {
-  FeedbackAttendee,
-  FeedbackPage,
-  FeedbackSession,
-} from '#/platform/feedback'
+import type { FeedbackAttendee, FeedbackPage } from '#/platform/feedback'
 import { FEEDBACK } from './feedback.copy'
 import { ImportsFrame } from './imports'
 import { FIELD } from './kit/field'
@@ -22,7 +19,6 @@ import {
   Item,
   Items,
   Meta,
-  Notice,
   Section,
   Submit,
   TextField,
@@ -34,56 +30,9 @@ import {
   PersonAvatar,
   NightRequest,
   SearchFold,
-  ShelfRow,
 } from './session-parts'
 
-/** `/feedback`: the open Sessions, each a row of the shelf to its form.
- * `sessions` is null when the engine cannot run on this server; `recorded`
- * is the Session whose Feedback was just recorded. */
-export function OpenSessions({
-  sessions,
-  recorded,
-  gone = false,
-}: {
-  sessions: FeedbackSession[] | null
-  recorded?: string
-  gone?: boolean
-}) {
-  const { list } = FEEDBACK
-  return (
-    <ImportsFrame back={FEEDBACK.back} backTo="/">
-      <div className="flex flex-col gap-sm">
-        <h1 className="font-display text-title">{list.title}</h1>
-        <p className="max-w-[60ch] text-ink-2">{list.lead}</p>
-      </div>
-      {recorded && <Notice>{list.recorded(recorded)}</Notice>}
-      {gone && <Alert>{list.gone}</Alert>}
-      {!sessions ? (
-        <Alert>{FEEDBACK.unavailable}</Alert>
-      ) : sessions.length === 0 ? (
-        <p className="text-ink-2">{list.empty}</p>
-      ) : (
-        <ul className="flex flex-col gap-md">
-          {sessions.map((s) => (
-            <ShelfRow
-              key={s.id}
-              href={`/feedback/${encodeURIComponent(s.id)}`}
-              before={<Avatars people={s.attendees} />}
-            >
-              <DateLabel>{s.date}</DateLabel>
-              <span className="font-display text-[15px] font-bold">
-                {names(s.attendees)}
-              </span>
-              <Meta parts={[s.request, list.films(s.recommendation.length)]} />
-            </ShelfRow>
-          ))}
-        </ul>
-      )}
-    </ImportsFrame>
-  )
-}
-
-/** `/feedback/<sessao>`: the form that records the Session's Feedback and
+/** `feedbackPath(<sessao>)`: the form that records the Session's Feedback and
  * closes it, and the satisfaction of its Presentes now. A plain POST to
  * `/feedback/<sessao>/enviar`: it works before the JavaScript. `page` is
  * `'unknown'` when no open Session has that id, null when the engine cannot
@@ -102,14 +51,14 @@ export function FeedbackScreen({
   search?: SearchAnswer | null
   film?: string
 }) {
-  const path = `/feedback/${encodeURIComponent(session)}`
+  const path = feedbackPath(session)
   const pick = (id: string) => {
     const params = new URLSearchParams({ filme: id })
     if (search) params.set('buscar', search.query)
     return `${path}?${params.toString()}`
   }
   return (
-    <ImportsFrame back={FEEDBACK.back} backTo="/feedback">
+    <ImportsFrame back={FEEDBACK.back} backTo={sessionPath(session)}>
       {page === null ? (
         <Alert>{FEEDBACK.unavailable}</Alert>
       ) : page === 'unknown' ? (

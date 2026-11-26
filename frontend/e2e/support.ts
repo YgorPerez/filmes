@@ -68,6 +68,19 @@ export async function loginAs(page: Page, email: string) {
   await expect(page).toHaveURL(/\/$/)
 }
 
+/** A tab of the app shell, the one on screen: at the bottom on the phone,
+ * in the top bar from 900px. */
+export const tab = (page: Page, name: string) =>
+  page
+    .getByRole('navigation', { name: 'Seções' })
+    .getByRole('link', { name, exact: true })
+
+/** Opens the menu of the Dono's avatar (Operações for an admin, Sair). */
+export async function accountMenu(page: Page): Promise<Locator> {
+  await page.getByRole('button', { name: /^Sua conta:/ }).click()
+  return page.getByRole('navigation', { name: 'Conta' })
+}
+
 /** Makes Bruno admin on the copy (`operations.e2e.ts`, `owners.e2e.ts`):
  * the other files do not mind. */
 export function makeBrunoAdmin() {

@@ -21,6 +21,7 @@ import {
   type FeedbackForm,
   type FeedbackRefusal,
 } from '#/content/feedback-form'
+import { feedbackPath, sessionPath } from '#/content/session-paths'
 import { appPoster, formPoster, seeOther } from './form-post'
 import { appEngine } from './engine'
 import { attendeeSlugs, sessionFilms, type SessionFilm } from './session-fields'
@@ -47,7 +48,7 @@ export type FeedbackSession = {
  * weighs. */
 export type FeedbackSatisfaction = PersonSatisfactionNow & { name: string }
 
-/** What `/feedback/<sessao>` shows. */
+/** What a Sessão's Feedback form shows. */
 export type FeedbackPage = FeedbackSession & {
   satisfaction: FeedbackSatisfaction[]
 }
@@ -126,7 +127,7 @@ function logEngineError(outcome: { output: ErrorOutput }): void {
   console.error(`engine: ${code}: ${message}`)
 }
 
-/** What `/feedback` lists; null when the engine cannot run here. */
+/** The open Sessions; null when the engine cannot run here. */
 export async function openSessionList(
   feedback: Feedback,
 ): Promise<FeedbackSession[] | null> {
@@ -138,7 +139,7 @@ export async function openSessionList(
   return list.output
 }
 
-/** What `/feedback/<sessao>` shows: the open Session with its Presentes'
+/** What a Sessão's Feedback form (`feedbackPath`) shows: the open Session with its Presentes'
  * satisfaction, `'unknown'` when no open Session has that id (it has its
  * Feedback already, or never was), or null when the engine cannot run
  * here. */
@@ -185,11 +186,10 @@ function refusalOf(outcome: { output: ErrorOutput }): FeedbackRefusal {
   }
 }
 
-const pageOf = (session: string) => `/feedback/${encodeURIComponent(session)}`
-
 /** `POST /feedback/<sessao>/enviar`: records the form's Feedback as the
- * logged-in Dono and goes back to the list (`?feito=<sessao>`), or to the
- * form saying why not (`?erro=`). Only a Dono, and only a form of this site
+ * logged-in Dono and goes to the Sessão (`?feito=contada`), or back to the
+ * form saying why not (`?erro=`); a Sessão gone shows its page's own
+ * notice. Only a Dono, and only a form of this site
  * (the `Origin`, as the logout checks): the page gate does not cover this
  * route. */
 export async function feedbackAction(
@@ -203,24 +203,20 @@ export async function feedbackAction(
   if (poster instanceof Response) return poster
   const parsed = parseFeedback(await request.formData())
   if ('refused' in parsed)
-    return seeOther(`${pageOf(session)}?erro=${parsed.refused}`)
+    return seeOther(`${feedbackPath(session)}?erro=${parsed.refused}`)
   const outcome = await feedback.record(session, parsed.ok, poster.person)
   if (outcome.exitCode !== 0) {
     if (outcome.output.error.code === 'unknown_session')
-      return seeOther('/feedback?erro=sessao')
-    return seeOther(`${pageOf(session)}?erro=${refusalOf(outcome)}`)
+      return seeOther(sessionPath(session))
+    return seeOther(`${feedbackPath(session)}?erro=${refusalOf(outcome)}`)
   }
-  return seeOther(`/feedback?feito=${encodeURIComponent(session)}`)
+  return seeOther(`${sessionPath(session)}?feito=contada`)
 }
 
 // --- the app's -----------------------------------------------------------------
 
 const appFeedback = (viewer: string | null = null) =>
   feedbackFromEngine(appEngine(), viewer)
-
-/** The open Sessions for the app, for the logged-in Dono `viewer`. */
-export const appOpenSessions = (viewer: string) =>
-  openSessionList(appFeedback(viewer))
 
 /** A Session's Feedback form for the app, for the logged-in Dono
  * `viewer`. */

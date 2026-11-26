@@ -82,6 +82,9 @@
   --text-title: 19px;
   --text-title--line-height: 1.2;
   --text-title--font-weight: 700;
+  --text-counter-title: 24px;
+  --text-counter-title--line-height: 1.2;
+  --text-counter-title--font-weight: 800;
   --text-step-title: 17px;
   --text-step-title--line-height: 1.25;
   --text-step-title--font-weight: 700;
@@ -111,9 +114,6 @@
   --text-hand: 18px;
   --text-hand--line-height: 1.2;
   --text-hand--font-weight: 400;
-  --text-hand-name: 30px;
-  --text-hand-name--line-height: 1;
-  --text-hand-name--font-weight: 400;
   /* The system's font (`font-body`): what the engine says and what is read
    * (The Engine Speaks Plain Rule). */
   --text-body: 16px;

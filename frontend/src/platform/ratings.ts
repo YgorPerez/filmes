@@ -16,6 +16,7 @@ import {
   type GivenRating,
   type RatingRefusal,
 } from '#/content/rating-form'
+import { RATINGS_PATH } from '#/content/paths'
 import { formPoster, seeOther } from './form-post'
 
 /** Films the page gets: more than a sitting rates, fewer than a slow page. */
@@ -62,7 +63,7 @@ function logEngineError(outcome: { output: ErrorOutput }): void {
   console.error(`engine: ${code}: ${message}`)
 }
 
-/** What `/notas` shows the logged-in Dono: her Fila de Notas, or null when
+/** What the rating screen (`RATINGS_PATH`) shows the logged-in Dono: her Fila de Notas, or null when
  * the engine cannot run here. */
 export async function ratingQueuePage(
   owner: Pick<Rater, 'person'>,
@@ -97,9 +98,9 @@ export async function rateAction(
   const poster = formPoster(request, owner, origin)
   if (poster instanceof Response) return poster
   const given = parseRatings(await request.formData())
-  if (given === null) return seeOther('/notas?erro=pedido')
+  if (given === null) return seeOther(`${RATINGS_PATH}?erro=pedido`)
   const outcome = await ratings.rate(given, poster)
   if (outcome.exitCode !== 0)
-    return seeOther(`/notas?erro=${refusalOf(outcome)}`)
-  return seeOther(`/notas?feito=${outcome.output.added}`)
+    return seeOther(`${RATINGS_PATH}?erro=${refusalOf(outcome)}`)
+  return seeOther(`${RATINGS_PATH}?feito=${outcome.output.added}`)
 }

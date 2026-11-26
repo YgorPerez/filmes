@@ -805,7 +805,7 @@ describe('access (#166)', () => {
     const { engine, people, send, owners } = useAccessForm()
     try {
       expect(await send(ADMIN, 'bruno', { acao: 'tirar-acesso' })).toBe(
-        '/pessoas/bruno?erro=proprio-acesso',
+        '/meu-gosto?erro=proprio-acesso',
       )
       expect(owners.ownerByEmail('bruno@example.org')?.person).toBe('bruno')
       expect(await send(ADMIN, 'vera', { acao: 'tirar-acesso' })).toBe(

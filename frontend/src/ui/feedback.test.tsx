@@ -8,7 +8,7 @@ import { afterEach, describe, expect, it } from 'vite-plus/test'
 import { FEEDBACK_REFUSALS, parseFeedback } from '#/content/feedback-form'
 import type { FeedbackPage, FeedbackSession } from '#/platform/feedback'
 import { FEEDBACK } from './feedback.copy'
-import { FeedbackScreen, OpenSessions } from './feedback'
+import { FeedbackScreen } from './feedback'
 
 afterEach(cleanup)
 
@@ -227,29 +227,6 @@ describe('FeedbackScreen', () => {
   })
 })
 
-describe('OpenSessions', () => {
-  it('lists each open Session as a link to its form', () => {
-    render(<OpenSessions sessions={[SESSION]} />)
-    const link = screen.getByRole('link', { name: /Bruno, Iara, Quim/ })
-    expect(link.getAttribute('href')).toBe('/feedback/2026-11-20-iara-quim')
-    expect(link.textContent).toContain('algo leve · 2 filmes')
-  })
-
-  it('says what was recorded, and when there is nothing to list', () => {
-    render(<OpenSessions sessions={[]} recorded="2026-11-20-iara" gone />)
-    expect(screen.getByRole('status').textContent).toContain(
-      FEEDBACK.list.recorded('2026-11-20-iara'),
-    )
-    expect(screen.getByRole('alert').textContent).toContain(FEEDBACK.list.gone)
-    expect(screen.getByText(FEEDBACK.list.empty)).toBeTruthy()
-    cleanup()
-    render(<OpenSessions sessions={null} />)
-    expect(screen.getByRole('alert').textContent).toContain(
-      FEEDBACK.unavailable,
-    )
-  })
-})
-
 describe('parseFeedback', () => {
   const form = (fields: Record<string, string>) => {
     const data = new FormData()
@@ -291,7 +268,7 @@ describe('the Catálogo search', () => {
     render(<FeedbackScreen session={PAGE.id} page={PAGE} search={search} />)
     const use = screen.getByRole('link', { name: 'Usar Casa Cheia (2021)' })
     expect(use.getAttribute('href')).toBe(
-      '/feedback/2026-11-20-iara-quim?filme=tt9000602&buscar=cheia',
+      '/sessoes/2026-11-20-iara-quim/contar?filme=tt9000602&buscar=cheia',
     )
     const form = () => screen.getByRole('form', { name: FEEDBACK.form.label })
 

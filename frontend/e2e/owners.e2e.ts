@@ -51,7 +51,7 @@ for (const dono of DONOS)
     await addPerson('Lara')
     await loginAs(page, `${dono.slug}@example.org`)
     await expect(
-      page.getByRole('heading', { name: `Olá, ${dono.name}` }),
+      page.getByRole('button', { name: `Sua conta: ${dono.name}` }),
     ).toBeVisible()
 
     // The form checks her, and only her, as the Dono.
@@ -79,7 +79,7 @@ for (const dono of DONOS)
     await snap(page, info, `donos-cartaz-${dono.slug}`)
 
     // The Feedback: her Nota is hers; Lara's she relays.
-    await page.goto(`/feedback/${id}`)
+    await page.goto(`/sessoes/${id}/contar`)
     const own = page.getByLabel(`Reação: ${dono.name}`)
     await expect(own.locator('option[value^="relato:"]')).toHaveCount(0)
     await expect(
@@ -89,7 +89,7 @@ for (const dono of DONOS)
     await own.selectOption('nota:5')
     await page.getByLabel('Reação: Lara').selectOption('nota:4')
     await page.getByRole('button', { name: 'Gravar e fechar a Sessão' }).click()
-    await expect(page).toHaveURL(new RegExp(`/feedback\\?feito=${id}$`))
+    await expect(page).toHaveURL(new RegExp(`/sessoes/${id}\\?feito=contada$`))
     expect(await ratings(id)).toEqual(
       [
         [dono.slug, 0],
@@ -97,8 +97,9 @@ for (const dono of DONOS)
       ].toSorted(([a], [b]) => String(a).localeCompare(String(b))),
     )
 
-    // Taste on her own page.
+    // Taste on her own page, Meu gosto.
     await page.goto(`/pessoas/${dono.slug}`)
+    await expect(page).toHaveURL(/\/meu-gosto$/)
     const area = section(page, 'Declarados')
     await area.getByText('Acrescentar Declarado', { exact: true }).click()
     const form = area.getByRole('form', { name: 'Acrescentar Declarado' })
@@ -118,7 +119,7 @@ test('Bruno tells a Relato about Vera, and Vera sees it on her page', async ({
   await loginAs(bruno, 'bruno@example.org')
 
   // On his own page, no Relato form: what he says of himself is Declarado.
-  await bruno.goto('/pessoas/bruno')
+  await bruno.goto('/meu-gosto')
   await expect(section(bruno, 'Declarados')).toBeVisible()
   await expect(section(bruno, 'Relatos')).toHaveCount(0)
   await snap(bruno, info, 'relato-bruno-own-page')
@@ -162,7 +163,7 @@ test('a new Dono sees the setup guide, and a skipped step stays skipped', async 
     if (!error.message.includes('person_exists')) throw error
   })
   await loginAs(page, email)
-  const guide = page.getByRole('list', { name: 'Para começar', exact: true })
+  const guide = page.getByRole('region', { name: 'Para começar', exact: true })
   await expect(guide).toBeVisible()
   await expect(guide.getByRole('heading', { name: 'Meu gosto' })).toBeVisible()
   await expect(

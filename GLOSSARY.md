@@ -46,8 +46,12 @@ Pergunta de gosto que o Claude fez sobre um Presente e ele pulou ("a Ana curte t
 Os três passos que a home mostra ao Dono que ainda não terminou de começar: Meu gosto (feito com 10 Notas ou um import), Importar do Letterboxd ou do Trakt (feito com um import) e Conector no Claude (feito quando o Claude se conectou ao filmes com o e-mail dele). Nunca bloqueia: pedir filme vale desde o primeiro dia. Some quando cada passo está feito ou pulado (mapa #140).
 _Evitar_: onboarding, tutorial, cadastro
 
+**Meu gosto** [my taste, `MY_TASTE`]:
+A página da Pessoa do Dono que está logado, numa aba própria do app (`/meu-gosto`): as Notas dela (dar, importar, exportar), o gosto, os Vetos e os Ajustes. É a mesma página de Pessoa das outras, vista por ela mesma (mapa #218). Também é o nome do primeiro passo do Guia de início.
+_Evitar_: perfil, minha conta
+
 **Passo pulado** [skipped setup step, `skippedSetup`]:
-Um passo do Guia de início que o Dono pulou. Fica no frontmatter do arquivo dele (`skipped_setup: [import]`), e por isso vale em todo aparelho. Na carteirinha ele tem estado próprio, o carimbo "pulei", e não conta como feito; só para dar o guia por encerrado ele vale como feito.
+Um passo do Guia de início que o Dono pulou. Fica no frontmatter do arquivo dele (`skipped_setup: [import]`), e por isso vale em todo aparelho. No guia da home ele tem estado próprio, "pulado", com "Retomar", e não conta como feito; só para dar o guia por encerrado ele vale como feito.
 
 **Restrição** [constraint, `Constraint`]:
 Um limite que vale só numa Sessão, como "tem criança" ou "sem legenda". Tira o filme antes de qualquer ordenação, como o Veto.

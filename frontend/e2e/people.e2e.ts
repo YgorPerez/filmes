@@ -9,6 +9,7 @@
 import { personSkip, personView } from '@filmes/engine'
 import { type Page } from '@playwright/test'
 import {
+  tab,
   engineRun,
   expect,
   loginAs,
@@ -35,10 +36,7 @@ test('the Dono reads and changes a Pessoa’s taste', async ({ page }, info) => 
   const name = slug === 'rosa' ? 'Rosa' : 'Teo'
   await loginAsBruno(page)
 
-  await page
-    .getByRole('navigation', { name: 'Telas' })
-    .getByRole('link', { name: 'Pessoas' })
-    .click()
+  await tab(page, 'Pessoas').click()
   await expect(page).toHaveURL(/\/pessoas$/)
   await expect(page.getByRole('heading', { name: 'Pessoas' })).toBeVisible()
   await expect(page.getByRole('link', { name: /Bruno.*Dono/ })).toBeVisible()
@@ -247,5 +245,7 @@ test('the Dono adds a Dono, who logs in with her e-mail', async ({
 
   await page.context().clearCookies()
   await loginAs(page, 'farias@example.org')
-  await expect(page.getByRole('heading', { name: 'Olá, Farias' })).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: 'Sua conta: Farias' }),
+  ).toBeVisible()
 })

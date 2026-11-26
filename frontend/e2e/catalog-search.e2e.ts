@@ -69,7 +69,7 @@ test('Feedback: the film the search found is “Outro filme”', async ({
     }),
   )
   await loginAsBruno(page)
-  await page.goto(`/feedback/${encodeURIComponent(session.id)}`)
+  await page.goto(`/sessoes/${encodeURIComponent(session.id)}/contar`)
   await page.getByText('Viram outro filme?').click()
   await search(page, 'fronteira (2012)')
   await expect(results(page)).toHaveCount(1)

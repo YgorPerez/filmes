@@ -1,22 +1,9 @@
 import type { FeedbackRefusal } from '#/content/feedback-form'
 
-const films = (n: number) =>
-  n === 0 ? 'nenhum filme' : n === 1 ? '1 filme' : `${n} filmes`
-
 export const FEEDBACK = {
   back: 'Voltar',
   unavailable:
     'As Sessões ainda não estão prontas neste servidor: falta o banco do filmes.',
-
-  list: {
-    title: 'Feedback',
-    lead: 'As Sessões abertas esperam o Feedback: o filme que vocês viram e o que cada Presente achou. Gravar fecha a Sessão.',
-    empty: 'Nenhuma Sessão aberta.',
-    films,
-    recorded: (id: string) =>
-      `Feedback gravado: a Sessão ${id} fechou. A satisfação da próxima Sessão já conta com ele.`,
-    gone: 'Essa Sessão não está mais no repo de dados.',
-  },
 
   form: {
     title: 'Feedback da Sessão',

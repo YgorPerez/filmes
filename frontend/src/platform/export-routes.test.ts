@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vite-plus/test'
 import { Route as Download } from '#/routes/exportar/imdb[.]csv'
-import { Route as Page } from '#/routes/_owner/exportar'
+import { Route as Page } from '#/routes/_owner/meu-gosto/exportar'
 
 describe('the Export routes', () => {
   it('keeps only a reason the page knows in the query', () => {

@@ -81,7 +81,7 @@ describe('Pronto', () => {
     )
 
     expect(response.status).toBe(303)
-    expect(response.headers.get('Location')).toBe('/notas?feito=2')
+    expect(response.headers.get('Location')).toBe('/meu-gosto/notas?feito=2')
     const file = readFileSync(join(fixture.data, 'people', 'teo.md'), 'utf8')
     expect(file).toContain('Pequenos Milagres')
     expect(file).toContain('Deserto Branco')
@@ -105,7 +105,7 @@ describe('Pronto', () => {
       ),
     )
 
-    expect(unknown.headers.get('Location')).toBe('/notas?erro=alvo')
+    expect(unknown.headers.get('Location')).toBe('/meu-gosto/notas?erro=alvo')
     expect(nobody.headers.get('Location')).toBe('/entrar')
     expect(elsewhere.status).toBe(403)
   })
@@ -117,7 +117,7 @@ describe('Pronto', () => {
       rateAction(post({}), TEO, r, ORIGIN),
     )
 
-    expect(empty.headers.get('Location')).toBe('/notas?erro=pedido')
+    expect(empty.headers.get('Location')).toBe('/meu-gosto/notas?erro=pedido')
   })
 })
 

@@ -17,13 +17,17 @@ export const ownerMiddleware = createMiddleware({ type: 'function' }).server(
   },
 )
 
-/** What the pages may know of the Dono: the name and whether admin. The
- * email and the session stay on the server. */
+/** What the pages may know of the Dono: the name, her Pessoa (Meu gosto)
+ * and whether admin. The email and the session stay on the server. */
 export const readOwner = createServerFn({ method: 'GET' })
   .middleware([ownerMiddleware])
   .handler(({ context }) =>
     context.owner
-      ? { name: context.owner.name, admin: context.owner.admin }
+      ? {
+          name: context.owner.name,
+          person: context.owner.person,
+          admin: context.owner.admin,
+        }
       : null,
   )
 

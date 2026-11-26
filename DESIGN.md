@@ -66,11 +66,6 @@ typography:
     fontSize: '18px'
     fontWeight: 400
     lineHeight: 1.2
-  hand-name:
-    fontFamily: 'Permanent Marker, Comic Sans MS, cursive'
-    fontSize: '30px'
-    fontWeight: 400
-    lineHeight: 1
   price:
     fontFamily: 'Rubik, system-ui, sans-serif'
     fontSize: '18px'
@@ -86,6 +81,11 @@ typography:
     fontFamily: 'Rubik, system-ui, sans-serif'
     fontSize: '19px'
     fontWeight: 700
+    lineHeight: 1.2
+  counter-title:
+    fontFamily: 'Rubik, system-ui, sans-serif'
+    fontSize: '24px'
+    fontWeight: 800
     lineHeight: 1.2
   step-title:
     fontFamily: 'Rubik, system-ui, sans-serif'
@@ -268,35 +268,36 @@ components:
     textColor: '{colors.card-stock-ink}'
     rounded: '{rounded.field}'
     padding: '10px 12px'
-  membership-card:
-    backgroundColor: '{colors.card-stock}'
-    textColor: '{colors.card-stock-ink}'
+  counter:
+    backgroundColor: '{colors.case}'
+    textColor: '{colors.case-ink}'
+    typography: '{typography.counter-title}'
     rounded: '{rounded.panel}'
-    padding: '14px 14px 16px'
-  stamp-done:
-    textColor: '{colors.stamp}'
-    typography: '{typography.price}'
-    rounded: '{rounded.round}'
-    size: '58px'
-  step:
+    padding: '16px 14px 14px'
+  guide:
     backgroundColor: '{colors.surface}'
     textColor: '{colors.ink}'
     typography: '{typography.step-title}'
     rounded: '{rounded.card}'
     padding: '14px'
+  step-mark:
+    textColor: '{colors.ink}'
+    typography: '{typography.price}'
+    rounded: '{rounded.round}'
+    size: '28px'
   url-field:
     backgroundColor: '{colors.case}'
     textColor: '{colors.case-ink}'
     typography: '{typography.url}'
     rounded: '{rounded.field}'
     height: '48px'
-  shelf-link:
+  account-menu:
     backgroundColor: '{colors.surface}'
     textColor: '{colors.ink}'
     typography: '{typography.control}'
-    rounded: '{rounded.nav-row}'
-    padding: '0 14px'
-    height: '52px'
+    rounded: '{rounded.card}'
+    padding: '6px'
+    width: '240px'
   top-bar:
     backgroundColor: '{colors.case}'
     textColor: '{colors.case-ink}'
@@ -321,9 +322,9 @@ components:
 
 **Creative North Star: "Locadora de bairro"**
 
-O filmes é a locadora da esquina de quem usa. Cada filme é uma fita no estojo preto da prateleira, com o número num adesivo de preço laranja e o gênero num adesivo colorido. O pedido da noite está impresso na etiqueta da frente da prateleira ("VOCÊS DOIS · ATÉ 1H50 · ALGO LEVE"), e a fala do Dono vai escrita à mão, de pincel atômico, num papel amarelo colado ao lado. Trocar é um adesivo rosa batido na capa; "novo" é um adesivo amarelo no canto do estojo. Na home, o guia de configuração é a carteirinha de sócio, com um carimbo por passo. Depois da Sessão, contar como foi é "devolver a fita".
+O filmes é a locadora da esquina de quem usa. Cada filme é uma fita no estojo preto da prateleira, com o número num adesivo de preço laranja e o gênero num adesivo colorido. O pedido da noite está impresso na etiqueta da frente da prateleira ("VOCÊS DOIS · ATÉ 1H50 · ALGO LEVE"), e a fala do Dono vai escrita à mão, de pincel atômico, num papel amarelo colado ao lado. Trocar é um adesivo rosa batido na capa; "novo" é um adesivo amarelo no canto do estojo. Na home, o pedido se faz no balcão: o estojo preto com a etiqueta da prateleira ainda em branco. Depois da Sessão, contar como foi é "devolver a fita".
 
-Por baixo dos objetos, o filmes é uma tela de trabalho clara: cards, listas, opções em pílula e campos que qualquer um sabe usar com uma mão, no sofá. Os objetos da locadora (estojo, etiqueta, adesivo, carimbo, carteirinha) ficam nas bordas da informação, nunca no lugar dela. A capa do filme continua sendo a imagem do produto.
+Por baixo dos objetos, o filmes é uma tela de trabalho clara: cards, listas, opções em pílula e campos que qualquer um sabe usar com uma mão, no sofá. Os objetos da locadora (estojo, etiqueta, adesivo, carimbo) ficam nas bordas da informação, nunca no lugar dela. A capa do filme continua sendo a imagem do produto.
 
 O Dono escolheu este mundo no #142, vendo lado a lado os três protótipos do #141 (A · Letreiro de rua, B · Locadora de bairro, C · Catálogo da Mostra). Ele substitui o "Letreiro de rua" do #78, que tinha sido escolhido sem o Dono ver as alternativas. Os protótipos A e C, e o `prototypes/cartaz.prototype.html` do #78, ficam no repo como histórico: não são o sistema, e o detector do impeccable acusa neles cores e fontes que não estão aqui.
 
@@ -334,7 +335,7 @@ Celular primeiro. O Cartaz roda em dois lugares, com o mesmo componente React: d
 **Key Characteristics:**
 
 - Tela fria e clara de dia, azul-noite no escuro; os objetos da locadora (estojo preto, etiqueta clara, adesivos vivos) são os mesmos nos dois temas.
-- Quatro adesivos com um papel cada: laranja é número e ação principal, amarelo é "novo" e a letra do Dono, rosa é Trocar, violeta é carimbo.
+- Quatro adesivos com um papel cada: laranja é número e ação principal, amarelo é "novo" e a letra do Dono, rosa é Trocar, violeta é carimbo (o passo feito do guia).
 - Rubik (500, 700, 800) é a letra dos objetos e dos controles; Permanent Marker é a mão do balconista, em frases curtas; a fonte do sistema fica com o texto que se lê (sinopse, Evidência, legenda).
 - Uma cor por Presente, sempre com a inicial junto.
 - Estados se colam no objeto (adesivo, carimbo), e nada some sem dizer por quê.
@@ -352,7 +353,7 @@ Neutros frios fazem a tela. Os adesivos e as cores dos Presentes têm um papel c
 
 - **Amarelo-novo** (sticker-yellow): o adesivo "NOVO" de quem entrou ao regerar, o papel com a fala do Dono ao lado da etiqueta da prateleira e a cor de seleção de texto (a 53% de opacidade). Texto em on-sticker.
 - **Rosa-troca** (sticker-pink): só o adesivo "TROCAR". Texto em on-sticker.
-- **Violeta-carimbo** (stamp; dark-stamp no escuro): os carimbos da carteirinha, o carimbo APOSTA no Cartaz e as notas do balconista em letra de mão ("Este passo se marca sozinho..."). No escuro vira lilás claro para ler sobre o cartão escuro.
+- **Violeta-carimbo** (stamp; dark-stamp no escuro): o passo feito do guia da home (marca, segmento do progresso e pontos do contador), o carimbo APOSTA no Cartaz e as notas do balconista em letra de mão ("Este passo se marca sozinho..."). No escuro vira lilás claro para ler sobre o cartão escuro.
 - **Verde-etiqueta** (sticker-green): só os pontos que separam os itens na etiqueta da prateleira, junto com o laranja e o rosa, como as bolinhas coloridas de uma etiqueta de preço.
 
 ### Tertiary
@@ -378,7 +379,7 @@ Neutros frios fazem a tela. Os adesivos e as cores dos Presentes têm um papel c
 - **Estojo** (case / dark-case): o preto do estojo da fita, do trilho da prateleira, da lombada na lista compacta, da barra do topo e do campo do endereço do conector. Quase preto nos dois temas: o estojo é um objeto, não muda de cor com o tema.
 - **Tinta do estojo** (case-ink, case-ink-2): texto sobre o estojo; case-ink-2 para o secundário (versão do Cartaz no topo).
 - **Etiqueta** (shelf-label): o papel claro da etiqueta da prateleira, igual nos dois temas, com texto em on-sticker.
-- **Cartão** (card-stock / dark-card-stock, com card-stock-ink): o papel-cartão azul-claro da carteirinha, da nota de Já vi e da caixa "Falta contar como foi". No escuro, azul profundo com texto azul-gelo.
+- **Cartão** (card-stock / dark-card-stock, com card-stock-ink): o papel-cartão azul-claro da tela de entrar, da nota de Já vi e da caixa "Falta contar como foi". No escuro, azul profundo com texto azul-gelo.
 
 ### Named Rules
 
@@ -408,15 +409,15 @@ As duas fontes vão auto-hospedadas no app, em woff2, só nos pesos usados (Rubi
 ### Hierarchy
 
 - **Shelf label** (Rubik 800, 17px, 1.15, 0.01em, maiúsculas): o pedido na etiqueta da prateleira; 15px na versão compacta (Claude inline e topo da tela cheia).
-- **Hand** (Permanent Marker 400, 18px, 1.2): a fala do Dono no papel amarelo (16px na versão compacta), o título do que saiu em "Saiu da prateleira" (15px), "pulei" no carimbo (17px), a data na ficha da última Sessão (16px), "Falta contar como foi" (19px), a nota do balconista (15px).
-- **Hand name** (Permanent Marker 400, 30px, 1): o primeiro nome do Dono na carteirinha; 19px na carteirinha compacta.
-- **Price** (Rubik 800, 18px, 1): o número no adesivo de preço; 14px na lista compacta e 15px no número do passo e no carimbo "OK".
+- **Hand** (Permanent Marker 400, 18px, 1.2): a fala do Dono no papel amarelo (16px na versão compacta), o título do que saiu em "Saiu da prateleira" (15px), a data na ficha da última Sessão (16px), "Falta contar como foi" (19px), a nota do balconista (15px).
+- **Price** (Rubik 800, 18px, 1): o número no adesivo de preço; 14px na lista compacta e na marca do passo do guia.
 - **Sticker** (Rubik 800, 12px, 1, 0.06em, maiúsculas): "NOVO"; "TROCAR" em 15px.
 - **Title** (Rubik 700, 19px, 1.2): título do filme em português; o original embaixo em 13px da fonte do sistema, tinta clara.
-- **Step title** (Rubik 700, 17px, 1.25): título do passo aberto do guia; 15.5px no passo fechado.
+- **Counter title** (Rubik 800, 24px, 1.2): a pergunta do balcão da home, "O que vai ser hoje?", em case-ink.
+- **Step title** (Rubik 700, 17px, 1.25): "Para começar", o título do guia; o título de cada passo em 15.5px.
 - **Brand** (Rubik 800, 18px, 1): "filmes" e o nome da Sessão na barra do topo.
-- **Button** (Rubik 800, 15px, 0.02em, maiúsculas): botão principal; 18px no botão grande da home; 12px no Copiar do endereço.
-- **Control** (Rubik 500, 14px): opções em pílula; 700 quando marcada. Itens da prateleira de navegação em 700 15px.
+- **Button** (Rubik 800, 15px, 0.02em, maiúsculas): botão principal; 18px no botão grande da home.
+- **Control** (Rubik 500, 14px): opções em pílula; 700 quando marcada. As linhas do menu do avatar.
 - **Label** (Rubik 700, 12px, 0.06em, maiúsculas, tinta clara): "POR QUE CADA UM VAI GOSTAR", "JÁ VI", "ÚLTIMA SESSÃO". O complemento à direita ("Fato sobre 1 de 2") em 500, sem maiúsculas.
 - **Chip** (Rubik 500, 12px, números tabulares): ano, duração, gêneros; o chip do IMDb em 700.
 - **Tab** (Rubik 500, 11.5px): rótulo da aba; 700 na atual.
@@ -461,7 +462,7 @@ Em qualquer modo, alvos de toque de 44px ou mais, como no resto do filmes.
 
 ### App web
 
-O topo é a barra do estojo: preta, 12px 16px, com "filmes" (ou o nome da Sessão e, à direita em case-ink-2, "versão 2") e o avatar do Dono. No celular, a navegação é uma barra de abas fixa embaixo: Início, Sessões, Pessoas, Importar e, para admin, Operações. A partir de 900px, as mesmas abas sobem para a barra do topo, ao lado de "filmes", e a barra de baixo some. As telas de Sessão abrem com a etiqueta da prateleira do pedido. Na view do MCP Apps não há topo nem abas: só o Cartaz.
+O topo é a barra do estojo: preta, 4px 16px, 56px de altura, com "filmes" (ou o nome da Sessão e, à direita em case-ink-2, "versão 2") e o avatar do Dono, que abre o menu dela. No celular, a navegação é uma barra de quatro abas fixa embaixo: Início, Sessões, Pessoas e Meu gosto. A partir de 900px, as mesmas abas sobem para a barra do topo, ao lado de "filmes", e a barra de baixo some. Operações não é aba: mora no menu do avatar, só para admin. Cada tela mora num lugar só: a home não repete as abas. As telas de Sessão abrem com a etiqueta da prateleira do pedido. Na view do MCP Apps não há topo nem abas: só o Cartaz.
 
 ## Elevation & Depth
 
@@ -473,9 +474,9 @@ Plano. Profundidade só por tom (chão, superfície, superfície 2), pelo preto 
 
 ## Shapes
 
-Raios pequenos onde o mundo é papel e plástico (etiqueta 2px, capa e adesivo 3px, papel da fala 4px, trilho 6px, estojo 8px), médios onde é app (campo e nota de Já vi 8px, item de navegação 10px, card e passo 12px, carteirinha, card inline e botão grande 14px) e pílula nos controles de toque (opções, chips, botão principal). Avatares, pontos, adesivo de preço e carimbo são círculos.
+Raios pequenos onde o mundo é papel e plástico (etiqueta 2px, capa e adesivo 3px, papel da fala 4px, trilho 6px, estojo 8px), médios onde é app (campo e nota de Já vi 8px, item de navegação 10px, card, guia e menu do avatar 12px, balcão da home, card inline e botão grande 14px) e pílula nos controles de toque (opções, chips, botão principal). Avatares, pontos, adesivo de preço, marca do passo e carimbo são círculos.
 
-Só adesivos e carimbos giram, e nunca mais de 12°: papel da fala -2°, adesivo de preço -8°, "NOVO" 9°, "TROCAR" -9°, carimbo da carteirinha -12°, "pulei" -6°. Card, botão, campo e texto do motor nunca giram.
+Só adesivos e carimbos giram, e nunca mais de 12°: papel da fala -2°, adesivo de preço -8°, "NOVO" 9°, "TROCAR" -9°. Card, botão, campo e texto do motor nunca giram.
 
 ## Motion
 
@@ -570,38 +571,25 @@ Para "Pular", "Retomar" e ações menores: sem fundo, sistema 14px tinta clara, 
 
 ### Barra do topo e abas (app web)
 
-- **Topo:** estojo preto, 12px 16px, brand em Rubik 800 18px case-ink; à direita o avatar do Dono com anel de 2px em estojo.
+- **Topo:** estojo preto, 56px, 4px 16px, brand em Rubik 800 18px case-ink; à direita o avatar do Dono com anel de 2px em estojo, num botão de 44px.
+- **Abas:** quatro, na ordem: **Início** (casa), **Sessões** (fita), **Pessoas** (duas pessoas) e **Meu gosto** (coração). Sessões fica atual em `/sessoes/...`, inclusive no Feedback (`/sessoes/<id>/contar`); Pessoas em `/pessoas/...`; Meu gosto em `/meu-gosto/...` (Notas, import, export, fila). A página da própria Pessoa do Dono é Meu gosto: `/pessoas/<ela>` redireciona para lá.
 - **Abas (celular):** fixas embaixo, superfície com fio de 1px em cima, 14px de respiro para a área segura. Uma coluna por aba, 54px, ícone de 20px sobre o rótulo em tab, tinta clara. A atual fica em tinta, peso 700, com um disco laranja de 30px atrás do ícone, a 85% de opacidade. `aria-current="page"`.
 - **Abas (900px ou mais):** no topo, à direita de "filmes", texto em case-ink-2; a atual em case-ink com o mesmo disco laranja atrás do ícone.
-- **Aviso de push falhando** (só admin): faixa no topo da página, em superfície 2 com texto em tinta e ícone de alerta.
+- **Menu do avatar:** um `popover` nativo (abre sem JavaScript; um toque fora ou Esc fecha), preso 60px abaixo do topo, alinhado à direita da coluna de 1040px. Superfície, fio de 1px, raio 12px, 6px de padding, 240px. Em cima, o nome do Dono em Rubik 700 15px; embaixo, linhas de 44px em control com ícone de 20px e raio 6px, superfície 2 no hover: **Operações** (ferramentas, só admin; com o push falhando, "envio falhando" e o ícone de alerta em meta à direita) e **Sair** (porta com seta, POST para `/auth/logout`). O botão do avatar tem `aria-label` "Sua conta: Bruno", e o menu, "Conta".
+- **Aviso de push falhando** (só admin): faixa no topo da página, em superfície 2 com texto em tinta e ícone de alerta, com o link "Ver Operações".
 
-### Home: o guia como carteirinha de sócio
+### Home: o balcão, a última Sessão e o guia
 
-A home tem dois jeitos, conforme o guia de configuração do mapa #140 (3 passos: **Meu gosto**, feito com 10 Notas ou um import; **Importar do Letterboxd ou Trakt**; **Conector no Claude**, feito sozinho quando `oauth_grants` tem um grant para o e-mail do Dono).
+Uma coluna, de cima para baixo, com 16px entre os blocos. Não há lista de telas: as abas levam a todas.
 
-**Enquanto falta algum passo** (algum passo pendente; pulado não conta como falta):
+1. **O balcão** (sempre). Um `section` no preto do estojo, raio 14px, 16px 14px 14px, texto em case-ink. Em cima, o h1 da página, "O que vai ser hoje?", em counter title. Embaixo, a etiqueta da prateleira em branco: "QUEM ESTÁ · QUANTO TEMPO · O QUE A NOITE PEDE", os três itens que o pedido preenche, com os pontos de sempre e `aria-label` "O pedido: quem está, quanto tempo vocês têm e o que a noite pede.". Depois, em meta case-ink-2, "Saem 5 filmes, cada um com o motivo de cada Presente gostar." e, por fim, o **botão grande** "Pedir filme", o único laranja da tela.
+2. **Ficha da última Sessão** (quando houver uma com o Dono). Superfície com fio de 1px, raio 12px. Cabeçalho separado do resto por um fio tracejado de 1px (o canhoto), com "ÚLTIMA SESSÃO" em Rubik 800 13px maiúsculo tinta clara e, à direita, "Sexta, 21 nov · Você e Teo" em letra de mão 16px; o cabeçalho leva à Sessão. Embaixo, o pedido em evidence tinta clara, quando houver, e os filmes como lombadas: linhas de 38px em superfície 2, raio 6px, com a lombada preta de 8px à esquerda, o adesivo de preço compacto (26px) com a posição e o título em Rubik 700 15px, cortado com reticências; uma coluna no celular, duas a partir de 560px. Com Feedback pendente, a caixa **devolver** em card-stock (raio 8px, 12px): "Falta contar como foi" em letra de mão 19px, "Viram algum? Conte qual e o que cada um achou." em evidence e a opção "Contar como foi", que leva a `/sessoes/<id>/contar`. Sem pendência, uma linha em meta: "vimos Maré Baixa" ou "não vimos nada".
+3. **Guia "Para começar"** (só enquanto falta algum passo; pulado não conta como falta). Um `section` em superfície, fio de 1px, raio 12px, 14px. Em cima, "Para começar" em step title e o progresso: três segmentos de 6px, um por passo, violeta (stamp) quando feito, só contornado tracejado em tinta clara quando pulado, superfície 2 quando falta; à direita, "1 de 3 feitos" em Rubik 700 13px tinta clara, tabular. O `role="progressbar"` diz o mesmo. Depois, uma lista dos três passos, sempre os três, na ordem (**Meu gosto**, feito com 10 Notas ou um import; **Importar do Letterboxd ou do Trakt**; **Conector no Claude**, feito sozinho quando `oauth_grants` tem um grant para o e-mail do Dono), separados por fio tracejado. Cada passo tem a marca de 28px à esquerda e, ao lado, o título em 15.5px com o estado:
+   - **Falta fazer:** número em tinta num anel de 1,5px em tinta. Só o primeiro que falta diz o que pede (sistema 14.5px tinta clara) e mostra o conteúdo: em Meu gosto, o contador de 10 pontos de 14px (violeta os dados, anel de 1,5px em fio os que faltam) e "4 de 10"; no Conector, o endereço no preto do estojo (raio 8px, mono 14px em case-ink), os 3 passos de como adicionar o conector personalizado e a nota do balconista em letra de mão violeta 15px, "Este passo se marca sozinho quando o Claude entrar com o seu e-mail.". Todo passo que falta tem a ação em opção ("Dar notas", "Importar", "Copiar endereço") e "Pular" em link, que posta para `/inicio/pular`.
+   - **Feito:** check violeta num anel de 2px em stamp; ao lado do título, em meta tinta clara, "feito" ("feito, 12 notas" em Meu gosto).
+   - **Pulado:** o número num anel tracejado em tinta clara; ao lado do título, "pulado"; embaixo, "Retomar" em link abre o que o passo pede e a ação.
 
-1. **Carteirinha** (card-stock, raio 14px, 14px 14px 16px). Em cima, em Rubik 800 12px maiúsculo, "CARTEIRINHA" à esquerda e "FILMES" à direita. Embaixo, o primeiro nome do Dono em letra de mão 30px e, em Rubik 500 12.5px a 80%, "faltam 3 carimbos" ou "falta 1 carimbo" (os pulados não contam). Por fim, três casas lado a lado, uma por passo, na ordem: casa tracejada de 1,5px em card-stock-ink, raio 8px, 92px de altura, com o nome curto do passo embaixo ("Meu gosto", "Importar", "Claude") em Rubik 700 11.5px.
-   - **Pendente:** o número do passo em Rubik 800 26px a 35%.
-   - **Feito:** carimbo violeta, círculo de 58px com anel de 2,5px, "OK" em Rubik 800 15px maiúsculo, girado -12°. Em Meu gosto, embaixo do OK, "12 notas" em Rubik 700 11px, o piso de texto do filmes.
-   - **Pulado:** "pulei" em letra de mão 17px a 75%, girado -6°.
-   - A carteirinha é uma `section` com `aria-label` "Carteirinha: 2 passos pendentes", e cada casa tem `aria-label` "Meu gosto: feito".
-   - Nada de gênero gramatical: nem "sócia", nem "sócio", nem número de sócio inventado.
-2. **Passos**, uma lista na ordem, sem os feitos:
-   - **O primeiro pendente fica aberto:** card de passo (superfície, fio, raio 12px, 14px), com o número num círculo laranja de 28px e o título em step title; o texto em sistema 14.5px tinta clara; o conteúdo do passo; e, embaixo, a ação principal (botão laranja) com "Pular" em link ao lado.
-     - Meu gosto: o contador de 10 pontos de 14px (laranja os dados, anel de 1,5px em fio os que faltam) e "4 de 10" em Rubik 700 13px; ação "Dar notas".
-     - Importar: ação "Importar".
-     - Conector no Claude: o campo do endereço (estojo preto, raio 8px, 48px, mono 14px em case-ink, `https://cinema.finalsend.com.br/mcp`) com o botão laranja "Copiar" dentro, à direita, numa linha só; os 3 passos de como adicionar o conector personalizado no Claude, numerados, sistema 14px; e a nota do balconista em letra de mão violeta 15px: "Este passo se marca sozinho quando o Claude entrar com o seu e-mail." Aqui o Copiar é o botão laranja da tela, e não há outro.
-   - **Os outros pendentes ficam fechados:** uma linha (6px 6px 6px 14px) com número e título em 15.5px, e à direita a ação como opção em pílula e "Pular".
-   - **Os pulados ficam fechados** com "Retomar" em link no lugar das ações.
-3. **Pedir cedo:** "Dá para pedir filme agora. Com gosto, a lista acerta mais." em sistema 14px tinta clara, com a opção "Pedir filme" (ícone de +) à direita. O guia nunca bloqueia o pedido.
-
-**Quando não falta nenhum passo:**
-
-1. **Carteirinha compacta:** faixa em card-stock, raio 12px, 10px 12px: o nome em letra de mão 19px, e à direita um selo de 22px por passo: feito é anel violeta de 2px com miolo cheio de 8px; pulado é anel tracejado, sem miolo. Tocar leva aos passos pulados para retomar.
-2. **Pedir filme**, o botão grande.
-3. **Ficha da última Sessão:** superfície com fio de 1px, raio 12px. Cabeçalho separado do resto por um fio tracejado de 1px (o canhoto), com "ÚLTIMA SESSÃO" em Rubik 800 13px maiúsculo tinta clara e, à direita, "Sexta, 21 nov · Você e Teo" em letra de mão 16px. Embaixo, as capas dos filmes da Sessão em fitas pequenas, 4 colunas. Com Feedback pendente, a caixa **devolver** em card-stock (raio 8px, 12px): "Falta contar como foi" em letra de mão 19px, o texto da pendência em sistema 14px e a opção "Contar como foi". Sem pendência, a caixa não aparece.
-4. **Prateleira de navegação:** lista de itens de 52px (superfície, fio, raio 10px, 0 14px), Rubik 700 15px: um ponto de 12px de cor fixa, o nome, a contagem em sistema 13px tinta clara e uma seta de 16px. Sessões (genre-blue, "7"), Pessoas (genre-green, "6"), Dar notas (genre-orange, "12 dadas"), Exportar (genre-pink) e, para admin, Operações (ink-2). O ponto é lembrete, não informação.
+O guia nunca bloqueia: "Pedir filme" fica sempre em cima. Quando nenhum passo falta, o guia some da home inteira; não há carteirinha nem selo.
 
 ### Avatares
 
@@ -644,4 +632,4 @@ Círculo de 24px na cor do Presente, inicial em Rubik 700 11px em on-person. Vaz
 - **Don't** mostrar Força, Presente, gênero ou estado só por cor.
 - **Don't** esconder um filme marcado: ele fica, com o adesivo, até regerar.
 - **Don't** escrever ou resumir uma linha de Evidência na interface; o texto é do motor.
-- **Don't** pôr gênero gramatical ou número de sócio inventado na carteirinha.
+- **Don't** repetir na home as telas que as abas já levam.

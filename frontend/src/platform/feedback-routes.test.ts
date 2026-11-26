@@ -1,19 +1,9 @@
 import { describe, expect, it } from 'vite-plus/test'
 import { Route as Send } from '#/routes/feedback/$sessao/enviar'
-import { Route as Form } from '#/routes/_owner/feedback/$sessao'
-import { Route as List } from '#/routes/_owner/feedback/index'
+import { Route as Form } from '#/routes/_owner/sessoes/$sessao/contar'
 
 describe('the Feedback routes', () => {
-  it('keeps only a Session id or a reason the page knows in the query', () => {
-    const list = List.options.validateSearch as (search: object) => object
-    expect(list({ feito: '2026-11-20-quim-2', erro: 'sessao' })).toEqual({
-      feito: '2026-11-20-quim-2',
-      erro: 'sessao',
-    })
-    expect(list({ feito: '<b>', erro: 'x' })).toEqual({
-      feito: undefined,
-      erro: undefined,
-    })
+  it('keeps only a reason the page knows in the query', () => {
     const form = Form.options.validateSearch as (search: object) => object
     expect(form({ erro: 'ambiguo' })).toEqual({ erro: 'ambiguo' })
     expect(form({ erro: 'x' })).toEqual({ erro: undefined })

@@ -123,7 +123,7 @@ export function GroupHeading({
   )
 }
 
-/** A row that leads to a Session, like the home's navigation shelf: 52px,
+/** A row that leads to a Session, a shelf row: 52px,
  * `surface`, a 1px `rule`, 10px, with the arrow at the end. */
 export function ShelfRow({
   href,

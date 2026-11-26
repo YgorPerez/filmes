@@ -12,6 +12,7 @@ import {
   type Outcome,
 } from '@filmes/engine'
 import type { ExportRefusal } from '#/content/export-refusal'
+import { EXPORT_PATH } from '#/content/paths'
 import { currentOwner } from './auth'
 import { appEngine } from './engine'
 import type { Owner } from './owners'
@@ -52,7 +53,7 @@ function logEngineError(outcome: { output: ErrorOutput }): void {
   console.error(`engine: ${code}: ${message}`)
 }
 
-/** What `/exportar` shows: every Pessoa with her Notas counted, the
+/** What the export page (`EXPORT_PATH`) shows: every Pessoa with her Notas counted, the
  * logged-in Dono's own chosen when the page opens; `null` when the engine
  * cannot run here (no database yet), with the reason in the server log. */
 export async function exportChoices(
@@ -75,7 +76,7 @@ const refused = (refusal: ExportRefusal) =>
   new Response(null, {
     status: 303,
     headers: {
-      Location: `/exportar?erro=${refusal}`,
+      Location: `${EXPORT_PATH}?erro=${refusal}`,
       'Cache-Control': 'private, no-store',
     },
   })

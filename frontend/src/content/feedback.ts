@@ -1,17 +1,8 @@
 import { createServerFn } from '@tanstack/react-start'
 import { ownerMiddleware, pathSlug, requireOwner } from './owner'
 
-/** What `/feedback` lists (`openSessionList`). A request with no Dono is
- * refused: the page gate does not protect a server function. */
-export const readOpenSessions = createServerFn({ method: 'GET' })
-  .middleware([ownerMiddleware])
-  .handler(async ({ context }) => {
-    requireOwner(context.owner)
-    const { appOpenSessions } = await import('#/platform/feedback')
-    return appOpenSessions(context.owner.person)
-  })
-
-/** What `/feedback/<sessao>` shows (`feedbackPage`). */
+/** What a Sessão's Feedback form shows (`feedbackPage`). A request with
+ * no Dono is refused: the page gate does not protect a server function. */
 export const readFeedbackPage = createServerFn({ method: 'GET' })
   .middleware([ownerMiddleware])
   .validator(pathSlug)

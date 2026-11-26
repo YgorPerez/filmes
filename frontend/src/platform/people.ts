@@ -49,6 +49,7 @@ import {
   type TypedPerson,
 } from '#/content/person-create'
 import type { CatalogScope } from '#/content/catalog-search'
+import { personPath } from '#/content/paths'
 import { currentOwner } from './auth'
 import { catalogSearch } from './catalog-search'
 import { appEngine } from './engine'
@@ -378,8 +379,6 @@ function refusalOf(outcome: { output: ErrorOutput }): PersonRefusal {
   return 'indisponivel'
 }
 
-const pageOf = (person: string) => `/pessoas/${encodeURIComponent(person)}`
-
 /** `POST /pessoas/<slug>/acao`: runs the form's action as the logged-in
  * Dono, who signs the commit, and goes back to her page saying what
  * happened (`?feito=`) or why not (`?erro=`). Only a Dono, and only a form
@@ -395,16 +394,23 @@ export async function personAction(
   const poster = formPoster(request, owner, origin)
   if (poster instanceof Response) return poster
   const action = parseAction(await request.formData())
-  if (!action) return seeOther(`${pageOf(person)}?erro=pedido`)
+  if (!action)
+    return seeOther(
+      `${personPath(person, person === poster.person)}?erro=pedido`,
+    )
   if (isAccessAction(action) && !poster.admin)
     return new Response('Só um admin dá ou tira acesso', { status: 403 })
   const outcome = await people.act(person, action, poster)
   if (outcome.exitCode !== 0) {
     if (outcome.output.error.code === 'unknown_person')
       return seeOther('/pessoas?erro=pessoa')
-    return seeOther(`${pageOf(person)}?erro=${refusalOf(outcome)}`)
+    return seeOther(
+      `${personPath(person, person === poster.person)}?erro=${refusalOf(outcome)}`,
+    )
   }
-  return seeOther(`${pageOf(person)}?feito=${outcome.output}`)
+  return seeOther(
+    `${personPath(person, person === poster.person)}?feito=${outcome.output}`,
+  )
 }
 
 /** The create form's reason for each of the engine's (`createPerson`). */
@@ -464,7 +470,7 @@ export async function personCreateAction(
   const outcome = await people.create(input, poster)
   if (outcome.exitCode !== 0)
     return refusedCreate(createRefusalOf(outcome), typed)
-  return seeOther(`${pageOf(outcome.output)}?feito=criada`)
+  return seeOther(`${personPath(outcome.output, false)}?feito=criada`)
 }
 
 /** The logged-in Dono as the commit's author: the engine's `authorOf` of her

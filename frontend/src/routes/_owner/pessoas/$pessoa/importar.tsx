@@ -1,19 +1,15 @@
 import { createFileRoute } from '@tanstack/react-router'
-import {
-  countOf,
-  isImportNotice,
-  isImportRefusal,
-} from '#/content/import-action'
 import { readImportsPage } from '#/content/imports'
-import { PersonImportsScreen } from '#/ui/person-imports'
+import { moved, MOVED_TO } from '#/content/moved'
+import { importsSearch, PersonImportsScreen } from '#/ui/person-imports'
 
-export const Route = createFileRoute('/_owner/importar/$pessoa')({
-  validateSearch: (search) => ({
-    feito: isImportNotice(search.feito) ? search.feito : undefined,
-    erro: isImportRefusal(search.erro) ? search.erro : undefined,
-    novos: countOf(search.novos),
-    fora: countOf(search.fora),
-  }),
+// A Pessoa's imports, under her page. The Dono's own are under Meu gosto.
+export const Route = createFileRoute('/_owner/pessoas/$pessoa/importar')({
+  validateSearch: importsSearch,
+  beforeLoad: ({ params, context, location }) => {
+    if (params.pessoa === context.owner.person)
+      moved(MOVED_TO.imports, location.searchStr)
+  },
   loader: ({ params }) => readImportsPage({ data: params.pessoa }),
   component: PersonImportsRoute,
 })

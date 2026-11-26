@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vite-plus/test'
 import { Route as QueuePost } from '#/routes/fila/acao'
 import { Route as ImportPost } from '#/routes/importar/$pessoa/acao'
-import { Route as Queue } from '#/routes/_owner/fila'
-import { Route as Person } from '#/routes/_owner/importar/$pessoa'
-import { Route as List } from '#/routes/_owner/importar/index'
+import { Route as Queue } from '#/routes/_owner/meu-gosto/fila'
+import { Route as Person } from '#/routes/_owner/pessoas/$pessoa/importar'
 
 type Post = (ctx: {
   request: Request
@@ -40,9 +39,6 @@ describe('the Imports routes', () => {
       resolvidos: undefined,
       restam: undefined,
     })
-    const list = List.options.validateSearch as (search: object) => object
-    expect(list({ erro: 'pessoa' })).toEqual({ erro: 'pessoa' })
-    expect(list({ erro: 'x' })).toEqual({ erro: undefined })
   })
 
   it('send a form with no Dono session to the login', async () => {
