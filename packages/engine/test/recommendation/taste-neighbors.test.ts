@@ -5,32 +5,10 @@
 // shares only 2 of his films. All of them rated Pequenos Milagres (601)
 // and Deserto Branco (701), where Bruno has no Fact. Nobody shares the
 // default minimum of 10 films with him, so the other tests do not see them.
-import { readFileSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
 import { describe, expect, test } from 'vite-plus/test'
 import type { Recommendation, Vars } from '../../src/index.ts'
-import { ROOT, useFixture, type Fixture } from '../fixture.ts'
-import { engineRecommendation, film } from './support.ts'
-
-/** `config/weights.toml` with `[taste_neighbors]`'s `k` and `min_shared`
- * changed, and `[rating_percentile] min_ratings` when given. */
-const tasteWeights = (
-  fixture: Fixture,
-  k: number,
-  minShared: number,
-  minRatings?: number,
-): Vars => {
-  let text = readFileSync(join(ROOT, 'config/weights.toml'), 'utf8')
-  text = text.replace(
-    'k = 50\nmin_shared = 10',
-    `k = ${k}\nmin_shared = ${minShared}`,
-  )
-  if (minRatings !== undefined)
-    text = text.replace('min_ratings = 20', `min_ratings = ${minRatings}`)
-  const file = join(fixture.root, 'weights-test.toml')
-  writeFileSync(file, text)
-  return { FILMES_PESOS: file }
-}
+import { useFixture, type Fixture } from '../fixture.ts'
+import { engineRecommendation, film, tasteWeights } from './support.ts'
 
 const bruno = (fixture: Fixture, vars: Vars) =>
   engineRecommendation(fixture, { attendees: ['bruno'], count: 50 }, vars)

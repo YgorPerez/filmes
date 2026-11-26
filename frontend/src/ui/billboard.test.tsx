@@ -82,18 +82,31 @@ describe('the Cartaz shows', () => {
 
   it('a shared Evidence on one line, and who has no Fato on hers, with no Força', () => {
     render(<Billboard billboard={MODEL} />)
-    const [shared] = card(1).getAllByRole('listitem')
+    const why = (n: number) =>
+      within(card(n).getByRole('list', { name: BILLBOARD.card.why }))
+    const [shared] = why(1).getAllByRole('listitem')
     expect(within(shared!).getByLabelText('Bruno, Iara').textContent).toBe('BI')
     expect(within(shared!).getByLabelText('Força moderada').dataset.level).toBe(
       '2',
     )
     expect(card(1).getByText('Fato sobre 2 de 2')).toBeTruthy()
-    const [strong, without] = card(2).getAllByRole('listitem')
+    const [strong, without] = why(2).getAllByRole('listitem')
     expect(within(strong!).getByLabelText('Força forte').dataset.level).toBe(
       '3',
     )
     expect(without!.textContent).toBe('IIara: sem fato sobre este filme')
     expect(within(without!).queryByLabelText(/Força/)).toBeNull()
+  })
+
+  it('the Nota prevista of each Presente who has one, and none for who has not', () => {
+    render(<Billboard billboard={MODEL} />)
+    const predicted = card(1).getByRole('list', { name: 'Nota prevista' })
+    expect(
+      within(predicted)
+        .getAllByRole('listitem')
+        .map((item) => item.textContent),
+    ).toEqual(['B8,3Bruno: 8,3 de 10'])
+    expect(card(2).queryByRole('list', { name: 'Nota prevista' })).toBeNull()
   })
 
   it('a dot per Presente on the poster, hollow for who has no Fato', () => {

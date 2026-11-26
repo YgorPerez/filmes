@@ -9,7 +9,8 @@ export default defineTool({
     'O Cartaz da Recomendação gravada numa Sessão, como dados: `billboard` traz o topo (`request.who` e `request.parts`, ' +
     'a leitura do pedido), os Presentes (`attendees`, com "Você" para o Dono), o que saiu na versão (`dropped`, com `reason`) e um card ' +
     'por filme em `films` (position, title, originalTitle, poster, imdbRatingText, votesText, chips, synopsis, `new` para o selo "novo", ' +
-    '`lines` com a Evidência mais forte de cada Presente e `coverage`). Com `films`, o Cartaz traz só esses, na ordem dada e ' +
+    '`lines` com a Evidência mais forte de cada Presente, `coverage` e `predictedRatings`, a Nota prevista de 1 a 10 de cada Presente que tem uma, ' +
+    'como a versão gravou). Com `films`, o Cartaz traz só esses, na ordem dada e ' +
     'numerados de 1 em diante, e a Sessão guarda a lista como mostrada, para o Feedback registrar a posição do Filme escolhido nela. ' +
     'O Cartaz responde: em cada filme, Já vi (por Presente, com nota de 1 a 10 e o que achou), Trocar, estrelas e comentário; ' +
     'embaixo, o acrescentar. O texto que volta começa com `#cartaz <sessao> v<n>` e vai para `answer_billboard`. ' +
