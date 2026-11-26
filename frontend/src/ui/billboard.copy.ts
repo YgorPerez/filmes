@@ -20,6 +20,10 @@ export const BILLBOARD = {
       'Aposta: pouca Evidência, mas quem tem gosto parecido deu nota alta',
     imdb: (rating: string | null, votes: string) =>
       `${rating === null ? '' : `${rating} `}IMDb · ${votes} votos`,
+    predicted: 'Nota prevista',
+    predictedOf: (name: string, rating: string) => `${name}: ${rating} de 10`,
+    predictedHint:
+      'Pelas pessoas de gosto parecido no MovieLens, na escala de 1 a 10 do Já vi',
     why: 'Por que cada um vai gostar',
     withoutFact: (names: string) => `${names}: sem fato sobre este filme`,
     swapStamp: 'Trocar',

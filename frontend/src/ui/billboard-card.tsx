@@ -106,12 +106,61 @@ function Poster({
   )
 }
 
+/** Each Presente's Nota prevista (#175), her avatar and the number on the
+ * 1 to 10 scale of the Já vi; a Presente with none is not there. */
+function Predicted({
+  film,
+  people,
+}: {
+  film: BillboardFilm
+  people: readonly BillboardPerson[]
+}) {
+  const { card } = BILLBOARD
+  const known = byslug(people)
+  const predicted = film.predictedRatings.flatMap((p) => {
+    const person = known.get(p.person)
+    return person ? [{ person, text: p.text }] : []
+  })
+  if (predicted.length === 0) return null
+  return (
+    <div
+      className="flex flex-wrap items-center gap-xs"
+      title={card.predictedHint}
+    >
+      <span
+        aria-hidden="true"
+        className="font-display text-label text-ink-2 uppercase"
+      >
+        {card.predicted}
+      </span>
+      <ul aria-label={card.predicted} className="flex flex-wrap gap-xs">
+        {predicted.map(({ person, text }) => (
+          <li
+            key={person.slug}
+            className="inline-flex items-center gap-[5px] rounded-pill border-[1.5px] border-rule py-[2px] pr-[9px] pl-[2px] font-display text-chip font-bold text-ink tabular-nums"
+          >
+            <span aria-hidden="true" className="contents">
+              <Avatar person={person} />
+              {text}
+            </span>
+            <span className="sr-only">
+              {card.predictedOf(person.name, text)}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
 function Header({
   film,
+  people,
   id,
   level,
 }: {
   film: BillboardFilm
+  people: readonly BillboardPerson[]
   id: string
   level: Level
 }) {
@@ -149,6 +198,7 @@ function Header({
           {card.imdb(film.imdbRatingText, film.votesText)}
         </a>
       </div>
+      <Predicted film={film} people={people} />
     </div>
   )
 }
@@ -224,7 +274,7 @@ function Why({
           {film.coverage}
         </span>
       </Label>
-      <ul className="flex flex-col gap-[9px]">
+      <ul aria-label={card.why} className="flex flex-col gap-[9px]">
         {film.lines.map((line) => (
           <Line
             key={`${line.people.join(' ')}:${line.text}`}
@@ -274,7 +324,12 @@ export function BillboardCard({
       className="group/card grid grid-cols-[112px_1fr] content-start gap-xl rounded-card border border-rule bg-surface px-xl pt-2xl pb-xl min-[560px]:grid-cols-[160px_1fr]"
     >
       <Poster film={film} people={people} first={first} stamp={stamp} />
-      <Header film={film} id={`filme-${film.id}`} level={level} />
+      <Header
+        film={film}
+        people={people}
+        id={`filme-${film.id}`}
+        level={level}
+      />
       <Why film={film} people={people} level={level} />
       {marks && onChange && (
         <FilmMarksControls

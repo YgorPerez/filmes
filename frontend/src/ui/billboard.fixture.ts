@@ -70,6 +70,7 @@ export const MODEL: Billboard = {
       ],
       withoutFact: [],
       coverage: 'Fato sobre 2 de 2',
+      predictedRatings: [{ person: 'bruno', value: 8.31, text: '8,3' }],
     },
     {
       position: 2,
@@ -95,6 +96,7 @@ export const MODEL: Billboard = {
       ],
       withoutFact: ['iara'],
       coverage: 'Fato sobre 1 de 2',
+      predictedRatings: [],
     },
   ],
   sections: [

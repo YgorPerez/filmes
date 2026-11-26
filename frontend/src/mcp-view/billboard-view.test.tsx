@@ -85,6 +85,13 @@ describe('the view shows', () => {
     expect(card(1).queryByText(BILLBOARD.card.bet)).toBeNull()
   })
 
+  it('the Nota prevista the tool result carries', () => {
+    render(<BillboardView result={shown} host={fakeHost(json({}))} />)
+    expect(
+      card(1).getByRole('list', { name: BILLBOARD.card.predicted }).textContent,
+    ).toBe('B8,3Bruno: 8,3 de 10')
+  })
+
   it("the engine's error when the tool failed", () => {
     const failed = json(
       { error: { code: 'invalid_usage', message: 'Sessão desconhecida' } },

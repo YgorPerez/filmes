@@ -8,7 +8,8 @@
 // saves each screen.
 
 import { readFileSync, writeFileSync } from 'node:fs'
-import { recommendSession } from '@filmes/engine'
+import { join } from 'node:path'
+import { recommend, recommendSession } from '@filmes/engine'
 import { expect, test, type Page } from '@playwright/test'
 import {
   addPerson,
@@ -60,6 +61,11 @@ async function send(page: Page, id: string, done: string, says: string) {
   )
   await expect(notice(page).first()).toContainText(says)
 }
+
+/** The note on keeping the marks shows once the page has hydrated: a click
+ * before that is lost when the machine is busy. */
+const hydrated = (page: Page) =>
+  expect(page.getByText('fica guardado neste navegador')).toBeVisible()
 
 const cards = (page: Page) => page.getByRole('article')
 const card = (page: Page, n: number) => cards(page).nth(n - 1)
@@ -129,6 +135,7 @@ test('the Dono marks, reloads, sends, and the Cartaz comes back redone', async (
   await page.goto(`/sessoes/${id}`)
   await expect(cards(page)).toHaveCount(4)
   await expect(page.getByText('Vocês dois', { exact: false })).toBeVisible()
+  await hydrated(page)
   await snap(page, info, 'cartaz')
   const [seen, swapped, third, fourth] = await Promise.all(
     [1, 2, 3, 4].map((n) => titleOf(page, n)),
@@ -206,6 +213,7 @@ test('in the dark, Copiar pro chat gives the text, and stars alone only note', a
   await loginAsBruno(page)
   await page.goto(`/sessoes/${id}`)
   await expect(cards(page)).toHaveCount(3)
+  await hydrated(page)
   const film = await card(page, 1)
     .getByRole('link')
     .first()
@@ -226,4 +234,53 @@ test('in the dark, Copiar pro chat gives the text, and stars alone only note', a
     card(page, 1).getByRole('button', { name: '5 de 5' }),
   ).toHaveAttribute('aria-pressed', 'false')
   await snap(page, info, 'cartaz-anotado')
+})
+
+// Pequenos Milagres, which Bruno's taste neighbours in the fixture's sample
+// rated (#174): with k = 3 and min_shared = 5 they predict 8,3 for him.
+const PEQUENOS_MILAGRES = 'tt9000601'
+
+/** `config/weights.toml` of the fixture copy with Bruno's taste neighbours
+ * on, written next to it for this project alone; the app keeps the
+ * default, where nobody has neighbours. */
+const tasteWeights = (project: string) => {
+  const root = process.env.E2E_ENGINE ?? ''
+  const file = join(root, `weights-taste-${project}.toml`)
+  writeFileSync(
+    file,
+    readFileSync(join(root, 'config/weights.toml'), 'utf8').replace(
+      'k = 50\nmin_shared = 10',
+      'k = 3\nmin_shared = 5',
+    ),
+  )
+  return { FILMES_PESOS: file }
+}
+
+test('the Nota prevista the Session recorded, per Presente who has one', async ({
+  page,
+}, info) => {
+  const vars = tasteWeights(info.project.name)
+  const request = { attendees: ['bruno', 'iara'] }
+  // The Session ends at Pequenos Milagres, so its card is the last.
+  const { films } = await engineRun(
+    (engine) => engine.run(recommend({ ...request, count: 50 })),
+    vars,
+  )
+  const count = films.find((f) => f.id === PEQUENOS_MILAGRES)?.position ?? 0
+  const session = await engineRun(
+    (engine) =>
+      engine.run(recommendSession({ ...request, count }), { owner: 'bruno' }),
+    vars,
+  )
+  const id = session.session.id
+  await loginAsBruno(page)
+  await page.goto(`/sessoes/${id}`)
+  await expect(cards(page)).toHaveCount(count)
+  await snap(page, info, 'cartaz-nota-prevista')
+  await snap(page, info, 'cartaz-nota-prevista-card', card(page, count))
+
+  const predicted = card(page, count).getByRole('list', {
+    name: 'Nota prevista',
+  })
+  await expect(predicted.getByRole('listitem')).toHaveText([/Bruno: 8,3 de 10/])
 })

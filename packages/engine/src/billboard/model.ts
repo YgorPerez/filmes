@@ -123,6 +123,16 @@ export interface BillboardLine {
   readonly source: string | null
 }
 
+/** A Presente's Nota prevista [predicted rating] of a film (#174), as the
+ * version recorded it. */
+export interface BillboardPrediction {
+  readonly person: string
+  /** 1 to 10, the scale of the Cartaz's Já vi. */
+  readonly value: number
+  /** "8,3". */
+  readonly text: string
+}
+
 export interface BillboardFilm {
   /** On the screen, from 1. */
   readonly position: number
@@ -153,6 +163,9 @@ export interface BillboardFilm {
   readonly withoutFact: ReadonlyArray<string>
   /** "Fato sobre 1 de 2". */
   readonly coverage: string
+  /** The Presentes with a Nota prevista, in order; a Presente with none is
+   * left out, never guessed. */
+  readonly predictedRatings: ReadonlyArray<BillboardPrediction>
 }
 
 /** A run of neighbouring films with the same Motivo, under its title. */
@@ -285,8 +298,25 @@ const numberText = (value: number): string =>
   (Number.isInteger(value) ? String(value) : pyRepr(value)).replace('.', ',')
 
 /** 7.25 is "7,2" (`_nota`). */
-export const imdbRatingLabel = (rating: number): string =>
-  pyFixed(rating, 1).replace('.', ',')
+const oneDecimal = (value: number): string =>
+  pyFixed(value, 1).replace('.', ',')
+
+export const imdbRatingLabel = (rating: number): string => oneDecimal(rating)
+
+/** The Notas previstas a version recorded for a film, in the Presentes'
+ * order (#175). */
+const predictionsOf = (
+  item: YamlMapping | undefined,
+  attendees: ReadonlyArray<string>,
+): BillboardPrediction[] => {
+  const recorded = item?.get('predicted_rating')
+  return attendees.flatMap((person) => {
+    const value = get(get(recorded, person), 'value')
+    if (value === undefined || value === null) return []
+    const number = Number(yamlToJson(value))
+    return [{ person, value: number, text: oneDecimal(number) }]
+  })
+}
 
 /** 2_400 is "2 mil"; 1_250_000 is "1,2 mi" (`_votos`). */
 export const votesText = (votes: number): string => {
@@ -542,18 +572,16 @@ export const billboardModel = (
     const { weights } = yield* Environment
     // "Você" is whoever looks: the logged-in Pessoa, else the Session's Dono.
     const owner = (yield* Owner) ?? textOf(front.get('owner'))
-    const newOnes = new Map<string, boolean>()
-    const bets = new Set<string>()
-    const reasons = new Map<string, FilmReason | null>()
-    let withReasons = false
-    const recommendation = front.get('recommendation')
-    for (const item of mappings(recommendation)) {
-      const filmId = pyStrValue(item.get('id') ?? null)
-      newOnes.set(filmId, pyTruthy(item.get('new') ?? false))
-      if (pyTruthy(item.get('bet') ?? false)) bets.add(filmId)
-      if (item.has('reason')) withReasons = true
-      reasons.set(filmId, storedReason(item.get('reason')))
-    }
+    const listed = new Map<string, YamlMapping>()
+    for (const item of mappings(front.get('recommendation')))
+      listed.set(pyStrValue(item.get('id') ?? null), item)
+    const withReasons = [...listed.values()].some((item) => item.has('reason'))
+    const reasons = new Map(
+      [...listed].map(([filmId, item]) => [
+        filmId,
+        storedReason(item.get('reason')),
+      ]),
+    )
     return yield* (yield* Sqlite).read((db) =>
       Effect.gen(function* () {
         const names = new Map(
@@ -589,8 +617,8 @@ export const billboardModel = (
             title,
             originalTitle:
               header.titlePt && header.titlePt !== row.title ? row.title : null,
-            new: newOnes.get(film.id) ?? false,
-            bet: bets.has(film.id),
+            new: pyTruthy(listed.get(film.id)?.get('new') ?? false),
+            bet: pyTruthy(listed.get(film.id)?.get('bet') ?? false),
             poster: header.poster
               ? header.poster.replace('/w185/', '/w500/')
               : null,
@@ -606,6 +634,7 @@ export const billboardModel = (
             lines: linesOf(film),
             withoutFact,
             coverage: `Fato sobre ${people.length - withoutFact.length} de ${people.length}`,
+            predictedRatings: predictionsOf(listed.get(film.id), attendees),
           })
         }
         return {

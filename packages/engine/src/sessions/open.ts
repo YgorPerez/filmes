@@ -128,6 +128,10 @@ export const recommendationFields = (
           title: f.title,
           ...('new' in f && { new: f.new }),
           ...(f.bet && { bet: true }),
+          // The Nota prevista the Cartaz shows (#175), kept with the
+          // version so an old version's Cartaz does not move when the
+          // neighbours do.
+          ...(f.predictedRating && { predicted_rating: f.predictedRating }),
           reason: filmReason(f.evidence),
         })),
       ),

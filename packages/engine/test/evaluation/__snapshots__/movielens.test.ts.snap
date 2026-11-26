@@ -204,7 +204,7 @@ exports[`avaliar on MovieLens files, as recorded > a messy sample with tags give
         },
         "recall50": 1,
         "retrieved": 5,
-        "similarityTop5": 0.31704280277115016,
+        "similarityTop5": 0.2951678027711502,
         "withEvidence": 14,
       },
     },
@@ -302,6 +302,10 @@ exports[`avaliar on MovieLens files, as recorded > a messy sample with tags give
       },
       "people": {
         "statementWeight": 1,
+      },
+      "ratingDecay": {
+        "floor": 0.25,
+        "halfLifeYears": 5,
       },
       "ratingPercentile": {
         "minRatings": 20,
@@ -589,7 +593,7 @@ exports[`avaliar on MovieLens files, as recorded > a small sample warns that Mov
         },
         "recall50": 1,
         "retrieved": 5,
-        "similarityTop5": 0.3604166666666666,
+        "similarityTop5": 0.3291666666666666,
         "withEvidence": 12,
       },
     },
@@ -688,6 +692,10 @@ exports[`avaliar on MovieLens files, as recorded > a small sample warns that Mov
       },
       "people": {
         "statementWeight": 1,
+      },
+      "ratingDecay": {
+        "floor": 0.25,
+        "halfLifeYears": 5,
       },
       "ratingPercentile": {
         "minRatings": 20,
@@ -975,7 +983,7 @@ exports[`the diaries, as recorded > a Trakt history dates the cut 1`] = `
         },
         "recall50": 1,
         "retrieved": 5,
-        "similarityTop5": 0.27708333333333335,
+        "similarityTop5": 0.24583333333333332,
         "withEvidence": 14,
       },
     },
@@ -1072,6 +1080,10 @@ exports[`the diaries, as recorded > a Trakt history dates the cut 1`] = `
       },
       "people": {
         "statementWeight": 1,
+      },
+      "ratingDecay": {
+        "floor": 0.25,
+        "halfLifeYears": 5,
       },
       "ratingPercentile": {
         "minRatings": 20,

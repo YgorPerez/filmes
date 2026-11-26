@@ -83,7 +83,11 @@ describe('the Motivo of each film, in the Session file', () => {
         people: ['bruno', 'iara'],
       },
       { kind: 'film', name: 'Fronteira (2008)', people: ['bruno', 'iara'] },
-      { kind: 'film', name: 'Fronteira (2008)', people: ['bruno', 'iara'] },
+      {
+        kind: 'film',
+        name: 'O Farol de Areia (2012)',
+        people: ['bruno', 'iara'],
+      },
       { kind: 'taste', people: ['bruno'] },
     ])
   })
@@ -196,7 +200,7 @@ describe('the Motivo of each film, in the Session file', () => {
 })
 
 describe('the Cartaz by Motivo', () => {
-  test('neighbouring films with the same Motivo share a title; the Aposta has its own', async () => {
+  test('each film under the title of its Motivo, naming who has it; the Aposta has its own', async () => {
     const fixture = useFixture()
     const session = await recommend(fixture, { attendees: ['dono', 'iara'] })
 
@@ -207,12 +211,14 @@ describe('the Cartaz by Motivo', () => {
     expect(sections(model)).toEqual([
       ['Porque você e Iara gostam de Rui Tavares', false, [1]],
       ['Porque você e Iara gostam de Trilogia da Fronteira', false, [2]],
-      ['Porque você e Iara gostaram de Fronteira (2008)', false, [3, 4]],
+      ['Porque você e Iara gostaram de Fronteira (2008)', false, [3]],
+      ['Porque você e Iara gostaram de O Farol de Areia (2012)', false, [4]],
       ['Aposta', false, [5]],
     ])
     expect(model.sections.map((s) => s.kind)).toEqual([
       'entity',
       'entity',
+      'film',
       'film',
       'bet',
     ])
