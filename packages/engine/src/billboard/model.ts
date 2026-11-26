@@ -94,7 +94,7 @@ export interface BillboardPerson {
   /** "Você" for the Dono, else her name. */
   readonly label: string
   /** The shortest start of her name no other Presente's starts with
-   * ("Léo" and "Lorenzo" are "Lé" and "Lo"). */
+   * ("Léo" and "Lopo" are "Lé" and "Lo"). */
   readonly initial: string
   /** 1 to `PERSON_COLORS`. */
   readonly color: number
