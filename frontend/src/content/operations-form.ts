@@ -5,7 +5,7 @@
 import { field, oneOf, within } from './form-fields'
 
 /** What a form did. */
-export const OPERATIONS_NOTICES = ['avaliando', 'enviado'] as const
+const OPERATIONS_NOTICES = ['avaliando', 'enviado'] as const
 export type OperationsNotice = (typeof OPERATIONS_NOTICES)[number]
 export const isOperationsNotice = within(OPERATIONS_NOTICES)
 
