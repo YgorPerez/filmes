@@ -41,7 +41,7 @@ const useSatisfactionFixture = (): { fixture: Fixture; vars: Vars } => {
     fixture,
     '\nweight = 0.3\n\n[no_sad]',
     '\nweight = 0.0\n\n[no_sad]',
-    ['floor = 0.25', 'floor = 1.0'],
+    [['floor = 0.25', 'floor = 1.0']],
   )
   return { fixture, vars }
 }

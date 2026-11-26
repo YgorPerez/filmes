@@ -38,12 +38,12 @@ export const expectRecordedRecommendation = async (
 }
 
 /** A copy of `config/weights.toml` with `from` replaced by `to`, and each
- * further pair after it: the engine's `FILMES_PESOS`. */
+ * pair of `more` too: the engine's `FILMES_PESOS`. */
 export const weightsWith = (
   fixture: Fixture,
   from: string,
   to: string,
-  ...more: ReadonlyArray<readonly [string, string]>
+  more: ReadonlyArray<readonly [string, string]> = [],
 ): Vars => {
   let text = readFileSync(join(ROOT, 'config/weights.toml'), 'utf8')
   for (const [a, b] of [[from, to] as const, ...more]) {
