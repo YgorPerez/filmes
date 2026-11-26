@@ -80,10 +80,10 @@ describe('the whole output, as recorded', () => {
 
   test('Vetos to a tag group and to a genre', async () => {
     const fixture = useFixture()
-    await fixture.ok(personCreate({ name: 'Lorenzo', slug: 'lorenzo' }))
+    await fixture.ok(personCreate({ name: 'Lopo', slug: 'lopo' }))
     await fixture.ok(
       personVeto({
-        person: 'lorenzo',
+        person: 'lopo',
         text: 'não vê romance',
         target: 'Q1054574',
       }),
@@ -98,7 +98,7 @@ describe('the whole output, as recorded', () => {
     )
 
     const out = await expectRecordedRecommendation(fixture, {
-      attendees: ['dono', 'lorenzo'],
+      attendees: ['dono', 'lopo'],
       count: 100,
     })
     expect(out.vetoes.map((v) => v.target)).toEqual([
