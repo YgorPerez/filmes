@@ -8,10 +8,11 @@
 // the neighbours predict 8,31, an 8,84 once calibrated to his own Notas
 // (#210), and he has no Fact on it. The other films
 // they predict are ones he rated, with plenty of Evidence.
-import { readFileSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, test } from 'vite-plus/test'
 import {
+  answerBillboard,
   billboardModel,
   drawBets,
   parseYaml,
@@ -344,5 +345,119 @@ describe('the bet in the Session', () => {
         cause: 'swapped',
       },
     ])
+  })
+})
+
+const HISTORY_FILM = 'tt9000105'
+
+const pastBet = (
+  fixture: Fixture,
+  id: string,
+  facts: string,
+  date = '2026-11-19',
+) => {
+  const folder = join(fixture.data, 'sessions')
+  mkdirSync(folder, { recursive: true })
+  writeFileSync(
+    join(folder, `${id}.md`),
+    `---
+date: ${date}
+owner: iara
+attendees: [iara, bruno]
+rule: {name: default}
+recommendation: [{position: 5, id: ${HISTORY_FILM}, bet: true}]
+${facts}
+---
+`,
+  )
+}
+
+describe('the bet record', () => {
+  test('repeated no votes suppress bets for the voter across seeded draws', async () => {
+    const fixture = useFixture()
+    const vars = betWeights(fixture)
+    const seeds = Array.from({ length: 12 }, (_, i) => ({ seed: `next-${i}` }))
+    const draw = () =>
+      Promise.all(seeds.map((seed) => bruno(fixture, vars, seed)))
+    const fresh = await draw()
+    for (let i = 1; i <= 20; i++)
+      pastBet(
+        fixture,
+        `swapped-${i}`,
+        `swapped: [${HISTORY_FILM}]
+votes: [{person: bruno, film: ${HISTORY_FILM}, vote: 'no', date: 2026-11-19}]`,
+      )
+    const learned = await draw()
+
+    expect(fresh.filter((out) => bets(out).length)).toHaveLength(seeds.length)
+    expect(learned.filter((out) => bets(out).length).length).toBeLessThan(4)
+    expect((await draw()).map(bets)).toEqual(learned.map(bets))
+
+    for (let i = 1; i <= 25; i++)
+      pastBet(
+        fixture,
+        `liked-${i}`,
+        `chosen: ${HISTORY_FILM}
+feedback:
+  recorded_on: 2026-11-20
+  reactions: [{person: bruno, kind: report, reaction: liked}]`,
+      )
+    expect(
+      (await draw()).filter((out) => bets(out).length).length,
+    ).toBeGreaterThan(8)
+  })
+
+  test('a rated Já vi teaches from the Session file and can be corrected', async () => {
+    const fixture = useFixture()
+    const vars = betWeights(
+      fixture,
+      ['min_success_rate = 0.25', 'min_success_rate = 0.0'],
+      ['min_predicted = 7.0', 'min_predicted = 8.5'],
+    )
+    const id = 'rated-bet'
+    pastBet(fixture, id, '')
+    const draw = () => bruno(fixture, vars, { seed: 'next-session' })
+    expect(bets(await draw())).toEqual([[5, PEQUENOS_MILAGRES]])
+    const answer = (rating: number) =>
+      fixture.ok(
+        answerBillboard({
+          session: id,
+          text: `#cartaz ${id} v1\n5 ${HISTORY_FILM} · já vi: bruno=${rating}`,
+        }),
+        vars,
+      )
+
+    await answer(2)
+    // Use a fresh rebuild of the same fixture's Notas with only the
+    // Session file copied from the other workspace.
+    const replay = useFixture()
+    pastBet(replay, id, '')
+    const file = (f: Fixture) => join(f.data, 'sessions', `${id}.md`)
+    const replayDraw = () => bruno(replay, vars, { seed: 'next-session' })
+    writeFileSync(file(replay), readFileSync(file(fixture)))
+    expect(bets(await replayDraw())).toEqual([])
+
+    await answer(10)
+    writeFileSync(file(replay), readFileSync(file(fixture)))
+    expect(bets(await replayDraw())).toEqual([[5, PEQUENOS_MILAGRES]])
+  })
+
+  test('an old owner swap raises the calibrated floor less than a recent one', async () => {
+    const fixture = useFixture()
+    const vars = betWeights(
+      fixture,
+      ['min_success_rate = 0.25', 'min_success_rate = 0.0'],
+      ['min_predicted = 7.0', 'min_predicted = 8.5'],
+    )
+    const id = 'swapped-bet'
+    const facts = (date: string) => `swapped: [${HISTORY_FILM}]
+bet_marks: [{person: bruno, film: ${HISTORY_FILM}, kind: swapped, rating: null, date: ${date}}]`
+    const draw = () => bruno(fixture, vars, { seed: 'next-session' })
+    pastBet(fixture, id, facts('2011-11-20'), '2011-11-20')
+    const old = await draw()
+    expect(bets(old)).toEqual([[5, PEQUENOS_MILAGRES]])
+    expect(old.films[4]?.cautiousBet).toBe(true)
+    pastBet(fixture, id, facts('2026-11-20'), '2026-11-20')
+    expect(bets(await draw())).toEqual([])
   })
 })

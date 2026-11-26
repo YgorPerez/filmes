@@ -41,11 +41,13 @@ import type { EngineServices } from '../runtime/Engine.ts'
 import { Environment } from '../runtime/Environment.ts'
 import { engineError, type EngineError } from '../runtime/EngineError.ts'
 import { Run } from '../runtime/Run.ts'
+import { readBetRecord } from '../sessions/bet-record.ts'
 import { text } from '../sqlite/row.ts'
 import { Sqlite, type Connection, type SqliteError } from '../sqlite/Sqlite.ts'
 import { resolveAttendees } from './attendees.ts'
 import { attributionsOf, type Attribution } from './attributions.ts'
 import {
+  betPolicy,
   drawBets,
   hasLittleEvidence,
   type BetCandidate,
@@ -140,6 +142,8 @@ export interface RecommendedFilm extends FilmHeader {
   readonly new?: boolean
   /** Only on the Aposta [bet] (#178). */
   readonly bet?: true
+  /** The Histórico de apostas required a higher Nota prevista. */
+  readonly cautiousBet?: true
 }
 
 export interface Recommendation {
@@ -180,6 +184,8 @@ export interface RankOptions {
   readonly regenerate?: Regenerate
   /** The Aposta's draws (the Session id); without it, no bet. */
   readonly seed?: string
+  /** The Session being redone, excluded from its own bet record. */
+  readonly session?: string
 }
 
 type Key = readonly PyOrderable[]
@@ -419,6 +425,7 @@ export const rank = (
       }
     /** The Regra's films for `places` places of `pool`, and the bet for
      * one of them when some film may be it. */
+    let cautiousBet = false
     const withBet = (
       pool: ReadonlyArray<Ordered>,
       chosen: ReadonlyArray<Ordered>,
@@ -427,6 +434,17 @@ export const rank = (
       Effect.gen(function* () {
         const candidates = pool.filter((item) => betOdds.has(item.film.id))
         if (seed === undefined || candidates.length === 0 || places < 1)
+          return {
+            regular: yield* regularFill(pool, chosen, places),
+            bet: undefined,
+          }
+        const policy = betPolicy(
+          seed,
+          attendees,
+          yield* readBetRecord(round, options.session),
+          weights.bet,
+        )
+        if (!policy.offer)
           return {
             regular: yield* regularFill(pool, chosen, places),
             bet: undefined,
@@ -440,9 +458,15 @@ export const rank = (
             .filter((item) => !taken.has(item.film.id))
             .flatMap((item) => betOdds.get(item.film.id) ?? []),
           weights.bet.min_predicted,
+          policy.floors,
         ).flatMap((id) => byId.get(id) ?? [])
         const [bet] = yield* fill(drawn, 1)
-        if (bet !== undefined) return { regular, bet }
+        if (bet !== undefined) {
+          cautiousBet = [...policy.floors.keys()].some((p) =>
+            betOdds.get(bet.id)?.odds.has(p),
+          )
+          return { regular, bet }
+        }
         // No bet passed: the place goes back to the Regra.
         const tried = new Set(drawn.map((item) => item.film.id))
         const more = yield* fill(
@@ -477,6 +501,7 @@ export const rank = (
       )
       if (keptBet !== undefined) {
         betId = keptBet.film.id
+        cautiousBet = regenerate.cautiousBet ?? false
         placed = place(
           regenerate,
           fixed,
@@ -643,6 +668,7 @@ export const rank = (
         filmLines: lines.map((e) => evidenceToJson(e, weights)),
         ...(regenerate !== undefined && { new: isNew(regenerate, film.id) }),
         ...(film.id === betId && { bet: true as const }),
+        ...(film.id === betId && cautiousBet && { cautiousBet: true as const }),
       })
     }
     for (const warning of asked.listWarnings(films.length, count))
@@ -803,6 +829,7 @@ export const rankRequest = (
           moods: request.moods ?? [],
           ...(regenerate !== undefined && { regenerate }),
           ...(seed !== undefined && { seed }),
+          ...(request.session != null && { session: request.session }),
         })
       }),
     )

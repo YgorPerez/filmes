@@ -76,6 +76,12 @@ export const Weights = Schema.Struct({
     position: Count,
     min_predicted: Weight,
     max_facts: Count,
+    prior_successes: Weight.check(Schema.isGreaterThan(0)),
+    prior_failures: Weight.check(Schema.isGreaterThan(0)),
+    min_success_rate: Weight.check(
+      Schema.isBetween({ minimum: 0, maximum: 1 }),
+    ),
+    max_predicted_increase: Weight.check(Schema.isGreaterThanOrEqualTo(0)),
   }),
   /** The Perguntas par a par (#181): how many pairs each Presente is
    * asked in a Session. */

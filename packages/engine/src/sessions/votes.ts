@@ -37,6 +37,7 @@ import type { SqliteError } from '../sqlite/Sqlite.ts'
 import { sessionOwner } from './feedback.ts'
 import {
   currentVersion,
+  sessionVersions,
   isOpen,
   readSession,
   sessionRelative,
@@ -85,21 +86,19 @@ interface StoredVote {
   readonly person: string
   readonly film: string
   readonly vote: VoteValue
+  readonly date?: string
   /** The first Voto of a submission. Legacy votes have no boundary. */
   readonly replaces?: boolean
 }
 
-const storedVotes = (version: YamlMapping): StoredVote[] =>
+export const storedVotes = (version: YamlMapping): StoredVote[] =>
   listOf(version.get('votes'))
     .filter(isMapping)
     .map((item) => yamlToJson(item) as unknown as StoredVote)
 
 /** The Votos of every version of the Session, oldest first. */
 const sessionVotes = (front: YamlMapping): StoredVote[] =>
-  [
-    ...listOf(front.get('versions')).filter(isMapping),
-    currentVersion(front),
-  ].flatMap(storedVotes)
+  sessionVersions(front).flatMap(storedVotes)
 
 /** The films `person` already voted on in the Session, in any version. */
 export const votedBy = (

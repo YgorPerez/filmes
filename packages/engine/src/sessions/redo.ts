@@ -52,6 +52,7 @@ import { engineError, type EngineError } from '../runtime/EngineError.ts'
 import type { Environment } from '../runtime/Environment.ts'
 import { Run } from '../runtime/Run.ts'
 import type { SqliteError } from '../sqlite/Sqlite.ts'
+import { recordBetMarks } from './bet-record.ts'
 import { syncSession } from './database.ts'
 import { sessionOwner } from './feedback.ts'
 import {
@@ -128,6 +129,7 @@ export const redoSession = (
   recommendation: Recommendation,
   context: YamlValue,
   swapped: ReadonlySet<string>,
+  explicitSwaps: ReadonlyArray<string>,
 ): Effect.Effect<
   SessionRef,
   EngineError | SqliteError | GitError,
@@ -136,7 +138,8 @@ export const redoSession = (
   Effect.gen(function* () {
     const { today } = yield* Run
     const writer = yield* DataWriter
-    const author = yield* authorFor(yield* sessionOwner(id))
+    const owner = yield* sessionOwner(id)
+    const author = yield* authorFor(owner)
     return yield* writer.write(
       { author, message: `redo session ${id}` },
       (db) =>
@@ -148,11 +151,29 @@ export const redoSession = (
               (row) => [String(row['slug']), String(row['nome'])],
             ),
           )
+          const previousSwaps = idsOf(front.get('swapped'))
+          if (owner !== undefined)
+            recordBetMarks(
+              front,
+              [...swapped]
+                .filter(
+                  (film) =>
+                    !previousSwaps.includes(film) ||
+                    explicitSwaps.includes(film),
+                )
+                .map((film) => ({
+                  person: owner,
+                  film,
+                  kind: 'swapped',
+                  rating: null,
+                  date: today,
+                })),
+            )
           if (swapped.size > 0)
             front.set(
               'swapped',
-              [...new Set([...idsOf(front.get('swapped')), ...swapped])].sort(
-                (a, b) => compareTuple([a], [b]),
+              [...new Set([...previousSwaps, ...swapped])].sort((a, b) =>
+                compareTuple([a], [b]),
               ),
             )
           const earlier = front.get('versions')
@@ -278,6 +299,7 @@ export const recommendSession = (
             recommendation,
             context,
             regenerate.swapped,
+            requestIds(asking.swap),
           )
         : yield* openSession(recommendation, context)
     return { ...recommendation, session: ref }

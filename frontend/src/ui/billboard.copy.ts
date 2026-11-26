@@ -16,6 +16,8 @@ export const BILLBOARD = {
     noFact: (name: string) => `${name}: sem fato`,
     isNew: 'novo',
     bet: 'aposta',
+    cautiousBet:
+      'O histórico de apostas do grupo pediu uma nota prevista mais alta.',
     betHint:
       'Aposta: pouca Evidência, mas quem tem gosto parecido deu nota alta',
     imdb: (rating: string | null, votes: string) =>

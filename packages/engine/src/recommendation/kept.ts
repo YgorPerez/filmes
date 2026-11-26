@@ -40,21 +40,19 @@
 
 import { Effect } from 'effect'
 import { thousandsDot } from '../compat/number.ts'
-import {
-  isMapping,
-  isSequence,
-  pyStrValue,
-  pyTruthy,
-  yamlToJson,
-  type YamlMapping,
-} from '../data/yaml.ts'
+import { pyStrValue, yamlToJson, type YamlMapping } from '../data/yaml.ts'
 import { ratingText } from '../evidence/wording.ts'
 import type { EngineError } from '../runtime/EngineError.ts'
 import type { Environment } from '../runtime/Environment.ts'
 import type { Weights } from '../runtime/Weights.ts'
 import { numOrNull, text } from '../sqlite/row.ts'
 import type { Connection, SqliteError } from '../sqlite/Sqlite.ts'
-import { currentVersion, shownFilms, type ShownFilm } from '../sessions/file.ts'
+import {
+  currentVersion,
+  shownFilms,
+  storedBet,
+  type ShownFilm,
+} from '../sessions/file.ts'
 import { orderByYes, yesVotes } from '../sessions/votes.ts'
 import type { Candidate } from './candidates.ts'
 import type { Constraint } from './constraints.ts'
@@ -81,6 +79,7 @@ export interface Regenerate {
   readonly newMood: boolean
   /** The previous version's Aposta (#178), if any. */
   readonly bet?: string
+  readonly cautiousBet?: boolean
 }
 
 /** Why a film of the previous version left (an item of `dropped`, without
@@ -150,11 +149,8 @@ export const prepareRegenerate = (
         `--manter ${id}: o filme não estava na versão anterior da Sessão; ficou de fora`,
     )
   const attendees = yamlToJson(version.get('attendees') ?? null)
-  const recommendation = version.get('recommendation')
-  const bet = (isSequence(recommendation) ? recommendation : [])
-    .filter(isMapping)
-    .find((film) => pyTruthy(film.get('bet') ?? false))
-    ?.get('id')
+  const stored = storedBet(version)
+  const bet = stored?.get('id')
   return {
     regenerate: {
       previous: screen,
@@ -171,6 +167,7 @@ export const prepareRegenerate = (
       replacing,
       newMood,
       ...(bet !== undefined && bet !== null && { bet: pyStrValue(bet) }),
+      ...(stored?.get('cautious_bet') === true && { cautiousBet: true }),
     },
     warnings,
   }

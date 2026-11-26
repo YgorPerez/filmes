@@ -14,8 +14,12 @@ exports[`avaliar, as recorded > gives the recorded result and report 1`] = `
       },
       "bet": {
         "maxFacts": 1,
+        "maxPredictedIncrease": 2,
         "minPredicted": 7,
+        "minSuccessRate": 0.25,
         "position": 5,
+        "priorFailures": 2,
+        "priorSuccesses": 2,
       },
       "catalog": {
         "minImdbRating": 7,
@@ -438,8 +442,12 @@ Quanto das Notas retidas foi 4 ou mais, pela Força mais alta a favor do filme n
       },
       "bet": {
         "maxFacts": 1,
+        "maxPredictedIncrease": 2,
         "minPredicted": 7,
+        "minSuccessRate": 0.25,
         "position": 5,
+        "priorFailures": 2,
+        "priorSuccesses": 2,
       },
       "catalog": {
         "minImdbRating": 7,
@@ -2134,8 +2142,12 @@ Foram testados 303 conjuntos. A ordem usa a média do Recall@50 entre as amostra
       },
       "bet": {
         "maxFacts": 1,
+        "maxPredictedIncrease": 2,
         "minPredicted": 7,
+        "minSuccessRate": 0.25,
         "position": 5,
+        "priorFailures": 2,
+        "priorSuccesses": 2,
       },
       "catalog": {
         "minImdbRating": 7,
