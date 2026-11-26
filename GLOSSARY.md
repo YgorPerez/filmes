@@ -20,6 +20,9 @@ _Evitar_: usuário, admin
 Um encontro para ver um filme. Nasce no pedido do Dono, guarda os Presentes, o contexto, a Recomendação e o Filme escolhido, e fecha quando o Feedback é registrado. Sessão sem Feedback fica aberta.
 _Evitar_: pedido, noite, rolê
 
+**Link da Sessão** [session link, `sessionLink`]:
+O endereço que o Dono da Sessão compartilha com os Presentes. Cada Presente se identifica pelo nome e pode participar enquanto a Sessão estiver aberta, sem login. O link dá acesso aos filmes da versão atual e às interações da Sessão, sem expor o gosto das Pessoas (#180).
+
 **Presentes** [attendees, `attendees`]:
 As Pessoas de uma Sessão. Não existe grupo guardado: cada Sessão tem os seus Presentes.
 _Evitar_: grupo, turma
