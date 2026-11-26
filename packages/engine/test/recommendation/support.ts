@@ -51,6 +51,26 @@ export const weightsWith = (
   return { FILMES_PESOS: file }
 }
 
+/** `config/weights.toml` with `[taste_neighbors]`'s `k` and `min_shared`
+ * changed, and `[rating_percentile] min_ratings` when given. */
+export const tasteWeights = (
+  fixture: Fixture,
+  k: number,
+  minShared: number,
+  minRatings?: number,
+): Vars => {
+  let text = readFileSync(join(ROOT, 'config/weights.toml'), 'utf8')
+  text = text.replace(
+    'k = 50\nmin_shared = 10',
+    `k = ${k}\nmin_shared = ${minShared}`,
+  )
+  if (minRatings !== undefined)
+    text = text.replace('min_ratings = 20', `min_ratings = ${minRatings}`)
+  const file = join(fixture.root, 'weights-test.toml')
+  writeFileSync(file, text)
+  return { FILMES_PESOS: file }
+}
+
 export const titles = (out: Recommendation): string[] =>
   out.films.map((film) => film.title)
 
