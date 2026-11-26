@@ -87,6 +87,20 @@ window = 5
 # Peso da Evidência de vizinhança item-item do MovieLens (Tipo review).
 weight = 1.0
 
+[taste_neighbors]
+# Vizinhos de gosto (#174): os `k` usuários da amostra do MovieLens mais próximos
+# da Pessoa, pela diferença média entre o percentil da Nota dela e o da nota
+# deles (cada um na própria escala) nos filmes que os dois viram; só conta quem
+# viu pelo menos `min_shared` filmes dela. O percentil médio dos vizinhos que
+# viram o filme, de 0 a 1, dá a Evidência (Tipo review) com base
+# `weight` × 2 × (percentil − 0,5): a favor acima da mediana dela, contra abaixo.
+# A menos de `neutral_band` da mediana, eles não dizem nada. A Força vem da
+# régua, por quantos são, quanto concordam e quanto dividem com ela.
+k = 50
+min_shared = 10
+weight = 1.0
+neutral_band = 0.05
+
 [mood]
 # Bônus de cada Clima pedido que o filme sustenta, somado à pontuação da Regra
 # de escolha (que vai de 0 a 1), vezes o multiplicador da Força.

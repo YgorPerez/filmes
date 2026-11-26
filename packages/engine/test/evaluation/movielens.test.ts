@@ -10,6 +10,7 @@ import {
   dumpReportYaml,
   evaluate,
   importTrakt,
+  rebuild,
   type Vars,
 } from '../../src/index.ts'
 import { ROOT, useFixture, type Fixture } from '../fixture.ts'
@@ -192,6 +193,62 @@ describe('avaliar on MovieLens files, as recorded', () => {
         code: 'invalid_versions',
         message: `${join(fixture.root, 'none.json')}: sem fonte e data de ml-32m.zip ([Errno 2] No such file or directory: '${join(fixture.root, 'none.json')}')`,
       },
+    })
+  })
+})
+
+describe('the taste neighbours of the sample (#174)', () => {
+  /** The users' ratings of `manyRatings`, as the taste neighbours' sample
+   * of the Catalog (capped at 5), with k = 3 and 1 film shared. */
+  const sampleOf = async (fixture: Fixture, users: readonly number[]) => {
+    const catalog = catalogWith(fixture, {
+      'links.csv': links,
+      'ratings.csv': manyRatings(),
+    })
+    const rows = users.flatMap((user) =>
+      FILMS.flatMap((film, i) =>
+        (user + i + 1) % 3 === 0
+          ? []
+          : [
+              `${user},tt${film},${Math.min(5, ((user * (i + 1)) % 5) + 1 + ((i + 1) % 2 ? 0.5 : 0))}`,
+            ],
+      ),
+    )
+    writeFileSync(
+      join(catalog, 'notas_gosto_movielens.csv'),
+      ['usuario,filme_id,nota', ...rows].join('\n') + '\n',
+    )
+    const weights = join(fixture.root, 'weights-test.toml')
+    writeFileSync(
+      weights,
+      readFileSync(join(ROOT, 'config/weights.toml'), 'utf8').replace(
+        'k = 50\nmin_shared = 10',
+        'k = 3\nmin_shared = 1',
+      ),
+    )
+    const vars = { FILMES_CATALOGO: catalog, FILMES_PESOS: weights }
+    await fixture.ok(rebuild, vars)
+    const result = await fixture.ok(evaluate(), {
+      ...vars,
+      FILMES_AVALIACOES: join(fixture.root, 'avaliacoes'),
+    })
+    return result.offline.movielens.predictedRatingError
+  }
+
+  /** Users 1 to 100 outside `Random(27)`'s sample of 1,100. */
+  const OUTSIDE = [14, 36, 41, 48, 55, 80, 86, 92]
+
+  test('users outside the sample predict the sampled ones', async () => {
+    expect((await sampleOf(useFixture(), OUTSIDE)).films).toBeGreaterThan(0)
+  })
+
+  test('a sampled user is never a neighbour, not even his own', async () => {
+    const sampled = Array.from({ length: 100 }, (_, i) => i + 1).filter(
+      (user) => !OUTSIDE.includes(user),
+    )
+    expect(await sampleOf(useFixture(), sampled)).toEqual({
+      films: 0,
+      meanAbsoluteError: null,
     })
   })
 })

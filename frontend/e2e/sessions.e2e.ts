@@ -247,3 +247,67 @@ test('the link only works for its Session while it is open', async ({
     await guest.close()
   }
 })
+
+test('each Presente votes on the films; a no swaps the film and the Session is redone', async ({
+  page,
+  browser,
+}, info) => {
+  const person = info.project.name === 'desktop' ? 'rosa' : 'quim'
+  const name = info.project.name === 'desktop' ? 'Rosa' : 'Quim'
+  const opened = await engineRun((engine) =>
+    engine.run(recommendSession({ attendees: ['dono', person], count: 3 }), {
+      owner: 'bruno',
+    }),
+  )
+  const [first, second, third] = opened.films.map((film) => film.title)
+  await loginAsBruno(page)
+  await page.goto(`/sessoes/${opened.session.id}`)
+  const shared = await page
+    .getByRole('link', { name: 'Link para os Presentes' })
+    .getAttribute('href')
+  if (!shared) throw new Error('the Session had no link')
+  const guest = await browser.newContext()
+  try {
+    const participant = await guest.newPage()
+    const href = new URL(shared)
+    href.searchParams.set('presente', person)
+    await participant.goto(href.href)
+    await expect(participant.getByText(name, { exact: true })).toBeVisible()
+    await participant.getByRole('link', { name: 'Votar nos filmes' }).click()
+    await expect(
+      participant.getByRole('heading', { name: first }),
+    ).toBeVisible()
+    await snap(participant, info, 'sessao-votar')
+
+    await participant.getByRole('button', { name: 'Sim', exact: true }).click()
+    await expect(
+      participant.getByRole('heading', { name: second }),
+    ).toBeVisible()
+    await participant.getByRole('button', { name: 'Não', exact: true }).click()
+    await participant.getByRole('button', { name: 'Sim', exact: true }).click()
+    await expect(participant.getByText('2 sins · 1 não')).toBeVisible()
+    await snap(participant, info, 'sessao-votos-resumo')
+
+    await participant.getByRole('button', { name: 'Enviar votos' }).click()
+    await expect(participant.getByRole('status')).toContainText(
+      'outro entrou no lugar',
+    )
+    // Only the film that came in is left to vote on.
+    const newcomer = participant.getByRole('article')
+    await expect(newcomer).toHaveCount(1)
+    await expect(newcomer).not.toContainText(second ?? '')
+    await expect(participant.getByText('Filme 1 de 1')).toBeVisible()
+    await snap(participant, info, 'sessao-votos-enviados')
+
+    await page.reload()
+    await expect(page.getByText(/Saiu da prateleira/u)).toBeVisible()
+    const onCartaz = (title?: string) =>
+      page.getByRole('heading', { level: 2 }).filter({ hasText: title })
+    await expect(onCartaz(second)).toHaveCount(0)
+    await expect(onCartaz(first)).toHaveCount(1)
+    await expect(onCartaz(third)).toHaveCount(1)
+    await snap(page, info, 'sessao-cartaz-depois-dos-votos')
+  } finally {
+    await guest.close()
+  }
+})

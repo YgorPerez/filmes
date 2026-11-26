@@ -231,6 +231,7 @@ exports[`avaliar on MovieLens files, as recorded > a messy sample with tags give
       "elenco_principal_imdb.csv": "559f381e49c30635a34a1469db33ef7c5de47619fd211b204e027736ead40262",
       "entidades.csv": "a554083d3fdf5d805116adc00a348b28cf68de2072fb34a399a61b3420cb6432",
       "filmes.csv": "2623fafc661095c67913aa2d5858724b99ab6ff36416f222b1571ed0693a8377",
+      "fonte_gosto_movielens.csv": "bd0e4d5aac3969eb131926c4a3fe9dc12b220d13543832caee9c72717cac4a9a",
       "generos_imdb.csv": "ca9cb82915808484dcd3881bd375601d7daeb8d4e28c79cebf10e672ca5389e3",
       "genoma.csv": "bf9e335eaec86c9fbe2d5ca1d55cf4a75f1a865c83f48750d359f07ac4169ed1",
       "idiomas_originais.csv": "3fd72e324b22bdd4a924778d6826f20e648099c908c0a40de7af2cf7ee6dacbf",
@@ -238,6 +239,7 @@ exports[`avaliar on MovieLens files, as recorded > a messy sample with tags give
       "ml-32m/ratings.csv": "b031f470a578ded291c9030aa96b963f3332ace36beb2078b1b1fef0550ff2bd",
       "ml-32m/tags.csv": "9d715c5a9a99222d7685b7b2a37c54eb051a3c6dcfef43482282a104692a823c",
       "notas.csv": "fce6055d2fb915a21f46c4eea36d2bef360756974cc83e8713674103e9075f78",
+      "notas_gosto_movielens.csv": "c7931ecb50aad10c030a8e85c3b90d247d4e444a833d641992028f7bdd57f33a",
       "notas_movielens.csv": "732f70f4971aca938e7cc266ded071f301ddf13cda14e7f3e008eebcbb3e17b2",
       "series_de_filmes.csv": "7f4cef1fbbf193e21f72d6101a0e1280b729cca9c57b334d4bab1769075cd03e",
       "slugs_letterboxd.csv": "aef16df5bcb6b746236d595d8c29a29728a3f8bb45726201631f04ed2f5071aa",
@@ -342,6 +344,12 @@ exports[`avaliar on MovieLens files, as recorded > a messy sample with tags give
       "tagVetoes": {
         "minRelevance": 0.7,
         "minUsers": 10,
+      },
+      "tasteNeighbors": {
+        "k": 50,
+        "minShared": 10,
+        "neutralBand": 0.05,
+        "weight": 1,
       },
       "utility": {
         "k": 1,
@@ -607,12 +615,14 @@ exports[`avaliar on MovieLens files, as recorded > a small sample warns that Mov
       "elenco_principal_imdb.csv": "559f381e49c30635a34a1469db33ef7c5de47619fd211b204e027736ead40262",
       "entidades.csv": "a554083d3fdf5d805116adc00a348b28cf68de2072fb34a399a61b3420cb6432",
       "filmes.csv": "2623fafc661095c67913aa2d5858724b99ab6ff36416f222b1571ed0693a8377",
+      "fonte_gosto_movielens.csv": "bd0e4d5aac3969eb131926c4a3fe9dc12b220d13543832caee9c72717cac4a9a",
       "generos_imdb.csv": "ca9cb82915808484dcd3881bd375601d7daeb8d4e28c79cebf10e672ca5389e3",
       "genoma.csv": "bf9e335eaec86c9fbe2d5ca1d55cf4a75f1a865c83f48750d359f07ac4169ed1",
       "idiomas_originais.csv": "3fd72e324b22bdd4a924778d6826f20e648099c908c0a40de7af2cf7ee6dacbf",
       "ml-32m/links.csv": "d8e1d4a9be5d5f36887488aa18d4088e9ce5ff13a56cc1dc8c2d7239ee295d6e",
       "ml-32m/ratings.csv": "17815b6b621ab2a8bec43788881b371e87522a0dd0e38052369aa6d360b67e38",
       "notas.csv": "fce6055d2fb915a21f46c4eea36d2bef360756974cc83e8713674103e9075f78",
+      "notas_gosto_movielens.csv": "c7931ecb50aad10c030a8e85c3b90d247d4e444a833d641992028f7bdd57f33a",
       "notas_movielens.csv": "732f70f4971aca938e7cc266ded071f301ddf13cda14e7f3e008eebcbb3e17b2",
       "series_de_filmes.csv": "7f4cef1fbbf193e21f72d6101a0e1280b729cca9c57b334d4bab1769075cd03e",
       "slugs_letterboxd.csv": "aef16df5bcb6b746236d595d8c29a29728a3f8bb45726201631f04ed2f5071aa",
@@ -719,6 +729,12 @@ exports[`avaliar on MovieLens files, as recorded > a small sample warns that Mov
       "tagVetoes": {
         "minRelevance": 0.7,
         "minUsers": 10,
+      },
+      "tasteNeighbors": {
+        "k": 50,
+        "minShared": 10,
+        "neutralBand": 0.05,
+        "weight": 1,
       },
       "utility": {
         "k": 1,
@@ -984,10 +1000,12 @@ exports[`the diaries, as recorded > a Trakt history dates the cut 1`] = `
       "elenco_principal_imdb.csv": "559f381e49c30635a34a1469db33ef7c5de47619fd211b204e027736ead40262",
       "entidades.csv": "a554083d3fdf5d805116adc00a348b28cf68de2072fb34a399a61b3420cb6432",
       "filmes.csv": "2623fafc661095c67913aa2d5858724b99ab6ff36416f222b1571ed0693a8377",
+      "fonte_gosto_movielens.csv": "bd0e4d5aac3969eb131926c4a3fe9dc12b220d13543832caee9c72717cac4a9a",
       "generos_imdb.csv": "ca9cb82915808484dcd3881bd375601d7daeb8d4e28c79cebf10e672ca5389e3",
       "genoma.csv": "bf9e335eaec86c9fbe2d5ca1d55cf4a75f1a865c83f48750d359f07ac4169ed1",
       "idiomas_originais.csv": "3fd72e324b22bdd4a924778d6826f20e648099c908c0a40de7af2cf7ee6dacbf",
       "notas.csv": "fce6055d2fb915a21f46c4eea36d2bef360756974cc83e8713674103e9075f78",
+      "notas_gosto_movielens.csv": "c7931ecb50aad10c030a8e85c3b90d247d4e444a833d641992028f7bdd57f33a",
       "notas_movielens.csv": "732f70f4971aca938e7cc266ded071f301ddf13cda14e7f3e008eebcbb3e17b2",
       "series_de_filmes.csv": "7f4cef1fbbf193e21f72d6101a0e1280b729cca9c57b334d4bab1769075cd03e",
       "slugs_letterboxd.csv": "aef16df5bcb6b746236d595d8c29a29728a3f8bb45726201631f04ed2f5071aa",
@@ -1094,6 +1112,12 @@ exports[`the diaries, as recorded > a Trakt history dates the cut 1`] = `
       "tagVetoes": {
         "minRelevance": 0.7,
         "minUsers": 10,
+      },
+      "tasteNeighbors": {
+        "k": 50,
+        "minShared": 10,
+        "neutralBand": 0.05,
+        "weight": 1,
       },
       "utility": {
         "k": 1,

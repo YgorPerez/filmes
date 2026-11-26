@@ -15,7 +15,7 @@
 //     chosen_in_recommendation: null
 //     feedback: null                      # {recorded_on, reactions} once given
 //
-// Later tickets add `shown`, `kept`, `dropped`, `replies`, `swapped`,
+// Later tickets add `shown`, `kept`, `dropped`, `replies`, `swapped`, `votes`,
 // `redone_on` and `versions` (the earlier versions, oldest first); the
 // current version is the top of the frontmatter, numbered
 // `len(versions) + 1`.
@@ -222,6 +222,7 @@ export const VERSION_EXTRAS = [
   'dropped',
   'replies',
   'swapped',
+  'votes',
 ] as const
 
 /** The version at the top of the frontmatter, shaped as an item of

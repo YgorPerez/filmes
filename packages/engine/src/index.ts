@@ -105,6 +105,7 @@ export {
   requestCount,
   type RankOptions,
   type Recommendation,
+  type PredictedRating,
   type RecommendedFilm,
   type RecommendRequest,
 } from './recommendation/recommend.ts'
@@ -224,6 +225,14 @@ export {
   redoSession,
 } from './sessions/redo.ts'
 export { sessionRedoRequest } from './sessions/redo-request.ts'
+export {
+  castVotes,
+  votedBy,
+  yesVotes,
+  type CastVotes,
+  type CastVotesRequest,
+  type VoteValue,
+} from './sessions/votes.ts'
 export {
   engineLayer,
   errorOutcome,

@@ -56,6 +56,15 @@ export const Weights = Schema.Struct({
   seen: Schema.Struct({ weight: Weight }),
   satisfaction: Schema.Struct({ factor: Weight, window: Count }),
   neighbors: Schema.Struct({ weight: Weight }),
+  /** The taste neighbours (#174): how many, how many films each must share
+   * with the Pessoa, the Evidence's weight, and the band around her median
+   * where they say nothing. */
+  taste_neighbors: Schema.Struct({
+    k: Count,
+    min_shared: Count,
+    weight: Weight,
+    neutral_band: Weight,
+  }),
   mood: Schema.Struct({ weight: Weight }),
   group: Schema.Struct({ weight: Weight }),
   people: Schema.Struct({ statement_weight: Weight }),

@@ -772,6 +772,49 @@ test("counts the population's ratings by value, for the ruler (#172)", async () 
   ])
 })
 
+test("keeps a sample of users' ratings for the taste neighbours (#174)", async () => {
+  // 60 linked films. User 10 rated 50 of them and stays; user 20 rated
+  // 49, too few; user 15 rated 60 but his id is not a multiple of 10.
+  const films = Array.from({ length: 60 }, (_, i) => i + 1)
+  const rows = [
+    ...films.slice(0, 50).map((f) => `10,${f},${(f % 10) / 2 + 0.5},1`),
+    ...films.slice(0, 49).map((f) => `20,${f},4,1`),
+    ...films.map((f) => `15,${f},3,1`),
+    '10,999,5,1',
+  ]
+  const movielens = zip({
+    ...SMALL_MOVIELENS,
+    'ml-32m/links.csv': `movieId,imdbId,tmdbId\n${films.map((f) => `${f},${String(f).padStart(7, '0')},`).join('\n')}\n`,
+    'ml-32m/ratings.csv': `userId,movieId,rating,timestamp\n${rows.join('\n')}\n`,
+  })
+  const query = await rebuilt(
+    usePinnedDumps(replacing('ml-32m.zip', movielens)),
+  )
+
+  expect(
+    await query(
+      'SELECT usuario, count(*), min(nota), max(nota) FROM notas_gosto_movielens GROUP BY usuario',
+    ),
+  ).toEqual([[10, 50, 0.5, 5]])
+  expect(
+    await query(
+      "SELECT filme_id, nota FROM notas_gosto_movielens WHERE filme_id = 'tt0000007'",
+    ),
+  ).toEqual([['tt0000007', 4]])
+  // Five of each value: 0,5 is his 0,05, 5 his 0,95.
+  expect(
+    await query(
+      'SELECT nota, percentil FROM percentis_gosto_movielens WHERE nota IN (0.5, 5) ORDER BY nota',
+    ),
+  ).toEqual([
+    [0.5, 0.05],
+    [5, 0.95],
+  ])
+  expect(await query('SELECT fonte, data FROM fonte_gosto_movielens')).toEqual([
+    ['MovieLens ml-32m', '2023-10-13'],
+  ])
+})
+
 test('reads a deflated ZIP64 archive behind a stub', async () => {
   const movielens = zip(SMALL_MOVIELENS, {
     method: 8,

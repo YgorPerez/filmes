@@ -12,6 +12,7 @@ import { realCatalog } from './real-catalog.ts'
 import { sessions } from './sessions.ts'
 import { similarity } from './similarity.ts'
 import { subgenres } from './subgenres.ts'
+import { tasteScales } from './taste-scales.ts'
 import type { Step } from './Step.ts'
 
 export const STEPS: ReadonlyArray<Step> = [
@@ -25,4 +26,5 @@ export const STEPS: ReadonlyArray<Step> = [
   sessions,
   ageRatings,
   similarity,
+  tasteScales,
 ]

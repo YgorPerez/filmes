@@ -10,6 +10,7 @@ import { neighbors } from './neighbors.ts'
 import { seen } from './seen.ts'
 import type { Signal } from './Signal.ts'
 import { stated } from './stated.ts'
+import { tasteNeighbors } from './taste-neighbors.ts'
 
 export const SIGNALS: ReadonlyArray<Signal> = [
   mood,
@@ -19,4 +20,5 @@ export const SIGNALS: ReadonlyArray<Signal> = [
   seen,
   imdbRating,
   neighbors,
+  tasteNeighbors,
 ]
