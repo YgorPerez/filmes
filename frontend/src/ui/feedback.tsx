@@ -2,6 +2,7 @@ import { useState } from 'react'
 import {
   RATING_CHOICES,
   REPORT_CHOICES,
+  isFeedbackRefusal,
   type FeedbackDraft,
   type FeedbackRefusal,
 } from '#/content/feedback-form'
@@ -10,6 +11,7 @@ import type { SearchAnswer } from '#/platform/catalog-search'
 import type { FeedbackAttendee, FeedbackPage } from '#/platform/feedback'
 import { FEEDBACK } from './feedback.copy'
 import { ImportsFrame } from './imports'
+import { useFetchForm, useHydrated, useRefusalInPlace } from './kit/fetch-form'
 import { FIELD } from './kit/field'
 import { FieldLabel } from './kit/field-label'
 import { Option } from './kit/option'
@@ -73,7 +75,6 @@ export function FeedbackScreen({
       ) : (
         <>
           <Heading page={page} />
-          {refusal && <Alert>{FEEDBACK.refusals[refusal]}</Alert>}
           <FeedbackForm
             key={`${session} ${film ?? ''} ${search?.query ?? ''} ${note ?? ''}`}
             session={session}
@@ -82,6 +83,7 @@ export function FeedbackScreen({
             search={search}
             draft={draft}
             pick={pick}
+            refusal={refusal}
           />
           {page.attendees.length > 1 && <Satisfaction page={page} />}
         </>
@@ -122,6 +124,7 @@ function FeedbackForm({
   search,
   draft,
   pick,
+  refusal,
 }: {
   session: string
   page: FeedbackPage
@@ -129,22 +132,28 @@ function FeedbackForm({
   search: SearchAnswer | null
   draft: FeedbackDraft | null
   pick: (id: string) => string
+  refusal?: FeedbackRefusal
 }) {
   const { form } = FEEDBACK
-  const [nothing, setNothing] = useState(false)
   const listed = page.recommendation.some((item) => item.id === film)
   const other = !listed && (film !== undefined || search !== null)
+  // The film radio marked: a film of the list, `outro` or `nada`.
+  const [choice, setChoice] = useState(
+    listed ? film : other ? 'outro' : undefined,
+  )
+  const { refused, alert, onAnswer } = useRefusalInPlace(
+    feedbackPath(session),
+    isFeedbackRefusal,
+    refusal,
+  )
+  const { onSubmit, busy } = useFetchForm(onAnswer)
   return (
     <form
       method="post"
       action={`/feedback/${encodeURIComponent(session)}/enviar`}
       aria-label={form.label}
       className="group/feedback flex flex-col gap-3xl"
-      onChange={(event) => {
-        const input = event.target
-        if (input instanceof HTMLInputElement && input.name === 'filme')
-          setNothing(input.value === 'nada')
-      }}
+      onSubmit={onSubmit}
     >
       {/* Enter in any field sends the form: the first submit button is the
           one Enter presses. With a search not run yet in its field, the
@@ -152,16 +161,23 @@ function FeedbackForm({
       <button type="submit" name="tecla" value="enter" hidden>
         {form.submit}
       </button>
+      {refused && (
+        <div ref={alert}>
+          <Alert>{FEEDBACK.refusals[refused]}</Alert>
+        </div>
+      )}
       <FilmChoice
         page={page}
         film={film}
         other={other}
         search={search}
         pick={pick}
+        choice={choice}
+        onChoose={setChoice}
       />
 
       <fieldset
-        disabled={nothing}
+        disabled={choice === 'nada'}
         className="min-w-0 group-has-[input[value=nada]:checked]/feedback:hidden"
       >
         <Section id="reacoes" title={form.reactions} lead={form.reactionsLead}>
@@ -178,75 +194,88 @@ function FeedbackForm({
         </Section>
       </fieldset>
 
-      <Submit variant="primary" className="w-full sm:w-auto sm:self-start">
-        {form.submit}
+      <Submit
+        variant="primary"
+        disabled={busy !== null}
+        className="w-full sm:w-auto sm:self-start"
+      >
+        {busy === null ? form.submit : form.submitting}
       </Submit>
     </form>
   )
 }
 
-/** The chosen film or a title to look up. */
+/** The chosen film or a title to look up. `choice` is the radio marked.
+ * With the JavaScript, "Usar" takes the film in place: its radio when the
+ * list has it, else "Outro filme" with its id in the field; before it,
+ * "Usar" is a link (`pick`). */
 function FilmChoice({
   page,
   film,
   other,
   search,
   pick,
+  choice,
+  onChoose,
 }: {
   page: FeedbackPage
   film?: string
   other: boolean
   search: SearchAnswer | null
   pick: (id: string) => string
+  choice?: string
+  onChoose: (value: string) => void
 }) {
   const { form } = FEEDBACK
+  const live = useHydrated()
   const selected =
     search && 'found' in search
       ? search.found.films.find((item) => item.id === film)
       : undefined
+  // The title of the film the field holds, until the Dono types over it.
+  const [title, setTitle] = useState(other ? selected?.title : undefined)
+  const take = (picked: { id: string; label: string }) => {
+    const inList = page.recommendation.some((item) => item.id === picked.id)
+    onChoose(inList ? picked.id : 'outro')
+    setTitle(inList ? undefined : picked.label)
+  }
+  const radio = (value: string) => ({
+    type: 'radio' as const,
+    shape: 'row' as const,
+    name: 'filme',
+    value,
+    checked: choice === value,
+    onChange: (checked: boolean) => {
+      if (checked) onChoose(value)
+    },
+  })
   return (
     <Section id="filme" title={form.film}>
       <fieldset className="group/film flex min-w-0 flex-col gap-sm">
         <legend className="sr-only">{form.film}</legend>
         {page.recommendation.map((item) => (
-          <Option
-            key={item.id}
-            type="radio"
-            shape="row"
-            name="filme"
-            value={item.id}
-            defaultChecked={item.id === film}
-          >
+          <Option key={item.id} {...radio(item.id)}>
             <span className="flex items-center gap-md">
               <PriceSticker compact>{item.position}</PriceSticker>
               <span className="text-[15px] font-bold">{item.title}</span>
             </span>
           </Option>
         ))}
-        <Option
-          type="radio"
-          shape="row"
-          name="filme"
-          value="outro"
-          defaultChecked={other}
-        >
-          {form.other}
-        </Option>
+        <Option {...radio('outro')}>{form.other}</Option>
         <div className="hidden flex-col gap-sm rounded-field border border-rule bg-surface-2 p-lg group-has-[input[value=outro]:checked]/film:flex">
-          {other && selected && (
-            <p className="font-semibold">{selected.title}</p>
-          )}
+          {title && <p className="font-semibold">{title}</p>}
           <SessionFilmLookup
             name="busca"
             label={form.search}
             value={other ? (film ?? search?.query) : undefined}
             answer={search}
             pick={pick}
+            onPick={live ? take : undefined}
+            fill
+            onType={() => setTitle(undefined)}
           />
         </div>
-        <Option type="radio" shape="row" name="filme" value="nada">
-          {form.nothing}
-        </Option>
+        <Option {...radio('nada')}>{form.nothing}</Option>
       </fieldset>
     </Section>
   )

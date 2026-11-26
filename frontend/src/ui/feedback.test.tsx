@@ -259,17 +259,20 @@ describe('the Catálogo search', () => {
         series: [],
       },
     }
-    render(<FeedbackScreen session={PAGE.id} page={PAGE} search={search} />)
-    const use = screen.getByRole('link', { name: 'Usar Casa Cheia (2021)' })
-    expect(use.getAttribute('href')).toBe(
-      '/sessoes/2026-11-20-iara-quim/contar?filme=tt9000602&buscar=cheia',
-    )
     const form = () => screen.getByRole('form', { name: FEEDBACK.form.label })
 
-    // The form's defaults are set when the page loads, as after the link.
-    cleanup()
-    render(<FeedbackScreen session={PAGE.id} page={PAGE} film="tt9000602" />)
+    // The form's defaults are set when the page loads, as after the link
+    // (before the JavaScript: `feedback-plain.test.tsx`).
+    render(
+      <FeedbackScreen
+        session={PAGE.id}
+        page={PAGE}
+        search={search}
+        film="tt9000602"
+      />,
+    )
     expect(posted(form())).toEqual({ ok: { film: 'tt9000602', reactions: [] } })
+    expect(screen.getByText('Casa Cheia', { selector: 'p' })).toBeTruthy()
     expect(
       (screen.getByLabelText(FEEDBACK.form.other) as HTMLInputElement).checked,
     ).toBe(true)
