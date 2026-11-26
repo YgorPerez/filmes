@@ -19,6 +19,7 @@ import {
   sessionRedoRequest,
   type Billboard,
   type Engine,
+  type WaitingAnswers,
   type ErrorOutput,
   type Outcome,
 } from '@filmes/engine'
@@ -27,6 +28,12 @@ import type { SessionLinkSearch } from '#/content/session-link-address'
 import { appEngine } from './engine'
 import { appPoster, formPoster, seeOther } from './form-post'
 import { appNotes, type Note, type Notes } from './notes'
+import {
+  pairwiseAnswerAction,
+  pairwiseDecisionAction,
+  pairwisePage,
+  pairwiseWaiting,
+} from './pairwise'
 import { serverEnv } from './server-env'
 import { issueSessionLink, resolveSessionLink } from './session-link'
 import { voteAction, voteDeck } from './session-votes'
@@ -118,6 +125,8 @@ export type CartazPage = {
   warnings: string[]
   addition: string | null
   sessionLink?: string | null
+  /** The Presentes' Perguntas par a par that wait for the Dono (#181). */
+  pairwise?: ReadonlyArray<WaitingAnswers>
 }
 
 export async function cartazPage(
@@ -200,14 +209,16 @@ export async function appCartazPage(
   viewer: string,
 ): Promise<CartazPage | 'unknown' | null> {
   const engine = appEngine()
-  const page = await cartazPage(
+  const made = await cartazPage(
     id,
     note,
     sessionsFromEngine(engine, viewer),
     billboardsFromEngine(engine, viewer),
     appNotes(),
   )
-  if (!page || page === 'unknown' || !page.session.open) return page
+  if (!made || made === 'unknown') return made
+  const page = { ...made, pairwise: await pairwiseWaiting(id, engine) }
+  if (!page.session.open) return page
   const { APP_ORIGIN, AUTH_DATABASE_PATH } = serverEnv()
   return {
     ...page,
@@ -239,4 +250,27 @@ export const serveVotes = (request: Request) => {
 export const serveReply = (request: Request, id: string) => {
   const { owner, origin } = appPoster(request)
   return replyAction(request, owner, id, appBillboards(), appNotes(), origin)
+}
+
+// --- the Perguntas par a par's (#181) ---------------------------------------
+
+/** The Perguntas par a par page of a Link da Sessão, for the app. */
+export const appPairwisePage = (search: SessionLinkSearch) =>
+  pairwisePage(search, appEngine(), serverEnv().AUTH_DATABASE_PATH)
+
+/** The route of a Presente's answer, for the app. */
+export const servePairwiseAnswer = (request: Request) => {
+  const { AUTH_DATABASE_PATH, APP_ORIGIN } = serverEnv()
+  return pairwiseAnswerAction(
+    request,
+    appEngine(),
+    AUTH_DATABASE_PATH,
+    APP_ORIGIN,
+  )
+}
+
+/** The route of the Dono's decision on the answers, for the app. */
+export const servePairwiseDecision = (request: Request, id: string) => {
+  const { owner, origin } = appPoster(request)
+  return pairwiseDecisionAction(request, owner, id, appEngine(), origin)
 }
