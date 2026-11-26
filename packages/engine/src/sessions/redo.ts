@@ -152,23 +152,17 @@ export const redoSession = (
             ),
           )
           const previousSwaps = idsOf(front.get('swapped'))
-          if (owner !== undefined)
-            recordBetMarks(
-              front,
-              [...swapped]
-                .filter(
-                  (film) =>
-                    !previousSwaps.includes(film) ||
-                    explicitSwaps.includes(film),
-                )
-                .map((film) => ({
-                  person: owner,
-                  film,
-                  kind: 'swapped',
-                  rating: null,
-                  date: today,
-                })),
-            )
+          const [explicitSwap] = explicitSwaps
+          if (owner !== undefined && explicitSwap && explicitSwaps.length === 1)
+            recordBetMarks(front, [
+              {
+                person: owner,
+                film: explicitSwap,
+                kind: 'swapped',
+                rating: null,
+                date: today,
+              },
+            ])
           if (swapped.size > 0)
             front.set(
               'swapped',

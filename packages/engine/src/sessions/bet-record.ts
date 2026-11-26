@@ -1,10 +1,9 @@
 // Bet outcomes are derived from Session files. A film carried across
 // versions counts once per Presente; another Session can teach it again.
 
-import { Effect } from 'effect'
+import { Effect, Schema } from 'effect'
 import { pyFloat } from '../compat/fact-id.ts'
 import {
-  isMapping,
   isSequence,
   pyStrValue,
   yamlToJson,
@@ -18,6 +17,7 @@ import {
   ratingStrength,
 } from '../evidence/ruler.ts'
 import { scaleOf, type Round } from '../recommendation/signals/Signal.ts'
+import { num, text } from '../sqlite/row.ts'
 import { ratingValue, reactions } from './facts.ts'
 import { readSession, sessionIds, sessionVersions, storedBet } from './file.ts'
 import { storedVotes } from './votes.ts'
@@ -27,21 +27,23 @@ export interface BetRecord {
   readonly failures: number
 }
 
-interface BetMark {
-  readonly person: string
-  readonly film: string
-  readonly rating: number | null
-  readonly kind: 'seen' | 'swapped'
-  readonly date: string
-}
+const BetMark = Schema.Struct({
+  person: Schema.String,
+  film: Schema.String,
+  rating: Schema.NullOr(
+    Schema.Finite.check(Schema.isBetween({ minimum: 0.5, maximum: 5 })),
+  ),
+  kind: Schema.Literals(['seen', 'swapped']),
+  date: Schema.String,
+})
+type BetMark = typeof BetMark.Type
+const isBetMark = Schema.is(BetMark)
 
 const list = (value: YamlValue | undefined) => (isSequence(value) ? value : [])
 const strings = (value: YamlValue | undefined) => list(value).map(pyStrValue)
 
 const betMarks = (version: YamlMapping) =>
-  list(version.get('bet_marks'))
-    .filter(isMapping)
-    .map((mark) => yamlToJson(mark) as BetMark)
+  list(version.get('bet_marks')).map(yamlToJson).filter(isBetMark)
 
 /** Record the Dono's Trocar and a rated Já vi on the Session itself.
  * These are the two actions whose attribution or Nota was not otherwise
@@ -81,10 +83,37 @@ interface Outcome {
   readonly date: string
 }
 
+const isSeenDrop = Schema.is(
+  Schema.Struct({
+    cause: Schema.Literal('seen'),
+    id: Schema.String,
+    people: Schema.Array(Schema.String),
+  }),
+)
+
+/** The Nota from when the film was on screen. A later re-rating or a
+ * Nota from before the film was an Aposta cannot explain this drop. */
+const ratingForDrop = (
+  round: Round,
+  person: string,
+  film: string,
+  since: string,
+  until: string,
+) =>
+  round.db.get(
+    `SELECT nota, data FROM notas
+     WHERE pessoa = ? AND filme_id = ? AND tipo = 'nota' AND data BETWEEN ? AND ?
+     ORDER BY data DESC, fato_id LIMIT 1`,
+    person,
+    film,
+    since,
+    until,
+  )
+
 const sessionOutcomes = (id: string, front: YamlMapping, round: Round) =>
   Effect.gen(function* () {
     const attendees = new Set(round.attendees)
-    const shown = new Map<string, Set<string>>()
+    const shown = new Map<string, Map<string, string>>()
     const outcomes = new Map<string, Map<string, Outcome>>()
     const put = (person: string, film: string, outcome: Outcome) => {
       if (
@@ -101,53 +130,68 @@ const sessionOutcomes = (id: string, front: YamlMapping, round: Round) =>
       }
     }
 
+    const putRating = (
+      person: string,
+      film: string,
+      rating: number,
+      date: string,
+    ) => {
+      const scale = scaleOf(round, person)
+      if (isHighRating(scale, rating))
+        put(person, film, { success: true, date })
+      else if (ratingStrength(scale, rating)[1] < 0)
+        put(person, film, { success: false, date })
+    }
+    const seenKey = (person: string, film: string) =>
+      JSON.stringify([person, film])
+
     const versions = sessionVersions(front)
     const marks = versions.map(betMarks)
     const latestSeen = new Map(
       marks
         .flat()
         .filter((mark) => mark.kind === 'seen')
-        .map((mark) => [JSON.stringify([mark.person, mark.film]), mark]),
+        .map((mark) => [seenKey(mark.person, mark.film), mark]),
     )
     for (const [index, version] of versions.entries()) {
+      const date = pyStrValue(version.get('date') ?? null)
       const bet = storedBet(version)
       if (bet) {
         const film = pyStrValue(bet.get('id') ?? null)
-        const people = shown.get(film) ?? new Set<string>()
+        const people = shown.get(film) ?? new Map<string, string>()
         for (const person of strings(version.get('attendees')))
-          if (attendees.has(person)) people.add(person)
+          if (attendees.has(person) && !people.has(person))
+            people.set(person, date)
         shown.set(film, people)
       }
       if (!shown.size) continue
-      const date = pyStrValue(version.get('date') ?? null)
-      const attributed = new Set<string>()
+      for (const drop of list(version.get('dropped'))
+        .map(yamlToJson)
+        .filter(isSeenDrop)) {
+        for (const person of drop.people) {
+          const since = shown.get(drop.id)?.get(person)
+          if (since === undefined || latestSeen.has(seenKey(person, drop.id)))
+            continue
+          const note = yield* ratingForDrop(round, person, drop.id, since, date)
+          if (note !== undefined)
+            putRating(person, drop.id, num(note, 'nota'), text(note, 'data'))
+        }
+      }
       for (const vote of storedVotes(version)) {
         if (vote.vote !== 'no') continue
-        attributed.add(vote.film)
         put(vote.person, vote.film, { success: false, date: vote.date ?? date })
       }
       for (const mark of marks[index] ?? []) {
         if (mark.kind === 'swapped') {
-          attributed.add(mark.film)
           put(mark.person, mark.film, { success: false, date: mark.date })
         } else if (
-          latestSeen.get(JSON.stringify([mark.person, mark.film])) === mark &&
+          latestSeen.get(seenKey(mark.person, mark.film)) === mark &&
           mark.rating !== null &&
           attendees.has(mark.person)
         ) {
-          const scale = scaleOf(round, mark.person)
-          if (isHighRating(scale, mark.rating))
-            put(mark.person, mark.film, { success: true, date: mark.date })
-          else if (ratingStrength(scale, mark.rating)[1] < 0)
-            put(mark.person, mark.film, { success: false, date: mark.date })
+          putRating(mark.person, mark.film, mark.rating, mark.date)
         }
       }
-      // Before actor attribution, a Trocar with no corresponding no was
-      // the Dono's. A Voto must never also count against the Dono.
-      const owner = front.get('owner')
-      if (typeof owner === 'string')
-        for (const film of strings(version.get('swapped')))
-          if (!attributed.has(film)) put(owner, film, { success: false, date })
     }
 
     const chosen = front.get('chosen')

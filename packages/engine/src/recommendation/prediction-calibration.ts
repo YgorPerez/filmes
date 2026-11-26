@@ -10,6 +10,8 @@
 // rest staying the identity, so a Pessoa with few comparable films keeps
 // nearly the neighbours' own prediction.
 
+import { mean } from './mean.ts'
+
 /** One of her Notas: what the neighbours would have predicted (their mean
  * percentile, without her Nota), and the percentile she gave it. */
 export interface Comparison {
@@ -30,9 +32,6 @@ export const NO_CALIBRATION: PredictionCalibration = {
   slope: 1,
   films: 0,
 }
-
-const mean = (values: ReadonlyArray<number>): number =>
-  values.reduce((sum, v) => sum + v, 0) / values.length
 
 /** The least-squares line through the comparisons, shrunk toward the
  * identity by `pseudoCount` films. Without spread in the predictions the

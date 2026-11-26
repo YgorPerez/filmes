@@ -48,6 +48,7 @@ import {
 import type { Connection, SqliteError } from '../sqlite/Sqlite.ts'
 import { num, text } from '../sqlite/row.ts'
 import { candidatesJson, scaleOf, type Round } from './signals/Signal.ts'
+import { mean } from './mean.ts'
 
 export interface TasteNeighbor {
   readonly user: number
@@ -111,9 +112,6 @@ WHERE g.usuario IN (SELECT value FROM json_each(?1))
   AND +g.filme_id IN (SELECT value FROM json_each(?2))
 ORDER BY g.filme_id, g.usuario
 `
-
-const mean = (values: ReadonlyArray<number>): number =>
-  values.reduce((sum, v) => sum + v, 0) / values.length
 
 /** One of her Notas: its percentile on her scale and its Decaimento. */
 interface OwnRating {

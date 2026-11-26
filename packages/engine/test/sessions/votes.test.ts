@@ -3,7 +3,7 @@
 // that Presente; a yes can move kept films and redo the Session on its
 // own (#205). Votos are no Fato and never touch taste.
 
-import { readFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, test } from 'vite-plus/test'
 import {
@@ -123,6 +123,28 @@ describe('castVotes', () => {
       f[1],
       f[4],
     ])
+  })
+
+  test('a string "false" cannot replace the earlier vote set', async () => {
+    const fixture = useFixture()
+    const { id, f } = await open(fixture)
+    await vote(fixture, {
+      session: id,
+      person: 'iara',
+      version: 1,
+      votes: [{ film: f[0]!, vote: 'yes' }],
+    })
+    const file = join(fixture.data, 'sessions', `${id}.md`)
+    const original = readFileSync(file, 'utf8')
+    writeFileSync(
+      file,
+      original.replace(
+        '\n---',
+        `\n- {person: iara, film: ${f[2]}, vote: 'yes', replaces: 'false'}\n---`,
+      ),
+    )
+    const redone = await redo(fixture, id, f)
+    expect(redone.films[0]?.id).toBe(f[0])
   })
 
   test('equal yes counts keep the current order without a new version', async () => {

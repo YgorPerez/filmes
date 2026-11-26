@@ -13,9 +13,14 @@ import { join } from 'node:path'
 import { describe, expect, test } from 'vite-plus/test'
 import {
   answerBillboard,
+  answerPairwise,
   billboardModel,
+  decidePairwise,
   drawBets,
+  pairwiseQuestions,
   parseYaml,
+  personRate,
+  personSeen,
   recommendSession,
   yamlToJson,
   type BetCandidate,
@@ -355,6 +360,7 @@ const pastBet = (
   id: string,
   facts: string,
   date = '2026-11-19',
+  owner = 'iara',
 ) => {
   const folder = join(fixture.data, 'sessions')
   mkdirSync(folder, { recursive: true })
@@ -362,10 +368,10 @@ const pastBet = (
     join(folder, `${id}.md`),
     `---
 date: ${date}
-owner: iara
+owner: ${owner}
 attendees: [iara, bruno]
 rule: {name: default}
-recommendation: [{position: 5, id: ${HISTORY_FILM}, bet: true}]
+recommendation: [{position: 1, id: tt9000101}, {position: 5, id: ${HISTORY_FILM}, bet: true}]
 ${facts}
 ---
 `,
@@ -415,7 +421,7 @@ feedback:
       ['min_predicted = 7.0', 'min_predicted = 8.5'],
     )
     const id = 'rated-bet'
-    pastBet(fixture, id, '')
+    pastBet(fixture, id, '', '2026-11-19', 'bruno')
     const draw = () => bruno(fixture, vars, { seed: 'next-session' })
     expect(bets(await draw())).toEqual([[5, PEQUENOS_MILAGRES]])
     const answer = (rating: number) =>
@@ -437,9 +443,292 @@ feedback:
     writeFileSync(file(replay), readFileSync(file(fixture)))
     expect(bets(await replayDraw())).toEqual([])
 
-    await answer(10)
+    const reply = await answer(10)
+    expect(reply.regenerate).toBe(true)
+    const redone = await session(fixture, vars, {
+      session: reply.session.id,
+      attendees: ['iara', 'bruno'],
+      keep: reply.keep,
+    })
+    expect(redone.dropped).toContainEqual(
+      expect.objectContaining({
+        id: HISTORY_FILM,
+        cause: 'seen',
+        people: ['bruno'],
+      }),
+    )
     writeFileSync(file(replay), readFileSync(file(fixture)))
     expect(bets(await replayDraw())).toEqual([[5, PEQUENOS_MILAGRES]])
+  })
+
+  test.each(['keep', 'whole screen', 'single swap', 'Cartaz Trocar'])(
+    'learns only from an explicit Trocar: %s',
+    async (action) => {
+      const fixture = useFixture()
+      const vars = betWeights(
+        fixture,
+        ['min_success_rate = 0.25', 'min_success_rate = 0.0'],
+        ['min_predicted = 7.0', 'min_predicted = 8.5'],
+      )
+      const id = 'swap-history'
+      pastBet(fixture, id, '', '2026-11-19', 'bruno')
+      if (action === 'Cartaz Trocar')
+        await fixture.ok(
+          answerBillboard({
+            session: id,
+            text: `#cartaz ${id} v1\n5 ${HISTORY_FILM} · trocar`,
+          }),
+          vars,
+        )
+      const redone = await session(fixture, vars, {
+        session: id,
+        attendees: ['iara', 'bruno'],
+        ...(action === 'whole screen'
+          ? { swap: ['tt9000101', HISTORY_FILM] }
+          : { keep: ['tt9000101'] }),
+        ...(action === 'single swap' && { swap: [HISTORY_FILM] }),
+      })
+      expect(ids(redone)).not.toContain(HISTORY_FILM)
+      const next = await bruno(fixture, vars, { seed: 'next-session' })
+      expect(bets(next)).toEqual(
+        action === 'keep' || action === 'whole screen'
+          ? [[5, PEQUENOS_MILAGRES]]
+          : [],
+      )
+    },
+  )
+
+  test.each(['personSeen', 'personRate'] as const)(
+    'learns from a Nota recorded through %s and the drop in the Session file',
+    async (action) => {
+      const fixture = useFixture()
+      const vars = betWeights(
+        fixture,
+        ['min_success_rate = 0.25', 'min_success_rate = 0.0'],
+        ['min_predicted = 7.0', 'min_predicted = 8.0'],
+        ['max_predicted_increase = 2.0', 'max_predicted_increase = 10.0'],
+      )
+      const id = 'seen-in-chat'
+      pastBet(fixture, id, '')
+      if (action === 'personSeen')
+        await fixture.ok(
+          personSeen({ person: 'bruno', film: HISTORY_FILM, rating: '2/10' }),
+        )
+      else
+        await fixture.ok(
+          personRate({
+            person: 'bruno',
+            ratings: [{ film: HISTORY_FILM, rating: 2 }],
+          }),
+        )
+      const draw = () => bruno(fixture, vars, { seed: 'next-session' })
+      expect(bets(await draw())).toEqual([[5, PEQUENOS_MILAGRES]])
+
+      const redone = await session(fixture, vars, {
+        session: id,
+        attendees: ['iara', 'bruno'],
+        keep: ['tt9000101'],
+      })
+      expect(redone.dropped).toContainEqual(
+        expect.objectContaining({
+          id: HISTORY_FILM,
+          cause: 'seen',
+          people: ['bruno'],
+        }),
+      )
+      const learned = await draw()
+      expect(bets(learned)).toEqual([])
+      expect(bets(await draw())).toEqual(bets(learned))
+    },
+  )
+
+  test('a Nota from a recorded pairwise answer also teaches through a seen drop', async () => {
+    const fixture = useFixture()
+    const vars = betWeights(
+      fixture,
+      ['min_success_rate = 0.25', 'min_success_rate = 0.0'],
+      ['min_predicted = 7.0', 'min_predicted = 8.0'],
+      ['max_predicted_increase = 2.0', 'max_predicted_increase = 10.0'],
+      // Read the pairwise 3.5 as against, so it visibly changes the draw.
+      ['weak = 0.4', 'weak = 0.65'],
+    )
+    const id = 'pairwise-bet'
+    pastBet(fixture, id, '', '2026-11-19', 'bruno')
+    const { pairs } = await fixture.ok(
+      pairwiseQuestions({ session: id, person: 'bruno' }),
+      vars,
+    )
+    const pair = pairs.find((p) => p.some((f) => f.id === HISTORY_FILM))
+    if (!pair) throw new Error('the Aposta was not in the pairwise questions')
+    await fixture.ok(
+      answerPairwise({
+        session: id,
+        person: 'bruno',
+        films: [pair[0].id, pair[1].id],
+        choice: HISTORY_FILM,
+      }),
+      vars,
+    )
+    await fixture.ok(
+      decidePairwise({ session: id, person: 'bruno', record: true }),
+      vars,
+    )
+    const draw = () => bruno(fixture, vars, { seed: 'next-session' })
+    expect(bets(await draw())).toEqual([[5, PEQUENOS_MILAGRES]])
+
+    const redone = await session(fixture, vars, {
+      session: id,
+      attendees: ['iara', 'bruno'],
+      keep: ['tt9000101'],
+    })
+    expect(redone.dropped).toContainEqual(
+      expect.objectContaining({
+        id: HISTORY_FILM,
+        cause: 'seen',
+        people: ['bruno'],
+      }),
+    )
+    expect(bets(await draw())).toEqual([])
+  })
+
+  test('an unrelated earlier Nota does not turn a legacy Já vi into a bet outcome', async () => {
+    const fixture = useFixture()
+    const vars = betWeights(
+      fixture,
+      ['min_success_rate = 0.25', 'min_success_rate = 0.0'],
+      ['min_predicted = 7.0', 'min_predicted = 8.0'],
+      ['max_predicted_increase = 2.0', 'max_predicted_increase = 10.0'],
+    )
+    await fixture.ok(
+      personSeen({
+        person: 'bruno',
+        film: HISTORY_FILM,
+        rating: '2/10',
+        date: '2026-11-18',
+      }),
+    )
+    pastBet(fixture, 'unrated-seen', '')
+    await fixture.ok(personSeen({ person: 'bruno', film: HISTORY_FILM }))
+    const redone = await session(fixture, vars, {
+      session: 'unrated-seen',
+      attendees: ['iara', 'bruno'],
+      keep: ['tt9000101'],
+    })
+    expect(redone.dropped).toContainEqual(
+      expect.objectContaining({
+        id: HISTORY_FILM,
+        cause: 'seen',
+        people: ['bruno'],
+      }),
+    )
+    expect(bets(await bruno(fixture, vars, { seed: 'next-session' }))).toEqual([
+      [5, PEQUENOS_MILAGRES],
+    ])
+  })
+
+  test('a good record lowers the minimum predicted rating down to its configured floor', async () => {
+    const fixture = useFixture()
+    const settings = [
+      ['min_success_rate = 0.25', 'min_success_rate = 0.0'],
+      ['min_predicted = 7.0', 'min_predicted = 9.0'],
+    ] as const
+    const draw = (vars: Vars) => bruno(fixture, vars, { seed: 'next-session' })
+
+    expect(bets(await draw(betWeights(fixture, ...settings)))).toEqual([])
+    pastBet(
+      fixture,
+      'liked-bet',
+      `chosen: ${HISTORY_FILM}
+feedback:
+  recorded_on: 2026-11-20
+  reactions: [{person: bruno, kind: report, reaction: liked}]`,
+    )
+    const learned = await draw(betWeights(fixture, ...settings))
+    expect(bets(learned)).toEqual([[5, PEQUENOS_MILAGRES]])
+    expect(learned.films[4]?.cautiousBet).toBeUndefined()
+
+    const bounded = await draw(
+      betWeights(fixture, ...settings, [
+        'min_predicted_floor = 6.0',
+        'min_predicted_floor = 9.0',
+      ]),
+    )
+    expect(bets(bounded)).toEqual([])
+  })
+
+  test('the engine explains a cautious bet in the recommendation, Session and Cartaz', async () => {
+    const fixture = useFixture()
+    const vars = betWeights(fixture, [
+      'min_success_rate = 0.25',
+      'min_success_rate = 0.0',
+    ])
+    pastBet(
+      fixture,
+      'failed-bet',
+      `bet_marks: [{person: bruno, film: ${HISTORY_FILM}, kind: swapped, rating: null, date: 2026-11-19}]`,
+    )
+    const out = await session(fixture, vars, { attendees: ['bruno'] })
+    const explanation =
+      'O histórico de apostas do grupo pediu uma nota prevista mais alta.'
+    const bet = out.films.find((film) => film.bet)
+    expect(bet?.cautiousBet).toBe(true)
+    expect(bet?.filmLines).toContainEqual(
+      expect.objectContaining({ text: explanation, contribution: 0 }),
+    )
+    expect(
+      readFileSync(
+        join(fixture.data, 'sessions', `${out.session.id}.md`),
+        'utf8',
+      ),
+    ).toContain(explanation)
+    const model = await fixture.ok(
+      billboardModel({ session: out.session.id }),
+      vars,
+    )
+    expect(model.films.find((film) => film.bet)?.cautiousBetReason).toBe(
+      explanation,
+    )
+  })
+
+  test('a bet mark with a string Nota does not teach the record', async () => {
+    const fixture = useFixture()
+    const vars = betWeights(
+      fixture,
+      ['min_success_rate = 0.25', 'min_success_rate = 0.0'],
+      ['min_predicted = 7.0', 'min_predicted = 8.5'],
+    )
+    pastBet(
+      fixture,
+      'invalid-mark',
+      `bet_marks: [{person: bruno, film: ${HISTORY_FILM}, kind: seen, rating: '1', date: 2026-11-20}]`,
+    )
+    const out = await bruno(fixture, vars, { seed: 'next-session' })
+    expect(bets(out)).toEqual([[5, PEQUENOS_MILAGRES]])
+  })
+
+  test('a string "false" does not mark a kept bet as cautious', async () => {
+    const fixture = useFixture()
+    const vars = betWeights(fixture)
+    const out = await session(fixture, vars, { attendees: ['bruno'] })
+    const id = out.session.id
+    const file = join(fixture.data, 'sessions', `${id}.md`)
+    const original = readFileSync(file, 'utf8')
+    writeFileSync(
+      file,
+      original.replace('bet: true', "bet: true\n  cautious_bet: 'false'"),
+    )
+
+    const model = await fixture.ok(billboardModel({ session: id }), vars)
+    expect(
+      model.films.find((film) => film.bet)?.cautiousBetReason,
+    ).toBeUndefined()
+    const redone = await session(fixture, vars, {
+      session: id,
+      attendees: ['bruno'],
+      keep: ids(out),
+    })
+    expect(bets(redone)).toEqual([[5, PEQUENOS_MILAGRES]])
+    expect(redone.films[4]?.cautiousBet).toBeUndefined()
   })
 
   test('an old owner swap raises the calibrated floor less than a recent one', async () => {

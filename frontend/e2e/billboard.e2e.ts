@@ -152,6 +152,7 @@ attendees: [bruno]
 rule: {name: default}
 recommendation: [{position: 5, id: tt9000105, bet: true}]
 swapped: [tt9000105]
+bet_marks: [{person: bruno, film: tt9000105, kind: swapped, rating: null, date: 2026-11-19}]
 ---
 `,
   )

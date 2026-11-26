@@ -123,10 +123,13 @@ max_facts = 1
 # Com histórico, a média dos sorteios dos Presentes precisa chegar a
 # min_success_rate. O mínimo individual sobe até max_predicted_increase
 # pontos conforme a média do posterior cai abaixo da média do prior.
+# Acima da média do prior, o mínimo desce na mesma proporção até o piso;
+# no grupo, a redução entra na média dos mínimos de quem tem Nota prevista.
 prior_successes = 2.0
 prior_failures = 2.0
 min_success_rate = 0.25
 max_predicted_increase = 2.0
+min_predicted_floor = 6.0
 
 [pairwise]
 # Perguntas par a par (#181): quantos pares cada Presente responde (ou pula)

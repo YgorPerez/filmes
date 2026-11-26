@@ -12,11 +12,29 @@
 
 import { createHash } from 'node:crypto'
 import { pySum } from '../compat/number.ts'
-import type { Evidence } from '../evidence/Evidence.ts'
+import { makeEvidence, type Evidence } from '../evidence/Evidence.ts'
+import { guessStrength } from '../evidence/ruler.ts'
 import type { Weights } from '../runtime/Weights.ts'
 import type { BetRecord } from '../sessions/bet-record.ts'
 import { NEUTRAL_UTILITY } from './rule.ts'
 import { TASTE_NEIGHBORS_TABLE } from './signals/taste-neighbors.ts'
+
+export const CAUTIOUS_BET_REASON =
+  'O histórico de apostas do grupo pediu uma nota prevista mais alta.'
+
+export const cautiousBetLine = (filmId: string): Evidence =>
+  makeEvidence({
+    person: null,
+    filmId,
+    text: CAUTIOUS_BET_REASON,
+    source: null,
+    date: null,
+    strength: guessStrength(),
+    kind: 'guess',
+    factId: null,
+    base: 0,
+    countsAsFact: false,
+  })
 
 /** What a Presente's Nota prevista says about a film, for the draw. */
 export interface BetOdds {
@@ -76,7 +94,8 @@ const logGamma = (shape: number, uniform: () => number): number => {
 }
 
 /** Decide whether the group gets a bet and raise the individual floor
- * for a Presente whose posterior mean has fallen below the prior mean. */
+ * for a Presente whose posterior mean has fallen below the prior mean,
+ * or lower it for one whose mean has risen. */
 export const betPolicy = (
   seed: string,
   attendees: ReadonlyArray<string>,
@@ -91,9 +110,20 @@ export const betPolicy = (
     const record = records.get(person)
     const a = prior_successes + (record?.successes ?? 0)
     const b = prior_failures + (record?.failures ?? 0)
-    const decrease = 1 - a / (a + b) / priorMean
-    const shift = weights.max_predicted_increase * decrease
-    if (shift > 0) floors.set(person, weights.min_predicted + shift)
+    const posteriorMean = a / (a + b)
+    const { min_predicted, min_predicted_floor, max_predicted_increase } =
+      weights
+    if (posteriorMean < priorMean) {
+      const shift = max_predicted_increase * (1 - posteriorMean / priorMean)
+      floors.set(person, min_predicted + shift)
+    } else if (
+      posteriorMean > priorMean &&
+      min_predicted > min_predicted_floor
+    ) {
+      const shift =
+        (max_predicted_increase * (posteriorMean - priorMean)) / (1 - priorMean)
+      floors.set(person, Math.max(min_predicted_floor, min_predicted - shift))
+    }
     let draw = 0
     const uniform = () =>
       uniforms(`bet-record\u0000${seed}\u0000${person}\u0000${draw++}`)[0]
@@ -113,14 +143,26 @@ export const drawBets = (
   floors: ReadonlyMap<string, number> = new Map(),
 ): ReadonlyArray<string> =>
   candidates
-    .filter(
-      (c) =>
-        c.odds.size > 0 &&
-        mean([...c.odds.values()].map((o) => o.value)) >= minPredicted &&
-        [...c.odds].every(
-          ([person, o]) => o.value >= (floors.get(person) ?? 0),
-        ),
-    )
+    .filter((candidate) => {
+      const odds = [...candidate.odds]
+      if (odds.length === 0) return false
+      const minimum = (person: string) => floors.get(person) ?? minPredicted
+      // Relax the original group average by the minimums that went down.
+      // A minimum that went up is still a requirement for that Presente.
+      return (
+        mean(odds.map(([, o]) => o.value)) >=
+          minPredicted +
+            mean(
+              odds.map(([person]) =>
+                Math.min(0, minimum(person) - minPredicted),
+              ),
+            ) &&
+        odds.every(
+          ([person, o]) =>
+            minimum(person) <= minPredicted || o.value >= minimum(person),
+        )
+      )
+    })
     .map((c) => ({
       id: c.id,
       draw: mean(
