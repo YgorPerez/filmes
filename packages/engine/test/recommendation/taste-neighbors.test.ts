@@ -1,8 +1,9 @@
 // The taste neighbours (#174): the MovieLens users of the fixture's sample
 // (`notas_gosto_movielens.csv`) closest to a Pessoa by the percentiles of
 // the films they share, and what they gave a Candidate. Users 10, 20 and 30
-// rate Bruno's films as he does, user 40 the other way round, and user 50
-// shares only 2 of his films. All of them rated Pequenos Milagres (601)
+// rate Bruno's films as he does, user 40 the other way round, user 50
+// shares only 2 of his films, and user 60 shares 4, against him only on his
+// oldest Nota. All of them rated Pequenos Milagres (601)
 // and Deserto Branco (701), where Bruno has no Fact. Nobody shares the
 // default minimum of 10 films with him, so the other tests do not see them.
 import { describe, expect, test } from 'vite-plus/test'
@@ -145,6 +146,32 @@ describe('the taste neighbours path', () => {
     )
     expect(later[0]!.contribution).toBeGreaterThan(0)
     expect(later[0]!.contribution).toBeLessThan(now[0]!.contribution)
+  })
+
+  test('her recent Notas weigh more than her old ones in choosing them', async () => {
+    const fixture = useFixture()
+    // User 60 shares 4 of Bruno's films: the three recent ones as he rated
+    // them, and Fronteira (401), rated 5 by Bruno in 2019, the other way
+    // round. He gave Deserto Branco a 3.
+    const choose = (floor: string) =>
+      bruno(
+        fixture,
+        weightsWith(fixture, 'k = 50\nmin_shared = 10', 'k = 3\nmin_shared = 4', [
+          ['floor = 0.25', floor],
+        ]),
+      )
+    const evenly = neighbours(await choose('floor = 1.0'), 'Deserto Branco')
+    const byAge = neighbours(await choose('floor = 0.25'), 'Deserto Branco')
+
+    // Every Nota counting the same, 401 keeps him out: 10, 20 and 30.
+    expect(evenly[0]?.text).toBe(
+      '3 pessoas de gosto parecido deram 1,5 em média a este',
+    )
+    // With the old Nota faded, he takes user 10's place: 20, 30 and 60
+    // gave it 1,5, 2 and 3.
+    expect(byAge[0]?.text).toBe(
+      '3 pessoas de gosto parecido deram 2,2 em média a este',
+    )
   })
 
   test('below the minimum of films shared, there is no neighbour', async () => {

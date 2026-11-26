@@ -5,7 +5,8 @@
 // MovieLens sample (`notas_gosto_movielens`) closest to her: the distance
 // is the mean, over the films both rated, of the difference between the
 // percentile of her Nota on her scale and the percentile of the user's on
-// his (`percentis_gosto_movielens`). Only users who rated at least
+// his (`percentis_gosto_movielens`), each film weighted by the Decaimento
+// of her Nota (`decay.ts`), so her taste of today chooses them. Only users who rated at least
 // `min_shared` of her films count. Ties go to whoever shares more films,
 // then to the lower user id. Each neighbour's freshness is the mean
 // Decaimento (`decay.ts`) of her Notas he shares: the Evidence of the
@@ -37,7 +38,8 @@ import { candidatesJson, type Round } from './signals/Signal.ts'
 
 export interface TasteNeighbor {
   readonly user: number
-  /** Mean difference of percentiles over the films shared, 0 to 1. */
+  /** Mean difference of percentiles over the films shared, weighted by
+   * the Decaimento of her Notas, 0 to 1. */
   readonly distance: number
   /** Films both rated. */
   readonly shared: number
@@ -110,7 +112,7 @@ const closest = (
   const sums = new Map<number, [number, number, number]>()
   for (const [user, difference, decay] of differences) {
     const sum = sums.get(user) ?? [0, 0, 0]
-    sum[0] += difference
+    sum[0] += difference * decay
     sum[1] += 1
     sum[2] += decay
     sums.set(user, sum)
@@ -119,7 +121,7 @@ const closest = (
     .filter(([, [, shared]]) => shared >= minShared)
     .map(([user, [total, shared, decay]]) => ({
       user,
-      distance: total / shared,
+      distance: total / decay,
       shared,
       freshness: decay / shared,
     }))
