@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { answerFetch } from '#/content/fetch-answer'
 
 // The group swipe's deck posts here (#182). `voteAction` revalidates the
 // Link da Sessão itself; the import is inside the handler, so the browser
@@ -8,7 +9,7 @@ export const Route = createFileRoute('/participar/votos')({
     handlers: {
       POST: async ({ request }) => {
         const { serveVotes } = await import('#/platform/billboard')
-        return serveVotes(request)
+        return answerFetch(request, await serveVotes(request))
       },
     },
   },
