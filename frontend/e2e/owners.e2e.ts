@@ -152,6 +152,24 @@ test('Bruno tells a Relato about Vera, and Vera sees it on her page', async ({
 
 const SKIP_IMPORT = 'Pular: Importar do Letterboxd ou do Trakt'
 
+test.describe('without JavaScript', () => {
+  test.use({ javaScriptEnabled: false })
+
+  test('the setup guide accepts a plain skip POST', async ({ page }, info) => {
+    test.skip(info.project.name === 'mobile', 'both projects share Vera')
+    await loginAs(page, 'vera@example.org')
+    const guide = section(page, 'Para começar')
+    const posted = page.waitForResponse((response) =>
+      response.url().endsWith('/inicio/pular'),
+    )
+    await guide
+      .getByRole('button', { name: 'Pular: Conector no Claude' })
+      .click()
+    expect((await posted).status()).toBe(303)
+    await expect(guide.getByText('Retomar')).toBeVisible()
+  })
+})
+
 test('a new Dono sees the setup guide, and a skipped step stays skipped', async ({
   page,
 }, info) => {
@@ -173,12 +191,33 @@ test('a new Dono sees the setup guide, and a skipped step stays skipped', async 
   await expect(page.getByRole('link', { name: 'Pedir filme' })).toBeVisible()
   await snap(page, info, 'home-guide')
 
-  await guide.getByRole('button', { name: SKIP_IMPORT }).click()
+  await page.locator('html').evaluate((root) => {
+    root.dataset.setupGuide = 'open'
+  })
+  const { promise, resolve } = Promise.withResolvers<void>()
+  await page.route(
+    '**/inicio/pular',
+    async (route) => {
+      if (route.request().isNavigationRequest()) return route.continue()
+      await promise
+      await route.continue()
+    },
+    { times: 1 },
+  )
+  try {
+    await guide.getByRole('button', { name: SKIP_IMPORT }).click()
+    await expect(guide.getByRole('button', { name: 'Pulando…' })).toBeDisabled()
+    await snap(page, info, 'home-guide-pulando')
+  } finally {
+    resolve()
+  }
+  await expect(guide.getByText('Retomar')).toBeVisible()
+  await snap(page, info, 'home-guide-skipped')
+  await expect(page.locator('html')).toHaveAttribute('data-setup-guide', 'open')
   await expect(page).toHaveURL(/\/$/)
   await page.reload()
   await expect(guide.getByText('Retomar')).toBeVisible()
   await expect(guide.getByRole('button', { name: SKIP_IMPORT })).toHaveCount(0)
-  await snap(page, info, 'home-guide-skipped')
 
   // Every step out of the way: the guide leaves, "pedir filme" stays.
   await guide.getByRole('button', { name: 'Pular: Meu gosto' }).click()

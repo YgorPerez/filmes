@@ -6,7 +6,7 @@ import type {
   EvaluationSummary,
 } from '#/platform/operations'
 import { OPERATIONS } from './operations.copy'
-import { ActionPost, Alert, Detail, Section, Submit } from './operations-parts'
+import { ActionPost, Alert, Detail, Section } from './operations-parts'
 
 const COPY = OPERATIONS.evaluation
 
@@ -169,6 +169,7 @@ function RunForm() {
     <ActionPost
       action="avaliar"
       className="flex flex-wrap items-center gap-xl border-t border-rule pt-xl"
+      submitClassName="sm:ml-auto"
     >
       <label className="flex min-h-touch cursor-pointer items-center gap-md">
         <input
@@ -188,7 +189,6 @@ function RunForm() {
           </span>
         </span>
       </label>
-      <Submit className="sm:ml-auto">{COPY.run}</Submit>
     </ActionPost>
   )
 }

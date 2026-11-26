@@ -1,6 +1,6 @@
 import type { PushStatus } from '@filmes/engine'
 import { OPERATIONS } from './operations.copy'
-import { ActionPost, Alert, Detail, Section, Submit } from './operations-parts'
+import { ActionPost, Alert, Detail, Section } from './operations-parts'
 
 const COPY = OPERATIONS.push
 
@@ -50,9 +50,7 @@ function PushQueue({
         </details>
       )}
       {(status.pending > 0 || status.failures > 0) && (
-        <ActionPost action="enviar">
-          <Submit>{COPY.retry}</Submit>
-        </ActionPost>
+        <ActionPost action="enviar" />
       )}
     </>
   )

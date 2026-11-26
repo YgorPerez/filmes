@@ -3,13 +3,11 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, within } from 'storybook/test'
 import { ActionPost, Detail } from './operations-parts'
-import { Button } from './shadcn/button'
 
 const meta = {
   component: ActionPost,
   args: {
     action: 'enviar',
-    children: <Button type="submit">Tentar de novo</Button>,
   },
 } satisfies Meta<typeof ActionPost>
 
@@ -20,7 +18,9 @@ type Story = StoryObj<typeof meta>
 export const Action: Story = {
   play: async ({ canvasElement }) => {
     await expect(
-      within(canvasElement).getByRole('button', { name: 'Tentar de novo' }),
+      within(canvasElement).getByRole('button', {
+        name: 'Tentar enviar agora',
+      }),
     ).toHaveProperty('type', 'submit')
   },
 }

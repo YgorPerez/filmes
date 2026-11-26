@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { answerFetch } from '#/content/fetch-answer'
 
 // The home's "pular" posts here (`setupSkipAction`). Outside `_owner/`,
 // since the page gate runs for pages, not for server handlers: the action
@@ -9,7 +10,7 @@ export const Route = createFileRoute('/inicio/pular')({
     handlers: {
       POST: async ({ request }) => {
         const { serveSetupSkip } = await import('#/platform/setup-guide')
-        return serveSetupSkip(request)
+        return answerFetch(request, await serveSetupSkip(request))
       },
     },
   },
