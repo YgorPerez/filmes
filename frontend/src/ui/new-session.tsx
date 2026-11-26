@@ -1,5 +1,7 @@
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   DEFAULT_SERIES_ORDER_CHOICE,
+  isSessionRequestRefusal,
   MAX_CHILD_AGE,
   RULE_CHOICES,
   SERIES_ORDER_CHOICES,
@@ -10,19 +12,21 @@ import { similarParam } from '#/content/catalog-search'
 import type { SearchAnswer } from '#/platform/catalog-search'
 import type { PageReading } from '#/platform/reading'
 import type { NewSessionDraft, RequestOptions } from '#/platform/sessions'
-import { CATALOG_SEARCH } from './catalog-search.copy'
 import { ImportsFrame } from './imports'
+import { useFetchForm, useHydrated } from './kit/fetch-form'
 import { Option } from './kit/option'
 import { OwnerTag } from './kit/owner-tag'
 import {
   Alert,
+  ChosenFilms,
   Disclosure,
   Item,
-  LinkButton,
   Notice,
+  PickFilm,
+  SessionFilmLookup,
+  type ChosenFilm,
   Section,
   SelectField,
-  SessionFilmLookup,
   Submit,
   TextField,
 } from './person-parts'
@@ -44,9 +48,11 @@ const labels = (candidates: readonly { label: string }[]) =>
 function ReadingSaid({
   reading,
   pick,
+  onPick,
 }: {
   reading: PageReading
   pick: (id: string) => string
+  onPick?: (film: ChosenFilm & { label: string }) => void
 }) {
   const said = SESSIONS.form.reading
   // A title of several films lists them, with "Usar"; the rest is a line.
@@ -85,12 +91,12 @@ function ReadingSaid({
               <Item
                 key={film.id}
                 actions={
-                  <LinkButton
-                    href={pick(film.id)}
-                    label={CATALOG_SEARCH.pickLabel(film.label)}
-                  >
-                    {CATALOG_SEARCH.pick}
-                  </LinkButton>
+                  <PickFilm
+                    id={film.id}
+                    label={film.label}
+                    pick={pick}
+                    onPick={onPick}
+                  />
                 }
               >
                 <span className="font-semibold">{film.label}</span>
@@ -107,10 +113,14 @@ function Sentence({
   text,
   reading,
   pick,
+  onPick,
+  busy,
 }: {
   text?: string
   reading: PageReading | null
   pick: (id: string) => string
+  onPick?: (film: ChosenFilm & { label: string }) => void
+  busy: string | null
 }) {
   const { form } = SESSIONS
   return (
@@ -125,11 +135,16 @@ function Sentence({
             defaultValue={text}
           />
         </div>
-        <Submit name="ler" value="sim" className="self-start sm:self-auto">
-          {form.read}
+        <Submit
+          name="ler"
+          value="sim"
+          disabled={busy !== null}
+          className="self-start sm:self-auto"
+        >
+          {busy === 'ler' ? form.reading.busy : form.read}
         </Submit>
       </div>
-      {reading && <ReadingSaid reading={reading} pick={pick} />}
+      {reading && <ReadingSaid reading={reading} pick={pick} onPick={onPick} />}
     </div>
   )
 }
@@ -238,7 +253,6 @@ export function NewSession({
   return (
     <ImportsFrame back={SESSIONS.back} backTo="/sessoes">
       <h1 className="font-display text-counter-title">{form.title}</h1>
-      {refusal && <Alert>{SESSIONS.refusals[refusal]}</Alert>}
       {options === null ? (
         <Alert>{SESSIONS.unavailable}</Alert>
       ) : (
@@ -276,11 +290,17 @@ function NewSessionForm({
 }) {
   const { form } = SESSIONS
   const asked = draft?.fields ?? {}
+  const live = useHydrated()
+  const { refused, alert, onAnswer } = useRefusalInPlace(refusal)
+  const { onSubmit, busy } = useFetchForm(onAnswer)
+  const films = useChosenFilms(similar)
+  const onPick = live ? films.take : undefined
   return (
     <form
       method="post"
       action="/sessoes/nova/enviar"
       aria-label={form.label}
+      onSubmit={onSubmit}
       className="flex flex-col gap-3xl"
     >
       {/* Enter in any field sends the form, as before "Ler" came above:
@@ -291,40 +311,38 @@ function NewSessionForm({
         {form.submit}
       </button>
       {note && <input type="hidden" name="nota" value={note} />}
+      {refused && (
+        <div ref={alert}>
+          <Alert>{SESSIONS.refusals[refused]}</Alert>
+        </div>
+      )}
       <Sentence
         text={asked.request}
         reading={draft?.reading ?? null}
         pick={pick}
+        onPick={onPick}
+        busy={busy}
       />
       <Attendees options={options} asked={asked} />
       <Moods moods={options.moods} asked={asked} />
       <div className="flex flex-col gap-sm">
-        <Disclosure
-          summary={form.searchFold}
+        <Similar
           open={
-            search !== null || similar !== undefined || refusal === 'parecido'
+            search !== null ||
+            similar !== undefined ||
+            refused === 'parecido' ||
+            films.chosen.length > 0
           }
-        >
-          <div className="flex flex-col gap-xl">
-            <SessionFilmLookup
-              name="buscar"
-              label={form.searchLabel}
-              answer={search}
-              pick={pick}
-            />
-            <TextField
-              name="parecido"
-              label={form.similar}
-              hint={form.similarHint}
-              defaultValue={similar}
-            />
-          </div>
-        </Disclosure>
+          search={search}
+          similar={similar}
+          pick={pick}
+          films={live ? films : null}
+        />
         <Disclosure
           summary={form.details}
           open={
             detailsAsked(asked) ||
-            (refusal !== undefined && DETAILS_REFUSALS.has(refusal))
+            (refused !== undefined && DETAILS_REFUSALS.has(refused))
           }
         >
           <div className="flex flex-col gap-xl">
@@ -334,10 +352,107 @@ function NewSessionForm({
           </div>
         </Disclosure>
       </div>
-      <Submit variant="primary" className="w-full sm:w-auto sm:self-start">
-        {form.submit}
+      <Submit
+        variant="primary"
+        disabled={busy !== null}
+        className="w-full sm:w-auto sm:self-start"
+      >
+        {busy !== null && busy !== 'ler' ? form.submitting : form.submit}
       </Submit>
     </form>
+  )
+}
+
+/** A refusal the post by `fetch` came back with (#235): shown in place,
+ * over the form as the Dono left it, and scrolled into view. `refusal`
+ * is the one the page came with (a plain POST). */
+function useRefusalInPlace(refusal: SessionRequestRefusal | undefined) {
+  const [refused, setRefused] = useState(refusal)
+  const [refusals, setRefusals] = useState(0)
+  const alert = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (refusals > 0) alert.current?.scrollIntoView({ block: 'center' })
+  }, [refusals])
+  const onAnswer = (to: string) => {
+    const url = new URL(to, window.location.origin)
+    const why = url.searchParams.get('erro')
+    if (url.pathname !== '/sessoes/nova' || !isSessionRequestRefusal(why))
+      return false
+    setRefused(why)
+    setRefusals((n) => n + 1)
+    return true
+  }
+  return { refused, alert, onAnswer }
+}
+
+/** The films "Parecido com" took, from the ids the page came with. */
+function useChosenFilms(similar: string | undefined) {
+  const [chosen, setChosen] = useState<readonly ChosenFilm[]>(() =>
+    (similar ?? '')
+      .split(',')
+      .filter((id) => id !== '')
+      .map((id) => ({ id })),
+  )
+  const take = (film: ChosenFilm) =>
+    setChosen((films) =>
+      films.some((f) => f.id === film.id) ? films : [...films, film],
+    )
+  const drop = (id: string) =>
+    setChosen((films) => films.filter((f) => f.id !== id))
+  const name = useCallback(
+    (id: string, label: string) =>
+      setChosen((films) => films.map((f) => (f.id === id ? { id, label } : f))),
+    [],
+  )
+  return { chosen, take, drop, name }
+}
+
+/** "Parecido com um filme?": the Catálogo search, then the films taken.
+ * `films` is null before the JavaScript: a field of ids, and "Usar" a
+ * link (`pick`). */
+function Similar({
+  open,
+  search,
+  similar,
+  pick,
+  films,
+}: {
+  open: boolean
+  search: SearchAnswer | null
+  similar?: string
+  pick: (id: string) => string
+  films: ReturnType<typeof useChosenFilms> | null
+}) {
+  const { form } = SESSIONS
+  return (
+    <Disclosure summary={form.searchFold} open={open}>
+      <div className="flex flex-col gap-xl">
+        <SessionFilmLookup
+          name="buscar"
+          label={form.searchLabel}
+          answer={search}
+          pick={pick}
+          onPick={films?.take}
+        />
+        {films ? (
+          <ChosenFilms
+            name="parecido"
+            label={form.similar}
+            empty={form.similarNone}
+            films={films.chosen}
+            onRemove={films.drop}
+            onLabel={films.name}
+          />
+        ) : (
+          <TextField
+            name="parecido"
+            label={form.similar}
+            hint={form.similarHint}
+            defaultValue={similar}
+          />
+        )}
+      </div>
+    </Disclosure>
   )
 }
 

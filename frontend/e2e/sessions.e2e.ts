@@ -112,10 +112,10 @@ test('“Ler” fills the form from one sentence and says what it left out', asy
   await page.goto('/sessoes/nova')
   await snap(page, info, 'sessoes-nova-frase-vazia')
 
-  // "Ler" with no sentence: the page says so.
+  // "Ler" with no sentence: the page says so, in place (#235).
   await page.getByRole('button', { name: 'Ler' }).click()
-  await expect(page).toHaveURL(/\/sessoes\/nova\?erro=frase$/)
   await expect(page.getByRole('alert')).toContainText('Escreva a frase')
+  await expect(page).toHaveURL(/\/sessoes\/nova$/)
 
   // What the Dono set before "Ler" stays: the reading fills on top.
   await page.getByRole('checkbox', { name: 'pra rir' }).check()
@@ -146,13 +146,14 @@ test('“Ler” fills the form from one sentence and says what it left out', asy
   ).toBeVisible()
   await snap(page, info, 'sessoes-nova-frase-lida')
 
-  // "Usar" on one of the films takes it for "Parecido com", and the form
-  // keeps what "Ler" filled.
-  await page.getByRole('link', { name: 'Usar Reprise (2004)' }).click()
-  await expect(page).toHaveURL(/parecido=tt9012602/)
-  await expect(page.getByLabel('Parecido com', { exact: false })).toHaveValue(
-    'tt9012602',
-  )
+  // "Usar" on one of the films takes it for "Parecido com" in place, and
+  // the form keeps what "Ler" filled.
+  await page.getByRole('button', { name: 'Usar Reprise (2004)' }).click()
+  await expect(
+    page.getByRole('button', { name: 'Tirar Reprise (2004)' }),
+  ).toBeVisible()
+  await expect(page).toHaveURL(/\/sessoes\/nova\?nota=[\w-]+$/)
+  await snap(page, info, 'sessoes-nova-parecido')
   await expect(page.getByRole('checkbox', { name: 'pra rir' })).toBeChecked()
   await expect(page.getByLabel('Criança')).toHaveValue('7')
 })
@@ -164,20 +165,22 @@ test('the form says why it refused, and “o gosto de uma Pessoa” orders', asy
   await loginAsBruno(page)
   await page.goto('/sessoes/nova')
 
-  // No Presente: the page refuses before the engine.
+  // No Presente: the page refuses before the engine, in place, with the
+  // form as it was (#235).
   await page.getByRole('checkbox', { name: /Bruno/ }).uncheck()
   await ask(page)
-  await expect(page).toHaveURL(/\/sessoes\/nova\?erro=presentes$/)
   await expect(page.getByRole('alert')).toContainText(
     'Marque pelo menos um Presente',
   )
+  await expect(page).toHaveURL(/\/sessoes\/nova$/)
+  await expect(page.getByRole('checkbox', { name: /Bruno/ })).not.toBeChecked()
   await snap(page, info, 'sessoes-recusa')
 
-  // A film the Catálogo does not have: the engine refuses.
-  await page.getByText('Parecido com um filme?').click()
-  await page.getByLabel('Parecido com', { exact: false }).fill('tt0000001')
+  // A film the Catálogo does not have (from a link): the engine refuses.
+  await page.goto('/sessoes/nova?parecido=tt0000001')
   await ask(page)
-  await expect(page).toHaveURL(/\/sessoes\/nova\?erro=parecido$/)
+  await expect(page.getByRole('alert')).toContainText('Parecido com')
+  await page.getByRole('button', { name: 'Tirar tt0000001' }).click()
 
   await page.getByRole('checkbox', { name: 'Quim' }).check()
   await page.getByText('Mais opções', { exact: true }).click()
