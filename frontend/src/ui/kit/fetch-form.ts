@@ -4,7 +4,8 @@
 // as always. With it, the submit goes by
 // `fetch` with the same fields and the button pressed, to the same route,
 // which answers `{ to }` (`answerFetch`) instead of the 303; the page then
-// goes to `to` through the router, keeping the scroll.
+// goes to `to` through the router, keeping the scroll, and loads again
+// what it shows.
 
 import { useHydrated, useRouter } from '@tanstack/react-router'
 import { useRef, useState, type FormEvent } from 'react'
@@ -23,17 +24,25 @@ async function answerOf(response: Response): Promise<string | null> {
 /** `onSubmit` for a `<form method="post">`, and `busy`: the `name` of the
  * button whose post is running (`''` for one without a name), null when
  * none is. A second submit while one runs is dropped. `onAnswer` sees the
- * `to` first and returns true when it took care of it (a refusal shown in
- * place); otherwise the page goes there. */
-export function useFetchForm(onAnswer?: (to: string) => boolean) {
+ * `to` (and the form posted) first and returns true when it took care of
+ * it (a refusal shown in place); otherwise the page goes there. */
+export function useFetchForm(
+  onAnswer?: (to: string, form: HTMLFormElement) => boolean,
+) {
   const router = useRouter({ warn: false })
   const [busy, setBusy] = useState<string | null>(null)
   const running = useRef(false)
 
-  const go = async (to: string) => {
-    if (onAnswer?.(to)) return
-    if (router) await router.navigate({ href: to, resetScroll: false })
-    else window.location.assign(to)
+  const go = async (to: string, form: HTMLFormElement) => {
+    if (onAnswer?.(to, form)) return
+    if (!router) return window.location.assign(to)
+    const stays =
+      new URL(to, window.location.origin).pathname ===
+      router.state.location.pathname
+    await router.navigate({ href: to, resetScroll: false })
+    // The post changed what the page shows, and a route that stays (only
+    // its query changes) keeps its loader's data: load it again.
+    if (stays) await router.invalidate()
   }
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -51,7 +60,7 @@ export function useFetchForm(onAnswer?: (to: string) => boolean) {
       .then(answerOf)
       .catch(() => null)
       .then(async (to) => {
-        if (to !== null) return go(to)
+        if (to !== null) return go(to, form)
         // Anything but `{ to }`: the plain POST, which shows it, with
         // the button pressed as a field (`submit()` sends no submitter).
         const pressed = submitter?.getAttribute('name')

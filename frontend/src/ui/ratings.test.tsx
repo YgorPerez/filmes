@@ -4,7 +4,7 @@
 import type { RatingQueue } from '@filmes/engine'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, beforeEach, describe, expect, it } from 'vite-plus/test'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import type { SearchAnswer } from '#/platform/catalog-search'
 import { RatingScreen } from './imports'
 import { RATINGS } from './ratings.copy'
@@ -46,7 +46,10 @@ const SEARCH: SearchAnswer = {
 }
 
 beforeEach(() => localStorage.clear())
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  vi.unstubAllGlobals()
+})
 
 const card = () => within(screen.getByRole('article'))
 const sent = () =>
@@ -128,6 +131,11 @@ describe('the rating screen', () => {
   })
 
   it('once Pronto wrote them, the sent Notas leave the draft and it says how many', async () => {
+    // The post goes on its way and the page reloads before it answers.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn<typeof fetch>(() => new Promise<Response>(() => {})),
+    )
     const user = userEvent.setup()
     const first = render(<RatingScreen queue={QUEUE} search={null} />)
     await user.click(card().getByRole('button', { name: 'Nota 8' }))
