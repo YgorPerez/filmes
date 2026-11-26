@@ -67,6 +67,10 @@ Notas de outras Pessoas, para os testes de grupo (`test_grupo.py`):
 
 Os filmes de Lia Moura, Tomás Reis, Beatriz Sá e Jorge Amaral não ligam a Nota nenhuma: são os filmes só com palpites, que completam a lista com `--quantos 50`.
 
+### Régua por percentil (#172)
+
+`notas_movielens.csv` é a população do MovieLens da fixture: 50 notas inventadas, distribuídas para que, com os cortes de `[rating_percentile]` em `config/weights.toml`, a leitura pela população dê o que a régua absoluta antiga dava (5 e 4,5 forte, 4 moderada, 3,5 e 3 fraca a favor, 2,5 fraca contra, 2 moderada contra, 1,5 ou menos forte contra). Toda Pessoa da fixture tem menos de 20 Notas, o mínimo, e é lida por ela; assim as tabelas acima continuam valendo. Os testes da escala própria baixam o mínimo (`weightsWith`) para o Bruno, com 11 Notas, ser lido pelas dele: 5 forte, 4,5 moderada, 4 fraca, 3,5 fraca contra. Mudou um corte em `weights.toml`? Refaça esta distribuição.
+
 ### Sinais de Review (#21)
 
 Os filmes `tt90010NN` e `tt90011NN` não têm diretor. Eles se ligam às Notas só pela tabela `vizinhos`, e cada um tem pelo menos uma Evidência do Bruno, para não virar filme só com palpites nos testes de grupo.

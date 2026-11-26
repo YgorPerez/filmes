@@ -30,6 +30,7 @@ import {
   type Evidence,
   type EvidenceJson,
 } from '../evidence/Evidence.ts'
+import type { RatingScale } from '../evidence/ruler.ts'
 import type { EngineServices } from '../runtime/Engine.ts'
 import { Environment } from '../runtime/Environment.ts'
 import { engineError, type EngineError } from '../runtime/EngineError.ts'
@@ -73,6 +74,7 @@ import {
   type Rule,
   type RuleName,
 } from './rule.ts'
+import { readRatingScale } from '../people/rating-scale.ts'
 import { SIGNALS } from './signals/index.ts'
 import type { Round } from './signals/Signal.ts'
 import { individualUtility } from './utility.ts'
@@ -397,6 +399,9 @@ export const rank = (
         [-Math.abs(contribution(a, weights)), a.factId ?? ''],
         [-Math.abs(contribution(b, weights)), b.factId ?? ''],
       )
+    const scales = new Map<string, RatingScale>()
+    for (const p of credits.keys())
+      scales.set(p, yield* readRatingScale(db, p, weights))
     const films: RecommendedFilm[] = []
     for (const [position, { key, film, utilities, evidence }] of placed) {
       const all = [
@@ -420,8 +425,17 @@ export const rank = (
         adjustment,
       ).map((p) => {
         const credit = credits.get(p)
-        if (credit === undefined) throw pythonError('KeyError', `'${p}'`)
-        return creditLine(p, names.get(p) ?? p, credit, film.id, run.today)
+        const scale = scales.get(p)
+        if (credit === undefined || scale === undefined)
+          throw pythonError('KeyError', `'${p}'`)
+        return creditLine(
+          p,
+          names.get(p) ?? p,
+          credit,
+          scale,
+          film.id,
+          run.today,
+        )
       })
       const lines = [...asked.linesOf(film.id), ...signalLines, ...creditLines]
       const withoutFactOn = [...utilities]

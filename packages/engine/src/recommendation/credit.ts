@@ -13,7 +13,7 @@ import { compareTuple } from '../compat/compare.ts'
 import { pythonError } from '../compat/python-error.ts'
 import { pyRound, pySum } from '../compat/number.ts'
 import { makeEvidence, type Evidence } from '../evidence/Evidence.ts'
-import { feedbackStrength } from '../evidence/ruler.ts'
+import { feedbackStrength, type RatingScale } from '../evidence/ruler.ts'
 import { ratingText } from '../evidence/wording.ts'
 import { sessionOrder } from '../sessions/order.ts'
 import { num, numOrNull, text, textOrNull } from '../sqlite/row.ts'
@@ -131,6 +131,7 @@ export const creditLine = (
   person: string,
   name: string,
   credit: Credit,
+  scale: RatingScale,
   filmId: string,
   today: string,
 ): Evidence => {
@@ -154,6 +155,7 @@ export const creditLine = (
     date: text(reaction, 'data'),
     strength: feedbackStrength(
       kind,
+      scale,
       rating ?? 0,
       text(reaction, 'data'),
       today,

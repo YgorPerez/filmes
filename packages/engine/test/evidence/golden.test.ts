@@ -10,7 +10,6 @@ import {
   contribution,
   durationText,
   evidenceToJson,
-  feedbackStrength,
   filmText,
   genomeStrength,
   imdbRatingStrength,
@@ -25,12 +24,10 @@ import {
   movielensTagStrength,
   neighborStrength,
   pathStrength,
-  ratingStrength,
   ratingText,
   requestMetadataStrength,
   ruleKey,
   ruleToJson,
-  seedStrength,
   seedText,
   similarStrength,
   statedStrength,
@@ -107,26 +104,15 @@ const englishOut = (value: Tagged): Tagged => {
 
 describe('the Força ruler', () => {
   type RulerRow = { fn: string; args: Tagged[]; out: Tagged }
-  const rows = golden<RulerRow & { constant?: string }>('ruler', FOLDER)
+  /** Python read a Nota by absolute thresholds; the engine reads it by its
+   * percentile on the Pessoa's scale (#172, `percentile.test.ts`), so the
+   * vectors of the Nota, seed and Feedback rulers no longer apply. */
+  const PERCENTILE = new Set(['forca_nota', 'forca_semente', 'forca_feedback'])
+  const rows = golden<RulerRow & { constant?: string }>('ruler', FOLDER).filter(
+    (row) => !PERCENTILE.has(row.fn),
+  )
 
   const call: Record<string, (args: Tagged[]) => unknown> = {
-    forca_nota: ([rating, date, today, fromFeedback]) =>
-      ratingStrength(num(rating), str(date), str(today), bool(fromFeedback)),
-    forca_semente: ([seed, rating, date, today, fromFeedback]) =>
-      seedStrength(
-        kind(str(seed)) as SeedKind,
-        num(rating),
-        str(date),
-        str(today),
-        bool(fromFeedback),
-      ),
-    forca_feedback: ([reaction, rating, date, today]) =>
-      feedbackStrength(
-        kind(str(reaction)) as 'rating' | 'report',
-        num(rating),
-        str(date),
-        str(today),
-      ),
     forca_dito: ([said, specific, date, today]) =>
       statedStrength(
         kind(str(said)) as 'stated' | 'report',
@@ -162,7 +148,7 @@ describe('the Força ruler', () => {
 
   test('every function gives what regua.py gives', () => {
     const calls = rows.filter((row) => row.constant === undefined)
-    expect(calls.length).toBeGreaterThanOrEqual(10_000)
+    expect(calls.length).toBeGreaterThanOrEqual(7_000)
     expect(
       misses(
         calls.map((row) => ({ ...row, out: englishOut(row.out) })),
@@ -181,7 +167,7 @@ describe('the Força ruler', () => {
 
   test('the leap-day and edge vectors are there', () => {
     const dated = rows.filter((row) =>
-      ['forca_nota', 'forca_dito', 'mais_velha_que'].includes(row.fn),
+      ['forca_dito', 'mais_velha_que'].includes(row.fn),
     )
     const today = (row: RulerRow) =>
       str(row.args[row.fn === 'forca_dito' ? 3 : 2] ?? null)

@@ -6,6 +6,7 @@
 import { Effect } from 'effect'
 import { pyRound } from '../compat/number.ts'
 import { readPeople } from '../people/people.ts'
+import { readRatingScale } from '../people/rating-scale.ts'
 import { computeCredit, creditLine } from '../recommendation/credit.ts'
 import type { EngineError } from '../runtime/EngineError.ts'
 import { Environment } from '../runtime/Environment.ts'
@@ -39,18 +40,28 @@ export const creditNow = (
       (yield* readPeople).map((p) => [p.slug, p.name] as const),
     )
     const sqlite = yield* Sqlite
-    const credits = yield* sqlite.read((db) =>
-      computeCredit(db, attendees, weights.credit.window),
+    const [credits, scales] = yield* sqlite.read((db) =>
+      Effect.all([
+        computeCredit(db, attendees, weights.credit.window),
+        Effect.forEach(attendees, (p) => readRatingScale(db, p, weights)),
+      ]),
     )
-    return attendees.map((person) => {
+    return attendees.map((person, i) => {
       const credit = credits.get(person)
-      if (credit === undefined || credit.origin === null)
+      const scale = scales[i]
+      if (credit === undefined || credit.origin === null || !scale)
         return { person, value: 0, line: null }
       return {
         person,
         value: pyRound(credit.value, 4),
-        line: creditLine(person, names.get(person) ?? person, credit, '', today)
-          .text,
+        line: creditLine(
+          person,
+          names.get(person) ?? person,
+          credit,
+          scale,
+          '',
+          today,
+        ).text,
       }
     })
   })

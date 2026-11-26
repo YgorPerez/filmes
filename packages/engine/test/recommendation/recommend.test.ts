@@ -13,7 +13,7 @@ import {
   type RecommendedFilm,
 } from '../../src/index.ts'
 import { useFixture, type Fixture } from '../fixture.ts'
-import { engineRecommendation, film, titles } from './support.ts'
+import { engineRecommendation, film, titles, weightsWith } from './support.ts'
 
 const EVIDENCE_FIELDS = [
   'contribution',
@@ -26,8 +26,8 @@ const EVIDENCE_FIELDS = [
   'text',
 ]
 
-const all = (fixture: Fixture) =>
-  engineRecommendation(fixture, { attendees: ['dono'], count: 50 })
+const all = (fixture: Fixture, vars = {}) =>
+  engineRecommendation(fixture, { attendees: ['dono'], count: 50 }, vars)
 
 const ofKind = (f: RecommendedFilm, kind: string) =>
   (f.evidence['bruno'] ?? []).filter((e) => e.kind === kind)
@@ -229,6 +229,64 @@ describe('recommend for the Dono alone', () => {
           message: '--quantos precisa ser 1 ou mais',
         },
       },
+    })
+  })
+})
+
+describe('the ruler reads a Nota by its percentile (#172)', () => {
+  // Bruno has 11 Notas: 5 twice, 4,5 twice, 4 four times, 3,5, 2 and 1.
+  // Below the minimum of 20 they are read on the fixture's MovieLens
+  // population (`notas_movielens.csv`), which gives what the old absolute
+  // ruler gave. With a minimum of 10, on his own Notas: 5 is his top 10%
+  // (strong), 4,5 moderate, and 4, near his median, only weak.
+  const own = (fixture: Fixture) =>
+    weightsWith(fixture, 'min_ratings = 20', 'min_ratings = 10')
+
+  test('from the minimum on, a seed Nota is read on his own Notas', async () => {
+    const fixture = useFixture()
+    const f = film(await all(fixture, own(fixture)), 'As Horas Lentas')
+
+    expect(
+      Object.fromEntries(ofKind(f, 'rating').map((e) => [e.text, e.strength])),
+    ).toEqual({
+      'deu 5 a O Farol de Areia (2012), também de Helena Prado': 'strong',
+      'deu 4,5 a Maré Baixa (2015), também de Helena Prado': 'moderate',
+      'deu 4 a Cidade de Vidro (2018), também de Helena Prado': 'weak',
+    })
+  })
+
+  test('the aggregated metadata counts only his high Notas', async () => {
+    const fixture = useFixture()
+    const e = metadata(await all(fixture, own(fixture)), 'As Horas Lentas')
+
+    expect([e?.text, e?.strength]).toEqual([
+      'dirigido por Helena Prado, como 2 filmes a que deu Nota alta: O Farol de Areia (2012) e Maré Baixa (2015)',
+      'moderate',
+    ])
+  })
+
+  test('a Nota below his median speaks against the film', async () => {
+    const fixture = useFixture()
+    const vars = own(fixture)
+    const ratings = async (extra: object) =>
+      Object.fromEntries(
+        ofKind(film(await all(fixture, extra), 'Vento Norte'), 'rating').map(
+          (e) => [e.text, [e.strength, Math.sign(e.contribution)]],
+        ),
+      )
+
+    // On the population, his 3,5 is a weak Nota in favour; on his own
+    // Notas it sits at 23%, below his median: weak against.
+    expect(await ratings({})).toEqual({
+      'deu 4 a Jardim Suspenso (2017), também de Marta Quintal': [
+        'moderate',
+        1,
+      ],
+      'deu 3,5 a Rio Abaixo (2014), também de Marta Quintal': ['weak', 1],
+    })
+    expect(await ratings(vars)).toEqual({
+      'deu 4 a Jardim Suspenso (2017), também de Marta Quintal': ['weak', 1],
+      'deu 3,5 a Rio Abaixo (2014), também de Marta Quintal': ['weak', -1],
     })
   })
 })

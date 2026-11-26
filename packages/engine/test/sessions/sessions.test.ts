@@ -140,7 +140,7 @@ describe('recomendar opens the Session', () => {
         ' · Fonte: Letterboxd do Bruno, 2025-06-01 · Força: forte · Tipo: nota\n',
     )
     expect(body).toContain(
-      '     - Evidência: dirigido por Helena Prado, como 3 filmes a que deu 4 ou mais:' +
+      '     - Evidência: dirigido por Helena Prado, como 3 filmes a que deu Nota alta:' +
         ' O Farol de Areia (2012), Maré Baixa (2015) e Cidade de Vidro (2018)' +
         ' · Fonte: Wikidata, 2026-11-20 · Força: forte · Tipo: metadado\n',
     )
