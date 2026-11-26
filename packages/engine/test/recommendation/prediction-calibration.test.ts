@@ -13,6 +13,7 @@ import { join } from 'node:path'
 import { describe, expect, test } from 'vite-plus/test'
 import {
   parseYaml,
+  personView,
   rebuild,
   recommendSession,
   yamlToJson,
@@ -20,7 +21,12 @@ import {
   type Vars,
 } from '../../src/index.ts'
 import { ROOT, useFixture, type Fixture } from '../fixture.ts'
-import { engineRecommendation, film, weightsWith } from './support.ts'
+import {
+  engineRecommendation,
+  film,
+  tasteWeights,
+  weightsWith,
+} from './support.ts'
 
 const herFilms = Array.from(
   { length: 9 },
@@ -89,6 +95,44 @@ const veraOnProva = async (
   )
   return film(out, 'A Prova')
 }
+
+describe('the Pessoa’s prediction error', () => {
+  test('averages the calibrated errors on the Já vi scale', async () => {
+    const fixture = useFixture()
+    const catalog = await withKinderNeighbours(fixture)
+    const view = await fixture.ok(
+      personView('vera', { predictionError: true }),
+      {
+        ...catalog,
+        ...tasteWeights(fixture, 3, 5, 9),
+      },
+    )
+
+    expect(view.predictionError?.films).toBe(9)
+    // The 9/29 weight on the fit (665/369 × percentile − 611/738)
+    // brings the mean absolute error from 2.10234 to 1.45536 points.
+    expect(view.predictionError?.meanAbsoluteError).toBeCloseTo(1.45536, 5)
+  })
+
+  test('is absent below the minimum number of comparable films', async () => {
+    const fixture = useFixture()
+    const catalog = await withKinderNeighbours(fixture)
+    for (const [minShared, minRatings] of [
+      [5, 10],
+      [9, 9],
+    ] as const) {
+      const view = await fixture.ok(
+        personView('vera', { predictionError: true }),
+        {
+          ...catalog,
+          ...tasteWeights(fixture, 3, minShared, minRatings),
+        },
+      )
+
+      expect(view.predictionError).toBeUndefined()
+    }
+  })
+})
 
 describe('the calibrated Nota prevista', () => {
   test('a Pessoa whose neighbours are kinder than her gets a lower one', async () => {

@@ -121,7 +121,28 @@ const IARA: PersonPage = {
 /** The setup guide's steps, in its order (`SETUP_STEPS`). */
 const STEPS: readonly SetupStep[] = ['taste', 'import', 'connector']
 
-const OWN: PersonPage = { ...IARA, person: 'bruno', name: 'Bruno', owner: true }
+const WITH_HISTORY: PersonPage = {
+  ...IARA,
+  predictionError: { meanAbsoluteError: 1.2, films: 30 },
+  ratings: Array.from({ length: 30 }, (_, i) => ({
+    filmId: `tt90004${String(i + 1).padStart(2, '0')}`,
+    title: i === 0 ? 'Fronteira' : `Filme ${i + 1}`,
+    rating: 3 + (i % 5) / 2,
+    date: '2025-08-30',
+    source: 'Letterboxd da Iara',
+    kind: 'rating',
+    factId: `notas:${i + 1}`,
+  })),
+}
+
+const OWN: PersonPage = {
+  ...WITH_HISTORY,
+  person: 'bruno',
+  name: 'Bruno',
+  owner: true,
+}
+
+const PREDICTION_ERROR = 'a previsão erra 1,2 ponto em média, em 30 filmes'
 
 const meta = {
   component: PersonScreen,
@@ -133,10 +154,12 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const AnotherPerson: Story = {
+  args: { page: WITH_HISTORY },
   play: async ({ canvasElement }) => {
-    await expect(
-      within(canvasElement).getByRole('region', { name: PERSON.notes.title }),
-    ).toBeVisible()
+    const notes = within(canvasElement).getByRole('region', {
+      name: PERSON.notes.title,
+    })
+    await expect(within(notes).getByText(PREDICTION_ERROR)).toBeVisible()
   },
 }
 
@@ -146,7 +169,7 @@ export const MyTaste: Story = {
     page: OWN,
     start: {
       setup: {
-        ratings: 3,
+        ratings: 30,
         steps: STEPS.map((step) => ({
           step,
           done: step === 'taste',
@@ -155,6 +178,11 @@ export const MyTaste: Story = {
       },
       mcpUrl: 'https://filmes.example/mcp',
     },
+  },
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByText(PREDICTION_ERROR),
+    ).toBeVisible()
   },
 }
 
@@ -179,6 +207,11 @@ export const Empty: Story = {
       openQuestions: [],
       ratings: null,
     },
+  },
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).queryByText(/a previsão erra/),
+    ).not.toBeInTheDocument()
   },
 }
 

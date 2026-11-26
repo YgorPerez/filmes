@@ -38,6 +38,7 @@ import {
   ratingPercentile,
   type RatingScale,
 } from '../evidence/ruler.ts'
+import { readRatingScale } from '../people/rating-scale.ts'
 import type { Weights } from '../runtime/Weights.ts'
 import {
   calibrate,
@@ -115,6 +116,7 @@ ORDER BY g.filme_id, g.usuario
 
 /** One of her Notas: its percentile on her scale and its Decaimento. */
 interface OwnRating {
+  readonly rating: number
   readonly percentile: number
   readonly decay: number
 }
@@ -141,11 +143,15 @@ const closer = (
   b: Pick<TasteNeighbor, 'user' | 'distance' | 'shared'>,
 ): number => a.distance - b.distance || b.shared - a.shared || a.user - b.user
 
+interface RatedComparison extends Comparison {
+  readonly rating: number
+}
+
 /** Her taste neighbours, and the comparisons the calibration is fitted
  * on. */
 interface Neighbourhood {
   readonly neighbors: ReadonlyArray<TasteNeighbor>
-  readonly comparisons: ReadonlyArray<Comparison>
+  readonly comparisons: ReadonlyArray<RatedComparison>
 }
 
 /** Every user who shares `minShared` of her films or more, the closest
@@ -255,13 +261,17 @@ const tasteNeighbourhood = (
 ): Effect.Effect<Neighbourhood, SqliteError> =>
   Effect.gen(function* () {
     const own = new Map<string, OwnRating>(
-      (yield* db.all(OWN_RATINGS, person)).map((row) => [
-        text(row, 'filme_id'),
-        {
-          percentile: ratingPercentile(scale, num(row, 'nota')),
-          decay: ratingDecay(text(row, 'data'), today, weights.rating_decay),
-        },
-      ]),
+      (yield* db.all(OWN_RATINGS, person)).map((row) => {
+        const rating = num(row, 'nota')
+        return [
+          text(row, 'filme_id'),
+          {
+            rating,
+            percentile: ratingPercentile(scale, rating),
+            decay: ratingDecay(text(row, 'data'), today, weights.rating_decay),
+          },
+        ]
+      }),
     )
     const { k, min_shared } = weights.taste_neighbors
     const key = JSON.stringify([person, k, min_shared, [...own]])
@@ -275,7 +285,7 @@ const tasteNeighbourhood = (
         : []
     const { sums, byFilm } = sharedRatings(rows, own)
     const everyone = ranked(sums, min_shared)
-    const comparisons: Comparison[] = []
+    const comparisons: RatedComparison[] = []
     for (const [film, mine] of own) {
       const predicted = leftOut(
         mine,
@@ -286,7 +296,11 @@ const tasteNeighbourhood = (
         min_shared,
       )
       if (predicted !== null)
-        comparisons.push({ predicted, own: mine.percentile })
+        comparisons.push({
+          predicted,
+          own: mine.percentile,
+          rating: mine.rating,
+        })
     }
     const result = { neighbors: everyone.slice(0, k), comparisons }
     cache.set(key, result)
@@ -303,6 +317,41 @@ const onHerScale = (scale: RatingScale, p: number): number | null => {
   const rating = ratingAtPercentile(scale, p)
   return rating === null ? null : 2 * rating
 }
+
+export interface PersonPredictionError {
+  readonly films: number
+  readonly meanAbsoluteError: number
+}
+
+/** Error on the films used to fit her calibration, in points out of 10. */
+export const personPredictionError = (
+  db: Connection,
+  person: string,
+  weights: Weights,
+  today: string,
+): Effect.Effect<PersonPredictionError | null, SqliteError> =>
+  Effect.gen(function* () {
+    const scale = yield* readRatingScale(db, person, weights)
+    if (scale.source === 'population') return null
+    const { comparisons } = yield* tasteNeighbourhood(
+      db,
+      person,
+      scale,
+      weights,
+      today,
+    )
+    const films = comparisons.length
+    if (films < Math.max(1, weights.rating_percentile.min_ratings)) return null
+    const calibration = fitCalibration(
+      comparisons,
+      weights.prediction_calibration.pseudo_count,
+    )
+    const errors = comparisons.map(({ predicted, rating }) => {
+      const value = onHerScale(scale, calibrate(calibration, predicted))!
+      return Math.abs(value - 2 * rating)
+    })
+    return { films, meanAbsoluteError: mean(errors) }
+  })
 
 /** A neighbour's rating of a Candidate. */
 interface Rater {
