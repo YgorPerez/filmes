@@ -17,7 +17,6 @@ import {
   recommendSession,
   sessionRedoRequest,
   votedBy,
-  yamlToJson,
   type Engine,
   type ErrorOutput,
 } from '@filmes/engine'
@@ -114,12 +113,6 @@ export async function voteAction(
       ...filmsOf(form, 'sim').map((film) => ({ film, vote: 'yes' as const })),
       ...filmsOf(form, 'nao').map((film) => ({ film, vote: 'no' as const })),
     ]
-    const read = await engine.run(readSession(link.session))
-    const owner =
-      read.exitCode === 0
-        ? String(yamlToJson(read.output.frontmatter.get('owner') ?? null))
-        : undefined
-    const vars = owner ? { owner } : {}
     const cast = await engine.run(
       castVotes({
         session: link.session,
@@ -127,10 +120,8 @@ export async function voteAction(
         version: Number(form.get('versao')) || link.version,
         votes,
       }),
-      vars,
     )
     if (cast.exitCode !== 0) {
-      if (cast.output.error.code === 'closed_session') return back()
       logEngineError(cast)
       return deck({ erro: 'indisponivel' })
     }
@@ -142,7 +133,6 @@ export async function voteAction(
     }
     const redone = await engine.run(
       recommendSession({ ...asked.output, keep: [cast.output.keep.join(',')] }),
-      vars,
     )
     if (redone.exitCode !== 0) {
       logEngineError(redone)

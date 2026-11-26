@@ -1,6 +1,13 @@
 import { useRef, useState, type PointerEvent } from 'react'
+import { sessionLinkPath } from '#/content/session-link-address'
+import {
+  votePath,
+  type VoteNotice,
+  type VoteRefusal,
+} from '#/content/session-votes-address'
 import type { VoteDeck } from '#/platform/session-votes'
 import { buttonVariants } from './kit/button-variants'
+import { Alert, Notice } from './kit/status'
 import { VOTES } from './session-votes.copy'
 
 // The group swipe's deck (#182): one film at a time, Não or Sim, by the
@@ -114,5 +121,57 @@ export function VoteCards({
         </>
       )}
     </form>
+  )
+}
+
+/** The swipe's page under the chosen Presente's name: what the last post
+ * did, and the deck, or that she voted on every film of the screen. */
+export function VoteScreen({
+  deck,
+  search,
+}: {
+  deck: VoteDeck | null
+  search: {
+    sessao?: string | undefined
+    chave?: string | undefined
+    presente?: string | undefined
+    feito?: VoteNotice | undefined
+    erro?: VoteRefusal | undefined
+  }
+}) {
+  const { sessao, chave, presente, feito, erro } = search
+  const list = sessao && chave ? sessionLinkPath(sessao, chave, presente) : null
+  return (
+    <section aria-labelledby="votar" className="flex flex-col gap-lg">
+      <h1 id="votar" className="font-display text-title">
+        {VOTES.title}
+      </h1>
+      {feito && <Notice>{VOTES.notices[feito]}</Notice>}
+      {erro && <Alert>{VOTES.refusals[erro]}</Alert>}
+      {deck && deck.films.length > 0 ? (
+        <VoteCards
+          key={`${deck.version}:${deck.films.map((f) => f.id).join(',')}`}
+          deck={deck}
+          action={votePath('votos', search)}
+        />
+      ) : (
+        <>
+          <p>{VOTES.done}</p>
+          <div className="flex flex-wrap gap-sm">
+            <a
+              href={votePath('votar', search)}
+              className={buttonVariants({ variant: 'option' })}
+            >
+              {VOTES.refresh}
+            </a>
+            {list && (
+              <a href={list} className={buttonVariants({ variant: 'option' })}>
+                {VOTES.list}
+              </a>
+            )}
+          </div>
+        </>
+      )}
+    </section>
   )
 }

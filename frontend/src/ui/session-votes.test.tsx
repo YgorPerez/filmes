@@ -4,8 +4,9 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, expect, it } from 'vite-plus/test'
+import { voteSearch } from '#/content/session-votes-address'
 import { VOTES } from './session-votes.copy'
-import { VoteCards } from './session-votes'
+import { VoteCards, VoteScreen } from './session-votes'
 
 afterEach(cleanup)
 
@@ -77,4 +78,52 @@ it('a drag to the left is a no and to the right a yes; a short one is nothing', 
     ['nao', 'tt9000101'],
     ['sim', 'tt9000601'],
   ])
+})
+
+const LINK = { sessao: '2026-11-20-iara', chave: 'k', presente: 'iara' }
+
+it('the page posts the link’s search and says what the last post did', () => {
+  render(<VoteScreen deck={DECK} search={{ ...LINK, feito: 'regerada' }} />)
+
+  expect(screen.getByRole('status').textContent).toBe(VOTES.notices.regerada)
+  expect(screen.queryByRole('alert')).toBeNull()
+  expect(document.querySelector('form')?.getAttribute('action')).toBe(
+    '/participar/votos?sessao=2026-11-20-iara&chave=k&presente=iara',
+  )
+})
+
+it('with every film voted on, it offers to look again and the list', () => {
+  render(
+    <VoteScreen
+      deck={{ version: 2, films: [] }}
+      search={{ ...LINK, erro: 'regerar' }}
+    />,
+  )
+
+  expect(screen.getByRole('alert').textContent).toBe(VOTES.refusals.regerar)
+  expect(screen.getByText(VOTES.done)).toBeTruthy()
+  expect(
+    screen.getByRole('link', { name: VOTES.refresh }).getAttribute('href'),
+  ).toBe('/participar/votar?sessao=2026-11-20-iara&chave=k&presente=iara')
+  expect(
+    screen.getByRole('link', { name: VOTES.list }).getAttribute('href'),
+  ).toBe('/participar?sessao=2026-11-20-iara&chave=k&presente=iara')
+})
+
+it('without a link there is no deck and no list', () => {
+  render(<VoteScreen deck={null} search={{}} />)
+
+  expect(screen.queryByRole('form')).toBeNull()
+  expect(screen.queryByRole('link', { name: VOTES.list })).toBeNull()
+})
+
+it('the page’s search keeps only the notices and refusals it knows', () => {
+  expect(voteSearch({ feito: 'votado', erro: 'indisponivel' })).toEqual({
+    feito: 'votado',
+    erro: 'indisponivel',
+  })
+  expect(voteSearch({ feito: 'x', erro: 3 })).toEqual({
+    feito: undefined,
+    erro: undefined,
+  })
 })

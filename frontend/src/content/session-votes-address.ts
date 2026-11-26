@@ -3,7 +3,6 @@
 // what the post says back in the deck's query. Client-safe.
 
 import { within } from './form-fields'
-import type { SessionLinkSearch } from './session-link-address'
 
 /** `votado`: the Votos were recorded and nothing left the screen;
  * `regerada`: a no took a film off and the Recomendação was redone. */
@@ -24,7 +23,15 @@ export const voteSearch = (search: Record<string, unknown>) => ({
  * happened. */
 export function votePath(
   page: 'votar' | 'votos',
-  { sessao, chave, presente }: SessionLinkSearch,
+  {
+    sessao,
+    chave,
+    presente,
+  }: {
+    sessao?: string | undefined
+    chave?: string | undefined
+    presente?: string | undefined
+  },
   outcome: { feito?: VoteNotice; erro?: VoteRefusal } = {},
 ): string {
   const query = new URLSearchParams()
