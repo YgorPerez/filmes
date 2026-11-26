@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-// The app shell around every Dono page: the top bar, the tabs in their two
-// places, and the push strip for an admin.
+// The app shell around every Dono page: the top bar with the avatar's
+// menu, the four tabs in their two places, and the push strip for an admin.
 import type { PushStatus } from '@filmes/engine'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vite-plus/test'
@@ -32,27 +32,29 @@ const show = ({
     </AppShell>,
   )
 
+/** The menu the avatar's button opens (a popover, closed in the test). */
+const menuOf = (button: HTMLElement) => {
+  const menu = document.getElementById(button.getAttribute('popovertarget')!)
+  if (!menu) throw new Error('no menu')
+  return menu
+}
+
 /** Both places of the tabs: the top bar's (from 900px) and the bottom's. */
 const tabBars = () => screen.getAllByRole('navigation', { name: 'Seções' })
 
 describe('AppShell', () => {
-  it('wraps the page with "filmes" leading home, and a logout by POST', () => {
+  it('wraps the page with "filmes" leading home, and no alert', () => {
     const { container } = show()
     expect(screen.getByText('a página')).toBeTruthy()
     expect(screen.getByRole('link', { name: 'filmes, início' })).toHaveProperty(
       'pathname',
       '/',
     )
-    const logout = screen.getByRole('button', { name: 'Sair' })
-    const form = logout.closest('form')
-    expect(form?.getAttribute('method')).toBe('post')
-    expect(form?.getAttribute('action')).toBe('/auth/logout')
-    expect(screen.getByRole('img', { name: 'Você: Bruno' })).toBeTruthy()
     expect(container.querySelector('[role="alert"]')).toBeNull()
   })
 
-  it('has the tabs in both places, and Operações only for an admin', () => {
-    show()
+  it('has the four tabs in both places', () => {
+    show({ admin: true })
     const bars = tabBars()
     expect(bars).toHaveLength(2)
     for (const bar of bars)
@@ -64,22 +66,51 @@ describe('AppShell', () => {
         ['Início', '/'],
         ['Sessões', '/sessoes'],
         ['Pessoas', '/pessoas'],
-        ['Importar', '/importar'],
+        ['Meu gosto', '/meu-gosto'],
       ])
-    cleanup()
+  })
+
+  it('opens the menu from the avatar, with Sair by POST', () => {
+    show()
+    const avatar = screen.getByRole('button', { name: 'Sua conta: Bruno' })
+    const menu = menuOf(avatar)
+    expect(menu.getAttribute('popover')).toBe('auto')
+    expect(menu.getAttribute('aria-label')).toBe('Conta')
+    const logout = within(menu).getByRole('button', {
+      name: 'Sair',
+      hidden: true,
+    })
+    const form = logout.closest('form')
+    expect(form?.getAttribute('method')).toBe('post')
+    expect(form?.getAttribute('action')).toBe('/auth/logout')
+    expect(
+      within(menu).queryByRole('link', { name: /Operações/, hidden: true }),
+    ).toBeNull()
+  })
+
+  it('puts Operações in the menu for an admin, saying when the push fails', () => {
     show({ admin: true })
-    for (const bar of tabBars())
-      expect(
-        within(bar).getByRole('link', { name: 'Operações' }),
-      ).toHaveProperty('pathname', '/operacoes')
+    // Closed until the avatar opens it: hidden from the tree till then.
+    const menu = () => menuOf(screen.getByRole('button', { name: /Sua conta/ }))
+    expect(
+      within(menu()).getByRole('link', { name: 'Operações', hidden: true }),
+    ).toHaveProperty('pathname', '/operacoes')
+    cleanup()
+    show({ admin: true, alert: ALERT })
+    expect(
+      within(menu()).getByRole('link', { name: /^Operações/, hidden: true })
+        .textContent,
+    ).toBe('Operaçõesenvio falhando')
   })
 
   it.each([
     ['/', 'Início'],
     ['/sessoes/2026-11-20-1', 'Sessões'],
-    ['/feedback/2026-11-20-1', 'Sessões'],
+    ['/sessoes/2026-11-20-1/contar', 'Sessões'],
     ['/pessoas/vera', 'Pessoas'],
-    ['/fila', 'Importar'],
+    ['/pessoas/vera/importar', 'Pessoas'],
+    ['/meu-gosto', 'Meu gosto'],
+    ['/meu-gosto/fila', 'Meu gosto'],
   ])('marks the tab of %s', (path, tab) => {
     show({ path })
     for (const bar of tabBars())
@@ -92,14 +123,16 @@ describe('AppShell', () => {
   })
 
   it('marks no tab for a page out of them', () => {
-    show({ path: '/exportar' })
+    show({ path: '/operacoes' })
     expect(document.querySelector('[aria-current]')).toBeNull()
   })
 
   it('shows an admin the strip of a push that keeps failing, with a link to Operações', () => {
     show({ admin: true, alert: ALERT })
     const alert = screen.getByRole('alert')
-    expect(alert.textContent).toContain('falhou 5 vezes seguidas; 4 commits')
+    expect(alert.textContent).toContain(
+      'falhou 5 vezes seguidas. 4 commits na fila.',
+    )
     expect(
       within(alert).getByRole('link', { name: 'Ver Operações' }),
     ).toHaveProperty('pathname', '/operacoes')

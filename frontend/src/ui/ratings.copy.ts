@@ -3,7 +3,7 @@ import type { RatingRefusal } from '#/content/rating-form'
 const notas = (n: number) => (n === 1 ? '1 Nota' : `${n} Notas`)
 
 export const RATINGS = {
-  back: 'Voltar',
+  back: 'Meu gosto',
   title: 'Meu gosto',
   lead: 'Dê uma Nota de 1 a 10 aos filmes que você viu; os que não viu, pule. As Notas ficam neste navegador até você tocar em Pronto, e aí vão todas de uma vez para o seu gosto.',
   unavailable:

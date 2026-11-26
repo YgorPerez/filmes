@@ -16,7 +16,6 @@ import {
 import {
   importAction,
   importsFromEngine,
-  importsOverview,
   importsPage,
   queueAction,
   queuePage,
@@ -156,13 +155,6 @@ function fakeImports(
 ) {
   const calls: unknown[] = []
   const imports: Imports = {
-    overview: async () => ({
-      exitCode: 0,
-      output: {
-        people: [{ person: 'teo', name: 'Teo', owner: false, imports: 1 }],
-        queued: 2,
-      },
-    }),
     page: async (person) =>
       person === 'teo'
         ? failure('missing_database')
@@ -205,7 +197,7 @@ describe('importAction', () => {
     )
     expect(response.status).toBe(303)
     expect(response.headers.get('Location')).toBe(
-      '/importar/teo?feito=letterboxd&novos=12',
+      '/pessoas/teo/importar?feito=letterboxd&novos=12',
     )
     expect(calls).toEqual([
       {
@@ -229,7 +221,7 @@ describe('importAction', () => {
       ORIGIN,
     )
     expect(response.headers.get('Location')).toBe(
-      '/importar/teo?feito=trakt&novos=3&fora=2',
+      '/pessoas/teo/importar?feito=trakt&novos=3&fora=2',
     )
   })
 
@@ -254,9 +246,13 @@ describe('importAction', () => {
     const neither = await upload(
       new File([new Uint8Array(zipOf([['notas.csv', 'x']]))], 'outro.zip'),
     )
-    expect(neither.headers.get('Location')).toBe('/importar/teo?erro=origem')
+    expect(neither.headers.get('Location')).toBe(
+      '/pessoas/teo/importar?erro=origem',
+    )
     const notZip = await upload(zipFile())
-    expect(notZip.headers.get('Location')).toBe('/importar/teo?erro=origem')
+    expect(notZip.headers.get('Location')).toBe(
+      '/pessoas/teo/importar?erro=origem',
+    )
     expect(calls).toHaveLength(2)
   })
 
@@ -270,7 +266,7 @@ describe('importAction', () => {
       ORIGIN,
     )
     expect(response.headers.get('Location')).toBe(
-      '/importar/bruno?feito=letterboxd&novos=12',
+      '/meu-gosto/importar?feito=letterboxd&novos=12',
     )
     expect(calls).toMatchObject([
       { action: { kind: 'rss', user: 'olga_farol' } },
@@ -308,7 +304,7 @@ describe('importAction', () => {
       ORIGIN,
     )
     expect(noConsent.headers.get('Location')).toBe(
-      '/importar/teo?erro=consentimento',
+      '/pessoas/teo/importar?erro=consentimento',
     )
     const big = await importAction(
       post('/importar/teo/acao', RSS, {
@@ -320,18 +316,20 @@ describe('importAction', () => {
       imports,
       ORIGIN,
     )
-    expect(big.headers.get('Location')).toBe('/importar/teo?erro=grande')
+    expect(big.headers.get('Location')).toBe(
+      '/pessoas/teo/importar?erro=grande',
+    )
     expect(calls).toEqual([])
   })
 
   it.each<[ErrorCode, string]>([
-    ['invalid_file', '/importar/teo?erro=arquivo'],
-    ['invalid_usage', '/importar/teo?erro=pedido'],
-    ['missing_rss', '/importar/teo?erro=rss'],
-    ['source_unavailable', '/importar/teo?erro=fonte'],
-    ['unknown_import', '/importar/teo?erro=item'],
-    ['unknown_person', '/importar?erro=pessoa'],
-    ['outdated_database', '/importar/teo?erro=indisponivel'],
+    ['invalid_file', '/pessoas/teo/importar?erro=arquivo'],
+    ['invalid_usage', '/pessoas/teo/importar?erro=pedido'],
+    ['missing_rss', '/pessoas/teo/importar?erro=rss'],
+    ['source_unavailable', '/pessoas/teo/importar?erro=fonte'],
+    ['unknown_import', '/pessoas/teo/importar?erro=item'],
+    ['unknown_person', '/pessoas?erro=pessoa'],
+    ['outdated_database', '/pessoas/teo/importar?erro=indisponivel'],
   ])('says why the engine refused: %s', async (code, location) => {
     const log = vi.spyOn(console, 'error').mockImplementation(() => {})
     const { imports } = fakeImports(failure(code))
@@ -357,7 +355,9 @@ describe('queueAction', () => {
       imports,
       ORIGIN,
     )
-    expect(response.headers.get('Location')).toBe('/fila?feito=confirmado')
+    expect(response.headers.get('Location')).toBe(
+      '/meu-gosto/fila?feito=confirmado',
+    )
     expect(calls).toEqual([
       {
         action: { kind: 'confirm', id: 'x-1', film: 'tt1' },
@@ -378,7 +378,7 @@ describe('queueAction', () => {
       ORIGIN,
     )
     expect(response.headers.get('Location')).toBe(
-      '/fila?feito=reprocessado&resolvidos=2&restam=1',
+      '/meu-gosto/fila?feito=reprocessado&resolvidos=2&restam=1',
     )
   })
 
@@ -390,7 +390,9 @@ describe('queueAction', () => {
       imports,
       ORIGIN,
     )
-    expect(incomplete.headers.get('Location')).toBe('/fila?erro=pedido')
+    expect(incomplete.headers.get('Location')).toBe(
+      '/meu-gosto/fila?erro=pedido',
+    )
     const anonymous = await queueAction(
       post('/fila/acao', { acao: 'reprocessar' }),
       null,
@@ -409,10 +411,10 @@ describe('queueAction', () => {
   })
 
   it.each<[ErrorCode, string]>([
-    ['invalid_usage', '/fila?erro=filme'],
-    ['film_without_imdb', '/fila?erro=sem-imdb'],
-    ['item_not_queued', '/fila?erro=item'],
-    ['internal', '/fila?erro=indisponivel'],
+    ['invalid_usage', '/meu-gosto/fila?erro=filme'],
+    ['film_without_imdb', '/meu-gosto/fila?erro=sem-imdb'],
+    ['item_not_queued', '/meu-gosto/fila?erro=item'],
+    ['internal', '/meu-gosto/fila?erro=indisponivel'],
   ])('says why the engine refused: %s', async (code, location) => {
     const log = vi.spyOn(console, 'error').mockImplementation(() => {})
     const { imports } = fakeImports(undefined, failure(code))
@@ -463,10 +465,6 @@ describe('the pages', () => {
   it('give what the engine read, unknown, or null when it cannot run', async () => {
     const log = vi.spyOn(console, 'error').mockImplementation(() => {})
     const { imports } = fakeImports()
-    expect(await importsOverview(imports)).toEqual({
-      people: [{ person: 'teo', name: 'Teo', owner: false, imports: 1 }],
-      queued: 2,
-    })
     expect(await importsPage('ninguem', 'bruno', imports)).toBe('unknown')
     expect(await importsPage('teo', 'bruno', imports)).toBeNull()
     expect(await queuePage(imports)).toBeNull()
@@ -559,11 +557,7 @@ describe('importsFromEngine, imports', () => {
       ['trakt', 'trakt.zip'],
     ])
     expect(page.trakt).toEqual({ ratings: 2, seen: 1 })
-    const overview = await ok(imports.overview())
-    expect(overview.people.find((p) => p.person === 'quim')).toMatchObject({
-      imports: 2,
-    })
-    expect(overview.queued).toBe(2)
+    expect((await ok(imports.queue())).items).toHaveLength(2)
 
     expect(await run({ kind: 'rss', user: 'olga_farol' })).toMatchObject({
       notice: 'rss',

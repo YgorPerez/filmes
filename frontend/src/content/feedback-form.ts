@@ -1,6 +1,6 @@
 // What the Feedback form posts (`POST /feedback/<sessao>/enviar`) and what
-// the pages hear back in their query: `/feedback?feito=<sessao>` or
-// `/feedback/<sessao>?erro=<refusal>`. Shared by the page and the server
+// the form hears back in its query when refused:
+// `/sessoes/<sessao>/contar?erro=<refusal>`. Shared by the page and the server
 // (`platform/feedback.ts`), so nothing here imports the engine.
 //
 // Fields (PT, as the other forms): `filme` is a film of the Recomendação
@@ -9,7 +9,7 @@
 // `relato:<gostou|neutro|nao-gostou>` (empty: no reaction) and
 // `comentario.<slug>` what she thought.
 
-import { field, within } from './form-fields'
+import { field, searchAsked, within } from './form-fields'
 
 /** The Relato levels the form offers, by their value in the form. */
 export const REPORT_CHOICES = {
@@ -84,6 +84,35 @@ function peopleIn(form: FormData): string[] {
   return [...people]
 }
 
+/** The Catálogo search the post asks for (`searchAsked`): the text to look
+ * up, at most 200 characters, empty when nothing was typed; undefined when
+ * the post sends the Feedback. */
+export const feedbackSearch = (form: FormData): string | undefined =>
+  searchAsked(form, 'busca')
+    ? (field(form, 'busca')?.slice(0, 200) ?? '')
+    : undefined
+
+/** What each Presente had filled when the Dono searched the Catálogo: the
+ * form comes back with it. */
+export type FeedbackDraft = Readonly<
+  Record<string, { readonly reaction?: string; readonly comment?: string }>
+>
+
+/** The reactions and comments of the form as they are, refused or not. */
+export function feedbackDraftOf(form: FormData): FeedbackDraft {
+  const draft: Record<string, { reaction?: string; comment?: string }> = {}
+  for (const person of peopleIn(form)) {
+    const reaction = field(form, `${REACTION}${person}`)
+    const comment = field(form, `${COMMENT}${person}`)
+    if (reaction !== undefined || comment !== undefined)
+      draft[person] = {
+        ...(reaction !== undefined && { reaction }),
+        ...(comment !== undefined && { comment }),
+      }
+  }
+  return draft
+}
+
 type Parsed<A> = { ok: A } | { refused: FeedbackRefusal }
 
 /** One Presente's reaction: absent (a comment alone is refused), a Nota or
@@ -137,12 +166,3 @@ export function parseFeedback(form: FormData): Parsed<FeedbackForm> {
 }
 
 export const isFeedbackRefusal = within(FEEDBACK_REFUSALS)
-
-/** A Session id as the engine writes it (`2026-11-20-iara`, `-2`...):
- * what `?feito=` may carry back to the list. */
-export const isSessionId = (value: unknown): value is string =>
-  typeof value === 'string' && /^[\w-]{1,120}$/.test(value)
-
-/** Why `/feedback` shows a refusal: the form's Session is gone. */
-export const isSessionsRefusal = (value: unknown): value is 'sessao' =>
-  value === 'sessao'

@@ -412,6 +412,120 @@ describe('“Ler” in sessionRequestAction', () => {
   })
 })
 
+describe('the Catálogo search in sessionRequestAction', () => {
+  const search = (fields: [string, string][], notes = new Notes()) =>
+    sessionRequestAction(
+      post([...fields, ['buscar-catalogo', 'sim']]),
+      BRUNO,
+      fake().sessions,
+      notes,
+      ORIGIN,
+    )
+
+  it('comes back with the search and the form as the Dono left it, opening nothing', async () => {
+    const notes = new Notes()
+    const { sessions, open } = fake()
+    const response = await sessionRequestAction(
+      post([
+        ...BASIC,
+        ['climas', 'leve'],
+        ['pedido', 'eu e a Iara'],
+        ['parecido', 'tt9000101'],
+        ['buscar', ' farol '],
+        ['buscar-catalogo', 'sim'],
+      ]),
+      BRUNO,
+      sessions,
+      notes,
+      ORIGIN,
+    )
+    expect(open).not.toHaveBeenCalled()
+    const location = new URL(response.headers.get('Location') ?? '', ORIGIN)
+    expect(location.pathname).toBe('/sessoes/nova')
+    expect(location.searchParams.get('buscar')).toBe('farol')
+    const draft = newSessionDraft(
+      location.searchParams.get('nota') ?? undefined,
+      notes,
+    )
+    expect(draft).toEqual({
+      fields: {
+        attendees: ['bruno', 'iara'],
+        rule: 'default',
+        moods: ['leve'],
+        request: 'eu e a Iara',
+        similar: ['tt9000101'],
+      },
+      reading: null,
+    })
+  })
+
+  it('keeps what “Ler” said about the sentence', async () => {
+    const notes = new Notes()
+    const reading = {
+      understood: ['Presente: Iara'],
+      notUnderstood: [],
+      ambiguities: [],
+    }
+    const before = notes.remember({
+      warnings: [],
+      addition: null,
+      form: { attendees: ['iara'] },
+      reading,
+    })
+    const response = await search([...BASIC, ['nota', before ?? '']], notes)
+    const token = new URL(
+      response.headers.get('Location') ?? '',
+      ORIGIN,
+    ).searchParams.get('nota')
+    expect(newSessionDraft(token ?? undefined, notes)?.reading).toEqual(reading)
+  })
+
+  it('Enter with a search not run yet searches instead of opening', async () => {
+    const { sessions, open } = fake()
+    const response = await sessionRequestAction(
+      post([
+        ...BASIC,
+        ['buscar', 'farol'],
+        ['buscado', ''],
+        ['tecla', 'enter'],
+      ]),
+      BRUNO,
+      sessions,
+      new Notes(),
+      ORIGIN,
+    )
+    const location = new URL(response.headers.get('Location') ?? '', ORIGIN)
+    expect(location.pathname).toBe('/sessoes/nova')
+    expect(location.searchParams.get('buscar')).toBe('farol')
+    expect(open).not.toHaveBeenCalled()
+  })
+
+  it('Enter with the search already run opens the Session', async () => {
+    const { sessions, open } = fake()
+    await sessionRequestAction(
+      post([
+        ...BASIC,
+        ['buscar', 'farol'],
+        ['buscado', 'farol'],
+        ['tecla', 'enter'],
+      ]),
+      BRUNO,
+      sessions,
+      new Notes(),
+      ORIGIN,
+    )
+    expect(open).toHaveBeenCalled()
+  })
+
+  it('with nothing typed, comes back to the form with no search', async () => {
+    const location = new URL(
+      (await search(BASIC)).headers.get('Location') ?? '',
+      ORIGIN,
+    )
+    expect(location.searchParams.has('buscar')).toBe(false)
+  })
+})
+
 describe('newSessionDraft', () => {
   it('is null with no note, a forgotten one, or one of another form', () => {
     const notes = new Notes()

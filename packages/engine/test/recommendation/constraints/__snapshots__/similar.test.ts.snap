@@ -65,7 +65,7 @@ exports[`the whole output, as recorded > similar to ["tt9006701","tt9006702"] 1`
           "person": null,
           "source": "MovieLens ml-32m",
           "strength": "weak",
-          "text": "parecido com Escrever Cartas: family, writers, bittersweet; de 500 pessoas que deram 4+ a ele, 40% deram 4+ a este",
+          "text": "parecido com Escrever Cartas: family, writers, bittersweet; das 500 pessoas que deram 4 ou mais a ele, 40% fizeram o mesmo com este",
         },
       ],
       "genres": [
@@ -119,7 +119,7 @@ exports[`the whole output, as recorded > similar to ["tt9006701","tt9006702"] 1`
           "person": null,
           "source": "MovieLens ml-32m",
           "strength": "weak",
-          "text": "parecido com Escrever Cartas: de 500 pessoas que deram 4+ a ele, 10% deram 4+ a este",
+          "text": "parecido com Escrever Cartas: das 500 pessoas que deram 4 ou mais a ele, 10% fizeram o mesmo com este",
         },
         {
           "contribution": 0,
@@ -335,7 +335,7 @@ exports[`the whole output, as recorded > similar to ["tt9006701"] 1`] = `
           "person": null,
           "source": "MovieLens ml-32m",
           "strength": "weak",
-          "text": "parecido com Escrever Cartas: family, writers, bittersweet; de 500 pessoas que deram 4+ a ele, 40% deram 4+ a este",
+          "text": "parecido com Escrever Cartas: family, writers, bittersweet; das 500 pessoas que deram 4 ou mais a ele, 40% fizeram o mesmo com este",
         },
       ],
       "genres": [
@@ -389,7 +389,7 @@ exports[`the whole output, as recorded > similar to ["tt9006701"] 1`] = `
           "person": null,
           "source": "MovieLens ml-32m",
           "strength": "weak",
-          "text": "parecido com Escrever Cartas: de 500 pessoas que deram 4+ a ele, 10% deram 4+ a este",
+          "text": "parecido com Escrever Cartas: das 500 pessoas que deram 4 ou mais a ele, 10% fizeram o mesmo com este",
         },
       ],
       "genres": [
@@ -597,7 +597,7 @@ exports[`the whole output, as recorded > similar to ["tt9006701,tt9006711"] 1`] 
           "person": null,
           "source": "MovieLens ml-32m",
           "strength": "weak",
-          "text": "parecido com Escrever Cartas: de 500 pessoas que deram 4+ a ele, 10% deram 4+ a este",
+          "text": "parecido com Escrever Cartas: das 500 pessoas que deram 4 ou mais a ele, 10% fizeram o mesmo com este",
         },
       ],
       "genres": [
@@ -1012,7 +1012,7 @@ exports[`the whole output, as recorded > the cut and its warning 1`] = `
           "person": null,
           "source": "MovieLens ml-32m",
           "strength": "weak",
-          "text": "parecido com Escrever Cartas: family, writers, bittersweet; de 500 pessoas que deram 4+ a ele, 40% deram 4+ a este",
+          "text": "parecido com Escrever Cartas: family, writers, bittersweet; das 500 pessoas que deram 4 ou mais a ele, 40% fizeram o mesmo com este",
         },
       ],
       "genres": [

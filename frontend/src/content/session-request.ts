@@ -239,5 +239,6 @@ export function draftOf(form: FormData): Partial<SessionRequestForm> {
     unseen: checked(form, 'sem-ja-visto'),
     noSlow: checked(form, 'sem-lento'),
     noSad: checked(form, 'sem-tristeza'),
+    seriesOrder: seriesOrder(form),
   })
 }

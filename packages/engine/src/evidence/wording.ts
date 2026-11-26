@@ -53,10 +53,11 @@ export const durationText = (minutes: number): string => {
   return rest ? `${hours}h${String(rest).padStart(2, '0')}` : `${hours}h`
 }
 
-/** The taste neighbours' line (#174): "23 pessoas de gosto parecido deram
- * 4,3 em média a este", their mean rating to one place. */
+/** The taste neighbours' line (#174, worded by #221): "23 pessoas de gosto
+ * parecido deram 4,3 em média a este filme", their mean rating to one
+ * place. */
 export const tasteNeighborsText = (
   raters: number,
   meanRating: number,
 ): string =>
-  `${integerText(raters)} pessoas de gosto parecido deram ${ratingText(pyRound(meanRating, 1))} em média a este`
+  `${integerText(raters)} pessoas de gosto parecido deram ${ratingText(pyRound(meanRating, 1))} em média a este filme`

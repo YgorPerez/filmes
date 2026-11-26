@@ -1,10 +1,10 @@
 import type { PersonCreateRefusal, TypedPerson } from '#/content/person-create'
 import type { PersonEntry } from '#/platform/people'
+import { personPath } from '#/content/paths'
 import { PEOPLE } from './person.copy'
 import { OwnerTag } from './kit/owner-tag'
 import { Alert, Disclosure, Submit, TextField } from './person-parts'
 import { RowArrow } from './kit/row-arrow'
-import { buttonVariants } from './shadcn/button'
 
 /** The create form as it comes back: why it was refused, what was typed. */
 export type CreateState = {
@@ -12,24 +12,28 @@ export type CreateState = {
   typed: TypedPerson
 }
 
-/** `/pessoas`: every Pessoa of filmes-dados, each a link to her page.
- * `people` is null when the engine cannot run on this server. */
+/** The logged-in Dono first; the others in the engine's order. */
+const selfFirst = (people: PersonEntry[], self?: string) => [
+  ...people.filter((p) => p.person === self),
+  ...people.filter((p) => p.person !== self),
+]
+
+/** `/pessoas`: every Pessoa of filmes-dados, each a link to her page; the
+ * logged-in Dono (`self`) first, to Meu gosto. `people` is null when the
+ * engine cannot run on this server. */
 export function PeopleList({
   people,
+  self,
   gone = false,
   create,
 }: {
   people: PersonEntry[] | null
+  self?: string
   gone?: boolean
   create?: CreateState
 }) {
   return (
     <main className="mx-auto flex max-w-[720px] flex-col gap-3xl px-2xl py-3xl">
-      <header className="flex flex-wrap items-center justify-between gap-xl">
-        <a href="/" className={buttonVariants({ variant: 'option' })}>
-          {PEOPLE.back}
-        </a>
-      </header>
       <div className="flex flex-col gap-sm">
         <h1 className="font-display text-title">{PEOPLE.title}</h1>
         <p className="text-ink-2">{PEOPLE.lead}</p>
@@ -41,10 +45,10 @@ export function PeopleList({
         <p className="text-ink-2">{PEOPLE.empty}</p>
       ) : (
         <ul className="flex flex-col gap-xs" aria-label={PEOPLE.title}>
-          {people.map(({ person, name, aliases, owner }) => (
+          {selfFirst(people, self).map(({ person, name, aliases, owner }) => (
             <li key={person}>
               <a
-                href={`/pessoas/${encodeURIComponent(person)}`}
+                href={personPath(person, person === self)}
                 className="flex min-h-[52px] items-stretch overflow-hidden rounded-nav-row border border-rule bg-surface text-ink no-underline hover:bg-surface-2"
               >
                 <span aria-hidden="true" className="w-2 shrink-0 bg-case" />
@@ -53,6 +57,11 @@ export function PeopleList({
                     {name}
                   </span>
                   {owner && <OwnerTag />}
+                  {person === self && (
+                    <span className="text-meta text-ink-2">
+                      {PEOPLE.myTaste}
+                    </span>
+                  )}
                   {aliases.length > 0 && (
                     <span className="text-meta text-ink-2">
                       {PEOPLE.aliases(aliases)}

@@ -14,23 +14,6 @@ const facts = (n: number) =>
 const UNAVAILABLE =
   'Os imports ainda não estão prontos neste servidor: falta o banco do filmes.'
 
-export const IMPORTS = {
-  back: 'Voltar',
-  title: 'Importar',
-  lead: 'Traga as Notas e os Já vistos de uma Pessoa do Letterboxd ou do Trakt. Cada import fica guardado no repo de dados e pode sair depois.',
-  people: 'Pessoas',
-  count: (n: number) =>
-    n === 0 ? 'nenhum import' : count(n, 'import', 'imports'),
-  queue: 'Fila de resolução',
-  queued: (n: number) =>
-    n === 0
-      ? 'nenhum filme esperando'
-      : count(n, 'filme esperando', 'filmes esperando'),
-  empty: 'Nenhuma Pessoa no repo de dados ainda.',
-  unavailable: UNAVAILABLE,
-  gone: 'Essa Pessoa não está mais no repo de dados.',
-} as const
-
 const KINDS: Record<string, string> = {
   letterboxd: 'Arquivo do Letterboxd',
   'letterboxd-rss': 'RSS do Letterboxd',
@@ -38,8 +21,10 @@ const KINDS: Record<string, string> = {
 }
 
 export const PERSON_IMPORTS = {
-  back: 'Importar',
-  title: (name: string) => `Imports de ${name}`,
+  /** Back to her page: Meu gosto, or her name. */
+  back: (name: string, own: boolean) => (own ? 'Meu gosto' : name),
+  title: (name: string, own: boolean) =>
+    own ? 'Importar Notas' : `Importar as Notas de ${name}`,
   unknown: 'Nenhuma Pessoa com esse nome no repo de dados.',
   unavailable: UNAVAILABLE,
   notices: {
@@ -105,7 +90,7 @@ export const PERSON_IMPORTS = {
       `${count(ratings, 'Nota', 'Notas')} e ${count(seen, 'Já visto', 'Já vistos')} do Trakt.`,
   },
   upload: {
-    title: 'Trazer seus filmes do Letterboxd ou do Trakt',
+    title: 'O arquivo do Letterboxd ou do Trakt',
     file: 'Arquivo que o Letterboxd ou o Trakt te deu (ZIP)',
     /** How to download the ZIP, one line per service: the service's name
      * links to its data settings. */
@@ -135,7 +120,7 @@ export const PERSON_IMPORTS = {
 } as const
 
 export const QUEUE = {
-  back: 'Importar',
+  back: 'Voltar',
   title: 'Fila de resolução',
   lead: 'Filmes dos arquivos do Letterboxd que o filmes não achou no Catálogo sozinho. A decisão vale para todas as Pessoas que têm o filme.',
   unavailable: UNAVAILABLE,

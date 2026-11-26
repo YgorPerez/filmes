@@ -8,7 +8,7 @@ import { afterEach, describe, expect, it } from 'vite-plus/test'
 import { FEEDBACK_REFUSALS, parseFeedback } from '#/content/feedback-form'
 import type { FeedbackPage, FeedbackSession } from '#/platform/feedback'
 import { FEEDBACK } from './feedback.copy'
-import { FeedbackScreen, OpenSessions } from './feedback'
+import { FeedbackScreen } from './feedback'
 
 afterEach(cleanup)
 
@@ -21,6 +21,8 @@ const SESSION: FeedbackSession = {
     { person: 'iara', name: 'Iara', owner: false },
     { person: 'quim', name: 'Quim', owner: false },
   ],
+  moods: [],
+  constraints: [],
   recommendation: [
     { position: 1, id: 'tt9000101', title: 'O Farol de Areia' },
     { position: 2, id: 'tt9000601', title: 'Pequenos Milagres' },
@@ -142,26 +144,18 @@ describe('FeedbackScreen', () => {
     })
   })
 
-  it('takes the search as the film even with no radio chosen', async () => {
-    const { user, form } = show()
-    await user.type(
-      screen.getByLabelText(FEEDBACK.form.search, { exact: false }),
-      'tt9000602',
-    )
-    expect(posted(form)).toEqual({ ok: { film: 'tt9000602', reactions: [] } })
-  })
-
   it('records "não vimos nada", with no reaction', async () => {
     const { user, form } = show()
     await user.click(screen.getByLabelText(/Não vimos nada/))
     expect(posted(form)).toEqual({ ok: { film: null, reactions: [] } })
   })
 
-  it('refuses "não vimos nada" with a reaction', async () => {
+  it('omits reactions when the choice changes to "não vimos nada"', async () => {
     const { user, form } = show()
-    await user.click(screen.getByLabelText(/Não vimos nada/))
+    await user.click(screen.getByLabelText(/O Farol de Areia/))
     await user.selectOptions(reaction('Bruno'), 'Nota 3')
-    expect(posted(form)).toEqual({ refused: 'nada' })
+    await user.click(screen.getByLabelText(/Não vimos nada/))
+    expect(posted(form)).toEqual({ ok: { film: null, reactions: [] } })
   })
 
   it('refuses a comment with no Nota or Relato', async () => {
@@ -183,7 +177,7 @@ describe('FeedbackScreen', () => {
     })
     expect(region.textContent).toMatch(/Iara/)
     expect(region.textContent).toMatch(/Casa Cheia/)
-    expect(region.textContent).toContain('Satisfação 11%')
+    expect(region.textContent).toContain('11%')
     expect(region.textContent).not.toMatch(/Quim/)
   })
 
@@ -221,29 +215,6 @@ describe('FeedbackScreen', () => {
     )
     cleanup()
     render(<FeedbackScreen session="x" page={null} />)
-    expect(screen.getByRole('alert').textContent).toContain(
-      FEEDBACK.unavailable,
-    )
-  })
-})
-
-describe('OpenSessions', () => {
-  it('lists each open Session as a link to its form', () => {
-    render(<OpenSessions sessions={[SESSION]} />)
-    const link = screen.getByRole('link', { name: /Bruno, Iara, Quim/ })
-    expect(link.getAttribute('href')).toBe('/feedback/2026-11-20-iara-quim')
-    expect(link.textContent).toContain('algo leve · 2 filmes')
-  })
-
-  it('says what was recorded, and when there is nothing to list', () => {
-    render(<OpenSessions sessions={[]} recorded="2026-11-20-iara" gone />)
-    expect(screen.getByRole('status').textContent).toContain(
-      FEEDBACK.list.recorded('2026-11-20-iara'),
-    )
-    expect(screen.getByRole('alert').textContent).toContain(FEEDBACK.list.gone)
-    expect(screen.getByText(FEEDBACK.list.empty)).toBeTruthy()
-    cleanup()
-    render(<OpenSessions sessions={null} />)
     expect(screen.getByRole('alert').textContent).toContain(
       FEEDBACK.unavailable,
     )
@@ -291,7 +262,7 @@ describe('the Catálogo search', () => {
     render(<FeedbackScreen session={PAGE.id} page={PAGE} search={search} />)
     const use = screen.getByRole('link', { name: 'Usar Casa Cheia (2021)' })
     expect(use.getAttribute('href')).toBe(
-      '/feedback/2026-11-20-iara-quim?filme=tt9000602&buscar=cheia',
+      '/sessoes/2026-11-20-iara-quim/contar?filme=tt9000602&buscar=cheia',
     )
     const form = () => screen.getByRole('form', { name: FEEDBACK.form.label })
 

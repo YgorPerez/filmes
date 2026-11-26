@@ -10,13 +10,10 @@ type Level = 'none' | 'low' | 'normal' | 'high'
 type Reaction = 'love' | 'like' | 'dislike' | 'hate'
 type Strength = 'strong' | 'moderate' | 'weak' | 'guess'
 
-const count = (n: number, one: string, many: string) =>
-  n === 0 ? `nenhum ${one}` : n === 1 ? `1 ${one}` : `${n} ${many}`
-
 export const PEOPLE = {
-  back: 'Voltar',
   title: 'Pessoas',
-  lead: 'Quem assiste com o Dono e o que o filmes sabe do gosto de cada uma.',
+  lead: 'Quem assiste com você e o que o filmes sabe do gosto de cada uma.',
+  myTaste: 'Meu gosto',
   owner: 'Dono',
   aliases: (aliases: readonly string[]) => `também ${aliases.join(', ')}`,
   empty: 'Nenhuma Pessoa no repo de dados ainda.',
@@ -49,6 +46,21 @@ export const PEOPLE = {
 
 export const PERSON = {
   back: 'Pessoas',
+  myTaste: 'Meu gosto',
+  notes: {
+    title: 'Notas',
+    rate: 'Dar notas',
+    import: 'Importar do Letterboxd ou do Trakt',
+    download: 'Baixar CSV do IMDb',
+    movielens:
+      'O CSV entra no MovieLens em Import or Export Data, como avaliações do IMDb.',
+    list: (n: number) => (n === 1 ? 'Ver a Nota' : `Ver as ${n} Notas`),
+    empty: (own: boolean) =>
+      own
+        ? 'Nenhuma Nota ainda. Dê nota a filmes que você já viu, ou traga o seu histórico.'
+        : 'Nenhuma Nota ainda. Traga o histórico dela do Letterboxd ou do Trakt.',
+    noDatabase: 'As Notas aparecem depois que o banco for reconstruído.',
+  },
   contents: 'Nesta página',
   owner: 'Dono',
   aliases: (aliases: readonly string[]) => `também ${aliases.join(', ')}`,
@@ -81,6 +93,7 @@ export const PERSON = {
     'email-usado': 'Esse e-mail já é de outra Pessoa.',
     'ja-dono': 'Ela já tem acesso. Para trocar o e-mail, tire o acesso antes.',
     'proprio-acesso': 'O seu próprio acesso não sai por aqui.',
+    exportar: 'Não deu para gerar o CSV agora. Tente de novo daqui a pouco.',
     indisponivel: 'Não deu para gravar agora. Tente de novo daqui a pouco.',
   } satisfies Record<PersonRefusal, string>,
 
@@ -141,14 +154,6 @@ export const PERSON = {
     add: 'Acrescentar Já visto',
     source: 'conversa com o Dono',
   },
-  ratings: {
-    title: 'Notas importadas',
-    lead: 'As Notas em vigor, dos imports e dos Já vistos. Para mudar, importe de novo.',
-    count: (n: number) => count(n, 'Nota', 'Notas'),
-    empty: 'Nenhuma Nota.',
-    noDatabase: 'As Notas aparecem depois que o banco for reconstruído.',
-  },
-
   access: {
     title: 'Acesso',
     lead: 'Com acesso, ela vira Dono: entra no site e no conector do Claude com o e-mail do Google e vê tudo da casa.',

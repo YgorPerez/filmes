@@ -11,12 +11,14 @@ import { describe, expect, it, vi } from 'vite-plus/test'
 import { useFixture } from '../../../packages/engine/test/fixture.ts'
 import {
   feedbackAction,
+  feedbackDraft,
   feedbackFromEngine,
   feedbackPage,
   openSessionList,
   type Feedback,
   type FeedbackSession,
 } from './feedback'
+import { Notes } from './notes'
 import type { Owner } from './owners'
 
 const BRUNO: Owner = {
@@ -42,6 +44,8 @@ const SESSION: FeedbackSession = {
     { person: 'quim', name: 'Quim', owner: false },
   ],
   recommendation: [{ position: 1, id: 'tt9000101', title: 'O Farol de Areia' }],
+  moods: [],
+  constraints: [],
 }
 
 const RECORDED: FeedbackResult = {
@@ -103,9 +107,9 @@ describe('feedbackAction', () => {
     request: Request,
     feedback: Feedback,
     owner: Owner | null = BRUNO,
-  ) => feedbackAction(request, SESSION.id, owner, feedback, ORIGIN)
+  ) => feedbackAction(request, SESSION.id, owner, feedback, new Notes(), ORIGIN)
 
-  it('records the form as the logged-in Dono and goes back to the list', async () => {
+  it('records the form as the logged-in Dono and goes back to the Session', async () => {
     const { feedback, record } = fake()
     const response = await act(
       post({
@@ -119,7 +123,7 @@ describe('feedbackAction', () => {
     )
     expect(response.status).toBe(303)
     expect(response.headers.get('Location')).toBe(
-      '/feedback?feito=2026-11-20-quim',
+      '/sessoes/2026-11-20-quim?feito=contada',
     )
     expect(response.headers.get('Cache-Control')).toBe('private, no-store')
     expect(record).toHaveBeenCalledWith(
@@ -160,19 +164,19 @@ describe('feedbackAction', () => {
     const { feedback, record } = fake()
     const response = await act(post({ 'comentario.quim': 'x' }), feedback)
     expect(response.headers.get('Location')).toBe(
-      '/feedback/2026-11-20-quim?erro=comentario',
+      '/sessoes/2026-11-20-quim/contar?erro=comentario',
     )
     expect(record).not.toHaveBeenCalled()
   })
 
   it.each<[ErrorCode, string]>([
-    ['closed_session', '/feedback/2026-11-20-quim?erro=fechada'],
-    ['unknown_film', '/feedback/2026-11-20-quim?erro=desconhecido'],
-    ['ambiguous_film', '/feedback/2026-11-20-quim?erro=ambiguo'],
-    ['invalid_usage', '/feedback/2026-11-20-quim?erro=pedido'],
-    ['unknown_person', '/feedback/2026-11-20-quim?erro=pedido'],
-    ['unknown_session', '/feedback?erro=sessao'],
-    ['missing_database', '/feedback/2026-11-20-quim?erro=indisponivel'],
+    ['closed_session', '/sessoes/2026-11-20-quim/contar?erro=fechada'],
+    ['unknown_film', '/sessoes/2026-11-20-quim/contar?erro=desconhecido'],
+    ['ambiguous_film', '/sessoes/2026-11-20-quim/contar?erro=ambiguo'],
+    ['invalid_usage', '/sessoes/2026-11-20-quim/contar?erro=pedido'],
+    ['unknown_person', '/sessoes/2026-11-20-quim/contar?erro=pedido'],
+    ['unknown_session', '/sessoes/2026-11-20-quim'],
+    ['missing_database', '/sessoes/2026-11-20-quim/contar?erro=indisponivel'],
   ])('says why the engine refused %s', async (code, location) => {
     const log = vi.spyOn(console, 'error').mockImplementation(() => {})
     const { feedback } = fake({ record: failure(code) })
@@ -180,6 +184,106 @@ describe('feedbackAction', () => {
     expect(response.headers.get('Location')).toBe(location)
     expect(log.mock.calls.length > 0).toBe(code === 'missing_database')
     log.mockRestore()
+  })
+})
+
+describe('the Catálogo search in feedbackAction', () => {
+  const search = (fields: Record<string, string>, notes = new Notes()) => {
+    const { feedback, record } = fake()
+    const response = feedbackAction(
+      post(fields),
+      SESSION.id,
+      BRUNO,
+      feedback,
+      notes,
+      ORIGIN,
+    )
+    return { response, record }
+  }
+  const searched = (location: string | null) => new URL(location ?? '', ORIGIN)
+
+  it('comes back to the form with the search, recording nothing', async () => {
+    const asked = (busca: string) =>
+      search({ filme: 'outro', busca, 'buscar-catalogo': 'sim' })
+    const found = asked(' Fronteira (2012) ')
+    expect((await found.response).headers.get('Location')).toBe(
+      '/sessoes/2026-11-20-quim/contar?buscar=Fronteira+%282012%29',
+    )
+    const empty = asked('  ')
+    expect((await empty.response).headers.get('Location')).toBe(
+      '/sessoes/2026-11-20-quim/contar?erro=filme',
+    )
+    expect(found.record).not.toHaveBeenCalled()
+  })
+
+  it('keeps the reactions and comments the Dono had filled', async () => {
+    const notes = new Notes()
+    const { response, record } = search(
+      {
+        filme: 'outro',
+        busca: 'fronteira',
+        'reacao.bruno': 'nota:4,5',
+        'reacao.quim': 'relato:gostou',
+        'comentario.quim': 'quero ver de novo',
+        'buscar-catalogo': 'sim',
+      },
+      notes,
+    )
+    const location = searched((await response).headers.get('Location'))
+    expect(location.pathname).toBe('/sessoes/2026-11-20-quim/contar')
+    expect(location.searchParams.get('buscar')).toBe('fronteira')
+    expect(
+      feedbackDraft(location.searchParams.get('nota') ?? undefined, notes),
+    ).toEqual({
+      bruno: { reaction: 'nota:4,5' },
+      quim: { reaction: 'relato:gostou', comment: 'quero ver de novo' },
+    })
+    expect(record).not.toHaveBeenCalled()
+  })
+
+  it('Enter with a title not searched yet searches instead of recording', async () => {
+    const { response, record } = search({
+      filme: 'outro',
+      busca: 'fronteira',
+      buscado: '',
+      tecla: 'enter',
+      'reacao.bruno': 'nota:4',
+    })
+    const location = searched((await response).headers.get('Location'))
+    expect(location.searchParams.get('buscar')).toBe('fronteira')
+    expect(record).not.toHaveBeenCalled()
+  })
+
+  it('Enter with the title already searched, or a click on the button, records', async () => {
+    const enter = search({
+      filme: 'outro',
+      busca: 'Café Amargo',
+      buscado: 'Café Amargo',
+      tecla: 'enter',
+      'reacao.bruno': 'nota:4',
+    })
+    expect((await enter.response).headers.get('Location')).toBe(
+      '/sessoes/2026-11-20-quim?feito=contada',
+    )
+    const click = search({
+      filme: 'outro',
+      busca: 'Café Amargo',
+      buscado: '',
+      'reacao.bruno': 'nota:4',
+    })
+    expect((await click.response).headers.get('Location')).toBe(
+      '/sessoes/2026-11-20-quim?feito=contada',
+    )
+  })
+})
+
+describe('feedbackDraft', () => {
+  it('is null with no note, a forgotten one, or one of another form', () => {
+    const notes = new Notes()
+    const other = notes.remember({ warnings: ['aviso'], addition: null })
+    expect(feedbackDraft(undefined, notes)).toBeNull()
+    expect(feedbackDraft('nenhuma', notes)).toBeNull()
+    expect(feedbackDraft(other, notes)).toBeNull()
   })
 })
 
@@ -262,6 +366,8 @@ describe('feedbackFromEngine', () => {
           id: first.session.id,
           date: '2026-11-20',
           request: null,
+          moods: [],
+          constraints: [],
           attendees: [
             { person: 'bruno', name: 'Bruno', owner: true },
             { person: 'quim', name: 'Quim', owner: false },
@@ -286,10 +392,11 @@ describe('feedbackFromEngine', () => {
         first.session.id,
         BRUNO,
         feedback,
+        new Notes(),
         ORIGIN,
       )
       expect(response.headers.get('Location')).toBe(
-        `/feedback?feito=${first.session.id}`,
+        `/sessoes/${first.session.id}?feito=contada`,
       )
       expect(await openSessionList(feedback)).toEqual([])
       const log = git(fixture.data, 'log', '-1', '--format=%an <%ae>|%s')

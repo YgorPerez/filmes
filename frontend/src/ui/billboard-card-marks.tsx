@@ -1,5 +1,5 @@
 import type { BillboardFilm, BillboardPerson } from '@filmes/engine'
-import type { ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { BILLBOARD } from './billboard.copy'
 import type { FilmMarks } from './billboard-marks'
 import { Icon } from './billboard-icons'
@@ -8,9 +8,10 @@ import { FIELD } from './kit/field'
 import { Avatar } from './kit/person'
 
 // The marks of one film of the Cartaz (DESIGN.md, Opções, Escala de nota,
-// Estrelas): Já vi per Presente and "Todos", each Já vi opening her note
-// (the 1 to 10 scale and what she thought) on the blue card stock; Trocar
-// and the stars on one line; the comment.
+// Estrelas): Trocar, the stars and Comentar on one line; Já vi per
+// Presente and "Todos", each Já vi opening her note (the 1 to 10 scale and
+// what she thought) on the blue card stock. The comment's field opens from
+// Comentar, so a card carries no empty field.
 
 /** An option that stays pressed, with the ✓ before the word. */
 function Toggle({
@@ -147,7 +148,40 @@ function Stars({
 
 const label = 'font-display text-label text-ink-2 uppercase'
 
-/** The marks of one film. */
+/** The comment's field, at the end of the card's marks; opened by a tap
+ * on Comentar it takes the typing. */
+function Comment({
+  position,
+  comment,
+  opened,
+  onChange,
+}: {
+  position: number
+  comment: string
+  opened: boolean
+  onChange: (comment: string) => void
+}) {
+  const { marks: copy } = BILLBOARD
+  const field = useRef<HTMLTextAreaElement>(null)
+  useEffect(() => {
+    if (opened) field.current?.focus()
+  }, [opened])
+  return (
+    <textarea
+      ref={field}
+      rows={1}
+      placeholder={copy.comment}
+      aria-label={copy.commentLabel(position)}
+      value={comment}
+      onChange={(e) => onChange(e.target.value)}
+      className={FIELD}
+    />
+  )
+}
+
+/** The marks of one film: Trocar, the stars and Comentar on one line
+ * (it wraps on a phone), then Já vi per Presente with each one's note,
+ * and the comment once Comentar opened it or it has text. */
 export function FilmMarksControls({
   film,
   people,
@@ -160,6 +194,8 @@ export function FilmMarksControls({
   onChange: (marks: FilmMarks) => void
 }) {
   const { marks: copy } = BILLBOARD
+  const [opened, setOpened] = useState(false)
+  const commenting = opened || marks.comment !== ''
   const seen = new Set(marks.seen)
   const mark = (slug: string, on: boolean) => {
     const next = new Set(seen)
@@ -172,6 +208,28 @@ export function FilmMarksControls({
   }
   return (
     <div className="col-span-2 flex flex-col gap-sm border-t border-dashed border-rule pt-lg">
+      <div className="flex flex-wrap items-center gap-x-sm">
+        <Toggle
+          pressed={marks.swap}
+          onChange={(swap) => onChange({ ...marks, swap })}
+        >
+          {copy.swap}
+        </Toggle>
+        <Stars
+          stars={marks.stars}
+          onChange={(stars) => onChange({ ...marks, stars })}
+        />
+        {!commenting && (
+          <button
+            type="button"
+            aria-expanded={false}
+            onClick={() => setOpened(true)}
+            className={buttonVariants({ variant: 'link' })}
+          >
+            {copy.openComment}
+          </button>
+        )}
+      </div>
       <div
         role="group"
         aria-label={copy.seenGroup(film.position)}
@@ -209,26 +267,14 @@ export function FilmMarksControls({
             onChange={onChange}
           />
         ))}
-      <div className="flex flex-wrap items-center gap-sm">
-        <Toggle
-          pressed={marks.swap}
-          onChange={(swap) => onChange({ ...marks, swap })}
-        >
-          {copy.swap}
-        </Toggle>
-        <Stars
-          stars={marks.stars}
-          onChange={(stars) => onChange({ ...marks, stars })}
+      {commenting && (
+        <Comment
+          position={film.position}
+          comment={marks.comment}
+          opened={opened}
+          onChange={(comment) => onChange({ ...marks, comment })}
         />
-      </div>
-      <textarea
-        rows={1}
-        placeholder={copy.comment}
-        aria-label={copy.commentLabel(film.position)}
-        value={marks.comment}
-        onChange={(e) => onChange({ ...marks, comment: e.target.value })}
-        className={FIELD}
-      />
+      )}
     </div>
   )
 }

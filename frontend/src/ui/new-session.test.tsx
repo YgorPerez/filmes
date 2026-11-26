@@ -3,13 +3,18 @@
 // server reads (`parseSessionRequest`, the same reader the route uses).
 import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import type { ComponentProps } from 'react'
 import { afterEach, describe, expect, it } from 'vite-plus/test'
 import {
   parseSessionRequest,
   SESSION_REQUEST_REFUSALS,
 } from '#/content/session-request'
-import type { NewSessionDraft, RequestOptions } from '#/platform/sessions'
-import { NewSession } from './sessions'
+import { NewSession } from './new-session'
+
+// The screen's own props: the test leaves the server module alone.
+type Props = ComponentProps<typeof NewSession>
+type RequestOptions = NonNullable<Props['options']>
+type NewSessionDraft = NonNullable<Props['draft']>
 import { SESSIONS } from './sessions.copy'
 
 afterEach(cleanup)
@@ -48,6 +53,7 @@ describe('the Nova Sessão form', () => {
   it('posts the Presentes, the Regra, the Climas and every Restrição', async () => {
     const { user, form } = show()
     await user.click(screen.getByRole('checkbox', { name: 'Iara' }))
+    await user.click(screen.getByText(copy.details))
     await user.click(screen.getByRole('radio', { name: copy.rules.de }))
     await user.selectOptions(
       screen.getByRole('combobox', { name: /^De quem/ }),
@@ -78,7 +84,7 @@ describe('the Nova Sessão form', () => {
       screen.getByLabelText(copy.similar, { exact: false }),
       'tt9000101',
     )
-    await user.click(screen.getByRole('checkbox', { name: /Nenhum Já visto/ }))
+    await user.click(screen.getByRole('checkbox', { name: copy.unseen }))
     await user.click(screen.getByRole('checkbox', { name: copy.noSlow }))
     await user.click(screen.getByRole('checkbox', { name: copy.noSad }))
     await user.click(
@@ -110,6 +116,7 @@ describe('the Nova Sessão form', () => {
 
   it('starts the Série na ordem at its default, marked, and offers the other two', async () => {
     const { user, form } = show()
+    await user.click(screen.getByText(copy.details))
     const group = screen.getByRole('region', { name: copy.seriesOrder })
     const radios = within(group).getAllByRole('radio')
 
@@ -131,12 +138,14 @@ describe('the Nova Sessão form', () => {
 
   it('offers a child with no age (only “livre”)', async () => {
     const { user, form } = show()
+    await user.click(screen.getByText(copy.details))
     await user.selectOptions(screen.getByLabelText(copy.child), '0')
     expect(posted(form)).toMatchObject({ ok: { child: 0 } })
   })
 
   it('refuses “o gosto de uma Pessoa” for someone who is not a Presente', async () => {
     const { user, form } = show()
+    await user.click(screen.getByText(copy.details))
     await user.click(screen.getByRole('radio', { name: copy.rules.de }))
     await user.selectOptions(
       screen.getByRole('combobox', { name: /^De quem/ }),
@@ -208,8 +217,9 @@ describe('the Catálogo search', () => {
     expect(posted(form as HTMLFormElement)).toMatchObject({
       ok: { similar: ['tt9000101'] },
     })
-    const searchForm = screen.getByRole('search') as HTMLFormElement
-    expect(new FormData(searchForm).get('parecido')).toBe('tt9000101')
+    expect(new FormData(form as HTMLFormElement).get('parecido')).toBe(
+      'tt9000101',
+    )
   })
 
   it('starts “parecido com” with no search', () => {
@@ -221,9 +231,9 @@ describe('the Catálogo search', () => {
         }) as HTMLInputElement
       ).value,
     ).toBe('')
-    expect(
-      screen.getByRole('search').querySelector('input[type=hidden]'),
-    ).toBeNull()
+    expect(screen.getByText(copy.searchFold).closest('details')?.open).toBe(
+      false,
+    )
   })
 })
 
@@ -287,9 +297,10 @@ describe('reading a sentence (“Ler”)', () => {
       name: copy.read,
     }) as HTMLButtonElement
     expect([read.form, read.name, read.value]).toEqual([form, 'ler', 'sim'])
-    // Enter presses the first submit button: the one with no “ler”.
-    const first = form.querySelector('button[type=submit]')
-    expect(first?.hasAttribute('name')).toBe(false)
+    // Enter presses the first submit button: not “ler”, but the one that
+    // says Enter, so a search not run yet in its field searches instead.
+    const first = form.querySelector<HTMLButtonElement>('button[type=submit]')
+    expect([first?.name, first?.value]).toEqual(['tecla', 'enter'])
   })
 
   it('comes back with every field “Ler” left, and the sentence kept', () => {
@@ -329,7 +340,7 @@ describe('the form “Ler” filled', () => {
     expect(posted(form)).toMatchObject({
       ok: { similar: ['tt9001904', 'tt9000101'] },
     })
-    const search = new FormData(screen.getByRole('search') as HTMLFormElement)
+    const search = new FormData(form)
     expect([search.get('parecido'), search.get('nota')]).toEqual([
       'tt9001904,tt9000101',
       NOTE,
@@ -387,5 +398,38 @@ describe('the form “Ler” filled', () => {
     const said = screen.getByRole('status').textContent
     expect(said).toContain(copy.reading.nothing)
     expect(said).toContain(copy.reading.notUnderstood(['pipoca']))
+  })
+})
+
+describe('“Mais opções”', () => {
+  const details = () =>
+    screen.getByText(copy.details).closest('details') as HTMLDetailsElement
+
+  it('stays folded for a draft that set nothing under it', () => {
+    showDraft({
+      ...DRAFT,
+      fields: {
+        attendees: ['bruno', 'iara'],
+        moods: ['leve'],
+        rule: 'default',
+      },
+    })
+    expect(details().open).toBe(false)
+  })
+
+  it('comes open for a draft that set a limit, the Regra or the Série', () => {
+    showDraft(DRAFT)
+    expect(details().open).toBe(true)
+    cleanup()
+    showDraft({ ...DRAFT, fields: { seriesOrder: 'all' } })
+    expect(details().open).toBe(true)
+  })
+
+  it('comes open for a refusal about a field under it, and only then', () => {
+    render(<NewSession options={OPTIONS} refusal="duracao" />)
+    expect(details().open).toBe(true)
+    cleanup()
+    render(<NewSession options={OPTIONS} refusal="presentes" />)
+    expect(details().open).toBe(false)
   })
 })

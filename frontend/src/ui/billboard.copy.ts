@@ -3,6 +3,12 @@
 const plural = (n: number, one: string, many: string) =>
   `${n} ${n === 1 ? one : many}`
 
+/** "a", "a e b", "a, b e c". */
+const andList = (items: readonly string[]) =>
+  items.length <= 1
+    ? items.join('')
+    : `${items.slice(0, -1).join(', ')} e ${items.at(-1)}`
+
 export const BILLBOARD = {
   label: 'Cartaz',
   dropped: 'Saiu da prateleira:',
@@ -23,7 +29,7 @@ export const BILLBOARD = {
     predicted: 'Nota prevista',
     predictedOf: (name: string, rating: string) => `${name}: ${rating} de 10`,
     predictedHint:
-      'Pelas pessoas de gosto parecido no MovieLens, na escala de 1 a 10 do Já vi',
+      'Vem de quem tem gosto parecido no MovieLens, de 1 a 10 como no Já vi',
     why: 'Por que cada um vai gostar',
     withoutFact: (names: string) => `${names}: sem fato sobre este filme`,
     swapStamp: 'Trocar',
@@ -49,11 +55,13 @@ export const BILLBOARD = {
     stars: 'quanto animou',
     star: (value: number) => `${value} de 5`,
     comment: 'comentário',
+    openComment: 'Comentar',
     commentLabel: (n: number) => `comentário sobre o filme ${n}`,
   },
 
   reply: {
     title: 'Responder',
+    bar: 'O que você marcou',
     addition: 'Acrescentar',
     additionHint: 'contexto da noite ou gosto: “chegou a Ana”, “só 1h30”',
     moods: 'Clima',
@@ -68,6 +76,8 @@ export const BILLBOARD = {
     kept: 'O que você marcar fica guardado neste navegador, mesmo trocando de aba.',
     noScript:
       'Sem JavaScript as marcações não saem daqui: responda no chat ou ative o JavaScript.',
+    /** What was marked, in a sentence: "1 Trocar, 1 Já vi e estrelas em
+     * 2 filmes". Empty with nothing marked. */
     summary: (counts: {
       swap: number
       seen: number
@@ -76,26 +86,24 @@ export const BILLBOARD = {
       addition: boolean
       mood: boolean
     }) =>
-      [
-        counts.swap > 0 &&
-          plural(counts.swap, 'Trocar marcado', 'Trocar marcados'),
-        counts.seen > 0 && plural(counts.seen, 'Já vi', 'Já vi'),
-        counts.stars > 0 &&
-          plural(counts.stars, 'filme com estrelas', 'filmes com estrelas'),
-        counts.comments > 0 &&
-          plural(counts.comments, 'comentário', 'comentários'),
-        counts.addition && 'acrescentar',
-        counts.mood && 'outro Clima',
-      ]
-        .filter(Boolean)
-        .join(' · '),
+      andList(
+        [
+          counts.swap > 0 && `${counts.swap} Trocar`,
+          counts.seen > 0 && `${counts.seen} Já vi`,
+          counts.stars > 0 &&
+            `estrelas em ${plural(counts.stars, 'filme', 'filmes')}`,
+          counts.comments > 0 &&
+            plural(counts.comments, 'comentário', 'comentários'),
+          counts.addition && 'o acrescentar',
+          counts.mood && 'outro Clima',
+        ].filter((item): item is string => typeof item === 'string'),
+      ),
   },
 
   // The MCP Apps view (`mcp-view/`): Enviar goes to `answer_billboard`
   // through the host, and Claude gets a message when it has to regenerate.
   view: {
     loading: 'Montando o Cartaz…',
-    tag: 'filmes · Cartaz',
     list: 'Os filmes do Cartaz',
     mark: 'Marcar',
     open: 'Ver o Cartaz',

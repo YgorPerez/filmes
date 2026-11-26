@@ -296,7 +296,7 @@ describe('the ruler reads a Nota by its percentile (#172)', () => {
     const e = metadata(await all(fixture, own(fixture)), 'As Horas Lentas')
 
     expect([e?.text, e?.strength]).toEqual([
-      'dirigido por Helena Prado, como 2 filmes a que deu Nota alta: O Farol de Areia (2012) e Maré Baixa (2015)',
+      'dirigido por Helena Prado, como 2 filmes a que deu nota alta: O Farol de Areia (2012) e Maré Baixa (2015)',
       'moderate',
     ])
   })

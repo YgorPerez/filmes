@@ -7,7 +7,7 @@ import {
 import { readSessionPage } from '#/content/sessions'
 import { SessionScreen } from '#/ui/sessions'
 
-export const Route = createFileRoute('/_owner/sessoes/$sessao')({
+export const Route = createFileRoute('/_owner/sessoes/$sessao/')({
   validateSearch: (search) => ({
     feito: isSessionNotice(search.feito) ? search.feito : undefined,
     erro: isReplyRefusal(search.erro) ? search.erro : undefined,

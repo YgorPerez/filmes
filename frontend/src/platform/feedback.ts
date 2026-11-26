@@ -2,11 +2,11 @@
 // Presentes saw and thought (`recordFeedback`, #96), and the satisfaction
 // it changes (#176). The form posts to `/feedback/<sessao>/enviar`, which records it
 // as the logged-in Dono (the commit's author, and whose reactions are not
-// relayed) and goes back to the list. Server only.
+// relayed) and goes back to the Session. Server only.
 
 import {
   readPeople,
-  openSessions,
+  listSessions,
   recordFeedback,
   satisfactionNow,
   type PersonSatisfactionNow,
@@ -17,12 +17,17 @@ import {
   type Outcome,
 } from '@filmes/engine'
 import {
+  feedbackDraftOf,
+  feedbackSearch,
   parseFeedback,
+  type FeedbackDraft,
   type FeedbackForm,
   type FeedbackRefusal,
 } from '#/content/feedback-form'
+import { feedbackPath, sessionPath } from '#/content/session-paths'
 import { appPoster, formPoster, seeOther } from './form-post'
 import { appEngine } from './engine'
+import { appNotes, type Notes } from './notes'
 import { attendeeSlugs, sessionFilms, type SessionFilm } from './session-fields'
 import type { Owner } from './owners'
 
@@ -41,13 +46,15 @@ export type FeedbackSession = {
   request: string | null
   attendees: FeedbackAttendee[]
   recommendation: FeedbackFilm[]
+  moods: readonly string[]
+  constraints: readonly string[]
 }
 
 /** A Presente's satisfaction now: what the next Recomendação of this group
  * weighs. */
 export type FeedbackSatisfaction = PersonSatisfactionNow & { name: string }
 
-/** What `/feedback/<sessao>` shows. */
+/** What a Sessão's Feedback form shows. */
 export type FeedbackPage = FeedbackSession & {
   satisfaction: FeedbackSatisfaction[]
 }
@@ -91,26 +98,30 @@ export function feedbackFromEngine(
   const run = engine.run
   return {
     async sessions() {
-      const open = await run(openSessions)
+      const open = await run(listSessions)
       if (open.exitCode !== 0) return open
       const people = await run(readPeople)
       if (people.exitCode !== 0) return people
       const byslug = new Map(people.output.map((p) => [p.slug, p]))
       return ok(
-        open.output.sessions.map((s) => ({
-          id: s.id,
-          date: s.date,
-          request: typeof s.request === 'string' ? s.request : null,
-          attendees: attendeeSlugs(s.attendees).map((person) => ({
-            person,
-            name: byslug.get(person)?.name ?? person,
-            owner:
-              viewer === null
-                ? (byslug.get(person)?.owner ?? false)
-                : person === viewer,
+        open.output.sessions
+          .filter((session) => session.open)
+          .map((s) => ({
+            id: s.id,
+            date: s.date,
+            request: typeof s.request === 'string' ? s.request : null,
+            attendees: attendeeSlugs(s.attendees).map((person) => ({
+              person,
+              name: byslug.get(person)?.name ?? person,
+              owner:
+                viewer === null
+                  ? (byslug.get(person)?.owner ?? false)
+                  : person === viewer,
+            })),
+            recommendation: sessionFilms(s.recommendation),
+            moods: s.moods,
+            constraints: s.constraints,
           })),
-          recommendation: sessionFilms(s.recommendation),
-        })),
       )
     },
     satisfaction: (attendees) => run(satisfactionNow(attendees)),
@@ -126,7 +137,7 @@ function logEngineError(outcome: { output: ErrorOutput }): void {
   console.error(`engine: ${code}: ${message}`)
 }
 
-/** What `/feedback` lists; null when the engine cannot run here. */
+/** The open Sessions; null when the engine cannot run here. */
 export async function openSessionList(
   feedback: Feedback,
 ): Promise<FeedbackSession[] | null> {
@@ -138,7 +149,7 @@ export async function openSessionList(
   return list.output
 }
 
-/** What `/feedback/<sessao>` shows: the open Session with its Presentes'
+/** What a Sessão's Feedback form (`feedbackPath`) shows: the open Session with its Presentes'
  * satisfaction, `'unknown'` when no open Session has that id (it has its
  * Feedback already, or never was), or null when the engine cannot run
  * here. */
@@ -185,11 +196,33 @@ function refusalOf(outcome: { output: ErrorOutput }): FeedbackRefusal {
   }
 }
 
-const pageOf = (session: string) => `/feedback/${encodeURIComponent(session)}`
+/** The Catálogo search: back to the form with the results (with nothing
+ * typed, saying so) and, in a note (`?nota=`), the reactions and comments
+ * as the Dono left them, which the URL does not carry. */
+function searchCatalog(
+  form: FormData,
+  query: string,
+  session: string,
+  notes: Notes,
+): Response {
+  const draft = feedbackDraftOf(form)
+  const token = notes.remember({
+    warnings: [],
+    addition: null,
+    ...(Object.keys(draft).length > 0 && { feedback: draft }),
+  })
+  const params = new URLSearchParams(
+    query ? { buscar: query } : { erro: 'filme' },
+  )
+  if (token) params.set('nota', token)
+  return seeOther(`${feedbackPath(session)}?${params}`)
+}
 
 /** `POST /feedback/<sessao>/enviar`: records the form's Feedback as the
- * logged-in Dono and goes back to the list (`?feito=<sessao>`), or to the
- * form saying why not (`?erro=`). Only a Dono, and only a form of this site
+ * logged-in Dono and goes to the Sessão (`?feito=contada`), or back to the
+ * form saying why not (`?erro=`); a Sessão gone shows its page's own
+ * notice. The Catálogo search (its button, or Enter in its field) records
+ * nothing: `searchCatalog`. Only a Dono, and only a form of this site
  * (the `Origin`, as the logout checks): the page gate does not cover this
  * route. */
 export async function feedbackAction(
@@ -197,30 +230,37 @@ export async function feedbackAction(
   session: string,
   owner: Owner | null,
   feedback: Feedback,
+  notes: Notes,
   origin: string | undefined,
 ): Promise<Response> {
   const poster = formPoster(request, owner, origin)
   if (poster instanceof Response) return poster
-  const parsed = parseFeedback(await request.formData())
+  const form = await request.formData()
+  const query = feedbackSearch(form)
+  if (query !== undefined) return searchCatalog(form, query, session, notes)
+  const parsed = parseFeedback(form)
   if ('refused' in parsed)
-    return seeOther(`${pageOf(session)}?erro=${parsed.refused}`)
+    return seeOther(`${feedbackPath(session)}?erro=${parsed.refused}`)
   const outcome = await feedback.record(session, parsed.ok, poster.person)
   if (outcome.exitCode !== 0) {
     if (outcome.output.error.code === 'unknown_session')
-      return seeOther('/feedback?erro=sessao')
-    return seeOther(`${pageOf(session)}?erro=${refusalOf(outcome)}`)
+      return seeOther(sessionPath(session))
+    return seeOther(`${feedbackPath(session)}?erro=${refusalOf(outcome)}`)
   }
-  return seeOther(`/feedback?feito=${encodeURIComponent(session)}`)
+  return seeOther(`${sessionPath(session)}?feito=contada`)
 }
+
+/** The reactions and comments the note `token` holds; null when there are
+ * none (gone after a restart, or a note of another form). */
+export const feedbackDraft = (
+  token: string | undefined,
+  notes: Notes,
+): FeedbackDraft | null => notes.recall(token)?.feedback ?? null
 
 // --- the app's -----------------------------------------------------------------
 
 const appFeedback = (viewer: string | null = null) =>
   feedbackFromEngine(appEngine(), viewer)
-
-/** The open Sessions for the app, for the logged-in Dono `viewer`. */
-export const appOpenSessions = (viewer: string) =>
-  openSessionList(appFeedback(viewer))
 
 /** A Session's Feedback form for the app, for the logged-in Dono
  * `viewer`. */
@@ -231,5 +271,16 @@ export const appFeedbackPage = (id: string, viewer: string) =>
  * engine. */
 export const serveFeedbackAction = (request: Request, session: string) => {
   const { owner, origin } = appPoster(request)
-  return feedbackAction(request, session, owner, appFeedback(), origin)
+  return feedbackAction(
+    request,
+    session,
+    owner,
+    appFeedback(),
+    appNotes(),
+    origin,
+  )
 }
+
+/** The draft of `/sessoes/<sessao>/contar?nota=`, for the app. */
+export const appFeedbackDraft = (token: string) =>
+  feedbackDraft(token, appNotes())

@@ -1,14 +1,13 @@
+import { useState } from 'react'
 import {
   RATING_CHOICES,
   REPORT_CHOICES,
+  type FeedbackDraft,
   type FeedbackRefusal,
 } from '#/content/feedback-form'
+import { feedbackPath, sessionPath } from '#/content/session-paths'
 import type { SearchAnswer } from '#/platform/catalog-search'
-import type {
-  FeedbackAttendee,
-  FeedbackPage,
-  FeedbackSession,
-} from '#/platform/feedback'
+import type { FeedbackAttendee, FeedbackPage } from '#/platform/feedback'
 import { FEEDBACK } from './feedback.copy'
 import { ImportsFrame } from './imports'
 import { FIELD } from './kit/field'
@@ -18,98 +17,55 @@ import { PriceSticker } from './kit/sticker'
 import { OwnerTag } from './kit/owner-tag'
 import {
   Alert,
-  CatalogSearch,
   Item,
   Items,
-  Meta,
-  Notice,
+  SessionFilmLookup,
   Section,
   Submit,
   TextField,
 } from './person-parts'
 import {
   Avatars,
-  DateLabel,
+  SessionDate,
   names,
   PersonAvatar,
   NightRequest,
-  SearchFold,
-  ShelfRow,
 } from './session-parts'
 
-/** `/feedback`: the open Sessions, each a row of the shelf to its form.
- * `sessions` is null when the engine cannot run on this server; `recorded`
- * is the Session whose Feedback was just recorded. */
-export function OpenSessions({
-  sessions,
-  recorded,
-  gone = false,
-}: {
-  sessions: FeedbackSession[] | null
-  recorded?: string
-  gone?: boolean
-}) {
-  const { list } = FEEDBACK
-  return (
-    <ImportsFrame back={FEEDBACK.back} backTo="/">
-      <div className="flex flex-col gap-sm">
-        <h1 className="font-display text-title">{list.title}</h1>
-        <p className="max-w-[60ch] text-ink-2">{list.lead}</p>
-      </div>
-      {recorded && <Notice>{list.recorded(recorded)}</Notice>}
-      {gone && <Alert>{list.gone}</Alert>}
-      {!sessions ? (
-        <Alert>{FEEDBACK.unavailable}</Alert>
-      ) : sessions.length === 0 ? (
-        <p className="text-ink-2">{list.empty}</p>
-      ) : (
-        <ul className="flex flex-col gap-md">
-          {sessions.map((s) => (
-            <ShelfRow
-              key={s.id}
-              href={`/feedback/${encodeURIComponent(s.id)}`}
-              before={<Avatars people={s.attendees} />}
-            >
-              <DateLabel>{s.date}</DateLabel>
-              <span className="font-display text-[15px] font-bold">
-                {names(s.attendees)}
-              </span>
-              <Meta parts={[s.request, list.films(s.recommendation.length)]} />
-            </ShelfRow>
-          ))}
-        </ul>
-      )}
-    </ImportsFrame>
-  )
-}
-
-/** `/feedback/<sessao>`: the form that records the Session's Feedback and
+/** `feedbackPath(<sessao>)`: the form that records the Session's Feedback and
  * closes it, and the satisfaction of its Presentes now. A plain POST to
  * `/feedback/<sessao>/enviar`: it works before the JavaScript. `page` is
  * `'unknown'` when no open Session has that id, null when the engine cannot
  * run on this server. The Catálogo search (`search`) comes first: its
- * "Usar" comes back with `film` chosen, from the list or as "Outro filme". */
+ * "Usar" comes back with `film` chosen, from the list or as "Outro filme".
+ * `draft` holds the reactions and comments the search kept, in the note
+ * `note`: the form comes back with them, and "Usar" keeps them. */
 export function FeedbackScreen({
   session,
   page,
   refusal,
   search = null,
   film,
+  draft = null,
+  note,
 }: {
   session: string
   page: FeedbackPage | 'unknown' | null
   refusal?: FeedbackRefusal
   search?: SearchAnswer | null
   film?: string
+  draft?: FeedbackDraft | null
+  note?: string
 }) {
-  const path = `/feedback/${encodeURIComponent(session)}`
+  const path = feedbackPath(session)
   const pick = (id: string) => {
     const params = new URLSearchParams({ filme: id })
     if (search) params.set('buscar', search.query)
+    if (note) params.set('nota', note)
     return `${path}?${params.toString()}`
   }
   return (
-    <ImportsFrame back={FEEDBACK.back} backTo="/feedback">
+    <ImportsFrame back={FEEDBACK.back} backTo={sessionPath(session)}>
       {page === null ? (
         <Alert>{FEEDBACK.unavailable}</Alert>
       ) : page === 'unknown' ? (
@@ -118,19 +74,15 @@ export function FeedbackScreen({
         <>
           <Heading page={page} />
           {refusal && <Alert>{FEEDBACK.refusals[refusal]}</Alert>}
-          <SearchFold
-            summary={FEEDBACK.form.searchFold}
-            hint={FEEDBACK.form.searchFoldHint}
-            open={search !== null}
-          >
-            <CatalogSearch
-              action={path}
-              scope="films"
-              answer={search}
-              pick={pick}
-            />
-          </SearchFold>
-          <FeedbackForm session={session} page={page} film={film} />
+          <FeedbackForm
+            key={`${session} ${film ?? ''} ${search?.query ?? ''} ${note ?? ''}`}
+            session={session}
+            page={page}
+            film={film}
+            search={search}
+            draft={draft}
+            pick={pick}
+          />
           {page.attendees.length > 1 && <Satisfaction page={page} />}
         </>
       )}
@@ -143,17 +95,22 @@ export function FeedbackScreen({
 function Heading({ page }: { page: FeedbackPage }) {
   return (
     <div className="flex flex-col gap-lg">
-      <h1 className="font-display text-title">{FEEDBACK.form.title}</h1>
+      <h1 className="font-display text-counter-title">{FEEDBACK.form.title}</h1>
       <div className="flex items-center gap-lg">
         <Avatars people={page.attendees} />
         <span className="flex min-w-0 flex-col gap-0.5">
-          <DateLabel>{page.date}</DateLabel>
+          <span className="text-meta text-ink-2">
+            <SessionDate date={page.date} />
+          </span>
           <span className="font-display text-step-title">
             {names(page.attendees)}
           </span>
         </span>
       </div>
-      <NightRequest items={[]} note={page.request} />
+      <NightRequest
+        items={[...page.moods, ...page.constraints]}
+        note={page.request}
+      />
     </div>
   )
 }
@@ -162,28 +119,64 @@ function FeedbackForm({
   session,
   page,
   film,
+  search,
+  draft,
+  pick,
 }: {
   session: string
   page: FeedbackPage
   film?: string
+  search: SearchAnswer | null
+  draft: FeedbackDraft | null
+  pick: (id: string) => string
 }) {
   const { form } = FEEDBACK
+  const [nothing, setNothing] = useState(false)
+  const listed = page.recommendation.some((item) => item.id === film)
+  const other = !listed && (film !== undefined || search !== null)
   return (
     <form
       method="post"
       action={`/feedback/${encodeURIComponent(session)}/enviar`}
       aria-label={form.label}
-      className="flex flex-col gap-3xl"
+      className="group/feedback flex flex-col gap-3xl"
+      onChange={(event) => {
+        const input = event.target
+        if (input instanceof HTMLInputElement && input.name === 'filme')
+          setNothing(input.value === 'nada')
+      }}
     >
-      <FilmChoice page={page} film={film} />
+      {/* Enter in any field sends the form: the first submit button is the
+          one Enter presses. With a search not run yet in its field, the
+          server searches instead (`searchAsked`). */}
+      <button type="submit" name="tecla" value="enter" hidden>
+        {form.submit}
+      </button>
+      <FilmChoice
+        page={page}
+        film={film}
+        other={other}
+        search={search}
+        pick={pick}
+      />
 
-      <Section id="reacoes" title={form.reactions} lead={form.reactionsLead}>
-        <div className="flex flex-col">
-          {page.attendees.map((attendee, index) => (
-            <Reaction key={attendee.person} attendee={attendee} index={index} />
-          ))}
-        </div>
-      </Section>
+      <fieldset
+        disabled={nothing}
+        className="min-w-0 group-has-[input[value=nada]:checked]/feedback:hidden"
+      >
+        <Section id="reacoes" title={form.reactions} lead={form.reactionsLead}>
+          <div className="flex flex-col">
+            {page.attendees.map((attendee, index) => (
+              <Reaction
+                key={attendee.person}
+                attendee={attendee}
+                index={index}
+                kept={draft?.[attendee.person]}
+              />
+            ))}
+          </div>
+        </Section>
+      </fieldset>
 
       <Submit variant="primary" className="w-full sm:w-auto sm:self-start">
         {form.submit}
@@ -192,16 +185,29 @@ function FeedbackForm({
   )
 }
 
-/** Which film they saw: one of the list (its tape: the price sticker with
- * its number and its title), another (`busca`), or none. `film` comes
- * chosen (the Catálogo search's "Usar"). */
-function FilmChoice({ page, film }: { page: FeedbackPage; film?: string }) {
+/** The chosen film or a title to look up. */
+function FilmChoice({
+  page,
+  film,
+  other,
+  search,
+  pick,
+}: {
+  page: FeedbackPage
+  film?: string
+  other: boolean
+  search: SearchAnswer | null
+  pick: (id: string) => string
+}) {
   const { form } = FEEDBACK
-  const listed = page.recommendation.some((f) => f.id === film)
-  const other = film !== undefined && !listed
+  const selected =
+    search && 'found' in search
+      ? search.found.films.find((item) => item.id === film)
+      : undefined
   return (
     <Section id="filme" title={form.film}>
-      <div className="flex flex-col gap-sm" role="radiogroup">
+      <fieldset className="group/film flex min-w-0 flex-col gap-sm">
+        <legend className="sr-only">{form.film}</legend>
         {page.recommendation.map((item) => (
           <Option
             key={item.id}
@@ -226,32 +232,37 @@ function FilmChoice({ page, film }: { page: FeedbackPage; film?: string }) {
         >
           {form.other}
         </Option>
-      </div>
-      <TextField
-        name="busca"
-        label={form.search}
-        hint={form.searchHint}
-        placeholder="tt…"
-        defaultValue={other ? film : undefined}
-      />
-      <Option type="radio" shape="row" name="filme" value="nada">
-        {form.nothing}{' '}
-        <span className="font-body text-meta font-normal text-ink-2">
-          {form.nothingHint}
-        </span>
-      </Option>
+        <div className="hidden flex-col gap-sm rounded-field border border-rule bg-surface-2 p-lg group-has-[input[value=outro]:checked]/film:flex">
+          {other && selected && (
+            <p className="font-semibold">{selected.title}</p>
+          )}
+          <SessionFilmLookup
+            name="busca"
+            label={form.search}
+            value={other ? (film ?? search?.query) : undefined}
+            answer={search}
+            pick={pick}
+          />
+        </div>
+        <Option type="radio" shape="row" name="filme" value="nada">
+          {form.nothing}
+        </Option>
+      </fieldset>
     </Section>
   )
 }
 
 /** One Presente's reaction: her avatar in the Session's colour and her
- * name, the Nota or the Relato, and the comment. */
+ * name, the Nota or the Relato, and the comment; filled with what the
+ * Catálogo search `kept`. */
 function Reaction({
   attendee,
   index,
+  kept,
 }: {
   attendee: FeedbackAttendee
   index: number
+  kept?: FeedbackDraft[string]
 }) {
   const { form } = FEEDBACK
   const id = `reacao-${attendee.person}`
@@ -270,7 +281,7 @@ function Reaction({
             id={id}
             aria-label={`${form.reaction}: ${attendee.name}`}
             name={`reacao.${attendee.person}`}
-            defaultValue=""
+            defaultValue={kept?.reaction ?? ''}
             className={`${FIELD} w-full`}
           >
             <option value="">{form.none}</option>
@@ -295,7 +306,7 @@ function Reaction({
         <TextField
           name={`comentario.${attendee.person}`}
           label={`${form.comment}: ${attendee.name}`}
-          hint={form.commentHint}
+          defaultValue={kept?.comment}
         />
       </div>
     </fieldset>
@@ -316,9 +327,7 @@ function Satisfaction({ page }: { page: FeedbackPage }) {
             ? []
             : [
                 <Item key={c.person}>
-                  <span className="font-semibold">{c.name}</span>
                   <span>{c.line}</span>
-                  <Meta parts={[satisfaction.value(c.satisfaction)]} />
                 </Item>,
               ],
         )}

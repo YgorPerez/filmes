@@ -1,17 +1,9 @@
 import { createServerFn } from '@tanstack/react-start'
+import { isNoteToken } from './billboard-reply'
 import { ownerMiddleware, pathSlug, requireOwner } from './owner'
 
-/** What `/feedback` lists (`openSessionList`). A request with no Dono is
- * refused: the page gate does not protect a server function. */
-export const readOpenSessions = createServerFn({ method: 'GET' })
-  .middleware([ownerMiddleware])
-  .handler(async ({ context }) => {
-    requireOwner(context.owner)
-    const { appOpenSessions } = await import('#/platform/feedback')
-    return appOpenSessions(context.owner.person)
-  })
-
-/** What `/feedback/<sessao>` shows (`feedbackPage`). */
+/** What a Sessão's Feedback form shows (`feedbackPage`). A request with
+ * no Dono is refused: the page gate does not protect a server function. */
 export const readFeedbackPage = createServerFn({ method: 'GET' })
   .middleware([ownerMiddleware])
   .validator(pathSlug)
@@ -20,3 +12,23 @@ export const readFeedbackPage = createServerFn({ method: 'GET' })
     const { appFeedbackPage } = await import('#/platform/feedback')
     return appFeedbackPage(data, context.owner.person)
   })
+
+/** The reactions and comments the Catálogo search kept, in the note
+ * `/sessoes/<sessao>/contar?nota=` names (`feedbackDraft`). */
+const readFeedbackDraft = createServerFn({ method: 'GET' })
+  .middleware([ownerMiddleware])
+  .validator((value: unknown) => {
+    if (!isNoteToken(value)) throw new Error('note token required')
+    return value
+  })
+  .handler(async ({ context, data }) => {
+    requireOwner(context.owner)
+    const { appFeedbackDraft } = await import('#/platform/feedback')
+    return appFeedbackDraft(data)
+  })
+
+/** The draft for the page's loader: none without `?nota=`. */
+export const feedbackDraftFor = (token: string | undefined) =>
+  token === undefined
+    ? Promise.resolve(null)
+    : readFeedbackDraft({ data: token })

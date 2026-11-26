@@ -37,7 +37,7 @@ Cada linha de "Por que cada um vai gostar" aponta para um Fato guardado, com Fon
 
 - Dois caminhos para a mesma coisa:
   - **Claude**: o Dono conversa com o Claude no app (conta grátis, um conector personalizado, que funciona no celular). O filmes é esse conector, por MCP sobre HTTP. O Cartaz aparece dentro da conversa como view do MCP Apps, num WebView, no tema claro ou escuro do app. O Dono marca vários filmes e toca em Enviar; a resposta vai para a conversa e o Claude regera.
-  - **App web**: formulário estruturado para o pedido da Sessão, sem chamada a LLM. A home recebe quem acabou de chegar com um guia de 3 passos (Meu gosto, Importar do Letterboxd ou Trakt, Conector no Claude), cada um feito, pendente ou pulado; o pulado fica no frontmatter da Pessoa do Dono, em qualquer aparelho. Quem não tem histórico dá Notas numa tela própria, com os filmes de mais votos no IMDb. Telas de Sessões (pedido, Cartaz, regerar, Feedback), Pessoas (gosto, Vetos, Ajustes, perguntas abertas), import do Letterboxd e do Trakt com a fila de resolução, export, e Operações (consulta SQL, avaliar) só para quem é `admin`.
+  - **App web**: formulário estruturado para o pedido da Sessão, sem chamada a LLM. A home abre no pedido ("Pedir filme"), mostra a última Sessão com o Feedback pendente e, enquanto falta algum passo, o guia de 3 passos (Meu gosto, Importar do Letterboxd ou Trakt, Conector no Claude), cada um feito, pendente ou pulado; o pulado fica no frontmatter da Pessoa do Dono, em qualquer aparelho. As abas são Início, Sessões, Pessoas e Meu gosto (a página da Pessoa do Dono, com Notas, import e export); Operações fica no menu do avatar. Quem não tem histórico dá Notas numa tela própria, com os filmes de mais votos no IMDb. Telas de Sessões (pedido, Cartaz, regerar, Feedback), Pessoas (gosto, Vetos, Ajustes, perguntas abertas), import do Letterboxd e do Trakt com a fila de resolução, export, e Operações (consulta SQL, avaliar) só para quem é `admin`.
 - O Cartaz é um componente React só, usado nos dois caminhos.
 - Login com Google; só entra quem tem o e-mail numa Pessoa que é Dono.
 - Pessoas e Sessões são Markdown no repo privado filmes-dados. Cada gravação é um commit em nome de quem está logado. Push que falha fica na fila, e o admin vê um aviso quando falha de novo e de novo.
@@ -67,7 +67,7 @@ Cada linha de "Por que cada um vai gostar" aponta para um Fato guardado, com Fon
 - O Cartaz de hoje, em HTML para o T3 Code: `filmes/cartaz/__init__.py`, `cartaz.css` e `cartaz.js`. Ele segue as variáveis de tema do T3 (claro e escuro) e não tem identidade própria.
 - Capas, títulos em português e sinopses vêm do TMDB; nota e votos, do IMDb. A fixture (`tests/fixture/`) tem filmes, Pessoas e respostas gravadas fictícios, bons para Storybook e testes.
 - Três protótipos de direção visual do #141 em `prototypes/` (Letreiro de rua, Locadora de bairro, Catálogo da Mostra), cada um com o Cartaz (web, Claude inline e tela cheia) e a home nos 3 estados do guia. O Dono escolheu a **Locadora de bairro** no #142; ela é o mundo de `DESIGN.md`, e os outros dois ficam como histórico.
-- Não há logo, marca, depoimentos nem métricas de uso. Nada disso pode ser inventado; a carteirinha da home não leva número de sócio.
+- Não há logo, marca, depoimentos nem métricas de uso. Nada disso pode ser inventado.
 
 ## Product Principles
 

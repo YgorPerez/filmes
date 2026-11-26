@@ -3,35 +3,47 @@ import { expect, test } from './server-test'
 
 /** Through the app's button to the stand-in Google, as `email`. */
 async function loginAs(page: Page, email: string) {
-  await page.goto('/')
-  await expect(page).toHaveURL(/\/entrar$/)
   await page.getByRole('link', { name: 'Entrar com Google' }).click()
   await page.getByLabel('E-mail').fill(email)
   await page.getByRole('button', { name: 'Continuar' }).click()
 }
 
-test('a Dono logs in with Google, sees her name and logs out', async ({
+test('a Dono logs in with Google, sees her name in the menu and logs out', async ({
   page,
 }) => {
+  await page.goto('/')
+  await expect(page).toHaveURL(/\/entrar$/)
   await loginAs(page, 'bruno@example.org')
   await expect(page).toHaveURL(/\/$/)
-  await expect(page.getByRole('heading', { name: 'Olá, Bruno' })).toBeVisible()
+  await expect(
+    page.getByRole('heading', { name: 'O que vai ser hoje?' }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: 'Sua conta: Bruno' }),
+  ).toBeVisible()
 
   await page.goto('/entrar')
   await expect(page).toHaveURL(/\/$/)
 
-  await page.getByRole('button', { name: 'Sair' }).click()
+  await page.getByRole('button', { name: 'Sua conta: Bruno' }).click()
+  await page
+    .getByRole('navigation', { name: 'Conta' })
+    .getByRole('button', { name: 'Sair' })
+    .click()
   await expect(page).toHaveURL(/\/entrar$/)
   await page.goto('/')
   await expect(page).toHaveURL(/\/entrar$/)
 })
 
 test('an email that is not on a Dono is refused', async ({ page }) => {
+  await page.goto('/')
   await loginAs(page, 'iara@example.org')
   await expect(page).toHaveURL(/\/entrar\?recusa=nao-dono$/)
   await expect(page.getByRole('alert')).toContainText(
-    'não é de um Dono do filmes',
+    'Este e-mail do Google não tem acesso ao filmes.',
   )
-  await page.goto('/')
-  await expect(page).toHaveURL(/\/entrar$/)
+  await page.getByRole('link', { name: 'Usar outra conta Google' }).click()
+  await page.getByLabel('E-mail').fill('bruno@example.org')
+  await page.getByRole('button', { name: 'Continuar' }).click()
+  await expect(page).toHaveURL(/\/$/)
 })

@@ -86,18 +86,17 @@ const session = (id: string, attendees: string[]): LatestSession => ({
 })
 
 describe('homeData', () => {
-  it('gives the steps, her Notas, how many Sessões and the MCP URL', async () => {
+  it('gives the steps, her Notas and the MCP URL', async () => {
     const home = await homeData(BRUNO, fakeSource().source, [], ORIGIN)
     expect(home).toEqual({
       person: 'bruno',
       setup: { steps: STEPS, ratings: 4 },
       latest: null,
-      sessions: 0,
       mcpUrl: 'http://localhost/mcp',
     })
   })
 
-  it('keeps the steps once every one is done or skipped, for the card', async () => {
+  it('keeps the steps once every one is done or skipped', async () => {
     const home = await homeData(BRUNO, fakeSource(true).source, [], ORIGIN)
     expect(home.setup?.steps).toEqual(STEPS)
   })
@@ -110,7 +109,6 @@ describe('homeData', () => {
     ]
     const home = await homeData(BRUNO, fakeSource().source, list, ORIGIN)
     expect(home.latest?.id).toBe('2026-11-19-1')
-    expect(home.sessions).toBe(3)
   })
 
   it('shows no guide and no Sessão when the engine cannot run', async () => {
@@ -124,7 +122,6 @@ describe('homeData', () => {
       person: 'bruno',
       setup: null,
       latest: null,
-      sessions: null,
       mcpUrl: null,
     })
   })

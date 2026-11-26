@@ -7,7 +7,7 @@ import type { SearchAnswer } from '#/platform/catalog-search'
 import type { FeedbackPage } from '#/platform/feedback'
 import { CATALOG_SEARCH } from './catalog-search.copy'
 import { FeedbackScreen } from './feedback'
-import { NewSession } from './sessions'
+import { NewSession } from './new-session'
 
 afterEach(cleanup)
 
@@ -62,6 +62,8 @@ const PAGE: FeedbackPage = {
   date: '2026-11-20',
   request: null,
   attendees: [{ person: 'bruno', name: 'Bruno', owner: true }],
+  moods: [],
+  constraints: [],
   recommendation: [],
   satisfaction: [],
 }
@@ -69,10 +71,7 @@ const PAGE: FeedbackPage = {
 const showFeedback = (search: SearchAnswer) =>
   render(<FeedbackScreen session={PAGE.id} page={PAGE} search={search} />)
 
-const searchForm = () =>
-  screen.getByRole('search', { name: CATALOG_SEARCH.title }) as HTMLFormElement
-
-it('is a GET form to the page that keeps its other values', () => {
+it('puts the film lookup in the same form as the request', () => {
   render(
     <NewSession
       options={{
@@ -83,15 +82,18 @@ it('is a GET form to the page that keeps its other values', () => {
       similar="tt1"
     />,
   )
-  const form = searchForm()
+  const form = screen.getByRole('form', {
+    name: 'Nova Sessão',
+  }) as HTMLFormElement
+  const lookup = screen.getByRole('region', { name: CATALOG_SEARCH.title })
+  const search = within(lookup).getByRole('button', {
+    name: 'Buscar',
+  }) as HTMLButtonElement
 
-  expect(form.method).toBe('get')
-  expect(new URL(form.action).pathname).toBe('/sessoes/nova')
-  expect([...new FormData(form).entries()]).toEqual([
-    ['parecido', 'tt1'],
-    ['buscar', ''],
-  ])
-  expect(screen.getByText(CATALOG_SEARCH.leadFilms)).toBeTruthy()
+  expect(search.form).toBe(form)
+  expect(form.method).toBe('post')
+  expect(new FormData(form, search).get('parecido')).toBe('tt1')
+  expect(new FormData(form, search).get('buscar-catalogo')).toBe('sim')
   expect(screen.queryByRole('status')).toBeNull()
 })
 
@@ -101,7 +103,6 @@ it('shows each kind with its IDs, and "Usar" only on films', () => {
   expect((screen.getByRole('searchbox') as HTMLInputElement).value).toBe(
     'fronteira',
   )
-  expect(screen.getByText(CATALOG_SEARCH.leadFilms)).toBeTruthy()
   expect(screen.getByRole('status').textContent).toBe(
     CATALOG_SEARCH.results('fronteira'),
   )
@@ -115,7 +116,7 @@ it('shows each kind with its IDs, and "Usar" only on films', () => {
     screen
       .getByRole('link', { name: 'Usar Fronteira (2008)' })
       .getAttribute('href'),
-  ).toBe('/feedback/2026-11-20-bruno?filme=tt9000401&buscar=fronteira')
+  ).toBe('/sessoes/2026-11-20-bruno/contar?filme=tt9000401&buscar=fronteira')
   expect(screen.getAllByRole('link', { name: /^Usar/ })).toHaveLength(2)
   expect(
     screen.getByText('direção, elenco · 2 filmes · Pequenos Milagres (2019)'),

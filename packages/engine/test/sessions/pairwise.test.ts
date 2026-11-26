@@ -341,7 +341,7 @@ describe('decidePairwise', () => {
     }
     // Nor is it a Nota alta for the aggregated metadata: those lines name
     // her own top Notas, never an answered film.
-    const high = evidence.filter((e) => e.text.includes('Nota alta'))
+    const high = evidence.filter((e) => e.text.includes('nota alta'))
     expect(high.length).toBeGreaterThan(0)
     for (const line of high) {
       expect(line.text).not.toContain('O Farol de Areia')

@@ -4,7 +4,8 @@
 // Each Nota in favour of the Pessoa on a film X (by its percentile on her
 // scale), or her stated "ama", is a seed.
 // For each neighbour Y of X that is a Candidate, one review Evidence: "deu 5
-// a X, e de 3.104 pessoas que deram 4+ a ele, 64% deram 4+ a este". The
+// a X; das 3.104 pessoas que deram 4 ou mais a ele, 64% fizeram o mesmo com
+// este". The
 // strength comes from the base and the share, capped by the seed's
 // strength; a Nota seed's Decaimento (`decay.ts`) scales the weight. A
 // stated rating opens the line as on the content path and has
@@ -68,9 +69,9 @@ export const neighbors: Signal = {
             person,
             filmId: candidate,
             text:
-              `${seedText(kind, num(row, 'nota'), film)}, ` +
-              `e de ${integerText(base)} pessoas que deram 4+ a ele, ` +
-              `${Math.floor((100 * both) / base)}% deram 4+ a este`,
+              `${seedText(kind, num(row, 'nota'), film)}; ` +
+              `das ${integerText(base)} pessoas que deram 4 ou mais a ele, ` +
+              `${Math.floor((100 * both) / base)}% fizeram o mesmo com este`,
             source: text(row, 'fonte'),
             date: text(row, 'data'),
             strength,

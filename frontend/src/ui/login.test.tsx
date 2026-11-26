@@ -17,6 +17,12 @@ describe('Login', () => {
     expect(html).toContain(LOGIN.refusals[refusal])
   })
 
+  it('does not send the visitor back to Google when sign-in is unavailable', () => {
+    expect(
+      renderToStaticMarkup(<Login refusal="indisponivel" />),
+    ).not.toContain('href="/auth/google"')
+  })
+
   it('opens with the brand on the case-black bar', () => {
     expect(renderToStaticMarkup(<Login />)).toMatch(
       /<header class="bg-case"><p[^>]*>filmes<\/p><\/header>/u,

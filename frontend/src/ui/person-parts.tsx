@@ -6,6 +6,7 @@ import { CATALOG_SEARCH } from './catalog-search.copy'
 import { PERSON } from './person.copy'
 import { FIELD } from './kit/field'
 import { FieldLabel } from './kit/field-label'
+import { Icon } from './kit/icon'
 import { Alert, Notice } from './kit/status'
 import { Button, buttonVariants } from './shadcn/button'
 
@@ -156,8 +157,13 @@ export function Disclosure({
 }) {
   return (
     <details open={open} className="group rounded-field border border-rule">
-      <summary className="flex min-h-touch cursor-pointer items-center px-3 font-semibold select-none">
+      <summary className="flex min-h-touch cursor-pointer list-none items-center justify-between gap-sm px-3 font-semibold select-none [&::-webkit-details-marker]:hidden">
         {summary}
+        {/* The drawn +, a × while open: the fold's state not by colour. */}
+        <Icon
+          name="plus"
+          className="size-[18px] text-ink-2 transition-transform group-open:rotate-45 motion-reduce:transition-none"
+        />
       </summary>
       <div className="border-t border-rule p-xl">{children}</div>
     </details>
@@ -345,7 +351,7 @@ function Group({ title, children }: { title: string; children: ReactNode[] }) {
   )
 }
 
-function Results({
+function CatalogResults({
   answer,
   pick,
 }: {
@@ -427,7 +433,52 @@ export function CatalogSearch({
         </label>
         <Submit className="">{submit}</Submit>
       </form>
-      {answer && <Results answer={answer} pick={pick} />}
+      {answer && <CatalogResults answer={answer} pick={pick} />}
     </Section>
+  )
+}
+
+/** The Catálogo search inside a form that posts (Nova Sessão, Contar como
+ * foi): its button sends the form with `buscar-catalogo=sim`, so the
+ * server keeps what the form holds and comes back with the search. Enter
+ * in the field searches too: the form's default button says `tecla=enter`,
+ * and `buscado`, what the field came back with, tells a new search from
+ * one already run (`searchAsked`). */
+export function SessionFilmLookup({
+  name,
+  label,
+  answer,
+  value,
+  pick,
+}: {
+  name: 'buscar' | 'busca'
+  label: string
+  answer: SearchAnswer | null
+  value?: string
+  pick: (id: string) => string
+}) {
+  return (
+    <section aria-label={CATALOG_SEARCH.title} className="flex flex-col gap-lg">
+      <div className="grid items-end gap-sm sm:grid-cols-[1fr_auto]">
+        <FieldLabel label={label}>
+          <input
+            type="search"
+            name={name}
+            defaultValue={value ?? answer?.query}
+            autoComplete="off"
+            className={`${FIELD} w-full`}
+          />
+        </FieldLabel>
+        <Submit name="buscar-catalogo" value="sim" formNoValidate>
+          {CATALOG_SEARCH.submit}
+        </Submit>
+      </div>
+      <input
+        type="hidden"
+        name="buscado"
+        value={value ?? answer?.query ?? ''}
+      />
+      {answer && <CatalogResults answer={answer} pick={pick} />}
+    </section>
   )
 }

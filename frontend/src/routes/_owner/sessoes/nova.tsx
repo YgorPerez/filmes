@@ -3,7 +3,7 @@ import { isNoteToken } from '#/content/billboard-reply'
 import { searchFor, searchParam, similarParam } from '#/content/catalog-search'
 import { isSessionRequestRefusal } from '#/content/session-request'
 import { draftFor, readRequestOptions } from '#/content/sessions'
-import { NewSession } from '#/ui/sessions'
+import { NewSession } from '#/ui/new-session'
 
 export const Route = createFileRoute('/_owner/sessoes/nova')({
   validateSearch: (search) => ({

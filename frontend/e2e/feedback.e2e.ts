@@ -7,7 +7,7 @@
 
 import { openSessions, recommendSession } from '@filmes/engine'
 import { type Page } from '@playwright/test'
-import { engineRun, expect, loginAsBruno, snap, test } from './support'
+import { engineRun, expect, loginAsBruno, snap, tab, test } from './support'
 
 /** Opens a Session for `attendees`, as Bruno; gives its id. */
 const openSession = async (attendees: string[]) =>
@@ -35,11 +35,19 @@ test('the Dono closes a Session and the next one shows the satisfaction', async 
   await loginAsBruno(page)
   await snap(page, info, 'inicio')
 
-  await page.getByRole('link', { name: 'Feedback', exact: true }).click()
-  await expect(page).toHaveURL(/\/feedback$/)
-  await snap(page, info, 'feedback-lista')
-  await page.locator(`a[href="/feedback/${first}"]`).click()
-  await expect(page).toHaveURL(new RegExp(`/feedback/${first}$`))
+  // Sessões leads to its Feedback (the home shows only the latest, and the
+  // other project opens its own at the same time).
+  await tab(page, 'Sessões').click()
+  await page.getByRole('link', { name: 'Para contar' }).click()
+  await expect(page).toHaveURL(/\/sessoes\?filtro=para-contar$/)
+  await page
+    .getByRole('listitem')
+    .filter({
+      has: page.locator(`a[href="/sessoes/${first}"]`),
+    })
+    .getByRole('link', { name: 'Contar como foi' })
+    .click()
+  await expect(page).toHaveURL(new RegExp(`/sessoes/${first}/contar$`))
   await expect(satisfaction(page)).toContainText(
     'Ninguém deste grupo está atrás dos outros',
   )
@@ -54,16 +62,21 @@ test('the Dono closes a Session and the next one shows the satisfaction', async 
   await snap(page, info, 'feedback-preenchido')
   await page.getByRole('button', { name: 'Gravar e fechar a Sessão' }).click()
 
-  await expect(page).toHaveURL(new RegExp(`/feedback\\?feito=${first}$`))
-  await expect(page.getByRole('status')).toContainText(
-    `a Sessão ${first} fechou`,
-  )
+  await expect(page).toHaveURL(new RegExp(`/sessoes/${first}\\?feito=contada$`))
+  await expect(
+    page.getByRole('status').filter({ hasText: 'Feedback gravado' }),
+  ).toContainText('Feedback gravado e Sessão fechada')
   await snap(page, info, 'feedback-gravado')
   expect(await stillOpen(first)).toBe(false)
+  await page.goto('/feedback')
+  await expect(page).toHaveURL(/\/sessoes\?filtro=para-contar$/)
+  await expect(page.locator(`a[href="/sessoes/${first}"]`)).toHaveCount(0)
+  await page.getByRole('link', { name: 'Todas' }).click()
+  await expect(page.locator(`a[href="/sessoes/${first}"]`)).toBeVisible()
 
   // The same group again: Rosa left the first Session the least satisfied.
   const next = await openSession(['dono', 'rosa', 'quim'])
-  await page.goto(`/feedback/${next}`)
+  await page.goto(`/sessoes/${next}/contar`)
   await expect(satisfaction(page)).toContainText('Rosa')
   await expect(satisfaction(page)).toContainText(
     /satisfação de Rosa nas últimas Sessões: 11%, e a mais alta do grupo, 100%; na de 2026-11-20 \(.+\), deu 1/,
@@ -77,13 +90,18 @@ test('a relayed Relato, a film by its title, and a refusal', async ({
   test.skip(info.project.name !== 'mobile', 'one group per project')
   const id = await openSession(['dono', 'teo', 'iara'])
   await loginAsBruno(page)
+  // The old address still reaches the form.
   await page.goto(`/feedback/${id}`)
+  await expect(page).toHaveURL(new RegExp(`/sessoes/${id}/contar$`))
 
   // A comment with no reaction is refused, and the Session stays open.
+  await page.getByLabel('Outro filme').check()
   await page.getByLabel('Título ou ID do IMDb', { exact: false }).fill('x')
   await page.getByLabel('Comentário: Teo').fill('dormiu')
   await page.getByRole('button', { name: 'Gravar e fechar a Sessão' }).click()
-  await expect(page).toHaveURL(new RegExp(`/feedback/${id}\\?erro=comentario$`))
+  await expect(page).toHaveURL(
+    new RegExp(`/sessoes/${id}/contar\\?erro=comentario$`),
+  )
   await expect(page.getByRole('alert')).toContainText(
     'O comentário vai junto da Nota ou do Relato',
   )
@@ -98,10 +116,12 @@ test('a relayed Relato, a film by its title, and a refusal', async ({
   await page.getByLabel('Reação: Iara').selectOption('relato:gostou')
   await page.getByLabel('Comentário: Iara').fill('riu muito')
   await page.getByRole('button', { name: 'Gravar e fechar a Sessão' }).click()
-  await expect(page).toHaveURL(new RegExp(`/feedback\\?feito=${id}$`))
+  await expect(page).toHaveURL(new RegExp(`/sessoes/${id}\\?feito=contada$`))
   expect(await stillOpen(id)).toBe(false)
 
   // The form of a closed Session says so.
-  await page.goto(`/feedback/${id}`)
-  await expect(page.getByRole('alert')).toContainText('ela já tem Feedback')
+  await page.goto(`/sessoes/${id}/contar`)
+  await expect(page.getByRole('alert')).toContainText(
+    'A Sessão pode já estar fechada',
+  )
 })

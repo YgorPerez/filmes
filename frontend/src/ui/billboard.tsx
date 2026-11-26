@@ -20,7 +20,7 @@ import {
   type FilmMarks,
   type Marks,
 } from './billboard-marks'
-import { ReplyBox, SendButton, Status, summaryOf } from './billboard-reply'
+import { ReplyBar, ReplyBox, summaryOf, type BarPlace } from './billboard-reply'
 import { Dropped, Legend } from './billboard-top'
 import { BILLBOARD } from './billboard.copy'
 import { ShelfLabel } from './kit/shelf-label'
@@ -29,17 +29,18 @@ import { ShelfLabel } from './kit/shelf-label'
 // the request on the shelf label, the legend, what left the previous
 // version, a card per film under the title of its Motivo (#183; a Session
 // from before has the cards alone) and, while the Session is open, the
-// reply: the
-// marks per film, the acrescentar and the Clima chips below the last film,
-// Enviar and Copiar pro chat. It renders the engine's `billboardModel` and builds the text
+// reply: the marks on each card; the acrescentar, the Clima chips and
+// Copiar pro chat after the last film; and the bar with what was marked
+// and Enviar, stuck to the bottom while the Cartaz is on screen (#221). It
+// renders the engine's `billboardModel` and builds the text
 // `answerBillboard` reads (`billboardText`).
 //
 // Nothing of the app here, so the MCP Apps view (#111) renders the same
 // component: on the web Enviar posts the text to `action`; in the view,
 // `onSend` gets it. The view picks the layout (DESIGN.md, Dentro do
 // Claude): `inline` is the compact card in the conversation, `fullscreen`
-// the one to mark films in, with the top and the foot fixed. The marks
-// live here, so they survive the switch between the two.
+// the one to mark films in, with the shelf label fixed on top. The marks live here, so
+// they survive the switch between the two.
 
 type Layout = 'page' | 'inline' | 'fullscreen'
 
@@ -143,10 +144,12 @@ export function Billboard({
   const empty = billboard.films.length === 0
   const replying = billboard.open && !empty
 
+  const summary = summaryOf(billboard, marks)
   if (layout === 'inline' && onExpand)
     return (
       <InlineBillboard
         billboard={billboard}
+        summary={summary}
         message={message}
         onExpand={onExpand}
         onSend={onSendClick}
@@ -177,6 +180,17 @@ export function Billboard({
       ))
     : billboard.films.map(card)
   const fullscreen = layout === 'fullscreen'
+  // The web has the app's tabs at the bottom of a phone; Claude's
+  // fullscreen, its own foot; a frame sized to the content, nothing.
+  const place: BarPlace = fullscreen ? 'foot' : onSend ? 'end' : 'tabs'
+  const bar = replying && (
+    <ReplyBar
+      summary={summary}
+      message={message}
+      onSend={onSendClick}
+      place={place}
+    />
+  )
   const shelf = (
     <>
       {empty && <p className="text-ink-2">{BILLBOARD.empty}</p>}
@@ -187,38 +201,17 @@ export function Billboard({
           billboard={billboard}
           marks={marks}
           kept={canKeep}
-          message={message}
           onMessage={setMessage}
           onAddition={(addition) => change({ ...marks, addition })}
           onMoods={(moods) => change({ ...marks, moods })}
-          send={fullscreen ? undefined : { onSend: onSendClick }}
         />
       )}
     </>
   )
 
   const body = fullscreen ? (
-    <Fullscreen
-      top={
-        <>
-          <Request billboard={billboard} compact />
-          <Legend billboard={billboard} />
-        </>
-      }
-      foot={
-        replying && (
-          <>
-            <div className="flex items-center justify-between gap-md">
-              <p className="min-w-0 text-meta text-ink-2">
-                {summaryOf(billboard, marks)}
-              </p>
-              <SendButton onSend={onSendClick} className="shrink-0" />
-            </div>
-            <Status message={message} />
-          </>
-        )
-      }
-    >
+    <Fullscreen top={<Request billboard={billboard} compact />} foot={bar}>
+      <Legend billboard={billboard} />
       {shelf}
     </Fullscreen>
   ) : (
@@ -226,6 +219,7 @@ export function Billboard({
       <Request billboard={billboard} />
       <Legend billboard={billboard} />
       {shelf}
+      {bar}
     </div>
   )
 
@@ -276,9 +270,9 @@ function Section({
   )
 }
 
-/** Claude's fullscreen: the request and the legend fixed on top, the
- * shelf scrolling, the summary and Enviar fixed at the foot, above the
- * host's message box (its safe area). */
+/** Claude's fullscreen: the request fixed on top, the legend and the
+ * shelf scrolling, the bar fixed at the foot, above the host's message box
+ * (its safe area). */
 function Fullscreen({
   top,
   foot,
@@ -294,11 +288,7 @@ function Fullscreen({
         {top}
       </header>
       <div className="flex flex-1 flex-col gap-2xl p-2xl">{children}</div>
-      {foot && (
-        <footer className="sticky bottom-0 z-10 flex flex-col gap-xs border-t border-rule bg-surface px-2xl pt-md pb-[max(10px,env(safe-area-inset-bottom))]">
-          {foot}
-        </footer>
-      )}
+      {foot}
     </div>
   )
 }

@@ -151,7 +151,7 @@ describe('the bundled view', () => {
     const [first] = await page.findAllByRole('article')
 
     within(first!).getByRole('button', { name: 'Trocar' }).click()
-    await page.findByText('1 Trocar marcado')
+    await page.findByText('1 Trocar')
     page.getByRole('button', { name: BILLBOARD.reply.copy }).click()
     await page.findByText(BILLBOARD.reply.copied)
 
@@ -196,7 +196,7 @@ describe('the bundled view', () => {
     const message = next('ui/message')
 
     within(first!).getByRole('button', { name: 'Trocar' }).click()
-    await page.findByText('1 Trocar marcado')
+    await page.findByText('1 Trocar')
     page.getByRole('button', { name: BILLBOARD.reply.send }).click()
 
     expect((await call).params).toMatchObject({

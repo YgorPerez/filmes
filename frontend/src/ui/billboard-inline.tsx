@@ -9,9 +9,11 @@ import { PriceSticker } from './kit/sticker'
 // The Cartaz as Claude's inline card (DESIGN.md, Dentro do Claude): the
 // conversation owns the scrolling and the card's height has a ceiling, so it
 // shows four facts per film (number, title, year, duration), one line each,
-// and two actions: Marcar opens the fullscreen, where the films are marked,
-// and Enviar sends what was marked there. A Session that has its
-// Feedback takes no marks: the one action opens the whole Cartaz.
+// and Marcar, which opens the fullscreen, where the films are marked. Once
+// something is marked there, the card says what in a line and Enviar
+// comes beside Marcar; with nothing marked there is nothing to send. A
+// Session that has its Feedback takes no marks: the one action opens the
+// whole Cartaz.
 
 /** Year and duration: the chips before the genres, the ones that are
  * numbers. */
@@ -20,24 +22,25 @@ const factsOf = (chips: readonly string[]) =>
 
 export function InlineBillboard({
   billboard,
+  summary,
   message,
   onExpand,
   onSend,
 }: {
   billboard: BillboardModel
+  /** What was marked in the fullscreen; empty with nothing. */
+  summary: string
   message: string
   onExpand: () => void
   onSend?: () => void
 }) {
   const { view } = BILLBOARD
+  const sending = billboard.open && summary !== ''
   return (
     <section
       aria-label={BILLBOARD.label}
       className="flex flex-col gap-md rounded-panel border border-rule bg-ground p-lg"
     >
-      <p className="font-display text-[11px] leading-none font-bold tracking-[0.06em] text-ink-2 uppercase">
-        {view.tag}
-      </p>
       <ShelfLabel
         compact
         items={[billboard.request.who, ...billboard.request.parts]}
@@ -60,7 +63,8 @@ export function InlineBillboard({
           </li>
         ))}
       </ol>
-      <div className={`grid gap-sm ${billboard.open ? 'grid-cols-2' : ''}`}>
+      {sending && <p className="text-meta text-ink-2">{summary}</p>}
+      <div className={`grid gap-sm ${sending ? 'grid-cols-2' : ''}`}>
         <button
           type="button"
           onClick={onExpand}
@@ -69,7 +73,7 @@ export function InlineBillboard({
           <Icon name="expand" />
           {billboard.open ? view.mark : view.open}
         </button>
-        {billboard.open && <SendButton onSend={onSend} />}
+        {sending && <SendButton onSend={onSend} />}
       </div>
       <Status message={message} />
     </section>
