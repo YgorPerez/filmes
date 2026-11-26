@@ -59,4 +59,4 @@ export const tasteNeighborsText = (
   raters: number,
   meanRating: number,
 ): string =>
-  `${integerText(raters)} pessoas de gosto parecido deram ${ratingText(pyRound(meanRating, 1))} em média a este`
+  `${integerText(raters)} pessoas de gosto parecido deram ${ratingText(pyRound(meanRating, 1))} em média a este filme`

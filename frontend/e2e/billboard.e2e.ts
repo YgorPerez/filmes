@@ -223,8 +223,14 @@ test('the Dono marks, reloads, sends, and the Cartaz comes back redone', async (
     card(page, 2).getByRole('link').first().getByText('Trocar'),
   ).toBeVisible()
   await card(page, 3).getByRole('button', { name: '4 de 5' }).click()
+  await card(page, 3).getByRole('button', { name: 'Comentar' }).click()
   await page.getByLabel('comentário sobre o filme 3').fill('longo')
-  await expect(page.getByText('1 Trocar marcado · 1 Já vi')).toBeVisible()
+  // What was marked goes with Enviar, in the bar at the foot.
+  const bar = page.getByRole('region', { name: 'O que você marcou' })
+  await expect(
+    bar.getByText('1 Trocar, 1 Já vi, estrelas em 1 filme e 1 comentário'),
+  ).toBeVisible()
+  await expect(bar.getByRole('button', { name: 'Enviar' })).toBeInViewport()
 
   // A reload gives the marks back (one key per Session and version).
   await page.reload()

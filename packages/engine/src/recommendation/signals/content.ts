@@ -133,7 +133,7 @@ const highRatings = (high: ReadonlyArray<Row>): string => {
   const films = high
     .slice(0, LIST_MAX)
     .map((s) => filmText(text(s, 'titulo'), numOrNull(s, 'ano')))
-  const start = `como ${n} ${n === 1 ? 'filme' : 'filmes'} a que deu Nota alta`
+  const start = `como ${n} ${n === 1 ? 'filme' : 'filmes'} a que deu nota alta`
   return n > LIST_MAX
     ? `${start}, entre eles ${listText(films)}`
     : `${start}: ${listText(films)}`
