@@ -32,6 +32,9 @@ export interface MeasuredPerson {
   readonly heldOut: ReadonlySet<string>
   /** Held-out films rated 4 or more: what the list should find. */
   readonly targets: ReadonlySet<string>
+  /** The Nota of each held-out film that has one (a diary line may have
+   * none). */
+  readonly heldOutRatings: ReadonlyMap<string, number>
   readonly training: ReadonlyArray<TrainingRating>
 }
 
@@ -55,7 +58,13 @@ export const split = (
   const targets = new Set(
     [...heldOut].filter((film) => (ratings.get(film) ?? 0) >= HIGH_RATING),
   )
-  return { person, cut: cut!, heldOut, targets, training: [] }
+  const heldOutRatings = new Map(
+    [...heldOut].flatMap((film) => {
+      const rating = ratings.get(film)
+      return rating === undefined ? [] : [[film, rating] as const]
+    }),
+  )
+  return { person, cut: cut!, heldOut, targets, heldOutRatings, training: [] }
 }
 
 const firstDate = (diary: Map<string, string>, film: string, date: string) => {
