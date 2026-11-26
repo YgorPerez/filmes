@@ -76,7 +76,9 @@ const titleOf = async (page: Page, n: number) =>
     .split('\n')[0]!
     .trim()
 
-test('the Aposta has its stamp, in both themes', async ({ page }, info) => {
+test('the Aposta has its stamp and its section; the films stand under their Motivo, in both themes', async ({
+  page,
+}, info) => {
   const mobile = info.project.name === 'mobile'
   if (mobile) await page.emulateMedia({ colorScheme: 'dark' })
   const name = mobile ? 'Rui' : 'Pia'
@@ -90,30 +92,15 @@ test('the Aposta has its stamp, in both themes', async ({ page }, info) => {
     await expect(
       card(page, n).getByText('aposta', { exact: true }),
     ).toHaveCount(0)
-  await card(page, 5).scrollIntoViewIfNeeded()
-  await snap(page, info, 'cartaz-aposta')
-})
 
-test('the films stand under the title of their Motivo, the Aposta last', async ({
-  page,
-}, info) => {
-  const mobile = info.project.name === 'mobile'
-  if (mobile) await page.emulateMedia({ colorScheme: 'dark' })
-  const name = mobile ? 'Lia' : 'Bia'
-  await addPerson(name)
-  const id = await openBetSession(name.toLowerCase())
-  await loginAsBruno(page)
-  await page.goto(`/sessoes/${id}`)
-  await expect(cards(page)).toHaveCount(5)
-
-  // Only Bruno has Notas: every Motivo is his.
+  // Only Bruno has Notas: every Motivo is his (#183).
   const sections = page.getByRole('region', { name: /^(Porque você|Aposta)/ })
   const titles = await sections
     .getByRole('heading', { level: 2 })
     .allInnerTexts()
   expect(titles[0]).toMatch(/^Porque você (gosta|gostou) de /)
   expect(titles.at(-1)).toBe('Aposta')
-  // Same films, same order: each section holds the next cards.
+  // Same films, same order: the sections hold the five cards.
   const counts = await Promise.all(
     titles.map((_, i) => sections.nth(i).getByRole('article').count()),
   )
@@ -124,6 +111,8 @@ test('the films stand under the title of their Motivo, the Aposta last', async (
     }),
   ).toBeVisible()
   await snap(page, info, 'cartaz-secoes')
+  await card(page, 5).scrollIntoViewIfNeeded()
+  await snap(page, info, 'cartaz-aposta')
 })
 
 test('the Dono marks, reloads, sends, and the Cartaz comes back redone', async ({
