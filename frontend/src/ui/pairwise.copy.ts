@@ -19,5 +19,6 @@ export const PAIRWISE = {
     prefers: (chosen: string, other: string) => `Preferiu ${chosen} a ${other}`,
     record: (name: string) => `Gravar as respostas de ${name}`,
     discard: 'Descartar',
+    sending: 'Enviando decisão…',
   },
 } as const

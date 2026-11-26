@@ -1,7 +1,7 @@
 import type { Billboard as BillboardModel } from '@filmes/engine'
 import { useEffect, useRef, useState } from 'react'
 import { BILLBOARD } from './billboard.copy'
-import { chosenMoods, hasMarks, replyText, type Marks } from './billboard-marks'
+import { chosenMoods, hasMarks, type Marks } from './billboard-marks'
 import { buttonVariants } from './kit/button-variants'
 import { FIELD } from './kit/field'
 import { Option } from './kit/option'
@@ -20,7 +20,9 @@ const { reply } = BILLBOARD
 export function SendButton({
   onSend,
   className,
+  sending = false,
 }: {
+  sending?: boolean
   onSend?: () => void
   className?: string
 }) {
@@ -30,7 +32,7 @@ export function SendButton({
       onClick={onSend}
       className={buttonVariants({ className })}
     >
-      {reply.send}
+      {sending ? BILLBOARD.view.sending : reply.send}
     </button>
   )
 }
@@ -150,11 +152,12 @@ function MoodChips({
 }
 
 /** The acrescentar box, after the last film: the acrescentar, the Clima
- * chips, Copiar pro chat and the hidden field the web posts. */
+ * chips and Copiar pro chat. */
 export function ReplyBox({
   billboard,
   marks,
   kept,
+  text,
   onMessage,
   onAddition,
   onMoods,
@@ -162,11 +165,11 @@ export function ReplyBox({
   billboard: BillboardModel
   marks: Marks
   kept: boolean
+  text: string
   onMessage: (message: string) => void
   onAddition: (text: string) => void
   onMoods: (moods: string[]) => void
 }) {
-  const text = replyText(billboard, marks)
   return (
     <section
       aria-labelledby="responder"
@@ -192,7 +195,6 @@ export function ReplyBox({
       {billboard.moodChoices.length > 0 && (
         <MoodChips billboard={billboard} marks={marks} onMoods={onMoods} />
       )}
-      <input type="hidden" name="texto" value={text} />
       <div className="flex flex-wrap items-center gap-sm">
         <Copy text={text} onMessage={onMessage} />
       </div>
@@ -225,11 +227,13 @@ export function ReplyBar({
   message,
   onSend,
   place,
+  sending,
 }: {
   summary: string
   message: string
   onSend?: () => void
   place: BarPlace
+  sending?: boolean
 }) {
   return (
     <section
@@ -238,7 +242,7 @@ export function ReplyBar({
     >
       <div className="flex items-center justify-between gap-md">
         <p className="min-w-0 text-meta text-ink-2">{summary}</p>
-        <SendButton onSend={onSend} className="shrink-0" />
+        <SendButton onSend={onSend} sending={sending} className="shrink-0" />
       </div>
       <Status message={message} />
     </section>

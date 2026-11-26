@@ -1,5 +1,6 @@
 import type { WaitingAnswers } from '@filmes/engine'
 import { buttonVariants } from './kit/button-variants'
+import type { useFetchForm } from './kit/fetch-form'
 import { PAIRWISE } from './pairwise.copy'
 
 const film = (f: { title: string; year: number | null }) =>
@@ -12,9 +13,11 @@ const film = (f: { title: string; year: number | null }) =>
 export function PairwiseAnswers({
   action,
   waiting,
+  post,
 }: {
   action: string
   waiting: ReadonlyArray<WaitingAnswers>
+  post?: ReturnType<typeof useFetchForm>
 }) {
   const { owner } = PAIRWISE
   if (waiting.length === 0) return null
@@ -32,6 +35,7 @@ export function PairwiseAnswers({
           key={person}
           method="post"
           action={action}
+          onSubmit={post?.onSubmit}
           aria-label={name}
           className="flex flex-col gap-sm"
         >
@@ -48,6 +52,7 @@ export function PairwiseAnswers({
             <button
               type="submit"
               name="decisao"
+              disabled={post != null && post.busy !== null}
               value="gravar"
               className={buttonVariants({ variant: 'option' })}
             >
@@ -56,6 +61,7 @@ export function PairwiseAnswers({
             <button
               type="submit"
               name="decisao"
+              disabled={post != null && post.busy !== null}
               value="descartar"
               className={buttonVariants({ variant: 'link' })}
             >
@@ -64,6 +70,7 @@ export function PairwiseAnswers({
           </div>
         </form>
       ))}
+      {post?.busy === 'decisao' && <p role="status">{owner.sending}</p>}
     </section>
   )
 }
