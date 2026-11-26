@@ -74,14 +74,9 @@ export interface ImportRemovalInput {
   readonly author: Author
 }
 
-/** Removes an import (`importar --remover`). */
-export const removeImport = (
-  input: ImportRemovalInput,
-): Effect.Effect<
-  ImportRemoval,
-  EngineError | SqliteError | GitError,
-  Environment | Sqlite | Run | DataWriter
-> =>
+/** The one import of the candidates that answers to the file; none is
+ * `unknown_import`, more than one `ambiguous_import`. */
+const findImport = (input: ImportRemovalInput) =>
   Effect.gen(function* () {
     const candidates: readonly Person[] = input.person
       ? [yield* resolvePerson(input.person)]
@@ -108,6 +103,52 @@ export const removeImport = (
           .map(({ record }) => pyStrValue(record.get('file') ?? null))
           .join(', ')}`,
       )
+    return match
+  })
+
+/** Saves the Pessoa without the import, reloads her Fatos and deletes the
+ * stored file, counting the Fatos before and after. */
+const dropImport = (
+  db: Connection,
+  removal: {
+    readonly person: Person
+    readonly record: YamlMapping
+    readonly file: string
+    readonly root: string
+  },
+) =>
+  Effect.gen(function* () {
+    const { person, record, file, root } = removal
+    yield* requireImportTables(db)
+    const before = yield* countFacts(db, person.slug)
+    yield* savePerson(person)
+    yield* loadLetterboxd(db)
+    yield* reloadPersonTrakt(db, person)
+    const after = yield* countFacts(db, person.slug)
+    yield* Effect.sync(() => rmSync(join(root, file), { force: true }))
+    return {
+      person: person.slug,
+      removed: yamlToJson(record),
+      facts: after,
+      removedFacts: {
+        ratings: before.ratings - after.ratings,
+        seen: before.seen - after.seen,
+        stated: before.stated - after.stated,
+        watchlist: before.watchlist - after.watchlist,
+      },
+    }
+  })
+
+/** Removes an import (`importar --remover`). */
+export const removeImport = (
+  input: ImportRemovalInput,
+): Effect.Effect<
+  ImportRemoval,
+  EngineError | SqliteError | GitError,
+  Environment | Sqlite | Run | DataWriter
+> =>
+  Effect.gen(function* () {
+    const match = yield* findImport(input)
     const { record, index } = match
     const file = pyStrValue(record.get('file') ?? null)
     const person: Person = {
@@ -121,26 +162,6 @@ export const removeImport = (
         author: input.author,
         message: `remove import ${person.slug}: ${file}`,
       },
-      (db) =>
-        Effect.gen(function* () {
-          yield* requireImportTables(db)
-          const before = yield* countFacts(db, person.slug)
-          yield* savePerson(person)
-          yield* loadLetterboxd(db)
-          yield* reloadPersonTrakt(db, person)
-          const after = yield* countFacts(db, person.slug)
-          yield* Effect.sync(() => rmSync(join(root, file), { force: true }))
-          return {
-            person: person.slug,
-            removed: yamlToJson(record),
-            facts: after,
-            removedFacts: {
-              ratings: before.ratings - after.ratings,
-              seen: before.seen - after.seen,
-              stated: before.stated - after.stated,
-              watchlist: before.watchlist - after.watchlist,
-            },
-          }
-        }),
+      (db) => dropImport(db, { person, record, file, root }),
     )
   })

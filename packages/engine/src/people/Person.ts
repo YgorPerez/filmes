@@ -330,6 +330,58 @@ const openQuestions: SectionRules<OpenQuestion> = {
     })),
 }
 
+/** [line index, item] of each line of the `## <title>` section; a line out
+ * of format fails naming the file and the line. */
+const indexedLines = <A>(
+  person: Person,
+  title: string,
+  format: RegExp,
+  item: (groups: Groups) => A,
+): Effect.Effect<ReadonlyArray<readonly [number, A]>, EngineError> =>
+  Effect.suspend(() => {
+    const heading = casefold(title)
+    const found: Array<readonly [number, A]> = []
+    let current: string | null = null
+    const lines = pySplitlines(person.body)
+    for (const [i, text] of lines.entries()) {
+      if (text.startsWith('#')) {
+        current = casefold(pyStrip(text.replace(/^#+/, '')))
+        continue
+      }
+      if (current !== heading || !text.startsWith('- ')) continue
+      const match = format.exec(pyRstrip(text))
+      if (!match?.groups || !isIsoDate(match.groups.date ?? ''))
+        return Effect.fail(
+          engineError(
+            'invalid_data',
+            `people/${person.slug}.md, linha ${i + 1} do corpo: ${title.slice(0, -1)} fora do formato: ${text}`,
+          ),
+        )
+      found.push([i, item(match.groups)])
+    }
+    return Effect.succeed(found)
+  })
+
+/** The body with `added` as the last line of the `## <title>` section,
+ * which goes at the end when missing. */
+const withLine = (body: string, title: string, added: string): string => {
+  const lines = pySplitlines(body)
+  const titleLine = `## ${title}`
+  if (!lines.includes(titleLine)) {
+    while (lines.length > 0 && pyStrip(lines.at(-1) ?? '') === '') lines.pop()
+    lines.push(...(lines.length > 0 ? [''] : []), titleLine, '', added)
+  } else {
+    const start = lines.indexOf(titleLine) + 1
+    let end = lines.findIndex((l, i) => i >= start && l.startsWith('#'))
+    if (end === -1) end = lines.length
+    let last = start
+    for (let i = start; i < end; i++)
+      if (pyStrip(lines[i] ?? '') !== '') last = i
+    lines.splice(last + 1, 0, added)
+  }
+  return `${lines.join('\n')}\n`
+}
+
 /** A `## <title>` section of the body, one item per line in its format. */
 const bodySection = <A extends object>(
   title: string,
@@ -337,34 +389,7 @@ const bodySection = <A extends object>(
   item: (groups: Groups) => A,
   line: (item: A) => string,
 ): SectionRules<A> => {
-  const heading = casefold(title)
-  /** [line index, item] of each line of the section; a line out of format
-   * fails naming the file and the line. */
-  const indexed = (
-    person: Person,
-  ): Effect.Effect<ReadonlyArray<readonly [number, A]>, EngineError> =>
-    Effect.suspend(() => {
-      const found: Array<readonly [number, A]> = []
-      let current: string | null = null
-      const lines = pySplitlines(person.body)
-      for (const [i, text] of lines.entries()) {
-        if (text.startsWith('#')) {
-          current = casefold(pyStrip(text.replace(/^#+/, '')))
-          continue
-        }
-        if (current !== heading || !text.startsWith('- ')) continue
-        const match = format.exec(pyRstrip(text))
-        if (!match?.groups || !isIsoDate(match.groups.date ?? ''))
-          return Effect.fail(
-            engineError(
-              'invalid_data',
-              `people/${person.slug}.md, linha ${i + 1} do corpo: ${title.slice(0, -1)} fora do formato: ${text}`,
-            ),
-          )
-        found.push([i, item(match.groups)])
-      }
-      return Effect.succeed(found)
-    })
+  const indexed = (person: Person) => indexedLines(person, title, format, item)
 
   const read = (person: Person) =>
     Effect.map(indexed(person), (found) => found.map(([, it]) => it))
@@ -372,30 +397,11 @@ const bodySection = <A extends object>(
   return {
     read,
     add: (person, added) =>
-      Effect.map(read(person), (present) => {
-        if (present.some((it) => equal(it, added))) return null
-        const lines = pySplitlines(person.body)
-        const titleLine = `## ${title}`
-        if (!lines.includes(titleLine)) {
-          while (lines.length > 0 && pyStrip(lines.at(-1) ?? '') === '')
-            lines.pop()
-          lines.push(
-            ...(lines.length > 0 ? [''] : []),
-            titleLine,
-            '',
-            line(added),
-          )
-        } else {
-          const start = lines.indexOf(titleLine) + 1
-          let end = lines.findIndex((l, i) => i >= start && l.startsWith('#'))
-          if (end === -1) end = lines.length
-          let last = start
-          for (let i = start; i < end; i++)
-            if (pyStrip(lines[i] ?? '') !== '') last = i
-          lines.splice(last + 1, 0, line(added))
-        }
-        return { ...person, body: `${lines.join('\n')}\n` }
-      }),
+      Effect.map(read(person), (present) =>
+        present.some((it) => equal(it, added))
+          ? null
+          : { ...person, body: withLine(person.body, title, line(added)) },
+      ),
     remove: (person, removed) =>
       Effect.flatMap(indexed(person), (found) => {
         const at = found.find(([, it]) => equal(it, removed))

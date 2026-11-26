@@ -202,11 +202,9 @@ const byCodePoint = (a: string, b: string): number => {
   return x.length - y.length
 }
 
-/** Inserts the Pessoa's rows (`pessoas.carregar`). */
-export const loadPerson = (
-  db: Connection,
-  person: Person,
-): Effect.Effect<void, EngineError | SqliteError> =>
+/** The `pessoas` row and the frontmatter lists: apelidos, Vetos, Ajustes,
+ * open questions. */
+const insertFrontmatter = (db: Connection, person: Person) =>
   Effect.gen(function* () {
     const slug = person.slug
     yield* db.run(
@@ -252,6 +250,12 @@ export const loadPerson = (
         question.date,
         question.skips,
       )
+  })
+
+/** The Declarados and Relatos, each with its Nota when it states one. */
+const insertStatements = (db: Connection, person: Person) =>
+  Effect.gen(function* () {
+    const slug = person.slug
     for (const [table, section] of [
       ['declarados', 'stated'],
       ['relatos', 'reports'],
@@ -285,6 +289,12 @@ export const loadPerson = (
           )
       }
     }
+  })
+
+/** The Já vistos of the body: a Nota when rated, a ja_visto row otherwise. */
+const insertSeen = (db: Connection, person: Person) =>
+  Effect.gen(function* () {
+    const slug = person.slug
     for (const seen of yield* items(person, 'seen')) {
       const id = seenId(slug, seen)
       if (seen.rating === null)
@@ -309,6 +319,17 @@ export const loadPerson = (
           seen.pairwise === true ? 1 : 0,
         )
     }
+  })
+
+/** Inserts the Pessoa's rows (`pessoas.carregar`). */
+export const loadPerson = (
+  db: Connection,
+  person: Person,
+): Effect.Effect<void, EngineError | SqliteError> =>
+  Effect.gen(function* () {
+    yield* insertFrontmatter(db, person)
+    yield* insertStatements(db, person)
+    yield* insertSeen(db, person)
   })
 
 /** The Pessoa tables that came after databases already built: a sync
