@@ -134,7 +134,9 @@ describe('pessoa vetar', () => {
     expect(again).toEqual({ ...first, new: false })
     expect((await fixture.ok(personView('ana'))).vetoes).toHaveLength(1)
   })
+})
 
+describe('pessoa vetar', () => {
   test('a tag group is kept by its key, with its Portuguese value in the database', async () => {
     const fixture = useFixture()
 
@@ -171,7 +173,9 @@ describe('pessoa vetar', () => {
       ),
     ).toEqual([{ n: 0 }])
   })
+})
 
+describe('pessoa vetar', () => {
   test('a group outside tag_vetoes.toml is an unknown target', async () => {
     const fixture = useFixture()
 
@@ -192,7 +196,9 @@ describe('pessoa vetar', () => {
         "'besteirol' não é um grupo de config/tag_vetoes.toml (há: silly_comedy, slow)",
     })
   })
+})
 
+describe('pessoa vetar', () => {
   test('a target outside the Catalog, an empty text or a bad date write nothing', async () => {
     const fixture = useFixture()
     const before = read(fixture, 'teo')
@@ -238,7 +244,9 @@ describe('pessoa vetar', () => {
     ])
     expect(read(fixture, 'teo')).toBe(before)
   })
+})
 
+describe('pessoa vetar', () => {
   test('a Catalog target needs the database; a group does not', async () => {
     const fixture = useFixture()
     const vars = { FILMES_BANCO: join(fixture.root, 'missing.sqlite') }
@@ -318,7 +326,9 @@ describe('pessoa ajustar', () => {
     expect(result.new).toBe(false)
     expect(read(fixture, 'bruno')).toBe(before)
   })
+})
 
+describe('pessoa ajustar', () => {
   test('a new level of the same link replaces the old one; the same level is not new', async () => {
     const fixture = useFixture()
     await fixture.ok(
@@ -379,7 +389,9 @@ describe('pessoa pular and perguntas', () => {
     expect(plain(rest)).toEqual(plain(before.frontmatter))
     expect(after.body).toBe(before.body)
   })
+})
 
+describe('pessoa pular and perguntas', () => {
   test('skipped for the second time it leaves the list, keeping the first text', async () => {
     const fixture = useFixture()
     await fixture.ok(
@@ -426,7 +438,9 @@ describe('pessoa pular and perguntas', () => {
       expect.objectContaining({ text: 'o Bruno gosta de filme longo?' }),
     ])
   })
+})
 
+describe('pessoa pular and perguntas', () => {
   test('perguntas lists her open questions, as ver does', async () => {
     const fixture = useFixture()
     await fixture.ok(
@@ -461,7 +475,9 @@ describe('pessoa pular and perguntas', () => {
       result.openQuestions,
     )
   })
+})
 
+describe('pessoa pular and perguntas', () => {
   test('skip and remove hold in the database at once', async () => {
     const fixture = useFixture()
     const skip = () =>
@@ -495,7 +511,9 @@ describe('pessoa pular and perguntas', () => {
       ),
     ).toEqual([{ n: 0 }])
   })
+})
 
+describe('pessoa pular and perguntas', () => {
   test('skipped again with a subject keeps the subject', async () => {
     const fixture = useFixture()
     await fixture.ok(
@@ -517,7 +535,9 @@ describe('pessoa pular and perguntas', () => {
       2,
     ])
   })
+})
 
+describe('pessoa pular and perguntas', () => {
   test('a database from before the open questions takes a write to the Pessoa', async () => {
     const fixture = useFixture()
     await fixture.ok(
@@ -550,7 +570,9 @@ describe('pessoa pular and perguntas', () => {
       await query(fixture, `SELECT pessoa FROM vetos WHERE alvo = '${FAROL}'`),
     ).toEqual([{ pessoa: 'bruno' }])
   })
+})
 
+describe('pessoa pular and perguntas', () => {
   test('a film as subject is invalid usage; a group outside the file is an unknown target', async () => {
     const fixture = useFixture()
 
@@ -621,7 +643,9 @@ describe('pessoa remover', () => {
     ).toEqual([{ n: 0 }])
     expect(read(fixture, 'teo')).not.toContain('adoro esse')
   })
+})
 
+describe('pessoa remover', () => {
   test('removes the Veto by its target', async () => {
     const fixture = useFixture()
     const vetoed = await fixture.ok(
@@ -639,7 +663,9 @@ describe('pessoa remover', () => {
       await query(fixture, "SELECT * FROM vetos WHERE pessoa = 'teo'"),
     ).toEqual([])
   })
+})
 
+describe('pessoa remover', () => {
   test('a target with more than one Relato asks for the fato_id', async () => {
     const fixture = useFixture()
     const one = (
@@ -685,7 +711,9 @@ describe('pessoa remover', () => {
       await query(fixture, "SELECT texto FROM relatos WHERE pessoa = 'teo'"),
     ).toEqual([{ texto: 'gosta de comédia' }])
   })
+})
 
+describe('pessoa remover', () => {
   test('an item not in the file is an error and nothing changes', async () => {
     const fixture = useFixture()
     await fixture.ok(personState({ person: 'teo', text: 'gosto de comédia' }))
@@ -726,7 +754,9 @@ describe('pessoa remover', () => {
         'ele veio de um import: tire o import com `importar --remover`',
     )
   })
+})
 
+describe('pessoa remover', () => {
   test('a removed Já visto leaves the database, as a reload agrees', async () => {
     const fixture = useFixture()
     const seen = (
@@ -753,7 +783,9 @@ describe('pessoa remover', () => {
       '## Já vistos\n\n- 2026-11-20 · conversa com o Dono · Casa Cheia (tt9000602)\n',
     )
   })
+})
 
+describe('pessoa remover', () => {
   test('removes an answered question by its subject or its fato_id', async () => {
     const fixture = useFixture()
     await fixture.ok(
@@ -789,7 +821,9 @@ describe('pessoa remover', () => {
     )
     expect(frontmatter(fixture, 'bruno')).not.toHaveProperty('open_questions')
   })
+})
 
+describe('pessoa remover', () => {
   test('every item of ver has a fato_id, and the synced rows equal a reload', async () => {
     const fixture = useFixture()
     await ana(fixture)
@@ -830,7 +864,9 @@ describe('pessoa remover', () => {
     await fixture.ok(reloadPeople)
     expect(await personRows(fixture)).toEqual(synced)
   })
+})
 
+describe('pessoa remover', () => {
   // The removal itself is in test/sessions/feedback.test.ts (#96).
   test('a Feedback comment whose Session file is gone is an unknown Session', async () => {
     const fixture = useFixture()

@@ -117,7 +117,9 @@ describe('the Motivo of each film, in the Session file', () => {
       }),
     ).toEqual({ kind: 'entity', name: 'faroeste', people: ['bruno'] })
   })
+})
 
+describe('the Motivo of each film, in the Session file', () => {
   test('a film with nothing for it has none', () => {
     expect(
       filmReason({
@@ -167,7 +169,9 @@ describe('the Motivo of each film, in the Session file', () => {
       null,
     ])
   })
+})
 
+describe('the Motivo of each film, in the Session file', () => {
   test('on a tie the first Presente’s wins, and everyone with it shares it', () => {
     expect(
       filmReason({
@@ -242,7 +246,9 @@ describe('the Cartaz by Motivo', () => {
       model.films.map((f) => f.id),
     )
   })
+})
 
+describe('the Cartaz by Motivo', () => {
   test('the shown films are grouped in the order the Dono sees them', async () => {
     const fixture = useFixture()
     const session = await recommend(fixture, { attendees: ['dono'] })
@@ -288,7 +294,9 @@ describe('the Cartaz by Motivo', () => {
       ['Aposta', false, [5]],
     ])
   })
+})
 
+describe('the Cartaz by Motivo', () => {
   test('neighbours share a title with everyone who has the Motivo on any of them', async () => {
     const fixture = useFixture()
     const session = await recommend(fixture, { attendees: ['dono', 'iara'] })

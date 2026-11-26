@@ -160,7 +160,9 @@ describe('recomendar --sessao (test_refazer_sessao)', () => {
     ])
     expect(body.split('## Recomendação')).toHaveLength(2)
   })
+})
 
+describe('recomendar --sessao (test_refazer_sessao)', () => {
   test('each refazer adds a version and sessoes-abertas shows one Session', async () => {
     const fixture = useFixture()
     await recommend(fixture, {
@@ -203,7 +205,9 @@ describe('recomendar --sessao (test_refazer_sessao)', () => {
       recommendation: top['recommendation'],
     })
   })
+})
 
+describe('recomendar --sessao (test_refazer_sessao)', () => {
   test('the Feedback finds the position in the redone list', async () => {
     const fixture = useFixture()
     await recommend(fixture, {
@@ -247,7 +251,9 @@ describe('recomendar --sessao (test_refazer_sessao)', () => {
     expect(outcome.output).toMatchObject({ error: { code: 'closed_session' } })
     expect(front(fixture, '2026-11-20-bruno').text).toBe(before)
   })
+})
 
+describe('recomendar --sessao (test_refazer_sessao)', () => {
   test('a Session that does not exist is an error and opens none', async () => {
     const fixture = useFixture()
 
@@ -260,6 +266,40 @@ describe('recomendar --sessao (test_refazer_sessao)', () => {
     expect(sessions).toEqual([])
   })
 })
+
+/**
+ * Rewrites the Session by hand to show Curta da Madrugada at 2 and
+ * tt0000001, untitled, at 3.
+ */
+const showUnratedAt2And3 = (fixture: Fixture, id: string, first: Out) =>
+  fixture.ok(
+    Effect.gen(function* () {
+      const { frontmatter, body } = yield* readSession(id)
+      const top = new Map(frontmatter)
+      top.set(
+        'recommendation',
+        first.films.map((f) => {
+          if (f.position === 2)
+            return new Map<string, YamlValue>([
+              ['position', pyInt(2)],
+              ['id', 'tt9000106'],
+              ['title', 'Curta da Madrugada'],
+            ])
+          if (f.position === 3)
+            return new Map<string, YamlValue>([
+              ['position', pyInt(3)],
+              ['id', 'tt0000001'],
+            ])
+          return new Map<string, YamlValue>([
+            ['position', pyInt(f.position)],
+            ['id', f.id],
+            ['title', f.title],
+          ])
+        }),
+      )
+      yield* writeSession(id, top, body)
+    }),
+  )
 
 const openAlone = async (fixture: Fixture, attendees = ['dono']) => {
   const first = await recommend(fixture, { attendees })
@@ -314,7 +354,9 @@ describe('regenerating with kept films (test_regerar_mantidos)', () => {
       { position: 5, id: f[4]!.id, title: f[4]!.title, cause: 'swapped' },
     ])
   })
+})
 
+describe('regenerating with kept films (test_regerar_mantidos)', () => {
   test('the stored version keeps new, kept and dropped', async () => {
     const fixture = useFixture()
     const { first, id } = await openAlone(fixture)
@@ -359,7 +401,9 @@ describe('regenerating with kept films (test_regerar_mantidos)', () => {
     expect(outcome.exitCode).toBe(2)
     expect(outcome.output).toMatchObject({ error: { code: 'invalid_usage' } })
   })
+})
 
+describe('regenerating with kept films (test_regerar_mantidos)', () => {
   test('a kept film that was not in the earlier version stays out, with a warning', async () => {
     const fixture = useFixture()
     const { first, id } = await openAlone(fixture)
@@ -407,7 +451,9 @@ describe('regenerating with kept films (test_regerar_mantidos)', () => {
     ).toBe(true)
     expect(redone.films[1]).toMatchObject({ new: true, position: 2 })
   })
+})
 
+describe('regenerating with kept films (test_regerar_mantidos)', () => {
   test('a new Veto removes the kept film and a new Declarado does not', async () => {
     const fixture = useFixture()
     const { first, id } = await openAlone(fixture)
@@ -450,7 +496,9 @@ describe('regenerating with kept films (test_regerar_mantidos)', () => {
       ),
     ).toBe(true)
   })
+})
 
+describe('regenerating with kept films (test_regerar_mantidos)', () => {
   test('a refazer without keep keeps nothing and says what left', async () => {
     // With no no-repeat (#66) what was not seen may come back; the
     // Session's Já visto leaves.
@@ -480,7 +528,9 @@ describe('regenerating with kept films (test_regerar_mantidos)', () => {
       people: ['bruno'],
     })
   })
+})
 
+describe('regenerating with kept films (test_regerar_mantidos)', () => {
   test('a kept film below the minimum rating leaves with a warning', async () => {
     // Sombra Morna has 6,5 on IMDb: no Candidate. A Session from before the
     // minimum rating showed it at 2.
@@ -516,40 +566,15 @@ describe('regenerating with kept films (test_regerar_mantidos)', () => {
       ),
     ).toBe(true)
   })
+})
 
+describe('regenerating with kept films (test_regerar_mantidos)', () => {
   test('a kept film with too few votes, or outside the Catálogo, leaves with the reason', async () => {
     // Curta da Madrugada has 600 votes; tt0000001 is in no Catálogo. A
     // Session written by hand showed them at 2 and 3, the second untitled.
     const fixture = useFixture()
     const { first, id } = await openAlone(fixture)
-    await fixture.ok(
-      Effect.gen(function* () {
-        const { frontmatter, body } = yield* readSession(id)
-        const top = new Map(frontmatter)
-        top.set(
-          'recommendation',
-          first.films.map((f) => {
-            if (f.position === 2)
-              return new Map<string, YamlValue>([
-                ['position', pyInt(2)],
-                ['id', 'tt9000106'],
-                ['title', 'Curta da Madrugada'],
-              ])
-            if (f.position === 3)
-              return new Map<string, YamlValue>([
-                ['position', pyInt(3)],
-                ['id', 'tt0000001'],
-              ])
-            return new Map<string, YamlValue>([
-              ['position', pyInt(f.position)],
-              ['id', f.id],
-              ['title', f.title],
-            ])
-          }),
-        )
-        yield* writeSession(id, top, body)
-      }),
-    )
+    await showUnratedAt2And3(fixture, id, first)
 
     const redone = await recommend(fixture, {
       attendees: ['dono'],
@@ -579,7 +604,9 @@ describe('regenerating with kept films (test_regerar_mantidos)', () => {
       'tt0000001 saiu, apesar de mantido: fora do Catálogo',
     ])
   })
+})
 
+describe('regenerating with kept films (test_regerar_mantidos)', () => {
   test('a list shorter than a kept film’s number has no hole', async () => {
     const fixture = useFixture()
     const { first, id } = await openAlone(fixture)
@@ -683,7 +710,9 @@ describe('out of the Session (test_fora_da_sessao)', () => {
     expect(ids(third)).not.toContain(f[4])
     expect(ids(third)).toEqual(expect.arrayContaining([f[0], f[1]]))
   })
+})
 
+describe('out of the Session (test_fora_da_sessao)', () => {
   test('a Presente’s Já vi in the Session keeps the film out without asking for unseen', async () => {
     const fixture = useFixture()
     const { first, id } = await openMany(fixture)
@@ -733,7 +762,9 @@ describe('out of the Session (test_fora_da_sessao)', () => {
       f.filter((film) => film !== longest.id && ids(third).includes(film)),
     ).toEqual([])
   })
+})
 
+describe('out of the Session (test_fora_da_sessao)', () => {
   test('swap records the films as swapped before the refazer', async () => {
     const fixture = useFixture()
     const { first, id } = await openMany(fixture)
@@ -779,7 +810,9 @@ describe('out of the Session (test_fora_da_sessao)', () => {
 
     expect(second.films.some((f) => f.new)).toBe(false)
   })
+})
 
+describe('out of the Session (test_fora_da_sessao)', () => {
   test('a Já vi of whoever arrived in this refazer removes the film', async () => {
     const fixture = useFixture()
     const first = await recommend(fixture, { attendees: ['dono'] })
@@ -849,7 +882,9 @@ describe('the similar in the Session (test_parecido_na_sessao)', () => {
     expect(ids(second)).toEqual([PE_NA_ESTRADA])
     expect(ids(third)).toEqual([PE_NA_ESTRADA])
   })
+})
 
+describe('the similar in the Session (test_parecido_na_sessao)', () => {
   test('a new similar replaces the whole list and ignores keep, with a warning', async () => {
     const fixture = useFixture()
     const { first, id } = await openTen(fixture)
@@ -892,7 +927,9 @@ describe('the similar in the Session (test_parecido_na_sessao)', () => {
 
     expect(ids(third)).toEqual(ids(first))
   })
+})
 
+describe('the similar in the Session (test_parecido_na_sessao)', () => {
   test('repeating the same similar is no new request', async () => {
     const fixture = useFixture()
     const { first, id } = await openTen(fixture, { similar: [ESCREVER_CARTAS] })
@@ -935,7 +972,9 @@ describe('the similar in the Session (test_parecido_na_sessao)', () => {
 
     expect(outcome.exitCode).toBe(2)
   })
+})
 
+describe('the similar in the Session (test_parecido_na_sessao)', () => {
   test('a new similar keeps swapped what the Dono swapped on the Cartaz', async () => {
     const fixture = useFixture()
     const { first, id } = await openTen(fixture)

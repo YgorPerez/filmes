@@ -64,7 +64,9 @@ describe('sessionRedoRequest', () => {
       Object.keys({ ...opened.constraints, out_of_session: {} }).toSorted(),
     )
   })
+})
 
+describe('sessionRedoRequest', () => {
   test('leaves out what the version did not ask, and a Restrição that no longer exists', async () => {
     const fixture = useFixture()
     const opened = await fixture.ok(

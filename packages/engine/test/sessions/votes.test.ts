@@ -95,7 +95,9 @@ describe('castVotes', () => {
     ])
     expect(redone.dropped).toEqual([])
   })
+})
 
+describe('castVotes', () => {
   test('a Presente’s latest vote set replaces the previous version’s votes', async () => {
     const fixture = useFixture()
     const { id, f } = await open(fixture)
@@ -146,7 +148,9 @@ describe('castVotes', () => {
     const redone = await redo(fixture, id, f)
     expect(redone.films[0]?.id).toBe(f[0])
   })
+})
 
+describe('castVotes', () => {
   test('equal yes counts keep the current order without a new version', async () => {
     const fixture = useFixture()
     const { id, f } = await open(fixture)
@@ -196,7 +200,9 @@ describe('castVotes', () => {
       }),
     )
   })
+})
 
+describe('castVotes', () => {
   test('a no swaps the film and the rest stays, in screen order', async () => {
     const fixture = useFixture()
     const { id, f } = await open(fixture)
@@ -228,7 +234,9 @@ describe('castVotes', () => {
       { person: 'iara', film: f[3], vote: 'yes', date: '2026-11-20' },
     ])
   })
+})
 
+describe('castVotes', () => {
   test('a yes lifts the kept film to the first kept number; free places stay', async () => {
     const fixture = useFixture()
     const { id, f, attendees } = await open(fixture)
@@ -280,7 +288,9 @@ describe('castVotes', () => {
       `voto em ${f[0]} ignorado: o filme não está mais na tela da versão 2`,
     ])
   })
+})
 
+describe('castVotes', () => {
   test('a no still swaps the film after a Presente voted yes on it', async () => {
     const fixture = useFixture()
     const { id, f } = await open(fixture)
@@ -332,7 +342,9 @@ describe('castVotes', () => {
 
     expect(out.output).toMatchObject({ error: { code: 'closed_session' } })
   })
+})
 
+describe('castVotes', () => {
   test('votes are no Fato: the Presente’s taste does not change', async () => {
     const fixture = useFixture()
     const { id, f } = await open(fixture)
@@ -373,7 +385,9 @@ describe('castVotes', () => {
     expect((await ask('2026-01-01-ninguem', 1)).exitCode).not.toBe(0)
     expect(front(fixture, id).votes).toBeUndefined()
   })
+})
 
+describe('castVotes', () => {
   test('votedBy says which films a Presente voted on in any version', async () => {
     const fixture = useFixture()
     const { id, f, attendees } = await open(fixture)

@@ -69,7 +69,9 @@ describe('giving access', () => {
     expect(quim.owner).toBe(false)
     expect(quim.email).toBeNull()
   })
+})
 
+describe('giving access', () => {
   test('refuses a Pessoa who is a Dono already', async () => {
     const fixture = useFixture()
     const outcome = await fixture.run(
