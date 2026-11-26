@@ -20,10 +20,9 @@ import {
   type SeedKind,
 } from '../../evidence/ruler.ts'
 import { filmText, integerText, seedText } from '../../evidence/wording.ts'
-import { readRatingScale } from '../../people/rating-scale.ts'
 import { num, numOrNull, text, textOrNull } from '../../sqlite/row.ts'
 import { kindOf } from '../../sqlite/vocabulary.ts'
-import { candidatesJson, type Signal } from './Signal.ts'
+import { candidatesJson, scaleOf, type Signal } from './Signal.ts'
 
 /** The neighbours of the Pessoa's Notas that are Candidates. The `+`
  * keeps SQLite on the Notas (vizinhos has no index on `vizinho_id`), with
@@ -42,7 +41,7 @@ export const neighbors: Signal = {
   module: 'vizinhanca',
   forPerson: (round, person) =>
     Effect.gen(function* () {
-      const scale = yield* readRatingScale(round.db, person, round.weights)
+      const scale = scaleOf(round, person)
       const rows = yield* round.db.all(NEIGHBORS, person, candidatesJson(round))
       return rows.flatMap((row) => {
         const candidate = text(row, 'candidato')

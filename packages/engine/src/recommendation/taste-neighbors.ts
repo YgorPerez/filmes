@@ -30,11 +30,10 @@ import {
   ratingPercentile,
   type RatingScale,
 } from '../evidence/ruler.ts'
-import { readRatingScale } from '../people/rating-scale.ts'
 import type { Weights } from '../runtime/Weights.ts'
 import type { Connection, SqliteError } from '../sqlite/Sqlite.ts'
 import { num, text } from '../sqlite/row.ts'
-import { candidatesJson, type Round } from './signals/Signal.ts'
+import { candidatesJson, scaleOf, type Round } from './signals/Signal.ts'
 
 export interface TasteNeighbor {
   readonly user: number
@@ -132,27 +131,22 @@ const closest = (
     .slice(0, k)
 }
 
-interface Found {
-  readonly scale: RatingScale
-  readonly neighbors: ReadonlyArray<TasteNeighbor>
-}
-
 /** Per connection, by Pessoa and what she rated: `evaluate` ranks the
  * same Pessoa many times with the same Notas. */
-const found = new WeakMap<Connection, Map<string, Found>>()
+const found = new WeakMap<
+  Connection,
+  Map<string, ReadonlyArray<TasteNeighbor>>
+>()
 
-/** The taste neighbours of `person`, and her scale. */
+/** The taste neighbours of `person`, read on her `scale`. */
 export const tasteNeighbors = (
   db: Connection,
   person: string,
-  weights: Pick<
-    Weights,
-    'rating_percentile' | 'taste_neighbors' | 'rating_decay'
-  >,
+  scale: RatingScale,
+  weights: Pick<Weights, 'taste_neighbors' | 'rating_decay'>,
   today: string,
-): Effect.Effect<Found, SqliteError> =>
+): Effect.Effect<ReadonlyArray<TasteNeighbor>, SqliteError> =>
   Effect.gen(function* () {
-    const scale = yield* readRatingScale(db, person, weights)
     const own = new Map<string, OwnRating>(
       (yield* db.all(OWN_RATINGS, person)).map((row) => [
         text(row, 'filme_id'),
@@ -164,7 +158,8 @@ export const tasteNeighbors = (
     )
     const { k, min_shared } = weights.taste_neighbors
     const key = JSON.stringify([person, k, min_shared, [...own]])
-    const cache = found.get(db) ?? new Map<string, Found>()
+    const cache =
+      found.get(db) ?? new Map<string, ReadonlyArray<TasteNeighbor>>()
     found.set(db, cache)
     const cached = cache.get(key)
     if (cached !== undefined) return cached
@@ -172,21 +167,18 @@ export const tasteNeighbors = (
       own.size >= min_shared && k > 0
         ? yield* db.all(SHARED, JSON.stringify([...own.keys()]))
         : []
-    const result: Found = {
-      scale,
-      neighbors: closest(
-        rows.map((row) => {
-          const mine = own.get(text(row, 'filme_id'))!
-          return [
-            num(row, 'usuario'),
-            Math.abs(mine.percentile - num(row, 'percentil')),
-            mine.decay,
-          ] as const
-        }),
-        k,
-        min_shared,
-      ),
-    }
+    const result = closest(
+      rows.map((row) => {
+        const mine = own.get(text(row, 'filme_id'))!
+        return [
+          num(row, 'usuario'),
+          Math.abs(mine.percentile - num(row, 'percentil')),
+          mine.decay,
+        ] as const
+      }),
+      k,
+      min_shared,
+    )
     cache.set(key, result)
     return result
   })
@@ -254,9 +246,11 @@ export const predictRatings = (
     predictions.set(round, ofRound)
     const cached = ofRound.get(person)
     if (cached !== undefined) return cached
-    const { scale, neighbors } = yield* tasteNeighbors(
+    const scale = scaleOf(round, person)
+    const neighbors = yield* tasteNeighbors(
       round.db,
       person,
+      scale,
       round.weights,
       round.today,
     )

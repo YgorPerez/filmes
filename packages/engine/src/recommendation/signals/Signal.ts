@@ -4,7 +4,9 @@
 // a bonus to the order. Both return Evidence on the round's Candidates only.
 
 import type { Effect } from 'effect'
+import { pythonError } from '../../compat/python-error.ts'
 import type { Evidence } from '../../evidence/Evidence.ts'
+import type { RatingScale } from '../../evidence/ruler.ts'
 import type { Environment } from '../../runtime/Environment.ts'
 import type { EngineError } from '../../runtime/EngineError.ts'
 import type { Weights } from '../../runtime/Weights.ts'
@@ -23,6 +25,16 @@ export interface Round {
   readonly attendees: ReadonlyArray<string>
   /** The Climas asked for, in the order asked. */
   readonly moods: ReadonlyArray<Mood>
+  /** Each Presente's Escala, read once for the round: every signal reads
+   * her Notas on the same scale. */
+  readonly scales: ReadonlyMap<string, RatingScale>
+}
+
+/** The Escala of a Presente of the round. */
+export const scaleOf = (round: Round, person: string): RatingScale => {
+  const scale = round.scales.get(person)
+  if (scale === undefined) throw pythonError('KeyError', `'${person}'`)
+  return scale
 }
 
 export type SignalEffect = Effect.Effect<

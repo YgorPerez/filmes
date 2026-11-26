@@ -49,7 +49,6 @@ import {
 } from '../../evidence/ruler.ts'
 import type { Level, Link, Strength } from '../../evidence/strength.ts'
 import { filmText, listText, seedText } from '../../evidence/wording.ts'
-import { readRatingScale } from '../../people/rating-scale.ts'
 import { engineError } from '../../runtime/EngineError.ts'
 import { num, numOrNull, text, textOrNull } from '../../sqlite/row.ts'
 import type { Row } from '../../sqlite/Sqlite.ts'
@@ -59,7 +58,7 @@ import {
   LINK_PREDICATE,
   linkOf,
 } from '../../sqlite/vocabulary.ts'
-import { candidatesJson, type Signal } from './Signal.ts'
+import { candidatesJson, scaleOf, type Signal } from './Signal.ts'
 
 /** How each link reads. `seed` null: the link makes no seed Evidence. */
 const WORDING: Readonly<
@@ -145,7 +144,7 @@ export const content: Signal = {
   forPerson: (round, person) =>
     Effect.gen(function* () {
       const { db, weights, today } = round
-      const scale = yield* readRatingScale(db, person, weights)
+      const scale = scaleOf(round, person)
       const out: Evidence[] = []
       const seeds = new Map<string, Evidence>()
       const adjustments = new Map<string, Level>()
