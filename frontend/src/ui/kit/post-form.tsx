@@ -5,12 +5,22 @@
 import { createContext, useContext, type ReactNode } from 'react'
 import { useFetchForm } from './fetch-form'
 
-/** What the screen does with the answer of each `PostForm` in it, as
- * `useFetchForm`'s `onAnswer` (`usePostedFeedback`); none lets the page go
- * to the answer. */
-export const PostAnswer = createContext<
-  ((to: string, form: HTMLFormElement) => boolean) | undefined
->(undefined)
+type OnAnswer = (to: string, form: HTMLFormElement) => boolean
+
+const PostAnswer = createContext<OnAnswer | undefined>(undefined)
+
+/** What the screen does with the answer of each `PostForm` in `children`,
+ * as `useFetchForm`'s `onAnswer` (`usePostedFeedback`); without it, the
+ * page goes to the answer. */
+export function PostAnswers({
+  onAnswer,
+  children,
+}: {
+  onAnswer: OnAnswer
+  children: ReactNode
+}) {
+  return <PostAnswer.Provider value={onAnswer}>{children}</PostAnswer.Provider>
+}
 
 /** A `<form method="post">` to `action` (multipart when it sends a file)
  * that posts by `fetch` once the JavaScript is in. `children` see whether

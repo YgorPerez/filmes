@@ -6,7 +6,7 @@ import type { QueueEntry, QueuePage, QueueSuggestion } from '#/platform/imports'
 import { ImportsFrame } from './imports'
 import { QUEUE } from './imports.copy'
 import { FieldLabel } from './kit/field-label'
-import { PostAnswer, PostForm } from './kit/post-form'
+import { PostAnswers, PostForm } from './kit/post-form'
 import { usePostedFeedback } from './kit/posted-feedback'
 import { PageHead } from './kit/page-head'
 import { TapeCase } from './kit/tape-case'
@@ -65,7 +65,7 @@ export function QueueScreen({
     done ? `${done.notice}:${done.resolved}:${done.left}` : (refusal ?? ''),
   )
   return (
-    <PostAnswer.Provider value={onAnswer}>
+    <PostAnswers onAnswer={onAnswer}>
       <ImportsFrame back={QUEUE.back} backTo={`${MY_TASTE}/importar`}>
         <PageHead title={QUEUE.title} lead={QUEUE.lead} />
         {(refusal || done) && (
@@ -122,7 +122,7 @@ export function QueueScreen({
           </>
         )}
       </ImportsFrame>
-    </PostAnswer.Provider>
+    </PostAnswers>
   )
 }
 

@@ -1,6 +1,6 @@
 import { FIELD } from './kit/field'
 import { FieldLabel } from './kit/field-label'
-import { PostAnswer, PostForm } from './kit/post-form'
+import { PostAnswers, PostForm } from './kit/post-form'
 import { usePostedFeedback } from './kit/posted-feedback'
 import type { ReactNode } from 'react'
 import type { PersonImports } from '@filmes/engine'
@@ -59,7 +59,7 @@ export function PersonImportsScreen({
     done ? `${done.notice}:${done.facts}:${done.outside}` : (refusal ?? ''),
   )
   return (
-    <PostAnswer.Provider value={onAnswer}>
+    <PostAnswers onAnswer={onAnswer}>
       <ImportsFrame back={COPY.back(name, own)} backTo={personPath(slug, own)}>
         {page === null ? (
           <Alert>{COPY.unavailable}</Alert>
@@ -85,7 +85,7 @@ export function PersonImportsScreen({
           </>
         )}
       </ImportsFrame>
-    </PostAnswer.Provider>
+    </PostAnswers>
   )
 }
 
