@@ -531,9 +531,20 @@ function useLiveSearch(
     return () => clearTimeout(timer)
   }, [on, query])
 
-  return { query, setQuery, answer, searching }
+  /** Puts `text` in the field as searched already: the answer stays. */
+  const fill = (text: string) => {
+    latest.current++
+    searched.current = text
+    setSearching(false)
+    setQuery(text)
+  }
+
+  return { query, setQuery, fill, answer, searching }
 }
 
+/** The Catálogo search of a form that posts. With `fill`, the field is the
+ * film the form sends (Contar como foi): "Usar" puts the film's id in it,
+ * and `onType` hears the Dono typing over it. */
 export function SessionFilmLookup({
   name,
   label,
@@ -541,19 +552,29 @@ export function SessionFilmLookup({
   value,
   pick,
   onPick,
+  fill: fills = false,
+  onType,
 }: Pick & {
   name: 'buscar' | 'busca'
   label: string
   answer: SearchAnswer | null
   value?: string
+  fill?: boolean
+  onType?: () => void
 }) {
   const live = useHydrated()
   const typed = value ?? initial?.query ?? ''
-  const { query, setQuery, answer, searching } = useLiveSearch(
+  const { query, setQuery, fill, answer, searching } = useLiveSearch(
     live,
     typed,
     initial,
   )
+  const take =
+    onPick &&
+    ((film: { id: string; label: string }) => {
+      if (fills) fill(film.id)
+      onPick(film)
+    })
   return (
     <section aria-label={CATALOG_SEARCH.title} className="flex flex-col gap-lg">
       <div className="grid items-end gap-sm sm:grid-cols-[1fr_auto]">
@@ -563,7 +584,10 @@ export function SessionFilmLookup({
               type="search"
               name={name}
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => {
+                setQuery(event.target.value)
+                onType?.()
+              }}
               onKeyDown={(event) => {
                 if (live && event.key === 'Enter') event.preventDefault()
               }}
@@ -589,7 +613,7 @@ export function SessionFilmLookup({
         )}
       </div>
       <input type="hidden" name="buscado" value={query.trim()} />
-      {answer && <CatalogResults answer={answer} pick={pick} onPick={onPick} />}
+      {answer && <CatalogResults answer={answer} pick={pick} onPick={take} />}
     </section>
   )
 }
