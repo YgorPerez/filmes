@@ -70,14 +70,16 @@ export function ChosenReactions({
   )
 }
 
-/** The chosen film when no card shows it: its title, then each line. */
+/** The chosen film when no card shows it: its title, then each line.
+ * Nothing when a card shows it or there is none. */
 export function ChosenFilm({
   chosen,
   people,
 }: {
-  chosen: BillboardChosen
+  chosen: BillboardChosen | undefined
   people: readonly BillboardPerson[]
 }) {
+  if (!chosen) return null
   const id = `escolhido-${chosen.id}`
   return (
     <section

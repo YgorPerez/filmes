@@ -208,9 +208,7 @@ export function Billboard({
     <>
       {empty && <p className="text-ink-2">{BILLBOARD.empty}</p>}
       <Dropped billboard={billboard} />
-      {billboard.chosen && (
-        <ChosenFilm chosen={billboard.chosen} people={billboard.attendees} />
-      )}
+      <ChosenFilm chosen={billboard.chosen} people={billboard.attendees} />
       {cards}
       {replying && (
         <ReplyBox
