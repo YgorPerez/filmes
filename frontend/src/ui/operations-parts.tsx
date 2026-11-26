@@ -20,3 +20,13 @@ export function ActionPost({
     </form>
   )
 }
+
+/** The technical half of a message, under the plain sentence: the code or
+ * the setting an admin looks up, smaller and in ink-2. */
+export function Detail({ children }: { children: ReactNode }) {
+  return (
+    <small className="mt-xs block text-meta wrap-anywhere text-ink-2">
+      {children}
+    </small>
+  )
+}

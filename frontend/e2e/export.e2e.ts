@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { exportRatings } from '@filmes/engine'
-import { engineRun, expect, loginAsBruno, tab, test } from './support'
+import { type Page } from '@playwright/test'
+import { engineRun, expect, loginAsBruno, section, tab, test } from './support'
 
 /** The file the engine writes for `person`, over the same fixture copy the
  * app serves. */
@@ -8,45 +9,50 @@ const engineFile = async (person: string) =>
   (await engineRun((engine) => engine.run(exportRatings(person, 'imdb'))))
     .content
 
-test('the Dono downloads a Pessoa’s IMDb CSV, equal to the engine’s', async ({
+/** Downloads the CSV from the Notas section of the page on screen, and
+ * checks it is the engine's, byte for byte. */
+async function download(page: Page, slug: string) {
+  const notes = section(page, 'Notas')
+  await expect(notes.getByText('Import or Export Data')).toBeVisible()
+  const [file] = await Promise.all([
+    page.waitForEvent('download'),
+    notes.getByRole('link', { name: 'Baixar CSV do IMDb' }).click(),
+  ])
+  expect(file.suggestedFilename()).toBe(`filmes-${slug}-imdb.csv`)
+  const saved = readFileSync(await file.path(), 'utf8')
+  expect(saved).toBe(await engineFile(slug))
+  expect(saved.split('\r\n').length).toBeGreaterThan(2)
+}
+
+test('the Dono downloads her own IMDb CSV and a Pessoa’s, equal to the engine’s', async ({
   page,
 }) => {
   await loginAsBruno(page)
   await tab(page, 'Meu gosto').click()
-  await page.getByRole('link', { name: 'Exportar', exact: true }).click()
-  await expect(page).toHaveURL(/\/meu-gosto\/exportar$/)
-  await expect(
-    page.getByRole('heading', { name: 'Exportar Notas' }),
-  ).toBeVisible()
-  await expect(page.getByText('Import or Export Data')).toBeVisible()
+  await download(page, 'bruno')
+  await expect(page).toHaveURL(/\/meu-gosto$/)
 
-  // His own Notas are the ones chosen when the page opens.
-  const person = page.getByLabel('Pessoa')
-  await expect(person).toHaveValue('bruno')
-
-  for (const slug of ['bruno', 'iara']) {
-    await person.selectOption(slug)
-    const [download] = await Promise.all([
-      page.waitForEvent('download'),
-      page.getByRole('button', { name: 'Baixar CSV do IMDb' }).click(),
-    ])
-    expect(download.suggestedFilename()).toBe(`filmes-${slug}-imdb.csv`)
-    const saved = readFileSync(await download.path(), 'utf8')
-    expect(saved).toBe(await engineFile(slug))
-    expect(saved.split('\r\n').length).toBeGreaterThan(2)
-    await expect(page).toHaveURL(/\/meu-gosto\/exportar$/)
-  }
+  await tab(page, 'Pessoas').click()
+  await page.getByRole('link', { name: /Iara/ }).click()
+  await download(page, 'iara')
+  await expect(page).toHaveURL(/\/pessoas\/iara$/)
 })
 
-test('a Pessoa that is gone sends the Dono back with the reason', async ({
+test('a Pessoa that is gone sends the Dono back to Pessoas with the reason', async ({
   page,
 }) => {
   await loginAsBruno(page)
   await page.goto('/exportar/imdb.csv?pessoa=ninguem')
-  await expect(page).toHaveURL(/\/meu-gosto\/exportar\?erro=pessoa$/)
+  await expect(page).toHaveURL(/\/pessoas\?erro=pessoa$/)
   await expect(page.getByRole('alert')).toContainText(
     'não está mais no repo de dados',
   )
+})
+
+test('the old export page is Meu gosto', async ({ page }) => {
+  await loginAsBruno(page)
+  await page.goto('/exportar')
+  await expect(page).toHaveURL(/\/meu-gosto$/)
 })
 
 test('the download needs a Dono', async ({ request }) => {

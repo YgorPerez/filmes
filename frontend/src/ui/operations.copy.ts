@@ -1,7 +1,4 @@
-import type {
-  OperationsNotice,
-  OperationsRefusal,
-} from '#/content/operations-form'
+import type { OperationsRefusal } from '#/content/operations-form'
 
 const commits = (n: number) => (n === 1 ? '1 commit' : `${n} commits`)
 
@@ -18,90 +15,96 @@ const time = (iso: string) =>
   })
 
 export const OPERATIONS = {
-  back: 'Voltar',
   title: 'Operações',
-  lead: 'Só quem é admin vê esta tela: o envio do repo de dados, a avaliação da Recomendação e o console do banco.',
-  notices: {
-    avaliando: 'A avaliação começou. O progresso aparece abaixo.',
-    enviado: 'Tentei enviar agora. O resultado está no quadro do envio.',
-  } satisfies Record<OperationsNotice, string>,
   refusals: {
-    'em-andamento': 'Já há uma avaliação em andamento. Espere ela terminar.',
+    'em-andamento':
+      'Já tem uma avaliação em andamento. Espere terminar para iniciar outra.',
     'sem-pasta':
-      'A avaliação não está configurada: falta FILMES_AVALIACOES no servidor.',
-    pedido: 'Esse pedido não veio desta tela. Tente pelo botão.',
-    indisponivel: 'Não deu para fazer isso agora. Tente de novo daqui a pouco.',
+      'Configure a pasta de relatórios no servidor para rodar a avaliação.',
+    pedido: 'Esse pedido não veio desta tela. Use o botão da ação.',
+    indisponivel: 'A ação falhou. Tente de novo daqui a pouco.',
   } satisfies Record<OperationsRefusal, string>,
   percent,
-  time,
   push: {
-    title: 'Envio do repo de dados',
-    lead: 'Cada gravação vira um commit no filmes-dados, enviado ao GitHub em seguida.',
+    title: 'Envio dos dados',
+    lead: 'Os commits do filmes-dados vão para o GitHub.',
     unavailable:
-      'O envio não pôde ser lido: o motor não está pronto neste servidor.',
-    off: 'O envio está desligado neste servidor (sem FILMES_DATA_REMOTE). Os commits ficam só aqui.',
-    ok: 'Tudo enviado.',
-    pending: (n: number) => `${commits(n)} na fila para enviar.`,
+      'Não foi possível ler a fila de envio. Recarregue a página para tentar de novo.',
+    off: 'O envio está desligado neste servidor. Os commits ficam só aqui, sem ir para o GitHub.',
+    remoteSetting: 'FILMES_DATA_REMOTE',
+    ok: 'Fila em dia. Todos os commits foram enviados.',
+    pending: (n: number) => `${commits(n)} na fila.`,
+    failing: 'Envio falhando',
     failures: (n: number) =>
       n === 1 ? '1 falha seguida.' : `${n} falhas seguidas.`,
-    since: (iso: string) => `Falhando desde ${time(iso)}.`,
-    lastError: 'Último erro',
+    since: (iso: string) => `A primeira falha foi em ${time(iso)}.`,
+    lastError: 'Último erro do Git',
     retry: 'Tentar enviar agora',
     banner: (pending: number, failures: number) =>
-      `O envio do repo de dados falhou ${failures} vezes seguidas; ${commits(pending)} esperando.`,
+      `O envio dos dados falhou ${failures} vezes seguidas. ${commits(pending)} na fila.`,
     bannerLink: 'Ver Operações',
   },
   evaluation: {
     title: 'Avaliar a Recomendação',
-    lead: 'Mede a Recomendação contra as Notas de cada Pessoa (corte offline) e o Feedback das últimas Sessões, e grava um relatório com a data de hoje.',
-    unset:
-      'Não configurado: falta FILMES_AVALIACOES, a pasta onde os relatórios ficam (fora do filmes-dados). Sem ela, a avaliação não roda.',
+    lead: 'Compara as Recomendações com as Notas e com o Feedback das últimas Sessões. O relatório fica salvo com a data de hoje.',
     unavailable:
-      'A avaliação não está pronta neste servidor: o motor não pôde ler a configuração.',
-    grid: 'Comparar também os pesos da grade',
-    gridHint: 'demora bem mais',
+      'Não foi possível ler a configuração da avaliação. Recarregue a página para tentar de novo.',
+    folderSetting: 'FILMES_AVALIACOES',
+    grid: 'Testar outras combinações de pesos',
+    gridHint: 'Roda a avaliação para cada combinação. Leva mais tempo.',
     run: 'Avaliar',
     running: 'Avaliando…',
     startedBy: (by: string, at: string, grid: boolean) =>
-      `${grid ? 'Avaliação com a grade' : 'Avaliação'} iniciada por ${by} em ${time(at)}.`,
+      `${by} iniciou ${grid ? 'a comparação de pesos' : 'a avaliação'} em ${time(at)}.`,
     progress: 'Progresso da avaliação',
-    refresh: 'Atualizar',
-    done: (at: string) => `Terminou em ${time(at)}.`,
-    failed: (code: string, message: string) =>
-      `A avaliação parou com erro (${code}): ${message}`,
-    measures: 'Medidas do corte offline',
+    refresh: 'Atualizar progresso',
+    done: (at: string) => `A avaliação terminou em ${time(at)}.`,
+    failed: 'A avaliação parou. Tente rodar de novo.',
+    measures: 'Teste com Notas reservadas',
     sample: 'Amostra',
     people: 'Pessoas',
     movielens: 'MovieLens',
-    measured: 'Medidas',
+    measured: 'Perfis',
     recall: 'Recall@50',
     coverage: 'Cobertura no top 5',
-    online: (sessions: number, rate: number | null) =>
-      `Feedback de ${sessions === 1 ? '1 Sessão' : `${sessions} Sessões`}; escolhido no top 5: ${percent(rate)}.`,
+    online: (sessions: number, rate: number | null) => {
+      if (sessions === 0) return 'Nenhuma Sessão com Feedback.'
+      const count = sessions === 1 ? '1 Sessão' : `${sessions} Sessões`
+      return rate === null
+        ? `Feedback de ${count}. Sem taxa de escolha no top 5.`
+        : `Feedback de ${count}. O filme escolhido estava no top 5 em ${percent(rate)} delas.`
+    },
     priority: (priority: 'online' | 'offline') =>
       priority === 'online'
-        ? 'Prioridade: o Feedback (já há Sessões suficientes).'
-        : 'Prioridade: o corte offline (ainda há poucas Sessões com Feedback).',
-    best: 'Melhores pesos da grade',
+        ? 'Já há Sessões suficientes com Feedback, e ele vale mais que o teste com Notas.'
+        : 'Ainda há poucas Sessões com Feedback, então vale mais o teste com Notas.',
+    best: 'Combinações com melhor resultado',
+    rank: 'Posição',
     bestRow: (n: number) => `${n}º`,
     file: (file: string) => `Relatório gravado em ${file}.`,
     report: (date: string) => `Relatório de ${date}`,
-    noReport: 'Nenhum relatório ainda.',
+    noReport: 'Ainda não há relatório.',
   },
   consult: {
     title: 'Consultar o banco',
-    lead: 'Uma consulta SQL só de leitura no banco derivado. Só SELECT; uma instrução por vez.',
+    lead: 'Rode um SELECT por vez. A consulta só lê o banco.',
     label: 'SQL',
     placeholder: 'SELECT titulo FROM filmes LIMIT 5',
     run: 'Consultar',
+    results: 'Resultado da consulta',
     rows: (total: number, shown: number) =>
-      `${total === 1 ? '1 linha' : `${total} linhas`}${shown < total ? `; mostrando as primeiras ${shown}` : ''}.`,
-    empty: 'A consulta não trouxe linhas.',
+      shown < total
+        ? `Mostrando ${shown} de ${total} linhas.`
+        : total === 1
+          ? '1 linha.'
+          : `${total} linhas.`,
+    empty: 'A consulta retornou 0 linhas.',
     errors: {
-      read_only: 'Só leitura: o console aceita só SELECT.',
-      invalid_sql: 'SQL inválido.',
+      read_only: 'O console só lê o banco. Use um SELECT.',
+      invalid_sql:
+        'O banco recusou o SQL. Confira a instrução e tente de novo.',
     } as Record<string, string>,
-    other: 'O console não pôde rodar a consulta neste servidor.',
+    other: 'Não foi possível consultar o banco agora. Tente mais tarde.',
     null: 'NULL',
   },
 } as const

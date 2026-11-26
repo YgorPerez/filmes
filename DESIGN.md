@@ -594,6 +594,33 @@ Uma coluna, de cima para baixo, com 16px entre os blocos. Não há lista de tela
 
 O guia nunca bloqueia: "Pedir filme" fica sempre em cima. Quando nenhum passo falta, o guia some da home inteira; não há carteirinha nem selo.
 
+### Entrar
+
+A barra preta leva a marca. O cartão azul começa perto do topo e traz o título na etiqueta clara. O botão laranja ocupa a largura interna no celular. Uma recusa ocupa o lugar da instrução inicial e diz o que fazer. Se a conta está sem acesso, o botão diz "Usar outra conta Google". Se a entrada está indisponível, o cartão mostra só o aviso.
+
+### Operações
+
+O console SQL, a fila de envio e a avaliação têm títulos próprios. A partir de 900px, a fila fica à direita do console e a avaliação ocupa a linha de baixo. No celular, a ordem é consulta, envio, avaliação. O botão laranja executa a consulta. A tabela e a contagem ficam logo abaixo do formulário, com rolagem dentro da área de resultados.
+
+O quadro de envio mostra a fila e, se houver falha, quando ela começou e quantas tentativas falharam. O último erro do Git abre sob demanda. Depois de tentar enviar, o estado da fila aparece no próprio quadro.
+
+A avaliação mostra o progresso no lugar do formulário enquanto roda. As medidas vêm antes do relatório, que abre sob demanda. A opção de testar outras combinações de pesos explica por que leva mais tempo.
+
+Um erro ou um aviso de configuração diz primeiro, em frase, o que houve e o que fazer. Embaixo, menor e em ink-2, vem o detalhe técnico que o admin procura: o código do erro, ou a variável do servidor que falta.
+
+### Pessoas e Meu gosto
+
+**Pessoas** (`/pessoas`) é uma lista de linhas de 52px em superfície, raio 10px, com a lombada preta de 8px à esquerda, o nome em Rubik 700 15px, a etiqueta DONO de quem tem acesso, os apelidos em meta e a seta à direita. Quem entrou vem primeiro, com "Meu gosto" em meta ao lado do nome, e a linha dela leva a `/meu-gosto`; as outras seguem a ordem do motor. Embaixo, "Acrescentar Pessoa" abre o formulário. Não há "Voltar": Pessoas é aba.
+
+**A página de uma Pessoa** e **Meu gosto** (a página da Pessoa de quem entrou) são a mesma tela, uma coluna de fichas (`Slip`: superfície, fio de 1px, raio 12px, canhoto tracejado com o título em Rubik 800 13px maiúsculo e a contagem à direita), 16px entre elas. De cima para baixo:
+
+1. **Cabeçalho.** Na página de outra Pessoa, a opção "Pessoas" para voltar e o nome dela em title, com DONO quando ela tem acesso. Em Meu gosto, o h1 é "Meu gosto" e, embaixo, em meta, o nome e os apelidos de quem entrou. O aviso ou a recusa do último formulário vêm logo depois.
+2. **Notas** (sempre a primeira ficha). Sem Nota, uma linha diz como ter alguma. Depois, as ações numa fila de pílulas: em Meu gosto, "Dar notas" é o botão laranja, o único da tela (a fila de Notas grava para quem entrou, então só existe aqui); "Importar do Letterboxd ou do Trakt" em opção, que leva ao import dela (`/meu-gosto/importar` ou `/pessoas/<ela>/importar`); "Baixar CSV do IMDb" em opção, só com Notas, um link direto para o arquivo. Embaixo, em meta, onde o CSV entra no MovieLens. Por último, "Ver as 11 Notas" abre a lista, que pode ser longa.
+3. **Só em Meu gosto, o que o guia da home deixou.** "Conector no Claude": o endereço no preto do estojo, "Copiar endereço" em opção e, à direita do canhoto, "conectado" ou "falta conectar". Enquanto falta, os 3 passos de como adicionar e a nota do balconista; conectado, uma linha diz para usar o mesmo endereço em outro aparelho. "Passos pulados", só com algum passo pulado e não feito: os passos do guia nesse estado (marca tracejada, "pulado"), cada um com "Retomar" em link, que abre o que o passo pede e a ação, como na home. Um conector pulado mostra o endereço só atrás do "Retomar" dele, e a ficha do conector sai: o endereço aparece uma vez.
+4. **O gosto.** Os atalhos das fichas em pílula, com a contagem, a busca no Catálogo (acha o tt… ou Q… dos formulários) e as fichas: Perguntas abertas, Vetos, Ajustes, Declarados, Relatos, Já vistos e, só para admin, Acesso.
+
+Dar notas e o import seguem como telas próprias, com "Meu gosto" (ou o nome dela) no botão de voltar: a escala de 1 a 10, um filme por vez, e os formulários do import não cabem numa ficha. Exportar deixou de ser tela: o download sai da ficha de Notas, e uma falha volta para a página dela com o motivo.
+
 ### Avatares
 
 Círculo de 24px na cor do Presente, inicial em Rubik 700 11px em on-person. Vazado: fundo transparente, anel de 2px na cor e inicial na cor. Sobrepostos: -7px de margem e anel de 2px na cor da superfície.

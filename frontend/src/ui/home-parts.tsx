@@ -215,8 +215,8 @@ function Skip({ step }: { step: SetupStepView['step'] }) {
 }
 
 /** Puts the address on the clipboard; when the browser refuses, says how
- * to copy it by hand. */
-function CopyAddress({ url, label }: { url: string; label: string }) {
+ * to copy it by hand. Meu gosto's connector section has it too. */
+export function CopyAddress({ url, label }: { url: string; label: string }) {
   const [state, setState] = useState<'idle' | 'copied' | 'failed'>('idle')
   const copy = async () => {
     try {
@@ -245,15 +245,30 @@ function CopyAddress({ url, label }: { url: string; label: string }) {
   )
 }
 
-/** The connector's address on the case's black, then how to add it in
- * Claude and the clerk's note that the step marks itself. */
-function ConnectorBody({ url }: { url: string }) {
-  const { guide } = HOME
+/** The connector's address on the case's black, then, until the Claude
+ * app has connected (`done`), how to add it in Claude and the clerk's note
+ * that the step marks itself. Meu gosto shows it too. */
+export function ConnectorBody({
+  url,
+  done = false,
+}: {
+  url: string
+  done?: boolean
+}) {
   return (
     <>
       <code className="block rounded-field bg-case px-lg py-md font-mono text-url break-all text-case-ink">
         {url}
       </code>
+      {!done && <ConnectorHow />}
+    </>
+  )
+}
+
+function ConnectorHow() {
+  const { guide } = HOME
+  return (
+    <>
       <ol className="flex list-decimal flex-col gap-2xs pl-3xl text-evidence">
         {guide.how.map((line) => (
           <li key={line}>{line}</li>
@@ -423,19 +438,44 @@ export function Guide({
         </h2>
         <Progress setup={setup} />
       </div>
-      <ol className="flex flex-col">
-        {setup.steps.map((step, i) => (
-          <Step
-            key={step.step}
-            step={step}
-            n={i + 1}
-            person={person}
-            mcpUrl={mcpUrl}
-            ratings={setup.ratings}
-            first={step === first}
-          />
-        ))}
-      </ol>
+      <StepList setup={setup} person={person} mcpUrl={mcpUrl} first={first} />
     </section>
+  )
+}
+
+/** A step she skipped and has not done: Meu gosto resumes it from here
+ * once the home has no guide. */
+export const isSkipped = (step: SetupStepView) => stateOf(step) === 'skipped'
+
+/** The guide's steps, numbered in order: all of them, or, for Meu gosto,
+ * only the skipped ones (`skippedOnly`), each with its "Retomar". */
+export function StepList({
+  setup,
+  person,
+  mcpUrl,
+  first,
+  skippedOnly = false,
+}: {
+  setup: SetupView
+  person: string
+  mcpUrl: string | null
+  first?: SetupStepView
+  skippedOnly?: boolean
+}) {
+  const steps = skippedOnly ? setup.steps.filter(isSkipped) : setup.steps
+  return (
+    <ol className="flex flex-col">
+      {steps.map((step, i) => (
+        <Step
+          key={step.step}
+          step={step}
+          n={i + 1}
+          person={person}
+          mcpUrl={mcpUrl}
+          ratings={setup.ratings}
+          first={step === first}
+        />
+      ))}
+    </ol>
   )
 }

@@ -4,12 +4,14 @@ import { Alert } from './kit/status'
 import { buttonVariants } from './shadcn/button'
 
 // `/entrar`, the only page without a Dono, so outside the app shell: the
-// case-black bar with "filmes", and the membership card shown at the
-// counter (DESIGN.md, Home: o guia como carteirinha de sócio) with the one
-// orange button. The button is a link, since `/auth/google` answers a GET
-// with the redirect to Google.
+// case-black bar with "filmes" and one card with the one orange button.
+// The button is a link, since `/auth/google` answers a GET with the
+// redirect to Google; it goes when sign-in is off here, since Google
+// would only send the visitor back.
 
 export function Login({ refusal }: { refusal?: LoginRefusal }) {
+  const googleLabel = refusal === 'nao-dono' ? LOGIN.otherAccount : LOGIN.google
+
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="bg-case">
@@ -17,33 +19,36 @@ export function Login({ refusal }: { refusal?: LoginRefusal }) {
           {LOGIN.brand}
         </p>
       </header>
-      <main className="mx-auto flex w-full max-w-[420px] flex-1 flex-col justify-center px-2xl py-3xl">
+      <main className="mx-auto w-full max-w-[464px] px-2xl pt-14 pb-3xl sm:pt-24">
         <section
           aria-labelledby="entrar"
-          className="flex flex-col gap-xl rounded-panel bg-card-stock px-xl pt-xl pb-2xl text-card-stock-ink"
+          className="overflow-hidden rounded-panel"
         >
-          <p
-            aria-hidden="true"
-            className="flex items-baseline justify-between font-display text-[12px] leading-none font-extrabold tracking-[0.08em] uppercase"
-          >
-            <span>{LOGIN.card}</span>
-            <span>{LOGIN.brand}</span>
-          </p>
-          <h1 id="entrar" className="font-display text-title">
-            {LOGIN.title}
-          </h1>
-          <p className="text-[15px] text-pretty">{LOGIN.lead}</p>
-          {refusal && (
-            <Alert className="bg-surface text-evidence">
-              {LOGIN.refusals[refusal]}
-            </Alert>
-          )}
-          <a
-            href="/auth/google"
-            className={buttonVariants({ className: 'self-start' })}
-          >
-            {LOGIN.google}
-          </a>
+          <div className="bg-case p-xs">
+            <h1
+              id="entrar"
+              className="rounded-cover bg-shelf-label px-lg py-sm font-display text-counter-title text-on-sticker"
+            >
+              {LOGIN.title}
+            </h1>
+          </div>
+          <div className="flex flex-col gap-2xl bg-card-stock p-2xl text-card-stock-ink sm:p-3xl">
+            {refusal ? (
+              <Alert className="bg-surface text-evidence">
+                {LOGIN.refusals[refusal]}
+              </Alert>
+            ) : (
+              <p className="text-pretty">{LOGIN.lead}</p>
+            )}
+            {refusal !== 'indisponivel' && (
+              <a
+                href="/auth/google"
+                className={buttonVariants({ className: 'sm:self-start' })}
+              >
+                {googleLabel}
+              </a>
+            )}
+          </div>
         </section>
       </main>
     </div>
