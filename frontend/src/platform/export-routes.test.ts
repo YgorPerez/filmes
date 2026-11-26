@@ -1,14 +1,7 @@
 import { describe, expect, it } from 'vite-plus/test'
 import { Route as Download } from '#/routes/exportar/imdb[.]csv'
-import { Route as Page } from '#/routes/_owner/meu-gosto/exportar'
 
-describe('the Export routes', () => {
-  it('keeps only a reason the page knows in the query', () => {
-    const validate = Page.options.validateSearch as (search: object) => object
-    expect(validate({ erro: 'pessoa' })).toEqual({ erro: 'pessoa' })
-    expect(validate({ erro: '<b>' })).toEqual({ erro: undefined })
-  })
-
+describe('the IMDb download route', () => {
   it('sends a request with no Dono session to the login', async () => {
     const handlers = Download.options.server?.handlers as {
       GET: (ctx: { request: Request }) => Promise<Response>

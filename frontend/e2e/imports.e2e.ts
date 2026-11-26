@@ -43,7 +43,7 @@ const folderZip = (folder: string, prefix = '') =>
 const importsOf = (person: string) =>
   engineRun((engine) => engine.run(personImports(person)))
 
-const UPLOAD = 'Trazer seus filmes do Letterboxd ou do Trakt'
+const UPLOAD = 'O arquivo do Letterboxd ou do Trakt'
 const PROFILE = 'Ou só o recente, pelo perfil'
 
 /** Sends a ZIP through the one file field: the server tells the service. */
@@ -75,13 +75,12 @@ test('the Dono imports a Letterboxd ZIP and works the queue', async ({
   await tab(page, 'Pessoas').click()
   await page.getByRole('link', { name: /Olga/ }).click()
   await expect(page).toHaveURL(/\/pessoas\/olga$/)
-  await page
-    .getByRole('navigation', { name: 'Notas' })
-    .getByRole('link', { name: 'Importar' })
+  await section(page, 'Notas')
+    .getByRole('link', { name: 'Importar do Letterboxd ou do Trakt' })
     .click()
   await expect(page).toHaveURL(/\/pessoas\/olga\/importar$/)
   await expect(
-    page.getByRole('heading', { name: 'Imports de Olga' }),
+    page.getByRole('heading', { name: 'Importar as Notas de Olga' }),
   ).toBeVisible()
   await expect(section(page, 'Arquivos importados')).toContainText(
     'Nenhum import ainda.',

@@ -25,9 +25,11 @@ export const Route = createFileRoute('/_owner/pessoas/')({
 
 function PeoplePage() {
   const { erro, ...query } = Route.useSearch()
+  const { owner } = Route.useRouteContext()
   return (
     <PeopleList
       people={Route.useLoaderData()}
+      self={owner.person}
       gone={erro === 'pessoa'}
       create={
         isPersonCreateRefusal(erro)
