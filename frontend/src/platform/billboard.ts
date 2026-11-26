@@ -28,6 +28,7 @@ import { appPoster, formPoster, seeOther } from './form-post'
 import { appNotes, type Note, type Notes } from './notes'
 import { serverEnv } from './server-env'
 import { issueSessionLink, resolveSessionLink } from './session-link'
+import { voteAction, voteDeck } from './session-votes'
 import { sessionPage, sessionsFromEngine, type Sessions } from './sessions'
 import type { SessionItem } from './sessions'
 
@@ -218,6 +219,16 @@ export async function appCartazPage(
 /** The public page of a Link da Sessão, for the app. */
 export const appSessionLink = (search: SessionLinkSearch) =>
   resolveSessionLink(search, appEngine(), serverEnv().AUTH_DATABASE_PATH)
+
+/** The group swipe's deck (#182), for the app. */
+export const appVoteDeck = (search: SessionLinkSearch) =>
+  voteDeck(search, appEngine(), serverEnv().AUTH_DATABASE_PATH)
+
+/** The group swipe's post (#182), for the app. */
+export const serveVotes = (request: Request) => {
+  const { AUTH_DATABASE_PATH, APP_ORIGIN } = serverEnv()
+  return voteAction(request, appEngine(), AUTH_DATABASE_PATH, APP_ORIGIN)
+}
 
 /** The reply's route for the app. */
 export const serveReply = (request: Request, id: string) => {

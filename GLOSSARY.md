@@ -103,8 +103,12 @@ O texto livre que o Dono escreve embaixo do Cartaz, depois do último filme: con
 _Evitar_: observação, extra
 
 **Trocado** [swapped, `swapped`]:
-Um filme que o Dono tirou da tela de uma versão: o Trocar do Cartaz e, ao refazer, o que ele mandou trocar e o que não ficou como Mantido. Fica fora da Sessão até o fim.
+Um filme que o Dono tirou da tela de uma versão: o Trocar do Cartaz, o não de um Presente no Voto e, ao refazer, o que ele mandou trocar e o que não ficou como Mantido. Fica fora da Sessão até o fim.
 _Evitar_: descartado, rejeitado
+
+**Voto** [vote, `votes`; `yes`, `no`]:
+O sim ou o não de um Presente a um filme da tela, dado no celular pelo Link da Sessão, um filme de cada vez (o swipe do grupo, #182). Fica na versão da Sessão com quem votou e a data. O não é um Trocado daquele Presente: o filme sai e a Sessão regera. O sim sobe o filme: ao regerar, os Mantidos com mais sins, na Sessão inteira, vêm primeiro, nos números que os Mantidos já tinham, e as vagas não mudam. Voto não é Fato e não mexe no gosto.
+_Evitar_: curtida, like
 
 **Saída** [dropped, `dropped`; causa: `seen`, `swapped`, `constraint`, `veto`, `min_rating`]:
 Um filme da versão anterior que não está na nova, com a causa. A causa não é Motivo: Motivo é por que um filme está na Recomendação.

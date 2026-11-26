@@ -43,6 +43,7 @@ import type { Weights } from '../runtime/Weights.ts'
 import { numOrNull, text } from '../sqlite/row.ts'
 import type { Connection, SqliteError } from '../sqlite/Sqlite.ts'
 import { currentVersion, shownFilms, type ShownFilm } from '../sessions/file.ts'
+import { yesVotes } from '../sessions/votes.ts'
 import type { Candidate } from './candidates.ts'
 import type { Constraint } from './constraints.ts'
 import { constraintLabel } from './constraints/index.ts'
@@ -94,6 +95,21 @@ export const isNew = (regenerate: Regenerate, filmId: string): boolean =>
 const titleOf = (regenerate: Regenerate, filmId: string): string =>
   regenerate.previous.find((f) => f.id === filmId)?.title || filmId
 
+/** The kept films' numbers after the Votos (#182): the same numbers, but
+ * the film with more yes in the Session takes the first one; on a tie, the
+ * one that was higher. With no yes, nothing moves. */
+const liftKept = (
+  kept: ReadonlyArray<readonly [string, number]>,
+  yes: ReadonlyMap<string, number>,
+): ReadonlyMap<string, number> => {
+  const onScreen = kept.toSorted(([, p], [, q]) => p - q)
+  // A stable sort: on a tie in yes, the screen's order.
+  const lifted = onScreen.toSorted(
+    ([a], [b]) => (yes.get(b) ?? 0) - (yes.get(a) ?? 0),
+  )
+  return new Map(onScreen.map(([, position], i) => [lifted[i]![0], position]))
+}
+
 /** What stays and what was on the screen of the Session's current version,
  * and the warnings of the kept films that were not on it (`preparar`).
  * `swapped` is what the Dono swapped from it; `replacing`, the new
@@ -118,11 +134,12 @@ export const prepareRegenerate = (
     regenerate: {
       previous: screen,
       date: pyStrValue(version.get('date') ?? null),
-      positions: new Map(
+      positions: liftKept(
         keep.flatMap((id) => {
           const position = positions.get(id)
           return position === undefined ? [] : [[id, position] as const]
         }),
+        yesVotes(front),
       ),
       attendees: Array.isArray(attendees) ? attendees.map(String) : [],
       swapped,
