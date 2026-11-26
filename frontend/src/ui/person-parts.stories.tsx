@@ -10,7 +10,6 @@ import {
   Disclosure,
   Item,
   Items,
-  LinkButton,
   Meta as ItemMeta,
   Notice,
   RemoveForm,
@@ -138,17 +137,11 @@ export const EmptySection: Story = {
   ),
 }
 
-export const StatusAndLinks: Story = {
+export const Status: Story = {
   render: () => (
     <div className="flex flex-col gap-xl">
       <Notice>Gravado.</Notice>
       <Alert>Esse ID não está no Catálogo.</Alert>
-      <LinkButton href="/meu-gosto/notas" variant="primary">
-        Dar notas
-      </LinkButton>
-      <LinkButton href="/meu-gosto/importar" label="Importar as Notas">
-        Importar
-      </LinkButton>
     </div>
   ),
 }
