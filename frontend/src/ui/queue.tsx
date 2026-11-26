@@ -1,11 +1,13 @@
 import { FIELD } from './kit/field'
-import type { ReactNode } from 'react'
+import { createContext, useContext, type ReactNode } from 'react'
 import type { QueueNotice, QueueRefusal } from '#/content/import-action'
 import { MY_TASTE } from '#/content/paths'
 import type { QueueEntry, QueuePage, QueueSuggestion } from '#/platform/imports'
 import { ImportsFrame } from './imports'
 import { QUEUE } from './imports.copy'
+import { useFetchForm } from './kit/fetch-form'
 import { FieldLabel } from './kit/field-label'
+import { usePostedFeedback } from './kit/posted-feedback'
 import { PageHead } from './kit/page-head'
 import { TapeCase } from './kit/tape-case'
 import { Alert, Notice, Submit, TextField } from './person-parts'
@@ -19,7 +21,13 @@ export type QueueDoneView = {
   left?: number
 }
 
-/** A form of the queue: a plain POST to `/fila/acao`. */
+/** What the screen does with a form's answer (`usePostedFeedback`). */
+const Answered = createContext<
+  ((to: string, form: HTMLFormElement) => boolean) | undefined
+>(undefined)
+
+/** A form of the queue: a POST to `/fila/acao`, by `fetch` once the
+ * JavaScript is in (#240). `children` see whether its post is running. */
 function QueueForm({
   action,
   id,
@@ -31,18 +39,20 @@ function QueueForm({
   id?: string
   label?: string
   className?: string
-  children: ReactNode
+  children: (busy: boolean) => ReactNode
 }) {
+  const { onSubmit, busy } = useFetchForm(useContext(Answered))
   return (
     <form
       method="post"
       action="/fila/acao"
       aria-label={label}
+      onSubmit={onSubmit}
       className={className}
     >
       <input type="hidden" name="acao" value={action} />
       {id !== undefined && <input type="hidden" name="id" value={id} />}
-      {children}
+      {children(busy !== null)}
     </form>
   )
 }
@@ -59,51 +69,68 @@ export function QueueScreen({
   done?: QueueDoneView
   refusal?: QueueRefusal
 }) {
+  const { feedback, onAnswer } = usePostedFeedback(
+    done ? `${done.notice}:${done.resolved}:${done.left}` : (refusal ?? ''),
+  )
   return (
-    <ImportsFrame back={QUEUE.back} backTo={`${MY_TASTE}/importar`}>
-      <PageHead title={QUEUE.title} lead={QUEUE.lead} />
-      {refusal && <Alert>{QUEUE.refusals[refusal]}</Alert>}
-      {done && (
-        <Notice>{QUEUE.notices[done.notice](done.resolved, done.left)}</Notice>
-      )}
-      {!queue ? (
-        <Alert>{QUEUE.unavailable}</Alert>
-      ) : (
-        <>
-          {queue.items.length === 0 ? (
-            <p className="text-ink-2">{QUEUE.empty}</p>
-          ) : (
-            <ul className="flex flex-col gap-2xl">
-              {queue.items.map((item) => (
-                <Card key={item.id} item={item} names={queue.names} />
-              ))}
-            </ul>
-          )}
-          {queue.items.length > 0 && (
-            <datalist id="motivos">
-              {QUEUE.reasons.map((reason) => (
-                <option key={reason} value={reason} />
-              ))}
-            </datalist>
-          )}
-          <QueueForm
-            action="reprocessar"
-            label={QUEUE.reprocess}
-            className="flex flex-col gap-md border-t border-dashed border-rule pt-2xl"
-          >
-            <p className="max-w-[60ch] text-meta text-ink-2">
-              {QUEUE.reprocessLead}
-            </p>
-            <Submit>{QUEUE.reprocess}</Submit>
-          </QueueForm>
-          {queue.attributions.map(({ source, text }) => (
-            <p key={source} className="text-source text-ink-2">
-              {text}
-            </p>
-          ))}
-        </>
-      )}
-    </ImportsFrame>
+    <Answered.Provider value={onAnswer}>
+      <ImportsFrame back={QUEUE.back} backTo={`${MY_TASTE}/importar`}>
+        <PageHead title={QUEUE.title} lead={QUEUE.lead} />
+        {(refusal || done) && (
+          <div ref={feedback}>
+            {refusal && <Alert>{QUEUE.refusals[refusal]}</Alert>}
+            {done && (
+              <Notice>
+                {QUEUE.notices[done.notice](done.resolved, done.left)}
+              </Notice>
+            )}
+          </div>
+        )}
+        {!queue ? (
+          <Alert>{QUEUE.unavailable}</Alert>
+        ) : (
+          <>
+            {queue.items.length === 0 ? (
+              <p className="text-ink-2">{QUEUE.empty}</p>
+            ) : (
+              <ul className="flex flex-col gap-2xl">
+                {queue.items.map((item) => (
+                  <Card key={item.id} item={item} names={queue.names} />
+                ))}
+              </ul>
+            )}
+            {queue.items.length > 0 && (
+              <datalist id="motivos">
+                {QUEUE.reasons.map((reason) => (
+                  <option key={reason} value={reason} />
+                ))}
+              </datalist>
+            )}
+            <QueueForm
+              action="reprocessar"
+              label={QUEUE.reprocess}
+              className="flex flex-col gap-md border-t border-dashed border-rule pt-2xl"
+            >
+              {(busy) => (
+                <>
+                  <p className="max-w-[60ch] text-meta text-ink-2">
+                    {QUEUE.reprocessLead}
+                  </p>
+                  <Submit disabled={busy}>
+                    {busy ? QUEUE.busy.reprocess : QUEUE.reprocess}
+                  </Submit>
+                </>
+              )}
+            </QueueForm>
+            {queue.attributions.map(({ source, text }) => (
+              <p key={source} className="text-source text-ink-2">
+                {text}
+              </p>
+            ))}
+          </>
+        )}
+      </ImportsFrame>
+    </Answered.Provider>
   )
 }
 
@@ -195,14 +222,19 @@ function Suggestion({
         )}
       </span>
       <QueueForm action="confirmar" id={id} className="shrink-0">
-        <input type="hidden" name="filme" value={candidate.link} />
-        <Button
-          type="submit"
-          variant="option"
-          aria-label={QUEUE.pickLabel(label, candidate.tmdb)}
-        >
-          {QUEUE.pick}
-        </Button>
+        {(busy) => (
+          <>
+            <input type="hidden" name="filme" value={candidate.link} />
+            <Button
+              type="submit"
+              variant="option"
+              disabled={busy}
+              aria-label={QUEUE.pickLabel(label, candidate.tmdb)}
+            >
+              {busy ? QUEUE.busy.confirm : QUEUE.pick}
+            </Button>
+          </>
+        )}
       </QueueForm>
     </li>
   )
@@ -217,15 +249,21 @@ function Confirm({ id, title }: { id: string; title: string }) {
       label={`${QUEUE.confirm} ${title}`}
       className="flex flex-col gap-sm border-t border-dashed border-rule pt-lg sm:flex-row sm:items-end"
     >
-      <div className="min-w-0 flex-1">
-        <TextField
-          name="filme"
-          label={QUEUE.film}
-          hint={QUEUE.filmHint}
-          required
-        />
-      </div>
-      <Submit>{QUEUE.confirm}</Submit>
+      {(busy) => (
+        <>
+          <div className="min-w-0 flex-1">
+            <TextField
+              name="filme"
+              label={QUEUE.film}
+              hint={QUEUE.filmHint}
+              required
+            />
+          </div>
+          <Submit disabled={busy}>
+            {busy ? QUEUE.busy.confirm : QUEUE.confirm}
+          </Submit>
+        </>
+      )}
     </QueueForm>
   )
 }
@@ -248,18 +286,24 @@ function Discard({ id, title }: { id: string; title: string }) {
         label={`${QUEUE.discard} ${title}`}
         className="mt-xs flex flex-col gap-sm rounded-field bg-surface-2 p-lg sm:flex-row sm:items-end"
       >
-        <div className="min-w-0 flex-1">
-          <FieldLabel label={QUEUE.reason} hint={QUEUE.reasonHint}>
-            <input
-              type="text"
-              name="motivo"
-              list="motivos"
-              autoComplete="off"
-              className={`${FIELD} w-full`}
-            />
-          </FieldLabel>
-        </div>
-        <Submit>{QUEUE.discard}</Submit>
+        {(busy) => (
+          <>
+            <div className="min-w-0 flex-1">
+              <FieldLabel label={QUEUE.reason} hint={QUEUE.reasonHint}>
+                <input
+                  type="text"
+                  name="motivo"
+                  list="motivos"
+                  autoComplete="off"
+                  className={`${FIELD} w-full`}
+                />
+              </FieldLabel>
+            </div>
+            <Submit disabled={busy}>
+              {busy ? QUEUE.busy.discard : QUEUE.discard}
+            </Submit>
+          </>
+        )}
       </QueueForm>
     </details>
   )

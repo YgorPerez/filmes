@@ -21,6 +21,8 @@ export const RATINGS = {
   remove: (title: string) => `Tirar a Nota de ${title}`,
   removeLabel: 'Tirar',
   done: (n: number) => (n === 0 ? 'Pronto' : `Pronto (${notas(n)})`),
+  /** Pronto while its post runs. */
+  writing: 'Gravando…',
   written: (n: number) =>
     n === 0
       ? 'Nada novo: você já tinha essas Notas.'

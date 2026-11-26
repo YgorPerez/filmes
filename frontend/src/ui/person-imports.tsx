@@ -1,6 +1,8 @@
 import { FIELD } from './kit/field'
+import { useFetchForm } from './kit/fetch-form'
 import { FieldLabel } from './kit/field-label'
-import type { ReactNode } from 'react'
+import { usePostedFeedback } from './kit/posted-feedback'
+import { createContext, useContext, type ReactNode } from 'react'
 import type { PersonImports } from '@filmes/engine'
 import type { ImportNotice, ImportRefusal } from '#/content/import-action'
 import { personPath, QUEUE_PATH } from '#/content/paths'
@@ -38,7 +40,7 @@ export type ImportDoneView = {
  * Letterboxd from Trakt by the ZIP), then the Letterboxd profile, what the
  * imports gave (only once they gave something) and the files, each with
  * its Tirar. Every form is a plain POST (the upload multipart) that comes
- * back here. `page` is `'unknown'` when no Pessoa has the slug, null when
+ * back here; with the JavaScript, by `fetch`, without a reload (#240). `page` is `'unknown'` when no Pessoa has the slug, null when
  * the engine cannot run on this server. */
 export function PersonImportsScreen({
   slug,
@@ -53,34 +55,50 @@ export function PersonImportsScreen({
 }) {
   const own = typeof page === 'object' && page?.own === true
   const name = typeof page === 'object' && page !== null ? page.name : slug
+  const { feedback, onAnswer } = usePostedFeedback(
+    done ? `${done.notice}:${done.facts}:${done.outside}` : (refusal ?? ''),
+  )
   return (
-    <ImportsFrame back={COPY.back(name, own)} backTo={personPath(slug, own)}>
-      {page === null ? (
-        <Alert>{COPY.unavailable}</Alert>
-      ) : page === 'unknown' ? (
-        <Alert>{COPY.unknown}</Alert>
-      ) : (
-        <>
-          <PageHead title={COPY.title(page.name, page.own)} />
-          {refusal && <Refusal refusal={refusal} />}
-          {done && (
-            <Notice>
-              {COPY.notices[done.notice](done.facts, done.outside)}
-            </Notice>
-          )}
-          <Upload slug={slug} />
-          <Rss slug={slug} name={page.name} own={page.own} />
-          <Summaries page={page} />
-          <Files slug={slug} page={page} />
-        </>
-      )}
-    </ImportsFrame>
+    <Answered.Provider value={onAnswer}>
+      <ImportsFrame back={COPY.back(name, own)} backTo={personPath(slug, own)}>
+        {page === null ? (
+          <Alert>{COPY.unavailable}</Alert>
+        ) : page === 'unknown' ? (
+          <Alert>{COPY.unknown}</Alert>
+        ) : (
+          <>
+            <PageHead title={COPY.title(page.name, page.own)} />
+            {(refusal || done) && (
+              <div ref={feedback}>
+                {refusal && <Refusal refusal={refusal} />}
+                {done && (
+                  <Notice>
+                    {COPY.notices[done.notice](done.facts, done.outside)}
+                  </Notice>
+                )}
+              </div>
+            )}
+            <Upload slug={slug} />
+            <Rss slug={slug} name={page.name} own={page.own} />
+            <Summaries page={page} />
+            <Files slug={slug} page={page} />
+          </>
+        )}
+      </ImportsFrame>
+    </Answered.Provider>
   )
 }
 
 const actionOf = (slug: string) => `/importar/${encodeURIComponent(slug)}/acao`
 
-/** A form of this page: a plain POST, multipart when it sends a file. */
+/** What the screen does with a form's answer (`usePostedFeedback`). */
+const Answered = createContext<
+  ((to: string, form: HTMLFormElement) => boolean) | undefined
+>(undefined)
+
+/** A form of this page: a POST, multipart when it sends a file, by `fetch`
+ * once the JavaScript is in (#240). `children` see whether its post is
+ * running. */
 function ImportForm({
   slug,
   action,
@@ -92,18 +110,20 @@ function ImportForm({
   action: string
   label?: string
   upload?: boolean
-  children: ReactNode
+  children: (busy: boolean) => ReactNode
 }) {
+  const { onSubmit, busy } = useFetchForm(useContext(Answered))
   return (
     <form
       method="post"
       action={actionOf(slug)}
       encType={upload ? 'multipart/form-data' : undefined}
       aria-label={label}
+      onSubmit={onSubmit}
       className="flex flex-col gap-xl"
     >
       <input type="hidden" name="acao" value={action} />
-      {children}
+      {children(busy !== null)}
     </form>
   )
 }
@@ -136,10 +156,19 @@ function RemoveImport({
       <div className="mt-sm flex max-w-[300px] flex-col gap-sm rounded-field bg-surface-2 p-lg">
         <p className="text-meta">{files.removeWarning}</p>
         <ImportForm slug={slug} action="remover">
-          <input type="hidden" name="arquivo" value={file} />
-          <Button type="submit" variant="option" className="self-start">
-            {files.removeConfirm}
-          </Button>
+          {(busy) => (
+            <>
+              <input type="hidden" name="arquivo" value={file} />
+              <Button
+                type="submit"
+                variant="option"
+                disabled={busy}
+                className="self-start"
+              >
+                {busy ? files.removeBusy : files.removeConfirm}
+              </Button>
+            </>
+          )}
         </ImportForm>
       </div>
     </details>
@@ -314,19 +343,25 @@ function Upload({ slug }: { slug: string }) {
   return (
     <Section id="trazer" title={upload.title}>
       <ImportForm slug={slug} action="arquivo" label={upload.title} upload>
-        <div className="flex flex-col gap-sm">
-          <FieldLabel label={upload.file}>
-            <input
-              type="file"
-              name="arquivo"
-              required
-              accept=".zip,application/zip"
-              className={fileControl}
-            />
-          </FieldLabel>
-          <HowTo />
-        </div>
-        <Submit variant="primary">{upload.submit}</Submit>
+        {(busy) => (
+          <>
+            <div className="flex flex-col gap-sm">
+              <FieldLabel label={upload.file}>
+                <input
+                  type="file"
+                  name="arquivo"
+                  required
+                  accept=".zip,application/zip"
+                  className={fileControl}
+                />
+              </FieldLabel>
+              <HowTo />
+            </div>
+            <Submit variant="primary" disabled={busy}>
+              {busy ? upload.busy : upload.submit}
+            </Submit>
+          </>
+        )}
       </ImportForm>
     </Section>
   )
@@ -349,25 +384,29 @@ function Rss({
   return (
     <Section id="rss" title={rss.title} lead={rss.lead}>
       <ImportForm slug={slug} action="rss" label={rss.title}>
-        <TextField
-          name="usuario"
-          label={rss.user}
-          hint={rss.userHint}
-          required
-        />
-        {!own && (
-          <label className="flex min-h-touch cursor-pointer items-start gap-md rounded-field bg-surface-2 p-lg">
-            <input
-              type="checkbox"
-              name="consentimento"
-              value="sim"
+        {(busy) => (
+          <>
+            <TextField
+              name="usuario"
+              label={rss.user}
+              hint={rss.userHint}
               required
-              className="mt-0.5 size-5 shrink-0 accent-ink"
             />
-            <span>{rss.consent(name)}</span>
-          </label>
+            {!own && (
+              <label className="flex min-h-touch cursor-pointer items-start gap-md rounded-field bg-surface-2 p-lg">
+                <input
+                  type="checkbox"
+                  name="consentimento"
+                  value="sim"
+                  required
+                  className="mt-0.5 size-5 shrink-0 accent-ink"
+                />
+                <span>{rss.consent(name)}</span>
+              </label>
+            )}
+            <Submit disabled={busy}>{busy ? rss.busy : rss.submit}</Submit>
+          </>
         )}
-        <Submit>{rss.submit}</Submit>
       </ImportForm>
     </Section>
   )

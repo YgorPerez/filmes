@@ -2,6 +2,7 @@ import type { FilmRef } from '@filmes/engine'
 import { pairwisePath } from '#/content/pairwise-address'
 import type { PairwisePage } from '#/platform/pairwise'
 import { buttonVariants } from './kit/button-variants'
+import { useFetchForm } from './kit/fetch-form'
 import { Alert, Notice } from './kit/status'
 import { PAIRWISE } from './pairwise.copy'
 
@@ -13,16 +14,24 @@ const choice = buttonVariants({
   className: 'min-h-[64px] w-full justify-start text-left',
 })
 
-function Choice({ film }: { film: FilmRef }) {
+function Choice({ film, busy }: { film: FilmRef; busy: boolean }) {
   return (
-    <button type="submit" name="escolha" value={film.id} className={choice}>
+    <button
+      type="submit"
+      name="escolha"
+      value={film.id}
+      disabled={busy}
+      className={choice}
+    >
       {PAIRWISE.film(film.title, film.year)}
     </button>
   )
 }
 
 /** `/participar/perguntas`: one pair at a time, as a plain form to
- * `/participar/perguntas/enviar` (it works before the JavaScript). `page`
+ * `/participar/perguntas/enviar` (it works before the JavaScript; with it,
+ * the answer goes by `fetch` and the next pair comes without a reload,
+ * #240). `page`
  * is null when the engine could not ask; `failed` says the last answer was
  * not kept. */
 export function PairwiseQuestion({
@@ -37,6 +46,7 @@ export function PairwiseQuestion({
   back: string
 }) {
   const pair = page?.pair ?? null
+  const { onSubmit, busy } = useFetchForm()
   return (
     <section aria-labelledby="pergunta" className="flex flex-col gap-lg">
       <h1 id="pergunta" className="font-display text-title">
@@ -54,6 +64,7 @@ export function PairwiseQuestion({
             method="post"
             action="/participar/perguntas/enviar"
             aria-label={PAIRWISE.title}
+            onSubmit={onSubmit}
             className="flex flex-col gap-md"
           >
             <p className="text-meta text-ink-2 tabular-nums">
@@ -64,12 +75,13 @@ export function PairwiseQuestion({
             <input type="hidden" name="presente" value={link.person} />
             <input type="hidden" name="a" value={pair[0].id} />
             <input type="hidden" name="b" value={pair[1].id} />
-            <Choice film={pair[0]} />
-            <Choice film={pair[1]} />
+            <Choice film={pair[0]} busy={busy !== null} />
+            <Choice film={pair[1]} busy={busy !== null} />
             <button
               type="submit"
               name="escolha"
               value=""
+              disabled={busy !== null}
               className={buttonVariants({ variant: 'link' })}
             >
               {PAIRWISE.skip}
