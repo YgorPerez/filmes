@@ -269,6 +269,11 @@ exports[`avaliar on MovieLens files, as recorded > a messy sample with tags give
       "constraints": {
         "onDemandReach": 50,
       },
+      "diversity": {
+        "depth": 10,
+        "lambda": 1,
+        "pool": 30,
+      },
       "group": {
         "weight": 0.05,
       },
@@ -650,6 +655,11 @@ exports[`avaliar on MovieLens files, as recorded > a small sample warns that Mov
       "constraints": {
         "onDemandReach": 50,
       },
+      "diversity": {
+        "depth": 10,
+        "lambda": 1,
+        "pool": 30,
+      },
       "group": {
         "weight": 0.05,
       },
@@ -1028,6 +1038,11 @@ exports[`the diaries, as recorded > a Trakt history dates the cut 1`] = `
       },
       "constraints": {
         "onDemandReach": 50,
+      },
+      "diversity": {
+        "depth": 10,
+        "lambda": 1,
+        "pool": 30,
       },
       "group": {
         "weight": 0.05,

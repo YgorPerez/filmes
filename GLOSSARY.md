@@ -82,6 +82,14 @@ _Evitar_: sugestão, lista
 O filme da 5ª vaga da Recomendação (`[bet] position`): um Candidato com Nota prevista boa e pouca Evidência, que a Regra deixaria de fora. Sai por amostragem de Thompson: cada Presente com Nota prevista sorteia uma Nota em torno dela, tanto mais espalhada quanto mais incerta, e vence a maior média dos sorteios. O sorteio parte do id da Sessão, então refazer a mesma Sessão sorteia o mesmo. Vetos e Restrições valem para ela. O Já vi e o Trocar tiram a Aposta da Sessão, e a Nota do Já vi muda os vizinhos de gosto do próximo sorteio. Mantida, continua Aposta. No Cartaz, leva o selo "aposta".
 _Evitar_: exploração, coringa, surpresa
 
+**Parecença** [similarity, `similarity`]:
+O quanto um filme se parece com um filme de referência, de 0 a 1: genoma, tags do MovieLens, vizinhos, gênero e diretor ou atores em comum, com os pesos de `[similar.weight]`. Mede-se a partir da referência, então não é simétrica. É o que o `--parecido` usa para filtrar.
+_Evitar_: semelhança, distância
+
+**Diversidade** [diversity, `diversity`]:
+O quanto a Recomendação evita filmes parecidos entre si. Na ordem final (MMR, #177), cada lugar vai para o filme com a melhor pontuação da Regra de escolha descontada da maior Parecença com os filmes já escolhidos acima dele (`[diversity]` em `config/weights.toml`). O `evaluate` a mede pela Parecença média no top 5.
+_Evitar_: variedade, mistura
+
 **Versão da Sessão** [session version, `SessionVersion`]:
 Uma Recomendação de uma Sessão aberta. Quando o Dono pede outra lista na mesma Sessão, a atual vira uma versão anterior, guardada com o pedido e os Presentes dela, e a nova passa a valer. O número da versão conta a partir de 1. Um filme de uma versão anterior pode voltar na nova; só o que o Dono trocou em alguma versão e o que algum Presente marcou Já vi na Sessão ficam fora dela até o fim.
 _Evitar_: rodada, tentativa

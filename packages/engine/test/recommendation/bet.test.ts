@@ -201,6 +201,16 @@ describe('the bet in the Recomendação', () => {
     )
   })
 
+  test('with MMR on, MMR picks the other places and leaves the bet', async () => {
+    const fixture = useFixture()
+    const vars = betWeights(fixture, ['lambda = 1.0', 'lambda = 0.5'])
+    const plain = await bruno(fixture, vars, { count: 4 })
+    const out = await bruno(fixture, vars, { seed: '2026-11-20-bruno' })
+
+    expect(bets(out)).toEqual([[5, PEQUENOS_MILAGRES]])
+    expect(ids(out).slice(0, 4)).toEqual(ids(plain))
+  })
+
   test('position 0 turns the bet off', async () => {
     const fixture = useFixture()
     const out = await bruno(

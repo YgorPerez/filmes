@@ -16,11 +16,13 @@
 // the id. Each film carries each Presente's utility and Evidence, grouped by
 // slug in the Presentes' order; whoever has no Fact on the film gets the
 // "sem fato" line. The satisfaction line also goes in `filmLines` when
-// weighing who is behind changes the order.
+// weighing who is behind changes the order. Then MMR (`diversity.ts`, #177)
+// picks the first places for Diversidade, before the on-demand Restrições.
 //
 // With a seed (the Session id), the Aposta (`bet.ts`, #178) takes the place
-// `[bet] position`: the Regra fills the other places, and the bet is drawn
-// among the Candidates left, with a good Nota prevista and little Evidence.
+// `[bet] position`: the Regra (and MMR) fills the other places, and the bet
+// is drawn among the Candidates left, with a good Nota prevista and little
+// Evidence. MMR does not move the bet.
 
 import { Effect } from 'effect'
 import { compareTuple, type PyOrderable } from '../compat/compare.ts'
@@ -60,6 +62,7 @@ import {
   type ConstraintContext,
 } from './constraints.ts'
 import { readConstraints, type ConstraintRequest } from './constraints/index.ts'
+import { diversify, type Scored } from './diversity.ts'
 import {
   groupSatisfaction,
   satisfactionLine,
@@ -178,25 +181,29 @@ export interface RankOptions {
 
 type Key = readonly PyOrderable[]
 
-interface Ordered {
+interface Ordered extends Scored {
   readonly key: Key
   readonly film: Candidate
   readonly utilities: ReadonlyMap<string, number | null>
   readonly evidence: ReadonlyArray<Evidence>
 }
 
+/** 0 with some known utility, 1 with Facts only in the film signals, 2
+ * with guesses only. */
+const bandOf = (byRule: readonly number[] | null, hasFact: boolean): number =>
+  byRule !== null ? 0 : hasFact ? 1 : 2
+
 const orderKey = (
   byRule: readonly number[] | null,
   hasFact: boolean,
   film: Candidate,
   bonus: number,
-): Key => {
-  const band: Key =
-    byRule !== null
-      ? [0, byRule.map((v) => -(v + bonus))]
-      : [hasFact ? 1 : 2, [-bonus]]
-  return [...band, -film.votes, film.id]
-}
+): Key => [
+  bandOf(byRule, hasFact),
+  byRule !== null ? byRule.map((v) => -(v + bonus)) : [-bonus],
+  -film.votes,
+  film.id,
+]
 
 const byKey = (a: { key: Key }, b: { key: Key }) =>
   compareTuple([...a.key], [...b.key])
@@ -359,13 +366,12 @@ export const rank = (
       const hasFact = [...evidence, ...filmSignals].some(
         (e) => e.kind !== 'guess' && e.countsAsFact,
       )
+      const byRule = ruleKey(rule, utilities, adjustment)
       ordered.push({
-        key: orderKey(
-          ruleKey(rule, utilities, adjustment),
-          hasFact,
-          film,
-          bonus,
-        ),
+        key: orderKey(byRule, hasFact, film, bonus),
+        id: film.id,
+        band: bandOf(byRule, hasFact),
+        score: (byRule?.[0] ?? 0) + bonus,
         film,
         utilities,
         evidence,
@@ -380,6 +386,15 @@ export const rank = (
     const reach = weights.constraints.on_demand_reach
     const fill = (pool: ReadonlyArray<Ordered>, places: number) =>
       asked.approve(pool, places, reach, (item) => item.film)
+    /** The Regra's places, with MMR over `chosen` (#177). */
+    const regularFill = (
+      pool: ReadonlyArray<Ordered>,
+      chosen: ReadonlyArray<Ordered>,
+      places: number,
+    ) =>
+      Effect.flatMap(diversify(db, pool, chosen, places, weights), (order) =>
+        fill(order, places),
+      )
     // The Aposta (#178): the films that may be the bet, with each
     // Presente's Nota prevista.
     const seed = options.seed
@@ -397,12 +412,19 @@ export const rank = (
       }
     /** The Regra's films for `places` places of `pool`, and the bet for
      * one of them when some film may be it. */
-    const withBet = (pool: ReadonlyArray<Ordered>, places: number) =>
+    const withBet = (
+      pool: ReadonlyArray<Ordered>,
+      chosen: ReadonlyArray<Ordered>,
+      places: number,
+    ) =>
       Effect.gen(function* () {
         const candidates = pool.filter((item) => betOdds.has(item.film.id))
         if (seed === undefined || candidates.length === 0 || places < 1)
-          return { regular: yield* fill(pool, places), bet: undefined }
-        const regular = yield* fill(pool, places - 1)
+          return {
+            regular: yield* regularFill(pool, chosen, places),
+            bet: undefined,
+          }
+        const regular = yield* regularFill(pool, chosen, places - 1)
         const taken = new Set(regular.map((item) => item.film.id))
         const byId = new Map(candidates.map((item) => [item.film.id, item]))
         const drawn = drawBets(
@@ -451,12 +473,12 @@ export const rank = (
         placed = place(
           regenerate,
           fixed,
-          yield* fill(others, places),
+          yield* regularFill(others, fixed, places),
           count,
           idOf,
         )
       } else if (betAt > 0 && count >= betAt && betPlaceFree) {
-        const { regular, bet } = yield* withBet(others, places)
+        const { regular, bet } = yield* withBet(others, fixed, places)
         betId = bet?.film.id
         placed =
           bet === undefined
@@ -478,40 +500,43 @@ export const rank = (
         placed = place(
           regenerate,
           fixed,
-          yield* fill(others, places),
+          yield* regularFill(others, fixed, places),
           count,
           idOf,
         )
     } else {
       const { regular, bet } =
         betAt > 0 && count >= betAt
-          ? yield* withBet(ordered, count)
-          : { regular: yield* fill(ordered, count), bet: undefined }
+          ? yield* withBet(ordered, [], count)
+          : { regular: yield* regularFill(ordered, [], count), bet: undefined }
       betId = bet?.film.id
       const approved =
         bet === undefined ? regular : regular.toSpliced(betAt - 1, 0, bet)
       placed = approved.map((item, i) => [i + 1, item] as const)
     }
     const approvedIds = new Set(placed.map(([, item]) => item.film.id))
-    // The two orders with the same verdicts, without asking an on-demand
-    // source for more answers. When regenerating, only the free places
-    // compete: each one's order is among the films not kept, and the kept
-    // film, there because the Dono asked, gets no satisfaction line.
+    // The two orders by the Regra, with and without weighing the
+    // satisfaction, over the same films: the ones with the same verdicts,
+    // without asking an on-demand source for more answers. MMR does not
+    // enter: a film it moved up did not go up by the satisfaction. When
+    // regenerating, only the free places compete: each one's order is among
+    // the films not kept, and the kept film, there because the Dono asked,
+    // gets no satisfaction line.
+    const competes = (id: string) =>
+      (approvedIds.has(id) || !asked.pending.get(id)?.length) &&
+      !kept(id) &&
+      id !== betId
     const positionUnweighed = new Map(
       unweighed
         .sort(byKey)
-        .filter(
-          ({ id }) =>
-            (approvedIds.has(id) || !asked.pending.get(id)?.length) &&
-            !kept(id) &&
-            id !== betId,
-        )
+        .filter(({ id }) => competes(id))
         .map(({ id }, i) => [id, i + 1]),
     )
-    const contested = new Map<string, number>()
-    for (const [, item] of placed)
-      if (!kept(item.film.id) && item.film.id !== betId)
-        contested.set(item.film.id, contested.size + 1)
+    const contested = new Map(
+      ordered
+        .filter((item) => competes(item.id))
+        .map((item, i) => [item.id, i + 1]),
+    )
 
     const names = new Map<string, string>()
     if (adjustment.size > 0)

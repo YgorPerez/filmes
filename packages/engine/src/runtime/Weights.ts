@@ -85,6 +85,7 @@ export const Weights = Schema.Struct({
     /** By similarity source, in file order. */
     weight: Schema.Record(Schema.String, Weight),
   }),
+  diversity: Schema.Struct({ lambda: Weight, depth: Count, pool: Count }),
 })
 
 export type Weights = typeof Weights.Type
