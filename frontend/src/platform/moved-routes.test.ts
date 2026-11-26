@@ -43,7 +43,7 @@ describe('the moved paths', () => {
   it.each([
     ['/meu-gosto/notas?feito=3', Ratings, {}, '?feito=3'],
     ['/meu-gosto/fila', Queue, {}, ''],
-    ['/meu-gosto/exportar?erro=pessoa', Export, {}, '?erro=pessoa'],
+    ['/meu-gosto', Export, {}, ''],
     ['/meu-gosto/importar', Imports, {}, ''],
     ['/pessoas/teo/importar', PersonImportsOld, { pessoa: 'teo' }, ''],
     ['/sessoes', FeedbackList, {}, ''],

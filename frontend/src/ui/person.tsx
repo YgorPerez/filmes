@@ -1,6 +1,6 @@
 import type { PersonNotice, PersonRefusal } from '#/content/person-action'
 import {
-  EXPORT_PATH,
+  imdbCsvPath,
   importsPath,
   personPath,
   RATINGS_PATH,
@@ -23,6 +23,7 @@ import {
   Submit,
   TextField,
 } from './person-parts'
+import { MyStartSections, type MyStart } from './my-start'
 import { StrengthDots } from './person-marks'
 import { PERSON, RATING_CHOICES } from './person.copy'
 import { Button, buttonVariants } from './shadcn/button'
@@ -45,108 +46,154 @@ const RATING_OPTIONS = [
   ...RATING_CHOICES.map((value) => ({ value, label: value })),
 ]
 
-/** `/pessoas/<slug>`, or Meu gosto for the Dono's own: what the filmes
- * knows of the Pessoa's taste, and a form for each `pessoa` action. Every
- * form is a plain POST that comes back here with `notice` or `refusal`. `page` is `'unknown'` when no Pessoa has
- * the slug, null when the engine cannot run on this server. `search` is the
- * Catálogo search of `?buscar=`, for the targets' IDs. */
+/** `/pessoas/<slug>`, or Meu gosto for the Dono's own: her Notas first
+ * (rate, import, the CSV), then, on Meu gosto, the setup guide's leftovers
+ * (`start`), then what the filmes knows of her taste, with a form for each
+ * `pessoa` action. Every form is a plain POST that comes back here with
+ * `notice` or `refusal`. `page` is `'unknown'` when no Pessoa has the slug,
+ * null when the engine cannot run on this server. `search` is the Catálogo
+ * search of `?buscar=`, for the targets' IDs. */
 export function PersonScreen({
   slug,
   page,
   notice,
   refusal,
   search = null,
+  start,
 }: {
   slug: string
   page: PersonPage | 'unknown' | null
   notice?: PersonNotice
   refusal?: PersonRefusal
   search?: SearchAnswer | null
+  /** Meu gosto's part of the setup guide; only on her own page. */
+  start?: MyStart
 }) {
+  const own =
+    typeof page === 'object' &&
+    page !== null &&
+    page.person === page.viewer.person
   return (
-    <main className="mx-auto flex max-w-[720px] flex-col gap-3xl px-2xl py-3xl">
+    <main className="mx-auto flex max-w-[720px] flex-col gap-2xl px-2xl py-3xl">
+      {!own && (
+        <a
+          href="/pessoas"
+          className={`${buttonVariants({ variant: 'option' })} self-start`}
+        >
+          {PERSON.back}
+        </a>
+      )}
       {page === null ? (
         <Alert>{PERSON.unavailable}</Alert>
       ) : page === 'unknown' ? (
         <Alert>{PERSON.unknown}</Alert>
       ) : (
         <>
-          <NotesLinks slug={slug} own={page.person === page.viewer.person} />
-          <PersonHeader page={page} notice={notice} refusal={refusal} />
-          <CatalogSearch
-            action={personPath(slug, page.person === page.viewer.person)}
-            scope="all"
-            answer={search}
+          <PersonHeader
+            page={page}
+            own={own}
+            notice={notice}
+            refusal={refusal}
           />
-          <Details slug={slug} page={page} />
+          <Notes slug={slug} own={own} ratings={page.ratings} />
+          {own && start && <MyStartSections start={start} person={slug} />}
+          <Contents page={page} />
+          <Details slug={slug} page={page} search={search} />
         </>
       )}
     </main>
   )
 }
 
-/** Where her Notas come and go: rate (only the Dono's own: the queue is
- * hers), import and export. Back to Pessoas on anyone else's page. Until
- * #222 brings the Notas section here, these are links to their screens. */
-function NotesLinks({ slug, own }: { slug: string; own: boolean }) {
-  const { notes } = PERSON
-  const option = buttonVariants({ variant: 'option' })
-  return (
-    <nav
-      aria-label={notes.label}
-      className="flex flex-wrap items-center gap-sm"
-    >
-      {!own && (
-        <a href="/pessoas" className={option}>
-          {PERSON.back}
-        </a>
-      )}
-      {own && (
-        <a href={RATINGS_PATH} className={option}>
-          {notes.rate}
-        </a>
-      )}
-      <a href={importsPath(slug, own)} className={option}>
-        {notes.import}
-      </a>
-      {own && (
-        <a href={EXPORT_PATH} className={option}>
-          {notes.export}
-        </a>
-      )}
-    </nav>
-  )
-}
-
-/** Her name and aliases, and what the last form did. */
+/** Her name (on Meu gosto, the page's name, then hers) and aliases, and
+ * what the last form did. */
 function PersonHeader({
   page,
+  own,
   notice,
   refusal,
 }: {
   page: PersonPage
+  own: boolean
   notice?: PersonNotice
   refusal?: PersonRefusal
 }) {
+  const aliases = page.aliases.length > 0 ? PERSON.aliases(page.aliases) : null
   return (
     <>
-      <div className="flex flex-col gap-md">
-        <div className="flex flex-col gap-xs">
-          <h1 className="flex flex-wrap items-center gap-sm font-display text-title">
-            {page.name}
-            {page.owner && <OwnerTag />}
-          </h1>
-          {page.aliases.length > 0 && (
-            <p className="text-meta text-ink-2">
-              {PERSON.aliases(page.aliases)}
-            </p>
-          )}
-        </div>
-        <Contents page={page} />
+      <div className="flex flex-col gap-xs">
+        <h1 className="flex flex-wrap items-center gap-sm font-display text-title">
+          {own ? PERSON.myTaste : page.name}
+          {!own && page.owner && <OwnerTag />}
+        </h1>
+        {(own || aliases) && (
+          <Meta parts={own ? [page.name, aliases] : [aliases]} />
+        )}
       </div>
       {refusal && <Alert>{PERSON.refusals[refusal]}</Alert>}
       {notice && <Notice>{PERSON.notices[notice]}</Notice>}
     </>
+  )
+}
+
+/** Her Notas and where they come and go: Dar notas (only on Meu gosto: the
+ * queue writes for the Dono logged in), her import, and the IMDb CSV once
+ * she has a Nota. The list itself opens on demand: it can be long. */
+function Notes({
+  slug,
+  own,
+  ratings,
+}: {
+  slug: string
+  own: boolean
+  ratings: PersonPage['ratings']
+}) {
+  const { notes } = PERSON
+  const option = buttonVariants({ variant: 'option' })
+  return (
+    <Slip
+      id="notas"
+      title={notes.title}
+      aside={ratings === null ? undefined : String(ratings.length)}
+    >
+      {ratings === null && <p className="text-ink-2">{notes.noDatabase}</p>}
+      {ratings?.length === 0 && (
+        <p className="text-ink-2">{notes.empty(own)}</p>
+      )}
+      <div className="flex flex-wrap items-center gap-xs">
+        {own && (
+          <a href={RATINGS_PATH} className={buttonVariants()}>
+            {notes.rate}
+          </a>
+        )}
+        <a href={importsPath(slug, own)} className={option}>
+          {notes.import}
+        </a>
+        {ratings !== null && ratings.length > 0 && (
+          <a href={imdbCsvPath(slug)} download className={option}>
+            {notes.download}
+          </a>
+        )}
+      </div>
+      {ratings !== null && ratings.length > 0 && (
+        <p className="text-meta text-ink-2">{notes.movielens}</p>
+      )}
+      {ratings !== null && ratings.length > 0 && (
+        <Disclosure summary={notes.list(ratings.length)}>
+          <ul className="flex flex-col">
+            {ratings.map((r) => (
+              <Item key={r.factId}>
+                <span>
+                  {r.title ?? r.filmId}{' '}
+                  <span className="text-ink-2">({r.filmId})</span>
+                </span>
+                <Meta parts={[PERSON.ratingText(r.rating), r.date, r.source]} />
+              </Item>
+            ))}
+          </ul>
+        </Disclosure>
+      )}
+    </Slip>
   )
 }
 
@@ -163,7 +210,6 @@ function Contents({ page }: { page: PersonPage }) {
       ? []
       : [['relatos', PERSON.reports.title, page.reports.length] as const]),
     ['vistos', PERSON.seen.title, page.seen.length],
-    ['notas', PERSON.ratings.title, page.ratings?.length ?? null],
     ...(page.access === undefined
       ? []
       : [['acesso', PERSON.access.title, null] as const]),
@@ -190,10 +236,24 @@ function Contents({ page }: { page: PersonPage }) {
   )
 }
 
-/** The Pessoa's sections, one per kind of taste. */
-function Details({ slug, page }: { slug: string; page: PersonPage }) {
+/** The Pessoa's sections, one per kind of taste, after the Catálogo
+ * search that finds the IDs their forms take. */
+function Details({
+  slug,
+  page,
+  search,
+}: {
+  slug: string
+  page: PersonPage
+  search: SearchAnswer | null
+}) {
   return (
     <>
+      <CatalogSearch
+        action={personPath(slug, page.person === page.viewer.person)}
+        scope="all"
+        answer={search}
+      />
       <OpenQuestions slug={slug} page={page} />
       <Vetoes slug={slug} page={page} />
       <Adjustments slug={slug} page={page} />
@@ -205,7 +265,6 @@ function Details({ slug, page }: { slug: string; page: PersonPage }) {
       />
       <Reports slug={slug} page={page} />
       <Seen slug={slug} page={page} />
-      <Ratings ratings={page.ratings} />
       <Access slug={slug} page={page} />
     </>
   )
@@ -588,38 +647,6 @@ function Seen({ slug, page }: Part) {
           <Submit>{PERSON.save}</Submit>
         </ActionForm>
       </Disclosure>
-    </Slip>
-  )
-}
-
-function Ratings({ ratings }: { ratings: PersonPage['ratings'] }) {
-  const copy = PERSON.ratings
-  return (
-    <Slip
-      id="notas"
-      title={copy.title}
-      aside={ratings === null ? undefined : countOf(ratings)}
-      lead={copy.lead}
-    >
-      {ratings === null ? (
-        <p className="text-ink-2">{copy.noDatabase}</p>
-      ) : ratings.length === 0 ? (
-        <p className="text-ink-2">{copy.empty}</p>
-      ) : (
-        <Disclosure summary={copy.count(ratings.length)}>
-          <ul className="flex flex-col">
-            {ratings.map((r) => (
-              <Item key={r.factId}>
-                <span>
-                  {r.title ?? r.filmId}{' '}
-                  <span className="text-ink-2">({r.filmId})</span>
-                </span>
-                <Meta parts={[PERSON.ratingText(r.rating), r.date, r.source]} />
-              </Item>
-            ))}
-          </ul>
-        </Disclosure>
-      )}
     </Slip>
   )
 }

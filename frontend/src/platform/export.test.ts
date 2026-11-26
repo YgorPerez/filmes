@@ -6,9 +6,7 @@ import {
 } from '@filmes/engine'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { useFixture } from '../../../packages/engine/test/fixture.ts'
-import { isExportRefusal } from '#/content/export-refusal'
 import {
-  exportChoices,
   exporterFromEngine,
   imdbDownload,
   imdbFileName,
@@ -35,7 +33,6 @@ const failure = (code: ErrorCode): Outcome<never> => ({
 function exporter(outcome: Outcome<string>) {
   const asked: string[] = []
   const fake: Exporter = {
-    choices: async () => ({ exitCode: 0, output: [] }),
     imdb: async (person) => {
       asked.push(person)
       return outcome.exitCode === 0
@@ -81,38 +78,31 @@ describe('imdbDownload', () => {
   })
 
   it.each(['', '?pessoa=', '?pessoa=%20'])(
-    'goes back to the page when no Pessoa is chosen (%s)',
+    'goes back to Pessoas when no Pessoa is chosen (%s)',
     async (query) => {
       const { fake, asked } = exporter({ exitCode: 0, output: CSV })
       const response = await imdbDownload(download(query), BRUNO, fake)
-      expect(response.headers.get('Location')).toBe(
-        '/meu-gosto/exportar?erro=pessoa',
-      )
+      expect(response.headers.get('Location')).toBe('/pessoas?erro=pessoa')
       expect(asked).toEqual([])
     },
   )
 
-  it('goes back to the page when the Pessoa is gone', async () => {
+  it('goes back to Pessoas when the Pessoa is gone', async () => {
     const { fake } = exporter(failure('unknown_person'))
     const response = await imdbDownload(download('?pessoa=leo'), BRUNO, fake)
     expect(response.status).toBe(303)
-    expect(response.headers.get('Location')).toBe(
-      '/meu-gosto/exportar?erro=pessoa',
-    )
+    expect(response.headers.get('Location')).toBe('/pessoas?erro=pessoa')
   })
 
-  it('logs any other engine error and says the export is unavailable', async () => {
+  it('logs any other engine error and goes back to her page saying so', async () => {
     const log = vi.spyOn(console, 'error').mockImplementation(() => {})
     try {
       const { fake } = exporter(failure('missing_database'))
-      const response = await imdbDownload(
-        download('?pessoa=bruno'),
-        BRUNO,
-        fake,
-      )
-      expect(response.headers.get('Location')).toBe(
-        '/meu-gosto/exportar?erro=indisponivel',
-      )
+      // Her page; the Dono's own redirects on to Meu gosto with the query.
+      const own = await imdbDownload(download('?pessoa=bruno'), BRUNO, fake)
+      expect(own.headers.get('Location')).toBe('/pessoas/bruno?erro=exportar')
+      const other = await imdbDownload(download('?pessoa=iara'), BRUNO, fake)
+      expect(other.headers.get('Location')).toBe('/pessoas/iara?erro=exportar')
       expect(log).toHaveBeenCalledWith(
         'engine: missing_database: mensagem de missing_database',
       )
@@ -149,56 +139,6 @@ describe('on the engine fixture', () => {
       await engine.dispose()
     }
   })
-
-  it('offers every Pessoa with her Notas counted, the Dono chosen', async () => {
-    const fixture = useFixture()
-    const engine = makeEngine(fixture.vars)
-    try {
-      const choices = await exportChoices(BRUNO, exporterFromEngine(engine))
-      expect(choices?.selected).toBe('bruno')
-      expect(choices?.people.map((p) => p.person)).toEqual([
-        'bruno',
-        'iara',
-        'quim',
-        'rosa',
-        'teo',
-        'vera',
-      ])
-      expect(choices?.people.find((p) => p.person === 'quim')).toEqual({
-        person: 'quim',
-        name: 'Quim',
-        ratings: 4,
-      })
-    } finally {
-      await engine.dispose()
-    }
-  })
-
-  it('has no choices, and logs why, when the database is missing', async () => {
-    const fixture = useFixture()
-    const engine = makeEngine({
-      ...fixture.vars,
-      FILMES_BANCO: `${fixture.root}/none.sqlite`,
-    })
-    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
-    try {
-      expect(await exportChoices(BRUNO, exporterFromEngine(engine))).toBeNull()
-      expect(log).toHaveBeenCalledWith(
-        expect.stringMatching(/^engine: missing_database: /),
-      )
-    } finally {
-      log.mockRestore()
-      await engine.dispose()
-    }
-  })
-})
-
-describe('isExportRefusal', () => {
-  it('takes only the reasons the page knows', () => {
-    expect(isExportRefusal('pessoa')).toBe(true)
-    expect(isExportRefusal('outra')).toBe(false)
-    expect(isExportRefusal(undefined)).toBe(false)
-  })
 })
 
 describe('exporterFromEngine', () => {
@@ -207,12 +147,7 @@ describe('exporterFromEngine', () => {
     const engine = makeEngine({})
     try {
       const exporter = exporterFromEngine(engine)
-      const choices = await exporter.choices()
       const file = await exporter.imdb('bruno')
-      expect(choices).toMatchObject({
-        exitCode: 1,
-        output: { error: { code: 'missing_config' } },
-      })
       expect(file).toMatchObject({
         exitCode: 1,
         output: { error: { code: 'missing_config' } },
