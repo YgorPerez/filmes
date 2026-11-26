@@ -7,7 +7,13 @@
 // (the file's other tests read the fixture's Pessoas).
 // `E2E_SCREENSHOTS=<folder>` saves each screen.
 
-import { readFileSync, writeFileSync } from 'node:fs'
+import {
+  copyFileSync,
+  cpSync,
+  mkdirSync,
+  readFileSync,
+  writeFileSync,
+} from 'node:fs'
 import { join } from 'node:path'
 import { recommend, recommendSession } from '@filmes/engine'
 import { type Page } from '@playwright/test'
@@ -122,6 +128,65 @@ test('the Aposta has its stamp and its section; the films stand under their Moti
   await snap(page, info, 'cartaz-secoes')
   await card(page, 5).scrollIntoViewIfNeeded()
   await snap(page, info, 'cartaz-aposta')
+})
+
+test('the Aposta’s Motivo explains a higher predicted-rating floor', async ({
+  page,
+}, info) => {
+  const name = info.project.name === 'mobile' ? 'Celia' : 'Dora'
+  await addPerson(name)
+  // This history belongs only to this recommendation. Other Cartaz tests
+  // still start with Bruno's regular history.
+  const data = info.outputPath('data')
+  cpSync(join(engineRoot(), 'data', 'people'), join(data, 'people'), {
+    recursive: true,
+  })
+  const sessions = join(data, 'sessions')
+  mkdirSync(sessions, { recursive: true })
+  writeFileSync(
+    join(sessions, 'past-bet.md'),
+    `---
+date: 2026-11-19
+owner: bruno
+attendees: [bruno]
+rule: {name: default}
+recommendation: [{position: 5, id: tt9000105, bet: true}]
+swapped: [tt9000105]
+---
+`,
+  )
+  const weights = tasteWeights(`cautious-${info.project.name}`).FILMES_PESOS
+  writeFileSync(
+    weights,
+    readFileSync(weights, 'utf8').replace(
+      'min_success_rate = 0.25',
+      'min_success_rate = 0.0',
+    ),
+  )
+  const {
+    session: { id },
+  } = await engineRun(
+    (engine) =>
+      engine.run(
+        recommendSession({ attendees: ['bruno', name.toLowerCase()] }),
+        {
+          owner: 'bruno',
+        },
+      ),
+    { FILMES_DADOS: data, FILMES_PESOS: weights },
+  )
+  const appSessions = join(engineRoot(), 'data', 'sessions')
+  mkdirSync(appSessions, { recursive: true })
+  copyFileSync(join(sessions, `${id}.md`), join(appSessions, `${id}.md`))
+  await loginAsBruno(page)
+  await page.goto(`/sessoes/${id}`)
+  await expect(
+    section(page, 'Aposta').getByText(
+      'O histórico de apostas do grupo pediu uma nota prevista mais alta.',
+      { exact: true },
+    ),
+  ).toBeVisible()
+  await snap(page, info, 'cartaz-aposta-cautelosa')
 })
 
 test('the Dono marks, reloads, sends, and the Cartaz comes back redone', async ({

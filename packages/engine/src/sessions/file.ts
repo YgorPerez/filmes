@@ -223,6 +223,7 @@ export const VERSION_EXTRAS = [
   'replies',
   'swapped',
   'votes',
+  'bet_marks',
 ] as const
 
 /** The version at the top of the frontmatter, shaped as an item of
@@ -244,6 +245,26 @@ export const currentVersion = (front: YamlMapping): YamlMapping => {
   for (const field of VERSION_EXTRAS)
     if (front.has(field)) version.set(field, get(field))
   return version
+}
+
+/** The versions of a Session in order, including the current one. */
+export const sessionVersions = (
+  front: YamlMapping,
+): ReadonlyArray<YamlMapping> => {
+  const earlier = front.get('versions')
+  return [
+    ...(isSequence(earlier) ? earlier.filter(isMapping) : []),
+    currentVersion(front),
+  ]
+}
+
+/** The Aposta saved with a version's Recomendação, even if it moved on
+ * the Cartaz. */
+export const storedBet = (version: YamlMapping): YamlMapping | undefined => {
+  const list = version.get('recommendation')
+  return (isSequence(list) ? list : [])
+    .filter(isMapping)
+    .find((film) => pyTruthy(film.get('bet') ?? false))
 }
 
 /** The list the Dono saw of a version: the Cartaz's `shown`, or else the

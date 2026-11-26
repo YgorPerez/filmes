@@ -119,6 +119,14 @@ pseudo_count = 20
 position = 5
 min_predicted = 7.0
 max_facts = 1
+# Histórico de apostas (#205): dois acertos e dois fracassos no prior Beta.
+# Com histórico, a média dos sorteios dos Presentes precisa chegar a
+# min_success_rate. O mínimo individual sobe até max_predicted_increase
+# pontos conforme a média do posterior cai abaixo da média do prior.
+prior_successes = 2.0
+prior_failures = 2.0
+min_success_rate = 0.25
+max_predicted_increase = 2.0
 
 [pairwise]
 # Perguntas par a par (#181): quantos pares cada Presente responde (ou pula)

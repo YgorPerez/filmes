@@ -14,6 +14,7 @@ import { createHash } from 'node:crypto'
 import { pySum } from '../compat/number.ts'
 import type { Evidence } from '../evidence/Evidence.ts'
 import type { Weights } from '../runtime/Weights.ts'
+import type { BetRecord } from '../sessions/bet-record.ts'
 import { NEUTRAL_UTILITY } from './rule.ts'
 import { TASTE_NEIGHBORS_TABLE } from './signals/taste-neighbors.ts'
 
@@ -47,7 +48,60 @@ const uniforms = (key: string): readonly [number, number] => {
 /** A standard normal draw for one film and Presente (Box–Muller). */
 const normal = (seed: string, filmId: string, person: string): number => {
   const [u, v] = uniforms(`${seed}\u0000${filmId}\u0000${person}`)
-  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v)
+  return standardNormal(u, v)
+}
+
+const standardNormal = (u: number, v: number): number =>
+  Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v)
+
+/** Marsaglia–Tsang gamma sampling. Work in logs so small prior shapes
+ * can still be compared when their gamma samples underflow. */
+const logGamma = (shape: number, uniform: () => number): number => {
+  if (shape < 1)
+    return logGamma(shape + 1, uniform) + Math.log(uniform()) / shape
+  const d = shape - 1 / 3
+  const c = 1 / Math.sqrt(9 * d)
+  for (;;) {
+    const x = standardNormal(uniform(), uniform())
+    const root = 1 + c * x
+    if (root <= 0) continue
+    const v = root ** 3
+    const u = uniform()
+    if (
+      u < 1 - 0.0331 * x ** 4 ||
+      Math.log(u) < (x * x) / 2 + d * (1 - v + Math.log(v))
+    )
+      return Math.log(d) + Math.log(v)
+  }
+}
+
+/** Decide whether the group gets a bet and raise the individual floor
+ * for a Presente whose posterior mean has fallen below the prior mean. */
+export const betPolicy = (
+  seed: string,
+  attendees: ReadonlyArray<string>,
+  records: ReadonlyMap<string, BetRecord>,
+  weights: Weights['bet'],
+) => {
+  const floors = new Map<string, number>()
+  if (records.size === 0) return { offer: true, floors }
+  const { prior_successes, prior_failures } = weights
+  const priorMean = prior_successes / (prior_successes + prior_failures)
+  const draws = attendees.map((person) => {
+    const record = records.get(person)
+    const a = prior_successes + (record?.successes ?? 0)
+    const b = prior_failures + (record?.failures ?? 0)
+    const decrease = 1 - a / (a + b) / priorMean
+    const shift = weights.max_predicted_increase * decrease
+    if (shift > 0) floors.set(person, weights.min_predicted + shift)
+    let draw = 0
+    const uniform = () =>
+      uniforms(`bet-record\u0000${seed}\u0000${person}\u0000${draw++}`)[0]
+    const success = logGamma(a, uniform)
+    const failure = logGamma(b, uniform)
+    return 1 / (1 + Math.exp(failure - success))
+  })
+  return { offer: mean(draws) >= weights.min_success_rate, floors }
 }
 
 /** The films whose mean Nota prevista reaches `minPredicted`, by their
@@ -56,12 +110,16 @@ export const drawBets = (
   seed: string,
   candidates: ReadonlyArray<BetCandidate>,
   minPredicted: number,
+  floors: ReadonlyMap<string, number> = new Map(),
 ): ReadonlyArray<string> =>
   candidates
     .filter(
       (c) =>
         c.odds.size > 0 &&
-        mean([...c.odds.values()].map((o) => o.value)) >= minPredicted,
+        mean([...c.odds.values()].map((o) => o.value)) >= minPredicted &&
+        [...c.odds].every(
+          ([person, o]) => o.value >= (floors.get(person) ?? 0),
+        ),
     )
     .map((c) => ({
       id: c.id,

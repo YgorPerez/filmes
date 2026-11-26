@@ -262,8 +262,12 @@ exports[`avaliar on MovieLens files, as recorded > a messy sample with tags give
       },
       "bet": {
         "maxFacts": 1,
+        "maxPredictedIncrease": 2,
         "minPredicted": 7,
+        "minSuccessRate": 0.25,
         "position": 5,
+        "priorFailures": 2,
+        "priorSuccesses": 2,
       },
       "catalog": {
         "minImdbRating": 7,
@@ -661,8 +665,12 @@ exports[`avaliar on MovieLens files, as recorded > a small sample warns that Mov
       },
       "bet": {
         "maxFacts": 1,
+        "maxPredictedIncrease": 2,
         "minPredicted": 7,
+        "minSuccessRate": 0.25,
         "position": 5,
+        "priorFailures": 2,
+        "priorSuccesses": 2,
       },
       "catalog": {
         "minImdbRating": 7,
@@ -1058,8 +1066,12 @@ exports[`the diaries, as recorded > a Trakt history dates the cut 1`] = `
       },
       "bet": {
         "maxFacts": 1,
+        "maxPredictedIncrease": 2,
         "minPredicted": 7,
+        "minSuccessRate": 0.25,
         "position": 5,
+        "priorFailures": 2,
+        "priorSuccesses": 2,
       },
       "catalog": {
         "minImdbRating": 7,

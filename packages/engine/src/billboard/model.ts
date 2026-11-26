@@ -145,6 +145,8 @@ export interface BillboardFilm {
   readonly new: boolean
   /** The Aposta [bet] of this version (#178). */
   readonly bet: boolean
+  /** The Histórico de apostas required a higher Nota prevista. */
+  readonly cautiousBet?: true
   /** The TMDB poster at w500, or null. */
   readonly poster: string | null
   readonly imdbUrl: string
@@ -619,6 +621,9 @@ export const billboardModel = (
               header.titlePt && header.titlePt !== row.title ? row.title : null,
             new: pyTruthy(listed.get(film.id)?.get('new') ?? false),
             bet: pyTruthy(listed.get(film.id)?.get('bet') ?? false),
+            ...(listed.get(film.id)?.get('cautious_bet') === true && {
+              cautiousBet: true as const,
+            }),
             poster: header.poster
               ? header.poster.replace('/w185/', '/w500/')
               : null,

@@ -80,6 +80,7 @@ import { engineError, type EngineError } from '../runtime/EngineError.ts'
 import type { Environment } from '../runtime/Environment.ts'
 import { Run } from '../runtime/Run.ts'
 import type { SqliteError } from '../sqlite/Sqlite.ts'
+import { recordBetMarks } from '../sessions/bet-record.ts'
 import { syncSession } from '../sessions/database.ts'
 import { sessionOwner } from '../sessions/feedback.ts'
 import {
@@ -475,7 +476,8 @@ export const answerBillboard = (
     const chosen = read.moods === null ? null : yield* resolveMoods(read.moods)
     const { today } = yield* Run
     const writer = yield* DataWriter
-    const author = yield* authorFor(yield* sessionOwner(id))
+    const owner = yield* sessionOwner(id)
+    const author = yield* authorFor(owner)
     return yield* writer.writeFiles(
       { author, message: `answer billboard ${id}` },
       (db) =>
@@ -661,7 +663,32 @@ export const answerBillboard = (
             ])
             write = true
           }
-          if (write) yield* writeSession(id, front, session.body)
+          const betMarksChanged = recordBetMarks(front, [
+            ...seen.flatMap(({ person, film, rating }) =>
+              rating === null
+                ? []
+                : [
+                    {
+                      person,
+                      film,
+                      rating,
+                      kind: 'seen' as const,
+                      date: today,
+                    },
+                  ],
+            ),
+            ...(owner === undefined
+              ? []
+              : [...swap].map((film) => ({
+                  person: owner,
+                  film,
+                  rating: null,
+                  kind: 'swapped' as const,
+                  date: today,
+                }))),
+          ])
+          if (write || betMarksChanged)
+            yield* writeSession(id, front, session.body)
 
           const dropped: Array<ShownFilm & DropCause> = []
           const keep: string[] = []
