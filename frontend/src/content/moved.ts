@@ -4,7 +4,7 @@
 
 import { redirect } from '@tanstack/react-router'
 import { importsPath, MY_TASTE, QUEUE_PATH, RATINGS_PATH } from './paths'
-import { feedbackPath, SESSIONS_PATH } from './session-paths'
+import { feedbackPath } from './session-paths'
 
 /** Where each old page went. */
 export const MOVED_TO = {
@@ -15,7 +15,6 @@ export const MOVED_TO = {
   export: MY_TASTE,
   imports: `${MY_TASTE}/importar`,
   personImports: (person: string) => importsPath(person, false),
-  openSessions: SESSIONS_PATH,
   feedback: feedbackPath,
 }
 

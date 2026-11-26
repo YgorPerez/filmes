@@ -19,7 +19,6 @@ import {
   expect,
   loginAs,
   loginAsBruno,
-  section,
   snap,
   test,
 } from './support'
@@ -61,6 +60,7 @@ test('the Dono opens a Session with Restrições and finds it in the list', asyn
   await expect(page.getByRole('checkbox', { name: /Bruno/ })).toBeChecked()
   await page.getByRole('checkbox', { name: 'Iara' }).check()
   await page.getByRole('checkbox', { name: 'leve' }).check()
+  await page.getByText('Mais opções', { exact: true }).click()
   await page.getByLabel('Quantos filmes', { exact: false }).fill('3')
   await page.getByLabel('Em uma frase', { exact: false }).fill('eu e a Iara')
   await page.getByLabel('Duração máxima', { exact: false }).fill('130')
@@ -91,14 +91,15 @@ test('the Dono opens a Session with Restrições and finds it in the list', asyn
   })
 
   await page.getByRole('link', { name: 'Voltar' }).click()
-  const row = section(page, 'Abertas')
+  const row = page
+    .getByRole('list', { name: 'Sessões' })
     .getByRole('listitem')
     .filter({
       has: page.locator(`a[href="/sessoes/${id}"]`),
     })
   await expect(row).toContainText('eu e a Iara')
   await expect(
-    row.getByRole('link', { name: `Contar como foi a Sessão ${id}` }),
+    row.getByRole('link', { name: 'Contar como foi' }),
   ).toHaveAttribute('href', `/sessoes/${id}/contar`)
   await snap(page, info, 'sessoes-lista-com-sessao')
 })
@@ -138,9 +139,11 @@ test('“Ler” fills the form from one sentence and says what it left out', asy
   )
   await expect(page.getByLabel('Criança')).toHaveValue('7')
   const said = page.getByRole('status')
-  await expect(said).toContainText('Lido da frase: Presente: Bruno')
-  await expect(said).toContainText('Ficou de fora: “pipoca”')
-  await expect(page.getByText('“Reprise” pode ser um destes')).toBeVisible()
+  await expect(said).toContainText('Pelo que entendi, Presente: Bruno')
+  await expect(said).toContainText('Deixei “pipoca” de fora')
+  await expect(
+    page.getByText('Qual destes filmes você quis dizer com “Reprise”?'),
+  ).toBeVisible()
   await snap(page, info, 'sessoes-nova-frase-lida')
 
   // "Usar" on one of the films takes it for "Parecido com", and the form
@@ -171,11 +174,13 @@ test('the form says why it refused, and “o gosto de uma Pessoa” orders', asy
   await snap(page, info, 'sessoes-recusa')
 
   // A film the Catálogo does not have: the engine refuses.
+  await page.getByText('Parecido com um filme?').click()
   await page.getByLabel('Parecido com', { exact: false }).fill('tt0000001')
   await ask(page)
   await expect(page).toHaveURL(/\/sessoes\/nova\?erro=parecido$/)
 
   await page.getByRole('checkbox', { name: 'Quim' }).check()
+  await page.getByText('Mais opções', { exact: true }).click()
   await page.getByRole('radio', { name: 'O gosto de uma Pessoa' }).check()
   await page.getByRole('combobox', { name: /^De quem/ }).selectOption('quim')
   await ask(page)
@@ -301,7 +306,9 @@ test('the link only works for its Session while it is open', async ({
     await loginAs(await guest.newPage(), 'vera@example.org')
     await participant.goto(new URL(path, shared).href)
     await expect(
-      participant.getByRole('heading', { name: /Sessão 2026-11-20/ }),
+      participant.getByRole('heading', {
+        name: 'Sessão de 20 de novembro de 2026',
+      }),
     ).toBeVisible()
     await expect(
       participant.getByRole('link', { name: 'Link para os Presentes' }),

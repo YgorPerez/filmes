@@ -1,8 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { moved, MOVED_TO } from '#/content/moved'
+import { moved } from '#/content/moved'
+import { PENDING_FEEDBACK_FILTER, SESSIONS_PATH } from '#/content/session-paths'
 
-// The list of open Sessões moved in the layout pass (#219); the old path redirects.
 export const Route = createFileRoute('/feedback/')({
-  beforeLoad: ({ location }) =>
-    moved(MOVED_TO.openSessions, location.searchStr),
+  beforeLoad: ({ location }) => {
+    const search = new URLSearchParams(location.searchStr)
+    search.set('filtro', PENDING_FEEDBACK_FILTER)
+    moved(SESSIONS_PATH, `?${search}`)
+  },
 })

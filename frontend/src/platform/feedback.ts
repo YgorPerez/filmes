@@ -2,11 +2,11 @@
 // Presentes saw and thought (`recordFeedback`, #96), and the satisfaction
 // it changes (#176). The form posts to `/feedback/<sessao>/enviar`, which records it
 // as the logged-in Dono (the commit's author, and whose reactions are not
-// relayed) and goes back to the list. Server only.
+// relayed) and goes back to the Session. Server only.
 
 import {
   readPeople,
-  openSessions,
+  listSessions,
   recordFeedback,
   satisfactionNow,
   type PersonSatisfactionNow,
@@ -42,6 +42,8 @@ export type FeedbackSession = {
   request: string | null
   attendees: FeedbackAttendee[]
   recommendation: FeedbackFilm[]
+  moods: readonly string[]
+  constraints: readonly string[]
 }
 
 /** A Presente's satisfaction now: what the next Recomendação of this group
@@ -92,26 +94,30 @@ export function feedbackFromEngine(
   const run = engine.run
   return {
     async sessions() {
-      const open = await run(openSessions)
+      const open = await run(listSessions)
       if (open.exitCode !== 0) return open
       const people = await run(readPeople)
       if (people.exitCode !== 0) return people
       const byslug = new Map(people.output.map((p) => [p.slug, p]))
       return ok(
-        open.output.sessions.map((s) => ({
-          id: s.id,
-          date: s.date,
-          request: typeof s.request === 'string' ? s.request : null,
-          attendees: attendeeSlugs(s.attendees).map((person) => ({
-            person,
-            name: byslug.get(person)?.name ?? person,
-            owner:
-              viewer === null
-                ? (byslug.get(person)?.owner ?? false)
-                : person === viewer,
+        open.output.sessions
+          .filter((session) => session.open)
+          .map((s) => ({
+            id: s.id,
+            date: s.date,
+            request: typeof s.request === 'string' ? s.request : null,
+            attendees: attendeeSlugs(s.attendees).map((person) => ({
+              person,
+              name: byslug.get(person)?.name ?? person,
+              owner:
+                viewer === null
+                  ? (byslug.get(person)?.owner ?? false)
+                  : person === viewer,
+            })),
+            recommendation: sessionFilms(s.recommendation),
+            moods: s.moods,
+            constraints: s.constraints,
           })),
-          recommendation: sessionFilms(s.recommendation),
-        })),
       )
     },
     satisfaction: (attendees) => run(satisfactionNow(attendees)),
@@ -201,7 +207,17 @@ export async function feedbackAction(
 ): Promise<Response> {
   const poster = formPoster(request, owner, origin)
   if (poster instanceof Response) return poster
-  const parsed = parseFeedback(await request.formData())
+  const form = await request.formData()
+  if (form.get('buscar-catalogo') === 'sim') {
+    const typed = form.get('busca')
+    const query = typeof typed === 'string' ? typed.trim().slice(0, 200) : ''
+    return seeOther(
+      query
+        ? `${feedbackPath(session)}?${new URLSearchParams({ buscar: query })}`
+        : `${feedbackPath(session)}?erro=filme`,
+    )
+  }
+  const parsed = parseFeedback(form)
   if ('refused' in parsed)
     return seeOther(`${feedbackPath(session)}?erro=${parsed.refused}`)
   const outcome = await feedback.record(session, parsed.ok, poster.person)

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import {
   RATING_CHOICES,
   REPORT_CHOICES,
@@ -15,21 +16,19 @@ import { PriceSticker } from './kit/sticker'
 import { OwnerTag } from './kit/owner-tag'
 import {
   Alert,
-  CatalogSearch,
   Item,
   Items,
-  Meta,
+  SessionFilmLookup,
   Section,
   Submit,
   TextField,
 } from './person-parts'
 import {
   Avatars,
-  DateLabel,
+  SessionDate,
   names,
   PersonAvatar,
   NightRequest,
-  SearchFold,
 } from './session-parts'
 
 /** `feedbackPath(<sessao>)`: the form that records the Session's Feedback and
@@ -67,19 +66,14 @@ export function FeedbackScreen({
         <>
           <Heading page={page} />
           {refusal && <Alert>{FEEDBACK.refusals[refusal]}</Alert>}
-          <SearchFold
-            summary={FEEDBACK.form.searchFold}
-            hint={FEEDBACK.form.searchFoldHint}
-            open={search !== null}
-          >
-            <CatalogSearch
-              action={path}
-              scope="films"
-              answer={search}
-              pick={pick}
-            />
-          </SearchFold>
-          <FeedbackForm session={session} page={page} film={film} />
+          <FeedbackForm
+            key={`${session} ${film ?? ''} ${search?.query ?? ''}`}
+            session={session}
+            page={page}
+            film={film}
+            search={search}
+            pick={pick}
+          />
           {page.attendees.length > 1 && <Satisfaction page={page} />}
         </>
       )}
@@ -92,17 +86,22 @@ export function FeedbackScreen({
 function Heading({ page }: { page: FeedbackPage }) {
   return (
     <div className="flex flex-col gap-lg">
-      <h1 className="font-display text-title">{FEEDBACK.form.title}</h1>
+      <h1 className="font-display text-counter-title">{FEEDBACK.form.title}</h1>
       <div className="flex items-center gap-lg">
         <Avatars people={page.attendees} />
         <span className="flex min-w-0 flex-col gap-0.5">
-          <DateLabel>{page.date}</DateLabel>
+          <span className="text-meta text-ink-2">
+            <SessionDate date={page.date} />
+          </span>
           <span className="font-display text-step-title">
             {names(page.attendees)}
           </span>
         </span>
       </div>
-      <NightRequest items={[]} note={page.request} />
+      <NightRequest
+        items={[...page.moods, ...page.constraints]}
+        note={page.request}
+      />
     </div>
   )
 }
@@ -111,28 +110,58 @@ function FeedbackForm({
   session,
   page,
   film,
+  search,
+  pick,
 }: {
   session: string
   page: FeedbackPage
   film?: string
+  search: SearchAnswer | null
+  pick: (id: string) => string
 }) {
   const { form } = FEEDBACK
+  const [nothing, setNothing] = useState(false)
+  const listed = page.recommendation.some((item) => item.id === film)
+  const other = !listed && (film !== undefined || search !== null)
   return (
     <form
       method="post"
       action={`/feedback/${encodeURIComponent(session)}/enviar`}
       aria-label={form.label}
-      className="flex flex-col gap-3xl"
+      className="group/feedback flex flex-col gap-3xl"
+      onChange={(event) => {
+        const input = event.target
+        if (input instanceof HTMLInputElement && input.name === 'filme')
+          setNothing(input.value === 'nada')
+      }}
     >
-      <FilmChoice page={page} film={film} />
+      <button type="submit" hidden>
+        {form.submit}
+      </button>
+      <FilmChoice
+        page={page}
+        film={film}
+        other={other}
+        search={search}
+        pick={pick}
+      />
 
-      <Section id="reacoes" title={form.reactions} lead={form.reactionsLead}>
-        <div className="flex flex-col">
-          {page.attendees.map((attendee, index) => (
-            <Reaction key={attendee.person} attendee={attendee} index={index} />
-          ))}
-        </div>
-      </Section>
+      <fieldset
+        disabled={nothing}
+        className="min-w-0 group-has-[input[value=nada]:checked]/feedback:hidden"
+      >
+        <Section id="reacoes" title={form.reactions} lead={form.reactionsLead}>
+          <div className="flex flex-col">
+            {page.attendees.map((attendee, index) => (
+              <Reaction
+                key={attendee.person}
+                attendee={attendee}
+                index={index}
+              />
+            ))}
+          </div>
+        </Section>
+      </fieldset>
 
       <Submit variant="primary" className="w-full sm:w-auto sm:self-start">
         {form.submit}
@@ -141,16 +170,29 @@ function FeedbackForm({
   )
 }
 
-/** Which film they saw: one of the list (its tape: the price sticker with
- * its number and its title), another (`busca`), or none. `film` comes
- * chosen (the Catálogo search's "Usar"). */
-function FilmChoice({ page, film }: { page: FeedbackPage; film?: string }) {
+/** The chosen film or a title to look up. */
+function FilmChoice({
+  page,
+  film,
+  other,
+  search,
+  pick,
+}: {
+  page: FeedbackPage
+  film?: string
+  other: boolean
+  search: SearchAnswer | null
+  pick: (id: string) => string
+}) {
   const { form } = FEEDBACK
-  const listed = page.recommendation.some((f) => f.id === film)
-  const other = film !== undefined && !listed
+  const selected =
+    search && 'found' in search
+      ? search.found.films.find((item) => item.id === film)
+      : undefined
   return (
     <Section id="filme" title={form.film}>
-      <div className="flex flex-col gap-sm" role="radiogroup">
+      <fieldset className="group/film flex min-w-0 flex-col gap-sm">
+        <legend className="sr-only">{form.film}</legend>
         {page.recommendation.map((item) => (
           <Option
             key={item.id}
@@ -175,20 +217,22 @@ function FilmChoice({ page, film }: { page: FeedbackPage; film?: string }) {
         >
           {form.other}
         </Option>
-      </div>
-      <TextField
-        name="busca"
-        label={form.search}
-        hint={form.searchHint}
-        placeholder="tt…"
-        defaultValue={other ? film : undefined}
-      />
-      <Option type="radio" shape="row" name="filme" value="nada">
-        {form.nothing}{' '}
-        <span className="font-body text-meta font-normal text-ink-2">
-          {form.nothingHint}
-        </span>
-      </Option>
+        <div className="hidden flex-col gap-sm rounded-field border border-rule bg-surface-2 p-lg group-has-[input[value=outro]:checked]/film:flex">
+          {other && selected && (
+            <p className="font-semibold">{selected.title}</p>
+          )}
+          <SessionFilmLookup
+            name="busca"
+            label={form.search}
+            value={other ? (film ?? search?.query) : undefined}
+            answer={search}
+            pick={pick}
+          />
+        </div>
+        <Option type="radio" shape="row" name="filme" value="nada">
+          {form.nothing}
+        </Option>
+      </fieldset>
     </Section>
   )
 }
@@ -244,7 +288,6 @@ function Reaction({
         <TextField
           name={`comentario.${attendee.person}`}
           label={`${form.comment}: ${attendee.name}`}
-          hint={form.commentHint}
         />
       </div>
     </fieldset>
@@ -265,9 +308,7 @@ function Satisfaction({ page }: { page: FeedbackPage }) {
             ? []
             : [
                 <Item key={c.person}>
-                  <span className="font-semibold">{c.name}</span>
                   <span>{c.line}</span>
-                  <Meta parts={[satisfaction.value(c.satisfaction)]} />
                 </Item>,
               ],
         )}

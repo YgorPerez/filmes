@@ -1,12 +1,28 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { PENDING_FEEDBACK_FILTER } from '#/content/session-paths'
 import { readSessions } from '#/content/sessions'
 import { SessionList } from '#/ui/sessions'
 
 export const Route = createFileRoute('/_owner/sessoes/')({
-  loader: () => readSessions(),
+  validateSearch: (search) => ({
+    filtro:
+      search.filtro === PENDING_FEEDBACK_FILTER
+        ? PENDING_FEEDBACK_FILTER
+        : undefined,
+  }),
+  loaderDeps: ({ search }) => ({
+    pendingOnly: search.filtro === PENDING_FEEDBACK_FILTER,
+  }),
+  loader: ({ deps }) => readSessions({ data: deps.pendingOnly }),
   component: SessionsPage,
 })
 
 function SessionsPage() {
-  return <SessionList sessions={Route.useLoaderData()} />
+  const { filtro } = Route.useSearch()
+  return (
+    <SessionList
+      sessions={Route.useLoaderData()}
+      pendingOnly={filtro === PENDING_FEEDBACK_FILTER}
+    />
+  )
 }
