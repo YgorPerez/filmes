@@ -21,12 +21,8 @@ import {
   type FeedbackRefusal,
 } from '#/content/feedback-form'
 import { appPoster, formPoster, seeOther } from './form-post'
-import {
-  appEngine,
-  attendeeSlugs,
-  sessionFilms,
-  type SessionFilm,
-} from './engine'
+import { appEngine } from './engine'
+import { attendeeSlugs, sessionFilms, type SessionFilm } from './session-fields'
 import type { Owner } from './owners'
 
 /** A Presente of the Session, with her name and whether she is the Dono
