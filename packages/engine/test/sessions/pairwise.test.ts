@@ -312,6 +312,39 @@ describe('decidePairwise', () => {
     expect(evidence.filter((e) => e.text.includes('Nota alta'))).toEqual([])
   })
 
+  test('a Nota from an answer decays with age, like any Nota', async () => {
+    const fixture = useFixture()
+    const session = await answered(fixture)
+    await fixture.ok(
+      decidePairwise({ session, person: 'teo', record: true }),
+      {},
+      { owner: 'bruno' },
+    )
+
+    const source = `perguntas par a par ${session}`
+    const seeds = async (today?: string) =>
+      new Map(
+        (
+          await fixture.ok(
+            recommend({ attendees: ['teo'], count: 50 }),
+            today === undefined ? {} : { FILMES_HOJE: today },
+          )
+        ).films.flatMap((film) =>
+          (film.evidence['teo'] ?? [])
+            .filter((e) => e.source === source && e.contribution > 0)
+            .map((e) => [`${film.id} ${e.text}`, e] as const),
+        ),
+      )
+    const now = await seeds()
+    const later = await seeds('2036-11-20')
+    expect(now.size).toBeGreaterThan(0)
+    for (const [key, evidence] of now) {
+      const aged = later.get(key)
+      expect(aged?.strength).toBe('weak')
+      expect(aged!.contribution).toBeLessThan(evidence.contribution)
+    }
+  })
+
   test("the Dono's no drops the answers and writes no taste", async () => {
     const fixture = useFixture()
     const session = await answered(fixture)
