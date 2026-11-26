@@ -1,7 +1,9 @@
 // The Força ruler, the PT wording, the individual utility and the Regra key
 // against the golden vectors the Python engine's own modules wrote
 // (`golden.py`): 10,000 inputs each, around the 2-year and 5-year edges and
-// on every 29 February from 1988 to 2040.
+// on every 29 February from 1988 to 2040. A Nota more than 5 years old
+// dropped one Força level in Python; the Decaimento replaced that step
+// (#173), so those vectors are left out of the comparison.
 import * as names from '../python-names.ts'
 import { describe, expect, test } from 'vite-plus/test'
 import {
@@ -35,7 +37,6 @@ import {
   usesSatisfaction,
   weaken,
   guessStrength,
-  FRESH_YEARS,
   HIGH_RATING,
   MIN_NEIGHBOR_BASE,
   MIN_NEIGHBOR_PERCENT,
@@ -184,16 +185,9 @@ describe('the Força ruler', () => {
     )
     expect(
       matches(
-        [
-          HIGH_RATING,
-          FRESH_YEARS,
-          STATED_YEARS,
-          MIN_NEIGHBOR_BASE,
-          MIN_NEIGHBOR_PERCENT,
-        ],
+        [HIGH_RATING, STATED_YEARS, MIN_NEIGHBOR_BASE, MIN_NEIGHBOR_PERCENT],
         [
           constants['NOTA_ALTA'],
-          constants['ANOS_FRESCOR'],
           constants['ANOS_DITO'],
           constants['BASE_MINIMA_VIZINHANCA'],
           constants['PORCENTO_MINIMO_VIZINHANCA'],

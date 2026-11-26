@@ -204,7 +204,11 @@ _Evitar_: posição, ranking
 As Notas contra as quais a régua lê uma Nota dela: as próprias Notas da Pessoa, quando ela tem pelo menos o mínimo de `[rating_percentile]`; abaixo dele, as notas da população do MovieLens, na mesma escala de 0,5 a 5. As do Letterboxd e as do Trakt entram juntas.
 
 **Nota alta** [high rating, `isHighRating`]:
-Uma Nota que a régua lê a favor com Força moderada ou forte, só pelo percentil, sem a idade nem o Feedback. É o que o metadado agregado do caminho de conteúdo conta ("como 3 filmes a que deu Nota alta"). Num Declarado de filme, só o "ama".
+Uma Nota que a régua lê a favor com Força moderada ou forte, só pelo percentil, sem o Feedback. É o que o metadado agregado do caminho de conteúdo conta ("como 3 filmes a que deu Nota alta"). Num Declarado de filme, só o "ama".
+
+**Decaimento** [rating decay, `ratingDecay`]:
+O quanto o tempo apaga uma Nota: a contribuição dela cai à metade a cada meia-vida (`half_life_years`) e nunca fica abaixo de um piso (`floor`). A Força da Nota não muda com a idade. Declarado, Relato e Já visto não decaem.
+_Evitar_: envelhecimento, validade
 
 **Declarado** [stated, `stated`]:
 O que uma Pessoa disse sobre o próprio gosto ou sobre um filme, por exemplo num questionário ou numa review que ela escreveu.
@@ -216,8 +220,12 @@ _Evitar_: descrição, declarado
 **Review** [review, `review`]:
 Um sinal tirado de opiniões de terceiros, que não estão entre as Pessoas, como as tags de uma base pública ou quantos estranhos que gostaram de um filme gostaram de outro.
 
+**Vizinhos de gosto** [taste neighbors, `tasteNeighbors`]:
+Os usuários do MovieLens mais perto do gosto de uma Pessoa: os que, nos filmes que ela também viu, deram notas no mesmo percentil que as dela, cada um lido na própria escala. Quantos e com quantos filmes em comum ficam em `[taste_neighbors]` de `config/weights.toml`. O que eles deram a um Candidato é uma Review ("23 pessoas de gosto parecido deram 4,3 em média a este"), com Força pela régua: quantos o viram, quanto concordam e quanto dividem com ela.
+_Evitar_: usuários parecidos, almas gêmeas
+
 **Nota prevista** [predicted rating, `predictedRating`]:
-A Nota que o motor espera que uma Pessoa dê a um filme que ela não viu, de 1 a 10 como o Já vi do Cartaz. Não é Fato nem Nota: é uma previsão, e o `evaluate` mede o erro dela contra as Notas retidas. Ainda não existe; vem dos vizinhos de gosto (#174).
+A Nota que o motor espera que uma Pessoa dê a um filme, de 1 a 10 como o Já vi do Cartaz: o percentil médio dos vizinhos de gosto que viram o filme, lido de volta na Escala da Pessoa, de modo que o mesmo percentil é uma Nota mais alta para quem dá Notas altas. Sai com quantos vizinhos a sustentam e com o desvio entre eles [deviation, `deviation`], que diz quanto ela é incerta. Não é Fato nem Nota: é uma previsão, e o `evaluate` mede o erro dela contra as Notas retidas.
 _Evitar_: nota esperada, match
 
 **Palpite** [guess, `guess`]:

@@ -6,11 +6,13 @@
 // For each neighbour Y of X that is a Candidate, one review Evidence: "deu 5
 // a X, e de 3.104 pessoas que deram 4+ a ele, 64% deram 4+ a este". The
 // strength comes from the base and the share, capped by the seed's
-// strength. A stated rating opens the line as on the content path and has
+// strength; a Nota seed's Decaimento (`decay.ts`) scales the weight. A
+// stated rating opens the line as on the content path and has
 // the stated seed strength. A rating against is not a seed: liking Y when
 // you liked X says nothing about someone who did not like X.
 
 import { Effect } from 'effect'
+import { ratingDecay } from '../../evidence/decay.ts'
 import { makeEvidence } from '../../evidence/Evidence.ts'
 import {
   neighborStrength,
@@ -75,7 +77,15 @@ export const neighbors: Signal = {
             strength,
             kind: 'review',
             factId: text(row, 'fato_id'),
-            base: round.weights.neighbors.weight,
+            base:
+              round.weights.neighbors.weight *
+              (kind === 'rating'
+                ? ratingDecay(
+                    text(row, 'nota_data'),
+                    round.today,
+                    round.weights.rating_decay,
+                  )
+                : 1),
           }),
         ]
       })

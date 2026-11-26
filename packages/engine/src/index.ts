@@ -105,6 +105,7 @@ export {
   requestCount,
   type RankOptions,
   type Recommendation,
+  type PredictedRating,
   type RecommendedFilm,
   type RecommendRequest,
 } from './recommendation/recommend.ts'

@@ -27,6 +27,13 @@ weak = 0.4
 weak_against = 0.2
 moderate_against = 0.1
 
+[rating_decay]
+# Decaimento de uma Nota (#173): a contribuição dela vale 2^(−idade / meia-vida),
+# com a idade em anos até hoje, e nunca menos que o piso. A Força não muda com a
+# idade. Declarado e Relato não decaem; o Já visto também não.
+half_life_years = 5.0
+floor = 0.25
+
 [path.weight]
 # Peso de cada tipo de aresta de conteúdo no caminho de gosto. Um predicado fora
 # daqui não entra no caminho; o texto de cada um fica em sinais/conteudo.py.
@@ -79,6 +86,20 @@ window = 5
 [neighbors]
 # Peso da Evidência de vizinhança item-item do MovieLens (Tipo review).
 weight = 1.0
+
+[taste_neighbors]
+# Vizinhos de gosto (#174): os `k` usuários da amostra do MovieLens mais próximos
+# da Pessoa, pela diferença média entre o percentil da Nota dela e o da nota
+# deles (cada um na própria escala) nos filmes que os dois viram; só conta quem
+# viu pelo menos `min_shared` filmes dela. O percentil médio dos vizinhos que
+# viram o filme, de 0 a 1, dá a Evidência (Tipo review) com base
+# `weight` × 2 × (percentil − 0,5): a favor acima da mediana dela, contra abaixo.
+# A menos de `neutral_band` da mediana, eles não dizem nada. A Força vem da
+# régua, por quantos são, quanto concordam e quanto dividem com ela.
+k = 50
+min_shared = 10
+weight = 1.0
+neutral_band = 0.05
 
 [mood]
 # Bônus de cada Clima pedido que o filme sustenta, somado à pontuação da Regra

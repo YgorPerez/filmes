@@ -13,7 +13,7 @@ Os IDs de filme seguem `tt90DDNNN`: `DD` é o diretor (`Q90000DD`), `NNN` a orde
 | Helena Prado (01) | 101–106 | 5 (2025), 4,5 (2024), 4 (2023) em 101–103 | 3 Notas altas: caminho forte. 106 tem 600 votos, abaixo do mínimo |
 | Otávio Lins (02) | 201–203 | 4,5 e 4 em 201–202 | 2 Notas altas: moderada |
 | Marta Quintal (03) | 301–303 | 4 em 301, 3,5 em 303 | 1 Nota alta: fraca; 3,5 é semente fraca a favor |
-| Rui Tavares (04) | 401–403 | 5 (2019), 4 (2018) | Notas com mais de 5 anos caem um nível |
+| Rui Tavares (04) | 401–403 | 5 (2019), 4 (2018) | Notas antigas: a Força fica, a contribuição decai pela meia-vida (#173) |
 | Caio Brandão (05) | 501–503 | 1 e 2 | Notas baixas: Evidência contra |
 | Lia Moura, Tomás Reis, Beatriz Sá, Jorge Amaral (06–09) | 601–903 | nenhuma | Sem Fato para o Bruno. 903 tem 999 votos |
 | Sofia Rangel (18) | 1801–1803 | nenhuma | Alvo de Declarado, Relato e Veto nos testes de Pessoa (#18) |
@@ -70,6 +70,18 @@ Os filmes de Lia Moura, Tomás Reis, Beatriz Sá e Jorge Amaral não ligam a Not
 ### Régua por percentil (#172)
 
 `notas_movielens.csv` é a população do MovieLens da fixture: 50 notas inventadas, distribuídas para que, com os cortes de `[rating_percentile]` em `config/weights.toml`, a leitura pela população dê o que a régua absoluta antiga dava (5 e 4,5 forte, 4 moderada, 3,5 e 3 fraca a favor, 2,5 fraca contra, 2 moderada contra, 1,5 ou menos forte contra). Toda Pessoa da fixture tem menos de 20 Notas, o mínimo, e é lida por ela; assim as tabelas acima continuam valendo. Os testes da escala própria baixam o mínimo (`weightsWith`) para o Bruno, com 11 Notas, ser lido pelas dele: 5 forte, 4,5 moderada, 4 fraca, 3,5 fraca contra. Mudou um corte em `weights.toml`? Refaça esta distribuição.
+
+### Vizinhos de gosto (#174)
+
+`notas_gosto_movielens.csv` é a amostra de usuários do MovieLens da fixture, com a Fonte em `fonte_gosto_movielens.csv`. A etapa `71_escalas_de_gosto` calcula o percentil de cada nota na escala do próprio usuário.
+
+| Usuário | Notas | Para que serve |
+|---|---|---|
+| 10, 20 e 30 | As de Bruno em 101, 102, 103, 201, 202, 401, 501 e 503, quase iguais às dele; 5, 4,5 e 5 em Pequenos Milagres (601); 1, 1,5 e 2 em Deserto Branco (701) | Os vizinhos mais próximos do Bruno: a favor de 601, contra 701 |
+| 40 | Os mesmos 8 filmes ao contrário do Bruno; 1 em 601 e 5 em 701 | Vizinho distante: só entra com `k` 4 ou mais |
+| 50 | 5 em 101, 4,5 em 102, 1 em 601 | Divide só 2 filmes com o Bruno |
+
+Ninguém divide 10 filmes com o Bruno, o `min_shared` de `config/weights.toml`, então os outros testes não veem esse caminho. Os testes dele baixam `k` e `min_shared`.
 
 ### Sinais de Review (#21)
 
