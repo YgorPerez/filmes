@@ -512,6 +512,33 @@ test('limits the neighbourhood and breaks ties by IMDb id', async () => {
   ])
 })
 
+test("measures how each film's MovieLens ratings spread", async () => {
+  const movielens = zip({
+    'ml-32m/links.csv':
+      'movieId,imdbId,tmdbId\n1,0000001,\n2,0000002,\n3,0000003,\n',
+    // Film 1: four users split over two values (1 bit). Film 2: one rating
+    // twice by the same value (0 bits). Film 3 is not in the ratings.
+    'ml-32m/ratings.csv':
+      'userId,movieId,rating,timestamp\n1,1,5.0,1\n2,1,5.0,1\n3,1,2.5,1\n4,1,2.5,1\n1,2,4.0,1\n2,2,4.0,1\n',
+    'ml-32m/tags.csv': 'userId,movieId,tag,timestamp\n',
+  })
+  const query = await rebuilt(
+    usePinnedDumps((dumps) => [
+      ...without('ml-32m.zip')(dumps),
+      ['ml-32m.zip', movielens],
+    ]),
+  )
+
+  expect(
+    await query(
+      'SELECT filme_id, avaliacoes, entropia FROM entropia_movielens ORDER BY filme_id',
+    ),
+  ).toEqual([
+    ['tt0000001', 4, 1],
+    ['tt0000002', 2, 0],
+  ])
+})
+
 test('aggregates the normalized tags by distinct user', async () => {
   const query = await rebuilt(usePinnedDumps())
 

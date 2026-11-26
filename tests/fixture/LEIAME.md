@@ -273,3 +273,5 @@ Filmes `tt90126NN`, de Nina Vale (`Q9012601`), para o teste de ordem das semente
 | Reprise (9012601, 2011) | 4 (2025) | mesmo título e mesma Nota que a de 2004, com o ID menor: o ano desempata antes do ID |
 | Reprise (9012602, 2004) | 4 (2025) | |
 | Bis (9012603, 2019) | nenhuma | Candidato: as duas Reprise saem em ordem de ano na linha do diretor e nas sementes |
+
+Perguntas par a par (#181, `entropia_movielens.csv`): sete filmes com a entropia das notas do MovieLens, na ordem de entropia × ln(avaliações): Jardim Suspenso (301, adulto, nunca é perguntado), Ponte Aérea (201, que o Quim já viu), O Farol de Areia (101), A Última Estação (702), Sal e Ferrugem (105), Pequenos Milagres (601, o mais popular, mas sem discordância) e O Último Bonde (202). Os outros filmes vêm depois, pelos votos do IMDb.

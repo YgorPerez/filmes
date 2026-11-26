@@ -38,6 +38,10 @@ export const SESSIONS = {
         'Recomendação refeita: quem ficou segue no mesmo número, quem entrou tem o selo “novo”.',
       anotada:
         'Estrelas e comentários ficaram na Sessão. Eles não mexem no gosto de ninguém.',
+      'perguntas-gravadas':
+        'Respostas gravadas: o escolhido de cada par virou Nota fraca, e o outro, Já visto.',
+      'perguntas-descartadas':
+        'Respostas descartadas. Nada mudou no gosto de ninguém.',
     } satisfies Record<SessionNotice, string>,
     refusals: {
       nada: 'Nada marcado ainda.',

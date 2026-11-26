@@ -6,8 +6,16 @@ import { within } from './form-fields'
 
 /** `aberta`: the form opened the Session; `regerada`: a reply took films
  * off or brought an acrescentar, and the Recomendação was redone;
- * `anotada`: only stars and comments, kept in the Session. */
-const SESSION_NOTICES = ['aberta', 'regerada', 'anotada'] as const
+ * `anotada`: only stars and comments, kept in the Session;
+ * `perguntas-gravadas` and `perguntas-descartadas`: the Dono's decision on
+ * a Presente's Perguntas par a par (#181). */
+const SESSION_NOTICES = [
+  'aberta',
+  'regerada',
+  'anotada',
+  'perguntas-gravadas',
+  'perguntas-descartadas',
+] as const
 export type SessionNotice = (typeof SESSION_NOTICES)[number]
 export const isSessionNotice = within(SESSION_NOTICES)
 

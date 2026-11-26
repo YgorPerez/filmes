@@ -170,7 +170,30 @@ const sourceOf = (dump: Dump): readonly [string, string] => {
   return [dump.source, dump.date]
 }
 
-/** `vizinhos(notas, links)` and the tags of ml-32m. */
+/** MovieLens rates from 0.5 to 5 in half steps. */
+const RATING_STEPS = 10
+
+/** `(film, ratings, entropy)` of each film with a rating: the entropy, in
+ * bits, of its ratings' histogram by half step (`entropia_movielens`). */
+function* spreadRows(
+  films: readonly string[],
+  spread: Int32Array,
+): Generator<readonly [string, number, number]> {
+  for (const [index, film] of films.entries()) {
+    const counts = spread.subarray(
+      index * RATING_STEPS,
+      (index + 1) * RATING_STEPS,
+    )
+    const total = counts.reduce((sum, count) => sum + count, 0)
+    if (total === 0) continue
+    let entropy = 0
+    for (const count of counts)
+      if (count > 0) entropy += (count / total) * Math.log2(total / count)
+    yield [film, total, entropy]
+  }
+}
+
+/** `vizinhos(notas, links)`, the ratings' spread and the tags of ml-32m. */
 const loadMovielens = (db: Connection, zip: string, dump: Dump) =>
   Effect.gen(function* () {
     const sourceAndDate = sourceOf(dump)
@@ -194,14 +217,18 @@ const loadMovielens = (db: Connection, zip: string, dump: Dump) =>
     let items = new Int32Array(1 << 20)
     let users = new Int32Array(1 << 20)
     let votes = 0
+    const spread = new Int32Array(films.length * RATING_STEPS)
     yield* forEachBatch(csvRows(zip, MOVIELENS_MEMBERS.ratings), (rows) =>
       Effect.sync(() => {
         for (const row of rows) {
           const movieId = row('movieId')
           const item = movieId === null ? undefined : byMovieId.get(movieId)
           if (item === undefined) continue
-          if (!(pyParseFloat(present(row('rating'), 'rating')) >= HIGH_RATING))
-            continue
+          const rating = pyParseFloat(present(row('rating'), 'rating'))
+          const step = Math.round(rating * 2) - 1
+          const bin = Math.min(RATING_STEPS - 1, Math.max(0, step))
+          spread[item * RATING_STEPS + bin]! += 1
+          if (!(rating >= HIGH_RATING)) continue
           const user = pyParseInt(present(row('userId'), 'userId'))
           if (user === null)
             throw pythonError(
@@ -233,6 +260,10 @@ const loadMovielens = (db: Connection, zip: string, dump: Dump) =>
         ),
         sourceAndDate,
       ),
+    )
+    yield* db.runMany(
+      'INSERT INTO entropia_movielens VALUES (?, ?, ?)',
+      spreadRows(films, spread),
     )
     const tagRows: Array<readonly [string, string, string]> = []
     yield* forEachBatch(csvRows(zip, MOVIELENS_MEMBERS.tags), (rows) =>

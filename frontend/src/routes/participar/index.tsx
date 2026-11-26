@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { PairwiseInvite } from '#/ui/pairwise'
 import { PARTICIPATION } from '#/ui/session-link.copy'
 
 export const Route = createFileRoute('/participar/')({
@@ -6,7 +7,9 @@ export const Route = createFileRoute('/participar/')({
 })
 
 function SessionLinkFilms() {
-  const films = Route.useRouteContext().participation?.films ?? []
+  const { participation } = Route.useRouteContext()
+  const { chave } = Route.useSearch()
+  const films = participation?.films ?? []
   return (
     <section
       aria-labelledby="filmes-da-sessao"
@@ -31,6 +34,13 @@ function SessionLinkFilms() {
             </li>
           ))}
         </ol>
+      )}
+      {participation?.selected && chave && (
+        <PairwiseInvite
+          session={participation.session}
+          token={chave}
+          person={participation.selected.person}
+        />
       )}
     </section>
   )
