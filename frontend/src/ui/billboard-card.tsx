@@ -275,6 +275,9 @@ function Why({
         </span>
       </Label>
       <ul aria-label={card.why} className="flex flex-col gap-[9px]">
+        {film.cautiousBetReason && (
+          <li className="text-evidence text-ink-2">{film.cautiousBetReason}</li>
+        )}
         {film.lines.map((line) => (
           <Line
             key={`${line.people.join(' ')}:${line.text}`}

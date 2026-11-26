@@ -7,7 +7,13 @@
 // (the file's other tests read the fixture's Pessoas).
 // `E2E_SCREENSHOTS=<folder>` saves each screen.
 
-import { readFileSync, writeFileSync } from 'node:fs'
+import {
+  copyFileSync,
+  cpSync,
+  mkdirSync,
+  readFileSync,
+  writeFileSync,
+} from 'node:fs'
 import { join } from 'node:path'
 import { recommend, recommendSession } from '@filmes/engine'
 import { type Page } from '@playwright/test'
@@ -124,6 +130,66 @@ test('the Aposta has its stamp and its section; the films stand under their Moti
   await snap(page, info, 'cartaz-aposta')
 })
 
+test('the Aposta’s Motivo explains a higher predicted-rating floor', async ({
+  page,
+}, info) => {
+  const name = info.project.name === 'mobile' ? 'Celia' : 'Dora'
+  await addPerson(name)
+  // This history belongs only to this recommendation. Other Cartaz tests
+  // still start with Bruno's regular history.
+  const data = info.outputPath('data')
+  cpSync(join(engineRoot(), 'data', 'people'), join(data, 'people'), {
+    recursive: true,
+  })
+  const sessions = join(data, 'sessions')
+  mkdirSync(sessions, { recursive: true })
+  writeFileSync(
+    join(sessions, 'past-bet.md'),
+    `---
+date: 2026-11-19
+owner: bruno
+attendees: [bruno]
+rule: {name: default}
+recommendation: [{position: 5, id: tt9000105, bet: true}]
+swapped: [tt9000105]
+bet_marks: [{person: bruno, film: tt9000105, kind: swapped, rating: null, date: 2026-11-19}]
+---
+`,
+  )
+  const weights = tasteWeights(`cautious-${info.project.name}`).FILMES_PESOS
+  writeFileSync(
+    weights,
+    readFileSync(weights, 'utf8').replace(
+      'min_success_rate = 0.25',
+      'min_success_rate = 0.0',
+    ),
+  )
+  const {
+    session: { id },
+  } = await engineRun(
+    (engine) =>
+      engine.run(
+        recommendSession({ attendees: ['bruno', name.toLowerCase()] }),
+        {
+          owner: 'bruno',
+        },
+      ),
+    { FILMES_DADOS: data, FILMES_PESOS: weights },
+  )
+  const appSessions = join(engineRoot(), 'data', 'sessions')
+  mkdirSync(appSessions, { recursive: true })
+  copyFileSync(join(sessions, `${id}.md`), join(appSessions, `${id}.md`))
+  await loginAsBruno(page)
+  await page.goto(`/sessoes/${id}`)
+  await expect(
+    section(page, 'Aposta').getByText(
+      'O histórico de apostas do grupo pediu uma nota prevista mais alta.',
+      { exact: true },
+    ),
+  ).toBeVisible()
+  await snap(page, info, 'cartaz-aposta-cautelosa')
+})
+
 test('the Dono marks, reloads, sends, and the Cartaz comes back redone', async ({
   page,
 }, info) => {
@@ -236,7 +302,8 @@ test('in the dark, Copiar pro chat gives the text, and stars alone only note', a
 })
 
 // Pequenos Milagres, which Bruno's taste neighbours in the fixture's sample
-// rated (#174): with k = 3 and min_shared = 5 they predict 8,3 for him.
+// rated (#174): with k = 3 and min_shared = 5 they predict 8,3 for him, which the
+// Calibration against his own Notas (#210) lifts to 8,8.
 const PEQUENOS_MILAGRES = 'tt9000601'
 
 test('the Nota prevista the Session recorded, per Presente who has one', async ({
@@ -268,5 +335,5 @@ test('the Nota prevista the Session recorded, per Presente who has one', async (
   const predicted = card(page, at).getByRole('list', {
     name: 'Nota prevista',
   })
-  await expect(predicted.getByRole('listitem')).toHaveText([/Bruno: 8,3 de 10/])
+  await expect(predicted.getByRole('listitem')).toHaveText([/Bruno: 8,8 de 10/])
 })

@@ -96,6 +96,7 @@ describe('evaluate: predicted-rating error', () => {
       expect(sample.predictedRatingError).toEqual({
         films: 0,
         meanAbsoluteError: null,
+        rawMeanAbsoluteError: null,
       })
     expect(readReport(result)).toContain(
       '- Erro médio (Pessoas): ausente, nenhum filme retido tem Nota prevista.',
@@ -110,7 +111,10 @@ describe('evaluate: predicted-rating error', () => {
     // a 10) at 8,31, O Último Bonde (4, an 8) at 6,04 and Barulho (1, a 2)
     // at 3,06, all on the population's scale. Quim keeps 3 Notas, which
     // users 40, 20 and 10 share; they disagree on Ponte Aérea (his 5, a
-    // 10) and predict 6,87.
+    // 10) and predict 6,87. That is before the calibration (#210): on
+    // Bruno's 5 training films they are harsher than he is, and with 5
+    // films against 20 they become 6,21, 3,20 and 8,71; Quim, whose 3
+    // Notas each leave 2 films shared when left out, has nothing to fit.
     const weights = readFileSync(join(ROOT, 'config/weights.toml'), 'utf8')
     const file = join(fixture.root, 'weights-test.toml')
     writeFileSync(
@@ -121,13 +125,48 @@ describe('evaluate: predicted-rating error', () => {
 
     const error = result.offline.people.predictedRatingError
     expect(error.films).toBe(4)
-    expect(error.meanAbsoluteError).toBeCloseTo(
+    expect(error.rawMeanAbsoluteError).toBeCloseTo(
       (1.69 + 1.96 + 1.06 + 3.13) / 4,
       2,
     )
-    expect(readReport(result)).toMatch(
-      /- Erro médio \(Pessoas\): 1[.,]96 em 4 filmes, de 1 a 10\./,
+    expect(error.meanAbsoluteError).toBeCloseTo(
+      (1.79 + 1.2 + 1.29 + 3.13) / 4,
+      2,
     )
+    expect(readReport(result)).toMatch(
+      /- Erro médio \(Pessoas\): 1[.,]85 em 4 filmes, de 1 a 10; sem a Calibração, 1[.,]96\./,
+    )
+  })
+
+  test('calibrates on the Notas before the cut only', async () => {
+    const fixture = useFixture()
+    // Quim alone. With all 4 of his Notas he has 4 comparable films and a
+    // calibration of his own (test/recommendation/prediction-calibration
+    // .test.ts); before his cut he keeps 3, and each one left out leaves 2
+    // films shared, below the 3 the neighbours need. So the held-out Ponte
+    // Aérea keeps the neighbours' 6,87, against his 10.
+    const vars = await withCatalog(fixture, {}, (catalog) => {
+      const notas = join(catalog, 'notas.csv')
+      const lines = readFileSync(notas, 'utf8').split('\n')
+      writeFileSync(
+        notas,
+        lines.filter((l, i) => i === 0 || l.startsWith('quim,')).join('\n') +
+          '\n',
+      )
+    })
+    const result = await evaluated(fixture, {
+      ...vars,
+      ...weightsWith(
+        fixture,
+        'k = 50\nmin_shared = 10',
+        'k = 3\nmin_shared = 3',
+      ),
+    })
+
+    const error = result.offline.people.predictedRatingError
+    expect(error.films).toBe(1)
+    expect(error.rawMeanAbsoluteError).toBeCloseTo(3.13, 2)
+    expect(error.meanAbsoluteError).toBe(error.rawMeanAbsoluteError)
   })
 })
 

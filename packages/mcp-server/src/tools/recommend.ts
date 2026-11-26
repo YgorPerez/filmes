@@ -29,9 +29,11 @@ export default defineTool({
     'Fora das Evidências, cada filme traz `imdbUrl`, `genres` (do IMDb, em português), `poster` (pôster do TMDB em w185), ' +
     '`titlePt` e `synopsis` (do TMDB em pt-BR; null sem chave do TMDB ou sem o dado), `imdbRating`, `imdbVotes`, `year`, `runtimeMinutes` ' +
     'e `coverage` ({withFact, attendees, withoutFact: slugs}). `onlyGuesses` marca filme sem Fato nenhum, que só entra no fim quando faltam Candidatos com Fato. ' +
-    '`predictedRating`, quando existe, dá por Presente a Nota prevista de 1 a 10 pelos vizinhos de gosto ({value, raters, deviation}). ' +
+    '`predictedRating`, quando existe, dá por Presente a Nota prevista de 1 a 10 pelos vizinhos de gosto ({value, raw, raters, deviation}): ' +
+    '`value` é a calibrada pelas Notas da própria Pessoa, a que o Cartaz mostra; `raw` é a dos vizinhos antes da Calibração. ' +
     'O filme com `bet: true` é a Aposta: a 5ª vaga vai para um filme com Nota prevista boa e pouca Evidência, sorteado pelo id da Sessão; ' +
     'apresente-o como aposta, não como certeza. Mantida, continua Aposta; Já vi ou Trocar nela sorteia outra no refazer. ' +
+    '`cautiousBet: true` indica que o Histórico de apostas exigiu uma Nota prevista maior para a Aposta, com o Motivo em `filmLines`. ' +
     '`vetoes` lista os Vetos dos Presentes que tiraram filmes, com `filmsRemoved` e `byPath` ({direct, subgenres, imdbGenre, tags}): ' +
     'um Veto a gênero tira também os subgêneros do Wikidata e o gênero do IMDb; um Veto a grupo de tags, como comédia boba, conta em `tags`. ' +
     'Presentes por slug, nome ou apelido; "dono" é o Dono. ' +

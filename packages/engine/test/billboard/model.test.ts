@@ -572,7 +572,8 @@ describe('the Cartaz model', () => {
 
 // Bruno's taste neighbours in the fixture's sample (#174) rated Pequenos
 // Milagres; Teo has none. With k = 3 and min_shared = 5 the prediction for
-// Bruno is 8,31 (test/recommendation/taste-neighbors.test.ts).
+// Bruno is 8,31, an 8,84 calibrated to his Notas
+// (test/recommendation/bet.test.ts).
 describe('the predicted rating (#175)', () => {
   const pequenosMilagres = async (fixture: Fixture) => {
     const session = await fixture.ok(
@@ -597,7 +598,7 @@ describe('the predicted rating (#175)', () => {
 
     const card = model.films.find((f) => f.id === film.id)
     expect(card?.predictedRatings).toEqual([
-      { person: 'bruno', value: 8.31, text: '8,3' },
+      { person: 'bruno', value: 8.84, text: '8,8' },
     ])
   })
 
@@ -610,7 +611,7 @@ describe('the predicted rating (#175)', () => {
     const model = await fixture.ok(billboardModel({ session: id }))
 
     expect(model.films.find((f) => f.id === film.id)?.predictedRatings).toEqual(
-      [{ person: 'bruno', value: 8.31, text: '8,3' }],
+      [{ person: 'bruno', value: 8.84, text: '8,8' }],
     )
   })
 

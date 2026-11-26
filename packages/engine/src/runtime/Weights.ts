@@ -65,12 +65,26 @@ export const Weights = Schema.Struct({
     weight: Weight,
     neutral_band: Weight,
   }),
+  /** The Calibração da Nota prevista (#210): how many films of no
+   * correction the fit is weighed against. */
+  prediction_calibration: Schema.Struct({
+    pseudo_count: Schema.Finite.check(Schema.isGreaterThanOrEqualTo(0)),
+  }),
   /** The Aposta (#178): its place (0: none), the lowest mean Nota
    * prevista, 1 to 10, and how many Facts it may have. */
   bet: Schema.Struct({
     position: Count,
     min_predicted: Weight,
+    min_predicted_floor: Weight.check(
+      Schema.isBetween({ minimum: 1, maximum: 10 }),
+    ),
     max_facts: Count,
+    prior_successes: Weight.check(Schema.isGreaterThan(0)),
+    prior_failures: Weight.check(Schema.isGreaterThan(0)),
+    min_success_rate: Weight.check(
+      Schema.isBetween({ minimum: 0, maximum: 1 }),
+    ),
+    max_predicted_increase: Weight.check(Schema.isGreaterThanOrEqualTo(0)),
   }),
   /** The Perguntas par a par (#181): how many pairs each Presente is
    * asked in a Session. */

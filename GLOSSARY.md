@@ -90,6 +90,9 @@ _Evitar_: sugestão, lista
 O filme da 5ª vaga da Recomendação (`[bet] position`): um Candidato com Nota prevista boa e pouca Evidência, que a Regra deixaria de fora. Sai por amostragem de Thompson: cada Presente com Nota prevista sorteia uma Nota em torno dela, tanto mais espalhada quanto mais incerta, e vence a maior média dos sorteios. O sorteio parte do id da Sessão, então refazer a mesma Sessão sorteia o mesmo. Vetos e Restrições valem para ela. O Já vi e o Trocar tiram a Aposta da Sessão, e a Nota do Já vi muda os vizinhos de gosto do próximo sorteio. Mantida, continua Aposta. No Cartaz, leva o selo "aposta".
 _Evitar_: exploração, coringa, surpresa
 
+**Histórico de apostas** [bet record, `BetRecord`, `bet_marks`, `cautious_bet`, `min_predicted_floor`]:
+Os acertos e fracassos das Apostas de cada Pessoa, lidos das Sessões em que esteve Presente. Um Filme escolhido com reação à altura da mediana dela ou um Já vi com Nota alta conta como acerto. Trocar explícito e Já vi com Nota contra contam como fracasso. A Sessão guarda as marcações da Aposta em `bet_marks` (`seen` ou `swapped`) e marca com `cautious_bet` a Aposta que exigiu Nota prevista maior. Um histórico bom reduz o mínimo da Nota prevista até o piso `min_predicted_floor`. O Decaimento da Nota dá menos peso às respostas antigas.
+
 **Parecença** [similarity, `similarity`]:
 O quanto um filme se parece com um filme de referência, de 0 a 1: genoma, tags do MovieLens, vizinhos, gênero e diretor ou atores em comum, com os pesos de `[similar.weight]`. Mede-se a partir da referência, então não é simétrica. É o que o `--parecido` usa para filtrar.
 _Evitar_: semelhança, distância
@@ -103,7 +106,7 @@ Uma Recomendação de uma Sessão aberta. Quando o Dono pede outra lista na mesm
 _Evitar_: rodada, tentativa
 
 **Mantido** [kept, `kept`]:
-Um filme da versão anterior que o Dono quer na próxima. Ao regerar, fica no mesmo número e só as vagas ganham filme novo. Sai por Restrição ou Veto do pedido refeito, ou por estar abaixo da nota mínima do IMDb, nunca por gosto novo. O que sai da versão anterior vira uma saída, com o motivo: Já visto, trocado, a Restrição, o Veto ou a nota mínima.
+Um filme da versão anterior que o Dono quer na próxima. Ao regerar, ocupa um dos números dos Mantidos, em ordem de Votos, e só as vagas ganham filme novo. Sai por Restrição ou Veto do pedido refeito, ou por estar abaixo da nota mínima do IMDb, nunca por gosto novo. O que sai da versão anterior vira uma saída, com o motivo: Já visto, trocado, a Restrição, o Veto ou a nota mínima.
 _Evitar_: fixado, travado
 
 **Cartaz** [billboard, `Billboard`]:
@@ -130,8 +133,8 @@ _Evitar_: parser, interpretação
 Um filme que o Dono tirou da tela de uma versão: o Trocar do Cartaz, o não de um Presente no Voto e, ao refazer, o que ele mandou trocar e o que não ficou como Mantido. Fica fora da Sessão até o fim.
 _Evitar_: descartado, rejeitado
 
-**Voto** [vote, `votes`; `yes`, `no`]:
-O sim ou o não de um Presente a um filme da tela, dado no celular pelo Link da Sessão, um filme de cada vez (o swipe do grupo, #182). Fica na versão da Sessão com quem votou e a data. O não é um Trocado daquele Presente: o filme sai e a Sessão regera. O sim sobe o filme: ao regerar, os Mantidos com mais sins, na Sessão inteira, vêm primeiro, nos números que os Mantidos já tinham, e as vagas não mudam. Voto não é Fato e não mexe no gosto.
+**Voto** [vote, `votes`, `replaces`; `yes`, `no`]:
+O sim ou o não de um Presente a um filme da tela, dado no celular pelo Link da Sessão, um filme de cada vez (o swipe do grupo, #182). Fica na versão da Sessão com quem votou e a data. O não é um Trocado daquele Presente: o filme sai e a Sessão regera. Na contagem vale o último envio de cada Presente, cujo primeiro Voto tem `replaces: true`. Os Mantidos com mais sins vêm primeiro, nos números que os Mantidos já tinham, e os empates mantêm a ordem. Se a ordem muda, o sim por si só regera a Sessão (#205). Voto não é Fato e não mexe no gosto.
 _Evitar_: curtida, like
 
 **Saída** [dropped, `dropped`; causa: `seen`, `swapped`, `constraint`, `veto`, `min_rating`, `mood`]:
@@ -245,8 +248,12 @@ Os usuários do MovieLens mais perto do gosto de uma Pessoa: os que, nos filmes 
 _Evitar_: usuários parecidos, almas gêmeas
 
 **Nota prevista** [predicted rating, `predictedRating`]:
-A Nota que o motor espera que uma Pessoa dê a um filme, de 1 a 10 como o Já vi do Cartaz: o percentil médio dos vizinhos de gosto que viram o filme, lido de volta na Escala da Pessoa, de modo que o mesmo percentil é uma Nota mais alta para quem dá Notas altas. Sai com quantos vizinhos a sustentam e com o desvio entre eles [deviation, `deviation`], que diz quanto ela é incerta. Não é Fato nem Nota: é uma previsão, e o `evaluate` mede o erro dela contra as Notas retidas. A Sessão guarda a de cada filme da versão, e o Cartaz mostra a guardada, mesmo que os vizinhos mudem depois.
+A Nota que o motor espera que uma Pessoa dê a um filme, de 1 a 10 como o Já vi do Cartaz: o percentil médio dos vizinhos de gosto que viram o filme, lido de volta na Escala da Pessoa, de modo que o mesmo percentil é uma Nota mais alta para quem dá Notas altas. Sai com quantos vizinhos a sustentam e com o desvio entre eles [deviation, `deviation`], que diz quanto ela é incerta. Não é Fato nem Nota: é uma previsão, e o `evaluate` mede o erro dela contra as Notas retidas. A Sessão guarda a de cada filme da versão, e o Cartaz mostra a guardada, mesmo que os vizinhos mudem depois. É a Nota prevista calibrada; a de antes da Calibração [raw, `raw`] fica para o `evaluate`.
 _Evitar_: nota esperada, match
+
+**Calibração da Nota prevista** [prediction calibration, `predictionCalibration`]:
+A correção da Nota prevista de uma Pessoa pelas Notas dela: nos filmes a que ela deu Nota, o que os vizinhos de gosto teriam previsto sem aquela Nota (cada filme deixado de fora na escolha deles) contra o percentil que ela deu, numa reta (deslocamento e inclinação no percentil). Quem tem vizinhos mais generosos que ela recebe uma Nota prevista mais baixa. Com poucos filmes assim, a reta vale pouco: pesa n / (n + `[prediction_calibration] pseudo_count`), e o resto fica sem correção. A Nota da Pergunta par a par fica fora, e no `evaluate` só entram as Notas de antes do corte. Muda o número, não a Evidência dos vizinhos nem a Força dela.
+_Evitar_: ajuste (é outra coisa), correção de viés
 
 **Palpite** [guess, `guess`]:
 Um Motivo sem Fato que o sustente.

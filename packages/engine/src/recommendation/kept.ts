@@ -40,22 +40,21 @@
 
 import { Effect } from 'effect'
 import { thousandsDot } from '../compat/number.ts'
-import {
-  isMapping,
-  isSequence,
-  pyStrValue,
-  pyTruthy,
-  yamlToJson,
-  type YamlMapping,
-} from '../data/yaml.ts'
+import { pyStrValue, yamlToJson, type YamlMapping } from '../data/yaml.ts'
 import { ratingText } from '../evidence/wording.ts'
 import type { EngineError } from '../runtime/EngineError.ts'
 import type { Environment } from '../runtime/Environment.ts'
 import type { Weights } from '../runtime/Weights.ts'
 import { numOrNull, text } from '../sqlite/row.ts'
 import type { Connection, SqliteError } from '../sqlite/Sqlite.ts'
-import { currentVersion, shownFilms, type ShownFilm } from '../sessions/file.ts'
-import { yesVotes } from '../sessions/votes.ts'
+import {
+  currentVersion,
+  isCautiousBet,
+  shownFilms,
+  storedBet,
+  type ShownFilm,
+} from '../sessions/file.ts'
+import { orderByYes, yesVotes } from '../sessions/votes.ts'
 import type { Candidate } from './candidates.ts'
 import type { Constraint, DropDetail } from './constraints.ts'
 import { constraintLabel } from './constraints/index.ts'
@@ -82,6 +81,7 @@ export interface Regenerate {
   readonly newMood: boolean
   /** The previous version's Aposta (#178), if any. */
   readonly bet?: string
+  readonly cautiousBet?: boolean
 }
 
 /** Why a film of the previous version left (an item of `dropped`, without
@@ -124,11 +124,11 @@ const liftKept = (
   yes: ReadonlyMap<string, number>,
 ): ReadonlyMap<string, number> => {
   const onScreen = kept.toSorted(([, p], [, q]) => p - q)
-  // A stable sort: on a tie in yes, the screen's order.
-  const lifted = onScreen.toSorted(
-    ([a], [b]) => (yes.get(b) ?? 0) - (yes.get(a) ?? 0),
+  const lifted = orderByYes(
+    onScreen.map(([id]) => id),
+    yes,
   )
-  return new Map(onScreen.map(([, position], i) => [lifted[i]![0], position]))
+  return new Map(onScreen.map(([, position], i) => [lifted[i]!, position]))
 }
 
 /** What stays and what was on the screen of the Session's current version,
@@ -153,11 +153,8 @@ export const prepareRegenerate = (
         `--manter ${id}: o filme não estava na versão anterior da Sessão; ficou de fora`,
     )
   const attendees = yamlToJson(version.get('attendees') ?? null)
-  const recommendation = version.get('recommendation')
-  const bet = (isSequence(recommendation) ? recommendation : [])
-    .filter(isMapping)
-    .find((film) => pyTruthy(film.get('bet') ?? false))
-    ?.get('id')
+  const stored = storedBet(version)
+  const bet = stored?.get('id')
   return {
     regenerate: {
       previous: screen,
@@ -174,6 +171,7 @@ export const prepareRegenerate = (
       replacing,
       newMood,
       ...(bet !== undefined && bet !== null && { bet: pyStrValue(bet) }),
+      ...(isCautiousBet(stored) && { cautiousBet: true }),
     },
     warnings,
   }

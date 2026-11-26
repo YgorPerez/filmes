@@ -249,6 +249,7 @@ describe('the taste neighbours of the sample (#174)', () => {
     expect(await sampleOf(useFixture(), sampled)).toEqual({
       films: 0,
       meanAbsoluteError: null,
+      rawMeanAbsoluteError: null,
     })
   })
 })

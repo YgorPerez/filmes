@@ -50,6 +50,7 @@ import {
 } from '../data/yaml.ts'
 import type { Strength } from '../evidence/strength.ts'
 import { listText } from '../evidence/wording.ts'
+import { CAUTIOUS_BET_REASON } from '../recommendation/bet.ts'
 import { catalogFilm } from '../recommendation/candidates.ts'
 import type { StoredConstraint } from '../recommendation/constraints.ts'
 import { constraintLabel } from '../recommendation/constraints/index.ts'
@@ -72,6 +73,7 @@ import { sessionOwner } from '../sessions/feedback.ts'
 import {
   currentVersion,
   filmsInBody,
+  isCautiousBet,
   isOpen,
   readSession,
   sessionDuration,
@@ -151,6 +153,9 @@ export interface BillboardFilm {
   readonly new: boolean
   /** The Aposta [bet] of this version (#178). */
   readonly bet: boolean
+  /** The Histórico de apostas required a higher Nota prevista. */
+  readonly cautiousBet?: true
+  readonly cautiousBetReason?: string
   /** The TMDB poster at w500, or null. */
   readonly poster: string | null
   readonly imdbUrl: string
@@ -629,6 +634,10 @@ export const billboardModel = (
               header.titlePt && header.titlePt !== row.title ? row.title : null,
             new: pyTruthy(listed.get(film.id)?.get('new') ?? false),
             bet: pyTruthy(listed.get(film.id)?.get('bet') ?? false),
+            ...(isCautiousBet(listed.get(film.id)) && {
+              cautiousBet: true as const,
+              cautiousBetReason: CAUTIOUS_BET_REASON,
+            }),
             poster: header.poster
               ? header.poster.replace('/w185/', '/w500/')
               : null,

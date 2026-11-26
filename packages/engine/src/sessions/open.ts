@@ -128,10 +128,20 @@ export const recommendationFields = (
           title: f.title,
           ...('new' in f && { new: f.new }),
           ...(f.bet && { bet: true }),
+          ...(f.cautiousBet && { cautious_bet: true }),
           // The Nota prevista the Cartaz shows (#175), kept with the
           // version so an old version's Cartaz does not move when the
-          // neighbours do.
-          ...(f.predictedRating && { predicted_rating: f.predictedRating }),
+          // neighbours do. Only the calibrated value (#210).
+          ...(f.predictedRating && {
+            predicted_rating: Object.fromEntries(
+              Object.entries(f.predictedRating).map(
+                ([person, { value, raters, deviation }]) => [
+                  person,
+                  { value, raters, deviation },
+                ],
+              ),
+            ),
+          }),
           reason: filmReason(f.evidence),
         })),
       ),

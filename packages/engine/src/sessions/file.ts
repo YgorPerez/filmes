@@ -33,7 +33,7 @@
 
 import { existsSync, readdirSync, renameSync, rmSync } from 'node:fs'
 import { basename, join } from 'node:path'
-import { Effect } from 'effect'
+import { Effect, Schema } from 'effect'
 import { compareTuple } from '../compat/compare.ts'
 import { pyInt } from '../compat/fact-id.ts'
 import { pySplitlines } from '../compat/text.ts'
@@ -223,6 +223,7 @@ export const VERSION_EXTRAS = [
   'replies',
   'swapped',
   'votes',
+  'bet_marks',
 ] as const
 
 /** The version at the top of the frontmatter, shaped as an item of
@@ -245,6 +246,32 @@ export const currentVersion = (front: YamlMapping): YamlMapping => {
     if (front.has(field)) version.set(field, get(field))
   return version
 }
+
+/** The versions of a Session in order, including the current one. */
+export const sessionVersions = (
+  front: YamlMapping,
+): ReadonlyArray<YamlMapping> => {
+  const earlier = front.get('versions')
+  return [
+    ...(isSequence(earlier) ? earlier.filter(isMapping) : []),
+    currentVersion(front),
+  ]
+}
+
+/** The Aposta saved with a version's Recomendação, even if it moved on
+ * the Cartaz. */
+export const storedBet = (version: YamlMapping): YamlMapping | undefined => {
+  const list = version.get('recommendation')
+  return (isSequence(list) ? list : [])
+    .filter(isMapping)
+    .find((film) => pyTruthy(film.get('bet') ?? false))
+}
+
+const isTrue = Schema.is(Schema.Literal(true))
+
+/** Whether the stored Aposta required a higher Nota prevista. */
+export const isCautiousBet = (film: YamlMapping | undefined): boolean =>
+  isTrue(film?.get('cautious_bet'))
 
 /** The list the Dono saw of a version: the Cartaz's `shown`, or else the
  * Recomendação (`arquivo.na_tela`). */
