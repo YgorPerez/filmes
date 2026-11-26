@@ -153,3 +153,18 @@ movielens_tags = 0.25
 neighbors = 0.2
 genre = 0.1
 people = 0.1
+
+[diversity]
+# Diversidade (#177): MMR na ordem final. Cada lugar seguinte vai para o filme
+# com o maior λ × pontuação − (1 − λ) × a maior Parecença (a do `--parecido`,
+# medida a partir do filme de cima) com os filmes já escolhidos acima dele.
+# A pontuação é a primeira da Regra de escolha, com os bônus do filme; a faixa
+# (com Fato, só sinais do filme, só palpites) continua vindo antes. λ = 1 desliga.
+# Desligado até o `evaluate` no banco real e as Sessões do Dono provarem um
+# valor (mapa #169); nas Notas da fixture, 0,8 baixa a parecença do top 5.
+lambda = 1.0
+# Só os `depth` primeiros lugares saem do MMR, escolhidos entre os `pool`
+# primeiros filmes da ordem; os demais seguem a Regra. A Parecença só é medida
+# entre esses filmes.
+depth = 10
+pool = 30

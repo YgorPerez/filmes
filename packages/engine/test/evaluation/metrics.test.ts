@@ -11,6 +11,7 @@ import {
   type Evaluation,
 } from '../../src/index.ts'
 import { ROOT, useFixture, type Fixture } from '../fixture.ts'
+import { weightsWith } from '../recommendation/support.ts'
 
 const evaluated = async (
   fixture: Fixture,
@@ -174,6 +175,22 @@ describe('evaluate: similarity of the top 5', () => {
     const similarity = result.offline.people.similarityTop5!
     expect(similarity).toBeGreaterThan(0)
     expect(similarity).toBeLessThan(1)
+  })
+
+  test('falls with MMR in the order, and Recall@50 stays (#177)', async () => {
+    const fixture = useFixture()
+    const before = await evaluated(fixture)
+    const after = await evaluated(
+      fixture,
+      weightsWith(fixture, 'lambda = 1.0', 'lambda = 0.8'),
+    )
+
+    expect(after.offline.people.similarityTop5!).toBeLessThan(
+      before.offline.people.similarityTop5!,
+    )
+    // MMR only reorders the first 30 films of the order: the top 50 keeps
+    // the same films.
+    expect(after.offline.people.recall50).toBe(before.offline.people.recall50)
   })
 })
 

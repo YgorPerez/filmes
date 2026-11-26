@@ -16,7 +16,8 @@
 // the id. Each film carries each Presente's utility and Evidence, grouped by
 // slug in the Presentes' order; whoever has no Fact on the film gets the
 // "sem fato" line. The satisfaction line also goes in `filmLines` when
-// weighing who is behind changes the order.
+// weighing who is behind changes the order. Then MMR (`diversity.ts`, #177)
+// picks the first places for Diversidade, before the on-demand Restrições.
 
 import { Effect } from 'effect'
 import { compareTuple, type PyOrderable } from '../compat/compare.ts'
@@ -50,6 +51,7 @@ import {
   type ConstraintContext,
 } from './constraints.ts'
 import { readConstraints, type ConstraintRequest } from './constraints/index.ts'
+import { diversify, type Scored } from './diversity.ts'
 import {
   groupSatisfaction,
   satisfactionLine,
@@ -164,25 +166,29 @@ export interface RankOptions {
 
 type Key = readonly PyOrderable[]
 
-interface Ordered {
+interface Ordered extends Scored {
   readonly key: Key
   readonly film: Candidate
   readonly utilities: ReadonlyMap<string, number | null>
   readonly evidence: ReadonlyArray<Evidence>
 }
 
+/** 0 with some known utility, 1 with Facts only in the film signals, 2
+ * with guesses only. */
+const bandOf = (byRule: readonly number[] | null, hasFact: boolean): number =>
+  byRule !== null ? 0 : hasFact ? 1 : 2
+
 const orderKey = (
   byRule: readonly number[] | null,
   hasFact: boolean,
   film: Candidate,
   bonus: number,
-): Key => {
-  const band: Key =
-    byRule !== null
-      ? [0, byRule.map((v) => -(v + bonus))]
-      : [hasFact ? 1 : 2, [-bonus]]
-  return [...band, -film.votes, film.id]
-}
+): Key => [
+  bandOf(byRule, hasFact),
+  byRule !== null ? byRule.map((v) => -(v + bonus)) : [-bonus],
+  -film.votes,
+  film.id,
+]
 
 const byKey = (a: { key: Key }, b: { key: Key }) =>
   compareTuple([...a.key], [...b.key])
@@ -345,13 +351,12 @@ export const rank = (
       const hasFact = [...evidence, ...filmSignals].some(
         (e) => e.kind !== 'guess' && e.countsAsFact,
       )
+      const byRule = ruleKey(rule, utilities, adjustment)
       ordered.push({
-        key: orderKey(
-          ruleKey(rule, utilities, adjustment),
-          hasFact,
-          film,
-          bonus,
-        ),
+        key: orderKey(byRule, hasFact, film, bonus),
+        id: film.id,
+        band: bandOf(byRule, hasFact),
+        score: (byRule?.[0] ?? 0) + bonus,
         film,
         utilities,
         evidence,
@@ -378,16 +383,17 @@ export const rank = (
         }
       }
       const others = ordered.filter((item) => !kept(item.film.id))
+      const places = Math.max(count - fixed.length, 0)
       const free = yield* asked.approve(
-        others,
-        Math.max(count - fixed.length, 0),
+        yield* diversify(db, others, fixed, places, weights),
+        places,
         reach,
         (item) => item.film,
       )
       placed = place(regenerate, fixed, free, count, (item) => item.film.id)
     } else {
       const approved = yield* asked.approve(
-        ordered,
+        yield* diversify(db, ordered, [], count, weights),
         count,
         reach,
         (item) => item.film,
@@ -395,23 +401,26 @@ export const rank = (
       placed = approved.map((item, i) => [i + 1, item] as const)
     }
     const approvedIds = new Set(placed.map(([, item]) => item.film.id))
-    // The two orders with the same verdicts, without asking an on-demand
-    // source for more answers. When regenerating, only the free places
-    // compete: each one's order is among the films not kept, and the kept
-    // film, there because the Dono asked, gets no satisfaction line.
+    // The two orders by the Regra, with and without weighing the
+    // satisfaction, over the same films: the ones with the same verdicts,
+    // without asking an on-demand source for more answers. MMR does not
+    // enter: a film it moved up did not go up by the satisfaction. When
+    // regenerating, only the free places compete: each one's order is among
+    // the films not kept, and the kept film, there because the Dono asked,
+    // gets no satisfaction line.
+    const competes = (id: string) =>
+      (approvedIds.has(id) || !asked.pending.get(id)?.length) && !kept(id)
     const positionUnweighed = new Map(
       unweighed
         .sort(byKey)
-        .filter(
-          ({ id }) =>
-            (approvedIds.has(id) || !asked.pending.get(id)?.length) &&
-            !kept(id),
-        )
+        .filter(({ id }) => competes(id))
         .map(({ id }, i) => [id, i + 1]),
     )
-    const contested = new Map<string, number>()
-    for (const [, item] of placed)
-      if (!kept(item.film.id)) contested.set(item.film.id, contested.size + 1)
+    const contested = new Map(
+      ordered
+        .filter((item) => competes(item.id))
+        .map((item, i) => [item.id, i + 1]),
+    )
 
     const names = new Map<string, string>()
     if (adjustment.size > 0)
