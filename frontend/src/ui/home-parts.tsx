@@ -7,7 +7,7 @@ import type {
   SetupView,
 } from '#/platform/setup-guide'
 import { HOME } from './home.copy'
-import { useFetchForm } from './kit/fetch-form'
+import { PostForm } from './kit/post-form'
 import { isSkipped, stateOf } from './setup-steps'
 import { Icon } from './kit/icon'
 import { ShelfLabel } from './kit/shelf-label'
@@ -196,22 +196,24 @@ function Mark({ state, n }: { state: StepState; n: number }) {
 
 function Skip({ step }: { step: SetupStepView['step'] }) {
   const { guide } = HOME
-  const { onSubmit, busy } = useFetchForm()
-  const skipping = busy !== null
   return (
-    <form method="post" action="/inicio/pular" onSubmit={onSubmit}>
-      <input type="hidden" name="passo" value={step} />
-      <button
-        type="submit"
-        aria-label={
-          skipping ? undefined : guide.skipLabel(guide.steps[step].title)
-        }
-        disabled={skipping}
-        className={buttonVariants({ variant: 'link', className: 'px-sm' })}
-      >
-        {skipping ? guide.skipping : guide.skip}
-      </button>
-    </form>
+    <PostForm action="/inicio/pular">
+      {(skipping) => (
+        <>
+          <input type="hidden" name="passo" value={step} />
+          <button
+            type="submit"
+            aria-label={
+              skipping ? undefined : guide.skipLabel(guide.steps[step].title)
+            }
+            disabled={skipping}
+            className={buttonVariants({ variant: 'link', className: 'px-sm' })}
+          >
+            {skipping ? guide.skipping : guide.skip}
+          </button>
+        </>
+      )}
+    </PostForm>
   )
 }
 

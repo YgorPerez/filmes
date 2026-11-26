@@ -1,12 +1,12 @@
 import { FIELD } from './kit/field'
-import { createContext, useContext, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import type { QueueNotice, QueueRefusal } from '#/content/import-action'
 import { MY_TASTE } from '#/content/paths'
 import type { QueueEntry, QueuePage, QueueSuggestion } from '#/platform/imports'
 import { ImportsFrame } from './imports'
 import { QUEUE } from './imports.copy'
-import { useFetchForm } from './kit/fetch-form'
 import { FieldLabel } from './kit/field-label'
+import { PostAnswer, PostForm } from './kit/post-form'
 import { usePostedFeedback } from './kit/posted-feedback'
 import { PageHead } from './kit/page-head'
 import { TapeCase } from './kit/tape-case'
@@ -20,11 +20,6 @@ export type QueueDoneView = {
   resolved?: number
   left?: number
 }
-
-/** What the screen does with a form's answer (`usePostedFeedback`). */
-const Answered = createContext<
-  ((to: string, form: HTMLFormElement) => boolean) | undefined
->(undefined)
 
 /** A form of the queue: a POST to `/fila/acao`, by `fetch` once the
  * JavaScript is in (#240). `children` see whether its post is running. */
@@ -41,19 +36,16 @@ function QueueForm({
   className?: string
   children: (busy: boolean) => ReactNode
 }) {
-  const { onSubmit, busy } = useFetchForm(useContext(Answered))
   return (
-    <form
-      method="post"
-      action="/fila/acao"
-      aria-label={label}
-      onSubmit={onSubmit}
-      className={className}
-    >
-      <input type="hidden" name="acao" value={action} />
-      {id !== undefined && <input type="hidden" name="id" value={id} />}
-      {children(busy !== null)}
-    </form>
+    <PostForm action="/fila/acao" label={label} className={className}>
+      {(busy) => (
+        <>
+          <input type="hidden" name="acao" value={action} />
+          {id !== undefined && <input type="hidden" name="id" value={id} />}
+          {children(busy)}
+        </>
+      )}
+    </PostForm>
   )
 }
 
@@ -73,7 +65,7 @@ export function QueueScreen({
     done ? `${done.notice}:${done.resolved}:${done.left}` : (refusal ?? ''),
   )
   return (
-    <Answered.Provider value={onAnswer}>
+    <PostAnswer.Provider value={onAnswer}>
       <ImportsFrame back={QUEUE.back} backTo={`${MY_TASTE}/importar`}>
         <PageHead title={QUEUE.title} lead={QUEUE.lead} />
         {(refusal || done) && (
@@ -130,7 +122,7 @@ export function QueueScreen({
           </>
         )}
       </ImportsFrame>
-    </Answered.Provider>
+    </PostAnswer.Provider>
   )
 }
 

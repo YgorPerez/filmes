@@ -1,6 +1,6 @@
 import type { WaitingAnswers } from '@filmes/engine'
 import { buttonVariants } from './kit/button-variants'
-import type { useFetchForm } from './kit/fetch-form'
+import type { FormEventHandler } from 'react'
 import { PAIRWISE } from './pairwise.copy'
 
 const film = (f: { title: string; year: number | null }) =>
@@ -17,7 +17,7 @@ export function PairwiseAnswers({
 }: {
   action: string
   waiting: ReadonlyArray<WaitingAnswers>
-  post?: ReturnType<typeof useFetchForm>
+  post?: { onSubmit: FormEventHandler<HTMLFormElement>; busy: string | null }
 }) {
   const { owner } = PAIRWISE
   if (waiting.length === 0) return null

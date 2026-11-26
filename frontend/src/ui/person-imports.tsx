@@ -1,8 +1,8 @@
 import { FIELD } from './kit/field'
-import { useFetchForm } from './kit/fetch-form'
 import { FieldLabel } from './kit/field-label'
+import { PostAnswer, PostForm } from './kit/post-form'
 import { usePostedFeedback } from './kit/posted-feedback'
-import { createContext, useContext, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import type { PersonImports } from '@filmes/engine'
 import type { ImportNotice, ImportRefusal } from '#/content/import-action'
 import { personPath, QUEUE_PATH } from '#/content/paths'
@@ -59,7 +59,7 @@ export function PersonImportsScreen({
     done ? `${done.notice}:${done.facts}:${done.outside}` : (refusal ?? ''),
   )
   return (
-    <Answered.Provider value={onAnswer}>
+    <PostAnswer.Provider value={onAnswer}>
       <ImportsFrame back={COPY.back(name, own)} backTo={personPath(slug, own)}>
         {page === null ? (
           <Alert>{COPY.unavailable}</Alert>
@@ -85,16 +85,11 @@ export function PersonImportsScreen({
           </>
         )}
       </ImportsFrame>
-    </Answered.Provider>
+    </PostAnswer.Provider>
   )
 }
 
 const actionOf = (slug: string) => `/importar/${encodeURIComponent(slug)}/acao`
-
-/** What the screen does with a form's answer (`usePostedFeedback`). */
-const Answered = createContext<
-  ((to: string, form: HTMLFormElement) => boolean) | undefined
->(undefined)
 
 /** A form of this page: a POST, multipart when it sends a file, by `fetch`
  * once the JavaScript is in (#240). `children` see whether its post is
@@ -112,19 +107,20 @@ function ImportForm({
   upload?: boolean
   children: (busy: boolean) => ReactNode
 }) {
-  const { onSubmit, busy } = useFetchForm(useContext(Answered))
   return (
-    <form
-      method="post"
+    <PostForm
       action={actionOf(slug)}
-      encType={upload ? 'multipart/form-data' : undefined}
-      aria-label={label}
-      onSubmit={onSubmit}
+      upload={upload}
+      label={label}
       className="flex flex-col gap-xl"
     >
-      <input type="hidden" name="acao" value={action} />
-      {children(busy !== null)}
-    </form>
+      {(busy) => (
+        <>
+          <input type="hidden" name="acao" value={action} />
+          {children(busy)}
+        </>
+      )}
+    </PostForm>
   )
 }
 

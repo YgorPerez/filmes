@@ -1,6 +1,6 @@
-// A form posted by `fetch` (#235): the header it carries, and how its
-// route answers it. Client-safe: the page's `useFetchForm` and the routes
-// both use it.
+// A form posted by `fetch` (#235): the header it carries, and how the
+// server answers it. Client-safe: the page's `useFetchForm` and the server
+// entry (`server.ts`, around every route of the app) both use it.
 
 /** The header a form sent by `fetch` carries (`useFetchForm`): its route
  * answers `{ to }` as JSON instead of the 303, and the page goes there

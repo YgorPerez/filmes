@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { useFetchForm } from './kit/fetch-form'
+import { PostForm } from './kit/post-form'
 import { OPERATIONS } from './operations.copy'
 import { Alert, Section, Submit } from './person-parts'
 
@@ -22,24 +22,21 @@ export function ActionPost({
   submitClassName?: string
   children?: ReactNode
 }) {
-  const { onSubmit, busy } = useFetchForm()
-  const sending = busy !== null
   const { evaluation, push } = OPERATIONS
   const label = action === 'avaliar' ? evaluation.run : push.retry
   const pending = action === 'avaliar' ? evaluation.running : push.sending
   return (
-    <form
-      method="post"
-      action="/operacoes/acao"
-      className={className}
-      onSubmit={onSubmit}
-    >
-      <input type="hidden" name="acao" value={action} />
-      {children}
-      <Submit className={submitClassName} disabled={sending}>
-        {sending ? pending : label}
-      </Submit>
-    </form>
+    <PostForm action="/operacoes/acao" className={className}>
+      {(sending) => (
+        <>
+          <input type="hidden" name="acao" value={action} />
+          {children}
+          <Submit className={submitClassName} disabled={sending}>
+            {sending ? pending : label}
+          </Submit>
+        </>
+      )}
+    </PostForm>
   )
 }
 

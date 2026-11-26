@@ -2,7 +2,7 @@ import type { FilmRef } from '@filmes/engine'
 import { pairwisePath } from '#/content/pairwise-address'
 import type { PairwisePage } from '#/platform/pairwise'
 import { buttonVariants } from './kit/button-variants'
-import { useFetchForm } from './kit/fetch-form'
+import { PostForm } from './kit/post-form'
 import { Alert, Notice } from './kit/status'
 import { PAIRWISE } from './pairwise.copy'
 
@@ -46,7 +46,6 @@ export function PairwiseQuestion({
   back: string
 }) {
   const pair = page?.pair ?? null
-  const { onSubmit, busy } = useFetchForm()
   return (
     <section aria-labelledby="pergunta" className="flex flex-col gap-lg">
       <h1 id="pergunta" className="font-display text-title">
@@ -60,33 +59,35 @@ export function PairwiseQuestion({
         <>
           <p className="text-ink-2">{PAIRWISE.lead}</p>
           {failed && <Alert>{PAIRWISE.failed}</Alert>}
-          <form
-            method="post"
+          <PostForm
             action="/participar/perguntas/enviar"
-            aria-label={PAIRWISE.title}
-            onSubmit={onSubmit}
+            label={PAIRWISE.title}
             className="flex flex-col gap-md"
           >
-            <p className="text-meta text-ink-2 tabular-nums">
-              {PAIRWISE.progress(page.answered + 1, page.total)}
-            </p>
-            <input type="hidden" name="sessao" value={link.session} />
-            <input type="hidden" name="chave" value={link.token} />
-            <input type="hidden" name="presente" value={link.person} />
-            <input type="hidden" name="a" value={pair[0].id} />
-            <input type="hidden" name="b" value={pair[1].id} />
-            <Choice film={pair[0]} busy={busy !== null} />
-            <Choice film={pair[1]} busy={busy !== null} />
-            <button
-              type="submit"
-              name="escolha"
-              value=""
-              disabled={busy !== null}
-              className={buttonVariants({ variant: 'link' })}
-            >
-              {PAIRWISE.skip}
-            </button>
-          </form>
+            {(busy) => (
+              <>
+                <p className="text-meta text-ink-2 tabular-nums">
+                  {PAIRWISE.progress(page.answered + 1, page.total)}
+                </p>
+                <input type="hidden" name="sessao" value={link.session} />
+                <input type="hidden" name="chave" value={link.token} />
+                <input type="hidden" name="presente" value={link.person} />
+                <input type="hidden" name="a" value={pair[0].id} />
+                <input type="hidden" name="b" value={pair[1].id} />
+                <Choice film={pair[0]} busy={busy} />
+                <Choice film={pair[1]} busy={busy} />
+                <button
+                  type="submit"
+                  name="escolha"
+                  value=""
+                  disabled={busy}
+                  className={buttonVariants({ variant: 'link' })}
+                >
+                  {PAIRWISE.skip}
+                </button>
+              </>
+            )}
+          </PostForm>
         </>
       )}
       <a href={back} className={buttonVariants({ variant: 'link' })}>
