@@ -32,7 +32,8 @@ const openSession = async (person: string, count: number) =>
 
 /** Opens a Session for Bruno and `person` with Bruno's taste neighbours
  * on (the fixture's users 10, 20 and 30), so the 5th place is the Aposta
- * (#178); gives its id. */
+ * (#178), Pequenos Milagres; gives its id. No other file may make that film
+ * a Já visto of Bruno's. */
 const openBetSession = async (person: string) => {
   const root = process.env.E2E_ENGINE!
   const weights = `${root}/weights-bet.toml`
