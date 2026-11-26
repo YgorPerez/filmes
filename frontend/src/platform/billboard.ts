@@ -23,9 +23,12 @@ import {
   type Outcome,
 } from '@filmes/engine'
 import type { ReplyRefusal, SessionNotice } from '#/content/billboard-reply'
+import type { SessionLinkSearch } from '#/content/session-link-address'
 import { appEngine } from './engine'
 import { appPoster, formPoster, seeOther } from './form-post'
 import { appNotes, type Note, type Notes } from './notes'
+import { serverEnv } from './server-env'
+import { issueSessionLink, resolveSessionLink } from './session-link'
 import { sessionPage, sessionsFromEngine, type Sessions } from './sessions'
 import type { SessionItem } from './sessions'
 
@@ -113,6 +116,7 @@ export type CartazPage = {
   billboard: Billboard | null
   warnings: string[]
   addition: string | null
+  sessionLink?: string | null
 }
 
 export async function cartazPage(
@@ -189,18 +193,36 @@ const appBillboards = () => billboardsFromEngine(appEngine())
 
 /** One Session's page for the app, as the logged-in Dono `viewer` sees
  * it. */
-export const appCartazPage = (
+export async function appCartazPage(
   id: string,
   note: string | undefined,
   viewer: string,
-) =>
-  cartazPage(
+): Promise<CartazPage | 'unknown' | null> {
+  const engine = appEngine()
+  const page = await cartazPage(
     id,
     note,
-    sessionsFromEngine(appEngine(), viewer),
-    billboardsFromEngine(appEngine(), viewer),
+    sessionsFromEngine(engine, viewer),
+    billboardsFromEngine(engine, viewer),
     appNotes(),
   )
+  if (!page || page === 'unknown' || !page.session.open) return page
+  const { APP_ORIGIN, AUTH_DATABASE_PATH } = serverEnv()
+  return {
+    ...page,
+    sessionLink: await issueSessionLink(
+      id,
+      viewer,
+      engine,
+      AUTH_DATABASE_PATH,
+      APP_ORIGIN,
+    ),
+  }
+}
+
+/** The public page of a Link da Sessão, for the app. */
+export const appSessionLink = (search: SessionLinkSearch) =>
+  resolveSessionLink(search, appEngine(), serverEnv().AUTH_DATABASE_PATH)
 
 /** The reply's route for the app. */
 export const serveReply = (request: Request, id: string) => {
