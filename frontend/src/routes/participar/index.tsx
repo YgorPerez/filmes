@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { votePath } from '#/content/session-votes-address'
 import { buttonVariants } from '#/ui/kit/button-variants'
+import { PairwiseInvite } from '#/ui/pairwise'
 import { PARTICIPATION } from '#/ui/session-link.copy'
 import { VOTES } from '#/ui/session-votes.copy'
 
@@ -9,8 +10,9 @@ export const Route = createFileRoute('/participar/')({
 })
 
 function SessionLinkFilms() {
-  const films = Route.useRouteContext().participation?.films ?? []
+  const { participation } = Route.useRouteContext()
   const search = Route.useSearch()
+  const films = participation?.films ?? []
   return (
     <section
       aria-labelledby="filmes-da-sessao"
@@ -46,6 +48,13 @@ function SessionLinkFilms() {
         >
           {VOTES.open}
         </a>
+      )}
+      {participation?.selected && search.chave && (
+        <PairwiseInvite
+          session={participation.session}
+          token={search.chave}
+          person={participation.selected.person}
+        />
       )}
     </section>
   )

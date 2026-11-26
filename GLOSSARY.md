@@ -177,6 +177,10 @@ _Evitar_: pendências
 Os filmes que a tela de notas oferece a um Dono sem Import, um de cada vez, para ele dar Nota ou dizer "não vi": os de mais votos no IMDb que ele não viu, variando a década e o gênero. Cada Nota dada ali vira um Já visto com Nota, gravado num commit só quando ele diz "Pronto".
 _Evitar_: questionário
 
+**Pergunta par a par** [pairwise question, `PairwiseQuestion`]:
+"Qual dos dois você gostou mais?", feita a um Presente pelo Link da Sessão: dois filmes que ele ainda não tem como Já visto, escolhidos pela entropia das notas do MovieLens vezes a popularidade (Rashid et al. 2002, #170), porque um filme que muita gente viu e que divide opiniões diz mais sobre quem responde. Escolher um diz que viu os dois; "não vi os dois" pula o par. A resposta fica na Sessão até o Dono gravar ou descartar: gravada, o escolhido vira Nota 3,5 (Força fraca) e o outro, Já visto sem Nota (#181).
+_Evitar_: quiz, duelo, questionário
+
 **Motivo** [reason, `Reason`]:
 Uma razão para um filme estar na Recomendação.
 _Evitar_: justificativa, explicação

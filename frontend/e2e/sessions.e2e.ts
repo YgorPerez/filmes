@@ -248,6 +248,70 @@ test('the link only works for its Session while it is open', async ({
   }
 })
 
+// The Perguntas par a par (#181): through the link, a Presente says which of
+// two films she liked more; the answers wait on the Session's page until
+// the Dono records them.
+
+test('a Presente answers pairwise questions and the Dono records them', async ({
+  page,
+  browser,
+}, info) => {
+  const person = info.project.name === 'desktop' ? 'teo' : 'iara'
+  const name = info.project.name === 'desktop' ? 'Teo' : 'Iara'
+  const opened = await engineRun((engine) =>
+    engine.run(recommendSession({ attendees: ['dono', person], count: 2 }), {
+      owner: 'bruno',
+    }),
+  )
+  const path = `/sessoes/${opened.session.id}`
+  await loginAsBruno(page)
+  await page.goto(path)
+  const shared = await page
+    .getByRole('link', { name: 'Link para os Presentes' })
+    .getAttribute('href')
+  if (!shared) throw new Error('the Session had no link')
+  const href = new URL(shared)
+  href.searchParams.set('presente', person)
+
+  const guest = await browser.newContext()
+  try {
+    const participant = await guest.newPage()
+    await participant.goto(href.href)
+    await participant
+      .getByRole('link', { name: 'Responder perguntas de gosto' })
+      .click()
+    const question = participant.getByRole('form', {
+      name: 'Qual dos dois você gostou mais?',
+    })
+    await expect(question).toContainText('Pergunta 1 de 10')
+    await snap(participant, info, 'perguntas-par-a-par')
+    const [chosen, other] = await question
+      .getByRole('button')
+      .evaluateAll((buttons) => buttons.map((b) => b.textContent ?? ''))
+    await question.getByRole('button', { name: chosen }).click()
+    await expect(question).toContainText('Pergunta 2 de 10')
+    await question.getByRole('button', { name: 'Não vi os dois' }).click()
+    await expect(question).toContainText('Pergunta 3 de 10')
+
+    await page.reload()
+    const answers = page.getByRole('form', { name })
+    await expect(answers.getByRole('listitem')).toHaveText([
+      `Preferiu ${chosen} a ${other}`,
+    ])
+    await snap(page, info, 'sessao-perguntas-dono')
+    await answers
+      .getByRole('button', { name: `Gravar as respostas de ${name}` })
+      .click()
+    await expect(page).toHaveURL(/\?feito=perguntas-gravadas$/)
+    await expect(page.getByRole('status').first()).toContainText(
+      'Respostas gravadas',
+    )
+    await expect(page.getByRole('form', { name })).toHaveCount(0)
+  } finally {
+    await guest.close()
+  }
+})
+
 test('each Presente votes on the films; a no swaps the film and the Session is redone', async ({
   page,
   browser,

@@ -291,6 +291,13 @@ describe('Enviar and Copiar pro chat', () => {
     expect(onSend).not.toHaveBeenCalled()
   })
 
+  it('on the web, the empty form is not posted and says so', async () => {
+    const user = userEvent.setup()
+    render(<Billboard billboard={MODEL} action="/x" />)
+    await user.click(screen.getByRole('button', { name: BILLBOARD.reply.send }))
+    expect(screen.getByRole('status').textContent).toBe(BILLBOARD.reply.nothing)
+  })
+
   it('Enviar hands the text to `onSend` (the MCP Apps view)', async () => {
     const user = userEvent.setup()
     const onSend = vi.fn<(text: string) => void>()

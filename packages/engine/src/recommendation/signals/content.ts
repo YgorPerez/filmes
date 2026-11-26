@@ -41,6 +41,7 @@ import {
   castStrength,
   HIGH_RATING,
   isHighRating,
+  isPairwiseSource,
   linkStrength,
   pathStrength,
   seedStrength,
@@ -122,10 +123,12 @@ ORDER BY c.filme_id, c.entidade_id
 const fill = (template: string, entity: string): string =>
   template.replace('{}', () => entity)
 
-/** A high seed: a Nota by its percentile, a stated rating by its value. */
+/** A high seed: a Nota by its percentile, a stated rating by its value. A
+ * pairwise answer's Nota is weak (`seedStrength`), so never high. */
 const isHigh = (scale: RatingScale, seed: Row): boolean =>
   kindOf(text(seed, 'nota_tipo')) === 'rating'
-    ? isHighRating(scale, num(seed, 'nota'))
+    ? !isPairwiseSource(text(seed, 'nota_fonte')) &&
+      isHighRating(scale, num(seed, 'nota'))
     : num(seed, 'nota') >= HIGH_RATING
 
 const highRatings = (high: ReadonlyArray<Row>): string => {
@@ -205,7 +208,10 @@ export const content: Signal = {
                 rating,
                 date,
                 today,
-                textOrNull(s, 'nota_sessao') !== null,
+                {
+                  fromFeedback: textOrNull(s, 'nota_sessao') !== null,
+                  source: text(s, 'nota_fonte'),
+                },
               )
               const start = seedText(
                 kind,

@@ -6,7 +6,7 @@
 // that redo. Votos never touch taste. Server only.
 //
 // Every post revalidates the link first (`resolveSessionLink`, with a
-// Presente chosen) and takes only a form of this site (`fromThisSite`). The Session is
+// Presente chosen) and takes only a form of this site (`same-site.ts`). The Session is
 // derived from the link, never from the form. Votos and the redo of one
 // Session run one after another, so a redo always keeps the films of the
 // screen that is current when it starts.
@@ -32,6 +32,7 @@ import {
 import { seeOther } from './form-post'
 import type { SessionFilm } from './session-fields'
 import { resolveSessionLink } from './session-link'
+import { fromThisSite } from './same-site'
 
 /** What the deck shows the chosen Presente: the current version and the
  * films of its screen she has not voted on in the Session. */
@@ -72,15 +73,6 @@ function logEngineError({ output }: { output: ErrorOutput }): void {
 
 const filmsOf = (form: FormData, name: string) =>
   form.getAll(name).filter((v): v is string => typeof v === 'string')
-
-/** A form of this site. The link's pages send no referrer, so the
- * browser posts their form with `Origin: null`; `Sec-Fetch-Site` still
- * says where it came from. */
-function fromThisSite(request: Request, origin: string | undefined) {
-  const site = request.headers.get('sec-fetch-site')
-  if (site !== null) return site === 'same-origin'
-  return origin !== undefined && request.headers.get('origin') === origin
-}
 
 /** `POST /participar/votos?sessao=…&chave=…&presente=…`: records the
  * chosen Presente's Votos and, when one is a no, redoes the Session; back

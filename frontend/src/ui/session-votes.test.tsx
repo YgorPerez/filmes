@@ -70,6 +70,13 @@ it('a drag to the left is a no and to the right a yes; a short one is nothing', 
 
   drag(200, 180)
   expect(screen.getByRole('heading', { name: 'O Farol de Areia' })).toBeTruthy()
+  // A cancelled drag, or a release with no press, votes nothing.
+  const card = screen.getByRole('article')
+  fireEvent.pointerDown(card, { clientX: 200 })
+  fireEvent.pointerCancel(card)
+  fireEvent.pointerUp(card, { clientX: 40 })
+  fireEvent.pointerUp(card, { clientX: 400 })
+  expect(screen.getByRole('heading', { name: 'O Farol de Areia' })).toBeTruthy()
   drag(200, 40)
   drag(40, 200)
 
@@ -81,9 +88,16 @@ it('a drag to the left is a no and to the right a yes; a short one is nothing', 
 })
 
 const LINK = { sessao: '2026-11-20-iara', chave: 'k', presente: 'iara' }
+const HOME = '/participar?sessao=2026-11-20-iara&chave=k&presente=iara'
 
 it('the page posts the link’s search and says what the last post did', () => {
-  render(<VoteScreen deck={DECK} search={{ ...LINK, feito: 'regerada' }} />)
+  render(
+    <VoteScreen
+      deck={DECK}
+      search={{ ...LINK, feito: 'regerada' }}
+      home={HOME}
+    />,
+  )
 
   expect(screen.getByRole('status').textContent).toBe(VOTES.notices.regerada)
   expect(screen.queryByRole('alert')).toBeNull()
@@ -97,6 +111,7 @@ it('with every film voted on, it offers to look again and the list', () => {
     <VoteScreen
       deck={{ version: 2, films: [] }}
       search={{ ...LINK, erro: 'regerar' }}
+      home={HOME}
     />,
   )
 
@@ -107,11 +122,11 @@ it('with every film voted on, it offers to look again and the list', () => {
   ).toBe('/participar/votar?sessao=2026-11-20-iara&chave=k&presente=iara')
   expect(
     screen.getByRole('link', { name: VOTES.list }).getAttribute('href'),
-  ).toBe('/participar?sessao=2026-11-20-iara&chave=k&presente=iara')
+  ).toBe(HOME)
 })
 
 it('without a link there is no deck and no list', () => {
-  render(<VoteScreen deck={null} search={{}} />)
+  render(<VoteScreen deck={null} search={{}} home={null} />)
 
   expect(screen.queryByRole('form')).toBeNull()
   expect(screen.queryByRole('link', { name: VOTES.list })).toBeNull()

@@ -1,5 +1,4 @@
 import { useRef, useState, type PointerEvent } from 'react'
-import { sessionLinkPath } from '#/content/session-link-address'
 import {
   votePath,
   type VoteNotice,
@@ -129,6 +128,7 @@ export function VoteCards({
 export function VoteScreen({
   deck,
   search,
+  home,
 }: {
   deck: VoteDeck | null
   search: {
@@ -138,9 +138,10 @@ export function VoteScreen({
     feito?: VoteNotice | undefined
     erro?: VoteRefusal | undefined
   }
+  /** The link's film list, or null without a link. */
+  home: string | null
 }) {
-  const { sessao, chave, presente, feito, erro } = search
-  const list = sessao && chave ? sessionLinkPath(sessao, chave, presente) : null
+  const { feito, erro } = search
   return (
     <section aria-labelledby="votar" className="flex flex-col gap-lg">
       <h1 id="votar" className="font-display text-title">
@@ -164,8 +165,8 @@ export function VoteScreen({
             >
               {VOTES.refresh}
             </a>
-            {list && (
-              <a href={list} className={buttonVariants({ variant: 'option' })}>
+            {home && (
+              <a href={home} className={buttonVariants({ variant: 'option' })}>
                 {VOTES.list}
               </a>
             )}
