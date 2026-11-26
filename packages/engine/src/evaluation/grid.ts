@@ -4,7 +4,8 @@
 // time: with five predicates the full product would give 243 sets of path
 // weights for each set of multipliers, and the grid would stop being small.
 // The N of the strongest-Evidence cut (`[utility] max_evidence`) varies on
-// its own, with the rest as the config has it (#57).
+// its own, with the rest as the config has it (#57), and so does the
+// half-life of the Decaimento (`[rating_decay] half_life_years`, #173).
 //
 // The order of the combinations follows Python's, which walks the path
 // weights by their Portuguese names (`diretor, elenco, genero, roteiro,
@@ -19,10 +20,17 @@ import type { Measures } from './offline.ts'
 
 export const MAX_EVIDENCE = [3, 5, 8, 10] as const
 
+/** The Decaimento half-lives tried, in years (#173). */
+export const HALF_LIFE_YEARS = [2.5, 5, 10, 20] as const
+
 /** The Forças, weakest first (Python's `FORCAS`). */
 const STRENGTHS = ['weak', 'moderate', 'strong'] as const
 
-type Section = 'path.weight' | 'strength.multiplier' | 'utility'
+type Section =
+  | 'path.weight'
+  | 'strength.multiplier'
+  | 'utility'
+  | 'rating_decay'
 
 /** The values tried, by section and key (`valores`). Keys are the EN
  * config keys. */
@@ -48,6 +56,7 @@ export const gridSpace = (weights: Weights): GridSpace => ({
     STRENGTHS.map((s) => [s, variations(weights.strength.multiplier[s])]),
   ),
   utility: new Map([['max_evidence', MAX_EVIDENCE]]),
+  rating_decay: new Map([['half_life_years', HALF_LIFE_YEARS]]),
 })
 
 const withValue = (
@@ -75,6 +84,11 @@ const withValue = (
       }
     case 'utility':
       return { ...weights, utility: { ...weights.utility, [key]: value } }
+    case 'rating_decay':
+      return {
+        ...weights,
+        rating_decay: { ...weights.rating_decay, [key]: value },
+      }
   }
 }
 
@@ -120,9 +134,18 @@ export const combinations = (weights: Weights, space: GridSpace): Weights[] => {
       const pathsChanged = Object.entries(config.path.weight).filter(
         ([link, value]) => value !== weights.path.weight[link],
       ).length
-      const cutChanged =
-        config.utility.max_evidence !== weights.utility.max_evidence
-      if (cutChanged && (pathsChanged || !sameMultipliers(config, weights)))
+      // The cut's N and the half-life each vary alone.
+      const aloneChanged =
+        Number(config.utility.max_evidence !== weights.utility.max_evidence) +
+        Number(
+          config.rating_decay.half_life_years !==
+            weights.rating_decay.half_life_years,
+        )
+      if (
+        aloneChanged > 1 ||
+        (aloneChanged === 1 &&
+          (pathsChanged || !sameMultipliers(config, weights)))
+      )
         return
       if (
         strengths.weak <= strengths.moderate &&
@@ -152,6 +175,7 @@ export interface GridEntry {
     readonly 'path.weight': Readonly<Record<string, number>>
     readonly 'strength.multiplier': Weights['strength']['multiplier']
     readonly utility: { readonly max_evidence: number }
+    readonly rating_decay: { readonly half_life_years: number }
   }
   readonly recall50: number | null
   readonly coverageTop5: number | null
@@ -176,6 +200,9 @@ const entry = (
     'path.weight': config.path.weight,
     'strength.multiplier': config.strength.multiplier,
     utility: { max_evidence: config.utility.max_evidence },
+    rating_decay: {
+      half_life_years: config.rating_decay.half_life_years,
+    },
   },
   recall50: meanOf(offline, 'recall50'),
   coverageTop5: meanOf(offline, 'coverageTop5'),
