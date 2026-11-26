@@ -377,18 +377,19 @@ describe('Does the Dog Die', () => {
   })
 })
 
-describe('TMDB', () => {
-  const page = (n: number, total: number) =>
-    json({
-      page: n,
-      total_pages: total,
-      results: [{ id: n * 10 }, { id: n * 10 + 1 }],
-    })
+/** One page of a TMDB search, of `total`. */
+const tmdbPage = (n: number, total: number) =>
+  json({
+    page: n,
+    total_pages: total,
+    results: [{ id: n * 10 }, { id: n * 10 + 1 }],
+  })
 
+describe('TMDB', () => {
   test('a search reads every page into one cached entry, with a v3 key in the query', async () => {
     const fixture = useFixture()
     const net = fakeFetch((url) =>
-      page(Number(new URL(url).searchParams.get('page') ?? 1), 3),
+      tmdbPage(Number(new URL(url).searchParams.get('page') ?? 1), 3),
     )
 
     const films = await fixture.ok(
@@ -444,17 +445,12 @@ describe('TMDB', () => {
 })
 
 describe('TMDB', () => {
-  const page = (n: number, total: number) =>
-    json({
-      page: n,
-      total_pages: total,
-      results: [{ id: n * 10 }, { id: n * 10 + 1 }],
-    })
-
   test('a failed later page fails the whole search', async () => {
     const fixture = useFixture()
     const net = fakeFetch((url) =>
-      url.includes('page=2') ? new Response('', { status: 400 }) : page(1, 2),
+      url.includes('page=2')
+        ? new Response('', { status: 400 })
+        : tmdbPage(1, 2),
     )
 
     const answer = await fixture.ok(
@@ -480,7 +476,7 @@ describe('TMDB', () => {
   test('an empty later page adds nothing', async () => {
     const fixture = useFixture()
     const net = fakeFetch((url) =>
-      url.includes('page=2') ? json({}) : page(1, 2),
+      url.includes('page=2') ? json({}) : tmdbPage(1, 2),
     )
 
     const films = await fixture.ok(

@@ -589,24 +589,19 @@ const withBet = (
   Effect.gen(function* () {
     const { seed } = r.options
     const candidates = pool.filter((item) => betOdds.has(item.film.id))
+    const noBet = Effect.map(
+      regularFill(r, pool, chosen, places),
+      (regular): BetFill => ({ regular, bet: undefined, cautious: false }),
+    )
     if (seed === undefined || candidates.length === 0 || places < 1)
-      return {
-        regular: yield* regularFill(r, pool, chosen, places),
-        bet: undefined,
-        cautious: false,
-      }
+      return yield* noBet
     const policy = betPolicy(
       seed,
       r.options.attendees,
       yield* readBetRecord(r.round, r.options.session),
       r.weights.bet,
     )
-    if (!policy.offer)
-      return {
-        regular: yield* regularFill(r, pool, chosen, places),
-        bet: undefined,
-        cautious: false,
-      }
+    if (!policy.offer) return yield* noBet
     const regular = yield* regularFill(r, pool, chosen, places - 1)
     return yield* drawBet(r, {
       seed,
