@@ -19,7 +19,7 @@ import {
 import userEvent from '@testing-library/user-event'
 import { afterEach, expect, it, vi } from 'vite-plus/test'
 import { PeopleList } from './people'
-import { PEOPLE } from './person.copy'
+import { PEOPLE } from './people.copy'
 
 afterEach(() => {
   cleanup()

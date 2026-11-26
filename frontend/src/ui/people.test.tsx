@@ -6,7 +6,7 @@ import userEvent from '@testing-library/user-event'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { afterEach, describe, expect, it } from 'vite-plus/test'
 import { parseNewPerson, PERSON_CREATE_REFUSALS } from '#/content/person-create'
-import { PEOPLE } from './person.copy'
+import { PEOPLE } from './people.copy'
 import { PeopleList } from './people'
 
 afterEach(cleanup)

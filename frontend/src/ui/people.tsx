@@ -5,7 +5,7 @@ import {
 } from '#/content/person-create'
 import type { PersonEntry } from '#/platform/people'
 import { personPath } from '#/content/paths'
-import { PEOPLE } from './person.copy'
+import { PEOPLE } from './people.copy'
 import { useFetchForm } from './kit/fetch-form'
 import { OwnerTag } from './kit/owner-tag'
 import { refusalOn, useRefusalInPlace } from './kit/refusal-in-place'

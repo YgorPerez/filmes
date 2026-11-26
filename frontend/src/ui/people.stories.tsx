@@ -2,7 +2,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, within } from 'storybook/test'
 import { PeopleList } from './people'
-import { PEOPLE } from './person.copy'
+import { PEOPLE } from './people.copy'
 
 const PEOPLE_LIST = [
   { person: 'bruno', name: 'Bruno', aliases: ['eu'], owner: true },
