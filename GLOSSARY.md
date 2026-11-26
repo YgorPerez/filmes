@@ -110,8 +110,8 @@ _Evitar_: descartado, rejeitado
 O sim ou o não de um Presente a um filme da tela, dado no celular pelo Link da Sessão, um filme de cada vez (o swipe do grupo, #182). Fica na versão da Sessão com quem votou e a data. O não é um Trocado daquele Presente: o filme sai e a Sessão regera. O sim sobe o filme: ao regerar, os Mantidos com mais sins, na Sessão inteira, vêm primeiro, nos números que os Mantidos já tinham, e as vagas não mudam. Voto não é Fato e não mexe no gosto.
 _Evitar_: curtida, like
 
-**Saída** [dropped, `dropped`; causa: `seen`, `swapped`, `constraint`, `veto`, `min_rating`]:
-Um filme da versão anterior que não está na nova, com a causa. A causa não é Motivo: Motivo é por que um filme está na Recomendação.
+**Saída** [dropped, `dropped`; causa: `seen`, `swapped`, `constraint`, `veto`, `min_rating`, `mood`]:
+Um filme da versão anterior que não está na nova, com a causa. A causa `mood` é de quem caiu porque o Dono pediu outro Clima: o filme continua elegível na Sessão. A causa não é Motivo: Motivo é por que um filme está na Recomendação.
 
 **Capa** [poster, `poster`]:
 O pôster do filme, vindo do TMDB. Não é o Cartaz, que é a Recomendação inteira.

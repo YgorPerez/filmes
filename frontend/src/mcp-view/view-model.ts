@@ -63,12 +63,19 @@ const line = (text: string) =>
 const MESSAGE_LIMIT = 8000
 
 /** What Claude must hear after Enviar: the reply is recorded, and the
- * regenerate (`keep`), the acrescentar and the comments are his to read.
+ * regenerate (`keep`), the Climas chosen, the acrescentar and the comments
+ * are his to read.
  * Null when there is nothing for him (stars, or Notas that dropped no film). */
 export function replyMessage(
   reply: Pick<
     BillboardReply,
-    'session' | 'version' | 'regenerate' | 'keep' | 'addition' | 'comments'
+    | 'session'
+    | 'version'
+    | 'regenerate'
+    | 'keep'
+    | 'moods'
+    | 'addition'
+    | 'comments'
   >,
 ): string | null {
   const comments = reply.comments.filter((c) => line(c.comment ?? '') !== '')
@@ -78,6 +85,8 @@ export function replyMessage(
     `Enviei o Cartaz ${reply.session.id} v${reply.version} pela tela; answer_billboard já gravou.`,
     reply.regenerate &&
       `refazer · manter: ${reply.keep.length > 0 ? reply.keep.join(', ') : 'nenhum'}`,
+    reply.moods !== null &&
+      `clima: ${reply.moods.length > 0 ? reply.moods.join(', ') : 'nenhum'}`,
     reply.addition !== null && `acrescentar: ${line(reply.addition)}`,
     ...comments.map(
       (c) =>

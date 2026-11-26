@@ -12,6 +12,7 @@ export const MOODS = [
   'pra pensar',
   'assustador',
   'ação',
+  'sombrio',
 ]
 
 const person = z
@@ -43,7 +44,9 @@ export default defineTool({
     'Com `swap`, os filmes dados viram Trocados da Sessão antes de refazer ("outras opções" no chat: passe os da tela); sem `swap` nem `keep`, o refazer devolve a mesma lista. ' +
     'Com `keep`, os mantidos ficam no número da versão anterior e só as vagas ganham filme novo; cada filme traz `new` ' +
     '(false no que já estava na tela anterior), e a resposta traz `kept` e `dropped` ({position, id, title, cause}: `seen` com `people`, ' +
-    '`swapped`, `constraint` com `constraint` e `label`, `veto` com `person` e `text`, ou `min_rating` com `label`). ' +
+    '`swapped`, `constraint` com `constraint` e `label`, `veto` com `person` e `text`, `min_rating` com `label`, ou `mood`). ' +
+    'O Clima puxa a ordem e nunca tira filme. Com `session`, Climas diferentes dos da versão anterior (por nome, em qualquer ordem) trocam a lista inteira: ' +
+    'ignoram `keep`, com aviso, e quem sai sem ser Já vi nem Trocado sai com `cause: mood` e pode voltar. Num refazer, repita os Climas da versão anterior. ' +
     'Uma Restrição ou um Veto do pedido tiram também o mantido que os viola, e o mantido abaixo da nota ou dos votos mínimos do IMDb sai, com aviso; gosto novo não tira mantido. ' +
     'A resposta inclui `moods` (os Climas aceitos), `warnings` e `attributions`. Copie o texto do Does the Dog Die como veio.',
   input: z.object({
@@ -68,7 +71,9 @@ export default defineTool({
       .optional()
       .describe(
         `Climas do pedido, do vocabulário fixo: ${MOODS.join(', ')}. ` +
-          '"Algo leve" é leve; "pra dar risada" é pra rir. Fora da lista, o motor devolve um aviso',
+          'Traduza o pedido livre para esses nomes, um ou mais: "algo leve" é leve; "leve e engraçado" é leve e pra rir; ' +
+          '"pra dar risada" é pra rir; "de roer as unhas" é tenso; "pesado, escuro" é sombrio. ' +
+          '"Tipo X, só que mais sombrio" é X em `similar` com sombrio aqui. Fora da lista, o motor devolve um aviso',
       ),
     count: z
       .number()

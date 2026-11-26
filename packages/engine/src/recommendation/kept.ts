@@ -18,6 +18,7 @@
 //     {position, id, title, cause: 'constraint', constraint: name, label: 'nada triste'}
 //     {position, id, title, cause: 'veto', person: slug, text: 'the Veto as said'}
 //     {position, id, title, cause: 'min_rating', label: 'nota 6,5 no IMDb, abaixo de 7'}
+//     {position, id, title, cause: 'mood'}
 //
 // `position` is the film's number in the previous version. `seen` holds when
 // some Presente, of now or of the previous version, has a Já visto of the
@@ -29,6 +30,10 @@
 // `constraint` cause of whoever leaves without being a Já vi nor swapped by
 // the Dono (`swapped`: the Cartaz's Trocar, `swap` and what did not stay of
 // `keep`).
+//
+// Another Clima (#179) also replaces the whole list: whoever leaves without
+// being a Já vi nor swapped by the Dono has the `mood` cause. It stays
+// eligible: the Clima only pulls the order, and the film fell below the cut.
 //
 // The film that comes back from the previous version does not get the "novo"
 // mark, kept or not.
@@ -64,6 +69,9 @@ export interface Regenerate {
   readonly swapped: ReadonlySet<string>
   /** The new Restrição that replaces the whole list, if any. */
   readonly replacing: Constraint | undefined
+  /** The request asks for other Climas than the previous version's, which
+   * also replaces the whole list. */
+  readonly newMood: boolean
 }
 
 /** Why a film of the previous version left (an item of `dropped`, without
@@ -71,6 +79,7 @@ export interface Regenerate {
 export type DropCause =
   | { readonly cause: 'seen'; readonly people: ReadonlyArray<string> }
   | { readonly cause: 'swapped' }
+  | { readonly cause: 'mood' }
   | RemovalCause
 
 /** Why a kept film was removed: a Restrição, a Veto or the minimum rating. */
@@ -113,12 +122,14 @@ const liftKept = (
 /** What stays and what was on the screen of the Session's current version,
  * and the warnings of the kept films that were not on it (`preparar`).
  * `swapped` is what the Dono swapped from it; `replacing`, the new
- * Restrição that replaces the whole list. */
+ * Restrição that replaces the whole list; `newMood`, whether the Climas
+ * changed. */
 export const prepareRegenerate = (
   front: YamlMapping,
   keep: ReadonlyArray<string>,
   swapped: ReadonlySet<string>,
   replacing: Constraint | undefined,
+  newMood: boolean,
 ): { readonly regenerate: Regenerate; readonly warnings: string[] } => {
   const version = currentVersion(front)
   const screen = shownFilms(version)
@@ -144,6 +155,7 @@ export const prepareRegenerate = (
       attendees: Array.isArray(attendees) ? attendees.map(String) : [],
       swapped,
       replacing,
+      newMood,
     },
     warnings,
   }
@@ -279,6 +291,8 @@ export const droppedFilms = (
         !regenerate.swapped.has(film.id)
       )
         list.push({ ...base, ...byConstraint(regenerate.replacing) })
+      else if (regenerate.newMood && !regenerate.swapped.has(film.id))
+        list.push({ ...base, cause: 'mood' })
       else list.push({ ...base, cause: 'swapped' })
     }
     return list
