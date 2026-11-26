@@ -11,7 +11,7 @@
 // config serves every set.
 
 import { Effect } from 'effect'
-import { measure, pairValue } from '../recommendation/similarity.ts'
+import { similarityTo } from '../recommendation/similarity.ts'
 import type { Weights } from '../runtime/Weights.ts'
 import type { Connection, SqliteError } from '../sqlite/Sqlite.ts'
 
@@ -32,11 +32,8 @@ export const listSimilarity = (
   const oneWay = (from: string, others: ReadonlyArray<string>) =>
     Effect.gen(function* () {
       if (others.every((to) => known.has(key(from, to)))) return
-      const pairs = yield* measure(db, from, config)
-      for (const to of others) {
-        const pair = pairs.get(to)
-        known.set(key(from, to), pair ? pairValue(pair, config.weight) : 0)
-      }
+      for (const [to, value] of yield* similarityTo(db, from, others, config))
+        known.set(key(from, to), value)
     })
 
   return (films) =>
