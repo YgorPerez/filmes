@@ -46,7 +46,7 @@ describe('the content path', () => {
         0.3915,
       ],
       [
-        'escrito por Ana Ruiz, como 1 filme a que deu Nota alta: O Farol de Areia (2012)',
+        'escrito por Ana Ruiz, como 1 filme a que deu nota alta: O Farol de Areia (2012)',
         'weak',
         'metadata',
         0.24,
@@ -65,7 +65,7 @@ describe('the content path', () => {
           0.2259,
         ],
         [
-          'com Rita Lobo no elenco, como 1 filme a que deu Nota alta: Ponte Aérea (2016)',
+          'com Rita Lobo no elenco, como 1 filme a que deu nota alta: Ponte Aérea (2016)',
           'weak',
           'metadata',
           0.15,
@@ -81,7 +81,7 @@ describe('the content path', () => {
       ),
     ).toEqual([
       [
-        'com Rita Lobo no elenco, como 1 filme a que deu Nota alta: Ponte Aérea (2016)',
+        'com Rita Lobo no elenco, como 1 filme a que deu nota alta: Ponte Aérea (2016)',
         'weak',
         'metadata',
         0.15,
@@ -108,7 +108,7 @@ describe('the content path', () => {
         0.3363,
       ],
       [
-        'da série Trilogia da Fronteira, como 1 filme a que deu Nota alta: Fronteira (2008)',
+        'da série Trilogia da Fronteira, como 1 filme a que deu nota alta: Fronteira (2008)',
         'weak',
         'metadata',
         0.3,
@@ -128,7 +128,7 @@ describe('the content path', () => {
   test('a shared genre is weak at most and makes no seed', async () => {
     expect(evidenceOf(await all(useFixture()), 'Poeira', 'bruno')).toEqual([
       [
-        'do gênero faroeste, como 4 filmes a que deu Nota alta, entre eles O Farol de Areia (2012), ' +
+        'do gênero faroeste, como 4 filmes a que deu nota alta, entre eles O Farol de Areia (2012), ' +
           'Maré Baixa (2015) e Cidade de Vidro (2018)',
         'weak',
         'metadata',
@@ -180,12 +180,12 @@ describe('the content path', () => {
       .map((e) => [e.text, e.strength])
     expect(sortedRows(metadata)).toEqual([
       [
-        'com Duda Alves no elenco, como 3 filmes a que deu Nota alta: Ensaio Geral (2014), ' +
+        'com Duda Alves no elenco, como 3 filmes a que deu nota alta: Ensaio Geral (2014), ' +
           'Ato Final (2018) e Bastidores (2016)',
         'moderate',
       ],
       [
-        'dirigido por Clara Bastos, como 3 filmes a que deu Nota alta: Ensaio Geral (2014), ' +
+        'dirigido por Clara Bastos, como 3 filmes a que deu nota alta: Ensaio Geral (2014), ' +
           'Ato Final (2018) e Bastidores (2016)',
         'strong',
       ],
@@ -202,7 +202,7 @@ describe('the content path', () => {
     expect(
       (film(out, 'Bis').evidence['rosa'] ?? []).map((e) => e.text),
     ).toEqual([
-      'dirigido por Nina Vale, como 2 filmes a que deu Nota alta: Reprise (2004) e Reprise (2011)',
+      'dirigido por Nina Vale, como 2 filmes a que deu nota alta: Reprise (2004) e Reprise (2011)',
       'deu 4 a Reprise (2004), também de Nina Vale',
       'deu 4 a Reprise (2011), também de Nina Vale',
     ])
@@ -232,7 +232,7 @@ describe('the Ajuste to a link', () => {
       sortedRows(evidenceOf(await all(fixture, 60), 'Voo Noturno', 'bruno')),
     ).toEqual([
       [
-        'com Rita Lobo no elenco, como 1 filme a que deu Nota alta: Ponte Aérea (2016)',
+        'com Rita Lobo no elenco, como 1 filme a que deu nota alta: Ponte Aérea (2016)',
         'weak',
         'metadata',
         0.075,

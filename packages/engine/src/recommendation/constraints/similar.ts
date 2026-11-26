@@ -82,8 +82,8 @@ const line = (
   if (pair.neighbor) {
     const { base, both } = pair.neighbor
     parts.push(
-      `de ${integerText(base)} pessoas que deram 4+ a ele, ` +
-        `${Math.floor((100 * both) / base)}% deram 4+ a este`,
+      `das ${integerText(base)} pessoas que deram 4 ou mais a ele, ` +
+        `${Math.floor((100 * both) / base)}% fizeram o mesmo com este`,
     )
   }
   if (pair.director) parts.push('mesmo diretor')

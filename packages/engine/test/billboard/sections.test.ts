@@ -103,7 +103,7 @@ describe('the Motivo of each film, in the Session file', () => {
           },
           { text: 'já viu', kind: 'rating', contribution: -1 },
           {
-            text: '3 pessoas de gosto parecido deram 2,1 em média a este',
+            text: '3 pessoas de gosto parecido deram 2,1 em média a este filme',
             kind: 'review',
             contribution: -0.4,
           },
@@ -133,11 +133,11 @@ describe('the Motivo of each film, in the Session file', () => {
 
     expect([
       one(
-        'com Davi Couto no elenco, como 1 filme a que deu Nota alta: X (2001)',
+        'com Davi Couto no elenco, como 1 filme a que deu nota alta: X (2001)',
         'metadata',
       ),
       one(
-        'escrito por Ana Ruiz, como 2 filmes a que deu Nota alta: X (2001) e Y, Z (2002)',
+        'escrito por Ana Ruiz, como 2 filmes a que deu nota alta: X (2001) e Y, Z (2002)',
         'metadata',
       ),
       one(
@@ -151,9 +151,9 @@ describe('the Motivo of each film, in the Session file', () => {
       one('segundo o Dono, "ama a Rita"; com Rita Lobo no elenco', 'report'),
       one('disse "curte filme de júri"; tema: tribunal', 'stated'),
       one(
-        'disse que ama Rio, Abaixo (2014), e de 1.200 pessoas que deram 4+ a ele, 65% deram 4+ a este',
+        'disse que ama Rio, Abaixo (2014); das 1.200 pessoas que deram 4 ou mais a ele, 65% fizeram o mesmo com este',
       ),
-      one('1.023 pessoas de gosto parecido deram 4,3 em média a este'),
+      one('1.023 pessoas de gosto parecido deram 4,3 em média a este filme'),
       one('nota 8,5 no IMDb', 'metadata'),
     ]).toEqual([
       { kind: 'entity', name: 'Davi Couto', people: ['bruno'] },
@@ -185,7 +185,7 @@ describe('the Motivo of each film, in the Session file', () => {
             contribution: 0.6,
           },
           {
-            text: 'dirigido por Otávio Lins, como 1 filme a que deu Nota alta: X (2001)',
+            text: 'dirigido por Otávio Lins, como 1 filme a que deu nota alta: X (2001)',
             kind: 'metadata',
             contribution: 0.3,
           },
