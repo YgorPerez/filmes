@@ -170,7 +170,7 @@ function Notes({
           {notes.import}
         </a>
         {ratings !== null && ratings.length > 0 && (
-          <a href={imdbCsvPath(slug)} download className={option}>
+          <a href={imdbCsvPath(slug)} className={option}>
             {notes.download}
           </a>
         )}

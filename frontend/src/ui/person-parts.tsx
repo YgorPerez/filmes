@@ -440,7 +440,10 @@ export function CatalogSearch({
 
 /** The Catálogo search inside a form that posts (Nova Sessão, Contar como
  * foi): its button sends the form with `buscar-catalogo=sim`, so the
- * server keeps what the form holds and comes back with the search. */
+ * server keeps what the form holds and comes back with the search. Enter
+ * in the field searches too: the form's default button says `tecla=enter`,
+ * and `buscado`, what the field came back with, tells a new search from
+ * one already run (`searchAsked`). */
 export function SessionFilmLookup({
   name,
   label,
@@ -470,6 +473,11 @@ export function SessionFilmLookup({
           {CATALOG_SEARCH.submit}
         </Submit>
       </div>
+      <input
+        type="hidden"
+        name="buscado"
+        value={value ?? answer?.query ?? ''}
+      />
       {answer && <CatalogResults answer={answer} pick={pick} />}
     </section>
   )

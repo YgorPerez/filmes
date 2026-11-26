@@ -297,9 +297,10 @@ describe('reading a sentence (“Ler”)', () => {
       name: copy.read,
     }) as HTMLButtonElement
     expect([read.form, read.name, read.value]).toEqual([form, 'ler', 'sim'])
-    // Enter presses the first submit button: the one with no “ler”.
-    const first = form.querySelector('button[type=submit]')
-    expect(first?.hasAttribute('name')).toBe(false)
+    // Enter presses the first submit button: not “ler”, but the one that
+    // says Enter, so a search not run yet in its field searches instead.
+    const first = form.querySelector<HTMLButtonElement>('button[type=submit]')
+    expect([first?.name, first?.value]).toEqual(['tecla', 'enter'])
   })
 
   it('comes back with every field “Ler” left, and the sentence kept', () => {
