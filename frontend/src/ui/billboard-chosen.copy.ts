@@ -3,6 +3,9 @@
 
 export const CHOSEN = {
   title: 'Filme escolhido',
+  /** The chosen film without a card: "Curta da Madrugada (2010)". */
+  film: (title: string, year: number | null) =>
+    year === null ? title : `${title} (${year})`,
   predicted: (rating: string) => `previsto ${rating}`,
   rating: (rating: string) => `achou ${rating}`,
   reaction: { liked: 'gostou', neutral: 'neutro', disliked: 'não gostou' },

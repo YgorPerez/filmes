@@ -12,6 +12,7 @@ import { appendFileSync, cpSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, test } from 'vite-plus/test'
 import {
+  importTrakt,
   parseYaml,
   personView,
   rebuild,
@@ -21,6 +22,7 @@ import {
   type Vars,
 } from '../../src/index.ts'
 import { ROOT, useFixture, type Fixture } from '../fixture.ts'
+import { zipOf } from '../imports/zip.ts'
 import {
   engineRecommendation,
   film,
@@ -97,7 +99,7 @@ const veraOnProva = async (
 }
 
 describe('the Pessoa’s prediction error', () => {
-  test('averages the calibrated errors on the Já vi scale', async () => {
+  test('averages the calibrated errors on the Já vi scale, each Nota left out', async () => {
     const fixture = useFixture()
     const catalog = await withKinderNeighbours(fixture)
     const view = await fixture.ok(
@@ -109,9 +111,49 @@ describe('the Pessoa’s prediction error', () => {
     )
 
     expect(view.predictionError?.films).toBe(9)
-    // The 9/29 weight on the fit (665/369 × percentile − 611/738)
-    // brings the mean absolute error from 2.10234 to 1.45536 points.
-    expect(view.predictionError?.meanAbsoluteError).toBeCloseTo(1.45536, 5)
+    // Each film is scored with the calibration fitted on the other 8, as
+    // `evaluate` scores a film the calibration never saw: 1.50951 points.
+    // Fitted on all 9 and scored on the same 9 (665/369 × percentile −
+    // 611/738, weight 9/29), it would flatter her with 1.45536.
+    expect(view.predictionError?.meanAbsoluteError).toBeCloseTo(1.50951, 5)
+  })
+
+  test('follows a Nota she gives after it was shown', async () => {
+    const fixture = useFixture()
+    const vars = {
+      ...(await withKinderNeighbours(fixture)),
+      ...tasteWeights(fixture, 3, 5, 9),
+    }
+    const view = () =>
+      fixture.ok(personView('vera', { predictionError: true }), vars)
+    expect((await view()).predictionError?.films).toBe(9)
+
+    // A 1 to one of the films her neighbours gave 0,5, from Trakt.
+    const rated = [
+      {
+        rated_at: '2025-10-01T20:00:00.000Z',
+        rating: 2,
+        type: 'movie',
+        movie: {
+          title: 'Filme da Vera 10',
+          year: 2010,
+          ids: { trakt: 1, imdb: theirLowFilms[0], tmdb: null },
+        },
+      },
+    ]
+    await fixture.ok(
+      importTrakt({
+        person: 'vera',
+        original: 'trakt.zip',
+        content: zipOf([
+          ['trakt-export/ratings-movies.json', JSON.stringify(rated)],
+        ]),
+        author: { name: 'Dono', email: 'dono@example.org' },
+      }),
+      vars,
+    )
+
+    expect((await view()).predictionError?.films).toBe(10)
   })
 
   test('is absent below the minimum number of comparable films', async () => {

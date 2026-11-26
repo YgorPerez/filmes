@@ -131,3 +131,20 @@ export const CLOSED: Billboard = {
     SALT!,
   ],
 }
+
+/** A closed Cartaz whose chosen film has no card: they watched Curta da
+ * Madrugada, outside the Recomendação. Bruno gave it 8; Iara did not
+ * like it. */
+export const CHOSEN_OUTSIDE: Billboard = {
+  ...MODEL,
+  open: false,
+  chosen: {
+    id: 'tt9000106',
+    title: 'Curta da Madrugada',
+    year: 2010,
+    reactions: [
+      { person: 'bruno', predicted: null, rating: '8', reaction: null },
+      { person: 'iara', predicted: null, rating: null, reaction: 'disliked' },
+    ],
+  },
+}

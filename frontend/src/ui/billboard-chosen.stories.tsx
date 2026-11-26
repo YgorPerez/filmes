@@ -1,10 +1,10 @@
 // The chosen film's reactions on a closed Cartaz (#264): the stored Nota
 // prevista beside a Nota or a Relato, either alone, and one Presente with
-// neither, who is not there.
+// neither, who is not there; and the block of a chosen film with no card.
 import type { BillboardPerson } from '@filmes/engine'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, within } from 'storybook/test'
-import { ChosenReactions } from './billboard-chosen'
+import { ChosenFilm, ChosenReactions } from './billboard-chosen'
 
 const person = (slug: string, name: string, color: number) =>
   ({
@@ -61,3 +61,25 @@ export const EachCase: Story = {
 }
 
 export const UnderSection: Story = { args: { level: 3 } }
+
+/** A chosen film with no card, outside the Recomendação: its own block. */
+export const WithoutCard: Story = {
+  render: (args) => (
+    <ChosenFilm
+      people={args.people}
+      chosen={{
+        id: 'tt9000106',
+        title: 'Curta da Madrugada',
+        year: 2010,
+        reactions: args.reactions.slice(0, 2),
+      }}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const block = within(canvasElement).getByRole('region', {
+      name: 'Filme escolhido',
+    })
+    await expect(block).toHaveTextContent('Curta da Madrugada (2010)')
+    await expect(within(block).getAllByRole('listitem')).toHaveLength(2)
+  },
+}

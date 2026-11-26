@@ -404,7 +404,7 @@ export const personView = (
       Effect.gen(function* () {
         const imported = yield* importedStated(db, slug, today)
         const predictionError = options.predictionError
-          ? yield* personPredictionError(db, slug, env.weights, today)
+          ? yield* personPredictionError(db, path, slug, env.weights, today)
           : null
         return {
           ...view,

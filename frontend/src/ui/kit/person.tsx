@@ -1,4 +1,4 @@
-import { type PointerEvent, useId } from 'react'
+import { type PointerEvent, useId, useRef } from 'react'
 
 // A Presente's colour (DESIGN.md, Avatares; The One Color Per Person Rule):
 // one per Presente by her order in the Session, the same in the dot under
@@ -53,13 +53,27 @@ export function Avatar({
   )
 }
 
+/** Where the browser cannot anchor the popover to its dot, it would open at
+ * the page's top left: there it goes under the dot, from where the dot is
+ * on screen. */
+const underDot = (popover: HTMLElement, dot: HTMLElement) => {
+  if (CSS.supports('anchor-name', '--dot')) return
+  const { bottom, left } = dot.getBoundingClientRect()
+  popover.style.setProperty('position-area', 'none')
+  popover.style.top = `${bottom}px`
+  popover.style.left = `${left}px`
+}
+
 /** Her 12px dot on the case, under the cover, with her Nota prevista
  * beside it when she has one ("8,3"). The dot alone is only a picture: the
  * card says in its text who has no Fato ("Fulano: sem fato sobre este
  * filme"). With a number, the dot is a button whose `hint` says whose it is
  * and how many neighbours back it: a native popover under it, running right
  * from the dot (the case is on the card's left), opened by a
- * tap or a click (a tap outside or Esc closes it) and by a mouse over it. */
+ * tap or a click (a tap outside or Esc closes it) and by a mouse over it.
+ * The hint is the button's name; the popover repeats it to the eye only.
+ * Without CSS anchor positioning (Firefox, Safari before 26) the popover
+ * is placed under the dot by hand as it opens (`underDot`). */
 export function PersonDot({
   person,
   hollow = false,
@@ -70,6 +84,7 @@ export function PersonDot({
   rating?: { text: string; hint: string }
 }) {
   const id = useId()
+  const button = useRef<HTMLButtonElement>(null)
   const dot = (
     <span
       aria-hidden="true"
@@ -85,6 +100,7 @@ export function PersonDot({
   return (
     <>
       <button
+        ref={button}
         type="button"
         popoverTarget={id}
         popoverTargetAction="show"
@@ -99,7 +115,16 @@ export function PersonDot({
       </button>
       <span
         id={id}
+        ref={(popover) => {
+          if (!popover) return
+          const place = () => {
+            if (button.current) underDot(popover, button.current)
+          }
+          popover.addEventListener('beforetoggle', place)
+          return () => popover.removeEventListener('beforetoggle', place)
+        }}
         popover="auto"
+        aria-hidden="true"
         style={{ positionAnchor: anchor }}
         className="inset-auto m-0 mt-1 w-max max-w-[calc(100vw-32px)] rounded-field border border-rule bg-surface px-sm py-xs text-meta text-ink [position-area:bottom_span-right] [position-try-fallbacks:flip-block]"
       >
