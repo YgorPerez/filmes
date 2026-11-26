@@ -10,6 +10,7 @@ import { PriceSticker, Sticker } from './kit/sticker'
 import { TapeCase } from './kit/tape-case'
 import { BILLBOARD } from './billboard.copy'
 import { BetStamp } from './billboard-bet'
+import { ChosenReactions } from './billboard-chosen'
 import { FilmMarksControls } from './billboard-card-marks'
 import { Strength } from './billboard-top'
 
@@ -325,6 +326,13 @@ export function BillboardCard({
         level={level}
       />
       <Why film={film} people={people} level={level} />
+      {film.reactions && (
+        <ChosenReactions
+          reactions={film.reactions}
+          people={people}
+          level={level}
+        />
+      )}
       {marks && onChange && (
         <FilmMarksControls
           film={film}
