@@ -26,7 +26,8 @@ import {
 } from './rating-draft'
 import { RatingDisc } from './person-marks'
 import { RATINGS } from './ratings.copy'
-import { Button, buttonVariants } from './shadcn/button'
+import { buttonVariants } from './kit/button-variants'
+import { Button } from './shadcn/button'
 
 /** The frame of the Imports screens: the letreiro and the way back. */
 export function ImportsFrame({

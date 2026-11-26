@@ -1,0 +1,86 @@
+// The Imports frame, and the rating screen in it: one film of the Fila de
+// Notas at a time, the search that picks another, what Pronto wrote.
+import type { RatingQueue } from '@filmes/engine'
+import type { Meta, StoryObj } from '@storybook/react-vite'
+import type { ComponentProps } from 'react'
+import { expect, within } from 'storybook/test'
+import { ImportsFrame, RatingScreen } from './imports'
+
+// The screen's own prop: the story leaves the server module alone.
+type SearchAnswer = NonNullable<ComponentProps<typeof RatingScreen>['search']>
+import { RATINGS } from './ratings.copy'
+
+const QUEUE: RatingQueue = {
+  person: 'teo',
+  films: [
+    {
+      id: 'tt9000601',
+      title: 'Pequenos Milagres',
+      year: 2019,
+      genres: ['Comédia'],
+    },
+    { id: 'tt9000602', title: 'Casa Cheia', year: 2021, genres: [] },
+    { id: 'tt9000701', title: 'Deserto Branco', year: 2015, genres: [] },
+  ],
+}
+
+const SEARCH: SearchAnswer = {
+  query: 'fronteira',
+  found: {
+    query: 'fronteira',
+    films: [
+      {
+        id: 'tt9000401',
+        title: 'Fronteira',
+        year: 2008,
+        votes: 40000,
+        rating: 7.2,
+        directors: ['Rui Tavares'],
+      },
+    ],
+    people: [],
+    genres: [],
+    series: [],
+  },
+}
+
+const meta = {
+  component: RatingScreen,
+  args: { queue: QUEUE, search: null },
+  // Each story starts without the draft another one left.
+  beforeEach: () => localStorage.clear(),
+} satisfies Meta<typeof RatingScreen>
+
+export default meta
+
+type Story = StoryObj<typeof meta>
+
+export const NextInQueue: Story = {
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByRole('heading', {
+        level: 1,
+        name: RATINGS.title,
+      }),
+    ).toBeVisible()
+  },
+}
+
+export const PickedInSearch: Story = {
+  args: { search: SEARCH, film: 'tt9000401' },
+}
+
+export const Written: Story = { args: { written: 1 } }
+
+export const Refused: Story = { args: { refusal: 'pedido' } }
+
+export const Unavailable: Story = { args: { queue: null } }
+
+/** The frame alone: the way back and whatever the screen puts in it. */
+export const Frame: Story = {
+  render: () => (
+    <ImportsFrame back="Voltar para Meu gosto" backTo="/meu-gosto">
+      <p>O conteúdo da tela.</p>
+    </ImportsFrame>
+  ),
+}

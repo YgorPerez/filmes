@@ -10,14 +10,10 @@
 // Marcar asks for it; in fullscreen it is the whole Cartaz with the top and
 // the foot fixed. A host without one gets the whole Cartaz inline.
 //
-// `mountView` takes the `App` of `@modelcontextprotocol/ext-apps` (or a
-// fake in the tests) so that this file never reaches the network or the
-// parent window by itself.
+// `mountView` (`mount-view.tsx`) connects this view to the host.
 
 import type { Billboard as BillboardModel } from '@filmes/engine'
-import { useRef, useState, useSyncExternalStore } from 'react'
-import type { App, McpUiHostContext } from '@modelcontextprotocol/ext-apps'
-import { createRoot } from 'react-dom/client'
+import { useRef, useState } from 'react'
 import { Billboard } from '../ui/billboard'
 import { BILLBOARD } from '../ui/billboard.copy'
 import {
@@ -135,80 +131,4 @@ export function BillboardView({
       )}
     </main>
   )
-}
-
-/** The part of ext-apps' `App` the view uses. */
-export type ViewApp = Pick<
-  App,
-  | 'ontoolresult'
-  | 'onhostcontextchanged'
-  | 'getHostContext'
-  | 'callServerTool'
-  | 'sendMessage'
-  | 'requestDisplayMode'
->
-
-type HostContext = McpUiHostContext
-
-/** Renders the view in `root` and connects it to the host (`connect`):
- * the tool result, the host's theme (`data-theme`, which `ui/tokens.css`
- * follows) and its display modes. */
-export async function mountView(
-  app: ViewApp,
-  root: HTMLElement,
-  connect: () => Promise<void>,
-): Promise<void> {
-  let result: ToolResult | null = null
-  let context: HostContext = {}
-  const listeners = new Set<() => void>()
-  const changed = () => {
-    for (const listener of listeners) listener()
-  }
-  const subscribe = (listener: () => void) => {
-    listeners.add(listener)
-    return () => listeners.delete(listener)
-  }
-  const setContext = (next: HostContext | undefined) => {
-    context = { ...context, ...next }
-    if (context.theme) {
-      document.documentElement.dataset.theme = context.theme
-      document.documentElement.style.colorScheme = context.theme
-    }
-    changed()
-  }
-
-  const callTool = (name: string, args: Record<string, unknown>) =>
-    app.callServerTool({ name, arguments: args })
-  const sendMessage = (text: string) =>
-    app.sendMessage({ role: 'user', content: [{ type: 'text', text }] })
-  const fullscreen = () => {
-    void app.requestDisplayMode({ mode: 'fullscreen' }).catch(() => {})
-  }
-  const hostOf = (c: HostContext): Host =>
-    c.displayMode === 'fullscreen'
-      ? { callTool, sendMessage, inFullscreen: true }
-      : c.availableDisplayModes?.includes('fullscreen')
-        ? { callTool, sendMessage, fullscreen }
-        : { callTool, sendMessage }
-
-  // One Host per context, so the snapshot stays the same between changes.
-  let cached: { context: HostContext; host: Host } | null = null
-  const currentHost = () => {
-    if (cached?.context !== context) cached = { context, host: hostOf(context) }
-    return cached.host
-  }
-  function Root() {
-    const shown = useSyncExternalStore(subscribe, () => result)
-    const host = useSyncExternalStore(subscribe, currentHost)
-    return <BillboardView result={shown} host={host} />
-  }
-
-  app.ontoolresult = (next) => {
-    result = next
-    changed()
-  }
-  app.onhostcontextchanged = setContext
-  createRoot(root).render(<Root />)
-  await connect()
-  setContext(app.getHostContext())
 }

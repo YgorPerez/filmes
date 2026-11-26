@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { readImportsPage } from '#/content/imports'
-import { importsSearch, PersonImportsScreen } from '#/ui/person-imports'
+import { importsSearch } from '#/content/imports-search'
+import { PersonImportsScreen } from '#/ui/person-imports'
 
 // The Dono's own imports, under Meu gosto.
 export const Route = createFileRoute('/_owner/meu-gosto/importar')({

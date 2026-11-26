@@ -1,0 +1,195 @@
+// A Pessoa's page and Meu gosto: her Notas, her start, her taste and its forms.
+import type { Meta, StoryObj } from '@storybook/react-vite'
+import type { ComponentProps } from 'react'
+import type { SetupStep } from '@filmes/engine'
+import { expect, within } from 'storybook/test'
+import { PersonScreen } from './person'
+
+// The screen's own props: the story leaves the server module alone.
+type PersonPage = Exclude<
+  ComponentProps<typeof PersonScreen>['page'],
+  'unknown' | null
+>
+import { PERSON } from './person.copy'
+
+const IARA: PersonPage = {
+  person: 'iara',
+  name: 'Iara',
+  aliases: ['ia'],
+  owner: false,
+  viewer: { person: 'bruno', name: 'Bruno', admin: false },
+  vetoes: [
+    {
+      text: 'nunca vê terror',
+      target: 'Q9001801',
+      label: 'Terror',
+      date: '2026-11-19',
+      factId: 'vetos:1',
+    },
+  ],
+  adjustments: [
+    { link: 'cast', level: 'none', date: '2026-11-18', factId: 'ajustes:1' },
+  ],
+  stated: [
+    {
+      text: 'adoro os filmes dela',
+      source: 'questionário',
+      date: '2026-11-17',
+      specific: true,
+      reaction: 'love',
+      target: 'Q9000018',
+      label: 'Sofia Rangel',
+      kind: 'stated',
+      strength: 'strong',
+      rating: null,
+      factId: 'declarados:1',
+    },
+    {
+      text: 'Ótimo',
+      source: 'Letterboxd da Iara',
+      date: '2025-01-01',
+      specific: true,
+      reaction: null,
+      target: 'tt9000101',
+      label: 'O Farol de Areia',
+      kind: 'stated',
+      strength: 'moderate',
+      rating: null,
+      factId: 'letterboxd:1',
+    },
+  ],
+  reports: [
+    {
+      text: 'odeia filme lento',
+      source: 'descrição do Dono',
+      date: '2026-11-16',
+      specific: false,
+      reaction: null,
+      target: null,
+      label: null,
+      kind: 'report',
+      strength: 'weak',
+      rating: null,
+      factId: 'relatos:1',
+    },
+  ],
+  seen: [
+    {
+      film: 'tt9000602',
+      title: 'Casa Cheia',
+      rating: 4.5,
+      date: '2026-11-15',
+      source: 'conversa com o Dono',
+      factId: 'vistos:1',
+    },
+  ],
+  openQuestions: [
+    {
+      text: 'a Iara curte terror?',
+      subject: 'Q9001801',
+      label: 'Terror',
+      date: '2026-11-14',
+      skips: 1,
+      factId: 'perguntas_abertas:1',
+    },
+    {
+      text: 'curte comédia boba?',
+      subject: 'silly_comedy',
+      label: 'comédia boba',
+      date: '2026-11-14',
+      skips: 1,
+      factId: 'perguntas_abertas:2',
+    },
+  ],
+  ratings: [
+    {
+      filmId: 'tt9000401',
+      title: 'Fronteira',
+      rating: 4,
+      date: '2025-08-30',
+      source: 'Letterboxd da Iara',
+      kind: 'rating',
+      factId: 'notas:1',
+    },
+  ],
+  tagGroups: [
+    { key: 'silly_comedy', label: 'comédia boba' },
+    { key: 'slow', label: 'lento' },
+  ],
+}
+
+/** The setup guide's steps, in its order (`SETUP_STEPS`). */
+const STEPS: readonly SetupStep[] = ['taste', 'import', 'connector']
+
+const OWN: PersonPage = { ...IARA, person: 'bruno', name: 'Bruno', owner: true }
+
+const meta = {
+  component: PersonScreen,
+  args: { slug: 'iara', page: IARA },
+} satisfies Meta<typeof PersonScreen>
+
+export default meta
+
+type Story = StoryObj<typeof meta>
+
+export const AnotherPerson: Story = {
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByRole('region', { name: PERSON.notes.title }),
+    ).toBeVisible()
+  },
+}
+
+export const MyTaste: Story = {
+  args: {
+    slug: 'bruno',
+    page: OWN,
+    start: {
+      setup: {
+        ratings: 3,
+        steps: STEPS.map((step) => ({
+          step,
+          done: step === 'taste',
+          skipped: step === 'import',
+        })),
+      },
+      mcpUrl: 'https://filmes.example/mcp',
+    },
+  },
+}
+
+export const AdminGrantsAccess: Story = {
+  args: {
+    page: {
+      ...IARA,
+      viewer: { person: 'bruno', name: 'Bruno', admin: true },
+      access: { email: null },
+    },
+  },
+}
+
+export const Empty: Story = {
+  args: {
+    page: {
+      ...IARA,
+      vetoes: [],
+      stated: [],
+      reports: [],
+      seen: [],
+      openQuestions: [],
+      ratings: null,
+    },
+  },
+}
+
+export const WithNotice: Story = { args: { notice: 'gravado' } }
+
+export const WithRefusal: Story = { args: { refusal: 'alvo' } }
+
+export const WithSearchRefusal: Story = {
+  args: { search: { query: 'é', refused: 'curta' } },
+}
+
+export const Unknown: Story = { args: { slug: 'ninguem', page: 'unknown' } }
+
+export const Unavailable: Story = { args: { page: null } }

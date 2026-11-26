@@ -24,10 +24,10 @@ import {
   Submit,
   TextField,
 } from './person-parts'
+import { names } from './session-names'
 import {
   Avatars,
   SessionDate,
-  names,
   PersonAvatar,
   NightRequest,
 } from './session-parts'

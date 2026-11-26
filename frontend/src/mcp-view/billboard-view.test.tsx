@@ -8,12 +8,8 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 import { MODEL } from '../ui/billboard.fixture'
 import { BILLBOARD } from '../ui/billboard.copy'
-import {
-  BillboardView,
-  mountView,
-  type Host,
-  type ViewApp,
-} from './billboard-view'
+import { BillboardView, type Host } from './billboard-view'
+import { mountView, type ViewApp } from './mount-view'
 import { replyMessage, type ToolResult } from './view-model'
 
 afterEach(() => {

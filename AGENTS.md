@@ -38,6 +38,8 @@ frontend/                  app TanStack Start: MCP por HTTP, OAuth, app web e o 
   lint/                    plugins locais do Oxlint, um por arquivo e com teste (rule-config.test.ts confere que cada um está ligado), e folders.ts, que confere esta árvore no `pnpm check`
   nginx/                   vhost, TLS, formato de log sem query e rotação que o deploy instala na VPS
   Dockerfile               a imagem: só o .output do build
+  .storybook/              o Storybook: uma história por peça de src/ui/ (<nome>.stories.tsx ao lado dela; ADR 0008)
+  lint/                    stories.ts, no pnpm check: peça de src/ui/ sem história falha
 config/                    pesos e vocabulários fixos (*.toml) e o manifesto dos dumps (catalog-versions.json), com as chaves em inglês (ADR 0002), lidos como estão
 tests/fixture/             a fixture do motor: catalogo/, dados/ (people/, com as chaves em inglês), gravacoes/, letterboxd/, trakt/
 scripts/                   gancho de push (verify-push.ts, affected.ts, install-hooks.ts)
@@ -75,7 +77,11 @@ Adaptado do `AGENTS.md` do pesquisa-relacionamentos.
 pnpm install      # uma vez: o workspace inteiro, e o patch do @effect/tsgo no prepare
 pnpm check        # formato e lint (Oxfmt, Oxlint com tipos), tipos, testes com piso de cobertura, fallow e React Doctor
 pnpm --filter frontend e2e   # o app no Chrome da máquina
+pnpm test:stories # cada história do Storybook no Chrome, no celular e no desktop
+pnpm storybook    # o Storybook na porta 6006
 ```
+
+Uma peça nova em `frontend/src/ui/` leva uma história no mesmo PR (`frontend/lint/stories.ts`). A história recebe os dados por props: de `@filmes/engine` e `#/platform/*` ela só importa tipos. O CI roda as histórias no job `stories`.
 
 O e2e do app (Playwright) faz o build, sobe o app com um Google falso (`frontend/e2e/fake-google.ts`) e as Pessoas da fixture; o CI roda no job `build`.
 

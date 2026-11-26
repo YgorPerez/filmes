@@ -9,11 +9,14 @@
     "start": "pnpm --filter frontend start",
     "catalog:update": "node frontend/scripts/catalog-update.ts",
     "db:publish": "node frontend/scripts/db-publish.ts",
-    "check": "vp check && node frontend/lint/folders.ts && vp run -r --cache test:coverage && vp test run --coverage && vp run --filter frontend --filter @filmes/engine fallow && vp run --filter frontend doctor",
+    "check": "vp check && node frontend/lint/folders.ts && node frontend/lint/stories.ts && vp run -r --cache test:coverage && vp test run --coverage && vp run --filter frontend --filter @filmes/engine fallow && vp run --filter frontend doctor",
     "fmt": "vp fmt",
     "lint": "vp lint",
     "test": "vp test run && vp run -r --cache test",
-    "typecheck": "vp run -r --cache typecheck"
+    "typecheck": "vp run -r --cache typecheck",
+    "storybook": "pnpm --filter frontend storybook",
+    "build-storybook": "pnpm --filter frontend build-storybook",
+    "test:stories": "pnpm --filter frontend test:stories"
   },
   "devDependencies": {
     "@effect/tsgo": "catalog:",

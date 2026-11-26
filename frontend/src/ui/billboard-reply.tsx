@@ -1,13 +1,7 @@
 import type { Billboard as BillboardModel } from '@filmes/engine'
 import { useEffect, useRef, useState } from 'react'
 import { BILLBOARD } from './billboard.copy'
-import {
-  chosenMoods,
-  hasMarks,
-  markCounts,
-  replyText,
-  type Marks,
-} from './billboard-marks'
+import { chosenMoods, hasMarks, replyText, type Marks } from './billboard-marks'
 import { buttonVariants } from './kit/button-variants'
 import { FIELD } from './kit/field'
 import { Option } from './kit/option'
@@ -19,10 +13,6 @@ import { Option } from './kit/option'
 // screen's one orange button). The Cartaz (`billboard.tsx`) places them.
 
 const { reply } = BILLBOARD
-
-/** What was marked, in a sentence ("1 Trocar e 1 Já vi"). */
-export const summaryOf = (billboard: BillboardModel, marks: Marks) =>
-  reply.summary(markCounts(billboard, marks))
 
 /** Enviar: the form's submit on the web; without `onSend` there is no
  * other way. In the MCP Apps view a plain button, since a sandboxed frame

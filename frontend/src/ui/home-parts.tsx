@@ -7,26 +7,17 @@ import type {
   SetupView,
 } from '#/platform/setup-guide'
 import { HOME } from './home.copy'
+import { isSkipped, stateOf } from './setup-steps'
 import { Icon } from './kit/icon'
 import { ShelfLabel } from './kit/shelf-label'
 import { PriceSticker } from './kit/sticker'
-import { buttonVariants } from './shadcn/button'
+import { buttonVariants } from './kit/button-variants'
 
 // The home's parts as the Locadora de bairro draws them (DESIGN.md, Home):
 // the counter where the Dono asks for a film, the latest Sessão's stub and
 // the setup guide as one list of three steps. "Pedir filme" is the screen's
 // one orange button, so every step's action is an option. The guide is
 // never in the way of asking for a film.
-
-type StepState = keyof typeof HOME.guide.state
-
-/** Done wins over skipped: a step she skipped and did anyway is done. */
-const stateOf = (step: SetupStepView): StepState =>
-  step.done ? 'done' : step.skipped ? 'skipped' : 'pending'
-
-/** A step is pending: the home shows the guide. Skipped does not count. */
-export const isGuiding = (setup: SetupView) =>
-  setup.steps.some((s) => stateOf(s) === 'pending')
 
 // --- the counter ---------------------------------------------------------------
 
@@ -183,6 +174,8 @@ function Progress({ setup }: { setup: SetupView }) {
 
 /** The step's mark: its number in a ring while pending, a violet check
  * when done, its number in a dashed ring when skipped. */
+type StepState = keyof typeof HOME.guide.state
+
 function Mark({ state, n }: { state: StepState; n: number }) {
   return (
     <span
@@ -446,10 +439,6 @@ export function Guide({
     </section>
   )
 }
-
-/** A step she skipped and has not done: Meu gosto resumes it from here
- * once the home has no guide. */
-export const isSkipped = (step: SetupStepView) => stateOf(step) === 'skipped'
 
 /** The guide's steps, numbered in order: all of them, or, for Meu gosto,
  * only the skipped ones (`skippedOnly`), each with its "Retomar". */

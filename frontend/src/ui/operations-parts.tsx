@@ -1,7 +1,13 @@
 import type { ReactNode } from 'react'
+import { Alert, Section, Submit } from './person-parts'
 
 // The form every Operações action posts: `/operacoes/acao`, with the
-// action in `acao`.
+// action in `acao`. The Operações screens take the alert, the section and
+// the submit button of the Dono screens from here, with the rest of their
+// parts, which keeps person-parts under fallow's coupling threshold (its
+// fan-in at most the project's p95), as person-parts does for kit/status.
+
+export { Alert, Section, Submit }
 
 /** A plain POST of one action (`acao`): it works before the JavaScript. */
 export function ActionPost({

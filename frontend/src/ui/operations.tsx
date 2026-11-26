@@ -11,11 +11,11 @@ import type {
 } from '#/platform/operations'
 import { FieldLabel } from './kit/field-label'
 import { PageHead } from './kit/page-head'
-import { EvaluationSection, jobKey } from './operations-evaluation'
+import { jobKey } from './evaluation-job'
+import { EvaluationSection } from './operations-evaluation'
 import { OPERATIONS } from './operations.copy'
-import { Detail } from './operations-parts'
+import { Alert, Detail, Section, Submit } from './operations-parts'
 import { PushSection } from './operations-push'
-import { Alert, Section, Submit } from './person-parts'
 
 const COPY = OPERATIONS.consult
 

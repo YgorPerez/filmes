@@ -13,3 +13,5 @@
 @source './billboard-view.tsx';
 @source '../ui/billboard*.tsx';
 @source '../ui/kit';
+/* The stories are not the Cartaz (`pnpm storybook`). */
+@source not '../ui/**/*.stories.tsx';

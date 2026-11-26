@@ -14,6 +14,8 @@ const IGNORED = [
   'frontend/.output/**',
   'frontend/.nitro/**',
   'frontend/.tanstack/**',
+  // Storybook's build (`pnpm build-storybook`).
+  'frontend/storybook-static/**',
   '**/coverage/**',
   // The Cartaz's MCP Apps view, built into one HTML string by
   // `frontend/scripts/billboard-view.ts`; a test keeps it equal to the build.
@@ -138,11 +140,13 @@ export default defineConfig({
     overrides: [
       {
         // The app: localStorage only through `openStorage()`, which owns
-        // it. The tests read and clear it to check what a screen kept.
+        // it. The tests and the stories read and clear it to check what a
+        // screen kept.
         files: ['frontend/src/**'],
         excludeFiles: [
           'frontend/src/ui/billboard-marks.ts',
           'frontend/src/**/*.test.{ts,tsx}',
+          'frontend/src/**/*.stories.tsx',
         ],
         rules: { 'state/localstorage-through-open-storage': 'error' },
       },
