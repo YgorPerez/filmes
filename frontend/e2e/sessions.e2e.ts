@@ -19,6 +19,7 @@ import {
   expect,
   loginAs,
   loginAsBruno,
+  notice,
   snap,
   test,
 } from './support'
@@ -376,14 +377,64 @@ test('a Presente answers pairwise questions and the Dono records them', async ({
       `Preferiu ${chosen} a ${other}`,
     ])
     await snap(page, info, 'sessao-perguntas-dono')
-    await answers
-      .getByRole('button', { name: `Gravar as respostas de ${name}` })
-      .click()
+    await page.evaluate(() => {
+      document.documentElement.dataset.perguntas = 'original'
+    })
+    const post = Promise.withResolvers<void>()
+    await page.route(`**${path}/perguntas`, async (route) => {
+      await post.promise
+      await route.continue()
+    })
+    const record = answers.getByRole('button', {
+      name: `Gravar as respostas de ${name}`,
+    })
+    await record.click()
+    try {
+      await expect(
+        page.getByRole('status').filter({ hasText: 'Enviando decisão…' }),
+      ).toBeVisible()
+      await expect(record).toBeDisabled()
+      await expect(
+        answers.getByRole('button', { name: 'Descartar' }),
+      ).toBeDisabled()
+      await snap(page, info, 'sessao-perguntas-enviando')
+    } finally {
+      post.resolve()
+    }
     await expect(page).toHaveURL(/\?feito=perguntas-gravadas$/)
     await expect(page.getByRole('status').first()).toContainText(
       'Respostas gravadas',
     )
     await expect(page.getByRole('form', { name })).toHaveCount(0)
+    await expect(page.locator('html')).toHaveAttribute(
+      'data-perguntas',
+      'original',
+    )
+    await snap(page, info, 'sessao-perguntas-gravadas')
+
+    if (info.project.name === 'desktop') {
+      // A later answer can still be discarded through a plain POST.
+      await question.getByRole('button').first().click()
+      await expect(question).toContainText('Pergunta 4 de 10')
+      const plain = await browser.newContext({
+        javaScriptEnabled: false,
+        storageState: await page.context().storageState(),
+      })
+      try {
+        const owner = await plain.newPage()
+        await owner.goto(new URL(path, page.url()).href)
+        await owner
+          .getByRole('form', { name })
+          .getByRole('button', { name: 'Descartar' })
+          .click()
+        await expect(notice(owner).first()).toContainText(
+          'Respostas descartadas',
+        )
+        await expect(owner.getByRole('form', { name })).toHaveCount(0)
+      } finally {
+        await plain.close()
+      }
+    }
   } finally {
     await guest.close()
   }

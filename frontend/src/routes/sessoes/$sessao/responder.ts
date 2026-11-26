@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { answerFetch } from '#/content/fetch-answer'
 
 // The Cartaz's Enviar posts here. Outside `_owner/`, since the page gate runs
 // for pages, not for server handlers: `replyAction` checks the Dono itself.
@@ -9,7 +10,7 @@ export const Route = createFileRoute('/sessoes/$sessao/responder')({
     handlers: {
       POST: async ({ request, params }) => {
         const { serveReply } = await import('#/platform/billboard')
-        return serveReply(request, params.sessao)
+        return answerFetch(request, await serveReply(request, params.sessao))
       },
     },
   },

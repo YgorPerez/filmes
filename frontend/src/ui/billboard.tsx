@@ -48,6 +48,11 @@ type Props = {
   billboard: BillboardModel
   /** Where Enviar posts the text (field `texto`): the web. */
   action?: string
+  post?: {
+    onSubmit: (event: FormEvent<HTMLFormElement>) => void
+    busy: boolean
+    sending: boolean
+  }
   /** Gets the text instead of the post: the MCP Apps view. What its
    * promise gives is the status line. */
   onSend?: (text: string) => void | Promise<string>
@@ -110,6 +115,7 @@ function Request({
 export function Billboard({
   billboard,
   action,
+  post,
   onSend,
   sent = false,
   layout = 'page',
@@ -117,19 +123,22 @@ export function Billboard({
 }: Props) {
   const { marks, change, canKeep } = useMarks(billboard, sent)
   const [message, setMessage] = useState('')
+  const text = replyText(billboard, marks)
 
   const changeFilm = (id: string) => (film: FilmMarks) =>
     change({ ...marks, films: { ...marks.films, [id]: film } })
 
-  // The web posts the form; nothing marked stays here.
+  // Send the web form only when there is a reply.
   const submit = (event: FormEvent<HTMLFormElement>) => {
-    if (onSend === undefined && hasMarks(replyText(billboard, marks))) return
+    if (onSend === undefined && hasMarks(text)) {
+      post?.onSubmit(event)
+      return
+    }
     event.preventDefault()
     if (onSend === undefined) setMessage(BILLBOARD.reply.nothing)
   }
   // The view hands the text over instead.
   const send = (handOver: NonNullable<Props['onSend']>) => () => {
-    const text = replyText(billboard, marks)
     if (!hasMarks(text)) {
       setMessage(BILLBOARD.reply.nothing)
       return
@@ -189,6 +198,7 @@ export function Billboard({
       message={message}
       onSend={onSendClick}
       place={place}
+      sending={post?.sending}
     />
   )
   const shelf = (
@@ -200,6 +210,7 @@ export function Billboard({
         <ReplyBox
           billboard={billboard}
           marks={marks}
+          text={text}
           kept={canKeep}
           onMessage={setMessage}
           onAddition={(addition) => change({ ...marks, addition })}
@@ -230,7 +241,14 @@ export function Billboard({
       onSubmit={submit}
       aria-label={BILLBOARD.label}
     >
-      {body}
+      <input type="hidden" name="texto" value={text} />
+      {post ? (
+        <fieldset className="min-w-0" disabled={post.busy}>
+          {body}
+        </fieldset>
+      ) : (
+        body
+      )}
     </form>
   ) : (
     body
