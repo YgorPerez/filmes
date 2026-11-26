@@ -11,6 +11,7 @@ export const VOTES = {
     `${yes} ${yes === 1 ? 'sim' : 'sins'} · ${no} ${no === 1 ? 'não' : 'nãos'}`,
   rule: 'Um não tira o filme da Sessão e outro entra no lugar. Um sim sobe o filme na lista.',
   send: 'Enviar votos',
+  sending: 'Enviando votos…',
   restart: 'Recomeçar',
   done: 'Você já votou em todos os filmes da tela.',
   refresh: 'Ver se chegou filme novo',

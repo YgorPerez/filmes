@@ -475,9 +475,30 @@ test('each Presente votes on the films; a no swaps the film and the Session is r
     await expect(participant.getByText('2 sins · 1 não')).toBeVisible()
     await snap(participant, info, 'sessao-votos-resumo')
 
-    await participant.getByRole('button', { name: 'Enviar votos' }).click()
+    // Keep the POST pending long enough to check the sending state.
+    const send = Promise.withResolvers<void>()
+    await participant.route('**/participar/votos?**', async (route) => {
+      await send.promise
+      await route.continue()
+    })
+    await participant.evaluate(() => {
+      document.documentElement.dataset.votePage = 'original'
+    })
+    try {
+      await participant.getByRole('button', { name: 'Enviar votos' }).click()
+      await expect(
+        participant.getByRole('button', { name: 'Enviando votos…' }),
+      ).toBeDisabled()
+      await snap(participant, info, 'sessao-votos-enviando')
+    } finally {
+      send.resolve()
+    }
     await expect(participant.getByRole('status')).toContainText(
       'outro entrou no lugar',
+    )
+    await expect(participant.locator('html')).toHaveAttribute(
+      'data-vote-page',
+      'original',
     )
     // Only the film that came in is left to vote on.
     const newcomer = participant.getByRole('article')
