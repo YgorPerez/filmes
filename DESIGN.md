@@ -511,6 +511,10 @@ Trilho preto (estojo, 5px, raio 6px) e, dentro, a etiqueta clara (shelf-label, r
 - **JÁ VI:** quando todos os Presentes marcaram Já vi, um adesivo em superfície com contorno de 2px e texto em tinta, mesmo tamanho e rotação do TROCAR, no mesmo lugar. Já vi de só parte dos Presentes não cola adesivo: aparece nas opções marcadas e na nota de Já vi.
 - **Saiu da prateleira:** acima do primeiro card, em meta tinta clara, "Saiu da prateleira:" e o título do que saiu em letra de mão 15px tinta, com o motivo entre parênteses ("Teo já viu"). Um por linha quando sai mais de um.
 
+### Nota prevista
+
+Abaixo dos chips, quando algum Presente tem Nota prevista: o rótulo "NOTA PREVISTA" em label, tinta clara, e uma pílula por Presente que tem uma, na ordem dos Presentes: contorno de 1,5px em fio, o avatar de 24px e o número em Rubik 700 12px tabular, com uma casa ("8,3"), na escala de 1 a 10 do Já vi. Quem não tem Nota prevista não aparece: nunca um palpite. O leitor de tela ouve "Bruno: 8,3 de 10". A nota é a que a versão gravou na Sessão; ela não muda depois.
+
 ### Por que cada um vai gostar
 
 Rótulo em label, com "Fato sobre N de M" à direita. Uma linha por Evidência, grade de 34px, 28px e o resto: avatar de 24px (ou avatares sobrepostos com anel de 2px quando a Evidência é a mesma), a Força em três pontos, e o texto do motor com a Fonte embaixo. Quem não tem Fato fecha a lista com o avatar vazado e "Fulano: sem fato sobre este filme", em tinta clara.

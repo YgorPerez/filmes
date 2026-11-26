@@ -225,7 +225,7 @@ Os usuários do MovieLens mais perto do gosto de uma Pessoa: os que, nos filmes 
 _Evitar_: usuários parecidos, almas gêmeas
 
 **Nota prevista** [predicted rating, `predictedRating`]:
-A Nota que o motor espera que uma Pessoa dê a um filme, de 1 a 10 como o Já vi do Cartaz: o percentil médio dos vizinhos de gosto que viram o filme, lido de volta na Escala da Pessoa, de modo que o mesmo percentil é uma Nota mais alta para quem dá Notas altas. Sai com quantos vizinhos a sustentam e com o desvio entre eles [deviation, `deviation`], que diz quanto ela é incerta. Não é Fato nem Nota: é uma previsão, e o `evaluate` mede o erro dela contra as Notas retidas.
+A Nota que o motor espera que uma Pessoa dê a um filme, de 1 a 10 como o Já vi do Cartaz: o percentil médio dos vizinhos de gosto que viram o filme, lido de volta na Escala da Pessoa, de modo que o mesmo percentil é uma Nota mais alta para quem dá Notas altas. Sai com quantos vizinhos a sustentam e com o desvio entre eles [deviation, `deviation`], que diz quanto ela é incerta. Não é Fato nem Nota: é uma previsão, e o `evaluate` mede o erro dela contra as Notas retidas. A Sessão guarda a de cada filme da versão, e o Cartaz mostra a guardada, mesmo que os vizinhos mudem depois.
 _Evitar_: nota esperada, match
 
 **Palpite** [guess, `guess`]:
