@@ -180,6 +180,16 @@ Um Fato sobre o filme em si, vindo de uma base pública: elenco, diretor, gêner
 A avaliação que uma Pessoa deu a um filme, sempre dita com o nome de quem deu.
 _Evitar_: nota própria, nota de amigo, rating
 
+**Percentil da Nota** [rating percentile, `ratingPercentile`]:
+Onde uma Nota fica na Escala da Pessoa, de 0 a 1: a parte das Notas da escala abaixo dela, mais metade das iguais. A régua tira a Força de uma Nota do percentil, pelos cortes de `[rating_percentile]` em `config/weights.toml`: o top 10% é forte.
+_Evitar_: posição, ranking
+
+**Escala da Pessoa** [rating scale, `RatingScale`]:
+As Notas contra as quais a régua lê uma Nota dela: as próprias Notas da Pessoa, quando ela tem pelo menos o mínimo de `[rating_percentile]`; abaixo dele, as notas da população do MovieLens, na mesma escala de 0,5 a 5. As do Letterboxd e as do Trakt entram juntas.
+
+**Nota alta** [high rating, `isHighRating`]:
+Uma Nota que a régua lê a favor com Força moderada ou forte, só pelo percentil, sem a idade nem o Feedback. É o que o metadado agregado do caminho de conteúdo conta ("como 3 filmes a que deu Nota alta"). Num Declarado de filme, só o "ama".
+
 **Declarado** [stated, `stated`]:
 O que uma Pessoa disse sobre o próprio gosto ou sobre um filme, por exemplo num questionário ou numa review que ela escreveu.
 

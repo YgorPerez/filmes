@@ -15,7 +15,7 @@ import { Effect } from 'effect'
 import { compareTuple } from '../compat/compare.ts'
 import { pythonError } from '../compat/python-error.ts'
 import { makeEvidence, type Evidence } from '../evidence/Evidence.ts'
-import { feedbackStrength } from '../evidence/ruler.ts'
+import { feedbackStrength, type RatingScale } from '../evidence/ruler.ts'
 import { ratingText } from '../evidence/wording.ts'
 import { sessionOrder } from '../sessions/order.ts'
 import { satisfaction } from '../sessions/satisfaction.ts'
@@ -138,11 +138,13 @@ const percent = (value: number): string => `${Math.round(value * 100)}%`
 
 /** The line of the film that went up because a Presente was behind, citing
  * her lowest reaction in the window. It adds nothing to the utility (base
- * 0): the satisfaction acts on the Regra, not on the Evidence. */
+ * 0): the satisfaction acts on the Regra, not on the Evidence. A cited
+ * Nota is read on her scale (#172). */
 export const satisfactionLine = (
   person: string,
   name: string,
   group: GroupSatisfaction,
+  scale: RatingScale,
   filmId: string,
   today: string,
 ): Evidence => {
@@ -166,6 +168,7 @@ export const satisfactionLine = (
     date: text(reaction, 'data'),
     strength: feedbackStrength(
       kind,
+      scale,
       rating ?? 0,
       text(reaction, 'data'),
       today,
