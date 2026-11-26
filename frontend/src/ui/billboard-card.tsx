@@ -87,7 +87,14 @@ function Poster({
           {card.isNew}
         </Sticker>
       )}
-      {film.bet && <BetStamp className="absolute bottom-[38px] -left-sm" />}
+      {film.bet && (
+        <BetStamp
+          hint={card.betHint}
+          className="absolute bottom-[38px] -left-sm"
+        >
+          {card.bet}
+        </BetStamp>
+      )}
       <PriceSticker className="absolute -top-[9px] -left-[9px]">
         {film.position}
       </PriceSticker>
