@@ -31,6 +31,7 @@ export const PEOPLE = {
     testUsers:
       'Enquanto a tela de consentimento do Google estiver em teste, um Dono novo também precisa estar em Test users no Google Cloud, ou o primeiro login dele falha.',
     submit: 'Acrescentar',
+    submitting: 'Acrescentando…',
     refusals: {
       nome: 'Esse nome não dá um nome de arquivo válido. Use letras, números ou espaços.',
       reservado: '“dono” é reservado para achar o Dono. Escolha outro nome.',
@@ -68,7 +69,9 @@ export const PERSON = {
   unavailable: PEOPLE.unavailable,
   remove: 'Tirar',
   removeLabel: (what: string) => `Tirar ${what}`,
+  removing: 'Tirando…',
   save: 'Gravar',
+  saving: 'Gravando…',
   imported: 'importado',
   fromFeedback: 'do Feedback',
   notices: {
@@ -120,6 +123,7 @@ export const PERSON = {
     answer: 'Responder',
     answerText: 'A resposta dela',
     skip: 'Pular',
+    skipping: 'Pulando…',
   },
   vetoes: {
     title: 'Vetos',

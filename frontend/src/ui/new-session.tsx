@@ -13,7 +13,8 @@ import type { SearchAnswer } from '#/platform/catalog-search'
 import type { PageReading } from '#/platform/reading'
 import type { NewSessionDraft, RequestOptions } from '#/platform/sessions'
 import { ImportsFrame } from './imports'
-import { useFetchForm, useHydrated, useRefusalInPlace } from './kit/fetch-form'
+import { useFetchForm, useHydrated } from './kit/fetch-form'
+import { refusalOn, useRefusalInPlace } from './kit/refusal-in-place'
 import { Option } from './kit/option'
 import { OwnerTag } from './kit/owner-tag'
 import {
@@ -292,9 +293,8 @@ function NewSessionForm({
   const asked = draft?.fields ?? {}
   const live = useHydrated()
   const { refused, alert, onAnswer } = useRefusalInPlace(
-    '/sessoes/nova',
-    isSessionRequestRefusal,
     refusal,
+    refusalOn(isSessionRequestRefusal, '/sessoes/nova'),
   )
   const { onSubmit, busy } = useFetchForm(onAnswer)
   const films = useChosenFilms(similar)

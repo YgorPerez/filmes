@@ -11,7 +11,8 @@ import type { SearchAnswer } from '#/platform/catalog-search'
 import type { FeedbackAttendee, FeedbackPage } from '#/platform/feedback'
 import { FEEDBACK } from './feedback.copy'
 import { ImportsFrame } from './imports'
-import { useFetchForm, useHydrated, useRefusalInPlace } from './kit/fetch-form'
+import { useFetchForm, useHydrated } from './kit/fetch-form'
+import { refusalOn, useRefusalInPlace } from './kit/refusal-in-place'
 import { FIELD } from './kit/field'
 import { FieldLabel } from './kit/field-label'
 import { Option } from './kit/option'
@@ -142,9 +143,8 @@ function FeedbackForm({
     listed ? film : other ? 'outro' : undefined,
   )
   const { refused, alert, onAnswer } = useRefusalInPlace(
-    feedbackPath(session),
-    isFeedbackRefusal,
     refusal,
+    refusalOn(isFeedbackRefusal, feedbackPath(session)),
   )
   const { onSubmit, busy } = useFetchForm(onAnswer)
   return (
