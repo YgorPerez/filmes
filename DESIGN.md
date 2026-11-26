@@ -591,6 +591,20 @@ Uma coluna, de cima para baixo, com 16px entre os blocos. Não há lista de tela
 
 O guia nunca bloqueia: "Pedir filme" fica sempre em cima. Quando nenhum passo falta, o guia some da home inteira; não há carteirinha nem selo.
 
+### Entrar
+
+A barra preta leva a marca. O cartão azul começa perto do topo e traz o título na etiqueta clara. O botão laranja ocupa a largura interna no celular. Uma recusa ocupa o lugar da instrução inicial e diz o que fazer. Se a conta está sem acesso, o botão diz "Usar outra conta Google". Se a entrada está indisponível, o cartão mostra só o aviso.
+
+### Operações
+
+O console SQL, a fila de envio e a avaliação têm títulos próprios. A partir de 900px, a fila fica à direita do console e a avaliação ocupa a linha de baixo. No celular, a ordem é consulta, envio, avaliação. O botão laranja executa a consulta. A tabela e a contagem ficam logo abaixo do formulário, com rolagem dentro da área de resultados.
+
+O quadro de envio mostra a fila e, se houver falha, quando ela começou e quantas tentativas falharam. O último erro do Git abre sob demanda. Depois de tentar enviar, o estado da fila aparece no próprio quadro.
+
+A avaliação mostra o progresso no lugar do formulário enquanto roda. As medidas vêm antes do relatório, que abre sob demanda. A opção de testar outras combinações de pesos explica por que leva mais tempo.
+
+Um erro ou um aviso de configuração diz primeiro, em frase, o que houve e o que fazer. Embaixo, menor e em ink-2, vem o detalhe técnico que o admin procura: o código do erro, ou a variável do servidor que falta.
+
 ### Avatares
 
 Círculo de 24px na cor do Presente, inicial em Rubik 700 11px em on-person. Vazado: fundo transparente, anel de 2px na cor e inicial na cor. Sobrepostos: -7px de margem e anel de 2px na cor da superfície.
