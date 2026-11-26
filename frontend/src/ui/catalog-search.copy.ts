@@ -35,7 +35,9 @@ export const CATALOG_SEARCH = {
   votes: (n: number) => `${n.toLocaleString('pt-BR')} votos`,
   refusals: {
     curta: 'Escreva pelo menos 2 letras ou números para buscar.',
+    // The server's refusal, which it logs, and the browser's failure to
+    // reach it, which nothing logs and a retry may fix.
     indisponivel:
-      'A busca não funcionou: o site está com um problema, e ele ficou registrado no log do servidor.',
+      'A busca não funcionou. Confira a conexão; se ela estiver boa, o site está com um problema, e ele ficou registrado no log do servidor.',
   } satisfies Record<SearchRefusal, string>,
 }

@@ -7,7 +7,7 @@ export const RATINGS = {
   title: 'Meu gosto',
   lead: 'Dê uma Nota de 1 a 10 aos filmes que você viu; os que não viu, pule. As Notas ficam neste navegador até você tocar em Pronto, e aí vão todas de uma vez para o seu gosto.',
   unavailable:
-    'Não deu para abrir a tela de notas: o site está com um problema, e ele ficou registrado no log do servidor.',
+    'Não deu para abrir a tela de Notas: o site está com um problema, e ele ficou registrado no log do servidor.',
   queueLabel: 'Filme para dar Nota',
   rate: (n: number) => `Nota ${n}`,
   scale: 'Nota de 1 a 10',
