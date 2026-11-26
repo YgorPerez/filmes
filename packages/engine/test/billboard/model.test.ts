@@ -620,7 +620,7 @@ describe('the predicted rating (#175)', () => {
 
     const card = model.films.find((f) => f.id === film.id)
     expect(card?.predictedRatings).toEqual([
-      { person: 'bruno', value: 8.84, text: '8,8' },
+      { person: 'bruno', value: 8.84, text: '8,8', raters: 3 },
     ])
   })
 
@@ -633,7 +633,7 @@ describe('the predicted rating (#175)', () => {
     const model = await fixture.ok(billboardModel({ session: id }))
 
     expect(model.films.find((f) => f.id === film.id)?.predictedRatings).toEqual(
-      [{ person: 'bruno', value: 8.84, text: '8,8' }],
+      [{ person: 'bruno', value: 8.84, text: '8,8', raters: 3 }],
     )
   })
 

@@ -1,11 +1,14 @@
 // One film of the Cartaz: with a poster and marks, a new bet without poster,
-// marked Trocar, and read-only once the Session has its Feedback.
+// marked Trocar, and read-only once the Session has its Feedback; the dots
+// on the case with and without a Nota prevista, a hollow one with a number,
+// and six Presentes on the 112px case of a phone.
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
 import { expect, userEvent, within } from 'storybook/test'
 import { BillboardCard } from './billboard-card'
 import { MODEL } from './billboard.fixture'
 import type { FilmMarks } from './billboard-marks'
+import type { BillboardPerson } from '@filmes/engine'
 
 // A poster drawn here, so no story reaches the network for TMDB's.
 const POSTER =
@@ -13,6 +16,21 @@ const POSTER =
 
 const [FIRST, BET] = MODEL.films
 const FILM = { ...FIRST!, poster: POSTER }
+
+const [BRUNO, IARA] = MODEL.attendees
+
+/** Four more Presentes, after Bruno and Iara, in the Session's colours. */
+const MORE: BillboardPerson[] = ['Caio', 'Lia', 'Quim', 'Teo'].map(
+  (name, index) => ({
+    slug: name.toLowerCase(),
+    name,
+    label: name,
+    initial: name[0]!,
+    color: index + 3,
+    owner: false,
+  }),
+)
+const SIX = [BRUNO!, IARA!, ...MORE]
 
 const NO_MARKS: FilmMarks = {
   seen: [],
@@ -58,6 +76,91 @@ export const Swapped: Story = {
   render: (args) => <Marked {...args} />,
 }
 
-export const ReadOnly: Story = {}
+/** Bruno has a Nota prevista, Iara none. */
+/** Bruno has a Nota prevista, Iara none; a tap on his dot opens its hint
+ * under it. */
+export const ReadOnly: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const hint = 'Bruno: 8,3 de 10 · 12 vizinhos'
+    const dot = canvas.getByRole('button', { name: hint })
+    await expect(canvas.getByText(hint)).not.toBeVisible()
+    await userEvent.click(dot)
+    const popover = canvas.getByText(hint)
+    await expect(popover).toBeVisible()
+    const box = popover.getBoundingClientRect()
+    await expect(box.top).toBeGreaterThanOrEqual(
+      dot.getBoundingClientRect().bottom,
+    )
+    await expect(box.left).toBeGreaterThanOrEqual(0)
+    await expect(box.right).toBeLessThanOrEqual(window.innerWidth)
+    await expect(canvas.queryByRole('button', { name: /^Iara:/ })).toBeNull()
+  },
+}
 
 export const UnderSection: Story = { args: { level: 3 } }
+
+export const WithoutPredictedRating: Story = {
+  args: { film: { ...FILM, predictedRatings: [] } },
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).queryByRole('button', { name: /vizinho/ }),
+    ).toBeNull()
+  },
+}
+
+/** Iara has no Fato but has a Nota prevista: a hollow dot with a number. */
+export const HollowWithNumber: Story = {
+  args: {
+    film: {
+      ...BET!,
+      predictedRatings: [
+        { person: 'bruno', value: 7.12, text: '7,1', raters: 4 },
+        { person: 'iara', value: 6.94, text: '6,9', raters: 1 },
+      ],
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(
+      canvas.getByRole('button', { name: 'Iara: 6,9 de 10 · 1 vizinho' }),
+    ).toBeVisible()
+    await expect(
+      canvas.getByText('Iara: sem fato sobre este filme'),
+    ).toBeVisible()
+  },
+}
+
+/** Six Presentes, five with a Nota prevista (one of them a 10,0): the dots
+ * wrap inside the case and none spills out of it. */
+export const ManyPresentes: Story = {
+  args: {
+    people: SIX,
+    film: {
+      ...FILM,
+      withoutFact: ['quim'],
+      coverage: 'Fato sobre 5 de 6',
+      predictedRatings: [
+        { person: 'bruno', value: 8.31, text: '8,3', raters: 12 },
+        { person: 'iara', value: 10, text: '10,0', raters: 3 },
+        { person: 'caio', value: 7.06, text: '7,1', raters: 8 },
+        { person: 'quim', value: 6.44, text: '6,4', raters: 2 },
+        { person: 'teo', value: 9.15, text: '9,2', raters: 25 },
+      ],
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const dots = canvas.getAllByRole('button', { name: /vizinho/ })
+    await expect(dots).toHaveLength(5)
+    // The link fills the cover, which sits in the case.
+    const cover = canvas.getByRole('link', { name: /^Capa/ })
+    const tape = cover.parentElement!.parentElement!.getBoundingClientRect()
+    for (const dot of dots) {
+      const box = dot.getBoundingClientRect()
+      await expect(box.left).toBeGreaterThanOrEqual(tape.left)
+      await expect(box.right).toBeLessThanOrEqual(tape.right)
+      await expect(box.bottom).toBeLessThanOrEqual(tape.bottom)
+    }
+  },
+}

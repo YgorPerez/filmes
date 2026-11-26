@@ -139,6 +139,8 @@ export interface BillboardPrediction {
   readonly value: number
   /** "8,3". */
   readonly text: string
+  /** How many taste neighbours back it. */
+  readonly raters: number
 }
 
 export interface BillboardFilm {
@@ -322,10 +324,20 @@ const predictionsOf = (
 ): BillboardPrediction[] => {
   const recorded = item?.get('predicted_rating')
   return attendees.flatMap((person) => {
-    const value = get(get(recorded, person), 'value')
-    if (value === undefined || value === null) return []
+    const prediction = get(recorded, person)
+    const value = get(prediction, 'value')
+    // Every recorded prediction carries its raters (#174).
+    const raters = get(prediction, 'raters')
+    if (value === undefined || value === null || raters === undefined) return []
     const number = Number(yamlToJson(value))
-    return [{ person, value: number, text: oneDecimal(number) }]
+    return [
+      {
+        person,
+        value: number,
+        text: oneDecimal(number),
+        raters: Number(yamlToJson(raters)),
+      },
+    ]
   })
 }
 

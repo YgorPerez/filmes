@@ -5,7 +5,7 @@ import type {
 } from '@filmes/engine'
 import type { FilmMarks } from './billboard-marks'
 import { Chip } from './kit/chip'
-import { Avatar, PersonDot } from './kit/person'
+import { PersonDot } from './kit/person'
 import { PriceSticker, Sticker } from './kit/sticker'
 import { TapeCase } from './kit/tape-case'
 import { BILLBOARD } from './billboard.copy'
@@ -14,8 +14,8 @@ import { FilmMarksControls } from './billboard-card-marks'
 import { Strength } from './billboard-top'
 
 // One film of the Cartaz (DESIGN.md, Card do filme): the tape in its case
-// with the price sticker and a dot per Presente, the header, "Por que cada
-// um vai gostar" and, while the Session takes a reply, the marks
+// with the price sticker and a dot per Presente with her Nota prevista, the
+// header, "Por que cada um vai gostar" and, while the Session takes a reply, the marks
 // (`billboard-card-marks.tsx`). A grid: the case on the left (112px, 160px
 // from 560px), the header on the right; "Por que" and the marks across
 // below, each opened by a dashed rule, "Por que" going up under the chips
@@ -29,7 +29,7 @@ const byslug = (people: readonly BillboardPerson[]) =>
   new Map(people.map((p) => [p.slug, p]))
 
 const namesOf = (people: readonly BillboardPerson[]) =>
-  people.map((p) => p.name).join(', ')
+  BILLBOARD.card.whose(people.map((p) => p.name))
 
 function Poster({
   film,
@@ -44,31 +44,46 @@ function Poster({
 }) {
   const { card } = BILLBOARD
   const without = new Set(film.withoutFact)
+  const predicted = new Map(film.predictedRatings.map((p) => [p.person, p]))
   return (
-    <a
-      href={film.imdbUrl}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="relative self-start no-underline min-[560px]:row-span-2"
-    >
+    <div className="relative self-start min-[560px]:row-span-2">
       <TapeCase
         className="w-full"
         cover={
-          film.poster ? (
-            <img
-              src={film.poster}
-              alt={card.poster(film.title)}
-              loading={first ? 'eager' : 'lazy'}
-              className="absolute inset-0 size-full object-cover group-data-swap/card:opacity-70"
-            />
-          ) : (
-            <span>{film.title}</span>
-          )
+          <a
+            href={film.imdbUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="absolute inset-0 grid place-items-center p-md text-ink-2 no-underline"
+          >
+            {film.poster ? (
+              <img
+                src={film.poster}
+                alt={card.poster(film.title)}
+                loading={first ? 'eager' : 'lazy'}
+                className="absolute inset-0 size-full object-cover group-data-swap/card:opacity-70"
+              />
+            ) : (
+              <span>{film.title}</span>
+            )}
+          </a>
         }
       >
         {people.map((p) => {
-          const hollow = without.has(p.slug)
-          return <PersonDot key={p.slug} person={p} hollow={hollow} />
+          const rating = predicted.get(p.slug)
+          return (
+            <PersonDot
+              key={p.slug}
+              person={p}
+              hollow={without.has(p.slug)}
+              rating={
+                rating && {
+                  text: rating.text,
+                  hint: card.predicted(p.name, rating.text, rating.raters),
+                }
+              }
+            />
+          )
         })}
       </TapeCase>
       {stamp && (
@@ -95,63 +110,16 @@ function Poster({
       <PriceSticker className="absolute -top-[9px] -left-[9px]">
         {film.position}
       </PriceSticker>
-    </a>
-  )
-}
-
-/** Each Presente's Nota prevista (#175), her avatar and the number on the
- * 1 to 10 scale of the Já vi; a Presente with none is not there. */
-function Predicted({
-  film,
-  people,
-}: {
-  film: BillboardFilm
-  people: readonly BillboardPerson[]
-}) {
-  const { card } = BILLBOARD
-  const known = byslug(people)
-  const predicted = film.predictedRatings.flatMap((p) => {
-    const person = known.get(p.person)
-    return person ? [{ person, text: p.text }] : []
-  })
-  if (predicted.length === 0) return null
-  return (
-    <div className="flex flex-wrap items-center gap-xs">
-      <span
-        aria-hidden="true"
-        className="font-display text-label text-ink-2 uppercase"
-      >
-        {card.predicted}
-      </span>
-      <span className="sr-only">{card.predictedHint}</span>
-      <ul aria-label={card.predicted} className="flex flex-wrap gap-xs">
-        {predicted.map(({ person, text }) => (
-          <li
-            key={person.slug}
-            className="inline-flex items-center gap-1.25 rounded-pill border-(length:--border-width-stroke) border-rule py-0.5 pr-2.25 pl-0.5 font-display text-chip font-bold text-ink tabular-nums"
-          >
-            <span aria-hidden="true" className="contents">
-              <Avatar person={person} />
-              {text}
-            </span>
-            <span className="sr-only">
-              {card.predictedOf(person.name, text)}
-            </span>
-          </li>
-        ))}
-      </ul>
     </div>
   )
 }
 
 function Header({
   film,
-  people,
   id,
   level,
 }: {
   film: BillboardFilm
-  people: readonly BillboardPerson[]
   id: string
   level: Level
 }) {
@@ -189,37 +157,12 @@ function Header({
           {card.imdb(film.imdbRatingText, film.votesText)}
         </a>
       </div>
-      <Predicted film={film} people={people} />
     </div>
   )
 }
 
-// Avatar, Força, the engine's text: 34px, 28px and the rest.
-const LINE = 'grid grid-cols-[minmax(34px,auto)_28px_1fr] gap-xs text-evidence'
-
-/** One avatar, or the same Evidência's avatars overlapping with a ring of
- * the card's surface between them. */
-function Avatars({
-  people,
-  hollow = false,
-}: {
-  people: readonly BillboardPerson[]
-  hollow?: boolean
-}) {
-  return (
-    <span aria-label={namesOf(people)} className="flex">
-      {people.map((p, i) => (
-        <span
-          key={p.slug}
-          className={i > 0 ? '-ml-[7px] rounded-round ring-2 ring-surface' : ''}
-        >
-          <Avatar person={p} hollow={hollow} />
-        </span>
-      ))}
-    </span>
-  )
-}
-
+/** One line of "Por que": the Força, then whose it is and the engine's
+ * text, with the Fonte below. */
 function Line({
   line,
   people,
@@ -229,13 +172,12 @@ function Line({
 }) {
   const who = line.people.flatMap((slug) => people.get(slug) ?? [])
   return (
-    <li className={LINE}>
-      <Avatars people={who} />
-      <span className="pt-1.75">
+    <li className="grid grid-cols-[28px_1fr] gap-xs text-evidence">
+      <span className="flex h-lh items-center">
         <Strength strength={line.strength} />
       </span>
       <span>
-        {line.text}
+        <span className="font-semibold">{namesOf(who)}:</span> {line.text}
         {line.source && (
           <span className="block text-source text-ink-2">{line.source}</span>
         )}
@@ -277,10 +219,8 @@ function Why({
           />
         ))}
         {without.length > 0 && (
-          <li className={`${LINE} text-ink-2`}>
-            <Avatars people={without} hollow />
-            <span />
-            <span>{card.withoutFact(namesOf(without))}</span>
+          <li className="text-evidence text-ink-2">
+            {card.withoutFact(namesOf(without))}
           </li>
         )}
       </ul>
@@ -318,12 +258,7 @@ export function BillboardCard({
       className="group/card grid grid-cols-[112px_1fr] content-start gap-xl rounded-card border border-rule bg-surface px-xl pt-2xl pb-xl min-[560px]:grid-cols-[160px_1fr]"
     >
       <Poster film={film} people={people} first={first} stamp={stamp} />
-      <Header
-        film={film}
-        people={people}
-        id={`filme-${film.id}`}
-        level={level}
-      />
+      <Header film={film} id={`filme-${film.id}`} level={level} />
       <Why film={film} people={people} level={level} />
       {marks && onChange && (
         <FilmMarksControls

@@ -375,8 +375,10 @@ test('the Nota prevista the Session recorded, per Presente who has one', async (
   await snap(page, info, 'cartaz-nota-prevista')
   await snap(page, info, 'cartaz-nota-prevista-card', card(page, at))
 
-  const predicted = card(page, at).getByRole('list', {
-    name: 'Nota prevista',
+  const dot = card(page, at).getByRole('button', {
+    name: 'Bruno: 8,8 de 10 · 3 vizinhos',
   })
-  await expect(predicted.getByRole('listitem')).toHaveText([/Bruno: 8,8 de 10/])
+  await expect(dot).toHaveText('8,8')
+  await dot.click()
+  await expect(page.getByText('Bruno: 8,8 de 10 · 3 vizinhos')).toBeVisible()
 })
