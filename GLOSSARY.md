@@ -106,6 +106,10 @@ _Evitar_: retorno, devolutiva
 O texto livre que o Dono escreve embaixo do Cartaz, depois do último filme: contexto da noite ou gosto novo. O contexto regera direto; o gosto só é gravado com um sim do Dono.
 _Evitar_: observação, extra
 
+**Leitura do pedido** [request reading, `RequestReading`]:
+O que o motor entende, sem modelo de linguagem, de uma frase que o Dono digita no app web ("eu e a Iara, algo leve, até 2h"): os Presentes, o Clima, as Restrições, quantos filmes e a Regra "de", cada item com as palavras de onde veio, o que ficou sem entender e o nome ou o título que pode ser mais de um. O vocabulário fica em `config/request_reading.toml`; a mesma frase sai sempre igual. Nunca lê gosto: uma oração como "a Ana odeia terror" volta sem entender. No chat, quem lê a frase é o Claude.
+_Evitar_: parser, interpretação
+
 **Trocado** [swapped, `swapped`]:
 Um filme que o Dono tirou da tela de uma versão: o Trocar do Cartaz, o não de um Presente no Voto e, ao refazer, o que ele mandou trocar e o que não ficou como Mantido. Fica fora da Sessão até o fim.
 _Evitar_: descartado, rejeitado
