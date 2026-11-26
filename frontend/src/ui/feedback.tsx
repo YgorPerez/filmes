@@ -20,6 +20,7 @@ import { PriceSticker } from './kit/sticker'
 import { OwnerTag } from './kit/owner-tag'
 import {
   Alert,
+  PostFailed,
   Item,
   Items,
   Section,
@@ -146,7 +147,7 @@ function FeedbackForm({
     refusal,
     refusalOn(isFeedbackRefusal, feedbackPath(session)),
   )
-  const { onSubmit, busy } = useFetchForm(onAnswer)
+  const { onSubmit, busy, failed } = useFetchForm(onAnswer)
   return (
     <form
       method="post"
@@ -166,6 +167,7 @@ function FeedbackForm({
           <Alert>{FEEDBACK.refusals[refused]}</Alert>
         </div>
       )}
+      <PostFailed failed={failed} />
       <FilmChoice
         page={page}
         film={film}

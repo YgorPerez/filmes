@@ -9,15 +9,19 @@ export const FETCH_HEADER = 'x-filmes-fetch'
 
 /** The route's answer as the poster asked for it: a form sent by `fetch`
  * (`FETCH_HEADER`) gets the 303's `location` as `{ to }`, so the page goes
- * there without reloading; a plain POST gets the 303 itself. */
+ * there without reloading, with the 303's other headers (a `Set-Cookie`);
+ * a plain POST gets the 303 itself. */
 export const answerFetch = (request: Request, response: Response) => {
   const to = response.headers.get('Location')
-  return request.headers.get(FETCH_HEADER) === '1' &&
-    response.status === 303 &&
-    to !== null
-    ? Response.json(
-        { to },
-        { headers: { 'Cache-Control': 'private, no-store' } },
-      )
-    : response
+  if (
+    request.headers.get(FETCH_HEADER) !== '1' ||
+    response.status !== 303 ||
+    to === null
+  )
+    return response
+  const headers = new Headers(response.headers)
+  headers.delete('Location')
+  headers.delete('Content-Length')
+  headers.set('Cache-Control', 'private, no-store')
+  return Response.json({ to }, { headers })
 }

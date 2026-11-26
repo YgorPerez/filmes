@@ -3,6 +3,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useId,
   useRef,
   useState,
   type ComponentProps,
@@ -21,7 +22,7 @@ import {
 } from './kit/film-search'
 import { FieldLabel } from './kit/field-label'
 import { Icon } from './kit/icon'
-import { Alert, Notice } from './kit/status'
+import { Alert, Notice, PostFailed } from './kit/status'
 import { buttonVariants } from './kit/button-variants'
 import { Button } from './shadcn/button'
 
@@ -32,7 +33,7 @@ import { Button } from './shadcn/button'
 // their parts, which keeps kit/status under fallow's coupling threshold
 // (its fan-in at most the project's p95).
 
-export { Alert, Notice }
+export { Alert, Notice, PostFailed }
 
 /** A section of the Pessoa's page: a card with its title. */
 export function Section({
@@ -118,6 +119,29 @@ function settle(form: HTMLFormElement) {
   fold.querySelector('summary')?.focus()
 }
 
+/** The `ActionForm` showing the refusal its post got (its id), null when
+ * none does, and how a form says it: one alert at a time says what the
+ * last post did. */
+const RefusedIn = createContext<{
+  form: string | null
+  show: (form: string | null) => void
+} | null>(null)
+
+/** The Pessoa's page's forms (`ActionForm`): the refusal one of them
+ * shows in place hides the page's own notice and the refusals the others
+ * showed before. */
+export function ActionForms({ children }: { children: ReactNode }) {
+  const [form, show] = useState<string | null>(null)
+  return (
+    <RefusedIn.Provider value={{ form, show }}>{children}</RefusedIn.Provider>
+  )
+}
+
+/** True while an `ActionForm` shows its refusal in place: the notice or
+ * refusal the page came with is no longer what the last post did. */
+export const useRefusedInPlace = () =>
+  (useContext(RefusedIn)?.form ?? null) !== null
+
 /** A form that posts one action to the Pessoa's route
  * (`platform/people.ts`). A plain POST: it works before the JavaScript.
  * With it (#235), it posts by `fetch`: a refusal shows here, over what was
@@ -138,15 +162,24 @@ export function ActionForm({
   busy?: string
   children: ReactNode
 }) {
+  const id = useId()
+  const shared = useContext(RefusedIn)
   const { refused, alert, onAnswer } = useRefusalInPlace(
     undefined,
     refusalOn(isPersonRefusal),
   )
-  const { onSubmit, busy: running } = useFetchForm((to, form) => {
-    if (onAnswer(to)) return true
+  const {
+    onSubmit,
+    busy: running,
+    failed,
+  } = useFetchForm((to, form) => {
+    const kept = onAnswer(to)
+    shared?.show(kept ? id : null)
+    if (kept) return true
     settle(form)
     return false
   })
+  const shown = shared === null || shared.form === id ? refused : undefined
   return (
     <form
       method="post"
@@ -155,11 +188,12 @@ export function ActionForm({
       onSubmit={onSubmit}
       className={className ?? 'flex flex-col gap-xl'}
     >
-      {refused && (
+      {shown && (
         <div ref={alert} className="basis-full">
-          <Alert>{PERSON.refusals[refused]}</Alert>
+          <Alert>{PERSON.refusals[shown]}</Alert>
         </div>
       )}
+      <PostFailed failed={failed} />
       <input type="hidden" name="acao" value={action} />
       <Posting.Provider value={running === null ? null : busy}>
         {children}
@@ -294,12 +328,13 @@ export function SelectField({
 /** The submit of a form, with every Button prop (`disabled`...): an
  * option at the start of its line unless `variant` or `className` say
  * otherwise. In an `ActionForm` whose post runs, it is disabled and says
- * what the form is doing. */
+ * what the form is doing, in its name too. */
 export function Submit({
   variant = 'option',
   className = 'self-start',
   disabled,
   children,
+  'aria-label': label,
   ...props
 }: Omit<ComponentProps<typeof Button>, 'type'>) {
   const posting = useContext(Posting)
@@ -309,6 +344,8 @@ export function Submit({
       variant={variant}
       className={className}
       disabled={disabled === true || posting !== null}
+      // While posting, its name is what it does, as its text says.
+      aria-label={posting === null ? label : undefined}
       {...props}
     >
       {posting ?? children}

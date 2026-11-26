@@ -9,7 +9,13 @@ import { PEOPLE } from './people.copy'
 import { useFetchForm } from './kit/fetch-form'
 import { OwnerTag } from './kit/owner-tag'
 import { refusalOn, useRefusalInPlace } from './kit/refusal-in-place'
-import { Alert, Disclosure, Submit, TextField } from './person-parts'
+import {
+  Alert,
+  Disclosure,
+  PostFailed,
+  Submit,
+  TextField,
+} from './person-parts'
 import { RowArrow } from './kit/row-arrow'
 
 /** The create form as it comes back: why it was refused, what was typed. */
@@ -96,7 +102,7 @@ function CreateForm({ state }: { state?: CreateState }) {
     state?.refusal,
     refusalOn(isPersonCreateRefusal),
   )
-  const { onSubmit, busy } = useFetchForm(onAnswer)
+  const { onSubmit, busy, failed } = useFetchForm(onAnswer)
   return (
     <Disclosure summary={create.title} open={state?.refusal !== undefined}>
       <form
@@ -111,6 +117,7 @@ function CreateForm({ state }: { state?: CreateState }) {
             <Alert>{create.refusals[refused]}</Alert>
           </div>
         )}
+        <PostFailed failed={failed} />
         <TextField
           name="nome"
           label={create.name}

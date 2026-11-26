@@ -8,12 +8,19 @@ import {
 } from 'react'
 import { ratingField, type RatingRefusal } from '#/content/rating-form'
 import type { SearchAnswer } from '#/platform/catalog-search'
-import { useFetchForm } from './kit/fetch-form'
+import { useFetchForm, type Answered } from './kit/fetch-form'
 import { usePostedFeedback } from './kit/posted-feedback'
 import { Chip } from './kit/chip'
 import { TapeCase } from './kit/tape-case'
 import { Slip } from './kit/slip'
-import { Alert, CatalogSearch, Meta, Notice, Submit } from './person-parts'
+import {
+  Alert,
+  CatalogSearch,
+  Meta,
+  Notice,
+  PostFailed,
+  Submit,
+} from './person-parts'
 import {
   loadDraft,
   parseDraft,
@@ -116,9 +123,7 @@ export function RatingScreen({
   written?: number
   refusal?: RatingRefusal
 }) {
-  const { feedback, onAnswer } = usePostedFeedback(
-    written !== undefined ? `feito:${written}` : (refusal ?? ''),
-  )
+  const { feedback, onAnswer } = usePostedFeedback()
   return (
     <ImportsFrame back={RATINGS.back} backTo={MY_TASTE}>
       <div className="flex flex-col gap-sm">
@@ -171,7 +176,7 @@ function useDraft(person: string, settled?: 'written' | 'refused') {
 
 /** Pronto's answer, heard without a reload: written, the sent Notas leave
  * the draft; refused, they stay. */
-type Answered = (to: string, form: HTMLFormElement) => boolean
+type OnAnswer = (to: string, form: HTMLFormElement) => Answered
 
 function Rating({
   queue,
@@ -184,11 +189,11 @@ function Rating({
   search: SearchAnswer | null
   film?: string
   settled?: 'written' | 'refused'
-  onAnswer: Answered
+  onAnswer: OnAnswer
 }) {
   const person = queue.person
   const [draft, change] = useDraft(person, settled)
-  const sent: Answered = (to, form) => {
+  const sent: OnAnswer = (to, form) => {
     const answer = new URL(to, window.location.origin).searchParams
     if (answer.has('feito') || answer.has('erro'))
       change(settle(loadDraft(person), answer.has('feito')))
@@ -239,10 +244,10 @@ function DraftSection({
   draft: Draft
   onRemove: (id: string) => void
   onSend: () => void
-  onAnswer: Answered
+  onAnswer: OnAnswer
 }) {
   const rated = Object.entries(draft.ratings)
-  const { onSubmit, busy } = useFetchForm(onAnswer)
+  const { onSubmit, busy, failed } = useFetchForm(onAnswer)
   return (
     <Slip
       id="minhas-notas"
@@ -295,6 +300,7 @@ function DraftSection({
             value={entry.rating}
           />
         ))}
+        <PostFailed failed={failed} />
         <Submit
           variant="primary"
           disabled={rated.length === 0 || busy !== null}

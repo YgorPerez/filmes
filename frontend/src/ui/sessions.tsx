@@ -20,7 +20,7 @@ import { ImportsFrame } from './imports'
 import { RowArrow } from './kit/row-arrow'
 import { Slip } from './kit/slip'
 import { buttonVariants } from './kit/button-variants'
-import { Alert, Notice } from './kit/status'
+import { Alert, Notice, PostFailed } from './kit/status'
 import { names } from './session-names'
 import { Avatars, SessionDate, NewSessionLink } from './session-parts'
 import { PairwiseAnswers } from './pairwise-answers'
@@ -246,12 +246,8 @@ function SessionView({
   const [rejection, setRejection] = useState<{ reason: ReplyRefusal } | null>(
     null,
   )
-  const alert = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    if (rejection) alert.current?.scrollIntoView({ block: 'nearest' })
-  }, [rejection])
 
-  const { onSubmit, busy } = useFetchForm((to) => {
+  const { onSubmit, busy, failed } = useFetchForm((to) => {
     const url = new URL(to, window.location.origin)
     if (
       url.origin !== window.location.origin ||
@@ -265,13 +261,18 @@ function SessionView({
     }
     setRejection(null)
     const done = url.searchParams.get('feito')
-    if (billboard && (done === 'regerada' || done === 'anotada')) {
+    if (!billboard || (done !== 'regerada' && done !== 'anotada')) return false
+    // The marks go once the new Cartaz is in: kept if it fails to load.
+    return () => {
       forgetMarks(openStorage(), billboard)
       setSentReplies((n) => n + 1)
     }
-    return false
   })
   const refused = rejection?.reason ?? refusal
+  const alert = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (rejection || failed) alert.current?.scrollIntoView({ block: 'nearest' })
+  }, [rejection, failed])
   return (
     <>
       <header className="flex flex-col gap-xl border-b border-dashed border-rule pb-xl">
@@ -298,9 +299,10 @@ function SessionView({
         )}
       </header>
       {notice && <Notice>{session.notices[notice]}</Notice>}
-      {refused && (
+      {(refused || failed) && (
         <div ref={alert}>
-          <Alert>{session.refusals[refused]}</Alert>
+          {refused && <Alert>{session.refusals[refused]}</Alert>}
+          <PostFailed failed={failed} />
         </div>
       )}
       <Said page={page} />

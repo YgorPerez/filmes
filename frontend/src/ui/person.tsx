@@ -11,6 +11,7 @@ import { OwnerTag } from './kit/owner-tag'
 import { Slip } from './kit/slip'
 import {
   ActionForm,
+  ActionForms,
   Alert,
   CatalogSearch,
   Disclosure,
@@ -22,6 +23,7 @@ import {
   SelectField,
   Submit,
   TextField,
+  useRefusedInPlace,
 } from './person-parts'
 import { MyStartSections, type MyStart } from './my-start'
 import { StrengthDots } from './person-marks'
@@ -89,7 +91,7 @@ export function PersonScreen({
       ) : page === 'unknown' ? (
         <Alert>{PERSON.unknown}</Alert>
       ) : (
-        <>
+        <ActionForms>
           <PersonHeader
             page={page}
             own={own}
@@ -100,7 +102,7 @@ export function PersonScreen({
           {own && start && <MyStartSections start={start} person={slug} />}
           <Contents page={page} />
           <Details slug={slug} page={page} search={search} />
-        </>
+        </ActionForms>
       )}
     </main>
   )
@@ -120,6 +122,8 @@ function PersonHeader({
   refusal?: PersonRefusal
 }) {
   const aliases = page.aliases.length > 0 ? PERSON.aliases(page.aliases) : null
+  // A form's refusal in place says what the last post did now.
+  const stale = useRefusedInPlace()
   return (
     <>
       <div className="flex flex-col gap-xs">
@@ -131,8 +135,8 @@ function PersonHeader({
           <Meta parts={own ? [page.name, aliases] : [aliases]} />
         )}
       </div>
-      {refusal && <Alert>{PERSON.refusals[refusal]}</Alert>}
-      {notice && <Notice>{PERSON.notices[notice]}</Notice>}
+      {refusal && !stale && <Alert>{PERSON.refusals[refusal]}</Alert>}
+      {notice && !stale && <Notice>{PERSON.notices[notice]}</Notice>}
     </>
   )
 }

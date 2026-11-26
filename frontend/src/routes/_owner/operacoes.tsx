@@ -16,15 +16,12 @@ export const Route = createFileRoute('/_owner/operacoes')({
     erro: isOperationsRefusal(search.erro) ? search.erro : undefined,
   }),
   loaderDeps: ({ search }) => ({ sql: search.sql }),
-  // The POST may change the evaluation or queue while the SQL stays the same.
-  shouldReload: true,
   beforeLoad: ({ context }) => {
     if (!context.owner.admin) throw notFound()
   },
-  loader: {
-    handler: ({ deps }) => readOperationsPage({ data: deps }),
-    staleReloadMode: 'blocking',
-  },
+  // A post loads the page again itself, once (`useFetchForm`), the shell's
+  // strip of a failing push with it.
+  loader: ({ deps }) => readOperationsPage({ data: deps }),
   component: OperationsPage,
 })
 

@@ -55,9 +55,7 @@ export function PersonImportsScreen({
 }) {
   const own = typeof page === 'object' && page?.own === true
   const name = typeof page === 'object' && page !== null ? page.name : slug
-  const { feedback, onAnswer } = usePostedFeedback(
-    done ? `${done.notice}:${done.facts}:${done.outside}` : (refusal ?? ''),
-  )
+  const { feedback, onAnswer } = usePostedFeedback()
   return (
     <PostAnswers onAnswer={onAnswer}>
       <ImportsFrame back={COPY.back(name, own)} backTo={personPath(slug, own)}>
