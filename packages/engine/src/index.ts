@@ -231,6 +231,21 @@ export {
 } from './sessions/redo.ts'
 export { sessionRedoRequest } from './sessions/redo-request.ts'
 export {
+  answerPairwise,
+  decidePairwise,
+  pairwiseAnswers,
+  pairwiseQuestions,
+  pairwiseSource,
+  PAIRWISE_PAIRS,
+  PAIRWISE_RATING,
+  type PairwiseAnswer,
+  type PairwiseDecision,
+  type PairwiseQuestions,
+  type PairwiseRequest,
+  type WaitingAnswer,
+  type WaitingAnswers,
+} from './sessions/pairwise.ts'
+export {
   castVotes,
   votedBy,
   yesVotes,

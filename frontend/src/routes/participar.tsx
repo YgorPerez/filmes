@@ -10,8 +10,11 @@ import { PARTICIPATION } from '#/ui/session-link.copy'
 
 export const Route = createFileRoute('/participar')({
   validateSearch: sessionLinkSearch,
-  beforeLoad: async ({ search }) => ({
-    participation: await readSessionLink({ data: search }),
+  // `home`: the link's film list for the chosen Presente, where the child
+  // pages go back to.
+  beforeLoad: async ({ search: { sessao, chave, presente } }) => ({
+    participation: await readSessionLink({ data: { sessao, chave, presente } }),
+    home: sessao && chave ? sessionLinkPath(sessao, chave, presente) : null,
   }),
   headers: () => sessionLinkHeaders,
   component: SessionLinkRoute,

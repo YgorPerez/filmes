@@ -35,6 +35,7 @@ import {
   SearchFold,
   ShelfRow,
 } from './session-parts'
+import { PairwiseAnswers } from './pairwise-answers'
 import { ShareSessionLink } from './session-link-share'
 import { SESSIONS } from './sessions.copy'
 
@@ -251,6 +252,10 @@ function SessionView({
       {notice && <Notice>{session.notices[notice]}</Notice>}
       {refusal && <Alert>{session.refusals[refusal]}</Alert>}
       <Said page={page} />
+      <PairwiseAnswers
+        action={`${sessionHref(s.id)}/perguntas`}
+        waiting={page.pairwise ?? []}
+      />
       {page.billboard === null ? (
         <Alert>{SESSIONS.unavailable}</Alert>
       ) : (

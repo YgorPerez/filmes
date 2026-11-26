@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { readVoteDeck } from '#/content/session-votes'
+import { readVoteDeck } from '#/content/session-link'
 import { voteSearch } from '#/content/session-votes-address'
 import { VoteScreen } from '#/ui/session-votes'
 
@@ -20,5 +20,11 @@ export const Route = createFileRoute('/participar/votar')({
 })
 
 function VoteRoute() {
-  return <VoteScreen deck={Route.useLoaderData()} search={Route.useSearch()} />
+  return (
+    <VoteScreen
+      deck={Route.useLoaderData()}
+      search={Route.useSearch()}
+      home={Route.useRouteContext().home}
+    />
+  )
 }

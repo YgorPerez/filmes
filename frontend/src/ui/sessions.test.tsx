@@ -161,6 +161,12 @@ describe('a Session’s page', () => {
       name: 'Link para os Presentes',
     })
     expect((field as HTMLInputElement).value).toBe(sessionLink)
+    await user.click(field)
+    const input = field as HTMLInputElement
+    expect([input.selectionStart, input.selectionEnd]).toEqual([
+      0,
+      sessionLink.length,
+    ])
   })
 
   it('shows what the reply or the form left: the warnings, the acrescentar, a refusal', () => {
