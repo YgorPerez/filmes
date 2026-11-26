@@ -35,7 +35,7 @@ import {
   contribution,
   type Evidence,
 } from '../../evidence/Evidence.ts'
-import { ratingDecay } from '../../evidence/decay.ts'
+import { seedDecay } from '../../evidence/decay.ts'
 import {
   adjustedStrength,
   castStrength,
@@ -228,9 +228,7 @@ export const content: Signal = {
                 base:
                   weight *
                   direction *
-                  (kind === 'rating'
-                    ? ratingDecay(date, today, weights.rating_decay)
-                    : 1),
+                  seedDecay(kind, date, today, weights.rating_decay),
               })
               // The same Nota can reach the Candidate through more than one
               // node: the strongest link counts.

@@ -12,7 +12,7 @@
 // you liked X says nothing about someone who did not like X.
 
 import { Effect } from 'effect'
-import { ratingDecay } from '../../evidence/decay.ts'
+import { seedDecay } from '../../evidence/decay.ts'
 import { makeEvidence } from '../../evidence/Evidence.ts'
 import {
   neighborStrength,
@@ -79,13 +79,12 @@ export const neighbors: Signal = {
             factId: text(row, 'fato_id'),
             base:
               round.weights.neighbors.weight *
-              (kind === 'rating'
-                ? ratingDecay(
-                    text(row, 'nota_data'),
-                    round.today,
-                    round.weights.rating_decay,
-                  )
-                : 1),
+              seedDecay(
+                kind,
+                text(row, 'nota_data'),
+                round.today,
+                round.weights.rating_decay,
+              ),
           }),
         ]
       })
