@@ -1,8 +1,9 @@
 // Satisfação [satisfaction] and Discordância [disagreement] (#171), from the
-// reactions of the Sessions in the online window, after Stratigi et al. (see
-// #170). A reaction goes from 0 to 1, as the Crédito reads it.
+// reactions of a set of Sessions, after Stratigi et al. (see #170). A
+// reaction goes from 0 to 1. `evaluate` measures the online window with it;
+// the default Regra, each Presente's recent shared Sessions (#176).
 //
-// - Each Presente's satisfaction: the mean of her reactions in the window.
+// - Each Presente's satisfaction: the mean of her reactions in the set.
 // - In each group Session (two or more Presentes reacted): the lowest
 //   reaction, and the disagreement, highest minus lowest. `minimum` and
 //   `disagreement` are their means over those Sessions.

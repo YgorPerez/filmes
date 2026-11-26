@@ -29,15 +29,15 @@ const SESSION: FeedbackSession = {
 
 const PAGE: FeedbackPage = {
   ...SESSION,
-  credit: [
-    { person: 'bruno', name: 'Bruno', value: 0, line: null },
+  satisfaction: [
+    { person: 'bruno', name: 'Bruno', satisfaction: 1, line: null },
     {
       person: 'iara',
       name: 'Iara',
-      value: 0.4444,
-      line: 'na Sessão de 2026-11-19 (Casa Cheia), Iara deu 1 e a média dos Presentes foi 3',
+      satisfaction: 0.1111,
+      line: 'satisfação de Iara nas últimas Sessões: 11%, e a mais alta do grupo, 100%; na de 2026-11-19 (Casa Cheia), deu 1',
     },
-    { person: 'quim', name: 'Quim', value: 0, line: null },
+    { person: 'quim', name: 'Quim', satisfaction: 1, line: null },
   ],
 }
 
@@ -176,29 +176,35 @@ describe('FeedbackScreen', () => {
     expect(posted(form)).toEqual({ refused: 'filme' })
   })
 
-  it('shows who has Crédito now, with the Session it came from', () => {
+  it('shows who is behind in satisfaction now, with the Session it cites', () => {
     show()
-    const credit = screen.getByRole('region', { name: FEEDBACK.credit.title })
-    expect(credit.textContent).toMatch(/Iara/)
-    expect(credit.textContent).toMatch(/Casa Cheia/)
-    expect(credit.textContent).toContain('Crédito 0,44')
-    expect(credit.textContent).not.toMatch(/Quim/)
+    const region = screen.getByRole('region', {
+      name: FEEDBACK.satisfaction.title,
+    })
+    expect(region.textContent).toMatch(/Iara/)
+    expect(region.textContent).toMatch(/Casa Cheia/)
+    expect(region.textContent).toContain('Satisfação 11%')
+    expect(region.textContent).not.toMatch(/Quim/)
   })
 
-  it('says nobody has Crédito, and has no Crédito alone', () => {
-    show({ ...PAGE, credit: PAGE.credit.map((c) => ({ ...c, line: null })) })
+  it('says nobody is behind, and has no satisfaction alone', () => {
+    show({
+      ...PAGE,
+      satisfaction: PAGE.satisfaction.map((c) => ({ ...c, line: null })),
+    })
     expect(
-      screen.getByRole('region', { name: FEEDBACK.credit.title }).textContent,
-    ).toContain(FEEDBACK.credit.empty)
+      screen.getByRole('region', { name: FEEDBACK.satisfaction.title })
+        .textContent,
+    ).toContain(FEEDBACK.satisfaction.empty)
     cleanup()
     show({
       ...PAGE,
       attendees: PAGE.attendees.slice(0, 1),
-      credit: PAGE.credit.slice(0, 1),
+      satisfaction: PAGE.satisfaction.slice(0, 1),
     })
-    expect(screen.queryByRole('region', { name: FEEDBACK.credit.title })).toBe(
-      null,
-    )
+    expect(
+      screen.queryByRole('region', { name: FEEDBACK.satisfaction.title }),
+    ).toBe(null)
   })
 
   it('says every refusal, and when the Session is not open', () => {

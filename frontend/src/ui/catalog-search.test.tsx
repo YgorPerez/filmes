@@ -63,7 +63,7 @@ const PAGE: FeedbackPage = {
   request: null,
   attendees: [{ person: 'bruno', name: 'Bruno', owner: true }],
   recommendation: [],
-  credit: [],
+  satisfaction: [],
 }
 
 const showFeedback = (search: SearchAnswer) =>

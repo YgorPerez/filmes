@@ -39,7 +39,7 @@ exports[`the whole output, as recorded > all of them 1`] = `
       "until": null,
     },
   },
-  "credit": {},
+  "disagreement": null,
   "films": [
     {
       "coverage": {
@@ -168,6 +168,7 @@ exports[`the whole output, as recorded > all of them 1`] = `
   "rule": {
     "name": "default",
   },
+  "satisfaction": {},
   "vetoes": [],
   "warnings": [
     "TMDB sem chave de API (defina FILMES_TMDB_CHAVE); os filmes saem sem capa, sem título em português e sem sinopse",
@@ -192,7 +193,7 @@ exports[`the whole output, as recorded > duration 1`] = `
       "removed": 34,
     },
   },
-  "credit": {},
+  "disagreement": null,
   "films": [
     {
       "coverage": {
@@ -2634,6 +2635,7 @@ exports[`the whole output, as recorded > duration 1`] = `
   "rule": {
     "name": "default",
   },
+  "satisfaction": {},
   "vetoes": [],
   "warnings": [
     "TMDB sem chave de API (defina FILMES_TMDB_CHAVE); os filmes saem sem capa, sem título em português e sem sinopse",
@@ -2658,7 +2660,7 @@ exports[`the whole output, as recorded > language 1`] = `
       "removed": 73,
     },
   },
-  "credit": {},
+  "disagreement": null,
   "films": [
     {
       "coverage": {
@@ -3184,6 +3186,7 @@ exports[`the whole output, as recorded > language 1`] = `
   "rule": {
     "name": "default",
   },
+  "satisfaction": {},
   "vetoes": [],
   "warnings": [
     "TMDB sem chave de API (defina FILMES_TMDB_CHAVE); os filmes saem sem capa, sem título em português e sem sinopse",
@@ -3207,7 +3210,7 @@ exports[`the whole output, as recorded > unseen 1`] = `
       "removed": 11,
     },
   },
-  "credit": {},
+  "disagreement": null,
   "films": [
     {
       "coverage": {
@@ -6132,6 +6135,7 @@ exports[`the whole output, as recorded > unseen 1`] = `
   "rule": {
     "name": "default",
   },
+  "satisfaction": {},
   "vetoes": [],
   "warnings": [
     "TMDB sem chave de API (defina FILMES_TMDB_CHAVE); os filmes saem sem capa, sem título em português e sem sinopse",

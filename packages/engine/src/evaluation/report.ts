@@ -19,7 +19,7 @@ import { randomBytes } from 'node:crypto'
 import { pyFixed, pyRepr } from '../compat/number.ts'
 import type { StrengthCalibration } from './calibration.ts'
 import type { Measures } from './offline.ts'
-import type { Satisfaction } from './satisfaction.ts'
+import type { Satisfaction } from '../sessions/satisfaction.ts'
 import { dumpYaml, type ReportValue } from './yaml.ts'
 
 const isFile = (path: string) => existsSync(path) && statSync(path).isFile()

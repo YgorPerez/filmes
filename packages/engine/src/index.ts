@@ -88,10 +88,10 @@ export {
   type ConstraintRequest,
 } from './recommendation/constraints/index.ts'
 export {
-  computeCredit,
-  creditLine,
-  type Credit,
-} from './recommendation/credit.ts'
+  groupSatisfaction,
+  satisfactionLine,
+  type GroupSatisfaction,
+} from './recommendation/group-satisfaction.ts'
 export {
   filmHeader,
   firstSentence,
@@ -115,7 +115,7 @@ export {
   RULE_NAMES,
   ruleKey,
   ruleToJson,
-  usesCredit,
+  usesSatisfaction,
   type Rule,
   type RuleName,
 } from './recommendation/rule.ts'
@@ -194,7 +194,11 @@ export {
   reloadSessions,
   syncSession,
 } from './sessions/database.ts'
-export { creditNow, type CreditNow } from './sessions/credit.ts'
+export {
+  satisfactionNow,
+  type PersonSatisfactionNow,
+  type SatisfactionNow,
+} from './sessions/satisfaction-now.ts'
 export {
   dropComment,
   recordFeedback,

@@ -48,7 +48,7 @@ export const Weights = Schema.Struct({
   catalog: Schema.Struct({ min_votes: Count, min_imdb_rating: Weight }),
   recommendation: Schema.Struct({ size: Count }),
   seen: Schema.Struct({ weight: Weight }),
-  credit: Schema.Struct({ factor: Weight, window: Count }),
+  satisfaction: Schema.Struct({ factor: Weight, window: Count }),
   neighbors: Schema.Struct({ weight: Weight }),
   /** The taste neighbours (#174): how many, how many films each must share
    * with the Pessoa, the Evidence's weight, and the band around her median

@@ -32,7 +32,7 @@ import {
 import { engineError, type EngineError } from '../runtime/EngineError.ts'
 
 /** A reaction's level as the file has it, its database value, and the 0 to
- * 1 value the Crédito uses. */
+ * 1 value the satisfaction uses. */
 export const REPORT_LEVELS = {
   liked: { db: 'gostou', value: 1 },
   neutral: { db: 'neutro', value: 0.5 },
@@ -80,7 +80,7 @@ export interface SessionSeen {
   readonly source: string
 }
 
-/** A Nota from 0.5 to 5 as the Crédito's 0 to 1. */
+/** A Nota from 0.5 to 5 as the satisfaction's 0 to 1. */
 export const ratingValue = (rating: number): number => (rating - 0.5) / 4.5
 
 /** The Fonte of a Session's Fatos. */

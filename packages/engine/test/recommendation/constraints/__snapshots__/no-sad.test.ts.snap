@@ -20,7 +20,7 @@ exports[`the whole output, as recorded > nothing sad 1`] = `
       "removed": 8,
     },
   },
-  "credit": {},
+  "disagreement": null,
   "films": [
     {
       "coverage": {
@@ -4089,6 +4089,7 @@ exports[`the whole output, as recorded > nothing sad 1`] = `
   "rule": {
     "name": "default",
   },
+  "satisfaction": {},
   "vetoes": [],
   "warnings": [
     "TMDB sem chave de API (defina FILMES_TMDB_CHAVE); os filmes saem sem capa, sem título em português e sem sinopse",
