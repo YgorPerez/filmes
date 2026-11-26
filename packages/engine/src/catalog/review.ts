@@ -233,11 +233,49 @@ class TasteRatings {
 const TASTE_SAMPLE_STRIDE = 10
 const TASTE_SAMPLE_MIN_RATINGS = 50
 
-/** `vizinhos(notas, links)`, the ratings' spread, the tags, the ratings by
- * value of ml-32m, and the taste neighbours' sample. */
-const loadMovielens = (db: Connection, zip: string, dump: Dump) =>
+/** The high ratings' items and users, in typed arrays that grow. */
+class HighRatings {
+  private itemsOf = new Int32Array(1 << 20)
+  private usersOf = new Int32Array(1 << 20)
+  private votes = 0
+
+  push(item: number, user: number): void {
+    if (this.votes === this.itemsOf.length) {
+      const grownItems = new Int32Array(this.votes * 2)
+      grownItems.set(this.itemsOf)
+      this.itemsOf = grownItems
+      const grownUsers = new Int32Array(this.votes * 2)
+      grownUsers.set(this.usersOf)
+      this.usersOf = grownUsers
+    }
+    this.itemsOf[this.votes] = item
+    this.usersOf[this.votes] = user
+    this.votes += 1
+  }
+
+  get items(): Int32Array {
+    return this.itemsOf.subarray(0, this.votes)
+  }
+
+  get users(): Int32Array {
+    return this.usersOf.subarray(0, this.votes)
+  }
+}
+
+/** What reading ml-32m's ratings gathers. */
+interface RatingsScan {
+  readonly byMovieId: ReadonlyMap<string, number>
+  readonly spread: Int32Array
+  /** Every rating, linked or not, by value: the population's scale (#172). */
+  readonly population: Map<number, number>
+  /** The taste neighbours' sample (#174), one rating per index. */
+  readonly taste: TasteRatings
+  readonly high: HighRatings
+}
+
+/** ml-32m's links: movieId to tconst. */
+const readLinks = (zip: string) =>
   Effect.gen(function* () {
-    const sourceAndDate = sourceOf(dump)
     const map = new Map<string, string>()
     yield* forEachBatch(csvRows(zip, MOVIELENS_MEMBERS.links), (rows) =>
       Effect.sync(() => {
@@ -248,71 +286,53 @@ const loadMovielens = (db: Connection, zip: string, dump: Dump) =>
         }
       }),
     )
-    const films = [...new Set(map.values())].sort((a, b) =>
-      compareTuple([a], [b]),
+    return map
+  })
+
+const scanRating = (scan: RatingsScan, row: Lookup): void => {
+  const rating = pyParseFloat(present(row('rating'), 'rating'))
+  if (rating >= 0.5 && rating <= 5)
+    scan.population.set(rating, (scan.population.get(rating) ?? 0) + 1)
+  const movieId = row('movieId')
+  const item = movieId === null ? undefined : scan.byMovieId.get(movieId)
+  if (item === undefined) return
+  const step = Math.round(rating * 2) - 1
+  const bin = Math.min(RATING_STEPS - 1, Math.max(0, step))
+  scan.spread[item * RATING_STEPS + bin]! += 1
+  const sampled = row('userId')
+  if (
+    sampled !== null &&
+    /^\d+$/.test(sampled) &&
+    Number(sampled) % TASTE_SAMPLE_STRIDE === 0 &&
+    rating >= 0.5 &&
+    rating <= 5
+  )
+    scan.taste.push(Number(sampled), item, rating)
+  if (!(rating >= HIGH_RATING)) return
+  const user = pyParseInt(present(row('userId'), 'userId'))
+  if (user === null)
+    throw pythonError(
+      'ValueError',
+      `invalid literal for int() with base 10: ${pyReprStr(row('userId')!)}`,
     )
-    const index = new Map(films.map((film, i) => [film, i] as const))
-    const byMovieId = new Map(
-      [...map].map(([movieId, film]) => [movieId, index.get(film)!] as const),
-    )
-    let items = new Int32Array(1 << 20)
-    let users = new Int32Array(1 << 20)
-    let votes = 0
-    const spread = new Int32Array(films.length * RATING_STEPS)
-    // Every rating, linked or not, by value: the population's scale (#172).
-    const population = new Map<number, number>()
-    // The taste neighbours' sample (#174), one rating per index.
-    const taste = new TasteRatings()
-    yield* forEachBatch(csvRows(zip, MOVIELENS_MEMBERS.ratings), (rows) =>
-      Effect.sync(() => {
-        for (const row of rows) {
-          const rating = pyParseFloat(present(row('rating'), 'rating'))
-          if (rating >= 0.5 && rating <= 5)
-            population.set(rating, (population.get(rating) ?? 0) + 1)
-          const movieId = row('movieId')
-          const item = movieId === null ? undefined : byMovieId.get(movieId)
-          if (item === undefined) continue
-          const step = Math.round(rating * 2) - 1
-          const bin = Math.min(RATING_STEPS - 1, Math.max(0, step))
-          spread[item * RATING_STEPS + bin]! += 1
-          const sampled = row('userId')
-          if (
-            sampled !== null &&
-            /^\d+$/.test(sampled) &&
-            Number(sampled) % TASTE_SAMPLE_STRIDE === 0 &&
-            rating >= 0.5 &&
-            rating <= 5
-          )
-            taste.push(Number(sampled), item, rating)
-          if (!(rating >= HIGH_RATING)) continue
-          const user = pyParseInt(present(row('userId'), 'userId'))
-          if (user === null)
-            throw pythonError(
-              'ValueError',
-              `invalid literal for int() with base 10: ${pyReprStr(row('userId')!)}`,
-            )
-          if (votes === items.length) {
-            const grownItems = new Int32Array(votes * 2)
-            grownItems.set(items)
-            items = grownItems
-            const grownUsers = new Int32Array(votes * 2)
-            grownUsers.set(users)
-            users = grownUsers
-          }
-          items[votes] = item
-          users[votes] = user
-          votes += 1
-        }
-      }),
-    )
+  scan.high.push(item, user)
+}
+
+const writeRatings = (
+  db: Connection,
+  films: readonly string[],
+  scan: RatingsScan,
+  sourceAndDate: readonly [string, string],
+) =>
+  Effect.gen(function* () {
     yield* db.runMany(
       'INSERT INTO notas_movielens VALUES (?, ?)',
-      [...population].sort(([a], [b]) => a - b),
+      [...scan.population].sort(([a], [b]) => a - b),
     )
     // Two movieIds may link to the same film: the later rating stays.
     yield* db.runMany(
       'INSERT OR REPLACE INTO notas_gosto_movielens VALUES (?, ?, ?)',
-      taste.rows(films),
+      scan.taste.rows(films),
     )
     yield* db.run(
       `DELETE FROM notas_gosto_movielens WHERE usuario IN (
@@ -328,18 +348,23 @@ const loadMovielens = (db: Connection, zip: string, dump: Dump) =>
       'INSERT INTO vizinhos VALUES (?, ?, ?, ?, ?, ?, ?)',
       reviewFactRows(
         'vizinhos',
-        computeNeighbors(
-          films,
-          items.subarray(0, votes),
-          users.subarray(0, votes),
-        ),
+        computeNeighbors(films, scan.high.items, scan.high.users),
         sourceAndDate,
       ),
     )
     yield* db.runMany(
       'INSERT INTO entropia_movielens VALUES (?, ?, ?)',
-      spreadRows(films, spread),
+      spreadRows(films, scan.spread),
     )
+  })
+
+const loadTags = (
+  db: Connection,
+  zip: string,
+  map: ReadonlyMap<string, string>,
+  sourceAndDate: readonly [string, string],
+) =>
+  Effect.gen(function* () {
     const tagRows: Array<readonly [string, string, string]> = []
     yield* forEachBatch(csvRows(zip, MOVIELENS_MEMBERS.tags), (rows) =>
       Effect.sync(() => {
@@ -355,6 +380,34 @@ const loadMovielens = (db: Connection, zip: string, dump: Dump) =>
       'INSERT INTO tags_movielens VALUES (?, ?, ?, ?, ?, ?)',
       reviewFactRows('tags_movielens', countTags(tagRows, map), sourceAndDate),
     )
+  })
+
+/** `vizinhos(notas, links)`, the ratings' spread, the tags, the ratings by
+ * value of ml-32m, and the taste neighbours' sample. */
+const loadMovielens = (db: Connection, zip: string, dump: Dump) =>
+  Effect.gen(function* () {
+    const sourceAndDate = sourceOf(dump)
+    const map = yield* readLinks(zip)
+    const films = [...new Set(map.values())].sort((a, b) =>
+      compareTuple([a], [b]),
+    )
+    const index = new Map(films.map((film, i) => [film, i] as const))
+    const scan: RatingsScan = {
+      byMovieId: new Map(
+        [...map].map(([movieId, film]) => [movieId, index.get(film)!] as const),
+      ),
+      spread: new Int32Array(films.length * RATING_STEPS),
+      population: new Map<number, number>(),
+      taste: new TasteRatings(),
+      high: new HighRatings(),
+    }
+    yield* forEachBatch(csvRows(zip, MOVIELENS_MEMBERS.ratings), (rows) =>
+      Effect.sync(() => {
+        for (const row of rows) scanRating(scan, row)
+      }),
+    )
+    yield* writeRatings(db, films, scan, sourceAndDate)
+    yield* loadTags(db, zip, map, sourceAndDate)
   })
 
 /** The lines of a binary stream split on "\n" only (Python iterating a

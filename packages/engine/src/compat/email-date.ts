@@ -64,10 +64,9 @@ const offsetOf = (zone: string): number | null => {
   return sign * (Math.floor(abs / 100) * 3600 + (abs % 100) * 60)
 }
 
-/** "YYYY-MM-DD" of the date, or null where Python raises ValueError or
- * TypeError. */
-export const pyEmailDate = (text: string): string | null => {
-  if (!text) return null
+/** The words of the date as `_parsedate_tz` splits them, at least five
+ * (day, month, year, time, zone, maybe out of place); null when fewer. */
+const wordsOf = (text: string): string[] | null => {
   let data = text.split(SPLIT).filter((part) => part !== '')
   if (data.length === 0) return null
   const first = data[0] ?? ''
@@ -88,6 +87,12 @@ export const pyEmailDate = (text: string): string | null => {
     else data.push('')
   }
   if (data.length < 5) return null
+  return data
+}
+
+/** Day, month, year, time and zone put in their places, as
+ * `_parsedate_tz` swaps them; null where it gives up. */
+const placed = (data: readonly string[]) => {
   let [dd = '', mm = '', yy = '', tm = '', tz = ''] = data
   if (!(dd && mm && yy)) return null
   mm = mm.toLowerCase()
@@ -104,12 +109,31 @@ export const pyEmailDate = (text: string): string | null => {
     if (!yy) return null
   }
   if (!/^\p{Nd}/u.test(yy)) [yy, tz] = [tz, yy]
-  if (tm.endsWith(',')) tm = tm.slice(0, -1)
+  return { dd, month, yy, tm, tz }
+}
+
+/** The time's parts, split on ":" or ".", or null with not 2 or 3. */
+const timeParts = (text: string): string[] | null => {
+  const tm = text.endsWith(',') ? text.slice(0, -1) : text
   let time = tm.split(':')
   if (time.length === 1 && tm.includes('.')) {
     time = tm.split('.')
     if (time.length !== 2 && time.length !== 3) return null
   } else if (time.length !== 2 && time.length !== 3) return null
+  return time
+}
+
+/** "YYYY-MM-DD" of the date, or null where Python raises ValueError or
+ * TypeError. */
+export const pyEmailDate = (text: string): string | null => {
+  if (!text) return null
+  const data = wordsOf(text)
+  if (data === null) return null
+  const fields = placed(data)
+  if (fields === null) return null
+  const { dd, month, yy, tz } = fields
+  const time = timeParts(fields.tm)
+  if (time === null) return null
   const [hh = '', mi = '', ss = '0'] = time
   const numbers = [yy, dd, hh, mi, ss].map(pyParseInt)
   if (numbers.some((n) => n === null)) return null

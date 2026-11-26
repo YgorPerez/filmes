@@ -153,7 +153,8 @@ class SparqlScanner {
       .join('.')
   }
 
-  push(text: string): Binding[] {
+  /** Drops the text behind every token still open, and appends `text`. */
+  private refill(text: string): void {
     const keep =
       this.itemStart >= 0
         ? this.itemStart
@@ -167,65 +168,86 @@ class SparqlScanner {
     if (this.itemStart >= 0) this.itemStart -= keep
     if (this.stringStart >= 0) this.stringStart -= keep
     if (this.numberStart >= 0) this.numberStart -= keep
+  }
+
+  /** A character inside a string; at its end, a kept string is the key. */
+  private stringChar(c: number): void {
+    if (this.escaped) this.escaped = false
+    else if (c === BACKSLASH) this.escaped = true
+    else if (c === QUOTE) {
+      this.inString = false
+      if (this.stringStart >= 0) {
+        this.lastKey = JSON.parse(
+          this.buffer.slice(this.stringStart, this.at + 1),
+        ) as string
+        this.stringStart = -1
+      }
+    }
+  }
+
+  /** A number of the first two levels ends: keep QLever's count. */
+  private endNumber(): void {
+    if (this.numberStart >= 0 && !/[0-9eE+\-.]/.test(this.buffer[this.at]!)) {
+      if (this.path() === 'meta' && this.lastKey === 'result-size-total')
+        this.expected = Number(this.buffer.slice(this.numberStart, this.at))
+      this.numberStart = -1
+    }
+  }
+
+  private openContainer(c: number, depth: number): void {
+    const inBindings =
+      c === OPEN_BRACE &&
+      depth === 3 &&
+      this.stack[2]!.kind === OPEN_BRACKET &&
+      this.path() === 'results.bindings'
+    if (inBindings) this.itemStart = this.at
+    if (
+      c === OPEN_BRACKET &&
+      depth === 2 &&
+      this.path() === 'results' &&
+      this.lastKey === 'bindings'
+    )
+      this.bindings = true
+    this.stack.push({
+      kind: c,
+      key: depth === 0 ? undefined : this.lastKey,
+    })
+    this.lastKey = undefined
+  }
+
+  private closeContainer(out: Binding[]): void {
+    this.stack.pop()
+    if (this.itemStart >= 0 && this.stack.length === 3) {
+      out.push(
+        JSON.parse(this.buffer.slice(this.itemStart, this.at + 1)) as Binding,
+      )
+      this.count += 1
+      this.itemStart = -1
+    }
+    this.lastKey = this.stack.length > 0 ? this.stack.at(-1)!.key : undefined
+  }
+
+  push(text: string): Binding[] {
+    this.refill(text)
     const out: Binding[] = []
     const buffer = this.buffer
     for (; this.at < buffer.length; this.at++) {
       const c = buffer.charCodeAt(this.at)
       if (this.inString) {
-        if (this.escaped) this.escaped = false
-        else if (c === BACKSLASH) this.escaped = true
-        else if (c === QUOTE) {
-          this.inString = false
-          if (this.stringStart >= 0) {
-            this.lastKey = JSON.parse(
-              buffer.slice(this.stringStart, this.at + 1),
-            ) as string
-            this.stringStart = -1
-          }
-        }
+        this.stringChar(c)
         continue
       }
-      if (this.numberStart >= 0 && !/[0-9eE+\-.]/.test(buffer[this.at]!)) {
-        if (this.path() === 'meta' && this.lastKey === 'result-size-total')
-          this.expected = Number(buffer.slice(this.numberStart, this.at))
-        this.numberStart = -1
-      }
+      this.endNumber()
       const depth = this.stack.length
       if (c === QUOTE) {
         this.inString = true
         // Keys and values of the first two levels are short: keep them.
         if (depth <= 2 && this.itemStart < 0) this.stringStart = this.at
-      } else if (c === OPEN_BRACE || c === OPEN_BRACKET) {
-        const inBindings =
-          c === OPEN_BRACE &&
-          depth === 3 &&
-          this.stack[2]!.kind === OPEN_BRACKET &&
-          this.path() === 'results.bindings'
-        if (inBindings) this.itemStart = this.at
-        if (
-          c === OPEN_BRACKET &&
-          depth === 2 &&
-          this.path() === 'results' &&
-          this.lastKey === 'bindings'
-        )
-          this.bindings = true
-        this.stack.push({
-          kind: c,
-          key: depth === 0 ? undefined : this.lastKey,
-        })
-        this.lastKey = undefined
-      } else if (c === CLOSE_BRACE || c === CLOSE_BRACKET) {
-        this.stack.pop()
-        if (this.itemStart >= 0 && this.stack.length === 3) {
-          out.push(
-            JSON.parse(buffer.slice(this.itemStart, this.at + 1)) as Binding,
-          )
-          this.count += 1
-          this.itemStart = -1
-        }
-        this.lastKey =
-          this.stack.length > 0 ? this.stack.at(-1)!.key : undefined
-      } else if (c === COMMA || c === COLON) {
+      } else if (c === OPEN_BRACE || c === OPEN_BRACKET)
+        this.openContainer(c, depth)
+      else if (c === CLOSE_BRACE || c === CLOSE_BRACKET)
+        this.closeContainer(out)
+      else if (c === COMMA || c === COLON) {
         if (c === COMMA && this.stack.at(-1)?.kind === OPEN_BRACE)
           this.lastKey = undefined
       } else if (

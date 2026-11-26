@@ -180,21 +180,16 @@ export class Environment extends Context.Service<
     Layer.effect(Environment, makeEnvironment(vars))
 }
 
-const makeEnvironment = Effect.fnUntraced(function* (vars: Vars) {
-  const get = (name: string): string | undefined => vars[name] || undefined
+/** The variables, with an empty one read as unset, as in Python. */
+type Getter = (name: string) => string | undefined
 
-  const config = get('FILMES_CONFIG')
-  if (config === undefined)
-    return yield* engineError(
-      'missing_config',
-      'pasta de config não configurada: defina FILMES_CONFIG (a pasta com weights.toml)',
-    )
-
-  const localFile = get('FILMES_LOCAL') ?? join(config, 'local.toml')
-  const local = existsSync(localFile)
-    ? ((yield* readConfigFile(localFile, LocalToml)).paths ?? {})
-    : {}
-
+/** Every path that is set: the variable, then `[paths]` in local.toml, then
+ * the default; `cache` defaults to beside the database. */
+const resolvePaths = (
+  get: Getter,
+  config: string,
+  local: Partial<Record<PathName, string>>,
+): Partial<Record<PathName, string>> => {
   const storage = join(
     get('XDG_DATA_HOME') ?? join(get('HOME') ?? homedir(), '.local', 'share'),
     'filmes',
@@ -214,11 +209,12 @@ const makeEnvironment = Effect.fnUntraced(function* (vars: Vars) {
     const stem = basename(database, extname(database))
     paths.cache = join(dirname(database), `${stem}-cache.sqlite`)
   }
+  return paths
+}
 
-  const weights = yield* readConfigFile(
-    get('FILMES_PESOS') ?? join(config, 'weights.toml'),
-    Weights,
-  )
+const readSourceKeys = (
+  get: Getter,
+): Partial<Record<SourceKeyVariable, Redacted.Redacted<string>>> => {
   const sourceKeys: Partial<
     Record<SourceKeyVariable, Redacted.Redacted<string>>
   > = {}
@@ -226,6 +222,44 @@ const makeEnvironment = Effect.fnUntraced(function* (vars: Vars) {
     const value = get(name)
     if (value !== undefined) sourceKeys[name] = Redacted.make(value)
   }
+  return sourceKeys
+}
+
+const pathIn =
+  (paths: Partial<Record<PathName, string>>) =>
+  (name: PathName): Effect.Effect<string, EngineError> => {
+    const value = paths[name]
+    return value === undefined
+      ? Effect.fail(
+          engineError(
+            'missing_config',
+            `caminho '${name}' não configurado: defina ${PATH_VARIABLES[name]} ou [paths] ${name} em config/local.toml`,
+          ),
+        )
+      : Effect.succeed(value)
+  }
+
+const makeEnvironment = Effect.fnUntraced(function* (vars: Vars) {
+  const get: Getter = (name) => vars[name] || undefined
+
+  const config = get('FILMES_CONFIG')
+  if (config === undefined)
+    return yield* engineError(
+      'missing_config',
+      'pasta de config não configurada: defina FILMES_CONFIG (a pasta com weights.toml)',
+    )
+
+  const localFile = get('FILMES_LOCAL') ?? join(config, 'local.toml')
+  const local = existsSync(localFile)
+    ? ((yield* readConfigFile(localFile, LocalToml)).paths ?? {})
+    : {}
+  const paths = resolvePaths(get, config, local)
+
+  const weights = yield* readConfigFile(
+    get('FILMES_PESOS') ?? join(config, 'weights.toml'),
+    Weights,
+  )
+  const sourceKeys = readSourceKeys(get)
 
   const dataKey = get('FILMES_DATA_KEY')
 
@@ -240,17 +274,7 @@ const makeEnvironment = Effect.fnUntraced(function* (vars: Vars) {
     dataRemote: get('FILMES_DATA_REMOTE'),
     dataKey: dataKey === undefined ? undefined : Redacted.make(dataKey),
     fixedToday: today,
-    path: (name) => {
-      const value = paths[name]
-      return value === undefined
-        ? Effect.fail(
-            engineError(
-              'missing_config',
-              `caminho '${name}' não configurado: defina ${PATH_VARIABLES[name]} ou [paths] ${name} em config/local.toml`,
-            ),
-          )
-        : Effect.succeed(value)
-    },
+    path: pathIn(paths),
     readConfig: (name, schema) =>
       readConfigFile(join(config, `${name}.toml`), schema),
   })

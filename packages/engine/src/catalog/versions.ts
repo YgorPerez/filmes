@@ -77,17 +77,8 @@ const difference = (a: ReadonlySet<string>, b: Iterable<string>) => {
 const subset = (a: Iterable<string>, b: ReadonlySet<string>) =>
   [...a].every((x) => b.has(x))
 
-const check = (manifest: string, catalog: string): Dumps => {
-  const parsed: unknown = JSON.parse(readFileSync(manifest, 'utf8'))
-  const raw =
-    typeof parsed === 'object' && parsed !== null && 'dumps' in parsed
-      ? parsed.dumps
-      : undefined
-  if (raw === undefined) throw new Invalid("'dumps'")
-  if (typeof raw !== 'object' || raw === null || Array.isArray(raw))
-    throw new Invalid('dumps is not an object')
-  const entries = Object.entries(raw as Record<string, unknown>)
-  const names = new Set(entries.map(([name]) => name))
+/** The manifest names every dump the catalog needs, and no other. */
+const checkNames = (names: ReadonlySet<string>): void => {
   const required = new Set([IMDB_BASICS, IMDB_RATINGS, LABELS])
   if (GROUPLENS.some((name) => names.has(name))) {
     if (!GROUPLENS.every((name) => names.has(name)))
@@ -110,34 +101,50 @@ const check = (manifest: string, catalog: string): Dumps => {
   }
   if (rest.size > 0)
     throw new Invalid(`dumps desconhecidos: ${[...rest].sort().join(', ')}`)
-  const dumps = new Map<string, Dump>()
-  for (const [name, value] of entries) {
-    const dump = value as Record<string, unknown>
-    if (typeof dump !== 'object' || dump === null)
-      throw new Invalid(`${name} is not an object`)
-    for (const key of ['sha256', 'date'] as const)
-      if (!(key in dump)) throw new Invalid(pyReprStr(key))
-    const { sha256: pinned, date, source } = dump
-    if (typeof date !== 'string' || pyIsoDate(date) === null)
-      throw new Invalid(`Invalid isoformat string: ${pyReprStr(String(date))}`)
-    if (typeof pinned !== 'string' || !/^[0-9a-f]{64}$/.test(pinned))
-      throw new Invalid(`SHA-256 inválido para ${name}`)
-    const entry: Dump = {
-      source:
-        typeof source === 'string'
-          ? source
-          : source === undefined
-            ? undefined
-            : JSON.stringify(source),
-      date,
-      sha256: pinned,
-    }
-    const file = dumpPath(catalog, name, entry)
-    if (!isFile(file)) throw new Invalid(`dump fixado ausente: ${file}`)
-    if (sha256(file) !== pinned)
-      throw new Invalid(`SHA-256 diverge para ${name}`)
-    dumps.set(name, entry)
+}
+
+/** One dump of the manifest, its file checked against its SHA-256. */
+const checkDump = (name: string, value: unknown, catalog: string): Dump => {
+  const dump = value as Record<string, unknown>
+  if (typeof dump !== 'object' || dump === null)
+    throw new Invalid(`${name} is not an object`)
+  for (const key of ['sha256', 'date'] as const)
+    if (!(key in dump)) throw new Invalid(pyReprStr(key))
+  const { sha256: pinned, date, source } = dump
+  if (typeof date !== 'string' || pyIsoDate(date) === null)
+    throw new Invalid(`Invalid isoformat string: ${pyReprStr(String(date))}`)
+  if (typeof pinned !== 'string' || !/^[0-9a-f]{64}$/.test(pinned))
+    throw new Invalid(`SHA-256 inválido para ${name}`)
+  const entry: Dump = {
+    source:
+      typeof source === 'string'
+        ? source
+        : source === undefined
+          ? undefined
+          : JSON.stringify(source),
+    date,
+    sha256: pinned,
   }
+  const file = dumpPath(catalog, name, entry)
+  if (!isFile(file)) throw new Invalid(`dump fixado ausente: ${file}`)
+  if (sha256(file) !== pinned) throw new Invalid(`SHA-256 diverge para ${name}`)
+  return entry
+}
+
+const check = (manifest: string, catalog: string): Dumps => {
+  const parsed: unknown = JSON.parse(readFileSync(manifest, 'utf8'))
+  const raw =
+    typeof parsed === 'object' && parsed !== null && 'dumps' in parsed
+      ? parsed.dumps
+      : undefined
+  if (raw === undefined) throw new Invalid("'dumps'")
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw))
+    throw new Invalid('dumps is not an object')
+  const entries = Object.entries(raw as Record<string, unknown>)
+  checkNames(new Set(entries.map(([name]) => name)))
+  const dumps = new Map<string, Dump>()
+  for (const [name, value] of entries)
+    dumps.set(name, checkDump(name, value, catalog))
   return dumps
 }
 

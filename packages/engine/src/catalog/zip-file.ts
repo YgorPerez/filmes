@@ -66,8 +66,9 @@ const zip64 = (
   }
 }
 
-/** The central directory's entry for `name` (the last of that name). */
-const findMember = (fd: number, name: string): Member => {
+/** Where the central directory is: its size, its offset as recorded, and
+ * where it ends in the file. */
+const locateDirectory = (fd: number) => {
   const fileSize = fstatSync(fd).size
   if (fileSize < EOCD_SIZE) throw badZip('File is not a zip file')
   const tailStart = Math.max(0, fileSize - MAX_COMMENT - EOCD_SIZE)
@@ -95,6 +96,12 @@ const findMember = (fd: number, name: string): Member => {
       directoryEnd = locator - 56
     }
   }
+  return { size, offset, directoryEnd }
+}
+
+/** The central directory's entry for `name` (the last of that name). */
+const findMember = (fd: number, name: string): Member => {
+  const { size, offset, directoryEnd } = locateDirectory(fd)
   // The archive may sit after other bytes; zipfile shifts every offset.
   const shift = directoryEnd - size - offset
   if (shift < 0) throw badZip('File is not a zip file')

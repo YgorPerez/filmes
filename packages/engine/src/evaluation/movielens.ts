@@ -136,6 +136,111 @@ const sampledPerson = (
   return { ...measured, cut: measured.cut.slice(0, 10), training }
 }
 
+const RATING_COLUMNS = ['userId', 'movieId', 'rating', 'timestamp'] as const
+
+/** links.csv's movieId → tconst, and the users drawn from ratings.csv. */
+const drawUsers = (linksCsv: string, ratingsCsv: string) => {
+  const films = new Map<number, string>()
+  for (const [movieId, imdbId] of csvColumns(linksCsv, ['movieId', 'imdbId']))
+    if (imdbId) films.set(int(movieId), `tt${imdbId}`)
+  const ids = new Set<number>()
+  for (const [userId] of csvColumns(ratingsCsv, RATING_COLUMNS))
+    ids.add(int(userId))
+  const sorted = [...ids].sort((a, b) => a - b)
+  const drawn = new Set(
+    new PyRandom(SEED).sample(sorted, Math.min(SAMPLE_SIZE, sorted.length)),
+  )
+  return { films, drawn }
+}
+
+/** The 4+ votes outside the sample, (user, item) pairs in typed arrays
+ * that grow. */
+class OutsideVotes {
+  private users = new Int32Array(1024)
+  private items = new Int32Array(1024)
+  private votes = 0
+
+  push(user: number, item: number): void {
+    if (this.votes === this.users.length) {
+      const grownUsers = new Int32Array(this.votes * 2)
+      grownUsers.set(this.users)
+      this.users = grownUsers
+      const grownItems = new Int32Array(this.votes * 2)
+      grownItems.set(this.items)
+      this.items = grownItems
+    }
+    this.users[this.votes] = user
+    this.items[this.votes] = item
+    this.votes += 1
+  }
+
+  pairs(films: readonly string[]): Sample['votes'] {
+    return {
+      films,
+      items: this.items.slice(0, this.votes),
+      users: this.users.slice(0, this.votes),
+    }
+  }
+}
+
+/** A sampled user's rating, unless she rated the film later. */
+const keepLatest = (
+  mine: Map<string, readonly [number, number]>,
+  film: string,
+  instant: number,
+  rating: number,
+) => {
+  const before = mine.get(film)
+  if (before === undefined || instant > before[0])
+    mine.set(film, [instant, rating])
+}
+
+/** ratings.csv split: the drawn users' ratings, measured like Pessoas, and
+ * everyone else's 4+ votes. */
+const splitRatings = (
+  ratingsCsv: string,
+  drawing: ReturnType<typeof drawUsers>,
+  sourceDate: readonly [string, string],
+): Sample => {
+  const { films, drawn } = drawing
+  const imdbs = [...new Set(films.values())].sort((a, b) =>
+    compareTuple([a], [b]),
+  )
+  const columns = new Map(imdbs.map((imdb, i) => [imdb, i]))
+  const outside = new OutsideVotes()
+  const byUser = new Map<number, Map<string, readonly [number, number]>>()
+  for (const [userId, movieId, rawRating, rawInstant] of csvColumns(
+    ratingsCsv,
+    RATING_COLUMNS,
+  )) {
+    const film = films.get(int(movieId))
+    if (film === undefined) continue
+    const user = int(userId)
+    const rating = pyParseFloat(rawRating)
+    if (drawn.has(user)) {
+      const instant = int(rawInstant)
+      let mine = byUser.get(user)
+      if (mine === undefined) {
+        mine = new Map()
+        byUser.set(user, mine)
+      }
+      keepLatest(mine, film, instant, rating)
+    } else if (rating >= HIGH_RATING) outside.push(user, columns.get(film)!)
+  }
+  const measured: MeasuredPerson[] = []
+  for (const user of [...byUser.keys()].sort((a, b) => a - b)) {
+    const person = sampledPerson(user, byUser.get(user)!, sourceDate[0])
+    if (person) measured.push(person)
+  }
+  return {
+    measured,
+    users: drawn,
+    films,
+    votes: outside.pairs(imdbs),
+    sourceAndDate: sourceDate,
+  }
+}
+
 /** `ler`: the sample, or `null` when the Catalog has neither ratings.csv
  * nor links.csv. */
 export const readSample = (
@@ -157,89 +262,13 @@ export const readSample = (
     const sourceDate = yield* sourceAndDate(manifest, MOVIELENS_DUMP)
     const fail = (error: unknown) =>
       engineError('invalid_data', `${folder}: ${reason(error)}`)
-    const ratingColumns = ['userId', 'movieId', 'rating', 'timestamp'] as const
-    const { films, drawn } = yield* Effect.try({
-      try: () => {
-        const films = new Map<number, string>()
-        for (const [movieId, imdbId] of csvColumns(linksCsv, [
-          'movieId',
-          'imdbId',
-        ]))
-          if (imdbId) films.set(int(movieId), `tt${imdbId}`)
-        const ids = new Set<number>()
-        for (const [userId] of csvColumns(ratingsCsv, ratingColumns))
-          ids.add(int(userId))
-        const sorted = [...ids].sort((a, b) => a - b)
-        const drawn = new Set(
-          new PyRandom(SEED).sample(
-            sorted,
-            Math.min(SAMPLE_SIZE, sorted.length),
-          ),
-        )
-        return { films, drawn }
-      },
+    const drawing = yield* Effect.try({
+      try: () => drawUsers(linksCsv, ratingsCsv),
       catch: fail,
     })
     yield* progress(14, 'Separando as Notas de treino e da amostra')
     return yield* Effect.try({
-      try: () => {
-        const imdbs = [...new Set(films.values())].sort((a, b) =>
-          compareTuple([a], [b]),
-        )
-        const columns = new Map(imdbs.map((imdb, i) => [imdb, i]))
-        let users = new Int32Array(1024)
-        let items = new Int32Array(1024)
-        let votes = 0
-        const byUser = new Map<number, Map<string, readonly [number, number]>>()
-        for (const [userId, movieId, rawRating, rawInstant] of csvColumns(
-          ratingsCsv,
-          ratingColumns,
-        )) {
-          const film = films.get(int(movieId))
-          if (film === undefined) continue
-          const user = int(userId)
-          const rating = pyParseFloat(rawRating)
-          if (drawn.has(user)) {
-            const instant = int(rawInstant)
-            let mine = byUser.get(user)
-            if (mine === undefined) {
-              mine = new Map()
-              byUser.set(user, mine)
-            }
-            const before = mine.get(film)
-            if (before === undefined || instant > before[0])
-              mine.set(film, [instant, rating])
-          } else if (rating >= HIGH_RATING) {
-            if (votes === users.length) {
-              const grownUsers = new Int32Array(votes * 2)
-              grownUsers.set(users)
-              users = grownUsers
-              const grownItems = new Int32Array(votes * 2)
-              grownItems.set(items)
-              items = grownItems
-            }
-            users[votes] = user
-            items[votes] = columns.get(film)!
-            votes += 1
-          }
-        }
-        const measured: MeasuredPerson[] = []
-        for (const user of [...byUser.keys()].sort((a, b) => a - b)) {
-          const person = sampledPerson(user, byUser.get(user)!, sourceDate[0])
-          if (person) measured.push(person)
-        }
-        return {
-          measured,
-          users: drawn,
-          films,
-          votes: {
-            films: imdbs,
-            items: items.slice(0, votes),
-            users: users.slice(0, votes),
-          },
-          sourceAndDate: sourceDate,
-        }
-      },
+      try: () => splitRatings(ratingsCsv, drawing, sourceDate),
       catch: fail,
     })
   })
@@ -251,6 +280,65 @@ const insertMany = (
 ): Effect.Effect<void, SqliteError> =>
   Effect.gen(function* () {
     for (const row of rows) yield* db.run(sql, ...row)
+  })
+
+/** The TEMP `vizinhos` from the votes outside the sample, only for films
+ * someone uses as a seed. */
+const sampleNeighbors = (db: Connection, sample: Sample, progress: Progress) =>
+  Effect.gen(function* () {
+    const seeds = new Set(
+      (yield* db.all(
+        'SELECT DISTINCT n.filme_id FROM notas_vigentes n JOIN filmes f ON f.id = n.filme_id WHERE n.nota >= 3',
+      )).map((row) => text(row, 'filme_id')),
+    )
+    const { films, items, users } = sample.votes
+    const rows = films.flatMap((film, i) => (seeds.has(film) ? [i] : []))
+    const batches: Array<readonly [number, number]> = []
+    const pairs = [
+      ...computeNeighbors(films, items, users, {
+        seeds: rows,
+        onBatch: (done, total) => batches.push([done, total]),
+      }),
+    ]
+    for (const [done, total] of batches)
+      yield* progress(
+        20 + Math.floor((14 * done) / total),
+        'Calculando vizinhos sem os usuários sorteados',
+      )
+    yield* insertMany(
+      db,
+      'INSERT INTO vizinhos (fato_id, filme_id, vizinho_id, base, ambos, fonte, data) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      reviewFacts('vizinhos', pairs, sample.sourceAndDate),
+    )
+  })
+
+/** The TEMP `tags_movielens` without the sampled users' tags. */
+const sampleTags = (
+  db: Connection,
+  folder: string,
+  sample: Sample,
+  progress: Progress,
+) =>
+  Effect.gen(function* () {
+    const tagsCsv = join(folder, 'tags.csv')
+    if (!isFile(tagsCsv)) return
+    yield* progress(34, 'Contando as tags dos usuários de treino')
+    const counted = yield* Effect.try({
+      try: () => {
+        const lines = [...csvColumns(tagsCsv, ['userId', 'movieId', 'tag'])]
+        const map = new Map(
+          [...sample.films].map(([id, film]) => [String(id), film]),
+        )
+        return countTags(lines, map, sample.users)
+      },
+      catch: (error) =>
+        engineError('invalid_data', `${tagsCsv}: ${reason(error)}`),
+    })
+    yield* insertMany(
+      db,
+      'INSERT INTO tags_movielens (fato_id, filme_id, tag, usuarios, fonte, data) VALUES (?, ?, ?, ?, ?, ?)',
+      reviewFacts('tags_movielens', counted, sample.sourceAndDate),
+    )
   })
 
 /** `preparar`: TEMP `vizinhos` from the votes outside the sample (only for
@@ -285,54 +373,12 @@ export const prepareSample = (
       CREATE TEMP TABLE vizinhos AS SELECT * FROM main.vizinhos WHERE 0;
       CREATE INDEX temp.vizinhos_por_filme ON vizinhos(filme_id);
     `)
-    const seeds = new Set(
-      (yield* db.all(
-        'SELECT DISTINCT n.filme_id FROM notas_vigentes n JOIN filmes f ON f.id = n.filme_id WHERE n.nota >= 3',
-      )).map((row) => text(row, 'filme_id')),
-    )
-    const { films, items, users } = sample.votes
-    const rows = films.flatMap((film, i) => (seeds.has(film) ? [i] : []))
-    const batches: Array<readonly [number, number]> = []
-    const pairs = [
-      ...computeNeighbors(films, items, users, {
-        seeds: rows,
-        onBatch: (done, total) => batches.push([done, total]),
-      }),
-    ]
-    for (const [done, total] of batches)
-      yield* progress(
-        20 + Math.floor((14 * done) / total),
-        'Calculando vizinhos sem os usuários sorteados',
-      )
-    yield* insertMany(
-      db,
-      'INSERT INTO vizinhos (fato_id, filme_id, vizinho_id, base, ambos, fonte, data) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      reviewFacts('vizinhos', pairs, sample.sourceAndDate),
-    )
+    yield* sampleNeighbors(db, sample, progress)
     yield* db.exec(`
       CREATE TEMP TABLE tags_movielens AS SELECT * FROM main.tags_movielens WHERE 0;
       CREATE INDEX temp.tags_por_tag ON tags_movielens(tag);
     `)
-    const tagsCsv = join(folder, 'tags.csv')
-    if (isFile(tagsCsv)) {
-      yield* progress(34, 'Contando as tags dos usuários de treino')
-      const counted = yield* Effect.try({
-        try: () => {
-          const lines = [...csvColumns(tagsCsv, ['userId', 'movieId', 'tag'])]
-          const map = new Map(
-            [...sample.films].map(([id, film]) => [String(id), film]),
-          )
-          return countTags(lines, map, sample.users)
-        },
-        catch: (error) =>
-          engineError('invalid_data', `${tagsCsv}: ${reason(error)}`),
-      })
-      yield* insertMany(
-        db,
-        'INSERT INTO tags_movielens (fato_id, filme_id, tag, usuarios, fonte, data) VALUES (?, ?, ?, ?, ?, ?)',
-        reviewFacts('tags_movielens', counted, sample.sourceAndDate),
-      )
-    }
+    yield* sampleTags(db, folder, sample, progress)
     yield* db.exec(`
       CREATE TEMP TABLE tags_no_catalogo AS SELECT * FROM main.tags_no_catalogo WHERE 0;
       CREATE TEMP TABLE normas_tags_movielens AS SELECT * FROM main.normas_tags_movielens WHERE 0;

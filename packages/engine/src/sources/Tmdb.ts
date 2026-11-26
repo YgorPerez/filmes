@@ -30,6 +30,7 @@ import { field, list, text, truthy } from './json.ts'
 import {
   getJson,
   makeObtain,
+  type Obtain,
   type SourceProfile,
   type Transport,
 } from './Source.ts'
@@ -81,6 +82,83 @@ export interface Card {
 
 type SourceError = EngineError | SqliteError
 
+/** One request: the first page, and for a search every other page into the
+ * same entry. */
+const live =
+  (path: string, params: Readonly<Record<string, string>>) =>
+  (apiKey: string) =>
+    Effect.gen(function* () {
+      const query = new URLSearchParams(params)
+      const headers: Record<string, string> = {}
+      if (apiKey.length > 40) headers['Authorization'] = `Bearer ${apiKey}`
+      else query.append('api_key', apiKey)
+      const body = yield* getJson(`${URL}${path}?${query}`, headers)
+      if (body === null) return SEARCH.notFound
+      if (!path.startsWith('/search/')) return body
+      const results = [...list(field(body, 'results'))]
+      const pages = Number(field(body, 'total_pages') ?? 1)
+      for (let page = 2; page <= pages; page++) {
+        const next = new URLSearchParams(query)
+        next.append('page', String(page))
+        const answer = yield* getJson(`${URL}${path}?${next}`, headers)
+        if (truthy(answer)) results.push(...list(field(answer, 'results')))
+      }
+      return { ...(body as object), results }
+    })
+
+const results = (answer: CachedAnswer | undefined) =>
+  answer === undefined ? undefined : list(field(answer.body, 'results'))
+
+/** One request through the cache, the recordings or TMDB. */
+const askWith =
+  (obtain: Obtain) =>
+  (
+    profile: SourceProfile,
+    key: string,
+    path: string,
+    params: Readonly<Record<string, string>> = {},
+  ) =>
+    obtain(profile, key, live(path, params))
+
+/** A search by title and year, of films or of series. */
+const searchWith =
+  (ask: ReturnType<typeof askWith>) =>
+  (kind: 'filme' | 'serie', path: string, yearParam: string) =>
+  (title: string, year: number) =>
+    Effect.map(
+      ask(SEARCH, searchKey(kind, title, year), path, {
+        query: title,
+        [yearParam]: String(year),
+        include_adult: 'false',
+      }),
+      results,
+    )
+
+const searchDisabled = Effect.gen(function* () {
+  return yield* (yield* Run).isSourceDisabled(SEARCH.id)
+})
+
+const imdbIdOf = (answer: CachedAnswer | undefined) => {
+  const imdb = text(field(answer?.body, 'imdb_id'))
+  return TCONST.test(imdb) ? imdb : undefined
+}
+
+const runtimeOf = (answer: CachedAnswer | undefined) => {
+  const minutes = field(answer?.body, 'runtime')
+  return truthy(minutes) ? Number(minutes) : undefined
+}
+
+const cardOf = (answer: CachedAnswer | undefined): Card => {
+  const [film] = list(field(answer?.body, 'movie_results'))
+  const poster = field(film, 'poster_path')
+  const title = field(film, 'title')
+  return {
+    poster: truthy(poster) ? `${IMAGES}${String(poster)}` : null,
+    titlePt: truthy(title) ? String(title) : null,
+    overview: pyStrip(text(field(film, 'overview'))) || null,
+  }
+}
+
 export class Tmdb extends Context.Service<
   Tmdb,
   {
@@ -124,53 +202,8 @@ export class Tmdb extends Context.Service<
       const obtain = yield* makeObtain
       const cache = yield* SourceCache
 
-      /** One request: the first page, and for a search every other page
-       * into the same entry. */
-      const live =
-        (path: string, params: Readonly<Record<string, string>>) =>
-        (apiKey: string) =>
-          Effect.gen(function* () {
-            const query = new URLSearchParams(params)
-            const headers: Record<string, string> = {}
-            if (apiKey.length > 40)
-              headers['Authorization'] = `Bearer ${apiKey}`
-            else query.append('api_key', apiKey)
-            const body = yield* getJson(`${URL}${path}?${query}`, headers)
-            if (body === null) return SEARCH.notFound
-            if (!path.startsWith('/search/')) return body
-            const results = [...list(field(body, 'results'))]
-            const pages = Number(field(body, 'total_pages') ?? 1)
-            for (let page = 2; page <= pages; page++) {
-              const next = new URLSearchParams(query)
-              next.append('page', String(page))
-              const answer = yield* getJson(`${URL}${path}?${next}`, headers)
-              if (truthy(answer))
-                results.push(...list(field(answer, 'results')))
-            }
-            return { ...(body as object), results }
-          })
-
-      const ask = (
-        profile: SourceProfile,
-        key: string,
-        path: string,
-        params: Readonly<Record<string, string>> = {},
-      ) => obtain(profile, key, live(path, params))
-
-      const results = (answer: CachedAnswer | undefined) =>
-        answer === undefined ? undefined : list(field(answer.body, 'results'))
-
-      const search =
-        (kind: 'filme' | 'serie', path: string, yearParam: string) =>
-        (title: string, year: number) =>
-          Effect.map(
-            ask(SEARCH, searchKey(kind, title, year), path, {
-              query: title,
-              [yearParam]: String(year),
-              include_adult: 'false',
-            }),
-            results,
-          )
+      const ask = askWith(obtain)
+      const search = searchWith(ask)
 
       return Tmdb.of({
         movies: search('filme', '/search/movie', 'primary_release_year'),
@@ -186,10 +219,7 @@ export class Tmdb extends Context.Service<
           if (!TMDB_ID.test(id)) return Effect.undefined
           return Effect.map(
             ask(SEARCH, `externos-${id}`, `/movie/${id}/external_ids`),
-            (answer) => {
-              const imdb = text(field(answer?.body, 'imdb_id'))
-              return TCONST.test(imdb) ? imdb : undefined
-            },
+            imdbIdOf,
           )
         },
         runtime: (tmdbId) => {
@@ -197,15 +227,10 @@ export class Tmdb extends Context.Service<
           if (!TMDB_ID.test(id)) return Effect.undefined
           return Effect.map(
             ask(SEARCH, `detalhes-${id}`, `/movie/${id}`),
-            (answer) => {
-              const minutes = field(answer?.body, 'runtime')
-              return truthy(minutes) ? Number(minutes) : undefined
-            },
+            runtimeOf,
           )
         },
-        searchDisabled: Effect.gen(function* () {
-          return yield* (yield* Run).isSourceDisabled(SEARCH.id)
-        }),
+        searchDisabled,
         card: (tconst) =>
           Effect.map(
             TCONST.test(tconst)
@@ -214,16 +239,7 @@ export class Tmdb extends Context.Service<
                   language: 'pt-BR',
                 })
               : Effect.undefined,
-            (answer): Card => {
-              const [film] = list(field(answer?.body, 'movie_results'))
-              const poster = field(film, 'poster_path')
-              const title = field(film, 'title')
-              return {
-                poster: truthy(poster) ? `${IMAGES}${String(poster)}` : null,
-                titlePt: truthy(title) ? String(title) : null,
-                overview: pyStrip(text(field(film, 'overview'))) || null,
-              }
-            },
+            cardOf,
           ),
       })
     }),
