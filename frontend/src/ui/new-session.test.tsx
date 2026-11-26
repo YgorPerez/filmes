@@ -8,7 +8,7 @@ import {
   parseSessionRequest,
   SESSION_REQUEST_REFUSALS,
 } from '#/content/session-request'
-import type { RequestOptions } from '#/platform/sessions'
+import type { RequestOptions, SentenceReading } from '#/platform/sessions'
 import { NewSession } from './sessions'
 import { SESSIONS } from './sessions.copy'
 
@@ -199,5 +199,116 @@ describe('the Catálogo search', () => {
     expect(
       screen.getByRole('search').querySelector('input[type=hidden]'),
     ).toBeNull()
+  })
+})
+
+const READING: SentenceReading = {
+  text: 'a Iara, pelo gosto dela, leve, 3 filmes, até 2h, dos anos 90, nacional',
+  request: {
+    attendees: ['iara'],
+    rule: 'by',
+    by: 'iara',
+    moods: ['leve'],
+    count: 3,
+    maxDuration: 120,
+    since: 1990,
+    until: 1999,
+    language: 'pt',
+    child: 7,
+    similar: ['tt9001904'],
+    unseen: true,
+    noSlow: true,
+    noSad: true,
+  },
+  understood: ['Presente: Iara', 'Clima: leve'],
+  notUnderstood: ['pipoca', 'traz o vinho'],
+  ambiguities: [
+    { words: 'Teo', candidates: ['Rosa', 'Teo'] },
+    { words: 'Amélie', candidates: [] },
+  ],
+}
+
+const showReading = (reading: SentenceReading, similar?: string) => {
+  render(<NewSession options={OPTIONS} reading={reading} similar={similar} />)
+  return screen.getByRole('form', {
+    name: SESSIONS.form.label,
+  }) as HTMLFormElement
+}
+
+describe('reading a sentence (“Ler”)', () => {
+  it('posts the form with “ler” from its button, and Enter still sends it', () => {
+    const { form } = show()
+    const read = screen.getByRole('button', {
+      name: copy.read,
+    }) as HTMLButtonElement
+    expect([read.form, read.name, read.value]).toEqual([form, 'ler', 'sim'])
+    // Enter presses the first submit button: the one with no “ler”.
+    const first = form.querySelector('button[type=submit]')
+    expect(first?.hasAttribute('name')).toBe(false)
+  })
+
+  it('comes back with every field it understood filled, and the sentence kept', () => {
+    const form = showReading(READING)
+    expect(posted(form)).toEqual({
+      ok: {
+        ...READING.request,
+        request: READING.text,
+      },
+    })
+  })
+
+  it('leaves the Dono out when the sentence names only others', () => {
+    const form = showReading({
+      ...READING,
+      request: { attendees: ['quim'] },
+    })
+    expect(posted(form)).toMatchObject({
+      ok: { attendees: ['quim'], rule: 'default', moods: [] },
+    })
+  })
+
+  it('keeps the form’s defaults for what the sentence did not say', () => {
+    const form = showReading({ ...READING, request: {} })
+    expect(posted(form)).toEqual({
+      ok: {
+        attendees: ['bruno'],
+        rule: 'default',
+        moods: [],
+        request: READING.text,
+      },
+    })
+  })
+})
+
+describe('the form a sentence filled', () => {
+  it('adds the films it read to those the Catálogo search took', () => {
+    const form = showReading(
+      { ...READING, request: { similar: ['tt9001904'] } },
+      'tt9000101',
+    )
+    expect(posted(form)).toMatchObject({
+      ok: { similar: ['tt9000101', 'tt9001904'] },
+    })
+  })
+
+  it('says what it understood, what it did not and what it could not decide', () => {
+    showReading(READING)
+    const said = screen.getByRole('status').textContent
+    expect(said).toContain(copy.reading.understood(READING.understood))
+    expect(said).toContain(copy.reading.notUnderstood(READING.notUnderstood))
+    expect(said).toContain(copy.reading.ambiguous(READING.ambiguities))
+  })
+
+  it('says when it understood nothing', () => {
+    showReading({
+      ...READING,
+      request: {},
+      understood: [],
+      notUnderstood: ['pipoca'],
+      ambiguities: [],
+    })
+    const said = screen.getByRole('status').textContent
+    expect(said).toContain(copy.reading.nothing)
+    expect(said).toContain(copy.reading.notUnderstood(['pipoca']))
   })
 })

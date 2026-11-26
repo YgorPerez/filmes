@@ -82,6 +82,45 @@ test('the Dono opens a Session with Restrições and finds it in the list', asyn
   await snap(page, info, 'sessoes-lista-com-sessao')
 })
 
+test('“Ler” fills the form from one sentence and says what it left out', async ({
+  page,
+}, info) => {
+  // Reads only, so both projects run it: no Session is opened.
+  await loginAsBruno(page)
+  await page.goto('/sessoes/nova')
+  await snap(page, info, 'sessoes-nova-frase-vazia')
+
+  // "Ler" with no sentence: the page says so.
+  await page.getByRole('button', { name: 'Ler' }).click()
+  await expect(page).toHaveURL(/\/sessoes\/nova\?erro=frase$/)
+  await expect(page.getByRole('alert')).toContainText('Escreva a frase')
+
+  const sentence =
+    'eu e a Iara, algo leve, até 2h, tem criança de 7, nada lento, parecido com Reprise, com pipoca'
+  await page.getByLabel('Em uma frase', { exact: false }).fill(sentence)
+  await page.getByRole('button', { name: 'Ler' }).click()
+  await expect(page).toHaveURL(/\/sessoes\/nova\?frase=/)
+
+  await expect(page.getByLabel('Em uma frase', { exact: false })).toHaveValue(
+    sentence,
+  )
+  await expect(page.getByRole('checkbox', { name: /Bruno/ })).toBeChecked()
+  await expect(page.getByRole('checkbox', { name: 'Iara' })).toBeChecked()
+  await expect(page.getByRole('checkbox', { name: 'leve' })).toBeChecked()
+  await expect(page.getByRole('checkbox', { name: 'Nada lento' })).toBeChecked()
+  await expect(page.getByLabel('Duração máxima', { exact: false })).toHaveValue(
+    '120',
+  )
+  await expect(page.getByLabel('Criança')).toHaveValue('7')
+  const said = page.getByRole('status')
+  await expect(said).toContainText('Lido da frase: Presente: Bruno')
+  await expect(said).toContainText('Ficou de fora: “pipoca”')
+  await expect(said).toContainText(
+    '“Reprise” pode ser Reprise (2011) ou Reprise (2004)',
+  )
+  await snap(page, info, 'sessoes-nova-frase-lida')
+})
+
 test('the form says why it refused, and “o gosto de uma Pessoa” orders', async ({
   page,
 }, info) => {
