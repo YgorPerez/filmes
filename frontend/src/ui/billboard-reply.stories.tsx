@@ -4,7 +4,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
 import { expect, fn, userEvent, within } from 'storybook/test'
 import { MODEL } from './billboard.fixture'
-import type { Marks } from './billboard-marks'
+import { replyText, type Marks } from './billboard-marks'
 import { ReplyBar, ReplyBox, SendButton, Status } from './billboard-reply'
 
 const NO_MARKS: Marks = { addition: '', moods: null, films: {} }
@@ -19,6 +19,7 @@ function Box({ kept }: { kept: boolean }) {
         billboard={MODEL}
         marks={marks}
         kept={kept}
+        text={replyText(MODEL, marks)}
         onMessage={setMessage}
         onAddition={(addition) => setMarks({ ...marks, addition })}
         onMoods={(moods) => setMarks({ ...marks, moods })}

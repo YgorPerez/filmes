@@ -7,7 +7,13 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
-import { cleanup, render, screen, within } from '@testing-library/react'
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 import type { CartazPage } from '#/platform/billboard'
@@ -194,7 +200,7 @@ describe('a Session’s page', () => {
       expect(addition().value).toBe('na próxima vez')
 
       await user.click(screen.getByRole('button', { name: 'Enviar' }))
-      await vi.waitFor(() => {
+      await waitFor(() => {
         expect(router.state.location.href).toBe(`${path}?feito=anotada`)
         expect(addition().value).toBe('')
         expect(screen.queryByRole('alert')).toBeNull()
