@@ -89,7 +89,7 @@ describe('evaluate: Força calibration', () => {
 const readReport = (result: Evaluation) => readFileSync(result.file, 'utf8')
 
 describe('evaluate: predicted-rating error', () => {
-  test('is absent until there is a predicted rating', async () => {
+  test('is absent when no held-out film has a predicted rating', async () => {
     const fixture = useFixture()
     const result = await evaluated(fixture)
     for (const sample of [result.offline.people, result.offline.movielens])
@@ -98,7 +98,35 @@ describe('evaluate: predicted-rating error', () => {
         meanAbsoluteError: null,
       })
     expect(readReport(result)).toContain(
-      '- Erro médio (Pessoas): ausente, o motor ainda não prevê nota.',
+      '- Erro médio (Pessoas): ausente, nenhum filme retido tem Nota prevista.',
+    )
+  })
+
+  test("compares the taste neighbours' prediction with the held-out Nota", async () => {
+    const fixture = useFixture()
+    // Before his cut, Bruno shares 5 films with users 10, 20 and 30 of the
+    // sample and with user 40, who rates the other way round; the 3
+    // closest are the first three. They predict O Farol de Areia (his 5,
+    // a 10) at 8,31, O Último Bonde (4, an 8) at 6,04 and Barulho (1, a 2)
+    // at 3,06, all on the population's scale. Quim keeps 3 Notas, which
+    // users 40, 20 and 10 share; they disagree on Ponte Aérea (his 5, a
+    // 10) and predict 6,87.
+    const weights = readFileSync(join(ROOT, 'config/weights.toml'), 'utf8')
+    const file = join(fixture.root, 'weights-test.toml')
+    writeFileSync(
+      file,
+      weights.replace('k = 50\nmin_shared = 10', 'k = 3\nmin_shared = 3'),
+    )
+    const result = await evaluated(fixture, { FILMES_PESOS: file })
+
+    const error = result.offline.people.predictedRatingError
+    expect(error.films).toBe(4)
+    expect(error.meanAbsoluteError).toBeCloseTo(
+      (1.69 + 1.96 + 1.06 + 3.13) / 4,
+      2,
+    )
+    expect(readReport(result)).toMatch(
+      /- Erro médio \(Pessoas\): 1[.,]96 em 4 filmes, de 1 a 10\./,
     )
   })
 })

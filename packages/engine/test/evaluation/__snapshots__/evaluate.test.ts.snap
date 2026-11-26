@@ -96,6 +96,12 @@ exports[`avaliar, as recorded > gives the recorded result and report 1`] = `
         "minRelevance": 0.7,
         "minUsers": 10,
       },
+      "tasteNeighbors": {
+        "k": 50,
+        "minShared": 10,
+        "neutralBand": 0.05,
+        "weight": 1,
+      },
       "utility": {
         "k": 1,
         "maxEvidence": 5,
@@ -109,10 +115,12 @@ exports[`avaliar, as recorded > gives the recorded result and report 1`] = `
       "elenco_principal_imdb.csv": "559f381e49c30635a34a1469db33ef7c5de47619fd211b204e027736ead40262",
       "entidades.csv": "a554083d3fdf5d805116adc00a348b28cf68de2072fb34a399a61b3420cb6432",
       "filmes.csv": "2623fafc661095c67913aa2d5858724b99ab6ff36416f222b1571ed0693a8377",
+      "fonte_gosto_movielens.csv": "bd0e4d5aac3969eb131926c4a3fe9dc12b220d13543832caee9c72717cac4a9a",
       "generos_imdb.csv": "ca9cb82915808484dcd3881bd375601d7daeb8d4e28c79cebf10e672ca5389e3",
       "genoma.csv": "bf9e335eaec86c9fbe2d5ca1d55cf4a75f1a865c83f48750d359f07ac4169ed1",
       "idiomas_originais.csv": "3fd72e324b22bdd4a924778d6826f20e648099c908c0a40de7af2cf7ee6dacbf",
       "notas.csv": "fce6055d2fb915a21f46c4eea36d2bef360756974cc83e8713674103e9075f78",
+      "notas_gosto_movielens.csv": "c7931ecb50aad10c030a8e85c3b90d247d4e444a833d641992028f7bdd57f33a",
       "notas_movielens.csv": "732f70f4971aca938e7cc266ded071f301ddf13cda14e7f3e008eebcbb3e17b2",
       "series_de_filmes.csv": "7f4cef1fbbf193e21f72d6101a0e1280b729cca9c57b334d4bab1769075cd03e",
       "slugs_letterboxd.csv": "aef16df5bcb6b746236d595d8c29a29728a3f8bb45726201631f04ed2f5071aa",
@@ -150,8 +158,8 @@ Quanto das Notas retidas foi 4 ou mais, pela Força mais alta a favor do filme n
 
 ## Nota prevista
 
-- Erro médio (Pessoas): ausente, o motor ainda não prevê nota.
-- Erro médio (MovieLens): ausente, o motor ainda não prevê nota.
+- Erro médio (Pessoas): ausente, nenhum filme retido tem Nota prevista.
+- Erro médio (MovieLens): ausente, nenhum filme retido tem Nota prevista.
 
 ## Online
 
@@ -384,10 +392,12 @@ Quanto das Notas retidas foi 4 ou mais, pela Força mais alta a favor do filme n
       "elenco_principal_imdb.csv": "559f381e49c30635a34a1469db33ef7c5de47619fd211b204e027736ead40262",
       "entidades.csv": "a554083d3fdf5d805116adc00a348b28cf68de2072fb34a399a61b3420cb6432",
       "filmes.csv": "2623fafc661095c67913aa2d5858724b99ab6ff36416f222b1571ed0693a8377",
+      "fonte_gosto_movielens.csv": "bd0e4d5aac3969eb131926c4a3fe9dc12b220d13543832caee9c72717cac4a9a",
       "generos_imdb.csv": "ca9cb82915808484dcd3881bd375601d7daeb8d4e28c79cebf10e672ca5389e3",
       "genoma.csv": "bf9e335eaec86c9fbe2d5ca1d55cf4a75f1a865c83f48750d359f07ac4169ed1",
       "idiomas_originais.csv": "3fd72e324b22bdd4a924778d6826f20e648099c908c0a40de7af2cf7ee6dacbf",
       "notas.csv": "fce6055d2fb915a21f46c4eea36d2bef360756974cc83e8713674103e9075f78",
+      "notas_gosto_movielens.csv": "c7931ecb50aad10c030a8e85c3b90d247d4e444a833d641992028f7bdd57f33a",
       "notas_movielens.csv": "732f70f4971aca938e7cc266ded071f301ddf13cda14e7f3e008eebcbb3e17b2",
       "series_de_filmes.csv": "7f4cef1fbbf193e21f72d6101a0e1280b729cca9c57b334d4bab1769075cd03e",
       "slugs_letterboxd.csv": "aef16df5bcb6b746236d595d8c29a29728a3f8bb45726201631f04ed2f5071aa",
@@ -490,6 +500,12 @@ Quanto das Notas retidas foi 4 ou mais, pela Força mais alta a favor do filme n
       "tagVetoes": {
         "minRelevance": 0.7,
         "minUsers": 10,
+      },
+      "tasteNeighbors": {
+        "k": 50,
+        "minShared": 10,
+        "neutralBand": 0.05,
+        "weight": 1,
       },
       "utility": {
         "k": 1,
@@ -1124,8 +1140,8 @@ Quanto das Notas retidas foi 4 ou mais, pela Força mais alta a favor do filme n
 
 ## Nota prevista
 
-- Erro médio (Pessoas): ausente, o motor ainda não prevê nota.
-- Erro médio (MovieLens): ausente, o motor ainda não prevê nota.
+- Erro médio (Pessoas): ausente, nenhum filme retido tem Nota prevista.
+- Erro médio (MovieLens): ausente, nenhum filme retido tem Nota prevista.
 
 ## Online
 
@@ -2016,10 +2032,12 @@ Foram testados 300 conjuntos. A ordem usa a média do Recall@50 entre as amostra
       "elenco_principal_imdb.csv": "559f381e49c30635a34a1469db33ef7c5de47619fd211b204e027736ead40262",
       "entidades.csv": "a554083d3fdf5d805116adc00a348b28cf68de2072fb34a399a61b3420cb6432",
       "filmes.csv": "2623fafc661095c67913aa2d5858724b99ab6ff36416f222b1571ed0693a8377",
+      "fonte_gosto_movielens.csv": "bd0e4d5aac3969eb131926c4a3fe9dc12b220d13543832caee9c72717cac4a9a",
       "generos_imdb.csv": "ca9cb82915808484dcd3881bd375601d7daeb8d4e28c79cebf10e672ca5389e3",
       "genoma.csv": "bf9e335eaec86c9fbe2d5ca1d55cf4a75f1a865c83f48750d359f07ac4169ed1",
       "idiomas_originais.csv": "3fd72e324b22bdd4a924778d6826f20e648099c908c0a40de7af2cf7ee6dacbf",
       "notas.csv": "fce6055d2fb915a21f46c4eea36d2bef360756974cc83e8713674103e9075f78",
+      "notas_gosto_movielens.csv": "c7931ecb50aad10c030a8e85c3b90d247d4e444a833d641992028f7bdd57f33a",
       "notas_movielens.csv": "732f70f4971aca938e7cc266ded071f301ddf13cda14e7f3e008eebcbb3e17b2",
       "series_de_filmes.csv": "7f4cef1fbbf193e21f72d6101a0e1280b729cca9c57b334d4bab1769075cd03e",
       "slugs_letterboxd.csv": "aef16df5bcb6b746236d595d8c29a29728a3f8bb45726201631f04ed2f5071aa",
@@ -2122,6 +2140,12 @@ Foram testados 300 conjuntos. A ordem usa a média do Recall@50 entre as amostra
       "tagVetoes": {
         "minRelevance": 0.7,
         "minUsers": 10,
+      },
+      "tasteNeighbors": {
+        "k": 50,
+        "minShared": 10,
+        "neutralBand": 0.05,
+        "weight": 1,
       },
       "utility": {
         "k": 1,

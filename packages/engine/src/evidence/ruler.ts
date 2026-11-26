@@ -83,6 +83,54 @@ export const ratingPercentile = (
   return (below + equal / 2) / n
 }
 
+/** The Nota of the scale at percentile `p`, the inverse of
+ * `ratingPercentile`: a value of the scale where `p` is its percentile,
+ * and between two values the point on the line between them; below the
+ * lowest or above the highest, that value. `null` on an empty scale. */
+export const ratingAtPercentile = (
+  scale: RatingScale,
+  p: number,
+): number | null => {
+  const points = [...scale.counts.keys()]
+    .sort((a, b) => a - b)
+    .map((value) => [value, ratingPercentile(scale, value)] as const)
+  const [first, last] = [points[0], points.at(-1)]
+  if (first === undefined || last === undefined) return null
+  if (p <= first[1]) return first[0]
+  if (p >= last[1]) return last[0]
+  const above = points.findIndex(([, q]) => q >= p)
+  const [low, lowP] = points[above - 1]!
+  const [high, highP] = points[above]!
+  return low + ((high - low) * (p - lowP)) / (highP - lowP)
+}
+
+/** Below this many taste neighbours with a rating of the film, they say
+ * nothing about it (`tasteNeighborsStrength`). */
+export const MIN_TASTE_RATERS = 3
+
+/** The taste neighbours on a film: `raters` of them rated it, the standard
+ * deviation of their percentiles is `spread` (0 when they all agree), and
+ * they share `overlap` films with the Pessoa on average.
+ *
+ * Strong with 10+ neighbours, spread up to 0.15 and 30+ films shared;
+ * moderate with 5+, spread up to 0.25 and 15+ shared; weak with 3 or more.
+ * Fewer than 3 give no Evidence. */
+export const tasteNeighborsStrength = (
+  raters: number,
+  spread: number,
+  overlap: number,
+): Strength | null => {
+  const steps: ReadonlyArray<readonly [Strength, number, number, number]> = [
+    ['strong', 10, 0.15, 30],
+    ['moderate', 5, 0.25, 15],
+    ['weak', MIN_TASTE_RATERS, Infinity, 0],
+  ]
+  for (const [strength, minRaters, maxSpread, minOverlap] of steps)
+    if (raters >= minRaters && spread <= maxSpread && overlap >= minOverlap)
+      return strength
+  return null
+}
+
 /** Nota alta [high rating]: in favour, moderate or strong, by the
  * percentile alone (age and Feedback do not count). */
 export const isHighRating = (scale: RatingScale, rating: number): boolean =>

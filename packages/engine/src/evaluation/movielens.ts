@@ -254,8 +254,10 @@ const insertMany = (
   })
 
 /** `preparar`: TEMP `vizinhos` from the votes outside the sample (only for
- * films someone uses as a seed) and TEMP `tags_movielens` without the
- * sampled users. Runs after the offline views, since the seeds come from
+ * films someone uses as a seed), TEMP `tags_movielens` without the sampled
+ * users, and a TEMP view of the taste neighbours' MovieLens ratings
+ * without them either (#174): a sampled user would otherwise be his own
+ * closest neighbour, held-out films included. Runs after the offline views, since the seeds come from
  * the TEMP `notas_vigentes`. The similarity's tag rarities and norms are
  * computed again over those tags (#171: the top 5's similarity reads
  * them), with the rebuild's own step, into TEMP tables. */
@@ -266,6 +268,19 @@ export const prepareSample = (
   progress: Progress,
 ): Effect.Effect<void, EngineError | SqliteError, Environment> =>
   Effect.gen(function* () {
+    yield* db.exec(
+      'CREATE TEMP TABLE usuarios_sorteados (usuario INTEGER PRIMARY KEY)',
+    )
+    yield* insertMany(
+      db,
+      'INSERT INTO usuarios_sorteados VALUES (?)',
+      [...sample.users].map((user) => [user]),
+    )
+    yield* db.exec(`
+      CREATE TEMP VIEW notas_gosto_movielens AS
+      SELECT g.* FROM main.notas_gosto_movielens g
+      WHERE g.usuario NOT IN (SELECT usuario FROM usuarios_sorteados)
+    `)
     yield* db.exec(`
       CREATE TEMP TABLE vizinhos AS SELECT * FROM main.vizinhos WHERE 0;
       CREATE INDEX temp.vizinhos_por_filme ON vizinhos(filme_id);

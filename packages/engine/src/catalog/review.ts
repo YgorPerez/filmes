@@ -172,7 +172,46 @@ const sourceOf = (dump: Dump): readonly [string, string] => {
   return [dump.source, dump.date]
 }
 
-/** `vizinhos(notas, links)`, the tags and the ratings by value of ml-32m. */
+/** Ratings in typed arrays that grow: ml-32m's sample holds millions. */
+class TasteRatings {
+  private users = new Int32Array(1 << 16)
+  private items = new Int32Array(1 << 16)
+  // Halves from 0.5 to 5 are exact in 32 bits.
+  private ratings = new Float32Array(1 << 16)
+  private size = 0
+
+  push(user: number, item: number, rating: number): void {
+    if (this.size === this.users.length) {
+      const grow = <T extends Int32Array | Float32Array>(old: T, next: T) => {
+        next.set(old)
+        return next
+      }
+      this.users = grow(this.users, new Int32Array(this.size * 2))
+      this.items = grow(this.items, new Int32Array(this.size * 2))
+      this.ratings = grow(this.ratings, new Float32Array(this.size * 2))
+    }
+    this.users[this.size] = user
+    this.items[this.size] = item
+    this.ratings[this.size] = rating
+    this.size += 1
+  }
+
+  *rows(
+    films: readonly string[],
+  ): Generator<readonly [number, string, number]> {
+    for (let i = 0; i < this.size; i++)
+      yield [this.users[i]!, films[this.items[i]!]!, this.ratings[i]!]
+  }
+}
+
+/** The taste neighbours' sample (#174): the users whose id is a multiple of
+ * this, with at least `TASTE_SAMPLE_MIN_RATINGS` ratings of linked films. On
+ * ml-32m, about one user in ten. */
+export const TASTE_SAMPLE_STRIDE = 10
+export const TASTE_SAMPLE_MIN_RATINGS = 50
+
+/** `vizinhos(notas, links)`, the tags, the ratings by value of ml-32m, and
+ * the taste neighbours' sample. */
 const loadMovielens = (db: Connection, zip: string, dump: Dump) =>
   Effect.gen(function* () {
     const sourceAndDate = sourceOf(dump)
@@ -198,6 +237,8 @@ const loadMovielens = (db: Connection, zip: string, dump: Dump) =>
     let votes = 0
     // Every rating, linked or not, by value: the population's scale (#172).
     const population = new Map<number, number>()
+    // The taste neighbours' sample (#174), one rating per index.
+    const taste = new TasteRatings()
     yield* forEachBatch(csvRows(zip, MOVIELENS_MEMBERS.ratings), (rows) =>
       Effect.sync(() => {
         for (const row of rows) {
@@ -207,6 +248,15 @@ const loadMovielens = (db: Connection, zip: string, dump: Dump) =>
           const movieId = row('movieId')
           const item = movieId === null ? undefined : byMovieId.get(movieId)
           if (item === undefined) continue
+          const sampled = row('userId')
+          if (
+            sampled !== null &&
+            /^\d+$/.test(sampled) &&
+            Number(sampled) % TASTE_SAMPLE_STRIDE === 0 &&
+            rating >= 0.5 &&
+            rating <= 5
+          )
+            taste.push(Number(sampled), item, rating)
           if (!(rating >= HIGH_RATING)) continue
           const user = pyParseInt(present(row('userId'), 'userId'))
           if (user === null)
@@ -231,6 +281,21 @@ const loadMovielens = (db: Connection, zip: string, dump: Dump) =>
     yield* db.runMany(
       'INSERT INTO notas_movielens VALUES (?, ?)',
       [...population].sort(([a], [b]) => a - b),
+    )
+    // Two movieIds may link to the same film: the later rating stays.
+    yield* db.runMany(
+      'INSERT OR REPLACE INTO notas_gosto_movielens VALUES (?, ?, ?)',
+      taste.rows(films),
+    )
+    yield* db.run(
+      `DELETE FROM notas_gosto_movielens WHERE usuario IN (
+         SELECT usuario FROM notas_gosto_movielens
+         GROUP BY usuario HAVING count(*) < ?)`,
+      TASTE_SAMPLE_MIN_RATINGS,
+    )
+    yield* db.run(
+      'INSERT INTO fonte_gosto_movielens VALUES (?, ?)',
+      ...sourceAndDate,
     )
     yield* db.runMany(
       'INSERT INTO vizinhos VALUES (?, ?, ?, ?, ?, ?, ?)',
