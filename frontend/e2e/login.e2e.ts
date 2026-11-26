@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test'
+import { type Page } from '@playwright/test'
+import { expect, test } from './support'
 
 /** Through the app's button to the stand-in Google, as `email`. */
 async function loginAs(page: Page, email: string) {

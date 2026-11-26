@@ -10,8 +10,16 @@
 // Pessoa file; the skip holds after a reload.
 
 import { consult, personCreate } from '@filmes/engine'
-import { expect, test } from '@playwright/test'
-import { addPerson, engineRun, loginAs, notice, section, snap } from './support'
+import {
+  addPerson,
+  engineRun,
+  expect,
+  loginAs,
+  notice,
+  section,
+  snap,
+  test,
+} from './support'
 
 const DONOS = [
   { slug: 'vera', name: 'Vera', other: 'Bruno' },

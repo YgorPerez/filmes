@@ -4,20 +4,23 @@
 // redone: the films that stayed keep their number, the new ones have the
 // "novo" mark, and "Saiu" says what left and why. A Já vi writes a Já
 // visto in the Pessoa's file, so each project marks a Pessoa of its own
-// (the other files read the fixture's Pessoas). `E2E_SCREENSHOTS=<folder>`
-// saves each screen.
+// (the file's other tests read the fixture's Pessoas).
+// `E2E_SCREENSHOTS=<folder>` saves each screen.
 
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { recommend, recommendSession } from '@filmes/engine'
-import { expect, test, type Page } from '@playwright/test'
+import { type Page } from '@playwright/test'
 import {
   addPerson,
+  engineRoot,
   engineRun,
+  expect,
   loginAsBruno,
   notice,
   section,
   snap,
+  test,
 } from './support'
 
 /** Opens a Session for Bruno and `person`, as Bruno; gives its id. */
@@ -34,7 +37,7 @@ const openSession = async (person: string, count: number) =>
  * on, written next to it for this project alone; the app keeps the
  * default, where nobody has neighbours. */
 const tasteWeights = (project: string) => {
-  const root = process.env.E2E_ENGINE ?? ''
+  const root = engineRoot()
   const file = join(root, `weights-taste-${project}.toml`)
   writeFileSync(
     file,
@@ -48,8 +51,7 @@ const tasteWeights = (project: string) => {
 
 /** Opens a Session for Bruno and `person` with Bruno's taste neighbours
  * on (the fixture's users 10, 20 and 30), so the 5th place is the Aposta
- * (#178), Pequenos Milagres; gives its id. No other file may make that film
- * a Já visto of Bruno's. */
+ * (#178), Pequenos Milagres; gives its id. */
 const openBetSession = async (person: string, project: string) => {
   const opened = await engineRun(
     (engine) =>

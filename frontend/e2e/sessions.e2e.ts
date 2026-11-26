@@ -7,8 +7,16 @@
 // of each screen.
 
 import { listSessions, recommendSession, recordFeedback } from '@filmes/engine'
-import { expect, test, type Page } from '@playwright/test'
-import { engineRun, loginAs, loginAsBruno, section, snap } from './support'
+import { type Page } from '@playwright/test'
+import {
+  engineRun,
+  expect,
+  loginAs,
+  loginAsBruno,
+  section,
+  snap,
+  test,
+} from './support'
 
 const ask = (page: Page) =>
   page.getByRole('button', { name: 'Recomendar' }).click()
