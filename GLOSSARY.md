@@ -78,6 +78,14 @@ _Evitar_: conflito, variância
 O top 5 que uma Sessão recebe, cada filme com os seus Motivos.
 _Evitar_: sugestão, lista
 
+**Parecença** [similarity, `similarity`]:
+O quanto um filme se parece com um filme de referência, de 0 a 1: genoma, tags do MovieLens, vizinhos, gênero e diretor ou atores em comum, com os pesos de `[similar.weight]`. Mede-se a partir da referência, então não é simétrica. É o que o `--parecido` usa para filtrar.
+_Evitar_: semelhança, distância
+
+**Diversidade** [diversity, `diversity`]:
+O quanto a Recomendação evita filmes parecidos entre si. Na ordem final (MMR, #177), cada lugar vai para o filme com a melhor pontuação da Regra de escolha descontada da maior Parecença com os filmes já escolhidos acima dele (`[diversity]` em `config/weights.toml`). O `evaluate` a mede pela Parecença média no top 5.
+_Evitar_: variedade, mistura
+
 **Versão da Sessão** [session version, `SessionVersion`]:
 Uma Recomendação de uma Sessão aberta. Quando o Dono pede outra lista na mesma Sessão, a atual vira uma versão anterior, guardada com o pedido e os Presentes dela, e a nova passa a valer. O número da versão conta a partir de 1. Um filme de uma versão anterior pode voltar na nova; só o que o Dono trocou em alguma versão e o que algum Presente marcou Já vi na Sessão ficam fora dela até o fim.
 _Evitar_: rodada, tentativa
@@ -99,8 +107,12 @@ O texto livre que o Dono escreve embaixo do Cartaz, depois do último filme: con
 _Evitar_: observação, extra
 
 **Trocado** [swapped, `swapped`]:
-Um filme que o Dono tirou da tela de uma versão: o Trocar do Cartaz e, ao refazer, o que ele mandou trocar e o que não ficou como Mantido. Fica fora da Sessão até o fim.
+Um filme que o Dono tirou da tela de uma versão: o Trocar do Cartaz, o não de um Presente no Voto e, ao refazer, o que ele mandou trocar e o que não ficou como Mantido. Fica fora da Sessão até o fim.
 _Evitar_: descartado, rejeitado
+
+**Voto** [vote, `votes`; `yes`, `no`]:
+O sim ou o não de um Presente a um filme da tela, dado no celular pelo Link da Sessão, um filme de cada vez (o swipe do grupo, #182). Fica na versão da Sessão com quem votou e a data. O não é um Trocado daquele Presente: o filme sai e a Sessão regera. O sim sobe o filme: ao regerar, os Mantidos com mais sins, na Sessão inteira, vêm primeiro, nos números que os Mantidos já tinham, e as vagas não mudam. Voto não é Fato e não mexe no gosto.
+_Evitar_: curtida, like
 
 **Saída** [dropped, `dropped`; causa: `seen`, `swapped`, `constraint`, `veto`, `min_rating`, `mood`]:
 Um filme da versão anterior que não está na nova, com a causa. A causa `mood` é de quem caiu porque o Dono pediu outro Clima: o filme continua elegível na Sessão. A causa não é Motivo: Motivo é por que um filme está na Recomendação.

@@ -240,6 +240,14 @@ export {
   type WaitingAnswers,
 } from './sessions/pairwise.ts'
 export {
+  castVotes,
+  votedBy,
+  yesVotes,
+  type CastVotes,
+  type CastVotesRequest,
+  type VoteValue,
+} from './sessions/votes.ts'
+export {
   engineLayer,
   errorOutcome,
   makeEngine,

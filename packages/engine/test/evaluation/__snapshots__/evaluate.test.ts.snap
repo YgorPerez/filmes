@@ -19,6 +19,11 @@ exports[`avaliar, as recorded > gives the recorded result and report 1`] = `
       "constraints": {
         "onDemandReach": 50,
       },
+      "diversity": {
+        "depth": 10,
+        "lambda": 1,
+        "pool": 30,
+      },
       "group": {
         "weight": 0.05,
       },
@@ -410,6 +415,11 @@ Quanto das Notas retidas foi 4 ou mais, pela Força mais alta a favor do filme n
       },
       "constraints": {
         "onDemandReach": 50,
+      },
+      "diversity": {
+        "depth": 10,
+        "lambda": 1,
+        "pool": 30,
       },
       "group": {
         "weight": 0.05,
@@ -2038,6 +2048,11 @@ Foram testados 300 conjuntos. A ordem usa a média do Recall@50 entre as amostra
       },
       "constraints": {
         "onDemandReach": 50,
+      },
+      "diversity": {
+        "depth": 10,
+        "lambda": 1,
+        "pool": 30,
       },
       "group": {
         "weight": 0.05,

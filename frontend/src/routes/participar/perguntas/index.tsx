@@ -1,7 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { readPairwise } from '#/content/pairwise'
+import { readPairwise } from '#/content/session-link'
 import { pairwiseSearch } from '#/content/pairwise-address'
-import { sessionLinkPath } from '#/content/session-link-address'
 import { PairwiseQuestion } from '#/ui/pairwise'
 
 // The Perguntas par a par of the Link da Sessão (#181). The parent
@@ -19,11 +18,11 @@ export const Route = createFileRoute('/participar/perguntas/')({
 })
 
 function PairwiseRoute() {
-  const { participation } = Route.useRouteContext()
+  const { participation, home } = Route.useRouteContext()
   const { chave, erro } = Route.useSearch()
   const page = Route.useLoaderData()
   const selected = participation?.selected
-  if (!participation || !selected || !chave) return null
+  if (!participation || !selected || !chave || !home) return null
   return (
     <PairwiseQuestion
       page={page}
@@ -33,7 +32,7 @@ function PairwiseRoute() {
         person: selected.person,
       }}
       failed={erro === 1}
-      back={sessionLinkPath(participation.session, chave, selected.person)}
+      back={home}
     />
   )
 }

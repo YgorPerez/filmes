@@ -23,6 +23,8 @@ import { Route as InicioPularRouteImport } from './routes/inicio/pular'
 import { Route as NotasEnviarRouteImport } from './routes/notas/enviar'
 import { Route as OperacoesAcaoRouteImport } from './routes/operacoes/acao'
 import { Route as ParticiparIndexRouteImport } from './routes/participar/index'
+import { Route as ParticiparVotarRouteImport } from './routes/participar/votar'
+import { Route as ParticiparVotosRouteImport } from './routes/participar/votos'
 import { Route as OwnerFeedbackIndexRouteImport } from './routes/_owner/feedback/index'
 import { Route as OwnerFeedbackSessaoRouteImport } from './routes/_owner/feedback/$sessao'
 import { Route as OwnerImportarIndexRouteImport } from './routes/_owner/importar/index'
@@ -109,6 +111,16 @@ const OperacoesAcaoRoute = OperacoesAcaoRouteImport.update({
 const ParticiparIndexRoute = ParticiparIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => ParticiparRoute,
+} as any)
+const ParticiparVotarRoute = ParticiparVotarRouteImport.update({
+  id: '/votar',
+  path: '/votar',
+  getParentRoute: () => ParticiparRoute,
+} as any)
+const ParticiparVotosRoute = ParticiparVotosRouteImport.update({
+  id: '/votos',
+  path: '/votos',
   getParentRoute: () => ParticiparRoute,
 } as any)
 const OwnerFeedbackIndexRoute = OwnerFeedbackIndexRouteImport.update({
@@ -217,6 +229,8 @@ export interface FileRoutesByFullPath {
   '/inicio/pular': typeof InicioPularRoute
   '/notas/enviar': typeof NotasEnviarRoute
   '/operacoes/acao': typeof OperacoesAcaoRoute
+  '/participar/votar': typeof ParticiparVotarRoute
+  '/participar/votos': typeof ParticiparVotosRoute
   '/participar/': typeof ParticiparIndexRoute
   '/feedback/$sessao': typeof OwnerFeedbackSessaoRoute
   '/importar/$pessoa': typeof OwnerImportarPessoaRoute
@@ -248,6 +262,8 @@ export interface FileRoutesByTo {
   '/inicio/pular': typeof InicioPularRoute
   '/notas/enviar': typeof NotasEnviarRoute
   '/operacoes/acao': typeof OperacoesAcaoRoute
+  '/participar/votar': typeof ParticiparVotarRoute
+  '/participar/votos': typeof ParticiparVotosRoute
   '/': typeof OwnerIndexRoute
   '/participar': typeof ParticiparIndexRoute
   '/feedback/$sessao': typeof OwnerFeedbackSessaoRoute
@@ -283,6 +299,8 @@ export interface FileRoutesById {
   '/inicio/pular': typeof InicioPularRoute
   '/notas/enviar': typeof NotasEnviarRoute
   '/operacoes/acao': typeof OperacoesAcaoRoute
+  '/participar/votar': typeof ParticiparVotarRoute
+  '/participar/votos': typeof ParticiparVotosRoute
   '/_owner/': typeof OwnerIndexRoute
   '/participar/': typeof ParticiparIndexRoute
   '/_owner/feedback/$sessao': typeof OwnerFeedbackSessaoRoute
@@ -319,6 +337,8 @@ export interface FileRouteTypes {
     | '/inicio/pular'
     | '/notas/enviar'
     | '/operacoes/acao'
+    | '/participar/votar'
+    | '/participar/votos'
     | '/participar/'
     | '/feedback/$sessao'
     | '/importar/$pessoa'
@@ -350,6 +370,8 @@ export interface FileRouteTypes {
     | '/inicio/pular'
     | '/notas/enviar'
     | '/operacoes/acao'
+    | '/participar/votar'
+    | '/participar/votos'
     | '/'
     | '/participar'
     | '/feedback/$sessao'
@@ -384,6 +406,8 @@ export interface FileRouteTypes {
     | '/inicio/pular'
     | '/notas/enviar'
     | '/operacoes/acao'
+    | '/participar/votar'
+    | '/participar/votos'
     | '/_owner/'
     | '/participar/'
     | '/_owner/feedback/$sessao'
@@ -522,6 +546,20 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/participar/'
       preLoaderRoute: typeof ParticiparIndexRouteImport
+      parentRoute: typeof ParticiparRoute
+    }
+    '/participar/votar': {
+      id: '/participar/votar'
+      path: '/votar'
+      fullPath: '/participar/votar'
+      preLoaderRoute: typeof ParticiparVotarRouteImport
+      parentRoute: typeof ParticiparRoute
+    }
+    '/participar/votos': {
+      id: '/participar/votos'
+      path: '/votos'
+      fullPath: '/participar/votos'
+      preLoaderRoute: typeof ParticiparVotosRouteImport
       parentRoute: typeof ParticiparRoute
     }
     '/_owner/feedback/': {
@@ -690,12 +728,16 @@ const OwnerRouteChildren: OwnerRouteChildren = {
 const OwnerRouteWithChildren = OwnerRoute._addFileChildren(OwnerRouteChildren)
 
 interface ParticiparRouteChildren {
+  ParticiparVotarRoute: typeof ParticiparVotarRoute
+  ParticiparVotosRoute: typeof ParticiparVotosRoute
   ParticiparIndexRoute: typeof ParticiparIndexRoute
   ParticiparPerguntasEnviarRoute: typeof ParticiparPerguntasEnviarRoute
   ParticiparPerguntasIndexRoute: typeof ParticiparPerguntasIndexRoute
 }
 
 const ParticiparRouteChildren: ParticiparRouteChildren = {
+  ParticiparVotarRoute: ParticiparVotarRoute,
+  ParticiparVotosRoute: ParticiparVotosRoute,
   ParticiparIndexRoute: ParticiparIndexRoute,
   ParticiparPerguntasEnviarRoute: ParticiparPerguntasEnviarRoute,
   ParticiparPerguntasIndexRoute: ParticiparPerguntasIndexRoute,

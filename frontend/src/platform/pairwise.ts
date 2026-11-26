@@ -27,6 +27,7 @@ import {
 } from '#/content/session-link-address'
 import { formPoster, seeOther } from './form-post'
 import { resolveSessionLink } from './session-link'
+import { fromThisSite } from './same-site'
 
 /** What `/participar/perguntas` shows: how many she answered, of how many,
  * and the next pair (null once all are answered). */
@@ -62,18 +63,6 @@ export async function pairwisePage(
 const field = (form: FormData, name: string) => {
   const value = form.get(name)
   return typeof value === 'string' ? value : undefined
-}
-
-/** A form of this site. The link's pages send no Referer (`no-referrer`),
- * so a browser posts their forms with `Origin: null`; then the Fetch
- * Metadata a page cannot forge says where the form was. */
-function fromThisSite(request: Request, origin: string | undefined): boolean {
-  const sent = request.headers.get('origin')
-  if (sent === null || origin === undefined) return false
-  return (
-    sent === origin ||
-    (sent === 'null' && request.headers.get('sec-fetch-site') === 'same-origin')
-  )
 }
 
 /** `POST /participar/perguntas/enviar`: keeps one answer and goes back to
