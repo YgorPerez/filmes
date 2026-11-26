@@ -256,6 +256,49 @@ describe('the Cartaz model', () => {
     )
   })
 
+  test('the Cartaz has the version’s Climas and the whole vocabulary for the chips', async () => {
+    const fixture = useFixture()
+    const session = await recommend(fixture, {
+      attendees: ['dono'],
+      moods: ['Tenso', 'leve'],
+    })
+
+    const model = await fixture.ok(
+      billboardModel({ session: session.session.id }),
+    )
+
+    expect(model.moods).toEqual(['tenso', 'leve'])
+    expect(model.moodChoices).toEqual([
+      'leve',
+      'pra rir',
+      'tenso',
+      'romântico',
+      'pra chorar',
+      'pra pensar',
+      'assustador',
+      'ação',
+      'sombrio',
+    ])
+  })
+
+  test('what another Clima took off reads so', async () => {
+    const fixture = useFixture()
+    const first = await recommend(fixture, { attendees: ['iara'], count: 10 })
+    const id = first.session.id
+    await recommend(fixture, {
+      attendees: ['iara'],
+      count: 10,
+      session: id,
+      moods: ['leve'],
+    })
+
+    const model = await fixture.ok(billboardModel({ session: id }))
+
+    expect(new Set(model.dropped.map((s) => s.reason))).toEqual(
+      new Set(['outro Clima']),
+    )
+  })
+
   test('the card header has the w500 poster, rating, Portuguese title and synopsis', async () => {
     const fixture = useFixture()
     const session = await recommend(fixture, { attendees: ['dono'] })

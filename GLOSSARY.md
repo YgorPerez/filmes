@@ -102,8 +102,8 @@ _Evitar_: observação, extra
 Um filme que o Dono tirou da tela de uma versão: o Trocar do Cartaz e, ao refazer, o que ele mandou trocar e o que não ficou como Mantido. Fica fora da Sessão até o fim.
 _Evitar_: descartado, rejeitado
 
-**Saída** [dropped, `dropped`; causa: `seen`, `swapped`, `constraint`, `veto`, `min_rating`]:
-Um filme da versão anterior que não está na nova, com a causa. A causa não é Motivo: Motivo é por que um filme está na Recomendação.
+**Saída** [dropped, `dropped`; causa: `seen`, `swapped`, `constraint`, `veto`, `min_rating`, `mood`]:
+Um filme da versão anterior que não está na nova, com a causa. A causa `mood` é de quem caiu porque o Dono pediu outro Clima: o filme continua elegível na Sessão. A causa não é Motivo: Motivo é por que um filme está na Recomendação.
 
 **Capa** [poster, `poster`]:
 O pôster do filme, vindo do TMDB. Não é o Cartaz, que é a Recomendação inteira.
