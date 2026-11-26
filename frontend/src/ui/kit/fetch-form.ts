@@ -4,7 +4,8 @@
 // as always. With it, the submit goes by
 // `fetch` with the same fields and the button pressed, to the same route,
 // which answers `{ to }` (`answerFetch`) instead of the 303; the page then
-// goes to `to` through the router, keeping the scroll.
+// goes to `to` through the router, keeping the scroll, and reloads its
+// data when `to` is the page it was on.
 
 import { useHydrated, useRouter } from '@tanstack/react-router'
 import { useRef, useState, type FormEvent } from 'react'
@@ -32,8 +33,14 @@ export function useFetchForm(onAnswer?: (to: string) => boolean) {
 
   const go = async (to: string) => {
     if (onAnswer?.(to)) return
-    if (router) await router.navigate({ href: to, resetScroll: false })
-    else window.location.assign(to)
+    if (!router) return window.location.assign(to)
+    // Back to the page it was on: what the post changed is in the page's
+    // data, which the router keeps for the same page unless told.
+    const same =
+      new URL(to, window.location.origin).pathname ===
+      router.state.location.pathname
+    await router.navigate({ href: to, resetScroll: false })
+    if (same) await router.invalidate()
   }
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -71,4 +78,23 @@ export function useFetchForm(onAnswer?: (to: string) => boolean) {
   }
 
   return { onSubmit, busy }
+}
+
+/** `onSubmit` for a `<form method="get">` to a page of the app (the
+ * Catálogo search): with the router, the page goes to the form's URL
+ * without reloading, keeping the scroll; before it, the browser does. */
+export function useGetForm() {
+  const router = useRouter({ warn: false })
+  return (event: FormEvent<HTMLFormElement>) => {
+    if (!router) return
+    event.preventDefault()
+    const form = event.currentTarget
+    const query = new URLSearchParams()
+    for (const [name, value] of new FormData(form))
+      if (typeof value === 'string') query.append(name, value)
+    void router.navigate({
+      href: `${new URL(form.action).pathname}?${query}`,
+      resetScroll: false,
+    })
+  }
 }

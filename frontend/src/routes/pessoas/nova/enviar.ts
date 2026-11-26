@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { answerFetch } from '#/content/fetch-answer'
 
 // The "Acrescentar Pessoa" form of `/pessoas` posts here. Outside `_owner/`,
 // since the page gate runs for pages, not for server handlers:
@@ -9,7 +10,7 @@ export const Route = createFileRoute('/pessoas/nova/enviar')({
     handlers: {
       POST: async ({ request }) => {
         const { servePersonCreate } = await import('#/platform/people')
-        return servePersonCreate(request)
+        return answerFetch(request, await servePersonCreate(request))
       },
     },
   },

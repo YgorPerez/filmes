@@ -1,8 +1,14 @@
-import type { PersonCreateRefusal, TypedPerson } from '#/content/person-create'
+import {
+  isPersonCreateRefusal,
+  type PersonCreateRefusal,
+  type TypedPerson,
+} from '#/content/person-create'
 import type { PersonEntry } from '#/platform/people'
 import { personPath } from '#/content/paths'
 import { PEOPLE } from './person.copy'
+import { useFetchForm } from './kit/fetch-form'
 import { OwnerTag } from './kit/owner-tag'
+import { useRefusalInPlace } from './kit/refusal-in-place'
 import { Alert, Disclosure, Submit, TextField } from './person-parts'
 import { RowArrow } from './kit/row-arrow'
 
@@ -81,20 +87,38 @@ export function PeopleList({
   )
 }
 
+/** The create form's refusal, which comes back to the list. */
+const createRefusalOf = (to: URL) => {
+  const why = to.searchParams.get('erro')
+  return isPersonCreateRefusal(why) ? why : null
+}
+
 /** "Acrescentar Pessoa": a plain POST, so it works before the JavaScript.
- * Open, with what was typed and why not, when the server refused it. */
+ * Open, with what was typed and why not, when the server refused it. With
+ * the JavaScript (#235), it posts by `fetch`: a refusal shows in place,
+ * over what was typed, and the new Pessoa's page opens without reloading. */
 function CreateForm({ state }: { state?: CreateState }) {
   const { create } = PEOPLE
   const typed = state?.typed ?? {}
+  const { refused, alert, onAnswer } = useRefusalInPlace(
+    state?.refusal,
+    createRefusalOf,
+  )
+  const { onSubmit, busy } = useFetchForm(onAnswer)
   return (
     <Disclosure summary={create.title} open={state?.refusal !== undefined}>
       <form
         method="post"
         action="/pessoas/nova/enviar"
         aria-label={create.title}
+        onSubmit={onSubmit}
         className="flex flex-col gap-xl"
       >
-        {state?.refusal && <Alert>{create.refusals[state.refusal]}</Alert>}
+        {refused && (
+          <div ref={alert}>
+            <Alert>{create.refusals[refused]}</Alert>
+          </div>
+        )}
         <TextField
           name="nome"
           label={create.name}
@@ -125,7 +149,9 @@ function CreateForm({ state }: { state?: CreateState }) {
           defaultValue={typed.email}
         />
         <p className="text-meta text-ink-2">{create.testUsers}</p>
-        <Submit variant="primary">{create.submit}</Submit>
+        <Submit variant="primary" disabled={busy !== null}>
+          {busy === null ? create.submit : create.submitting}
+        </Submit>
       </form>
     </Disclosure>
   )

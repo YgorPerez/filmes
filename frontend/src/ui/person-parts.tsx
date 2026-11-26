@@ -1,15 +1,19 @@
 import type { EntityMatch, FilmMatch, FilmRef } from '@filmes/engine'
 import {
+  createContext,
+  useContext,
   useEffect,
   useRef,
   useState,
   type ComponentProps,
   type ReactNode,
 } from 'react'
+import { isPersonRefusal } from '#/content/person-action'
 import { CATALOG_SEARCH } from './catalog-search.copy'
 import { PERSON } from './person.copy'
 import { FIELD } from './kit/field'
-import { useHydrated } from './kit/fetch-form'
+import { useFetchForm, useGetForm, useHydrated } from './kit/fetch-form'
+import { useRefusalInPlace } from './kit/refusal-in-place'
 import {
   searchFilms,
   type CatalogScope,
@@ -99,30 +103,74 @@ export function Meta({ parts }: { parts: readonly (string | null)[] }) {
   )
 }
 
+/** What the submit buttons of a form say while its post runs (they are
+ * disabled then), null when none runs: `Submit` reads it. */
+const Posting = createContext<string | null>(null)
+
+/** The refusal of a Pessoa's form, which comes back to her page. */
+const personRefusalOf = (to: URL) => {
+  const why = to.searchParams.get('erro')
+  return isPersonRefusal(why) ? why : null
+}
+
+/** After a post that went through: a form in a fold empties and the fold
+ * closes, as a new page would have it, the focus on its summary. */
+function settle(form: HTMLFormElement | null) {
+  const fold = form?.closest('details')
+  if (!form || !fold) return
+  form.reset()
+  fold.open = false
+  fold.querySelector('summary')?.focus()
+}
+
 /** A form that posts one action to the Pessoa's route
- * (`platform/people.ts`). A plain POST: it works before the JavaScript. */
+ * (`platform/people.ts`). A plain POST: it works before the JavaScript.
+ * With it (#235), it posts by `fetch`: a refusal shows here, over what was
+ * typed; what went through reloads the page through the router. Its
+ * submits say `busy` while the post runs. */
 export function ActionForm({
   slug,
   action,
   label,
   className,
+  busy = PERSON.saving,
   children,
 }: {
   slug: string
   action: string
   label?: string
   className?: string
+  busy?: string
   children: ReactNode
 }) {
+  const form = useRef<HTMLFormElement>(null)
+  const { refused, alert, onAnswer } = useRefusalInPlace(
+    undefined,
+    personRefusalOf,
+  )
+  const { onSubmit, busy: running } = useFetchForm((to) => {
+    if (onAnswer(to)) return true
+    settle(form.current)
+    return false
+  })
   return (
     <form
+      ref={form}
       method="post"
       action={`/pessoas/${encodeURIComponent(slug)}/acao`}
       aria-label={label}
+      onSubmit={onSubmit}
       className={className ?? 'flex flex-col gap-xl'}
     >
+      {refused && (
+        <div ref={alert} className="basis-full">
+          <Alert>{PERSON.refusals[refused]}</Alert>
+        </div>
+      )}
       <input type="hidden" name="acao" value={action} />
-      {children}
+      <Posting.Provider value={running === null ? null : busy}>
+        {children}
+      </Posting.Provider>
     </form>
   )
 }
@@ -140,16 +188,17 @@ export function RemoveForm({
   label: string
 }) {
   return (
-    <ActionForm slug={slug} action="remover" className="shrink-0">
+    <ActionForm
+      slug={slug}
+      action="remover"
+      className="shrink-0"
+      busy={PERSON.removing}
+    >
       <input type="hidden" name="tipo" value={what} />
       <input type="hidden" name="id" value={id} />
-      <Button
-        type="submit"
-        variant="option"
-        aria-label={PERSON.removeLabel(label)}
-      >
+      <Submit className="" aria-label={PERSON.removeLabel(label)}>
         {PERSON.remove}
-      </Button>
+      </Submit>
     </ActionForm>
   )
 }
@@ -251,14 +300,26 @@ export function SelectField({
 
 /** The submit of a form, with every Button prop (`disabled`...): an
  * option at the start of its line unless `variant` or `className` say
- * otherwise. */
+ * otherwise. In an `ActionForm` whose post runs, it is disabled and says
+ * what the form is doing. */
 export function Submit({
   variant = 'option',
   className = 'self-start',
+  disabled,
+  children,
   ...props
 }: Omit<ComponentProps<typeof Button>, 'type'>) {
+  const posting = useContext(Posting)
   return (
-    <Button type="submit" variant={variant} className={className} {...props} />
+    <Button
+      type="submit"
+      variant={variant}
+      className={className}
+      disabled={disabled === true || posting !== null}
+      {...props}
+    >
+      {posting ?? children}
+    </Button>
   )
 }
 
@@ -432,6 +493,7 @@ export function CatalogSearch({
   pick?: (id: string) => string
 }) {
   const { title, leadFilms, leadAll, label, hint, submit } = CATALOG_SEARCH
+  const onSubmit = useGetForm()
   return (
     <Section
       id="buscar-catalogo"
@@ -443,6 +505,7 @@ export function CatalogSearch({
         action={action}
         role="search"
         aria-label={title}
+        onSubmit={onSubmit}
         className="flex flex-wrap items-end gap-sm"
       >
         {Object.entries(keep).map(

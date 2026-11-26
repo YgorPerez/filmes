@@ -26,7 +26,7 @@ import {
 import { MyStartSections, type MyStart } from './my-start'
 import { StrengthDots } from './person-marks'
 import { PERSON, RATING_CHOICES } from './person.copy'
-import { Button, buttonVariants } from './shadcn/button'
+import { buttonVariants } from './shadcn/button'
 
 type Statement = PersonPage['stated'][number]
 type Reaction = keyof typeof PERSON.reactions
@@ -50,7 +50,8 @@ const RATING_OPTIONS = [
  * (rate, import, the CSV), then, on Meu gosto, the setup guide's leftovers
  * (`start`), then what the filmes knows of her taste, with a form for each
  * `pessoa` action. Every form is a plain POST that comes back here with
- * `notice` or `refusal`. `page` is `'unknown'` when no Pessoa has the slug,
+ * `notice` or `refusal`; with the JavaScript, it goes by `fetch` and
+ * reloads the page in place (`ActionForm`). `page` is `'unknown'` when no Pessoa has the slug,
  * null when the engine cannot run on this server. `search` is the Catálogo
  * search of `?buscar=`, for the targets' IDs. */
 export function PersonScreen({
@@ -334,18 +335,23 @@ function OpenQuestions({ slug, page }: Part) {
                   <Submit>{PERSON.save}</Submit>
                 </ActionForm>
               </Disclosure>
-              <ActionForm slug={slug} action="pular" className="self-start">
+              <ActionForm
+                slug={slug}
+                action="pular"
+                className="self-start"
+                busy={questions.skipping}
+              >
                 <input type="hidden" name="texto" value={q.text} />
                 {q.subject && (
                   <input type="hidden" name="assunto" value={q.subject} />
                 )}
-                <Button
-                  type="submit"
+                <Submit
                   variant="link"
+                  className=""
                   aria-label={`${questions.skip}: ${q.text}`}
                 >
                   {questions.skip}
-                </Button>
+                </Submit>
               </ActionForm>
             </div>
           </Item>
@@ -434,9 +440,7 @@ function Adjustments({ slug, page }: Part) {
                   hint={current?.date}
                   level={current?.level ?? 'normal'}
                 />
-                <Button type="submit" variant="option">
-                  {adjustments.change}
-                </Button>
+                <Submit className="">{adjustments.change}</Submit>
               </ActionForm>
             </li>
           )
