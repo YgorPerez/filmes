@@ -99,10 +99,13 @@ import { individualUtility } from './utility.ts'
 import { applyVetoes, type VetoReport } from './vetoes.ts'
 
 /** A Presente's Nota prevista [predicted rating] of a film (#174), from
- * her taste neighbours. */
+ * her taste neighbours, calibrated to her own Notas (#210). */
 export interface PredictedRating {
-  /** 1 to 10, on her scale, rounded to 2 places. */
+  /** 1 to 10, on her scale, rounded to 2 places: what the Cartaz shows. */
   readonly value: number
+  /** `value` before the calibration, for `evaluate`; the Session does not
+   * keep it. */
+  readonly raw: number
   /** How many taste neighbours rated the film. */
   readonly raters: number
   /** How uncertain `value` is: the standard deviation of each neighbour's
@@ -598,6 +601,7 @@ export const rank = (
             p,
             {
               value: pyRound(prediction.value, 2),
+              raw: pyRound(prediction.raw, 2),
               raters: prediction.raters,
               deviation: pyRound(prediction.deviation, 2),
             },

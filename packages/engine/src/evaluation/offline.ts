@@ -33,6 +33,7 @@ import {
   onTenScale,
   predictedRating,
   predictedRatingError,
+  type PredictedPair,
   type PredictedRatingError,
 } from './predicted-rating.ts'
 
@@ -187,7 +188,7 @@ export const measure = <R>(
     let withEvidence = 0
     let filmsTop5 = 0
     const scored: Scored[] = []
-    const predicted: Array<readonly [number, number]> = []
+    const predicted: PredictedPair[] = []
     const similarities: Array<number | null> = []
     for (const person of people) {
       // The ranking sees the day of the cut and these weights; its warnings
@@ -214,7 +215,7 @@ export const measure = <R>(
           })
           const prediction = predictedRating(film, person.person)
           if (prediction !== null)
-            predicted.push([prediction, onTenScale(rating)])
+            predicted.push({ ...prediction, rating: onTenScale(rating) })
         }
       const top = films.slice(0, 5)
       similarities.push(yield* options.similarity(top.map((film) => film.id)))

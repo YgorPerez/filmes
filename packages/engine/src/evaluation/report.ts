@@ -126,12 +126,12 @@ export const reportText = (r: ReportContent): string => {
     '## Nota prevista',
     '',
     ...(['people', 'movielens'] as const).map((sample) => {
-      const { films, meanAbsoluteError } =
+      const { films, meanAbsoluteError, rawMeanAbsoluteError } =
         r.offline[sample].predictedRatingError
       const name = sample === 'people' ? 'Pessoas' : 'MovieLens'
-      return meanAbsoluteError === null
+      return meanAbsoluteError === null || rawMeanAbsoluteError === null
         ? `- Erro médio (${name}): ausente, nenhum filme retido tem Nota prevista.`
-        : `- Erro médio (${name}): ${pyFixed(meanAbsoluteError, 2)} em ${films} filmes, de 1 a 10.`
+        : `- Erro médio (${name}): ${pyFixed(meanAbsoluteError, 2)} em ${films} filmes, de 1 a 10; sem a Calibração, ${pyFixed(rawMeanAbsoluteError, 2)}.`
     }),
   )
   const online = r.online

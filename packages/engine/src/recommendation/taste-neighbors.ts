@@ -18,9 +18,17 @@
 // than `MIN_TASTE_RATERS` give none. Her scale is the ruler's, so the same
 // percentile is a higher Nota for someone who rates high.
 //
+// The prediction is then calibrated to her (#210,
+// `prediction-calibration.ts`): on each film she rated, the neighbours
+// chosen without that film predict it, and a line from their percentile
+// to hers corrects every prediction. The Evidence keeps the neighbours'
+// own percentile; the Nota prevista and its deviation are the calibrated
+// ones, and `raw` keeps the one before.
+//
 // It reads `notas_vigentes`, so in `evaluate` it sees only the Notas
-// before the cut, and `notas_gosto_movielens`, which `evaluate` shadows
-// without its own sampled users.
+// before the cut, in the neighbours and in the calibration, and
+// `notas_gosto_movielens`, which `evaluate` shadows without its own
+// sampled users.
 
 import { Effect } from 'effect'
 import { ratingDecay } from '../evidence/decay.ts'
@@ -31,6 +39,12 @@ import {
   type RatingScale,
 } from '../evidence/ruler.ts'
 import type { Weights } from '../runtime/Weights.ts'
+import {
+  calibrate,
+  fitCalibration,
+  type Comparison,
+  type PredictionCalibration,
+} from './prediction-calibration.ts'
 import type { Connection, SqliteError } from '../sqlite/Sqlite.ts'
 import { num, text } from '../sqlite/row.ts'
 import { candidatesJson, scaleOf, type Round } from './signals/Signal.ts'
@@ -62,10 +76,13 @@ export interface TastePrediction {
   /** The mean freshness of the raters: how much the Evidence keeps of
    * its weight as her Notas age. */
   readonly freshness: number
-  /** The Nota prevista: `percentile` read on her scale, 1 to 10. */
+  /** The Nota prevista: `percentile` calibrated to her and read on her
+   * scale, 1 to 10. */
   readonly value: number
-  /** The standard deviation of each neighbour's percentile read on her
-   * scale, 1 to 10: how uncertain `value` is. */
+  /** `percentile` read on her scale without the calibration, 1 to 10. */
+  readonly raw: number
+  /** The standard deviation of each neighbour's calibrated percentile
+   * read on her scale, 1 to 10: how uncertain `value` is. */
   readonly deviation: number
 }
 
@@ -95,57 +112,122 @@ WHERE g.usuario IN (SELECT value FROM json_each(?1))
 ORDER BY g.filme_id, g.usuario
 `
 
+const mean = (values: ReadonlyArray<number>): number =>
+  values.reduce((sum, v) => sum + v, 0) / values.length
+
 /** One of her Notas: its percentile on her scale and its Decaimento. */
 interface OwnRating {
   readonly percentile: number
   readonly decay: number
 }
 
-/** The closest `k` among the users who share `minShared` films or more,
- * from (user, |her percentile − his|, her Nota's Decaimento) triples. */
-const closest = (
-  differences: Iterable<readonly [number, number, number]>,
-  k: number,
+/** A sample user's rating of one of her films. */
+interface SharedRating {
+  readonly user: number
+  readonly percentile: number
+}
+
+/** One user's sums over her films he rated. */
+interface UserSums {
+  /** Σ |her percentile − his| × her Nota's Decaimento. */
+  total: number
+  shared: number
+  /** Σ her Notas' Decaimento. */
+  decay: number
+}
+
+/** Who is closer: by distance, then by more films shared, then by the
+ * lower user id. */
+const closer = (
+  a: Pick<TasteNeighbor, 'user' | 'distance' | 'shared'>,
+  b: Pick<TasteNeighbor, 'user' | 'distance' | 'shared'>,
+): number => a.distance - b.distance || b.shared - a.shared || a.user - b.user
+
+/** Her taste neighbours, and the comparisons the calibration is fitted
+ * on. */
+interface Neighbourhood {
+  readonly neighbors: ReadonlyArray<TasteNeighbor>
+  readonly comparisons: ReadonlyArray<Comparison>
+}
+
+/** Every user who shares `minShared` of her films or more, the closest
+ * first, from his sums. */
+const ranked = (
+  sums: ReadonlyMap<number, UserSums>,
   minShared: number,
-): ReadonlyArray<TasteNeighbor> => {
-  const sums = new Map<number, [number, number, number]>()
-  for (const [user, difference, decay] of differences) {
-    const sum = sums.get(user) ?? [0, 0, 0]
-    sum[0] += difference * decay
-    sum[1] += 1
-    sum[2] += decay
-    sums.set(user, sum)
-  }
-  return [...sums]
-    .filter(([, [, shared]]) => shared >= minShared)
-    .map(([user, [total, shared, decay]]) => ({
+): ReadonlyArray<TasteNeighbor> =>
+  [...sums]
+    .filter(([, { shared }]) => shared >= minShared)
+    .map(([user, { total, shared, decay }]) => ({
       user,
       distance: total / decay,
       shared,
       freshness: decay / shared,
     }))
-    .sort(
-      (a, b) =>
-        a.distance - b.distance || b.shared - a.shared || a.user - b.user,
-    )
-    .slice(0, k)
+    .sort(closer)
+
+/** What the neighbours chosen without one of her films would have
+ * predicted for it: the mean percentile of its `raters` among the closest
+ * `k`, or `null` with fewer than `MIN_TASTE_RATERS`. Only its raters move
+ * when it leaves: the others keep their place in `everyone`. */
+const leftOut = (
+  mine: OwnRating,
+  raters: ReadonlyArray<SharedRating>,
+  everyone: ReadonlyArray<TasteNeighbor>,
+  sums: ReadonlyMap<number, UserSums>,
+  k: number,
+  minShared: number,
+): number | null => {
+  const moved = new Set(raters.map((r) => r.user))
+  const without = raters
+    .flatMap((r) => {
+      const sum = sums.get(r.user)!
+      const shared = sum.shared - 1
+      if (shared < Math.max(1, minShared)) return []
+      const difference = Math.abs(mine.percentile - r.percentile)
+      return [
+        {
+          user: r.user,
+          distance:
+            (sum.total - difference * mine.decay) / (sum.decay - mine.decay),
+          shared,
+          percentile: r.percentile,
+        },
+      ]
+    })
+    .sort(closer)
+  const chosen: number[] = []
+  let i = 0
+  let j = 0
+  for (let taken = 0; taken < k; taken += 1) {
+    while (i < everyone.length && moved.has(everyone[i]!.user)) i += 1
+    const stayed = everyone[i]
+    const rater = without[j]
+    if (
+      rater !== undefined &&
+      (stayed === undefined || closer(rater, stayed) < 0)
+    ) {
+      chosen.push(rater.percentile)
+      j += 1
+    } else if (stayed !== undefined) i += 1
+    else break
+  }
+  return chosen.length < MIN_TASTE_RATERS ? null : mean(chosen)
 }
 
 /** Per connection, by Pessoa and what she rated: `evaluate` ranks the
  * same Pessoa many times with the same Notas. */
-const found = new WeakMap<
-  Connection,
-  Map<string, ReadonlyArray<TasteNeighbor>>
->()
+const found = new WeakMap<Connection, Map<string, Neighbourhood>>()
 
-/** The taste neighbours of `person`, read on her `scale`. */
-export const tasteNeighbors = (
+/** The taste neighbours of `person`, read on her `scale`, and, for each
+ * film she rated, what the neighbours chosen without it predict. */
+const tasteNeighbourhood = (
   db: Connection,
   person: string,
   scale: RatingScale,
   weights: Pick<Weights, 'taste_neighbors' | 'rating_decay'>,
   today: string,
-): Effect.Effect<ReadonlyArray<TasteNeighbor>, SqliteError> =>
+): Effect.Effect<Neighbourhood, SqliteError> =>
   Effect.gen(function* () {
     const own = new Map<string, OwnRating>(
       (yield* db.all(OWN_RATINGS, person)).map((row) => [
@@ -158,8 +240,7 @@ export const tasteNeighbors = (
     )
     const { k, min_shared } = weights.taste_neighbors
     const key = JSON.stringify([person, k, min_shared, [...own]])
-    const cache =
-      found.get(db) ?? new Map<string, ReadonlyArray<TasteNeighbor>>()
+    const cache = found.get(db) ?? new Map<string, Neighbourhood>()
     found.set(db, cache)
     const cached = cache.get(key)
     if (cached !== undefined) return cached
@@ -167,24 +248,42 @@ export const tasteNeighbors = (
       own.size >= min_shared && k > 0
         ? yield* db.all(SHARED, JSON.stringify([...own.keys()]))
         : []
-    const result = closest(
-      rows.map((row) => {
-        const mine = own.get(text(row, 'filme_id'))!
-        return [
-          num(row, 'usuario'),
-          Math.abs(mine.percentile - num(row, 'percentil')),
-          mine.decay,
-        ] as const
-      }),
-      k,
-      min_shared,
-    )
+    const sums = new Map<number, UserSums>()
+    const byFilm = new Map<string, SharedRating[]>()
+    for (const row of rows) {
+      const film = text(row, 'filme_id')
+      const mine = own.get(film)!
+      const rating = {
+        user: num(row, 'usuario'),
+        percentile: num(row, 'percentil'),
+      }
+      const sum = sums.get(rating.user) ?? { total: 0, shared: 0, decay: 0 }
+      sum.total += Math.abs(mine.percentile - rating.percentile) * mine.decay
+      sum.shared += 1
+      sum.decay += mine.decay
+      sums.set(rating.user, sum)
+      const raters = byFilm.get(film) ?? []
+      raters.push(rating)
+      byFilm.set(film, raters)
+    }
+    const everyone = ranked(sums, min_shared)
+    const comparisons: Comparison[] = []
+    for (const [film, mine] of own) {
+      const predicted = leftOut(
+        mine,
+        byFilm.get(film) ?? [],
+        everyone,
+        sums,
+        k,
+        min_shared,
+      )
+      if (predicted !== null)
+        comparisons.push({ predicted, own: mine.percentile })
+    }
+    const result = { neighbors: everyone.slice(0, k), comparisons }
     cache.set(key, result)
     return result
   })
-
-const mean = (values: ReadonlyArray<number>): number =>
-  values.reduce((sum, v) => sum + v, 0) / values.length
 
 const deviation = (values: ReadonlyArray<number>): number => {
   const m = mean(values)
@@ -205,17 +304,19 @@ interface Rater {
   readonly freshness: number
 }
 
-/** A Candidate's prediction from what its raters gave it, or `null` with
- * too few raters or an empty scale. */
+/** A Candidate's prediction from what its raters gave it, calibrated to
+ * her, or `null` with too few raters or an empty scale. */
 const predict = (
   scale: RatingScale,
+  calibration: PredictionCalibration,
   raters: ReadonlyArray<Rater>,
 ): TastePrediction | null => {
   if (raters.length < MIN_TASTE_RATERS) return null
   const percentiles = raters.map((r) => r.percentile)
   const percentile = mean(percentiles)
-  const value = onHerScale(scale, percentile)
-  if (value === null) return null
+  const value = onHerScale(scale, calibrate(calibration, percentile))
+  const raw = onHerScale(scale, percentile)
+  if (value === null || raw === null) return null
   return {
     percentile,
     raters: raters.length,
@@ -224,7 +325,10 @@ const predict = (
     overlap: mean(raters.map((r) => r.shared)),
     freshness: mean(raters.map((r) => r.freshness)),
     value,
-    deviation: deviation(percentiles.map((p) => onHerScale(scale, p)!)),
+    raw,
+    deviation: deviation(
+      percentiles.map((p) => onHerScale(scale, calibrate(calibration, p))!),
+    ),
   }
 }
 
@@ -247,12 +351,16 @@ export const predictRatings = (
     const cached = ofRound.get(person)
     if (cached !== undefined) return cached
     const scale = scaleOf(round, person)
-    const neighbors = yield* tasteNeighbors(
+    const { neighbors, comparisons } = yield* tasteNeighbourhood(
       round.db,
       person,
       scale,
       round.weights,
       round.today,
+    )
+    const calibration = fitCalibration(
+      comparisons,
+      round.weights.prediction_calibration.pseudo_count,
     )
     const out = new Map<string, TastePrediction>()
     if (neighbors.length > 0) {
@@ -275,7 +383,7 @@ export const predictRatings = (
         byFilm.set(film, raters)
       }
       for (const [film, raters] of byFilm) {
-        const prediction = predict(scale, raters)
+        const prediction = predict(scale, calibration, raters)
         if (prediction !== null) out.set(film, prediction)
       }
     }

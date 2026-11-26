@@ -237,8 +237,12 @@ Os usuários do MovieLens mais perto do gosto de uma Pessoa: os que, nos filmes 
 _Evitar_: usuários parecidos, almas gêmeas
 
 **Nota prevista** [predicted rating, `predictedRating`]:
-A Nota que o motor espera que uma Pessoa dê a um filme, de 1 a 10 como o Já vi do Cartaz: o percentil médio dos vizinhos de gosto que viram o filme, lido de volta na Escala da Pessoa, de modo que o mesmo percentil é uma Nota mais alta para quem dá Notas altas. Sai com quantos vizinhos a sustentam e com o desvio entre eles [deviation, `deviation`], que diz quanto ela é incerta. Não é Fato nem Nota: é uma previsão, e o `evaluate` mede o erro dela contra as Notas retidas. A Sessão guarda a de cada filme da versão, e o Cartaz mostra a guardada, mesmo que os vizinhos mudem depois.
+A Nota que o motor espera que uma Pessoa dê a um filme, de 1 a 10 como o Já vi do Cartaz: o percentil médio dos vizinhos de gosto que viram o filme, lido de volta na Escala da Pessoa, de modo que o mesmo percentil é uma Nota mais alta para quem dá Notas altas. Sai com quantos vizinhos a sustentam e com o desvio entre eles [deviation, `deviation`], que diz quanto ela é incerta. Não é Fato nem Nota: é uma previsão, e o `evaluate` mede o erro dela contra as Notas retidas. A Sessão guarda a de cada filme da versão, e o Cartaz mostra a guardada, mesmo que os vizinhos mudem depois. É a Nota prevista calibrada; a de antes da Calibração [raw, `raw`] fica para o `evaluate`.
 _Evitar_: nota esperada, match
+
+**Calibração da Nota prevista** [prediction calibration, `predictionCalibration`]:
+A correção da Nota prevista de uma Pessoa pelas Notas dela: nos filmes a que ela deu Nota, o que os vizinhos de gosto teriam previsto sem aquela Nota (cada filme deixado de fora na escolha deles) contra o percentil que ela deu, numa reta (deslocamento e inclinação no percentil). Quem tem vizinhos mais generosos que ela recebe uma Nota prevista mais baixa. Com poucos filmes assim, a reta vale pouco: pesa n / (n + `[prediction_calibration] pseudo_count`), e o resto fica sem correção. A Nota da Pergunta par a par fica fora, e no `evaluate` só entram as Notas de antes do corte. Muda o número, não a Evidência dos vizinhos nem a Força dela.
+_Evitar_: ajuste (é outra coisa), correção de viés
 
 **Palpite** [guess, `guess`]:
 Um Motivo sem Fato que o sustente.

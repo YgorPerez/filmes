@@ -65,7 +65,11 @@ const MEASURES = {
     },
     people: {},
   },
-  predictedRatingError: { films: 0, meanAbsoluteError: null },
+  predictedRatingError: {
+    films: 0,
+    meanAbsoluteError: null,
+    rawMeanAbsoluteError: null,
+  },
   similarityTop5: null,
 }
 

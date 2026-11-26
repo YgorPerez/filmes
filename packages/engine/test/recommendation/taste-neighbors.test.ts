@@ -189,11 +189,19 @@ describe('the taste neighbours path', () => {
 describe('the predicted rating', () => {
   test('is the neighbours’ percentile read back on her scale, from 1 to 10', async () => {
     const fixture = useFixture()
-    const out = await bruno(fixture, tasteWeights(fixture, 3, 5))
+    // Without the calibration (#210): with this many films toward no
+    // correction, the fit on his Notas weighs nothing.
+    const out = await bruno(
+      fixture,
+      weightsWith(fixture, 'k = 50\nmin_shared = 10', 'k = 3\nmin_shared = 5', [
+        ['pseudo_count = 20', 'pseudo_count = 1e12'],
+      ]),
+    )
 
     // 0,817 lies between the population's 4 (0,77) and 4,5 (0,92): 4,16.
     const predicted = film(out, 'Pequenos Milagres').predictedRating?.['bruno']
     expect(predicted?.value).toBeCloseTo(8.31, 2)
+    expect(predicted?.raw).toBeCloseTo(8.31, 2)
     expect(predicted?.raters).toBe(3)
     // Each neighbour's percentile read on her scale: 8,53, 7,61 and 8,87.
     expect(predicted?.deviation).toBeCloseTo(0.53, 2)
@@ -202,14 +210,14 @@ describe('the predicted rating', () => {
     ).toBeLessThan(5)
   })
 
-  test('is calibrated on her own Notas once she has enough of them', async () => {
+  test('is read on her own Notas once she has enough of them', async () => {
     const fixture = useFixture()
     // Bruno's 11 Notas are his scale: 4,5 is his 0,73 and 5 his 0,91, so
-    // the same 0,817 is a 4,75.
+    // the same 0,817 is a 4,75, before the calibration.
     const out = await bruno(fixture, tasteWeights(fixture, 3, 5, 10))
 
     expect(
-      film(out, 'Pequenos Milagres').predictedRating?.['bruno']?.value,
+      film(out, 'Pequenos Milagres').predictedRating?.['bruno']?.raw,
     ).toBeCloseTo(9.49, 2)
   })
 

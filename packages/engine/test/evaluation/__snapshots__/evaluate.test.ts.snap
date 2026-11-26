@@ -61,6 +61,9 @@ exports[`avaliar, as recorded > gives the recorded result and report 1`] = `
       "people": {
         "statementWeight": 1,
       },
+      "predictionCalibration": {
+        "pseudoCount": 20,
+      },
       "ratingDecay": {
         "floor": 0.25,
         "halfLifeYears": 5,
@@ -242,6 +245,7 @@ Quanto das Notas retidas foi 4 ou mais, pela Força mais alta a favor do filme n
         "predictedRatingError": {
           "films": 0,
           "meanAbsoluteError": null,
+          "rawMeanAbsoluteError": null,
         },
         "recall50": null,
         "retrieved": 0,
@@ -375,6 +379,7 @@ Quanto das Notas retidas foi 4 ou mais, pela Força mais alta a favor do filme n
         "predictedRatingError": {
           "films": 0,
           "meanAbsoluteError": null,
+          "rawMeanAbsoluteError": null,
         },
         "recall50": 0.8,
         "retrieved": 4,
@@ -480,6 +485,9 @@ Quanto das Notas retidas foi 4 ou mais, pela Força mais alta a favor do filme n
       "people": {
         "statementWeight": 1,
       },
+      "predictionCalibration": {
+        "pseudoCount": 20,
+      },
       "ratingDecay": {
         "floor": 0.25,
         "halfLifeYears": 5,
@@ -582,6 +590,7 @@ exports[`avaliar, as recorded > the grid gives the recorded best weights and rep
           "predictedRatingError": {
             "films": 0,
             "meanAbsoluteError": null,
+            "rawMeanAbsoluteError": null,
           },
           "recall50": null,
           "retrieved": 0,
@@ -715,6 +724,7 @@ exports[`avaliar, as recorded > the grid gives the recorded best weights and rep
           "predictedRatingError": {
             "films": 0,
             "meanAbsoluteError": null,
+            "rawMeanAbsoluteError": null,
           },
           "recall50": 0.8,
           "retrieved": 4,
@@ -782,6 +792,7 @@ exports[`avaliar, as recorded > the grid gives the recorded best weights and rep
           "predictedRatingError": {
             "films": 0,
             "meanAbsoluteError": null,
+            "rawMeanAbsoluteError": null,
           },
           "recall50": null,
           "retrieved": 0,
@@ -915,6 +926,7 @@ exports[`avaliar, as recorded > the grid gives the recorded best weights and rep
           "predictedRatingError": {
             "films": 0,
             "meanAbsoluteError": null,
+            "rawMeanAbsoluteError": null,
           },
           "recall50": 0.8,
           "retrieved": 4,
@@ -982,6 +994,7 @@ exports[`avaliar, as recorded > the grid gives the recorded best weights and rep
           "predictedRatingError": {
             "films": 0,
             "meanAbsoluteError": null,
+            "rawMeanAbsoluteError": null,
           },
           "recall50": null,
           "retrieved": 0,
@@ -1115,6 +1128,7 @@ exports[`avaliar, as recorded > the grid gives the recorded best weights and rep
           "predictedRatingError": {
             "films": 0,
             "meanAbsoluteError": null,
+            "rawMeanAbsoluteError": null,
           },
           "recall50": 0.8,
           "retrieved": 4,
@@ -1254,6 +1268,7 @@ Foram testados 303 conjuntos. A ordem usa a média do Recall@50 entre as amostra
               "predictedRatingError": {
                 "films": 0,
                 "meanAbsoluteError": null,
+                "rawMeanAbsoluteError": null,
               },
               "recall50": null,
               "retrieved": 0,
@@ -1387,6 +1402,7 @@ Foram testados 303 conjuntos. A ordem usa a média do Recall@50 entre as amostra
               "predictedRatingError": {
                 "films": 0,
                 "meanAbsoluteError": null,
+                "rawMeanAbsoluteError": null,
               },
               "recall50": 0.8,
               "retrieved": 4,
@@ -1454,6 +1470,7 @@ Foram testados 303 conjuntos. A ordem usa a média do Recall@50 entre as amostra
               "predictedRatingError": {
                 "films": 0,
                 "meanAbsoluteError": null,
+                "rawMeanAbsoluteError": null,
               },
               "recall50": null,
               "retrieved": 0,
@@ -1587,6 +1604,7 @@ Foram testados 303 conjuntos. A ordem usa a média do Recall@50 entre as amostra
               "predictedRatingError": {
                 "films": 0,
                 "meanAbsoluteError": null,
+                "rawMeanAbsoluteError": null,
               },
               "recall50": 0.8,
               "retrieved": 4,
@@ -1654,6 +1672,7 @@ Foram testados 303 conjuntos. A ordem usa a média do Recall@50 entre as amostra
               "predictedRatingError": {
                 "films": 0,
                 "meanAbsoluteError": null,
+                "rawMeanAbsoluteError": null,
               },
               "recall50": null,
               "retrieved": 0,
@@ -1787,6 +1806,7 @@ Foram testados 303 conjuntos. A ordem usa a média do Recall@50 entre as amostra
               "predictedRatingError": {
                 "films": 0,
                 "meanAbsoluteError": null,
+                "rawMeanAbsoluteError": null,
               },
               "recall50": 0.8,
               "retrieved": 4,
@@ -1921,6 +1941,7 @@ Foram testados 303 conjuntos. A ordem usa a média do Recall@50 entre as amostra
         "predictedRatingError": {
           "films": 0,
           "meanAbsoluteError": null,
+          "rawMeanAbsoluteError": null,
         },
         "recall50": null,
         "retrieved": 0,
@@ -2054,6 +2075,7 @@ Foram testados 303 conjuntos. A ordem usa a média do Recall@50 entre as amostra
         "predictedRatingError": {
           "films": 0,
           "meanAbsoluteError": null,
+          "rawMeanAbsoluteError": null,
         },
         "recall50": 0.8,
         "retrieved": 4,
@@ -2158,6 +2180,9 @@ Foram testados 303 conjuntos. A ordem usa a média do Recall@50 entre as amostra
       },
       "people": {
         "statementWeight": 1,
+      },
+      "predictionCalibration": {
+        "pseudoCount": 20,
       },
       "ratingDecay": {
         "floor": 0.25,
