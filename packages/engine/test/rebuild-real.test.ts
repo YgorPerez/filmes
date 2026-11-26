@@ -778,6 +778,27 @@ const neighbours = (query: (sql: string) => Promise<unknown>) =>
     'SELECT filme_id, vizinho_id, base, ambos FROM vizinhos ORDER BY filme_id',
   )
 
+test("counts the population's ratings by value, for the ruler (#172)", async () => {
+  const movielens = zip({
+    ...SMALL_MOVIELENS,
+    // Film 9 has no IMDb link: its rating still counts, as the population's.
+    'ml-32m/ratings.csv':
+      'userId,movieId,rating,timestamp\n1,1,4,1\n1,2,5,1\n2,1,4.5,1\n2,2,4,1\n3,2,nan,1\n3,9,0.5,1\n',
+  })
+  const query = await rebuilt(
+    usePinnedDumps(replacing('ml-32m.zip', movielens)),
+  )
+
+  expect(
+    await query('SELECT nota, quantidade FROM notas_movielens ORDER BY nota'),
+  ).toEqual([
+    [0.5, 1],
+    [4, 2],
+    [4.5, 1],
+    [5, 1],
+  ])
+})
+
 test('reads a deflated ZIP64 archive behind a stub', async () => {
   const movielens = zip(SMALL_MOVIELENS, {
     method: 8,

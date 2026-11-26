@@ -1,6 +1,8 @@
 // `catalogo/review.py`: the GroupLens dumps behind the Review Signals.
-// From ml-32m, the item-item neighbourhood of the 4+ ratings and the tags
-// counted by distinct user; from the Tag Genome 2021, each tag's relevance.
+// From ml-32m, the item-item neighbourhood of the 4+ ratings, the tags
+// counted by distinct user and every rating counted by value (the
+// population's scale the ruler falls back on, #172); from the Tag Genome
+// 2021, each tag's relevance.
 // The evaluation shares the tag counting and the Fatos with the Catalog.
 
 import { Effect } from 'effect'
@@ -193,7 +195,8 @@ function* spreadRows(
   }
 }
 
-/** `vizinhos(notas, links)`, the ratings' spread and the tags of ml-32m. */
+/** `vizinhos(notas, links)`, the ratings' spread, the tags and the ratings
+ * by value of ml-32m. */
 const loadMovielens = (db: Connection, zip: string, dump: Dump) =>
   Effect.gen(function* () {
     const sourceAndDate = sourceOf(dump)
@@ -218,13 +221,17 @@ const loadMovielens = (db: Connection, zip: string, dump: Dump) =>
     let users = new Int32Array(1 << 20)
     let votes = 0
     const spread = new Int32Array(films.length * RATING_STEPS)
+    // Every rating, linked or not, by value: the population's scale (#172).
+    const population = new Map<number, number>()
     yield* forEachBatch(csvRows(zip, MOVIELENS_MEMBERS.ratings), (rows) =>
       Effect.sync(() => {
         for (const row of rows) {
+          const rating = pyParseFloat(present(row('rating'), 'rating'))
+          if (rating >= 0.5 && rating <= 5)
+            population.set(rating, (population.get(rating) ?? 0) + 1)
           const movieId = row('movieId')
           const item = movieId === null ? undefined : byMovieId.get(movieId)
           if (item === undefined) continue
-          const rating = pyParseFloat(present(row('rating'), 'rating'))
           const step = Math.round(rating * 2) - 1
           const bin = Math.min(RATING_STEPS - 1, Math.max(0, step))
           spread[item * RATING_STEPS + bin]! += 1
@@ -248,6 +255,10 @@ const loadMovielens = (db: Connection, zip: string, dump: Dump) =>
           votes += 1
         }
       }),
+    )
+    yield* db.runMany(
+      'INSERT INTO notas_movielens VALUES (?, ?)',
+      [...population].sort(([a], [b]) => a - b),
     )
     yield* db.runMany(
       'INSERT INTO vizinhos VALUES (?, ?, ?, ?, ?, ?, ?)',

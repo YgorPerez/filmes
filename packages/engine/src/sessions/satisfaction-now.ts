@@ -6,6 +6,7 @@
 import { Effect } from 'effect'
 import { pyRound } from '../compat/number.ts'
 import { readPeople } from '../people/people.ts'
+import { readRatingScale } from '../people/rating-scale.ts'
 import {
   groupSatisfaction,
   satisfactionLine,
@@ -58,24 +59,30 @@ export const satisfactionNow = (
       (yield* readPeople).map((p) => [p.slug, p.name] as const),
     )
     const sqlite = yield* Sqlite
-    const group = yield* sqlite.read((db) =>
-      groupSatisfaction(db, attendees, weights.satisfaction.window),
+    const [group, scales] = yield* sqlite.read((db) =>
+      Effect.all([
+        groupSatisfaction(db, attendees, weights.satisfaction.window),
+        Effect.forEach(attendees, (p) => readRatingScale(db, p, weights)),
+      ]),
     )
     return {
-      people: attendees.map((person) => {
+      people: attendees.map((person, i) => {
         const own = group.people.get(person)
+        const scale = scales[i]
         return {
           person,
           satisfaction: own === undefined ? null : pyRound(own.satisfaction, 4),
-          line: group.behind.has(person)
-            ? satisfactionLine(
-                person,
-                names.get(person) ?? person,
-                group,
-                '',
-                today,
-              ).text
-            : null,
+          line:
+            group.behind.has(person) && scale
+              ? satisfactionLine(
+                  person,
+                  names.get(person) ?? person,
+                  group,
+                  scale,
+                  '',
+                  today,
+                ).text
+              : null,
         }
       }),
       disagreement:
