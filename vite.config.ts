@@ -14,6 +14,8 @@ const IGNORED = [
   'frontend/.output/**',
   'frontend/.nitro/**',
   'frontend/.tanstack/**',
+  // Storybook's build (`pnpm build-storybook`).
+  'frontend/storybook-static/**',
   '**/coverage/**',
   // The Cartaz's MCP Apps view, built into one HTML string by
   // `frontend/scripts/billboard-view.ts`; a test keeps it equal to the build.
