@@ -248,31 +248,11 @@ const PYYAML_TAGS: ScalarTag[] = [
 const BREAK = '\n\x85\u{2028}\u{2029}'
 const WHITESPACE = `\0 \t\r${BREAK}`
 
-/** PyYAML's `Emitter.analyze_scalar`, reduced to what `choose_scalar_style`
- * needs: whether the text may go plain in block and in flow context, and
- * whether it may go single-quoted. */
-const analyze = (text: string) => {
-  const chars = Array.from(text)
-  if (chars.length === 0)
-    return {
-      empty: true,
-      multiline: false,
-      flowPlain: false,
-      blockPlain: true,
-      single: true,
-    }
+/** The indicators of `analyze_scalar`: whether one keeps the text from
+ * going plain in flow and in block context. */
+const indicators = (text: string, chars: readonly string[]) => {
   let block = text.startsWith('---') || text.startsWith('...')
   let flow = block
-  let lineBreaks = false
-  let special = false
-  let leadingSpace = false
-  let leadingBreak = false
-  let trailingSpace = false
-  let trailingBreak = false
-  let breakSpace = false
-  let spaceBreak = false
-  let previousSpace = false
-  let previousBreak = false
   chars.forEach((ch, i) => {
     const before = i === 0 || WHITESPACE.includes(chars[i - 1] ?? '')
     const after =
@@ -292,18 +272,31 @@ const analyze = (text: string) => {
       }
       if (ch === '#' && before) flow = block = true
     }
+  })
+  return { flow, block }
+}
+
+/** The spaces, breaks and special characters of `analyze_scalar`. */
+const spacing = (chars: readonly string[]) => {
+  let lineBreaks = false
+  let special = false
+  let edges = false
+  let breakSpace = false
+  let spaceBreak = false
+  let previousSpace = false
+  let previousBreak = false
+  chars.forEach((ch, i) => {
     if (BREAK.includes(ch)) lineBreaks = true
     const unicode = PRINTABLE_UNICODE.test(ch) && ch !== FEFF && ch !== LAST
     if (!(ch === '\n' || (ch >= ' ' && ch <= '~')) && !unicode) special = true
+    const edge = i === 0 || i === chars.length - 1
     if (ch === ' ') {
-      if (i === 0) leadingSpace = true
-      if (i === chars.length - 1) trailingSpace = true
+      if (edge) edges = true
       if (previousBreak) breakSpace = true
       previousSpace = true
       previousBreak = false
     } else if (BREAK.includes(ch)) {
-      if (i === 0) leadingBreak = true
-      if (i === chars.length - 1) trailingBreak = true
+      if (edge) edges = true
       if (previousSpace) spaceBreak = true
       previousSpace = false
       previousBreak = true
@@ -312,7 +305,24 @@ const analyze = (text: string) => {
       previousBreak = false
     }
   })
-  const edges = leadingSpace || leadingBreak || trailingSpace || trailingBreak
+  return { lineBreaks, special, edges, breakSpace, spaceBreak }
+}
+
+/** PyYAML's `Emitter.analyze_scalar`, reduced to what `choose_scalar_style`
+ * needs: whether the text may go plain in block and in flow context, and
+ * whether it may go single-quoted. */
+const analyze = (text: string) => {
+  const chars = Array.from(text)
+  if (chars.length === 0)
+    return {
+      empty: true,
+      multiline: false,
+      flowPlain: false,
+      blockPlain: true,
+      single: true,
+    }
+  const { flow, block } = indicators(text, chars)
+  const { lineBreaks, special, edges, breakSpace, spaceBreak } = spacing(chars)
   const noPlain = edges || breakSpace || spaceBreak || special || lineBreaks
   return {
     empty: false,

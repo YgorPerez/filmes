@@ -144,7 +144,9 @@ describe('the calibrated Nota prevista', () => {
     expect(Math.max(...bare)).toBeGreaterThan(1.5)
     expect(Math.max(...shrunk)).toBeLessThan(0.3)
   })
+})
 
+describe('the calibrated Nota prevista', () => {
   test('the Evidence of the neighbours and its Força do not change', async () => {
     const fixture = useFixture()
     const catalog = await withKinderNeighbours(fixture)

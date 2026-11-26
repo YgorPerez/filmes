@@ -85,11 +85,9 @@ const calibrationRow = (name: string, c: StrengthCalibration) =>
 
 const yamlBlock = (value: ReportValue) => '```yaml\n' + dumpYaml(value) + '```'
 
-/** The report's Markdown text (`gravar`, before the file). */
-const reportText = (r: ReportContent): string => {
+/** The offline table, the calibration and the predicted rating. */
+const offlineLines = (r: ReportContent): string[] => {
   const lines = [
-    `# Avaliação de ${r.date}`,
-    '',
     '## Offline',
     '',
     '| Amostra | Pessoas | Recall@50 | Cobertura no top 5 |',
@@ -134,9 +132,13 @@ const reportText = (r: ReportContent): string => {
         : `- Erro médio (${name}): ${pyFixed(meanAbsoluteError, 2)} em ${films} filmes, de 1 a 10; sem a Calibração, ${pyFixed(rawMeanAbsoluteError, 2)}.`
     }),
   )
+  return lines
+}
+
+/** The online measures. */
+const onlineLines = (r: ReportContent): string[] => {
   const online = r.online
-  lines.push(
-    '',
+  return [
     '## Online',
     '',
     `- Sessões com Feedback na janela: ${online.sessions}`,
@@ -151,6 +153,17 @@ const reportText = (r: ReportContent): string => {
         `- Satisfação de ${person}: ${pyFixed(p.satisfaction, 3)} em ${p.sessions} Sessões`,
     ),
     `- Medida que decide: ${r.priority}`,
+  ]
+}
+
+/** The report's Markdown text (`gravar`, before the file). */
+const reportText = (r: ReportContent): string => {
+  const lines = [
+    `# Avaliação de ${r.date}`,
+    '',
+    ...offlineLines(r),
+    '',
+    ...onlineLines(r),
     '',
     '## Pesos',
     '',
@@ -159,7 +172,7 @@ const reportText = (r: ReportContent): string => {
     '## Versões dos dados',
     '',
     yamlBlock(r.versions),
-  )
+  ]
   if (r.grid)
     lines.push(
       '',

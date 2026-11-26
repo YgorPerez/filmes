@@ -164,6 +164,54 @@ const heldOutSelection = (
   }
 }
 
+/** What `measure` adds up over the Pessoas. */
+interface Tally {
+  measured: number
+  retrieved: number
+  heldOut4Plus: number
+  withEvidence: number
+  filmsTop5: number
+  readonly scored: Scored[]
+  readonly predicted: PredictedPair[]
+  readonly similarities: Array<number | null>
+}
+
+/** The held-out films as the ranking scored them: each one's Força bucket
+ * and whether it was a hit, and its predicted rating. */
+const scoreHeldOut = (
+  tally: Tally,
+  person: MeasuredPerson,
+  films: ReadonlyArray<RecommendedFilm>,
+): void => {
+  for (const film of films) {
+    const rating = person.heldOutRatings.get(film.id)!
+    tally.scored.push({
+      person: person.person,
+      bucket: bucketOf(film, person.person),
+      hit: rating >= HIGH_RATING,
+    })
+    const prediction = predictedRating(film, person.person)
+    if (prediction !== null)
+      tally.predicted.push({ ...prediction, rating: onTenScale(rating) })
+  }
+}
+
+const measuresOf = (tally: Tally, perPerson: boolean): Measures => {
+  const { retrieved, heldOut4Plus, withEvidence, filmsTop5 } = tally
+  return {
+    people: tally.measured,
+    retrieved,
+    heldOut4Plus,
+    withEvidence,
+    filmsTop5,
+    recall50: heldOut4Plus ? retrieved / heldOut4Plus : null,
+    coverageTop5: filmsTop5 ? withEvidence / filmsTop5 : null,
+    calibration: calibration(tally.scored, perPerson),
+    predictedRatingError: predictedRatingError(tally.predicted),
+    similarityTop5: meanSimilarity(tally.similarities),
+  }
+}
+
 /** `medir`: each Pessoa's top 50 on the day of her cut, with `weights`,
  * and the films she held out, scored on that same day; `advance` runs after
  * each Pessoa. */
@@ -182,14 +230,16 @@ export const measure = <R>(
   Effect.gen(function* () {
     const env = yield* Environment
     const run = yield* Run
-    let measured = 0
-    let retrieved = 0
-    let heldOut4Plus = 0
-    let withEvidence = 0
-    let filmsTop5 = 0
-    const scored: Scored[] = []
-    const predicted: PredictedPair[] = []
-    const similarities: Array<number | null> = []
+    const tally: Tally = {
+      measured: 0,
+      retrieved: 0,
+      heldOut4Plus: 0,
+      withEvidence: 0,
+      filmsTop5: 0,
+      scored: [],
+      predicted: [],
+      similarities: [],
+    }
     for (const person of people) {
       // The ranking sees the day of the cut and these weights; its warnings
       // are not the evaluation's (Python's were a list of its own).
@@ -206,36 +256,19 @@ export const measure = <R>(
       const films = yield* ranked(50, selection)
       const heldOut = heldOutSelection(selection, person.heldOutRatings)
       if (heldOut.films.size > 0)
-        for (const film of yield* ranked(heldOut.films.size, heldOut)) {
-          const rating = person.heldOutRatings.get(film.id)!
-          scored.push({
-            person: person.person,
-            bucket: bucketOf(film, person.person),
-            hit: rating >= HIGH_RATING,
-          })
-          const prediction = predictedRating(film, person.person)
-          if (prediction !== null)
-            predicted.push({ ...prediction, rating: onTenScale(rating) })
-        }
+        scoreHeldOut(tally, person, yield* ranked(heldOut.films.size, heldOut))
       const top = films.slice(0, 5)
-      similarities.push(yield* options.similarity(top.map((film) => film.id)))
-      measured += 1
-      retrieved += films.filter((film) => person.targets.has(film.id)).length
-      heldOut4Plus += person.targets.size
-      withEvidence += top.filter(backed).length
-      filmsTop5 += top.length
+      tally.similarities.push(
+        yield* options.similarity(top.map((film) => film.id)),
+      )
+      tally.measured += 1
+      tally.retrieved += films.filter((film) =>
+        person.targets.has(film.id),
+      ).length
+      tally.heldOut4Plus += person.targets.size
+      tally.withEvidence += top.filter(backed).length
+      tally.filmsTop5 += top.length
       yield* advance
     }
-    return {
-      people: measured,
-      retrieved,
-      heldOut4Plus,
-      withEvidence,
-      filmsTop5,
-      recall50: heldOut4Plus ? retrieved / heldOut4Plus : null,
-      coverageTop5: filmsTop5 ? withEvidence / filmsTop5 : null,
-      calibration: calibration(scored, options.perPerson),
-      predictedRatingError: predictedRatingError(predicted),
-      similarityTop5: meanSimilarity(similarities),
-    }
+    return measuresOf(tally, options.perPerson)
   })

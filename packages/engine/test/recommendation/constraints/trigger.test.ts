@@ -111,7 +111,9 @@ describe('a trigger', () => {
       ])
     }
   })
+})
 
+describe('a trigger', () => {
   test('each trigger asked holds on its own', async () => {
     const out = await all(useFixture(), [DOG, 'there are jump scares'])
 

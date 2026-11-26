@@ -100,7 +100,9 @@ describe('importTrakt', () => {
       ),
     ).toEqual([['tt9000101', 'declarado', '2025-02-03', 'Trakt de Teo', null]])
   })
+})
 
+describe('importTrakt', () => {
   test('the latest Nota counts, and the database can be rebuilt', async () => {
     const fixture = useFixture()
     const trakt = traktZip()
@@ -147,7 +149,9 @@ describe('importTrakt', () => {
     await rebuild(fixture)
     expect(await facts()).toEqual(before)
   })
+})
 
+describe('importTrakt', () => {
   test('the paged history wins, and a film outside the Catalog is reported', async () => {
     const fixture = useFixture()
     const history = JSON.parse(
@@ -190,7 +194,9 @@ describe('importTrakt', () => {
       { name: 'Filme perdido', imdb: 'tt9999999', tmdb: null, trakt: 99 },
     ])
   })
+})
 
+describe('importTrakt', () => {
   test('an export without Trakt files is not kept', async () => {
     const fixture = useFixture()
     const outcome = await fixture.run(
@@ -234,7 +240,9 @@ describe('importTrakt', () => {
       ),
     ).toEqual([['tt9000102', '2025-02-01']])
   })
+})
 
+describe('importTrakt', () => {
   test('a TMDB id two films share does not resolve', async () => {
     const fixture = useFixture()
     await fixture.ok(
@@ -299,44 +307,49 @@ describe('readTraktExport', () => {
   })
 })
 
+const olgaZip = () =>
+  zipOf(
+    ['diary.csv', 'ratings.csv', 'reviews.csv', 'watched.csv', 'watchlist.csv']
+      .filter((name) => existsSync(join(OLGA, name)))
+      .map((name) => [name, readFileSync(join(OLGA, name))] as const),
+  )
+
+const olgaRatings = (fixture: Fixture) =>
+  query(
+    fixture,
+    "SELECT filme_id, data, fonte FROM notas WHERE pessoa = 'olga' ORDER BY data, filme_id",
+  )
+
+/** Stores the recorded RSS as Olga's import and gives its file. */
+const storeOlgaRss = (fixture: Fixture) => {
+  const feed = readFileSync(
+    join(ROOT, 'tests/fixture/gravacoes/letterboxd/rss-olga_farol.xml'),
+  )
+  return fixture.ok(
+    Effect.gen(function* () {
+      const olga = yield* resolvePerson('olga')
+      return (yield* storeImport(
+        olga,
+        LETTERBOXD_RSS_KIND,
+        'https://letterboxd.com/olga_farol/rss/',
+        feed,
+        'xml',
+      )).file
+    }),
+  )
+}
+
+const olgaFacts = (fixture: Fixture) =>
+  query(
+    fixture,
+    "SELECT fato_id FROM notas WHERE pessoa = 'olga' UNION ALL SELECT fato_id FROM ja_visto WHERE pessoa = 'olga' ORDER BY 1",
+  )
+
 describe('removeImport', () => {
-  const olgaZip = () =>
-    zipOf(
-      [
-        'diary.csv',
-        'ratings.csv',
-        'reviews.csv',
-        'watched.csv',
-        'watchlist.csv',
-      ]
-        .filter((name) => existsSync(join(OLGA, name)))
-        .map((name) => [name, readFileSync(join(OLGA, name))] as const),
-    )
-
-  const olgaRatings = (fixture: Fixture) =>
-    query(
-      fixture,
-      "SELECT filme_id, data, fonte FROM notas WHERE pessoa = 'olga' ORDER BY data, filme_id",
-    )
-
   test('removing the RSS leaves only the Fatos of the ZIP', async () => {
     const fixture = useFixture()
     await fixture.ok(personCreate({ name: 'Olga' }))
-    const feed = readFileSync(
-      join(ROOT, 'tests/fixture/gravacoes/letterboxd/rss-olga_farol.xml'),
-    )
-    const rss = await fixture.ok(
-      Effect.gen(function* () {
-        const olga = yield* resolvePerson('olga')
-        return (yield* storeImport(
-          olga,
-          LETTERBOXD_RSS_KIND,
-          'https://letterboxd.com/olga_farol/rss/',
-          feed,
-          'xml',
-        )).file
-      }),
-    )
+    const rss = await storeOlgaRss(fixture)
     const zip = (
       await fixture.ok(
         importLetterboxd({
@@ -372,16 +385,14 @@ describe('removeImport', () => {
     expect(
       new Set((await olgaRatings(fixture)).map(([, , source]) => source)),
     ).toEqual(new Set(['Letterboxd de Olga']))
-    const facts = () =>
-      query(
-        fixture,
-        "SELECT fato_id FROM notas WHERE pessoa = 'olga' UNION ALL SELECT fato_id FROM ja_visto WHERE pessoa = 'olga' ORDER BY 1",
-      )
+    const facts = () => olgaFacts(fixture)
     const after = await facts()
     await rebuild(fixture)
     expect(await facts()).toEqual(after)
   })
+})
 
+describe('removeImport', () => {
   test("removing Trakt's last import takes all its Fatos", async () => {
     const fixture = useFixture()
     const { file } = await fixture.ok(importZip(traktZip()))
@@ -431,7 +442,9 @@ describe('removeImport', () => {
     expect(existsSync(join(fixture.data, file))).toBe(true)
     expect((await fixture.ok(personView('teo'))).imports).toHaveLength(1)
   })
+})
 
+describe('removeImport', () => {
   test('a name two imports share is ambiguous; an unknown one names no Pessoa', async () => {
     const fixture = useFixture()
     const zip = traktZip()

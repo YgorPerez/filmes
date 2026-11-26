@@ -134,6 +134,62 @@ const fail = (cause: unknown): SqliteError =>
     cause,
   })
 
+const attempt = <A>(f: () => A): Effect.Effect<A, SqliteError> =>
+  Effect.try({ try: f, catch: fail })
+
+/** Runs one statement once per row, stopping at the first failure. */
+const runRows = (
+  prepare: (sql: string) => StatementSync,
+  sql: string,
+  rows: Iterable<ReadonlyArray<SQLInputValue>>,
+): Effect.Effect<void, SqliteError> =>
+  Effect.suspend(() => {
+    let statement: StatementSync
+    try {
+      statement = prepare(sql)
+    } catch (error) {
+      return Effect.fail(fail(error))
+    }
+    for (const row of rows)
+      try {
+        statement.run(...row)
+      } catch (error) {
+        return Effect.fail(fail(error))
+      }
+    return Effect.void
+  })
+
+const prepareTyped = (
+  db: DatabaseSync,
+  sql: string,
+): Effect.Effect<TypedStatement | undefined, SqliteError> =>
+  attempt(() => {
+    let statement: StatementSync
+    try {
+      statement = db.prepare(sql)
+    } catch (error) {
+      // node:sqlite's own refusal of a text with no statement, where
+      // SQLite gives no statement and no error.
+      if (isNoStatement(error)) return undefined
+      throw error
+    }
+    statement.setReturnArrays(true)
+    const source = statement.sourceSQL
+    return {
+      columns: statement.columns().map((column) => column.name),
+      tail: sql.slice(source.length),
+      // Without parameters SQLite expands the text verbatim.
+      parameterCount:
+        statement.expandedSQL === source ? 0 : parameterCount(source),
+      rows: attempt(
+        () =>
+          statement.all() as unknown as ReadonlyArray<
+            ReadonlyArray<SQLOutputValue>
+          >,
+      ),
+    }
+  })
+
 const makeConnection = (db: DatabaseSync): Connection => {
   const statements = new Map<string, StatementSync>()
   const prepare = (sql: string): StatementSync => {
@@ -144,8 +200,6 @@ const makeConnection = (db: DatabaseSync): Connection => {
     }
     return statement
   }
-  const attempt = <A>(f: () => A): Effect.Effect<A, SqliteError> =>
-    Effect.try({ try: f, catch: fail })
   return {
     all: (sql, ...params) => attempt(() => prepare(sql).all(...params)),
     get: (sql, ...params) => attempt(() => prepare(sql).get(...params)),
@@ -156,50 +210,9 @@ const makeConnection = (db: DatabaseSync): Connection => {
           .map((column) => column.name),
       ),
     run: (sql, ...params) => attempt(() => prepare(sql).run(...params)),
-    runMany: (sql, rows) =>
-      Effect.suspend(() => {
-        let statement: StatementSync
-        try {
-          statement = prepare(sql)
-        } catch (error) {
-          return Effect.fail(fail(error))
-        }
-        for (const row of rows)
-          try {
-            statement.run(...row)
-          } catch (error) {
-            return Effect.fail(fail(error))
-          }
-        return Effect.void
-      }),
+    runMany: (sql, rows) => runRows(prepare, sql, rows),
     exec: (sql) => attempt(() => db.exec(sql)),
-    prepareTyped: (sql) =>
-      attempt(() => {
-        let statement: StatementSync
-        try {
-          statement = db.prepare(sql)
-        } catch (error) {
-          // node:sqlite's own refusal of a text with no statement, where
-          // SQLite gives no statement and no error.
-          if (isNoStatement(error)) return undefined
-          throw error
-        }
-        statement.setReturnArrays(true)
-        const source = statement.sourceSQL
-        return {
-          columns: statement.columns().map((column) => column.name),
-          tail: sql.slice(source.length),
-          // Without parameters SQLite expands the text verbatim.
-          parameterCount:
-            statement.expandedSQL === source ? 0 : parameterCount(source),
-          rows: attempt(
-            () =>
-              statement.all() as unknown as ReadonlyArray<
-                ReadonlyArray<SQLOutputValue>
-              >,
-          ),
-        }
-      }),
+    prepareTyped: (sql) => prepareTyped(db, sql),
   }
 }
 

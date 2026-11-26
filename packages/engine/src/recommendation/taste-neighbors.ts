@@ -45,7 +45,7 @@ import {
   type Comparison,
   type PredictionCalibration,
 } from './prediction-calibration.ts'
-import type { Connection, SqliteError } from '../sqlite/Sqlite.ts'
+import type { Connection, Row, SqliteError } from '../sqlite/Sqlite.ts'
 import { num, text } from '../sqlite/row.ts'
 import { candidatesJson, scaleOf, type Round } from './signals/Signal.ts'
 import { mean } from './mean.ts'
@@ -213,6 +213,33 @@ const leftOut = (
   return chosen.length < MIN_TASTE_RATERS ? null : mean(chosen)
 }
 
+/** By neighbour, the decayed distance to `own` on the films both rated;
+ * by film, the neighbours' ratings of it. */
+const sharedRatings = (
+  rows: ReadonlyArray<Row>,
+  own: ReadonlyMap<string, OwnRating>,
+) => {
+  const sums = new Map<number, UserSums>()
+  const byFilm = new Map<string, SharedRating[]>()
+  for (const row of rows) {
+    const film = text(row, 'filme_id')
+    const mine = own.get(film)!
+    const rating = {
+      user: num(row, 'usuario'),
+      percentile: num(row, 'percentil'),
+    }
+    const sum = sums.get(rating.user) ?? { total: 0, shared: 0, decay: 0 }
+    sum.total += Math.abs(mine.percentile - rating.percentile) * mine.decay
+    sum.shared += 1
+    sum.decay += mine.decay
+    sums.set(rating.user, sum)
+    const raters = byFilm.get(film) ?? []
+    raters.push(rating)
+    byFilm.set(film, raters)
+  }
+  return { sums, byFilm }
+}
+
 /** Per connection, by Pessoa and what she rated: `evaluate` ranks the
  * same Pessoa many times with the same Notas. */
 const found = new WeakMap<Connection, Map<string, Neighbourhood>>()
@@ -246,24 +273,7 @@ const tasteNeighbourhood = (
       own.size >= min_shared && k > 0
         ? yield* db.all(SHARED, JSON.stringify([...own.keys()]))
         : []
-    const sums = new Map<number, UserSums>()
-    const byFilm = new Map<string, SharedRating[]>()
-    for (const row of rows) {
-      const film = text(row, 'filme_id')
-      const mine = own.get(film)!
-      const rating = {
-        user: num(row, 'usuario'),
-        percentile: num(row, 'percentil'),
-      }
-      const sum = sums.get(rating.user) ?? { total: 0, shared: 0, decay: 0 }
-      sum.total += Math.abs(mine.percentile - rating.percentile) * mine.decay
-      sum.shared += 1
-      sum.decay += mine.decay
-      sums.set(rating.user, sum)
-      const raters = byFilm.get(film) ?? []
-      raters.push(rating)
-      byFilm.set(film, raters)
-    }
+    const { sums, byFilm } = sharedRatings(rows, own)
     const everyone = ranked(sums, min_shared)
     const comparisons: Comparison[] = []
     for (const [film, mine] of own) {

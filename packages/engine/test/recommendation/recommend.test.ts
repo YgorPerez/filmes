@@ -95,7 +95,9 @@ describe('recommend for the Dono alone', () => {
       Object.fromEntries(ofKind(f, 'rating').map((e) => [e.date, e.strength])),
     ).toEqual({ '2019-01-10': 'strong', '2018-07-07': 'moderate' })
   })
+})
 
+describe('recommend for the Dono alone', () => {
   test("a seed Nota's contribution halves with every half-life of age", async () => {
     // A half-life of 5 years: the 5 of 2019 is 2,871 days old (×0.3363),
     // the 4 of 2018 is 3,058 days old (×0.3133 of the moderate 0.6).
@@ -142,7 +144,9 @@ describe('recommend for the Dono alone', () => {
       ),
     ).toContain(seed?.factId)
   })
+})
 
+describe('recommend for the Dono alone', () => {
   test('low Notas on the director weigh against', async () => {
     const out = await all(useFixture())
     const f = film(out, 'Explosão Final')
@@ -192,7 +196,9 @@ describe('recommend for the Dono alone', () => {
     expect(out).not.toContain('Curta da Madrugada') // 600 votes, by Helena Prado
     expect(out).toContain('As Horas Lentas')
   })
+})
 
+describe('recommend for the Dono alone', () => {
   test('an unknown Presente is an error', async () => {
     const outcome = await useFixture().run(recommend({ attendees: ['fulano'] }))
 
@@ -243,7 +249,9 @@ describe('recommend for the Dono alone', () => {
       titles(await engineRecommendation(fixture, { attendees: ['dono'] })),
     ).not.toContain('O Farol de Areia')
   })
+})
 
+describe('recommend for the Dono alone', () => {
   test('a film rated below 7 on the IMDb is never a Candidate', async () => {
     // Sombra Morna is by Helena Prado, Bruno's favourite, but has 6.5.
     const out = titles(await all(useFixture()))

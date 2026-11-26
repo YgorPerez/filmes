@@ -55,6 +55,68 @@ const fail = (cause: unknown): SqliteError =>
     cause,
   })
 
+/** Opens the file (and creates it) in WAL mode, with the table. */
+const openFile = (path: string): DatabaseSync => {
+  mkdirSync(dirname(path), { recursive: true })
+  const opened = new DatabaseSync(path, {
+    timeout: BUSY_TIMEOUT_MS,
+  })
+  try {
+    opened.exec('PRAGMA journal_mode = WAL')
+    opened.exec(SCHEMA)
+  } catch (error) {
+    opened.close()
+    throw error
+  }
+  return opened
+}
+
+const readAnswer = (
+  opened: DatabaseSync,
+  source: string,
+  key: string,
+  today: string,
+): CachedAnswer | undefined => {
+  const row = opened
+    .prepare(
+      'SELECT corpo, obtido_em FROM respostas WHERE fonte = ? AND chave = ? AND expira_em > ?',
+    )
+    .get(source, key, today)
+  return row === undefined
+    ? undefined
+    : {
+        body: JSON.parse(String(row['corpo'])),
+        fetchedOn: String(row['obtido_em']),
+      }
+}
+
+const writeAnswer = (
+  opened: DatabaseSync,
+  answer: { source: string; key: string; body: unknown; today: string },
+  validityDays: number,
+): CachedAnswer => {
+  const { source, key, body, today } = answer
+  opened
+    .prepare(
+      'INSERT OR REPLACE INTO respostas (fonte, chave, corpo, obtido_em, expira_em) VALUES (?, ?, ?, ?, ?)',
+    )
+    .run(source, key, JSON.stringify(body), today, addDays(today, validityDays))
+  return { body, fetchedOn: today }
+}
+
+/** `read` over a connection that may not be there. */
+const readFrom =
+  (connection: Effect.Effect<DatabaseSync | undefined, CacheError>) =>
+  (source: string, key: string, today: string) =>
+    Effect.flatMap(connection, (opened) =>
+      opened === undefined
+        ? Effect.undefined
+        : Effect.try({
+            try: () => readAnswer(opened, source, key, today),
+            catch: fail,
+          }),
+    )
+
 export class SourceCache extends Context.Service<
   SourceCache,
   {
@@ -102,19 +164,8 @@ export class SourceCache extends Context.Service<
               : Effect.flatMap(environment.path('cache'), (path) =>
                   Effect.try({
                     try: () => {
-                      mkdirSync(dirname(path), { recursive: true })
-                      const opened = new DatabaseSync(path, {
-                        timeout: BUSY_TIMEOUT_MS,
-                      })
-                      try {
-                        opened.exec('PRAGMA journal_mode = WAL')
-                        opened.exec(SCHEMA)
-                      } catch (error) {
-                        opened.close()
-                        throw error
-                      }
-                      db = opened
-                      return opened
+                      db = openFile(path)
+                      return db
                     },
                     catch: fail,
                   }),
@@ -133,50 +184,18 @@ export class SourceCache extends Context.Service<
               ),
         )
 
-        const readFrom =
-          (connection: Effect.Effect<DatabaseSync | undefined, CacheError>) =>
-          (source: string, key: string, today: string) =>
-            Effect.flatMap(connection, (opened) =>
-              opened === undefined
-                ? Effect.undefined
-                : Effect.try({
-                    try: (): CachedAnswer | undefined => {
-                      const row = opened
-                        .prepare(
-                          'SELECT corpo, obtido_em FROM respostas WHERE fonte = ? AND chave = ? AND expira_em > ?',
-                        )
-                        .get(source, key, today)
-                      return row === undefined
-                        ? undefined
-                        : {
-                            body: JSON.parse(String(row['corpo'])),
-                            fetchedOn: String(row['obtido_em']),
-                          }
-                    },
-                    catch: fail,
-                  }),
-            )
-
         return SourceCache.of({
           read: readFrom(open),
           peek: readFrom(openExisting),
           write: (source, key, body, today, validityDays) =>
             Effect.flatMap(open, (opened) =>
               Effect.try({
-                try: (): CachedAnswer => {
-                  opened
-                    .prepare(
-                      'INSERT OR REPLACE INTO respostas (fonte, chave, corpo, obtido_em, expira_em) VALUES (?, ?, ?, ?, ?)',
-                    )
-                    .run(
-                      source,
-                      key,
-                      JSON.stringify(body),
-                      today,
-                      addDays(today, validityDays),
-                    )
-                  return { body, fetchedOn: today }
-                },
+                try: () =>
+                  writeAnswer(
+                    opened,
+                    { source, key, body, today },
+                    validityDays,
+                  ),
                 catch: fail,
               }),
             ),

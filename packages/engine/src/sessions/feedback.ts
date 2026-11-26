@@ -296,6 +296,27 @@ const itemId = (item: YamlMapping): string => {
   return pyStrValue(id)
 }
 
+/** The film of an IMDb id: the Catalog's, else the Recomendação's title
+ * with no year. */
+const filmById = (
+  db: Connection,
+  wanted: string,
+  recommended: ReadonlyMap<string, YamlMapping>,
+): Effect.Effect<Film, SqliteError> =>
+  Effect.gen(function* () {
+    const row = yield* db.get(
+      'SELECT id, titulo, ano FROM filmes WHERE id = ?',
+      wanted,
+    )
+    if (row !== undefined) return filmRow(row)
+    const title = recommended.get(wanted)?.get('title')
+    return {
+      id: wanted,
+      title: title === undefined || title === null ? null : pyStrValue(title),
+      year: null,
+    }
+  })
+
 /** The chosen film, by IMDb id or by title, with or without the year
  * (`_filme`). A title looks in the Recomendação first, then in the whole
  * Catalog. */
@@ -307,19 +328,7 @@ const findFilm = (
   Effect.gen(function* () {
     const wanted = pyStrip(asked)
     const recommended = new Map(recommendation.map((r) => [itemId(r), r]))
-    if (IMDB_ID.test(wanted)) {
-      const row = yield* db.get(
-        'SELECT id, titulo, ano FROM filmes WHERE id = ?',
-        wanted,
-      )
-      if (row !== undefined) return filmRow(row)
-      const title = recommended.get(wanted)?.get('title')
-      return {
-        id: wanted,
-        title: title === undefined || title === null ? null : pyStrValue(title),
-        year: null,
-      }
-    }
+    if (IMDB_ID.test(wanted)) return yield* filmById(db, wanted, recommended)
     const matched = WITH_YEAR.exec(wanted)
     const title = matched ? String(matched[1]) : wanted
     const year = matched ? digitsValue(String(matched[2])) : null
@@ -398,6 +407,35 @@ const REPORT_TEXT: Readonly<Record<ReportLevel, (film: string) => string>> = {
 
 const SEEN_KIND = { declarado: 'stated', relato: 'report' } as const
 
+/** The comments and Já vistos of the Session, as Evidence lines about the
+ * chosen film. */
+const ownerFactLines = (
+  id: string,
+  front: YamlMapping,
+  owners: ReadonlySet<string>,
+  name: string,
+  today: string,
+): FeedbackFact[] => [
+  ...comments(id, front, owners).map((c): FeedbackFact => ({
+    person: c.person,
+    text: `disse "${c.text}" de ${name}`,
+    source: c.source,
+    date: c.date,
+    strength: statedStrength('stated', true, c.date, today),
+    kind: 'stated',
+    factId: c.factId,
+  })),
+  ...sessionSeen(id, front, owners).map((v): FeedbackFact => ({
+    person: v.person,
+    text: 'já viu',
+    source: v.source,
+    date: v.date,
+    strength: SEEN_STRENGTH,
+    kind: SEEN_KIND[v.kind],
+    factId: v.factId,
+  })),
+]
+
 /** The Fatos written, as Evidence lines about the chosen film (`_fatos`).
  * A Nota is read on the Pessoa's scale, which already has it. */
 const writtenFacts = (
@@ -439,26 +477,7 @@ const writtenFacts = (
         kind: r.kind,
         factId: r.factId,
       })
-    for (const c of comments(id, front, owners))
-      lines.push({
-        person: c.person,
-        text: `disse "${c.text}" de ${name}`,
-        source: c.source,
-        date: c.date,
-        strength: statedStrength('stated', true, c.date, today),
-        kind: 'stated',
-        factId: c.factId,
-      })
-    for (const v of sessionSeen(id, front, owners))
-      lines.push({
-        person: v.person,
-        text: 'já viu',
-        source: v.source,
-        date: v.date,
-        strength: SEEN_STRENGTH,
-        kind: SEEN_KIND[v.kind],
-        factId: v.factId,
-      })
+    lines.push(...ownerFactLines(id, front, owners, name, today))
     return lines
   })
 
@@ -473,6 +492,136 @@ export const sessionOwner = (id: string) =>
     )
     const field = frontmatter.get('owner')
     return pyTruthy(field) ? pyStrValue(field ?? null) : undefined
+  })
+
+/** The reactions the Feedback records, read from the request, with the
+ * Session's Donos and Presentes. */
+const feedbackReactions = (
+  db: Connection,
+  front: Map<string, YamlValue>,
+  request: FeedbackRequest,
+) =>
+  Effect.gen(function* () {
+    // The logged-in Dono records it and speaks for herself: she becomes
+    // the Session's `owner`, so her reactions are not relayed, now and
+    // on every reload. With no login, the Session's own `owner`.
+    const speaker = yield* Owner
+    if (speaker !== null) front.set('owner', speaker)
+    const owners = yield* ownersOf(db, front)
+    const attendees = (
+      isSequence(front.get('attendees'))
+        ? (front.get('attendees') as YamlValue[])
+        : []
+    ).map((p) => pyStrValue(p))
+    const list = yield* readReactions(
+      db,
+      attendees,
+      owners,
+      request.ratings ?? [],
+      request.reports ?? [],
+    )
+    yield* addComments(db, attendees, list, request.comments ?? [])
+    return { owners, attendees, list }
+  })
+
+/** The chosen film and its positions in the Recomendação and in what was
+ * shown; none for "não vimos nada", which takes no reaction. */
+const chosenFilm = (
+  db: Connection,
+  film: string | null,
+  front: YamlMapping,
+  reactionCount: number,
+) =>
+  Effect.gen(function* () {
+    const recommendation = mappings(front.get('recommendation'))
+    let chosen: Film | null = null
+    let position: YamlValue = null
+    let shownPosition: YamlValue = null
+    if (film === null) {
+      if (reactionCount > 0)
+        return yield* engineError(
+          'invalid_usage',
+          '"não vimos nada" não leva reação',
+        )
+    } else {
+      chosen = yield* findFilm(db, film, recommendation)
+      position = positionIn(recommendation, chosen.id)
+      shownPosition = positionIn(mappings(front.get('shown')), chosen.id)
+    }
+    return { chosen, position, shownPosition }
+  })
+
+/** The chosen film as the result says it, with its positions. */
+const chosenResult = (
+  chosen: Film | null,
+  position: YamlValue,
+  shown: YamlValue | undefined,
+  shownPosition: YamlValue,
+): FeedbackResult['chosen'] =>
+  chosen === null
+    ? null
+    : {
+        ...chosen,
+        position: positionNumber(position),
+        ...(shown !== undefined &&
+          shown !== null && {
+            shownPosition: positionNumber(shownPosition),
+          }),
+      }
+
+/** Writes the Feedback inside the write. */
+const writeFeedback = (
+  db: Connection,
+  request: FeedbackRequest,
+  today: string,
+) =>
+  Effect.gen(function* () {
+    const id = request.session
+    const { frontmatter, body } = yield* readSession(id)
+    if (!isOpen(frontmatter))
+      return yield* engineError(
+        'closed_session',
+        `a Sessão ${id} já tem Feedback`,
+      )
+    const front = new Map(frontmatter)
+    const { owners, attendees, list } = yield* feedbackReactions(
+      db,
+      front,
+      request,
+    )
+    const shown = front.get('shown')
+    const { chosen, position, shownPosition } = yield* chosenFilm(
+      db,
+      request.film,
+      front,
+      list.length,
+    )
+    front.set('chosen', chosen?.id ?? null)
+    front.set('chosen_in_recommendation', position)
+    if (shown !== undefined && shown !== null)
+      front.set('chosen_in_shown', shownPosition)
+    front.set(
+      'feedback',
+      new Map<string, YamlValue>([
+        ['recorded_on', today],
+        ['reactions', list],
+      ]),
+    )
+    yield* syncSession(db, id, front)
+    yield* writeSession(id, front, body)
+
+    const withReaction = new Set(list.map((r) => personOf(r)))
+    const result: FeedbackResult = {
+      session: { id, file: sessionRelative(id) },
+      chosen: chosenResult(chosen, position, shown, shownPosition),
+      facts:
+        chosen === null
+          ? []
+          : yield* writtenFacts(db, id, front, owners, chosen, today),
+      withoutReaction:
+        chosen === null ? [] : attendees.filter((p) => !withReaction.has(p)),
+    }
+    return result
   })
 
 /** Writes the Feedback of a Session and closes it (`feedback.registrar`):
@@ -490,87 +639,7 @@ export const recordFeedback = (
     const writer = yield* DataWriter
     const author = yield* authorFor(yield* sessionOwner(id))
     return yield* writer.write({ author, message: `feedback ${id}` }, (db) =>
-      Effect.gen(function* () {
-        const { frontmatter, body } = yield* readSession(id)
-        if (!isOpen(frontmatter))
-          return yield* engineError(
-            'closed_session',
-            `a Sessão ${id} já tem Feedback`,
-          )
-        const front = new Map(frontmatter)
-        // The logged-in Dono records it and speaks for herself: she becomes
-        // the Session's `owner`, so her reactions are not relayed, now and
-        // on every reload. With no login, the Session's own `owner`.
-        const speaker = yield* Owner
-        if (speaker !== null) front.set('owner', speaker)
-        const owners = yield* ownersOf(db, front)
-        const attendees = (
-          isSequence(front.get('attendees'))
-            ? (front.get('attendees') as YamlValue[])
-            : []
-        ).map((p) => pyStrValue(p))
-        const list = yield* readReactions(
-          db,
-          attendees,
-          owners,
-          request.ratings ?? [],
-          request.reports ?? [],
-        )
-        yield* addComments(db, attendees, list, request.comments ?? [])
-        const recommendation = mappings(front.get('recommendation'))
-        const shown = front.get('shown')
-        let chosen: Film | null = null
-        let position: YamlValue = null
-        let shownPosition: YamlValue = null
-        if (request.film === null) {
-          if (list.length > 0)
-            return yield* engineError(
-              'invalid_usage',
-              '"não vimos nada" não leva reação',
-            )
-        } else {
-          chosen = yield* findFilm(db, request.film, recommendation)
-          position = positionIn(recommendation, chosen.id)
-          shownPosition = positionIn(mappings(shown), chosen.id)
-        }
-        front.set('chosen', chosen?.id ?? null)
-        front.set('chosen_in_recommendation', position)
-        if (shown !== undefined && shown !== null)
-          front.set('chosen_in_shown', shownPosition)
-        front.set(
-          'feedback',
-          new Map<string, YamlValue>([
-            ['recorded_on', today],
-            ['reactions', list],
-          ]),
-        )
-        yield* syncSession(db, id, front)
-        yield* writeSession(id, front, body)
-
-        const withReaction = new Set(list.map((r) => personOf(r)))
-        return {
-          session: { id, file: sessionRelative(id) },
-          chosen:
-            chosen === null
-              ? null
-              : {
-                  ...chosen,
-                  position: positionNumber(position),
-                  ...(shown !== undefined &&
-                    shown !== null && {
-                      shownPosition: positionNumber(shownPosition),
-                    }),
-                },
-          facts:
-            chosen === null
-              ? []
-              : yield* writtenFacts(db, id, front, owners, chosen, today),
-          withoutReaction:
-            chosen === null
-              ? []
-              : attendees.filter((p) => !withReaction.has(p)),
-        }
-      }),
+      writeFeedback(db, request, today),
     )
   })
 

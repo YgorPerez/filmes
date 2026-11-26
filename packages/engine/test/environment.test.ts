@@ -84,7 +84,9 @@ describe('weights', () => {
       message: `arquivo de config não encontrado: ${file}`,
     })
   })
+})
 
+describe('weights', () => {
   test('a file that is not TOML is invalid_config', async () => {
     const fixture = useFixture()
     const file = weightsWith(fixture, '[utility]', '[utility')
@@ -205,7 +207,9 @@ describe('paths', () => {
     expect(beside).toBe(join(fixture.root, 'filmes-cache.sqlite'))
     expect(set).toBe('/a/cache')
   })
+})
 
+describe('paths', () => {
   test('the catalog and the database default to the user data folder', async () => {
     const fixture = useFixture()
 

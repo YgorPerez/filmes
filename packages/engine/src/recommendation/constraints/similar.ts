@@ -31,7 +31,8 @@ import { similarStrength } from '../../evidence/ruler.ts'
 import { integerText } from '../../evidence/wording.ts'
 import { engineError } from '../../runtime/EngineError.ts'
 import { num, text, textOrNull } from '../../sqlite/row.ts'
-import type { Row } from '../../sqlite/Sqlite.ts'
+import type { Weights } from '../../runtime/Weights.ts'
+import type { Connection, Row } from '../../sqlite/Sqlite.ts'
 import {
   pass,
   type Constraint,
@@ -108,6 +109,62 @@ const line = (
   })
 }
 
+/** Each reference's row, in the order asked; fails on one outside the
+ * Catálogo. */
+const readReferences = (db: Connection, films: ReadonlyArray<string>) =>
+  Effect.gen(function* () {
+    const references = new Map<string, Row>()
+    for (const id of films) {
+      const row = yield* db.get('SELECT * FROM filmes WHERE id = ?', id)
+      if (row === undefined)
+        return yield* engineError(
+          'invalid_usage',
+          `--parecido ${id}: filme fora do Catálogo`,
+        )
+      references.set(id, row)
+    }
+    return references
+  })
+
+/** Each reference's pairs, and the `config.candidates` films most similar
+ * to the references together. */
+const mostSimilarTo = (
+  db: Connection,
+  references: ReadonlyMap<string, Row>,
+  config: Weights['similar'],
+) =>
+  Effect.gen(function* () {
+    const pairs = new Map<string, Map<string, Pair>>()
+    for (const id of references.keys())
+      pairs.set(id, yield* measure(db, id, config))
+    const values = new Map<string, number>()
+    for (const ofReference of pairs.values())
+      for (const [filmId, pair] of ofReference)
+        if (!references.has(filmId))
+          values.set(
+            filmId,
+            (values.get(filmId) ?? 0) +
+              pairValue(pair, config.weight) / references.size,
+          )
+    const votes = new Map(
+      (yield* db.all(
+        'SELECT id, votos FROM filmes WHERE id IN (SELECT value FROM json_each(?))',
+        jsonList(values.keys()),
+      )).map((row) => [text(row, 'id'), num(row, 'votos')]),
+    )
+    // A MovieLens film outside the Catálogo does not count among the
+    // most similar.
+    const key = (id: string) => [
+      -(values.get(id) ?? 0),
+      -(votes.get(id) ?? 0),
+      id,
+    ]
+    const mostSimilar = [...votes.keys()]
+      .sort((a, b) => compareTuple(key(a), key(b)))
+      .slice(0, config.candidates)
+    return { pairs, mostSimilar }
+  })
+
 const similar = (films: ReadonlyArray<string>): Constraint => {
   // The titles are known once `evaluate` has read the references, as in
   // Python, where `avaliar` fills `self.titulos`.
@@ -124,46 +181,13 @@ const similar = (films: ReadonlyArray<string>): Constraint => {
     evaluate: (context, alive) =>
       Effect.gen(function* () {
         const { db } = context
-        const config = context.weights.similar
-        const references = new Map<string, Row>()
-        for (const id of films) {
-          const row = yield* db.get('SELECT * FROM filmes WHERE id = ?', id)
-          if (row === undefined)
-            return yield* engineError(
-              'invalid_usage',
-              `--parecido ${id}: filme fora do Catálogo`,
-            )
-          references.set(id, row)
-        }
+        const references = yield* readReferences(db, films)
         titles = [...references.values()].map((row) => text(row, 'titulo'))
-        const pairs = new Map<string, Map<string, Pair>>()
-        for (const id of references.keys())
-          pairs.set(id, yield* measure(db, id, config))
-        const values = new Map<string, number>()
-        for (const ofReference of pairs.values())
-          for (const [filmId, pair] of ofReference)
-            if (!references.has(filmId))
-              values.set(
-                filmId,
-                (values.get(filmId) ?? 0) +
-                  pairValue(pair, config.weight) / references.size,
-              )
-        const votes = new Map(
-          (yield* db.all(
-            'SELECT id, votos FROM filmes WHERE id IN (SELECT value FROM json_each(?))',
-            jsonList(values.keys()),
-          )).map((row) => [text(row, 'id'), num(row, 'votos')]),
+        const { pairs, mostSimilar } = yield* mostSimilarTo(
+          db,
+          references,
+          context.weights.similar,
         )
-        // A MovieLens film outside the Catálogo does not count among the
-        // most similar.
-        const key = (id: string) => [
-          -(values.get(id) ?? 0),
-          -(votes.get(id) ?? 0),
-          id,
-        ]
-        const mostSimilar = [...votes.keys()]
-          .sort((a, b) => compareTuple(key(a), key(b)))
-          .slice(0, config.candidates)
         const verdicts = new Map<string, Pass>()
         for (const filmId of mostSimilar) {
           if (!alive.has(filmId)) continue

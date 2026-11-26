@@ -559,6 +559,34 @@ export const personLetterboxdRows = (
     return [...zips.flat(), ...feeds.flat()]
   })
 
+/** Inserts one Letterboxd Fato of the film, its `fato_id` from the values. */
+const factInserter =
+  (db: Connection, slug: string, source: string, film: string) =>
+  (
+    table: FactTable,
+    columns: readonly string[],
+    values: readonly PyValue[],
+  ) => {
+    const id = factId(LETTERBOXD_KIND, table, slug, film, ...values)
+    const target = table === 'declarados' ? 'alvo' : 'filme_id'
+    const params = values.map((v) =>
+      typeof v === 'object' && v !== null
+        ? 'float' in v
+          ? v.float
+          : v.int
+        : v,
+    )
+    return db.run(
+      `INSERT INTO ${table} (fato_id, pessoa, ${target}, fonte, ${columns.join(', ')}) ` +
+        `VALUES (?, ?, ?, ?, ${columns.map(() => '?').join(', ')}) ON CONFLICT(fato_id) DO NOTHING`,
+      id,
+      slug,
+      film,
+      source,
+      ...params.map((p) => (typeof p === 'boolean' ? Number(p) : p)),
+    )
+  }
+
 const insertFacts = (
   db: Connection,
   slug: string,
@@ -567,30 +595,7 @@ const insertFacts = (
   row: LetterboxdRow,
 ): Effect.Effect<void, SqliteError> =>
   Effect.gen(function* () {
-    const insert = (
-      table: FactTable,
-      columns: readonly string[],
-      values: readonly PyValue[],
-    ) => {
-      const id = factId(LETTERBOXD_KIND, table, slug, film, ...values)
-      const target = table === 'declarados' ? 'alvo' : 'filme_id'
-      const params = values.map((v) =>
-        typeof v === 'object' && v !== null
-          ? 'float' in v
-            ? v.float
-            : v.int
-          : v,
-      )
-      return db.run(
-        `INSERT INTO ${table} (fato_id, pessoa, ${target}, fonte, ${columns.join(', ')}) ` +
-          `VALUES (?, ?, ?, ?, ${columns.map(() => '?').join(', ')}) ON CONFLICT(fato_id) DO NOTHING`,
-        id,
-        slug,
-        film,
-        source,
-        ...params.map((p) => (typeof p === 'boolean' ? Number(p) : p)),
-      )
-    }
+    const insert = factInserter(db, slug, source, film)
     if (row.file === 'watchlist') {
       yield* insert('watchlist', ['data'], [row.date])
       return
@@ -993,6 +998,74 @@ const ITEM_STATUSES: Readonly<Record<ItemStatus, ReprocessedItem['status']>> = {
   fila: 'queued',
 }
 
+/** The queue's items before the reprocessing, by id, of the slugs. */
+const queuedIds = (db: Connection, slugs: readonly string[]) =>
+  Effect.map(
+    db.all(
+      `SELECT id FROM itens_letterboxd WHERE situacao = 'fila' AND pessoa IN (${slugs.map(() => '?').join(',')}) ORDER BY id`,
+      ...slugs,
+    ),
+    (rows) => new Set(rows.map((row) => String(row.id))),
+  )
+
+/** What became of the items that were queued (`before`), with whose each
+ * one is. */
+const reprocessedItems = (
+  db: Connection,
+  slugs: readonly string[],
+  before: ReadonlySet<string>,
+) =>
+  Effect.map(
+    db.all(
+      `SELECT id, nome, ano, situacao, caminho, filme_id, razao, pessoa FROM itens_letterboxd
+             WHERE pessoa IN (${slugs.map(() => '?').join(',')}) ORDER BY nome, ano, id, pessoa`,
+      ...slugs,
+    ),
+    (rows) => {
+      const items = new Map<string, ReprocessedItem & { people: string[] }>()
+      for (const row of rows) {
+        const id = String(row.id)
+        if (!before.has(id)) continue
+        let found = items.get(id)
+        if (found === undefined) {
+          found = {
+            ...item(row),
+            status: ITEM_STATUSES[row.situacao as ItemStatus],
+            resolvedBy: PATHS_BY_DB[String(row.caminho)] ?? null,
+            filmId: asText(row.filme_id),
+            people: [],
+          }
+          items.set(id, found)
+        }
+        found.people.push(String(row.pessoa))
+      }
+      return [...items.values()]
+    },
+  )
+
+/** `reprocessLetterboxd` inside the data write. */
+const reprocessQueue = (db: Connection, person: string | undefined) =>
+  Effect.gen(function* () {
+    yield* ensureLetterboxdTables(db)
+    const people =
+      person === undefined ? yield* readPeople : [yield* resolvePerson(person)]
+    const slugs = people.map((p) => p.slug)
+    const before = yield* queuedIds(db, slugs)
+    const rows: LetterboxdRow[] = []
+    for (const p of people) rows.push(...(yield* personLetterboxdRows(p)))
+    const { resolutions, usedTmdb } = yield* recordTmdbAnswers(db, rows)
+    yield* loadLetterboxd(db, resolutions)
+    const all = yield* reprocessedItems(db, slugs, before)
+    return {
+      people: slugs,
+      resolved: all.filter((i) => i.status === 'resolved'),
+      discarded: all.filter((i) => i.status === 'discarded'),
+      queue: all.filter((i) => i.status === 'queued'),
+      warnings: yield* (yield* Run).warnings,
+      attributions: usedTmdb ? [TMDB_ATTRIBUTION] : [],
+    }
+  })
+
 /** Asks TMDB again for the queue's items it has not answered, of one
  * Pessoa or of all (`fila reprocessar`). What TMDB already answered comes
  * from the cache, offline. */
@@ -1012,59 +1085,6 @@ export const reprocessLetterboxd = (input: {
         author: input.author,
         message: `reprocess letterboxd queue${input.person === undefined ? '' : ` ${input.person}`}`,
       },
-      (db) =>
-        Effect.gen(function* () {
-          yield* ensureLetterboxdTables(db)
-          const people =
-            input.person === undefined
-              ? yield* readPeople
-              : [yield* resolvePerson(input.person)]
-          const slugs = people.map((p) => p.slug)
-          const marks = slugs.map(() => '?').join(',')
-          const before = new Set(
-            (yield* db.all(
-              `SELECT id FROM itens_letterboxd WHERE situacao = 'fila' AND pessoa IN (${marks}) ORDER BY id`,
-              ...slugs,
-            )).map((row) => String(row.id)),
-          )
-          const rows: LetterboxdRow[] = []
-          for (const person of people)
-            rows.push(...(yield* personLetterboxdRows(person)))
-          const { resolutions, usedTmdb } = yield* recordTmdbAnswers(db, rows)
-          yield* loadLetterboxd(db, resolutions)
-          const items = new Map<
-            string,
-            ReprocessedItem & { people: string[] }
-          >()
-          for (const row of yield* db.all(
-            `SELECT id, nome, ano, situacao, caminho, filme_id, razao, pessoa FROM itens_letterboxd
-             WHERE pessoa IN (${marks}) ORDER BY nome, ano, id, pessoa`,
-            ...slugs,
-          )) {
-            const id = String(row.id)
-            if (!before.has(id)) continue
-            let found = items.get(id)
-            if (found === undefined) {
-              found = {
-                ...item(row),
-                status: ITEM_STATUSES[row.situacao as ItemStatus],
-                resolvedBy: PATHS_BY_DB[String(row.caminho)] ?? null,
-                filmId: asText(row.filme_id),
-                people: [],
-              }
-              items.set(id, found)
-            }
-            found.people.push(String(row.pessoa))
-          }
-          const all = [...items.values()]
-          return {
-            people: slugs,
-            resolved: all.filter((i) => i.status === 'resolved'),
-            discarded: all.filter((i) => i.status === 'discarded'),
-            queue: all.filter((i) => i.status === 'queued'),
-            warnings: yield* (yield* Run).warnings,
-            attributions: usedTmdb ? [TMDB_ATTRIBUTION] : [],
-          }
-        }),
+      (db) => reprocessQueue(db, input.person),
     )
   })

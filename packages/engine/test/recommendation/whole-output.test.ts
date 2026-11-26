@@ -66,7 +66,9 @@ describe('the whole output, as recorded', () => {
   ] as const)('$name', async ({ request }) => {
     await expectRecordedRecommendation(useFixture(), request)
   })
+})
 
+describe('the whole output, as recorded', () => {
   test('the poster, title and synopsis from the TMDB', async () => {
     const fixture = useFixture()
     const vars = { FILMES_TMDB_CHAVE: 'x', FILMES_GRAVACOES: RECORDINGS }
@@ -106,7 +108,9 @@ describe('the whole output, as recorded', () => {
       'Q1054574',
     ])
   })
+})
 
+describe('the whole output, as recorded', () => {
   test('Ajustes, a Declarado on an entity and a Relato on a film', async () => {
     const fixture = useFixture()
     await fixture.ok(
@@ -150,7 +154,9 @@ describe('the whole output, as recorded', () => {
       count: 100,
     })
   })
+})
 
+describe('the whole output, as recorded', () => {
   test('the cut of the strongest, and a link left out of the weights', async () => {
     const fixture = useFixture()
     const cut = weightsWith(
@@ -170,7 +176,9 @@ describe('the whole output, as recorded', () => {
       noWriter,
     )
   })
+})
 
+describe('the whole output, as recorded', () => {
   test('the satisfaction, its line and the order it changes', async () => {
     const fixture = useFixture()
     const noImdbBonus = weightsWith(

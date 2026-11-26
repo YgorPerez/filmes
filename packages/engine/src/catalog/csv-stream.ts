@@ -75,6 +75,100 @@ type State =
 /** Thrown by `more` when a quoted record runs past the lines fed so far. */
 const NEED_MORE = Symbol('need more lines')
 
+/** The state machine of `_csv.c`, one character at a time; `null` is the
+ * end of a line. */
+class RecordMachine {
+  readonly fields: string[] = []
+  field = ''
+  state: State = 'start_record'
+
+  save(): void {
+    checkLength(this.field)
+    this.fields.push(this.field)
+    this.field = ''
+  }
+
+  private endOfLine(c: string | null): void {
+    this.save()
+    this.state = c === null ? 'start_record' : 'eat_crnl'
+  }
+
+  private startField(c: string | null): void {
+    if (c === '\n' || c === '\r' || c === null) this.endOfLine(c)
+    else if (c === '"') this.state = 'in_quoted_field'
+    else if (c === ',') this.save()
+    else {
+      this.field += c
+      this.state = 'in_field'
+    }
+  }
+
+  private startRecord(c: string | null, newline: boolean): void {
+    if (c === null) return
+    if (newline) {
+      this.state = 'eat_crnl'
+      return
+    }
+    this.state = 'start_field'
+    this.startField(c)
+  }
+
+  private inField(c: string | null, newline: boolean): void {
+    if (newline || c === null) this.endOfLine(c)
+    else if (c === ',') {
+      this.save()
+      this.state = 'start_field'
+    } else this.field += c
+  }
+
+  private inQuotedField(c: string | null): void {
+    if (c === null) return
+    if (c === '"') this.state = 'quote_in_quoted_field'
+    else this.field += c
+  }
+
+  private quoteInQuotedField(c: string | null, newline: boolean): void {
+    if (c === '"') {
+      this.field += c
+      this.state = 'in_quoted_field'
+    } else if (c === ',') {
+      this.save()
+      this.state = 'start_field'
+    } else if (newline || c === null) this.endOfLine(c)
+    else {
+      this.field += c
+      this.state = 'in_field'
+    }
+  }
+
+  private eatCrnl(c: string | null, newline: boolean): void {
+    if (newline) return
+    if (c === null) this.state = 'start_record'
+    else
+      throw new CsvLineError(
+        "new-line character seen in unquoted field - do you need to open the file with newline=''?",
+      )
+  }
+
+  step(c: string | null): void {
+    const newline = c === '\n' || c === '\r'
+    switch (this.state) {
+      case 'start_record':
+        return this.startRecord(c, newline)
+      case 'start_field':
+        return this.startField(c)
+      case 'in_field':
+        return this.inField(c, newline)
+      case 'in_quoted_field':
+        return this.inQuotedField(c)
+      case 'quote_in_quoted_field':
+        return this.quoteInQuotedField(c, newline)
+      case 'eat_crnl':
+        return this.eatCrnl(c, newline)
+    }
+  }
+}
+
 /** One record through the state machine, from its first line; more lines
  * come from `more` while a quoted field is open (`undefined` = end of
  * data). */
@@ -82,87 +176,18 @@ const parseRecord = (
   first: string,
   more: () => string | undefined,
 ): string[] => {
-  const fields: string[] = []
-  let field = ''
-  let state: State = 'start_record'
-  const save = () => {
-    checkLength(field)
-    fields.push(field)
-    field = ''
-  }
-  const endOfLine = (c: string | null) => {
-    save()
-    state = c === null ? 'start_record' : 'eat_crnl'
-  }
-  const startField = (c: string | null) => {
-    if (c === '\n' || c === '\r' || c === null) endOfLine(c)
-    else if (c === '"') state = 'in_quoted_field'
-    else if (c === ',') save()
-    else {
-      field += c
-      state = 'in_field'
-    }
-  }
-  const step = (c: string | null) => {
-    const newline = c === '\n' || c === '\r'
-    switch (state) {
-      case 'start_record':
-        if (c === null) return
-        if (newline) {
-          state = 'eat_crnl'
-          return
-        }
-        state = 'start_field'
-        startField(c)
-        return
-      case 'start_field':
-        startField(c)
-        return
-      case 'in_field':
-        if (newline || c === null) endOfLine(c)
-        else if (c === ',') {
-          save()
-          state = 'start_field'
-        } else field += c
-        return
-      case 'in_quoted_field':
-        if (c === null) return
-        if (c === '"') state = 'quote_in_quoted_field'
-        else field += c
-        return
-      case 'quote_in_quoted_field':
-        if (c === '"') {
-          field += c
-          state = 'in_quoted_field'
-        } else if (c === ',') {
-          save()
-          state = 'start_field'
-        } else if (newline || c === null) endOfLine(c)
-        else {
-          field += c
-          state = 'in_field'
-        }
-        return
-      case 'eat_crnl':
-        if (newline) return
-        if (c === null) state = 'start_record'
-        else
-          throw new CsvLineError(
-            "new-line character seen in unquoted field - do you need to open the file with newline=''?",
-          )
-        return
-    }
-  }
+  const machine = new RecordMachine()
   let line: string | undefined = first
   for (;;) {
-    for (const c of line) step(c)
-    step(null)
-    if (state === 'start_record') return fields
+    for (const c of line) machine.step(c)
+    machine.step(null)
+    if (machine.state === 'start_record') return machine.fields
     line = more()
     if (line === undefined) {
       // End of data inside a record: not strict, so the field stays.
-      if (field.length > 0 || state === 'in_quoted_field') save()
-      return fields
+      if (machine.field.length > 0 || machine.state === 'in_quoted_field')
+        machine.save()
+      return machine.fields
     }
   }
 }

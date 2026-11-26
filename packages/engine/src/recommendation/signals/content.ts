@@ -58,7 +58,7 @@ import {
   LINK_PREDICATE,
   linkOf,
 } from '../../sqlite/vocabulary.ts'
-import { candidatesJson, scaleOf, type Signal } from './Signal.ts'
+import { candidatesJson, scaleOf, type Round, type Signal } from './Signal.ts'
 
 /** How each link reads. `seed` null: the link makes no seed Evidence. */
 const WORDING: Readonly<
@@ -139,23 +139,172 @@ const highRatings = (high: ReadonlyArray<Row>): string => {
     : `${start}: ${listText(films)}`
 }
 
+/** The Pessoa's Ajuste to each link. */
+const readAdjustments = (round: Round, person: string) =>
+  Effect.gen(function* () {
+    const adjustments = new Map<string, Level>()
+    for (const row of yield* round.db.all(
+      'SELECT elo, nivel FROM ajustes WHERE pessoa = ?',
+      person,
+    ))
+      adjustments.set(
+        linkOf(text(row, 'elo')) ?? text(row, 'elo'),
+        levelOf(text(row, 'nivel')),
+      )
+    return adjustments
+  })
+
+/** One link, as the Evidence of its edges reads it. */
+interface LinkPath {
+  readonly round: Round
+  readonly person: string
+  readonly scale: RatingScale
+  readonly link: Link
+  readonly level: Level
+  readonly weight: number
+  readonly wording: (typeof WORDING)[Link]
+}
+
+/** One edge of a Candidate to an entity, with the seeds linked to it. */
+interface Edge {
+  readonly row: Row
+  readonly candidate: string
+  readonly entity: string
+  readonly linked: ReadonlyArray<Row>
+  readonly adjust: (strength: Strength) => Strength
+}
+
+const seedEvidence = (
+  path: LinkPath,
+  edge: Edge,
+  seedTemplate: string,
+  s: Row,
+): Evidence => {
+  const { round, person, scale, link, weight } = path
+  const { today, weights } = round
+  const kind = kindOf(text(s, 'nota_tipo')) as SeedKind
+  const rating = num(s, 'nota')
+  const date = text(s, 'nota_data')
+  const [seedStrengthValue, direction] = seedStrength(
+    kind,
+    scale,
+    rating,
+    date,
+    today,
+    {
+      fromFeedback: textOrNull(s, 'nota_sessao') !== null,
+      pairwise: num(s, 'par_a_par') === 1,
+    },
+  )
+  const start = seedText(
+    kind,
+    rating,
+    filmText(text(s, 'titulo'), numOrNull(s, 'ano')),
+  )
+  return makeEvidence({
+    person,
+    filmId: edge.candidate,
+    text: `${start}, ${fill(seedTemplate, edge.entity)}`,
+    source: text(s, 'nota_fonte'),
+    date,
+    strength: edge.adjust(linkStrength(seedStrengthValue, link)),
+    kind,
+    factId: text(s, 'nota_fato'),
+    base:
+      weight * direction * seedDecay(kind, date, today, weights.rating_decay),
+  })
+}
+
+/** The seed Evidence of the edge into `seeds`, and its node Evidence into
+ * `out`. */
+const edgeEvidence = (
+  path: LinkPath,
+  edge: Edge,
+  into: { readonly out: Evidence[]; readonly seeds: Map<string, Evidence> },
+) => {
+  const { weights } = path.round
+  const { candidate, linked } = edge
+  const seedTemplate = path.wording.seed
+  if (seedTemplate !== null)
+    for (const s of linked) {
+      const evidence = seedEvidence(path, edge, seedTemplate, s)
+      // The same Nota can reach the Candidate through more than one
+      // node: the strongest link counts.
+      const key = `${candidate}\0${text(s, 'nota_fato')}`
+      const before = into.seeds.get(key)
+      if (
+        before === undefined ||
+        Math.abs(contribution(evidence, weights)) >
+          Math.abs(contribution(before, weights))
+      )
+        into.seeds.set(key, evidence)
+    }
+
+  const high = linked.filter((s) => isHigh(path.scale, s))
+  const nodeStrength = pathStrength(high.length, path.link)
+  if (nodeStrength)
+    into.out.push(
+      makeEvidence({
+        person: path.person,
+        filmId: candidate,
+        text: `${fill(path.wording.node, edge.entity)}, ${highRatings(high)}`,
+        source: text(edge.row, 'fonte'),
+        date: text(edge.row, 'data'),
+        strength: edge.adjust(nodeStrength),
+        kind: 'metadata',
+        factId: text(edge.row, 'fato_id'),
+        base: path.weight,
+      }),
+    )
+}
+
+const linkEvidence = (
+  path: LinkPath,
+  into: { readonly out: Evidence[]; readonly seeds: Map<string, Evidence> },
+) =>
+  Effect.gen(function* () {
+    const { db } = path.round
+    const params = [LINK_PREDICATE[path.link], path.person] as const
+
+    const byEntity = new Map<string, Row[]>()
+    for (const row of yield* db.all(SEEDS, ...params)) {
+      const entity = text(row, 'entidade_id')
+      byEntity.set(entity, [...(byEntity.get(entity) ?? []), row])
+    }
+
+    for (const row of yield* db.all(
+      EDGES,
+      ...params,
+      candidatesJson(path.round),
+    )) {
+      const candidate = text(row, 'candidato')
+      const linked = (byEntity.get(text(row, 'entidade_id')) ?? []).filter(
+        (s) => text(s, 'filme_id') !== candidate,
+      )
+      const [first] = linked
+      if (first === undefined) continue
+      const credited = numOrNull(row, 'principal')
+      const principal = credited === null ? null : credited !== 0
+      const adjust = (strength: Strength): Strength =>
+        adjustedStrength(castStrength(strength, principal), path.level) ??
+        strength
+      edgeEvidence(
+        path,
+        { row, candidate, entity: text(first, 'entidade'), linked, adjust },
+        into,
+      )
+    }
+  })
+
 export const content: Signal = {
   module: 'conteudo',
   forPerson: (round, person) =>
     Effect.gen(function* () {
-      const { db, weights, today } = round
+      const { weights } = round
       const scale = scaleOf(round, person)
       const out: Evidence[] = []
       const seeds = new Map<string, Evidence>()
-      const adjustments = new Map<string, Level>()
-      for (const row of yield* db.all(
-        'SELECT elo, nivel FROM ajustes WHERE pessoa = ?',
-        person,
-      ))
-        adjustments.set(
-          linkOf(text(row, 'elo')) ?? text(row, 'elo'),
-          levelOf(text(row, 'nivel')),
-        )
+      const adjustments = yield* readAdjustments(round, person)
 
       for (const [link, linkWeight] of Object.entries(weights.path.weight)) {
         if (!isLink(link)) {
@@ -166,98 +315,18 @@ export const content: Signal = {
         }
         const level = adjustments.get(link) ?? 'normal'
         if (level === 'none') continue
-        const weight = linkWeight * weights.adjustment.level[level]
-        const wording = WORDING[link]
-        const params = [LINK_PREDICATE[link], person] as const
-
-        const byEntity = new Map<string, Row[]>()
-        for (const row of yield* db.all(SEEDS, ...params)) {
-          const entity = text(row, 'entidade_id')
-          byEntity.set(entity, [...(byEntity.get(entity) ?? []), row])
-        }
-
-        for (const edge of yield* db.all(
-          EDGES,
-          ...params,
-          candidatesJson(round),
-        )) {
-          const candidate = text(edge, 'candidato')
-          const linked = (byEntity.get(text(edge, 'entidade_id')) ?? []).filter(
-            (s) => text(s, 'filme_id') !== candidate,
-          )
-          const [first] = linked
-          if (first === undefined) continue
-          const entity = text(first, 'entidade')
-          const credited = numOrNull(edge, 'principal')
-          const principal = credited === null ? null : credited !== 0
-          const adjust = (strength: Strength): Strength =>
-            adjustedStrength(castStrength(strength, principal), level) ??
-            strength
-
-          if (wording.seed !== null)
-            for (const s of linked) {
-              const kind = kindOf(text(s, 'nota_tipo')) as SeedKind
-              const rating = num(s, 'nota')
-              const date = text(s, 'nota_data')
-              const [seedStrengthValue, direction] = seedStrength(
-                kind,
-                scale,
-                rating,
-                date,
-                today,
-                {
-                  fromFeedback: textOrNull(s, 'nota_sessao') !== null,
-                  pairwise: num(s, 'par_a_par') === 1,
-                },
-              )
-              const start = seedText(
-                kind,
-                rating,
-                filmText(text(s, 'titulo'), numOrNull(s, 'ano')),
-              )
-              const evidence = makeEvidence({
-                person,
-                filmId: candidate,
-                text: `${start}, ${fill(wording.seed, entity)}`,
-                source: text(s, 'nota_fonte'),
-                date,
-                strength: adjust(linkStrength(seedStrengthValue, link)),
-                kind,
-                factId: text(s, 'nota_fato'),
-                base:
-                  weight *
-                  direction *
-                  seedDecay(kind, date, today, weights.rating_decay),
-              })
-              // The same Nota can reach the Candidate through more than one
-              // node: the strongest link counts.
-              const key = `${candidate}\0${text(s, 'nota_fato')}`
-              const before = seeds.get(key)
-              if (
-                before === undefined ||
-                Math.abs(contribution(evidence, weights)) >
-                  Math.abs(contribution(before, weights))
-              )
-                seeds.set(key, evidence)
-            }
-
-          const high = linked.filter((s) => isHigh(scale, s))
-          const nodeStrength = pathStrength(high.length, link)
-          if (nodeStrength)
-            out.push(
-              makeEvidence({
-                person,
-                filmId: candidate,
-                text: `${fill(wording.node, entity)}, ${highRatings(high)}`,
-                source: text(edge, 'fonte'),
-                date: text(edge, 'data'),
-                strength: adjust(nodeStrength),
-                kind: 'metadata',
-                factId: text(edge, 'fato_id'),
-                base: weight,
-              }),
-            )
-        }
+        yield* linkEvidence(
+          {
+            round,
+            person,
+            scale,
+            link,
+            level,
+            weight: linkWeight * weights.adjustment.level[level],
+            wording: WORDING[link],
+          },
+          { out, seeds },
+        )
       }
       return [...out, ...seeds.values()]
     }),

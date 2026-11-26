@@ -77,7 +77,9 @@ describe('the card header', () => {
       withKey.attributions.filter((a) => a.source !== 'TMDB'),
     )
   })
+})
 
+describe('the card header', () => {
   test("with a poster, the TMDB's attribution comes in", async () => {
     const fixture = useFixture()
     const withPoster = await ask(fixture, TMDB)
@@ -128,7 +130,9 @@ describe('the card header', () => {
     ).toBe(true)
     expect(film(out, 'As Horas Lentas').title).toBe('As Horas Lentas')
   })
+})
 
+describe('the card header', () => {
   test('the poster stays six months in the cache and survives a rebuild', async () => {
     const fixture = useFixture()
     await ask(fixture, TMDB)

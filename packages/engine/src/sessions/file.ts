@@ -214,6 +214,26 @@ export const writeSession = (
 export const isOpen = (front: YamlMapping): boolean =>
   !pyTruthy(front.get('feedback'))
 
+/** A Session to change: an unknown one is `invalid_usage`, and one with
+ * Feedback is `closed_session`, saying `closed`. Its frontmatter comes as
+ * a copy to change. */
+export const readOpenSession = (id: string, closed: string) =>
+  Effect.gen(function* () {
+    const session = yield* readSession(id).pipe(
+      Effect.catchIf(
+        (e) => e.code === 'unknown_session',
+        (e) => engineError('invalid_usage', e.message),
+      ),
+    )
+    const front = new Map<string, YamlValue>(session.frontmatter)
+    if (!isOpen(front))
+      return yield* engineError(
+        'closed_session',
+        `a Sessão ${id} já tem Feedback; ${closed}`,
+      )
+    return { session, front }
+  })
+
 /** The fields of a version, as they sit at the top of the frontmatter
  * (the current one) and in each item of `versions`. */
 export const VERSION_EXTRAS = [

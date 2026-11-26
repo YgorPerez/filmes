@@ -74,7 +74,9 @@ describe('OMDb', () => {
       },
     ])
   })
+})
 
+describe('OMDb', () => {
   test('"Not Rated" is a value; N/A and a blank one are not', async () => {
     const fixture = useFixture()
     const dir = recordingsCopy(fixture)
@@ -119,7 +121,9 @@ describe('OMDb', () => {
     })
     expect(cacheRows(join(fixture.root, 'filmes-cache.sqlite'))).toEqual([])
   })
+})
 
+describe('OMDb', () => {
   test('the cached answer lasts 30 days', async () => {
     const fixture = useFixture()
     await fixture.ok(ageRating('tt9000302'), RECORDED)
@@ -231,7 +235,9 @@ describe('TMDB', () => {
       none: [],
     })
   })
+})
 
+describe('TMDB', () => {
   test('gives the tconst and the runtime of a TMDB id', async () => {
     const fixture = useFixture()
 
@@ -261,7 +267,9 @@ describe('TMDB', () => {
       runtimeNotAnId: undefined,
     })
   })
+})
 
+describe('TMDB', () => {
   test('the card has the pt-BR poster, title and overview, or nulls', async () => {
     const fixture = useFixture()
 
@@ -318,6 +326,23 @@ describe('TMDB', () => {
   })
 })
 
+/** What TMDB answers around a search that fails and switches it off. */
+const afterFailure = <A, E, R>(search: Effect.Effect<A, E, R>) =>
+  Effect.gen(function* () {
+    const source = yield* tmdb
+    return {
+      off: yield* source.searchDisabled,
+      failed: yield* search,
+      offAfter: yield* source.searchDisabled,
+      // Off: what has a recording is not asked...
+      other: yield* source.movies('Porto Seguro', 2019),
+      // ...but the cache still answers...
+      cached: (yield* source.movies('Eco', 2021))?.length,
+      // ...and the card is another profile, still on.
+      card: (yield* source.card('tt9000104')).titlePt,
+    }
+  })
+
 describe('recorded failures', () => {
   const RIO = 'filme-rio-abaixo-2015-cb01025b85e0'
   const search = Effect.flatMap(tmdb, (source) =>
@@ -342,6 +367,13 @@ describe('recorded failures', () => {
     ])
     expect(answer.warnings).toEqual([])
   })
+})
+
+describe('recorded failures', () => {
+  const RIO = 'filme-rio-abaixo-2015-cb01025b85e0'
+  const search = Effect.flatMap(tmdb, (source) =>
+    source.movies('Rio Abaixo', 2015),
+  )
 
   test.each([
     ['three times', { motivo: 'Connection reset by peer', vezes: 3 }],
@@ -358,25 +390,7 @@ describe('recorded failures', () => {
         vars,
       )
 
-      const answer = await fixture.ok(
-        withWarnings(
-          Effect.gen(function* () {
-            const source = yield* tmdb
-            return {
-              off: yield* source.searchDisabled,
-              failed: yield* search,
-              offAfter: yield* source.searchDisabled,
-              // Off: what has a recording is not asked...
-              other: yield* source.movies('Porto Seguro', 2019),
-              // ...but the cache still answers...
-              cached: (yield* source.movies('Eco', 2021))?.length,
-              // ...and the card is another profile, still on.
-              card: (yield* source.card('tt9000104')).titlePt,
-            }
-          }),
-        ),
-        vars,
-      )
+      const answer = await fixture.ok(withWarnings(afterFailure(search)), vars)
 
       expect(answer).toEqual({
         value: {
@@ -397,6 +411,13 @@ describe('recorded failures', () => {
         'find-tt9000104-pt-BR',
       ])
     },
+  )
+})
+
+describe('recorded failures', () => {
+  const RIO = 'filme-rio-abaixo-2015-cb01025b85e0'
+  const search = Effect.flatMap(tmdb, (source) =>
+    source.movies('Rio Abaixo', 2015),
   )
 
   test('the next request on the engine starts with the source on and the count at zero', async () => {
@@ -423,6 +444,13 @@ describe('recorded failures', () => {
       await engine.dispose()
     }
   })
+})
+
+describe('recorded failures', () => {
+  const RIO = 'filme-rio-abaixo-2015-cb01025b85e0'
+  const search = Effect.flatMap(tmdb, (source) =>
+    source.movies('Rio Abaixo', 2015),
+  )
 
   test('the failure count is per key and per profile', async () => {
     const fixture = useFixture()

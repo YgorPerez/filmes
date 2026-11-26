@@ -87,6 +87,34 @@ const PERSON_ROWS = [
 const personRows = (fixture: Fixture) =>
   Promise.all(PERSON_ROWS.map((sql) => query(fixture, sql)))
 
+/** A Pessoa file with a Veto, an Ajuste, an open question and an import. */
+const CAROL_WITH_LISTS = `---
+name: Carol
+aliases: []
+vetoes:
+- text: nada de comédia boba
+  target: silly_comedy
+  label: comédia boba
+  date: 2026-01-05
+adjustments:
+- link: cast
+  level: low
+  date: 2026-01-06
+open_questions:
+- text: a Carol curte terror?
+  subject: slow
+  label: filme lento
+  date: 2026-01-07
+  skips: 1
+imports:
+- kind: letterboxd
+  file: imports/carol.zip
+  date: '2026-01-08'
+  original: carol.zip
+  sha256: abc
+---
+`
+
 describe('the database spellings', () => {
   test('are the Portuguese values Python stored', () => {
     const flip = (table: Record<string, string>) =>
@@ -150,7 +178,9 @@ describe('pessoa criar and ver', () => {
       email: 'luana.farias@example.org',
     })
   })
+})
 
+describe('pessoa criar and ver', () => {
   test('ver finds the Pessoa by an alias', async () => {
     const fixture = useFixture()
     await fixture.ok(
@@ -202,7 +232,9 @@ describe('pessoa criar and ver', () => {
 
     expect(view).toMatchObject({ person: 'bruno', owner: true })
   })
+})
 
+describe('pessoa criar and ver', () => {
   test('ver shows the Notas of the Pessoa', async () => {
     const fixture = useFixture()
 
@@ -220,7 +252,9 @@ describe('pessoa criar and ver', () => {
       }),
     )
   })
+})
 
+describe('pessoa criar and ver', () => {
   test('ver shows everything known of the Pessoa', async () => {
     const fixture = useFixture()
     await ana(fixture)
@@ -265,38 +299,12 @@ describe('pessoa criar and ver', () => {
       imports: [],
     })
   })
+})
 
+describe('pessoa criar and ver', () => {
   test('ver shows the Vetos, Ajustes, open questions and imports of the file, with their fato_ids', async () => {
     const fixture = useFixture()
-    writeFileSync(
-      file(fixture, 'carol'),
-      `---
-name: Carol
-aliases: []
-vetoes:
-- text: nada de comédia boba
-  target: silly_comedy
-  label: comédia boba
-  date: 2026-01-05
-adjustments:
-- link: cast
-  level: low
-  date: 2026-01-06
-open_questions:
-- text: a Carol curte terror?
-  subject: slow
-  label: filme lento
-  date: 2026-01-07
-  skips: 1
-imports:
-- kind: letterboxd
-  file: imports/carol.zip
-  date: '2026-01-08'
-  original: carol.zip
-  sha256: abc
----
-`,
-    )
+    writeFileSync(file(fixture, 'carol'), CAROL_WITH_LISTS)
 
     const view = await fixture.ok(personView('carol'))
 
@@ -338,7 +346,9 @@ imports:
       },
     ])
   })
+})
 
+describe('pessoa criar and ver', () => {
   test('without a database, ver shows the file and says the Notas are missing', async () => {
     const fixture = useFixture()
     rmSync(fixture.database)
@@ -396,7 +406,9 @@ describe('pessoa declarar and relatar', () => {
       },
     ])
   })
+})
 
+describe('pessoa declarar and relatar', () => {
   test('a Declarado about a genre is generic and moderate', async () => {
     const fixture = useFixture()
     await ana(fixture)
@@ -433,7 +445,9 @@ describe('pessoa declarar and relatar', () => {
 
     expect(result.stated).toMatchObject({ specific: true, strength: 'strong' })
   })
+})
 
+describe('pessoa declarar and relatar', () => {
   test('a Relato is one level below and goes into relatos', async () => {
     const fixture = useFixture()
     await ana(fixture)
@@ -475,7 +489,9 @@ describe('pessoa declarar and relatar', () => {
 
     expect(result.report.strength).toBe('weak')
   })
+})
 
+describe('pessoa declarar and relatar', () => {
   test('a Declarado or a Relato older than two years falls a level', async () => {
     const fixture = useFixture()
     await ana(fixture)
@@ -520,7 +536,9 @@ describe('pessoa declarar and relatar', () => {
     // not 2 years yet.
     expect(strengths).toEqual(['moderate', 'weak', 'moderate'])
   })
+})
 
+describe('pessoa declarar and relatar', () => {
   test('her own review counts as a specific Declarado', async () => {
     const fixture = useFixture()
     await ana(fixture)
@@ -568,7 +586,9 @@ describe('pessoa declarar and relatar', () => {
       },
     ])
   })
+})
 
+describe('pessoa declarar and relatar', () => {
   test('"odeia" a film is a declared Nota 1', async () => {
     const fixture = useFixture()
     await ana(fixture)
@@ -605,7 +625,9 @@ describe('pessoa declarar and relatar', () => {
       await query(fixture, "SELECT nota, tipo FROM notas WHERE pessoa = 'ana'"),
     ).toEqual([{ nota: 5, tipo: 'relato' }])
   })
+})
 
+describe('pessoa declarar and relatar', () => {
   test('liking a film is not a Nota', async () => {
     const fixture = useFixture()
     await ana(fixture)
@@ -655,7 +677,9 @@ describe('pessoa declarar and relatar', () => {
     )
     expect(text.split('## Relatos')).toHaveLength(2)
   })
+})
 
+describe('pessoa declarar and relatar', () => {
   test('a target outside the Catalog is an error and nothing is written', async () => {
     const fixture = useFixture()
     await ana(fixture)
@@ -684,7 +708,9 @@ describe('pessoa declarar and relatar', () => {
 
     expect(error).toMatchObject({ exitCode: 2, code: 'invalid_usage' })
   })
+})
 
+describe('pessoa declarar and relatar', () => {
   test.each([
     [
       'a reaction without a target',
@@ -725,7 +751,9 @@ describe('pessoa declarar and relatar', () => {
     expect(error).toEqual({ exitCode: 2, code: 'invalid_usage', message })
     expect(read(fixture, 'ana')).toBe(before)
   })
+})
 
+describe('pessoa declarar and relatar', () => {
   test('the date is any ISO form Python takes, written as YYYY-MM-DD; the text and source lose their extra spaces', async () => {
     const fixture = useFixture()
     await ana(fixture)
@@ -834,7 +862,9 @@ describe('the Pessoa sync and the reload', () => {
 
     expect(await personRows(fixture)).toEqual(synced)
   })
+})
 
+describe('the Pessoa sync and the reload', () => {
   test('the reload reads Declarados, Relatos and Vetos from the file', async () => {
     const fixture = useFixture()
     writeFileSync(file(fixture, 'carol'), CAROL)
@@ -880,7 +910,9 @@ describe('the Pessoa sync and the reload', () => {
       ),
     ).toEqual([{ alvo: SOFIA_RANGEL, data: '2026-01-05' }])
   })
+})
 
+describe('the Pessoa sync and the reload', () => {
   test('a Veto on a tag group, an Ajuste and an open question are kept with their Portuguese values', async () => {
     const fixture = useFixture()
     writeFileSync(
@@ -934,7 +966,9 @@ imports: []
     expect(error.message).toContain('carol.md')
     expect(error.message).toContain('ontem, no questionário')
   })
+})
 
+describe('the Pessoa sync and the reload', () => {
   test('a sync creates the open questions table a database built before it lacks', async () => {
     const fixture = useFixture()
     await fixture.ok(
@@ -1028,7 +1062,9 @@ describe('pessoa visto', () => {
       [[CASA_CHEIA, 4, 'Sessão de sábado', '2026-11-20']],
     )
   })
+})
 
+describe('pessoa visto', () => {
   test('it holds after a reload as synced, and the body has the lines', async () => {
     const fixture = useFixture()
     await fixture.ok(
@@ -1072,7 +1108,9 @@ describe('pessoa visto', () => {
     expect(again.new).toBe(false)
     expect(read(fixture, 'teo').split(PEQUENOS_MILAGRES)).toHaveLength(2)
   })
+})
 
+describe('pessoa visto', () => {
   test('a Nota off the scale is invalid usage and suggests 1 to 10', async () => {
     const fixture = useFixture()
 

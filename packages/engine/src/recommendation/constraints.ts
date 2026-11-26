@@ -211,6 +211,93 @@ export interface ConstraintSet {
   >
 }
 
+/** What a `ConstraintSet` keeps as it applies its Restrições. */
+interface SetState {
+  readonly lines: Map<string, ReadonlyArray<Evidence>>
+  readonly pending: Map<string, ReadonlyArray<Constraint>>
+  readonly removedBy: Map<string, Constraint>
+  readonly dropDetails: Map<string, DropDetail>
+  readonly removed: Map<ConstraintName, number>
+  readonly drops: Map<ConstraintName, Map<string, number>>
+}
+
+const linesIn = (state: SetState, filmId: string) =>
+  state.lines.get(filmId) ?? []
+
+const addLines = (
+  state: SetState,
+  filmId: string,
+  more: ReadonlyArray<Evidence>,
+) => state.lines.set(filmId, [...linesIn(state, filmId), ...more])
+
+const countDrop = (
+  state: SetState,
+  constraint: Constraint,
+  verdict: Drop,
+  filmId: string,
+) => {
+  const { removed, drops } = state
+  state.removedBy.set(filmId, constraint)
+  if (verdict.detail !== undefined)
+    state.dropDetails.set(filmId, verdict.detail)
+  removed.set(constraint.name, (removed.get(constraint.name) ?? 0) + 1)
+  if (verdict.cause !== null) {
+    const causes = drops.get(constraint.name) ?? new Map<string, number>()
+    causes.set(verdict.cause, (causes.get(verdict.cause) ?? 0) + 1)
+    drops.set(constraint.name, causes)
+  }
+}
+
+const passesOnDemandIn =
+  (context: ConstraintContext, state: SetState) =>
+  (film: Candidate, consult: boolean): ConstraintEffect<boolean> =>
+    Effect.gen(function* () {
+      const found: Evidence[] = []
+      for (const constraint of state.pending.get(film.id) ?? []) {
+        if (constraint.resolve === undefined)
+          throw new TypeError(
+            `the constraint ${constraint.name} left a film pending and cannot resolve it`,
+          )
+        const verdict = yield* constraint.resolve(context, film, consult)
+        if (verdict._tag === 'Drop') {
+          countDrop(state, constraint, verdict, film.id)
+          return false
+        }
+        found.push(...verdict.lines)
+      }
+      addLines(state, film.id, found)
+      return true
+    })
+
+const candidatesIn =
+  (
+    context: ConstraintContext,
+    state: SetState,
+    constraints: ReadonlyArray<Constraint>,
+  ) =>
+  (
+    films: ReadonlyMap<string, Candidate>,
+  ): ConstraintEffect<ReadonlyMap<string, Candidate>> =>
+    Effect.gen(function* () {
+      const { pending } = state
+      const alive = new Map(films)
+      for (const constraint of constraints) {
+        const verdicts = yield* constraint.evaluate(context, alive)
+        for (const filmId of Array.from(alive.keys())) {
+          const verdict = verdicts.get(filmId) ?? drop()
+          if (verdict === 'pending') {
+            pending.set(filmId, [...(pending.get(filmId) ?? []), constraint])
+          } else if (verdict._tag === 'Drop') {
+            alive.delete(filmId)
+            countDrop(state, constraint, verdict, filmId)
+          } else {
+            addLines(state, filmId, verdict.lines)
+          }
+        }
+      }
+      return alive
+    })
+
 export const makeConstraintSet = (
   context: ConstraintContext,
   asked: ReadonlyArray<Constraint>,
@@ -219,74 +306,23 @@ export const makeConstraintSet = (
     (a, b) =>
       CONSTRAINT_ORDER.indexOf(a.name) - CONSTRAINT_ORDER.indexOf(b.name),
   )
-  const lines = new Map<string, ReadonlyArray<Evidence>>()
-  const pending = new Map<string, ReadonlyArray<Constraint>>()
-  const removedBy = new Map<string, Constraint>()
-  const dropDetails = new Map<string, DropDetail>()
-  const removed = new Map<ConstraintName, number>()
-  const drops = new Map<ConstraintName, Map<string, number>>()
-
-  const linesOf = (filmId: string) => lines.get(filmId) ?? []
-  const addLines = (filmId: string, more: ReadonlyArray<Evidence>) =>
-    lines.set(filmId, [...linesOf(filmId), ...more])
-  const countDrop = (constraint: Constraint, verdict: Drop, filmId: string) => {
-    removedBy.set(filmId, constraint)
-    if (verdict.detail !== undefined) dropDetails.set(filmId, verdict.detail)
-    removed.set(constraint.name, (removed.get(constraint.name) ?? 0) + 1)
-    if (verdict.cause !== null) {
-      const causes = drops.get(constraint.name) ?? new Map<string, number>()
-      causes.set(verdict.cause, (causes.get(verdict.cause) ?? 0) + 1)
-      drops.set(constraint.name, causes)
-    }
+  const state: SetState = {
+    lines: new Map(),
+    pending: new Map(),
+    removedBy: new Map(),
+    dropDetails: new Map(),
+    removed: new Map(),
+    drops: new Map(),
   }
-
-  const passesOnDemand = (
-    film: Candidate,
-    consult: boolean,
-  ): ConstraintEffect<boolean> =>
-    Effect.gen(function* () {
-      const found: Evidence[] = []
-      for (const constraint of pending.get(film.id) ?? []) {
-        if (constraint.resolve === undefined)
-          throw new TypeError(
-            `the constraint ${constraint.name} left a film pending and cannot resolve it`,
-          )
-        const verdict = yield* constraint.resolve(context, film, consult)
-        if (verdict._tag === 'Drop') {
-          countDrop(constraint, verdict, film.id)
-          return false
-        }
-        found.push(...verdict.lines)
-      }
-      addLines(film.id, found)
-      return true
-    })
+  const passesOnDemand = passesOnDemandIn(context, state)
 
   return {
     constraints,
-    pending,
-    removedBy,
-    dropDetails,
-    linesOf,
-    candidates: (films) =>
-      Effect.gen(function* () {
-        const alive = new Map(films)
-        for (const constraint of constraints) {
-          const verdicts = yield* constraint.evaluate(context, alive)
-          for (const filmId of Array.from(alive.keys())) {
-            const verdict = verdicts.get(filmId) ?? drop()
-            if (verdict === 'pending') {
-              pending.set(filmId, [...(pending.get(filmId) ?? []), constraint])
-            } else if (verdict._tag === 'Drop') {
-              alive.delete(filmId)
-              countDrop(constraint, verdict, filmId)
-            } else {
-              addLines(filmId, verdict.lines)
-            }
-          }
-        }
-        return alive
-      }),
+    pending: state.pending,
+    removedBy: state.removedBy,
+    dropDetails: state.dropDetails,
+    linesOf: (filmId) => linesIn(state, filmId),
+    candidates: candidatesIn(context, state, constraints),
     approve: (ordered, count, reach, filmOf) =>
       Effect.gen(function* () {
         const approved: (typeof ordered)[number][] = []
@@ -308,8 +344,8 @@ export const makeConstraintSet = (
           c.name,
           {
             ...c.toJson(),
-            ...c.result(drops.get(c.name) ?? new Map()),
-            removed: removed.get(c.name) ?? 0,
+            ...c.result(state.drops.get(c.name) ?? new Map()),
+            removed: state.removed.get(c.name) ?? 0,
           },
         ]),
       ),

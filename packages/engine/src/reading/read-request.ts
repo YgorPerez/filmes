@@ -26,7 +26,15 @@ import type {
   ReadingContext,
 } from './reader.ts'
 import { READERS } from './readers/index.ts'
-import { phraseOf, phrasesOf, sentenceOf, wordsOf } from './words.ts'
+import {
+  phraseOf,
+  phrasesOf,
+  sentenceOf,
+  wordsOf,
+  type Phrase,
+  type Sentence,
+  type Words,
+} from './words.ts'
 
 export { REQUEST_READING_MAX_LENGTH }
 
@@ -159,22 +167,25 @@ const choose = (
   }
 }
 
-/** Reads `request.text` into the request fields it understood, applying
- * only the items of `request.fields`. A sentence over
- * `REQUEST_READING_MAX_LENGTH` is `invalid_usage`. */
-export const readRequest = (
+/** What the readers read the sentence with. */
+interface Reading {
+  readonly sentence: Sentence
+  readonly numbers: ReadonlyMap<string, number>
+  readonly file: Readonly<Record<string, unknown>>
+  readonly context: ReadingContext
+  /** Whether the word at `i` is in a clause about taste. */
+  readonly blocked: (i: number) => boolean
+}
+
+/** The vocabulary file, its common part decoded, and the reading context. */
+const prepareReading = (
   request: RequestReadingInput,
 ): Effect.Effect<
-  RequestReading,
+  Omit<Reading, 'blocked'> & { readonly taste: ReadonlyArray<Phrase> },
   EngineError | SqliteError,
   Sqlite | Environment
 > =>
   Effect.gen(function* () {
-    if (request.text.length > REQUEST_READING_MAX_LENGTH)
-      return yield* engineError(
-        'invalid_usage',
-        `a frase tem mais de ${REQUEST_READING_MAX_LENGTH} caracteres`,
-      )
     const file = yield* (yield* Environment).readConfig(
       'request_reading',
       Schema.Record(Schema.String, Schema.Unknown),
@@ -196,77 +207,137 @@ export const readRequest = (
         n,
       ]),
     )
-    const sentence = sentenceOf(request.text)
-    const { tokens } = sentence
+    return {
+      sentence: sentenceOf(request.text),
+      numbers,
+      file,
+      context,
+      taste: phrasesOf(common.taste.words),
+    }
+  })
 
-    const taste = phrasesOf(common.taste.words)
-    const all = wordsOf(sentence, numbers, () => false)
-    const tasteClauses = new Set(
-      tokens.flatMap((token, i) =>
-        all.longest(i, taste) > 0 ? [token.clause] : [],
-      ),
-    )
-    const blocked = (i: number) => tasteClauses.has(tokens[i]?.clause ?? -1)
-
+/** Word → the claim that took it: the closed readers first, then the open
+ * ones on the words left. */
+const claimWords = (reading: Reading) =>
+  Effect.gen(function* () {
     const used = new Map<number, Chosen>()
     const phase = (open: boolean) =>
       Effect.gen(function* () {
         const words = wordsOf(
-          sentence,
-          numbers,
-          (i) => blocked(i) || used.has(i),
+          reading.sentence,
+          reading.numbers,
+          (i) => reading.blocked(i) || used.has(i),
         )
         const claims: Chosen[] = []
         for (const [order, reader] of READERS.entries()) {
           if (reader.open !== open) continue
-          for (const claim of yield* reader.read(words, file, context))
+          for (const claim of yield* reader.read(
+            words,
+            reading.file,
+            reading.context,
+          ))
             claims.push({ ...claim, field: reader.field, order })
         }
         choose(claims, used)
       })
     yield* phase(false)
     yield* phase(true)
+    return used
+  })
+
+/** The items of the fields applied, in the order of the sentence. */
+const itemsOf = (
+  used: ReadonlyMap<number, Chosen>,
+  applied: ReadonlySet<ReadField>,
+  all: Words,
+) => {
+  const chosen = [...new Set(used.values())].sort((a, b) => a.start - b.start)
+  const quoted = ({ quote, start, end }: Claim) =>
+    all.text(quote?.start ?? start, quote?.end ?? end)
+  const understood: ReadItem[] = []
+  const ambiguities: ReadAmbiguity[] = []
+  for (const claim of chosen) {
+    if (!applied.has(claim.field)) continue
+    const words = quoted(claim)
+    if ('candidates' in claim.found)
+      ambiguities.push({
+        field: claim.field,
+        words,
+        candidates: claim.found.candidates,
+      })
+    else
+      understood.push({
+        field: claim.field,
+        words,
+        label: claim.found.label,
+        request: claim.found.request,
+      })
+  }
+  return { understood, ambiguities }
+}
+
+/** Each run of words no item took, and each item of a field not applied. */
+const notUnderstoodOf = (
+  reading: Reading,
+  used: ReadonlyMap<number, Chosen>,
+  applied: ReadonlySet<ReadField>,
+  all: Words,
+): string[] => {
+  const { tokens } = reading.sentence
+  const notUnderstood: string[] = []
+  let run: { start: number; end: number } | undefined
+  const flush = () => {
+    if (run) notUnderstood.push(all.text(run.start, run.end))
+    run = undefined
+  }
+  for (const [i, token] of tokens.entries()) {
+    const claim = used.get(i)
+    if (claim || (run && tokens[run.start]?.clause !== token.clause)) flush()
+    // An item of a field not applied comes back whole, as typed.
+    if (claim && !applied.has(claim.field) && claim.start === i)
+      notUnderstood.push(all.text(claim.start, claim.end))
+    if (claim || reading.context.fillers.has(token.key)) continue
+    run = { start: run?.start ?? i, end: i + 1 }
+  }
+  flush()
+  return notUnderstood
+}
+
+/** Reads `request.text` into the request fields it understood, applying
+ * only the items of `request.fields`. A sentence over
+ * `REQUEST_READING_MAX_LENGTH` is `invalid_usage`. */
+export const readRequest = (
+  request: RequestReadingInput,
+): Effect.Effect<
+  RequestReading,
+  EngineError | SqliteError,
+  Sqlite | Environment
+> =>
+  Effect.gen(function* () {
+    if (request.text.length > REQUEST_READING_MAX_LENGTH)
+      return yield* engineError(
+        'invalid_usage',
+        `a frase tem mais de ${REQUEST_READING_MAX_LENGTH} caracteres`,
+      )
+    const { taste, ...prepared } = yield* prepareReading(request)
+    const { sentence, numbers } = prepared
+    const { tokens } = sentence
+
+    const all = wordsOf(sentence, numbers, () => false)
+    const tasteClauses = new Set(
+      tokens.flatMap((token, i) =>
+        all.longest(i, taste) > 0 ? [token.clause] : [],
+      ),
+    )
+    const reading: Reading = {
+      ...prepared,
+      blocked: (i) => tasteClauses.has(tokens[i]?.clause ?? -1),
+    }
+    const used = yield* claimWords(reading)
 
     const applied = new Set(request.fields ?? READERS.map((r) => r.field))
-    const chosen = [...new Set(used.values())].sort((a, b) => a.start - b.start)
-    const quoted = ({ quote, start, end }: Claim) =>
-      all.text(quote?.start ?? start, quote?.end ?? end)
-    const understood: ReadItem[] = []
-    const ambiguities: ReadAmbiguity[] = []
-    for (const claim of chosen) {
-      if (!applied.has(claim.field)) continue
-      const words = quoted(claim)
-      if ('candidates' in claim.found)
-        ambiguities.push({
-          field: claim.field,
-          words,
-          candidates: claim.found.candidates,
-        })
-      else
-        understood.push({
-          field: claim.field,
-          words,
-          label: claim.found.label,
-          request: claim.found.request,
-        })
-    }
-
-    const notUnderstood: string[] = []
-    let run: { start: number; end: number } | undefined
-    const flush = () => {
-      if (run) notUnderstood.push(all.text(run.start, run.end))
-      run = undefined
-    }
-    for (const [i, token] of tokens.entries()) {
-      const claim = used.get(i)
-      if (claim || (run && tokens[run.start]?.clause !== token.clause)) flush()
-      // An item of a field not applied comes back whole, as typed.
-      if (claim && !applied.has(claim.field) && claim.start === i)
-        notUnderstood.push(all.text(claim.start, claim.end))
-      if (claim || context.fillers.has(token.key)) continue
-      run = { start: run?.start ?? i, end: i + 1 }
-    }
-    flush()
+    const { understood, ambiguities } = itemsOf(used, applied, all)
+    const notUnderstood = notUnderstoodOf(reading, used, applied, all)
 
     return {
       text: request.text,

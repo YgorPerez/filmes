@@ -80,7 +80,9 @@ describe('cartaz --filmes (test_cartaz_mostrados)', () => {
       4, 1,
     ])
   })
+})
 
+describe('cartaz --filmes (test_cartaz_mostrados)', () => {
   test('a film outside the Recomendação, or repeated, is invalid_usage and the Session stays', async () => {
     const fixture = useFixture()
     const session = await recommend(fixture, {
@@ -124,7 +126,9 @@ describe('cartaz --filmes (test_cartaz_mostrados)', () => {
       { position: 1, id: first.id, title: first.title },
     ])
   })
+})
 
+describe('cartaz --filmes (test_cartaz_mostrados)', () => {
   test('a closed Session is shown but its shown films stay as they were', async () => {
     const fixture = useFixture()
     const session = await recommend(fixture, { attendees: ['dono'] })
@@ -194,7 +198,9 @@ describe('the Cartaz model', () => {
       expect(strengths).toEqual([...strengths].sort((a, b) => a - b))
     }
   })
+})
 
+describe('the Cartaz model', () => {
   test('Presentes with the same strongest Evidence share one line', async () => {
     const fixture = useFixture()
     const session = await recommend(fixture, { attendees: ['dono', 'iara'] })
@@ -236,7 +242,9 @@ describe('the Cartaz model', () => {
       },
     ])
   })
+})
 
+describe('the Cartaz model', () => {
   test('the top reads the request', async () => {
     const fixture = useFixture()
     const session = await recommend(fixture, {
@@ -281,7 +289,9 @@ describe('the Cartaz model', () => {
       'sombrio',
     ])
   })
+})
 
+describe('the Cartaz model', () => {
   test('what another Clima took off reads so', async () => {
     const fixture = useFixture()
     const first = await recommend(fixture, { attendees: ['iara'], count: 10 })
@@ -329,7 +339,9 @@ describe('the Cartaz model', () => {
     ])
     expect(out.warnings).toEqual([])
   })
+})
 
+describe('the Cartaz model', () => {
   test('a redone version has the new mark and what left and why', async () => {
     const fixture = useFixture()
     const first = await recommend(fixture, { attendees: ['dono', 'iara'] })
@@ -381,7 +393,9 @@ describe('the Cartaz model', () => {
     expect(reasons).toContain(`1 ${f[0]!.title} (seu Veto: “não vejo esse”)`)
     expect(reasons).toContain(`2 ${f[1]!.title} (até 1h50)`)
   })
+})
 
+describe('the Cartaz model', () => {
   test('the top says the references while the similar holds', async () => {
     const fixture = useFixture()
     const first = await recommend(fixture, {
@@ -428,7 +442,9 @@ describe('the Cartaz model', () => {
       speech: null,
     })
   })
+})
 
+describe('the Cartaz model', () => {
   test('another Presente’s Veto and a Já visto of two read by name', async () => {
     const fixture = useFixture()
     const first = await recommend(fixture, {
@@ -465,7 +481,9 @@ describe('the Cartaz model', () => {
       'Iara e Teo já viram',
     ])
   })
+})
 
+describe('the Cartaz model', () => {
   test('a film the Catálogo no longer has is invalid_data', async () => {
     const fixture = useFixture()
     const session = await recommend(fixture, { attendees: ['dono'] })
@@ -510,7 +528,9 @@ describe('the Cartaz model', () => {
     ])
     expect(request.parts.join(' · ')).toBe('nota 7+ no IMDb')
   })
+})
 
+describe('the Cartaz model', () => {
   test('a Session written by hand with no context reads as an empty request', async () => {
     const fixture = useFixture()
     const session = await recommend(fixture, { attendees: ['dono'] })
@@ -558,7 +578,9 @@ describe('the Cartaz model', () => {
       ['A', 'Você', 3],
     ])
   })
+})
 
+describe('the Cartaz model', () => {
   test('votes read as the page writes them, rounding half to even', () => {
     expect([870, 2_500, 3_500, 1_250_000, 1_350_000].map(votesText)).toEqual([
       '870',

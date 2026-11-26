@@ -98,7 +98,9 @@ describe('cartaz responder (test_cartaz_responder)', () => {
     const iara = await view(fixture, 'iara')
     expect(iara.ratings?.every((n) => n.filmId !== f[1]!.id)).toBe(true)
   })
+})
 
+describe('cartaz responder (test_cartaz_responder)', () => {
   test('stars, comments and acrescentar stay in the Session’s version', async () => {
     const fixture = useFixture()
     const { id, f } = await open(fixture, 'iara')
@@ -152,7 +154,9 @@ describe('cartaz responder (test_cartaz_responder)', () => {
 
     expect(await view(fixture, 'dono')).toEqual(before)
   })
+})
 
+describe('cartaz responder (test_cartaz_responder)', () => {
   test('only stars or comments ask for no regenerate', async () => {
     const fixture = useFixture()
     const { id, f } = await open(fixture, 'iara')
@@ -185,7 +189,9 @@ describe('cartaz responder (test_cartaz_responder)', () => {
     expect(out.keep).not.toContain(f[3]!.id)
     expect(front(fixture, id)['swapped']).toEqual([f[3]!.id])
   })
+})
 
+describe('cartaz responder (test_cartaz_responder)', () => {
   test('an old version’s text counts by film and ignores the Trocar of what left', async () => {
     const fixture = useFixture()
     const { id, f: v1 } = await open(fixture, 'iara')
@@ -234,7 +240,9 @@ describe('cartaz responder (test_cartaz_responder)', () => {
     expect(top['replies']).toBeUndefined()
     expect(top['versions'][0]['replies'][0]['films'][0]['stars']).toBe(5)
   })
+})
 
+describe('cartaz responder (test_cartaz_responder)', () => {
   test('a text with conversation around it is read from the Cartaz line', async () => {
     const fixture = useFixture()
     const { id, f } = await open(fixture, 'iara')
@@ -284,7 +292,9 @@ describe('cartaz responder (test_cartaz_responder)', () => {
 
     expect(outcome.output).toMatchObject({ error: { code: 'closed_session' } })
   })
+})
 
+describe('cartaz responder (test_cartaz_responder)', () => {
   test('Já vi of someone who was not there is an error and nothing is written', async () => {
     const fixture = useFixture()
     const { id, f } = await open(fixture, 'iara')
@@ -301,7 +311,9 @@ describe('cartaz responder (test_cartaz_responder)', () => {
     expect(outcome.exitCode).toBe(2)
     expect(readFileSync(file, 'utf8')).toBe(before)
   })
+})
 
+describe('cartaz responder (test_cartaz_responder)', () => {
   test('end to end, the text the Cartaz builds is the one the reply reads', async () => {
     const fixture = useFixture()
     const { id, f } = await open(fixture, 'iara')
@@ -360,7 +372,9 @@ describe('cartaz responder (test_cartaz_responder)', () => {
       out.dropped.map((s) => [s.id, s.cause]),
     )
   })
+})
 
+describe('cartaz responder (test_cartaz_responder)', () => {
   test('pasting the same text again duplicates neither the reply nor the Já visto', async () => {
     const fixture = useFixture()
     const { id, f } = await open(fixture, 'iara')
@@ -408,7 +422,9 @@ describe('cartaz responder (test_cartaz_responder)', () => {
       out.warnings.some((w) => w.includes(outside) && w.includes('tela')),
     ).toBe(true)
   })
+})
 
+describe('cartaz responder (test_cartaz_responder)', () => {
   test('what she thought becomes her specific Declarado about the film', async () => {
     const fixture = useFixture()
     const { id, f } = await open(fixture, 'iara')
@@ -453,7 +469,9 @@ describe('cartaz responder (test_cartaz_responder)', () => {
       .map((d) => [d.reaction, d.text])
     expect(stated).toEqual([['dislike', 'pensei melhor, ruim']])
   })
+})
 
+describe('cartaz responder (test_cartaz_responder)', () => {
   test('each Pessoa of the Já vi has her own Nota and what she thought', async () => {
     const fixture = useFixture()
     const { id, f } = await open(fixture, 'iara')
@@ -507,7 +525,9 @@ describe('cartaz responder (test_cartaz_responder)', () => {
     ])
     expect([out.regenerate, out.keep]).toEqual([true, f.map((x) => x.id)])
   })
+})
 
+describe('cartaz responder (test_cartaz_responder)', () => {
   test('another Clima redoes the whole list, and the same one asks nothing', async () => {
     const fixture = useFixture()
     const { id } = await open(fixture, 'iara')
@@ -627,7 +647,9 @@ describe('the text the Cartaz copies (test_cartaz_responde)', () => {
         '5 tt9000108 · estrelas: 2\n',
     )
   })
+})
 
+describe('the text the Cartaz copies (test_cartaz_responde)', () => {
   test('each marked Pessoa has her own Nota and what she thought, even with several', () => {
     expect(
       billboardText(
@@ -680,7 +702,9 @@ describe('the text the Cartaz copies (test_cartaz_responde)', () => {
       ),
     ).toBe('#cartaz s v1\n1 tt1 · já vi: bruno=10 · achou bruno: obra-prima\n')
   })
+})
 
+describe('the text the Cartaz copies (test_cartaz_responde)', () => {
   test('the Climas the Dono chose go after acrescentar; none is nenhum', () => {
     const chose = (moods: string[]) =>
       billboardText({ ...state('s', 2, ['bruno'], 'chegou a Ana'), moods })

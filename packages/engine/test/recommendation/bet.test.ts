@@ -118,7 +118,9 @@ describe('the draw', () => {
       drawBets('any', [candidate('a', 6.9, 3), candidate('b', 7, 0)], 7),
     ).toEqual(['b'])
   })
+})
 
+describe('the draw', () => {
   test('in a group, the mean of the Presentes with a prediction', () => {
     const film: BetCandidate = {
       id: 'a',
@@ -185,7 +187,9 @@ describe('the bet in the Recomendação', () => {
     expect(ids(out)).not.toContain(PEQUENOS_MILAGRES)
     expect(out.films).toHaveLength(5)
   })
+})
 
+describe('the bet in the Recomendação', () => {
   test('a prediction below `min_predicted` is no bet', async () => {
     const fixture = useFixture()
     const out = await bruno(
@@ -231,7 +235,9 @@ describe('the bet in the Recomendação', () => {
     expect(bets(out)).toEqual([[5, PEQUENOS_MILAGRES]])
     expect(ids(out).slice(0, 4)).toEqual(ids(plain))
   })
+})
 
+describe('the bet in the Recomendação', () => {
   test('position 0 turns the bet off', async () => {
     const fixture = useFixture()
     const out = await bruno(
@@ -311,7 +317,9 @@ describe('the bet in the Session', () => {
 
     expect(bets(again)).toEqual([[5, PEQUENOS_MILAGRES]])
   })
+})
 
+describe('the bet in the Session', () => {
   test('a kept bet stays the bet', async () => {
     const fixture = useFixture()
     const vars = betWeights(fixture)
@@ -412,7 +420,9 @@ feedback:
       (await draw()).filter((out) => bets(out).length).length,
     ).toBeGreaterThan(8)
   })
+})
 
+describe('the bet record', () => {
   test('a rated Já vi teaches from the Session file and can be corrected', async () => {
     const fixture = useFixture()
     const vars = betWeights(
@@ -460,7 +470,9 @@ feedback:
     writeFileSync(file(replay), readFileSync(file(fixture)))
     expect(bets(await replayDraw())).toEqual([[5, PEQUENOS_MILAGRES]])
   })
+})
 
+describe('the bet record', () => {
   test.each(['keep', 'whole screen', 'single swap', 'Cartaz Trocar'])(
     'learns only from an explicit Trocar: %s',
     async (action) => {
@@ -497,7 +509,9 @@ feedback:
       )
     },
   )
+})
 
+describe('the bet record', () => {
   test.each(['personSeen', 'personRate'] as const)(
     'learns from a Nota recorded through %s and the drop in the Session file',
     async (action) => {
@@ -541,7 +555,9 @@ feedback:
       expect(bets(await draw())).toEqual(bets(learned))
     },
   )
+})
 
+describe('the bet record', () => {
   test('a Nota from a recorded pairwise answer also teaches through a seen drop', async () => {
     const fixture = useFixture()
     const vars = betWeights(
@@ -590,7 +606,9 @@ feedback:
     )
     expect(bets(await draw())).toEqual([])
   })
+})
 
+describe('the bet record', () => {
   test('an unrelated earlier Nota does not turn a legacy Já vi into a bet outcome', async () => {
     const fixture = useFixture()
     const vars = betWeights(
@@ -625,7 +643,9 @@ feedback:
       [5, PEQUENOS_MILAGRES],
     ])
   })
+})
 
+describe('the bet record', () => {
   test('a good record lowers the minimum predicted rating down to its configured floor', async () => {
     const fixture = useFixture()
     const settings = [
@@ -655,7 +675,9 @@ feedback:
     )
     expect(bets(bounded)).toEqual([])
   })
+})
 
+describe('the bet record', () => {
   test('the engine explains a cautious bet in the recommendation, Session and Cartaz', async () => {
     const fixture = useFixture()
     const vars = betWeights(fixture, [
@@ -705,7 +727,9 @@ feedback:
     const out = await bruno(fixture, vars, { seed: 'next-session' })
     expect(bets(out)).toEqual([[5, PEQUENOS_MILAGRES]])
   })
+})
 
+describe('the bet record', () => {
   test('a string "false" does not mark a kept bet as cautious', async () => {
     const fixture = useFixture()
     const vars = betWeights(fixture)

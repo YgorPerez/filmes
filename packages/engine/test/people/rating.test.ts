@@ -121,7 +121,9 @@ describe('the Notas of the rating screen', () => {
     const queue = await fixture.ok(ratingQueue({ person: 'teo', limit: 3 }))
     expect(queue.films.map((f) => f.id)).not.toContain('tt9000601')
   })
+})
 
+describe('the Notas of the rating screen', () => {
   test('refuses a Nota off the scale and a film not in the Catálogo, writing nothing', async () => {
     const fixture = useFixture()
     const before = readFileSync(join(fixture.data, 'people', 'teo.md'), 'utf8')

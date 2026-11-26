@@ -122,7 +122,9 @@ describe('OMDb', () => {
       { Response: 'False', Error: 'Movie not found!' },
     ])
   })
+})
 
+describe('OMDb', () => {
   test.each(['Invalid API key!', 'Request limit reached!'])(
     '"%s" switches OMDb off at once, for every film',
     async (error) => {
@@ -237,7 +239,9 @@ describe('transient failures', () => {
       at: [0, 2000, 6000],
     })
   })
+})
 
+describe('transient failures', () => {
   test('a dropped connection is transient, and the warning names its cause', async () => {
     const fixture = useFixture()
     const refused = () =>
@@ -323,7 +327,9 @@ describe('Does the Dog Die', () => {
       ['https://www.doesthedogdie.com/media/7105', 'ddd-key'],
     ])
   })
+})
 
+describe('Does the Dog Die', () => {
   test.each([
     ['no item', () => json({ items: [] })],
     ['a 404', () => new Response('', { status: 404 })],
@@ -371,18 +377,19 @@ describe('Does the Dog Die', () => {
   })
 })
 
-describe('TMDB', () => {
-  const page = (n: number, total: number) =>
-    json({
-      page: n,
-      total_pages: total,
-      results: [{ id: n * 10 }, { id: n * 10 + 1 }],
-    })
+/** One page of a TMDB search, of `total`. */
+const tmdbPage = (n: number, total: number) =>
+  json({
+    page: n,
+    total_pages: total,
+    results: [{ id: n * 10 }, { id: n * 10 + 1 }],
+  })
 
+describe('TMDB', () => {
   test('a search reads every page into one cached entry, with a v3 key in the query', async () => {
     const fixture = useFixture()
     const net = fakeFetch((url) =>
-      page(Number(new URL(url).searchParams.get('page') ?? 1), 3),
+      tmdbPage(Number(new URL(url).searchParams.get('page') ?? 1), 3),
     )
 
     const films = await fixture.ok(
@@ -407,7 +414,9 @@ describe('TMDB', () => {
     expect(row?.['chave']).toMatch(/^filme-acao-reacao-2020-[0-9a-f]{12}$/)
     expect(row?.['expira_em']).toBe('2027-05-21')
   })
+})
 
+describe('TMDB', () => {
   test('a v4 token goes in the Authorization header', async () => {
     const fixture = useFixture()
     const token = 'eyJ'.padEnd(41, 'x')
@@ -433,11 +442,15 @@ describe('TMDB', () => {
       },
     ])
   })
+})
 
+describe('TMDB', () => {
   test('a failed later page fails the whole search', async () => {
     const fixture = useFixture()
     const net = fakeFetch((url) =>
-      url.includes('page=2') ? new Response('', { status: 400 }) : page(1, 2),
+      url.includes('page=2')
+        ? new Response('', { status: 400 })
+        : tmdbPage(1, 2),
     )
 
     const answer = await fixture.ok(
@@ -463,7 +476,7 @@ describe('TMDB', () => {
   test('an empty later page adds nothing', async () => {
     const fixture = useFixture()
     const net = fakeFetch((url) =>
-      url.includes('page=2') ? json({}) : page(1, 2),
+      url.includes('page=2') ? json({}) : tmdbPage(1, 2),
     )
 
     const films = await fixture.ok(
@@ -477,7 +490,9 @@ describe('TMDB', () => {
 
     expect(films).toEqual([{ id: 10 }, { id: 11 }])
   })
+})
 
+describe('TMDB', () => {
   test('the card asks /find in pt-BR, and warns as the card', async () => {
     const fixture = useFixture()
     const net = fakeFetch(() => new Response('', { status: 400 }))

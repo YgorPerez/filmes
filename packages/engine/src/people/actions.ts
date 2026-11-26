@@ -437,6 +437,44 @@ export interface ReportResult {
   readonly new: boolean
 }
 
+/** The Declarado or Relato the input states, checked against its flags;
+ * the label and `specific` come from the Catalog when it names a target. */
+const statementOf = (
+  input: StatementInput,
+  defaultSource: string,
+  db: Connection | null,
+) =>
+  Effect.gen(function* () {
+    const target = input.target || null
+    const reaction = input.reaction ?? null
+    if (reaction !== null && target === null)
+      return yield* invalidUsage('--reacao precisa de --filme ou --entidade')
+    if (input.review && input.specific === false)
+      return yield* invalidUsage(
+        'review ou tag da própria Pessoa é sempre específico',
+      )
+    const source = yield* sourceOf(input.source ?? defaultSource)
+    let label: string | null = null
+    let specific = input.specific
+    if (target !== null) {
+      const connection = yield* required(db)
+      label = yield* targetLabel(connection, target)
+      if (specific === undefined)
+        specific = !(yield* onlyGenre(connection, target))
+    }
+    if (input.review) specific = true
+    const statement: Statement = {
+      date: yield* dateOf(input.date),
+      source,
+      specific: specific ?? false,
+      text: yield* textOf(input.text),
+      reaction,
+      target,
+      label,
+    }
+    return statement
+  })
+
 const recordStatement = (
   table: StatementTable,
   input: StatementInput,
@@ -456,35 +494,7 @@ const recordStatement = (
           return yield* invalidUsage(
             'o Dono falando do próprio gosto é Declarado, não Relato',
           )
-        const target = input.target || null
-        const reaction = input.reaction ?? null
-        if (reaction !== null && target === null)
-          return yield* invalidUsage(
-            '--reacao precisa de --filme ou --entidade',
-          )
-        if (input.review && input.specific === false)
-          return yield* invalidUsage(
-            'review ou tag da própria Pessoa é sempre específico',
-          )
-        const source = yield* sourceOf(input.source ?? defaultSource)
-        let label: string | null = null
-        let specific = input.specific
-        if (target !== null) {
-          const connection = yield* required(db)
-          label = yield* targetLabel(connection, target)
-          if (specific === undefined)
-            specific = !(yield* onlyGenre(connection, target))
-        }
-        if (input.review) specific = true
-        const statement: Statement = {
-          date: yield* dateOf(input.date),
-          source,
-          specific: specific ?? false,
-          text: yield* textOf(input.text),
-          reaction,
-          target,
-          label,
-        }
+        const statement = yield* statementOf(input, defaultSource, db)
         const section = table === 'declarados' ? 'stated' : 'reports'
         const { person: updated, added } = yield* addItem(
           person,

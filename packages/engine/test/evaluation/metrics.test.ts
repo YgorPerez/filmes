@@ -137,7 +137,9 @@ describe('evaluate: predicted-rating error', () => {
       /- Erro médio \(Pessoas\): 1[.,]85 em 4 filmes, de 1 a 10; sem a Calibração, 1[.,]96\./,
     )
   })
+})
 
+describe('evaluate: predicted-rating error', () => {
   test('calibrates on the Notas before the cut only', async () => {
     const fixture = useFixture()
     // Quim alone. With all 4 of his Notas he has 4 comparable films and a
@@ -215,7 +217,9 @@ describe('evaluate: similarity of the top 5', () => {
     expect(similarity).toBeGreaterThan(0)
     expect(similarity).toBeLessThan(1)
   })
+})
 
+describe('evaluate: similarity of the top 5', () => {
   test('falls with MMR in the order, and Recall@50 stays (#177)', async () => {
     const fixture = useFixture()
     const before = await evaluated(fixture)

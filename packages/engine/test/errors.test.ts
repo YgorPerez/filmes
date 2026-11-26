@@ -72,7 +72,9 @@ describe('the error contract', () => {
       },
     })
   })
+})
 
+describe('the error contract', () => {
   test('without a database, the error says how to build it', async () => {
     const fixture = useFixture()
 

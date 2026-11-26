@@ -12,7 +12,12 @@ import { yamlToJson, type YamlValue } from '../data/yaml.ts'
 import { engineError, type EngineError } from '../runtime/EngineError.ts'
 import type { Environment } from '../runtime/Environment.ts'
 import { Run } from '../runtime/Run.ts'
-import { Sqlite, type Connection, type SqliteError } from '../sqlite/Sqlite.ts'
+import {
+  Sqlite,
+  type Connection,
+  type Row,
+  type SqliteError,
+} from '../sqlite/Sqlite.ts'
 import { TMDB_ATTRIBUTION, Tmdb } from '../sources/Tmdb.ts'
 import {
   ensureLetterboxdTables,
@@ -26,6 +31,7 @@ import {
   saveResolutions,
   statusOf,
   type Resolution,
+  type Resolutions,
 } from './letterboxd-resolutions.ts'
 
 /** A film waiting in the queue, and the Pessoas who have it. */
@@ -170,6 +176,95 @@ const filmOf = (
     )
   })
 
+/** No queued item: the same decision as the one recorded answers it
+ * again, with `new: false`; anything else is `item_not_queued`. */
+const repeatedDecision = (
+  id: string,
+  decided: Decided,
+  resolutions: Resolutions,
+): Effect.Effect<QueueDecision, EngineError> => {
+  const earlier = resolutions.get(id)
+  const same =
+    earlier !== undefined &&
+    (decided.film === undefined
+      ? statusOf(earlier) === 'discarded' &&
+        earlier.get('discard_reason') === decided.reason
+      : earlier.get('input') === decided.film)
+  if (same)
+    return Effect.succeed({
+      ...decisionJson(earlier),
+      new: false,
+    } as unknown as QueueDecision)
+  return Effect.fail(
+    engineError(
+      'item_not_queued',
+      `'${id}' não está na fila; consulte \`fila ver\``,
+    ),
+  )
+}
+
+/** The resolution's fields for the queued item, and whether the film came
+ * through TMDB. */
+const decisionFields = (
+  db: Connection,
+  id: string,
+  item: Row,
+  decided: Decided,
+) =>
+  Effect.gen(function* () {
+    const year = item.ano === null ? null : Number(item.ano)
+    const fields: [string, YamlValue][] = [
+      ['id', id],
+      ['name', String(item.nome)],
+      ['year', year === null ? null : pyInt(year)],
+      ['date', (yield* Run).today],
+      ['source', 'Dono'],
+      ['kind', 'stated'],
+    ]
+    let usedTmdb = false
+    if (decided.film === undefined) {
+      const reason = pyStrip(decided.reason)
+      if (!reason)
+        return yield* engineError(
+          'invalid_usage',
+          'informe a razão do descarte',
+        )
+      fields.push(['status', 'discarded'], ['discard_reason', reason])
+    } else {
+      const found = yield* filmOf(db, decided.film)
+      usedTmdb = found.usedTmdb
+      fields.push(
+        ['status', 'confirmed'],
+        ['film', found.film],
+        ['input', decided.film],
+      )
+    }
+    return { fields, usedTmdb }
+  })
+
+/** `decide` inside the data write. */
+const recordDecision = (db: Connection, id: string, decided: Decided) =>
+  Effect.gen(function* () {
+    yield* ensureLetterboxdTables(db)
+    const item = yield* db.get(
+      "SELECT nome, ano FROM itens_letterboxd WHERE id = ? AND situacao = 'fila' LIMIT 1",
+      id,
+    )
+    const resolutions = yield* readResolutions
+    if (item === undefined)
+      return yield* repeatedDecision(id, decided, resolutions)
+    const { fields, usedTmdb } = yield* decisionFields(db, id, item, decided)
+    const resolution: Resolution = new Map(fields)
+    resolutions.set(id, resolution)
+    yield* loadLetterboxd(db, resolutions)
+    yield* saveResolutions(resolutions)
+    return {
+      ...decisionJson(resolution),
+      new: true,
+      attributions: usedTmdb ? [TMDB_ATTRIBUTION] : [],
+    } as unknown as QueueDecision
+  })
+
 /** Records the Dono's decision on a queued film and reloads the Letterboxd
  * Fatos (`decidir`). The same decision again answers what was recorded,
  * with `new: false`. */
@@ -187,69 +282,7 @@ const decide = (
     const action = decided.film === undefined ? 'discard' : 'confirm'
     return yield* writer.write(
       { author, message: `letterboxd queue ${action} ${id}` },
-      (db) =>
-        Effect.gen(function* () {
-          yield* ensureLetterboxdTables(db)
-          const item = yield* db.get(
-            "SELECT nome, ano FROM itens_letterboxd WHERE id = ? AND situacao = 'fila' LIMIT 1",
-            id,
-          )
-          const resolutions = yield* readResolutions
-          if (item === undefined) {
-            const earlier = resolutions.get(id)
-            const same =
-              earlier !== undefined &&
-              (decided.film === undefined
-                ? statusOf(earlier) === 'discarded' &&
-                  earlier.get('discard_reason') === decided.reason
-                : earlier.get('input') === decided.film)
-            if (same)
-              return {
-                ...decisionJson(earlier),
-                new: false,
-              } as unknown as QueueDecision
-            return yield* engineError(
-              'item_not_queued',
-              `'${id}' não está na fila; consulte \`fila ver\``,
-            )
-          }
-          const year = item.ano === null ? null : Number(item.ano)
-          const fields: [string, YamlValue][] = [
-            ['id', id],
-            ['name', String(item.nome)],
-            ['year', year === null ? null : pyInt(year)],
-            ['date', (yield* Run).today],
-            ['source', 'Dono'],
-            ['kind', 'stated'],
-          ]
-          let usedTmdb = false
-          if (decided.film === undefined) {
-            const reason = pyStrip(decided.reason)
-            if (!reason)
-              return yield* engineError(
-                'invalid_usage',
-                'informe a razão do descarte',
-              )
-            fields.push(['status', 'discarded'], ['discard_reason', reason])
-          } else {
-            const found = yield* filmOf(db, decided.film)
-            usedTmdb = found.usedTmdb
-            fields.push(
-              ['status', 'confirmed'],
-              ['film', found.film],
-              ['input', decided.film],
-            )
-          }
-          const resolution: Resolution = new Map(fields)
-          resolutions.set(id, resolution)
-          yield* loadLetterboxd(db, resolutions)
-          yield* saveResolutions(resolutions)
-          return {
-            ...decisionJson(resolution),
-            new: true,
-            attributions: usedTmdb ? [TMDB_ATTRIBUTION] : [],
-          } as unknown as QueueDecision
-        }),
+      (db) => recordDecision(db, id, decided),
     )
   })
 

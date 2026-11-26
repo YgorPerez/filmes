@@ -79,17 +79,17 @@ import type { EngineServices } from '../runtime/Engine.ts'
 import { engineError, type EngineError } from '../runtime/EngineError.ts'
 import type { Environment } from '../runtime/Environment.ts'
 import { Run } from '../runtime/Run.ts'
-import type { SqliteError } from '../sqlite/Sqlite.ts'
+import type { Connection, SqliteError } from '../sqlite/Sqlite.ts'
 import { recordBetMarks } from '../sessions/bet-record.ts'
 import { syncSession } from '../sessions/database.ts'
 import { sessionOwner } from '../sessions/feedback.ts'
 import {
   currentVersion,
-  isOpen,
-  readSession,
+  readOpenSession,
   sessionRelative,
   shownFilms,
   writeSession,
+  type SessionFile,
   type ShownFilm,
 } from '../sessions/file.ts'
 import { authorFor } from '../sessions/open.ts'
@@ -459,6 +459,371 @@ const changedMoods = (
     : names
 }
 
+/** The open Session and the version the text is of. */
+interface OpenedVersion {
+  readonly session: SessionFile
+  readonly front: Map<string, YamlValue>
+  readonly current: YamlMapping
+  readonly currentNumber: number
+  readonly versions: YamlValue[]
+  readonly version: YamlMapping
+}
+
+/** Reads the Session, which must be open, and finds the text's version. */
+const openVersion = (
+  id: string,
+  read: ReadReply,
+): Effect.Effect<OpenedVersion, EngineError, Environment> =>
+  Effect.gen(function* () {
+    const { session, front } = yield* readOpenSession(
+      id,
+      'recomende sem --sessao para abrir outra',
+    )
+    const current = currentVersion(front)
+    const currentNumber = Number(yamlToJson(current.get('version') ?? null))
+    if (!(read.version >= 1 && read.version <= currentNumber))
+      return yield* invalid(`a Sessão ${id} não tem a versão ${read.version}`)
+    const versions = [...listOf(front.get('versions'))]
+    const earlierVersion = versions[read.version - 1]
+    const version: YamlMapping =
+      read.version === currentNumber
+        ? current
+        : isMapping(earlierVersion)
+          ? earlierVersion
+          : new Map()
+    return { session, front, current, currentNumber, versions, version }
+  })
+
+/** A Já vi of one Pessoa, as the text marked it. */
+interface AskedSeen {
+  readonly slug: string
+  readonly film: string
+  readonly rating: number | null
+  readonly thought: string | null
+}
+
+/** The Já vi marks of the films, Pessoa by Pessoa. */
+const askedSeen = (
+  films: ReadonlyArray<ReadMarks>,
+  attendees: ReadonlyArray<string>,
+): Effect.Effect<AskedSeen[], EngineError, Environment> =>
+  Effect.gen(function* () {
+    const asked: AskedSeen[] = []
+    for (const marks of films) {
+      if (!marks.seen) continue
+      const who = yield* whoSaw(marks, attendees)
+      const slugs = who.map(([slug]) => slug)
+      for (const [slug, rating] of who)
+        asked.push({
+          slug,
+          film: marks.id,
+          rating,
+          thought: yield* thoughtOf(marks, slug, slugs),
+        })
+    }
+    return asked
+  })
+
+/** One Já vi recorded on the Pessoa: the Já visto, its Nota and what she
+ * thought. */
+const markSeen = (
+  person: Person,
+  item: AskedSeen & { readonly label: string },
+  source: string,
+  today: string,
+) =>
+  Effect.gen(function* () {
+    const { film, thought, label } = item
+    let changed = false
+    const earlier = (yield* items(person, 'seen')).find(
+      (s) => s.source === source && s.target === film,
+    )
+    let rating = item.rating
+    if (earlier === undefined) {
+      const added: Seen = { date: today, source, target: film, label, rating }
+      person = (yield* addItem(person, 'seen', added)).person
+      changed = true
+    } else if (rating !== null && rating !== earlier.rating) {
+      // Pasting again updates the Nota of the Já visto the Cartaz
+      // recorded, adding no other.
+      person = yield* removeItem(person, 'seen', earlier)
+      person = (yield* addItem(person, 'seen', { ...earlier, rating })).person
+      changed = true
+    } else rating = earlier.rating
+    if (thought !== null) {
+      const updated = yield* withThought(person, {
+        date: today,
+        source,
+        specific: true,
+        text: thought,
+        reaction: reactionOf(rating),
+        target: film,
+        label,
+      })
+      if (updated !== null) {
+        person = updated
+        changed = true
+      }
+    }
+    return { person, changed, rating, isNew: earlier === undefined }
+  })
+
+/** Records the Já vistos, Notas and what each one thought
+ * (`_gravar_ja_vistos`). */
+const recordSeen = (
+  db: Connection | null,
+  id: string,
+  today: string,
+  asked: ReadonlyArray<AskedSeen>,
+) =>
+  Effect.gen(function* () {
+    const seen: ReplySeen[] = []
+    if (asked.length === 0) return seen
+    const connection = yield* required(db)
+    // Every label first: a film outside the Catálogo writes nothing.
+    const labelled = []
+    for (const item of asked)
+      labelled.push({
+        ...item,
+        label: yield* targetLabel(connection, item.film),
+      })
+    const people = new Map<string, Person>()
+    const changed = new Set<string>()
+    const toSave = new Map<string, Person>()
+    const source = `cartaz ${id}`
+    for (const item of labelled) {
+      const { slug, film, thought, label } = item
+      const marked = yield* markSeen(
+        people.get(slug) ?? (yield* resolvePerson(slug)),
+        item,
+        source,
+        today,
+      )
+      if (marked.changed) changed.add(slug)
+      people.set(slug, marked.person)
+      // In the order each Pessoa first changed, as Python saves them.
+      if (changed.has(slug)) toSave.set(slug, marked.person)
+      seen.push({
+        person: slug,
+        film,
+        title: label,
+        rating: marked.rating,
+        new: marked.isNew,
+        ...(thought !== null && { comment: thought }),
+      })
+    }
+    for (const person of toSave.values()) yield* savePersonAndSync(db, person)
+    return seen
+  })
+
+/** Records the stars, comments and acrescentar (`_gravar_resposta`); true
+ * when the Session changed. */
+const recordReplyMarks = (
+  db: Connection | null,
+  id: string,
+  read: ReadReply,
+  opened: OpenedVersion,
+  today: string,
+) =>
+  Effect.gen(function* () {
+    const reply = replyOf(read, today)
+    if (reply === null) return false
+    const { front, currentNumber, version, versions } = opened
+    const connection = yield* required(db)
+    const target: Map<string, YamlValue> =
+      read.version === currentNumber ? front : new Map(version)
+    const replies = listOf(target.get('replies'))
+    if (replies.some((r) => sameReply(r, reply))) return false
+    target.set('replies', [...replies, reply])
+    if (target !== front) {
+      versions[read.version - 1] = target
+      front.set('versions', versions)
+    }
+    yield* syncSession(connection, id, front)
+    return true
+  })
+
+/** The films to Trocar that are still on the current screen; the others
+ * are warned about. */
+const swapsOnScreen = (
+  films: ReadonlyArray<ReadMarks>,
+  screen: ReadonlyArray<ShownFilm>,
+  currentNumber: number,
+  warnings: string[],
+): Set<string> => {
+  const onScreen = new Set(screen.map((f) => f.id))
+  const swap = new Set<string>()
+  for (const marks of films) {
+    if (!marks.swap) continue
+    if (onScreen.has(marks.id)) swap.add(marks.id)
+    else
+      warnings.push(
+        `trocar ${marks.id} ignorado: o filme não está mais na tela da versão ${currentNumber}`,
+      )
+  }
+  return swap
+}
+
+/** The Aposta marks of the reply: each Já vi with a Nota, and each Trocar
+ * as the owner's. */
+const betMarksOf = (
+  seen: ReadonlyArray<ReplySeen>,
+  swap: ReadonlySet<string>,
+  owner: string | undefined,
+  today: string,
+) => [
+  ...seen.flatMap(({ person, film, rating }) =>
+    rating === null
+      ? []
+      : [{ person, film, rating, kind: 'seen' as const, date: today }],
+  ),
+  ...(owner === undefined
+    ? []
+    : [...swap].map((film) => ({
+        person: owner,
+        film,
+        rating: null,
+        kind: 'swapped' as const,
+        date: today,
+      }))),
+]
+
+/** What the reply recorded and what regenerating needs. */
+const replyResult = (input: {
+  readonly id: string
+  readonly read: ReadReply
+  readonly opened: OpenedVersion
+  readonly films: ReadonlyArray<ReadMarks>
+  readonly screen: ReadonlyArray<ShownFilm>
+  readonly seen: ReadonlyArray<ReplySeen>
+  readonly swap: ReadonlySet<string>
+  readonly moods: string[] | null
+  readonly warnings: ReadonlyArray<string>
+}): BillboardReply => {
+  const { id, read, opened, films, screen, seen, swap, moods } = input
+  const sawIt = new Map<string, string[]>()
+  for (const s of seen)
+    sawIt.set(s.film, [...(sawIt.get(s.film) ?? []), s.person])
+  const dropped: Array<ShownFilm & DropCause> = []
+  const keep: string[] = []
+  for (const film of screen) {
+    const people = sawIt.get(film.id)
+    if (people !== undefined) dropped.push({ ...film, cause: 'seen', people })
+    else if (swap.has(film.id)) dropped.push({ ...film, cause: 'swapped' })
+    else keep.push(film.id)
+  }
+  const titles = new Map(
+    [...shownFilms(opened.version), ...screen].map((f) => [f.id, f.title]),
+  )
+  const note = (m: ReadMarks) => ({
+    position: m.position,
+    id: m.id,
+    title: titles.get(m.id) ?? null,
+  })
+  return {
+    session: { id, file: sessionRelative(id) },
+    version: read.version,
+    currentVersion: opened.currentNumber,
+    regenerate: dropped.length > 0 || read.addition !== null || moods !== null,
+    keep: moods === null ? keep : [],
+    dropped,
+    addition: read.addition,
+    moods,
+    comments: films.flatMap((m) =>
+      m.comment === null ? [] : [{ ...note(m), comment: m.comment }],
+    ),
+    stars: films.flatMap((m) =>
+      m.stars === null ? [] : [{ ...note(m), stars: m.stars }],
+    ),
+    seen,
+    warnings: input.warnings,
+  }
+}
+
+/** The marked films that were on the screen of the text's version; the
+ * others are warned about. */
+const filmsOnVersion = (
+  read: ReadReply,
+  version: YamlMapping,
+  warnings: string[],
+): ReadMarks[] => {
+  const ofVersion = new Set(shownFilms(version).map((f) => f.id))
+  for (const marks of read.films)
+    if (!ofVersion.has(marks.id))
+      warnings.push(
+        `${marks.position} ${marks.id} ignorado: o filme não estava na tela da versão ${read.version}`,
+      )
+  return read.films.filter((m) => ofVersion.has(m.id))
+}
+
+/** What `answerBillboard` has read before the write. */
+interface ReplyInput {
+  readonly db: Connection | null
+  readonly id: string
+  readonly read: ReadReply
+  readonly chosen: {
+    readonly moods: ReadonlyArray<Mood>
+    readonly warnings: ReadonlyArray<string>
+  } | null
+  readonly today: string
+  readonly owner: string | undefined
+}
+
+/** Records the reply inside the write: everything `answerBillboard` does
+ * once the text is read. */
+const recordReply = (input: ReplyInput) =>
+  Effect.gen(function* () {
+    const { db, id, read, chosen, today, owner } = input
+    const opened = yield* openVersion(id, read)
+    const { front, current, currentNumber, version } = opened
+
+    const warnings: string[] = [...(chosen?.warnings ?? [])]
+    const moods = changedMoods(current, chosen?.moods)
+    const films = filmsOnVersion(read, version, warnings)
+
+    const asked = yield* askedSeen(films, slugsOf(version.get('attendees')))
+    const seen = yield* recordSeen(db, id, today, asked)
+    let write = yield* recordReplyMarks(
+      db,
+      id,
+      { ...read, films },
+      opened,
+      today,
+    )
+
+    // Trocar (`_gravar_trocados`).
+    const screen = shownFilms(current)
+    const swap = swapsOnScreen(films, screen, currentNumber, warnings)
+    if (swap.size > 0) {
+      yield* required(db)
+      const swapped = slugsOf(front.get('swapped'))
+      front.set('swapped', [
+        ...swapped,
+        ...[...swap]
+          .filter((f) => !swapped.includes(f))
+          .sort((a, b) => compareTuple([a], [b])),
+      ])
+      write = true
+    }
+    const betMarksChanged = recordBetMarks(
+      front,
+      betMarksOf(seen, swap, owner, today),
+    )
+    if (write || betMarksChanged)
+      yield* writeSession(id, front, opened.session.body)
+    return replyResult({
+      id,
+      read,
+      opened,
+      films,
+      screen,
+      seen,
+      swap,
+      moods,
+      warnings,
+    })
+  })
+
 /** Records the text pasted from the Cartaz (`cartaz responder`): Já vistos,
  * Notas and what each one thought, stars, comments and acrescentar, and
  * the Trocar; says whether the Session must be regenerated and what stays.
@@ -480,253 +845,6 @@ export const answerBillboard = (
     const author = yield* authorFor(owner)
     return yield* writer.writeFiles(
       { author, message: `answer billboard ${id}` },
-      (db) =>
-        Effect.gen(function* () {
-          const session = yield* readSession(id).pipe(
-            Effect.catchIf(
-              (e) => e.code === 'unknown_session',
-              (e) => invalid(e.message),
-            ),
-          )
-          const front = new Map<string, YamlValue>(session.frontmatter)
-          if (!isOpen(front))
-            return yield* engineError(
-              'closed_session',
-              `a Sessão ${id} já tem Feedback; recomende sem --sessao para abrir outra`,
-            )
-          const current = currentVersion(front)
-          const currentNumber = Number(
-            yamlToJson(current.get('version') ?? null),
-          )
-          if (!(read.version >= 1 && read.version <= currentNumber))
-            return yield* invalid(
-              `a Sessão ${id} não tem a versão ${read.version}`,
-            )
-          const versions = [...listOf(front.get('versions'))]
-          const earlierVersion = versions[read.version - 1]
-          const version: YamlMapping =
-            read.version === currentNumber
-              ? current
-              : isMapping(earlierVersion)
-                ? earlierVersion
-                : new Map()
-
-          const warnings: string[] = [...(chosen?.warnings ?? [])]
-          const moods = changedMoods(current, chosen?.moods)
-          const ofVersion = new Set(shownFilms(version).map((f) => f.id))
-          for (const marks of read.films)
-            if (!ofVersion.has(marks.id))
-              warnings.push(
-                `${marks.position} ${marks.id} ignorado: o filme não estava na tela da versão ${read.version}`,
-              )
-          const films = read.films.filter((m) => ofVersion.has(m.id))
-
-          // Já vistos, Notas and what each one thought (`_gravar_ja_vistos`).
-          const asked: Array<{
-            slug: string
-            film: string
-            rating: number | null
-            thought: string | null
-          }> = []
-          const attendees = slugsOf(version.get('attendees'))
-          for (const marks of films) {
-            if (!marks.seen) continue
-            const who = yield* whoSaw(marks, attendees)
-            const slugs = who.map(([slug]) => slug)
-            for (const [slug, rating] of who)
-              asked.push({
-                slug,
-                film: marks.id,
-                rating,
-                thought: yield* thoughtOf(marks, slug, slugs),
-              })
-          }
-          const seen: ReplySeen[] = []
-          if (asked.length > 0) {
-            const connection = yield* required(db)
-            // Every label first: a film outside the Catálogo writes nothing.
-            const labelled = []
-            for (const item of asked)
-              labelled.push({
-                ...item,
-                label: yield* targetLabel(connection, item.film),
-              })
-            const people = new Map<string, Person>()
-            const changed = new Set<string>()
-            const toSave = new Map<string, Person>()
-            const source = `cartaz ${id}`
-            for (const {
-              slug,
-              film,
-              rating: given,
-              thought,
-              label,
-            } of labelled) {
-              let person = people.get(slug) ?? (yield* resolvePerson(slug))
-              const earlier = (yield* items(person, 'seen')).find(
-                (s) => s.source === source && s.target === film,
-              )
-              let rating = given
-              if (earlier === undefined) {
-                const added: Seen = {
-                  date: today,
-                  source,
-                  target: film,
-                  label,
-                  rating,
-                }
-                person = (yield* addItem(person, 'seen', added)).person
-                changed.add(slug)
-              } else if (rating !== null && rating !== earlier.rating) {
-                // Pasting again updates the Nota of the Já visto the Cartaz
-                // recorded, adding no other.
-                person = yield* removeItem(person, 'seen', earlier)
-                person = (yield* addItem(person, 'seen', {
-                  ...earlier,
-                  rating,
-                })).person
-                changed.add(slug)
-              } else rating = earlier.rating
-              if (thought !== null) {
-                const updated = yield* withThought(person, {
-                  date: today,
-                  source,
-                  specific: true,
-                  text: thought,
-                  reaction: reactionOf(rating),
-                  target: film,
-                  label,
-                })
-                if (updated !== null) {
-                  person = updated
-                  changed.add(slug)
-                }
-              }
-              people.set(slug, person)
-              // In the order each Pessoa first changed, as Python saves them.
-              if (changed.has(slug)) toSave.set(slug, person)
-              seen.push({
-                person: slug,
-                film,
-                title: label,
-                rating,
-                new: earlier === undefined,
-                ...(thought !== null && { comment: thought }),
-              })
-            }
-            for (const person of toSave.values())
-              yield* savePersonAndSync(db, person)
-          }
-
-          // Stars, comments and acrescentar (`_gravar_resposta`).
-          let write = false
-          const reply = replyOf({ ...read, films }, today)
-          if (reply !== null) {
-            const connection = yield* required(db)
-            const target: Map<string, YamlValue> =
-              read.version === currentNumber ? front : new Map(version)
-            const replies = listOf(target.get('replies'))
-            if (!replies.some((r) => sameReply(r, reply))) {
-              target.set('replies', [...replies, reply])
-              if (target !== front) {
-                versions[read.version - 1] = target
-                front.set('versions', versions)
-              }
-              yield* syncSession(connection, id, front)
-              write = true
-            }
-          }
-
-          // Trocar (`_gravar_trocados`).
-          const screen = shownFilms(current)
-          const onScreen = new Set(screen.map((f) => f.id))
-          const sawIt = new Map<string, string[]>()
-          for (const s of seen)
-            sawIt.set(s.film, [...(sawIt.get(s.film) ?? []), s.person])
-          const swap = new Set<string>()
-          for (const marks of films) {
-            if (!marks.swap) continue
-            if (onScreen.has(marks.id)) swap.add(marks.id)
-            else
-              warnings.push(
-                `trocar ${marks.id} ignorado: o filme não está mais na tela da versão ${currentNumber}`,
-              )
-          }
-          if (swap.size > 0) {
-            yield* required(db)
-            const swapped = slugsOf(front.get('swapped'))
-            front.set('swapped', [
-              ...swapped,
-              ...[...swap]
-                .filter((f) => !swapped.includes(f))
-                .sort((a, b) => compareTuple([a], [b])),
-            ])
-            write = true
-          }
-          const betMarksChanged = recordBetMarks(front, [
-            ...seen.flatMap(({ person, film, rating }) =>
-              rating === null
-                ? []
-                : [
-                    {
-                      person,
-                      film,
-                      rating,
-                      kind: 'seen' as const,
-                      date: today,
-                    },
-                  ],
-            ),
-            ...(owner === undefined
-              ? []
-              : [...swap].map((film) => ({
-                  person: owner,
-                  film,
-                  rating: null,
-                  kind: 'swapped' as const,
-                  date: today,
-                }))),
-          ])
-          if (write || betMarksChanged)
-            yield* writeSession(id, front, session.body)
-
-          const dropped: Array<ShownFilm & DropCause> = []
-          const keep: string[] = []
-          for (const film of screen) {
-            const people = sawIt.get(film.id)
-            if (people !== undefined)
-              dropped.push({ ...film, cause: 'seen', people })
-            else if (swap.has(film.id))
-              dropped.push({ ...film, cause: 'swapped' })
-            else keep.push(film.id)
-          }
-          const titles = new Map(
-            [...shownFilms(version), ...screen].map((f) => [f.id, f.title]),
-          )
-          const note = (m: ReadMarks) => ({
-            position: m.position,
-            id: m.id,
-            title: titles.get(m.id) ?? null,
-          })
-          return {
-            session: { id, file: sessionRelative(id) },
-            version: read.version,
-            currentVersion: currentNumber,
-            regenerate:
-              dropped.length > 0 || read.addition !== null || moods !== null,
-            keep: moods === null ? keep : [],
-            dropped,
-            addition: read.addition,
-            moods,
-            comments: films.flatMap((m) =>
-              m.comment === null ? [] : [{ ...note(m), comment: m.comment }],
-            ),
-            stars: films.flatMap((m) =>
-              m.stars === null ? [] : [{ ...note(m), stars: m.stars }],
-            ),
-            seen,
-            warnings,
-          }
-        }),
+      (db) => recordReply({ db, id, read, chosen, today, owner }),
     )
   })

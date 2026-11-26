@@ -84,7 +84,9 @@ describe('pairwiseQuestions', () => {
       ['tt9000601', 'tt9000202'],
     ])
   })
+})
 
+describe('pairwiseQuestions', () => {
   test('only for a Presente with fewer Notas than `min_ratings`: a guest or someone new', async () => {
     const fixture = useFixture()
     const session = await open(fixture)
@@ -160,7 +162,9 @@ describe('answerPairwise', () => {
       ),
     ).toEqual([])
   })
+})
 
+describe('answerPairwise', () => {
   test('refuses a pair it did not ask and a choice outside the pair', async () => {
     const fixture = useFixture()
     const session = await open(fixture)
@@ -181,28 +185,35 @@ describe('answerPairwise', () => {
   })
 })
 
-describe('decidePairwise', () => {
-  const answered = async (fixture: Fixture) => {
-    const session = await open(fixture)
-    for (const [films, choice] of [
-      [['tt9000201', 'tt9000101'], 'tt9000101'],
-      [['tt9000702', 'tt9000105'], null],
-      [['tt9000601', 'tt9000202'], 'tt9000601'],
-    ] as const)
-      await fixture.ok(
-        answerPairwise({ session, person: 'teo', films, choice }),
-      )
-    await fixture.ok(
-      answerPairwise({
-        session,
-        person: 'quim',
-        films: ['tt9000101', 'tt9000702'],
-        choice: 'tt9000702',
-      }),
-    )
-    return session
-  }
+/** A Session where Teo answered three pairs and Quim one. */
+const answered = async (fixture: Fixture) => {
+  const session = await open(fixture)
+  for (const [films, choice] of [
+    [['tt9000201', 'tt9000101'], 'tt9000101'],
+    [['tt9000702', 'tt9000105'], null],
+    [['tt9000601', 'tt9000202'], 'tt9000601'],
+  ] as const)
+    await fixture.ok(answerPairwise({ session, person: 'teo', films, choice }))
+  await fixture.ok(
+    answerPairwise({
+      session,
+      person: 'quim',
+      films: ['tt9000101', 'tt9000702'],
+      choice: 'tt9000702',
+    }),
+  )
+  return session
+}
 
+/** The Dono records Teo's answers. */
+const decideTeo = (fixture: Fixture, session: string) =>
+  fixture.ok(
+    decidePairwise({ session, person: 'teo', record: true }),
+    {},
+    { owner: 'bruno' },
+  )
+
+describe('decidePairwise', () => {
   test('lists the answers that wait for the Dono, by Presente', async () => {
     const fixture = useFixture()
     const session = await answered(fixture)
@@ -234,7 +245,9 @@ describe('decidePairwise', () => {
       },
     ])
   })
+})
 
+describe('decidePairwise', () => {
   test("the Dono's yes makes the chosen film a weak Nota and the other a Já visto", async () => {
     const fixture = useFixture()
     const session = await answered(fixture)
@@ -246,13 +259,10 @@ describe('decidePairwise', () => {
       }),
     )
 
-    expect(
-      await fixture.ok(
-        decidePairwise({ session, person: 'teo', record: true }),
-        {},
-        { owner: 'bruno' },
-      ),
-    ).toEqual({ person: 'teo', added: 3 })
+    expect(await decideTeo(fixture, session)).toEqual({
+      person: 'teo',
+      added: 3,
+    })
     const source = `perguntas par a par ${session}`
     expect(
       await rows(
@@ -276,13 +286,10 @@ describe('decidePairwise', () => {
         .answered,
     ).toBe(3)
     // Nothing waits any more: deciding again writes nothing.
-    expect(
-      await fixture.ok(
-        decidePairwise({ session, person: 'teo', record: true }),
-        {},
-        { owner: 'bruno' },
-      ),
-    ).toEqual({ person: 'teo', added: 0 })
+    expect(await decideTeo(fixture, session)).toEqual({
+      person: 'teo',
+      added: 0,
+    })
 
     // The Nota reaches other films with weak Força, through the director.
     // (The answered films themselves carry the Já visto, strong against.)
@@ -297,7 +304,9 @@ describe('decidePairwise', () => {
     expect(fromAnswers.length).toBeGreaterThan(0)
     for (const evidence of fromAnswers) expect(evidence.strength).toBe('weak')
   })
+})
 
+describe('decidePairwise', () => {
   test('a Nota from an answer stays weak in favour, whatever its percentile', async () => {
     const fixture = useFixture()
     const session = await answered(fixture)
@@ -316,11 +325,7 @@ describe('decidePairwise', () => {
         ],
       }),
     )
-    await fixture.ok(
-      decidePairwise({ session, person: 'teo', record: true }),
-      {},
-      { owner: 'bruno' },
-    )
+    await decideTeo(fixture, session)
     // From her file: the Nota keeps its mark, whatever the Fonte says.
     await fixture.ok(rebuild)
 
@@ -348,7 +353,9 @@ describe('decidePairwise', () => {
       expect(line.text).not.toContain('Pequenos Milagres')
     }
   })
+})
 
+describe('decidePairwise', () => {
   test('a Nota from an answer stays out of her scale: her other Notas read the same', async () => {
     const fixture = useFixture()
     const session = await answered(fixture)
@@ -368,11 +375,7 @@ describe('decidePairwise', () => {
         ],
       }),
     )
-    await fixture.ok(
-      decidePairwise({ session, person: 'teo', record: true }),
-      {},
-      { owner: 'bruno' },
-    )
+    await decideTeo(fixture, session)
 
     const { films } = await fixture.ok(
       recommend({ attendees: ['teo'], count: 50 }),
@@ -387,15 +390,13 @@ describe('decidePairwise', () => {
       expect(seed.contribution).toBeGreaterThan(0)
     }
   })
+})
 
+describe('decidePairwise', () => {
   test('a Nota from an answer decays with age, like any Nota', async () => {
     const fixture = useFixture()
     const session = await answered(fixture)
-    await fixture.ok(
-      decidePairwise({ session, person: 'teo', record: true }),
-      {},
-      { owner: 'bruno' },
-    )
+    await decideTeo(fixture, session)
 
     const source = `perguntas par a par ${session}`
     const seeds = async (today?: string) =>

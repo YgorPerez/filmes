@@ -103,6 +103,40 @@ const englishOut = (value: Tagged): Tagged => {
   return value
 }
 
+const rulerCalls: Record<string, (args: Tagged[]) => unknown> = {
+  forca_dito: ([said, specific, date, today]) =>
+    statedStrength(
+      kind(str(said)) as 'stated' | 'report',
+      bool(specific),
+      str(date),
+      str(today),
+    ),
+  mais_velha_que: ([date, years, today]) =>
+    isOlderThan(str(date), num(years), str(today)),
+  forca_caminho: ([count, predicate]) =>
+    pathStrength(num(count), link(str(predicate))),
+  forca_elenco: ([given, principal]) =>
+    castStrength(
+      strength(str(given)),
+      principal === null ? null : bool(principal),
+    ),
+  forca_elo: ([given, predicate]) =>
+    linkStrength(strength(str(given)), link(str(predicate))),
+  forca_ajustada: ([given, adjustment]) =>
+    adjustedStrength(strength(str(given)), level(str(adjustment))),
+  forca_vizinhanca: ([base, both, ceiling]) =>
+    neighborStrength(num(base), num(both), strength(str(ceiling))),
+  forca_tag_movielens: ([users]) => movielensTagStrength(num(users)),
+  forca_genoma: ([relevance]) => genomeStrength(num(relevance)),
+  descer: ([given]) => weaken(strength(str(given))),
+  subir: ([given]) => strengthen(strength(str(given))),
+  forca_genero_no_clima: () => moodGenreStrength(),
+  forca_nota_imdb: () => imdbRatingStrength(),
+  forca_parecido: () => similarStrength(),
+  forca_metadado_do_pedido: () => requestMetadataStrength(),
+  forca_palpite: () => guessStrength(),
+}
+
 describe('the Força ruler', () => {
   type RulerRow = { fn: string; args: Tagged[]; out: Tagged }
   /** Python read a Nota by absolute thresholds; the engine reads it by its
@@ -113,40 +147,6 @@ describe('the Força ruler', () => {
     (row) => !PERCENTILE.has(row.fn),
   )
 
-  const call: Record<string, (args: Tagged[]) => unknown> = {
-    forca_dito: ([said, specific, date, today]) =>
-      statedStrength(
-        kind(str(said)) as 'stated' | 'report',
-        bool(specific),
-        str(date),
-        str(today),
-      ),
-    mais_velha_que: ([date, years, today]) =>
-      isOlderThan(str(date), num(years), str(today)),
-    forca_caminho: ([count, predicate]) =>
-      pathStrength(num(count), link(str(predicate))),
-    forca_elenco: ([given, principal]) =>
-      castStrength(
-        strength(str(given)),
-        principal === null ? null : bool(principal),
-      ),
-    forca_elo: ([given, predicate]) =>
-      linkStrength(strength(str(given)), link(str(predicate))),
-    forca_ajustada: ([given, adjustment]) =>
-      adjustedStrength(strength(str(given)), level(str(adjustment))),
-    forca_vizinhanca: ([base, both, ceiling]) =>
-      neighborStrength(num(base), num(both), strength(str(ceiling))),
-    forca_tag_movielens: ([users]) => movielensTagStrength(num(users)),
-    forca_genoma: ([relevance]) => genomeStrength(num(relevance)),
-    descer: ([given]) => weaken(strength(str(given))),
-    subir: ([given]) => strengthen(strength(str(given))),
-    forca_genero_no_clima: () => moodGenreStrength(),
-    forca_nota_imdb: () => imdbRatingStrength(),
-    forca_parecido: () => similarStrength(),
-    forca_metadado_do_pedido: () => requestMetadataStrength(),
-    forca_palpite: () => guessStrength(),
-  }
-
   test('every function gives what regua.py gives', () => {
     const calls = rows.filter((row) => row.constant === undefined)
     expect(calls.length).toBeGreaterThanOrEqual(7_000)
@@ -154,7 +154,7 @@ describe('the Força ruler', () => {
       misses(
         calls.map((row) => ({ ...row, out: englishOut(row.out) })),
         ({ fn, args }) => {
-          const f = call[fn]
+          const f = rulerCalls[fn]
           if (!f) throw new Error(`no port of ${fn}`)
           return f(args)
         },
@@ -162,7 +162,7 @@ describe('the Força ruler', () => {
     ).toEqual([])
     // Every function of the ruler is in the vectors.
     expect(new Set(calls.map((row) => row.fn))).toEqual(
-      new Set(Object.keys(call)),
+      new Set(Object.keys(rulerCalls)),
     )
   })
 
@@ -176,6 +176,17 @@ describe('the Força ruler', () => {
       dated.filter((row) => today(row).endsWith('-02-29')).length,
     ).toBeGreaterThan(300)
   })
+})
+
+describe('the Força ruler', () => {
+  type RulerRow = { fn: string; args: Tagged[]; out: Tagged }
+  /** Python read a Nota by absolute thresholds; the engine reads it by its
+   * percentile on the Pessoa's scale (#172, `percentile.test.ts`), so the
+   * vectors of the Nota, seed and Feedback rulers no longer apply. */
+  const PERCENTILE = new Set(['forca_nota', 'forca_semente', 'forca_feedback'])
+  const rows = golden<RulerRow & { constant?: string }>('ruler', FOLDER).filter(
+    (row) => !PERCENTILE.has(row.fn),
+  )
 
   test('the constants are regua.py’s', () => {
     const constants = Object.fromEntries(

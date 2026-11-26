@@ -92,6 +92,38 @@ const writeSessionFile = (fixture: Fixture, id: string, text: string) => {
 // For the Bruno, Noite de Estreia comes 3rd: As Horas Lentas, Sal e
 // Ferrugem, Noite de Estreia.
 
+/** The Fatos of Noite de Estreia's Feedback, but the Já visto ones. */
+const firstFacts = (source: string) => [
+  // A 4 is moderate on the ruler; 2 is moderate against. From the
+  // Feedback, both go up to strong.
+  {
+    person: 'bruno',
+    text: 'deu 4 a Noite de Estreia (2022)',
+    source,
+    date: '2026-11-20',
+    strength: 'strong',
+    kind: 'rating',
+  },
+  {
+    person: 'iara',
+    text: 'deu 2 a Noite de Estreia (2022)',
+    source: `${source}, repassado pelo Dono`,
+    date: '2026-11-20',
+    strength: 'strong',
+    kind: 'rating',
+  },
+  // A Relato about a film: one level under the specific Declarado
+  // (moderate), and up for coming from the Feedback.
+  {
+    person: 'teo',
+    text: 'não gostou de Noite de Estreia (2022)',
+    source,
+    date: '2026-11-20',
+    strength: 'strong',
+    kind: 'report',
+  },
+]
+
 describe('feedback', () => {
   test('writes the chosen film and the reactions, and closes the Session', async () => {
     const fixture = useFixture()
@@ -135,7 +167,9 @@ describe('feedback', () => {
     expect(rest(after.front)).toEqual(rest(before.front))
     expect(await fixture.ok(openSessions)).toEqual({ sessions: [] })
   })
+})
 
+describe('feedback', () => {
   test('returns the Fatos written, one Força level up', async () => {
     const fixture = useFixture()
     const id = await open(fixture, {
@@ -164,39 +198,12 @@ describe('feedback', () => {
       out.facts
         .filter((f) => f.text !== 'já viu')
         .map((fact) => ({ ...fact, factId: undefined })),
-    ).toEqual([
-      // A 4 is moderate on the ruler; 2 is moderate against. From the
-      // Feedback, both go up to strong.
-      {
-        person: 'bruno',
-        text: 'deu 4 a Noite de Estreia (2022)',
-        source,
-        date: '2026-11-20',
-        strength: 'strong',
-        kind: 'rating',
-      },
-      {
-        person: 'iara',
-        text: 'deu 2 a Noite de Estreia (2022)',
-        source: `${source}, repassado pelo Dono`,
-        date: '2026-11-20',
-        strength: 'strong',
-        kind: 'rating',
-      },
-      // A Relato about a film: one level under the specific Declarado
-      // (moderate), and up for coming from the Feedback.
-      {
-        person: 'teo',
-        text: 'não gostou de Noite de Estreia (2022)',
-        source,
-        date: '2026-11-20',
-        strength: 'strong',
-        kind: 'report',
-      },
-    ])
+    ).toEqual(firstFacts(source))
     expect(out.facts.every((f) => f.factId)).toBe(true)
   })
+})
 
+describe('feedback', () => {
   test('a weak Nota from the Feedback goes up to moderate', async () => {
     const fixture = useFixture()
     const id = await open(fixture, { attendees: ['dono'] })
@@ -247,7 +254,9 @@ describe('feedback', () => {
       await query(fixture, 'SELECT pessoa FROM notas WHERE sessao IS NOT NULL'),
     ).toEqual([['bruno']])
   })
+})
 
+describe('feedback', () => {
   test('a Nota from the Feedback is a seed one level up', async () => {
     // Bruno gave 4 to Jardim Suspenso on Letterboxd (moderate). Giving 4 to
     // Vento Norte in the Feedback, the new Nota is a strong seed for Rio
@@ -281,7 +290,9 @@ describe('feedback', () => {
       ],
     })
   })
+})
 
+describe('feedback', () => {
   test('a film someone has seen weighs against and shows a strong Já visto', async () => {
     const fixture = useFixture()
     const request = { attendees: ['dono', 'iara'], count: 50 }
@@ -323,7 +334,9 @@ describe('feedback', () => {
       titles(before).indexOf('As Horas Lentas'),
     )
   })
+})
 
+describe('feedback', () => {
   test('"não vimos nada" closes the Session with no chosen film and no Fato', async () => {
     const fixture = useFixture()
     const id = await open(fixture, { attendees: ['dono', 'iara'] })
@@ -372,7 +385,9 @@ describe('feedback', () => {
       await errorOf(fixture, { session: id, film: 'Vento Norte' }),
     ).toEqual([1, 'closed_session'])
   })
+})
 
+describe('feedback', () => {
   test('refuses what does not fit the Session', async () => {
     const fixture = useFixture()
     const id = await open(fixture, { attendees: ['dono', 'iara'] })
@@ -397,7 +412,9 @@ describe('feedback', () => {
       expect(await errorOf(fixture, request)).toEqual(expected)
     expect((await fixture.ok(openSessions)).sessions[0]?.id).toBe(id)
   })
+})
 
+describe('feedback', () => {
   test('the messages name the option and the item', async () => {
     const fixture = useFixture()
     const id = await open(fixture, { attendees: ['dono', 'iara'] })
@@ -443,7 +460,9 @@ describe('feedback', () => {
       { person: 'teo', kind: 'report', reaction: 'neutral' },
     ])
   })
+})
 
+describe('feedback', () => {
   test('a failure to load the Fatos keeps the file open', async () => {
     const fixture = useFixture()
     const id = '2026-11-20-bruno'
@@ -482,7 +501,9 @@ describe('feedback', () => {
     expect(out.films.every((f) => f.id !== 'tt9000302')).toBe(true)
     expect(out.constraints['unseen']?.removed).toBe(1)
   })
+})
 
+describe('feedback', () => {
   test('finds by title a recommended film that left the Catalog', async () => {
     const fixture = useFixture()
     const id = '2026-11-20-bruno'
@@ -529,7 +550,9 @@ describe('feedback', () => {
     expect(out.facts[0]?.text).toBe('já viu')
     expect(readFile(fixture, id).front.chosen_in_shown).toBeNull()
   })
+})
 
+describe('feedback', () => {
   test('the films the Dono saw give the chosen film its shown position', async () => {
     const fixture = useFixture()
     const id = await open(fixture, { attendees: ['dono'] })
@@ -576,7 +599,9 @@ describe('feedback', () => {
     })
     expect(out.chosen?.id).toBe('tt9999998')
   })
+})
 
+describe('feedback', () => {
   test('the Recomendação wins over the Catalog for a shared title', async () => {
     const fixture = useFixture()
     const id = await open(fixture, { attendees: ['dono'] })
@@ -592,6 +617,69 @@ describe('feedback', () => {
     expect(out.chosen?.position).toBe(1)
   })
 })
+
+const STATED =
+  'SELECT pessoa, reacao, alvo, especifico, fonte, data, texto FROM declarados WHERE sessao IS NOT NULL ORDER BY pessoa'
+
+/** The `declarados` rows of the three comments on Noite de Estreia. */
+const commentRows = (source: string, relayed: string) => [
+  [
+    'bruno',
+    'gosta',
+    'tt9000203',
+    1,
+    source,
+    '2026-11-21',
+    'enquadramento e diálogo muito bons',
+  ],
+  ['iara', null, 'tt9000203', 1, relayed, '2026-11-21', 'bonito, mas comprido'],
+  [
+    'teo',
+    'nao_gosta',
+    'tt9000203',
+    1,
+    relayed,
+    '2026-11-21',
+    'muita violência sem sentido',
+  ],
+]
+
+/** The stated Fatos of a Feedback, but the Já visto ones. */
+const statedComments = (out: FeedbackResult) =>
+  out.facts
+    .filter((f) => f.kind === 'stated' && f.text !== 'já viu')
+    .map(({ person, text, source, strength, kind }) => ({
+      person,
+      text,
+      source,
+      strength,
+      kind,
+    }))
+
+/** The stated Fatos of the three comments on Noite de Estreia. */
+const commentFacts = (source: string, relayed: string) => [
+  {
+    person: 'bruno',
+    text: 'disse "enquadramento e diálogo muito bons" de Noite de Estreia (2022)',
+    source,
+    strength: 'strong',
+    kind: 'stated',
+  },
+  {
+    person: 'iara',
+    text: 'disse "bonito, mas comprido" de Noite de Estreia (2022)',
+    source: relayed,
+    strength: 'strong',
+    kind: 'stated',
+  },
+  {
+    person: 'teo',
+    text: 'disse "muita violência sem sentido" de Noite de Estreia (2022)',
+    source: relayed,
+    strength: 'strong',
+    kind: 'stated',
+  },
+]
 
 describe('a Nota on the scale of 10, and a comment per Presente (#40)', () => {
   test('writes the Nota converted and the number said', async () => {
@@ -641,7 +729,9 @@ describe('a Nota on the scale of 10, and a comment per Presente (#40)', () => {
       teo: 'deu 4 a Noite de Estreia (2022)',
     })
   })
+})
 
+describe('a Nota on the scale of 10, and a comment per Presente (#40)', () => {
   test('the scale of 10 goes from 1 to 10', async () => {
     const fixture = useFixture()
     const id = await open(fixture, { attendees: ['dono'] })
@@ -655,10 +745,9 @@ describe('a Nota on the scale of 10, and a comment per Presente (#40)', () => {
     const out = await feedback(fixture, { ...film, ratings: ['dono=8,5/10'] })
     expect(out.facts[0]?.text).toBe('deu 8,5/10 a Vento Norte (2020)')
   })
+})
 
-  const STATED =
-    'SELECT pessoa, reacao, alvo, especifico, fonte, data, texto FROM declarados WHERE sessao IS NOT NULL ORDER BY pessoa'
-
+describe('a Nota on the scale of 10, and a comment per Presente (#40)', () => {
   test('a comment is a specific Declarado, liking by the Nota', async () => {
     const fixture = useFixture()
     const id = await open(fixture, {
@@ -688,72 +777,12 @@ describe('a Nota on the scale of 10, and a comment per Presente (#40)', () => {
 
     const source = 'Feedback da Sessão 2026-11-20'
     const relayed = `${source}, repassado pelo Dono`
-    expect(await query(fixture, STATED)).toEqual([
-      [
-        'bruno',
-        'gosta',
-        'tt9000203',
-        1,
-        source,
-        '2026-11-21',
-        'enquadramento e diálogo muito bons',
-      ],
-      [
-        'iara',
-        null,
-        'tt9000203',
-        1,
-        relayed,
-        '2026-11-21',
-        'bonito, mas comprido',
-      ],
-      [
-        'teo',
-        'nao_gosta',
-        'tt9000203',
-        1,
-        relayed,
-        '2026-11-21',
-        'muita violência sem sentido',
-      ],
-    ])
+    expect(await query(fixture, STATED)).toEqual(commentRows(source, relayed))
     // The comment gives no new Nota: only the Session's three came in.
     expect(await query(fixture, 'SELECT count(*) FROM notas')).toEqual([
       [ratings + 3],
     ])
-    expect(
-      out.facts
-        .filter((f) => f.kind === 'stated' && f.text !== 'já viu')
-        .map(({ person, text, source, strength, kind }) => ({
-          person,
-          text,
-          source,
-          strength,
-          kind,
-        })),
-    ).toEqual([
-      {
-        person: 'bruno',
-        text: 'disse "enquadramento e diálogo muito bons" de Noite de Estreia (2022)',
-        source,
-        strength: 'strong',
-        kind: 'stated',
-      },
-      {
-        person: 'iara',
-        text: 'disse "bonito, mas comprido" de Noite de Estreia (2022)',
-        source: relayed,
-        strength: 'strong',
-        kind: 'stated',
-      },
-      {
-        person: 'teo',
-        text: 'disse "muita violência sem sentido" de Noite de Estreia (2022)',
-        source: relayed,
-        strength: 'strong',
-        kind: 'stated',
-      },
-    ])
+    expect(statedComments(out)).toEqual(commentFacts(source, relayed))
     expect(readFile(fixture, id).front.feedback.reactions[2]).toEqual({
       person: 'teo',
       kind: 'rating',
@@ -774,7 +803,9 @@ describe('a Nota on the scale of 10, and a comment per Presente (#40)', () => {
       'muita violência sem sentido',
     )
   })
+})
 
+describe('a Nota on the scale of 10, and a comment per Presente (#40)', () => {
   test('a comment on the scale of 5 and with a Relato', async () => {
     const fixture = useFixture()
     const id = await open(fixture, { attendees: ['dono', 'iara', 'teo'] })

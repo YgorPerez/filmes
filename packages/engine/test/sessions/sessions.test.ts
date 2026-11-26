@@ -126,7 +126,9 @@ describe('recomendar opens the Session', () => {
       feedback: null,
     })
   })
+})
 
+describe('recomendar opens the Session', () => {
   test('its body keeps every Evidence in the full line format', async () => {
     const fixture = useFixture()
 
@@ -157,7 +159,9 @@ describe('recomendar opens the Session', () => {
       '     - Evidência: sem fato · Força: fraca · Tipo: palpite\n',
     )
   })
+})
 
+describe('recomendar opens the Session', () => {
   test('the body reads back into each Presente’s Evidence', async () => {
     const fixture = useFixture()
     const out = await open(fixture, { attendees: ['dono', 'iara'], count: 50 })
@@ -196,7 +200,9 @@ describe('recomendar opens the Session', () => {
       '2026-11-20-bruno.md',
     ])
   })
+})
 
+describe('recomendar opens the Session', () => {
   test('a new request on the same day keeps the earlier Session', async () => {
     const fixture = useFixture()
 
@@ -221,7 +227,9 @@ describe('recomendar opens the Session', () => {
       '2026-11-20-iara',
     ])
   })
+})
 
+describe('recomendar opens the Session', () => {
   test('the Session’s rows are those a reload gives', async () => {
     const fixture = useFixture()
     await open(fixture, { attendees: ['dono', 'iara'], request: 'algo bom' })
@@ -257,7 +265,9 @@ describe('recomendar opens the Session', () => {
       { regra: 'de', regra_pessoa: 'teo', pedido: null },
     ])
   })
+})
 
+describe('recomendar opens the Session', () => {
   test('the logged-in Pessoa is the Dono of the request', async () => {
     const fixture = useFixture()
     const engine = makeEngine(fixture.vars)
@@ -299,7 +309,9 @@ describe('recomendar opens the Session', () => {
       ],
     })
   })
+})
 
+describe('recomendar opens the Session', () => {
   test('the Session file stores the Restrições the request asks for, without the counts', async () => {
     const fixture = useFixture()
     const { session } = await open(fixture, {
@@ -374,7 +386,9 @@ describe('sessoes-abertas', () => {
       version: 1,
     })
   })
+})
 
+describe('sessoes-abertas', () => {
   test('the tenth Session of a day comes after the ninth', async () => {
     const fixture = useFixture()
     mkdirSync(join(fixture.data, 'sessions'))
@@ -457,7 +471,9 @@ describe('every Session', () => {
     ])
     expect(Object.keys(still[0] ?? {})).not.toContain('open')
   })
+})
 
+describe('every Session', () => {
   test('a Restrição stored with no module left is not labelled', async () => {
     const fixture = useFixture()
     mkdirSync(join(fixture.data, 'sessions'))
@@ -478,15 +494,15 @@ describe('every Session', () => {
   })
 })
 
+const write = (fixture: Fixture, id: string, text: string) => {
+  mkdirSync(join(fixture.data, 'sessions'), { recursive: true })
+  writeFileSync(sessionFile(fixture, id), text)
+}
+
+const error = async (fixture: Fixture, id: string) =>
+  (await fixture.run(readSession(id))).output
+
 describe('the Session file', () => {
-  const write = (fixture: Fixture, id: string, text: string) => {
-    mkdirSync(join(fixture.data, 'sessions'), { recursive: true })
-    writeFileSync(sessionFile(fixture, id), text)
-  }
-
-  const error = async (fixture: Fixture, id: string) =>
-    (await fixture.run(readSession(id))).output
-
   test('the prototype’s format is read as today’s', async () => {
     const fixture = useFixture()
     write(
@@ -532,7 +548,9 @@ rule: {name: default}
       name: 'default',
     })
   })
+})
 
+describe('the Session file', () => {
   test('an unknown id, a path, or a missing field is an error', async () => {
     const fixture = useFixture()
     write(
@@ -560,23 +578,23 @@ rule: {name: default}
   })
 })
 
-describe('a redone Session', () => {
-  const REDONE =
-    '---\ndate: 2026-11-20\nowner: bruno\nattendees: [bruno, iara]\n' +
-    "context: {request: '2026-11-19', max_duration: null, moods: [], constraints: []}\n" +
-    'rule: {name: default}\n' +
-    'recommendation:\n- {position: 1, id: tt9000104, title: As Horas Lentas, new: true}\n' +
-    'kept: []\n' +
-    "replies:\n- {date: '2026-11-21', addition: algo leve}\n" +
-    "redone_on: '2026-11-21'\n" +
-    'versions:\n' +
-    "- version: 1\n  date: '2026-11-20'\n  attendees: [bruno, iara]\n  context: null\n" +
-    '  rule: {name: default}\n' +
-    '  recommendation:\n  - {position: 1, id: tt9000102, title: Maré Baixa}\n' +
-    '  shown:\n  - {position: 1, id: tt9000102, title: Maré Baixa}\n' +
-    "  replies:\n  - {date: '2026-11-20', films: []}\n" +
-    "feedback: {recorded_on: '2026-11-22', reactions: []}\n---\n## Recomendação\n"
+const REDONE =
+  '---\ndate: 2026-11-20\nowner: bruno\nattendees: [bruno, iara]\n' +
+  "context: {request: '2026-11-19', max_duration: null, moods: [], constraints: []}\n" +
+  'rule: {name: default}\n' +
+  'recommendation:\n- {position: 1, id: tt9000104, title: As Horas Lentas, new: true}\n' +
+  'kept: []\n' +
+  "replies:\n- {date: '2026-11-21', addition: algo leve}\n" +
+  "redone_on: '2026-11-21'\n" +
+  'versions:\n' +
+  "- version: 1\n  date: '2026-11-20'\n  attendees: [bruno, iara]\n  context: null\n" +
+  '  rule: {name: default}\n' +
+  '  recommendation:\n  - {position: 1, id: tt9000102, title: Maré Baixa}\n' +
+  '  shown:\n  - {position: 1, id: tt9000102, title: Maré Baixa}\n' +
+  "  replies:\n  - {date: '2026-11-20', films: []}\n" +
+  "feedback: {recorded_on: '2026-11-22', reactions: []}\n---\n## Recomendação\n"
 
+describe('a redone Session', () => {
   test('is written with its dates as dates, and reads back the same', async () => {
     const fixture = useFixture()
     mkdirSync(join(fixture.data, 'sessions'))
@@ -602,7 +620,9 @@ describe('a redone Session', () => {
     )
     expect(after.body).toBe(before.body)
   })
+})
 
+describe('a redone Session', () => {
   test('its current version is the top of the frontmatter', async () => {
     const fixture = useFixture()
     mkdirSync(join(fixture.data, 'sessions'))

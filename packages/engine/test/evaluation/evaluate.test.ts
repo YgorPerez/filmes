@@ -88,7 +88,9 @@ describe('avaliar', () => {
     const values = events.map((e) => e.progress)
     expect([...values].sort((a, b) => a - b)).toEqual(values)
   })
+})
 
+describe('avaliar', () => {
   test('says where the reports go, or that nothing says so', async () => {
     const fixture = useFixture()
     expect(await fixture.ok(evaluationsFolder, reports(fixture))).toBe(
@@ -103,7 +105,9 @@ describe('avaliar', () => {
       'FILMES_AVALIACOES',
     )
   })
+})
 
+describe('avaliar', () => {
   test(
     'uses only the ten latest Sessions with Feedback',
     { timeout: 60_000 },
@@ -159,7 +163,9 @@ describe('avaliar', () => {
       })
     },
   )
+})
 
+describe('avaliar', () => {
   test('leaves the sampled users out of the neighbourhood', async () => {
     const fixture = useFixture()
     const catalog = join(fixture.root, 'catalogo')
@@ -211,7 +217,9 @@ describe('avaliar', () => {
     expect(result.movielensSample).toEqual({ seed: 27, users: 1000 })
     expect(result.warnings).toEqual([])
   })
+})
 
+describe('avaliar', () => {
   test('a held-out film is not a Já visto before the cut', async () => {
     const fixture = useFixture()
     const catalog = join(fixture.root, 'catalogo')
@@ -231,7 +239,9 @@ describe('avaliar', () => {
     // a Já visto, would give each a Fact and lift it into the top 50.
     expect([people.retrieved, people.heldOut4Plus]).toEqual([2, 5])
   })
+})
 
+describe('avaliar', () => {
   test(
     'the grid tries three values per weight and keeps the config',
     { timeout: 300_000 },
@@ -276,7 +286,9 @@ describe('avaliar', () => {
       expect(readFileSync(result.file, 'utf8')).toContain('## Grade de pesos')
     },
   )
+})
 
+describe('avaliar', () => {
   test('uses the diary dates when the export has loose ratings', async () => {
     const fixture = useFixture()
     const olga = join(ROOT, 'tests/fixture/letterboxd/olga')
@@ -322,7 +334,9 @@ describe('avaliar', () => {
       pinned.dumps['title.basics.tsv.gz']!.sha256,
     )
   })
+})
 
+describe('avaliar', () => {
   test('a missing MovieLens file is invalid data; no report folder is missing_config', async () => {
     const fixture = useFixture()
     const catalog = join(fixture.root, 'catalogo')

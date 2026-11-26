@@ -62,17 +62,14 @@ export const ownersOf = (db: Connection, front: YamlMapping) =>
     return new Set(rows.map((row) => String(row['slug'])))
   })
 
-/** Replaces one Session's rows with its frontmatter's (`banco.carregar`). */
-export const syncSession = (
+/** The `sessoes` row of a Session, with its Presentes and its
+ * Recomendação. */
+const insertSession = (
   db: Connection,
   id: string,
   front: YamlMapping,
-): Effect.Effect<void, EngineError | SqliteError> =>
+): Effect.Effect<void, SqliteError> =>
   Effect.gen(function* () {
-    for (const table of SESSION_TABLES)
-      yield* db.run(`DELETE FROM ${table} WHERE sessao = ?`, id)
-    yield* db.run('DELETE FROM sessoes WHERE id = ?', id)
-
     const rule = front.get('rule')
     const ruleOf = isMapping(rule) ? rule : new Map<string, YamlValue>()
     const ruleName = ruleOf.get('name')
@@ -110,6 +107,15 @@ export const syncSession = (
           bind(item.get('position')),
           bind(item.get('id')),
         )
+  })
+
+/** The Session's reactions, and the Notas among them. */
+const insertReactions = (
+  db: Connection,
+  id: string,
+  front: YamlMapping,
+): Effect.Effect<void, EngineError | SqliteError> =>
+  Effect.gen(function* () {
     for (const r of yield* reactions(id, front)) {
       const level = r.reaction === null ? null : REPORT_LEVELS[r.reaction].db
       yield* db.run(
@@ -139,6 +145,15 @@ export const syncSession = (
           r.session,
         )
     }
+  })
+
+/** The Declarados and Já vistos the Session's Fatos give. */
+const insertOwnerFacts = (
+  db: Connection,
+  id: string,
+  front: YamlMapping,
+): Effect.Effect<void, EngineError | SqliteError> =>
+  Effect.gen(function* () {
     const owners = yield* ownersOf(db, front)
     for (const c of comments(id, front, owners))
       yield* db.run(
@@ -165,6 +180,21 @@ export const syncSession = (
         v.source,
         v.session,
       )
+  })
+
+/** Replaces one Session's rows with its frontmatter's (`banco.carregar`). */
+export const syncSession = (
+  db: Connection,
+  id: string,
+  front: YamlMapping,
+): Effect.Effect<void, EngineError | SqliteError> =>
+  Effect.gen(function* () {
+    for (const table of SESSION_TABLES)
+      yield* db.run(`DELETE FROM ${table} WHERE sessao = ?`, id)
+    yield* db.run('DELETE FROM sessoes WHERE id = ?', id)
+    yield* insertSession(db, id, front)
+    yield* insertReactions(db, id, front)
+    yield* insertOwnerFacts(db, id, front)
   })
 
 /** Loads every Session file into `db` (`carregar_todas`, the rebuild's

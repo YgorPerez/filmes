@@ -177,6 +177,36 @@ const insertFact = (
     ...(values as Array<string | null>),
   )
 
+/** An item's entity, from its labels the first time, then remembered. */
+const entityOf = (
+  db: Connection,
+  target: string,
+  entities: Map<string, Entity>,
+): Effect.Effect<Entity, SqliteError> =>
+  Effect.gen(function* () {
+    const known = entities.get(target)
+    if (known !== undefined) return known
+    const found = yield* db.get(
+      'SELECT pt, en, mul, codigo FROM rotulos_wikidata WHERE item = ?',
+      target,
+    )
+    const [pt, en, mul, languageCode] = (
+      ['pt', 'en', 'mul', 'codigo'] as const
+    ).map((column) => (found?.[column] as string | null | undefined) ?? null)
+    const entity = {
+      label: pt || en || mul || target,
+      labels: [pt ?? null, en ?? null, mul ?? null],
+      code: languageCode ?? null,
+    }
+    yield* db.run(
+      'INSERT INTO entidades (id, rotulo) VALUES (?, ?)',
+      target,
+      entity.label,
+    )
+    entities.set(target, entity)
+    return entity
+  })
+
 /** `_carregar_conteudo`: one triple, for each film of its item. */
 const loadContent = (
   db: Connection,
@@ -192,32 +222,8 @@ const loadContent = (
     let label = raw
     let labels: ReadonlyArray<string | null> = []
     let code: string | null = null
-    if (target !== undefined) {
-      let entity = entities.get(target)
-      if (entity === undefined) {
-        const found = yield* db.get(
-          'SELECT pt, en, mul, codigo FROM rotulos_wikidata WHERE item = ?',
-          target,
-        )
-        const [pt, en, mul, languageCode] = (
-          ['pt', 'en', 'mul', 'codigo'] as const
-        ).map(
-          (column) => (found?.[column] as string | null | undefined) ?? null,
-        )
-        entity = {
-          label: pt || en || mul || target,
-          labels: [pt ?? null, en ?? null, mul ?? null],
-          code: languageCode ?? null,
-        }
-        yield* db.run(
-          'INSERT INTO entidades (id, rotulo) VALUES (?, ?)',
-          target,
-          entity.label,
-        )
-        entities.set(target, entity)
-      }
-      ;({ label, labels, code } = entity)
-    }
+    if (target !== undefined)
+      ({ label, labels, code } = yield* entityOf(db, target, entities))
     const predicate = EDGES.get(property)
     for (const film of films) {
       if (target !== undefined && predicate !== undefined)

@@ -109,7 +109,9 @@ describe('the satisfaction', () => {
       disagreement: null,
     })
   })
+})
 
+describe('the satisfaction', () => {
   test('who left less satisfied weighs more, and her film rises with the satisfaction line', async () => {
     const { fixture, vars } = useSatisfactionFixture()
     const before = await recommend(fixture, vars, DONO_QUIM)
@@ -150,7 +152,9 @@ describe('the satisfaction', () => {
     expect(film(after, 'Voo Noturno').filmLines).toEqual([])
     expect(film(before, 'As Horas Lentas').filmLines).toEqual([])
   })
+})
 
+describe('the satisfaction', () => {
   test("the line's Força reads her Nota on her own scale", async () => {
     // Bruno rates high: with his Feedback, 12 Notas, five of them a 4.
     // Below the config's 20, his 4 is read on the population: its 77th
@@ -201,7 +205,9 @@ describe('the satisfaction', () => {
     )
     expect(film(after, 'O Farol de Areia').filmLines).toEqual([])
   })
+})
 
+describe('the satisfaction', () => {
   test('the Dono’s Relato counts in three levels', async () => {
     const { fixture, vars } = useSatisfactionFixture()
     await withFeedback(fixture, vars, ['dono', 'quim'], {
@@ -255,7 +261,9 @@ describe('the satisfaction', () => {
       titles(out).indexOf('Asfalto Quente'),
     )
   })
+})
 
+describe('the satisfaction', () => {
   test('a Presente with no reaction has no satisfaction, and nobody is behind', async () => {
     const { fixture, vars } = useSatisfactionFixture()
     await withFeedback(fixture, vars, ['dono', 'quim'], { ratings: ['dono=1'] })
@@ -292,7 +300,9 @@ describe('the satisfaction', () => {
     )
     expect([out.satisfaction, out.disagreement]).toEqual([{}, null])
   })
+})
 
+describe('the satisfaction', () => {
   test('the average Regra and "de fulano" do not weigh the satisfaction', async () => {
     const { fixture, vars } = useSatisfactionFixture()
     await withFeedback(fixture, vars, ['dono', 'quim'], {
@@ -346,49 +356,54 @@ const writeSession = (
   )
 }
 
+/** Bruno's Sessions with Quim, with Iara and alone, for the window. */
+const writeWindowSessions = (fixture: Fixture) => {
+  // With Quim: in the oldest Bruno fell behind; in the next 5, a tie.
+  writeSession(
+    fixture,
+    '2026-10-01-quim',
+    '2026-10-01',
+    ['bruno', 'quim'],
+    [
+      ['bruno', 0.5],
+      ['quim', 5],
+    ],
+  )
+  for (let day = 2; day < 7; day++)
+    writeSession(
+      fixture,
+      `2026-10-0${day}-quim`,
+      `2026-10-0${day}`,
+      ['bruno', 'quim'],
+      [
+        ['bruno', 4],
+        ['quim', 4],
+      ],
+    )
+  // With Iara, and alone: Bruno fell behind, but none of it is with Quim.
+  writeSession(
+    fixture,
+    '2026-11-01-iara',
+    '2026-11-01',
+    ['bruno', 'iara'],
+    [
+      ['bruno', 0.5],
+      ['iara', 5],
+    ],
+  )
+  writeSession(
+    fixture,
+    '2026-11-02-bruno',
+    '2026-11-02',
+    ['bruno'],
+    [['bruno', 0.5]],
+  )
+}
+
 describe('the satisfaction’s window', () => {
   test('looks at the 5 latest Sessions with someone here today', async () => {
     const { fixture, vars } = useSatisfactionFixture()
-    // With Quim: in the oldest Bruno fell behind; in the next 5, a tie.
-    writeSession(
-      fixture,
-      '2026-10-01-quim',
-      '2026-10-01',
-      ['bruno', 'quim'],
-      [
-        ['bruno', 0.5],
-        ['quim', 5],
-      ],
-    )
-    for (let day = 2; day < 7; day++)
-      writeSession(
-        fixture,
-        `2026-10-0${day}-quim`,
-        `2026-10-0${day}`,
-        ['bruno', 'quim'],
-        [
-          ['bruno', 4],
-          ['quim', 4],
-        ],
-      )
-    // With Iara, and alone: Bruno fell behind, but none of it is with Quim.
-    writeSession(
-      fixture,
-      '2026-11-01-iara',
-      '2026-11-01',
-      ['bruno', 'iara'],
-      [
-        ['bruno', 0.5],
-        ['iara', 5],
-      ],
-    )
-    writeSession(
-      fixture,
-      '2026-11-02-bruno',
-      '2026-11-02',
-      ['bruno'],
-      [['bruno', 0.5]],
-    )
+    writeWindowSessions(fixture)
     await fixture.ok(reloadSessions)
 
     const measured = async (attendees: string[]) => {

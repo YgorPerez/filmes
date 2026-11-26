@@ -77,7 +77,9 @@ describe('the neighbourhood path', () => {
     expect(one(out, 'A Casa das Marés')?.text).toContain('O Farol de Areia')
     expect(one(out, 'O Mapa Rasgado')?.text).toContain('Maré Baixa')
   })
+})
 
+describe('the neighbourhood path', () => {
   test('the neighbourhood is never stronger than the seed Nota', async () => {
     const out = await all(useFixture())
 
@@ -132,6 +134,20 @@ describe('the neighbourhood path', () => {
     )
     expect(e?.strength).toBe('moderate')
   })
+})
+
+describe('the neighbourhood path', () => {
+  const anaSays = async (fixture: Fixture, how: 'states' | 'reports') => {
+    await fixture.ok(personCreate({ name: 'Ana', slug: 'ana' }))
+    const said = {
+      person: 'ana',
+      text: 'ama O Farol',
+      target: 'tt9000101',
+      reaction: 'love',
+    } as const
+    if (how === 'states') await fixture.ok(personState(said))
+    else await fixture.ok(personReport(said))
+  }
 
   test('a rating against is no seed', async () => {
     // Bruno gave 1 to Barulho, and 70% of whoever gave 4+ to Barulho gave
@@ -157,6 +173,19 @@ describe('the neighbourhood path', () => {
     expect(e?.strength).toBe('moderate')
   })
 
+  test('a stated rating is a seed, with the stated wording and ruler', async () => {
+    const fixture = useFixture()
+    await anaSays(fixture, 'states')
+
+    const e = one(await all(fixture, 'ana'), 'A Casa das Marés', 'ana')
+    expect(e?.text).toBe(
+      'disse que ama O Farol de Areia (2012); das 3.104 pessoas que deram 4 ou mais a ele, 64% fizeram o mesmo com este',
+    )
+    expect(e?.strength).toBe('strong')
+  })
+})
+
+describe('the neighbourhood path', () => {
   const anaSays = async (fixture: Fixture, how: 'states' | 'reports') => {
     await fixture.ok(personCreate({ name: 'Ana', slug: 'ana' }))
     const said = {
@@ -168,17 +197,6 @@ describe('the neighbourhood path', () => {
     if (how === 'states') await fixture.ok(personState(said))
     else await fixture.ok(personReport(said))
   }
-
-  test('a stated rating is a seed, with the stated wording and ruler', async () => {
-    const fixture = useFixture()
-    await anaSays(fixture, 'states')
-
-    const e = one(await all(fixture, 'ana'), 'A Casa das Marés', 'ana')
-    expect(e?.text).toBe(
-      'disse que ama O Farol de Areia (2012); das 3.104 pessoas que deram 4 ou mais a ele, 64% fizeram o mesmo com este',
-    )
-    expect(e?.strength).toBe('strong')
-  })
 
   test('a Relato that she loves a film is a seed one level below', async () => {
     const fixture = useFixture()

@@ -87,7 +87,9 @@ describe('diversity in the final order', () => {
       'A Volta do Mar',
     ])
   })
+})
 
+describe('diversity in the final order', () => {
   test('MMR chooses only among the first films of the order', async () => {
     const fixture = useFixture()
     const out = await engineRecommendation(
@@ -130,7 +132,9 @@ describe('diversity in the final order', () => {
     ])
     expect(redone.kept).toEqual(['tt9000104'])
   })
+})
 
+describe('diversity in the final order', () => {
   test('a film MMR moves up gets no satisfaction line', async () => {
     const fixture = useFixture()
     // As in satisfaction.test.ts: Bruno is behind in satisfaction after a

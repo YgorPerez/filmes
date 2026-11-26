@@ -120,7 +120,9 @@ describe('avaliar on MovieLens files, as recorded', () => {
       /^O MovieLens tinha só 4 usuários/,
     )
   })
+})
 
+describe('avaliar on MovieLens files, as recorded', () => {
   test.each([
     ['only links.csv', { 'links.csv': links }],
     ['a short row', { 'links.csv': links, 'ratings.csv': ratings(['1,1,5']) }],
@@ -167,7 +169,9 @@ describe('avaliar on MovieLens files, as recorded', () => {
     })
     expect(engine.exitCode).toBe(1)
   })
+})
 
+describe('avaliar on MovieLens files, as recorded', () => {
   test('a manifest without the MovieLens dump is invalid_versions', async () => {
     const fixture = useFixture()
     const catalog = catalogWith(fixture, {

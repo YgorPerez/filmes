@@ -44,7 +44,7 @@ import {
 } from 'effect'
 import type { Person } from '../people/Person.ts'
 import { engineError, type EngineError } from '../runtime/EngineError.ts'
-import { Environment } from '../runtime/Environment.ts'
+import { Environment, type EnvironmentShape } from '../runtime/Environment.ts'
 import { Sqlite, type Connection, type SqliteError } from '../sqlite/Sqlite.ts'
 import { git, GitError, runGit } from './git.ts'
 
@@ -123,6 +123,242 @@ const identity = (author: Author): Record<string, string> => ({
 const shellQuote = (word: string): string =>
   `'${word.replaceAll("'", `'\\''`)}'`
 
+/** The data folder, and whether it is the top of its own repository. */
+const openRepoIn = (
+  env: EnvironmentShape,
+  remote: string | undefined,
+): Effect.Effect<Repo, EngineError> =>
+  Effect.gen(function* () {
+    const root = yield* env.path('data')
+    const isDir = yield* Effect.sync(
+      () => existsSync(root) && statSync(root).isDirectory(),
+    )
+    if (!isDir)
+      return yield* engineError(
+        'missing_data',
+        `repo de dados não encontrado em ${root}`,
+      )
+    const top = yield* runGit(root, ['rev-parse', '--show-toplevel']).pipe(
+      Effect.orElseSucceed(() => undefined),
+    )
+    const isRepo =
+      top !== undefined &&
+      top.code === 0 &&
+      (yield* Effect.sync(
+        () => realpathSync(top.stdout.trim()) === realpathSync(root),
+      ))
+    if (!isRepo && remote !== undefined)
+      return yield* engineError(
+        'missing_data',
+        `repo de dados em ${root} não é um repositório git, e FILMES_DATA_REMOTE pede o push`,
+      )
+    return { root, git: isRepo }
+  })
+
+const changes = (root: string) =>
+  Effect.map(
+    git(root, ['status', '--porcelain', '-z', '--untracked-files=all']),
+    (out) => out !== '',
+  )
+
+/** What a write that never committed left in the work tree goes to
+ * `git stash`, so nothing is lost and the tree is clean. */
+const setAside = (root: string, author: Author) =>
+  Effect.gen(function* () {
+    if (!(yield* changes(root))) return
+    const now = new Date(yield* Clock.currentTimeMillis).toISOString()
+    yield* git(
+      root,
+      [
+        'stash',
+        'push',
+        '--include-untracked',
+        '--quiet',
+        '-m',
+        `filmes: changes left outside a commit, set aside at ${now}`,
+      ],
+      identity(author),
+    )
+  })
+
+/** Back to HEAD: the tree was clean when the write began, so only its
+ * changes go. */
+const discard = (root: string) =>
+  git(root, ['reset', '--quiet', '--hard', 'HEAD']).pipe(
+    Effect.andThen(git(root, ['clean', '--quiet', '-d', '--force'])),
+    Effect.ignore,
+  )
+
+const commit = (root: string, options: WriteOptions) =>
+  Effect.gen(function* () {
+    yield* git(root, ['add', '--all'])
+    const staged = yield* runGit(root, ['diff', '--cached', '--quiet'])
+    if (staged.code === 0) return
+    yield* git(
+      root,
+      ['commit', '--quiet', '--no-verify', '-m', options.message],
+      identity(options.author),
+    )
+  })
+
+const scrub = (text: string, keyPath: string | undefined): string => {
+  let clean = text.replace(/\/\/[^/@\s]*@/g, '//')
+  if (keyPath !== undefined) clean = clean.replaceAll(keyPath, '<chave>')
+  return clean
+}
+
+const branchOf = (root: string) =>
+  Effect.map(git(root, ['symbolic-ref', '--quiet', '--short', 'HEAD']), (out) =>
+    out.trim(),
+  )
+
+const pendingIn = (root: string, branch: string) =>
+  Effect.gen(function* () {
+    const tracking = `refs/remotes/${REMOTE}/${branch}`
+    const known = yield* runGit(root, [
+      'rev-parse',
+      '--verify',
+      '--quiet',
+      tracking,
+    ])
+    const range = known.code === 0 ? `${tracking}..HEAD` : 'HEAD'
+    const out = yield* git(root, ['rev-list', '--count', range])
+    return Number(out.trim())
+  })
+
+/** The remote named `origin` points at `FILMES_DATA_REMOTE`. */
+const ensureRemote = (root: string, url: string) =>
+  Effect.gen(function* () {
+    const current = yield* runGit(root, ['remote', 'get-url', REMOTE])
+    if (current.code !== 0) yield* git(root, ['remote', 'add', REMOTE, url])
+    else if (current.stdout.trim() !== url)
+      yield* git(root, ['remote', 'set-url', REMOTE, url])
+  })
+
+const sshEnv = (keyPath: string | undefined): Record<string, string> =>
+  keyPath === undefined
+    ? {}
+    : {
+        GIT_SSH_COMMAND: [
+          'ssh',
+          '-F /dev/null',
+          `-i ${shellQuote(keyPath)}`,
+          '-o IdentitiesOnly=yes',
+          '-o BatchMode=yes',
+          '-o StrictHostKeyChecking=accept-new',
+          `-o UserKnownHostsFile=${shellQuote(`${keyPath}.known_hosts`)}`,
+        ].join(' '),
+      }
+
+/** What the push side of the writer shares. */
+interface Pushing {
+  readonly openRepo: Effect.Effect<Repo, EngineError>
+  readonly remote: string | undefined
+  readonly keyPath: string | undefined
+  readonly failures: Ref.Ref<Failures>
+}
+
+const statusWith = (pushing: Pushing, pending: number, enabled: boolean) =>
+  Effect.map(Ref.get(pushing.failures), (f): PushStatus => ({
+    enabled,
+    pending,
+    failures: f.count,
+    failingSince: f.since === null ? null : new Date(f.since).toISOString(),
+    lastError: f.lastError,
+    alert: f.count >= ALERT_AFTER_FAILURES,
+  }))
+
+const queueStatus = (pushing: Pushing): Effect.Effect<PushStatus> =>
+  Effect.gen(function* () {
+    if (pushing.remote === undefined)
+      return yield* statusWith(pushing, 0, false)
+    const repo = yield* pushing.openRepo
+    if (!repo.git) return yield* statusWith(pushing, 0, false)
+    const branch = yield* branchOf(repo.root)
+    return yield* statusWith(pushing, yield* pendingIn(repo.root, branch), true)
+  }).pipe(
+    Effect.catch((error) =>
+      Effect.flatMap(Ref.get(pushing.failures), (f) =>
+        statusWith(pushing, 0, true).pipe(
+          Effect.map((s) => ({
+            ...s,
+            lastError: f.lastError ?? scrub(error.message, pushing.keyPath),
+          })),
+        ),
+      ),
+    ),
+  )
+
+const failed = (pushing: Pushing, message: string) =>
+  Effect.flatMap(Clock.currentTimeMillis, (now) =>
+    Ref.update(pushing.failures, (f) => ({
+      count: f.count + 1,
+      since: f.since ?? now,
+      lastError: scrub(message, pushing.keyPath),
+    })),
+  )
+
+const attempt = (pushing: Pushing, url: string) =>
+  Effect.gen(function* () {
+    const repo = yield* pushing.openRepo
+    const branch = yield* branchOf(repo.root)
+    if ((yield* pendingIn(repo.root, branch)) === 0) return
+    yield* ensureRemote(repo.root, url)
+    yield* git(
+      repo.root,
+      ['push', '--quiet', REMOTE, `HEAD:refs/heads/${branch}`],
+      sshEnv(pushing.keyPath),
+    )
+  })
+
+const pushWith = (
+  pushing: Pushing,
+  pushLock: Semaphore.Semaphore,
+): Effect.Effect<PushStatus> =>
+  pushing.remote === undefined
+    ? statusWith(pushing, 0, false)
+    : pushLock.withPermits(1)(
+        attempt(pushing, pushing.remote).pipe(
+          Effect.matchEffect({
+            onFailure: (error) => failed(pushing, error.message),
+            onSuccess: () => Ref.set(pushing.failures, NO_FAILURES),
+          }),
+          Effect.andThen(queueStatus(pushing)),
+        ),
+      )
+
+/** Waits for a kick, then pushes until the queue is empty, waiting longer
+ * after each failure; a kick cuts the wait short. */
+const drain = (kicks: Queue.Queue<void>, push: Effect.Effect<PushStatus>) =>
+  Effect.gen(function* () {
+    yield* Queue.take(kicks)
+    let wait = 1
+    for (;;) {
+      const after = yield* push
+      if (after.pending === 0 || after.failures === 0) return
+      yield* Queue.take(kicks).pipe(
+        Effect.timeoutOption(wait === 1 ? RETRY_FIRST : `${wait} minutes`),
+      )
+      wait = Math.min(wait * 2, RETRY_LAST_MINUTES)
+    }
+  })
+
+/** Inside the lock: the use, then one commit of what it changed. */
+const committed = <A, E, R>(
+  openRepo: Effect.Effect<Repo, EngineError>,
+  options: WriteOptions,
+  use: Effect.Effect<A, E, R>,
+) =>
+  Effect.gen(function* () {
+    const repo = yield* openRepo
+    if (!repo.git) return yield* use
+    yield* setAside(repo.root, options.author)
+    return yield* use.pipe(
+      Effect.tap(() => commit(repo.root, options)),
+      Effect.onError(() => discard(repo.root)),
+    )
+  })
+
 export class DataWriter extends Context.Service<
   DataWriter,
   {
@@ -154,261 +390,41 @@ export class DataWriter extends Context.Service<
         const env = yield* Environment
         const sqlite = yield* Sqlite
         const remote = env.dataRemote
-        const keyPath =
-          env.dataKey === undefined ? undefined : Redacted.value(env.dataKey)
-        const pushLock = yield* Semaphore.make(1)
-        const failures = yield* Ref.make<Failures>(NO_FAILURES)
-        const kicks = yield* Queue.sliding<void>(1)
-
-        /** The data folder, and whether it is the top of its own
-         * repository. */
-        const openRepo: Effect.Effect<Repo, EngineError> = Effect.gen(
-          function* () {
-            const root = yield* env.path('data')
-            const isDir = yield* Effect.sync(
-              () => existsSync(root) && statSync(root).isDirectory(),
-            )
-            if (!isDir)
-              return yield* engineError(
-                'missing_data',
-                `repo de dados não encontrado em ${root}`,
-              )
-            const top = yield* runGit(root, [
-              'rev-parse',
-              '--show-toplevel',
-            ]).pipe(Effect.orElseSucceed(() => undefined))
-            const isRepo =
-              top !== undefined &&
-              top.code === 0 &&
-              (yield* Effect.sync(
-                () => realpathSync(top.stdout.trim()) === realpathSync(root),
-              ))
-            if (!isRepo && remote !== undefined)
-              return yield* engineError(
-                'missing_data',
-                `repo de dados em ${root} não é um repositório git, e FILMES_DATA_REMOTE pede o push`,
-              )
-            return { root, git: isRepo }
-          },
-        )
-
-        const changes = (root: string) =>
-          Effect.map(
-            git(root, ['status', '--porcelain', '-z', '--untracked-files=all']),
-            (out) => out !== '',
-          )
-
-        /** What a write that never committed left in the work tree goes to
-         * `git stash`, so nothing is lost and the tree is clean. */
-        const setAside = (root: string, author: Author) =>
-          Effect.gen(function* () {
-            if (!(yield* changes(root))) return
-            const now = new Date(yield* Clock.currentTimeMillis).toISOString()
-            yield* git(
-              root,
-              [
-                'stash',
-                'push',
-                '--include-untracked',
-                '--quiet',
-                '-m',
-                `filmes: changes left outside a commit, set aside at ${now}`,
-              ],
-              identity(author),
-            )
-          })
-
-        /** Back to HEAD: the tree was clean when the write began, so only
-         * its changes go. */
-        const discard = (root: string) =>
-          git(root, ['reset', '--quiet', '--hard', 'HEAD']).pipe(
-            Effect.andThen(git(root, ['clean', '--quiet', '-d', '--force'])),
-            Effect.ignore,
-          )
-
-        const commit = (root: string, options: WriteOptions) =>
-          Effect.gen(function* () {
-            yield* git(root, ['add', '--all'])
-            const staged = yield* runGit(root, ['diff', '--cached', '--quiet'])
-            if (staged.code === 0) return
-            yield* git(
-              root,
-              ['commit', '--quiet', '--no-verify', '-m', options.message],
-              identity(options.author),
-            )
-          })
-
-        const scrub = (text: string): string => {
-          let clean = text.replace(/\/\/[^/@\s]*@/g, '//')
-          if (keyPath !== undefined)
-            clean = clean.replaceAll(keyPath, '<chave>')
-          return clean
+        const pushing: Pushing = {
+          openRepo: openRepoIn(env, remote),
+          remote,
+          keyPath:
+            env.dataKey === undefined ? undefined : Redacted.value(env.dataKey),
+          failures: yield* Ref.make<Failures>(NO_FAILURES),
         }
-
-        const branchOf = (root: string) =>
-          Effect.map(
-            git(root, ['symbolic-ref', '--quiet', '--short', 'HEAD']),
-            (out) => out.trim(),
-          )
-
-        const pendingIn = (root: string, branch: string) =>
-          Effect.gen(function* () {
-            const tracking = `refs/remotes/${REMOTE}/${branch}`
-            const known = yield* runGit(root, [
-              'rev-parse',
-              '--verify',
-              '--quiet',
-              tracking,
-            ])
-            const range = known.code === 0 ? `${tracking}..HEAD` : 'HEAD'
-            const out = yield* git(root, ['rev-list', '--count', range])
-            return Number(out.trim())
-          })
-
-        /** The remote named `origin` points at `FILMES_DATA_REMOTE`. */
-        const ensureRemote = (root: string, url: string) =>
-          Effect.gen(function* () {
-            const current = yield* runGit(root, ['remote', 'get-url', REMOTE])
-            if (current.code !== 0)
-              yield* git(root, ['remote', 'add', REMOTE, url])
-            else if (current.stdout.trim() !== url)
-              yield* git(root, ['remote', 'set-url', REMOTE, url])
-          })
-
-        const sshEnv = (): Record<string, string> =>
-          keyPath === undefined
-            ? {}
-            : {
-                GIT_SSH_COMMAND: [
-                  'ssh',
-                  '-F /dev/null',
-                  `-i ${shellQuote(keyPath)}`,
-                  '-o IdentitiesOnly=yes',
-                  '-o BatchMode=yes',
-                  '-o StrictHostKeyChecking=accept-new',
-                  `-o UserKnownHostsFile=${shellQuote(`${keyPath}.known_hosts`)}`,
-                ].join(' '),
-              }
-
-        const statusWith = (pending: number, enabled: boolean) =>
-          Effect.map(Ref.get(failures), (f): PushStatus => ({
-            enabled,
-            pending,
-            failures: f.count,
-            failingSince:
-              f.since === null ? null : new Date(f.since).toISOString(),
-            lastError: f.lastError,
-            alert: f.count >= ALERT_AFTER_FAILURES,
-          }))
-
-        const disabled = statusWith(0, false)
-
-        const status: Effect.Effect<PushStatus> = Effect.gen(function* () {
-          if (remote === undefined) return yield* disabled
-          const repo = yield* openRepo
-          if (!repo.git) return yield* disabled
-          const branch = yield* branchOf(repo.root)
-          return yield* statusWith(yield* pendingIn(repo.root, branch), true)
-        }).pipe(
-          Effect.catch((error) =>
-            Effect.flatMap(Ref.get(failures), (f) =>
-              statusWith(0, true).pipe(
-                Effect.map((s) => ({
-                  ...s,
-                  lastError: f.lastError ?? scrub(error.message),
-                })),
-              ),
-            ),
-          ),
-        )
-
-        const failed = (message: string) =>
-          Effect.flatMap(Clock.currentTimeMillis, (now) =>
-            Ref.update(failures, (f) => ({
-              count: f.count + 1,
-              since: f.since ?? now,
-              lastError: scrub(message),
-            })),
-          )
-
-        const attempt = (url: string) =>
-          Effect.gen(function* () {
-            const repo = yield* openRepo
-            const branch = yield* branchOf(repo.root)
-            if ((yield* pendingIn(repo.root, branch)) === 0) return
-            yield* ensureRemote(repo.root, url)
-            yield* git(
-              repo.root,
-              ['push', '--quiet', REMOTE, `HEAD:refs/heads/${branch}`],
-              sshEnv(),
-            )
-          })
-
-        const push: Effect.Effect<PushStatus> =
-          remote === undefined
-            ? disabled
-            : pushLock.withPermits(1)(
-                attempt(remote).pipe(
-                  Effect.matchEffect({
-                    onFailure: (error) => failed(error.message),
-                    onSuccess: () => Ref.set(failures, NO_FAILURES),
-                  }),
-                  Effect.andThen(status),
-                ),
-              )
-
+        const pushLock = yield* Semaphore.make(1)
+        const kicks = yield* Queue.sliding<void>(1)
+        const push = pushWith(pushing, pushLock)
         const kick = Queue.offer(kicks, undefined)
 
         if (remote !== undefined) {
-          // Waits for a kick, then pushes until the queue is empty, waiting
-          // longer after each failure; a kick cuts the wait short.
-          const drain = Effect.gen(function* () {
-            yield* Queue.take(kicks)
-            let wait = 1
-            for (;;) {
-              const after = yield* push
-              if (after.pending === 0 || after.failures === 0) return
-              yield* Queue.take(kicks).pipe(
-                Effect.timeoutOption(
-                  wait === 1 ? RETRY_FIRST : `${wait} minutes`,
-                ),
-              )
-              wait = Math.min(wait * 2, RETRY_LAST_MINUTES)
-            }
-          })
-          yield* Effect.forkScoped(Effect.forever(drain))
+          yield* Effect.forkScoped(Effect.forever(drain(kicks, push)))
           yield* kick
         }
-
-        /** Inside the lock: the use, then one commit of what it changed. */
-        const committed = <A, E, R>(
-          options: WriteOptions,
-          use: Effect.Effect<A, E, R>,
-        ) =>
-          Effect.gen(function* () {
-            const repo = yield* openRepo
-            if (!repo.git) return yield* use
-            yield* setAside(repo.root, options.author)
-            return yield* use.pipe(
-              Effect.tap(() => commit(repo.root, options)),
-              Effect.onError(() => discard(repo.root)),
-            )
-          })
 
         return DataWriter.of({
           write: (options, use) =>
             sqlite
-              .write((db) => committed(options, use(db)))
+              .write((db) => committed(pushing.openRepo, options, use(db)))
               .pipe(Effect.tap(() => kick)),
           writeFiles: (options, use) =>
             Effect.gen(function* () {
               const database = yield* env.path('database')
               if (yield* Effect.sync(() => existsSync(database)))
-                return yield* sqlite.write((db) => committed(options, use(db)))
-              return yield* sqlite.exclusive(committed(options, use(null)))
+                return yield* sqlite.write((db) =>
+                  committed(pushing.openRepo, options, use(db)),
+                )
+              return yield* sqlite.exclusive(
+                committed(pushing.openRepo, options, use(null)),
+              )
             }).pipe(Effect.tap(() => kick)),
           push,
-          status,
+          status: queueStatus(pushing),
         })
       }),
     )

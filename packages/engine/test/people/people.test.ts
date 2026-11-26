@@ -78,6 +78,78 @@ const errorOf = async <A, E>(
 const person = (fixture: Fixture, slug: string) =>
   fixture.ok(readPerson(file(fixture, slug)))
 
+/** A broken Pessoa file: what it has, its text and the message. */
+const INVALID_FILES: ReadonlyArray<[string, string, string]> = [
+  ['no frontmatter', 'só texto\n', 'falta o campo nome'],
+  [
+    'an open frontmatter',
+    '---\nname: Ana\n',
+    "frontmatter sem o '---' de fechamento",
+  ],
+  ['broken YAML', '---\nname: [Ana\n---\n', 'frontmatter inválido: '],
+  ['a list frontmatter', '---\n- a\n---\n', 'falta o campo nome'],
+  [
+    'a Veto with no target',
+    '---\nname: Ana\nvetoes:\n- {text: x, date: 2026-01-01}\n---\n',
+    "Veto precisa de texto, alvo e data: {'text': 'x', 'date': '2026-01-01'}",
+  ],
+  [
+    'a Veto with a bad date',
+    "---\nname: Ana\nvetoes:\n- {text: x, target: Q1, date: '2026-13-01'}\n---\n",
+    "data do Veto inválida: '2026-13-01'",
+  ],
+  [
+    'an Ajuste with an unknown link',
+    "---\nname: Ana\nadjustments:\n- {link: elenco, level: none, date: '2026-01-01'}\n---\n",
+    "elo do Ajuste inválido: 'elenco' (use director, writer, cast, series, genre)",
+  ],
+  [
+    'an Ajuste at normal',
+    "---\nname: Ana\nadjustments:\n- {link: cast, level: normal, date: '2026-01-01'}\n---\n",
+    "nível do Ajuste inválido: 'normal' (use none, low ou high)",
+  ],
+  [
+    'an Ajuste with no level',
+    "---\nname: Ana\nadjustments:\n- {link: cast, date: '2026-01-01'}\n---\n",
+    "Ajuste precisa de elo, nivel e data: {'link': 'cast', 'date': '2026-01-01'}",
+  ],
+  [
+    'an Ajuste with a bad date',
+    '---\nname: Ana\nadjustments:\n- {link: cast, level: low, date: ontem}\n---\n',
+    "data do Ajuste inválida: 'ontem'",
+  ],
+  [
+    'two Ajustes for one link',
+    "---\nname: Ana\nadjustments:\n- {link: cast, level: low, date: '2026-01-01'}\n- {link: cast, level: high, date: '2026-01-02'}\n---\n",
+    'mais de um Ajuste para o elo cast',
+  ],
+  [
+    'an open question skipped twice',
+    "---\nname: Ana\nopen_questions:\n- {text: x?, date: '2026-01-01', skips: 2}\n---\n",
+    'puladas da pergunta aberta inválido: 2 (de 1 a 1; pulada 2 vezes, sai)',
+  ],
+  [
+    'an open question with skips 1.0',
+    "---\nname: Ana\nopen_questions:\n- {text: x?, date: '2026-01-01', skips: 1.0}\n---\n",
+    'puladas da pergunta aberta inválido: 1.0',
+  ],
+  [
+    'an open question with no date',
+    '---\nname: Ana\nopen_questions:\n- {text: x?, skips: 1}\n---\n',
+    "pergunta aberta precisa de texto, data e puladas: {'text': 'x?', 'skips': 1}",
+  ],
+  [
+    'an open question with a bad date',
+    "---\nname: Ana\nopen_questions:\n- {text: x?, date: '2026', skips: 1}\n---\n",
+    "data da pergunta aberta inválida: '2026'",
+  ],
+  [
+    'an open question asked twice',
+    "---\nname: Ana\nopen_questions:\n- {text: Curte X?, date: '2026-01-01', skips: 1}\n- {text: curte x?, date: '2026-01-02', skips: 1}\n---\n",
+    "pergunta aberta repetida: 'curte x?'",
+  ],
+]
+
 describe('reading the Pessoas', () => {
   test('every fixture Pessoa parses', async () => {
     const fixture = useFixture()
@@ -113,7 +185,9 @@ describe('reading the Pessoas', () => {
       },
     ])
   })
+})
 
+describe('reading the Pessoas', () => {
   test('a Pessoa with Vetos and body sections parses', async () => {
     const fixture = useFixture()
     write(fixture, 'carol', CAROL)
@@ -155,7 +229,9 @@ describe('reading the Pessoas', () => {
     ])
     expect(await fixture.ok(items(carol, 'seen'))).toEqual([])
   })
+})
 
+describe('reading the Pessoas', () => {
   test('a line out of format is invalid_data naming the file and the line', async () => {
     const fixture = useFixture()
     write(
@@ -207,77 +283,10 @@ describe('reading the Pessoas', () => {
 
     expect(await fixture.ok(readPeople)).toEqual([])
   })
+})
 
-  test.each([
-    ['no frontmatter', 'só texto\n', 'falta o campo nome'],
-    [
-      'an open frontmatter',
-      '---\nname: Ana\n',
-      "frontmatter sem o '---' de fechamento",
-    ],
-    ['broken YAML', '---\nname: [Ana\n---\n', 'frontmatter inválido: '],
-    ['a list frontmatter', '---\n- a\n---\n', 'falta o campo nome'],
-    [
-      'a Veto with no target',
-      '---\nname: Ana\nvetoes:\n- {text: x, date: 2026-01-01}\n---\n',
-      "Veto precisa de texto, alvo e data: {'text': 'x', 'date': '2026-01-01'}",
-    ],
-    [
-      'a Veto with a bad date',
-      "---\nname: Ana\nvetoes:\n- {text: x, target: Q1, date: '2026-13-01'}\n---\n",
-      "data do Veto inválida: '2026-13-01'",
-    ],
-    [
-      'an Ajuste with an unknown link',
-      "---\nname: Ana\nadjustments:\n- {link: elenco, level: none, date: '2026-01-01'}\n---\n",
-      "elo do Ajuste inválido: 'elenco' (use director, writer, cast, series, genre)",
-    ],
-    [
-      'an Ajuste at normal',
-      "---\nname: Ana\nadjustments:\n- {link: cast, level: normal, date: '2026-01-01'}\n---\n",
-      "nível do Ajuste inválido: 'normal' (use none, low ou high)",
-    ],
-    [
-      'an Ajuste with no level',
-      "---\nname: Ana\nadjustments:\n- {link: cast, date: '2026-01-01'}\n---\n",
-      "Ajuste precisa de elo, nivel e data: {'link': 'cast', 'date': '2026-01-01'}",
-    ],
-    [
-      'an Ajuste with a bad date',
-      '---\nname: Ana\nadjustments:\n- {link: cast, level: low, date: ontem}\n---\n',
-      "data do Ajuste inválida: 'ontem'",
-    ],
-    [
-      'two Ajustes for one link',
-      "---\nname: Ana\nadjustments:\n- {link: cast, level: low, date: '2026-01-01'}\n- {link: cast, level: high, date: '2026-01-02'}\n---\n",
-      'mais de um Ajuste para o elo cast',
-    ],
-    [
-      'an open question skipped twice',
-      "---\nname: Ana\nopen_questions:\n- {text: x?, date: '2026-01-01', skips: 2}\n---\n",
-      'puladas da pergunta aberta inválido: 2 (de 1 a 1; pulada 2 vezes, sai)',
-    ],
-    [
-      'an open question with skips 1.0',
-      "---\nname: Ana\nopen_questions:\n- {text: x?, date: '2026-01-01', skips: 1.0}\n---\n",
-      'puladas da pergunta aberta inválido: 1.0',
-    ],
-    [
-      'an open question with no date',
-      '---\nname: Ana\nopen_questions:\n- {text: x?, skips: 1}\n---\n',
-      "pergunta aberta precisa de texto, data e puladas: {'text': 'x?', 'skips': 1}",
-    ],
-    [
-      'an open question with a bad date',
-      "---\nname: Ana\nopen_questions:\n- {text: x?, date: '2026', skips: 1}\n---\n",
-      "data da pergunta aberta inválida: '2026'",
-    ],
-    [
-      'an open question asked twice',
-      "---\nname: Ana\nopen_questions:\n- {text: Curte X?, date: '2026-01-01', skips: 1}\n- {text: curte x?, date: '2026-01-02', skips: 1}\n---\n",
-      "pergunta aberta repetida: 'curte x?'",
-    ],
-  ])('%s is invalid_data', async (_, text, message) => {
+describe('reading the Pessoas', () => {
+  test.each(INVALID_FILES)('%s is invalid_data', async (_, text, message) => {
     const fixture = useFixture()
     write(fixture, 'ana', text)
 
@@ -294,7 +303,9 @@ describe('reading the Pessoas', () => {
 
     expect((await errorOf(fixture, readPeople)).code).toBe('internal')
   })
+})
 
+describe('reading the Pessoas', () => {
   test('keys and values read as Python read them', async () => {
     const fixture = useFixture()
     write(
@@ -351,7 +362,9 @@ describe('reading the Pessoas', () => {
       ]),
     ])
   })
+})
 
+describe('reading the Pessoas', () => {
   test('decodePersonSync throws the EngineError', () => {
     expect(decodePersonSync('/x/ana.md', '---\nname: Ana\n---\n').slug).toBe(
       'ana',
@@ -410,6 +423,96 @@ describe('resolving a Pessoa', () => {
   })
 })
 
+/** A Pessoa that cannot be created: input, code, message and reason. */
+const CREATE_ERRORS: ReadonlyArray<
+  [Parameters<typeof createPerson>[0], string, string, string]
+> = [
+  [
+    { name: 'Outro Bruno', slug: 'bruno' },
+    'person_exists',
+    "já existe uma Pessoa com o slug 'bruno'",
+    'slug_taken',
+  ],
+  [
+    { name: 'Ana', slug: 'Ana' },
+    'invalid_usage',
+    "slug inválido: 'Ana' (só letras minúsculas sem acento, números e '-')",
+    'invalid_slug',
+  ],
+  [
+    { name: '日本' },
+    'invalid_usage',
+    "slug inválido: '' (só letras minúsculas sem acento, números e '-')",
+    'invalid_slug',
+  ],
+  [
+    { name: ' DONO ' },
+    'invalid_usage',
+    "'dono' é reservado para achar o Dono",
+    'reserved_name',
+  ],
+  [
+    { name: 'Ana', slug: 'dono' },
+    'invalid_usage',
+    "'dono' é reservado para achar o Dono",
+    'reserved_name',
+  ],
+  [
+    { name: 'Ana', owner: true },
+    'invalid_usage',
+    'um Dono precisa do e-mail do Google, para entrar no site',
+    'email_required',
+  ],
+  [
+    { name: 'Ana', owner: true, email: 'ana@example' },
+    'invalid_usage',
+    "e-mail inválido: 'ana@example'",
+    'invalid_email',
+  ],
+  [
+    { name: 'Ana', owner: true, email: 'ana lima@example.org' },
+    'invalid_usage',
+    "e-mail inválido: 'ana lima@example.org'",
+    'invalid_email',
+  ],
+  [
+    { name: 'Ana', email: 'ana@example.org' },
+    'invalid_usage',
+    'só um Dono tem e-mail: ele serve para entrar no site',
+    'email_not_owner',
+  ],
+  [
+    { name: 'Ana', owner: true, email: 'Bruno@Example.org' },
+    'invalid_usage',
+    "o e-mail 'bruno@example.org' já é de bruno",
+    'email_taken',
+  ],
+  [
+    { name: ' VERA ', slug: 'vera-lima' },
+    'person_exists',
+    "já existe uma Pessoa chamada 'VERA': vera",
+    'name_taken',
+  ],
+  [
+    { name: 'Ana', aliases: ['Aninha', 'EU'] },
+    'person_exists',
+    "já existe uma Pessoa chamada 'EU': bruno",
+    'name_taken',
+  ],
+  [
+    { name: 'Joana', aliases: ['quim'] },
+    'person_exists',
+    "já existe uma Pessoa chamada 'quim': quim",
+    'name_taken',
+  ],
+  [
+    { name: 'Teodoro', slug: 'eu' },
+    'person_exists',
+    "já existe uma Pessoa chamada 'eu': bruno",
+    'name_taken',
+  ],
+]
+
 describe('creating a Pessoa', () => {
   test('writes the file with name and aliases', async () => {
     const fixture = useFixture()
@@ -453,100 +556,18 @@ describe('creating a Pessoa', () => {
     expect(frontmatter(fixture, 'ana')).toMatchObject({ owner: true })
   })
 
-  test.each([
-    [
-      { name: 'Outro Bruno', slug: 'bruno' },
-      'person_exists',
-      "já existe uma Pessoa com o slug 'bruno'",
-      'slug_taken',
-    ],
-    [
-      { name: 'Ana', slug: 'Ana' },
-      'invalid_usage',
-      "slug inválido: 'Ana' (só letras minúsculas sem acento, números e '-')",
-      'invalid_slug',
-    ],
-    [
-      { name: '日本' },
-      'invalid_usage',
-      "slug inválido: '' (só letras minúsculas sem acento, números e '-')",
-      'invalid_slug',
-    ],
-    [
-      { name: ' DONO ' },
-      'invalid_usage',
-      "'dono' é reservado para achar o Dono",
-      'reserved_name',
-    ],
-    [
-      { name: 'Ana', slug: 'dono' },
-      'invalid_usage',
-      "'dono' é reservado para achar o Dono",
-      'reserved_name',
-    ],
-    [
-      { name: 'Ana', owner: true },
-      'invalid_usage',
-      'um Dono precisa do e-mail do Google, para entrar no site',
-      'email_required',
-    ],
-    [
-      { name: 'Ana', owner: true, email: 'ana@example' },
-      'invalid_usage',
-      "e-mail inválido: 'ana@example'",
-      'invalid_email',
-    ],
-    [
-      { name: 'Ana', owner: true, email: 'ana lima@example.org' },
-      'invalid_usage',
-      "e-mail inválido: 'ana lima@example.org'",
-      'invalid_email',
-    ],
-    [
-      { name: 'Ana', email: 'ana@example.org' },
-      'invalid_usage',
-      'só um Dono tem e-mail: ele serve para entrar no site',
-      'email_not_owner',
-    ],
-    [
-      { name: 'Ana', owner: true, email: 'Bruno@Example.org' },
-      'invalid_usage',
-      "o e-mail 'bruno@example.org' já é de bruno",
-      'email_taken',
-    ],
-    [
-      { name: ' VERA ', slug: 'vera-lima' },
-      'person_exists',
-      "já existe uma Pessoa chamada 'VERA': vera",
-      'name_taken',
-    ],
-    [
-      { name: 'Ana', aliases: ['Aninha', 'EU'] },
-      'person_exists',
-      "já existe uma Pessoa chamada 'EU': bruno",
-      'name_taken',
-    ],
-    [
-      { name: 'Joana', aliases: ['quim'] },
-      'person_exists',
-      "já existe uma Pessoa chamada 'quim': quim",
-      'name_taken',
-    ],
-    [
-      { name: 'Teodoro', slug: 'eu' },
-      'person_exists',
-      "já existe uma Pessoa chamada 'eu': bruno",
-      'name_taken',
-    ],
-  ])('%j is an error', async (input, code, message, reason) => {
-    const fixture = useFixture()
+  test.each(CREATE_ERRORS)(
+    '%j is an error',
+    async (input, code, message, reason) => {
+      const fixture = useFixture()
 
-    expect(await errorOf(fixture, createPerson(input))).toEqual({
-      code,
-      message,
-      reason,
-    })
-  })
+      expect(await errorOf(fixture, createPerson(input))).toEqual({
+        code,
+        message,
+        reason,
+      })
+    },
+  )
 })
 
 describe('writing a Pessoa back', () => {
@@ -559,7 +580,9 @@ describe('writing a Pessoa back', () => {
 
     expect(await fixture.ok(readPeople)).toEqual(before)
   })
+})
 
+describe('writing a Pessoa back', () => {
   test('keeps email and admin, and writes the keys in their order', async () => {
     const fixture = useFixture()
     const bruno: Person = {
@@ -613,6 +636,14 @@ describe('writing a Pessoa back', () => {
   })
 })
 
+const TERROR: OpenQuestion = {
+  text: 'curte terror?',
+  date: '2026-11-21',
+  skips: 1,
+  subject: null,
+  label: null,
+}
+
 describe('the sections of a Pessoa', () => {
   test('a new Relato goes after the last one and keeps the free text', async () => {
     const fixture = useFixture()
@@ -660,7 +691,9 @@ describe('the sections of a Pessoa', () => {
     expect(added).toBe(false)
     expect(same).toBe(carol)
   })
+})
 
+describe('the sections of a Pessoa', () => {
   test('a missing section is created at the end, and a removed item leaves it', async () => {
     const fixture = useFixture()
     write(fixture, 'carol', `${CAROL}\n\n`)
@@ -701,7 +734,9 @@ describe('the sections of a Pessoa', () => {
       (await fixture.run(removeItem(empty, 'seen', second))).exitCode,
     ).toBe(1)
   })
+})
 
+describe('the sections of a Pessoa', () => {
   test('a section with nothing but its title gets the item after the blank line', async () => {
     const fixture = useFixture()
     write(fixture, 'ana', '---\nname: Ana\n---\n## Relatos\n\n## Outra\n')
@@ -730,7 +765,9 @@ describe('the sections of a Pessoa', () => {
       '## Declarados\n\n- 2026-11-20 · x · específico · odeia Y (Q1) · "t"\n',
     )
   })
+})
 
+describe('the sections of a Pessoa', () => {
   test('Vetos are one per target; Ajustes one per link, the new replacing the old', async () => {
     const fixture = useFixture()
     const bruno = await person(fixture, 'bruno')
@@ -777,40 +814,35 @@ describe('the sections of a Pessoa', () => {
     ).toEqual([])
     expect(await fixture.ok(items(bruno, 'vetoes'))).toEqual([])
   })
+})
 
+describe('the sections of a Pessoa', () => {
   test('open questions: one per subject, or per text; skipped twice, they leave', async () => {
     const fixture = useFixture()
     const quim = await person(fixture, 'quim')
     const [helena] = quim.openQuestions
     if (!helena) throw new Error('no open question')
-    const terror: OpenQuestion = {
-      text: 'curte terror?',
-      date: '2026-11-21',
-      skips: 1,
-      subject: null,
-      label: null,
-    }
 
-    const added = await fixture.ok(addItem(quim, 'open_questions', terror))
+    const added = await fixture.ok(addItem(quim, 'open_questions', TERROR))
     const same = await fixture.ok(
       addItem(added.person, 'open_questions', {
-        ...terror,
+        ...TERROR,
         text: 'CURTE TERROR?',
       }),
     )
     expect([added.added, same.added]).toEqual([true, false])
     expect(await fixture.ok(items(added.person, 'open_questions'))).toEqual([
       helena,
-      terror,
+      TERROR,
     ])
     expect(
-      (await fixture.ok(removeItem(added.person, 'open_questions', terror)))
+      (await fixture.ok(removeItem(added.person, 'open_questions', TERROR)))
         .openQuestions,
     ).toEqual([helena])
 
     // Skipped again with a subject it lacked: the count goes up, the subject stays.
     const subject = skipQuestion(added.person, {
-      ...terror,
+      ...TERROR,
       date: '2026-11-22',
       subject: 'horror',
       label: 'terror',
@@ -821,10 +853,10 @@ describe('the sections of a Pessoa', () => {
     })
     expect(subject.person.openQuestions).toEqual([helena])
 
-    const fresh = skipQuestion(quim, terror)
+    const fresh = skipQuestion(quim, TERROR)
     expect(fresh).toEqual({
       person: added.person,
-      question: terror,
+      question: TERROR,
       dropped: false,
     })
 
@@ -838,7 +870,9 @@ describe('the sections of a Pessoa', () => {
     })
     expect(kept.person.openQuestions).toEqual([kept.question])
   })
+})
 
+describe('the sections of a Pessoa', () => {
   test('a Pessoa decodes the same from text as from her file', async () => {
     const fixture = useFixture()
     write(fixture, 'carol', CAROL)

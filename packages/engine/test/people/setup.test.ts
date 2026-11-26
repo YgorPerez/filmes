@@ -105,7 +105,9 @@ describe('the setup guide', () => {
     expect(vera.complete).toBe(false)
     expect(vera.ratings).toBe(0)
   })
+})
 
+describe('the setup guide', () => {
   test('one import does both Meu gosto and the import', async () => {
     const fixture = useFixture()
     const text = readFileSync(file(fixture, 'vera'), 'utf8')

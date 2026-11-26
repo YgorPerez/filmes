@@ -56,7 +56,9 @@ describe('two Donos', () => {
       'vera',
     )
   })
+})
 
+describe('two Donos', () => {
   test('each opens her own Session and is "Você" on its Cartaz', async () => {
     const fixture = useFixture()
 
@@ -92,7 +94,9 @@ describe('two Donos', () => {
     // No login: the Session's own Dono.
     expect(await labels()).toEqual(await labels('vera'))
   })
+})
 
+describe('two Donos', () => {
   test('who records the Feedback speaks for herself', async () => {
     const fixture = useFixture()
     const { session, films } = await fixture.ok(
@@ -135,7 +139,9 @@ describe('two Donos', () => {
       },
     })
   })
+})
 
+describe('two Donos', () => {
   test('the logged-in Dono signs the commit', async () => {
     const fixture = useFixture()
     gitIn(fixture.data, 'init', '--quiet', '-b', 'master')

@@ -86,7 +86,9 @@ describe('the taste neighbours path', () => {
 
     expect(neighbours(out, 'Pequenos Milagres')[0]?.text).toMatch(/^4 pessoas/)
   })
+})
 
+describe('the taste neighbours path', () => {
   test('a Nota from a pairwise answer does not choose the neighbours', async () => {
     const fixture = useFixture()
     // User 50 shares 2 of Bruno's films, one short of the minimum.
@@ -131,7 +133,9 @@ describe('the taste neighbours path', () => {
       /^4 pessoas/,
     )
   })
+})
 
+describe('the taste neighbours path', () => {
   test('fades with the age of her Notas the match rests on, like a Nota seed', async () => {
     const fixture = useFixture()
     const weights = tasteWeights(fixture, 3, 5)

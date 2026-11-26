@@ -27,11 +27,14 @@ import { Effect } from 'effect'
 import { FILM_SERIES } from '../../catalog/wikidata.ts'
 import { engineError } from '../../runtime/EngineError.ts'
 import { text, textOrNull } from '../../sqlite/row.ts'
+import type { Connection, SqliteError } from '../../sqlite/Sqlite.ts'
+import type { Candidate } from '../candidates.ts'
 import {
   drop,
   filmsJson,
   pass,
   type Constraint,
+  type ConstraintContext,
   type ConstraintModule,
   type StoredConstraint,
   type Verdict,
@@ -125,22 +128,15 @@ const required = (
 
 const PASSED = pass()
 
-const seriesOrder = (mode: SeriesOrderMode): Constraint => ({
-  name: 'series_order',
-  toJson: () => ({ mode }),
-  stored: () => ({ name: 'series_order', mode }),
-  unstored: mode === DEFAULT_SERIES_ORDER,
-  result: () => ({}),
-  evaluate: (context, films) =>
-    Effect.gen(function* () {
-      const { db, attendees } = context
-      const everyone = new Map(
-        [...films.keys()].map((id): [string, Verdict] => [id, PASSED]),
-      )
-      if (mode === 'off') return everyone
-      const series = new Map<string, Member[]>()
-      for (const row of yield* db.all(
-        `SELECT DISTINCT a.entidade_id AS serie, a.filme_id, f.titulo, e.data
+/** Film series id → its films, of the series of some film of `films`. */
+const readSeries = (
+  db: Connection,
+  films: ReadonlyMap<string, Candidate>,
+): Effect.Effect<ReadonlyMap<string, ReadonlyArray<Member>>, SqliteError> =>
+  Effect.gen(function* () {
+    const series = new Map<string, Member[]>()
+    for (const row of yield* db.all(
+      `SELECT DISTINCT a.entidade_id AS serie, a.filme_id, f.titulo, e.data
          FROM arestas a
          JOIN filmes f ON f.id = a.filme_id
          LEFT JOIN estreias e ON e.filme_id = a.filme_id
@@ -150,76 +146,107 @@ const seriesOrder = (mode: SeriesOrderMode): Constraint => ({
              SELECT entidade_id FROM arestas
              WHERE predicado = 'serie' AND filme_id IN (SELECT value FROM json_each(?)))
          ORDER BY a.entidade_id, e.data, a.filme_id`,
-        FILM_SERIES,
-        filmsJson(films),
-      )) {
-        const id = text(row, 'serie')
-        series.set(id, [
-          ...(series.get(id) ?? []),
-          {
-            id: text(row, 'filme_id'),
-            title: text(row, 'titulo'),
-            date: textOrNull(row, 'data'),
-          },
-        ])
-      }
-      if (series.size === 0) return everyone
-      const members = [...series.values()].flat()
-      const seen = new Set(
-        (yield* db.all(
-          `SELECT DISTINCT pessoa, filme_id FROM ja_vistos
+      FILM_SERIES,
+      filmsJson(films),
+    )) {
+      const id = text(row, 'serie')
+      series.set(id, [
+        ...(series.get(id) ?? []),
+        {
+          id: text(row, 'filme_id'),
+          title: text(row, 'titulo'),
+          date: textOrNull(row, 'data'),
+        },
+      ])
+    }
+    return series
+  })
+
+/** Who among the Presentes did not see the films `film` needs, grouped by
+ * the same missing films. */
+const unseenBefore = (
+  mode: SeriesOrderMode,
+  attendees: ReadonlyArray<string>,
+  needed: ReadonlyArray<Member>,
+  saw: (person: string, film: Member) => boolean,
+): UnseenBefore[] => {
+  const groups = new Map<string, { people: string[]; films: string[] }>()
+  for (const person of attendees) {
+    const missing =
+      mode === 'all'
+        ? needed.filter((m) => !saw(person, m))
+        : needed.some((m) => saw(person, m))
+          ? []
+          : needed
+    if (missing.length === 0) continue
+    const titles = missing.map((m) => m.title)
+    const key = JSON.stringify(titles)
+    const group = groups.get(key)
+    if (group) group.people.push(person)
+    else groups.set(key, { people: [person], films: titles })
+  }
+  return [...groups.values()]
+}
+
+const evaluateSeriesOrder = (
+  mode: SeriesOrderMode,
+  context: ConstraintContext,
+  films: ReadonlyMap<string, Candidate>,
+) =>
+  Effect.gen(function* () {
+    const { db, attendees } = context
+    const everyone = new Map(
+      [...films.keys()].map((id): [string, Verdict] => [id, PASSED]),
+    )
+    if (mode === 'off') return everyone
+    const series = yield* readSeries(db, films)
+    if (series.size === 0) return everyone
+    const members = [...series.values()].flat()
+    const seen = new Set(
+      (yield* db.all(
+        `SELECT DISTINCT pessoa, filme_id FROM ja_vistos
            WHERE pessoa IN (SELECT value FROM json_each(?))
              AND filme_id IN (SELECT value FROM json_each(?))`,
-          JSON.stringify(attendees),
-          JSON.stringify([...new Set(members.map((m) => m.id))]),
-        )).map((row) => `${text(row, 'pessoa')} ${text(row, 'filme_id')}`),
-      )
-      const saw = (person: string, film: Member) =>
-        seen.has(`${person} ${film.id}`)
-      const names = new Map(
-        (yield* db.all(
-          'SELECT slug, nome FROM pessoas WHERE slug IN (SELECT value FROM json_each(?))',
-          JSON.stringify(attendees),
-        )).map((row) => [text(row, 'slug'), text(row, 'nome')]),
-      )
-      for (const [, inSeries] of series) {
-        for (const film of inSeries) {
-          const verdict = everyone.get(film.id)
-          // A film only evaluated once, though it may be in two series.
-          if (verdict !== PASSED) continue
-          const needed = required(mode, film, inSeries)
-          if (needed.length === 0) continue
-          const groups = new Map<
-            string,
-            { people: string[]; films: string[] }
-          >()
-          for (const person of attendees) {
-            const missing =
-              mode === 'all'
-                ? needed.filter((m) => !saw(person, m))
-                : needed.some((m) => saw(person, m))
-                  ? []
-                  : needed
-            if (missing.length === 0) continue
-            const titles = missing.map((m) => m.title)
-            const key = JSON.stringify(titles)
-            const group = groups.get(key)
-            if (group) group.people.push(person)
-            else groups.set(key, { people: [person], films: titles })
-          }
-          if (groups.size === 0) continue
-          const unseen: UnseenBefore[] = [...groups.values()]
-          everyone.set(
-            film.id,
-            drop(null, {
-              label: unseenText(unseen, (slug) => names.get(slug) ?? slug),
-              unseen,
-            }),
-          )
-        }
+        JSON.stringify(attendees),
+        JSON.stringify([...new Set(members.map((m) => m.id))]),
+      )).map((row) => `${text(row, 'pessoa')} ${text(row, 'filme_id')}`),
+    )
+    const saw = (person: string, film: Member) =>
+      seen.has(`${person} ${film.id}`)
+    const names = new Map(
+      (yield* db.all(
+        'SELECT slug, nome FROM pessoas WHERE slug IN (SELECT value FROM json_each(?))',
+        JSON.stringify(attendees),
+      )).map((row) => [text(row, 'slug'), text(row, 'nome')]),
+    )
+    for (const [, inSeries] of series) {
+      for (const film of inSeries) {
+        const verdict = everyone.get(film.id)
+        // A film only evaluated once, though it may be in two series.
+        if (verdict !== PASSED) continue
+        const needed = required(mode, film, inSeries)
+        if (needed.length === 0) continue
+        const unseen = unseenBefore(mode, attendees, needed, saw)
+        if (unseen.length === 0) continue
+        everyone.set(
+          film.id,
+          drop(null, {
+            label: unseenText(unseen, (slug) => names.get(slug) ?? slug),
+            unseen,
+          }),
+        )
       }
-      return everyone
-    }),
+    }
+    return everyone
+  })
+
+const seriesOrder = (mode: SeriesOrderMode): Constraint => ({
+  name: 'series_order',
+  toJson: () => ({ mode }),
+  stored: () => ({ name: 'series_order', mode }),
+  unstored: mode === DEFAULT_SERIES_ORDER,
+  result: () => ({}),
+  evaluate: (context, films) => evaluateSeriesOrder(mode, context, films),
 })
 
 export const seriesOrderModule: ConstraintModule<SeriesOrderRequest> = {

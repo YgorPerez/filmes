@@ -151,26 +151,23 @@ describe('the other modes', () => {
   })
 })
 
+const open = (
+  fixture: Fixture,
+  request: RecommendSessionRequest,
+): Promise<SessionRecommendation> =>
+  fixture.ok(recommendSession({ count: 100, ...request }))
+
+const stored = (fixture: Fixture, id: string) => {
+  const text = readFileSync(join(fixture.data, 'sessions', `${id}.md`), 'utf8')
+  const front = yamlToJson(
+    parseYaml(text.slice(4, text.indexOf('\n---', 4))),
+  ) as { context: { constraints?: Array<Record<string, unknown>> } }
+  return (front.context.constraints ?? []).filter(
+    (c) => c['name'] === 'series_order',
+  )
+}
+
 describe('in a Session', () => {
-  const open = (
-    fixture: Fixture,
-    request: RecommendSessionRequest,
-  ): Promise<SessionRecommendation> =>
-    fixture.ok(recommendSession({ count: 100, ...request }))
-
-  const stored = (fixture: Fixture, id: string) => {
-    const text = readFileSync(
-      join(fixture.data, 'sessions', `${id}.md`),
-      'utf8',
-    )
-    const front = yamlToJson(
-      parseYaml(text.slice(4, text.indexOf('\n---', 4))),
-    ) as { context: { constraints?: Array<Record<string, unknown>> } }
-    return (front.context.constraints ?? []).filter(
-      (c) => c['name'] === 'series_order',
-    )
-  }
-
   test('the default mode is not stored, and the top says nothing of it', async () => {
     const fixture = useFixture()
     const session = await open(fixture, { attendees: ['rosa'] })
@@ -212,7 +209,9 @@ describe('in a Session', () => {
       mode: 'previous',
     })
   })
+})
 
+describe('in a Session', () => {
   test('"tanto faz" is stored too, so a refazer keeps the rule off', async () => {
     const fixture = useFixture()
     const session = await open(fixture, {
@@ -264,7 +263,9 @@ describe('in a Session', () => {
         .map((d) => `${d.title} (${d.reason})`),
     ).toEqual(['Cais 3 (Teo não viu Cais 2)'])
   })
+})
 
+describe('in a Session', () => {
   test('the Dono is "você" on the Cartaz, and Presentes who missed the same films share the line', async () => {
     const fixture = useFixture()
     const session = await open(fixture, {

@@ -50,7 +50,9 @@ describe('personImports', () => {
       trakt: { ratings: 0, seen: 0 },
     })
   })
+})
 
+describe('personImports', () => {
   test('after a Letterboxd and a Trakt import: both records and their Fatos', async () => {
     const fixture = useFixture()
     await fixture.ok(personCreate({ name: 'Olga' }))

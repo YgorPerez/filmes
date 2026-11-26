@@ -103,7 +103,9 @@ describe('YAML as PyYAML reads it', () => {
     expect(wrong).toEqual([])
     // ~2 s of parsing alone; the default 5 s is not enough on a loaded machine.
   }, 30_000)
+})
 
+describe('YAML as PyYAML reads it', () => {
   test('collections of scalars go in flow style, like default_flow_style=None', () => {
     const value = new Map<string, YamlValue>([
       ['name', 'Ana'],
@@ -155,7 +157,9 @@ describe('YAML as PyYAML reads it', () => {
     const x = isMapping(many) ? many.get('x') : null
     expect(isMapping(x) && x.get('a')).toEqual(pyInt(1))
   })
+})
 
+describe('YAML as PyYAML reads it', () => {
   test.each([
     ['a: [unclosed\n', /sufficiently indented/],
     ['a: !!binary aGk=\n', /Unresolved tag/],

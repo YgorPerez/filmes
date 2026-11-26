@@ -29,7 +29,7 @@ import {
 import { basename, dirname, join, resolve } from 'node:path'
 import { Readable } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
-import { createGzip } from 'node:zlib'
+import { createGzip, type Gzip } from 'node:zlib'
 import { Data, Duration, Effect, Fiber } from 'effect'
 import { ZipError } from '../imports/zip.ts'
 import { isInside, REPOSITORY } from '../rebuild/rebuild.ts'
@@ -401,179 +401,206 @@ type Fraction = (fraction: number, message: string) => Effect.Effect<void>
 
 /** One run of `atualizar` (`_Atualizacao`): the downloads into `folder`,
  * what each pins, and every Wikidata item seen (for the labels). */
-const makeUpdate = (options: {
+interface UpdateRun {
   readonly catalog: string
   readonly folder: string
   readonly recordings: string | undefined
   readonly today: string
   readonly fetch: typeof globalThis.fetch
-}) => {
-  const { catalog, folder, recordings, today, fetch } = options
-  const dumps: Record<string, PinnedDump> = {}
-  const items = new Set<string>()
-  const recording = (name: string) =>
-    join(recordings!, name.replace(/\.gz$/, ''))
-
-  /** `_guardar`: pins the file under its SHA-256. */
-  const keep = (name: string, source: string, url: string, date: string) =>
-    attempt(async () => {
-      const file = join(folder, name)
-      const hash = sha256(file)
-      const destination = join(catalog, hash, name)
-      mkdirSync(dirname(destination), { recursive: true })
-      dumps[name] = {
-        date,
-        sha256: hash,
-        bytes: statSync(file).size,
-        source,
-        url,
-      }
-      renameSync(file, destination)
-    })
-
-  const grouplens = (name: string) => {
-    const { source, date, url } = GROUPLENS_SOURCES.get(name)!
-    const file = join(folder, name)
-    return Effect.gen(function* () {
-      const bytes =
-        recordings === undefined
-          ? (yield* open(fetch, url)).bytes
-          : fileBytes(join(recordings, name))
-      yield* attempt(async () => {
-        await save(bytes, file)
-        await validateZip(file, name)
-      }, true)
-    }).pipe(
-      Effect.mapError((error) => failure(`${name}: ${error.message}`)),
-      Effect.andThen(keep(name, source, url, date)),
-    )
-  }
-
-  const imdb = (name: string) =>
-    Effect.gen(function* () {
-      const url = IMDB_URL + name
-      const file = join(folder, name)
-      let date = today
-      if (recordings === undefined) {
-        const opened = yield* open(fetch, url)
-        date = opened.headers.get('x-amz-meta-run-date') ?? today
-        yield* attempt(() => save(opened.bytes, file))
-      } else yield* attempt(() => compress(fileBytes(recording(name)), file))
-      yield* attempt(() => checkImdb(file, name))
-      yield* keep(name, 'IMDb', url, date)
-    })
-
-  const sparql = (name: string, source: string, url: string, query: string) =>
-    Effect.gen(function* () {
-      const file = join(folder, name)
-      const bytes =
-        recordings === undefined
-          ? (yield* open(fetch, url, query)).bytes
-          : fileBytes(recording(name))
-      yield* attempt(() => compress(bytes, file))
-      const fields = name === LABELS ? ['valor'] : ['item', 'p', 'valor']
-      const seen = yield* attempt(async () => {
-        const found = new Set<string>()
-        for await (const rows of sparqlRows(file))
-          for (const row of rows) {
-            if (fields.some((field) => !hasValue(row, field)))
-              throw failure(`linha SPARQL sem os campos esperados em ${name}`)
-            for (const field of ['item', 'valor']) {
-              const item = qid(row[field])
-              if (item !== undefined) found.add(item)
-            }
-          }
-        return found
-      })
-      for (const item of seen) items.add(item)
-      yield* keep(name, source, url, today)
-    })
-
-  const wikidata = (
-    group: string,
-    properties: readonly string[],
-    progress: Fraction,
-  ) =>
-    Effect.gen(function* () {
-      yield* progress(0, `Consultando o QLever (${group})`)
-      yield* sparql(
-        wikidataName(group),
-        'QLever',
-        QLEVER,
-        groupQuery(group, properties),
-      ).pipe(
-        Effect.catchTag('UpdateFailure', (error) =>
-          Effect.gen(function* () {
-            yield* progress(
-              0.1,
-              `QLever falhou (${group}): ${error.message}. Consultando o WDQS por predicado.`,
-            )
-            for (const [index, property] of properties.entries()) {
-              yield* progress(
-                0.1 + (0.9 * (index + 1)) / (properties.length + 1),
-                `Consultando o WDQS (${group}, ${property})`,
-              )
-              yield* sparql(
-                wikidataName(group, property),
-                'WDQS',
-                WDQS,
-                groupQuery(group, [property]),
-              )
-            }
-          }),
-        ),
-      )
-    })
-
-  const labels = (progress: Fraction) =>
-    Effect.gen(function* () {
-      yield* progress(0, 'Consultando o QLever (rótulos)')
-      if (recordings !== undefined)
-        return yield* sparql(LABELS, 'QLever', QLEVER, '')
-      const sorted = [...items].sort()
-      const batches: string[][] = []
-      for (let at = 0; at < sorted.length; at += LABELS_BATCH)
-        batches.push(sorted.slice(at, at + LABELS_BATCH))
-      const gzip = createGzip({ level: 3 })
-      const written = pipeline(gzip, createWriteStream(join(folder, LABELS)))
-      // Two batches in flight, consumed in order (Python's `pool.map` with
-      // two workers).
-      const started: Array<Fiber.Fiber<LabelBatch, Failure>> = []
-      const start = (index: number) =>
-        index < batches.length && started[index] === undefined
-          ? Effect.forkChild(fetchLabels(fetch, batches[index]!)).pipe(
-              Effect.map((fiber) => {
-                started[index] = fiber
-              }),
-            )
-          : Effect.void
-      let usedWdqs = false
-      let separator = ''
-      gzip.write(
-        '{"head":{"vars":["valor","pt","en","mul","codigo"]},"results":{"bindings":[',
-      )
-      for (const index of batches.keys()) {
-        yield* start(index)
-        yield* start(index + 1)
-        const batch = yield* Fiber.join(started[index]!)
-        usedWdqs ||= batch.fallback
-        for (const row of batch.rows) {
-          gzip.write(separator + JSON.stringify(row))
-          separator = ','
-        }
-        yield* progress(
-          (index + 1) / (batches.length + 1),
-          `Rótulos do Wikidata: lote ${index + 1}/${batches.length}`,
-        )
-      }
-      gzip.end(']}}')
-      yield* attempt(() => written)
-      yield* keep(LABELS, usedWdqs ? 'QLever e WDQS' : 'QLever', QLEVER, today)
-      if (usedWdqs) dumps[LABELS] = { ...dumps[LABELS]!, fallback: WDQS }
-    })
-
-  return { dumps, grouplens, imdb, wikidata, labels }
+  readonly dumps: Record<string, PinnedDump>
+  readonly items: Set<string>
 }
+
+const recording = (run: UpdateRun, name: string) =>
+  join(run.recordings!, name.replace(/\.gz$/, ''))
+
+/** `_guardar`: pins the file under its SHA-256. */
+const keep = (
+  run: UpdateRun,
+  name: string,
+  pin: { readonly source: string; readonly url: string; readonly date: string },
+) =>
+  attempt(async () => {
+    const file = join(run.folder, name)
+    const hash = sha256(file)
+    const destination = join(run.catalog, hash, name)
+    mkdirSync(dirname(destination), { recursive: true })
+    run.dumps[name] = {
+      date: pin.date,
+      sha256: hash,
+      bytes: statSync(file).size,
+      source: pin.source,
+      url: pin.url,
+    }
+    renameSync(file, destination)
+  })
+
+const grouplens = (run: UpdateRun, name: string) => {
+  const { source, date, url } = GROUPLENS_SOURCES.get(name)!
+  const file = join(run.folder, name)
+  return Effect.gen(function* () {
+    const bytes =
+      run.recordings === undefined
+        ? (yield* open(run.fetch, url)).bytes
+        : fileBytes(join(run.recordings, name))
+    yield* attempt(async () => {
+      await save(bytes, file)
+      await validateZip(file, name)
+    }, true)
+  }).pipe(
+    Effect.mapError((error) => failure(`${name}: ${error.message}`)),
+    Effect.andThen(keep(run, name, { source, url, date })),
+  )
+}
+
+const imdb = (run: UpdateRun, name: string) =>
+  Effect.gen(function* () {
+    const url = IMDB_URL + name
+    const file = join(run.folder, name)
+    let date = run.today
+    if (run.recordings === undefined) {
+      const opened = yield* open(run.fetch, url)
+      date = opened.headers.get('x-amz-meta-run-date') ?? run.today
+      yield* attempt(() => save(opened.bytes, file))
+    } else yield* attempt(() => compress(fileBytes(recording(run, name)), file))
+    yield* attempt(() => checkImdb(file, name))
+    yield* keep(run, name, { source: 'IMDb', url, date })
+  })
+
+/** Every Wikidata item a SPARQL dump names, checking each row has the
+ * fields the dump needs. */
+const itemsIn = (file: string, name: string) =>
+  attempt(async () => {
+    const fields = name === LABELS ? ['valor'] : ['item', 'p', 'valor']
+    const found = new Set<string>()
+    for await (const rows of sparqlRows(file))
+      for (const row of rows) {
+        if (fields.some((field) => !hasValue(row, field)))
+          throw failure(`linha SPARQL sem os campos esperados em ${name}`)
+        for (const field of ['item', 'valor']) {
+          const item = qid(row[field])
+          if (item !== undefined) found.add(item)
+        }
+      }
+    return found
+  })
+
+const sparql = (
+  run: UpdateRun,
+  name: string,
+  endpoint: { readonly source: string; readonly url: string },
+  query: string,
+) =>
+  Effect.gen(function* () {
+    const file = join(run.folder, name)
+    const bytes =
+      run.recordings === undefined
+        ? (yield* open(run.fetch, endpoint.url, query)).bytes
+        : fileBytes(recording(run, name))
+    yield* attempt(() => compress(bytes, file))
+    const seen = yield* itemsIn(file, name)
+    for (const item of seen) run.items.add(item)
+    yield* keep(run, name, { ...endpoint, date: run.today })
+  })
+
+const wikidata = (
+  run: UpdateRun,
+  group: string,
+  properties: readonly string[],
+  progress: Fraction,
+) =>
+  Effect.gen(function* () {
+    yield* progress(0, `Consultando o QLever (${group})`)
+    yield* sparql(
+      run,
+      wikidataName(group),
+      { source: 'QLever', url: QLEVER },
+      groupQuery(group, properties),
+    ).pipe(
+      Effect.catchTag('UpdateFailure', (error) =>
+        Effect.gen(function* () {
+          yield* progress(
+            0.1,
+            `QLever falhou (${group}): ${error.message}. Consultando o WDQS por predicado.`,
+          )
+          for (const [index, property] of properties.entries()) {
+            yield* progress(
+              0.1 + (0.9 * (index + 1)) / (properties.length + 1),
+              `Consultando o WDQS (${group}, ${property})`,
+            )
+            yield* sparql(
+              run,
+              wikidataName(group, property),
+              { source: 'WDQS', url: WDQS },
+              groupQuery(group, [property]),
+            )
+          }
+        }),
+      ),
+    )
+  })
+
+/** Fetches the label batches into `gzip`, two in flight, consumed in order
+ * (Python's `pool.map` with two workers); whether any went to the WDQS. */
+const writeLabelBatches = (
+  run: UpdateRun,
+  batches: readonly string[][],
+  gzip: Gzip,
+  progress: Fraction,
+) =>
+  Effect.gen(function* () {
+    const started: Array<Fiber.Fiber<LabelBatch, Failure>> = []
+    const start = (index: number) =>
+      index < batches.length && started[index] === undefined
+        ? Effect.forkChild(fetchLabels(run.fetch, batches[index]!)).pipe(
+            Effect.map((fiber) => {
+              started[index] = fiber
+            }),
+          )
+        : Effect.void
+    let usedWdqs = false
+    let separator = ''
+    for (const index of batches.keys()) {
+      yield* start(index)
+      yield* start(index + 1)
+      const batch = yield* Fiber.join(started[index]!)
+      usedWdqs ||= batch.fallback
+      for (const row of batch.rows) {
+        gzip.write(separator + JSON.stringify(row))
+        separator = ','
+      }
+      yield* progress(
+        (index + 1) / (batches.length + 1),
+        `Rótulos do Wikidata: lote ${index + 1}/${batches.length}`,
+      )
+    }
+    return usedWdqs
+  })
+
+const labels = (run: UpdateRun, progress: Fraction) =>
+  Effect.gen(function* () {
+    yield* progress(0, 'Consultando o QLever (rótulos)')
+    if (run.recordings !== undefined)
+      return yield* sparql(run, LABELS, { source: 'QLever', url: QLEVER }, '')
+    const sorted = [...run.items].sort()
+    const batches: string[][] = []
+    for (let at = 0; at < sorted.length; at += LABELS_BATCH)
+      batches.push(sorted.slice(at, at + LABELS_BATCH))
+    const gzip = createGzip({ level: 3 })
+    const written = pipeline(gzip, createWriteStream(join(run.folder, LABELS)))
+    gzip.write(
+      '{"head":{"vars":["valor","pt","en","mul","codigo"]},"results":{"bindings":[',
+    )
+    const usedWdqs = yield* writeLabelBatches(run, batches, gzip, progress)
+    gzip.end(']}}')
+    yield* attempt(() => written)
+    yield* keep(run, LABELS, {
+      source: usedWdqs ? 'QLever e WDQS' : 'QLever',
+      url: QLEVER,
+      date: run.today,
+    })
+    if (usedWdqs) run.dumps[LABELS] = { ...run.dumps[LABELS]!, fallback: WDQS }
+  })
 
 /** The dumps downloaded first, in Python's order. */
 const DOWNLOADS = [
@@ -583,6 +610,41 @@ const DOWNLOADS = [
   IMDB_RATINGS,
   IMDB_PRINCIPALS,
 ]
+
+/** Every download of one run, in Python's order, then the manifest. */
+const downloadAll = (
+  run: UpdateRun,
+  versions: string,
+  progress: (event: UpdateProgress) => Effect.Effect<void>,
+) =>
+  Effect.gen(function* () {
+    const steps = DOWNLOADS.length + GROUPS.length + 1
+    for (const [position, name] of DOWNLOADS.entries()) {
+      yield* progress({
+        progress: position,
+        total: steps,
+        message: `Baixando ${name}`,
+      })
+      yield* GROUPLENS_SOURCES.has(name)
+        ? grouplens(run, name)
+        : imdb(run, name)
+    }
+    for (const [index, [group, properties]] of GROUPS.entries()) {
+      const position = DOWNLOADS.length + index
+      yield* wikidata(run, group, properties, (fraction, message) =>
+        progress({
+          progress: position + fraction,
+          total: steps,
+          message,
+        }),
+      )
+    }
+    yield* labels(run, (fraction, message) =>
+      progress({ progress: steps - 1 + fraction, total: steps, message }),
+    )
+    yield* attempt(async () => writeManifest(versions, run.dumps))
+    return run.dumps
+  })
 
 /** `atualizar`: downloads every dump and pins the new versions. */
 export const update = (
@@ -605,8 +667,8 @@ export const update = (
     const dumps = yield* Effect.acquireUseRelease(
       Effect.sync(() => mkdtempSync(join(catalog, 'tmp'))),
       (folder) =>
-        Effect.gen(function* () {
-          const run = makeUpdate({
+        downloadAll(
+          {
             catalog,
             folder,
             recordings:
@@ -615,33 +677,12 @@ export const update = (
                 : join(recordings, 'catalogo'),
             today,
             fetch: request.fetch ?? globalThis.fetch,
-          })
-          for (const [position, name] of DOWNLOADS.entries()) {
-            yield* progress({
-              progress: position,
-              total: steps,
-              message: `Baixando ${name}`,
-            })
-            yield* GROUPLENS_SOURCES.has(name)
-              ? run.grouplens(name)
-              : run.imdb(name)
-          }
-          for (const [index, [group, properties]] of GROUPS.entries()) {
-            const position = DOWNLOADS.length + index
-            yield* run.wikidata(group, properties, (fraction, message) =>
-              progress({
-                progress: position + fraction,
-                total: steps,
-                message,
-              }),
-            )
-          }
-          yield* run.labels((fraction, message) =>
-            progress({ progress: steps - 1 + fraction, total: steps, message }),
-          )
-          yield* attempt(async () => writeManifest(versions, run.dumps))
-          return run.dumps
-        }),
+            dumps: {},
+            items: new Set(),
+          },
+          versions,
+          progress,
+        ),
       (folder) =>
         Effect.sync(() => rmSync(folder, { recursive: true, force: true })),
     ).pipe(

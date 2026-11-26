@@ -122,7 +122,9 @@ describe('reprocessLetterboxd', () => {
     expect(result.discarded.map((i) => i.name)).toEqual(['Gambito']) // a TMDB miniseries
     expect(await queued(fixture)).toContain(RIO)
   })
+})
 
+describe('reprocessLetterboxd', () => {
   test('a transient TMDB failure in the middle of the import is tried again', async () => {
     const fixture = useFixture()
     await addOlga(fixture)
@@ -215,6 +217,17 @@ describe("the Dono's decisions", () => {
       },
     })
   })
+})
+
+describe("the Dono's decisions", () => {
+  /** Olga's ZIP imported with TMDB on: Vento Norte and Filme Perdido wait. */
+  const imported = async (fixture: Fixture) => {
+    await addOlga(fixture)
+    await importZip(fixture, 'olga', olgaZip(), TMDB_ON)
+    const { items } = await fixture.ok(viewQueue, RECORDED)
+    const id = (name: string) => items.find((i) => i.name === name)?.id ?? ''
+    return { fixture, vento: id('Vento Norte'), perdido: id('Filme Perdido') }
+  }
 
   test('a confirmation by tconst, again, answers what was recorded', async () => {
     const { fixture, vento } = await imported(useFixture())
@@ -258,6 +271,17 @@ describe("the Dono's decisions", () => {
     )
     expect(result).toMatchObject({ film: 'tt9000101', attributions: [] })
   })
+})
+
+describe("the Dono's decisions", () => {
+  /** Olga's ZIP imported with TMDB on: Vento Norte and Filme Perdido wait. */
+  const imported = async (fixture: Fixture) => {
+    await addOlga(fixture)
+    await importZip(fixture, 'olga', olgaZip(), TMDB_ON)
+    const { items } = await fixture.ok(viewQueue, RECORDED)
+    const id = (name: string) => items.find((i) => i.name === name)?.id ?? ''
+    return { fixture, vento: id('Vento Norte'), perdido: id('Filme Perdido') }
+  }
 
   test('what cannot be decided is an error', async () => {
     const { fixture, vento } = await imported(useFixture())
@@ -291,7 +315,9 @@ describe("the Dono's decisions", () => {
         'TMDB sem chave de API (defina FILMES_TMDB_CHAVE); o que o Wikidata não resolveu fica na fila; `fila reprocessar` consulta o TMDB de novo. Use o tconst ou o link do IMDb para confirmar.',
     })
   })
+})
 
+describe("the Dono's decisions", () => {
   test('an old database without the import tables is outdated', async () => {
     const fixture = useFixture()
     await addOlga(fixture)

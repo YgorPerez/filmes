@@ -73,7 +73,9 @@ describe('the content path', () => {
       ],
     )
   })
+})
 
+describe('the content path', () => {
   test('an actor outside the first three IMDb credits is weak at most', async () => {
     expect(
       sortedRows(
@@ -124,7 +126,9 @@ describe('the content path', () => {
     ).map(([text]) => text)
     expect(texts.filter((t) => t.includes('série'))).toEqual([])
   })
+})
 
+describe('the content path', () => {
   test('a shared genre is weak at most and makes no seed', async () => {
     expect(evidenceOf(await all(useFixture()), 'Poeira', 'bruno')).toEqual([
       [
@@ -167,7 +171,9 @@ describe('the content path', () => {
       },
     })
   })
+})
 
+describe('the content path', () => {
   test('a principal actor on three high Notas is moderate at most, and the director strong', async () => {
     // Rosa gave 5, 4.5 and 4.5 to Ensaio Geral, Bastidores and Ato Final, all
     // by Clara Bastos and with Duda Alves. Coxia too, with Duda Alves first
@@ -255,6 +261,11 @@ describe('the Ajuste to a link', () => {
       evidenceOf(await all(fixture, 60), 'Voo Noturno', 'bruno')[0]?.[1],
     ).toBe('moderate')
   })
+})
+
+describe('the Ajuste to a link', () => {
+  const adjust = (fixture: Fixture, level: Level) =>
+    fixture.ok(personAdjust({ person: 'bruno', link: 'cast', level }))
 
   test('a new Ajuste to the same link replaces the old; high weighs 1.5 without a stronger strength', async () => {
     const fixture = useFixture()

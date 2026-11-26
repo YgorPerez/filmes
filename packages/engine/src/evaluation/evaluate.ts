@@ -33,6 +33,7 @@ import {
   SAMPLE_SIZE,
   SEED,
   type Progress,
+  type Sample,
 } from './movielens.ts'
 import { listSimilarity } from './diversity.ts'
 import { measure, prepareOffline } from './offline.ts'
@@ -195,6 +196,33 @@ const MEASURE_FROM = 35
 const MEASURE_SPAN = 60
 const NOTIFY_EVERY_MS = 5_000
 
+/** The measures' progress: a notice at each new whole percent, or after
+ * `NOTIFY_EVERY_MS` without one. */
+const makeTicker = (total: number, progress: Progress) =>
+  Effect.gen(function* () {
+    let done = 0
+    let percent = MEASURE_FROM
+    let lastNotice = yield* Clock.currentTimeMillis
+    const ticker: { message: string; readonly advance: Effect.Effect<void> } = {
+      message: 'Medindo recall e cobertura',
+      advance: Effect.gen(function* () {
+        done += 1
+        const now = MEASURE_FROM + (MEASURE_SPAN * done) / total
+        const clock = yield* Clock.currentTimeMillis
+        if (
+          Math.trunc(now) > Math.trunc(percent) ||
+          clock - lastNotice >= NOTIFY_EVERY_MS
+        ) {
+          percent = now
+          lastNotice = clock
+          yield* progress(now, ticker.message)
+        }
+      }),
+    }
+    yield* progress(percent, ticker.message)
+    return ticker
+  })
+
 /** `_medir`: the current weights, then (with the grid) every combination. */
 const measureAll = (
   db: Connection,
@@ -216,25 +244,8 @@ const measureAll = (
     const configs = space && count ? combinations(weights, space) : []
     const total =
       count * (1 + configs.filter((c) => !sameWeights(c, weights)).length)
-    let done = 0
-    let percent = MEASURE_FROM
-    let lastNotice = yield* Clock.currentTimeMillis
-    let message = 'Medindo recall e cobertura'
-    yield* progress(percent, message)
-
-    const advance = Effect.gen(function* () {
-      done += 1
-      const now = MEASURE_FROM + (MEASURE_SPAN * done) / total
-      const clock = yield* Clock.currentTimeMillis
-      if (
-        Math.trunc(now) > Math.trunc(percent) ||
-        clock - lastNotice >= NOTIFY_EVERY_MS
-      ) {
-        percent = now
-        lastNotice = clock
-        yield* progress(now, message)
-      }
-    })
+    const ticker = yield* makeTicker(total, progress)
+    const advance = ticker.advance
 
     const measureWith = (config: Weights) =>
       Effect.gen(function* () {
@@ -252,7 +263,7 @@ const measureAll = (
 
     const current = yield* measureWith(weights)
     if (!withGrid || space === null) return { current, grid: null }
-    message = 'Comparando os pesos da grade'
+    ticker.message = 'Comparando os pesos da grade'
     const results: Array<readonly [Weights, OfflineResult]> = []
     for (const config of configs)
       results.push([
@@ -268,6 +279,69 @@ const measureAll = (
       },
     }
   })
+
+/** Every measure, inside the run's one read transaction. */
+const measureInRead = (
+  db: Connection,
+  options: {
+    readonly weights: Weights
+    readonly today: string
+    readonly movielensFolder: string
+    readonly manifest: string
+    readonly grid: boolean
+    readonly progress: Progress
+  },
+) =>
+  Effect.gen(function* () {
+    const { movielensFolder, progress } = options
+    yield* db.exec('BEGIN')
+    const onlineMeasures = yield* online(db)
+    const people = yield* measuredPeople(db, options.today)
+    yield* progress(10, 'Sorteando a amostra do MovieLens')
+    const sample = yield* readSample(
+      movielensFolder,
+      options.manifest,
+      progress,
+    )
+    const sampled = sample?.measured ?? []
+    yield* prepareOffline(db, people, sampled)
+    if (sample) {
+      yield* progress(20, 'Calculando vizinhos sem os usuários sorteados')
+      yield* prepareSample(db, movielensFolder, sample, progress)
+    }
+    const result = yield* measureAll(
+      db,
+      options.weights,
+      people,
+      sampled,
+      options.grid,
+      progress,
+    )
+    return { onlineMeasures, sample, ...result }
+  })
+
+/** What the report warns of: the MovieLens sample missing or short, and a
+ * Força that does not rise. */
+const warningsOf = (sample: Sample | null, current: OfflineResult) => {
+  const warnings: string[] = []
+  if (sample === null)
+    warnings.push(
+      'A amostra offline do MovieLens exige ml-32m/ratings.csv e ml-32m/links.csv no Catálogo.',
+    )
+  else if (sample.users.size < SAMPLE_SIZE)
+    warnings.push(
+      `O MovieLens tinha só ${sample.users.size} usuários para sortear.`,
+    )
+  for (const [name, measures] of [
+    ['Pessoas', current.people],
+    ['MovieLens', current.movielens],
+  ] as const)
+    if (measures.calibration.overall.rises === false)
+      warnings.push(
+        `Na amostra ${name}, a Força não sobe de fraca para forte: uma Força acerta menos que outra mais fraca.`,
+      )
+  return warnings
+}
 
 /** `avaliar`. */
 export const evaluate = (
@@ -289,49 +363,16 @@ export const evaluate = (
     // it back), from the first SELECT on, so every measure sees one state of
     // the database. In WAL mode it blocks no writer; it only keeps the `-wal`
     // from being checkpointed past it, so the `-wal` grows until it ends.
-    const measured = yield* sqlite.read((db) =>
-      Effect.gen(function* () {
-        yield* db.exec('BEGIN')
-        const onlineMeasures = yield* online(db)
-        const people = yield* measuredPeople(db, run.today)
-        yield* progress(10, 'Sorteando a amostra do MovieLens')
-        const sample = yield* readSample(movielensFolder, manifest, progress)
-        const sampled = sample?.measured ?? []
-        yield* prepareOffline(db, people, sampled)
-        if (sample) {
-          yield* progress(20, 'Calculando vizinhos sem os usuários sorteados')
-          yield* prepareSample(db, movielensFolder, sample, progress)
-        }
-        const result = yield* measureAll(
-          db,
-          env.weights,
-          people,
-          sampled,
-          request.grid ?? false,
-          progress,
-        )
-        return { onlineMeasures, sample, ...result }
+    const { onlineMeasures, sample, current, grid } = yield* sqlite.read((db) =>
+      measureInRead(db, {
+        weights: env.weights,
+        today: run.today,
+        movielensFolder,
+        manifest,
+        grid: request.grid ?? false,
+        progress,
       }),
     )
-    const { onlineMeasures, sample, current, grid } = measured
-
-    const warnings: string[] = []
-    if (sample === null)
-      warnings.push(
-        'A amostra offline do MovieLens exige ml-32m/ratings.csv e ml-32m/links.csv no Catálogo.',
-      )
-    else if (sample.users.size < SAMPLE_SIZE)
-      warnings.push(
-        `O MovieLens tinha só ${sample.users.size} usuários para sortear.`,
-      )
-    for (const [name, measures] of [
-      ['Pessoas', current.people],
-      ['MovieLens', current.movielens],
-    ] as const)
-      if (measures.calibration.overall.rises === false)
-        warnings.push(
-          `Na amostra ${name}, a Força não sobe de fraca para forte: uma Força acerta menos que outra mais fraca.`,
-        )
 
     yield* progress(96, 'Gravando o relatório')
     const result = {
@@ -344,7 +385,7 @@ export const evaluate = (
           : ('offline' as const),
       weights: camelKeys(env.weights),
       versions: dataVersions(catalog, manifest),
-      warnings,
+      warnings: warningsOf(sample, current),
       movielensSample: { seed: SEED, users: sample ? sample.users.size : 0 },
       ...(grid ? { grid } : {}),
     }
