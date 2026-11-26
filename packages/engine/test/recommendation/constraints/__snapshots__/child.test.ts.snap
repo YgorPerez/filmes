@@ -18,7 +18,7 @@ exports[`the whole output, as recorded > child 10 with OMDb 1`] = `
       "removed": 73,
     },
   },
-  "credit": {},
+  "disagreement": null,
   "films": [
     {
       "coverage": {
@@ -499,6 +499,7 @@ exports[`the whole output, as recorded > child 10 with OMDb 1`] = `
   "rule": {
     "name": "default",
   },
+  "satisfaction": {},
   "vetoes": [],
   "warnings": [
     "TMDB sem chave de API (defina FILMES_TMDB_CHAVE); os filmes saem sem capa, sem título em português e sem sinopse",
@@ -524,7 +525,7 @@ exports[`the whole output, as recorded > child 10 without the OMDb key 1`] = `
       "removed": 74,
     },
   },
-  "credit": {},
+  "disagreement": null,
   "films": [
     {
       "coverage": {
@@ -936,6 +937,7 @@ exports[`the whole output, as recorded > child 10 without the OMDb key 1`] = `
   "rule": {
     "name": "default",
   },
+  "satisfaction": {},
   "vetoes": [],
   "warnings": [
     "OMDb sem chave de API (defina FILMES_OMDB_CHAVE); filmes sem classificação local saem da Sessão com criança",
@@ -962,7 +964,7 @@ exports[`the whole output, as recorded > child 12, local chain only 1`] = `
       "removed": 71,
     },
   },
-  "credit": {},
+  "disagreement": null,
   "films": [
     {
       "coverage": {
@@ -1618,6 +1620,7 @@ exports[`the whole output, as recorded > child 12, local chain only 1`] = `
   "rule": {
     "name": "default",
   },
+  "satisfaction": {},
   "vetoes": [],
   "warnings": [
     "OMDb sem chave de API (defina FILMES_OMDB_CHAVE); filmes sem classificação local saem da Sessão com criança",
@@ -1644,7 +1647,7 @@ exports[`the whole output, as recorded > child 17 with OMDb 1`] = `
       "removed": 65,
     },
   },
-  "credit": {},
+  "disagreement": null,
   "films": [
     {
       "coverage": {
@@ -2694,6 +2697,7 @@ exports[`the whole output, as recorded > child 17 with OMDb 1`] = `
   "rule": {
     "name": "default",
   },
+  "satisfaction": {},
   "vetoes": [],
   "warnings": [
     "TMDB sem chave de API (defina FILMES_TMDB_CHAVE); os filmes saem sem capa, sem título em português e sem sinopse",
@@ -2719,7 +2723,7 @@ exports[`the whole output, as recorded > child no age 1`] = `
       "removed": 77,
     },
   },
-  "credit": {},
+  "disagreement": null,
   "films": [
     {
       "coverage": {
@@ -2909,6 +2913,7 @@ exports[`the whole output, as recorded > child no age 1`] = `
   "rule": {
     "name": "default",
   },
+  "satisfaction": {},
   "vetoes": [],
   "warnings": [
     "OMDb sem chave de API (defina FILMES_OMDB_CHAVE); filmes sem classificação local saem da Sessão com criança",

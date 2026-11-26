@@ -171,7 +171,7 @@ describe('the whole output, as recorded', () => {
     )
   })
 
-  test('the Crédito, its line and the order it changes', async () => {
+  test('the satisfaction, its line and the order it changes', async () => {
     const fixture = useFixture()
     const noImdbBonus = weightsWith(
       fixture,
@@ -195,11 +195,14 @@ describe('the whole output, as recorded', () => {
       { attendees: ['dono', 'quim'], count: 50 },
       noImdbBonus,
     )
-    expect(out.credit).toEqual({ bruno: 0.4444, quim: 0 })
+    expect([out.satisfaction, out.disagreement]).toEqual([
+      { bruno: 0.1111, quim: 1 },
+      0.8889,
+    ])
     expect(
       out.films.some((f) => f.filmLines.some((l) => l.person === 'bruno')),
     ).toBe(true)
-    // A Relato in the Feedback, and the Crédito outside the default Regra.
+    // A Relato in the Feedback, and the satisfaction outside the default Regra.
     await fixture.ok(rebuild)
     const again = await fixture.ok(
       recommendSession({ attendees: ['dono', 'quim', 'iara'], count: 5 }),

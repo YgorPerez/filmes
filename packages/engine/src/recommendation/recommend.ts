@@ -15,8 +15,8 @@
 // only when Candidates with Facts run out. Then the most voted first, then
 // the id. Each film carries each Presente's utility and Evidence, grouped by
 // slug in the Presentes' order; whoever has no Fact on the film gets the
-// "sem fato" line. The Crédito line also goes in `filmLines` when the
-// adjustment changes the order.
+// "sem fato" line. The satisfaction line also goes in `filmLines` when
+// weighing who is behind changes the order.
 
 import { Effect } from 'effect'
 import { compareTuple, type PyOrderable } from '../compat/compare.ts'
@@ -49,7 +49,11 @@ import {
   type ConstraintContext,
 } from './constraints.ts'
 import { readConstraints, type ConstraintRequest } from './constraints/index.ts'
-import { computeCredit, creditLine, type Credit } from './credit.ts'
+import {
+  groupSatisfaction,
+  satisfactionLine,
+  type GroupSatisfaction,
+} from './group-satisfaction.ts'
 import { filmHeader, type FilmHeader } from './header.ts'
 import {
   byConstraint,
@@ -69,7 +73,7 @@ import {
   DEFAULT_RULE,
   ruleKey,
   ruleToJson,
-  usesCredit,
+  usesSatisfaction,
   type Rule,
   type RuleName,
 } from './rule.ts'
@@ -96,7 +100,7 @@ export interface RecommendedFilm extends FilmHeader {
   readonly utility: Readonly<Record<string, number | null>>
   /** By Presente, in the Presentes' order; the strongest first. */
   readonly evidence: Readonly<Record<string, ReadonlyArray<EvidenceJson>>>
-  /** The Restrições' lines, the film signals and the Crédito line. */
+  /** The Restrições' lines, the film signals and the satisfaction line. */
   readonly filmLines: ReadonlyArray<EvidenceJson>
   /** Only when regenerating: the previous version did not show it. */
   readonly new?: boolean
@@ -105,9 +109,12 @@ export interface RecommendedFilm extends FilmHeader {
 export interface Recommendation {
   readonly attendees: ReadonlyArray<string>
   readonly rule: ReturnType<typeof ruleToJson>
-  /** By Presente, rounded to 4 places; empty when the Regra or a Session
-   * alone takes no Crédito. */
-  readonly credit: Readonly<Record<string, number>>
+  /** By Presente with a reaction in her recent shared Sessions, rounded to
+   * 4 places; empty when the Regra or a Session alone does not weigh it. */
+  readonly satisfaction: Readonly<Record<string, number>>
+  /** The highest satisfaction minus the lowest, rounded to 4 places; null
+   * with fewer than two. */
+  readonly disagreement: number | null
   readonly vetoes: ReadonlyArray<VetoReport>
   readonly moods: ReadonlyArray<string>
   readonly films: ReadonlyArray<RecommendedFilm>
@@ -162,20 +169,20 @@ const orderKey = (
 const byKey = (a: { key: Key }, b: { key: Key }) =>
   compareTuple([...a.key], [...b.key])
 
-/** Who has Crédito and made this film go up: the film gained places with
- * the Crédito, the Pessoa has a Fact on it and is not the default Regra's
- * minimum (the film is hers: with the Crédito, the films where she is the
- * minimum fell and this one stayed). The minimum is among those with a
- * Fact: the 0.5 of whoever has none does not count. */
-const wentUpByCredit = (
+/** Who is behind in satisfaction and made this film go up: the film gained
+ * places with the satisfaction, the Pessoa has a Fact on it and is not the
+ * default Regra's minimum (the film is hers: weighed by the satisfaction,
+ * the films where she is the minimum fell and this one stayed). The minimum
+ * is among those with a Fact: the 0.5 of whoever has none does not count. */
+const wentUpBySatisfaction = (
   filmId: string,
   contested: ReadonlyMap<string, number>,
-  positionWithoutCredit: ReadonlyMap<string, number>,
+  positionUnweighed: ReadonlyMap<string, number>,
   utilities: ReadonlyMap<string, number | null>,
   adjustment: ReadonlyMap<string, number>,
 ): ReadonlyArray<string> => {
   const position = contested.get(filmId)
-  const before = positionWithoutCredit.get(filmId)
+  const before = positionUnweighed.get(filmId)
   if (adjustment.size === 0 || position === undefined) return []
   if (before === undefined) throw pythonError('KeyError', `'${filmId}'`)
   if (position >= before) return []
@@ -269,17 +276,17 @@ export const rank = (
       if (signal.forFilm) collect(ofFilm, yield* signal.forFilm(round))
     }
 
-    // Crédito (#20): only in the default Regra and in a group.
-    // `adjustment` is each Pessoa's factor × Crédito.
-    const credits: ReadonlyMap<string, Credit> =
-      usesCredit(rule) && attendees.length > 1
-        ? yield* computeCredit(db, attendees, weights.credit.window)
-        : new Map()
-    const factor = weights.credit.factor
+    // Satisfação (#176): only in the default Regra and in a group.
+    // `adjustment` is factor × how far each Pessoa is below the highest.
+    const group: GroupSatisfaction | null =
+      usesSatisfaction(rule) && attendees.length > 1
+        ? yield* groupSatisfaction(db, attendees, weights.satisfaction.window)
+        : null
+    const factor = weights.satisfaction.factor
     const adjustment = new Map(
-      [...credits]
-        .filter(([, c]) => factor && c.value > 0)
-        .map(([p, c]) => [p, factor * c.value]),
+      factor && group !== null
+        ? [...group.behind].map(([p, gap]) => [p, factor * gap])
+        : [],
     )
 
     let ids: Iterable<string> = round.candidates.keys()
@@ -301,7 +308,7 @@ export const rank = (
       ids = some
     }
     const ordered: Ordered[] = []
-    const withoutCredit: { key: Key; id: string }[] = []
+    const unweighed: { key: Key; id: string }[] = []
     for (const filmId of ids) {
       const film = round.candidates.get(filmId)
       if (film === undefined) throw pythonError('KeyError', `'${filmId}'`)
@@ -332,7 +339,7 @@ export const rank = (
         evidence,
       })
       if (adjustment.size > 0)
-        withoutCredit.push({
+        unweighed.push({
           key: orderKey(ruleKey(rule, utilities), hasFact, film, bonus),
           id: filmId,
         })
@@ -373,9 +380,9 @@ export const rank = (
     // The two orders with the same verdicts, without asking an on-demand
     // source for more answers. When regenerating, only the free places
     // compete: each one's order is among the films not kept, and the kept
-    // film, there because the Dono asked, gets no Crédito line.
-    const positionWithoutCredit = new Map(
-      withoutCredit
+    // film, there because the Dono asked, gets no satisfaction line.
+    const positionUnweighed = new Map(
+      unweighed
         .sort(byKey)
         .filter(
           ({ id }) =>
@@ -412,18 +419,23 @@ export const rank = (
           Math.abs(contribution(b, weights)) -
           Math.abs(contribution(a, weights)),
       )
-      const creditLines = wentUpByCredit(
-        film.id,
-        contested,
-        positionWithoutCredit,
-        utilities,
-        adjustment,
-      ).map((p) => {
-        const credit = credits.get(p)
-        if (credit === undefined) throw pythonError('KeyError', `'${p}'`)
-        return creditLine(p, names.get(p) ?? p, credit, film.id, run.today)
-      })
-      const lines = [...asked.linesOf(film.id), ...signalLines, ...creditLines]
+      const satisfactionLines =
+        group === null
+          ? []
+          : wentUpBySatisfaction(
+              film.id,
+              contested,
+              positionUnweighed,
+              utilities,
+              adjustment,
+            ).map((p) =>
+              satisfactionLine(p, names.get(p) ?? p, group, film.id, run.today),
+            )
+      const lines = [
+        ...asked.linesOf(film.id),
+        ...signalLines,
+        ...satisfactionLines,
+      ]
       const withoutFactOn = [...utilities]
         .filter(([, u]) => u === null)
         .map(([p]) => p)
@@ -467,9 +479,16 @@ export const rank = (
     return {
       attendees,
       rule: ruleToJson(rule),
-      credit: Object.fromEntries(
-        [...credits].map(([p, c]) => [p, pyRound(c.value, 4)]),
+      satisfaction: Object.fromEntries(
+        [...(group?.people ?? [])].map(([p, s]) => [
+          p,
+          pyRound(s.satisfaction, 4),
+        ]),
       ),
+      disagreement:
+        group === null || group.disagreement === null
+          ? null
+          : pyRound(group.disagreement, 4),
       vetoes: vetoes.acted,
       moods: moods.moods.map((m) => m.name),
       films,

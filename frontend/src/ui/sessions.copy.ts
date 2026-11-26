@@ -68,7 +68,8 @@ export const SESSIONS = {
     attendeesLead: 'Quem vai assistir.',
     rule: 'Regra de escolha',
     rules: {
-      padrao: 'Padrão: média sem miséria, com o Crédito de quem ficou atrás',
+      padrao:
+        'Padrão: média sem miséria, a favor de quem saiu menos satisfeito',
       media: 'Média dos Presentes',
       de: 'O gosto de uma Pessoa',
     },

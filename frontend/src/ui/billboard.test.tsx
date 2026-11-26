@@ -153,6 +153,30 @@ describe('the marks', () => {
     expect(card(2).getAllByText(BILLBOARD.card.swapStamp)).toHaveLength(2)
   })
 
+  it('the Clima chips start at the version’s and ask for another in the text', async () => {
+    const user = userEvent.setup()
+    render(<Billboard billboard={MODEL} action="/x" />)
+    const chip = (name: string) =>
+      within(screen.getByRole('group', { name: /^Clima/ })).getByRole(
+        'checkbox',
+        { name },
+      )
+    expect(chip('leve')).toHaveProperty('checked', true)
+    expect(chip('pra rir')).toHaveProperty('checked', false)
+
+    await user.click(chip('tenso'))
+    expect(text()).toBe('#cartaz 2026-11-20-iara v2\nclima: leve, tenso\n')
+    expect(screen.getByText('outro Clima')).toBeTruthy()
+
+    await user.click(chip('leve'))
+    await user.click(chip('tenso'))
+    expect(text()).toBe('#cartaz 2026-11-20-iara v2\nclima: nenhum\n')
+
+    // Back to the version's: nothing to ask.
+    await user.click(chip('leve'))
+    expect(text()).toBe('#cartaz 2026-11-20-iara v2\n')
+  })
+
   it('Todos marks every Presente and stamps Já vi; the same Nota again takes it off', async () => {
     const user = userEvent.setup()
     render(<Billboard billboard={MODEL} action="/x" />)
@@ -316,6 +340,7 @@ describe('parseMarks', () => {
     )
     expect(marks).toEqual({
       addition: '',
+      moods: null,
       films: {
         tt9000104: {
           seen: ['iara'],
@@ -337,8 +362,17 @@ describe('parseMarks', () => {
     })
   })
 
+  it('keeps the chosen Climas that are chips of the Cartaz, in their order', () => {
+    const marks = (moods: unknown) =>
+      parseMarks(store(JSON.stringify({ moods, films: {} })), MODEL).moods
+
+    expect(marks(['tenso', 'épico', 'leve', 3])).toEqual(['leve', 'tenso'])
+    expect(marks([])).toEqual([])
+    expect(marks('leve')).toBeNull()
+  })
+
   it('gives none for what does not read', () => {
-    const none = { addition: '', films: {} }
+    const none = { addition: '', moods: null, films: {} }
     expect(parseMarks(store('{'), MODEL)).toEqual(none)
     expect(parseMarks(store('[]'), MODEL)).toEqual(none)
     expect(parseMarks(store('{"films": 1}'), MODEL)).toEqual(none)
