@@ -7,9 +7,23 @@
 
 import { randomUUID } from 'node:crypto'
 
+/** What the Leitura do pedido made of the acrescentar (#200): the labels
+ * of what went into the request, the words it did not understand, and the
+ * names or titles of several things (or of none). */
+export type AdditionReading = {
+  readonly added: readonly string[]
+  readonly notUnderstood: readonly string[]
+  readonly ambiguous: ReadonlyArray<{
+    readonly words: string
+    readonly candidates: readonly string[]
+  }>
+}
+
 export type Note = {
   readonly warnings: readonly string[]
   readonly addition: string | null
+  /** Absent when there was no acrescentar or it could not be read. */
+  readonly reading?: AdditionReading
 }
 
 /** How long a note lasts, and how many the process keeps at most. */

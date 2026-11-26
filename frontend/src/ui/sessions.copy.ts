@@ -57,6 +57,17 @@ export const SESSIONS = {
     addition: (text: string) =>
       `Acrescentar: “${text}” ficou anotado na Sessão. Se for gosto de alguém, só vale com o seu sim:`,
     additionLink: 'diga na página da Pessoa.',
+    /** The acrescentar as the Leitura do pedido read it (#200). */
+    additionRead: (text: string) => `Acrescentar: “${text}”.`,
+    additionAdded: (labels: readonly string[]) =>
+      `Entrou no pedido: ${labels.join('; ')}.`,
+    additionNotUnderstood: (runs: readonly string[]) =>
+      `Não entendi, ficou só anotado na Sessão: ${runs.map((r) => `“${r}”`).join(', ')}.`,
+    additionAmbiguous: (words: string, candidates: readonly string[]) =>
+      candidates.length === 0
+        ? `“${words}” não está no Catálogo.`
+        : `“${words}” pode ser ${candidates.join(' ou ')}: diga qual no próximo acrescentar.`,
+    additionTaste: 'Se for gosto de alguém, só vale com o seu sim:',
     closed: 'Fechada',
   },
 

@@ -6,6 +6,7 @@ import {
 } from '#/content/session-request'
 import type { ReplyRefusal, SessionNotice } from '#/content/billboard-reply'
 import type { CartazPage } from '#/platform/billboard'
+import type { AdditionReading } from '#/platform/notes'
 import type { SearchAnswer } from '#/platform/catalog-search'
 import type { RequestOptions, SessionItem } from '#/platform/sessions'
 import { Billboard } from './billboard'
@@ -196,6 +197,24 @@ export function SessionScreen({
   )
 }
 
+/** The acrescentar, what went into the request from it, and what did
+ * not. */
+function readingText(addition: string, reading: AdditionReading): string {
+  const { session } = SESSIONS
+  return [
+    session.additionRead(addition),
+    reading.added.length > 0 && session.additionAdded(reading.added),
+    reading.notUnderstood.length > 0 &&
+      session.additionNotUnderstood(reading.notUnderstood),
+    ...reading.ambiguous.map((a) =>
+      session.additionAmbiguous(a.words, a.candidates),
+    ),
+    session.additionTaste,
+  ]
+    .filter(Boolean)
+    .join(' ')
+}
+
 /** What the last reply or the form left to say: the warnings, and the
  * acrescentar, which is gosto only after the Dono's yes. */
 function Said({ page }: { page: CartazPage }) {
@@ -217,7 +236,9 @@ function Said({ page }: { page: CartazPage }) {
       )}
       {page.addition && (
         <Notice>
-          {session.addition(page.addition)}{' '}
+          {page.reading
+            ? readingText(page.addition, page.reading)
+            : session.addition(page.addition)}{' '}
           <a href="/pessoas" className="font-semibold text-ink">
             {session.additionLink}
           </a>
