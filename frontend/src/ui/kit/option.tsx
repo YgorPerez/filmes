@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type { ChangeEvent, ReactNode } from 'react'
 import { Icon } from './icon'
 
 // An option to mark (DESIGN.md, Opções): a 44px pill with a 1.5px `rule`
@@ -8,7 +8,9 @@ import { Icon } from './icon'
 // keyboard and the screen reader get the real control, and the pill only
 // draws its state (`has-checked`) and the focus ring of the input in it.
 // `shape="row"` is the same option for a text too long for a pill (a
-// Regra, a film): a 10px corner, and the text wraps.
+// Regra, a film): a 10px corner, and the text wraps. With `checked`, the
+// page holds the state (the Cartaz's Clima chips) and `onChange` gets each
+// tap.
 
 const SHAPES = {
   pill: 'rounded-pill px-xl',
@@ -20,6 +22,8 @@ export function Option({
   name,
   value = 'sim',
   defaultChecked,
+  checked,
+  onChange,
   shape = 'pill',
   children,
 }: {
@@ -27,6 +31,8 @@ export function Option({
   name: string
   value?: string
   defaultChecked?: boolean
+  checked?: boolean
+  onChange?: (checked: boolean) => void
   shape?: keyof typeof SHAPES
   children: ReactNode
 }) {
@@ -35,7 +41,13 @@ export function Option({
   const input = {
     name,
     value,
-    defaultChecked,
+    ...(checked === undefined
+      ? { defaultChecked }
+      : {
+          checked,
+          onChange: (e: ChangeEvent<HTMLInputElement>) =>
+            onChange?.(e.target.checked),
+        }),
     className: 'absolute inset-0 m-0 size-full cursor-pointer opacity-0',
   }
   return (
