@@ -148,10 +148,10 @@ exports[`avaliar, as recorded > gives the recorded result and report 1`] = `
 
 | Amostra | Pessoas | Recall@50 | Cobertura no top 5 |
 | --- | ---: | ---: | ---: |
-| Pessoas | 4 | 100.0% (5/5) | 70.0% (14/20) |
+| Pessoas | 4 | 80.0% (4/5) | 70.0% (14/20) |
 | MovieLens | 0 | — (0/0) | — (0/0) |
 
-Parecença média no top 5 (quanto menor, mais variada a lista): Pessoas 0.246, MovieLens —.
+Parecença média no top 5 (quanto menor, mais variada a lista): Pessoas 0.277, MovieLens —.
 
 O corte retém os 20% mais recentes do histórico de cada Pessoa e de cada usuário sorteado.
 A amostra do MovieLens usou a semente 27 e sorteou 0 usuários.
@@ -376,9 +376,9 @@ Quanto das Notas retidas foi 4 ou mais, pela Força mais alta a favor do filme n
           "films": 0,
           "meanAbsoluteError": null,
         },
-        "recall50": 1,
-        "retrieved": 5,
-        "similarityTop5": 0.24583333333333332,
+        "recall50": 0.8,
+        "retrieved": 4,
+        "similarityTop5": 0.27708333333333335,
         "withEvidence": 14,
       },
     },
@@ -716,13 +716,13 @@ exports[`avaliar, as recorded > the grid gives the recorded best weights and rep
             "films": 0,
             "meanAbsoluteError": null,
           },
-          "recall50": 1,
-          "retrieved": 5,
-          "similarityTop5": 0.24583333333333332,
+          "recall50": 0.8,
+          "retrieved": 4,
+          "similarityTop5": 0.27708333333333335,
           "withEvidence": 14,
         },
       },
-      "recall50": 1,
+      "recall50": 0.8,
       "weights": {
         "path.weight": {
           "cast": 0.5,
@@ -916,13 +916,13 @@ exports[`avaliar, as recorded > the grid gives the recorded best weights and rep
             "films": 0,
             "meanAbsoluteError": null,
           },
-          "recall50": 1,
-          "retrieved": 5,
-          "similarityTop5": 0.19969424672172714,
+          "recall50": 0.8,
+          "retrieved": 4,
+          "similarityTop5": 0.23094424672172714,
           "withEvidence": 14,
         },
       },
-      "recall50": 1,
+      "recall50": 0.8,
       "weights": {
         "path.weight": {
           "cast": 0.5,
@@ -1116,13 +1116,13 @@ exports[`avaliar, as recorded > the grid gives the recorded best weights and rep
             "films": 0,
             "meanAbsoluteError": null,
           },
-          "recall50": 1,
-          "retrieved": 5,
-          "similarityTop5": 0.24583333333333332,
+          "recall50": 0.8,
+          "retrieved": 4,
+          "similarityTop5": 0.27708333333333335,
           "withEvidence": 14,
         },
       },
-      "recall50": 1,
+      "recall50": 0.8,
       "weights": {
         "path.weight": {
           "cast": 0.375,
@@ -1152,10 +1152,10 @@ exports[`avaliar, as recorded > the grid gives the recorded best weights and rep
 
 | Amostra | Pessoas | Recall@50 | Cobertura no top 5 |
 | --- | ---: | ---: | ---: |
-| Pessoas | 4 | 100.0% (5/5) | 70.0% (14/20) |
+| Pessoas | 4 | 80.0% (4/5) | 70.0% (14/20) |
 | MovieLens | 0 | — (0/0) | — (0/0) |
 
-Parecença média no top 5 (quanto menor, mais variada a lista): Pessoas 0.246, MovieLens —.
+Parecença média no top 5 (quanto menor, mais variada a lista): Pessoas 0.277, MovieLens —.
 
 O corte retém os 20% mais recentes do histórico de cada Pessoa e de cada usuário sorteado.
 A amostra do MovieLens usou a semente 27 e sorteou 0 usuários.
@@ -1388,13 +1388,13 @@ Foram testados 303 conjuntos. A ordem usa a média do Recall@50 entre as amostra
                 "films": 0,
                 "meanAbsoluteError": null,
               },
-              "recall50": 1,
-              "retrieved": 5,
-              "similarityTop5": 0.24583333333333332,
+              "recall50": 0.8,
+              "retrieved": 4,
+              "similarityTop5": 0.27708333333333335,
               "withEvidence": 14,
             },
           },
-          "recall50": 1,
+          "recall50": 0.8,
           "weights": {
             "path.weight": {
               "cast": 0.5,
@@ -1588,13 +1588,13 @@ Foram testados 303 conjuntos. A ordem usa a média do Recall@50 entre as amostra
                 "films": 0,
                 "meanAbsoluteError": null,
               },
-              "recall50": 1,
-              "retrieved": 5,
-              "similarityTop5": 0.19969424672172714,
+              "recall50": 0.8,
+              "retrieved": 4,
+              "similarityTop5": 0.23094424672172714,
               "withEvidence": 14,
             },
           },
-          "recall50": 1,
+          "recall50": 0.8,
           "weights": {
             "path.weight": {
               "cast": 0.5,
@@ -1788,13 +1788,13 @@ Foram testados 303 conjuntos. A ordem usa a média do Recall@50 entre as amostra
                 "films": 0,
                 "meanAbsoluteError": null,
               },
-              "recall50": 1,
-              "retrieved": 5,
-              "similarityTop5": 0.24583333333333332,
+              "recall50": 0.8,
+              "retrieved": 4,
+              "similarityTop5": 0.27708333333333335,
               "withEvidence": 14,
             },
           },
-          "recall50": 1,
+          "recall50": 0.8,
           "weights": {
             "path.weight": {
               "cast": 0.375,
@@ -2055,9 +2055,9 @@ Foram testados 303 conjuntos. A ordem usa a média do Recall@50 entre as amostra
           "films": 0,
           "meanAbsoluteError": null,
         },
-        "recall50": 1,
-        "retrieved": 5,
-        "similarityTop5": 0.24583333333333332,
+        "recall50": 0.8,
+        "retrieved": 4,
+        "similarityTop5": 0.27708333333333335,
         "withEvidence": 14,
       },
     },

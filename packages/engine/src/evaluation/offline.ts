@@ -85,11 +85,19 @@ export const prepareOffline = (
         ${movielens}
       `)
     }
+    // A view of the main schema reads the main tables, past the TEMP views
+    // above: each one that reads a cut table is shadowed by a TEMP copy.
     const view = yield* db.get(
       "SELECT sql FROM main.sqlite_schema WHERE name = 'notas_vigentes'",
     )
     yield* db.exec(
       text(view!, 'sql').replace('CREATE VIEW', 'CREATE TEMP TABLE'),
+    )
+    const seen = yield* db.get(
+      "SELECT sql FROM main.sqlite_schema WHERE name = 'ja_vistos'",
+    )
+    yield* db.exec(
+      text(seen!, 'sql').replace('CREATE VIEW', 'CREATE TEMP VIEW'),
     )
     yield* db.exec(
       'CREATE INDEX temp.vigentes_por_pessoa ON notas_vigentes(pessoa, filme_id)',
