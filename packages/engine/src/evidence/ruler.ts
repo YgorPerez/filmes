@@ -122,24 +122,41 @@ export const ratingStrength = (
   return [strength, direction]
 }
 
+/** The start of the Fonte of a Nota written from an answer to the
+ * Perguntas par a par, followed by the Session (`pairwiseSource`). */
+export const PAIRWISE_SOURCE = 'perguntas par a par'
+
+/** Whether a Fonte is that of a pairwise answer's Nota. */
+export const isPairwiseSource = (source: string | undefined): boolean =>
+  source?.startsWith(`${PAIRWISE_SOURCE} `) === true
+
+/** Where a seed rating came from: a Session's Feedback, and its Fonte. */
+export interface SeedOrigin {
+  readonly fromFeedback?: boolean
+  readonly source?: string
+}
+
 /** The Tipo of a seed rating: a Nota, or a rating stated by the Pessoa
  * ("love" is 5, "hate" is 1) or told by the Dono. */
 export type SeedKind = 'rating' | 'stated' | 'report'
 
 /** Strength and direction of a seed rating of any Tipo. A Nota follows the
  * Nota ruler; a stated or reported one follows the specific Declarado and
- * the Relato rulers. */
+ * the Relato rulers. A Nota from a pairwise answer only says which of two
+ * films she liked more: weak in favour, whatever its percentile. */
 export const seedStrength = (
   kind: SeedKind,
   scale: RatingScale,
   rating: number,
   date: string,
   today: string,
-  fromFeedback = false,
-): readonly [Strength, Direction] =>
-  kind === 'rating'
-    ? ratingStrength(scale, rating, date, today, fromFeedback)
-    : [statedStrength(kind, true, date, today), rating >= 3 ? 1 : -1]
+  origin: SeedOrigin = {},
+): readonly [Strength, Direction] => {
+  if (kind !== 'rating')
+    return [statedStrength(kind, true, date, today), rating >= 3 ? 1 : -1]
+  if (isPairwiseSource(origin.source)) return ['weak', 1]
+  return ratingStrength(scale, rating, date, today, origin.fromFeedback)
+}
 
 /** Strength of a Feedback reaction (a Nota or a Relato) on the chosen film.
  *

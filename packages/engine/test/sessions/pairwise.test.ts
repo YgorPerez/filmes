@@ -19,6 +19,7 @@ import {
   PAIRWISE_PAIRS,
 } from '../../src/index.ts'
 import { useFixture, type Fixture } from '../fixture.ts'
+import { weightsWith } from '../recommendation/support.ts'
 
 const open = async (fixture: Fixture) =>
   (
@@ -266,6 +267,49 @@ describe('decidePairwise', () => {
     )
     expect(fromAnswers.length).toBeGreaterThan(0)
     for (const evidence of fromAnswers) expect(evidence.strength).toBe('weak')
+  })
+
+  test('a Nota from an answer stays weak in favour, whatever its percentile', async () => {
+    const fixture = useFixture()
+    const session = await answered(fixture)
+    // Six low Notas: on her own scale (minimum 5), a 3,5 is her top 20%,
+    // moderate in favour; an answer only says which of two she liked more.
+    await fixture.ok(
+      personRate({
+        person: 'teo',
+        ratings: [
+          { film: 'tt9000301', rating: 2 },
+          { film: 'tt9000302', rating: 2 },
+          { film: 'tt9000303', rating: 3 },
+          { film: 'tt9000401', rating: 3 },
+          { film: 'tt9000402', rating: 4 },
+          { film: 'tt9000403', rating: 4 },
+        ],
+      }),
+    )
+    await fixture.ok(
+      decidePairwise({ session, person: 'teo', record: true }),
+      {},
+      { owner: 'bruno' },
+    )
+
+    const source = `perguntas par a par ${session}`
+    const { films } = await fixture.ok(
+      recommend({ attendees: ['teo'], count: 50 }),
+      weightsWith(fixture, 'min_ratings = 20', 'min_ratings = 5'),
+    )
+    const evidence = films.flatMap((film) => film.evidence['teo'] ?? [])
+    // The seeds on other films; the answered films carry the Já visto.
+    const seeds = evidence.filter(
+      (e) => e.source === source && e.text !== 'já viu',
+    )
+    expect(seeds.length).toBeGreaterThan(0)
+    for (const seed of seeds) {
+      expect(seed.strength).toBe('weak')
+      expect(seed.contribution).toBeGreaterThan(0)
+    }
+    // Nor is it a Nota alta for the aggregated metadata: her own are low.
+    expect(evidence.filter((e) => e.text.includes('Nota alta'))).toEqual([])
   })
 
   test("the Dono's no drops the answers and writes no taste", async () => {

@@ -32,6 +32,7 @@ import {
   type YamlMapping,
   type YamlValue,
 } from '../data/yaml.ts'
+import { PAIRWISE_SOURCE } from '../evidence/ruler.ts'
 import { required, savePersonAndSync } from '../people/actions.ts'
 import { resolvePerson } from '../people/people.ts'
 import { addItem } from '../people/Person.ts'
@@ -57,7 +58,7 @@ export const PAIRWISE_RATING = 3.5
 
 /** The Fonte of what the answers become. */
 export const pairwiseSource = (session: string) =>
-  `perguntas par a par ${session}`
+  `${PAIRWISE_SOURCE} ${session}`
 
 export interface PairwiseRequest {
   readonly session: string
