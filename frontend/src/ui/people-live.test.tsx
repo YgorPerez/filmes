@@ -9,7 +9,13 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
-import { cleanup, render, screen, within } from '@testing-library/react'
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, expect, it, vi } from 'vite-plus/test'
 import { PeopleList } from './people'
@@ -83,7 +89,7 @@ it('says it is adding while the post runs, and opens her page after', async () =
   expect(adding.disabled).toBe(true)
 
   answer.resolve(Response.json({ to: '/pessoas/luana-reis?feito=criada' }))
-  await vi.waitFor(() =>
+  await waitFor(() =>
     expect(router.state.location.href).toBe('/pessoas/luana-reis?feito=criada'),
   )
 })

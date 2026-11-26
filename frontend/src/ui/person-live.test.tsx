@@ -10,7 +10,13 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
-import { cleanup, render, screen, within } from '@testing-library/react'
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ComponentProps } from 'react'
 import { renderToString } from 'react-dom/server'
@@ -129,11 +135,11 @@ it('reloads the page through the router when it went through, the fold closed an
 
   await user.click(within(form).getByRole('button', { name: PERSON.save }))
 
-  await vi.waitFor(() =>
+  await waitFor(() =>
     expect(router.state.location.href).toBe('/pessoas/iara?feito=gravado'),
   )
   // Her page again: its data reloads, as the router keeps it otherwise.
-  await vi.waitFor(() => expect(router.loads).toHaveBeenCalledTimes(2))
+  await waitFor(() => expect(router.loads).toHaveBeenCalledTimes(2))
   expect(form.closest('details')?.open).toBe(false)
   expect(new FormData(form).get('texto')).toBe('')
   expect(within(form).queryByRole('alert')).toBeNull()
@@ -196,7 +202,7 @@ it('goes to the list when her Pessoa is gone', async () => {
     }),
   )
 
-  await vi.waitFor(() =>
+  await waitFor(() =>
     expect(router.state.location.href).toBe('/pessoas?erro=pessoa'),
   )
 })
@@ -213,7 +219,7 @@ it('searches the Catálogo through the router, keeping the page', async () => {
     within(search).getByRole('button', { name: CATALOG_SEARCH.submit }),
   )
 
-  await vi.waitFor(() =>
+  await waitFor(() =>
     expect(router.state.location.href).toBe('/pessoas/iara?buscar=terror'),
   )
 })
