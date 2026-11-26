@@ -67,14 +67,23 @@
   --font-mono: ui-monospace, SF Mono, Menlo, Consolas, monospace;
 
   --text-*: initial;
-  /* Rubik (`font-display`). */
-  --text-shelf-label: 17px;
-  --text-shelf-label--line-height: 1.15;
-  --text-shelf-label--font-weight: 800;
-  --text-shelf-label--letter-spacing: 0.01em;
+  /* Rubik (`font-display`). The shelf label's type is `shelf` here, not
+   * DESIGN.md's `shelf-label`: that name is also a colour, and
+   * `text-shelf-label` would paint the text in the label's own colour. */
+  --text-shelf: 17px;
+  --text-shelf--line-height: 1.15;
+  --text-shelf--font-weight: 800;
+  --text-shelf--letter-spacing: 0.01em;
+  --text-shelf-compact: 15px;
+  --text-shelf-compact--line-height: 1.15;
+  --text-shelf-compact--font-weight: 800;
+  --text-shelf-compact--letter-spacing: 0.01em;
   --text-price: 18px;
   --text-price--line-height: 1;
   --text-price--font-weight: 800;
+  --text-price-compact: 14px;
+  --text-price-compact--line-height: 1;
+  --text-price-compact--font-weight: 800;
   --text-sticker: 12px;
   --text-sticker--line-height: 1;
   --text-sticker--font-weight: 800;
@@ -82,12 +91,23 @@
   --text-title: 19px;
   --text-title--line-height: 1.2;
   --text-title--font-weight: 700;
+  /* A name on a row: a film in a compact list, a Pessoa, the Dono in the
+   * avatar menu. The row sets its line height. */
+  --text-row-title: 15px;
+  --text-row-title--font-weight: 700;
+  /* The title of an app screen (`PageHead`). */
+  --text-page-title: 24px;
+  --text-page-title--line-height: 1.15;
+  --text-page-title--font-weight: 700;
   --text-counter-title: 24px;
   --text-counter-title--line-height: 1.2;
   --text-counter-title--font-weight: 800;
   --text-step-title: 17px;
   --text-step-title--line-height: 1.25;
   --text-step-title--font-weight: 700;
+  --text-step-title-small: 15.5px;
+  --text-step-title-small--line-height: 1.25;
+  --text-step-title-small--font-weight: 700;
   --text-brand: 18px;
   --text-brand--line-height: 1;
   --text-brand--font-weight: 800;
@@ -96,24 +116,62 @@
   --text-button--line-height: 1;
   --text-button--font-weight: 800;
   --text-button--letter-spacing: 0.02em;
+  --text-button-big: 18px;
+  --text-button-big--line-height: 1;
+  --text-button-big--font-weight: 800;
+  --text-button-big--letter-spacing: 0.02em;
   --text-control: 14px;
   --text-control--line-height: 1.2;
   --text-control--font-weight: 500;
+  /* A field's label, a fieldset's legend, a summary that opens, the
+   * Já vi note's name and the number on the 1 to 10 scale. */
+  --text-field-label: 14px;
+  --text-field-label--font-weight: 700;
   --text-label: 12px;
   --text-label--line-height: 1.3;
   --text-label--font-weight: 700;
   --text-label--letter-spacing: 0.06em;
+  /* The slip's stub ("ÚLTIMA SESSÃO"), in capitals. */
+  --text-slip-title: 13px;
+  --text-slip-title--line-height: 1;
+  --text-slip-title--font-weight: 800;
+  --text-slip-title--letter-spacing: 0.08em;
+  /* A count in Rubik ("1 de 3 feitos", "4 de 10") and the title on a cover
+   * with no poster. */
+  --text-meta-strong: 13px;
+  --text-meta-strong--font-weight: 700;
   --text-chip: 12px;
   --text-chip--line-height: 1;
   --text-chip--font-weight: 500;
   --text-tab: 11.5px;
   --text-tab--line-height: 1.2;
   --text-tab--font-weight: 500;
+  /* The initial in a Presente's avatar. */
+  --text-avatar: 11px;
+  --text-avatar--font-weight: 700;
+  /* The Nota already given, in the orange disc of the rating screen. */
+  --text-rating-disc: 15px;
+  --text-rating-disc--font-weight: 800;
+  /* The "?" on the cover of a film still to be rated. */
+  --text-cover-mark: 26px;
+  --text-cover-mark--line-height: 1;
+  --text-cover-mark--font-weight: 800;
   /* Permanent Marker (`font-hand`): short phrases only (The Hand Is Short
    * Rule). */
   --text-hand: 18px;
   --text-hand--line-height: 1.2;
   --text-hand--font-weight: 400;
+  /* The Dono's words in the compact Cartaz, the date on the last Session's
+   * slip. */
+  --text-hand-compact: 16px;
+  --text-hand-compact--line-height: 1.2;
+  --text-hand-compact--font-weight: 400;
+  /* The title of what left the shelf, the clerk's note. */
+  --text-hand-small: 15px;
+  --text-hand-small--font-weight: 400;
+  /* "Falta contar como foi". */
+  --text-hand-large: 19px;
+  --text-hand-large--font-weight: 400;
   /* The system's font (`font-body`): what the engine says and what is read
    * (The Engine Speaks Plain Rule). */
   --text-body: 16px;
@@ -125,6 +183,12 @@
   --text-evidence: 14px;
   --text-evidence--line-height: 1.45;
   --text-evidence--font-weight: 400;
+  /* The body of a guide step. */
+  --text-evidence-step: 14.5px;
+  --text-evidence-step--font-weight: 400;
+  /* "Pular", "Retomar" and the smaller actions (DESIGN.md, Link). */
+  --text-link: 14px;
+  --text-link--font-weight: 400;
   --text-meta: 13px;
   --text-meta--line-height: 1.4;
   --text-meta--font-weight: 400;
@@ -160,6 +224,15 @@
   --spacing-3xl: 22px;
   /* The 44px tap target, every control's minimum height. */
   --spacing-touch: 44px;
+  /* The bottom tab bar's breath above the safe area, and the room the page
+   * leaves under itself for that bar. */
+  --spacing-tab-safe: max(14px, env(safe-area-inset-bottom));
+  --spacing-tab-clearance: calc(68px + env(safe-area-inset-bottom));
+
+  /* The 1.5px outline of an option, a field, a chip (DESIGN.md: "contorno
+   * de 1,5px"), as `border-(length:--border-width-stroke)`: `@shadcn/lint`
+   * reads a bare `border-stroke` as a color. */
+  --border-width-stroke: 1.5px;
 
   /* The one authored motion: a sticker being stuck on (DESIGN.md, Motion).
    * It animates `scale` alone, so the sticker's `rotate` and `translate`

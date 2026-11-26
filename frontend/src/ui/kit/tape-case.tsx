@@ -18,12 +18,12 @@ export function TapeCase({
 }) {
   return (
     <div
-      className={`relative flex shrink-0 flex-col self-start rounded-case bg-case px-[5px] pt-[5px] ${className}`}
+      className={`relative flex shrink-0 flex-col self-start rounded-case bg-case px-1.25 pt-1.25 ${className}`}
     >
-      <div className="relative grid aspect-[2/3] place-items-center overflow-hidden rounded-cover bg-surface-2 p-md text-center font-display text-[13px] font-bold text-ink-2">
+      <div className="relative grid aspect-[2/3] place-items-center overflow-hidden rounded-cover bg-surface-2 p-md text-center font-display text-meta-strong text-ink-2">
         {cover}
       </div>
-      <div className="flex min-h-[5px] justify-center gap-xs py-[7px] empty:p-0">
+      <div className="flex min-h-[5px] justify-center gap-xs py-1.75 empty:p-0">
         {children}
       </div>
     </div>

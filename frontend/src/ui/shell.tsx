@@ -58,7 +58,7 @@ function Tabs({ path, place }: { path: string; place: 'top' | 'bottom' }) {
       aria-label={SHELL.tabs}
       className={
         bottom
-          ? 'fixed inset-x-0 bottom-0 z-10 border-t border-rule bg-surface pb-[max(14px,env(safe-area-inset-bottom))] min-[900px]:hidden'
+          ? 'fixed inset-x-0 bottom-0 z-10 border-t border-rule bg-surface pb-tab-safe min-[900px]:hidden'
           : 'hidden min-[900px]:block'
       }
     >
@@ -76,7 +76,7 @@ function Tabs({ path, place }: { path: string; place: 'top' | 'bottom' }) {
                 aria-current={current ? 'page' : undefined}
                 className={`flex items-center font-display no-underline ${
                   bottom
-                    ? 'min-h-[54px] flex-col justify-center gap-[3px] pt-[5px] text-tab'
+                    ? 'min-h-[54px] flex-col justify-center gap-0.75 pt-1.25 text-tab'
                     : 'min-h-touch gap-xs rounded-nav-row pr-md pl-2xs text-control'
                 } ${
                   current
@@ -159,7 +159,7 @@ function AccountMenu({
         aria-label={SHELL.menu}
         className="fixed inset-auto top-[60px] right-[max(16px,calc((100vw-1040px)/2+16px))] m-0 w-[240px] rounded-card border border-rule bg-surface p-xs text-ink"
       >
-        <p className="truncate px-md pt-sm pb-xs font-display text-[15px] font-bold">
+        <p className="truncate px-md pt-sm pb-xs font-display text-row-title">
           {owner.name}
         </p>
         <ul className="flex flex-col">
@@ -222,9 +222,7 @@ export function AppShell({
         </div>
       </header>
       {alert && <PushStrip status={alert} />}
-      <div className="flex-1 pb-[calc(68px+env(safe-area-inset-bottom))] min-[900px]:pb-0">
-        {children}
-      </div>
+      <div className="flex-1 pb-tab-clearance min-[900px]:pb-0">{children}</div>
       <Tabs path={path} place="bottom" />
     </div>
   )

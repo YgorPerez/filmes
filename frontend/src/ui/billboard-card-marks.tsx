@@ -48,18 +48,14 @@ function Scale({
   onChange: (value: string) => void
 }) {
   return (
-    <div
-      role="group"
-      aria-label={label}
-      className="grid grid-cols-10 gap-[3px]"
-    >
+    <div role="group" aria-label={label} className="grid grid-cols-10 gap-0.75">
       {Array.from({ length: 10 }, (_, i) => String(i + 1)).map((n) => (
         <button
           key={n}
           type="button"
           aria-pressed={value === n}
           onClick={() => onChange(value === n ? '' : n)}
-          className="group grid h-touch min-w-0 cursor-pointer place-items-center rounded-rail bg-surface p-0 font-display text-[14px] font-bold text-ink tabular-nums aria-pressed:bg-transparent"
+          className="group grid h-touch min-w-0 cursor-pointer place-items-center rounded-rail bg-surface p-0 font-display text-field-label text-ink tabular-nums aria-pressed:bg-transparent"
         >
           <span className="grid size-7 place-items-center rounded-round group-aria-pressed:bg-sticker-orange group-aria-pressed:text-on-sticker">
             {n}
@@ -86,7 +82,7 @@ function SeenNote({
   const who = person.owner ? 'você' : person.name
   return (
     <div className="flex flex-col gap-sm rounded-field bg-card-stock px-lg py-md text-card-stock-ink">
-      <span className="flex items-center gap-sm font-display text-[14px] font-bold">
+      <span className="flex items-center gap-sm font-display text-field-label">
         <Avatar person={person} />
         {copy.note(person.owner ? null : person.name)}
       </span>

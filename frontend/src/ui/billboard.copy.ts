@@ -19,7 +19,6 @@ export const BILLBOARD = {
 
   card: {
     poster: (title: string) => `Capa de ${title}`,
-    noFact: (name: string) => `${name}: sem fato`,
     isNew: 'novo',
     bet: 'aposta',
     betHint:

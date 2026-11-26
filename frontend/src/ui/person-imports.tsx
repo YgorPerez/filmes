@@ -2,13 +2,7 @@ import { FIELD } from './kit/field'
 import { FieldLabel } from './kit/field-label'
 import type { ReactNode } from 'react'
 import type { PersonImports } from '@filmes/engine'
-import {
-  countOf,
-  isImportNotice,
-  isImportRefusal,
-  type ImportNotice,
-  type ImportRefusal,
-} from '#/content/import-action'
+import type { ImportNotice, ImportRefusal } from '#/content/import-action'
 import { personPath, QUEUE_PATH } from '#/content/paths'
 import { ImportsFrame } from './imports'
 import { PERSON_IMPORTS } from './imports.copy'
@@ -25,7 +19,8 @@ import {
   Submit,
   TextField,
 } from './person-parts'
-import { Button, buttonVariants } from './shadcn/button'
+import { buttonVariants } from './kit/button-variants'
+import { Button } from './shadcn/button'
 
 const COPY = PERSON_IMPORTS
 
@@ -38,15 +33,6 @@ export type ImportDoneView = {
   facts: number
   outside?: number
 }
-
-/** The import page's query, as its routes keep it: what the last form
- * did (`feito`, with `novos` and `fora`) or why not (`erro`). */
-export const importsSearch = (search: Record<string, unknown>) => ({
-  feito: isImportNotice(search.feito) ? search.feito : undefined,
-  erro: isImportRefusal(search.erro) ? search.erro : undefined,
-  novos: countOf(search.novos),
-  fora: countOf(search.fora),
-})
 
 /** A Pessoa's imports (`importsPath`): the upload first (one file field: the server tells
  * Letterboxd from Trakt by the ZIP), then the Letterboxd profile, what the
@@ -176,7 +162,7 @@ function Files({ slug, page }: Part) {
               />
             }
           >
-            <span className="font-display text-[15px] font-bold break-all">
+            <span className="font-display text-row-title break-all">
               {record.original}
             </span>
             <Meta parts={[files.kind(record.kind), files.on(record.date)]} />
@@ -281,7 +267,7 @@ function Trakt({ page }: { page: PersonImports }) {
   )
 }
 
-const fileControl = `${FIELD} w-full cursor-pointer file:mr-lg file:min-h-9 file:cursor-pointer file:rounded-pill file:border-[1.5px] file:border-rule file:bg-surface-2 file:px-xl file:font-display file:text-control file:text-ink`
+const fileControl = `${FIELD} w-full cursor-pointer file:mr-lg file:min-h-9 file:cursor-pointer file:rounded-pill file:border-(length:--border-width-stroke) file:border-rule file:bg-surface-2 file:px-xl file:font-display file:text-control file:text-ink`
 
 /** How to download the ZIP: one line per service, its name a link to its
  * data settings. Spans, so it also fits inside the alert's paragraph. */

@@ -68,6 +68,3 @@ export const linkOf = (predicate: string): Link | undefined =>
 /** A Veto target as the engine names it: a tag group by its English key,
  * a film or entity id as it is. */
 export const targetOf = (value: string): string => TAG_GROUP[value] ?? value
-
-/** The maps, for the test that keeps them equal to Python's names. */
-export const DATABASE_VALUES = { KIND, LEVEL, TAG_GROUP } as const

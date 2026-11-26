@@ -12,7 +12,7 @@ import { forEachBatch } from './text-source.ts'
 import { tsvColumns } from './tsv.ts'
 import { dumpPath, IMDB_BASICS, IMDB_RATINGS, type Dumps } from './versions.ts'
 
-export const MIN_VOTES = 100
+const MIN_VOTES = 100
 const NULL = '\\N'
 
 /** Python's `int(text)`. */

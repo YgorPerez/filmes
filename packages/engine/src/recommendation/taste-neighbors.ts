@@ -50,7 +50,7 @@ import { num, text } from '../sqlite/row.ts'
 import { candidatesJson, scaleOf, type Round } from './signals/Signal.ts'
 import { mean } from './mean.ts'
 
-export interface TasteNeighbor {
+interface TasteNeighbor {
   readonly user: number
   /** Mean difference of percentiles over the films shared, weighted by
    * the Decaimento of her Notas, 0 to 1. */

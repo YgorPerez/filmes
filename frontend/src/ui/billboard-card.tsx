@@ -68,14 +68,7 @@ function Poster({
       >
         {people.map((p) => {
           const hollow = without.has(p.slug)
-          return (
-            <PersonDot
-              key={p.slug}
-              person={p}
-              hollow={hollow}
-              title={hollow ? card.noFact(p.name) : p.name}
-            />
-          )
+          return <PersonDot key={p.slug} person={p} hollow={hollow} />
         })}
       </TapeCase>
       {stamp && (
@@ -92,12 +85,12 @@ function Poster({
         </Sticker>
       )}
       {film.bet && (
-        <BetStamp
-          hint={card.betHint}
-          className="absolute bottom-[38px] -left-sm"
-        >
-          {card.bet}
-        </BetStamp>
+        <>
+          <BetStamp className="absolute bottom-[38px] -left-sm">
+            {card.bet}
+          </BetStamp>
+          <span className="sr-only">{card.betHint}</span>
+        </>
       )}
       <PriceSticker className="absolute -top-[9px] -left-[9px]">
         {film.position}
@@ -123,21 +116,19 @@ function Predicted({
   })
   if (predicted.length === 0) return null
   return (
-    <div
-      className="flex flex-wrap items-center gap-xs"
-      title={card.predictedHint}
-    >
+    <div className="flex flex-wrap items-center gap-xs">
       <span
         aria-hidden="true"
         className="font-display text-label text-ink-2 uppercase"
       >
         {card.predicted}
       </span>
+      <span className="sr-only">{card.predictedHint}</span>
       <ul aria-label={card.predicted} className="flex flex-wrap gap-xs">
         {predicted.map(({ person, text }) => (
           <li
             key={person.slug}
-            className="inline-flex items-center gap-[5px] rounded-pill border-[1.5px] border-rule py-[2px] pr-[9px] pl-[2px] font-display text-chip font-bold text-ink tabular-nums"
+            className="inline-flex items-center gap-1.25 rounded-pill border-(length:--border-width-stroke) border-rule py-0.5 pr-2.25 pl-0.5 font-display text-chip font-bold text-ink tabular-nums"
           >
             <span aria-hidden="true" className="contents">
               <Avatar person={person} />
@@ -193,7 +184,7 @@ function Header({
           href={film.imdbUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="rounded-pill border-[1.5px] border-rule px-[9px] py-[4px] font-display text-chip font-bold text-ink tabular-nums no-underline"
+          className="rounded-pill border-(length:--border-width-stroke) border-rule px-2.25 py-1 font-display text-chip font-bold text-ink tabular-nums no-underline"
         >
           {card.imdb(film.imdbRatingText, film.votesText)}
         </a>
@@ -240,7 +231,7 @@ function Line({
   return (
     <li className={LINE}>
       <Avatars people={who} />
-      <span className="pt-[7px]">
+      <span className="pt-1.75">
         <Strength strength={line.strength} />
       </span>
       <span>
@@ -274,7 +265,7 @@ function Why({
           {film.coverage}
         </span>
       </Label>
-      <ul aria-label={card.why} className="flex flex-col gap-[9px]">
+      <ul aria-label={card.why} className="flex flex-col gap-2.25">
         {film.cautiousBetReason && (
           <li className="text-evidence text-ink-2">{film.cautiousBetReason}</li>
         )}

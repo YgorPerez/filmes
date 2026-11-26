@@ -35,7 +35,7 @@ const PROFILE: SourceProfile = {
 }
 
 /** A film's age rating as OMDb gives it. */
-export interface AgeRating {
+export interface OmdbRating {
   /** As it came: "PG-13", "Not Rated". */
   readonly rated: string
   /** The day it was fetched. */
@@ -49,7 +49,7 @@ export class Omdb extends Context.Service<
     /** The film's `Rated`, or `undefined` with no answer or no value. */
     readonly ageRating: (
       imdbId: string,
-    ) => Effect.Effect<AgeRating | undefined, EngineError | SqliteError, Run>
+    ) => Effect.Effect<OmdbRating | undefined, EngineError | SqliteError, Run>
   }
 >()('@filmes/engine/sources/Omdb') {
   static readonly layer: Layer.Layer<

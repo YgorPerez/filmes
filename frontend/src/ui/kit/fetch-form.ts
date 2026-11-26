@@ -7,7 +7,7 @@
 // goes to `to` through the router, keeping the scroll.
 
 import { useHydrated, useRouter } from '@tanstack/react-router'
-import { useRef, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { FETCH_HEADER } from '#/content/fetch-answer'
 
 export { useHydrated }
@@ -71,4 +71,31 @@ export function useFetchForm(onAnswer?: (to: string) => boolean) {
   }
 
   return { onSubmit, busy }
+}
+
+/** A refusal the post by `fetch` came back with: shown in place, over the
+ * form as the Dono left it, and scrolled into view (`alert`, on the box of
+ * the alert). `onAnswer` (for `useFetchForm`) takes a `to` back to the
+ * form's page `path` with an `?erro=` that `isRefusal`; `refusal` is the
+ * one the page came with (a plain POST). */
+export function useRefusalInPlace<R extends string>(
+  path: string,
+  isRefusal: (value: unknown) => value is R,
+  refusal: R | undefined,
+) {
+  const [refused, setRefused] = useState(refusal)
+  const [refusals, setRefusals] = useState(0)
+  const alert = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (refusals > 0) alert.current?.scrollIntoView({ block: 'center' })
+  }, [refusals])
+  const onAnswer = (to: string) => {
+    const url = new URL(to, window.location.origin)
+    const why = url.searchParams.get('erro')
+    if (url.pathname !== path || !isRefusal(why)) return false
+    setRefused(why)
+    setRefusals((n) => n + 1)
+    return true
+  }
+  return { refused, alert, onAnswer }
 }
