@@ -1,11 +1,11 @@
 import { createHash } from 'node:crypto'
 import { DatabaseSync } from 'node:sqlite'
 
-// `auth.sqlite`: web sessions, Google login attempts and the MCP OAuth
-// clients, codes and tokens of #120 (ADR 0005: no backup, losing it only
-// forces a new login). Append migrations here and never edit an applied one;
-// during blue/green both images open the same file, so a change must be
-// additive while the previous image can still run.
+// `auth.sqlite`: web sessions, Google login attempts, the MCP OAuth clients,
+// codes and tokens (#120), and the Session link signing key (#180). Losing the
+// database forces a new login and invalidates links already shared (ADR 0005).
+// Append migrations here and never edit an applied one. Both images open the
+// same file during a deploy, so changes must be additive.
 const migrations: readonly string[] = [
   // `email` and not the Pessoa: the Dono gate runs again on every request
   // (`auth.ts`), so a Pessoa who stops being Dono is out at once.
@@ -35,6 +35,10 @@ const migrations: readonly string[] = [
     kind TEXT NOT NULL CHECK (kind IN ('access', 'refresh')),
     expires_at INTEGER NOT NULL) STRICT;
   CREATE INDEX oauth_tokens_grant ON oauth_tokens (grant_id);`,
+  // Stable signing key shared by both images. A Session link expires
+  // against the live Session file, independently of this database.
+  `CREATE TABLE session_link_key (id INTEGER PRIMARY KEY CHECK (id = 1),
+    secret BLOB NOT NULL CHECK (length(secret) = 32)) STRICT;`,
 ]
 
 export const tokenHash = (token: string) =>

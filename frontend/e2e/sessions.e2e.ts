@@ -6,9 +6,9 @@
 // id from the page it lands on. `E2E_SCREENSHOTS=<folder>` saves a capture
 // of each screen.
 
-import { listSessions } from '@filmes/engine'
+import { listSessions, recommendSession, recordFeedback } from '@filmes/engine'
 import { expect, test, type Page } from '@playwright/test'
-import { engineRun, loginAsBruno, section, snap } from './support'
+import { engineRun, loginAs, loginAsBruno, section, snap } from './support'
 
 const ask = (page: Page) =>
   page.getByRole('button', { name: 'Recomendar' }).click()
@@ -111,4 +111,139 @@ test('the form says why it refused, and “o gosto de uma Pessoa” orders', asy
   const id = openedId(page)
   expect((await sessionFile(id))?.attendees).toEqual(['bruno', 'quim'])
   await snap(page, info, 'sessoes-aberta')
+})
+
+// The Link da Sessão (#180): the Dono shares it, a Presente with no login
+// picks who she is and sees the current films, until the Feedback.
+
+test('the Dono shares the current films with a Presente who has no login', async ({
+  page,
+  browser,
+}, info) => {
+  const person = info.project.name === 'desktop' ? 'rosa' : 'quim'
+  const name = info.project.name === 'desktop' ? 'Rosa' : 'Quim'
+  const opened = await engineRun((engine) =>
+    engine.run(
+      recommendSession({
+        attendees: ['dono', person],
+        count: 3,
+        request: 'Pedido particular da Sessão',
+      }),
+      { owner: 'bruno' },
+    ),
+  )
+  await loginAsBruno(page)
+  const ownerPage = await page.goto(`/sessoes/${opened.session.id}`)
+  expect(ownerPage?.headers()['cache-control']).toContain('no-store')
+  const link = page.getByRole('link', { name: 'Link para os Presentes' })
+  await expect(link).toBeVisible()
+  await snap(page, info, 'sessao-link')
+  const href = new URL((await link.getAttribute('href')) ?? '', page.url())
+  const guest = await browser.newContext()
+  try {
+    const participant = await guest.newPage()
+    const response = await participant.goto(href.href)
+    expect(response?.headers()).toMatchObject({
+      'cache-control': 'private, no-store',
+      'referrer-policy': 'no-referrer',
+      'x-robots-tag': 'noindex',
+    })
+    await expect(
+      participant.getByRole('heading', { name: 'Quem é você?' }),
+    ).toBeVisible()
+    await expect(participant.getByRole('link', { name: 'Bruno' })).toBeVisible()
+    await expect(participant.getByRole('link', { name: 'Iara' })).toHaveCount(0)
+    await snap(participant, info, 'sessao-escolher-presente')
+    const choice = participant.getByRole('link', { name, exact: true })
+    const selected = new URL((await choice.getAttribute('href')) ?? '', href)
+    const selectedPage = await participant.goto(selected.href)
+    const films = participant.getByRole('list', { name: 'Filmes da Sessão' })
+    await expect(films.getByRole('listitem')).toHaveText(
+      opened.films.map((film) => film.title),
+    )
+    expect(await selectedPage?.text()).not.toMatch(
+      /Pedido particular da Sessão|@example\.org|"evidence"|"utility"/u,
+    )
+    await snap(participant, info, 'sessao-filmes-presentes')
+    await expect(
+      participant.getByRole('button', { name: 'Enviar' }),
+    ).toHaveCount(0)
+  } finally {
+    await guest.close()
+  }
+})
+
+test('the link only works for its Session while it is open', async ({
+  page,
+  browser,
+}, info) => {
+  test.skip(
+    info.project.name !== 'desktop',
+    'the capability is device-independent',
+  )
+  const open = async (person: string) =>
+    (
+      await engineRun((engine) =>
+        engine.run(recommendSession({ attendees: ['dono', person] }), {
+          owner: 'bruno',
+        }),
+      )
+    ).session.id
+  const session = await open('teo')
+  const other = await open('iara')
+  const path = `/sessoes/${session}`
+  await loginAsBruno(page)
+  await page.goto(path)
+  const share = page.getByRole('link', { name: 'Link para os Presentes' })
+  const shared = await share.getAttribute('href')
+  if (!shared) throw new Error('the Session had no link')
+  await page.reload()
+  await expect(share).toHaveAttribute('href', shared)
+
+  const guest = await browser.newContext()
+  try {
+    const participant = await guest.newPage()
+    const unavailable = participant.getByRole('heading', {
+      name: 'Link da Sessão indisponível',
+    })
+    const href = new URL(shared)
+    href.searchParams.set('presente', 'iara')
+    await participant.goto(href.href)
+    await expect(
+      participant.getByRole('heading', { name: 'Quem é você?' }),
+    ).toBeVisible()
+    await expect(
+      participant.getByRole('list', { name: 'Filmes da Sessão' }),
+    ).toHaveCount(0)
+
+    href.searchParams.set('sessao', other)
+    await participant.goto(href.href)
+    await expect(unavailable).toBeVisible()
+
+    href.searchParams.set('sessao', session)
+    href.searchParams.delete('chave')
+    await participant.goto(href.href)
+    await expect(unavailable).toBeVisible()
+
+    // Another site's Dono can see the normal Cartaz, but cannot issue its link.
+    await loginAs(await guest.newPage(), 'vera@example.org')
+    await participant.goto(new URL(path, shared).href)
+    await expect(
+      participant.getByRole('heading', { name: /Sessão 2026-11-20/ }),
+    ).toBeVisible()
+    await expect(
+      participant.getByRole('link', { name: 'Link para os Presentes' }),
+    ).toHaveCount(0)
+
+    await engineRun((engine) =>
+      engine.run(recordFeedback({ session, film: null }), { owner: 'bruno' }),
+    )
+    await page.reload()
+    await expect(share).toHaveCount(0)
+    await participant.goto(shared)
+    await expect(unavailable).toBeVisible()
+    await snap(participant, info, 'sessao-link-encerrado')
+  } finally {
+    await guest.close()
+  }
 })
