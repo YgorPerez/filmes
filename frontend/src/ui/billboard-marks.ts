@@ -21,7 +21,13 @@ export type FilmMarks = {
   comment: string
 }
 
-export type Marks = { addition: string; films: Record<string, FilmMarks> }
+/** `moods` are the Clima chips the Dono left on; null until she touches
+ * one, which keeps the version's. */
+export type Marks = {
+  addition: string
+  moods: string[] | null
+  films: Record<string, FilmMarks>
+}
 
 const NO_MARKS: FilmMarks = {
   seen: [],
@@ -32,7 +38,28 @@ const NO_MARKS: FilmMarks = {
   comment: '',
 }
 
-const emptyMarks = (): Marks => ({ addition: '', films: {} })
+const emptyMarks = (): Marks => ({ addition: '', moods: null, films: {} })
+
+/** The chips that are on: the Dono's, else the version's. */
+export const chosenMoods = (model: Billboard, marks: Marks) =>
+  new Set(marks.moods ?? model.moods)
+
+/** The chips of the Cartaz that are in `moods`, in the chips' order. */
+const inChipOrder = (model: Billboard, moods: Iterable<unknown>) => {
+  const wanted = new Set(moods)
+  return model.moodChoices.filter((m) => wanted.has(m))
+}
+
+/** The Climas the Dono chose, in the chips' order, when they are not the
+ * version's; null when they are. */
+function otherMoods(model: Billboard, marks: Marks): string[] | null {
+  if (marks.moods === null) return null
+  const chosen = inChipOrder(model, marks.moods)
+  const before = new Set(model.moods)
+  const same =
+    chosen.length === before.size && chosen.every((m) => before.has(m))
+  return same ? null : chosen
+}
 
 export const marksOf = (marks: Marks, id: string): FilmMarks =>
   marks.films[id] ?? NO_MARKS
@@ -51,6 +78,7 @@ function billboardState(model: Billboard, marks: Marks): BillboardState {
     version: model.version,
     attendees: model.attendees.map((p) => p.slug),
     addition: marks.addition,
+    moods: otherMoods(model, marks),
     films: model.films.map((film) => {
       const m = marksOf(marks, film.id)
       const ratings: Record<string, number> = {}
@@ -90,6 +118,7 @@ export function markCounts(model: Billboard, marks: Marks) {
     stars: films.filter((m) => m.stars > 0).length,
     comments: films.filter((m) => m.comment.trim() !== '').length,
     addition: marks.addition.trim() !== '',
+    mood: otherMoods(model, marks) !== null,
   }
 }
 
@@ -157,8 +186,10 @@ export function parseMarks(stored: string | null, model: Billboard): Marks {
   if (!isRecord(saved)) return emptyMarks()
   const films = isRecord(saved.films) ? saved.films : {}
   const attendees = model.attendees.map((p) => p.slug)
+  const moods = Array.isArray(saved.moods) ? (saved.moods as unknown[]) : null
   return {
     addition: typeof saved.addition === 'string' ? saved.addition : '',
+    moods: moods === null ? null : inChipOrder(model, moods),
     films: Object.fromEntries(
       model.films
         .filter((f) => f.id in films)

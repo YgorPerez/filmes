@@ -35,7 +35,7 @@ import {
   similarStrength,
   statedStrength,
   strengthen,
-  usesCredit,
+  usesSatisfaction,
   weaken,
   guessStrength,
   FRESH_YEARS,
@@ -344,7 +344,7 @@ describe('the Regra key', () => {
     out: Tagged
   }>('rule', FOLDER)
 
-  test('the key, the credit and the JSON are regra.py’s', () => {
+  test('the key, the satisfaction adjustment and the JSON are regra.py’s', () => {
     expect(rows.length).toBeGreaterThanOrEqual(10_000)
     const wrong = rows.flatMap((row) => {
       const name = rule(row.nome)
@@ -369,7 +369,7 @@ describe('the Regra key', () => {
         ...(row.json.pessoa ? { person: row.json.pessoa } : {}),
       }
       return matches(key, row.out) &&
-        usesCredit(r) === row.usa_credito &&
+        usesSatisfaction(r) === row.usa_credito &&
         JSON.stringify(json) === JSON.stringify(expectedJson)
         ? []
         : [{ row, key, json }]

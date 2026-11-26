@@ -39,6 +39,7 @@ const REPLY = {
   keep: ['tt9000105'],
   dropped: [],
   addition: null,
+  moods: null,
   comments: [],
   stars: [],
   seen: [],
@@ -215,6 +216,19 @@ describe('the message Claude gets', () => {
         'acrescentar: chegou a Ana\n' +
         'comentário 2 tt2 (Sal e Ferrugem): lindo',
     )
+  })
+
+  it('the Climas the Dono chose, or nenhum', () => {
+    const clima = (moods: string[]) =>
+      replyMessage({ ...REPLY, keep: [], moods })
+        ?.split('\n')
+        .slice(1)
+
+    expect(clima(['leve', 'pra rir'])).toEqual([
+      'refazer · manter: nenhum',
+      'clima: leve, pra rir',
+    ])
+    expect(clima([])).toEqual(['refazer · manter: nenhum', 'clima: nenhum'])
   })
 
   it('none when Claude has nothing to do', () => {

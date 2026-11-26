@@ -130,10 +130,10 @@ describe('diversity in the final order', () => {
     expect(redone.kept).toEqual(['tt9000104'])
   })
 
-  test('a film MMR moves up gets no Crédito line', async () => {
+  test('a film MMR moves up gets no satisfaction line', async () => {
     const fixture = useFixture()
-    // As in whole-output.test.ts: Bruno has Crédito after a Session with
-    // Quim that only Quim liked; the IMDb bonus is off there.
+    // As in satisfaction.test.ts: Bruno is behind in satisfaction after a
+    // Session with Quim that only Quim liked; the IMDb bonus is off there.
     const noImdbBonus: ReadonlyArray<readonly [string, string]> = [
       ['\nweight = 0.3\n\n[no_sad]', '\nweight = 0.0\n\n[no_sad]'],
     ]
@@ -155,7 +155,7 @@ describe('diversity in the final order', () => {
       }),
     )
     const request = { attendees: ['dono', 'quim'], count: 50 }
-    const withCredit = (out: Recommendation) =>
+    const withSatisfaction = (out: Recommendation) =>
       out.films
         .filter((f) => f.filmLines.some((l) => l.person === 'bruno'))
         .map((f) => f.id)
@@ -171,9 +171,9 @@ describe('diversity in the final order', () => {
     // The same 50 films, in another order: MMR only moves the first 30.
     expect(titles(diversified)).not.toEqual(titles(plain))
     expect(titles(diversified).sort()).toEqual(titles(plain).sort())
-    // The Crédito line says the Crédito moved the film up in the Regra's
-    // order, whatever MMR did after.
-    expect(withCredit(plain).length).toBeGreaterThan(0)
-    expect(withCredit(diversified)).toEqual(withCredit(plain))
+    // The satisfaction line says weighing the satisfaction moved the film up
+    // in the Regra's order, whatever MMR did after.
+    expect(withSatisfaction(plain).length).toBeGreaterThan(0)
+    expect(withSatisfaction(diversified)).toEqual(withSatisfaction(plain))
   })
 })

@@ -50,10 +50,12 @@ size = 5
 # Já visto pesa contra o filme com esta base (a Força é sempre forte).
 weight = 1.0
 
-[credit]
-# u' = u - fator x Crédito na Regra padrão. O Crédito olha as últimas `janela`
-# Sessões em grupo com Feedback que a Pessoa dividiu com algum Presente de hoje.
-factor = 0.5
+[satisfaction]
+# u' = u - fator x (Satisfação mais alta de hoje - a da Pessoa) na Regra padrão.
+# A Satisfação olha as últimas `window` Sessões em grupo com Feedback que a
+# Pessoa dividiu com algum Presente de hoje. Com dois Presentes, 0,25 dá o mesmo
+# que o Crédito de antes (0,5 x a distância até a média).
+factor = 0.25
 window = 5
 
 [neighbors]
