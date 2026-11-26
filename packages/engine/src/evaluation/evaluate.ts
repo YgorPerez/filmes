@@ -38,7 +38,7 @@ import { listSimilarity } from './diversity.ts'
 import { measure, prepareOffline } from './offline.ts'
 import { measuredPeople, type MeasuredPerson } from './people.ts'
 import { dataVersions, writeReport } from './report.ts'
-import { satisfaction, type Satisfaction } from './satisfaction.ts'
+import { satisfaction, type Satisfaction } from '../sessions/satisfaction.ts'
 import type { ReportValue } from './yaml.ts'
 
 /** A progress event, as `avaliar --progresso` wrote it on stderr (in English

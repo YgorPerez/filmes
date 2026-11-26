@@ -1,6 +1,6 @@
 // The attributions the sources used by a recommendation require
 // (`recomendacao/atribuicoes.py`). Not "créditos", so as not to mix it up
-// with the Sessions' Crédito.
+// with the cast credits.
 //
 // The IMDb is always there: every Candidate comes from its datasets. The
 // others come in when some Evidence returned has a source with their name

@@ -10,7 +10,7 @@
 //   impression.
 // - a comment `iara=texto`: what she thought, with her Nota or Relato. It
 //   becomes a specific Declarado about the chosen film (`facts.ts`).
-// - a Presente with no reaction gives no Fato and no Crédito, but gets the
+// - a Presente with no reaction gives no Fato and no satisfaction, but gets the
 //   Já visto.
 //
 // When the Session has `shown` (the Cartaz's films), the Feedback also
