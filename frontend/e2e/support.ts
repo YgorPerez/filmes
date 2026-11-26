@@ -1,8 +1,8 @@
-// What the e2e files share: `test`, on the file's own app server, logging in
-// as one of the fixture's Donos, a screenshot per screen, the regions and
-// the notice of a page, and the engine over the file's fixture copy
-// (`servers.ts`), to check what the app wrote or to prepare what a screen
-// needs.
+// What the e2e files share: `test`, on the file's own app server
+// (`server-test.ts`), logging in as one of the fixture's Donos, a
+// screenshot per screen, the regions and the notice of a page, and the
+// engine over the file's fixture copy (`servers.ts`), to check what the app
+// wrote or to prepare what a screen needs.
 
 import { join } from 'node:path'
 import {
@@ -11,25 +11,11 @@ import {
   type Engine,
   type Outcome,
 } from '@filmes/engine'
-import {
-  test as base,
-  expect,
-  type Locator,
-  type Page,
-  type TestInfo,
-} from '@playwright/test'
+import { type Locator, type Page, type TestInfo } from '@playwright/test'
+import { expect, test } from './server-test'
 import { serverOf } from './servers'
 
-/** Playwright's `test`, with `baseURL` on the app server of the test's file
- * (`servers.ts`), unless the config sets one. Every e2e file takes `test`
- * and `expect` from here. */
-export const test = base.extend({
-  baseURL: async ({ baseURL }, provide, info) => {
-    await provide(baseURL ?? serverOf(info.file).origin)
-  },
-})
-
-export { expect }
+export { expect, test }
 
 /** The fixture copy of the running test's file: its `config/`, `data/`
  * and database. */
