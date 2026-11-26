@@ -16,7 +16,6 @@ import {
 import {
   importAction,
   importsFromEngine,
-  importsOverview,
   importsPage,
   queueAction,
   queuePage,
@@ -156,13 +155,6 @@ function fakeImports(
 ) {
   const calls: unknown[] = []
   const imports: Imports = {
-    overview: async () => ({
-      exitCode: 0,
-      output: {
-        people: [{ person: 'teo', name: 'Teo', owner: false, imports: 1 }],
-        queued: 2,
-      },
-    }),
     page: async (person) =>
       person === 'teo'
         ? failure('missing_database')
@@ -473,10 +465,6 @@ describe('the pages', () => {
   it('give what the engine read, unknown, or null when it cannot run', async () => {
     const log = vi.spyOn(console, 'error').mockImplementation(() => {})
     const { imports } = fakeImports()
-    expect(await importsOverview(imports)).toEqual({
-      people: [{ person: 'teo', name: 'Teo', owner: false, imports: 1 }],
-      queued: 2,
-    })
     expect(await importsPage('ninguem', 'bruno', imports)).toBe('unknown')
     expect(await importsPage('teo', 'bruno', imports)).toBeNull()
     expect(await queuePage(imports)).toBeNull()
@@ -569,11 +557,7 @@ describe('importsFromEngine, imports', () => {
       ['trakt', 'trakt.zip'],
     ])
     expect(page.trakt).toEqual({ ratings: 2, seen: 1 })
-    const overview = await ok(imports.overview())
-    expect(overview.people.find((p) => p.person === 'quim')).toMatchObject({
-      imports: 2,
-    })
-    expect(overview.queued).toBe(2)
+    expect((await ok(imports.queue())).items).toHaveLength(2)
 
     expect(await run({ kind: 'rss', user: 'olga_farol' })).toMatchObject({
       notice: 'rss',

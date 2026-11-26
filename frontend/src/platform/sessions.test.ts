@@ -480,6 +480,43 @@ describe('the Catálogo search in sessionRequestAction', () => {
     expect(newSessionDraft(token ?? undefined, notes)?.reading).toEqual(reading)
   })
 
+  it('Enter with a search not run yet searches instead of opening', async () => {
+    const { sessions, open } = fake()
+    const response = await sessionRequestAction(
+      post([
+        ...BASIC,
+        ['buscar', 'farol'],
+        ['buscado', ''],
+        ['tecla', 'enter'],
+      ]),
+      BRUNO,
+      sessions,
+      new Notes(),
+      ORIGIN,
+    )
+    const location = new URL(response.headers.get('Location') ?? '', ORIGIN)
+    expect(location.pathname).toBe('/sessoes/nova')
+    expect(location.searchParams.get('buscar')).toBe('farol')
+    expect(open).not.toHaveBeenCalled()
+  })
+
+  it('Enter with the search already run opens the Session', async () => {
+    const { sessions, open } = fake()
+    await sessionRequestAction(
+      post([
+        ...BASIC,
+        ['buscar', 'farol'],
+        ['buscado', 'farol'],
+        ['tecla', 'enter'],
+      ]),
+      BRUNO,
+      sessions,
+      new Notes(),
+      ORIGIN,
+    )
+    expect(open).toHaveBeenCalled()
+  })
+
   it('with nothing typed, comes back to the form with no search', async () => {
     const location = new URL(
       (await search(BASIC)).headers.get('Location') ?? '',

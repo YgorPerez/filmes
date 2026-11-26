@@ -2,7 +2,7 @@
 // closest to the Pessoa gave each Candidate (`../taste-neighbors.ts`).
 //
 // One review Evidence per Candidate that enough neighbours rated: "23
-// pessoas de gosto parecido deram 4,3 em média a este". Its base is
+// pessoas de gosto parecido deram 4,3 em média a este filme". Its base is
 // `[taste_neighbors] weight × 2 × (percentile − 0.5)`: for the film above
 // her median, against below it, and nothing within `neutral_band` of it.
 // It fades with the raters' freshness, the Decaimento of her Notas the

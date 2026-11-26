@@ -17,13 +17,17 @@ import {
   type Outcome,
 } from '@filmes/engine'
 import {
+  feedbackDraftOf,
+  feedbackSearch,
   parseFeedback,
+  type FeedbackDraft,
   type FeedbackForm,
   type FeedbackRefusal,
 } from '#/content/feedback-form'
 import { feedbackPath, sessionPath } from '#/content/session-paths'
 import { appPoster, formPoster, seeOther } from './form-post'
 import { appEngine } from './engine'
+import { appNotes, type Notes } from './notes'
 import { attendeeSlugs, sessionFilms, type SessionFilm } from './session-fields'
 import type { Owner } from './owners'
 
@@ -192,10 +196,33 @@ function refusalOf(outcome: { output: ErrorOutput }): FeedbackRefusal {
   }
 }
 
+/** The Catálogo search: back to the form with the results (with nothing
+ * typed, saying so) and, in a note (`?nota=`), the reactions and comments
+ * as the Dono left them, which the URL does not carry. */
+function searchCatalog(
+  form: FormData,
+  query: string,
+  session: string,
+  notes: Notes,
+): Response {
+  const draft = feedbackDraftOf(form)
+  const token = notes.remember({
+    warnings: [],
+    addition: null,
+    ...(Object.keys(draft).length > 0 && { feedback: draft }),
+  })
+  const params = new URLSearchParams(
+    query ? { buscar: query } : { erro: 'filme' },
+  )
+  if (token) params.set('nota', token)
+  return seeOther(`${feedbackPath(session)}?${params}`)
+}
+
 /** `POST /feedback/<sessao>/enviar`: records the form's Feedback as the
  * logged-in Dono and goes to the Sessão (`?feito=contada`), or back to the
  * form saying why not (`?erro=`); a Sessão gone shows its page's own
- * notice. Only a Dono, and only a form of this site
+ * notice. The Catálogo search (its button, or Enter in its field) records
+ * nothing: `searchCatalog`. Only a Dono, and only a form of this site
  * (the `Origin`, as the logout checks): the page gate does not cover this
  * route. */
 export async function feedbackAction(
@@ -203,20 +230,14 @@ export async function feedbackAction(
   session: string,
   owner: Owner | null,
   feedback: Feedback,
+  notes: Notes,
   origin: string | undefined,
 ): Promise<Response> {
   const poster = formPoster(request, owner, origin)
   if (poster instanceof Response) return poster
   const form = await request.formData()
-  if (form.get('buscar-catalogo') === 'sim') {
-    const typed = form.get('busca')
-    const query = typeof typed === 'string' ? typed.trim().slice(0, 200) : ''
-    return seeOther(
-      query
-        ? `${feedbackPath(session)}?${new URLSearchParams({ buscar: query })}`
-        : `${feedbackPath(session)}?erro=filme`,
-    )
-  }
+  const query = feedbackSearch(form)
+  if (query !== undefined) return searchCatalog(form, query, session, notes)
   const parsed = parseFeedback(form)
   if ('refused' in parsed)
     return seeOther(`${feedbackPath(session)}?erro=${parsed.refused}`)
@@ -228,6 +249,13 @@ export async function feedbackAction(
   }
   return seeOther(`${sessionPath(session)}?feito=contada`)
 }
+
+/** The reactions and comments the note `token` holds; null when there are
+ * none (gone after a restart, or a note of another form). */
+export const feedbackDraft = (
+  token: string | undefined,
+  notes: Notes,
+): FeedbackDraft | null => notes.recall(token)?.feedback ?? null
 
 // --- the app's -----------------------------------------------------------------
 
@@ -243,5 +271,16 @@ export const appFeedbackPage = (id: string, viewer: string) =>
  * engine. */
 export const serveFeedbackAction = (request: Request, session: string) => {
   const { owner, origin } = appPoster(request)
-  return feedbackAction(request, session, owner, appFeedback(), origin)
+  return feedbackAction(
+    request,
+    session,
+    owner,
+    appFeedback(),
+    appNotes(),
+    origin,
+  )
 }
+
+/** The draft of `/sessoes/<sessao>/contar?nota=`, for the app. */
+export const appFeedbackDraft = (token: string) =>
+  feedbackDraft(token, appNotes())

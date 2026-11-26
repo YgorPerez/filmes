@@ -2,6 +2,7 @@ import { useState } from 'react'
 import {
   RATING_CHOICES,
   REPORT_CHOICES,
+  type FeedbackDraft,
   type FeedbackRefusal,
 } from '#/content/feedback-form'
 import { feedbackPath, sessionPath } from '#/content/session-paths'
@@ -36,24 +37,31 @@ import {
  * `/feedback/<sessao>/enviar`: it works before the JavaScript. `page` is
  * `'unknown'` when no open Session has that id, null when the engine cannot
  * run on this server. The Catálogo search (`search`) comes first: its
- * "Usar" comes back with `film` chosen, from the list or as "Outro filme". */
+ * "Usar" comes back with `film` chosen, from the list or as "Outro filme".
+ * `draft` holds the reactions and comments the search kept, in the note
+ * `note`: the form comes back with them, and "Usar" keeps them. */
 export function FeedbackScreen({
   session,
   page,
   refusal,
   search = null,
   film,
+  draft = null,
+  note,
 }: {
   session: string
   page: FeedbackPage | 'unknown' | null
   refusal?: FeedbackRefusal
   search?: SearchAnswer | null
   film?: string
+  draft?: FeedbackDraft | null
+  note?: string
 }) {
   const path = feedbackPath(session)
   const pick = (id: string) => {
     const params = new URLSearchParams({ filme: id })
     if (search) params.set('buscar', search.query)
+    if (note) params.set('nota', note)
     return `${path}?${params.toString()}`
   }
   return (
@@ -67,11 +75,12 @@ export function FeedbackScreen({
           <Heading page={page} />
           {refusal && <Alert>{FEEDBACK.refusals[refusal]}</Alert>}
           <FeedbackForm
-            key={`${session} ${film ?? ''} ${search?.query ?? ''}`}
+            key={`${session} ${film ?? ''} ${search?.query ?? ''} ${note ?? ''}`}
             session={session}
             page={page}
             film={film}
             search={search}
+            draft={draft}
             pick={pick}
           />
           {page.attendees.length > 1 && <Satisfaction page={page} />}
@@ -111,12 +120,14 @@ function FeedbackForm({
   page,
   film,
   search,
+  draft,
   pick,
 }: {
   session: string
   page: FeedbackPage
   film?: string
   search: SearchAnswer | null
+  draft: FeedbackDraft | null
   pick: (id: string) => string
 }) {
   const { form } = FEEDBACK
@@ -135,7 +146,10 @@ function FeedbackForm({
           setNothing(input.value === 'nada')
       }}
     >
-      <button type="submit" hidden>
+      {/* Enter in any field sends the form: the first submit button is the
+          one Enter presses. With a search not run yet in its field, the
+          server searches instead (`searchAsked`). */}
+      <button type="submit" name="tecla" value="enter" hidden>
         {form.submit}
       </button>
       <FilmChoice
@@ -157,6 +171,7 @@ function FeedbackForm({
                 key={attendee.person}
                 attendee={attendee}
                 index={index}
+                kept={draft?.[attendee.person]}
               />
             ))}
           </div>
@@ -238,13 +253,16 @@ function FilmChoice({
 }
 
 /** One Presente's reaction: her avatar in the Session's colour and her
- * name, the Nota or the Relato, and the comment. */
+ * name, the Nota or the Relato, and the comment; filled with what the
+ * Catálogo search `kept`. */
 function Reaction({
   attendee,
   index,
+  kept,
 }: {
   attendee: FeedbackAttendee
   index: number
+  kept?: FeedbackDraft[string]
 }) {
   const { form } = FEEDBACK
   const id = `reacao-${attendee.person}`
@@ -263,7 +281,7 @@ function Reaction({
             id={id}
             aria-label={`${form.reaction}: ${attendee.name}`}
             name={`reacao.${attendee.person}`}
-            defaultValue=""
+            defaultValue={kept?.reaction ?? ''}
             className={`${FIELD} w-full`}
           >
             <option value="">{form.none}</option>
@@ -288,6 +306,7 @@ function Reaction({
         <TextField
           name={`comentario.${attendee.person}`}
           label={`${form.comment}: ${attendee.name}`}
+          defaultValue={kept?.comment}
         />
       </div>
     </fieldset>

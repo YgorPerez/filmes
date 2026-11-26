@@ -21,7 +21,7 @@ import {
   type RequestReading,
   type SessionSummary,
 } from '@filmes/engine'
-import { field } from '#/content/form-fields'
+import { field, searchAsked } from '#/content/form-fields'
 import {
   draftOf,
   parseSessionRequest,
@@ -254,7 +254,8 @@ function searchSimilar(form: FormData, notes: Notes): Response {
  * logged-in Dono and goes to its page (`?feito=aberta`, with `?nota=` for
  * the Recomendação's warnings), or back to the form saying why not
  * (`?erro=`). With `ler=sim` ("Ler"), opens nothing: back to the form
- * filled from its sentence (`readSentence`). Only a Dono, and only a form of
+ * filled from its sentence (`readSentence`); nor with the Catálogo search
+ * (its button, or Enter in its field: `searchSimilar`). Only a Dono, and only a form of
  * this site (the `Origin`): the page gate does not cover this route. */
 export async function sessionRequestAction(
   request: Request,
@@ -266,7 +267,7 @@ export async function sessionRequestAction(
   const poster = formPoster(request, owner, origin)
   if (poster instanceof Response) return poster
   const form = await request.formData()
-  if (form.get('buscar-catalogo') === 'sim') return searchSimilar(form, notes)
+  if (searchAsked(form, 'buscar')) return searchSimilar(form, notes)
   if (form.get('ler') === 'sim')
     return readSentence(form, poster.person, sessions, notes)
   const parsed = parseSessionRequest(form)

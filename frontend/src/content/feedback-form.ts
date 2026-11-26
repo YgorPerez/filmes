@@ -9,7 +9,7 @@
 // `relato:<gostou|neutro|nao-gostou>` (empty: no reaction) and
 // `comentario.<slug>` what she thought.
 
-import { field, within } from './form-fields'
+import { field, searchAsked, within } from './form-fields'
 
 /** The Relato levels the form offers, by their value in the form. */
 export const REPORT_CHOICES = {
@@ -82,6 +82,35 @@ function peopleIn(form: FormData): string[] {
       if (key.startsWith(prefix) && key.length > prefix.length)
         people.add(key.slice(prefix.length))
   return [...people]
+}
+
+/** The Catálogo search the post asks for (`searchAsked`): the text to look
+ * up, at most 200 characters, empty when nothing was typed; undefined when
+ * the post sends the Feedback. */
+export const feedbackSearch = (form: FormData): string | undefined =>
+  searchAsked(form, 'busca')
+    ? (field(form, 'busca')?.slice(0, 200) ?? '')
+    : undefined
+
+/** What each Presente had filled when the Dono searched the Catálogo: the
+ * form comes back with it. */
+export type FeedbackDraft = Readonly<
+  Record<string, { readonly reaction?: string; readonly comment?: string }>
+>
+
+/** The reactions and comments of the form as they are, refused or not. */
+export function feedbackDraftOf(form: FormData): FeedbackDraft {
+  const draft: Record<string, { reaction?: string; comment?: string }> = {}
+  for (const person of peopleIn(form)) {
+    const reaction = field(form, `${REACTION}${person}`)
+    const comment = field(form, `${COMMENT}${person}`)
+    if (reaction !== undefined || comment !== undefined)
+      draft[person] = {
+        ...(reaction !== undefined && { reaction }),
+        ...(comment !== undefined && { comment }),
+      }
+  }
+  return draft
 }
 
 type Parsed<A> = { ok: A } | { refused: FeedbackRefusal }

@@ -284,8 +284,10 @@ function NewSessionForm({
       className="flex flex-col gap-3xl"
     >
       {/* Enter in any field sends the form, as before "Ler" came above:
-          the first submit button is the one Enter presses. */}
-      <button type="submit" hidden>
+          the first submit button is the one Enter presses. With a search
+          not run yet in its field, the server searches instead
+          (`searchAsked`). */}
+      <button type="submit" name="tecla" value="enter" hidden>
         {form.submit}
       </button>
       {note && <input type="hidden" name="nota" value={note} />}

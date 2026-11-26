@@ -11,6 +11,21 @@ export const field = (form: FormData, name: string): string | undefined => {
   return trimmed === '' ? undefined : trimmed
 }
 
+/** Whether the post asks for the Catálogo search of the field `name`:
+ * by its button ("Buscar", `buscar-catalogo=sim`), or by Enter (the form's
+ * default button, `tecla=enter`) while the field holds text the page has
+ * not searched yet (`buscado`, what the field came back with). Enter
+ * elsewhere, with nothing new to search, sends the form. */
+export const searchAsked = (form: FormData, name: string): boolean => {
+  if (form.get('buscar-catalogo') === 'sim') return true
+  const typed = field(form, name)
+  return (
+    form.get('tecla') === 'enter' &&
+    typed !== undefined &&
+    typed !== field(form, 'buscado')
+  )
+}
+
 /** The value when it is one of `values`. */
 export const oneOf = <T extends string>(
   values: readonly T[],

@@ -5,9 +5,10 @@
 -- Sem chave estrangeira para filmes:
 -- o MovieLens tem filmes fora do Catálogo, e os sinais só olham os Candidatos.
 
--- Vizinhança item-item, lida como "de <base> pessoas que deram 4+ a <filme_id>,
--- <ambos> (em %) deram 4+ a <vizinho_id>". Top-k vizinhos por filme. A
--- proporção é ambos / base; guardar as duas contagens evita arredondar na fronteira.
+-- Vizinhança item-item, lida como "das <base> pessoas que deram 4 ou mais a
+-- <filme_id>, <ambos> (em %) fizeram o mesmo com <vizinho_id>". Top-k vizinhos
+-- por filme. A proporção é ambos / base; guardar as duas contagens evita
+-- arredondar na fronteira.
 CREATE TABLE vizinhos (
     fato_id    TEXT PRIMARY KEY,
     filme_id   TEXT NOT NULL,              -- X: o filme da Nota-semente

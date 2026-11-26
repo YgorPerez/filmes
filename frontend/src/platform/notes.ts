@@ -8,6 +8,7 @@
 // forgets them: the page then shows the Cartaz without them. Server only.
 
 import { randomUUID } from 'node:crypto'
+import type { FeedbackDraft } from '#/content/feedback-form'
 import type { SessionRequestForm } from '#/content/session-request'
 import type { PageReading } from './reading'
 
@@ -20,6 +21,9 @@ export type Note = {
   readonly reading?: PageReading
   /** Nova Sessão's fields as "Ler" left them (#199). */
   readonly form?: Partial<SessionRequestForm>
+  /** The Feedback form's reactions and comments as the Catálogo search
+   * left them. */
+  readonly feedback?: FeedbackDraft
 }
 
 /** How long a note lasts, and how many the process keeps at most. */
@@ -34,7 +38,12 @@ export class Notes {
   /** Keeps `note` and gives its token; none when there is nothing to
    * say. */
   remember(note: Note): string | undefined {
-    if (note.warnings.length === 0 && !note.addition && !note.form)
+    if (
+      note.warnings.length === 0 &&
+      !note.addition &&
+      !note.form &&
+      !note.feedback
+    )
       return undefined
     this.#forgetOld()
     const token = randomUUID()

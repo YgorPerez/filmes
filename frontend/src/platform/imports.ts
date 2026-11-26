@@ -47,20 +47,6 @@ import { serverEnv } from './server-env'
 /** Whoever is logged in, as the login reads her (`currentOwner`). */
 type LoggedIn = ReturnType<typeof currentOwner>
 
-/** A Pessoa with how many imports she has. */
-export type ImportsEntry = {
-  person: string
-  name: string
-  owner: boolean
-  imports: number
-}
-
-export type ImportsOverview = {
-  people: ImportsEntry[]
-  /** Films waiting in the queue, of every Pessoa. */
-  queued: number
-}
-
 /** A TMDB suggestion for a queued film, as the page shows it. */
 export type QueueSuggestion = {
   tmdb: string
@@ -121,7 +107,6 @@ export type QueueDone = {
 
 /** What the screens and the actions need from the engine. */
 export interface Imports {
-  overview(): Promise<Outcome<ImportsOverview>>
   page(person: string): Promise<Outcome<PersonImports>>
   queue(): Promise<Outcome<QueuePage>>
   run(
@@ -245,19 +230,6 @@ function runDecision(
 export function importsFromEngine(engine: Engine): Imports {
   const run = engine.run
   return {
-    async overview() {
-      const people = await run(readPeople)
-      if (people.exitCode !== 0) return people
-      return map(run(viewQueue), (queue) => ({
-        people: people.output.map(({ slug, name, owner, imports }) => ({
-          person: slug,
-          name,
-          owner,
-          imports: imports.length,
-        })),
-        queued: queue.items.length,
-      }))
-    },
     page: (person) => run(personImports(person)),
     queue: () => queueOf(run),
     run: (person, action, author) => runImport(run, person, action, author),
@@ -279,9 +251,6 @@ async function shown<A>(outcome: Promise<Outcome<A>>): Promise<A | null> {
   logEngineError(done)
   return null
 }
-
-/** Every Pessoa with how many imports she has, and the queue's size. */
-export const importsOverview = (imports: Imports) => shown(imports.overview())
 
 /** What a Pessoa's import page shows to `viewer` (the logged-in Dono's slug),
  * with whether it is her own page (no consent box there: she answers for
