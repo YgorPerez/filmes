@@ -9,7 +9,13 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
-import { cleanup, render, screen, within } from '@testing-library/react'
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, expect, it, vi } from 'vite-plus/test'
 import { PairwiseQuestion } from './pairwise'
@@ -56,9 +62,7 @@ it('answers by fetch and goes to the next pair through the router', async () => 
     .setup()
     .click((await form()).getByRole('button', { name: 'Ponte Aérea (2016)' }))
 
-  await vi.waitFor(() =>
-    expect(router.state.location.href).toBe(`${NEXT}&erro=1`),
-  )
+  await waitFor(() => expect(router.state.location.href).toBe(`${NEXT}&erro=1`))
   const [, init] = answered.mock.calls[0] ?? []
   expect(new Headers(init?.headers).get('x-filmes-fetch')).toBe('1')
   expect((init?.body as FormData | undefined)?.get('escolha')).toBe(PONTE.id)

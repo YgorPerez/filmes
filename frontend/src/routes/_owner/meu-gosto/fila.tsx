@@ -1,15 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { countOf, isQueueNotice, isQueueRefusal } from '#/content/import-action'
 import { readQueue } from '#/content/imports'
+import { queueSearch } from '#/content/queue-search'
 import { QueueScreen } from '#/ui/queue'
 
 export const Route = createFileRoute('/_owner/meu-gosto/fila')({
-  validateSearch: (search) => ({
-    feito: isQueueNotice(search.feito) ? search.feito : undefined,
-    erro: isQueueRefusal(search.erro) ? search.erro : undefined,
-    resolvidos: countOf(search.resolvidos),
-    restam: countOf(search.restam),
-  }),
+  validateSearch: queueSearch,
   loader: () => readQueue(),
   component: QueueRoute,
 })

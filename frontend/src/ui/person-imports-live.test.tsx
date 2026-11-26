@@ -15,11 +15,8 @@ import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, expect, it, vi } from 'vite-plus/test'
 import { PERSON_IMPORTS } from './imports.copy'
-import {
-  importsSearch,
-  PersonImportsScreen,
-  type PersonImportsView,
-} from './person-imports'
+import { importsSearch } from '#/content/imports-search'
+import { PersonImportsScreen, type PersonImportsView } from './person-imports'
 
 afterEach(() => {
   cleanup()

@@ -14,7 +14,7 @@ import {
 import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, expect, it, vi } from 'vite-plus/test'
-import { isQueueNotice, isQueueRefusal } from '#/content/import-action'
+import { queueSearch } from '#/content/queue-search'
 import type { QueuePage } from '#/platform/imports'
 import { QUEUE } from './imports.copy'
 import { QueueScreen } from './queue'
@@ -52,14 +52,12 @@ function renderRouted() {
   const router = createRouter({
     routeTree: createRootRoute({
       component: function Queue() {
-        const search: Record<string, unknown> = useSearch({ strict: false })
+        const { feito, erro } = queueSearch(useSearch({ strict: false }))
         return (
           <QueueScreen
             queue={QUEUE_PAGE}
-            done={
-              isQueueNotice(search.feito) ? { notice: search.feito } : undefined
-            }
-            refusal={isQueueRefusal(search.erro) ? search.erro : undefined}
+            done={feito && { notice: feito }}
+            refusal={erro}
           />
         )
       },
