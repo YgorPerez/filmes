@@ -36,6 +36,6 @@ export const CATALOG_SEARCH = {
   refusals: {
     curta: 'Escreva pelo menos 2 letras ou números para buscar.',
     indisponivel:
-      'A busca não está pronta neste servidor: falta o banco do filmes.',
+      'A busca não funcionou: o site está com um problema, e ele ficou registrado no log do servidor.',
   } satisfies Record<SearchRefusal, string>,
 }

@@ -3,7 +3,7 @@ import type { FeedbackRefusal } from '#/content/feedback-form'
 export const FEEDBACK = {
   back: 'Voltar',
   unavailable:
-    'Não deu para abrir a Sessão agora. Tente de novo daqui a pouco.',
+    'Não deu para abrir a Sessão: o site está com um problema, e ele ficou registrado no log do servidor.',
 
   form: {
     title: 'Contar como foi',
