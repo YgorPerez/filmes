@@ -16,7 +16,6 @@ import {
   recommend,
   recommendSession,
   recordFeedback,
-  PAIRWISE_PAIRS,
 } from '../../src/index.ts'
 import { useFixture, type Fixture } from '../fixture.ts'
 import { weightsWith } from '../recommendation/support.ts'
@@ -44,7 +43,8 @@ describe('pairwiseQuestions', () => {
     const teo = await fixture.ok(pairwiseQuestions({ session, person: 'teo' }))
     expect(teo.answered).toBe(0)
     expect(await fixture.ok(pairwiseAnswers(session))).toEqual([])
-    expect(teo.pairs).toHaveLength(PAIRWISE_PAIRS)
+    // `[pairwise] pairs` of `config/weights.toml`.
+    expect(teo.pairs).toHaveLength(10)
     expect(ids(teo.pairs).slice(0, 4)).toEqual([
       ['tt9000201', 'tt9000101'],
       ['tt9000702', 'tt9000105'],
@@ -67,6 +67,21 @@ describe('pairwiseQuestions', () => {
     expect(ids(quim.pairs)[0]).toEqual(['tt9000101', 'tt9000702'])
     for (const seen of ['tt9000201', 'tt9000102', 'tt9000501', 'tt9000401'])
       expect(ids(quim.pairs).flat()).not.toContain(seen)
+  })
+
+  test('asks as many pairs as `[pairwise] pairs` says', async () => {
+    const fixture = useFixture()
+    const session = await open(fixture)
+
+    const teo = await fixture.ok(
+      pairwiseQuestions({ session, person: 'teo' }),
+      weightsWith(fixture, 'pairs = 10', 'pairs = 3'),
+    )
+    expect(ids(teo.pairs)).toEqual([
+      ['tt9000201', 'tt9000101'],
+      ['tt9000702', 'tt9000105'],
+      ['tt9000601', 'tt9000202'],
+    ])
   })
 
   test('only for a Presente of an open Session', async () => {
@@ -116,7 +131,7 @@ describe('answerPairwise', () => {
 
     const next = await fixture.ok(pairwiseQuestions({ session, person: 'teo' }))
     expect(next.answered).toBe(2)
-    expect(next.pairs).toHaveLength(PAIRWISE_PAIRS - 2)
+    expect(next.pairs).toHaveLength(10 - 2)
     expect(ids(next.pairs)[0]).toEqual(['tt9000601', 'tt9000202'])
     // Another Presente's questions do not move.
     const quim = await fixture.ok(

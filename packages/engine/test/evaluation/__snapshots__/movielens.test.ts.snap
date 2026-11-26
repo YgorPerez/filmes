@@ -292,6 +292,9 @@ exports[`avaliar on MovieLens files, as recorded > a messy sample with tags give
         "minUsersHeavyTheme": 2,
         "minUsersSad": 3,
       },
+      "pairwise": {
+        "pairs": 10,
+      },
       "path": {
         "weight": {
           "cast": 0.5,
@@ -683,6 +686,9 @@ exports[`avaliar on MovieLens files, as recorded > a small sample warns that Mov
         "minUsersHeavyTheme": 2,
         "minUsersSad": 3,
       },
+      "pairwise": {
+        "pairs": 10,
+      },
       "path": {
         "weight": {
           "cast": 0.5,
@@ -1071,6 +1077,9 @@ exports[`the diaries, as recorded > a Trakt history dates the cut 1`] = `
         "minRelevance": 0.6,
         "minUsersHeavyTheme": 2,
         "minUsersSad": 3,
+      },
+      "pairwise": {
+        "pairs": 10,
       },
       "path": {
         "weight": {

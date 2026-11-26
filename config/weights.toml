@@ -113,6 +113,11 @@ position = 5
 min_predicted = 7.0
 max_facts = 1
 
+[pairwise]
+# Perguntas par a par (#181): quantos pares cada Presente responde (ou pula)
+# por Sessão, pelo Link da Sessão.
+pairs = 10
+
 [mood]
 # Bônus de cada Clima pedido que o filme sustenta, somado à pontuação da Regra
 # de escolha (que vai de 0 a 1), vezes o multiplicador da Força.

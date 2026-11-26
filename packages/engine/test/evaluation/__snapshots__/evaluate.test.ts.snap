@@ -46,6 +46,9 @@ exports[`avaliar, as recorded > gives the recorded result and report 1`] = `
         "minUsersHeavyTheme": 2,
         "minUsersSad": 3,
       },
+      "pairwise": {
+        "pairs": 10,
+      },
       "path": {
         "weight": {
           "cast": 0.5,
@@ -461,6 +464,9 @@ Quanto das Notas retidas foi 4 ou mais, pela Força mais alta a favor do filme n
         "minRelevance": 0.6,
         "minUsersHeavyTheme": 2,
         "minUsersSad": 3,
+      },
+      "pairwise": {
+        "pairs": 10,
       },
       "path": {
         "weight": {
@@ -2137,6 +2143,9 @@ Foram testados 303 conjuntos. A ordem usa a média do Recall@50 entre as amostra
         "minRelevance": 0.6,
         "minUsersHeavyTheme": 2,
         "minUsersSad": 3,
+      },
+      "pairwise": {
+        "pairs": 10,
       },
       "path": {
         "weight": {
