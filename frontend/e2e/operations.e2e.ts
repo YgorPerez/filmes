@@ -56,7 +56,7 @@ test('the admin consults the database, read-only', async ({ page }, info) => {
   await snap(page, info, 'operacoes-consulta-recusada')
 })
 
-test('the admin evaluates the Recommendation and reads the report', async ({
+test('the admin can retry a refused evaluation and read the report', async ({
   page,
 }, info) => {
   test.skip(info.project.name === 'mobile', 'one evaluation per server')
@@ -68,8 +68,46 @@ test('the admin evaluates the Recommendation and reads the report', async ({
     'O envio está desligado neste servidor',
   )
 
+  await page.locator('html').evaluate((root) => {
+    root.dataset.evaluation = 'open'
+  })
+  const { promise, resolve } = Promise.withResolvers<void>()
+  await page.route(
+    '**/operacoes/acao',
+    async (route) => {
+      if (route.request().isNavigationRequest()) return route.continue()
+      await promise
+      await route.fulfill({ json: { to: '/operacoes?erro=pedido' } })
+    },
+    { times: 1 },
+  )
+
   const evaluation = section(page, 'Avaliar a Recomendação')
-  await evaluation.getByRole('button', { name: 'Avaliar' }).click()
+  const grid = evaluation.getByRole('checkbox', {
+    name: 'Testar outras combinações de pesos',
+  })
+  await grid.check()
+  try {
+    await evaluation
+      .getByRole('button', { name: 'Avaliar', exact: true })
+      .click()
+    await expect(
+      evaluation.getByRole('button', { name: 'Avaliando…' }),
+    ).toBeDisabled()
+    await snap(page, info, 'operacoes-enviando-avaliacao')
+  } finally {
+    resolve()
+  }
+  await expect(page.getByRole('alert')).toContainText(
+    'Esse pedido não veio desta tela. Use o botão da ação.',
+  )
+  await expect(grid).toBeChecked()
+  await expect(
+    evaluation.getByRole('button', { name: 'Avaliar', exact: true }),
+  ).toBeEnabled()
+
+  await grid.uncheck()
+  await evaluation.getByRole('button', { name: 'Avaliar', exact: true }).click()
   await expect(page).toHaveURL(/\/operacoes\?feito=avaliando$/)
   await expect(evaluation.getByRole('status')).toContainText(
     'Relatório gravado em 2026-11-20.md',
@@ -80,6 +118,7 @@ test('the admin evaluates the Recommendation and reads the report', async ({
   await evaluation.getByText('Relatório de 2026-11-20').click()
   await expect(evaluation.getByText(/Recall@50/).first()).toBeVisible()
   await snap(page, info, 'operacoes-avaliacao')
+  await expect(page.locator('html')).toHaveAttribute('data-evaluation', 'open')
 
   const report = join(engineRoot(), 'evaluations/2026-11-20.md')
   expect(readFileSync(report, 'utf8')).toContain('Recall@50')

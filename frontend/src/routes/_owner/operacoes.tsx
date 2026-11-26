@@ -16,10 +16,15 @@ export const Route = createFileRoute('/_owner/operacoes')({
     erro: isOperationsRefusal(search.erro) ? search.erro : undefined,
   }),
   loaderDeps: ({ search }) => ({ sql: search.sql }),
+  // The POST may change the evaluation or queue while the SQL stays the same.
+  shouldReload: true,
   beforeLoad: ({ context }) => {
     if (!context.owner.admin) throw notFound()
   },
-  loader: ({ deps }) => readOperationsPage({ data: deps }),
+  loader: {
+    handler: ({ deps }) => readOperationsPage({ data: deps }),
+    staleReloadMode: 'blocking',
+  },
   component: OperationsPage,
 })
 

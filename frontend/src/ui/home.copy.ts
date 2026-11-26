@@ -56,6 +56,7 @@ export const HOME = {
     doneRatings: (n: number) =>
       n === 1 ? 'feito, 1 nota' : `feito, ${n} notas`,
     skip: 'Pular',
+    skipping: 'Pulando…',
     skipLabel: (title: string) => `Pular: ${title}`,
     resume: 'Retomar',
     counter: (n: number) => `${Math.min(n, 10)} de 10`,
