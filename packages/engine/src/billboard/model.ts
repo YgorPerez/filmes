@@ -3,7 +3,9 @@
 //
 // Once the Session has its Feedback, the chosen film carries each
 // Presente's Nota prevista as the version stored it, next to her Reação
-// (#264): what was expected beside what came.
+// (#264): what was expected beside what came. A chosen film with no card
+// (outside the Recomendação, or left out of the films shown) has a block
+// of its own, `chosen`.
 //
 // Every text the page shows comes from here: the reading of the request at
 // the top, the line of what left the previous version and why, each film's
@@ -71,11 +73,12 @@ import { engineError, type EngineError } from '../runtime/EngineError.ts'
 import { Environment } from '../runtime/Environment.ts'
 import { Owner } from '../runtime/Owner.ts'
 import { Run } from '../runtime/Run.ts'
+import type { Tmdb } from '../sources/Tmdb.ts'
 import { Sqlite, type Connection, type SqliteError } from '../sqlite/Sqlite.ts'
 import { pyInt } from '../compat/fact-id.ts'
 import { sessionOwner } from '../sessions/feedback.ts'
 import {
-  reactions,
+  readableReactions,
   type Reaction,
   type ReportLevel,
 } from '../sessions/facts.ts'
@@ -149,8 +152,9 @@ export interface BillboardPrediction {
   readonly value: number
   /** "8,3". */
   readonly text: string
-  /** How many taste neighbours back it. */
-  readonly raters: number
+  /** How many taste neighbours back it; absent when the version did not
+   * store it. */
+  readonly raters?: number
 }
 
 /** A Presente on the chosen film of a Session with Feedback (#264): the
@@ -164,6 +168,16 @@ export interface BillboardReaction {
   readonly rating: string | null
   /** Her Relato; null without one. */
   readonly reaction: ReportLevel | null
+}
+
+/** The chosen film of a Session with Feedback when no card shows it: it
+ * was outside the Recomendação, or left out of the films shown. */
+export interface BillboardChosen {
+  readonly id: string
+  readonly title: string
+  readonly year: number | null
+  /** As on a card's `reactions`. */
+  readonly reactions: ReadonlyArray<BillboardReaction>
 }
 
 export interface BillboardFilm {
@@ -240,6 +254,8 @@ export interface Billboard {
   readonly moodChoices: ReadonlyArray<string>
   /** The Session is still open: it can take a reply. */
   readonly open: boolean
+  /** Only when the Session has Feedback and its chosen film has no card. */
+  readonly chosen?: BillboardChosen
 }
 
 export interface BillboardRequestInput {
@@ -352,16 +368,16 @@ const predictionsOf = (
   return attendees.flatMap((person) => {
     const prediction = get(recorded, person)
     const value = get(prediction, 'value')
-    // Every recorded prediction carries its raters (#174).
+    if (value === undefined || value === null) return []
     const raters = get(prediction, 'raters')
-    if (value === undefined || value === null || raters === undefined) return []
     const number = Number(yamlToJson(value))
     return [
       {
         person,
         value: number,
         text: oneDecimal(number),
-        raters: Number(yamlToJson(raters)),
+        ...(raters !== undefined &&
+          raters !== null && { raters: Number(yamlToJson(raters)) }),
       },
     ]
   })
@@ -700,6 +716,38 @@ const filmCard = (
     }
   })
 
+/** The chosen film when no card shows it, with the Nota prevista the
+ * version stored when it was in the Recomendação; `null` when the Catálogo
+ * no longer has it. */
+const chosenWithoutCard = (
+  db: Connection,
+  feedback: {
+    readonly chosen: string
+    readonly given: ReadonlyArray<Reaction>
+  },
+  listed: ReadonlyMap<string, YamlMapping>,
+  attendees: ReadonlyArray<string>,
+): Effect.Effect<
+  BillboardChosen | null,
+  EngineError | SqliteError,
+  Tmdb | Run
+> =>
+  Effect.gen(function* () {
+    const row = yield* catalogFilm(db, feedback.chosen)
+    if (row === undefined) return null
+    const header = yield* filmHeader(db, row)
+    return {
+      id: feedback.chosen,
+      title: header.titlePt || row.title,
+      year: row.year,
+      reactions: reactionsOf(
+        predictionsOf(listed.get(feedback.chosen), attendees),
+        feedback.given,
+        attendees,
+      ),
+    }
+  })
+
 /** The Cartaz of a Session (`cartaz.gerar`), as data. Reads only. */
 export const billboardModel = (
   input: BillboardRequestInput,
@@ -730,7 +778,7 @@ export const billboardModel = (
         ? null
         : {
             chosen: pyStrValue(chosen ?? null),
-            given: yield* reactions(id, front),
+            given: readableReactions(id, front),
           }
     return yield* (yield* Sqlite).read((db) =>
       Effect.gen(function* () {
@@ -753,6 +801,10 @@ export const billboardModel = (
               feedback,
             }),
           )
+        const chosenBlock =
+          feedback === null || cards.some((c) => c.id === feedback.chosen)
+            ? null
+            : yield* chosenWithoutCard(db, feedback, listed, attendees)
         return {
           session: id,
           version: Number(
@@ -767,6 +819,7 @@ export const billboardModel = (
           moods: texts(get(front.get('context'), 'moods')),
           moodChoices: (yield* readMoods).map((m) => m.name),
           open: isOpen(front),
+          ...(chosenBlock !== null && { chosen: chosenBlock }),
         }
       }),
     )

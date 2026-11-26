@@ -178,7 +178,12 @@ function Line({
         <Strength strength={line.strength} />
       </span>
       <span>
-        <span className="font-semibold">{namesOf(who)}:</span> {line.text}
+        {who.length > 0 && (
+          <>
+            <span className="font-semibold">{namesOf(who)}:</span>{' '}
+          </>
+        )}
+        {line.text}
         {line.source && (
           <span className="block text-source text-ink-2">{line.source}</span>
         )}

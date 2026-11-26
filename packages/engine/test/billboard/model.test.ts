@@ -637,6 +637,25 @@ describe('the predicted rating (#175)', () => {
     )
   })
 
+  test('a prediction stored without its raters still shows, without them', async () => {
+    const fixture = useFixture()
+    const { id, film } = await pequenosMilagres(fixture)
+    const file = join(fixture.data, 'sessions', `${id}.md`)
+    const text = readFileSync(file, 'utf8')
+    const stored = 'bruno: {value: 8.84, raters: 3, deviation: '
+    expect(text).toContain(stored)
+    writeFileSync(
+      file,
+      text.replaceAll(stored, 'bruno: {value: 8.84, deviation: '),
+    )
+
+    const model = await fixture.ok(billboardModel({ session: id }))
+
+    expect(model.films.find((f) => f.id === film.id)?.predictedRatings).toEqual(
+      [{ person: 'bruno', value: 8.84, text: '8,8' }],
+    )
+  })
+
   test('a film nobody has a prediction for has none', async () => {
     const fixture = useFixture()
     const session = await recommend(fixture, { attendees: ['dono', 'iara'] })
@@ -699,6 +718,97 @@ describe('the closed Cartaz (#264)', () => {
 
     expect(model.films.find((f) => f.id === film.id)?.reactions).toEqual([
       { person: 'bruno', predicted: '8,8', rating: null, reaction: null },
+    ])
+  })
+
+  test('a chosen film outside the Recomendação has its own block', async () => {
+    const fixture = useFixture()
+    const session = await fixture.ok(
+      recommendSession({ attendees: ['bruno', 'teo'], count: 50 }),
+      tasteWeights(fixture, 3, 5),
+    )
+    const id = session.session.id
+    // 600 votes: never a Candidate.
+    await fixture.ok(
+      recordFeedback({
+        session: id,
+        film: 'tt9000106',
+        ratings: ['bruno=4'],
+        reports: ['teo=nao_gostou'],
+      }),
+    )
+
+    const model = await fixture.ok(billboardModel({ session: id }))
+
+    expect(model.chosen).toEqual({
+      id: 'tt9000106',
+      title: 'Curta da Madrugada',
+      year: 2010,
+      reactions: [
+        { person: 'bruno', predicted: null, rating: '8', reaction: null },
+        { person: 'teo', predicted: null, rating: null, reaction: 'disliked' },
+      ],
+    })
+    expect(model.films.every((f) => f.reactions === undefined)).toBe(true)
+  })
+
+  test('a chosen film left out of the films shown has its own block, with its stored Nota prevista', async () => {
+    const fixture = useFixture()
+    const { id, film } = await closed(fixture, { ratings: ['bruno=3'] })
+    const other = (
+      await fixture.ok(billboardModel({ session: id }))
+    ).films.find((f) => f.id !== film.id)!
+
+    const model = await fixture.ok(
+      billboardModel({ session: id, shown: [other.id] }),
+    )
+
+    expect(model.films.map((f) => f.id)).toEqual([other.id])
+    expect(model.chosen).toEqual({
+      id: film.id,
+      title: 'Pequenos Milagres',
+      year: film.year,
+      reactions: [
+        { person: 'bruno', predicted: '8,8', rating: '6', reaction: null },
+      ],
+    })
+  })
+
+  test('a chosen film on a card has no block of its own', async () => {
+    const fixture = useFixture()
+    const { id } = await closed(fixture, { ratings: ['bruno=3'] })
+
+    const model = await fixture.ok(billboardModel({ session: id }))
+
+    expect(model.chosen).toBeUndefined()
+  })
+
+  test('a reaction that does not parse is left out, not the Cartaz', async () => {
+    const fixture = useFixture()
+    const { id, film } = await closed(fixture, {
+      ratings: ['bruno=3'],
+      reports: ['teo=gostou'],
+    })
+    const file = join(fixture.data, 'sessions', `${id}.md`)
+    const text = readFileSync(file, 'utf8')
+    const valid = '  - {person: teo, kind: report, reaction: liked}\n'
+    expect(text).toContain(valid)
+    writeFileSync(
+      file,
+      text.replace(
+        valid,
+        valid +
+          '  - {person: teo, kind: rating}\n' +
+          '  - {person: teo, kind: shrug}\n' +
+          '  - {person: teo, kind: report, reaction: amazed}\n',
+      ),
+    )
+
+    const model = await fixture.ok(billboardModel({ session: id }))
+
+    expect(model.films.find((f) => f.id === film.id)?.reactions).toEqual([
+      { person: 'bruno', predicted: '8,8', rating: '6', reaction: null },
+      { person: 'teo', predicted: null, rating: null, reaction: 'liked' },
     ])
   })
 

@@ -191,6 +191,26 @@ const reportReaction = (
   source: feedbackSource(front),
 })
 
+/** One reaction of the Feedback, or `null` for a kind it does not know.
+ * A reaction without its fields throws, as Python's did. */
+const reactionOf = (
+  place: Omit<ReactionPlace, 'person'>,
+  value: YamlValue,
+): Reaction | null => {
+  const r = asMapping(value)
+  const person = pyStrValue(field(r, 'person'))
+  const kind = field(r, 'kind')
+  const level = r.get('reaction')
+  if (kind === 'rating') return ratingReaction({ ...place, r, person })
+  if (
+    kind === 'report' &&
+    typeof level === 'string' &&
+    Object.hasOwn(REPORT_LEVELS, level)
+  )
+    return reportReaction({ ...place, person }, level as ReportLevel)
+  return null
+}
+
 /** The Feedback's reactions (`fatos.reacoes`). */
 export const reactions = (
   id: string,
@@ -202,31 +222,38 @@ export const reactions = (
     const { filmId, date } = feedback
     const list: Reaction[] = []
     for (const value of feedback.reactions) {
-      const r = asMapping(value)
-      const person = pyStrValue(field(r, 'person'))
-      const kind = field(r, 'kind')
-      const level = r.get('reaction')
-      if (kind === 'rating')
-        list.push(ratingReaction({ id, front, r, person, filmId, date }))
-      else if (
-        kind === 'report' &&
-        typeof level === 'string' &&
-        Object.hasOwn(REPORT_LEVELS, level)
-      )
-        list.push(
-          reportReaction(
-            { id, front, person, filmId, date },
-            level as ReportLevel,
-          ),
-        )
-      else
+      const reaction = reactionOf({ id, front, filmId, date }, value)
+      if (reaction === null)
         return yield* engineError(
           'invalid_data',
-          `Sessão ${id}: reação inválida ${pyReprValue(r)}`,
+          `Sessão ${id}: reação inválida ${pyReprValue(value)}`,
         )
+      list.push(reaction)
     }
     return list
   })
+
+/** `reactions` for a page that only shows them (the closed Cartaz): what
+ * does not parse is left out instead of failing the page. */
+export const readableReactions = (
+  id: string,
+  front: YamlMapping,
+): ReadonlyArray<Reaction> => {
+  const attempt = <A>(read: () => A): A | null => {
+    try {
+      return read()
+    } catch {
+      return null
+    }
+  }
+  const feedback = attempt(() => given(front))
+  if (feedback === null) return []
+  const { filmId, date } = feedback
+  return feedback.reactions.flatMap(
+    (value) =>
+      attempt(() => reactionOf({ id, front, filmId, date }, value)) ?? [],
+  )
+}
 
 /** How a comment feels, from its reaction (`fatos.reacao_do_comentario`). */
 const commentReaction = (r: YamlMapping): 'gosta' | 'nao_gosta' | null => {

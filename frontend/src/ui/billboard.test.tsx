@@ -8,7 +8,7 @@ import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { Billboard } from './billboard'
-import { MODEL } from './billboard.fixture'
+import { CHOSEN_OUTSIDE, MODEL } from './billboard.fixture'
 import { parseMarks } from './billboard-marks'
 import { BILLBOARD } from './billboard.copy'
 
@@ -175,6 +175,32 @@ describe('the Cartaz shows', () => {
     expect(card(2).queryByRole('button', { name: /vizinho/ })).toBeNull()
   })
 
+  it('a Nota prevista stored without its neighbours, with a hint without them', () => {
+    const [hours] = MODEL.films
+    const film = {
+      ...hours!,
+      predictedRatings: [{ person: 'bruno', value: 8.31, text: '8,3' }],
+    }
+    render(<Billboard billboard={{ ...MODEL, films: [film] }} />)
+    expect(
+      card(1).getByRole('button', { name: 'Bruno: 8,3 de 10' }).textContent,
+    ).toBe('8,3')
+  })
+
+  it('an Evidence about no Presente of the Cartaz, without a name before it', () => {
+    const [, salt] = MODEL.films
+    const film = {
+      ...salt!,
+      lines: [{ ...salt!.lines[0]!, people: ['ninguem'] }],
+      withoutFact: [],
+    }
+    render(<Billboard billboard={{ ...MODEL, films: [film] }} />)
+    const why = within(card(1).getByRole('list', { name: BILLBOARD.card.why }))
+    expect(why.getAllByRole('listitem').map((li) => li.textContent)).toEqual([
+      'deu 5 a Maré Baixa',
+    ])
+  })
+
   it('a number on a hollow dot, and "sem fato" only in the text', () => {
     const [, bet] = MODEL.films
     const film = {
@@ -208,6 +234,19 @@ describe('the Cartaz shows', () => {
     expect(
       screen.queryByRole('button', { name: BILLBOARD.reply.send }),
     ).toBeNull()
+  })
+
+  it('a chosen film without a card in a block of its own, with each Reação', () => {
+    render(<Billboard billboard={CHOSEN_OUTSIDE} />)
+    const block = within(
+      screen.getByRole('region', { name: 'Filme escolhido' }),
+    )
+    expect(block.getByText('Curta da Madrugada (2010)')).toBeTruthy()
+    expect(block.getAllByRole('listitem').map((li) => li.textContent)).toEqual([
+      'Bruno: achou 8',
+      'Iara: não gostou',
+    ])
+    expect(cards()).toHaveLength(2)
   })
 
   it('that nothing passed the Restrições', () => {

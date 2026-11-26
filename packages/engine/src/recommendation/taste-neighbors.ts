@@ -393,8 +393,7 @@ export const personPredictionError = (
               }),
             ),
           }
-    if (errors.size >= MAX_ERRORS)
-      errors.delete(errors.keys().next().value!)
+    if (errors.size >= MAX_ERRORS) errors.delete(errors.keys().next().value!)
     errors.set(key, error)
     return error
   })

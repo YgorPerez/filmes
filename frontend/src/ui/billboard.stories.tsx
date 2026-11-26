@@ -1,10 +1,11 @@
 // The whole Cartaz: on the page, open and closed (the chosen film with its
-// reactions), without sections, empty,
+// reactions, on its card or, without one, in a block above the cards),
+// without sections, empty,
 // and in the MCP Apps view's inline and fullscreen layouts.
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, within } from 'storybook/test'
 import { Billboard } from './billboard'
-import { CLOSED, MODEL } from './billboard.fixture'
+import { CHOSEN_OUTSIDE, CLOSED, MODEL } from './billboard.fixture'
 
 // A poster drawn here, so no story reaches the network for TMDB's.
 const POSTER =
@@ -54,6 +55,19 @@ export const Closed: Story = {
     await expect(lists[0]).toHaveTextContent('Bruno: previsto 8,3 · achou 6')
     await expect(lists[0]).toHaveTextContent('Iara: gostou')
     await expect(canvas.queryByRole('button', { name: 'Enviar' })).toBeNull()
+  },
+}
+
+export const ClosedChosenWithoutCard: Story = {
+  args: { billboard: local(CHOSEN_OUTSIDE) },
+  play: async ({ canvasElement }) => {
+    const block = within(
+      within(canvasElement).getByRole('region', { name: 'Filme escolhido' }),
+    )
+    await expect(block.getByText('Curta da Madrugada (2010)')).toBeVisible()
+    await expect(block.getByRole('list')).toHaveTextContent(
+      'Bruno: achou 8Iara: não gostou',
+    )
   },
 }
 
