@@ -5,7 +5,8 @@
 // In the fixture, only Bruno has taste neighbours, and only once
 // `[taste_neighbors]` is lowered (users 10, 20 and 30 of
 // `notas_gosto_movielens.csv`). Pequenos Milagres (601) is his one bet:
-// the neighbours predict 8,31 and he has no Fact on it. The other films
+// the neighbours predict 8,31, an 8,84 once calibrated to his own Notas
+// (#210), and he has no Fact on it. The other films
 // they predict are ones he rated, with plenty of Evidence.
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -140,7 +141,21 @@ describe('the bet in the Recomendação', () => {
     expect(ids(out).slice(0, 4)).toEqual(ids(plain).slice(0, 4))
     expect(ids(plain)).not.toContain(PEQUENOS_MILAGRES)
     const bet = out.films[4]
-    expect(bet?.predictedRating?.['bruno']?.value).toBeCloseTo(8.31, 2)
+    expect(bet?.predictedRating?.['bruno']?.value).toBeCloseTo(8.84, 2)
+  })
+
+  test('reads the calibrated Nota prevista', async () => {
+    const fixture = useFixture()
+    // 8,5 is above his neighbours' own 8,31 and below the 8,84 calibrated
+    // to his Notas: they are harsher than he is.
+    const out = await bruno(
+      fixture,
+      betWeights(fixture, ['min_predicted = 7.0', 'min_predicted = 8.5']),
+      { seed: '2026-11-20-bruno' },
+    )
+
+    expect(bets(out)).toEqual([[5, PEQUENOS_MILAGRES]])
+    expect(out.films[4]?.predictedRating?.['bruno']?.raw).toBeCloseTo(8.31, 2)
   })
 
   test('without a Nota prevista there is no bet', async () => {
@@ -169,7 +184,7 @@ describe('the bet in the Recomendação', () => {
     const fixture = useFixture()
     const out = await bruno(
       fixture,
-      betWeights(fixture, ['min_predicted = 7.0', 'min_predicted = 8.5']),
+      betWeights(fixture, ['min_predicted = 7.0', 'min_predicted = 9.0']),
       { seed: '2026-11-20-bruno' },
     )
 
@@ -252,7 +267,7 @@ describe('the bet in the Session', () => {
       title: 'Pequenos Milagres',
       bet: true,
       predicted_rating: {
-        bruno: { value: 8.31, deviation: 0.53, raters: 3 },
+        bruno: { value: 8.84, deviation: 0.82, raters: 3 },
       },
       reason: { kind: 'taste', people: ['bruno'] },
     })

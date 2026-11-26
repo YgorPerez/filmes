@@ -68,6 +68,7 @@ exports[`avaliar on MovieLens files, as recorded > a messy sample with tags give
         "predictedRatingError": {
           "films": 0,
           "meanAbsoluteError": null,
+          "rawMeanAbsoluteError": null,
         },
         "recall50": 0,
         "retrieved": 0,
@@ -201,6 +202,7 @@ exports[`avaliar on MovieLens files, as recorded > a messy sample with tags give
         "predictedRatingError": {
           "films": 0,
           "meanAbsoluteError": null,
+          "rawMeanAbsoluteError": null,
         },
         "recall50": 0.8,
         "retrieved": 4,
@@ -306,6 +308,9 @@ exports[`avaliar on MovieLens files, as recorded > a messy sample with tags give
       },
       "people": {
         "statementWeight": 1,
+      },
+      "predictionCalibration": {
+        "pseudoCount": 20,
       },
       "ratingDecay": {
         "floor": 0.25,
@@ -461,6 +466,7 @@ exports[`avaliar on MovieLens files, as recorded > a small sample warns that Mov
         "predictedRatingError": {
           "films": 0,
           "meanAbsoluteError": null,
+          "rawMeanAbsoluteError": null,
         },
         "recall50": 1,
         "retrieved": 1,
@@ -594,6 +600,7 @@ exports[`avaliar on MovieLens files, as recorded > a small sample warns that Mov
         "predictedRatingError": {
           "films": 0,
           "meanAbsoluteError": null,
+          "rawMeanAbsoluteError": null,
         },
         "recall50": 0.8,
         "retrieved": 4,
@@ -700,6 +707,9 @@ exports[`avaliar on MovieLens files, as recorded > a small sample warns that Mov
       },
       "people": {
         "statementWeight": 1,
+      },
+      "predictionCalibration": {
+        "pseudoCount": 20,
       },
       "ratingDecay": {
         "floor": 0.25,
@@ -855,6 +865,7 @@ exports[`the diaries, as recorded > a Trakt history dates the cut 1`] = `
         "predictedRatingError": {
           "films": 0,
           "meanAbsoluteError": null,
+          "rawMeanAbsoluteError": null,
         },
         "recall50": null,
         "retrieved": 0,
@@ -988,6 +999,7 @@ exports[`the diaries, as recorded > a Trakt history dates the cut 1`] = `
         "predictedRatingError": {
           "films": 0,
           "meanAbsoluteError": null,
+          "rawMeanAbsoluteError": null,
         },
         "recall50": 0.8,
         "retrieved": 4,
@@ -1092,6 +1104,9 @@ exports[`the diaries, as recorded > a Trakt history dates the cut 1`] = `
       },
       "people": {
         "statementWeight": 1,
+      },
+      "predictionCalibration": {
+        "pseudoCount": 20,
       },
       "ratingDecay": {
         "floor": 0.25,
