@@ -3,12 +3,16 @@
 // form that posts every Voto at once.
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, expect, it } from 'vite-plus/test'
-import { voteSearch } from '#/content/session-votes-address'
+import { afterEach, expect, it, vi } from 'vite-plus/test'
+import { FETCH_HEADER } from '#/content/fetch-answer'
+import { votePath, voteSearch } from '#/content/session-votes-address'
 import { VOTES } from './session-votes.copy'
 import { VoteCards, VoteScreen } from './session-votes'
 
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  vi.unstubAllGlobals()
+})
 
 const DECK = {
   version: 2,
@@ -89,6 +93,52 @@ it('a drag to the left is a no and to the right a yes; a short one is nothing', 
 
 const LINK = { sessao: '2026-11-20-iara', chave: 'k', presente: 'iara' }
 const HOME = '/participar?sessao=2026-11-20-iara&chave=k&presente=iara'
+
+it('keeps the votes on screen when the server could not record them', async () => {
+  const answer = Promise.withResolvers<Response>()
+  const fetchVotes = vi.fn<typeof fetch>(() => answer.promise)
+  vi.stubGlobal('fetch', fetchVotes)
+  render(<VoteScreen deck={DECK} search={LINK} home={HOME} />)
+  const user = userEvent.setup()
+  for (const name of [VOTES.yes, VOTES.no, VOTES.yes]) {
+    await user.click(screen.getByRole('button', { name }))
+  }
+  const fields = posted()
+  await user.click(screen.getByRole('button', { name: VOTES.send }))
+
+  const sending = screen.getByRole<HTMLButtonElement>('button', {
+    name: 'Enviando votos…',
+  })
+  expect(sending.disabled).toBe(true)
+  expect(
+    screen.getByRole<HTMLButtonElement>('button', { name: VOTES.restart })
+      .disabled,
+  ).toBe(true)
+  sending.form?.requestSubmit()
+  expect(fetchVotes).toHaveBeenCalledOnce()
+  const [url, init] = fetchVotes.mock.calls[0] ?? []
+  expect(url).toBe(
+    new URL(votePath('votos', LINK), window.location.origin).href,
+  )
+  expect(new Headers(init?.headers).get(FETCH_HEADER)).toBe('1')
+  const body = init?.body
+  if (!(body instanceof FormData)) throw new Error('Expected a vote form')
+  expect([...body]).toEqual(fields)
+
+  answer.resolve(
+    Response.json({ to: votePath('votar', LINK, { erro: 'indisponivel' }) }),
+  )
+
+  expect((await screen.findByRole('alert')).textContent).toBe(
+    VOTES.refusals.indisponivel,
+  )
+  expect(screen.getByText(VOTES.summary(2, 1))).toBeTruthy()
+  expect(posted()).toEqual(fields)
+  expect(
+    screen.getByRole<HTMLButtonElement>('button', { name: VOTES.send })
+      .disabled,
+  ).toBe(false)
+})
 
 it('the page posts the link’s search and says what the last post did', () => {
   render(
