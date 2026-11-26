@@ -149,6 +149,13 @@ describe('avaliar', () => {
         rateTop5: 8 / 9,
         reactions: 9,
         meanReaction: 1.0,
+        // Alone, there is no group to disagree (#171).
+        satisfaction: {
+          people: { bruno: { sessions: 9, satisfaction: 1 } },
+          groupSessions: 0,
+          minimum: null,
+          disagreement: null,
+        },
       })
     },
   )

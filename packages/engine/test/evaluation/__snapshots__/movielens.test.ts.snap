@@ -35,21 +35,176 @@ exports[`avaliar on MovieLens files, as recorded > a messy sample with tags give
     },
     "offline": {
       "movielens": {
+        "calibration": {
+          "overall": {
+            "moderate": {
+              "heldOut": 0,
+              "hitRate": null,
+              "hits": 0,
+            },
+            "none": {
+              "heldOut": 66,
+              "hitRate": 0,
+              "hits": 0,
+            },
+            "rises": null,
+            "strong": {
+              "heldOut": 274,
+              "hitRate": 0,
+              "hits": 0,
+            },
+            "weak": {
+              "heldOut": 0,
+              "hitRate": null,
+              "hits": 0,
+            },
+          },
+          "people": {},
+        },
         "coverageTop5": 0.9096,
         "filmsTop5": 5000,
         "heldOut4Plus": 264,
         "people": 1000,
+        "predictedRatingError": {
+          "films": 0,
+          "meanAbsoluteError": null,
+        },
         "recall50": 0,
         "retrieved": 0,
+        "similarityTop5": 0.3297289500839499,
         "withEvidence": 4548,
       },
       "people": {
+        "calibration": {
+          "overall": {
+            "moderate": {
+              "heldOut": 0,
+              "hitRate": null,
+              "hits": 0,
+            },
+            "none": {
+              "heldOut": 4,
+              "hitRate": 0.75,
+              "hits": 3,
+            },
+            "rises": null,
+            "strong": {
+              "heldOut": 2,
+              "hitRate": 1,
+              "hits": 2,
+            },
+            "weak": {
+              "heldOut": 0,
+              "hitRate": null,
+              "hits": 0,
+            },
+          },
+          "people": {
+            "bruno": {
+              "moderate": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "none": {
+                "heldOut": 1,
+                "hitRate": 0,
+                "hits": 0,
+              },
+              "rises": null,
+              "strong": {
+                "heldOut": 2,
+                "hitRate": 1,
+                "hits": 2,
+              },
+              "weak": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+            },
+            "iara": {
+              "moderate": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "none": {
+                "heldOut": 1,
+                "hitRate": 1,
+                "hits": 1,
+              },
+              "rises": null,
+              "strong": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "weak": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+            },
+            "quim": {
+              "moderate": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "none": {
+                "heldOut": 1,
+                "hitRate": 1,
+                "hits": 1,
+              },
+              "rises": null,
+              "strong": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "weak": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+            },
+            "rosa": {
+              "moderate": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "none": {
+                "heldOut": 1,
+                "hitRate": 1,
+                "hits": 1,
+              },
+              "rises": null,
+              "strong": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "weak": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+            },
+          },
+        },
         "coverageTop5": 0.7,
         "filmsTop5": 20,
         "heldOut4Plus": 5,
         "people": 4,
+        "predictedRatingError": {
+          "films": 0,
+          "meanAbsoluteError": null,
+        },
         "recall50": 1,
         "retrieved": 5,
+        "similarityTop5": 0.31704280277115016,
         "withEvidence": 14,
       },
     },
@@ -58,6 +213,12 @@ exports[`avaliar on MovieLens files, as recorded > a messy sample with tags give
       "meanReaction": null,
       "rateTop5": null,
       "reactions": 0,
+      "satisfaction": {
+        "disagreement": null,
+        "groupSessions": 0,
+        "minimum": null,
+        "people": {},
+      },
       "sessions": 0,
       "withFilm": 0,
     },
@@ -232,21 +393,176 @@ exports[`avaliar on MovieLens files, as recorded > a small sample warns that Mov
     },
     "offline": {
       "movielens": {
+        "calibration": {
+          "overall": {
+            "moderate": {
+              "heldOut": 0,
+              "hitRate": null,
+              "hits": 0,
+            },
+            "none": {
+              "heldOut": 0,
+              "hitRate": null,
+              "hits": 0,
+            },
+            "rises": null,
+            "strong": {
+              "heldOut": 2,
+              "hitRate": 0.5,
+              "hits": 1,
+            },
+            "weak": {
+              "heldOut": 0,
+              "hitRate": null,
+              "hits": 0,
+            },
+          },
+          "people": {},
+        },
         "coverageTop5": 1,
         "filmsTop5": 10,
         "heldOut4Plus": 1,
         "people": 2,
+        "predictedRatingError": {
+          "films": 0,
+          "meanAbsoluteError": null,
+        },
         "recall50": 1,
         "retrieved": 1,
+        "similarityTop5": 0.4875,
         "withEvidence": 10,
       },
       "people": {
+        "calibration": {
+          "overall": {
+            "moderate": {
+              "heldOut": 0,
+              "hitRate": null,
+              "hits": 0,
+            },
+            "none": {
+              "heldOut": 4,
+              "hitRate": 0.75,
+              "hits": 3,
+            },
+            "rises": null,
+            "strong": {
+              "heldOut": 2,
+              "hitRate": 1,
+              "hits": 2,
+            },
+            "weak": {
+              "heldOut": 0,
+              "hitRate": null,
+              "hits": 0,
+            },
+          },
+          "people": {
+            "bruno": {
+              "moderate": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "none": {
+                "heldOut": 1,
+                "hitRate": 0,
+                "hits": 0,
+              },
+              "rises": null,
+              "strong": {
+                "heldOut": 2,
+                "hitRate": 1,
+                "hits": 2,
+              },
+              "weak": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+            },
+            "iara": {
+              "moderate": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "none": {
+                "heldOut": 1,
+                "hitRate": 1,
+                "hits": 1,
+              },
+              "rises": null,
+              "strong": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "weak": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+            },
+            "quim": {
+              "moderate": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "none": {
+                "heldOut": 1,
+                "hitRate": 1,
+                "hits": 1,
+              },
+              "rises": null,
+              "strong": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "weak": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+            },
+            "rosa": {
+              "moderate": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "none": {
+                "heldOut": 1,
+                "hitRate": 1,
+                "hits": 1,
+              },
+              "rises": null,
+              "strong": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "weak": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+            },
+          },
+        },
         "coverageTop5": 0.6,
         "filmsTop5": 20,
         "heldOut4Plus": 5,
         "people": 4,
+        "predictedRatingError": {
+          "films": 0,
+          "meanAbsoluteError": null,
+        },
         "recall50": 1,
         "retrieved": 5,
+        "similarityTop5": 0.3604166666666666,
         "withEvidence": 12,
       },
     },
@@ -255,6 +571,12 @@ exports[`avaliar on MovieLens files, as recorded > a small sample warns that Mov
       "meanReaction": null,
       "rateTop5": null,
       "reactions": 0,
+      "satisfaction": {
+        "disagreement": null,
+        "groupSessions": 0,
+        "minimum": null,
+        "people": {},
+      },
       "sessions": 0,
       "withFilm": 0,
     },
@@ -430,21 +752,176 @@ exports[`the diaries, as recorded > a Trakt history dates the cut 1`] = `
     },
     "offline": {
       "movielens": {
+        "calibration": {
+          "overall": {
+            "moderate": {
+              "heldOut": 0,
+              "hitRate": null,
+              "hits": 0,
+            },
+            "none": {
+              "heldOut": 0,
+              "hitRate": null,
+              "hits": 0,
+            },
+            "rises": null,
+            "strong": {
+              "heldOut": 0,
+              "hitRate": null,
+              "hits": 0,
+            },
+            "weak": {
+              "heldOut": 0,
+              "hitRate": null,
+              "hits": 0,
+            },
+          },
+          "people": {},
+        },
         "coverageTop5": null,
         "filmsTop5": 0,
         "heldOut4Plus": 0,
         "people": 0,
+        "predictedRatingError": {
+          "films": 0,
+          "meanAbsoluteError": null,
+        },
         "recall50": null,
         "retrieved": 0,
+        "similarityTop5": null,
         "withEvidence": 0,
       },
       "people": {
+        "calibration": {
+          "overall": {
+            "moderate": {
+              "heldOut": 0,
+              "hitRate": null,
+              "hits": 0,
+            },
+            "none": {
+              "heldOut": 4,
+              "hitRate": 0.75,
+              "hits": 3,
+            },
+            "rises": null,
+            "strong": {
+              "heldOut": 2,
+              "hitRate": 1,
+              "hits": 2,
+            },
+            "weak": {
+              "heldOut": 0,
+              "hitRate": null,
+              "hits": 0,
+            },
+          },
+          "people": {
+            "bruno": {
+              "moderate": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "none": {
+                "heldOut": 1,
+                "hitRate": 0,
+                "hits": 0,
+              },
+              "rises": null,
+              "strong": {
+                "heldOut": 2,
+                "hitRate": 1,
+                "hits": 2,
+              },
+              "weak": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+            },
+            "iara": {
+              "moderate": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "none": {
+                "heldOut": 1,
+                "hitRate": 1,
+                "hits": 1,
+              },
+              "rises": null,
+              "strong": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "weak": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+            },
+            "quim": {
+              "moderate": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "none": {
+                "heldOut": 1,
+                "hitRate": 1,
+                "hits": 1,
+              },
+              "rises": null,
+              "strong": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "weak": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+            },
+            "rosa": {
+              "moderate": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "none": {
+                "heldOut": 1,
+                "hitRate": 1,
+                "hits": 1,
+              },
+              "rises": null,
+              "strong": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "weak": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+            },
+          },
+        },
         "coverageTop5": 0.7,
         "filmsTop5": 20,
         "heldOut4Plus": 5,
         "people": 4,
+        "predictedRatingError": {
+          "films": 0,
+          "meanAbsoluteError": null,
+        },
         "recall50": 1,
         "retrieved": 5,
+        "similarityTop5": 0.27708333333333335,
         "withEvidence": 14,
       },
     },
@@ -453,6 +930,12 @@ exports[`the diaries, as recorded > a Trakt history dates the cut 1`] = `
       "meanReaction": null,
       "rateTop5": null,
       "reactions": 0,
+      "satisfaction": {
+        "disagreement": null,
+        "groupSessions": 0,
+        "minimum": null,
+        "people": {},
+      },
       "sessions": 0,
       "withFilm": 0,
     },
