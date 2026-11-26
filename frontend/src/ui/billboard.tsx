@@ -27,7 +27,9 @@ import { ShelfLabel } from './kit/shelf-label'
 
 // The Cartaz [billboard] of a Session (`cartaz/__init__.py`, `cartaz.js`):
 // the request on the shelf label, the legend, what left the previous
-// version, a card per film and, while the Session is open, the reply: the
+// version, a card per film under the title of its Motivo (#183; a Session
+// from before has the cards alone) and, while the Session is open, the
+// reply: the
 // marks per film, the acrescentar and the Clima chips below the last film,
 // Enviar and Copiar pro chat. It renders the engine's `billboardModel` and builds the text
 // `answerBillboard` reads (`billboardText`).
@@ -151,16 +153,29 @@ export function Billboard({
       />
     )
 
-  const cards = billboard.films.map((film, i) => (
+  const grouped = billboard.sections.length > 0
+  const card = (film: BillboardModel['films'][number]) => (
     <BillboardCard
       key={film.id}
       film={film}
       people={billboard.attendees}
-      first={i === 0}
+      first={film === billboard.films[0]}
+      level={grouped ? 3 : 2}
       marks={billboard.open ? marksOf(marks, film.id) : undefined}
       onChange={billboard.open ? changeFilm(film.id) : undefined}
     />
-  ))
+  )
+  const byId = new Map(billboard.films.map((film) => [film.id, film]))
+  const cards = grouped
+    ? billboard.sections.map((section) => (
+        <Section key={section.films[0]} section={section}>
+          {section.films.flatMap((id) => {
+            const film = byId.get(id)
+            return film ? [card(film)] : []
+          })}
+        </Section>
+      ))
+    : billboard.films.map(card)
   const fullscreen = layout === 'fullscreen'
   const shelf = (
     <>
@@ -225,6 +240,39 @@ export function Billboard({
     </form>
   ) : (
     body
+  )
+}
+
+/** A section by Motivo (DESIGN.md, Seção do Cartaz): the title beside a 4px bar
+ * in ink (the stamp's violet for the Aposta), "de novo" when
+ * the Motivo was above already, and its cards. */
+function Section({
+  section,
+  children,
+}: {
+  section: BillboardModel['sections'][number]
+  children: ReactNode
+}) {
+  const id = `secao-${section.films[0]}`
+  const bet = section.kind === 'bet'
+  return (
+    <section aria-labelledby={id} className="flex flex-col gap-lg">
+      <h2
+        id={id}
+        className={`border-l-4 pl-sm font-display text-step-title text-balance ${bet ? 'border-stamp text-stamp' : 'border-ink text-ink'}`}
+      >
+        {section.title}
+        {section.again && (
+          <>
+            {' '}
+            <span className="font-body text-meta font-normal text-ink-2">
+              {BILLBOARD.section.again}
+            </span>
+          </>
+        )}
+      </h2>
+      {children}
+    </section>
   )
 }
 

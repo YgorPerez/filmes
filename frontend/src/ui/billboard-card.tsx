@@ -19,7 +19,11 @@ import { Strength } from './billboard-top'
 // (`billboard-card-marks.tsx`). A grid: the case on the left (112px, 160px
 // from 560px), the header on the right; "Por que" and the marks across
 // below, each opened by a dashed rule, "Por que" going up under the chips
-// from 560px. The state is the Cartaz's (`billboard.tsx`).
+// from 560px. The state is the Cartaz's (`billboard.tsx`). Inside a
+// section by Motivo (#183) the title is a level below the section's.
+
+/** The film's title level: 2 alone, 3 under a section's title. */
+type Level = 2 | 3
 
 const byslug = (people: readonly BillboardPerson[]) =>
   new Map(people.map((p) => [p.slug, p]))
@@ -102,11 +106,23 @@ function Poster({
   )
 }
 
-function Header({ film, id }: { film: BillboardFilm; id: string }) {
+function Header({
+  film,
+  id,
+  level,
+}: {
+  film: BillboardFilm
+  id: string
+  level: Level
+}) {
   const { card } = BILLBOARD
+  const Title = level === 3 ? 'h3' : 'h2'
   return (
     <div className="flex min-w-0 flex-col gap-sm">
-      <h2 id={id} className="flex flex-col gap-y-0.5 font-display text-title">
+      <Title
+        id={id}
+        className="flex flex-col gap-y-0.5 font-display text-title"
+      >
         <span className="sr-only">{film.position}</span>
         <span>{film.title}</span>
         {film.originalTitle && (
@@ -114,7 +130,7 @@ function Header({ film, id }: { film: BillboardFilm; id: string }) {
             {film.originalTitle}
           </span>
         )}
-      </h2>
+      </Title>
       {film.synopsis && (
         <p className="max-w-[60ch] text-synopsis text-pretty">
           {film.synopsis}
@@ -190,21 +206,24 @@ function Line({
 function Why({
   film,
   people,
+  level,
 }: {
   film: BillboardFilm
   people: readonly BillboardPerson[]
+  level: Level
 }) {
   const { card } = BILLBOARD
+  const Label = level === 3 ? 'h4' : 'h3'
   const known = byslug(people)
   const without = film.withoutFact.flatMap((slug) => known.get(slug) ?? [])
   return (
     <div className="col-span-2 flex flex-col gap-sm border-t border-dashed border-rule pt-lg min-[560px]:col-span-1 min-[560px]:col-start-2">
-      <h3 className="flex justify-between gap-sm font-display text-label text-ink-2 uppercase">
+      <Label className="flex justify-between gap-sm font-display text-label text-ink-2 uppercase">
         {card.why}
         <span className="font-medium tracking-normal normal-case">
           {film.coverage}
         </span>
-      </h3>
+      </Label>
       <ul className="flex flex-col gap-[9px]">
         {film.lines.map((line) => (
           <Line
@@ -226,17 +245,20 @@ function Why({
 }
 
 /** A film of the Cartaz. `marks` and `onChange` are absent when the
- * Session takes no reply (it has its Feedback). */
+ * Session takes no reply (it has its Feedback). `level` 3 under a
+ * section's title. */
 export function BillboardCard({
   film,
   people,
   first,
+  level = 2,
   marks,
   onChange,
 }: {
   film: BillboardFilm
   people: readonly BillboardPerson[]
   first: boolean
+  level?: Level
   marks?: FilmMarks
   onChange?: (marks: FilmMarks) => void
 }) {
@@ -252,8 +274,8 @@ export function BillboardCard({
       className="group/card grid grid-cols-[112px_1fr] content-start gap-xl rounded-card border border-rule bg-surface px-xl pt-2xl pb-xl min-[560px]:grid-cols-[160px_1fr]"
     >
       <Poster film={film} people={people} first={first} stamp={stamp} />
-      <Header film={film} id={`filme-${film.id}`} />
-      <Why film={film} people={people} />
+      <Header film={film} id={`filme-${film.id}`} level={level} />
+      <Why film={film} people={people} level={level} />
       {marks && onChange && (
         <FilmMarksControls
           film={film}

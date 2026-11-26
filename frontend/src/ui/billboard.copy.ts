@@ -26,6 +26,10 @@ export const BILLBOARD = {
     seenStamp: 'Já vi',
   },
 
+  section: {
+    again: 'de novo',
+  },
+
   marks: {
     seen: 'Já vi',
     seenGroup: (n: number) => `Já vi o filme ${n}`,

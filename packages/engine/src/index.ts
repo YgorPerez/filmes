@@ -104,6 +104,11 @@ export {
   type BetOdds,
 } from './recommendation/bet.ts'
 export {
+  filmReason,
+  type FilmReason,
+  type ReasonKind,
+} from './recommendation/reason.ts'
+export {
   rank,
   rankRequest,
   recommend,
@@ -624,6 +629,7 @@ export {
   type BillboardRequest,
   type BillboardRequestInput,
   type BillboardResult,
+  type BillboardSection,
 } from './billboard/model.ts'
 export {
   RATING_QUEUE_LIMIT,

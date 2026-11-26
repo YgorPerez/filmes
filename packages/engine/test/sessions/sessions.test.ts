@@ -14,6 +14,7 @@ import * as names from '../python-names.ts'
 import { Effect } from 'effect'
 import { describe, expect, test } from 'vite-plus/test'
 import {
+  filmReason,
   filmsInBody,
   KIND_IN_BODY,
   makeEngine,
@@ -118,6 +119,7 @@ describe('recomendar opens the Session', () => {
         position: f.position,
         id: f.id,
         title: f.title,
+        reason: filmReason(f.evidence),
       })),
       chosen: null,
       chosen_in_recommendation: null,
@@ -348,8 +350,26 @@ describe('sessoes-abertas', () => {
       attendees: ['bruno', 'iara'],
       request: 'eu e a Iara',
       recommendation: [
-        { position: 1, id: 'tt9000403', title: 'A Volta do Mar' },
-        { position: 2, id: 'tt9001903', title: 'Fronteira II' },
+        {
+          position: 1,
+          id: 'tt9000403',
+          title: 'A Volta do Mar',
+          reason: {
+            kind: 'entity',
+            name: 'Rui Tavares',
+            people: ['bruno', 'iara'],
+          },
+        },
+        {
+          position: 2,
+          id: 'tt9001903',
+          title: 'Fronteira II',
+          reason: {
+            kind: 'entity',
+            name: 'Trilogia da Fronteira',
+            people: ['bruno', 'iara'],
+          },
+        },
       ],
       version: 1,
     })

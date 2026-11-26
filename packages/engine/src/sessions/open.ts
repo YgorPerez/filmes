@@ -35,6 +35,7 @@ import {
   constraintLabel,
   storedConstraints,
 } from '../recommendation/constraints/index.ts'
+import { filmReason } from '../recommendation/reason.ts'
 import type {
   Recommendation,
   RecommendRequest,
@@ -108,7 +109,8 @@ export const sessionContext = (
 }
 
 /** The frontmatter fields that change when the Recomendação is redone
- * (`_campos_da_recomendacao`). */
+ * (`_campos_da_recomendacao`). Each film keeps its Motivo [reason] (#183),
+ * which the Cartaz groups by: the body has no sign to find it again. */
 export const recommendationFields = (
   recommendation: Recommendation,
   context: YamlValue,
@@ -126,6 +128,7 @@ export const recommendationFields = (
           title: f.title,
           ...('new' in f && { new: f.new }),
           ...(f.bet && { bet: true }),
+          reason: filmReason(f.evidence),
         })),
       ),
     ],
@@ -249,7 +252,8 @@ export interface OpenSession {
   readonly attendees: unknown
   /** The request as the Dono said it, or null. */
   readonly request: unknown
-  /** The current version's films: `{position, id, title, new?}`. */
+  /** The current version's films: `{position, id, title, new?, bet?,
+   * reason}`. */
   readonly recommendation: unknown
   readonly version: number
 }
