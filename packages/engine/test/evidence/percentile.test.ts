@@ -18,9 +18,6 @@ const CUTS: RatingPercentile = {
   moderate_against: 0.1,
 }
 
-const TODAY = '2026-11-20'
-const RECENT = '2026-01-01'
-
 /** Counts by value from a list of Notas. */
 const counts = (ratings: readonly number[]): Map<number, number> => {
   const out = new Map<number, number>()
@@ -50,10 +47,10 @@ describe('the percentile of a Nota', () => {
 describe('the Força of a Nota by its percentile', () => {
   test('an enthusiast’s 4 speaks against the film, and her 5 is not strong', () => {
     const scale = ratingScale(ENTHUSIAST, new Map(), CUTS)
-    expect(ratingStrength(scale, 5, RECENT, TODAY)).toEqual(['moderate', 1])
-    expect(ratingStrength(scale, 4.5, RECENT, TODAY)).toEqual(['weak', 1])
-    expect(ratingStrength(scale, 4, RECENT, TODAY)).toEqual(['weak', -1])
-    expect(ratingStrength(scale, 2, RECENT, TODAY)).toEqual(['strong', -1])
+    expect(ratingStrength(scale, 5)).toEqual(['moderate', 1])
+    expect(ratingStrength(scale, 4.5)).toEqual(['weak', 1])
+    expect(ratingStrength(scale, 4)).toEqual(['weak', -1])
+    expect(ratingStrength(scale, 2)).toEqual(['strong', -1])
   })
 
   test('her top 10% is strong, whatever the value', () => {
@@ -62,16 +59,17 @@ describe('the Força of a Nota by its percentile', () => {
       new Map(),
       CUTS,
     )
-    expect(ratingStrength(scale, 3.5, RECENT, TODAY)).toEqual(['strong', 1])
+    expect(ratingStrength(scale, 3.5)).toEqual(['strong', 1])
     // 1 is the bottom 5%: strong against; 2 sits at 30%: weak against.
-    expect(ratingStrength(scale, 1, RECENT, TODAY)).toEqual(['strong', -1])
-    expect(ratingStrength(scale, 2, RECENT, TODAY)).toEqual(['weak', -1])
+    expect(ratingStrength(scale, 1)).toEqual(['strong', -1])
+    expect(ratingStrength(scale, 2)).toEqual(['weak', -1])
   })
 
-  test('age and Feedback still move the level read from the percentile', () => {
+  test('Feedback still moves the level read from the percentile', () => {
+    // Age no longer does: the Decaimento weighs an old Nota instead (#173).
     const scale = ratingScale(ENTHUSIAST, new Map(), CUTS)
-    expect(ratingStrength(scale, 5, '2019-01-01', TODAY)).toEqual(['weak', 1])
-    expect(ratingStrength(scale, 5, RECENT, TODAY, true)).toEqual(['strong', 1])
+    expect(ratingStrength(scale, 5)).toEqual(['moderate', 1])
+    expect(ratingStrength(scale, 5, true)).toEqual(['strong', 1])
   })
 })
 
@@ -83,8 +81,8 @@ describe('the scale of a Pessoa with few Notas', () => {
     const guest = ratingScale(counts([4, 5, 5]), POPULATION, CUTS)
     expect(guest.source).toBe('population')
     // On her own three Notas, 4 would sit at 1/6: against.
-    expect(ratingStrength(guest, 4, RECENT, TODAY)).toEqual(['moderate', 1])
-    expect(ratingStrength(guest, 5, RECENT, TODAY)).toEqual(['strong', 1])
+    expect(ratingStrength(guest, 4)).toEqual(['moderate', 1])
+    expect(ratingStrength(guest, 5)).toEqual(['strong', 1])
   })
 
   test('from the minimum on, her own Notas', () => {
@@ -94,6 +92,6 @@ describe('the scale of a Pessoa with few Notas', () => {
   test('with no population in the Catálogo, her own Notas, however few', () => {
     const guest = ratingScale(counts([4, 5, 5]), new Map(), CUTS)
     expect(guest.source).toBe('own')
-    expect(ratingStrength(guest, 4, RECENT, TODAY)).toEqual(['moderate', -1])
+    expect(ratingStrength(guest, 4)).toEqual(['moderate', -1])
   })
 })

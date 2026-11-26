@@ -20,6 +20,12 @@ export const Weights = Schema.Struct({
       guess: Weight,
     }),
   }),
+  rating_decay: Schema.Struct({
+    /** Years for a Nota's contribution to halve. */
+    half_life_years: Schema.Finite.check(Schema.isGreaterThan(0)),
+    /** The least a Nota's contribution keeps, from 0 to 1. */
+    floor: Weight,
+  }),
   path: Schema.Struct({
     /** By content predicate (`director`, `writer`, `series`, `cast`,
      * `genre`), in file order. A predicate outside it is not a path. */

@@ -4,9 +4,10 @@
 // film above.
 //
 // In the fixture, Bruno's order by the Regra is As Horas Lentas (104) and
-// Sal e Ferrugem (105), both 0.9734 and by Helena Prado, then Noite de
-// Estreia (Otávio Lins, 0.9002), Cidade de Vidro (Helena, 0.8442), A Volta
-// do Mar (Rui Tavares, 0.8176) and Vento Norte (Marta Quintal, 0.7685).
+// Sal e Ferrugem (105), both 0.947 and by Helena Prado, then Noite de
+// Estreia (Otávio Lins, 0.8604), Cidade de Vidro (Helena, 0.7661), A Volta
+// do Mar (Rui Tavares, 0.7548) and Vento Norte (Marta Quintal, 0.7111),
+// with the Decaimento of his Notas (#173).
 // These films have no MovieLens data, so the Parecença from a Helena film
 // is the director (1) and the IMDb genres (Jaccard), weight 0.1 each: 0.5
 // to Sal e Ferrugem (no genre in common), 2/3 to Cidade de Vidro (Drama of
@@ -46,10 +47,10 @@ describe('diversity in the final order', () => {
       diverse(fixture),
     )
 
-    // λ 0.8. Second place: Sal e Ferrugem 0.8 × 0.9734 − 0.2 × 0.5 = 0.679
-    // loses to Noite de Estreia 0.8 × 0.9002 = 0.720. Third: Sal e Ferrugem
-    // beats A Volta do Mar (0.654). Fourth: A Volta do Mar beats Cidade de
-    // Vidro (0.675 − 0.2 × 2/3 = 0.542). Fifth: Vento Norte (0.615).
+    // λ 0.8. Second place: Sal e Ferrugem 0.8 × 0.947 − 0.2 × 0.5 = 0.658
+    // loses to Noite de Estreia 0.8 × 0.8604 = 0.688. Third: Sal e Ferrugem
+    // beats A Volta do Mar (0.604). Fourth: A Volta do Mar beats Cidade de
+    // Vidro (0.613 − 0.2 × 2/3 = 0.480). Fifth: Vento Norte (0.569).
     expect(titles(out)).toEqual([
       'As Horas Lentas',
       'Noite de Estreia',
@@ -59,7 +60,7 @@ describe('diversity in the final order', () => {
     ])
     // Positions follow the new order; the utility stays the Regra's.
     expect(out.films.map((f) => f.position)).toEqual([1, 2, 3, 4, 5])
-    expect(out.films[1]?.utility).toEqual({ bruno: 0.9002 })
+    expect(out.films[1]?.utility).toEqual({ bruno: 0.8604 })
   })
 
   test('with λ 1 the order is the Regra de escolha alone', async () => {
@@ -116,16 +117,16 @@ describe('diversity in the final order', () => {
     )
 
     // The other four were swapped and stay out of the Session. The best
-    // free film by the Regra, Cidade de Vidro (0.8 × 0.8442 = 0.675), is a
-    // Helena film like the kept one: 0.675 − 0.2 × 2/3 = 0.542 puts it after
-    // A Casa das Marés (0.585), Luz de Inverno and Fronteira II (0.569),
-    // still ahead of Maré Cheia (0.538).
+    // free film by the Regra, Cidade de Vidro (0.8 × 0.7661 = 0.613), is a
+    // Helena film like the kept one: 0.613 − 0.2 × 2/3 = 0.480 puts it after
+    // A Casa das Marés (0.555), Fronteira II (0.523), Maré Cheia (0.522) and
+    // Luz de Inverno (0.501), out of the five.
     expect(titles(redone)).toEqual([
       'As Horas Lentas',
       'A Casa das Marés',
-      'Luz de Inverno',
       'Fronteira II',
-      'Cidade de Vidro',
+      'Maré Cheia',
+      'Luz de Inverno',
     ])
     expect(redone.kept).toEqual(['tt9000104'])
   })
