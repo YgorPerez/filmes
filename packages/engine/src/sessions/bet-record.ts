@@ -110,40 +110,113 @@ const ratingForDrop = (
     until,
   )
 
+const seenKey = (person: string, film: string) => JSON.stringify([person, film])
+
+/** Each Presente's outcome per film, of the films she was shown as an
+ * Aposta: the latest by date, none after today. */
+const outcomeCollector = (round: Round) => {
+  const shown = new Map<string, Map<string, string>>()
+  const outcomes = new Map<string, Map<string, Outcome>>()
+  const put = (person: string, film: string, outcome: Outcome) => {
+    if (
+      !shown.get(film)?.has(person) ||
+      !Number.isFinite(Date.parse(outcome.date)) ||
+      outcome.date > round.today
+    )
+      return
+    const films = outcomes.get(person) ?? new Map<string, Outcome>()
+    const previous = films.get(film)
+    if (!previous || previous.date <= outcome.date) {
+      films.set(film, outcome)
+      outcomes.set(person, films)
+    }
+  }
+  const putRating = (
+    person: string,
+    film: string,
+    rating: number,
+    date: string,
+  ) => {
+    const scale = scaleOf(round, person)
+    if (isHighRating(scale, rating)) put(person, film, { success: true, date })
+    else if (ratingStrength(scale, rating)[1] < 0)
+      put(person, film, { success: false, date })
+  }
+  return { shown, outcomes, put, putRating }
+}
+
+type OutcomeCollector = ReturnType<typeof outcomeCollector>
+
+/** The version's Aposta, as shown to its Presentes from its date. */
+const showBet = (
+  { shown }: OutcomeCollector,
+  version: YamlMapping,
+  attendees: ReadonlySet<string>,
+  date: string,
+): void => {
+  const bet = storedBet(version)
+  if (!bet) return
+  const film = pyStrValue(bet.get('id') ?? null)
+  const people = shown.get(film) ?? new Map<string, string>()
+  for (const person of strings(version.get('attendees')))
+    if (attendees.has(person) && !people.has(person)) people.set(person, date)
+  shown.set(film, people)
+}
+
+/** The Já vi drops of the version, by the Nota from when the film was on
+ * screen; a Já vi the Session marked itself is read from its mark. */
+const seenDropOutcomes = (
+  collector: OutcomeCollector,
+  round: Round,
+  version: YamlMapping,
+  date: string,
+  latestSeen: ReadonlyMap<string, unknown>,
+) =>
+  Effect.gen(function* () {
+    for (const drop of list(version.get('dropped'))
+      .map(yamlToJson)
+      .filter(isSeenDrop)) {
+      for (const person of drop.people) {
+        const since = collector.shown.get(drop.id)?.get(person)
+        if (since === undefined || latestSeen.has(seenKey(person, drop.id)))
+          continue
+        const note = yield* ratingForDrop(round, person, drop.id, since, date)
+        if (note !== undefined)
+          collector.putRating(
+            person,
+            drop.id,
+            num(note, 'nota'),
+            text(note, 'data'),
+          )
+      }
+    }
+  })
+
+/** The reactions to the chosen film, when it was an Aposta: a success at
+ * or above the median of the Presente's scale. */
+const chosenOutcomes = (
+  collector: OutcomeCollector,
+  round: Round,
+  id: string,
+  front: YamlMapping,
+) =>
+  Effect.gen(function* () {
+    const { shown, put } = collector
+    const chosen = front.get('chosen')
+    if (typeof chosen === 'string' && shown.has(chosen))
+      for (const reaction of yield* reactions(id, front)) {
+        if (!shown.get(chosen)?.has(reaction.person)) continue
+        const median = ratingAtPercentile(scaleOf(round, reaction.person), 0.5)
+        if (reaction.value >= (median === null ? 0.5 : ratingValue(median)))
+          put(reaction.person, chosen, { success: true, date: reaction.date })
+      }
+  })
+
 const sessionOutcomes = (id: string, front: YamlMapping, round: Round) =>
   Effect.gen(function* () {
     const attendees = new Set(round.attendees)
-    const shown = new Map<string, Map<string, string>>()
-    const outcomes = new Map<string, Map<string, Outcome>>()
-    const put = (person: string, film: string, outcome: Outcome) => {
-      if (
-        !shown.get(film)?.has(person) ||
-        !Number.isFinite(Date.parse(outcome.date)) ||
-        outcome.date > round.today
-      )
-        return
-      const films = outcomes.get(person) ?? new Map<string, Outcome>()
-      const previous = films.get(film)
-      if (!previous || previous.date <= outcome.date) {
-        films.set(film, outcome)
-        outcomes.set(person, films)
-      }
-    }
-
-    const putRating = (
-      person: string,
-      film: string,
-      rating: number,
-      date: string,
-    ) => {
-      const scale = scaleOf(round, person)
-      if (isHighRating(scale, rating))
-        put(person, film, { success: true, date })
-      else if (ratingStrength(scale, rating)[1] < 0)
-        put(person, film, { success: false, date })
-    }
-    const seenKey = (person: string, film: string) =>
-      JSON.stringify([person, film])
+    const collector = outcomeCollector(round)
+    const { shown, put, putRating } = collector
 
     const versions = sessionVersions(front)
     const marks = versions.map(betMarks)
@@ -155,28 +228,9 @@ const sessionOutcomes = (id: string, front: YamlMapping, round: Round) =>
     )
     for (const [index, version] of versions.entries()) {
       const date = pyStrValue(version.get('date') ?? null)
-      const bet = storedBet(version)
-      if (bet) {
-        const film = pyStrValue(bet.get('id') ?? null)
-        const people = shown.get(film) ?? new Map<string, string>()
-        for (const person of strings(version.get('attendees')))
-          if (attendees.has(person) && !people.has(person))
-            people.set(person, date)
-        shown.set(film, people)
-      }
+      showBet(collector, version, attendees, date)
       if (!shown.size) continue
-      for (const drop of list(version.get('dropped'))
-        .map(yamlToJson)
-        .filter(isSeenDrop)) {
-        for (const person of drop.people) {
-          const since = shown.get(drop.id)?.get(person)
-          if (since === undefined || latestSeen.has(seenKey(person, drop.id)))
-            continue
-          const note = yield* ratingForDrop(round, person, drop.id, since, date)
-          if (note !== undefined)
-            putRating(person, drop.id, num(note, 'nota'), text(note, 'data'))
-        }
-      }
+      yield* seenDropOutcomes(collector, round, version, date, latestSeen)
       for (const vote of storedVotes(version)) {
         if (vote.vote !== 'no') continue
         put(vote.person, vote.film, { success: false, date: vote.date ?? date })
@@ -194,15 +248,8 @@ const sessionOutcomes = (id: string, front: YamlMapping, round: Round) =>
       }
     }
 
-    const chosen = front.get('chosen')
-    if (typeof chosen === 'string' && shown.has(chosen))
-      for (const reaction of yield* reactions(id, front)) {
-        if (!shown.get(chosen)?.has(reaction.person)) continue
-        const median = ratingAtPercentile(scaleOf(round, reaction.person), 0.5)
-        if (reaction.value >= (median === null ? 0.5 : ratingValue(median)))
-          put(reaction.person, chosen, { success: true, date: reaction.date })
-      }
-    return outcomes
+    yield* chosenOutcomes(collector, round, id, front)
+    return collector.outcomes
   })
 
 /** Only other Sessions inform this draw. Redoing this Session still uses

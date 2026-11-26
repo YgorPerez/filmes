@@ -119,6 +119,54 @@ const otherMoods = (
     return names.length !== before.size || names.some((n) => !before.has(n))
   })
 
+/** The frontmatter after the refazer: the version that leaves goes to the
+ * end of `versions`, and the top gets the new request and list. Returns
+ * the new version's number. */
+const redoFront = (
+  front: Map<string, YamlValue>,
+  input: {
+    readonly recommendation: Recommendation
+    readonly context: YamlValue
+    readonly swapped: ReadonlySet<string>
+    readonly explicitSwaps: ReadonlyArray<string>
+    readonly owner: string | undefined
+    readonly today: string
+  },
+): number => {
+  const { recommendation, context, swapped, explicitSwaps, owner, today } =
+    input
+  const previousSwaps = idsOf(front.get('swapped'))
+  const [explicitSwap] = explicitSwaps
+  if (owner !== undefined && explicitSwap && explicitSwaps.length === 1)
+    recordBetMarks(front, [
+      {
+        person: owner,
+        film: explicitSwap,
+        kind: 'swapped',
+        rating: null,
+        date: today,
+      },
+    ])
+  if (swapped.size > 0)
+    front.set(
+      'swapped',
+      [...new Set([...previousSwaps, ...swapped])].sort((a, b) =>
+        compareTuple([a], [b]),
+      ),
+    )
+  const earlier = front.get('versions')
+  const versions = [
+    ...(pyTruthy(earlier) && isSequence(earlier) ? earlier : []),
+    currentVersion(front),
+  ]
+  for (const field of VERSION_EXTRAS) front.delete(field)
+  for (const [key, value] of recommendationFields(recommendation, context))
+    front.set(key, value)
+  front.set('redone_on', today)
+  front.set('versions', versions)
+  return versions.length + 1
+}
+
 /** Puts the new Recomendação in an open Session, in the same file
  * (`sessao.refazer`): the version that leaves goes to the end of
  * `versions`, with `swapped` added to its own (what the Dono swapped from
@@ -151,51 +199,105 @@ export const redoSession = (
               (row) => [String(row['slug']), String(row['nome'])],
             ),
           )
-          const previousSwaps = idsOf(front.get('swapped'))
-          const [explicitSwap] = explicitSwaps
-          if (owner !== undefined && explicitSwap && explicitSwaps.length === 1)
-            recordBetMarks(front, [
-              {
-                person: owner,
-                film: explicitSwap,
-                kind: 'swapped',
-                rating: null,
-                date: today,
-              },
-            ])
-          if (swapped.size > 0)
-            front.set(
-              'swapped',
-              [...new Set([...previousSwaps, ...swapped])].sort((a, b) =>
-                compareTuple([a], [b]),
-              ),
-            )
-          const earlier = front.get('versions')
-          const versions = [
-            ...(pyTruthy(earlier) && isSequence(earlier) ? earlier : []),
-            currentVersion(front),
-          ]
-          for (const field of VERSION_EXTRAS) front.delete(field)
-          for (const [key, value] of recommendationFields(
+          const version = redoFront(front, {
             recommendation,
             context,
-          ))
-            front.set(key, value)
-          front.set('redone_on', today)
-          front.set('versions', versions)
+            swapped,
+            explicitSwaps,
+            owner,
+            today,
+          })
           yield* syncSession(db, id, front)
           yield* writeSession(
             id,
             front,
             sessionBody(recommendation.films, names),
           )
-          return {
-            id,
-            file: sessionRelative(id),
-            version: versions.length + 1,
-          }
+          return { id, file: sessionRelative(id), version }
         }),
     )
+  })
+
+/** The Restrições a request asks, its own and the ones it reads. */
+const readAsked = (from: RecommendSessionRequest) =>
+  Effect.map(readConstraints(from), (asked) => [
+    ...asked,
+    ...(from.constraints ?? []),
+  ])
+
+/** What a refazer regenerates from the open Session. A request that
+ * replaces the whole list, or with other Climas, ignores `keep`, with a
+ * warning, and its Restrições are read again without it. */
+const prepareRedo = (
+  front: YamlMapping,
+  start: {
+    readonly keep: ReadonlyArray<string>
+    readonly asking: RecommendSessionRequest
+    readonly asked: ReadonlyArray<Constraint>
+  },
+) =>
+  Effect.gen(function* () {
+    let { keep, asking, asked } = start
+    const warnings: string[] = []
+    // A refazer always regenerates: without `keep` no film stays, but the
+    // "novo" mark and `dropped` still say what came in and what left.
+    let replacing: Constraint | undefined = replacingList(
+      asked,
+      storedIn(front),
+    )[0]
+    const newMood = yield* otherMoods(front, asking.moods)
+    if ((replacing !== undefined || newMood) && keep.length > 0) {
+      const why =
+        replacing === undefined
+          ? 'o Clima novo'
+          : (constraintLabel(replacing.stored()) ?? '')
+      warnings.push(
+        `--manter ${keep.join(',')}: ignorado, ${why} troca a lista inteira`,
+      )
+      keep = []
+      asking = { ...asking, keep: undefined }
+      asked = yield* readAsked(asking)
+      const name = replacing?.name
+      replacing = asked.find((c) => c.name === name)
+    }
+    const swapped = swappedNow(
+      currentVersion(front),
+      keep,
+      requestIds(asking.swap),
+    )
+    const prepared = prepareRegenerate(front, keep, swapped, replacing, newMood)
+    warnings.push(...prepared.warnings)
+    return { asking, asked, regenerate: prepared.regenerate, warnings }
+  })
+
+/** The request as the Session asks it: with the Restrições its current
+ * version passes on and, in a refazer, what it regenerates. */
+const sessionRequest = (
+  request: RecommendSessionRequest,
+  session: string | undefined,
+  keep: ReadonlyArray<string>,
+): Effect.Effect<
+  {
+    readonly asking: RecommendSessionRequest
+    readonly asked: ReadonlyArray<Constraint>
+    readonly regenerate: Regenerate | undefined
+    readonly warnings: ReadonlyArray<string>
+  },
+  EngineError,
+  Environment
+> =>
+  Effect.gen(function* () {
+    if (session === undefined)
+      return {
+        asking: request,
+        asked: yield* readAsked(request),
+        regenerate: undefined,
+        warnings: [],
+      }
+    const front = yield* openSessionFront(session)
+    const asking = inheritConstraints(request, storedIn(front))
+    const asked = yield* readAsked(asking)
+    return yield* prepareRedo(front, { keep, asking, asked })
   })
 
 /** `recomendar`: the Recomendação, and the Session it opens or, with
@@ -209,64 +311,18 @@ export const recommendSession = (
 > =>
   Effect.gen(function* () {
     const count = yield* requestCount(request)
-    let keep = requestIds(request.keep)
+    const keep = requestIds(request.keep)
     if (keep.length > 0 && !request.session)
       return yield* engineError(
         'invalid_usage',
         '--manter só vale com --sessao: são os filmes da versão anterior que ficam',
       )
     const session = request.session || undefined
-    let asking: RecommendSessionRequest = request
-    let front: YamlMapping | undefined
-    if (session !== undefined) {
-      front = yield* openSessionFront(session)
-      asking = inheritConstraints(asking, storedIn(front))
-    }
-    const read = (from: RecommendSessionRequest) =>
-      Effect.map(readConstraints(from), (asked) => [
-        ...asked,
-        ...(from.constraints ?? []),
-      ])
-    let asked: ReadonlyArray<Constraint> = yield* read(asking)
-    const warnings: string[] = []
-    let regenerate: Regenerate | undefined
-    if (session !== undefined && front !== undefined) {
-      // A refazer always regenerates: without `keep` no film stays, but the
-      // "novo" mark and `dropped` still say what came in and what left.
-      let replacing: Constraint | undefined = replacingList(
-        asked,
-        storedIn(front),
-      )[0]
-      const newMood = yield* otherMoods(front, asking.moods)
-      if ((replacing !== undefined || newMood) && keep.length > 0) {
-        const why =
-          replacing === undefined
-            ? 'o Clima novo'
-            : (constraintLabel(replacing.stored()) ?? '')
-        warnings.push(
-          `--manter ${keep.join(',')}: ignorado, ${why} troca a lista inteira`,
-        )
-        keep = []
-        asking = { ...asking, keep: undefined }
-        asked = yield* read(asking)
-        const name = replacing?.name
-        replacing = asked.find((c) => c.name === name)
-      }
-      const swapped = swappedNow(
-        currentVersion(front),
-        keep,
-        requestIds(asking.swap),
-      )
-      const prepared = prepareRegenerate(
-        front,
-        keep,
-        swapped,
-        replacing,
-        newMood,
-      )
-      regenerate = prepared.regenerate
-      warnings.push(...prepared.warnings)
-    }
+    const { asking, asked, regenerate, warnings } = yield* sessionRequest(
+      request,
+      session,
+      keep,
+    )
     // The Aposta's draws come from the Session id (#178).
     const ranked = yield* rankRequest(
       asking,

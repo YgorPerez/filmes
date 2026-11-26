@@ -67,7 +67,7 @@ import { engineError, type EngineError } from '../runtime/EngineError.ts'
 import { Environment } from '../runtime/Environment.ts'
 import { Owner } from '../runtime/Owner.ts'
 import { Run } from '../runtime/Run.ts'
-import { Sqlite, type SqliteError } from '../sqlite/Sqlite.ts'
+import { Sqlite, type Connection, type SqliteError } from '../sqlite/Sqlite.ts'
 import { pyInt } from '../compat/fact-id.ts'
 import { sessionOwner } from '../sessions/feedback.ts'
 import {
@@ -573,6 +573,64 @@ const onlyShown = (
     }))
   })
 
+/** One film's card on the Cartaz; a film outside the Catálogo is
+ * `invalid_data`. */
+const filmCard = (
+  db: Connection,
+  input: {
+    readonly id: string
+    readonly film: FilmInBody
+    readonly listed: ReadonlyMap<string, YamlMapping>
+    readonly attendees: ReadonlyArray<string>
+    readonly people: ReadonlyArray<BillboardPerson>
+  },
+) =>
+  Effect.gen(function* () {
+    const { id, film, listed, attendees, people } = input
+    const row = yield* catalogFilm(db, film.id)
+    if (row === undefined)
+      return yield* engineError(
+        'invalid_data',
+        `Sessão ${id}: ${film.id} não está no Catálogo`,
+      )
+    const header = yield* filmHeader(db, row)
+    const withoutFact = Object.entries(film.evidence)
+      .filter(([, evidence]) => !evidence.some(isFact))
+      .map(([person]) => person)
+    const title = header.titlePt || row.title
+    const chips = [
+      ...(row.year ? [String(row.year)] : []),
+      ...(row.runtimeMinutes ? [sessionDuration(row.runtimeMinutes)] : []),
+      ...header.genres,
+    ]
+    const card: BillboardFilm = {
+      position: film.position,
+      id: film.id,
+      title,
+      originalTitle:
+        header.titlePt && header.titlePt !== row.title ? row.title : null,
+      new: pyTruthy(listed.get(film.id)?.get('new') ?? false),
+      bet: pyTruthy(listed.get(film.id)?.get('bet') ?? false),
+      ...(isCautiousBet(listed.get(film.id)) && {
+        cautiousBet: true as const,
+        cautiousBetReason: CAUTIOUS_BET_REASON,
+      }),
+      poster: header.poster ? header.poster.replace('/w185/', '/w500/') : null,
+      imdbUrl: header.imdbUrl,
+      imdbRating: header.imdbRating,
+      imdbRatingText:
+        header.imdbRating === null ? null : imdbRatingLabel(header.imdbRating),
+      votesText: votesText(header.imdbVotes),
+      chips,
+      synopsis: header.synopsis,
+      lines: linesOf(film),
+      withoutFact,
+      coverage: `Fato sobre ${people.length - withoutFact.length} de ${people.length}`,
+      predictedRatings: predictionsOf(listed.get(film.id), attendees),
+    }
+    return card
+  })
+
 /** The Cartaz of a Session (`cartaz.gerar`), as data. Reads only. */
 export const billboardModel = (
   input: BillboardRequestInput,
@@ -607,55 +665,10 @@ export const billboardModel = (
         )
         const people = billboardPeople(attendees, names, owner)
         const cards: BillboardFilm[] = []
-        for (const film of films) {
-          const row = yield* catalogFilm(db, film.id)
-          if (row === undefined)
-            return yield* engineError(
-              'invalid_data',
-              `Sessão ${id}: ${film.id} não está no Catálogo`,
-            )
-          const header = yield* filmHeader(db, row)
-          const withoutFact = Object.entries(film.evidence)
-            .filter(([, evidence]) => !evidence.some(isFact))
-            .map(([person]) => person)
-          const title = header.titlePt || row.title
-          const chips = [
-            ...(row.year ? [String(row.year)] : []),
-            ...(row.runtimeMinutes
-              ? [sessionDuration(row.runtimeMinutes)]
-              : []),
-            ...header.genres,
-          ]
-          cards.push({
-            position: film.position,
-            id: film.id,
-            title,
-            originalTitle:
-              header.titlePt && header.titlePt !== row.title ? row.title : null,
-            new: pyTruthy(listed.get(film.id)?.get('new') ?? false),
-            bet: pyTruthy(listed.get(film.id)?.get('bet') ?? false),
-            ...(isCautiousBet(listed.get(film.id)) && {
-              cautiousBet: true as const,
-              cautiousBetReason: CAUTIOUS_BET_REASON,
-            }),
-            poster: header.poster
-              ? header.poster.replace('/w185/', '/w500/')
-              : null,
-            imdbUrl: header.imdbUrl,
-            imdbRating: header.imdbRating,
-            imdbRatingText:
-              header.imdbRating === null
-                ? null
-                : imdbRatingLabel(header.imdbRating),
-            votesText: votesText(header.imdbVotes),
-            chips,
-            synopsis: header.synopsis,
-            lines: linesOf(film),
-            withoutFact,
-            coverage: `Fato sobre ${people.length - withoutFact.length} de ${people.length}`,
-            predictedRatings: predictionsOf(listed.get(film.id), attendees),
-          })
-        }
+        for (const film of films)
+          cards.push(
+            yield* filmCard(db, { id, film, listed, attendees, people }),
+          )
         return {
           session: id,
           version: Number(

@@ -37,7 +37,7 @@ import {
 import { required, savePersonAndSync } from '../people/actions.ts'
 import { hasFewRatings } from '../people/rating-scale.ts'
 import { resolvePerson } from '../people/people.ts'
-import { addItem } from '../people/Person.ts'
+import { addItem, type Person } from '../people/Person.ts'
 import type { EngineServices } from '../runtime/Engine.ts'
 import { engineError, type EngineError } from '../runtime/EngineError.ts'
 import { Environment } from '../runtime/Environment.ts'
@@ -348,6 +348,56 @@ export const pairwiseAnswers = (
     )
   })
 
+/** Records a Presente's waiting answers: the chosen films become Notas
+ * of `PAIRWISE_RATING` and the others Já vistos with no Nota, skipping a
+ * film she already has a Já visto for. */
+const recordAnswers = (
+  db: Connection | null,
+  input: {
+    readonly person: Person
+    readonly mine: ReadonlyArray<readonly [number, Stored]>
+    readonly session: string
+    readonly today: string
+  },
+) =>
+  Effect.gen(function* () {
+    const { mine, session, today } = input
+    let person = input.person
+    let added = 0
+    const connection = yield* required(db)
+    const seen = new Set(
+      (yield* connection.all(
+        'SELECT filme_id FROM ja_vistos WHERE pessoa = ?',
+        person.slug,
+      )).map((row) => text(row, 'filme_id')),
+    )
+    const labels = new Map(
+      (yield* connection.all(
+        FILMS_BY_ID,
+        JSON.stringify(mine.flatMap(([, a]) => filmsOf(a))),
+      )).map((row) => [text(row, 'id'), text(row, 'titulo')]),
+    )
+    for (const [, answer] of mine) {
+      if (typeof answer.choice !== 'string') continue
+      for (const film of filmsOf(answer)) {
+        if (seen.has(film)) continue
+        seen.add(film)
+        const result = yield* addItem(person, 'seen', {
+          date: today,
+          source: pairwiseSource(session),
+          target: film,
+          label: labels.get(film)!,
+          rating: film === answer.choice ? PAIRWISE_RATING : null,
+          pairwise: film === answer.choice,
+        })
+        person = result.person
+        added += Number(result.added)
+      }
+    }
+    if (added > 0) yield* savePersonAndSync(db, person)
+    return { person, added }
+  })
+
 /** The Dono's decision on a Presente's waiting answers. Recorded, the
  * chosen films become Notas of `PAIRWISE_RATING` and the others Já vistos
  * with no Nota, skipping a film she already has a Já visto for; either
@@ -382,37 +432,14 @@ export const decidePairwise = (
             .filter(([, a]) => a.person === slug && waits(a))
           let added = 0
           if (record) {
-            const connection = yield* required(db)
-            const seen = new Set(
-              (yield* connection.all(
-                'SELECT filme_id FROM ja_vistos WHERE pessoa = ?',
-                slug,
-              )).map((row) => text(row, 'filme_id')),
-            )
-            const labels = new Map(
-              (yield* connection.all(
-                FILMS_BY_ID,
-                JSON.stringify(mine.flatMap(([, a]) => filmsOf(a))),
-              )).map((row) => [text(row, 'id'), text(row, 'titulo')]),
-            )
-            for (const [, answer] of mine) {
-              if (typeof answer.choice !== 'string') continue
-              for (const film of filmsOf(answer)) {
-                if (seen.has(film)) continue
-                seen.add(film)
-                const result = yield* addItem(person, 'seen', {
-                  date: today,
-                  source: pairwiseSource(session),
-                  target: film,
-                  label: labels.get(film)!,
-                  rating: film === answer.choice ? PAIRWISE_RATING : null,
-                  pairwise: film === answer.choice,
-                })
-                person = result.person
-                added += Number(result.added)
-              }
-            }
-            if (added > 0) yield* savePersonAndSync(db, person)
+            const recorded = yield* recordAnswers(db, {
+              person,
+              mine,
+              session,
+              today,
+            })
+            person = recorded.person
+            added = recorded.added
           }
           if (mine.length > 0) {
             for (const [index] of mine)

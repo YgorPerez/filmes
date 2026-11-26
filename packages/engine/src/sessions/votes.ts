@@ -37,8 +37,7 @@ import { sessionOwner } from './feedback.ts'
 import {
   currentVersion,
   sessionVersions,
-  isOpen,
-  readSession,
+  readOpenSession,
   sessionRelative,
   shownFilms,
   writeSession,
@@ -131,6 +130,105 @@ export const orderByYes = (
   yes: ReadonlyMap<string, number>,
 ): string[] => films.toSorted((a, b) => (yes.get(b) ?? 0) - (yes.get(a) ?? 0))
 
+/** Reads the Session the Votos are for: open, with the version asked and
+ * `person` among its Presentes. */
+const openForVotes = (request: CastVotesRequest) =>
+  Effect.gen(function* () {
+    const id = request.session
+    const { session, front } = yield* readOpenSession(
+      id,
+      'o Voto não vale mais',
+    )
+    const current = currentVersion(front)
+    const currentNumber = listOf(front.get('versions')).length + 1
+    if (!(request.version >= 1 && request.version <= currentNumber))
+      return yield* invalid(
+        `a Sessão ${id} não tem a versão ${request.version}`,
+      )
+    const attendees = listOf(current.get('attendees')).map((v) => pyStrValue(v))
+    if (!attendees.includes(request.person))
+      return yield* invalid(
+        `${request.person} não está entre os Presentes da Sessão ${id}`,
+      )
+    return { session, front, current, currentNumber }
+  })
+
+/** Adds the Votos cast to `front`, a no as a Trocado. */
+const addVotes = (
+  front: Map<string, YamlValue>,
+  person: string,
+  cast: ReadonlyMap<string, VoteValue>,
+  today: string,
+): void => {
+  front.set('votes', [
+    ...listOf(front.get('votes')),
+    ...[...cast].map(
+      ([film, vote], i) =>
+        new Map<string, YamlValue>([
+          ['person', person],
+          ['film', film],
+          ['vote', vote],
+          ['date', today],
+          ...(i === 0 ? ([['replaces', true]] as const) : []),
+        ]),
+    ),
+  ])
+  const no = [...cast].filter(([, v]) => v === 'no').map(([f]) => f)
+  if (no.length > 0) {
+    const swapped = listOf(front.get('swapped')).map(pyStrValue)
+    front.set(
+      'swapped',
+      [...new Set([...swapped, ...no])].sort((a, b) => compareTuple([a], [b])),
+    )
+  }
+}
+
+/** Records the Votos inside the write. */
+const recordVotes = (request: CastVotesRequest, today: string) =>
+  Effect.gen(function* () {
+    const id = request.session
+    const { session, front, current, currentNumber } =
+      yield* openForVotes(request)
+
+    const screen = shownFilms(current)
+    const onScreen = new Set(screen.map((f) => f.id))
+    const warnings: string[] = []
+    const cast = new Map<string, VoteValue>()
+    for (const { film, vote } of request.votes)
+      if (onScreen.has(film)) cast.set(film, vote)
+      else
+        warnings.push(
+          `voto em ${film} ignorado: o filme não está mais na tela da versão ${currentNumber}`,
+        )
+
+    if (cast.size > 0) {
+      addVotes(front, request.person, cast, today)
+      yield* writeSession(id, front, session.body)
+    }
+
+    const dropped: Array<ShownFilm & DropCause> = []
+    const keep: string[] = []
+    // What this version swapped before stays out too: a redo that
+    // failed after an earlier no is done now.
+    const out = new Set(listOf(front.get('swapped')).map(pyStrValue))
+    for (const film of screen)
+      if (out.has(film.id)) dropped.push({ ...film, cause: 'swapped' })
+      else keep.push(film.id)
+    const reordered = orderByYes(keep, yesVotes(front)).some(
+      (id, i) => id !== keep[i],
+    )
+    const result: CastVotes = {
+      session: { id, file: sessionRelative(id) },
+      version: request.version,
+      currentVersion: currentNumber,
+      regenerate: dropped.length > 0 || reordered,
+      keep,
+      dropped,
+      warnings,
+    }
+    return result
+  })
+
 /** Records a Presente's Votos on the current screen and says whether the
  * Session must be regenerated and what stays. One commit. */
 export const castVotes = (
@@ -147,92 +245,6 @@ export const castVotes = (
     const author = yield* authorFor(yield* sessionOwner(id))
     return yield* writer.writeFiles(
       { author, message: `vote session ${id}` },
-      () =>
-        Effect.gen(function* () {
-          const session = yield* readSession(id).pipe(
-            Effect.catchIf(
-              (e) => e.code === 'unknown_session',
-              (e) => invalid(e.message),
-            ),
-          )
-          const front = new Map<string, YamlValue>(session.frontmatter)
-          if (!isOpen(front))
-            return yield* engineError(
-              'closed_session',
-              `a Sessão ${id} já tem Feedback; o Voto não vale mais`,
-            )
-          const current = currentVersion(front)
-          const currentNumber = listOf(front.get('versions')).length + 1
-          if (!(request.version >= 1 && request.version <= currentNumber))
-            return yield* invalid(
-              `a Sessão ${id} não tem a versão ${request.version}`,
-            )
-          const attendees = listOf(current.get('attendees')).map((v) =>
-            pyStrValue(v),
-          )
-          if (!attendees.includes(request.person))
-            return yield* invalid(
-              `${request.person} não está entre os Presentes da Sessão ${id}`,
-            )
-
-          const screen = shownFilms(current)
-          const onScreen = new Set(screen.map((f) => f.id))
-          const warnings: string[] = []
-          const cast = new Map<string, VoteValue>()
-          for (const { film, vote } of request.votes)
-            if (onScreen.has(film)) cast.set(film, vote)
-            else
-              warnings.push(
-                `voto em ${film} ignorado: o filme não está mais na tela da versão ${currentNumber}`,
-              )
-
-          if (cast.size > 0) {
-            front.set('votes', [
-              ...listOf(front.get('votes')),
-              ...[...cast].map(
-                ([film, vote], i) =>
-                  new Map<string, YamlValue>([
-                    ['person', request.person],
-                    ['film', film],
-                    ['vote', vote],
-                    ['date', today],
-                    ...(i === 0 ? ([['replaces', true]] as const) : []),
-                  ]),
-              ),
-            ])
-            const no = [...cast].filter(([, v]) => v === 'no').map(([f]) => f)
-            if (no.length > 0) {
-              const swapped = listOf(front.get('swapped')).map(pyStrValue)
-              front.set(
-                'swapped',
-                [...new Set([...swapped, ...no])].sort((a, b) =>
-                  compareTuple([a], [b]),
-                ),
-              )
-            }
-            yield* writeSession(id, front, session.body)
-          }
-
-          const dropped: Array<ShownFilm & DropCause> = []
-          const keep: string[] = []
-          // What this version swapped before stays out too: a redo that
-          // failed after an earlier no is done now.
-          const out = new Set(listOf(front.get('swapped')).map(pyStrValue))
-          for (const film of screen)
-            if (out.has(film.id)) dropped.push({ ...film, cause: 'swapped' })
-            else keep.push(film.id)
-          const reordered = orderByYes(keep, yesVotes(front)).some(
-            (id, i) => id !== keep[i],
-          )
-          return {
-            session: { id, file: sessionRelative(id) },
-            version: request.version,
-            currentVersion: currentNumber,
-            regenerate: dropped.length > 0 || reordered,
-            keep,
-            dropped,
-            warnings,
-          }
-        }),
+      () => recordVotes(request, today),
     )
   })

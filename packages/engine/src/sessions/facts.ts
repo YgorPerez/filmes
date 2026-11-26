@@ -130,6 +130,67 @@ const asMapping = (value: YamlValue): YamlMapping => {
   return value
 }
 
+/** Where a reaction is: the Session, its Feedback and the Pessoa. */
+interface ReactionPlace {
+  readonly id: string
+  readonly front: YamlMapping
+  readonly person: string
+  readonly filmId: string
+  readonly date: string
+}
+
+/** A Nota of the Feedback, from its reaction `r`. */
+const ratingReaction = (
+  place: ReactionPlace & { readonly r: YamlMapping },
+): Reaction => {
+  const { id, front, r, person, filmId, date } = place
+  const rating = toFloat(field(r, 'rating'))
+  const relayed = pyTruthy(r.get('relayed') ?? false)
+  const source = feedbackSource(front, relayed)
+  const original = r.get('original_rating')
+  return {
+    factId: factId('notas', person, filmId, pyFloat(rating), date, source, id),
+    session: id,
+    person,
+    filmId,
+    kind: 'rating',
+    rating,
+    originalRating:
+      original === undefined || original === null ? null : pyStrValue(original),
+    reaction: null,
+    relayed,
+    value: ratingValue(rating),
+    date,
+    source,
+  }
+}
+
+/** A Relato of the Feedback, at `reaction`. */
+const reportReaction = (
+  { id, front, person, filmId, date }: ReactionPlace,
+  reaction: ReportLevel,
+): Reaction => ({
+  factId: factId(
+    'reacoes',
+    id,
+    person,
+    filmId,
+    REPORT_LEVELS[reaction].db,
+    date,
+  ),
+  session: id,
+  person,
+  filmId,
+  kind: 'report',
+  rating: null,
+  originalRating: null,
+  reaction,
+  relayed: false,
+  value: REPORT_LEVELS[reaction].value,
+  date,
+  source: feedbackSource(front),
+})
+
 /** The Feedback's reactions (`fatos.reacoes`). */
 export const reactions = (
   id: string,
@@ -145,64 +206,20 @@ export const reactions = (
       const person = pyStrValue(field(r, 'person'))
       const kind = field(r, 'kind')
       const level = r.get('reaction')
-      if (kind === 'rating') {
-        const rating = toFloat(field(r, 'rating'))
-        const relayed = pyTruthy(r.get('relayed') ?? false)
-        const source = feedbackSource(front, relayed)
-        const original = r.get('original_rating')
-        list.push({
-          factId: factId(
-            'notas',
-            person,
-            filmId,
-            pyFloat(rating),
-            date,
-            source,
-            id,
-          ),
-          session: id,
-          person,
-          filmId,
-          kind: 'rating',
-          rating,
-          originalRating:
-            original === undefined || original === null
-              ? null
-              : pyStrValue(original),
-          reaction: null,
-          relayed,
-          value: ratingValue(rating),
-          date,
-          source,
-        })
-      } else if (
+      if (kind === 'rating')
+        list.push(ratingReaction({ id, front, r, person, filmId, date }))
+      else if (
         kind === 'report' &&
         typeof level === 'string' &&
         Object.hasOwn(REPORT_LEVELS, level)
-      ) {
-        const reaction = level as ReportLevel
-        list.push({
-          factId: factId(
-            'reacoes',
-            id,
-            person,
-            filmId,
-            REPORT_LEVELS[reaction].db,
-            date,
+      )
+        list.push(
+          reportReaction(
+            { id, front, person, filmId, date },
+            level as ReportLevel,
           ),
-          session: id,
-          person,
-          filmId,
-          kind: 'report',
-          rating: null,
-          originalRating: null,
-          reaction,
-          relayed: false,
-          value: REPORT_LEVELS[reaction].value,
-          date,
-          source: feedbackSource(front),
-        })
-      } else
+        )
+      else
         return yield* engineError(
           'invalid_data',
           `Sessão ${id}: reação inválida ${pyReprValue(r)}`,
