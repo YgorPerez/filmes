@@ -35,6 +35,7 @@ import {
   SearchFold,
   ShelfRow,
 } from './session-parts'
+import { ShareSessionLink } from './session-link-share'
 import { SESSIONS } from './sessions.copy'
 
 const sessionHref = (id: string) => `/sessoes/${encodeURIComponent(id)}`
@@ -244,6 +245,9 @@ function SessionView({
         </h1>
         <Meta parts={[names(s.attendees), s.request]} />
       </div>
+      {page.sessionLink && (
+        <ShareSessionLink key={s.id} url={page.sessionLink} />
+      )}
       {notice && <Notice>{session.notices[notice]}</Notice>}
       {refusal && <Alert>{session.refusals[refusal]}</Alert>}
       <Said page={page} />

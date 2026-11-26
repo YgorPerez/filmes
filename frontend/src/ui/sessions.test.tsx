@@ -2,7 +2,8 @@
 // The Sessions list and a Session's page: what each shows, and where its
 // links go.
 import { cleanup, render, screen, within } from '@testing-library/react'
-import { afterEach, describe, expect, it } from 'vite-plus/test'
+import userEvent from '@testing-library/user-event'
+import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 import type { CartazPage } from '#/platform/billboard'
 import type { SessionItem } from '#/platform/sessions'
 import { MODEL } from './billboard.fixture'
@@ -132,6 +133,34 @@ describe('a Session’s page', () => {
         .getByRole('link', { name: SESSIONS.list.feedback })
         .getAttribute('href'),
     ).toBe('/feedback/2026-11-20-iara')
+  })
+
+  it('copies the shareable Link da Sessão', async () => {
+    const user = userEvent.setup()
+    const sessionLink = 'https://cinema.example/participar?sessao=x&chave=y'
+    render(<SessionScreen page={{ ...PAGE, sessionLink }} />)
+
+    await user.click(screen.getByRole('button', { name: 'Copiar link' }))
+    expect(await navigator.clipboard.readText()).toBe(sessionLink)
+    expect(screen.getByRole('status').textContent).toBe('Link copiado')
+  })
+
+  it('shows the Link da Sessão to select when the clipboard refuses it', async () => {
+    const user = userEvent.setup()
+    const sessionLink = 'https://cinema.example/participar?sessao=x&chave=y'
+    vi.spyOn(navigator.clipboard, 'writeText').mockRejectedValue(
+      new Error('denied'),
+    )
+    render(<SessionScreen page={{ ...PAGE, sessionLink }} />)
+
+    await user.click(screen.getByRole('button', { name: 'Copiar link' }))
+    expect(screen.getByRole('status').textContent).toBe(
+      'Selecione o link abaixo para copiar.',
+    )
+    const field = screen.getByRole('textbox', {
+      name: 'Link para os Presentes',
+    })
+    expect((field as HTMLInputElement).value).toBe(sessionLink)
   })
 
   it('shows what the reply or the form left: the warnings, the acrescentar, a refusal', () => {
