@@ -27,6 +27,7 @@ packages/engine/           o motor, com Effect v4 (ADR 0003); sem nada de tela n
   src/recommendation/      Candidatos, utilidade, ordem; signals/<caminho>.ts, constraints/<nome>.ts
   src/evidence/            Evidência, régua de Força (ruler.ts), redação (wording.ts)
   src/compat/              as regras de texto, número e ordem do motor antigo que a saída mantém
+  src/reading/             Leitura do pedido: a frase do Dono nos campos do pedido; readers/<campo>.ts, vocabulário em config/request_reading.toml
   src/<área>/              o resto: people, sessions, billboard, catalog, sources, imports, export, evaluation, verify, consult, data
   test/                    Vitest pela costura de test/fixture.ts; o global-setup monta a fixture com o `rebuild` do motor
     **/__snapshots__/      saídas inteiras gravadas do motor em Python antes de ele sair (test/expected.ts)
@@ -41,7 +42,7 @@ tests/fixture/             a fixture do motor: catalogo/, dados/ (people/, com a
 scripts/                   gancho de push (verify-push.ts, affected.ts, install-hooks.ts)
 ```
 
-Cada ponto de extensão é um arquivo novo numa pasta (ferramenta MCP, etapa de carga, sinal, Restrição), listado no `index.ts` dela. Isso evita conflito entre tickets paralelos.
+Cada ponto de extensão é um arquivo novo numa pasta (ferramenta MCP, etapa de carga, sinal, Restrição, leitor da Leitura do pedido), listado no `index.ts` dela. Isso evita conflito entre tickets paralelos.
 
 ## Padrões de código
 
