@@ -15,6 +15,9 @@ export default defineTool({
     'O Cartaz responde: em cada filme, Já vi (por Presente, com nota de 1 a 10 e o que achou), Trocar, estrelas e comentário; ' +
     'embaixo, o acrescentar. O texto que volta começa com `#cartaz <sessao> v<n>` e vai para `answer_billboard`. ' +
     'Devolve também `session`, `films` (quantos cards) e `warnings`. ' +
+    'Ao apresentar o Cartaz no chat, a linha de cada filme cita o `text` de `predictedRatings`, na ordem de `attendees`: ' +
+    '"Fronteira (2008) — previsto: Ana 8,3, Bruno 7,1", com "Você" para o Dono; Presente sem Nota prevista fica fora da lista, ' +
+    'e filme sem nenhuma não tem "previsto". ' +
     'Onde o app mostra telas (MCP Apps), o resultado aparece como o Cartaz (`ui://filmes/cartaz.html`): o Dono marca ali, e o Enviar ' +
     'grava a resposta com `answer_billboard` sem passar por você e, se algo caiu ou veio texto livre, manda uma mensagem que começa com ' +
     '`Enviei o Cartaz <sessao> v<n> pela tela`.',

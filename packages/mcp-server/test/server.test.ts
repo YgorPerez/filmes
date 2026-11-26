@@ -58,6 +58,26 @@ describe('the server', () => {
     for (const tool of TOOLS) assert.ok(named.has(tool.name), tool.name)
   })
 
+  test("asks for each Presente's Nota prevista on the film's line", async () => {
+    const { client } = await connect(useFixture())
+
+    const instructions = client.getInstructions() ?? ''
+
+    assert.ok(
+      instructions.includes('Fronteira (2008) — previsto: Ana 8,3, Bruno 7,1'),
+    )
+    assert.match(instructions, /Presente sem Nota prevista fica fora da lista/)
+    assert.match(instructions, /filme sem nenhuma não tem "previsto"/)
+    assert.match(instructions, /`predictedRatings`/)
+    // The rule is in the tool too, in case the instructions never reach the model (#75).
+    const { tools } = await client.listTools()
+    const billboard = tools.find((t) => t.name === 'billboard')
+    assert.match(
+      billboard?.description ?? '',
+      /Fronteira \(2008\) — previsto: Ana 8,3, Bruno 7,1/,
+    )
+  })
+
   test('runs every call as the logged-in Pessoa', async () => {
     const { ok } = await connect(useFixture(), 'iara')
 
