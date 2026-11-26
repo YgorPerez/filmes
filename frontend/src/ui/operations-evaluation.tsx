@@ -6,8 +6,7 @@ import type {
   EvaluationSummary,
 } from '#/platform/operations'
 import { OPERATIONS } from './operations.copy'
-import { ActionPost, Detail } from './operations-parts'
-import { Alert, Section, Submit } from './person-parts'
+import { ActionPost, Alert, Detail, Section, Submit } from './operations-parts'
 
 const COPY = OPERATIONS.evaluation
 
@@ -245,8 +244,3 @@ export function EvaluationSection({
     </Section>
   )
 }
-
-/** A key that changes with each run, so a page loaded after a new run
- * starts from the loader's panel. */
-export const jobKey = (job: EvaluationJob) =>
-  job.state === 'idle' ? 'idle' : job.startedAt

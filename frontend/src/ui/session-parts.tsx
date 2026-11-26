@@ -46,9 +46,6 @@ export function PersonAvatar({
   )
 }
 
-export const names = (people: readonly Named[]) =>
-  people.map((p) => p.name).join(', ')
-
 const dateFormat = new Intl.DateTimeFormat('pt-BR', {
   day: 'numeric',
   month: 'long',

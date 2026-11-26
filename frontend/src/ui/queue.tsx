@@ -9,7 +9,8 @@ import { FieldLabel } from './kit/field-label'
 import { PageHead } from './kit/page-head'
 import { TapeCase } from './kit/tape-case'
 import { Alert, Notice, Submit, TextField } from './person-parts'
-import { Button, buttonVariants } from './shadcn/button'
+import { buttonVariants } from './kit/button-variants'
+import { Button } from './shadcn/button'
 
 /** What the last decision did. */
 export type QueueDoneView = {

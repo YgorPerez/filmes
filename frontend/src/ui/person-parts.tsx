@@ -8,7 +8,8 @@ import { FIELD } from './kit/field'
 import { FieldLabel } from './kit/field-label'
 import { Icon } from './kit/icon'
 import { Alert, Notice } from './kit/status'
-import { Button, buttonVariants } from './shadcn/button'
+import { buttonVariants } from './kit/button-variants'
+import { Button } from './shadcn/button'
 
 // The pieces the Pessoas screens share, and the other Dono screens with
 // them: the alert and the notice, a section's card, the fields, the forms

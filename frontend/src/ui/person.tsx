@@ -26,7 +26,8 @@ import {
 import { MyStartSections, type MyStart } from './my-start'
 import { StrengthDots } from './person-marks'
 import { PERSON, RATING_CHOICES } from './person.copy'
-import { Button, buttonVariants } from './shadcn/button'
+import { buttonVariants } from './kit/button-variants'
+import { Button } from './shadcn/button'
 
 type Statement = PersonPage['stated'][number]
 type Reaction = keyof typeof PERSON.reactions
