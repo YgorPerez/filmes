@@ -6,7 +6,10 @@ import {
   type Outcome,
 } from '@filmes/engine'
 import { describe, expect, it, vi } from 'vite-plus/test'
-import { useFixture } from '../../../packages/engine/test/fixture.ts'
+import {
+  useFixture,
+  type Fixture,
+} from '../../../packages/engine/test/fixture.ts'
 import { MODEL } from '#/ui/billboard.fixture'
 import {
   billboardsFromEngine,
@@ -140,11 +143,13 @@ describe('replyAction', () => {
 })
 
 describe('cartazPage', () => {
-  it('has the Session, its Cartaz, and the note’s and the sources’ warnings once', async () => {
+  it('has the Session, its Cartaz, the note’s reading, and the note’s and the sources’ warnings once', async () => {
     const notes = new Notes()
+    const reading = { added: [], notUnderstood: ['Ana'], ambiguous: [] }
     const token = notes.remember({
       warnings: ['só 1 passou', 'sem chave do TMDB'],
       addition: 'chegou a Ana',
+      reading,
     })
     expect(
       await cartazPage(
@@ -159,6 +164,7 @@ describe('cartazPage', () => {
       billboard: MODEL,
       warnings: ['só 1 passou', 'sem chave do TMDB'],
       addition: 'chegou a Ana',
+      reading,
     })
   })
 
@@ -348,4 +354,173 @@ describe('billboardsFromEngine', () => {
       await engine.dispose()
     }
   }, 60_000) // real git commits: slow on a loaded machine
+
+  describe('reads the acrescentar into the request', () => {
+    /** A Session of Bruno's 3 films, by the fixture's ranking tt9000104
+     * (1h44), tt9000105 (1h57) and tt9000203 (1h49). */
+    const opened = async (fixture: Fixture, since?: number) => {
+      commitAll(fixture.data)
+      const engine = makeEngine(fixture.vars)
+      const made = await engine.run(
+        recommendSession({ attendees: ['bruno'], count: 3, since }),
+        { owner: 'bruno' },
+      )
+      if (made.exitCode !== 0) throw new Error('not opened')
+      const id = made.output.session.id
+      const billboards = billboardsFromEngine(engine)
+      const add = (text: string, marks = '') =>
+        billboards.answer(
+          id,
+          `#cartaz ${id} v1\nacrescentar: ${text}\n${marks}`,
+          'bruno',
+        )
+      const model = async () => {
+        const shown = await billboards.model(id)
+        if (shown.exitCode !== 0) throw new Error('no model')
+        return shown.output.model
+      }
+      return { engine, add, model }
+    }
+
+    it('adds a new Presente and keeps the films that fit', async () => {
+      const { engine, add, model } = await opened(useFixture())
+      try {
+        const done = await add('chegou a Iara e o Zeca')
+
+        expect(done).toMatchObject({
+          exitCode: 0,
+          output: {
+            regenerated: true,
+            note: {
+              addition: 'chegou a Iara e o Zeca',
+              reading: {
+                added: ['Presente: Iara'],
+                notUnderstood: ['Zeca'],
+                ambiguous: [],
+              },
+            },
+          },
+        })
+        const redone = await model()
+        expect(redone.version).toBe(2)
+        expect(redone.attendees.map((a) => a.slug)).toEqual(['bruno', 'iara'])
+        expect(redone.films.filter((f) => !f.new).map((f) => f.id)).toEqual([
+          'tt9000104',
+          'tt9000105',
+          'tt9000203',
+        ])
+      } finally {
+        await engine.dispose()
+      }
+    }, 60_000) // real git commits: slow on a loaded machine
+
+    it('takes out a kept film that breaks a new Restrição', async () => {
+      const { engine, add, model } = await opened(useFixture())
+      try {
+        const done = await add('até 110 minutos')
+
+        expect(done).toMatchObject({
+          exitCode: 0,
+          output: {
+            regenerated: true,
+            note: { reading: { added: ['até 1h50'], notUnderstood: [] } },
+          },
+        })
+        const redone = await model()
+        expect(redone.dropped.map((d) => [d.id, d.reason])).toEqual([
+          ['tt9000105', 'até 1h50'],
+        ])
+        expect(
+          redone.films.filter((f) => !f.new).map((f) => [f.position, f.id]),
+        ).toEqual([
+          [1, 'tt9000104'],
+          [3, 'tt9000203'],
+        ])
+      } finally {
+        await engine.dispose()
+      }
+    }, 60_000) // real git commits: slow on a loaded machine
+
+    it('redoes nothing when it understood nothing, and says so', async () => {
+      const { engine, add, model } = await opened(useFixture())
+      try {
+        const done = await add('a Iara odeia terror')
+
+        expect(done).toEqual({
+          exitCode: 0,
+          output: {
+            regenerated: false,
+            note: {
+              warnings: [],
+              addition: 'a Iara odeia terror',
+              reading: {
+                added: [],
+                notUnderstood: ['Iara odeia terror'],
+                ambiguous: [],
+              },
+            },
+          },
+        })
+        expect((await model()).version).toBe(1)
+      } finally {
+        await engine.dispose()
+      }
+    }, 60_000) // real git commits: slow on a loaded machine
+
+    it('replaces the year range whole, and lists a title of several films', async () => {
+      const { engine, add, model } = await opened(useFixture(), 2010)
+      try {
+        const done = await add('antes de 2022, parecido com Reprise')
+
+        expect(done).toMatchObject({
+          exitCode: 0,
+          output: {
+            regenerated: true,
+            note: {
+              reading: {
+                added: ['até 2021'],
+                notUnderstood: [],
+                ambiguous: [
+                  {
+                    words: 'Reprise',
+                    candidates: ['Reprise (2011)', 'Reprise (2004)'],
+                  },
+                ],
+              },
+            },
+          },
+        })
+        expect((await model()).dropped.map((d) => [d.id, d.reason])).toEqual([
+          ['tt9000105', 'até 2021'],
+          ['tt9000203', 'até 2021'],
+        ])
+      } finally {
+        await engine.dispose()
+      }
+    }, 60_000) // real git commits: slow on a loaded machine
+
+    it('still redoes for a dropped film when the acrescentar cannot be read', async () => {
+      const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+      const { engine, add } = await opened(useFixture())
+      try {
+        const long = 'leve '.repeat(120).trim()
+
+        const done = await add(long, '2 tt9000105 · trocar\n')
+
+        expect(done).toEqual({
+          exitCode: 0,
+          output: {
+            regenerated: true,
+            note: { warnings: expect.any(Array), addition: long },
+          },
+        })
+        expect(log).toHaveBeenCalledWith(
+          expect.stringMatching(/^engine: invalid_usage: /),
+        )
+      } finally {
+        log.mockRestore()
+        await engine.dispose()
+      }
+    }, 60_000) // real git commits: slow on a loaded machine
+  })
 })
