@@ -8,7 +8,8 @@
 // saves each screen.
 
 import { readFileSync, writeFileSync } from 'node:fs'
-import { recommendSession } from '@filmes/engine'
+import { join } from 'node:path'
+import { recommend, recommendSession } from '@filmes/engine'
 import { expect, test, type Page } from '@playwright/test'
 import { addPerson, engineRun, loginAsBruno, notice, snap } from './support'
 
@@ -22,26 +23,33 @@ const openSession = async (person: string, count: number) =>
     )
   ).session.id
 
-/** Opens a Session for Bruno and `person` with Bruno's taste neighbours
- * on (the fixture's users 10, 20 and 30), so the 5th place is the Aposta
- * (#178), Pequenos Milagres; gives its id. No other file may make that film
- * a Já visto of Bruno's. */
-const openBetSession = async (person: string) => {
-  const root = process.env.E2E_ENGINE!
-  const weights = `${root}/weights-bet.toml`
+/** `config/weights.toml` of the fixture copy with Bruno's taste neighbours
+ * on, written next to it for this project alone; the app keeps the
+ * default, where nobody has neighbours. */
+const tasteWeights = (project: string) => {
+  const root = process.env.E2E_ENGINE ?? ''
+  const file = join(root, `weights-taste-${project}.toml`)
   writeFileSync(
-    weights,
-    readFileSync(`${root}/config/weights.toml`, 'utf8').replace(
+    file,
+    readFileSync(join(root, 'config/weights.toml'), 'utf8').replace(
       'k = 50\nmin_shared = 10',
       'k = 3\nmin_shared = 5',
     ),
   )
+  return { FILMES_PESOS: file }
+}
+
+/** Opens a Session for Bruno and `person` with Bruno's taste neighbours
+ * on (the fixture's users 10, 20 and 30), so the 5th place is the Aposta
+ * (#178), Pequenos Milagres; gives its id. No other file may make that film
+ * a Já visto of Bruno's. */
+const openBetSession = async (person: string, project: string) => {
   const opened = await engineRun(
     (engine) =>
       engine.run(recommendSession({ attendees: ['bruno', person] }), {
         owner: 'bruno',
       }),
-    { FILMES_PESOS: weights },
+    tasteWeights(project),
   )
   return opened.session.id
 }
@@ -54,6 +62,11 @@ async function send(page: Page, id: string, done: string, says: string) {
   )
   await expect(notice(page).first()).toContainText(says)
 }
+
+/** The note on keeping the marks shows once the page has hydrated: a click
+ * before that is lost when the machine is busy. */
+const hydrated = (page: Page) =>
+  expect(page.getByText('fica guardado neste navegador')).toBeVisible()
 
 const cards = (page: Page) => page.getByRole('article')
 const card = (page: Page, n: number) => cards(page).nth(n - 1)
@@ -68,7 +81,7 @@ test('the Aposta has its stamp, in both themes', async ({ page }, info) => {
   if (mobile) await page.emulateMedia({ colorScheme: 'dark' })
   const name = mobile ? 'Rui' : 'Pia'
   await addPerson(name)
-  const id = await openBetSession(name.toLowerCase())
+  const id = await openBetSession(name.toLowerCase(), info.project.name)
   await loginAsBruno(page)
   await page.goto(`/sessoes/${id}`)
   await expect(cards(page)).toHaveCount(5)
@@ -91,6 +104,7 @@ test('the Dono marks, reloads, sends, and the Cartaz comes back redone', async (
   await page.goto(`/sessoes/${id}`)
   await expect(cards(page)).toHaveCount(4)
   await expect(page.getByText('Vocês dois', { exact: false })).toBeVisible()
+  await hydrated(page)
   await snap(page, info, 'cartaz')
   const [seen, swapped, third, fourth] = await Promise.all(
     [1, 2, 3, 4].map((n) => titleOf(page, n)),
@@ -168,6 +182,7 @@ test('in the dark, Copiar pro chat gives the text, and stars alone only note', a
   await loginAsBruno(page)
   await page.goto(`/sessoes/${id}`)
   await expect(cards(page)).toHaveCount(3)
+  await hydrated(page)
   const film = await card(page, 1)
     .getByRole('link')
     .first()
@@ -188,4 +203,40 @@ test('in the dark, Copiar pro chat gives the text, and stars alone only note', a
     card(page, 1).getByRole('button', { name: '5 de 5' }),
   ).toHaveAttribute('aria-pressed', 'false')
   await snap(page, info, 'cartaz-anotado')
+})
+
+// Pequenos Milagres, which Bruno's taste neighbours in the fixture's sample
+// rated (#174): with k = 3 and min_shared = 5 they predict 8,3 for him.
+const PEQUENOS_MILAGRES = 'tt9000601'
+
+test('the Nota prevista the Session recorded, per Presente who has one', async ({
+  page,
+}, info) => {
+  const vars = tasteWeights(info.project.name)
+  const request = { attendees: ['bruno', 'iara'] }
+  // A Session long enough to reach Pequenos Milagres; the Aposta (#178) may
+  // move it up, so its card is found by the Session's own position.
+  const { films } = await engineRun(
+    (engine) => engine.run(recommend({ ...request, count: 50 })),
+    vars,
+  )
+  const count = films.find((f) => f.id === PEQUENOS_MILAGRES)?.position ?? 0
+  const session = await engineRun(
+    (engine) =>
+      engine.run(recommendSession({ ...request, count }), { owner: 'bruno' }),
+    vars,
+  )
+  const id = session.session.id
+  const at =
+    session.films.find((f) => f.id === PEQUENOS_MILAGRES)?.position ?? 0
+  await loginAsBruno(page)
+  await page.goto(`/sessoes/${id}`)
+  await expect(cards(page)).toHaveCount(count)
+  await snap(page, info, 'cartaz-nota-prevista')
+  await snap(page, info, 'cartaz-nota-prevista-card', card(page, at))
+
+  const predicted = card(page, at).getByRole('list', {
+    name: 'Nota prevista',
+  })
+  await expect(predicted.getByRole('listitem')).toHaveText([/Bruno: 8,3 de 10/])
 })

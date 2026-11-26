@@ -10,7 +10,12 @@ import {
   type Engine,
   type Outcome,
 } from '@filmes/engine'
-import { expect, type Page, type TestInfo } from '@playwright/test'
+import {
+  expect,
+  type Locator,
+  type Page,
+  type TestInfo,
+} from '@playwright/test'
 
 /** Runs `task` on an engine over the fixture copy and gives its output; an
  * engine error fails the test. `vars` add to the engine's variables. */
@@ -60,14 +65,20 @@ export async function loginAs(page: Page, email: string) {
 /** `loginAs` Bruno. */
 export const loginAsBruno = (page: Page) => loginAs(page, 'bruno@example.org')
 
-/** With `E2E_SCREENSHOTS=<folder>`, a full-page capture named by project. */
-export async function snap(page: Page, info: TestInfo, name: string) {
+/** With `E2E_SCREENSHOTS=<folder>`, a full-page capture named by project;
+ * with `part`, only that part of the page. */
+export async function snap(
+  page: Page,
+  info: TestInfo,
+  name: string,
+  part?: Locator,
+) {
   const folder = process.env.E2E_SCREENSHOTS
   if (!folder) return
-  await page.screenshot({
-    path: join(folder, `${info.project.name}-${name}.png`),
-    fullPage: true,
-  })
+  const path = join(folder, `${info.project.name}-${name}.png`)
+  await (part
+    ? part.screenshot({ path })
+    : page.screenshot({ path, fullPage: true }))
 }
 
 /** A section of the page by its exact title. */

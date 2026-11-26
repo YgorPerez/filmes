@@ -620,6 +620,7 @@ export {
   type BillboardDropped,
   type BillboardFilm,
   type BillboardLine,
+  type BillboardPrediction,
   type BillboardPerson,
   type BillboardRequest,
   type BillboardRequestInput,
