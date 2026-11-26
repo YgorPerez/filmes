@@ -148,14 +148,36 @@ const WITH_DATA: ReadonlyArray<readonly [SimilaritySource, string]> = [
   ],
 ]
 
+/** Limits a query to some films: `AND <column> IN (...)` and its
+ * parameter, or nothing when every film counts. */
+interface Among {
+  readonly sql: (column: string) => string
+  readonly params: ReadonlyArray<string>
+  readonly has: (filmId: string) => boolean
+}
+
+const amongOf = (films: Iterable<string> | undefined): Among => {
+  if (films === undefined) return { sql: () => '', params: [], has: () => true }
+  const set = new Set(films)
+  return {
+    sql: (column) => ` AND ${column} IN (SELECT value FROM json_each(?))`,
+    params: [jsonList(set)],
+    has: (filmId) => set.has(filmId),
+  }
+}
+
 /** The similarity of every film that has something in common with the
- * reference (`medir`). */
+ * reference (`medir`), or only of the films `among` when given: each
+ * film's pair is the same either way, and the limited one reads far fewer
+ * rows. */
 export const measure = (
   db: Connection,
   reference: string,
   config: Weights['similar'],
+  among?: Iterable<string>,
 ): Effect.Effect<Pairs, SqliteError> =>
   Effect.gen(function* () {
+    const limit = amongOf(among)
     let pairs: Pairs = new Map()
     const pairOf = (filmId: string): Pair => {
       const found = pairs.get(filmId)
@@ -167,10 +189,10 @@ export const measure = (
     // A source the reference has: the film with data in it and nothing in
     // common gets 0.
     const present = new Map<SimilaritySource, boolean>([
-      ['genome', yield* genome(db, reference, config, pairOf)],
-      ['movielens_tags', yield* tags(db, reference, config, pairOf)],
-      ['neighbors', yield* neighbors(db, reference, pairOf)],
-      ['people', yield* people(db, reference, pairOf)],
+      ['genome', yield* genome(db, reference, config, limit, pairOf)],
+      ['movielens_tags', yield* tags(db, reference, config, limit, pairOf)],
+      ['neighbors', yield* neighbors(db, reference, limit, pairOf)],
+      ['people', yield* people(db, reference, limit, pairOf)],
     ])
     pairs.delete(reference)
     pairs = new Map([...pairs].filter(([, pair]) => hasSomethingInCommon(pair)))
@@ -231,6 +253,7 @@ const genome = (
   db: Connection,
   reference: string,
   config: Weights['similar'],
+  limit: Among,
   pairOf: (filmId: string) => Pair,
 ): Effect.Effect<boolean, SqliteError> =>
   Effect.gen(function* () {
@@ -260,8 +283,9 @@ const genome = (
     const total = pySum(own.values())
     if (!total) return false
     for (const row of yield* db.all(
-      'SELECT filme_id, tag, relevancia, fonte, data FROM genoma WHERE tag IN (SELECT value FROM json_each(?)) ORDER BY filme_id, tag',
+      `SELECT filme_id, tag, relevancia, fonte, data FROM genoma WHERE tag IN (SELECT value FROM json_each(?))${limit.sql('filme_id')} ORDER BY filme_id, tag`,
       jsonList(own.keys()),
+      ...limit.params,
     )) {
       const tag = text(row, 'tag')
       const common = Math.min(
@@ -282,6 +306,7 @@ const tags = (
   db: Connection,
   reference: string,
   config: Weights['similar'],
+  limit: Among,
   pairOf: (filmId: string) => Pair,
 ): Effect.Effect<boolean, SqliteError> =>
   Effect.gen(function* () {
@@ -318,10 +343,11 @@ const tags = (
       `SELECT t.filme_id, t.tag, t.usuarios, t.fonte, t.data, n.norma FROM tags_movielens t
        JOIN normas_tags_movielens n ON n.filme_id = t.filme_id
        WHERE t.tag IN (SELECT value FROM json_each(?1)) AND t.filme_id IN
-       (SELECT filme_id FROM tags_movielens WHERE tag IN (SELECT value FROM json_each(?2)))
+       (SELECT filme_id FROM tags_movielens WHERE tag IN (SELECT value FROM json_each(?2)))${limit.sql('t.filme_id')}
        ORDER BY t.filme_id, t.tag`,
       jsonList(vector.keys()),
       jsonList(search),
+      ...limit.params,
     )) {
       const filmNorm = num(row, 'norma')
       if (!filmNorm) continue
@@ -354,6 +380,7 @@ const tags = (
 const neighbors = (
   db: Connection,
   reference: string,
+  limit: Among,
   pairOf: (filmId: string) => Pair,
 ): Effect.Effect<boolean, SqliteError> =>
   Effect.gen(function* () {
@@ -382,6 +409,7 @@ const neighbors = (
     if (!highest) return false
     for (const row of ofReference) {
       const id = text(row, 'vizinho_id')
+      if (!limit.has(id)) continue
       const pair = pairOf(id)
       pair.sources.set('neighbors', valueOf(cosine, id) / highest)
       pair.neighbor = {
@@ -396,6 +424,7 @@ const neighbors = (
 const people = (
   db: Connection,
   reference: string,
+  limit: Among,
   pairOf: (filmId: string) => Pair,
 ): Effect.Effect<boolean, SqliteError> =>
   Effect.gen(function* () {
@@ -409,8 +438,9 @@ const people = (
     )).map((row) => text(row, 'ator_imdb'))
     if (directors.length > 0)
       for (const row of yield* db.all(
-        "SELECT filme_id, fonte, data FROM arestas WHERE predicado = 'diretor' AND entidade_id IN (SELECT value FROM json_each(?)) ORDER BY filme_id, data DESC",
+        `SELECT filme_id, fonte, data FROM arestas WHERE predicado = 'diretor' AND entidade_id IN (SELECT value FROM json_each(?))${limit.sql('filme_id')} ORDER BY filme_id, data DESC`,
         jsonList(new Set(directors)),
+        ...limit.params,
       )) {
         const pair = pairOf(text(row, 'filme_id'))
         pair.sources.set('people', 1)
@@ -418,8 +448,9 @@ const people = (
       }
     if (actors.length > 0)
       for (const row of yield* db.all(
-        'SELECT filme_id, count(*) AS comuns FROM elenco_principal_imdb WHERE ator_imdb IN (SELECT value FROM json_each(?)) GROUP BY filme_id ORDER BY filme_id',
+        `SELECT filme_id, count(*) AS comuns FROM elenco_principal_imdb WHERE ator_imdb IN (SELECT value FROM json_each(?))${limit.sql('filme_id')} GROUP BY filme_id ORDER BY filme_id`,
         jsonList(new Set(actors)),
+        ...limit.params,
       )) {
         const pair = pairOf(text(row, 'filme_id'))
         pair.sources.set(
@@ -463,3 +494,22 @@ const genres = (
       pairs.get(filmId)?.sources.set('genre', both / either)
     }
   })
+
+/** The Parecença from `reference` to each film of `among`, from 0 to 1; a
+ * film with nothing in common gets 0. */
+export const similarityTo = (
+  db: Connection,
+  reference: string,
+  among: ReadonlyArray<string>,
+  config: Weights['similar'],
+): Effect.Effect<ReadonlyMap<string, number>, SqliteError> =>
+  Effect.map(
+    measure(db, reference, config, among),
+    (pairs) =>
+      new Map(
+        among.map((id) => {
+          const pair = pairs.get(id)
+          return [id, pair ? pairValue(pair, config.weight) : 0] as const
+        }),
+      ),
+  )
