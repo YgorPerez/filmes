@@ -6,7 +6,12 @@
 // id from the page it lands on. `E2E_SCREENSHOTS=<folder>` saves a capture
 // of each screen.
 
-import { listSessions, recommendSession, recordFeedback } from '@filmes/engine'
+import {
+  castVotes,
+  listSessions,
+  recommendSession,
+  recordFeedback,
+} from '@filmes/engine'
 import { type Page } from '@playwright/test'
 import {
   engineRun,
@@ -29,6 +34,16 @@ const sessionFile = async (id: string) =>
   (await engineRun((engine) => engine.run(listSessions))).sessions.find(
     (s) => s.id === id,
   )
+
+const sessionLinkFor = async (page: Page, person: string) => {
+  const shared = await page
+    .getByRole('link', { name: 'Link para os Presentes' })
+    .getAttribute('href')
+  if (!shared) throw new Error('the Session had no link')
+  const href = new URL(shared)
+  href.searchParams.set('presente', person)
+  return href.href
+}
 
 test('the Dono opens a Session with Restrições and finds it in the list', async ({
   page,
@@ -325,17 +340,12 @@ test('a Presente answers pairwise questions and the Dono records them', async ({
   const path = `/sessoes/${opened.session.id}`
   await loginAsBruno(page)
   await page.goto(path)
-  const shared = await page
-    .getByRole('link', { name: 'Link para os Presentes' })
-    .getAttribute('href')
-  if (!shared) throw new Error('the Session had no link')
-  const href = new URL(shared)
-  href.searchParams.set('presente', person)
+  const href = await sessionLinkFor(page, person)
 
   const guest = await browser.newContext()
   try {
     const participant = await guest.newPage()
-    await participant.goto(href.href)
+    await participant.goto(href)
     await participant
       .getByRole('link', { name: 'Responder perguntas de gosto' })
       .click()
@@ -385,16 +395,11 @@ test('each Presente votes on the films; a no swaps the film and the Session is r
   const [first, second, third] = opened.films.map((film) => film.title)
   await loginAsBruno(page)
   await page.goto(`/sessoes/${opened.session.id}`)
-  const shared = await page
-    .getByRole('link', { name: 'Link para os Presentes' })
-    .getAttribute('href')
-  if (!shared) throw new Error('the Session had no link')
+  const href = await sessionLinkFor(page, person)
   const guest = await browser.newContext()
   try {
     const participant = await guest.newPage()
-    const href = new URL(shared)
-    href.searchParams.set('presente', person)
-    await participant.goto(href.href)
+    await participant.goto(href)
     await expect(participant.getByText(name, { exact: true })).toBeVisible()
     await participant.getByRole('link', { name: 'Votar nos filmes' }).click()
     await expect(
@@ -430,6 +435,72 @@ test('each Presente votes on the films; a no swaps the film and the Session is r
     await expect(onCartaz(first)).toHaveCount(1)
     await expect(onCartaz(third)).toHaveCount(1)
     await snap(page, info, 'sessao-cartaz-depois-dos-votos')
+  } finally {
+    await guest.close()
+  }
+})
+
+test('a Presente sends only yes votes and the Dono sees the new Cartaz order', async ({
+  page,
+  browser,
+}, info) => {
+  const person = info.project.name === 'desktop' ? 'rosa' : 'quim'
+  const other = info.project.name === 'desktop' ? 'iara' : 'teo'
+  const opened = await engineRun((engine) =>
+    engine.run(
+      recommendSession({ attendees: ['dono', person, other], count: 3 }),
+      { owner: 'bruno' },
+    ),
+  )
+  const [first, second, third] = opened.films
+  const session = opened.session.id
+  // One earlier yes kept the first film in place. The deck now shows what
+  // this Presente has yet to vote on.
+  await engineRun((engine) =>
+    engine.run(
+      castVotes({
+        session,
+        person,
+        version: 1,
+        votes: [{ film: first!.id, vote: 'yes' }],
+      }),
+    ),
+  )
+
+  await loginAsBruno(page)
+  await page.goto(`/sessoes/${session}`)
+  const titles = page.getByRole('article').getByRole('heading', { level: 3 })
+  await expect(titles).toHaveCount(3)
+  await expect(titles).toContainText([
+    first!.title,
+    second!.title,
+    third!.title,
+  ])
+  const href = await sessionLinkFor(page, person)
+
+  const guest = await browser.newContext()
+  try {
+    const participant = await guest.newPage()
+    await participant.goto(href)
+    await participant.getByRole('link', { name: 'Votar nos filmes' }).click()
+    const yes = participant.getByRole('button', { name: 'Sim', exact: true })
+    await yes.click()
+    await yes.click()
+    await expect(participant.getByText('2 sins · 0 nãos')).toBeVisible()
+    await participant.getByRole('button', { name: 'Enviar votos' }).click()
+    await expect(participant.getByRole('status')).toHaveText(
+      'Votos contados. A lista foi atualizada.',
+    )
+    await snap(participant, info, 'sessao-sins-contados')
+
+    await page.reload()
+    await expect(titles).toHaveCount(3)
+    await expect(titles).toContainText([
+      second!.title,
+      third!.title,
+      first!.title,
+    ])
+    await snap(page, info, 'sessao-cartaz-reordenado')
   } finally {
     await guest.close()
   }

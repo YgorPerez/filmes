@@ -1,7 +1,7 @@
 // The Votos of the group swipe (#182): each Presente says yes or no to the
 // films of the screen through the Link da Sessão. A no is a Trocar from
-// that Presente; a yes lifts the film when the Session regenerates with
-// the films that stay. Votos are no Fato and never touch taste.
+// that Presente; a yes can move kept films and redo the Session on its
+// own (#205). Votos are no Fato and never touch taste.
 
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -60,6 +60,121 @@ const front = (fixture: Fixture, id: string) => {
 }
 
 describe('castVotes', () => {
+  test('yes votes alone put the most-voted film first and keep the whole screen', async () => {
+    const fixture = useFixture()
+    const { id, f, attendees } = await open(fixture)
+    await vote(fixture, {
+      session: id,
+      person: attendees.find((p) => p !== 'iara')!,
+      version: 1,
+      votes: [
+        { film: f[0]!, vote: 'yes' },
+        { film: f[1]!, vote: 'yes' },
+      ],
+    })
+    const out = await vote(fixture, {
+      session: id,
+      person: 'iara',
+      version: 1,
+      votes: [
+        { film: f[3]!, vote: 'yes' },
+        { film: f[1]!, vote: 'yes' },
+      ],
+    })
+    expect(out.regenerate).toBe(true)
+    expect(out.dropped).toEqual([])
+
+    const redone = await redo(fixture, id, out.keep)
+    expect(redone.session.version).toBe(2)
+    expect(redone.films.map((film) => film.id)).toEqual([
+      f[1],
+      f[0],
+      f[3],
+      f[2],
+      f[4],
+    ])
+    expect(redone.dropped).toEqual([])
+  })
+
+  test('a Presente’s latest vote set replaces the previous version’s votes', async () => {
+    const fixture = useFixture()
+    const { id, f } = await open(fixture)
+    const first = await vote(fixture, {
+      session: id,
+      person: 'iara',
+      version: 1,
+      votes: [{ film: f[3]!, vote: 'yes' }],
+    })
+    const second = await redo(fixture, id, first.keep)
+    expect(second.films[0]?.id).toBe(f[3])
+
+    const latest = await vote(fixture, {
+      session: id,
+      person: 'iara',
+      version: 2,
+      votes: [{ film: f[2]!, vote: 'yes' }],
+    })
+    expect(latest.regenerate).toBe(true)
+    const third = await redo(fixture, id, latest.keep)
+    expect(third.films.map((film) => film.id)).toEqual([
+      f[2],
+      f[3],
+      f[0],
+      f[1],
+      f[4],
+    ])
+  })
+
+  test('equal yes counts keep the current order without a new version', async () => {
+    const fixture = useFixture()
+    const { id, f } = await open(fixture)
+    const out = await vote(fixture, {
+      session: id,
+      person: 'iara',
+      version: 1,
+      votes: f.toReversed().map((film) => ({ film, vote: 'yes' })),
+    })
+
+    expect(out.regenerate).toBe(false)
+    expect(out.keep).toEqual(f)
+    expect(front(fixture, id).versions).toBeUndefined()
+  })
+
+  test('a Restrição still removes an ineligible kept film when yes votes call for a redo', async () => {
+    const fixture = useFixture()
+    const { id, f } = await open(fixture)
+    const out = await vote(fixture, {
+      session: id,
+      person: 'iara',
+      version: 1,
+      votes: [
+        { film: f[1]!, vote: 'yes' },
+        { film: f[3]!, vote: 'yes' },
+      ],
+    })
+    expect(out.regenerate).toBe(true)
+
+    const redone = await fixture.ok(
+      recommendSession({
+        session: id,
+        attendees: ['dono', 'iara'],
+        keep: out.keep,
+        maxDuration: 110,
+      }),
+    )
+    expect(redone.films.map((film) => film.id)).not.toContain(f[1])
+    expect(redone.films.findIndex((film) => film.id === f[3])).toBeLessThan(
+      redone.films.findIndex((film) => film.id === f[0]),
+    )
+    expect(redone.dropped).toContainEqual(
+      expect.objectContaining({
+        id: f[1],
+        cause: 'constraint',
+        constraint: 'duration',
+      }),
+    )
+  })
+
   test('a no swaps the film and the rest stays, in screen order', async () => {
     const fixture = useFixture()
     const { id, f } = await open(fixture)
@@ -81,7 +196,13 @@ describe('castVotes', () => {
     ])
     expect(front(fixture, id).swapped).toEqual([f[1]])
     expect(front(fixture, id).votes).toEqual([
-      { person: 'iara', film: f[1], vote: 'no', date: '2026-11-20' },
+      {
+        person: 'iara',
+        film: f[1],
+        vote: 'no',
+        date: '2026-11-20',
+        replaces: true,
+      },
       { person: 'iara', film: f[3], vote: 'yes', date: '2026-11-20' },
     ])
   })
@@ -138,7 +259,7 @@ describe('castVotes', () => {
     ])
   })
 
-  test('voting again on a film replaces the earlier vote', async () => {
+  test('a no still swaps the film after a Presente voted yes on it', async () => {
     const fixture = useFixture()
     const { id, f } = await open(fixture)
     const ask = (v: 'yes' | 'no') =>
@@ -149,11 +270,11 @@ describe('castVotes', () => {
         votes: [{ film: f[2]!, vote: v }],
       })
     await ask('yes')
-    await ask('no')
-
-    expect(front(fixture, id).votes).toEqual([
-      { person: 'iara', film: f[2], vote: 'no', date: '2026-11-20' },
+    const latest = await ask('no')
+    expect(latest.dropped).toEqual([
+      expect.objectContaining({ id: f[2], position: 3, cause: 'swapped' }),
     ])
+    expect(front(fixture, id).swapped).toEqual([f[2]])
   })
 
   test('only a Presente of the current version votes', async () => {

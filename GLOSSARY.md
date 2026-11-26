@@ -95,7 +95,7 @@ Uma Recomendação de uma Sessão aberta. Quando o Dono pede outra lista na mesm
 _Evitar_: rodada, tentativa
 
 **Mantido** [kept, `kept`]:
-Um filme da versão anterior que o Dono quer na próxima. Ao regerar, fica no mesmo número e só as vagas ganham filme novo. Sai por Restrição ou Veto do pedido refeito, ou por estar abaixo da nota mínima do IMDb, nunca por gosto novo. O que sai da versão anterior vira uma saída, com o motivo: Já visto, trocado, a Restrição, o Veto ou a nota mínima.
+Um filme da versão anterior que o Dono quer na próxima. Ao regerar, ocupa um dos números dos Mantidos, em ordem de Votos, e só as vagas ganham filme novo. Sai por Restrição ou Veto do pedido refeito, ou por estar abaixo da nota mínima do IMDb, nunca por gosto novo. O que sai da versão anterior vira uma saída, com o motivo: Já visto, trocado, a Restrição, o Veto ou a nota mínima.
 _Evitar_: fixado, travado
 
 **Cartaz** [billboard, `Billboard`]:
@@ -123,7 +123,7 @@ Um filme que o Dono tirou da tela de uma versão: o Trocar do Cartaz, o não de 
 _Evitar_: descartado, rejeitado
 
 **Voto** [vote, `votes`; `yes`, `no`]:
-O sim ou o não de um Presente a um filme da tela, dado no celular pelo Link da Sessão, um filme de cada vez (o swipe do grupo, #182). Fica na versão da Sessão com quem votou e a data. O não é um Trocado daquele Presente: o filme sai e a Sessão regera. O sim sobe o filme: ao regerar, os Mantidos com mais sins, na Sessão inteira, vêm primeiro, nos números que os Mantidos já tinham, e as vagas não mudam. Voto não é Fato e não mexe no gosto.
+O sim ou o não de um Presente a um filme da tela, dado no celular pelo Link da Sessão, um filme de cada vez (o swipe do grupo, #182). Fica na versão da Sessão com quem votou e a data. O não é um Trocado daquele Presente: o filme sai e a Sessão regera. Na contagem vale o último envio de cada Presente, cujo primeiro Voto tem `replaces: true`. Os Mantidos com mais sins vêm primeiro, nos números que os Mantidos já tinham, e os empates mantêm a ordem. Se a ordem muda, o sim por si só regera a Sessão (#205). Voto não é Fato e não mexe no gosto.
 _Evitar_: curtida, like
 
 **Saída** [dropped, `dropped`; causa: `seen`, `swapped`, `constraint`, `veto`, `min_rating`, `mood`]:

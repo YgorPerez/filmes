@@ -1,14 +1,13 @@
 // The Votos of the group swipe (#182): each Presente says yes or no to the
 // films of the screen, one at a time, on the Link da Sessão.
 //
-// - The Votos go in `votes` of the current version: who, which film, yes or
-//   no, and the date. A Presente voting again on a film of the same version
-//   replaces her earlier Voto.
+// - The Votos go in `votes` of the current version. For the count, each
+//   Presente's latest submission replaces her earlier votes (#205).
 // - A no is a Trocar from that Presente: the film goes in `swapped` of the
 //   current version and never comes back in the Session (#66).
-// - A yes lifts the film: when the Session regenerates, the kept films with
-//   more yes in the whole Session come first, at the numbers the kept films
-//   had (`liftKept`); the free places do not move.
+// - A yes lifts the film: the kept films with more yes in the Session come
+//   first, at the numbers the kept films had. A changed order calls for a
+//   redo even when every film stays (#205).
 // - A film no longer on the current screen is skipped, with a warning: the
 //   deck was of an older version and another Presente's no redid it.
 // - Votos are no Fato: no Nota, no Declarado, nothing about taste.
@@ -67,8 +66,7 @@ export interface CastVotes {
   readonly session: { readonly id: string; readonly file: string }
   readonly version: number
   readonly currentVersion: number
-  /** A film of the current screen was swapped: by this no or, when its
-   * redo failed, an earlier one. */
+  /** A film was swapped or the yes votes changed the screen's order. */
   readonly regenerate: boolean
   /** The ids that stay, in the current screen's order. */
   readonly keep: ReadonlyArray<string>
@@ -87,6 +85,8 @@ interface StoredVote {
   readonly person: string
   readonly film: string
   readonly vote: VoteValue
+  /** The first Voto of a submission. Legacy votes have no boundary. */
+  readonly replaces?: boolean
 }
 
 const storedVotes = (version: YamlMapping): StoredVote[] =>
@@ -112,16 +112,27 @@ export const votedBy = (
       .map((v) => v.film),
   )
 
-/** Film → how many Presentes said yes to it, in every version of the
- * Session; a Presente's later Voto on a film replaces her earlier one. */
+/** Film → how many Presentes said yes in their latest submission. Legacy
+ * votes were saved by film, with no way to tell submissions apart. */
 export const yesVotes = (front: YamlMapping): ReadonlyMap<string, number> => {
-  const last = new Map<string, StoredVote>()
-  for (const v of sessionVotes(front)) last.set(`${v.person}\0${v.film}`, v)
+  const latest = new Map<string, Map<string, VoteValue>>()
+  for (const { person, film, vote, replaces } of sessionVotes(front)) {
+    const votes = (replaces ? undefined : latest.get(person)) ?? new Map()
+    votes.set(film, vote)
+    latest.set(person, votes)
+  }
   const count = new Map<string, number>()
-  for (const v of last.values())
-    if (v.vote === 'yes') count.set(v.film, (count.get(v.film) ?? 0) + 1)
+  for (const votes of latest.values())
+    for (const [film, vote] of votes)
+      if (vote === 'yes') count.set(film, (count.get(film) ?? 0) + 1)
   return count
 }
+
+/** Most yes votes first. Ties keep the given screen order. */
+export const orderByYes = (
+  films: ReadonlyArray<string>,
+  yes: ReadonlyMap<string, number>,
+): string[] => films.toSorted((a, b) => (yes.get(b) ?? 0) - (yes.get(a) ?? 0))
 
 /** Records a Presente's Votos on the current screen and says whether the
  * Session must be regenerated and what stays. One commit. */
@@ -179,19 +190,16 @@ export const castVotes = (
               )
 
           if (cast.size > 0) {
-            const mine = (v: StoredVote) =>
-              v.person === request.person && cast.has(v.film)
             front.set('votes', [
-              ...listOf(front.get('votes')).filter(
-                (item) => !mine(yamlToJson(item) as unknown as StoredVote),
-              ),
+              ...listOf(front.get('votes')),
               ...[...cast].map(
-                ([film, vote]) =>
+                ([film, vote], i) =>
                   new Map<string, YamlValue>([
                     ['person', request.person],
                     ['film', film],
                     ['vote', vote],
                     ['date', today],
+                    ...(i === 0 ? ([['replaces', true]] as const) : []),
                   ]),
               ),
             ])
@@ -216,11 +224,14 @@ export const castVotes = (
           for (const film of screen)
             if (out.has(film.id)) dropped.push({ ...film, cause: 'swapped' })
             else keep.push(film.id)
+          const reordered = orderByYes(keep, yesVotes(front)).some(
+            (id, i) => id !== keep[i],
+          )
           return {
             session: { id, file: sessionRelative(id) },
             version: request.version,
             currentVersion: currentNumber,
-            regenerate: dropped.length > 0,
+            regenerate: dropped.length > 0 || reordered,
             keep,
             dropped,
             warnings,
