@@ -20,6 +20,10 @@ import { readRating } from '../data/rating.ts'
 import { yamlToJson } from '../data/yaml.ts'
 import { statedStrength } from '../evidence/ruler.ts'
 import type { Kind, Strength } from '../evidence/strength.ts'
+import {
+  personPredictionError,
+  type PersonPredictionError,
+} from '../recommendation/taste-neighbors.ts'
 import { Environment } from '../runtime/Environment.ts'
 import { Owner } from '../runtime/Owner.ts'
 import { engineError, type EngineError } from '../runtime/EngineError.ts'
@@ -154,6 +158,8 @@ export interface PersonView extends PersonSummary {
   readonly imports: readonly unknown[]
   /** Null without a database, with the `warning`. */
   readonly ratings: readonly RatingJson[] | null
+  /** Only when requested and enough films have a leave-one-out prediction. */
+  readonly predictionError?: PersonPredictionError
   readonly warning?: string
 }
 
@@ -363,6 +369,7 @@ const ratingsOf = (db: Connection, slug: string) =>
 /** Everything the engine knows of the Pessoa (`pessoa ver`). */
 export const personView = (
   name: string,
+  options: { predictionError?: boolean } = {},
 ): Effect.Effect<
   PersonView,
   EngineError | SqliteError,
@@ -389,16 +396,21 @@ export const personView = (
       openQuestions: person.openQuestions.map((q) => openQuestionJson(slug, q)),
       imports: person.imports.map(yamlToJson),
     }
-    const path = yield* (yield* Environment).path('database')
+    const env = yield* Environment
+    const path = yield* env.path('database')
     if (!(yield* Effect.sync(() => existsSync(path))))
       return { ...view, ratings: null, warning: NO_DATABASE_WARNING }
     return yield* (yield* Sqlite).read((db) =>
       Effect.gen(function* () {
         const imported = yield* importedStated(db, slug, today)
+        const predictionError = options.predictionError
+          ? yield* personPredictionError(db, slug, env.weights, today)
+          : null
         return {
           ...view,
           stated: [...stated, ...imported],
           ratings: yield* ratingsOf(db, slug),
+          ...(predictionError !== null && { predictionError }),
         }
       }),
     )

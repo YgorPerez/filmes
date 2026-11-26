@@ -135,7 +135,7 @@ export function peopleFromEngine(engine: Engine): People {
           owner,
         })),
       ),
-    view: (person) => engine.run(personView(person)),
+    view: (person) => engine.run(personView(person, { predictionError: true })),
     email: (person) => map(engine.run(resolvePerson(person)), (p) => p.email),
     create: (input, owner) =>
       map(
