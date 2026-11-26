@@ -48,6 +48,7 @@ import { resolveAttendees } from './attendees.ts'
 import { attributionsOf, type Attribution } from './attributions.ts'
 import {
   betPolicy,
+  cautiousBetLine,
   drawBets,
   hasLittleEvidence,
   type BetCandidate,
@@ -462,8 +463,10 @@ export const rank = (
         ).flatMap((id) => byId.get(id) ?? [])
         const [bet] = yield* fill(drawn, 1)
         if (bet !== undefined) {
-          cautiousBet = [...policy.floors.keys()].some((p) =>
-            betOdds.get(bet.id)?.odds.has(p),
+          cautiousBet = [...policy.floors].some(
+            ([p, minimum]) =>
+              minimum > weights.bet.min_predicted &&
+              betOdds.get(bet.id)?.odds.has(p),
           )
           return { regular, bet }
         }
@@ -617,6 +620,7 @@ export const rank = (
         ...asked.linesOf(film.id),
         ...signalLines,
         ...satisfactionLines,
+        ...(film.id === betId && cautiousBet ? [cautiousBetLine(film.id)] : []),
       ]
       const predicted: Array<[string, PredictedRating]> = []
       for (const p of attendees) {

@@ -82,8 +82,8 @@ _Evitar_: sugestão, lista
 O filme da 5ª vaga da Recomendação (`[bet] position`): um Candidato com Nota prevista boa e pouca Evidência, que a Regra deixaria de fora. Sai por amostragem de Thompson: cada Presente com Nota prevista sorteia uma Nota em torno dela, tanto mais espalhada quanto mais incerta, e vence a maior média dos sorteios. O sorteio parte do id da Sessão, então refazer a mesma Sessão sorteia o mesmo. Vetos e Restrições valem para ela. O Já vi e o Trocar tiram a Aposta da Sessão, e a Nota do Já vi muda os vizinhos de gosto do próximo sorteio. Mantida, continua Aposta. No Cartaz, leva o selo "aposta".
 _Evitar_: exploração, coringa, surpresa
 
-**Histórico de apostas** [bet record, `BetRecord`]:
-Os acertos e fracassos das Apostas de cada Pessoa, lidos das Sessões em que esteve Presente. Um Filme escolhido com reação à altura da mediana dela ou um Já vi com Nota alta conta como acerto. Trocar e Já vi com Nota contra contam como fracasso. O Decaimento da Nota dá menos peso às respostas antigas.
+**Histórico de apostas** [bet record, `BetRecord`, `bet_marks`, `cautious_bet`, `min_predicted_floor`]:
+Os acertos e fracassos das Apostas de cada Pessoa, lidos das Sessões em que esteve Presente. Um Filme escolhido com reação à altura da mediana dela ou um Já vi com Nota alta conta como acerto. Trocar explícito e Já vi com Nota contra contam como fracasso. A Sessão guarda as marcações da Aposta em `bet_marks` (`seen` ou `swapped`) e marca com `cautious_bet` a Aposta que exigiu Nota prevista maior. Um histórico bom reduz o mínimo da Nota prevista até o piso `min_predicted_floor`. O Decaimento da Nota dá menos peso às respostas antigas.
 
 **Parecença** [similarity, `similarity`]:
 O quanto um filme se parece com um filme de referência, de 0 a 1: genoma, tags do MovieLens, vizinhos, gênero e diretor ou atores em comum, com os pesos de `[similar.weight]`. Mede-se a partir da referência, então não é simétrica. É o que o `--parecido` usa para filtrar.
@@ -125,7 +125,7 @@ _Evitar_: parser, interpretação
 Um filme que o Dono tirou da tela de uma versão: o Trocar do Cartaz, o não de um Presente no Voto e, ao refazer, o que ele mandou trocar e o que não ficou como Mantido. Fica fora da Sessão até o fim.
 _Evitar_: descartado, rejeitado
 
-**Voto** [vote, `votes`; `yes`, `no`]:
+**Voto** [vote, `votes`, `replaces`; `yes`, `no`]:
 O sim ou o não de um Presente a um filme da tela, dado no celular pelo Link da Sessão, um filme de cada vez (o swipe do grupo, #182). Fica na versão da Sessão com quem votou e a data. O não é um Trocado daquele Presente: o filme sai e a Sessão regera. Na contagem vale o último envio de cada Presente, cujo primeiro Voto tem `replaces: true`. Os Mantidos com mais sins vêm primeiro, nos números que os Mantidos já tinham, e os empates mantêm a ordem. Se a ordem muda, o sim por si só regera a Sessão (#205). Voto não é Fato e não mexe no gosto.
 _Evitar_: curtida, like
 

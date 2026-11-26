@@ -75,6 +75,9 @@ export const Weights = Schema.Struct({
   bet: Schema.Struct({
     position: Count,
     min_predicted: Weight,
+    min_predicted_floor: Weight.check(
+      Schema.isBetween({ minimum: 1, maximum: 10 }),
+    ),
     max_facts: Count,
     prior_successes: Weight.check(Schema.isGreaterThan(0)),
     prior_failures: Weight.check(Schema.isGreaterThan(0)),

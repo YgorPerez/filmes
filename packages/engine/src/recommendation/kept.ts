@@ -49,6 +49,7 @@ import { numOrNull, text } from '../sqlite/row.ts'
 import type { Connection, SqliteError } from '../sqlite/Sqlite.ts'
 import {
   currentVersion,
+  isCautiousBet,
   shownFilms,
   storedBet,
   type ShownFilm,
@@ -167,7 +168,7 @@ export const prepareRegenerate = (
       replacing,
       newMood,
       ...(bet !== undefined && bet !== null && { bet: pyStrValue(bet) }),
-      ...(stored?.get('cautious_bet') === true && { cautiousBet: true }),
+      ...(isCautiousBet(stored) && { cautiousBet: true }),
     },
     warnings,
   }

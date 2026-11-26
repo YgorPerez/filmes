@@ -33,7 +33,7 @@
 
 import { existsSync, readdirSync, renameSync, rmSync } from 'node:fs'
 import { basename, join } from 'node:path'
-import { Effect } from 'effect'
+import { Effect, Schema } from 'effect'
 import { compareTuple } from '../compat/compare.ts'
 import { pyInt } from '../compat/fact-id.ts'
 import { pySplitlines } from '../compat/text.ts'
@@ -266,6 +266,12 @@ export const storedBet = (version: YamlMapping): YamlMapping | undefined => {
     .filter(isMapping)
     .find((film) => pyTruthy(film.get('bet') ?? false))
 }
+
+const isTrue = Schema.is(Schema.Literal(true))
+
+/** Whether the stored Aposta required a higher Nota prevista. */
+export const isCautiousBet = (film: YamlMapping | undefined): boolean =>
+  isTrue(film?.get('cautious_bet'))
 
 /** The list the Dono saw of a version: the Cartaz's `shown`, or else the
  * Recomendação (`arquivo.na_tela`). */

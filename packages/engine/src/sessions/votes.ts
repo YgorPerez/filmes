@@ -16,12 +16,11 @@
 // returns `regenerate`, `keep` and `dropped`, and whoever asked redoes the
 // Session with `recommendSession({ session, keep })`.
 
-import { Effect } from 'effect'
+import { Effect, Schema } from 'effect'
 import { compareTuple } from '../compat/compare.ts'
 import { DataWriter } from '../data/DataWriter.ts'
 import type { GitError } from '../data/git.ts'
 import {
-  isMapping,
   isSequence,
   pyStrValue,
   pyTruthy,
@@ -81,20 +80,19 @@ const invalid = (message: string) => engineError('invalid_usage', message)
 const listOf = (value: YamlValue | undefined): ReadonlyArray<YamlValue> =>
   pyTruthy(value) && isSequence(value) ? value : []
 
-/** A Voto as the Session keeps it. */
-interface StoredVote {
-  readonly person: string
-  readonly film: string
-  readonly vote: VoteValue
-  readonly date?: string
-  /** The first Voto of a submission. Legacy votes have no boundary. */
-  readonly replaces?: boolean
-}
+/** A Voto as the Session keeps it. Legacy votes have no submission boundary. */
+const StoredVote = Schema.Struct({
+  person: Schema.String,
+  film: Schema.String,
+  vote: Schema.Literals(['yes', 'no']),
+  date: Schema.optionalKey(Schema.String),
+  replaces: Schema.optionalKey(Schema.Boolean),
+})
+type StoredVote = typeof StoredVote.Type
+const isStoredVote = Schema.is(StoredVote)
 
 export const storedVotes = (version: YamlMapping): StoredVote[] =>
-  listOf(version.get('votes'))
-    .filter(isMapping)
-    .map((item) => yamlToJson(item) as unknown as StoredVote)
+  listOf(version.get('votes')).map(yamlToJson).filter(isStoredVote)
 
 /** The Votos of every version of the Session, oldest first. */
 const sessionVotes = (front: YamlMapping): StoredVote[] =>
