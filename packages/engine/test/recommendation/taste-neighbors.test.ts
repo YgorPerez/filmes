@@ -15,7 +15,12 @@ import {
   type Vars,
 } from '../../src/index.ts'
 import { useFixture, type Fixture } from '../fixture.ts'
-import { engineRecommendation, film, tasteWeights } from './support.ts'
+import {
+  engineRecommendation,
+  film,
+  tasteWeights,
+  weightsWith,
+} from './support.ts'
 
 const bruno = (fixture: Fixture, vars: Vars) =>
   engineRecommendation(fixture, { attendees: ['bruno'], count: 50 }, vars)
@@ -28,7 +33,13 @@ const neighbours = (out: Recommendation, title: string) =>
 describe('the taste neighbours path', () => {
   test('the closest neighbours speak for the film they liked', async () => {
     const fixture = useFixture()
-    const out = await bruno(fixture, tasteWeights(fixture, 3, 5))
+    // No Decaimento, for the worked contribution below.
+    const out = await bruno(
+      fixture,
+      weightsWith(fixture, 'k = 50\nmin_shared = 10', 'k = 3\nmin_shared = 5', [
+        ['floor = 0.25', 'floor = 1.0'],
+      ]),
+    )
 
     const [e] = neighbours(out, 'Pequenos Milagres')
     // Users 10, 20 and 30 gave it 5, 4,5 and 5; user 40, who rates the
@@ -118,6 +129,22 @@ describe('the taste neighbours path', () => {
     expect(neighbours(after, 'Pequenos Milagres')[0]?.text).toMatch(
       /^4 pessoas/,
     )
+  })
+
+  test('fades with the age of her Notas the match rests on, like a Nota seed', async () => {
+    const fixture = useFixture()
+    const weights = tasteWeights(fixture, 3, 5)
+    const now = neighbours(await bruno(fixture, weights), 'Pequenos Milagres')
+    const later = neighbours(
+      await bruno(fixture, { ...weights, FILMES_HOJE: '2036-11-20' }),
+      'Pequenos Milagres',
+    )
+
+    expect(later.map((e) => [e.text, e.strength])).toEqual(
+      now.map((e) => [e.text, e.strength]),
+    )
+    expect(later[0]!.contribution).toBeGreaterThan(0)
+    expect(later[0]!.contribution).toBeLessThan(now[0]!.contribution)
   })
 
   test('below the minimum of films shared, there is no neighbour', async () => {
