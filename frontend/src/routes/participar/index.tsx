@@ -1,5 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { votePath } from '#/content/session-votes-address'
+import { buttonVariants } from '#/ui/kit/button-variants'
 import { PARTICIPATION } from '#/ui/session-link.copy'
+import { VOTES } from '#/ui/session-votes.copy'
 
 export const Route = createFileRoute('/participar/')({
   component: SessionLinkFilms,
@@ -7,6 +10,7 @@ export const Route = createFileRoute('/participar/')({
 
 function SessionLinkFilms() {
   const films = Route.useRouteContext().participation?.films ?? []
+  const search = Route.useSearch()
   return (
     <section
       aria-labelledby="filmes-da-sessao"
@@ -31,6 +35,17 @@ function SessionLinkFilms() {
             </li>
           ))}
         </ol>
+      )}
+      {films.length > 0 && (
+        <a
+          href={votePath('votar', search)}
+          className={buttonVariants({
+            variant: 'option',
+            className: 'self-start',
+          })}
+        >
+          {VOTES.open}
+        </a>
       )}
     </section>
   )
