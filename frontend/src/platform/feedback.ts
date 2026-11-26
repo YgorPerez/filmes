@@ -139,7 +139,7 @@ export async function openSessionList(
   return list.output
 }
 
-/** What `/feedback/<sessao>` shows: the open Session with its Presentes'
+/** What a Sessão's Feedback form (`feedbackPath`) shows: the open Session with its Presentes'
  * satisfaction, `'unknown'` when no open Session has that id (it has its
  * Feedback already, or never was), or null when the engine cannot run
  * here. */

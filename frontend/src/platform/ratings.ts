@@ -63,7 +63,7 @@ function logEngineError(outcome: { output: ErrorOutput }): void {
   console.error(`engine: ${code}: ${message}`)
 }
 
-/** What `/notas` shows the logged-in Dono: her Fila de Notas, or null when
+/** What the rating screen (`RATINGS_PATH`) shows the logged-in Dono: her Fila de Notas, or null when
  * the engine cannot run here. */
 export async function ratingQueuePage(
   owner: Pick<Rater, 'person'>,

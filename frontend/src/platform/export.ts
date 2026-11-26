@@ -53,7 +53,7 @@ function logEngineError(outcome: { output: ErrorOutput }): void {
   console.error(`engine: ${code}: ${message}`)
 }
 
-/** What `/exportar` shows: every Pessoa with her Notas counted, the
+/** What the export page (`EXPORT_PATH`) shows: every Pessoa with her Notas counted, the
  * logged-in Dono's own chosen when the page opens; `null` when the engine
  * cannot run here (no database yet), with the reason in the server log. */
 export async function exportChoices(

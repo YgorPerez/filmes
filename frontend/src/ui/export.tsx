@@ -63,7 +63,7 @@ function Movielens() {
   )
 }
 
-/** `/exportar`: a Pessoa's Notas as the IMDb CSV, and how to take it to the
+/** The export page (`EXPORT_PATH`): a Pessoa's Notas as the IMDb CSV, and how to take it to the
  * MovieLens. It works before the JavaScript loads. `choices` is null when
  * the engine cannot run on this server. */
 export function Export({
