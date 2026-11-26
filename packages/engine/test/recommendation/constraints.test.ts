@@ -115,7 +115,9 @@ describe('the Restrições seam', () => {
       'passa em no_sad',
     ])
   })
+})
 
+describe('the Restrições seam', () => {
   test('a pending film is resolved after the order, asking only within reach', async () => {
     const fixture = useFixture()
     const asked: string[] = []

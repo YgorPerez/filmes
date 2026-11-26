@@ -64,7 +64,9 @@ describe('read', () => {
       expect(JSON.stringify(outcome.output)).toContain('SqliteError')
     }
   })
+})
 
+describe('read', () => {
   test('an authorizer can refuse actions', async () => {
     const fixture = useFixture()
     const denied: number[] = []
@@ -160,7 +162,9 @@ describe('write', () => {
       await engine.dispose()
     }
   })
+})
 
+describe('write', () => {
   test('two writes at once run one after the other', async () => {
     const fixture = useFixture()
     await fixture.ok(withScratchTable)
@@ -209,7 +213,9 @@ describe('write', () => {
     expect(seen).toEqual({ before: [], after: [] })
     expect(await fixture.ok(scratchRows)).toEqual([{ x: 1 }])
   })
+})
 
+describe('write', () => {
   test('switches a database built in rollback mode to WAL', async () => {
     const fixture = useFixture()
     const mode = () => {

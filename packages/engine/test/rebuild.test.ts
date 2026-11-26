@@ -218,7 +218,9 @@ describe('a catalog the schema does not take is refused and the database stays',
       readdirSync(fixture.root).filter((f) => f.endsWith('.novo')),
     ).toEqual([])
   })
+})
 
+describe('a catalog the schema does not take is refused and the database stays', () => {
   test('no catalog folder', async () => {
     const fixture = useFixture()
     const missing = join(fixture.root, 'nada')

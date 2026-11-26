@@ -129,7 +129,9 @@ describe('importLetterboxdRss', () => {
       SOURCE,
     ])
   })
+})
 
+describe('importLetterboxdRss', () => {
   test('an entry without a diary date takes the day it was published, in its offset', async () => {
     const fixture = useFixture()
     await addOlga(fixture)
@@ -175,7 +177,9 @@ describe('importLetterboxdRss', () => {
       new Set(facts.map(([f, d]) => `${String(f)} ${String(d)}`)).size,
     ).toBe(facts.length)
   })
+})
 
+describe('importLetterboxdRss', () => {
   test("the Dono's decision comes before the TMDB id", async () => {
     const fixture = useFixture()
     await addOlga(fixture)
@@ -281,6 +285,23 @@ describe('fetchLetterboxdRss', () => {
       },
     ])
   })
+})
+
+describe('fetchLetterboxdRss', () => {
+  const fetchWith = (fixture: Fixture, answer: () => Promise<Response>) => {
+    const net = fakeFetch(answer)
+    return {
+      net,
+      outcome: fixture.run(
+        Effect.provideService(
+          fetchLetterboxdRss('olga_farol'),
+          Fetch,
+          net.fetch,
+        ),
+        NETWORK,
+      ),
+    }
+  }
 
   test.each([
     [
@@ -310,7 +331,9 @@ describe('fetchLetterboxdRss', () => {
       output: { error: { code, message } },
     })
   })
+})
 
+describe('fetchLetterboxdRss', () => {
   test('gives up after 20 seconds', async () => {
     const fixture = useFixture()
     const net = fakeFetch(() => new Promise<Response>(() => {}))

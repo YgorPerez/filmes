@@ -91,7 +91,9 @@ describe('each kind of field alone', () => {
   ])('child: "%s" is %i', async (text, age) => {
     expect(await fields(useFixture(), text)).toEqual({ child: age })
   })
+})
 
+describe('each kind of field alone', () => {
   test('a child older than 17 is not read', async () => {
     const reading = await read(useFixture(), 'criança de 30 anos')
 
@@ -146,7 +148,9 @@ describe('each kind of field alone', () => {
       expect(await fields(useFixture(), text)).toEqual({ unseen: true })
     },
   )
+})
 
+describe('each kind of field alone', () => {
   test('nada lento and nada triste', async () => {
     const reading = await read(useFixture(), 'nada lento, nada triste')
 
@@ -244,7 +248,9 @@ describe('Presentes', () => {
     ])
     expect(reading.notUnderstood).toEqual([])
   })
+})
 
+describe('Presentes', () => {
   test('an ambiguous name in "pelo gosto de" is ambiguous for the Regra', async () => {
     const fixture = useFixture()
     await fixture.ok(change("INSERT INTO apelidos VALUES ('rosa', 'Teo')"))
@@ -307,7 +313,9 @@ describe('Parecido', () => {
     expect(reading.request).toEqual({ similar: ['tt9012602'] })
     expect(reading.understood[0]?.words).toBe('Reprise (2004)')
   })
+})
 
+describe('Parecido', () => {
   test('a title with no film is ambiguous with no candidate', async () => {
     const reading = await read(useFixture(), 'tipo Amélie')
 
@@ -400,7 +408,9 @@ describe('the whole sentence', () => {
       ambiguities: [],
     })
   })
+})
 
+describe('the whole sentence', () => {
   test('a Clima after a negation in its clause is not understood', async () => {
     const fixture = useFixture()
 
@@ -456,7 +466,9 @@ describe('the whole sentence', () => {
 
     expect(await read(fixture, text)).toEqual(await read(fixture, text))
   })
+})
 
+describe('the whole sentence', () => {
   test('"eu" with no Dono and no Pessoa so nicknamed is not understood', async () => {
     const fixture = useFixture()
     await fixture.ok(change('UPDATE pessoas SET dono = 0'))
@@ -546,7 +558,9 @@ describe('the Acrescentar', () => {
     ])
     expect(reading.ambiguities).toEqual([])
   })
+})
 
+describe('the Acrescentar', () => {
   test('adds Presentes and Climas, replaces a Restrição, the year range and the Parecido', () => {
     expect(
       withAddition(

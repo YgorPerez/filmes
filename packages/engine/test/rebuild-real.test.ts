@@ -124,60 +124,67 @@ interface ZipOptions {
   readonly zip64?: boolean
 }
 
-/** A ZIP, as `ZipFile(..., "w").writestr` makes (stored by default). */
-function zip(
-  members: Record<string, string>,
-  options: ZipOptions = {},
-): Buffer {
-  const {
-    method = 0,
-    flags = 0,
-    prefix = Buffer.alloc(0),
-    zip64 = false,
-  } = options
-  const locals: Buffer[] = [prefix]
-  const central: Buffer[] = []
-  let offset = 0
-  for (const [name, text] of Object.entries(members)) {
-    const raw = Buffer.from(text)
-    const data = method === 8 ? deflateRawSync(raw) : raw
-    const fileName = Buffer.from(name)
-    const crc = crc32(raw)
-    const local = Buffer.alloc(30)
-    local.writeUInt32LE(0x04034b50, 0)
-    local.writeUInt16LE(20, 4)
-    local.writeUInt16LE(flags, 6)
-    local.writeUInt16LE(method, 8)
-    local.writeUInt32LE(crc, 14)
-    local.writeUInt32LE(data.length, 18)
-    local.writeUInt32LE(raw.length, 22)
-    local.writeUInt16LE(fileName.length, 26)
-    const extra = Buffer.alloc(zip64 ? 28 : 0)
-    if (zip64) {
-      extra.writeUInt16LE(0x0001, 0)
-      extra.writeUInt16LE(24, 2)
-      extra.writeBigUInt64LE(BigInt(raw.length), 4)
-      extra.writeBigUInt64LE(BigInt(data.length), 12)
-      extra.writeBigUInt64LE(BigInt(offset), 20)
-    }
-    const entry = Buffer.alloc(46)
-    entry.writeUInt32LE(0x02014b50, 0)
-    entry.writeUInt16LE(45, 4)
-    entry.writeUInt16LE(45, 6)
-    entry.writeUInt16LE(flags, 8)
-    entry.writeUInt16LE(method, 10)
-    entry.writeUInt32LE(crc, 16)
-    entry.writeUInt32LE(zip64 ? 0xffffffff : data.length, 20)
-    entry.writeUInt32LE(zip64 ? 0xffffffff : raw.length, 24)
-    entry.writeUInt16LE(fileName.length, 28)
-    entry.writeUInt16LE(extra.length, 30)
-    entry.writeUInt32LE(zip64 ? 0xffffffff : offset, 42)
-    locals.push(local, fileName, data)
-    central.push(entry, fileName, extra)
-    offset += 30 + fileName.length + data.length
+/** One member's sizes and place, as both of its headers write them. */
+type MemberHeader = {
+  readonly method: number
+  readonly flags: number
+  readonly zip64: boolean
+  readonly crc: number
+  readonly raw: Buffer
+  readonly data: Buffer
+  readonly fileName: Buffer
+  readonly offset: number
+}
+
+function localHeader(m: MemberHeader): Buffer {
+  const local = Buffer.alloc(30)
+  local.writeUInt32LE(0x04034b50, 0)
+  local.writeUInt16LE(20, 4)
+  local.writeUInt16LE(m.flags, 6)
+  local.writeUInt16LE(m.method, 8)
+  local.writeUInt32LE(m.crc, 14)
+  local.writeUInt32LE(m.data.length, 18)
+  local.writeUInt32LE(m.raw.length, 22)
+  local.writeUInt16LE(m.fileName.length, 26)
+  return local
+}
+
+function zip64Extra(m: MemberHeader): Buffer {
+  const extra = Buffer.alloc(m.zip64 ? 28 : 0)
+  if (m.zip64) {
+    extra.writeUInt16LE(0x0001, 0)
+    extra.writeUInt16LE(24, 2)
+    extra.writeBigUInt64LE(BigInt(m.raw.length), 4)
+    extra.writeBigUInt64LE(BigInt(m.data.length), 12)
+    extra.writeBigUInt64LE(BigInt(m.offset), 20)
   }
-  const directory = Buffer.concat(central)
-  const count = Object.keys(members).length
+  return extra
+}
+
+function centralEntry(m: MemberHeader, extra: Buffer): Buffer {
+  const { zip64 } = m
+  const entry = Buffer.alloc(46)
+  entry.writeUInt32LE(0x02014b50, 0)
+  entry.writeUInt16LE(45, 4)
+  entry.writeUInt16LE(45, 6)
+  entry.writeUInt16LE(m.flags, 8)
+  entry.writeUInt16LE(m.method, 10)
+  entry.writeUInt32LE(m.crc, 16)
+  entry.writeUInt32LE(zip64 ? 0xffffffff : m.data.length, 20)
+  entry.writeUInt32LE(zip64 ? 0xffffffff : m.raw.length, 24)
+  entry.writeUInt16LE(m.fileName.length, 28)
+  entry.writeUInt16LE(extra.length, 30)
+  entry.writeUInt32LE(zip64 ? 0xffffffff : m.offset, 42)
+  return entry
+}
+
+/** The end records after the central directory, ZIP64's first if asked. */
+function endRecords(
+  count: number,
+  directory: Buffer,
+  offset: number,
+  { prefix, zip64 }: { readonly prefix: Buffer; readonly zip64: boolean },
+): Buffer[] {
   const records: Buffer[] = []
   if (zip64) {
     const end64 = Buffer.alloc(56)
@@ -202,7 +209,47 @@ function zip(
   end.writeUInt16LE(zip64 ? 0xffff : count, 10)
   end.writeUInt32LE(zip64 ? 0xffffffff : directory.length, 12)
   end.writeUInt32LE(zip64 ? 0xffffffff : offset, 16)
-  return Buffer.concat([...locals, directory, ...records, end])
+  records.push(end)
+  return records
+}
+
+/** A ZIP, as `ZipFile(..., "w").writestr` makes (stored by default). */
+function zip(
+  members: Record<string, string>,
+  options: ZipOptions = {},
+): Buffer {
+  const {
+    method = 0,
+    flags = 0,
+    prefix = Buffer.alloc(0),
+    zip64 = false,
+  } = options
+  const locals: Buffer[] = [prefix]
+  const central: Buffer[] = []
+  let offset = 0
+  for (const [name, text] of Object.entries(members)) {
+    const raw = Buffer.from(text)
+    const data = method === 8 ? deflateRawSync(raw) : raw
+    const fileName = Buffer.from(name)
+    const header = {
+      method,
+      flags,
+      zip64,
+      crc: crc32(raw),
+      raw,
+      data,
+      fileName,
+      offset,
+    }
+    const extra = zip64Extra(header)
+    locals.push(localHeader(header), fileName, data)
+    central.push(centralEntry(header, extra), fileName, extra)
+    offset += 30 + fileName.length + data.length
+  }
+  const directory = Buffer.concat(central)
+  const count = Object.keys(members).length
+  const records = endRecords(count, directory, offset, { prefix, zip64 })
+  return Buffer.concat([...locals, directory, ...records])
 }
 
 test('loads only feature films with 100 votes', async () => {

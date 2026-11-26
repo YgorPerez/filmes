@@ -81,7 +81,9 @@ describe('the Clima', () => {
       ),
     ).toBe(false)
   })
+})
 
+describe('the Clima', () => {
   test("the Clima line's strength follows the review ruler", async () => {
     const out = await ask(useFixture(), ['leve'])
 
@@ -128,7 +130,9 @@ describe('the Clima', () => {
       ],
     ])
   })
+})
 
+describe('the Clima', () => {
   test('the genome relevance has two places cut, never past the threshold', async () => {
     // 0.799 reads "0,79", not "0,80".
     const out = await ask(useFixture(), ['tenso'])
@@ -170,7 +174,9 @@ describe('the Clima', () => {
       'metadata',
     ])
   })
+})
 
+describe('the Clima', () => {
   test('each Clima gives one line only, the strongest', async () => {
     // Dia de Feira has "feel-good" (14), "funny" (12) and is a comedy,
     // which is in both Climas.
@@ -210,7 +216,9 @@ describe('the Clima', () => {
     expect(out.moods).toEqual(['ação', 'pra rir'])
     expect(withoutPosterWarning(out.warnings)).toEqual([])
   })
+})
 
+describe('the Clima', () => {
   test('a Tag Genome line brings its attribution', async () => {
     const fixture = useFixture()
     const withGenome = await ask(fixture, ['leve'])

@@ -138,7 +138,9 @@ describe('the local rating chain', () => {
       'classificação 6 (Medierådet 7 convertida)',
     )
   })
+})
 
+describe('the local rating chain', () => {
   test('a label that already has the system name does not repeat it', async () => {
     // FSK writes "FSK 6".
     expect(
@@ -214,7 +216,9 @@ describe("OMDb's Rated, for a film with no local rating", () => {
       titles(await all(fixture, 10, { ...OFFLINE, FILMES_HOJE: '2026-12-20' })),
     ).not.toContain('Vento Norte')
   })
+})
 
+describe("OMDb's Rated, for a film with no local rating", () => {
   test('the cache survives a rebuild', async () => {
     const fixture = useFixture()
     await all(fixture, 10, WITH_OMDB)

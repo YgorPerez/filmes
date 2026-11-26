@@ -188,7 +188,9 @@ describe('write', () => {
 
     expect(log(fixture.data)).toHaveLength(1)
   })
+})
 
+describe('write', () => {
   test('a use that fails leaves no commit, no file and no row', async () => {
     const { fixture, vars, log } = useScratchRepo()
     const person = join(fixture.data, 'people', 'bruno.md')
@@ -220,7 +222,9 @@ describe('write', () => {
     )
     expect(tables).toEqual([])
   })
+})
 
+describe('write', () => {
   test('what a write left outside a commit is set aside in the stash, not committed', async () => {
     const { fixture, vars, log } = useScratchRepo()
     writeFileSync(join(fixture.data, 'leftover.md'), 'half a write')
@@ -245,7 +249,9 @@ describe('write', () => {
       /filmes: changes left outside a commit/,
     )
   })
+})
 
+describe('write', () => {
   test('concurrent writes are serialized, one commit each', async () => {
     const { fixture, vars, log } = useScratchRepo()
     const events: string[] = []
@@ -288,7 +294,9 @@ describe('write', () => {
       )
     }
   })
+})
 
+describe('write', () => {
   test('outside a repository it writes without committing; with a remote set it refuses', async () => {
     const fixture = useFixture()
     const note = write({ author: BRUNO, message: 'note' }, () =>
@@ -377,7 +385,9 @@ describe('the pessoa actions', () => {
     ])
     expect(gitIn(fixture.data, 'status', '--porcelain')).toBe('')
   })
+})
 
+describe('the pessoa actions', () => {
   test('a new Dono with her e-mail is one commit by the Dono who created her', async () => {
     const { fixture, vars, log } = useScratchRepo()
 
@@ -447,7 +457,9 @@ describe('push', () => {
       'Bruno <bruno@example.org>|Bruno <bruno@example.org>|queued',
     )
   })
+})
 
+describe('push', () => {
   test('commits left unpushed by a previous engine are still queued', async () => {
     const { fixture, vars, log, remote } = useScratchRepo()
     const away = `${remote}-away`
@@ -491,7 +503,9 @@ describe('push', () => {
     )
     expect(log(remote)[0]).toMatch(/\|first$/)
   })
+})
 
+describe('push', () => {
   test('without FILMES_DATA_REMOTE nothing is pushed', async () => {
     const { fixture, log, remote } = useScratchRepo()
 
@@ -508,7 +522,9 @@ describe('push', () => {
     expect(log(fixture.data)[0]).toMatch(/\|local$/)
     expect(log(remote)).toHaveLength(1)
   })
+})
 
+describe('push', () => {
   test('pushes over ssh with the deploy key, and never shows its path', async () => {
     const { fixture, log, remote } = useScratchRepo()
     const bin = join(fixture.root, 'bin')

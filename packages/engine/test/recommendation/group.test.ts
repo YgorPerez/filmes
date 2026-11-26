@@ -67,7 +67,9 @@ describe('several Presentes', () => {
     expect(f.utility['iara']).toBeNull()
     expect(f.evidence['iara']).toEqual([{ person: 'iara', ...WITHOUT_FACT }])
   })
+})
 
+describe('several Presentes', () => {
   test('someone with no Nota counts as neutral and does not change the order', async () => {
     const fixture = useFixture()
     const alone = await ask(fixture, { attendees: ['dono'], count: 50 })
@@ -150,7 +152,9 @@ describe('the Regra de escolha', () => {
       ),
     ).toBe(true)
   })
+})
 
+describe('the Regra de escolha', () => {
   test('the average rule puts first the film with the higher mean', async () => {
     const out = await ask(useFixture(), {
       attendees: ['dono', 'iara'],
@@ -199,7 +203,9 @@ describe('the Regra de escolha', () => {
       ),
     ).toBe(true)
   })
+})
 
+describe('the Regra de escolha', () => {
   test.each([
     {
       name: 'the rule of someone not among the Presentes',

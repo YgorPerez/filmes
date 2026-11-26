@@ -102,7 +102,9 @@ describe('numbers', () => {
     atLeast10k(rows)
     expect(misses(rows, ({ x, n }) => pyFixed(float(x.f), n))).toEqual([])
   })
+})
 
+describe('numbers', () => {
   test('pyFormatG formats as :g and :.ng', () => {
     const rows = golden<{ x: { f: string }; p: number | null; out: string }>(
       'py-format-g',
@@ -180,7 +182,9 @@ describe('text', () => {
     atLeast10k(rows)
     expect(misses(rows, ({ s }) => isalnum(s))).toEqual([])
   })
+})
 
+describe('text', () => {
   test('the Letterboxd and Pessoa slugs match on every code point', () => {
     const [table, ...rows] = golden<{
       assigned: Range[]

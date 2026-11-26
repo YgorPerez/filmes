@@ -162,7 +162,9 @@ describe('importLetterboxd', () => {
       'Letterboxd de Olga',
     ]) // the apostrophe goes
   })
+})
 
+describe('importLetterboxd', () => {
   test('the same ZIP twice, and a reload, keep the Fatos', async () => {
     const { fixture, ok } = useOlga()
     await addOlga(fixture)
@@ -203,7 +205,9 @@ describe('importLetterboxd', () => {
     expect(await facts()).toEqual(before)
     expect(existsSync(cache)).toBe(false)
   })
+})
 
+describe('importLetterboxd', () => {
   test("the report counts each path; the Dono's decisions resolve and discard", async () => {
     const { fixture, ok } = useOlga()
     await addOlga(fixture)
@@ -254,7 +258,9 @@ describe('importLetterboxd', () => {
     expect((await queue(fixture)).items).toEqual([])
     expect(await ratings(fixture)).toContainEqual(rating)
   })
+})
 
+describe('importLetterboxd', () => {
   test('reviews and tags stay with the Pessoa after a Declarado', async () => {
     const { fixture, ok } = useOlga()
     await addOlga(fixture)
@@ -303,7 +309,9 @@ describe('importLetterboxd', () => {
       ),
     ).toEqual([])
   })
+})
 
+describe('importLetterboxd', () => {
   test('the queue tells apart names with the same slug', async () => {
     const fixture = useFixture()
     const zip = zipOf([
@@ -332,7 +340,9 @@ describe('importLetterboxd', () => {
       'Letterboxd de Iara',
     ])
   })
+})
 
+describe('importLetterboxd', () => {
   test("TMDB's answers expire and are asked again", async () => {
     const { fixture, ok } = useOlga()
     await addOlga(fixture)
@@ -374,7 +384,9 @@ describe('importLetterboxd', () => {
     })
     expect(later.resolved.tmdb).toBe(2)
   })
+})
 
+describe('importLetterboxd', () => {
   test('a slug with a TMDB film id resolves even without P345', async () => {
     const { fixture, ok } = useOlga()
     await addOlga(fixture)
@@ -421,7 +433,9 @@ describe('importLetterboxd', () => {
     expect(existsSync(join(fixture.data, 'imports'))).toBe(false)
     expect((await ok(personView('olga'))).imports).toEqual([])
   })
+})
 
+describe('importLetterboxd', () => {
   test("TMDB's cache still resolves after an item with no answer", async () => {
     const { fixture, ok } = useOlga()
     await addOlga(fixture)
@@ -472,7 +486,9 @@ describe('importLetterboxd', () => {
     expect(ids.has('tt9009311')).toBe(true)
     expect(ids.has('tt9009301')).toBe(false)
   })
+})
 
+describe('importLetterboxd', () => {
   test('a short with no votes leaves the candidates when there is a feature', async () => {
     const { fixture, ok } = useOlga()
     await addOlga(fixture)

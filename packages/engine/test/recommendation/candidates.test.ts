@@ -80,7 +80,9 @@ describe('Candidates', () => {
       ),
     ).toBe(true)
   })
+})
 
+describe('Candidates', () => {
   test('the minimums come from the weights', async () => {
     const fixture = useFixture()
     const films = await fixture.ok(
@@ -166,7 +168,9 @@ describe('attendees', () => {
       },
     })
   })
+})
 
+describe('attendees', () => {
   test('"dono" with no Dono is unknown_person', async () => {
     const fixture = useFixture()
     await fixture.ok(change('UPDATE pessoas SET dono = 0'))
