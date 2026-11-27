@@ -77,6 +77,20 @@ export const Sent: Story = {
   args: { deck: AFTER, search: { ...LINK, feito: 'regerada' } },
 }
 
+/** Sent from a deck that went stale: another Presente's não had taken a
+ * film out before her sim on it arrived. */
+export const SentLate: Story = {
+  args: {
+    deck: { ...AFTER, stale: ['Quermesse'] },
+    search: { ...LINK, feito: 'regerada' },
+  },
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByText(VOTES.stale(['Quermesse'])),
+    ).toBeVisible()
+  },
+}
+
 export const AllVoted: Story = {
   args: {
     deck: {

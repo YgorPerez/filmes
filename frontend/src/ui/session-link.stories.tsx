@@ -14,7 +14,7 @@ import { PARTICIPATION } from './session-link.copy'
 
 const VOTE = {
   deck: '/participar/votar?sessao=s&chave=k&presente=iara',
-  revote: '/participar/votar?sessao=s&chave=k&presente=iara&mudar=1',
+  revote: '/participar/votar?sessao=s&chave=k&presente=iara&mudar=true',
 }
 const QUESTIONS = '/participar/perguntas?sessao=s&chave=k&presente=iara'
 
