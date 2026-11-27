@@ -14,7 +14,7 @@ import { filmHeader } from '../recommendation/header.ts'
 import { sessionDuration } from '../sessions/file.ts'
 import { imdbRatingLabel } from '../billboard/model.ts'
 
-export interface FilmCard {
+export interface PublicFilmCard {
   readonly id: string
   /** The Portuguese title, else the Catálogo's. */
   readonly title: string
@@ -39,7 +39,7 @@ export interface FilmCard {
 export const filmCards = (
   ids: ReadonlyArray<string>,
 ): Effect.Effect<
-  ReadonlyArray<FilmCard>,
+  ReadonlyArray<PublicFilmCard>,
   EngineError | SqliteError,
   Sqlite | Tmdb | Run
 > =>
@@ -47,7 +47,7 @@ export const filmCards = (
     const sqlite = yield* Sqlite
     return yield* sqlite.read((db) =>
       Effect.gen(function* () {
-        const cards: FilmCard[] = []
+        const cards: PublicFilmCard[] = []
         for (const id of ids) {
           const row = yield* catalogFilm(db, id)
           if (row === undefined) continue

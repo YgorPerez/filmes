@@ -13,7 +13,7 @@ import {
   shownFilms,
   yamlToJson,
   type Engine,
-  type FilmCard,
+  type PublicFilmCard,
   type VoteValue,
   type YamlMapping,
 } from '@filmes/engine'
@@ -42,7 +42,7 @@ export type LinkFilm = {
   id: string
   title: string
   new: boolean
-  card: FilmCard | null
+  card: PublicFilmCard | null
   mine: VoteValue | null
 }
 
@@ -144,7 +144,7 @@ export async function closedSessionLink(
 export async function cardsById(
   engine: Engine,
   ids: readonly string[],
-): Promise<ReadonlyMap<string, FilmCard>> {
+): Promise<ReadonlyMap<string, PublicFilmCard>> {
   const cards = await engine.run(filmCards(ids))
   return new Map(cards.exitCode === 0 ? cards.output.map((c) => [c.id, c]) : [])
 }

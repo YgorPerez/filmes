@@ -41,7 +41,7 @@ export {
   type SearchKind,
 } from './catalog/search.ts'
 export { searchKey } from './catalog/search-key.ts'
-export { filmCards, type FilmCard } from './catalog/cards.ts'
+export { filmCards, type PublicFilmCard } from './catalog/cards.ts'
 export {
   EXPORT_FORMATS,
   exportRatings,
