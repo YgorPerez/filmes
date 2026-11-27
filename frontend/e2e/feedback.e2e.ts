@@ -107,7 +107,7 @@ test('the Dono closes a Session and the next one shows the satisfaction', async 
   await page.goto(`/sessoes/${next}/contar`)
   await expect(satisfaction(page)).toContainText('Rosa')
   await expect(satisfaction(page)).toContainText(
-    /satisfação de Rosa nas últimas Sessões: 11%, e a mais alta do grupo, 100%; na de sex, 20 nov \(.+\), deu 2 de 10/,
+    /Rosa: satisfação de 11% nas últimas Sessões \(a mais alta do grupo, 100%\); na de sex, 20 nov, deu 2 de 10 a .+/,
   )
   await snap(page, info, 'feedback-satisfacao')
 })
