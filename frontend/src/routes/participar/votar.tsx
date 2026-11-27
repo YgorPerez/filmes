@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { pairwisePath } from '#/content/pairwise-address'
 import { readVoteDeck } from '#/content/session-link'
 import { voteSearch } from '#/content/session-votes-address'
 import { VoteScreen } from '#/ui/session-votes'
@@ -20,11 +21,23 @@ export const Route = createFileRoute('/participar/votar')({
 })
 
 function VoteRoute() {
+  const { participation, home } = Route.useRouteContext()
+  const search = Route.useSearch()
+  const questions =
+    participation?.selected && participation.questions > 0 && search.chave
+      ? pairwisePath(
+          participation.session,
+          search.chave,
+          participation.selected.person,
+        )
+      : null
   return (
     <VoteScreen
       deck={Route.useLoaderData()}
-      search={Route.useSearch()}
-      home={Route.useRouteContext().home}
+      search={search}
+      home={home}
+      owner={participation?.owner ?? null}
+      questions={questions}
     />
   )
 }

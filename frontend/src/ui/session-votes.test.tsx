@@ -8,20 +8,14 @@ import { FETCH_HEADER } from '#/content/fetch-answer'
 import { votePath, voteSearch } from '#/content/session-votes-address'
 import { VOTES } from './session-votes.copy'
 import { VoteCards, VoteScreen } from './session-votes'
+import { FILMS } from './session-link.fixture'
 
 afterEach(() => {
   cleanup()
   vi.unstubAllGlobals()
 })
 
-const DECK = {
-  version: 2,
-  films: [
-    { position: 1, id: 'tt9000101', title: 'O Farol de Areia' },
-    { position: 2, id: 'tt9000601', title: 'Pequenos Milagres' },
-    { position: 3, id: 'tt9000701', title: 'Noite de Estreia' },
-  ],
-}
+const DECK = { version: 2, films: FILMS, left: [] }
 
 const posted = () => {
   const form = document.querySelector('form')
@@ -47,7 +41,10 @@ it('shows one film at a time and posts every Voto with the version', async () =>
   await user.click(screen.getByRole('button', { name: VOTES.no }))
   await user.click(screen.getByRole('button', { name: VOTES.yes }))
 
-  expect(screen.getByText(VOTES.summary(2, 1))).toBeTruthy()
+  expect(
+    screen.getByRole('heading', { name: VOTES.summary(2, 1) }),
+  ).toBeTruthy()
+  expect(screen.getByText(VOTES.leaving(['Pequenos Milagres']))).toBeTruthy()
   expect(screen.getByRole('button', { name: VOTES.send })).toBeTruthy()
   expect(document.querySelector('form')?.getAttribute('action')).toBe(
     '/participar/votos?sessao=s',
@@ -130,7 +127,7 @@ it('keeps the votes on screen when the server could not record them', async () =
   )
 
   expect((await screen.findByRole('alert')).textContent).toBe(
-    VOTES.refusals.indisponivel,
+    VOTES.refusals.indisponivel(),
   )
   expect(screen.getByText(VOTES.summary(2, 1))).toBeTruthy()
   expect(posted()).toEqual(fields)
@@ -140,39 +137,142 @@ it('keeps the votes on screen when the server could not record them', async () =
   ).toBe(false)
 })
 
-it('the page posts the link’s search and says what the last post did', () => {
-  render(
-    <VoteScreen
-      deck={DECK}
-      search={{ ...LINK, feito: 'regerada' }}
-      home={HOME}
-    />,
-  )
+it('the deck posts the link’s search', () => {
+  render(<VoteScreen deck={DECK} search={LINK} home={HOME} />)
 
-  expect(screen.getByRole('status').textContent).toBe(VOTES.notices.regerada)
   expect(screen.queryByRole('alert')).toBeNull()
   expect(document.querySelector('form')?.getAttribute('action')).toBe(
     '/participar/votos?sessao=2026-11-20-iara&chave=k&presente=iara',
   )
 })
 
-it('with every film voted on, it offers to look again and the list', () => {
+it('with every film voted on, it shows the night’s list with her Votos', () => {
+  const films = [
+    { ...FILMS[0]!, mine: 'yes' as const },
+    { ...FILMS[1]!, mine: 'yes' as const, new: true },
+  ]
   render(
     <VoteScreen
-      deck={{ version: 2, films: [] }}
-      search={{ ...LINK, erro: 'regerar' }}
+      deck={{ version: 3, films, left: ['Sal e Ferrugem'] }}
+      search={LINK}
+      home={HOME}
+      questions="/participar/perguntas?x"
+    />,
+  )
+
+  expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
+    VOTES.voted,
+  )
+  expect(screen.queryByRole('form')).toBeNull()
+  expect(screen.getAllByText('você: sim')).toHaveLength(2)
+  expect(screen.getByText(/Sal e Ferrugem/u)).toBeTruthy()
+  expect(
+    screen.getByRole('link', { name: VOTES.questions }).getAttribute('href'),
+  ).toBe('/participar/perguntas?x')
+  expect(
+    screen.getByRole('link', { name: VOTES.revote }).getAttribute('href'),
+  ).toBe(
+    '/participar/votar?sessao=2026-11-20-iara&chave=k&presente=iara&mudar=1',
+  )
+})
+
+it('after sending, it says so and offers the films that came in', () => {
+  const films = [
+    { ...FILMS[0]!, mine: 'yes' as const },
+    { ...FILMS[1]!, mine: null, new: true },
+  ]
+  render(
+    <VoteScreen
+      deck={{ version: 3, films, left: [] }}
+      search={{ ...LINK, feito: 'regerada' }}
       home={HOME}
     />,
   )
 
-  expect(screen.getByRole('alert').textContent).toBe(VOTES.refusals.regerar)
-  expect(screen.getByText(VOTES.done)).toBeTruthy()
+  expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(VOTES.sent)
+  expect(screen.getByRole('status').textContent).toBe(VOTES.notices.regerada)
+  expect(screen.queryByRole('form')).toBeNull()
   expect(
-    screen.getByRole('link', { name: VOTES.refresh }).getAttribute('href'),
+    screen
+      .getByRole('link', { name: 'Votar no que chegou' })
+      .getAttribute('href'),
   ).toBe('/participar/votar?sessao=2026-11-20-iara&chave=k&presente=iara')
+})
+
+it('a failure she cannot fix names the Dono and leaves only the list', () => {
+  render(
+    <VoteScreen
+      deck={DECK}
+      search={{ ...LINK, erro: 'falha' }}
+      home={HOME}
+      owner="Bruno"
+    />,
+  )
+
+  expect(screen.getByRole('alert').textContent).toBe(
+    VOTES.refusals.falha('Bruno'),
+  )
+  expect(screen.queryByRole('form')).toBeNull()
   expect(
-    screen.getByRole('link', { name: VOTES.list }).getAttribute('href'),
-  ).toBe(HOME)
+    screen.getAllByRole('link').map((a) => a.getAttribute('href')),
+  ).toEqual([HOME])
+})
+
+it('her standing Votos go again with the new ones; mudar asks every film', async () => {
+  const user = userEvent.setup()
+  const voted = {
+    version: 3,
+    films: [{ ...FILMS[0]!, mine: 'yes' as const }, FILMS[1]!],
+    left: [],
+  }
+  const { unmount } = render(
+    <VoteCards deck={voted} action="/participar/votos" />,
+  )
+  expect(screen.getByText(VOTES.of(1, 1))).toBeTruthy()
+  await user.click(screen.getByRole('button', { name: VOTES.no }))
+  expect(posted()).toEqual([
+    ['versao', '3'],
+    ['sim', 'tt9000101'],
+    ['nao', 'tt9000601'],
+  ])
+  unmount()
+
+  render(<VoteCards deck={voted} revote action="/participar/votos" />)
+  expect(screen.getByText(VOTES.of(1, 2))).toBeTruthy()
+  expect(posted()).toEqual([['versao', '3']])
+})
+
+it('the arrow keys vote, the next title takes the focus and is announced; the recap flips a Voto', async () => {
+  const user = userEvent.setup()
+  render(<VoteCards deck={DECK} action="/participar/votos" />)
+
+  await user.keyboard('{ArrowRight}')
+  const title = screen.getByRole('heading', { name: 'Pequenos Milagres' })
+  expect(document.activeElement).toBe(title)
+  expect(screen.getByRole('status').textContent).toBe(
+    VOTES.now(2, 3, 'Pequenos Milagres'),
+  )
+  await user.keyboard('{ArrowLeft}')
+  await user.click(screen.getByRole('button', { name: VOTES.back }))
+  expect(screen.getByRole('status').textContent).toBe(
+    VOTES.wentBack('Pequenos Milagres'),
+  )
+  await user.keyboard('{ArrowLeft}{ArrowRight}')
+
+  await user.click(
+    screen.getByRole('button', {
+      name: VOTES.flip('Pequenos Milagres', 'no'),
+    }),
+  )
+  expect(posted()).toEqual([
+    ['versao', '2'],
+    ['sim', 'tt9000101'],
+    ['sim', 'tt9000601'],
+    ['sim', 'tt9000701'],
+  ])
+  expect(
+    screen.getByRole('heading', { name: VOTES.summary(3, 0) }),
+  ).toBeTruthy()
 })
 
 it('without a link there is no deck and no list', () => {
@@ -183,12 +283,12 @@ it('without a link there is no deck and no list', () => {
 })
 
 it('the page’s search keeps only the notices and refusals it knows', () => {
-  expect(voteSearch({ feito: 'votado', erro: 'indisponivel' })).toEqual({
-    feito: 'votado',
-    erro: 'indisponivel',
-  })
-  expect(voteSearch({ feito: 'x', erro: 3 })).toEqual({
+  expect(
+    voteSearch({ feito: 'votado', erro: 'indisponivel', mudar: 1 }),
+  ).toEqual({ feito: 'votado', erro: 'indisponivel', mudar: true })
+  expect(voteSearch({ feito: 'x', erro: 3, mudar: 'sim' })).toEqual({
     feito: undefined,
     erro: undefined,
+    mudar: undefined,
   })
 })
