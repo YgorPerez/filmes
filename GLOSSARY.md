@@ -35,8 +35,8 @@ _Evitar_: grupo, turma
 A recusa permanente de uma Pessoa a um tipo de filme, como "Leo nunca vê terror". Vale em toda Sessão em que ela está entre os Presentes e tira o filme antes de qualquer ordenação. O alvo é um filme, uma entidade (gênero, diretor, ator) ou um grupo de tags com nome, como "comédia boba".
 _Evitar_: filtro, bloqueio
 
-**Ajuste** [adjustment, `Adjustment`; elo [link: `director`, `writer`, `cast`, `series`, `genre`]; nível [level: `none`, `low`, `normal`, `high`]]:
-Quanto um elo entre filmes (diretor, roteiro, elenco, série, gênero) pesa para uma Pessoa: nada, pouco, normal ou muito. "Pro Lopo ator não importa" é o Ajuste de elenco dele em nada. Vale para o que o motor deduz das Notas dela; o que a Pessoa disse sobre um ator ou diretor nomeado continua valendo.
+**Ajuste** [adjustment, `Adjustment`; elo [link: `director`, `writer`, `cast`, `series`, `genre`, `cinematography`, `producer`]; nível [level: `none`, `low`, `normal`, `high`]]:
+Quanto um Elo entre filmes (diretor, roteiro, elenco, série, gênero, fotografia, produtor) pesa para uma Pessoa: nada, pouco, normal ou muito. "Pro Lopo ator não importa" é o Ajuste de elenco dele em nada. Vale para o que o motor deduz das Notas dela; o que a Pessoa disse sobre um ator ou diretor nomeado continua valendo.
 _Evitar_: peso da Pessoa, importância, preferência
 
 **Pergunta aberta** [open question, `OpenQuestion`]:
@@ -218,6 +218,10 @@ _Evitar_: categoria
 
 **Metadado** [metadata, `metadata`]:
 Um Fato sobre o filme em si, vindo de uma base pública: elenco, diretor, gênero, duração, classificação.
+
+**Elo** [link, `Link`: `director`, `writer`, `cast`, `series`, `genre`, `cinematography`, `producer`]:
+A mesma entidade em dois filmes, pela qual o caminho de conteúdo leva uma Nota de um ao outro: diretor, roteiro, elenco, série, gênero, fotografia (o diretor de fotografia, P344 do Wikidata) e produtor (P162). No banco, cada um é o predicado de `arestas` em português (`diretor`, `fotografia`, `produtor`...). Cada Elo tem um peso em `[path.weight]` e um teto de Força na régua. Música, estúdio e país estão no Catálogo, mas não são Elos (#283).
+_Evitar_: aresta (é a linha do banco), relação
 
 **Prêmio ou indicação** [award or nomination, `awards`]:
 Uma distinção do Wikidata da lista de `config/awards.toml`. Cada distinção aparece como linha do filme no Cartaz. A Regra soma o bônus uma vez por filme, e a distinção não conta como Fato da Recomendação.

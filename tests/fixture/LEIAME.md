@@ -349,3 +349,12 @@ Filmes `tt90126NN`, de Nina Vale (`Q9012601`), para o teste de ordem das semente
 | Bis (9012603, 2019) | nenhuma | Candidato: as duas Reprise saem em ordem de ano na linha do diretor e nas sementes |
 
 Perguntas par a par (#181, `entropia_movielens.csv`): sete filmes com a entropia das notas do MovieLens, na ordem de entropia × ln(avaliações): Jardim Suspenso (301, adulto, nunca é perguntado), Ponte Aérea (201, que o Quim já viu), O Farol de Areia (101), A Última Estação (702), Sal e Ferrugem (105), Pequenos Milagres (601, o mais popular, mas sem discordância) e O Último Bonde (202). Os outros filmes vêm depois, pelos votos do IMDb.
+
+### Fotografia e produtor (#284)
+
+Filmes `tt90284NN`, com entidades `Q90284NN`, para o caminho de conteúdo por fotografia e por produtor (decisão do Dono no #283: teto fraca, peso 0,5). Cada um liga a Ensaio Geral (`tt9005501`, 5 da Rosa) por um predicado só. Têm 900 votos, abaixo do mínimo de `[catalog]`: só são Candidatos no teste que baixa o `min_votes`, e por isso não mudam as saídas gravadas.
+
+| Filme | Predicado e entidade | Liga a |
+|---|---|---|
+| Luz Rasante (9028401) | fotografia, Íris Penha (Q9028401) | Ensaio Geral (5501) |
+| Bilheteria (9028402) | produtor, Nestor Gil (Q9028402) | Ensaio Geral (5501) |

@@ -101,7 +101,7 @@ const INVALID_FILES: ReadonlyArray<[string, string, string]> = [
   [
     'an Ajuste with an unknown link',
     "---\nname: Ana\nadjustments:\n- {link: elenco, level: none, date: '2026-01-01'}\n---\n",
-    "elo do Ajuste inválido: 'elenco' (use director, writer, cast, series, genre)",
+    "elo do Ajuste inválido: 'elenco' (use director, writer, cast, series, genre, cinematography, producer)",
   ],
   [
     'an Ajuste at normal',
@@ -884,8 +884,11 @@ describe('the sections of a Pessoa', () => {
 })
 
 describe('closed lists', () => {
-  test('are Python’s, in English', () => {
-    expect(LINKS).toEqual(Object.values(names.LINKS))
+  test('are Python’s, in English, then the ones born after it', () => {
+    expect(LINKS).toEqual([
+      ...Object.values(names.LINKS),
+      ...Object.values(names.LATER_LINKS),
+    ])
     expect(LEVELS).toEqual(Object.values(names.LEVELS))
     expect(STATEMENT_REACTIONS).toEqual(
       Object.values(names.STATEMENT_REACTIONS),

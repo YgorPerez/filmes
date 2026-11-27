@@ -231,13 +231,18 @@ export const castStrength = (
 ): Strength => (principal === false ? 'weak' : strength)
 
 /** The strongest each content link can be (the Dono's decision of
- * 2026-11-22): the same director or series says more than the same actor. */
+ * 2026-11-22): the same director or series says more than the same actor.
+ * The cinematographer and the producer are weak at most (the Dono's
+ * decision of 2026-11-27, #283): above weak, `evaluate` found their hits
+ * below the base rate. */
 export const LINK_CEILING: Readonly<Record<string, Strength>> = {
   director: 'strong',
   series: 'strong',
   writer: 'moderate',
   cast: 'moderate',
   genre: 'weak',
+  cinematography: 'weak',
+  producer: 'weak',
 }
 
 /** The weaker of the given strength (the seed's or the node's) and the

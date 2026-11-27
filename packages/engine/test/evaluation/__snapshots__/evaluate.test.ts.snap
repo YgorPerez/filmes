@@ -63,8 +63,10 @@ exports[`avaliar, as recorded > gives the recorded result and report 1`] = `
       "path": {
         "weight": {
           "cast": 0.5,
+          "cinematography": 0.5,
           "director": 1,
           "genre": 0.3,
+          "producer": 0.5,
           "series": 1,
           "writer": 0.8,
         },
@@ -135,14 +137,14 @@ exports[`avaliar, as recorded > gives the recorded result and report 1`] = `
     },
     {
       "adultos.csv": "cd83a7697b1ed11b0bffed5a6d0571eb4e6fd5f7be9d6309f6007cc4a83f5fe4",
-      "arestas.csv": "dd2ef822894f8bbe8348381cea0338eef5faf060774c722f61695fa9a0815c98",
+      "arestas.csv": "991e4e4dae7196c1e185c7af8257004669b6a48346bd3203e54990201a1cd77b",
       "atores_imdb.csv": "9cd70976800f6e8fb605c5630a0465614807c43afe88cb1569298b063d9f0e32",
       "classificacoes.csv": "c3a70b77d1c21b31571296783da337367fb2a67cad3c945ab6310f7671b451aa",
       "elenco_principal_imdb.csv": "559f381e49c30635a34a1469db33ef7c5de47619fd211b204e027736ead40262",
-      "entidades.csv": "5a2e92d5a59ff472f7c6ae75756570d3f1ff9f77f57a397966e36af849e7be50",
+      "entidades.csv": "3eca58bb68816c361b8f022ab9229325bd465e05cc78adb05726d20a9b05a4c8",
       "entropia_movielens.csv": "54e8912b088438c2f77c5ba7671c3cf29c2e528ccafbdec5f8e9423b6f2e498e",
       "estreias.csv": "880d7cedc13ca6b4219cb65ec8bd5fa81f08aee038295689d0ec2b269baf48a3",
-      "filmes.csv": "2b0d4ad04f1007999cf77b33796c695d2e0223ca171ac74248496faf908a986a",
+      "filmes.csv": "610119952a8475a01c0836a83430743c07a2df5213be7dae653080149b6315f1",
       "fonte_gosto_movielens.csv": "bd0e4d5aac3969eb131926c4a3fe9dc12b220d13543832caee9c72717cac4a9a",
       "generos_imdb.csv": "ca9cb82915808484dcd3881bd375601d7daeb8d4e28c79cebf10e672ca5389e3",
       "genoma.csv": "bf9e335eaec86c9fbe2d5ca1d55cf4a75f1a865c83f48750d359f07ac4169ed1",
@@ -416,14 +418,14 @@ Quanto das Notas retidas foi 4 ou mais, pela Força mais alta a favor do filme n
     "priority": "offline",
     "versions": {
       "adultos.csv": "cd83a7697b1ed11b0bffed5a6d0571eb4e6fd5f7be9d6309f6007cc4a83f5fe4",
-      "arestas.csv": "dd2ef822894f8bbe8348381cea0338eef5faf060774c722f61695fa9a0815c98",
+      "arestas.csv": "991e4e4dae7196c1e185c7af8257004669b6a48346bd3203e54990201a1cd77b",
       "atores_imdb.csv": "9cd70976800f6e8fb605c5630a0465614807c43afe88cb1569298b063d9f0e32",
       "classificacoes.csv": "c3a70b77d1c21b31571296783da337367fb2a67cad3c945ab6310f7671b451aa",
       "elenco_principal_imdb.csv": "559f381e49c30635a34a1469db33ef7c5de47619fd211b204e027736ead40262",
-      "entidades.csv": "5a2e92d5a59ff472f7c6ae75756570d3f1ff9f77f57a397966e36af849e7be50",
+      "entidades.csv": "3eca58bb68816c361b8f022ab9229325bd465e05cc78adb05726d20a9b05a4c8",
       "entropia_movielens.csv": "54e8912b088438c2f77c5ba7671c3cf29c2e528ccafbdec5f8e9423b6f2e498e",
       "estreias.csv": "880d7cedc13ca6b4219cb65ec8bd5fa81f08aee038295689d0ec2b269baf48a3",
-      "filmes.csv": "2b0d4ad04f1007999cf77b33796c695d2e0223ca171ac74248496faf908a986a",
+      "filmes.csv": "610119952a8475a01c0836a83430743c07a2df5213be7dae653080149b6315f1",
       "fonte_gosto_movielens.csv": "bd0e4d5aac3969eb131926c4a3fe9dc12b220d13543832caee9c72717cac4a9a",
       "generos_imdb.csv": "ca9cb82915808484dcd3881bd375601d7daeb8d4e28c79cebf10e672ca5389e3",
       "genoma.csv": "bf9e335eaec86c9fbe2d5ca1d55cf4a75f1a865c83f48750d359f07ac4169ed1",
@@ -500,8 +502,10 @@ Quanto das Notas retidas foi 4 ou mais, pela Força mais alta a favor do filme n
       "path": {
         "weight": {
           "cast": 0.5,
+          "cinematography": 0.5,
           "director": 1,
           "genre": 0.3,
+          "producer": 0.5,
           "series": 1,
           "writer": 0.8,
         },
@@ -760,8 +764,10 @@ exports[`avaliar, as recorded > the grid gives the recorded best weights and rep
       "weights": {
         "path.weight": {
           "cast": 0.5,
+          "cinematography": 0.5,
           "director": 1,
           "genre": 0.3,
+          "producer": 0.5,
           "series": 1,
           "writer": 0.8,
         },
@@ -962,8 +968,10 @@ exports[`avaliar, as recorded > the grid gives the recorded best weights and rep
       "weights": {
         "path.weight": {
           "cast": 0.5,
+          "cinematography": 0.5,
           "director": 0.75,
           "genre": 0.3,
+          "producer": 0.5,
           "series": 1,
           "writer": 0.8,
         },
@@ -1164,8 +1172,10 @@ exports[`avaliar, as recorded > the grid gives the recorded best weights and rep
       "weights": {
         "path.weight": {
           "cast": 0.375,
+          "cinematography": 0.5,
           "director": 1,
           "genre": 0.3,
+          "producer": 0.5,
           "series": 1,
           "writer": 0.8,
         },
@@ -1241,7 +1251,7 @@ Quanto das Notas retidas foi 4 ou mais, pela Força mais alta a favor do filme n
 
 ## Grade de pesos
 
-Foram testados 303 conjuntos. A ordem usa a média do Recall@50 entre as amostras. No empate, vale a cobertura no top 5 e depois o menor número de mudanças nos pesos.
+Foram testados 411 conjuntos. A ordem usa a média do Recall@50 entre as amostras. No empate, vale a cobertura no top 5 e depois o menor número de mudanças nos pesos.
 
 \`\`\`yaml
 <bloco>
@@ -1438,8 +1448,10 @@ Foram testados 303 conjuntos. A ordem usa a média do Recall@50 entre as amostra
           "weights": {
             "path.weight": {
               "cast": 0.5,
+              "cinematography": 0.5,
               "director": 1,
               "genre": 0.3,
+              "producer": 0.5,
               "series": 1,
               "writer": 0.8,
             },
@@ -1640,8 +1652,10 @@ Foram testados 303 conjuntos. A ordem usa a média do Recall@50 entre as amostra
           "weights": {
             "path.weight": {
               "cast": 0.5,
+              "cinematography": 0.5,
               "director": 0.75,
               "genre": 0.3,
+              "producer": 0.5,
               "series": 1,
               "writer": 0.8,
             },
@@ -1842,8 +1856,10 @@ Foram testados 303 conjuntos. A ordem usa a média do Recall@50 entre as amostra
           "weights": {
             "path.weight": {
               "cast": 0.375,
+              "cinematography": 0.5,
               "director": 1,
               "genre": 0.3,
+              "producer": 0.5,
               "series": 1,
               "writer": 0.8,
             },
@@ -1862,10 +1878,15 @@ Foram testados 303 conjuntos. A ordem usa a média do Recall@50 entre as amostra
           },
         },
       ],
-      "combinations": 303,
+      "combinations": 411,
       "values": {
         "path.weight": {
           "cast": [
+            0.375,
+            0.5,
+            0.625,
+          ],
+          "cinematography": [
             0.375,
             0.5,
             0.625,
@@ -1879,6 +1900,11 @@ Foram testados 303 conjuntos. A ordem usa a média do Recall@50 entre as amostra
             0.225,
             0.3,
             0.375,
+          ],
+          "producer": [
+            0.375,
+            0.5,
+            0.625,
           ],
           "series": [
             0.75,
@@ -2124,14 +2150,14 @@ Foram testados 303 conjuntos. A ordem usa a média do Recall@50 entre as amostra
     "priority": "offline",
     "versions": {
       "adultos.csv": "cd83a7697b1ed11b0bffed5a6d0571eb4e6fd5f7be9d6309f6007cc4a83f5fe4",
-      "arestas.csv": "dd2ef822894f8bbe8348381cea0338eef5faf060774c722f61695fa9a0815c98",
+      "arestas.csv": "991e4e4dae7196c1e185c7af8257004669b6a48346bd3203e54990201a1cd77b",
       "atores_imdb.csv": "9cd70976800f6e8fb605c5630a0465614807c43afe88cb1569298b063d9f0e32",
       "classificacoes.csv": "c3a70b77d1c21b31571296783da337367fb2a67cad3c945ab6310f7671b451aa",
       "elenco_principal_imdb.csv": "559f381e49c30635a34a1469db33ef7c5de47619fd211b204e027736ead40262",
-      "entidades.csv": "5a2e92d5a59ff472f7c6ae75756570d3f1ff9f77f57a397966e36af849e7be50",
+      "entidades.csv": "3eca58bb68816c361b8f022ab9229325bd465e05cc78adb05726d20a9b05a4c8",
       "entropia_movielens.csv": "54e8912b088438c2f77c5ba7671c3cf29c2e528ccafbdec5f8e9423b6f2e498e",
       "estreias.csv": "880d7cedc13ca6b4219cb65ec8bd5fa81f08aee038295689d0ec2b269baf48a3",
-      "filmes.csv": "2b0d4ad04f1007999cf77b33796c695d2e0223ca171ac74248496faf908a986a",
+      "filmes.csv": "610119952a8475a01c0836a83430743c07a2df5213be7dae653080149b6315f1",
       "fonte_gosto_movielens.csv": "bd0e4d5aac3969eb131926c4a3fe9dc12b220d13543832caee9c72717cac4a9a",
       "generos_imdb.csv": "ca9cb82915808484dcd3881bd375601d7daeb8d4e28c79cebf10e672ca5389e3",
       "genoma.csv": "bf9e335eaec86c9fbe2d5ca1d55cf4a75f1a865c83f48750d359f07ac4169ed1",
@@ -2208,8 +2234,10 @@ Foram testados 303 conjuntos. A ordem usa a média do Recall@50 entre as amostra
       "path": {
         "weight": {
           "cast": 0.5,
+          "cinematography": 0.5,
           "director": 1,
           "genre": 0.3,
+          "producer": 0.5,
           "series": 1,
           "writer": 0.8,
         },

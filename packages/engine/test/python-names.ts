@@ -27,6 +27,13 @@ export const LINKS: Readonly<Record<string, string>> = {
   genero: 'genre',
 }
 
+/** The links born after Python left (#284), stored in Portuguese like the
+ * others: the database's predicate and Ajuste elo, then the English name. */
+export const LATER_LINKS: Readonly<Record<string, string>> = {
+  fotografia: 'cinematography',
+  produtor: 'producer',
+}
+
 /** An Adjustment level. */
 export const LEVELS: Readonly<Record<string, string>> = {
   nada: 'none',

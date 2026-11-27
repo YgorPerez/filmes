@@ -88,7 +88,7 @@ describe('read', () => {
       read((db) => db.run('DELETE FROM filmes'), { authorizer }),
     )
 
-    expect(selected).toEqual({ n: 91 })
+    expect(selected).toEqual({ n: 93 })
     expect(refused.exitCode).toBe(1)
     expect(denied).toContain(constants.SQLITE_DELETE)
   })

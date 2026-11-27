@@ -36,13 +36,18 @@ floor = 0.25
 
 [path.weight]
 # Peso de cada tipo de aresta de conteúdo no caminho de gosto. Um predicado fora
-# daqui não entra no caminho; o texto de cada um fica em sinais/conteudo.py.
-# Gênero só dá metadado, no máximo fraco (régua).
+# daqui não entra no caminho; o texto de cada um fica em
+# packages/engine/src/recommendation/signals/content.ts.
+# Gênero só dá metadado, no máximo fraco (régua). Fotografia e produtor entraram
+# no #284, no máximo fracos (decisão do Dono no #283); música, estúdio e país
+# ficaram fora, porque o `evaluate` não mostrou ganho.
 director = 1.0
 writer = 0.8
 series = 1.0
 cast = 0.5
 genre = 0.3
+cinematography = 0.5
+producer = 0.5
 
 [utility]
 # Utilidade individual de 0 a 1: u = 1 / (1 + exp(-k * soma das contribuições)).

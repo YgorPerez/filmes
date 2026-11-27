@@ -5,7 +5,14 @@ import {
 } from '#/content/person-action'
 import { PEOPLE } from './people.copy'
 
-type Link = 'director' | 'writer' | 'cast' | 'series' | 'genre'
+type Link =
+  | 'director'
+  | 'writer'
+  | 'cast'
+  | 'series'
+  | 'genre'
+  | 'cinematography'
+  | 'producer'
 type Level = 'none' | 'low' | 'normal' | 'high'
 type Reaction = 'love' | 'like' | 'dislike' | 'hate'
 type Strength = 'strong' | 'moderate' | 'weak' | 'guess'
@@ -310,6 +317,8 @@ export const PERSON = {
     cast: 'elenco',
     series: 'série',
     genre: 'gênero',
+    cinematography: 'fotografia',
+    producer: 'produtor',
   } satisfies Record<Link, string>,
   levels: {
     none: 'nada',

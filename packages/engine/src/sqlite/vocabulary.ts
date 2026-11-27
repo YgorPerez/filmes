@@ -24,6 +24,10 @@ export const LINK_PREDICATE: Readonly<Record<Link, string>> = {
   series: 'serie',
   cast: 'elenco',
   genre: 'genero',
+  // Born after Python left (#284): the predicates the catalog step already
+  // stored from Wikidata's P344 and P162.
+  cinematography: 'fotografia',
+  producer: 'produtor',
 }
 
 /** `nivel` of `ajustes`. */

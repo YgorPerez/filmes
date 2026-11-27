@@ -119,7 +119,7 @@ describe('the database spellings', () => {
   test('are the Portuguese values Python stored', () => {
     const flip = (table: Record<string, string>) =>
       Object.fromEntries(Object.entries(table).map(([pt, en]) => [en, pt]))
-    expect(DB_LINKS).toEqual(flip(names.LINKS))
+    expect(DB_LINKS).toEqual(flip({ ...names.LINKS, ...names.LATER_LINKS }))
     const { normal: _, ...levels } = flip(names.LEVELS)
     expect(DB_LEVELS).toEqual(levels)
     expect(DB_REACTIONS).toEqual(flip(names.STATEMENT_REACTIONS))

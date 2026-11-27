@@ -28,7 +28,7 @@ export const Weights = Schema.Struct({
   }),
   path: Schema.Struct({
     /** By content predicate (`director`, `writer`, `series`, `cast`,
-     * `genre`), in file order. A predicate outside it is not a path. */
+     * `genre`, `cinematography`, `producer`), in file order. A predicate outside it is not a path. */
     weight: Schema.Record(Schema.String, Weight),
   }),
   /** The cut points of the Nota ruler (#172): a Nota at or above a cut's
