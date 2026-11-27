@@ -47,7 +47,7 @@ describe('personImports', () => {
         queue: [],
         discardedItems: [],
       },
-      trakt: { ratings: 0, seen: 0 },
+      trakt: { ratings: 0, seen: 0, watchlist: 0 },
     })
   })
 })
