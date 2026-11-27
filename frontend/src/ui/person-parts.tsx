@@ -368,8 +368,9 @@ export function RemoveForm({
       ) : (
         <Submit
           ref={confirm}
-          // The decisive step, marked as a chosen option: no new colour.
-          variant={live ? 'chosen' : 'option'}
+          // The decisive step, in the commit look: no new colour, and not
+          // the look of a marked option (#347).
+          variant={live ? 'commit' : 'option'}
           className=""
           aria-label={
             live ? PERSON.removeSure(label) : PERSON.removeLabel(label)
@@ -552,7 +553,7 @@ export function RatingField({
             defaultChecked={defaultValue === ''}
             className={radio}
           />
-          <span className="rounded-pill px-sm py-0.5 group-has-checked/rating:bg-ink group-has-checked/rating:text-surface">
+          <span className="rounded-pill px-sm py-0.5 group-has-checked/rating:bg-sticker-orange group-has-checked/rating:text-on-sticker">
             {PERSON.noRating}
           </span>
         </label>

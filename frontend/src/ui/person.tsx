@@ -1035,7 +1035,7 @@ function LongAnswer({
             options={REACTION_OPTIONS}
           />
         )}
-        <Submit variant="chosen">{PERSON.save}</Submit>
+        <Submit variant="commit">{PERSON.save}</Submit>
       </ActionForm>
     </Disclosure>
   )
@@ -1088,10 +1088,9 @@ function Vetoes({ slug, page }: Part) {
               scope="all"
               groups={page.tagGroups}
             />
-            {/* Below a rule, apart from the group pills: a marked pill
-                has the save's look (#273). */}
+            {/* Below a rule, apart from the group pills (#273). */}
             <div className="border-t border-rule pt-xl">
-              <Submit variant="chosen">{PERSON.save}</Submit>
+              <Submit variant="commit">{PERSON.save}</Submit>
             </div>
           </ActionForm>
         </Disclosure>
@@ -1408,7 +1407,7 @@ function AddStatement({
           options={REACTION_OPTIONS}
         />
         <TextField name="fonte" label={PERSON.source} hint={hint} />
-        <Submit variant="chosen">{PERSON.save}</Submit>
+        <Submit variant="commit">{PERSON.save}</Submit>
       </ActionForm>
     </Disclosure>
   )
@@ -1457,7 +1456,7 @@ function Seen({ slug, page }: Part) {
             <TargetField name="filme" label={PERSON.film} scope="films" />
             <RatingField name="nota" label={PERSON.rating} />
             <TextField name="fonte" label={PERSON.source} hint={hint} />
-            <Submit variant="chosen">{PERSON.save}</Submit>
+            <Submit variant="commit">{PERSON.save}</Submit>
           </ActionForm>
         </Disclosure>
       )}
@@ -1886,7 +1885,7 @@ function EditForm({
           {children}
         </div>
         <span className="flex flex-wrap items-center gap-lg">
-          <Submit variant="chosen">{PERSON.save}</Submit>
+          <Submit variant="commit">{PERSON.save}</Submit>
           {hydrated ? (
             <button type="button" onClick={editing.close} className={LINK}>
               {PERSON.edit.cancel}
