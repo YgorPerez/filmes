@@ -600,6 +600,13 @@ export {
   type TraktUnresolved,
 } from './imports/trakt.ts'
 export {
+  linkedTraktUser,
+  syncAttendeesTrakt,
+  syncTrakt,
+  type TraktSync,
+  type TraktSyncInput,
+} from './imports/trakt-sync.ts'
+export {
   importImdb,
   IMDB_KIND,
   imdbFactCounts,
