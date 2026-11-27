@@ -10,7 +10,7 @@ import { Icon } from './icon'
 // `shape="row"` is the same option for a text too long for a pill (a
 // Regra, a film): a 10px corner, and the text wraps. With `checked`, the
 // page holds the state (the Cartaz's Clima chips) and `onChange` gets each
-// tap.
+// tap. `label` names the control when its text repeats another option's.
 //
 // Marking never moves the row (#268): the marked pill has the same width as
 // the unmarked one. Unmarked, 22px each side inside the 1.5px outline;
@@ -66,8 +66,6 @@ export function Option({
   checked?: boolean
   onChange?: (checked: boolean) => void
   shape?: keyof typeof SHAPES
-  /** The control's name when the text alone repeats another option's:
-   * it starts with the text, as the screen says it. */
   label?: string
   children: ReactNode
 }) {

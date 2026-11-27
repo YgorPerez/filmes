@@ -47,15 +47,6 @@ describe('the Operações copy', () => {
     )
   })
 
-  it('names every weight of the content path the grid may change (#276)', () => {
-    const keys = pathWeights()
-    expect(keys).toContain('cinematography')
-    for (const key of keys)
-      expect(
-        COPY.change({ section: 'path.weight', key, from: 1, to: 0.5 }),
-      ).not.toContain('path.weight')
-  })
-
   it('says the change since the report before, up, down or none', () => {
     expect(COPY.delta(0.4, 0.4, '2026-11-13')).toBe('Igual à de 13 nov 2026.')
     expect(COPY.delta(0.39, 0.4, '2026-11-13')).toBe(
@@ -107,5 +98,16 @@ describe('the Operações copy, weights and rows', () => {
     )
     expect(OPERATIONS.consult.rows(1, 1)).toBe('1 linha.')
     expect(OPERATIONS.consult.rows(1200, 1200)).toBe('1.200 linhas.')
+  })
+})
+
+describe('the Operações copy, the weights’ names (#276)', () => {
+  it('names every weight of the content path the grid may change (#276)', () => {
+    const keys = pathWeights()
+    expect(keys).toContain('cinematography')
+    for (const key of keys)
+      expect(
+        COPY.change({ section: 'path.weight', key, from: 1, to: 0.5 }),
+      ).not.toContain('path.weight')
   })
 })

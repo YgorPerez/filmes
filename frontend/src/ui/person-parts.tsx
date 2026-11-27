@@ -9,6 +9,7 @@ import {
   useState,
   type ComponentProps,
   type ReactNode,
+  type RefObject,
 } from 'react'
 import {
   formProblem,
@@ -285,6 +286,28 @@ export function ActionForm({
   )
 }
 
+/** While `asking`, another form that posts before the one holding
+ * `inside` leaves the question behind: `drop` takes it away, so it never
+ * comes back over that form's answer (#273). */
+function useLeftBehind(
+  asking: boolean,
+  inside: RefObject<HTMLElement | null>,
+  drop: () => void,
+) {
+  const leftBehind = useEffectEvent(drop)
+  useEffect(() => {
+    if (!asking) return
+    let answered = false
+    const elsewhere = (event: Event) => {
+      if (!(event.target instanceof Node) || answered) return
+      answered = event.target.contains(inside.current)
+      if (!answered) leftBehind()
+    }
+    document.addEventListener('submit', elsewhere, true)
+    return () => document.removeEventListener('submit', elsewhere, true)
+  }, [asking, inside])
+}
+
 /** "Tirar": takes one item out of her file. With the JavaScript, it asks
  * first, in place (#330): beside "Editar", a slip of the thumb would lose
  * the item. Before it, the post goes at once. */
@@ -320,21 +343,7 @@ export function RemoveForm({
   }, [asking, asked])
   // Another form posted before this one: the question was left behind, so
   // it goes, and never comes back over that form's answer (#273).
-  const leftBehind = useEffectEvent(() => toggle(false))
-  useEffect(() => {
-    if (!asking) return
-    let answered = false
-    const elsewhere = (event: Event) => {
-      if (!(event.target instanceof Node) || answered) return
-      if (event.target.contains(confirm.current)) {
-        answered = true
-        return
-      }
-      leftBehind()
-    }
-    document.addEventListener('submit', elsewhere, true)
-    return () => document.removeEventListener('submit', elsewhere, true)
-  }, [asking])
+  useLeftBehind(asking, confirm, () => toggle(false))
   return (
     <ActionForm
       slug={slug}

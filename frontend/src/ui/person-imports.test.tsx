@@ -793,51 +793,6 @@ describe('what came in, site by site', () => {
     expect(section(COPY.files.title).textContent).toContain('perfil antigo')
   })
 
-  it('folds the films another site left out under its line (#274)', () => {
-    show({
-      ...EMPTY,
-      imports: [
-        {
-          kind: 'imdb',
-          file: 'imports/quim/imdb-a1.csv',
-          date: '2026-11-20',
-          original: 'ratings.csv',
-        },
-      ],
-      imdb: { ratings: 3 },
-      films: { ...FILMS, imdb: { rated: 3, seen: 0, watchlist: 0 } },
-      leftOut: {
-        ...EMPTY.leftOut,
-        imdb: [{ name: 'Cais, Episódio 1', year: null, id: 'tt9028501' }],
-      },
-    })
-    const results = section(COPY.results.title)
-    expect(results.textContent).toContain('IMDb: 3 Notas')
-    const fold = within(results).getByText(COPY.results.seeOutside(1))
-    expect(fold.closest('details')?.textContent).toContain(
-      `Cais, Episódio 1 · ${COPY.results.notInCatalog}`,
-    )
-  })
-
-  it('says what Tirar takes when the file is its site’s only one (#274)', () => {
-    show({
-      ...EMPTY,
-      imports: [
-        {
-          kind: 'imdb',
-          file: 'imports/quim/imdb-a1.csv',
-          date: '2026-11-20',
-          original: 'ratings.csv',
-        },
-      ],
-      imdb: { ratings: 3 },
-      films: { ...FILMS, imdb: { rated: 3, seen: 0, watchlist: 0 } },
-    })
-    expect(section(COPY.files.title).textContent).toContain(
-      'Saem 3 Notas: o que só este arquivo trazia.',
-    )
-  })
-
   it('shows nothing in for files that gave nothing', () => {
     show({
       ...EMPTY,
@@ -1004,5 +959,52 @@ describe('pass 4 of the critique (#274)', () => {
         'underline',
       )
     }
+  })
+})
+
+describe('PersonImportsScreen, what each site left out and what Tirar takes (#274)', () => {
+  it('folds the films another site left out under its line (#274)', () => {
+    show({
+      ...EMPTY,
+      imports: [
+        {
+          kind: 'imdb',
+          file: 'imports/quim/imdb-a1.csv',
+          date: '2026-11-20',
+          original: 'ratings.csv',
+        },
+      ],
+      imdb: { ratings: 3 },
+      films: { ...FILMS, imdb: { rated: 3, seen: 0, watchlist: 0 } },
+      leftOut: {
+        ...EMPTY.leftOut,
+        imdb: [{ name: 'Cais, Episódio 1', year: null, id: 'tt9028501' }],
+      },
+    })
+    const results = section(COPY.results.title)
+    expect(results.textContent).toContain('IMDb: 3 Notas')
+    const fold = within(results).getByText(COPY.results.seeOutside(1))
+    expect(fold.closest('details')?.textContent).toContain(
+      `Cais, Episódio 1 · ${COPY.results.notInCatalog}`,
+    )
+  })
+
+  it('says what Tirar takes when the file is its site’s only one (#274)', () => {
+    show({
+      ...EMPTY,
+      imports: [
+        {
+          kind: 'imdb',
+          file: 'imports/quim/imdb-a1.csv',
+          date: '2026-11-20',
+          original: 'ratings.csv',
+        },
+      ],
+      imdb: { ratings: 3 },
+      films: { ...FILMS, imdb: { rated: 3, seen: 0, watchlist: 0 } },
+    })
+    expect(section(COPY.files.title).textContent).toContain(
+      'Saem 3 Notas: o que só este arquivo trazia.',
+    )
   })
 })

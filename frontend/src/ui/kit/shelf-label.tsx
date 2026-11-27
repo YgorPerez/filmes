@@ -91,17 +91,31 @@ export function ShelfLabel({
           </span>
         )}
       </div>
-      {note && (
-        <HandNote compact={compact} narrow={narrow}>
-          {note}
-        </HandNote>
-      )}
+      <Papers note={note} added={added} size={{ compact, narrow }} />
+    </div>
+  )
+}
+
+/** The Dono's words, then each acrescentar on a paper tilted the other
+ * way. */
+function Papers({
+  note,
+  added,
+  size,
+}: {
+  note?: string | null
+  added: readonly string[]
+  size: { compact: boolean; narrow: boolean }
+}) {
+  return (
+    <>
+      {note && <HandNote {...size}>{note}</HandNote>}
       {added.map((words) => (
-        <HandNote key={words} compact={compact} narrow={narrow} tilt="right">
+        <HandNote key={words} {...size} tilt="right">
           {`+ ${words}`}
         </HandNote>
       ))}
-    </div>
+    </>
   )
 }
 

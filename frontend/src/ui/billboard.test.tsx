@@ -433,40 +433,6 @@ describe('the Cartaz shows, section lines and no film', () => {
     expect(card(1).queryByRole('list', { name: 'Filme escolhido' })).toBeNull()
   })
 
-  it('the shared reason again in a card whose own lines all weigh against it', () => {
-    const [hours, salt] = MODEL.films
-    const shared = hours!.lines[0]!
-    const seen = {
-      people: [MODEL.attendees[0]!.slug],
-      strength: 'moderate' as const,
-      text: 'já viu',
-      source: null,
-      against: true,
-    }
-    render(
-      <Billboard
-        billboard={{
-          ...MODEL,
-          films: [
-            { ...hours!, lines: [shared], reactions: [] },
-            { ...salt!, lines: [shared, seen] },
-          ],
-          sections: [
-            {
-              kind: 'entity',
-              title: 'Porque gostam de Helena Prado',
-              again: true,
-              films: [hours!.id, salt!.id],
-            },
-          ],
-        }}
-      />,
-    )
-    expect(card(1).queryByText(shared.text)).toBeNull()
-    expect(card(2).getByText(shared.text)).toBeTruthy()
-    expect(card(2).getByText('já viu')).toBeTruthy()
-  })
-
   it('that nothing passed the Restrições', () => {
     render(<Billboard billboard={{ ...MODEL, films: [] }} />)
     expect(screen.getByText(BILLBOARD.empty)).toBeTruthy()
@@ -1010,18 +976,6 @@ describe('in the MCP Apps view without fullscreen', () => {
     expect(screen.queryByText(BILLBOARD.redoneWhy)).toBeNull()
   })
 
-  it('closed, says each Reação once, at the top (#277)', () => {
-    render(<Billboard billboard={CLOSED} onSend={onSend} />)
-    expect(
-      screen.getAllByRole('list', { name: 'Filme escolhido' }),
-    ).toHaveLength(1)
-    // The card keeps its label.
-    expect(
-      card(1).getByRole('heading', { level: 4, name: 'Filme escolhido' }),
-    ).toBeTruthy()
-    expect(card(1).queryByText('Iara: gostou')).toBeNull()
-  })
-
   it('with no film, says what to ask in the chat', () => {
     render(<Billboard billboard={{ ...MODEL, films: [] }} onSend={onSend} />)
     expect(
@@ -1317,4 +1271,52 @@ describe('the marks, Todos at any number of Presentes (#272)', () => {
       expect(buttons.every((b) => pressed(b))).toBe(true)
     },
   )
+})
+
+describe('the Cartaz, pass 5 of the critique (#272, #277)', () => {
+  it('the shared reason again in a card whose own lines all weigh against it', () => {
+    const [hours, salt] = MODEL.films
+    const shared = hours!.lines[0]!
+    const seen = {
+      people: [MODEL.attendees[0]!.slug],
+      strength: 'moderate' as const,
+      text: 'já viu',
+      source: null,
+      against: true,
+    }
+    render(
+      <Billboard
+        billboard={{
+          ...MODEL,
+          films: [
+            { ...hours!, lines: [shared], reactions: [] },
+            { ...salt!, lines: [shared, seen] },
+          ],
+          sections: [
+            {
+              kind: 'entity',
+              title: 'Porque gostam de Helena Prado',
+              again: true,
+              films: [hours!.id, salt!.id],
+            },
+          ],
+        }}
+      />,
+    )
+    expect(card(1).queryByText(shared.text)).toBeNull()
+    expect(card(2).getByText(shared.text)).toBeTruthy()
+    expect(card(2).getByText('já viu')).toBeTruthy()
+  })
+
+  it('closed, says each Reação once, at the top (#277)', () => {
+    render(<Billboard billboard={CLOSED} onSend={() => {}} />)
+    expect(
+      screen.getAllByRole('list', { name: 'Filme escolhido' }),
+    ).toHaveLength(1)
+    // The card keeps its label.
+    expect(
+      card(1).getByRole('heading', { level: 4, name: 'Filme escolhido' }),
+    ).toBeTruthy()
+    expect(card(1).queryByText('Iara: gostou')).toBeNull()
+  })
 })

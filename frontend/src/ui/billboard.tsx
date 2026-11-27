@@ -89,9 +89,6 @@ type Props = {
   unread?: { words: readonly string[]; onEdit: () => void }
   /** After the last film, on the web: "Contar como foi" (#272). */
   after?: ReactNode
-  /** The shelf label is above, outside the Cartaz: a told Session opens
-   * with it, over the tape given back (#272). */
-  labelAbove?: boolean
 }
 
 /** Another tab changed the storage. */
@@ -260,7 +257,6 @@ export function Billboard({
   onExpand,
   unread,
   after,
-  labelAbove = false,
 }: Props) {
   const { message, setMessage, marks, change, canKeep } = useReplyMarks(
     billboard,
@@ -313,10 +309,6 @@ export function Billboard({
       unread={unread}
     />
   )
-  // Closed, Claude's views open with each Reação of the chosen card
-  // (`Standing`): the card and the legend do not say them again (#277).
-  const head =
-    (fullscreen || onSend !== undefined) && reactionsInHead(billboard)
   const shelf = (
     <Shelf
       billboard={billboard}
@@ -324,7 +316,7 @@ export function Billboard({
       change={change}
       canKeep={canKeep}
       viewed={onSend !== undefined}
-      reactionsAbove={head}
+      reactionsAbove={headSaysReactions(billboard, layout, onSend)}
     />
   )
   const body = fullscreen ? (
@@ -336,12 +328,7 @@ export function Billboard({
       {onSend ? (
         <ViewTop billboard={billboard} shelf={shelf} />
       ) : (
-        <PageTop
-          billboard={billboard}
-          shelf={shelf}
-          after={after}
-          label={!labelAbove}
-        />
+        <PageTop billboard={billboard} shelf={shelf} after={after} />
       )}
       {bar}
     </div>
@@ -440,18 +427,18 @@ function PageTop({
   billboard,
   shelf,
   after,
-  label,
 }: {
   billboard: BillboardModel
   shelf: ReactNode
   after: ReactNode
-  label: boolean
 }) {
   return (
     <>
       <div className="flex flex-col gap-xs">
         <div className="flex items-start justify-between gap-md">
-          {label && <BillboardRequest billboard={billboard} />}
+          {/* Told, the label opens the page instead, over the tape given
+              back (#272). */}
+          {billboard.open && <BillboardRequest billboard={billboard} />}
           <Legend />
         </div>
         {billboard.open && <Dropped billboard={billboard} />}
@@ -512,6 +499,17 @@ function Shelf({
 }
 
 type Film = BillboardModel['films'][number]
+
+/** Closed, Claude's views (its fullscreen, or its view without one) open
+ * with each Reação of the chosen card (`Standing`): the card and the
+ * legend do not say them again (#277). */
+const headSaysReactions = (
+  billboard: BillboardModel,
+  layout: Props['layout'],
+  onSend: Props['onSend'],
+) =>
+  (layout === 'fullscreen' || onSend !== undefined) &&
+  reactionsInHead(billboard)
 
 /** Closed, with a card of the chosen film with Reações: `Standing` says
  * each one at the top of Claude's views, every Presente named. */

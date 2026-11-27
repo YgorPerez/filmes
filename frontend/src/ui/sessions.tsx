@@ -668,7 +668,6 @@ function SessionBillboard({
       }}
       sent={sent}
       unread={unread}
-      labelAbove={!open}
       after={
         open && (
           <p className="flex flex-wrap items-center gap-sm text-ink-2">

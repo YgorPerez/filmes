@@ -130,6 +130,20 @@ export function PeopleList({
   )
 }
 
+/** A refusal about the e-mail is said under it, which takes the focus
+ * (#273), as a Veto's target does: the refusal, and the form to focus in. */
+function useEmailRefusal(refused: PersonCreateRefusal | undefined) {
+  const email =
+    refused === 'email' || refused === 'email-usado' ? refused : undefined
+  const form = useRef<HTMLFormElement>(null)
+  useEffect(() => {
+    if (!email) return
+    const field = form.current?.elements.namedItem('email')
+    if (field instanceof HTMLElement) field.focus()
+  }, [email])
+  return { email, form }
+}
+
 /** "Acrescentar Pessoa": a plain POST, so it works before the JavaScript.
  * Open, with what was typed and why not, when the server refused it. With
  * the JavaScript (#235), it posts by `fetch`: a refusal shows in place,
@@ -142,16 +156,7 @@ function CreateForm({ state, admin }: { state?: CreateState; admin: boolean }) {
     refusalOn(isPersonCreateRefusal),
   )
   const { onSubmit, busy, failed } = useFetchForm(onAnswer)
-  // A refusal about the e-mail is said under it, which takes the focus
-  // (#273), as a Veto's target does.
-  const email =
-    refused === 'email' || refused === 'email-usado' ? refused : undefined
-  const form = useRef<HTMLFormElement>(null)
-  useEffect(() => {
-    if (!email) return
-    const field = form.current?.elements.namedItem('email')
-    if (field instanceof HTMLElement) field.focus()
-  }, [email])
+  const { email, form } = useEmailRefusal(refused)
   return (
     <Disclosure summary={create.title} open={state?.refusal !== undefined}>
       <form
