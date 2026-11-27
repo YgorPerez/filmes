@@ -2,6 +2,8 @@
 // she passed over, kept in the browser (one key per Dono) until Pronto
 // writes them. `sent` holds the films of the Pronto on its way: once the
 // screen hears they were written, they leave the draft; refused, they stay.
+// `history` is the order she rated or passed over the films still in the
+// draft, so "Voltar ao anterior" undoes the last one (#274).
 
 import { openStorage } from './billboard-marks'
 
@@ -16,9 +18,15 @@ export type Draft = {
   ratings: Record<string, DraftRating>
   skipped: string[]
   sent: string[]
+  history: string[]
 }
 
-const emptyDraft = (): Draft => ({ ratings: {}, skipped: [], sent: [] })
+const emptyDraft = (): Draft => ({
+  ratings: {},
+  skipped: [],
+  sent: [],
+  history: [],
+})
 
 const storageKey = (person: string) => `filmes-notas:${person}`
 
@@ -50,7 +58,12 @@ export function parseDraft(text: string | null): Draft {
         const rating = ratingFrom(entry)
         if (rating && /^tt\d+$/.test(id)) ratings[id] = rating
       }
-    return { ratings, skipped: ids(value.skipped), sent: ids(value.sent) }
+    return {
+      ratings,
+      skipped: ids(value.skipped),
+      sent: ids(value.sent),
+      history: ids(value.history),
+    }
   } catch {
     return emptyDraft()
   }
@@ -73,8 +86,15 @@ export function settle(draft: Draft, written: boolean): Draft {
   if (!written) return { ...draft, sent: [] }
   const ratings = { ...draft.ratings }
   for (const id of draft.sent) delete ratings[id]
-  return { ...draft, ratings, sent: [] }
+  const history = draft.history.filter((id) => !draft.sent.includes(id))
+  return { ...draft, ratings, sent: [], history }
 }
+
+/** The history with `film` last. */
+const last = (history: readonly string[], film: string) => [
+  ...history.filter((id) => id !== film),
+  film,
+]
 
 /** The draft with the film's Nota, given or changed. */
 export const withRating = (
@@ -87,19 +107,44 @@ export const withRating = (
     ...draft.ratings,
     [film.id]: { title: film.title, year: film.year, rating },
   },
+  history: last(draft.history, film.id),
 })
 
 /** The draft with the film passed over ("Não vi"). */
 export const withSkipped = (draft: Draft, film: string): Draft => ({
   ...draft,
   skipped: [...draft.skipped, film],
+  history: last(draft.history, film),
 })
 
 /** The draft without the film's Nota ("Tirar"). */
 export function withoutRating(draft: Draft, film: string): Draft {
   const ratings = { ...draft.ratings }
   delete ratings[film]
-  return { ...draft, ratings }
+  return {
+    ...draft,
+    ratings,
+    history: draft.history.filter((id) => id !== film),
+  }
+}
+
+/** The film of the last Nota or "Não vi" still in the draft, if any. */
+export const lastTaken = (draft: Draft): string | undefined =>
+  draft.history.at(-1)
+
+/** The draft without its last Nota or "Não vi" ("Voltar ao anterior"): the
+ * film comes back to the card. */
+export function undoLast(draft: Draft): Draft {
+  const film = lastTaken(draft)
+  if (film === undefined) return draft
+  const ratings = { ...draft.ratings }
+  delete ratings[film]
+  return {
+    ...draft,
+    ratings,
+    skipped: draft.skipped.filter((id) => id !== film),
+    history: draft.history.slice(0, -1),
+  }
 }
 
 /** The draft as Pronto leaves: its Notas on their way. */

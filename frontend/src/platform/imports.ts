@@ -42,7 +42,12 @@ import { importsPath, QUEUE_PATH } from '#/content/paths'
 import { appEngine } from './engine'
 import { appPoster, failureOf, formPoster, seeOther } from './form-post'
 import { ownerAuthor } from './people'
-import { rateAction, ratingQueuePage, ratingsFromEngine } from './ratings'
+import {
+  filmCardOf,
+  rateAction,
+  ratingQueuePage,
+  ratingsFromEngine,
+} from './ratings'
 
 /** Whoever is logged in, as the login reads her (`appPoster`). */
 type LoggedIn = ReturnType<typeof appPoster>['owner']
@@ -422,6 +427,10 @@ const appRatings = () => ratingsFromEngine(appEngine())
 /** The Fila de Notas for the app, of the logged-in Dono. */
 export const appRatingQueue = (owner: { person: string }) =>
   ratingQueuePage(owner, appRatings())
+
+/** One film's card for the rating screen, for the logged-in Dono. */
+export const appFilmCard = (film: string, owner: { person: string }) =>
+  filmCardOf(film, owner, appRatings())
 
 /** Pronto's route for the app: the logged-in Dono, the process's engine. */
 export const serveRate = (request: Request) => {

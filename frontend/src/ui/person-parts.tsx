@@ -450,7 +450,12 @@ function Id({ id }: { id: string }) {
 export type Pick = {
   pick?: (id: string) => string
   onPick?: (film: { id: string; label: string }) => void
+  /** The button's words, when it is not "Usar" (the rating screen's "Dar
+   * nota"). */
+  pickAs?: PickWords
 }
+
+export type PickWords = { text: string; label: (title: string) => string }
 
 /** "Usar": the link, or the button that takes the film in place. */
 export function PickFilm({
@@ -458,35 +463,41 @@ export function PickFilm({
   label,
   pick,
   onPick,
+  pickAs = { text: CATALOG_SEARCH.pick, label: CATALOG_SEARCH.pickLabel },
 }: Pick & { id: string; label: string }) {
-  const { pickLabel } = CATALOG_SEARCH
   if (onPick)
     return (
       <Button
         type="button"
         variant="option"
         className="self-start"
-        aria-label={pickLabel(label)}
+        aria-label={pickAs.label(label)}
         onClick={() => onPick({ id, label })}
       >
-        {CATALOG_SEARCH.pick}
+        {pickAs.text}
       </Button>
     )
   if (!pick) return null
   return (
-    <LinkButton href={pick(id)} label={pickLabel(label)}>
-      {CATALOG_SEARCH.pick}
+    <LinkButton href={pick(id)} label={pickAs.label(label)}>
+      {pickAs.text}
     </LinkButton>
   )
 }
 
-function FilmItem({ film, pick, onPick }: Pick & { film: FilmMatch }) {
+function FilmItem({ film, pick, onPick, pickAs }: Pick & { film: FilmMatch }) {
   const { votes } = CATALOG_SEARCH
   const title = filmText(film)
   return (
     <Item
       actions={
-        <PickFilm id={film.id} label={title} pick={pick} onPick={onPick} />
+        <PickFilm
+          id={film.id}
+          label={title}
+          pick={pick}
+          onPick={onPick}
+          pickAs={pickAs}
+        />
       }
     >
       <span className="flex flex-wrap items-center gap-sm">
@@ -530,6 +541,7 @@ function CatalogResults({
   answer,
   pick,
   onPick,
+  pickAs,
 }: Pick & { answer: SearchAnswer }) {
   const { groups, results, none, refusals } = CATALOG_SEARCH
   if ('refused' in answer) return <Alert>{refusals[answer.refused]}</Alert>
@@ -545,7 +557,13 @@ function CatalogResults({
       </p>
       <Group title={groups.films}>
         {films.map((f) => (
-          <FilmItem key={f.id} film={f} pick={pick} onPick={onPick} />
+          <FilmItem
+            key={f.id}
+            film={f}
+            pick={pick}
+            onPick={onPick}
+            pickAs={pickAs}
+          />
         ))}
       </Group>
       <Group title={groups.people}>{entities(people)}</Group>
@@ -564,12 +582,16 @@ export function CatalogSearch({
   answer,
   keep = {},
   pick,
-}: {
+  onPick,
+  pickAs,
+  lead,
+}: Pick & {
   action: string
   scope: CatalogScope
   answer: SearchAnswer | null
   keep?: Readonly<Record<string, string | undefined>>
-  pick?: (id: string) => string
+  /** What the search is for here, over the default. */
+  lead?: string
 }) {
   const { title, leadFilms, leadAll, label, hint, submit } = CATALOG_SEARCH
   const onSubmit = useGetForm()
@@ -577,7 +599,7 @@ export function CatalogSearch({
     <Section
       id="buscar-catalogo"
       title={title}
-      lead={scope === 'films' ? leadFilms : leadAll}
+      lead={lead ?? (scope === 'films' ? leadFilms : leadAll)}
     >
       <form
         method="get"
@@ -609,7 +631,14 @@ export function CatalogSearch({
         </label>
         <Submit className="">{submit}</Submit>
       </form>
-      {answer && <CatalogResults answer={answer} pick={pick} />}
+      {answer && (
+        <CatalogResults
+          answer={answer}
+          pick={pick}
+          onPick={onPick}
+          pickAs={pickAs}
+        />
+      )}
     </Section>
   )
 }

@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from 'vite-plus/test'
 import { useFixture } from '../../../packages/engine/test/fixture.ts'
 import { parseRatings } from '#/content/rating-form'
 import {
+  filmCardOf,
   rateAction,
   ratingQueuePage,
   ratingsFromEngine,
@@ -61,6 +62,26 @@ describe('the Fila de Notas page', () => {
       expect(log).toHaveBeenCalledWith(
         expect.stringMatching(/^engine: missing_database: /),
       )
+    } finally {
+      log.mockRestore()
+    }
+  })
+})
+
+describe('the film card', () => {
+  it("gives a film's directors and runtime, and null for one out of the Catálogo", async () => {
+    const fixture = useFixture()
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      const card = await withRatings(fixture.vars, (r) =>
+        filmCardOf('tt9000601', TEO, r),
+      )
+      const none = await withRatings(fixture.vars, (r) =>
+        filmCardOf('tt0000001', TEO, r),
+      )
+
+      expect(card).toMatchObject({ title: 'Pequenos Milagres', runtime: 96 })
+      expect(none).toBeNull()
     } finally {
       log.mockRestore()
     }

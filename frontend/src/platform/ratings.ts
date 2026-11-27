@@ -3,9 +3,11 @@
 // its Notas to her file in one commit (`personRate`). Server only.
 
 import {
+  filmCard,
   personRate,
   ratingQueue,
   type Engine,
+  type FilmCard,
   type ErrorOutput,
   type Outcome,
   type PersonRateResult,
@@ -33,6 +35,8 @@ export type Rater = {
 /** What the screen and Pronto need from the engine. */
 export interface Ratings {
   queue(person: string): Promise<Outcome<RatingQueue>>
+  /** What the card shows of one film, so she knows it (#274). */
+  card(film: string, person: string): Promise<Outcome<FilmCard>>
   /** Writes the Notas to the Dono `owner`, who signs the commit. */
   rate(
     ratings: readonly GivenRating[],
@@ -44,6 +48,7 @@ export function ratingsFromEngine(engine: Engine): Ratings {
   return {
     queue: (person) =>
       engine.run(ratingQueue({ person, limit: QUEUE_SIZE }), { owner: person }),
+    card: (film, person) => engine.run(filmCard({ film }), { owner: person }),
     rate: (ratings, owner) =>
       engine.run(
         personRate({
@@ -75,6 +80,21 @@ export async function ratingQueuePage(
     return null
   }
   return queue.output
+}
+
+/** The film card of the rating screen, or null when the film is not in the
+ * Catálogo or the engine cannot run (logged: the card does without it). */
+export async function filmCardOf(
+  film: string,
+  owner: Pick<Rater, 'person'>,
+  ratings: Ratings,
+): Promise<FilmCard | null> {
+  const card = await ratings.card(film, owner.person)
+  if (card.exitCode !== 0) {
+    logEngineError(card)
+    return null
+  }
+  return card.output
 }
 
 function refusalOf(outcome: { output: ErrorOutput }): RatingRefusal {
