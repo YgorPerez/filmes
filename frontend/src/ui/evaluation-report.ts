@@ -175,6 +175,13 @@ const LONG_HASH = /\b([0-9a-f]{12})[0-9a-f]{4,}\b/g
  * her slug. */
 const SATISFACTION = /^(Satisfação de )(\S+)(:.*)$/
 
+/** The grid's count, in the engine's word for a set of weights; the page
+ * calls each one a "combinação", as its checkbox and verdict do. */
+const GRID_COUNT = /\bForam testados (\d+) conjuntos\b/
+
+/** The section of the grid of weights. */
+const GRID_SECTION = 'Grade de pesos'
+
 /** The name of the Pessoa `slug`; the slug itself for anyone else. */
 const nameOf = (names: Readonly<Record<string, string>>, slug: string) =>
   Object.hasOwn(names, slug) ? names[slug]! : slug
@@ -232,13 +239,23 @@ function tidyBlock(
       return title === VERSIONS_SECTION
         ? { ...block, text: block.text.replace(LONG_HASH, '$1…') }
         : block
+    case 'paragraph':
+      return title === GRID_SECTION
+        ? {
+            ...block,
+            text: block.text.replace(
+              GRID_COUNT,
+              (_, count: string) => `Foram testadas ${count} combinações`,
+            ),
+          }
+        : block
     default:
       return block
   }
 }
 
 /** The report's sections as the page shows them (#276): each Pessoa by
- * her name, not her slug; a row with nothing measured in one line that
+ * her name, not her slug; the grid's sets of weights as "combinações"; a row with nothing measured in one line that
  * says why (for MovieLens without its dump, the missing dump, which then
  * leaves the warnings); the data versions' hashes shortened, with a line
  * that says the whole ones are in the file. A section left with nothing
