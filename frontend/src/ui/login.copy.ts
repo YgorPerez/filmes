@@ -5,9 +5,9 @@ export const LOGIN = {
   title: 'Entrar',
   /** The shelf label over the card: what the site is for, before the
    * visitor has to know anything else. */
-  tagline: ['Filme pra hoje', 'Pra todo mundo da sala'],
-  taglineLabel: 'Filme pra hoje, pra todo mundo da sala.',
-  lead: 'Entre com a conta Google que tem acesso ao filmes.',
+  tagline: ['Filme pra hoje', 'Pra sala toda'],
+  taglineLabel: 'Filme pra hoje, pra sala toda.',
+  lead: 'Entre com a sua conta Google.',
   /** Who gets in, before a failed trip to Google says it. */
   access:
     'Só entra quem já está em Pessoas como Dono. Peça a quem já usa para pôr o seu e-mail.',

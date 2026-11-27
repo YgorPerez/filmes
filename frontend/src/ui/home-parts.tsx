@@ -452,7 +452,7 @@ function Pending({ step, n, person, mcpUrl, ratings, first }: StepProps) {
         />
       ) : (
         <>
-          <details className="group flex flex-col gap-sm">
+          <details className="group">
             <summary
               className={buttonVariants({
                 variant: 'option',
@@ -463,7 +463,7 @@ function Pending({ step, n, person, mcpUrl, ratings, first }: StepProps) {
               <span className="group-open:hidden">{guide.howToConnect}</span>
               <span className="hidden group-open:inline">{guide.close}</span>
             </summary>
-            <div className="mt-sm flex flex-col gap-sm">
+            <div className="mt-md flex flex-col gap-sm">
               <StepContent
                 step={step}
                 person={person}
@@ -473,7 +473,8 @@ function Pending({ step, n, person, mcpUrl, ratings, first }: StepProps) {
               />
             </div>
           </details>
-          <div>
+          {/* Alone on its row, "Pular" lines up with the text above. */}
+          <div className="-ml-sm">
             <Skip step={step.step} />
           </div>
         </>
