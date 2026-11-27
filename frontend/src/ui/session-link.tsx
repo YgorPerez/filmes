@@ -294,12 +294,14 @@ export function LinkFilms({
 }) {
   const { films } = view
   const unvoted = films.filter((f) => f.mine === null).length
+  // Every film voted: the state in words and "Mudar votos" beside it, as
+  // the swipe's page says it (#275); nothing left to vote, so no rule.
   const action =
-    unvoted === films.length
-      ? { href: vote.deck, label: PARTICIPATION.vote }
-      : unvoted > 0
-        ? { href: vote.deck, label: PARTICIPATION.voteNew(unvoted) }
-        : { href: vote.revote, label: PARTICIPATION.revote }
+    unvoted === 0
+      ? null
+      : unvoted === films.length
+        ? { href: vote.deck, label: PARTICIPATION.vote }
+        : { href: vote.deck, label: PARTICIPATION.voteNew(unvoted) }
   return (
     <section
       aria-labelledby="filmes-da-sessao"
@@ -342,12 +344,18 @@ export function LinkFilms({
             </p>
           )}
           <div className="flex flex-col gap-sm">
-            <VoteRule />
+            {action ? (
+              <VoteRule />
+            ) : (
+              <p className="font-display text-row-title">{VOTES.voted}</p>
+            )}
             <div className="flex flex-wrap items-center gap-md">
-              <a href={action.href} className={buttonVariants()}>
-                {action.label}
-              </a>
-              {unvoted > 0 && unvoted < films.length && (
+              {action && (
+                <a href={action.href} className={buttonVariants()}>
+                  {action.label}
+                </a>
+              )}
+              {unvoted < films.length && (
                 <a
                   href={vote.revote}
                   className={buttonVariants({ variant: 'option' })}

@@ -133,7 +133,10 @@ it('with every film voted, offers to change the Votos; without questions, no inv
     />,
   )
   expect(screen.getAllByText(PARTICIPATION.mine('no'))).toHaveLength(3)
-  expect(link(PARTICIPATION.revote).getAttribute('href')).toBe('/votar?mudar=1')
+  // The state in words, not a button's label, and no rule (#275).
+  expect(screen.getByText(VOTES.voted)).toBeTruthy()
+  expect(screen.queryByText(VOTES.ruleText)).toBeNull()
+  expect(link(VOTES.revote).getAttribute('href')).toBe('/votar?mudar=1')
   expect(screen.queryByText(PARTICIPATION.questionsTitle)).toBeNull()
 })
 
