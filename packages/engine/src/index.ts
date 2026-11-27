@@ -56,6 +56,7 @@ export {
   TRAKT_ATTRIBUTION,
   type Attribution,
   type Credit,
+  type CreditSource,
 } from './recommendation/attributions.ts'
 export {
   catalogFilm,

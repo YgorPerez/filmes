@@ -5,11 +5,6 @@ import { createServerFn } from '@tanstack/react-start'
 export const readCredits = createServerFn({ method: 'GET' }).handler(
   async () => {
     const { CREDITS } = await import('@filmes/engine')
-    return CREDITS.map(({ source, url, use, notice }) => ({
-      source,
-      url,
-      use,
-      notice,
-    }))
+    return CREDITS.map(({ source, url, notice }) => ({ source, url, notice }))
   },
 )
