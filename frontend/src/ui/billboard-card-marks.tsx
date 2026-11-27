@@ -219,8 +219,9 @@ export function FilmMarksControls({
   const { marks: copy } = BILLBOARD
   const onChange = (next: FilmMarks) => change(settleSwap(next, unseen))
   const why = swapReasons(marks, unseen)
+  const seenBy = new Set(why.seen)
   const names = people
-    .filter((p) => why.seen.includes(p.slug))
+    .filter((p) => seenBy.has(p.slug))
     .map((p) => (p.owner ? null : p.name))
   const [opened, setOpened] = useState(false)
   const commenting = opened || marks.comment !== ''

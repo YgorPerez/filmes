@@ -388,7 +388,8 @@ export function BillboardCard({
   unseen?: boolean
   onChange?: (marks: FilmMarks) => void
 }) {
-  const seen = people.filter((p) => marks?.seen.includes(p.slug))
+  const seenBy = new Set(marks?.seen)
+  const seen = people.filter((p) => seenBy.has(p.slug))
   const stamp: Stamp | null = marks?.swap
     ? { kind: 'swap' }
     : seen.length > 0

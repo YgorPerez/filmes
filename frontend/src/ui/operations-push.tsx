@@ -36,40 +36,12 @@ function PushQueue({
   status: PushStatus
   retried: boolean
 }) {
-  const unreadable = status.failures === 0 && status.lastError !== null
   const failing = status.failures > 0
-  const fine = status.pending === 0 && !failing
   const listed = failing && status.queued.length > 0
-  const queue = fine
-    ? COPY.upToDate(status.lastPushedAt)
-    : listed
-      ? COPY.pendingList(status.pending, status.queued.length)
-      : COPY.pending(status.pending)
   return (
     <>
-      {failing && (
-        <Alert>
-          <strong className="font-semibold">{COPY.failing}</strong>
-          <Detail>
-            {COPY.failures(status.failures)}{' '}
-            {status.failingSince && COPY.since(status.failingSince)}
-          </Detail>
-        </Alert>
-      )}
-      {unreadable ? (
-        <Alert>{COPY.unavailable}</Alert>
-      ) : (
-        <p
-          role={retried ? 'status' : undefined}
-          className={
-            failing
-              ? 'font-semibold tabular-nums'
-              : 'text-meta text-ink-2 tabular-nums'
-          }
-        >
-          {queue}
-        </p>
-      )}
+      {failing && <Failing status={status} />}
+      <QueueLine status={status} retried={retried} />
       {listed && <Queued status={status} />}
       {failing && <p>{COPY.nextStep}</p>}
       {status.lastError && (
@@ -83,6 +55,51 @@ function PushQueue({
         <ActionPost action="enviar" primary={failing} />
       )}
     </>
+  )
+}
+
+/** The run of failures and when it began. */
+function Failing({ status }: { status: PushStatus }) {
+  return (
+    <Alert>
+      <strong className="font-semibold">{COPY.failing}</strong>
+      <Detail>
+        {COPY.failures(status.failures)}{' '}
+        {status.failingSince && COPY.since(status.failingSince)}
+      </Detail>
+    </Alert>
+  )
+}
+
+/** The queue in a line, or that it could not be read. */
+function QueueLine({
+  status,
+  retried,
+}: {
+  status: PushStatus
+  retried: boolean
+}) {
+  const failing = status.failures > 0
+  if (!failing && status.lastError !== null)
+    return <Alert>{COPY.unavailable}</Alert>
+  const fine = status.pending === 0 && !failing
+  const listed = failing && status.queued.length > 0
+  const queue = fine
+    ? COPY.upToDate(status.lastPushedAt)
+    : listed
+      ? COPY.pendingList(status.pending, status.queued.length)
+      : COPY.pending(status.pending)
+  return (
+    <p
+      role={retried ? 'status' : undefined}
+      className={
+        failing
+          ? 'font-semibold tabular-nums'
+          : 'text-meta text-ink-2 tabular-nums'
+      }
+    >
+      {queue}
+    </p>
   )
 }
 

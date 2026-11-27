@@ -510,12 +510,10 @@ function SyncStatus({
   )
 }
 
-/** What the imports gave, first on the page once there is any: Letterboxd
- * with its queue, then one line per other site that gave something; the
- * sources kept in sync say when they were read (#274). */
-function Results({ slug, page }: { slug: string; page: PersonImportsView }) {
+/** One line per other site that gave something. */
+function resultLines(page: PersonImportsView) {
   const { results } = COPY
-  const lines = [
+  return [
     (page.trakt.ratings > 0 || page.trakt.seen > 0) &&
       results.trakt(page.trakt.ratings, page.trakt.seen),
     page.imdb.ratings > 0 && results.imdb(page.imdb.ratings),
@@ -524,6 +522,45 @@ function Results({ slug, page }: { slug: string; page: PersonImportsView }) {
     (page.tvtime.ratings > 0 || page.tvtime.seen > 0) &&
       results.tvtime(page.tvtime.ratings, page.tvtime.seen),
   ].filter((line) => line !== false)
+}
+
+/** The Letterboxd profile kept in sync: when it was read and, on her own
+ * page, the way to read it now. */
+function RssSync({
+  slug,
+  own,
+  rss,
+}: {
+  slug: string
+  own: boolean
+  rss: NonNullable<ReturnType<typeof latest>>
+}) {
+  const { sync } = COPY.results
+  const user = rssUser(rss.original)
+  return (
+    <SyncStatus who={user ?? rss.original} how={sync.rss} date={rss.date}>
+      {own && (
+        <ImportForm slug={slug} action="rss" form="perfil" label={sync.rssNow}>
+          {(busy) => (
+            <>
+              <input type="hidden" name="usuario" value={user ?? ''} />
+              <Submit disabled={busy}>
+                {busy ? COPY.rss.busy : sync.rssNow}
+              </Submit>
+            </>
+          )}
+        </ImportForm>
+      )}
+    </SyncStatus>
+  )
+}
+
+/** What the imports gave, first on the page once there is any: Letterboxd
+ * with its queue, then one line per other site that gave something; the
+ * sources kept in sync say when they were read (#274). */
+function Results({ slug, page }: { slug: string; page: PersonImportsView }) {
+  const { results } = COPY
+  const lines = resultLines(page)
   const letterboxd = page.letterboxd.films > 0 || page.letterboxd.queued > 0
   if (!letterboxd && lines.length === 0) return null
   const rss = latest(page, 'letterboxd-rss')
@@ -533,35 +570,7 @@ function Results({ slug, page }: { slug: string; page: PersonImportsView }) {
       {letterboxd && (
         <LetterboxdResult report={page.letterboxd} from={resolvedFrom(page)} />
       )}
-      {rss && (
-        <SyncStatus
-          who={rssUser(rss.original) ?? rss.original}
-          how={results.sync.rss}
-          date={rss.date}
-        >
-          {page.own && (
-            <ImportForm
-              slug={slug}
-              action="rss"
-              form="perfil"
-              label={results.sync.rssNow}
-            >
-              {(busy) => (
-                <>
-                  <input
-                    type="hidden"
-                    name="usuario"
-                    value={rssUser(rss.original) ?? ''}
-                  />
-                  <Submit disabled={busy}>
-                    {busy ? COPY.rss.busy : results.sync.rssNow}
-                  </Submit>
-                </>
-              )}
-            </ImportForm>
-          )}
-        </SyncStatus>
-      )}
+      {rss && <RssSync slug={slug} own={page.own} rss={rss} />}
       {lines.length > 0 && (
         <ul
           className={`flex flex-col gap-xs ${letterboxd ? 'border-t border-dashed border-rule pt-lg' : ''}`}

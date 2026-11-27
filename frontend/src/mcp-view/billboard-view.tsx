@@ -16,7 +16,7 @@
 // `mountView` (`mount-view.tsx`) connects this view to the host.
 
 import type { Billboard as BillboardModel } from '@filmes/engine'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Billboard, type SendOutcome } from '../ui/billboard'
 import { SEND_STATUS } from '../ui/billboard-send.copy'
 import { BILLBOARD } from '../ui/billboard.copy'
@@ -97,12 +97,12 @@ function Cartaz({
 }) {
   const [sent, setSent] = useState(false)
   // A message of this version reached the chat: the next one replaces it.
-  const [told, setTold] = useState(false)
+  const told = useRef(false)
 
   const onSend = async (text: string) => {
-    const outcome = await send(host, billboard, text, told)
+    const outcome = await send(host, billboard, text, told.current)
     if (outcome.sent) setSent(true)
-    if (outcome.told) setTold(true)
+    if (outcome.told) told.current = true
     return outcome
   }
 

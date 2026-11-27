@@ -60,15 +60,7 @@ export function TraktSync({
     <Section
       id="trakt"
       title={COPY.title}
-      lead={
-        own
-          ? mine
-            ? COPY.connected
-            : linked
-              ? COPY.linkedOwn
-              : COPY.connect
-          : COPY.other(name)
-      }
+      lead={leadOf(own, mine, linked, name)}
     >
       {refusal && <Alert>{refusal}</Alert>}
       {linked && (
@@ -90,20 +82,45 @@ export function TraktSync({
           <RowArrow />
         </a>
       )}
-      {!mine &&
-        (!own && link.user === null ? (
-          <UserForm action={action} name={name} own={own} />
-        ) : (
-          <Fold summary={link.user === null ? COPY.ownUser : COPY.otherUser}>
-            <UserForm action={action} name={name} own={own} />
-          </Fold>
-        ))}
+      {!mine && (
+        <ProfileWay action={action} name={name} own={own} user={link.user} />
+      )}
       {zip && (
         <Fold summary={COPY.zip} open={zipOpen}>
           {zip}
         </Fold>
       )}
     </Section>
+  )
+}
+
+/** What the slip says first: how her Trakt comes in. */
+const leadOf = (own: boolean, mine: boolean, linked: boolean, name: string) =>
+  !own
+    ? COPY.other(name)
+    : mine
+      ? COPY.connected
+      : linked
+        ? COPY.linkedOwn
+        : COPY.connect
+
+/** The public profile by its name: the way on another Pessoa's page with
+ * none yet, folded otherwise. */
+function ProfileWay({
+  action,
+  name,
+  own,
+  user,
+}: {
+  action: string
+  name: string
+  own: boolean
+  user: string | null
+}) {
+  const form = <UserForm action={action} name={name} own={own} />
+  if (!own && user === null) return form
+  return (
+    <Fold summary={user === null ? COPY.ownUser : COPY.otherUser}>{form}</Fold>
   )
 }
 
