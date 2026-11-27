@@ -263,6 +263,12 @@ describe('personImports', () => {
     ])
     expect(report.simkl).toEqual({ ratings: 3, seen: 1, watchlist: 1 })
     expect(report.films.simkl).toEqual({ rated: 3, seen: 1, watchlist: 1 })
+    // What the notice said was left out stays on the page (#348).
+    expect(report.leftOut.simkl).toEqual([
+      { name: 'Rio Abaixo', year: 2014, id: '9101' },
+      { name: 'Filme Perdido', year: 1999, id: 'tt9999901' },
+      { name: 'Filme Sem Ids', year: 2020, id: null },
+    ])
 
     const removed = await fixture.ok(removeImport({ file, author: AUTHOR }))
     expect(removed.removedFacts).toEqual({

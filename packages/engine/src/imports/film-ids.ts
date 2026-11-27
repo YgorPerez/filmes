@@ -12,6 +12,15 @@ export interface FilmIds {
   readonly tmdb: string | null
 }
 
+/** A film of an import that the Catálogo does not have, as the imports
+ * page lists it (#348): its title and year when the file gives them, and
+ * the id it named, if any. */
+export interface LeftOutFilm {
+  readonly name: string | null
+  readonly year: number | null
+  readonly id: string | null
+}
+
 /** Whether the database has Wikidata's table (a fixture may lack it). */
 export const hasWikidata = (
   db: Connection,

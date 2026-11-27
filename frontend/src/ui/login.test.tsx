@@ -84,6 +84,8 @@ describe('the Trakt connection screen', () => {
       /<input type="checkbox" required=""[^>]* name="consentir" value="sim"/,
     )
     expect(html).not.toContain('/trakt/desconectar')
+    // The one name of the action, as Meu gosto and the import say (#348).
+    expect(html).toMatch(/<button[^>]*>Conectar o Trakt<\/button>/)
   })
 
   it('splits what it reads from what it sends, and says where it leads (#274)', () => {
@@ -95,14 +97,16 @@ describe('the Trakt connection screen', () => {
     expect(html).toContain(
       'Depois você volta para esta página com a conta conectada',
     )
-    expect(html).not.toContain('Importar</a>')
+    expect(html).not.toContain('Importar Notas</a>')
   })
 
-  it('has the way back to Importar for a Dono, in the app', () => {
+  it('has the way back to Importar Notas for a Dono, in the app (#348)', () => {
     const html = renderToStaticMarkup(
       <TraktScreen page={{ status: 'connected', name: 'Iara' }} inApp />,
     )
-    expect(html).toMatch(/<a href="\/meu-gosto\/importar"[^>]*>Importar<\/a>/)
+    expect(html).toMatch(
+      /<a href="\/meu-gosto\/importar"[^>]*>Importar Notas<\/a>/,
+    )
     expect(html).not.toContain('Créditos')
   })
 

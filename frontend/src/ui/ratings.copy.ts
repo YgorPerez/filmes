@@ -38,7 +38,7 @@ export const RATINGS = {
   over: 'Acabou a fila. Busque um filme pelo título para dar mais Notas.',
   /** The bar: how many she has, toward the goal until she reaches it. */
   progress: (n: number, goal: number) =>
-    n < goal ? `${n} de ${goal}` : notas(n),
+    n < goal ? `${n} de ${goal} Notas` : notas(n),
   progressLabel: (n: number, goal: number) =>
     n < goal
       ? `${notas(n)} de ${goal}, contando as que ainda não foram gravadas`

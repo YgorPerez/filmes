@@ -8,19 +8,22 @@ import { resolvePerson } from '../people/people.ts'
 import type { EngineError } from '../runtime/EngineError.ts'
 import type { Environment } from '../runtime/Environment.ts'
 import { Sqlite, type Connection, type SqliteError } from '../sqlite/Sqlite.ts'
-import { imdbFactCounts, type ImdbFactCounts } from './imdb.ts'
+import type { LeftOutFilm } from './film-ids.ts'
+export type { LeftOutFilm } from './film-ids.ts'
+import { imdbFactCounts, imdbLeftOut, type ImdbFactCounts } from './imdb.ts'
 import {
   letterboxdReport,
   type FactCounts,
   type LetterboxdReport,
 } from './letterboxd.ts'
-import { simklFactCounts, type SimklFactCounts } from './simkl.ts'
+import { simklFactCounts, simklLeftOut, type SimklFactCounts } from './simkl.ts'
 import {
   requireImportTables,
   traktFactCounts,
+  traktLeftOut,
   type TraktFactCounts,
 } from './trakt.ts'
-import { tvTimeFactCounts } from './tvtime.ts'
+import { tvTimeFactCounts, tvTimeLeftOut } from './tvtime.ts'
 
 /** An import recorded in the Pessoa's file. */
 export interface ImportRecord {
@@ -48,6 +51,9 @@ export interface PersonImports {
   /** What each of the other sites gave, film by film, the way the notice
    * of its import counts (#274). */
   readonly films: Readonly<Record<FilmSource, SourceFilms>>
+  /** Each site's films the Catálogo does not have, from all her files of
+   * it (#348): what the notice of each import said was left out. */
+  readonly leftOut: Readonly<Record<FilmSource, readonly LeftOutFilm[]>>
 }
 
 /** The sites whose Fatos `films` counts by film. */
@@ -141,6 +147,12 @@ export const personImports = (
             imdb: yield* sourceFilms(db, person.slug, 'imdb'),
             simkl: yield* sourceFilms(db, person.slug, 'simkl'),
             tvtime: yield* sourceFilms(db, person.slug, 'tvtime'),
+          },
+          leftOut: {
+            trakt: yield* traktLeftOut(db, person),
+            imdb: yield* imdbLeftOut(db, person),
+            simkl: yield* simklLeftOut(db, person),
+            tvtime: yield* tvTimeLeftOut(db, person),
           },
         }
       }),

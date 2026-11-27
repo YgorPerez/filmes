@@ -13,6 +13,20 @@ export const MY_TASTE = '/meu-gosto'
 export const RATINGS_PATH = `${MY_TASTE}/notas`
 export const QUEUE_PATH = `${MY_TASTE}/fila`
 
+/** The path whose tab the bar marks: another Pessoa's queue (`?de=`,
+ * from her import page) is hers, under Pessoas, though its address is
+ * Meu gosto's (#348). */
+export const tabPath = (
+  pathname: string,
+  search: { readonly de?: unknown },
+  viewer: string,
+) =>
+  pathname === QUEUE_PATH &&
+  typeof search.de === 'string' &&
+  search.de !== viewer
+    ? '/pessoas'
+    : pathname
+
 /** A Pessoa's page: Meu gosto when she is the Dono logged in (`self`). */
 export const personPath = (person: string, self: boolean) =>
   self ? MY_TASTE : `/pessoas/${slug(person)}`
