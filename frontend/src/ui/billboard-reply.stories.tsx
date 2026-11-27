@@ -47,6 +47,12 @@ export const AdditionBox: Story = {
     const field = canvas.getByRole('textbox')
     await userEvent.type(field, 'chegou a Ana')
     await expect(field).toHaveValue('chegou a Ana')
+    // "Responder" reads at a heading's step, and the Clima fold opens.
+    await expect(
+      canvas.getByRole('heading', { level: 2, name: 'Responder' }),
+    ).toBeVisible()
+    await userEvent.click(canvas.getByText('Mudar o clima (refaz a lista)'))
+    await expect(canvas.getByRole('group', { name: /^Clima/u })).toBeVisible()
   },
 }
 

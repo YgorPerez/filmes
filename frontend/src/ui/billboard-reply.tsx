@@ -1,6 +1,7 @@
 import type { Billboard as BillboardModel } from '@filmes/engine'
 import { useEffect, useRef, useState } from 'react'
 import { BILLBOARD } from './billboard.copy'
+import { Icon } from './billboard-icons'
 import { chosenMoods, hasMarks, type Marks } from './billboard-marks'
 import { buttonVariants } from './kit/button-variants'
 import { Icon } from './kit/icon'
@@ -205,7 +206,9 @@ export function ReplyBox({
       aria-labelledby="responder"
       className="flex flex-col gap-md rounded-card border border-rule bg-surface p-xl"
     >
-      <h2 id="responder" className="sr-only">
+      {/* Visible, at the step of a page's titles: it sits among the film
+          titles, and must not read below them (#277). */}
+      <h2 id="responder" className="font-display text-page-title">
         {reply.title}
       </h2>
       <label className="flex flex-col gap-xs">

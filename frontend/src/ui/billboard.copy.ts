@@ -1,5 +1,7 @@
 // The Cartaz's words, for the app and for the MCP Apps view (#111).
 
+import { askedParts, isDuration } from './billboard-request'
+
 const plural = (n: number, one: string, many: string) =>
   `${n} ${n === 1 ? one : many}`
 
@@ -184,6 +186,11 @@ export const BILLBOARD = {
     open: 'Ver o Cartaz',
     markAgain: 'Marcar de novo',
     sentTitle: 'Enviado',
+    /** The small tag at the end of an inline row (#277). */
+    tag: { swap: 'Trocar', seen: 'Já vi', chosen: 'Escolhido' },
+    /** A Session with its Feedback, on the inline card (#277). */
+    closed: 'Sessão fechada',
+    chosen: 'Filme escolhido:',
     /** "v2" beside the label, from the second version on. */
     version: (n: number) => `v${n}`,
     isNew: 'novo',
@@ -200,9 +207,25 @@ export const BILLBOARD = {
       ]
         .filter(Boolean)
         .join(' · '),
-    /** No film passed: the request's limits, and what to say to Claude. */
-    empty: (limits: readonly string[]) =>
-      `Nenhum filme passou ${limits.length > 0 ? `nos limites deste pedido (${limits.join(' · ')})` : 'nas Restrições deste pedido'}. Peça no chat com mais tempo ou menos limites.`,
+    /** No film passed: the limits the Dono asked for, out of the request's
+     * parts (none: the minimum IMDb rating alone), and what to say to
+     * Claude (#277). */
+    empty: (parts: readonly string[]) => {
+      const limits = askedParts(parts)
+      const passed =
+        limits.length === 0
+          ? 'Nenhum filme passou neste pedido.'
+          : limits.length === 1
+            ? `Nenhum filme passou no limite ${limits[0]}.`
+            : `Nenhum filme passou nos limites deste pedido (${limits.join(' · ')}).`
+      const ask =
+        limits.length === 0
+          ? 'Peça outro no chat.'
+          : limits.some(isDuration)
+            ? 'Peça no chat com mais tempo ou menos limites.'
+            : 'Peça no chat com menos limites.'
+      return `${passed} ${ask}`
+    },
     /** A host without fullscreen shows the Cartaz inline: it opens whole
      * from here (#277). */
     seeAll: 'Ver o Cartaz inteiro',

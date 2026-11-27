@@ -55,12 +55,18 @@ describe('the Cartaz copy', () => {
     ).toBe('estrelas em 1 filme, 2 comentários, o acrescentar e outro Clima')
   })
 
-  it('says why no film passed', () => {
-    expect(view.empty(['até 1h30', 'sem lento'])).toMatch(
-      /^Nenhum filme passou nos limites deste pedido \(até 1h30 · sem lento\)\./u,
+  it('says why no film passed, without the minimum IMDb rating', () => {
+    expect(view.empty(['até 1h30', 'nota 7+ no IMDb', 'sem lento'])).toBe(
+      'Nenhum filme passou nos limites deste pedido (até 1h30 · sem lento). Peça no chat com mais tempo ou menos limites.',
     )
-    expect(view.empty([])).toMatch(
-      /^Nenhum filme passou nas Restrições deste pedido\./u,
+    expect(view.empty(['até 20min', 'nota 7,5+ no IMDb'])).toBe(
+      'Nenhum filme passou no limite até 20min. Peça no chat com mais tempo ou menos limites.',
+    )
+    expect(view.empty(['sem lento'])).toBe(
+      'Nenhum filme passou no limite sem lento. Peça no chat com menos limites.',
+    )
+    expect(view.empty(['nota 7+ no IMDb'])).toBe(
+      'Nenhum filme passou neste pedido. Peça outro no chat.',
     )
   })
 

@@ -1,4 +1,4 @@
-// The Cartaz's three icons.
+// The Cartaz's four icons.
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { Icon } from './billboard-icons'
 
@@ -16,3 +16,5 @@ export const Check: Story = {}
 export const Star: Story = { args: { name: 'star' } }
 
 export const Expand: Story = { args: { name: 'expand' } }
+
+export const Chevron: Story = { args: { name: 'chevron' } }
