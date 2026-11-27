@@ -265,7 +265,34 @@ it('her standing Votos go again with the new ones; mudar asks every film', async
   ])
   unmount()
 
+  // Mudar: her Votos come back chosen, and only the film without one is
+  // asked (#340).
   render(<VoteCards deck={voted} revote action="/participar/votos" />)
+  expect(screen.getByText(VOTES.of(2, 2))).toBeTruthy()
+  expect(posted()).toEqual([
+    ['versao', '3'],
+    ['sim', 'tt9000101'],
+  ])
+})
+
+it('mudar opens on the recap with her Votos chosen; Recomeçar asks every film again (#340)', async () => {
+  const user = userEvent.setup()
+  const voted = {
+    version: 3,
+    films: [
+      { ...FILMS[0]!, mine: 'yes' as const },
+      { ...FILMS[1]!, mine: 'no' as const },
+    ],
+    left: [],
+  }
+  render(<VoteCards deck={voted} revote action="/participar/votos" />)
+  expect(screen.getByText(VOTES.kept)).toBeTruthy()
+  expect(posted()).toEqual([
+    ['versao', '3'],
+    ['sim', 'tt9000101'],
+    ['nao', 'tt9000601'],
+  ])
+  await user.click(screen.getByRole('button', { name: VOTES.restart }))
   expect(screen.getByText(VOTES.of(1, 2))).toBeTruthy()
   expect(posted()).toEqual([['versao', '3']])
 })

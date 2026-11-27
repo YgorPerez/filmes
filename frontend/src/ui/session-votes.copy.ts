@@ -39,6 +39,8 @@ export const VOTES = {
   summary: (yes: number, no: number) =>
     `${count(yes, 'sim', 'sins')} · ${count(no, 'não', 'nãos')}`,
   recap: 'Revise antes de enviar: dá pra mudar qualquer voto aqui.',
+  /** Mudar votos: the recap opens on her earlier Votos (#340). */
+  kept: 'Seus votos de antes estão marcados e valem até você enviar os novos. Mude o que quiser aqui.',
   /** What a screen reader hears after the last card. */
   end: (yes: number, no: number) =>
     `Fim: ${count(yes, 'sim', 'sins')}, ${count(no, 'não', 'nãos')}. Revise e envie.`,
