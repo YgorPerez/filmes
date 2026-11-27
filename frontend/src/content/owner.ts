@@ -17,8 +17,9 @@ export const ownerMiddleware = createMiddleware({ type: 'function' }).server(
   },
 )
 
-/** What the pages may know of the Dono: the name, her Pessoa (Meu gosto)
- * and whether admin. The email and the session stay on the server. */
+/** What the pages may know of the Dono: the name, her Pessoa (Meu gosto),
+ * whether admin, and the Google e-mail she entered with, which her account
+ * menu shows her (#268). The session stays on the server. */
 export const readOwner = createServerFn({ method: 'GET' })
   .middleware([ownerMiddleware])
   .handler(({ context }) =>
@@ -27,6 +28,7 @@ export const readOwner = createServerFn({ method: 'GET' })
           name: context.owner.name,
           person: context.owner.person,
           admin: context.owner.admin,
+          email: context.owner.email,
         }
       : null,
   )

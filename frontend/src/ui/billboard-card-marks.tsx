@@ -5,6 +5,7 @@ import type { FilmMarks } from './billboard-marks'
 import { Icon } from './billboard-icons'
 import { buttonVariants } from './kit/button-variants'
 import { FIELD } from './kit/field'
+import { MarkText, PRESSED_PILL } from './kit/option'
 import { Avatar } from './kit/person'
 
 // The marks of one film of the Cartaz (DESIGN.md, Opções, Escala de nota,
@@ -13,7 +14,8 @@ import { Avatar } from './kit/person'
 // what she thought) on the blue card stock. The comment's field opens from
 // Comentar, so a card carries no empty field.
 
-/** An option that stays pressed, with the ✓ before the word. */
+/** An option that stays pressed, with the ✓ before the word, the same
+ * width pressed or not (`kit/option.tsx`): pressing never wraps the row. */
 function Toggle({
   pressed,
   onChange,
@@ -28,10 +30,13 @@ function Toggle({
       type="button"
       aria-pressed={pressed}
       onClick={() => onChange(!pressed)}
-      className={buttonVariants({ variant: 'option', className: 'gap-xs' })}
+      className={buttonVariants({
+        variant: 'option',
+        className: `gap-sm ${PRESSED_PILL}`,
+      })}
     >
-      {pressed && <Icon name="check" />}
-      {children}
+      {pressed && <Icon name="check" className="size-4 shrink-0" />}
+      <MarkText>{children}</MarkText>
     </button>
   )
 }

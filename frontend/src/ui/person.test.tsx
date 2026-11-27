@@ -240,13 +240,44 @@ describe('PersonScreen forms', () => {
       fields.getByLabelText(PERSON.film, { exact: false }),
       'tt9000101',
     )
-    await user.selectOptions(fields.getByLabelText(PERSON.rating), '3,5')
+    await user.selectOptions(fields.getByLabelText(PERSON.rating), '7')
     expect(posted(form)).toEqual({
       kind: 'seen',
       film: 'tt9000101',
-      rating: '3,5',
+      rating: '7/10',
       source: undefined,
     })
+  })
+
+  it('marks the field a Veto lacks, and keeps the post', async () => {
+    const { user, form } = await open(
+      section(PERSON.vetoes.title),
+      PERSON.vetoes.add,
+    )
+    const fields = within(form)
+    await user.type(
+      fields.getByLabelText(PERSON.vetoes.text, { exact: false }),
+      'nada bobo',
+    )
+    await user.click(fields.getByRole('button', { name: PERSON.save }))
+    const target = fields.getByRole('textbox', { name: /^Alvo/ })
+    expect(target.getAttribute('aria-invalid')).toBe('true')
+    expect(document.activeElement).toBe(target)
+    const said = document.getElementById(
+      target.getAttribute('aria-describedby') ?? '',
+    )
+    expect(said?.textContent).toBe(
+      PERSON.fieldProblem({ field: 'alvo', problem: 'target' }),
+    )
+    await user.type(target, 'Q')
+    expect(target.getAttribute('aria-invalid')).toBeNull()
+  })
+
+  it('shows her Notas on the 1 to 10 scale she gives them on', () => {
+    const notes = section(PERSON.notes.title)
+    expect(notes.textContent).toContain(
+      'nota 8 · 30 ago 2025 · 4★ no Letterboxd da Iara',
+    )
   })
 
   it('changes an Ajuste, starting from the level she has', async () => {

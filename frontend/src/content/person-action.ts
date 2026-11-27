@@ -52,7 +52,9 @@ const REACTIONS = ['love', 'like', 'dislike', 'hate'] as const
 const LINKS = ['director', 'writer', 'cast', 'series', 'genre'] as const
 const LEVELS = ['none', 'low', 'normal', 'high'] as const
 const REMOVABLE = ['stated', 'report', 'veto', 'seen'] as const
-const RATING = /^(?:[1-4](?:,5)?|0,5|5)$/
+// A Nota as the forms give it: 1 to 10 with "/10" (#268), or the engine's
+// own 0,5 to 5.
+const RATING = /^(?:(?:[1-9]|10)\/10|[1-4](?:,5)?|0,5|5)$/
 const ID = /^(?:tt|Q)\d+$/
 
 type Reader = (form: FormData) => PersonAction | null
@@ -136,6 +138,60 @@ const READERS: Record<(typeof PERSON_ACTIONS)[number], Reader> = {
 /** An action only an admin may take: giving or taking a Pessoa's access. */
 export const isAccessAction = (action: PersonAction) =>
   action.kind === 'grant' || action.kind === 'revoke'
+
+/** What is wrong with one field of a form, for the page to mark it before
+ * the post (#268): `required`, empty; `id`, not a tt… or Q…; `film`, not a
+ * tt…; `rating`, off the scale; `target`, a Veto with neither an id nor a
+ * tag group; `reaction`, a reaction with no target to react to. */
+export type FieldProblem = {
+  field: string
+  problem: 'required' | 'id' | 'film' | 'rating' | 'target' | 'reaction'
+}
+
+const statementProblem = (form: FormData): FieldProblem | null => {
+  const target = field(form, 'alvo')
+  if (!field(form, 'texto')) return { field: 'texto', problem: 'required' }
+  if (target !== undefined && !ID.test(target))
+    return { field: 'alvo', problem: 'id' }
+  if (field(form, 'reacao') !== undefined && target === undefined)
+    return { field: 'alvo', problem: 'reaction' }
+  return null
+}
+
+const PROBLEMS: Partial<
+  Record<(typeof PERSON_ACTIONS)[number], (form: FormData) => FieldProblem | null>
+> = {
+  declarar: statementProblem,
+  relatar: statementProblem,
+  visto: (form) => {
+    const film = field(form, 'filme')
+    const rating = field(form, 'nota')
+    if (!film) return { field: 'filme', problem: 'required' }
+    if (!/^tt\d+$/.test(film)) return { field: 'filme', problem: 'film' }
+    if (rating !== undefined && !RATING.test(rating))
+      return { field: 'nota', problem: 'rating' }
+    return null
+  },
+  vetar: (form) => {
+    const target = field(form, 'alvo')
+    if (!field(form, 'texto')) return { field: 'texto', problem: 'required' }
+    if (field(form, 'grupo') !== undefined) return null
+    if (target === undefined) return { field: 'alvo', problem: 'target' }
+    return ID.test(target) ? null : { field: 'alvo', problem: 'id' }
+  },
+  responder: (form) =>
+    field(form, 'texto') ? null : { field: 'texto', problem: 'required' },
+  'dar-acesso': (form) =>
+    field(form, 'email') ? null : { field: 'email', problem: 'required' },
+}
+
+/** The first field of the form that its action would refuse, or null: the
+ * page marks it and keeps the post (`ActionForm`); the server refuses the
+ * same form as `pedido`. */
+export function formProblem(form: FormData): FieldProblem | null {
+  const kind = oneOf(PERSON_ACTIONS, field(form, 'acao'))
+  return kind ? (PROBLEMS[kind]?.(form) ?? null) : null
+}
 
 /** The form's action, or null when a field is missing or not one the page
  * offers. Whatever the engine itself checks (the target in the Catalog,

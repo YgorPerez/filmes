@@ -6,6 +6,7 @@ import {
 } from '#/content/billboard-reply'
 import { readSessionPage } from '#/content/sessions'
 import { SessionScreen } from '#/ui/sessions'
+import { PAGE_TITLES, titled } from '#/ui/page-title'
 
 export const Route = createFileRoute('/_owner/sessoes/$sessao/')({
   validateSearch: (search) => ({
@@ -17,6 +18,12 @@ export const Route = createFileRoute('/_owner/sessoes/$sessao/')({
   // A post loads the page again itself, once (`useFetchForm`).
   loader: ({ params, deps }) =>
     readSessionPage({ data: { session: params.sessao, note: deps.nota } }),
+  head: ({ loaderData }) =>
+    titled(
+      loaderData && loaderData !== 'unknown'
+        ? PAGE_TITLES.session(loaderData.session.date)
+        : null,
+    ),
   component: SessionRoute,
 })
 

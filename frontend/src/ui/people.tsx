@@ -63,7 +63,7 @@ export function PeopleList({
                 href={personPath(person, person === self)}
                 className="flex min-h-[52px] items-stretch overflow-hidden rounded-nav-row border border-rule bg-surface text-ink no-underline hover:bg-surface-2"
               >
-                <span aria-hidden="true" className="w-2 shrink-0 bg-case" />
+                <span aria-hidden="true" className="w-2 shrink-0 border-r border-case-edge bg-case" />
                 <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-sm gap-y-2xs py-sm pl-xl">
                   <span className="font-display text-row-title">{name}</span>
                   {owner && <OwnerTag />}

@@ -27,7 +27,7 @@ const show = ({
   alert?: PushStatus | null
 } = {}) =>
   render(
-    <AppShell owner={{ name: 'Bruno', admin }} path={path} alert={alert}>
+    <AppShell owner={{ name: 'Bruno', admin, email: 'bruno@example.org' }} path={path} alert={alert}>
       <main>a página</main>
     </AppShell>,
   )
@@ -122,9 +122,21 @@ describe('AppShell', () => {
       ).toEqual([tab])
   })
 
-  it('marks no tab for a page out of them', () => {
-    show({ path: '/operacoes' })
-    expect(document.querySelector('[aria-current]')).toBeNull()
+  it('marks the avatar, not a tab, on Operações', () => {
+    show({ path: '/operacoes', admin: true })
+    for (const bar of tabBars())
+      expect(within(bar).queryByRole('link', { current: 'page' })).toBeNull()
+    expect(
+      screen
+        .getByRole('button', { name: 'Sua conta: Bruno' })
+        .getAttribute('aria-current'),
+    ).toBe('page')
+  })
+
+  it('says in the menu which Google e-mail entered', () => {
+    show()
+    const menu = menuOf(screen.getByRole('button', { name: /Sua conta/ }))
+    expect(menu.textContent).toContain('Entrou com bruno@example.org')
   })
 
   it('shows an admin the strip of a push that keeps failing, with a link to Operações', () => {

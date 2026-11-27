@@ -9,7 +9,11 @@ import {
   type ComponentProps,
   type ReactNode,
 } from 'react'
-import { isPersonRefusal } from '#/content/person-action'
+import {
+  formProblem,
+  isPersonRefusal,
+  type FieldProblem,
+} from '#/content/person-action'
 import { CATALOG_SEARCH } from './catalog-search.copy'
 import { PERSON } from './person.copy'
 import { FIELD } from './kit/field'
@@ -142,11 +146,29 @@ export function ActionForms({ children }: { children: ReactNode }) {
 export const useRefusedInPlace = () =>
   (useContext(RefusedIn)?.form ?? null) !== null
 
+/** The field of the `ActionForm` around that its action would refuse, and
+ * what to say under it: `TextField` and `SelectField` read it. */
+const ProblemIn = createContext<FieldProblem | null>(null)
+
+/** A field's `aria-invalid`, `aria-describedby` and the text under it, when
+ * the form's problem is this field's (`name`). */
+function useFieldProblem(name: string) {
+  const id = useId()
+  const problem = useContext(ProblemIn)
+  if (problem?.field !== name) return { error: undefined, aria: {} }
+  return {
+    error: { id, text: PERSON.fieldProblem(problem) },
+    aria: { 'aria-invalid': true, 'aria-describedby': id } as const,
+  }
+}
+
 /** A form that posts one action to the Pessoa's route
  * (`platform/people.ts`). A plain POST: it works before the JavaScript.
  * With it (#235), it posts by `fetch`: a refusal shows here, over what was
  * typed; what went through reloads the page through the router. Its
- * submits say `busy` while the post runs. */
+ * submits say `busy` while the post runs. With the JavaScript, a field the
+ * action would refuse (`formProblem`) keeps the post: the field is marked,
+ * says why under it and takes the focus (#268); typing clears it. */
 export function ActionForm({
   slug,
   action,
@@ -180,12 +202,26 @@ export function ActionForm({
     return false
   })
   const shown = shared === null || shared.form === id ? refused : undefined
+  const [problem, setProblem] = useState<FieldProblem | null>(null)
+  const form = useRef<HTMLFormElement>(null)
+  useEffect(() => {
+    if (!problem) return
+    const field = form.current?.elements.namedItem(problem.field)
+    if (field instanceof HTMLElement) field.focus()
+  }, [problem])
   return (
     <form
+      ref={form}
       method="post"
       action={`/pessoas/${encodeURIComponent(slug)}/acao`}
       aria-label={label}
-      onSubmit={onSubmit}
+      onSubmit={(event) => {
+        const found = formProblem(new FormData(event.currentTarget))
+        setProblem(found)
+        if (found) event.preventDefault()
+        else onSubmit(event)
+      }}
+      onInput={() => setProblem(null)}
       className={className ?? 'flex flex-col gap-xl'}
     >
       {shown && (
@@ -195,9 +231,11 @@ export function ActionForm({
       )}
       <PostFailed failed={failed} />
       <input type="hidden" name="acao" value={action} />
-      <Posting.Provider value={running === null ? null : busy}>
-        {children}
-      </Posting.Provider>
+      <ProblemIn.Provider value={problem}>
+        <Posting.Provider value={running === null ? null : busy}>
+          {children}
+        </Posting.Provider>
+      </ProblemIn.Provider>
     </form>
   )
 }
@@ -242,13 +280,13 @@ export function Disclosure({
   children: ReactNode
 }) {
   return (
-    <details open={open} className="group rounded-field border border-rule">
+    <details open={open} className="group/fold rounded-field border border-rule">
       <summary className="flex min-h-touch cursor-pointer list-none items-center justify-between gap-sm px-3 font-semibold select-none [&::-webkit-details-marker]:hidden">
         {summary}
         {/* The drawn +, a × while open: the fold's state not by colour. */}
         <Icon
           name="plus"
-          className="size-[18px] text-ink-2 transition-transform group-open:rotate-45 motion-reduce:transition-none"
+          className="size-[18px] text-ink-2 transition-transform group-open/fold:rotate-45 motion-reduce:transition-none"
         />
       </summary>
       <div className="border-t border-rule p-xl">{children}</div>
@@ -281,9 +319,11 @@ export function TextField({
   max?: number
   defaultValue?: string
 }) {
+  const { error, aria } = useFieldProblem(name)
   return (
-    <FieldLabel label={label} hint={hint}>
+    <FieldLabel label={label} hint={hint} error={error}>
       <input
+        {...aria}
         type={type}
         min={min}
         max={max}
@@ -312,9 +352,15 @@ export function SelectField({
   options: readonly { value: string; label: string }[]
   defaultValue?: string
 }) {
+  const { error, aria } = useFieldProblem(name)
   return (
-    <FieldLabel label={label} hint={hint}>
-      <select name={name} defaultValue={defaultValue} className={control}>
+    <FieldLabel label={label} hint={hint} error={error}>
+      <select
+        {...aria}
+        name={name}
+        defaultValue={defaultValue}
+        className={control}
+      >
         {options.map(({ value, label: text }) => (
           <option key={value} value={value}>
             {text}

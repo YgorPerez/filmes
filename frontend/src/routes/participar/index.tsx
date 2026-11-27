@@ -4,8 +4,10 @@ import { buttonVariants } from '#/ui/kit/button-variants'
 import { PairwiseInvite } from '#/ui/pairwise'
 import { PARTICIPATION } from '#/ui/session-link.copy'
 import { VOTES } from '#/ui/session-votes.copy'
+import { PAGE_TITLES, titled } from '#/ui/page-title'
 
 export const Route = createFileRoute('/participar/')({
+  head: () => titled(PAGE_TITLES.participate),
   component: SessionLinkFilms,
 })
 

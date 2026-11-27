@@ -119,21 +119,25 @@ function PushStrip({ status }: { status: PushStatus }) {
   )
 }
 
-export type ShellOwner = { name: string; admin: boolean }
+export type ShellOwner = { name: string; admin: boolean; email: string }
 
 const MENU_ROW =
   'flex min-h-touch w-full cursor-pointer items-center gap-md rounded-rail px-md font-display text-control text-ink no-underline hover:bg-surface-2'
 
-/** The Dono's avatar, a button that opens her menu: her name, Operações
- * for an admin (saying so while the push keeps failing), and Sair by
- * POST. A native popover: it opens without the JavaScript, and a tap
- * outside or Esc closes it. */
+/** The Dono's avatar, a button that opens her menu: her name and the
+ * Google e-mail she entered with, Operações for an admin (saying so while
+ * the push keeps failing), and Sair by POST. A native popover: it opens
+ * without the JavaScript, and a tap outside or Esc closes it. On a page of
+ * the menu (Operações), the avatar is the current place: `aria-current` and
+ * the tabs' orange disc behind it. */
 function AccountMenu({
   owner,
   alert,
+  current,
 }: {
   owner: ShellOwner
   alert: PushStatus | null
+  current: boolean
 }) {
   return (
     <>
@@ -141,7 +145,10 @@ function AccountMenu({
         type="button"
         popoverTarget="conta"
         aria-label={SHELL.account(owner.name)}
-        className="grid size-touch cursor-pointer place-items-center rounded-round"
+        aria-current={current ? 'page' : undefined}
+        className={`grid size-touch cursor-pointer place-items-center rounded-round ${
+          current ? 'bg-sticker-orange/85' : ''
+        }`}
       >
         <span className="grid place-items-center rounded-round ring-2 ring-case">
           <Avatar
@@ -159,13 +166,21 @@ function AccountMenu({
         aria-label={SHELL.menu}
         className="fixed inset-auto top-[60px] right-[max(16px,calc((100vw-1040px)/2+16px))] m-0 w-[240px] rounded-card border border-rule bg-surface p-xs text-ink"
       >
-        <p className="truncate px-md pt-sm pb-xs font-display text-row-title">
-          {owner.name}
-        </p>
+        <div className="px-md pt-sm pb-xs">
+          <p className="truncate font-display text-row-title">{owner.name}</p>
+          <p className="truncate text-meta text-ink-2">
+            <span className="sr-only">{SHELL.signedInAs} </span>
+            {owner.email}
+          </p>
+        </div>
         <ul className="flex flex-col">
           {owner.admin && (
             <li>
-              <a href="/operacoes" className={MENU_ROW}>
+              <a
+                href="/operacoes"
+                aria-current={current ? 'page' : undefined}
+                className={MENU_ROW}
+              >
                 <Icon name="tools" />
                 {SHELL.operations}
                 {alert && (
@@ -211,13 +226,17 @@ export function AppShell({
           <a
             href="/"
             aria-label={SHELL.home}
-            className="font-display text-brand text-case-ink no-underline"
+            className="inline-flex min-h-touch items-center font-display text-brand text-case-ink no-underline"
           >
             {SHELL.brand}
           </a>
           <Tabs path={path} place="top" />
           <div className="ml-auto flex items-center">
-            <AccountMenu owner={owner} alert={alert} />
+            <AccountMenu
+              owner={owner}
+              alert={alert}
+              current={under(path, '/operacoes')}
+            />
           </div>
         </div>
       </header>

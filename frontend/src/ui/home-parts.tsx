@@ -30,7 +30,7 @@ export function Ask() {
   return (
     <section
       aria-labelledby="pedir"
-      className="flex flex-col gap-xl rounded-panel bg-case px-xl pt-2xl pb-xl text-case-ink"
+      className="flex flex-col gap-xl rounded-panel border border-case-edge bg-case px-xl pt-2xl pb-xl text-case-ink"
     >
       <h1 id="pedir" className="font-display text-counter-title">
         {ask.title}
@@ -97,7 +97,7 @@ export function Latest({
               key={film.id}
               className="flex min-h-[38px] items-center gap-md overflow-hidden rounded-rail bg-surface-2 pr-md"
             >
-              <span aria-hidden="true" className="w-2 self-stretch bg-case" />
+              <span aria-hidden="true" className="w-2 self-stretch border-r border-case-edge bg-case" />
               <PriceSticker compact>{i + 1}</PriceSticker>
               <span className="truncate font-display text-row-title">
                 {film.title}
@@ -157,7 +157,7 @@ function Progress({ setup }: { setup: SetupView }) {
                   ? 'bg-stamp'
                   : state === 'skipped'
                     ? 'border border-dashed border-ink-2'
-                    : 'bg-surface-2'
+                    : 'border border-rule-strong'
               }`}
             />
           )
@@ -298,7 +298,7 @@ function Counter({ ratings }: { ratings: number }) {
           className={`size-3.5 rounded-round ${
             i < ratings
               ? 'bg-stamp'
-              : 'border-(length:--border-width-stroke) border-rule'
+              : 'border-(length:--border-width-stroke) border-rule-strong'
           }`}
         />
       ))}

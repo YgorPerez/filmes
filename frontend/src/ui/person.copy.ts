@@ -1,5 +1,6 @@
 import {
   reportSource,
+  type FieldProblem,
   type PersonNotice,
   type PersonRefusal,
 } from '#/content/person-action'
@@ -61,7 +62,8 @@ export const PERSON = {
   } satisfies Record<PersonNotice, string>,
   refusals: {
     alvo: 'Esse ID não está no Catálogo. Confira o tt… do filme ou o Q… da entidade.',
-    pedido: 'Faltou um campo, ou um valor não vale. Confira o formulário.',
+    pedido:
+      'Faltou um campo, ou um valor não vale: confira o texto, o alvo (tt… ou Q…) e a Nota de 1 a 10.',
     item: 'Esse item já não está no arquivo dela.',
     email: 'Para entrar, ela precisa de um e-mail do Google válido.',
     'email-usado': 'Esse e-mail já é de outra Pessoa.',
@@ -173,20 +175,42 @@ export const PERSON = {
   } satisfies Record<Strength, string>,
   specific: 'específico',
   generic: 'genérico',
-  /** A Nota as the engine writes it: 4.5 is "4,5". */
-  ratingText: (rating: number) => `nota ${String(rating).replace('.', ',')}`,
+  /** A Nota on the 1 to 10 scale she gives it on (the rating screen, the
+   * Cartaz's Já vi): the engine keeps it from 0,5 to 5, so 4.5 is "nota 9"
+   * (#268). */
+  ratingText: (rating: number) => `nota ${tenScale(rating)}`,
+  /** Where a Nota came from, with the stars it had there when the source
+   * rates on 5 (Letterboxd): "4,5★ no Letterboxd da Iara". */
+  ratingSource: (rating: number, source: string | null) =>
+    source !== null && /letterboxd/i.test(source)
+      ? `${String(rating).replace('.', ',')}★ no ${source}`
+      : source,
+  /** What is wrong with a field, under it (`formProblem`). */
+  fieldProblem: ({ field, problem }: FieldProblem) => {
+    if (problem === 'rating') return 'A Nota vai de 1 a 10.'
+    if (problem === 'film') return 'O filme é o tt… dele no Catálogo.'
+    if (problem === 'id')
+      return 'O alvo é um ID do Catálogo: tt… de um filme ou Q… de uma pessoa, gênero ou série.'
+    if (problem === 'target')
+      return 'Falta o alvo: um filme ou uma entidade pelo ID (tt… ou Q…), ou um grupo de tags.'
+    if (problem === 'reaction')
+      return 'Uma reação precisa de um alvo: diga o ID (tt… ou Q…) a que ela reage.'
+    return REQUIRED[field] ?? 'Falta preencher este campo.'
+  },
 } as const
 
-/** The Notas a form offers, on the scale of 0,5 to 5. */
-export const RATING_CHOICES = [
-  '5',
-  '4,5',
-  '4',
-  '3,5',
-  '3',
-  '2,5',
-  '2',
-  '1,5',
-  '1',
-  '0,5',
-] as const
+/** The Nota of 0,5 to 5 the engine keeps, on the scale of 1 to 10. */
+const tenScale = (rating: number) =>
+  String(Math.round(rating * 20) / 10).replace('.', ',')
+
+const REQUIRED: Record<string, string> = {
+  texto: 'Falta o texto: o que foi dito.',
+  filme: 'Falta o filme: o tt… dele no Catálogo.',
+  email: 'Falta o e-mail do Google dela.',
+}
+
+/** The Notas a form offers, from 10 to 1, as the forms post them. */
+export const RATING_CHOICES = Array.from({ length: 10 }, (_, i) => ({
+  value: `${10 - i}/10`,
+  label: String(10 - i),
+}))

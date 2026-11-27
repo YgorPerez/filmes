@@ -7,10 +7,9 @@ import {
 } from '#/content/person-create'
 import { readPeopleList } from '#/content/people'
 import { PeopleList } from '#/ui/people'
+import { PAGE_TITLES, titled } from '#/ui/page-title'
 
 export const Route = createFileRoute('/_owner/pessoas/')({
-  // `erro=pessoa`: a form's Pessoa is gone. Any other reason is the create
-  // form's, which comes back with what was typed.
   validateSearch: (search) => {
     const erro =
       isPeopleRefusal(search.erro) || isPersonCreateRefusal(search.erro)
@@ -20,6 +19,9 @@ export const Route = createFileRoute('/_owner/pessoas/')({
     return { erro, ...typedQuery(search) }
   },
   loader: () => readPeopleList(),
+  head: () => titled(PAGE_TITLES.people),
+  // `erro=pessoa`: a form's Pessoa is gone. Any other reason is the create
+  // form's, which comes back with what was typed.
   component: PeoplePage,
 })
 

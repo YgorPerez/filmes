@@ -4,6 +4,7 @@ import { filmParam, searchFor, searchParam } from '#/content/catalog-search'
 import { isFeedbackRefusal } from '#/content/feedback-form'
 import { feedbackDraftFor, readFeedbackPage } from '#/content/feedback'
 import { FeedbackScreen } from '#/ui/feedback'
+import { PAGE_TITLES, titled } from '#/ui/page-title'
 
 export const Route = createFileRoute('/_owner/sessoes/$sessao/contar')({
   validateSearch: (search) => ({
@@ -21,6 +22,7 @@ export const Route = createFileRoute('/_owner/sessoes/$sessao/contar')({
     ])
     return { page, search, draft }
   },
+  head: () => titled(PAGE_TITLES.feedback),
   component: FeedbackRoute,
 })
 

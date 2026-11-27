@@ -29,6 +29,7 @@ import { MyStartSections, type MyStart } from './my-start'
 import { StrengthDots } from './person-marks'
 import { PERSON, RATING_CHOICES } from './person.copy'
 import { buttonVariants } from './kit/button-variants'
+import { shortDate } from './dates'
 
 type Statement = PersonPage['stated'][number]
 type Reaction = keyof typeof PERSON.reactions
@@ -43,10 +44,7 @@ const REACTION_OPTIONS = [
   })),
 ]
 
-const RATING_OPTIONS = [
-  { value: '', label: PERSON.noRating },
-  ...RATING_CHOICES.map((value) => ({ value, label: value })),
-]
+const RATING_OPTIONS = [{ value: '', label: PERSON.noRating }, ...RATING_CHOICES]
 
 /** `/pessoas/<slug>`, or Meu gosto for the Dono's own: her Notas first
  * (rate, import, the CSV), then, on Meu gosto, the setup guide's leftovers
@@ -207,7 +205,13 @@ function Notes({
                   {r.title ?? r.filmId}{' '}
                   <span className="text-ink-2">({r.filmId})</span>
                 </span>
-                <Meta parts={[PERSON.ratingText(r.rating), r.date, r.source]} />
+                <Meta
+                  parts={[
+                    PERSON.ratingText(r.rating),
+                    shortDate(r.date),
+                    PERSON.ratingSource(r.rating, r.source),
+                  ]}
+                />
               </Item>
             ))}
           </ul>
@@ -327,7 +331,7 @@ function OpenQuestions({ slug, page }: Part) {
               parts={[
                 q.label && q.subject && `${q.label} (${q.subject})`,
                 questions.skips(q.skips),
-                q.date,
+                shortDate(q.date),
               ]}
             />
             <div className="mt-sm flex flex-col gap-sm">
@@ -398,7 +402,7 @@ function Vetoes({ slug, page }: Part) {
             }
           >
             <span>“{v.text}”</span>
-            <Meta parts={[`${v.label} (${v.target})`, v.date]} />
+            <Meta parts={[`${v.label} (${v.target})`, shortDate(v.date)]} />
           </Item>
         ))}
       </Items>
@@ -456,7 +460,7 @@ function Adjustments({ slug, page }: Part) {
                 <input type="hidden" name="elo" value={link} />
                 <LevelPicker
                   legend={adjustments.level(name)}
-                  hint={current?.date}
+                  hint={current && shortDate(current.date)}
                   level={current?.level ?? 'normal'}
                 />
                 <Submit className="">{adjustments.change}</Submit>
@@ -577,7 +581,7 @@ function Statements({
                   parts={[
                     statementTarget(s),
                     s.specific ? PERSON.specific : PERSON.generic,
-                    s.date,
+                    shortDate(s.date),
                     s.source,
                   ]}
                 />
@@ -641,8 +645,10 @@ function Seen({ slug, page }: Part) {
             <Meta
               parts={[
                 s.rating === null ? null : PERSON.ratingText(s.rating),
-                s.date,
-                s.source,
+                shortDate(s.date),
+                s.rating === null
+                  ? s.source
+                  : PERSON.ratingSource(s.rating, s.source),
               ]}
             />
           </Item>
