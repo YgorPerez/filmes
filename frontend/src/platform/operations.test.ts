@@ -21,6 +21,8 @@ import {
   evaluationPanel,
   latestReport,
   operationsAction,
+  previousMeasure,
+  reportDownload,
   operationsFromEngine,
   operationsPage,
   pushAlert,
@@ -107,6 +109,8 @@ const EVALUATION = {
 function fake(over: Partial<Operations> = {}): Operations {
   return {
     consult: async () => ok({ columns: [], rows: [] }),
+    schema: async () =>
+      ok([{ name: 'filmes', kind: 'table', columns: ['id', 'titulo'] }]),
     pushStatus: async () => ok(STATUS),
     push: async () => ok(STATUS),
     evaluationsFolder: async () => failure('missing_config'),
@@ -176,6 +180,7 @@ describe('the console', () => {
     )
     if ('error' in answer) throw new Error('expected a table')
     expect(answer.total).toBe(CONSULT_ROWS + 5)
+    expect(answer.limit).toBe(CONSULT_ROWS)
     expect(answer.rows).toHaveLength(CONSULT_ROWS)
     expect(answer.columns).toEqual([
       { key: 'c0', name: 'n' },
@@ -260,8 +265,8 @@ describe('EvaluationRuns', () => {
         priority: 'offline',
         warnings: ['sem MovieLens'],
         best: [
-          { recall50: 0.5, coverageTop5: 0.2 },
-          { recall50: null, coverageTop5: null },
+          { recall50: 0.5, coverageTop5: 0.2, changes: [], tie: false },
+          { recall50: null, coverageTop5: null, changes: [], tie: false },
         ],
         file: '2026-11-20.md',
       },
@@ -290,6 +295,81 @@ describe('EvaluationRuns', () => {
   })
 })
 
+describe('the grid’s best sets', () => {
+  it('say what each changes from today’s weights, and which tie', async () => {
+    const runs = new EvaluationRuns(
+      fake({
+        evaluate: async () =>
+          ok({
+            ...EVALUATION,
+            weights: {
+              path: { weight: { cast: 0.5, genre: 0.3 } },
+              ratingDecay: { halfLifeYears: 5 },
+            },
+            grid: {
+              values: {},
+              combinations: 9,
+              best: [
+                {
+                  weights: {
+                    'path.weight': { cast: 0.625, genre: 0.3 },
+                    rating_decay: { halfLifeYears: 5 },
+                  },
+                  recall50: 0.8,
+                  coverageTop5: 0.7,
+                },
+                {
+                  weights: {
+                    'path.weight': { cast: 0.5, genre: 0.3 },
+                    rating_decay: { halfLifeYears: 5 },
+                  },
+                  recall50: 0.8,
+                  coverageTop5: 0.7,
+                },
+                {
+                  weights: {
+                    'path.weight': { cast: 0.5, genre: 0.3 },
+                    rating_decay: { halfLifeYears: 10 },
+                  },
+                  recall50: 0.6,
+                  coverageTop5: 0.7,
+                },
+              ],
+            },
+          }),
+      }),
+      NOW,
+    )
+    await runs.start('Bruno', true)
+    const { current } = runs
+    if (current.state !== 'done') throw new Error('expected a finished run')
+    expect(current.result.best).toEqual([
+      {
+        recall50: 0.8,
+        coverageTop5: 0.7,
+        changes: [
+          { section: 'path.weight', key: 'cast', from: 0.5, to: 0.625 },
+        ],
+        tie: true,
+      },
+      { recall50: 0.8, coverageTop5: 0.7, changes: [], tie: true },
+      {
+        recall50: 0.6,
+        coverageTop5: 0.7,
+        changes: [
+          {
+            section: 'rating_decay',
+            key: 'half_life_years',
+            from: 5,
+            to: 10,
+          },
+        ],
+        tie: false,
+      },
+    ])
+  })
+})
+
 describe('EvaluationRuns, when the run throws', () => {
   it('ends failed, not running forever', async () => {
     const log = vi.spyOn(console, 'error').mockImplementation(() => {})
@@ -311,15 +391,24 @@ describe('the page', () => {
     const page = await operationsPage(ops, new EvaluationRuns(ops), undefined)
     expect(page).toEqual({
       push: STATUS,
-      evaluation: { folder: 'unset', job: { state: 'idle' }, report: null },
+      evaluation: {
+        folder: 'unset',
+        job: { state: 'idle' },
+        report: null,
+        previous: null,
+      },
       consult: null,
+      schema: [{ name: 'filmes', kind: 'table', columns: ['id', 'titulo'] }],
     })
   })
 
   it('shows the latest report of the folder', async () => {
     const folder = join(useFixture().root, 'avaliacoes')
     mkdirSync(folder)
-    writeFileSync(join(folder, '2026-11-02.md'), 'velho')
+    writeFileSync(
+      join(folder, '2026-11-02.md'),
+      '## Offline\n\n| Amostra | Pessoas | Recall@50 |\n| --- | ---: | ---: |\n| Pessoas | 4 | 75.0% (3/4) |\n',
+    )
     writeFileSync(join(folder, '2026-11-19.md'), 'novo')
     writeFileSync(join(folder, 'notas.txt'), 'outro')
     const ops = fake({ evaluationsFolder: async () => ok(folder) })
@@ -327,8 +416,35 @@ describe('the page', () => {
       folder: 'ready',
       job: { state: 'idle' },
       report: { date: '2026-11-19', text: 'novo' },
+      previous: { date: '2026-11-02', recall50: 0.75 },
     })
     expect(latestReport(join(folder, 'nenhuma'))).toBeNull()
+    expect(previousMeasure(join(folder, 'nenhuma'))).toBeNull()
+  })
+
+  it('gives a report to keep, only to an admin and only a dated one', async () => {
+    const folder = join(useFixture().root, 'avaliacoes')
+    mkdirSync(folder)
+    writeFileSync(join(folder, '2026-11-19.md'), '# Avaliação')
+    const ops = fake({ evaluationsFolder: async () => ok(folder) })
+    const get = (query: string) =>
+      new Request(`http://localhost/operacoes/relatorio.md${query}`)
+    const file = await reportDownload(get('?data=2026-11-19'), ADMIN, ops)
+    expect(file.status).toBe(200)
+    expect(file.headers.get('Content-Disposition')).toBe(
+      'attachment; filename="avaliacao-2026-11-19.md"',
+    )
+    expect(await file.text()).toBe('# Avaliação')
+    for (const query of ['?data=2026-11-18', '?data=../x', ''])
+      expect((await reportDownload(get(query), ADMIN, ops)).status).toBe(404)
+    expect(
+      (await reportDownload(get('?data=2026-11-19'), DONO, ops)).status,
+    ).toBe(403)
+    expect(
+      (await reportDownload(get('?data=2026-11-19'), null, ops)).headers.get(
+        'Location',
+      ),
+    ).toBe('/entrar')
   })
 
   it('says what it cannot read when the engine cannot run', async () => {
@@ -414,7 +530,7 @@ describe('the form route', () => {
       location(
         await act(post({ acao: 'avaliar', grade: 'sim' }), ADMIN, ops, runs),
       ),
-    ).toBe('/operacoes?feito=avaliando')
+    ).toBe('/operacoes?feito=avaliando#avaliar')
     expect(runs.current).toMatchObject({
       state: 'running',
       by: 'Bruno',

@@ -108,14 +108,19 @@ test('the admin can retry a refused evaluation and read the report', async ({
 
   await grid.uncheck()
   await evaluation.getByRole('button', { name: 'Avaliar', exact: true }).click()
-  await expect(page).toHaveURL(/\/operacoes\?feito=avaliando$/)
-  await expect(evaluation.getByRole('status')).toContainText(
-    'Relatório gravado em 2026-11-20.md',
+  await expect(page).toHaveURL(/\/operacoes\?feito=avaliando#avaliar$/)
+  await expect(evaluation.getByRole('status').first()).toContainText(
+    'Terminou em',
     { timeout: 30_000 },
   )
   // Other files add Pessoas and Notas meanwhile: the numbers vary.
-  await expect(evaluation.getByRole('row', { name: /^Pessoas/ })).toBeVisible()
-  await evaluation.getByText('Relatório de 2026-11-20').click()
+  await expect(
+    evaluation.getByRole('row', { name: /^Pessoas/ }).first(),
+  ).toBeVisible()
+  await expect(
+    evaluation.getByRole('heading', { name: 'Relatório de 20 nov 2026' }),
+  ).toBeVisible()
+  await evaluation.getByText('Calibração da Força').click()
   await expect(evaluation.getByText(/Recall@50/).first()).toBeVisible()
   await snap(page, info, 'operacoes-avaliacao')
   await expect(page.locator('html')).toHaveAttribute('data-evaluation', 'open')

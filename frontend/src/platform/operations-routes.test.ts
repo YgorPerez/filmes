@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vite-plus/test'
 import { Route as Post } from '#/routes/operacoes/acao'
+import { Route as Report } from '#/routes/operacoes/relatorio[.]md'
 import { Route as Page } from '#/routes/_owner/operacoes'
 
 describe('the Operações routes', () => {
@@ -27,6 +28,21 @@ describe('the Operações routes', () => {
         method: 'POST',
         body: new FormData(),
       }),
+    })
+    expect(response.status).toBe(303)
+    expect(response.headers.get('Location')).toBe('/entrar')
+  })
+
+  it('send a report download with no Dono session to the login', async () => {
+    const { GET } = (
+      Report.options.server as {
+        handlers: { GET: (ctx: { request: Request }) => Promise<Response> }
+      }
+    ).handlers
+    const response = await GET({
+      request: new Request(
+        'http://localhost/operacoes/relatorio.md?data=2026-11-20',
+      ),
     })
     expect(response.status).toBe(303)
     expect(response.headers.get('Location')).toBe('/entrar')

@@ -28,6 +28,7 @@ import { Route as InicioPularRouteImport } from './routes/inicio/pular'
 import { Route as NotasIndexRouteImport } from './routes/notas/index'
 import { Route as NotasEnviarRouteImport } from './routes/notas/enviar'
 import { Route as OperacoesAcaoRouteImport } from './routes/operacoes/acao'
+import { Route as OperacoesRelatorioDotmdRouteImport } from './routes/operacoes/relatorio[.]md'
 import { Route as ParticiparIndexRouteImport } from './routes/participar/index'
 import { Route as ParticiparVotarRouteImport } from './routes/participar/votar'
 import { Route as ParticiparVotosRouteImport } from './routes/participar/votos'
@@ -147,6 +148,11 @@ const NotasEnviarRoute = NotasEnviarRouteImport.update({
 const OperacoesAcaoRoute = OperacoesAcaoRouteImport.update({
   id: '/operacoes/acao',
   path: '/operacoes/acao',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OperacoesRelatorioDotmdRoute = OperacoesRelatorioDotmdRouteImport.update({
+  id: '/operacoes/relatorio.md',
+  path: '/operacoes/relatorio.md',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ParticiparIndexRoute = ParticiparIndexRouteImport.update({
@@ -293,6 +299,7 @@ export interface FileRoutesByFullPath {
   '/inicio/pular': typeof InicioPularRoute
   '/notas/enviar': typeof NotasEnviarRoute
   '/operacoes/acao': typeof OperacoesAcaoRoute
+  '/operacoes/relatorio.md': typeof OperacoesRelatorioDotmdRoute
   '/participar/votar': typeof ParticiparVotarRoute
   '/participar/votos': typeof ParticiparVotosRoute
   '/exportar/': typeof ExportarIndexRoute
@@ -336,6 +343,7 @@ export interface FileRoutesByTo {
   '/inicio/pular': typeof InicioPularRoute
   '/notas/enviar': typeof NotasEnviarRoute
   '/operacoes/acao': typeof OperacoesAcaoRoute
+  '/operacoes/relatorio.md': typeof OperacoesRelatorioDotmdRoute
   '/participar/votar': typeof ParticiparVotarRoute
   '/participar/votos': typeof ParticiparVotosRoute
   '/': typeof OwnerIndexRoute
@@ -383,6 +391,7 @@ export interface FileRoutesById {
   '/inicio/pular': typeof InicioPularRoute
   '/notas/enviar': typeof NotasEnviarRoute
   '/operacoes/acao': typeof OperacoesAcaoRoute
+  '/operacoes/relatorio.md': typeof OperacoesRelatorioDotmdRoute
   '/participar/votar': typeof ParticiparVotarRoute
   '/participar/votos': typeof ParticiparVotosRoute
   '/_owner/': typeof OwnerIndexRoute
@@ -431,6 +440,7 @@ export interface FileRouteTypes {
     | '/inicio/pular'
     | '/notas/enviar'
     | '/operacoes/acao'
+    | '/operacoes/relatorio.md'
     | '/participar/votar'
     | '/participar/votos'
     | '/exportar/'
@@ -474,6 +484,7 @@ export interface FileRouteTypes {
     | '/inicio/pular'
     | '/notas/enviar'
     | '/operacoes/acao'
+    | '/operacoes/relatorio.md'
     | '/participar/votar'
     | '/participar/votos'
     | '/'
@@ -520,6 +531,7 @@ export interface FileRouteTypes {
     | '/inicio/pular'
     | '/notas/enviar'
     | '/operacoes/acao'
+    | '/operacoes/relatorio.md'
     | '/participar/votar'
     | '/participar/votos'
     | '/_owner/'
@@ -566,6 +578,7 @@ export interface RootRouteChildren {
   InicioPularRoute: typeof InicioPularRoute
   NotasEnviarRoute: typeof NotasEnviarRoute
   OperacoesAcaoRoute: typeof OperacoesAcaoRoute
+  OperacoesRelatorioDotmdRoute: typeof OperacoesRelatorioDotmdRoute
   ExportarIndexRoute: typeof ExportarIndexRoute
   FeedbackIndexRoute: typeof FeedbackIndexRoute
   FilaIndexRoute: typeof FilaIndexRoute
@@ -715,6 +728,13 @@ declare module '@tanstack/react-router' {
       path: '/operacoes/acao'
       fullPath: '/operacoes/acao'
       preLoaderRoute: typeof OperacoesAcaoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/operacoes/relatorio.md': {
+      id: '/operacoes/relatorio.md'
+      path: '/operacoes/relatorio.md'
+      fullPath: '/operacoes/relatorio.md'
+      preLoaderRoute: typeof OperacoesRelatorioDotmdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/participar/': {
@@ -962,6 +982,7 @@ const rootRouteChildren: RootRouteChildren = {
   InicioPularRoute: InicioPularRoute,
   NotasEnviarRoute: NotasEnviarRoute,
   OperacoesAcaoRoute: OperacoesAcaoRoute,
+  OperacoesRelatorioDotmdRoute: OperacoesRelatorioDotmdRoute,
   ExportarIndexRoute: ExportarIndexRoute,
   FeedbackIndexRoute: FeedbackIndexRoute,
   FilaIndexRoute: FilaIndexRoute,

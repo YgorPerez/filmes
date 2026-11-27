@@ -2,13 +2,15 @@
 // of filmes-dados (#121's status, and a push now), `evaluate` with its live
 // progress and its report (#103), and the read-only SQL console (`consult`,
 // #102). The forms post to `/operacoes/acao`; the console is a GET of the
-// page. Server only.
+// page, and the report downloads from `/operacoes/relatorio.md`. Server
+// only.
 
 import { readdirSync, readFileSync } from 'node:fs'
 import { basename, join } from 'node:path'
 import {
   checkDatabase,
   consult,
+  consultSchema,
   evaluate,
   evaluationsFolder,
   progressTo,
@@ -25,6 +27,7 @@ import {
   type OnlineMeasures,
   type Outcome,
   type PushStatus,
+  type SchemaTable,
 } from '@filmes/engine'
 import {
   parseOperation,
@@ -53,8 +56,29 @@ export type ConsultAnswer =
       rows: { key: string; cells: ConsultCell[] }[]
       /** Rows the query gave, before the cut. */
       total: number
+      /** The cut: at most this many rows show. */
+      limit: number
     }
   | { sql: string; error: { code: string; message: string } }
+
+/** One weight a combination of the grid sets apart from `weights.toml`:
+ * its section and key there, today's value and the combination's. */
+export type WeightChange = {
+  section: string
+  key: string
+  from: number | null
+  to: number
+}
+
+/** One of the grid's best weight sets: its measures, what it changes from
+ * today's weights (none: it is today's), and whether another of the best
+ * measured the same. */
+export type GridBest = {
+  recall50: number | null
+  coverageTop5: number | null
+  changes: WeightChange[]
+  tie: boolean
+}
 
 /** The measures of a finished `evaluate`, as the page shows them. */
 export type EvaluationSummary = {
@@ -64,7 +88,7 @@ export type EvaluationSummary = {
   priority: 'online' | 'offline'
   warnings: string[]
   /** The grid's three best weight sets, when it ran. */
-  best: { recall50: number | null; coverageTop5: number | null }[] | null
+  best: GridBest[] | null
   /** The report's file name in the evaluations folder. */
   file: string
 }
@@ -90,12 +114,17 @@ export type EvaluationJob =
 /** The latest report in the evaluations folder. */
 export type EvaluationReport = { date: string; text: string }
 
+/** The report before the latest: its day and the Pessoas' Recall@50, for
+ * the change since. */
+export type PreviousMeasure = { date: string; recall50: number }
+
 /** The evaluation's part of the page: whether a folder is set for the
  * reports (`FILMES_AVALIACOES` has no default), the run, the report. */
 export type EvaluationPanel = {
   folder: 'ready' | 'unset' | 'unavailable'
   job: EvaluationJob
   report: EvaluationReport | null
+  previous: PreviousMeasure | null
 }
 
 /** What `/operacoes` shows; `push` is null when the engine cannot run
@@ -104,11 +133,15 @@ export type OperationsPage = {
   push: PushStatus | null
   evaluation: EvaluationPanel
   consult: ConsultAnswer | null
+  /** The tables and views the console can read; null when the engine
+   * cannot say. */
+  schema: SchemaTable[] | null
 }
 
 /** What the screen needs from the engine. */
 export interface Operations {
   consult(sql: string): Promise<Outcome<ConsultResult>>
+  schema(): Promise<Outcome<readonly SchemaTable[]>>
   pushStatus(): Promise<Outcome<PushStatus>>
   push(): Promise<Outcome<PushStatus>>
   evaluationsFolder(): Promise<Outcome<string>>
@@ -128,6 +161,7 @@ const failed = (code: ErrorCode, message: string): Outcome<never> => ({
 export function operationsFromEngine(engine: Engine): Operations {
   return {
     consult: (sql) => engine.run(consult(sql)),
+    schema: () => engine.run(consultSchema),
     pushStatus: () => engine.run(pushStatus),
     push: () => engine.run(pushNow),
     evaluationsFolder: () => engine.run(evaluationsFolder),
@@ -146,16 +180,70 @@ function logEngineError(outcome: { output: ErrorOutput }): void {
 const number = (value: unknown): number | null =>
   typeof value === 'number' ? value : null
 
+const record = (value: unknown): Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {}
+
+const camelCase = (name: string) =>
+  name.replace(/_([a-z0-9])/g, (_, c: string) => c.toUpperCase())
+
+const snakeCase = (name: string) =>
+  name.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`)
+
+/** Today's value of `key` in a grid `section` (`path.weight`), from the
+ * output's weights, whose keys are camelCased at every level. */
+const currentValue = (
+  weights: unknown,
+  section: string,
+  key: string,
+): number | null =>
+  number(
+    record(
+      section
+        .split('.')
+        .reduce<unknown>((at, part) => record(at)[camelCase(part)], weights),
+    )[key],
+  )
+
+/** What one of the best sets changes from today's weights, by the TOML's
+ * section and key. */
+function changesOf(entry: unknown, weights: unknown): WeightChange[] {
+  return Object.entries(record(record(entry).weights)).flatMap(
+    ([section, values]) =>
+      Object.entries(record(values)).flatMap(([key, value]) => {
+        const to = number(value)
+        const from = currentValue(weights, section, key)
+        return to === null || to === from
+          ? []
+          : [{ section, key: snakeCase(key), from, to }]
+      }),
+  )
+}
+
 /** The grid's best entries, from the report's loose shape. */
-function bestOf(grid: Evaluation['grid']): EvaluationSummary['best'] {
+function bestOf(
+  grid: Evaluation['grid'],
+  weights: unknown,
+): EvaluationSummary['best'] {
   if (!grid || !Array.isArray(grid.best)) return null
-  return grid.best.map((entry) => {
-    const e = (entry ?? {}) as Record<string, unknown>
+  const best = grid.best.map((entry) => {
+    const e = record(entry)
     return {
       recall50: number(e.recall50),
       coverageTop5: number(e.coverageTop5),
+      changes: changesOf(entry, weights),
     }
   })
+  return best.map((entry, i) => ({
+    ...entry,
+    tie: best.some(
+      (other, j) =>
+        j !== i &&
+        other.recall50 === entry.recall50 &&
+        other.coverageTop5 === entry.coverageTop5,
+    ),
+  }))
 }
 
 const summaryOf = (evaluation: Evaluation): EvaluationSummary => ({
@@ -164,26 +252,45 @@ const summaryOf = (evaluation: Evaluation): EvaluationSummary => ({
   online: evaluation.online,
   priority: evaluation.priority,
   warnings: [...evaluation.warnings],
-  best: bestOf(evaluation.grid),
+  best: bestOf(evaluation.grid, evaluation.weights),
   file: basename(evaluation.file),
 })
 
 const REPORT_NAME = /^\d{4}-\d{2}-\d{2}\.md$/
 
+/** The dated reports in `folder`, oldest first; none without the folder. */
+function reportNames(folder: string): string[] {
+  try {
+    return readdirSync(folder)
+      .filter((name) => REPORT_NAME.test(name))
+      .sort()
+  } catch {
+    return []
+  }
+}
+
+const reportOf = (folder: string, name: string): EvaluationReport => ({
+  date: name.slice(0, -'.md'.length),
+  text: readFileSync(join(folder, name), 'utf8'),
+})
+
 /** The newest dated report in `folder`, or null (no folder, no report). */
 export function latestReport(folder: string): EvaluationReport | null {
-  let names: string[]
-  try {
-    names = readdirSync(folder).filter((name) => REPORT_NAME.test(name))
-  } catch {
-    return null
-  }
-  const name = names.sort().at(-1)
+  const name = reportNames(folder).at(-1)
+  return name === undefined ? null : reportOf(folder, name)
+}
+
+/** The Pessoas' row of a report's Offline table: "| Pessoas | 4 | 80.0%". */
+const PEOPLE_RECALL = /^\| Pessoas \| \d+ \| (\d+(?:\.\d+)?)%/m
+
+/** The report before the newest, with the Pessoas' Recall@50 it gave; null
+ * without one, or when it has no such measure. */
+export function previousMeasure(folder: string): PreviousMeasure | null {
+  const name = reportNames(folder).at(-2)
   if (name === undefined) return null
-  return {
-    date: name.slice(0, -'.md'.length),
-    text: readFileSync(join(folder, name), 'utf8'),
-  }
+  const { date, text } = reportOf(folder, name)
+  const match = PEOPLE_RECALL.exec(text)
+  return match ? { date, recall50: Number(match[1]) / 100 } : null
 }
 
 /** One `evaluate` at a time per process, with its progress kept for the
@@ -252,11 +359,16 @@ export async function evaluationPanel(
   const job = runs.current
   const folder = await operations.evaluationsFolder()
   if (folder.exitCode === 0)
-    return { folder: 'ready', job, report: latestReport(folder.output) }
+    return {
+      folder: 'ready',
+      job,
+      report: latestReport(folder.output),
+      previous: previousMeasure(folder.output),
+    }
   if (folder.output.error.code === 'missing_config')
-    return { folder: 'unset', job, report: null }
+    return { folder: 'unset', job, report: null, previous: null }
   logEngineError(folder)
-  return { folder: 'unavailable', job, report: null }
+  return { folder: 'unavailable', job, report: null, previous: null }
 }
 
 /** The console's answer to `sql`: the first `CONSULT_ROWS` rows, or the
@@ -276,6 +388,7 @@ export async function consultAnswer(
         cells: row.map((value, c) => ({ key: `c${c}`, value })),
       })),
       total: rows.length,
+      limit: CONSULT_ROWS,
     }
   }
   const { code } = outcome.output.error
@@ -291,10 +404,13 @@ export async function operationsPage(
 ): Promise<OperationsPage> {
   const status = await operations.pushStatus()
   if (status.exitCode !== 0) logEngineError(status)
+  const schema = await operations.schema()
+  if (schema.exitCode !== 0) logEngineError(schema)
   return {
     push: status.exitCode === 0 ? status.output : null,
     evaluation: await evaluationPanel(operations, runs),
     consult: sql === undefined ? null : await consultAnswer(operations, sql),
+    schema: schema.exitCode === 0 ? [...schema.output] : null,
   }
 }
 
@@ -326,7 +442,10 @@ async function evaluateAction(
   }
   // The run goes on after the answer; the page follows its progress.
   const run = runs.start(by, grid)
-  return run === 'busy' ? refused('em-andamento') : back('feito=avaliando')
+  // To the panel, where the progress shows (on the phone it is far down).
+  return run === 'busy'
+    ? refused('em-andamento')
+    : back('feito=avaliando#avaliar')
 }
 
 const refused = (refusal: OperationsRefusal) => back(`erro=${refusal}`)
@@ -356,6 +475,33 @@ export async function operationsAction(
   return back('feito=enviado')
 }
 
+/** `GET /operacoes/relatorio.md?data=<day>`: a report as the engine wrote
+ * it, to keep. Only an admin Dono; a day with no report is a 404. */
+export async function reportDownload(
+  request: Request,
+  owner: Operator | null,
+  operations: Operations,
+): Promise<Response> {
+  if (!owner)
+    return new Response(null, {
+      status: 303,
+      headers: { Location: '/entrar', 'Cache-Control': 'no-store' },
+    })
+  if (!owner.admin) return new Response('Só para admin', { status: 403 })
+  const name = `${new URL(request.url).searchParams.get('data') ?? ''}.md`
+  const folder = await operations.evaluationsFolder()
+  if (folder.exitCode !== 0 || !reportNames(folder.output).includes(name))
+    return new Response('Relatório não encontrado', { status: 404 })
+  return new Response(readFileSync(join(folder.output, name)), {
+    headers: {
+      'Content-Type': 'text/markdown; charset=utf-8',
+      'Content-Disposition': `attachment; filename="avaliacao-${name}"`,
+      'Cache-Control': 'private, no-store',
+      'X-Content-Type-Options': 'nosniff',
+    },
+  })
+}
+
 // --- the app's -----------------------------------------------------------------
 
 const appOperations = () => operationsFromEngine(appEngine())
@@ -375,6 +521,10 @@ export const appEvaluationPanel = () =>
 /** The push banner for the logged-in Dono. */
 export const appPushAlert = (owner: Operator) =>
   pushAlert(owner, appOperations())
+
+/** The report's download for the app. */
+export const serveReportDownload = (request: Request) =>
+  reportDownload(request, appPoster(request).owner, appOperations())
 
 /** The form's route for the app: the logged-in Dono, the process's engine. */
 export const serveOperationsAction = (request: Request) => {

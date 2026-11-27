@@ -1,15 +1,15 @@
 import type { ReactNode } from 'react'
 import { PostForm } from './kit/post-form'
 import { OPERATIONS } from './operations.copy'
-import { Alert, Section, Submit } from './person-parts'
+import { Alert, Disclosure, Section, Submit } from './person-parts'
 
 // The form every Operações action posts: `/operacoes/acao`, with the
-// action in `acao`. The Operações screens take the alert, the section and
-// the submit button of the Dono screens from here, with the rest of their
+// action in `acao`. The Operações screens take the alert, the fold, the
+// section and the submit button of the Dono screens from here, with the rest of their
 // parts, which keeps person-parts under fallow's coupling threshold (its
 // fan-in at most the project's p95), as person-parts does for kit/status.
 
-export { Alert, Section, Submit }
+export { Alert, Disclosure, Section, Submit }
 
 export function ActionPost({
   action,
