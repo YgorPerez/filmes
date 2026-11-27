@@ -162,6 +162,17 @@ export const SESSIONS = {
     /** "vocês dois", "vocês três": the bar's who (#272). */
     together: (n: number) =>
       `vocês ${['', 'um', 'dois', 'três', 'quatro', 'cinco', 'seis'][n] ?? n}`,
+    /** The bar's Restrições, as the Cartaz's label says them (#272). */
+    night: {
+      noMoods: (names: readonly string[]) => `nada ${names.join(' nem ')}`,
+      noSlow: 'nada lento',
+      noSad: 'nada triste',
+      unseen: 'nada repetido',
+      child: (age: string) =>
+        age === '0' ? 'com criança' : `com criança de ${age} anos`,
+      /** The years, the language and the triggers, counted. */
+      more: (n: number) => `+ ${n} ${n === 1 ? 'limite' : 'limites'}`,
+    },
     reading: {
       understood: (labels: readonly string[]) =>
         `Entendi: ${labels.join(', ')}.`,

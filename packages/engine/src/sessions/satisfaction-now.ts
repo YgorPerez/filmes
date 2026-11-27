@@ -21,9 +21,9 @@ export interface PersonSatisfactionNow {
   /** Rounded to 4 places, as the Recomendação's `satisfaction`; null with
    * no reaction in her recent shared Sessions. */
   readonly satisfaction: number | null
-  /** "satisfação de <nome> nas últimas Sessões: 11%, e a mais alta do
-   * grupo, 100%; na de sex, 20 nov (<filme>), deu 2 de 10"; null when she is behind
-   * nobody. */
+  /** "<nome>: satisfação de 11% nas últimas Sessões (a mais alta do
+   * grupo, 100%); na de sex, 20 nov, deu 2 de 10 a <filme>"; null when she
+   * is behind nobody. */
   readonly line: string | null
 }
 

@@ -155,16 +155,20 @@ export const groupSatisfaction = (
     }
   })
 
-const REPORTED: Readonly<Record<string, string>> = {
-  gostou: 'gostou',
-  neutro: 'achou neutro',
-  'não gostou': 'não gostou',
+/** How a Relato cites the film: "gostou de F", "achou F neutro". */
+const REPORTED: Readonly<Record<string, (film: string) => string>> = {
+  gostou: (film) => `gostou de ${film}`,
+  neutro: (film) => `achou ${film} neutro`,
+  'não gostou': (film) => `não gostou de ${film}`,
 }
 
 const percent = (value: number): string => `${Math.round(value * 100)}%`
 
 /** The line of the film that went up because a Presente was behind, citing
- * her lowest reaction in the window. It adds nothing to the utility (base
+ * her lowest reaction in the window: "Teo: satisfação de 22% nas últimas
+ * Sessões (a mais alta do grupo, 100%); na de sex, 20 nov, deu 3 de 10 a
+ * Quermesse" (#272). It opens with her name: it is a line of the film,
+ * with no name before it on the Cartaz. It adds nothing to the utility (base
  * 0): the satisfaction acts on the Regra, not on the Evidence. A cited
  * Nota is read on her scale (#172), and written on 1–10 with the day as
  * the app writes it ("sex, 20 nov", #272). */
@@ -187,11 +191,13 @@ export const satisfactionLine = (
   if (kind === 'report' && reported === undefined)
     throw pythonError('KeyError', `'${String(reaction['reacao'])}'`)
   const reacted =
-    kind === 'rating' ? `deu ${tenScaleText(rating ?? Number.NaN)}` : reported
+    kind === 'rating'
+      ? `deu ${tenScaleText(rating ?? Number.NaN)} a ${film}`
+      : (reported?.(film) ?? '')
   return makeEvidence({
     person,
     filmId,
-    text: `satisfação de ${name} nas últimas Sessões: ${percent(own.satisfaction)}, e a mais alta do grupo, ${percent(group.highest)}; na de ${weekdayDateText(text(session, 'data'))} (${film}), ${reacted}`,
+    text: `${name}: satisfação de ${percent(own.satisfaction)} nas últimas Sessões (a mais alta do grupo, ${percent(group.highest)}); na de ${weekdayDateText(text(session, 'data'))}, ${reacted}`,
     source: text(reaction, 'fonte'),
     date: text(reaction, 'data'),
     strength: feedbackStrength(

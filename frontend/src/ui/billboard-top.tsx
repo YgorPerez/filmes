@@ -1,5 +1,6 @@
 import type { Billboard as BillboardModel, BillboardLine } from '@filmes/engine'
 import { BILLBOARD } from './billboard.copy'
+import { closeOnOutside, HEAD_POPOVERS } from './kit/dismiss'
 import { Avatar } from './kit/person'
 
 // The pieces of the Cartaz above the cards (DESIGN.md, Legenda, Força and
@@ -75,10 +76,15 @@ export function PeopleLegend({ billboard }: { billboard: BillboardModel }) {
 }
 
 /** The three Forças in words, behind a "?" (#272): the Presentes are in
- * the page's head, and the key is for who asks. */
+ * the page's head, and the key is for who asks. A tap outside or Esc
+ * closes it, and so does opening the ⋯ menu (`kit/dismiss.ts`). */
 export function Legend() {
   return (
-    <details className="group/legend relative self-end">
+    <details
+      ref={closeOnOutside}
+      name={HEAD_POPOVERS}
+      className="group/legend relative self-end"
+    >
       <summary
         aria-label={BILLBOARD.legend}
         className="grid size-touch cursor-pointer list-none place-items-center rounded-round border-(length:--border-width-stroke) border-rule bg-surface font-display text-control text-ink [&::-webkit-details-marker]:hidden"

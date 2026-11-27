@@ -13,6 +13,8 @@ export const CHOSEN = {
   reaction: { liked: 'gostou', neutral: 'neutro', disliked: 'não gostou' },
   /** Her comment in the Feedback, quoted (#272). */
   comment: (text: string) => `“${text}”`,
+  /** The Presentes with no Reação, in one muted line (#272). */
+  noReaction: (names: string) => `${names}: sem reação`,
   line: (name: string, parts: readonly string[]) =>
     `${name}: ${parts.join(' · ')}`,
 } as const

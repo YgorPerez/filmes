@@ -17,6 +17,7 @@ import { Billboard } from './billboard'
 import { CHOSEN_OUTSIDE, CLOSED, MODEL } from './billboard.fixture'
 import { parseMarks } from './billboard-marks'
 import { BILLBOARD } from './billboard.copy'
+import { CHOSEN as CHOSEN_COPY } from './billboard-chosen.copy'
 
 const KEY = 'filmes-cartaz:2026-11-20-iara:v2'
 
@@ -290,7 +291,7 @@ describe('the Cartaz shows, the chosen film', () => {
     expect(block.getByText('Curta da Madrugada (2010)')).toBeTruthy()
     // Each line opens with her avatar, whose initial a screen reader skips.
     expect(block.getAllByRole('listitem').map((li) => li.textContent)).toEqual([
-      'BBruno: deu 8 de 10',
+      'BVocê: deu 8 de 10',
       'IIara: não gostou',
     ])
     expect(cards()).toHaveLength(2)
@@ -303,7 +304,7 @@ describe('the Cartaz shows, the chosen film', () => {
         .getByRole('list', { name: 'Filme escolhido' })
         .querySelectorAll('li')
     expect([...reactions()].map((li) => li.textContent)).toEqual([
-      'BBruno: previsto 8,3 · deu 6 de 10',
+      'BVocê: previsto 8,3 · deu 6 de 10',
       'IIara: gostou',
     ])
     expect(
@@ -318,7 +319,7 @@ describe('the Cartaz shows, the chosen film', () => {
 })
 
 describe('the Cartaz shows, a Reação from outside', () => {
-  it('a Reação of someone not on the Cartaz, by her slug', () => {
+  it('a Reação of someone not on the Cartaz, by her slug, and who has none, muted', () => {
     render(
       <Billboard
         billboard={{
@@ -341,9 +342,10 @@ describe('the Cartaz shows, a Reação from outside', () => {
     const block = within(
       screen.getByRole('region', { name: 'Filme escolhido' }),
     )
-    expect(block.getByRole('listitem').textContent).toBe(
+    expect(block.getAllByRole('listitem').map((li) => li.textContent)).toEqual([
       'teo: previsto 7 · neutro',
-    )
+      CHOSEN_COPY.noReaction('Você e Iara'),
+    ])
   })
 })
 
@@ -864,7 +866,7 @@ describe('the inline card', () => {
     ).toBe('Sessão fechada · Filme escolhido: As Horas Lentas')
     expect(
       screen.getByRole('list', { name: 'Filme escolhido' }).textContent,
-    ).toBe('BBruno: previsto 8,3 · deu 6 de 10IIara: gostou')
+    ).toBe('BVocê: previsto 8,3 · deu 6 de 10IIara: gostou')
     const rows = within(
       screen.getByRole('list', { name: BILLBOARD.view.list }),
     ).getAllByRole('listitem')
@@ -1191,12 +1193,24 @@ describe('the Cartaz, what weighs against a film (#272)', () => {
     ).toBeTruthy()
   })
 
-  it('the case is stamped JÁ VI for who the engine knows saw it, the option unpressed', () => {
+  it('the case is stamped VISTO ANTES for who the engine knows saw it, the option unpressed', () => {
     render(<Billboard billboard={seen} action="/x" />)
     expect(
-      card(1).getByText(BILLBOARD.card.seenStampWho(['Você'])),
+      card(1).getByText(BILLBOARD.card.seenBeforeStampWho(['Você'])),
     ).toBeTruthy()
+    expect(
+      card(1).queryByText(BILLBOARD.card.seenStampWho(['Você'])),
+    ).toBeNull()
     expect(pressed(card(1).getByRole('button', { name: 'Você' }))).toBe(false)
+  })
+
+  it('a Já vi marked on the Cartaz turns the stamp into JÁ VI, with who the engine knows too', async () => {
+    const user = userEvent.setup()
+    render(<Billboard billboard={seen} action="/x" />)
+    await user.click(card(1).getByRole('button', { name: 'Iara' }))
+    // The row's label and the stamp; both saw it, so no initials.
+    expect(card(1).getAllByText(BILLBOARD.card.seenStamp)).toHaveLength(2)
+    expect(card(1).queryByText(BILLBOARD.card.seenBeforeStamp)).toBeNull()
   })
 })
 
@@ -1228,35 +1242,33 @@ describe('the Cartaz, a section of several films (#272)', () => {
   })
 })
 
-describe('the marks, Todos with more than three Presentes (#272)', () => {
-  it('goes up beside the label, still marking everyone', async () => {
-    const user = userEvent.setup()
-    const four = ['Teo', 'Rosa'].map((name, i) => ({
-      slug: name.toLowerCase(),
-      name,
-      label: name,
-      initial: name[0]!,
-      color: i + 3,
-      owner: false,
-    }))
-    render(
-      <Billboard
-        billboard={{ ...MODEL, attendees: [...MODEL.attendees, ...four] }}
-        action="/x"
-      />,
-    )
-    const row = card(1).getByRole('group', {
-      name: BILLBOARD.marks.seenGroup(1),
-    })
-    const all = within(row).getByRole('button', { name: BILLBOARD.marks.all })
-    expect(all.parentElement!.textContent).toBe(
-      `${BILLBOARD.marks.seen}${BILLBOARD.marks.all}`,
-    )
-    await user.click(all)
-    expect(
-      within(row)
-        .getAllByRole('button')
-        .every((b) => pressed(b)),
-    ).toBe(true)
-  })
+describe('the marks, Todos at any number of Presentes (#272)', () => {
+  it.each([0, 2])(
+    'comes right after the label and before the names, still marking everyone (%i more)',
+    async (more) => {
+      const user = userEvent.setup()
+      const extra = ['Teo', 'Rosa'].slice(0, more).map((name, i) => ({
+        slug: name.toLowerCase(),
+        name,
+        label: name,
+        initial: name[0]!,
+        color: i + 3,
+        owner: false,
+      }))
+      render(
+        <Billboard
+          billboard={{ ...MODEL, attendees: [...MODEL.attendees, ...extra] }}
+          action="/x"
+        />,
+      )
+      const row = card(1).getByRole('group', {
+        name: BILLBOARD.marks.seenGroup(1),
+      })
+      const buttons = within(row).getAllByRole('button')
+      expect(row.firstElementChild!.textContent).toBe(BILLBOARD.marks.seen)
+      expect(buttons[0]!.textContent).toBe(BILLBOARD.marks.all)
+      await user.click(buttons[0]!)
+      expect(buttons.every((b) => pressed(b))).toBe(true)
+    },
+  )
 })
