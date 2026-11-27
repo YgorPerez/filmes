@@ -51,6 +51,12 @@ describe('personImports', () => {
       imdb: { ratings: 0 },
       simkl: { ratings: 0, seen: 0, watchlist: 0 },
       tvtime: { ratings: 0, seen: 0, stated: 0, watchlist: 0 },
+      films: {
+        trakt: { rated: 0, seen: 0, watchlist: 0 },
+        imdb: { rated: 0, seen: 0, watchlist: 0 },
+        simkl: { rated: 0, seen: 0, watchlist: 0 },
+        tvtime: { rated: 0, seen: 0, watchlist: 0 },
+      },
     })
   })
 })
@@ -103,6 +109,14 @@ describe('personImports', () => {
     } = letterboxd
     expect(report.letterboxd).toEqual(lbReport)
     expect(report.trakt).toEqual(trakt.facts)
+    // By film (#274): the history's one film has a Nota, so it is no Já
+    // visto of its own.
+    expect(report.trakt.seen).toBeGreaterThan(0)
+    expect(report.films.trakt).toEqual({
+      rated: report.trakt.ratings,
+      seen: 0,
+      watchlist: 0,
+    })
     expect(facts.ratings).toBeGreaterThan(0)
   })
 

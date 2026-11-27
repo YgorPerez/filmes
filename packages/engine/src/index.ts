@@ -668,8 +668,10 @@ export {
 } from './imports/simkl.ts'
 export {
   personImports,
+  type FilmSource,
   type ImportRecord,
   type PersonImports,
+  type SourceFilms,
 } from './imports/report.ts'
 export {
   removeImport,
