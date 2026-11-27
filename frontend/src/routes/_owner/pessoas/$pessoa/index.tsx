@@ -7,6 +7,7 @@ import { PersonScreen, UnknownPerson } from '#/ui/person'
 // A Pessoa's page. The Dono's own is Meu gosto (`/meu-gosto`), with the
 // same query. No Pessoa with the slug is a 404 (#273).
 export const Route = createFileRoute('/_owner/pessoas/$pessoa/')({
+  staticData: { wide: true },
   validateSearch: personSearch,
   beforeLoad: ({ params, context, location }) => {
     if (params.pessoa === context.owner.person)
@@ -23,7 +24,7 @@ export const Route = createFileRoute('/_owner/pessoas/$pessoa/')({
 
 function PersonRoute() {
   const { pessoa } = Route.useParams()
-  const { feito, erro, em, campo } = Route.useSearch()
+  const { feito, erro, em, campo, editar, item } = Route.useSearch()
   const { page } = Route.useLoaderData()
   return (
     <PersonScreen
@@ -33,6 +34,8 @@ function PersonRoute() {
       refusal={erro}
       spot={em}
       problem={readProblemParam(campo)}
+      editing={editar}
+      saved={item}
     />
   )
 }

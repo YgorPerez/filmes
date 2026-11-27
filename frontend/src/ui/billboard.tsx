@@ -12,7 +12,7 @@ import {
 } from 'react'
 import { BillboardCard, EvidenceLine } from './billboard-card'
 import { ChosenFilm } from './billboard-chosen'
-import { Changes, InlineBillboard, type RowTag } from './billboard-inline'
+import { InlineBillboard, Standing, type RowTag } from './billboard-inline'
 import {
   emptyMarks,
   forgetMarks,
@@ -348,8 +348,9 @@ export function Billboard({
   )
 }
 
-/** The fullscreen: the request fixed on top, the Dono's words, what left,
- * the Presentes and the shelf, the bar at the foot. */
+/** The fullscreen: the request fixed on top, the Dono's words, what left
+ * (or, once closed, that it is and the Filme escolhido, as inline), the
+ * Presentes and the shelf, the bar at the foot. */
 function FullscreenBody({
   billboard,
   bar,
@@ -375,14 +376,15 @@ function FullscreenBody({
           <HandNote compact tilt="right">{`+ ${words}`}</HandNote>
         </div>
       ))}
-      <Changes billboard={billboard} />
+      <Standing billboard={billboard} block />
       {billboard.films.length > 0 && <PeopleLegend billboard={billboard} />}
       {children}
     </Fullscreen>
   )
 }
 
-/** Claude without fullscreen: no page head names the Presentes. */
+/** Claude without fullscreen: no page head names the Presentes; what left,
+ * or the closed Session's lines, come under the request, as inline. */
 function ViewTop({
   billboard,
   shelf,
@@ -393,8 +395,8 @@ function ViewTop({
   return (
     <>
       <Request billboard={billboard} />
+      <Standing billboard={billboard} block />
       <PeopleLegend billboard={billboard} />
-      <Changes billboard={billboard} />
       <Capped>{shelf}</Capped>
     </>
   )
@@ -469,11 +471,19 @@ function Shelf({
 
 type Film = BillboardModel['films'][number]
 
-/** A film without the lines its section says once. */
-const withoutShared = (film: Film, shared: ReadonlySet<string>) =>
-  shared.size === 0
+/** A film without the lines and the "sem fato" its section says once. */
+const withoutShared = (
+  film: Film,
+  shared: ReadonlySet<string>,
+  without: ReadonlySet<string>,
+) =>
+  shared.size === 0 && without.size === 0
     ? film
-    : { ...film, lines: film.lines.filter((l) => !shared.has(lineKey(l))) }
+    : {
+        ...film,
+        lines: film.lines.filter((l) => !shared.has(lineKey(l))),
+        withoutFact: film.withoutFact.filter((slug) => !without.has(slug)),
+      }
 
 /** A card per film, under the section of its Motivo when there are
  * sections. */
@@ -520,15 +530,18 @@ function Cards({
       {billboard.sections.map((section) => {
         const films = section.films.flatMap((id) => byId.get(id) ?? [])
         const shared = sharedLines(films)
+        const without = sharedWithoutFact(films)
         const own = new Set(shared.map(lineKey))
+        const none = new Set(without)
         return (
           <Section
             key={section.films[0]}
             section={section}
             shared={shared}
+            without={without}
             people={billboard.attendees}
           >
-            {films.map((film) => card(withoutShared(film, own)))}
+            {films.map((film) => card(withoutShared(film, own, none)))}
           </Section>
         )
       })}
@@ -542,11 +555,13 @@ function Cards({
 function Section({
   section,
   shared,
+  without,
   people,
   children,
 }: {
   section: BillboardModel['sections'][number]
   shared: readonly BillboardLine[]
+  without: readonly string[]
   people: readonly BillboardPerson[]
   children: ReactNode
 }) {
@@ -568,7 +583,9 @@ function Section({
           </>
         )}
       </h2>
-      {shared.length > 0 && <SharedLines lines={shared} people={people} />}
+      {(shared.length > 0 || without.length > 0) && (
+        <SharedLines lines={shared} without={without} people={people} />
+      )}
       {children}
     </section>
   )
@@ -576,8 +593,9 @@ function Section({
 
 /** Claude's fullscreen: the request fixed on top, one line, the Dono's
  * words, the legend and the shelf scrolling, the bar fixed at the foot,
- * above the host's message box (its safe area, `--host-inset-*`). The
- * content keeps the web's column, centred (#277). */
+ * above the host's message box (its safe area, `--host-inset-*`); with
+ * no bar, the content ends above that box. The content keeps the web's
+ * column, centred (#277). */
 function Fullscreen({
   top,
   foot,
@@ -596,6 +614,11 @@ function Fullscreen({
       <div className={`flex flex-1 flex-col gap-2xl py-2xl ${column}`}>
         {children}
       </div>
+      {/* With no bar (a closed or an empty Cartaz), the end of the shelf
+          clears the host's message box by itself (#277). */}
+      {!foot && (
+        <div aria-hidden="true" className="h-(--host-inset-bottom) shrink-0" />
+      )}
       {foot}
     </div>
   )
@@ -619,7 +642,9 @@ function Capped({ children }: { children: ReactNode }) {
         {children}
       </div>
       {cut && (
-        <div className="absolute inset-x-0 bottom-0 flex justify-center border-t border-rule bg-ground pt-md">
+        // Narrow, the shelf sits on the frame's floor, not on the ground
+        // (`billboard-view.tsx`).
+        <div className="absolute inset-x-0 bottom-0 flex justify-center border-t border-rule bg-view-floor pt-md min-[560px]:bg-ground">
           <button
             type="button"
             aria-expanded={false}
@@ -636,7 +661,7 @@ function Capped({ children }: { children: ReactNode }) {
 
 /** An Evidência line by what it says and whose it is. */
 const lineKey = (line: BillboardLine) =>
-  `${line.people.join(' ')}:${line.strength}:${line.text}`
+  `${line.people.join(' ')}:${line.strength}:${line.against}:${line.text}`
 
 /** The lines every film of a section has, when it has two films or more
  * (#272): said once under the title, so each card keeps what is its own. */
@@ -650,15 +675,31 @@ function sharedLines(
   )
 }
 
-/** The shared lines, under a section's title. */
+/** The Presentes with no Fato about any film of a section of two films
+ * or more (#272): said once with its shared lines, never lost with them. */
+function sharedWithoutFact(
+  films: readonly BillboardModel['films'][number][],
+): string[] {
+  const [first, ...rest] = films
+  if (!first || rest.length === 0) return []
+  return first.withoutFact.filter((slug) =>
+    rest.every((film) => film.withoutFact.includes(slug)),
+  )
+}
+
+/** The shared lines and who has no Fato, under a section's title. */
 function SharedLines({
   lines,
+  without,
   people,
 }: {
   lines: readonly BillboardLine[]
+  without: readonly string[]
   people: readonly BillboardPerson[]
 }) {
   const known = new Map(people.map((p) => [p.slug, p]))
+  const absent = new Set(without)
+  const nobody = people.filter((p) => absent.has(p.slug))
   return (
     <div className="flex flex-col gap-xs pl-md">
       <p className="font-display text-label text-ink-2 uppercase">
@@ -668,6 +709,11 @@ function SharedLines({
         {lines.map((line) => (
           <EvidenceLine key={lineKey(line)} line={line} people={known} />
         ))}
+        {nobody.length > 0 && (
+          <li className="text-evidence text-ink-2">
+            {BILLBOARD.sharedWithoutFact(BILLBOARD.names(nobody))}
+          </li>
+        )}
       </ul>
     </div>
   )

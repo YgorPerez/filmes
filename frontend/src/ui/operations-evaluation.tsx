@@ -23,6 +23,20 @@ const SMALL_SAMPLE = 10
  * MovieLens row says itself. */
 const NO_MOVIELENS = /ml-32m/
 
+/** A ref for what takes the focus when a run this page watched ends
+ * (`settled`): the progress that had it is gone, and without this the
+ * focus falls back to the page's body, the next Tab back at the top. It
+ * moves only from the body: a focus the admin put elsewhere stays. */
+function useSettledFocus<T extends HTMLElement>(settled: boolean) {
+  const target = useRef<T>(null)
+  useEffect(() => {
+    const active = document.activeElement
+    if (settled && (active === null || active === document.body))
+      target.current?.focus()
+  }, [settled])
+  return target
+}
+
 function Running({
   job,
   focus,
@@ -88,7 +102,7 @@ function Measures({ result }: { result: EvaluationSummary }) {
         <thead>
           <tr className="border-b border-rule font-display">
             <th scope="col">{COPY.sample}</th>
-            <th scope="col">{COPY.measured}</th>
+            <th scope="col">{COPY.people}</th>
             <th scope="col">{COPY.recall}</th>
             <th scope="col">{COPY.coverage}</th>
           </tr>
@@ -118,7 +132,8 @@ function Measures({ result }: { result: EvaluationSummary }) {
 }
 
 /** One of the grid's best sets. `gain`: it measured better than today's
- * weights, the only case where copying its weights is worth it. */
+ * weights, the only case where copying its weights is worth it. One tag at
+ * most: "atual", "sem ganho", or "empate" between sets that gain. */
 function BestRow({
   entry,
   rank,
@@ -130,6 +145,9 @@ function BestRow({
 }) {
   const current = entry.changes.length === 0
   const noGain = !current && !gain
+  // A tie says something only among the sets that beat today's weights:
+  // today's ties only with sets that do not, which "sem ganho" says.
+  const tie = gain && entry.tie
   return (
     <tr className="border-b border-rule align-top">
       <th scope="row" className="whitespace-nowrap">
@@ -146,10 +164,10 @@ function BestRow({
               </span>
             ))
           )}
-          {(current || entry.tie || noGain) && (
+          {(current || tie || noGain) && (
             <span className="flex flex-wrap gap-xs">
               {current && <Tag>{COPY.currentTag}</Tag>}
-              {entry.tie && <Tag>{COPY.tie}</Tag>}
+              {tie && <Tag>{COPY.tie}</Tag>}
               {noGain && <Tag>{COPY.noGain}</Tag>}
             </span>
           )}
@@ -227,10 +245,13 @@ function Best({
 function Verdict({
   result,
   previous,
+  settled,
 }: {
   result: EvaluationSummary
   previous: PreviousMeasure | null
+  settled: boolean
 }) {
+  const line = useSettledFocus<HTMLParagraphElement>(settled)
   const { people } = result.offline
   const delta =
     previous && people.recall50 !== null && previous.date !== result.date
@@ -238,7 +259,11 @@ function Verdict({
       : null
   return (
     <div className="flex flex-col gap-xs">
-      <p className="font-display text-step-title text-pretty">
+      <p
+        ref={line}
+        tabIndex={-1}
+        className="font-display text-step-title text-pretty"
+      >
         {COPY.verdict(people.recall50, people.people)}
         {delta && <span className="text-ink-2"> {delta}</span>}
       </p>
@@ -256,9 +281,11 @@ function Verdict({
 function Done({
   job,
   previous,
+  settled,
 }: {
   job: Extract<EvaluationJob, { state: 'done' }>
   previous: PreviousMeasure | null
+  settled: boolean
 }) {
   const { result } = job
   const warnings = result.warnings.filter((w) => !NO_MOVIELENS.test(w))
@@ -267,7 +294,7 @@ function Done({
       <p role="status" className="text-meta text-ink-2">
         {COPY.done(job.finishedAt)}
       </p>
-      <Verdict result={result} previous={previous} />
+      <Verdict result={result} previous={previous} settled={settled} />
       <div className="grid gap-2xl sm:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] sm:items-start">
         <Measures result={result} />
         <div className="flex flex-col">
@@ -291,29 +318,46 @@ function Done({
   )
 }
 
+/** Why the run stopped. Like the verdict, it takes the focus when the
+ * page watched the run end. */
+function Failed({
+  job,
+  settled,
+}: {
+  job: Extract<EvaluationJob, { state: 'failed' }>
+  settled: boolean
+}) {
+  const box = useSettledFocus<HTMLDivElement>(settled)
+  return (
+    <div ref={box} tabIndex={-1}>
+      <Alert>
+        {COPY.failed}
+        <Detail>
+          <code>{job.error.code}</code> ({job.error.message})
+        </Detail>
+      </Alert>
+    </div>
+  )
+}
+
 function Job({
   job,
   previous,
   focus,
+  settled,
 }: {
   job: EvaluationJob
   previous: PreviousMeasure | null
   focus: boolean
+  settled: boolean
 }) {
   switch (job.state) {
     case 'running':
       return <Running job={job} focus={focus} />
     case 'done':
-      return <Done job={job} previous={previous} />
+      return <Done job={job} previous={previous} settled={settled} />
     case 'failed':
-      return (
-        <Alert>
-          {COPY.failed}
-          <Detail>
-            <code>{job.error.code}</code> ({job.error.message})
-          </Detail>
-        </Alert>
-      )
+      return <Failed job={job} settled={settled} />
     default:
       return null
   }
@@ -359,7 +403,8 @@ function RunForm() {
 /** `evaluate` with its live progress: while a run goes on, the panel asks
  * `read` again every `pollMs`; it stops when the run ends. Without
  * JavaScript, "Atualizar" reloads the page. `started`: the page came back
- * from Avaliar, and the progress takes the focus. */
+ * from Avaliar, and the progress takes the focus; when a run the page
+ * watched ends, the verdict (or why it stopped) takes it. */
 export function EvaluationSection({
   initial,
   read,
@@ -371,7 +416,12 @@ export function EvaluationSection({
   pollMs?: number
   started?: boolean
 }) {
-  const [panel, setPanel] = useState(initial)
+  // `settled`: a run this page watched has ended. The page asks only while
+  // a run goes on, so an answer with no run going on is its end.
+  const [{ panel, settled }, setState] = useState({
+    panel: initial,
+    settled: false,
+  })
   const running = panel.job.state === 'running'
   // Each answer is a new job object, so the next ask follows it.
   const { job } = panel
@@ -380,7 +430,8 @@ export function EvaluationSection({
     let live = true
     const timer = setTimeout(() => {
       void read().then((next) => {
-        if (live) setPanel(next)
+        if (live)
+          setState({ panel: next, settled: next.job.state !== 'running' })
       })
     }, pollMs)
     return () => {
@@ -400,7 +451,12 @@ export function EvaluationSection({
         </Alert>
       )}
       {panel.folder === 'unavailable' && <Alert>{COPY.unavailable}</Alert>}
-      <Job job={panel.job} previous={panel.previous} focus={started} />
+      <Job
+        job={panel.job}
+        previous={panel.previous}
+        focus={started}
+        settled={settled}
+      />
       {panel.folder === 'ready' && !running && (
         <>
           <Report report={panel.report} />

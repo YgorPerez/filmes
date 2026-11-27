@@ -233,8 +233,44 @@ const detailsAsked = (asked: Asked) =>
   (asked.seriesOrder !== undefined &&
     asked.seriesOrder !== SERIES_ORDER_CHOICES[DEFAULT_SERIES_ORDER_CHOICE])
 
+/** A text field's value; a file (none here) is no text. */
+const fieldText = (data: FormData, name: string): string => {
+  const value = data.get(name)
+  return typeof value === 'string' ? value : ''
+}
+
+/** The words of a list field ("assustador, tenso"). */
+const listed = (data: FormData, name: string) =>
+  fieldText(data, name)
+    .split(',')
+    .map((word) => word.trim())
+    .filter((word) => word !== '')
+
+/** The Restrições the form asks for so far, as the Cartaz's label says
+ * them, and the rest counted (#272). */
+function limitsOf(data: FormData): string[] {
+  const { night } = SESSIONS.form
+  const filled = (name: string) => fieldText(data, name).trim() !== ''
+  const noMoods = listed(data, 'sem-climas')
+  const child = fieldText(data, 'crianca')
+  const more = [
+    filled('desde') || filled('ate'),
+    filled('idioma'),
+    listed(data, 'gatilhos').length > 0,
+  ].filter(Boolean).length
+  return [
+    noMoods.length > 0 ? night.noMoods(noMoods) : null,
+    data.has('sem-lento') ? night.noSlow : null,
+    data.has('sem-tristeza') ? night.noSad : null,
+    data.has('sem-ja-visto') ? night.unseen : null,
+    child === '' ? null : night.child(child),
+    more > 0 ? night.more(more) : null,
+  ].filter((item): item is string => item !== null)
+}
+
 /** The night the form asks for so far, as the shelf label would say it:
- * who ("você", "vocês dois"), the duration and the Climas. */
+ * who ("você", "vocês dois"), the duration, the Climas and the
+ * Restrições. */
 function nightOf(data: FormData, options: RequestOptions): string[] {
   const people = data.getAll('presentes').map(String)
   const one = options.people.find((p) => p.person === people[0])
@@ -252,9 +288,12 @@ function nightOf(data: FormData, options: RequestOptions): string[] {
     minutes > 0
       ? `até ${hours > 0 ? `${hours}h${minutes % 60 ? String(minutes % 60).padStart(2, '0') : ''}` : `${minutes}min`}`
       : null
-  return [who, duration, ...data.getAll('climas').map(String)].filter(
-    (item): item is string => item !== null,
-  )
+  return [
+    who,
+    duration,
+    ...data.getAll('climas').map(String),
+    ...limitsOf(data),
+  ].filter((item): item is string => item !== null)
 }
 
 /** A number field's value as the input holds it. */

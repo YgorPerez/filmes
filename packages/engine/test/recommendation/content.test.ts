@@ -43,7 +43,7 @@ describe('the content path', () => {
     // A seed of 5 would be strong; the writer's ceiling is moderate.
     expect(evidenceOf(await all(useFixture()), 'Maré Cheia', 'bruno')).toEqual([
       [
-        'deu 5 a O Farol de Areia (2012), também escrito por Ana Ruiz',
+        'deu 10 de 10 a O Farol de Areia (2012), também escrito por Ana Ruiz',
         'moderate',
         'rating',
         // 0.8 × 0.6, ×0.8156 for the 5 of 2025-06-01 (a half-life of 5 years).
@@ -62,7 +62,7 @@ describe('the content path', () => {
     expect(evidenceOf(await all(useFixture()), 'Voo Noturno', 'bruno')).toEqual(
       [
         [
-          'deu 4,5 a Ponte Aérea (2016), também com Rita Lobo',
+          'deu 9 de 10 a Ponte Aérea (2016), também com Rita Lobo',
           'moderate',
           'rating',
           // 0.5 × 0.6, ×0.7528 for the 4.5 of 2024-11-02.
@@ -93,7 +93,7 @@ describe('the content path', () => {
         0.15,
       ],
       [
-        'deu 4,5 a Ponte Aérea (2016), também com Rita Lobo',
+        'deu 9 de 10 a Ponte Aérea (2016), também com Rita Lobo',
         'weak',
         'rating',
         0.1129,
@@ -108,7 +108,7 @@ describe('the content path', () => {
       evidenceOf(await all(useFixture()), 'Fronteira II', 'bruno'),
     ).toEqual([
       [
-        'deu 5 a Fronteira (2008), também da série Trilogia da Fronteira',
+        'deu 10 de 10 a Fronteira (2008), também da série Trilogia da Fronteira',
         'strong',
         'rating',
         0.3363,
@@ -213,8 +213,8 @@ describe('the content path', () => {
       (film(out, 'Bis').evidence['rosa'] ?? []).map((e) => e.text),
     ).toEqual([
       'dirigido por Nina Vale, como 2 filmes a que deu nota alta: Reprise (2004) e Reprise (2011)',
-      'deu 4 a Reprise (2004), também de Nina Vale',
-      'deu 4 a Reprise (2011), também de Nina Vale',
+      'deu 8 de 10 a Reprise (2004), também de Nina Vale',
+      'deu 8 de 10 a Reprise (2011), também de Nina Vale',
     ])
   })
 })
@@ -248,7 +248,7 @@ describe('the Ajuste to a link', () => {
         0.075,
       ],
       [
-        'deu 4,5 a Ponte Aérea (2016), também com Rita Lobo',
+        'deu 9 de 10 a Ponte Aérea (2016), também com Rita Lobo',
         'weak',
         'rating',
         0.0565,
@@ -279,7 +279,7 @@ describe('the Ajuste to a link', () => {
     expect(
       evidenceOf(await all(fixture, 60), 'Voo Noturno', 'bruno')[0],
     ).toEqual([
-      'deu 4,5 a Ponte Aérea (2016), também com Rita Lobo',
+      'deu 9 de 10 a Ponte Aérea (2016), também com Rita Lobo',
       'moderate',
       'rating',
       // 0.5 × 1.5 × 0.6, ×0.7528 for its age.
@@ -378,7 +378,7 @@ describe('the content path by cinematography and producer', () => {
         0.15,
       ],
       [
-        'deu 5 a Contraluz (2013), também com fotografia de Íris Penha',
+        'deu 10 de 10 a Contraluz (2013), também com fotografia de Íris Penha',
         'weak',
         'rating',
         // 0.5 × 0.3, ×0.787 for the 5 of 2025-03-01.
@@ -396,7 +396,7 @@ describe('the content path by cinematography and producer', () => {
     const out = await vera(useFixture())
     expect(sortedRows(evidenceOf(out, 'Bilheteria', 'vera'))).toEqual([
       [
-        'deu 5 a Contraluz (2013), também produzido por Nestor Gil',
+        'deu 10 de 10 a Contraluz (2013), também produzido por Nestor Gil',
         'weak',
         'rating',
         0.1181,
@@ -431,7 +431,7 @@ describe('the content path by cinematography and producer', () => {
     // 1.5 × the weight, and still weak.
     expect(sortedRows(evidenceOf(out, 'Bilheteria', 'vera'))).toEqual([
       [
-        'deu 5 a Contraluz (2013), também produzido por Nestor Gil',
+        'deu 10 de 10 a Contraluz (2013), também produzido por Nestor Gil',
         'weak',
         'rating',
         0.1772,

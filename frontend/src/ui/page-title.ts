@@ -47,6 +47,7 @@ const TITLES: Record<string, string | ((data: unknown) => string | null)> = {
   '/_owner/meu-gosto/importar': 'Importar',
   '/_owner/meu-gosto/fila': 'Fila de resolução',
   '/trakt': 'Trakt',
+  '/creditos': 'Créditos',
   '/_owner/operacoes': 'Operações',
   // The link's pages: the names until a Presente is chosen (#275).
   '/participar': (data) => text(read(data, 'title')),
@@ -59,10 +60,15 @@ export const pageTitle = (name?: string | null) =>
   name ? `${name} · filmes` : 'filmes'
 
 /** The title of the page the router matched: "Página não encontrada" when
- * an address leads nowhere, else the deepest route's, else "filmes". */
+ * an address leads nowhere, else the outermost route whose loader says it
+ * `covers` its children (it shows in their place: the link closed), else
+ * the deepest route's, else "filmes". */
 export function titleOf(matches: readonly Match[]): string {
   if (matches.some((m) => m.status === 'notFound' || m._notFound === true))
     return pageTitle(NOT_FOUND)
+  const cover = matches.find((m) => read(m.loaderData, 'covers') === true)
+  const title = cover && TITLES[cover.routeId]
+  if (typeof title === 'function') return pageTitle(title(cover?.loaderData))
   for (const match of [...matches].reverse()) {
     const title = TITLES[match.routeId]
     if (title !== undefined)

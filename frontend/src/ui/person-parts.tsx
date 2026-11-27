@@ -89,14 +89,20 @@ export function Items({
 }
 
 export function Item({
+  id,
   children,
   actions,
 }: {
+  /** For a link to the item (`#id`): an edit comes back to it (#330). */
+  id?: string
   children: ReactNode
   actions?: ReactNode
 }) {
   return (
-    <li className="flex flex-wrap items-start justify-between gap-sm border-rule py-sm not-first:border-t">
+    <li
+      id={id}
+      className="flex scroll-mt-2xl flex-wrap items-start justify-between gap-sm border-rule py-sm not-first:border-t"
+    >
       <div className="flex min-w-0 flex-1 basis-[240px] flex-col gap-0.5">
         {children}
       </div>
@@ -204,6 +210,9 @@ type ActionFormProps = {
   /** The field the server refused, when this form came back refused
    * without the JavaScript (#273): marked from the start. */
   problem?: FieldProblem | null
+  /** After a post that went through, before the page reloads: an edit
+   * closes (#330). */
+  onDone?: () => void
   children: ReactNode
 }
 
@@ -221,6 +230,7 @@ export function ActionForm({
   className,
   busy = PERSON.saving,
   problem: initialProblem = null,
+  onDone,
   children,
 }: ActionFormProps) {
   const id = useId()
@@ -238,6 +248,7 @@ export function ActionForm({
     shared?.show(kept ? id : null)
     if (kept) return true
     settle(form)
+    onDone?.()
     return false
   })
   const shown = shared === null || shared.form === id ? refused : undefined
@@ -273,30 +284,90 @@ export function ActionForm({
   )
 }
 
-/** "Tirar": takes one item out of her file. */
+/** "Tirar": takes one item out of her file. With the JavaScript, it asks
+ * first, in place (#330): beside "Editar", a slip of the thumb would lose
+ * the item. Before it, the post goes at once. */
 export function RemoveForm({
   slug,
   what,
   id,
   label,
+  onAsking,
+  mayAsk = () => true,
 }: {
   slug: string
   what: 'stated' | 'report' | 'veto' | 'seen'
   id: string
   label: string
+  /** While it asks: its row hides what else it offers. */
+  onAsking?: (asking: boolean) => void
+  /** Whether it may ask now: an edit with changes elsewhere holds it. */
+  mayAsk?: () => boolean
 }) {
+  const live = useHydrated()
+  const [asking, setAsking] = useState(false)
+  const toggle = (value: boolean) => {
+    setAsking(value)
+    onAsking?.(value)
+  }
+  const confirm = useRef<HTMLButtonElement>(null)
+  const ask = useRef<HTMLButtonElement>(null)
+  const [asked, setAsked] = useState(false)
+  useEffect(() => {
+    if (asking) confirm.current?.focus()
+    else if (asked) ask.current?.focus()
+  }, [asking, asked])
   return (
     <ActionForm
       slug={slug}
       action="remover"
-      className="shrink-0"
+      className="flex shrink-0 flex-wrap gap-xs"
       busy={PERSON.removing}
     >
       <input type="hidden" name="tipo" value={what} />
       <input type="hidden" name="id" value={id} />
-      <Submit className="" aria-label={PERSON.removeLabel(label)}>
-        {PERSON.remove}
-      </Submit>
+      {live && asking && (
+        <p className="basis-full text-meta text-ink-2">
+          {PERSON.removeWarning}
+        </p>
+      )}
+      {live && !asking ? (
+        <Button
+          ref={ask}
+          type="button"
+          variant="option"
+          aria-label={PERSON.removeLabel(label)}
+          onClick={() => {
+            if (mayAsk()) toggle(true)
+          }}
+        >
+          {PERSON.remove}
+        </Button>
+      ) : (
+        <Submit
+          ref={confirm}
+          // The decisive step, marked as a chosen option: no new colour.
+          variant={live ? 'chosen' : 'option'}
+          className=""
+          aria-label={
+            live ? PERSON.removeSure(label) : PERSON.removeLabel(label)
+          }
+        >
+          {live ? PERSON.removeSureShort : PERSON.remove}
+        </Submit>
+      )}
+      {live && asking && (
+        <Button
+          type="button"
+          variant="link"
+          onClick={() => {
+            toggle(false)
+            setAsked(true)
+          }}
+        >
+          {PERSON.removeKeep}
+        </Button>
+      )}
     </ActionForm>
   )
 }
@@ -319,14 +390,16 @@ export function Disclosure({
     <details
       id={id}
       open={open}
-      className="group/disclosure scroll-mt-2xl rounded-field border border-rule"
+      className="scroll-mt-2xl rounded-field border border-rule"
     >
-      <summary className="flex min-h-touch cursor-pointer list-none items-center justify-between gap-sm px-3 font-semibold select-none [&::-webkit-details-marker]:hidden">
+      <summary className="flex min-h-touch cursor-pointer list-none items-center justify-between gap-sm px-3 py-sm font-semibold select-none [&::-webkit-details-marker]:hidden">
         {summary}
-        {/* The drawn +, a × while open: the fold's state not by colour. */}
+        {/* The drawn +, a × while open: the fold's state not by colour.
+         * Only its own fold turns it: a group variant would match any open
+         * fold around this one too. */}
         <Icon
           name="plus"
-          className="size-[18px] text-ink-2 transition-[rotate] group-open/disclosure:rotate-45 motion-reduce:transition-none"
+          className="size-[18px] shrink-0 text-ink-2 transition-[rotate] motion-reduce:transition-none [details[open]>summary>&]:rotate-45"
         />
       </summary>
       <div className="border-t border-rule p-xl">{children}</div>
@@ -408,6 +481,61 @@ export function SelectField({
         ))}
       </select>
     </FieldLabel>
+  )
+}
+
+/** A Nota from 1 to 10 as radios, the scale the rating screen and the
+ * Feedback use, with "sem Nota" first: ten cells, the chosen one on the
+ * orange disc. Posts `n/10`, or nothing. */
+export function RatingField({
+  name,
+  label,
+  defaultValue = '',
+}: {
+  name: string
+  label: string
+  /** `n/10`, or '' for none. */
+  defaultValue?: string
+}) {
+  const cell =
+    'group/rating relative grid h-touch min-w-0 cursor-pointer place-items-center rounded-rail bg-surface-2 font-display text-field-label text-ink tabular-nums has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-focus'
+  const radio = 'absolute inset-0 m-0 size-full cursor-pointer opacity-0'
+  return (
+    <fieldset className="flex flex-col gap-xs">
+      <legend className="mb-xs font-display text-field-label">{label}</legend>
+      <div className="grid grid-cols-5 gap-0.75">
+        <label className={`${cell} col-span-5 px-lg`}>
+          <input
+            type="radio"
+            name={name}
+            value=""
+            defaultChecked={defaultValue === ''}
+            className={radio}
+          />
+          <span className="rounded-pill px-sm py-0.5 group-has-checked/rating:bg-ink group-has-checked/rating:text-surface">
+            {PERSON.noRating}
+          </span>
+        </label>
+        {Array.from({ length: 10 }, (_, i) => String(i + 1)).map((n) => (
+          <label key={n} className={cell}>
+            <input
+              type="radio"
+              name={name}
+              value={`${n}/10`}
+              defaultChecked={defaultValue === `${n}/10`}
+              aria-label={n}
+              className={radio}
+            />
+            <span
+              aria-hidden="true"
+              className="grid size-7 place-items-center rounded-round group-has-checked/rating:bg-sticker-orange group-has-checked/rating:text-on-sticker"
+            >
+              {n}
+            </span>
+          </label>
+        ))}
+      </div>
+    </fieldset>
   )
 }
 
@@ -692,7 +820,20 @@ type TagGroup = { key: string; label: string }
 /** The tag groups as pills: radios, so the form posts the marked one
  * without the JavaScript. With it, a second tap on the marked one lets it
  * go; before it, "nenhum" does. */
-function GroupPills({ groups }: { groups: readonly TagGroup[] }) {
+function GroupPills({
+  groups,
+  initial = '',
+  marked,
+  onMark,
+}: {
+  groups: readonly TagGroup[]
+  /** The group marked from the start: an edited Veto's (#330). */
+  initial?: string
+  /** With the JavaScript, the marked group, '' for none, and what a tap
+   * on a pill marks: the target search lets its pick go then. */
+  marked: string
+  onMark: (key: string) => void
+}) {
   const live = useHydrated()
   return (
     <fieldset className="flex flex-col gap-xs">
@@ -700,7 +841,11 @@ function GroupPills({ groups }: { groups: readonly TagGroup[] }) {
         {PERSON.groupsLabel}
       </legend>
       <div className="flex flex-wrap gap-xs">
-        {live ? <LivePills groups={groups} /> : <PlainPills groups={groups} />}
+        {live ? (
+          <LivePills groups={groups} marked={marked} onMark={onMark} />
+        ) : (
+          <PlainPills groups={groups} initial={initial} />
+        )}
       </div>
     </fieldset>
   )
@@ -711,7 +856,13 @@ const PILL =
 
 /** The pills before the JavaScript: "nenhum" first and marked, so the
  * form posts no group unless one is marked. */
-function PlainPills({ groups }: { groups: readonly TagGroup[] }) {
+function PlainPills({
+  groups,
+  initial,
+}: {
+  groups: readonly TagGroup[]
+  initial: string
+}) {
   return [{ key: '', label: PERSON.noGroup }, ...groups].map(
     ({ key, label }) => (
       <label key={key || 'nenhum'} className="flex">
@@ -719,7 +870,7 @@ function PlainPills({ groups }: { groups: readonly TagGroup[] }) {
           type="radio"
           name="grupo"
           value={key}
-          defaultChecked={key === ''}
+          defaultChecked={key === initial}
           className="peer sr-only"
         />
         <span className={PILL}>{label}</span>
@@ -730,8 +881,15 @@ function PlainPills({ groups }: { groups: readonly TagGroup[] }) {
 
 /** The pills with the JavaScript: a second tap on the marked one lets it
  * go. */
-function LivePills({ groups }: { groups: readonly TagGroup[] }) {
-  const [marked, setMarked] = useState('')
+function LivePills({
+  groups,
+  marked,
+  onMark: setMarked,
+}: {
+  groups: readonly TagGroup[]
+  marked: string
+  onMark: (key: string) => void
+}) {
   return groups.map(({ key, label }) => (
     <label key={key} className="flex">
       <input
@@ -758,6 +916,8 @@ export function TargetField({
   hint,
   scope,
   groups = [],
+  initial = null,
+  initialGroup,
 }: {
   name: 'alvo' | 'filme'
   label: string
@@ -765,13 +925,34 @@ export function TargetField({
   scope: CatalogScope
   /** The tag groups a Veto can name instead. */
   groups?: readonly TagGroup[]
+  /** The target picked from the start: an edited item's (#330). */
+  initial?: Target | null
+  /** The tag group marked from the start: an edited Veto's. */
+  initialGroup?: string
 }) {
   const live = useHydrated()
   const film = name === 'filme'
+  // One or the other (#330): picking a result lets the group go, and
+  // marking a group lets the result go, so the form never shows both.
+  const [picked, setPicked] = useState<Target | null>(initial)
+  const [group, setGroup] = useState(initialGroup ?? '')
+  // The result a group took the place of: letting the group go brings it
+  // back, so a tap on a pill never loses the target for good.
+  const before = useRef<Target | null>(null)
   return (
     <div className={`flex flex-col ${live ? 'gap-lg' : 'gap-xl'}`}>
       {live ? (
-        <TargetSearch name={name} label={label} hint={hint} scope={scope} />
+        <TargetSearch
+          name={name}
+          label={label}
+          hint={hint}
+          scope={scope}
+          picked={picked}
+          onPick={(target) => {
+            setPicked(target)
+            if (target !== null) setGroup('')
+          }}
+        />
       ) : (
         <TextField
           name={name}
@@ -779,14 +960,31 @@ export function TargetField({
           hint={film ? PERSON.filmHint : PERSON.idHint}
           pattern={film ? 'tt[0-9]+' : '(tt|Q)[0-9]+'}
           required={film}
+          defaultValue={initial?.id}
         />
       )}
-      {groups.length > 0 && <GroupPills groups={groups} />}
+      {groups.length > 0 && (
+        <GroupPills
+          groups={groups}
+          initial={initialGroup}
+          marked={group}
+          onMark={(key) => {
+            setGroup(key)
+            if (key !== '') {
+              if (picked !== null) before.current = picked
+              setPicked(null)
+            } else if (before.current !== null) {
+              setPicked(before.current)
+              before.current = null
+            }
+          }}
+        />
+      )}
     </div>
   )
 }
 
-type Target = { id: string; label: string }
+export type Target = { id: string; label: string }
 
 /** The target with the JavaScript: a search by name; the picked result
  * fills the hidden field and shows as a chip. */
@@ -795,13 +993,16 @@ function TargetSearch({
   label,
   hint,
   scope,
+  picked,
+  onPick: setPicked,
 }: {
   name: 'alvo' | 'filme'
   label: string
   hint?: string
   scope: CatalogScope
+  picked: Target | null
+  onPick: (target: Target | null) => void
 }) {
-  const [picked, setPicked] = useState<Target | null>(null)
   const { error, aria } = useFieldProblem(name)
   const search = useLiveSearch(picked === null, '', null, scope)
   return (

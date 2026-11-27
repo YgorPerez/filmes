@@ -3,6 +3,7 @@ import type {
   BillboardPerson,
   BillboardReaction,
 } from '@filmes/engine'
+import { BILLBOARD } from './billboard.copy'
 import { CHOSEN } from './billboard-chosen.copy'
 import { Avatar } from './kit/person'
 
@@ -14,7 +15,9 @@ import { Avatar } from './kit/person'
 // (outside the Recomendação, or not among the films shown) has a block of
 // its own above the cards, `ChosenFilm`, with its title and the same lines.
 // What a Presente said of it in the Feedback goes under her line, in the
-// clerk's hand (#272).
+// clerk's hand (#272). Each Presente is named as the Cartaz names her
+// ("Você", #277), and who has no Reação closes the lines, muted ("Iara e
+// Teo: sem reação", #272): the head lists every Presente.
 
 /** The film's title level: 2 alone, 3 under a section's title. */
 type Level = 2 | 3
@@ -39,6 +42,8 @@ function Lines({
   people: readonly BillboardPerson[]
 }) {
   const known = new Map(people.map((p) => [p.slug, p]))
+  const reacted = new Set(reactions.map((r) => r.person))
+  const silent = people.filter((p) => !reacted.has(p.slug))
   return (
     <ul aria-label={CHOSEN.title} className="flex flex-col gap-xs">
       {reactions.map((reaction) => {
@@ -54,7 +59,7 @@ function Lines({
               </span>
             )}
             <span className="flex flex-col gap-2xs">
-              <span>{lineOf(person?.name ?? reaction.person, reaction)}</span>
+              <span>{lineOf(person?.label ?? reaction.person, reaction)}</span>
               {reaction.comment && (
                 <span className="font-hand text-hand-small text-ink">
                   {CHOSEN.comment(reaction.comment)}
@@ -64,6 +69,11 @@ function Lines({
           </li>
         )
       })}
+      {silent.length > 0 && (
+        <li className="text-meta text-ink-2">
+          {CHOSEN.noReaction(BILLBOARD.names(silent))}
+        </li>
+      )}
     </ul>
   )
 }

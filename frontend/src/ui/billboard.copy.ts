@@ -29,13 +29,26 @@ export const BILLBOARD = {
   /** The Força key, behind its "?" (#272). */
   legend: 'O que querem dizer os pontos',
   legendLead: 'Os pontos antes de cada motivo dizem a Força da Evidência.',
+  /** The mark of an Evidência against the film (#272), and its key. */
+  against: 'pesa contra',
+  againstLegend: 'a Evidência fala contra o filme, como um Já visto.',
   /** The Evidência every film of a section shares, said once under its
    * title (#272). */
   shared: 'Vale para todos desta seção',
+  /** Who has no Fato about any film of the section, said there once. */
+  sharedWithoutFact: (names: string) => `${names}: sem fato sobre estes filmes`,
   empty:
     'Nenhum filme passou nas Restrições. Abra outra Sessão com menos limites.',
   strength: { strong: 'forte', moderate: 'moderada', weak: 'fraca' },
   strengthLabel: (name: string) => `Força ${name}`,
+  /** Who an Evidência or a Nota prevista is about, in the Cartaz's names
+   * (#277): "Você e Iara", "Iara e você". */
+  names: (people: readonly { label: string; owner: boolean }[]) =>
+    andList(
+      people.map((p, i) =>
+        p.owner && i > 0 ? p.label.toLowerCase() : p.label,
+      ),
+    ),
 
   card: {
     poster: (title: string) => `Capa de ${title}`,
@@ -56,8 +69,6 @@ export const BILLBOARD = {
     predictedHint: (raters: number) =>
       `pela nota de ${plural(raters, 'pessoa', 'pessoas')} de gosto parecido`,
     predictedLabel: (name: string, hint: string) => `${name}: ${hint}`,
-    /** Who an Evidência is about, opening its line: "Ana e Bruno". */
-    whose: (names: readonly string[]) => andList(names),
     why: 'Por que cada um vai gostar',
     /** The same block once the Session was told (#272). */
     whyClosed: 'Por que estava na lista',
@@ -75,6 +86,10 @@ export const BILLBOARD = {
     /** Who marked Já vi, for a screen reader, when not every Presente did
      * (#272): the stamp shows their initials. */
     seenStampWho: (names: readonly string[]) => `Já vi: ${andList(names)}`,
+    /** A Já visto the engine knows, with no Já vi marked here (#272). */
+    seenBeforeStamp: 'Visto antes',
+    seenBeforeStampWho: (names: readonly string[]) =>
+      `Visto antes: ${andList(names)}`,
   },
 
   section: {

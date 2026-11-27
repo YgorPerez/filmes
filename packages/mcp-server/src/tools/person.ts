@@ -1,9 +1,11 @@
 import { Effect } from 'effect'
 import {
+  EDITABLE,
   LEVELS,
   LINKS,
   personAdjust,
   personCreate,
+  personEdit,
   personQuestions,
   personRemove,
   personReport,
@@ -29,6 +31,7 @@ const ACTIONS = [
   'skip',
   'questions',
   'remove',
+  'edit',
 ] as const
 
 /** What each action cannot go without. */
@@ -43,6 +46,7 @@ const NEEDS: Readonly<Record<(typeof ACTIONS)[number], readonly string[]>> = {
   skip: ['person', 'text'],
   questions: ['person'],
   remove: ['person', 'remove'],
+  edit: ['person', 'edit'],
 }
 
 /** Not an option, not blank. */
@@ -54,7 +58,7 @@ const input = z.object({
     .enum(ACTIONS)
     .describe(
       'create (criar), view (ver), state (declarar), report (relatar), veto (vetar), seen (já visto), ' +
-        'adjust (ajustar), skip (pular uma pergunta), questions (perguntas abertas) ou remove (remover)',
+        'adjust (ajustar), skip (pular uma pergunta), questions (perguntas abertas), remove (remover) ou edit (editar)',
     ),
   person: personName('slug, nome ou apelido; "dono" é o Dono').optional(),
   name: word('nome').optional().describe('create: nome da Pessoa'),
@@ -156,12 +160,54 @@ const input = z.object({
     })
     .optional()
     .describe('remove: o item a tirar'),
+  edit: z
+    .object({
+      kind: z
+        .enum(EDITABLE)
+        .describe(
+          'stated (Declarado), report (Relato), veto ou seen (Já visto)',
+        ),
+      id: z
+        .string()
+        .trim()
+        .min(1)
+        .describe(
+          'o factId que view mostra, ou o alvo (tt..., Q..., grupo) quando só um item tem esse alvo',
+        ),
+    })
+    .optional()
+    .describe(
+      'edit: o item a corrigir; text, film, entity, group, reaction, source e rating mandados trocam o que ele tem, o resto fica',
+    ),
+  clear: z
+    .array(z.enum(['target', 'reaction', 'rating']))
+    .optional()
+    .describe(
+      'edit: o que o item perde: target (o alvo de um Declarado ou Relato), reaction, rating (a Nota de um Já visto)',
+    ),
 })
 
 type Input = z.infer<typeof input>
 
 /** The target of a Declarado, Relato or Veto: one of film and entity. */
 const targetOf = (i: Input) => i.film ?? i.entity
+
+/** An edit's new target: the one sent, or null when `clear` has it. */
+const editedTarget = (i: Input) => {
+  const target = i.group ?? targetOf(i)
+  if (i.clear?.includes('target')) return { target: null }
+  return target === undefined ? {} : { target }
+}
+
+/** An edit's field: the value sent, null when `clear` has it, or nothing. */
+const cleared = <K extends 'reaction' | 'rating', V>(
+  i: Input,
+  key: K,
+  value: V | undefined,
+) => {
+  if (i.clear?.includes(key)) return { [key]: null } as Record<K, null>
+  return value === undefined ? {} : ({ [key]: value } as Record<K, V>)
+}
 
 const run = (i: Input) =>
   Effect.gen(function* () {
@@ -257,6 +303,18 @@ const run = (i: Input) =>
           kind: i.remove!.kind,
           id: i.remove!.id,
         })
+      case 'edit':
+        return yield* personEdit({
+          author,
+          person,
+          kind: i.edit!.kind,
+          id: i.edit!.id,
+          ...(i.text !== undefined && { text: i.text }),
+          ...(i.source !== undefined && { source: i.source }),
+          ...editedTarget(i),
+          ...cleared(i, 'reaction', i.reaction),
+          ...cleared(i, 'rating', i.rating),
+        })
     }
   })
 
@@ -280,7 +338,10 @@ export default defineTool({
     'Declarado sobre um ator ou diretor nomeado continua valendo. skip: guarda uma pergunta de gosto que a Pessoa pulou ' +
     '(text, com o assunto em entity ou group quando houver); pulada de novo, soma e, na segunda vez, sai (dropped: true). ' +
     'questions: as perguntas abertas. remove: tira um item gravado por engano (remove.kind e remove.id, o factId que view ' +
-    'mostra ou o alvo); open_question tira uma pergunta aberta respondida. Falta de campo é erro invalid_usage. ' +
+    'mostra ou o alvo); open_question tira uma pergunta aberta respondida. edit: corrige um Declarado, Relato, Veto ou Já visto no ' +
+    'lugar (edit.kind e edit.id); manda só o que muda (text, film, entity, group, reaction, source; no Já visto, rating e ' +
+    'source, o filme não muda) e clear para tirar alvo, reação ou Nota; o item mantém a data e ganha "editado" com a data ' +
+    'de hoje; o que veio de import ou do Feedback não se edita. Falta de campo é erro invalid_usage. ' +
     'O que se grava ou tira vale já na próxima Recomendação e na próxima Sessão; cada gravação é um commit em nome do Dono.',
   input,
   run,

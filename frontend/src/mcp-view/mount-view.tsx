@@ -40,21 +40,32 @@ function setInsets(insets: HostContext['safeAreaInsets']) {
     )
 }
 
-/** The frame's `color-scheme`. The inline card has no floor and sits on
- * the host's: a frame whose scheme differs from the page around it gets an
- * opaque canvas from Chrome, so inline it declares none, as the host's
- * page does, and its colours come from `data-theme` alone (#277). The
- * fullscreen and the whole Cartaz of a host without one lay their own
- * ground, and take the theme's scheme for the native controls. */
-const schemeOf = (c: HostContext) =>
-  c.displayMode !== 'fullscreen' &&
-  c.availableDisplayModes?.includes('fullscreen')
-    ? 'normal'
-    : (c.theme ?? '')
+/** The frame's `color-scheme`: the theme's, as ext-apps'
+ * `applyDocumentTheme` sets it, which is what a host built on it expects.
+ * Where the page around the frame declares another scheme, Chrome paints
+ * an opaque canvas behind it, and that canvas is the theme's own: the dark
+ * tokens on a dark canvas, the light ones on a light one, never the dark
+ * ones on white (#277). */
+const schemeOf = (c: HostContext) => c.theme ?? ''
+
+/** The host's floor, painted on the frame edge to edge (#277): with the
+ * host's own background (`--color-background-primary`), the opaque canvas
+ * Chrome puts behind a frame whose scheme differs from the page around it
+ * never shows, and the inline card still sits on the chat's floor. */
+const floorOf = (c: HostContext) =>
+  c.styles?.variables?.['--color-background-primary'] ?? ''
+
+/** Without that floor, in the dark theme, the inline card lays the
+ * Cartaz's ground under itself, inside its rule and corners: on a host
+ * page with no scheme Chrome's near-black square is behind the frame, and
+ * the card no longer reads as a hole in it. The light theme needs none: a
+ * canvas behind it is the host's own white. */
+const cardFloorOf = (c: HostContext) =>
+  floorOf(c) === '' && c.theme === 'dark' ? 'var(--color-ground)' : ''
 
 /** Renders the view in `root` and connects it to the host (`connect`):
  * the tool result, the host's theme (`data-theme`, which `ui/tokens.css`
- * follows), its safe area and its display modes. */
+ * follows), its floor, its safe area and its display modes. */
 export async function mountView(
   app: ViewApp,
   root: HTMLElement,
@@ -76,6 +87,9 @@ export async function mountView(
       document.documentElement.dataset.theme = context.theme
       document.documentElement.style.colorScheme = schemeOf(context)
     }
+    const root = document.documentElement.style
+    root.setProperty('--view-floor', floorOf(context))
+    root.setProperty('--card-floor', cardFloorOf(context))
     setInsets(context.safeAreaInsets)
     changed()
   }
@@ -89,6 +103,13 @@ export async function mountView(
   const fullscreen = () => {
     void app.requestDisplayMode({ mode: 'fullscreen' }).catch(() => {})
   }
+  // Back to the chat, where the new list comes (#277): whether the host
+  // took it.
+  const leaveFullscreen = () =>
+    app.requestDisplayMode({ mode: 'inline' }).then(
+      (answer) => answer.mode === 'inline',
+      () => false,
+    )
   // A host that takes no model context may never answer the request.
   const talk = () =>
     app.getHostCapabilities()?.updateModelContext
@@ -96,7 +117,7 @@ export async function mountView(
       : { callTool, sendMessage }
   const hostOf = (c: HostContext): Host =>
     c.displayMode === 'fullscreen'
-      ? { ...talk(), inFullscreen: true }
+      ? { ...talk(), inFullscreen: true, leaveFullscreen }
       : c.availableDisplayModes?.includes('fullscreen')
         ? { ...talk(), fullscreen }
         : talk()

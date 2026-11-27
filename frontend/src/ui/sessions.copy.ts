@@ -24,6 +24,14 @@ const films = (n: number) =>
 
 /** A reading's item as a person says it (#272): "Presente: Iara" is
  * "Iara", and the logged-in Dono is "você"; "Clima: leve" is "leve". */
+/** "a", "a e b", "a, b e c". */
+const andNames = (items: readonly string[]) =>
+  items.length <= 1
+    ? items.join('')
+    : `${items.slice(0, -1).join(', ')} e ${items.at(-1)}`
+
+const capital = (text: string) => text.charAt(0).toUpperCase() + text.slice(1)
+
 export const spoken = (label: string, owner?: string): string => {
   const person = /^Presente: (.+)$/.exec(label)?.[1]
   if (person !== undefined) return person === owner ? 'você' : person
@@ -103,6 +111,11 @@ export const SESSIONS = {
     additionRead: (text: string) => `Você acrescentou “${text}”.`,
     additionAdded: (labels: readonly string[]) =>
       `Acrescentei ao pedido ${labels.join(', ')}.`,
+    /** Who the acrescentar brought in (#272): "Rosa entrou na Sessão." */
+    additionPeople: (names: readonly string[]) =>
+      names.length === 1
+        ? `${capital(names[0] ?? '')} entrou na Sessão.`
+        : `${capital(andNames(names))} entraram na Sessão.`,
     additionNotUnderstood: (words: readonly string[]) =>
       `Deixei ${runs(words)} só como anotação.`,
     additionAmbiguous: (words: string, candidates: readonly string[]) =>
@@ -110,14 +123,10 @@ export const SESSIONS = {
         ? `${ambiguity(words, candidates)}.`
         : `${ambiguity(words, candidates)}. Diga qual na próxima vez.`,
     additionTaste: 'Para guardar um gosto,',
-    /** The reading as a sentence (#272): "Entendi: Iara, leve, até 2h." */
-    understood: (items: readonly string[]) => `Entendi: ${items.join(', ')}.`,
     closed: 'Fechada',
     /** A told Session opens with the tape given back (#272). */
     returned: 'Fita devolvida',
     returnedNothing: 'Não viram nada da prateleira.',
-    satisfaction:
-      'Na próxima Sessão deste grupo, na Regra padrão, quem gostou menos pesa mais:',
     again: 'Pedir filme de novo com essa turma',
     /** The Cartaz's stars and comments on the film they saw (#272). */
     onCartaz: 'No Cartaz:',
@@ -153,6 +162,17 @@ export const SESSIONS = {
     /** "vocês dois", "vocês três": the bar's who (#272). */
     together: (n: number) =>
       `vocês ${['', 'um', 'dois', 'três', 'quatro', 'cinco', 'seis'][n] ?? n}`,
+    /** The bar's Restrições, as the Cartaz's label says them (#272). */
+    night: {
+      noMoods: (names: readonly string[]) => `nada ${names.join(' nem ')}`,
+      noSlow: 'nada lento',
+      noSad: 'nada triste',
+      unseen: 'nada repetido',
+      child: (age: string) =>
+        age === '0' ? 'com criança' : `com criança de ${age} anos`,
+      /** The years, the language and the triggers, counted. */
+      more: (n: number) => `+ ${n} ${n === 1 ? 'limite' : 'limites'}`,
+    },
     reading: {
       understood: (labels: readonly string[]) =>
         `Entendi: ${labels.join(', ')}.`,

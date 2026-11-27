@@ -10,7 +10,8 @@ import { withMergedClasses } from './class-merge'
 // same orange, the whole width, 60px tall, 14px radius, 18px. `option` is
 // every other action: a pill with a 1.5px `rule` outline on `surface`,
 // Rubik 500 14px; pressed (`aria-pressed`), a 2px `ink` outline on
-// `surface-2` in 700. `link` is "Pular", "Retomar" and the smaller
+// `surface-2` in 700; `chosen` is that pressed look at rest, for the
+// decisive step of a form. `link` is "Pular", "Retomar" and the smaller
 // actions: no background, the system's 14px `ink-2`, underlined. A
 // `className` passed in replaces the variant's classes it conflicts with
 // (`mergeClasses`, above): `min-h-[64px]` wins over `min-h-touch`.
@@ -24,6 +25,11 @@ const variants = cva(
         big: 'min-h-[60px] w-full rounded-panel bg-sticker-orange px-3xl font-display text-button-big text-on-sticker uppercase',
         option:
           'rounded-pill border-(length:--border-width-stroke) border-rule bg-surface px-xl font-display text-control text-ink aria-pressed:border-2 aria-pressed:border-ink aria-pressed:bg-surface-2 aria-pressed:font-bold',
+        // The step a form exists for when the screen's one orange is taken
+        // or too loud (#330: "Gravar" of an edit, "Tirar de vez"): the
+        // pressed option's 2px ink outline, `surface-2` and 700, at rest.
+        chosen:
+          'rounded-pill border-2 border-ink bg-surface-2 px-xl font-display text-control font-bold text-ink',
         link: 'justify-start px-0 font-body text-link text-ink-2 underline underline-offset-3',
       },
     },

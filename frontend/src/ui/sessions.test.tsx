@@ -200,6 +200,41 @@ describe('a Session’s page', () => {
   })
 })
 
+describe('the head’s ⋯ menu and "?" legend (#272)', () => {
+  const opened = () => {
+    const menu = screen
+      .getByLabelText(SESSIONS.session.menu)
+      .closest('details')!
+    const legend = screen.getByLabelText(BILLBOARD.legend).closest('details')!
+    return { menu, legend }
+  }
+
+  it('close on a tap outside and on Esc, and one opening closes the other', async () => {
+    const user = userEvent.setup()
+    render(<SessionScreen page={PAGE} />)
+    const { menu, legend } = opened()
+
+    await user.click(screen.getByLabelText(SESSIONS.session.menu))
+    expect(menu.open).toBe(true)
+    await user.click(screen.getByRole('heading', { level: 1 }))
+    expect(menu.open).toBe(false)
+
+    await user.click(screen.getByLabelText(BILLBOARD.legend))
+    expect(legend.open).toBe(true)
+    await user.keyboard('{Escape}')
+    expect(legend.open).toBe(false)
+    expect(document.activeElement).toBe(screen.getByLabelText(BILLBOARD.legend))
+
+    await user.click(screen.getByLabelText(SESSIONS.session.menu))
+    await user.click(screen.getByLabelText(BILLBOARD.legend))
+    await waitFor(() => expect(menu.open).toBe(false))
+    expect(legend.open).toBe(true)
+    // A tap inside keeps it open.
+    await user.click(screen.getByText(BILLBOARD.legendLead))
+    expect(legend.open).toBe(true)
+  })
+})
+
 /** The Session's page under a router at `path`; gives the router. */
 function renderSessionAt(path: string, loader?: () => Promise<void> | void) {
   const router = createRouter({
@@ -395,7 +430,7 @@ describe('a Session’s page, the acrescentar', () => {
     const [addition] = screen.getAllByRole('status')
     // The reading as a sentence (#272).
     expect(addition!.textContent).toBe(
-      'Entendi: Iara, até 1h50. ' +
+      'Iara entrou na Sessão. Acrescentei ao pedido até 1h50. ' +
         'Deixei “Zeca” só como anotação. ' +
         '“Reprise” pode ser Reprise (2011) ou Reprise (2004). Diga qual na próxima vez. ' +
         '“Amélie” não está no Catálogo. ' +
@@ -404,6 +439,28 @@ describe('a Session’s page, the acrescentar', () => {
     expect(within(addition!).getByRole('link').getAttribute('href')).toBe(
       '/pessoas',
     )
+  })
+})
+
+describe('a Session’s page, an acrescentar all understood', () => {
+  it('says who came in, with no word about keeping a gosto (#272)', () => {
+    render(
+      <SessionScreen
+        page={{
+          ...PAGE,
+          addition: 'chegou a Rosa e a Iara',
+          reading: {
+            understood: ['Presente: Rosa', 'Presente: Iara'],
+            notUnderstood: [],
+            ambiguities: [],
+          },
+        }}
+        notice="regerada"
+      />,
+    )
+    const [addition] = screen.getAllByRole('status')
+    expect(addition!.textContent).toBe('Rosa e Iara entraram na Sessão.')
+    expect(within(addition!).queryByRole('link')).toBeNull()
   })
 })
 
@@ -438,13 +495,13 @@ describe('a Session’s page, an acrescentar only noted and a told Session', () 
           ...PAGE,
           session: CLOSED,
           billboard: { ...MODEL, open: false },
-          satisfaction: ['satisfação de Quim nas últimas Sessões: 40%'],
         }}
       />,
     )
     const tape = screen.getByRole('region', { name: SESSIONS.session.returned })
     expect(tape.textContent).toContain('Pequenos Milagres')
-    expect(tape.textContent).toContain('satisfação de Quim')
+    // A record: no Satisfação of now, which later Sessions change (#272).
+    expect(tape.textContent).not.toContain('satisfação')
     expect(
       within(tape)
         .getByRole('link', { name: SESSIONS.session.again })

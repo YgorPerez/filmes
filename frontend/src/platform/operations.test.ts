@@ -112,6 +112,7 @@ function fake(over: Partial<Operations> = {}): Operations {
     schema: async () =>
       ok([{ name: 'filmes', kind: 'table', columns: ['id', 'titulo'] }]),
     pushStatus: async () => ok(STATUS),
+    people: async () => ok([{ slug: 'bruno', name: 'Bruno' }]),
     push: async () => ok(STATUS),
     evaluationsFolder: async () => failure('missing_config'),
     evaluate: async () => ok(EVALUATION),
@@ -420,9 +421,16 @@ describe('the page', () => {
     expect(await evaluationPanel(ops, new EvaluationRuns(ops))).toEqual({
       folder: 'ready',
       job: { state: 'idle' },
-      report: { date: '2026-11-19', text: 'novo' },
+      report: { date: '2026-11-19', text: 'novo', names: { bruno: 'Bruno' } },
       previous: { date: '2026-11-02', recall50: 0.75 },
     })
+    const blind = fake({
+      evaluationsFolder: async () => ok(folder),
+      people: async () => failure('internal'),
+    })
+    expect(
+      (await evaluationPanel(blind, new EvaluationRuns(blind))).report,
+    ).toEqual({ date: '2026-11-19', text: 'novo', names: {} })
     expect(latestReport(join(folder, 'nenhuma'))).toBeNull()
     expect(previousMeasure(join(folder, 'nenhuma'))).toBeNull()
   })

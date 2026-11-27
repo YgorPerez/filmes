@@ -4,7 +4,7 @@
 import type { PushStatus } from '@filmes/engine'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vite-plus/test'
-import { AppShell } from './shell'
+import { AppShell, OutsideShell } from './shell'
 
 afterEach(cleanup)
 
@@ -23,16 +23,19 @@ const show = ({
   path = '/',
   admin = false,
   alert = null,
+  wide = false,
 }: {
   path?: string
   admin?: boolean
   alert?: PushStatus | null
+  wide?: boolean
 } = {}) =>
   render(
     <AppShell
       owner={{ name: 'Bruno', admin, email: 'bruno@example.org' }}
       path={path}
       alert={alert}
+      wide={wide}
     >
       <main>a página</main>
     </AppShell>,
@@ -175,5 +178,80 @@ describe('AppShell, the alert and the footer', () => {
       screen.getByText('a página').compareDocumentPosition(footer) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy()
+  })
+
+  it('marks the footer link as the current page on the credits, and no tab', () => {
+    show({ path: '/creditos' })
+    const credits = within(screen.getByRole('contentinfo')).getByRole('link', {
+      name: 'Créditos das fontes',
+    })
+    expect(credits.getAttribute('aria-current')).toBe('page')
+    expect(credits.className).not.toContain('underline-offset')
+    expect(
+      screen
+        .getAllByRole('link')
+        .filter((a) => a.getAttribute('aria-current') === 'page'),
+    ).toEqual([credits])
+  })
+
+  it('leaves the footer link unmarked on any other page', () => {
+    show()
+    expect(
+      within(screen.getByRole('contentinfo'))
+        .getByRole('link', { name: 'Créditos das fontes' })
+        .getAttribute('aria-current'),
+    ).toBeNull()
+  })
+
+  it('puts the bar, the strip and the footer on the page’s column, wide or not', () => {
+    /** The max-width classes of a strip's inner column. */
+    const column = (el: Element | null) =>
+      (el?.firstElementChild?.className ?? '')
+        .split(' ')
+        .filter((c) => c.includes('max-w-'))
+    for (const wide of [false, true]) {
+      show({ admin: true, alert: ALERT, wide })
+      const bar = column(screen.getByRole('banner'))
+      expect(bar).toEqual(column(screen.getByRole('contentinfo')))
+      expect(bar).toEqual(column(screen.getByRole('alert').parentElement))
+      expect(bar.join(' ').includes('1040px')).toBe(wide)
+      cleanup()
+    }
+  })
+})
+
+describe('OutsideShell', () => {
+  it('has the bar with filmes alone, the page and the footer', () => {
+    render(
+      <OutsideShell>
+        <main>a página</main>
+      </OutsideShell>,
+    )
+    expect(
+      screen
+        .getAllByRole('link')
+        .map((a) => [a.textContent, a.getAttribute('href')]),
+    ).toEqual([
+      ['filmes', '/'],
+      ['Créditos das fontes', '/creditos'],
+    ])
+    expect(
+      screen
+        .getByRole('link', { name: 'Créditos das fontes' })
+        .getAttribute('aria-current'),
+    ).toBeNull()
+  })
+
+  it('marks the footer link as the current page on the credits', () => {
+    render(
+      <OutsideShell path="/creditos">
+        <main>a página</main>
+      </OutsideShell>,
+    )
+    expect(
+      screen
+        .getByRole('link', { name: 'Créditos das fontes' })
+        .getAttribute('aria-current'),
+    ).toBe('page')
   })
 })

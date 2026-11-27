@@ -50,6 +50,7 @@ import {
   type QueueRefusal,
 } from '#/content/import-action'
 import { importsPath, QUEUE_PATH } from '#/content/paths'
+import { queueFrom } from '#/content/queue-search'
 import { appEngine } from './engine'
 import { appPoster, failureOf, formPoster, seeOther } from './form-post'
 import { ownerAuthor } from './people'
@@ -546,11 +547,16 @@ export async function queueAction(
 ): Promise<Response> {
   const signer = formPoster(request, owner, origin)
   if (signer instanceof Response) return signer
-  const action = parseQueue(await request.formData())
-  if (!action) return seeOther(`${QUEUE_PATH}${query({ erro: 'pedido' })}`)
+  const form = await request.formData()
+  // Whose import sent her to the queue: it stays across her decisions.
+  const de = queueFrom(form.get('de'))
+  const action = parseQueue(form)
+  if (!action) return seeOther(`${QUEUE_PATH}${query({ erro: 'pedido', de })}`)
   const outcome = await imports.decide(action, ownerAuthor(signer))
   if (outcome.exitCode !== 0)
-    return seeOther(`${QUEUE_PATH}${query({ erro: queueRefusal(outcome) })}`)
+    return seeOther(
+      `${QUEUE_PATH}${query({ erro: queueRefusal(outcome), de })}`,
+    )
   const { notice, resolved, left, item } = outcome.output
   return seeOther(
     `${QUEUE_PATH}${query({
@@ -559,6 +565,7 @@ export async function queueAction(
       restam: left,
       item: item?.id,
       titulo: item?.title,
+      de,
     })}`,
   )
 }

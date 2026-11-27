@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import type { PushStatus } from '@filmes/engine'
 import { Icon, type IconName } from './kit/icon'
 import { Avatar } from './kit/person'
-import { SiteFooter } from './kit/site-footer'
+import { CREDITS_PATH, SiteFooter } from './kit/site-footer'
 import { Alert } from './kit/status'
 import { OPERATIONS } from './operations.copy'
 import { SHELL } from './shell.copy'
@@ -13,7 +13,11 @@ import { SHELL } from './shell.copy'
 // and from 900px they move up into the top bar. An admin also sees, under
 // the bar, the strip of a push that keeps failing. Under the page, the
 // footer with the sources' credits (#292). Every Dono page sits in it;
-// `/entrar` and the Cartaz's MCP Apps view do not.
+// `/entrar` and the Cartaz's MCP Apps view do not. The bar and the footer
+// share the page's column (720px, or 1040px for a `wide` page), so at the
+// desktop "filmes", the page and the footer start on one left edge.
+// `OutsideShell` is the frame of a page with no Dono: the bar with
+// "filmes" alone, the page and the footer.
 
 type Tab = {
   key: keyof typeof SHELL.items
@@ -102,13 +106,13 @@ function Tabs({ path, place }: { path: string; place: 'top' | 'bottom' }) {
 
 /** The strip under the top bar while pushes keep failing (`alert`, after
  * three in a row), for an admin: `surface-2`, ink and the alert icon. */
-function PushStrip({ status }: { status: PushStatus }) {
+function PushStrip({ status, wide }: { status: PushStatus; wide: boolean }) {
   const copy = OPERATIONS.push
   return (
     <div className="border-b border-rule bg-surface-2 text-ink">
       <Alert
         strip
-        className="mx-auto max-w-[720px] px-2xl py-md text-meta min-[900px]:max-w-[1040px]"
+        className={`mx-auto px-2xl py-md text-meta ${wide ? 'max-w-[720px] min-[900px]:max-w-[1040px]' : 'max-w-[720px]'}`}
       >
         {copy.banner(status.pending, status.failures)}{' '}
         <a
@@ -137,10 +141,12 @@ function AccountMenu({
   owner,
   alert,
   current,
+  wide,
 }: {
   owner: ShellOwner
   alert: PushStatus | null
   current: boolean
+  wide: boolean
 }) {
   return (
     <>
@@ -167,7 +173,11 @@ function AccountMenu({
         id="conta"
         popover="auto"
         aria-label={SHELL.menu}
-        className="fixed inset-auto top-[60px] right-[max(16px,calc((100vw-1040px)/2+16px))] m-0 w-[240px] rounded-card border border-rule bg-surface p-xs text-ink"
+        className={`fixed inset-auto top-[60px] m-0 w-[240px] rounded-card border border-rule bg-surface p-xs text-ink ${
+          wide
+            ? 'right-[max(16px,calc((100vw-1040px)/2+16px))]'
+            : 'right-[max(16px,calc((100vw-720px)/2+16px))]'
+        }`}
       >
         <div className="px-md pt-sm pb-xs">
           <p className="truncate font-display text-row-title">{owner.name}</p>
@@ -209,47 +219,93 @@ function AccountMenu({
   )
 }
 
+/** "filmes", leading home, in the 44px link of the bar. */
+function Brand() {
+  return (
+    <a
+      href="/"
+      aria-label={SHELL.home}
+      className="inline-flex min-h-touch items-center font-display text-brand text-case-ink no-underline"
+    >
+      {SHELL.brand}
+    </a>
+  )
+}
+
+const BAR = 'mx-auto flex min-h-[56px] items-center px-2xl py-2xs'
+
 /** Every Dono page: the top bar, the push strip for an admin, the page,
- * the footer, and the tabs. `path` is the page's, to mark its tab. */
+ * the footer, and the tabs. `path` is the page's, to mark its tab (`""`
+ * marks none). `wide`: the page's column is 1040px from 900px (Meu gosto,
+ * a Pessoa, Operações). */
 export function AppShell({
   owner,
   path,
   alert,
+  wide = false,
   children,
 }: {
   owner: ShellOwner
   path: string
   alert: PushStatus | null
+  wide?: boolean
   children: ReactNode
 }) {
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="bg-case text-case-ink">
-        <div className="mx-auto flex min-h-[56px] max-w-[1040px] items-center gap-3xl px-2xl py-2xs">
-          <a
-            href="/"
-            aria-label={SHELL.home}
-            className="inline-flex min-h-touch items-center font-display text-brand text-case-ink no-underline"
-          >
-            {SHELL.brand}
-          </a>
+        <div
+          className={`${BAR} gap-2xl ${wide ? 'max-w-[720px] min-[900px]:max-w-[1040px]' : 'max-w-[720px]'}`}
+        >
+          <Brand />
           <Tabs path={path} place="top" />
           <div className="ml-auto flex items-center">
             <AccountMenu
               owner={owner}
               alert={alert}
               current={under(path, '/operacoes')}
+              wide={wide}
             />
           </div>
         </div>
       </header>
       {/* On Operações the push's own section says it, first. */}
-      {alert && !under(path, '/operacoes') && <PushStrip status={alert} />}
+      {alert && !under(path, '/operacoes') && (
+        <PushStrip status={alert} wide={wide} />
+      )}
       <div className="flex flex-1 flex-col pb-tab-clearance min-[900px]:pb-0">
         <div>{children}</div>
-        <SiteFooter />
+        <SiteFooter
+          width={wide ? 'wide' : 'page'}
+          current={path === CREDITS_PATH}
+        />
       </div>
       <Tabs path={path} place="bottom" />
+    </div>
+  )
+}
+
+/** A page with no Dono (the 404 and the error outside the shell,
+ * `/creditos` logged out): the case-black bar with "filmes" leading home,
+ * over the page, in the 720px column, and the footer. The page carries its
+ * own way in, so the bar has no Entrar. `path` is the page's, so the
+ * footer knows when it is on the credits. */
+export function OutsideShell({
+  path = '',
+  children,
+}: {
+  path?: string
+  children: ReactNode
+}) {
+  return (
+    <div className="flex min-h-dvh flex-col">
+      <header className="bg-case text-case-ink">
+        <div className={`${BAR} max-w-[720px]`}>
+          <Brand />
+        </div>
+      </header>
+      {children}
+      <SiteFooter current={path === CREDITS_PATH} />
     </div>
   )
 }

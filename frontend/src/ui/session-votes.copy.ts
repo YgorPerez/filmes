@@ -9,8 +9,23 @@ const count = (n: number, one: string, many: string) =>
 
 export const VOTES = {
   title: 'Sim ou não?',
-  rule: 'Não tira o filme da noite pra todo mundo. Sim sobe ele na lista.',
-  hint: 'Arraste o cartão pro lado, toque nos botões ou use as setas ← →.',
+  /** The recap's title: every card is answered, she is reviewing. */
+  review: 'Revise seus votos',
+  /** The veto rule, with Não and Sim marked as the buttons they name
+   * (pass 3 F1): read alone, "Não tira o filme" read as a negation. */
+  rule: {
+    no: 'Não',
+    noDoes: 'tira o filme da noite pra todo mundo.',
+    yes: 'Sim',
+    yesDoes: 'sobe ele na lista.',
+  },
+  /** The rule as one sentence, for tests and the screen reader. */
+  ruleText: 'Não tira o filme da noite pra todo mundo. Sim sobe ele na lista.',
+  /** How to vote: the arrow keys only where there is a keyboard. */
+  hint: {
+    touch: 'Arraste o cartão pro lado ou toque nos botões.',
+    keys: 'Arraste o cartão pro lado, toque nos botões ou use as setas ← →.',
+  },
   of: (n: number, total: number) => `Filme ${n} de ${total}`,
   /** What a screen reader hears when the card changes. */
   now: (n: number, total: number, title: string) =>
@@ -24,6 +39,8 @@ export const VOTES = {
   summary: (yes: number, no: number) =>
     `${count(yes, 'sim', 'sins')} · ${count(no, 'não', 'nãos')}`,
   recap: 'Revise antes de enviar: dá pra mudar qualquer voto aqui.',
+  /** Mudar votos: the recap opens on her earlier Votos (#340). */
+  kept: 'Seus votos de antes estão marcados e valem até você enviar os novos. Mude o que quiser aqui.',
   /** What a screen reader hears after the last card. */
   end: (yes: number, no: number) =>
     `Fim: ${count(yes, 'sim', 'sins')}, ${count(no, 'não', 'nãos')}. Revise e envie.`,
@@ -44,7 +61,13 @@ export const VOTES = {
   lineup: 'A lista da noite agora',
   revote: 'Mudar votos',
   list: 'Ver a lista',
-  questions: 'Responder perguntas de gosto (1 min)',
+  /** Short enough to stay on one line of the pill at 390px, with "1 min"
+   * kept whole (pass 4 F5). */
+  questions: 'Responder perguntas (1\u00a0min)',
+  /** Her sim on films another Presente's não had already taken out, on an
+   * older deck: the engine skipped them (pass 4 F3). */
+  stale: (titles: readonly string[]) =>
+    `Já tinha saído da noite antes do seu sim: ${titles.join(', ')}.`,
   notices: {
     votado: 'Votos contados.',
     atualizada: 'Votos contados. A lista foi atualizada.',
@@ -56,6 +79,6 @@ export const VOTES = {
       `Seus votos foram contados, mas a lista não foi refeita. Fale com ${who(owner)}.`,
     indisponivel: () => 'Não deu pra enviar os votos agora. Tente de novo.',
     falha: (owner: string | null) =>
-      `Deu um problema do nosso lado e seus votos não foram contados. Fale com ${who(owner)}.`,
+      `Deu um problema do nosso lado. Fale com ${who(owner)}.`,
   },
 } as const

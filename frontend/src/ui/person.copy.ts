@@ -17,6 +17,17 @@ type Level = 'none' | 'low' | 'normal' | 'high'
 type Reaction = 'love' | 'like' | 'dislike' | 'hate'
 type Strength = 'strong' | 'moderate' | 'weak' | 'guess'
 
+/** "do gênero Drama e da direção de Helena Prado": what the Notas say she
+ * likes, each part with its label (#274). */
+const likedParts = (genres: readonly string[], directors: readonly string[]) =>
+  [
+    genres.length > 0 &&
+      `${genres.length === 1 ? 'do gênero' : 'dos gêneros'} ${listed(genres)}`,
+    directors.length > 0 && `da direção de ${listed(directors)}`,
+  ]
+    .filter((part) => part !== false)
+    .join(' e ')
+
 const escapeRegExp = (text: string) =>
   text.replaceAll(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
@@ -32,36 +43,33 @@ export const PERSON = {
   },
   glance: {
     title: 'Seu gosto em uma olhada',
+    /** At zero, no count and no countdown: the next step already says to
+     * give Notas (#274). */
     notes: (n: number) =>
-      n === 1 ? '1 Nota' : `${n.toLocaleString('pt-BR')} Notas`,
+      n === 0
+        ? 'Nenhuma Nota ainda'
+        : n === 1
+          ? '1 Nota'
+          : `${n.toLocaleString('pt-BR')} Notas`,
     toTen: (n: number) => `faltam ${10 - n} para 10`,
     /** The genres and directors of the films she liked, each part with
      * its label (#274). */
-    likes: (genres: readonly string[], directors: readonly string[]) => {
-      const parts = [
-        genres.length > 0 &&
-          `${genres.length === 1 ? 'do gênero' : 'dos gêneros'} ${listed(genres)}`,
-        directors.length > 0 && `da direção de ${listed(directors)}`,
-      ].filter((part) => part !== false)
-      return `Pelas suas Notas, você gosta ${parts.join(' e ')}.`
-    },
+    likes: (genres: readonly string[], directors: readonly string[]) =>
+      `Pelas suas Notas, você gosta ${likedParts(genres, directors)}.`,
     said: 'O que você disse',
     nothingSaid: 'Nada dito ainda sobre o seu gosto.',
-    next: 'Próximo passo',
+    /** The next step, a button as on another Pessoa's page (#273). */
     steps: {
-      rate: 'dar notas a filmes que você viu',
-      connector: 'ligar o conector no Claude',
-      questions: 'responder as perguntas abertas',
+      rate: 'Dar notas a filmes que você viu',
+      connector: 'Ligar o conector no Claude',
+      questions: 'Responder as perguntas abertas',
       queue: (n: number) =>
         n === 1
-          ? 'dizer qual é o filme que espera na fila'
-          : `dizer quais são os ${n} filmes que esperam na fila`,
-      ask: 'pedir um filme para hoje',
+          ? 'Dizer qual é o filme que espera na fila'
+          : `Dizer quais são os ${n} filmes que esperam na fila`,
+      ask: 'Pedir um filme para hoje',
     },
   },
-  /** The fold of a ficha with nothing yet (#273): "Já vistos sem Nota:
-   * nenhum", its + the way to add one. */
-  empty: (title: string) => `${title}: nenhum`,
   /** Another Pessoa's page under her name (#273): how much the filmes knows
    * of her, and the one thing to do next. */
   summary: {
@@ -72,9 +80,14 @@ export const PERSON = {
       n === 1 ? '1 pergunta aberta' : `${n} perguntas abertas`,
     sessions: (n: number) => (n === 1 ? '1 Sessão' : `${n} Sessões`),
     unknown: 'falta conhecer',
-    /** What her Notas say she likes (#273): her genres and directors. */
-    likes: (name: string, names: readonly string[]) =>
-      `Pelas Notas, ${name} gosta de ${listed(names)}.`,
+    /** What her Notas say she likes (#273): her genres and directors,
+     * each with its role, as Meu gosto says them: a bare name could read
+     * as a Pessoa of the house. */
+    likes: (
+      name: string,
+      genres: readonly string[],
+      directors: readonly string[],
+    ) => `Pelas Notas, ${name} gosta ${likedParts(genres, directors)}.`,
     /** Without genres to say, the films of her highest Notas. */
     liked: (name: string, titles: readonly string[]) =>
       `${name} deu nota alta a ${listed(titles)}.`,
@@ -82,8 +95,6 @@ export const PERSON = {
     /** The next step, a button: short, it is in capitals (#273). */
     steps: {
       import: (name: string) => `Trazer o histórico de ${name}`,
-      questions: (n: number) =>
-        n === 1 ? 'Responder a pergunta' : 'Responder as perguntas',
       veto: (name: string) => `Dizer o que ${name} não vê`,
       ask: (name: string) => `Pedir um filme com ${name}`,
     },
@@ -141,7 +152,9 @@ export const PERSON = {
       return `a previsão erra ${rounded.toLocaleString('pt-BR')} ${points} em média, em ${films.toLocaleString('pt-BR')} filmes`
     },
     rate: 'Dar notas',
-    import: 'Importar de outro site',
+    // The page's own title (#274): "De outro site" there is IMDb, Simkl and
+    // TV Time only.
+    import: 'Importar Notas',
     more: 'Baixar as Notas:',
     download: 'CSV do IMDb',
     downloadLetterboxd: 'CSV do Letterboxd',
@@ -188,9 +201,40 @@ export const PERSON = {
   },
   unavailable:
     'Não deu para abrir a Pessoa: o site está com um problema, e ele ficou registrado no log do servidor.',
+  /** Correcting an item in place (#330). */
+  edit: {
+    open: 'Editar',
+    label: (what: string) => `Editar ${what}`,
+    cancel: 'Cancelar',
+    /** Above the open form: which item it is, as it was. */
+    heading: (kind: string) => `Editando ${kind}`,
+    kinds: {
+      veto: 'o Veto',
+      stated: 'o Declarado',
+      report: 'o Relato',
+      seen: 'o Já visto',
+    },
+    /** In an item's line: the day of its last edit, after its own date. */
+    on: (date: string) => `editado ${date}`,
+    /** Beside the item an edit just saved. */
+    saved: 'Editado',
+    /** Another "Editar", or Esc, while the open form has changes. */
+    held: 'Esta edição tem mudanças: grave ou cancele antes de sair dela.',
+    /** A Já visto's film stays: another film is another Já visto. */
+    filmFixed: 'Para trocar o filme, tire este Já visto e acrescente o certo.',
+    /** The Fonte of an edit: left empty, the one it had stays. */
+    sourceHint: 'de onde veio; apagada, fica a de antes',
+    /** Why an imported item has no "Editar", for a screen reader. */
+    readOnly: 'corrija na origem',
+  },
   remove: 'Tirar',
   removeLabel: (what: string) => `Tirar ${what}`,
   removing: 'Tirando…',
+  /** "Tirar" asks first (#330). */
+  removeSure: (what: string) => `Tirar ${what} de vez`,
+  removeSureShort: 'Tirar de vez',
+  removeKeep: 'Manter',
+  removeWarning: 'Sai do arquivo e não volta.',
   save: 'Gravar',
   saving: 'Gravando…',
   imported: 'importado',
@@ -198,13 +242,26 @@ export const PERSON = {
   /** What a save or a Tirar did, by the ficha that posted it (#273):
    * "Veto gravado.", not where the file is. */
   savedIn: {
-    vetos: { gravado: 'Veto gravado.', removido: 'Veto tirado.' },
+    vetos: {
+      gravado: 'Veto gravado.',
+      removido: 'Veto tirado.',
+      editado: 'Veto editado.',
+    },
     declarados: {
       gravado: 'Declarado gravado.',
       removido: 'Declarado tirado.',
+      editado: 'Declarado editado.',
     },
-    relatos: { gravado: 'Relato gravado.', removido: 'Relato tirado.' },
-    vistos: { gravado: 'Já visto gravado.', removido: 'Já visto tirado.' },
+    relatos: {
+      gravado: 'Relato gravado.',
+      removido: 'Relato tirado.',
+      editado: 'Relato editado.',
+    },
+    vistos: {
+      gravado: 'Já visto gravado.',
+      removido: 'Já visto tirado.',
+      editado: 'Já visto editado.',
+    },
   } satisfies Record<string, Partial<Record<PersonNotice, string>>>,
   /** What the last form did, by her name (#273): every Pessoa is not
    * "ela". */
@@ -214,6 +271,7 @@ export const PERSON = {
       igual: 'Já estava assim: nada mudou.',
       ajustado: 'Ajuste gravado.',
       removido: 'Tirado.',
+      editado: 'Editado.',
       pulada: 'Pergunta pulada: volta uma vez, quando o assunto aparecer.',
       saiu: 'Pulada duas vezes: a pergunta saiu da lista.',
       respondida: 'Resposta gravada como Declarado; a pergunta saiu da lista.',
@@ -228,6 +286,7 @@ export const PERSON = {
       pedido:
         'Faltou um campo, ou um valor não vale: confira o texto, o alvo e a Nota de 1 a 10.',
       item: `Esse item já não está no arquivo de ${name}.`,
+      repetido: `Assim ele ficaria igual a outro item do arquivo de ${name}. Nada mudou.`,
       email: `Para entrar, ${name} precisa de um e-mail do Google válido.`,
       'email-usado': 'Esse e-mail já é de outra Pessoa.',
       'ja-dono': `${name} já tem acesso. Para trocar o e-mail, tire o acesso antes.`,
@@ -250,7 +309,7 @@ export const PERSON = {
   targetSearch: 'Busque pelo nome',
   /** Before the JavaScript, the field takes the ID. */
   idHint: 'tt… de um filme ou Q… de uma pessoa, gênero ou série',
-  groupsLabel: 'ou um grupo',
+  groupsLabel: 'ou, em vez disso, um grupo',
   targetChip: (label: string, kind: string) => `${label} · ${kind}`,
   film: 'Filme',
   filmKind: 'filme',
@@ -286,7 +345,7 @@ export const PERSON = {
     empty: 'Nenhum Veto.',
     add: 'Acrescentar Veto',
     text: 'O Veto, como foi dito',
-    placeholder: 'nunca vê terror',
+    placeholder: 'ex.: nunca vê terror',
   },
   adjustments: {
     title: 'Ajustes',
@@ -328,8 +387,9 @@ export const PERSON = {
     source: reportSource,
   },
   seen: {
-    title: 'Já vistos sem Nota',
-    empty: 'Nenhum Já visto sem Nota: os filmes com Nota estão nas Notas.',
+    title: 'Já vistos',
+    empty:
+      'Nenhum filme visto sem Nota. Os que têm Nota já contam como vistos.',
     add: 'Acrescentar Já visto',
     source: 'conversa com o Dono',
   },
@@ -432,6 +492,8 @@ export const PERSON = {
       return 'Busque pelo nome e escolha um resultado do Catálogo.'
     if (problem === 'target')
       return 'Falta o alvo: um filme, uma pessoa, um gênero ou um grupo.'
+    if (problem === 'both')
+      return 'Escolha um só: o alvo ou o grupo. O Veto vale para um deles.'
     if (problem === 'reaction')
       return 'Uma reação precisa de um alvo: diga sobre o quê.'
     return REQUIRED[field] ?? 'Falta preencher este campo.'
@@ -458,9 +520,3 @@ const REQUIRED: Record<string, string> = {
   filme: 'Falta o filme: busque pelo título e escolha um resultado.',
   email: 'Falta o e-mail do Google.',
 }
-
-/** The Notas a form offers, from 10 to 1, as the forms post them. */
-export const RATING_CHOICES = Array.from({ length: 10 }, (_, i) => ({
-  value: `${10 - i}/10`,
-  label: String(10 - i),
-}))

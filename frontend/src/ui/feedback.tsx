@@ -28,6 +28,7 @@ import {
   TextField,
 } from './person-parts'
 import { names } from './session-names'
+import { sessionLabel } from './billboard-request'
 import {
   Avatars,
   SessionDate,
@@ -142,7 +143,7 @@ function Heading({ page }: { page: FeedbackPage }) {
         </span>
       </div>
       <NightRequest
-        items={[...page.moods, ...page.constraints]}
+        items={sessionLabel(page)}
         note={page.request}
         added={page.additions}
       />
@@ -502,7 +503,8 @@ function Satisfaction({ page }: { page: FeedbackPage }) {
             ? []
             : [
                 <Item key={c.person}>
-                  <span>{c.line}</span>
+                  {/* Small, under the block's own lead (#272). */}
+                  <span className="text-meta text-ink">{c.line}</span>
                 </Item>,
               ],
         )}

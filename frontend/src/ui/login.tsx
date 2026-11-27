@@ -18,9 +18,11 @@ import { Button } from './shadcn/button'
 //
 // `/entrar`: the case-black bar with "filmes" and one card with the one
 // orange button. The button is a link, since `/auth/google` answers a GET with the
-// redirect to Google; it goes when sign-in is off here, since Google
-// would only send the visitor back. Both pages end with the footer that
-// links the sources' credits.
+// redirect to Google. When sign-in is off here the orange goes, and a
+// quiet "Tentar de novo" takes its place: the same link, which lands on
+// Google once the server has sign-in again, or back on this refusal. Both pages end with the footer that
+// links the sources' credits. On `/entrar` the bar and the footer take the
+// card's 464px, so "filmes" sits over the card's left edge.
 
 export function Login({ refusal }: { refusal?: LoginRefusal }) {
   const googleLabel = refusal === 'nao-dono' ? LOGIN.otherAccount : LOGIN.google
@@ -28,7 +30,7 @@ export function Login({ refusal }: { refusal?: LoginRefusal }) {
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="bg-case">
-        <p className="mx-auto flex min-h-[56px] max-w-[1040px] items-center px-2xl font-display text-brand text-case-ink">
+        <p className="mx-auto flex min-h-[56px] max-w-[464px] items-center px-2xl font-display text-brand text-case-ink">
           {LOGIN.brand}
         </p>
       </header>
@@ -51,7 +53,17 @@ export function Login({ refusal }: { refusal?: LoginRefusal }) {
             ) : (
               <p className="text-balance">{LOGIN.lead}</p>
             )}
-            {refusal !== 'indisponivel' && (
+            {refusal === 'indisponivel' ? (
+              <a
+                href="/auth/google"
+                className={buttonVariants({
+                  variant: 'option',
+                  className: 'sm:self-start',
+                })}
+              >
+                {LOGIN.retry}
+              </a>
+            ) : (
               <a
                 href="/auth/google"
                 className={buttonVariants({ className: 'sm:self-start' })}
@@ -67,7 +79,7 @@ export function Login({ refusal }: { refusal?: LoginRefusal }) {
           </div>
         </section>
       </main>
-      <SiteFooter />
+      <SiteFooter width="card" />
     </div>
   )
 }

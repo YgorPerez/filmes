@@ -4,6 +4,8 @@
 // tables instead of the Markdown as text. Only what the engine writes is
 // read: no inline Markdown, no nesting. Code, not a component.
 
+import { OPERATIONS } from './operations.copy'
+
 export type Align = 'left' | 'right' | 'center'
 
 export type ReportBlock =
@@ -149,4 +151,141 @@ export function weightsToml(yaml: string): string | null {
       [...(table ? [`[${table}]`] : []), ...entries].join('\n'),
     )
     .join('\n\n')
+}
+
+/** The section of the data versions, whose hashes the page shortens. */
+const VERSIONS_SECTION = 'Versões dos dados'
+
+/** A cell with no held-out Nota ("— (0/0)"), or no measure at all. */
+const EMPTY_CELL = /^(— \(0\/0\)|—|0)$/
+
+/** The sample whose rows say why they are empty, when the Catálogo lacks
+ * its dump. */
+const MOVIELENS = 'MovieLens'
+
+/** The warning that the MovieLens dump is missing: the MovieLens rows
+ * already give it as their cause. */
+const NO_MOVIELENS = /ml-32m/
+
+/** A hash of the data versions, longer than the page needs to tell two
+ * apart. */
+const LONG_HASH = /\b([0-9a-f]{12})[0-9a-f]{4,}\b/g
+
+/** A satisfaction line of the Online section, which names the Pessoa by
+ * her slug. */
+const SATISFACTION = /^(Satisfação de )(\S+)(:.*)$/
+
+/** The grid's count, in the engine's word for a set of weights; the page
+ * calls each one a "combinação", as its checkbox and verdict do. */
+const GRID_COUNT = /\bForam testados (\d+) conjuntos\b/
+
+/** The section of the grid of weights. */
+const GRID_SECTION = 'Grade de pesos'
+
+/** The name of the Pessoa `slug`; the slug itself for anyone else. */
+const nameOf = (names: Readonly<Record<string, string>>, slug: string) =>
+  Object.hasOwn(names, slug) ? names[slug]! : slug
+
+/** A table row as the page shows it: the Pessoa by her name, and a row
+ * with nothing measured in one cell that says why; on a row with numbers,
+ * an empty cell says "sem Notas". */
+function tidyRow(
+  row: string[],
+  names: Readonly<Record<string, string>>,
+  noMovielens: boolean,
+): string[] {
+  const [first = '', ...rest] = row
+  const name = nameOf(names, first)
+  if (rest.length > 0 && rest.every((cell) => EMPTY_CELL.test(cell)))
+    return [
+      name,
+      name === MOVIELENS && noMovielens
+        ? OPERATIONS.evaluation.noMovielens
+        : OPERATIONS.evaluation.noRatingsRow,
+    ]
+  return [
+    name,
+    ...rest.map((cell) =>
+      cell === '— (0/0)' ? OPERATIONS.evaluation.noRatingsCell : cell,
+    ),
+  ]
+}
+
+function tidyBlock(
+  block: ReportBlock,
+  title: string,
+  names: Readonly<Record<string, string>>,
+  noMovielens: boolean,
+): ReportBlock | null {
+  switch (block.kind) {
+    case 'table':
+      return {
+        ...block,
+        rows: block.rows.map((row) => tidyRow(row, names, noMovielens)),
+      }
+    case 'list': {
+      const items = block.items
+        .filter((item) => !(noMovielens && NO_MOVIELENS.test(item)))
+        .map((item) =>
+          item.replace(
+            SATISFACTION,
+            (_, lead: string, slug: string, tail: string) =>
+              `${lead}${nameOf(names, slug)}${tail}`,
+          ),
+        )
+      return items.length === 0 ? null : { ...block, items }
+    }
+    case 'code':
+      return title === VERSIONS_SECTION
+        ? { ...block, text: block.text.replace(LONG_HASH, '$1…') }
+        : block
+    case 'paragraph':
+      return title === GRID_SECTION
+        ? {
+            ...block,
+            text: block.text.replace(
+              GRID_COUNT,
+              (_, count: string) => `Foram testadas ${count} combinações`,
+            ),
+          }
+        : block
+    default:
+      return block
+  }
+}
+
+/** The report's sections as the page shows them (#276): each Pessoa by
+ * her name, not her slug; the grid's sets of weights as "combinações"; a row with nothing measured in one line that
+ * says why (for MovieLens without its dump, the missing dump, which then
+ * leaves the warnings); the data versions' hashes shortened, with a line
+ * that says the whole ones are in the file. A section left with nothing
+ * is dropped. */
+export function tidyReport(
+  sections: readonly ReportSection[],
+  names: Readonly<Record<string, string>>,
+): ReportSection[] {
+  const noMovielens = sections.some((section) =>
+    section.blocks.some(
+      (block) =>
+        block.kind === 'list' &&
+        block.items.some((item) => NO_MOVIELENS.test(item)),
+    ),
+  )
+  return sections.flatMap((section) => {
+    const blocks = section.blocks.flatMap((block) => {
+      const tidy = tidyBlock(block, section.title, names, noMovielens)
+      return tidy === null ? [] : [tidy]
+    })
+    const shortened =
+      section.title === VERSIONS_SECTION &&
+      section.blocks.some(
+        (block) => block.kind === 'code' && block.text.search(LONG_HASH) >= 0,
+      )
+    if (shortened)
+      blocks.push({
+        kind: 'paragraph',
+        text: OPERATIONS.evaluation.shortHashes,
+      })
+    return blocks.length === 0 ? [] : [{ title: section.title, blocks }]
+  })
 }

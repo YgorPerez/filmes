@@ -32,7 +32,11 @@ export const Deck: Story = {
     await expect(
       canvas.getByRole('heading', { name: 'O Farol de Areia' }),
     ).toBeVisible()
-    await expect(canvas.getByText(VOTES.rule)).toBeVisible()
+    await expect(
+      canvas.getByText(
+        (_, el) => el?.tagName === 'P' && el.textContent === VOTES.ruleText,
+      ),
+    ).toBeVisible()
     await userEvent.click(canvas.getByRole('button', { name: VOTES.yes }))
     await expect(
       canvas.getByRole('heading', { name: 'Pequenos Milagres' }),
@@ -47,6 +51,9 @@ export const Recap: Story = {
       await userEvent.click(canvas.getByRole('button', { name }))
     await expect(
       canvas.getByRole('heading', { name: VOTES.summary(2, 1) }),
+    ).toBeVisible()
+    await expect(
+      canvas.getByRole('heading', { level: 1, name: VOTES.review }),
     ).toBeVisible()
     await expect(
       canvas.getByText(VOTES.leaving(['Pequenos Milagres'])),
@@ -70,6 +77,20 @@ export const Sent: Story = {
   args: { deck: AFTER, search: { ...LINK, feito: 'regerada' } },
 }
 
+/** Sent from a deck that went stale: another Presente's não had taken a
+ * film out before her sim on it arrived. */
+export const SentLate: Story = {
+  args: {
+    deck: { ...AFTER, stale: ['Quermesse'] },
+    search: { ...LINK, feito: 'regerada' },
+  },
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByText(VOTES.stale(['Quermesse'])),
+    ).toBeVisible()
+  },
+}
+
 export const AllVoted: Story = {
   args: {
     deck: {
@@ -79,8 +100,25 @@ export const AllVoted: Story = {
   },
 }
 
+/** Mudar votos: her Votos come back chosen, on the recap (#340). */
 export const Revote: Story = {
-  args: { deck: AFTER, search: { ...LINK, mudar: true } },
+  args: {
+    deck: {
+      ...AFTER,
+      films: AFTER.films.map((f, i) => ({
+        ...f,
+        mine: i === 0 ? ('no' as const) : ('yes' as const),
+      })),
+    },
+    search: { ...LINK, mudar: true },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(
+      canvas.getByRole('heading', { level: 1, name: VOTES.review }),
+    ).toBeVisible()
+    await expect(canvas.getByText(VOTES.kept)).toBeVisible()
+  },
 }
 
 export const Failure: Story = {

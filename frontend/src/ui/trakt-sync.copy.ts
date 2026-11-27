@@ -21,16 +21,19 @@ export const TRAKT_SYNC = {
   /** Another Pessoa's page: only she can connect hers, so no way to it
    * here (#274). */
   other: (name: string) =>
-    `Pelo nome do perfil público de ${name} no Trakt, o filmes lê o histórico e as notas a cada Sessão nova. Perfil privado? Peça a ${name} para torná-lo público, ou envie o ZIP do Trakt dela.`,
+    `Pelo nome do perfil público de ${name} no Trakt, o filmes lê o histórico e as notas a cada Sessão nova. Perfil privado? Peça a ${name} para torná-lo público, ou envie o ZIP do Trakt de ${name}.`,
   ownUser: 'Ou pelo nome do perfil, se ele é público',
   user: 'Nome do perfil no Trakt',
   userHint: 'como em trakt.tv/users/nome',
   consent: (name: string) =>
     `${name} concordou que o filmes leia o perfil público do Trakt e guarde as notas`,
   read: 'Ler o perfil',
+  /** The profile form's accessible name (#274). */
+  readLabel: 'Perfil do Trakt',
   otherUser: 'Ler outro perfil',
-  /** The one tap once a profile or the account was read. */
-  sync: 'Sincronizar agora',
-  syncUser: (user: string) => `Sincronizar agora (${user})`,
+  /** The one tap once a profile or the account was read: the same verb
+   * as the results' rows (#274). */
+  sync: 'Ler agora',
+  syncUser: (user: string) => `Ler agora (${user})`,
   busy: 'Lendo o Trakt…',
 } as const

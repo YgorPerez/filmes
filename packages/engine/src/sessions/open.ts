@@ -141,6 +141,10 @@ export const recommendationFields = (
             position: f.position,
             id: f.id,
             title: f.title,
+            // The title the Cartaz shows (TMDB's in Portuguese), for the
+            // screens that name the film from the Session (#272); `title`
+            // stays the Catálogo's, which the Feedback matches.
+            ...(f.titlePt && f.titlePt !== f.title && { title_pt: f.titlePt }),
             ...('new' in f && { new: f.new }),
             ...(f.bet && { bet: true }),
             ...(f.cautiousBet && { cautious_bet: true }),

@@ -33,5 +33,8 @@ export const Unavailable: Story = {
     await expect(
       within(canvasElement).queryByRole('link', { name: LOGIN.google }),
     ).toBeNull()
+    await expect(
+      within(canvasElement).getByRole('link', { name: LOGIN.retry }),
+    ).toHaveAttribute('href', '/auth/google')
   },
 }

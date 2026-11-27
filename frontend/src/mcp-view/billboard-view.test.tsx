@@ -6,7 +6,7 @@
 import { act, cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
-import { MODEL } from '../ui/billboard.fixture'
+import { CHOSEN_OUTSIDE, CLOSED, MODEL } from '../ui/billboard.fixture'
 import { SEND_STATUS } from '../ui/billboard-send.copy'
 import { BILLBOARD } from '../ui/billboard.copy'
 import { BillboardView, type Host } from './billboard-view'
@@ -97,9 +97,9 @@ describe('the view shows', () => {
   it('the Nota prevista the tool result carries', () => {
     render(<BillboardView result={shown} host={fakeHost(json({}))} />)
     const name = card(1).getByRole('button', {
-      name: 'Bruno: pela nota de 12 pessoas de gosto parecido',
+      name: 'Você: pela nota de 12 pessoas de gosto parecido',
     })
-    expect(name.closest('p')?.textContent).toMatch(/^previsto · Bruno.* 8,3$/u)
+    expect(name.closest('p')?.textContent).toMatch(/^previsto · Você.* 8,3$/u)
   })
 
   it("plain words for the engine's error, never its message", () => {
@@ -139,6 +139,38 @@ describe('the view shows, with no text or as the page', () => {
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
       'Cartaz: Vocês dois',
     )
+  })
+})
+
+describe('the view shows, a closed Session', () => {
+  const closed = (billboard: typeof CLOSED, host: Partial<Host> = {}) =>
+    render(
+      <BillboardView
+        result={json({ session: billboard.session, billboard })}
+        host={{ ...fakeHost(json({})), ...host }}
+      />,
+    )
+  const reactions = () =>
+    screen.getAllByRole('list', { name: 'Filme escolhido' })
+
+  it('in fullscreen, it opens as inline: closed, the Filme escolhido and each line', () => {
+    closed(CLOSED, { inFullscreen: true })
+    expect(
+      screen.getByText(new RegExp(`^${view.closed}`, 'u')).textContent,
+    ).toBe('Sessão fechada · Filme escolhido: As Horas Lentas')
+    // Under the request, and again in the chosen film's card.
+    expect(reactions().map((list) => list.textContent)).toEqual([
+      'BVocê: previsto 8,3 · deu 6 de 10IIara: gostou',
+      'BVocê: previsto 8,3 · deu 6 de 10IIara: gostou',
+    ])
+  })
+
+  it('without fullscreen, the same; a chosen film with a block of its own says its lines once', () => {
+    closed(CHOSEN_OUTSIDE)
+    expect(
+      screen.getByText(new RegExp(`^${view.closed}`, 'u')).textContent,
+    ).toBe('Sessão fechada · Filme escolhido: Curta da Madrugada')
+    expect(reactions()).toHaveLength(1)
   })
 })
 
@@ -621,7 +653,7 @@ describe('mountView, inline', () => {
     root.remove()
   })
 
-  it('inline declares no colour scheme, so the host’s floor shows; fullscreen takes the theme’s', async () => {
+  it('inline and fullscreen take the theme’s colour scheme, so a canvas behind has its polarity', async () => {
     const modes = { availableDisplayModes: ['inline', 'fullscreen'] }
     const app = fakeApp({ theme: 'dark', displayMode: 'inline', ...modes })
     const root = document.body.appendChild(document.createElement('div'))
@@ -630,11 +662,86 @@ describe('mountView, inline', () => {
     )
     const style = document.documentElement.style
     expect(document.documentElement.dataset.theme).toBe('dark')
-    expect(style.colorScheme).toBe('normal')
-    await act(async () =>
-      app.onhostcontextchanged?.({ displayMode: 'fullscreen' }),
-    )
     expect(style.colorScheme).toBe('dark')
+    await act(async () =>
+      app.onhostcontextchanged?.({ displayMode: 'fullscreen', theme: 'light' }),
+    )
+    expect(style.colorScheme).toBe('light')
+    root.remove()
+  })
+})
+
+describe('mountView, the floor', () => {
+  const floors = async (context: Record<string, unknown>) => {
+    const app = fakeApp(context)
+    const root = document.body.appendChild(document.createElement('div'))
+    await act(() =>
+      mountView(app as unknown as ViewApp, root, () => Promise.resolve()),
+    )
+    const style = document.documentElement.style
+    const read = () => [
+      style.getPropertyValue('--view-floor'),
+      style.getPropertyValue('--card-floor'),
+    ]
+    return { app, root, read }
+  }
+
+  it('the host’s background is the frame’s floor, edge to edge', async () => {
+    const { root, read } = await floors({
+      theme: 'dark',
+      styles: { variables: { '--color-background-primary': '#262624' } },
+    })
+    expect(read()).toEqual(['#262624', ''])
+    root.remove()
+  })
+
+  it('dark without it, the card lays the ground; light, nothing', async () => {
+    const { app, root, read } = await floors({ theme: 'dark' })
+    expect(read()).toEqual(['', 'var(--color-ground)'])
+    await act(async () => app.onhostcontextchanged?.({ theme: 'light' }))
+    expect(read()).toEqual(['', ''])
+    root.remove()
+  })
+})
+
+describe('mountView, Enviar in fullscreen', () => {
+  const fullscreenSend = async (answer: () => Promise<object>) => {
+    const modes = { availableDisplayModes: ['inline', 'fullscreen'] }
+    const app = fakeApp({ displayMode: 'fullscreen', ...modes })
+    app.requestDisplayMode.mockImplementation(answer)
+    const root = document.body.appendChild(document.createElement('div'))
+    await act(() =>
+      mountView(app as unknown as ViewApp, root, () => Promise.resolve()),
+    )
+    await act(async () => app.ontoolresult?.(shown))
+    await swapFirstAndSend()
+    return { app, root }
+  }
+
+  it('a regenerate asks the host for the chat, where the new list comes', async () => {
+    const { app, root } = await fullscreenSend(() =>
+      Promise.resolve({ mode: 'inline' }),
+    )
+    expect(app.requestDisplayMode).toHaveBeenCalledExactlyOnceWith({
+      mode: 'inline',
+    })
+    expect(status()).toBe(SEND_STATUS.regenerating)
+    root.remove()
+  })
+
+  it('a host that keeps the fullscreen: she is asked to close it', async () => {
+    const { root } = await fullscreenSend(() =>
+      Promise.reject(new Error('não')),
+    )
+    expect(status()).toBe(SEND_STATUS.closeFullscreen)
+    root.remove()
+  })
+
+  it('a host that answers with the fullscreen still: the same', async () => {
+    const { root } = await fullscreenSend(() =>
+      Promise.resolve({ mode: 'fullscreen' }),
+    )
+    expect(status()).toBe(SEND_STATUS.closeFullscreen)
     root.remove()
   })
 })

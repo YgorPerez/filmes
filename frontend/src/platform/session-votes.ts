@@ -13,8 +13,11 @@
 
 import {
   castVotes,
+  readSession,
   recommendSession,
   sessionRedoRequest,
+  sessionVersions,
+  shownFilms,
   type Engine,
   type ErrorOutput,
 } from '@filmes/engine'
@@ -34,17 +37,49 @@ import { fromThisSite } from './same-site'
 /** What the deck shows the chosen Presente: the current version, the
  * films of its screen with her standing Voto on each (the deck asks for
  * the ones she has not voted on, and sends the rest again, since her
- * latest submission is the one that counts), and what her no took out. */
-export type VoteDeck = Pick<SessionLinkView, 'version' | 'films' | 'left'>
+ * latest submission is the one that counts), what her no took out, and,
+ * by title, the films her last sim went to after they had left the screen
+ * (`stale`: an older deck, while another Presente's no redid the Session;
+ * pass 4 F3). */
+export type VoteDeck = Pick<SessionLinkView, 'version' | 'films' | 'left'> & {
+  stale?: string[]
+}
 
 export async function voteDeck(
-  search: ReturnType<typeof sessionLinkSearch>,
+  search: ReturnType<typeof sessionLinkSearch> & { fora?: string | undefined },
   engine: Engine,
   database: string,
 ): Promise<VoteDeck | null> {
   const link = await resolveSessionLink(search, engine, database)
   if (!link?.selected) return null
-  return { version: link.version, films: link.films, left: link.left }
+  const deck = { version: link.version, films: link.films, left: link.left }
+  const asked = search.fora?.split(',') ?? []
+  if (asked.length === 0) return deck
+  const onScreen = new Set(link.films.map((f) => f.id))
+  const stale = await shownTitles(
+    engine,
+    link.session,
+    (id) => asked.includes(id) && !onScreen.has(id),
+  )
+  return stale.length > 0 ? { ...deck, stale } : deck
+}
+
+/** The titles of the films some version of the Session showed that
+ * `pick` takes, once each: only a film the Session showed is named. */
+async function shownTitles(
+  engine: Engine,
+  session: string,
+  pick: (id: string) => boolean,
+): Promise<string[]> {
+  const read = await engine.run(readSession(session))
+  if (read.exitCode !== 0) return []
+  const titles = new Map(
+    sessionVersions(read.output.frontmatter)
+      .flatMap(shownFilms)
+      .filter((f) => pick(f.id))
+      .map((f) => [f.id, f.title ?? f.id]),
+  )
+  return [...titles.values()]
 }
 
 /** One Session's Votos and redo at a time, in this process. */
@@ -91,8 +126,20 @@ export async function voteAction(
   return oneAtATime(search.sessao ?? '', async () => {
     const link = await resolveSessionLink(search, engine, database)
     if (!link?.selected) return back()
+    const onScreen = new Set(link.films.map((f) => f.id))
+    // A sim on a film that already left: the engine skips it, and the
+    // deck says so.
+    const stale = filmsOf(form, 'sim').filter((film) => !onScreen.has(film))
     const deck = (outcome: { feito?: VoteNotice; erro?: VoteRefusal }) =>
-      seeOther(votePath('votar', search, outcome))
+      seeOther(
+        votePath(
+          'votar',
+          search,
+          stale.length > 0 && outcome.feito
+            ? { ...outcome, fora: stale.slice(0, 10).join(',') }
+            : outcome,
+        ),
+      )
     const votes = [
       ...filmsOf(form, 'sim').map((film) => ({ film, vote: 'yes' as const })),
       ...filmsOf(form, 'nao').map((film) => ({ film, vote: 'no' as const })),

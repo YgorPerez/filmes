@@ -16,6 +16,7 @@ import {
   progressTo,
   pushNow,
   pushStatus,
+  readPeople,
   type ConsultResult,
   type ConsultValue,
   type Engine,
@@ -113,8 +114,13 @@ export type EvaluationJob =
       error: { code: string; message: string }
     })
 
-/** The latest report in the evaluations folder. */
-export type EvaluationReport = { date: string; text: string }
+/** The latest report in the evaluations folder, with each Pessoa's name
+ * by her slug, which is how the report names her. */
+export type EvaluationReport = {
+  date: string
+  text: string
+  names: Readonly<Record<string, string>>
+}
 
 /** The report before the latest: its day and the Pessoas' Recall@50, for
  * the change since. */
@@ -145,6 +151,8 @@ export interface Operations {
   consult(sql: string): Promise<Outcome<ConsultResult>>
   schema(): Promise<Outcome<readonly SchemaTable[]>>
   pushStatus(): Promise<Outcome<PushStatus>>
+  /** Every Pessoa's slug and name. */
+  people(): Promise<Outcome<readonly { slug: string; name: string }[]>>
   push(): Promise<Outcome<PushStatus>>
   evaluationsFolder(): Promise<Outcome<string>>
   evaluate(
@@ -165,6 +173,7 @@ export function operationsFromEngine(engine: Engine): Operations {
     consult: (sql) => engine.run(consult(sql)),
     schema: () => engine.run(consultSchema),
     pushStatus: () => engine.run(pushStatus),
+    people: () => engine.run(readPeople),
     push: () => engine.run(pushNow),
     evaluationsFolder: () => engine.run(evaluationsFolder),
     evaluate: (grid, listen) =>
@@ -272,13 +281,15 @@ function reportNames(folder: string): string[] {
   }
 }
 
-const reportOf = (folder: string, name: string): EvaluationReport => ({
+type ReportFile = Omit<EvaluationReport, 'names'>
+
+const reportOf = (folder: string, name: string): ReportFile => ({
   date: name.slice(0, -'.md'.length),
   text: readFileSync(join(folder, name), 'utf8'),
 })
 
 /** The newest dated report in `folder`, or null (no folder, no report). */
-export function latestReport(folder: string): EvaluationReport | null {
+export function latestReport(folder: string): ReportFile | null {
   const name = reportNames(folder).at(-1)
   return name === undefined ? null : reportOf(folder, name)
 }
@@ -354,6 +365,19 @@ export class EvaluationRuns {
   }
 }
 
+/** Each Pessoa's name by her slug; none when the engine cannot say (the
+ * report then keeps the slugs). */
+async function peopleNames(
+  operations: Operations,
+): Promise<Record<string, string>> {
+  const people = await operations.people()
+  if (people.exitCode !== 0) {
+    logEngineError(people)
+    return {}
+  }
+  return Object.fromEntries(people.output.map((p) => [p.slug, p.name]))
+}
+
 /** The evaluation's part of the page, read again while a run goes on. */
 export async function evaluationPanel(
   operations: Operations,
@@ -361,13 +385,15 @@ export async function evaluationPanel(
 ): Promise<EvaluationPanel> {
   const job = runs.current
   const folder = await operations.evaluationsFolder()
-  if (folder.exitCode === 0)
+  if (folder.exitCode === 0) {
+    const report = latestReport(folder.output)
     return {
       folder: 'ready',
       job,
-      report: latestReport(folder.output),
+      report: report && { ...report, names: await peopleNames(operations) },
       previous: previousMeasure(folder.output),
     }
+  }
   if (folder.output.error.code === 'missing_config')
     return { folder: 'unset', job, report: null, previous: null }
   logEngineError(folder)

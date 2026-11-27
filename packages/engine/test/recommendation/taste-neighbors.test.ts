@@ -46,7 +46,7 @@ describe('the taste neighbours path', () => {
     // Users 10, 20 and 30 gave it 5, 4,5 and 5; user 40, who rates the
     // other way round, is not among the 3 closest.
     expect(e?.text).toBe(
-      '3 pessoas de gosto parecido deram 4,8 em média a este filme',
+      '3 pessoas de gosto parecido deram 9,7 de 10 em média a este filme',
     )
     expect([e?.strength, e?.kind, e?.source, e?.date]).toEqual([
       'weak',
@@ -64,7 +64,7 @@ describe('the taste neighbours path', () => {
 
     const [e] = neighbours(out, 'Deserto Branco')
     expect(e?.text).toBe(
-      '3 pessoas de gosto parecido deram 1,5 em média a este filme',
+      '3 pessoas de gosto parecido deram 3 de 10 em média a este filme',
     )
     expect(e?.contribution).toBeLessThan(0)
   })
@@ -74,7 +74,7 @@ describe('the taste neighbours path', () => {
     const out = await bruno(fixture, tasteWeights(fixture, 4, 5))
 
     expect(neighbours(out, 'Pequenos Milagres')[0]?.text).toBe(
-      '4 pessoas de gosto parecido deram 3,9 em média a este filme',
+      '4 pessoas de gosto parecido deram 7,8 de 10 em média a este filme',
     )
   })
 
@@ -172,12 +172,12 @@ describe('the taste neighbours path', () => {
 
     // Every Nota counting the same, 401 keeps him out: 10, 20 and 30.
     expect(evenly[0]?.text).toBe(
-      '3 pessoas de gosto parecido deram 1,5 em média a este filme',
+      '3 pessoas de gosto parecido deram 3 de 10 em média a este filme',
     )
     // With the old Nota faded, he takes user 10's place: 20, 30 and 60
     // gave it 1,5, 2 and 3.
     expect(byAge[0]?.text).toBe(
-      '3 pessoas de gosto parecido deram 2,2 em média a este filme',
+      '3 pessoas de gosto parecido deram 4,3 de 10 em média a este filme',
     )
   })
 

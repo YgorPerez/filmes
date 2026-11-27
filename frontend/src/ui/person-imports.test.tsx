@@ -18,6 +18,14 @@ afterEach(cleanup)
 const COPY = PERSON_IMPORTS
 const NONE = { wikidata: 0, tmdb: 0, manual: 0 }
 const TRAKT_FILE = 'imports/quim/trakt-b1.zip'
+/** A site's films (#274): none. */
+const NO_FILMS = { rated: 0, seen: 0, watchlist: 0 }
+const FILMS = {
+  trakt: NO_FILMS,
+  imdb: NO_FILMS,
+  simkl: NO_FILMS,
+  tvtime: NO_FILMS,
+}
 
 const QUIM: PersonImportsView = {
   person: 'quim',
@@ -57,6 +65,8 @@ const QUIM: PersonImportsView = {
   imdb: { ratings: 0 },
   simkl: { ratings: 0, seen: 0, watchlist: 0 },
   tvtime: { ratings: 0, seen: 0, stated: 0, watchlist: 0 },
+  // The history's film has a Nota: no Já visto of its own (#274).
+  films: { ...FILMS, trakt: { rated: 2, seen: 0, watchlist: 0 } },
 }
 
 /** Quim with nothing imported yet. */
@@ -75,6 +85,7 @@ const EMPTY: PersonImportsView = {
   imdb: { ratings: 0 },
   simkl: { ratings: 0, seen: 0, watchlist: 0 },
   tvtime: { ratings: 0, seen: 0, stated: 0, watchlist: 0 },
+  films: FILMS,
 }
 
 const show = (page: PersonImportsView = QUIM) =>
@@ -135,8 +146,10 @@ describe('PersonImportsScreen', () => {
       within(results)
         .getByRole('link', { name: COPY.results.toQueue })
         .getAttribute('href'),
-    ).toBe('/meu-gosto/fila')
-    expect(results.textContent).toContain('Trakt: 2 Notas e 1 Já visto')
+    ).toBe('/meu-gosto/fila?de=quim')
+    // By film, as the notice counts (#274).
+    expect(results.textContent).toContain('Trakt: 2 Notas')
+    expect(results.textContent).not.toContain('Já visto')
     const files = section(COPY.files.title)
     expect(files.textContent).toContain('ZIP do Letterboxd · em 20 nov 2026')
     expect(files.textContent).toContain('ZIP do Trakt · em 21 nov 2026')
@@ -395,7 +408,7 @@ describe('PersonImportsScreen', () => {
     )
     expect(await posted(sync)).toEqual({ kind: 'trakt-sync', user: null })
     await user.click(within(trakt).getByText(TRAKT_SYNC.otherUser))
-    const read = within(trakt).getByRole('form', { name: TRAKT_SYNC.read })
+    const read = within(trakt).getByRole('form', { name: TRAKT_SYNC.readLabel })
     await user.type(
       within(read).getByLabelText(TRAKT_SYNC.user, { exact: false }),
       'https://trakt.tv/users/quim_t',
@@ -423,7 +436,7 @@ describe('PersonImportsScreen', () => {
     show({ ...QUIM, traktLink: { available: false, connected: false } })
     const trakt = section(TRAKT_SYNC.title)
     expect(
-      within(trakt).queryByRole('form', { name: TRAKT_SYNC.read }),
+      within(trakt).queryByRole('form', { name: TRAKT_SYNC.readLabel }),
     ).toBeNull()
   })
 
@@ -435,13 +448,19 @@ describe('PersonImportsScreen', () => {
       date: '2026-11-23',
       original: 'gdpr-data.zip',
     }
-    show({ ...QUIM, imports: [...QUIM.imports, record], tvtime })
+    const films = {
+      ...QUIM.films,
+      tvtime: { rated: 3, seen: 1, watchlist: 1 },
+    }
+    show({ ...QUIM, imports: [...QUIM.imports, record], tvtime, films })
     const results = section(COPY.results.title)
     expect(results.textContent).toContain('Letterboxd e TV Time: 10 filmes')
     expect(results.textContent).toContain(
       '1 filme do Letterboxd e do TV Time espera você confirmar qual é',
     )
-    expect(results.textContent).toContain('TV Time: 3 Notas e 4 Já vistos')
+    expect(results.textContent).toContain(
+      'TV Time: 3 Notas, 1 Já visto e 1 filme na watchlist',
+    )
     expect(section(COPY.files.title).textContent).toContain(
       'Backup do TV Time · em 23 nov 2026',
     )
@@ -451,6 +470,7 @@ describe('PersonImportsScreen', () => {
       imports: [record],
       letterboxd: { ...QUIM.letterboxd, films: 4 },
       tvtime,
+      films,
     })
     const alone = section(COPY.results.title)
     expect(alone.textContent).toContain('TV Time: 4 filmes')
@@ -526,6 +546,19 @@ describe('PersonImportsScreen', () => {
     ).toBe(
       'O ZIP do Letterboxd entrou: entraram 4 Notas novas, 1 Já visto novo e 1 filme na watchlist. 5 Notas mudaram: A, de 9 para 1; B, de 2 para 8 e mais 3 outras. 3 filmes ficaram com a Nota que já tinham.',
     )
+    // A first sentence with a colon of its own: a full stop, never two
+    // colons in a row.
+    expect(
+      COPY.notices.trakt({
+        facts: 1,
+        ratings: 0,
+        seen: 0,
+        changed: 1,
+        changes: [{ title: 'Maré Baixa (2015)', from: 9, to: 1 }],
+      }),
+    ).toBe(
+      'O ZIP do Trakt entrou. 1 Nota mudou: Maré Baixa (2015), de 9 para 1.',
+    )
     // Only films that kept their Notas: nothing new.
     expect(
       COPY.notices.letterboxd({ facts: 4, ratings: 0, seen: 0, repeated: 4 }),
@@ -574,7 +607,7 @@ describe('the Trakt section on her own page', () => {
       within(trakt).getByRole('link', { name: TRAKT_SYNC.manage }),
     ).toBeTruthy()
     expect(
-      within(trakt).queryByRole('form', { name: TRAKT_SYNC.read }),
+      within(trakt).queryByRole('form', { name: TRAKT_SYNC.readLabel }),
     ).toBeNull()
   })
 
@@ -599,7 +632,9 @@ describe('the Trakt section on her own page', () => {
       .getByText(TRAKT_SYNC.ownUser)
       .closest('details') as HTMLDetailsElement
     expect(profile.open).toBe(false)
-    const read = within(profile).getByRole('form', { name: TRAKT_SYNC.read })
+    const read = within(profile).getByRole('form', {
+      name: TRAKT_SYNC.readLabel,
+    })
     expect(within(read).queryByRole('checkbox')).toBeNull()
     const zip = within(trakt)
       .getByText(TRAKT_SYNC.zip)
@@ -626,7 +661,7 @@ describe('the Trakt section on her own page', () => {
         .queryAllByRole('link')
         .map((link) => link.getAttribute('href')),
     ).toEqual(['https://trakt.tv/settings/data'])
-    const read = within(trakt).getByRole('form', { name: TRAKT_SYNC.read })
+    const read = within(trakt).getByRole('form', { name: TRAKT_SYNC.readLabel })
     expect(within(read).getByRole('checkbox')).toBeTruthy()
   })
 
@@ -687,14 +722,45 @@ describe('what came in, site by site', () => {
       'conta conectada · lido a cada Sessão nova · última leitura em 20 nov 2026',
     )
     const trakt = within(results).getByRole('form', {
-      name: COPY.results.sync.traktNow,
+      name: COPY.results.sync.traktLabel,
     })
     expect(await posted(trakt)).toEqual({ kind: 'trakt-sync', user: null })
     const rss = within(results).getByRole('form', {
-      name: COPY.results.sync.rssNow,
+      name: COPY.results.sync.rssLabel('@quim_lb'),
     })
+    // One verb on each profile row (#274).
+    expect(
+      within(results)
+        .getAllByRole('button', { name: COPY.results.sync.now })
+        .map((button) => button.closest('form')),
+    ).toEqual([rss, trakt])
     // On her own page she answers for herself: no yes to ask.
     expect(await posted(rss, true)).toEqual({ kind: 'rss', user: 'quim_lb' })
+  })
+
+  it('reads another Pessoa’s profile again with the yes she gave (#274)', async () => {
+    show({
+      ...QUIM,
+      imports: [
+        ...QUIM.imports,
+        {
+          kind: 'letterboxd-rss',
+          file: 'imports/quim/rss-a1.xml',
+          date: '2026-11-19',
+          original: 'https://letterboxd.com/quim_lb/rss/',
+        },
+      ],
+    })
+    const rss = within(section(COPY.results.title)).getByRole('form', {
+      name: COPY.results.sync.rssLabel('@quim_lb'),
+    })
+    expect(await posted(rss)).toEqual({ kind: 'rss', user: 'quim_lb' })
+    // The step of the guide reads it again the same way, with no box.
+    const again = screen.getByRole('form', {
+      name: COPY.rss.update('@quim_lb'),
+    })
+    expect(within(again).queryByRole('checkbox')).toBeNull()
+    expect(await posted(again)).toEqual({ kind: 'rss', user: 'quim_lb' })
   })
 
   it('lists the other sites without Letterboxd, and a profile by its address', () => {
@@ -710,13 +776,18 @@ describe('what came in, site by site', () => {
       ],
       imdb: { ratings: 3 },
       simkl: { ratings: 0, seen: 2, watchlist: 0 },
+      films: {
+        ...FILMS,
+        imdb: { rated: 3, seen: 0, watchlist: 0 },
+        simkl: { rated: 0, seen: 2, watchlist: 0 },
+      },
     })
     const results = section(COPY.results.title)
     expect(
       within(results)
         .getAllByRole('listitem')
         .map((item) => item.textContent),
-    ).toEqual([COPY.results.imdb(3), COPY.results.simkl(0, 2)])
+    ).toEqual(['IMDb: 3 Notas', 'Simkl: 2 Já vistos'])
     expect(within(results).queryByRole('definition')).toBeNull()
     expect(section(COPY.files.title).textContent).toContain('perfil antigo')
   })
@@ -775,5 +846,117 @@ describe('what came in, site by site', () => {
       .map((item) => item.textContent)
     expect(outside).toContain('Fora · curta')
     expect(outside).toContain('Outro (1999)')
+  })
+})
+
+describe('pass 4 of the critique (#274)', () => {
+  it('keeps the way to connect Trakt in what came in, on her own page only', () => {
+    show({
+      ...QUIM,
+      own: true,
+      traktLink: { available: true, connected: false },
+    })
+    const results = section(COPY.results.title)
+    expect(results.textContent).toContain(COPY.results.traktOff)
+    expect(
+      within(results)
+        .getByRole('link', { name: COPY.results.traktConnect })
+        .getAttribute('href'),
+    ).toBe('/trakt')
+    cleanup()
+    // Connected, without Trakt on the site, or another Pessoa's page:
+    // nothing to connect here.
+    for (const page of [
+      { ...QUIM, own: true, traktLink: { available: true, connected: true } },
+      { ...QUIM, own: true, traktLink: { available: false, connected: false } },
+      { ...QUIM, traktLink: { available: true, connected: false } },
+    ]) {
+      show(page)
+      expect(section(COPY.results.title).textContent).not.toContain(
+        COPY.results.traktOff,
+      )
+      cleanup()
+    }
+  })
+
+  it('names a Trakt read as the profile it read, or her account', () => {
+    show({
+      ...QUIM,
+      imports: [
+        ...QUIM.imports,
+        {
+          kind: 'trakt-api',
+          file: 'imports/quim/trakt-api-c1.json',
+          date: '2026-11-20',
+          original: '@quim_trakt',
+        },
+        {
+          kind: 'trakt-api',
+          file: 'imports/quim/trakt-api-c2.json',
+          date: '2026-11-21',
+          original: 'conta conectada',
+        },
+      ],
+    })
+    const files = section(COPY.files.title).textContent
+    expect(files).toContain('Perfil do Trakt · em 20 nov 2026')
+    expect(files).toContain('Conta do Trakt · em 21 nov 2026')
+  })
+
+  it('names in step 4 the button that is there: "Ler o perfil", then "Ler agora"', () => {
+    show(EMPTY)
+    const guide = section(COPY.letterboxd.title)
+    expect(guide.textContent).toContain(COPY.letterboxd.profile.text(false))
+    expect(guide.textContent).toContain('toque em “Ler o perfil”')
+    expect(
+      within(guide).getByRole('button', { name: COPY.rss.submit }),
+    ).toBeTruthy()
+    cleanup()
+    show({
+      ...EMPTY,
+      imports: [
+        {
+          kind: 'letterboxd-rss',
+          file: 'imports/quim/rss-a1.xml',
+          date: '2026-11-19',
+          original: 'https://letterboxd.com/quim_lb/rss/',
+        },
+      ],
+    })
+    expect(screen.getByText(COPY.letterboxd.profile.text(true))).toBeTruthy()
+  })
+
+  it('folds every other way as a + row, closed until asked', () => {
+    show({
+      ...QUIM,
+      own: true,
+      traktLink: { available: true, connected: false },
+      letterboxd: {
+        ...QUIM.letterboxd,
+        discardedItems: [
+          {
+            id: 'fora',
+            name: 'Fora',
+            year: null,
+            reason: '',
+            resolvedBy: null,
+          },
+        ],
+      },
+    })
+    for (const summary of [
+      COPY.results.again,
+      COPY.results.seeOutside(1),
+      TRAKT_SYNC.zip,
+      TRAKT_SYNC.ownUser,
+    ]) {
+      const fold = screen.getByText(summary).closest('details')
+      expect(fold?.open).toBe(false)
+      // The drawn +, not an underlined link nor a pill.
+      expect(fold?.querySelector('summary svg')).toBeTruthy()
+      expect(fold?.querySelector('summary')?.className).not.toContain(
+        'underline',
+      )
+    }
   })
 })

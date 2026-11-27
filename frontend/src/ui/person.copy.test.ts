@@ -45,16 +45,18 @@ describe('the Pessoa copy', () => {
     )
   })
 
-  it('names the empty fichas and her name in the Sessões', () => {
-    expect(PERSON.empty('Já vistos sem Nota')).toBe(
-      'Já vistos sem Nota: nenhum',
-    )
-    expect(PERSON.summary.likes('Quim', ['Drama'])).toBe(
-      'Pelas Notas, Quim gosta de Drama.',
+  it('names what she likes and her name in the Sessões', () => {
+    expect(PERSON.summary.likes('Quim', ['Drama'], [])).toBe(
+      'Pelas Notas, Quim gosta do gênero Drama.',
     )
     expect(
-      PERSON.summary.likes('Quim', ['Drama', 'Crime', 'Rui Tavares']),
-    ).toBe('Pelas Notas, Quim gosta de Drama, Crime e Rui Tavares.')
+      PERSON.summary.likes('Quim', ['Drama', 'Crime'], ['Rui Tavares']),
+    ).toBe(
+      'Pelas Notas, Quim gosta dos gêneros Drama e Crime e da direção de Rui Tavares.',
+    )
+    expect(
+      PERSON.summary.likes('Rosa', [], ['Clara Bastos', 'Nina Vale']),
+    ).toBe('Pelas Notas, Rosa gosta da direção de Clara Bastos e Nina Vale.')
     expect(PERSON.refine(['Ajustes', 'Declarados (2)'])).toBe(
       'Afinar: Ajustes e Declarados (2)',
     )
@@ -78,10 +80,10 @@ describe('the Pessoa copy', () => {
       'Pelas suas Notas, você gosta dos gêneros Terror, Drama e Crime.',
     )
     expect(glance.steps.queue(1)).toBe(
-      'dizer qual é o filme que espera na fila',
+      'Dizer qual é o filme que espera na fila',
     )
     expect(glance.steps.queue(3)).toBe(
-      'dizer quais são os 3 filmes que esperam na fila',
+      'Dizer quais são os 3 filmes que esperam na fila',
     )
     expect([summary.notes(1), summary.notes(1200)]).toEqual([
       '1 Nota',
@@ -104,9 +106,7 @@ describe('the Pessoa copy', () => {
 
 describe('the Pessoa copy', () => {
   it('counts the Notas, questions and Ajustes in the singular and the plural', () => {
-    const { summary, notes, questions, adjustments } = PERSON
-    expect(summary.steps.questions(1)).toBe('Responder a pergunta')
-    expect(summary.steps.questions(2)).toBe('Responder as perguntas')
+    const { notes, questions, adjustments } = PERSON
     expect([notes.pending(1), notes.pending(2)]).toEqual([
       '1 filme espera você',
       '2 filmes esperam você',

@@ -82,9 +82,11 @@ describe('recommend for the Dono alone', () => {
     expect(
       Object.fromEntries(ofKind(f, 'rating').map((e) => [e.text, e.strength])),
     ).toEqual({
-      'deu 5 a O Farol de Areia (2012), também de Helena Prado': 'strong',
-      'deu 4,5 a Maré Baixa (2015), também de Helena Prado': 'strong',
-      'deu 4 a Cidade de Vidro (2018), também de Helena Prado': 'moderate',
+      'deu 10 de 10 a O Farol de Areia (2012), também de Helena Prado':
+        'strong',
+      'deu 9 de 10 a Maré Baixa (2015), também de Helena Prado': 'strong',
+      'deu 8 de 10 a Cidade de Vidro (2018), também de Helena Prado':
+        'moderate',
     })
   })
 
@@ -293,9 +295,10 @@ describe('the ruler reads a Nota by its percentile (#172)', () => {
     expect(
       Object.fromEntries(ofKind(f, 'rating').map((e) => [e.text, e.strength])),
     ).toEqual({
-      'deu 5 a O Farol de Areia (2012), também de Helena Prado': 'strong',
-      'deu 4,5 a Maré Baixa (2015), também de Helena Prado': 'moderate',
-      'deu 4 a Cidade de Vidro (2018), também de Helena Prado': 'weak',
+      'deu 10 de 10 a O Farol de Areia (2012), também de Helena Prado':
+        'strong',
+      'deu 9 de 10 a Maré Baixa (2015), também de Helena Prado': 'moderate',
+      'deu 8 de 10 a Cidade de Vidro (2018), também de Helena Prado': 'weak',
     })
   })
 
@@ -322,15 +325,18 @@ describe('the ruler reads a Nota by its percentile (#172)', () => {
     // On the population, his 3,5 is a weak Nota in favour; on his own
     // Notas it sits at 23%, below his median: weak against.
     expect(await ratings({})).toEqual({
-      'deu 4 a Jardim Suspenso (2017), também de Marta Quintal': [
+      'deu 8 de 10 a Jardim Suspenso (2017), também de Marta Quintal': [
         'moderate',
         1,
       ],
-      'deu 3,5 a Rio Abaixo (2014), também de Marta Quintal': ['weak', 1],
+      'deu 7 de 10 a Rio Abaixo (2014), também de Marta Quintal': ['weak', 1],
     })
     expect(await ratings(vars)).toEqual({
-      'deu 4 a Jardim Suspenso (2017), também de Marta Quintal': ['weak', 1],
-      'deu 3,5 a Rio Abaixo (2014), também de Marta Quintal': ['weak', -1],
+      'deu 8 de 10 a Jardim Suspenso (2017), também de Marta Quintal': [
+        'weak',
+        1,
+      ],
+      'deu 7 de 10 a Rio Abaixo (2014), também de Marta Quintal': ['weak', -1],
     })
   })
 })

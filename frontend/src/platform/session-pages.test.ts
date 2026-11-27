@@ -118,6 +118,7 @@ describe('the Link da Sessão’s title and preview', () => {
   it('says a closed Session from a broken link, with no preview', () => {
     const closed = load({ participation: null, closed: true })
     expect(closed).toEqual({
+      covers: true,
       title: PARTICIPATION.unavailable.closed,
       preview: null,
     })

@@ -118,14 +118,30 @@ async function addStatedReportAndSeen(page: Page, info: TestInfo) {
   await form.getByRole('button', { name: 'Gravar' }).click()
   await expect(section(page, 'Relatos')).toContainText('odeia filme lento')
 
-  await page.getByText('Já vistos sem Nota: nenhum').click()
-  form = await addForm(page, 'Já vistos sem Nota', 'Acrescentar Já visto')
+  form = await addForm(page, 'Já vistos', 'Acrescentar Já visto')
   await target(form, /^Filme/, 'casa cheia', /^Usar Casa Cheia/)
-  await form.getByLabel(/^Nota/).selectOption('8')
+  await form
+    .getByRole('group', { name: 'Nota' })
+    .getByRole('radio', { name: '8', exact: true })
+    .check()
   await form.getByRole('button', { name: 'Gravar' }).click()
-  await expect(section(page, 'Já vistos sem Nota')).toContainText('Casa Cheia')
-  await expect(section(page, 'Já vistos sem Nota')).toContainText('nota 8')
+  await expect(section(page, 'Já vistos')).toContainText('Casa Cheia')
+  await expect(section(page, 'Já vistos')).toContainText('nota 8')
   await snap(page, info, 'pessoa-com-gosto')
+}
+
+async function editSeen(page: Page, info: TestInfo) {
+  // Editar in place (#330): the Nota changes, the item says it was edited.
+  const seen = section(page, 'Já vistos')
+  await seen.getByRole('button', { name: 'Editar Casa Cheia' }).click()
+  const form = seen.getByRole('form', { name: 'Editar Casa Cheia' })
+  await expect(form).toContainText('Editando o Já visto')
+  await snap(page, info, 'pessoa-editando')
+  await form.getByRole('radio', { name: '9', exact: true }).check()
+  await form.getByRole('button', { name: 'Gravar' }).click()
+  await expect(seen.getByRole('status')).toHaveText('Editado')
+  await expect(seen).toContainText('nota 9')
+  await expect(seen).toContainText('editado')
 }
 
 async function engineReadsItBack(slug: string) {
@@ -139,8 +155,10 @@ async function engineReadsItBack(slug: string) {
     ['adoro os filmes dela', 'love', 'Q9000018'],
   ])
   expect(view.reports.map((r) => r.text)).toEqual(['odeia filme lento'])
-  // An 8 on the 1 to 10 scale is the engine's 4 of 5.
-  expect(view.seen.map((s) => [s.film, s.rating])).toEqual([['tt9000602', 4]])
+  // An 8 on the 1 to 10 scale is the engine's 4 of 5; edited to 9, 4.5.
+  expect(view.seen.map((s) => [s.film, s.rating, s.edited])).toEqual([
+    ['tt9000602', 4.5, expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/)],
+  ])
 }
 
 test('the Dono reads and changes a Pessoa’s taste', async ({ page }, info) => {
@@ -163,9 +181,13 @@ test('the Dono reads and changes a Pessoa’s taste', async ({ page }, info) => 
   await addTwoVetoes(page)
   await castAdjustmentToNothing(page)
   await addStatedReportAndSeen(page, info)
+  await editSeen(page, info)
 
-  // Out again.
+  // Out again, after the question (#330).
   await page.getByRole('button', { name: 'Tirar nunca vê terror' }).click()
+  await page
+    .getByRole('button', { name: 'Tirar nunca vê terror de vez' })
+    .click()
   await expect(section(page, 'Vetos').getByRole('status')).toHaveText(
     'Veto tirado.',
   )
@@ -181,7 +203,7 @@ test('the Dono answers or skips an open question', async ({ page }, info) => {
     await page.goto('/pessoas/quim')
     const questions = section(page, 'Perguntas abertas')
     await expect(questions).toContainText(
-      'o Quim curte os filmes da Helena Prado?',
+      'O Quim curte os filmes da Helena Prado?',
     )
     await snap(page, info, 'pergunta-aberta')
     await questions.getByText('Responder com palavras', { exact: true }).click()
@@ -243,6 +265,26 @@ test('a name no Pessoa has is a 404 that says so', async ({ page }) => {
     page.getByRole('heading', { level: 1, name: 'Pessoa não encontrada' }),
   ).toBeVisible()
   await expect(page.getByRole('link', { name: 'Ver as Pessoas' })).toBeVisible()
+})
+
+test('the bar and the page start at one edge on every Pessoas screen', async ({
+  page,
+}) => {
+  // The list, a Pessoa and the 404 share the wide column, so the top bar
+  // stays put between them (#273).
+  await page.setViewportSize({ width: 1280, height: 900 })
+  await loginAsBruno(page)
+  const edges: number[] = []
+  for (const path of ['/pessoas', '/pessoas/quim', '/pessoas/ninguem']) {
+    await page.goto(path)
+    const brand = await page
+      .getByRole('link', { name: 'filmes, início' })
+      .boundingBox()
+    const title = await page.getByRole('heading', { level: 1 }).boundingBox()
+    expect(title?.x).toBe(brand?.x)
+    edges.push(brand?.x ?? -1)
+  }
+  expect(new Set(edges).size).toBe(1)
 })
 
 /** Opens "Acrescentar Pessoa" on `/pessoas` and gives its form. */

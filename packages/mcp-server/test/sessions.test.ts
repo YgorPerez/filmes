@@ -109,7 +109,7 @@ describe('open_sessions and record_feedback', () => {
       ]),
       [
         ['bruno', 'deu 9/10 a Noite de Estreia (2022)'],
-        ['iara', 'deu 2 a Noite de Estreia (2022)'],
+        ['iara', 'deu 4 de 10 a Noite de Estreia (2022)'],
         ['teo', 'não gostou de Noite de Estreia (2022)'],
         [
           'bruno',

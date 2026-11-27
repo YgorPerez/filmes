@@ -24,7 +24,6 @@ import {
   billboard,
   readRequest,
   recommendSession,
-  satisfactionNow,
   sessionRedoRequest,
   withAddition,
   type Billboard,
@@ -182,9 +181,6 @@ export type CartazPage = {
   sessionLink?: string | null
   /** The Presentes' Perguntas par a par that wait for the Dono (#181). */
   pairwise?: ReadonlyArray<WaitingAnswers>
-  /** A closed Session's group: who the next Sessão weighs more, one line
-   * each (#272). */
-  satisfaction?: readonly string[]
 }
 
 export async function cartazPage(
@@ -294,17 +290,10 @@ export async function appCartazPage(
   )
   if (!made || made === 'unknown') return made
   const page = { ...made, pairwise: await pairwiseWaiting(id, engine) }
-  if (!page.session.open) {
-    const slugs = page.session.attendees.map((a) => a.person)
-    if (slugs.length < 2) return page
-    const now = await engine.run(satisfactionNow(slugs))
-    if (now.exitCode !== 0) {
-      logEngineError(now)
-      return page
-    }
-    const lines = now.output.people.flatMap((p) => p.line ?? [])
-    return { ...page, satisfaction: lines }
-  }
+  // A told Session is a record: only its own reactions, never the
+  // Satisfação of now, which later Sessions change (#272). Contar and the
+  // next Nova Sessão show that.
+  if (!page.session.open) return page
   const { APP_ORIGIN, AUTH_DATABASE_PATH } = serverEnv()
   return {
     ...page,
@@ -327,8 +316,9 @@ export const appClosedSessionLink = (search: SessionLinkSearch) =>
   closedSessionLink(search, appEngine(), serverEnv().AUTH_DATABASE_PATH)
 
 /** The group swipe's deck (#182), for the app. */
-export const appVoteDeck = (search: SessionLinkSearch) =>
-  voteDeck(search, appEngine(), serverEnv().AUTH_DATABASE_PATH)
+export const appVoteDeck = (
+  search: SessionLinkSearch & { fora?: string | undefined },
+) => voteDeck(search, appEngine(), serverEnv().AUTH_DATABASE_PATH)
 
 /** The group swipe's post (#182), for the app. */
 export const serveVotes = (request: Request) => {

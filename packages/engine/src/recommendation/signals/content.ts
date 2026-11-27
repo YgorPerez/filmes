@@ -49,7 +49,12 @@ import {
   type SeedKind,
 } from '../../evidence/ruler.ts'
 import type { Level, Link, Strength } from '../../evidence/strength.ts'
-import { filmText, listText, seedText } from '../../evidence/wording.ts'
+import {
+  filmText,
+  listText,
+  ownScaleText,
+  seedText,
+} from '../../evidence/wording.ts'
 import { engineError } from '../../runtime/EngineError.ts'
 import { num, numOrNull, text, textOrNull } from '../../sqlite/row.ts'
 import type { Row } from '../../sqlite/Sqlite.ts'
@@ -202,11 +207,9 @@ const seedEvidence = (
       pairwise: num(s, 'par_a_par') === 1,
     },
   )
-  const start = seedText(
-    kind,
-    rating,
-    filmText(text(s, 'titulo'), numOrNull(s, 'ano')),
-  )
+  const start =
+    seedText(kind, rating, filmText(text(s, 'titulo'), numOrNull(s, 'ano'))) +
+    ownScaleText(kind, rating, [seedStrengthValue, direction])
   return makeEvidence({
     person,
     filmId: edge.candidate,

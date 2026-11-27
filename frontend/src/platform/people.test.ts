@@ -125,6 +125,52 @@ const ACTION_FORMS: [Record<string, string>, PersonAction][] = [
     { kind: 'remove', what: 'veto', id: 'vetos:abc' },
   ],
   [
+    {
+      acao: 'editar',
+      tipo: 'stated',
+      id: 'declarados:abc',
+      texto: 'adoro terror',
+      alvo: '',
+      reacao: '',
+      fonte: 'questionário',
+    },
+    {
+      kind: 'edit',
+      what: 'stated',
+      id: 'declarados:abc',
+      text: 'adoro terror',
+      target: null,
+      reaction: null,
+      source: 'questionário',
+    },
+  ],
+  [
+    {
+      acao: 'editar',
+      tipo: 'veto',
+      id: 'vetos:abc',
+      texto: 'x',
+      grupo: 'slow',
+    },
+    { kind: 'edit', what: 'veto', id: 'vetos:abc', text: 'x', target: 'slow' },
+  ],
+  [
+    {
+      acao: 'editar',
+      tipo: 'seen',
+      id: 'vistos:abc',
+      nota: '',
+      fonte: 'cinema',
+    },
+    {
+      kind: 'edit',
+      what: 'seen',
+      id: 'vistos:abc',
+      rating: null,
+      source: 'cinema',
+    },
+  ],
+  [
     { acao: 'dar-acesso', email: ' iara@example.org ' },
     { kind: 'grant', email: 'iara@example.org' },
   ],
@@ -148,10 +194,14 @@ describe('parseAction', () => {
     { acao: 'visto', filme: 'tt1', nota: '7' },
     { acao: 'vetar', texto: 'x', alvo: '' },
     { acao: 'vetar', texto: '', alvo: 'Q1' },
+    { acao: 'vetar', texto: 'x', alvo: 'Q1', grupo: 'slow' },
     { acao: 'ajustar', elo: 'cast', nivel: 'muito' },
     { acao: 'pular' },
     { acao: 'responder', texto: 'sim' },
     { acao: 'remover', tipo: 'open_question', id: 'x' },
+    { acao: 'editar', tipo: 'stated', texto: 'x' },
+    { acao: 'editar', tipo: 'veto', id: 'vetos:1', texto: '' },
+    { acao: 'editar', tipo: 'seen', id: 'vistos:1', nota: '7' },
     { acao: 'dar-acesso', email: '  ' },
   ])('refuses the form %j', (fields) => {
     expect(parseAction(form(fields))).toBeNull()

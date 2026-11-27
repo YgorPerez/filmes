@@ -103,7 +103,7 @@ describe('the Motivo of each film, in the Session file', () => {
           },
           { text: 'já viu', kind: 'rating', contribution: -1 },
           {
-            text: '3 pessoas de gosto parecido deram 2,1 em média a este filme',
+            text: '3 pessoas de gosto parecido deram 4,2 de 10 em média a este filme',
             kind: 'review',
             contribution: -0.4,
           },
@@ -153,9 +153,11 @@ describe('the Motivo of each film, in the Session file', () => {
       one('segundo o Dono, "ama a Rita"; com Rita Lobo no elenco', 'report'),
       one('disse "curte filme de júri"; tema: tribunal', 'stated'),
       one(
-        'disse que ama Rio, Abaixo (2014); das 1.200 pessoas que deram 4 ou mais a ele, 65% fizeram o mesmo com este',
+        'disse que ama Rio, Abaixo (2014); das 1.200 pessoas que deram 8 ou mais a ele, 65% fizeram o mesmo com este',
       ),
-      one('1.023 pessoas de gosto parecido deram 4,3 em média a este filme'),
+      one(
+        '1.023 pessoas de gosto parecido deram 8,6 de 10 em média a este filme',
+      ),
       one('nota 8,5 no IMDb', 'metadata'),
     ]).toEqual([
       { kind: 'entity', name: 'Davi Couto', people: ['bruno'] },
@@ -177,14 +179,14 @@ describe('the Motivo of each film, in the Session file', () => {
       filmReason({
         bruno: [
           {
-            text: 'deu 5 a X (2001), também de Otávio Lins',
+            text: 'deu 10 de 10 a X (2001), também de Otávio Lins',
             kind: 'rating',
             contribution: 0.6,
           },
         ],
         iara: [
           {
-            text: 'deu 5 a Y (2002), também de Helena Prado',
+            text: 'deu 10 de 10 a Y (2002), também de Helena Prado',
             kind: 'rating',
             contribution: 0.6,
           },
@@ -216,7 +218,9 @@ describe('the Cartaz by Motivo', () => {
       ['Porque você e Iara gostam de Rui Tavares', false, [1]],
       ['Porque você e Iara gostam de Trilogia da Fronteira', false, [2]],
       ['Porque você e Iara gostaram de Fronteira (2008)', false, [3]],
-      ['Porque você e Iara gostaram de O Farol de Areia (2012)', false, [4]],
+      // Iara's 6 of 10 is no Nota she liked: the title names only who did
+      // (#272).
+      ['Porque você gostou de O Farol de Areia (2012)', false, [4]],
       ['Aposta', false, [5]],
     ])
     expect(model.sections.map((s) => s.kind)).toEqual([
@@ -330,5 +334,27 @@ describe('the Cartaz by Motivo', () => {
 
     expect(model.films).toHaveLength(5)
     expect(model.sections).toEqual([])
+  })
+})
+
+describe('the Cartaz by Motivo, who liked it (#272)', () => {
+  test('with nobody whose line for the Motivo is a Nota she liked, the title names the link alone', async () => {
+    const fixture = useFixture()
+    const session = await recommend(fixture, { attendees: ['dono', 'iara'] })
+    const id = session.session.id
+    // Only Iara, whose 6 of 10 to O Farol de Areia is film 4's Motivo.
+    editReasons(fixture, id, (_, i) =>
+      i === 3
+        ? '{kind: film, name: O Farol de Areia (2012), people: [iara]}'
+        : 'null',
+    )
+
+    const model = await fixture.ok(billboardModel({ session: id }))
+
+    expect(sections(model)).toContainEqual([
+      'Parecidos com O Farol de Areia (2012)',
+      false,
+      [4],
+    ])
   })
 })

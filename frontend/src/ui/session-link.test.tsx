@@ -1,7 +1,13 @@
 // @vitest-environment jsdom
 // The Presente's side of the Link da Sessão (#180, #275): the names, the
 // night's list with Votar, and the link that no longer opens.
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vite-plus/test'
 import {
   FilmCover,
@@ -91,12 +97,25 @@ it('before any Voto, lists the films and asks for every Voto', () => {
   expect(link(VOTES.questions).getAttribute('href')).toBe('/perguntas')
   expect(screen.getByText(PARTICIPATION.questionsLead('Bruno'))).toBeTruthy()
   expect(screen.queryByText(new RegExp(PARTICIPATION.left, 'u'))).toBeNull()
+  // Nothing came in after a Voto yet: no row says so.
+  expect(screen.queryByText(PARTICIPATION.arrived)).toBeNull()
+  // The veto rule marks Não and Sim with the buttons' colour, but not as
+  // a button: no outline to tap (pass 4 F2).
+  const rule = screen.getByText(
+    (_, el) => el?.tagName === 'P' && el.textContent === VOTES.ruleText,
+  )
+  const no = within(rule).getByText(VOTES.rule.no)
+  expect(no.className).toContain('font-bold')
+  expect(no.className).not.toContain('border')
+  expect(no.querySelector('.bg-sticker-pink')).not.toBeNull()
 })
 
 it('after her Votos, marks them, names what left and asks only for the newcomer', () => {
   render(<LinkFilms view={VOTED} vote={VOTE} questions="/perguntas" />)
   expect(screen.getAllByText(PARTICIPATION.mine('yes'))).toHaveLength(2)
   expect(screen.queryByText('Novo')).toBeNull()
+  // The film that came in after her Votos says so in words.
+  expect(screen.getAllByText(PARTICIPATION.arrived)).toHaveLength(1)
   expect(
     screen.getByText(`${PARTICIPATION.left}: Sal e Ferrugem.`),
   ).toBeTruthy()

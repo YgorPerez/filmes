@@ -10,6 +10,7 @@ import { PersonScreen } from '#/ui/person'
 // what the setup guide left (the connector, the skipped steps), then her
 // taste (#222).
 export const Route = createFileRoute('/_owner/meu-gosto/')({
+  staticData: { wide: true },
   validateSearch: personSearch,
   loader: async ({ context }) => {
     const [page, start, trakt, queue, taste] = await Promise.all([
@@ -39,7 +40,7 @@ export const Route = createFileRoute('/_owner/meu-gosto/')({
 
 function MyTasteRoute() {
   const { owner } = Route.useRouteContext()
-  const { feito, erro, em, campo } = Route.useSearch()
+  const { feito, erro, em, campo, editar, item } = Route.useSearch()
   const { page, start, trakt, pending, taste } = Route.useLoaderData()
   return (
     <PersonScreen
@@ -53,6 +54,8 @@ function MyTasteRoute() {
       refusal={erro}
       spot={em}
       problem={readProblemParam(campo)}
+      editing={editar}
+      saved={item}
     />
   )
 }

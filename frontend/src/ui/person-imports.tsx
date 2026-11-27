@@ -8,10 +8,12 @@ import {
   type ImportRefusal,
 } from '#/content/import-action'
 import { personPath, QUEUE_PATH } from '#/content/paths'
+import { TRAKT_PATH } from '#/content/trakt-form'
 import { FIELD } from './kit/field'
 import { FieldLabel } from './kit/field-label'
 import { FilePicker } from './kit/file-picker'
 import { Icon } from './kit/icon'
+import { FoldRow } from './kit/fold-row'
 import { PostAnswers, PostForm } from './kit/post-form'
 import { usePostedFeedback } from './kit/posted-feedback'
 import { ImportsFrame } from './imports'
@@ -201,21 +203,13 @@ function PageFeedback({
   )
 }
 
-/** "Importar de novo": the forms, folded under the results. */
+/** "Importar de novo": the forms, folded under the results, as a + row
+ * like every other fold of the page (#274). */
 function Again({ open, children }: { open: boolean; children: ReactNode }) {
   return (
-    <details className="group" open={open}>
-      <summary
-        className={buttonVariants({
-          variant: 'option',
-          className:
-            'list-none group-open:mb-xl [&::-webkit-details-marker]:hidden',
-        })}
-      >
-        {COPY.results.again}
-      </summary>
+    <FoldRow summary={COPY.results.again} open={open}>
       {children}
-    </details>
+    </FoldRow>
   )
 }
 
@@ -368,7 +362,12 @@ function Files({ slug, page }: Part) {
                 ? (rssUser(record.original) ?? record.original)
                 : record.original}
             </span>
-            <Meta parts={[files.kind(record.kind), files.on(record.date)]} />
+            <Meta
+              parts={[
+                files.kind(record.kind, record.original),
+                files.on(record.date),
+              ]}
+            />
           </Item>
         ))}
       </Items>
@@ -390,13 +389,17 @@ function Tally({ value, term }: { value: number; term: string }) {
 }
 
 /** The films of her export that wait in the queue, on the card stock,
- * with the way to them: the next step, so it comes first. */
+ * with the way to them: the next step, so it comes first. From another
+ * Pessoa's page, the queue knows whose (`?de=`) and its back pill comes
+ * back here (#274). */
 function Waiting({
   report,
   from,
+  queue,
 }: {
   report: PersonImports['letterboxd']
   from: Resolved
+  queue: string
 }) {
   const { results } = COPY
   return (
@@ -413,7 +416,7 @@ function Waiting({
         ))}
       </ul>
       <a
-        href={QUEUE_PATH}
+        href={queue}
         className={buttonVariants({
           variant: 'option',
           className: 'self-start border-transparent',
@@ -441,9 +444,11 @@ function resolvedFrom(page: PersonImports): Resolved {
 function LetterboxdResult({
   report,
   from,
+  queue,
 }: {
   report: PersonImports['letterboxd']
   from: Resolved
+  queue: string
 }) {
   const { results } = COPY
   const outside = report.discardedItems
@@ -457,12 +462,11 @@ function LetterboxdResult({
         <Tally value={total(report.discarded)} term={results.outside} />
         <Tally value={report.queued} term={results.waiting} />
       </dl>
-      {report.queued > 0 && <Waiting report={report} from={from} />}
+      {report.queued > 0 && (
+        <Waiting report={report} from={from} queue={queue} />
+      )}
       {outside.length > 0 && (
-        <details className="group">
-          <summary className="inline-flex min-h-touch cursor-pointer list-none items-center text-link text-ink-2 underline underline-offset-3 [&::-webkit-details-marker]:hidden">
-            {results.seeOutside(outside.length)}
-          </summary>
+        <FoldRow summary={results.seeOutside(outside.length)}>
           <ul className="flex flex-col gap-2xs text-meta">
             {outside.map((item) => (
               <li key={item.id}>
@@ -477,7 +481,7 @@ function LetterboxdResult({
               </li>
             ))}
           </ul>
-        </details>
+        </FoldRow>
       )}
     </div>
   )
@@ -510,22 +514,52 @@ function SyncStatus({
   )
 }
 
-/** One line per other site that gave something. */
+const SITES = [
+  ['trakt', 'Trakt'],
+  ['imdb', 'IMDb'],
+  ['simkl', 'Simkl'],
+  ['tvtime', 'TV Time'],
+] as const
+
+/** One line per other site that gave a film, counted by film as its
+ * notice counts them (#274). */
 function resultLines(page: PersonImportsView) {
-  const { results } = COPY
-  return [
-    (page.trakt.ratings > 0 || page.trakt.seen > 0) &&
-      results.trakt(page.trakt.ratings, page.trakt.seen),
-    page.imdb.ratings > 0 && results.imdb(page.imdb.ratings),
-    (page.simkl.ratings > 0 || page.simkl.seen > 0) &&
-      results.simkl(page.simkl.ratings, page.simkl.seen),
-    (page.tvtime.ratings > 0 || page.tvtime.seen > 0) &&
-      results.tvtime(page.tvtime.ratings, page.tvtime.seen),
-  ].filter((line) => line !== false)
+  return SITES.filter(([site]) => {
+    const { rated, seen, watchlist } = page.films[site]
+    return rated + seen + watchlist > 0
+  }).map(([site, name]) => COPY.results.site(name, page.films[site]))
 }
 
-/** The Letterboxd profile kept in sync: when it was read and, on her own
- * page, the way to read it now. */
+/** Her own Trakt, not connected while the site reads Trakt (#274): the
+ * recommended way, said here too once the forms fold away. */
+function TraktOff() {
+  const { results } = COPY
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-sm">
+      <Meta parts={[results.traktOff]} />
+      <a
+        href={TRAKT_PATH}
+        className={buttonVariants({
+          variant: 'option',
+          className: 'self-start',
+        })}
+      >
+        {results.traktConnect}
+        <RowArrow />
+      </a>
+    </div>
+  )
+}
+
+/** The yes a Pessoa gave when her profile was first read, kept for the
+ * reads of the same profile after it (#274): the server took the first
+ * one only with it. */
+function KeptConsent({ own }: { own: boolean }) {
+  return own ? null : <input type="hidden" name="consentimento" value="sim" />
+}
+
+/** The Letterboxd profile kept in sync: when it was read and "Ler agora",
+ * the same verb as Trakt's row (#274). */
 function RssSync({
   slug,
   own,
@@ -539,14 +573,18 @@ function RssSync({
   const user = rssUser(rss.original)
   return (
     <SyncStatus who={user ?? rss.original} how={sync.rss} date={rss.date}>
-      {own && (
-        <ImportForm slug={slug} action="rss" form="perfil" label={sync.rssNow}>
+      {user !== null && (
+        <ImportForm
+          slug={slug}
+          action="rss"
+          form="perfil"
+          label={sync.rssLabel(user)}
+        >
           {(busy) => (
             <>
-              <input type="hidden" name="usuario" value={user ?? ''} />
-              <Submit disabled={busy}>
-                {busy ? COPY.rss.busy : sync.rssNow}
-              </Submit>
+              <input type="hidden" name="usuario" value={user} />
+              <KeptConsent own={own} />
+              <Submit disabled={busy}>{busy ? COPY.rss.busy : sync.now}</Submit>
             </>
           )}
         </ImportForm>
@@ -565,10 +603,20 @@ function Results({ slug, page }: { slug: string; page: PersonImportsView }) {
   if (!letterboxd && lines.length === 0) return null
   const rss = latest(page, 'letterboxd-rss')
   const traktApi = latest(page, 'trakt-api')
+  const traktOff =
+    page.own && page.traktLink?.available === true && !page.traktLink.connected
   return (
     <Slip id="resultado" title={results.title}>
       {letterboxd && (
-        <LetterboxdResult report={page.letterboxd} from={resolvedFrom(page)} />
+        <LetterboxdResult
+          report={page.letterboxd}
+          from={resolvedFrom(page)}
+          queue={
+            page.own
+              ? QUEUE_PATH
+              : `${QUEUE_PATH}?de=${encodeURIComponent(slug)}`
+          }
+        />
       )}
       {rss && <RssSync slug={slug} own={page.own} rss={rss} />}
       {lines.length > 0 && (
@@ -589,10 +637,15 @@ function Results({ slug, page }: { slug: string; page: PersonImportsView }) {
           date={traktApi.date}
         >
           {page.traktLink?.available && (
-            <TraktReadNow slug={slug} label={results.sync.traktNow} />
+            <TraktReadNow
+              slug={slug}
+              label={results.sync.now}
+              name={results.sync.traktLabel}
+            />
           )}
         </SyncStatus>
       )}
+      {traktOff && <TraktOff />}
     </Slip>
   )
 }
@@ -665,7 +718,9 @@ function LetterboxdGuide({
           <LetterboxdUpload slug={slug} refused={refusedOf('letterboxd')} />
         </Step>
         <Step n={4} title={guide.profile.title}>
-          <p className="text-evidence text-ink-2">{guide.profile.text}</p>
+          <p className="text-evidence text-ink-2">
+            {guide.profile.text(lastProfile(page) !== null)}
+          </p>
           <Rss slug={slug} page={page} refused={refusedOf('perfil')} />
         </Step>
       </ol>
@@ -813,22 +868,10 @@ function ServiceGuides() {
   const { other } = COPY
   return (
     <ul className="flex flex-col">
-      {other.services.map(({ service, href, steps }) => (
-        <li
-          key={service}
-          className="border-rule not-first:border-t not-first:border-dashed"
-        >
-          <details className="group">
-            <summary className="flex min-h-touch cursor-pointer list-none items-center justify-between gap-md font-display text-row-title [&::-webkit-details-marker]:hidden">
-              {other.how(service)}
-              <span
-                aria-hidden="true"
-                className="text-ink-2 transition-transform group-open:rotate-90"
-              >
-                <RowArrow />
-              </span>
-            </summary>
-            <ol className="flex list-decimal flex-col gap-2xs pb-md pl-3xl text-evidence">
+      {other.services.map(({ service, href, steps }, index) => (
+        <li key={service}>
+          <FoldRow summary={other.how(service)} rule={index > 0}>
+            <ol className="flex list-decimal flex-col gap-2xs pl-3xl text-evidence">
               {steps.map((step, index) => (
                 <li key={step}>
                   {index === 0 && href !== null ? (
@@ -846,7 +889,7 @@ function ServiceGuides() {
                 </li>
               ))}
             </ol>
-          </details>
+          </FoldRow>
         </li>
       ))}
     </ul>
@@ -861,8 +904,9 @@ const lastProfile = (page: PersonImports) =>
     .findLast((user) => user !== null) ?? null
 
 /** The Letterboxd profile's public diary, the way to keep the ZIP's
- * history current. Once a profile was read, one tap reads it again; the
- * field for another one folds under it. The server reads the user out of
+ * history current. Once a profile was read, one tap reads it again ("Ler
+ * agora", with the yes given then); the field for another one, which
+ * asks for the yes again, folds under it. The server reads the user out of
  * a name, an @name or the profile's address. Another Pessoa's diary needs
  * her yes; on the Dono's own page there is nothing to ask. */
 function Rss({
@@ -900,19 +944,16 @@ function Rss({
         {(busy) => (
           <>
             <input type="hidden" name="usuario" value={last} />
-            {consent}
+            <KeptConsent own={page.own} />
             <Submit disabled={busy}>
               {busy ? rss.busy : rss.update(last)}
             </Submit>
           </>
         )}
       </ImportForm>
-      <details className="group" open={refused !== undefined}>
-        <summary className="inline-flex min-h-touch cursor-pointer list-none items-center text-link text-ink-2 underline underline-offset-3 group-open:hidden [&::-webkit-details-marker]:hidden">
-          {rss.other}
-        </summary>
+      <FoldRow summary={rss.other} open={refused !== undefined}>
         {field}
-      </details>
+      </FoldRow>
     </div>
   )
 }

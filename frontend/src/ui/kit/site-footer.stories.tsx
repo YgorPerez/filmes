@@ -22,4 +22,17 @@ export const Credits: Story = {
 }
 
 /** Under the Session link's pages: the guest column's width. */
-export const Narrow: Story = { args: { narrow: true } }
+export const Narrow: Story = { args: { width: 'link' } }
+
+/** Under `/entrar`: the sign-in card's width. */
+export const Card: Story = { args: { width: 'card' } }
+
+/** On `/creditos` itself: the link is the current page, quiet. */
+export const OnCredits: Story = {
+  args: { current: true },
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByRole('link', { name: SITE_FOOTER.credits }),
+    ).toHaveAttribute('aria-current', 'page')
+  },
+}

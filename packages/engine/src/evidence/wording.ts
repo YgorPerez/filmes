@@ -4,6 +4,7 @@
 import { pyFormatG, pyRepr, pyRound, thousandsDot } from '../compat/number.ts'
 import { pythonError } from '../compat/python-error.ts'
 import type { SeedKind } from './ruler.ts'
+import type { Strength } from './strength.ts'
 
 /** A rating as the lines write it: 5.0 is "5"; 4.5 is "4,5". */
 export const ratingText = (value: number): string =>
@@ -17,14 +18,16 @@ const STATED: Readonly<Record<string, string>> = {
   'report 1': 'segundo o Dono, odeia',
 }
 
-/** The start of a seed rating's line: "deu 4,5 a X", "disse que ama X",
- * "segundo o Dono, odeia X". A stated or reported seed is 5 or 1. */
+/** The start of a seed rating's line: "deu 9 de 10 a X", "disse que ama
+ * X", "segundo o Dono, odeia X". A Nota is written on the 1 to 10 scale of
+ * the Cartaz's Já vi, whatever the source's (#272, #277). A stated or
+ * reported seed is 5 or 1. */
 export const seedText = (
   kind: SeedKind,
   value: number,
   film: string,
 ): string => {
-  if (kind === 'rating') return `deu ${ratingText(value)} a ${film}`
+  if (kind === 'rating') return `deu ${tenScaleText(value)} a ${film}`
   const opening = STATED[`${kind} ${value}`]
   if (opening === undefined) {
     throw pythonError('KeyError', `('${kind}', ${pyRepr(value)})`)
@@ -54,13 +57,51 @@ export const durationText = (minutes: number): string => {
 }
 
 /** The taste neighbours' line (#174, worded by #221): "23 pessoas de gosto
- * parecido deram 4,3 em média a este filme", their mean rating to one
- * place. */
+ * parecido deram 8,6 de 10 em média a este filme", their mean rating on
+ * the 1 to 10 scale, to one place (#272). */
 export const tasteNeighborsText = (
   raters: number,
   meanRating: number,
 ): string =>
-  `${integerText(raters)} pessoas de gosto parecido deram ${ratingText(pyRound(meanRating, 1))} em média a este filme`
+  `${integerText(raters)} pessoas de gosto parecido deram ${ratingText(pyRound(meanRating * 2, 1))} de 10 em média a este filme`
+
+/** The MovieLens "4+" of 5 stars: a seed Nota under it did not do what
+ * the neighbourhood's people did. */
+const NEIGHBORHOOD_CUT = 4
+
+/** Whether a seed Nota is under the MovieLens neighbourhood's 8 of 10. */
+export const belowNeighborhoodCut = (kind: SeedKind, value: number): boolean =>
+  kind === 'rating' && value < NEIGHBORHOOD_CUT
+
+/** What a seed line adds after the film when the Nota is under 8 of 10 and
+ * the ruler reads it as moderate or strong for her, by its percentile on
+ * her scale (#272, #277): ", uma das notas mais altas que dá". Vera's "deu
+ * 6 de 10" under ●●○ is otherwise a lukewarm reason. A weak seed is no
+ * high Nota, and a pairwise answer's is weak. */
+export const OWN_SCALE_TEXT = ', uma das notas mais altas que dá'
+
+export const ownScaleText = (
+  kind: SeedKind,
+  value: number,
+  [strength, direction]: readonly [Strength, number],
+): string =>
+  belowNeighborhoodCut(kind, value) && direction > 0 && strength !== 'weak'
+    ? OWN_SCALE_TEXT
+    : ''
+
+/** The MovieLens neighbourhood's base (#221): "das 3.104 pessoas que
+ * deram 8 ou mais a ele, 64% fizeram o mesmo com este". The MovieLens "4+"
+ * of 5 stars, on the 1 to 10 scale (#272). Over a seed Nota under that cut
+ * "o mesmo" points at what she did not do, so the line says it whole: "30%
+ * deram 8 ou mais a este" (#272). */
+export const neighborhoodText = (
+  base: number,
+  both: number,
+  seedBelowCut = false,
+): string =>
+  `das ${integerText(base)} pessoas que deram 8 ou mais a ele, ` +
+  `${Math.floor((100 * both) / base)}% ` +
+  (seedBelowCut ? 'deram 8 ou mais a este' : 'fizeram o mesmo com este')
 
 const MONTHS = [
   'jan',

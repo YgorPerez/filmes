@@ -47,7 +47,7 @@ describe('several Presentes', () => {
     expect(f.evidence['iara']).toHaveLength(1)
     const [hers] = f.evidence['iara'] ?? []
     expect(hers?.text).toBe(
-      'deu 3 a O Farol de Areia (2012), também de Helena Prado',
+      'deu 6 de 10 a O Farol de Areia (2012), também de Helena Prado',
     )
     expect(hers?.source).toBe('Letterboxd da Iara')
     // Weak (0.3), ×0.8003 for the 3 of 2025-04-12 (a half-life of 5 years).

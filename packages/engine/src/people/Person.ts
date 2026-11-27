@@ -17,6 +17,10 @@
 //
 //     - 2026-11-21 · conversa com o Dono · Casa Cheia (tt9000602) · nota 4
 //
+// An item corrected on the Pessoa's page (#330) keeps its date and ends with
+// `· editado AAAA-MM-DD`, the day of the last edit; a Veto has `edited:` in
+// the frontmatter. The edit date is not part of the fato_id.
+//
 // A Nota from an answer to the Perguntas par a par ends with `· par a par`,
 // whatever its Fonte says: the ruler keeps it weak and her scale leaves it
 // out.
@@ -80,6 +84,8 @@ export interface Veto {
   readonly target: string
   readonly label: string
   readonly date: string
+  /** The day of the last edit (#330), absent when never edited. */
+  readonly edited?: string
 }
 
 export interface Adjustment {
@@ -108,6 +114,8 @@ export interface Statement {
   /** A film (tt...) or an entity (Q...). */
   readonly target: string | null
   readonly label: string | null
+  /** The day of the last edit (#330), absent when never edited. */
+  readonly edited?: string
 }
 
 /** A Já visto [seen] said on the spot, with the Nota when she gave one: a
@@ -122,6 +130,8 @@ export interface Seen {
   readonly rating: number | null
   /** The Nota came from an answer to the Perguntas par a par (#181). */
   readonly pairwise?: boolean
+  /** The day of the last edit (#330), absent when never edited. */
+  readonly edited?: string
 }
 
 export interface Person {
@@ -179,13 +189,14 @@ const NOT_SPACE_OR_PARENS = `[^()${PY_SPACE_CLASS}]`
 const STATEMENT_LINE = new RegExp(
   '^- (?<date>[0-9]{4}-[0-9]{2}-[0-9]{2}) · (?<source>.+?) · (?<specificity>específico|genérico)' +
     `(?: · (?<reaction>ama|gosta de|não gosta de|odeia|sobre) (?<label>.+?) \\((?<target>${NOT_SPACE_OR_PARENS}+)\\))?` +
-    ' · "(?<text>.*)"$',
+    ' · "(?<text>.*)"(?: · editado (?<edited>[0-9]{4}-[0-9]{2}-[0-9]{2}))?$',
   'u',
 )
 
 const SEEN_LINE = new RegExp(
   `^- (?<date>[0-9]{4}-[0-9]{2}-[0-9]{2}) · (?<source>.+?) · (?<label>.+?) \\((?<target>tt${NOT_SPACE_OR_PARENS}+)\\)` +
-    '(?: · nota (?<rating>\\p{Nd}+(?:,\\p{Nd}+)?)(?<pairwise> · par a par)?)?$',
+    '(?: · nota (?<rating>\\p{Nd}+(?:,\\p{Nd}+)?)(?<pairwise> · par a par)?)?' +
+    '(?: · editado (?<edited>[0-9]{4}-[0-9]{2}-[0-9]{2}))?$',
   'u',
 )
 
@@ -197,11 +208,15 @@ export const statementLine = (s: Statement): string => {
     fields.push(`${words} ${s.label} (${s.target})`)
   }
   fields.push(`"${s.text}"`)
+  if (s.edited !== undefined) fields.push(`${EDITED_MARK} ${s.edited}`)
   return `- ${fields.join(' · ')}`
 }
 
 /** The end of a pairwise answer's Nota line. */
 const PAIRWISE_MARK = 'par a par'
+
+/** Before the day of an item's last edit, at the end of its line. */
+const EDITED_MARK = 'editado'
 
 /** The body line of a Já visto. */
 export const seenLine = (s: Seen): string => {
@@ -209,6 +224,7 @@ export const seenLine = (s: Seen): string => {
   if (s.rating !== null)
     fields.push(`nota ${pyFormatG(s.rating).replace('.', ',')}`)
   if (s.rating !== null && s.pairwise === true) fields.push(PAIRWISE_MARK)
+  if (s.edited !== undefined) fields.push(`${EDITED_MARK} ${s.edited}`)
   return `- ${fields.join(' · ')}`
 }
 
@@ -225,6 +241,7 @@ const statement = (g: Groups): Statement => ({
       : (REACTION_BY_WORDS.get(g.reaction) ?? null),
   target: g.target ?? null,
   label: g.label ?? null,
+  ...(g.edited === undefined ? {} : { edited: g.edited }),
 })
 
 const seen = (g: Groups): Seen => ({
@@ -235,6 +252,7 @@ const seen = (g: Groups): Seen => ({
   rating:
     g.rating === undefined ? null : pyParseFloat(g.rating.replace(',', '.')),
   ...(g.pairwise === undefined ? {} : { pairwise: true }),
+  ...(g.edited === undefined ? {} : { edited: g.edited }),
 })
 
 // --- sections --------------------------------------------------------------
@@ -263,6 +281,12 @@ interface SectionRules<A> {
     person: Person,
     item: A,
   ) => Effect.Effect<Person, EngineError>
+  /** The person with `next` where `item` was. */
+  readonly replace: (
+    person: Person,
+    item: A,
+    next: A,
+  ) => Effect.Effect<Person, EngineError>
 }
 
 const notFound = () =>
@@ -278,6 +302,17 @@ const without = <A extends object>(
   return Effect.succeed(items.filter((_, i) => i !== index))
 }
 
+/** `next` in the place of the first item equal to `item`. */
+const swapped = <A extends object>(
+  items: readonly A[],
+  item: A,
+  next: A,
+): Effect.Effect<A[]> => {
+  const index = items.findIndex((other) => equal(other, item))
+  if (index === -1) return notFound()
+  return Effect.succeed(items.map((it, i) => (i === index ? next : it)))
+}
+
 const vetoes: SectionRules<Veto> = {
   read: (person) => Effect.succeed(person.vetoes),
   // One per target.
@@ -291,6 +326,11 @@ const vetoes: SectionRules<Veto> = {
     Effect.map(without(person.vetoes, veto), (rest) => ({
       ...person,
       vetoes: rest,
+    })),
+  replace: (person, veto, next) =>
+    Effect.map(swapped(person.vetoes, veto, next), (vetoes) => ({
+      ...person,
+      vetoes,
     })),
 }
 
@@ -314,6 +354,11 @@ const adjustments: SectionRules<Adjustment> = {
       ...person,
       adjustments: rest,
     })),
+  replace: (person, adjustment, next) =>
+    Effect.map(swapped(person.adjustments, adjustment, next), (list) => ({
+      ...person,
+      adjustments: list,
+    })),
 }
 
 const openQuestions: SectionRules<OpenQuestion> = {
@@ -329,6 +374,11 @@ const openQuestions: SectionRules<OpenQuestion> = {
     Effect.map(without(person.openQuestions, question), (rest) => ({
       ...person,
       openQuestions: rest,
+    })),
+  replace: (person, question, next) =>
+    Effect.map(swapped(person.openQuestions, question, next), (list) => ({
+      ...person,
+      openQuestions: list,
     })),
 }
 
@@ -396,6 +446,21 @@ const bodySection = <A extends object>(
   const read = (person: Person) =>
     Effect.map(indexed(person), (found) => found.map(([, it]) => it))
 
+  /** The body with `edit` applied to the line of `item`. */
+  const atLine = (
+    person: Person,
+    item: A,
+    edit: (lines: string[], index: number) => void,
+  ) =>
+    Effect.flatMap(indexed(person), (found) => {
+      const at = found.find(([, it]) => equal(it, item))
+      if (!at)
+        return Effect.die(pythonError('ValueError', 'item not in section'))
+      const lines = pySplitlines(person.body)
+      edit(lines, at[0])
+      return Effect.succeed({ ...person, body: `${lines.join('\n')}\n` })
+    })
+
   return {
     read,
     add: (person, added) =>
@@ -405,13 +470,10 @@ const bodySection = <A extends object>(
           : { ...person, body: withLine(person.body, title, line(added)) },
       ),
     remove: (person, removed) =>
-      Effect.flatMap(indexed(person), (found) => {
-        const at = found.find(([, it]) => equal(it, removed))
-        if (!at)
-          return Effect.die(pythonError('ValueError', 'item not in section'))
-        const lines = pySplitlines(person.body)
-        lines.splice(at[0], 1)
-        return Effect.succeed({ ...person, body: `${lines.join('\n')}\n` })
+      atLine(person, removed, (lines, index) => lines.splice(index, 1)),
+    replace: (person, item, next) =>
+      atLine(person, item, (lines, index) => {
+        lines[index] = line(next)
       }),
   }
 }
@@ -454,6 +516,16 @@ export const removeItem = <S extends Section>(
   section: S,
   item: SectionItems[S],
 ): Effect.Effect<Person, EngineError> => SECTIONS[section].remove(person, item)
+
+/** The person with `next` in the place of `item`, in the same section and
+ * line. An item that is not there is a defect, as in `removeItem`. */
+export const replaceItem = <S extends Section>(
+  person: Person,
+  section: S,
+  item: SectionItems[S],
+  next: SectionItems[S],
+): Effect.Effect<Person, EngineError> =>
+  SECTIONS[section].replace(person, item, next)
 
 /** Keeps a skipped question, counting the skip when it was already open
  * (`pessoas.pular`): the question with its new count, and whether it left

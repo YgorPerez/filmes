@@ -68,7 +68,12 @@ import {
 import { filmHeader } from '../recommendation/header.ts'
 import { readMoods } from '../recommendation/moods.ts'
 import type { DropCause } from '../recommendation/kept.ts'
-import type { FilmReason, ReasonKind } from '../recommendation/reason.ts'
+import {
+  readLine,
+  sameReason,
+  type FilmReason,
+  type ReasonKind,
+} from '../recommendation/reason.ts'
 import type { EngineServices } from '../runtime/Engine.ts'
 import { engineError, type EngineError } from '../runtime/EngineError.ts'
 import { Environment } from '../runtime/Environment.ts'
@@ -149,6 +154,9 @@ export interface BillboardLine {
   readonly strength: Strength
   readonly text: string
   readonly source: string | null
+  /** It weighs against the film, as a Já visto does (#272): the Cartaz
+   * says so, never drawing it as a reason to like it. */
+  readonly against: boolean
 }
 
 /** A Presente's Nota prevista [predicted rating] of a film (#174), as the
@@ -228,6 +236,9 @@ export interface BillboardFilm {
   readonly lines: ReadonlyArray<BillboardLine>
   /** The Presentes with no Fato about it, in order. */
   readonly withoutFact: ReadonlyArray<string>
+  /** The Presentes the engine knows saw it (a Já visto), in order: the
+   * case is stamped JÁ VI for them (#272). */
+  readonly seen: ReadonlyArray<string>
   /** "Fato sobre 1 de 2". */
   readonly coverage: string
   /** The Presentes with a Nota prevista, in order; a Presente with none is
@@ -460,22 +471,37 @@ export const votesText = (votes: number): string => {
   return String(votes)
 }
 
-/** The reading of the request (`_pedido`). */
+/** Who the request is for, opening the shelf label: the one Presente's
+ * label ("Você"), or "Vocês quatro". Contar says it the same
+ * (`frontend/src/ui/billboard-request.ts`, #272). */
+const requestWho = (
+  people: ReadonlyArray<Pick<BillboardPerson, 'label'>>,
+): string => {
+  const only = people.length === 1 ? people[0] : undefined
+  return only !== undefined
+    ? only.label
+    : `Vocês ${IN_WORDS[people.length] ?? people.length}`
+}
+
+/** The reading of the request (`_pedido`). The duration reads as its
+ * Restrição's label ("até 2h"), as the Sessions list and Contar say it
+ * (#272). */
 const requestOf = (
   front: YamlMapping,
   people: ReadonlyArray<BillboardPerson>,
   minRating: number,
 ): BillboardRequest => {
   const context = front.get('context')
-  const only = people.length === 1 ? people[0] : undefined
-  const who =
-    only !== undefined
-      ? only.label
-      : `Vocês ${IN_WORDS[people.length] ?? people.length}`
+  const who = requestWho(people)
   const parts: string[] = []
   const max = get(context, 'max_duration')
   if (max !== undefined && pyTruthy(max))
-    parts.push(`até ${sessionDuration(Number(yamlToJson(max)))}`)
+    parts.push(
+      askedConstraintLabel({
+        name: 'duration',
+        max_minutes: Number(yamlToJson(max)),
+      }) ?? '',
+    )
   parts.push(`nota ${numberText(minRating)}+ no IMDb`)
   parts.push(...texts(get(context, 'moods')))
   // A stored Restrição that no longer exists (an old Session's no_repeat)
@@ -563,9 +589,18 @@ const droppedOf = (
 
 const isFact = (e: BodyEvidence) => e.kind !== 'guess'
 
+/** A Já visto's line (`signals/seen.ts`). */
+const isSeen = (e: BodyEvidence) => e.against && e.text === 'já viu'
+
+/** A Feedback's Fonte as whoever looks reads it: the Dono who relayed it
+ * is "você" (#277). */
+const RELAYED = /, repassado pelo Dono$/u
+const sourceFor = (source: string, relayedByYou: boolean): string =>
+  relayedByYou ? source.replace(RELAYED, ', repassado por você') : source
+
 /** The strongest Evidence of each Presente with a Fato, the ones with the
  * same sharing a line, the strongest lines first (`_linhas`). */
-const linesOf = (film: FilmInBody): BillboardLine[] => {
+const linesOf = (film: FilmInBody, relayedByYou: boolean): BillboardLine[] => {
   const groups = new Map<string, { evidence: BodyEvidence; people: string[] }>()
   for (const [person, evidence] of Object.entries(film.evidence)) {
     const strongest = evidence.find(isFact)
@@ -576,6 +611,7 @@ const linesOf = (film: FilmInBody): BillboardLine[] => {
       strongest.date,
       strongest.strength,
       strongest.kind,
+      strongest.against,
     ])
     const group = groups.get(key)
     if (group) group.people.push(person)
@@ -592,7 +628,10 @@ const linesOf = (film: FilmInBody): BillboardLine[] => {
       people: g.people,
       strength: g.evidence.strength as Strength,
       text: g.evidence.text,
-      source: g.evidence.source || null,
+      source: g.evidence.source
+        ? sourceFor(g.evidence.source, relayedByYou)
+        : null,
+      against: g.evidence.against,
     }))
 }
 
@@ -612,7 +651,8 @@ const storedReason = (value: YamlValue | undefined): FilmReason | null => {
   }
 }
 
-/** A section's title, naming who has its Motivo. */
+/** A section's title, naming who has its Motivo. With nobody whose seed
+ * is a liked Nota (#272), it names the link alone. */
 const sectionTitle = (
   kind: BillboardSection['kind'],
   name: string,
@@ -626,12 +666,51 @@ const sectionTitle = (
     case 'other':
       return 'Outras escolhas'
     case 'entity':
-      return `Porque ${names} ${many ? 'gostam' : 'gosta'} de ${name}`
+      return who.length === 0
+        ? `Ligados a ${name}`
+        : `Porque ${names} ${many ? 'gostam' : 'gosta'} de ${name}`
     case 'film':
-      return `Porque ${names} ${many ? 'gostaram' : 'gostou'} de ${name}`
+      return who.length === 0
+        ? `Parecidos com ${name}`
+        : `Porque ${names} ${many ? 'gostaram' : 'gostou'} de ${name}`
     case 'taste':
       return `Gente de gosto parecido com ${names} gostou`
   }
+}
+
+/** A seed Nota's value on 1 to 10: "deu 9 de 10 a", or "deu 4,5 a" of a
+ * Session from before #272, on 0,5 to 5. */
+const SEED_RATING = /^deu ([\d,]+)( de 10)? a /u
+
+/** The line says she liked what the Motivo is about (#272): a seed Nota
+ * the ruler read as moderate or strong, or of 8 or more of 10 (a link's
+ * cap may hold its Força down), or any other line for it (her "ama", the
+ * "como 3 filmes a que deu nota alta", her Declarado about it). */
+const likedLine = (line: BodyEvidence): boolean => {
+  if (line.against || line.kind === 'guess') return false
+  const seed = SEED_RATING.exec(line.text)
+  if (seed === null) return true
+  const value = Number((seed[1] ?? '').replace(',', '.'))
+  const onTen = seed[2] === undefined ? value * 2 : value
+  return line.strength !== 'weak' || onTen >= 8
+}
+
+/** Who of a film's Motivo the title may say liked it (#272): the taste
+ * neighbours' Motivo is everyone's; another leaves out who has lines for
+ * it and none liked (Iara's "deu 6 de 10 a O Farol de Areia"). With no
+ * line that reads as it (a file edited by hand), she stays. */
+const likedBy = (
+  film: FilmInBody | undefined,
+  reason: FilmReason,
+): ReadonlyArray<string> => {
+  if (reason.kind === 'taste' || film === undefined) return reason.people
+  return reason.people.filter((person) => {
+    const lines = (film.evidence[person] ?? []).filter((line) => {
+      const read = readLine(line.text)
+      return read !== null && sameReason(read, reason)
+    })
+    return lines.length === 0 || lines.some(likedLine)
+  })
 }
 
 /** The films in sections: a run of neighbours with the same Motivo is one;
@@ -640,7 +719,9 @@ const sectionsOf = (
   films: ReadonlyArray<BillboardFilm>,
   reasons: ReadonlyMap<string, FilmReason | null>,
   people: ReadonlyArray<BillboardPerson>,
+  bodies: ReadonlyArray<FilmInBody>,
 ): BillboardSection[] => {
+  const body = new Map(bodies.map((f) => [f.id, f]))
   type Run = {
     key: string
     kind: BillboardSection['kind']
@@ -661,7 +742,8 @@ const sectionsOf = (
         : { key, kind, name, who: new Set<string>(), films: [] }
     if (run !== last) runs.push(run)
     run.films.push(film.id)
-    for (const slug of reason?.people ?? []) run.who.add(slug)
+    if (reason !== null)
+      for (const slug of likedBy(body.get(film.id), reason)) run.who.add(slug)
   }
   return runs.map((run, i) => ({
     kind: run.kind,
@@ -713,6 +795,8 @@ const filmCard = (
     readonly people: ReadonlyArray<BillboardPerson>
     /** The Feedback's chosen film and reactions, when it has them. */
     readonly feedback: Told | null
+    /** Whoever looks is the Session's Dono, who relayed its Feedback. */
+    readonly relayedByYou: boolean
   },
 ) =>
   Effect.gen(function* () {
@@ -732,6 +816,9 @@ const filmCard = (
     const critics = labels('critics')
     const withoutFact = Object.entries(film.evidence)
       .filter(([, evidence]) => !evidence.some(isFact))
+      .map(([person]) => person)
+    const seen = Object.entries(film.evidence)
+      .filter(([, evidence]) => evidence.some(isSeen))
       .map(([person]) => person)
     const title = header.titlePt || row.title
     const chips = [
@@ -762,8 +849,9 @@ const filmCard = (
       ...(awards.length > 0 && { awards }),
       ...(critics.length > 0 && { critics }),
       synopsis: header.synopsis,
-      lines: linesOf(film),
+      lines: linesOf(film, input.relayedByYou),
       withoutFact,
+      seen,
       coverage: `Fato sobre ${people.length - withoutFact.length} de ${people.length}`,
       predictedRatings: predictionsOf(recorded, attendees),
     }
@@ -842,7 +930,9 @@ export const billboardModel = (
       films = yield* onlyShown(id, films, input.shown)
     const { weights } = yield* Environment
     // "Você" is whoever looks: the logged-in Pessoa, else the Session's Dono.
-    const owner = (yield* Owner) ?? textOf(front.get('owner'))
+    const sessionOwner = textOf(front.get('owner'))
+    const owner = (yield* Owner) ?? sessionOwner
+    const relayedByYou = owner !== null && owner === sessionOwner
     const listed = new Map<string, YamlMapping>()
     for (const item of mappings(front.get('recommendation')))
       listed.set(pyStrValue(item.get('id') ?? null), item)
@@ -881,6 +971,7 @@ export const billboardModel = (
             attendees,
             people,
             feedback,
+            relayedByYou,
           })
           const note = notes.get(film.id)
           cards.push(note === undefined ? card : { ...card, notes: note })
@@ -899,7 +990,9 @@ export const billboardModel = (
           request: requestOf(front, people, weights.catalog.min_imdb_rating),
           dropped: droppedOf(front, people, owner),
           films: cards,
-          sections: withReasons ? sectionsOf(cards, reasons, people) : [],
+          sections: withReasons
+            ? sectionsOf(cards, reasons, people, films)
+            : [],
           moods: texts(get(front.get('context'), 'moods')),
           moodChoices: (yield* readMoods).map((m) => m.name),
           open: isOpen(front),

@@ -546,6 +546,31 @@ describe('queueAction', () => {
     ])
   })
 
+  it('keeps whose import sent her there, and drops what is no slug (#274)', async () => {
+    const { imports } = fakeImports()
+    const from = await queueAction(
+      post('/fila/acao', {
+        acao: 'confirmar',
+        id: 'x-1',
+        filme: 'tt1',
+        de: 'olga',
+      }),
+      BRUNO,
+      imports,
+      ORIGIN,
+    )
+    expect(from.headers.get('Location')).toBe(
+      '/meu-gosto/fila?feito=confirmado&de=olga',
+    )
+    const refused = await queueAction(
+      post('/fila/acao', { acao: 'confirmar', de: '../x' }),
+      BRUNO,
+      imports,
+      ORIGIN,
+    )
+    expect(refused.headers.get('Location')).toBe('/meu-gosto/fila?erro=pedido')
+  })
+
   it('says how many films left the queue after asking TMDB again', async () => {
     const { imports } = fakeImports(undefined, {
       exitCode: 0,
@@ -636,6 +661,12 @@ describe('the pages', () => {
           imdb: { ratings: 0 },
           simkl: { ratings: 0, seen: 0, watchlist: 0 },
           tvtime: { ratings: 0, seen: 0, stated: 0, watchlist: 0 },
+          films: {
+            trakt: { rated: 0, seen: 0, watchlist: 0 },
+            imdb: { rated: 0, seen: 0, watchlist: 0 },
+            simkl: { rated: 0, seen: 0, watchlist: 0 },
+            tvtime: { rated: 0, seen: 0, watchlist: 0 },
+          },
         },
       }),
     }

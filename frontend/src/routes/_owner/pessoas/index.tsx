@@ -9,6 +9,8 @@ import { readPeopleList } from '#/content/people'
 import { PeopleList } from '#/ui/people'
 
 export const Route = createFileRoute('/_owner/pessoas/')({
+  // The list sits in a Pessoa's column, so the bar takes it too (#273).
+  staticData: { wide: true },
   // `erro=pessoa`: a form's Pessoa is gone; `erro=baixar`, a download's;
   // `feito=removida`: one was taken out. Any other reason is the create
   // form's, which comes back with what was typed.

@@ -12,6 +12,7 @@ describe('page titles', () => {
     expect(titleOf(at('/_owner/sessoes/'))).toBe('Sessões · filmes')
     expect(titleOf(at('/_owner/meu-gosto/notas'))).toBe('Dar notas · filmes')
     expect(titleOf(at('/trakt'))).toBe('Trakt · filmes')
+    expect(titleOf(at('/creditos'))).toBe('Créditos · filmes')
   })
 
   it('takes a Session’s day and a Pessoa’s name from the page', () => {
@@ -36,6 +37,25 @@ describe('page titles', () => {
     expect(
       titleOf([{ routeId: '/_owner/operacoes', status: 'notFound' }]),
     ).toBe('Página não encontrada · filmes')
+  })
+
+  it('names the link’s page when it shows in place of its child', () => {
+    const link = (covers: boolean, child: string) => [
+      { routeId: '__root__', status: 'success' },
+      {
+        routeId: '/participar',
+        status: 'success',
+        loaderData: { covers, title: 'Essa Sessão já fechou' },
+      },
+      { routeId: child, status: 'success' },
+    ]
+    expect(titleOf(link(true, '/participar/votar'))).toBe(
+      'Essa Sessão já fechou · filmes',
+    )
+    expect(titleOf(link(true, '/participar/perguntas/'))).toBe(
+      'Essa Sessão já fechou · filmes',
+    )
+    expect(titleOf(link(false, '/participar/votar'))).toBe('Votar · filmes')
   })
 
   it('is filmes alone for a page with no title', () => {

@@ -59,7 +59,9 @@ test('a visitor reaches the sources’ credits from the footer', async ({
   await expect(page).toHaveURL(/\/creditos$/)
   await expect(page.getByRole('heading', { name: 'Créditos' })).toBeVisible()
   for (const source of ['IMDb', 'TMDB', 'Does the Dog Die', 'Trakt'])
-    await expect(page.getByRole('link', { name: source })).toBeVisible()
+    await expect(
+      page.getByRole('link', { name: source, exact: true }),
+    ).toBeVisible()
   await expect(
     page.getByText(
       'This product uses the TMDB API but is not endorsed or certified by TMDB.',

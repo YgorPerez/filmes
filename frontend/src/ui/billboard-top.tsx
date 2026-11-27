@@ -1,5 +1,6 @@
 import type { Billboard as BillboardModel, BillboardLine } from '@filmes/engine'
 import { BILLBOARD } from './billboard.copy'
+import { closeOnOutside, HEAD_POPOVERS } from './kit/dismiss'
 import { Avatar } from './kit/person'
 
 // The pieces of the Cartaz above the cards (DESIGN.md, Legenda, Força and
@@ -34,8 +35,20 @@ export function Strength({
   )
 }
 
-/** In Claude, where no page head names them: a Presente per avatar with her name, and the three Forças in words on
- * a line of their own, so the legend never runs into the names (#277). */
+/** "pesa contra", the mark of an Evidência against the film (#272): a
+ * label in its outline, beside the text it qualifies. */
+export function AgainstMark() {
+  return (
+    <span className="inline-block rounded-pill border-(length:--border-width-stroke) border-rule px-1.5 align-[1px] font-display text-label whitespace-nowrap text-ink-2 uppercase">
+      {BILLBOARD.against}
+    </span>
+  )
+}
+
+/** In Claude, where no page head names them: a Presente per avatar with
+ * her name ("Você" for the Dono who looks), and the three Forças in words
+ * on a line of their own, so the legend never runs into the names
+ * (#277). */
 export function PeopleLegend({ billboard }: { billboard: BillboardModel }) {
   return (
     <div className="flex flex-col gap-xs text-meta text-ink-2">
@@ -46,7 +59,7 @@ export function PeopleLegend({ billboard }: { billboard: BillboardModel }) {
             className="inline-flex items-center gap-xs text-ink"
           >
             <Avatar person={p} />
-            {p.name}
+            {p.label}
           </span>
         ))}
       </p>
@@ -63,10 +76,15 @@ export function PeopleLegend({ billboard }: { billboard: BillboardModel }) {
 }
 
 /** The three Forças in words, behind a "?" (#272): the Presentes are in
- * the page's head, and the key is for who asks. */
+ * the page's head, and the key is for who asks. A tap outside or Esc
+ * closes it, and so does opening the ⋯ menu (`kit/dismiss.ts`). */
 export function Legend() {
   return (
-    <details className="group/legend relative self-end">
+    <details
+      ref={closeOnOutside}
+      name={HEAD_POPOVERS}
+      className="group/legend relative self-end"
+    >
       <summary
         aria-label={BILLBOARD.legend}
         className="grid size-touch cursor-pointer list-none place-items-center rounded-round border-(length:--border-width-stroke) border-rule bg-surface font-display text-control text-ink [&::-webkit-details-marker]:hidden"
@@ -83,6 +101,9 @@ export function Legend() {
             </li>
           ))}
         </ul>
+        <p>
+          <AgainstMark /> {BILLBOARD.againstLegend}
+        </p>
       </div>
     </details>
   )

@@ -87,7 +87,7 @@ async function profile(page: Page) {
 }
 
 async function removeImport(page: Page, original: string) {
-  const files = section(page, 'Arquivos importados')
+  const files = section(page, 'Arquivos e perfis')
   await files.getByLabel(`Tirar ${original}`).click()
   await files
     .getByRole('listitem')
@@ -103,7 +103,7 @@ async function openOlgaImports(page: Page, info: TestInfo) {
   await expect(page).toHaveURL(/\/pessoas\/olga$/)
   await section(page, 'Notas')
     .getByRole('link', {
-      name: 'Importar de outro site',
+      name: 'Importar Notas',
     })
     .click()
   await expect(page).toHaveURL(/\/pessoas\/olga\/importar$/)
@@ -112,7 +112,7 @@ async function openOlgaImports(page: Page, info: TestInfo) {
   ).toBeVisible()
   // Nothing imported: the guided flow is the page, and Olga's diary needs
   // her yes.
-  await expect(section(page, 'Arquivos importados')).toHaveCount(0)
+  await expect(section(page, 'Arquivos e perfis')).toHaveCount(0)
   await expect(section(page, RESULTS)).toHaveCount(0)
   await expect(
     section(page, 'Do Letterboxd').getByRole('link', {
@@ -129,7 +129,7 @@ async function importOlgaZip(page: Page, info: TestInfo) {
   await expect(notice(page)).toContainText(
     'O ZIP do Letterboxd entrou: entraram',
   )
-  await expect(section(page, 'Arquivos importados')).toContainText(
+  await expect(section(page, 'Arquivos e perfis')).toContainText(
     'letterboxd-olga.zip',
   )
   const letterboxd = section(page, RESULTS)
@@ -145,7 +145,7 @@ async function importOlgaZip(page: Page, info: TestInfo) {
  * confirms it again; gives the section of Filme Perdido. */
 async function confirmInQueue(page: Page, info: TestInfo, letterboxd: Locator) {
   await letterboxd.getByRole('link', { name: 'Resolver agora' }).click()
-  await expect(page).toHaveURL(/\/meu-gosto\/fila$/)
+  await expect(page).toHaveURL(/\/meu-gosto\/fila\?de=olga$/)
   const wind = section(page, 'Vento Norte (2020)')
   const lost = section(page, 'Filme Perdido (2001)')
   await expect(wind).toContainText('Nordwind')
@@ -159,7 +159,7 @@ async function confirmInQueue(page: Page, info: TestInfo, letterboxd: Locator) {
   })
   await confirmLost.getByLabel(/^Link ou ID/).fill('um filme qualquer')
   await confirmLost.getByRole('button', { name: 'Confirmar' }).click()
-  await expect(page).toHaveURL(/\/meu-gosto\/fila\?erro=filme$/)
+  await expect(page).toHaveURL(/\/meu-gosto\/fila\?erro=filme&de=olga$/)
   await expect(page.getByRole('alert')).toContainText('Cole um link')
 
   // Each suggestion says its director, runtime and country (#274).
@@ -224,9 +224,7 @@ async function readRssAndRemoveZip(page: Page, info: TestInfo) {
   await rss.getByLabel(/^Olga concordou que o filmes leia/).check()
   await rss.getByRole('button', { name: 'Ler o perfil' }).click()
   await expect(notice(page)).toContainText('Perfil do Letterboxd lido')
-  await expect(section(page, 'Arquivos importados')).toContainText(
-    '@olga_farol',
-  )
+  await expect(section(page, 'Arquivos e perfis')).toContainText('@olga_farol')
   await snap(page, info, 'importar-rss')
   await removeImport(page, 'letterboxd-olga.zip')
   await expect(notice(page)).toContainText('Import tirado')
@@ -276,9 +274,9 @@ test('the Dono imports a Trakt ZIP; a ZIP of neither and a profile that does not
     'O ZIP do Trakt entrou: entraram 2 Notas novas.',
   )
   await expect(section(page, RESULTS)).not.toContainText('Letterboxd:')
-  await expect(section(page, RESULTS)).toContainText(
-    'Trakt: 2 Notas e 1 Já visto',
-  )
+  // The card counts by film, as the notice (#274).
+  await expect(section(page, RESULTS)).toContainText('Trakt: 2 Notas')
+  await expect(section(page, RESULTS)).not.toContainText('Já visto')
   await snap(page, info, 'importar-trakt')
 
   const rss = await profile(page)
@@ -339,7 +337,7 @@ test('the Dono imports a Simkl backup ZIP', async ({ page }, info) => {
     /^O backup do Simkl entrou: entraram 3 Notas novas.* 2 filmes ficaram de fora: o Catálogo do filmes não tem\.$/,
   )
   await expect(section(page, RESULTS)).toContainText(
-    'Simkl: 3 Notas e 2 Já vistos',
+    'Simkl: 3 Notas, 2 Já vistos e 1 filme na watchlist',
   )
   await snap(page, info, 'importar-simkl')
   expect((await importsOf('sara')).simkl).toEqual({
@@ -372,7 +370,7 @@ test('the Dono imports a TV Time backup', async ({ page }, info) => {
     /^O backup do TV Time entrou: entraram 2 Notas novas.* 1 filme ficou de fora: o Catálogo do filmes não tem\.$/,
   )
   await expect(section(page, RESULTS)).toContainText(
-    'TV Time: 2 Notas e 3 Já vistos',
+    'TV Time: 2 Notas, 1 Já visto e 1 filme na watchlist',
   )
   await snap(page, info, 'importar-tvtime')
   expect((await importsOf('ravi')).tvtime).toEqual({

@@ -3,6 +3,7 @@ import {
   Outlet,
   redirect,
   useLocation,
+  useMatches,
 } from '@tanstack/react-router'
 import { readPushAlert } from '#/content/operations'
 import { NotFound } from '#/ui/lost'
@@ -40,8 +41,17 @@ function OwnerNotFound() {
 function OwnerLayout() {
   const { owner } = Route.useRouteContext()
   const { pathname } = useLocation()
+  // A two-column page says so in its route's `staticData`.
+  const wide = useMatches({
+    select: (matches) => matches.some((match) => match.staticData.wide),
+  })
   return (
-    <AppShell owner={owner} path={pathname} alert={Route.useLoaderData()}>
+    <AppShell
+      owner={owner}
+      path={pathname}
+      alert={Route.useLoaderData()}
+      wide={wide}
+    >
       <Outlet />
     </AppShell>
   )

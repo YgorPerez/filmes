@@ -59,7 +59,7 @@ const IN_BLOCKS = `> Você e Teo · até 2h · vez do Bruno. Saíram 2 filmes.
 
 Fato sobre 1 de 2; sem fato: Teo
 
-- ●●● **Você:** deu 5 a O Farol de Areia (2012), também de Helena Prado (Letterboxd do Bruno, 2025-06-01) *(nota)*
+- ●●● **Você:** deu 10 de 10 a O Farol de Areia (2012), também de Helena Prado (Letterboxd do Bruno, 2025-06-01) *(nota)*
 - ●○○ **Teo:** sem fato *(palpite)*
 - ●●● **Filme:** duração 1h44, dentro do limite de 2h (IMDb) *(metadado)*
 
@@ -73,7 +73,7 @@ Fato sobre 1 de 2; sem fato: Teo
 
 Fato sobre 1 de 2; sem fato: Teo
 
-- ●●● **Você:** deu 4,5 a Maré Baixa (2015), também de Helena Prado (Letterboxd do Bruno, 2024-02-10) *(nota)*
+- ●●● **Você:** deu 9 de 10 a Maré Baixa (2015), também de Helena Prado (Letterboxd do Bruno, 2024-02-10) *(nota)*
 - ●○○ **Teo:** sem fato *(palpite)*
 
 ---
@@ -154,7 +154,7 @@ describe('answer verification', () => {
     const answer = `Você e Teo · até 2h · vez do Bruno.
 
 **1. As Horas Lentas** (2021, 1h44)
-- **Você:** deu 5 a O Farol de Areia (2012), também de Helena Prado (Letterboxd do Bruno, 2025-06-01) *(forte, nota)*
+- **Você:** deu 10 de 10 a O Farol de Areia (2012), também de Helena Prado (Letterboxd do Bruno, 2025-06-01) *(forte, nota)*
 - **Teo:** sem fato *(fraca, palpite)*
 - **Filme:** duração 1h44, dentro do limite de 2h (IMDb) *(forte, metadado)*
 
@@ -173,7 +173,7 @@ Depois, me conte o que viram e como foi.`
 
 ![capa](https://image.tmdb.org/t/p/w92/hOrAsLeNtAs9104.jpg) **1. As Horas Lentas** (2021, 1h44)\\
 Drama, Mistério · [IMDb](https://www.imdb.com/title/tt9000104/)
-- **Você:** deu 5 a O Farol de Areia (2012), também de Helena Prado (Letterboxd do Bruno, 2025-06-01) *(forte, nota)*
+- **Você:** deu 10 de 10 a O Farol de Areia (2012), também de Helena Prado (Letterboxd do Bruno, 2025-06-01) *(forte, nota)*
 - **Teo:** sem fato *(fraca, palpite)*
 
 **2. Sal e Ferrugem** (2023, 1h57)\\
@@ -213,13 +213,13 @@ describe('answer verification', () => {
     const fixture = useFixture()
     const out = await ownerAndTeo(fixture, 2, TMDB)
     const invalid = [
-      '- ●●○ **Você:** deu 5 a O Farol de Areia (2012), também de Helena Prado (Letterboxd do Bruno, 2025-06-01) *(nota)*',
+      '- ●●○ **Você:** deu 10 de 10 a O Farol de Areia (2012), também de Helena Prado (Letterboxd do Bruno, 2025-06-01) *(nota)*',
       '- ●●● **Teo:** sem fato *(palpite)*',
       '- ●○○ **Você e Ana:** sem fato *(palpite)*',
       'Vai ser a noite perfeita para os dois.',
     ]
     const answer = IN_BLOCKS.replace(
-      '- ●●● **Você:** deu 5 a O Farol de Areia (2012), também de Helena Prado (Letterboxd do Bruno, 2025-06-01) *(nota)*',
+      '- ●●● **Você:** deu 10 de 10 a O Farol de Areia (2012), também de Helena Prado (Letterboxd do Bruno, 2025-06-01) *(nota)*',
       invalid[0] ?? '',
     )
       .replace(
@@ -252,7 +252,7 @@ describe('answer verification', () => {
       (await verify(fixture, out.session.id, answer)).invalidLines,
     ).toEqual([
       swapped,
-      '- ●●● **Você:** deu 4,5 a Maré Baixa (2015), também de Helena Prado (Letterboxd do Bruno, 2024-02-10) *(nota)*',
+      '- ●●● **Você:** deu 9 de 10 a Maré Baixa (2015), também de Helena Prado (Letterboxd do Bruno, 2024-02-10) *(nota)*',
       '- ●○○ **Teo:** sem fato *(palpite)*',
     ])
   })
@@ -296,8 +296,8 @@ describe('answer verification', () => {
       }),
     )
     const invalid = [
-      '- **Você:** deu 4 a O Farol de Areia (2012), também de Helena Prado (Letterboxd do Bruno, 2025-06-01) *(forte, nota)*',
-      '- **Teo:** deu 5 a O Farol de Areia (2012), também de Helena Prado (Letterboxd do Bruno, 2025-06-01) *(forte, nota)*',
+      '- **Você:** deu 8 de 10 a O Farol de Areia (2012), também de Helena Prado (Letterboxd do Bruno, 2025-06-01) *(forte, nota)*',
+      '- **Teo:** deu 10 de 10 a O Farol de Areia (2012), também de Helena Prado (Letterboxd do Bruno, 2025-06-01) *(forte, nota)*',
       '- **Teo:** sem fato *(moderada, palpite)*',
       '- **Teo:** sem fato *(fraca, palpite)*. Vai adorar.',
       'Ana gosta do diretor.',

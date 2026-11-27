@@ -298,7 +298,13 @@ describe('PersonScreen forms', () => {
     )
     const fields = within(form)
     await pick(user, form, /^Filme/, 'Fronteira (2008)')
-    await user.selectOptions(fields.getByLabelText(PERSON.rating), '7')
+    // The 1 to 10 the rating screen and the Feedback use (#330).
+    await user.click(
+      within(fields.getByRole('group', { name: PERSON.rating })).getByRole(
+        'radio',
+        { name: '7' },
+      ),
+    )
     expect(posted(form)).toEqual({
       kind: 'seen',
       film: 'tt9000401',
@@ -474,6 +480,202 @@ describe('PersonScreen forms', () => {
   })
 })
 
+describe('PersonScreen edit', () => {
+  beforeEach(() => {
+    show()
+  })
+
+  const edit = async (label: string) => {
+    const user = userEvent.setup()
+    await user.click(
+      screen.getByRole('button', { name: PERSON.edit.label(label) }),
+    )
+    return {
+      user,
+      form: screen.getByRole('form', { name: PERSON.edit.label(label) }),
+    }
+  }
+
+  it('opens a Declarado filled in its place, and posts the correction', async () => {
+    const { user, form } = await edit('adoro os filmes dela')
+    const fields = within(form)
+    const text = fields.getByLabelText(PERSON.text, { exact: false })
+    expect(document.activeElement).toBe(text)
+    expect(fields.getByText('Sofia Rangel')).toBeTruthy()
+    await user.clear(text)
+    await user.type(text, 'adoro a Sofia')
+    expect(posted(form)).toEqual({
+      kind: 'edit',
+      what: 'stated',
+      id: 'declarados:1',
+      text: 'adoro a Sofia',
+      target: 'Q9000018',
+      reaction: 'love',
+      source: 'questionário',
+    })
+  })
+
+  it('opens a Veto to a genre with its target picked', async () => {
+    const { form } = await edit('nunca vê terror')
+    expect(posted(form)).toEqual({
+      kind: 'edit',
+      what: 'veto',
+      id: 'vetos:1',
+      text: 'nunca vê terror',
+      target: 'Q9001801',
+    })
+  })
+
+  it('opens a Já visto with its Nota on the 1 to 10 scale, the film fixed', async () => {
+    const { form } = await edit('Casa Cheia')
+    expect(document.activeElement).toBe(
+      within(form).getByRole('radio', { name: '9' }),
+    )
+    expect(within(form).getByText(PERSON.edit.filmFixed)).toBeTruthy()
+    expect(posted(form)).toEqual({
+      kind: 'edit',
+      what: 'seen',
+      id: 'vistos:1',
+      rating: '9/10',
+      source: 'conversa com o Dono',
+    })
+  })
+
+  it('cancels back to the item, the focus on its Editar', async () => {
+    const { user } = await edit('odeia filme lento')
+    await user.click(screen.getByRole('button', { name: PERSON.edit.cancel }))
+    const again = screen.getByRole('button', {
+      name: PERSON.edit.label('odeia filme lento'),
+    })
+    expect(document.activeElement).toBe(again)
+  })
+
+  it('marks the result or the group of a Veto, never both', async () => {
+    const { user, form } = await edit('nunca vê terror')
+    await user.click(within(form).getByRole('radio', { name: 'lento' }))
+    expect(within(form).queryByText('Terror')).toBeNull()
+    expect(posted(form)).toEqual({
+      kind: 'edit',
+      what: 'veto',
+      id: 'vetos:1',
+      text: 'nunca vê terror',
+      target: 'slow',
+    })
+  })
+
+  it('holds an edit with changes: another Editar or Esc says why and keeps it', async () => {
+    const { user, form } = await edit('nunca vê terror')
+    await user.type(
+      within(form).getByLabelText(PERSON.vetoes.text, { exact: false }),
+      ' nunca',
+    )
+    await user.click(
+      screen.getByRole('button', { name: PERSON.edit.label('Casa Cheia') }),
+    )
+    expect(within(form).getByRole('alert').textContent).toBe(PERSON.edit.held)
+    expect(
+      screen.queryByRole('form', { name: PERSON.edit.label('Casa Cheia') }),
+    ).toBeNull()
+    await user.keyboard('{Escape}')
+    expect(form.isConnected).toBe(true)
+  })
+
+  it('brings the Veto’s target back when its group is let go', async () => {
+    const { user, form } = await edit('nunca vê terror')
+    const lento = within(form).getByRole('radio', { name: 'lento' })
+    await user.click(lento)
+    await user.click(lento)
+    expect(within(form).getByText('Terror')).toBeTruthy()
+    expect(posted(form)).toMatchObject({ target: 'Q9001801' })
+  })
+
+  it('holds Tirar on another item while an edit has changes', async () => {
+    const { user, form } = await edit('nunca vê terror')
+    await user.type(
+      within(form).getByLabelText(PERSON.vetoes.text, { exact: false }),
+      '!',
+    )
+    await user.click(
+      screen.getByRole('button', { name: PERSON.removeLabel('Casa Cheia') }),
+    )
+    expect(within(form).getByRole('alert').textContent).toBe(PERSON.edit.held)
+    expect(
+      screen.queryByRole('button', { name: PERSON.removeSure('Casa Cheia') }),
+    ).toBeNull()
+  })
+
+  it('takes the alert away once the form changes again', async () => {
+    const { user, form } = await edit('nunca vê terror')
+    const text = within(form).getByLabelText(PERSON.vetoes.text, {
+      exact: false,
+    })
+    await user.type(text, '!')
+    await user.keyboard('{Escape}')
+    expect(within(form).getByRole('alert')).toBeTruthy()
+    await user.type(text, '!')
+    expect(within(form).queryByRole('alert')).toBeNull()
+  })
+
+  it('leaves a form without changes on Esc', async () => {
+    const { user } = await edit('Casa Cheia')
+    await user.keyboard('{Escape}')
+    expect(
+      screen.queryByRole('form', { name: PERSON.edit.label('Casa Cheia') }),
+    ).toBeNull()
+  })
+
+  it('says which item is open, and keeps the add form out of the way', async () => {
+    const { form } = await edit('nunca vê terror')
+    expect(
+      within(form).getByText(PERSON.edit.heading(PERSON.edit.kinds.veto)),
+    ).toBeTruthy()
+    expect(within(form).getByText('Terror · 19 nov 2026')).toBeTruthy()
+    expect(
+      within(section(PERSON.vetoes.title)).queryByText(PERSON.vetoes.add),
+    ).toBeNull()
+  })
+
+  it('asks before taking an item out', async () => {
+    const user = userEvent.setup()
+    await user.click(
+      screen.getByRole('button', { name: PERSON.removeLabel('Casa Cheia') }),
+    )
+    const sure = screen.getByRole('button', {
+      name: PERSON.removeSure('Casa Cheia'),
+    })
+    expect(document.activeElement).toBe(sure)
+    await user.click(screen.getByRole('button', { name: PERSON.removeKeep }))
+    expect(document.activeElement).toBe(
+      screen.getByRole('button', { name: PERSON.removeLabel('Casa Cheia') }),
+    )
+  })
+
+  it('offers no Editar on what came from an import', () => {
+    expect(
+      screen.queryByRole('button', { name: PERSON.edit.label('Ótimo') }),
+    ).toBeNull()
+  })
+})
+
+describe('PersonScreen after an edit', () => {
+  it('marks the item it saved, not the ficha', () => {
+    render(
+      <PersonScreen
+        slug="iara"
+        page={IARA}
+        notice="editado"
+        spot="vistos"
+        saved="vistos:1"
+      />,
+    )
+    const row = screen
+      .getByRole('button', { name: PERSON.edit.label('Casa Cheia') })
+      .closest('li')!
+    expect(within(row).getByRole('status').textContent).toBe(PERSON.edit.saved)
+    expect(screen.queryByText(PERSON.notices('Iara').editado)).toBeNull()
+  })
+})
+
 describe('PersonScreen', () => {
   it('shows what came from an import, without a way to remove it', () => {
     show()
@@ -488,11 +690,12 @@ describe('PersonScreen', () => {
     expect(
       screen.getByText('também ia · 1 Nota · 1 Veto · 2 perguntas abertas'),
     ).toBeTruthy()
-    expect(
-      screen
-        .getByRole('link', { name: PERSON.summary.steps.questions(2) })
-        .getAttribute('href'),
-    ).toBe('#perguntas')
+    // The open questions are right below, with their answers: no button
+    // to them, and each starts its line.
+    expect(screen.queryByText(PERSON.summary.next)).toBeNull()
+    const questions = section(PERSON.questions.title)
+    expect(within(questions).getByText('A Iara curte terror?')).toBeTruthy()
+    expect(within(questions).getByText('Curte comédia boba?')).toBeTruthy()
     cleanup()
     show({ ...IARA, aliases: [], vetoes: [], openQuestions: [], ratings: [] })
     expect(screen.getByText(PERSON.summary.unknown)).toBeTruthy()
@@ -534,7 +737,7 @@ describe('PersonScreen', () => {
     })
     expect(
       screen.getByText(
-        'Pelas Notas, Iara gosta de Drama, Crime e Rui Tavares.',
+        'Pelas Notas, Iara gosta dos gêneros Drama e Crime e da direção de Rui Tavares.',
       ),
     ).toBeTruthy()
     cleanup()
@@ -715,6 +918,8 @@ describe('PersonScreen', () => {
   it('takes a Relato about another Dono, told by the logged-in one', async () => {
     show({ ...IARA, person: 'vera', name: 'Vera', owner: true })
     expect(screen.getByText(PERSON.owner)).toBeTruthy()
+    // The sticker sits beside the h1: the heading is her name alone.
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Vera')
     const { user, form } = await open(
       section(PERSON.reports.title),
       PERSON.reports.add,
@@ -853,7 +1058,7 @@ describe('the Notas section', () => {
 })
 
 describe('the Notas section', () => {
-  it('is Meu gosto’s first section, with Dar notas as its one orange button', () => {
+  it('is Meu gosto’s first section, with Dar notas beside the glance’s orange next step', () => {
     show({ ...IARA, person: 'bruno', name: 'Bruno', owner: true })
     expect(
       screen.getByRole('heading', { level: 1, name: PERSON.myTaste }),
@@ -1145,6 +1350,13 @@ describe('Meu gosto in the second person', () => {
     expect(screen.getByText('Nas Sessões, você é Bruno.')).toBeTruthy()
   })
 
+  it('says she has no Nota yet, with no countdown from zero (#274)', () => {
+    render(<PersonScreen slug="bruno" page={{ ...MY_PAGE, ratings: [] }} />)
+    const glance = section(PERSON.glance.title)
+    expect(glance.textContent).toContain('Nenhuma Nota ainda')
+    expect(glance.textContent).not.toContain('faltam')
+  })
+
   it('says how many of her films wait in the queue, and leads there first', () => {
     render(<PersonScreen slug="bruno" page={MY_PAGE} pending={2} />)
     const notes = section(PERSON.notes.title)
@@ -1195,9 +1407,11 @@ describe('Meu gosto in the second person', () => {
     expect(screen.queryByText(/tag: chuva/)).toBeNull()
   })
 
-  it('folds the empty fichas into one line, and says the Ajustes are all normal', () => {
+  it('shows the empty Já vistos as a slip with its add fold, and says the Ajustes are all normal', () => {
     render(<PersonScreen slug="bruno" page={MY_PAGE} />)
-    expect(screen.getByText(PERSON.empty(PERSON.seen.title))).toBeTruthy()
+    const seen = section(PERSON.seen.title)
+    expect(within(seen).getByText(PERSON.seen.empty)).toBeTruthy()
+    expect(within(seen).getByText(PERSON.seen.add)).toBeTruthy()
     expect(
       within(section(PERSON.adjustments.title)).getByText(
         PERSON.adjustments.noneChanged,
@@ -1303,6 +1517,22 @@ describe('formProblem', () => {
     [
       { acao: 'vetar', texto: 'x', alvo: 'x1' },
       { field: 'alvo', problem: 'id' },
+    ],
+    [
+      { acao: 'vetar', texto: 'x', alvo: 'Q1', grupo: 'slow' },
+      { field: 'alvo', problem: 'both' },
+    ],
+    [
+      { acao: 'editar', tipo: 'veto', id: 'vetos:1', texto: '' },
+      { field: 'texto', problem: 'required' },
+    ],
+    [
+      { acao: 'editar', tipo: 'seen', id: 'vistos:1', nota: '11/10' },
+      { field: 'nota', problem: 'rating' },
+    ],
+    [
+      { acao: 'editar', tipo: 'stated', id: 'declarados:1' },
+      { field: 'texto', problem: 'required' },
     ],
     [{ acao: 'responder' }, { field: 'texto', problem: 'required' }],
     [{ acao: 'dar-acesso' }, { field: 'email', problem: 'required' }],
