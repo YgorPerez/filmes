@@ -55,6 +55,8 @@ export interface QueueFilm extends FilmRef {
 
 export interface RatingQueue {
   readonly person: string
+  /** How many films she has a Nota for already, from anywhere. */
+  readonly rated: number
   readonly films: ReadonlyArray<QueueFilm>
 }
 
@@ -176,12 +178,17 @@ export const ratingQueue = (
           })),
           limit,
         )
+        const rated = yield* db.get(
+          'SELECT COUNT(DISTINCT filme_id) AS n FROM notas WHERE pessoa = ?',
+          person.slug,
+        )
         const ids = order.map((f) => f.id)
         const none = new Map<string, string[]>()
         const genres = ids.length === 0 ? none : yield* genresOf(db, ids)
         const directors = ids.length === 0 ? none : yield* directorsOf(db, ids)
         return {
           person: person.slug,
+          rated: Number(rated?.n ?? 0),
           films: order.map(({ id, title, year, runtime }) => ({
             id,
             title,

@@ -77,6 +77,7 @@ describe('the Fila de Notas', () => {
     const queue = await fixture.ok(ratingQueue({ person: 'bruno', limit: 200 }))
 
     // Bruno gave Notas to O Farol de Areia, Maré Baixa and Cidade de Vidro.
+    expect(queue.rated).toBeGreaterThanOrEqual(3)
     const ids = queue.films.map((f) => f.id)
     expect(ids).toContain('tt9000601')
     expect(ids).not.toContain('tt9000101')
