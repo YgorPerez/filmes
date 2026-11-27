@@ -115,9 +115,10 @@ test('the Dono reads and changes a Pessoa’s taste', async ({ page }, info) => 
   await target(form, /^Sobre o quê/, 'sofia rangel', /^Usar Sofia Rangel/)
   await form.getByLabel('Reação').selectOption({ label: 'ama' })
   await form.getByRole('button', { name: 'Gravar' }).click()
-  await expect(section(page, 'Declarados')).toContainText(
-    'ama Sofia Rangel · específico',
-  )
+  // The target in words, its name a link; "específico" is gone (#274).
+  const stated = section(page, 'Declarados')
+  await expect(stated).toContainText('ama Sofia Rangel')
+  await expect(stated).not.toContainText('específico')
 
   form = await addForm(page, 'Relatos', 'Acrescentar Relato')
   await form.getByLabel('O que foi dito').fill('odeia filme lento')
