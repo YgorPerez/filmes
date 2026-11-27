@@ -1,3 +1,4 @@
+import { useHydrated } from '@tanstack/react-router'
 import { Fragment, type ReactNode } from 'react'
 import type { PersonNotice, PersonRefusal } from '#/content/person-action'
 import {
@@ -30,7 +31,6 @@ import { MyStartSections, type MyStart } from './my-start'
 import { StrengthDots } from './person-marks'
 import { PERSON, RATING_CHOICES } from './person.copy'
 import { buttonVariants } from './kit/button-variants'
-import { useHydrated } from './kit/fetch-form'
 import { shortDate } from './dates'
 
 type Statement = PersonPage['stated'][number]

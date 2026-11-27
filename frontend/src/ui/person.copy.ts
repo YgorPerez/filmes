@@ -1,6 +1,5 @@
 import {
   reportSource,
-  type FieldProblem,
   type PersonNotice,
   type PersonRefusal,
 } from '#/content/person-action'
@@ -222,7 +221,7 @@ export const PERSON = {
       ? `${String(rating).replace('.', ',')}★ no ${source}`
       : source,
   /** What is wrong with a field, under it (`formProblem`). */
-  fieldProblem: ({ field, problem }: FieldProblem) => {
+  fieldProblem: ({ field, problem }: { field: string; problem: string }) => {
     if (problem === 'rating') return 'A Nota vai de 1 a 10.'
     if (problem === 'film') return 'O filme é o tt… dele no Catálogo.'
     if (problem === 'id')
