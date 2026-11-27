@@ -78,6 +78,24 @@ describe('the Trakt connection screen', () => {
     expect(html).not.toContain('/trakt/desconectar')
   })
 
+  it('splits what it reads from what it sends, and says where it leads (#274)', () => {
+    const html = renderToStaticMarkup(
+      <TraktScreen page={{ status: 'disconnected', name: 'Iara' }} />,
+    )
+    expect(html).toContain('O filmes lê do seu Trakt')
+    expect(html).toContain('O filmes envia ao seu Trakt, ao salvar o Feedback')
+    expect(html).toContain('Depois ele volta para esta página')
+    expect(html).not.toContain('Importar</a>')
+  })
+
+  it('has the way back to Importar for a Dono, in the app', () => {
+    const html = renderToStaticMarkup(
+      <TraktScreen page={{ status: 'connected', name: 'Iara' }} inApp />,
+    )
+    expect(html).toMatch(/<a href="\/meu-gosto\/importar"[^>]*>Importar<\/a>/)
+    expect(html).not.toContain('Créditos')
+  })
+
   it('lets a connected Pessoa disconnect', () => {
     const html = renderToStaticMarkup(
       <TraktScreen page={{ status: 'connected', name: 'Iara' }} />,
