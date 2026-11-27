@@ -9,7 +9,8 @@ import { within } from './form-fields'
  * `anotada`: only stars and comments, kept in the Session;
  * `perguntas-gravadas` and `perguntas-descartadas`: the Dono's decision on
  * a Presente's Perguntas par a par (#181); `contada`: the Feedback was
- * recorded and the Sessão closed. */
+ * recorded and the Sessão closed; `corrigida`: a told Sessão's Feedback
+ * was replaced (#344). */
 const SESSION_NOTICES = [
   'aberta',
   'regerada',
@@ -17,6 +18,7 @@ const SESSION_NOTICES = [
   'perguntas-gravadas',
   'perguntas-descartadas',
   'contada',
+  'corrigida',
 ] as const
 export type SessionNotice = (typeof SESSION_NOTICES)[number]
 export const isSessionNotice = within(SESSION_NOTICES)

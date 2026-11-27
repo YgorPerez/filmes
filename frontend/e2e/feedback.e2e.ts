@@ -5,7 +5,12 @@
 // Teo and Iara (the satisfaction only counts Sessions shared with today's
 // Presentes). `E2E_SCREENSHOTS=<folder>` saves a capture of each screen.
 
-import { openSessions, recommendSession } from '@filmes/engine'
+import {
+  openSessions,
+  recommendSession,
+  recordedFeedback,
+  recordFeedback,
+} from '@filmes/engine'
 import { type Page } from '@playwright/test'
 import { engineRun, expect, loginAsBruno, snap, tab, test } from './support'
 
@@ -161,6 +166,53 @@ test('a relayed Relato, a film by its title, and a refusal in place', async ({
     'Esta Sessão já foi contada',
   )
   await expect(page.getByRole('link', { name: 'Ver a Sessão' })).toBeVisible()
+  await snap(page, info, 'feedback-contada')
+})
+
+test('the Dono corrects a told Session, from the tape given back (#344)', async ({
+  page,
+}, info) => {
+  test.skip(info.project.name !== 'mobile', 'one group per project')
+  const id = await openSession(['dono', 'teo', 'iara'])
+  await engineRun((engine) =>
+    engine.run(
+      recordFeedback({
+        session: id,
+        film: 'Café Amargo',
+        ratings: ['dono=4'],
+        reports: ['iara=gostou'],
+        comments: ['iara=riu muito'],
+      }),
+      { owner: 'bruno' },
+    ),
+  )
+  await loginAsBruno(page)
+  await page.goto(`/sessoes/${id}`)
+  await page
+    .getByRole('region', { name: 'Fita devolvida' })
+    .getByRole('link', { name: 'Corrigir o que contei' })
+    .click()
+  await expect(page).toHaveURL(
+    new RegExp(`/sessoes/${id}/contar\\?corrigir=sim$`),
+  )
+
+  // The form comes with what was told, and saving replaces it.
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+    'Corrigir o que contei',
+  )
+  const iara = reactionOf(page, 'Iara')
+  await expect(
+    iara.getByRole('radio', { name: 'gostou', exact: true }),
+  ).toBeChecked()
+  await expect(page.getByLabel('Comentário: Iara')).toHaveValue('riu muito')
+  await snap(page, info, 'feedback-corrigir')
+  await rate(page, 'Bruno', '6')
+  await page.getByRole('button', { name: 'Gravar a correção' }).click()
+  await expect(page).toHaveURL(new RegExp(`/sessoes/${id}\\?feito=corrigida$`))
+  await expect(page.getByText('Correção gravada')).toBeVisible()
+  await snap(page, info, 'sessao-corrigida')
+  const told = await engineRun((engine) => engine.run(recordedFeedback(id)))
+  expect(told?.reactions.find((r) => r.person === 'bruno')?.rating).toBe(6)
 })
 
 test.describe('without the JavaScript', () => {

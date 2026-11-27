@@ -332,7 +332,7 @@ describe('FeedbackScreen, refusals', () => {
       <FeedbackScreen
         session="x"
         page="unknown"
-        told={{ title: 'Pequenos Milagres' }}
+        told={{ title: 'Pequenos Milagres', mine: false }}
       />,
     )
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
@@ -348,6 +348,22 @@ describe('FeedbackScreen, refusals', () => {
     expect(screen.getByRole('alert').textContent).toContain(
       FEEDBACK.unavailable,
     )
+  })
+})
+
+describe('parseFeedback correcting (#344)', () => {
+  it('reads corrigir=sim as a correction, and nothing else', () => {
+    const form = (fields: Record<string, string>) => {
+      const data = new FormData()
+      for (const [name, value] of Object.entries(fields)) data.set(name, value)
+      return parseFeedback(data)
+    }
+    expect(form({ filme: 'nada', corrigir: 'sim' })).toEqual({
+      ok: { film: null, reactions: [], correct: true },
+    })
+    expect(form({ filme: 'nada', corrigir: 'x' })).toEqual({
+      ok: { film: null, reactions: [] },
+    })
   })
 })
 
@@ -418,5 +434,33 @@ describe('the Catálogo search', () => {
         }) as HTMLInputElement
       ).value,
     ).toBe('')
+  })
+})
+
+describe('a told Session’s form (#344)', () => {
+  it('offers the correction only to a Dono who was there', () => {
+    render(
+      <FeedbackScreen
+        session="x"
+        page="unknown"
+        told={{ title: 'Pequenos Milagres', mine: false }}
+      />,
+    )
+    expect(
+      screen.queryByRole('link', { name: FEEDBACK.form.correct }),
+    ).toBeNull()
+    cleanup()
+    render(
+      <FeedbackScreen
+        session="x"
+        page="unknown"
+        told={{ title: 'Pequenos Milagres', mine: true }}
+      />,
+    )
+    expect(
+      screen
+        .getByRole('link', { name: FEEDBACK.form.correct })
+        .getAttribute('href'),
+    ).toBe('/sessoes/x/contar?corrigir=sim')
   })
 })

@@ -246,6 +246,11 @@ export {
   type FeedbackResult,
 } from './sessions/feedback.ts'
 export {
+  recordedFeedback,
+  type ToldFeedback,
+  type ToldReaction,
+} from './sessions/told.ts'
+export {
   listSessions,
   openSession,
   openSessions,

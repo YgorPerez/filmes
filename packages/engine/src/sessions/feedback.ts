@@ -57,7 +57,7 @@ import { ownersOf, syncSession } from './database.ts'
 import { comments, reactions, sessionSeen, type ReportLevel } from './facts.ts'
 import { isOpen, readSession, sessionRelative, writeSession } from './file.ts'
 import { authorFor } from './open.ts'
-import { syncTraktFeedback } from './trakt.ts'
+import { syncTraktFeedback, traktSent } from './trakt.ts'
 
 export interface FeedbackRequest {
   /** The Session's id, as `sessoes-abertas` lists it. */
@@ -71,6 +71,10 @@ export interface FeedbackRequest {
   readonly reports?: ReadonlyArray<string>
   /** `PESSOA=TEXTO`, with that Pessoa's Nota or Relato. */
   readonly comments?: ReadonlyArray<string>
+  /** A told Session takes it instead of its Feedback (#344): the whole
+   * Feedback is replaced, by a Dono who was there. Without it, a told
+   * Session refuses. */
+  readonly correct?: boolean
 }
 
 export interface ChosenFilm {
@@ -571,6 +575,28 @@ const chosenResult = (
           }),
       }
 
+/** A told Session is corrected only by a Dono who was among its
+ * Presentes; with no login, by anyone (#344). */
+const mayCorrect = (id: string, front: YamlMapping) =>
+  Effect.gen(function* () {
+    const speaker = yield* Owner
+    const attendees = front.get('attendees')
+    const there = isSequence(attendees)
+      ? attendees.map((p) => pyStrValue(p))
+      : []
+    if (speaker !== null && !there.includes(speaker))
+      return yield* engineError(
+        'invalid_usage',
+        `só quem esteve na Sessão ${id} corrige o que foi contado`,
+      )
+  })
+
+/** When a told Session was told: the date its Fatos carry. */
+const toldOn = (front: YamlMapping): YamlValue => {
+  const feedback = front.get('feedback')
+  return isMapping(feedback) ? (feedback.get('recorded_on') ?? null) : null
+}
+
 /** Writes the Feedback inside the write. */
 const writeFeedback = (
   db: Connection,
@@ -580,12 +606,15 @@ const writeFeedback = (
   Effect.gen(function* () {
     const id = request.session
     const { frontmatter, body } = yield* readSession(id)
-    if (!isOpen(frontmatter))
+    const told = !isOpen(frontmatter)
+    if (told && request.correct !== true)
       return yield* engineError(
         'closed_session',
         `a Sessão ${id} já tem Feedback`,
       )
+    if (told) yield* mayCorrect(id, frontmatter)
     const front = new Map(frontmatter)
+    const night = told ? toldOn(frontmatter) : null
     const { owners, attendees, list } = yield* feedbackReactions(
       db,
       front,
@@ -602,10 +631,13 @@ const writeFeedback = (
     front.set('chosen_in_recommendation', position)
     if (shown !== undefined && shown !== null)
       front.set('chosen_in_shown', shownPosition)
+    // A correction keeps the night's date, which the Fatos carry, and
+    // says when it was corrected (#344).
     front.set(
       'feedback',
       new Map<string, YamlValue>([
-        ['recorded_on', today],
+        ['recorded_on', night ?? today],
+        ...(night === null ? [] : [['corrected_on', today] as const]),
         ['reactions', list],
       ]),
     )
@@ -640,11 +672,17 @@ export const recordFeedback = (
     const id = request.session
     const writer = yield* DataWriter
     const author = yield* authorFor(yield* sessionOwner(id))
+    // What Trakt already has from this Session: a correction sends only
+    // what changed (#344).
+    const sent = request.correct === true ? yield* traktSent(id) : null
     const result = yield* writer.write(
-      { author, message: `feedback ${id}` },
+      {
+        author,
+        message: sent === null ? `feedback ${id}` : `feedback ${id} corrigido`,
+      },
       (db) => writeFeedback(db, request, today),
     )
-    const warnings = yield* syncTraktFeedback(id)
+    const warnings = yield* syncTraktFeedback(id, sent)
     return warnings.length > 0 ? { ...result, warnings } : result
   })
 

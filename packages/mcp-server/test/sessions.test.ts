@@ -75,6 +75,25 @@ describe('open_sessions and record_feedback', () => {
     assert.equal(nothing.chosen, null)
   })
 
+  test('correct replaces the Feedback of a told Session (#344)', async () => {
+    const { ok, call } = await connect(useFixture())
+    const session = (await ok('recommend', { attendees: ['iara'] })).session.id
+    await ok('record_feedback', { session, nothing: true })
+
+    assert.match(
+      failureText(
+        await call('record_feedback', { session, film: 'Noite de Estreia' }),
+      ),
+      /já tem Feedback/,
+    )
+    const corrected = await ok('record_feedback', {
+      session,
+      film: 'Noite de Estreia',
+      correct: true,
+    })
+    assert.equal(corrected.chosen.id, 'tt9000203')
+  })
+
   test('a 1-10 rating is halved, the original kept, and the comment becomes a Declarado', async () => {
     const { ok, fixture } = await connect(useFixture())
     const session = (

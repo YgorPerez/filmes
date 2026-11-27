@@ -35,7 +35,9 @@ export default defineTool({
     'a Pessoa achou do filme e vira Declarado específico dela sobre ele, sem Nota nova. Presente ' +
     'sem reação fica sem Fato mas ganha o Já visto. Devolve o Filme escolhido (`chosen`), os `facts` gravados (linhas de ' +
     'Evidência com Força e Tipo) e `withoutReaction`. Aceite texto livre. Se faltar alguma reação, ' +
-    'pergunte só por quem faltou. Mostre o registro e só chame depois da confirmação do Dono.',
+    'pergunte só por quem faltou. Mostre o registro e só chame depois da confirmação do Dono. Para corrigir uma ' +
+    'Sessão já contada, leia o que foi contado (`billboard`) e mande o Feedback inteiro de novo com `correct: true`: ' +
+    'ele substitui o anterior, e o Trakt recebe só o que mudou.',
   input: z
     .object({
       session: sessionId(
@@ -52,6 +54,12 @@ export default defineTool({
         .boolean()
         .optional()
         .describe('"não vimos nada": fecha sem Filme escolhido'),
+      correct: z
+        .boolean()
+        .optional()
+        .describe(
+          'true para corrigir uma Sessão já contada: o Feedback inteiro substitui o anterior',
+        ),
       ratings: z
         .array(
           z
@@ -100,9 +108,10 @@ export default defineTool({
       message: 'mande film ou nothing: true, um dos dois',
       path: ['film'],
     }),
-  run: ({ session, film, ratings = [], reports = [] }) =>
+  run: ({ session, film, correct, ratings = [], reports = [] }) =>
     recordFeedback({
       session,
+      ...(correct === true && { correct }),
       film: film ?? null,
       ratings: ratings.map(
         (r) => `${r.person}=${r.rating}${r.scale === 10 ? '/10' : ''}`,

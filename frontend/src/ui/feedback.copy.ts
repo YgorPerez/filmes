@@ -16,6 +16,12 @@ export const FEEDBACK = {
         ? 'Esta Sessão já foi contada: não viram nada da prateleira.'
         : `Esta Sessão já foi contada: viram ${title}.`,
     toSession: 'Ver a Sessão',
+    /** A Dono who was there corrects a told Session (#344). */
+    correct: 'Corrigir o que contei',
+    correctTitle: 'Corrigir o que contei',
+    correctLead:
+      'O formulário vem com o que foi contado. Gravar troca o que estava gravado; no Trakt, vai só o que mudou.',
+    correctSubmit: 'Gravar a correção',
     toList: 'Ver Sessões',
     label: 'Contar como foi',
     /** Said to one when the Session had one Presente (#272). */

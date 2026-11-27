@@ -525,6 +525,31 @@ describe('a Session’s page, an acrescentar only noted and a told Session', () 
     expect(
       screen.queryByRole('link', { name: SESSIONS.list.feedback }),
     ).toBeNull()
+    // Bruno was not there: no correction for him (#344).
+    expect(
+      within(tape).queryByRole('link', { name: SESSIONS.session.correct }),
+    ).toBeNull()
+  })
+
+  it('a Dono who was there may correct what was told (#344)', () => {
+    render(
+      <SessionScreen
+        page={{
+          ...PAGE,
+          session: {
+            ...CLOSED,
+            attendees: [{ person: 'bruno', name: 'Bruno', owner: true }],
+          },
+          billboard: { ...MODEL, open: false },
+        }}
+      />,
+    )
+    const tape = screen.getByRole('region', { name: SESSIONS.session.returned })
+    expect(
+      within(tape)
+        .getByRole('link', { name: SESSIONS.session.correct })
+        .getAttribute('href'),
+    ).toBe(`/sessoes/${CLOSED.id}/contar?corrigir=sim`)
   })
 })
 
