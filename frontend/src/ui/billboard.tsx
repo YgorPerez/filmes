@@ -311,7 +311,6 @@ export function Billboard({
       change={change}
       canKeep={canKeep}
       viewed={onSend !== undefined}
-      headed={fullscreen || onSend !== undefined}
     />
   )
   const body = fullscreen ? (
@@ -440,17 +439,15 @@ function Shelf({
   change,
   canKeep,
   viewed,
-  headed,
 }: {
   billboard: BillboardModel
   marks: Marks
   change: (next: Marks) => void
   canKeep: boolean
-  /** In the MCP Apps view. */
+  /** In the MCP Apps view, inline, fullscreen or without one: under a
+   * head that says where the version stands (`Standing`), as the web's
+   * page is not. */
   viewed: boolean
-  /** Under a head that says where the version stands (`Standing`): the
-   * fullscreen and the view without one, not the web. */
-  headed: boolean
 }) {
   const empty = billboard.films.length === 0
   return (
@@ -467,7 +464,7 @@ function Shelf({
         billboard={billboard}
         marks={marks}
         change={change}
-        reactionsOnTop={headed && linesOnTop(billboard)}
+        reactionsOnTop={viewed && linesOnTop(billboard)}
       />
       {billboard.open && !empty && (
         <ReplyBox
