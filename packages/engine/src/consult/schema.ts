@@ -28,7 +28,11 @@ export const consultSchema: Effect.Effect<
          FROM sqlite_master m JOIN pragma_table_info(m.name) p
          WHERE m.type IN ('table', 'view') AND m.name NOT LIKE 'sqlite\\_%' ESCAPE '\\'
          ORDER BY m.name, p.cid`,
-      )) as ReadonlyArray<{ name: string; kind: 'table' | 'view'; column: string }>
+      )) as ReadonlyArray<{
+        name: string
+        kind: 'table' | 'view'
+        column: string
+      }>
       const tables = new Map<string, SchemaTable & { columns: string[] }>()
       for (const row of rows) {
         const table = tables.get(row.name) ?? {
