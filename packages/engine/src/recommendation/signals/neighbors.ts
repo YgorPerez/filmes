@@ -80,11 +80,7 @@ export const neighbors: Signal = {
             filmId: candidate,
             text:
               `${seedText(kind, rating, film)}${own}; ` +
-              neighborhoodText(
-                base,
-                both,
-                belowNeighborhoodCut(kind, rating),
-              ),
+              neighborhoodText(base, both, belowNeighborhoodCut(kind, rating)),
             source: text(row, 'fonte'),
             date: text(row, 'data'),
             strength,

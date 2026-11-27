@@ -52,9 +52,7 @@ export const Closed: Story = {
     const canvas = within(canvasElement)
     const lists = canvas.getAllByRole('list', { name: 'Filme escolhido' })
     await expect(lists).toHaveLength(1)
-    await expect(lists[0]).toHaveTextContent(
-      'Você: previsto 8,3 · deu 6 de 10',
-    )
+    await expect(lists[0]).toHaveTextContent('Você: previsto 8,3 · deu 6 de 10')
     await expect(lists[0]).toHaveTextContent('Iara: gostou')
     await expect(canvas.queryByRole('button', { name: 'Enviar' })).toBeNull()
   },

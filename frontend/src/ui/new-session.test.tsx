@@ -482,7 +482,10 @@ describe('the bar by Recomendar (#272)', () => {
       screen.getByRole('combobox', { name: copy.child }),
       copy.childNoAge,
     )
-    await user.type(screen.getByLabelText(copy.language, { exact: false }), 'pt')
+    await user.type(
+      screen.getByLabelText(copy.language, { exact: false }),
+      'pt',
+    )
     expect(
       screen.getByText(`${copy.alone} · com criança · + 1 limite`),
     ).toBeTruthy()

@@ -223,9 +223,7 @@ describe('the head’s ⋯ menu and "?" legend (#272)', () => {
     expect(legend.open).toBe(true)
     await user.keyboard('{Escape}')
     expect(legend.open).toBe(false)
-    expect(document.activeElement).toBe(
-      screen.getByLabelText(BILLBOARD.legend),
-    )
+    expect(document.activeElement).toBe(screen.getByLabelText(BILLBOARD.legend))
 
     await user.click(screen.getByLabelText(SESSIONS.session.menu))
     await user.click(screen.getByLabelText(BILLBOARD.legend))

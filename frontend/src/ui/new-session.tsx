@@ -233,9 +233,15 @@ const detailsAsked = (asked: Asked) =>
   (asked.seriesOrder !== undefined &&
     asked.seriesOrder !== SERIES_ORDER_CHOICES[DEFAULT_SERIES_ORDER_CHOICE])
 
+/** A text field's value; a file (none here) is no text. */
+const fieldText = (data: FormData, name: string): string => {
+  const value = data.get(name)
+  return typeof value === 'string' ? value : ''
+}
+
 /** The words of a list field ("assustador, tenso"). */
 const listed = (data: FormData, name: string) =>
-  String(data.get(name) ?? '')
+  fieldText(data, name)
     .split(',')
     .map((word) => word.trim())
     .filter((word) => word !== '')
@@ -244,9 +250,9 @@ const listed = (data: FormData, name: string) =>
  * them, and the rest counted (#272). */
 function limitsOf(data: FormData): string[] {
   const { night } = SESSIONS.form
-  const filled = (name: string) => String(data.get(name) ?? '').trim() !== ''
+  const filled = (name: string) => fieldText(data, name).trim() !== ''
   const noMoods = listed(data, 'sem-climas')
-  const child = String(data.get('crianca') ?? '')
+  const child = fieldText(data, 'crianca')
   const more = [
     filled('desde') || filled('ate'),
     filled('idioma'),

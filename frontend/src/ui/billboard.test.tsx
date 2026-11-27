@@ -342,9 +342,10 @@ describe('the Cartaz shows, a Reação from outside', () => {
     const block = within(
       screen.getByRole('region', { name: 'Filme escolhido' }),
     )
-    expect(block.getAllByRole('listitem').map((li) => li.textContent)).toEqual(
-      ['teo: previsto 7 · neutro', CHOSEN_COPY.noReaction('Você e Iara')],
-    )
+    expect(block.getAllByRole('listitem').map((li) => li.textContent)).toEqual([
+      'teo: previsto 7 · neutro',
+      CHOSEN_COPY.noReaction('Você e Iara'),
+    ])
   })
 })
 

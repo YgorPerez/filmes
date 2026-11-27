@@ -114,20 +114,21 @@ function Poster({
             : stamp.kind === 'seen'
               ? card.seenStamp
               : card.seenBeforeStamp}
-          {stamp.kind !== 'swap' && (!everyone || stamp.kind === 'seenBefore') && (
-            <>
-              <span aria-hidden="true" className="inline-flex gap-0.5">
-                {stamp.who.map((p) => (
-                  <Avatar key={p.slug} person={p} />
-                ))}
-              </span>
-              <span className="sr-only">
-                {(stamp.kind === 'seen'
-                  ? card.seenStampWho
-                  : card.seenBeforeStampWho)(stamp.who.map((p) => p.label))}
-              </span>
-            </>
-          )}
+          {stamp.kind !== 'swap' &&
+            (!everyone || stamp.kind === 'seenBefore') && (
+              <>
+                <span aria-hidden="true" className="inline-flex gap-0.5">
+                  {stamp.who.map((p) => (
+                    <Avatar key={p.slug} person={p} />
+                  ))}
+                </span>
+                <span className="sr-only">
+                  {(stamp.kind === 'seen'
+                    ? card.seenStampWho
+                    : card.seenBeforeStampWho)(stamp.who.map((p) => p.label))}
+                </span>
+              </>
+            )}
         </Sticker>
       )}
       {film.bet && (

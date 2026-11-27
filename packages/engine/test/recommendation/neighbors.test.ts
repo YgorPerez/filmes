@@ -175,8 +175,8 @@ describe('the neighbourhood path', () => {
   })
 
   test('a weak seed under 8 of 10 says the share whole, with no qualifier', async () => {
-    const [e] = reviews(await all(useFixture()), 'Luz de Inverno').filter(
-      (x) => x.text.startsWith('deu 7 de 10 a Rio Abaixo'),
+    const [e] = reviews(await all(useFixture()), 'Luz de Inverno').filter((x) =>
+      x.text.startsWith('deu 7 de 10 a Rio Abaixo'),
     )
     expect(e?.text).toBe(
       'deu 7 de 10 a Rio Abaixo (2014); das 900 pessoas que deram 8 ou mais a ele, 70% deram 8 ou mais a este',
