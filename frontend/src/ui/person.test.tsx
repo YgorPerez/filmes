@@ -750,4 +750,59 @@ describe('Meu gosto in the second person', () => {
     const seen = section(PERSON.seen.title)
     expect(within(seen).getByText(PERSON.seen.empty)).toBeTruthy()
   })
+
+  const TEN = Array.from({ length: 10 }, (_, i) => ({
+    ...IARA.ratings![0]!,
+    filmId: `tt90000${i}`,
+    factId: `notas:${i}`,
+  }))
+  const steps = (start: MyStart | undefined, page: PersonPage) => {
+    render(<PersonScreen slug="bruno" page={page} start={start} />)
+    const name = within(section(PERSON.glance.title))
+      .getAllByRole('link')
+      .map((a) => a.textContent)
+    cleanup()
+    return name
+  }
+
+  it('names the next step after ten Notas', () => {
+    const setup = (done: boolean): MyStart => ({
+      mcpUrl: 'https://filmes.example/mcp',
+      setup: {
+        ratings: 10,
+        steps: SETUP_STEPS.map((step) => ({
+          step,
+          done: step !== 'connector' || done,
+          skipped: false,
+        })),
+      },
+    })
+    const rated = { ...OWN, ratings: TEN }
+    expect(steps(setup(false), rated)).toEqual([PERSON.glance.steps.connector])
+    expect(
+      steps(setup(true), { ...rated, openQuestions: IARA.openQuestions }),
+    ).toEqual([PERSON.glance.steps.questions])
+    expect(steps(setup(true), rated)).toEqual([PERSON.glance.steps.ask])
+  })
+
+  it('shows a moved Ajuste, the others in one row, and speaks to her in the notice', () => {
+    render(
+      <PersonScreen
+        slug="bruno"
+        page={{
+          ...OWN,
+          vetoes: IARA.vetoes,
+          adjustments: IARA.adjustments,
+        }}
+        notice="gravado"
+      />,
+    )
+    expect(screen.getByText(PERSON.adjustments.restNormal)).toBeTruthy()
+    expect(screen.getByText(PERSON.ownNotices.gravado)).toBeTruthy()
+    expect(
+      within(screen.getByRole('navigation', { name: PERSON.contents }))
+        .getAllByRole('link')
+        .map((a) => a.textContent),
+    ).toEqual(['Vetos 1', 'Declarados 2', 'Relatos 1', 'Ajustes 1'])
+  })
 })
