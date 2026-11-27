@@ -49,10 +49,20 @@ export function AgainstMark() {
  * her name ("Você" for the Dono who looks), and the three Forças in words
  * on a line of their own, so the legend never runs into the names
  * (#277). */
-export function PeopleLegend({ billboard }: { billboard: BillboardModel }) {
+export function PeopleLegend({
+  billboard,
+  avatars = true,
+}: {
+  billboard: BillboardModel
+  /** False when the Reações right above name everyone (#277). */
+  avatars?: boolean
+}) {
   return (
     <div className="flex flex-col gap-xs text-meta text-ink-2">
-      <p className="flex flex-wrap items-center gap-x-xl gap-y-xs">
+      <p
+        hidden={!avatars}
+        className="flex flex-wrap items-center gap-x-xl gap-y-xs"
+      >
         {billboard.attendees.map((p) => (
           <span
             key={p.slug}

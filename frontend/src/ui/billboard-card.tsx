@@ -107,7 +107,14 @@ function Poster({
       {stamp && (
         <Sticker
           kind={stamp.kind === 'swap' ? 'swap' : 'seen'}
-          className={`absolute left-1/2 inline-flex -translate-x-1/2 items-center gap-xs whitespace-nowrap ${cover ? 'top-[40%]' : 'top-[62%]'}`}
+          // A Já vi stamp, with its avatars, is wider than the phone's
+          // 112px poster: from its left edge, 9px out like the price
+          // sticker, so it keeps the gutter (#277). Centred otherwise.
+          className={`absolute inline-flex items-center gap-xs whitespace-nowrap ${
+            stamp.kind === 'swap'
+              ? 'left-1/2 -translate-x-1/2'
+              : '-left-[9px] min-[560px]:left-1/2 min-[560px]:-translate-x-1/2'
+          } ${cover ? 'top-[40%]' : 'top-[62%]'}`}
         >
           {stamp.kind === 'swap'
             ? card.swapStamp
@@ -397,6 +404,7 @@ export function BillboardCard({
   level = 2,
   marks,
   onChange,
+  reactionsAbove = false,
 }: {
   film: BillboardFilm
   people: readonly BillboardPerson[]
@@ -404,6 +412,9 @@ export function BillboardCard({
   level?: Level
   marks?: FilmMarks
   onChange?: (marks: FilmMarks) => void
+  /** The view's head says each Reação already (#277): the card keeps its
+   * label only. */
+  reactionsAbove?: boolean
 }) {
   // Who marked Já vi, and who the engine knows saw it (#272).
   const marked = marks?.seen ?? []
@@ -436,6 +447,7 @@ export function BillboardCard({
           reactions={film.reactions}
           people={people}
           level={level}
+          labelOnly={reactionsAbove}
         />
       )}
       {marks && onChange && (

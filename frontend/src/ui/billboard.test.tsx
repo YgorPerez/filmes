@@ -177,7 +177,7 @@ describe('the Cartaz shows, shared Evidence and the Nota prevista', () => {
       within(card(n).getByRole('list', { name: BILLBOARD.card.why }))
     const [shared] = why(1).getAllByRole('listitem')
     expect(shared!.textContent).toBe(
-      'Você e Iara: dirigido por Helena Prado, como 2 filmes a que deu nota altaWikidata',
+      'Você e Iara: dirigido por Helena Prado, como 2 filmes a que deram nota altaWikidata',
     )
     expect(within(shared!).getByLabelText('Força moderada').dataset.level).toBe(
       '2',
@@ -1008,6 +1008,18 @@ describe('in the MCP Apps view without fullscreen', () => {
       ),
     ).toBeTruthy()
     expect(screen.queryByText(BILLBOARD.redoneWhy)).toBeNull()
+  })
+
+  it('closed, says each Reação once, at the top (#277)', () => {
+    render(<Billboard billboard={CLOSED} onSend={onSend} />)
+    expect(
+      screen.getAllByRole('list', { name: 'Filme escolhido' }),
+    ).toHaveLength(1)
+    // The card keeps its label.
+    expect(
+      card(1).getByRole('heading', { level: 4, name: 'Filme escolhido' }),
+    ).toBeTruthy()
+    expect(card(1).queryByText('Iara: gostou')).toBeNull()
   })
 
   it('with no film, says what to ask in the chat', () => {

@@ -83,6 +83,7 @@ export function ChosenReactions({
   people,
   level = 2,
   bare = false,
+  labelOnly = false,
 }: {
   reactions: readonly BillboardReaction[]
   people: readonly BillboardPerson[]
@@ -90,6 +91,8 @@ export function ChosenReactions({
   /** The lines alone, under a title of the caller's: the told Session's
    * "Fita devolvida" (#272). */
   bare?: boolean
+  /** The label alone: the view's head says the lines already (#277). */
+  labelOnly?: boolean
 }) {
   const Label = level === 3 ? 'h4' : 'h3'
   if (reactions.length === 0) return null
@@ -99,7 +102,7 @@ export function ChosenReactions({
       <Label className="font-display text-label text-ink-2 uppercase">
         {CHOSEN.title}
       </Label>
-      <Lines reactions={reactions} people={people} />
+      {!labelOnly && <Lines reactions={reactions} people={people} />}
     </div>
   )
 }
