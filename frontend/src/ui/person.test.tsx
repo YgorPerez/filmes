@@ -297,7 +297,13 @@ describe('PersonScreen forms', () => {
     )
     const fields = within(form)
     await pick(user, form, /^Filme/, 'Fronteira (2008)')
-    await user.selectOptions(fields.getByLabelText(PERSON.rating), '7')
+    // The 1 to 10 the rating screen and the Feedback use (#330).
+    await user.click(
+      within(fields.getByRole('group', { name: PERSON.rating })).getByRole(
+        'radio',
+        { name: '7' },
+      ),
+    )
     expect(posted(form)).toEqual({
       kind: 'seen',
       film: 'tt9000401',
@@ -521,6 +527,9 @@ describe('PersonScreen edit', () => {
 
   it('opens a Já visto with its Nota on the 1 to 10 scale, the film fixed', async () => {
     const { form } = await edit('Casa Cheia')
+    expect(document.activeElement).toBe(
+      within(form).getByRole('radio', { name: '9' }),
+    )
     expect(within(form).getByText(PERSON.edit.filmFixed)).toBeTruthy()
     expect(posted(form)).toEqual({
       kind: 'edit',
@@ -568,6 +577,42 @@ describe('PersonScreen edit', () => {
     ).toBeNull()
     await user.keyboard('{Escape}')
     expect(form.isConnected).toBe(true)
+  })
+
+  it('brings the Veto’s target back when its group is let go', async () => {
+    const { user, form } = await edit('nunca vê terror')
+    const lento = within(form).getByRole('radio', { name: 'lento' })
+    await user.click(lento)
+    await user.click(lento)
+    expect(within(form).getByText('Terror')).toBeTruthy()
+    expect(posted(form)).toMatchObject({ target: 'Q9001801' })
+  })
+
+  it('holds Tirar on another item while an edit has changes', async () => {
+    const { user, form } = await edit('nunca vê terror')
+    await user.type(
+      within(form).getByLabelText(PERSON.vetoes.text, { exact: false }),
+      '!',
+    )
+    await user.click(
+      screen.getByRole('button', { name: PERSON.removeLabel('Casa Cheia') }),
+    )
+    expect(within(form).getByRole('alert').textContent).toBe(PERSON.edit.held)
+    expect(
+      screen.queryByRole('button', { name: PERSON.removeSure('Casa Cheia') }),
+    ).toBeNull()
+  })
+
+  it('takes the alert away once the form changes again', async () => {
+    const { user, form } = await edit('nunca vê terror')
+    const text = within(form).getByLabelText(PERSON.vetoes.text, {
+      exact: false,
+    })
+    await user.type(text, '!')
+    await user.keyboard('{Escape}')
+    expect(within(form).getByRole('alert')).toBeTruthy()
+    await user.type(text, '!')
+    expect(within(form).queryByRole('alert')).toBeNull()
   })
 
   it('leaves a form without changes on Esc', async () => {

@@ -185,9 +185,9 @@ export const PERSON = {
     /** A Já visto's film stays: another film is another Já visto. */
     filmFixed: 'Para trocar o filme, tire este Já visto e acrescente o certo.',
     /** The Fonte of an edit: left empty, the one it had stays. */
-    sourceHint: 'vazia, fica a de antes',
+    sourceHint: 'de onde veio; apagada, fica a de antes',
     /** Why an imported item has no "Editar", for a screen reader. */
-    readOnly: 'veio de fora; corrija na origem',
+    readOnly: 'corrija na origem',
   },
   remove: 'Tirar',
   removeLabel: (what: string) => `Tirar ${what}`,
@@ -196,6 +196,7 @@ export const PERSON = {
   removeSure: (what: string) => `Tirar ${what} de vez`,
   removeSureShort: 'Tirar de vez',
   removeKeep: 'Manter',
+  removeWarning: 'Sai do arquivo e não volta.',
   save: 'Gravar',
   saving: 'Gravando…',
   imported: 'importado',
@@ -252,7 +253,7 @@ export const PERSON = {
   targetSearch: 'Busque pelo nome',
   /** Before the JavaScript, the field takes the ID. */
   idHint: 'tt… de um filme ou Q… de uma pessoa, gênero ou série',
-  groupsLabel: 'ou um grupo',
+  groupsLabel: 'ou, em vez disso, um grupo',
   targetChip: (label: string, kind: string) => `${label} · ${kind}`,
   film: 'Filme',
   filmKind: 'filme',

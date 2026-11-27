@@ -292,14 +292,24 @@ export function RemoveForm({
   what,
   id,
   label,
+  onAsking,
+  mayAsk = () => true,
 }: {
   slug: string
   what: 'stated' | 'report' | 'veto' | 'seen'
   id: string
   label: string
+  /** While it asks: its row hides what else it offers. */
+  onAsking?: (asking: boolean) => void
+  /** Whether it may ask now: an edit with changes elsewhere holds it. */
+  mayAsk?: () => boolean
 }) {
   const live = useHydrated()
   const [asking, setAsking] = useState(false)
+  const toggle = (value: boolean) => {
+    setAsking(value)
+    onAsking?.(value)
+  }
   const confirm = useRef<HTMLButtonElement>(null)
   const ask = useRef<HTMLButtonElement>(null)
   const [asked, setAsked] = useState(false)
@@ -316,19 +326,28 @@ export function RemoveForm({
     >
       <input type="hidden" name="tipo" value={what} />
       <input type="hidden" name="id" value={id} />
+      {live && asking && (
+        <p className="basis-full text-meta text-ink-2">
+          {PERSON.removeWarning}
+        </p>
+      )}
       {live && !asking ? (
         <Button
           ref={ask}
           type="button"
           variant="option"
           aria-label={PERSON.removeLabel(label)}
-          onClick={() => setAsking(true)}
+          onClick={() => {
+            if (mayAsk()) toggle(true)
+          }}
         >
           {PERSON.remove}
         </Button>
       ) : (
         <Submit
           ref={confirm}
+          // The decisive step, marked as a chosen option: no new colour.
+          variant={live ? 'chosen' : 'option'}
           className=""
           aria-label={
             live ? PERSON.removeSure(label) : PERSON.removeLabel(label)
@@ -342,7 +361,7 @@ export function RemoveForm({
           type="button"
           variant="link"
           onClick={() => {
-            setAsking(false)
+            toggle(false)
             setAsked(true)
           }}
         >
@@ -460,6 +479,61 @@ export function SelectField({
         ))}
       </select>
     </FieldLabel>
+  )
+}
+
+/** A Nota from 1 to 10 as radios, the scale the rating screen and the
+ * Feedback use, with "sem Nota" first: ten cells, the chosen one on the
+ * orange disc. Posts `n/10`, or nothing. */
+export function RatingField({
+  name,
+  label,
+  defaultValue = '',
+}: {
+  name: string
+  label: string
+  /** `n/10`, or '' for none. */
+  defaultValue?: string
+}) {
+  const cell =
+    'group/rating relative grid h-touch min-w-0 cursor-pointer place-items-center rounded-rail bg-surface-2 font-display text-field-label text-ink tabular-nums has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-focus'
+  const radio = 'absolute inset-0 m-0 size-full cursor-pointer opacity-0'
+  return (
+    <fieldset className="flex flex-col gap-xs">
+      <legend className="mb-xs font-display text-field-label">{label}</legend>
+      <div className="grid grid-cols-5 gap-0.75">
+        <label className={`${cell} col-span-5 px-lg`}>
+          <input
+            type="radio"
+            name={name}
+            value=""
+            defaultChecked={defaultValue === ''}
+            className={radio}
+          />
+          <span className="rounded-pill px-sm py-0.5 group-has-checked/rating:bg-ink group-has-checked/rating:text-surface">
+            {PERSON.noRating}
+          </span>
+        </label>
+        {Array.from({ length: 10 }, (_, i) => String(i + 1)).map((n) => (
+          <label key={n} className={cell}>
+            <input
+              type="radio"
+              name={name}
+              value={`${n}/10`}
+              defaultChecked={defaultValue === `${n}/10`}
+              aria-label={n}
+              className={radio}
+            />
+            <span
+              aria-hidden="true"
+              className="grid size-7 place-items-center rounded-round group-has-checked/rating:bg-sticker-orange group-has-checked/rating:text-on-sticker"
+            >
+              {n}
+            </span>
+          </label>
+        ))}
+      </div>
+    </fieldset>
   )
 }
 
@@ -816,6 +890,9 @@ export function TargetField({
   // marking a group lets the result go, so the form never shows both.
   const [picked, setPicked] = useState<Target | null>(initial)
   const [group, setGroup] = useState(initialGroup ?? '')
+  // The result a group took the place of: letting the group go brings it
+  // back, so a tap on a pill never loses the target for good.
+  const [before, setBefore] = useState<Target | null>(null)
   return (
     <div className={`flex flex-col ${live ? 'gap-lg' : 'gap-xl'}`}>
       {live ? (
@@ -847,7 +924,13 @@ export function TargetField({
           marked={group}
           onMark={(key) => {
             setGroup(key)
-            if (key !== '') setPicked(null)
+            if (key !== '') {
+              if (picked !== null) setBefore(picked)
+              setPicked(null)
+            } else if (before !== null) {
+              setPicked(before)
+              setBefore(null)
+            }
           }}
         />
       )}

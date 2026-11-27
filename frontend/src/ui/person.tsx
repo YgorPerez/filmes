@@ -36,6 +36,7 @@ import {
   Items,
   Meta,
   Notice,
+  RatingField,
   RemoveForm,
   SelectField,
   Submit,
@@ -46,7 +47,7 @@ import {
 } from './person-parts'
 import { MyStartSections, type MyStart } from './my-start'
 import { StrengthDots } from './person-marks'
-import { PERSON, RATING_CHOICES } from './person.copy'
+import { PERSON } from './person.copy'
 import { buttonVariants } from './kit/button-variants'
 import { shortDate, weekdayDate } from './dates'
 
@@ -59,11 +60,6 @@ const REACTION_OPTIONS = [
     value,
     label,
   })),
-]
-
-const RATING_OPTIONS = [
-  { value: '', label: PERSON.noRating },
-  ...RATING_CHOICES,
 ]
 
 /** What the last form did and where (#273): the ficha that posted says it
@@ -683,7 +679,7 @@ const REFINE = new Set(['ajustes', 'declarados', 'relatos', 'acesso'])
 /** What the Dono acts on, in that order (#273): the open questions (only
  * when there is one), the Vetos (always: the strongest thing she can say),
  * the Já vistos without a Nota; the empty ones in one fold ("Ainda sem
- * Já vistos sem Nota · Acrescentar"); then "Afinar", folded, with the
+ * Já vistos · Acrescentar"); then "Afinar", folded, with the
  * Ajustes, Declarados, Relatos and Acesso. A fold opens by itself when its
  * ficha posted the last form. */
 function Taste({ slug, page }: { slug: string; page: PersonPage }) {
@@ -1204,9 +1200,11 @@ function StatementItem({
     return (
       <Item
         actions={
-          <span className="font-display text-label text-ink-2 uppercase">
-            {origin}
-            <span className="sr-only">: {PERSON.edit.readOnly}</span>
+          <span className="flex shrink-0 flex-col items-end gap-2xs text-right">
+            <span className="font-display text-label text-ink-2 uppercase">
+              {origin}
+            </span>
+            <span className="text-meta text-ink-2">{PERSON.edit.readOnly}</span>
           </span>
         }
       >
@@ -1219,7 +1217,7 @@ function StatementItem({
       what={kind}
       id={s.factId}
       label={s.text}
-      context={[s.label && PERSON.plainLabel(s.label), shortDate(s.date)]}
+      context={[statementAbout(s), shortDate(s.date)]}
       form={<StatementFields s={s} />}
     >
       {body}
@@ -1311,11 +1309,7 @@ function Seen({ slug, page }: Part) {
             problem={refused}
           >
             <TargetField name="filme" label={PERSON.film} scope="films" />
-            <SelectField
-              name="nota"
-              label={PERSON.rating}
-              options={RATING_OPTIONS}
-            />
+            <RatingField name="nota" label={PERSON.rating} />
             <TextField
               name="fonte"
               label={PERSON.source}
@@ -1454,6 +1448,14 @@ type Editable = 'stated' | 'report' | 'veto' | 'seen'
 type Veto = PersonPage['vetoes'][number]
 type SeenItem = PersonPage['seen'][number]
 
+const CLOSED = {
+  open: null,
+  closed: null,
+  dirty: false,
+  held: 0,
+  warned: false,
+} as const
+
 type EditState = {
   /** The item open for editing: one at a time. */
   open: string | null
@@ -1461,8 +1463,11 @@ type EditState = {
   closed: string | null
   /** The open form has changes: leaving it would lose them. */
   dirty: boolean
-  /** Bumped when leaving was refused for that: the form says why. */
+  /** Bumped when leaving was refused for that: the form takes the focus
+   * back. */
   held: number
+  /** The form says why, until the next change in it. */
+  warned: boolean
 }
 
 const Editing = createContext<{
@@ -1476,12 +1481,16 @@ const Editing = createContext<{
   /** Esc: closes the open item unless it has changes. */
   leave: () => void
   touch: () => void
+  /** Whether another item may act now: not while the open one has
+   * changes, which it says. */
+  free: (id: string) => boolean
 }>({
-  state: { open: null, closed: null, dirty: false, held: 0 },
+  state: CLOSED,
   open: () => {},
   close: () => {},
   leave: () => {},
   touch: () => {},
+  free: () => true,
 })
 
 function EditingItem({
@@ -1494,14 +1503,17 @@ function EditingItem({
   children: ReactNode
 }) {
   const [state, setState] = useState<EditState>({
+    ...CLOSED,
     open: initial ?? null,
-    closed: null,
-    dirty: false,
-    held: 0,
   })
-  const close = () =>
-    setState((was) => ({ open: null, closed: was.open, dirty: false, held: 0 }))
-  const hold = (was: EditState) => ({ ...was, held: was.held + 1 })
+  const close = () => setState((was) => ({ ...CLOSED, closed: was.open }))
+  const hold = (was: EditState) => ({
+    ...was,
+    held: was.held + 1,
+    warned: true,
+  })
+  const holding = (id: string) =>
+    state.open !== null && state.dirty && state.open !== id
   return (
     <Editing.Provider
       value={{
@@ -1511,17 +1523,24 @@ function EditingItem({
           setState((was) =>
             was.open !== null && was.dirty && was.open !== id
               ? hold(was)
-              : { open: id, closed: was.open, dirty: false, held: 0 },
+              : { ...CLOSED, open: id, closed: was.open },
           ),
         close,
         leave: () =>
           setState((was) =>
-            was.dirty
-              ? hold(was)
-              : { open: null, closed: was.open, dirty: false, held: 0 },
+            was.dirty ? hold(was) : { ...CLOSED, closed: was.open },
           ),
         touch: () =>
-          setState((was) => (was.dirty ? was : { ...was, dirty: true })),
+          setState((was) =>
+            was.dirty && !was.warned
+              ? was
+              : { ...was, dirty: true, warned: false },
+          ),
+        free: (id) => {
+          if (!holding(id)) return true
+          setState(hold)
+          return false
+        },
       }}
     >
       {children}
@@ -1539,9 +1558,14 @@ function useEditingIn() {
 
 /** An item's date, and the day of its last edit when it has one. */
 const dates = (item: { date: string; edited?: string }) => [
-  shortDate(item.date),
-  item.edited === undefined ? null : PERSON.edit.on(shortDate(item.edited)),
+  unbroken(shortDate(item.date)),
+  item.edited === undefined
+    ? null
+    : unbroken(PERSON.edit.on(shortDate(item.edited))),
 ]
+
+/** A date that does not break across lines: "editado 27 nov 2026" whole. */
+const unbroken = (text: string) => text.replaceAll(' ', '\u00a0')
 
 const itemAnchor = (id: string) => `item-${id.replace(':', '-')}`
 
@@ -1568,6 +1592,7 @@ function EditableItem({
   children: ReactNode
 }) {
   const editing = useContext(Editing)
+  const [asking, setAsking] = useState(false)
   if (editing.state.open === id)
     return (
       <EditForm slug={slug} what={what} id={id} label={label} context={context}>
@@ -1579,17 +1604,24 @@ function EditableItem({
       id={itemAnchor(id)}
       actions={
         <span className="flex shrink-0 flex-wrap items-center gap-xs">
-          {editing.saved === id && (
+          {editing.saved === id && !asking && (
             <span
               role="status"
-              className="inline-flex items-center gap-2xs font-display text-label text-ink"
+              className="inline-flex items-center gap-2xs font-display text-row-title text-ink motion-safe:animate-stick"
             >
-              <Icon name="check" className="size-[16px]" />
+              <Icon name="check" className="size-[18px]" />
               {PERSON.edit.saved}
             </span>
           )}
-          <EditOpen id={id} label={label} />
-          <RemoveForm slug={slug} what={what} id={id} label={label} />
+          {!asking && <EditOpen id={id} label={label} />}
+          <RemoveForm
+            slug={slug}
+            what={what}
+            id={id}
+            label={label}
+            onAsking={setAsking}
+            mayAsk={() => editing.free(id)}
+          />
         </span>
       }
     >
@@ -1597,6 +1629,13 @@ function EditableItem({
     </Item>
   )
 }
+
+/** The first field a person types in, in the open item. */
+const firstField = (item: HTMLElement | null) =>
+  // A scale's chosen radio, not its first one ("sem Nota").
+  item?.querySelector<HTMLElement>(
+    'input:not([type=hidden]):not([type=radio]), input[type=radio]:checked, select, textarea',
+  ) ?? null
 
 const OPTION = buttonVariants({ variant: 'option' })
 const LINK = buttonVariants({ variant: 'link' })
@@ -1653,13 +1692,12 @@ function EditForm({
   children: ReactNode
 }) {
   const editing = useContext(Editing)
-  const { held } = editing.state
+  const { held, warned } = editing.state
   const hydrated = useHydrated()
   const item = useRef<HTMLLIElement>(null)
+  // Opened (held 0), and each time leaving was held: the first field.
   useEffect(() => {
-    item.current
-      ?.querySelector<HTMLElement>('input:not([type=hidden]), select, textarea')
-      ?.focus()
+    if (held >= 0) firstField(item.current)?.focus()
   }, [held])
   return (
     <li
@@ -1672,15 +1710,15 @@ function EditForm({
         action="editar"
         label={PERSON.edit.label(label)}
         onDone={editing.close}
-        className="flex flex-col gap-xl rounded-field border-(length:--border-width-stroke) border-ink p-xl"
+        className="flex flex-col gap-xl rounded-field border-2 border-ink p-lg min-[480px]:p-xl"
       >
         <div className="flex flex-col gap-2xs">
-          <p className="font-display text-field-label">
+          <p className="font-display text-row-title">
             {PERSON.edit.heading(PERSON.edit.kinds[what])}
           </p>
           <Meta parts={context} />
         </div>
-        {held > 0 && <Alert>{PERSON.edit.held}</Alert>}
+        {warned && <Alert>{PERSON.edit.held}</Alert>}
         <input type="hidden" name="tipo" value={what} />
         <input type="hidden" name="id" value={id} />
         <div
@@ -1688,7 +1726,17 @@ function EditForm({
           onInput={editing.touch}
           onChange={editing.touch}
           onKeyDown={(event) => {
+            // Ctrl or ⌘ with Enter saves, from any field.
+            if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+              event.preventDefault()
+              event.currentTarget.closest('form')?.requestSubmit()
+              return
+            }
             if (event.key !== 'Escape') return
+            // Esc in the target search closes its results, not the form.
+            const field = event.target
+            if (field instanceof HTMLInputElement && field.type === 'search')
+              return
             event.preventDefault()
             editing.leave()
           }}
@@ -1696,7 +1744,7 @@ function EditForm({
           {children}
         </div>
         <span className="flex flex-wrap items-center gap-lg">
-          <Submit>{PERSON.save}</Submit>
+          <Submit variant="chosen">{PERSON.save}</Submit>
           {hydrated ? (
             <button type="button" onClick={editing.close} className={LINK}>
               {PERSON.edit.cancel}
@@ -1711,6 +1759,12 @@ function EditForm({
     </li>
   )
 }
+
+/** What a Declarado is about, as its line says it: "ama Sofia Rangel". */
+const statementAbout = (s: Statement) =>
+  s.target === null
+    ? null
+    : `${s.reaction ? PERSON.reactions[s.reaction as Reaction] : PERSON.about} ${PERSON.plainLabel(s.label ?? s.target)}`
 
 /** The target the search shows picked: the item's, with its label. */
 const targetOf = (id: string | null, label: string | null): Target | null =>
@@ -1789,10 +1843,9 @@ function SeenFields({ s }: { s: SeenItem }) {
         <span>{s.title}</span>
         <span className="text-meta text-ink-2">{PERSON.edit.filmFixed}</span>
       </p>
-      <SelectField
+      <RatingField
         name="nota"
         label={PERSON.rating}
-        options={RATING_OPTIONS}
         defaultValue={s.rating === null ? '' : `${Math.round(s.rating * 2)}/10`}
       />
       <TextField
