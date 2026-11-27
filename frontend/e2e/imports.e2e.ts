@@ -461,7 +461,7 @@ test('a Dona with no history rates from the Fila and the search, then Pronto', a
   await snap(page, info, 'notas-rascunho')
   await page
     .getByRole('region', { name: 'Suas Notas desta vez' })
-    .getByRole('button', { name: 'Pronto (2 Notas)' })
+    .getByRole('button', { name: 'Pronto: gravar 2 Notas' })
     .click()
 
   await expect(notice(page)).toHaveText('2 Notas gravadas no seu gosto.')

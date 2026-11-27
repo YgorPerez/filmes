@@ -492,7 +492,19 @@ export type Pick = {
   pickAs?: PickWords
 }
 
-export type PickWords = { text: string; label: (title: string) => string }
+export type PickWords = {
+  text: string
+  label: (title: string) => string
+  /** The rating screen's results (#274): no ID, the directors as the card
+   * says them, and her Nota of a film she rated, whose pick then changes
+   * it (`change`). */
+  card?: {
+    directedBy: (names: readonly string[]) => string
+    rated: (id: string) => number | undefined
+    ratedText: (rating: number) => string
+    change: { text: string; label: (title: string) => string }
+  }
+}
 
 /** "Usar": the link, or the button that takes the film in place. */
 export function PickFilm({
@@ -523,6 +535,16 @@ export function PickFilm({
 }
 
 function FilmItem({ film, pick, onPick, pickAs }: Pick & { film: FilmMatch }) {
+  if (pickAs?.card)
+    return (
+      <CardFilmItem
+        film={film}
+        pick={pick}
+        onPick={onPick}
+        pickAs={pickAs}
+        card={pickAs.card}
+      />
+    )
   const { votes } = CATALOG_SEARCH
   const title = filmText(film)
   return (
@@ -541,6 +563,43 @@ function FilmItem({ film, pick, onPick, pickAs }: Pick & { film: FilmMatch }) {
         <span className="font-semibold">{title}</span> <Id id={film.id} />
       </span>
       <Meta parts={[film.directors.join(', '), votes(film.votes)]} />
+    </Item>
+  )
+}
+
+/** A film of the rating screen's search (#274): its title, the directors
+ * and the votes, and her Nota when she gave one; then "Dar nota", or
+ * "Mudar". */
+function CardFilmItem({
+  film,
+  pick,
+  onPick,
+  pickAs,
+  card,
+}: Pick & { film: FilmMatch; card: NonNullable<PickWords['card']> }) {
+  const { votes } = CATALOG_SEARCH
+  const title = filmText(film)
+  const rating = card.rated(film.id)
+  return (
+    <Item
+      actions={
+        <PickFilm
+          id={film.id}
+          label={title}
+          pick={pick}
+          onPick={onPick}
+          pickAs={rating === undefined ? pickAs : card.change}
+        />
+      }
+    >
+      <span className="font-semibold">{title}</span>
+      <Meta
+        parts={[
+          film.directors.length > 0 ? card.directedBy(film.directors) : null,
+          votes(film.votes),
+          rating === undefined ? null : card.ratedText(rating),
+        ]}
+      />
     </Item>
   )
 }

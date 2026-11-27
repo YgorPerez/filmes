@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 
 // The tape's black case (DESIGN.md, Fita): 8px radius, a 5px border on top
 // and on the sides, the cover inside (2:3, 3px radius) and, under it, still
@@ -28,5 +28,40 @@ export function TapeCase({
         {children}
       </div>
     </div>
+  )
+}
+
+/** The poster on the cover, or the title when there is none or it fails
+ * to load (#274): a TMDB 404 shows the title cover DESIGN.md asks for,
+ * never the broken-image glyph. An image that failed before the page
+ * hydrated is caught when it mounts. */
+export function PosterCover({
+  src,
+  title,
+  alt,
+  fallback,
+  lazy = false,
+}: {
+  src: string | null
+  title: string
+  alt: string
+  /** What a small case shows instead of the title. */
+  fallback?: ReactNode
+  lazy?: boolean
+}) {
+  const [failed, setFailed] = useState<string | null>(null)
+  if (src === null || failed === src)
+    return fallback ?? <span aria-hidden="true">{title}</span>
+  return (
+    <img
+      src={src}
+      alt={alt}
+      loading={lazy ? 'lazy' : undefined}
+      onError={() => setFailed(src)}
+      ref={(img) => {
+        if (img?.complete && img.naturalWidth === 0) setFailed(src)
+      }}
+      className="absolute inset-0 size-full object-cover"
+    />
   )
 }

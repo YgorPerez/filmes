@@ -54,6 +54,7 @@ import { appPoster, failureOf, formPoster, seeOther } from './form-post'
 import { ownerAuthor } from './people'
 import {
   filmCardOf,
+  myRatingsOf,
   rateAction,
   ratingQueuePage,
   ratingsFromEngine,
@@ -567,6 +568,12 @@ export const appRatingQueue = (owner: { person: string }) =>
 /** One film's card for the rating screen, for the logged-in Dono. */
 export const appFilmCard = (film: string, owner: { person: string }) =>
   filmCardOf(film, owner, appRatings())
+
+/** The logged-in Dono's Notas of some films, for the rating screen. */
+export const appRatingsOf = (
+  films: readonly string[],
+  owner: { person: string },
+) => myRatingsOf(films, owner, appRatings())
 
 /** Meu gosto's look at the logged-in Dono's taste. */
 export const appTasteSummary = (owner: { person: string }) =>

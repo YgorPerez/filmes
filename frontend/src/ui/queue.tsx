@@ -9,7 +9,7 @@ import { QUEUE } from './queue.copy'
 import { PostAnswers, PostForm } from './kit/post-form'
 import { usePostedFeedback } from './kit/posted-feedback'
 import { PageHead } from './kit/page-head'
-import { TapeCase } from './kit/tape-case'
+import { PosterCover, TapeCase } from './kit/tape-case'
 import { Alert, Disclosure, Notice, Submit, TextField } from './person-parts'
 import { Button } from './shadcn/button'
 
@@ -237,18 +237,17 @@ function Suggestion({
       <div className="w-14 shrink-0">
         <TapeCase
           cover={
-            candidate.poster ? (
-              <img
-                src={candidate.poster}
-                alt={QUEUE.poster(label)}
-                loading="lazy"
-                className="absolute inset-0 size-full object-cover"
-              />
-            ) : (
-              <span aria-hidden="true" className="text-cover-mark">
-                ?
-              </span>
-            )
+            <PosterCover
+              src={candidate.poster}
+              title={label}
+              alt={QUEUE.poster(label)}
+              lazy
+              fallback={
+                <span aria-hidden="true" className="text-cover-mark">
+                  ?
+                </span>
+              }
+            />
           }
         />
       </div>

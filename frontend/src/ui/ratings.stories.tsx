@@ -119,7 +119,7 @@ export const AfterATap: Story = {
   },
 }
 
-/** Ten reached: the card waits behind "Mais 10". */
+/** Ten reached: said once, the card behind "Continuar dando notas". */
 export const GoalReached: Story = {
   args: { queue: { ...QUEUE, rated: 9 } },
   play: async ({ canvasElement }) => {
@@ -133,8 +133,25 @@ export const PickedInSearch: Story = {
   args: { search: SEARCH, film: 'tt9000401' },
 }
 
+/** A film she rated already, from the search or Meu gosto's "Mudar":
+ * her Nota on the card and on the result (#274). */
+export const AlreadyRated: Story = {
+  args: { search: SEARCH, film: 'tt9000401', rated: { tt9000401: 10 } },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText(RATINGS.ratedNow(10))).toBeVisible()
+    await expect(canvas.getByText(/sua nota 10/)).toBeVisible()
+  },
+}
+
+/** After Pronto: no bar, "Pedir filme" is the one orange button (#274). */
 export const Written: Story = {
   args: { written: 3, queue: { ...QUEUE, rated: 12 } },
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).queryByRole('region', { name: RATINGS.bar }),
+    ).toBeNull()
+  },
 }
 
 export const Refused: Story = { args: { refusal: 'pedido' } }

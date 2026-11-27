@@ -5,6 +5,7 @@
 import {
   filmCard,
   personRate,
+  personRatingsOf,
   ratingQueue,
   tasteSummary,
   type Engine,
@@ -41,6 +42,11 @@ export interface Ratings {
   card(film: string, person: string): Promise<Outcome<FilmCard>>
   /** Meu gosto's look at her taste: her genres and directors (#274). */
   summary(person: string): Promise<Outcome<TasteSummary>>
+  /** Her Nota of each of `films` that has one, 1 to 10 (#274). */
+  ratingsOf(
+    person: string,
+    films: readonly string[],
+  ): Promise<Outcome<Readonly<Record<string, number>>>>
   /** Writes the Notas to the Dono `owner`, who signs the commit. */
   rate(
     ratings: readonly GivenRating[],
@@ -55,6 +61,8 @@ export function ratingsFromEngine(engine: Engine): Ratings {
     card: (film, person) => engine.run(filmCard({ film }), { owner: person }),
     summary: (person) =>
       engine.run(tasteSummary({ person }), { owner: person }),
+    ratingsOf: (person, films) =>
+      engine.run(personRatingsOf({ person, films }), { owner: person }),
     rate: (ratings, owner) =>
       engine.run(
         personRate({
@@ -115,6 +123,22 @@ export async function tasteSummaryOf(
     return null
   }
   return summary.output
+}
+
+/** The logged-in Dono's Nota of each of `films` that has one, 1 to 10;
+ * none when the engine cannot run (logged: the screen does without). */
+export async function myRatingsOf(
+  films: readonly string[],
+  owner: Pick<Rater, 'person'>,
+  ratings: Ratings,
+): Promise<Readonly<Record<string, number>>> {
+  if (films.length === 0) return {}
+  const found = await ratings.ratingsOf(owner.person, films)
+  if (found.exitCode !== 0) {
+    logEngineError(found)
+    return {}
+  }
+  return found.output
 }
 
 function refusalOf(outcome: { output: ErrorOutput }): RatingRefusal {
