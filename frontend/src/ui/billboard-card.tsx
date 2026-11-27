@@ -149,9 +149,11 @@ function Header({
   const Title = level === 3 ? 'h3' : 'h2'
   return (
     <div className="flex min-w-0 flex-col gap-sm">
+      {/* The anchor of a tape on the home (`#filme-…`): room above for the
+       * card's padding, the price sticker and a gutter (#271). */}
       <Title
         id={id}
-        className="flex flex-col gap-y-0.5 font-display text-title"
+        className="flex scroll-mt-10 flex-col gap-y-0.5 font-display text-title"
       >
         <span className="sr-only">{film.position}</span>
         <span>{film.title}</span>
