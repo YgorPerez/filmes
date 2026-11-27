@@ -31,7 +31,8 @@ import { mcpHandler, mcpRequest } from './mcp-endpoint'
 
 const ORIGIN = 'http://localhost:3000'
 const SERVER = `${ORIGIN}/mcp`
-const CALLBACK = 'http://127.0.0.1:43123/callback'
+const CALLBACK = 'https://claude.ai/api/mcp/auth_callback'
+const CHATGPT = 'https://chatgpt.com/connector_platform_oauth_redirect'
 
 /** A JSON answer's fields. */
 const json = async (response: Response) =>
@@ -51,6 +52,7 @@ type Connection = {
 
 /** The app's connector paths over a fixture copy, and Claude's side. */
 class Connector {
+  clock = Date.now()
   email = 'bruno@example.org'
   /** The Donos' emails (the login's gate, `owners.ts`, is tested there). */
   readonly donos = new Set(['bruno@example.org'])
@@ -58,7 +60,10 @@ class Connector {
   readonly auth: Auth
   readonly handler: McpHttpHandler
 
-  constructor(fixture: Fixture) {
+  constructor(
+    fixture: Fixture,
+    private readonly callback = CALLBACK,
+  ) {
     const engine = makeEngine(fixture.vars)
     this.handler = mcpHandler(() => engine)
     onTestFinished(async () => {
@@ -67,6 +72,7 @@ class Connector {
     })
     this.auth = new Auth({
       origin: ORIGIN,
+      now: () => this.clock,
       clientId: 'client',
       clientSecret: 'secret',
       databasePath: join(
@@ -134,8 +140,8 @@ class Connector {
     const client = await registerClient(info.authorizationServerUrl, {
       metadata: info.authorizationServerMetadata,
       clientMetadata: {
-        client_name: 'Claude',
-        redirect_uris: [CALLBACK],
+        client_name: 'Connector test',
+        redirect_uris: [this.callback],
         token_endpoint_auth_method: 'none',
         grant_types: ['authorization_code', 'refresh_token'],
         response_types: ['code'],
@@ -146,17 +152,17 @@ class Connector {
   }
 
   /** Up to the client's redirect, logged in to Google as `email`. */
-  async authorize(email: string) {
+  async authorize(email: string, connection?: Connection) {
     this.email = email
-    const connection = await this.register()
+    connection ??= await this.register()
     const { authorizationUrl, codeVerifier } = await startAuthorization(
       connection.info.authorizationServerUrl,
       {
         metadata: connection.info.authorizationServerMetadata,
         clientInformation: connection.client,
-        redirectUrl: CALLBACK,
+        redirectUrl: this.callback,
         scope: 'mcp offline_access',
-        state: 'claude-state',
+        state: 'connector-state',
         resource: SERVER,
       },
     )
@@ -168,17 +174,20 @@ class Connector {
   }
 
   /** The whole flow, to the tokens. */
-  async tokens(email: string) {
-    const { info, client, codeVerifier, back } = await this.authorize(email)
-    assert.equal(back.origin + back.pathname, CALLBACK)
-    assert.equal(back.searchParams.get('state'), 'claude-state')
+  async tokens(email: string, connection?: Connection) {
+    const { info, client, codeVerifier, back } = await this.authorize(
+      email,
+      connection,
+    )
+    assert.equal(back.origin + back.pathname, this.callback)
+    assert.equal(back.searchParams.get('state'), 'connector-state')
     const tokens = await exchangeAuthorization(info.authorizationServerUrl, {
       metadata: info.authorizationServerMetadata,
       clientInformation: client,
       authorizationCode: back.searchParams.get('code')!,
       iss: back.searchParams.get('iss')!,
       codeVerifier,
-      redirectUri: CALLBACK,
+      redirectUri: this.callback,
       resource: SERVER,
       fetchFn: this.fetchFn,
     })
@@ -197,7 +206,7 @@ class Connector {
 
   /** An MCP client over HTTP with the bearer. */
   async mcp(accessToken: string) {
-    const client = new Client({ name: 'claude-test', version: '0' })
+    const client = new Client({ name: 'connector-test', version: '0' })
     await client.connect(
       new StreamableHTTPClientTransport(new URL(SERVER), {
         fetch: this.fetchFn,
@@ -248,6 +257,7 @@ describe('discovery', () => {
     )
     expect(metadata).toMatchObject({
       issuer: ORIGIN,
+      authorization_response_iss_parameter_supported: true,
       code_challenge_methods_supported: ['S256'],
       token_endpoint_auth_methods_supported: ['none'],
     })
@@ -314,6 +324,51 @@ describe('the admin tools', () => {
 
     expect(names).toEqual(expect.arrayContaining(['consult', 'evaluate']))
     expect(toolOutput(result)).toEqual({ columns: ['n'], rows: [[1]] })
+  })
+})
+
+describe('the ChatGPT pilot', () => {
+  it('reconnects the same non-admin Dono and serves only the Session tools', async () => {
+    const connector = new Connector(useFixture(), CHATGPT)
+    const { tokens, ...connection } =
+      await connector.tokens('bruno@example.org')
+    connector.clock += 25 * 60 * 60_000
+    await connector.register() // DCR prunes old clients without a grant.
+    const refresh = await connector.refresh(connection, tokens.refresh_token!)
+    expect(await connector.status(refresh.access_token)).toBe(200)
+
+    const reconnected = await connector.tokens('bruno@example.org', connection)
+    expect(reconnected.client.client_id).toBe(connection.client.client_id)
+    const client = await connector.mcp(reconnected.tokens.access_token)
+    const { tools } = await client.listTools()
+    expect(tools.map((tool) => tool.name)).toEqual([
+      'open_sessions',
+      'recommend',
+      'billboard',
+      'answer_billboard',
+      'verify_answer',
+      'record_feedback',
+      'search_catalog',
+    ])
+    for (const tool of tools)
+      expect(tool._meta?.securitySchemes).toEqual([
+        { type: 'oauth2', scopes: ['mcp'] },
+      ])
+    expect(tools.find((tool) => tool.name === 'billboard')?._meta?.ui).toEqual({
+      resourceUri: 'ui://filmes/cartaz.html',
+    })
+    await expect(
+      client.callTool({
+        name: 'person',
+        arguments: { action: 'view', person: 'dono' },
+      }),
+    ).rejects.toThrow(/person not found/)
+
+    const result = await client.callTool({
+      name: 'recommend',
+      arguments: { attendees: ['dono'] },
+    })
+    expect(toolOutput(result).attendees).toEqual(['bruno'])
   })
 })
 

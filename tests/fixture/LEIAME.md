@@ -227,6 +227,26 @@ Os filmes `tt90058NN` (#58) não têm diretor nem Nota, e ficam entre os só com
 
 "sad" e "tearjerker" estão no Clima "pra chorar"; nenhum teste pede esse Clima. As tags de "sozinho" (bleak, depressing) ficaram de fora de propósito, para não mudar quem é filme só com palpites.
 
+## CSV de avaliações do IMDb
+
+`imdb/vera.csv` está no formato do "Your Ratings" > Export do IMDb, com as colunas que `exportRatings` escreve (#285). A Vera não tem Nota na fixture; os testes importam o CSV para ela ou para uma Pessoa criada no teste.
+
+- O Último Bonde (202) com 9, Rio Abaixo (303) com 7 e Pequenos Milagres (601) com 2: viram Notas 4,5, 3,5 e 1.
+- "Cais, Episódio 1" (`tt9028501`) é um episódio de série fora do Catálogo, com vírgula no título: fica de fora do import, no relatório.
+
+## Backup do Simkl
+
+`simkl/SimklBackup.json` está no formato do backup do Simkl (Apps › Export › ".zip archive with .json file", #299), com IDs `simkl` inventados (`91000NN`). Os testes o importam para a Vera, sozinho ou dentro de um ZIP.
+
+- O Último Bonde (202) com 9, pelo ID do IMDb: Nota 4,5 em 2025-03-08 (`last_watched_at`).
+- Maré Baixa só com o TMDB 9003, que `slugs_letterboxd.csv` liga a 102: Nota 3. O `last_watched_at` é o "não lembro" do Simkl (`1970-01-01T00:00:01Z`), e a data sai de `user_rated_at`, 2024-07-14.
+- Rio Abaixo só com o TMDB 9101, que nada liga offline: com a chave do TMDB, a gravação `tmdb/externos-9101.json` dá 303, e vira Já visto (`completed` sem nota) em 2023-05-01; sem a chave, fica de fora.
+- Pequenos Milagres (601) em `plantowatch`: watchlist em 2026-10-02.
+- Casa Cheia (602) `completed` sem nota e sem data nenhuma além do "não lembro": Já visto com a data do import.
+- Barulho (501) em `dropped`, sem nota: não entra.
+- Filme Perdido (`tt9999901`) não está no Catálogo, e Filme Sem Ids, um anime só com o ID do MyAnimeList, não se resolve: os dois ficam no relatório.
+- Em `anime`, Deserto Branco (701) com `anime_type: "movie"` e nota 8 vira Nota 4; A Última Estação (702) é `tv` e não entra, nem a série Cais em `shows`.
+
 ## RSS do Letterboxd
 
 `gravacoes/letterboxd/rss-olga_farol.xml` é um RSS inventado no formato do real

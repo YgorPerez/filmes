@@ -42,6 +42,7 @@ import { field, truthy } from '../sources/json.ts'
 import { TMDB_ATTRIBUTION, Tmdb } from '../sources/Tmdb.ts'
 import {
   filmKey,
+  hasLetterboxdWatchlist,
   readLetterboxdExport,
   rowDay,
   rowKey,
@@ -62,6 +63,7 @@ import {
   readLetterboxdRss,
 } from './letterboxd-rss.ts'
 import { storedImports, storeImport } from './stored.ts'
+import { withLatestWatchlist } from './watchlist.ts'
 
 /** The kinds of a Pessoa's `imports:` records this module reads. */
 export const LETTERBOXD_KIND = 'letterboxd'
@@ -539,7 +541,8 @@ const tmdbIdOf = (rows: readonly LetterboxdRow[]): string | null =>
   rows.find((row) => row.tmdb)?.tmdb ?? null
 
 /** The rows of the Pessoa's ZIPs, then those of her RSS copies, so the
- * ZIP's Fonte wins on a repeated Fato (`linhas_da_pessoa`). */
+ * ZIP's Fonte wins on a repeated Fato (`linhas_da_pessoa`). The watchlist
+ * is the latest ZIP's that has one (`withLatestWatchlist`). */
 export const personLetterboxdRows = (
   person: Person,
 ): Effect.Effect<LetterboxdRow[], EngineError, Environment> =>
@@ -548,7 +551,10 @@ export const personLetterboxdRows = (
       person,
       LETTERBOXD_KIND,
       (path, content) =>
-        attempt(() => readLetterboxdExport(basename(path), content)),
+        attempt(() => ({
+          rows: readLetterboxdExport(basename(path), content),
+          hasWatchlist: hasLetterboxdWatchlist(content),
+        })),
     )
     const feeds = yield* storedImports(
       person,
@@ -556,7 +562,10 @@ export const personLetterboxdRows = (
       (path, content) =>
         attempt(() => readLetterboxdRss(basename(path), content)),
     )
-    return [...zips.flat(), ...feeds.flat()]
+    return [
+      ...withLatestWatchlist(zips, (row) => row.file === 'watchlist'),
+      ...feeds.flat(),
+    ]
   })
 
 /** Inserts one Letterboxd Fato of the film, its `fato_id` from the values. */

@@ -37,6 +37,34 @@ describe('the server', () => {
     )
   })
 
+  test('describes the effects of the Session tools', async () => {
+    const { client } = await connect(useFixture())
+    const { tools } = await client.listTools()
+    const annotations = Object.fromEntries(
+      tools.map((tool) => [tool.name, tool.annotations]),
+    )
+    assert.deepEqual(annotations.open_sessions, {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: false,
+    })
+    assert.deepEqual(annotations.recommend, {
+      readOnlyHint: false,
+      destructiveHint: false,
+      openWorldHint: true,
+    })
+    assert.deepEqual(annotations.billboard, {
+      readOnlyHint: false,
+      destructiveHint: false,
+      openWorldHint: false,
+    })
+    assert.deepEqual(annotations.answer_billboard, {
+      readOnlyHint: false,
+      destructiveHint: false,
+      openWorldHint: false,
+    })
+  })
+
   test('sends the instructions, with the PT words for the output values', async () => {
     const { client } = await connect(useFixture())
 

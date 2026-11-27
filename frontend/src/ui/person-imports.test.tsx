@@ -52,7 +52,9 @@ const QUIM: PersonImportsView = {
     ],
     discardedItems: [],
   },
-  trakt: { ratings: 2, seen: 1 },
+  trakt: { ratings: 2, seen: 1, watchlist: 0 },
+  imdb: { ratings: 0 },
+  simkl: { ratings: 0, seen: 0, watchlist: 0 },
 }
 
 /** Quim with nothing imported yet. */
@@ -67,7 +69,9 @@ const EMPTY: PersonImportsView = {
     queued: 0,
     queue: [],
   },
-  trakt: { ratings: 0, seen: 0 },
+  trakt: { ratings: 0, seen: 0, watchlist: 0 },
+  imdb: { ratings: 0 },
+  simkl: { ratings: 0, seen: 0, watchlist: 0 },
 }
 
 const show = (page: PersonImportsView = QUIM) =>
@@ -163,7 +167,15 @@ describe('PersonImportsScreen', () => {
     ).toEqual([
       ['Letterboxd', 'https://letterboxd.com/settings/data/'],
       ['Trakt', 'https://trakt.tv/settings/data'],
+      ['IMDb', 'https://www.imdb.com/list/ratings'],
+      [
+        'Simkl',
+        'https://docs.simkl.org/how-to-use-simkl/advanced-usage/import-export-data/exporting-from-simkl/export-data-formats',
+      ],
     ])
+    expect(
+      within(form).getByLabelText(COPY.upload.file).getAttribute('accept'),
+    ).toBe('.zip,application/zip,.csv,text/csv,.json,application/json')
     // The One Orange Button Rule.
     expect(
       [...container.querySelectorAll('.bg-sticker-orange')].map(
@@ -219,13 +231,25 @@ describe('PersonImportsScreen', () => {
     expect(section(COPY.trakt.title).textContent).toContain(
       '2 Notas e 1 Já visto do Trakt.',
     )
+    expect(screen.queryByRole('region', { name: COPY.imdb.title })).toBeNull()
+    cleanup()
+    show({ ...EMPTY, imdb: { ratings: 1 } })
+    expect(screen.queryByRole('region', { name: COPY.trakt.title })).toBeNull()
+    expect(section(COPY.imdb.title).textContent).toContain('1 Nota do IMDb.')
+    expect(screen.queryByRole('region', { name: COPY.simkl.title })).toBeNull()
+    cleanup()
+    show({ ...EMPTY, simkl: { ratings: 2, seen: 1, watchlist: 4 } })
+    expect(screen.queryByRole('region', { name: COPY.imdb.title })).toBeNull()
+    expect(section(COPY.simkl.title).textContent).toContain(
+      '2 Notas e 1 Já visto do Simkl.',
+    )
   })
 
-  it('says how to download each ZIP when one is of neither service', () => {
+  it('says how to download each file when one is of no service', () => {
     render(<PersonImportsScreen slug="quim" page={QUIM} refusal="origem" />)
     const alert = screen.getByRole('alert')
     expect(alert.textContent).toContain(
-      'Esse ZIP não parece ser do Letterboxd nem do Trakt.',
+      'Esse arquivo não parece ser do Letterboxd, do Trakt, do IMDb nem do Simkl.',
     )
     expect(
       within(alert)
@@ -234,6 +258,8 @@ describe('PersonImportsScreen', () => {
     ).toEqual([
       'https://letterboxd.com/settings/data/',
       'https://trakt.tv/settings/data',
+      'https://www.imdb.com/list/ratings',
+      'https://docs.simkl.org/how-to-use-simkl/advanced-usage/import-export-data/exporting-from-simkl/export-data-formats',
     ])
   })
 
@@ -267,6 +293,9 @@ describe('PersonImportsScreen', () => {
     )
     expect(COPY.notices.trakt(3)).toBe(
       'Arquivo do Trakt importado: 3 Fatos novos.',
+    )
+    expect(COPY.notices.imdb(1, 1)).toBe(
+      'CSV do IMDb importado: 1 Fato novo. 1 título ficou de fora: o Catálogo não tem.',
     )
     expect(COPY.notices.removido(0)).toContain('Nenhum Fato saiu')
     expect(COPY.notices.removido(1)).toBe('Import tirado: 1 Fato saiu.')

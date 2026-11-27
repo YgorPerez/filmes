@@ -262,6 +262,11 @@ const run = (i: Input) =>
 
 export default defineTool({
   name: 'person',
+  annotations: {
+    readOnlyHint: false,
+    destructiveHint: true,
+    openWorldHint: false,
+  },
   description:
     'As Pessoas no repo de dados e o gosto delas. create: nome, apelidos, slug, owner (Dono) com o email do Google dele. view: tudo o que se sabe da ' +
     'Pessoa (Vetos, Ajustes, Declarados, Relatos com Força, Já vistos, Notas, perguntas abertas, imports). ' +

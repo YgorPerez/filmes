@@ -10,13 +10,16 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as OwnerRouteImport } from './routes/_owner'
+import { Route as CreditosRouteImport } from './routes/creditos'
 import { Route as EntrarRouteImport } from './routes/entrar'
 import { Route as ParticiparRouteImport } from './routes/participar'
 import { Route as SaudeRouteImport } from './routes/saude'
+import { Route as TraktRouteImport } from './routes/trakt'
 import { Route as OwnerIndexRouteImport } from './routes/_owner/index'
 import { Route as OwnerOperacoesRouteImport } from './routes/_owner/operacoes'
 import { Route as ExportarIndexRouteImport } from './routes/exportar/index'
 import { Route as ExportarImdbDotcsvRouteImport } from './routes/exportar/imdb[.]csv'
+import { Route as ExportarLetterboxdDotcsvRouteImport } from './routes/exportar/letterboxd[.]csv'
 import { Route as FeedbackIndexRouteImport } from './routes/feedback/index'
 import { Route as FilaIndexRouteImport } from './routes/fila/index'
 import { Route as FilaAcaoRouteImport } from './routes/fila/acao'
@@ -55,6 +58,11 @@ const OwnerRoute = OwnerRouteImport.update({
   id: '/_owner',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CreditosRoute = CreditosRouteImport.update({
+  id: '/creditos',
+  path: '/creditos',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EntrarRoute = EntrarRouteImport.update({
   id: '/entrar',
   path: '/entrar',
@@ -68,6 +76,11 @@ const ParticiparRoute = ParticiparRouteImport.update({
 const SaudeRoute = SaudeRouteImport.update({
   id: '/saude',
   path: '/saude',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TraktRoute = TraktRouteImport.update({
+  id: '/trakt',
+  path: '/trakt',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OwnerIndexRoute = OwnerIndexRouteImport.update({
@@ -90,6 +103,12 @@ const ExportarImdbDotcsvRoute = ExportarImdbDotcsvRouteImport.update({
   path: '/exportar/imdb.csv',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ExportarLetterboxdDotcsvRoute =
+  ExportarLetterboxdDotcsvRouteImport.update({
+    id: '/exportar/letterboxd.csv',
+    path: '/exportar/letterboxd.csv',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const FeedbackIndexRoute = FeedbackIndexRouteImport.update({
   id: '/feedback/',
   path: '/feedback/',
@@ -262,11 +281,14 @@ const OwnerSessoesSessaoContarRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof OwnerIndexRoute
+  '/creditos': typeof CreditosRoute
   '/entrar': typeof EntrarRoute
   '/participar': typeof ParticiparRouteWithChildren
   '/saude': typeof SaudeRoute
+  '/trakt': typeof TraktRoute
   '/operacoes': typeof OwnerOperacoesRoute
   '/exportar/imdb.csv': typeof ExportarImdbDotcsvRoute
+  '/exportar/letterboxd.csv': typeof ExportarLetterboxdDotcsvRoute
   '/fila/acao': typeof FilaAcaoRoute
   '/inicio/pular': typeof InicioPularRoute
   '/notas/enviar': typeof NotasEnviarRoute
@@ -303,10 +325,13 @@ export interface FileRoutesByFullPath {
   '/sessoes/$sessao/': typeof OwnerSessoesSessaoIndexRoute
 }
 export interface FileRoutesByTo {
+  '/creditos': typeof CreditosRoute
   '/entrar': typeof EntrarRoute
   '/saude': typeof SaudeRoute
+  '/trakt': typeof TraktRoute
   '/operacoes': typeof OwnerOperacoesRoute
   '/exportar/imdb.csv': typeof ExportarImdbDotcsvRoute
+  '/exportar/letterboxd.csv': typeof ExportarLetterboxdDotcsvRoute
   '/fila/acao': typeof FilaAcaoRoute
   '/inicio/pular': typeof InicioPularRoute
   '/notas/enviar': typeof NotasEnviarRoute
@@ -346,11 +371,14 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_owner': typeof OwnerRouteWithChildren
+  '/creditos': typeof CreditosRoute
   '/entrar': typeof EntrarRoute
   '/participar': typeof ParticiparRouteWithChildren
   '/saude': typeof SaudeRoute
+  '/trakt': typeof TraktRoute
   '/_owner/operacoes': typeof OwnerOperacoesRoute
   '/exportar/imdb.csv': typeof ExportarImdbDotcsvRoute
+  '/exportar/letterboxd.csv': typeof ExportarLetterboxdDotcsvRoute
   '/fila/acao': typeof FilaAcaoRoute
   '/inicio/pular': typeof InicioPularRoute
   '/notas/enviar': typeof NotasEnviarRoute
@@ -391,11 +419,14 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/creditos'
     | '/entrar'
     | '/participar'
     | '/saude'
+    | '/trakt'
     | '/operacoes'
     | '/exportar/imdb.csv'
+    | '/exportar/letterboxd.csv'
     | '/fila/acao'
     | '/inicio/pular'
     | '/notas/enviar'
@@ -432,10 +463,13 @@ export interface FileRouteTypes {
     | '/sessoes/$sessao/'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/creditos'
     | '/entrar'
     | '/saude'
+    | '/trakt'
     | '/operacoes'
     | '/exportar/imdb.csv'
+    | '/exportar/letterboxd.csv'
     | '/fila/acao'
     | '/inicio/pular'
     | '/notas/enviar'
@@ -474,11 +508,14 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_owner'
+    | '/creditos'
     | '/entrar'
     | '/participar'
     | '/saude'
+    | '/trakt'
     | '/_owner/operacoes'
     | '/exportar/imdb.csv'
+    | '/exportar/letterboxd.csv'
     | '/fila/acao'
     | '/inicio/pular'
     | '/notas/enviar'
@@ -518,10 +555,13 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   OwnerRoute: typeof OwnerRouteWithChildren
+  CreditosRoute: typeof CreditosRoute
   EntrarRoute: typeof EntrarRoute
   ParticiparRoute: typeof ParticiparRouteWithChildren
   SaudeRoute: typeof SaudeRoute
+  TraktRoute: typeof TraktRoute
   ExportarImdbDotcsvRoute: typeof ExportarImdbDotcsvRoute
+  ExportarLetterboxdDotcsvRoute: typeof ExportarLetterboxdDotcsvRoute
   FilaAcaoRoute: typeof FilaAcaoRoute
   InicioPularRoute: typeof InicioPularRoute
   NotasEnviarRoute: typeof NotasEnviarRoute
@@ -551,6 +591,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OwnerRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/creditos': {
+      id: '/creditos'
+      path: '/creditos'
+      fullPath: '/creditos'
+      preLoaderRoute: typeof CreditosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/entrar': {
       id: '/entrar'
       path: '/entrar'
@@ -570,6 +617,13 @@ declare module '@tanstack/react-router' {
       path: '/saude'
       fullPath: '/saude'
       preLoaderRoute: typeof SaudeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/trakt': {
+      id: '/trakt'
+      path: '/trakt'
+      fullPath: '/trakt'
+      preLoaderRoute: typeof TraktRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_owner/': {
@@ -598,6 +652,13 @@ declare module '@tanstack/react-router' {
       path: '/exportar/imdb.csv'
       fullPath: '/exportar/imdb.csv'
       preLoaderRoute: typeof ExportarImdbDotcsvRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/exportar/letterboxd.csv': {
+      id: '/exportar/letterboxd.csv'
+      path: '/exportar/letterboxd.csv'
+      fullPath: '/exportar/letterboxd.csv'
+      preLoaderRoute: typeof ExportarLetterboxdDotcsvRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/feedback/': {
@@ -890,10 +951,13 @@ const ParticiparRouteWithChildren = ParticiparRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   OwnerRoute: OwnerRouteWithChildren,
+  CreditosRoute: CreditosRoute,
   EntrarRoute: EntrarRoute,
   ParticiparRoute: ParticiparRouteWithChildren,
   SaudeRoute: SaudeRoute,
+  TraktRoute: TraktRoute,
   ExportarImdbDotcsvRoute: ExportarImdbDotcsvRoute,
+  ExportarLetterboxdDotcsvRoute: ExportarLetterboxdDotcsvRoute,
   FilaAcaoRoute: FilaAcaoRoute,
   InicioPularRoute: InicioPularRoute,
   NotasEnviarRoute: NotasEnviarRoute,

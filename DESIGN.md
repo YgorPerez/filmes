@@ -603,7 +603,7 @@ Os cards ficam sob o título do Motivo deles, na ordem da Recomendação: um tí
 - **Background:** superfície sobre o chão, fio de 1px.
 - **Internal Padding:** 16px em cima, 14px nos lados e embaixo.
 - **Corpo:** título, original embaixo, sinopse e chips.
-- **Chips:** ano, duração e gêneros em superfície 2 (o gênero com o ponto da cor dele antes do nome); o chip do IMDb sem fundo, com contorno de 1,5px em fio, "7,4 IMDb · 28 mil votos".
+- **Chips:** ano, duração e gêneros em superfície 2 (o gênero com o ponto da cor dele antes do nome); o chip do IMDb sem fundo, com contorno de 1,5px em fio, "7,4 IMDb · 28 mil votos". Ao lado, igual a ele, o chip "trailer", link para o trailer oficial no YouTube numa aba nova, só quando o TMDB tem um; nunca um player no card.
 - **Trocado:** só a arte da capa cai para 70% de opacidade, sob o adesivo TROCAR. Título, sinopse, "Por que" e controles ficam inteiros: texto esmaecido perde o contraste AA.
 
 ### Adesivos de estado

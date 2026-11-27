@@ -261,6 +261,9 @@ exports[`avaliar on MovieLens files, as recorded > a messy sample with tags give
           "normal": 1,
         },
       },
+      "awards": {
+        "weight": 0.1,
+      },
       "bet": {
         "maxFacts": 1,
         "maxPredictedIncrease": 2,
@@ -666,6 +669,9 @@ exports[`avaliar on MovieLens files, as recorded > a small sample warns that Mov
           "normal": 1,
         },
       },
+      "awards": {
+        "weight": 0.1,
+      },
       "bet": {
         "maxFacts": 1,
         "maxPredictedIncrease": 2,
@@ -1068,6 +1074,9 @@ exports[`the diaries, as recorded > a Trakt history dates the cut 1`] = `
           "none": 0,
           "normal": 1,
         },
+      },
+      "awards": {
+        "weight": 0.1,
       },
       "bet": {
         "maxFacts": 1,

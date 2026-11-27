@@ -14,7 +14,9 @@ import { describe, expect, test } from 'vite-plus/test'
 import {
   evaluate,
   evaluationsFolder,
+  importImdb,
   importLetterboxd,
+  importSimkl,
   openSessions,
   progressTo,
   PyRandom,
@@ -286,6 +288,42 @@ describe('avaliar', () => {
       expect(readFileSync(result.file, 'utf8')).toContain('## Grade de pesos')
     },
   )
+})
+
+describe('avaliar', () => {
+  test('measures a Pessoa whose Notas came from an IMDb CSV (#285)', async () => {
+    const fixture = useFixture()
+    await fixture.ok(
+      importImdb({
+        person: 'vera',
+        original: 'ratings.csv',
+        content: readFileSync(join(ROOT, 'tests/fixture/imdb/vera.csv')),
+        author: { name: 'Dono', email: 'dono@example.org' },
+      }),
+    )
+
+    // The fixture's four, and Vera, cut in her rating dates.
+    expect((await evaluated(fixture)).offline.people.people).toBe(5)
+  })
+})
+
+describe('avaliar', () => {
+  test('measures a Pessoa whose Notas came from a Simkl backup (#299)', async () => {
+    const fixture = useFixture()
+    await fixture.ok(
+      importSimkl({
+        person: 'vera',
+        original: 'SimklBackup.json',
+        content: readFileSync(
+          join(ROOT, 'tests/fixture/simkl/SimklBackup.json'),
+        ),
+        author: { name: 'Dono', email: 'dono@example.org' },
+      }),
+    )
+
+    // The fixture's four, and Vera, cut in her rating dates.
+    expect((await evaluated(fixture)).offline.people.people).toBe(5)
+  })
 })
 
 describe('avaliar', () => {

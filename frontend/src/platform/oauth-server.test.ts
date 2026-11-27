@@ -14,6 +14,7 @@ import { allowedRedirect, OAuthServer } from './oauth-server'
 
 const ORIGIN = 'https://cinema.example'
 const CLAUDE = 'https://claude.ai/api/mcp/auth_callback'
+const CHATGPT = 'https://chatgpt.com/connector_platform_oauth_redirect'
 
 /** A JSON answer's fields. */
 const json = async (response: Response | null) =>
@@ -194,6 +195,39 @@ describe('registration', () => {
     expect(client).not.toHaveProperty('client_secret')
   })
 
+  it('accepts only the exact HTTPS callback for ChatGPT', async () => {
+    const server = new Server()
+    const registered = await server.register({ redirect_uris: [CHATGPT] })
+    expect(registered.status).toBe(201)
+    const client = await json(registered)
+    const metadata = await json(
+      await server.send('/.well-known/oauth-authorization-server'),
+    )
+    const authorize = (redirect: string, extra: Record<string, string> = {}) =>
+      server.authorize(client.client_id!, { redirect_uri: redirect, ...extra })
+    const back = await server.callback(await authorize(CHATGPT))
+    expect(back.origin + back.pathname).toBe(CHATGPT)
+    expect(back.searchParams.get('iss')).toBe(metadata.issuer)
+    const refused = location(await authorize(CHATGPT, { scope: 'admin' }))
+    expect(refused.searchParams.get('error')).toBe('invalid_scope')
+    expect(refused.searchParams.get('iss')).toBe(metadata.issuer)
+
+    for (const redirect of [
+      CHATGPT + '/',
+      CHATGPT + '?other=1',
+      CHATGPT + '#fragment',
+      CHATGPT.replace('https:', 'http:'),
+      CHATGPT.replace('chatgpt.com', 'chatgpt.com.example'),
+    ]) {
+      expect(
+        await error(await server.register({ redirect_uris: [redirect] })),
+      ).toBe('invalid_redirect_uri')
+      const response = (await authorize(redirect))!
+      expect(response.status).toBe(400)
+      expect(response.headers.has('location')).toBe(false)
+    }
+  })
+
   it('refuses another redirect, or none', async () => {
     const server = new Server()
     for (const body of [
@@ -223,15 +257,26 @@ describe('registration', () => {
       ).toBe('invalid_client_metadata')
   })
 
-  it('forgets a client that never connected after a day', async () => {
-    const server = new Server()
-    const old = await server.clientId()
-    server.clock += 25 * 60 * 60_000
-    await server.clientId()
-    const response = (await server.authorize(old))!
-    expect(response.status).toBe(400)
-    expect(await response.text()).toContain('não está registrado')
-  })
+  it.each([CLAUDE, CHATGPT])(
+    'prunes an unused client after a day (%s)',
+    async (redirect) => {
+      const server = new Server()
+      const old = await server.clientId(redirect)
+      server.clock += 23 * 60 * 60_000
+      await server.clientId()
+      expect(
+        location(await server.authorize(old, { redirect_uri: redirect }))
+          .origin,
+      ).toBe('https://google.test')
+      server.clock += 2 * 60 * 60_000
+      await server.clientId()
+      const response = (await server.authorize(old, {
+        redirect_uri: redirect,
+      }))!
+      expect(response.status).toBe(400)
+      expect(await response.text()).toContain('não está registrado')
+    },
+  )
 })
 
 describe('authorize, before the redirect is known', () => {

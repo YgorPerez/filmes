@@ -15,8 +15,9 @@
 //
 // The Evidence comes from the Session's body. The header (genres, rating,
 // poster, Portuguese title, synopsis) is rebuilt from the database and the
-// TMDB, which answers from the cache. The sources' attributions stay out,
-// as in the Markdown answer (the Dono's decision of 2026-11-21).
+// TMDB, which answers from the cache; so is the trailer (#289), a YouTube
+// link only when TMDB has one. The sources' attributions stay out, as in
+// the Markdown answer (the Dono's decision of 2026-11-21).
 //
 // In a version redone with `keep` (#59), a film that came in is `new`, and
 // `dropped` says what left and why ("Teo não viu Cais 2" for the Série na
@@ -73,7 +74,7 @@ import { engineError, type EngineError } from '../runtime/EngineError.ts'
 import { Environment } from '../runtime/Environment.ts'
 import { Owner } from '../runtime/Owner.ts'
 import { Run } from '../runtime/Run.ts'
-import type { Tmdb } from '../sources/Tmdb.ts'
+import { Tmdb } from '../sources/Tmdb.ts'
 import { Sqlite, type Connection, type SqliteError } from '../sqlite/Sqlite.ts'
 import { pyInt } from '../compat/fact-id.ts'
 import { sessionOwner } from '../sessions/feedback.ts'
@@ -198,6 +199,9 @@ export interface BillboardFilm {
   /** The TMDB poster at w500, or null. */
   readonly poster: string | null
   readonly imdbUrl: string
+  /** The official trailer on YouTube (pt-BR, else English); absent with
+   * none. */
+  readonly trailer?: string
   readonly imdbRating: number | null
   /** "7,5", or null. */
   readonly imdbRatingText: string | null
@@ -205,6 +209,8 @@ export interface BillboardFilm {
   readonly votesText: string
   /** The chips: year, duration and genres in Portuguese. */
   readonly chips: ReadonlyArray<string>
+  /** The major awards and nominations saved with the version. */
+  readonly awards?: ReadonlyArray<string>
   readonly synopsis: string | null
   /** The strongest Evidence of each Presente with a Fato, the strongest
    * lines first. */
@@ -675,6 +681,11 @@ const filmCard = (
         `Sessão ${id}: ${film.id} não está no Catálogo`,
       )
     const header = yield* filmHeader(db, row)
+    const trailer = yield* (yield* Tmdb).trailer(film.id)
+    const recorded = listed.get(film.id)
+    const awards = listOf(recorded?.get('awards')).filter(
+      (label) => typeof label === 'string',
+    )
     const withoutFact = Object.entries(film.evidence)
       .filter(([, evidence]) => !evidence.some(isFact))
       .map(([person]) => person)
@@ -690,24 +701,26 @@ const filmCard = (
       title,
       originalTitle:
         header.titlePt && header.titlePt !== row.title ? row.title : null,
-      new: pyTruthy(listed.get(film.id)?.get('new') ?? false),
-      bet: pyTruthy(listed.get(film.id)?.get('bet') ?? false),
-      ...(isCautiousBet(listed.get(film.id)) && {
+      new: pyTruthy(recorded?.get('new') ?? false),
+      bet: pyTruthy(recorded?.get('bet') ?? false),
+      ...(isCautiousBet(recorded) && {
         cautiousBet: true as const,
         cautiousBetReason: CAUTIOUS_BET_REASON,
       }),
       poster: header.poster ? header.poster.replace('/w185/', '/w500/') : null,
       imdbUrl: header.imdbUrl,
+      ...(trailer !== null && { trailer }),
       imdbRating: header.imdbRating,
       imdbRatingText:
         header.imdbRating === null ? null : imdbRatingLabel(header.imdbRating),
       votesText: votesText(header.imdbVotes),
       chips,
+      ...(awards.length > 0 && { awards }),
       synopsis: header.synopsis,
       lines: linesOf(film),
       withoutFact,
       coverage: `Fato sobre ${people.length - withoutFact.length} de ${people.length}`,
-      predictedRatings: predictionsOf(listed.get(film.id), attendees),
+      predictedRatings: predictionsOf(recorded, attendees),
     }
     if (feedback?.chosen !== film.id) return card
     return {

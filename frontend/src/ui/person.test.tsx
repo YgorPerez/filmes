@@ -502,6 +502,9 @@ describe('the Notas section', () => {
     expect(link(notes, PERSON.notes.download)).toBe(
       '/exportar/imdb.csv?pessoa=iara',
     )
+    expect(link(notes, PERSON.notes.downloadLetterboxd)).toBe(
+      '/exportar/letterboxd.csv?pessoa=iara',
+    )
     expect(within(notes).getByText(PERSON.notes.movielens)).toBeTruthy()
     // The rating queue is the logged-in Dono's: not on another's page.
     expect(
@@ -516,6 +519,11 @@ describe('the Notas section', () => {
     const notes = section(PERSON.notes.title)
     expect(
       within(notes).queryByRole('link', { name: PERSON.notes.download }),
+    ).toBeNull()
+    expect(
+      within(notes).queryByRole('link', {
+        name: PERSON.notes.downloadLetterboxd,
+      }),
     ).toBeNull()
     expect(within(notes).getByText(PERSON.notes.empty(false))).toBeTruthy()
   })

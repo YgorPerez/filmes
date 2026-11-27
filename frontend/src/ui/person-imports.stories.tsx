@@ -7,6 +7,8 @@ import { PersonImportsScreen, type PersonImportsView } from './person-imports'
 
 const NONE = { wikidata: 0, tmdb: 0, manual: 0 }
 const TRAKT_FILE = 'imports/quim/trakt-b1.zip'
+const IMDB_FILE = 'imports/quim/imdb-c1.csv'
+const SIMKL_FILE = 'imports/quim/simkl-d1.zip'
 
 const QUIM: PersonImportsView = {
   person: 'quim',
@@ -25,6 +27,18 @@ const QUIM: PersonImportsView = {
       date: '2026-11-21',
       original: 'trakt.zip',
     },
+    {
+      kind: 'imdb',
+      file: IMDB_FILE,
+      date: '2026-11-22',
+      original: 'ratings.csv',
+    },
+    {
+      kind: 'simkl',
+      file: SIMKL_FILE,
+      date: '2026-11-23',
+      original: 'SimklBackup.zip',
+    },
   ],
   letterboxd: {
     person: 'quim',
@@ -42,7 +56,9 @@ const QUIM: PersonImportsView = {
     ],
     discardedItems: [],
   },
-  trakt: { ratings: 2, seen: 1 },
+  trakt: { ratings: 2, seen: 1, watchlist: 0 },
+  imdb: { ratings: 412 },
+  simkl: { ratings: 87, seen: 140, watchlist: 12 },
 }
 
 /** Quim with nothing imported yet. */
@@ -57,7 +73,23 @@ const EMPTY: PersonImportsView = {
     queued: 0,
     queue: [],
   },
-  trakt: { ratings: 0, seen: 0 },
+  trakt: { ratings: 0, seen: 0, watchlist: 0 },
+  imdb: { ratings: 0 },
+  simkl: { ratings: 0, seen: 0, watchlist: 0 },
+}
+
+/** Quim with only the IMDb CSV. */
+const IMDB_ONLY: PersonImportsView = {
+  ...EMPTY,
+  imports: QUIM.imports.filter(({ kind }) => kind === 'imdb'),
+  imdb: { ratings: 412 },
+}
+
+/** Quim with only the Simkl backup. */
+const SIMKL_ONLY: PersonImportsView = {
+  ...EMPTY,
+  imports: QUIM.imports.filter(({ kind }) => kind === 'simkl'),
+  simkl: QUIM.simkl,
 }
 
 const meta = {
@@ -88,6 +120,32 @@ export const NothingYet: Story = { args: { page: EMPTY } }
 
 export const Imported: Story = {
   args: { done: { notice: 'trakt', facts: 3, outside: 2 } },
+}
+
+export const OnlyImdb: Story = {
+  args: { page: IMDB_ONLY },
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByText(PERSON_IMPORTS.imdb.summary(412)),
+    ).toBeVisible()
+  },
+}
+
+export const ImdbImported: Story = {
+  args: { page: IMDB_ONLY, done: { notice: 'imdb', facts: 412, outside: 3 } },
+}
+
+export const OnlySimkl: Story = {
+  args: { page: SIMKL_ONLY },
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByText(PERSON_IMPORTS.simkl.summary(87, 140)),
+    ).toBeVisible()
+  },
+}
+
+export const SimklImported: Story = {
+  args: { page: SIMKL_ONLY, done: { notice: 'simkl', facts: 239, outside: 4 } },
 }
 
 export const Refused: Story = { args: { refusal: 'origem' } }

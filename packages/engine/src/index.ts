@@ -44,16 +44,18 @@ export { searchKey } from './catalog/search-key.ts'
 export {
   EXPORT_FORMATS,
   exportRatings,
-  IMDB_HEADER,
-  imdbRating,
   type ExportFormat,
   type ExportResult,
-} from './export/imdb.ts'
+} from './export/export.ts'
+export { IMDB_HEADER } from './export/imdb.ts'
+export { LETTERBOXD_HEADER } from './export/letterboxd.ts'
 export { resolveAttendees } from './recommendation/attendees.ts'
 export {
   attributionsOf,
+  CREDITS,
   TRAKT_ATTRIBUTION,
   type Attribution,
+  type Credit,
 } from './recommendation/attributions.ts'
 export {
   catalogFilm,
@@ -284,6 +286,7 @@ export {
   type Outcome,
   type RunOptions,
 } from './runtime/Engine.ts'
+export type { TraktConnection } from './sources/Trakt.ts'
 export { Owner, ownerOf } from './runtime/Owner.ts'
 export {
   ERROR_CODES,
@@ -596,6 +599,43 @@ export {
   type TraktReport,
   type TraktUnresolved,
 } from './imports/trakt.ts'
+export {
+  importImdb,
+  IMDB_KIND,
+  imdbFactCounts,
+  loadImdb,
+  reloadImdb,
+  reloadPersonImdb,
+  type ImdbFactCounts,
+  type ImdbImport,
+  type ImdbImportInput,
+  type ImdbOutside,
+} from './imports/imdb.ts'
+export {
+  importSimkl,
+  loadSimkl,
+  reloadPersonSimkl,
+  reloadSimkl,
+  SIMKL_KIND,
+  simklFactCounts,
+  type SimklFactCounts,
+  type SimklImport,
+  type SimklImportInput,
+  type SimklReport,
+  type SimklUnresolved,
+} from './imports/simkl.ts'
+export {
+  isSimklBackup,
+  readSimklBackup,
+  type SimklFilm,
+  type SimklRow,
+  type SimklRowKind,
+} from './imports/simkl-backup.ts'
+export {
+  isImdbRatings,
+  readImdbRatings,
+  type ImdbRatingRow,
+} from './imports/imdb-ratings.ts'
 export {
   personImports,
   type ImportRecord,

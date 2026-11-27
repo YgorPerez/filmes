@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import type { PushStatus } from '@filmes/engine'
 import { Icon, type IconName } from './kit/icon'
 import { Avatar } from './kit/person'
+import { SiteFooter } from './kit/site-footer'
 import { Alert } from './kit/status'
 import { OPERATIONS } from './operations.copy'
 import { SHELL } from './shell.copy'
@@ -10,8 +11,9 @@ import { SHELL } from './shell.copy'
 // with "filmes" and the Dono's avatar, which opens her menu (Operações for
 // an admin, and Sair); on the phone the four tabs sit fixed at the bottom,
 // and from 900px they move up into the top bar. An admin also sees, under
-// the bar, the strip of a push that keeps failing. Every Dono page sits in
-// it; `/entrar` and the Cartaz's MCP Apps view do not.
+// the bar, the strip of a push that keeps failing. Under the page, the
+// footer with the sources' credits (#292). Every Dono page sits in it;
+// `/entrar` and the Cartaz's MCP Apps view do not.
 
 type Tab = {
   key: keyof typeof SHELL.items
@@ -207,7 +209,7 @@ function AccountMenu({
 }
 
 /** Every Dono page: the top bar, the push strip for an admin, the page,
- * and the tabs. `path` is the page's, to mark its tab. */
+ * the footer, and the tabs. `path` is the page's, to mark its tab. */
 export function AppShell({
   owner,
   path,
@@ -241,7 +243,10 @@ export function AppShell({
         </div>
       </header>
       {alert && <PushStrip status={alert} />}
-      <div className="flex-1 pb-tab-clearance min-[900px]:pb-0">{children}</div>
+      <div className="flex flex-1 flex-col pb-tab-clearance min-[900px]:pb-0">
+        <div>{children}</div>
+        <SiteFooter />
+      </div>
       <Tabs path={path} place="bottom" />
     </div>
   )

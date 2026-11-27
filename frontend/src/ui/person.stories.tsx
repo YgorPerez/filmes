@@ -160,6 +160,11 @@ export const AnotherPerson: Story = {
       name: PERSON.notes.title,
     })
     await expect(within(notes).getByText(PREDICTION_ERROR)).toBeVisible()
+    await expect(
+      within(notes).getByRole('link', {
+        name: PERSON.notes.downloadLetterboxd,
+      }),
+    ).toHaveAttribute('href', '/exportar/letterboxd.csv?pessoa=iara')
   },
 }
 
@@ -184,6 +189,10 @@ export const MyTaste: Story = {
       within(canvasElement).getByText(PREDICTION_ERROR),
     ).toBeVisible()
   },
+}
+
+export const MyTasteWithTrakt: Story = {
+  args: { ...MyTaste.args, showTrakt: true },
 }
 
 export const AdminGrantsAccess: Story = {

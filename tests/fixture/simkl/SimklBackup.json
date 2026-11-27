@@ -1,0 +1,145 @@
+{
+  "movies": [
+    {
+      "added_to_watchlist_at": "2025-01-02T10:00:00Z",
+      "last_watched_at": "2025-03-08T21:30:00Z",
+      "user_rated_at": "2025-03-09T10:00:00Z",
+      "user_rating": 9,
+      "status": "completed",
+      "movie": {
+        "title": "O Último Bonde",
+        "year": 2019,
+        "ids": { "simkl": 9100001, "imdb": "tt9000202", "tmdb": "9202" }
+      }
+    },
+    {
+      "added_to_watchlist_at": "2024-07-14T17:00:00Z",
+      "last_watched_at": "1970-01-01T00:00:01Z",
+      "user_rated_at": "2024-07-14T18:00:00Z",
+      "user_rating": 6,
+      "status": "completed",
+      "movie": {
+        "title": "Maré Baixa",
+        "year": 2015,
+        "ids": { "simkl": 9100002, "tmdb": "9003" }
+      }
+    },
+    {
+      "added_to_watchlist_at": "2023-04-30T12:00:00Z",
+      "last_watched_at": "2023-05-01T20:00:00Z",
+      "user_rated_at": null,
+      "user_rating": null,
+      "status": "completed",
+      "movie": {
+        "title": "Rio Abaixo",
+        "year": 2014,
+        "ids": { "simkl": 9100003, "tmdb": "9101" }
+      }
+    },
+    {
+      "added_to_watchlist_at": "2026-10-02T12:00:00Z",
+      "last_watched_at": null,
+      "user_rated_at": null,
+      "user_rating": null,
+      "status": "plantowatch",
+      "movie": {
+        "title": "Pequenos Milagres",
+        "year": 2019,
+        "ids": { "simkl": 9100004, "imdb": "tt9000601" }
+      }
+    },
+    {
+      "added_to_watchlist_at": null,
+      "last_watched_at": "1970-01-01T00:00:01Z",
+      "user_rated_at": null,
+      "user_rating": null,
+      "status": "completed",
+      "movie": {
+        "title": "Casa Cheia",
+        "year": 2021,
+        "ids": { "simkl": 9100005, "imdb": "tt9000602" }
+      }
+    },
+    {
+      "added_to_watchlist_at": "2024-02-02T12:00:00Z",
+      "last_watched_at": "2024-02-03T12:00:00Z",
+      "user_rated_at": null,
+      "user_rating": null,
+      "status": "dropped",
+      "movie": {
+        "title": "Barulho",
+        "year": 2013,
+        "ids": { "simkl": 9100006, "imdb": "tt9000501" }
+      }
+    },
+    {
+      "added_to_watchlist_at": "2022-01-01T12:00:00Z",
+      "last_watched_at": "2022-01-09T22:00:00Z",
+      "user_rated_at": "2022-01-09T23:00:00Z",
+      "user_rating": 7,
+      "status": "completed",
+      "movie": {
+        "title": "Filme Perdido",
+        "year": 1999,
+        "ids": { "simkl": 9100007, "imdb": "tt9999901" }
+      }
+    }
+  ],
+  "shows": [
+    {
+      "added_to_watchlist_at": "2024-01-01T12:00:00Z",
+      "last_watched_at": "2024-03-01T12:00:00Z",
+      "user_rated_at": "2024-03-02T12:00:00Z",
+      "user_rating": 8,
+      "status": "completed",
+      "show": {
+        "title": "Cais",
+        "year": 2023,
+        "ids": { "simkl": 9100008, "imdb": "tt9028501" }
+      },
+      "seasons": []
+    }
+  ],
+  "anime": [
+    {
+      "added_to_watchlist_at": "2022-12-20T12:00:00Z",
+      "last_watched_at": "2022-12-24T21:00:00Z",
+      "user_rated_at": "2022-12-25T09:00:00Z",
+      "user_rating": 8,
+      "status": "completed",
+      "anime_type": "movie",
+      "show": {
+        "title": "Deserto Branco",
+        "year": 2015,
+        "ids": { "simkl": 9100009, "mal": "9701", "imdb": "tt9000701" }
+      }
+    },
+    {
+      "added_to_watchlist_at": "2021-06-01T12:00:00Z",
+      "last_watched_at": "2021-06-30T21:00:00Z",
+      "user_rated_at": "2021-07-01T09:00:00Z",
+      "user_rating": 10,
+      "status": "completed",
+      "anime_type": "tv",
+      "show": {
+        "title": "A Última Estação",
+        "year": 2018,
+        "ids": { "simkl": 9100010, "imdb": "tt9000702" }
+      },
+      "seasons": []
+    },
+    {
+      "added_to_watchlist_at": "2020-05-01T12:00:00Z",
+      "last_watched_at": "2020-05-02T21:00:00Z",
+      "user_rated_at": "2020-05-03T09:00:00Z",
+      "user_rating": 5,
+      "status": "completed",
+      "anime_type": "movie",
+      "show": {
+        "title": "Filme Sem Ids",
+        "year": 2020,
+        "ids": { "simkl": 9100011, "mal": "9702" }
+      }
+    }
+  ]
+}

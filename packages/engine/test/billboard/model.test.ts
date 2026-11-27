@@ -341,6 +341,43 @@ describe('the Cartaz model', () => {
   })
 })
 
+describe('the trailer (#289)', () => {
+  test('each card links the official YouTube trailer, pt-BR first, then English', async () => {
+    const fixture = useFixture()
+    const session = await recommend(fixture, { attendees: ['dono'] })
+    const tmdb = { FILMES_TMDB_CHAVE: 'x', FILMES_GRAVACOES: RECORDINGS }
+
+    const out = await fixture.ok(
+      billboard({ session: session.session.id }),
+      tmdb,
+    )
+
+    const trailers = new Map(out.billboard.films.map((f) => [f.id, f.trailer]))
+    expect(trailers.get('tt9000104')).toBe(
+      'https://www.youtube.com/watch?v=hOrAsPtBr01',
+    )
+    expect(trailers.get('tt9000105')).toBe(
+      'https://www.youtube.com/watch?v=sAlTrUsTeN1',
+    )
+    const others = out.billboard.films.filter(
+      (f) => f.id !== 'tt9000104' && f.id !== 'tt9000105',
+    )
+    expect(others.length).toBeGreaterThan(0)
+    for (const film of others) expect(film).not.toHaveProperty('trailer')
+    expect(out.warnings).toEqual([])
+  })
+
+  test('without TMDB, no card has a trailer', async () => {
+    const fixture = useFixture()
+    const session = await recommend(fixture, { attendees: ['dono'] })
+
+    const out = await fixture.ok(billboard({ session: session.session.id }))
+
+    for (const film of out.billboard.films)
+      expect(film).not.toHaveProperty('trailer')
+  })
+})
+
 describe('the Cartaz model', () => {
   test('a redone version has the new mark and what left and why', async () => {
     const fixture = useFixture()

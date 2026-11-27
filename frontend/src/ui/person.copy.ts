@@ -45,15 +45,16 @@ export const PERSON = {
       return `a previsão erra ${rounded.toLocaleString('pt-BR')} ${points} em média, em ${films.toLocaleString('pt-BR')} filmes`
     },
     rate: 'Dar notas',
-    import: 'Importar do Letterboxd ou do Trakt',
+    import: 'Importar do Letterboxd, do Trakt, do IMDb ou do Simkl',
     download: 'Baixar CSV do IMDb',
+    downloadLetterboxd: 'Baixar CSV do Letterboxd',
     movielens:
-      'O CSV entra no MovieLens em Import or Export Data, como avaliações do IMDb.',
+      'O CSV do IMDb entra no MovieLens em Import or Export Data, como avaliações do IMDb. O do Letterboxd leva as Notas e os Já vistos ao diário dela, pelo import de dados do Letterboxd.',
     list: (n: number) => (n === 1 ? 'Ver a Nota' : `Ver as ${n} Notas`),
     empty: (own: boolean) =>
       own
         ? 'Nenhuma Nota ainda. Dê nota a filmes que você já viu, ou traga o seu histórico.'
-        : 'Nenhuma Nota ainda. Traga o histórico dela do Letterboxd ou do Trakt.',
+        : 'Nenhuma Nota ainda. Traga o histórico dela do Letterboxd, do Trakt, do IMDb ou do Simkl.',
     noDatabase: 'As Notas aparecem depois que o banco for reconstruído.',
   },
   contents: 'Nesta página',

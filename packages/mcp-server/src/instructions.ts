@@ -115,11 +115,19 @@ A pergunta que a Pessoa pulou vai em \`action: "skip"\` (a pergunta em \`text\`,
 
 O ZIP do Letterboxd e o do Trakt sobem pelo app, em Importar. Por aqui vai o RSS público do Letterboxd: pergunte se a Pessoa concorda que o RSS dela seja baixado e, só com o sim, chame \`import\` com \`person\`, \`letterboxdRss\` (o usuário) e \`consent: true\`. O RSS traz as cerca de 50 entradas recentes do diário; o ZIP importado depois soma o resto sem repetir Fatos. Mostre o relatório e as pendências.
 
+Quem dá nota no IMDb manda o CSV de "Your Ratings" (imdb.com, Your Ratings › Export). Chame \`import\` com \`person\` e \`imdbCsv\` (o texto inteiro do arquivo): cada filme do Catálogo vira Nota e Já visto. Diga quantos Fatos entraram e, se \`outsideCatalog\` não estiver vazio, que aqueles títulos (séries, episódios, filmes que o Catálogo não tem) ficaram de fora. O arquivo também sobe pelo app, em Importar.
+
+Quem usa o Simkl manda o backup (simkl.com, Apps › Export › ".zip archive with .json file"). Chame \`import\` com \`person\` e \`simklJson\`: o texto do SimklBackup.json, o arquivo de dentro do ZIP. Filmes e filmes de anime com nota viram Notas (de 1 a 10, lidas na Escala dela), os \`completed\` sem nota viram Já vistos e os \`plantowatch\`, a watchlist; séries ficam de fora. Diga quantos Fatos entraram e, se \`unresolved\` não estiver vazio, quais filmes o Catálogo não achou. O ZIP inteiro sobe pelo app, em Importar.
+
 Os filmes que esperam decisão estão em \`import_queue\` (\`view\`). Mostre os candidatos e, depois que o Dono decidir, \`confirm\` com \`film\` ou \`discard\` com \`reason\`. Se o relatório avisar que o TMDB não respondeu, chame \`reprocess\` (com \`person\`, para só os dela) antes de levar os itens ao Dono.
 
 ### Exportar para o MovieLens
 
 O MovieLens só importa o CSV de avaliações do IMDb. Chame \`export\` com a Pessoa e \`format: "imdb"\`: o arquivo volta em \`content\`. Entregue-o ao Dono como \`<pessoa>-imdb-ratings.csv\`. A Pessoa sobe o arquivo em movielens.org, Import or Export Data.
+
+### Exportar para o Letterboxd
+
+Para levar ao diário do Letterboxd o que a Pessoa deu nota e viu no filmes, chame \`export\` com a Pessoa e \`format: "letterboxd"\`. Entregue \`content\` ao Dono como \`<pessoa>-letterboxd.csv\`. A Pessoa sobe o arquivo no import de dados do Letterboxd (letterboxd.com/about/importing-data explica); cada filme entra no diário no dia em que ela viu, e exportar de novo atualiza a entrada em vez de repetir.
 
 ### Desfazer um registro
 

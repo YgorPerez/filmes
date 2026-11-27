@@ -4,6 +4,11 @@ import { defineTool } from '../tool.ts'
 
 export default defineTool({
   name: 'open_sessions',
+  annotations: {
+    readOnlyHint: true,
+    destructiveHint: false,
+    openWorldHint: false,
+  },
   description:
     'Lista as Sessões sem Feedback, a mais recente primeiro, em `sessions`: id, date, attendees (os Presentes), ' +
     'request (o pedido) e recommendation ({position, id, title}) da versão atual, e `version`, que passa de 1 quando a ' +

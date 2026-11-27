@@ -3,10 +3,12 @@ import { Fragment, type ReactNode } from 'react'
 import type { PersonNotice, PersonRefusal } from '#/content/person-action'
 import {
   imdbCsvPath,
+  letterboxdCsvPath,
   importsPath,
   personPath,
   RATINGS_PATH,
 } from '#/content/paths'
+import { TRAKT_PATH } from '#/content/trakt-form'
 import type { SearchAnswer } from '#/platform/catalog-search'
 import type { PersonPage } from '#/platform/people'
 import { OwnerTag } from './kit/owner-tag'
@@ -66,6 +68,7 @@ export function PersonScreen({
   refusal,
   search = null,
   start,
+  showTrakt = false,
 }: {
   slug: string
   page: PersonPage | 'unknown' | null
@@ -74,6 +77,7 @@ export function PersonScreen({
   search?: SearchAnswer | null
   /** Meu gosto's part of the setup guide; only on her own page. */
   start?: MyStart
+  showTrakt?: boolean
 }) {
   const own =
     typeof page === 'object' &&
@@ -106,6 +110,17 @@ export function PersonScreen({
           <div className="grid gap-2xl min-[900px]:grid-cols-2 min-[900px]:items-start">
             <div className="flex min-w-0 flex-col gap-2xl">
               {own && <Glance page={page} start={start} />}
+              {own && showTrakt && (
+                <a
+                  href={TRAKT_PATH}
+                  className={buttonVariants({
+                    variant: 'option',
+                    className: 'self-start',
+                  })}
+                >
+                  Conexão com o Trakt
+                </a>
+              )}
               <Notes
                 slug={slug}
                 own={own}
@@ -211,9 +226,14 @@ function Notes({
           {notes.import}
         </a>
         {ratings !== null && ratings.length > 0 && (
-          <a href={imdbCsvPath(slug)} className={option}>
-            {notes.download}
-          </a>
+          <>
+            <a href={imdbCsvPath(slug)} className={option}>
+              {notes.download}
+            </a>
+            <a href={letterboxdCsvPath(slug)} className={option}>
+              {notes.downloadLetterboxd}
+            </a>
+          </>
         )}
       </div>
       {ratings !== null && ratings.length > 0 && (
