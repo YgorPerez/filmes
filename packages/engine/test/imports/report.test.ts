@@ -49,6 +49,7 @@ describe('personImports', () => {
       },
       trakt: { ratings: 0, seen: 0, watchlist: 0 },
       imdb: { ratings: 0 },
+      simkl: { ratings: 0, seen: 0, watchlist: 0 },
     })
   })
 })

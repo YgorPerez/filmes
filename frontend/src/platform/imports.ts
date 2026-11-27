@@ -1,5 +1,5 @@
 // Imports (map #72, W5): a Pessoa's Letterboxd and Trakt exports, her
-// IMDb ratings CSV (#285), her Letterboxd RSS, and the resolution queue the Letterboxd imports share.
+// IMDb ratings CSV (#285), her Simkl backup (#299), her Letterboxd RSS, and the resolution queue the Letterboxd imports share.
 // The pages read through `Imports`; a Pessoa's forms post to
 // `/importar/<slug>/acao` and the queue's to `/fila/acao`, which run as the
 // logged-in Dono (the commit's author) and go back with what happened.
@@ -12,6 +12,7 @@ import {
   importImdb,
   importLetterboxd,
   importLetterboxdRss,
+  importSimkl,
   importTrakt,
   readPeople,
   personImports,
@@ -95,7 +96,7 @@ export type ImportDone = {
   notice: ImportNotice
   /** Fatos that came in (or went, for a removal). */
   facts: number
-  /** Trakt or IMDb films the Catalog could not resolve. */
+  /** Trakt, IMDb or Simkl films the Catalog could not resolve. */
   outside?: number
 }
 
@@ -189,6 +190,15 @@ function runImport(
           outside: r.outsideCatalog.length,
         }),
       )
+    case 'simkl':
+      return map(
+        run(importSimkl({ person, ...upload(action), author })),
+        (r): ImportDone => ({
+          notice: r.newFile ? 'simkl' : 'repetido',
+          facts: sum(r.newFacts),
+          outside: r.unresolved.length,
+        }),
+      )
     case 'remove':
       return map(
         run(removeImport({ file: action.file, person, author })),
@@ -278,7 +288,7 @@ export async function importsPage(
 }
 
 /** The upload once its service is known by what the file holds; null when
- * it is neither Letterboxd's, Trakt's nor IMDb's. */
+ * it is none of Letterboxd's, Trakt's, IMDb's or Simkl's. */
 function runOf(action: ImportAction): ImportRun | null {
   if (action.kind !== 'upload') return action
   const source = exportSource(action.content)
@@ -329,8 +339,8 @@ const query = (fields: Record<string, string | number | undefined>) => {
   return `?${params.toString()}`
 }
 
-/** `POST /importar/<slug>/acao`: a Letterboxd or Trakt ZIP or the IMDb
- * CSV (multipart, told apart by what it holds), the RSS (only with the Pessoa's consent,
+/** `POST /importar/<slug>/acao`: a Letterboxd, Trakt or Simkl ZIP, the IMDb
+ * CSV or the Simkl JSON (multipart, told apart by what it holds), the RSS (only with the Pessoa's consent,
  * which the engine does not ask; on her own page the Dono answers for
  * herself), or removing an import; as the logged-in Dono, who signs the
  * commit. */

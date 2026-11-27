@@ -1,7 +1,8 @@
 // The import tools (#110): the old MCP's letterboxd.test, trakt.test and
 // the import part of remover.test. The ZIPs go up through the app, not the
 // MCP, so the tests put them in with the engine and do the rest through
-// the tools; the IMDb CSV is text, and goes through the tool (#285). TMDB answers from the recordings; nothing touches the network.
+// the tools; the IMDb CSV is text, and goes through the tool (#285), as does Simkl's
+// backup JSON (#299). TMDB answers from the recordings; nothing touches the network.
 import assert from 'node:assert/strict'
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -224,21 +225,66 @@ describe('import', () => {
     )
   })
 
-  test('takes one thing per call, and the RSS and the CSV need the Pessoa', async () => {
+  test("imports Simkl's backup JSON as text", async () => {
+    const c = await connect(useFixture(), null, TMDB_ON)
+    const json = readFileSync(
+      join(ROOT, 'tests/fixture/simkl/SimklBackup.json'),
+      'utf8',
+    )
+
+    const report = await c.ok('import', { person: 'vera', simklJson: json })
+
+    assert.equal(report.person, 'vera')
+    assert.deepEqual(report.newFacts, { ratings: 3, seen: 2, watchlist: 1 })
+    assert.deepEqual(report.resolved, { imdb: 4, tmdb: 2 })
+    assert.deepEqual(
+      report.unresolved.map((film: { name: string }) => film.name),
+      ['Filme Perdido', 'Filme Sem Ids'],
+    )
+    assert.match(report.file, /^imports\/vera\/simkl-[0-9a-f]{64}\.json$/)
+    assert.deepEqual(
+      (await c.ok('person', { action: 'view', person: 'vera' })).imports.map(
+        (record: { kind: string; original: string }) => [
+          record.kind,
+          record.original,
+        ],
+      ),
+      [['simkl', 'SimklBackup.json']],
+    )
+    assert.deepEqual(
+      (await c.error('import', { person: 'vera', simklJson: '{"user": {}}' }))
+        .error,
+      {
+        code: 'invalid_file',
+        message:
+          'SimklBackup.json: JSON sem movies nem anime de um backup do Simkl',
+      },
+    )
+  })
+
+  test('takes one thing per call, and the RSS, the CSV and the backup need the Pessoa', async () => {
     const c = await connect(useFixture())
 
     for (const [args, message] of [
-      [{ person: 'teo' }, 'mande letterboxdRss, imdbCsv ou remove, um só'],
+      [
+        { person: 'teo' },
+        'mande letterboxdRss, imdbCsv, simklJson ou remove, um só',
+      ],
       [
         { person: 'teo', letterboxdRss: 'x', remove: 'y' },
-        'mande letterboxdRss, imdbCsv ou remove, um só',
+        'mande letterboxdRss, imdbCsv, simklJson ou remove, um só',
       ],
       [
         { person: 'teo', imdbCsv: 'x', remove: 'y' },
-        'mande letterboxdRss, imdbCsv ou remove, um só',
+        'mande letterboxdRss, imdbCsv, simklJson ou remove, um só',
       ],
       [{ letterboxdRss: 'x', consent: true }, 'o RSS precisa de person'],
       [{ imdbCsv: 'x' }, 'o CSV do IMDb precisa de person'],
+      [
+        { person: 'teo', imdbCsv: 'x', simklJson: 'y' },
+        'mande letterboxdRss, imdbCsv, simklJson ou remove, um só',
+      ],
+      [{ simklJson: 'x' }, 'o backup do Simkl precisa de person'],
     ] as const)
       assert.deepEqual((await c.error('import', args)).error, {
         code: 'invalid_usage',
