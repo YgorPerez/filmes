@@ -118,7 +118,6 @@ async function addStatedReportAndSeen(page: Page, info: TestInfo) {
   await form.getByRole('button', { name: 'Gravar' }).click()
   await expect(section(page, 'Relatos')).toContainText('odeia filme lento')
 
-  await page.getByText('Já vistos: nenhum').click()
   form = await addForm(page, 'Já vistos', 'Acrescentar Já visto')
   await target(form, /^Filme/, 'casa cheia', /^Usar Casa Cheia/)
   await form
@@ -204,7 +203,7 @@ test('the Dono answers or skips an open question', async ({ page }, info) => {
     await page.goto('/pessoas/quim')
     const questions = section(page, 'Perguntas abertas')
     await expect(questions).toContainText(
-      'o Quim curte os filmes da Helena Prado?',
+      'O Quim curte os filmes da Helena Prado?',
     )
     await snap(page, info, 'pergunta-aberta')
     await questions.getByText('Responder com palavras', { exact: true }).click()

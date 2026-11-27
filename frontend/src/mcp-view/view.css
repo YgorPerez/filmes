@@ -16,15 +16,12 @@
 /* The stories are not the Cartaz (`pnpm storybook`). */
 @source not '../ui/**/*.stories.tsx';
 
-/* Inline, the card sits on the host's own floor (#277): the frame has none,
- * and declares no colour scheme, as the host's page does, or Chrome paints
- * an opaque canvas behind it. The fullscreen lays the ground itself
- * (`billboard.tsx`), and `mount-view.tsx` gives it the theme's scheme. */
+/* Inline, the card sits on the host's own floor (#277): the frame has none.
+ * Its colour scheme is the theme's (`base.css` until the host gives one,
+ * then `mount-view.tsx`), so where Chrome paints a canvas behind it, the
+ * canvas has the tokens' own polarity. The fullscreen lays the ground
+ * itself (`billboard.tsx`). */
 @layer base {
-  html {
-    color-scheme: normal;
-  }
-
   body {
     background: transparent;
   }

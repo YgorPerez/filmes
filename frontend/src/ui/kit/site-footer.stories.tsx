@@ -22,4 +22,7 @@ export const Credits: Story = {
 }
 
 /** Under the Session link's pages: the guest column's width. */
-export const Narrow: Story = { args: { narrow: true } }
+export const Narrow: Story = { args: { width: 'link' } }
+
+/** Under `/entrar`: the sign-in card's width. */
+export const Card: Story = { args: { width: 'card' } }

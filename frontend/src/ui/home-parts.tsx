@@ -71,9 +71,35 @@ const attendeesOf = (s: LatestSession, person: string) => {
     : names
 }
 
-/** One film of the Sessão as a tape on the shelf: its cover, or the
- * case's spine without one, its number and title, leading to its card in
- * the Cartaz. */
+/** The tape's cover slot, the same 30px in every row so the numbers line
+ * up: the poster, or the case's black when there is none or it fails to
+ * load (never the broken-image glyph). An image that failed before the
+ * page hydrated is caught when it mounts. */
+function TapeCover({ src }: { src: string | null }) {
+  const [failed, setFailed] = useState<string | null>(null)
+  return (
+    <span
+      aria-hidden="true"
+      className="h-touch w-7.5 shrink-0 overflow-hidden border-r border-case-edge bg-case"
+    >
+      {src !== null && failed !== src && (
+        <img
+          src={src}
+          alt=""
+          loading="lazy"
+          onError={() => setFailed(src)}
+          ref={(img) => {
+            if (img?.complete && img.naturalWidth === 0) setFailed(src)
+          }}
+          className="size-full object-cover"
+        />
+      )}
+    </span>
+  )
+}
+
+/** One film of the Sessão as a tape on the shelf: its cover slot, its
+ * number and title, leading to its card in the Cartaz. */
 function Tape({
   film,
   n,
@@ -91,19 +117,7 @@ function Tape({
         href={`${sessionPath(session)}#filme-${film.id}`}
         className="flex min-h-touch items-center gap-md overflow-hidden rounded-rail bg-surface-2 pr-md text-ink no-underline hover:bg-rule"
       >
-        {cover ? (
-          <img
-            src={cover}
-            alt=""
-            loading="lazy"
-            className="h-touch w-7.5 shrink-0 border-r border-case-edge bg-case object-cover"
-          />
-        ) : (
-          <span
-            aria-hidden="true"
-            className="w-2 self-stretch border-r border-case-edge bg-case"
-          />
-        )}
+        <TapeCover src={cover} />
         <PriceSticker compact>{n}</PriceSticker>
         <span className="min-w-0 flex-1 truncate font-display text-row-title">
           {film.title}

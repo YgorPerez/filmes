@@ -84,7 +84,7 @@ function SessionLinkRoute() {
           />
         )}
       </main>
-      <SiteFooter narrow />
+      <SiteFooter width="link" />
     </div>
   )
 }

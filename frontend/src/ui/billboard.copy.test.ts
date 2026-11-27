@@ -1,7 +1,9 @@
 // The Cartaz's words: what a redo changed, what was marked, the bar's
-// sentence, an empty Recomendação and the view's failures.
+// sentence, an empty Recomendação, the view's failures and the shelf
+// label outside the Cartaz.
 import { describe, expect, it } from 'vite-plus/test'
 import { BILLBOARD } from './billboard.copy'
+import { sessionLabel } from './billboard-request'
 
 const { reply, view } = BILLBOARD
 
@@ -77,5 +79,36 @@ describe('the Cartaz copy', () => {
     expect(view.failed(null)).toBe(
       'Não consegui enviar. Tente de novo ou copie pro chat.',
     )
+  })
+})
+
+describe('the shelf label outside the Cartaz (#272)', () => {
+  it('says who, the duration, the Climas and the other Restrições, as the Cartaz', () => {
+    expect(
+      sessionLabel({
+        attendees: [
+          { name: 'Bruno', owner: true },
+          { name: 'Iara', owner: false },
+          { name: 'Teo', owner: false },
+          { name: 'Rosa', owner: false },
+        ],
+        moods: ['leve'],
+        constraints: ['até 2h', 'nada assustador'],
+      }),
+    ).toEqual(['Vocês quatro', 'até 2h', 'leve', 'nada assustador'])
+    expect(
+      sessionLabel({
+        attendees: [{ name: 'Bruno', owner: true }],
+        moods: [],
+        constraints: [],
+      }),
+    ).toEqual(['Você'])
+    expect(
+      sessionLabel({
+        attendees: [{ name: 'Iara', owner: false }],
+        moods: [],
+        constraints: [],
+      }),
+    ).toEqual(['Iara'])
   })
 })

@@ -11,7 +11,9 @@
 // as on the web. When the host has a fullscreen, the view starts as the
 // compact inline card, whose Marcar asks for it; in fullscreen it is the
 // whole Cartaz with the top and the foot fixed. A host without one gets the
-// whole Cartaz inline, capped.
+// whole Cartaz inline, capped, on its own ground with the inline card's
+// rule and corners. After an Enviar that redoes the list, the fullscreen
+// gives way to the chat, where the new list comes.
 //
 // `mountView` (`mount-view.tsx`) connects this view to the host.
 
@@ -44,6 +46,9 @@ export type Host = {
   readonly fullscreen?: () => void
   /** The view is in the host's fullscreen. */
   readonly inFullscreen?: boolean
+  /** Asks the host for the inline card again, in the fullscreen: whether
+   * it took it. */
+  readonly leaveFullscreen?: () => Promise<boolean>
 }
 
 const { view } = BILLBOARD
@@ -82,10 +87,19 @@ async function send(
   )
   if (!told) return { message: SEND_STATUS.notNotified, sent: true }
   return {
-    message: reply.regenerate ? SEND_STATUS.regenerating : SEND_STATUS.toChat,
+    message: reply.regenerate ? await regenerating(host) : SEND_STATUS.toChat,
     sent: true,
     told: true,
   }
+}
+
+/** Where the new list comes: in the chat, which the fullscreen covers, so
+ * the view goes back inline first; when the host keeps it, the Dono is
+ * asked to close it (#277). */
+async function regenerating(host: Host) {
+  if (!host.leaveFullscreen) return SEND_STATUS.regenerating
+  const left = await host.leaveFullscreen().catch(() => false)
+  return left ? SEND_STATUS.regenerating : SEND_STATUS.closeFullscreen
 }
 
 function Cartaz({
@@ -163,7 +177,13 @@ export function BillboardView({
   if (result === null) return <Loading />
   const shown = billboardOf(result)
   return (
-    <main className={layoutOf(host) === 'page' ? 'bg-ground p-2xl' : ''}>
+    <main
+      className={
+        layoutOf(host) === 'page'
+          ? 'rounded-panel border border-rule bg-ground p-lg'
+          : ''
+      }
+    >
       {'billboard' in shown ? (
         <>
           <h1 className="sr-only">

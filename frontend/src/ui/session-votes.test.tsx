@@ -12,6 +12,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, expect, it, vi } from 'vite-plus/test'
 import { FETCH_HEADER } from '#/content/fetch-answer'
 import { votePath, voteSearch } from '#/content/session-votes-address'
+import { PARTICIPATION } from './session-link.copy'
 import { VOTES } from './session-votes.copy'
 import { VoteCards, VoteScreen } from './session-votes'
 import { FILMS } from './session-link.fixture'
@@ -318,7 +319,8 @@ it('the page’s search keeps only the notices and refusals it knows', () => {
 })
 
 // The sticker on the card, not the button of the same word.
-const STAMP = { selector: 'span' }
+// The card's stamp, not the rule's Não / Sim marks above the card.
+const STAMP = { selector: 'article span' }
 
 const motion = (reduce: boolean) =>
   vi.stubGlobal(
@@ -443,6 +445,26 @@ it('films still to vote on after sending lead first, the Perguntas after', () =>
     VOTES.revote,
     VOTES.questions,
   ])
+  expect(screen.getAllByText(PARTICIPATION.arrived)).toHaveLength(1)
+})
+
+it('the page title asks Sim ou não over the cards and says Revise on the recap', async () => {
+  const user = userEvent.setup()
+  render(<VoteScreen deck={DECK} search={LINK} home={HOME} />)
+  const title = () => screen.getByRole('heading', { level: 1 }).textContent
+  expect(title()).toBe(VOTES.title)
+  // The arrow keys show only where there is a keyboard; both clauses exist.
+  expect(screen.getByText(VOTES.hint.touch).className).toContain(
+    'pointer-fine:hidden',
+  )
+  expect(screen.getByText(VOTES.hint.keys).className).toContain(
+    'pointer-fine:inline',
+  )
+  for (const name of [VOTES.yes, VOTES.no, VOTES.yes])
+    await user.click(screen.getByRole('button', { name }))
+  expect(title()).toBe(VOTES.review)
+  await user.click(screen.getByRole('button', { name: VOTES.restart }))
+  expect(title()).toBe(VOTES.title)
 })
 
 it('a redo that failed says the Votos were counted, in the title and the alert', () => {

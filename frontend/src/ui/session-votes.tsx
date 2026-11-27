@@ -4,6 +4,7 @@ import {
   useState,
   type FormEventHandler,
   type PointerEvent,
+  type ReactNode,
   type RefObject,
 } from 'react'
 import {
@@ -17,7 +18,7 @@ import { useFetchForm } from './kit/fetch-form'
 import { Icon } from './kit/icon'
 import { Alert, Notice, PostFailed } from './kit/status'
 import { Sticker } from './kit/sticker'
-import { FilmCover, FilmFacts, LinkFilmRow } from './session-link'
+import { FilmCover, FilmFacts, LinkFilmRow, VoteRule } from './session-link'
 import { PARTICIPATION } from './session-link.copy'
 import { VOTES } from './session-votes.copy'
 
@@ -144,6 +145,7 @@ export function VoteCards({
   action,
   onSubmit,
   sending = false,
+  header,
 }: {
   deck: VoteDeck
   /** Every film of the screen again, not only the ones she has not voted
@@ -152,74 +154,86 @@ export function VoteCards({
   action: string
   onSubmit?: FormEventHandler<HTMLFormElement>
   sending?: boolean
+  /** What goes above the cards, told whether she is on the recap, so the
+   * page's title can say so. */
+  header?: (reviewing: boolean) => ReactNode
 }) {
   const films = revote ? deck.films : deck.films.filter((f) => !f.mine)
   const standing = revote ? [] : deck.films.filter((f) => f.mine)
   const { votes, said, film, heading, recap, cast, back, change, restart } =
     useVotes(films)
   useArrowKeys(film !== undefined, cast)
+  const reviewing = film === undefined
   return (
-    <form
-      method="post"
-      action={action}
-      onSubmit={onSubmit}
-      aria-busy={sending}
-      className="flex flex-col gap-lg"
-    >
-      <input type="hidden" name="versao" value={deck.version} />
-      {standing.map((f) => (
-        <input
-          key={f.id}
-          type="hidden"
-          name={f.mine === 'yes' ? 'sim' : 'nao'}
-          value={f.id}
-        />
-      ))}
-      {votes.map((vote, i) => (
-        <input
-          key={films[i]?.id}
-          type="hidden"
-          name={vote === 'yes' ? 'sim' : 'nao'}
-          value={films[i]?.id}
-        />
-      ))}
-      <p role="status" className="sr-only">
-        {sending ? VOTES.sending : said}
-      </p>
-      {film ? (
-        <>
-          <div className="flex flex-col gap-xs">
-            <p className="max-w-[60ch] text-pretty">{VOTES.rule}</p>
-            <p className="text-meta text-ink-2">{VOTES.hint}</p>
-          </div>
-          <VoteCard
-            film={film}
-            place={votes.length + 1}
-            total={films.length}
-            heading={heading}
-            cast={cast}
+    <>
+      {header?.(reviewing)}
+      <form
+        method="post"
+        action={action}
+        onSubmit={onSubmit}
+        aria-busy={sending}
+        className="flex flex-col gap-lg"
+      >
+        <input type="hidden" name="versao" value={deck.version} />
+        {standing.map((f) => (
+          <input
+            key={f.id}
+            type="hidden"
+            name={f.mine === 'yes' ? 'sim' : 'nao'}
+            value={f.id}
           />
-          {votes.length > 0 && (
-            <button
-              type="button"
-              onClick={back}
-              className={buttonVariants({ variant: 'link' })}
-            >
-              {VOTES.back}
-            </button>
-          )}
-        </>
-      ) : (
-        <VoteRecap
-          films={films}
-          votes={votes}
-          sending={sending}
-          heading={recap}
-          change={change}
-          restart={restart}
-        />
-      )}
-    </form>
+        ))}
+        {votes.map((vote, i) => (
+          <input
+            key={films[i]?.id}
+            type="hidden"
+            name={vote === 'yes' ? 'sim' : 'nao'}
+            value={films[i]?.id}
+          />
+        ))}
+        <p role="status" className="sr-only">
+          {sending ? VOTES.sending : said}
+        </p>
+        {film ? (
+          <>
+            <div className="flex flex-col gap-xs">
+              <VoteRule />
+              <p className="text-meta text-ink-2">
+                <span className="pointer-fine:hidden">{VOTES.hint.touch}</span>
+                <span className="hidden pointer-fine:inline">
+                  {VOTES.hint.keys}
+                </span>
+              </p>
+            </div>
+            <VoteCard
+              film={film}
+              place={votes.length + 1}
+              total={films.length}
+              heading={heading}
+              cast={cast}
+            />
+            {votes.length > 0 && (
+              <button
+                type="button"
+                onClick={back}
+                className={buttonVariants({ variant: 'link' })}
+              >
+                {VOTES.back}
+              </button>
+            )}
+          </>
+        ) : (
+          <VoteRecap
+            films={films}
+            votes={votes}
+            sending={sending}
+            heading={recap}
+            change={change}
+            restart={restart}
+          />
+        )}
+      </form>
+    </>
   )
 }
 
@@ -462,7 +476,12 @@ function VoteResults({
       </h2>
       <ol className="rounded-card border border-rule bg-surface px-md">
         {deck.films.map((film, i) => (
-          <LinkFilmRow key={film.id} film={film} first={i === 0} />
+          <LinkFilmRow
+            key={film.id}
+            film={film}
+            first={i === 0}
+            arrived={unvoted < deck.films.length}
+          />
         ))}
       </ol>
       {deck.left.length > 0 && (
@@ -615,14 +634,20 @@ export function VoteScreen({
   }
   const screen = screenOf(deck, search, failed)
   const sent = Boolean(feito) && !failed
-  return (
-    <section aria-labelledby="votar" className="flex flex-col gap-lg">
-      <h1 id="votar" className="font-display text-page-title">
-        {screenTitle(screen, deck, sent, erro)}
+  const header = (reviewing: boolean) => (
+    <>
+      <h1 id="votar" className="font-display text-page-title text-balance">
+        {reviewing ? VOTES.review : screenTitle(screen, deck, sent, erro)}
       </h1>
       {sent && feito && <Notice>{VOTES.notices[feito]}</Notice>}
       {refusal && <Alert>{VOTES.refusals[refusal](owner)}</Alert>}
       <PostFailed failed={lost} />
+    </>
+  )
+  const voting = screen === 'vote' && deck !== null
+  return (
+    <section aria-labelledby="votar" className="flex flex-col gap-lg">
+      {!voting && header(false)}
       {screen === 'stuck' && <BackToList home={home} plain />}
       {screen === 'none' && <BackToList home={home} plain={false} />}
       {screen === 'vote' && deck && (
@@ -633,6 +658,7 @@ export function VoteScreen({
           action={votePath('votos', link)}
           onSubmit={onSubmit}
           sending={busy !== null}
+          header={header}
         />
       )}
       {screen === 'results' && deck && (

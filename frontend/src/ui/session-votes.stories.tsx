@@ -32,7 +32,11 @@ export const Deck: Story = {
     await expect(
       canvas.getByRole('heading', { name: 'O Farol de Areia' }),
     ).toBeVisible()
-    await expect(canvas.getByText(VOTES.rule)).toBeVisible()
+    await expect(
+      canvas.getByText(
+        (_, el) => el?.tagName === 'P' && el.textContent === VOTES.ruleText,
+      ),
+    ).toBeVisible()
     await userEvent.click(canvas.getByRole('button', { name: VOTES.yes }))
     await expect(
       canvas.getByRole('heading', { name: 'Pequenos Milagres' }),
@@ -47,6 +51,9 @@ export const Recap: Story = {
       await userEvent.click(canvas.getByRole('button', { name }))
     await expect(
       canvas.getByRole('heading', { name: VOTES.summary(2, 1) }),
+    ).toBeVisible()
+    await expect(
+      canvas.getByRole('heading', { level: 1, name: VOTES.review }),
     ).toBeVisible()
     await expect(
       canvas.getByText(VOTES.leaving(['Pequenos Milagres'])),

@@ -1,7 +1,7 @@
 import { FIELD } from './kit/field'
-import type { ReactNode } from 'react'
+import { createContext, useContext, type ReactNode } from 'react'
 import type { QueueNotice, QueueRefusal } from '#/content/import-action'
-import { MY_TASTE, QUEUE_PATH } from '#/content/paths'
+import { importsPath, MY_TASTE, QUEUE_PATH } from '#/content/paths'
 import type { SearchAnswer } from '#/platform/catalog-search'
 import type { QueueEntry, QueuePage, QueueSuggestion } from '#/platform/imports'
 import { ImportsFrame } from './imports'
@@ -9,8 +9,9 @@ import { QUEUE } from './queue.copy'
 import { PostAnswers, PostForm } from './kit/post-form'
 import { usePostedFeedback } from './kit/posted-feedback'
 import { PageHead } from './kit/page-head'
+import { Icon } from './kit/icon'
 import { PosterCover, TapeCase } from './kit/tape-case'
-import { Alert, Disclosure, Notice, Submit, TextField } from './person-parts'
+import { Alert, Notice, Submit, TextField } from './person-parts'
 import { Button } from './shadcn/button'
 
 /** What the last decision did, and on which film (`item`, to take it
@@ -25,6 +26,18 @@ export type QueueDoneView = {
 
 /** The Catálogo search one film's card asked for (`?buscar=&para=`). */
 export type QueueSearchView = { item: string; answer: SearchAnswer }
+
+/** Whose import sent the Dono here (`de`), carried by every form of the
+ * page so it comes back to the same back pill (#274). */
+const FromContext = createContext<string | undefined>(undefined)
+
+/** `de`, as a hidden field, when some import sent her here. */
+function FromField() {
+  const from = useContext(FromContext)
+  return from === undefined ? null : (
+    <input type="hidden" name="de" value={from} />
+  )
+}
 
 /** A form of the queue: a POST to `/fila/acao`, by `fetch` once the
  * JavaScript is in (#240). `children` see whether its post is running. */
@@ -47,6 +60,7 @@ function QueueForm({
         <>
           <input type="hidden" name="acao" value={action} />
           {id !== undefined && <input type="hidden" name="id" value={id} />}
+          <FromField />
           {children(busy)}
         </>
       )}
@@ -59,71 +73,81 @@ function QueueForm({
  * synopsis, to tell twins apart), the Catálogo search for another title,
  * the link as a last resort, and the reasons to take a film out. What the
  * last decision did names the film, with Desfazer. `queue` is null when
- * the engine cannot run here. */
+ * the engine cannot run here. `from`, the Pessoa whose import sent her
+ * here, takes the back pill to that import ("Importar · Olga", #274). */
 export function QueueScreen({
   queue,
   done,
   refusal,
   search,
+  from,
 }: {
   queue: QueuePage | null
   done?: QueueDoneView
   refusal?: QueueRefusal
   search?: QueueSearchView
+  from?: string
 }) {
   const { feedback, onAnswer } = usePostedFeedback()
+  const fromName = from === undefined ? undefined : queue?.names[from]
+  const [back, backTo] =
+    from !== undefined && fromName !== undefined
+      ? [QUEUE.backFrom(fromName), importsPath(from, false)]
+      : [QUEUE.back, `${MY_TASTE}/importar`]
   return (
-    <PostAnswers onAnswer={onAnswer}>
-      <ImportsFrame back={QUEUE.back} backTo={`${MY_TASTE}/importar`}>
-        <PageHead title={QUEUE.title} lead={QUEUE.lead} />
-        {(refusal || done) && (
-          <div ref={feedback}>
-            {refusal && <Alert>{QUEUE.refusals[refusal]}</Alert>}
-            {done && <Done done={done} />}
-          </div>
-        )}
-        {!queue ? (
-          <Alert>{QUEUE.unavailable}</Alert>
-        ) : (
-          <>
-            {queue.items.length === 0 ? (
-              <p className="text-ink-2">{QUEUE.empty}</p>
-            ) : (
-              <ul className="flex flex-col gap-2xl">
-                {queue.items.map((item) => (
-                  <Card
-                    key={item.id}
-                    item={item}
-                    names={queue.names}
-                    search={search?.item === item.id ? search.answer : null}
-                    first={item.id === firstSuggested(queue)}
-                  />
-                ))}
-              </ul>
-            )}
-            <QueueForm
-              action="reprocessar"
-              label={QUEUE.reprocess}
-              className="flex flex-col gap-md border-t border-dashed border-rule pt-2xl"
-            >
-              {(busy) => (
-                <>
-                  <p className="max-w-[60ch] text-meta text-ink-2">
-                    {QUEUE.reprocessLead}
-                  </p>
-                  <Submit disabled={busy}>
-                    {busy ? QUEUE.busy.reprocess : QUEUE.reprocess}
-                  </Submit>
-                </>
+    <FromContext value={fromName === undefined ? undefined : from}>
+      <PostAnswers onAnswer={onAnswer}>
+        <ImportsFrame back={back} backTo={backTo}>
+          <PageHead title={QUEUE.title} lead={QUEUE.lead} />
+          {(refusal || done) && (
+            <div ref={feedback}>
+              {refusal && <Alert>{QUEUE.refusals[refusal]}</Alert>}
+              {done && <Done done={done} />}
+            </div>
+          )}
+          {!queue ? (
+            <Alert>{QUEUE.unavailable}</Alert>
+          ) : (
+            <>
+              {queue.items.length === 0 ? (
+                <p className="text-ink-2">{QUEUE.empty}</p>
+              ) : (
+                <ul className="flex flex-col gap-2xl">
+                  {queue.items.map((item) => (
+                    <Card
+                      key={item.id}
+                      item={item}
+                      names={queue.names}
+                      search={search?.item === item.id ? search.answer : null}
+                      first={item.id === firstSuggested(queue)}
+                    />
+                  ))}
+                </ul>
               )}
-            </QueueForm>
-            {queue.attributions.length > 0 && (
-              <p className="text-source text-ink-2">{QUEUE.attribution}</p>
-            )}
-          </>
-        )}
-      </ImportsFrame>
-    </PostAnswers>
+              <QueueForm
+                action="reprocessar"
+                label={QUEUE.reprocess}
+                className="flex flex-col gap-md border-t border-dashed border-rule pt-2xl"
+              >
+                {(busy) => (
+                  <>
+                    <p className="max-w-[60ch] text-meta text-ink-2">
+                      {QUEUE.reprocessLead}
+                    </p>
+                    <Submit disabled={busy}>
+                      {busy ? QUEUE.busy.reprocess : QUEUE.reprocess}
+                    </Submit>
+                  </>
+                )}
+              </QueueForm>
+              {queue.attributions.length > 0 && (
+                <p className="text-source text-ink-2">{QUEUE.attribution}</p>
+              )}
+            </>
+          )}
+        </ImportsFrame>
+      </PostAnswers>
+    </FromContext>
   )
 }
 
@@ -160,13 +184,12 @@ function Done({ done }: { done: QueueDoneView }) {
   )
 }
 
-/** The film the import could not place: a tape with no label yet. */
-function BlankTape() {
+/** The film the import could not place: its tape with the title the
+ * file gave on the cover, as Dar notas shows one with no poster (#274). */
+function BlankTape({ title }: { title: string }) {
   return (
-    <div aria-hidden="true" className="w-16 sm:w-20">
-      <TapeCase
-        cover={<span className="font-display text-cover-mark">?</span>}
-      />
+    <div aria-hidden="true" className="w-20 shrink-0">
+      <TapeCase small cover={<span className="line-clamp-6">{title}</span>} />
     </div>
   )
 }
@@ -193,7 +216,7 @@ function Card({
         className="flex flex-col gap-xl rounded-card border border-rule bg-surface px-xl pt-2xl pb-xl"
       >
         <div className="flex items-start gap-xl">
-          <BlankTape />
+          <BlankTape title={title} />
           <div className="flex min-w-0 flex-col gap-xs">
             <h2 id={headingId} className="font-display text-title">
               {title}
@@ -209,16 +232,44 @@ function Card({
         )}
         {/* One fold for the other ways: the Catálogo, then the link
             (#274). */}
-        <Disclosure summary={QUEUE.search} open={search !== null}>
+        <Fold summary={QUEUE.search} open={search !== null}>
           <FindInCatalog item={item} title={title} search={search} />
           <div className="flex flex-col gap-sm border-t border-dashed border-rule pt-lg">
             <p className="font-display text-field-label">{QUEUE.link}</p>
             <Confirm id={item.id} title={title} />
           </div>
-        </Disclosure>
+        </Fold>
         <Discard id={item.id} title={title} />
       </section>
     </li>
+  )
+}
+
+/** The card's fold: a row under a dashed rule with the drawn +, not a
+ * bordered box inside the card (#274, no card in a card). */
+function Fold({
+  summary,
+  open,
+  children,
+}: {
+  summary: string
+  open: boolean
+  children: ReactNode
+}) {
+  return (
+    <details
+      open={open}
+      className="group/fold border-t border-dashed border-rule pt-xs"
+    >
+      <summary className="flex min-h-touch cursor-pointer list-none items-center justify-between gap-sm font-semibold select-none [&::-webkit-details-marker]:hidden">
+        {summary}
+        <Icon
+          name="plus"
+          className="size-[18px] shrink-0 text-ink-2 transition-[rotate] group-open/fold:rotate-45 motion-reduce:transition-none"
+        />
+      </summary>
+      <div className="flex flex-col gap-lg pt-md">{children}</div>
+    </details>
   )
 }
 
@@ -257,8 +308,9 @@ function Suggestion({
   const details = QUEUE.details(candidate)
   return (
     <li className="flex items-start gap-md border-rule py-md not-first:border-t">
-      <div className="w-14 shrink-0">
+      <div className="w-20 shrink-0">
         <TapeCase
+          small
           cover={
             <PosterCover
               src={candidate.poster}
@@ -266,8 +318,8 @@ function Suggestion({
               alt={QUEUE.poster(label)}
               lazy
               fallback={
-                <span aria-hidden="true" className="text-cover-mark">
-                  ?
+                <span aria-hidden="true" className="line-clamp-6">
+                  {label}
                 </span>
               }
             />
@@ -342,6 +394,7 @@ function FindInCatalog({
         className="flex flex-wrap items-end gap-sm"
       >
         <input type="hidden" name="para" value={item.id} />
+        <FromField />
         <label className="flex min-w-0 flex-1 basis-[200px] flex-col gap-xs">
           <span className="font-display text-field-label">
             {QUEUE.searchField}{' '}

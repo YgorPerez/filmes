@@ -42,7 +42,10 @@ export function Operations({
           schema={page.schema}
           quiet={failing}
         />
-        {!failing && push}
+        {!failing && (
+          // Beside a long console, the push stays in view.
+          <div className="min-[900px]:sticky min-[900px]:top-xl">{push}</div>
+        )}
       </div>
       <EvaluationSection
         key={jobKey(page.evaluation.job)}

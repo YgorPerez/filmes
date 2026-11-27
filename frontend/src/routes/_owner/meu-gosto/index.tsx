@@ -10,6 +10,7 @@ import { PersonScreen } from '#/ui/person'
 // what the setup guide left (the connector, the skipped steps), then her
 // taste (#222).
 export const Route = createFileRoute('/_owner/meu-gosto/')({
+  staticData: { wide: true },
   validateSearch: personSearch,
   loader: async ({ context }) => {
     const [page, start, trakt, queue, taste] = await Promise.all([

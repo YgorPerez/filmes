@@ -56,7 +56,7 @@ export const TRAKT_SCREEN = {
   ],
   consent: 'Autorizo a leitura e o envio acima',
   after:
-    'O Trakt pede que você entre e aprove. Depois ele volta para esta página, já conectada, e o histórico entra na próxima Sessão.',
+    'O Trakt pede que você entre e aprove. Depois você volta para esta página com a conta conectada, e o histórico entra na próxima Sessão.',
   notEndorsed:
     'O filmes usa o Trakt e não é endossado nem certificado pelo Trakt.',
   errors: {

@@ -12,6 +12,7 @@ describe('page titles', () => {
     expect(titleOf(at('/_owner/sessoes/'))).toBe('Sessões · filmes')
     expect(titleOf(at('/_owner/meu-gosto/notas'))).toBe('Dar notas · filmes')
     expect(titleOf(at('/trakt'))).toBe('Trakt · filmes')
+    expect(titleOf(at('/creditos'))).toBe('Créditos · filmes')
   })
 
   it('takes a Session’s day and a Pessoa’s name from the page', () => {

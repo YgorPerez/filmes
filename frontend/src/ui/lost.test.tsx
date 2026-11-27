@@ -2,7 +2,8 @@
 // The 404 and the failed page: their way back.
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
-import { LoadFailed, LostAlone, NotFound } from './lost'
+import { LoadFailed, NotFound } from './lost'
+import { OutsideShell } from './shell'
 
 afterEach(cleanup)
 
@@ -34,9 +35,9 @@ describe('NotFound', () => {
 
   it('alone, leads in through Entrar, names no Sessão and ends with the credits', () => {
     render(
-      <LostAlone>
+      <OutsideShell>
         <NotFound owner={false} />
-      </LostAlone>,
+      </OutsideShell>,
     )
     expect(
       screen

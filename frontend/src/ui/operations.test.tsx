@@ -345,7 +345,7 @@ describe('the evaluation, following the run', () => {
       .mockResolvedValueOnce({
         ...IDLE,
         job: DONE,
-        report: { date: '2026-11-20', text: '# Avaliação' },
+        report: { date: '2026-11-20', text: '# Avaliação', names: {} },
       })
     render(
       <EvaluationSection
@@ -447,9 +447,21 @@ describe('the evaluation, whether the grid beats today', () => {
       ),
     ).toBeTruthy()
     expect(within(area).getByText('sem ganho')).toBeTruthy()
+    // Below today's weights a tie says nothing "sem ganho" does not.
+    expect(within(area).queryByText('empate')).toBeNull()
     expect(
       within(area).queryByRole('button', { name: /Copiar os pesos/ }),
     ).toBeNull()
+  })
+
+  it('marks a tie only between sets that beat today', () => {
+    const area = grid([
+      { recall50: 0.9, coverageTop5: 0.7, changes: CHANGE, tie: true },
+      { recall50: 0.9, coverageTop5: 0.7, changes: CHANGE, tie: true },
+      { recall50: 0.8, coverageTop5: 0.7, changes: [], tie: false },
+    ])
+    expect(within(area).getAllByText('empate')).toHaveLength(2)
+    expect(within(area).getByText('atual')).toBeTruthy()
   })
 
   it('says how many beat today, with today among the best or not', () => {
@@ -499,6 +511,7 @@ describe('the evaluation, the weights, the report and the focus', () => {
           report: {
             date: '2026-11-20',
             text: '# Avaliação\n\n## Offline\n\n| A | B |\n| --- | ---: |\n| Pessoas | 0.27708333333333335 |\n\n## Avisos\n\n- sem MovieLens\n',
+            names: {},
           },
         },
       }),

@@ -2,7 +2,13 @@
 // The home after the layout pass (#219, map #218): the counter to ask for
 // a film first, the latest Sessão with its Feedback, and the setup guide as
 // one list of three steps while a step is pending.
-import { cleanup, render, screen, within } from '@testing-library/react'
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 import type {
@@ -158,6 +164,21 @@ describe('Home, the latest Sessão', () => {
       'https://image.example/tt1.jpg',
     )
     expect(links[1]?.querySelector('img')).toBeNull()
+  })
+
+  it('drops a cover that fails to load, keeping the slot so the numbers line up', () => {
+    show({
+      latest: SESSION,
+      covers: { tt1: 'https://image.example/tt1.jpg', tt2: null },
+    })
+    const films = within(card()).getByRole('list', { name: 'Filmes da Sessão' })
+    const [first, second] = within(films).getAllByRole('link')
+    const img = first?.querySelector('img')
+    fireEvent.error(img!)
+    expect(first?.querySelector('img')).toBeNull()
+    expect(first?.firstElementChild?.className).toBe(
+      second?.firstElementChild?.className,
+    )
   })
 
   it('on the night it was made, leads back to the Cartaz first, and the Feedback is a link', () => {

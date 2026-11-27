@@ -97,9 +97,9 @@ describe('the view shows', () => {
   it('the Nota prevista the tool result carries', () => {
     render(<BillboardView result={shown} host={fakeHost(json({}))} />)
     const name = card(1).getByRole('button', {
-      name: 'Bruno: pela nota de 12 pessoas de gosto parecido',
+      name: 'Você: pela nota de 12 pessoas de gosto parecido',
     })
-    expect(name.closest('p')?.textContent).toMatch(/^previsto · Bruno.* 8,3$/u)
+    expect(name.closest('p')?.textContent).toMatch(/^previsto · Você.* 8,3$/u)
   })
 
   it("plain words for the engine's error, never its message", () => {
@@ -621,7 +621,7 @@ describe('mountView, inline', () => {
     root.remove()
   })
 
-  it('inline declares no colour scheme, so the host’s floor shows; fullscreen takes the theme’s', async () => {
+  it('inline and fullscreen take the theme’s colour scheme, so a canvas behind has its polarity', async () => {
     const modes = { availableDisplayModes: ['inline', 'fullscreen'] }
     const app = fakeApp({ theme: 'dark', displayMode: 'inline', ...modes })
     const root = document.body.appendChild(document.createElement('div'))
@@ -630,11 +630,53 @@ describe('mountView, inline', () => {
     )
     const style = document.documentElement.style
     expect(document.documentElement.dataset.theme).toBe('dark')
-    expect(style.colorScheme).toBe('normal')
-    await act(async () =>
-      app.onhostcontextchanged?.({ displayMode: 'fullscreen' }),
-    )
     expect(style.colorScheme).toBe('dark')
+    await act(async () =>
+      app.onhostcontextchanged?.({ displayMode: 'fullscreen', theme: 'light' }),
+    )
+    expect(style.colorScheme).toBe('light')
+    root.remove()
+  })
+})
+
+describe('mountView, Enviar in fullscreen', () => {
+  const fullscreenSend = async (answer: () => Promise<object>) => {
+    const modes = { availableDisplayModes: ['inline', 'fullscreen'] }
+    const app = fakeApp({ displayMode: 'fullscreen', ...modes })
+    app.requestDisplayMode.mockImplementation(answer)
+    const root = document.body.appendChild(document.createElement('div'))
+    await act(() =>
+      mountView(app as unknown as ViewApp, root, () => Promise.resolve()),
+    )
+    await act(async () => app.ontoolresult?.(shown))
+    await swapFirstAndSend()
+    return { app, root }
+  }
+
+  it('a regenerate asks the host for the chat, where the new list comes', async () => {
+    const { app, root } = await fullscreenSend(() =>
+      Promise.resolve({ mode: 'inline' }),
+    )
+    expect(app.requestDisplayMode).toHaveBeenCalledExactlyOnceWith({
+      mode: 'inline',
+    })
+    expect(status()).toBe(SEND_STATUS.regenerating)
+    root.remove()
+  })
+
+  it('a host that keeps the fullscreen: she is asked to close it', async () => {
+    const { root } = await fullscreenSend(() =>
+      Promise.reject(new Error('não')),
+    )
+    expect(status()).toBe(SEND_STATUS.closeFullscreen)
+    root.remove()
+  })
+
+  it('a host that answers with the fullscreen still: the same', async () => {
+    const { root } = await fullscreenSend(() =>
+      Promise.resolve({ mode: 'fullscreen' }),
+    )
+    expect(status()).toBe(SEND_STATUS.closeFullscreen)
     root.remove()
   })
 })

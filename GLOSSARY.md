@@ -197,7 +197,7 @@ A autorização que uma Pessoa dá ao filmes para ler e gravar na conta dela do 
 _Evitar_: login do Trakt, integração
 
 **Leitura do Trakt** [Trakt sync, `syncTrakt`]:
-O que o filmes lê do Trakt de uma Pessoa pela API: o histórico, as notas e a watchlist de filmes, da conta dela pela Conexão com o Trakt ou de um perfil público pelo nome. Fica em filmes-dados como um Import `trakt-api`, uma foto que a seguinte substitui, e carrega como o ZIP do Trakt. Roda no "Sincronizar agora" do import e quando uma Sessão nova abre, para cada Presente conectado ou com nome; uma falha vira aviso. Se o Trakt recusou a Conexão dela, a leitura vai pelo nome do perfil, quando ela tem um, e leva o mesmo aviso do Envio ao Trakt: reconectar o Trakt. "Sincronizar" vale aqui, e só aqui: trazer agora o Trakt dela para o filmes, num sentido só, trocando a foto anterior.
+O que o filmes lê do Trakt de uma Pessoa pela API: o histórico, as notas e a watchlist de filmes, da conta dela pela Conexão com o Trakt ou de um perfil público pelo nome. Fica em filmes-dados como um Import `trakt-api`, uma foto que a seguinte substitui, e carrega como o ZIP do Trakt. Roda no "Ler agora" do import e quando uma Sessão nova abre, para cada Presente conectado ou com nome; uma falha vira aviso. Se o Trakt recusou a Conexão dela, a leitura vai pelo nome do perfil, quando ela tem um, e leva o mesmo aviso do Envio ao Trakt: reconectar o Trakt. "Sincronizar" vale aqui, e só aqui: trazer agora o Trakt dela para o filmes, num sentido só, trocando a foto anterior.
 
 **Envio ao Trakt** [Trakt write-back, `syncTraktFeedback`]:
 O que o filmes grava no Trakt de cada Presente com Conexão com o Trakt, depois de gravar o Feedback: o Filme escolhido e os Já vi do Cartaz no histórico, e as Notas, de 1 a 10. Filme que o Trakt não conhece fica de fora, com um aviso que o nomeia, e o resto segue. Se o Trakt falhar, o Feedback fica salvo e o resultado leva um aviso.
@@ -276,7 +276,7 @@ _Evitar_: descrição, declarado
 Um sinal tirado de opiniões de terceiros, que não estão entre as Pessoas, como as tags de uma base pública ou quantos estranhos que gostaram de um filme gostaram de outro.
 
 **Vizinhos de gosto** [taste neighbors, `tasteNeighbors`]:
-Os usuários do MovieLens mais perto do gosto de uma Pessoa: os que, nos filmes que ela também viu, deram notas no mesmo percentil que as dela, cada um lido na própria escala. Quantos e com quantos filmes em comum ficam em `[taste_neighbors]` de `config/weights.toml`. O que eles deram a um Candidato é uma Review ("23 pessoas de gosto parecido deram 4,3 em média a este filme"), com Força pela régua: quantos o viram, quanto concordam e quanto dividem com ela.
+Os usuários do MovieLens mais perto do gosto de uma Pessoa: os que, nos filmes que ela também viu, deram notas no mesmo percentil que as dela, cada um lido na própria escala. Quantos e com quantos filmes em comum ficam em `[taste_neighbors]` de `config/weights.toml`. O que eles deram a um Candidato é uma Review ("23 pessoas de gosto parecido deram 8,6 de 10 em média a este filme"), com Força pela régua: quantos o viram, quanto concordam e quanto dividem com ela.
 _Evitar_: usuários parecidos, almas gêmeas
 
 **Nota prevista** [predicted rating, `predictedRating`]:

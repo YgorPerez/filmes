@@ -138,7 +138,7 @@ test('the similar line names the themes in common and is no Evidence', async () 
   expect(line).toMatchObject({
     text:
       'parecido com Escrever Cartas: family, writers, bittersweet; ' +
-      'das 500 pessoas que deram 4 ou mais a ele, 40% fizeram o mesmo com este',
+      'das 500 pessoas que deram 8 ou mais a ele, 40% fizeram o mesmo com este',
     person: null,
     contribution: 0,
   })
@@ -156,7 +156,7 @@ test('two references bring the similar ones of each', async () => {
   expect(ids(out)).not.toContain(WRITING_LETTERS)
   expect(ids(out)).not.toContain(DOWN_THE_ROAD)
   expect(similarLines(out, ON_THE_ROAD)).toEqual([
-    'parecido com Escrever Cartas: das 500 pessoas que deram 4 ou mais a ele, 10% fizeram o mesmo com este',
+    'parecido com Escrever Cartas: das 500 pessoas que deram 8 ou mais a ele, 10% fizeram o mesmo com este',
     'parecido com Estrada Afora: road trip',
   ])
   expect(ids(out)).toEqual(

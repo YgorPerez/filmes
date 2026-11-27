@@ -41,3 +41,14 @@ export const BrokenPoster: Story = {
     await expect(canvasElement.querySelector('img')).toBeNull()
   },
 }
+
+/** The queue's narrow tape: the title still on the cover, in label size
+ * (#274). */
+export const Small: Story = {
+  args: { cover: 'Vento Norte (2020)', small: true, className: 'w-20' },
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByText('Vento Norte (2020)'),
+    ).toBeVisible()
+  },
+}

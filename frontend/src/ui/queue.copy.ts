@@ -25,8 +25,10 @@ const names = (people: readonly string[]) =>
 
 export const QUEUE = {
   back: 'Importar',
+  /** Back to the import of the Pessoa that sent her here (#274). */
+  backFrom: (name: string) => `Importar · ${name}`,
   title: 'Fila de resolução',
-  lead: 'Filmes dos seus arquivos que o filmes não achou sozinho no Catálogo. As Notas deles só contam no gosto depois que você disser qual filme é. A decisão vale para todas as Pessoas que têm o filme.',
+  lead: 'Filmes dos arquivos importados que o filmes não achou sozinho no Catálogo. As Notas deles só contam no gosto depois que você disser qual filme é. A decisão vale para todas as Pessoas que têm o filme.',
   unavailable:
     'Não deu para abrir a fila: o site está com um problema, e ele ficou registrado no log do servidor.',
   empty: 'Nenhum filme esperando. Tudo resolvido.',

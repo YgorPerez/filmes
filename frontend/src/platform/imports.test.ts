@@ -546,6 +546,31 @@ describe('queueAction', () => {
     ])
   })
 
+  it('keeps whose import sent her there, and drops what is no slug (#274)', async () => {
+    const { imports } = fakeImports()
+    const from = await queueAction(
+      post('/fila/acao', {
+        acao: 'confirmar',
+        id: 'x-1',
+        filme: 'tt1',
+        de: 'olga',
+      }),
+      BRUNO,
+      imports,
+      ORIGIN,
+    )
+    expect(from.headers.get('Location')).toBe(
+      '/meu-gosto/fila?feito=confirmado&de=olga',
+    )
+    const refused = await queueAction(
+      post('/fila/acao', { acao: 'confirmar', de: '../x' }),
+      BRUNO,
+      imports,
+      ORIGIN,
+    )
+    expect(refused.headers.get('Location')).toBe('/meu-gosto/fila?erro=pedido')
+  })
+
   it('says how many films left the queue after asking TMDB again', async () => {
     const { imports } = fakeImports(undefined, {
       exitCode: 0,

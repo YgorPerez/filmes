@@ -71,6 +71,17 @@ const gave = ({
     : 'nenhuma Nota nem Já visto novo, só o resto do que ele trazia'
 }
 
+/** "O ZIP do Trakt entrou: entraram 2 Notas novas", but a full stop when
+ * the first sentence of what it gave has a colon of its own, so two never
+ * chain ("O ZIP do Trakt entrou. 1 Nota mudou: Maré Baixa…", #274). */
+const entered = (head: string, done: Gave) => {
+  const body = gave(done)
+  const first = body.split('. ')[0] ?? body
+  return first.includes(':')
+    ? `${head}. ${body.charAt(0).toLocaleUpperCase('pt-BR')}${body.slice(1)}`
+    : `${head}: ${body}`
+}
+
 const left = (outside = 0) =>
   outside === 0
     ? ''
@@ -125,21 +136,22 @@ export const PERSON_IMPORTS = {
   /** After a notice of a replaced Nota: where to change it back. */
   changedLink: 'Ver e mudar as Notas',
   notices: {
-    letterboxd: (done: Gave) => `O ZIP do Letterboxd entrou: ${gave(done)}.`,
-    rss: (done: Gave) => `Perfil do Letterboxd lido: ${gave(done)}.`,
+    letterboxd: (done: Gave) =>
+      `${entered('O ZIP do Letterboxd entrou', done)}.`,
+    rss: (done: Gave) => `${entered('Perfil do Letterboxd lido', done)}.`,
     trakt: (done: Gave) =>
-      `O ZIP do Trakt entrou: ${gave(done)}.${left(done.outside)}`,
+      `${entered('O ZIP do Trakt entrou', done)}.${left(done.outside)}`,
     imdb: (done: Gave) =>
-      `O CSV do IMDb entrou: ${gave(done)}.${left(done.outside)}`,
+      `${entered('O CSV do IMDb entrou', done)}.${left(done.outside)}`,
     simkl: (done: Gave) =>
-      `O backup do Simkl entrou: ${gave(done)}.${left(done.outside)}`,
+      `${entered('O backup do Simkl entrou', done)}.${left(done.outside)}`,
     tvtime: (done: Gave) =>
-      `O backup do TV Time entrou: ${gave(done)}.${left(done.outside)}`,
+      `${entered('O backup do TV Time entrou', done)}.${left(done.outside)}`,
     repetido: () => 'Esse arquivo já tinha entrado antes: nada mudou.',
     sincronizado: (done: Gave) =>
       done.facts === 0
         ? `Trakt lido: nada novo desde a última vez.${left(done.outside)}`
-        : `Trakt lido: ${gave(done)}.${left(done.outside)}`,
+        : `${entered('Trakt lido', done)}.${left(done.outside)}`,
     reconectar: (done: Gave) =>
       `O Trakt recusou a conexão, então o perfil público foi lido: ${done.facts === 0 ? 'nada novo desde a última vez' : gave(done)}.${left(done.outside)} Conecte o Trakt de novo para voltar a ler e enviar o histórico.`,
     removido: (done: Gave) =>
@@ -202,18 +214,20 @@ export const PERSON_IMPORTS = {
     queuedLead:
       'O filmes não achou estes sozinho no Catálogo. Até você confirmar, as Notas deles não contam.',
     toQueue: 'Resolver agora',
-    /** The sources kept in sync, and when they were read (#274). */
+    /** The sources kept in sync, and when they were read (#274). Each
+     * profile row reads it again with the same verb, "Ler agora". */
     sync: {
       trakt: 'lido a cada Sessão nova',
       rss: 'lido quando você pede',
       last: (date: string) => `última leitura em ${shortDate(date)}`,
-      traktNow: 'Ler agora',
-      rssNow: 'Ler o perfil agora',
+      now: 'Ler agora',
+      traktLabel: 'Ler agora o Trakt',
+      rssLabel: (user: string) => `Ler agora o perfil ${user} do Letterboxd`,
     },
     again: 'Importar de novo ou de outro site',
   },
   files: {
-    title: 'Arquivos importados',
+    title: 'Arquivos e perfis',
     lead: 'Tirar um import tira as Notas e os Já vistos que só ele trazia.',
     kind: (kind: string) => KINDS[kind] ?? kind,
     on: (date: string) => `em ${shortDate(date)}`,
@@ -248,7 +262,7 @@ export const PERSON_IMPORTS = {
     },
     profile: {
       title: 'Para manter em dia: o perfil',
-      text: 'Depois do ZIP, o filmes lê do perfil público as 50 entradas mais recentes do diário. Volte aqui quando registrar filmes novos.',
+      text: 'Depois do ZIP, o filmes lê do perfil público as 50 entradas mais recentes do diário. Quando registrar filmes novos, toque em “Ler agora”.',
     },
   },
   rss: {
@@ -258,7 +272,8 @@ export const PERSON_IMPORTS = {
     consent: (name: string) =>
       `${name} concordou que o filmes leia o diário público do Letterboxd e guarde as Notas`,
     submit: 'Ler o perfil',
-    update: (user: string) => `Atualizar de ${user}`,
+    /** A profile read before: the same "Ler agora" as the results. */
+    update: (user: string) => `Ler agora (${user})`,
     other: 'Ler outro perfil',
     busy: 'Lendo o perfil…',
   },

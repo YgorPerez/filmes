@@ -72,7 +72,9 @@ export function PeopleList({
   create?: CreateState
 }) {
   return (
-    <main className="mx-auto flex max-w-[720px] flex-col gap-3xl px-2xl py-3xl">
+    // The column of a Pessoa's page (#273): from the list to one of them,
+    // the left edge stays; the list itself keeps a reading width in it.
+    <main className="mx-auto flex max-w-[720px] flex-col gap-3xl px-2xl py-3xl min-[900px]:max-w-[1040px] min-[900px]:*:max-w-[656px]">
       <div className="flex flex-col gap-sm">
         <h1 className="font-display text-page-title">{PEOPLE.title}</h1>
         <p className="text-ink-2">{PEOPLE.lead}</p>
@@ -164,15 +166,16 @@ function CreateForm({ state, admin }: { state?: CreateState; admin: boolean }) {
           name="apelidos"
           label={create.aliases}
           hint={create.aliasesHint}
-          placeholder="Lu, Luana"
           defaultValue={typed.aliases}
         />
-        <label className="flex min-h-touch items-center gap-sm">
+        {/* The kit's 20px box, as the import page's consent (#273). */}
+        <label className="flex min-h-touch cursor-pointer items-center gap-md">
           <input
             type="checkbox"
             name="dono"
             value="sim"
             defaultChecked={typed.owner}
+            className="size-5 shrink-0 accent-ink"
           />
           <span className="font-semibold">{create.owner}</span>
         </label>

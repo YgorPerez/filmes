@@ -422,9 +422,9 @@ test('the Nota prevista the Session recorded, per Presente who has one', async (
   // Under "Por que", the line of each one's Nota prevista; the name opens
   // how many taste neighbours back it (#326).
   const hint = 'pela nota de 3 pessoas de gosto parecido'
-  const name = card(page, at).getByRole('button', { name: `Bruno: ${hint}` })
+  const name = card(page, at).getByRole('button', { name: `Você: ${hint}` })
   await expect(card(page, at).locator('p', { hasText: 'previsto' })).toHaveText(
-    /^previsto · Bruno 8,8/,
+    /^previsto · Você 8,8/,
     { useInnerText: true },
   )
   await name.click()

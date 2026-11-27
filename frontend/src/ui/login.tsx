@@ -20,7 +20,8 @@ import { Button } from './shadcn/button'
 // orange button. The button is a link, since `/auth/google` answers a GET with the
 // redirect to Google; it goes when sign-in is off here, since Google
 // would only send the visitor back. Both pages end with the footer that
-// links the sources' credits.
+// links the sources' credits. On `/entrar` the bar and the footer take the
+// card's 464px, so "filmes" sits over the card's left edge.
 
 export function Login({ refusal }: { refusal?: LoginRefusal }) {
   const googleLabel = refusal === 'nao-dono' ? LOGIN.otherAccount : LOGIN.google
@@ -28,7 +29,7 @@ export function Login({ refusal }: { refusal?: LoginRefusal }) {
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="bg-case">
-        <p className="mx-auto flex min-h-[56px] max-w-[1040px] items-center px-2xl font-display text-brand text-case-ink">
+        <p className="mx-auto flex min-h-[56px] max-w-[464px] items-center px-2xl font-display text-brand text-case-ink">
           {LOGIN.brand}
         </p>
       </header>
@@ -67,7 +68,7 @@ export function Login({ refusal }: { refusal?: LoginRefusal }) {
           </div>
         </section>
       </main>
-      <SiteFooter />
+      <SiteFooter width="card" />
     </div>
   )
 }

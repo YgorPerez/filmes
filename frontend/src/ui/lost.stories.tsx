@@ -2,8 +2,8 @@
 // and alone (no Dono).
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, within } from 'storybook/test'
-import { LoadFailed, LostAlone, NotFound } from './lost'
-import { AppShell } from './shell'
+import { LoadFailed, NotFound } from './lost'
+import { AppShell, OutsideShell } from './shell'
 
 const meta = {
   component: NotFound,
@@ -52,9 +52,9 @@ export const SessionGone: Story = {
 
 export const Alone: Story = {
   render: () => (
-    <LostAlone>
+    <OutsideShell>
       <NotFound owner={false} />
-    </LostAlone>
+    </OutsideShell>
   ),
   play: async ({ canvasElement }) => {
     const page = within(canvasElement)

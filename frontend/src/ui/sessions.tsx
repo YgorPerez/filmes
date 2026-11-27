@@ -300,31 +300,68 @@ function SessionHead({ page }: { page: CartazPage }) {
   )
 }
 
-/** What the acrescentar became, in one sentence (#272): what went into
- * the request, what stayed only as a note, and what to say next time. */
+/** What the acrescentar became, in plain sentences (#272): who came in,
+ * what else went into the request, what stayed only as a note, and what
+ * to say next time. `taste`: some words went unread, so the page says
+ * where a gosto is kept. */
 function readingText(
   addition: string,
   reading: PageReading,
   owner?: string,
-): string {
+): { text: string; taste: boolean } {
   const { session } = SESSIONS
-  const understood = reading.understood.map((label) => spoken(label, owner))
-  return [
-    understood.length > 0
-      ? session.understood(understood)
-      : session.additionRead(addition),
-    reading.notUnderstood.length > 0 &&
-      session.additionNotUnderstood(reading.notUnderstood),
+  const isPerson = (label: string) => label.startsWith('Presente: ')
+  const people = reading.understood
+    .filter(isPerson)
+    .map((label) => spoken(label, owner))
+  const rest = reading.understood
+    .filter((label) => !isPerson(label))
+    .map((label) => spoken(label))
+  const taste = reading.notUnderstood.length > 0
+  const text = [
+    people.length > 0 && session.additionPeople(people),
+    rest.length > 0 && session.additionAdded(rest),
+    people.length === 0 && rest.length === 0 && session.additionRead(addition),
+    taste && session.additionNotUnderstood(reading.notUnderstood),
     ...reading.ambiguities.map((a) =>
       session.additionAmbiguous(
         a.words,
         a.candidates.map((c) => c.label),
       ),
     ),
-    session.additionTaste,
+    taste && session.additionTaste,
   ]
     .filter(Boolean)
     .join(' ')
+  return { text, taste }
+}
+
+/** The acrescentar's line: as the reading read it, with the way to keep a
+ * gosto only when some words went unread (#272). */
+function AdditionSaid({
+  addition,
+  reading,
+  owner,
+}: {
+  addition: string
+  reading: PageReading | undefined
+  owner: string | undefined
+}) {
+  const { session } = SESSIONS
+  const read = reading ? readingText(addition, reading, owner) : null
+  return (
+    <p role="status" className="text-meta text-pretty text-ink-2">
+      {read ? read.text : session.addition(addition)}
+      {(read === null || read.taste) && (
+        <>
+          {' '}
+          <a href="/pessoas" className="font-semibold text-ink">
+            {session.additionLink}
+          </a>
+        </>
+      )}
+    </p>
+  )
 }
 
 /** What the last reply or the form left to say, as quiet lines: the
@@ -349,14 +386,11 @@ function Said({ page }: { page: CartazPage }) {
         </div>
       )}
       {page.addition && (
-        <p role="status" className="text-meta text-pretty text-ink-2">
-          {page.reading
-            ? readingText(page.addition, page.reading, owner)
-            : session.addition(page.addition)}{' '}
-          <a href="/pessoas" className="font-semibold text-ink">
-            {session.additionLink}
-          </a>
-        </p>
+        <AdditionSaid
+          addition={page.addition}
+          reading={page.reading}
+          owner={owner}
+        />
       )}
     </>
   )
@@ -407,16 +441,6 @@ function TapeReturned({ page }: { page: CartazPage }) {
         />
       )}
       <CartazNotes notes={card?.notes} />
-      {page.satisfaction && page.satisfaction.length > 0 && (
-        <div className="flex flex-col gap-xs text-meta text-ink-2">
-          <p>{session.satisfaction}</p>
-          <ul className="list-disc pl-5">
-            {page.satisfaction.map((line) => (
-              <li key={line}>{line}</li>
-            ))}
-          </ul>
-        </div>
-      )}
       <a
         href={again}
         className={buttonVariants({

@@ -690,11 +690,12 @@ describe('PersonScreen', () => {
     expect(
       screen.getByText('também ia · 1 Nota · 1 Veto · 2 perguntas abertas'),
     ).toBeTruthy()
-    expect(
-      screen
-        .getByRole('link', { name: PERSON.summary.steps.questions(2) })
-        .getAttribute('href'),
-    ).toBe('#perguntas')
+    // The open questions are right below, with their answers: no button
+    // to them, and each starts its line.
+    expect(screen.queryByText(PERSON.summary.next)).toBeNull()
+    const questions = section(PERSON.questions.title)
+    expect(within(questions).getByText('A Iara curte terror?')).toBeTruthy()
+    expect(within(questions).getByText('Curte comédia boba?')).toBeTruthy()
     cleanup()
     show({ ...IARA, aliases: [], vetoes: [], openQuestions: [], ratings: [] })
     expect(screen.getByText(PERSON.summary.unknown)).toBeTruthy()
@@ -736,7 +737,7 @@ describe('PersonScreen', () => {
     })
     expect(
       screen.getByText(
-        'Pelas Notas, Iara gosta de Drama, Crime e Rui Tavares.',
+        'Pelas Notas, Iara gosta dos gêneros Drama e Crime e da direção de Rui Tavares.',
       ),
     ).toBeTruthy()
     cleanup()
@@ -917,6 +918,8 @@ describe('PersonScreen', () => {
   it('takes a Relato about another Dono, told by the logged-in one', async () => {
     show({ ...IARA, person: 'vera', name: 'Vera', owner: true })
     expect(screen.getByText(PERSON.owner)).toBeTruthy()
+    // The sticker sits beside the h1: the heading is her name alone.
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Vera')
     const { user, form } = await open(
       section(PERSON.reports.title),
       PERSON.reports.add,
@@ -1055,7 +1058,7 @@ describe('the Notas section', () => {
 })
 
 describe('the Notas section', () => {
-  it('is Meu gosto’s first section, with Dar notas as its one orange button', () => {
+  it('is Meu gosto’s first section, with Dar notas beside the glance’s orange next step', () => {
     show({ ...IARA, person: 'bruno', name: 'Bruno', owner: true })
     expect(
       screen.getByRole('heading', { level: 1, name: PERSON.myTaste }),
@@ -1347,6 +1350,13 @@ describe('Meu gosto in the second person', () => {
     expect(screen.getByText('Nas Sessões, você é Bruno.')).toBeTruthy()
   })
 
+  it('says she has no Nota yet, with no countdown from zero (#274)', () => {
+    render(<PersonScreen slug="bruno" page={{ ...MY_PAGE, ratings: [] }} />)
+    const glance = section(PERSON.glance.title)
+    expect(glance.textContent).toContain('Nenhuma Nota ainda')
+    expect(glance.textContent).not.toContain('faltam')
+  })
+
   it('says how many of her films wait in the queue, and leads there first', () => {
     render(<PersonScreen slug="bruno" page={MY_PAGE} pending={2} />)
     const notes = section(PERSON.notes.title)
@@ -1397,9 +1407,11 @@ describe('Meu gosto in the second person', () => {
     expect(screen.queryByText(/tag: chuva/)).toBeNull()
   })
 
-  it('folds the empty fichas into one line, and says the Ajustes are all normal', () => {
+  it('shows the empty Já vistos as a slip with its add fold, and says the Ajustes are all normal', () => {
     render(<PersonScreen slug="bruno" page={MY_PAGE} />)
-    expect(screen.getByText(PERSON.empty(PERSON.seen.title))).toBeTruthy()
+    const seen = section(PERSON.seen.title)
+    expect(within(seen).getByText(PERSON.seen.empty)).toBeTruthy()
+    expect(within(seen).getByText(PERSON.seen.add)).toBeTruthy()
     expect(
       within(section(PERSON.adjustments.title)).getByText(
         PERSON.adjustments.noneChanged,

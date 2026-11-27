@@ -72,6 +72,9 @@ function InlineFilms({
   tags: Readonly<Record<string, readonly RowTag[]>>
 }) {
   const { view } = BILLBOARD
+  const chosen = new Set(
+    Object.keys(tags).filter((id) => tags[id]?.includes('chosen')),
+  )
   return (
     <ol aria-label={view.list} className="flex flex-col gap-2xs">
       {films.map((film) => (
@@ -86,7 +89,11 @@ function InlineFilms({
           />
           <PriceSticker compact>{film.position}</PriceSticker>
           <span className="flex min-w-0 items-center gap-xs">
-            <span className="truncate font-display text-row-title">
+            {/* The Filme escolhido's title takes two lines before its tag
+                cuts it (#277). */}
+            <span
+              className={`font-display text-row-title ${chosen.has(film.id) ? 'line-clamp-2' : 'truncate'}`}
+            >
               {film.title}
             </span>
             {(tags[film.id] ?? []).map((kind) => (

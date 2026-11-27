@@ -224,11 +224,25 @@ describe('the Força ruler', () => {
   })
 })
 
+/** A seed Nota on the 1 to 10 scale (#272): texto.py wrote "deu 4,5 a X",
+ * the engine writes "deu 9 de 10 a X". The decision changes only that. */
+const onTen = (row: { fn: string; args: Tagged[]; out: Tagged }) =>
+  row.fn === 'semente' && row.args[0] === 'nota' && typeof row.out === 'string'
+    ? {
+        ...row,
+        out: row.out.replace(
+          /^deu ([\d,]+) a /u,
+          (_, n: string) =>
+            `deu ${ratingText(Number(n.replace(',', '.')) * 2)} de 10 a `,
+        ),
+      }
+    : row
+
 describe('the PT wording', () => {
   const rows = golden<{ fn: string; args: Tagged[]; out: Tagged }>(
     'wording',
     FOLDER,
-  )
+  ).map(onTen)
   const call: Record<string, (args: Tagged[]) => unknown> = {
     nota: ([value]) => ratingText(num(value)),
     semente: ([seed, value, film]) =>

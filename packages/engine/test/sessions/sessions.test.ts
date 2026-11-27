@@ -140,7 +140,7 @@ describe('recomendar opens the Session', () => {
       '. As Horas Lentas (2021, 1h44) · tt9000104\n   - Bruno\n',
     )
     expect(body).toContain(
-      '     - Evidência: deu 5 a O Farol de Areia (2012), também de Helena Prado' +
+      '     - Evidência: deu 10 de 10 a O Farol de Areia (2012), também de Helena Prado' +
         ' · Fonte: Letterboxd do Bruno, 2025-06-01 · Força: forte · Tipo: nota\n',
     )
     expect(body).toContain(
@@ -149,7 +149,7 @@ describe('recomendar opens the Session', () => {
         ' · Fonte: Wikidata, 2026-11-20 · Força: forte · Tipo: metadado\n',
     )
     expect(body).toContain(
-      '     - Evidência: deu 3 a O Farol de Areia (2012), também de Helena Prado' +
+      '     - Evidência: deu 6 de 10 a O Farol de Areia (2012), também de Helena Prado' +
         ' · Fonte: Letterboxd da Iara, 2025-04-12 · Força: fraca · Tipo: nota\n',
     )
     expect(body).toContain(
@@ -183,6 +183,8 @@ describe('recomendar opens the Session', () => {
               date: e.date,
               strength: e.strength,
               kind: e.kind,
+              // The body marks what weighs against the film (#272).
+              against: e.contribution < 0,
             })),
           ]),
         ),

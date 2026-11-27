@@ -377,7 +377,19 @@ export const sessionDuration = (minutes: number): string =>
     ? `${Math.floor(minutes / 60)}h${String(minutes % 60).padStart(2, '0')}`
     : `${minutes}min`
 
-/** One Evidence in the full line format (`arquivo.linha_completa`). */
+/** The mark at the end of a body line whose Evidence weighs against the
+ * film (#272): the Cartaz draws it as such. A line without it is for the
+ * film, or from a Session written before. */
+const AGAINST_IN_BODY = ' · Sentido: contra'
+
+/** A body line without its mark of against, and whether it had it. */
+export const bodyDirection = (line: string): [string, boolean] =>
+  line.endsWith(AGAINST_IN_BODY)
+    ? [line.slice(0, -AGAINST_IN_BODY.length), true]
+    : [line, false]
+
+/** One Evidence in the full line format (`arquivo.linha_completa`), with
+ * the mark of against when its contribution is negative (#272). */
 export const fullLine = (evidence: EvidenceJson): string => {
   const parts = [`Evidência: ${evidence.text}`]
   if (evidence.source)
@@ -388,7 +400,7 @@ export const fullLine = (evidence: EvidenceJson): string => {
     `Força: ${STRENGTH_IN_BODY[evidence.strength]}`,
     `Tipo: ${KIND_IN_BODY[evidence.kind]}`,
   )
-  return parts.join(' · ')
+  return parts.join(' · ') + (evidence.contribution < 0 ? AGAINST_IN_BODY : '')
 }
 
 const yearAndDuration = (film: BodyFilm): string => {
@@ -429,6 +441,9 @@ export interface BodyEvidence {
   readonly date: string | null
   readonly strength: Strength | 'guess'
   readonly kind: Kind
+  /** It weighs against the film: the body's mark (#272), or, in a Session
+   * written before it, a Já visto. */
+  readonly against: boolean
 }
 
 export interface FilmInBody {
@@ -459,7 +474,11 @@ const rpartition = (
     : [text.slice(0, at), separator, text.slice(at + separator.length)]
 }
 
-const bodyEvidence = (line: string): BodyEvidence => {
+/** A Já visto's line (`signals/seen.ts`), always against the film. */
+const SEEN_TEXT = 'já viu'
+
+const bodyEvidence = (full: string): BodyEvidence => {
+  const [line, marked] = bodyDirection(full)
   let [rest, , kind] = rpartition(line, ' · Tipo: ')
   let strength: string
   ;[rest, , strength] = rpartition(rest, ' · Força: ')
@@ -483,6 +502,7 @@ const bodyEvidence = (line: string): BodyEvidence => {
     // A line written by hand may name neither; it keeps the text as is.
     strength: fromBody(STRENGTH_IN_BODY, strength) ?? (strength as 'guess'),
     kind: fromBody(KIND_IN_BODY, kind) ?? (kind as Kind),
+    against: marked || text === SEEN_TEXT,
   }
 }
 
