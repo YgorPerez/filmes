@@ -38,6 +38,7 @@ export const Done: Story = {
       ),
     ).toBeVisible()
     await expect(canvas.getAllByText('sem ganho')).toHaveLength(2)
+    await expect(canvas.queryByText('empate')).toBeNull()
     await expect(
       canvas.queryByRole('button', { name: /Copiar os pesos/ }),
     ).toBeNull()

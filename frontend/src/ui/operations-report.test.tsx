@@ -36,7 +36,7 @@ it('shows each block, and only the weights copy back as TOML', async () => {
     value: { writeText },
     configurable: true,
   })
-  render(<Report report={{ date: '2026-11-20', text: REPORT }} />)
+  render(<Report report={{ date: '2026-11-20', text: REPORT, names: {} }} />)
   expect(screen.getByText('O teste esconde as Notas altas.')).toBeTruthy()
   expect(screen.getByRole('rowheader', { name: 'Recall' })).toBeTruthy()
   expect(screen.getByRole('cell', { name: 'extra' })).toBeTruthy()
@@ -47,6 +47,45 @@ it('shows each block, and only the weights copy back as TOML', async () => {
   expect(copy).toHaveLength(1)
   await userEvent.click(copy[0]!)
   expect(writeText).toHaveBeenCalledWith('[path.weight]\ncast = 0.5')
+})
+
+const CALIBRATION = [
+  '## Calibração da Força',
+  '| Quem | Fraca | Forte | Sobe? |',
+  '| --- | ---: | ---: | :---: |',
+  '| bruno | — (0/0) | 100.0% (2/2) | — |',
+  '| iara | — (0/0) | — (0/0) | — |',
+  '| MovieLens | — (0/0) | — (0/0) | — |',
+  '## Online',
+  '- Satisfação de iara: 0.500 em 2 Sessões',
+  '## Versões dos dados',
+  '```yaml',
+  `filmes.csv: ${'a'.repeat(64)}`,
+  '```',
+  '## Avisos',
+  '- Sem a chave do OMDb.',
+].join('\n')
+
+it('names each Pessoa, and says in one line that a row has no Notas', () => {
+  render(
+    <Report
+      report={{
+        date: '2026-11-20',
+        text: CALIBRATION,
+        names: { bruno: 'Bruno', iara: 'Iara' },
+      }}
+    />,
+  )
+  expect(screen.getByRole('rowheader', { name: 'Bruno' })).toBeTruthy()
+  expect(screen.getByRole('cell', { name: 'sem Notas' })).toBeTruthy()
+  // Without the warning about the dump, MovieLens has no Notas either.
+  const empty = screen.getAllByRole('cell', { name: 'sem Notas nesse corte' })
+  expect(empty).toHaveLength(2)
+  expect(empty[0]!.getAttribute('colspan')).toBe('3')
+  expect(screen.getByText('Satisfação de Iara: 0,5 em 2 Sessões')).toBeTruthy()
+  expect(screen.getByText(`filmes.csv: ${'a'.repeat(12)}…`)).toBeTruthy()
+  expect(screen.getByText(OPERATIONS.evaluation.shortHashes)).toBeTruthy()
+  expect(screen.getByText('Sem a chave do OMDb.')).toBeTruthy()
 })
 
 it('says there is no report yet', () => {
