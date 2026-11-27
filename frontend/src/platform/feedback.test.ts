@@ -102,13 +102,14 @@ const post = (
 
 const FORM = { filme: 'tt9000101', 'reacao.bruno': 'nota:8' }
 
-describe('feedbackAction', () => {
-  const act = (
-    request: Request,
-    feedback: Feedback,
-    owner: Owner | null = BRUNO,
-  ) => feedbackAction(request, SESSION.id, owner, feedback, new Notes(), ORIGIN)
+/** `feedbackAction` on the Session, as `owner` (Bruno by default). */
+const act = (
+  request: Request,
+  feedback: Feedback,
+  owner: Owner | null = BRUNO,
+) => feedbackAction(request, SESSION.id, owner, feedback, new Notes(), ORIGIN)
 
+describe('feedbackAction', () => {
   it('carries a Trakt warning to the closed Session', async () => {
     const warnings = ['Não foi possível concluir o envio ao Trakt.']
     const notes = new Notes()
@@ -129,7 +130,9 @@ describe('feedbackAction', () => {
       notes.recall(location.searchParams.get('nota') ?? undefined)?.warnings,
     ).toEqual(warnings)
   })
+})
 
+describe('feedbackAction recording', () => {
   it('records the form as the logged-in Dono and goes back to the Session', async () => {
     const { feedback, record } = fake()
     const response = await act(
@@ -180,7 +183,9 @@ describe('feedbackAction', () => {
     expect((await act(post(FORM, null), feedback)).status).toBe(403)
     expect(record).not.toHaveBeenCalled()
   })
+})
 
+describe('feedbackAction refusing', () => {
   it('goes back to the form with what the page refused', async () => {
     const { feedback, record } = fake()
     const response = await act(post({ 'comentario.quim': 'x' }), feedback)
@@ -208,21 +213,22 @@ describe('feedbackAction', () => {
   })
 })
 
-describe('the Catálogo search in feedbackAction', () => {
-  const search = (fields: Record<string, string>, notes = new Notes()) => {
-    const { feedback, record } = fake()
-    const response = feedbackAction(
-      post(fields),
-      SESSION.id,
-      BRUNO,
-      feedback,
-      notes,
-      ORIGIN,
-    )
-    return { response, record }
-  }
-  const searched = (location: string | null) => new URL(location ?? '', ORIGIN)
+/** The feedback form posted with `fields`, as Bruno, on a fake. */
+const search = (fields: Record<string, string>, notes = new Notes()) => {
+  const { feedback, record } = fake()
+  const response = feedbackAction(
+    post(fields),
+    SESSION.id,
+    BRUNO,
+    feedback,
+    notes,
+    ORIGIN,
+  )
+  return { response, record }
+}
+const searched = (location: string | null) => new URL(location ?? '', ORIGIN)
 
+describe('the Catálogo search in feedbackAction', () => {
   it('comes back to the form with the search, recording nothing', async () => {
     const asked = (busca: string) =>
       search({ filme: 'outro', busca, 'buscar-catalogo': 'sim' })
@@ -261,7 +267,9 @@ describe('the Catálogo search in feedbackAction', () => {
     })
     expect(record).not.toHaveBeenCalled()
   })
+})
 
+describe('the Catálogo search in feedbackAction, with Enter', () => {
   it('Enter with a title not searched yet searches instead of recording', async () => {
     const { response, record } = search({
       filme: 'outro',
@@ -353,53 +361,69 @@ describe('the pages', () => {
 const git = (cwd: string, ...args: string[]) =>
   execFileSync('git', args, { cwd, encoding: 'utf8' })
 
+/** Puts the fixture's filmes-dados under git, in one commit. */
+const commitAll = (cwd: string) => {
+  git(cwd, 'init', '--quiet', '-b', 'master')
+  git(cwd, 'add', '--all')
+  git(
+    cwd,
+    '-c',
+    'user.name=fixture',
+    '-c',
+    'user.email=fixture@example.org',
+    'commit',
+    '--quiet',
+    '-m',
+    'initial',
+  )
+}
+
+/** Opens a Session for the Dono and Quim, as Bruno. */
+const openWithQuim = async (engine: ReturnType<typeof makeEngine>) => {
+  const outcome = await engine.run(
+    recommendSession({ attendees: ['dono', 'quim'], count: 3 }),
+    { owner: 'bruno' },
+  )
+  if (outcome.exitCode !== 0) throw new Error(JSON.stringify(outcome))
+  return outcome.output
+}
+
+/** The open Sessions are only `first`, with its films in order. */
+const expectOnlyOpen = async (
+  feedback: Feedback,
+  first: Awaited<ReturnType<typeof openWithQuim>>,
+) => {
+  const list = await openSessionList(feedback)
+  expect(list).toEqual([
+    {
+      id: first.session.id,
+      date: '2026-11-20',
+      request: null,
+      moods: [],
+      constraints: [],
+      attendees: [
+        { person: 'bruno', name: 'Bruno', owner: true },
+        { person: 'quim', name: 'Quim', owner: false },
+      ],
+      recommendation: first.films.map((f) => ({
+        position: f.position,
+        id: f.id,
+        title: f.title,
+      })),
+    },
+  ])
+}
+
 describe('feedbackFromEngine', () => {
   it('closes a Session with one commit signed by the Dono, and the next one sees the satisfaction', async () => {
     const fixture = useFixture()
-    git(fixture.data, 'init', '--quiet', '-b', 'master')
-    git(fixture.data, 'add', '--all')
-    git(
-      fixture.data,
-      '-c',
-      'user.name=fixture',
-      '-c',
-      'user.email=fixture@example.org',
-      'commit',
-      '--quiet',
-      '-m',
-      'initial',
-    )
+    commitAll(fixture.data)
     const engine = makeEngine(fixture.vars)
-    const open = async () => {
-      const outcome = await engine.run(
-        recommendSession({ attendees: ['dono', 'quim'], count: 3 }),
-        { owner: 'bruno' },
-      )
-      if (outcome.exitCode !== 0) throw new Error(JSON.stringify(outcome))
-      return outcome.output
-    }
+    const open = () => openWithQuim(engine)
     try {
       const feedback = feedbackFromEngine(engine)
       const first = await open()
-      const list = await openSessionList(feedback)
-      expect(list).toEqual([
-        {
-          id: first.session.id,
-          date: '2026-11-20',
-          request: null,
-          moods: [],
-          constraints: [],
-          attendees: [
-            { person: 'bruno', name: 'Bruno', owner: true },
-            { person: 'quim', name: 'Quim', owner: false },
-          ],
-          recommendation: first.films.map((f) => ({
-            position: f.position,
-            id: f.id,
-            title: f.title,
-          })),
-        },
-      ])
+      await expectOnlyOpen(feedback, first)
 
       // Bruno hated Pequenos Milagres; Quim loved it and said why.
       const response = await feedbackAction(

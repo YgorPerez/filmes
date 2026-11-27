@@ -112,7 +112,9 @@ describe('homeData', () => {
     const home = await homeData(BRUNO, fakeSource().source, list, ORIGIN)
     expect(home.latest?.id).toBe('2026-11-19-1')
   })
+})
 
+describe('homeData, on the shelf and a failing engine', () => {
   it('asks the shelf for today and for the covers of the latest Sessão only', async () => {
     const asked: string[][] = []
     const home = await homeData(

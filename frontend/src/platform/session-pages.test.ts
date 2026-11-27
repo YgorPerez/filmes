@@ -43,7 +43,9 @@ describe('the Session pages’ queries', () => {
     const many = Array.from({ length: 30 }, (_, i) => `p${i}`).join(',')
     expect(search({ presentes: many }).presentes).toHaveLength(20)
   })
+})
 
+describe('the Session pages’ queries, on the Session and its Feedback', () => {
   it('the Session page keeps a known notice and refusal, a note and short words', () => {
     const search = searchOf(Session)
     expect(

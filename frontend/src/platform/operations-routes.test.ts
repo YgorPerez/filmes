@@ -32,7 +32,9 @@ describe('the Operações routes', () => {
     expect(response.status).toBe(303)
     expect(response.headers.get('Location')).toBe('/entrar')
   })
+})
 
+describe('the Operações routes, on reports and admins', () => {
   it('send a report download with no Dono session to the login', async () => {
     const { GET } = (
       Report.options.server as {

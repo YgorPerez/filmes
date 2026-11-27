@@ -96,7 +96,9 @@ describe('csvDownload', () => {
     expect(response.headers.get('Location')).toBe('/entrar')
     expect(asked).toEqual([])
   })
+})
 
+describe('csvDownload when it cannot give the file', () => {
   it.each(['', '?pessoa=', '?pessoa=%20'])(
     'goes back to Pessoas when no Pessoa is chosen (%s)',
     async (query) => {
