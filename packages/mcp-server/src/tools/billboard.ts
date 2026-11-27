@@ -5,6 +5,11 @@ import { defineTool, imdbId, sessionId } from '../tool.ts'
 
 export default defineTool({
   name: 'billboard',
+  annotations: {
+    readOnlyHint: false,
+    destructiveHint: false,
+    openWorldHint: false,
+  },
   description:
     'O Cartaz da Recomendação gravada numa Sessão, como dados: `billboard` traz o topo (`request.who` e `request.parts`, ' +
     'a leitura do pedido), os Presentes (`attendees`, com "Você" para o Dono), o que saiu na versão (`dropped`, com `reason`) e um card ' +

@@ -47,3 +47,22 @@ test('an email that is not on a Dono is refused', async ({ page }) => {
   await page.getByRole('button', { name: 'Continuar' }).click()
   await expect(page).toHaveURL(/\/$/)
 })
+
+test('a visitor reaches the sources’ credits from the footer', async ({
+  page,
+}) => {
+  await page.goto('/entrar')
+  await page
+    .getByRole('contentinfo')
+    .getByRole('link', { name: 'Créditos das fontes' })
+    .click()
+  await expect(page).toHaveURL(/\/creditos$/)
+  await expect(page.getByRole('heading', { name: 'Créditos' })).toBeVisible()
+  for (const source of ['IMDb', 'TMDB', 'Does the Dog Die', 'Trakt'])
+    await expect(page.getByRole('link', { name: source })).toBeVisible()
+  await expect(
+    page.getByText(
+      'This product uses the TMDB API but is not endorsed or certified by TMDB.',
+    ),
+  ).toBeVisible()
+})

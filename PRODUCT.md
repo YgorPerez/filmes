@@ -53,7 +53,8 @@ Cada linha de "Por que cada um vai gostar" aponta para um Fato guardado, com Fon
 - O guia da home nunca bloqueia: dá para pedir filme desde o primeiro login.
 - Operações (`consult`, `evaluate`) só para `admin: true`.
 - Fora do escopo: cadastro aberto, outras línguas, rede social, streaming, notificações.
-- A decidir: o nome que aparece na tela (o repo se chama `filmes`; o domínio é `cinema.finalsend.com.br`), e se as atribuições do TMDB e do IMDb passam a aparecer na tela agora que mais de uma pessoa usa.
+- Atribuição das fontes: o mínimo que os termos de cada uma pedem, numa página de Créditos (`/creditos`) aberta a qualquer um e ligada do rodapé de toda página. Nada nos cards. Decisão do Dono, mapa #279 (#292).
+- A decidir: o nome que aparece na tela (o repo se chama `filmes`; o domínio é `cinema.finalsend.com.br`).
 
 ## Brand Commitments
 

@@ -1,6 +1,6 @@
-// The watchlist [watchlist]: a film the Presente put on her Letterboxd or
-// Trakt watchlist is a Declarado in her favour, moderate (#280); her TV
-// Time list too (#300).
+// The watchlist [watchlist]: a film the Presente put on her Letterboxd,
+// Trakt or Simkl (#299) watchlist is a Declarado in her favour, moderate
+// (#280); her TV Time list too (#300).
 //
 // One Evidence per film, the latest entry; the base is `[people]
 // statement_weight`, like a Declarado about an entity. A Já visto of the
@@ -17,6 +17,7 @@ import { candidatesJson, type Signal } from './Signal.ts'
 const LINE: Readonly<Record<string, string>> = {
   letterboxd: 'está na lista do Letterboxd',
   trakt: 'está na lista do Trakt',
+  simkl: 'está na lista do Simkl',
   tvtime: 'está na lista do TV Time',
 }
 

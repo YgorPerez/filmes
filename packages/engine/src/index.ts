@@ -52,8 +52,10 @@ export { LETTERBOXD_HEADER } from './export/letterboxd.ts'
 export { resolveAttendees } from './recommendation/attendees.ts'
 export {
   attributionsOf,
+  CREDITS,
   TRAKT_ATTRIBUTION,
   type Attribution,
+  type Credit,
 } from './recommendation/attributions.ts'
 export {
   catalogFilm,
@@ -616,6 +618,26 @@ export {
   type ImdbImportInput,
   type ImdbOutside,
 } from './imports/imdb.ts'
+export {
+  importSimkl,
+  loadSimkl,
+  reloadPersonSimkl,
+  reloadSimkl,
+  SIMKL_KIND,
+  simklFactCounts,
+  type SimklFactCounts,
+  type SimklImport,
+  type SimklImportInput,
+  type SimklReport,
+  type SimklUnresolved,
+} from './imports/simkl.ts'
+export {
+  isSimklBackup,
+  readSimklBackup,
+  type SimklFilm,
+  type SimklRow,
+  type SimklRowKind,
+} from './imports/simkl-backup.ts'
 export {
   isImdbRatings,
   readImdbRatings,

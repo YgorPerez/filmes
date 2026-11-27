@@ -8,6 +8,7 @@ import { PersonImportsScreen, type PersonImportsView } from './person-imports'
 const NONE = { wikidata: 0, tmdb: 0, manual: 0 }
 const TRAKT_FILE = 'imports/quim/trakt-b1.zip'
 const IMDB_FILE = 'imports/quim/imdb-c1.csv'
+const SIMKL_FILE = 'imports/quim/simkl-d1.zip'
 const TVTIME_RECORD = {
   kind: 'tvtime',
   file: 'imports/quim/tvtime-d1.zip',
@@ -45,6 +46,12 @@ const QUIM: PersonImportsView = {
       date: '2026-11-22',
       original: 'ratings.csv',
     },
+    {
+      kind: 'simkl',
+      file: SIMKL_FILE,
+      date: '2026-11-23',
+      original: 'SimklBackup.zip',
+    },
   ],
   letterboxd: {
     person: 'quim',
@@ -64,6 +71,7 @@ const QUIM: PersonImportsView = {
   },
   trakt: { ratings: 2, seen: 1, watchlist: 0 },
   imdb: { ratings: 412 },
+  simkl: { ratings: 87, seen: 140, watchlist: 12 },
   tvtime: { ratings: 0, seen: 0, stated: 0, watchlist: 0 },
 }
 
@@ -81,6 +89,7 @@ const EMPTY: PersonImportsView = {
   },
   trakt: { ratings: 0, seen: 0, watchlist: 0 },
   imdb: { ratings: 0 },
+  simkl: { ratings: 0, seen: 0, watchlist: 0 },
   tvtime: { ratings: 0, seen: 0, stated: 0, watchlist: 0 },
 }
 
@@ -89,6 +98,13 @@ const IMDB_ONLY: PersonImportsView = {
   ...EMPTY,
   imports: QUIM.imports.filter(({ kind }) => kind === 'imdb'),
   imdb: { ratings: 412 },
+}
+
+/** Quim with only the Simkl backup. */
+const SIMKL_ONLY: PersonImportsView = {
+  ...EMPTY,
+  imports: QUIM.imports.filter(({ kind }) => kind === 'simkl'),
+  simkl: QUIM.simkl,
 }
 
 /** Quim with the TV Time backup too: its films join the Letterboxd ones in
@@ -161,6 +177,19 @@ export const OnlyImdb: Story = {
 
 export const ImdbImported: Story = {
   args: { page: IMDB_ONLY, done: { notice: 'imdb', facts: 412, outside: 3 } },
+}
+
+export const OnlySimkl: Story = {
+  args: { page: SIMKL_ONLY },
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByText(PERSON_IMPORTS.simkl.summary(87, 140)),
+    ).toBeVisible()
+  },
+}
+
+export const SimklImported: Story = {
+  args: { page: SIMKL_ONLY, done: { notice: 'simkl', facts: 239, outside: 4 } },
 }
 
 export const WithTvTime: Story = {

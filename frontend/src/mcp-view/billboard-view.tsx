@@ -3,7 +3,7 @@
 // result and hands that result to the view. The view renders the same
 // component as the Session's page (`ui/billboard.tsx`). Enviar records the
 // reply with `answer_billboard`, called through the host, and when a film
-// left or something was written (acrescentar, comments) tells Claude with a
+// left or something was written (acrescentar, comments) notifies the chat with a
 // `ui/message`, since the regenerate and the reading of the free text are
 // his. Copiar pro chat gives the `#cartaz` text, as on the web. When the
 // host has a fullscreen, the view starts as the compact inline card, whose
@@ -15,6 +15,7 @@
 import type { Billboard as BillboardModel } from '@filmes/engine'
 import { useRef, useState } from 'react'
 import { Billboard } from '../ui/billboard'
+import { SEND_STATUS } from '../ui/billboard-send.copy'
 import { BILLBOARD } from '../ui/billboard.copy'
 import {
   billboardOf,
@@ -40,7 +41,7 @@ export type Host = {
 
 const { view } = BILLBOARD
 
-/** Records the reply and, when Claude has something to do, tells him.
+/** Records the reply and, when needed, sends a follow-up to the chat.
  * Gives the status line and whether the reply was recorded. */
 async function send(
   host: Host,
@@ -65,9 +66,9 @@ async function send(
     (answer) => !answer.isError,
     () => false,
   )
-  if (!told) return { status: view.notNotified, recorded: true }
+  if (!told) return { status: SEND_STATUS.notNotified, recorded: true }
   return {
-    status: reply.regenerate ? view.regenerating : view.toClaude,
+    status: reply.regenerate ? SEND_STATUS.regenerating : SEND_STATUS.toChat,
     recorded: true,
   }
 }

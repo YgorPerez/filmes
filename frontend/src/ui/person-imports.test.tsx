@@ -54,6 +54,7 @@ const QUIM: PersonImportsView = {
   },
   trakt: { ratings: 2, seen: 1, watchlist: 0 },
   imdb: { ratings: 0 },
+  simkl: { ratings: 0, seen: 0, watchlist: 0 },
   tvtime: { ratings: 0, seen: 0, stated: 0, watchlist: 0 },
 }
 
@@ -71,6 +72,7 @@ const EMPTY: PersonImportsView = {
   },
   trakt: { ratings: 0, seen: 0, watchlist: 0 },
   imdb: { ratings: 0 },
+  simkl: { ratings: 0, seen: 0, watchlist: 0 },
   tvtime: { ratings: 0, seen: 0, stated: 0, watchlist: 0 },
 }
 
@@ -168,10 +170,14 @@ describe('PersonImportsScreen', () => {
       ['Letterboxd', 'https://letterboxd.com/settings/data/'],
       ['Trakt', 'https://trakt.tv/settings/data'],
       ['IMDb', 'https://www.imdb.com/list/ratings'],
+      [
+        'Simkl',
+        'https://docs.simkl.org/how-to-use-simkl/advanced-usage/import-export-data/exporting-from-simkl/export-data-formats',
+      ],
     ])
     expect(
       within(form).getByLabelText(COPY.upload.file).getAttribute('accept'),
-    ).toBe('.zip,application/zip,.csv,text/csv')
+    ).toBe('.zip,application/zip,.csv,text/csv,.json,application/json')
     // The One Orange Button Rule.
     expect(
       [...container.querySelectorAll('.bg-sticker-orange')].map(
@@ -232,13 +238,20 @@ describe('PersonImportsScreen', () => {
     show({ ...EMPTY, imdb: { ratings: 1 } })
     expect(screen.queryByRole('region', { name: COPY.trakt.title })).toBeNull()
     expect(section(COPY.imdb.title).textContent).toContain('1 Nota do IMDb.')
+    expect(screen.queryByRole('region', { name: COPY.simkl.title })).toBeNull()
+    cleanup()
+    show({ ...EMPTY, simkl: { ratings: 2, seen: 1, watchlist: 4 } })
+    expect(screen.queryByRole('region', { name: COPY.imdb.title })).toBeNull()
+    expect(section(COPY.simkl.title).textContent).toContain(
+      '2 Notas e 1 Já visto do Simkl.',
+    )
   })
 
   it('says how to download each file when one is of no service', () => {
     render(<PersonImportsScreen slug="quim" page={QUIM} refusal="origem" />)
     const alert = screen.getByRole('alert')
     expect(alert.textContent).toContain(
-      'Esse arquivo não parece ser do Letterboxd, do Trakt, do IMDb nem do TV Time.',
+      'Esse arquivo não parece ser do Letterboxd, do Trakt, do IMDb, do Simkl nem do TV Time.',
     )
     expect(
       within(alert)
@@ -248,6 +261,7 @@ describe('PersonImportsScreen', () => {
       'https://letterboxd.com/settings/data/',
       'https://trakt.tv/settings/data',
       'https://www.imdb.com/list/ratings',
+      'https://docs.simkl.org/how-to-use-simkl/advanced-usage/import-export-data/exporting-from-simkl/export-data-formats',
     ])
     // TV Time is closed: its line says which backup, with no link.
     expect(alert.textContent).toContain(

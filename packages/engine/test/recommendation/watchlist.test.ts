@@ -1,10 +1,11 @@
 // The watchlist [watchlist] as a Declarado in favour (#280): a film on a
-// Presente's Letterboxd or Trakt watchlist. Teo has no Nota, so his only
+// Presente's Letterboxd, Trakt or Simkl (#299) watchlist. Teo has no Nota, so his only
 // Evidence on Jardim Suspenso (tt9000301) is the one his import gives.
 
 import { describe, expect, test } from 'vite-plus/test'
 import {
   importLetterboxd,
+  importSimkl,
   importTrakt,
   personImports,
   personSeen,
@@ -35,6 +36,33 @@ const JARDIM_ON_TRAKT = {
     ids: { trakt: 71, imdb: 'tt9000301', tmdb: 9008 },
   },
 }
+
+const simklBackup = (status: string) =>
+  JSON.stringify({
+    movies: [
+      {
+        added_to_watchlist_at: '2025-05-06T12:00:00Z',
+        last_watched_at: null,
+        user_rating: null,
+        status,
+        movie: {
+          title: 'Jardim Suspenso',
+          year: 2017,
+          ids: { simkl: 9100301, imdb: 'tt9000301' },
+        },
+      },
+    ],
+  })
+
+const importSimklBackup = (fixture: Fixture, json: string) =>
+  fixture.ok(
+    importSimkl({
+      person: 'teo',
+      original: 'SimklBackup.json',
+      content: new TextEncoder().encode(json),
+      author: AUTHOR,
+    }),
+  )
 
 const importLetterboxdZip = (fixture: Fixture, content: Uint8Array) =>
   fixture.ok(
@@ -178,5 +206,29 @@ describe('the watchlist', () => {
     expect((await teoOnJardim(fixture))?.map((e) => e.text)).toEqual([
       'sem fato',
     ])
+  })
+
+  test('a film on the Simkl watchlist (plantowatch) is the same Declarado, from Simkl', async () => {
+    const fixture = useFixture()
+    await importSimklBackup(fixture, simklBackup('plantowatch'))
+
+    const lines = await teoOnJardim(fixture)
+    expect(lines).toHaveLength(1)
+    expect(lines?.[0]).toMatchObject({
+      text: 'está na lista do Simkl',
+      source: 'Simkl de Teo',
+      date: '2025-05-06',
+      strength: 'moderate',
+      kind: 'stated',
+      contribution: 0.6,
+    })
+  })
+
+  test('a new Simkl backup replaces the watchlist of the earlier one', async () => {
+    const fixture = useFixture()
+    await importSimklBackup(fixture, simklBackup('plantowatch'))
+    await importSimklBackup(fixture, simklBackup('completed'))
+
+    expect((await teoOnJardim(fixture))?.map((e) => e.text)).toEqual(['já viu'])
   })
 })

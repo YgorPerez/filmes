@@ -321,7 +321,7 @@ export const statedStrength = (
   return strength
 }
 
-/** A film on the Pessoa's watchlist (Letterboxd or Trakt): she said she
+/** A film on the Pessoa's watchlist (Letterboxd, Trakt or Simkl): she said she
  * wants to see it, about the film itself, but only by putting it on a
  * list. Moderate, whatever its age (#280). */
 export const watchlistStrength = (): Strength => 'moderate'

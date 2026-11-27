@@ -37,7 +37,7 @@ export type ImportDoneView = {
 }
 
 /** A Pessoa's imports (`importsPath`): the upload first (one file field: the server tells
- * Letterboxd, Trakt and TV Time apart by the ZIP, and IMDb by its CSV), then the Letterboxd profile, what the
+ * Letterboxd, Trakt and TV Time apart by the ZIP, IMDb by its CSV and Simkl by its JSON), then the Letterboxd profile, what the
  * imports gave (only once they gave something) and the files, each with
  * its Tirar. Every form is a plain POST (the upload multipart) that comes
  * back here; with the JavaScript, by `fetch`, without a reload (#240). `page` is `'unknown'` when no Pessoa has the slug, null when
@@ -240,17 +240,21 @@ const hasLetterboxd = (page: PersonImports) =>
 const hasTrakt = (page: PersonImports) =>
   page.trakt.ratings > 0 || page.trakt.seen > 0
 
+const hasSimkl = (page: PersonImports) =>
+  page.simkl.ratings > 0 || page.simkl.seen > 0
+
 const hasTvTime = (page: PersonImports) =>
   page.tvtime.ratings > 0 || page.tvtime.seen > 0
 
 /** What the imports gave, by service: a card only once it gave something;
- * Trakt, IMDb and TV Time, which only count, share the narrow column. */
+ * Trakt, IMDb, Simkl and TV Time, which only count, share the narrow column. */
 function Summaries({ page }: { page: PersonImports }) {
   const letterboxd = hasLetterboxd(page)
   const trakt = hasTrakt(page)
   const imdb = page.imdb.ratings > 0
+  const simkl = hasSimkl(page)
   const tvtime = hasTvTime(page)
-  const counted = trakt || imdb || tvtime
+  const counted = trakt || imdb || simkl || tvtime
   if (!letterboxd && !counted) return null
   return (
     <div
@@ -261,6 +265,7 @@ function Summaries({ page }: { page: PersonImports }) {
         <div className="grid content-start gap-2xl">
           {trakt && <Trakt page={page} />}
           {imdb && <Imdb page={page} />}
+          {simkl && <Simkl page={page} />}
           {tvtime && <TvTime page={page} />}
         </div>
       )}
@@ -322,6 +327,15 @@ function Imdb({ page }: { page: PersonImports }) {
   return (
     <Slip id="imdb" title={imdb.title}>
       <p>{imdb.summary(page.imdb.ratings)}</p>
+    </Slip>
+  )
+}
+
+function Simkl({ page }: { page: PersonImports }) {
+  const { simkl } = COPY
+  return (
+    <Slip id="simkl" title={simkl.title}>
+      <p>{simkl.summary(page.simkl.ratings, page.simkl.seen)}</p>
     </Slip>
   )
 }
@@ -395,7 +409,7 @@ function Upload({ slug }: { slug: string }) {
                   type="file"
                   name="arquivo"
                   required
-                  accept=".zip,application/zip,.csv,text/csv"
+                  accept=".zip,application/zip,.csv,text/csv,.json,application/json"
                   className={fileControl}
                 />
               </FieldLabel>

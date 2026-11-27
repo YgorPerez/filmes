@@ -154,7 +154,7 @@ describe('Home, the setup guide', () => {
         .map((h) => h.textContent),
     ).toEqual([
       'Meu gostofeito, 12 notas',
-      'Importar do Letterboxd, do Trakt ou do IMDb' + 'pulado',
+      'Importar do Letterboxd, do Trakt, do IMDb ou do Simkl' + 'pulado',
       'Conector no Claude' + 'falta fazer',
     ])
     const progress = within(region).getByRole('progressbar', {
@@ -181,7 +181,7 @@ describe('Home, the setup guide', () => {
     ])
     expect(
       screen.getByRole('button', {
-        name: 'Pular: Importar do Letterboxd, do Trakt ou do IMDb',
+        name: 'Pular: Importar do Letterboxd, do Trakt, do IMDb ou do Simkl',
       }),
     ).toBeTruthy()
     expect(href('Dar notas')).toBe('/meu-gosto/notas')
