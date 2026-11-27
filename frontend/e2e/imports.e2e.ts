@@ -200,7 +200,11 @@ test('the Dono imports a Letterboxd ZIP and works the queue', async ({
   await snap(page, info, 'fila-decidida')
 
   await page.goto('/importar/olga')
-  await expect(section(page, RESULTS)).not.toContainText('esperam você')
+  // Nothing waits for her: the count says 0 and no film asks to be solved.
+  await expect(section(page, RESULTS)).toContainText('esperam você0')
+  await expect(page.getByRole('link', { name: 'Resolver agora' })).toHaveCount(
+    0,
+  )
 
   // Her RSS, with her consent. Its TMDB ids would resolve Vento Norte for
   // everyone, so it comes after the queue.
