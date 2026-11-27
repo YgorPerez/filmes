@@ -121,6 +121,8 @@ export interface StoredConstraint {
 
 export interface Constraint {
   readonly name: ConstraintName
+  /** A refill constraint only evaluates candidates for the free places. */
+  readonly appliesTo?: (filmId: string) => boolean
   /** What was asked, for reading the request back ("restricoes" of the
    * result), with the output's English keys. */
   readonly toJson: () => Readonly<Record<string, unknown>>
@@ -331,7 +333,12 @@ const candidatesIn =
       const { pending } = state
       const alive = new Map(films)
       for (const constraint of constraints) {
-        const evaluated = yield* constraint.evaluate(context, alive)
+        const appliesTo = constraint.appliesTo
+        const candidates =
+          appliesTo === undefined
+            ? alive
+            : new Map([...alive].filter(([id]) => appliesTo(id)))
+        const evaluated = yield* constraint.evaluate(context, candidates)
         const limit = constraint.candidateLimit?.(context.weights)
         const verdicts =
           limit === undefined
@@ -345,6 +352,7 @@ const candidatesIn =
                 kept,
               )
         for (const filmId of Array.from(alive.keys())) {
+          if (!candidates.has(filmId)) continue
           const verdict = verdicts.get(filmId) ?? drop()
           if (verdict === 'pending') {
             pending.set(filmId, [...(pending.get(filmId) ?? []), constraint])

@@ -184,6 +184,8 @@ export interface RankOptions {
   readonly constraints?: ReadonlyArray<Constraint>
   /** Clima names as asked. */
   readonly moods?: ReadonlyArray<string>
+  /** Climas from Cartaz comments, for open places only. */
+  readonly refillMoods?: ReadonlyArray<string>
   /** The Candidates prepared once for many rounds (`avaliar`). */
   readonly selection?: CandidateSelection
   /** A refazer of a Session (Python's `regerar`): the kept films stay at
@@ -292,6 +294,11 @@ const prepare = (db: Connection, options: RankOptions): RankEffect<Ranking> =>
     )
     const moods = yield* resolveMoods(options.moods ?? [])
     for (const warning of moods.warnings) yield* run.warn(warning)
+    const refill = options.refillMoods?.length
+      ? (yield* resolveMoods(options.refillMoods)).moods
+      : []
+    const kept = (id: string) =>
+      regenerate !== undefined && isKept(regenerate, id)
     const context: ConstraintContext = {
       db,
       weights,
@@ -299,8 +306,6 @@ const prepare = (db: Connection, options: RankOptions): RankEffect<Ranking> =>
       attendees,
     }
     const asked = makeConstraintSet(context, options.constraints ?? [])
-    const kept = (id: string) =>
-      regenerate !== undefined && isKept(regenerate, id)
     const scales = new Map<string, RatingScale>()
     for (const p of attendees)
       scales.set(p, yield* readRatingScale(db, p, weights))
@@ -311,6 +316,7 @@ const prepare = (db: Connection, options: RankOptions): RankEffect<Ranking> =>
       candidates: yield* asked.candidates(vetoes.remaining, kept),
       attendees,
       moods: moods.moods,
+      ...(refill.length > 0 && { refillMoods: { moods: refill, kept } }),
       scales,
     }
     return {
@@ -1169,7 +1175,7 @@ export const requestCount = (
  * the Presentes resolved, the Regra checked, then `rank`. `seedOf` gives
  * the Aposta's seed from the Presentes when the request has none. */
 export const rankRequest = (
-  request: RecommendRequest,
+  request: RecommendRequest & Pick<RankOptions, 'refillMoods'>,
   count: number,
   asked: ReadonlyArray<Constraint>,
   regenerate?: Regenerate,
@@ -1199,6 +1205,9 @@ export const rankRequest = (
           rule,
           constraints: asked,
           moods: request.moods ?? [],
+          ...(request.refillMoods !== undefined && {
+            refillMoods: request.refillMoods,
+          }),
           ...(regenerate !== undefined && { regenerate }),
           ...(seed !== undefined && { seed }),
           ...(request.session != null && { session: request.session }),
