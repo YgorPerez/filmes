@@ -1,6 +1,9 @@
-// The movies of a Trakt Raw Export (`importar/zip_trakt.py`): the ratings
-// and the history JSONs of the ZIP, each item a film with its ids, the
-// instant (in UTC) and, for a rating, the Nota on the 0.5 to 5 scale.
+// The movies of a Trakt Raw Export (`importar/zip_trakt.py`): the ratings,
+// the history and the watchlist JSONs of the ZIP, each item a film with its
+// ids, the instant (in UTC) and, for a rating, the Nota on the 0.5 to 5
+// scale. The watchlist is `watchlist.json` (`lists/watchlist.json` in some
+// exports) or `lists-watchlist.json`, its items dated by `listed_at`, as
+// the API's watchlist gives them (#280).
 import { pyIsoInstantUtc } from '../compat/datetime.ts'
 import { engineError } from '../runtime/EngineError.ts'
 import { pyJsonLoads, type PyJson } from './py-json.ts'
@@ -20,13 +23,15 @@ export interface TraktRow {
   /** `2025-02-03T19:00:00.000000+00:00`. */
   readonly instant: string
   readonly rating: number | null
+  /** On the watchlist, not seen (#280). */
+  readonly watchlist: boolean
 }
 
 // Python's `\d` is any decimal digit.
 const FILE =
-  /^(ratings(?:-movies)?|(?:watched-)?history|watched-movies)(?:-\p{Nd}+)?\.json$/u
+  /^(ratings(?:-movies)?|(?:watched-)?history|watched-movies|(?:lists-)?watchlist(?:-movies)?)(?:-\p{Nd}+)?\.json$/u
 
-type DateField = 'rated_at' | 'watched_at' | 'last_watched_at'
+type DateField = 'rated_at' | 'watched_at' | 'last_watched_at' | 'listed_at'
 
 const DATE_FIELDS: Readonly<Record<string, DateField>> = {
   ratings: 'rated_at',
@@ -34,6 +39,10 @@ const DATE_FIELDS: Readonly<Record<string, DateField>> = {
   history: 'watched_at',
   'watched-history': 'watched_at',
   'watched-movies': 'last_watched_at',
+  watchlist: 'listed_at',
+  'watchlist-movies': 'listed_at',
+  'lists-watchlist': 'listed_at',
+  'lists-watchlist-movies': 'listed_at',
 }
 
 /** `PurePosixPath(path).name`. */
@@ -106,10 +115,24 @@ const rowsOf = (
     const at = item.get(field)
     const instant = typeof at === 'string' ? pyIsoInstantUtc(at) : null
     if (instant === null) throw invalid(`${where}: data inválida em ${field}`)
-    rows.push({ film, instant, rating })
+    rows.push({ film, instant, rating, watchlist: field === 'listed_at' })
   })
   return rows
 }
+
+/** The members the reader takes, each with its date field. */
+const traktFiles = (content: Uint8Array) =>
+  new Zip(Buffer.from(content)).members().flatMap((member) => {
+    const match = FILE.exec(posixName(member.name))
+    return match !== null && !member.name.endsWith('/')
+      ? [{ member, field: DATE_FIELDS[match[1] ?? ''] ?? 'rated_at' }]
+      : []
+  })
+
+/** Whether a Trakt export that reads has a watchlist file, even an empty
+ * one. */
+export const hasTraktWatchlist = (content: Uint8Array): boolean =>
+  traktFiles(content).some(({ field }) => field === 'listed_at')
 
 /** The rows of a Trakt export (`zip_trakt.ler`): `name` is the file's name,
  * for the messages. The watched-movies summary counts only when the export
@@ -119,13 +142,7 @@ export const readTraktExport = (
   content: Uint8Array,
 ): TraktRow[] => {
   try {
-    const zip = new Zip(Buffer.from(content))
-    const files = zip.members().flatMap((member) => {
-      const match = FILE.exec(posixName(member.name))
-      return match !== null && !member.name.endsWith('/')
-        ? [{ member, field: DATE_FIELDS[match[1] ?? ''] ?? 'rated_at' }]
-        : []
-    })
+    const files = traktFiles(content)
     if (files.length === 0)
       throw invalid(`${name}: ZIP sem notas ou histórico do Trakt`)
     const history = files.some(({ field }) => field === 'watched_at')
