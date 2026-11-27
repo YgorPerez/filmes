@@ -102,7 +102,11 @@ export class Trakt {
         code_challenge_method: 'S256',
       }).toString()
       return seeOther(authorize.href)
-    } catch {
+    } catch (error) {
+      // Our own fixed messages, or fetch's ("fetch failed", a timeout).
+      console.warn(
+        `Trakt connection failed: ${error instanceof Error ? error.message : 'unknown error'}`,
+      )
       return seeOther(`${PAGE}?erro=trakt`)
     }
   }
@@ -123,9 +127,9 @@ export class Trakt {
         code,
         code_verifier: verifier,
       })
-      return this.store.finish(attempt, tokens, this.now())
-        ? seeOther(PAGE)
-        : seeOther(`${PAGE}?erro=trakt`)
+      if (this.store.finish(attempt, tokens, this.now())) return seeOther(PAGE)
+      console.warn('Trakt connection not kept: the login or attempt changed')
+      return seeOther(`${PAGE}?erro=trakt`)
     } finally {
       this.store.forget(attempt)
     }
@@ -164,6 +168,11 @@ export class Trakt {
       }),
     })
     if (!response.ok) {
+      const error = await oauthError(response.clone())
+      // The status and OAuth error code only: never a token or the body.
+      console.warn(
+        `Trakt OAuth ${grant.grant_type} failed: HTTP ${response.status}${error ? ` ${error}` : ''}`,
+      )
       if (grant.grant_type === 'refresh_token' && (await refused(response)))
         throw new TraktGrantRefused()
       throw new Error('Trakt OAuth exchange failed')
@@ -183,8 +192,13 @@ export class Trakt {
       typeof expires_in !== 'number' ||
       !Number.isSafeInteger(expires_in) ||
       expires_in <= 0
-    )
+    ) {
+      // The field names only, never their values.
+      console.warn(
+        `Trakt OAuth ${grant.grant_type} answer is incomplete: ${Object.keys(body).join(', ')}`,
+      )
       throw new Error('Invalid Trakt OAuth response')
+    }
     return {
       access: access_token,
       refresh: refresh_token,
@@ -208,7 +222,12 @@ function traktOptions(env: ReturnType<typeof serverEnv>): TraktOptions | null {
   if (!origin || !clientId || !FILMES_TRAKT_TOKEN_KEY) return null
   const tokenKey = Buffer.from(FILMES_TRAKT_TOKEN_KEY, 'base64')
   if (tokenKey.length !== 32) return null
-  return { origin, clientId, tokenKey, databasePath: AUTH_DATABASE_PATH }
+  return {
+    origin,
+    clientId,
+    tokenKey,
+    databasePath: AUTH_DATABASE_PATH,
+  }
 }
 
 export function traktConnection(
@@ -287,5 +306,22 @@ export function traktLink(
     connected: Boolean(
       options && identity && new Trakt(options).connected(identity),
     ),
+  }
+}
+
+/** The `error` code of an OAuth error answer (`invalid_grant`,
+ * `invalid_client`...), when it is one: a short word, safe to log. */
+async function oauthError(response: Response) {
+  try {
+    const body: unknown = await response.json()
+    const error =
+      body && typeof body === 'object'
+        ? (body as { error?: unknown }).error
+        : null
+    return typeof error === 'string' && /^[a-z_]{1,40}$/.test(error)
+      ? error
+      : null
+  } catch {
+    return null
   }
 }
