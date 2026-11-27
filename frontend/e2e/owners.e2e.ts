@@ -150,7 +150,8 @@ test('Bruno tells a Relato about Vera, and Vera sees it on her page', async ({
   await vera.close()
 })
 
-const SKIP_IMPORT = 'Pular: Importar do Letterboxd, do Trakt ou do IMDb'
+const SKIP_IMPORT =
+  'Pular: Importar do Letterboxd, do Trakt, do IMDb ou do Simkl'
 
 test.describe('without JavaScript', () => {
   test.use({ javaScriptEnabled: false })

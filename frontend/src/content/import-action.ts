@@ -6,7 +6,8 @@
 
 import { field, within } from './form-fields'
 
-/** A file as uploaded (a ZIP, or IMDb's CSV): its name and its bytes. */
+/** A file as uploaded (a ZIP, IMDb's CSV or Simkl's JSON): its name and its
+ * bytes. */
 type Upload = { original: string; content: Uint8Array }
 
 /** What the Dono asks on a Pessoa's imports page. The upload says nothing
@@ -18,7 +19,7 @@ export type ImportAction =
 
 /** What the engine runs: the upload once its service is known. */
 export type ImportRun =
-  | ({ kind: 'letterboxd' | 'trakt' | 'imdb' } & Upload)
+  | ({ kind: 'letterboxd' | 'trakt' | 'imdb' | 'simkl' } & Upload)
   | Exclude<ImportAction, { kind: 'upload' }>
 
 /** What the Dono decides on the queue. */
@@ -27,8 +28,8 @@ export type QueueAction =
   | { kind: 'discard'; id: string; reason: string }
   | { kind: 'reprocess' }
 
-/** The biggest upload the server reads: a Letterboxd or Trakt export of
- * years of films, or IMDb's CSV, is a few megabytes. Nginx lets 25 MB
+/** The biggest upload the server reads: a Letterboxd, Trakt or Simkl
+ * export of years of films, or IMDb's CSV, is a few megabytes. Nginx lets 25 MB
  * through. */
 export const MAX_UPLOAD_BYTES = 20 * 1024 * 1024
 
@@ -113,11 +114,13 @@ export function parseQueue(form: FormData): QueueAction | null {
 // --- what comes back -------------------------------------------------------------
 
 const IMPORT_NOTICES = [
-  // A ZIP, the IMDb CSV or the RSS imported: `novos` Fatos more.
+  // A ZIP, the IMDb CSV, the Simkl backup or the RSS imported: `novos`
+  // Fatos more.
   'letterboxd',
   'rss',
   'trakt',
   'imdb',
+  'simkl',
   // The same file again: kept once, nothing new.
   'repetido',
   // An import removed: `novos` Fatos less.
@@ -130,7 +133,7 @@ const IMPORT_REFUSALS = [
   'pedido',
   // No file, or a file its service's reader refused.
   'arquivo',
-  // A file neither of Letterboxd, of Trakt nor of IMDb.
+  // A file of none of Letterboxd, Trakt, IMDb or Simkl.
   'origem',
   'grande',
   // The RSS without the Pessoa's yes.
