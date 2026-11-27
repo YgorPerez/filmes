@@ -161,10 +161,14 @@ export function ReplyBox({
   onMessage,
   onAddition,
   onMoods,
+  copy,
 }: {
   billboard: BillboardModel
   marks: Marks
   kept: boolean
+  /** Copiar pro chat: in the MCP Apps view, where the host may not take
+   * the reply; the web sends it itself (#272). */
+  copy: boolean
   text: string
   onMessage: (message: string) => void
   onAddition: (text: string) => void
@@ -186,6 +190,7 @@ export function ReplyBox({
           </span>
         </span>
         <textarea
+          id="acrescentar"
           rows={2}
           value={marks.addition}
           onChange={(e) => onAddition(e.target.value)}
@@ -195,9 +200,11 @@ export function ReplyBox({
       {billboard.moodChoices.length > 0 && (
         <MoodChips billboard={billboard} marks={marks} onMoods={onMoods} />
       )}
-      <div className="flex flex-wrap items-center gap-sm">
-        <Copy text={text} onMessage={onMessage} />
-      </div>
+      {copy && (
+        <div className="flex flex-wrap items-center gap-sm">
+          <Copy text={text} onMessage={onMessage} />
+        </div>
+      )}
       {kept && <p className="text-meta text-ink-2">{reply.kept}</p>}
       <noscript>
         <p className="text-meta text-ink-2">{reply.noScript}</p>
@@ -228,22 +235,53 @@ export function ReplyBar({
   onSend,
   place,
   sending,
+  unread,
 }: {
   summary: string
   message: string
   onSend?: () => void
   place: BarPlace
   sending?: boolean
+  /** The acrescentar's words the reading did not take: the bar asks
+   * whether to send it as it is (#272). */
+  unread?: { words: readonly string[]; onEdit: () => void }
 }) {
   return (
     <section
       aria-label={reply.bar}
       className={`sticky z-10 flex flex-col gap-2xs border-rule bg-surface px-lg py-sm ${BAR[place]}`}
     >
-      <div className="flex items-center justify-between gap-md">
-        <p className="min-w-0 text-meta text-ink-2">{summary}</p>
-        <SendButton onSend={onSend} sending={sending} className="shrink-0" />
-      </div>
+      {unread ? (
+        <div role="alert" className="flex flex-col gap-sm py-2xs">
+          <p className="text-meta text-pretty text-ink">
+            {reply.unread(unread.words)}
+          </p>
+          <div className="flex flex-wrap justify-end gap-sm">
+            <button
+              type="button"
+              onClick={unread.onEdit}
+              className={buttonVariants({ variant: 'option' })}
+            >
+              {reply.edit}
+            </button>
+            <button
+              type="submit"
+              name="confirmar"
+              value="sim"
+              className={buttonVariants()}
+            >
+              {reply.sendAnyway}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center justify-between gap-md">
+          <p className="min-w-0 text-meta text-ink-2">
+            {summary || reply.hint}
+          </p>
+          <SendButton onSend={onSend} sending={sending} className="shrink-0" />
+        </div>
+      )}
       <Status message={message} />
     </section>
   )

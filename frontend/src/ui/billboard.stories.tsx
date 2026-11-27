@@ -52,7 +52,9 @@ export const Closed: Story = {
     const canvas = within(canvasElement)
     const lists = canvas.getAllByRole('list', { name: 'Filme escolhido' })
     await expect(lists).toHaveLength(1)
-    await expect(lists[0]).toHaveTextContent('Bruno: previsto 8,3 · achou 6')
+    await expect(lists[0]).toHaveTextContent(
+      'Bruno: previsto 8,3 · deu 6 de 10',
+    )
     await expect(lists[0]).toHaveTextContent('Iara: gostou')
     await expect(canvas.queryByRole('button', { name: 'Enviar' })).toBeNull()
   },
@@ -66,7 +68,7 @@ export const ClosedChosenWithoutCard: Story = {
     )
     await expect(block.getByText('Curta da Madrugada (2010)')).toBeVisible()
     await expect(block.getByRole('list')).toHaveTextContent(
-      'Bruno: achou 8Iara: não gostou',
+      'Bruno: deu 8 de 10Iara: não gostou',
     )
   },
 }

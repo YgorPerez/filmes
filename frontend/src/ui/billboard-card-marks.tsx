@@ -140,7 +140,7 @@ function Stars({
           aria-pressed={stars === value}
           // The same star again takes the stars off.
           onClick={() => onChange(stars === value ? 0 : value)}
-          className={`grid h-touch w-9 cursor-pointer place-items-center ${
+          className={`grid size-touch cursor-pointer place-items-center ${
             value <= stars ? 'text-star [&_svg]:fill-current' : 'text-ink-2/45'
           }`}
         >

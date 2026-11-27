@@ -23,6 +23,9 @@ export const isSessionNotice = within(SESSION_NOTICES)
 
 const REPLY_REFUSALS = [
   'nada',
+  // The acrescentar has words the reading did not take (`palavra`, one
+  // per run): nothing was recorded until the Dono sends it as it is.
+  'leitura',
   'texto',
   'fechada',
   'regerar',

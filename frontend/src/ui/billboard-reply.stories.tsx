@@ -20,6 +20,7 @@ function Box({ kept }: { kept: boolean }) {
         billboard={MODEL}
         marks={marks}
         kept={kept}
+        copy
         text={replyText(MODEL, marks)}
         onMessage={setMessage}
         onAddition={(addition) => setMarks({ ...marks, addition })}
