@@ -593,6 +593,127 @@ describe('peopleFromEngine', () => {
   }, 30_000)
 })
 
+type Act = (action: PersonAction) => Promise<unknown>
+
+/** A Veto twice, a group's Veto, an Ajuste, a Declarado, a Relato, a Já
+ * visto and two questions skipped. */
+async function writeFacts(act: Act) {
+  expect(
+    await act({
+      kind: 'veto',
+      text: 'nunca terror',
+      target: 'Q9001801',
+      group: false,
+    }),
+  ).toBe('gravado')
+  expect(
+    await act({
+      kind: 'veto',
+      text: 'nunca terror',
+      target: 'Q9001801',
+      group: false,
+    }),
+  ).toBe('igual')
+  expect(
+    await act({
+      kind: 'veto',
+      text: 'nada bobo',
+      target: 'silly_comedy',
+      group: true,
+    }),
+  ).toBe('gravado')
+  expect(await act({ kind: 'adjust', link: 'cast', level: 'none' })).toBe(
+    'ajustado',
+  )
+  expect(
+    await act({
+      kind: 'state',
+      text: 'adoro os filmes dela',
+      target: 'Q9000018',
+      reaction: 'love',
+    }),
+  ).toBe('gravado')
+  expect(await act({ kind: 'report', text: 'odeia filme lento' })).toBe(
+    'gravado',
+  )
+  expect(await act({ kind: 'seen', film: 'tt9000602', rating: '4,5' })).toBe(
+    'gravado',
+  )
+  expect(
+    await act({
+      kind: 'skip',
+      text: 'a Iara curte terror?',
+      subject: 'Q9001801',
+    }),
+  ).toBe('pulada')
+  expect(
+    await act({
+      kind: 'skip',
+      text: 'curte comédia boba?',
+      subject: 'silly_comedy',
+    }),
+  ).toBe('pulada')
+}
+
+/** Her file holds what `writeFacts` wrote. */
+function expectWritten(file: () => string) {
+  const text = file()
+  expect(text).toContain('nunca terror')
+  expect(text).toContain('silly_comedy')
+  expect(text).toContain('link: cast')
+  expect(text).toContain(
+    '2026-11-20 · conversa com o Dono · específico · ama Sofia Rangel (Q9000018) · "adoro os filmes dela"',
+  )
+  expect(text).toContain(
+    '2026-11-20 · descrição de Bruno · genérico · "odeia filme lento"',
+  )
+  expect(text).toContain('Casa Cheia (tt9000602) · nota 4,5')
+}
+
+/** An open question answered (twice: the second refused), a Veto taken
+ * out and a question skipped for good. */
+async function answerAndRemove(people: People, act: Act, file: () => string) {
+  const page = await personPage('iara', people, BRUNO)
+  if (page === null || page === 'unknown') throw new Error(String(page))
+  expect(page.openQuestions).toHaveLength(2)
+  const terror = page.openQuestions.find((q) => q.subject === 'Q9001801')!
+  expect(
+    await act({
+      kind: 'answer',
+      question: terror.factId,
+      text: 'não gosta',
+      reaction: 'dislike',
+    }),
+  ).toBe('respondida')
+  // Answered, it is no longer open.
+  const again = await people.act(
+    'iara',
+    { kind: 'answer', question: terror.factId, text: 'de novo' },
+    BRUNO,
+  )
+  expect(again.exitCode).toBe(1)
+
+  const after = await personPage('iara', people, BRUNO)
+  if (after === null || after === 'unknown') throw new Error(String(after))
+  expect(after.openQuestions.map((q) => q.subject)).toEqual(['silly_comedy'])
+  expect(
+    after.stated.map((s) => [s.text, s.reaction, s.target]),
+  ).toContainEqual(['não gosta', 'dislike', 'Q9001801'])
+  const removed = await people.act(
+    'iara',
+    { kind: 'remove', what: 'veto', id: after.vetoes[0]!.factId },
+    BRUNO,
+  )
+  expect(removed).toEqual({ exitCode: 0, output: 'removido' })
+  expect(file()).not.toContain('nunca terror')
+  const skipped = await people.act(
+    'iara',
+    { kind: 'skip', text: 'curte comédia boba?', subject: 'silly_comedy' },
+    BRUNO,
+  )
+  expect(skipped).toEqual({ exitCode: 0, output: 'saiu' })
+}
+
 describe('peopleFromEngine', () => {
   it('writes each action to her file, one commit signed by the Dono', async () => {
     const fixture = useFixture()
@@ -608,115 +729,9 @@ describe('peopleFromEngine', () => {
           throw new Error(JSON.stringify(outcome.output))
         return outcome.output
       }
-      expect(
-        await act({
-          kind: 'veto',
-          text: 'nunca terror',
-          target: 'Q9001801',
-          group: false,
-        }),
-      ).toBe('gravado')
-      expect(
-        await act({
-          kind: 'veto',
-          text: 'nunca terror',
-          target: 'Q9001801',
-          group: false,
-        }),
-      ).toBe('igual')
-      expect(
-        await act({
-          kind: 'veto',
-          text: 'nada bobo',
-          target: 'silly_comedy',
-          group: true,
-        }),
-      ).toBe('gravado')
-      expect(await act({ kind: 'adjust', link: 'cast', level: 'none' })).toBe(
-        'ajustado',
-      )
-      expect(
-        await act({
-          kind: 'state',
-          text: 'adoro os filmes dela',
-          target: 'Q9000018',
-          reaction: 'love',
-        }),
-      ).toBe('gravado')
-      expect(await act({ kind: 'report', text: 'odeia filme lento' })).toBe(
-        'gravado',
-      )
-      expect(
-        await act({ kind: 'seen', film: 'tt9000602', rating: '4,5' }),
-      ).toBe('gravado')
-      expect(
-        await act({
-          kind: 'skip',
-          text: 'a Iara curte terror?',
-          subject: 'Q9001801',
-        }),
-      ).toBe('pulada')
-      expect(
-        await act({
-          kind: 'skip',
-          text: 'curte comédia boba?',
-          subject: 'silly_comedy',
-        }),
-      ).toBe('pulada')
-
-      const text = file()
-      expect(text).toContain('nunca terror')
-      expect(text).toContain('silly_comedy')
-      expect(text).toContain('link: cast')
-      expect(text).toContain(
-        '2026-11-20 · conversa com o Dono · específico · ama Sofia Rangel (Q9000018) · "adoro os filmes dela"',
-      )
-      expect(text).toContain(
-        '2026-11-20 · descrição de Bruno · genérico · "odeia filme lento"',
-      )
-      expect(text).toContain('Casa Cheia (tt9000602) · nota 4,5')
-
-      const page = await personPage('iara', people, BRUNO)
-      if (page === null || page === 'unknown') throw new Error(String(page))
-      expect(page.openQuestions).toHaveLength(2)
-      const terror = page.openQuestions.find((q) => q.subject === 'Q9001801')!
-      expect(
-        await act({
-          kind: 'answer',
-          question: terror.factId,
-          text: 'não gosta',
-          reaction: 'dislike',
-        }),
-      ).toBe('respondida')
-      // Answered, it is no longer open.
-      const again = await people.act(
-        'iara',
-        { kind: 'answer', question: terror.factId, text: 'de novo' },
-        BRUNO,
-      )
-      expect(again.exitCode).toBe(1)
-
-      const after = await personPage('iara', people, BRUNO)
-      if (after === null || after === 'unknown') throw new Error(String(after))
-      expect(after.openQuestions.map((q) => q.subject)).toEqual([
-        'silly_comedy',
-      ])
-      expect(
-        after.stated.map((s) => [s.text, s.reaction, s.target]),
-      ).toContainEqual(['não gosta', 'dislike', 'Q9001801'])
-      const removed = await people.act(
-        'iara',
-        { kind: 'remove', what: 'veto', id: after.vetoes[0]!.factId },
-        BRUNO,
-      )
-      expect(removed).toEqual({ exitCode: 0, output: 'removido' })
-      expect(file()).not.toContain('nunca terror')
-      const skipped = await people.act(
-        'iara',
-        { kind: 'skip', text: 'curte comédia boba?', subject: 'silly_comedy' },
-        BRUNO,
-      )
-      expect(skipped).toEqual({ exitCode: 0, output: 'saiu' })
+      await writeFacts(act)
+      expectWritten(file)
+      await answerAndRemove(people, act, file)
     } finally {
       await engine.dispose()
     }
@@ -734,6 +749,27 @@ describe('peopleFromEngine', () => {
       expect(line).toMatch(/^Bruno <bruno@example\.org>\|pessoa /)
   }, 60_000) // twelve real git commits: slow on a loaded machine
 })
+
+/** What the engine refuses comes back to the list with its reason and
+ * what was typed. */
+async function expectCreateRefusals(
+  send: (fields: Record<string, string>) => Promise<string | null>,
+) {
+  expect(await send({ nome: 'Iara' })).toBe('/pessoas?erro=existe&nome=Iara')
+  expect(await send({ nome: 'Lia', apelidos: 'eu' })).toBe(
+    '/pessoas?erro=nome-usado&nome=Lia&apelidos=eu',
+  )
+  expect(await send({ nome: 'Dono' })).toBe('/pessoas?erro=reservado&nome=Dono')
+  expect(await send({ nome: '!!!' })).toBe('/pessoas?erro=nome&nome=%21%21%21')
+  expect(await send({ nome: 'Ana', dono: 'sim', email: 'ana@x' })).toBe(
+    '/pessoas?erro=email&nome=Ana&dono=sim&email=ana%40x',
+  )
+  expect(
+    await send({ nome: 'Ana', dono: 'sim', email: 'BRUNO@example.org' }),
+  ).toBe(
+    '/pessoas?erro=email-usado&nome=Ana&dono=sim&email=BRUNO%40example.org',
+  )
+}
 
 describe('peopleFromEngine', () => {
   it('creates a Pessoa and a Dono from the form, one commit each signed by the Dono', async () => {
@@ -767,27 +803,7 @@ describe('peopleFromEngine', () => {
         readFileSync(join(fixture.data, 'people/farias.md'), 'utf8'),
       ).toMatch(/owner: true[\s\S]*email: farias@example\.org/)
 
-      // What the engine refuses comes back with its reason.
-      expect(await send({ nome: 'Iara' })).toBe(
-        '/pessoas?erro=existe&nome=Iara',
-      )
-      expect(await send({ nome: 'Lia', apelidos: 'eu' })).toBe(
-        '/pessoas?erro=nome-usado&nome=Lia&apelidos=eu',
-      )
-      expect(await send({ nome: 'Dono' })).toBe(
-        '/pessoas?erro=reservado&nome=Dono',
-      )
-      expect(await send({ nome: '!!!' })).toBe(
-        '/pessoas?erro=nome&nome=%21%21%21',
-      )
-      expect(await send({ nome: 'Ana', dono: 'sim', email: 'ana@x' })).toBe(
-        '/pessoas?erro=email&nome=Ana&dono=sim&email=ana%40x',
-      )
-      expect(
-        await send({ nome: 'Ana', dono: 'sim', email: 'BRUNO@example.org' }),
-      ).toBe(
-        '/pessoas?erro=email-usado&nome=Ana&dono=sim&email=BRUNO%40example.org',
-      )
+      await expectCreateRefusals(send)
     } finally {
       await engine.dispose()
     }

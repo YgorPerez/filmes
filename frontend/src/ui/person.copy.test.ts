@@ -50,7 +50,7 @@ describe('the Pessoa copy', () => {
 
 describe('the Pessoa copy', () => {
   it('counts in the singular and the plural', () => {
-    const { glance, summary, notes, questions, adjustments } = PERSON
+    const { glance, summary } = PERSON
     expect(glance.likes(['Terror'])).toBe(
       'Pelas suas Notas, você gosta de Terror.',
     )
@@ -79,6 +79,12 @@ describe('the Pessoa copy', () => {
       '1 Sessão',
       '4 Sessões',
     ])
+  })
+})
+
+describe('the Pessoa copy', () => {
+  it('counts the Notas, questions and Ajustes in the singular and the plural', () => {
+    const { summary, notes, questions, adjustments } = PERSON
     expect(summary.steps.questions(1)).toBe('responder a pergunta aberta')
     expect(summary.steps.questions(2)).toBe('responder as perguntas abertas')
     expect([notes.pending(1), notes.pending(2)]).toEqual([
