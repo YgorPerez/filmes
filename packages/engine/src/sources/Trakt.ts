@@ -74,11 +74,11 @@ const PAGE = 1000
 const PAGES = 50
 
 /** What reading a Trakt profile can meet: no such user, or a private one. */
-export type TraktReadFailure = 'missing' | 'private'
+type TraktReadFailure = 'missing' | 'private'
 
 /** The lists of a Trakt profile, as the API gives them: the same items the
  * Raw Export's JSONs hold. */
-export interface TraktLists {
+interface TraktLists {
   readonly history: ReadonlyArray<unknown>
   readonly ratings: ReadonlyArray<unknown>
   readonly watchlist: ReadonlyArray<unknown>

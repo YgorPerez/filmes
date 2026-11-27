@@ -161,18 +161,9 @@ export const readTraktExport = (
   }
 }
 
-/** A Trakt profile read by the API (#269), as filmes-dados keeps it: the
- * lists the Raw Export's JSONs hold, under one object. */
-export interface TraktSnapshot {
-  /** `me` for the connected account, or the public username. */
-  readonly user: string
-  readonly history: ReadonlyArray<unknown>
-  readonly ratings: ReadonlyArray<unknown>
-  readonly watchlist: ReadonlyArray<unknown>
-}
-
-/** The rows of a kept snapshot (`readTraktExport`'s, for the API's lists):
- * the history, the ratings and the watchlist, read as the export's files. */
+/** The rows of a kept snapshot of a Trakt profile read by the API (#269):
+ * one JSON object with `user` (`me` or the public username) and the lists
+ * `history`, `ratings` and `watchlist`, read as the export's files. */
 export const readTraktSnapshot = (
   name: string,
   content: Uint8Array,
