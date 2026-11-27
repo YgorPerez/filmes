@@ -37,6 +37,7 @@ import {
   keptTvTimeBackup,
   readTvTimeBackup,
   TVTIME_KIND,
+  tvTimeZip,
 } from './tvtime-backup.ts'
 
 /** Runs a reader that throws the `EngineError` of a bad file. */
@@ -109,7 +110,8 @@ export interface TvTimeImportInput {
   readonly person: string
   /** The file's name as uploaded: the messages and the record show it. */
   readonly original: string
-  /** The ZIP's bytes. */
+  /** The ZIP's bytes, or the Liberator's `movies.json` when `original`
+   * ends in `.json`. */
   readonly content: Uint8Array
   /** Who asked: the commit's author. */
   readonly author: Author
@@ -125,12 +127,9 @@ export const importTvTime = (
   Environment | Sqlite | Run | Tmdb | DataWriter
 > =>
   Effect.gen(function* () {
-    const rows = yield* attempt(() =>
-      readTvTimeBackup(input.original, input.content),
-    )
-    const kept = yield* attempt(() =>
-      keptTvTimeBackup(input.original, input.content),
-    )
+    const zip = tvTimeZip(input.original, input.content)
+    const rows = yield* attempt(() => readTvTimeBackup(input.original, zip))
+    const kept = yield* attempt(() => keptTvTimeBackup(input.original, zip))
     const writer = yield* DataWriter
     return yield* writer.write(
       {
