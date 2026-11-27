@@ -146,6 +146,7 @@ test('Bruno tells a Relato about Vera, and Vera sees it on her page', async ({
   const vera = await browser.newPage()
   await loginAs(vera, 'vera@example.org')
   await vera.goto('/pessoas/vera')
+  await vera.getByText(/^Afinar:/).click()
   const hers = section(vera, 'Relatos')
   await expect(hers).toContainText('a Vera adora suspense')
   await expect(hers).toContainText('descrição de Bruno')
@@ -276,9 +277,12 @@ test("the admin's own page offers no way out", async ({ page }, info) => {
   makeBrunoAdmin()
   await loginAs(page, 'bruno@example.org')
   await page.goto('/pessoas/bruno')
-  const access = section(page, 'Acesso')
-  await expect(access).toContainText('o seu próprio acesso não sai por aqui')
-  await expect(access.getByRole('button')).toHaveCount(0)
+  // Her own page has no Acesso at all (#273), even in the Afinar fold.
+  await page.getByText(/^Afinar:/).click()
+  await expect(section(page, 'Acesso')).toHaveCount(0)
+  await expect(
+    page.getByRole('button', { name: /Tirar o acesso/ }),
+  ).toHaveCount(0)
 })
 
 test('a Dono who is not admin sees no Acesso', async ({ page }, info) => {
