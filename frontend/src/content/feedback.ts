@@ -1,6 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
-import { isNoteToken } from './billboard-reply'
-import { ownerMiddleware, pathSlug, requireOwner } from './owner'
+import { noteToken, ownerMiddleware, pathSlug, requireOwner } from './owner'
 
 /** What a Sessão's Feedback form shows (`feedbackPage`). A request with
  * no Dono is refused: the page gate does not protect a server function. */
@@ -17,10 +16,7 @@ export const readFeedbackPage = createServerFn({ method: 'GET' })
  * `/sessoes/<sessao>/contar?nota=` names (`feedbackDraft`). */
 const readFeedbackDraft = createServerFn({ method: 'GET' })
   .middleware([ownerMiddleware])
-  .validator((value: unknown) => {
-    if (!isNoteToken(value)) throw new Error('note token required')
-    return value
-  })
+  .validator(noteToken)
   .handler(async ({ context, data }) => {
     requireOwner(context.owner)
     const { appFeedbackDraft } = await import('#/platform/feedback')

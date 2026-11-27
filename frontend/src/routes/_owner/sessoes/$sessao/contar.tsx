@@ -3,7 +3,7 @@ import { isNoteToken } from '#/content/billboard-reply'
 import { filmParam, searchFor, searchParam } from '#/content/catalog-search'
 import { isFeedbackRefusal } from '#/content/feedback-form'
 import { feedbackDraftFor, readFeedbackPage } from '#/content/feedback'
-import { readSessions } from '#/content/sessions'
+import { readSessions, toldSession } from '#/content/sessions'
 import { FeedbackScreen } from '#/ui/feedback'
 
 export const Route = createFileRoute('/_owner/sessoes/$sessao/contar')({
@@ -23,16 +23,9 @@ export const Route = createFileRoute('/_owner/sessoes/$sessao/contar')({
     // No open Session by that id: a told one says what they saw (#272).
     const told =
       page === 'unknown'
-        ? (await readSessions({ data: false }))?.find(
-            (s) => s.id === params.sessao && !s.open,
-          )
+        ? toldSession(await readSessions({ data: false }), params.sessao)
         : undefined
-    return {
-      page,
-      search,
-      draft,
-      told: told && { title: told.chosen?.title ?? null },
-    }
+    return { page, search, draft, told }
   },
   component: FeedbackRoute,
 })
