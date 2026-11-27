@@ -1,5 +1,5 @@
-import { cva, type VariantProps } from 'class-variance-authority'
-import { mergeClasses } from './class-merge'
+import { cva } from 'class-variance-authority'
+import { withMergedClasses } from './class-merge'
 
 // The DESIGN.md buttons, as classes: `shadcn/button.tsx`'s Button
 // (Base UI underneath) takes them, and so do links and the Cartaz, which
@@ -13,7 +13,7 @@ import { mergeClasses } from './class-merge'
 // `surface-2` in 700. `link` is "Pular", "Retomar" and the smaller
 // actions: no background, the system's 14px `ink-2`, underlined. A
 // `className` passed in replaces the variant's classes it conflicts with
-// (`kit/class-merge.ts`): `min-h-[64px]` wins over `min-h-touch`.
+// (`mergeClasses`, above): `min-h-[64px]` wins over `min-h-touch`.
 const variants = cva(
   'inline-flex min-h-touch cursor-pointer items-center justify-center gap-sm no-underline select-none disabled:cursor-default disabled:opacity-60',
   {
@@ -31,8 +31,4 @@ const variants = cva(
   },
 )
 
-export const buttonVariants = ({
-  className,
-  ...props
-}: VariantProps<typeof variants> & { className?: string } = {}) =>
-  mergeClasses(variants(props), className)
+export const buttonVariants = withMergedClasses(variants)

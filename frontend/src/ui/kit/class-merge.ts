@@ -129,3 +129,10 @@ const merge = extendTailwindMerge({
 /** The classes, the later of two conflicting ones winning. */
 export const mergeClasses = (...classes: readonly (string | undefined)[]) =>
   merge(...classes)
+
+/** A `cva` that merges the caller's `className` last, so it replaces the
+ * variant's classes it conflicts with. */
+export const withMergedClasses =
+  <P extends object>(variants: (props?: P) => string) =>
+  ({ className, ...props }: P & { className?: string } = {} as P) =>
+    mergeClasses(variants(props as P), className)

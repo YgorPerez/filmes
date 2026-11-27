@@ -1,6 +1,5 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vite-plus/test'
-import { buttonVariants } from './button-variants'
 import { mergeClasses, TOKENS } from './class-merge'
 
 const tokens = readFileSync(new URL('../tokens.css', import.meta.url), 'utf8')
@@ -19,11 +18,11 @@ describe('class merge', () => {
     },
   )
 
-  it('lets the caller replace a variant’s height and padding', () => {
-    const classes = buttonVariants({
-      variant: 'option',
-      className: 'min-h-[64px] px-0',
-    }).split(' ')
+  it('lets a later class replace a height and a padding', () => {
+    const classes = mergeClasses(
+      'inline-flex min-h-touch rounded-pill px-xl font-display text-control',
+      'min-h-[64px] px-0',
+    ).split(' ')
     expect(classes).toContain('min-h-[64px]')
     expect(classes).not.toContain('min-h-touch')
     expect(classes).toContain('px-0')
