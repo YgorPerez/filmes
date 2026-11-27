@@ -462,7 +462,7 @@ describe('the pages', () => {
             queue: [],
             discardedItems: [],
           },
-          trakt: { ratings: 0, seen: 0 },
+          trakt: { ratings: 0, seen: 0, watchlist: 0 },
           imdb: { ratings: 0 },
         },
       }),
@@ -576,7 +576,7 @@ describe('importsFromEngine, imports', () => {
       ['trakt', 'trakt.zip'],
       ['imdb', 'ratings.csv'],
     ])
-    expect(page.trakt).toEqual({ ratings: 2, seen: 1 })
+    expect(page.trakt).toEqual({ ratings: 2, seen: 1, watchlist: 0 })
     expect(page.imdb).toEqual({ ratings: 3 })
     expect((await ok(imports.queue())).items).toHaveLength(2)
 

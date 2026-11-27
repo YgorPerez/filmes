@@ -175,7 +175,7 @@ describe('import', () => {
 
     const removed = await c.ok('import', { remove: imported.file })
 
-    assert.deepEqual(imported.newFacts, { ratings: 2, seen: 1 })
+    assert.deepEqual(imported.newFacts, { ratings: 2, seen: 1, watchlist: 0 })
     assert.equal(removed.person, 'teo')
     assert.deepEqual(removed.removedFacts, {
       ratings: 2,

@@ -321,9 +321,17 @@ export const statedStrength = (
   return strength
 }
 
+/** A film on the Pessoa's watchlist (Letterboxd or Trakt): she said she
+ * wants to see it, about the film itself, but only by putting it on a
+ * list. Moderate, whatever its age (#280). */
+export const watchlistStrength = (): Strength => 'moderate'
+
 /** The IMDb rating as a film line: exact metadata, strong. The bonus size
  * comes from the rating itself, not from the strength. */
 export const imdbRatingStrength = (): Strength => 'strong'
+
+/** A Wikidata award or nomination is exact metadata. */
+export const awardStrength = (): Strength => 'strong'
 
 /** The "parecido com X" line of a similar request: the project's reading
  * of tags and neighbours, weak. Not a Fact, and adds to nothing. */
