@@ -200,6 +200,14 @@ export const PERSON_IMPORTS = {
     queuedLead:
       'O filmes não achou estes sozinho no Catálogo. Até você confirmar, as Notas deles não contam.',
     toQueue: 'Resolver agora',
+    /** The sources kept in sync, and when they were read (#274). */
+    sync: {
+      trakt: 'lido a cada Sessão nova',
+      rss: 'lido quando você pede',
+      last: (date: string) => `última leitura em ${shortDate(date)}`,
+      traktNow: 'Ler agora',
+      rssNow: 'Ler o perfil agora',
+    },
     again: 'Importar de novo ou de outro site',
   },
   files: {
@@ -252,24 +260,28 @@ export const PERSON_IMPORTS = {
     other: 'Ler outro perfil',
     busy: 'Lendo o perfil…',
   },
-  /** The other services, behind the Letterboxd flow. */
+  /** The Trakt ZIP, folded in the Trakt slip (#274). */
+  trakt: {
+    href: 'https://trakt.tv/settings/data',
+    steps: [
+      'Abra trakt.tv/settings/data, com a conta do Trakt, pelo computador.',
+      'Em “Export”, baixe o ZIP dos dados.',
+      'Envie o ZIP aqui, sem abrir.',
+    ],
+    file: 'ZIP do Trakt',
+    wrongType: 'Esse não é o ZIP do Trakt: ele termina em .zip.',
+    submit: 'Importar o ZIP do Trakt',
+    busy: 'Importando…',
+  },
+  /** The other services, behind the Letterboxd flow and Trakt. */
   other: {
     title: 'De outro site',
-    lead: 'Trakt, IMDb, Simkl ou o backup do TV Time: baixe o arquivo no site de cada um, pelo computador, e envie aqui como veio.',
-    file: 'Arquivo do Trakt, do IMDb, do Simkl ou do TV Time',
+    lead: 'IMDb, Simkl ou o backup do TV Time: baixe o arquivo no site de cada um, pelo computador, e envie aqui como veio.',
+    file: 'Arquivo do IMDb, do Simkl ou do TV Time',
     wrongType:
-      'Esse arquivo não é de nenhum deles: o Trakt, o Simkl e o TV Time dão um .zip, e o IMDb um .csv.',
+      'Esse arquivo não é de nenhum deles: o Simkl e o TV Time dão um .zip, e o IMDb um .csv.',
     how: (service: string) => `Como baixar do ${service}`,
     services: [
-      {
-        service: 'Trakt',
-        href: 'https://trakt.tv/settings/data',
-        steps: [
-          'Abra trakt.tv/settings/data, com a conta do Trakt.',
-          'Em “Export”, baixe o ZIP dos dados.',
-          'Envie o ZIP aqui, sem abrir.',
-        ],
-      },
       {
         service: 'IMDb',
         href: 'https://www.imdb.com/list/ratings',

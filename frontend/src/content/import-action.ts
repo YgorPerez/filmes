@@ -260,7 +260,14 @@ export type QueueRefusal = (typeof QUEUE_REFUSALS)[number]
  * one that was sent (`?de=` of the action, back in the page's query): the
  * guided Letterboxd upload, the other services' upload, the profile and
  * the Trakt read by the API (#269). */
-const IMPORT_FORMS = ['letterboxd', 'outro', 'perfil', 'trakt'] as const
+const IMPORT_FORMS = [
+  'letterboxd',
+  'outro',
+  'perfil',
+  'trakt',
+  // The Trakt ZIP, folded in the Trakt slip (#274).
+  'trakt-zip',
+] as const
 
 export type ImportForm = (typeof IMPORT_FORMS)[number]
 
@@ -275,7 +282,7 @@ export function refusedForm(
   if (['consentimento', 'usuario', 'rss', 'fonte'].includes(refusal))
     return 'perfil'
   if (['arquivo', 'origem', 'grande'].includes(refusal))
-    return sent === 'outro' ? 'outro' : 'letterboxd'
+    return sent === 'outro' || sent === 'trakt-zip' ? sent : 'letterboxd'
   return null
 }
 
