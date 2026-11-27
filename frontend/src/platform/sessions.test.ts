@@ -696,3 +696,38 @@ describe('sessionsFromEngine', () => {
     }
   }, 60_000) // a real git commit: slow on a loaded machine
 })
+
+describe('sessionsFromEngine, the film’s title (#272)', () => {
+  it('names a film as the Cartaz does, by TMDB’s Portuguese title', async () => {
+    const fixture = useFixture()
+    commitAll(fixture.data)
+    const engine = makeEngine({
+      ...fixture.vars,
+      FILMES_GRAVACOES: new URL(
+        '../../../tests/fixture/gravacoes',
+        import.meta.url,
+      ).pathname,
+      FILMES_TMDB_CHAVE: 'chave-de-teste',
+    })
+    try {
+      const sessions = sessionsFromEngine(engine)
+      const parsed = parseSessionRequest(
+        form([
+          ['presentes', 'bruno'],
+          ['quantos', '50'],
+        ]),
+      )
+      if (!('ok' in parsed)) throw new Error(parsed.refused)
+      await sessions.open(parsed.ok, 'bruno')
+      const page = await sessionPage('2026-11-20-bruno', sessions)
+      const titles =
+        page === 'unknown' || page === null
+          ? []
+          : page.recommendation.map((f) => f.title)
+      expect(titles).toContain('Sal & Ferrugem')
+      expect(titles).not.toContain('Sal e Ferrugem')
+    } finally {
+      await engine.dispose()
+    }
+  }, 60_000) // a real git commit: slow on a loaded machine
+})
