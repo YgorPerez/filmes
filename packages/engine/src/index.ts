@@ -42,6 +42,11 @@ export {
 } from './catalog/search.ts'
 export { searchKey } from './catalog/search-key.ts'
 export {
+  filmCard,
+  type FilmCard,
+  type FilmCardRequest,
+} from './catalog/film-card.ts'
+export {
   EXPORT_FORMATS,
   exportRatings,
   type ExportFormat,
@@ -539,6 +544,7 @@ export {
 export {
   confirmQueueItem,
   discardQueueItem,
+  reopenQueueItem,
   viewQueue,
   type QueueDecision,
   type QueueItem,

@@ -27,6 +27,7 @@ import {
   personState,
   personView,
   reloadLetterboxd,
+  reopenQueueItem,
   Sqlite,
   TMDB_ATTRIBUTION,
   type EngineServices,
@@ -136,6 +137,45 @@ const watchedZip = (rows: [string, number][]) =>
   ])
 
 describe('importLetterboxd', () => {
+  test('a candidate brings its poster and synopsis, and a decision can be taken back', async () => {
+    const { fixture, ok } = useOlga()
+    await addOlga(fixture)
+    await ok(importZip('Olga', olgaZip()))
+    const vento = (await queue(fixture)).items.find(
+      (i) => i.name === 'Vento Norte',
+    )
+    expect(vento?.candidates[0]).toMatchObject({
+      poster: 'https://image.tmdb.org/t/p/w185/vEnToNoRtE9102.jpg',
+      overview: expect.stringContaining('faroleiro'),
+    })
+    expect(vento?.candidates[1]?.poster).toBeNull()
+
+    await ok(
+      confirmQueueItem({
+        id: vento?.id ?? '',
+        film: vento?.candidates[0]?.link ?? '',
+        author: AUTHOR,
+      }),
+    )
+    expect((await queue(fixture)).items.map((i) => i.name)).toEqual([
+      'Filme Perdido',
+    ])
+    const reopened = await ok(
+      reopenQueueItem({ id: vento?.id ?? '', author: AUTHOR }),
+    )
+    expect(reopened).toEqual({ id: vento?.id, name: 'Vento Norte', year: 2020 })
+    expect(new Set((await queue(fixture)).items.map((i) => i.name))).toEqual(
+      new Set(['Filme Perdido', 'Vento Norte']),
+    )
+    expect(statuses(fixture)['Vento Norte']).toBeUndefined()
+
+    const again = await fixture.run(
+      reopenQueueItem({ id: vento?.id ?? '', author: AUTHOR }),
+      TMDB_ON,
+    )
+    expect(again.exitCode).toBe(1)
+  })
+
   test("Notas resolved by Wikidata become the Pessoa's Notas", async () => {
     const { fixture, ok } = useOlga()
     await addOlga(fixture)
