@@ -577,7 +577,8 @@ function Cards({
               card(
                 withReason(
                   withoutShared(film, own, none),
-                  reasons.get(section.title) ?? [],
+                  // Said under this section's title already: not again.
+                  reason.length > 0 ? [] : (reasons.get(section.title) ?? []),
                 ),
               ),
             )}
@@ -589,7 +590,8 @@ function Cards({
 }
 
 /** A card whose own lines all weigh against it says its Motivo's reason
- * too (#346): read alone, it shows why it is on the shelf. */
+ * too (#346): read alone, it shows why it is on the shelf. Only in a "de
+ * novo" section; its own section says the reason above its cards. */
 const withReason = (film: Film, reason: readonly BillboardLine[]): Film =>
   reason.length > 0 &&
   film.lines.length > 0 &&

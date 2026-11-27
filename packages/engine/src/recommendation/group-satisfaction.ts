@@ -16,7 +16,7 @@ import { compareTuple } from '../compat/compare.ts'
 import { pythonError } from '../compat/python-error.ts'
 import { makeEvidence, type Evidence } from '../evidence/Evidence.ts'
 import { feedbackStrength, type RatingScale } from '../evidence/ruler.ts'
-import { tenScaleText } from '../evidence/wording.ts'
+import { listText, tenScaleText } from '../evidence/wording.ts'
 import { sessionOrder } from '../sessions/order.ts'
 import { satisfaction } from '../sessions/satisfaction.ts'
 import { num, numOrNull, text, textOrNull } from '../sqlite/row.ts'
@@ -165,28 +165,25 @@ const REPORTED: Readonly<Record<string, (film: string) => string>> = {
 const percent = (value: number): string => `${Math.round(value * 100)}%`
 
 /** Who has the highest satisfaction, in the Presentes' order: "Iara",
- * "Iara e Rosa", "você". */
+ * "Iara e Rosa", "você" (the `viewer`); null when nobody holds it. */
 const highestNames = (
   group: GroupSatisfaction,
   nameOf: (person: string) => string,
-): string => {
+  viewer: string | null,
+): string | null => {
   const names = [...group.people]
     .filter(([, p]) => p.satisfaction === group.highest)
-    .map(([person]) => {
-      const name = nameOf(person)
-      return name === 'Você' ? 'você' : name
-    })
-  return names.length < 2
-    ? (names[0] ?? '')
-    : `${names.slice(0, -1).join(', ')} e ${names.at(-1)}`
+    .map(([person]) => (person === viewer ? 'você' : nameOf(person)))
+  return names.length === 0 ? null : listText(names)
 }
 
 /** The line of who is behind the most satisfied, citing her lowest
  * reaction in the window and naming the highest: "Teo: 22% nas últimas
  * Sessões (deu 3 de 10 a Quermesse); Iara, 100%" (#346). It opens with her
  * name: it is a line of the film, with no name before it on the Cartaz.
- * `nameOf` says each Pessoa's name ("Você" for the Dono who looks on
- * Contar); a name after the semicolon is lowercased only when it is "Você".
+ * `nameOf` says each Pessoa's name ("Você" for the `viewer`, the Dono who
+ * looks on Contar, who is "você" after the semicolon). With nobody at the
+ * highest, the line ends at the reaction.
  * It adds nothing to the utility (base 0): the satisfaction acts on the
  * Regra, not on the Evidence. A cited Nota is read on her scale (#172), and
  * written on 1–10 (#272). */
@@ -197,6 +194,7 @@ export const satisfactionLine = (
   scale: RatingScale,
   filmId: string,
   today: string,
+  viewer: string | null = null,
 ): Evidence => {
   const own = group.people.get(person)
   if (own === undefined || group.highest === null)
@@ -212,10 +210,13 @@ export const satisfactionLine = (
     kind === 'rating'
       ? `deu ${tenScaleText(rating ?? Number.NaN)} a ${film}`
       : (reported?.(film) ?? '')
+  const highest = highestNames(group, nameOf, viewer)
   return makeEvidence({
     person,
     filmId,
-    text: `${nameOf(person)}: ${percent(own.satisfaction)} nas últimas Sessões (${reacted}); ${highestNames(group, nameOf)}, ${percent(group.highest)}`,
+    text:
+      `${nameOf(person)}: ${percent(own.satisfaction)} nas últimas Sessões (${reacted})` +
+      (highest === null ? '' : `; ${highest}, ${percent(group.highest)}`),
     source: text(reaction, 'fonte'),
     date: text(reaction, 'data'),
     strength: feedbackStrength(

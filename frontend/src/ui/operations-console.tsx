@@ -102,38 +102,49 @@ function ConsultTable({
           tabIndex={0}
           className="max-h-[60vh] overflow-auto rounded-field border border-rule min-[900px]:max-h-[50vh]"
         >
-          <table className="w-max min-w-full text-left text-meta tabular-nums">
-            <thead className="sticky top-0 bg-surface-2 font-display font-bold">
-              <tr>
-                {answer.columns.map((column) => (
-                  <th
-                    key={column.key}
-                    scope="col"
-                    className="px-md py-xs whitespace-nowrap"
-                  >
-                    {column.name}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {answer.rows.map((row) => (
-                <tr key={row.key} className="border-t border-rule">
-                  {row.cells.map((cell) => (
-                    <td
-                      key={cell.key}
-                      className="px-md py-sm align-top whitespace-nowrap"
-                    >
-                      <Cell value={cell.value} />
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <Rows answer={answer} />
         </div>
       )}
     </div>
+  )
+}
+
+/** The answer's columns and rows. */
+function Rows({
+  answer,
+}: {
+  answer: Exclude<ConsultAnswer, { error: unknown }>
+}) {
+  return (
+    <table className="w-max min-w-full text-left text-meta tabular-nums">
+      <thead className="sticky top-0 bg-surface-2 font-display font-bold">
+        <tr>
+          {answer.columns.map((column) => (
+            <th
+              key={column.key}
+              scope="col"
+              className="px-md py-xs whitespace-nowrap"
+            >
+              {column.name}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {answer.rows.map((row) => (
+          <tr key={row.key} className="border-t border-rule">
+            {row.cells.map((cell) => (
+              <td
+                key={cell.key}
+                className="px-md py-sm align-top whitespace-nowrap"
+              >
+                <Cell value={cell.value} />
+              </td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
   )
 }
 

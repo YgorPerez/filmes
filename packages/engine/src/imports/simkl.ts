@@ -33,8 +33,11 @@ import { Sqlite, type Connection, type SqliteError } from '../sqlite/Sqlite.ts'
 import {
   hasWikidata,
   inCatalog,
+  leftOutFilm,
   resolveFilmIds,
+  resolveRows,
   type LeftOutFilm,
+  type FilmResolution,
   type ResolvedBy,
 } from './film-ids.ts'
 import {
@@ -106,15 +109,13 @@ const personSimklBackups = (
     }
   })
 
-type Resolution = readonly [string, ResolvedBy] | null
-
 /** The film's tconst: by its ids, then by TMDB's recorded answer. */
 const resolveFilm = (
   db: Connection,
   film: SimklFilm,
   wikidata: boolean,
   answers: ReadonlyMap<string, string>,
-): Effect.Effect<Resolution, SqliteError> =>
+): Effect.Effect<FilmResolution, SqliteError> =>
   Effect.gen(function* () {
     const found = yield* resolveFilmIds(db, film, wikidata)
     if (found !== null || film.tmdb === null) return found
@@ -185,33 +186,11 @@ export interface SimklReport {
 
 /** Each row whose film the Catálogo has, with its tconst, and the films it
  * does not have, each once. */
-const resolveRows = (
-  db: Connection,
-  { rows, answers }: PersonBackups,
-): Effect.Effect<
-  {
-    found: (readonly [DatedRow, readonly [string, ResolvedBy]])[]
-    unresolved: SimklUnresolved[]
-  },
-  SqliteError
-> =>
-  Effect.gen(function* () {
-    const wikidata = yield* hasWikidata(db)
-    const resolutions = new Map<string, Resolution>()
-    const found: (readonly [DatedRow, readonly [string, ResolvedBy]])[] = []
-    const unresolved: SimklUnresolved[] = []
-    for (const row of rows) {
-      const { film } = row
-      const key = JSON.stringify(film)
-      let resolution = resolutions.get(key)
-      if (resolution === undefined) {
-        resolution = yield* resolveFilm(db, film, wikidata, answers)
-        resolutions.set(key, resolution)
-        if (resolution === null) unresolved.push(film)
-      }
-      if (resolution !== null) found.push([row, resolution])
-    }
-    return { found, unresolved }
+const resolveSimklRows = (db: Connection, { rows, answers }: PersonBackups) =>
+  resolveRows(db, rows, {
+    key: (film: SimklFilm) => JSON.stringify(film),
+    resolve: (film, wikidata) => resolveFilm(db, film, wikidata, answers),
+    unresolved: (film): SimklUnresolved => film,
   })
 
 /** The films of all her backups the Catálogo does not have, TMDB's
@@ -222,15 +201,11 @@ export const simklLeftOut = (
   person: Person,
 ): Effect.Effect<LeftOutFilm[], EngineError | SqliteError, Environment> =>
   Effect.gen(function* () {
-    const { unresolved } = yield* resolveRows(
+    const { unresolved } = yield* resolveSimklRows(
       db,
       yield* personSimklBackups(person),
     )
-    return unresolved.map(({ name, year, imdb, tmdb }) => ({
-      name,
-      year,
-      id: imdb ?? tmdb,
-    }))
+    return unresolved.map(leftOutFilm)
   })
 
 /** Replaces the Pessoa's Simkl Fatos by those of the backups. */
@@ -247,7 +222,7 @@ const loadPerson = (
       )
     const source = `Simkl de ${person.name}`
     const resolved = { imdb: new Set<string>(), tmdb: new Set<string>() }
-    const { found, unresolved } = yield* resolveRows(db, backups)
+    const { found, unresolved } = yield* resolveSimklRows(db, backups)
     for (const [row, [id, by]] of found) {
       resolved[by].add(id)
       yield* insertFact(db, person.slug, source, id, row)

@@ -168,7 +168,6 @@ function CreateForm({ state, admin }: { state?: CreateState; admin: boolean }) {
       : undefined
   const fieldProps = (name: 'nome' | 'email') => ({
     refusal: refusalOf(name),
-    inputRef: field === name ? focused : undefined,
     onInput: () => setClearedAt(refusals),
   })
   return (
@@ -192,6 +191,7 @@ function CreateForm({ state, admin }: { state?: CreateState; admin: boolean }) {
           required
           defaultValue={typed.name}
           {...fieldProps('nome')}
+          inputRef={field === 'nome' ? focused : undefined}
         />
         <TextField
           name="apelidos"
@@ -220,6 +220,7 @@ function CreateForm({ state, admin }: { state?: CreateState; admin: boolean }) {
             hint={create.emailHint}
             defaultValue={typed.email}
             {...fieldProps('email')}
+            inputRef={field === 'email' ? focused : undefined}
           />
           {admin && <p className="text-meta text-ink-2">{create.testUsers}</p>}
         </div>

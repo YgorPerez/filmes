@@ -56,7 +56,15 @@ import {
   type YamlValue,
 } from '../data/yaml.ts'
 import type { Strength } from '../evidence/strength.ts'
-import { listText } from '../evidence/wording.ts'
+import {
+  listText,
+  OWN_SCALE_PLURAL,
+  SEED_PLURALS,
+  type PluralWording,
+} from '../evidence/wording.ts'
+import { HIGH_RATINGS_PLURAL } from '../recommendation/signals/content.ts'
+import { SEEN_PLURAL } from '../recommendation/signals/seen.ts'
+import { WATCHLIST_PLURALS } from '../recommendation/signals/watchlist.ts'
 import { CAUTIOUS_BET_REASON } from '../recommendation/bet.ts'
 import { catalogFilm } from '../recommendation/candidates.ts'
 import type { StoredConstraint } from '../recommendation/constraints.ts'
@@ -590,7 +598,7 @@ const droppedOf = (
 const isFact = (e: BodyEvidence) => e.kind !== 'guess'
 
 /** A Já visto's line (`signals/seen.ts`). */
-const isSeen = (e: BodyEvidence) => e.against && e.text === 'já viu'
+const isSeen = (e: BodyEvidence) => e.against && e.text === SEEN_PLURAL.one
 
 /** A Feedback's Fonte as whoever looks reads it: the Dono who relayed it
  * is "você" (#277). */
@@ -598,17 +606,15 @@ const RELAYED = /, repassado pelo Dono$/u
 const sourceFor = (source: string, relayedByYou: boolean): string =>
   relayedByYou ? source.replace(RELAYED, ', repassado por você') : source
 
-/** The singular verbs of a Presente's own Evidence (`evidence/wording.ts`,
- * `signals/content.ts`, `signals/seen.ts`, `signals/watchlist.ts`) and
- * their plural, for a line two or more Presentes share (#351). */
-const PLURAL: ReadonlyArray<readonly [RegExp, string]> = [
-  [/^deu /u, 'deram '],
-  [/^disse que (ama|odeia) /u, 'disseram que $1m '],
-  [/^segundo o Dono, (ama|odeia) /u, 'segundo o Dono, $1m '],
-  [/^já viu$/u, 'já viram'],
-  [/^está na lista /u, 'estão na lista '],
-  [/ a que deu nota alta/u, ' a que deram nota alta'],
-  [/, uma das notas mais altas que dá/u, ', uma das notas mais altas que dão'],
+/** The plural of each singular wording of a Presente's own Evidence, as
+ * the files that write it give it, for a line two or more Presentes share
+ * (#351). */
+const PLURAL: ReadonlyArray<PluralWording> = [
+  ...SEED_PLURALS,
+  OWN_SCALE_PLURAL,
+  HIGH_RATINGS_PLURAL,
+  SEEN_PLURAL,
+  ...WATCHLIST_PLURALS,
 ]
 
 /** A line as the names before it read: the engine writes each Presente's
@@ -616,7 +622,15 @@ const PLURAL: ReadonlyArray<readonly [RegExp, string]> = [
  * agree (#351). */
 const agreeing = (text: string, people: number): string =>
   people > 1
-    ? PLURAL.reduce((out, [from, to]) => out.replace(from, to), text)
+    ? PLURAL.reduce(
+        (out, { one, many, start }) =>
+          !start
+            ? out.replace(one, many)
+            : out.startsWith(one)
+              ? many + out.slice(one.length)
+              : out,
+        text,
+      )
     : text
 
 /** The strongest Evidence of each Presente with a Fato, the ones with the

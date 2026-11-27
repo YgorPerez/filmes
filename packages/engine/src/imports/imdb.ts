@@ -23,7 +23,7 @@ import { Sqlite, type Connection, type SqliteError } from '../sqlite/Sqlite.ts'
 import { readImdbRatings, type ImdbRatingRow } from './imdb-ratings.ts'
 import { storedImports, storeImport } from './stored.ts'
 import { requireImportTables } from './trakt.ts'
-import { inCatalog, type LeftOutFilm } from './film-ids.ts'
+import { inCatalog, leftOutFilm, type LeftOutFilm } from './film-ids.ts'
 import { tasteChange, tasteSnapshot, type TasteChange } from './taste-change.ts'
 
 /** The kind of a Pessoa's `imports:` records this module reads. */
@@ -140,7 +140,7 @@ export const imdbLeftOut = (
     const outside = new Map<string, LeftOutFilm>()
     for (const row of yield* personImdbRows(person))
       if (!outside.has(row.film) && !(yield* inCatalog(db, row.film)))
-        outside.set(row.film, { name: row.title, year: null, id: row.film })
+        outside.set(row.film, leftOutFilm({ name: row.title, imdb: row.film }))
     return [...outside.values()]
   })
 

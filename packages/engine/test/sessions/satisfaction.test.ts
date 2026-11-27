@@ -114,6 +114,22 @@ describe('the satisfaction', () => {
   })
 })
 
+describe('the satisfaction now', () => {
+  test('names the Dono who looks as "você" when she is the most satisfied', async () => {
+    const { fixture, vars } = useSatisfactionFixture()
+    await withFeedback(fixture, vars, ['dono', 'quim'], {
+      ratings: ['dono=5', 'quim=1'],
+    })
+
+    const now = await fixture.ok(satisfactionNow(['bruno', 'quim']), vars)
+
+    expect(now.people.map((p) => p.line)).toEqual([
+      null,
+      'Quim: 11% nas últimas Sessões (deu 2 de 10 a Pequenos Milagres); você, 100%',
+    ])
+  })
+})
+
 describe('the satisfaction', () => {
   test('who left less satisfied weighs more, and her film rises with the satisfaction line', async () => {
     const { fixture, vars } = useSatisfactionFixture()
