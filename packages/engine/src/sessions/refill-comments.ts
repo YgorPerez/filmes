@@ -1,5 +1,4 @@
 import { Effect } from 'effect'
-import type { YamlValue } from '../data/yaml.ts'
 import { ADDITION_FIELDS, withAddition } from '../reading/addition.ts'
 import {
   readRequest,
@@ -14,13 +13,12 @@ const fields = ADDITION_FIELDS.filter((field) => field !== 'attendees')
 
 /** Read each comment on its own, since a note about one film can end
  * with words that would change the reading of the next comment. */
-export const readRefillComments = (saved: ReadonlyArray<YamlValue>) =>
+export const readRefillComments = (saved: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     let request: ReadFields = {}
     const comments = new Set(saved)
     for (const text of comments) {
-      if (typeof text !== 'string' || text.length > REQUEST_READING_MAX_LENGTH)
-        continue
+      if (text.length > REQUEST_READING_MAX_LENGTH) continue
       const read = yield* readRequest({ text, fields })
       request = withAddition(request, read.request)
     }

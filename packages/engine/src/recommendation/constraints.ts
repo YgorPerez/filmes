@@ -24,7 +24,7 @@
 //   given the count, lets them in Restrição by Restrição in `RELAX_ORDER`
 //   (the Parecido, then the year) until the count is filled. A relaxed film
 //   comes after the ones that passed (`tierOf`). A Restrição with a
-//   `candidateLimit` picks only among the films no Restrição set aside.
+//   `candidateLimit` fills its quota from films no Restrição set aside.
 //
 // `makeConstraintSet` uses Python's module order (`CONSTRAINT_ORDER`) to
 // present film lines and to apply Restrições within each stage.
@@ -263,8 +263,8 @@ interface SetState {
   readonly pending: Map<string, ReadonlyArray<Constraint>>
   readonly removedBy: Map<string, Constraint>
   readonly dropDetails: Map<string, DropDetail>
-  readonly removed: Map<ConstraintName, number>
-  readonly drops: Map<ConstraintName, Map<string, number>>
+  readonly removed: Map<Constraint, number>
+  readonly drops: Map<Constraint, Map<string, number>>
   /** Film → the Restrições of `RELAX_ORDER` it failed, while undecided;
    * after `candidates`, only the ones relaxed to let it in. */
   readonly failed: Map<string, ReadonlyArray<Constraint>>
@@ -292,11 +292,11 @@ const countDrop = (
   state.removedBy.set(filmId, constraint)
   if (verdict.detail !== undefined)
     state.dropDetails.set(filmId, verdict.detail)
-  removed.set(constraint.name, (removed.get(constraint.name) ?? 0) + 1)
+  removed.set(constraint, (removed.get(constraint) ?? 0) + 1)
   if (verdict.cause !== null) {
-    const causes = drops.get(constraint.name) ?? new Map<string, number>()
+    const causes = drops.get(constraint) ?? new Map<string, number>()
     causes.set(verdict.cause, (causes.get(verdict.cause) ?? 0) + 1)
-    drops.set(constraint.name, causes)
+    drops.set(constraint, causes)
   }
 }
 
@@ -376,13 +376,8 @@ const candidatesIn =
       const alive = new Map(films)
       for (const constraint of constraints) {
         const { appliesTo, relaxes } = constraint
-        const limited = constraint.candidateLimit !== undefined
         const candidates = new Map(
-          [...alive].filter(
-            ([id]) =>
-              (appliesTo === undefined || appliesTo(id)) &&
-              !(limited && failed.has(id)),
-          ),
+          [...alive].filter(([id]) => appliesTo === undefined || appliesTo(id)),
         )
         const evaluated = yield* constraint.evaluate(context, candidates)
         const limit = constraint.candidateLimit?.(context.weights)
@@ -393,13 +388,17 @@ const candidatesIn =
                 context,
                 state,
                 alive,
-                evaluated,
+                new Map([...evaluated].filter(([id]) => !failed.has(id))),
                 limit,
                 kept,
               )
         for (const [filmId, film] of Array.from(alive)) {
           if (!candidates.has(filmId)) continue
-          const verdict = verdicts.get(filmId) ?? drop()
+          // A match outside the year range still counts as similar when
+          // the year relaxes. It does not use the in-range quota or reach.
+          const matches =
+            limit !== undefined && failed.has(filmId) ? evaluated : verdicts
+          const verdict = matches.get(filmId) ?? drop()
           if (verdict === 'pending') {
             pending.set(filmId, [...(pending.get(filmId) ?? []), constraint])
           } else if (verdict._tag === 'Pass') {
@@ -425,15 +424,21 @@ const relax = (
   count: number,
 ): ReadonlyMap<string, Candidate> => {
   const { failed } = state
-  const allowed = new Set<Constraint>()
+  const allowed = new Set<ConstraintName>()
   const within = (filmId: string) =>
-    (failed.get(filmId) ?? []).every((c) => allowed.has(c))
-  const ladder = RELAX_ORDER.flatMap((name) =>
-    constraints.filter((c) => c.name === name && c.relaxes !== undefined),
+    (failed.get(filmId) ?? []).every((c) => allowed.has(c.name))
+  const ladder = RELAX_ORDER.filter((name) =>
+    constraints.some((c) => c.name === name && c.relaxes !== undefined),
   )
-  for (const constraint of ladder) {
-    if ([...alive.keys()].filter(within).length >= count) break
-    allowed.add(constraint)
+  for (const name of ladder) {
+    // Pending films may still drop at placement. Keep the next tier
+    // available until enough films are known to pass.
+    if (
+      [...alive.keys()].filter((id) => within(id) && !state.pending.has(id))
+        .length >= count
+    )
+      break
+    allowed.add(name)
   }
   for (const [filmId, by] of failed) {
     if (within(filmId)) continue
@@ -479,8 +484,12 @@ export const makeConstraintSet = (
     candidates: candidatesIn(context, state, evaluationOrder),
     relaxedOf: (filmId) => state.failed.get(filmId) ?? [],
     tierOf: (filmId) =>
-      (state.failed.get(filmId) ?? []).reduce(
-        (tier, c) => tier + 2 ** RELAX_ORDER.indexOf(c.name),
+      RELAX_ORDER.reduce(
+        (tier, name, index) =>
+          tier +
+          ((state.failed.get(filmId) ?? []).some((c) => c.name === name)
+            ? 2 ** index
+            : 0),
         0,
       ),
     approve: (ordered, count, reach, filmOf) =>
@@ -500,14 +509,16 @@ export const makeConstraintSet = (
         .filter((warning): warning is string => !!warning),
     toJson: () =>
       Object.fromEntries(
-        constraints.map((c) => [
-          c.name,
-          {
-            ...c.toJson(),
-            ...c.result(state.drops.get(c.name) ?? new Map()),
-            removed: state.removed.get(c.name) ?? 0,
-          },
-        ]),
+        constraints
+          .filter((c) => c.appliesTo === undefined)
+          .map((c) => [
+            c.name,
+            {
+              ...c.toJson(),
+              ...c.result(state.drops.get(c) ?? new Map()),
+              removed: state.removed.get(c) ?? 0,
+            },
+          ]),
       ),
   }
 }

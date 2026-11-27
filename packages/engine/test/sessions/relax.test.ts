@@ -10,6 +10,7 @@ import {
   type RecommendSessionRequest,
 } from '../../src/index.ts'
 import { useFixture, type Fixture } from '../fixture.ts'
+import { RECORDINGS } from '../sources/support.ts'
 
 const ESCREVER_CARTAS = 'tt9006701' // 4 similar films pass its Restrições
 
@@ -117,7 +118,7 @@ test('the Cartaz says what ran out and what came in', async () => {
   const [similar, year] = out.shortfall?.relaxed ?? []
 
   expect(cartaz.billboard.shortfall).toBe(
-    `Acabaram os parecidos com Escrever Cartas; entraram ${similar?.films} que não são parecidos e entraram ${year?.films} de antes de 2023.`,
+    `Acabaram os parecidos com Escrever Cartas; entraram ${similar?.films} que não são parecidos e ${year?.films} de antes de 2023.`,
   )
 })
 
@@ -142,3 +143,46 @@ test.each([
     expect(out.shortfall?.relaxed.map((r) => r.text)).toEqual([text])
   },
 )
+
+test('relaxing the Parecido never brings in its own reference', async () => {
+  const out = await recommend(useFixture(), {
+    attendees: ['dono'],
+    similar: [ESCREVER_CARTAS],
+    count: 100,
+  })
+  expect(ids(out)).not.toContain(ESCREVER_CARTAS)
+})
+
+test('older similar films lead the films that enter when the year relaxes', async () => {
+  const out = await recommend(useFixture(), {
+    attendees: ['dono'],
+    similar: [ESCREVER_CARTAS],
+    since: 2023,
+    count: 10,
+  })
+  const older = out.films.filter((film) => (film.year ?? 0) < 2023)
+  const explainsMatch = (film: (typeof older)[number]) =>
+    film.filmLines.some((line) =>
+      line.text.startsWith('parecido com Escrever Cartas'),
+    )
+  expect(older.some(explainsMatch)).toBe(true)
+  expect(older.map(explainsMatch)).toEqual(
+    older.map(explainsMatch).toSorted((a, b) => Number(b) - Number(a)),
+  )
+})
+
+test('a film rejected by OMDb leaves room to relax the year', async () => {
+  const out = await useFixture().ok(
+    recommendSession({
+      attendees: ['dono'],
+      since: 2022,
+      until: 2022,
+      child: 10,
+      count: 1,
+    }),
+    { FILMES_OMDB_CHAVE: 'chave-de-teste', FILMES_GRAVACOES: RECORDINGS },
+  )
+  expect(out.films).toHaveLength(1)
+  expect(out.films[0]?.title).not.toBe('Noite de Estreia')
+  expect(out.shortfall?.relaxed[0]?.constraint).toBe('year')
+})

@@ -29,7 +29,7 @@ import { compareTuple } from '../../compat/compare.ts'
 import { pyStrip } from '../../compat/text.ts'
 import { makeEvidence, type Evidence } from '../../evidence/Evidence.ts'
 import { similarStrength } from '../../evidence/ruler.ts'
-import { neighborhoodText } from '../../evidence/wording.ts'
+import { listText, neighborhoodText } from '../../evidence/wording.ts'
 import { engineError } from '../../runtime/EngineError.ts'
 import { text, textOrNull } from '../../sqlite/row.ts'
 import type { Weights } from '../../runtime/Weights.ts'
@@ -54,12 +54,6 @@ export interface SimilarRequest {
    * it. */
   readonly session?: string | null
 }
-
-/** "A", "A e B", "A, B e C" (`_e`). */
-export const andList = (names: ReadonlyArray<string>): string =>
-  names.length === 1
-    ? (names[0] ?? '')
-    : `${names.slice(0, -1).join(', ')} e ${names.at(-1) ?? ''}`
 
 const storedFilms = (stored: StoredConstraint | undefined): string[] => {
   const films = stored?.['films']
@@ -160,7 +154,7 @@ const similar = (films: ReadonlyArray<string>): Constraint => {
     stored: () => ({ name: 'similar', films: [...films], titles: [...titles] }),
     result: () => ({}),
     candidateLimit: (weights) => weights.similar.candidates,
-    relaxes: () => true,
+    relaxes: (film) => !films.includes(film.id),
     relaxedText: () => 'que não são parecidos',
     replacesList: (stored) => {
       const before = new Set(storedFilms(stored))
@@ -191,8 +185,8 @@ const similar = (films: ReadonlyArray<string>): Constraint => {
     listWarning: (found, count) => {
       if (found >= count) return null
       if (found === 1)
-        return `só 1 parecido com ${andList(titles)} passou nas Restrições`
-      return `só ${found} parecidos com ${andList(titles)} passaram nas Restrições`
+        return `só 1 parecido com ${listText(titles)} passou nas Restrições`
+      return `só ${found} parecidos com ${listText(titles)} passaram nas Restrições`
     },
   }
 }
@@ -226,7 +220,7 @@ export const similarModule: ConstraintModule<SimilarRequest> = {
       Array.isArray(titles) && titles.length > 0
         ? titles.map(String)
         : storedFilms(stored)
-    return `parecidos com ${andList(names)}`
+    return `parecidos com ${listText(names)}`
   },
   inherit: (request, stored) => {
     if (!stored || request.similar?.length || request.noSimilar) return request

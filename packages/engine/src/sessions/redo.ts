@@ -328,8 +328,8 @@ const sessionRequest = (
     )
     const asked = yield* readAsked(asking)
     const redo = yield* prepareRedo(front, { keep, asking, asked })
-    const comments = front.get('refill_comments')
-    if (!isSequence(comments)) return redo
+    const comments = request.refillComments
+    if (!comments?.length) return redo
     const read = yield* readRefillComments(comments)
     return {
       ...redo,

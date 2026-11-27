@@ -112,7 +112,8 @@ export function billboardsFromEngine(
         owner,
       })
       if (reply.exitCode !== 0) return { ...reply, stage: 'answer' }
-      const { keep, moods, dropped, warnings, addition } = reply.output
+      const { keep, moods, dropped, warnings, addition, comments } =
+        reply.output
       const read =
         addition === null
           ? null
@@ -149,6 +150,7 @@ export function billboardsFromEngine(
         recommendSession({
           ...(reading ? withAddition(chosen, reading.request) : chosen),
           keep: [keep.join(',')],
+          refillComments: comments.flatMap(({ comment }) => comment ?? []),
         }),
         { owner },
       )

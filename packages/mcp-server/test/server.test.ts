@@ -92,6 +92,15 @@ describe('the server', () => {
     for (const tool of TOOLS) assert.ok(named.has(tool.name), tool.name)
   })
 
+  test('explains that a comment about the film leaves it on screen', async () => {
+    const { client } = await connect(useFixture())
+    assert.match(client.getInstructions() ?? '', /Só sobre o filme/)
+    assert.match(
+      client.getInstructions() ?? '',
+      /Um comentário, mesmo negativo, deixa o filme na tela/,
+    )
+  })
+
   test("asks for each Presente's Nota prevista on the film's line", async () => {
     const { client } = await connect(useFixture())
 
