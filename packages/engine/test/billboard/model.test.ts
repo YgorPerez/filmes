@@ -739,7 +739,7 @@ describe('the predicted rating (#175)', () => {
 describe('the closed Cartaz (#264)', () => {
   const closed = async (
     fixture: Fixture,
-    feedback: { ratings?: string[]; reports?: string[] },
+    feedback: { ratings?: string[]; reports?: string[]; comments?: string[] },
   ) => {
     const session = await fixture.ok(
       recommendSession({ attendees: ['bruno', 'teo'], count: 50 }),
@@ -758,6 +758,7 @@ describe('the closed Cartaz (#264)', () => {
     const { id, film } = await closed(fixture, {
       ratings: ['bruno=3'],
       reports: ['teo=gostou'],
+      comments: ['teo=dormiu no meio'],
     })
 
     // With the default minimum of 10 shared films Bruno has no neighbour
@@ -766,8 +767,14 @@ describe('the closed Cartaz (#264)', () => {
 
     const chosen = model.films.find((f) => f.id === film.id)
     expect(chosen?.reactions).toEqual([
-      { person: 'bruno', predicted: '8,8', rating: '6', reaction: null },
-      { person: 'teo', predicted: null, rating: null, reaction: 'liked' },
+      { person: 'bruno', predicted: '8,8', rating: '6', reaction: null, comment: null },
+      {
+        person: 'teo',
+        predicted: null,
+        rating: null,
+        reaction: 'liked',
+        comment: 'dormiu no meio',
+      },
     ])
     expect(
       model.films.filter((f) => f.reactions !== undefined).map((f) => f.id),
@@ -781,7 +788,7 @@ describe('the closed Cartaz (#264)', () => {
     const model = await fixture.ok(billboardModel({ session: id }))
 
     expect(model.films.find((f) => f.id === film.id)?.reactions).toEqual([
-      { person: 'bruno', predicted: '8,8', rating: null, reaction: null },
+      { person: 'bruno', predicted: '8,8', rating: null, reaction: null, comment: null },
     ])
   })
 
@@ -809,8 +816,8 @@ describe('the closed Cartaz (#264)', () => {
       title: 'Curta da Madrugada',
       year: 2010,
       reactions: [
-        { person: 'bruno', predicted: null, rating: '8', reaction: null },
-        { person: 'teo', predicted: null, rating: null, reaction: 'disliked' },
+        { person: 'bruno', predicted: null, rating: '8', reaction: null, comment: null },
+        { person: 'teo', predicted: null, rating: null, reaction: 'disliked', comment: null },
       ],
     })
     expect(model.films.every((f) => f.reactions === undefined)).toBe(true)
@@ -833,7 +840,7 @@ describe('the closed Cartaz (#264)', () => {
       title: 'Pequenos Milagres',
       year: film.year,
       reactions: [
-        { person: 'bruno', predicted: '8,8', rating: '6', reaction: null },
+        { person: 'bruno', predicted: '8,8', rating: '6', reaction: null, comment: null },
       ],
     })
   })
@@ -871,8 +878,8 @@ describe('the closed Cartaz (#264)', () => {
     const model = await fixture.ok(billboardModel({ session: id }))
 
     expect(model.films.find((f) => f.id === film.id)?.reactions).toEqual([
-      { person: 'bruno', predicted: '8,8', rating: '6', reaction: null },
-      { person: 'teo', predicted: null, rating: null, reaction: 'liked' },
+      { person: 'bruno', predicted: '8,8', rating: '6', reaction: null, comment: null },
+      { person: 'teo', predicted: null, rating: null, reaction: 'liked', comment: null },
     ])
   })
 
