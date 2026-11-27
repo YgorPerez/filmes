@@ -44,6 +44,7 @@ import {
 import { storedImports, storeImport } from './stored.ts'
 import { requireImportTables } from './trakt.ts'
 import { withLatestWatchlist } from './watchlist.ts'
+import { tasteChange, tasteSnapshot, type TasteChange } from './taste-change.ts'
 
 /** The kind of a Pessoa's `imports:` records this module reads. */
 export const SIMKL_KIND = 'simkl'
@@ -335,6 +336,8 @@ export interface SimklImport extends SimklReport {
   readonly newFile: boolean
   readonly facts: SimklFactCounts
   readonly newFacts: SimklFactCounts
+  /** What she sees on her Notas: new, changed and repeated Notas (#274). */
+  readonly changes: TasteChange
   readonly warnings: readonly string[]
   readonly attributions: readonly Attribution[]
 }
@@ -375,6 +378,7 @@ export const importSimkl = (
           yield* requireImportTables(db)
           const person = yield* resolvePerson(input.person)
           const before = yield* simklFactCounts(db, person.slug)
+          const taste = yield* tasteSnapshot(db, person.slug)
           const kept = yield* storeImport(
             person,
             SIMKL_KIND,
@@ -397,6 +401,7 @@ export const importSimkl = (
             file: kept.file,
             newFile: kept.new,
             facts: after,
+            changes: yield* tasteChange(db, person.slug, SIMKL_KIND, taste),
             newFacts: {
               ratings: after.ratings - before.ratings,
               seen: after.seen - before.seen,
