@@ -89,14 +89,20 @@ export function Items({
 }
 
 export function Item({
+  id,
   children,
   actions,
 }: {
+  /** For a link to the item (`#id`): an edit comes back to it (#330). */
+  id?: string
   children: ReactNode
   actions?: ReactNode
 }) {
   return (
-    <li className="flex flex-wrap items-start justify-between gap-sm border-rule py-sm not-first:border-t">
+    <li
+      id={id}
+      className="flex scroll-mt-2xl flex-wrap items-start justify-between gap-sm border-rule py-sm not-first:border-t"
+    >
       <div className="flex min-w-0 flex-1 basis-[240px] flex-col gap-0.5">
         {children}
       </div>
@@ -278,7 +284,9 @@ export function ActionForm({
   )
 }
 
-/** "Tirar": takes one item out of her file. */
+/** "Tirar": takes one item out of her file. With the JavaScript, it asks
+ * first, in place (#330): beside "Editar", a slip of the thumb would lose
+ * the item. Before it, the post goes at once. */
 export function RemoveForm({
   slug,
   what,
@@ -290,18 +298,57 @@ export function RemoveForm({
   id: string
   label: string
 }) {
+  const live = useHydrated()
+  const [asking, setAsking] = useState(false)
+  const confirm = useRef<HTMLButtonElement>(null)
+  const ask = useRef<HTMLButtonElement>(null)
+  const [asked, setAsked] = useState(false)
+  useEffect(() => {
+    if (asking) confirm.current?.focus()
+    else if (asked) ask.current?.focus()
+  }, [asking, asked])
   return (
     <ActionForm
       slug={slug}
       action="remover"
-      className="shrink-0"
+      className="flex shrink-0 flex-wrap gap-xs"
       busy={PERSON.removing}
     >
       <input type="hidden" name="tipo" value={what} />
       <input type="hidden" name="id" value={id} />
-      <Submit className="" aria-label={PERSON.removeLabel(label)}>
-        {PERSON.remove}
-      </Submit>
+      {live && !asking ? (
+        <Button
+          ref={ask}
+          type="button"
+          variant="option"
+          aria-label={PERSON.removeLabel(label)}
+          onClick={() => setAsking(true)}
+        >
+          {PERSON.remove}
+        </Button>
+      ) : (
+        <Submit
+          ref={confirm}
+          className=""
+          aria-label={
+            live ? PERSON.removeSure(label) : PERSON.removeLabel(label)
+          }
+        >
+          {live ? PERSON.removeSureShort : PERSON.remove}
+        </Submit>
+      )}
+      {live && asking && (
+        <Button
+          type="button"
+          variant="link"
+          onClick={() => {
+            setAsking(false)
+            setAsked(true)
+          }}
+        >
+          {PERSON.removeKeep}
+        </Button>
+      )}
     </ActionForm>
   )
 }
@@ -656,10 +703,16 @@ type TagGroup = { key: string; label: string }
 function GroupPills({
   groups,
   initial = '',
+  marked,
+  onMark,
 }: {
   groups: readonly TagGroup[]
   /** The group marked from the start: an edited Veto's (#330). */
   initial?: string
+  /** With the JavaScript, the marked group, '' for none, and what a tap
+   * on a pill marks: the target search lets its pick go then. */
+  marked: string
+  onMark: (key: string) => void
 }) {
   const live = useHydrated()
   return (
@@ -669,7 +722,7 @@ function GroupPills({
       </legend>
       <div className="flex flex-wrap gap-xs">
         {live ? (
-          <LivePills groups={groups} initial={initial} />
+          <LivePills groups={groups} marked={marked} onMark={onMark} />
         ) : (
           <PlainPills groups={groups} initial={initial} />
         )}
@@ -710,12 +763,13 @@ function PlainPills({
  * go. */
 function LivePills({
   groups,
-  initial,
+  marked,
+  onMark: setMarked,
 }: {
   groups: readonly TagGroup[]
-  initial: string
+  marked: string
+  onMark: (key: string) => void
 }) {
-  const [marked, setMarked] = useState(initial)
   return groups.map(({ key, label }) => (
     <label key={key} className="flex">
       <input
@@ -758,6 +812,10 @@ export function TargetField({
 }) {
   const live = useHydrated()
   const film = name === 'filme'
+  // One or the other (#330): picking a result lets the group go, and
+  // marking a group lets the result go, so the form never shows both.
+  const [picked, setPicked] = useState<Target | null>(initial)
+  const [group, setGroup] = useState(initialGroup ?? '')
   return (
     <div className={`flex flex-col ${live ? 'gap-lg' : 'gap-xl'}`}>
       {live ? (
@@ -766,7 +824,11 @@ export function TargetField({
           label={label}
           hint={hint}
           scope={scope}
-          initial={initial}
+          picked={picked}
+          onPick={(target) => {
+            setPicked(target)
+            if (target !== null) setGroup('')
+          }}
         />
       ) : (
         <TextField
@@ -779,7 +841,15 @@ export function TargetField({
         />
       )}
       {groups.length > 0 && (
-        <GroupPills groups={groups} initial={initialGroup} />
+        <GroupPills
+          groups={groups}
+          initial={initialGroup}
+          marked={group}
+          onMark={(key) => {
+            setGroup(key)
+            if (key !== '') setPicked(null)
+          }}
+        />
       )}
     </div>
   )
@@ -794,15 +864,16 @@ function TargetSearch({
   label,
   hint,
   scope,
-  initial,
+  picked,
+  onPick: setPicked,
 }: {
   name: 'alvo' | 'filme'
   label: string
   hint?: string
   scope: CatalogScope
-  initial: Target | null
+  picked: Target | null
+  onPick: (target: Target | null) => void
 }) {
-  const [picked, setPicked] = useState<Target | null>(initial)
   const { error, aria } = useFieldProblem(name)
   const search = useLiveSearch(picked === null, '', null, scope)
   return (

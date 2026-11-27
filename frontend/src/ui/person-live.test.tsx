@@ -219,6 +219,12 @@ it('says what “Tirar” and “Pular” are doing while they post', async () =
       name: PERSON.removeLabel('nunca vê terror'),
     }),
   )
+  // It asks first (#330).
+  await user.click(
+    screen.getByRole('button', {
+      name: PERSON.removeSure('nunca vê terror'),
+    }),
+  )
   await user.click(
     screen.getByRole('button', {
       name: `${PERSON.questions.skip}: a Iara curte terror?`,
@@ -235,7 +241,7 @@ it('says what “Tirar” and “Pular” are doing while they post', async () =
   ).toBe(true)
   expect(
     screen.queryByRole('button', {
-      name: PERSON.removeLabel('nunca vê terror'),
+      name: PERSON.removeSure('nunca vê terror'),
     }),
   ).toBeNull()
   expect(
@@ -285,9 +291,15 @@ it('goes to the list when her Pessoa is gone', async () => {
   answering('/pessoas?erro=pessoa')
   const router = showRouted()
 
-  await userEvent.setup().click(
+  const user = userEvent.setup()
+  await user.click(
     await screen.findByRole('button', {
       name: PERSON.removeLabel('nunca vê terror'),
+    }),
+  )
+  await user.click(
+    screen.getByRole('button', {
+      name: PERSON.removeSure('nunca vê terror'),
     }),
   )
 

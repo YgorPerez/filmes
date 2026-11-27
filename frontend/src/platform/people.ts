@@ -46,6 +46,7 @@ import {
   spotOf,
   type Edit,
   type PersonAction,
+  type PersonDone,
   type PersonNotice,
   type PersonRefusal,
 } from '#/content/person-action'
@@ -110,7 +111,7 @@ export interface People {
     person: string,
     action: PersonAction,
     owner: Owner,
-  ): Promise<Outcome<PersonNotice>>
+  ): Promise<Outcome<PersonDone>>
   /** Creates a Pessoa as the logged-in Dono, who signs the commit; gives
    * her slug. */
   create(input: NewPersonForm, owner: Owner): Promise<Outcome<string>>
@@ -240,7 +241,7 @@ function changeFile(
   run: Engine['run'],
   by: By,
   action: Exclude<PersonAction, FactWrite>,
-): Promise<Outcome<PersonNotice>> {
+): Promise<Outcome<PersonDone>> {
   switch (action.kind) {
     case 'skip':
       return map(
@@ -262,8 +263,10 @@ function changeFile(
         (): PersonNotice => 'removido',
       )
     case 'edit':
-      return map(run(personEdit({ ...by, ...editInput(action) })), (r) =>
-        r.changed ? 'editado' : 'igual',
+      return map(
+        run(personEdit({ ...by, ...editInput(action) })),
+        (r): PersonDone =>
+          r.changed ? { notice: 'editado', item: r.edited.factId } : 'igual',
       )
     case 'grant':
     case 'revoke':
@@ -507,8 +510,13 @@ export async function personAction(
       return seeOther('/pessoas?erro=pessoa')
     return seeOther(back({ erro: refusalOf(outcome) }))
   }
-  if (outcome.output === 'removida') return seeOther('/pessoas?feito=removida')
-  return seeOther(back({ feito: outcome.output }))
+  const done = outcome.output
+  if (done === 'removida') return seeOther('/pessoas?feito=removida')
+  return seeOther(
+    typeof done === 'string'
+      ? back({ feito: done })
+      : back({ feito: done.notice, item: done.item }),
+  )
 }
 
 /** Her page's address after a form (#273): the query says what happened

@@ -194,6 +194,7 @@ describe('parseAction', () => {
     { acao: 'visto', filme: 'tt1', nota: '7' },
     { acao: 'vetar', texto: 'x', alvo: '' },
     { acao: 'vetar', texto: '', alvo: 'Q1' },
+    { acao: 'vetar', texto: 'x', alvo: 'Q1', grupo: 'slow' },
     { acao: 'ajustar', elo: 'cast', nivel: 'muito' },
     { acao: 'pular' },
     { acao: 'responder', texto: 'sim' },

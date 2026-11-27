@@ -129,12 +129,14 @@ const seen: Reader = (form) => {
   return { kind: 'seen', film, rating, source: field(form, 'fonte') }
 }
 
-/** A Veto to a tag group (`grupo`) or to an id (`alvo`). */
+/** A Veto to a tag group (`grupo`) or to an id (`alvo`), never both: the
+ * form would not say which one it means (#330). */
 const veto: Reader = (form) => {
   const text = field(form, 'texto')
   const group = field(form, 'grupo')
   const target = field(form, 'alvo')
   if (!text) return null
+  if (group !== undefined && target !== undefined) return null
   if (group !== undefined)
     return { kind: 'veto', text, target: group, group: true }
   if (!target || !ID.test(target)) return null
@@ -226,10 +228,18 @@ export const isAccessAction = (action: PersonAction) =>
 /** What is wrong with one field of a form, for the page to mark it before
  * the post (#268): `required`, empty; `id`, not a tt… or Q…; `film`, not a
  * tt…; `rating`, off the scale; `target`, a Veto with neither an id nor a
- * tag group; `reaction`, a reaction with no target to react to. */
+ * tag group; `both`, a Veto with both; `reaction`, a reaction with no
+ * target to react to. */
 export type FieldProblem = {
   field: string
-  problem: 'required' | 'id' | 'film' | 'rating' | 'target' | 'reaction'
+  problem:
+    | 'required'
+    | 'id'
+    | 'film'
+    | 'rating'
+    | 'target'
+    | 'reaction'
+    | 'both'
 }
 
 const statementProblem = (form: FormData): FieldProblem | null => {
@@ -262,7 +272,8 @@ const PROBLEMS: Partial<
   vetar: (form) => {
     const target = field(form, 'alvo')
     if (!field(form, 'texto')) return { field: 'texto', problem: 'required' }
-    if (field(form, 'grupo') !== undefined) return null
+    if (field(form, 'grupo') !== undefined)
+      return target === undefined ? null : { field: 'alvo', problem: 'both' }
     if (target === undefined) return { field: 'alvo', problem: 'target' }
     return ID.test(target) ? null : { field: 'alvo', problem: 'id' }
   },
@@ -352,6 +363,7 @@ const PROBLEM_KINDS = [
   'rating',
   'target',
   'reaction',
+  'both',
 ] as const
 
 /** A field problem as `?campo=` carries it: `alvo:target`. */
@@ -393,6 +405,10 @@ export const PERSON_NOTICES = [
   'removida',
 ] as const
 export type PersonNotice = (typeof PERSON_NOTICES)[number]
+
+/** What an action did: its notice, and for an edit the item as it is now
+ * (its fato_id), which the page marks (#330). */
+export type PersonDone = PersonNotice | { notice: 'editado'; item: string }
 
 /** Why not, in `?erro=`. */
 export const PERSON_REFUSALS = [
@@ -442,10 +458,16 @@ export const isPeopleRefusal = (value: unknown): value is PeopleRefusal =>
 export const isPeopleNotice = (value: unknown): value is 'removida' =>
   value === 'removida'
 
+/** A fato_id in the query (`vetos:3f2a…`), or undefined. */
+const factIdParam = (value: unknown) =>
+  typeof value === 'string' && /^[a-z_]+:[\w-]+$/.test(value)
+    ? value
+    : undefined
+
 /** The query of a Pessoa's page and Meu gosto: what the last form did
  * (`feito`, `erro`), where (`em`) and, refused, the field it was
  * (`campo`); before the JavaScript, the item open for editing
- * (`editar`). */
+ * (`editar`); after an edit, the item it saved (`item`). */
 export const personSearch = (search: Record<string, unknown>) => ({
   feito: isPersonNotice(search.feito) ? search.feito : undefined,
   erro: isPersonRefusal(search.erro) ? search.erro : undefined,
@@ -460,10 +482,9 @@ export const personSearch = (search: Record<string, unknown>) => ({
       ? undefined
       : (search.campo as string),
   // The item open for editing before the JavaScript (#330): its fato_id.
-  editar:
-    typeof search.editar === 'string' && /^[a-z_]+:[\w-]+$/.test(search.editar)
-      ? search.editar
-      : undefined,
+  editar: factIdParam(search.editar),
+  // The item an edit just saved (#330): its fato_id, marked on the page.
+  item: factIdParam(search.item),
 })
 
 /** A Relato's source when the form gives none: who told it, since several

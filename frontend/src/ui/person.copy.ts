@@ -168,14 +168,34 @@ export const PERSON = {
     open: 'Editar',
     label: (what: string) => `Editar ${what}`,
     cancel: 'Cancelar',
+    /** Above the open form: which item it is, as it was. */
+    heading: (kind: string) => `Editando ${kind}`,
+    kinds: {
+      veto: 'o Veto',
+      stated: 'o Declarado',
+      report: 'o Relato',
+      seen: 'o Já visto',
+    },
     /** In an item's line: the day of its last edit, after its own date. */
     on: (date: string) => `editado ${date}`,
+    /** Beside the item an edit just saved. */
+    saved: 'Editado',
+    /** Another "Editar", or Esc, while the open form has changes. */
+    held: 'Esta edição tem mudanças: grave ou cancele antes de sair dela.',
     /** A Já visto's film stays: another film is another Já visto. */
     filmFixed: 'Para trocar o filme, tire este Já visto e acrescente o certo.',
+    /** The Fonte of an edit: left empty, the one it had stays. */
+    sourceHint: 'vazia, fica a de antes',
+    /** Why an imported item has no "Editar", for a screen reader. */
+    readOnly: 'veio de fora; corrija na origem',
   },
   remove: 'Tirar',
   removeLabel: (what: string) => `Tirar ${what}`,
   removing: 'Tirando…',
+  /** "Tirar" asks first (#330). */
+  removeSure: (what: string) => `Tirar ${what} de vez`,
+  removeSureShort: 'Tirar de vez',
+  removeKeep: 'Manter',
   save: 'Gravar',
   saving: 'Gravando…',
   imported: 'importado',
@@ -184,7 +204,7 @@ export const PERSON = {
   ownNotices: {
     gravado: 'Gravado no seu arquivo.',
     removido: 'Tirado do seu arquivo.',
-    editado: 'Corrigido no seu arquivo.',
+    editado: 'Editado no seu arquivo.',
   } satisfies Partial<Record<PersonNotice, string>>,
   /** What the last form did, by her name (#273): every Pessoa is not
    * "ela". */
@@ -194,7 +214,7 @@ export const PERSON = {
       igual: 'Já estava assim: nada mudou.',
       ajustado: 'gravado',
       removido: `Tirado do arquivo de ${name}.`,
-      editado: `Corrigido no arquivo de ${name}.`,
+      editado: `Editado no arquivo de ${name}.`,
       pulada: 'Pergunta pulada: ela volta uma vez, quando o assunto aparecer.',
       saiu: 'Pulada duas vezes: a pergunta saiu da lista.',
       respondida: 'Resposta gravada como Declarado; a pergunta saiu da lista.',
@@ -302,8 +322,8 @@ export const PERSON = {
     source: reportSource,
   },
   seen: {
-    title: 'Já vistos sem Nota',
-    empty: 'Nenhum Já visto sem Nota: os filmes com Nota estão nas Notas.',
+    title: 'Já vistos',
+    empty: 'Nenhum Já visto dito aqui. As Notas do site ficam nas Notas.',
     add: 'Acrescentar Já visto',
     source: 'conversa com o Dono',
   },
@@ -387,6 +407,8 @@ export const PERSON = {
       return 'Busque pelo nome e escolha um resultado do Catálogo.'
     if (problem === 'target')
       return 'Falta o alvo: um filme, uma pessoa, um gênero ou um grupo.'
+    if (problem === 'both')
+      return 'Escolha um só: o alvo ou o grupo. O Veto vale para um deles.'
     if (problem === 'reaction')
       return 'Uma reação precisa de um alvo: diga sobre o quê.'
     return REQUIRED[field] ?? 'Falta preencher este campo.'

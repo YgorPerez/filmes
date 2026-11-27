@@ -282,11 +282,13 @@ export const EditingSeen: Story = {
   args: { editing: 'vistos:1' },
 }
 
-/** A corrected Já visto: its own date, then the day of the edit. */
+/** A Já visto just edited: marked in its place, its own date, then the
+ * day of the edit. */
 export const EditedItem: Story = {
   args: {
     notice: 'editado',
     spot: 'vistos',
+    saved: 'vistos:1',
     page: {
       ...IARA,
       seen: IARA.seen.map((s) => ({ ...s, rating: 4, edited: '2026-11-27' })),

@@ -540,10 +540,93 @@ describe('PersonScreen edit', () => {
     expect(document.activeElement).toBe(again)
   })
 
+  it('marks the result or the group of a Veto, never both', async () => {
+    const { user, form } = await edit('nunca vê terror')
+    await user.click(within(form).getByRole('radio', { name: 'lento' }))
+    expect(within(form).queryByText('Terror')).toBeNull()
+    expect(posted(form)).toEqual({
+      kind: 'edit',
+      what: 'veto',
+      id: 'vetos:1',
+      text: 'nunca vê terror',
+      target: 'slow',
+    })
+  })
+
+  it('holds an edit with changes: another Editar or Esc says why and keeps it', async () => {
+    const { user, form } = await edit('nunca vê terror')
+    await user.type(
+      within(form).getByLabelText(PERSON.vetoes.text, { exact: false }),
+      ' nunca',
+    )
+    await user.click(
+      screen.getByRole('button', { name: PERSON.edit.label('Casa Cheia') }),
+    )
+    expect(within(form).getByRole('alert').textContent).toBe(PERSON.edit.held)
+    expect(
+      screen.queryByRole('form', { name: PERSON.edit.label('Casa Cheia') }),
+    ).toBeNull()
+    await user.keyboard('{Escape}')
+    expect(form.isConnected).toBe(true)
+  })
+
+  it('leaves a form without changes on Esc', async () => {
+    const { user } = await edit('Casa Cheia')
+    await user.keyboard('{Escape}')
+    expect(
+      screen.queryByRole('form', { name: PERSON.edit.label('Casa Cheia') }),
+    ).toBeNull()
+  })
+
+  it('says which item is open, and keeps the add form out of the way', async () => {
+    const { form } = await edit('nunca vê terror')
+    expect(
+      within(form).getByText(PERSON.edit.heading(PERSON.edit.kinds.veto)),
+    ).toBeTruthy()
+    expect(within(form).getByText('Terror · 19 nov 2026')).toBeTruthy()
+    expect(
+      within(section(PERSON.vetoes.title)).queryByText(PERSON.vetoes.add),
+    ).toBeNull()
+  })
+
+  it('asks before taking an item out', async () => {
+    const user = userEvent.setup()
+    await user.click(
+      screen.getByRole('button', { name: PERSON.removeLabel('Casa Cheia') }),
+    )
+    const sure = screen.getByRole('button', {
+      name: PERSON.removeSure('Casa Cheia'),
+    })
+    expect(document.activeElement).toBe(sure)
+    await user.click(screen.getByRole('button', { name: PERSON.removeKeep }))
+    expect(document.activeElement).toBe(
+      screen.getByRole('button', { name: PERSON.removeLabel('Casa Cheia') }),
+    )
+  })
+
   it('offers no Editar on what came from an import', () => {
     expect(
       screen.queryByRole('button', { name: PERSON.edit.label('Ótimo') }),
     ).toBeNull()
+  })
+})
+
+describe('PersonScreen after an edit', () => {
+  it('marks the item it saved, not the ficha', () => {
+    render(
+      <PersonScreen
+        slug="iara"
+        page={IARA}
+        notice="editado"
+        spot="vistos"
+        saved="vistos:1"
+      />,
+    )
+    const row = screen
+      .getByRole('button', { name: PERSON.edit.label('Casa Cheia') })
+      .closest('li')!
+    expect(within(row).getByRole('status').textContent).toBe(PERSON.edit.saved)
+    expect(screen.queryByText(PERSON.notices('Iara').editado)).toBeNull()
   })
 })
 
@@ -1284,6 +1367,22 @@ describe('formProblem', () => {
     [
       { acao: 'vetar', texto: 'x', alvo: 'x1' },
       { field: 'alvo', problem: 'id' },
+    ],
+    [
+      { acao: 'vetar', texto: 'x', alvo: 'Q1', grupo: 'slow' },
+      { field: 'alvo', problem: 'both' },
+    ],
+    [
+      { acao: 'editar', tipo: 'veto', id: 'vetos:1', texto: '' },
+      { field: 'texto', problem: 'required' },
+    ],
+    [
+      { acao: 'editar', tipo: 'seen', id: 'vistos:1', nota: '11/10' },
+      { field: 'nota', problem: 'rating' },
+    ],
+    [
+      { acao: 'editar', tipo: 'stated', id: 'declarados:1' },
+      { field: 'texto', problem: 'required' },
     ],
     [{ acao: 'responder' }, { field: 'texto', problem: 'required' }],
     [{ acao: 'dar-acesso' }, { field: 'email', problem: 'required' }],
