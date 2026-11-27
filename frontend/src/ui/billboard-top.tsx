@@ -34,8 +34,20 @@ export function Strength({
   )
 }
 
-/** In Claude, where no page head names them: a Presente per avatar with her name, and the three Forças in words on
- * a line of their own, so the legend never runs into the names (#277). */
+/** "pesa contra", the mark of an Evidência against the film (#272): a
+ * label in its outline, beside the text it qualifies. */
+export function AgainstMark() {
+  return (
+    <span className="inline-block rounded-pill border-(length:--border-width-stroke) border-rule px-1.5 align-[1px] font-display text-label whitespace-nowrap text-ink-2 uppercase">
+      {BILLBOARD.against}
+    </span>
+  )
+}
+
+/** In Claude, where no page head names them: a Presente per avatar with
+ * her name ("Você" for the Dono who looks), and the three Forças in words
+ * on a line of their own, so the legend never runs into the names
+ * (#277). */
 export function PeopleLegend({ billboard }: { billboard: BillboardModel }) {
   return (
     <div className="flex flex-col gap-xs text-meta text-ink-2">
@@ -46,7 +58,7 @@ export function PeopleLegend({ billboard }: { billboard: BillboardModel }) {
             className="inline-flex items-center gap-xs text-ink"
           >
             <Avatar person={p} />
-            {p.name}
+            {p.label}
           </span>
         ))}
       </p>
@@ -83,6 +95,9 @@ export function Legend() {
             </li>
           ))}
         </ul>
+        <p>
+          <AgainstMark /> {BILLBOARD.againstLegend}
+        </p>
       </div>
     </details>
   )

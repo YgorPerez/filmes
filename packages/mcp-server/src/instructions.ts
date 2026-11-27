@@ -164,7 +164,7 @@ Cada linha de Evidência começa pelo marcador da Força (\`●●●\` forte, \
 
 Fato sobre 1 de 2; sem fato: Teo
 
-- ●●● **Você:** deu 5 a O Farol de Areia (2012), também de Helena Prado (Letterboxd do Bruno, 2025-06-01) *(nota)*
+- ●●● **Você:** deu 10 de 10 a O Farol de Areia (2012), também de Helena Prado (Letterboxd do Bruno, 2025-06-01) *(nota)*
 - ●○○ **Teo:** sem fato *(palpite)*
 \`\`\`
 

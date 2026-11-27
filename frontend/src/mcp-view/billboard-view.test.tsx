@@ -97,9 +97,9 @@ describe('the view shows', () => {
   it('the Nota prevista the tool result carries', () => {
     render(<BillboardView result={shown} host={fakeHost(json({}))} />)
     const name = card(1).getByRole('button', {
-      name: 'Bruno: pela nota de 12 pessoas de gosto parecido',
+      name: 'Você: pela nota de 12 pessoas de gosto parecido',
     })
-    expect(name.closest('p')?.textContent).toMatch(/^previsto · Bruno.* 8,3$/u)
+    expect(name.closest('p')?.textContent).toMatch(/^previsto · Você.* 8,3$/u)
   })
 
   it("plain words for the engine's error, never its message", () => {

@@ -382,7 +382,9 @@ describe('decidePairwise', () => {
       weightsWith(fixture, 'min_ratings = 20', 'min_ratings = 5'),
     )
     const threes = films.flatMap((film) =>
-      (film.evidence['teo'] ?? []).filter((e) => e.text.startsWith('deu 3 a')),
+      (film.evidence['teo'] ?? []).filter((e) =>
+        e.text.startsWith('deu 6 de 10 a'),
+      ),
     )
     expect(threes.length).toBeGreaterThan(0)
     for (const seed of threes) {

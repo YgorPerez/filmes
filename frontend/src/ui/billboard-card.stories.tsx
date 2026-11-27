@@ -2,7 +2,8 @@
 // marked Trocar, a Trocar the stars marked, and read-only once the Session
 // has its Feedback; the Nota prevista line under "Por que", without one,
 // with a Presente without a Fato, and six Presentes on a phone; the
-// trailer link, and a film without one.
+// trailer link, and a film without one; a film the Dono saw before, whose
+// Já visto weighs against it, and four Presentes, Todos beside the label.
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
 import { expect, userEvent, within } from 'storybook/test'
@@ -122,8 +123,8 @@ export const Kept: Story = {
 }
 
 /** Once told: the past tense, and the stars given say "4 de 5" (#272).
- * Bruno has a Nota prevista, Iara none; a tap on his name opens its hint
- * under it. */
+ * Bruno, who looks, has a Nota prevista, as "Você" (#277), Iara none; a
+ * tap on his name opens its hint under it. */
 export const ReadOnly: Story = {
   args: { film: { ...FILM, notes: { stars: 4, comments: [] } } },
   play: async ({ canvasElement }) => {
@@ -131,7 +132,7 @@ export const ReadOnly: Story = {
     await expect(canvas.getByText('Por que estava na lista')).toBeVisible()
     await expect(canvas.getByText('4 de 5')).toBeVisible()
     const hint = 'pela nota de 12 pessoas de gosto parecido'
-    const name = canvas.getByRole('button', { name: `Bruno: ${hint}` })
+    const name = canvas.getByRole('button', { name: `Você: ${hint}` })
     await expect(canvas.getByText(hint)).not.toBeVisible()
     await userEvent.click(name)
     const popover = canvas.getByText(hint)
@@ -153,7 +154,7 @@ export const UnderSection: Story = { args: { level: 3 } }
 export const NoReasonOfItsOwn: Story = {
   args: {
     level: 3,
-    film: { ...FILM, lines: [], predictedRatings: [], withoutFact: ['iara'] },
+    film: { ...FILM, lines: [], predictedRatings: [], withoutFact: [] },
   },
   play: async ({ canvasElement }) => {
     await expect(
@@ -276,5 +277,50 @@ export const ManyPresentes: Story = {
       await expect(box.left).toBeGreaterThanOrEqual(card.left)
       await expect(box.right).toBeLessThanOrEqual(card.right)
     }
+  },
+}
+
+/** The engine knows Bruno saw it: the case says JÁ VI with his dot, and
+ * his Já visto reads "pesa contra", never a reason to like it (#272). */
+export const SeenBefore: Story = {
+  args: {
+    film: {
+      ...FILM,
+      lines: [
+        {
+          people: ['bruno'],
+          strength: 'strong',
+          text: 'já viu',
+          source: 'Letterboxd do Bruno',
+          against: true,
+        },
+      ],
+      seen: ['bruno'],
+    },
+  },
+  render: (args) => <Marked {...args} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('pesa contra')).toBeVisible()
+    await expect(canvas.getByText('Já vi: Você')).toBeInTheDocument()
+  },
+}
+
+/** Four Presentes: Todos goes beside the "JÁ VI" label, and the four
+ * names fit one line of a phone (#272). */
+export const FourPresentes: Story = {
+  args: { people: [BRUNO!, IARA!, ...MORE.slice(2)] },
+  render: (args) => <Marked {...args} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const all = canvas.getByRole('button', { name: 'Todos' })
+    const teo = canvas.getByRole('button', { name: 'Teo' })
+    const you = canvas.getByRole('button', { name: 'Você' })
+    await expect(all.getBoundingClientRect().bottom).toBeLessThanOrEqual(
+      you.getBoundingClientRect().top,
+    )
+    await expect(teo.getBoundingClientRect().top).toBe(
+      you.getBoundingClientRect().top,
+    )
   },
 }

@@ -3,11 +3,11 @@
 //
 // The Evidence lines are read back from their wording, which lives with each
 // path: the content path (`signals/content.ts`: "dirigido por X, como 3
-// filmes a que deu nota alta" and "deu 5 a F, também de X"; "com fotografia
+// filmes a que deu nota alta" and "deu 10 de 10 a F, também de X"; "com fotografia
 // de X" goes before "com X" and its "também com X"), Declarados and
 // Relatos about an entity (`signals/stated.ts`: `disse "..."; dirigido por
-// X`), the MovieLens neighbours (`signals/neighbors.ts`: "deu 5 a F; das
-// 1.000 pessoas...") and the taste neighbours (`wording.ts`). Any other line
+// X`), the MovieLens neighbours (`signals/neighbors.ts`: "deu 10 de 10 a
+// F; das 1.000 pessoas...") and the taste neighbours (`wording.ts`). Any other line
 // (Já visto, a film line, a guess) is no Motivo.
 //
 // Only Evidence for the film counts: its contribution is positive. The
@@ -32,14 +32,16 @@ export interface FilmReason {
 
 type Line = Pick<EvidenceJson, 'text' | 'kind' | 'contribution'>
 
-const SEED = String.raw`(?:deu [\d,]+ a|disse que ama|segundo o Dono, ama)`
+// A line of a Session from before #272 says "deu 5 a" and "deram 4 ou
+// mais"; the Motivo reads both.
+const SEED = String.raw`(?:deu [\d,]+(?: de 10)? a|disse que ama|segundo o Dono, ama)`
 const HIGH = String.raw`como \d+ filmes? a que deu nota alta`
 
 /** Each wording and what it is about, the more specific first. */
 const READINGS: ReadonlyArray<readonly [RegExp, ReasonKind]> = [
   [
     new RegExp(
-      String.raw`^${SEED} (.+); das [\d.]+ pessoas que deram 4 ou mais a ele, \d+% fizeram o mesmo com este$`,
+      String.raw`^${SEED} (.+); das [\d.]+ pessoas que deram [48] ou mais a ele, \d+% fizeram o mesmo com este$`,
       'u',
     ),
     'film',
@@ -67,7 +69,7 @@ const READINGS: ReadonlyArray<readonly [RegExp, ReasonKind]> = [
 ]
 
 /** The Motivo a line reads as, without who: `kind` and `name`. */
-const readLine = (text: string): Omit<FilmReason, 'people'> | null => {
+export const readLine = (text: string): Omit<FilmReason, 'people'> | null => {
   for (const [pattern, kind] of READINGS) {
     const match = pattern.exec(text)
     if (match === null) continue
@@ -77,7 +79,7 @@ const readLine = (text: string): Omit<FilmReason, 'people'> | null => {
   return null
 }
 
-const sameReason = (
+export const sameReason = (
   a: Omit<FilmReason, 'people'>,
   b: Omit<FilmReason, 'people'>,
 ) => a.kind === b.kind && a.name === b.name

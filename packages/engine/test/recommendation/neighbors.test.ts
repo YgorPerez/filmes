@@ -36,7 +36,7 @@ describe('the neighbourhood path', () => {
     const e = one(await all(fixture), 'A Casa das Marés')
 
     expect(e?.text).toBe(
-      'deu 5 a O Farol de Areia (2012); das 3.104 pessoas que deram 4 ou mais a ele, 64% fizeram o mesmo com este',
+      'deu 10 de 10 a O Farol de Areia (2012); das 3.104 pessoas que deram 8 ou mais a ele, 64% fizeram o mesmo com este',
     )
     expect([e?.strength, e?.source, e?.date]).toEqual([
       'strong',
@@ -63,7 +63,7 @@ describe('the neighbourhood path', () => {
     ])
     expect(
       moderate?.text.endsWith(
-        'das 250 pessoas que deram 4 ou mais a ele, 44% fizeram o mesmo com este',
+        'das 250 pessoas que deram 8 ou mais a ele, 44% fizeram o mesmo com este',
       ),
     ).toBe(true)
     expect([weak?.strength, weak?.contribution]).toEqual(['weak', 0.2042])
@@ -93,8 +93,8 @@ describe('the neighbourhood path', () => {
         ]),
       ),
     ).toEqual({
-      'deu 3,5 a Rio Abaixo (2014)': 'weak',
-      'deu 5 a Fronteira (2008)': 'strong',
+      'deu 7 de 10 a Rio Abaixo (2014)': 'weak',
+      'deu 10 de 10 a Fronteira (2008)': 'strong',
     })
   })
 
@@ -111,8 +111,8 @@ describe('the neighbourhood path', () => {
         ]),
       ),
     ).toEqual({
-      'deu 3,5 a Rio Abaixo (2014)': 0.1792,
-      'deu 5 a Fronteira (2008)': 0.3363,
+      'deu 7 de 10 a Rio Abaixo (2014)': 0.1792,
+      'deu 10 de 10 a Fronteira (2008)': 0.3363,
     })
   })
 
@@ -130,7 +130,7 @@ describe('the neighbourhood path', () => {
     )
 
     const [e] = reviews(await all(fixture), 'Luz de Inverno').filter((x) =>
-      x.text.startsWith('deu 3,5 a Rio Abaixo'),
+      x.text.startsWith('deu 7 de 10 a Rio Abaixo'),
     )
     expect(e?.strength).toBe('moderate')
   })
@@ -157,7 +157,7 @@ describe('the neighbourhood path', () => {
     )
 
     expect(texts).toHaveLength(1)
-    expect(texts[0]?.startsWith('deu 5 a Fronteira (2008)')).toBe(true)
+    expect(texts[0]?.startsWith('deu 10 de 10 a Fronteira (2008)')).toBe(true)
   })
 
   test('it holds for each Presente with her own Notas', async () => {
@@ -168,7 +168,7 @@ describe('the neighbourhood path', () => {
     )
 
     expect(e?.text).toBe(
-      'deu 4 a Fronteira (2008); das 150 pessoas que deram 4 ou mais a ele, 42% fizeram o mesmo com este',
+      'deu 8 de 10 a Fronteira (2008); das 150 pessoas que deram 8 ou mais a ele, 42% fizeram o mesmo com este',
     )
     expect(e?.strength).toBe('moderate')
   })
@@ -179,7 +179,7 @@ describe('the neighbourhood path', () => {
 
     const e = one(await all(fixture, 'ana'), 'A Casa das Marés', 'ana')
     expect(e?.text).toBe(
-      'disse que ama O Farol de Areia (2012); das 3.104 pessoas que deram 4 ou mais a ele, 64% fizeram o mesmo com este',
+      'disse que ama O Farol de Areia (2012); das 3.104 pessoas que deram 8 ou mais a ele, 64% fizeram o mesmo com este',
     )
     expect(e?.strength).toBe('strong')
   })
@@ -220,13 +220,13 @@ describe('the neighbourhood path', () => {
     expect(moderate?.strength).toBe('moderate')
     expect(
       moderate?.text.endsWith(
-        'das 600 pessoas que deram 4 ou mais a ele, 40% fizeram o mesmo com este',
+        'das 600 pessoas que deram 8 ou mais a ele, 40% fizeram o mesmo com este',
       ),
     ).toBe(true)
     expect(weak?.strength).toBe('weak')
     expect(
       weak?.text.endsWith(
-        'das 600 pessoas que deram 4 ou mais a ele, 25% fizeram o mesmo com este',
+        'das 600 pessoas que deram 8 ou mais a ele, 25% fizeram o mesmo com este',
       ),
     ).toBe(true)
   })

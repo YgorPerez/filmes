@@ -239,6 +239,7 @@ describe('the Cartaz model', () => {
         strength: strongest.strength,
         text: strongest.text,
         source: strongest.source || null,
+        against: false,
       },
     ])
   })
@@ -960,5 +961,70 @@ describe('the Cartaz model, what the Dono gave each film (#272)', () => {
       stars: 4,
       comments: ['curto'],
     })
+  })
+})
+
+describe('the Cartaz model, what weighs against the film (#272)', () => {
+  test('a Já visto is a line against the film, and the case knows who saw it', async () => {
+    const fixture = useFixture()
+    const session = await recommend(fixture, { attendees: ['dono'] })
+
+    const model = await fixture.ok(
+      billboardModel({ session: session.session.id }),
+    )
+
+    const seen = model.films.filter((f) => f.seen.includes('bruno'))
+    expect(seen.length).toBeGreaterThan(0)
+    expect(
+      seen
+        .flatMap((card) => card.lines)
+        .filter((l) => l.text === 'já viu')
+        .every((l) => l.against),
+    ).toBe(true)
+    for (const card of model.films)
+      for (const line of card.lines)
+        expect(line.against).toBe(
+          session.films
+            .find((f) => f.id === card.id)!
+            .evidence['bruno']!.some(
+              (e) => e.text === line.text && e.contribution < 0,
+            ),
+        )
+  })
+
+  test('a line marked against in the body reads so; a Já visto of a Session written before the mark too', async () => {
+    const fixture = useFixture()
+    const session = await recommend(fixture, { attendees: ['dono'] })
+    const id = session.session.id
+    const first = session.films[0]!
+    await fixture.ok(
+      Effect.gen(function* () {
+        const { frontmatter, body } = yield* readSession(id)
+        const lines = body.split('\n')
+        const at = lines.findIndex((l) => l.includes(first.id))
+        // Bruno's Evidence of the first film: a Nota against, and a Já
+        // visto as a Session before #272 wrote it, unmarked.
+        lines.splice(
+          at + 2,
+          0,
+          '     - Evidência: deu 2 de 10 a X (2001), também de Y · Fonte: Letterboxd do Bruno, 2025-01-01 · Força: forte · Tipo: nota · Sentido: contra',
+          '     - Evidência: já viu · Fonte: Letterboxd do Bruno, 2025-01-02 · Força: forte · Tipo: nota',
+        )
+        yield* writeSession(id, frontmatter, lines.join('\n'))
+      }),
+    )
+
+    const [card] = (await fixture.ok(billboardModel({ session: id }))).films
+
+    expect(card!.lines).toEqual([
+      {
+        people: ['bruno'],
+        strength: 'strong',
+        text: 'deu 2 de 10 a X (2001), também de Y',
+        source: 'Letterboxd do Bruno',
+        against: true,
+      },
+    ])
+    expect(card!.seen).toEqual(['bruno'])
   })
 })

@@ -3,9 +3,9 @@
 //
 // Each Nota in favour of the Pessoa on a film X (by its percentile on her
 // scale), or her stated "ama", is a seed.
-// For each neighbour Y of X that is a Candidate, one review Evidence: "deu 5
-// a X; das 3.104 pessoas que deram 4 ou mais a ele, 64% fizeram o mesmo com
-// este". The
+// For each neighbour Y of X that is a Candidate, one review Evidence: "deu
+// 10 de 10 a X; das 3.104 pessoas que deram 8 ou mais a ele, 64% fizeram o
+// mesmo com este" (on the 1 to 10 scale, #272). The
 // strength comes from the base and the share, capped by the seed's
 // strength; a Nota seed's Decaimento (`decay.ts`) scales the weight. A
 // stated rating opens the line as on the content path and has
@@ -20,7 +20,7 @@ import {
   seedStrength,
   type SeedKind,
 } from '../../evidence/ruler.ts'
-import { filmText, integerText, seedText } from '../../evidence/wording.ts'
+import { filmText, neighborhoodText, seedText } from '../../evidence/wording.ts'
 import { num, numOrNull, text, textOrNull } from '../../sqlite/row.ts'
 import { kindOf } from '../../sqlite/vocabulary.ts'
 import { candidatesJson, scaleOf, type Signal } from './Signal.ts'
@@ -70,8 +70,7 @@ export const neighbors: Signal = {
             filmId: candidate,
             text:
               `${seedText(kind, num(row, 'nota'), film)}; ` +
-              `das ${integerText(base)} pessoas que deram 4 ou mais a ele, ` +
-              `${Math.floor((100 * both) / base)}% fizeram o mesmo com este`,
+              neighborhoodText(base, both),
             source: text(row, 'fonte'),
             date: text(row, 'data'),
             strength,

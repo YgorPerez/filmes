@@ -395,7 +395,7 @@ describe('a Session’s page, the acrescentar', () => {
     const [addition] = screen.getAllByRole('status')
     // The reading as a sentence (#272).
     expect(addition!.textContent).toBe(
-      'Entendi: Iara, até 1h50. ' +
+      'Iara entrou na Sessão. Acrescentei ao pedido até 1h50. ' +
         'Deixei “Zeca” só como anotação. ' +
         '“Reprise” pode ser Reprise (2011) ou Reprise (2004). Diga qual na próxima vez. ' +
         '“Amélie” não está no Catálogo. ' +
@@ -404,6 +404,28 @@ describe('a Session’s page, the acrescentar', () => {
     expect(within(addition!).getByRole('link').getAttribute('href')).toBe(
       '/pessoas',
     )
+  })
+})
+
+describe('a Session’s page, an acrescentar all understood', () => {
+  it('says who came in, with no word about keeping a gosto (#272)', () => {
+    render(
+      <SessionScreen
+        page={{
+          ...PAGE,
+          addition: 'chegou a Rosa e a Iara',
+          reading: {
+            understood: ['Presente: Rosa', 'Presente: Iara'],
+            notUnderstood: [],
+            ambiguities: [],
+          },
+        }}
+        notice="regerada"
+      />,
+    )
+    const [addition] = screen.getAllByRole('status')
+    expect(addition!.textContent).toBe('Rosa e Iara entraram na Sessão.')
+    expect(within(addition!).queryByRole('link')).toBeNull()
   })
 })
 
@@ -438,13 +460,13 @@ describe('a Session’s page, an acrescentar only noted and a told Session', () 
           ...PAGE,
           session: CLOSED,
           billboard: { ...MODEL, open: false },
-          satisfaction: ['satisfação de Quim nas últimas Sessões: 40%'],
         }}
       />,
     )
     const tape = screen.getByRole('region', { name: SESSIONS.session.returned })
     expect(tape.textContent).toContain('Pequenos Milagres')
-    expect(tape.textContent).toContain('satisfação de Quim')
+    // A record: no Satisfação of now, which later Sessions change (#272).
+    expect(tape.textContent).not.toContain('satisfação')
     expect(
       within(tape)
         .getByRole('link', { name: SESSIONS.session.again })

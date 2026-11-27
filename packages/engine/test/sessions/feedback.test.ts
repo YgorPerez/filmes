@@ -98,7 +98,7 @@ const firstFacts = (source: string) => [
   // Feedback, both go up to strong.
   {
     person: 'bruno',
-    text: 'deu 4 a Noite de Estreia (2022)',
+    text: 'deu 8 de 10 a Noite de Estreia (2022)',
     source,
     date: '2026-11-20',
     strength: 'strong',
@@ -106,7 +106,7 @@ const firstFacts = (source: string) => [
   },
   {
     person: 'iara',
-    text: 'deu 2 a Noite de Estreia (2022)',
+    text: 'deu 4 de 10 a Noite de Estreia (2022)',
     source: `${source}, repassado pelo Dono`,
     date: '2026-11-20',
     strength: 'strong',
@@ -280,11 +280,11 @@ describe('feedback', () => {
         .map((e) => [e.text, [e.source, e.strength]]),
     )
     expect(seeds).toEqual({
-      'deu 4 a Jardim Suspenso (2017), também de Marta Quintal': [
+      'deu 8 de 10 a Jardim Suspenso (2017), também de Marta Quintal': [
         'Letterboxd do Bruno',
         'moderate',
       ],
-      'deu 4 a Vento Norte (2020), também de Marta Quintal': [
+      'deu 8 de 10 a Vento Norte (2020), também de Marta Quintal': [
         'Feedback da Sessão 2026-11-20',
         'strong',
       ],
@@ -726,7 +726,7 @@ describe('a Nota on the scale of 10, and a comment per Presente (#40)', () => {
     ).toEqual({
       bruno: 'deu 9/10 a Noite de Estreia (2022)',
       iara: 'deu 7/10 a Noite de Estreia (2022)',
-      teo: 'deu 4 a Noite de Estreia (2022)',
+      teo: 'deu 8 de 10 a Noite de Estreia (2022)',
     })
   })
 })

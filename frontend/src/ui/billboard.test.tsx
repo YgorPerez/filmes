@@ -176,14 +176,14 @@ describe('the Cartaz shows, shared Evidence and the Nota prevista', () => {
       within(card(n).getByRole('list', { name: BILLBOARD.card.why }))
     const [shared] = why(1).getAllByRole('listitem')
     expect(shared!.textContent).toBe(
-      'Bruno e Iara: dirigido por Helena Prado, como 2 filmes a que deu nota altaWikidata',
+      'Você e Iara: dirigido por Helena Prado, como 2 filmes a que deu nota altaWikidata',
     )
     expect(within(shared!).getByLabelText('Força moderada').dataset.level).toBe(
       '2',
     )
     expect(card(1).getByText('Fato sobre 2 de 2')).toBeTruthy()
     const [strong, without] = why(2).getAllByRole('listitem')
-    expect(strong!.textContent).toBe('Bruno: deu 5 a Maré Baixa')
+    expect(strong!.textContent).toBe('Você: deu 10 de 10 a Maré Baixa')
     expect(within(strong!).getByLabelText('Força forte').dataset.level).toBe(
       '3',
     )
@@ -202,9 +202,9 @@ describe('the Cartaz shows, shared Evidence and the Nota prevista', () => {
     }
     render(<Billboard billboard={{ ...MODEL, films: [film] }} />)
     const line = card(1).getByText(/^previsto/)
-    expect(visibleText(line)).toBe('previsto · Bruno 8,3 · Iara 7,1')
+    expect(visibleText(line)).toBe('previsto · Você 8,3 · Iara 7,1')
     const name = within(line).getByRole('button', {
-      name: 'Bruno: pela nota de 4 pessoas de gosto parecido',
+      name: 'Você: pela nota de 4 pessoas de gosto parecido',
     })
     const popover = document.getElementById(
       name.getAttribute('popovertarget')!,
@@ -226,7 +226,7 @@ describe('the Cartaz shows, shared Evidence and the Nota prevista', () => {
   it('a Presente without a Nota prevista is left out, and no line without any', () => {
     render(<Billboard billboard={MODEL} />)
     expect(visibleText(card(1).getByText(/^previsto/))).toBe(
-      'previsto · Bruno 8,3',
+      'previsto · Você 8,3',
     )
     expect(card(2).queryByText(/^previsto/)).toBeNull()
   })
@@ -239,7 +239,7 @@ describe('the Cartaz shows, shared Evidence and the Nota prevista', () => {
     }
     render(<Billboard billboard={{ ...MODEL, films: [film] }} />)
     const line = card(1).getByText(/^previsto/)
-    expect(line.textContent).toBe('previsto · Bruno 8,3')
+    expect(line.textContent).toBe('previsto · Você 8,3')
     expect(within(line).queryByRole('button')).toBeNull()
   })
 })
@@ -255,7 +255,7 @@ describe('the Cartaz shows, Evidence, dots and the cover', () => {
     render(<Billboard billboard={{ ...MODEL, films: [film] }} />)
     const why = within(card(1).getByRole('list', { name: BILLBOARD.card.why }))
     expect(why.getAllByRole('listitem').map((li) => li.textContent)).toEqual([
-      'deu 5 a Maré Baixa',
+      'deu 10 de 10 a Maré Baixa',
     ])
   })
 
@@ -427,7 +427,7 @@ describe('the Cartaz shows, section lines and no film', () => {
     const together = screen.getByRole('list', { name: BILLBOARD.shared })
     expect(together.textContent).toContain(shared.text)
     expect(card(1).queryByText(shared.text)).toBeNull()
-    expect(card(2).getByText('deu 5 a Maré Baixa')).toBeTruthy()
+    expect(card(2).getByText('deu 10 de 10 a Maré Baixa')).toBeTruthy()
     expect(card(1).queryByRole('list', { name: 'Filme escolhido' })).toBeNull()
   })
 
@@ -487,7 +487,7 @@ describe('the marks, Trocar marked for them', () => {
     expect(card(1).getByText('Trocar marcado: Iara já viu')).toBeTruthy()
     expect(text()).toContain('1 tt9000104 · já vi: iara · trocar: já vi\n')
 
-    await user.click(card(1).getByRole('button', { name: /Você/ }))
+    await user.click(card(1).getByRole('button', { name: 'Você' }))
     expect(
       card(1).getByText('Trocar marcado: você e Iara já viram'),
     ).toBeTruthy()
@@ -591,14 +591,14 @@ describe('the marks, Climas and Todos', () => {
     const user = userEvent.setup()
     render(<Billboard billboard={MODEL} action="/x" />)
     await user.click(card(1).getByRole('button', { name: 'Todos' }))
-    expect(pressed(card(1).getByRole('button', { name: /Você/ }))).toBe(true)
+    expect(pressed(card(1).getByRole('button', { name: 'Você' }))).toBe(true)
     expect(card(1).getAllByText(BILLBOARD.card.seenStamp)).toHaveLength(2)
     expect(text()).toContain('1 tt9000104 · já vi: todos\n')
     await user.click(rating('você', 1, '9'))
     expect(text()).toContain('1 tt9000104 · já vi: bruno=9, iara\n')
     await user.click(rating('você', 1, '9'))
     expect(text()).toContain('1 tt9000104 · já vi: todos\n')
-    await user.click(card(1).getByRole('button', { name: /Você/ }))
+    await user.click(card(1).getByRole('button', { name: 'Você' }))
     expect(text()).toContain('1 tt9000104 · já vi: iara\n')
     expect(screen.queryByLabelText(/nota de você/)).toBeNull()
     await user.click(card(1).getByRole('button', { name: /Todos/ }))
@@ -1153,5 +1153,110 @@ describe('parseMarks, what does not read', () => {
     expect(parseMarks(store('[]'), MODEL)).toEqual(none)
     expect(parseMarks(store('{"films": 1}'), MODEL)).toEqual(none)
     expect(parseMarks(null, MODEL)).toEqual(none)
+  })
+})
+
+describe('the Cartaz, what weighs against a film (#272)', () => {
+  const [hours, salt] = MODEL.films
+  const seen: typeof MODEL = {
+    ...MODEL,
+    films: [
+      {
+        ...hours!,
+        lines: [
+          {
+            people: ['bruno'],
+            strength: 'strong',
+            text: 'já viu',
+            source: 'Letterboxd do Bruno',
+            against: true,
+          },
+        ],
+        seen: ['bruno'],
+      },
+      salt!,
+    ],
+  }
+
+  it('a Já visto says it weighs against, and the legend says what that is', () => {
+    render(<Billboard billboard={seen} action="/x" />)
+    const [line] = within(
+      card(1).getByRole('list', { name: BILLBOARD.card.why }),
+    ).getAllByRole('listitem')
+    expect(line!.textContent).toBe(
+      `Você: já viu ${BILLBOARD.against}Letterboxd do Bruno`,
+    )
+    expect(
+      screen.getByText(BILLBOARD.againstLegend, { exact: false }),
+    ).toBeTruthy()
+  })
+
+  it('the case is stamped JÁ VI for who the engine knows saw it, the option unpressed', () => {
+    render(<Billboard billboard={seen} action="/x" />)
+    expect(
+      card(1).getByText(BILLBOARD.card.seenStampWho(['Você'])),
+    ).toBeTruthy()
+    expect(pressed(card(1).getByRole('button', { name: 'Você' }))).toBe(false)
+  })
+})
+
+describe('the Cartaz, a section of several films (#272)', () => {
+  const [hours, salt] = MODEL.films
+  const together: typeof MODEL = {
+    ...MODEL,
+    films: [
+      { ...hours!, withoutFact: ['iara'] },
+      { ...salt!, bet: false, withoutFact: ['iara'], lines: hours!.lines },
+    ],
+    sections: [
+      {
+        kind: 'entity',
+        title: 'Porque você gosta de Helena Prado',
+        again: false,
+        films: [hours!.id, salt!.id],
+      },
+    ],
+  }
+
+  it('who has no Fato on any of them is said once with the shared lines, never lost', () => {
+    render(<Billboard billboard={together} />)
+    const shared = within(
+      screen.getByRole('list', { name: BILLBOARD.shared }),
+    ).getAllByRole('listitem')
+    expect(shared.at(-1)!.textContent).toBe(BILLBOARD.sharedWithoutFact('Iara'))
+    expect(screen.queryByText(BILLBOARD.card.withoutFact('Iara'))).toBeNull()
+  })
+})
+
+describe('the marks, Todos with more than three Presentes (#272)', () => {
+  it('goes up beside the label, still marking everyone', async () => {
+    const user = userEvent.setup()
+    const four = ['Teo', 'Rosa'].map((name, i) => ({
+      slug: name.toLowerCase(),
+      name,
+      label: name,
+      initial: name[0]!,
+      color: i + 3,
+      owner: false,
+    }))
+    render(
+      <Billboard
+        billboard={{ ...MODEL, attendees: [...MODEL.attendees, ...four] }}
+        action="/x"
+      />,
+    )
+    const row = card(1).getByRole('group', {
+      name: BILLBOARD.marks.seenGroup(1),
+    })
+    const all = within(row).getByRole('button', { name: BILLBOARD.marks.all })
+    expect(all.parentElement!.textContent).toBe(
+      `${BILLBOARD.marks.seen}${BILLBOARD.marks.all}`,
+    )
+    await user.click(all)
+    expect(
+      within(row)
+        .getAllByRole('button')
+        .every((b) => pressed(b)),
+    ).toBe(true)
   })
 })
