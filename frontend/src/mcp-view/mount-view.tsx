@@ -40,17 +40,14 @@ function setInsets(insets: HostContext['safeAreaInsets']) {
     )
 }
 
-/** The frame's `color-scheme`. The inline card has no floor and sits on
- * the host's: a frame whose scheme differs from the page around it gets an
- * opaque canvas from Chrome, so inline it declares none, as the host's
- * page does, and its colours come from `data-theme` alone (#277). The
- * fullscreen and the whole Cartaz of a host without one lay their own
- * ground, and take the theme's scheme for the native controls. */
-const schemeOf = (c: HostContext) =>
-  c.displayMode !== 'fullscreen' &&
-  c.availableDisplayModes?.includes('fullscreen')
-    ? 'normal'
-    : (c.theme ?? '')
+/** The frame's `color-scheme`: the theme's, as ext-apps'
+ * `applyDocumentTheme` sets it, which is what a host built on it expects.
+ * Where the page around the frame declares another scheme, Chrome paints
+ * an opaque canvas behind it, and that canvas is the theme's own: the dark
+ * tokens on a dark canvas, the light ones on a light one, never the dark
+ * ones on white (#277). Inline the frame lays no floor of its own and,
+ * where the schemes agree, sits on the host's. */
+const schemeOf = (c: HostContext) => c.theme ?? ''
 
 /** Renders the view in `root` and connects it to the host (`connect`):
  * the tool result, the host's theme (`data-theme`, which `ui/tokens.css`
@@ -89,6 +86,13 @@ export async function mountView(
   const fullscreen = () => {
     void app.requestDisplayMode({ mode: 'fullscreen' }).catch(() => {})
   }
+  // Back to the chat, where the new list comes (#277): whether the host
+  // took it.
+  const leaveFullscreen = () =>
+    app.requestDisplayMode({ mode: 'inline' }).then(
+      (answer) => answer.mode === 'inline',
+      () => false,
+    )
   // A host that takes no model context may never answer the request.
   const talk = () =>
     app.getHostCapabilities()?.updateModelContext
@@ -96,7 +100,7 @@ export async function mountView(
       : { callTool, sendMessage }
   const hostOf = (c: HostContext): Host =>
     c.displayMode === 'fullscreen'
-      ? { ...talk(), inFullscreen: true }
+      ? { ...talk(), inFullscreen: true, leaveFullscreen }
       : c.availableDisplayModes?.includes('fullscreen')
         ? { ...talk(), fullscreen }
         : talk()
