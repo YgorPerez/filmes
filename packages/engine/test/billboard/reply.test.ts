@@ -5,7 +5,7 @@
 // comments and acrescentar stay in the Session's version. The answer says
 // whether to regenerate and what to keep.
 
-import { readFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, test } from 'vite-plus/test'
 import {
@@ -15,6 +15,7 @@ import {
   listSessions,
   parseYaml,
   personView,
+  recommend,
   recommendSession,
   recordFeedback,
   yamlToJson,
@@ -54,6 +55,104 @@ const front = (fixture: Fixture, id: string) => {
 
 const fromCartaz = (id: string) => (s: { source: string }) =>
   s.source === `cartaz ${id}`
+
+describe('comments on a Cartaz redo (#359)', () => {
+  test.each([
+    { moods: ['leve'], multiplier: 2 },
+    { moods: [], multiplier: 1 },
+  ])(
+    'a comment gives its Clima a weight of $multiplier only in the free place',
+    async ({ moods, multiplier }) => {
+      const fixture = useFixture()
+      const request = { attendees: ['iara'], moods }
+      const first = await fixture.ok(recommendSession({ ...request, count: 3 }))
+      const session = first.session.id
+      const [swapped, kept, commented] = first.films
+      const taste = await view(fixture, 'iara')
+
+      const reply = await answer(
+        fixture,
+        session,
+        `#cartaz ${session} v1\n1 ${swapped!.id} · trocar\n3 ${commented!.id} · comentário: algo mais leve\n`,
+      )
+      const redo = await fixture.ok(
+        recommendSession({ ...request, count: 3, session, keep: reply.keep }),
+      )
+      const baseline = await fixture.ok(
+        recommend({ ...request, moods: ['leve'], count: 50 }),
+      )
+      const moodBonus = (film: (typeof first.films)[number] | undefined) =>
+        film?.filmLines.find((line) => line.text.startsWith('Clima leve:'))
+          ?.contribution
+      const replacement = redo.films[0]
+      const ordinary = moodBonus(
+        baseline.films.find((f) => f.id === replacement?.id),
+      )
+
+      expect(redo.films.map((f) => [f.position, f.id]).slice(1)).toEqual([
+        [2, kept!.id],
+        [3, commented!.id],
+      ])
+      expect(ordinary).toBeGreaterThan(0)
+      expect(moodBonus(replacement)).toBe(multiplier * ordinary!)
+      expect(moodBonus(redo.films[2])).toBe(moodBonus(commented))
+      expect(redo.moods).toEqual(moods)
+      expect(await view(fixture, 'iara')).toEqual(taste)
+    },
+  )
+
+  test('a comment limits the replacements and leaves a longer film in place', async () => {
+    const fixture = useFixture()
+    const request = { attendees: ['dono'], count: 3 }
+    const first = await fixture.ok(recommendSession(request))
+    const session = first.session.id
+    const [swapped, kept] = first.films
+    expect(kept?.runtimeMinutes).toBeGreaterThan(90)
+    const reply = await answer(
+      fixture,
+      session,
+      `#cartaz ${session} v1\n1 ${swapped!.id} · trocar\n2 ${kept!.id} · comentário: até 90 minutos\n`,
+    )
+    const redo = await fixture.ok(
+      recommendSession({ ...request, session, keep: reply.keep }),
+    )
+
+    expect(redo.films).toHaveLength(3)
+    expect(redo.films[1]?.id).toBe(kept?.id)
+    expect(redo.films[0]?.runtimeMinutes).toBeLessThanOrEqual(90)
+
+    const next = await fixture.ok(recommendSession({ ...request, session }))
+    expect(next.films[0]?.runtimeMinutes).toBeGreaterThan(90)
+  })
+
+  test('a Parecido capped at one fills a vacancy and leaves the kept films in place', async () => {
+    const fixture = useFixture()
+    const weights = join(fixture.config, 'weights.toml')
+    writeFileSync(
+      weights,
+      readFileSync(weights, 'utf8').replace(
+        'candidates = 50',
+        'candidates = 1',
+      ),
+    )
+    const request = { attendees: ['dono'], count: 3 }
+    const first = await fixture.ok(recommendSession(request))
+    const session = first.session.id
+    const second = await fixture.ok(recommendSession({ ...request, session }))
+    const [swapped, kept] = second.films
+    const reply = await answer(
+      fixture,
+      session,
+      `#cartaz ${session} v1\n1 ${swapped!.id} · trocar\n2 ${kept!.id} · comentário: parecido com Estrada Afora\n`,
+    )
+    const redo = await fixture.ok(
+      recommendSession({ ...request, session, keep: reply.keep }),
+    )
+
+    expect(redo.films[0]?.title).toBe('Pé na Estrada')
+    expect(redo.films.slice(1).map((f) => f.id)).toEqual(reply.keep)
+  })
+})
 
 describe('cartaz responder (test_cartaz_responder)', () => {
   test('Já vi with a Nota records a Já visto and the Nota halved', async () => {
