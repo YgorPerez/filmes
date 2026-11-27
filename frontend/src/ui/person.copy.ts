@@ -21,7 +21,7 @@ export const PERSON = {
       return `a previsão erra ${rounded.toLocaleString('pt-BR')} ${points} em média, em ${films.toLocaleString('pt-BR')} filmes`
     },
     rate: 'Dar notas',
-    import: 'Importar do Letterboxd ou do Trakt',
+    import: 'Importar do Letterboxd, do Trakt ou do IMDb',
     download: 'Baixar CSV do IMDb',
     downloadLetterboxd: 'Baixar CSV do Letterboxd',
     movielens:
@@ -30,7 +30,7 @@ export const PERSON = {
     empty: (own: boolean) =>
       own
         ? 'Nenhuma Nota ainda. Dê nota a filmes que você já viu, ou traga o seu histórico.'
-        : 'Nenhuma Nota ainda. Traga o histórico dela do Letterboxd ou do Trakt.',
+        : 'Nenhuma Nota ainda. Traga o histórico dela do Letterboxd, do Trakt ou do IMDb.',
     noDatabase: 'As Notas aparecem depois que o banco for reconstruído.',
   },
   contents: 'Nesta página',

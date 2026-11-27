@@ -71,7 +71,7 @@ export const HOME = {
         action: 'Dar notas',
       },
       import: {
-        title: 'Importar do Letterboxd ou do Trakt',
+        title: 'Importar do Letterboxd, do Trakt ou do IMDb',
         text: 'Traz de uma vez as suas notas e o que você já viu.',
         action: 'Importar',
       },

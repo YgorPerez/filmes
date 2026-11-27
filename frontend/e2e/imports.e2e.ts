@@ -43,15 +43,22 @@ const folderZip = (folder: string, prefix = '') =>
 const importsOf = (person: string) =>
   engineRun((engine) => engine.run(personImports(person)))
 
-const UPLOAD = 'O arquivo do Letterboxd ou do Trakt'
+const UPLOAD = 'O arquivo do Letterboxd, do Trakt ou do IMDb'
 const PROFILE = 'Ou só o recente, pelo perfil'
 
-/** Sends a ZIP through the one file field: the server tells the service. */
-async function upload(page: Page, name: string, buffer: Buffer) {
+/** Sends a file through the one file field: the server tells the service. */
+async function upload(
+  page: Page,
+  name: string,
+  buffer: Buffer,
+  mimeType = 'application/zip',
+) {
   const form = section(page, UPLOAD).getByRole('form', { name: UPLOAD })
   await form
-    .getByLabel('Arquivo que o Letterboxd ou o Trakt te deu (ZIP)')
-    .setInputFiles({ name, mimeType: 'application/zip', buffer })
+    .getByLabel(
+      'Arquivo que o Letterboxd, o Trakt (ZIP) ou o IMDb (CSV) te deu',
+    )
+    .setInputFiles({ name, mimeType, buffer })
   await form.getByRole('button', { name: 'Importar', exact: true }).click()
 }
 
@@ -76,7 +83,7 @@ test('the Dono imports a Letterboxd ZIP and works the queue', async ({
   await page.getByRole('link', { name: /Olga/ }).click()
   await expect(page).toHaveURL(/\/pessoas\/olga$/)
   await section(page, 'Notas')
-    .getByRole('link', { name: 'Importar do Letterboxd ou do Trakt' })
+    .getByRole('link', { name: 'Importar do Letterboxd, do Trakt ou do IMDb' })
     .click()
   await expect(page).toHaveURL(/\/pessoas\/olga\/importar$/)
   await expect(
@@ -181,9 +188,9 @@ test('the Dono imports a Trakt ZIP; a ZIP of neither and a profile that does not
 
   await upload(page, 'outro.zip', zipOf([['notas.csv', 'Nome,Nota\n']]))
   await expect(page.getByRole('alert')).toContainText(
-    'Esse ZIP não parece ser do Letterboxd nem do Trakt.',
+    'Esse arquivo não parece ser do Letterboxd, do Trakt nem do IMDb.',
   )
-  await expect(page.getByRole('alert').getByRole('link')).toHaveCount(2)
+  await expect(page.getByRole('alert').getByRole('link')).toHaveCount(3)
 
   await upload(page, 'trakt-lia.zip', folderZip('trakt', 'trakt-export/'))
   await expect(notice(page)).toHaveText(
@@ -206,6 +213,26 @@ test('the Dono imports a Trakt ZIP; a ZIP of neither and a profile that does not
   await removeImport(page, 'trakt-lia.zip')
   await expect(notice(page)).toHaveText('Import tirado: 3 Fatos saíram.')
   expect((await importsOf('lia')).imports).toEqual([])
+})
+
+test('the Dono imports an IMDb ratings CSV', async ({ page }, info) => {
+  test.skip(info.project.name !== 'desktop', 'Nina is the desktop’s')
+  await addPerson('Nina')
+  await loginAsBruno(page)
+  await page.goto('/importar/nina')
+
+  await upload(
+    page,
+    'ratings.csv',
+    readFileSync(join(FIXTURE, 'imdb/vera.csv')),
+    'text/csv',
+  )
+  await expect(notice(page)).toHaveText(
+    'CSV do IMDb importado: 3 Fatos novos. 1 título ficou de fora: o Catálogo não tem.',
+  )
+  await expect(section(page, 'IMDb')).toContainText('3 Notas do IMDb.')
+  await snap(page, info, 'importar-imdb')
+  expect((await importsOf('nina')).imdb).toEqual({ ratings: 3 })
 })
 
 test('the RSS needs her consent, a Dono and this site', async ({
@@ -325,7 +352,7 @@ test.describe('with the JavaScript off', () => {
     await upload(page, 'outro.zip', zipOf([['notas.csv', 'Nome,Nota\n']]))
     await expect(page).toHaveURL(/\/meu-gosto\/importar\?erro=origem$/)
     await expect(page.getByRole('alert')).toContainText(
-      'Esse ZIP não parece ser do Letterboxd nem do Trakt.',
+      'Esse arquivo não parece ser do Letterboxd, do Trakt nem do IMDb.',
     )
   })
 })
