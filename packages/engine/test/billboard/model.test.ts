@@ -237,7 +237,8 @@ describe('the Cartaz model', () => {
       {
         people: ['bruno', 'iara'],
         strength: strongest.strength,
-        text: strongest.text,
+        // The shared line agrees with both names (#351).
+        text: 'dirigido por Rui Tavares, como 2 filmes a que deram nota alta: Fronteira (2008) e Inverno em Lisboa (2011)',
         source: strongest.source || null,
         against: false,
       },
@@ -1048,5 +1049,83 @@ describe('the Cartaz model, a relayed Feedback (#277)', () => {
     )
     expect(sources.some((s) => s.endsWith(', repassado por você'))).toBe(true)
     expect(sources.some((s) => s.endsWith('repassado pelo Dono'))).toBe(false)
+  })
+})
+
+describe('the Cartaz model, a line two Presentes share (#351)', () => {
+  test('its verb agrees with the names; a line of one keeps the singular', async () => {
+    const fixture = useFixture()
+    const session = await recommend(fixture, {
+      attendees: ['dono', 'iara'],
+      count: 10,
+    })
+    const id = session.session.id
+    const shared: ReadonlyArray<readonly [string, string]> = [
+      [
+        'dirigido por Helena Prado, como 2 filmes a que deu nota alta',
+        'dirigido por Helena Prado, como 2 filmes a que deram nota alta',
+      ],
+      [
+        'deu 10 de 10 a Fronteira (2008), também de Helena Prado',
+        'deram 10 de 10 a Fronteira (2008), também de Helena Prado',
+      ],
+      [
+        'deu 6 de 10 a As Horas Lentas (2021), uma das notas mais altas que dá, também de Helena Prado',
+        'deram 6 de 10 a As Horas Lentas (2021), uma das notas mais altas que dão, também de Helena Prado',
+      ],
+      [
+        'disse que ama Fronteira (2008); mesmo diretor',
+        'disseram que amam Fronteira (2008); mesmo diretor',
+      ],
+      [
+        'segundo o Dono, odeia Fronteira (2008); mesmo diretor',
+        'segundo o Dono, odeiam Fronteira (2008); mesmo diretor',
+      ],
+      ['está na lista do Letterboxd', 'estão na lista do Letterboxd'],
+    ]
+    const fact = (film: (typeof session.films)[number], text: string) => ({
+      ...film.evidence['bruno']!.find((e) => e.kind !== 'guess')!,
+      text,
+      contribution: 0.5,
+    })
+    expect(session.films.length).toBeGreaterThan(shared.length)
+    const films = session.films.map((f, i) => {
+      const pair = shared[i]
+      if (pair !== undefined) {
+        const line = fact(f, pair[0])
+        return { ...f, evidence: { bruno: [line], iara: [line] } }
+      }
+      if (i === shared.length)
+        return {
+          ...f,
+          evidence: { bruno: [fact(f, shared[1]![0])], iara: [] },
+        }
+      return f
+    })
+    await fixture.ok(
+      Effect.gen(function* () {
+        const { frontmatter } = yield* readSession(id)
+        yield* writeSession(
+          id,
+          frontmatter,
+          sessionBody(
+            films,
+            new Map([
+              ['bruno', 'Bruno'],
+              ['iara', 'Iara'],
+            ]),
+          ),
+        )
+      }),
+    )
+
+    const cards = (await fixture.ok(billboardModel({ session: id }))).films
+
+    expect(
+      shared.map((_, i) => cards[i]!.lines.map((l) => [l.people, l.text])),
+    ).toEqual(shared.map(([, plural]) => [[['bruno', 'iara'], plural]]))
+    expect(cards[shared.length]!.lines.map((l) => [l.people, l.text])).toEqual(
+      [[['bruno'], shared[1]![0]]],
+    )
   })
 })

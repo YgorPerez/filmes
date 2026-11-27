@@ -598,6 +598,27 @@ const RELAYED = /, repassado pelo Dono$/u
 const sourceFor = (source: string, relayedByYou: boolean): string =>
   relayedByYou ? source.replace(RELAYED, ', repassado por você') : source
 
+/** The singular verbs of a Presente's own Evidence (`evidence/wording.ts`,
+ * `signals/content.ts`, `signals/seen.ts`, `signals/watchlist.ts`) and
+ * their plural, for a line two or more Presentes share (#351). */
+const PLURAL: ReadonlyArray<readonly [RegExp, string]> = [
+  [/^deu /u, 'deram '],
+  [/^disse que (ama|odeia) /u, 'disseram que $1m '],
+  [/^segundo o Dono, (ama|odeia) /u, 'segundo o Dono, $1m '],
+  [/^já viu$/u, 'já viram'],
+  [/^está na lista /u, 'estão na lista '],
+  [/ a que deu nota alta/u, ' a que deram nota alta'],
+  [/, uma das notas mais altas que dá/u, ', uma das notas mais altas que dão'],
+]
+
+/** A line as the names before it read: the engine writes each Presente's
+ * Evidence in the singular, and "Você e Iara: deu 10 de 10 a X" would not
+ * agree (#351). */
+const agreeing = (text: string, people: number): string =>
+  people > 1
+    ? PLURAL.reduce((out, [from, to]) => out.replace(from, to), text)
+    : text
+
 /** The strongest Evidence of each Presente with a Fato, the ones with the
  * same sharing a line, the strongest lines first (`_linhas`). */
 const linesOf = (film: FilmInBody, relayedByYou: boolean): BillboardLine[] => {
@@ -627,7 +648,7 @@ const linesOf = (film: FilmInBody, relayedByYou: boolean): BillboardLine[] => {
     .map(({ g }) => ({
       people: g.people,
       strength: g.evidence.strength as Strength,
-      text: g.evidence.text,
+      text: agreeing(g.evidence.text, g.people.length),
       source: g.evidence.source
         ? sourceFor(g.evidence.source, relayedByYou)
         : null,
