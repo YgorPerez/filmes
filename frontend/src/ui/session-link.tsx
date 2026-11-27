@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react'
 import type { LinkPerson, SessionLinkView } from '#/platform/session-link'
 import { weekdayDate } from './dates'
 import { buttonVariants } from './kit/button-variants'
@@ -17,9 +18,14 @@ import { VOTES } from './session-votes.copy'
 
 type Film = SessionLinkView['films'][number]
 
-/** A film's tape: the poster or, without one, the title on the cover (the
- * Cartaz's rule; a `small` tape, too narrow for it, stays blank). The
- * poster is decorative: the title is always written beside it. */
+/** The first letter or digit of a title, for a tape too small for it. */
+const initialOf = (title: string) =>
+  /[\p{L}\p{N}]/u.exec(title)?.[0]?.toLocaleUpperCase('pt-BR') ?? ''
+
+/** A film's tape: the poster or, without one (or when it fails to load),
+ * the title on the cover (the Cartaz's rule; a `small` tape, too narrow
+ * for it, gets the title's initial). The poster is decorative: the title
+ * is always written beside it. */
 export function FilmCover({
   poster,
   title,
@@ -33,18 +39,31 @@ export function FilmCover({
   small?: boolean
   className?: string
 }) {
+  const [broken, setBroken] = useState(false)
+  const image = useRef<HTMLImageElement>(null)
+  // A poster that failed before hydration fired no onError React saw.
+  useEffect(() => {
+    const img = image.current
+    if (img?.complete && img.naturalWidth === 0) setBroken(true)
+  }, [])
   return (
     <TapeCase
       className={className}
       cover={
-        poster ? (
+        poster && !broken ? (
           <img
+            ref={image}
             src={poster}
             alt=""
             loading={eager ? 'eager' : 'lazy'}
+            onError={() => setBroken(true)}
             className="absolute inset-0 size-full object-cover"
           />
-        ) : small ? null : (
+        ) : small ? (
+          <span aria-hidden="true" className="text-title">
+            {initialOf(title)}
+          </span>
+        ) : (
           <span aria-hidden="true">{title}</span>
         )
       }
@@ -72,24 +91,35 @@ export function FilmFacts({ film }: { film: Film }) {
 }
 
 /** The link that leads nowhere: a broken or foreign link, or a Session
- * that already closed, each with what to do next. */
-export function LinkUnavailable({ closed }: { closed: boolean }) {
+ * that already closed (with the film the night ended with), each with
+ * what to do next. */
+export function LinkUnavailable({
+  closed,
+}: {
+  /** Null for a broken link; for a closed Session, the chosen film's
+   * title, or null when the Feedback named none. */
+  closed: { chosen: string | null } | null
+}) {
   const { unavailable } = PARTICIPATION
   return (
     <div className="flex flex-col gap-sm">
-      <h1 className="font-display text-title text-balance">
+      <h1 className="font-display text-page-title text-balance">
         {closed ? unavailable.closed : unavailable.broken}
       </h1>
       <p className="max-w-[60ch] text-pretty text-ink-2">
-        {closed ? unavailable.closedLead : unavailable.brokenLead}
+        {closed
+          ? unavailable.closedLead(closed.chosen)
+          : unavailable.brokenLead}
       </p>
     </div>
   )
 }
 
 /** The link's first screen: who sent it and for when, the Presentes in
- * their colours, and "Quem é você?" with each name. The Dono is marked, so
- * a guest does not take her name by mistake. */
+ * their colours, and "Quem é você?" with each guest's name. The Dono who
+ * opened the Session votes on her own Cartaz, so her name is left out
+ * (a guest could take it by mistake, with no login); only a Session with
+ * no one else lists her, marked. */
 export function LinkPicker({
   view,
   hrefFor,
@@ -101,19 +131,21 @@ export function LinkPicker({
   /** The link named a Presente who is not in the Session. */
   unknown?: boolean
 }) {
+  const guests = view.attendees.filter((person) => !person.owner)
+  const names = guests.length > 0 ? guests : view.attendees
   return (
     <div className="flex flex-col gap-xl">
       <p className="text-ink-2">
         {PARTICIPATION.invited(view.owner, weekdayDate(view.date))}
       </p>
-      <h1 className="font-display text-title">{PARTICIPATION.pick}</h1>
+      <h1 className="font-display text-page-title">{PARTICIPATION.pick}</h1>
       {unknown && (
         <p className="text-ink" role="status">
           {PARTICIPATION.unknownPerson}
         </p>
       )}
       <ul className="flex flex-col gap-sm">
-        {view.attendees.map((person) => (
+        {names.map((person) => (
           <li key={person.person}>
             <a
               href={hrefFor(person.person)}
@@ -237,7 +269,7 @@ export function LinkFilms({
     >
       <ShelfLabel items={[weekdayDate(view.date), ...view.shelf]} />
       <div className="flex flex-col gap-xs">
-        <h1 id="filmes-da-sessao" className="font-display text-title">
+        <h1 id="filmes-da-sessao" className="font-display text-page-title">
           {PARTICIPATION.films}
         </h1>
         {films.length > 0 && (
@@ -265,12 +297,19 @@ export function LinkFilms({
           )}
           <div className="flex flex-col gap-sm">
             <p className="max-w-[60ch] text-pretty">{VOTES.rule}</p>
-            <a
-              href={action.href}
-              className={buttonVariants({ className: 'self-start' })}
-            >
-              {action.label}
-            </a>
+            <div className="flex flex-wrap items-center gap-md">
+              <a href={action.href} className={buttonVariants()}>
+                {action.label}
+              </a>
+              {unvoted > 0 && unvoted < films.length && (
+                <a
+                  href={vote.revote}
+                  className={buttonVariants({ variant: 'option' })}
+                >
+                  {VOTES.revote}
+                </a>
+              )}
+            </div>
           </div>
         </>
       )}

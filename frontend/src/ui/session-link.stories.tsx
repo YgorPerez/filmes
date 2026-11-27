@@ -3,6 +3,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, within } from 'storybook/test'
 import {
+  FilmCover,
   LinkFilms,
   LinkHeader,
   LinkPicker,
@@ -62,9 +63,9 @@ export const Picker: Story = {
     await expect(
       canvas.getByRole('heading', { name: PARTICIPATION.pick }),
     ).toBeVisible()
-    await expect(
-      canvas.getByRole('link', { name: /Bruno/u }),
-    ).toHaveTextContent(PARTICIPATION.opened)
+    // The Dono who opened the Session votes on her Cartaz, not here.
+    await expect(canvas.queryByRole('link', { name: /Bruno/u })).toBeNull()
+    await expect(canvas.getByRole('link', { name: 'Iara' })).toBeVisible()
   },
 }
 
@@ -85,7 +86,43 @@ export const Header: Story = {
 }
 
 export const Broken: Story = {
-  render: () => <LinkUnavailable closed={false} />,
+  render: () => <LinkUnavailable closed={null} />,
 }
 
-export const Closed: Story = { render: () => <LinkUnavailable closed /> }
+export const Closed: Story = {
+  render: () => <LinkUnavailable closed={{ chosen: 'Dia de Feira' }} />,
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByText(/Vocês viram Dia de Feira/u),
+    ).toBeVisible()
+  },
+}
+
+export const ClosedWithoutFilm: Story = {
+  render: () => <LinkUnavailable closed={{ chosen: null }} />,
+}
+
+/** A poster that does not load: the tape falls back to the title, and the
+ * small one to its initial. */
+export const PosterFails: Story = {
+  render: () => (
+    <div className="flex items-start gap-lg">
+      <FilmCover
+        poster="/nao-existe.jpg"
+        title="As Horas Lentas"
+        className="w-[160px]"
+      />
+      <FilmCover
+        poster="/nao-existe.jpg"
+        title="As Horas Lentas"
+        small
+        className="w-[64px]"
+      />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText('As Horas Lentas')).toBeVisible()
+    await expect(await canvas.findByText('A')).toBeVisible()
+  },
+}

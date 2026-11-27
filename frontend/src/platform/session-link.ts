@@ -126,17 +126,31 @@ function signed(
     : null
 }
 
-/** A link that was issued for a Session now closed: its page says the
- * Session ended instead of that the link is broken. */
+/** A Session the link was issued for, now closed: its page says the
+ * Session ended, with the film the Feedback chose (null for "não vimos
+ * nada"), instead of that the link is broken. */
+export type ClosedSession = { chosen: string | null }
+
+/** The closed Session `search` was issued for, or null: a broken link,
+ * or a Session still open. */
 export async function closedSessionLink(
   search: SessionLinkSearch,
   engine: Engine,
   database: string,
-): Promise<boolean> {
+): Promise<ClosedSession | null> {
   const session = signed(search, database)
-  if (session === null) return false
+  if (session === null) return null
   const result = await engine.run(readSession(session))
-  return result.exitCode === 0 && !isOpen(result.output.frontmatter)
+  if (result.exitCode !== 0) return null
+  const front = result.output.frontmatter
+  if (isOpen(front)) return null
+  const chosen = text(front.get('chosen'))
+  if (chosen === null) return { chosen: null }
+  const shown = sessionVersions(front)
+    .flatMap(shownFilms)
+    .find((film) => film.id === chosen)
+  const card = (await cardsById(engine, [chosen])).get(chosen)
+  return { chosen: card?.title ?? shown?.title ?? chosen }
 }
 
 /** The public cards of `ids`, by id; none when the engine could not
