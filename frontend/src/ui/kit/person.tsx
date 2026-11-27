@@ -1,10 +1,7 @@
-import { type PointerEvent, useId, useRef } from 'react'
-
 // A Presente's colour (DESIGN.md, Avatares; The One Color Per Person Rule):
-// one per Presente by her order in the Session, the same in the dot under
-// the cover, her avatar in the legend and in the marks, always with her
-// initial or name beside it (or, on the dot, in its hint). Hollow (a ring in her colour) is the Presente
-// without a Fato.
+// one per Presente by her order in the Session, the same in her avatar in
+// the legend and in the marks, always with her initial or name beside it.
+// Hollow (a ring in her colour) is the Presente without a Fato.
 
 /** What a colour needs to know of a Presente. */
 interface Person {
@@ -50,88 +47,5 @@ export function Avatar({
     >
       {person.initial}
     </span>
-  )
-}
-
-/** Where the browser cannot anchor the popover to its dot, it would open at
- * the page's top left: there it goes under the dot, from where the dot is
- * on screen. */
-const underDot = (popover: HTMLElement, dot: HTMLElement) => {
-  if (CSS.supports('anchor-name', '--dot')) return
-  const { bottom, left } = dot.getBoundingClientRect()
-  popover.style.setProperty('position-area', 'none')
-  popover.style.top = `${bottom}px`
-  popover.style.left = `${left}px`
-}
-
-/** Her 12px dot on the case, under the cover, with her Nota prevista
- * beside it when she has one ("8,3"). The dot alone is only a picture: the
- * card says in its text who has no Fato ("Fulano: sem fato sobre este
- * filme"). With a number, the dot is a button whose `hint` says whose it is
- * and how many neighbours back it: a native popover under it, running right
- * from the dot (the case is on the card's left), opened by a
- * tap or a click (a tap outside or Esc closes it) and by a mouse over it.
- * The hint is the button's name; the popover repeats it to the eye only.
- * The dot stays small, and an invisible 44px box centred on it takes the tap
- * (#268).
- * Without CSS anchor positioning (Firefox, Safari before 26) the popover
- * is placed under the dot by hand as it opens (`underDot`). */
-export function PersonDot({
-  person,
-  hollow = false,
-  rating,
-}: {
-  person: Person
-  hollow?: boolean
-  rating?: { text: string; hint: string }
-}) {
-  const id = useId()
-  const button = useRef<HTMLButtonElement>(null)
-  const dot = (
-    <span
-      aria-hidden="true"
-      className={`size-3 shrink-0 rounded-round border-2 ${hollow ? 'bg-transparent' : ''} ${colorOf(person, hollow)}`}
-    />
-  )
-  if (!rating) return dot
-  const anchor = `--dot-${id.replaceAll(/[^\w-]/g, '')}`
-  const hover = (open: boolean) => (event: PointerEvent<HTMLElement>) => {
-    if (event.pointerType === 'mouse')
-      event.currentTarget.ownerDocument.getElementById(id)?.togglePopover(open)
-  }
-  return (
-    <>
-      <button
-        ref={button}
-        type="button"
-        popoverTarget={id}
-        popoverTargetAction="show"
-        aria-label={rating.hint}
-        onPointerEnter={hover(true)}
-        onPointerLeave={hover(false)}
-        style={{ anchorName: anchor }}
-        className="relative inline-flex cursor-pointer items-center gap-0.5 font-display text-avatar text-case-ink tabular-nums after:absolute after:top-1/2 after:left-1/2 after:h-touch after:w-[max(100%,44px)] after:-translate-1/2 after:content-['']"
-      >
-        {dot}
-        <span aria-hidden="true">{rating.text}</span>
-      </button>
-      <span
-        id={id}
-        ref={(popover) => {
-          if (!popover) return
-          const place = () => {
-            if (button.current) underDot(popover, button.current)
-          }
-          popover.addEventListener('beforetoggle', place)
-          return () => popover.removeEventListener('beforetoggle', place)
-        }}
-        popover="auto"
-        aria-hidden="true"
-        style={{ positionAnchor: anchor }}
-        className="inset-auto m-0 mt-1 w-max max-w-[calc(100vw-32px)] rounded-field border border-rule bg-surface px-sm py-xs text-meta text-ink [position-area:bottom_span-right] [position-try-fallbacks:flip-block]"
-      >
-        {rating.hint}
-      </span>
-    </>
   )
 }

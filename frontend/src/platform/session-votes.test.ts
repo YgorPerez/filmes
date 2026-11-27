@@ -124,7 +124,6 @@ test('a Presente’s no swaps the film and redoes the Session; her yes stays and
     expect(
       mine?.films.filter((f) => f.mine).map((f) => [f.id, f.mine]),
     ).toEqual([[a, 'yes']])
-    expect(mine?.films.filter((f) => f.new)).toHaveLength(1)
     expect(mine?.left).toEqual([first.films[1]?.title])
     expect((await deck('bruno'))?.films.map((f) => f.id)).toEqual(now)
 

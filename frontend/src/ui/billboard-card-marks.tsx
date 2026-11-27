@@ -12,7 +12,9 @@ import { Avatar } from './kit/person'
 // Estrelas): Trocar, the stars and Comentar on one line; Já vi per
 // Presente and "Todos", each Já vi opening her note (the 1 to 10 scale and
 // what she thought) on the blue card stock. The comment's field opens from
-// Comentar, so a card carries no empty field.
+// Comentar, so a card carries no empty field. A Trocar that came on by
+// itself (a Já vi with "Só filmes que ninguém viu", or 1 to 3 stars:
+// `withSwap` in `billboard-marks.ts`) says why under the buttons (#326).
 
 /** An option that stays pressed, with the ✓ before the word, the same
  * width pressed or not (`kit/option.tsx`): pressing never wraps the row. */
@@ -186,6 +188,30 @@ function Comment({
   )
 }
 
+/** Why the Trocar came on by itself, or nothing. */
+function SwapWhy({
+  marks,
+  people,
+}: {
+  marks: FilmMarks
+  people: readonly BillboardPerson[]
+}) {
+  const { swapWhy } = BILLBOARD.marks
+  if (!marks.swap) return null
+  const seen = new Set(marks.seen)
+  const why =
+    marks.swapWhy === 'stars'
+      ? swapWhy.stars(marks.stars)
+      : marks.swapWhy === 'seen'
+        ? swapWhy.seen(
+            people
+              .filter((p) => seen.has(p.slug))
+              .map((p) => (p.owner ? 'você' : p.name)),
+          )
+        : null
+  return why && <p className="text-meta text-ink-2">{why}</p>
+}
+
 /** The marks of one film: Trocar, the stars and Comentar on one line
  * (it wraps on a phone), then Já vi per Presente with each one's note,
  * and the comment once Comentar opened it or it has text. */
@@ -241,6 +267,7 @@ export function FilmMarksControls({
           </button>
         )}
       </div>
+      <SwapWhy marks={marks} people={people} />
       <div
         role="group"
         aria-label={copy.seenGroup(film.position)}

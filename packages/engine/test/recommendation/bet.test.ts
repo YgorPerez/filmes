@@ -473,42 +473,56 @@ describe('the bet record', () => {
 })
 
 describe('the bet record', () => {
-  test.each(['keep', 'whole screen', 'single swap', 'Cartaz Trocar'])(
-    'learns only from an explicit Trocar: %s',
-    async (action) => {
-      const fixture = useFixture()
-      const vars = betWeights(
-        fixture,
-        ['min_success_rate = 0.25', 'min_success_rate = 0.0'],
-        ['min_predicted = 7.0', 'min_predicted = 8.5'],
+  test.each([
+    'keep',
+    'whole screen',
+    'single swap',
+    'Cartaz Trocar',
+    'Cartaz Trocar beside a Já vi',
+    'Cartaz Trocar the Já vi marked',
+  ])('learns only from an explicit Trocar: %s', async (action) => {
+    const fixture = useFixture()
+    const vars = betWeights(
+      fixture,
+      ['min_success_rate = 0.25', 'min_success_rate = 0.0'],
+      ['min_predicted = 7.0', 'min_predicted = 8.5'],
+    )
+    const id = 'swap-history'
+    pastBet(fixture, id, '', '2026-11-19', 'bruno')
+    // The Trocar a Já vi marked on the Cartaz (`trocar: já vi`) is the Já
+    // vi's, which teaches only through its Nota; one the Dono pressed
+    // beside a Já vi is hers (#326).
+    const marks = new Map([
+      ['Cartaz Trocar', 'trocar'],
+      ['Cartaz Trocar beside a Já vi', 'já vi: bruno · trocar'],
+      ['Cartaz Trocar the Já vi marked', 'já vi: bruno · trocar: já vi'],
+    ]).get(action)
+    if (marks)
+      await fixture.ok(
+        answerBillboard({
+          session: id,
+          text: `#cartaz ${id} v1\n5 ${HISTORY_FILM} · ${marks}`,
+        }),
+        vars,
       )
-      const id = 'swap-history'
-      pastBet(fixture, id, '', '2026-11-19', 'bruno')
-      if (action === 'Cartaz Trocar')
-        await fixture.ok(
-          answerBillboard({
-            session: id,
-            text: `#cartaz ${id} v1\n5 ${HISTORY_FILM} · trocar`,
-          }),
-          vars,
-        )
-      const redone = await session(fixture, vars, {
-        session: id,
-        attendees: ['iara', 'bruno'],
-        ...(action === 'whole screen'
-          ? { swap: ['tt9000101', HISTORY_FILM] }
-          : { keep: ['tt9000101'] }),
-        ...(action === 'single swap' && { swap: [HISTORY_FILM] }),
-      })
-      expect(ids(redone)).not.toContain(HISTORY_FILM)
-      const next = await bruno(fixture, vars, { seed: 'next-session' })
-      expect(bets(next)).toEqual(
-        action === 'keep' || action === 'whole screen'
-          ? [[5, PEQUENOS_MILAGRES]]
-          : [],
-      )
-    },
-  )
+    const redone = await session(fixture, vars, {
+      session: id,
+      attendees: ['iara', 'bruno'],
+      ...(action === 'whole screen'
+        ? { swap: ['tt9000101', HISTORY_FILM] }
+        : { keep: ['tt9000101'] }),
+      ...(action === 'single swap' && { swap: [HISTORY_FILM] }),
+    })
+    expect(ids(redone)).not.toContain(HISTORY_FILM)
+    const next = await bruno(fixture, vars, { seed: 'next-session' })
+    expect(bets(next)).toEqual(
+      action === 'keep' ||
+        action === 'whole screen' ||
+        action === 'Cartaz Trocar the Já vi marked'
+        ? [[5, PEQUENOS_MILAGRES]]
+        : [],
+    )
+  })
 })
 
 describe('the bet record', () => {

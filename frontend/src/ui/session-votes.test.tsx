@@ -149,7 +149,7 @@ it('the deck posts the link’s search', () => {
 it('with every film voted on, it shows the night’s list with her Votos', () => {
   const films = [
     { ...FILMS[0]!, mine: 'yes' as const },
-    { ...FILMS[1]!, mine: 'yes' as const, new: true },
+    { ...FILMS[1]!, mine: 'yes' as const },
   ]
   render(
     <VoteScreen

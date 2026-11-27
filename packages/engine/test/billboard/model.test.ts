@@ -263,6 +263,7 @@ describe('the Cartaz model', () => {
     expect([request.who, ...request.parts].join(' · ')).toContain(
       'Vocês dois · até 2h05 · nota 7+ no IMDb · leve · nada repetido',
     )
+    expect(request.unseen).toBe(true)
   })
 
   test('a refazer keeps the Dono’s words and the label leaves out the Restrição it turns on by itself', async () => {
@@ -613,6 +614,7 @@ describe('the Cartaz model', () => {
       speech: null,
       who: 'Você',
       parts: ['nota 7+ no IMDb'],
+      unseen: false,
     })
   })
 

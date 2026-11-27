@@ -7,7 +7,7 @@ import type {
 import { useState } from 'react'
 import type { FilmMarks } from './billboard-marks'
 import { Chip } from './kit/chip'
-import { PersonDot } from './kit/person'
+import { Hint } from './kit/hint'
 import { PriceSticker, Sticker } from './kit/sticker'
 import { TapeCase } from './kit/tape-case'
 import { BILLBOARD } from './billboard.copy'
@@ -18,10 +18,10 @@ import { Icon } from './billboard-icons'
 import { Strength } from './billboard-top'
 
 // One film of the Cartaz (DESIGN.md, Card do filme): the tape in its case
-// with the price sticker and a dot per Presente with her Nota prevista, the
-// header (with the IMDb and, when TMDB has one, the trailer on YouTube: a
-// link, never a player, #289), "Por que cada um vai gostar" and, while the
-// Session takes a reply, the marks (`billboard-card-marks.tsx`). A grid:
+// with the price sticker, the header (with the IMDb and, when TMDB has one,
+// the trailer on YouTube: a link, never a player, #289), "Por que cada um
+// vai gostar", opened by each Presente's Nota prevista (#326), and, while
+// the Session takes a reply, the marks (`billboard-card-marks.tsx`). A grid:
 // the case on the left (112px, 160px from 560px), the header on the right;
 // "Por que" and the marks across below, each opened by a dashed rule, "Por
 // que" going up under the chips from 560px. The state is the Cartaz's (`billboard.tsx`). Inside a
@@ -42,18 +42,14 @@ const namesOf = (people: readonly BillboardPerson[]) =>
 
 function Poster({
   film,
-  people,
   first,
   stamp,
 }: {
   film: BillboardFilm
-  people: readonly BillboardPerson[]
   first: boolean
   stamp: 'swap' | 'seen' | null
 }) {
   const { card } = BILLBOARD
-  const without = new Set(film.withoutFact)
-  const predicted = new Map(film.predictedRatings.map((p) => [p.person, p]))
   // A poster that does not load gives way to the title, as none does: the
   // browser's clipped alt text never shows under the stickers (#272, #277).
   const [broken, setBroken] = useState(false)
@@ -90,24 +86,7 @@ function Poster({
             )}
           </a>
         }
-      >
-        {people.map((p) => {
-          const rating = predicted.get(p.slug)
-          return (
-            <PersonDot
-              key={p.slug}
-              person={p}
-              hollow={without.has(p.slug)}
-              rating={
-                rating && {
-                  text: rating.text,
-                  hint: card.predicted(p.name, rating.text, rating.raters),
-                }
-              }
-            />
-          )
-        })}
-      </TapeCase>
+      />
       {stamp && (
         <Sticker
           kind={stamp}
@@ -116,14 +95,9 @@ function Poster({
           {stamp === 'swap' ? card.swapStamp : card.seenStamp}
         </Sticker>
       )}
-      {film.new && (
-        <Sticker kind="new" className="absolute top-sm -right-md">
-          {card.isNew}
-        </Sticker>
-      )}
       {film.bet && (
         <>
-          <BetStamp className="absolute bottom-[38px] -left-sm">
+          <BetStamp className="absolute bottom-[17px] -left-sm">
             {card.bet}
           </BetStamp>
           <span className="sr-only">{card.betHint}</span>
@@ -230,6 +204,48 @@ export function EvidenceLine({
   )
 }
 
+/** Each Presente's Nota prevista, in the people's order, under the title
+ * of "Por que": "previsto · Ana 8,3 · Iara 7,1". Her name carries the hint
+ * of how many taste neighbours back it, when the version kept it. Who has
+ * none is left out, and with nobody there is no line (#326). */
+function Predicted({
+  film,
+  people,
+}: {
+  film: BillboardFilm
+  people: readonly BillboardPerson[]
+}) {
+  const { card } = BILLBOARD
+  const predicted = new Map(film.predictedRatings.map((p) => [p.person, p]))
+  const shown = people.flatMap((person) => {
+    const rating = predicted.get(person.slug)
+    return rating ? [{ person, rating }] : []
+  })
+  if (shown.length === 0) return null
+  return (
+    <p className="text-meta text-ink-2 tabular-nums">
+      {card.predicted}
+      {shown.map(({ person, rating }) => {
+        const hint =
+          rating.raters === undefined ? null : card.predictedHint(rating.raters)
+        return (
+          <span key={person.slug}>
+            {' · '}
+            {hint === null ? (
+              person.name
+            ) : (
+              <Hint label={card.predictedLabel(person.name, hint)} hint={hint}>
+                {person.name}
+              </Hint>
+            )}{' '}
+            {rating.text}
+          </span>
+        )
+      })}
+    </p>
+  )
+}
+
 function Why({
   film,
   people,
@@ -251,6 +267,7 @@ function Why({
           {film.coverage}
         </span>
       </Label>
+      <Predicted film={film} people={people} />
       <ul aria-label={card.why} className="flex flex-col gap-2.25">
         {film.cautiousBetReason && (
           <li className="text-evidence text-ink-2">{film.cautiousBetReason}</li>
@@ -333,7 +350,7 @@ export function BillboardCard({
       data-swap={marks?.swap || undefined}
       className="group/card grid grid-cols-[112px_1fr] content-start gap-xl rounded-card border border-rule bg-surface px-xl pt-2xl pb-xl min-[560px]:grid-cols-[160px_1fr]"
     >
-      <Poster film={film} people={people} first={first} stamp={stamp} />
+      <Poster film={film} first={first} stamp={stamp} />
       <Header film={film} id={`filme-${film.id}`} level={level} />
       <Why film={film} people={people} level={level} />
       {film.notes && <Notes notes={film.notes} />}

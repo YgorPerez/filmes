@@ -25,7 +25,9 @@
 //     one) is marked and nobody gave a Nota or said what she thought.
 //   - `achou <slug>: <text>`, one per marked Pessoa who said what she
 //     thought, in the Presentes' order. A ` · ` inside it becomes ` - `.
-//   - `trocar`
+//   - `trocar`, or `trocar: já vi` when the Cartaz marked it for a Já vi
+//     with "Só filmes que ninguém viu" on: that one is no failure in the
+//     Histórico de apostas (#326).
 //   - `estrelas: <1 to 5>`
 //   - `comentário: <text>`, always last: it runs to the end of the line and
 //     may hold ` · `.
@@ -45,6 +47,8 @@ export interface BillboardMarks {
   /** What each one thought of it. */
   readonly thoughts?: Readonly<Record<string, string>>
   readonly swap: boolean
+  /** The Trocar came on for a Já vi (#326). */
+  readonly swapForSeen?: boolean
   /** 1 to 5; 0 is none. */
   readonly stars: number
   readonly comment: string
@@ -98,7 +102,7 @@ export const billboardText = (state: BillboardState): string => {
       )
     for (const p of seen)
       if (thought(p)) parts.push(`achou ${p}: ${thought(p)}`)
-    if (film.swap) parts.push('trocar')
+    if (film.swap) parts.push(film.swapForSeen ? 'trocar: já vi' : 'trocar')
     if (film.stars) parts.push(`estrelas: ${film.stars}`)
     const comment = oneLine(film.comment)
     if (comment) parts.push(`comentário: ${comment}`)

@@ -24,6 +24,8 @@
 //   version's text counts the same; the Trocar of a film no longer on the
 //   screen is ignored, with a warning. The Trocar goes in `swapped` of the
 //   current version, and the film never comes back in the Session (#66).
+//   `trocar: já vi` is the Trocar the Cartaz marked for a Já vi: the same,
+//   but no failure in the Histórico de apostas (#326).
 //
 // - Clima (`clima: <name>, ...`, `clima: nenhum`): the Climas the Dono
 //   chose on the Cartaz, resolved by the vocabulary (a name outside it is a
@@ -123,6 +125,9 @@ export interface ReadMarks {
   readonly seen: string | null
   readonly thoughts: ReadonlyMap<string | null, string>
   readonly swap: boolean
+  /** The Trocar is `trocar: já vi`: the Cartaz marked it for a Já vi
+   * (#326). */
+  readonly swapForSeen: boolean
   readonly stars: number | null
   readonly comment: string | null
 }
@@ -168,6 +173,7 @@ const readMarks = (
     let seen: string | null = null
     const thoughts = new Map<string | null, string>()
     let swap = false
+    let swapForSeen = false
     let stars: number | null = null
     let comment: string | null = null
     let rest = marks.replace(LEADING_SEPARATOR, '')
@@ -182,6 +188,7 @@ const readMarks = (
       const value = pyStrip(raw)
       const thought = THOUGHT.exec(name)
       if (part === 'trocar') swap = true
+      else if (name === 'trocar' && value === 'já vi') swap = swapForSeen = true
       else if (name === 'já vi' && value) seen = value
       else if (thought && value)
         thoughts.set(thought[1] ?? null, pyJoinWords(value))
@@ -193,7 +200,16 @@ const readMarks = (
     }
     if (thoughts.size > 0 && !seen)
       return yield* invalid(`achou sem Já vi, filme ${position} ${film}`)
-    return { position, id: film, seen, thoughts, swap, stars, comment }
+    return {
+      position,
+      id: film,
+      seen,
+      thoughts,
+      swap,
+      swapForSeen,
+      stars,
+      comment,
+    }
   })
 
 /** Reads the pasted text (`ler`); a text with no `#cartaz` line is
@@ -665,10 +681,12 @@ const swapsOnScreen = (
 }
 
 /** The Aposta marks of the reply: each Já vi with a Nota, and each Trocar
- * as the owner's. */
+ * as the owner's, but the one the Cartaz marked for a Já vi (`trocar: já
+ * vi`), which teaches only through the Já vi's Nota (#326). */
 const betMarksOf = (
   seen: ReadonlyArray<ReplySeen>,
   swap: ReadonlySet<string>,
+  films: ReadonlyArray<ReadMarks>,
   owner: string | undefined,
   today: string,
 ) => [
@@ -679,13 +697,15 @@ const betMarksOf = (
   ),
   ...(owner === undefined
     ? []
-    : [...swap].map((film) => ({
-        person: owner,
-        film,
-        rating: null,
-        kind: 'swapped' as const,
-        date: today,
-      }))),
+    : [...swap]
+        .filter((film) => !films.some((m) => m.id === film && m.swapForSeen))
+        .map((film) => ({
+          person: owner,
+          film,
+          rating: null,
+          kind: 'swapped' as const,
+          date: today,
+        }))),
 ]
 
 /** What the reply recorded and what regenerating needs. */
@@ -807,7 +827,7 @@ const recordReply = (input: ReplyInput) =>
     }
     const betMarksChanged = recordBetMarks(
       front,
-      betMarksOf(seen, swap, owner, today),
+      betMarksOf(seen, swap, films, owner, today),
     )
     if (write || betMarksChanged)
       yield* writeSession(id, front, opened.session.body)
