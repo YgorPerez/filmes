@@ -85,17 +85,25 @@ function Tape({
   session: string
   cover: string | null
 }) {
+  // A cover that does not load gives way to the spine, as the Cartaz's
+  // case gives way to the title: no broken-image glyph (#272).
+  const [broken, setBroken] = useState(false)
   return (
     <li>
       <a
         href={`${sessionPath(session)}#filme-${film.id}`}
         className="flex min-h-touch items-center gap-md overflow-hidden rounded-rail bg-surface-2 pr-md text-ink no-underline hover:bg-rule"
       >
-        {cover ? (
+        {cover && !broken ? (
           <img
             src={cover}
             alt=""
             loading="lazy"
+            onError={() => setBroken(true)}
+            // It may have failed before the page came alive.
+            ref={(img) => {
+              if (img?.complete && img.naturalWidth === 0) setBroken(true)
+            }}
             className="h-touch w-7.5 shrink-0 border-r border-case-edge bg-case object-cover"
           />
         ) : (
