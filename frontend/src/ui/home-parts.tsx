@@ -36,7 +36,7 @@ export function Ask() {
       <a href={NEW_SESSION} tabIndex={-1} className="w-fit no-underline">
         <ShelfLabel items={ask.blanks} label={ask.blanksLabel} />
       </a>
-      <p className="text-meta text-case-ink-2">{ask.lead}</p>
+      <p className="text-pretty text-case-ink-2">{ask.lead}</p>
       <a href={NEW_SESSION} className={buttonVariants({ variant: 'big' })}>
         <Icon name="plus" className="size-6" />
         {HOME.request}
