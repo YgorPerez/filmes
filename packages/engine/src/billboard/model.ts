@@ -592,9 +592,15 @@ const isFact = (e: BodyEvidence) => e.kind !== 'guess'
 /** A Já visto's line (`signals/seen.ts`). */
 const isSeen = (e: BodyEvidence) => e.against && e.text === 'já viu'
 
+/** A Feedback's Fonte as whoever looks reads it: the Dono who relayed it
+ * is "você" (#277). */
+const RELAYED = /, repassado pelo Dono$/u
+const sourceFor = (source: string, relayedByYou: boolean): string =>
+  relayedByYou ? source.replace(RELAYED, ', repassado por você') : source
+
 /** The strongest Evidence of each Presente with a Fato, the ones with the
  * same sharing a line, the strongest lines first (`_linhas`). */
-const linesOf = (film: FilmInBody): BillboardLine[] => {
+const linesOf = (film: FilmInBody, relayedByYou: boolean): BillboardLine[] => {
   const groups = new Map<string, { evidence: BodyEvidence; people: string[] }>()
   for (const [person, evidence] of Object.entries(film.evidence)) {
     const strongest = evidence.find(isFact)
@@ -622,7 +628,9 @@ const linesOf = (film: FilmInBody): BillboardLine[] => {
       people: g.people,
       strength: g.evidence.strength as Strength,
       text: g.evidence.text,
-      source: g.evidence.source || null,
+      source: g.evidence.source
+        ? sourceFor(g.evidence.source, relayedByYou)
+        : null,
       against: g.evidence.against,
     }))
 }
@@ -787,6 +795,8 @@ const filmCard = (
     readonly people: ReadonlyArray<BillboardPerson>
     /** The Feedback's chosen film and reactions, when it has them. */
     readonly feedback: Told | null
+    /** Whoever looks is the Session's Dono, who relayed its Feedback. */
+    readonly relayedByYou: boolean
   },
 ) =>
   Effect.gen(function* () {
@@ -839,7 +849,7 @@ const filmCard = (
       ...(awards.length > 0 && { awards }),
       ...(critics.length > 0 && { critics }),
       synopsis: header.synopsis,
-      lines: linesOf(film),
+      lines: linesOf(film, input.relayedByYou),
       withoutFact,
       seen,
       coverage: `Fato sobre ${people.length - withoutFact.length} de ${people.length}`,
@@ -920,7 +930,9 @@ export const billboardModel = (
       films = yield* onlyShown(id, films, input.shown)
     const { weights } = yield* Environment
     // "Você" is whoever looks: the logged-in Pessoa, else the Session's Dono.
-    const owner = (yield* Owner) ?? textOf(front.get('owner'))
+    const sessionOwner = textOf(front.get('owner'))
+    const owner = (yield* Owner) ?? sessionOwner
+    const relayedByYou = owner !== null && owner === sessionOwner
     const listed = new Map<string, YamlMapping>()
     for (const item of mappings(front.get('recommendation')))
       listed.set(pyStrValue(item.get('id') ?? null), item)
@@ -959,6 +971,7 @@ export const billboardModel = (
             attendees,
             people,
             feedback,
+            relayedByYou,
           })
           const note = notes.get(film.id)
           cards.push(note === undefined ? card : { ...card, notes: note })

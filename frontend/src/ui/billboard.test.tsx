@@ -17,6 +17,7 @@ import { Billboard } from './billboard'
 import { CHOSEN_OUTSIDE, CLOSED, MODEL } from './billboard.fixture'
 import { parseMarks } from './billboard-marks'
 import { BILLBOARD } from './billboard.copy'
+import { CHOSEN as CHOSEN_COPY } from './billboard-chosen.copy'
 
 const KEY = 'filmes-cartaz:2026-11-20-iara:v2'
 
@@ -290,7 +291,7 @@ describe('the Cartaz shows, the chosen film', () => {
     expect(block.getByText('Curta da Madrugada (2010)')).toBeTruthy()
     // Each line opens with her avatar, whose initial a screen reader skips.
     expect(block.getAllByRole('listitem').map((li) => li.textContent)).toEqual([
-      'BBruno: deu 8 de 10',
+      'BVocê: deu 8 de 10',
       'IIara: não gostou',
     ])
     expect(cards()).toHaveLength(2)
@@ -303,7 +304,7 @@ describe('the Cartaz shows, the chosen film', () => {
         .getByRole('list', { name: 'Filme escolhido' })
         .querySelectorAll('li')
     expect([...reactions()].map((li) => li.textContent)).toEqual([
-      'BBruno: previsto 8,3 · deu 6 de 10',
+      'BVocê: previsto 8,3 · deu 6 de 10',
       'IIara: gostou',
     ])
     expect(
@@ -318,7 +319,7 @@ describe('the Cartaz shows, the chosen film', () => {
 })
 
 describe('the Cartaz shows, a Reação from outside', () => {
-  it('a Reação of someone not on the Cartaz, by her slug', () => {
+  it('a Reação of someone not on the Cartaz, by her slug, and who has none, muted', () => {
     render(
       <Billboard
         billboard={{
@@ -341,8 +342,8 @@ describe('the Cartaz shows, a Reação from outside', () => {
     const block = within(
       screen.getByRole('region', { name: 'Filme escolhido' }),
     )
-    expect(block.getByRole('listitem').textContent).toBe(
-      'teo: previsto 7 · neutro',
+    expect(block.getAllByRole('listitem').map((li) => li.textContent)).toEqual(
+      ['teo: previsto 7 · neutro', CHOSEN_COPY.noReaction('Você e Iara')],
     )
   })
 })
@@ -864,7 +865,7 @@ describe('the inline card', () => {
     ).toBe('Sessão fechada · Filme escolhido: As Horas Lentas')
     expect(
       screen.getByRole('list', { name: 'Filme escolhido' }).textContent,
-    ).toBe('BBruno: previsto 8,3 · deu 6 de 10IIara: gostou')
+    ).toBe('BVocê: previsto 8,3 · deu 6 de 10IIara: gostou')
     const rows = within(
       screen.getByRole('list', { name: BILLBOARD.view.list }),
     ).getAllByRole('listitem')

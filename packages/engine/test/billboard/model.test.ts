@@ -1028,3 +1028,25 @@ describe('the Cartaz model, what weighs against the film (#272)', () => {
     expect(card!.seen).toEqual(['bruno'])
   })
 })
+
+describe('the Cartaz model, a relayed Feedback (#277)', () => {
+  test('its Fonte says "repassado por você" to the Dono who relayed it', async () => {
+    const fixture = useFixture()
+    const first = await recommend(fixture, { attendees: ['dono', 'iara'] })
+    await fixture.ok(
+      recordFeedback({
+        session: first.session.id,
+        film: first.films[0]!.id,
+        ratings: ['dono=4', 'iara=5'],
+      }),
+    )
+    const next = await recommend(fixture, { attendees: ['dono', 'iara'] })
+    const out = await fixture.ok(billboard({ session: next.session.id }))
+
+    const sources = out.billboard.films.flatMap((f) =>
+      f.lines.flatMap((l) => (l.source === null ? [] : [l.source])),
+    )
+    expect(sources.some((s) => s.endsWith(', repassado por você'))).toBe(true)
+    expect(sources.some((s) => s.endsWith('repassado pelo Dono'))).toBe(false)
+  })
+})

@@ -85,7 +85,7 @@ test('the Dono closes a Session and the next one shows the satisfaction', async 
   // The told Session opens with the tape given back (#272).
   await expect(
     page.getByRole('region', { name: 'Fita devolvida' }),
-  ).toContainText('Bruno: deu 10 de 10')
+  ).toContainText('Você: deu 10 de 10')
   await snap(page, info, 'feedback-gravado')
   expect(await stillOpen(first)).toBe(false)
   // "Pedir filme de novo com essa turma" opens Nova Sessão with the group
