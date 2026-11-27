@@ -38,7 +38,12 @@ const NO_MARKS: FilmMarks = {
   comment: '',
 }
 
-const emptyMarks = (): Marks => ({ addition: '', moods: null, films: {} })
+/** No mark at all: a Cartaz as it came, or after Limpar. */
+export const emptyMarks = (): Marks => ({
+  addition: '',
+  moods: null,
+  films: {},
+})
 
 /** The chips that are on: the Dono's, else the version's. */
 export const chosenMoods = (model: Billboard, marks: Marks) =>
@@ -52,7 +57,7 @@ const inChipOrder = (model: Billboard, moods: Iterable<unknown>) => {
 
 /** The Climas the Dono chose, in the chips' order, when they are not the
  * version's; null when they are. */
-function otherMoods(model: Billboard, marks: Marks): string[] | null {
+export function otherMoods(model: Billboard, marks: Marks): string[] | null {
   if (marks.moods === null) return null
   const chosen = inChipOrder(model, marks.moods)
   const before = new Set(model.moods)
@@ -121,6 +126,34 @@ export function markCounts(model: Billboard, marks: Marks) {
     mood: otherMoods(model, marks) !== null,
   }
 }
+
+/** What was marked, named: the films of each Trocar, Já vi (with who),
+ * stars and comment, the acrescentar and the Climas, for the inline card
+ * (#277). */
+export function markedFilms(model: Billboard, marks: Marks) {
+  const name = (slug: string) =>
+    model.attendees.find((p) => p.slug === slug)?.label ?? slug
+  const films = model.films.map((film) => ({
+    film,
+    marks: marksOf(marks, film.id),
+  }))
+  return {
+    swap: films.filter((f) => f.marks.swap).map((f) => f.film.title),
+    seen: films
+      .filter((f) => f.marks.seen.length > 0)
+      .map((f) => ({ title: f.film.title, people: f.marks.seen.map(name) })),
+    stars: films
+      .filter((f) => f.marks.stars > 0)
+      .map((f) => ({ title: f.film.title, stars: f.marks.stars })),
+    comments: films
+      .filter((f) => f.marks.comment.trim() !== '')
+      .map((f) => f.film.title),
+    addition: marks.addition.trim(),
+    moods: otherMoods(model, marks),
+  }
+}
+
+export type MarkedFilms = ReturnType<typeof markedFilms>
 
 // --- the browser's storage ---------------------------------------------------
 

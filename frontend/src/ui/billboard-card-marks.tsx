@@ -56,7 +56,9 @@ function Scale({
     <div
       role="group"
       aria-label={label}
-      className="grid grid-cols-5 gap-0.75 min-[480px]:grid-cols-10"
+      // Two rows of 5 until the note itself is wide enough for ten
+      // 44px cells (#277): the width of the note, not of the window.
+      className="grid grid-cols-5 gap-0.75 @min-[470px]:grid-cols-10"
     >
       {Array.from({ length: 10 }, (_, i) => String(i + 1)).map((n) => (
         <button
@@ -90,7 +92,7 @@ function SeenNote({
   const { marks: copy } = BILLBOARD
   const who = person.owner ? 'você' : person.name
   return (
-    <div className="flex flex-col gap-sm rounded-field bg-card-stock px-lg py-md text-card-stock-ink">
+    <div className="@container flex flex-col gap-sm rounded-field bg-card-stock px-lg py-md text-card-stock-ink">
       <span className="flex items-center gap-sm font-display text-field-label">
         <Avatar person={person} />
         {copy.note(person.owner ? null : person.name)}
@@ -107,7 +109,7 @@ function SeenNote({
       />
       <textarea
         rows={1}
-        placeholder={copy.thought}
+        placeholder={copy.thought(who)}
         aria-label={copy.thoughtLabel(who, position)}
         value={marks.thoughts[person.slug] ?? ''}
         onChange={(e) =>
@@ -140,7 +142,7 @@ function Stars({
           aria-pressed={stars === value}
           // The same star again takes the stars off.
           onClick={() => onChange(stars === value ? 0 : value)}
-          className={`grid h-touch w-9 cursor-pointer place-items-center ${
+          className={`grid size-touch cursor-pointer place-items-center ${
             value <= stars ? 'text-star [&_svg]:fill-current' : 'text-ink-2/45'
           }`}
         >
@@ -202,6 +204,10 @@ export function FilmMarksControls({
   const [opened, setOpened] = useState(false)
   const commenting = opened || marks.comment !== ''
   const seen = new Set(marks.seen)
+  // Many Presentes make a long row of Já vi: it opens from one option,
+  // and stays open once someone is marked (#277).
+  const [unfolded, setUnfolded] = useState(false)
+  const folded = people.length > copy.seenFolded && !unfolded && seen.size === 0
   const mark = (slug: string, on: boolean) => {
     const next = new Set(seen)
     if (on) next.add(slug)
@@ -240,17 +246,29 @@ export function FilmMarksControls({
         aria-label={copy.seenGroup(film.position)}
         className="flex flex-wrap items-center gap-sm"
       >
-        <span className={label}>{copy.seen}</span>
-        {people.map((p) => (
-          <Toggle
-            key={p.slug}
-            pressed={seen.has(p.slug)}
-            onChange={(on) => mark(p.slug, on)}
+        {folded ? (
+          <button
+            type="button"
+            aria-expanded={false}
+            onClick={() => setUnfolded(true)}
+            className={buttonVariants({ variant: 'option' })}
           >
-            {p.label}
-          </Toggle>
-        ))}
-        {people.length > 1 && (
+            {copy.seenMore}
+          </button>
+        ) : (
+          <span className={label}>{copy.seen}</span>
+        )}
+        {!folded &&
+          people.map((p) => (
+            <Toggle
+              key={p.slug}
+              pressed={seen.has(p.slug)}
+              onChange={(on) => mark(p.slug, on)}
+            >
+              {p.label}
+            </Toggle>
+          ))}
+        {!folded && people.length > 1 && (
           <Toggle
             pressed={seen.size === people.length}
             onChange={(on) =>

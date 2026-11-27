@@ -8,9 +8,11 @@ import { Option } from './kit/option'
 
 // The reply's pieces (DESIGN.md, Botão principal, Acrescentar and Barra
 // de envio): the acrescentar box after the last film, with the Clima chips
-// (#179) and Copiar pro chat under it, and the bar that follows the Dono
-// down the Cartaz with what she marked, the status line and Enviar (the
-// screen's one orange button). The Cartaz (`billboard.tsx`) places them.
+// (#179) folded under "Mudar o clima" and, on the web, Copiar pro chat
+// under it; and the bar that follows the Dono down the Cartaz with what she
+// marked, the status line and Enviar (the screen's one orange button). In
+// Claude, Copiar shows in the bar only when Enviar could not go (#277).
+// The Cartaz (`billboard.tsx`) places them.
 
 const { reply } = BILLBOARD
 
@@ -21,8 +23,15 @@ export function SendButton({
   onSend,
   className,
   sending = false,
+  sent = false,
+  retry = false,
 }: {
   sending?: boolean
+  /** This very reply went already: nothing to send until a mark changes
+   * (#277). */
+  sent?: boolean
+  /** The last try failed. */
+  retry?: boolean
   onSend?: () => void
   className?: string
 }) {
@@ -30,9 +39,18 @@ export function SendButton({
     <button
       type={onSend ? 'button' : 'submit'}
       onClick={onSend}
-      className={buttonVariants({ className })}
+      disabled={sent}
+      className={buttonVariants({
+        className: `${className ?? ''} disabled:cursor-default disabled:bg-surface-2 disabled:text-ink-2`,
+      })}
     >
-      {sending ? BILLBOARD.view.sending : reply.send}
+      {sending
+        ? BILLBOARD.view.sending
+        : sent
+          ? reply.sent
+          : retry
+            ? reply.retry
+            : reply.send}
     </button>
   )
 }
@@ -57,7 +75,7 @@ async function copyText(text: string): Promise<boolean> {
 
 /** Copiar pro chat, and the box with the text selected when the clipboard
  * refused it. */
-function Copy({
+export function Copy({
   text,
   onMessage,
 }: {
@@ -126,28 +144,35 @@ function MoodChips({
     onMoods(
       billboard.moodChoices.filter((m) => (m === mood ? checked : on.has(m))),
     )
+  // Folded: any chip redoes the whole list, so it takes a tap to reach
+  // them (#277); open once the Dono changed the Clima.
   return (
-    <fieldset className="flex flex-col gap-xs">
-      <legend className="mb-xs font-display text-field-label">
-        {reply.moods}{' '}
-        <span className="font-body font-normal text-ink-2">
-          {reply.moodsHint}
-        </span>
-      </legend>
-      <div className="flex flex-wrap gap-sm">
-        {billboard.moodChoices.map((mood) => (
-          <Option
-            key={mood}
-            name="clima"
-            value={mood}
-            checked={on.has(mood)}
-            onChange={toggle(mood)}
-          >
-            {mood}
-          </Option>
-        ))}
-      </div>
-    </fieldset>
+    <details open={marks.moods !== null} className="flex flex-col gap-xs">
+      <summary className="flex min-h-touch cursor-pointer items-center font-display text-field-label">
+        {reply.moodsOpen}
+      </summary>
+      <fieldset className="flex flex-col gap-xs">
+        <legend className="mb-xs font-display text-field-label">
+          {reply.moods}{' '}
+          <span className="font-body font-normal text-ink-2">
+            {reply.moodsHint}
+          </span>
+        </legend>
+        <div className="flex flex-wrap gap-sm">
+          {billboard.moodChoices.map((mood) => (
+            <Option
+              key={mood}
+              name="clima"
+              value={mood}
+              checked={on.has(mood)}
+              onChange={toggle(mood)}
+            >
+              {mood}
+            </Option>
+          ))}
+        </div>
+      </fieldset>
+    </details>
   )
 }
 
@@ -158,6 +183,7 @@ export function ReplyBox({
   marks,
   kept,
   text,
+  copy = true,
   onMessage,
   onAddition,
   onMoods,
@@ -166,6 +192,9 @@ export function ReplyBox({
   marks: Marks
   kept: boolean
   text: string
+  /** Copiar pro chat here: the web. In Claude it is in the bar, when
+   * Enviar could not go. */
+  copy?: boolean
   onMessage: (message: string) => void
   onAddition: (text: string) => void
   onMoods: (moods: string[]) => void
@@ -195,9 +224,11 @@ export function ReplyBox({
       {billboard.moodChoices.length > 0 && (
         <MoodChips billboard={billboard} marks={marks} onMoods={onMoods} />
       )}
-      <div className="flex flex-wrap items-center gap-sm">
-        <Copy text={text} onMessage={onMessage} />
-      </div>
+      {copy && (
+        <div className="flex flex-wrap items-center gap-sm">
+          <Copy text={text} onMessage={onMessage} />
+        </div>
+      )}
       {kept && <p className="text-meta text-ink-2">{reply.kept}</p>}
       <noscript>
         <p className="text-meta text-ink-2">{reply.noScript}</p>
@@ -215,7 +246,9 @@ export type BarPlace = 'tabs' | 'foot' | 'end'
 
 const BAR: Record<BarPlace, string> = {
   tabs: 'bottom-[calc(68px+env(safe-area-inset-bottom))] rounded-t-panel border-x border-t min-[900px]:bottom-0',
-  foot: 'bottom-0 border-t px-2xl pb-[max(10px,env(safe-area-inset-bottom))]',
+  // Above the box the host lays over its foot (`--host-inset-bottom`, from
+  // the host's safe area, #277); `env()` is 0 inside a frame.
+  foot: 'bottom-0 border-t px-2xl pb-[max(10px,var(--host-inset-bottom,0px),env(safe-area-inset-bottom))]',
   end: 'bottom-0 rounded-panel border',
 }
 
@@ -224,27 +257,64 @@ const BAR: Record<BarPlace, string> = {
  * from any film. */
 export function ReplyBar({
   summary,
+  moods = null,
   message,
   onSend,
   place,
   sending,
+  sent,
+  retry,
+  copy,
+  onMessage,
 }: {
   summary: string
+  /** The Climas the Dono chose, when they are not the version's: in bold,
+   * since they redo the whole list (#277). */
+  moods?: readonly string[] | null
   message: string
   onSend?: () => void
   place: BarPlace
   sending?: boolean
+  sent?: boolean
+  retry?: boolean
+  /** The text for Copiar, beside the status, when Enviar could not go. */
+  copy?: string | null
+  onMessage?: (message: string) => void
 }) {
+  // In Claude's fullscreen the bar spans the frame and its content keeps
+  // the Cartaz's column (#277).
+  const column = place === 'foot' ? 'mx-auto w-full max-w-[688px]' : ''
   return (
     <section
       aria-label={reply.bar}
       className={`sticky z-10 flex flex-col gap-2xs border-rule bg-surface px-lg py-sm ${BAR[place]}`}
     >
-      <div className="flex items-center justify-between gap-md">
-        <p className="min-w-0 text-meta text-ink-2">{summary}</p>
-        <SendButton onSend={onSend} sending={sending} className="shrink-0" />
+      <div className={`flex items-center justify-between gap-md ${column}`}>
+        <p className="min-w-0 text-meta text-ink-2">
+          {summary}
+          {moods !== null && (
+            <>
+              {summary !== '' && ' · '}
+              <strong className="font-bold text-ink">
+                {reply.moodsChosen(moods)}
+              </strong>
+            </>
+          )}
+        </p>
+        <SendButton
+          onSend={onSend}
+          sending={sending}
+          sent={sent}
+          retry={retry}
+          className="shrink-0"
+        />
       </div>
-      <Status message={message} />
+      {(message || copy) && (
+        <div className={`flex flex-wrap items-center gap-sm ${column}`}>
+          <Status message={message} />
+          {copy && onMessage && <Copy text={copy} onMessage={onMessage} />}
+        </div>
+      )}
     </section>
   )
 }

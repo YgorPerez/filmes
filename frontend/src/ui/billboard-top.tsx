@@ -34,23 +34,31 @@ export function Strength({
   )
 }
 
-/** A Presente per avatar with her name, and the three Forças in words. */
+/** A Presente per avatar with her name, and the three Forças in words on
+ * a line of their own, so the legend never runs into the names (#277). */
 export function Legend({ billboard }: { billboard: BillboardModel }) {
   return (
-    <p className="flex flex-wrap items-center gap-x-xl gap-y-xs text-meta text-ink-2">
-      {billboard.attendees.map((p) => (
-        <span key={p.slug} className="inline-flex items-center gap-xs text-ink">
-          <Avatar person={p} />
-          {p.name}
-        </span>
-      ))}
-      {(['strong', 'moderate', 'weak'] as const).map((level) => (
-        <span key={level} className="inline-flex items-center gap-xs">
-          <Strength strength={level} />
-          {BILLBOARD.strength[level]}
-        </span>
-      ))}
-    </p>
+    <div className="flex flex-col gap-xs text-meta text-ink-2">
+      <p className="flex flex-wrap items-center gap-x-xl gap-y-xs">
+        {billboard.attendees.map((p) => (
+          <span
+            key={p.slug}
+            className="inline-flex items-center gap-xs text-ink"
+          >
+            <Avatar person={p} />
+            {p.name}
+          </span>
+        ))}
+      </p>
+      <p className="flex flex-wrap items-center gap-x-xl gap-y-xs">
+        {(['strong', 'moderate', 'weak'] as const).map((level) => (
+          <span key={level} className="inline-flex items-center gap-xs">
+            <Strength strength={level} />
+            {BILLBOARD.strength[level]}
+          </span>
+        ))}
+      </p>
+    </div>
   )
 }
 

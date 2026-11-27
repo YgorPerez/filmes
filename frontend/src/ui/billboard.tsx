@@ -10,11 +10,14 @@ import { BillboardCard } from './billboard-card'
 import { ChosenFilm } from './billboard-chosen'
 import { InlineBillboard } from './billboard-inline'
 import {
+  emptyMarks,
   forgetMarks,
   hasMarks,
   markCounts,
+  markedFilms,
   marksOf,
   openStorage,
+  otherMoods,
   parseMarks,
   replyText,
   saveMarks,
@@ -23,9 +26,10 @@ import {
   type Marks,
 } from './billboard-marks'
 import { ReplyBar, ReplyBox, type BarPlace } from './billboard-reply'
+import { buttonVariants } from './kit/button-variants'
 import { Dropped, Legend } from './billboard-top'
 import { BILLBOARD } from './billboard.copy'
-import { ShelfLabel } from './kit/shelf-label'
+import { HandNote, ShelfLabel } from './kit/shelf-label'
 
 // The Cartaz [billboard] of a Session (`cartaz/__init__.py`, `cartaz.js`):
 // the request on the shelf label, the legend, what left the previous
@@ -42,9 +46,19 @@ import { ShelfLabel } from './kit/shelf-label'
 // `onSend` gets it. The view picks the layout (DESIGN.md, Dentro do
 // Claude): `inline` is the compact card in the conversation, `fullscreen`
 // the one to mark films in, with the shelf label fixed on top. The marks live here, so
-// they survive the switch between the two.
+// they survive the switch between the two. A reply that went is not sent
+// again: Enviar reads "Enviado ✓" until a mark changes (#277).
 
 type Layout = 'page' | 'inline' | 'fullscreen'
+
+/** What became of an Enviar in the view: the status line, whether the
+ * reply went, and, when it did not, whether Copiar is the way out (the
+ * host cannot send) or a new try may do. */
+export type SendOutcome = {
+  readonly message: string
+  readonly sent: boolean
+  readonly copy?: boolean
+}
 
 type Props = {
   billboard: BillboardModel
@@ -56,8 +70,8 @@ type Props = {
     sending: boolean
   }
   /** Gets the text instead of the post: the MCP Apps view. What its
-   * promise gives is the status line. */
-  onSend?: (text: string) => void | Promise<string>
+   * promise gives is the outcome. */
+  onSend?: (text: string) => void | Promise<SendOutcome>
   /** The marks of this version were sent: forget the kept ones. */
   sent?: boolean
   layout?: Layout
@@ -101,15 +115,25 @@ function useMarks(billboard: BillboardModel, sent: boolean) {
 function Request({
   billboard,
   compact = false,
+  single = false,
 }: {
   billboard: BillboardModel
   compact?: boolean
+  /** One line with the version, and the Dono's words left to the body:
+   * the fixed top of Claude's fullscreen (#277). */
+  single?: boolean
 }) {
   return (
     <ShelfLabel
       compact={compact}
+      single={single}
+      tag={
+        single && billboard.version > 1
+          ? BILLBOARD.view.version(billboard.version)
+          : undefined
+      }
       items={[billboard.request.who, ...billboard.request.parts]}
-      note={billboard.request.speech}
+      note={single ? null : billboard.request.speech}
     />
   )
 }
@@ -123,10 +147,20 @@ export function Billboard({
   layout = 'page',
   onExpand,
 }: Props) {
-  const { marks, change, canKeep } = useMarks(billboard, sent)
+  const { marks, change: keep, canKeep } = useMarks(billboard, sent)
   const [message, setMessage] = useState('')
+  // The text that went, and why the last try did not.
+  const [sentText, setSentText] = useState<string | null>(null)
+  const [failure, setFailure] = useState<'retry' | 'copy' | null>(null)
+  const [busy, setBusy] = useState(false)
   const text = replyText(billboard, marks)
+  const isSent = sentText === text
 
+  // A new mark makes the last status ("Nada marcado ainda.") stale (#277).
+  const change = (next: Marks) => {
+    keep(next)
+    setMessage('')
+  }
   const changeFilm = (id: string) => (film: FilmMarks) =>
     change({ ...marks, films: { ...marks.films, [id]: film } })
 
@@ -139,32 +173,48 @@ export function Billboard({
     event.preventDefault()
     if (onSend === undefined) setMessage(BILLBOARD.reply.nothing)
   }
-  // The view hands the text over instead.
+  // The view hands the text over instead, once per reply.
   const send = (handOver: NonNullable<Props['onSend']>) => () => {
     if (!hasMarks(text)) {
       setMessage(BILLBOARD.reply.nothing)
       return
     }
-    const status = handOver(text)
-    if (status) {
-      setMessage(BILLBOARD.view.sending)
-      void status.then(setMessage)
-    }
+    if (isSent || busy) return
+    const going = text
+    const outcome = handOver(going)
+    if (!outcome) return
+    setBusy(true)
+    setMessage(BILLBOARD.view.sending)
+    void outcome.then((o) => {
+      setBusy(false)
+      setMessage(o.message)
+      setFailure(o.sent ? null : o.copy ? 'copy' : 'retry')
+      if (o.sent) setSentText(going)
+    })
   }
   const onSendClick = onSend && send(onSend)
   const empty = billboard.films.length === 0
   const replying = billboard.open && !empty
 
-  // What was marked, in a sentence ("1 Trocar e 1 Já vi").
-  const summary = BILLBOARD.reply.summary(markCounts(billboard, marks))
+  // What was marked, in a sentence ("1 Trocar e 1 Já vi"); the Clima
+  // apart, in bold.
+  const moods = otherMoods(billboard, marks)
+  const summary = BILLBOARD.reply.summary({
+    ...markCounts(billboard, marks),
+    mood: false,
+  })
   if (layout === 'inline' && onExpand)
     return (
       <InlineBillboard
         billboard={billboard}
-        summary={summary}
+        marked={BILLBOARD.reply.marked(markedFilms(billboard, marks))}
+        sent={isSent}
         message={message}
+        copy={failure === 'copy' ? text : null}
+        onMessage={setMessage}
         onExpand={onExpand}
         onSend={onSendClick}
+        onClear={() => change(emptyMarks())}
       />
     )
 
@@ -198,15 +248,26 @@ export function Billboard({
   const bar = replying && (
     <ReplyBar
       summary={summary}
+      moods={moods}
       message={message}
       onSend={onSendClick}
       place={place}
       sending={post?.sending}
+      sent={isSent}
+      retry={failure === 'retry'}
+      copy={failure === 'copy' ? text : null}
+      onMessage={setMessage}
     />
   )
   const shelf = (
     <>
-      {empty && <p className="text-ink-2">{BILLBOARD.empty}</p>}
+      {empty && (
+        <p className="text-ink-2">
+          {onSend
+            ? BILLBOARD.view.empty(billboard.request.parts)
+            : BILLBOARD.empty}
+        </p>
+      )}
       <Dropped billboard={billboard} />
       <ChosenFilm chosen={billboard.chosen} people={billboard.attendees} />
       {cards}
@@ -215,6 +276,7 @@ export function Billboard({
           billboard={billboard}
           marks={marks}
           text={text}
+          copy={onSend === undefined}
           kept={canKeep}
           onMessage={setMessage}
           onAddition={(addition) => change({ ...marks, addition })}
@@ -224,16 +286,25 @@ export function Billboard({
     </>
   )
 
+  const speech = billboard.request.speech
   const body = fullscreen ? (
-    <Fullscreen top={<Request billboard={billboard} compact />} foot={bar}>
-      <Legend billboard={billboard} />
+    <Fullscreen
+      top={<Request billboard={billboard} compact single />}
+      foot={bar}
+    >
+      {speech && (
+        <div className="flex">
+          <HandNote compact>{speech}</HandNote>
+        </div>
+      )}
+      {!empty && <Legend billboard={billboard} />}
       {shelf}
     </Fullscreen>
   ) : (
     <div className="flex flex-col gap-2xl">
       <Request billboard={billboard} />
       <Legend billboard={billboard} />
-      {shelf}
+      {onSend ? <Capped>{shelf}</Capped> : shelf}
       {bar}
     </div>
   )
@@ -275,7 +346,7 @@ function Section({
     <section aria-labelledby={id} className="flex flex-col gap-lg">
       <h2
         id={id}
-        className={`border-l-4 pl-sm font-display text-step-title text-balance ${bet ? 'border-stamp text-stamp' : 'border-ink text-ink'}`}
+        className={`border-l-4 pl-sm font-display text-page-title text-balance ${bet ? 'border-stamp text-stamp' : 'border-ink text-ink'}`}
       >
         {section.title}
         {section.again && (
@@ -292,9 +363,10 @@ function Section({
   )
 }
 
-/** Claude's fullscreen: the request fixed on top, the legend and the
- * shelf scrolling, the bar fixed at the foot, above the host's message box
- * (its safe area). */
+/** Claude's fullscreen: the request fixed on top, one line, the Dono's
+ * words, the legend and the shelf scrolling, the bar fixed at the foot,
+ * above the host's message box (its safe area, `--host-inset-*`). The
+ * content keeps the web's column, centred (#277). */
 function Fullscreen({
   top,
   foot,
@@ -304,13 +376,49 @@ function Fullscreen({
   foot: ReactNode
   children: ReactNode
 }) {
+  const column = 'mx-auto w-full max-w-[720px] px-2xl'
   return (
-    <div className="flex min-h-dvh flex-col">
-      <header className="sticky top-0 z-10 flex flex-col gap-sm border-b border-rule bg-ground px-2xl py-md">
-        {top}
+    <div className="flex min-h-dvh flex-col bg-ground">
+      <header className="sticky top-[var(--host-inset-top,0px)] z-10 border-b border-rule bg-ground py-sm">
+        <div className={column}>{top}</div>
       </header>
-      <div className="flex flex-1 flex-col gap-2xl p-2xl">{children}</div>
+      <div className={`flex flex-1 flex-col gap-2xl py-2xl ${column}`}>
+        {children}
+      </div>
       {foot}
+    </div>
+  )
+}
+
+/** A host without fullscreen sizes the frame to the content: the shelf is
+ * capped there, with "Ver o Cartaz inteiro", so the bar stays in reach
+ * (#277). */
+function Capped({ children }: { children: ReactNode }) {
+  const [whole, setWhole] = useState(false)
+  const [cut, setCut] = useState(false)
+  if (whole) return <>{children}</>
+  return (
+    <div className="relative flex flex-col gap-2xl">
+      <div
+        ref={(box) => {
+          if (box) setCut(box.scrollHeight > box.clientHeight)
+        }}
+        className="flex max-h-[880px] flex-col gap-2xl overflow-hidden"
+      >
+        {children}
+      </div>
+      {cut && (
+        <div className="absolute inset-x-0 bottom-0 flex justify-center border-t border-rule bg-ground pt-md">
+          <button
+            type="button"
+            aria-expanded={false}
+            onClick={() => setWhole(true)}
+            className={buttonVariants({ variant: 'option' })}
+          >
+            {BILLBOARD.view.seeAll}
+          </button>
+        </div>
+      )}
     </div>
   )
 }

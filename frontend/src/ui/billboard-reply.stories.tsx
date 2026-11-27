@@ -79,3 +79,37 @@ export const SentToChat: Story = {
     </div>
   ),
 }
+
+/** This very reply went: Enviar waits for a new mark (#277). */
+export const BarSent: Story = {
+  args: { place: 'foot', sent: true, message: SEND_STATUS.regenerating },
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByRole('button', { name: 'Enviado ✓' }),
+    ).toBeDisabled()
+  },
+}
+
+/** Another Clima, in bold, since it redoes the whole list. */
+export const BarWithClima: Story = {
+  args: { summary: '1 Trocar', moods: ['leve', 'pra rir'] },
+}
+
+/** The host could not send: Copiar beside the status. */
+export const BarCouldNotSend: Story = {
+  args: {
+    place: 'foot',
+    message: 'Não dá pra enviar por aqui. Toque em Copiar e cole no chat.',
+    copy: '#cartaz 2026-11-20-iara v2\n1 tt9000104 · trocar\n',
+    onMessage: fn(),
+  },
+}
+
+/** The engine refused it: Enviar tries again. */
+export const BarRetry: Story = {
+  args: {
+    place: 'foot',
+    retry: true,
+    message: 'Não consegui enviar. Tente de novo ou copie pro chat.',
+  },
+}

@@ -3,6 +3,7 @@ import type {
   BillboardLine,
   BillboardPerson,
 } from '@filmes/engine'
+import { useState } from 'react'
 import type { FilmMarks } from './billboard-marks'
 import { Chip } from './kit/chip'
 import { PersonDot } from './kit/person'
@@ -51,6 +52,10 @@ function Poster({
   const { card } = BILLBOARD
   const without = new Set(film.withoutFact)
   const predicted = new Map(film.predictedRatings.map((p) => [p.person, p]))
+  // A poster that does not load gives way to the title, as none does
+  // (#277).
+  const [broken, setBroken] = useState(false)
+  const cover = film.poster !== null && !broken
   return (
     <div className="relative self-start min-[560px]:row-span-2">
       <TapeCase
@@ -62,15 +67,19 @@ function Poster({
             rel="noopener noreferrer"
             className="absolute inset-0 grid place-items-center p-md text-ink-2 no-underline"
           >
-            {film.poster ? (
+            {cover ? (
               <img
-                src={film.poster}
+                src={film.poster ?? undefined}
                 alt={card.poster(film.title)}
                 loading={first ? 'eager' : 'lazy'}
+                onError={() => setBroken(true)}
                 className="absolute inset-0 size-full object-cover group-data-swap/card:opacity-70"
               />
             ) : (
-              <span>{film.title}</span>
+              // The title on the top half: a stamp goes on the bottom one.
+              <span className="self-start pt-lg text-center text-balance">
+                {film.title}
+              </span>
             )}
           </a>
         }
@@ -95,7 +104,7 @@ function Poster({
       {stamp && (
         <Sticker
           kind={stamp}
-          className="absolute top-[40%] left-1/2 -translate-x-1/2"
+          className={`absolute left-1/2 -translate-x-1/2 ${cover ? 'top-[40%]' : 'top-[62%]'}`}
         >
           {stamp === 'swap' ? card.swapStamp : card.seenStamp}
         </Sticker>
