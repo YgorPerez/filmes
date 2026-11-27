@@ -302,14 +302,13 @@ async function sendAndSeeRedone(
   await expect(page.getByText('Refeito: 2 saíram, 2 novos.')).toBeVisible()
   const left = page.getByText(`Saiu da prateleira: ${seen} (Nina já viu)`)
   // The page may still settle after the post: open the fold until it stays.
+  const traded = page.getByText(`Saiu da prateleira: ${swapped} (trocado)`)
   await expect(async () => {
     if (!(await left.isVisible()))
       await page.getByText('por quê', { exact: true }).click()
     await expect(left).toBeVisible({ timeout: 1000 })
+    await expect(traded).toBeVisible({ timeout: 1000 })
   }).toPass()
-  await expect(
-    page.getByText(`Saiu da prateleira: ${swapped} (trocado)`),
-  ).toBeVisible()
   // The kept films stay at their number; no card says "novo" (#326).
   expect(await titleOf(page, 3)).toBe(third)
   expect(await titleOf(page, 4)).toBe(fourth)
@@ -378,13 +377,13 @@ test('in the dark, stars alone only note, and stay on the card (#272)', async ({
 
   await send(page, id, 'anotada', 'Estrelas e comentários')
   await expect(page.getByText('Saiu da prateleira:')).toHaveCount(0)
+  // The stars it was given fill its controls, never a second row (#326).
   await expect(
     card(page, 1).getByRole('button', { name: '5 de 5' }),
-  ).toHaveAttribute('aria-pressed', 'false')
-  // The stars it was given stay in sight, read-only.
+  ).toHaveAttribute('aria-pressed', 'true')
   await expect(
-    card(page, 1).getByRole('img', { name: '5 de 5 estrelas' }),
-  ).toBeVisible()
+    card(page, 1).getByRole('img', { name: /estrelas/ }),
+  ).toHaveCount(0)
   await snap(page, info, 'cartaz-anotado')
 })
 
@@ -419,10 +418,13 @@ test('the Nota prevista the Session recorded, per Presente who has one', async (
   await snap(page, info, 'cartaz-nota-prevista')
   await snap(page, info, 'cartaz-nota-prevista-card', card(page, at))
 
-  const dot = card(page, at).getByRole('button', {
-    name: 'Bruno: 8,8 de 10 · 3 vizinhos',
+  // Under "Por que", one line of the Nota prevista (#326).
+  const predicted = card(page, at).getByRole('button', {
+    name: 'Nota prevista de Bruno: 8,8 de 10, pela nota de 3 pessoas de gosto parecido',
   })
-  await expect(dot).toHaveText('8,8')
-  await dot.click()
-  await expect(page.getByText('Bruno: 8,8 de 10 · 3 vizinhos')).toBeVisible()
+  await expect(predicted).toHaveText(/Bruno\s*8,8/)
+  await predicted.click()
+  await expect(
+    card(page, at).getByText('pela nota de 3 pessoas de gosto parecido'),
+  ).toBeVisible()
 })

@@ -57,7 +57,7 @@ test('the Dono closes a Session and the next one shows the satisfaction', async 
   // Sessões leads to its Feedback (the home shows only the latest, and the
   // other project opens its own at the same time).
   await tab(page, 'Sessões').click()
-  await page.getByRole('link', { name: 'Para contar' }).click()
+  await page.getByRole('link', { name: 'Para contar', exact: true }).click()
   await expect(page).toHaveURL(/\/sessoes\?filtro=para-contar$/)
   await page
     .getByRole('listitem')
