@@ -31,6 +31,7 @@ import { readPeople } from '../people/people.ts'
 import type { EngineServices } from '../runtime/Engine.ts'
 import type { EngineError } from '../runtime/EngineError.ts'
 import {
+  bodyDirection,
   KIND_IN_BODY,
   readSession,
   STRENGTH_IN_BODY,
@@ -287,7 +288,8 @@ const responseHeader = (line: string, film: YamlMapping): string | null => {
 }
 
 /** A body Evidence as the answer writes it (`_resumir`). */
-const summarize = (line: string): string | null => {
+const summarize = (full: string): string | null => {
+  const [line] = bodyDirection(full)
   let [text, , kind] = rpartition(line, ' · Tipo: ')
   let strength: string
   ;[text, , strength] = rpartition(text, ' · Força: ')
