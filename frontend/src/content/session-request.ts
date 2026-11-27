@@ -9,8 +9,8 @@
 // `quantos`, `pedido` (the Dono's words), and the Restrições: `duracao`
 // (minutes), `desde`/`ate` (years), `idioma`, `crianca` (age, 0 = no age),
 // `gatilhos` and `parecido` (lists separated by commas), `sem-ja-visto`,
-// `sem-lento`, `sem-tristeza` (checkboxes), `sem-climas` (a list, the
-// Climas turned away, #272), and `serie` (`anterior` |
+// `sem-lento`, `sem-tristeza` (checkboxes), `sem-climas` (repeated, the
+// Climas turned away, #272, #346; a value may be a comma list), and `serie` (`anterior` |
 // `todos` | `tanto-faz`, the Série na ordem, #165).
 
 import { field, oneOf, within } from './form-fields'
@@ -135,6 +135,19 @@ const all = (form: FormData, name: string): string[] => [
   ),
 ]
 
+/** The words of a repeated field whose values may be lists too: the
+ * "Nada de" chips, or the older comma list (#346). */
+const chips = (form: FormData, name: string): string[] | undefined => {
+  const items = all(form, name).flatMap(
+    (value) =>
+      value
+        .split(',')
+        .map((item) => item.trim())
+        .filter((item) => item !== ''),
+  )
+  return items.length > 0 ? [...new Set(items)] : undefined
+}
+
 const checked = (form: FormData, name: string) =>
   form.get(name) === 'sim' || undefined
 
@@ -197,7 +210,7 @@ function read(form: FormData): SessionRequestForm {
     unseen: checked(form, 'sem-ja-visto'),
     noSlow: checked(form, 'sem-lento'),
     noSad: checked(form, 'sem-tristeza'),
-    noMoods: list(form, 'sem-climas'),
+    noMoods: chips(form, 'sem-climas'),
     seriesOrder: seriesOrder(form),
   })
 }
@@ -246,7 +259,7 @@ export function draftOf(form: FormData): Partial<SessionRequestForm> {
     unseen: checked(form, 'sem-ja-visto'),
     noSlow: checked(form, 'sem-lento'),
     noSad: checked(form, 'sem-tristeza'),
-    noMoods: list(form, 'sem-climas'),
+    noMoods: chips(form, 'sem-climas'),
     seriesOrder: seriesOrder(form),
   })
 }

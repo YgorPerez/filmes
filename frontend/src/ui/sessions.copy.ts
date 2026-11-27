@@ -218,9 +218,8 @@ export const SESSIONS = {
     noSad: 'Nada triste',
     /** The Climas turned away (#272): “nada de terror”. */
     noMoods: 'Nada de',
-    /** The Climas a “nada de” takes, by name (#272). */
-    noMoodsHint: (moods: readonly string[]) =>
-      `tira os filmes do Clima; separe por vírgula: ${moods.join(', ')}`,
+    /** Over the Climas' chips under “nada de” (#346). */
+    noMoodsHint: 'tira os filmes dos Climas marcados',
     seriesOrder: 'Série na ordem',
     seriesOrderLead:
       'Na opção padrão, a continuação só entra se todo mundo viu o filme anterior. Vale para séries de filmes, não para franquias como Marvel ou Star Wars.',
