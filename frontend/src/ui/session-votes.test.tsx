@@ -164,12 +164,20 @@ it('with every film voted on, it shows the night’s list with her Votos', () =>
       search={LINK}
       home={HOME}
       questions="/participar/perguntas?x"
+      owner="Bruno"
     />,
   )
 
   expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
     VOTES.voted,
   )
+  // The same order as the film list (pass 5 F2): the Perguntas, then
+  // Mudar votos, and who sees the answers.
+  expect(screen.getAllByRole('link').map((a) => a.textContent)).toEqual([
+    VOTES.questions,
+    VOTES.revote,
+  ])
+  expect(screen.getByText(PARTICIPATION.questionsLead('Bruno'))).toBeTruthy()
   expect(screen.queryByRole('form')).toBeNull()
   expect(screen.getAllByText('você: sim')).toHaveLength(2)
   expect(screen.getByText(/Sal e Ferrugem/u)).toBeTruthy()
@@ -197,7 +205,11 @@ it('after sending, it says so and offers the films that came in', () => {
   )
 
   expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(VOTES.sent)
-  expect(screen.getByRole('status').textContent).toBe(VOTES.notices.regerada)
+  // No "Cada não" after a single não: the line under the list names what
+  // left (pass 5 F3).
+  expect(screen.getByRole('status').textContent).toBe(
+    'Votos contados. A lista foi refeita.',
+  )
   expect(screen.queryByRole('form')).toBeNull()
   expect(
     screen

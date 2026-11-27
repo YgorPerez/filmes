@@ -12,6 +12,8 @@ export const SHELL = {
   signedInAs: 'Entrou com',
   menu: 'Conta',
   operations: 'Operações',
-  pushFailing: 'envio falhando',
+  /** Beside Operações in the 240px menu: only "falhando" shows, so the row
+   * fits one line at 390; "envio" is read aloud. */
+  pushFailing: { hidden: 'envio ', shown: 'falhando' },
   logout: 'Sair',
 } as const

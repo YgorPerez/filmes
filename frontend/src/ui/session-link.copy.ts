@@ -50,7 +50,9 @@ export const PARTICIPATION = {
   vote: 'Votar nos filmes',
   voteNew: (n: number) =>
     n === 1 ? 'Votar no que chegou' : `Votar nos ${n} que chegaram`,
-  revote: 'Você já votou · mudar votos',
+  /** Every film has her Voto: the status as text, above the same actions
+   * as the deck's page (pass 5 F2). */
+  voted: 'Você já votou.',
   questionsTitle: 'Quer ajudar a acertar da próxima?',
   questionsLead: (owner: string | null) =>
     `Umas perguntas rápidas sobre filmes que você já viu. ${owner ?? 'Quem abriu a Sessão'} vê as respostas e decide se viram gosto.`,

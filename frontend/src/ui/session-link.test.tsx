@@ -16,6 +16,7 @@ import {
   LinkPicker,
   LinkUnavailable,
 } from './session-link'
+import { buttonVariants } from './kit/button-variants'
 import { PARTICIPATION } from './session-link.copy'
 import { PEOPLE, VIEW, VOTED } from './session-link.fixture'
 import { VOTES } from './session-votes.copy'
@@ -133,8 +134,28 @@ it('with every film voted, offers to change the Votos; without questions, no inv
     />,
   )
   expect(screen.getAllByText(PARTICIPATION.mine('no'))).toHaveLength(3)
-  expect(link(PARTICIPATION.revote).getAttribute('href')).toBe('/votar?mudar=1')
+  // The status is text, not a button label (pass 5 F2).
+  expect(screen.getByText(PARTICIPATION.voted)).toBeTruthy()
+  expect(link(VOTES.revote).getAttribute('href')).toBe('/votar?mudar=1')
   expect(screen.queryByText(PARTICIPATION.questionsTitle)).toBeNull()
+  // Nothing left to vote on: no veto rule.
+  expect(screen.queryByText(VOTES.rule.noDoes, { exact: false })).toBeNull()
+})
+
+it('with every film voted, the actions come in the deck’s order: the Perguntas, then Mudar votos', () => {
+  const films = VOTED.films.map((f) => ({ ...f, mine: 'yes' as const }))
+  render(
+    <LinkFilms view={{ ...VOTED, films }} vote={VOTE} questions="/perguntas" />,
+  )
+  expect(screen.getAllByRole('link').map((a) => a.textContent)).toEqual([
+    VOTES.questions,
+    VOTES.revote,
+  ])
+  // The Perguntas are the orange button, as on the deck's page.
+  expect(screen.getByRole('link', { name: VOTES.questions }).className).toBe(
+    buttonVariants(),
+  )
+  expect(screen.getByText(PARTICIPATION.questionsLead('Bruno'))).toBeTruthy()
 })
 
 it('a film without year or duration shows only its genres', () => {
