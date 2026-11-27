@@ -165,6 +165,7 @@ test('a relayed Relato, a film by its title, and a refusal in place', async ({
     'Esta Sessão já foi contada',
   )
   await expect(page.getByRole('link', { name: 'Ver a Sessão' })).toBeVisible()
+  await snap(page, info, 'feedback-contada')
 
   // Bruno was there, so he may correct it (#344): the form comes with what
   // was told, and saving replaces it.
@@ -187,6 +188,7 @@ test('a relayed Relato, a film by its title, and a refusal in place', async ({
   await page.getByRole('button', { name: 'Gravar a correção' }).click()
   await expect(page).toHaveURL(new RegExp(`/sessoes/${id}\\?feito=corrigida$`))
   await expect(page.getByText('Correção gravada')).toBeVisible()
+  await snap(page, info, 'sessao-corrigida')
   const told = await engineRun((engine) => engine.run(recordedFeedback(id)))
   expect(told?.reactions.find((r) => r.person === 'bruno')?.rating).toBe(6)
 })
