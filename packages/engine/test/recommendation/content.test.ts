@@ -13,6 +13,7 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, test } from 'vite-plus/test'
 import {
+  filmReason,
   personAdjust,
   personState,
   pyExp,
@@ -335,5 +336,96 @@ describe('the cut of the N strongest', () => {
     expect(others.length).toBeGreaterThan(0)
 
     expect(f.utility['bruno']).toBe(sigmoid((seen[0] ?? 0) + largest(others)))
+  })
+})
+
+describe('the content path by cinematography and producer', () => {
+  // The Dono's decision on #283: both join the path at most weak, with
+  // weight 0.5. In the fixture, Luz Rasante shares its cinematographer and
+  // Bilheteria its producer with Ensaio Geral, to which Rosa gave 5 (a strong
+  // seed). Both have 900 votes: only Candidates with a lower minimum.
+  const rosa = (fixture: Fixture) =>
+    engineRecommendation(
+      fixture,
+      { attendees: ['rosa'], count: 100 },
+      weightsWith(fixture, 'min_votes = 1000', 'min_votes = 900'),
+    )
+
+  test('a shared cinematographer links the Nota to the Candidate, at most weak', async () => {
+    const out = await rosa(useFixture())
+    expect(sortedRows(evidenceOf(out, 'Luz Rasante', 'rosa'))).toEqual([
+      [
+        'com fotografia de Íris Penha, como 1 filme a que deu nota alta: Ensaio Geral (2014)',
+        'weak',
+        'metadata',
+        // 0.5 × 0.3.
+        0.15,
+      ],
+      [
+        'deu 5 a Ensaio Geral (2014), também com fotografia de Íris Penha',
+        'weak',
+        'rating',
+        // 0.5 × 0.3, ×0.787 for the 5 of 2025-03-01.
+        0.1181,
+      ],
+    ])
+    expect(filmReason(film(out, 'Luz Rasante').evidence)).toEqual({
+      kind: 'entity',
+      name: 'Íris Penha',
+      people: ['rosa'],
+    })
+  })
+
+  test('a shared producer links the Nota to the Candidate, at most weak', async () => {
+    const out = await rosa(useFixture())
+    expect(sortedRows(evidenceOf(out, 'Bilheteria', 'rosa'))).toEqual([
+      [
+        'deu 5 a Ensaio Geral (2014), também produzido por Nestor Gil',
+        'weak',
+        'rating',
+        0.1181,
+      ],
+      [
+        'produzido por Nestor Gil, como 1 filme a que deu nota alta: Ensaio Geral (2014)',
+        'weak',
+        'metadata',
+        0.15,
+      ],
+    ])
+    expect(filmReason(film(out, 'Bilheteria').evidence)).toEqual({
+      kind: 'entity',
+      name: 'Nestor Gil',
+      people: ['rosa'],
+    })
+  })
+
+  test('the Ajuste to each link reaches it', async () => {
+    const fixture = useFixture()
+    await fixture.ok(
+      personAdjust({ person: 'rosa', link: 'cinematography', level: 'none' }),
+    )
+    await fixture.ok(
+      personAdjust({ person: 'rosa', link: 'producer', level: 'high' }),
+    )
+    const out = await rosa(fixture)
+
+    expect(evidenceOf(out, 'Luz Rasante', 'rosa')).toEqual([
+      ['sem fato', 'weak', 'guess', 0],
+    ])
+    // 1.5 × the weight, and still weak.
+    expect(sortedRows(evidenceOf(out, 'Bilheteria', 'rosa'))).toEqual([
+      [
+        'deu 5 a Ensaio Geral (2014), também produzido por Nestor Gil',
+        'weak',
+        'rating',
+        0.1772,
+      ],
+      [
+        'produzido por Nestor Gil, como 1 filme a que deu nota alta: Ensaio Geral (2014)',
+        'weak',
+        'metadata',
+        0.225,
+      ],
+    ])
   })
 })

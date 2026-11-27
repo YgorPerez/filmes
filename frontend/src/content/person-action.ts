@@ -21,7 +21,14 @@ const PERSON_ACTIONS = [
 ] as const
 
 type Reaction = 'love' | 'like' | 'dislike' | 'hate'
-type Link = 'director' | 'writer' | 'cast' | 'series' | 'genre'
+type Link =
+  | 'director'
+  | 'writer'
+  | 'cast'
+  | 'series'
+  | 'genre'
+  | 'cinematography'
+  | 'producer'
 type Level = 'none' | 'low' | 'normal' | 'high'
 
 /** A Declarado or a Relato as the form says it. */
@@ -49,7 +56,15 @@ export type PersonAction =
   | { kind: 'revoke' }
 
 const REACTIONS = ['love', 'like', 'dislike', 'hate'] as const
-const LINKS = ['director', 'writer', 'cast', 'series', 'genre'] as const
+const LINKS = [
+  'director',
+  'writer',
+  'cast',
+  'series',
+  'genre',
+  'cinematography',
+  'producer',
+] as const
 const LEVELS = ['none', 'low', 'normal', 'high'] as const
 const REMOVABLE = ['stated', 'report', 'veto', 'seen'] as const
 const RATING = /^(?:[1-4](?:,5)?|0,5|5)$/

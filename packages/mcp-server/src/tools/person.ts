@@ -126,7 +126,7 @@ const input = z.object({
     .enum(LINKS)
     .optional()
     .describe(
-      'adjust: o elo, director (diretor), writer (roteiro), cast (elenco), series (série) ou genre (gênero)',
+      'adjust: o elo, director (diretor), writer (roteiro), cast (elenco), series (série), genre (gênero), cinematography (fotografia) ou producer (produtor)',
     ),
   level: z
     .enum(LEVELS)

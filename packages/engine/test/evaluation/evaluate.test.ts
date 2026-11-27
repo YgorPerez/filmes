@@ -256,18 +256,20 @@ describe('avaliar', () => {
       const result = await evaluated(fixture, { FILMES_PESOS: weights }, true)
       const grid = result.grid!
       const values = grid.values as Record<string, Record<string, unknown[]>>
-      // 27 sets of multipliers; the five path weights vary one at a time (1
-      // current set + 5 × 2 variations); the cut's N (3, 8 and 10 besides
+      // 27 sets of multipliers; the seven path weights vary one at a time
+      // (1 current set + 7 × 2 variations); the cut's N (3, 8 and 10 besides
       // 5) and the Decaimento's half-life (2.5, 10 and 20 years besides 5)
       // vary alone, with the rest as the config has it.
       expect(Object.keys(values['path.weight']!).sort()).toEqual([
         'cast',
+        'cinematography',
         'director',
         'genre',
+        'producer',
         'series',
         'writer',
       ])
-      expect(grid.combinations).toBe(27 * 11 + 3 + 3)
+      expect(grid.combinations).toBe(27 * 15 + 3 + 3)
       for (const section of ['path.weight', 'strength.multiplier'])
         for (const tried of Object.values(values[section]!))
           expect(tried).toHaveLength(3)

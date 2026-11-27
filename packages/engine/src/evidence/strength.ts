@@ -16,7 +16,14 @@ export const KINDS = [
 export type Kind = (typeof KINDS)[number]
 
 /** The content links of the taste path, by their `[path.weight]` keys. */
-export type Link = 'director' | 'writer' | 'series' | 'cast' | 'genre'
+export type Link =
+  | 'director'
+  | 'writer'
+  | 'series'
+  | 'cast'
+  | 'genre'
+  | 'cinematography'
+  | 'producer'
 
 /** How much a Pessoa's Ajuste [adjustment] lets a link weigh. */
 export type Level = 'none' | 'low' | 'normal' | 'high'

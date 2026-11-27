@@ -3,7 +3,8 @@
 //
 // The Evidence lines are read back from their wording, which lives with each
 // path: the content path (`signals/content.ts`: "dirigido por X, como 3
-// filmes a que deu nota alta" and "deu 5 a F, também de X"), Declarados and
+// filmes a que deu nota alta" and "deu 5 a F, também de X"; "com fotografia
+// de X" goes before "com X" and its "também com X"), Declarados and
 // Relatos about an entity (`signals/stated.ts`: `disse "..."; dirigido por
 // X`), the MovieLens neighbours (`signals/neighbors.ts`: "deu 5 a F; das
 // 1.000 pessoas...") and the taste neighbours (`wording.ts`). Any other line
@@ -46,14 +47,14 @@ const READINGS: ReadonlyArray<readonly [RegExp, ReasonKind]> = [
   [/^[\d.]+ pessoas de gosto parecido deram /u, 'taste'],
   [
     new RegExp(
-      String.raw`^${SEED} .+, também (?:de|escrito por|com|da série) (.+)$`,
+      String.raw`^${SEED} .+, também (?:de|escrito por|com fotografia de|produzido por|com|da série) (.+)$`,
       'u',
     ),
     'entity',
   ],
   [
     new RegExp(
-      String.raw`^(?:dirigido por|escrito por|da série|do gênero) (.+?), ${HIGH}`,
+      String.raw`^(?:dirigido por|escrito por|da série|do gênero|com fotografia de|produzido por) (.+?), ${HIGH}`,
       'u',
     ),
     'entity',

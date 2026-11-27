@@ -30,6 +30,8 @@ export const CATALOG_SEARCH = {
     cast: 'elenco',
     series: 'série',
     genre: 'gênero',
+    cinematography: 'fotografia',
+    producer: 'produção',
   } satisfies Record<Link, string>,
   films,
   votes: (n: number) => `${n.toLocaleString('pt-BR')} votos`,
