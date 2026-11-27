@@ -302,7 +302,8 @@ export const SeenBefore: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByText('pesa contra')).toBeVisible()
-    await expect(canvas.getByText('Visto antes')).toBeVisible()
+    // Not `toBeVisible`: the sticker comes in from transparent.
+    await expect(canvas.getByText('Visto antes')).toBeInTheDocument()
     await expect(canvas.getByText('Visto antes: Você')).toBeInTheDocument()
   },
 }
