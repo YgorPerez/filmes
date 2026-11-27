@@ -120,7 +120,9 @@ describe('checkLive', () => {
       '/assets/estilo-B3x_9a.css arrived with 200 and text/plain',
     )
   })
+})
 
+describe('checkLive, on what the page cites and answers', () => {
   it('fails if a cited asset is gone', async () => {
     const { '/assets/estilo-B3x_9a.css': _, ...withoutCss } = LIVE
 
@@ -172,7 +174,9 @@ describe('checkLive', () => {
       'http://cinema.temestudo.cloud/?x=1 leads to https://cinema.temestudo.cloud/, not to https://cinema.temestudo.cloud/?x=1',
     )
   })
+})
 
+describe('checkLive while the app comes up', () => {
   it('tries again while the app comes up', async () => {
     let times = 0
     const { fetch } = site(LIVE)

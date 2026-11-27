@@ -112,7 +112,9 @@ describe('the cinema.temestudo.cloud vhost', () => {
     for (const d of all(top).filter((d) => d.name === 'access_log'))
       expect(d.args[1]).toBe('filmes_without_query')
   })
+})
 
+describe('the cinema.temestudo.cloud vhost, its two servers', () => {
   test("80 serves certbot's challenge from /opt/filmes/acme and sends the rest to https", () => {
     const http = servers.find((s) =>
       named(s.children, 'listen').some((l) => l.args[0] === '80'),
@@ -149,7 +151,9 @@ describe('the cinema.temestudo.cloud vhost', () => {
       named(tlsDirectives, 'ssl_certificate').map((d) => d.args[0]),
     ).toEqual(['/etc/letsencrypt/live/cinema.temestudo.cloud/fullchain.pem'])
   })
+})
 
+describe('the cinema.temestudo.cloud vhost, its uploads and files', () => {
   test('lets an Imports upload through, up to a bit more than the app takes', () => {
     const https = servers.find((s) =>
       named(s.children, 'listen').some((l) => l.args.includes('ssl')),

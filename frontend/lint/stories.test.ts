@@ -64,7 +64,9 @@ describe('piecesWithoutStory', () => {
       ),
     ).toEqual(['src/ui/b.tsx'])
   })
+})
 
+describe('piecesWithoutStory, on what needs no story', () => {
   it('what is not a piece (the `.ts`, the `.css`, the story, the test) needs no story', () => {
     expect(
       piecesWithoutStory(

@@ -154,7 +154,9 @@ describe('the bundled view', () => {
     expect(page.queryByText(BILLBOARD.reply.kept)).toBeNull()
     dom.window.close()
   })
+})
 
+describe('the bundled view, when the host cannot send', () => {
   it('Copiar pro chat, when the host cannot send, gives exactly the #cartaz text', async () => {
     const { dom, page, copied } = open({ toolsFail: true })
     const [first] = await page.findAllByRole('article')
@@ -202,7 +204,9 @@ describe('the bundled view', () => {
     expect(copied[0]).toBe('#cartaz 2026-11-20-iara v2\n1 tt9000104 · trocar\n')
     dom.window.close()
   })
+})
 
+describe('the bundled view, sending through the host', () => {
   it('Enviar calls answer_billboard through the host, then tells Claude', async () => {
     const { dom, page, next } = open()
     const [first] = await page.findAllByRole('article')

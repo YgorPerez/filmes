@@ -272,7 +272,9 @@ describe('EvaluationRuns', () => {
       },
     })
   })
+})
 
+describe('EvaluationRuns, when the engine fails', () => {
   it('keeps the engine’s error when the run fails, and lets a new one start', async () => {
     const log = vi.spyOn(console, 'error').mockImplementation(() => {})
     const evaluate = vi
@@ -295,48 +297,50 @@ describe('EvaluationRuns', () => {
   })
 })
 
+/** A run whose grid's best sets tie on the first two. */
+const GRID_EVALUATION = {
+  ...EVALUATION,
+  weights: {
+    path: { weight: { cast: 0.5, genre: 0.3 } },
+    ratingDecay: { halfLifeYears: 5 },
+  },
+  grid: {
+    values: {},
+    combinations: 9,
+    best: [
+      {
+        weights: {
+          'path.weight': { cast: 0.625, genre: 0.3 },
+          rating_decay: { halfLifeYears: 5 },
+        },
+        recall50: 0.8,
+        coverageTop5: 0.7,
+      },
+      {
+        weights: {
+          'path.weight': { cast: 0.5, genre: 0.3 },
+          rating_decay: { halfLifeYears: 5 },
+        },
+        recall50: 0.8,
+        coverageTop5: 0.7,
+      },
+      {
+        weights: {
+          'path.weight': { cast: 0.5, genre: 0.3 },
+          rating_decay: { halfLifeYears: 10 },
+        },
+        recall50: 0.6,
+        coverageTop5: 0.7,
+      },
+    ],
+  },
+} satisfies Evaluation
+
 describe('the grid’s best sets', () => {
   it('say what each changes from today’s weights, and which tie', async () => {
     const runs = new EvaluationRuns(
       fake({
-        evaluate: async () =>
-          ok({
-            ...EVALUATION,
-            weights: {
-              path: { weight: { cast: 0.5, genre: 0.3 } },
-              ratingDecay: { halfLifeYears: 5 },
-            },
-            grid: {
-              values: {},
-              combinations: 9,
-              best: [
-                {
-                  weights: {
-                    'path.weight': { cast: 0.625, genre: 0.3 },
-                    rating_decay: { halfLifeYears: 5 },
-                  },
-                  recall50: 0.8,
-                  coverageTop5: 0.7,
-                },
-                {
-                  weights: {
-                    'path.weight': { cast: 0.5, genre: 0.3 },
-                    rating_decay: { halfLifeYears: 5 },
-                  },
-                  recall50: 0.8,
-                  coverageTop5: 0.7,
-                },
-                {
-                  weights: {
-                    'path.weight': { cast: 0.5, genre: 0.3 },
-                    rating_decay: { halfLifeYears: 10 },
-                  },
-                  recall50: 0.6,
-                  coverageTop5: 0.7,
-                },
-              ],
-            },
-          }),
+        evaluate: async () => ok(GRID_EVALUATION),
       }),
       NOW,
     )
@@ -421,7 +425,9 @@ describe('the page', () => {
     expect(latestReport(join(folder, 'nenhuma'))).toBeNull()
     expect(previousMeasure(join(folder, 'nenhuma'))).toBeNull()
   })
+})
 
+describe('the page, keeping and failing', () => {
   it('gives a report to keep, only to an admin and only a dated one', async () => {
     const folder = join(useFixture().root, 'avaliacoes')
     mkdirSync(folder)
@@ -476,16 +482,17 @@ describe('the page', () => {
   })
 })
 
+/** `operationsAction` as `owner`, on `ops` (a fake by default). */
+const act = (
+  request: Request,
+  owner: Operator | null,
+  ops: Operations = fake(),
+  runs = new EvaluationRuns(ops),
+) => operationsAction(request, owner, ops, runs, ORIGIN)
+
+const location = (response: Response) => response.headers.get('Location')
+
 describe('the form route', () => {
-  const act = (
-    request: Request,
-    owner: Operator | null,
-    ops: Operations = fake(),
-    runs = new EvaluationRuns(ops),
-  ) => operationsAction(request, owner, ops, runs, ORIGIN)
-
-  const location = (response: Response) => response.headers.get('Location')
-
   it('takes only an admin Dono, from this site', async () => {
     expect(location(await act(post({ acao: 'enviar' }), null))).toBe('/entrar')
     expect(
@@ -518,7 +525,9 @@ describe('the form route', () => {
     ).toBe('/operacoes?erro=indisponivel')
     log.mockRestore()
   })
+})
 
+describe('the form route, evaluating', () => {
   it('starts the evaluation and answers before it ends', async () => {
     const pending = pendingEvaluation()
     const ops = fake({
@@ -591,7 +600,9 @@ describe('operationsFromEngine', () => {
       await engine.dispose()
     }
   })
+})
 
+describe('operationsFromEngine evaluating', () => {
   it('evaluates the fixture with progress, and writes the report', async () => {
     const fixture = useFixture()
     const folder = join(fixture.root, 'avaliacoes')
@@ -633,7 +644,9 @@ describe('operationsFromEngine', () => {
       await engine.dispose()
     }
   })
+})
 
+describe('operationsFromEngine without a database, and pushing', () => {
   it('says so when there is no database', async () => {
     const fixture = useFixture()
     const vars = { ...fixture.vars, FILMES_AVALIACOES: fixture.root }
