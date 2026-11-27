@@ -51,7 +51,7 @@ function Tag({ kind }: { kind: RowTag }) {
 /** What changed from the previous version, in one line: "Saiu: Cais 2
  * (trocado) · entrou: Fronteira". The inline card and the fullscreen say
  * it the same way (#277). Nothing on a first version or once closed. */
-export function Changes({ billboard }: { billboard: BillboardModel }) {
+function Changes({ billboard }: { billboard: BillboardModel }) {
   if (!billboard.open || billboard.version < 2) return null
   const entered = billboard.films.filter((f) => f.new).map((f) => f.title)
   const changes = BILLBOARD.view.changes(billboard.dropped, entered)
