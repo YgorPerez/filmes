@@ -19,7 +19,12 @@ import {
   type GoogleEndpoints,
 } from './google-login'
 import { OAuthServer } from './oauth-server'
-import { ownersFromDataRepo, type Owner, type OwnerDirectory } from './owners'
+import {
+  ownersFromDataRepo,
+  peopleFromDataRepo,
+  type Owner,
+  type OwnerDirectory,
+} from './owners'
 import { serverEnv } from './server-env'
 import type { LoginRefusal } from '#/content/login-refusal'
 
@@ -31,6 +36,7 @@ export type AuthOptions = {
   clientSecret?: string
   databasePath: string
   owners: OwnerDirectory
+  personByEmail?: (email: string) => Owner | null
   endpoints?: GoogleEndpoints
   fetch?: typeof fetch
   now?: () => number
@@ -110,10 +116,11 @@ export class Auth {
     return `${this.sessionName}=${value}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${seconds}${this.secure ? '; Secure' : ''}`
   }
 
-  /** The Dono of this request, or null. */
-  current(request: Request): Owner | null {
+  /** A verified Google email under a live login cookie. */
+  verifiedSession(request: Request): { email: string; hash: string } | null {
     const token = readCookie(request, this.sessionName)
     if (!token || !this.google) return null
+    const sessionHash = hash(token)
     const db = this.database()
     let email: unknown
     try {
@@ -121,13 +128,17 @@ export class Auth {
         .prepare(
           'SELECT email FROM web_sessions WHERE token_hash = ? AND expires_at > ?',
         )
-        .get(hash(token), this.now())?.email
+        .get(sessionHash, this.now())?.email
     } finally {
       db.close()
     }
-    return typeof email === 'string'
-      ? this.options.owners.ownerByEmail(email)
-      : null
+    return typeof email === 'string' ? { email, hash: sessionHash } : null
+  }
+
+  /** The Dono of this request, or null. */
+  current(request: Request): Owner | null {
+    const login = this.verifiedSession(request)
+    return login ? this.options.owners.ownerByEmail(login.email) : null
   }
 
   /** The answer for a `/auth/*` request, or null for any other path. */
@@ -136,6 +147,10 @@ export class Auth {
     if (!url.pathname.startsWith('/auth/')) return null
     if (url.pathname === '/auth/google' && request.method === 'GET')
       return this.google?.start('web') ?? refused('indisponivel')
+    if (url.pathname === '/auth/trakt-google' && request.method === 'GET')
+      return this.options.personByEmail && this.google
+        ? this.google.start('trakt')
+        : redirect('/trakt?erro=login')
     if (url.pathname === '/auth/callback' && request.method === 'GET')
       return this.callback(request)
     if (url.pathname === '/auth/logout' && request.method === 'POST')
@@ -157,6 +172,14 @@ export class Auth {
     // with the same Dono gate.
     if (result.purpose === 'mcp' && this.oauth)
       return this.oauth.resume(result.email, result.payload, clear)
+    if (result.purpose === 'trakt') {
+      if (!this.options.personByEmail?.(result.email))
+        return redirect('/trakt?erro=login', [clear])
+      return redirect('/trakt', [
+        this.createSession(request, result.email),
+        clear,
+      ])
+    }
     if (result.purpose !== 'web') return refused('expirou', [clear])
     if (!this.options.owners.ownerByEmail(result.email))
       return refused('nao-dono', [clear])
@@ -220,6 +243,9 @@ export function authFromEnvironment(variables = process.env) {
     clientSecret: env.GOOGLE_CLIENT_SECRET,
     databasePath: env.AUTH_DATABASE_PATH,
     owners: ownersFromDataRepo(env.DATA_REPO_PATH),
+    personByEmail: env.FILMES_TRAKT_CLIENT_ID
+      ? peopleFromDataRepo(env.DATA_REPO_PATH).byEmail
+      : undefined,
     endpoints: stub,
   })
 }

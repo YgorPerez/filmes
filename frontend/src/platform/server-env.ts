@@ -10,6 +10,9 @@ export const serverEnv = (env: NodeJS.ProcessEnv = process.env) => ({
   APP_ORIGIN: optional(env.APP_ORIGIN),
   GOOGLE_CLIENT_ID: optional(env.GOOGLE_CLIENT_ID),
   GOOGLE_CLIENT_SECRET: optional(env.GOOGLE_CLIENT_SECRET),
+  FILMES_TRAKT_CLIENT_ID: optional(env.FILMES_TRAKT_CLIENT_ID),
+  /** A base64-encoded 32-byte AES key, kept in the VPS app environment. */
+  FILMES_TRAKT_TOKEN_KEY: optional(env.FILMES_TRAKT_TOKEN_KEY),
   /** Web sessions and the MCP connector's OAuth clients and tokens (ADR 0005, 0007). */
   AUTH_DATABASE_PATH: optional(env.AUTH_DATABASE_PATH) ?? '/data/auth.sqlite',
   /** The filmes-dados checkout, where the Pessoas (and their `email:`) are. */

@@ -39,6 +39,13 @@ const migrations: readonly string[] = [
   // against the live Session file, independently of this database.
   `CREATE TABLE session_link_key (id INTEGER PRIMARY KEY CHECK (id = 1),
     secret BLOB NOT NULL CHECK (length(secret) = 32)) STRICT;`,
+  // A grant row exists only with consent. Tokens are encrypted with the VPS
+  // key, separately from the data repository and the derived database.
+  `CREATE TABLE trakt_grants (person TEXT PRIMARY KEY, identity_hash TEXT NOT NULL,
+    tokens BLOB NOT NULL, expires_at INTEGER NOT NULL, refresh_until INTEGER NOT NULL DEFAULT 0) STRICT;
+  CREATE TABLE trakt_attempts (person TEXT PRIMARY KEY, state_hash TEXT NOT NULL,
+    session_hash TEXT NOT NULL REFERENCES web_sessions(token_hash) ON DELETE CASCADE,
+    verifier TEXT NOT NULL, expires_at INTEGER NOT NULL, claimed INTEGER NOT NULL DEFAULT 0) STRICT;`,
 ]
 
 export const tokenHash = (token: string) =>

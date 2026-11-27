@@ -13,6 +13,7 @@ import { Route as OwnerRouteImport } from './routes/_owner'
 import { Route as EntrarRouteImport } from './routes/entrar'
 import { Route as ParticiparRouteImport } from './routes/participar'
 import { Route as SaudeRouteImport } from './routes/saude'
+import { Route as TraktRouteImport } from './routes/trakt'
 import { Route as OwnerIndexRouteImport } from './routes/_owner/index'
 import { Route as OwnerOperacoesRouteImport } from './routes/_owner/operacoes'
 import { Route as ExportarIndexRouteImport } from './routes/exportar/index'
@@ -68,6 +69,11 @@ const ParticiparRoute = ParticiparRouteImport.update({
 const SaudeRoute = SaudeRouteImport.update({
   id: '/saude',
   path: '/saude',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TraktRoute = TraktRouteImport.update({
+  id: '/trakt',
+  path: '/trakt',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OwnerIndexRoute = OwnerIndexRouteImport.update({
@@ -265,6 +271,7 @@ export interface FileRoutesByFullPath {
   '/entrar': typeof EntrarRoute
   '/participar': typeof ParticiparRouteWithChildren
   '/saude': typeof SaudeRoute
+  '/trakt': typeof TraktRoute
   '/operacoes': typeof OwnerOperacoesRoute
   '/exportar/imdb.csv': typeof ExportarImdbDotcsvRoute
   '/fila/acao': typeof FilaAcaoRoute
@@ -305,6 +312,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/entrar': typeof EntrarRoute
   '/saude': typeof SaudeRoute
+  '/trakt': typeof TraktRoute
   '/operacoes': typeof OwnerOperacoesRoute
   '/exportar/imdb.csv': typeof ExportarImdbDotcsvRoute
   '/fila/acao': typeof FilaAcaoRoute
@@ -349,6 +357,7 @@ export interface FileRoutesById {
   '/entrar': typeof EntrarRoute
   '/participar': typeof ParticiparRouteWithChildren
   '/saude': typeof SaudeRoute
+  '/trakt': typeof TraktRoute
   '/_owner/operacoes': typeof OwnerOperacoesRoute
   '/exportar/imdb.csv': typeof ExportarImdbDotcsvRoute
   '/fila/acao': typeof FilaAcaoRoute
@@ -394,6 +403,7 @@ export interface FileRouteTypes {
     | '/entrar'
     | '/participar'
     | '/saude'
+    | '/trakt'
     | '/operacoes'
     | '/exportar/imdb.csv'
     | '/fila/acao'
@@ -434,6 +444,7 @@ export interface FileRouteTypes {
   to:
     | '/entrar'
     | '/saude'
+    | '/trakt'
     | '/operacoes'
     | '/exportar/imdb.csv'
     | '/fila/acao'
@@ -477,6 +488,7 @@ export interface FileRouteTypes {
     | '/entrar'
     | '/participar'
     | '/saude'
+    | '/trakt'
     | '/_owner/operacoes'
     | '/exportar/imdb.csv'
     | '/fila/acao'
@@ -521,6 +533,7 @@ export interface RootRouteChildren {
   EntrarRoute: typeof EntrarRoute
   ParticiparRoute: typeof ParticiparRouteWithChildren
   SaudeRoute: typeof SaudeRoute
+  TraktRoute: typeof TraktRoute
   ExportarImdbDotcsvRoute: typeof ExportarImdbDotcsvRoute
   FilaAcaoRoute: typeof FilaAcaoRoute
   InicioPularRoute: typeof InicioPularRoute
@@ -570,6 +583,13 @@ declare module '@tanstack/react-router' {
       path: '/saude'
       fullPath: '/saude'
       preLoaderRoute: typeof SaudeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/trakt': {
+      id: '/trakt'
+      path: '/trakt'
+      fullPath: '/trakt'
+      preLoaderRoute: typeof TraktRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_owner/': {
@@ -893,6 +913,7 @@ const rootRouteChildren: RootRouteChildren = {
   EntrarRoute: EntrarRoute,
   ParticiparRoute: ParticiparRouteWithChildren,
   SaudeRoute: SaudeRoute,
+  TraktRoute: TraktRoute,
   ExportarImdbDotcsvRoute: ExportarImdbDotcsvRoute,
   FilaAcaoRoute: FilaAcaoRoute,
   InicioPularRoute: InicioPularRoute,

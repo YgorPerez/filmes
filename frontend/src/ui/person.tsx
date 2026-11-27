@@ -5,6 +5,7 @@ import {
   personPath,
   RATINGS_PATH,
 } from '#/content/paths'
+import { TRAKT_PATH } from '#/content/trakt-form'
 import type { SearchAnswer } from '#/platform/catalog-search'
 import type { PersonPage } from '#/platform/people'
 import { OwnerTag } from './kit/owner-tag'
@@ -63,6 +64,7 @@ export function PersonScreen({
   refusal,
   search = null,
   start,
+  showTrakt = false,
 }: {
   slug: string
   page: PersonPage | 'unknown' | null
@@ -71,6 +73,7 @@ export function PersonScreen({
   search?: SearchAnswer | null
   /** Meu gosto's part of the setup guide; only on her own page. */
   start?: MyStart
+  showTrakt?: boolean
 }) {
   const own =
     typeof page === 'object' &&
@@ -98,6 +101,17 @@ export function PersonScreen({
             notice={notice}
             refusal={refusal}
           />
+          {own && showTrakt && (
+            <a
+              href={TRAKT_PATH}
+              className={buttonVariants({
+                variant: 'option',
+                className: 'self-start',
+              })}
+            >
+              Conexão com o Trakt
+            </a>
+          )}
           <Notes
             slug={slug}
             own={own}

@@ -28,7 +28,7 @@ export const normalizeEmail = (email: string) => email.trim().toLowerCase()
 /** The Dono in the file, or null. A file the engine cannot read (no
  * name, a broken frontmatter) lets no one in, as the engine would refuse
  * it too. */
-function readOwner(path: string): Owner | null {
+function readIdentity(path: string): (Owner & { owner: boolean }) | null {
   let person: Person
   try {
     person = decodePersonSync(path, readFileSync(path, 'utf8'))
@@ -36,23 +36,38 @@ function readOwner(path: string): Owner | null {
     return null
   }
   const { owner, email, slug, name, admin } = person
-  if (!owner || email === null || !email.includes('@')) return null
-  return { person: slug, name, email: normalizeEmail(email), admin }
+  if (email === null || !email.includes('@')) return null
+  return { person: slug, name, email: normalizeEmail(email), admin, owner }
 }
 
 /** Reads the files on every call: a Pessoa who stops being Dono, or whose
  * email changes, is out on her next request. The folder is small. */
-export function ownersFromDataRepo(root: string): OwnerDirectory {
+export function peopleFromDataRepo(root: string) {
+  const folder = join(root, 'people')
+  function byEmail(email: string, ownersOnly = false): Owner | null {
+    if (!existsSync(folder)) return null
+    const wanted = normalizeEmail(email)
+    const found = readdirSync(folder)
+      .filter((file) => file.endsWith('.md'))
+      .map((file) => readIdentity(join(folder, file)))
+      .filter(
+        (person) => person?.email === wanted && (!ownersOnly || person.owner),
+      )
+    if (found.length !== 1 || !found[0]) return null
+    const { person, name, admin } = found[0]
+    return { person, name, email: wanted, admin }
+  }
   return {
-    ownerByEmail(email) {
-      const folder = join(root, 'people')
-      if (!existsSync(folder)) return null
-      const wanted = normalizeEmail(email)
-      const found = readdirSync(folder)
-        .filter((file) => file.endsWith('.md'))
-        .map((file) => readOwner(join(folder, file)))
-        .filter((owner) => owner?.email === wanted)
-      return found.length === 1 ? found[0]! : null
+    byEmail,
+    bySlug(slug: string) {
+      if (!/^[\w-]+$/.test(slug)) return null
+      const person = readIdentity(join(folder, `${slug}.md`))
+      return person && byEmail(person.email)?.person === slug ? person : null
     },
   }
+}
+
+export function ownersFromDataRepo(root: string): OwnerDirectory {
+  const people = peopleFromDataRepo(root)
+  return { ownerByEmail: (email) => people.byEmail(email, true) }
 }

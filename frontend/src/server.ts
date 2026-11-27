@@ -4,6 +4,7 @@ import { handleAuthRequest } from '#/platform/auth'
 import { engineReady } from '#/platform/engine'
 import { fontRequest } from '#/platform/fonts'
 import { handleMcpRequest } from '#/platform/mcp-endpoint'
+import { handleTraktRequest } from '#/platform/trakt'
 import { withRequestLog } from '#/platform/request-log'
 
 // Filmes-dados reloaded into the live database as the server starts
@@ -28,6 +29,7 @@ export default createServerEntry({
       await ready
       return (
         (await handleAuthRequest(request)) ??
+        (await handleTraktRequest(request)) ??
         (await handleMcpRequest(request)) ??
         answerFetch(request, await handler.fetch(request, ...rest))
       )
