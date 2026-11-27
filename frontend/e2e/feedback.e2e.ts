@@ -34,7 +34,7 @@ const satisfaction = (page: Page) =>
 
 /** One Presente's reaction, by her name (#272). */
 const reactionOf = (page: Page, name: string) =>
-  page.getByRole('group', { name: new RegExp(`^${name}\\b`) })
+  page.getByRole('group', { name: new RegExp(`^${name}(?!\\p{L})`, 'u') })
 
 /** Her Nota of 1 to 10, open in every row (#272). */
 async function rate(page: Page, name: string, n: string) {

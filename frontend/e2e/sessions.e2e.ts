@@ -566,7 +566,7 @@ async function sendVotesSwapping(
     send.resolve()
   }
   await expect(participant.getByRole('status')).toContainText(
-    'outro entrou no lugar',
+    'A lista foi refeita',
   )
   await expect(participant.locator('html')).toHaveAttribute(
     'data-vote-page',
