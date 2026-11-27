@@ -7,6 +7,7 @@ import { PersonScreen, UnknownPerson } from '#/ui/person'
 // A Pessoa's page. The Dono's own is Meu gosto (`/meu-gosto`), with the
 // same query. No Pessoa with the slug is a 404 (#273).
 export const Route = createFileRoute('/_owner/pessoas/$pessoa/')({
+  staticData: { wide: true },
   validateSearch: personSearch,
   beforeLoad: ({ params, context, location }) => {
     if (params.pessoa === context.owner.person)

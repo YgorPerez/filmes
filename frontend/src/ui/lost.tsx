@@ -1,15 +1,14 @@
 import type { ReactNode } from 'react'
 import { buttonVariants } from './kit/button-variants'
-import { SiteFooter } from './kit/site-footer'
 import { LOST } from './lost.copy'
 
 // The pages for an address that leads nowhere (DESIGN.md, Página perdida,
 // #268): a 404 and the error of a page that failed to open, in the shop's
 // voice, with the way back. Inside the app shell they are only the page;
-// outside it (no Dono, or the guest pages) `LostAlone` adds the case-black
-// bar with "filmes" and the footer, and the way in is Entrar. Neither says
-// why the address leads nowhere (a page only an admin opens is a 404 like
-// any other).
+// outside it (no Dono, or the guest pages) `OutsideShell` (`shell.tsx`)
+// adds the case-black bar with "filmes" and the footer, and the way in is
+// Entrar. Neither says why the address leads nowhere (a page only an admin
+// opens is a 404 like any other).
 
 function Page({
   title,
@@ -75,28 +74,5 @@ export function LoadFailed({ onRetry }: { onRetry: () => void }) {
         {copy.home}
       </a>
     </Page>
-  )
-}
-
-/** Outside the app shell: the case-black bar with "filmes" leading home,
- * as on /entrar, over the page, and the footer with the sources' credits.
- * The page carries Entrar, so the bar does not repeat it. */
-export function LostAlone({ children }: { children: ReactNode }) {
-  return (
-    <div className="flex min-h-dvh flex-col">
-      <header className="bg-case text-case-ink">
-        <div className="mx-auto flex min-h-[56px] max-w-[1040px] items-center gap-3xl px-2xl py-2xs">
-          <a
-            href="/"
-            aria-label={LOST.home}
-            className="inline-flex min-h-touch items-center font-display text-brand text-case-ink no-underline"
-          >
-            {LOST.brand}
-          </a>
-        </div>
-      </header>
-      {children}
-      <SiteFooter />
-    </div>
   )
 }

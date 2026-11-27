@@ -10,8 +10,8 @@ import css from '../styles.css?url'
 // Barra do topo), so no request for `/favicon.ico` goes unanswered.
 import icon from '#/ui/favicon.svg?url'
 import { readOwner } from '#/content/owner'
-import { LostAlone, NotFound } from '#/ui/lost'
-import { AppShell } from '#/ui/shell'
+import { NotFound } from '#/ui/lost'
+import { AppShell, OutsideShell } from '#/ui/shell'
 import { titleOf } from '#/ui/page-title'
 
 export const Route = createRootRoute({
@@ -45,9 +45,9 @@ function RootNotFound() {
   const { pathname } = useLocation()
   if (!owner)
     return (
-      <LostAlone>
+      <OutsideShell>
         <NotFound owner={false} />
-      </LostAlone>
+      </OutsideShell>
     )
   return (
     <AppShell owner={owner} path={pathname} alert={null}>

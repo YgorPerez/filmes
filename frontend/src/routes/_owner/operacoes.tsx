@@ -10,6 +10,7 @@ import { Operations } from '#/ui/operations'
 // Only an admin Dono: for anyone else the page does not exist. The server
 // functions refuse a non-admin on their own.
 export const Route = createFileRoute('/_owner/operacoes')({
+  staticData: { wide: true },
   validateSearch: (search) => ({
     sql: consultSql(search.sql),
     feito: isOperationsNotice(search.feito) ? search.feito : undefined,
