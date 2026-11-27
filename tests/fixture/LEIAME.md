@@ -337,7 +337,7 @@ Filmes `tt90067NN`, sem diretor nem Nota, para `test_parecido.py` e `mcp/test/pa
 | Quase Igual (6714) | 3000, 6,5 | como Mesa de Domingo | | | Drama, Family |
 | Tinta e Papel (6716) | 1500 | — | family 20, writers 15 | | Drama, Family |
 
-Parecença com Escrever Cartas, do maior para o menor: Tinta e Papel (fora do genoma, com o peso dele redistribuído, empata em tudo o que tem), Mesa de Domingo, Quase Igual (abaixo da nota mínima, mas conta entre os N), Rascunho e Pé na Estrada. Com Estrada Afora, que não está no genoma, só Pé na Estrada.
+Parecença com Escrever Cartas, do maior para o menor: Tinta e Papel (fora do genoma, com o peso dele redistribuído, empata em tudo o que tem), Mesa de Domingo, Quase Igual (abaixo da nota mínima e fica fora do corte), Rascunho e Pé na Estrada. Com Estrada Afora, que não está no genoma, só Pé na Estrada.
 
 Ponto de Partida (6720, 5000 votos, Drama) é referência fora do MovieLens, só com diretora (Lia Moura, Q9006701), os 3 primeiros atores (nm9006701 a 03) e gênero. Mesmo Elenco (6721, 4000, Thriller) divide os 3 atores e nada mais: não é parecido. Mesma Diretora (6722, 1200, Drama) divide a diretora: é parecida, com a linha "mesmo diretor".
 

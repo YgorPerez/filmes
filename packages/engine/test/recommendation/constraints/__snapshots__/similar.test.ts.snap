@@ -18,14 +18,14 @@ exports[`the whole output, as recorded > similar to ["tt9006701","tt9006702"] 1`
   "constraints": {
     "series_order": {
       "mode": "previous",
-      "removed": 0,
+      "removed": 2,
     },
     "similar": {
       "films": [
         "tt9006701",
         "tt9006702",
       ],
-      "removed": 83,
+      "removed": 81,
       "titles": [
         "Escrever Cartas",
         "Estrada Afora",
@@ -290,13 +290,13 @@ exports[`the whole output, as recorded > similar to ["tt9006701"] 1`] = `
   "constraints": {
     "series_order": {
       "mode": "previous",
-      "removed": 0,
+      "removed": 2,
     },
     "similar": {
       "films": [
         "tt9006701",
       ],
-      "removed": 83,
+      "removed": 81,
       "titles": [
         "Escrever Cartas",
       ],
@@ -550,14 +550,14 @@ exports[`the whole output, as recorded > similar to ["tt9006701,tt9006711"] 1`] 
   "constraints": {
     "series_order": {
       "mode": "previous",
-      "removed": 0,
+      "removed": 2,
     },
     "similar": {
       "films": [
         "tt9006701",
         "tt9006711",
       ],
-      "removed": 84,
+      "removed": 82,
       "titles": [
         "Escrever Cartas",
         "Mesa de Domingo",
@@ -774,13 +774,13 @@ exports[`the whole output, as recorded > similar to ["tt9006702"] 1`] = `
   "constraints": {
     "series_order": {
       "mode": "previous",
-      "removed": 0,
+      "removed": 2,
     },
     "similar": {
       "films": [
         "tt9006702",
       ],
-      "removed": 86,
+      "removed": 84,
       "titles": [
         "Estrada Afora",
       ],
@@ -869,13 +869,13 @@ exports[`the whole output, as recorded > similar to ["tt9006720"] 1`] = `
   "constraints": {
     "series_order": {
       "mode": "previous",
-      "removed": 0,
+      "removed": 2,
     },
     "similar": {
       "films": [
         "tt9006720",
       ],
-      "removed": 86,
+      "removed": 84,
       "titles": [
         "Ponto de Partida",
       ],
@@ -960,20 +960,24 @@ exports[`the whole output, as recorded > the cut and its warning 1`] = `
       "source": "IMDb",
       "text": "Information courtesy of IMDb (https://www.imdb.com). Used with permission.",
     },
+    {
+      "source": "Tag Genome",
+      "text": "Tag Genome 2021, de Kotkov, Maslov e Neovius (https://grouplens.org/datasets/movielens/tag-genome-2021/), sob licença CC BY-NC 3.0 (https://creativecommons.org/licenses/by-nc/3.0/)",
+    },
   ],
   "constraints": {
     "no_slow": {
-      "removed": 0,
+      "removed": 3,
     },
     "series_order": {
       "mode": "previous",
-      "removed": 0,
+      "removed": 2,
     },
     "similar": {
       "films": [
         "tt9006701",
       ],
-      "removed": 85,
+      "removed": 79,
       "titles": [
         "Escrever Cartas",
       ],
@@ -1060,6 +1064,59 @@ exports[`the whole output, as recorded > the cut and its warning 1`] = `
       "filmLines": [
         {
           "contribution": 0,
+          "date": "2021-12-30",
+          "factId": "parecido:386ac601554b",
+          "kind": "review",
+          "person": null,
+          "source": "Tag Genome 2021",
+          "strength": "weak",
+          "text": "parecido com Escrever Cartas: family",
+        },
+      ],
+      "genres": [
+        "Drama",
+      ],
+      "id": "tt9006712",
+      "imdbRating": null,
+      "imdbUrl": "https://www.imdb.com/title/tt9006712/",
+      "imdbVotes": 2000,
+      "onlyGuesses": true,
+      "position": 2,
+      "poster": null,
+      "runtimeMinutes": 95,
+      "synopsis": null,
+      "title": "Rascunho",
+      "titlePt": null,
+      "utility": {
+        "bruno": null,
+      },
+      "year": 2017,
+    },
+    {
+      "coverage": {
+        "attendees": 1,
+        "withFact": 0,
+        "withoutFact": [
+          "bruno",
+        ],
+      },
+      "evidence": {
+        "bruno": [
+          {
+            "contribution": 0,
+            "date": null,
+            "factId": null,
+            "kind": "guess",
+            "person": "bruno",
+            "source": null,
+            "strength": "weak",
+            "text": "sem fato",
+          },
+        ],
+      },
+      "filmLines": [
+        {
+          "contribution": 0,
           "date": "2023-10-13",
           "factId": "parecido:8468abfc8875",
           "kind": "review",
@@ -1078,7 +1135,7 @@ exports[`the whole output, as recorded > the cut and its warning 1`] = `
       "imdbUrl": "https://www.imdb.com/title/tt9006716/",
       "imdbVotes": 1500,
       "onlyGuesses": true,
-      "position": 2,
+      "position": 3,
       "poster": null,
       "runtimeMinutes": 102,
       "synopsis": null,
@@ -1098,7 +1155,7 @@ exports[`the whole output, as recorded > the cut and its warning 1`] = `
   "vetoes": [],
   "warnings": [
     "TMDB sem chave de API (defina FILMES_TMDB_CHAVE); os filmes saem sem capa, sem título em português e sem sinopse",
-    "só 2 parecidos com Escrever Cartas passaram nas Restrições",
+    "só 3 parecidos com Escrever Cartas passaram nas Restrições",
   ],
 }
 `;

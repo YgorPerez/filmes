@@ -306,6 +306,8 @@ const prepare = (db: Connection, options: RankOptions): RankEffect<Ranking> =>
       attendees,
     }
     const asked = makeConstraintSet(context, options.constraints ?? [])
+    const kept = (id: string) =>
+      regenerate !== undefined && isKept(regenerate, id)
     const scales = new Map<string, RatingScale>()
     for (const p of attendees)
       scales.set(p, yield* readRatingScale(db, p, weights))
@@ -313,7 +315,7 @@ const prepare = (db: Connection, options: RankOptions): RankEffect<Ranking> =>
       db,
       weights,
       today: run.today,
-      candidates: yield* asked.candidates(vetoes.remaining),
+      candidates: yield* asked.candidates(vetoes.remaining, kept),
       attendees,
       moods: moods.moods,
       ...(refill.length > 0 && { refillMoods: { moods: refill, kept } }),
