@@ -107,7 +107,10 @@ function Poster({
       {stamp && (
         <Sticker
           kind={stamp.kind === 'swap' ? 'swap' : 'seen'}
-          className={`absolute left-1/2 inline-flex -translate-x-1/2 items-center gap-xs whitespace-nowrap ${cover ? 'top-[40%]' : 'top-[62%]'}`}
+          // As wide as the case and 4px a side, the turn adding the rest of
+          // a sticker's 9px: the label and the dots wrap rather than spill
+          // past the card's padding on a phone's 112px case (#351).
+          className={`absolute left-1/2 inline-flex w-max max-w-[calc(100%+8px)] -translate-x-1/2 flex-wrap items-center justify-center gap-xs text-center ${cover ? 'top-[40%]' : 'top-[62%]'}`}
         >
           {stamp.kind === 'swap'
             ? card.swapStamp
@@ -397,6 +400,7 @@ export function BillboardCard({
   level = 2,
   marks,
   onChange,
+  reactionsOnTop = false,
 }: {
   film: BillboardFilm
   people: readonly BillboardPerson[]
@@ -404,6 +408,9 @@ export function BillboardCard({
   level?: Level
   marks?: FilmMarks
   onChange?: (marks: FilmMarks) => void
+  /** The Cartaz's head says the chosen film's lines: the card keeps only
+   * its label (#351). */
+  reactionsOnTop?: boolean
 }) {
   // Who marked Já vi, and who the engine knows saw it (#272).
   const marked = marks?.seen ?? []
@@ -436,6 +443,7 @@ export function BillboardCard({
           reactions={film.reactions}
           people={people}
           level={level}
+          labelOnly={reactionsOnTop}
         />
       )}
       {marks && onChange && (

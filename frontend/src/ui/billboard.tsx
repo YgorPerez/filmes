@@ -12,6 +12,7 @@ import {
 } from 'react'
 import { BillboardCard, EvidenceLine } from './billboard-card'
 import { ChosenFilm } from './billboard-chosen'
+import { linesOnTop } from './billboard-closed'
 import { InlineBillboard, Standing, type RowTag } from './billboard-inline'
 import {
   emptyMarks,
@@ -139,7 +140,7 @@ export function BillboardRequest({
   single = false,
 }: {
   billboard: BillboardModel
-  compact?: boolean
+  compact?: boolean | 'narrow'
   /** One line with the version, and the Dono's words left to the body:
    * the fixed top of Claude's fullscreen (#277). */
   single?: boolean
@@ -387,7 +388,9 @@ function FullscreenBody({
         </div>
       ))}
       <Standing billboard={billboard} block />
-      {billboard.films.length > 0 && <PeopleLegend billboard={billboard} />}
+      {billboard.films.length > 0 && (
+        <PeopleLegend billboard={billboard} named={linesOnTop(billboard)} />
+      )}
       {children}
     </Fullscreen>
   )
@@ -404,9 +407,9 @@ function ViewTop({
 }) {
   return (
     <>
-      <BillboardRequest billboard={billboard} />
+      <BillboardRequest billboard={billboard} compact="narrow" />
       <Standing billboard={billboard} block />
-      <PeopleLegend billboard={billboard} />
+      <PeopleLegend billboard={billboard} named={linesOnTop(billboard)} />
       <Capped>{shelf}</Capped>
     </>
   )
@@ -453,7 +456,9 @@ function Shelf({
   marks: Marks
   change: (next: Marks) => void
   canKeep: boolean
-  /** In the MCP Apps view. */
+  /** In the MCP Apps view, inline, fullscreen or without one: under a
+   * head that says where the version stands (`Standing`), as the web's
+   * page is not. */
   viewed: boolean
 }) {
   const empty = billboard.films.length === 0
@@ -467,7 +472,12 @@ function Shelf({
         </p>
       )}
       <ChosenFilm chosen={billboard.chosen} people={billboard.attendees} />
-      <Cards billboard={billboard} marks={marks} change={change} />
+      <Cards
+        billboard={billboard}
+        marks={marks}
+        change={change}
+        reactionsOnTop={viewed && linesOnTop(billboard)}
+      />
       {billboard.open && !empty && (
         <ReplyBox
           billboard={billboard}
@@ -503,10 +513,13 @@ function Cards({
   billboard,
   marks,
   change,
+  reactionsOnTop,
 }: {
   billboard: BillboardModel
   marks: Marks
   change: (next: Marks) => void
+  /** The head says the chosen film's lines (#351). */
+  reactionsOnTop: boolean
 }) {
   const grouped = billboard.sections.length > 0
   const card = (film: Film) => (
@@ -516,6 +529,7 @@ function Cards({
       people={billboard.attendees}
       first={film === billboard.films[0]}
       level={grouped ? 3 : 2}
+      reactionsOnTop={reactionsOnTop}
       marks={billboard.open ? marksOf(marks, film.id) : undefined}
       onChange={
         billboard.open

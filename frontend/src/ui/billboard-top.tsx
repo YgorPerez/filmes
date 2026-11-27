@@ -49,20 +49,33 @@ export function AgainstMark() {
  * her name ("Você" for the Dono who looks), and the three Forças in words
  * on a line of their own, so the legend never runs into the names
  * (#277). */
-export function PeopleLegend({ billboard }: { billboard: BillboardModel }) {
+export function PeopleLegend({
+  billboard,
+  named = false,
+}: {
+  billboard: BillboardModel
+  /** The closed Session's lines above name every Presente with her
+   * avatar: the same faces are not said again (#351). */
+  named?: boolean
+}) {
   return (
     <div className="flex flex-col gap-xs text-meta text-ink-2">
-      <p className="flex flex-wrap items-center gap-x-xl gap-y-xs">
-        {billboard.attendees.map((p) => (
-          <span
-            key={p.slug}
-            className="inline-flex items-center gap-xs text-ink"
-          >
-            <Avatar person={p} />
-            {p.label}
-          </span>
-        ))}
-      </p>
+      {!named && (
+        <ul
+          aria-label={BILLBOARD.view.attendees}
+          className="flex flex-wrap items-center gap-x-xl gap-y-xs"
+        >
+          {billboard.attendees.map((p) => (
+            <li
+              key={p.slug}
+              className="inline-flex items-center gap-xs text-ink"
+            >
+              <Avatar person={p} />
+              {p.label}
+            </li>
+          ))}
+        </ul>
+      )}
       <p className="flex flex-wrap items-center gap-x-xl gap-y-xs">
         {(['strong', 'moderate', 'weak'] as const).map((level) => (
           <span key={level} className="inline-flex items-center gap-xs">

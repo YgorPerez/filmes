@@ -177,7 +177,7 @@ describe('the Cartaz shows, shared Evidence and the Nota prevista', () => {
       within(card(n).getByRole('list', { name: BILLBOARD.card.why }))
     const [shared] = why(1).getAllByRole('listitem')
     expect(shared!.textContent).toBe(
-      'Você e Iara: dirigido por Helena Prado, como 2 filmes a que deu nota altaWikidata',
+      'Você e Iara: dirigido por Helena Prado, como 2 filmes a que deram nota altaWikidata',
     )
     expect(within(shared!).getByLabelText('Força moderada').dataset.level).toBe(
       '2',

@@ -210,6 +210,8 @@ export const BILLBOARD = {
   // The MCP Apps view (`mcp-view/`): Enviar goes to `answer_billboard`
   // through the host, then asks the chat to follow up.
   view: {
+    /** The legend's row of the Presentes, for a screen reader. */
+    attendees: 'Presentes',
     loading: 'Montando o Cartaz…',
     /** The view's one h1, for a screen reader: "Cartaz: Vocês dois". */
     heading: (who: string) => `Cartaz: ${who}`,
