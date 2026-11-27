@@ -28,6 +28,9 @@ describe('Login', () => {
     expect(html).toContain(`aria-label="${LOGIN.taglineLabel}"`)
     expect(html).toMatch(/<h1 id="entrar"[^>]*>Entrar<\/h1>/u)
     expect(html).toContain(LOGIN.access)
+    // The lead says what she gets there, not the button again.
+    expect(html).toContain('Sua lista da noite e as suas Sessões ficam aqui.')
+    expect(html).not.toContain('Entre com a sua conta Google')
   })
 
   it('leaves the access line out when the refusal already says it', () => {
