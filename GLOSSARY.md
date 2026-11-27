@@ -276,7 +276,7 @@ _Evitar_: descrição, declarado
 Um sinal tirado de opiniões de terceiros, que não estão entre as Pessoas, como as tags de uma base pública ou quantos estranhos que gostaram de um filme gostaram de outro.
 
 **Vizinhos de gosto** [taste neighbors, `tasteNeighbors`]:
-Os usuários do MovieLens mais perto do gosto de uma Pessoa: os que, nos filmes que ela também viu, deram notas no mesmo percentil que as dela, cada um lido na própria escala. Quantos e com quantos filmes em comum ficam em `[taste_neighbors]` de `config/weights.toml`. O que eles deram a um Candidato é uma Review ("23 pessoas de gosto parecido deram 4,3 em média a este filme"), com Força pela régua: quantos o viram, quanto concordam e quanto dividem com ela.
+Os usuários do MovieLens mais perto do gosto de uma Pessoa: os que, nos filmes que ela também viu, deram notas no mesmo percentil que as dela, cada um lido na própria escala. Quantos e com quantos filmes em comum ficam em `[taste_neighbors]` de `config/weights.toml`. O que eles deram a um Candidato é uma Review ("23 pessoas de gosto parecido deram 8,6 de 10 em média a este filme"), com Força pela régua: quantos o viram, quanto concordam e quanto dividem com ela.
 _Evitar_: usuários parecidos, almas gêmeas
 
 **Nota prevista** [predicted rating, `predictedRating`]:

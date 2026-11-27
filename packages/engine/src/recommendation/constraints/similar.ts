@@ -28,7 +28,7 @@ import { compareTuple } from '../../compat/compare.ts'
 import { pyStrip } from '../../compat/text.ts'
 import { makeEvidence, type Evidence } from '../../evidence/Evidence.ts'
 import { similarStrength } from '../../evidence/ruler.ts'
-import { integerText } from '../../evidence/wording.ts'
+import { neighborhoodText } from '../../evidence/wording.ts'
 import { engineError } from '../../runtime/EngineError.ts'
 import { num, text, textOrNull } from '../../sqlite/row.ts'
 import type { Weights } from '../../runtime/Weights.ts'
@@ -82,10 +82,7 @@ const line = (
   if (themes.length > 0) parts.push(themes.map(([tag]) => tag).join(', '))
   if (pair.neighbor) {
     const { base, both } = pair.neighbor
-    parts.push(
-      `das ${integerText(base)} pessoas que deram 4 ou mais a ele, ` +
-        `${Math.floor((100 * both) / base)}% fizeram o mesmo com este`,
-    )
+    parts.push(neighborhoodText(base, both))
   }
   if (pair.director) parts.push('mesmo diretor')
   const cited = themes[0]?.[1] ??

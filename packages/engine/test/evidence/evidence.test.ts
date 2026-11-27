@@ -57,7 +57,7 @@ test('the contribution prints rounded to 4 places', () => {
   const evidence = makeEvidence({
     person: 'bruno',
     filmId: 'tt9000101',
-    text: 'deu 4,5 a X',
+    text: 'deu 9 de 10 a X',
     source: 'Letterboxd do Bruno',
     date: '2025-06-01',
     strength: 'moderate',

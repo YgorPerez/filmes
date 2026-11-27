@@ -242,7 +242,7 @@ describe('the calibrated Nota prevista', () => {
     expect(none.predictedRating?.['vera']?.value).toBeCloseTo(8.13, 2)
     expect(bare.evidence).toEqual(none.evidence)
     expect(bare.evidence['vera']?.[0]?.text).toBe(
-      '3 pessoas de gosto parecido deram 3 em média a este filme',
+      '3 pessoas de gosto parecido deram 6 de 10 em média a este filme',
     )
   })
 

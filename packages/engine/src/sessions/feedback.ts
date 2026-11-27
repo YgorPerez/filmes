@@ -24,7 +24,7 @@ import { casefold, pyJoinWords, pyStrip } from '../compat/text.ts'
 import { PY_WHITESPACE_CLASS } from '../compat/whitespace.ts'
 import { DataWriter } from '../data/DataWriter.ts'
 import type { GitError } from '../data/git.ts'
-import { formatRating, readRating } from '../data/rating.ts'
+import { readRating } from '../data/rating.ts'
 import {
   isMapping,
   isPyInt,
@@ -43,7 +43,7 @@ import {
   statedStrength,
   type RatingScale,
 } from '../evidence/ruler.ts'
-import { filmText } from '../evidence/wording.ts'
+import { filmText, tenScaleText } from '../evidence/wording.ts'
 import { readRatingScale } from '../people/rating-scale.ts'
 import { resolveAttendees } from '../recommendation/attendees.ts'
 import type { EngineServices } from '../runtime/Engine.ts'
@@ -465,7 +465,7 @@ const writtenFacts = (
         person: r.person,
         text:
           r.kind === 'rating'
-            ? `deu ${r.originalRating ?? formatRating(r.rating ?? 0)} a ${name}`
+            ? `deu ${r.originalRating ?? tenScaleText(r.rating ?? 0)} a ${name}`
             : REPORT_TEXT[r.reaction ?? 'neutral'](name),
         source: r.source,
         date: r.date,
