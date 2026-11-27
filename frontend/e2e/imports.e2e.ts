@@ -87,7 +87,7 @@ async function profile(page: Page) {
 }
 
 async function removeImport(page: Page, original: string) {
-  const files = section(page, 'Arquivos importados')
+  const files = section(page, 'Arquivos e perfis')
   await files.getByLabel(`Tirar ${original}`).click()
   await files
     .getByRole('listitem')
@@ -112,7 +112,7 @@ async function openOlgaImports(page: Page, info: TestInfo) {
   ).toBeVisible()
   // Nothing imported: the guided flow is the page, and Olga's diary needs
   // her yes.
-  await expect(section(page, 'Arquivos importados')).toHaveCount(0)
+  await expect(section(page, 'Arquivos e perfis')).toHaveCount(0)
   await expect(section(page, RESULTS)).toHaveCount(0)
   await expect(
     section(page, 'Do Letterboxd').getByRole('link', {
@@ -129,7 +129,7 @@ async function importOlgaZip(page: Page, info: TestInfo) {
   await expect(notice(page)).toContainText(
     'O ZIP do Letterboxd entrou: entraram',
   )
-  await expect(section(page, 'Arquivos importados')).toContainText(
+  await expect(section(page, 'Arquivos e perfis')).toContainText(
     'letterboxd-olga.zip',
   )
   const letterboxd = section(page, RESULTS)
@@ -224,9 +224,7 @@ async function readRssAndRemoveZip(page: Page, info: TestInfo) {
   await rss.getByLabel(/^Olga concordou que o filmes leia/).check()
   await rss.getByRole('button', { name: 'Ler o perfil' }).click()
   await expect(notice(page)).toContainText('Perfil do Letterboxd lido')
-  await expect(section(page, 'Arquivos importados')).toContainText(
-    '@olga_farol',
-  )
+  await expect(section(page, 'Arquivos e perfis')).toContainText('@olga_farol')
   await snap(page, info, 'importar-rss')
   await removeImport(page, 'letterboxd-olga.zip')
   await expect(notice(page)).toContainText('Import tirado')

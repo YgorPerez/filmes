@@ -135,7 +135,7 @@ describe('PersonImportsScreen', () => {
       within(results)
         .getByRole('link', { name: COPY.results.toQueue })
         .getAttribute('href'),
-    ).toBe('/meu-gosto/fila')
+    ).toBe('/meu-gosto/fila?de=quim')
     expect(results.textContent).toContain('Trakt: 2 Notas e 1 Já visto')
     const files = section(COPY.files.title)
     expect(files.textContent).toContain('ZIP do Letterboxd · em 20 nov 2026')
@@ -395,7 +395,7 @@ describe('PersonImportsScreen', () => {
     )
     expect(await posted(sync)).toEqual({ kind: 'trakt-sync', user: null })
     await user.click(within(trakt).getByText(TRAKT_SYNC.otherUser))
-    const read = within(trakt).getByRole('form', { name: TRAKT_SYNC.read })
+    const read = within(trakt).getByRole('form', { name: TRAKT_SYNC.readLabel })
     await user.type(
       within(read).getByLabelText(TRAKT_SYNC.user, { exact: false }),
       'https://trakt.tv/users/quim_t',
@@ -423,7 +423,7 @@ describe('PersonImportsScreen', () => {
     show({ ...QUIM, traktLink: { available: false, connected: false } })
     const trakt = section(TRAKT_SYNC.title)
     expect(
-      within(trakt).queryByRole('form', { name: TRAKT_SYNC.read }),
+      within(trakt).queryByRole('form', { name: TRAKT_SYNC.readLabel }),
     ).toBeNull()
   })
 
@@ -526,6 +526,19 @@ describe('PersonImportsScreen', () => {
     ).toBe(
       'O ZIP do Letterboxd entrou: entraram 4 Notas novas, 1 Já visto novo e 1 filme na watchlist. 5 Notas mudaram: A, de 9 para 1; B, de 2 para 8 e mais 3 outras. 3 filmes ficaram com a Nota que já tinham.',
     )
+    // A first sentence with a colon of its own: a full stop, never two
+    // colons in a row.
+    expect(
+      COPY.notices.trakt({
+        facts: 1,
+        ratings: 0,
+        seen: 0,
+        changed: 1,
+        changes: [{ title: 'Maré Baixa (2015)', from: 9, to: 1 }],
+      }),
+    ).toBe(
+      'O ZIP do Trakt entrou. 1 Nota mudou: Maré Baixa (2015), de 9 para 1.',
+    )
     // Only films that kept their Notas: nothing new.
     expect(
       COPY.notices.letterboxd({ facts: 4, ratings: 0, seen: 0, repeated: 4 }),
@@ -574,7 +587,7 @@ describe('the Trakt section on her own page', () => {
       within(trakt).getByRole('link', { name: TRAKT_SYNC.manage }),
     ).toBeTruthy()
     expect(
-      within(trakt).queryByRole('form', { name: TRAKT_SYNC.read }),
+      within(trakt).queryByRole('form', { name: TRAKT_SYNC.readLabel }),
     ).toBeNull()
   })
 
@@ -599,7 +612,9 @@ describe('the Trakt section on her own page', () => {
       .getByText(TRAKT_SYNC.ownUser)
       .closest('details') as HTMLDetailsElement
     expect(profile.open).toBe(false)
-    const read = within(profile).getByRole('form', { name: TRAKT_SYNC.read })
+    const read = within(profile).getByRole('form', {
+      name: TRAKT_SYNC.readLabel,
+    })
     expect(within(read).queryByRole('checkbox')).toBeNull()
     const zip = within(trakt)
       .getByText(TRAKT_SYNC.zip)
@@ -626,7 +641,7 @@ describe('the Trakt section on her own page', () => {
         .queryAllByRole('link')
         .map((link) => link.getAttribute('href')),
     ).toEqual(['https://trakt.tv/settings/data'])
-    const read = within(trakt).getByRole('form', { name: TRAKT_SYNC.read })
+    const read = within(trakt).getByRole('form', { name: TRAKT_SYNC.readLabel })
     expect(within(read).getByRole('checkbox')).toBeTruthy()
   })
 
@@ -687,14 +702,45 @@ describe('what came in, site by site', () => {
       'conta conectada · lido a cada Sessão nova · última leitura em 20 nov 2026',
     )
     const trakt = within(results).getByRole('form', {
-      name: COPY.results.sync.traktNow,
+      name: COPY.results.sync.traktLabel,
     })
     expect(await posted(trakt)).toEqual({ kind: 'trakt-sync', user: null })
     const rss = within(results).getByRole('form', {
-      name: COPY.results.sync.rssNow,
+      name: COPY.results.sync.rssLabel('@quim_lb'),
     })
+    // One verb on each profile row (#274).
+    expect(
+      within(results)
+        .getAllByRole('button', { name: COPY.results.sync.now })
+        .map((button) => button.closest('form')),
+    ).toEqual([rss, trakt])
     // On her own page she answers for herself: no yes to ask.
     expect(await posted(rss, true)).toEqual({ kind: 'rss', user: 'quim_lb' })
+  })
+
+  it('reads another Pessoa’s profile again with the yes she gave (#274)', async () => {
+    show({
+      ...QUIM,
+      imports: [
+        ...QUIM.imports,
+        {
+          kind: 'letterboxd-rss',
+          file: 'imports/quim/rss-a1.xml',
+          date: '2026-11-19',
+          original: 'https://letterboxd.com/quim_lb/rss/',
+        },
+      ],
+    })
+    const rss = within(section(COPY.results.title)).getByRole('form', {
+      name: COPY.results.sync.rssLabel('@quim_lb'),
+    })
+    expect(await posted(rss)).toEqual({ kind: 'rss', user: 'quim_lb' })
+    // The step of the guide reads it again the same way, with no box.
+    const again = screen.getByRole('form', {
+      name: COPY.rss.update('@quim_lb'),
+    })
+    expect(within(again).queryByRole('checkbox')).toBeNull()
+    expect(await posted(again)).toEqual({ kind: 'rss', user: 'quim_lb' })
   })
 
   it('lists the other sites without Letterboxd, and a profile by its address', () => {

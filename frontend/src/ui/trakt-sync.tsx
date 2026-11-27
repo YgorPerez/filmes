@@ -21,7 +21,7 @@ export type TraktLinkView = {
 /** The one Trakt slip of a Pessoa's import page (#269, #274), with one
  * way recommended. On her own page: connect her account (`/trakt`), read
  * then at each new Session; once connected or linked to a public profile,
- * "Sincronizar agora". The profile by its name is folded under it, and so
+ * "Ler agora". The profile by its name is folded under it, and so
  * is the ZIP (`zip`). On another Pessoa's page, only she can connect hers:
  * her public profile with her yes, and no way to `/trakt`. On a server
  * with no Trakt client id, the ZIP is the way, unfolded. */
@@ -149,17 +149,26 @@ function Fold({
 
 /** "Ler agora", where the import page says when her Trakt was read
  * (#274). */
-export function TraktReadNow({ slug, label }: { slug: string; label: string }) {
+export function TraktReadNow({
+  slug,
+  label,
+  name = label,
+}: {
+  slug: string
+  label: string
+  /** The form's accessible name. */
+  name?: string
+}) {
   return (
     <SyncForm
       action={`/importar/${encodeURIComponent(slug)}/acao?de=trakt`}
       label={label}
-      name={label}
+      name={name}
     />
   )
 }
 
-/** "Sincronizar agora": reads her Trakt again, now. */
+/** "Ler agora": reads her Trakt again, now. */
 function SyncForm({
   action,
   label,
@@ -195,7 +204,7 @@ function UserForm({
   return (
     <PostForm
       action={action}
-      label={COPY.read}
+      label={COPY.readLabel}
       className="flex flex-col gap-xl"
     >
       {(busy) => (

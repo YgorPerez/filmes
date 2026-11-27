@@ -390,13 +390,17 @@ function Tally({ value, term }: { value: number; term: string }) {
 }
 
 /** The films of her export that wait in the queue, on the card stock,
- * with the way to them: the next step, so it comes first. */
+ * with the way to them: the next step, so it comes first. From another
+ * Pessoa's page, the queue knows whose (`?de=`) and its back pill comes
+ * back here (#274). */
 function Waiting({
   report,
   from,
+  queue,
 }: {
   report: PersonImports['letterboxd']
   from: Resolved
+  queue: string
 }) {
   const { results } = COPY
   return (
@@ -413,7 +417,7 @@ function Waiting({
         ))}
       </ul>
       <a
-        href={QUEUE_PATH}
+        href={queue}
         className={buttonVariants({
           variant: 'option',
           className: 'self-start border-transparent',
@@ -441,9 +445,11 @@ function resolvedFrom(page: PersonImports): Resolved {
 function LetterboxdResult({
   report,
   from,
+  queue,
 }: {
   report: PersonImports['letterboxd']
   from: Resolved
+  queue: string
 }) {
   const { results } = COPY
   const outside = report.discardedItems
@@ -457,7 +463,9 @@ function LetterboxdResult({
         <Tally value={total(report.discarded)} term={results.outside} />
         <Tally value={report.queued} term={results.waiting} />
       </dl>
-      {report.queued > 0 && <Waiting report={report} from={from} />}
+      {report.queued > 0 && (
+        <Waiting report={report} from={from} queue={queue} />
+      )}
       {outside.length > 0 && (
         <details className="group">
           <summary className="inline-flex min-h-touch cursor-pointer list-none items-center text-link text-ink-2 underline underline-offset-3 [&::-webkit-details-marker]:hidden">
@@ -524,8 +532,15 @@ function resultLines(page: PersonImportsView) {
   ].filter((line) => line !== false)
 }
 
-/** The Letterboxd profile kept in sync: when it was read and, on her own
- * page, the way to read it now. */
+/** The yes a Pessoa gave when her profile was first read, kept for the
+ * reads of the same profile after it (#274): the server took the first
+ * one only with it. */
+function KeptConsent({ own }: { own: boolean }) {
+  return own ? null : <input type="hidden" name="consentimento" value="sim" />
+}
+
+/** The Letterboxd profile kept in sync: when it was read and "Ler agora",
+ * the same verb as Trakt's row (#274). */
 function RssSync({
   slug,
   own,
@@ -539,14 +554,18 @@ function RssSync({
   const user = rssUser(rss.original)
   return (
     <SyncStatus who={user ?? rss.original} how={sync.rss} date={rss.date}>
-      {own && (
-        <ImportForm slug={slug} action="rss" form="perfil" label={sync.rssNow}>
+      {user !== null && (
+        <ImportForm
+          slug={slug}
+          action="rss"
+          form="perfil"
+          label={sync.rssLabel(user)}
+        >
           {(busy) => (
             <>
-              <input type="hidden" name="usuario" value={user ?? ''} />
-              <Submit disabled={busy}>
-                {busy ? COPY.rss.busy : sync.rssNow}
-              </Submit>
+              <input type="hidden" name="usuario" value={user} />
+              <KeptConsent own={own} />
+              <Submit disabled={busy}>{busy ? COPY.rss.busy : sync.now}</Submit>
             </>
           )}
         </ImportForm>
@@ -568,7 +587,15 @@ function Results({ slug, page }: { slug: string; page: PersonImportsView }) {
   return (
     <Slip id="resultado" title={results.title}>
       {letterboxd && (
-        <LetterboxdResult report={page.letterboxd} from={resolvedFrom(page)} />
+        <LetterboxdResult
+          report={page.letterboxd}
+          from={resolvedFrom(page)}
+          queue={
+            page.own
+              ? QUEUE_PATH
+              : `${QUEUE_PATH}?de=${encodeURIComponent(slug)}`
+          }
+        />
       )}
       {rss && <RssSync slug={slug} own={page.own} rss={rss} />}
       {lines.length > 0 && (
@@ -589,7 +616,11 @@ function Results({ slug, page }: { slug: string; page: PersonImportsView }) {
           date={traktApi.date}
         >
           {page.traktLink?.available && (
-            <TraktReadNow slug={slug} label={results.sync.traktNow} />
+            <TraktReadNow
+              slug={slug}
+              label={results.sync.now}
+              name={results.sync.traktLabel}
+            />
           )}
         </SyncStatus>
       )}
@@ -821,12 +852,12 @@ function ServiceGuides() {
           <details className="group">
             <summary className="flex min-h-touch cursor-pointer list-none items-center justify-between gap-md font-display text-row-title [&::-webkit-details-marker]:hidden">
               {other.how(service)}
-              <span
-                aria-hidden="true"
-                className="text-ink-2 transition-transform group-open:rotate-90"
-              >
-                <RowArrow />
-              </span>
+              {/* The drawn + of the flow's folds, a × while open (#274):
+                  the → is for links that leave the page. */}
+              <Icon
+                name="plus"
+                className="size-[18px] shrink-0 text-ink-2 transition-[rotate] group-open:rotate-45 motion-reduce:transition-none"
+              />
             </summary>
             <ol className="flex list-decimal flex-col gap-2xs pb-md pl-3xl text-evidence">
               {steps.map((step, index) => (
@@ -861,8 +892,9 @@ const lastProfile = (page: PersonImports) =>
     .findLast((user) => user !== null) ?? null
 
 /** The Letterboxd profile's public diary, the way to keep the ZIP's
- * history current. Once a profile was read, one tap reads it again; the
- * field for another one folds under it. The server reads the user out of
+ * history current. Once a profile was read, one tap reads it again ("Ler
+ * agora", with the yes given then); the field for another one, which
+ * asks for the yes again, folds under it. The server reads the user out of
  * a name, an @name or the profile's address. Another Pessoa's diary needs
  * her yes; on the Dono's own page there is nothing to ask. */
 function Rss({
@@ -900,7 +932,7 @@ function Rss({
         {(busy) => (
           <>
             <input type="hidden" name="usuario" value={last} />
-            {consent}
+            <KeptConsent own={page.own} />
             <Submit disabled={busy}>
               {busy ? rss.busy : rss.update(last)}
             </Submit>
