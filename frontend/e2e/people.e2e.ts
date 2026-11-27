@@ -128,10 +128,10 @@ test('the Dono reads and changes a Pessoa’s taste', async ({ page }, info) => 
   await page.getByText(/^Ainda sem Já vistos sem Nota/).click()
   form = await addForm(page, 'Já vistos sem Nota', 'Acrescentar Já visto')
   await target(form, /^Filme/, 'casa cheia', /^Usar Casa Cheia/)
-  await form.getByLabel(/^Nota/).selectOption('4')
+  await form.getByLabel(/^Nota/).selectOption('8')
   await form.getByRole('button', { name: 'Gravar' }).click()
   await expect(section(page, 'Já vistos sem Nota')).toContainText('Casa Cheia')
-  await expect(section(page, 'Já vistos sem Nota')).toContainText('nota 4')
+  await expect(section(page, 'Já vistos sem Nota')).toContainText('nota 8')
   await snap(page, info, 'pessoa-com-gosto')
 
   // Out again.
@@ -152,6 +152,7 @@ test('the Dono reads and changes a Pessoa’s taste', async ({ page }, info) => 
     ['adoro os filmes dela', 'love', 'Q9000018'],
   ])
   expect(view.reports.map((r) => r.text)).toEqual(['odeia filme lento'])
+  // An 8 on the 1 to 10 scale is the engine's 4 of 5.
   expect(view.seen.map((s) => [s.film, s.rating])).toEqual([['tt9000602', 4]])
 })
 
