@@ -4,11 +4,12 @@
 // swapped in later lacks those writes, so the app reloads everything that
 // comes from filmes-dados before it serves: the loading steps of a rebuild
 // (Python's `10_pessoas`, `31_letterboxd`, `32_trakt`, `40_sessoes`, and
-// `33_imdb` since #285), in that order, over the rows the build put there.
+// `33_imdb` since #285, `34_simkl` since #299), in that order, over the rows the build put there.
 
 import { Effect } from 'effect'
 import { reloadImdb } from '../imports/imdb.ts'
 import { reloadLetterboxd } from '../imports/letterboxd.ts'
+import { reloadSimkl } from '../imports/simkl.ts'
 import { reloadTrakt } from '../imports/trakt.ts'
 import { reloadPeople } from '../people/facts.ts'
 import { reloadSessions } from '../sessions/database.ts'
@@ -21,13 +22,14 @@ export interface DataReload {
 }
 
 /** Reloads the database's rows from filmes-dados: every Pessoa, her
- * Letterboxd, Trakt and IMDb imports, and every Session. Each step is its own
+ * Letterboxd, Trakt, IMDb and Simkl imports, and every Session. Each step is its own
  * write; the app holds its requests until the last one ends. */
 export const reloadData = Effect.gen(function* () {
   const people = yield* reloadPeople
   yield* reloadLetterboxd
   yield* reloadTrakt
   yield* reloadImdb
+  yield* reloadSimkl
   const sessions = yield* reloadSessions
   return { people, sessions } satisfies DataReload
 })

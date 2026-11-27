@@ -109,6 +109,27 @@ describe('feedbackAction', () => {
     owner: Owner | null = BRUNO,
   ) => feedbackAction(request, SESSION.id, owner, feedback, new Notes(), ORIGIN)
 
+  it('carries a Trakt warning to the closed Session', async () => {
+    const warnings = ['Não foi possível concluir o envio ao Trakt.']
+    const notes = new Notes()
+    const { feedback } = fake({
+      record: { exitCode: 0, output: { ...RECORDED, warnings } },
+    })
+    const response = await feedbackAction(
+      post(FORM),
+      SESSION.id,
+      BRUNO,
+      feedback,
+      notes,
+      ORIGIN,
+    )
+    const location = new URL(response.headers.get('Location')!, ORIGIN)
+    expect(location.searchParams.get('feito')).toBe('contada')
+    expect(
+      notes.recall(location.searchParams.get('nota') ?? undefined)?.warnings,
+    ).toEqual(warnings)
+  })
+
   it('records the form as the logged-in Dono and goes back to the Session', async () => {
     const { feedback, record } = fake()
     const response = await act(

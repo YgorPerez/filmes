@@ -247,7 +247,12 @@ export async function feedbackAction(
       return seeOther(sessionPath(session))
     return seeOther(`${feedbackPath(session)}?erro=${refusalOf(outcome)}`)
   }
-  return seeOther(`${sessionPath(session)}?feito=contada`)
+  const token = notes.remember({
+    warnings: outcome.output.warnings ?? [],
+    addition: null,
+  })
+  const notice = token ? `feito=contada&nota=${token}` : 'feito=contada'
+  return seeOther(`${sessionPath(session)}?${notice}`)
 }
 
 /** The reactions and comments the note `token` holds; null when there are
