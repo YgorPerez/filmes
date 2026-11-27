@@ -86,7 +86,8 @@ export function settle(draft: Draft, written: boolean): Draft {
   if (!written) return { ...draft, sent: [] }
   const ratings = { ...draft.ratings }
   for (const id of draft.sent) delete ratings[id]
-  const history = draft.history.filter((id) => !draft.sent.includes(id))
+  const sent = new Set(draft.sent)
+  const history = draft.history.filter((id) => !sent.has(id))
   return { ...draft, ratings, sent: [], history }
 }
 
