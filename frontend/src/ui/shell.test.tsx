@@ -137,4 +137,16 @@ describe('AppShell', () => {
       within(alert).getByRole('link', { name: 'Ver Operações' }),
     ).toHaveProperty('pathname', '/operacoes')
   })
+
+  it('links the credits from the footer, after the page', () => {
+    show()
+    const footer = screen.getByRole('contentinfo')
+    expect(
+      within(footer).getByRole('link', { name: 'Créditos das fontes' }),
+    ).toHaveProperty('pathname', '/creditos')
+    expect(
+      screen.getByText('a página').compareDocumentPosition(footer) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+  })
 })

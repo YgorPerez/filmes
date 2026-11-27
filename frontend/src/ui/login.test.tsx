@@ -28,4 +28,11 @@ describe('Login', () => {
       /<header class="bg-case"><p[^>]*>filmes<\/p><\/header>/u,
     )
   })
+
+  it('links the credits from its footer, for a visitor', () => {
+    const html = renderToStaticMarkup(<Login />)
+    expect(html).toMatch(
+      /<footer[^>]*>.*<a href="\/creditos"[^>]*>Créditos das fontes<\/a>.*<\/footer>/,
+    )
+  })
 })
