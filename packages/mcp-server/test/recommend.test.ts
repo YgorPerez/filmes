@@ -42,6 +42,23 @@ describe('recommend', () => {
     }
   })
 
+  test('a short list says how many came and whose similar films ran out', async () => {
+    const { ok } = await connect(useFixture())
+
+    const output = await ok('recommend', {
+      attendees: ['dono'],
+      similar: ['tt9006701'],
+      count: 10,
+    })
+
+    assert.deepEqual(output.shortfall, {
+      asked: 10,
+      found: 4,
+      similar: ['Escrever Cartas'],
+      relaxed: [],
+    })
+  })
+
   test('passes the Regra de escolha', async () => {
     const { ok } = await connect(useFixture())
 

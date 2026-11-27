@@ -65,6 +65,7 @@ import {
   writeSession,
 } from './file.ts'
 import { sessionOrder } from './order.ts'
+import type { Shortfall } from './shortfall.ts'
 
 /** Where a result names a Session: its id, its file in filmes-dados and
  * the version the result is. */
@@ -82,6 +83,9 @@ export interface RecommendSessionRequest extends RecommendRequest {
 
 export interface SessionRecommendation extends Recommendation {
   readonly session: SessionRef
+  /** Fewer films passed than asked, or a Restrição was relaxed (#357);
+   * absent when the list is full. */
+  readonly shortfall?: Shortfall
 }
 
 /** A value of the result as YAML: an integer is an int (positions,
@@ -120,7 +124,7 @@ export const sessionContext = (
  * (`_campos_da_recomendacao`). Each film keeps its Motivo [reason] (#183),
  * which the Cartaz groups by: the body has no sign to find it again. */
 export const recommendationFields = (
-  recommendation: Recommendation,
+  recommendation: Omit<SessionRecommendation, 'session'>,
   context: YamlValue,
 ): ReadonlyArray<readonly [string, YamlValue]> => {
   const fields: Array<readonly [string, YamlValue]> = [
@@ -170,7 +174,8 @@ export const recommendationFields = (
     ],
   ]
   // Regenerating with kept films (#59): what stayed and what left, and why.
-  for (const field of ['kept', 'dropped'])
+  // A short list, or a relaxed one (#357), says so in its version.
+  for (const field of ['kept', 'dropped', 'shortfall'])
     if (field in recommendation)
       fields.push([
         field,
