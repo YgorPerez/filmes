@@ -12,6 +12,17 @@ export const readFeedbackPage = createServerFn({ method: 'GET' })
     return appFeedbackPage(data, context.owner.person)
   })
 
+/** A told Session's form, filled with what was told
+ * (`feedbackCorrection`, #344). */
+export const readFeedbackCorrection = createServerFn({ method: 'GET' })
+  .middleware([ownerMiddleware])
+  .validator(pathSlug)
+  .handler(async ({ context, data }) => {
+    requireOwner(context.owner)
+    const { appFeedbackCorrection } = await import('#/platform/feedback')
+    return appFeedbackCorrection(data, context.owner.person)
+  })
+
 /** The reactions and comments the Catálogo search kept, in the note
  * `/sessoes/<sessao>/contar?nota=` names (`feedbackDraft`). */
 const readFeedbackDraft = createServerFn({ method: 'GET' })
@@ -28,3 +39,33 @@ export const feedbackDraftFor = (token: string | undefined) =>
   token === undefined
     ? Promise.resolve(null)
     : readFeedbackDraft({ data: token })
+
+/** What `/sessoes/<sessao>/contar` shows once the correction (#344) is
+ * read: its page in place of the open one, what was told under what the
+ * search kept, and the film to mark. `correction` is null when not asked
+ * for; `'unknown'` or null leaves the open page as it is. */
+export function withCorrection<P, D>(
+  opened: P,
+  kept: D | null,
+  correction: { page: P; film: string | null; draft: D } | 'unknown' | null,
+  filme: string | undefined,
+) {
+  const fix = typeof correction === 'object' ? correction : null
+  if (fix === null)
+    return {
+      page: opened,
+      draft: kept,
+      noted: kept !== null,
+      correcting: false,
+    }
+  return {
+    page: fix.page,
+    // What the search kept wins over what was told.
+    draft: kept ?? fix.draft,
+    noted: kept !== null,
+    correcting: true,
+    // A film the search picked wins over the one told.
+    film: filme ?? fix.film ?? undefined,
+    nothing: filme === undefined && fix.film === null,
+  }
+}

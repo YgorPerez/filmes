@@ -143,3 +143,40 @@ test('a refused grant asks to reconnect and skips only that Pessoa', async () =>
     await engine.dispose()
   }
 })
+
+test('a correction sends only what changed, and takes nothing back (#344)', async () => {
+  const { engine, id, accessToken } = await setup(useFixture())
+  try {
+    const first = { session: id, film: 'tt9000203', ratings: ['iara=9/10'] }
+    expect(await engine.run(recordFeedback(first))).toMatchObject({
+      exitCode: 0,
+    })
+    accessToken.mockClear()
+    // Another film, and her Nota for it: the new film goes into her
+    // history and gets the Nota; the first chosen film and the Cartaz Já
+    // vi are not sent again.
+    const correction = {
+      session: id,
+      film: 'tt9000301',
+      ratings: ['iara=6/10'],
+      correct: true,
+    }
+    const outcome = await engine.run(recordFeedback(correction))
+    expect(outcome.exitCode).toBe(0)
+    expect(outcome.output).not.toHaveProperty('warnings')
+    expect(accessToken.mock.calls.map(([person]) => person)).toEqual([
+      'bruno',
+      'iara',
+      'iara',
+      'teo',
+    ])
+    accessToken.mockClear()
+    // The same correction again changes nothing on Trakt.
+    expect(await engine.run(recordFeedback(correction))).toMatchObject({
+      exitCode: 0,
+    })
+    expect(accessToken).not.toHaveBeenCalled()
+  } finally {
+    await engine.dispose()
+  }
+})

@@ -53,11 +53,18 @@ export function FeedbackScreen({
   draft = null,
   note,
   told,
+  correcting = false,
+  nothing = false,
 }: {
   session: string
   page: FeedbackPage | 'unknown' | null
-  /** No open Session by that id, but a told one: what they saw (#272). */
-  told?: { title: string | null }
+  /** No open Session by that id, but a told one: what they saw (#272),
+   * and whether the Dono looking was there to correct it (#344). */
+  told?: { title: string | null; mine: boolean }
+  /** The form corrects a told Session, filled with what was told (#344). */
+  correcting?: boolean
+  /** "Não vimos nada" comes marked: what the corrected Session told. */
+  nothing?: boolean
   refusal?: FeedbackRefusal
   search?: SearchAnswer | null
   film?: string
@@ -69,6 +76,7 @@ export function FeedbackScreen({
     const params = new URLSearchParams({ filme: id })
     if (search) params.set('buscar', search.query)
     if (note) params.set('nota', note)
+    if (correcting) params.set('corrigir', 'sim')
     return `${path}?${params.toString()}`
   }
   return (
@@ -79,7 +87,7 @@ export function FeedbackScreen({
         <NotOpen session={session} told={told} />
       ) : (
         <>
-          <Heading page={page} />
+          <Heading page={page} correcting={correcting} />
           <FeedbackForm
             key={`${session} ${film ?? ''} ${search?.query ?? ''} ${note ?? ''}`}
             session={session}
@@ -89,6 +97,8 @@ export function FeedbackScreen({
             draft={draft}
             pick={pick}
             refusal={refusal}
+            correcting={correcting}
+            nothing={nothing}
           />
         </>
       )}
@@ -103,7 +113,7 @@ function NotOpen({
   told,
 }: {
   session: string
-  told?: { title: string | null }
+  told?: { title: string | null; mine: boolean }
 }) {
   const { form } = FEEDBACK
   return (
@@ -112,25 +122,42 @@ function NotOpen({
         {told ? form.told(told.title) : form.unknown}
       </h1>
       {!told && <p className="text-ink-2">{form.unknownLead}</p>}
-      <a
-        href={told ? sessionPath(session) : '/sessoes'}
-        className={buttonVariants({
-          variant: 'option',
-          className: 'self-start',
-        })}
-      >
-        {told ? form.toSession : form.toList}
-      </a>
+      <div className="flex flex-wrap items-center gap-lg">
+        <a
+          href={told ? sessionPath(session) : '/sessoes'}
+          className={buttonVariants({ variant: 'option' })}
+        >
+          {told ? form.toSession : form.toList}
+        </a>
+        {told?.mine && (
+          <a
+            href={`${feedbackPath(session)}?corrigir=sim`}
+            className={buttonVariants({ variant: 'link' })}
+          >
+            {form.correct}
+          </a>
+        )}
+      </div>
     </section>
   )
 }
 
 /** The page's head: the title, then who was there and when, and what the
  * Dono asked in her words, on the yellow paper. */
-function Heading({ page }: { page: FeedbackPage }) {
+function Heading({
+  page,
+  correcting,
+}: {
+  page: FeedbackPage
+  correcting: boolean
+}) {
+  const { form } = FEEDBACK
   return (
     <div className="flex flex-col gap-lg">
-      <h1 className="font-display text-counter-title">{FEEDBACK.form.title}</h1>
+      <h1 className="font-display text-counter-title">
+        {correcting ? form.correctTitle : form.title}
+      </h1>
+      {correcting && <p className="text-ink-2">{form.correctLead}</p>}
       <div className="flex items-center gap-lg">
         <Avatars people={page.attendees} />
         <span className="flex min-w-0 flex-col gap-0.5">
@@ -159,6 +186,8 @@ function FeedbackForm({
   draft,
   pick,
   refusal,
+  correcting,
+  nothing,
 }: {
   session: string
   page: FeedbackPage
@@ -167,14 +196,14 @@ function FeedbackForm({
   draft: FeedbackDraft | null
   pick: (id: string) => string
   refusal?: FeedbackRefusal
+  correcting: boolean
+  nothing: boolean
 }) {
   const { form } = FEEDBACK
   const listed = shelfOf(page).some((item) => item.id === film)
   const other = !listed && (film !== undefined || search !== null)
-  // The film radio marked: a film of the list, `outro` or `nada`; with
-  // none asked, the one the Cartaz points to (#272).
-  const [choice, setChoice] = useState(
-    listed ? film : other ? 'outro' : likelyFilm(page),
+  const [choice, setChoice] = useState(() =>
+    firstChoice(page, film, other, nothing),
   )
   const { refused, alert, onAnswer } = useRefusalInPlace(
     refusal,
@@ -198,6 +227,7 @@ function FeedbackForm({
       <button type="submit" name="tecla" value="enter" hidden>
         {form.submit}
       </button>
+      {correcting && <input type="hidden" name="corrigir" value="sim" />}
       {refused && !(fixed && FILM_REFUSALS.has(refused)) && (
         <div ref={alert}>
           <Alert>{FEEDBACK.refusals[refused]}</Alert>
@@ -242,18 +272,37 @@ function FeedbackForm({
       </fieldset>
 
       {!alone && <Satisfaction page={page} />}
-      {/* The way out stays a thumb away, as the Cartaz's Enviar. */}
-      <div className="sticky bottom-[calc(68px+env(safe-area-inset-bottom))] z-10 rounded-t-panel border-x border-t border-rule bg-surface px-lg py-sm min-[900px]:bottom-0">
-        <Submit
-          variant="primary"
-          disabled={busy !== null}
-          className="w-full sm:w-auto"
-        >
-          {busy === null ? form.submit : form.submitting}
-        </Submit>
-      </div>
+      <SendBar busy={busy !== null} correcting={correcting} />
     </form>
   )
+}
+
+/** The way out, a thumb away as the Cartaz's Enviar: it records, or
+ * records the correction (#344). */
+function SendBar({ busy, correcting }: { busy: boolean; correcting: boolean }) {
+  const { form } = FEEDBACK
+  const label = correcting ? form.correctSubmit : form.submit
+  return (
+    <div className="sticky bottom-[calc(68px+env(safe-area-inset-bottom))] z-10 rounded-t-panel border-x border-t border-rule bg-surface px-lg py-sm min-[900px]:bottom-0">
+      <Submit variant="primary" disabled={busy} className="w-full sm:w-auto">
+        {busy ? form.submitting : label}
+      </Submit>
+    </div>
+  )
+}
+
+/** The film radio marked first: "não vimos nada" when the corrected
+ * Session told it (#344), a film of the list, `outro`, or with none asked,
+ * the one the Cartaz points to (#272). */
+function firstChoice(
+  page: FeedbackPage,
+  film: string | undefined,
+  other: boolean,
+  nothing: boolean,
+): string | undefined {
+  if (nothing) return 'nada'
+  if (shelfOf(page).some((item) => item.id === film)) return film
+  return other ? 'outro' : likelyFilm(page)
 }
 
 /** Every film the Session showed: the current shelf, then the ones that

@@ -76,11 +76,35 @@ const personName = (person: string) =>
 // and gives a stable timestamp when Trakt deduplicates a retried POST.
 const timestamp = (date: string) => `${date}T12:00:00.000Z`
 
+type Sent = ReadonlyMap<string, ReadonlyMap<string, Seen>>
+
+/** What a told Session already sent to Trakt, read before a correction
+ * replaces its Feedback (#344). */
+export const traktSent = (
+  session: string,
+): Effect.Effect<Sent, never, Sqlite> =>
+  seenForTrakt(session).pipe(Effect.orElseSucceed((): Sent => new Map()))
+
+/** What is left to send after `sent`: a film she has not had in the
+ * history, and a Nota that is new or changed. Nothing is sent twice or
+ * taken back (#344). */
+const unsent = (
+  seen: Map<string, Seen>,
+  before: ReadonlyMap<string, Seen> | undefined,
+) => {
+  const history = [...seen.values()].filter((s) => !before?.has(s.film))
+  const ratings = [...seen.values()].filter(
+    (s) => s.rating !== null && before?.get(s.film)?.rating !== s.rating,
+  )
+  return { history, ratings }
+}
+
 /** Called after the Feedback and its commit; returns its warnings. A film
  * Trakt does not know is left out with a warning, and the rest goes. A
  * refused grant warns and skips that Pessoa. A failed source is done for
- * this run. */
-export const syncTraktFeedback = (session: string) =>
+ * this run. After a correction, `sent` is what the Session had sent, and
+ * only the difference goes. */
+export const syncTraktFeedback = (session: string, sent: Sent | null = null) =>
   Effect.gen(function* () {
     const connection = yield* TraktAccess
     if (!connection) return [] as ReadonlyArray<string>
@@ -88,18 +112,25 @@ export const syncTraktFeedback = (session: string) =>
     const missing = new Set<string>()
     return yield* Effect.gen(function* () {
       for (const [person, seen] of yield* seenForTrakt(session)) {
-        const history = [...seen.values()].map(({ film, date }) => ({
+        const due =
+          sent === null
+            ? { history: [...seen.values()], ratings: [...seen.values()] }
+            : unsent(seen, sent.get(person))
+        if (due.history.length === 0 && due.ratings.length === 0) continue
+        const history = due.history.map(({ film, date }) => ({
           ids: { imdb: film },
           watched_at: timestamp(date),
         }))
-        const sent = yield* writeTrakt('history', history, connection, person)
-        if (sent === null) continue
-        if (sent === TRAKT_REVOKED) {
-          warnings.push(traktRevokedWarning(yield* personName(person)))
-          continue
+        if (history.length > 0) {
+          const out = yield* writeTrakt('history', history, connection, person)
+          if (out === null) continue
+          if (out === TRAKT_REVOKED) {
+            warnings.push(traktRevokedWarning(yield* personName(person)))
+            continue
+          }
+          for (const film of out) missing.add(film)
         }
-        for (const film of sent) missing.add(film)
-        const ratings = [...seen.values()].flatMap(({ film, date, rating }) =>
+        const ratings = due.ratings.flatMap(({ film, date, rating }) =>
           rating === null || missing.has(film)
             ? []
             : [
@@ -112,7 +143,9 @@ export const syncTraktFeedback = (session: string) =>
         )
         if (ratings.length === 0) continue
         const rated = yield* writeTrakt('ratings', ratings, connection, person)
-        if (rated !== null && rated !== TRAKT_REVOKED)
+        if (rated === TRAKT_REVOKED && history.length === 0)
+          warnings.push(traktRevokedWarning(yield* personName(person)))
+        else if (rated !== null && rated !== TRAKT_REVOKED)
           for (const film of rated) missing.add(film)
       }
       for (const film of missing)
