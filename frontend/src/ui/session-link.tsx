@@ -18,17 +18,19 @@ import { VOTES } from './session-votes.copy'
 type Film = SessionLinkView['films'][number]
 
 /** A film's tape: the poster or, without one, the title on the cover (the
- * Cartaz's rule). The poster is decorative: the title is always written
- * beside it. */
+ * Cartaz's rule; a `small` tape, too narrow for it, stays blank). The
+ * poster is decorative: the title is always written beside it. */
 export function FilmCover({
   poster,
   title,
   eager = false,
+  small = false,
   className = '',
 }: {
   poster: string | null
   title: string
   eager?: boolean
+  small?: boolean
   className?: string
 }) {
   return (
@@ -42,7 +44,7 @@ export function FilmCover({
             loading={eager ? 'eager' : 'lazy'}
             className="absolute inset-0 size-full object-cover"
           />
-        ) : (
+        ) : small ? null : (
           <span aria-hidden="true">{title}</span>
         )
       }
@@ -181,6 +183,7 @@ export function LinkFilmRow({ film, first }: { film: Film; first: boolean }) {
           poster={film.card?.poster ?? null}
           title={film.title}
           eager={first}
+          small
           className="w-full"
         />
         {film.new && (
