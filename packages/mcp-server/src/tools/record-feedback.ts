@@ -20,6 +20,11 @@ const comment = z
 
 export default defineTool({
   name: 'record_feedback',
+  annotations: {
+    readOnlyHint: false,
+    destructiveHint: false,
+    openWorldHint: false,
+  },
   description:
     'Registra o Feedback de uma Sessão aberta e a fecha. Mande `film` (título ou ID do IMDb, de dentro ou de fora ' +
     'da Recomendação) ou `nothing: true` ("não vimos nada", sem reação). `ratings`: a Nota do Dono ("dono") ou o número ' +

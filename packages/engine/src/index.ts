@@ -52,8 +52,10 @@ export { LETTERBOXD_HEADER } from './export/letterboxd.ts'
 export { resolveAttendees } from './recommendation/attendees.ts'
 export {
   attributionsOf,
+  CREDITS,
   TRAKT_ATTRIBUTION,
   type Attribution,
+  type Credit,
 } from './recommendation/attributions.ts'
 export {
   catalogFilm,

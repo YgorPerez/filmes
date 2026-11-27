@@ -10,6 +10,11 @@ import { defineTool, invalidUsage, ownerAuthor, personName } from '../tool.ts'
 
 export default defineTool({
   name: 'import',
+  annotations: {
+    readOnlyHint: false,
+    destructiveHint: true,
+    openWorldHint: true,
+  },
   description:
     'Importa o RSS público do Letterboxd de uma Pessoa (`letterboxdRss`, o usuário dela: as ~50 entradas recentes do ' +
     'diário viram Notas e Já vistos), o CSV de avaliações do IMDb dela (`imdbCsv`, o texto do arquivo "Your Ratings" > ' +

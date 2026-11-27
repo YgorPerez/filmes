@@ -10,6 +10,7 @@ import { billboardText } from '@filmes/engine/billboard-text'
 import { JSDOM } from 'jsdom'
 import { beforeAll, describe, expect, it } from 'vite-plus/test'
 import { MODEL } from '../src/ui/billboard.fixture.ts'
+import { SEND_STATUS } from '../src/ui/billboard-send.copy.ts'
 import { BILLBOARD } from '../src/ui/billboard.copy.ts'
 import {
   buildBillboardView,
@@ -217,7 +218,7 @@ describe('the bundled view', () => {
         },
       ],
     })
-    expect(await page.findByText(BILLBOARD.view.regenerating)).toBeTruthy()
+    expect(await page.findByText(SEND_STATUS.regenerating)).toBeTruthy()
     dom.window.close()
   })
 })
