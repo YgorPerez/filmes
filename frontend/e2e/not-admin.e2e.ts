@@ -31,7 +31,7 @@ test('a Dono who is not admin neither sees nor reaches Operações', async ({
 
 test('a Dono who is not admin finds a film by name', async ({ page }) => {
   await loginAsVera(page)
-  await page.goto('/pessoas/bruno?buscar=Cidade%20de%20Vidro')
+  await page.goto('/sessoes/nova?buscar=Cidade%20de%20Vidro')
 
   await expect(
     page.getByRole('region', { name: 'Buscar no Catálogo', exact: true }),

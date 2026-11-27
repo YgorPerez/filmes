@@ -32,6 +32,30 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
+// The Catálogo the Veto's target finds: one genre, whatever is typed.
+vi.mock('./kit/film-search', () => {
+  const answer = (query: string) =>
+    Promise.resolve({
+      query,
+      found: {
+        query,
+        films: [],
+        people: [],
+        genres: [
+          {
+            id: 'Q1',
+            label: 'Terror',
+            links: ['genre'],
+            filmCount: 3,
+            knownFor: [],
+          },
+        ],
+        series: [],
+      },
+    })
+  return { searchFilms: answer, searchCatalog: answer }
+})
+
 /** A Pessoa's page as the engine reads it. */
 type PersonPage = Exclude<
   ComponentProps<typeof PersonScreen>['page'],
@@ -69,6 +93,8 @@ const IARA: PersonPage = {
   ],
   ratings: [],
   tagGroups: [],
+  sessions: { total: 0, recent: [], satisfaction: null },
+  imported: false,
 }
 
 /** `fetch` answering every post with `to`, as `answerFetch` does. */
@@ -116,7 +142,15 @@ async function typeVeto(text: string) {
     within(form).getByLabelText(PERSON.vetoes.text, { exact: false }),
     text,
   )
-  await user.type(within(form).getByLabelText(/^Alvo/), 'Q1')
+  await user.type(
+    within(form).getByRole('searchbox', { name: /^Diga o quê/ }),
+    'terror',
+  )
+  await user.click(
+    await within(form).findByRole('button', {
+      name: CATALOG_SEARCH.pickLabel('Terror · gênero'),
+    }),
+  )
   return { user, form: form as HTMLFormElement }
 }
 
@@ -129,7 +163,7 @@ it('shows a refusal in the form that got it, keeping what was typed', async () =
   await user.click(within(form).getByRole('button', { name: PERSON.save }))
 
   expect((await within(form).findByRole('alert')).textContent).toContain(
-    PERSON.refusals.alvo,
+    PERSON.refusals('Iara').alvo,
   )
   const [url, init] = answered.mock.calls[0] ?? []
   expect(url).toBe(form.action)
@@ -214,7 +248,7 @@ it('hides the notice of the last post while a form shows its refusal', async () 
   Element.prototype.scrollIntoView = vi.fn<() => void>()
   showRouted('/pessoas/iara?feito=gravado')
   expect((await screen.findByRole('status')).textContent).toBe(
-    PERSON.notices.gravado,
+    PERSON.notices('Iara').gravado,
   )
   const { user, form } = await typeVeto('nunca')
 
@@ -259,23 +293,6 @@ it('goes to the list when her Pessoa is gone', async () => {
 
   await waitFor(() =>
     expect(router.state.location.href).toBe('/pessoas?erro=pessoa'),
-  )
-})
-
-it('searches the Catálogo through the router, keeping the page', async () => {
-  const router = showRouted()
-  const user = userEvent.setup()
-  const search = await screen.findByRole('search', {
-    name: CATALOG_SEARCH.title,
-  })
-
-  await user.type(within(search).getByRole('searchbox'), 'terror')
-  await user.click(
-    within(search).getByRole('button', { name: CATALOG_SEARCH.submit }),
-  )
-
-  await waitFor(() =>
-    expect(router.state.location.href).toBe('/pessoas/iara?buscar=terror'),
   )
 })
 
