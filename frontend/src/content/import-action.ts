@@ -60,11 +60,12 @@ function letterboxdUser(typed: string): string | null {
 const DEFAULT_DISCARD_REASON = 'ignorar'
 
 /** Why an import form cannot run, before the engine sees it. */
-export type ImportFormError = 'pedido' | 'arquivo' | 'consentimento'
+export type ImportFormError = 'pedido' | 'arquivo' | 'consentimento' | 'usuario'
 
 /** The form → the action. An upload with no file is `arquivo`; the RSS
- * without the Pessoa's consent is `consentimento`, unless `own` (the Dono's
- * own page, where she answers for herself). */
+ * with something that is no Letterboxd user is `usuario`, and without the
+ * Pessoa's consent `consentimento`, unless `own` (the Dono's own page,
+ * where she answers for herself). */
 export async function parseImport(
   form: FormData,
   own = false,
@@ -82,7 +83,7 @@ export async function parseImport(
   }
   if (action === 'rss') {
     const user = letterboxdUser(field(form, 'usuario') ?? '')
-    if (user === null) return 'pedido'
+    if (user === null) return 'usuario'
     if (!own && field(form, 'consentimento') !== 'sim') return 'consentimento'
     return { kind: 'rss', user }
   }
@@ -138,6 +139,8 @@ const IMPORT_REFUSALS = [
   'grande',
   // The RSS without the Pessoa's yes.
   'consentimento',
+  // The RSS with something that is no Letterboxd user's name or address.
+  'usuario',
   // No public RSS for that user.
   'rss',
   // Letterboxd did not answer.
@@ -177,6 +180,28 @@ const QUEUE_REFUSALS = [
 
 export type QueueRefusal = (typeof QUEUE_REFUSALS)[number]
 
+/** The import page's forms a refusal can belong to, so it shows under the
+ * one that was sent (`?de=` of the action, back in the page's query): the
+ * guided Letterboxd upload, the other services' upload and the profile. */
+const IMPORT_FORMS = ['letterboxd', 'outro', 'perfil'] as const
+
+export type ImportForm = (typeof IMPORT_FORMS)[number]
+
+/** The form a refusal shows under: the profile's are the profile's, an
+ * upload's the upload that was sent (`sent`, the Letterboxd one when it is
+ * not known); the others belong to the page. */
+export function refusedForm(
+  refusal: ImportRefusal,
+  sent: ImportForm | undefined,
+): ImportForm | null {
+  if (['consentimento', 'usuario', 'rss', 'fonte'].includes(refusal))
+    return 'perfil'
+  if (['arquivo', 'origem', 'grande'].includes(refusal))
+    return sent === 'outro' ? 'outro' : 'letterboxd'
+  return null
+}
+
+export const isImportForm = within(IMPORT_FORMS)
 export const isImportNotice = within(IMPORT_NOTICES)
 export const isImportRefusal = within(IMPORT_REFUSALS)
 export const isQueueNotice = within(QUEUE_NOTICES)

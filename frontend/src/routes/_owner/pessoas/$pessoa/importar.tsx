@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { readImportsPage } from '#/content/imports'
 import { moved, MOVED_TO } from '#/content/moved'
-import { importsSearch } from '#/content/imports-search'
+import { doneOf, importsSearch } from '#/content/imports-search'
 import { PersonImportsScreen } from '#/ui/person-imports'
 
 // A Pessoa's imports, under her page. The Dono's own are under Meu gosto.
@@ -17,13 +17,14 @@ export const Route = createFileRoute('/_owner/pessoas/$pessoa/importar')({
 
 function PersonImportsRoute() {
   const { pessoa } = Route.useParams()
-  const { feito, erro, novos, fora } = Route.useSearch()
+  const search = Route.useSearch()
   return (
     <PersonImportsScreen
       slug={pessoa}
       page={Route.useLoaderData()}
-      done={feito && { notice: feito, facts: novos ?? 0, outside: fora }}
-      refusal={erro}
+      done={doneOf(search)}
+      refusal={search.erro}
+      refusedIn={search.de}
     />
   )
 }
