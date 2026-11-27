@@ -8,10 +8,12 @@ import {
   type ImportRefusal,
 } from '#/content/import-action'
 import { personPath, QUEUE_PATH } from '#/content/paths'
+import { TRAKT_PATH } from '#/content/trakt-form'
 import { FIELD } from './kit/field'
 import { FieldLabel } from './kit/field-label'
 import { FilePicker } from './kit/file-picker'
 import { Icon } from './kit/icon'
+import { FoldRow } from './kit/fold-row'
 import { PostAnswers, PostForm } from './kit/post-form'
 import { usePostedFeedback } from './kit/posted-feedback'
 import { ImportsFrame } from './imports'
@@ -201,21 +203,13 @@ function PageFeedback({
   )
 }
 
-/** "Importar de novo": the forms, folded under the results. */
+/** "Importar de novo": the forms, folded under the results, as a + row
+ * like every other fold of the page (#274). */
 function Again({ open, children }: { open: boolean; children: ReactNode }) {
   return (
-    <details className="group" open={open}>
-      <summary
-        className={buttonVariants({
-          variant: 'option',
-          className:
-            'list-none group-open:mb-xl [&::-webkit-details-marker]:hidden',
-        })}
-      >
-        {COPY.results.again}
-      </summary>
+    <FoldRow summary={COPY.results.again} open={open}>
       {children}
-    </details>
+    </FoldRow>
   )
 }
 
@@ -368,7 +362,12 @@ function Files({ slug, page }: Part) {
                 ? (rssUser(record.original) ?? record.original)
                 : record.original}
             </span>
-            <Meta parts={[files.kind(record.kind), files.on(record.date)]} />
+            <Meta
+              parts={[
+                files.kind(record.kind, record.original),
+                files.on(record.date),
+              ]}
+            />
           </Item>
         ))}
       </Items>
@@ -467,10 +466,7 @@ function LetterboxdResult({
         <Waiting report={report} from={from} queue={queue} />
       )}
       {outside.length > 0 && (
-        <details className="group">
-          <summary className="inline-flex min-h-touch cursor-pointer list-none items-center text-link text-ink-2 underline underline-offset-3 [&::-webkit-details-marker]:hidden">
-            {results.seeOutside(outside.length)}
-          </summary>
+        <FoldRow summary={results.seeOutside(outside.length)}>
           <ul className="flex flex-col gap-2xs text-meta">
             {outside.map((item) => (
               <li key={item.id}>
@@ -485,7 +481,7 @@ function LetterboxdResult({
               </li>
             ))}
           </ul>
-        </details>
+        </FoldRow>
       )}
     </div>
   )
@@ -518,18 +514,41 @@ function SyncStatus({
   )
 }
 
-/** One line per other site that gave something. */
+const SITES = [
+  ['trakt', 'Trakt'],
+  ['imdb', 'IMDb'],
+  ['simkl', 'Simkl'],
+  ['tvtime', 'TV Time'],
+] as const
+
+/** One line per other site that gave a film, counted by film as its
+ * notice counts them (#274). */
 function resultLines(page: PersonImportsView) {
+  return SITES.filter(([site]) => {
+    const { rated, seen, watchlist } = page.films[site]
+    return rated + seen + watchlist > 0
+  }).map(([site, name]) => COPY.results.site(name, page.films[site]))
+}
+
+/** Her own Trakt, not connected while the site reads Trakt (#274): the
+ * recommended way, said here too once the forms fold away. */
+function TraktOff() {
   const { results } = COPY
-  return [
-    (page.trakt.ratings > 0 || page.trakt.seen > 0) &&
-      results.trakt(page.trakt.ratings, page.trakt.seen),
-    page.imdb.ratings > 0 && results.imdb(page.imdb.ratings),
-    (page.simkl.ratings > 0 || page.simkl.seen > 0) &&
-      results.simkl(page.simkl.ratings, page.simkl.seen),
-    (page.tvtime.ratings > 0 || page.tvtime.seen > 0) &&
-      results.tvtime(page.tvtime.ratings, page.tvtime.seen),
-  ].filter((line) => line !== false)
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-sm">
+      <Meta parts={[results.traktOff]} />
+      <a
+        href={TRAKT_PATH}
+        className={buttonVariants({
+          variant: 'option',
+          className: 'self-start',
+        })}
+      >
+        {results.traktConnect}
+        <RowArrow />
+      </a>
+    </div>
+  )
 }
 
 /** The yes a Pessoa gave when her profile was first read, kept for the
@@ -584,6 +603,8 @@ function Results({ slug, page }: { slug: string; page: PersonImportsView }) {
   if (!letterboxd && lines.length === 0) return null
   const rss = latest(page, 'letterboxd-rss')
   const traktApi = latest(page, 'trakt-api')
+  const traktOff =
+    page.own && page.traktLink?.available === true && !page.traktLink.connected
   return (
     <Slip id="resultado" title={results.title}>
       {letterboxd && (
@@ -624,6 +645,7 @@ function Results({ slug, page }: { slug: string; page: PersonImportsView }) {
           )}
         </SyncStatus>
       )}
+      {traktOff && <TraktOff />}
     </Slip>
   )
 }
@@ -696,7 +718,9 @@ function LetterboxdGuide({
           <LetterboxdUpload slug={slug} refused={refusedOf('letterboxd')} />
         </Step>
         <Step n={4} title={guide.profile.title}>
-          <p className="text-evidence text-ink-2">{guide.profile.text}</p>
+          <p className="text-evidence text-ink-2">
+            {guide.profile.text(lastProfile(page) !== null)}
+          </p>
           <Rss slug={slug} page={page} refused={refusedOf('perfil')} />
         </Step>
       </ol>
@@ -844,24 +868,10 @@ function ServiceGuides() {
   const { other } = COPY
   return (
     <ul className="flex flex-col">
-      {other.services.map(({ service, href, steps }) => (
-        <li
-          key={service}
-          className="border-rule not-first:border-t not-first:border-dashed"
-        >
-          {/* A named group: the fold of "Importar de novo" around it is a
-              `group` too, and opens every + at once otherwise. */}
-          <details className="group/guide">
-            <summary className="flex min-h-touch cursor-pointer list-none items-center justify-between gap-md font-display text-row-title [&::-webkit-details-marker]:hidden">
-              {other.how(service)}
-              {/* The drawn + of the flow's folds, a × while open (#274):
-                  the → is for links that leave the page. */}
-              <Icon
-                name="plus"
-                className="size-[18px] shrink-0 text-ink-2 transition-[rotate] group-open/guide:rotate-45 motion-reduce:transition-none"
-              />
-            </summary>
-            <ol className="flex list-decimal flex-col gap-2xs pb-md pl-3xl text-evidence">
+      {other.services.map(({ service, href, steps }, index) => (
+        <li key={service}>
+          <FoldRow summary={other.how(service)} rule={index > 0}>
+            <ol className="flex list-decimal flex-col gap-2xs pl-3xl text-evidence">
               {steps.map((step, index) => (
                 <li key={step}>
                   {index === 0 && href !== null ? (
@@ -879,7 +889,7 @@ function ServiceGuides() {
                 </li>
               ))}
             </ol>
-          </details>
+          </FoldRow>
         </li>
       ))}
     </ul>
@@ -941,14 +951,9 @@ function Rss({
           </>
         )}
       </ImportForm>
-      {/* Named: inside "Importar de novo", a bare `group` would hide this
-          link as soon as that fold opens (#274). */}
-      <details className="group/other" open={refused !== undefined}>
-        <summary className="inline-flex min-h-touch cursor-pointer list-none items-center text-link text-ink-2 underline underline-offset-3 group-open/other:hidden [&::-webkit-details-marker]:hidden">
-          {rss.other}
-        </summary>
+      <FoldRow summary={rss.other} open={refused !== undefined}>
         {field}
-      </details>
+      </FoldRow>
     </div>
   )
 }

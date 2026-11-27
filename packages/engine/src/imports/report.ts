@@ -7,11 +7,7 @@ import { isMapping, pyStrValue, type YamlValue } from '../data/yaml.ts'
 import { resolvePerson } from '../people/people.ts'
 import type { EngineError } from '../runtime/EngineError.ts'
 import type { Environment } from '../runtime/Environment.ts'
-import {
-  Sqlite,
-  type Connection,
-  type SqliteError,
-} from '../sqlite/Sqlite.ts'
+import { Sqlite, type Connection, type SqliteError } from '../sqlite/Sqlite.ts'
 import { imdbFactCounts, type ImdbFactCounts } from './imdb.ts'
 import {
   letterboxdReport,

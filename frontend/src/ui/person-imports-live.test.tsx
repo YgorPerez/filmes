@@ -49,6 +49,12 @@ const OWN: PersonImportsView = {
   imdb: { ratings: 0 },
   simkl: { ratings: 0, seen: 0, watchlist: 0 },
   tvtime: { ratings: 0, seen: 0, stated: 0, watchlist: 0 },
+  films: {
+    trakt: { rated: 0, seen: 0, watchlist: 0 },
+    imdb: { rated: 0, seen: 0, watchlist: 0 },
+    simkl: { rated: 0, seen: 0, watchlist: 0 },
+    tvtime: { rated: 0, seen: 0, watchlist: 0 },
+  },
 }
 
 /** The screen under a router, reading its query as its route. */
