@@ -52,6 +52,8 @@ const SESSION: SessionItem = {
   chosen: null,
   moods: [],
   constraints: [],
+  version: 1,
+  additions: [],
 }
 
 /** Sessions that answer from fixed outcomes, and remember what they were

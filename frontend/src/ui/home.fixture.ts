@@ -44,6 +44,8 @@ export const LATEST: LatestSession = {
   chosen: null,
   moods: [],
   constraints: ['até 2h'],
+  version: 1,
+  additions: [],
 }
 
 /** A cover for the first film, drawn here so the stories need no network. */

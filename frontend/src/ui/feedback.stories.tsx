@@ -17,6 +17,9 @@ const PAGE: FeedbackPage = {
   ],
   moods: [],
   constraints: [],
+  additions: [],
+  stars: {},
+  earlier: [],
   recommendation: [
     { position: 1, id: 'tt9000101', title: 'O Farol de Areia' },
     { position: 2, id: 'tt9000601', title: 'Pequenos Milagres' },

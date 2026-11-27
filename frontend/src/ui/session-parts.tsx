@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { Icon } from './kit/icon'
 import { Avatar } from './kit/person'
-import { ShelfLabel } from './kit/shelf-label'
+import { HandNote, ShelfLabel } from './kit/shelf-label'
 import { buttonVariants } from './kit/button-variants'
 import { weekdayDate } from './dates'
 
@@ -52,9 +52,19 @@ export function SessionDate({ date }: { date: string }) {
 }
 
 /** "Nova Sessão": the screen's main action, with the drawn +. */
-export function NewSessionLink({ children }: { children: ReactNode }) {
+export function NewSessionLink({
+  children,
+  quiet = false,
+}: {
+  children: ReactNode
+  /** An outline, for a screen that already has its orange button (#272). */
+  quiet?: boolean
+}) {
   return (
-    <a href="/sessoes/nova" className={buttonVariants({ variant: 'primary' })}>
+    <a
+      href="/sessoes/nova"
+      className={buttonVariants({ variant: quiet ? 'option' : 'primary' })}
+    >
       <Icon name="plus" className="size-[18px]" />
       {children}
     </a>
@@ -67,14 +77,22 @@ export function NewSessionLink({ children }: { children: ReactNode }) {
 export function NightRequest({
   items,
   note,
+  added = [],
 }: {
   items: readonly string[]
   note: string | null
+  /** What the Dono added from the Cartaz since, in order (#272). */
+  added?: readonly string[]
 }) {
-  if (items.length > 0) return <ShelfLabel items={items} note={note} />
-  return note ? (
-    <p className="-rotate-2 self-start rounded-note bg-sticker-yellow px-xl pt-1.25 pb-2xs font-hand text-hand text-on-sticker">
-      {note}
-    </p>
-  ) : null
+  if (items.length > 0)
+    return <ShelfLabel items={items} note={note} added={added} />
+  if (!note && added.length === 0) return null
+  return (
+    <div className="flex flex-col items-start gap-xs">
+      {note && <HandNote>{note}</HandNote>}
+      {added.map((words) => (
+        <HandNote key={words} tilt="right">{`+ ${words}`}</HandNote>
+      ))}
+    </div>
+  )
 }

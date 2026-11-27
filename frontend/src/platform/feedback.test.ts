@@ -46,6 +46,9 @@ const SESSION: FeedbackSession = {
   recommendation: [{ position: 1, id: 'tt9000101', title: 'O Farol de Areia' }],
   moods: [],
   constraints: [],
+  additions: [],
+  stars: {},
+  earlier: [],
 }
 
 const RECORDED: FeedbackResult = {
@@ -401,6 +404,9 @@ const expectOnlyOpen = async (
       request: null,
       moods: [],
       constraints: [],
+      additions: [],
+      stars: {},
+      earlier: [],
       attendees: [
         { person: 'bruno', name: 'Bruno', owner: true },
         { person: 'quim', name: 'Quim', owner: false },

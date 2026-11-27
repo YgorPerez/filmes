@@ -26,7 +26,8 @@ describe('the Session pages’ queries', () => {
       erro: 'frase',
       nota: 'tok-1',
       repetir: 's1',
-      presentes: ['bruno', 'iara'],
+      // Kept as text: the route writes it back to the URL as it came.
+      presentes: 'bruno,iara',
     })
     expect(
       search({ erro: 'x', nota: 'a b', repetir: '', presentes: '!' }),
@@ -36,12 +37,15 @@ describe('the Session pages’ queries', () => {
       repetir: undefined,
       presentes: undefined,
     })
-    expect(search({ repetir: 3, presentes: ['bruno'] })).toMatchObject({
-      repetir: undefined,
-      presentes: undefined,
-    })
+    // A group the router had parsed as a list still comes through.
+    expect(search({ repetir: 3, presentes: ['bruno', 'iara'] })).toMatchObject(
+      { repetir: undefined, presentes: 'bruno,iara' },
+    )
+    expect(search({ presentes: 7 }).presentes).toBeUndefined()
     const many = Array.from({ length: 30 }, (_, i) => `p${i}`).join(',')
-    expect(search({ presentes: many }).presentes).toHaveLength(20)
+    expect(String(search({ presentes: many }).presentes).split(',')).toHaveLength(
+      20,
+    )
   })
 })
 
