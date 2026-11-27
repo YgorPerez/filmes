@@ -24,13 +24,30 @@ const MONTHS = [
   'dez',
 ]
 
-/** "Sexta, 21 nov" from "2026-11-21"; the date itself when it is not one. */
-const day = (iso: string) => {
+const DAY_MS = 86_400_000
+
+/** The UTC midnight of "2026-11-21"; null when it is not a date. */
+const utc = (iso: string) => {
   const [year, month, date] = iso.split('-').map(Number)
-  const when = new Date(Date.UTC(year ?? 0, (month ?? 1) - 1, date ?? 1))
-  return Number.isNaN(when.getTime()) || !month || !date
-    ? iso
-    : `${WEEKDAYS[when.getUTCDay()]}, ${date} ${MONTHS[month - 1]}`
+  if (!year || !month || !date) return null
+  const when = Date.UTC(year, month - 1, date)
+  return Number.isNaN(when) ? null : when
+}
+
+/** The Sessão's day from today: "Hoje", "Ontem", the weekday alone within
+ * the week ("Sexta"), then "Sexta, 21 nov". Without today, the last; the
+ * date itself when it is not one. */
+const day = (iso: string, today: string | null) => {
+  const when = utc(iso)
+  if (when === null) return iso
+  const now = today === null ? null : utc(today)
+  const ago = now === null ? null : Math.round((now - when) / DAY_MS)
+  const date = new Date(when)
+  const weekday = WEEKDAYS[date.getUTCDay()] ?? ''
+  if (ago === 0) return 'Hoje'
+  if (ago === 1) return 'Ontem'
+  if (ago !== null && ago > 1 && ago < 7) return weekday
+  return `${weekday}, ${date.getUTCDate()} ${MONTHS[date.getUTCMonth()]}`
 }
 
 /** "Você e Teo", "Você, Teo e Ana". */
@@ -46,7 +63,7 @@ export const HOME = {
     blanks: ['Quem está', 'Quanto tempo', 'O que a noite pede'],
     blanksLabel:
       'O pedido: quem está, quanto tempo vocês têm e o que a noite pede.',
-    lead: 'Saem 5 filmes, cada um com o motivo de cada Presente gostar.',
+    lead: 'Saem 5 filmes, cada um com o motivo de cada um que está na sala gostar.',
   },
   guide: {
     title: 'Para começar',
@@ -94,8 +111,8 @@ export const HOME = {
   },
   latest: {
     title: 'Última Sessão',
-    when: (date: string, names: readonly string[]) =>
-      `${day(date)} · ${together(names)}`,
+    when: (date: string, today: string | null, names: readonly string[]) =>
+      `${day(date, today)} · ${together(names)}`,
     you: 'Você',
     films: 'Filmes da Sessão',
     open: 'Falta contar como foi',
@@ -104,5 +121,10 @@ export const HOME = {
     feedbackLabel: (id: string) => `Contar como foi a Sessão ${id}`,
     chosen: (title: string) => `vimos ${title}`,
     nothing: 'não vimos nada',
+    billboard: 'Ver o Cartaz',
+    again: 'Pedir de novo:',
+    againWhat: (names: readonly string[], constraints: readonly string[]) =>
+      [together(names), ...constraints].join(', '),
+    none: 'Sua primeira Sessão aparece aqui.',
   },
 } as const

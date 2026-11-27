@@ -67,3 +67,11 @@ export class Run extends Context.Service<
     }),
   )
 }
+
+/** Today as the request sees it (`YYYY-MM-DD`), for a screen that says
+ * "hoje" or "ontem" without reading the clock itself. */
+export const requestToday: Effect.Effect<string, never, Run> = Effect.gen(
+  function* () {
+    return (yield* Run).today
+  },
+)

@@ -31,6 +31,8 @@ const SET_UP: HomeData = {
   },
   latest: null,
   mcpUrl: 'https://cinema.example/mcp',
+  today: '2026-11-22',
+  covers: {},
 }
 
 const SESSION: LatestSession = {
@@ -86,9 +88,25 @@ describe('Home', () => {
   it('has no list of screens: the tabs lead to them', () => {
     show()
     expect(screen.queryByRole('navigation')).toBeNull()
-    expect(screen.getAllByRole('link').map((a) => a.textContent)).toEqual([
-      'Pedir filme',
-    ])
+    expect(
+      screen
+        .getAllByRole('link')
+        .map((a) => a.getAttribute('href'))
+        .every((href) => href === '/sessoes/nova'),
+    ).toBe(true)
+  })
+
+  it('says where the first Sessão will show, once the guide is out of the way', () => {
+    show()
+    expect(screen.getByText('Sua primeira Sessão aparece aqui.')).toBeTruthy()
+  })
+
+  it('lets a tap on the shelf label open the request too, out of the keyboard\'s way', () => {
+    const { container } = show()
+    const label = container.querySelector('a[tabindex="-1"]')!
+    expect(label.getAttribute('href')).toBe('/sessoes/nova')
+    expect(label.querySelector('[role="img"]')).toBeTruthy()
+    expect(label.getAttribute('tabindex')).toBe('-1')
   })
 
   it('hides the guide once no step is pending, skipped ones included', () => {
@@ -104,28 +122,73 @@ describe('Home', () => {
 })
 
 describe('Home, the latest Sessão', () => {
+  const card = () => screen.getByRole('region', { name: 'Última Sessão' })
+
   it('shows it under "pedir filme", with its films and the way to tell how it went', () => {
     const { container } = show({ latest: SESSION })
-    const card = screen.getByRole('region', { name: 'Última Sessão' })
     expect(
-      within(card).getByRole('link', { name: /Última Sessão/ }),
+      within(card()).getByRole('link', { name: /Última Sessão/ }),
     ).toHaveProperty('pathname', '/sessoes/2026-11-21-1')
-    expect(card.textContent).toContain('Sábado, 21 nov · Você e Teo')
-    expect(card.textContent).toContain('algo leve')
+    expect(card().textContent).toContain('Ontem · Você e Teo')
+    expect(card().textContent).toContain('algo leve')
+    expect(card().textContent).toContain('Falta contar como foi')
     expect(
-      within(card)
-        .getAllByRole('listitem')
-        .map((li) => li.textContent),
-    ).toEqual(['1O Farol de Areia', '2Maré Baixa'])
-    expect(card.textContent).toContain('Falta contar como foi')
-    expect(
-      within(card).getByRole('link', {
+      within(card()).getByRole('link', {
         name: 'Contar como foi a Sessão 2026-11-21-1',
       }),
     ).toHaveProperty('pathname', '/sessoes/2026-11-21-1/contar')
     const html = container.innerHTML
     expect(html.indexOf('Pedir filme')).toBeLessThan(
       html.indexOf('Última Sessão'),
+    )
+  })
+
+  it('makes each film a link to its card in the Cartaz, with its cover when there is one', () => {
+    show({
+      latest: SESSION,
+      covers: { tt1: 'https://image.example/tt1.jpg', tt2: null },
+    })
+    const films = within(card()).getByRole('list', { name: 'Filmes da Sessão' })
+    const links = within(films).getAllByRole('link')
+    expect(links.map((a) => [a.textContent, a.getAttribute('href')])).toEqual([
+      ['1O Farol de Areia', '/sessoes/2026-11-21-1#filme-tt1'],
+      ['2Maré Baixa', '/sessoes/2026-11-21-1#filme-tt2'],
+    ])
+    expect(links[0]?.querySelector('img')?.getAttribute('src')).toBe(
+      'https://image.example/tt1.jpg',
+    )
+    expect(links[1]?.querySelector('img')).toBeNull()
+  })
+
+  it('on the night it was made, leads back to the Cartaz first, and the Feedback is a link', () => {
+    show({ latest: SESSION, today: '2026-11-21' })
+    expect(card().textContent).toContain('Hoje · Você e Teo')
+    expect(
+      within(card()).getByRole('link', { name: 'Ver o Cartaz' }),
+    ).toHaveProperty('pathname', '/sessoes/2026-11-21-1')
+    expect(card().textContent).not.toContain('Falta contar como foi')
+    expect(
+      within(card()).getByRole('link', {
+        name: 'Contar como foi a Sessão 2026-11-21-1',
+      }),
+    ).toBeTruthy()
+  })
+
+  it.each([
+    ['2026-11-22', 'Ontem'],
+    ['2026-11-25', 'Sábado'],
+    ['2026-12-01', 'Sábado, 21 nov'],
+  ])('dates it from today (%s): %s', (today, label) => {
+    show({ latest: SESSION, today })
+    expect(card().textContent).toContain(`${label} · Você e Teo`)
+  })
+
+  it('asks for the same request again, filled as that Sessão was asked', () => {
+    show({ latest: { ...SESSION, constraints: ['até 2h'] } })
+    const again = within(card()).getByRole('link', { name: /Pedir de novo/ })
+    expect(again.textContent).toBe('Pedir de novo: Você e Teo, até 2h')
+    expect(again.getAttribute('href')).toBe(
+      '/sessoes/nova?repetir=2026-11-21-1',
     )
   })
 
@@ -137,10 +200,9 @@ describe('Home, the latest Sessão', () => {
         chosen: { id: 'tt2', title: 'Maré Baixa' },
       },
     })
-    const card = screen.getByRole('region', { name: 'Última Sessão' })
-    expect(card.textContent).toContain('vimos Maré Baixa')
-    expect(card.textContent).not.toContain('Falta contar como foi')
-    expect(card.querySelector('a[href$="/contar"]')).toBeNull()
+    expect(card().textContent).toContain('vimos Maré Baixa')
+    expect(card().textContent).not.toContain('Falta contar como foi')
+    expect(card().querySelector('a[href$="/contar"]')).toBeNull()
   })
 })
 

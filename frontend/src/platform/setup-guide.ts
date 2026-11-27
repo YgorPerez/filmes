@@ -8,6 +8,8 @@
 
 import type { DatabaseSync } from 'node:sqlite'
 import {
+  filmCovers,
+  requestToday,
   SETUP_STEPS,
   type SetupStep,
   type SetupStepState,
@@ -16,6 +18,7 @@ import { openAuthDatabase } from './auth-database'
 import { appPoster, formPoster, seeOther } from './form-post'
 import { appSetupGuide, type Owner, type SetupGuideSource } from './people'
 import { serverEnv } from './server-env'
+import { appEngine } from './engine'
 import { appSessionList, valueOf, type SessionItem } from './sessions'
 
 /** A step as the home shows it. */
@@ -39,6 +42,24 @@ export type HomeData = {
   latest: LatestSession | null
   /** Where the Claude app connects (`/mcp`); null without `APP_ORIGIN`. */
   mcpUrl: string | null
+  /** Today (`YYYY-MM-DD`), so the latest Sessão says "Hoje" or "Ontem";
+   * null when the engine cannot say. */
+  today: string | null
+  /** The latest Sessão's covers by IMDb id; a film missing or null has
+   * none, and its row shows the tape's spine. */
+  covers: Record<string, string | null>
+}
+
+/** What the home asks the engine besides the guide and the Sessions:
+ * today's date and the latest Sessão's covers. */
+export interface HomeShelf {
+  today(): Promise<string | null>
+  covers(films: readonly string[]): Promise<Record<string, string | null>>
+}
+
+const NO_SHELF: HomeShelf = {
+  today: async () => null,
+  covers: async () => ({}),
 }
 
 /** The Claude app holds a connection (an OAuth grant) for the email. */
@@ -77,15 +98,17 @@ export async function homeData(
   source: SetupGuideSource,
   sessions: readonly SessionItem[] | null,
   origin: string | undefined,
+  shelf: HomeShelf = NO_SHELF,
 ): Promise<HomeData> {
-  return {
-    person: owner.person,
-    ...(await startData(owner, source, origin)),
-    latest:
-      sessions?.find((s) =>
-        s.attendees.some((a) => a.person === owner.person),
-      ) ?? null,
-  }
+  const latest =
+    sessions?.find((s) => s.attendees.some((a) => a.person === owner.person)) ??
+    null
+  const [start, today, covers] = await Promise.all([
+    startData(owner, source, origin),
+    shelf.today(),
+    latest ? shelf.covers(latest.recommendation.map((f) => f.id)) : {},
+  ])
+  return { person: owner.person, ...start, latest, today, covers }
 }
 
 const isSetupStep = (value: unknown): value is SetupStep =>
@@ -120,6 +143,13 @@ function appConnected(email: string): boolean {
   }
 }
 
+/** Today and the covers from the app's engine. */
+const appShelf: HomeShelf = {
+  today: async () => valueOf(await appEngine().run(requestToday)),
+  covers: async (films) =>
+    valueOf(await appEngine().run(filmCovers({ films }))) ?? {},
+}
+
 /** The home for the app, for the logged-in Dono. */
 export const appHome = async (owner: Owner) =>
   homeData(
@@ -127,6 +157,7 @@ export const appHome = async (owner: Owner) =>
     appSetupGuide(appConnected),
     await appSessionList(owner.person),
     serverEnv().APP_ORIGIN,
+    appShelf,
   )
 
 /** Meu gosto's part of the guide for the app, for the logged-in Dono. */

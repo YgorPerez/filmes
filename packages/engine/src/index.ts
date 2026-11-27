@@ -41,6 +41,7 @@ export {
   type SearchKind,
 } from './catalog/search.ts'
 export { searchKey } from './catalog/search-key.ts'
+export { filmCovers, type CoversRequest } from './catalog/covers.ts'
 export {
   EXPORT_FORMATS,
   exportRatings,
@@ -304,7 +305,7 @@ export {
   type SourceKeyVariable,
   type Vars,
 } from './runtime/Environment.ts'
-export { Run } from './runtime/Run.ts'
+export { requestToday, Run } from './runtime/Run.ts'
 export { TIME_ZONE, Today } from './runtime/Today.ts'
 export { Weights } from './runtime/Weights.ts'
 export { num, numOrNull, text, textOrNull } from './sqlite/row.ts'

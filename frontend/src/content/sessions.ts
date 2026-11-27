@@ -50,11 +50,25 @@ const readNewSessionDraft = createServerFn({ method: 'GET' })
     return appNewSessionDraft(data)
   })
 
-/** The draft for a page's loader: none without `?nota=`. */
-export const draftFor = (token: string | undefined) =>
-  token === undefined
-    ? Promise.resolve(null)
-    : readNewSessionDraft({ data: token })
+/** Nova Sessão as Sessão `id` was asked (`repeatDraft`): the home's
+ * "Pedir de novo". */
+const readRepeatDraft = createServerFn({ method: 'GET' })
+  .middleware([ownerMiddleware])
+  .validator(pathSlug)
+  .handler(async ({ context, data }) => {
+    requireOwner(context.owner)
+    const { appRepeatDraft } = await import('#/platform/sessions')
+    return appRepeatDraft(data, context.owner.person)
+  })
+
+/** The draft for a page's loader: the note of `?nota=`, else the Sessão
+ * of `?repetir=`, else none. */
+export const draftFor = (token: string | undefined, repeat?: string) =>
+  token !== undefined
+    ? readNewSessionDraft({ data: token })
+    : repeat !== undefined
+      ? readRepeatDraft({ data: repeat })
+      : Promise.resolve(null)
 
 /** What `/sessoes/<id>` shows (`cartazPage`): the Session, its Cartaz,
  * and the note `nota` names (warnings, the acrescentar). */

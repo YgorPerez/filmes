@@ -43,7 +43,15 @@ export const LATEST: LatestSession = {
   open: true,
   chosen: null,
   moods: [],
-  constraints: [],
+  constraints: ['até 2h'],
+}
+
+/** A cover for the first film, drawn here so the stories need no network. */
+export const COVERS: Record<string, string | null> = {
+  tt1: `data:image/svg+xml,${encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="185" height="278"><rect width="185" height="278" fill="#2c62c4"/><circle cx="92" cy="110" r="46" fill="#ffd23f"/></svg>',
+  )}`,
+  tt2: null,
 }
 
 export const HOME_DATA: HomeData = {
@@ -51,4 +59,6 @@ export const HOME_DATA: HomeData = {
   setup: setupOf({ taste: 'done', import: 'skipped', connector: 'done' }, 12),
   latest: LATEST,
   mcpUrl: MCP_URL,
+  today: '2026-11-22',
+  covers: {},
 }

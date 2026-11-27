@@ -16,6 +16,7 @@ import {
 } from '#/content/session-request'
 import {
   newSessionDraft,
+  repeatDraft,
   requestOptions,
   sessionList,
   sessionPage,
@@ -537,6 +538,33 @@ describe('newSessionDraft', () => {
     expect(newSessionDraft(undefined, notes)).toBeNull()
     expect(newSessionDraft('nada', notes)).toBeNull()
     expect(newSessionDraft(other, notes)).toBeNull()
+  })
+})
+
+describe('repeatDraft', () => {
+  it('fills Nova Sessão as the Sessão was asked, leaving out what the form asks again', () => {
+    expect(
+      repeatDraft({
+        attendees: ['bruno', 'iara'],
+        session: '2026-11-20-1',
+        moods: ['leve'],
+        count: 5,
+        request: null,
+        maxDuration: 120,
+        noSlow: true,
+        similar: ['tt1'],
+      }),
+    ).toEqual({
+      fields: {
+        attendees: ['bruno', 'iara'],
+        rule: 'default',
+        moods: ['leve'],
+        count: 5,
+        maxDuration: 120,
+        noSlow: true,
+      },
+      reading: null,
+    })
   })
 })
 

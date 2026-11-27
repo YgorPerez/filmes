@@ -11,6 +11,7 @@ import {
   type GuideStep,
 } from './setup-steps'
 import { Icon } from './kit/icon'
+import { RowArrow } from './kit/row-arrow'
 import { ShelfLabel } from './kit/shelf-label'
 import { PriceSticker } from './kit/sticker'
 import { buttonVariants } from './kit/button-variants'
@@ -25,7 +26,8 @@ import { buttonVariants } from './kit/button-variants'
 
 /** The counter on the case's black: the question, the blank shelf label
  * with what the request asks (who, how long, what the night calls for)
- * and the big orange "Pedir filme". */
+ * and the big orange "Pedir filme". The shelf label leads to the same form,
+ * for a tap there; out of the tab order, since the button is the next stop. */
 export function Ask() {
   const { ask } = HOME
   return (
@@ -36,13 +38,34 @@ export function Ask() {
       <h1 id="pedir" className="font-display text-counter-title">
         {ask.title}
       </h1>
-      <ShelfLabel items={ask.blanks} label={ask.blanksLabel} />
+      <a
+        href={NEW_SESSION}
+        tabIndex={-1}
+        className="w-fit no-underline"
+      >
+        <ShelfLabel items={ask.blanks} label={ask.blanksLabel} />
+      </a>
       <p className="text-meta text-case-ink-2">{ask.lead}</p>
-      <a href="/sessoes/nova" className={buttonVariants({ variant: 'big' })}>
+      <a href={NEW_SESSION} className={buttonVariants({ variant: 'big' })}>
         <Icon name="plus" className="size-6" />
         {HOME.request}
       </a>
     </section>
+  )
+}
+
+const NEW_SESSION = '/sessoes/nova'
+
+/** Nova Sessão filled as Sessão `id` was asked. */
+const repeatPath = (id: string) =>
+  `${NEW_SESSION}?${new URLSearchParams({ repetir: id })}`
+
+/** Before the first Sessão: where it will show. */
+export function NoSession() {
+  return (
+    <p className="rounded-card border border-dashed border-rule px-lg py-xl text-center text-evidence text-ink-2">
+      {HOME.latest.none}
+    </p>
   )
 }
 
@@ -57,17 +80,68 @@ const attendeesOf = (s: LatestSession, person: string) => {
     : names
 }
 
+/** One film of the Sessão as a tape on the shelf: its cover, or the
+ * case's spine without one, its number and title, leading to its card in
+ * the Cartaz. */
+function Tape({
+  film,
+  n,
+  session,
+  cover,
+}: {
+  film: LatestSession['recommendation'][number]
+  n: number
+  session: string
+  cover: string | null
+}) {
+  return (
+    <li>
+      <a
+        href={`${sessionPath(session)}#filme-${film.id}`}
+        className="flex min-h-touch items-center gap-md overflow-hidden rounded-rail bg-surface-2 pr-md text-ink no-underline hover:bg-rule"
+      >
+        {cover ? (
+          <img
+            src={cover}
+            alt=""
+            loading="lazy"
+            className="h-touch w-7.5 shrink-0 border-r border-case-edge bg-case object-cover"
+          />
+        ) : (
+          <span
+            aria-hidden="true"
+            className="w-2 self-stretch border-r border-case-edge bg-case"
+          />
+        )}
+        <PriceSticker compact>{n}</PriceSticker>
+        <span className="min-w-0 flex-1 truncate font-display text-row-title">
+          {film.title}
+        </span>
+        <RowArrow className="shrink-0" />
+      </a>
+    </li>
+  )
+}
+
 /** The latest Sessão as a rental stub: its header, over a dashed rule,
- * leads to the Sessão; then its films, a tape's spine and number each, and,
- * while its Feedback is open, the box to give it back. */
+ * leads to the Sessão; then its films, each a tape that leads to its card.
+ * On the night it was made, the way back to the Cartaz comes first and the
+ * Feedback is a link; from the next day, while the Feedback is open, the
+ * card-stock box asks for it. Last, the same request again. */
 export function Latest({
   session: s,
   person,
+  today = null,
+  covers = {},
 }: {
   session: LatestSession
   person: string
+  today?: string | null
+  covers?: Readonly<Record<string, string | null>>
 }) {
   const { latest } = HOME
+  const who = attendeesOf(s, person)
+  const tonight = s.open && today !== null && s.date === today
   return (
     <section
       aria-labelledby="ultima-sessao"
@@ -84,7 +158,7 @@ export function Latest({
           {latest.title}
         </h2>
         <span className="font-hand text-hand-compact leading-tight">
-          {latest.when(s.date, attendeesOf(s, person))}
+          {latest.when(s.date, today, who)}
         </span>
       </a>
       {s.request && <p className="text-evidence text-ink-2">{s.request}</p>}
@@ -94,23 +168,33 @@ export function Latest({
           className="grid gap-xs min-[560px]:grid-cols-2"
         >
           {s.recommendation.map((film, i) => (
-            <li
+            <Tape
               key={film.id}
-              className="flex min-h-[38px] items-center gap-md overflow-hidden rounded-rail bg-surface-2 pr-md"
-            >
-              <span
-                aria-hidden="true"
-                className="w-2 self-stretch border-r border-case-edge bg-case"
-              />
-              <PriceSticker compact>{i + 1}</PriceSticker>
-              <span className="truncate font-display text-row-title">
-                {film.title}
-              </span>
-            </li>
+              film={film}
+              n={i + 1}
+              session={s.id}
+              cover={covers[film.id] ?? null}
+            />
           ))}
         </ol>
       )}
-      {s.open ? (
+      {tonight ? (
+        <div className="flex flex-wrap items-center gap-x-md gap-y-xs">
+          <a
+            href={sessionPath(s.id)}
+            className={buttonVariants({ variant: 'option' })}
+          >
+            {latest.billboard}
+          </a>
+          <a
+            href={feedbackPath(s.id)}
+            aria-label={latest.feedbackLabel(s.id)}
+            className={buttonVariants({ variant: 'link' })}
+          >
+            {latest.feedback}
+          </a>
+        </div>
+      ) : s.open ? (
         <div className="flex flex-col items-start gap-md rounded-field bg-card-stock p-lg text-card-stock-ink">
           <p className="font-hand text-hand-large leading-tight">
             {latest.open}
@@ -129,6 +213,20 @@ export function Latest({
           {s.chosen ? latest.chosen(s.chosen.title) : latest.nothing}
         </p>
       )}
+      <a
+        href={repeatPath(s.id)}
+        className="flex min-h-touch items-center gap-sm border-t border-dashed border-rule pt-md text-link text-ink no-underline"
+      >
+        <span className="min-w-0 flex-1">
+          <span className="font-display text-meta-strong">
+            {latest.again}
+          </span>{' '}
+          <span className="text-ink-2">
+            {latest.againWhat(who, s.constraints)}
+          </span>
+        </span>
+        <RowArrow className="shrink-0" />
+      </a>
     </section>
   )
 }
