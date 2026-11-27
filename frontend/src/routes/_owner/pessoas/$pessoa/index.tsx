@@ -4,7 +4,6 @@ import { moved, MOVED_TO } from '#/content/moved'
 import { isPersonNotice, isPersonRefusal } from '#/content/person-action'
 import { readPersonPage } from '#/content/people'
 import { PersonScreen } from '#/ui/person'
-import { titled } from '#/ui/page-title'
 
 // A Pessoa's page. The Dono's own is Meu gosto (`/meu-gosto`), with the
 // same query.
@@ -26,12 +25,6 @@ export const Route = createFileRoute('/_owner/pessoas/$pessoa/')({
     ])
     return { page, search }
   },
-  head: ({ loaderData }) =>
-    titled(
-      loaderData?.page && loaderData.page !== 'unknown'
-        ? loaderData.page.name
-        : null,
-    ),
   component: PersonRoute,
 })
 

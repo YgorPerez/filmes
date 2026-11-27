@@ -12,25 +12,19 @@ import icon from '#/ui/favicon.svg?url'
 import { readOwner } from '#/content/owner'
 import { LostAlone, NotFound } from '#/ui/lost'
 import { AppShell } from '#/ui/shell'
-import { PAGE_TITLES, pageTitle } from '#/ui/page-title'
+import { titleOf } from '#/ui/page-title'
 
 export const Route = createRootRoute({
   // Who is logged in, once per navigation: the Dono gate (`_owner.tsx`),
   // `/entrar` and the 404 read it from the context.
   beforeLoad: async () => ({ owner: await readOwner() }),
-  // A page names itself in its route's `head` (`ui/page-title.ts`); an
+  // Each page's title, from the deepest match (`ui/page-title.ts`); an
   // address that leads nowhere is "Página não encontrada".
   head: ({ matches }) => ({
     meta: [
       { charSet: 'utf-8' },
       { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-      {
-        title: pageTitle(
-          matches.some((m) => m.status === 'notFound' || m._notFound === true)
-            ? PAGE_TITLES.notFound
-            : null,
-        ),
-      },
+      { title: titleOf(matches) },
     ],
     // The self-hosted fonts (`platform/fonts.ts`), the same file the MCP
     // Apps view links from the app's origin.

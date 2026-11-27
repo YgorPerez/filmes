@@ -4,7 +4,6 @@ import { searchFor, searchParam, similarParam } from '#/content/catalog-search'
 import { isSessionRequestRefusal } from '#/content/session-request'
 import { draftFor, readRequestOptions } from '#/content/sessions'
 import { NewSession } from '#/ui/new-session'
-import { PAGE_TITLES, titled } from '#/ui/page-title'
 
 export const Route = createFileRoute('/_owner/sessoes/nova')({
   validateSearch: (search) => ({
@@ -22,7 +21,6 @@ export const Route = createFileRoute('/_owner/sessoes/nova')({
     ])
     return { options, search, draft }
   },
-  head: () => titled(PAGE_TITLES.newSession),
   component: NewSessionPage,
 })
 

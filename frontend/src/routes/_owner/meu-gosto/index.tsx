@@ -3,7 +3,6 @@ import { searchFor, searchParam } from '#/content/catalog-search'
 import { isPersonNotice, isPersonRefusal } from '#/content/person-action'
 import { readMyStart, readPersonPage } from '#/content/people'
 import { PersonScreen } from '#/ui/person'
-import { PAGE_TITLES, titled } from '#/ui/page-title'
 
 // Meu gosto: the logged-in Dono's own Pessoa page (map #218): her Notas,
 // what the setup guide left (the connector, the skipped steps), then her
@@ -23,7 +22,6 @@ export const Route = createFileRoute('/_owner/meu-gosto/')({
     ])
     return { page, search, start }
   },
-  head: () => titled(PAGE_TITLES.myTaste),
   component: MyTasteRoute,
 })
 

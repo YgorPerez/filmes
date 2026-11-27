@@ -3,7 +3,6 @@ import { filmParam, searchFor, searchParam } from '#/content/catalog-search'
 import { isRatingRefusal, writtenCount } from '#/content/rating-form'
 import { readRatingQueue } from '#/content/ratings'
 import { RatingScreen } from '#/ui/imports'
-import { PAGE_TITLES, titled } from '#/ui/page-title'
 
 export const Route = createFileRoute('/_owner/meu-gosto/notas')({
   validateSearch: (search) => ({
@@ -20,7 +19,6 @@ export const Route = createFileRoute('/_owner/meu-gosto/notas')({
     ])
     return { queue, search }
   },
-  head: () => titled(PAGE_TITLES.rate),
   component: RatingRoute,
 })
 

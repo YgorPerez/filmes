@@ -6,7 +6,6 @@ import {
   isOperationsRefusal,
 } from '#/content/operations-form'
 import { Operations } from '#/ui/operations'
-import { PAGE_TITLES, titled } from '#/ui/page-title'
 
 // Only an admin Dono: for anyone else the page does not exist. The server
 // functions refuse a non-admin on their own.
@@ -23,7 +22,6 @@ export const Route = createFileRoute('/_owner/operacoes')({
   // A post loads the page again itself, once (`useFetchForm`), the shell's
   // strip of a failing push with it.
   loader: ({ deps }) => readOperationsPage({ data: deps }),
-  head: () => titled(PAGE_TITLES.operations),
   component: OperationsPage,
 })
 

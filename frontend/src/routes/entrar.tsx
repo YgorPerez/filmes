@@ -1,7 +1,6 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import { isLoginRefusal } from '#/content/login-refusal'
 import { Login } from '#/ui/login'
-import { PAGE_TITLES, titled } from '#/ui/page-title'
 
 export const Route = createFileRoute('/entrar')({
   validateSearch: (search) => ({
@@ -11,7 +10,6 @@ export const Route = createFileRoute('/entrar')({
   beforeLoad: ({ context }) => {
     if (context.owner) throw redirect({ to: '/' })
   },
-  head: () => titled(PAGE_TITLES.signIn),
   component: LoginPage,
 })
 

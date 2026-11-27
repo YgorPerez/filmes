@@ -2,7 +2,6 @@ import { createFileRoute } from '@tanstack/react-router'
 import { readPairwise } from '#/content/session-link'
 import { pairwiseSearch } from '#/content/pairwise-address'
 import { PairwiseQuestion } from '#/ui/pairwise'
-import { PAGE_TITLES, titled } from '#/ui/page-title'
 
 // The Perguntas par a par of the Link da Sessão (#181). The parent
 // (`participar.tsx`) checked the link and shows this only once a Presente
@@ -15,7 +14,6 @@ export const Route = createFileRoute('/participar/perguntas/')({
     presente,
   }),
   loader: ({ deps }) => readPairwise({ data: deps }),
-  head: () => titled(PAGE_TITLES.questions),
   component: PairwiseRoute,
 })
 
