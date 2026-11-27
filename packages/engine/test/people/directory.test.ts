@@ -84,6 +84,21 @@ describe('the Sessions of a Pessoa', () => {
   })
 })
 
+test('a Session with no film chosen yet has no reaction and no Satisfação', async () => {
+  const fixture = useFixture()
+  const { session } = await fixture.ok(
+    recommendSession({ attendees: ['dono', 'quim'] }),
+  )
+
+  const quim = await fixture.ok(personSessions('quim'))
+
+  expect(quim.total).toBe(1)
+  expect(quim.recent).toEqual([
+    { id: session.id, date: expect.any(String), chosen: null, reaction: null },
+  ])
+  expect(quim.satisfaction).toBeNull()
+})
+
 describe('taking a Pessoa out', () => {
   test('removes the file and her rows of one made by mistake', async () => {
     const fixture = useFixture()
