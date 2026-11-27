@@ -1,7 +1,8 @@
 // The whole Cartaz: on the page, open and closed (the chosen film with its
 // reactions, on its card or, without one, in a block above the cards),
 // without sections, empty,
-// and in the MCP Apps view's inline and fullscreen layouts.
+// and in the MCP Apps view's inline and fullscreen layouts, and in a host
+// without fullscreen.
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, within } from 'storybook/test'
 import { Billboard } from './billboard'
@@ -86,4 +87,32 @@ export const Inline: Story = {
 
 export const Fullscreen: Story = {
   args: { action: undefined, layout: 'fullscreen', onSend: fn() },
+}
+
+/** A host without fullscreen, the Dono's words long enough to wrap: on a
+ * phone the paper takes the fullscreen's compact hand, and its turned
+ * corners stay inside the frame, which never scrolls sideways (#351). */
+export const ViewWithoutFullscreen: Story = {
+  args: {
+    action: undefined,
+    onSend: fn(),
+    billboard: {
+      ...LOCAL,
+      request: {
+        ...LOCAL.request,
+        speech: 'algo leve pra hoje, eu, a Vera e o Teo, sem nada de terror',
+      },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const paper = within(canvasElement).getByText(/^algo leve pra hoje/u)
+    const narrow = window.innerWidth < 560
+    await expect(getComputedStyle(paper).fontSize).toBe(
+      narrow ? '16px' : '18px',
+    )
+    const box = paper.getBoundingClientRect()
+    const row = paper.parentElement!.getBoundingClientRect()
+    await expect(box.left).toBeGreaterThanOrEqual(row.left)
+    await expect(box.right).toBeLessThanOrEqual(row.right)
+  },
 }

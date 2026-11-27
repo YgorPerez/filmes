@@ -140,7 +140,7 @@ function Request({
   single = false,
 }: {
   billboard: BillboardModel
-  compact?: boolean
+  compact?: boolean | 'narrow'
   /** One line with the version, and the Dono's words left to the body:
    * the fixed top of Claude's fullscreen (#277). */
   single?: boolean
@@ -402,7 +402,7 @@ function ViewTop({
 }) {
   return (
     <>
-      <Request billboard={billboard} />
+      <Request billboard={billboard} compact="narrow" />
       <Standing billboard={billboard} block />
       <PeopleLegend billboard={billboard} named={linesOnTop(billboard)} />
       <Capped>{shelf}</Capped>
