@@ -11,6 +11,7 @@ import { describe, test } from 'vite-plus/test'
 import { ROOT, useFixture, type Fixture } from '../../engine/test/fixture.ts'
 import { zipOf } from '../../engine/test/imports/zip.ts'
 import { RECORDINGS } from '../../engine/test/sources/support.ts'
+import { INSTRUCTIONS } from '../src/index.ts'
 import { connect, failureText } from './connect.ts'
 
 const OLGA = join(ROOT, 'tests/fixture/letterboxd/olga')
@@ -262,20 +263,15 @@ describe('import', () => {
     )
   })
 
-  test('imports a TV Time backup sent in base64', async () => {
+  test("imports the TV Time Liberator's movies.json, never the GDPR ZIP", async () => {
     const fixture = useFixture()
     const c = await connect(fixture)
-    const folder = join(ROOT, 'tests/fixture/tvtime/liberator')
-    const zip = zipOf(
-      readdirSync(folder)
-        .sort()
-        .map((file) => [file, readFileSync(join(folder, file))] as const),
+    const movies = readFileSync(
+      join(ROOT, 'tests/fixture/tvtime/liberator/movies.json'),
+      'utf8',
     )
 
-    const report = await c.ok('import', {
-      person: 'vera',
-      tvtimeZip: zip.toString('base64'),
-    })
+    const report = await c.ok('import', { person: 'vera', tvtimeJson: movies })
 
     assert.equal(report.person, 'vera')
     assert.deepEqual(report.newFacts, {
@@ -293,13 +289,18 @@ describe('import', () => {
     )
     assert.match(report.file, /^imports\/vera\/tvtime-[0-9a-f]{64}\.zip$/)
     assert.deepEqual(
-      (
-        await c.error('import', {
-          person: 'vera',
-          tvtimeZip: Buffer.from('não é ZIP').toString('base64'),
-        })
-      ).error,
-      { code: 'invalid_file', message: 'vera-tvtime.zip: não é um ZIP' },
+      (await c.error('import', { person: 'vera', tvtimeJson: '{}' })).error,
+      {
+        code: 'invalid_file',
+        message: 'movies.json: movies.json não é uma lista de filmes',
+      },
+    )
+    // The GDPR export carries the account's credentials: only the app takes it.
+    assert.match(INSTRUCTIONS, /gdpr-data\.zip[^\n]*nunca peça nem aceite/)
+    assert.equal(
+      (await c.error('import', { person: 'vera', tvtimeZip: 'eA==' })).error
+        .code,
+      'invalid_usage',
     )
   })
 
@@ -309,24 +310,24 @@ describe('import', () => {
     for (const [args, message] of [
       [
         { person: 'teo' },
-        'mande letterboxdRss, imdbCsv, simklJson, tvtimeZip ou remove, um só',
+        'mande letterboxdRss, imdbCsv, simklJson, tvtimeJson ou remove, um só',
       ],
       [
         { person: 'teo', letterboxdRss: 'x', remove: 'y' },
-        'mande letterboxdRss, imdbCsv, simklJson, tvtimeZip ou remove, um só',
+        'mande letterboxdRss, imdbCsv, simklJson, tvtimeJson ou remove, um só',
       ],
       [
         { person: 'teo', imdbCsv: 'x', remove: 'y' },
-        'mande letterboxdRss, imdbCsv, simklJson, tvtimeZip ou remove, um só',
+        'mande letterboxdRss, imdbCsv, simklJson, tvtimeJson ou remove, um só',
       ],
       [{ letterboxdRss: 'x', consent: true }, 'o RSS precisa de person'],
       [{ imdbCsv: 'x' }, 'o CSV do IMDb precisa de person'],
       [
         { person: 'teo', imdbCsv: 'x', simklJson: 'y' },
-        'mande letterboxdRss, imdbCsv, simklJson, tvtimeZip ou remove, um só',
+        'mande letterboxdRss, imdbCsv, simklJson, tvtimeJson ou remove, um só',
       ],
       [{ simklJson: 'x' }, 'o backup do Simkl precisa de person'],
-      [{ tvtimeZip: 'eA==' }, 'o backup do TV Time precisa de person'],
+      [{ tvtimeJson: '[]' }, 'o backup do TV Time precisa de person'],
     ] as const)
       assert.deepEqual((await c.error('import', args)).error, {
         code: 'invalid_usage',

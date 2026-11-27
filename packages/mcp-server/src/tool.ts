@@ -40,6 +40,9 @@ export interface Tool<Input extends z.ZodObject = z.ZodObject> {
   /** Only for the Pessoa logged in with `admin: true`; anyone else gets the
    * error `admin_only`. */
   readonly admin?: boolean
+  /** In the Session flow the ChatGPT pilot serves (#298): recommendation,
+   * Cartaz, Feedback and title lookup. Other clients get every tool. */
+  readonly session?: boolean
   /** The engine operation for the validated input. */
   readonly run: (
     input: z.infer<Input>,

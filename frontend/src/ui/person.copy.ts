@@ -20,6 +20,7 @@ type Strength = 'strong' | 'moderate' | 'weak' | 'guess'
 export const PERSON = {
   back: 'Pessoas',
   myTaste: 'Meu gosto',
+  trakt: 'Conexão com o Trakt',
   /** Meu gosto's line under the h1: the name the Sessões give her. */
   ownName: (name: string, aliases: readonly string[]) => {
     const others = namesOnly(aliases)

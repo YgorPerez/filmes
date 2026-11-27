@@ -22,16 +22,17 @@ export default defineTool({
     'Export: cada filme do Catálogo vira Nota e Já visto, a nota de 1 a 10 lida na Escala dela), o backup do Simkl dela ' +
     '(`simklJson`, o texto do SimklBackup.json: filmes e filmes de anime com nota viram Notas, os completed sem nota ' +
     'Já vistos e os plantowatch a watchlist; séries ficam de fora), o backup do TV Time ' +
-    'dela (`tvtimeZip`, o ZIP em base64: o gdpr-data.zip do TV Time ou o tv-time-export.zip do TV Time Liberator; ' +
-    'cada filme assistido vira Já visto, a nota vira Nota, e o que ela queria ver vai para a watchlist), ou tira um import ' +
+    'dela pelo TV Time Liberator (`tvtimeJson`, o texto do movies.json de dentro do tv-time-export.zip; cada filme ' +
+    'assistido vira Já visto, a nota vira Nota, e o que ela queria ver vai para a watchlist), ou tira um import ' +
     '(`remove`: o registro na Pessoa, o arquivo guardado e os Fatos que só ele trazia). Uma coisa por chamada. O RSS só ' +
     'com o consentimento da própria Pessoa: pergunte a ela, pelo Dono, antes de baixar, e mande `consent: true` só com o ' +
-    'sim; sem ele, nada é baixado. O ZIP do Letterboxd e o do Trakt sobem pelo app (Importar), não por aqui; o CSV do ' +
-    'IMDb e o backup do Simkl sobem pelos dois. Devolve o relatório: no RSS, a resolução (filmes resolvidos por caminho, descartados, `queue` ' +
+    'sim; sem ele, nada é baixado. O ZIP do Letterboxd, o do Trakt e o gdpr-data.zip do TV Time sobem só pelo app ' +
+    '(Importar), não por aqui: o do TV Time traz as credenciais da conta; o CSV do IMDb, o backup do Simkl e o ' +
+    'movies.json do Liberator sobem pelos dois. Devolve o relatório: no RSS, a resolução (filmes resolvidos por caminho, descartados, `queue` ' +
     'com os que esperam o Dono em import_queue, Fatos novos); no CSV do IMDb, os Fatos novos e `outsideCatalog` (títulos ' +
     'que o Catálogo não tem, como séries); no backup do Simkl, os Fatos novos, `resolved` e `unresolved` (filmes que ' +
-    'nem o ID do IMDb nem o do TMDB acharam no Catálogo); no TV Time, a resolução como no RSS (o export GDPR não traz ID: ' +
-    'os filmes que o filmes não achou vão para import_queue) e `outsideCatalog`; com remove, o import tirado e os Fatos que saíram. Usuário ou arquivo errado ' +
+    'nem o ID do IMDb nem o do TMDB acharam no Catálogo); no TV Time, os Fatos novos, `queue` ' +
+    '(filme sem ID do IMDb, para import_queue) e `outsideCatalog`; com remove, o import tirado e os Fatos que saíram. Usuário ou arquivo errado ' +
     'é erro com código.',
   input: z.object({
     person: personName(
@@ -56,12 +57,13 @@ export default defineTool({
       .describe(
         'o texto inteiro do SimklBackup.json que a Pessoa mandou (o JSON de dentro do SimklBackup.zip)',
       ),
-    tvtimeZip: z
+    tvtimeJson: z
       .string()
-      .trim()
-      .regex(/^[A-Za-z0-9+/]+={0,2}$/, 'o ZIP em base64')
+      .min(1)
       .optional()
-      .describe('o ZIP do backup do TV Time que a Pessoa mandou, em base64'),
+      .describe(
+        'o texto inteiro do movies.json do TV Time Liberator que a Pessoa mandou (de dentro do tv-time-export.zip); o gdpr-data.zip do TV Time não, que sobe só pelo app',
+      ),
     consent: z
       .literal(true)
       .optional()
@@ -83,12 +85,12 @@ export default defineTool({
         i.letterboxdRss,
         i.imdbCsv,
         i.simklJson,
-        i.tvtimeZip,
+        i.tvtimeJson,
         i.remove,
       ].filter((value) => value !== undefined)
       if (asked.length !== 1)
         return yield* invalidUsage(
-          'mande letterboxdRss, imdbCsv, simklJson, tvtimeZip ou remove, um só',
+          'mande letterboxdRss, imdbCsv, simklJson, tvtimeJson ou remove, um só',
         )
       if (i.remove !== undefined)
         return yield* removeImport({ file: i.remove, person, author })
@@ -112,13 +114,13 @@ export default defineTool({
           author,
         })
       }
-      if (i.tvtimeZip !== undefined) {
+      if (i.tvtimeJson !== undefined) {
         if (person === undefined)
           return yield* invalidUsage('o backup do TV Time precisa de person')
         return yield* importTvTime({
           person,
-          original: `${person}-tvtime.zip`,
-          content: Buffer.from(i.tvtimeZip, 'base64'),
+          original: 'movies.json',
+          content: new TextEncoder().encode(i.tvtimeJson),
           author,
         })
       }

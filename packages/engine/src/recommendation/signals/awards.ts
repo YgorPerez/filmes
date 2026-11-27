@@ -17,7 +17,7 @@ export const awards: Signal = {
   forFilm: (round) =>
     Effect.gen(function* () {
       const weights = round.weights.awards
-      if (weights === undefined || round.candidates.size === 0) return []
+      if (round.candidates.size === 0) return []
 
       const labels = yield* (yield* Environment).readConfig(
         'awards',

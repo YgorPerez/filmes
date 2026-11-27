@@ -9,9 +9,25 @@ import { authFromEnvironment } from './auth'
 import { tokenHash } from './auth-database'
 import { peopleFromDataRepo } from './people-directory'
 import { serverEnv } from './server-env'
-import { TraktStore, type TraktIdentity, type TraktTokens } from './trakt-store'
+import {
+  TraktGrantRefused,
+  TraktStore,
+  type TraktIdentity,
+  type TraktTokens,
+} from './trakt-store'
 
 const CALLBACK = '/trakt/retorno'
+
+/** Trakt's answer to a refresh token it no longer takes. */
+const refused = async (response: Response) => {
+  if (response.status !== 400 && response.status !== 401) return false
+  const body: unknown = await response.json().catch(() => null)
+  return (
+    !!body &&
+    typeof body === 'object' &&
+    (body as Record<string, unknown>).error === 'invalid_grant'
+  )
+}
 
 /** Back to a page; its own, as `oauth-server.ts` builds its answers. */
 const seeOther = (location: string) =>
@@ -65,7 +81,8 @@ export class Trakt {
       if (request.headers.get('origin') !== this.options.origin)
         return new Response('Origem recusada', { status: 403 })
       if (url.pathname === DISCONNECT) {
-        this.store.disconnect(identity)
+        const tokens = this.store.disconnect(identity)
+        if (tokens) await this.revoke(tokens.access)
         return seeOther(PAGE)
       }
       const form = await request.formData()
@@ -114,6 +131,22 @@ export class Trakt {
     }
   }
 
+  /** Best effort: the local grant is already gone, so a Trakt that does not
+   * answer changes nothing for the Pessoa. */
+  private async revoke(token: string) {
+    try {
+      await this.fetch('https://api.trakt.tv/oauth/revoke', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        redirect: 'error',
+        signal: AbortSignal.timeout(5_000),
+        body: JSON.stringify({ token, client_id: this.options.clientId }),
+      })
+    } catch {
+      // Ignored: the tokens expire on their own.
+    }
+  }
+
   private async exchange(
     grant: Record<string, string>,
     signal?: AbortSignal,
@@ -130,7 +163,11 @@ export class Trakt {
         redirect_uri: this.redirectUri,
       }),
     })
-    if (!response.ok) throw new Error('Trakt OAuth exchange failed')
+    if (!response.ok) {
+      if (grant.grant_type === 'refresh_token' && (await refused(response)))
+        throw new TraktGrantRefused()
+      throw new Error('Trakt OAuth exchange failed')
+    }
     const body: unknown = await response.json()
     if (!body || typeof body !== 'object')
       throw new Error('Invalid Trakt OAuth response')

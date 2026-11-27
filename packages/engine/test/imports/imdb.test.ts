@@ -13,7 +13,7 @@ import {
   importImdb,
   personCreate,
   personImports,
-  reloadImdb,
+  reloadData,
   removeImport,
   Sqlite,
 } from '../../src/index.ts'
@@ -102,7 +102,7 @@ describe('importImdb', () => {
     expect(again.newFacts).toEqual({ ratings: 0 })
     expect(await facts()).toEqual(before)
 
-    await fixture.ok(reloadImdb)
+    await fixture.ok(reloadData)
     expect(await facts()).toEqual(before)
   })
 })

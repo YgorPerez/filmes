@@ -95,12 +95,12 @@ export const Weights = Schema.Struct({
   constraints: Schema.Struct({ on_demand_reach: Count }),
   tag_vetoes: Schema.Struct({ min_relevance: Weight, min_users: Count }),
   imdb_rating: Schema.Struct({ weight: Weight }),
-  awards: Schema.optionalKey(
-    Schema.Struct({ weight: Weight.check(Schema.isGreaterThanOrEqualTo(0)) }),
-  ),
-  critics: Schema.optionalKey(
-    Schema.Struct({ weight: Weight.check(Schema.isGreaterThanOrEqualTo(0)) }),
-  ),
+  awards: Schema.Struct({
+    weight: Weight.check(Schema.isGreaterThanOrEqualTo(0)),
+  }),
+  critics: Schema.Struct({
+    weight: Weight.check(Schema.isGreaterThanOrEqualTo(0)),
+  }),
   no_sad: Schema.Struct({
     min_users_sad: Count,
     min_users_heavy_theme: Count,

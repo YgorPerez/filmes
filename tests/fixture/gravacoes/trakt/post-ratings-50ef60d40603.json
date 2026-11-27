@@ -1,0 +1,24 @@
+{
+  "request": {
+    "path": "/sync/ratings",
+    "body": {
+      "movies": [
+        {
+          "ids": {
+            "imdb": "tt9000301"
+          },
+          "rating": 9,
+          "rated_at": "2026-11-20T12:00:00.000Z"
+        }
+      ]
+    }
+  },
+  "response": {
+    "added": {
+      "movies": 1
+    },
+    "not_found": {
+      "movies": []
+    }
+  }
+}

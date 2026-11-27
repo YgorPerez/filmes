@@ -3,9 +3,11 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
   makeEngine,
+  TRAKT_REVOKED,
   type ErrorCode,
   type ErrorReason,
   type Outcome,
+  type TraktConnection,
 } from '@filmes/engine'
 import { describe, expect, it, onTestFinished, vi } from 'vite-plus/test'
 import { ROOT, useFixture } from '../../../packages/engine/test/fixture.ts'
@@ -661,7 +663,7 @@ const LOST = 'filme-perdido-2001-91d7fc73cdee'
 
 /** The fixture with filmes-dados as a git repo, the app's `Imports` on it
  * (TMDB from the recordings), and its commits after the first. */
-function useImportsRepo() {
+function useImportsRepo(trakt?: TraktConnection) {
   const fixture = useFixture()
   git(fixture.data, 'init', '--quiet', '-b', 'master')
   git(fixture.data, 'add', '--all')
@@ -676,11 +678,14 @@ function useImportsRepo() {
     '-m',
     'initial',
   )
-  const engine = makeEngine({
-    ...fixture.vars,
-    FILMES_GRAVACOES: RECORDINGS,
-    FILMES_TMDB_CHAVE: 'chave-de-teste',
-  })
+  const engine = makeEngine(
+    {
+      ...fixture.vars,
+      FILMES_GRAVACOES: RECORDINGS,
+      FILMES_TMDB_CHAVE: 'chave-de-teste',
+    },
+    trakt && { trakt },
+  )
   onTestFinished(() => engine.dispose())
   const imports = importsFromEngine(engine)
   const ok = async <A>(outcome: Promise<Outcome<A>>) => {
@@ -848,6 +853,27 @@ describe('importsFromEngine, the queue', () => {
       `Bruno <bruno@example.org>|letterboxd queue confirm ${VENTO}`,
       `Bruno <bruno@example.org>|letterboxd queue discard ${LOST}`,
     ])
+  })
+})
+
+describe('importsFromEngine, a refused Trakt grant', () => {
+  it('reads her username and asks her to reconnect', async () => {
+    // Trakt refuses Teo's grant once; the app drops it, so the next ask
+    // finds him not connected.
+    let dropped = false
+    const { imports, ok } = useImportsRepo({
+      clientId: 'fixture',
+      accessToken: async () => {
+        if (dropped) return null
+        dropped = true
+        return TRAKT_REVOKED
+      },
+    })
+    const sync = (user: string | null) =>
+      ok(imports.run('teo', { kind: 'trakt-sync', user }, AUTHOR))
+    expect(await sync('teo_trakt')).toMatchObject({ notice: 'sincronizado' })
+    expect(await sync(null)).toMatchObject({ notice: 'reconectar' })
+    expect(await sync(null)).toMatchObject({ notice: 'sincronizado' })
   })
 })
 
