@@ -16,7 +16,7 @@ import { compareTuple } from '../compat/compare.ts'
 import { pythonError } from '../compat/python-error.ts'
 import { makeEvidence, type Evidence } from '../evidence/Evidence.ts'
 import { feedbackStrength, type RatingScale } from '../evidence/ruler.ts'
-import { tenScaleText, weekdayDateText } from '../evidence/wording.ts'
+import { tenScaleText } from '../evidence/wording.ts'
 import { sessionOrder } from '../sessions/order.ts'
 import { satisfaction } from '../sessions/satisfaction.ts'
 import { num, numOrNull, text, textOrNull } from '../sqlite/row.ts'
@@ -164,17 +164,35 @@ const REPORTED: Readonly<Record<string, (film: string) => string>> = {
 
 const percent = (value: number): string => `${Math.round(value * 100)}%`
 
-/** The line of the film that went up because a Presente was behind, citing
- * her lowest reaction in the window: "Teo: satisfação de 22% nas últimas
- * Sessões (a mais alta do grupo, 100%); na de sex, 20 nov, deu 3 de 10 a
- * Quermesse" (#272). It opens with her name: it is a line of the film,
- * with no name before it on the Cartaz. It adds nothing to the utility (base
- * 0): the satisfaction acts on the Regra, not on the Evidence. A cited
- * Nota is read on her scale (#172), and written on 1–10 with the day as
- * the app writes it ("sex, 20 nov", #272). */
+/** Who has the highest satisfaction, in the Presentes' order: "Iara",
+ * "Iara e Rosa", "você". */
+const highestNames = (
+  group: GroupSatisfaction,
+  nameOf: (person: string) => string,
+): string => {
+  const names = [...group.people]
+    .filter(([, p]) => p.satisfaction === group.highest)
+    .map(([person]) => {
+      const name = nameOf(person)
+      return name === 'Você' ? 'você' : name
+    })
+  return names.length < 2
+    ? (names[0] ?? '')
+    : `${names.slice(0, -1).join(', ')} e ${names.at(-1)}`
+}
+
+/** The line of who is behind the most satisfied, citing her lowest
+ * reaction in the window and naming the highest: "Teo: 22% nas últimas
+ * Sessões (deu 3 de 10 a Quermesse); Iara, 100%" (#346). It opens with her
+ * name: it is a line of the film, with no name before it on the Cartaz.
+ * `nameOf` says each Pessoa's name ("Você" for the Dono who looks on
+ * Contar); a name after the semicolon is lowercased only when it is "Você".
+ * It adds nothing to the utility (base 0): the satisfaction acts on the
+ * Regra, not on the Evidence. A cited Nota is read on her scale (#172), and
+ * written on 1–10 (#272). */
 export const satisfactionLine = (
   person: string,
-  name: string,
+  nameOf: (person: string) => string,
   group: GroupSatisfaction,
   scale: RatingScale,
   filmId: string,
@@ -197,7 +215,7 @@ export const satisfactionLine = (
   return makeEvidence({
     person,
     filmId,
-    text: `${name}: satisfação de ${percent(own.satisfaction)} nas últimas Sessões (a mais alta do grupo, ${percent(group.highest)}); na de ${weekdayDateText(text(session, 'data'))}, ${reacted}`,
+    text: `${nameOf(person)}: ${percent(own.satisfaction)} nas últimas Sessões (${reacted}); ${highestNames(group, nameOf)}, ${percent(group.highest)}`,
     source: text(reaction, 'fonte'),
     date: text(reaction, 'data'),
     strength: feedbackStrength(

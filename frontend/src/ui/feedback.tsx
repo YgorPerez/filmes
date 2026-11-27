@@ -16,7 +16,6 @@ import { refusalOn, useRefusalInPlace } from './kit/refusal-in-place'
 import { buttonVariants } from './kit/button-variants'
 import { Option } from './kit/option'
 import { PriceSticker } from './kit/sticker'
-import { OwnerTag } from './kit/owner-tag'
 import {
   Alert,
   PostFailed,
@@ -226,7 +225,7 @@ function FeedbackForm({
         <Section
           id="reacoes"
           title={form.reactions(alone)}
-          lead={form.reactionsLead}
+          lead={form.reactionsLead(alone)}
         >
           <div className="flex flex-col">
             {page.attendees.map((attendee, index) => (
@@ -426,7 +425,7 @@ function RatingRadios({
 }
 
 /** One Presente's reaction (#272): her avatar in the Session's colour and
- * her name, the 1 to 10, then one row of pills: "sem nota" and, for the
+ * her name ("Você" for the Dono who looks, #346), the 1 to 10, then one row of pills: "sem nota" and, for the
  * others, the Relato (gostou, neutro, não gostou), which the Dono does not
  * give about herself; then "comentar". Every row has the same parts in the
  * same place. Filled with what the Catálogo search `kept`. */
@@ -447,14 +446,17 @@ function Reaction({
       <legend className="float-left w-full">
         <span className="flex items-center gap-sm font-display text-row-title">
           <PersonAvatar person={attendee} index={index} />
-          {attendee.name}
-          {attendee.owner && <OwnerTag />}
+          {attendee.owner ? form.you : attendee.name}
         </span>
       </legend>
       <div className="clear-left pt-sm">
         <RatingRadios
           name={name}
-          label={form.ratingLabel(attendee.name)}
+          label={
+            attendee.owner
+              ? form.ownRatingLabel
+              : form.ratingLabel(attendee.name)
+          }
           value={value}
         />
       </div>
@@ -481,7 +483,11 @@ function Reaction({
         </summary>
         <TextField
           name={`comentario.${attendee.person}`}
-          label={`${form.comment}: ${attendee.name}`}
+          label={
+            attendee.owner
+              ? form.ownComment
+              : `${form.comment}: ${attendee.name}`
+          }
           defaultValue={kept?.comment}
         />
       </details>

@@ -74,7 +74,7 @@ test('the Dono closes a Session and the next one shows the satisfaction', async 
 
   // Bruno and Quim loved the first film; Rosa did not.
   await page.locator('input[name="filme"]').first().check()
-  await rate(page, 'Bruno', '10')
+  await rate(page, 'Você', '10')
   await rate(page, 'Quim', '9')
   await commentOn(page, 'Quim', 'quero ver de novo')
   await rate(page, 'Rosa', '2')
@@ -107,7 +107,7 @@ test('the Dono closes a Session and the next one shows the satisfaction', async 
   await page.goto(`/sessoes/${next}/contar`)
   await expect(satisfaction(page)).toContainText('Rosa')
   await expect(satisfaction(page)).toContainText(
-    /Rosa: satisfação de 11% nas últimas Sessões \(a mais alta do grupo, 100%\); na de sex, 20 nov, deu 2 de 10 a .+/,
+    /Rosa: 11% nas últimas Sessões \(deu 2 de 10 a .+\); você, 100%/,
   )
   await snap(page, info, 'feedback-satisfacao')
 })
@@ -146,7 +146,7 @@ test('a relayed Relato, a film by its title, and a refusal in place', async ({
   // Typed over, the field is a title again.
   await page.getByLabel('Comentário: Teo').fill('')
   await field.fill('Café Amargo')
-  await rate(page, 'Bruno', '8')
+  await rate(page, 'Você', '8')
   await reactionOf(page, 'Iara')
     .getByRole('radio', { name: 'gostou', exact: true })
     .check()
