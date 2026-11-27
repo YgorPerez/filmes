@@ -16,7 +16,7 @@ export const Route = createFileRoute('/participar')({
   validateSearch: sessionLinkSearch,
   // `home`: the link's film list for the chosen Presente, where the child
   // pages go back to. `closed`: the link was issued, but its Session has
-  // closed since.
+  // closed since, with the film it ended with.
   beforeLoad: async ({ search, location }) => {
     const { link, closed } = await readSessionLink({ data: search })
     return {
@@ -84,7 +84,7 @@ function SessionLinkRoute() {
           />
         )}
       </main>
-      <SiteFooter />
+      <SiteFooter narrow />
     </div>
   )
 }
