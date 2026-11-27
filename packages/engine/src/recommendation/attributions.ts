@@ -69,7 +69,7 @@ export const CREDITS: ReadonlyArray<Credit> = [
   {
     source: 'IMDb',
     url: 'https://www.imdb.com',
-    use: 'Os filmes, o elenco, a nota e os votos.',
+    use: 'Os filmes, o elenco, a nota e os votos, e as notas que cada Pessoa importa.',
     notice: textOf('IMDb'),
   },
   {
@@ -81,7 +81,7 @@ export const CREDITS: ReadonlyArray<Credit> = [
   {
     source: 'Wikidata',
     url: 'https://www.wikidata.org',
-    use: 'Quem fez cada filme, séries, datas de estreia, subgêneros e classificação etária.',
+    use: 'Quem fez cada filme, séries, prêmios, datas de estreia, subgêneros e classificação etária.',
     notice: 'Dados do Wikidata, em domínio público (CC0).',
   },
   {
@@ -116,13 +116,13 @@ export const CREDITS: ReadonlyArray<Credit> = [
   {
     source: TRAKT_ATTRIBUTION.source,
     url: 'https://trakt.tv',
-    use: 'O histórico e as notas que cada Pessoa importa.',
+    use: 'O histórico, as notas e a lista para ver que cada Pessoa importa.',
     notice: TRAKT_ATTRIBUTION.text,
   },
   {
     source: 'Letterboxd',
     url: 'https://letterboxd.com',
-    use: 'O histórico e as notas do export que cada Pessoa baixa.',
+    use: 'O histórico, as notas e a lista para ver do export que cada Pessoa baixa.',
     notice: null,
   },
 ]
