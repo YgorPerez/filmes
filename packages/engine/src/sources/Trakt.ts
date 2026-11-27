@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto'
 import { Context, Effect } from 'effect'
 import { field } from './json.ts'
 import { Environment } from '../runtime/Environment.ts'
-import { postJson, SourceFailure, Transport } from './Source.ts'
+import { getJson, postJson, SourceFailure, Transport } from './Source.ts'
 
 /** What the app answers when Trakt refused the Pessoa's refresh token
  * (`invalid_grant`): it dropped the grant, and she has to connect again. */
@@ -92,4 +92,91 @@ export const writeTrakt = (
     if (missing === null)
       return yield* failure('o Trakt respondeu sem a lista de não encontrados')
     return missing
+  })
+
+/** Films per page of the history; Trakt caps a page there. */
+const PAGE = 1000
+/** Pages read at most: 50,000 plays. */
+const PAGES = 50
+
+/** What reading a Trakt profile can meet: no such user, or a private one. */
+type TraktReadFailure = 'missing' | 'private'
+
+/** The lists of a Trakt profile, as the API gives them: the same items the
+ * Raw Export's JSONs hold. */
+interface TraktLists {
+  readonly history: ReadonlyArray<unknown>
+  readonly ratings: ReadonlyArray<unknown>
+  readonly watchlist: ReadonlyArray<unknown>
+}
+
+/** The recordings' name of a profile: `me` (the connected account) or the
+ * username, lower case. */
+const recordingUser = (user: string) => user.toLowerCase()
+
+/** Reads the films of a Trakt profile (#269): its whole history, page by
+ * page, its ratings and its watchlist. `user` is `me` with the Pessoa's
+ * `token` (her own account, private or not), or a public username with the
+ * client id alone. A 404 is `missing`, a 401 or 403 `private`; the rest is
+ * a `SourceFailure`. Recorded as `get-<user>-<list>[-<page>].json`. */
+export const readTraktLists = (
+  user: string,
+  clientId: string,
+  token: string | null,
+) =>
+  Effect.gen(function* () {
+    const transport = yield* Transport
+    const headers = {
+      'trakt-api-key': clientId,
+      'trakt-api-version': '2',
+      ...(token !== null && { Authorization: `Bearer ${token}` }),
+    }
+    const base = `https://api.trakt.tv/users/${encodeURIComponent(user)}`
+    const name = recordingUser(user)
+    const list = (path: string, key: string) =>
+      transport
+        .answer(
+          PROFILE,
+          `get-${name}-${key}`,
+          getJson(`${base}${path}`, headers),
+        )
+        .pipe(
+          Effect.catchTag('SourceFailure', (failure) =>
+            /^HTTP 40[13]$/.test(failure.reason)
+              ? Effect.succeed('private' as const)
+              : Effect.fail(failure),
+          ),
+        )
+    const outcome = (
+      answer: unknown,
+    ): ReadonlyArray<unknown> | TraktReadFailure =>
+      answer === 'private'
+        ? 'private'
+        : Array.isArray(answer)
+          ? answer
+          : 'missing'
+    const history: unknown[] = []
+    for (let page = 1; page <= PAGES; page++) {
+      const answer = outcome(
+        yield* list(
+          `/history/movies?page=${page}&limit=${PAGE}`,
+          `history-${page}`,
+        ),
+      )
+      if (typeof answer === 'string') {
+        if (page === 1) return answer
+        break
+      }
+      history.push(...answer)
+      if (answer.length < PAGE) break
+    }
+    const ratings = outcome(yield* list('/ratings/movies', 'ratings'))
+    if (typeof ratings === 'string') return ratings
+    const watchlist = outcome(yield* list('/watchlist/movies', 'watchlist'))
+    return {
+      history,
+      ratings,
+      // A profile may hide its watchlist alone: then it has none here.
+      watchlist: typeof watchlist === 'string' ? [] : watchlist,
+    } satisfies TraktLists
   })

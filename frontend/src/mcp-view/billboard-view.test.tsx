@@ -34,7 +34,14 @@ const REPLY = {
   currentVersion: 2,
   regenerate: true,
   keep: ['tt9000105'],
-  dropped: [],
+  dropped: [
+    {
+      position: 1,
+      id: 'tt9000104',
+      title: 'As Horas Lentas',
+      cause: 'swapped' as const,
+    },
+  ],
   addition: null,
   moods: null,
   comments: [],
@@ -42,6 +49,11 @@ const REPLY = {
   seen: [],
   warnings: [],
 }
+
+const TAG = '(enviado pelo Cartaz · 2026-11-20-iara v2)'
+const CONTEXT =
+  'Resposta do Cartaz 2026-11-20-iara v2, já gravada por answer_billboard (não chame de novo):\n' +
+  'refazer · manter: tt9000105'
 
 const fakeHost = (answer: ToolResult | Error, told: unknown = {}) => ({
   callTool: vi.fn<Host['callTool']>(() =>
@@ -90,19 +102,43 @@ describe('the view shows', () => {
     ).toBe('8,3')
   })
 
-  it("the engine's error when the tool failed", () => {
+  it("plain words for the engine's error, never its message", () => {
     const failed = json(
-      { error: { code: 'invalid_usage', message: 'Sessão desconhecida' } },
+      {
+        error: {
+          code: 'unknown_session',
+          message: "não há Sessão 'x' em /srv/dados/sessions",
+        },
+      },
       true,
     )
     render(<BillboardView result={failed} host={fakeHost(json({}))} />)
-    expect(screen.getByRole('alert').textContent).toBe('Sessão desconhecida')
+    expect(screen.getByRole('alert').textContent).toBe(
+      view.error('unknown_session'),
+    )
+    expect(screen.queryByText(/srv/)).toBeNull()
   })
 
-  it('the text of a result that is not JSON', () => {
+  it('a result that is not JSON is an error too', () => {
     const odd = { isError: true, content: [{ type: 'text', text: 'falhou' }] }
     render(<BillboardView result={odd} host={fakeHost(json({}))} />)
-    expect(screen.getByRole('alert').textContent).toBe('falhou')
+    expect(screen.getByRole('alert').textContent).toBe(view.error(null))
+  })
+})
+
+describe('the view shows, with no text or as the page', () => {
+  it('a result with no text at all is an error too', () => {
+    render(
+      <BillboardView result={{ isError: true }} host={fakeHost(json({}))} />,
+    )
+    expect(screen.getByRole('alert').textContent).toBe(view.error(null))
+  })
+
+  it('the Cartaz is the page’s one h1', () => {
+    render(<BillboardView result={shown} host={fakeHost(json({}))} />)
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
+      'Cartaz: Vocês dois',
+    )
   })
 })
 
@@ -118,13 +154,45 @@ describe('Enviar', () => {
       text: '#cartaz 2026-11-20-iara v2\n1 tt9000104 · trocar\n',
     })
     expect(host.callTool).toHaveBeenCalledTimes(1)
+    // A host without model context: the detail follows her words.
     expect(host.sendMessage).toHaveBeenCalledExactlyOnceWith(
-      'Enviei o Cartaz 2026-11-20-iara v2 pela tela; answer_billboard já gravou.\n' +
-        'refazer · manter: tt9000105',
+      `Troquei As Horas Lentas. Refaz a lista mantendo o resto?\n${TAG}\n${CONTEXT}`,
     )
-    expect(status()).toBe('Anotado. Pedi ao chat pra refazer a lista.')
+    expect(status()).toBe(SEND_STATUS.regenerating)
   })
 
+  it('her words in the chat, the ids in the model’s context', async () => {
+    const updateContext = vi.fn<NonNullable<Host['updateContext']>>(() =>
+      Promise.resolve({}),
+    )
+    const host = { ...fakeHost(json(REPLY)), updateContext }
+    render(<BillboardView result={shown} host={host} />)
+
+    await swapFirstAndSend()
+
+    expect(updateContext).toHaveBeenCalledExactlyOnceWith(CONTEXT)
+    expect(host.sendMessage).toHaveBeenCalledExactlyOnceWith(
+      `Troquei As Horas Lentas. Refaz a lista mantendo o resto?\n${TAG}`,
+    )
+  })
+
+  it('the same reply goes once; a new mark can go again', async () => {
+    const host = fakeHost(json(REPLY))
+    render(<BillboardView result={shown} host={host} />)
+    const user = await swapFirstAndSend()
+
+    const sent = screen.getByRole('button', { name: copy.sent })
+    expect((sent as HTMLButtonElement).disabled).toBe(true)
+    await user.click(sent)
+    expect(host.callTool).toHaveBeenCalledTimes(1)
+
+    await user.click(card(2).getByRole('button', { name: 'Trocar' }))
+    await user.click(screen.getByRole('button', { name: copy.send }))
+    expect(host.callTool).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('Enviar, stars, comments and refusals', () => {
   it('stars alone are recorded, without a chat message', async () => {
     const host = fakeHost(json({ ...REPLY, regenerate: false, keep: [] }))
     const user = userEvent.setup()
@@ -147,10 +215,10 @@ describe('Enviar', () => {
     )
     render(<BillboardView result={shown} host={host} />)
     await swapFirstAndSend()
-    expect(status()).toBe('Anotado. Mandei seu texto pro chat.')
+    expect(status()).toBe(SEND_STATUS.toChat)
   })
 
-  it("says the engine's refusal and points to Copiar", async () => {
+  it("says the engine's refusal in plain words, and Enviar tries again", async () => {
     const refused = json(
       { error: { code: 'closed_session', message: 'Sessão fechada.' } },
       true,
@@ -158,25 +226,34 @@ describe('Enviar', () => {
     const host = fakeHost(refused)
     render(<BillboardView result={shown} host={host} />)
     await swapFirstAndSend()
-    expect(status()).toBe(view.failed('Sessão fechada.'))
+    expect(status()).toBe(view.failed('closed_session'))
+    expect(screen.getByRole('button', { name: copy.retry })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: copy.copy })).toBeNull()
     expect(host.sendMessage).not.toHaveBeenCalled()
   })
 
-  it('a host that cannot call the tool points to Copiar', async () => {
+  it('a host that cannot call the tool offers Copiar, only then', async () => {
     render(
       <BillboardView result={shown} host={fakeHost(new Error('sem proxy'))} />,
     )
+    expect(screen.queryByRole('button', { name: copy.copy })).toBeNull()
     await swapFirstAndSend()
     expect(status()).toBe(view.unavailable)
+    expect(
+      within(screen.getByRole('region', { name: copy.bar })).getByRole(
+        'button',
+        { name: copy.copy },
+      ),
+    ).toBeTruthy()
   })
+})
 
+describe('Enviar, a message refused and one send at a time', () => {
   it('recorded but the message did not go: says so', async () => {
     const refusedMessage = fakeHost(json(REPLY), { isError: true })
     render(<BillboardView result={shown} host={refusedMessage} />)
     await swapFirstAndSend()
-    expect(status()).toBe(
-      'Anotado. O aviso não chegou ao chat. Se precisar refazer a lista, peça lá.',
-    )
+    expect(status()).toBe(SEND_STATUS.notNotified)
     cleanup()
 
     render(
@@ -207,13 +284,39 @@ describe('Enviar', () => {
   })
 })
 
+const people = MODEL.attendees
+
 describe('the chat follow-up message', () => {
-  it('one line per field, the free text on one line and visible', () => {
-    expect(
-      replyMessage({
+  it('her words first, the Cartaz’s tag, and the detail apart', () => {
+    const message = replyMessage(
+      {
         ...REPLY,
         keep: [],
-        addition: 'chegou\n\n\n\na Ana​',
+        dropped: [
+          {
+            position: 1,
+            id: 'tt1',
+            title: 'Cais 2',
+            cause: 'swapped' as const,
+          },
+        ],
+        seen: [
+          {
+            person: 'iara',
+            film: 'tt2',
+            title: 'Fronteira',
+            rating: 4,
+            new: true,
+          },
+          {
+            person: 'bruno',
+            film: 'tt2',
+            title: 'Fronteira',
+            rating: null,
+            new: true,
+          },
+        ],
+        addition: 'chegou\n\n\n\na Ana\u200b',
         comments: [
           {
             position: 2,
@@ -223,37 +326,140 @@ describe('the chat follow-up message', () => {
           },
           { position: 3, id: 'tt3', title: null, comment: '  ' },
         ],
-      }),
-    ).toBe(
-      'Enviei o Cartaz 2026-11-20-iara v2 pela tela; answer_billboard já gravou.\n' +
-        'refazer · manter: nenhum\n' +
-        'acrescentar: chegou a Ana\n' +
-        'comentário 2 tt2 (Sal e Ferrugem): lindo',
+      },
+      people,
+    )
+    expect(message?.text).toBe(
+      'Troquei Cais 2. Eu e Iara já vimos Fronteira (Iara deu 8). ' +
+        'Acrescentei: “chegou a Ana”. Sobre Sal e Ferrugem: “lindo”. Refaz a lista?\n' +
+        TAG,
+    )
+    expect(message?.text).not.toMatch(/tt\d|answer_billboard/u)
+    expect(message?.context.split('\n').slice(1)).toEqual([
+      'refazer · manter: nenhum',
+      'acrescentar: chegou a Ana',
+      'comentário 2 tt2 (Sal e Ferrugem): lindo',
+    ])
+  })
+})
+
+describe('the chat follow-up message, for the Dono and her Climas', () => {
+  it('the Dono alone: Já vi, with her note', () => {
+    const message = replyMessage(
+      {
+        ...REPLY,
+        dropped: [],
+        seen: [
+          {
+            person: 'bruno',
+            film: 'tt2',
+            title: 'Fronteira',
+            rating: 4.5,
+            new: true,
+          },
+        ],
+      },
+      people,
+    )
+    expect(message?.text.split('\n')[0]).toBe(
+      'Já vi Fronteira (nota 9). Refaz a lista mantendo o resto?',
     )
   })
 
   it('the Climas the Dono chose, or nenhum', () => {
     const clima = (moods: string[]) =>
-      replyMessage({ ...REPLY, keep: [], moods })
-        ?.split('\n')
-        .slice(1)
-
-    expect(clima(['leve', 'pra rir'])).toEqual([
+      replyMessage({ ...REPLY, keep: [], moods }, people)
+    expect(clima(['leve', 'pra rir'])?.context.split('\n').slice(1)).toEqual([
       'refazer · manter: nenhum',
       'clima: leve, pra rir',
     ])
-    expect(clima([])).toEqual(['refazer · manter: nenhum', 'clima: nenhum'])
+    expect(clima(['leve', 'pra rir'])?.text).toContain(
+      'Quero o clima leve e pra rir. Refaz a lista?',
+    )
+    expect(clima([])?.context.split('\n').slice(1)).toEqual([
+      'refazer · manter: nenhum',
+      'clima: nenhum',
+    ])
+  })
+})
+
+describe('the chat follow-up message, for others who saw it', () => {
+  it('others who saw it, by name or slug, and films without a title', () => {
+    const message = replyMessage(
+      {
+        ...REPLY,
+        keep: ['tt9000105'],
+        moods: [],
+        dropped: [
+          { position: 3, id: 'tt3', title: null, cause: 'swapped' as const },
+        ],
+        seen: [
+          {
+            person: 'teo',
+            film: 'tt2',
+            title: 'Fronteira',
+            rating: 3,
+            new: true,
+          },
+          {
+            person: 'iara',
+            film: 'tt5',
+            title: 'Cais',
+            rating: null,
+            new: true,
+          },
+          {
+            person: 'teo',
+            film: 'tt5',
+            title: 'Cais',
+            rating: null,
+            new: true,
+          },
+        ],
+        comments: [
+          { position: 4, id: 'tt4', title: null, comment: 'curto' },
+          { position: 5, id: 'tt5', title: 'Cais' },
+        ],
+      },
+      people,
+    )
+    expect(message?.text.split('\n')[0]).toBe(
+      'Troquei o filme 3. teo já viu Fronteira (teo deu 6). ' +
+        'Iara e teo já viram Cais. Tirei o clima. ' +
+        'Sobre o filme 4: “curto”. Refaz a lista?',
+    )
+    expect(message?.context.split('\n').slice(1)).toEqual([
+      'refazer · manter: tt9000105',
+      'clima: nenhum',
+      'comentário 4 tt4: curto',
+    ])
+  })
+})
+
+describe('the chat follow-up message, alone, none or long', () => {
+  it('a comment alone, without a redo', () => {
+    const message = replyMessage(
+      {
+        ...REPLY,
+        regenerate: false,
+        dropped: [],
+        comments: [{ position: 1, id: 'tt1', title: 'Cais', comment: 'bom' }],
+      },
+      people,
+    )
+    expect(message?.text.split('\n')[0]).toBe('Sobre Cais: “bom”.')
   })
 
   it('none when there is no follow-up', () => {
     expect(
-      replyMessage({ ...REPLY, regenerate: false, comments: [] }),
+      replyMessage({ ...REPLY, regenerate: false, comments: [] }, people),
     ).toBeNull()
   })
 
   it('at most the 8,000 characters a ui/message takes', () => {
-    const long = replyMessage({ ...REPLY, addition: 'a'.repeat(9000) })
-    expect(long).toHaveLength(8000)
+    const long = replyMessage({ ...REPLY, addition: 'a'.repeat(9000) }, people)
+    expect(long?.text).toHaveLength(8000)
+    expect(long?.context).toHaveLength(8000)
   })
 })
 
@@ -265,10 +471,12 @@ function fakeApp(context: Record<string, unknown> | undefined) {
       | ((c: Record<string, unknown>) => void)
       | undefined,
     getHostContext: () => context,
+    getHostCapabilities: () => ({ updateModelContext: { text: {} } }),
     callServerTool: vi.fn<() => Promise<ToolResult>>(() =>
       Promise.resolve(json(REPLY)),
     ),
     sendMessage: vi.fn<() => Promise<object>>(() => Promise.resolve({})),
+    updateModelContext: vi.fn<() => Promise<object>>(() => Promise.resolve({})),
     requestDisplayMode: vi.fn<() => Promise<object>>(() =>
       Promise.reject(new Error('não')),
     ),
@@ -304,11 +512,43 @@ describe('mountView', () => {
     })
     expect(app.sendMessage).toHaveBeenCalledWith({
       role: 'user',
-      content: [{ type: 'text', text: expect.stringMatching(/^Enviei/) }],
+      content: [
+        { type: 'text', text: expect.stringMatching(/enviado pelo Cartaz/) },
+      ],
+    })
+    expect(app.updateModelContext).toHaveBeenCalledWith({
+      content: [
+        { type: 'text', text: expect.stringMatching(/^Resposta do Cartaz/) },
+      ],
     })
     root.remove()
   })
+})
 
+describe('mountView, the safe area', () => {
+  it('the host’s safe area becomes the bar’s inset', async () => {
+    const app = fakeApp({
+      displayMode: 'fullscreen',
+      safeAreaInsets: { top: 0, right: 0, bottom: 96, left: 0 },
+    })
+    const root = document.body.appendChild(document.createElement('div'))
+    await act(() =>
+      mountView(app as unknown as ViewApp, root, () => Promise.resolve()),
+    )
+    const style = document.documentElement.style
+    expect(style.getPropertyValue('--host-inset-bottom')).toBe('96px')
+    await act(async () =>
+      app.onhostcontextchanged?.({
+        safeAreaInsets: { top: 8, right: 0, bottom: 0, left: 0 },
+      }),
+    )
+    expect(style.getPropertyValue('--host-inset-bottom')).toBe('0px')
+    expect(style.getPropertyValue('--host-inset-top')).toBe('8px')
+    root.remove()
+  })
+})
+
+describe('mountView, inline', () => {
   it('inline, the compact card: one line per film, Marcar asks for fullscreen', async () => {
     const app = fakeApp({
       displayMode: 'inline',
@@ -326,7 +566,13 @@ describe('mountView', () => {
       within(films)
         .getAllByRole('listitem')
         .map((li) => li.textContent),
-    ).toEqual(['1As Horas Lentas2021 · 1h44', '2Sal & Ferrugem'])
+    ).toEqual(['1As Horas Lentas2021 · 1h44', '2Sal & Ferrugemnovo'])
+    // What left and what came in with this version.
+    expect(
+      within(root).getByText(
+        'Saiu: Sessão Maldita (Iara já viu) · entrou: Sal & Ferrugem',
+      ),
+    ).toBeTruthy()
 
     // Nothing marked yet: Marcar alone, no Enviar to send nothing.
     expect(within(root).queryByRole('button', { name: copy.send })).toBeNull()
@@ -336,7 +582,9 @@ describe('mountView', () => {
     expect(document.documentElement.dataset.theme).toBeUndefined()
     root.remove()
   })
+})
 
+describe('mountView, from fullscreen back inline', () => {
   it('the marks made in fullscreen go with Enviar back inline', async () => {
     const modes = { availableDisplayModes: ['inline', 'fullscreen'] }
     const app = fakeApp({ displayMode: 'fullscreen', ...modes })
@@ -355,8 +603,8 @@ describe('mountView', () => {
       app.onhostcontextchanged?.({ displayMode: 'inline', ...modes }),
     )
     expect(within(root).queryByRole('article')).toBeNull()
-    // Inline says what goes with Enviar.
-    expect(within(root).getByText('1 Trocar')).toBeTruthy()
+    // Inline names what goes with Enviar.
+    expect(within(root).getByText('Trocar: As Horas Lentas')).toBeTruthy()
     await user.click(within(root).getByRole('button', { name: copy.send }))
     expect(app.callServerTool).toHaveBeenCalledWith({
       name: 'answer_billboard',
@@ -365,6 +613,35 @@ describe('mountView', () => {
         text: '#cartaz 2026-11-20-iara v2\n1 tt9000104 · trocar\n',
       },
     })
+    // Sent: it says so, and the one action is to mark again.
+    expect(within(root).getByText(view.sentTitle)).toBeTruthy()
+    expect(within(root).queryByRole('button', { name: copy.send })).toBeNull()
+    expect(
+      within(root).getByRole('button', { name: view.markAgain }),
+    ).toBeTruthy()
+    root.remove()
+  })
+})
+
+describe('mountView, Limpar inline', () => {
+  it('inline, Limpar takes every mark off', async () => {
+    const modes = { availableDisplayModes: ['inline', 'fullscreen'] }
+    const app = fakeApp({ displayMode: 'fullscreen', ...modes })
+    const root = document.body.appendChild(document.createElement('div'))
+    await act(() =>
+      mountView(app as unknown as ViewApp, root, () => Promise.resolve()),
+    )
+    await act(async () => app.ontoolresult?.(shown))
+    const user = userEvent.setup()
+    await user.click(card(1).getByRole('button', { name: 'Trocar' }))
+    await act(async () =>
+      app.onhostcontextchanged?.({ displayMode: 'inline', ...modes }),
+    )
+
+    await user.click(within(root).getByRole('button', { name: copy.clear }))
+
+    expect(within(root).queryByText('Trocar: As Horas Lentas')).toBeNull()
+    expect(within(root).queryByRole('button', { name: copy.send })).toBeNull()
     root.remove()
   })
 })

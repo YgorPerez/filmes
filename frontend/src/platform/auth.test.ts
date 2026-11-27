@@ -188,7 +188,9 @@ describe('the Google login', () => {
       '/entrar?recusa=nao-dono',
     )
   })
+})
 
+describe('the Google login, refusing', () => {
   it('refuses an email Google has not verified', async () => {
     const { login, setIdentity } = setup()
     setIdentity({ email: 'bruno@example.org', email_verified: false })
@@ -236,7 +238,9 @@ describe('the Google login', () => {
     )
     expect(response!.headers.get('location')).toBe('/entrar?recusa=google')
   })
+})
 
+describe('the Google login, off and scoped', () => {
   it('stays off without the Google client, and nobody is logged in', async () => {
     const { request, owner } = setup({ configured: false })
     expect((await request('/auth/google'))!.headers.get('location')).toBe(
@@ -338,7 +342,9 @@ describe('the session', () => {
       /invalid or expired/,
     )
   })
+})
 
+describe('the session, logging in and out', () => {
   it('replaces the previous session on a new login', async () => {
     const { login, session, owner } = setup()
     const first = session((await login())!)!

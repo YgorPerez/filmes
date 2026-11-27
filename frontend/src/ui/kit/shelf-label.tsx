@@ -16,6 +16,8 @@ export function ShelfLabel({
   label,
   note,
   compact = false,
+  single = false,
+  tag,
 }: {
   items: readonly string[]
   label?: string
@@ -24,33 +26,48 @@ export function ShelfLabel({
   /** 15px on the label and 16px on the paper: Claude's inline card and
    * the top of its fullscreen. */
   compact?: boolean
+  /** One line, cut with an ellipsis: the top of Claude's fullscreen on a
+   * phone, where the label is all that stays fixed (#277). */
+  single?: boolean
+  /** A short word beside the label, in meta: the version ("v2"). */
+  tag?: string
 }) {
+  const dot = single
+    ? 'mx-sm mb-0.5 inline-block size-2 align-middle'
+    : 'size-2 shrink-0'
   return (
     <div className="flex flex-col items-start gap-xs">
-      <div
-        role="img"
-        aria-label={label ?? items.join(' · ')}
-        className="rounded-rail bg-case p-1.25"
-      >
-        {/* `text-shelf`, not `text-shelf-label`: the colour of the same name
-         * would paint the text in the label's own colour. */}
-        <p
-          className={`flex flex-wrap items-center gap-x-sm gap-y-2xs rounded-plate bg-shelf-label px-md pt-1.75 pb-xs font-display text-on-sticker uppercase ${
-            compact ? 'text-shelf-compact' : 'text-shelf'
-          }`}
+      <div className="flex max-w-full items-center gap-sm">
+        <div
+          role="img"
+          aria-label={label ?? items.join(' · ')}
+          className="min-w-0 rounded-rail bg-case p-1.25"
         >
-          {items.map((item, index) => (
-            <Fragment key={item}>
-              {index > 0 && (
-                <span
-                  aria-hidden="true"
-                  className={`size-2 shrink-0 rounded-round ${DOTS[(index - 1) % DOTS.length]}`}
-                />
-              )}
-              <span aria-hidden="true">{item}</span>
-            </Fragment>
-          ))}
-        </p>
+          {/* `text-shelf`, not `text-shelf-label`: the colour of the same name
+           * would paint the text in the label's own colour. */}
+          <p
+            className={`rounded-plate bg-shelf-label px-md pt-1.75 pb-xs font-display text-on-sticker uppercase ${
+              compact ? 'text-shelf-compact' : 'text-shelf'
+            } ${single ? 'truncate' : 'flex flex-wrap items-center gap-x-sm gap-y-2xs'}`}
+          >
+            {items.map((item, index) => (
+              <Fragment key={item}>
+                {index > 0 && (
+                  <span
+                    aria-hidden="true"
+                    className={`${dot} rounded-round ${DOTS[(index - 1) % DOTS.length]}`}
+                  />
+                )}
+                <span aria-hidden="true">{item}</span>
+              </Fragment>
+            ))}
+          </p>
+        </div>
+        {tag && (
+          <span className="shrink-0 font-display text-meta text-ink-2">
+            {tag}
+          </span>
+        )}
       </div>
       {note && <HandNote compact={compact}>{note}</HandNote>}
     </div>
@@ -59,12 +76,12 @@ export function ShelfLabel({
 
 /** The yellow paper with a short phrase in marker, stuck at -2° (The Hand
  * Is Short Rule: one sentence, never a number to check). */
-function HandNote({
+export function HandNote({
   children,
-  compact,
+  compact = false,
 }: {
   children: string
-  compact: boolean
+  compact?: boolean
 }) {
   return (
     <p

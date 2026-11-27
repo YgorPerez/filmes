@@ -9,6 +9,7 @@ export const SHELL = {
     taste: 'Meu gosto',
   },
   account: (name: string) => `Sua conta: ${name}`,
+  signedInAs: 'Entrou com',
   menu: 'Conta',
   operations: 'Operações',
   pushFailing: 'envio falhando',

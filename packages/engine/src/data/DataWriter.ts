@@ -86,7 +86,15 @@ export interface PushStatus {
   readonly lastError: string | null
   /** Pushes keep failing: show the banner to `admin: true` Pessoas. */
   readonly alert: boolean
+  /** When a push last worked in this process (ISO 8601), or null. */
+  readonly lastPushedAt: string | null
+  /** The subjects of the commits in the queue, newest first, at most
+   * `QUEUED_SHOWN`. */
+  readonly queued: ReadonlyArray<string>
 }
+
+/** How many of the queued commits the status names. */
+const QUEUED_SHOWN = 5
 
 /** Failed attempts in a row before the banner shows. */
 export const ALERT_AFTER_FAILURES = 3
@@ -212,7 +220,9 @@ const branchOf = (root: string) =>
     out.trim(),
   )
 
-const pendingIn = (root: string, branch: string) =>
+/** The commits not on the remote yet: how many, and the subjects of the
+ * newest. */
+const queueIn = (root: string, branch: string) =>
   Effect.gen(function* () {
     const tracking = `refs/remotes/${REMOTE}/${branch}`
     const known = yield* runGit(root, [
@@ -222,9 +232,26 @@ const pendingIn = (root: string, branch: string) =>
       tracking,
     ])
     const range = known.code === 0 ? `${tracking}..HEAD` : 'HEAD'
-    const out = yield* git(root, ['rev-list', '--count', range])
-    return Number(out.trim())
+    const count = Number(
+      (yield* git(root, ['rev-list', '--count', range])).trim(),
+    )
+    const subjects =
+      count === 0
+        ? ''
+        : yield* git(root, [
+            'log',
+            `--max-count=${QUEUED_SHOWN}`,
+            '--format=%s',
+            range,
+          ])
+    return {
+      pending: count,
+      queued: subjects.split('\n').filter((line) => line !== ''),
+    }
   })
+
+const pendingIn = (root: string, branch: string) =>
+  Effect.map(queueIn(root, branch), (queue) => queue.pending)
 
 /** The remote named `origin` points at `FILMES_DATA_REMOTE`. */
 const ensureRemote = (root: string, url: string) =>
@@ -256,30 +283,47 @@ interface Pushing {
   readonly remote: string | undefined
   readonly keyPath: string | undefined
   readonly failures: Ref.Ref<Failures>
+  /** When a push last worked, in this process. */
+  readonly lastPushed: Ref.Ref<number | null>
 }
 
-const statusWith = (pushing: Pushing, pending: number, enabled: boolean) =>
-  Effect.map(Ref.get(pushing.failures), (f): PushStatus => ({
-    enabled,
-    pending,
-    failures: f.count,
-    failingSince: f.since === null ? null : new Date(f.since).toISOString(),
-    lastError: f.lastError,
-    alert: f.count >= ALERT_AFTER_FAILURES,
-  }))
+const NO_QUEUE = { pending: 0, queued: [] } as const
+
+const iso = (time: number | null) =>
+  time === null ? null : new Date(time).toISOString()
+
+const statusWith = (
+  pushing: Pushing,
+  queue: { pending: number; queued: ReadonlyArray<string> },
+  enabled: boolean,
+) =>
+  Effect.gen(function* () {
+    const f = yield* Ref.get(pushing.failures)
+    const lastPushed = yield* Ref.get(pushing.lastPushed)
+    return {
+      enabled,
+      pending: queue.pending,
+      failures: f.count,
+      failingSince: iso(f.since),
+      lastError: f.lastError,
+      alert: f.count >= ALERT_AFTER_FAILURES,
+      lastPushedAt: iso(lastPushed),
+      queued: queue.queued,
+    } satisfies PushStatus
+  })
 
 const queueStatus = (pushing: Pushing): Effect.Effect<PushStatus> =>
   Effect.gen(function* () {
     if (pushing.remote === undefined)
-      return yield* statusWith(pushing, 0, false)
+      return yield* statusWith(pushing, NO_QUEUE, false)
     const repo = yield* pushing.openRepo
-    if (!repo.git) return yield* statusWith(pushing, 0, false)
+    if (!repo.git) return yield* statusWith(pushing, NO_QUEUE, false)
     const branch = yield* branchOf(repo.root)
-    return yield* statusWith(pushing, yield* pendingIn(repo.root, branch), true)
+    return yield* statusWith(pushing, yield* queueIn(repo.root, branch), true)
   }).pipe(
     Effect.catch((error) =>
       Effect.flatMap(Ref.get(pushing.failures), (f) =>
-        statusWith(pushing, 0, true).pipe(
+        statusWith(pushing, NO_QUEUE, true).pipe(
           Effect.map((s) => ({
             ...s,
             lastError: f.lastError ?? scrub(error.message, pushing.keyPath),
@@ -302,13 +346,14 @@ const attempt = (pushing: Pushing, url: string) =>
   Effect.gen(function* () {
     const repo = yield* pushing.openRepo
     const branch = yield* branchOf(repo.root)
-    if ((yield* pendingIn(repo.root, branch)) === 0) return
+    if ((yield* pendingIn(repo.root, branch)) === 0) return false
     yield* ensureRemote(repo.root, url)
     yield* git(
       repo.root,
       ['push', '--quiet', REMOTE, `HEAD:refs/heads/${branch}`],
       sshEnv(pushing.keyPath),
     )
+    return true
   })
 
 const pushWith = (
@@ -316,12 +361,20 @@ const pushWith = (
   pushLock: Semaphore.Semaphore,
 ): Effect.Effect<PushStatus> =>
   pushing.remote === undefined
-    ? statusWith(pushing, 0, false)
+    ? statusWith(pushing, NO_QUEUE, false)
     : pushLock.withPermits(1)(
         attempt(pushing, pushing.remote).pipe(
           Effect.matchEffect({
             onFailure: (error) => failed(pushing, error.message),
-            onSuccess: () => Ref.set(pushing.failures, NO_FAILURES),
+            onSuccess: (pushed) =>
+              Effect.gen(function* () {
+                yield* Ref.set(pushing.failures, NO_FAILURES)
+                if (pushed)
+                  yield* Ref.set(
+                    pushing.lastPushed,
+                    yield* Clock.currentTimeMillis,
+                  )
+              }),
           }),
           Effect.andThen(queueStatus(pushing)),
         ),
@@ -396,6 +449,7 @@ export class DataWriter extends Context.Service<
           keyPath:
             env.dataKey === undefined ? undefined : Redacted.value(env.dataKey),
           failures: yield* Ref.make<Failures>(NO_FAILURES),
+          lastPushed: yield* Ref.make<number | null>(null),
         }
         const pushLock = yield* Semaphore.make(1)
         const kicks = yield* Queue.sliding<void>(1)

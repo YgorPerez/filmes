@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useState, type FormEvent } from 'react'
 import {
   DEFAULT_SERIES_ORDER_CHOICE,
   isSessionRequestRefusal,
@@ -32,7 +32,7 @@ import {
   Submit,
   TextField,
 } from './person-parts'
-import { SESSIONS } from './sessions.copy'
+import { SESSIONS, spoken } from './sessions.copy'
 
 // --- "Em uma frase" ------------------------------------------------------------
 //
@@ -47,24 +47,40 @@ import { SESSIONS } from './sessions.copy'
 const labels = (candidates: readonly { label: string }[]) =>
   candidates.map((candidate) => candidate.label)
 
+type Ambiguity = PageReading['ambiguities'][number]
+
+/** The reading's doubts by how they show: a title of several films lists
+ * them, with "Usar"; a title the Catálogo does not have, the search with
+ * the words in it; the rest is a line. */
+function sortAmbiguities(ambiguities: readonly Ambiguity[]) {
+  const films: Ambiguity[] = []
+  const missing: Ambiguity[] = []
+  const others: Ambiguity[] = []
+  for (const a of ambiguities) {
+    if (a.field !== 'similar') others.push(a)
+    else if (a.candidates.length > 0) films.push(a)
+    else missing.push(a)
+  }
+  return { films, missing, others }
+}
+
 function ReadingSaid({
   reading,
   pick,
   onPick,
+  owner,
 }: {
   reading: PageReading
   pick: (id: string) => string
   onPick?: (film: ChosenFilm & { label: string }) => void
+  /** The logged-in Dono's name: she is "você" in the sentence. */
+  owner?: string
 }) {
   const said = SESSIONS.form.reading
-  // A title of several films lists them, with "Usar"; the rest is a line.
-  const isFilms = (a: PageReading['ambiguities'][number]) =>
-    a.field === 'similar' && a.candidates.length > 0
-  const films = reading.ambiguities.filter(isFilms)
-  const others = reading.ambiguities.filter((a) => !isFilms(a))
+  const { films, missing, others } = sortAmbiguities(reading.ambiguities)
   const lines = [
     reading.understood.length > 0
-      ? said.understood(reading.understood)
+      ? said.understood(reading.understood.map((label) => spoken(label, owner)))
       : said.nothing,
     reading.notUnderstood.length > 0 &&
       said.notUnderstood(reading.notUnderstood),
@@ -85,6 +101,17 @@ function ReadingSaid({
           </span>
         ))}
       </Notice>
+      {missing.map((a) => (
+        <p key={a.words} className="text-meta">
+          {said.missing(a.words)}{' '}
+          <a
+            href={`/sessoes/nova?${new URLSearchParams({ buscar: a.words }).toString()}`}
+            className="font-semibold text-ink"
+          >
+            {said.missingSearch}
+          </a>
+        </p>
+      ))}
       {films.map((a) => (
         <div key={a.words} className="flex flex-col gap-xs">
           <p className="text-meta">{said.similarAmbiguous(a.words)}</p>
@@ -117,12 +144,14 @@ function Sentence({
   pick,
   onPick,
   busy,
+  owner,
 }: {
   text?: string
   reading: PageReading | null
   pick: (id: string) => string
   onPick?: (film: ChosenFilm & { label: string }) => void
   busy: string | null
+  owner?: string
 }) {
   const { form } = SESSIONS
   return (
@@ -146,7 +175,14 @@ function Sentence({
           {busy === 'ler' ? form.reading.busy : form.read}
         </Submit>
       </div>
-      {reading && <ReadingSaid reading={reading} pick={pick} onPick={onPick} />}
+      {reading && (
+        <ReadingSaid
+          reading={reading}
+          pick={pick}
+          onPick={onPick}
+          owner={owner}
+        />
+      )}
     </div>
   )
 }
@@ -177,21 +213,13 @@ const ruleChoice = (rule: Asked['rule']) =>
 /** The refusals about a field under "Mais opções", which opens to show
  * it. */
 const DETAILS_REFUSALS: ReadonlySet<SessionRequestRefusal> =
-  new Set<SessionRequestRefusal>([
-    'de',
-    'quantos',
-    'duracao',
-    'anos',
-    'crianca',
-    'pedido',
-  ])
+  new Set<SessionRequestRefusal>(['de', 'quantos', 'anos', 'crianca', 'pedido'])
 
 /** Whether the draft set a field under "Mais opções": then it comes
  * open, so what "Ler" or the Dono filled stays in sight. */
 const detailsAsked = (asked: Asked) =>
   [
     asked.count,
-    asked.maxDuration,
     asked.since,
     asked.until,
     asked.language,
@@ -203,6 +231,30 @@ const detailsAsked = (asked: Asked) =>
   (asked.rule !== undefined && asked.rule !== 'default') ||
   (asked.seriesOrder !== undefined &&
     asked.seriesOrder !== SERIES_ORDER_CHOICES[DEFAULT_SERIES_ORDER_CHOICE])
+
+/** The night the form asks for so far, as the shelf label would say it:
+ * who ("você", "vocês dois"), the duration and the Climas. */
+function nightOf(data: FormData, options: RequestOptions): string[] {
+  const people = data.getAll('presentes').map(String)
+  const one = options.people.find((p) => p.person === people[0])
+  const who =
+    people.length === 0
+      ? null
+      : people.length === 1
+        ? one?.owner
+          ? 'você'
+          : (one?.name ?? null)
+        : SESSIONS.form.together(people.length)
+  const minutes = Number(data.get('duracao'))
+  const hours = Math.floor(minutes / 60)
+  const duration =
+    minutes > 0
+      ? `até ${hours > 0 ? `${hours}h${minutes % 60 ? String(minutes % 60).padStart(2, '0') : ''}` : `${minutes}min`}`
+      : null
+  return [who, duration, ...data.getAll('climas').map(String)].filter(
+    (item): item is string => item !== null,
+  )
+}
 
 /** A number field's value as the input holds it. */
 const inputValue = (value: number | string | undefined) =>
@@ -238,6 +290,7 @@ export function NewSession({
   similar,
   draft = null,
   note,
+  attendees,
 }: {
   options: RequestOptions | null
   refusal?: SessionRequestRefusal
@@ -245,6 +298,9 @@ export function NewSession({
   similar?: string
   draft?: NewSessionDraft | null
   note?: string
+  /** The Presentes to start with: "Pedir filme de novo com essa turma"
+   * (#272). */
+  attendees?: readonly string[]
 }) {
   const { form } = SESSIONS
   // The films of the draft, then the ones "Usar" took since.
@@ -267,10 +323,34 @@ export function NewSession({
           search={search}
           note={note}
           refusal={refusal}
+          attendees={attendees}
         />
       )}
     </ImportsFrame>
   )
+}
+
+/** The form's fields to start with: the draft's, or the Presentes asked
+ * for. */
+const startingFields = (
+  draft: NewSessionDraft | null,
+  attendees: readonly string[] | undefined,
+): Asked => draft?.fields ?? (attendees ? { attendees: [...attendees] } : {})
+
+/** The night the form asks for so far, kept as the Dono changes it: on
+ * the bar by Recomendar (#272). */
+function useNight(options: RequestOptions) {
+  const [night, setNight] = useState<string[] | null>(null)
+  const listen = (event: FormEvent<HTMLFormElement>) =>
+    setNight(nightOf(new FormData(event.currentTarget), options))
+  // What the form starts with, once it is in the page.
+  const start = useCallback(
+    (form: HTMLFormElement | null) => {
+      if (form) setNight(nightOf(new FormData(form), options))
+    },
+    [options],
+  )
+  return { night, listen, start }
 }
 
 function NewSessionForm({
@@ -281,6 +361,7 @@ function NewSessionForm({
   search,
   note,
   refusal,
+  attendees,
 }: {
   options: RequestOptions
   similar?: string
@@ -289,9 +370,10 @@ function NewSessionForm({
   search: SearchAnswer | null
   note?: string
   refusal?: SessionRequestRefusal
+  attendees?: readonly string[]
 }) {
   const { form } = SESSIONS
-  const asked = draft?.fields ?? {}
+  const asked = startingFields(draft, attendees)
   const live = useHydrated()
   const { refused, alert, onAnswer } = useRefusalInPlace(
     refusal,
@@ -299,13 +381,15 @@ function NewSessionForm({
   )
   const { onSubmit, busy, failed } = useFetchForm(onAnswer)
   const films = useChosenFilms(similar)
-  const onPick = live ? films.take : undefined
+  const { night, listen, start } = useNight(options)
   return (
     <form
+      ref={start}
       method="post"
       action="/sessoes/nova/enviar"
       aria-label={form.label}
       onSubmit={onSubmit}
+      onChange={listen}
       className="flex flex-col gap-3xl"
     >
       {/* Enter in any field sends the form, as before "Ler" came above:
@@ -326,11 +410,24 @@ function NewSessionForm({
         text={asked.request}
         reading={draft?.reading ?? null}
         pick={pick}
-        onPick={onPick}
+        onPick={live ? films.take : undefined}
         busy={busy}
+        owner={options.people.find((p) => p.owner)?.name}
       />
       <Attendees options={options} asked={asked} />
       <Moods moods={options.moods} asked={asked} />
+      <Section id="duracao" title={form.time}>
+        <div className={grid}>
+          <TextField
+            name="duracao"
+            type="number"
+            min={1}
+            label={form.duration}
+            hint={form.durationHint}
+            defaultValue={inputValue(asked.maxDuration)}
+          />
+        </div>
+      </Section>
       <div className="flex flex-col gap-sm">
         <Similar
           open={
@@ -344,28 +441,60 @@ function NewSessionForm({
           pick={pick}
           films={live ? films : null}
         />
-        <Disclosure
-          summary={form.details}
-          open={
-            detailsAsked(asked) ||
-            (refused !== undefined && DETAILS_REFUSALS.has(refused))
-          }
-        >
-          <div className="flex flex-col gap-xl">
-            <Constraints asked={asked} />
-            <Rule options={options} asked={asked} />
-            <SeriesOrder asked={asked} />
-          </div>
-        </Disclosure>
+        <Details options={options} asked={asked} refused={refused} />
       </div>
-      <Submit
-        variant="primary"
-        disabled={busy !== null}
-        className="w-full sm:w-auto sm:self-start"
-      >
+      <RecommendBar night={night} busy={busy} />
+    </form>
+  )
+}
+
+/** "Mais opções": the Restrições, the Regra and the Série na ordem, open
+ * when the draft set one or a refusal is about one. */
+function Details({
+  options,
+  asked,
+  refused,
+}: {
+  options: RequestOptions
+  asked: Asked
+  refused: SessionRequestRefusal | undefined
+}) {
+  return (
+    <Disclosure
+      summary={SESSIONS.form.details}
+      open={
+        detailsAsked(asked) ||
+        (refused !== undefined && DETAILS_REFUSALS.has(refused))
+      }
+    >
+      <div className="flex flex-col gap-3xl">
+        <Constraints asked={asked} />
+        <Rule options={options} asked={asked} />
+        <SeriesOrder asked={asked} />
+      </div>
+    </Disclosure>
+  )
+}
+
+/** Recomendar stays a thumb away, above the tabs, with the night so far
+ * (#272). */
+function RecommendBar({
+  night,
+  busy,
+}: {
+  night: readonly string[] | null
+  busy: string | null
+}) {
+  const { form } = SESSIONS
+  return (
+    <div className="sticky bottom-[calc(68px+env(safe-area-inset-bottom))] z-10 -mx-lg flex items-center justify-between gap-md rounded-t-panel border-x border-t border-rule bg-surface px-lg py-sm min-[900px]:bottom-0">
+      <p className="min-w-0 font-display text-label text-ink-2 uppercase">
+        {night?.join(' · ')}
+      </p>
+      <Submit variant="primary" disabled={busy !== null} className="shrink-0">
         {busy !== null && busy !== 'ler' ? form.submitting : form.submit}
       </Submit>
-    </form>
+    </div>
   )
 }
 
@@ -474,7 +603,7 @@ function Rule({ options, asked }: { options: RequestOptions; asked: Asked }) {
   const { form } = SESSIONS
   const chosen = ruleChoice(asked.rule)
   return (
-    <Section id="regra" title={form.rule}>
+    <Section id="regra" title={form.rule} plain>
       <div className="flex flex-col gap-sm" role="radiogroup">
         {Object.keys(RULE_CHOICES).map((value) => (
           <Option
@@ -508,7 +637,12 @@ function Rule({ options, asked }: { options: RequestOptions; asked: Asked }) {
 function SeriesOrder({ asked }: { asked: Asked }) {
   const { form } = SESSIONS
   return (
-    <Section id="serie" title={form.seriesOrder} lead={form.seriesOrderLead}>
+    <Section
+      id="serie"
+      title={form.seriesOrder}
+      lead={form.seriesOrderLead}
+      plain
+    >
       <div className="flex flex-col gap-sm" role="radiogroup">
         {(
           Object.keys(
@@ -570,6 +704,7 @@ function Constraints({ asked }: { asked: Asked }) {
       id="restricoes"
       title={form.constraints}
       lead={form.constraintsLead}
+      plain
     >
       <div className="flex flex-col gap-sm">
         <Option name="sem-ja-visto" shape="row" defaultChecked={asked.unseen}>
@@ -585,14 +720,6 @@ function Constraints({ asked }: { asked: Asked }) {
         </div>
       </div>
       <div className={grid}>
-        <TextField
-          name="duracao"
-          type="number"
-          min={1}
-          label={form.duration}
-          hint={form.durationHint}
-          defaultValue={inputValue(asked.maxDuration)}
-        />
         <SelectField
           name="crianca"
           label={form.child}

@@ -10,7 +10,7 @@ const meta = {
   args: {
     person: 'bruno',
     start: {
-      setup: setupOf({ taste: 'done', import: 'skipped' }, 12),
+      setup: setupOf({ taste: 'skipped' }, 3),
       mcpUrl: MCP_URL,
     },
   },
@@ -20,7 +20,7 @@ export default meta
 
 type Story = StoryObj<typeof meta>
 
-export const SkippedImport: Story = {
+export const SkippedTaste: Story = {
   play: async ({ canvasElement }) => {
     await expect(within(canvasElement).getByText(MCP_URL)).toBeVisible()
   },

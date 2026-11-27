@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import {
   isReplyRefusal,
   type ReplyRefusal,
@@ -16,16 +16,17 @@ import type { SessionItem } from '#/platform/sessions'
 import { Billboard } from './billboard'
 import { forgetMarks, openStorage } from './billboard-marks'
 import { useFetchForm } from './kit/fetch-form'
-import { ImportsFrame } from './imports'
 import { RowArrow } from './kit/row-arrow'
 import { Slip } from './kit/slip'
 import { buttonVariants } from './kit/button-variants'
-import { Alert, Notice, PostFailed } from './kit/status'
+import { Alert, PostFailed } from './kit/status'
 import { names } from './session-names'
 import { Avatars, SessionDate, NewSessionLink } from './session-parts'
+import { ChosenReactions } from './billboard-chosen'
+import { Icon } from './kit/icon'
 import { PairwiseAnswers } from './pairwise-answers'
 import { ShareSessionLink } from './session-link-share'
-import { SESSIONS } from './sessions.copy'
+import { SESSIONS, spoken } from './sessions.copy'
 
 /** "Contar como foi": the Session's Feedback form. */
 function FeedbackLink({ session }: { session: string }) {
@@ -42,6 +43,14 @@ function FeedbackLink({ session }: { session: string }) {
 /** What a closed Session ended with. */
 const outcome = (s: SessionItem) =>
   s.chosen ? SESSIONS.list.chosen(s.chosen.title) : SESSIONS.list.nothing
+
+/** An open Session's shelf by title (#272): what the night was, at a
+ * glance; the first three and how many more. */
+const shelfOf = (s: SessionItem) => {
+  const titles = s.recommendation.map((film) => film.title)
+  if (titles.length === 0) return SESSIONS.films(0)
+  return SESSIONS.list.shelf(titles.slice(0, 3), titles.length - 3)
+}
 
 function SessionRow({ session: s }: { session: SessionItem }) {
   const context = [...s.moods, ...s.constraints].join(', ')
@@ -67,10 +76,10 @@ function SessionRow({ session: s }: { session: SessionItem }) {
           </a>
         }
       >
-        <div className="flex flex-wrap items-center justify-between gap-x-2xl gap-y-sm">
+        <div className="flex flex-col gap-sm">
           <div className="min-w-0">
-            <p className="font-medium">
-              {s.open ? SESSIONS.films(s.recommendation.length) : outcome(s)}
+            <p className="font-medium text-pretty">
+              {s.open ? shelfOf(s) : outcome(s)}
             </p>
             {s.request && (
               <p className="mt-2xs text-ink-2 wrap-anywhere">{s.request}</p>
@@ -79,10 +88,31 @@ function SessionRow({ session: s }: { session: SessionItem }) {
               <p className="mt-2xs text-meta text-ink-2">{context}</p>
             )}
           </div>
-          {s.open && <FeedbackLink session={s.id} />}
+          {s.open && (
+            <div className="flex justify-end">
+              <FeedbackLink session={s.id} />
+            </div>
+          )}
         </div>
       </Slip>
     </li>
+  )
+}
+
+/** No Session, or none to tell (#272): what a Session is and the way to
+ * one, or what goes here once a film was seen. */
+function EmptyList({ pendingOnly }: { pendingOnly: boolean }) {
+  const { list } = SESSIONS
+  return (
+    <section className="flex flex-col items-start gap-md">
+      <h2 className="font-display text-title">
+        {pendingOnly ? list.pendingEmpty : list.empty}
+      </h2>
+      <p className="max-w-[60ch] text-ink-2">
+        {pendingOnly ? list.pendingEmptyLead : list.emptyLead}
+      </p>
+      {!pendingOnly && <NewSessionLink>{list.emptyAction}</NewSessionLink>}
+    </section>
   )
 }
 
@@ -127,9 +157,7 @@ export function SessionList({
       {sessions === null ? (
         <Alert>{SESSIONS.unavailable}</Alert>
       ) : sessions.length === 0 ? (
-        <p className="text-ink-2">
-          {pendingOnly ? list.pendingEmpty : list.empty}
-        </p>
+        <EmptyList pendingOnly={pendingOnly} />
       ) : (
         <ul
           aria-label={pendingOnly ? list.pending : list.title}
@@ -148,48 +176,114 @@ export function SessionList({
  * comments, acrescentar; Enviar posts to `/sessoes/<id>/responder`). `page`
  * is `'unknown'` when there is no Session by that id, null when the engine
  * cannot run on this server; `notice` and `refusal` are what the form or
- * the last reply said. */
+ * the last reply said, and `words` the acrescentar's words the reading did
+ * not take. No Voltar: the Sessões tab is the way back (#272). */
 export function SessionScreen({
   page,
   notice,
   refusal,
+  words,
 }: {
   page: CartazPage | 'unknown' | null
   notice?: SessionNotice
   refusal?: ReplyRefusal
+  words?: readonly string[]
 }) {
   return (
-    <ImportsFrame back={SESSIONS.back} backTo="/sessoes">
+    <main className="mx-auto flex max-w-[720px] flex-col gap-2xl px-2xl pt-xl pb-3xl">
       {page === null ? (
         <Alert>{SESSIONS.unavailable}</Alert>
       ) : page === 'unknown' ? (
-        <Alert>{SESSIONS.session.unknown}</Alert>
+        <UnknownSession />
       ) : (
         <SessionView
           key={page.session.id}
           page={page}
           notice={notice}
           refusal={refusal}
+          words={words}
         />
       )}
-    </ImportsFrame>
+    </main>
   )
 }
 
-const labels = (candidates: readonly { label: string }[]) =>
-  candidates.map((c) => c.label)
-
-/** The acrescentar, what went into the request from it, and what did
- * not. */
-function readingText(addition: string, reading: PageReading): string {
+/** No Session by that id: what it is, and the two ways on (#272). */
+function UnknownSession() {
   const { session } = SESSIONS
+  return (
+    <section className="flex flex-col gap-lg">
+      <h1 className="font-display text-counter-title">{session.unknown}</h1>
+      <p className="text-ink-2">{session.unknownLead}</p>
+      <div className="flex flex-wrap gap-sm">
+        <a
+          href={SESSIONS_PATH}
+          className={buttonVariants({ variant: 'option' })}
+        >
+          {session.toList}
+        </a>
+        <NewSessionLink>{session.toNew}</NewSessionLink>
+      </div>
+    </section>
+  )
+}
+
+/** The page's head in one line (#272): the day, who was there, and the
+ * ⋯ menu with the Link para os Presentes and "Contar como foi". */
+function SessionHead({ page }: { page: CartazPage }) {
+  const s = page.session
+  const menu = s.open
+  return (
+    <header className="flex items-start justify-between gap-md">
+      <div className="flex min-w-0 flex-col gap-2xs">
+        <h1 className="font-display text-counter-title">
+          <SessionDate date={s.date} />
+        </h1>
+        <p className="flex min-w-0 items-center gap-sm text-meta text-ink-2">
+          <Avatars people={s.attendees} />
+          <span className="min-w-0 truncate">{names(s.attendees)}</span>
+        </p>
+      </div>
+      {menu && (
+        <details className="relative shrink-0">
+          <summary
+            aria-label={SESSIONS.session.menu}
+            className="grid size-touch cursor-pointer list-none place-items-center rounded-round border-(length:--border-width-stroke) border-rule bg-surface font-display text-title leading-none text-ink [&::-webkit-details-marker]:hidden"
+          >
+            <span aria-hidden="true">⋯</span>
+          </summary>
+          <div className="absolute top-full right-0 z-20 mt-xs flex w-max max-w-[calc(100vw-32px)] flex-col gap-sm rounded-card border border-rule bg-surface p-lg">
+            <FeedbackLink session={s.id} />
+            {page.sessionLink && (
+              <ShareSessionLink key={s.id} url={page.sessionLink} />
+            )}
+          </div>
+        </details>
+      )}
+    </header>
+  )
+}
+
+/** What the acrescentar became, in one sentence (#272): what went into
+ * the request, what stayed only as a note, and what to say next time. */
+function readingText(
+  addition: string,
+  reading: PageReading,
+  owner?: string,
+): string {
+  const { session } = SESSIONS
+  const understood = reading.understood.map((label) => spoken(label, owner))
   return [
-    session.additionRead(addition),
-    reading.understood.length > 0 && session.additionAdded(reading.understood),
+    understood.length > 0
+      ? session.understood(understood)
+      : session.additionRead(addition),
     reading.notUnderstood.length > 0 &&
       session.additionNotUnderstood(reading.notUnderstood),
     ...reading.ambiguities.map((a) =>
-      session.additionAmbiguous(a.words, labels(a.candidates)),
+      session.additionAmbiguous(
+        a.words,
+        a.candidates.map((c) => c.label),
+      ),
     ),
     session.additionTaste,
   ]
@@ -197,10 +291,12 @@ function readingText(addition: string, reading: PageReading): string {
     .join(' ')
 }
 
-/** What the last reply or the form left to say: the warnings, and the
- * acrescentar, which is gosto only after the Dono's yes. */
+/** What the last reply or the form left to say, as quiet lines: the
+ * warnings, and the acrescentar, which is gosto only after the Dono's
+ * yes. */
 function Said({ page }: { page: CartazPage }) {
   const { session } = SESSIONS
+  const owner = page.billboard?.attendees.find((p) => p.owner)?.name
   return (
     <>
       {page.warnings.length > 0 && (
@@ -217,46 +313,124 @@ function Said({ page }: { page: CartazPage }) {
         </div>
       )}
       {page.addition && (
-        <Notice>
+        <p role="status" className="text-meta text-pretty text-ink-2">
           {page.reading
-            ? readingText(page.addition, page.reading)
+            ? readingText(page.addition, page.reading, owner)
             : session.addition(page.addition)}{' '}
           <a href="/pessoas" className="font-semibold text-ink">
             {session.additionLink}
           </a>
-        </Notice>
+        </p>
       )}
     </>
   )
 }
 
-function SessionView({
-  page,
-  notice,
-  refusal,
-}: {
-  page: CartazPage
-  notice?: SessionNotice
-  refusal?: ReplyRefusal
-}) {
+/** The notices the page still says in words: the rest show on the
+ * Cartaz itself (a new Session, a redo, a told one). */
+const SPOKEN_NOTICES: ReadonlySet<SessionNotice> = new Set<SessionNotice>([
+  'anotada',
+  'perguntas-gravadas',
+  'perguntas-descartadas',
+])
+
+/** A told Session opens with the tape given back (#272): the film they
+ * saw and how each one took it, who the group weighs more next time, and
+ * the same group again. */
+function TapeReturned({ page }: { page: CartazPage }) {
   const { session } = SESSIONS
   const s = page.session
   const billboard = page.billboard
-  const [sentReplies, setSentReplies] = useState(0)
-  const [rejection, setRejection] = useState<{ reason: ReplyRefusal } | null>(
-    null,
+  const card = billboard?.films.find((film) => film.reactions)
+  const reactions = card?.reactions ?? billboard?.chosen?.reactions ?? []
+  const title = s.chosen?.title
+  const again = `/sessoes/nova?${new URLSearchParams({
+    presentes: s.attendees.map((a) => a.person).join(','),
+  }).toString()}`
+  return (
+    <section
+      aria-labelledby="fita-devolvida"
+      className="flex flex-col gap-lg rounded-card border-2 border-ink bg-surface p-xl"
+    >
+      <h2
+        id="fita-devolvida"
+        className="font-display text-label text-ink-2 uppercase"
+      >
+        {session.returned}
+      </h2>
+      {title ? (
+        <p className="font-display text-title">{title}</p>
+      ) : (
+        <p className="font-display text-title">{session.returnedNothing}</p>
+      )}
+      {billboard && reactions.length > 0 && (
+        <ChosenReactions
+          reactions={reactions}
+          people={billboard.attendees}
+          bare
+        />
+      )}
+      {page.satisfaction && page.satisfaction.length > 0 && (
+        <div className="flex flex-col gap-xs text-meta text-ink-2">
+          <p>{session.satisfaction}</p>
+          <ul className="list-disc pl-5">
+            {page.satisfaction.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      <a
+        href={again}
+        className={buttonVariants({
+          variant: 'option',
+          className: 'self-start',
+        })}
+      >
+        {session.again}
+      </a>
+    </section>
   )
+}
 
-  const { onSubmit, busy, failed } = useFetchForm((to) => {
+type BillboardOf = NonNullable<CartazPage['billboard']>
+
+/** Told, the shelf folds without the film they saw: the tape above has
+ * it. */
+function foldedShelf(billboard: BillboardOf): BillboardOf {
+  const chosenId = billboard.films.find((film) => film.reactions)?.id
+  return {
+    ...billboard,
+    films: billboard.films.filter((film) => film.id !== chosenId),
+    sections: billboard.sections
+      .map((section) => ({
+        ...section,
+        films: section.films.filter((id) => id !== chosenId),
+      }))
+      .filter((section) => section.films.length > 0),
+    chosen: undefined,
+  }
+}
+
+type Rejection = { reason: ReplyRefusal; words: readonly string[] }
+
+/** The reply's post: a refusal comes back in place (`rejection`), and a
+ * reply that went counts in `sentReplies` once the new Cartaz is in. */
+function useReplyPost(id: string, billboard: CartazPage['billboard']) {
+  const [sentReplies, setSentReplies] = useState(0)
+  const [editing, setEditing] = useState(false)
+  const [rejection, setRejection] = useState<Rejection | null>(null)
+  const post = useFetchForm((to) => {
     const url = new URL(to, window.location.origin)
     if (
       url.origin !== window.location.origin ||
-      url.pathname !== sessionPath(s.id)
+      url.pathname !== sessionPath(id)
     )
       return false
     const reason = url.searchParams.get('erro')
     if (isReplyRefusal(reason)) {
-      setRejection({ reason })
+      setEditing(false)
+      setRejection({ reason, words: url.searchParams.getAll('palavra') })
       return true
     }
     setRejection(null)
@@ -268,61 +442,196 @@ function SessionView({
       setSentReplies((n) => n + 1)
     }
   })
-  const refused = rejection?.reason ?? refusal
+  return { ...post, sentReplies, editing, setEditing, rejection }
+}
+
+/** The refusal and the post that failed, scrolled into sight when they
+ * come. */
+function ReplyAlerts({
+  refused,
+  rejection,
+  failed,
+}: {
+  /** The refusal to alert, if any. */
+  refused: ReplyRefusal | undefined
+  /** The refusal that came back in place. */
+  rejection: Rejection | null
+  failed: boolean
+}) {
   const alert = useRef<HTMLDivElement>(null)
   useEffect(() => {
-    if (rejection || failed) alert.current?.scrollIntoView({ block: 'nearest' })
-  }, [rejection, failed])
+    if ((rejection && refused) || failed)
+      alert.current?.scrollIntoView({ block: 'nearest' })
+  }, [rejection, refused, failed])
+  if (!refused && !failed) return null
+  return (
+    <div ref={alert}>
+      {refused && <Alert>{SESSIONS.session.refusals[refused]}</Alert>}
+      <PostFailed failed={failed} />
+    </div>
+  )
+}
+
+/** A closed Session's shelf, folded under the tape. */
+function ClosedShelf({
+  chosen,
+  others,
+  children,
+}: {
+  chosen: boolean
+  others: number
+  children: ReactNode
+}) {
+  const { session } = SESSIONS
+  return (
+    <details className="group/shelf flex flex-col">
+      <summary className="flex min-h-touch cursor-pointer list-none items-center justify-between gap-sm font-display text-row-title [&::-webkit-details-marker]:hidden">
+        {chosen ? session.others(others) : session.shelf}
+        <Icon
+          name="plus"
+          className="size-[18px] text-ink-2 transition-transform group-open/shelf:rotate-45 motion-reduce:transition-none"
+        />
+      </summary>
+      <div className="pt-lg">{children}</div>
+    </details>
+  )
+}
+
+/** The words of the acrescentar the reading did not take, asked in the
+ * bar until the Dono goes back to edit them. */
+function unreadOf(
+  asking: boolean,
+  editing: boolean,
+  words: readonly string[],
+  setEditing: (editing: boolean) => void,
+) {
+  if (!asking || editing) return undefined
+  const onEdit = () => {
+    setEditing(true)
+    const field = document.getElementById('acrescentar')
+    field?.scrollIntoView({ block: 'center' })
+    field?.focus()
+  }
+  return { words, onEdit }
+}
+
+/** The notice of what the last post did, when it is one to say. */
+function SpokenNotice({ notice }: { notice: SessionNotice | undefined }) {
+  if (!notice || !SPOKEN_NOTICES.has(notice)) return null
+  return (
+    <p role="status" className="text-meta text-ink-2">
+      {SESSIONS.session.notices[notice]}
+    </p>
+  )
+}
+
+/** The Cartaz of the Session, or why it cannot show. */
+function SessionBillboard({
+  id,
+  open,
+  shelf,
+  post,
+  sent,
+  unread,
+}: {
+  id: string
+  open: boolean
+  shelf: CartazPage['billboard']
+  post: {
+    onSubmit: ReturnType<typeof useFetchForm>['onSubmit']
+    busy: string | null
+  }
+  sent: boolean
+  unread: ReturnType<typeof unreadOf>
+}) {
+  if (shelf === null) return <Alert>{SESSIONS.unavailable}</Alert>
+  return (
+    <Billboard
+      billboard={shelf}
+      action={`${sessionPath(id)}/responder`}
+      post={{
+        onSubmit: post.onSubmit,
+        busy: post.busy !== null,
+        sending: post.busy === '',
+      }}
+      sent={sent}
+      unread={unread}
+      after={
+        open && (
+          <p className="flex flex-wrap items-center gap-sm text-ink-2">
+            {SESSIONS.session.seenIt} <FeedbackLink session={id} />
+          </p>
+        )
+      }
+    />
+  )
+}
+
+function SessionView({
+  page,
+  notice,
+  refusal,
+  words,
+}: {
+  page: CartazPage
+  notice?: SessionNotice
+  refusal?: ReplyRefusal
+  words?: readonly string[]
+}) {
+  const s = page.session
+  const billboard = page.billboard
+  const {
+    onSubmit,
+    busy,
+    failed,
+    sentReplies,
+    editing,
+    setEditing,
+    rejection,
+  } = useReplyPost(s.id, billboard)
+  const refused = rejection?.reason ?? refusal
+  const unreadWords = rejection ? rejection.words : (words ?? [])
+  // The words the reading did not take are asked in the bar, not alerted.
+  const asking = refused === 'leitura' && unreadWords.length > 0
+  const closed = !s.open
+  const shelf =
+    closed && billboard !== null ? foldedShelf(billboard) : billboard
+  const cartaz = (
+    <SessionBillboard
+      key={`${shelf?.version}:${sentReplies}`}
+      id={s.id}
+      open={s.open}
+      shelf={shelf}
+      post={{ onSubmit, busy }}
+      sent={
+        sentReplies === 0 && (notice === 'regerada' || notice === 'anotada')
+      }
+      unread={unreadOf(asking, editing, unreadWords, setEditing)}
+    />
+  )
+
   return (
     <>
-      <header className="flex flex-col gap-xl border-b border-dashed border-rule pb-xl">
-        <div className="flex flex-wrap items-start justify-between gap-lg">
-          <div className="flex min-w-0 flex-col gap-sm">
-            <h1 className="font-display text-counter-title">
-              {session.title} <SessionDate date={s.date} />
-            </h1>
-            <div className="flex min-w-0 items-center gap-sm">
-              <Avatars people={s.attendees} />
-              <span className="text-ink-2">{names(s.attendees)}</span>
-            </div>
-          </div>
-          {s.open && <FeedbackLink session={s.id} />}
-        </div>
-        {!s.open && (
-          <p className="text-ink-2">
-            <span className="font-semibold text-ink">{session.closed}.</span>{' '}
-            {outcome(s)}.
-          </p>
-        )}
-        {page.sessionLink && (
-          <ShareSessionLink key={s.id} url={page.sessionLink} />
-        )}
-      </header>
-      {notice && <Notice>{session.notices[notice]}</Notice>}
-      {(refused || failed) && (
-        <div ref={alert}>
-          {refused && <Alert>{session.refusals[refused]}</Alert>}
-          <PostFailed failed={failed} />
-        </div>
-      )}
+      <SessionHead page={page} />
+      <SpokenNotice notice={notice} />
+      <ReplyAlerts
+        refused={asking ? undefined : refused}
+        rejection={rejection}
+        failed={failed}
+      />
       <Said page={page} />
       <PairwiseAnswers
         action={`${sessionPath(s.id)}/perguntas`}
         waiting={page.pairwise ?? []}
         post={{ onSubmit, busy }}
       />
-      {billboard === null ? (
-        <Alert>{SESSIONS.unavailable}</Alert>
+      {closed && <TapeReturned page={page} />}
+      {closed && shelf !== null ? (
+        <ClosedShelf chosen={Boolean(s.chosen)} others={shelf.films.length}>
+          {cartaz}
+        </ClosedShelf>
       ) : (
-        <Billboard
-          key={`${billboard.version}:${sentReplies}`}
-          billboard={billboard}
-          action={`${sessionPath(s.id)}/responder`}
-          post={{ onSubmit, busy: busy !== null, sending: busy === '' }}
-          sent={
-            sentReplies === 0 && (notice === 'regerada' || notice === 'anotada')
-          }
-        />
+        cartaz
       )}
     </>
   )

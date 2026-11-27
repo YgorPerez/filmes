@@ -26,3 +26,28 @@ export const WithHint: Story = {
 }
 
 export const WithoutHint: Story = {}
+
+/** A field the form would refuse: marked, with why under it (#268). */
+export const WithError: Story = {
+  args: {
+    label: 'Alvo',
+    hint: 'tt… de um filme ou Q… de uma entidade do Catálogo',
+    error: {
+      id: 'alvo-erro',
+      text: 'Falta o alvo: um filme ou uma entidade pelo ID (tt… ou Q…), ou um grupo de tags.',
+    },
+    children: (
+      <input
+        name="alvo"
+        aria-invalid
+        aria-describedby="alvo-erro"
+        className={FIELD}
+      />
+    ),
+  },
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByRole('textbox', { name: /^Alvo/ }),
+    ).toHaveAccessibleDescription(/Falta o alvo/)
+  },
+}

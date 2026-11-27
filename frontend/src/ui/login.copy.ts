@@ -3,8 +3,15 @@ import type { TraktError } from '#/content/trakt-form'
 
 export const LOGIN = {
   brand: 'filmes',
-  title: 'Entrar no filmes',
-  lead: 'Entre com a conta Google que tem acesso ao filmes.',
+  title: 'Entrar',
+  /** The shelf label over the card: what the site is for, before the
+   * visitor has to know anything else. */
+  tagline: ['Filme pra hoje', 'Pra sala toda'],
+  taglineLabel: 'Filme pra hoje, pra sala toda.',
+  lead: 'Entre com a sua conta Google.',
+  /** Who gets in, before a failed trip to Google says it. */
+  access:
+    'Só entra quem já está em Pessoas como Dono. Peça a quem já usa para pôr o seu e-mail.',
   google: 'Entrar com Google',
   otherAccount: 'Usar outra conta Google',
   refusals: {
@@ -16,7 +23,8 @@ export const LOGIN = {
   } satisfies Record<LoginRefusal, string>,
 } as const
 
-/** `/trakt` (#295): a Pessoa connects her own Trakt, or disconnects it. */
+/** `/trakt` (#295, #269): a Pessoa connects her own Trakt, which the filmes
+ * reads and sends to, or disconnects it. */
 export const TRAKT_SCREEN = {
   title: 'Trakt',
   slip: 'Histórico e notas',
@@ -25,15 +33,16 @@ export const TRAKT_SCREEN = {
     'Entre com o e-mail cadastrado no filmes para conectar sua conta do Trakt.',
   google: 'Entrar com Google',
   connected:
-    'Sua conta está conectada. Ao desconectar, o filmes deixa de enviar seus filmes e apaga os dados de acesso. Seu histórico no Trakt fica como está.',
+    'Sua conta está conectada: o filmes lê seu histórico a cada Sessão nova e envia o filme escolhido. Ao desconectar, ele deixa de ler e de enviar e apaga os dados de acesso. O que já entrou no seu gosto e seu histórico no Trakt ficam como estão.',
   disconnect: 'Desconectar Trakt',
   consent:
-    'Autorizo o filmes a enviar ao meu Trakt o filme escolhido na Sessão, os filmes marcados como Já vi no Cartaz e as notas que dei. O envio acontece ao salvar o Feedback.',
+    'Autorizo o filmes a ler do meu Trakt o histórico, as notas e a watchlist de filmes, a cada Sessão nova e quando eu pedir, e a enviar ao meu Trakt o filme escolhido na Sessão, os filmes marcados como Já vi no Cartaz e as notas que dei, ao salvar o Feedback.',
   connect: 'Conectar Trakt',
   notice: 'O filmes usa o Trakt e não é endossado nem certificado pelo Trakt.',
   errors: {
     login: 'Entre com o e-mail cadastrado no filmes.',
     trakt: 'O Trakt não concluiu a conexão. Tente de novo.',
-    consentimento: 'Marque a caixa para autorizar o envio ao Trakt.',
+    consentimento:
+      'Marque a caixa para autorizar a leitura e o envio ao Trakt.',
   } satisfies Record<TraktError, string>,
 } as const

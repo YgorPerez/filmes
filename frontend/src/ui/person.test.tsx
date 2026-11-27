@@ -3,8 +3,9 @@
 // action the server runs (`parseAction`, the same reader the route uses).
 import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, beforeEach, describe, expect, it } from 'vite-plus/test'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import {
+  formProblem,
   parseAction,
   PERSON_NOTICES,
   PERSON_REFUSALS,
@@ -12,13 +13,51 @@ import {
 import type { PersonPage } from '#/platform/people'
 import { PERSON } from './person.copy'
 import { CATALOG_SEARCH } from './catalog-search.copy'
-import { SETUP_STEPS, type SetupStep } from '@filmes/engine'
+import {
+  RATING_SCREEN_SOURCE,
+  SETUP_STEPS,
+  type SetupStep,
+} from '@filmes/engine'
 import type { SetupView } from '#/platform/setup-guide'
 import { MY_START } from './my-start.copy'
 import type { MyStart } from './my-start'
 import { PersonScreen } from './person'
 
 afterEach(cleanup)
+
+// The Catálogo the targets' search finds (#273): a genre and a film,
+// whatever is typed.
+vi.mock('./kit/film-search', () => {
+  const answer = (query: string) =>
+    Promise.resolve({
+      query,
+      found: {
+        query,
+        films: [
+          {
+            id: 'tt9000401',
+            title: 'Fronteira',
+            year: 2008,
+            votes: 32000,
+            rating: null,
+            directors: ['Rui Tavares'],
+          },
+        ],
+        people: [],
+        genres: [
+          {
+            id: 'Q9001801',
+            label: 'Terror',
+            links: ['genre'],
+            filmCount: 3,
+            knownFor: [],
+          },
+        ],
+        series: [],
+      },
+    })
+  return { searchFilms: answer, searchCatalog: answer }
+})
 
 const IARA: PersonPage = {
   person: 'iara',
@@ -124,6 +163,23 @@ const IARA: PersonPage = {
     { key: 'silly_comedy', label: 'comédia boba' },
     { key: 'slow', label: 'lento' },
   ],
+  sessions: { total: 0, recent: [], satisfaction: null },
+  imported: false,
+}
+
+/** Searches a target's field and picks what `name` the result has. */
+async function pick(
+  user: ReturnType<typeof userEvent.setup>,
+  form: HTMLElement,
+  field: RegExp,
+  name: string,
+) {
+  await user.type(within(form).getByRole('searchbox', { name: field }), 'xx')
+  await user.click(
+    await within(form).findByRole('button', {
+      name: CATALOG_SEARCH.pickLabel(name),
+    }),
+  )
 }
 
 const show = (page: PersonPage = IARA) =>
@@ -152,7 +208,7 @@ describe('PersonScreen forms', () => {
     show()
   })
 
-  it('records a Veto by id', async () => {
+  it('records a Veto to a genre found by name, no ID to paste', async () => {
     const { user, form } = await open(
       section(PERSON.vetoes.title),
       PERSON.vetoes.add,
@@ -162,7 +218,8 @@ describe('PersonScreen forms', () => {
       fields.getByLabelText(PERSON.vetoes.text, { exact: false }),
       'nunca vê terror',
     )
-    await user.type(fields.getByLabelText(/^Alvo/), 'Q9001801')
+    await pick(user, form, /^Diga o quê/, 'Terror · gênero')
+    expect(fields.getByText('Terror · gênero')).toBeTruthy()
     expect(posted(form)).toEqual({
       kind: 'veto',
       text: 'nunca vê terror',
@@ -181,16 +238,19 @@ describe('PersonScreen forms', () => {
       fields.getByLabelText(PERSON.vetoes.text, { exact: false }),
       'nada bobo',
     )
-    await user.selectOptions(
-      fields.getByLabelText(PERSON.group),
-      'comédia boba',
-    )
+    await user.click(fields.getByRole('radio', { name: 'comédia boba' }))
     expect(posted(form)).toEqual({
       kind: 'veto',
       text: 'nada bobo',
       target: 'silly_comedy',
       group: true,
     })
+  })
+})
+
+describe('PersonScreen forms', () => {
+  beforeEach(() => {
+    show()
   })
 
   it('records a Declarado with a target and a reaction', async () => {
@@ -200,7 +260,7 @@ describe('PersonScreen forms', () => {
     )
     const fields = within(form)
     await user.type(fields.getByLabelText(PERSON.text), 'adora suspense')
-    await user.type(fields.getByLabelText(/^Alvo/), 'Q9001801')
+    await pick(user, form, /^Sobre o quê/, 'Terror · gênero')
     await user.selectOptions(fields.getByLabelText(PERSON.reaction), 'ama')
     await user.type(
       fields.getByLabelText(PERSON.source, { exact: false }),
@@ -236,17 +296,57 @@ describe('PersonScreen forms', () => {
       PERSON.seen.add,
     )
     const fields = within(form)
-    await user.type(
-      fields.getByLabelText(PERSON.film, { exact: false }),
-      'tt9000101',
-    )
-    await user.selectOptions(fields.getByLabelText(PERSON.rating), '3,5')
+    await pick(user, form, /^Filme/, 'Fronteira (2008)')
+    await user.selectOptions(fields.getByLabelText(PERSON.rating), '7')
     expect(posted(form)).toEqual({
       kind: 'seen',
-      film: 'tt9000101',
-      rating: '3,5',
+      film: 'tt9000401',
+      rating: '7/10',
       source: undefined,
     })
+  })
+})
+
+describe('PersonScreen forms', () => {
+  beforeEach(() => {
+    show()
+  })
+
+  it('marks the field a Veto lacks, and keeps the post', async () => {
+    const { user, form } = await open(
+      section(PERSON.vetoes.title),
+      PERSON.vetoes.add,
+    )
+    const fields = within(form)
+    await user.type(
+      fields.getByLabelText(PERSON.vetoes.text, { exact: false }),
+      'nada bobo',
+    )
+    await user.click(fields.getByRole('button', { name: PERSON.save }))
+    const target = fields.getByRole('searchbox', { name: /^Diga o quê/ })
+    expect(target.getAttribute('aria-invalid')).toBe('true')
+    expect(document.activeElement).toBe(target)
+    const said = document.getElementById(
+      target.getAttribute('aria-describedby') ?? '',
+    )
+    expect(said?.textContent).toBe(
+      PERSON.fieldProblem({ field: 'alvo', problem: 'target' }),
+    )
+    await user.type(target, 'Q')
+    expect(target.getAttribute('aria-invalid')).toBeNull()
+  })
+
+  it('shows her Notas on the 1 to 10 scale she gives them on', () => {
+    const notes = section(PERSON.notes.title)
+    expect(notes.textContent).toContain(
+      'nota 8 · 30 ago 2025 · 4★ no Letterboxd da Iara',
+    )
+  })
+})
+
+describe('PersonScreen forms', () => {
+  beforeEach(() => {
+    show()
   })
 
   it('changes an Ajuste, starting from the level she has', async () => {
@@ -284,7 +384,7 @@ describe('PersonScreen forms', () => {
       name: `${PERSON.questions.answer}: ${question.text}`,
     })
     await user.type(
-      within(answer).getByLabelText(PERSON.questions.answerText),
+      within(answer).getByLabelText(PERSON.questions.answerText('Iara')),
       'não gosta',
     )
     await user.selectOptions(
@@ -297,6 +397,12 @@ describe('PersonScreen forms', () => {
       text: 'não gosta',
       reaction: 'dislike',
     })
+  })
+})
+
+describe('PersonScreen forms', () => {
+  beforeEach(() => {
+    show()
   })
 
   it('offers no reaction to a question about a tag group', async () => {
@@ -311,6 +417,28 @@ describe('PersonScreen forms', () => {
     ).toBeNull()
   })
 
+  it.each([
+    [0, 'like', { text: 'curte Terror', reaction: 'like' }],
+    [0, 'dislike', { text: 'não curte Terror', reaction: 'dislike' }],
+    // A tag group is no Catalog entity: no reaction, the words say it.
+    [1, 'like', { text: 'curte comédia boba', reaction: undefined }],
+  ] as const)(
+    'answers open question %i with one tap: %s',
+    (index, reaction, answer) => {
+      const question = IARA.openQuestions[index]!
+      const word =
+        reaction === 'like' ? PERSON.questions.likes : PERSON.questions.dislikes
+      const form = screen.getByRole('form', {
+        name: `${word}: ${question.text}`,
+      })
+      expect(posted(form)).toEqual({
+        kind: 'answer',
+        question: question.factId,
+        ...answer,
+      })
+    },
+  )
+
   it.each([0, 1])('skips open question %i with its subject', (index) => {
     const question = IARA.openQuestions[index]!
     const skip = screen.getByRole('button', {
@@ -321,6 +449,12 @@ describe('PersonScreen forms', () => {
       text: question.text,
       subject: question.subject,
     })
+  })
+})
+
+describe('PersonScreen forms', () => {
+  beforeEach(() => {
+    show()
   })
 
   it.each([
@@ -348,16 +482,142 @@ describe('PersonScreen', () => {
     expect(screen.getByText(PERSON.imported)).toBeTruthy()
   })
 
-  it('opens with a link to each ficha, with how many it holds', () => {
+  it('opens with how much the filmes knows of her and one next step', () => {
     show()
-    const contents = screen.getByRole('navigation', { name: PERSON.contents })
-    const vetoes = within(contents).getByRole('link', {
-      name: `${PERSON.vetoes.title} 1`,
-    })
-    expect(vetoes.getAttribute('href')).toBe('#vetos')
-    expect(document.getElementById('vetos')?.closest('section')).toBe(
-      section(PERSON.vetoes.title),
+    expect(
+      screen.getByText('também ia · 1 Nota · 1 Veto · 2 perguntas abertas'),
+    ).toBeTruthy()
+    expect(
+      screen
+        .getByRole('link', { name: PERSON.summary.steps.questions(2) })
+        .getAttribute('href'),
+    ).toBe('#perguntas')
+    cleanup()
+    show({ ...IARA, aliases: [], vetoes: [], openQuestions: [], ratings: [] })
+    expect(screen.getByText(PERSON.summary.unknown)).toBeTruthy()
+    expect(
+      screen
+        .getByRole('link', { name: PERSON.summary.steps.import('Iara') })
+        .getAttribute('href'),
+    ).toBe('/pessoas/iara/importar')
+    cleanup()
+    show({ ...IARA, openQuestions: [] })
+    expect(
+      screen
+        .getByRole('link', { name: PERSON.summary.steps.veto('Iara') })
+        .getAttribute('href'),
+    ).toBe('#acrescentar-veto')
+    expect(document.getElementById('acrescentar-veto')).toBeTruthy()
+  })
+
+  it('folds what fine-tunes her taste into Afinar, after the Vetos', () => {
+    show()
+    const refine = document.getElementById('afinar') as HTMLDetailsElement
+    expect(refine.open).toBe(false)
+    for (const title of [
+      PERSON.adjustments.title,
+      PERSON.stated.title,
+      PERSON.reports.title,
+    ])
+      expect(refine.contains(section(title))).toBe(true)
+    expect(refine.contains(section(PERSON.vetoes.title))).toBe(false)
+    expect(
+      within(section(PERSON.adjustments.title)).getByText(
+        PERSON.adjustments.lead('Iara'),
+      ),
+    ).toBeTruthy()
+  })
+})
+
+describe('PersonScreen', () => {
+  it('says what a form did inside the ficha that posted it, and opens its fold', () => {
+    render(
+      <PersonScreen
+        slug="iara"
+        page={IARA}
+        notice="gravado"
+        spot="declarados"
+      />,
     )
+    expect(
+      within(section(PERSON.stated.title)).getByRole('status').textContent,
+    ).toBe(PERSON.notices('Iara').gravado)
+    expect(screen.getAllByRole('status')).toHaveLength(1)
+    expect((document.getElementById('afinar') as HTMLDetailsElement).open).toBe(
+      true,
+    )
+  })
+
+  it('marks the field the server refused, in its open form', () => {
+    render(
+      <PersonScreen
+        slug="iara"
+        page={IARA}
+        refusal="pedido"
+        spot="vetos"
+        problem={{ field: 'alvo', problem: 'target' }}
+      />,
+    )
+    const vetoes = section(PERSON.vetoes.title)
+    const said = PERSON.fieldProblem({ field: 'alvo', problem: 'target' })
+    expect(within(vetoes).getByRole('alert').textContent).toContain(said)
+    const form = within(vetoes).getByRole('form', { name: PERSON.vetoes.add })
+    expect(form.closest('details')?.open).toBe(true)
+    expect(
+      within(form)
+        .getByRole('searchbox', { name: /^Diga o quê/ })
+        .getAttribute('aria-invalid'),
+    ).toBe('true')
+  })
+
+  it('says "gravado" beside the Ajuste that changed', () => {
+    render(
+      <PersonScreen
+        slug="iara"
+        page={IARA}
+        notice="ajustado"
+        spot="ajuste-cast"
+      />,
+    )
+    const cast = screen.getByRole('group', {
+      name: new RegExp(`^${PERSON.adjustments.level(PERSON.links.cast)}`),
+    })
+    expect(within(cast).getByRole('status').textContent).toContain(
+      PERSON.adjustments.saved,
+    )
+    expect(screen.getAllByRole('status')).toHaveLength(1)
+  })
+})
+
+describe('PersonScreen', () => {
+  it('lists the Sessões she was in, with her Satisfação in words', () => {
+    show({
+      ...IARA,
+      sessions: {
+        total: 4,
+        recent: [
+          {
+            id: '2026-11-19-bruno-iara',
+            date: '2026-11-19',
+            chosen: { id: 'tt9000302', title: 'Noite de Estreia' },
+            reaction: 1,
+          },
+        ],
+        satisfaction: { value: 0.8, sessions: 3 },
+      },
+    })
+    const sessions = section(PERSON.sessions.title('Iara'))
+    expect(
+      within(sessions).getByText(PERSON.sessions.satisfaction('Iara', 0.8, 3)),
+    ).toBeTruthy()
+    expect(
+      within(sessions)
+        .getByRole('link', { name: /Noite de Estreia/ })
+        .getAttribute('href'),
+    ).toBe('/sessoes/2026-11-19-bruno-iara')
+    expect(
+      screen.getByText(/1 Veto · 2 perguntas abertas · 4 Sessões/),
+    ).toBeTruthy()
   })
 
   it('shows the Força of each Declarado', () => {
@@ -365,14 +625,21 @@ describe('PersonScreen', () => {
     const stated = screen
       .getByText('“adoro os filmes dela”')
       .closest('li') as HTMLElement
+    // What it is about, in words, the title the link (the id behind it).
+    expect(within(stated).getByText(/^ama/).textContent).toBe(
+      'ama Sofia Rangel',
+    )
     expect(
-      within(stated).getByText(/ama Sofia Rangel \(Q9000018\) · específico/),
+      within(stated).getByRole('link', { name: 'Sofia Rangel' }),
     ).toBeTruthy()
+    expect(within(stated).queryByText(/específico/)).toBeNull()
     expect(
       within(stated).getByRole('img', { name: 'Força forte' }),
     ).toBeTruthy()
   })
+})
 
+describe('PersonScreen', () => {
   it("has no Relato form on the logged-in Dono's own page: what he says is Declarado", () => {
     const own = { ...IARA, person: 'bruno', name: 'Bruno', owner: true }
     show({ ...own, reports: [] })
@@ -410,20 +677,44 @@ describe('PersonScreen', () => {
 
   it.each(PERSON_NOTICES)('says what happened: %s', (notice) => {
     render(<PersonScreen slug="iara" page={IARA} notice={notice} />)
-    expect(screen.getByRole('status').textContent).toBe(PERSON.notices[notice])
+    expect(screen.getByRole('status').textContent).toBe(
+      PERSON.notices('Iara')[notice],
+    )
   })
 
   it.each(PERSON_REFUSALS)('says why not: %s', (refusal) => {
     render(<PersonScreen slug="iara" page={IARA} refusal={refusal} />)
     expect(screen.getByRole('alert').textContent).toContain(
-      PERSON.refusals[refusal],
+      PERSON.refusals('Iara')[refusal],
     )
+  })
+})
+
+describe('PersonScreen', () => {
+  it('offers the downloads again when a CSV did not come', () => {
+    render(<PersonScreen slug="iara" page={IARA} refusal="exportar" />)
+    const alert = screen.getByRole('alert')
+    expect(
+      within(alert)
+        .getAllByRole('link')
+        .map((a) => a.getAttribute('href')),
+    ).toEqual([
+      '/exportar/imdb.csv?pessoa=iara',
+      '/exportar/letterboxd.csv?pessoa=iara',
+    ])
   })
 
   it('says when no Pessoa has the name, or the engine cannot run', () => {
     render(<PersonScreen slug="ninguem" page="unknown" />)
-    expect(screen.queryByRole('search')).toBeNull()
-    expect(screen.getByRole('alert').textContent).toContain(PERSON.unknown)
+    expect(
+      screen.getByRole('heading', { level: 1, name: PERSON.unknown.title }),
+    ).toBeTruthy()
+    expect(
+      screen
+        .getByRole('link', { name: PERSON.unknown.back })
+        .getAttribute('href'),
+    ).toBe('/pessoas')
+    expect(screen.getAllByRole('link')).toHaveLength(1)
     cleanup()
     render(<PersonScreen slug="iara" page={null} />)
     expect(screen.getByRole('alert').textContent).toContain(PERSON.unavailable)
@@ -445,7 +736,6 @@ describe('PersonScreen', () => {
       PERSON.stated.empty,
       PERSON.reports.empty,
       PERSON.seen.empty,
-      PERSON.questions.empty,
       PERSON.notes.noDatabase,
     ])
       expect(screen.getByText(empty)).toBeTruthy()
@@ -469,13 +759,25 @@ describe('the Notas section', () => {
     expect(link(notes, PERSON.notes.downloadLetterboxd)).toBe(
       '/exportar/letterboxd.csv?pessoa=iara',
     )
-    expect(within(notes).getByText(PERSON.notes.movielens)).toBeTruthy()
+    // Where the CSVs go is for an admin.
+    expect(
+      within(notes).queryByText(PERSON.notes.movielens(false, 1, IARA.name)),
+    ).toBeNull()
     // The rating queue is the logged-in Dono's: not on another's page.
     expect(
       within(notes).queryByRole('link', { name: PERSON.notes.rate }),
     ).toBeNull()
     await userEvent.setup().click(within(notes).getByText(PERSON.notes.list(1)))
     expect(within(notes).getByText(/Fronteira/)).toBeTruthy()
+  })
+
+  it('tells an admin where the CSVs go', () => {
+    show({ ...IARA, viewer: { person: 'bruno', name: 'Bruno', admin: true } })
+    expect(
+      within(section(PERSON.notes.title)).getByText(
+        PERSON.notes.movielens(false, IARA.ratings?.length ?? 0, IARA.name),
+      ),
+    ).toBeTruthy()
   })
 
   it('offers no CSV without a Nota, and says how to get some', () => {
@@ -489,9 +791,13 @@ describe('the Notas section', () => {
         name: PERSON.notes.downloadLetterboxd,
       }),
     ).toBeNull()
-    expect(within(notes).getByText(PERSON.notes.empty(false))).toBeTruthy()
+    expect(
+      within(notes).getByText(PERSON.notes.empty(false, 'Iara')),
+    ).toBeTruthy()
   })
+})
 
+describe('the Notas section', () => {
   it('is Meu gosto’s first section, with Dar notas as its one orange button', () => {
     show({ ...IARA, person: 'bruno', name: 'Bruno', owner: true })
     expect(
@@ -508,65 +814,71 @@ describe('the Notas section', () => {
   })
 })
 
-describe('Meu gosto’s start', () => {
-  const OWN = { ...IARA, person: 'bruno', name: 'Bruno', owner: true }
-  const MCP = 'https://filmes.example/mcp'
-  const setup = (
-    state: Partial<Record<SetupStep, 'done' | 'skipped'>> = {},
-  ): SetupView => ({
-    ratings: 3,
-    steps: SETUP_STEPS.map((step) => ({
-      step,
-      done: state[step] === 'done',
-      skipped: state[step] === 'skipped',
-    })),
-  })
-  const mine = (start: MyStart) =>
-    render(<PersonScreen slug="bruno" page={OWN} start={start} />)
+const START_OWNER = { ...IARA, person: 'bruno', name: 'Bruno', owner: true }
 
+const MCP_URL = 'https://filmes.example/mcp'
+
+const setupView = (
+  state: Partial<Record<SetupStep, 'done' | 'skipped'>> = {},
+): SetupView => ({
+  ratings: 3,
+  steps: SETUP_STEPS.map((step) => ({
+    step,
+    done: state[step] === 'done',
+    skipped: state[step] === 'skipped',
+  })),
+})
+
+const showMine = (start: MyStart) =>
+  render(<PersonScreen slug="bruno" page={START_OWNER} start={start} />)
+
+describe('Meu gosto’s start', () => {
   it('always shows the connector’s address, and how to add it', () => {
-    mine({ setup: setup(), mcpUrl: MCP })
+    showMine({ setup: setupView(), mcpUrl: MCP_URL })
     const connector = section(MY_START.connector.title)
-    expect(within(connector).getByText(MCP)).toBeTruthy()
+    expect(within(connector).getByText(MCP_URL)).toBeTruthy()
     expect(
       within(connector).getByRole('button', { name: /Copiar endereço/ }),
     ).toBeTruthy()
     expect(within(connector).getByText(MY_START.connector.pending)).toBeTruthy()
     cleanup()
-    mine({ setup: setup({ connector: 'done' }), mcpUrl: MCP })
+    showMine({ setup: setupView({ connector: 'done' }), mcpUrl: MCP_URL })
     const done = section(MY_START.connector.title)
-    expect(within(done).getByText(MCP)).toBeTruthy()
+    expect(within(done).getByText(MCP_URL)).toBeTruthy()
     expect(within(done).getByText(MY_START.connector.done)).toBeTruthy()
   })
 
   it('resumes a skipped step, even once the home has no guide', async () => {
-    mine({
-      setup: setup({ taste: 'done', import: 'skipped', connector: 'done' }),
-      mcpUrl: MCP,
+    showMine({
+      setup: setupView({ taste: 'skipped', connector: 'done' }),
+      mcpUrl: MCP_URL,
     })
     const skipped = section(MY_START.skipped.title)
     const resume = within(skipped).getByText(MY_START.resume)
-    expect(within(skipped).queryByText(/Meu gosto/)).toBeNull()
+    expect(within(skipped).queryByText(/Conector/)).toBeNull()
     await userEvent.setup().click(resume)
     expect(link(skipped, 'Importar')).toBe('/meu-gosto/importar')
+    expect(link(skipped, 'Dar notas')).toBe('/meu-gosto/notas')
   })
 
   it('keeps a skipped connector behind its Retomar, not twice', async () => {
-    mine({ setup: setup({ connector: 'skipped' }), mcpUrl: MCP })
+    showMine({ setup: setupView({ connector: 'skipped' }), mcpUrl: MCP_URL })
     expect(
       screen.queryByRole('region', { name: MY_START.connector.title }),
     ).toBeNull()
     const skipped = section(MY_START.skipped.title)
     await userEvent.setup().click(within(skipped).getByText(MY_START.resume))
-    expect(within(skipped).getByText(MCP)).toBeTruthy()
+    expect(within(skipped).getByText(MCP_URL)).toBeTruthy()
   })
+})
 
+describe('Meu gosto’s start', () => {
   it('has neither on another Pessoa’s page, nor what the server cannot say', () => {
     render(
       <PersonScreen
         slug="iara"
         page={IARA}
-        start={{ setup: setup({ import: 'skipped' }), mcpUrl: MCP }}
+        start={{ setup: setupView({ import: 'skipped' }), mcpUrl: MCP_URL }}
       />,
     )
     expect(
@@ -576,7 +888,7 @@ describe('Meu gosto’s start', () => {
       screen.queryByRole('region', { name: MY_START.skipped.title }),
     ).toBeNull()
     cleanup()
-    mine({ setup: null, mcpUrl: null })
+    showMine({ setup: null, mcpUrl: null })
     expect(
       screen.queryByRole('region', { name: MY_START.connector.title }),
     ).toBeNull()
@@ -586,9 +898,9 @@ describe('Meu gosto’s start', () => {
   })
 })
 
-describe('the Acesso section', () => {
-  const ADMIN = { person: 'bruno', name: 'Bruno', admin: true }
+const ADMIN_VIEWER = { person: 'bruno', name: 'Bruno', admin: true }
 
+describe('the Acesso section', () => {
   it('is not there for a Dono who is not admin', () => {
     show()
     expect(screen.queryByRole('region', { name: PERSON.access.title })).toBe(
@@ -597,7 +909,7 @@ describe('the Acesso section', () => {
   })
 
   it('gives an admin a Google e-mail field and "Dar acesso"', async () => {
-    show({ ...IARA, viewer: ADMIN, access: { email: null } })
+    show({ ...IARA, viewer: ADMIN_VIEWER, access: { email: null } })
     const region = section(PERSON.access.title)
     expect(within(region).getByText(PERSON.access.none)).toBeTruthy()
     const form = within(region).getByRole('form', {
@@ -609,17 +921,13 @@ describe('the Acesso section', () => {
       'iara@example.org',
     )
     expect(posted(form)).toEqual({ kind: 'grant', email: 'iara@example.org' })
-    const link = within(
-      screen.getByRole('navigation', { name: PERSON.contents }),
-    ).getByRole('link', { name: PERSON.access.title })
-    expect(link.getAttribute('href')).toBe('#acesso')
   })
 
-  it('shows a Dono her e-mail and "Tirar acesso"', () => {
+  it('shows a Dono her e-mail and "Tirar acesso", which asks first', () => {
     show({
       ...IARA,
       owner: true,
-      viewer: ADMIN,
+      viewer: ADMIN_VIEWER,
       access: { email: 'iara@example.org' },
     })
     const region = section(PERSON.access.title)
@@ -629,39 +937,397 @@ describe('the Acesso section', () => {
     const form = within(region).getByRole('form', {
       name: PERSON.access.revoke,
     })
+    expect(form.closest('details')?.open).toBe(false)
+    expect(
+      within(region).getByText(PERSON.access.revokeWarning('Iara')),
+    ).toBeTruthy()
+    expect(
+      within(form).getByRole('button', {
+        name: PERSON.access.revokeConfirm('Iara'),
+      }),
+    ).toBeTruthy()
     expect(posted(form)).toEqual({ kind: 'revoke' })
   })
+})
 
-  it("never offers the admin's own access", () => {
+describe('the Acesso section', () => {
+  it("has no Acesso on the admin's own page", () => {
     show({
       ...IARA,
       person: 'bruno',
       name: 'Bruno',
       owner: true,
-      viewer: ADMIN,
+      viewer: ADMIN_VIEWER,
       access: { email: 'bruno@example.org' },
     })
-    const region = section(PERSON.access.title)
-    expect(within(region).getByText(PERSON.access.self)).toBeTruthy()
-    expect(within(region).queryByRole('form')).toBeNull()
+    expect(
+      screen.queryByRole('region', { name: PERSON.access.title }),
+    ).toBeNull()
   })
 })
 
-describe('the Catálogo search', () => {
-  it('looks for any kind and comes back to her page', () => {
+describe('Remover Pessoa', () => {
+  const remove = PERSON.removePerson
+
+  const fold = () => document.getElementById('remover-pessoa') as HTMLElement
+
+  it('takes out a Pessoa made by mistake, from a fold that says what goes', () => {
+    show()
+    const form = within(fold()).getByRole('form', { name: remove.open('Iara') })
+    expect((fold() as HTMLDetailsElement).open).toBe(false)
+    expect(
+      within(fold()).getByText(new RegExp(remove.warning('Iara'))),
+    ).toBeTruthy()
+    expect(
+      within(form).getByRole('button', { name: remove.confirm('Iara') }),
+    ).toBeTruthy()
+    expect(posted(form)).toEqual({ kind: 'delete' })
+  })
+
+  it.each([
+    [{ owner: true }, remove.owner('Iara')],
+    [
+      { sessions: { total: 2, recent: [], satisfaction: null } },
+      remove.sessions('Iara', 2),
+    ],
+    [{ imported: true }, remove.imported('Iara')],
+  ])('keeps her, saying why: %j', (change, why) => {
+    show({ ...IARA, ...change })
+    expect(within(fold()).getByText(why)).toBeTruthy()
+    expect(within(fold()).queryByRole('form')).toBeNull()
+  })
+
+  it('is not on Meu gosto', () => {
+    show({ ...IARA, person: 'bruno', name: 'Bruno', owner: true })
+    expect(document.getElementById('remover-pessoa')).toBeNull()
+  })
+})
+
+const MY_PAGE: PersonPage = {
+  ...IARA,
+  person: 'bruno',
+  name: 'Bruno',
+  aliases: ['eu'],
+  owner: true,
+  vetoes: [],
+  openQuestions: [],
+  adjustments: [],
+  seen: [
+    {
+      film: 'tt9000401',
+      title: 'Fronteira',
+      rating: 4,
+      date: '2026-11-20',
+      source: RATING_SCREEN_SOURCE,
+      factId: 'vistos:9',
+    },
+  ],
+}
+
+const TEN_RATINGS = Array.from({ length: 10 }, (_, i) => ({
+  ...IARA.ratings![0]!,
+  filmId: `tt90000${i}`,
+  factId: `notas:${i}`,
+}))
+
+const glanceSteps = (start: MyStart | undefined, page: PersonPage) => {
+  render(<PersonScreen slug="bruno" page={page} start={start} />)
+  const name = within(section(PERSON.glance.title))
+    .getAllByRole('link')
+    .map((a) => a.textContent)
+  cleanup()
+  return name
+}
+
+describe('Meu gosto in the second person', () => {
+  it('opens with her taste in one look and one next step', () => {
+    render(<PersonScreen slug="bruno" page={MY_PAGE} />)
+    const glance = section(PERSON.glance.title)
+    expect(screen.getAllByRole('region')[0]).toBe(glance)
+    expect(glance.textContent).toContain('1 Nota · faltam 9 para 10')
+    expect(
+      within(glance).getByRole('link', { name: PERSON.glance.steps.rate }),
+    ).toHaveProperty('pathname', '/meu-gosto/notas')
+    // "eu" is how he says himself in the chat, not a name to show.
+    expect(screen.getByText('Nas Sessões, você é Bruno.')).toBeTruthy()
+  })
+
+  it('says how many of her films wait in the queue, and leads there first', () => {
+    render(<PersonScreen slug="bruno" page={MY_PAGE} pending={2} />)
+    const notes = section(PERSON.notes.title)
+    expect(within(notes).getByText(PERSON.notes.pending(2))).toBeTruthy()
+    expect(
+      within(notes).getByRole('link', { name: PERSON.notes.resolve }),
+    ).toHaveProperty('pathname', '/meu-gosto/fila')
+    expect(
+      within(section(PERSON.glance.title)).getByRole('link', {
+        name: PERSON.glance.steps.queue(2),
+      }),
+    ).toBeTruthy()
+  })
+
+  it('says what her Notas tell of her taste', () => {
+    render(
+      <PersonScreen
+        slug="bruno"
+        page={MY_PAGE}
+        taste={{
+          person: 'bruno',
+          liked: 8,
+          genres: ['Drama', 'Crime'],
+          directors: ['Rui Tavares'],
+        }}
+      />,
+    )
+    expect(
+      within(section(PERSON.glance.title)).getByText(
+        'Pelas suas Notas, você gosta de Drama, Crime e Rui Tavares.',
+      ),
+    ).toBeTruthy()
+  })
+})
+
+describe('Meu gosto in the second person', () => {
+  it('says a Letterboxd tag in words', () => {
+    render(
+      <PersonScreen
+        slug="bruno"
+        page={{
+          ...MY_PAGE,
+          stated: [{ ...IARA.stated[1]!, text: 'tag: chuva' }],
+        }}
+      />,
+    )
+    expect(screen.getByText('Marcou com a tag “chuva”')).toBeTruthy()
+    expect(screen.queryByText(/tag: chuva/)).toBeNull()
+  })
+
+  it('folds the empty fichas into one line, and says the Ajustes are all normal', () => {
+    render(<PersonScreen slug="bruno" page={MY_PAGE} />)
+    expect(screen.getByText(PERSON.empties([PERSON.seen.title]))).toBeTruthy()
+    expect(
+      within(section(PERSON.adjustments.title)).getByText(
+        PERSON.adjustments.noneChanged,
+      ),
+    ).toBeTruthy()
+    expect(
+      within(section(PERSON.adjustments.title)).getByText(
+        PERSON.adjustments.ownLead,
+      ),
+    ).toBeTruthy()
+  })
+
+  it('leaves her site Notas out of Já vistos', () => {
+    render(<PersonScreen slug="bruno" page={MY_PAGE} />)
+    const seen = section(PERSON.seen.title)
+    expect(within(seen).getByText(PERSON.seen.empty)).toBeTruthy()
+  })
+
+  it('names the next step after ten Notas', () => {
+    const setup = (done: boolean): MyStart => ({
+      mcpUrl: 'https://filmes.example/mcp',
+      setup: {
+        ratings: 10,
+        steps: SETUP_STEPS.map((step) => ({
+          step,
+          done: step !== 'connector' || done,
+          skipped: false,
+        })),
+      },
+    })
+    const rated = { ...MY_PAGE, ratings: TEN_RATINGS }
+    expect(glanceSteps(setup(false), rated)).toEqual([
+      PERSON.glance.steps.connector,
+    ])
+    expect(
+      glanceSteps(setup(true), { ...rated, openQuestions: IARA.openQuestions }),
+    ).toEqual([PERSON.glance.steps.questions])
+    expect(glanceSteps(setup(true), rated)).toEqual([PERSON.glance.steps.ask])
+  })
+})
+
+describe('Meu gosto in the second person', () => {
+  it('shows a moved Ajuste, the others in one row, and speaks to her in the notice', () => {
+    render(
+      <PersonScreen
+        slug="bruno"
+        page={{
+          ...MY_PAGE,
+          vetoes: IARA.vetoes,
+          adjustments: IARA.adjustments,
+        }}
+        notice="gravado"
+      />,
+    )
+    expect(
+      within(section(PERSON.adjustments.title)).getByText(
+        PERSON.adjustments.changed(1),
+      ),
+    ).toBeTruthy()
+    expect(screen.getByText(PERSON.ownNotices.gravado)).toBeTruthy()
+    expect(
+      within(screen.getByRole('navigation', { name: PERSON.contents }))
+        .getAllByRole('link')
+        .map((a) => a.textContent),
+    ).toEqual(['Vetos 1', 'Declarados 2', 'Relatos 1', 'Ajustes 1'])
+  })
+})
+
+// The field a Pessoa's form would be refused for, which the page marks
+// before the post (#268).
+const formOf = (fields: Record<string, string | undefined>) => {
+  const data = new FormData()
+  for (const [name, value] of Object.entries(fields))
+    if (value !== undefined) data.set(name, value)
+  return data
+}
+
+describe('formProblem', () => {
+  it.each([
+    [{ acao: 'declarar' }, { field: 'texto', problem: 'required' }],
+    [
+      { acao: 'relatar', texto: 'x', alvo: 'abc' },
+      { field: 'alvo', problem: 'id' },
+    ],
+    [
+      { acao: 'declarar', texto: 'x', reacao: 'love' },
+      { field: 'alvo', problem: 'reaction' },
+    ],
+    [{ acao: 'visto' }, { field: 'filme', problem: 'required' }],
+    [
+      { acao: 'visto', filme: 'Q1' },
+      { field: 'filme', problem: 'film' },
+    ],
+    [
+      { acao: 'visto', filme: 'tt1', nota: '11/10' },
+      { field: 'nota', problem: 'rating' },
+    ],
+    [{ acao: 'vetar' }, { field: 'texto', problem: 'required' }],
+    [
+      { acao: 'vetar', texto: 'x' },
+      { field: 'alvo', problem: 'target' },
+    ],
+    [
+      { acao: 'vetar', texto: 'x', alvo: 'x1' },
+      { field: 'alvo', problem: 'id' },
+    ],
+    [{ acao: 'responder' }, { field: 'texto', problem: 'required' }],
+    [{ acao: 'dar-acesso' }, { field: 'email', problem: 'required' }],
+  ])('marks %j', (fields, problem) => {
+    expect(formProblem(formOf(fields))).toEqual(problem)
+    expect(parseAction(formOf(fields))).toBeNull()
+  })
+
+  it.each([
+    { acao: 'visto', filme: 'tt1', nota: '10/10' },
+    { acao: 'visto', filme: 'tt1', nota: '4,5' },
+    { acao: 'vetar', texto: 'x', grupo: 'slow' },
+    { acao: 'vetar', texto: 'x', alvo: 'Q1' },
+    { acao: 'declarar', texto: 'x', alvo: 'tt1', reacao: 'love' },
+    { acao: 'responder', texto: 'sim', pergunta: 'p' },
+    { acao: 'dar-acesso', email: 'a@b.c' },
+    { acao: 'ajustar', elo: 'cast', nivel: 'low' },
+    { acao: 'nada' },
+  ])('passes %j', (fields) => {
+    expect(formProblem(formOf(fields))).toBeNull()
+  })
+})
+
+/** Iara on her own page, with nothing said of her taste yet. */
+const IARA_OWN: PersonPage = {
+  ...IARA,
+  viewer: { person: 'iara', name: 'Iara', admin: false },
+  vetoes: [],
+  adjustments: [],
+  stated: [],
+  reports: [],
+  seen: [],
+  openQuestions: [],
+}
+
+describe('Meu gosto with little in it', () => {
+  it('says nothing was said, lists no contents and links her Trakt', () => {
+    render(<PersonScreen slug="iara" page={IARA_OWN} showTrakt />)
+    expect(screen.getByText(PERSON.glance.nothingSaid)).toBeTruthy()
+    expect(
+      screen.queryByRole('navigation', { name: PERSON.contents }),
+    ).toBeNull()
+    expect(
+      screen
+        .getByRole('link', { name: 'Conexão com o Trakt' })
+        .getAttribute('href'),
+    ).toBe('/trakt')
+  })
+
+  it('waits for the database before it lists her Notas', () => {
+    render(<PersonScreen slug="iara" page={{ ...IARA_OWN, ratings: null }} />)
+    expect(screen.getByText(PERSON.notes.noDatabase)).toBeTruthy()
+    expect(screen.getByText(PERSON.glance.notes(0))).toBeTruthy()
+  })
+
+  it('names a Nota by its film when it has no title, and says how far the previsão misses', async () => {
     render(
       <PersonScreen
         slug="iara"
-        page={IARA}
-        search={{ query: 'é', refused: 'curta' }}
+        page={{
+          ...IARA_OWN,
+          viewer: { person: 'iara', name: 'Iara', admin: true },
+          ratings: [{ ...IARA.ratings![0]!, title: null }],
+          predictionError: { meanAbsoluteError: 1.24, films: 30 },
+        }}
       />,
     )
-    const form = screen.getByRole('search') as HTMLFormElement
-    expect(form.method).toBe('get')
-    expect(new URL(form.action).pathname).toBe('/pessoas/iara')
-    expect(screen.getByText(CATALOG_SEARCH.leadAll)).toBeTruthy()
-    expect(screen.getByRole('alert').textContent).toContain(
-      CATALOG_SEARCH.refusals.curta,
-    )
+    const notes = section(PERSON.notes.title)
+    expect(
+      within(notes).getByText(PERSON.notes.predictionError(1.24, 30)),
+    ).toBeTruthy()
+    await userEvent.setup().click(within(notes).getByText(PERSON.notes.list(1)))
+    expect(within(notes).getByText('tt9000401')).toBeTruthy()
+    expect(
+      within(notes).getByText(PERSON.notes.movielens(true, 1, 'Iara')),
+    ).toBeTruthy()
+  })
+})
+
+describe('another Pessoa’s Sessões and questions', () => {
+  it('says a Sessão chose no film', () => {
+    show({
+      ...IARA,
+      sessions: {
+        total: 1,
+        recent: [
+          {
+            id: '2026-11-19-bruno-iara',
+            date: '2026-11-19',
+            chosen: null,
+            reaction: null,
+          },
+        ],
+        satisfaction: null,
+      },
+    })
+    const sessions = section(PERSON.sessions.title('Iara'))
+    expect(sessions.textContent).toContain(PERSON.sessions.nothingChosen)
+    expect(sessions.textContent).toContain(PERSON.sessions.noReaction('Iara'))
+    expect(sessions.textContent).not.toContain(PERSON.sessions.reaction(null))
+  })
+
+  it('answers a question with no label by its subject', async () => {
+    show({
+      ...IARA,
+      openQuestions: [{ ...IARA.openQuestions[0]!, label: null }],
+    })
+    const questions = section(PERSON.questions.title)
+    const like = within(questions).getByRole('form', {
+      name: `${PERSON.questions.likes}: a Iara curte terror?`,
+    })
+    expect(posted(like)).toMatchObject({ kind: 'answer', text: 'curte' })
+    await userEvent
+      .setup()
+      .click(within(questions).getByText(PERSON.questions.answer))
+    const form = within(questions).getByRole('form', {
+      name: `${PERSON.questions.answer}: a Iara curte terror?`,
+    })
+    expect(within(form).getByText('Q9001801')).toBeTruthy()
   })
 })

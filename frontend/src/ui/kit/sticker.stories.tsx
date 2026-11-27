@@ -1,4 +1,4 @@
-// The price sticker, full and compact, and the NOVO, TROCAR and JÁ VI
+// The price sticker, full and compact, and the NOVO, TROCAR, SIM and JÁ VI
 // stickers.
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, within } from 'storybook/test'
@@ -21,6 +21,8 @@ export const New: Story = {
 }
 
 export const Swap: Story = { args: { kind: 'swap', children: 'Trocar' } }
+
+export const Yes: Story = { args: { kind: 'yes', children: 'Sim' } }
 
 export const Seen: Story = { args: { kind: 'seen', children: 'Já vi' } }
 

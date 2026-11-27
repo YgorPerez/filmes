@@ -27,8 +27,18 @@ afterEach(() => {
 })
 
 const LINK = { session: '2026-11-20-teo', token: 'k'.repeat(43), person: 'teo' }
-const FAROL = { id: 'tt9000101', title: 'O Farol de Areia', year: 2012 }
-const PONTE = { id: 'tt9000201', title: 'Ponte Aérea', year: 2016 }
+const FAROL = {
+  id: 'tt9000101',
+  title: 'O Farol de Areia',
+  year: 2012,
+  poster: null,
+}
+const PONTE = {
+  id: 'tt9000201',
+  title: 'Ponte Aérea',
+  year: 2016,
+  poster: null,
+}
 const NEXT = `/participar/perguntas?sessao=${LINK.session}&chave=${LINK.token}&presente=teo`
 
 function renderRouted() {

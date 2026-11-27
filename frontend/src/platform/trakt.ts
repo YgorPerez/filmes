@@ -216,7 +216,11 @@ export function traktConnection(
 ): TraktConnection | undefined {
   const env = serverEnv(variables)
   const options = traktOptions(env)
-  if (!options) return undefined
+  // The client id alone reads public profiles by username (#269).
+  if (!options)
+    return env.FILMES_TRAKT_CLIENT_ID
+      ? { clientId: env.FILMES_TRAKT_CLIENT_ID, accessToken: async () => null }
+      : undefined
   const trakt = new Trakt(options)
   const directory = peopleFromDataRepo(env.DATA_REPO_PATH)
   return {
@@ -264,4 +268,24 @@ export function handleTraktRequest(request: Request) {
   return browser
     ? browser.trakt.handle(request, browser.identity)
     : seeOther(PAGE)
+}
+
+/** What a Pessoa's import page needs of Trakt (#269): whether the server
+ * reads Trakt at all (a client id), and whether she connected her account
+ * (which only she can do, at `/trakt`). */
+export function traktLink(
+  slug: string,
+  variables: NodeJS.ProcessEnv = process.env,
+): { available: boolean; connected: boolean } {
+  const env = serverEnv(variables)
+  if (!env.FILMES_TRAKT_CLIENT_ID) return { available: false, connected: false }
+  const options = traktOptions(env)
+  const identity =
+    options && peopleFromDataRepo(env.DATA_REPO_PATH).bySlug(slug)
+  return {
+    available: true,
+    connected: Boolean(
+      options && identity && new Trakt(options).connected(identity),
+    ),
+  }
 }

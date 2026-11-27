@@ -301,3 +301,42 @@ export const discardQueueItem = (input: {
   readonly reason: string
   readonly author: Author
 }) => decide(input.id, { reason: input.reason }, input.author)
+
+/** The Dono takes back her decision on a film (#274): its resolution
+ * leaves imports/letterboxd.md and the Letterboxd Fatos reload, so the film
+ * goes back to where the import left it, the queue for a film it could not
+ * place. A film with no decision recorded is `item_not_queued`. */
+export const reopenQueueItem = (input: {
+  readonly id: string
+  readonly author: Author
+}): Effect.Effect<
+  { readonly id: string; readonly name: string; readonly year: number | null },
+  EngineError | SqliteError | GitError,
+  Environment | Sqlite | Run | Tmdb | DataWriter
+> =>
+  Effect.gen(function* () {
+    const writer = yield* DataWriter
+    return yield* writer.write(
+      { author: input.author, message: `letterboxd queue reopen ${input.id}` },
+      (db) =>
+        Effect.gen(function* () {
+          yield* ensureLetterboxdTables(db)
+          const resolutions = yield* readResolutions
+          const earlier = resolutions.get(input.id)
+          if (earlier === undefined)
+            return yield* engineError(
+              'item_not_queued',
+              `'${input.id}' não tem decisão para desfazer`,
+            )
+          resolutions.delete(input.id)
+          yield* loadLetterboxd(db, resolutions)
+          yield* saveResolutions(resolutions)
+          const { name, year } = decisionJson(earlier)
+          return {
+            id: input.id,
+            name: typeof name === 'string' ? name : input.id,
+            year: typeof year === 'number' ? year : null,
+          }
+        }),
+    )
+  })

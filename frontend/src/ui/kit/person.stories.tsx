@@ -55,7 +55,7 @@ export const Colors: Story = {
  * name, and not the open popover again. */
 export const DotWithRating: Story = {
   render: () => (
-    <div className="flex gap-xs rounded-case bg-case p-sm">
+    <div className="mt-2xl flex gap-xs rounded-case bg-case p-sm">
       <PersonDot
         person={PEOPLE[0]!}
         rating={{ text: '8,3', hint: 'Bruno: 8,3 de 10 · 12 vizinhos' }}
@@ -75,6 +75,15 @@ export const DotWithRating: Story = {
     await expect(isInaccessible(canvas.getByText(hint))).toBe(true)
     await userEvent.unhover(canvas.getByRole('button', { name: hint }))
     await expect(canvas.getByText(hint)).not.toBeVisible()
+    // The dot is small; its tap target is 44px tall (#268).
+    const dot = canvas.getByRole('button', { name: hint })
+    const box = dot.getBoundingClientRect()
+    const centre = box.left + box.width / 2
+    const middle = box.top + box.height / 2
+    for (const y of [middle - 21, middle + 21])
+      await expect(dot.contains(document.elementFromPoint(centre, y))).toBe(
+        true,
+      )
   },
 }
 

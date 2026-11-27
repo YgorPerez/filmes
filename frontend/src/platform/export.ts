@@ -45,8 +45,8 @@ const back = (location: string) =>
     headers: { Location: location, 'Cache-Control': 'private, no-store' },
   })
 
-/** No Pessoa to go back to: Pessoas says she is gone. */
-const gone = () => back('/pessoas?erro=pessoa')
+/** No Pessoa to go back to: Pessoas says the download found no one. */
+const gone = () => back('/pessoas?erro=baixar')
 
 /** `GET /exportar/<format>.csv?pessoa=<slug>`: the file, as the engine wrote it,
  * byte for byte. Only a Dono gets it (the page gate does not cover this

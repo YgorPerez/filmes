@@ -124,6 +124,20 @@ export const yesVotes = (front: YamlMapping): ReadonlyMap<string, number> => {
   return count
 }
 
+/** `person`'s standing Votos: her latest submission, film by film (#275). */
+export const latestVotes = (
+  front: YamlMapping,
+  person: string,
+): ReadonlyMap<string, VoteValue> => {
+  let votes = new Map<string, VoteValue>()
+  for (const { person: who, film, vote, replaces } of sessionVotes(front)) {
+    if (who !== person) continue
+    if (replaces) votes = new Map()
+    votes.set(film, vote)
+  }
+  return votes
+}
+
 /** Most yes votes first. Ties keep the given screen order. */
 export const orderByYes = (
   films: ReadonlyArray<string>,

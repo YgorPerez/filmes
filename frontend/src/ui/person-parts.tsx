@@ -9,13 +9,18 @@ import {
   type ComponentProps,
   type ReactNode,
 } from 'react'
-import { isPersonRefusal } from '#/content/person-action'
+import {
+  formProblem,
+  isPersonRefusal,
+  type FieldProblem,
+} from '#/content/person-action'
 import { CATALOG_SEARCH } from './catalog-search.copy'
 import { PERSON } from './person.copy'
 import { FIELD } from './kit/field'
 import { useFetchForm, useGetForm, useHydrated } from './kit/fetch-form'
 import { refusalOn, useRefusalInPlace } from './kit/refusal-in-place'
 import {
+  searchCatalog,
   searchFilms,
   type CatalogScope,
   type SearchAnswer,
@@ -40,17 +45,21 @@ export function Section({
   id,
   title,
   lead,
+  plain = false,
   children,
 }: {
   id: string
   title: string
   lead?: string
+  /** No card: a section inside a fold or another card, apart by its
+   * heading and the space around it (#272). */
+  plain?: boolean
   children: ReactNode
 }) {
   return (
     <section
       aria-labelledby={id}
-      className="flex flex-col gap-xl rounded-card border border-rule bg-surface p-xl"
+      className={`flex flex-col gap-xl ${plain ? '' : 'rounded-card border border-rule bg-surface p-xl'}`}
     >
       <div className="flex flex-col gap-xs">
         <h2 id={id} className="font-display text-title">
@@ -125,15 +134,28 @@ function settle(form: HTMLFormElement) {
 const RefusedIn = createContext<{
   form: string | null
   show: (form: string | null) => void
+  /** Whose page: a refusal names her. */
+  name: string
 } | null>(null)
+
+/** Who a refusal names outside a Pessoa's page. */
+const NO_NAME = 'esta Pessoa'
 
 /** The Pessoa's page's forms (`ActionForm`): the refusal one of them
  * shows in place hides the page's own notice and the refusals the others
- * showed before. */
-export function ActionForms({ children }: { children: ReactNode }) {
+ * showed before. `name` is hers, for the refusals. */
+export function ActionForms({
+  name = NO_NAME,
+  children,
+}: {
+  name?: string
+  children: ReactNode
+}) {
   const [form, show] = useState<string | null>(null)
   return (
-    <RefusedIn.Provider value={{ form, show }}>{children}</RefusedIn.Provider>
+    <RefusedIn.Provider value={{ form, show, name }}>
+      {children}
+    </RefusedIn.Provider>
   )
 }
 
@@ -142,26 +164,65 @@ export function ActionForms({ children }: { children: ReactNode }) {
 export const useRefusedInPlace = () =>
   (useContext(RefusedIn)?.form ?? null) !== null
 
+/** The field of the `ActionForm` around that its action would refuse, and
+ * what to say under it: `TextField` and `SelectField` read it. */
+const ProblemIn = createContext<FieldProblem | null>(null)
+
+/** A field's `aria-invalid`, `aria-describedby` and the text under it, when
+ * the form's problem is this field's (`name`). */
+function useFieldProblem(name: string) {
+  const id = useId()
+  const problem = useContext(ProblemIn)
+  if (problem?.field !== name) return { error: undefined, aria: {} }
+  return {
+    error: { id, text: PERSON.fieldProblem(problem) },
+    aria: { 'aria-invalid': true, 'aria-describedby': id } as const,
+  }
+}
+
+/** The field a form would refuse, focused when it is marked. */
+function useProblemFocus(initial: FieldProblem | null) {
+  const [problem, setProblem] = useState<FieldProblem | null>(initial)
+  const form = useRef<HTMLFormElement>(null)
+  useEffect(() => {
+    if (!problem) return
+    // A search field stands for the hidden one it fills (`TargetField`).
+    const field =
+      form.current?.querySelector(`[data-field="${problem.field}"]`) ??
+      form.current?.elements.namedItem(problem.field)
+    if (field instanceof HTMLElement) field.focus()
+  }, [problem])
+  return { form, problem, setProblem }
+}
+
+type ActionFormProps = {
+  slug: string
+  action: string
+  label?: string
+  className?: string
+  busy?: string
+  /** The field the server refused, when this form came back refused
+   * without the JavaScript (#273): marked from the start. */
+  problem?: FieldProblem | null
+  children: ReactNode
+}
+
 /** A form that posts one action to the Pessoa's route
  * (`platform/people.ts`). A plain POST: it works before the JavaScript.
  * With it (#235), it posts by `fetch`: a refusal shows here, over what was
  * typed; what went through reloads the page through the router. Its
- * submits say `busy` while the post runs. */
+ * submits say `busy` while the post runs. With the JavaScript, a field the
+ * action would refuse (`formProblem`) keeps the post: the field is marked,
+ * says why under it and takes the focus (#268); typing clears it. */
 export function ActionForm({
   slug,
   action,
   label,
   className,
   busy = PERSON.saving,
+  problem: initialProblem = null,
   children,
-}: {
-  slug: string
-  action: string
-  label?: string
-  className?: string
-  busy?: string
-  children: ReactNode
-}) {
+}: ActionFormProps) {
   const id = useId()
   const shared = useContext(RefusedIn)
   const { refused, alert, onAnswer } = useRefusalInPlace(
@@ -180,24 +241,34 @@ export function ActionForm({
     return false
   })
   const shown = shared === null || shared.form === id ? refused : undefined
+  const { form, problem, setProblem } = useProblemFocus(initialProblem)
   return (
     <form
+      ref={form}
       method="post"
       action={`/pessoas/${encodeURIComponent(slug)}/acao`}
       aria-label={label}
-      onSubmit={onSubmit}
+      onSubmit={(event) => {
+        const found = formProblem(new FormData(event.currentTarget))
+        setProblem(found)
+        if (found) event.preventDefault()
+        else onSubmit(event)
+      }}
+      onInput={() => setProblem(null)}
       className={className ?? 'flex flex-col gap-xl'}
     >
       {shown && (
         <div ref={alert} className="basis-full">
-          <Alert>{PERSON.refusals[shown]}</Alert>
+          <Alert>{PERSON.refusals(shared?.name ?? NO_NAME)[shown]}</Alert>
         </div>
       )}
       <PostFailed failed={failed} />
       <input type="hidden" name="acao" value={action} />
-      <Posting.Provider value={running === null ? null : busy}>
-        {children}
-      </Posting.Provider>
+      <ProblemIn.Provider value={problem}>
+        <Posting.Provider value={running === null ? null : busy}>
+          {children}
+        </Posting.Provider>
+      </ProblemIn.Provider>
     </form>
   )
 }
@@ -232,23 +303,30 @@ export function RemoveForm({
 
 /** A form that opens on demand, as a `<details>`: no JavaScript needed. */
 export function Disclosure({
+  id,
   summary,
   open,
   children,
 }: {
+  /** For a link to the fold (`#id`). */
+  id?: string
   summary: string
   /** Open from the start: the form came back refused. */
   open?: boolean
   children: ReactNode
 }) {
   return (
-    <details open={open} className="group rounded-field border border-rule">
+    <details
+      id={id}
+      open={open}
+      className="scroll-mt-2xl rounded-field border border-rule"
+    >
       <summary className="flex min-h-touch cursor-pointer list-none items-center justify-between gap-sm px-3 font-semibold select-none [&::-webkit-details-marker]:hidden">
         {summary}
         {/* The drawn +, a × while open: the fold's state not by colour. */}
         <Icon
           name="plus"
-          className="size-[18px] text-ink-2 transition-transform group-open:rotate-45 motion-reduce:transition-none"
+          className="size-[18px] text-ink-2 transition-transform motion-reduce:transition-none [details[open]>summary>&]:rotate-45"
         />
       </summary>
       <div className="border-t border-rule p-xl">{children}</div>
@@ -281,9 +359,11 @@ export function TextField({
   max?: number
   defaultValue?: string
 }) {
+  const { error, aria } = useFieldProblem(name)
   return (
-    <FieldLabel label={label} hint={hint}>
+    <FieldLabel label={label} hint={hint} error={error}>
       <input
+        {...aria}
         type={type}
         min={min}
         max={max}
@@ -312,9 +392,15 @@ export function SelectField({
   options: readonly { value: string; label: string }[]
   defaultValue?: string
 }) {
+  const { error, aria } = useFieldProblem(name)
   return (
-    <FieldLabel label={label} hint={hint}>
-      <select name={name} defaultValue={defaultValue} className={control}>
+    <FieldLabel label={label} hint={hint} error={error}>
+      <select
+        {...aria}
+        name={name}
+        defaultValue={defaultValue}
+        className={control}
+      >
         {options.map(({ value, label: text }) => (
           <option key={value} value={value}>
             {text}
@@ -401,7 +487,12 @@ function Id({ id }: { id: string }) {
 export type Pick = {
   pick?: (id: string) => string
   onPick?: (film: { id: string; label: string }) => void
+  /** The button's words, when it is not "Usar" (the rating screen's "Dar
+   * nota"). */
+  pickAs?: PickWords
 }
+
+export type PickWords = { text: string; label: (title: string) => string }
 
 /** "Usar": the link, or the button that takes the film in place. */
 export function PickFilm({
@@ -409,35 +500,41 @@ export function PickFilm({
   label,
   pick,
   onPick,
+  pickAs = { text: CATALOG_SEARCH.pick, label: CATALOG_SEARCH.pickLabel },
 }: Pick & { id: string; label: string }) {
-  const { pickLabel } = CATALOG_SEARCH
   if (onPick)
     return (
       <Button
         type="button"
         variant="option"
         className="self-start"
-        aria-label={pickLabel(label)}
+        aria-label={pickAs.label(label)}
         onClick={() => onPick({ id, label })}
       >
-        {CATALOG_SEARCH.pick}
+        {pickAs.text}
       </Button>
     )
   if (!pick) return null
   return (
-    <LinkButton href={pick(id)} label={pickLabel(label)}>
-      {CATALOG_SEARCH.pick}
+    <LinkButton href={pick(id)} label={pickAs.label(label)}>
+      {pickAs.text}
     </LinkButton>
   )
 }
 
-function FilmItem({ film, pick, onPick }: Pick & { film: FilmMatch }) {
+function FilmItem({ film, pick, onPick, pickAs }: Pick & { film: FilmMatch }) {
   const { votes } = CATALOG_SEARCH
   const title = filmText(film)
   return (
     <Item
       actions={
-        <PickFilm id={film.id} label={title} pick={pick} onPick={onPick} />
+        <PickFilm
+          id={film.id}
+          label={title}
+          pick={pick}
+          onPick={onPick}
+          pickAs={pickAs}
+        />
       }
     >
       <span className="flex flex-wrap items-center gap-sm">
@@ -448,13 +545,19 @@ function FilmItem({ film, pick, onPick }: Pick & { film: FilmMatch }) {
   )
 }
 
-function EntityItem({ entity }: { entity: EntityMatch }) {
+function EntityItem({ entity, onPick }: Pick & { entity: EntityMatch }) {
   const { links, films } = CATALOG_SEARCH
   return (
-    <Item>
+    <Item
+      actions={
+        onPick && (
+          <PickFilm id={entity.id} label={entityText(entity)} onPick={onPick} />
+        )
+      }
+    >
       <span className="flex flex-wrap items-center gap-sm">
         <span className="font-semibold">{entity.label}</span>{' '}
-        <Id id={entity.id} />
+        {!onPick && <Id id={entity.id} />}
       </span>
       <Meta
         parts={[
@@ -466,6 +569,13 @@ function EntityItem({ entity }: { entity: EntityMatch }) {
     </Item>
   )
 }
+
+/** "Terror · gênero": an entity as the chip of a picked target says it. */
+const entityText = (entity: EntityMatch) =>
+  PERSON.targetChip(
+    entity.label,
+    entity.links.map((link) => CATALOG_SEARCH.links[link]).join(', '),
+  )
 
 function Group({ title, children }: { title: string; children: ReactNode[] }) {
   if (children.length === 0) return null
@@ -481,12 +591,22 @@ function CatalogResults({
   answer,
   pick,
   onPick,
-}: Pick & { answer: SearchAnswer }) {
+  onEntityPick,
+  pickAs,
+  filmLabel = filmText,
+}: Pick & {
+  answer: SearchAnswer
+  /** "Usar" on a director, a genre or a series too: only where an entity
+   * can be the target. */
+  onEntityPick?: Pick['onPick']
+  /** How a picked film is named: its title, or its chip. */
+  filmLabel?: (film: FilmRef) => string
+}) {
   const { groups, results, none, refusals } = CATALOG_SEARCH
   if ('refused' in answer) return <Alert>{refusals[answer.refused]}</Alert>
   const { films, people, genres, series } = answer.found
   const entities = (list: readonly EntityMatch[]) =>
-    list.map((e) => <EntityItem key={e.id} entity={e} />)
+    list.map((e) => <EntityItem key={e.id} entity={e} onPick={onEntityPick} />)
   const empty =
     films.length + people.length + genres.length + series.length === 0
   return (
@@ -496,7 +616,15 @@ function CatalogResults({
       </p>
       <Group title={groups.films}>
         {films.map((f) => (
-          <FilmItem key={f.id} film={f} pick={pick} onPick={onPick} />
+          <FilmItem
+            key={f.id}
+            film={f}
+            pick={pick}
+            onPick={
+              onPick && ((picked) => onPick({ ...picked, label: filmLabel(f) }))
+            }
+            pickAs={pickAs}
+          />
         ))}
       </Group>
       <Group title={groups.people}>{entities(people)}</Group>
@@ -504,6 +632,226 @@ function CatalogResults({
       <Group title={groups.series}>{entities(series)}</Group>
     </div>
   )
+}
+
+// --- the target of a Pessoa's form ------------------------------------------
+//
+// What a Veto, a Declarado, a Relato or a Já visto is about (#273): with the
+// JavaScript, a search by name whose result, picked, fills the hidden field
+// the form posts and shows as a chip ("Terror · gênero"); a Veto also offers
+// the tag groups as pills. Before the JavaScript, the field takes the ID
+// (tt… or Q…), as the server reads it.
+
+/** A tag group a Veto can name. */
+type TagGroup = { key: string; label: string }
+
+/** The tag groups as pills: radios, so the form posts the marked one
+ * without the JavaScript. With it, a second tap on the marked one lets it
+ * go; before it, "nenhum" does. */
+function GroupPills({ groups }: { groups: readonly TagGroup[] }) {
+  const live = useHydrated()
+  return (
+    <fieldset className="flex flex-col gap-xs">
+      <legend className="mb-xs font-display text-field-label">
+        {PERSON.groupsLabel}
+      </legend>
+      <div className="flex flex-wrap gap-xs">
+        {live ? <LivePills groups={groups} /> : <PlainPills groups={groups} />}
+      </div>
+    </fieldset>
+  )
+}
+
+const PILL =
+  'flex min-h-touch cursor-pointer items-center rounded-pill border-(length:--border-width-stroke) border-rule bg-surface px-lg font-display text-control text-ink select-none peer-checked:border-2 peer-checked:border-ink peer-checked:bg-surface-2 peer-checked:font-bold peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-focus'
+
+/** The pills before the JavaScript: "nenhum" first and marked, so the
+ * form posts no group unless one is marked. */
+function PlainPills({ groups }: { groups: readonly TagGroup[] }) {
+  return [{ key: '', label: PERSON.noGroup }, ...groups].map(
+    ({ key, label }) => (
+      <label key={key || 'nenhum'} className="flex">
+        <input
+          type="radio"
+          name="grupo"
+          value={key}
+          defaultChecked={key === ''}
+          className="peer sr-only"
+        />
+        <span className={PILL}>{label}</span>
+      </label>
+    ),
+  )
+}
+
+/** The pills with the JavaScript: a second tap on the marked one lets it
+ * go. */
+function LivePills({ groups }: { groups: readonly TagGroup[] }) {
+  const [marked, setMarked] = useState('')
+  return groups.map(({ key, label }) => (
+    <label key={key} className="flex">
+      <input
+        type="radio"
+        name="grupo"
+        value={key}
+        checked={marked === key}
+        onChange={() => setMarked(key)}
+        onClick={() => {
+          if (marked === key) setMarked('')
+        }}
+        className="peer sr-only"
+      />
+      <span className={PILL}>{label}</span>
+    </label>
+  ))
+}
+
+/** The target of a form: `name` is the field it posts (`alvo`, or
+ * `filme` for a Já visto, films only). */
+export function TargetField({
+  name,
+  label,
+  hint,
+  scope,
+  groups = [],
+}: {
+  name: 'alvo' | 'filme'
+  label: string
+  hint?: string
+  scope: CatalogScope
+  /** The tag groups a Veto can name instead. */
+  groups?: readonly TagGroup[]
+}) {
+  const live = useHydrated()
+  const film = name === 'filme'
+  return (
+    <div className={`flex flex-col ${live ? 'gap-lg' : 'gap-xl'}`}>
+      {live ? (
+        <TargetSearch name={name} label={label} hint={hint} scope={scope} />
+      ) : (
+        <TextField
+          name={name}
+          label={label}
+          hint={film ? PERSON.filmHint : PERSON.idHint}
+          pattern={film ? 'tt[0-9]+' : '(tt|Q)[0-9]+'}
+          required={film}
+        />
+      )}
+      {groups.length > 0 && <GroupPills groups={groups} />}
+    </div>
+  )
+}
+
+type Target = { id: string; label: string }
+
+/** The target with the JavaScript: a search by name; the picked result
+ * fills the hidden field and shows as a chip. */
+function TargetSearch({
+  name,
+  label,
+  hint,
+  scope,
+}: {
+  name: 'alvo' | 'filme'
+  label: string
+  hint?: string
+  scope: CatalogScope
+}) {
+  const [picked, setPicked] = useState<Target | null>(null)
+  const { error, aria } = useFieldProblem(name)
+  const search = useLiveSearch(picked === null, '', null, scope)
+  return (
+    <>
+      <input type="hidden" name={name} value={picked?.id ?? ''} />
+      {picked ? (
+        <TargetChip
+          label={label}
+          picked={picked}
+          onClear={() => setPicked(null)}
+        />
+      ) : (
+        <FieldLabel label={label} hint={hint} error={error}>
+          <input
+            {...aria}
+            data-field={name}
+            type="search"
+            value={search.query}
+            placeholder={PERSON.targetSearch}
+            onChange={(event) => search.setQuery(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') event.preventDefault()
+            }}
+            autoComplete="off"
+            enterKeyHint="search"
+            aria-busy={search.searching}
+            className={`${FIELD} w-full`}
+          />
+        </FieldLabel>
+      )}
+      {!picked && search.answer && (
+        <CatalogResults
+          answer={search.answer}
+          filmLabel={(film) =>
+            PERSON.targetChip(filmText(film), PERSON.filmKind)
+          }
+          onPick={setPicked}
+          onEntityPick={scope === 'films' ? undefined : setPicked}
+        />
+      )}
+    </>
+  )
+}
+
+/** The picked target as a chip, with its × to let it go. */
+function TargetChip({
+  label,
+  picked,
+  onClear,
+}: {
+  label: string
+  picked: Target
+  onClear: () => void
+}) {
+  return (
+    <div className="flex flex-col gap-xs">
+      <span className="font-display text-field-label">{label}</span>
+      <span className="flex items-center gap-xs self-start rounded-pill border border-rule bg-surface-2 py-1 pr-1 pl-3">
+        <span>{picked.label}</span>
+        <button
+          type="button"
+          aria-label={PERSON.clearTarget(picked.label)}
+          onClick={onClear}
+          className="flex size-touch cursor-pointer items-center justify-center rounded-pill text-ink-2"
+        >
+          {/* The drawn +, turned into a ×, as the chosen films'. */}
+          <Icon name="plus" className="size-[16px] rotate-45" />
+        </button>
+      </span>
+    </div>
+  )
+}
+
+/** The page's other query values, as hidden fields. */
+function Kept({
+  values,
+}: {
+  values: Readonly<Record<string, string | undefined>>
+}) {
+  return Object.entries(values).map(
+    ([name, value]) =>
+      value !== undefined && (
+        <input key={name} type="hidden" name={name} value={value} />
+      ),
+  )
+}
+
+type CatalogSearchProps = Pick & {
+  action: string
+  scope: CatalogScope
+  answer: SearchAnswer | null
+  keep?: Readonly<Record<string, string | undefined>>
+  /** What the search is for here, over the default. */
+  lead?: string
 }
 
 /** The search card: the form, then the answer of the page's `?buscar=`.
@@ -515,20 +863,17 @@ export function CatalogSearch({
   answer,
   keep = {},
   pick,
-}: {
-  action: string
-  scope: CatalogScope
-  answer: SearchAnswer | null
-  keep?: Readonly<Record<string, string | undefined>>
-  pick?: (id: string) => string
-}) {
+  onPick,
+  pickAs,
+  lead,
+}: CatalogSearchProps) {
   const { title, leadFilms, leadAll, label, hint, submit } = CATALOG_SEARCH
   const onSubmit = useGetForm()
   return (
     <Section
       id="buscar-catalogo"
       title={title}
-      lead={scope === 'films' ? leadFilms : leadAll}
+      lead={lead ?? (scope === 'films' ? leadFilms : leadAll)}
     >
       <form
         method="get"
@@ -538,12 +883,7 @@ export function CatalogSearch({
         onSubmit={onSubmit}
         className="flex flex-wrap items-end gap-sm"
       >
-        {Object.entries(keep).map(
-          ([name, value]) =>
-            value !== undefined && (
-              <input key={name} type="hidden" name={name} value={value} />
-            ),
-        )}
+        <Kept values={keep} />
         <label className="flex min-w-0 flex-1 basis-[220px] flex-col gap-xs">
           <span className="font-display text-field-label">
             {label}{' '}
@@ -560,7 +900,14 @@ export function CatalogSearch({
         </label>
         <Submit className="">{submit}</Submit>
       </form>
-      {answer && <CatalogResults answer={answer} pick={pick} />}
+      {answer && (
+        <CatalogResults
+          answer={answer}
+          pick={pick}
+          onPick={onPick}
+          pickAs={pickAs}
+        />
+      )}
     </Section>
   )
 }
@@ -589,6 +936,7 @@ function useLiveSearch(
   on: boolean,
   typed: string,
   initial: SearchAnswer | null,
+  scope: CatalogScope = 'films',
 ) {
   const [query, setQuery] = useState(typed)
   const [answer, setAnswer] = useState(initial)
@@ -614,14 +962,14 @@ function useLiveSearch(
     const timer = setTimeout(
       () => {
         setSearching(true)
-        searchFilms(text).then(land, () =>
-          land({ query: text, refused: 'indisponivel' }),
-        )
+        const found =
+          scope === 'films' ? searchFilms(text) : searchCatalog(text, scope)
+        found.then(land, () => land({ query: text, refused: 'indisponivel' }))
       },
       IMDB_ID.test(text) ? 0 : DEBOUNCE_MS,
     )
     return () => clearTimeout(timer)
-  }, [on, query])
+  }, [on, query, scope])
 
   /** Puts `text` in the field as searched already: the answer stays. */
   const fill = (text: string) => {
@@ -670,34 +1018,17 @@ export function SessionFilmLookup({
   return (
     <section aria-label={CATALOG_SEARCH.title} className="flex flex-col gap-lg">
       <div className="grid items-end gap-sm sm:grid-cols-[1fr_auto]">
-        <FieldLabel label={label}>
-          <span className="relative flex">
-            <input
-              type="search"
-              name={name}
-              value={query}
-              onChange={(event) => {
-                setQuery(event.target.value)
-                onType?.()
-              }}
-              onKeyDown={(event) => {
-                if (live && event.key === 'Enter') event.preventDefault()
-              }}
-              autoComplete="off"
-              enterKeyHint="search"
-              aria-busy={searching}
-              className={`${FIELD} w-full ${searching ? 'pr-28' : ''}`}
-            />
-            {searching && (
-              <span
-                role="status"
-                className="pointer-events-none absolute top-1/2 right-10 -translate-y-1/2 text-meta text-ink-2"
-              >
-                {CATALOG_SEARCH.searching}
-              </span>
-            )}
-          </span>
-        </FieldLabel>
+        <LookupField
+          name={name}
+          label={label}
+          query={query}
+          live={live}
+          searching={searching}
+          onType={(text) => {
+            setQuery(text)
+            onType?.()
+          }}
+        />
         {!live && (
           <Submit name="buscar-catalogo" value="sim" formNoValidate>
             {CATALOG_SEARCH.submit}
@@ -710,27 +1041,60 @@ export function SessionFilmLookup({
   )
 }
 
-/** A film "Parecido com" took: its id, and its title once known. */
-export type ChosenFilm = { readonly id: string; readonly label?: string }
-
-/** The films "Parecido com" took, each with a × to let it go, over the
- * field the form posts (`name`, the ids by comma). The titles it does not
- * know yet (films that came in the URL) it looks up by id. */
-export function ChosenFilms({
+/** The lookup's field, with "buscando" in it while a search runs. With
+ * the JavaScript, Enter sends nothing. */
+function LookupField({
   name,
   label,
-  empty,
-  films,
-  onRemove,
-  onLabel,
+  query,
+  live,
+  searching,
+  onType,
 }: {
   name: string
   label: string
-  empty: string
-  films: readonly ChosenFilm[]
-  onRemove: (id: string) => void
-  onLabel: (id: string, label: string) => void
+  query: string
+  live: boolean
+  searching: boolean
+  onType: (text: string) => void
 }) {
+  return (
+    <FieldLabel label={label}>
+      <span className="relative flex">
+        <input
+          type="search"
+          name={name}
+          value={query}
+          onChange={(event) => onType(event.target.value)}
+          onKeyDown={(event) => {
+            if (live && event.key === 'Enter') event.preventDefault()
+          }}
+          autoComplete="off"
+          enterKeyHint="search"
+          aria-busy={searching}
+          className={`${FIELD} w-full ${searching ? 'pr-28' : ''}`}
+        />
+        {searching && (
+          <span
+            role="status"
+            className="pointer-events-none absolute top-1/2 right-10 -translate-y-1/2 text-meta text-ink-2"
+          >
+            {CATALOG_SEARCH.searching}
+          </span>
+        )}
+      </span>
+    </FieldLabel>
+  )
+}
+
+/** A film "Parecido com" took: its id, and its title once known. */
+export type ChosenFilm = { readonly id: string; readonly label?: string }
+
+/** Looks up by id the titles of the films that came without one. */
+function useFilmLabels(
+  films: readonly ChosenFilm[],
+  onLabel: (id: string, label: string) => void,
+) {
   const unknown = films
     .filter((film) => film.label === undefined)
     .map((film) => film.id)
@@ -753,7 +1117,52 @@ export function ChosenFilms({
       live = false
     }
   }, [unknown, onLabel])
+}
 
+/** A film "Parecido com" took, with its × to let it go. */
+function ChosenChip({
+  film,
+  onRemove,
+}: {
+  film: ChosenFilm
+  onRemove: (id: string) => void
+}) {
+  const label = film.label ?? film.id
+  return (
+    <li className="flex items-center gap-xs rounded-pill border border-rule bg-surface-2 py-1 pr-1 pl-3">
+      <span>{label}</span>
+      <button
+        type="button"
+        aria-label={CATALOG_SEARCH.remove(label)}
+        onClick={() => onRemove(film.id)}
+        className="flex size-touch cursor-pointer items-center justify-center rounded-pill text-ink-2"
+      >
+        {/* The drawn +, turned into a ×, as the folds' close. */}
+        <Icon name="plus" className="size-[16px] rotate-45" />
+      </button>
+    </li>
+  )
+}
+
+/** The films "Parecido com" took, each with a × to let it go, over the
+ * field the form posts (`name`, the ids by comma). The titles it does not
+ * know yet (films that came in the URL) it looks up by id. */
+export function ChosenFilms({
+  name,
+  label,
+  empty,
+  films,
+  onRemove,
+  onLabel,
+}: {
+  name: string
+  label: string
+  empty: string
+  films: readonly ChosenFilm[]
+  onRemove: (id: string) => void
+  onLabel: (id: string, label: string) => void
+}) {
+  useFilmLabels(films, onLabel)
   return (
     <div className="flex flex-col gap-xs">
       <span className="font-display text-field-label">{label}</span>
@@ -767,21 +1176,7 @@ export function ChosenFilms({
       ) : (
         <ul className="flex flex-wrap gap-sm">
           {films.map((film) => (
-            <li
-              key={film.id}
-              className="flex items-center gap-xs rounded-pill border border-rule bg-surface-2 py-1 pr-1 pl-3"
-            >
-              <span>{film.label ?? film.id}</span>
-              <button
-                type="button"
-                aria-label={CATALOG_SEARCH.remove(film.label ?? film.id)}
-                onClick={() => onRemove(film.id)}
-                className="flex size-touch cursor-pointer items-center justify-center rounded-pill text-ink-2"
-              >
-                {/* The drawn +, turned into a ×, as the folds' close. */}
-                <Icon name="plus" className="size-[16px] rotate-45" />
-              </button>
-            </li>
+            <ChosenChip key={film.id} film={film} onRemove={onRemove} />
           ))}
         </ul>
       )}

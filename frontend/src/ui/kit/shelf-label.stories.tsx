@@ -29,3 +29,14 @@ export const ItemsOnly: Story = {}
 export const Compact: Story = {
   args: { compact: true, note: 'algo pra rir' },
 }
+
+/** The top of Claude's fullscreen on a phone: one line, the version beside
+ * it. */
+export const SingleLine: Story = {
+  args: {
+    compact: true,
+    single: true,
+    tag: 'v2',
+    items: ['Vocês três', 'até 1h50', 'nota 7+ no IMDb', 'leve', 'pra rir'],
+  },
+}

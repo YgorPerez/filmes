@@ -160,3 +160,32 @@ export const readTraktExport = (
     throw error
   }
 }
+
+/** The rows of a kept snapshot of a Trakt profile read by the API (#269):
+ * one JSON object with `user` (`me` or the public username) and the lists
+ * `history`, `ratings` and `watchlist`, read as the export's files. */
+export const readTraktSnapshot = (
+  name: string,
+  content: Uint8Array,
+): TraktRow[] => {
+  let snapshot: unknown
+  try {
+    snapshot = JSON.parse(Buffer.from(content).toString('utf8'))
+  } catch {
+    throw invalid(`${name}: JSON inválido`)
+  }
+  if (typeof snapshot !== 'object' || snapshot === null)
+    throw invalid(`${name}: o JSON deve conter um objeto`)
+  const lists = snapshot as Record<string, unknown>
+  const read = (key: string, field: DateField) =>
+    rowsOf(
+      Buffer.from(JSON.stringify(lists[key] ?? [])),
+      `${name}: ${key}`,
+      field,
+    )
+  return [
+    ...read('history', 'watched_at'),
+    ...read('ratings', 'rated_at'),
+    ...read('watchlist', 'listed_at'),
+  ]
+}

@@ -1,7 +1,7 @@
 // The Feedback form of a Session: as it opens, with a Catálogo search, with
 // "outro filme" picked, refused, unknown and without the engine.
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, within } from 'storybook/test'
+import { expect, userEvent, within } from 'storybook/test'
 import type { FeedbackPage } from '#/platform/feedback'
 import { FEEDBACK } from './feedback.copy'
 import { FeedbackScreen } from './feedback'
@@ -48,7 +48,11 @@ export const Open: Story = {
     await expect(
       canvas.getByRole('form', { name: FEEDBACK.form.label }),
     ).toBeVisible()
-    await expect(canvas.getByLabelText('Reação: Iara')).toBeVisible()
+    // The reactions show once a film is picked.
+    await userEvent.click(
+      canvas.getByRole('radio', { name: /O Farol de Areia/ }),
+    )
+    await expect(canvas.getByRole('group', { name: 'Iara' })).toBeVisible()
   },
 }
 

@@ -27,12 +27,17 @@ import { storedImports, storeImport } from './stored.ts'
 import {
   hasTraktWatchlist,
   readTraktExport,
+  readTraktSnapshot,
   type TraktRow,
 } from './trakt-export.ts'
 import { withLatestWatchlist, type ExportRows } from './watchlist.ts'
 
 /** The kind of a Pessoa's `imports:` records this module reads. */
 export const TRAKT_KIND = 'trakt'
+
+/** The kind of the snapshots of her Trakt profile read by the API (#269):
+ * each holds her whole history, so only the latest one counts. */
+export const TRAKT_API_KIND = 'trakt-api'
 
 const FACT_TABLES = ['notas', 'ja_visto', 'watchlist'] as const
 
@@ -61,17 +66,31 @@ const readExport = (
     hasWatchlist: hasTraktWatchlist(content),
   }))
 
-/** The rows of every export the Pessoa has stored, in record order; the
- * watchlist only from the latest export with one. */
-const personTraktRows = (
+/** The rows of every export the Pessoa has stored, in record order, then
+ * those of her latest API snapshot, which has her whole profile; the
+ * watchlist only from the latest of them with one. */
+export const personTraktRows = (
   person: Person,
 ): Effect.Effect<TraktRow[], EngineError, Environment> =>
-  Effect.map(
-    storedImports(person, TRAKT_KIND, (path, content) =>
+  Effect.gen(function* () {
+    const exports = yield* storedImports(person, TRAKT_KIND, (path, content) =>
       readExport(basename(path), content),
-    ),
-    (exports) => withLatestWatchlist(exports, (row) => row.watchlist),
-  )
+    )
+    const snapshots = yield* storedImports(
+      person,
+      TRAKT_API_KIND,
+      (path, content) =>
+        attempt(() => ({
+          rows: readTraktSnapshot(basename(path), content),
+          hasWatchlist: true,
+        })),
+    )
+    const latest = snapshots.at(-1)
+    return withLatestWatchlist(
+      latest === undefined ? exports : [...exports, latest],
+      (row) => row.watchlist,
+    )
+  })
 
 const insertFact = (
   db: Connection,
@@ -131,7 +150,7 @@ export interface TraktReport {
 
 /** `_carregar_pessoa`: replaces the Pessoa's Trakt Fatos by those of the
  * rows. */
-const loadPerson = (
+export const loadPersonTrakt = (
   db: Connection,
   person: Person,
   rows: readonly TraktRow[],
@@ -187,7 +206,7 @@ export const loadTrakt = (
   Effect.gen(function* () {
     for (const person of yield* readPeople) {
       const rows = yield* personTraktRows(person)
-      if (rows.length > 0) yield* loadPerson(db, person, rows)
+      if (rows.length > 0) yield* loadPersonTrakt(db, person, rows)
     }
   })
 
@@ -216,7 +235,7 @@ export const reloadPersonTrakt = (
   person: Person,
 ): Effect.Effect<void, EngineError | SqliteError, Environment> =>
   Effect.flatMap(personTraktRows(person), (rows) =>
-    Effect.asVoid(loadPerson(db, person, rows)),
+    Effect.asVoid(loadPersonTrakt(db, person, rows)),
   )
 
 export type TraktFactCounts = Readonly<
@@ -297,7 +316,7 @@ export const importTrakt = (
             input.content,
             'zip',
           )
-          const report = yield* loadPerson(
+          const report = yield* loadPersonTrakt(
             db,
             kept.person,
             yield* personTraktRows(kept.person),

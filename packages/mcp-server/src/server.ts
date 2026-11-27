@@ -62,8 +62,32 @@ const contextOf = (ctx: ServerContext): ToolContext => {
   }
 }
 
+/** An absolute path of the server's disk, as an engine message may carry
+ * one ("não há Sessão 'x' em /srv/.../sessions"). */
+const SERVER_PATH = /(?:\/[^\s/'"`]+){2,}\/?/gu
+
+/** The engine's error without the server's paths: the chat and the
+ * Cartaz's view show its message, and only the last folder says anything
+ * to them (#277). */
+const withoutPaths = (output: unknown): unknown => {
+  if (typeof output !== 'object' || output === null || !('error' in output))
+    return output
+  const { error } = output as { error: { message?: unknown } }
+  if (typeof error.message !== 'string') return output
+  const message = error.message.replaceAll(
+    SERVER_PATH,
+    (path) => path.split('/').findLast(Boolean) ?? path,
+  )
+  return { ...output, error: { ...error, message } }
+}
+
 const answer = (output: unknown, isError: boolean) => ({
-  content: [{ type: 'text' as const, text: JSON.stringify(output) }],
+  content: [
+    {
+      type: 'text' as const,
+      text: JSON.stringify(isError ? withoutPaths(output) : output),
+    },
+  ],
   isError,
 })
 

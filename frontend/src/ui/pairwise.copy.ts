@@ -1,16 +1,21 @@
-// The Perguntas par a par's words (#181): the Presente's page on the Link da
-// Sessão and the Dono's section on the Session's page.
+// The Perguntas par a par's words (#181, #275): the Presente's page on the
+// Link da Sessão and the Dono's section on the Session's page.
 export const PAIRWISE = {
   invite: 'Responder perguntas de gosto',
   title: 'Qual dos dois você gostou mais?',
-  lead: 'Escolha só se viu os dois. As respostas só viram gosto depois que o Dono da Sessão aprovar.',
+  lead: (owner: string | null) =>
+    `Toque no filme que você gostou mais, se viu os dois. ${owner ?? 'Quem abriu a Sessão'} vê as respostas e decide se viram gosto.`,
   progress: (n: number, total: number) => `Pergunta ${n} de ${total}`,
-  skip: 'Não vi os dois',
+  canStop: 'Pode parar quando quiser.',
+  skip: 'Não vi algum dos dois',
   failed: 'Não deu para guardar essa resposta. Responda a pergunta abaixo.',
-  done: 'Pronto, obrigado! As respostas ficaram com o Dono da Sessão.',
+  doneTitle: 'Obrigado!',
+  done: (owner: string | null) =>
+    `${owner ?? 'Quem abriu a Sessão'} vê suas respostas e decide se viram gosto.`,
+  noneTitle: 'Nenhuma pergunta agora',
   none: 'Não há perguntas para você agora.',
   unavailable: 'As perguntas estão indisponíveis agora.',
-  back: 'Voltar aos filmes da Sessão',
+  back: 'Voltar aos filmes',
   film: (title: string, year: number | null) =>
     year === null ? title : `${title} (${year})`,
   owner: {
