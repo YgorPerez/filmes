@@ -51,12 +51,13 @@ export const PARTICIPATION = {
   voteNew: (n: number) =>
     n === 1 ? 'Votar no que chegou' : `Votar nos ${n} que chegaram`,
   revote: 'Você já votou · mudar votos',
-  votesLead:
-    'Sim sobe o filme na lista. Não tira o filme da noite pra todo mundo, e outro entra no lugar.',
   questionsTitle: 'Quer ajudar a acertar da próxima?',
   questionsLead: (owner: string | null) =>
     `Umas perguntas rápidas sobre filmes que você já viu. ${owner ?? 'Quem abriu a Sessão'} vê as respostas e decide se viram gosto.`,
   mine: (vote: 'yes' | 'no') => (vote === 'yes' ? 'você: sim' : 'você: não'),
+  /** A film that came in after her Votos, on a list where she voted the
+   * rest (pass 3 F2): text, not a sticker (#326). */
+  arrived: 'chegou depois · você ainda não votou',
   left: 'Saiu da noite pelo seu não',
   who,
 } as const

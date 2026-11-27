@@ -3,6 +3,7 @@ import type { LinkPerson, SessionLinkView } from '#/platform/session-link'
 import { weekdayDate } from './dates'
 import { buttonVariants } from './kit/button-variants'
 import { Chip } from './kit/chip'
+import { Icon } from './kit/icon'
 import { Avatar } from './kit/person'
 import { ShelfLabel } from './kit/shelf-label'
 import { TapeCase } from './kit/tape-case'
@@ -137,7 +138,9 @@ export function LinkPicker({
       <p className="text-ink-2">
         {PARTICIPATION.invited(view.owner, weekdayDate(view.date))}
       </p>
-      <h1 className="font-display text-page-title">{PARTICIPATION.pick}</h1>
+      <h1 className="font-display text-page-title text-balance">
+        {PARTICIPATION.pick}
+      </h1>
       {unknown && (
         <p className="text-ink" role="status">
           {PARTICIPATION.unknownPerson}
@@ -206,7 +209,39 @@ export function LinkHeader({
 
 /** One row of the night's list: the tape, the title, the facts, and her
  * Voto when she cast one. */
-export function LinkFilmRow({ film, first }: { film: Film; first: boolean }) {
+/** The veto rule, with Não and Sim drawn as the buttons they name, so
+ * "Não tira o filme" reads as the button, not as a negation. */
+export function VoteRule() {
+  const { rule } = VOTES
+  const mark =
+    'inline-flex items-center gap-0.5 rounded-pill border-2 bg-surface px-xs align-baseline font-bold leading-none whitespace-nowrap'
+  return (
+    <p className="max-w-[60ch] leading-loose text-pretty">
+      <span className={`${mark} border-sticker-pink`}>
+        <Icon name="close" className="size-[14px]" />
+        {rule.no}
+      </span>{' '}
+      {rule.noDoes}{' '}
+      <span className={`${mark} border-sticker-green`}>
+        <Icon name="check" className="size-[14px]" />
+        {rule.yes}
+      </span>{' '}
+      {rule.yesDoes}
+    </p>
+  )
+}
+
+/** One row of the night's list. `arrived` marks a film she has not voted
+ * on while she voted the rest: it came in after her Votos. */
+export function LinkFilmRow({
+  film,
+  first,
+  arrived = false,
+}: {
+  film: Film
+  first: boolean
+  arrived?: boolean
+}) {
   return (
     <li className="grid grid-cols-[64px_1fr] items-start gap-md border-b border-rule py-md last:border-b-0">
       <div className="relative">
@@ -224,10 +259,16 @@ export function LinkFilmRow({ film, first }: { film: Film; first: boolean }) {
           {film.title}
         </p>
         <FilmFacts film={film} />
-        {film.mine && (
+        {film.mine ? (
           <p className="text-meta text-ink-2">
             {PARTICIPATION.mine(film.mine)}
           </p>
+        ) : (
+          arrived && (
+            <p className="text-meta font-bold text-ink">
+              {PARTICIPATION.arrived}
+            </p>
+          )
         )}
       </div>
     </li>
@@ -263,7 +304,10 @@ export function LinkFilms({
     >
       <ShelfLabel items={[weekdayDate(view.date), ...view.shelf]} />
       <div className="flex flex-col gap-xs">
-        <h1 id="filmes-da-sessao" className="font-display text-page-title">
+        <h1
+          id="filmes-da-sessao"
+          className="font-display text-page-title text-balance"
+        >
           {PARTICIPATION.films}
         </h1>
         {films.length > 0 && (
@@ -281,7 +325,12 @@ export function LinkFilms({
             className="rounded-card border border-rule bg-surface px-md"
           >
             {films.map((film, i) => (
-              <LinkFilmRow key={film.id} film={film} first={i === 0} />
+              <LinkFilmRow
+                key={film.id}
+                film={film}
+                first={i === 0}
+                arrived={unvoted < films.length}
+              />
             ))}
           </ol>
           {view.left.length > 0 && (
@@ -290,7 +339,7 @@ export function LinkFilms({
             </p>
           )}
           <div className="flex flex-col gap-sm">
-            <p className="max-w-[60ch] text-pretty">{VOTES.rule}</p>
+            <VoteRule />
             <div className="flex flex-wrap items-center gap-md">
               <a href={action.href} className={buttonVariants()}>
                 {action.label}
