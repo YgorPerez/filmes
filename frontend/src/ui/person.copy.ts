@@ -386,7 +386,8 @@ export const PERSON = {
   },
   seen: {
     title: 'Já vistos',
-    empty: 'Nenhum Já visto dito aqui. As Notas do site ficam nas Notas.',
+    empty:
+      'Nenhum filme visto sem Nota. Os que têm Nota já contam como vistos.',
     add: 'Acrescentar Já visto',
     source: 'conversa com o Dono',
   },
