@@ -322,7 +322,7 @@ export function PickedTargetProvider({ children }: { children: ReactNode }) {
   )
 }
 
-export const usePickedTarget = () => useContext(PickedTarget)
+const usePickedTarget = () => useContext(PickedTarget)
 
 /** A target field (`alvo`, or `filme` for films only): it takes the id
  * "Usar" picked. */
