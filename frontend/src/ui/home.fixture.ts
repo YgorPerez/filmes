@@ -48,9 +48,7 @@ export const LATEST: LatestSession = {
 
 /** A cover for the first film, drawn here so the stories need no network. */
 export const COVERS: Record<string, string | null> = {
-  tt1: `data:image/svg+xml,${encodeURIComponent(
-    '<svg xmlns="http://www.w3.org/2000/svg" width="185" height="278"><rect width="185" height="278" fill="#2c62c4"/><circle cx="92" cy="110" r="46" fill="#ffd23f"/></svg>',
-  )}`,
+  tt1: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2 3'%3E%3Crect width='2' height='3' fill='%23476'/%3E%3C/svg%3E",
   tt2: null,
 }
 

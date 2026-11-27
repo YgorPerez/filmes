@@ -101,7 +101,7 @@ describe('Home', () => {
     expect(screen.getByText('Sua primeira Sessão aparece aqui.')).toBeTruthy()
   })
 
-  it('lets a tap on the shelf label open the request too, out of the keyboard\'s way', () => {
+  it("lets a tap on the shelf label open the request too, out of the keyboard's way", () => {
     const { container } = show()
     const label = container.querySelector('a[tabindex="-1"]')!
     expect(label.getAttribute('href')).toBe('/sessoes/nova')
@@ -305,7 +305,7 @@ describe('Home, the setup guide', () => {
     expect(summary.textContent).toBe('Meu gostopulado · RetomarFechar')
   })
 
-  it('leaves the engine\'s import step out: an import alone does not hold the guide open', () => {
+  it("leaves the engine's import step out: an import alone does not hold the guide open", () => {
     show(guiding({ taste: 'done', connector: 'done' }))
     expect(guide()).toBeNull()
   })

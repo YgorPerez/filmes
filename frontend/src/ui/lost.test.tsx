@@ -27,10 +27,9 @@ describe('NotFound', () => {
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
       'Essa Sessão não está na prateleira',
     )
-    expect(screen.getByRole('link', { name: 'Ver todas as Sessões' })).toHaveProperty(
-      'pathname',
-      '/sessoes',
-    )
+    expect(
+      screen.getByRole('link', { name: 'Ver todas as Sessões' }),
+    ).toHaveProperty('pathname', '/sessoes')
   })
 
   it('alone, offers Entrar and no Sessões', () => {

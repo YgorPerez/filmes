@@ -4,12 +4,7 @@ import { feedbackPath, sessionPath } from '#/content/session-paths'
 import type { LatestSession, SetupView } from '#/platform/setup-guide'
 import { HOME } from './home.copy'
 import { PostForm } from './kit/post-form'
-import {
-  guideSteps,
-  isSkipped,
-  stateOf,
-  type GuideStep,
-} from './setup-steps'
+import { guideSteps, isSkipped, stateOf, type GuideStep } from './setup-steps'
 import { Icon } from './kit/icon'
 import { RowArrow } from './kit/row-arrow'
 import { ShelfLabel } from './kit/shelf-label'
@@ -38,11 +33,7 @@ export function Ask() {
       <h1 id="pedir" className="font-display text-counter-title">
         {ask.title}
       </h1>
-      <a
-        href={NEW_SESSION}
-        tabIndex={-1}
-        className="w-fit no-underline"
-      >
+      <a href={NEW_SESSION} tabIndex={-1} className="w-fit no-underline">
         <ShelfLabel items={ask.blanks} label={ask.blanksLabel} />
       </a>
       <p className="text-meta text-case-ink-2">{ask.lead}</p>
@@ -218,9 +209,7 @@ export function Latest({
         className="flex min-h-touch items-center gap-sm border-t border-dashed border-rule pt-md text-link text-ink no-underline"
       >
         <span className="min-w-0 flex-1">
-          <span className="font-display text-meta-strong">
-            {latest.again}
-          </span>{' '}
+          <span className="font-display text-meta-strong">{latest.again}</span>{' '}
           <span className="text-ink-2">
             {latest.againWhat(who, s.constraints)}
           </span>
@@ -432,9 +421,7 @@ function StepContent({
     <>
       {mcpUrl && <ConnectorBody url={mcpUrl} />}
       <div className="flex flex-wrap items-center gap-xs">
-        {mcpUrl && (
-          <CopyAddress url={mcpUrl} label={HOME.guide.copyAddress} />
-        )}
+        {mcpUrl && <CopyAddress url={mcpUrl} label={HOME.guide.copyAddress} />}
         {skip && <Skip step="connector" />}
       </div>
     </>
