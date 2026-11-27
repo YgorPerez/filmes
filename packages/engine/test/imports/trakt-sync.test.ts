@@ -37,9 +37,9 @@ const withTrakt = (
   )
 }
 
-const using = async <A>(engine: Engine, use: (e: Engine) => Promise<A>) => {
+const using = async <A>(engine: Engine, task: (e: Engine) => Promise<A>) => {
   try {
-    return await use(engine)
+    return await task(engine)
   } finally {
     await engine.dispose()
   }
