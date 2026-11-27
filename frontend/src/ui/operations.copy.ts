@@ -90,7 +90,7 @@ export const OPERATIONS = {
     folderSetting: 'FILMES_AVALIACOES',
     grid: 'Testar outras combinações de pesos',
     gridHint:
-      'Roda a avaliação para cada combinação e diz quais pesos foram melhor. Leva bem mais tempo.',
+      'Roda a avaliação para cada combinação e diz quais pesos se saíram melhor. Leva bem mais tempo.',
     run: 'Avaliar',
     running: 'Avaliando…',
     startedBy: (by: string, at: string, grid: boolean) =>
@@ -119,7 +119,6 @@ export const OPERATIONS = {
     sample: 'Amostra',
     people: 'Pessoas',
     movielens: 'MovieLens',
-    measured: 'Medidas',
     recall: 'Recall@50',
     coverage: 'Cobertura no top 5',
     online: (sessions: number, rate: number | null) => {
@@ -198,6 +197,8 @@ export const OPERATIONS = {
           ? '1 linha.'
           : `${count(total)} linhas.`,
     empty: 'A consulta retornou 0 linhas.',
+    sideways: (columns: number) =>
+      `${count(columns)} colunas: role a tabela para o lado →`,
     tables: (n: number) => `Tabelas e visões (${n})`,
     tablesHint: 'Escolha um nome para ver as primeiras 20 linhas.',
     view: 'visão',
