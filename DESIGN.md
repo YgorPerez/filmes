@@ -697,7 +697,7 @@ Para "Pular", "Retomar" e ações menores: sem fundo, sistema 14px tinta clara, 
 
 ### Página perdida (404 e erro)
 
-Um endereço que não leva a nada fala como a locadora: h1 "Essa fita não está na prateleira" em page title, "O endereço pode ter mudado, ou a Sessão foi apagada." em tinta clara, o laranja "Ir para o início" e "Ver Sessões" em opção. Para um Dono, fica dentro da barra do topo e das abas, na coluna de 720px; para quem não entrou, a barra preta traz só "filmes", como em `/entrar`, o lead não fala de Sessão ("O endereço pode ter mudado, ou veio cortado."), o laranja é "Entrar" e o rodapé dos créditos fecha a página. Uma página só de admin aberta por outro Dono é esse mesmo 404: a página não diz por quê. Uma página que falhou ao abrir diz "A fita enroscou", que o problema ficou no log, e oferece "Tentar de novo" (laranja, carrega de novo) e "Ir para o início".
+Um endereço que não leva a nada fala como a locadora: h1 "Essa fita não está na prateleira" em page title, "O endereço pode ter mudado, ou o link veio cortado." em tinta clara (a Sessão que não existe tem o 404 dela, que fala da Sessão), o laranja "Ir para o início" e "Ver Sessões" em opção. Para um Dono, fica dentro da barra do topo e das abas, na coluna de 720px; para quem não entrou, a barra preta traz só "filmes", como em `/entrar`, o lead diz só "O endereço pode ter mudado, ou veio cortado.", o laranja é "Entrar" e o rodapé dos créditos fecha a página. Uma página só de admin aberta por outro Dono é esse mesmo 404: a página não diz por quê. Uma página que falhou ao abrir diz "A fita enroscou", que o problema ficou no log, e oferece "Tentar de novo" (laranja, carrega de novo) e "Ir para o início".
 
 ### Home: o balcão, a última Sessão e o guia
 
@@ -725,11 +725,11 @@ A barra preta leva a marca. O cartão azul começa perto do topo e traz o títul
 
 ### Operações
 
-O console SQL, a fila de envio e a avaliação têm títulos próprios. A partir de 900px, a fila fica à direita do console e a avaliação ocupa a linha de baixo. No celular, a ordem é consulta, envio, avaliação. O botão laranja executa a consulta. A tabela e a contagem ficam logo abaixo do formulário, com rolagem dentro da área de resultados.
+O console SQL, a fila de envio e a avaliação têm títulos próprios. A partir de 900px, a fila fica à direita do console e a avaliação ocupa a linha de baixo. No celular, a ordem é consulta, envio, avaliação. O botão laranja executa a consulta. Enquanto o envio falha, o envio sobe para o topo, na largura toda, e o laranja passa a ser o "Tentar enviar agora"; Consultar vira opção em pílula. A tabela e a contagem ficam logo abaixo do formulário, com rolagem dentro da área de resultados.
 
-O quadro de envio mostra a fila e, se houver falha, quando ela começou e quantas tentativas falharam. O último erro do Git abre sob demanda. Depois de tentar enviar, o estado da fila aparece no próprio quadro.
+O quadro de envio mostra a fila e, se houver falha, quando ela começou, quantas tentativas falharam, os commits na fila (o assunto em mono, como o motor o escreveu) e o que fazer. O último erro do Git abre sob demanda. A faixa de push falhando não aparece na própria Operações. Depois de tentar enviar, o estado da fila aparece no próprio quadro.
 
-A avaliação mostra o progresso no lugar do formulário enquanto roda. As medidas vêm antes do relatório, que abre sob demanda. A opção de testar outras combinações de pesos explica por que leva mais tempo.
+A avaliação mostra o progresso no lugar do formulário enquanto roda. As medidas vêm antes do relatório, que abre sob demanda: cada seção dele é uma dobra fechada, com os números em pt-BR, as tabelas empilhadas em "coluna: valor" abaixo de 640px e os pesos no TOML do `config/weights.toml`. A grade de pesos abre com uma frase que diz se alguma combinação supera os pesos de hoje; só as que superam têm "Copiar pesos", e as outras levam "sem ganho". A opção de testar outras combinações de pesos explica por que leva mais tempo.
 
 Um erro ou um aviso de configuração diz primeiro, em frase, o que houve e o que fazer. Embaixo, menor e em ink-2, vem o detalhe técnico que o admin procura: o código do erro, ou a variável do servidor que falta.
 

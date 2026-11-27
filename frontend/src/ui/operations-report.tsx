@@ -8,11 +8,13 @@ import { Disclosure } from './operations-parts'
 
 const COPY = OPERATIONS.evaluation
 
-/** The section the report opens on; the others open on demand. */
-const OPEN_SECTION = 'Offline'
-
-/** The section whose YAML is today's weights, which copy back as TOML. */
+/** The section whose YAML is today's weights, shown and copied as the
+ * TOML of `config/weights.toml`. */
 const WEIGHTS_SECTION = 'Pesos'
+
+/** The section whose YAML holds every measure of the grid's best sets:
+ * the page keeps its sentence and leaves the YAML to the file. */
+const GRID_SECTION = 'Grade de pesos'
 
 /** A button that puts `text` on the clipboard and says it did; where the
  * browser refuses, it says to select the text by hand. */
@@ -41,7 +43,10 @@ export function CopyButton({
         type="button"
         onClick={copy}
         aria-label={name}
-        className={buttonVariants({ variant: 'option' })}
+        className={buttonVariants({
+          variant: 'option',
+          className: 'whitespace-nowrap',
+        })}
       >
         <Icon name="copy" className="size-4" />
         {label}
@@ -69,12 +74,24 @@ const blockKey = (block: ReportBlock) => {
 
 const ALIGN = { left: 'text-left', right: 'text-right', center: 'text-center' }
 
+/** A report table: a grid at 640px and up; on the phone, where its columns
+ * do not fit, each row stacks as "column: value" lines under its name, so
+ * the last column (the calibration's "Sobe?") is never past the edge. */
+const REPORT_TABLE = [
+  'w-full text-meta tabular-nums',
+  '[&_td]:px-sm [&_td]:py-xs [&_th]:px-sm [&_th]:py-xs',
+  'max-sm:block max-sm:[&_tbody]:block max-sm:[&_thead]:sr-only',
+  'max-sm:[&_tr]:block max-sm:[&_tr]:py-xs max-sm:[&_th]:block max-sm:[&_th]:px-0',
+  'max-sm:[&_td]:flex max-sm:[&_td]:justify-between max-sm:[&_td]:gap-md max-sm:[&_td]:px-0 max-sm:[&_td]:py-2xs max-sm:[&_td]:text-right',
+  'max-sm:[&_td]:before:text-left max-sm:[&_td]:before:text-ink-2 max-sm:[&_td]:before:content-[attr(data-label)]',
+].join(' ')
+
 function Block({ block, weights }: { block: ReportBlock; weights: boolean }) {
   switch (block.kind) {
     case 'table':
       return (
         <div className="overflow-x-auto">
-          <table className="w-full text-meta tabular-nums [&_td]:px-sm [&_td]:py-xs [&_th]:px-sm [&_th]:py-xs">
+          <table className={REPORT_TABLE}>
             <thead>
               <tr className="border-b border-rule font-display">
                 {block.head.map((cell, i) => (
@@ -103,7 +120,8 @@ function Block({ block, weights }: { block: ReportBlock; weights: boolean }) {
                     ) : (
                       <td
                         key={block.head[i] ?? cell}
-                        className={`whitespace-nowrap ${ALIGN[block.align[i] ?? 'left']}`}
+                        data-label={block.head[i]}
+                        className={`sm:whitespace-nowrap ${ALIGN[block.align[i] ?? 'left']}`}
                       >
                         {cell}
                       </td>
@@ -121,7 +139,7 @@ function Block({ block, weights }: { block: ReportBlock; weights: boolean }) {
         <div className="flex flex-col gap-sm">
           {toml && <CopyButton text={toml} label={COPY.copyToml} />}
           <pre className="max-h-[50vh] overflow-auto rounded-field bg-surface-2 p-md font-mono text-meta">
-            {block.text}
+            {toml ?? block.text}
           </pre>
         </div>
       )
@@ -140,39 +158,50 @@ function Block({ block, weights }: { block: ReportBlock; weights: boolean }) {
 }
 
 /** The latest report: its day, a download of the file, and each section
- * in a fold of its own, the Offline one open. */
+ * in a fold of its own, all closed: the summary above is the answer, the
+ * report the reference. */
 export function Report({ report }: { report: EvaluationReport | null }) {
   if (report === null)
     return <p className="text-meta text-ink-2">{COPY.noReport}</p>
   const sections = parseReport(report.text)
+  const file = `/operacoes/relatorio.md?data=${report.date}`
   return (
     <div className="flex flex-col gap-md border-t border-rule pt-xl">
       <div className="flex flex-wrap items-center justify-between gap-sm">
         <h3 className="font-display text-step-title">
           {COPY.report(report.date)}
         </h3>
-        <a
-          href={`/operacoes/relatorio.md?data=${report.date}`}
-          download
-          className={buttonVariants({ variant: 'link' })}
-        >
+        <a href={file} download className={buttonVariants({ variant: 'link' })}>
           {COPY.download}
         </a>
       </div>
       {sections.map((section) => (
-        <Disclosure
-          key={section.title}
-          summary={section.title}
-          open={section.title === OPEN_SECTION}
-        >
+        <Disclosure key={section.title} summary={section.title}>
           <div className="flex flex-col gap-md">
-            {section.blocks.map((block) => (
-              <Block
-                key={blockKey(block)}
-                block={block}
-                weights={section.title === WEIGHTS_SECTION}
-              />
-            ))}
+            {section.blocks
+              .filter(
+                (block) =>
+                  section.title !== GRID_SECTION || block.kind !== 'code',
+              )
+              .map((block) => (
+                <Block
+                  key={blockKey(block)}
+                  block={block}
+                  weights={section.title === WEIGHTS_SECTION}
+                />
+              ))}
+            {section.title === GRID_SECTION && (
+              <p className="text-meta">
+                {COPY.gridFile}{' '}
+                <a
+                  href={file}
+                  download
+                  className="underline underline-offset-3"
+                >
+                  {COPY.download}
+                </a>
+              </p>
+            )}
           </div>
         </Disclosure>
       ))}

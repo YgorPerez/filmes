@@ -243,7 +243,8 @@ export function AppShell({
           </div>
         </div>
       </header>
-      {alert && <PushStrip status={alert} />}
+      {/* On Operações the push's own section says it, first. */}
+      {alert && !under(path, '/operacoes') && <PushStrip status={alert} />}
       <div className="flex flex-1 flex-col pb-tab-clearance min-[900px]:pb-0">
         <div>{children}</div>
         <SiteFooter />

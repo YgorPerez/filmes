@@ -10,22 +10,17 @@ import {
 
 const COPY = OPERATIONS.push
 
-/** The commits waiting, newest first, by their subjects. */
+/** The commits waiting, newest first, by their subjects: the engine's
+ * operation as it ran ("pessoa criar Lia"), so in code type. */
 function Queued({ status }: { status: PushStatus }) {
-  if (status.queued.length === 0) return null
   return (
-    <div className="flex flex-col gap-xs text-meta">
-      <p className="text-ink-2">
-        {COPY.queued(status.queued.length, status.pending)}
-      </p>
-      <ul className="list-disc space-y-2xs pl-xl">
-        {status.queued.map((subject) => (
-          <li key={subject} className="wrap-anywhere">
-            {subject}
-          </li>
-        ))}
-      </ul>
-    </div>
+    <ul className="list-disc space-y-2xs pl-xl text-meta">
+      {status.queued.map((subject) => (
+        <li key={subject} className="wrap-anywhere">
+          <code className="font-mono">{subject}</code>
+        </li>
+      ))}
+    </ul>
   )
 }
 
@@ -44,9 +39,12 @@ function PushQueue({
   const unreadable = status.failures === 0 && status.lastError !== null
   const failing = status.failures > 0
   const fine = status.pending === 0 && !failing
+  const listed = failing && status.queued.length > 0
   const queue = fine
     ? COPY.upToDate(status.lastPushedAt)
-    : COPY.pending(status.pending)
+    : listed
+      ? COPY.pendingList(status.pending, status.queued.length)
+      : COPY.pending(status.pending)
   return (
     <>
       {failing && (
@@ -72,8 +70,8 @@ function PushQueue({
           {queue}
         </p>
       )}
+      {listed && <Queued status={status} />}
       {failing && <p>{COPY.nextStep}</p>}
-      {failing && <Queued status={status} />}
       {status.lastError && (
         <Disclosure summary={COPY.lastError}>
           <pre className="text-meta break-words whitespace-pre-wrap">
@@ -81,7 +79,9 @@ function PushQueue({
           </pre>
         </Disclosure>
       )}
-      {(status.pending > 0 || failing) && <ActionPost action="enviar" />}
+      {(status.pending > 0 || failing) && (
+        <ActionPost action="enviar" primary={failing} />
+      )}
     </>
   )
 }
