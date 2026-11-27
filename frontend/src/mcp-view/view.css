@@ -12,16 +12,22 @@
 @import '../ui/base.css';
 @source './billboard-view.tsx';
 @source '../ui/billboard*.tsx';
+@source '../ui/billboard-frame.ts';
 @source '../ui/kit';
 /* The stories are not the Cartaz (`pnpm storybook`). */
 @source not '../ui/**/*.stories.tsx';
 
-/* Inline, the card sits on the host's own floor (#277): the frame has none.
- * Its colour scheme is the theme's (`base.css` until the host gives one,
- * then `mount-view.tsx`), so where Chrome paints a canvas behind it, the
- * canvas has the tokens' own polarity. The fullscreen lays the ground
- * itself (`billboard.tsx`). */
+/* Inline, the card sits on the host's own floor (#277): the frame paints
+ * `--view-floor`, the host's background when it gives one
+ * (`mount-view.tsx`), edge to edge, so the opaque canvas Chrome puts behind
+ * a frame whose colour scheme differs from the page around it never shows
+ * around the card's corners. The fullscreen lays the ground itself
+ * (`billboard.tsx`). */
 @layer base {
+  html {
+    background: var(--view-floor, transparent);
+  }
+
   body {
     background: transparent;
   }

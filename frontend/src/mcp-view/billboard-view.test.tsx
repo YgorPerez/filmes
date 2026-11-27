@@ -6,7 +6,7 @@
 import { act, cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
-import { MODEL } from '../ui/billboard.fixture'
+import { CHOSEN_OUTSIDE, CLOSED, MODEL } from '../ui/billboard.fixture'
 import { SEND_STATUS } from '../ui/billboard-send.copy'
 import { BILLBOARD } from '../ui/billboard.copy'
 import { BillboardView, type Host } from './billboard-view'
@@ -139,6 +139,38 @@ describe('the view shows, with no text or as the page', () => {
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
       'Cartaz: Vocês dois',
     )
+  })
+})
+
+describe('the view shows, a closed Session', () => {
+  const closed = (billboard: typeof CLOSED, host: Partial<Host> = {}) =>
+    render(
+      <BillboardView
+        result={json({ session: billboard.session, billboard })}
+        host={{ ...fakeHost(json({})), ...host }}
+      />,
+    )
+  const reactions = () =>
+    screen.getAllByRole('list', { name: 'Filme escolhido' })
+
+  it('in fullscreen, it opens as inline: closed, the Filme escolhido and each line', () => {
+    closed(CLOSED, { inFullscreen: true })
+    expect(
+      screen.getByText(new RegExp(`^${view.closed}`, 'u')).textContent,
+    ).toBe('Sessão fechada · Filme escolhido: As Horas Lentas')
+    // Under the request, and again in the chosen film's card.
+    expect(reactions().map((list) => list.textContent)).toEqual([
+      'BVocê: previsto 8,3 · deu 6 de 10IIara: gostou',
+      'BVocê: previsto 8,3 · deu 6 de 10IIara: gostou',
+    ])
+  })
+
+  it('without fullscreen, the same; a chosen film with a block of its own says its lines once', () => {
+    closed(CHOSEN_OUTSIDE)
+    expect(
+      screen.getByText(new RegExp(`^${view.closed}`, 'u')).textContent,
+    ).toBe('Sessão fechada · Filme escolhido: Curta da Madrugada')
+    expect(reactions()).toHaveLength(1)
   })
 })
 
@@ -635,6 +667,39 @@ describe('mountView, inline', () => {
       app.onhostcontextchanged?.({ displayMode: 'fullscreen', theme: 'light' }),
     )
     expect(style.colorScheme).toBe('light')
+    root.remove()
+  })
+})
+
+describe('mountView, the floor', () => {
+  const floors = async (context: Record<string, unknown>) => {
+    const app = fakeApp(context)
+    const root = document.body.appendChild(document.createElement('div'))
+    await act(() =>
+      mountView(app as unknown as ViewApp, root, () => Promise.resolve()),
+    )
+    const style = document.documentElement.style
+    const read = () => [
+      style.getPropertyValue('--view-floor'),
+      style.getPropertyValue('--card-floor'),
+    ]
+    return { app, root, read }
+  }
+
+  it('the host’s background is the frame’s floor, edge to edge', async () => {
+    const { root, read } = await floors({
+      theme: 'dark',
+      styles: { variables: { '--color-background-primary': '#262624' } },
+    })
+    expect(read()).toEqual(['#262624', ''])
+    root.remove()
+  })
+
+  it('dark without it, the card lays the ground; light, nothing', async () => {
+    const { app, root, read } = await floors({ theme: 'dark' })
+    expect(read()).toEqual(['', 'var(--color-ground)'])
+    await act(async () => app.onhostcontextchanged?.({ theme: 'light' }))
+    expect(read()).toEqual(['', ''])
     root.remove()
   })
 })

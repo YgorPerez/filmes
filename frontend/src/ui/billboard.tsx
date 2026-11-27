@@ -12,7 +12,7 @@ import {
 } from 'react'
 import { BillboardCard, EvidenceLine } from './billboard-card'
 import { ChosenFilm } from './billboard-chosen'
-import { Changes, InlineBillboard, type RowTag } from './billboard-inline'
+import { InlineBillboard, Standing, type RowTag } from './billboard-inline'
 import {
   emptyMarks,
   forgetMarks,
@@ -348,8 +348,9 @@ export function Billboard({
   )
 }
 
-/** The fullscreen: the request fixed on top, the Dono's words, what left,
- * the Presentes and the shelf, the bar at the foot. */
+/** The fullscreen: the request fixed on top, the Dono's words, what left
+ * (or, once closed, that it is and the Filme escolhido, as inline), the
+ * Presentes and the shelf, the bar at the foot. */
 function FullscreenBody({
   billboard,
   bar,
@@ -375,14 +376,15 @@ function FullscreenBody({
           <HandNote compact tilt="right">{`+ ${words}`}</HandNote>
         </div>
       ))}
-      <Changes billboard={billboard} />
+      <Standing billboard={billboard} block />
       {billboard.films.length > 0 && <PeopleLegend billboard={billboard} />}
       {children}
     </Fullscreen>
   )
 }
 
-/** Claude without fullscreen: no page head names the Presentes. */
+/** Claude without fullscreen: no page head names the Presentes; what left,
+ * or the closed Session's lines, come under the request, as inline. */
 function ViewTop({
   billboard,
   shelf,
@@ -393,8 +395,8 @@ function ViewTop({
   return (
     <>
       <Request billboard={billboard} />
+      <Standing billboard={billboard} block />
       <PeopleLegend billboard={billboard} />
-      <Changes billboard={billboard} />
       <Capped>{shelf}</Capped>
     </>
   )
@@ -640,7 +642,9 @@ function Capped({ children }: { children: ReactNode }) {
         {children}
       </div>
       {cut && (
-        <div className="absolute inset-x-0 bottom-0 flex justify-center border-t border-rule bg-ground pt-md">
+        // Narrow, the shelf sits on the frame's floor, not on the ground
+        // (`billboard-view.tsx`).
+        <div className="absolute inset-x-0 bottom-0 flex justify-center border-t border-rule bg-view-floor pt-md min-[560px]:bg-ground">
           <button
             type="button"
             aria-expanded={false}
