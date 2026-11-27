@@ -103,7 +103,7 @@ async function openOlgaImports(page: Page, info: TestInfo) {
   await expect(page).toHaveURL(/\/pessoas\/olga$/)
   await section(page, 'Notas')
     .getByRole('link', {
-      name: 'Importar do Letterboxd, do Trakt, do IMDb ou do Simkl',
+      name: 'Importar de outro site',
     })
     .click()
   await expect(page).toHaveURL(/\/pessoas\/olga\/importar$/)
@@ -267,7 +267,8 @@ test('the Dono imports a Trakt ZIP; a ZIP of neither and a profile that does not
     'outro',
   )
   await expect(notice(page)).toHaveText(
-    'O ZIP do Trakt entrou: entraram 2 Notas novas e 1 Já visto novo.',
+    // The film of the history has a Nota too: no Já visto alone (#274).
+    'O ZIP do Trakt entrou: entraram 2 Notas novas.',
   )
   await expect(section(page, RESULTS)).not.toContainText('Letterboxd:')
   await expect(section(page, RESULTS)).toContainText(
@@ -330,7 +331,7 @@ test('the Dono imports a Simkl backup ZIP', async ({ page }, info) => {
     'outro',
   )
   await expect(notice(page)).toHaveText(
-    'O backup do Simkl entrou: entraram 3 Notas novas e 2 Já vistos novos. 2 filmes ficaram de fora: o Catálogo do filmes não tem.',
+    /^O backup do Simkl entrou: entraram 3 Notas novas.* 2 filmes ficaram de fora: o Catálogo do filmes não tem\.$/,
   )
   await expect(section(page, RESULTS)).toContainText(
     'Simkl: 3 Notas e 2 Já vistos',
@@ -363,7 +364,7 @@ test('the Dono imports a TV Time backup', async ({ page }, info) => {
     'outro',
   )
   await expect(notice(page)).toHaveText(
-    'O backup do TV Time entrou: entraram 2 Notas novas e 3 Já vistos novos. 1 filme ficou de fora: o Catálogo do filmes não tem.',
+    /^O backup do TV Time entrou: entraram 2 Notas novas.* 1 filme ficou de fora: o Catálogo do filmes não tem\.$/,
   )
   await expect(section(page, RESULTS)).toContainText(
     'TV Time: 2 Notas e 3 Já vistos',

@@ -495,6 +495,57 @@ describe('PersonImportsScreen', () => {
     expect(COPY.notices.removido(none)).toContain('Nada saiu')
   })
 
+  it('says which Notas an import replaced, apart from the new ones (#274)', () => {
+    expect(
+      COPY.notices.trakt({
+        facts: 3,
+        ratings: 1,
+        seen: 0,
+        changed: 1,
+        changes: [{ title: 'Maré Baixa (2015)', from: 9, to: 1 }],
+        repeated: 1,
+      }),
+    ).toBe(
+      'O ZIP do Trakt entrou: entraram 1 Nota nova. 1 Nota mudou: Maré Baixa (2015), de 9 para 1. 1 filme ficou com a Nota que já tinha.',
+    )
+    expect(
+      COPY.notices.letterboxd({
+        facts: 9,
+        ratings: 4,
+        seen: 1,
+        watchlist: 1,
+        changed: 5,
+        changes: [
+          { title: 'A', from: 9, to: 1 },
+          { title: 'B', from: 2, to: 8 },
+        ],
+        repeated: 3,
+      }),
+    ).toBe(
+      'O ZIP do Letterboxd entrou: entraram 4 Notas novas, 1 Já visto novo e 1 filme na watchlist. 5 Notas mudaram: A, de 9 para 1; B, de 2 para 8 e mais 3 outras. 3 filmes ficaram com a Nota que já tinham.',
+    )
+    // Only films that kept their Notas: nothing new.
+    expect(
+      COPY.notices.letterboxd({ facts: 4, ratings: 0, seen: 0, repeated: 4 }),
+    ).toBe(
+      'O ZIP do Letterboxd entrou: nada novo, esses filmes já estavam aqui.',
+    )
+    const done = {
+      notice: 'trakt' as const,
+      facts: 3,
+      ratings: 0,
+      seen: 0,
+      changed: 1,
+      changes: [{ title: 'Maré Baixa (2015)', from: 9, to: 1 }],
+    }
+    render(<PersonImportsScreen slug="quim" page={QUIM} done={done} />)
+    expect(
+      within(screen.getByRole('status'))
+        .getByRole('link', { name: COPY.changedLink })
+        .getAttribute('href'),
+    ).toBe('/pessoas/quim#notas')
+  })
+
   it.each(IMPORT_REFUSALS)('says why not: %s', (refusal) => {
     render(<PersonImportsScreen slug="quim" page={EMPTY} refusal={refusal} />)
     expect(

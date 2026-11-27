@@ -2,6 +2,7 @@ import { useId, type ReactNode, type Ref } from 'react'
 import type { PersonImports } from '@filmes/engine'
 import {
   refusedForm,
+  type ChangedRating,
   type ImportForm as FormName,
   type ImportNotice,
   type ImportRefusal,
@@ -52,9 +53,15 @@ export type ImportDoneView = {
   notice: ImportNotice
   /** Fatos in (or out, for a removal). */
   facts: number
-  /** Of them, the new Notas and Já vistos. */
+  /** What her Notas list sees (#274): films with a first Nota, seen for
+   * the first time, whose Nota changed (the first few by name), that kept
+   * theirs, and that came into her watchlist. */
   ratings: number
   seen: number
+  changed?: number
+  changes?: readonly ChangedRating[]
+  repeated?: number
+  watchlist?: number
   outside?: number
 }
 
@@ -144,6 +151,7 @@ function ImportsPage({
         refusal={inForm ? undefined : refusal}
         done={done}
         feedback={feedback}
+        notes={`${personPath(slug, page.own)}#notas`}
       />
       {page.imports.length > 0 ? (
         <>
@@ -158,21 +166,37 @@ function ImportsPage({
   )
 }
 
-/** The refusal no form owns and the notice of what the last post did. */
+/** The refusal no form owns and the notice of what the last post did.
+ * When the import replaced a Nota, the way to her Notas, to change it
+ * back (#274). */
 function PageFeedback({
   refusal,
   done,
   feedback,
+  notes,
 }: {
   refusal?: ImportRefusal
   done?: ImportDoneView
   feedback: Ref<HTMLDivElement>
+  notes: string
 }) {
   if (!refusal && !done) return null
   return (
     <div ref={feedback}>
       {refusal && <Alert>{COPY.refusals[refusal]}</Alert>}
-      {done && <Notice>{COPY.notices[done.notice](done)}</Notice>}
+      {done && (
+        <Notice>
+          {COPY.notices[done.notice](done)}
+          {(done.changed ?? 0) > 0 && (
+            <>
+              {' '}
+              <a href={notes} className="text-ink underline underline-offset-3">
+                {COPY.changedLink}
+              </a>
+            </>
+          )}
+        </Notice>
+      )}
     </div>
   )
 }
