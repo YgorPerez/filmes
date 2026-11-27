@@ -4,6 +4,11 @@ import { defineTool, sessionId } from '../tool.ts'
 
 export default defineTool({
   name: 'answer_billboard',
+  annotations: {
+    readOnlyHint: false,
+    destructiveHint: false,
+    openWorldHint: false,
+  },
   description:
     'Lê o texto que o Dono mandou do Cartaz (o do botão Copiar pro chat ou Enviar, que começa com `#cartaz <sessao> v<n>`; ' +
     'pode vir com conversa em volta) e grava: cada Já vi vira Já visto da Pessoa e, com nota de 1 a 10, Nota ' +
