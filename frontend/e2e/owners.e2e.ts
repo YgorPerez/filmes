@@ -150,8 +150,7 @@ test('Bruno tells a Relato about Vera, and Vera sees it on her page', async ({
   await vera.close()
 })
 
-const SKIP_IMPORT =
-  'Pular: Importar do Letterboxd, do Trakt, do IMDb ou do Simkl'
+const SKIP_TASTE = 'Pular: Meu gosto'
 
 test.describe('without JavaScript', () => {
   test.use({ javaScriptEnabled: false })
@@ -186,6 +185,11 @@ test('a new Dono sees the setup guide, and a skipped step stays skipped', async 
   const guide = page.getByRole('region', { name: 'Para começar', exact: true })
   await expect(guide).toBeVisible()
   await expect(guide.getByRole('heading', { name: 'Meu gosto' })).toBeVisible()
+  // The connector behind Meu gosto says what it is, and folds the rest.
+  await expect(
+    guide.getByRole('button', { name: 'Copiar endereço' }),
+  ).toBeHidden()
+  await guide.getByText('Ver como conectar').click()
   await expect(
     guide.getByRole('button', { name: 'Copiar endereço' }),
   ).toBeVisible()
@@ -206,7 +210,7 @@ test('a new Dono sees the setup guide, and a skipped step stays skipped', async 
     { times: 1 },
   )
   try {
-    await guide.getByRole('button', { name: SKIP_IMPORT }).click()
+    await guide.getByRole('button', { name: SKIP_TASTE }).click()
     await expect(guide.getByRole('button', { name: 'Pulando…' })).toBeDisabled()
     await snap(page, info, 'home-guide-pulando')
   } finally {
@@ -218,10 +222,10 @@ test('a new Dono sees the setup guide, and a skipped step stays skipped', async 
   await expect(page).toHaveURL(/\/$/)
   await page.reload()
   await expect(guide.getByText('Retomar')).toBeVisible()
-  await expect(guide.getByRole('button', { name: SKIP_IMPORT })).toHaveCount(0)
+  await expect(guide.getByRole('button', { name: SKIP_TASTE })).toHaveCount(0)
 
-  // Every step out of the way: the guide leaves, "pedir filme" stays.
-  await guide.getByRole('button', { name: 'Pular: Meu gosto' }).click()
+  // Every step out of the way: the guide leaves, "pedir filme" stays. The
+  // connector, now the first pending step, shows its address.
   await expect(guide.getByText(/^http:\/\/localhost:\d+\/mcp$/)).toBeVisible()
   await guide.getByRole('button', { name: 'Pular: Conector no Claude' }).click()
   await expect(guide).toHaveCount(0)

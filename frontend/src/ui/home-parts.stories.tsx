@@ -53,10 +53,23 @@ export const SetupGuide: Story = {
   ),
 }
 
+export const GuideFromZero: Story = {
+  render: () => (
+    <Guide setup={setupOf({}, 0)} person="bruno" mcpUrl={MCP_URL} />
+  ),
+  play: async ({ canvasElement }) => {
+    const guide = within(canvasElement)
+    await expect(guide.getByText('Leva uns 2 minutos.')).toBeVisible()
+    await expect(
+      guide.getByRole('button', { name: 'Copiar endereço' }),
+    ).not.toBeVisible()
+  },
+}
+
 export const SkippedSteps: Story = {
   render: () => (
     <StepList
-      setup={setupOf({ import: 'skipped', connector: 'skipped' })}
+      setup={setupOf({ taste: 'skipped', connector: 'skipped' })}
       person="bruno"
       mcpUrl={MCP_URL}
       skippedOnly

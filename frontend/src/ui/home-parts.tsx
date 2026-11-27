@@ -1,14 +1,15 @@
-import { useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { importsPath, RATINGS_PATH } from '#/content/paths'
 import { feedbackPath, sessionPath } from '#/content/session-paths'
-import type {
-  LatestSession,
-  SetupStepView,
-  SetupView,
-} from '#/platform/setup-guide'
+import type { LatestSession, SetupView } from '#/platform/setup-guide'
 import { HOME } from './home.copy'
 import { PostForm } from './kit/post-form'
-import { isSkipped, stateOf } from './setup-steps'
+import {
+  guideSteps,
+  isSkipped,
+  stateOf,
+  type GuideStep,
+} from './setup-steps'
 import { Icon } from './kit/icon'
 import { ShelfLabel } from './kit/shelf-label'
 import { PriceSticker } from './kit/sticker'
@@ -16,7 +17,7 @@ import { buttonVariants } from './kit/button-variants'
 
 // The home's parts as the Locadora de bairro draws them (DESIGN.md, Home):
 // the counter where the Dono asks for a film, the latest Sessão's stub and
-// the setup guide as one list of three steps. "Pedir filme" is the screen's
+// the setup guide as one list of two steps. "Pedir filme" is the screen's
 // one orange button, so every step's action is an option. The guide is
 // never in the way of asking for a film.
 
@@ -134,48 +135,6 @@ export function Latest({
 
 // --- the guide -------------------------------------------------------------------
 
-/** The three steps as three segments: violet for a done one, the stamp's
- * colour; a skipped one only outlined. The count says it in words. */
-function Progress({ setup }: { setup: SetupView }) {
-  const done = setup.steps.filter((s) => stateOf(s) === 'done').length
-  const total = setup.steps.length
-  return (
-    <div className="flex items-center gap-md">
-      <div
-        role="progressbar"
-        aria-label={HOME.guide.progressLabel}
-        aria-valuemin={0}
-        aria-valuemax={total}
-        aria-valuenow={done}
-        aria-valuetext={HOME.guide.progress(done, total)}
-        className="flex flex-1 gap-2xs"
-      >
-        {setup.steps.map((step) => {
-          const state = stateOf(step)
-          return (
-            <span
-              key={step.step}
-              className={`h-1.5 flex-1 rounded-pill ${
-                state === 'done'
-                  ? 'bg-stamp'
-                  : state === 'skipped'
-                    ? 'border border-dashed border-ink-2'
-                    : 'border border-rule-strong'
-              }`}
-            />
-          )
-        })}
-      </div>
-      <span
-        aria-hidden="true"
-        className="font-display text-meta-strong text-ink-2 tabular-nums"
-      >
-        {HOME.guide.progress(done, total)}
-      </span>
-    </div>
-  )
-}
-
 /** The step's mark: its number in a ring while pending, a violet check
  * when done, its number in a dashed ring when skipped. */
 type StepState = keyof typeof HOME.guide.state
@@ -197,7 +156,7 @@ function Mark({ state, n }: { state: StepState; n: number }) {
   )
 }
 
-function Skip({ step }: { step: SetupStepView['step'] }) {
+function Skip({ step }: { step: GuideStep['step'] }) {
   const { guide } = HOME
   return (
     <PostForm action="/inicio/pular">
@@ -207,7 +166,7 @@ function Skip({ step }: { step: SetupStepView['step'] }) {
           <button
             type="submit"
             aria-label={
-              skipping ? undefined : guide.skipLabel(guide.steps[step].title)
+              skipping ? undefined : guide.skipLabel(guide.steps[step].name)
             }
             disabled={skipping}
             className={buttonVariants({ variant: 'link', className: 'px-sm' })}
@@ -220,10 +179,19 @@ function Skip({ step }: { step: SetupStepView['step'] }) {
   )
 }
 
-/** Puts the address on the clipboard; when the browser refuses, says how
- * to copy it by hand. Meu gosto's connector section has it too. */
+/** How long "Copiado" stays on the button. */
+const COPIED_FOR_MS = 3000
+
+/** Puts the address on the clipboard and says where to paste it; when the
+ * browser refuses, says how to copy it by hand. Meu gosto's connector
+ * section has it too. */
 export function CopyAddress({ url, label }: { url: string; label: string }) {
   const [state, setState] = useState<'idle' | 'copied' | 'failed'>('idle')
+  useEffect(() => {
+    if (state !== 'copied') return
+    const back = setTimeout(() => setState('idle'), COPIED_FOR_MS)
+    return () => clearTimeout(back)
+  }, [state])
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(url)
@@ -239,21 +207,23 @@ export function CopyAddress({ url, label }: { url: string; label: string }) {
         onClick={copy}
         className={buttonVariants({ variant: 'option', className: 'shrink-0' })}
       >
-        <Icon name="copy" className="size-4" />
+        <Icon name={state === 'copied' ? 'check' : 'copy'} className="size-4" />
         {state === 'copied' ? HOME.guide.copied : label}
       </button>
-      {state === 'failed' && (
-        <span role="status" className="basis-full text-meta">
-          {HOME.guide.copyFailed}
-        </span>
-      )}
+      <span role="status" className="basis-full text-meta empty:hidden">
+        {state === 'copied'
+          ? HOME.guide.pasteIt
+          : state === 'failed'
+            ? HOME.guide.copyFailed
+            : ''}
+      </span>
     </>
   )
 }
 
 /** The connector's address on the case's black, then, until the Claude
- * app has connected (`done`), how to add it in Claude and the clerk's note
- * that the step marks itself. Meu gosto shows it too. */
+ * app has connected (`done`), how to add it in Claude and the note that
+ * the step marks itself. Meu gosto shows it too. */
 export function ConnectorBody({
   url,
   done = false,
@@ -280,15 +250,16 @@ function ConnectorHow() {
           <li key={line}>{line}</li>
         ))}
       </ol>
-      <p className="font-hand text-hand-small leading-snug text-stamp">
-        {guide.auto}
-      </p>
+      <p className="text-meta text-pretty text-ink-2">{guide.auto}</p>
     </>
   )
 }
 
-/** Her Notas toward the 10 of Meu gosto: a dot each. */
+/** Her Notas toward the 10 of Meu gosto: a dot each; at zero, how long it
+ * takes instead of ten empty dots. */
 function Counter({ ratings }: { ratings: number }) {
+  if (ratings === 0)
+    return <p className="text-meta text-ink-2">{HOME.guide.quick}</p>
   return (
     <div
       role="img"
@@ -312,118 +283,203 @@ function Counter({ ratings }: { ratings: number }) {
   )
 }
 
-const stepHref = (step: SetupStepView['step'], person: string) =>
-  step === 'taste'
-    ? RATINGS_PATH
-    : step === 'import'
-      ? importsPath(person, true)
-      : null
-
-/** Where the step gets done: a link for Meu gosto and Importar; the
- * connector's is copying its address, since it marks itself. */
-function StepAction({
-  step,
-  person,
-  mcpUrl,
-}: {
-  step: SetupStepView['step']
-  person: string
-  mcpUrl: string | null
-}) {
-  const { guide } = HOME
-  if (step === 'connector')
-    return mcpUrl ? (
-      <CopyAddress url={mcpUrl} label={guide.copyAddress} />
-    ) : null
-  const href = stepHref(step, person)
-  const action = guide.steps[step].action
-  return href && action ? (
-    <a href={href} className={buttonVariants({ variant: 'option' })}>
-      {action}
-    </a>
-  ) : null
-}
-
-type StepProps = {
-  step: SetupStepView
-  n: number
-  person: string
-  mcpUrl: string | null
-  ratings: number
-  /** The first pending step: it says what it asks and shows its content. */
-  first: boolean
-}
-
-/** What the step asks and its own content: the counter of Meu gosto, the
- * connector's address. */
-function StepBody({
-  step,
-  mcpUrl,
-  ratings,
-}: Pick<StepProps, 'step' | 'mcpUrl' | 'ratings'>) {
+/** Where Meu gosto gets done: her Notas, or an import of her history. */
+function TasteActions({ person }: { person: string }) {
+  const { taste } = HOME.guide.steps
   return (
     <>
-      <p className="text-evidence-step text-pretty text-ink-2">
-        {HOME.guide.steps[step.step].text}
-      </p>
-      {step.step === 'taste' && <Counter ratings={ratings} />}
-      {step.step === 'connector' && mcpUrl && <ConnectorBody url={mcpUrl} />}
+      <a href={RATINGS_PATH} className={buttonVariants({ variant: 'option' })}>
+        {taste.rate}
+      </a>
+      <a
+        href={importsPath(person, true)}
+        className={buttonVariants({ variant: 'option' })}
+      >
+        {taste.import}
+      </a>
     </>
   )
 }
 
-/** One step of the list: its mark, its title with its state, and, by
- * state, what to do (pending), what it holds (done) or how to resume it
- * (skipped). */
-function Step({ step, n, person, mcpUrl, ratings, first }: StepProps) {
+type StepProps = {
+  step: GuideStep
+  n: number
+  person: string
+  mcpUrl: string | null
+  ratings: number
+  /** The first pending step: it shows its whole content. */
+  first: boolean
+}
+
+/** What the step holds beyond its line: the counter of Meu gosto, the
+ * connector's address and how to add it, with its copy button. */
+function StepContent({
+  step,
+  person,
+  mcpUrl,
+  ratings,
+  skip,
+}: Pick<StepProps, 'step' | 'person' | 'mcpUrl' | 'ratings'> & {
+  skip: boolean
+}) {
+  return step.step === 'taste' ? (
+    <>
+      <Counter ratings={ratings} />
+      <div className="flex flex-wrap items-center gap-xs">
+        <TasteActions person={person} />
+        {skip && <Skip step="taste" />}
+      </div>
+    </>
+  ) : (
+    <>
+      {mcpUrl && <ConnectorBody url={mcpUrl} />}
+      <div className="flex flex-wrap items-center gap-xs">
+        {mcpUrl && (
+          <CopyAddress url={mcpUrl} label={HOME.guide.copyAddress} />
+        )}
+        {skip && <Skip step="connector" />}
+      </div>
+    </>
+  )
+}
+
+/** A pending step: its line, always, then its content. The connector
+ * behind another pending step keeps its content folded under "Ver como
+ * conectar", so the guide stays short and the address is never copied
+ * blind. */
+function Pending({ step, n, person, mcpUrl, ratings, first }: StepProps) {
   const { guide } = HOME
-  const state = stateOf(step)
-  const title = guide.steps[step.step].title
+  const copy = guide.steps[step.step]
+  return (
+    <StepFrame state="pending" n={n}>
+      <h3 className="flex min-h-7 items-center font-display text-step-title-small">
+        {copy.title}
+        <span className="sr-only">, {guide.state.pending}</span>
+      </h3>
+      <p className="text-evidence-step text-pretty text-ink-2">{copy.text}</p>
+      {first || step.step === 'taste' ? (
+        <StepContent
+          step={step}
+          person={person}
+          mcpUrl={mcpUrl}
+          ratings={ratings}
+          skip
+        />
+      ) : (
+        <>
+          <details className="group flex flex-col gap-sm">
+            <summary
+              className={buttonVariants({
+                variant: 'option',
+                className:
+                  'w-fit cursor-pointer list-none [&::-webkit-details-marker]:hidden',
+              })}
+            >
+              <span className="group-open:hidden">{guide.howToConnect}</span>
+              <span className="hidden group-open:inline">{guide.close}</span>
+            </summary>
+            <div className="mt-sm flex flex-col gap-sm">
+              <StepContent
+                step={step}
+                person={person}
+                mcpUrl={mcpUrl}
+                ratings={ratings}
+                skip={false}
+              />
+            </div>
+          </details>
+          <div>
+            <Skip step={step.step} />
+          </div>
+        </>
+      )}
+    </StepFrame>
+  )
+}
+
+/** A skipped step: its title with "pulado · Retomar" on one line, the
+ * whole line opening it again; open, "Retomar" reads "Fechar". */
+function Skipped({ step, n, person, mcpUrl, ratings }: StepProps) {
+  const { guide } = HOME
+  const copy = guide.steps[step.step]
+  return (
+    <StepFrame state="skipped" n={n}>
+      <details className="group">
+        <summary className="relative flex min-h-7 cursor-pointer list-none flex-wrap items-center gap-x-sm after:absolute after:inset-x-0 after:-inset-y-2 [&::-webkit-details-marker]:hidden">
+          <h3 className="font-display text-step-title-small">{copy.name}</h3>
+          <span className="text-meta text-ink-2">
+            {guide.state.skipped} ·{' '}
+            <span className="text-link underline underline-offset-3 group-open:hidden">
+              {guide.resume}
+            </span>
+            <span className="hidden text-link underline underline-offset-3 group-open:inline">
+              {guide.close}
+            </span>
+          </span>
+        </summary>
+        <div className="mt-sm flex flex-col items-start gap-sm">
+          <p className="text-evidence-step text-pretty text-ink-2">
+            {copy.text}
+          </p>
+          <StepContent
+            step={step}
+            person={person}
+            mcpUrl={mcpUrl}
+            ratings={ratings}
+            skip={false}
+          />
+        </div>
+      </details>
+    </StepFrame>
+  )
+}
+
+/** A done step: its name and what it holds. */
+function Done({ step, n, ratings }: Pick<StepProps, 'step' | 'n' | 'ratings'>) {
+  const { guide } = HOME
+  return (
+    <StepFrame state="done" n={n}>
+      <h3 className="flex min-h-7 flex-wrap items-center gap-x-sm font-display text-step-title-small">
+        {guide.steps[step.step].name}
+        <span className="font-body text-meta font-normal text-ink-2">
+          {step.step === 'taste'
+            ? guide.doneRatings(ratings)
+            : guide.state.done}
+        </span>
+      </h3>
+    </StepFrame>
+  )
+}
+
+function StepFrame({
+  state,
+  n,
+  children,
+}: {
+  state: StepState
+  n: number
+  children: ReactNode
+}) {
   return (
     <li className="flex gap-md py-lg first:pt-0 last:pb-0 [&+li]:border-t [&+li]:border-dashed [&+li]:border-rule">
       <Mark state={state} n={n} />
-      <div className="flex min-w-0 flex-1 flex-col gap-sm">
-        <h3 className="flex min-h-7 flex-wrap items-center gap-x-sm font-display text-step-title-small">
-          {title}
-          {state !== 'pending' && (
-            <span className="font-body text-meta font-normal text-ink-2">
-              {state === 'done' && step.step === 'taste'
-                ? guide.doneRatings(ratings)
-                : guide.state[state]}
-            </span>
-          )}
-          {state === 'pending' && (
-            <span className="sr-only">{guide.state.pending}</span>
-          )}
-        </h3>
-        {state === 'pending' && (
-          <>
-            {first && (
-              <StepBody step={step} mcpUrl={mcpUrl} ratings={ratings} />
-            )}
-            <div className="flex flex-wrap items-center gap-xs">
-              <StepAction step={step.step} person={person} mcpUrl={mcpUrl} />
-              <Skip step={step.step} />
-            </div>
-          </>
-        )}
-        {state === 'skipped' && (
-          <details className="group">
-            <summary className="inline-flex min-h-touch cursor-pointer list-none items-center font-body text-link text-ink-2 underline underline-offset-3 group-open:hidden [&::-webkit-details-marker]:hidden">
-              {guide.resume}
-            </summary>
-            <div className="flex flex-col items-start gap-sm">
-              <StepBody step={step} mcpUrl={mcpUrl} ratings={ratings} />
-              <StepAction step={step.step} person={person} mcpUrl={mcpUrl} />
-            </div>
-          </details>
-        )}
-      </div>
+      <div className="flex min-w-0 flex-1 flex-col gap-sm">{children}</div>
     </li>
   )
 }
 
-/** The setup guide while a step is pending: its progress, then the three
+function Step(props: StepProps) {
+  const state = stateOf(props.step)
+  return state === 'done' ? (
+    <Done {...props} />
+  ) : state === 'skipped' ? (
+    <Skipped {...props} />
+  ) : (
+    <Pending {...props} />
+  )
+}
+
+/** The setup guide while a step is pending: what it buys her, then its two
  * steps in order, done ones included, so she sees where she stands. */
 export function Guide({
   setup,
@@ -434,19 +490,20 @@ export function Guide({
   person: string
   mcpUrl: string | null
 }) {
-  const first = setup.steps.find((s) => stateOf(s) === 'pending')
   return (
     <section
       aria-labelledby="guia"
       className="flex flex-col gap-lg rounded-card border border-rule bg-surface p-xl"
     >
-      <div className="flex flex-col gap-sm">
+      <div className="flex flex-col gap-xs">
         <h2 id="guia" className="font-display text-step-title">
           {HOME.guide.title}
         </h2>
-        <Progress setup={setup} />
+        <p className="text-evidence text-pretty text-ink-2">
+          {HOME.guide.payoff}
+        </p>
       </div>
-      <StepList setup={setup} person={person} mcpUrl={mcpUrl} first={first} />
+      <StepList setup={setup} person={person} mcpUrl={mcpUrl} />
     </section>
   )
 }
@@ -457,16 +514,16 @@ export function StepList({
   setup,
   person,
   mcpUrl,
-  first,
   skippedOnly = false,
 }: {
   setup: SetupView
   person: string
   mcpUrl: string | null
-  first?: SetupStepView
   skippedOnly?: boolean
 }) {
-  const steps = skippedOnly ? setup.steps.filter(isSkipped) : setup.steps
+  const all = guideSteps(setup)
+  const first = all.find((s) => stateOf(s) === 'pending')
+  const steps = skippedOnly ? all.filter(isSkipped) : all
   return (
     <ol className="flex flex-col">
       {steps.map((step, i) => (

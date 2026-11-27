@@ -145,27 +145,19 @@ describe('Home, the latest Sessão', () => {
 })
 
 describe('Home, the setup guide', () => {
-  it('lists the three steps once, each with its state, and the progress', () => {
+  it('lists two steps, each with its state, under what the guide buys her', () => {
     show(guiding({ taste: 'done', import: 'skipped' }, 12))
     const region = guide()!
     expect(
       within(region)
         .getAllByRole('heading', { level: 3 })
         .map((h) => h.textContent),
-    ).toEqual([
-      'Meu gostofeito, 12 notas',
-      'Importar do Letterboxd, do Trakt, do IMDb ou do Simkl' + 'pulado',
-      'Conector no Claude' + 'falta fazer',
-    ])
-    const progress = within(region).getByRole('progressbar', {
-      name: 'Passos feitos',
-    })
-    expect(progress.getAttribute('aria-valuenow')).toBe('1')
-    expect(progress.getAttribute('aria-valuemax')).toBe('3')
-    expect(progress.getAttribute('aria-valuetext')).toBe('1 de 3 feitos')
+    ).toEqual(['Meu gostofeito, 12 notas', 'Conector no Claude, falta fazer'])
+    expect(region.textContent).toContain('a lista sai só com palpites')
+    expect(within(region).queryByRole('progressbar')).toBeNull()
   })
 
-  it('gives each pending step its action and a "pular"', () => {
+  it('gives Meu gosto both ways to do it, and each pending step a "pular"', () => {
     show(guiding())
     const region = guide()!
     const skips = region.querySelectorAll('form[action="/inicio/pular"]')
@@ -176,28 +168,38 @@ describe('Home, the setup guide', () => {
       ]),
     ).toEqual([
       ['post', 'taste'],
-      ['post', 'import'],
       ['post', 'connector'],
     ])
     expect(
-      screen.getByRole('button', {
-        name: 'Pular: Importar do Letterboxd, do Trakt, do IMDb ou do Simkl',
-      }),
+      screen.getByRole('button', { name: 'Pular: Meu gosto' }),
     ).toBeTruthy()
     expect(href('Dar notas')).toBe('/meu-gosto/notas')
     expect(href('Importar')).toBe('/meu-gosto/importar')
-    expect(screen.getByRole('button', { name: 'Copiar endereço' })).toBeTruthy()
   })
 
-  it('opens only the first pending step, and keeps "pedir filme" the one orange button', () => {
+  it('says what the connector is even behind Meu gosto, and folds how to add it', () => {
     const { container } = show(guiding())
     expect(screen.getByRole('img', { name: '4 de 10 Notas' })).toBeTruthy()
-    expect(container.textContent).not.toContain('https://cinema.example/mcp')
+    expect(container.textContent).toContain(
+      'Para pedir filme conversando com o Claude',
+    )
+    const how = container.querySelector('details')!
+    expect(how.open).toBe(false)
+    expect(how.querySelector('summary')?.textContent).toContain(
+      'Ver como conectar',
+    )
+    expect(how.textContent).toContain('https://cinema.example/mcp')
     expect(orange(container)).toHaveLength(1)
     expect(orange(container)[0]?.textContent).toBe('Pedir filme')
   })
 
-  it('gives the MCP URL and how to add it in Claude, and copies it', async () => {
+  it('at zero Notas, says how long it takes instead of ten empty dots', () => {
+    show(guiding({}, 0))
+    expect(screen.queryByRole('img', { name: /de 10 Notas/ })).toBeNull()
+    expect(guide()!.textContent).toContain('Leva uns 2 minutos.')
+  })
+
+  it('gives the MCP URL and how to add it in Claude, copies it and says where to paste', async () => {
     const writeText = vi.fn<(text: string) => Promise<void>>(
       async () => undefined,
     )
@@ -205,7 +207,7 @@ describe('Home, the setup guide', () => {
       value: { writeText },
       configurable: true,
     })
-    const { container } = show(guiding({ taste: 'done', import: 'done' }))
+    const { container } = show(guiding({ taste: 'done' }))
     expect(screen.getByText('https://cinema.example/mcp')).toBeTruthy()
     expect(container.textContent).toContain('Adicionar conector personalizado')
     expect(container.textContent).toContain('Este passo se marca sozinho')
@@ -214,6 +216,9 @@ describe('Home, the setup guide', () => {
     )
     expect(writeText).toHaveBeenCalledWith('https://cinema.example/mcp')
     expect(screen.getByRole('button', { name: 'Copiado' })).toBeTruthy()
+    expect(screen.getByRole('status').textContent).toBe(
+      'Copiado. Agora cole no Claude, em Conectores.',
+    )
   })
 
   it('says how to copy by hand when the clipboard refuses', async () => {
@@ -221,7 +226,7 @@ describe('Home, the setup guide', () => {
       value: { writeText: async () => Promise.reject(new Error('no')) },
       configurable: true,
     })
-    show(guiding({ taste: 'done', import: 'done' }))
+    show(guiding({ taste: 'done' }))
     await userEvent.click(
       screen.getByRole('button', { name: 'Copiar endereço' }),
     )
@@ -230,11 +235,17 @@ describe('Home, the setup guide', () => {
     )
   })
 
-  it('keeps a skipped step closed, to resume, with no "pular"', () => {
-    show(guiding({ import: 'skipped' }))
+  it('keeps a skipped step closed on one line, "pulado · Retomar", with no "pular"', () => {
+    show(guiding({ taste: 'skipped' }))
     const region = guide()!
-    expect(region.querySelector('input[value="import"]')).toBeNull()
-    expect(within(region).getByText('Retomar')).toBeTruthy()
+    expect(region.querySelector('input[value="taste"]')).toBeNull()
+    const summary = region.querySelector('summary')!
+    expect(summary.textContent).toBe('Meu gostopulado · RetomarFechar')
+  })
+
+  it('leaves the engine\'s import step out: an import alone does not hold the guide open', () => {
+    show(guiding({ taste: 'done', connector: 'done' }))
+    expect(guide()).toBeNull()
   })
 
   it('never blocks: "pedir filme" comes before the guide', () => {
