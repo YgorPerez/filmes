@@ -80,6 +80,14 @@ const ERROR_REASONS = [
   'already_owner',
   // The logged-in Dono taking her own access away (`invalid_usage`).
   'own_access',
+  // Reading a Pessoa's Trakt (#269): no Trakt user by that name
+  // (`invalid_usage`), a profile Trakt keeps private (`source_unavailable`),
+  // a Pessoa with neither a connection nor a username (`invalid_usage`), a
+  // server with no Trakt client id (`source_unavailable`).
+  'trakt_user_missing',
+  'trakt_private',
+  'trakt_not_linked',
+  'trakt_off',
   // Taking a Pessoa out (#273, `invalid_usage`): she is a Dono, an import
   // holds her history, or a Session lists her.
   'is_owner',

@@ -31,6 +31,7 @@ const KINDS: Record<string, string> = {
   letterboxd: 'ZIP do Letterboxd',
   'letterboxd-rss': 'Perfil do Letterboxd',
   trakt: 'ZIP do Trakt',
+  'trakt-api': 'Lido do Trakt',
   imdb: 'CSV do IMDb',
   simkl: 'Backup do Simkl',
 }
@@ -62,6 +63,10 @@ export const PERSON_IMPORTS = {
     simkl: (done: Gave) =>
       `O backup do Simkl entrou: ${gave(done)}.${left(done.outside)}`,
     repetido: () => 'Esse arquivo já tinha entrado antes: nada mudou.',
+    sincronizado: (done: Gave) =>
+      done.facts === 0
+        ? `Trakt lido: nada novo desde a última vez.${left(done.outside)}`
+        : `Trakt lido: ${gave(done)}.${left(done.outside)}`,
     removido: (done: Gave) =>
       done.facts === 0
         ? 'Import tirado. Nada saiu do gosto: outro import trazia o mesmo.'
@@ -82,6 +87,15 @@ export const PERSON_IMPORTS = {
     rss: 'O Letterboxd não tem um perfil com esse nome. Confira como ele aparece no endereço do perfil (letterboxd.com/nome).',
     fonte: 'O Letterboxd não respondeu agora. Tente de novo daqui a pouco.',
     item: 'Esse import já não está no arquivo dela.',
+    'trakt-usuario':
+      'O Trakt não tem um perfil com esse nome. Use o nome que aparece no endereço do perfil (trakt.tv/users/nome).',
+    'trakt-privado':
+      'Esse perfil do Trakt é privado. Torne-o público no Trakt, ou conecte a conta (só a própria Pessoa pode conectar).',
+    'trakt-sem':
+      'Ainda não há Trakt para ler: conecte a conta ou escreva o nome do perfil público.',
+    'trakt-off':
+      'Este site ainda não lê o Trakt. Use o ZIP do Trakt, em De outro site.',
+    'trakt-fonte': 'O Trakt não respondeu agora. Tente de novo daqui a pouco.',
     indisponivel: 'Não deu para importar agora. Tente de novo daqui a pouco.',
     falha:
       'O site está com um problema, e ele ficou registrado no log do servidor. Tentar de novo não resolve.',

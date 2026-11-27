@@ -160,3 +160,41 @@ export const readTraktExport = (
     throw error
   }
 }
+
+/** A Trakt profile read by the API (#269), as filmes-dados keeps it: the
+ * lists the Raw Export's JSONs hold, under one object. */
+export interface TraktSnapshot {
+  /** `me` for the connected account, or the public username. */
+  readonly user: string
+  readonly history: ReadonlyArray<unknown>
+  readonly ratings: ReadonlyArray<unknown>
+  readonly watchlist: ReadonlyArray<unknown>
+}
+
+/** The rows of a kept snapshot (`readTraktExport`'s, for the API's lists):
+ * the history, the ratings and the watchlist, read as the export's files. */
+export const readTraktSnapshot = (
+  name: string,
+  content: Uint8Array,
+): TraktRow[] => {
+  let snapshot: unknown
+  try {
+    snapshot = JSON.parse(Buffer.from(content).toString('utf8'))
+  } catch {
+    throw invalid(`${name}: JSON inválido`)
+  }
+  if (typeof snapshot !== 'object' || snapshot === null)
+    throw invalid(`${name}: o JSON deve conter um objeto`)
+  const lists = snapshot as Record<string, unknown>
+  const read = (key: string, field: DateField) =>
+    rowsOf(
+      Buffer.from(JSON.stringify(lists[key] ?? [])),
+      `${name}: ${key}`,
+      field,
+    )
+  return [
+    ...read('history', 'watched_at'),
+    ...read('ratings', 'rated_at'),
+    ...read('watchlist', 'listed_at'),
+  ]
+}

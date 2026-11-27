@@ -17,6 +17,7 @@ import { Effect } from 'effect'
 import { compareTuple } from '../compat/compare.ts'
 import { DataWriter } from '../data/DataWriter.ts'
 import type { GitError } from '../data/git.ts'
+import { syncAttendeesTrakt } from '../imports/trakt-sync.ts'
 import {
   isMapping,
   isSequence,
@@ -50,6 +51,7 @@ import {
 import type { EngineServices } from '../runtime/Engine.ts'
 import { engineError, type EngineError } from '../runtime/EngineError.ts'
 import type { Environment } from '../runtime/Environment.ts'
+import { Owner } from '../runtime/Owner.ts'
 import { Run } from '../runtime/Run.ts'
 import type { SqliteError } from '../sqlite/Sqlite.ts'
 import { recordBetMarks } from './bet-record.ts'
@@ -330,6 +332,14 @@ export const recommendSession = (
         '--manter só vale com --sessao: são os filmes da versão anterior que ficam',
       )
     const session = request.session || undefined
+    // A new Session reads the Presentes' Trakt first (#269).
+    const synced =
+      session === undefined
+        ? yield* syncAttendeesTrakt(
+            request.attendees ?? [],
+            yield* authorFor((yield* Owner) ?? undefined),
+          )
+        : []
     const { asking, asked, regenerate, warnings } = yield* sessionRequest(
       request,
       session,
@@ -347,7 +357,7 @@ export const recommendSession = (
     )
     const recommendation: Recommendation = {
       ...ranked,
-      warnings: [...warnings, ...ranked.warnings],
+      warnings: [...synced, ...warnings, ...ranked.warnings],
     }
     const context = sessionContext(
       asking.request ?? null,

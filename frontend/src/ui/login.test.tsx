@@ -91,7 +91,10 @@ describe('the Trakt connection screen', () => {
   it.each([
     ['login', 'Entre com o e-mail cadastrado no filmes.'],
     ['trakt', 'O Trakt não concluiu a conexão. Tente de novo.'],
-    ['consentimento', 'Marque a caixa para autorizar o envio ao Trakt.'],
+    [
+      'consentimento',
+      'Marque a caixa para autorizar a leitura e o envio ao Trakt.',
+    ],
   ] as const)('says why it failed: %s', (error, message) => {
     const html = renderToStaticMarkup(
       <TraktScreen page={{ status: 'login' }} error={error} />,

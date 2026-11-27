@@ -10,6 +10,7 @@ import {
   parseImport,
 } from '#/content/import-action'
 import { PERSON_IMPORTS } from './imports.copy'
+import { TRAKT_SYNC } from './trakt-sync.copy'
 import { PersonImportsScreen, type PersonImportsView } from './person-imports'
 
 afterEach(cleanup)
@@ -349,6 +350,57 @@ describe('PersonImportsScreen', () => {
     expect(
       within(form(COPY.letterboxd.send.title)).queryByRole('alert'),
     ).toBeNull()
+  })
+
+  it('reads her Trakt: one tap once linked, a public profile with her yes', async () => {
+    show({
+      ...QUIM,
+      traktLink: { available: true, connected: false },
+      imports: [
+        ...QUIM.imports,
+        {
+          kind: 'trakt-api',
+          file: 'imports/quim/trakt-api-c1.json',
+          date: '2026-11-22',
+          original: '@quim_t',
+        },
+      ],
+    })
+    const user = userEvent.setup()
+    const trakt = section(TRAKT_SYNC.title)
+    const sync = within(trakt).getByRole('form', { name: TRAKT_SYNC.sync })
+    expect(within(sync).getByRole('button').textContent).toBe(
+      TRAKT_SYNC.syncUser('@quim_t'),
+    )
+    expect(await posted(sync)).toEqual({ kind: 'trakt-sync', user: null })
+    await user.click(within(trakt).getByText(TRAKT_SYNC.otherUser))
+    const read = within(trakt).getByRole('form', { name: TRAKT_SYNC.read })
+    await user.type(
+      within(read).getByLabelText(TRAKT_SYNC.user, { exact: false }),
+      'https://trakt.tv/users/quim_t',
+    )
+    expect(await posted(read)).toBe('consentimento')
+    await user.click(within(read).getByLabelText(TRAKT_SYNC.consent('Quim')))
+    expect(await posted(read)).toEqual({ kind: 'trakt-sync', user: 'quim_t' })
+  })
+
+  it('says a Trakt refusal in the Trakt section that sent it', () => {
+    render(
+      <PersonImportsScreen
+        slug="quim"
+        page={{ ...QUIM, traktLink: { available: true, connected: false } }}
+        refusal="trakt-privado"
+        refusedIn="trakt"
+      />,
+    )
+    expect(
+      within(section(TRAKT_SYNC.title)).getByRole('alert').textContent,
+    ).toBe(COPY.refusals['trakt-privado'])
+  })
+
+  it('shows no Trakt section on a server that does not read it', () => {
+    show({ ...QUIM, traktLink: { available: false, connected: false } })
+    expect(screen.queryByRole('region', { name: TRAKT_SYNC.title })).toBeNull()
   })
 
   it('says when no Pessoa has the name, or the engine cannot run', () => {

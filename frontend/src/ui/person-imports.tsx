@@ -29,11 +29,23 @@ import {
 } from './person-parts'
 import { buttonVariants } from './kit/button-variants'
 import { Button } from './shadcn/button'
+import { TraktSync, type TraktLinkView } from './trakt-sync'
 
 const COPY = PERSON_IMPORTS
 
-/** A Pessoa's imports, and whether she is the Dono looking at them. */
-export type PersonImportsView = PersonImports & { own: boolean }
+/** A Pessoa's imports, whether she is the Dono looking at them and, on
+ * the app, what the page knows of her Trakt (#269). */
+export type PersonImportsView = PersonImports & {
+  own: boolean
+  traktLink?: Omit<TraktLinkView, 'user'>
+}
+
+/** The public username her last Trakt read used, `@nome`, if any. */
+const traktUser = (page: PersonImports) =>
+  page.imports
+    .filter((record) => record.kind === 'trakt-api')
+    .map((record) => record.original)
+    .findLast((original) => original.startsWith('@')) ?? null
 
 /** What the last action did: the notice and its counts. */
 export type ImportDoneView = {
@@ -149,9 +161,19 @@ function Forms({
   refusedOf: Refused
   feedback?: Ref<HTMLDivElement>
 }) {
+  const traktRefused = refusedOf('trakt')
   return (
     <div ref={feedback} className="flex flex-col gap-3xl">
       <LetterboxdGuide slug={slug} page={page} refusedOf={refusedOf} />
+      {page.traktLink && (
+        <TraktSync
+          slug={slug}
+          name={page.name}
+          own={page.own}
+          link={{ ...page.traktLink, user: traktUser(page) }}
+          refusal={traktRefused && COPY.refusals[traktRefused]}
+        />
+      )}
       <OtherSites slug={slug} refused={refusedOf('outro')} />
     </div>
   )
