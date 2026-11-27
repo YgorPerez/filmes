@@ -10,8 +10,8 @@ const engineFile = async (person: string, format: ExportFormat) =>
     .content
 
 const LINKS: Record<ExportFormat, string> = {
-  imdb: 'Baixar CSV do IMDb',
-  letterboxd: 'Baixar CSV do Letterboxd',
+  imdb: 'CSV do IMDb',
+  letterboxd: 'CSV do Letterboxd',
 }
 
 /** Downloads the CSV from the Notas section of the page on screen, and
@@ -22,8 +22,7 @@ async function download(
   format: ExportFormat = 'imdb',
 ) {
   const notes = section(page, 'Notas')
-  // Folded under the Notas (#273).
-  await notes.getByText('Baixar as Notas em CSV', { exact: true }).click()
+  // Two links under the Notas (#274).
   // Where each CSV goes is said to an admin only (#274); Bruno is not one.
   await expect(notes.getByText('Import or Export Data')).toHaveCount(0)
   const [file] = await Promise.all([
@@ -79,10 +78,7 @@ test('a download that fails shows the page with the reason, not a file', async (
   // The login ran out while the page was open: the link goes to log in.
   await page.context().clearCookies()
   await section(page, 'Notas')
-    .getByText('Baixar as Notas em CSV', { exact: true })
-    .click()
-  await section(page, 'Notas')
-    .getByRole('link', { name: 'Baixar CSV do IMDb' })
+    .getByRole('link', { name: 'CSV do IMDb' })
     .click()
   await expect(page).toHaveURL(/\/entrar$/)
   await expect(

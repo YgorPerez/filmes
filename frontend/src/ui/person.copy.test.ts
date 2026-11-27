@@ -9,11 +9,17 @@ describe('the Pessoa copy', () => {
     expect(PERSON.ratingText(3.75)).toBe('nota 7,5')
   })
 
-  it('says the stars of a source that rates on 5', () => {
-    expect(PERSON.ratingSource(4.5, 'Letterboxd da Iara')).toBe(
-      '4,5★ no Letterboxd da Iara',
+  it('names the source by its service, with the stars of one that rates on 5', () => {
+    // On her own page, the service alone (#274).
+    expect(PERSON.ratingSource(4.5, 'Letterboxd da Iara', 'Iara')).toBe(
+      'Letterboxd (4,5★)',
     )
-    expect(PERSON.ratingSource(4, 'notas no site')).toBe('notas no site')
+    expect(PERSON.ratingSource(0.5, 'Trakt de Bruno', 'Bruno')).toBe('Trakt')
+    expect(PERSON.ratingSource(4.5, 'Letterboxd da Iara')).toBe(
+      'Letterboxd da Iara (4,5★)',
+    )
+    expect(PERSON.ratingSource(4, 'Feedback', 'Iara')).toBe('Feedback')
+    expect(PERSON.ratingSource(4, 'notas no site')).toBe('Dar notas')
     expect(PERSON.ratingSource(4, null)).toBeNull()
   })
 
@@ -30,10 +36,18 @@ describe('the Pessoa copy', () => {
     expect(PERSON.fieldProblem({ field, problem })).toMatch(text)
   })
 
+  it('labels the genres and the directors she likes apart', () => {
+    expect(PERSON.glance.likes(['Drama', 'Crime'], ['Helena Prado'])).toBe(
+      'Pelas suas Notas, você gosta dos gêneros Drama e Crime e da direção de Helena Prado.',
+    )
+    expect(PERSON.glance.likes(['Drama'], [])).toBe(
+      'Pelas suas Notas, você gosta do gênero Drama.',
+    )
+  })
+
   it('names the empty fichas and her name in the Sessões', () => {
-    expect(PERSON.empties(['Vetos'])).toBe('Ainda sem Vetos · Acrescentar')
-    expect(PERSON.empties(['Vetos', 'Declarados', 'Já vistos'])).toBe(
-      'Ainda sem Vetos, Declarados e Já vistos · Acrescentar',
+    expect(PERSON.empties('Já vistos sem Nota')).toBe(
+      'Já vistos sem Nota: nenhum · Acrescentar',
     )
     expect(PERSON.refine(['Ajustes', 'Declarados (2)'])).toBe(
       'Afinar: Ajustes e Declarados (2)',
@@ -51,11 +65,11 @@ describe('the Pessoa copy', () => {
 describe('the Pessoa copy', () => {
   it('counts in the singular and the plural', () => {
     const { glance, summary } = PERSON
-    expect(glance.likes(['Terror'])).toBe(
-      'Pelas suas Notas, você gosta de Terror.',
+    expect(glance.likes([], ['Lia Couto'])).toBe(
+      'Pelas suas Notas, você gosta da direção de Lia Couto.',
     )
-    expect(glance.likes(['Terror', 'Drama', 'Lia Couto'])).toBe(
-      'Pelas suas Notas, você gosta de Terror, Drama e Lia Couto.',
+    expect(glance.likes(['Terror', 'Drama', 'Crime'], [])).toBe(
+      'Pelas suas Notas, você gosta dos gêneros Terror, Drama e Crime.',
     )
     expect(glance.steps.queue(1)).toBe(
       'dizer qual é o filme que espera na fila',

@@ -85,6 +85,13 @@ function useRefusedField(id: string): FieldProblem | null {
 const noticeOfOwn = (notice: PersonNotice): string | undefined =>
   (PERSON.ownNotices as Partial<Record<PersonNotice, string>>)[notice]
 
+/** The hint of a form's Fonte: on her own page, what she says counts as
+ * said by her (#274). */
+function useSourceHint(fallback: string) {
+  const { own } = useContext(PostedAt)
+  return own ? PERSON.ownSourceHint : PERSON.sourceHint(fallback)
+}
+
 /** The words of a notice or a refusal, for her. */
 function useAnswerText() {
   const { name, own, problem } = useContext(PostedAt)
@@ -110,6 +117,9 @@ function SpotStatus({ id }: { id: string }) {
   return notice ? <Notice>{text.notice(notice)}</Notice> : null
 }
 
+/** Her Trakt connection, as Meu gosto's Notas say it (#274). */
+export type TraktState = 'connected' | 'disconnected' | null
+
 type PersonScreenProps = {
   slug: string
   page: PersonPage | 'unknown' | null
@@ -119,7 +129,9 @@ type PersonScreenProps = {
   problem?: FieldProblem
   /** Meu gosto's part of the setup guide; only on her own page. */
   start?: MyStart
-  showTrakt?: boolean
+  /** On Meu gosto, her Trakt connection; null when the server has no
+   * Trakt. */
+  trakt?: TraktState
   /** On Meu gosto, the films of her imports that wait in the queue. */
   pending?: number
   /** On Meu gosto, her genres and directors. */
@@ -145,7 +157,7 @@ export function PersonScreen({
   spot,
   problem,
   start,
-  showTrakt = false,
+  trakt = null,
   pending = 0,
   taste = null,
 }: PersonScreenProps) {
@@ -174,7 +186,7 @@ export function PersonScreen({
               page={page}
               own={own}
               start={start}
-              showTrakt={showTrakt}
+              trakt={trakt}
               pending={pending}
               taste={taste}
             />
@@ -193,7 +205,7 @@ function PersonColumns({
   page,
   own,
   start,
-  showTrakt,
+  trakt,
   pending,
   taste,
 }: {
@@ -201,7 +213,7 @@ function PersonColumns({
   page: PersonPage
   own: boolean
   start?: MyStart
-  showTrakt: boolean
+  trakt: TraktState
   pending: number
   taste: TasteSummary | null
 }) {
@@ -209,15 +221,17 @@ function PersonColumns({
     <div className="grid gap-2xl min-[900px]:grid-cols-2 min-[900px]:items-start">
       <div className="flex min-w-0 flex-col gap-2xl">
         {own ? (
-          <>
-            <Glance page={page} start={start} pending={pending} taste={taste} />
-            {showTrakt && <TraktLink />}
-          </>
+          <Glance page={page} start={start} pending={pending} taste={taste} />
         ) : (
           <SessionsWith page={page} />
         )}
-        <Notes slug={slug} own={own} page={page} pending={own ? pending : 0} />
-        {own && start && <MyStartSections start={start} person={slug} />}
+        <Notes
+          slug={slug}
+          own={own}
+          page={page}
+          pending={own ? pending : 0}
+          trakt={own ? trakt : null}
+        />
         {!own && <RemovePerson slug={slug} page={page} />}
       </div>
       <div
@@ -225,23 +239,25 @@ function PersonColumns({
       >
         {own && <Contents page={page} />}
         <Taste slug={slug} page={page} />
+        {/* The connector and the skipped steps go right, so the two
+            columns end near each other on a desktop (#274). */}
+        {own && start && <MyStartSections start={start} person={slug} />}
       </div>
     </div>
   )
 }
 
-/** Meu gosto's way to her Trakt connection. */
-function TraktLink() {
+/** Meu gosto's line of her Trakt connection, in the Notas (#274): whether
+ * it is connected, and the way to the connection. */
+function TraktStatus({ state }: { state: 'connected' | 'disconnected' }) {
+  const { trakt } = PERSON.notes
   return (
-    <a
-      href={TRAKT_PATH}
-      className={buttonVariants({
-        variant: 'option',
-        className: 'self-start',
-      })}
-    >
-      Conexão com o Trakt
-    </a>
+    <p className="text-meta text-ink-2">
+      {trakt.state(state === 'connected')} ·{' '}
+      <a href={TRAKT_PATH} className="text-ink underline underline-offset-3">
+        {trakt.link(state === 'connected')}
+      </a>
+    </p>
   )
 }
 
@@ -419,11 +435,13 @@ function Notes({
   own,
   page,
   pending,
+  trakt,
 }: {
   slug: string
   own: boolean
   page: PersonPage
   pending: number
+  trakt: TraktState
 }) {
   const { notes } = PERSON
   const { ratings, predictionError } = page
@@ -457,9 +475,10 @@ function Notes({
           {notes.import}
         </a>
       </div>
+      {trakt && <TraktStatus state={trakt} />}
       {ratings !== null && ratings.length > 0 && (
         <>
-          <NotesList ratings={ratings} />
+          <NotesList slug={slug} own={own} page={page} ratings={ratings} />
           <NotesMore slug={slug} own={own} page={page} count={ratings.length} />
         </>
       )}
@@ -482,33 +501,72 @@ function Pending({ pending }: { pending: number }) {
   )
 }
 
-/** Her Notas, folded: the list can be long. */
+/** Her Notas, folded: the list can be long. On Meu gosto each one can be
+ * changed on Dar notas (a newer Nota is the one in force); one her file
+ * holds (Dar notas, a Já visto with a Nota) can be taken out, and the one
+ * it covered, if any, counts again. An imported one leaves with its
+ * import (#274). */
 function NotesList({
+  slug,
+  own,
+  page,
   ratings,
 }: {
+  slug: string
+  own: boolean
+  page: PersonPage
   ratings: NonNullable<PersonPage['ratings']>
 }) {
+  const { notes } = PERSON
+  const inFile = new Set(page.seen.map((s) => s.factId))
   return (
-    <Disclosure summary={PERSON.notes.list(ratings.length)}>
+    <Disclosure summary={notes.list(ratings.length)}>
       <ul className="flex flex-col">
-        {ratings.map((r) => (
-          <Item key={r.factId}>
-            <span>{r.title ?? r.filmId}</span>
-            <Meta
-              parts={[
-                PERSON.ratingText(r.rating),
-                shortDate(r.date),
-                PERSON.ratingSource(r.rating, r.source),
-              ]}
-            />
-          </Item>
-        ))}
+        {ratings.map((r) => {
+          const title = r.title ?? r.filmId
+          return (
+            <Item
+              key={r.factId}
+              actions={
+                <span className="flex shrink-0 items-center gap-xs">
+                  {own && (
+                    <a
+                      href={`${RATINGS_PATH}?filme=${encodeURIComponent(r.filmId)}`}
+                      aria-label={notes.changeLabel(title)}
+                      className={buttonVariants({ variant: 'option' })}
+                    >
+                      {notes.change}
+                    </a>
+                  )}
+                  {inFile.has(r.factId) && (
+                    <RemoveForm
+                      slug={slug}
+                      what="seen"
+                      id={r.factId}
+                      label={notes.removeWhat(title)}
+                    />
+                  )}
+                </span>
+              }
+            >
+              <span>{title}</span>
+              <Meta
+                parts={[
+                  PERSON.ratingText(r.rating),
+                  shortDate(r.date),
+                  PERSON.ratingSource(r.rating, r.source, page.name),
+                ]}
+              />
+            </Item>
+          )
+        })}
       </ul>
     </Disclosure>
   )
 }
 
-/** The CSVs of her Notas, folded, and for an admin the MovieLens word. */
+/** The CSVs of her Notas, as two links, and for an admin the MovieLens
+ * word (#274). */
 function NotesMore({
   slug,
   own,
@@ -521,25 +579,26 @@ function NotesMore({
   count: number
 }) {
   const { notes } = PERSON
-  const option = buttonVariants({ variant: 'option' })
+  const link =
+    'inline-flex min-h-touch items-center text-ink underline underline-offset-3'
   return (
-    <Disclosure summary={notes.more}>
-      <div className="flex flex-col gap-md">
-        <div className="flex flex-wrap items-center gap-xs">
-          <a href={imdbCsvPath(slug)} className={option}>
-            {notes.download}
-          </a>
-          <a href={letterboxdCsvPath(slug)} className={option}>
-            {notes.downloadLetterboxd}
-          </a>
-        </div>
-        {page.viewer.admin && (
-          <p className="text-meta text-ink-2">
-            {notes.movielens(own, count, page.name)}
-          </p>
-        )}
-      </div>
-    </Disclosure>
+    <div className="flex flex-col gap-2xs">
+      <p className="flex flex-wrap items-center gap-x-sm text-meta text-ink-2">
+        {notes.more}
+        <a href={imdbCsvPath(slug)} className={link}>
+          {notes.download}
+        </a>
+        <span aria-hidden="true">·</span>
+        <a href={letterboxdCsvPath(slug)} className={link}>
+          {notes.downloadLetterboxd}
+        </a>
+      </p>
+      {page.viewer.admin && (
+        <p className="text-meta text-ink-2">
+          {notes.movielens(own, count, page.name)}
+        </p>
+      )}
+    </div>
   )
 }
 
@@ -613,8 +672,8 @@ function Glance({
           </span>
         )}
       </p>
-      {taste && taste.genres.length > 0 && (
-        <p>{glance.likes([...taste.genres, ...taste.directors])}</p>
+      {taste && taste.genres.length + taste.directors.length > 0 && (
+        <p>{glance.likes(taste.genres, taste.directors)}</p>
       )}
       <p className="text-ink-2">
         {said.length === 0
@@ -682,7 +741,7 @@ function Taste({ slug, page }: { slug: string; page: PersonPage }) {
         <Seen slug={slug} page={page} />
       ) : (
         <Disclosure
-          summary={PERSON.empties([PERSON.seen.title])}
+          summary={PERSON.empties(PERSON.seen.title)}
           open={posted === 'vistos' || undefined}
         >
           <Seen slug={slug} page={page} />
@@ -1203,6 +1262,7 @@ function AddStatement({
   refused: FieldProblem | null
 }) {
   const copy = kind === 'stated' ? PERSON.stated : PERSON.reports
+  const hint = useSourceHint(source)
   return (
     <Disclosure summary={copy.add} open={refused !== null || undefined}>
       <ActionForm
@@ -1223,11 +1283,7 @@ function AddStatement({
           label={PERSON.reaction}
           options={REACTION_OPTIONS}
         />
-        <TextField
-          name="fonte"
-          label={PERSON.source}
-          hint={PERSON.sourceHint(source)}
-        />
+        <TextField name="fonte" label={PERSON.source} hint={hint} />
         <Submit>{PERSON.save}</Submit>
       </ActionForm>
     </Disclosure>
@@ -1237,6 +1293,7 @@ function AddStatement({
 function Seen({ slug, page }: Part) {
   const { seen } = PERSON
   const refused = useRefusedField('vistos')
+  const hint = useSourceHint(seen.source)
   return (
     <Slip id="vistos" title={seen.title} aside={countOf(seenOf(page))}>
       <SpotStatus id="vistos" />
@@ -1279,11 +1336,7 @@ function Seen({ slug, page }: Part) {
             label={PERSON.rating}
             options={RATING_OPTIONS}
           />
-          <TextField
-            name="fonte"
-            label={PERSON.source}
-            hint={PERSON.sourceHint(seen.source)}
-          />
+          <TextField name="fonte" label={PERSON.source} hint={hint} />
           <Submit>{PERSON.save}</Submit>
         </ActionForm>
       </Disclosure>
