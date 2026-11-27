@@ -14,7 +14,7 @@ import {
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { Billboard } from './billboard'
-import { CHOSEN_OUTSIDE, MODEL } from './billboard.fixture'
+import { CHOSEN_OUTSIDE, CLOSED, MODEL } from './billboard.fixture'
 import { parseMarks } from './billboard-marks'
 import { BILLBOARD } from './billboard.copy'
 
@@ -268,6 +268,130 @@ describe('the Cartaz shows', () => {
     expect(cards()).toHaveLength(2)
   })
 
+  it('the chosen film’s card with each Reação, under a section or alone', () => {
+    render(<Billboard billboard={CLOSED} />)
+    const reactions = () =>
+      card(1)
+        .getByRole('list', { name: 'Filme escolhido' })
+        .querySelectorAll('li')
+    expect([...reactions()].map((li) => li.textContent)).toEqual([
+      'BBruno: previsto 8,3 · deu 6 de 10',
+      'IIara: gostou',
+    ])
+    expect(
+      card(1).getByRole('heading', { level: 4, name: 'Filme escolhido' }),
+    ).toBeTruthy()
+    cleanup()
+    render(<Billboard billboard={{ ...CLOSED, sections: [] }} />)
+    expect(
+      card(1).getByRole('heading', { level: 3, name: 'Filme escolhido' }),
+    ).toBeTruthy()
+  })
+
+  it('a Reação of someone not on the Cartaz, by her slug', () => {
+    render(
+      <Billboard
+        billboard={{
+          ...CHOSEN_OUTSIDE,
+          chosen: {
+            ...CHOSEN_OUTSIDE.chosen!,
+            reactions: [
+              {
+                person: 'teo',
+                predicted: '7',
+                rating: null,
+                reaction: 'neutral',
+              },
+            ],
+          },
+        }}
+      />,
+    )
+    const block = within(
+      screen.getByRole('region', { name: 'Filme escolhido' }),
+    )
+    expect(block.getByRole('listitem').textContent).toBe(
+      'teo: previsto 7 · neutro',
+    )
+  })
+
+  it('what the Dono marked before, the awards, a cautious Aposta, and a film whose why is its section', () => {
+    const [hours, salt] = MODEL.films
+    render(
+      <Billboard
+        billboard={{
+          ...MODEL,
+          open: false,
+          films: [
+            {
+              ...hours!,
+              awards: ['Oscar de melhor filme'],
+              notes: { stars: 3, comments: ['lindo'] },
+            },
+            {
+              ...salt!,
+              poster: 'https://image.tmdb.org/t/p/w500/sal.jpg',
+              lines: [],
+              withoutFact: ['teo'],
+              notes: { stars: null, comments: ['curto'] },
+            },
+          ],
+        }}
+      />,
+    )
+    expect(card(1).getByText('Oscar de melhor filme')).toBeTruthy()
+    expect(card(1).getByRole('img', { name: '3 de 5 estrelas' })).toBeTruthy()
+    expect(card(1).getByText('lindo')).toBeTruthy()
+    expect(card(2).queryByRole('img', { name: /estrelas/u })).toBeNull()
+    expect(card(2).getByText('curto')).toBeTruthy()
+    expect(card(2).getByText(BILLBOARD.card.sectionWhy)).toBeTruthy()
+    expect(
+      card(2)
+        .getByRole('img', { name: 'Capa de Sal & Ferrugem' })
+        .getAttribute('loading'),
+    ).toBe('lazy')
+    cleanup()
+    render(
+      <Billboard
+        billboard={{
+          ...MODEL,
+          films: [{ ...salt!, cautiousBetReason: 'Aposta mais exigente' }],
+        }}
+      />,
+    )
+    expect(card(1).getByText('Aposta mais exigente')).toBeTruthy()
+    expect(card(1).queryByText(BILLBOARD.card.sectionWhy)).toBeNull()
+  })
+
+  it('the lines every film of a section has, said once under its title', () => {
+    const [hours, salt] = MODEL.films
+    const shared = hours!.lines[0]!
+    render(
+      <Billboard
+        billboard={{
+          ...MODEL,
+          films: [
+            { ...hours!, reactions: [] },
+            { ...salt!, lines: [...salt!.lines, shared] },
+          ],
+          sections: [
+            {
+              kind: 'entity',
+              title: 'Porque gostam de Helena Prado',
+              again: false,
+              films: [hours!.id, salt!.id],
+            },
+          ],
+        }}
+      />,
+    )
+    const together = screen.getByRole('list', { name: BILLBOARD.shared })
+    expect(together.textContent).toContain(shared.text)
+    expect(card(1).queryByText(shared.text)).toBeNull()
+    expect(card(2).getByText('deu 5 a Maré Baixa')).toBeTruthy()
+    expect(card(1).queryByRole('list', { name: 'Filme escolhido' })).toBeNull()
+  })
+
   it('that nothing passed the Restrições', () => {
     render(<Billboard billboard={{ ...MODEL, films: [] }} />)
     expect(screen.getByText(BILLBOARD.empty)).toBeTruthy()
@@ -413,6 +537,24 @@ describe('Enviar and Copiar pro chat', () => {
     expect(card(1).getAllByText('As Horas Lentas').length).toBeGreaterThan(1)
   })
 
+  it('a poster that failed before the page came alive gives way to the title', () => {
+    const complete = Object.getOwnPropertyDescriptor(
+      HTMLImageElement.prototype,
+      'complete',
+    )
+    Object.defineProperty(HTMLImageElement.prototype, 'complete', {
+      configurable: true,
+      get: () => true,
+    })
+    try {
+      render(<Billboard billboard={MODEL} action="/x" />)
+      expect(card(1).queryByRole('img', { name: /^Capa/ })).toBeNull()
+    } finally {
+      if (complete)
+        Object.defineProperty(HTMLImageElement.prototype, 'complete', complete)
+    }
+  })
+
   it('a status line goes with the next mark, so it never contradicts the summary', async () => {
     const user = userEvent.setup()
     render(<Billboard billboard={MODEL} action="/x" />)
@@ -525,6 +667,109 @@ describe('Enviar and Copiar pro chat', () => {
     )
     expect(document.activeElement).toBe(box)
     writeText.mockRestore()
+  })
+})
+
+describe('the inline card', () => {
+  const expand = () => {}
+
+  it('a closed Session opens the whole Cartaz; a first version says no change', () => {
+    render(
+      <Billboard
+        billboard={{ ...MODEL, open: false, version: 1 }}
+        layout="inline"
+        onExpand={expand}
+      />,
+    )
+    expect(
+      screen.getByRole('button', { name: BILLBOARD.view.open }),
+    ).toBeTruthy()
+    expect(screen.queryByText(/^Saiu:/u)).toBeNull()
+  })
+
+  it('with no film, says why and offers nothing to mark', () => {
+    render(
+      <Billboard
+        billboard={{ ...MODEL, films: [] }}
+        layout="inline"
+        onExpand={expand}
+      />,
+    )
+    expect(
+      screen.getByText(BILLBOARD.view.empty(MODEL.request.parts)),
+    ).toBeTruthy()
+    expect(screen.queryByRole('button')).toBeNull()
+  })
+
+  it('the marks made before go with Enviar, and Copiar comes when it could not', async () => {
+    const user = userEvent.setup()
+    render(<Billboard billboard={MODEL} action="/x" />)
+    await user.click(card(2).getByRole('button', { name: 'Trocar' }))
+    cleanup()
+
+    const onSend = vi.fn<
+      (
+        text: string,
+      ) => Promise<{ message: string; sent: boolean; copy: boolean }>
+    >(() => Promise.resolve({ message: 'Não deu.', sent: false, copy: true }))
+    render(
+      <Billboard
+        billboard={MODEL}
+        layout="inline"
+        onExpand={expand}
+        onSend={onSend}
+      />,
+    )
+    expect(screen.getByText('Trocar: Sal & Ferrugem')).toBeTruthy()
+    await user.click(screen.getByRole('button', { name: BILLBOARD.reply.send }))
+    expect(onSend).toHaveBeenCalledOnce()
+    expect(
+      await screen.findByRole('button', { name: BILLBOARD.reply.copy }),
+    ).toBeTruthy()
+  })
+})
+
+describe('in the MCP Apps view without fullscreen', () => {
+  const onSend = () => {}
+
+  it('with no film, says what to ask in the chat', () => {
+    render(<Billboard billboard={{ ...MODEL, films: [] }} onSend={onSend} />)
+    expect(
+      screen.getByText(BILLBOARD.view.empty(MODEL.request.parts)),
+    ).toBeTruthy()
+  })
+
+  it('a long shelf is capped, with the way to see it whole', async () => {
+    const sizes = ['scrollHeight', 'clientHeight'].map(
+      (name) =>
+        [
+          name,
+          Object.getOwnPropertyDescriptor(HTMLElement.prototype, name),
+        ] as const,
+    )
+    Object.defineProperty(HTMLElement.prototype, 'scrollHeight', {
+      configurable: true,
+      get: () => 2000,
+    })
+    Object.defineProperty(HTMLElement.prototype, 'clientHeight', {
+      configurable: true,
+      get: () => 880,
+    })
+    try {
+      const user = userEvent.setup()
+      render(<Billboard billboard={MODEL} onSend={onSend} />)
+      await user.click(
+        screen.getByRole('button', { name: BILLBOARD.view.seeAll }),
+      )
+      expect(
+        screen.queryByRole('button', { name: BILLBOARD.view.seeAll }),
+      ).toBeNull()
+      expect(cards()).toHaveLength(2)
+    } finally {
+      for (const [name, descriptor] of sizes)
+        if (descriptor)
+          Object.defineProperty(HTMLElement.prototype, name, descriptor)
+    }
   })
 })
 

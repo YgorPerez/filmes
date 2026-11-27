@@ -123,7 +123,7 @@ function seenVerb(names: readonly string[]) {
 /** "Eu e Iara já vimos Fronteira (nota 8)." */
 function seenSentence(title: string, { people: who, ratings }: Seen) {
   // The Dono first ("Eu e Iara já vimos").
-  const names = who.toSorted((a, b) => (a === 'eu' ? -1 : b === 'eu' ? 1 : 0))
+  const names = who.toSorted((a, b) => Number(b === 'eu') - Number(a === 'eu'))
   const subject =
     names.length === 1 && names[0] === 'eu'
       ? ''
@@ -148,9 +148,11 @@ function redoSentence(reply: SentReply) {
     : 'Refaz a lista mantendo o resto?'
 }
 
-/** The comments that say something. */
+/** The comments that say something, each on one line. */
 const saidComments = (reply: SentReply) =>
-  reply.comments.filter((c) => line(c.comment ?? '') !== '')
+  reply.comments
+    .map((c) => ({ ...c, comment: line(c.comment ?? '') }))
+    .filter((c) => c.comment !== '')
 
 /** The Dono's sentence for what she sent: "Troquei Cais 2. Iara já viu
  * Fronteira (nota 8). Refaz a lista mantendo o resto?" */
@@ -167,7 +169,7 @@ function spoken(reply: SentReply, people: readonly BillboardPerson[]) {
     reply.addition !== null && `Acrescentei: “${line(reply.addition)}”.`,
     ...saidComments(reply).map(
       (c) =>
-        `Sobre ${c.title ? line(c.title) : `o filme ${c.position}`}: “${line(c.comment ?? '')}”.`,
+        `Sobre ${c.title ? line(c.title) : `o filme ${c.position}`}: “${c.comment}”.`,
     ),
     redoSentence(reply),
   ]
@@ -197,7 +199,7 @@ export function replyMessage(
     reply.addition !== null && `acrescentar: ${line(reply.addition)}`,
     ...comments.map(
       (c) =>
-        `comentário ${c.position} ${c.id}${c.title ? ` (${line(c.title)})` : ''}: ${line(c.comment ?? '')}`,
+        `comentário ${c.position} ${c.id}${c.title ? ` (${line(c.title)})` : ''}: ${c.comment}`,
     ),
   ]
   return {

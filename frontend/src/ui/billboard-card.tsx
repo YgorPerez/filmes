@@ -71,7 +71,7 @@ function Poster({
           >
             {cover ? (
               <img
-                src={film.poster ?? undefined}
+                src={film.poster}
                 alt={card.poster(film.title)}
                 loading={first ? 'eager' : 'lazy'}
                 onError={() => setBroken(true)}

@@ -292,3 +292,141 @@ it('the page’s search keeps only the notices and refusals it knows', () => {
     mudar: undefined,
   })
 })
+
+// The sticker on the card, not the button of the same word.
+const STAMP = { selector: 'span' }
+
+const motion = (reduce: boolean) =>
+  vi.stubGlobal(
+    'matchMedia',
+    vi.fn((query: string) => ({ matches: reduce, media: query })),
+  )
+
+it('the dragged card follows the finger and shows the Voto it is near', () => {
+  motion(false)
+  render(<VoteCards deck={DECK} action="/participar/votos" />)
+  const card = screen.getByRole('article')
+
+  fireEvent.pointerDown(card, { clientX: 200 })
+  fireEvent.pointerMove(card, { clientX: 250 })
+  expect(screen.getByText(VOTES.stampYes, STAMP)).toBeTruthy()
+  expect(card.style.transform).toBe('translateX(50px) rotate(3deg)')
+  fireEvent.pointerMove(card, { clientX: 150 })
+  expect(screen.getByText(VOTES.stampNo, STAMP)).toBeTruthy()
+  fireEvent.pointerMove(card, { clientX: 210 })
+  expect(screen.queryByText(VOTES.stampYes, STAMP)).toBeNull()
+  expect(screen.queryByText(VOTES.stampNo, STAMP)).toBeNull()
+  fireEvent.pointerUp(card, { clientX: 210 })
+  expect(card.style.transform).toBe('')
+})
+
+it('with reduced motion the card stays put, and a press on a button drags nothing', () => {
+  motion(true)
+  render(<VoteCards deck={DECK} action="/participar/votos" />)
+  const card = screen.getByRole('article')
+
+  fireEvent.pointerDown(card, { clientX: 200 })
+  fireEvent.pointerMove(card, { clientX: 300 })
+  expect(card.style.transform).toBe('')
+  expect(screen.queryByText(VOTES.stampYes, STAMP)).toBeNull()
+  fireEvent.pointerUp(card, { clientX: 300 })
+  expect(
+    screen.getByRole('heading', { name: 'Pequenos Milagres' }),
+  ).toBeTruthy()
+
+  const yes = screen.getByRole('button', { name: VOTES.yes })
+  fireEvent.pointerDown(yes, { clientX: 200 })
+  fireEvent.pointerUp(yes, { clientX: 400 })
+  expect(
+    screen.getByRole('heading', { name: 'Pequenos Milagres' }),
+  ).toBeTruthy()
+})
+
+it('the arrow keys in a field type there, and do not vote', async () => {
+  const user = userEvent.setup()
+  render(
+    <>
+      <input aria-label="nome" />
+      <VoteCards deck={DECK} action="/participar/votos" />
+    </>,
+  )
+  await user.click(screen.getByRole('textbox', { name: 'nome' }))
+  await user.keyboard('{ArrowRight}{ArrowLeft}')
+  expect(screen.getByRole('heading', { name: 'O Farol de Areia' })).toBeTruthy()
+  await user.keyboard('{Escape}')
+  expect(posted()).toEqual([['versao', '2']])
+})
+
+it('a standing não goes again, the original title shows, and the recap flips a sim', async () => {
+  const user = userEvent.setup()
+  const films = [
+    { ...FILMS[0]!, mine: 'no' as const },
+    {
+      ...FILMS[1]!,
+      card: { ...FILMS[1]!.card!, originalTitle: 'Little Miracles' },
+    },
+  ]
+  render(
+    <VoteCards
+      deck={{ version: 4, films, left: [] }}
+      action="/participar/votos"
+    />,
+  )
+  expect(screen.getByText('Little Miracles')).toBeTruthy()
+  await user.click(screen.getByRole('button', { name: VOTES.yes }))
+  await user.click(
+    screen.getByRole('button', {
+      name: VOTES.flip('Pequenos Milagres', 'yes'),
+    }),
+  )
+  expect(posted()).toEqual([
+    ['versao', '4'],
+    ['nao', 'tt9000101'],
+    ['nao', 'tt9000601'],
+  ])
+  expect(screen.getByText(VOTES.leaving(['Pequenos Milagres']))).toBeTruthy()
+})
+
+it('every film voted and no Perguntas left: only Mudar votos', () => {
+  const films = [{ ...FILMS[0]!, mine: 'yes' as const }]
+  render(
+    <VoteScreen
+      deck={{ version: 3, films, left: [] }}
+      search={LINK}
+      home={HOME}
+    />,
+  )
+  expect(screen.getAllByRole('link').map((a) => a.textContent)).toEqual([
+    VOTES.revote,
+  ])
+})
+
+it('films still to vote on after sending lead first, the Perguntas after', () => {
+  const films = [
+    { ...FILMS[0]!, mine: 'yes' as const },
+    { ...FILMS[1]!, mine: null, new: true },
+  ]
+  render(
+    <VoteScreen
+      deck={{ version: 3, films, left: [] }}
+      search={{ ...LINK, feito: 'votado' }}
+      home={HOME}
+      questions="/participar/perguntas?x"
+    />,
+  )
+  expect(screen.getAllByRole('link').map((a) => a.textContent)).toEqual([
+    'Votar no que chegou',
+    VOTES.revote,
+    VOTES.questions,
+  ])
+})
+
+it('without a deck, the way back to the link’s list', () => {
+  render(<VoteScreen deck={null} search={LINK} home={HOME} />)
+  expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
+    VOTES.title,
+  )
+  expect(
+    screen.getByRole('link', { name: VOTES.list }).getAttribute('href'),
+  ).toBe(HOME)
+})

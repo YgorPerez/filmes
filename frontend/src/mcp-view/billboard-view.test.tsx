@@ -125,6 +125,13 @@ describe('the view shows', () => {
     expect(screen.getByRole('alert').textContent).toBe(view.error(null))
   })
 
+  it('a result with no text at all is an error too', () => {
+    render(
+      <BillboardView result={{ isError: true }} host={fakeHost(json({}))} />,
+    )
+    expect(screen.getByRole('alert').textContent).toBe(view.error(null))
+  })
+
   it('the Cartaz is the page’s one h1', () => {
     render(<BillboardView result={shown} host={fakeHost(json({}))} />)
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
@@ -365,6 +372,70 @@ describe('the chat follow-up message', () => {
       'refazer · manter: nenhum',
       'clima: nenhum',
     ])
+  })
+
+  it('others who saw it, by name or slug, and films without a title', () => {
+    const message = replyMessage(
+      {
+        ...REPLY,
+        keep: ['tt9000105'],
+        moods: [],
+        dropped: [
+          { position: 3, id: 'tt3', title: null, cause: 'swapped' as const },
+        ],
+        seen: [
+          {
+            person: 'teo',
+            film: 'tt2',
+            title: 'Fronteira',
+            rating: 3,
+            new: true,
+          },
+          {
+            person: 'iara',
+            film: 'tt5',
+            title: 'Cais',
+            rating: null,
+            new: true,
+          },
+          {
+            person: 'teo',
+            film: 'tt5',
+            title: 'Cais',
+            rating: null,
+            new: true,
+          },
+        ],
+        comments: [
+          { position: 4, id: 'tt4', title: null, comment: 'curto' },
+          { position: 5, id: 'tt5', title: 'Cais' },
+        ],
+      },
+      people,
+    )
+    expect(message?.text.split('\n')[0]).toBe(
+      'Troquei o filme 3. teo já viu Fronteira (teo deu 6). ' +
+        'Iara e teo já viram Cais. Tirei o clima. ' +
+        'Sobre o filme 4: “curto”. Refaz a lista?',
+    )
+    expect(message?.context.split('\n').slice(1)).toEqual([
+      'refazer · manter: tt9000105',
+      'clima: nenhum',
+      'comentário 4 tt4: curto',
+    ])
+  })
+
+  it('a comment alone, without a redo', () => {
+    const message = replyMessage(
+      {
+        ...REPLY,
+        regenerate: false,
+        dropped: [],
+        comments: [{ position: 1, id: 'tt1', title: 'Cais', comment: 'bom' }],
+      },
+      people,
+    )
+    expect(message?.text.split('\n')[0]).toBe('Sobre Cais: “bom”.')
   })
 
   it('none when there is no follow-up', () => {

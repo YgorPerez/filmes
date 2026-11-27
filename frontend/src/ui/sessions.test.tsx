@@ -18,7 +18,8 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 import type { CartazPage } from '#/platform/billboard'
 import type { SessionItem } from '#/platform/sessions'
-import { MODEL } from './billboard.fixture'
+import { BILLBOARD } from './billboard.copy'
+import { CLOSED as TOLD, MODEL } from './billboard.fixture'
 import { SessionList, SessionScreen } from './sessions'
 import { SESSIONS } from './sessions.copy'
 
@@ -128,6 +129,13 @@ describe('the Sessions list', () => {
         .getByRole('link', { name: SESSIONS.list.emptyAction })
         .getAttribute('href'),
     ).toBe('/sessoes/nova')
+  })
+
+  it('an open Session with no film says so on its row', () => {
+    render(<SessionList sessions={[{ ...OPEN, recommendation: [] }]} />)
+    expect(screen.getByRole('listitem').textContent).toContain(
+      SESSIONS.films(0),
+    )
   })
 
   it('says when the engine cannot run here', () => {
@@ -411,6 +419,70 @@ describe('a Session’s page', () => {
     expect(
       screen.queryByRole('link', { name: SESSIONS.list.feedback }),
     ).toBeNull()
+  })
+
+  it('a told Session with its Reações: each one on the tape, the rest of the shelf folded', () => {
+    render(
+      <SessionScreen
+        page={{
+          ...PAGE,
+          session: {
+            ...CLOSED,
+            chosen: { id: 'tt9000104', title: 'As Horas Lentas' },
+          },
+          billboard: TOLD,
+        }}
+      />,
+    )
+    const tape = screen.getByRole('region', { name: SESSIONS.session.returned })
+    expect(within(tape).getAllByRole('listitem')).toHaveLength(2)
+    expect(screen.getByText(SESSIONS.session.others(1))).toBeTruthy()
+    expect(screen.getAllByRole('article')).toHaveLength(1)
+  })
+
+  it('a told Session where nothing was seen says so, over the whole shelf', () => {
+    render(
+      <SessionScreen
+        page={{
+          ...PAGE,
+          session: { ...CLOSED, chosen: null },
+          billboard: { ...MODEL, open: false },
+        }}
+      />,
+    )
+    expect(screen.getByText(SESSIONS.session.returnedNothing)).toBeTruthy()
+    expect(screen.getByText(SESSIONS.session.shelf)).toBeTruthy()
+    expect(screen.getAllByRole('article')).toHaveLength(2)
+  })
+
+  it('asks in the bar about the words the reading did not take, until the Dono goes to fix them', async () => {
+    const user = userEvent.setup()
+    const scrolled = vi.fn<() => void>()
+    Object.defineProperty(Element.prototype, 'scrollIntoView', {
+      configurable: true,
+      value: scrolled,
+    })
+    try {
+      render(<SessionScreen page={PAGE} refusal="leitura" words={['xpto']} />)
+      // The bar asks; no refusal is alerted above.
+      expect(screen.getByRole('alert').textContent).toContain(
+        BILLBOARD.reply.unread(['xpto']),
+      )
+      await user.click(
+        screen.getByRole('button', { name: BILLBOARD.reply.edit }),
+      )
+      expect(screen.queryByRole('alert')).toBeNull()
+      expect(scrolled).toHaveBeenCalled()
+    } finally {
+      Reflect.deleteProperty(Element.prototype, 'scrollIntoView')
+    }
+  })
+
+  it('a reading refusal with no words left is an alert', () => {
+    render(<SessionScreen page={PAGE} refusal="leitura" />)
+    expect(screen.getByRole('alert').textContent).toBe(
+      SESSIONS.session.refusals.leitura,
+    )
   })
 
   it('says when the Cartaz could not be made, when there is no such Session, or the engine cannot run', () => {

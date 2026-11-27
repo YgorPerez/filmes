@@ -163,6 +163,14 @@ describe('the Nova Sessão form', () => {
     )
   })
 
+  it('starts with the Presentes of “Pedir filme de novo com essa turma”', () => {
+    render(<NewSession options={OPTIONS} attendees={['iara', 'quim']} />)
+    const form = screen.getByRole('form', { name: SESSIONS.form.label })
+    expect(posted(form as HTMLFormElement)).toEqual({
+      ok: { attendees: ['iara', 'quim'], rule: 'default', moods: [] },
+    })
+  })
+
   it('says when the engine cannot run here', () => {
     render(<NewSession options={null} />)
     expect(screen.getByRole('alert').textContent).toContain(
