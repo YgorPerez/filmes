@@ -411,20 +411,44 @@ describe('the whole sentence', () => {
 })
 
 describe('the whole sentence', () => {
-  test('a Clima after a negation in its clause is not understood', async () => {
+  test('a Clima right after a negation is the Clima turned away', async () => {
     const fixture = useFixture()
 
     const reading = await read(fixture, 'algo leve, nada de terror')
 
-    expect(reading.request).toEqual({ moods: ['leve'] })
-    expect(reading.understood.map((i) => i.label)).toEqual(['Clima: leve'])
-    expect(reading.notUnderstood).toEqual(['nada de terror'])
-    expect((await read(fixture, 'sem comédia')).request).toEqual({})
-    expect((await read(fixture, 'não quero terror')).request).toEqual({})
+    expect(reading.request).toEqual({
+      moods: ['leve'],
+      noMoods: ['assustador'],
+    })
+    expect(reading.understood.map((i) => [i.words, i.label])).toEqual([
+      ['leve', 'Clima: leve'],
+      ['nada de terror', 'nada assustador'],
+    ])
+    expect(reading.notUnderstood).toEqual([])
+    expect((await read(fixture, 'sem comédia, sem romance')).request).toEqual({
+      noMoods: ['pra rir', 'romântico'],
+    })
+    expect((await read(fixture, 'não quero terror')).request).toEqual({
+      noMoods: ['assustador'],
+    })
+  })
+
+  test('a negation with other words before the Clima is not understood', async () => {
+    const reading = await read(useFixture(), 'nada mesmo de terror')
+
+    expect(reading.request).toEqual({})
+    expect(reading.notUnderstood).toEqual(['nada mesmo de terror'])
+  })
+
+  test('"nada triste" stays the Restrição no_sad', async () => {
+    expect(await fields(useFixture(), 'nada de chorar')).toEqual({
+      noSad: true,
+    })
   })
 
   test('a negation in another clause does not deny the Clima', async () => {
     expect(await fields(useFixture(), 'nada de terror; leve')).toEqual({
+      noMoods: ['assustador'],
       moods: ['leve'],
     })
   })

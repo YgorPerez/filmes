@@ -38,6 +38,7 @@ import {
   readTvTimeBackup,
   TVTIME_KIND,
 } from './tvtime-backup.ts'
+import { tasteChange, tasteSnapshot, type TasteChange } from './taste-change.ts'
 
 /** Runs a reader that throws the `EngineError` of a bad file. */
 const attempt = <A>(f: () => A): Effect.Effect<A, EngineError> =>
@@ -97,6 +98,8 @@ export interface TvTimeImport extends LetterboxdReport {
   readonly newFile: boolean
   readonly facts: FactCounts
   readonly newFacts: FactCounts
+  /** What she sees on her Notas: new, changed and repeated Notas (#274). */
+  readonly changes: TasteChange
   /** Films named by a tconst the Catálogo does not have, from all her
    * backups. */
   readonly outsideCatalog: readonly TvTimeOutside[]
@@ -142,6 +145,7 @@ export const importTvTime = (
           yield* ensureLetterboxdTables(db)
           const person = yield* resolvePerson(input.person)
           const before = yield* tvTimeFactCounts(db, person.slug)
+          const taste = yield* tasteSnapshot(db, person.slug)
           const all = [...(yield* personTvTimeRows(person)), ...rows]
           const { resolutions, usedTmdb } = yield* recordTmdbAnswers(db, all)
           const stored = yield* storeImport(
@@ -160,6 +164,7 @@ export const importTvTime = (
             file: stored.file,
             newFile: stored.new,
             facts: after,
+            changes: yield* tasteChange(db, person.slug, TVTIME_KIND, taste),
             newFacts: Object.fromEntries(
               Object.entries(after).map(([k, n]) => [
                 k,

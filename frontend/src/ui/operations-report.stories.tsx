@@ -1,7 +1,7 @@
-// The evaluation's report: each section in a fold, Offline open, and the
-// weights to copy as TOML; and before any report.
+// The evaluation's report: each section in a closed fold, the numbers in
+// pt-BR, and the weights shown and copied as TOML; and before any report.
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, within } from 'storybook/test'
+import { expect, userEvent, within } from 'storybook/test'
 import { REPORT_TEXT } from './operations.fixture'
 import { CopyButton, Report } from './operations-report'
 
@@ -20,10 +20,11 @@ export const Sections: Story = {
     await expect(
       canvas.getByRole('heading', { name: 'Relatório de 20 nov 2026' }),
     ).toBeVisible()
-    await expect(
-      canvas.getByRole('columnheader', { name: 'Recall@50' }),
-    ).toBeVisible()
-    await expect(canvas.getByText(/Pessoas 0\.28,/)).toBeVisible()
+    await userEvent.click(canvas.getByText('Offline'))
+    await expect(canvas.getByText(/Pessoas 0,28,/)).toBeVisible()
+    await expect(canvas.getAllByText('80% (4/5)')[0]).toBeVisible()
+    await userEvent.click(canvas.getByText('Pesos'))
+    await expect(canvas.getByText(/max_evidence = 5/)).toBeVisible()
     await expect(
       canvas.getByRole('link', { name: 'Baixar relatório (.md)' }),
     ).toHaveAttribute('href', '/operacoes/relatorio.md?data=2026-11-20')

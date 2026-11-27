@@ -27,7 +27,8 @@ const TABS: readonly Tab[] = [
   { key: 'home', href: '/', icon: 'home' },
   { key: 'sessions', href: '/sessoes', icon: 'film' },
   { key: 'people', href: '/pessoas', icon: 'people' },
-  { key: 'taste', href: '/meu-gosto', icon: 'taste' },
+  // `/trakt` is reached from Meu gosto's imports (#274).
+  { key: 'taste', href: '/meu-gosto', icon: 'taste', also: ['/trakt'] },
 ]
 
 const under = (path: string, root: string) =>
@@ -242,7 +243,8 @@ export function AppShell({
           </div>
         </div>
       </header>
-      {alert && <PushStrip status={alert} />}
+      {/* On Operações the push's own section says it, first. */}
+      {alert && !under(path, '/operacoes') && <PushStrip status={alert} />}
       <div className="flex flex-1 flex-col pb-tab-clearance min-[900px]:pb-0">
         <div>{children}</div>
         <SiteFooter />

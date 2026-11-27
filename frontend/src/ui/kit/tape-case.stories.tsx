@@ -1,7 +1,7 @@
 // The tape's case: a cover without a poster.
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, within } from 'storybook/test'
-import { TapeCase } from './tape-case'
+import { PosterCover, TapeCase } from './tape-case'
 
 const meta = {
   component: TapeCase,
@@ -21,3 +21,23 @@ export const WithTitle: Story = {
 }
 
 export const Empty: Story = {}
+
+/** A poster that does not load: the title on the cover, never the
+ * broken-image glyph (#274). */
+export const BrokenPoster: Story = {
+  args: {
+    cover: (
+      <PosterCover
+        src="/nao-existe.jpg"
+        title="Vento Norte"
+        alt="Cartaz de Vento Norte"
+      />
+    ),
+  },
+  play: async ({ canvasElement }) => {
+    await expect(
+      await within(canvasElement).findByText('Vento Norte'),
+    ).toBeVisible()
+    await expect(canvasElement.querySelector('img')).toBeNull()
+  },
+}

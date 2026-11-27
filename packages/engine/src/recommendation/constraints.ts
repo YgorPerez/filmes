@@ -49,6 +49,7 @@ export const CONSTRAINT_ORDER = [
   'unseen', // sem_ja_visto
   'no_slow', // sem_lento
   'no_sad', // sem_tristeza
+  'no_mood', // nada de um Clima (#272, after Python left)
   'series_order', // serie_na_ordem (#165, after Python left)
 ] as const
 export type ConstraintName = (typeof CONSTRAINT_ORDER)[number]

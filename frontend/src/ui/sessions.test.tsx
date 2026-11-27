@@ -45,6 +45,8 @@ const OPEN: SessionItem = {
   chosen: null,
   moods: ['leve'],
   constraints: ['até 2h', 'com criança de 7 anos'],
+  version: 1,
+  additions: [],
 }
 
 const CLOSED: SessionItem = {
@@ -63,18 +65,24 @@ describe('the Sessions list', () => {
   it('shows dates, outcomes and a way to tell how an open Session went', () => {
     render(
       <SessionList
-        sessions={[CLOSED, OPEN, { ...CLOSED, id: 'x', chosen: null }]}
+        sessions={[
+          CLOSED,
+          { ...OPEN, version: 2, additions: ['chegou a Rosa'] },
+          { ...CLOSED, id: 'x', chosen: null },
+        ]}
       />,
     )
     expect(
       screen.getByRole('link', { name: 'Nova Sessão' }).getAttribute('href'),
     ).toBe('/sessoes/nova')
-    const [closed, open, nothing] = screen.getAllByRole('listitem')
+    // The open Session first, then the told ones (#272).
+    const [open, closed, nothing] = screen.getAllByRole('listitem')
     expect(
       within(closed!).getByRole('link', { name: /Quim/ }).getAttribute('href'),
     ).toBe('/sessoes/2026-11-19-quim')
     expect(closed!.textContent).toContain('Viram Pequenos Milagres')
     expect(closed!.textContent).toContain('Qui, 19 nov')
+    expect(closed!.textContent).toContain(SESSIONS.list.told)
     expect(
       within(closed!).queryByRole('link', { name: 'Contar como foi' }),
     ).toBeNull()
@@ -83,16 +91,32 @@ describe('the Sessions list', () => {
         .getByRole('link', { name: /Bruno, Iara/ })
         .getAttribute('href'),
     ).toBe('/sessoes/2026-11-20-iara')
-    expect(open!.textContent).toContain('eu e a Iara')
+    expect(open!.textContent).toContain(SESSIONS.list.toTell)
+    expect(open!.textContent).toContain(SESSIONS.list.version(2))
+    // The words, then what she added; not the Climas again (#272).
+    expect(open!.textContent).toContain('eu e a Iara + chegou a Rosa')
+    expect(open!.textContent).not.toContain('até 2h')
     // The shelf by title, so the night is easy to place (#272).
     expect(open!.textContent).toContain('O Farol de Areia · Pequenos Milagres')
-    expect(open!.textContent).toContain('até 2h')
     expect(
       within(open!)
         .getByRole('link', { name: 'Contar como foi' })
         .getAttribute('href'),
     ).toBe('/sessoes/2026-11-20-iara/contar')
     expect(nothing!.textContent).toContain('Não viram nada')
+  })
+
+  it('says the Climas and Restrições when the Dono typed no words', () => {
+    render(<SessionList sessions={[{ ...OPEN, request: null }]} />)
+    expect(screen.getByRole('listitem').textContent).toContain('até 2h')
+  })
+
+  it('has one orange button on an empty list (#272)', () => {
+    render(<SessionList sessions={[]} />)
+    expect(screen.queryByRole('link', { name: 'Nova Sessão' })).toBeNull()
+    expect(
+      screen.getByRole('link', { name: SESSIONS.list.emptyAction }),
+    ).toBeTruthy()
   })
 
   it('explains an empty list and highlights its current filter', () => {
@@ -450,6 +474,38 @@ describe('a Session’s page, a told Session', () => {
     expect(within(tape).getAllByRole('listitem')).toHaveLength(2)
     expect(screen.getByText(SESSIONS.session.others(1))).toBeTruthy()
     expect(screen.getAllByRole('article')).toHaveLength(1)
+  })
+
+  it('the tape gives each comment and what the Cartaz kept of the film (#272)', () => {
+    const [seen, ...rest] = TOLD.films
+    render(
+      <SessionScreen
+        page={{
+          ...PAGE,
+          session: {
+            ...CLOSED,
+            chosen: { id: 'tt9000104', title: 'As Horas Lentas' },
+          },
+          billboard: {
+            ...TOLD,
+            films: [
+              {
+                ...seen!,
+                reactions: seen!.reactions!.map((r) =>
+                  r.person === 'iara' ? { ...r, comment: 'dormiu no meio' } : r,
+                ),
+                notes: { stars: 4, comments: ['a Iara riu do trailer'] },
+              },
+              ...rest,
+            ],
+          },
+        }}
+      />,
+    )
+    const tape = screen.getByRole('region', { name: SESSIONS.session.returned })
+    expect(tape.textContent).toContain('“dormiu no meio”')
+    expect(tape.textContent).toContain(SESSIONS.session.stars(4))
+    expect(tape.textContent).toContain('“a Iara riu do trailer”')
   })
 
   it('a told Session where nothing was seen says so, over the whole shelf', () => {

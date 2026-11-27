@@ -80,6 +80,13 @@ describe('importTrakt', () => {
 
     expect(report.resolved).toEqual({ imdb: 1, tmdb: 1 })
     expect(report.newFacts).toEqual({ ratings: 2, seen: 1, watchlist: 0 })
+    // The film of the history has a Nota too: no film is only seen.
+    expect(report.changes).toEqual({
+      newRatings: 2,
+      changedRatings: [],
+      repeatedRatings: 0,
+      newSeen: 0,
+    })
     expect(report.attributions).toEqual([TRAKT_ATTRIBUTION])
     const sha = createHash('sha256').update(zip).digest('hex')
     expect(report.file).toBe(`imports/teo/trakt-${sha}.zip`)
@@ -115,7 +122,7 @@ describe('importTrakt', () => {
       ],
     ])
     await fixture.ok(importZip(trakt))
-    await fixture.ok(
+    const second = await fixture.ok(
       importLetterboxd({
         person: 'teo',
         original: 'letterboxd.zip',
@@ -133,6 +140,22 @@ describe('importTrakt', () => {
       ['tt9000101', 4.5, 'Trakt de Teo'],
       ['tt9000102', 5, 'Letterboxd de Teo'],
     ])
+    // Maré Baixa's newer Letterboxd Nota replaced the Trakt one, and says
+    // so; O Farol de Areia kept its newer Trakt Nota (#274).
+    expect(second.changes).toEqual({
+      newRatings: 0,
+      changedRatings: [
+        {
+          film: 'tt9000102',
+          title: 'Maré Baixa',
+          year: 2015,
+          from: 0.5,
+          to: 5,
+        },
+      ],
+      repeatedRatings: 1,
+      newSeen: 0,
+    })
     const facts = () =>
       query(
         fixture,

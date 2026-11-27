@@ -20,7 +20,7 @@ export const readSessionLink = createServerFn({ method: 'GET' })
     const link = await appSessionLink(data)
     return {
       link,
-      closed: link === null && (await appClosedSessionLink(data)),
+      closed: link === null ? await appClosedSessionLink(data) : null,
     }
   })
 

@@ -7,7 +7,8 @@ export const LOGIN = {
    * visitor has to know anything else. */
   tagline: ['Filme pra hoje', 'Pra sala toda'],
   taglineLabel: 'Filme pra hoje, pra sala toda.',
-  lead: 'Entre com a sua conta Google.',
+  /** What the visitor gets, not the button again. */
+  lead: 'Sua lista da noite e as suas Sessões ficam aqui.',
   /** Who gets in, before a failed trip to Google says it. */
   access:
     'Só entra quem já está em Pessoas como Dono. Peça a quem já usa para pôr o seu e-mail.',

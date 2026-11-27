@@ -165,6 +165,7 @@ const IARA: PersonPage = {
   ],
   sessions: { total: 0, recent: [], satisfaction: null },
   imported: false,
+  likes: null,
 }
 
 /** Searches a target's field and picks what `name` the result has. */
@@ -345,7 +346,7 @@ describe('PersonScreen forms', () => {
   it('shows her Notas on the 1 to 10 scale she gives them on', () => {
     const notes = section(PERSON.notes.title)
     expect(notes.textContent).toContain(
-      'nota 8 · 30 ago 2025 · 4★ no Letterboxd da Iara',
+      'nota 8 · 30 ago 2025 · Letterboxd (4★)',
     )
   })
 })
@@ -703,13 +704,70 @@ describe('PersonScreen', () => {
         .getAttribute('href'),
     ).toBe('/pessoas/iara/importar')
     cleanup()
-    show({ ...IARA, openQuestions: [] })
+    show({ ...IARA, openQuestions: [], vetoes: [] })
     expect(
       screen
         .getByRole('link', { name: PERSON.summary.steps.veto('Iara') })
         .getAttribute('href'),
     ).toBe('#acrescentar-veto')
     expect(document.getElementById('acrescentar-veto')).toBeTruthy()
+    cleanup()
+    // With a Veto already, the step moves on: a film with her (#273).
+    show({ ...IARA, openQuestions: [], vetoes: IARA.vetoes })
+    expect(
+      screen.queryByRole('link', { name: PERSON.summary.steps.veto('Iara') }),
+    ).toBeNull()
+    expect(
+      screen
+        .getByRole('link', { name: PERSON.summary.steps.ask('Iara') })
+        .getAttribute('href'),
+    ).toBe('/sessoes/nova?presentes=bruno%2Ciara')
+  })
+
+  it('says what her Notas show she likes, under the counts', () => {
+    show({
+      ...IARA,
+      likes: {
+        person: 'iara',
+        liked: 3,
+        genres: ['Drama', 'Crime'],
+        directors: ['Rui Tavares'],
+      },
+    })
+    expect(
+      screen.getByText(
+        'Pelas Notas, Iara gosta de Drama, Crime e Rui Tavares.',
+      ),
+    ).toBeTruthy()
+    cleanup()
+    // The films she liked have no genre: the titles of her highest Notas.
+    const none = { person: 'iara', liked: 1, genres: [], directors: [] }
+    show({ ...IARA, likes: none })
+    expect(screen.getByText('Iara deu nota alta a Fronteira.')).toBeTruthy()
+    cleanup()
+    show({
+      ...IARA,
+      likes: none,
+      ratings: IARA.ratings!.map((r) => ({ ...r, rating: 3 })),
+    })
+    expect(screen.queryByText(/^Pelas Notas|nota alta/)).toBeNull()
+  })
+
+  it('reads in the order it shows: the Vetos before the Notas, Remover last', () => {
+    show()
+    const order = [
+      section(PERSON.vetoes.title),
+      section(PERSON.notes.title),
+      document.getElementById('afinar')!,
+      document.getElementById('remover-pessoa')!,
+    ]
+    for (const [before, after] of order
+      .slice(0, -1)
+      .map((el, i) => [el, order[i + 1]!]))
+      expect(
+        before.compareDocumentPosition(after) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy()
   })
 
   it('folds what fine-tunes her taste into Afinar, after the Vetos', () => {
@@ -743,7 +801,7 @@ describe('PersonScreen', () => {
     )
     expect(
       within(section(PERSON.stated.title)).getByRole('status').textContent,
-    ).toBe(PERSON.notices('Iara').gravado)
+    ).toBe(PERSON.savedIn.declarados.gravado)
     expect(screen.getAllByRole('status')).toHaveLength(1)
     expect((document.getElementById('afinar') as HTMLDetailsElement).open).toBe(
       true,
@@ -948,12 +1006,9 @@ const link = (region: HTMLElement, name: string) =>
   within(region).getByRole('link', { name }).getAttribute('href')
 
 describe('the Notas section', () => {
-  it('comes first, with her Notas, her import and her CSV', async () => {
+  it('holds her Notas, her import and her CSV', async () => {
     show()
     const notes = section(PERSON.notes.title)
-    expect(screen.getAllByRole('region')[0], 'Notas is the first section').toBe(
-      notes,
-    )
     expect(link(notes, PERSON.notes.import)).toBe('/pessoas/iara/importar')
     expect(link(notes, PERSON.notes.download)).toBe(
       '/exportar/imdb.csv?pessoa=iara',
@@ -1241,6 +1296,44 @@ const glanceSteps = (start: MyStart | undefined, page: PersonPage) => {
   return name
 }
 
+describe('Meu gosto, her Notas list (#274)', () => {
+  it('changes any Nota on Dar notas, and takes out one her file holds', () => {
+    const own: PersonPage = {
+      ...MY_PAGE,
+      ratings: [
+        { ...IARA.ratings![0]!, source: 'Trakt de Bruno' },
+        {
+          ...IARA.ratings![0]!,
+          filmId: 'tt9000602',
+          title: 'Casa Cheia',
+          source: RATING_SCREEN_SOURCE,
+          factId: 'vistos:9',
+        },
+      ],
+    }
+    render(<PersonScreen slug="bruno" page={own} />)
+    const notes = section(PERSON.notes.title)
+    expect(
+      within(notes)
+        .getByRole('link', { name: PERSON.notes.changeLabel('Fronteira') })
+        .getAttribute('href'),
+    ).toBe('/meu-gosto/notas?filme=tt9000401')
+    // The imported one leaves with its import: no Tirar.
+    expect(
+      within(notes).queryByRole('button', {
+        name: PERSON.removeLabel(PERSON.notes.removeWhat('Fronteira')),
+      }),
+    ).toBeNull()
+    expect(
+      within(notes).getByRole('button', {
+        name: PERSON.removeLabel(PERSON.notes.removeWhat('Casa Cheia')),
+      }),
+    ).toBeTruthy()
+    expect(notes.textContent).toContain('nota 8 · 30 ago 2025 · Trakt')
+    expect(notes.textContent).toContain('Dar notas')
+  })
+})
+
 describe('Meu gosto in the second person', () => {
   it('opens with her taste in one look and one next step', () => {
     render(<PersonScreen slug="bruno" page={MY_PAGE} />)
@@ -1283,7 +1376,7 @@ describe('Meu gosto in the second person', () => {
     )
     expect(
       within(section(PERSON.glance.title)).getByText(
-        'Pelas suas Notas, você gosta de Drama, Crime e Rui Tavares.',
+        'Pelas suas Notas, você gosta dos gêneros Drama e Crime e da direção de Rui Tavares.',
       ),
     ).toBeTruthy()
   })
@@ -1306,7 +1399,7 @@ describe('Meu gosto in the second person', () => {
 
   it('folds the empty fichas into one line, and says the Ajustes are all normal', () => {
     render(<PersonScreen slug="bruno" page={MY_PAGE} />)
-    expect(screen.getByText(PERSON.empties([PERSON.seen.title]))).toBeTruthy()
+    expect(screen.getByText(PERSON.empty(PERSON.seen.title))).toBeTruthy()
     expect(
       within(section(PERSON.adjustments.title)).getByText(
         PERSON.adjustments.noneChanged,
@@ -1366,7 +1459,7 @@ describe('Meu gosto in the second person', () => {
         PERSON.adjustments.changed(1),
       ),
     ).toBeTruthy()
-    expect(screen.getByText(PERSON.ownNotices.gravado)).toBeTruthy()
+    expect(screen.getByText(PERSON.notices('Bruno').gravado)).toBeTruthy()
     expect(
       within(screen.getByRole('navigation', { name: PERSON.contents }))
         .getAllByRole('link')
@@ -1464,17 +1557,28 @@ const IARA_OWN: PersonPage = {
 }
 
 describe('Meu gosto with little in it', () => {
-  it('says nothing was said, lists no contents and links her Trakt', () => {
-    render(<PersonScreen slug="iara" page={IARA_OWN} showTrakt />)
+  it('says nothing was said, lists no contents and says where her Trakt stands', () => {
+    render(<PersonScreen slug="iara" page={IARA_OWN} trakt="disconnected" />)
     expect(screen.getByText(PERSON.glance.nothingSaid)).toBeTruthy()
     expect(
       screen.queryByRole('navigation', { name: PERSON.contents }),
     ).toBeNull()
+    const notes = section(PERSON.notes.title)
+    expect(notes.textContent).toContain('Trakt não conectado')
     expect(
-      screen
-        .getByRole('link', { name: 'Conexão com o Trakt' })
+      within(notes)
+        .getByRole('link', { name: 'conectar' })
         .getAttribute('href'),
     ).toBe('/trakt')
+  })
+
+  it('says her Trakt is connected, with the way to the connection', () => {
+    render(<PersonScreen slug="iara" page={IARA_OWN} trakt="connected" />)
+    const notes = section(PERSON.notes.title)
+    expect(notes.textContent).toContain('Trakt conectado')
+    expect(
+      within(notes).getByRole('link', { name: 'ver a conexão' }),
+    ).toBeTruthy()
   })
 
   it('waits for the database before it lists her Notas', () => {

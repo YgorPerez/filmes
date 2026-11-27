@@ -390,14 +390,14 @@ export function Disclosure({
     <details
       id={id}
       open={open}
-      className="scroll-mt-2xl rounded-field border border-rule"
+      className="group/disclosure scroll-mt-2xl rounded-field border border-rule"
     >
       <summary className="flex min-h-touch cursor-pointer list-none items-center justify-between gap-sm px-3 font-semibold select-none [&::-webkit-details-marker]:hidden">
         {summary}
         {/* The drawn +, a × while open: the fold's state not by colour. */}
         <Icon
           name="plus"
-          className="size-[18px] text-ink-2 transition-transform motion-reduce:transition-none [details[open]>summary>&]:rotate-45"
+          className="size-[18px] text-ink-2 transition-[rotate] group-open/disclosure:rotate-45 motion-reduce:transition-none"
         />
       </summary>
       <div className="border-t border-rule p-xl">{children}</div>
@@ -618,7 +618,19 @@ export type Pick = {
   pickAs?: PickWords
 }
 
-export type PickWords = { text: string; label: (title: string) => string }
+export type PickWords = {
+  text: string
+  label: (title: string) => string
+  /** The rating screen's results (#274): no ID, the directors as the card
+   * says them, and her Nota of a film she rated, whose pick then changes
+   * it (`change`). */
+  card?: {
+    directedBy: (names: readonly string[]) => string
+    rated: (id: string) => number | undefined
+    ratedText: (rating: number) => string
+    change: { text: string; label: (title: string) => string }
+  }
+}
 
 /** "Usar": the link, or the button that takes the film in place. */
 export function PickFilm({
@@ -649,6 +661,16 @@ export function PickFilm({
 }
 
 function FilmItem({ film, pick, onPick, pickAs }: Pick & { film: FilmMatch }) {
+  if (pickAs?.card)
+    return (
+      <CardFilmItem
+        film={film}
+        pick={pick}
+        onPick={onPick}
+        pickAs={pickAs}
+        card={pickAs.card}
+      />
+    )
   const { votes } = CATALOG_SEARCH
   const title = filmText(film)
   return (
@@ -671,19 +693,50 @@ function FilmItem({ film, pick, onPick, pickAs }: Pick & { film: FilmMatch }) {
   )
 }
 
-function EntityItem({ entity, onPick }: Pick & { entity: EntityMatch }) {
-  const { links, films } = CATALOG_SEARCH
+/** A film of the rating screen's search (#274): its title, the directors
+ * and the votes, and her Nota when she gave one; then "Dar nota", or
+ * "Mudar". */
+function CardFilmItem({
+  film,
+  pick,
+  onPick,
+  pickAs,
+  card,
+}: Pick & { film: FilmMatch; card: NonNullable<PickWords['card']> }) {
+  const { votes } = CATALOG_SEARCH
+  const title = filmText(film)
+  const rating = card.rated(film.id)
   return (
     <Item
       actions={
-        onPick && (
-          <PickFilm id={entity.id} label={entityText(entity)} onPick={onPick} />
-        )
+        <PickFilm
+          id={film.id}
+          label={title}
+          pick={pick}
+          onPick={onPick}
+          pickAs={rating === undefined ? pickAs : card.change}
+        />
       }
     >
+      <span className="font-semibold">{title}</span>
+      <Meta
+        parts={[
+          film.directors.length > 0 ? card.directedBy(film.directors) : null,
+          votes(film.votes),
+          rating === undefined ? null : card.ratedText(rating),
+        ]}
+      />
+    </Item>
+  )
+}
+
+function EntityItem({ entity }: { entity: EntityMatch }) {
+  const { links, films } = CATALOG_SEARCH
+  return (
+    <Item>
       <span className="flex flex-wrap items-center gap-sm">
         <span className="font-semibold">{entity.label}</span>{' '}
-        {!onPick && <Id id={entity.id} />}
+        <Id id={entity.id} />
       </span>
       <Meta
         parts={[
@@ -717,22 +770,15 @@ function CatalogResults({
   answer,
   pick,
   onPick,
-  onEntityPick,
   pickAs,
-  filmLabel = filmText,
 }: Pick & {
   answer: SearchAnswer
-  /** "Usar" on a director, a genre or a series too: only where an entity
-   * can be the target. */
-  onEntityPick?: Pick['onPick']
-  /** How a picked film is named: its title, or its chip. */
-  filmLabel?: (film: FilmRef) => string
 }) {
   const { groups, results, none, refusals } = CATALOG_SEARCH
   if ('refused' in answer) return <Alert>{refusals[answer.refused]}</Alert>
   const { films, people, genres, series } = answer.found
   const entities = (list: readonly EntityMatch[]) =>
-    list.map((e) => <EntityItem key={e.id} entity={e} onPick={onEntityPick} />)
+    list.map((e) => <EntityItem key={e.id} entity={e} />)
   const empty =
     films.length + people.length + genres.length + series.length === 0
   return (
@@ -746,9 +792,7 @@ function CatalogResults({
             key={f.id}
             film={f}
             pick={pick}
-            onPick={
-              onPick && ((picked) => onPick({ ...picked, label: filmLabel(f) }))
-            }
+            onPick={onPick}
             pickAs={pickAs}
           />
         ))}
@@ -988,16 +1032,86 @@ function TargetSearch({
         </FieldLabel>
       )}
       {!picked && search.answer && (
-        <CatalogResults
+        <TargetResults
           answer={search.answer}
-          filmLabel={(film) =>
-            PERSON.targetChip(filmText(film), PERSON.filmKind)
-          }
+          scope={scope}
           onPick={setPicked}
-          onEntityPick={scope === 'films' ? undefined : setPicked}
         />
       )}
     </>
+  )
+}
+
+/** How many results the target's search offers: the list stays above the
+ * groups and the Gravar on a phone. */
+const TARGET_RESULTS = 5
+
+/** A result as an option: `name` is what its button says to a screen
+ * reader ("Usar Terror · gênero"). */
+type TargetOption = Target & { name: string; title: string; meta: string }
+
+/** The search's answer as the options of the target's field (#273): each
+ * result is one row, the whole row the button that picks it (44px or
+ * more), with what it is in meta and no ID. Films first; a Já visto
+ * offers only films. */
+function TargetResults({
+  answer,
+  scope,
+  onPick,
+}: {
+  answer: SearchAnswer
+  scope: CatalogScope
+  onPick: (target: Target) => void
+}) {
+  const { results, none, refusals, links, votes } = CATALOG_SEARCH
+  if ('refused' in answer) return <Alert>{refusals[answer.refused]}</Alert>
+  const { films, people, genres, series } = answer.found
+  const options: TargetOption[] = [
+    ...films.map((film) => ({
+      id: film.id,
+      label: PERSON.targetChip(filmText(film), PERSON.filmKind),
+      name: filmText(film),
+      title: filmText(film),
+      meta: [PERSON.filmKind, film.directors.join(', '), votes(film.votes)]
+        .filter((part) => part !== '')
+        .join(' · '),
+    })),
+    ...(scope === 'films' ? [] : [...people, ...genres, ...series]).map(
+      (entity) => ({
+        id: entity.id,
+        label: entityText(entity),
+        name: entityText(entity),
+        title: entity.label,
+        meta: entity.links.map((link) => links[link]).join(', '),
+      }),
+    ),
+  ].slice(0, TARGET_RESULTS)
+  return (
+    <div className="flex flex-col gap-xs">
+      <p className="text-meta text-ink-2" role="status">
+        {options.length === 0 ? none : results(answer.query)}
+      </p>
+      {options.length > 0 && (
+        <ul
+          aria-label={results(answer.query)}
+          className="flex flex-col overflow-hidden rounded-field border border-rule bg-surface"
+        >
+          {options.map((option) => (
+            <li key={option.id} className="border-rule not-first:border-t">
+              <button
+                type="button"
+                aria-label={CATALOG_SEARCH.pickLabel(option.name)}
+                onClick={() => onPick({ id: option.id, label: option.label })}
+                className="flex min-h-touch w-full cursor-pointer flex-col items-start justify-center gap-0.5 px-lg py-sm text-left text-ink hover:bg-surface-2 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus"
+              >
+                <span className="font-semibold">{option.title}</span>
+                <span className="text-meta text-ink-2">{option.meta}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   )
 }
 

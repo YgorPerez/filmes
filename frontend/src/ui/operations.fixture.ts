@@ -181,6 +181,7 @@ export const DONE: EvaluationPanel = {
           tie: false,
         },
       ],
+      combinations: 411,
       file: '2026-11-20.md',
     },
   },

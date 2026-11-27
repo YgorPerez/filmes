@@ -15,11 +15,14 @@ export function ActionPost({
   action,
   className,
   submitClassName,
+  primary = false,
   children,
 }: {
   action: 'avaliar' | 'enviar'
   className?: string
   submitClassName?: string
+  /** The page's orange button (the push's retry while pushes fail). */
+  primary?: boolean
   children?: ReactNode
 }) {
   const { evaluation, push } = OPERATIONS
@@ -31,7 +34,11 @@ export function ActionPost({
         <>
           <input type="hidden" name="acao" value={action} />
           {children}
-          <Submit className={submitClassName} disabled={sending}>
+          <Submit
+            variant={primary ? 'primary' : 'option'}
+            className={submitClassName}
+            disabled={sending}
+          >
             {sending ? pending : label}
           </Submit>
         </>

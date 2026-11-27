@@ -38,8 +38,10 @@ dez = 10
 onze = 11
 doze = 12
 
-# Uma destas nega o que vem depois na mesma oração: o Clima depois dela
-# ("nada de terror", "sem comédia") volta como "não entendi".
+# Uma destas nega o que vem depois na mesma oração: o Clima logo depois dela
+# ("nada de terror", "sem comédia") é a Restrição "nada de um Clima", que
+# tira os filmes dele (#272); com outra palavra no meio, volta como "não
+# entendi".
 [negation]
 words = ["nada", "nada de", "sem", "não"]
 

@@ -31,9 +31,16 @@ export const Done: Story = {
     const canvas = within(canvasElement)
     await expect(canvas.getByText(/A lista acerta 80%/)).toBeVisible()
     await expect(canvas.getByText('elenco 0,5 → 0,625')).toBeVisible()
+    // Today's weights come first: nothing to copy, and the line says so.
     await expect(
-      canvas.getByRole('button', { name: 'Copiar os pesos da 2ª combinação' }),
+      canvas.getByText(
+        'Nenhuma das 411 combinações testadas supera os pesos de hoje.',
+      ),
     ).toBeVisible()
+    await expect(canvas.getAllByText('sem ganho')).toHaveLength(2)
+    await expect(
+      canvas.queryByRole('button', { name: /Copiar os pesos/ }),
+    ).toBeNull()
   },
 }
 

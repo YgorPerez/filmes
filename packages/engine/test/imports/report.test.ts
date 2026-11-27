@@ -96,6 +96,7 @@ describe('personImports', () => {
       newFile: _n,
       facts,
       newFacts: _nf,
+      changes: _c,
       warnings: _w,
       attributions: _a,
       ...lbReport

@@ -90,11 +90,46 @@ export const SwappedByStars: Story = {
   },
 }
 
-/** Bruno has a Nota prevista, Iara none; a tap on his name opens its hint
- * under it. */
-export const ReadOnly: Story = {
+/** Only Iara saw it: the cover takes JÁ VI with her initial (#272). */
+export const OneSeen: Story = {
+  args: { marks: { ...NO_MARKS, seen: ['iara'] } },
+  render: (args) => <Marked {...args} />,
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByText('Já vi: Iara'),
+    ).toBeInTheDocument()
+  },
+}
+
+/** Kept from the last version with 4 stars and a comment: the stars are
+ * in their controls, once, and the comment stays in sight (#272). */
+export const Kept: Story = {
+  args: {
+    film: {
+      ...FILM,
+      notes: { stars: 4, comments: ['a Iara riu do trailer'] },
+    },
+  },
+  render: (args) => <Marked {...args} />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
+    await expect(
+      canvas.getByRole('button', { name: '4 de 5' }),
+    ).toHaveAttribute('aria-pressed', 'true')
+    await expect(canvas.queryByRole('img', { name: /estrelas/ })).toBeNull()
+    await expect(canvas.getByText('a Iara riu do trailer')).toBeVisible()
+  },
+}
+
+/** Once told: the past tense, and the stars given say "4 de 5" (#272).
+ * Bruno has a Nota prevista, Iara none; a tap on his name opens its hint
+ * under it. */
+export const ReadOnly: Story = {
+  args: { film: { ...FILM, notes: { stars: 4, comments: [] } } },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Por que estava na lista')).toBeVisible()
+    await expect(canvas.getByText('4 de 5')).toBeVisible()
     const hint = 'pela nota de 12 pessoas de gosto parecido'
     const name = canvas.getByRole('button', { name: `Bruno: ${hint}` })
     await expect(canvas.getByText(hint)).not.toBeVisible()
@@ -112,6 +147,20 @@ export const ReadOnly: Story = {
 }
 
 export const UnderSection: Story = { args: { level: 3 } }
+
+/** Every line is its section's and nobody has a Nota prevista: the card
+ * has no "Por que" of its own (#272). */
+export const NoReasonOfItsOwn: Story = {
+  args: {
+    level: 3,
+    film: { ...FILM, lines: [], predictedRatings: [], withoutFact: ['iara'] },
+  },
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).queryByText('Por que cada um vai gostar'),
+    ).toBeNull()
+  },
+}
 
 export const WithAwards: Story = {
   args: {

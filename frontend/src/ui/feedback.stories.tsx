@@ -17,6 +17,9 @@ const PAGE: FeedbackPage = {
   ],
   moods: [],
   constraints: [],
+  additions: [],
+  stars: {},
+  earlier: [],
   recommendation: [
     { position: 1, id: 'tt9000101', title: 'O Farol de Areia' },
     { position: 2, id: 'tt9000601', title: 'Pequenos Milagres' },
@@ -27,7 +30,7 @@ const PAGE: FeedbackPage = {
       person: 'iara',
       name: 'Iara',
       satisfaction: 0.1111,
-      line: 'satisfação de Iara nas últimas Sessões: 11%, e a mais alta do grupo, 100%; na de 2026-11-19 (Casa Cheia), deu 1',
+      line: 'satisfação de Iara nas últimas Sessões: 11%, e a mais alta do grupo, 100%; na de qui, 19 nov (Casa Cheia), deu 2 de 10',
     },
     { person: 'quim', name: 'Quim', satisfaction: 1, line: null },
   ],
@@ -53,6 +56,29 @@ export const Open: Story = {
       canvas.getByRole('radio', { name: /O Farol de Areia/ }),
     )
     await expect(canvas.getByRole('group', { name: 'Iara' })).toBeVisible()
+  },
+}
+
+/** What the Cartaz knew (#272): the starred film comes chosen, with its
+ * stars, and the films that left the shelf are there too. */
+export const FromTheCartaz: Story = {
+  args: {
+    page: {
+      ...PAGE,
+      additions: ['chegou a Rosa'],
+      stars: { [PAGE.recommendation[1]!.id]: 4 },
+      earlier: [{ id: 'tt9001106', title: 'Sessão Maldita' }],
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(
+      canvas.getByRole('radio', {
+        name: new RegExp(PAGE.recommendation[1]!.title),
+      }),
+    ).toBeChecked()
+    await expect(canvas.getByText(FEEDBACK.form.earlier)).toBeVisible()
+    await expect(canvas.getByText('+ chegou a Rosa')).toBeVisible()
   },
 }
 

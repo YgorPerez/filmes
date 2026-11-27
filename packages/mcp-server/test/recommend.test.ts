@@ -184,6 +184,19 @@ describe('recommend', () => {
     assert.ok(!titles(output).includes('Drama Juvenil'))
   })
 
+  test('noMoods drops the film of a Clima turned away', async () => {
+    const { ok } = await connect(useFixture())
+
+    const output = await ok('recommend', {
+      attendees: ['dono'],
+      count: 100,
+      noMoods: ['pra rir'],
+    })
+
+    assert.ok(output.constraints.no_mood.removed >= 2)
+    assert.ok(!titles(output).includes('Dia de Feira'))
+  })
+
   test('a child with no age means rating L', async () => {
     const { ok } = await connect(useFixture())
 

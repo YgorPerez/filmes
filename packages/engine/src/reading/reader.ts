@@ -20,6 +20,7 @@ export type ReadField =
   | 'unseen'
   | 'noSlow'
   | 'noSad'
+  | 'noMoods'
   | 'similar'
   | 'count'
   | 'by'
@@ -42,6 +43,7 @@ export type ReadFields = Partial<
     | 'unseen'
     | 'noSlow'
     | 'noSad'
+    | 'noMoods'
     | 'similar'
   >
 >

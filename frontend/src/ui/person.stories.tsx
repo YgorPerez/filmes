@@ -118,6 +118,12 @@ const IARA: PersonPage = {
   ],
   sessions: { total: 0, recent: [], satisfaction: null },
   imported: false,
+  likes: {
+    person: 'iara',
+    liked: 3,
+    genres: ['Drama', 'Crime'],
+    directors: ['Rui Tavares'],
+  },
 }
 
 /** The setup guide's steps, in its order (`SETUP_STEPS`). */
@@ -209,7 +215,7 @@ export const MyTasteWithQueue: Story = {
 }
 
 export const MyTasteWithTrakt: Story = {
-  args: { ...MyTaste.args, showTrakt: true },
+  args: { ...MyTaste.args, trakt: 'connected' },
 }
 
 export const AdminGrantsAccess: Story = {

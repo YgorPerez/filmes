@@ -233,6 +233,7 @@ function fakePeople(
       exitCode: 0,
       output: { total: 0, recent: [], satisfaction: null },
     }),
+    taste: async () => failure('unknown_person'),
     tagGroups: async () => ({ exitCode: 0, output: [] }),
     email: async () => ({ exitCode: 0, output: null }),
     act: async (person, action, owner) => {
@@ -596,6 +597,8 @@ describe('peopleFromEngine', () => {
       expect(page.tagGroups.map((g) => g.key)).toEqual(['silly_comedy', 'slow'])
       expect(page).not.toHaveProperty('imports')
       expect(page.imported).toBe(false)
+      expect(page.likes?.person).toBe('quim')
+      expect(page.likes?.liked).toBeTypeOf('number')
       expect(page.sessions).toEqual({
         total: 0,
         recent: [],

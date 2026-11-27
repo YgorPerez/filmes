@@ -95,6 +95,7 @@ const IARA: PersonPage = {
   tagGroups: [],
   sessions: { total: 0, recent: [], satisfaction: null },
   imported: false,
+  likes: null,
 }
 
 /** `fetch` answering every post with `to`, as `answerFetch` does. */

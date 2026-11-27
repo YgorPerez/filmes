@@ -2,6 +2,7 @@ import { useId, type ReactNode, type Ref } from 'react'
 import type { PersonImports } from '@filmes/engine'
 import {
   refusedForm,
+  type ChangedRating,
   type ImportForm as FormName,
   type ImportNotice,
   type ImportRefusal,
@@ -29,7 +30,7 @@ import {
 } from './person-parts'
 import { buttonVariants } from './kit/button-variants'
 import { Button } from './shadcn/button'
-import { TraktSync, type TraktLinkView } from './trakt-sync'
+import { TraktReadNow, TraktSync, type TraktLinkView } from './trakt-sync'
 
 const COPY = PERSON_IMPORTS
 
@@ -52,9 +53,15 @@ export type ImportDoneView = {
   notice: ImportNotice
   /** Fatos in (or out, for a removal). */
   facts: number
-  /** Of them, the new Notas and Já vistos. */
+  /** What her Notas list sees (#274): films with a first Nota, seen for
+   * the first time, whose Nota changed (the first few by name), that kept
+   * theirs, and that came into her watchlist. */
   ratings: number
   seen: number
+  changed?: number
+  changes?: readonly ChangedRating[]
+  repeated?: number
+  watchlist?: number
   outside?: number
 }
 
@@ -144,10 +151,11 @@ function ImportsPage({
         refusal={inForm ? undefined : refusal}
         done={done}
         feedback={feedback}
+        notes={`${personPath(slug, page.own)}#notas`}
       />
       {page.imports.length > 0 ? (
         <>
-          <Results page={page} />
+          <Results slug={slug} page={page} />
           <Files slug={slug} page={page} />
           <Again open={Boolean(inForm)}>{forms}</Again>
         </>
@@ -158,21 +166,37 @@ function ImportsPage({
   )
 }
 
-/** The refusal no form owns and the notice of what the last post did. */
+/** The refusal no form owns and the notice of what the last post did.
+ * When the import replaced a Nota, the way to her Notas, to change it
+ * back (#274). */
 function PageFeedback({
   refusal,
   done,
   feedback,
+  notes,
 }: {
   refusal?: ImportRefusal
   done?: ImportDoneView
   feedback: Ref<HTMLDivElement>
+  notes: string
 }) {
   if (!refusal && !done) return null
   return (
     <div ref={feedback}>
       {refusal && <Alert>{COPY.refusals[refusal]}</Alert>}
-      {done && <Notice>{COPY.notices[done.notice](done)}</Notice>}
+      {done && (
+        <Notice>
+          {COPY.notices[done.notice](done)}
+          {(done.changed ?? 0) > 0 && (
+            <>
+              {' '}
+              <a href={notes} className="text-ink underline underline-offset-3">
+                {COPY.changedLink}
+              </a>
+            </>
+          )}
+        </Notice>
+      )}
     </div>
   )
 }
@@ -210,19 +234,25 @@ function Forms({
   feedback?: Ref<HTMLDivElement>
 }) {
   const traktRefused = refusedOf('trakt')
+  const otherRefused = refusedOf('outro')
   return (
     <div ref={feedback} className="flex flex-col gap-3xl">
       <LetterboxdGuide slug={slug} page={page} refusedOf={refusedOf} />
-      {page.traktLink && (
-        <TraktSync
-          slug={slug}
-          name={page.name}
-          own={page.own}
-          link={{ ...page.traktLink, user: traktUser(page) }}
-          refusal={traktRefused && COPY.refusals[traktRefused]}
-        />
-      )}
-      <OtherSites slug={slug} refused={refusedOf('outro')} />
+      {/* One Trakt slip (#274): the account or the profile, the ZIP
+          folded under them. */}
+      <TraktSync
+        slug={slug}
+        name={page.name}
+        own={page.own}
+        link={{
+          ...(page.traktLink ?? { available: false, connected: false }),
+          user: traktUser(page),
+        }}
+        refusal={traktRefused && COPY.refusals[traktRefused]}
+        zip={<TraktZip slug={slug} refused={refusedOf('trakt-zip')} />}
+        zipOpen={refusedOf('trakt-zip') !== undefined}
+      />
+      <OtherSites slug={slug} refused={otherRefused} />
     </div>
   )
 }
@@ -453,11 +483,37 @@ function LetterboxdResult({
   )
 }
 
-/** What the imports gave, first on the page once there is any: Letterboxd
- * with its queue, then one line per other site that gave something. */
-function Results({ page }: { page: PersonImports }) {
+/** The latest import of a kind, if any. */
+const latest = (page: PersonImports, kind: string) =>
+  page.imports.findLast((record) => record.kind === kind)
+
+/** A source kept in sync (#274): what it reads, when, and the way to read
+ * it now. The Trakt one is read at each new Session; the Letterboxd
+ * profile when she asks. */
+function SyncStatus({
+  who,
+  how,
+  date,
+  children,
+}: {
+  who: string
+  how: string
+  date: string
+  children?: ReactNode
+}) {
+  const { sync } = COPY.results
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-sm">
+      <Meta parts={[who, how, sync.last(date)]} />
+      {children}
+    </div>
+  )
+}
+
+/** One line per other site that gave something. */
+function resultLines(page: PersonImportsView) {
   const { results } = COPY
-  const lines = [
+  return [
     (page.trakt.ratings > 0 || page.trakt.seen > 0) &&
       results.trakt(page.trakt.ratings, page.trakt.seen),
     page.imdb.ratings > 0 && results.imdb(page.imdb.ratings),
@@ -466,13 +522,55 @@ function Results({ page }: { page: PersonImports }) {
     (page.tvtime.ratings > 0 || page.tvtime.seen > 0) &&
       results.tvtime(page.tvtime.ratings, page.tvtime.seen),
   ].filter((line) => line !== false)
+}
+
+/** The Letterboxd profile kept in sync: when it was read and, on her own
+ * page, the way to read it now. */
+function RssSync({
+  slug,
+  own,
+  rss,
+}: {
+  slug: string
+  own: boolean
+  rss: NonNullable<ReturnType<typeof latest>>
+}) {
+  const { sync } = COPY.results
+  const user = rssUser(rss.original)
+  return (
+    <SyncStatus who={user ?? rss.original} how={sync.rss} date={rss.date}>
+      {own && (
+        <ImportForm slug={slug} action="rss" form="perfil" label={sync.rssNow}>
+          {(busy) => (
+            <>
+              <input type="hidden" name="usuario" value={user ?? ''} />
+              <Submit disabled={busy}>
+                {busy ? COPY.rss.busy : sync.rssNow}
+              </Submit>
+            </>
+          )}
+        </ImportForm>
+      )}
+    </SyncStatus>
+  )
+}
+
+/** What the imports gave, first on the page once there is any: Letterboxd
+ * with its queue, then one line per other site that gave something; the
+ * sources kept in sync say when they were read (#274). */
+function Results({ slug, page }: { slug: string; page: PersonImportsView }) {
+  const { results } = COPY
+  const lines = resultLines(page)
   const letterboxd = page.letterboxd.films > 0 || page.letterboxd.queued > 0
   if (!letterboxd && lines.length === 0) return null
+  const rss = latest(page, 'letterboxd-rss')
+  const traktApi = latest(page, 'trakt-api')
   return (
     <Slip id="resultado" title={results.title}>
       {letterboxd && (
         <LetterboxdResult report={page.letterboxd} from={resolvedFrom(page)} />
       )}
+      {rss && <RssSync slug={slug} own={page.own} rss={rss} />}
       {lines.length > 0 && (
         <ul
           className={`flex flex-col gap-xs ${letterboxd ? 'border-t border-dashed border-rule pt-lg' : ''}`}
@@ -483,6 +581,17 @@ function Results({ page }: { page: PersonImports }) {
             </li>
           ))}
         </ul>
+      )}
+      {traktApi && (
+        <SyncStatus
+          who={traktApi.original}
+          how={results.sync.trakt}
+          date={traktApi.date}
+        >
+          {page.traktLink?.available && (
+            <TraktReadNow slug={slug} label={results.sync.traktNow} />
+          )}
+        </SyncStatus>
       )}
     </Slip>
   )
@@ -601,9 +710,66 @@ function LetterboxdUpload({
   )
 }
 
-/** The Trakt, IMDb and Simkl files and the TV Time backup: how to get each
- * one, folded, and one upload; the server tells the site by what the file
- * holds. */
+/** The Trakt ZIP: its steps and its upload, inside the Trakt slip. It
+ * posts like the other sites' upload: the server tells Trakt by what the
+ * ZIP holds. */
+function TraktZip({
+  slug,
+  refused,
+}: {
+  slug: string
+  refused?: ImportRefusal
+}) {
+  const { trakt, picker } = COPY
+  return (
+    <div className="flex flex-col gap-lg">
+      <ol className="flex list-decimal flex-col gap-2xs pl-3xl text-evidence">
+        {trakt.steps.map((step, index) => (
+          <li key={step}>
+            {index === 0 ? (
+              <a
+                href={trakt.href}
+                target="_blank"
+                rel="noreferrer"
+                className="underline underline-offset-3"
+              >
+                {step}
+              </a>
+            ) : (
+              step
+            )}
+          </li>
+        ))}
+      </ol>
+      <ImportForm
+        slug={slug}
+        action="arquivo"
+        form="trakt-zip"
+        label={trakt.file}
+        upload
+      >
+        {(busy) => (
+          <>
+            <FilePicker
+              name="arquivo"
+              label={trakt.file}
+              accept=".zip,application/zip"
+              extensions={['.zip']}
+              wrongType={trakt.wrongType}
+              copy={picker}
+              error={refused && COPY.refusals[refused]}
+            />
+            <Submit disabled={busy}>{busy ? trakt.busy : trakt.submit}</Submit>
+          </>
+        )}
+      </ImportForm>
+    </div>
+  )
+}
+
+/** The IMDb and Simkl files and the TV Time backup: how to get each one,
+ * folded, and one upload; the server tells the site by what the file
+ * holds (a Trakt ZIP sent here goes in too). */
 function OtherSites({
   slug,
   refused,

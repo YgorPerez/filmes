@@ -82,7 +82,7 @@ const Common = Schema.Struct({
   taste: Schema.Struct({ words: Schema.Array(Schema.String) }),
 })
 
-const LISTS = ['attendees', 'moods', 'similar'] as const
+const LISTS = ['attendees', 'moods', 'noMoods', 'similar'] as const
 
 /** `part` over `into`: a list joined to the one there, in order and each
  * value once; any other field, `part`'s when it has one. How a reading's

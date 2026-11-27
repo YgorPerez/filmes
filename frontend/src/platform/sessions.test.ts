@@ -52,6 +52,8 @@ const SESSION: SessionItem = {
   chosen: null,
   moods: [],
   constraints: [],
+  version: 1,
+  additions: [],
 }
 
 /** Sessions that answer from fixed outcomes, and remember what they were
@@ -128,6 +130,7 @@ describe('parseSessionRequest', () => {
         ['sem-ja-visto', 'sim'],
         ['sem-lento', 'sim'],
         ['sem-tristeza', 'sim'],
+        ['sem-climas', 'assustador, '],
         ['serie', 'todos'],
       ]),
     ).toEqual({
@@ -148,6 +151,7 @@ describe('parseSessionRequest', () => {
         unseen: true,
         noSlow: true,
         noSad: true,
+        noMoods: ['assustador'],
         seriesOrder: 'all',
       } satisfies SessionRequestForm,
     })
@@ -310,7 +314,10 @@ describe('“Ler” in sessionRequestAction', () => {
       ['climas', 'tenso'],
       ['sem-tristeza', 'sim'],
       ['duracao', '90'],
-      ['pedido', 'eu e o Quim, algo leve, até 2h, 3 filmes, com pipoca'],
+      [
+        'pedido',
+        'eu e o Quim, algo leve, até 2h, 3 filmes, com pipoca, nada de terror',
+      ],
     ])
 
     expect(location).toMatch(/^\/sessoes\/nova\?nota=[\w-]+$/)
@@ -320,9 +327,11 @@ describe('“Ler” in sessionRequestAction', () => {
         rule: 'default',
         moods: ['tenso', 'leve'],
         count: 3,
-        request: 'eu e o Quim, algo leve, até 2h, 3 filmes, com pipoca',
+        request:
+          'eu e o Quim, algo leve, até 2h, 3 filmes, com pipoca, nada de terror',
         maxDuration: 120,
         noSad: true,
+        noMoods: ['assustador'],
       },
       reading: {
         understood: [
@@ -331,6 +340,7 @@ describe('“Ler” in sessionRequestAction', () => {
           'Clima: leve',
           'até 2h',
           '3 filmes',
+          'nada assustador',
         ],
         notUnderstood: ['pipoca'],
         ambiguities: [],

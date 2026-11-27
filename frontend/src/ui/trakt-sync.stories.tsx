@@ -49,6 +49,8 @@ export const OtherPessoa: Story = {
         name: TRAKT_SYNC.consent('Iara'),
       }),
     ).toBeVisible()
+    // Only Iara can connect hers: no way to /trakt here (#274).
+    await expect(within(canvasElement).queryByRole('link')).toBeNull()
   },
 }
 
@@ -58,5 +60,34 @@ export const OtherPessoaLinked: Story = {
     name: 'Iara',
     own: false,
     link: { available: true, connected: false, user: '@iara_ve' },
+  },
+}
+
+/** Her own page, not connected: the account recommended, the profile and
+ * the ZIP folded under it (#274). */
+export const NotConnectedWithZip: Story = {
+  args: {
+    link: { available: true, connected: false, user: null },
+    zip: <p>Os passos e o envio do ZIP do Trakt.</p>,
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText(TRAKT_SYNC.zip)).toBeVisible()
+    await expect(
+      canvas.queryByText('Os passos e o envio do ZIP do Trakt.'),
+    ).not.toBeVisible()
+  },
+}
+
+/** A server with no Trakt client id: only the ZIP, unfolded. */
+export const NoClientId: Story = {
+  args: {
+    link: { available: false, connected: false, user: null },
+    zip: <p>Os passos e o envio do ZIP do Trakt.</p>,
+  },
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByText('Os passos e o envio do ZIP do Trakt.'),
+    ).toBeVisible()
   },
 }

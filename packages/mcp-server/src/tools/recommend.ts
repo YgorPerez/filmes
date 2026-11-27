@@ -181,6 +181,14 @@ export default defineTool({
       .describe(
         '"nada lento": tira filme com tag de ritmo lento no MovieLens (slow, slow paced, meditative, contemplative, boring)',
       ),
+    noMoods: z
+      .array(z.string())
+      .min(1)
+      .optional()
+      .describe(
+        '"nada de terror", "sem comédia": os Climas do vocabulário de moods a tirar. Sai o filme de um dos ' +
+          'gêneros ou das tags do Clima; o Clima pedido em moods só puxa a ordem, este só tira',
+      ),
     similar: z
       .array(imdbId)
       .min(1)

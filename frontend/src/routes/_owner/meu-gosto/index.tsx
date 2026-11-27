@@ -26,7 +26,10 @@ export const Route = createFileRoute('/_owner/meu-gosto/')({
     return {
       page,
       start,
-      showTrakt: trakt.status !== 'unavailable',
+      trakt:
+        trakt.status === 'connected' || trakt.status === 'disconnected'
+          ? trakt.status
+          : null,
       pending,
       taste,
     }
@@ -37,13 +40,13 @@ export const Route = createFileRoute('/_owner/meu-gosto/')({
 function MyTasteRoute() {
   const { owner } = Route.useRouteContext()
   const { feito, erro, em, campo, editar, item } = Route.useSearch()
-  const { page, start, showTrakt, pending, taste } = Route.useLoaderData()
+  const { page, start, trakt, pending, taste } = Route.useLoaderData()
   return (
     <PersonScreen
       slug={owner.person}
       page={page}
       start={start}
-      showTrakt={showTrakt}
+      trakt={trakt}
       pending={pending}
       taste={taste}
       notice={feito}
