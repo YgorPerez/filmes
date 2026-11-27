@@ -1,5 +1,6 @@
 import type { Billboard as BillboardModel, BillboardLine } from '@filmes/engine'
 import { BILLBOARD } from './billboard.copy'
+import { Avatar } from './kit/person'
 
 // The pieces of the Cartaz above the cards (DESIGN.md, Legenda, Força and
 // "Saiu da prateleira"), and the Força the cards repeat on each Evidência.
@@ -30,6 +31,34 @@ export function Strength({
         />
       ))}
     </span>
+  )
+}
+
+/** In Claude, where no page head names them: a Presente per avatar with her name, and the three Forças in words on
+ * a line of their own, so the legend never runs into the names (#277). */
+export function PeopleLegend({ billboard }: { billboard: BillboardModel }) {
+  return (
+    <div className="flex flex-col gap-xs text-meta text-ink-2">
+      <p className="flex flex-wrap items-center gap-x-xl gap-y-xs">
+        {billboard.attendees.map((p) => (
+          <span
+            key={p.slug}
+            className="inline-flex items-center gap-xs text-ink"
+          >
+            <Avatar person={p} />
+            {p.name}
+          </span>
+        ))}
+      </p>
+      <p className="flex flex-wrap items-center gap-x-xl gap-y-xs">
+        {(['strong', 'moderate', 'weak'] as const).map((level) => (
+          <span key={level} className="inline-flex items-center gap-xs">
+            <Strength strength={level} />
+            {BILLBOARD.strength[level]}
+          </span>
+        ))}
+      </p>
+    </div>
   )
 }
 

@@ -545,14 +545,22 @@ Os adesivos saem para fora do estojo: o de preço fica 9px para cima e para a es
 
 No Claude, o Cartaz é uma view do MCP Apps: um só arquivo HTML com o JS e o CSS dentro, e só as fontes e as capas vindas de fora, das origens declaradas no CSP do recurso. O tema segue o `theme` do contexto do host (`light` ou `dark`) quando ele vier, e `prefers-color-scheme` quando não. Ele tem dois modos:
 
-- **Card inline, compacto.** É o que aparece na conversa. No celular a conversa é dona da rolagem vertical: a altura do card inline tem teto, o que passa dele é cortado e não há rolagem interna. Por isso o card inline mostra, de cima para baixo, em fundo chão com fio de 1px e raio 14px:
+- **Card inline, compacto.** É o que aparece na conversa. No celular a conversa é dona da rolagem vertical: a altura do card inline tem teto, o que passa dele é cortado e não há rolagem interna. Por isso o card inline mostra, de cima para baixo, sem fundo próprio (fica sobre o chão do Claude, claro ou escuro), com fio de 1px e raio 14px:
   1. a etiqueta da prateleira compacta (15px) com o papel amarelo da fala do Dono (16px); o Claude já diz de que app é o card, então não há rótulo acima dela;
-  2. a lista das 5 fitas, uma linha cada, de 6px de raio sobre superfície: lombada preta de 8px à esquerda, adesivo de preço de 26px, título em Rubik 700 15px (corta com reticências) e "2021 · 1h44" em meta à direita;
-  3. sem nada marcado, uma ação na largura toda: "Marcar" (opção com ícone de expandir, que abre a tela cheia). Depois de marcar na tela cheia, o resumo do que foi marcado em meta ("1 Trocar e 1 Já vi") e duas ações lado a lado, metade cada: "Marcar" e "Enviar" (botão laranja). Não há Enviar para mandar nada.
+  2. depois de um refazer, uma linha em meta com o que saiu e o que entrou ("Saiu: Cais 2 (trocado) · entrou: Fronteira");
+  3. a lista das 5 fitas, uma linha cada, de 6px de raio sobre superfície: lombada preta de 8px à esquerda, com fio de 1px em estojo-borda (no escuro ela não some), adesivo de preço de 26px, título em Rubik 700 15px (corta com reticências), um ponto amarelo de 8px no filme novo e "2021 · 1h44" em meta à direita;
+  4. sem nada marcado, uma ação na largura toda: "Marcar" (opção com ícone de expandir, que abre a tela cheia). Depois de marcar na tela cheia, o que foi marcado com o nome dos filmes, uma linha em meta por tipo, cortada com reticências ("Trocar: Cais 2", "Já vi: Fronteira (Iara)"), o link "Limpar", e duas ações lado a lado, metade cada: "Marcar" e "Enviar" (botão laranja). Não há Enviar para mandar nada;
+  5. depois do Enviar, "Enviado" em negrito sobre as mesmas linhas, a linha de status ("O Claude está refazendo a lista.") e uma ação só, "Marcar de novo". A mesma resposta nunca sai duas vezes.
+
+  Uma Recomendação sem filme não tem lista nem ação: diz os limites do pedido e o que pedir no chat ("Nenhum filme passou nos limites deste pedido (até 30min · nota 7+ no IMDb). Peça no chat com mais tempo ou menos limites."). Enquanto o resultado não chega, o card mostra a etiqueta e 5 linhas vazias, na altura do card pronto. Um erro sai dentro do mesmo card, com o ícone de alerta e uma frase com o próximo passo ("Não achei essa Sessão. Peça a lista de novo no chat."), nunca o texto do motor. A view tem um h1 só para leitor de tela ("Cartaz: Vocês dois").
 
   São 4 dados por filme (posição, título, ano, duração). Nada de capa, Evidência, chips nem adesivos de estado no inline: um filme marcado só aparece na tela cheia, e o resumo diz o que vai com o Enviar.
 
-- **Tela cheia, para marcar vários filmes.** "Marcar" pede `fullscreen` ao host. No topo, fixa, sobre o chão com fio embaixo, só a etiqueta compacta. No meio, rolando, a legenda dos Presentes e da Força, os cards inteiros e a caixa do acrescentar. No pé, fixa, a barra de envio na largura toda, sobre superfície com fio em cima, dentro da área segura e acima da caixa de mensagem que o Claude sobrepõe. Não há painel lateral no celular: são só esses dois modos.
+- **Tela cheia, para marcar vários filmes.** "Marcar" pede `fullscreen` ao host. No topo, fixa, sobre o chão com fio embaixo, só a etiqueta compacta numa linha (corta com reticências) e, da segunda versão em diante, "v2" em meta ao lado. No meio, rolando, o papel amarelo da fala do Dono, a legenda dos Presentes e, numa linha própria, a da Força, os cards inteiros e a caixa do acrescentar. No pé, fixa, a barra de envio na largura toda, sobre superfície com fio em cima, acima da caixa de mensagem que o Claude sobrepõe: a view lê o `safeAreaInsets` do contexto do host (o `env(safe-area-inset-*)` é 0 dentro do quadro). O conteúdo do topo, do meio e da barra fica na coluna do app web (720px com 16px de cada lado), centrada; o fundo da barra vai de ponta a ponta. Não há painel lateral no celular: são só esses dois modos.
+
+- **Sem tela cheia.** Um host sem `fullscreen` mostra o Cartaz inteiro no quadro, com a altura do conteúdo: a prateleira para em 880px, com "Ver o Cartaz inteiro" embaixo, e a barra de envio vem logo depois, sempre à mão.
+
+No Claude, o Copiar pro chat só aparece na barra (e no card inline) quando o Enviar não pôde ir: com o host sem como chamar a ferramenta ("Não dá pra enviar por aqui. Toque em Copiar e cole no chat."). Uma recusa passageira diz "Não consegui enviar. Tente de novo ou copie pro chat." e o Enviar vira "Tentar de novo". O Enviar grava a resposta e manda ao chat uma mensagem nas palavras do Dono ("Troquei Cais 2. Iara já viu Fronteira (Iara deu 8). Refaz a lista mantendo o resto?"), que termina com "(enviado pelo Cartaz · <sessão> v<n>)"; os IDs e o resto que o Claude precisa vão no contexto do modelo, nunca no balão.
 
 Em qualquer modo, alvos de toque de 44px ou mais, como no resto do filmes.
 
@@ -595,7 +603,7 @@ Trilho preto (estojo, 5px, raio 6px) e, dentro, a etiqueta clara (shelf-label, r
 
 ### Seção do Cartaz
 
-Os cards ficam sob o título do Motivo deles, na ordem da Recomendação: um título por sequência de filmes vizinhos com o mesmo Motivo, 14px acima do primeiro card dela. O título é step-title (Rubik 700 17px) em tinta, com uma barra de 4px em tinta à esquerda e 8px de respiro; na Aposta, barra e texto em carimbo violeta. É texto de leitura, então não vai em maiúsculas nem em letra de mão. Quando o Motivo já teve uma seção acima, o título se repete com "de novo" depois, em meta tinta clara. Dentro de uma seção, o título do filme desce um nível (h3) e "Por que cada um vai gostar" também (h4). Sessão de antes do #183, sem Motivo gravado, mostra os cards sem seção. No card inline do Claude não há seção: ele continua com 4 dados por filme.
+Os cards ficam sob o título do Motivo deles, na ordem da Recomendação: um título por sequência de filmes vizinhos com o mesmo Motivo, 14px acima do primeiro card dela. O título é page-title (Rubik 700 24px) em tinta, um degrau de 1,25 acima do título do filme (19px), com uma barra de 4px em tinta à esquerda e 8px de respiro; na Aposta, barra e texto em carimbo violeta. É texto de leitura, então não vai em maiúsculas nem em letra de mão. Quando o Motivo já teve uma seção acima, o título se repete com "de novo" depois, em meta tinta clara. Dentro de uma seção, o título do filme desce um nível (h3) e "Por que cada um vai gostar" também (h4). Sessão de antes do #183, sem Motivo gravado, mostra os cards sem seção. No card inline do Claude não há seção: ele continua com 4 dados por filme.
 
 ### Card do filme
 
@@ -636,17 +644,18 @@ Três pontos de 7px em tinta: ●●● forte, ●●○ moderada, ●○○ fra
 - **State:** marcada ganha contorno de 2px em tinta, fundo superfície 2, peso 700 e um ícone de ✓ de 16px antes do texto, com 8px de vão e 9,5px de cada lado. Marcar não muda a largura da pílula: o espaço do ✓ e do peso 700 já está reservado, então a linha nunca quebra de novo ao marcar. `aria-pressed` acompanha. O ✓ responde só ao controle da própria opção, nunca a um marcado em volta (numa dobra, num fieldset).
 - **Foco:** anel de 2px em focus (dark-focus no escuro), afastado 2px. Vale para todo controle.
 - Os controles do card vêm em duas linhas: primeiro Trocar, as estrelas e o link "Comentar" (no celular o link pode descer); depois a linha de Já vi, que começa com o rótulo "JÁ VI" e tem uma opção por Presente ("Você", "Teo") e "Todos". O campo do comentário só aparece depois do toque em Comentar (já com o foco) ou quando já tem texto, no fim dos controles: o card não carrega campo vazio.
-- Marcar Já vi de uma Pessoa abre, logo abaixo, a **nota de Já vi**: cartão azul (card-stock, raio 8px, 10px 12px) com o avatar e "Nota do Teo" em Rubik 700 14px, a escala de 1 a 10 e o campo "o que achou".
+- Marcar Já vi de uma Pessoa abre, logo abaixo, a **nota de Já vi**: cartão azul (card-stock, raio 8px, 10px 12px) com o avatar e "Nota do Teo" em Rubik 700 14px, a escala de 1 a 10 e o campo "o que Teo achou (opcional)".
+- Com mais de 4 Presentes, a linha de Já vi começa fechada numa opção só, "Já vi…", que abre as opções de cada um; com alguém marcado, ela fica aberta.
 
 ### Escala de nota (1 a 10)
 
-Dez botões, 3px entre eles, 44px de altura, raio 6px, superfície com número em Rubik 700 14px tabular: duas linhas de 5 abaixo de 480px (cada botão com uns 60px de largura) e uma grade de 10 colunas a partir daí; as âncoras "1 · não gostei" e "adorei · 10" ficam embaixo. A nota escolhida vira um círculo laranja com o número em on-sticker. `role="group"` com `aria-label="Nota de 1 a 10"`; cada botão diz o número. Na tela de Dar notas, com o foco no card, as teclas 1 a 9 dão a Nota e o 0 dá 10.
+Dez botões, 3px entre eles, 44px de altura, raio 6px, superfície com número em Rubik 700 14px tabular: duas linhas de 5 enquanto a nota de Já vi tem menos de 470px por dentro (uma consulta de contêiner, não de janela) e uma grade de 10 colunas a partir daí, quando cada botão cabe com 44px; as âncoras "1 · não gostei" e "adorei · 10" ficam embaixo. A nota escolhida vira um círculo laranja com o número em on-sticker. `role="group"` com `aria-label="Nota de 1 a 10"`; cada botão diz o número. Na tela de Dar notas, com o foco no card, as teclas 1 a 9 dão a Nota e o 0 dá 10.
 
 Toda Nota aparece na escala de 1 a 10, em todo lugar ("nota 9"), mesmo que o motor a guarde de 0,5 a 5. Quando a fonte dá estrelas de 5 (Letterboxd), a linha da Fonte diz as estrelas de lá: "4,5★ no Letterboxd da Iara". Os formulários que pedem Nota oferecem de 10 a 1.
 
 ### Estrelas
 
-Cinco estrelas de 24px, cada uma num alvo de 36×44px. Acesas em star e preenchidas; apagadas em tinta clara a 45%, só contorno. Ficam na linha do Trocar.
+Cinco estrelas de 24px, cada uma num alvo de 44×44px. Acesas em star e preenchidas; apagadas em tinta clara a 45%, só contorno. Ficam na linha do Trocar.
 
 ### Botão principal
 
@@ -658,9 +667,11 @@ No Claude, o Enviar manda o texto por `ui/message`, e o Claude só age com o sim
 
 ### Acrescentar
 
-Caixa em superfície, fio de 1px, raio 12px, 14px de padding, depois do último card. Rótulo "Acrescentar" em Rubik 700 14px com a dica em sistema 14px tinta clara ("contexto da noite ou gosto: “chegou a Ana”, “nada de terror”"), textarea de 2 linhas, os chips de Clima, "Copiar pro chat" (opção) e, no app, a nota de que as marcações ficam neste navegador. O Enviar não mora aqui: fica na barra de envio.
+Caixa em superfície, fio de 1px, raio 12px, 14px de padding, depois do último card. Rótulo "Acrescentar" em Rubik 700 14px com a dica em sistema 14px tinta clara ("contexto da noite ou gosto: “chegou a Ana”, “nada de terror”"), textarea de 2 linhas, os chips de Clima dentro de uma dobra "Mudar o clima (refaz a lista)" (aberta quando o Dono já mudou o Clima), "Copiar pro chat" (opção, só no app web) e, no app, a nota de que as marcações ficam neste navegador. O Enviar não mora aqui: fica na barra de envio.
 
 ### Barra de envio
+
+O Clima escolhido, quando não é o da versão, vem em negrito no resumo ("Clima: leve, pra rir"), porque refaz a lista inteira. Depois de enviada, a mesma resposta deixa o Enviar como "Enviado ✓", desligado, até uma marcação mudar; um status velho ("Nada marcado ainda.") some na primeira marcação.
 
 O resumo do que foi marcado e o Enviar ficam numa barra que gruda no pé da tela enquanto o Cartaz está nela, a um polegar de qualquer filme (#221). Superfície, fio de 1px, 8px 12px, o resumo em meta tinta clara à esquerda (em frase: "1 Trocar, 1 Já vi e estrelas em 1 filme"; vazio sem nada marcado) e o Enviar à direita; a linha de status ("Copiado. Cole no chat.", "Nada marcado ainda.") embaixo. No app, a barra encosta na barra de abas do celular (68px acima do pé) e, a partir de 900px, no pé da janela, com raio de 14px só em cima e fio em cima e dos lados. Na tela cheia do Claude ela é o pé fixo, na largura toda. No Claude sem tela cheia, a view tem a altura do conteúdo e a barra fica no fim. Sem resposta (Sessão com Feedback), não há barra.
 

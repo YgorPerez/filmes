@@ -78,11 +78,16 @@ export const BILLBOARD = {
       `nota de ${who} para o filme ${n}, de 1 a 10`,
     note: (name: string | null) =>
       name === null ? 'Sua nota' : `Nota de ${name}`,
-    thought: 'o que achou',
+    /** The Já vi note's field: "o que Iara achou (opcional)". */
+    thought: (who: string) => `o que ${who} achou (opcional)`,
     thoughtLabel: (who: string, n: number) =>
       `o que ${who} achou do filme ${n}`,
     swap: 'Trocar',
     stars: 'quanto animou',
+    /** More than this many Presentes: their Já vi options open from one
+     * "Já vi…" (#277). */
+    seenFolded: 4,
+    seenMore: 'Já vi…',
     star: (value: number) => `${value} de 5`,
     comment: 'comentário',
     openComment: 'Comentar',
@@ -91,12 +96,42 @@ export const BILLBOARD = {
 
   reply: {
     title: 'Responder',
+    /** What was marked, by name, one line per kind, for the inline card
+     * (#277): "Trocar: Cais 2", "Já vi: Fronteira (Iara)". */
+    marked: (m: {
+      swap: readonly string[]
+      seen: readonly { title: string; people: readonly string[] }[]
+      stars: readonly { title: string; stars: number }[]
+      comments: readonly string[]
+      addition: string
+      moods: readonly string[] | null
+    }) =>
+      [
+        m.swap.length > 0 && `Trocar: ${andList(m.swap)}`,
+        m.seen.length > 0 &&
+          `Já vi: ${m.seen.map((s) => `${s.title} (${andList(s.people)})`).join(', ')}`,
+        m.stars.length > 0 &&
+          `Estrelas: ${m.stars.map((s) => `${s.title} ${s.stars}★`).join(', ')}`,
+        m.comments.length > 0 && `Comentário: ${andList(m.comments)}`,
+        m.addition !== '' && `Acrescentar: “${m.addition}”`,
+        m.moods !== null &&
+          `Clima: ${m.moods.length > 0 ? m.moods.join(', ') : 'nenhum'}`,
+      ].filter((item): item is string => typeof item === 'string'),
     bar: 'O que você marcou',
     addition: 'Acrescentar',
     additionHint: 'contexto da noite ou gosto: “chegou a Ana”, “só 1h30”',
     moods: 'Clima',
     moodsHint: 'outro Clima refaz a lista inteira',
+    /** The fold the Clima chips sit in (#277). */
+    moodsOpen: 'Mudar o clima (refaz a lista)',
+    /** The Climas chosen, in bold in the bar: "Clima: leve, pra rir". */
+    moodsChosen: (moods: readonly string[]) =>
+      `Clima: ${moods.length > 0 ? moods.join(', ') : 'nenhum'}`,
     send: 'Enviar',
+    /** Enviar once this very reply went: nothing new to send (#277). */
+    sent: 'Enviado ✓',
+    retry: 'Tentar de novo',
+    clear: 'Limpar',
     copy: 'Copiar pro chat',
     output: 'texto pra colar no chat',
     nothing: 'Nada marcado ainda.',
@@ -142,13 +177,51 @@ export const BILLBOARD = {
   // through the host, then asks the chat to follow up.
   view: {
     loading: 'Montando o Cartaz…',
+    /** The view's one h1, for a screen reader: "Cartaz: Vocês dois". */
+    heading: (who: string) => `Cartaz: ${who}`,
     list: 'Os filmes do Cartaz',
     mark: 'Marcar',
     open: 'Ver o Cartaz',
+    markAgain: 'Marcar de novo',
+    sentTitle: 'Enviado',
+    /** "v2" beside the label, from the second version on. */
+    version: (n: number) => `v${n}`,
+    isNew: 'novo',
+    /** What a regenerate changed, on the inline card: "Saiu: Cais 2
+     * (trocado) · entrou: Fronteira". */
+    changes: (
+      dropped: readonly { title: string; reason: string }[],
+      entered: readonly string[],
+    ) =>
+      [
+        dropped.length > 0 &&
+          `Saiu: ${dropped.map((d) => `${d.title} (${d.reason})`).join(', ')}`,
+        entered.length > 0 && `entrou: ${andList(entered)}`,
+      ]
+        .filter(Boolean)
+        .join(' · '),
+    /** No film passed: the request's limits, and what to say to Claude. */
+    empty: (limits: readonly string[]) =>
+      `Nenhum filme passou ${limits.length > 0 ? `nos limites deste pedido (${limits.join(' · ')})` : 'nas Restrições deste pedido'}. Peça no chat com mais tempo ou menos limites.`,
+    /** A host without fullscreen shows the Cartaz inline: it opens whole
+     * from here (#277). */
+    seeAll: 'Ver o Cartaz inteiro',
     sending: 'Enviando…',
     recorded: 'Anotado.',
-    failed: (message: string) =>
-      `Não deu pra enviar: ${message} Use Copiar pro chat.`,
-    unavailable: 'Este app não envia daqui. Use Copiar pro chat.',
+    /** Enviar's tool call went and the engine refused it. */
+    failed: (code: string | null) =>
+      code === 'closed_session'
+        ? 'Essa Sessão já foi fechada: não dá pra mandar marcações. Peça uma nova no chat.'
+        : code === 'unknown_session'
+          ? 'Não achei essa Sessão. Peça a lista de novo no chat.'
+          : 'Não consegui enviar. Tente de novo ou copie pro chat.',
+    /** The host cannot call the tool from here. */
+    unavailable: 'Não dá pra enviar por aqui. Toque em Copiar e cole no chat.',
+    /** The `billboard` result was an error: never the engine's own words,
+     * which may carry the server's paths. */
+    error: (code: string | null) =>
+      code === 'unknown_session'
+        ? 'Não achei essa Sessão. Peça a lista de novo no chat.'
+        : 'Não consegui montar o Cartaz. Peça a lista de novo no chat.',
   },
 } as const

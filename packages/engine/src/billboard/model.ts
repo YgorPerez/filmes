@@ -448,7 +448,8 @@ const requestOf = (
   parts.push(`nota ${numberText(minRating)}+ no IMDb`)
   parts.push(...texts(get(context, 'moods')))
   // A stored Restrição that no longer exists (an old Session's no_repeat)
-  // does not show.
+  // does not show, nor the one the Session turns on by itself
+  // (`out_of_session`): the Dono did not ask for it (#277).
   const stored = get(context, 'constraints')
   for (const item of mappings(stored)) {
     const label = askedConstraintLabel(yamlToJson(item) as StoredConstraint)

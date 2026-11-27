@@ -4,7 +4,13 @@
 // top) and test_cartaz_guarda.py in the browser (the marks come back after
 // a reload, and without storage the Cartaz still works, saying nothing),
 // plus the text the marks make, the same `answerBillboard` reads.
-import { cleanup, render, screen, within } from '@testing-library/react'
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { Billboard } from './billboard'
@@ -318,7 +324,8 @@ describe('the marks', () => {
 
     await user.click(chip('tenso'))
     expect(text()).toBe('#cartaz 2026-11-20-iara v2\nclima: leve, tenso\n')
-    expect(screen.getByText('outro Clima')).toBeTruthy()
+    // The bar says the Clima in bold, since it redoes the whole list.
+    expect(screen.getByText('Clima: leve, tenso').tagName).toBe('STRONG')
 
     await user.click(chip('leve'))
     await user.click(chip('tenso'))
@@ -398,6 +405,14 @@ describe('Enviar and Copiar pro chat', () => {
     expect(within(bar).getByText('1 Trocar')).toBeTruthy()
   })
 
+  it('a poster that does not load gives way to the title', () => {
+    render(<Billboard billboard={MODEL} action="/x" />)
+    const poster = card(1).getByRole('img', { name: 'Capa de As Horas Lentas' })
+    fireEvent.error(poster)
+    expect(card(1).queryByRole('img', { name: /^Capa/ })).toBeNull()
+    expect(card(1).getAllByText('As Horas Lentas').length).toBeGreaterThan(1)
+  })
+
   it('a status line goes with the next mark, so it never contradicts the summary', async () => {
     const user = userEvent.setup()
     render(<Billboard billboard={MODEL} action="/x" />)
@@ -441,9 +456,19 @@ describe('Enviar and Copiar pro chat', () => {
     render(<Billboard billboard={MODEL} onSend={onSend} />)
     await user.click(screen.getByRole('button', { name: BILLBOARD.reply.send }))
     expect(screen.getByRole('status').textContent).toBe(BILLBOARD.reply.nothing)
-    await user.click(screen.getByRole('button', { name: BILLBOARD.reply.copy }))
-    expect(screen.getByRole('status').textContent).toBe(BILLBOARD.reply.nothing)
     expect(onSend).not.toHaveBeenCalled()
+    // A mark makes it stale: it goes.
+    await user.click(card(1).getByRole('button', { name: 'Trocar' }))
+    expect(screen.queryByRole('status')).toBeNull()
+  })
+
+  it('in the MCP Apps view, Copiar waits for an Enviar that could not go', () => {
+    render(
+      <Billboard billboard={MODEL} onSend={vi.fn<(t: string) => void>()} />,
+    )
+    expect(
+      screen.queryByRole('button', { name: BILLBOARD.reply.copy }),
+    ).toBeNull()
   })
 
   it('on the web, the empty form is not posted and says so', async () => {
@@ -470,11 +495,23 @@ describe('Enviar and Copiar pro chat', () => {
       .spyOn(navigator.clipboard, 'writeText')
       .mockResolvedValueOnce(undefined)
       .mockRejectedValueOnce(new Error('negado'))
+    // Copiar shows only when the host cannot take the reply (#277).
     render(
-      <Billboard billboard={MODEL} onSend={vi.fn<(text: string) => void>()} />,
+      <Billboard
+        billboard={MODEL}
+        onSend={() =>
+          Promise.resolve({ message: 'sem envio', sent: false, copy: true })
+        }
+      />,
     )
     await user.click(card(2).getByRole('button', { name: 'Trocar' }))
-    const copy = screen.getByRole('button', { name: BILLBOARD.reply.copy })
+    expect(
+      screen.queryByRole('button', { name: BILLBOARD.reply.copy }),
+    ).toBeNull()
+    await user.click(screen.getByRole('button', { name: BILLBOARD.reply.send }))
+    const copy = await screen.findByRole('button', {
+      name: BILLBOARD.reply.copy,
+    })
     await user.click(copy)
     expect(writeText).toHaveBeenCalledWith(
       '#cartaz 2026-11-20-iara v2\n2 tt9000105 · trocar\n',

@@ -24,6 +24,20 @@ describe('billboard', () => {
     assert.equal(output.billboard.attendees[0].label, 'Você')
   })
 
+  test('an unknown Session names no folder of the server', async () => {
+    const { error } = await connect(useFixture())
+
+    const { error: refused } = await error('billboard', {
+      session: '2026-01-01-ninguem',
+    })
+
+    assert.equal(refused.code, 'unknown_session')
+    assert.equal(
+      refused.message,
+      "não há Sessão '2026-01-01-ninguem' em sessions",
+    )
+  })
+
   test('a card carries the trailer link TMDB gives, and no other has one', async () => {
     const { ok } = await connect(useFixture(), null, {
       FILMES_TMDB_CHAVE: 'chave-de-teste',

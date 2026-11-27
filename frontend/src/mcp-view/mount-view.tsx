@@ -20,14 +20,29 @@ export type ViewApp = Pick<
   | 'getHostContext'
   | 'callServerTool'
   | 'sendMessage'
+  | 'updateModelContext'
+  | 'getHostCapabilities'
   | 'requestDisplayMode'
 >
 
 type HostContext = McpUiHostContext
 
+/** The host's safe area as CSS variables (`--host-inset-bottom`...): the
+ * bar of the fullscreen sits above the box Claude lays over its foot
+ * (#277). `env(safe-area-inset-*)` is 0 inside a frame. */
+const SIDES = ['top', 'right', 'bottom', 'left'] as const
+
+function setInsets(insets: HostContext['safeAreaInsets']) {
+  for (const side of SIDES)
+    document.documentElement.style.setProperty(
+      `--host-inset-${side}`,
+      `${insets?.[side] ?? 0}px`,
+    )
+}
+
 /** Renders the view in `root` and connects it to the host (`connect`):
  * the tool result, the host's theme (`data-theme`, which `ui/tokens.css`
- * follows) and its display modes. */
+ * follows), its safe area and its display modes. */
 export async function mountView(
   app: ViewApp,
   root: HTMLElement,
@@ -49,6 +64,7 @@ export async function mountView(
       document.documentElement.dataset.theme = context.theme
       document.documentElement.style.colorScheme = context.theme
     }
+    setInsets(context.safeAreaInsets)
     changed()
   }
 
@@ -56,15 +72,22 @@ export async function mountView(
     app.callServerTool({ name, arguments: args })
   const sendMessage = (text: string) =>
     app.sendMessage({ role: 'user', content: [{ type: 'text', text }] })
+  const updateContext = (text: string) =>
+    app.updateModelContext({ content: [{ type: 'text', text }] })
   const fullscreen = () => {
     void app.requestDisplayMode({ mode: 'fullscreen' }).catch(() => {})
   }
+  // A host that takes no model context may never answer the request.
+  const talk = () =>
+    app.getHostCapabilities()?.updateModelContext
+      ? { callTool, sendMessage, updateContext }
+      : { callTool, sendMessage }
   const hostOf = (c: HostContext): Host =>
     c.displayMode === 'fullscreen'
-      ? { callTool, sendMessage, inFullscreen: true }
+      ? { ...talk(), inFullscreen: true }
       : c.availableDisplayModes?.includes('fullscreen')
-        ? { callTool, sendMessage, fullscreen }
-        : { callTool, sendMessage }
+        ? { ...talk(), fullscreen }
+        : talk()
 
   // One Host per context, so the snapshot stays the same between changes.
   let cached: { context: HostContext; host: Host } | null = null

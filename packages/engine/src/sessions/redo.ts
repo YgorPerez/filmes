@@ -91,6 +91,15 @@ export const openSessionFront = (
   })
 
 /** The Restrições the current version stored (`context.constraints`). */
+/** The Dono's words the current version kept: a refazer without words of
+ * its own carries them on, so the Cartaz keeps her note (#277). */
+const storedRequest = (front: YamlMapping): string | null => {
+  const context = front.get('context')
+  const request =
+    pyTruthy(context) && isMapping(context) ? context.get('request') : undefined
+  return request !== undefined && pyTruthy(request) ? pyStrValue(request) : null
+}
+
 const storedIn = (front: YamlMapping): ReadonlyArray<StoredConstraint> => {
   const context = front.get('context')
   const list =
@@ -295,7 +304,10 @@ const sessionRequest = (
         warnings: [],
       }
     const front = yield* openSessionFront(session)
-    const asking = inheritConstraints(request, storedIn(front))
+    const asking = inheritConstraints(
+      { ...request, request: request.request ?? storedRequest(front) },
+      storedIn(front),
+    )
     const asked = yield* readAsked(asking)
     return yield* prepareRedo(front, { keep, asking, asked })
   })
@@ -338,7 +350,7 @@ export const recommendSession = (
       warnings: [...warnings, ...ranked.warnings],
     }
     const context = sessionContext(
-      request.request ?? null,
+      asking.request ?? null,
       recommendation.moods,
       asked,
     )
