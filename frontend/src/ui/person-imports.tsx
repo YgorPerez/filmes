@@ -1,9 +1,5 @@
 import { useId, type ReactNode, type Ref } from 'react'
-import type {
-  FilmSource,
-  PersonImports,
-  SourceFilms,
-} from '@filmes/engine'
+import type { FilmSource, PersonImports, SourceFilms } from '@filmes/engine'
 import {
   refusedForm,
   type ChangedRating,
@@ -684,9 +680,7 @@ function Results({ slug, page }: { slug: string; page: PersonImportsView }) {
         >
           {lines.map(({ site, line, leftOut }) => (
             <li key={site} className="flex flex-col gap-xs">
-              <span className="font-display text-step-title-small">
-                {line}
-              </span>
+              <span className="font-display text-step-title-small">{line}</span>
               <LeftOut films={leftOut} />
             </li>
           ))}

@@ -126,22 +126,22 @@ export function QueueScreen({
               )}
               {/* Nothing waits: nothing to ask the TMDB again (#274). */}
               {queue.items.length > 0 && (
-              <QueueForm
-                action="reprocessar"
-                label={QUEUE.reprocess}
-                className="flex flex-col gap-md border-t border-dashed border-rule pt-2xl"
-              >
-                {(busy) => (
-                  <>
-                    <p className="max-w-[60ch] text-meta text-ink-2">
-                      {QUEUE.reprocessLead}
-                    </p>
-                    <Submit disabled={busy}>
-                      {busy ? QUEUE.busy.reprocess : QUEUE.reprocess}
-                    </Submit>
-                  </>
-                )}
-              </QueueForm>
+                <QueueForm
+                  action="reprocessar"
+                  label={QUEUE.reprocess}
+                  className="flex flex-col gap-md border-t border-dashed border-rule pt-2xl"
+                >
+                  {(busy) => (
+                    <>
+                      <p className="max-w-[60ch] text-meta text-ink-2">
+                        {QUEUE.reprocessLead}
+                      </p>
+                      <Submit disabled={busy}>
+                        {busy ? QUEUE.busy.reprocess : QUEUE.reprocess}
+                      </Submit>
+                    </>
+                  )}
+                </QueueForm>
               )}
               {queue.attributions.length > 0 && (
                 <p className="text-source text-ink-2">{QUEUE.attribution}</p>

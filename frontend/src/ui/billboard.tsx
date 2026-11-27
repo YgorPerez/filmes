@@ -315,7 +315,8 @@ export function Billboard({
   )
   // Closed, Claude's views open with each Reação of the chosen card
   // (`Standing`): the card and the legend do not say them again (#277).
-  const head = (fullscreen || onSend !== undefined) && reactionsInHead(billboard)
+  const head =
+    (fullscreen || onSend !== undefined) && reactionsInHead(billboard)
   const shelf = (
     <Shelf
       billboard={billboard}
@@ -424,7 +425,10 @@ function ViewTop({
         <BillboardRequest billboard={billboard} narrow />
       </div>
       <Standing billboard={billboard} block />
-      <PeopleLegend billboard={billboard} avatars={!reactionsInHead(billboard)} />
+      <PeopleLegend
+        billboard={billboard}
+        avatars={!reactionsInHead(billboard)}
+      />
       <Capped>{shelf}</Capped>
     </>
   )

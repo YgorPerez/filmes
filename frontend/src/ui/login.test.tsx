@@ -101,7 +101,9 @@ describe('the Trakt connection screen', () => {
     const html = renderToStaticMarkup(
       <TraktScreen page={{ status: 'connected', name: 'Iara' }} inApp />,
     )
-    expect(html).toMatch(/<a href="\/meu-gosto\/importar"[^>]*>Importar Notas<\/a>/)
+    expect(html).toMatch(
+      /<a href="\/meu-gosto\/importar"[^>]*>Importar Notas<\/a>/,
+    )
     expect(html).not.toContain('Créditos')
   })
 

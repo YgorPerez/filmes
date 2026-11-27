@@ -25,7 +25,9 @@ export const InAMenu: Story = {
   args: { rows: true },
   play: async ({ canvasElement }) => {
     await expect(
-      within(canvasElement).getByRole('link', { name: 'Link para os Presentes' }),
+      within(canvasElement).getByRole('link', {
+        name: 'Link para os Presentes',
+      }),
     ).toBeVisible()
   },
 }
