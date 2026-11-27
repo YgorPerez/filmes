@@ -40,35 +40,20 @@ export function TraktSync({
   if (!link.available) return null
   // `de=trakt`: a refusal comes back to this section (#270).
   const action = `/importar/${encodeURIComponent(slug)}/acao?de=trakt`
-  const synced = (own && link.connected) || link.user !== null
+  // Her own account, connected: read by the API, no username to type.
+  const mine = own && link.connected
   return (
     <Section
       id="trakt-api"
       title={COPY.title}
-      lead={
-        own
-          ? link.connected
-            ? COPY.connected
-            : COPY.connect
-          : COPY.other(name)
-      }
+      lead={own ? (mine ? COPY.connected : COPY.connect) : COPY.other(name)}
     >
       {refusal && <Alert>{refusal}</Alert>}
-      {synced && (
-        <PostForm action={action} label={COPY.sync}>
-          {(busy) => (
-            <>
-              <input type="hidden" name="acao" value="trakt" />
-              <Submit disabled={busy}>
-                {busy
-                  ? COPY.busy
-                  : own && link.connected
-                    ? COPY.sync
-                    : COPY.syncUser(link.user ?? '')}
-              </Submit>
-            </>
-          )}
-        </PostForm>
+      {(mine || link.user !== null) && (
+        <SyncForm
+          action={action}
+          label={mine ? COPY.sync : COPY.syncUser(link.user ?? '')}
+        />
       )}
       <a
         href={TRAKT_PATH}
@@ -77,14 +62,10 @@ export function TraktSync({
           className: 'self-start',
         })}
       >
-        {own
-          ? link.connected
-            ? COPY.manage
-            : COPY.connectLink
-          : COPY.otherLink}
+        {own ? (mine ? COPY.manage : COPY.connectLink) : COPY.otherLink}
         <RowArrow />
       </a>
-      {!(own && link.connected) &&
+      {!mine &&
         (link.user === null ? (
           <UserForm action={action} name={name} own={own} />
         ) : (
@@ -96,6 +77,20 @@ export function TraktSync({
           </details>
         ))}
     </Section>
+  )
+}
+
+/** "Sincronizar agora": reads her Trakt again, now. */
+function SyncForm({ action, label }: { action: string; label: string }) {
+  return (
+    <PostForm action={action} label={COPY.sync}>
+      {(busy) => (
+        <>
+          <input type="hidden" name="acao" value="trakt" />
+          <Submit disabled={busy}>{busy ? COPY.busy : label}</Submit>
+        </>
+      )}
+    </PostForm>
   )
 }
 

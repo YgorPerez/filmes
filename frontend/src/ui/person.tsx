@@ -110,6 +110,22 @@ function SpotStatus({ id }: { id: string }) {
   return notice ? <Notice>{text.notice(notice)}</Notice> : null
 }
 
+type PersonScreenProps = {
+  slug: string
+  page: PersonPage | 'unknown' | null
+  notice?: PersonNotice
+  refusal?: PersonRefusal
+  spot?: string
+  problem?: FieldProblem
+  /** Meu gosto's part of the setup guide; only on her own page. */
+  start?: MyStart
+  showTrakt?: boolean
+  /** On Meu gosto, the films of her imports that wait in the queue. */
+  pending?: number
+  /** On Meu gosto, her genres and directors. */
+  taste?: TasteSummary | null
+}
+
 /** `/pessoas/<slug>`, or Meu gosto for the Dono's own. Another Pessoa's
  * opens with how much the filmes knows of her and the one next step
  * (#273); then her Sessões and Notas on the left, and on the right what
@@ -132,21 +148,7 @@ export function PersonScreen({
   showTrakt = false,
   pending = 0,
   taste = null,
-}: {
-  slug: string
-  page: PersonPage | 'unknown' | null
-  notice?: PersonNotice
-  refusal?: PersonRefusal
-  spot?: string
-  problem?: FieldProblem
-  /** Meu gosto's part of the setup guide; only on her own page. */
-  start?: MyStart
-  showTrakt?: boolean
-  /** On Meu gosto, the films of her imports that wait in the queue. */
-  pending?: number
-  /** On Meu gosto, her genres and directors. */
-  taste?: TasteSummary | null
-}) {
+}: PersonScreenProps) {
   if (page === 'unknown') return <UnknownPerson />
   const own = page !== null && page.person === page.viewer.person
   return (
@@ -167,54 +169,79 @@ export function PersonScreen({
         >
           <ActionForms name={page.name}>
             <PersonHeader slug={slug} page={page} own={own} />
-            {/* From 900px, two columns: her Sessões and Notas (and on Meu
-                gosto what the guide left) on the left, what the Dono acts
-                on at the right. On a phone, another Pessoa's page puts
-                what the Dono acts on first (#273). */}
-            <div className="grid gap-2xl min-[900px]:grid-cols-2 min-[900px]:items-start">
-              <div className="flex min-w-0 flex-col gap-2xl">
-                {own && (
-                  <Glance
-                    page={page}
-                    start={start}
-                    pending={pending}
-                    taste={taste}
-                  />
-                )}
-                {own && showTrakt && (
-                  <a
-                    href={TRAKT_PATH}
-                    className={buttonVariants({
-                      variant: 'option',
-                      className: 'self-start',
-                    })}
-                  >
-                    Conexão com o Trakt
-                  </a>
-                )}
-                {!own && <SessionsWith page={page} />}
-                <Notes
-                  slug={slug}
-                  own={own}
-                  page={page}
-                  pending={own ? pending : 0}
-                />
-                {own && start && (
-                  <MyStartSections start={start} person={slug} />
-                )}
-                {!own && <RemovePerson slug={slug} page={page} />}
-              </div>
-              <div
-                className={`flex min-w-0 flex-col gap-2xl ${own ? '' : 'max-[899px]:order-first'}`}
-              >
-                {own && <Contents page={page} />}
-                <Taste slug={slug} page={page} />
-              </div>
-            </div>
+            <PersonColumns
+              slug={slug}
+              page={page}
+              own={own}
+              start={start}
+              showTrakt={showTrakt}
+              pending={pending}
+              taste={taste}
+            />
           </ActionForms>
         </PostedAt.Provider>
       )}
     </main>
+  )
+}
+
+/** From 900px, two columns: her Sessões and Notas (and on Meu gosto what
+ * the guide left) on the left, what the Dono acts on at the right. On a
+ * phone, another Pessoa's page puts what the Dono acts on first (#273). */
+function PersonColumns({
+  slug,
+  page,
+  own,
+  start,
+  showTrakt,
+  pending,
+  taste,
+}: {
+  slug: string
+  page: PersonPage
+  own: boolean
+  start?: MyStart
+  showTrakt: boolean
+  pending: number
+  taste: TasteSummary | null
+}) {
+  return (
+    <div className="grid gap-2xl min-[900px]:grid-cols-2 min-[900px]:items-start">
+      <div className="flex min-w-0 flex-col gap-2xl">
+        {own ? (
+          <>
+            <Glance page={page} start={start} pending={pending} taste={taste} />
+            {showTrakt && <TraktLink />}
+          </>
+        ) : (
+          <SessionsWith page={page} />
+        )}
+        <Notes slug={slug} own={own} page={page} pending={own ? pending : 0} />
+        {own && start && <MyStartSections start={start} person={slug} />}
+        {!own && <RemovePerson slug={slug} page={page} />}
+      </div>
+      <div
+        className={`flex min-w-0 flex-col gap-2xl ${own ? '' : 'max-[899px]:order-first'}`}
+      >
+        {own && <Contents page={page} />}
+        <Taste slug={slug} page={page} />
+      </div>
+    </div>
+  )
+}
+
+/** Meu gosto's way to her Trakt connection. */
+function TraktLink() {
+  return (
+    <a
+      href={TRAKT_PATH}
+      className={buttonVariants({
+        variant: 'option',
+        className: 'self-start',
+      })}
+    >
+      Conexão com o Trakt
+    </a>
   )
 }
 
@@ -408,19 +435,7 @@ function Notes({
       aside={ratings === null ? undefined : String(ratings.length)}
     >
       {ratings === null && <p className="text-ink-2">{notes.noDatabase}</p>}
-      {pending > 0 && (
-        <p className="flex flex-wrap items-center gap-x-sm">
-          <span className="rounded-pill bg-sticker-orange px-sm font-display text-meta-strong text-on-sticker">
-            {notes.pending(pending)}
-          </span>
-          <a
-            href={QUEUE_PATH}
-            className="text-ink underline underline-offset-3"
-          >
-            {notes.resolve}
-          </a>
-        </p>
-      )}
+      {pending > 0 && <Pending pending={pending} />}
       {ratings?.length === 0 && (
         <p className="text-ink-2">{notes.empty(own, page.name)}</p>
       )}
@@ -443,43 +458,88 @@ function Notes({
         </a>
       </div>
       {ratings !== null && ratings.length > 0 && (
-        <Disclosure summary={notes.list(ratings.length)}>
-          <ul className="flex flex-col">
-            {ratings.map((r) => (
-              <Item key={r.factId}>
-                <span>{r.title ?? r.filmId}</span>
-                <Meta
-                  parts={[
-                    PERSON.ratingText(r.rating),
-                    shortDate(r.date),
-                    PERSON.ratingSource(r.rating, r.source),
-                  ]}
-                />
-              </Item>
-            ))}
-          </ul>
-        </Disclosure>
-      )}
-      {ratings !== null && ratings.length > 0 && (
-        <Disclosure summary={notes.more}>
-          <div className="flex flex-col gap-md">
-            <div className="flex flex-wrap items-center gap-xs">
-              <a href={imdbCsvPath(slug)} className={option}>
-                {notes.download}
-              </a>
-              <a href={letterboxdCsvPath(slug)} className={option}>
-                {notes.downloadLetterboxd}
-              </a>
-            </div>
-            {page.viewer.admin && (
-              <p className="text-meta text-ink-2">
-                {notes.movielens(own, ratings.length, page.name)}
-              </p>
-            )}
-          </div>
-        </Disclosure>
+        <>
+          <NotesList ratings={ratings} />
+          <NotesMore slug={slug} own={own} page={page} count={ratings.length} />
+        </>
       )}
     </Slip>
+  )
+}
+
+/** The films of her imports that wait in the queue, with the way there. */
+function Pending({ pending }: { pending: number }) {
+  const { notes } = PERSON
+  return (
+    <p className="flex flex-wrap items-center gap-x-sm">
+      <span className="rounded-pill bg-sticker-orange px-sm font-display text-meta-strong text-on-sticker">
+        {notes.pending(pending)}
+      </span>
+      <a href={QUEUE_PATH} className="text-ink underline underline-offset-3">
+        {notes.resolve}
+      </a>
+    </p>
+  )
+}
+
+/** Her Notas, folded: the list can be long. */
+function NotesList({
+  ratings,
+}: {
+  ratings: NonNullable<PersonPage['ratings']>
+}) {
+  return (
+    <Disclosure summary={PERSON.notes.list(ratings.length)}>
+      <ul className="flex flex-col">
+        {ratings.map((r) => (
+          <Item key={r.factId}>
+            <span>{r.title ?? r.filmId}</span>
+            <Meta
+              parts={[
+                PERSON.ratingText(r.rating),
+                shortDate(r.date),
+                PERSON.ratingSource(r.rating, r.source),
+              ]}
+            />
+          </Item>
+        ))}
+      </ul>
+    </Disclosure>
+  )
+}
+
+/** The CSVs of her Notas, folded, and for an admin the MovieLens word. */
+function NotesMore({
+  slug,
+  own,
+  page,
+  count,
+}: {
+  slug: string
+  own: boolean
+  page: PersonPage
+  count: number
+}) {
+  const { notes } = PERSON
+  const option = buttonVariants({ variant: 'option' })
+  return (
+    <Disclosure summary={notes.more}>
+      <div className="flex flex-col gap-md">
+        <div className="flex flex-wrap items-center gap-xs">
+          <a href={imdbCsvPath(slug)} className={option}>
+            {notes.download}
+          </a>
+          <a href={letterboxdCsvPath(slug)} className={option}>
+            {notes.downloadLetterboxd}
+          </a>
+        </div>
+        {page.viewer.admin && (
+          <p className="text-meta text-ink-2">
+            {notes.movielens(own, count, page.name)}
+          </p>
+        )}
+      </div>
+    </Disclosure>
   )
 }
 
@@ -609,17 +669,7 @@ const REFINE = new Set(['ajustes', 'declarados', 'relatos', 'acesso'])
 function Taste({ slug, page }: { slug: string; page: PersonPage }) {
   const { spot } = useContext(PostedAt)
   const posted = spot === undefined ? undefined : sectionOfSpot(spot)
-  const own = page.person === page.viewer.person
   const seen = seenOf(page)
-  const access = !own && page.viewer.admin && page.access !== undefined
-  const refine: readonly (readonly [string, string, number])[] = [
-    ['ajustes', PERSON.adjustments.title, changedAdjustments(page)],
-    ['declarados', PERSON.stated.title, page.stated.length],
-    ...(hasReports(page)
-      ? [['relatos', PERSON.reports.title, page.reports.length] as const]
-      : []),
-    ...(access ? [['acesso', PERSON.access.title, 0] as const] : []),
-  ]
   return (
     <>
       {/* Only with a question, or right after the last one left: it
@@ -628,8 +678,9 @@ function Taste({ slug, page }: { slug: string; page: PersonPage }) {
         <OpenQuestions slug={slug} page={page} />
       )}
       <Vetoes slug={slug} page={page} />
-      {seen.length > 0 && <Seen slug={slug} page={page} />}
-      {seen.length === 0 && (
+      {seen.length > 0 ? (
+        <Seen slug={slug} page={page} />
+      ) : (
         <Disclosure
           summary={PERSON.empties([PERSON.seen.title])}
           open={posted === 'vistos' || undefined}
@@ -637,35 +688,64 @@ function Taste({ slug, page }: { slug: string; page: PersonPage }) {
           <Seen slug={slug} page={page} />
         </Disclosure>
       )}
-      <Disclosure
-        id="afinar"
-        summary={PERSON.refine(
-          refine.map(([, title, n]) => (n > 0 ? `${title} (${n})` : title)),
-        )}
-        open={(posted !== undefined && REFINE.has(posted)) || undefined}
-      >
-        <div className="flex flex-col gap-2xl">
-          <Adjustments slug={slug} page={page} />
+      <Refine
+        slug={slug}
+        page={page}
+        open={posted !== undefined && REFINE.has(posted)}
+      />
+    </>
+  )
+}
+
+/** "Afinar", folded: the Ajustes, Declarados, Relatos and Acesso, each
+ * with how many it holds on the fold's summary. */
+function Refine({
+  slug,
+  page,
+  open,
+}: {
+  slug: string
+  page: PersonPage
+  open: boolean
+}) {
+  const own = page.person === page.viewer.person
+  const access = !own && page.viewer.admin && page.access !== undefined
+  const reports = hasReports(page)
+  const refine: readonly (readonly [string, number])[] = [
+    [PERSON.adjustments.title, changedAdjustments(page)],
+    [PERSON.stated.title, page.stated.length],
+    ...(reports ? [[PERSON.reports.title, page.reports.length] as const] : []),
+    ...(access ? [[PERSON.access.title, 0] as const] : []),
+  ]
+  return (
+    <Disclosure
+      id="afinar"
+      summary={PERSON.refine(
+        refine.map(([title, n]) => (n > 0 ? `${title} (${n})` : title)),
+      )}
+      open={open || undefined}
+    >
+      <div className="flex flex-col gap-2xl">
+        <Adjustments slug={slug} page={page} />
+        <Statements
+          slug={slug}
+          kind="stated"
+          own={own}
+          items={page.stated}
+          source={PERSON.stated.source}
+        />
+        {reports && (
           <Statements
             slug={slug}
-            kind="stated"
+            kind="report"
             own={own}
-            items={page.stated}
-            source={PERSON.stated.source}
+            items={page.reports}
+            source={own ? null : PERSON.reports.source(page.viewer.name)}
           />
-          {hasReports(page) && (
-            <Statements
-              slug={slug}
-              kind="report"
-              own={own}
-              items={page.reports}
-              source={own ? null : PERSON.reports.source(page.viewer.name)}
-            />
-          )}
-          {access && <Access slug={slug} page={page} />}
-        </div>
-      </Disclosure>
-    </>
+        )}
+        {access && <Access slug={slug} page={page} />}
+      </div>
+    </Disclosure>
   )
 }
 
@@ -687,87 +767,127 @@ function OpenQuestions({ slug, page }: Part) {
     >
       <SpotStatus id="perguntas" />
       <Items empty={questions.empty}>
-        {page.openQuestions.map((q) => {
-          const about = q.label ?? null
-          const entity = q.subject?.startsWith('Q') === true
-          const quick = (reaction: 'like' | 'dislike') => (
-            <ActionForm
-              slug={slug}
-              action="responder"
-              className="flex"
-              label={`${reaction === 'like' ? questions.likes : questions.dislikes}: ${q.text}`}
-            >
-              <input type="hidden" name="pergunta" value={q.factId} />
-              <input
-                type="hidden"
-                name="texto"
-                value={
-                  reaction === 'like'
-                    ? questions.likesText(about)
-                    : questions.dislikesText(about)
-                }
-              />
-              {entity && <input type="hidden" name="reacao" value={reaction} />}
-              <Submit className="">
-                {reaction === 'like' ? questions.likes : questions.dislikes}
-              </Submit>
-            </ActionForm>
-          )
-          return (
-            <Item key={q.factId}>
-              <span>{q.text}</span>
-              <Meta parts={[questions.skips(q.skips), shortDate(q.date)]} />
-              <div className="mt-sm flex flex-col gap-sm">
-                <div className="flex flex-wrap gap-xs">
-                  {quick('like')}
-                  {quick('dislike')}
-                  <ActionForm
-                    slug={slug}
-                    action="pular"
-                    className="flex"
-                    busy={questions.skipping}
-                  >
-                    <input type="hidden" name="texto" value={q.text} />
-                    {q.subject && (
-                      <input type="hidden" name="assunto" value={q.subject} />
-                    )}
-                    <Submit
-                      className=""
-                      aria-label={`${questions.skip}: ${q.text}`}
-                    >
-                      {questions.skip}
-                    </Submit>
-                  </ActionForm>
-                </div>
-                <Disclosure summary={questions.answer}>
-                  <ActionForm
-                    slug={slug}
-                    action="responder"
-                    label={`${questions.answer}: ${q.text}`}
-                  >
-                    <input type="hidden" name="pergunta" value={q.factId} />
-                    <TextField
-                      name="texto"
-                      label={questions.answerText(page.name)}
-                      required
-                    />
-                    {entity && (
-                      <SelectField
-                        name="reacao"
-                        label={PERSON.reaction}
-                        hint={q.label ?? q.subject ?? undefined}
-                        options={REACTION_OPTIONS}
-                      />
-                    )}
-                    <Submit>{PERSON.save}</Submit>
-                  </ActionForm>
-                </Disclosure>
-              </div>
-            </Item>
-          )
-        })}
+        {page.openQuestions.map((q) => (
+          <Question key={q.factId} slug={slug} name={page.name} q={q} />
+        ))}
       </Items>
     </Slip>
+  )
+}
+
+type OpenQuestion = PersonPage['openQuestions'][number]
+
+/** One tap's answer to a question: "Curte" or "Não curte". */
+function QuickAnswer({
+  slug,
+  q,
+  reaction,
+}: {
+  slug: string
+  q: OpenQuestion
+  reaction: 'like' | 'dislike'
+}) {
+  const { questions } = PERSON
+  const about = q.label ?? null
+  const like = reaction === 'like'
+  return (
+    <ActionForm
+      slug={slug}
+      action="responder"
+      className="flex"
+      label={`${like ? questions.likes : questions.dislikes}: ${q.text}`}
+    >
+      <input type="hidden" name="pergunta" value={q.factId} />
+      <input
+        type="hidden"
+        name="texto"
+        value={
+          like ? questions.likesText(about) : questions.dislikesText(about)
+        }
+      />
+      {q.subject?.startsWith('Q') === true && (
+        <input type="hidden" name="reacao" value={reaction} />
+      )}
+      <Submit className="">
+        {like ? questions.likes : questions.dislikes}
+      </Submit>
+    </ActionForm>
+  )
+}
+
+/** An open question: the quick answers, "Pular" and, folded, the answer
+ * in words. */
+function Question({
+  slug,
+  name,
+  q,
+}: {
+  slug: string
+  name: string
+  q: OpenQuestion
+}) {
+  const { questions } = PERSON
+  return (
+    <Item>
+      <span>{q.text}</span>
+      <Meta parts={[questions.skips(q.skips), shortDate(q.date)]} />
+      <div className="mt-sm flex flex-col gap-sm">
+        <div className="flex flex-wrap gap-xs">
+          <QuickAnswer slug={slug} q={q} reaction="like" />
+          <QuickAnswer slug={slug} q={q} reaction="dislike" />
+          <ActionForm
+            slug={slug}
+            action="pular"
+            className="flex"
+            busy={questions.skipping}
+          >
+            <input type="hidden" name="texto" value={q.text} />
+            {q.subject && (
+              <input type="hidden" name="assunto" value={q.subject} />
+            )}
+            <Submit className="" aria-label={`${questions.skip}: ${q.text}`}>
+              {questions.skip}
+            </Submit>
+          </ActionForm>
+        </div>
+        <LongAnswer slug={slug} name={name} q={q} />
+      </div>
+    </Item>
+  )
+}
+
+/** The answer in words, folded, with the reaction when the question is
+ * about an entity. */
+function LongAnswer({
+  slug,
+  name,
+  q,
+}: {
+  slug: string
+  name: string
+  q: OpenQuestion
+}) {
+  const { questions } = PERSON
+  return (
+    <Disclosure summary={questions.answer}>
+      <ActionForm
+        slug={slug}
+        action="responder"
+        label={`${questions.answer}: ${q.text}`}
+      >
+        <input type="hidden" name="pergunta" value={q.factId} />
+        <TextField name="texto" label={questions.answerText(name)} required />
+        {q.subject?.startsWith('Q') === true && (
+          <SelectField
+            name="reacao"
+            label={PERSON.reaction}
+            hint={q.label ?? q.subject ?? undefined}
+            options={REACTION_OPTIONS}
+          />
+        )}
+        <Submit>{PERSON.save}</Submit>
+      </ActionForm>
+    </Disclosure>
   )
 }
 
@@ -1017,69 +1137,100 @@ function Statements({
     >
       <SpotStatus id={id} />
       <Items empty={copy.empty}>
-        {items.map((s) => {
-          const origin = originOf(kind, s)
-          return (
-            <Item
-              key={s.factId}
-              actions={
-                origin === 'file' ? (
-                  <RemoveForm
-                    slug={slug}
-                    what={kind}
-                    id={s.factId}
-                    label={s.text}
-                  />
-                ) : (
-                  <span className="font-display text-label text-ink-2 uppercase">
-                    {origin}
-                  </span>
-                )
-              }
-            >
-              <span>{PERSON.statementText(s.text)}</span>
-              <span className="flex flex-wrap items-center gap-x-sm gap-y-2xs">
-                <StrengthDots
-                  strength={s.strength}
-                  word={PERSON.strengths[s.strength]}
-                />
-                <StatementTarget s={s} />
-                <Meta parts={[shortDate(s.date), s.source]} />
-              </span>
-            </Item>
-          )
-        })}
+        {items.map((s) => (
+          <StatementItem key={s.factId} slug={slug} kind={kind} s={s} />
+        ))}
       </Items>
       {source !== null && (
-        <Disclosure summary={copy.add} open={refused !== null || undefined}>
-          <ActionForm
-            slug={slug}
-            action={kind === 'stated' ? 'declarar' : 'relatar'}
-            label={copy.add}
-            problem={refused}
-          >
-            <TextField name="texto" label={PERSON.text} required />
-            <TargetField
-              name="alvo"
-              label={PERSON.statementTarget}
-              hint={PERSON.targetHint}
-              scope="all"
-            />
-            <SelectField
-              name="reacao"
-              label={PERSON.reaction}
-              options={REACTION_OPTIONS}
-            />
-            <TextField
-              name="fonte"
-              label={PERSON.source}
-              hint={PERSON.sourceHint(source)}
-            />
-            <Submit>{PERSON.save}</Submit>
-          </ActionForm>
-        </Disclosure>
+        <AddStatement
+          slug={slug}
+          kind={kind}
+          source={source}
+          refused={refused}
+        />
       )}
     </Slip>
+  )
+}
+
+/** A Declarado or Relato: its text, Força, target and source; "Tirar"
+ * when it came by a form, the file's word when it did not. */
+function StatementItem({
+  slug,
+  kind,
+  s,
+}: {
+  slug: string
+  kind: 'stated' | 'report'
+  s: Statement
+}) {
+  const origin = originOf(kind, s)
+  return (
+    <Item
+      actions={
+        origin === 'file' ? (
+          <RemoveForm slug={slug} what={kind} id={s.factId} label={s.text} />
+        ) : (
+          <span className="font-display text-label text-ink-2 uppercase">
+            {origin}
+          </span>
+        )
+      }
+    >
+      <span>{PERSON.statementText(s.text)}</span>
+      <span className="flex flex-wrap items-center gap-x-sm gap-y-2xs">
+        <StrengthDots
+          strength={s.strength}
+          word={PERSON.strengths[s.strength]}
+        />
+        <StatementTarget s={s} />
+        <Meta parts={[shortDate(s.date), s.source]} />
+      </span>
+    </Item>
+  )
+}
+
+/** The form that adds a Declarado or a Relato, folded. */
+function AddStatement({
+  slug,
+  kind,
+  source,
+  refused,
+}: {
+  slug: string
+  kind: 'stated' | 'report'
+  source: string
+  refused: FieldProblem | null
+}) {
+  const copy = kind === 'stated' ? PERSON.stated : PERSON.reports
+  return (
+    <Disclosure summary={copy.add} open={refused !== null || undefined}>
+      <ActionForm
+        slug={slug}
+        action={kind === 'stated' ? 'declarar' : 'relatar'}
+        label={copy.add}
+        problem={refused}
+      >
+        <TextField name="texto" label={PERSON.text} required />
+        <TargetField
+          name="alvo"
+          label={PERSON.statementTarget}
+          hint={PERSON.targetHint}
+          scope="all"
+        />
+        <SelectField
+          name="reacao"
+          label={PERSON.reaction}
+          options={REACTION_OPTIONS}
+        />
+        <TextField
+          name="fonte"
+          label={PERSON.source}
+          hint={PERSON.sourceHint(source)}
+        />
+        <Submit>{PERSON.save}</Submit>
+      </ActionForm>
+    </Disclosure>
   )
 }
 
