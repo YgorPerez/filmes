@@ -939,3 +939,26 @@ describe('the closed Cartaz (#264)', () => {
       expect(model.films.every((f) => f.reactions === undefined)).toBe(true)
   })
 })
+
+describe('the Cartaz model, what the Dono gave each film (#272)', () => {
+  test('the stars are the last given and a comment pasted again shows once', async () => {
+    const fixture = useFixture()
+    const session = await recommend(fixture, { attendees: ['dono', 'iara'] })
+    const id = session.session.id
+    const film = session.films[0]!.id
+    for (const stars of [2, 4])
+      await fixture.ok(
+        answerBillboard({
+          session: id,
+          text: `#cartaz ${id} v1\n1 ${film} · estrelas: ${stars} · comentário: curto\n`,
+        }),
+      )
+
+    const model = await fixture.ok(billboardModel({ session: id }))
+
+    expect(model.films.find((f) => f.id === film)?.notes).toEqual({
+      stars: 4,
+      comments: ['curto'],
+    })
+  })
+})

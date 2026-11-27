@@ -660,6 +660,27 @@ const state = (
 })
 
 describe('the text the Cartaz copies (test_cartaz_responde)', () => {
+  test('a film without Notas or thoughts on it still writes its Já vi', () => {
+    expect(
+      billboardText({
+        session: 's',
+        version: 1,
+        attendees: ['bruno', 'iara'],
+        addition: '',
+        films: [
+          {
+            position: 1,
+            id: 'tt1',
+            seen: ['iara'],
+            swap: false,
+            stars: 0,
+            comment: '',
+          },
+        ],
+      }),
+    ).toBe('#cartaz s v1\n1 tt1 · já vi: iara\n')
+  })
+
   test('header, acrescentar and one line per marked film', () => {
     expect(
       billboardText(
