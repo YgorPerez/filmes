@@ -537,6 +537,9 @@ function Cards({
   )
   if (!grouped) return <>{billboard.films.map(card)}</>
   const byId = new Map(billboard.films.map((film) => [film.id, film]))
+  // Each Motivo's reason: the lines for it its sections share, so a "de
+  // novo" section finds the one said above (#346).
+  const reasons = new Map<string, BillboardLine[]>()
   return (
     <>
       {billboard.sections.map((section) => {
@@ -545,6 +548,9 @@ function Cards({
         const without = sharedWithoutFact(films)
         const own = new Set(shared.map(lineKey))
         const none = new Set(without)
+        const reason = shared.filter((line) => !line.against)
+        if (reason.length > 0 && !reasons.has(section.title))
+          reasons.set(section.title, reason)
         return (
           <Section
             key={section.films[0]}
@@ -553,13 +559,29 @@ function Cards({
             without={without}
             people={billboard.attendees}
           >
-            {films.map((film) => card(withoutShared(film, own, none)))}
+            {films.map((film) =>
+              card(
+                withReason(
+                  withoutShared(film, own, none),
+                  reasons.get(section.title) ?? [],
+                ),
+              ),
+            )}
           </Section>
         )
       })}
     </>
   )
 }
+
+/** A card whose own lines all weigh against it says its Motivo's reason
+ * too (#346): read alone, it shows why it is on the shelf. */
+const withReason = (film: Film, reason: readonly BillboardLine[]): Film =>
+  reason.length > 0 &&
+  film.lines.length > 0 &&
+  film.lines.every((line) => line.against)
+    ? { ...film, lines: [...reason, ...film.lines] }
+    : film
 
 /** A section by Motivo (DESIGN.md, Seção do Cartaz): the title beside a 4px bar
  * in ink (the stamp's violet for the Aposta), "de novo" when
