@@ -17,6 +17,12 @@ import {
 } from './trakt-store'
 
 const CALLBACK = '/trakt/retorno'
+/** Trakt's Cloudflare answers 403 to fetch's default `node` User-Agent; the
+ * engine's Trakt calls send the same `filmes`. */
+const TRAKT_HEADERS = {
+  'content-type': 'application/json',
+  'user-agent': 'filmes',
+}
 
 /** Trakt's answer to a refresh token it no longer takes. */
 const refused = async (response: Response) => {
@@ -141,7 +147,7 @@ export class Trakt {
     try {
       await this.fetch('https://api.trakt.tv/oauth/revoke', {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: TRAKT_HEADERS,
         redirect: 'error',
         signal: AbortSignal.timeout(5_000),
         body: JSON.stringify({ token, client_id: this.options.clientId }),
@@ -158,7 +164,7 @@ export class Trakt {
     const timeout = AbortSignal.timeout(10_000)
     const response = await this.fetch('https://auth.trakt.tv/oauth/token', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: TRAKT_HEADERS,
       redirect: 'error',
       signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
       body: JSON.stringify({

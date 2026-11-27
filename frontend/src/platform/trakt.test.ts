@@ -139,6 +139,8 @@ function expectCodeExchange(
 ) {
   const [url, init] = fetchToken.mock.calls[0]!
   expect(url).toBe('https://auth.trakt.tv/oauth/token')
+  // Trakt's Cloudflare refuses fetch's default `node` User-Agent.
+  expect(new Headers(init?.headers).get('user-agent')).toBe('filmes')
   const body = JSON.parse(
     typeof init?.body === 'string' ? init.body : '{}',
   ) as Record<string, string>
