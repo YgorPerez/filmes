@@ -126,7 +126,7 @@ export const PERSON = {
       return `a previsão erra ${rounded.toLocaleString('pt-BR')} ${points} em média, em ${films.toLocaleString('pt-BR')} filmes`
     },
     rate: 'Dar notas',
-    import: 'Importar do Letterboxd, do Trakt, do IMDb ou do Simkl',
+    import: 'Importar Notas de outro site',
     more: 'Baixar as Notas em CSV',
     download: 'Baixar CSV do IMDb',
     downloadLetterboxd: 'Baixar CSV do Letterboxd',

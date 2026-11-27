@@ -4,7 +4,7 @@ export const LOST = {
   signIn: 'Entrar',
   notFound: {
     title: 'Essa fita não está na prateleira',
-    lead: 'O endereço pode ter mudado, ou a Sessão foi apagada.',
+    lead: 'O endereço pode ter mudado, ou o link veio cortado.',
     home: 'Ir para o início',
     sessions: 'Ver Sessões',
   },

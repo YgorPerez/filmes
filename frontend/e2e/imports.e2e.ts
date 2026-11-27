@@ -102,9 +102,7 @@ async function openOlgaImports(page: Page, info: TestInfo) {
   await page.getByRole('link', { name: /Olga/ }).click()
   await expect(page).toHaveURL(/\/pessoas\/olga$/)
   await section(page, 'Notas')
-    .getByRole('link', {
-      name: 'Importar do Letterboxd, do Trakt, do IMDb ou do Simkl',
-    })
+    .getByRole('link', { name: 'Importar Notas de outro site' })
     .click()
   await expect(page).toHaveURL(/\/pessoas\/olga\/importar$/)
   await expect(
