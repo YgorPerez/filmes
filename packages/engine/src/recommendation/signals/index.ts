@@ -2,6 +2,7 @@
 // that order is the order of each film's Evidence and of the sums over it
 // (R8), so a new signal goes in its Python name's place.
 
+import { awards } from './awards.ts'
 import { mood } from './mood.ts'
 import { content } from './content.ts'
 import { group } from './group.ts'
@@ -20,6 +21,7 @@ export const SIGNALS: ReadonlyArray<Signal> = [
   group,
   seen,
   imdbRating,
+  awards,
   neighbors,
   tasteNeighbors,
   watchlist,

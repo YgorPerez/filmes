@@ -330,6 +330,9 @@ export const watchlistStrength = (): Strength => 'moderate'
  * comes from the rating itself, not from the strength. */
 export const imdbRatingStrength = (): Strength => 'strong'
 
+/** A Wikidata award or nomination is exact metadata. */
+export const awardStrength = (): Strength => 'strong'
+
 /** The "parecido com X" line of a similar request: the project's reading
  * of tags and neighbours, weak. Not a Fact, and adds to nothing. */
 export const similarStrength = (): Strength => 'weak'
