@@ -15,6 +15,7 @@ import type { PageReading } from '#/platform/reading'
 import type { SessionItem } from '#/platform/sessions'
 import { Billboard } from './billboard'
 import { forgetMarks, openStorage } from './billboard-marks'
+import { closeOnOutside, HEAD_POPOVERS } from './kit/dismiss'
 import { useFetchForm } from './kit/fetch-form'
 import { RowArrow } from './kit/row-arrow'
 import { Slip } from './kit/slip'
@@ -281,7 +282,11 @@ function SessionHead({ page }: { page: CartazPage }) {
         </p>
       </div>
       {menu && (
-        <details className="relative shrink-0">
+        <details
+          ref={closeOnOutside}
+          name={HEAD_POPOVERS}
+          className="relative shrink-0"
+        >
           <summary
             aria-label={SESSIONS.session.menu}
             className="grid size-touch cursor-pointer list-none place-items-center rounded-round border-(length:--border-width-stroke) border-rule bg-surface font-display text-title leading-none text-ink [&::-webkit-details-marker]:hidden"
