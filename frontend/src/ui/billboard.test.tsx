@@ -118,7 +118,7 @@ describe('the Cartaz shows, the Aposta and the shelf label', () => {
       screen
         .getByRole('img', { name: /^Vocês dois/ })
         .getAttribute('aria-label'),
-    ).toBe('Vocês dois · até 2h05 · nota 7+ no IMDb · leve')
+    ).toBe('Vocês dois · até 2h05 · leve')
     expect(screen.getByText('algo leve pra hoje')).toBeTruthy()
     for (const level of ['forte', 'moderada', 'fraca'])
       expect(screen.getByText(level)).toBeTruthy()
@@ -713,6 +713,69 @@ describe('the inline card', () => {
     expect(screen.queryByText(/^Saiu:/u)).toBeNull()
   })
 
+  it('a closed Session says so, with the Filme escolhido, its tag and each Presente’s line', () => {
+    render(<Billboard billboard={CLOSED} layout="inline" onExpand={expand} />)
+    expect(
+      screen.getByText(new RegExp(`^${BILLBOARD.view.closed}`, 'u'))
+        .textContent,
+    ).toBe('Sessão fechada · Filme escolhido: As Horas Lentas')
+    expect(
+      screen.getByRole('list', { name: 'Filme escolhido' }).textContent,
+    ).toBe('BBruno: previsto 8,3 · deu 6 de 10IIara: gostou')
+    const rows = within(
+      screen.getByRole('list', { name: BILLBOARD.view.list }),
+    ).getAllByRole('listitem')
+    expect(within(rows[0]!).getByText(BILLBOARD.view.tag.chosen)).toBeTruthy()
+    expect(within(rows[1]!).queryByText(BILLBOARD.view.tag.chosen)).toBeNull()
+    // What came new in the last redo no longer matters once closed.
+    expect(screen.queryByText(/^Saiu:/u)).toBeNull()
+  })
+
+  it('a closed Session whose chosen film has no row names it', () => {
+    render(
+      <Billboard
+        billboard={CHOSEN_OUTSIDE}
+        layout="inline"
+        onExpand={expand}
+      />,
+    )
+    expect(
+      screen.getByText(new RegExp(`^${BILLBOARD.view.closed}`, 'u'))
+        .textContent,
+    ).toBe('Sessão fechada · Filme escolhido: Curta da Madrugada')
+  })
+
+  it('a closed Session without Feedback lines says only that it is closed', () => {
+    render(
+      <Billboard
+        billboard={{ ...MODEL, open: false }}
+        layout="inline"
+        onExpand={expand}
+      />,
+    )
+    expect(screen.getByText(BILLBOARD.view.closed)).toBeTruthy()
+  })
+
+  it('the marked films keep their rows, with a Trocar or Já vi tag', async () => {
+    const user = userEvent.setup()
+    render(<Billboard billboard={MODEL} action="/x" />)
+    await user.click(card(1).getByRole('button', { name: 'Trocar' }))
+    await user.click(
+      within(
+        card(2).getByRole('group', { name: BILLBOARD.marks.seenGroup(2) }),
+      ).getByRole('button', { name: 'Iara' }),
+    )
+    cleanup()
+    render(<Billboard billboard={MODEL} layout="inline" onExpand={expand} />)
+    const rows = within(
+      screen.getByRole('list', { name: BILLBOARD.view.list }),
+    ).getAllByRole('listitem')
+    expect(rows.map((row) => row.textContent)).toEqual([
+      '1As Horas LentasTrocar2021 · 1h44',
+      '2Sal & FerrugemnovoJá vi',
+    ])
+  })
+
   it('with no film, says why and offers nothing to mark', () => {
     render(
       <Billboard
@@ -757,6 +820,16 @@ describe('the inline card', () => {
 
 describe('in the MCP Apps view without fullscreen', () => {
   const onSend = () => {}
+
+  it('says what changed as the inline card does', () => {
+    render(<Billboard billboard={MODEL} onSend={onSend} />)
+    expect(
+      screen.getByText(
+        'Saiu: Sessão Maldita (Iara já viu) · entrou: Sal & Ferrugem',
+      ),
+    ).toBeTruthy()
+    expect(screen.queryByText(BILLBOARD.redoneWhy)).toBeNull()
+  })
 
   it('with no film, says what to ask in the chat', () => {
     render(<Billboard billboard={{ ...MODEL, films: [] }} onSend={onSend} />)

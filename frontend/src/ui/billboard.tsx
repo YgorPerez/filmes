@@ -12,7 +12,7 @@ import {
 } from 'react'
 import { BillboardCard, EvidenceLine } from './billboard-card'
 import { ChosenFilm } from './billboard-chosen'
-import { InlineBillboard } from './billboard-inline'
+import { Changes, InlineBillboard, type RowTag } from './billboard-inline'
 import {
   emptyMarks,
   forgetMarks,
@@ -30,6 +30,7 @@ import {
   type Marks,
 } from './billboard-marks'
 import { ReplyBar, ReplyBox, type BarPlace } from './billboard-reply'
+import { askedParts } from './billboard-request'
 import { buttonVariants } from './kit/button-variants'
 import { Dropped, Legend, PeopleLegend } from './billboard-top'
 import { BILLBOARD } from './billboard.copy'
@@ -147,7 +148,7 @@ function Request({
           ? BILLBOARD.view.version(billboard.version)
           : undefined
       }
-      items={[billboard.request.who, ...billboard.request.parts]}
+      items={[billboard.request.who, ...askedParts(billboard.request.parts)]}
       note={single ? null : billboard.request.speech}
     />
   )
@@ -216,6 +217,20 @@ function useSend({
   return { submit, onSendClick: onSend && send(onSend), isSent, failure }
 }
 
+/** The tags on the inline card's rows: what each film was marked with
+ * (#277). */
+function rowTags(billboard: BillboardModel, marks: Marks) {
+  const tags: Record<string, RowTag[]> = {}
+  for (const film of billboard.films) {
+    const own = marksOf(marks, film.id)
+    const kinds: RowTag[] = []
+    if (own.swap) kinds.push('swap')
+    if (own.seen.length > 0) kinds.push('seen')
+    if (kinds.length > 0) tags[film.id] = kinds
+  }
+  return tags
+}
+
 /** Where the bar sits: the web has the app's tabs at the bottom of a
  * phone; Claude's fullscreen, its own foot; a frame sized to the content,
  * nothing. */
@@ -253,6 +268,7 @@ export function Billboard({
       <InlineBillboard
         billboard={billboard}
         marked={BILLBOARD.reply.marked(markedFilms(billboard, marks))}
+        tags={rowTags(billboard, marks)}
         sent={isSent}
         message={message}
         copy={copy}
@@ -352,7 +368,7 @@ function FullscreenBody({
           <HandNote compact>{speech}</HandNote>
         </div>
       )}
-      {billboard.open && <Dropped billboard={billboard} />}
+      <Changes billboard={billboard} />
       {billboard.films.length > 0 && <PeopleLegend billboard={billboard} />}
       {children}
     </Fullscreen>
@@ -371,7 +387,7 @@ function ViewTop({
     <>
       <Request billboard={billboard} />
       <PeopleLegend billboard={billboard} />
-      {billboard.open && <Dropped billboard={billboard} />}
+      <Changes billboard={billboard} />
       <Capped>{shelf}</Capped>
     </>
   )
