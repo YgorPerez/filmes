@@ -1,20 +1,70 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
 import {
+  billboardPeople,
   currentVersion,
+  filmCards,
   isOpen,
+  latestVotes,
+  pairwiseQuestions,
   readPeople,
   readSession,
+  sessionDuration,
+  sessionVersions,
+  shownFilms,
   yamlToJson,
   type Engine,
+  type FilmCard,
+  type VoteValue,
+  type YamlMapping,
 } from '@filmes/engine'
 import {
   sessionLinkPath,
   type SessionLinkSearch,
 } from '#/content/session-link-address'
 import { openAuthDatabase } from './auth-database'
-import { attendeeSlugs, sessionFilms } from './session-fields'
+import { attendeeSlugs } from './session-fields'
 
-type Attendee = { person: string; name: string }
+/** A Presente as the link shows her: her colour and initial are the
+ * Cartaz's; `owner` marks who opened the Session. */
+export type LinkPerson = {
+  person: string
+  name: string
+  initial: string
+  color: number
+  owner: boolean
+}
+
+/** A film of the current screen, with its public card (null when the
+ * Catálogo no longer has it), whether this version brought it in, and the
+ * chosen Presente's standing Voto on it. */
+export type LinkFilm = {
+  position: number
+  id: string
+  title: string
+  new: boolean
+  card: FilmCard | null
+  mine: VoteValue | null
+}
+
+/** What anyone with the link sees: no Evidence, Fato or Nota prevista. */
+export type SessionLinkView = {
+  session: string
+  version: number
+  /** The Session's day, ISO. */
+  date: string
+  /** Who opened the Session, when she is among the Presentes' names. */
+  owner: string | null
+  attendees: LinkPerson[]
+  selected: LinkPerson | null
+  /** The night's shelf label: the maximum duration and the Climas. */
+  shelf: string[]
+  /** The current screen, only once a Presente is chosen. */
+  films: LinkFilm[]
+  /** The films her no took out of the Session, by title. */
+  left: string[]
+  /** How many Perguntas par a par are left for her (0 without one). */
+  questions: number
+}
 
 function signingKey(path: string, issue: boolean): Uint8Array | null {
   using db = openAuthDatabase(path)
@@ -60,37 +110,140 @@ export async function issueSessionLink(
     : null
 }
 
+const text = (value: unknown) => (typeof value === 'string' ? value : null)
+
+/** The Session whose signature `chave` carries, or null: the link was
+ * issued for it. */
+function signed(
+  { sessao, chave }: SessionLinkSearch,
+  database: string,
+): string | null {
+  if (!sessao || chave?.length !== 43 || !/^[\w-]+$/u.test(chave)) return null
+  const key = signingKey(database, false)
+  return key !== null &&
+    timingSafeEqual(Buffer.from(chave), Buffer.from(sign(sessao, key)))
+    ? sessao
+    : null
+}
+
+/** A link that was issued for a Session now closed: its page says the
+ * Session ended instead of that the link is broken. */
+export async function closedSessionLink(
+  search: SessionLinkSearch,
+  engine: Engine,
+  database: string,
+): Promise<boolean> {
+  const session = signed(search, database)
+  if (session === null) return false
+  const result = await engine.run(readSession(session))
+  return result.exitCode === 0 && !isOpen(result.output.frontmatter)
+}
+
+/** The public cards of `ids`, by id; none when the engine could not
+ * read them (the page shows the titles alone). */
+export async function cardsById(
+  engine: Engine,
+  ids: readonly string[],
+): Promise<ReadonlyMap<string, FilmCard>> {
+  const cards = await engine.run(filmCards(ids))
+  return new Map(cards.exitCode === 0 ? cards.output.map((c) => [c.id, c]) : [])
+}
+
+/** The screen of the current version, with her Votos and the cards. */
+async function screenOf(
+  front: YamlMapping,
+  session: string,
+  person: string,
+  engine: Engine,
+): Promise<Pick<SessionLinkView, 'films' | 'left' | 'questions'>> {
+  const current = currentVersion(front)
+  const listed = yamlToJson(current.get('recommendation') ?? null)
+  const fresh = new Set(
+    (Array.isArray(listed) ? (listed as Record<string, unknown>[]) : [])
+      .filter((item) => item.new === true)
+      .map((item) => String(item.id)),
+  )
+  const screen = shownFilms(current)
+  const mine = latestVotes(front, person)
+  const byId = await cardsById(
+    engine,
+    screen.map((f) => f.id),
+  )
+  const titles = new Map(
+    sessionVersions(front)
+      .flatMap(shownFilms)
+      .map((f) => [f.id, f.title ?? f.id]),
+  )
+  const onScreen = new Set(screen.map((f) => f.id))
+  const asked = await engine.run(pairwiseQuestions({ session, person }))
+  return {
+    questions: asked.exitCode === 0 ? asked.output.pairs.length : 0,
+    films: screen.map((film) => {
+      const card = byId.get(film.id) ?? null
+      return {
+        position: film.position,
+        id: film.id,
+        title: card?.title ?? film.title ?? film.id,
+        new: fresh.has(film.id),
+        card,
+        mine: mine.get(film.id) ?? null,
+      }
+    }),
+    left: [...mine]
+      .filter(([film, vote]) => vote === 'no' && !onScreen.has(film))
+      .map(([film]) => titles.get(film) ?? film),
+  }
+}
+
+/** The shelf label's parts: "até 1h50" and the Climas. */
+function shelfOf(front: YamlMapping): string[] {
+  const context = yamlToJson(front.get('context') ?? null) as Record<
+    string,
+    unknown
+  > | null
+  const max = Number(context?.max_duration)
+  const moods = Array.isArray(context?.moods) ? context.moods.map(String) : []
+  return [...(max > 0 ? [`até ${sessionDuration(max)}`] : []), ...moods]
+}
+
 /** Revalidate the capability and current Presentes before returning any data.
  * The anonymous view receives an explicit projection of the Session. */
 export async function resolveSessionLink(
-  { sessao, chave, presente }: SessionLinkSearch,
+  search: SessionLinkSearch,
   engine: Engine,
   database: string,
-) {
-  if (!sessao || chave?.length !== 43 || !/^[\w-]+$/u.test(chave)) return null
-  const key = signingKey(database, false)
-  if (
-    key === null ||
-    !timingSafeEqual(Buffer.from(chave), Buffer.from(sign(sessao, key)))
-  )
-    return null
-
+): Promise<SessionLinkView | null> {
+  const sessao = signed(search, database)
+  if (sessao === null) return null
+  const { presente } = search
   const front = await openSession(engine, sessao)
   if (!front) return null
   const people = await engine.run(readPeople)
   if (people.exitCode !== 0) return null
   const names = new Map(people.output.map((p) => [p.slug, p.name]))
-  const attendees: Attendee[] = attendeeSlugs(
-    yamlToJson(front.get('attendees') ?? null),
-  ).map((person) => ({ person, name: names.get(person) ?? person }))
+  const owner = text(yamlToJson(front.get('owner') ?? null))
+  const attendees: LinkPerson[] = billboardPeople(
+    attendeeSlugs(yamlToJson(front.get('attendees') ?? null)),
+    names,
+    owner,
+  ).map(({ slug, name, initial, color, owner: opened }) => ({
+    person: slug,
+    name,
+    initial,
+    color,
+    owner: opened,
+  }))
   const selected = attendees.find((p) => p.person === presente) ?? null
   return {
     session: sessao,
     version: Number(yamlToJson(currentVersion(front).get('version') ?? null)),
+    date: String(yamlToJson(front.get('date') ?? null)),
+    owner: owner === null ? null : (names.get(owner) ?? null),
     attendees,
     selected,
-    films: selected
-      ? sessionFilms(yamlToJson(front.get('recommendation') ?? null))
-      : [],
+    shelf: shelfOf(front),
+    ...(selected
+      ? await screenOf(front, sessao, selected.person, engine)
+      : { films: [], left: [], questions: 0 }),
   }
 }

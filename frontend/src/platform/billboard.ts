@@ -45,7 +45,11 @@ import {
 } from './pairwise'
 import { pageReading, type PageReading } from './reading'
 import { serverEnv } from './server-env'
-import { issueSessionLink, resolveSessionLink } from './session-link'
+import {
+  closedSessionLink,
+  issueSessionLink,
+  resolveSessionLink,
+} from './session-link'
 import { voteAction, voteDeck } from './session-votes'
 import { sessionPage, sessionsFromEngine, type Sessions } from './sessions'
 import type { SessionItem } from './sessions'
@@ -271,6 +275,10 @@ export async function appCartazPage(
 /** The public page of a Link da Sessão, for the app. */
 export const appSessionLink = (search: SessionLinkSearch) =>
   resolveSessionLink(search, appEngine(), serverEnv().AUTH_DATABASE_PATH)
+
+/** A link issued for a Session that closed since (#275), for the app. */
+export const appClosedSessionLink = (search: SessionLinkSearch) =>
+  closedSessionLink(search, appEngine(), serverEnv().AUTH_DATABASE_PATH)
 
 /** The group swipe's deck (#182), for the app. */
 export const appVoteDeck = (search: SessionLinkSearch) =>
