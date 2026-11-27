@@ -390,6 +390,26 @@ function Notes({
   )
 }
 
+/** Who marked Já vi, and who the engine knows saw it (#272); the poster's
+ * stamp from them, or Trocar's. */
+function stampOf(
+  film: BillboardFilm,
+  people: readonly BillboardPerson[],
+  marks: FilmMarks | undefined,
+): { seen: BillboardPerson[]; stamp: Stamp | null } {
+  const marked = marks?.seen ?? []
+  const seenBy = new Set([...marked, ...film.seen])
+  const seen = people.filter((p) => seenBy.has(p.slug))
+  const stamp: Stamp | null = marks?.swap
+    ? { kind: 'swap' }
+    : seen.length === 0
+      ? null
+      : marked.length > 0
+        ? { kind: 'seen', who: seen }
+        : { kind: 'seenBefore', who: seen }
+  return { seen, stamp }
+}
+
 /** A film of the Cartaz. `marks` and `onChange` are absent when the
  * Session takes no reply (it has its Feedback). `level` 3 under a
  * section's title. */
@@ -412,17 +432,7 @@ export function BillboardCard({
    * its label (#351). */
   reactionsOnTop?: boolean
 }) {
-  // Who marked Já vi, and who the engine knows saw it (#272).
-  const marked = marks?.seen ?? []
-  const seenBy = new Set([...marked, ...film.seen])
-  const seen = people.filter((p) => seenBy.has(p.slug))
-  const stamp: Stamp | null = marks?.swap
-    ? { kind: 'swap' }
-    : seen.length === 0
-      ? null
-      : marked.length > 0
-        ? { kind: 'seen', who: seen }
-        : { kind: 'seenBefore', who: seen }
+  const { seen, stamp } = stampOf(film, people, marks)
   return (
     <article
       aria-labelledby={`filme-${film.id}`}

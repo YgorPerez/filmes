@@ -403,7 +403,7 @@ describe('the Cartaz shows, what was marked and the awards', () => {
   })
 })
 
-describe('the Cartaz shows, section lines and no film', () => {
+describe('the Cartaz shows, section lines', () => {
   it('the lines every film of a section has, said once under its title', () => {
     const [hours, salt] = MODEL.films
     const shared = hours!.lines[0]!
@@ -471,7 +471,9 @@ describe('the Cartaz shows, section lines and no film', () => {
     // A card with a reason of its own keeps only it.
     expect(card(2).queryByText(shared.text)).toBeNull()
   })
+})
 
+describe('the Cartaz shows, a section’s reason once (#346), and no film', () => {
   it('a card in the section that says the reason does not repeat it (#346)', () => {
     const [hours] = MODEL.films
     const shared = hours!.lines[0]!
