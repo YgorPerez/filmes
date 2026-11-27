@@ -153,8 +153,6 @@ export function markedFilms(model: Billboard, marks: Marks) {
   }
 }
 
-export type MarkedFilms = ReturnType<typeof markedFilms>
-
 // --- the browser's storage ---------------------------------------------------
 
 /** One key per Session and version, as the old Cartaz had. */
