@@ -15,6 +15,8 @@ export const LOGIN = {
     'Só entra quem já está em Pessoas como Dono. Peça a quem já usa para pôr o seu e-mail.',
   google: 'Entrar com Google',
   otherAccount: 'Usar outra conta Google',
+  /** Sign-in is off on this server: the quiet way to try it again. */
+  retry: 'Tentar de novo',
   refusals: {
     'nao-dono':
       'Este e-mail do Google não tem acesso ao filmes. Entre com outra conta, ou peça a quem já entra no filmes para dar acesso a este e-mail na sua página em Pessoas.',

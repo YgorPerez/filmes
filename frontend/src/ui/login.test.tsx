@@ -17,10 +17,15 @@ describe('Login', () => {
     expect(html).toContain(LOGIN.refusals[refusal])
   })
 
-  it('does not send the visitor back to Google when sign-in is unavailable', () => {
-    expect(
-      renderToStaticMarkup(<Login refusal="indisponivel" />),
-    ).not.toContain('href="/auth/google"')
+  it('offers a quiet retry, not the orange button, when sign-in is unavailable', () => {
+    const html = renderToStaticMarkup(<Login refusal="indisponivel" />)
+    expect(html).not.toContain(LOGIN.google)
+    const retry = new RegExp(
+      `<a href="/auth/google" class="([^"]*)">${LOGIN.retry}</a>`,
+      'u',
+    ).exec(html)
+    expect(retry?.[1]).toContain('border-rule')
+    expect(retry?.[1]).not.toContain('bg-sticker-orange')
   })
 
   it('says what the site is for and who gets in, before a trip to Google', () => {
