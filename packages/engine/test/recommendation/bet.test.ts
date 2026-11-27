@@ -512,6 +512,37 @@ describe('the bet record', () => {
 })
 
 describe('the bet record', () => {
+  test.each([
+    ['trocar: já vi', [[5, PEQUENOS_MILAGRES]]],
+    ['trocar', []],
+  ] as const)(
+    'a Cartaz Trocar that came from a Já vi is no failure (#326): %s',
+    async (mark, expected) => {
+      const fixture = useFixture()
+      const vars = betWeights(
+        fixture,
+        ['min_success_rate = 0.25', 'min_success_rate = 0.0'],
+        ['min_predicted = 7.0', 'min_predicted = 8.5'],
+      )
+      const id = 'seen-swap-history'
+      pastBet(fixture, id, '', '2026-11-19', 'bruno')
+      const reply = await fixture.ok(
+        answerBillboard({
+          session: id,
+          text: `#cartaz ${id} v1\n5 ${HISTORY_FILM} · já vi: iara · ${mark}`,
+        }),
+        vars,
+      )
+      expect(reply.dropped).toContainEqual(
+        expect.objectContaining({ id: HISTORY_FILM, cause: 'seen' }),
+      )
+      const next = await bruno(fixture, vars, { seed: 'next-session' })
+      expect(bets(next)).toEqual(expected)
+    },
+  )
+})
+
+describe('the bet record', () => {
   test.each(['personSeen', 'personRate'] as const)(
     'learns from a Nota recorded through %s and the drop in the Session file',
     async (action) => {

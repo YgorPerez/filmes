@@ -1,5 +1,5 @@
-// Each Presente's colour, as an avatar and as the dot on the case, filled
-// and hollow (without a Fato), and the dot with a Nota prevista beside it.
+// Each Presente's colour, as an avatar and as a dot, filled and hollow
+// (without a Fato), and the dot with her name and Nota prevista beside it.
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import {
   expect,
@@ -50,33 +50,44 @@ export const Colors: Story = {
   },
 }
 
-/** On the case, with the number: a mouse over the dot opens its hint and
- * leaving closes it. A screen reader hears the hint once, as the dot's
- * name, and not the open popover again. */
+const BRUNO = {
+  text: '8,3',
+  name: 'Bruno',
+  hint: 'pela nota de 12 pessoas de gosto parecido',
+  label:
+    'Nota prevista de Bruno: 8,3 de 10, pela nota de 12 pessoas de gosto parecido',
+}
+
+/** On the line under "Por que" (#326), with the name and the number: a
+ * mouse over it opens its hint and leaving closes it. A screen reader
+ * hears the label once, and not the open popover again. */
 export const DotWithRating: Story = {
   render: () => (
-    <div className="mt-2xl flex gap-xs rounded-case bg-case p-sm">
-      <PersonDot
-        person={PEOPLE[0]!}
-        rating={{ text: '8,3', hint: 'Bruno: 8,3 de 10 · 12 vizinhos' }}
-      />
+    <p className="mt-2xl flex gap-sm text-meta text-ink-2">
+      <PersonDot person={PEOPLE[0]!} rating={BRUNO} />
       <PersonDot
         person={PEOPLE[1]!}
         hollow
-        rating={{ text: '6,9', hint: 'Vera: 6,9 de 10 · 1 vizinho' }}
+        rating={{
+          text: '6,9',
+          name: 'Vera',
+          hint: 'pela nota de 1 pessoa de gosto parecido',
+          label:
+            'Nota prevista de Vera: 6,9 de 10, pela nota de 1 pessoa de gosto parecido',
+        }}
       />
-    </div>
+    </p>
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    const hint = 'Bruno: 8,3 de 10 · 12 vizinhos'
-    await userEvent.hover(canvas.getByRole('button', { name: hint }))
-    await expect(canvas.getByText(hint)).toBeVisible()
-    await expect(isInaccessible(canvas.getByText(hint))).toBe(true)
-    await userEvent.unhover(canvas.getByRole('button', { name: hint }))
-    await expect(canvas.getByText(hint)).not.toBeVisible()
-    // The dot is small; its tap target is 44px tall (#268).
-    const dot = canvas.getByRole('button', { name: hint })
+    const dot = canvas.getByRole('button', { name: BRUNO.label })
+    await expect(dot).toHaveTextContent('Bruno 8,3')
+    await userEvent.hover(dot)
+    await expect(canvas.getByText(BRUNO.hint)).toBeVisible()
+    await expect(isInaccessible(canvas.getByText(BRUNO.hint))).toBe(true)
+    await userEvent.unhover(dot)
+    await expect(canvas.getByText(BRUNO.hint)).not.toBeVisible()
+    // The text is small; its tap target is 44px tall (#268).
     const box = dot.getBoundingClientRect()
     const centre = box.left + box.width / 2
     const middle = box.top + box.height / 2
@@ -91,12 +102,9 @@ export const DotWithRating: Story = {
  * 26), the hint still opens under its dot, not at the page's top left. */
 export const DotWithoutAnchorPositioning: Story = {
   render: () => (
-    <div className="mt-2xl ml-2xl flex gap-xs rounded-case bg-case p-sm">
-      <PersonDot
-        person={PEOPLE[0]!}
-        rating={{ text: '8,3', hint: 'Bruno: 8,3 de 10 · 12 vizinhos' }}
-      />
-    </div>
+    <p className="mt-2xl ml-2xl flex gap-sm text-meta text-ink-2">
+      <PersonDot person={PEOPLE[0]!} rating={BRUNO} />
+    </p>
   ),
   play: async ({ canvasElement }) => {
     // Chrome has anchor positioning: say it has not, and turn it off.
@@ -107,11 +115,10 @@ export const DotWithoutAnchorPositioning: Story = {
     document.head.append(off)
     try {
       const canvas = within(canvasElement)
-      const hint = 'Bruno: 8,3 de 10 · 12 vizinhos'
-      const dot = canvas.getByRole('button', { name: hint })
+      const dot = canvas.getByRole('button', { name: BRUNO.label })
       await userEvent.hover(dot)
       const below = dot.getBoundingClientRect()
-      const popover = canvas.getByText(hint).getBoundingClientRect()
+      const popover = canvas.getByText(BRUNO.hint).getBoundingClientRect()
       await expect(popover.left).toBeCloseTo(below.left, 0)
       await expect(popover.top).toBeGreaterThanOrEqual(below.bottom)
       await expect(popover.top).toBeLessThan(below.bottom + 8)

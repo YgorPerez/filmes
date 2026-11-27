@@ -18,8 +18,8 @@ import { PriceSticker } from './kit/sticker'
 // is "Marcar de novo", quiet, since the new list comes in the chat below
 // (#277). A marked film keeps its place with a small TROCAR or JÁ VI tag
 // on its row until the list is redone. After a regenerate, a line says
-// what left and what came in, and each new film has the yellow dot (the
-// fullscreen says the same line). A Recomendação with no film says why and
+// what left and what came in (the fullscreen says the same line); no film
+// carries a "novo" mark (#326). A Recomendação with no film says why and
 // what to ask, with nothing to mark. A Session that has its Feedback takes
 // no marks: it says so, with the Filme escolhido and what each Presente
 // was predicted to give and gave, and the one action opens the whole
@@ -89,11 +89,6 @@ function InlineFilms({
             <span className="truncate font-display text-row-title">
               {film.title}
             </span>
-            {film.new && (
-              <span className="size-2 shrink-0 rounded-round bg-sticker-yellow ring-1 ring-on-sticker/40">
-                <span className="sr-only">{view.isNew}</span>
-              </span>
-            )}
             {(tags[film.id] ?? []).map((kind) => (
               <Tag key={kind} kind={kind} />
             ))}

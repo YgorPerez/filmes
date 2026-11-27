@@ -193,6 +193,42 @@ describe('cartaz responder (test_cartaz_responder)', () => {
   })
 })
 
+describe('cartaz responder: a Trocar that came from a Já vi (#326)', () => {
+  test('takes the film off as the Já vi does and goes in swapped', async () => {
+    const fixture = useFixture()
+    const { id, f } = await open(fixture, 'iara')
+
+    const out = await answer(
+      fixture,
+      id,
+      `#cartaz ${id} v1\n2 ${f[1]!.id} · já vi: iara · trocar: já vi\n`,
+    )
+
+    expect(out.dropped).toEqual([
+      expect.objectContaining({ id: f[1]!.id, cause: 'seen' }),
+    ])
+    expect(front(fixture, id)['swapped']).toEqual([f[1]!.id])
+  })
+
+  test('the Copiar text says it only with a Já vi on the line', () => {
+    const text = billboardText(
+      state('s', 1, ['bruno', 'iara'], '', [
+        {
+          position: 1,
+          id: 'tt1',
+          seen: ['iara'],
+          swap: true,
+          swapReason: 'seen',
+        },
+        { position: 2, id: 'tt2', swap: true, swapReason: 'seen' },
+      ]),
+    )
+    expect(text).toBe(
+      '#cartaz s v1\n1 tt1 · já vi: iara · trocar: já vi\n2 tt2 · trocar\n',
+    )
+  })
+})
+
 describe('cartaz responder (test_cartaz_responder)', () => {
   test('an old version’s text counts by film and ignores the Trocar of what left', async () => {
     const fixture = useFixture()

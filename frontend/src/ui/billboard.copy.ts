@@ -5,6 +5,12 @@ import { askedParts, isDuration } from './billboard-request'
 const plural = (n: number, one: string, many: string) =>
   `${n} ${n === 1 ? one : many}`
 
+/** Who backs a Nota prevista: "pela nota de 4 pessoas de gosto parecido". */
+const backedBy = (raters?: number) =>
+  raters === undefined
+    ? 'pela nota de pessoas de gosto parecido'
+    : `pela nota de ${plural(raters, 'pessoa', 'pessoas')} de gosto parecido`
+
 /** "a", "a e b", "a, b e c". */
 const andList = (items: readonly string[]) =>
   items.length <= 1
@@ -39,7 +45,6 @@ export const BILLBOARD = {
 
   card: {
     poster: (title: string) => `Capa de ${title}`,
-    isNew: 'novo',
     bet: 'aposta',
     betHint:
       'Aposta: pouca Evidência, mas quem tem gosto parecido deu nota alta',
@@ -49,23 +54,33 @@ export const BILLBOARD = {
         : `${rating} IMDb · ${votes} votos`,
     /** The link to the film's trailer on YouTube (#289). */
     trailer: 'trailer',
-    /** The hint of a Presente's dot: "Ana: 8,3 de 10 · 12 vizinhos", or
-     * "Ana: 8,3 de 10" when the version did not keep how many. */
-    predicted: (name: string, rating: string, raters?: number) =>
-      raters === undefined
-        ? `${name}: ${rating} de 10`
-        : `${name}: ${rating} de 10 · ${plural(raters, 'vizinho', 'vizinhos')}`,
+    /** The muted line under "Por que" with each Presente's Nota prevista
+     * (#326): "previsto · Ygor 8,3 · Iara 7,1". */
+    predicted: 'previsto',
+    /** A name's hint on that line: who backs the number. */
+    predictedHint: backedBy,
+    /** What a screen reader hears on a name of that line. */
+    predictedLabel: (name: string, rating: string, raters?: number) =>
+      `Nota prevista de ${name}: ${rating} de 10, ${backedBy(raters)}`,
     /** Who an Evidência is about, opening its line: "Ana e Bruno". */
     whose: (names: readonly string[]) => andList(names),
     why: 'Por que cada um vai gostar',
-    /** Every line of the card is the section's, said under its title. */
-    sectionWhy: 'Os motivos da seção, logo acima.',
+    /** The same block once the Session was told (#272). */
+    whyClosed: 'Por que estava na lista',
     withoutFact: (names: string) => `${names}: sem fato sobre este filme`,
     /** What the Dono gave it in this Session (#272). */
     notes: 'Você marcou',
     notesStars: (n: number) => `${n} de 5 estrelas`,
+    /** Beside the stars given, so they never read as a Nota (#272). */
+    notesStarsText: (n: number) => `${n} de 5`,
+    /** Once the Session takes marks, only her comments stay in this line:
+     * the stars are back in their controls (#272). */
+    notesComments: 'Você comentou',
     swapStamp: 'Trocar',
     seenStamp: 'Já vi',
+    /** Who marked Já vi, for a screen reader, when not every Presente did
+     * (#272): the stamp shows their initials. */
+    seenStampWho: (names: readonly string[]) => `Já vi: ${andList(names)}`,
   },
 
   section: {
@@ -85,6 +100,19 @@ export const BILLBOARD = {
     thoughtLabel: (who: string, n: number) =>
       `o que ${who} achou do filme ${n}`,
     swap: 'Trocar',
+    /** Why the Cartaz turned the Trocar on by itself (#326): "Trocar
+     * marcado: você já viu", "Trocar marcado: 2 estrelas". A null name is
+     * the Dono. */
+    swapWhy: (seen: readonly (string | null)[], stars: number | null) =>
+      `Trocar marcado: ${[
+        seen.length > 0 &&
+          `${andList(seen.map((name) => name ?? 'você'))} ${
+            seen.length === 1 ? 'já viu' : 'já viram'
+          }`,
+        stars !== null && plural(stars, 'estrela', 'estrelas'),
+      ]
+        .filter(Boolean)
+        .join(' · ')}`,
     stars: 'quanto animou',
     /** More than this many Presentes: their Já vi options open from one
      * "Já vi…" (#277). */
@@ -193,7 +221,6 @@ export const BILLBOARD = {
     chosen: 'Filme escolhido:',
     /** "v2" beside the label, from the second version on. */
     version: (n: number) => `v${n}`,
-    isNew: 'novo',
     /** What a regenerate changed, on the inline card: "Saiu: Cais 2
      * (trocado) · entrou: Fronteira". */
     changes: (
