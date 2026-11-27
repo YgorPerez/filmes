@@ -31,6 +31,7 @@ export const MODEL: Billboard = {
     speech: 'algo leve pra hoje',
     who: 'Vocês dois',
     parts: ['até 2h05', 'nota 7+ no IMDb', 'leve'],
+    unseen: false,
   },
   moods: ['leve'],
   moodChoices: ['leve', 'pra rir', 'tenso'],

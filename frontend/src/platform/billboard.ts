@@ -6,7 +6,7 @@
 // redone with the films that stay (`recommendSession` with `keep`, from the
 // request the current version asked, `sessionRedoRequest`, and the Climas
 // the reply chose). The page then shows the new version: the
-// kept films at their number, the new ones "novo", and "Saiu" with why.
+// kept films at their number, and on top how many left and came in.
 //
 // The acrescentar is read by the Leitura do pedido (#200) and what it
 // understood goes into the redo request (the engine's `ADDITION_FIELDS` and

@@ -1,8 +1,8 @@
-// One film of the Cartaz: with a poster and marks, a new bet without poster,
-// marked Trocar, and read-only once the Session has its Feedback; the dots
-// on the case with and without a Nota prevista, a hollow one with a number,
-// and six Presentes on the 112px case of a phone; the trailer link, and a
-// film without one.
+// One film of the Cartaz: with a poster and marks, a bet without poster,
+// marked Trocar, a Trocar the stars marked, and read-only once the Session
+// has its Feedback; the Nota prevista line under "Por que", without one,
+// with a Presente without a Fato, and six Presentes on a phone; the
+// trailer link, and a film without one.
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
 import { expect, userEvent, within } from 'storybook/test'
@@ -38,6 +38,7 @@ const NO_MARKS: FilmMarks = {
   ratings: {},
   thoughts: {},
   swap: false,
+  swapWhy: null,
   stars: 0,
   comment: '',
 }
@@ -67,31 +68,42 @@ export const WithMarks: Story = {
   },
 }
 
-export const NewBet: Story = {
+export const Bet: Story = {
   args: { film: BET!, first: false },
   render: (args) => <Marked {...args} />,
 }
 
 export const Swapped: Story = {
-  args: { marks: { ...NO_MARKS, swap: true } },
+  args: { marks: { ...NO_MARKS, swap: true, swapWhy: 'owner' } },
   render: (args) => <Marked {...args} />,
 }
 
-/** Bruno has a Nota prevista, Iara none. */
-/** Bruno has a Nota prevista, Iara none; a tap on his dot opens its hint
+/** 2 stars turned the Trocar on, and the line under the buttons says why
+ * (#326). */
+export const SwappedByStars: Story = {
+  args: { marks: { ...NO_MARKS, swap: true, swapWhy: 'stars', stars: 2 } },
+  render: (args) => <Marked {...args} />,
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByText('Trocar marcado: 2 estrelas'),
+    ).toBeVisible()
+  },
+}
+
+/** Bruno has a Nota prevista, Iara none; a tap on his name opens its hint
  * under it. */
 export const ReadOnly: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    const hint = 'Bruno: 8,3 de 10 · 12 vizinhos'
-    const dot = canvas.getByRole('button', { name: hint })
+    const hint = 'pela nota de 12 pessoas de gosto parecido'
+    const name = canvas.getByRole('button', { name: `Bruno: ${hint}` })
     await expect(canvas.getByText(hint)).not.toBeVisible()
-    await userEvent.click(dot)
+    await userEvent.click(name)
     const popover = canvas.getByText(hint)
     await expect(popover).toBeVisible()
     const box = popover.getBoundingClientRect()
     await expect(box.top).toBeGreaterThanOrEqual(
-      dot.getBoundingClientRect().bottom,
+      name.getBoundingClientRect().bottom,
     )
     await expect(box.left).toBeGreaterThanOrEqual(0)
     await expect(box.right).toBeLessThanOrEqual(window.innerWidth)
@@ -159,14 +171,12 @@ export const WithoutTrailer: Story = {
 export const WithoutPredictedRating: Story = {
   args: { film: { ...FILM, predictedRatings: [] } },
   play: async ({ canvasElement }) => {
-    await expect(
-      within(canvasElement).queryByRole('button', { name: /vizinho/ }),
-    ).toBeNull()
+    await expect(within(canvasElement).queryByText(/^previsto/)).toBeNull()
   },
 }
 
-/** Iara has no Fato but has a Nota prevista: a hollow dot with a number. */
-export const HollowWithNumber: Story = {
+/** Iara has no Fato but has a Nota prevista: she is in the line too. */
+export const WithoutFactWithPrediction: Story = {
   args: {
     film: {
       ...BET!,
@@ -179,7 +189,9 @@ export const HollowWithNumber: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(
-      canvas.getByRole('button', { name: 'Iara: 6,9 de 10 · 1 vizinho' }),
+      canvas.getByRole('button', {
+        name: 'Iara: pela nota de 1 pessoa de gosto parecido',
+      }),
     ).toBeVisible()
     await expect(
       canvas.getByText('Iara: sem fato sobre este filme'),
@@ -187,8 +199,8 @@ export const HollowWithNumber: Story = {
   },
 }
 
-/** Six Presentes, five with a Nota prevista (one of them a 10,0): the dots
- * wrap inside the case and none spills out of it. */
+/** Six Presentes, five with a Nota prevista (one of them a 10,0): the line
+ * wraps inside the card and none spills out of it. */
 export const ManyPresentes: Story = {
   args: {
     people: SIX,
@@ -207,16 +219,13 @@ export const ManyPresentes: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    const dots = canvas.getAllByRole('button', { name: /vizinho/ })
-    await expect(dots).toHaveLength(5)
-    // The link fills the cover, which sits in the case.
-    const cover = canvas.getByRole('link', { name: /^Capa/ })
-    const tape = cover.parentElement!.parentElement!.getBoundingClientRect()
-    for (const dot of dots) {
-      const box = dot.getBoundingClientRect()
-      await expect(box.left).toBeGreaterThanOrEqual(tape.left)
-      await expect(box.right).toBeLessThanOrEqual(tape.right)
-      await expect(box.bottom).toBeLessThanOrEqual(tape.bottom)
+    const names = canvas.getAllByRole('button', { name: /gosto parecido/ })
+    await expect(names).toHaveLength(5)
+    const card = canvasElement.querySelector('article')!.getBoundingClientRect()
+    for (const name of names) {
+      const box = name.getBoundingClientRect()
+      await expect(box.left).toBeGreaterThanOrEqual(card.left)
+      await expect(box.right).toBeLessThanOrEqual(card.right)
     }
   },
 }

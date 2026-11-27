@@ -80,7 +80,7 @@ it('before any Voto, lists the films and asks for every Voto', () => {
 it('after her Votos, marks them, names what left and asks only for the newcomer', () => {
   render(<LinkFilms view={VOTED} vote={VOTE} questions="/perguntas" />)
   expect(screen.getAllByText(PARTICIPATION.mine('yes'))).toHaveLength(2)
-  expect(screen.getByText(PARTICIPATION.isNew)).toBeTruthy()
+  expect(screen.queryByText('Novo')).toBeNull()
   expect(
     screen.getByText(`${PARTICIPATION.left}: Sal e Ferrugem.`),
   ).toBeTruthy()
