@@ -32,7 +32,10 @@ describe('billboard', () => {
     })
 
     assert.equal(refused.code, 'unknown_session')
-    assert.equal(refused.message, "não há Sessão '2026-01-01-ninguem' em sessions")
+    assert.equal(
+      refused.message,
+      "não há Sessão '2026-01-01-ninguem' em sessions",
+    )
   })
 
   test('a card carries the trailer link TMDB gives, and no other has one', async () => {

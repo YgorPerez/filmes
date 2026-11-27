@@ -97,9 +97,7 @@ const storedRequest = (front: YamlMapping): string | null => {
   const context = front.get('context')
   const request =
     pyTruthy(context) && isMapping(context) ? context.get('request') : undefined
-  return request !== undefined && pyTruthy(request)
-    ? pyStrValue(request)
-    : null
+  return request !== undefined && pyTruthy(request) ? pyStrValue(request) : null
 }
 
 const storedIn = (front: YamlMapping): ReadonlyArray<StoredConstraint> => {
