@@ -47,10 +47,26 @@ describe('Credits', () => {
     expect(letterboxd.getByText(CREDIT_USES.Letterboxd)).toBeTruthy()
   })
 
-  it('leads back home from the bar', () => {
+  it('names TMDB once, by its logo', () => {
     render(<Credits credits={LIST} />)
+    const heading = screen.getByRole('heading', { level: 2, name: 'TMDB' })
+    expect(heading.textContent).toBe('')
+  })
+
+  it('makes each address in a notice a link, keeping the words', () => {
+    const notice =
+      'Information courtesy of IMDb (https://www.imdb.com). Used with permission.'
+    render(
+      <Credits
+        credits={[{ source: 'IMDb', url: 'https://www.imdb.com', notice }]}
+      />,
+    )
+    const paragraph = screen.getByText(/Information courtesy/)
+    expect(paragraph.textContent).toBe(notice)
     expect(
-      screen.getByRole('link', { name: CREDITS_PAGE.home }),
-    ).toHaveProperty('pathname', '/')
+      within(paragraph)
+        .getAllByRole('link')
+        .map((a) => a.getAttribute('href')),
+    ).toEqual(['https://www.imdb.com'])
   })
 })
