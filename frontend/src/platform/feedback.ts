@@ -226,7 +226,7 @@ const REPORT_VALUES = {
 } as const
 
 /** What was told, as the form's fields hold it. */
-export function toldDraft(told: ToldFeedback): FeedbackDraft {
+function toldDraft(told: ToldFeedback): FeedbackDraft {
   return Object.fromEntries(
     told.reactions.map((r) => [
       r.person,
