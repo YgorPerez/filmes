@@ -155,16 +155,29 @@ describe('parseAction', () => {
 
 /** A `People` whose every action answers `outcome`. */
 function fakePeople(
-  outcome: Outcome<'gravado'> = { exitCode: 0, output: 'gravado' },
+  outcome: Outcome<'gravado' | 'removida'> = { exitCode: 0, output: 'gravado' },
 ) {
   const acted: { person: string; action: PersonAction; owner: Owner }[] = []
   const created: { input: NewPersonForm; owner: Owner }[] = []
   const people: People = {
     list: async () => ({
       exitCode: 0,
-      output: [{ person: 'bruno', name: 'Bruno', aliases: [], owner: true }],
+      output: [
+        {
+          person: 'bruno',
+          name: 'Bruno',
+          aliases: [],
+          owner: true,
+          ratings: 11,
+          vetoes: 0,
+        },
+      ],
     }),
     view: async () => failure('unknown_person'),
+    sessions: async () => ({
+      exitCode: 0,
+      output: { total: 0, recent: [], satisfaction: null },
+    }),
     tagGroups: async () => ({ exitCode: 0, output: [] }),
     email: async () => ({ exitCode: 0, output: null }),
     act: async (person, action, owner) => {
@@ -201,7 +214,10 @@ describe('personAction', () => {
       ORIGIN,
     )
     expect(response.status).toBe(303)
-    expect(response.headers.get('Location')).toBe('/pessoas/iara?feito=gravado')
+    // Back to the ficha that posted (#273): the query and the fragment.
+    expect(response.headers.get('Location')).toBe(
+      '/pessoas/iara?feito=gravado&em=vetos#vetos',
+    )
     expect(acted).toEqual([
       {
         person: 'iara',
@@ -254,17 +270,62 @@ describe('personAction', () => {
       people,
       ORIGIN,
     )
-    expect(response.headers.get('Location')).toBe('/pessoas/iara?erro=pedido')
+    // The field it lacks, for the page to mark without the JavaScript.
+    expect(response.headers.get('Location')).toBe(
+      '/pessoas/iara?erro=pedido&campo=alvo%3Atarget&em=vetos#vetos',
+    )
     expect(acted).toEqual([])
   })
 
+  it('names the field a form without the JavaScript lacked', async () => {
+    const { people, acted } = fakePeople()
+    const response = await personAction(
+      post({ acao: 'vetar', texto: 'x', alvo: '', grupo: '' }),
+      'iara',
+      BRUNO,
+      people,
+      ORIGIN,
+    )
+    expect(response.headers.get('Location')).toBe(
+      '/pessoas/iara?erro=pedido&campo=alvo%3Atarget&em=vetos#vetos',
+    )
+    expect(acted).toEqual([])
+  })
+
+  it('goes back to the Ajuste that changed', async () => {
+    const { people } = fakePeople()
+    const response = await personAction(
+      post({ acao: 'ajustar', elo: 'cast', nivel: 'low' }),
+      'iara',
+      BRUNO,
+      people,
+      ORIGIN,
+    )
+    expect(response.headers.get('Location')).toBe(
+      '/pessoas/iara?feito=gravado&em=ajuste-cast#ajuste-cast',
+    )
+  })
+
+  it('goes to the list once she was taken out', async () => {
+    const { people, acted } = fakePeople({ exitCode: 0, output: 'removida' })
+    const response = await personAction(
+      post({ acao: 'remover-pessoa' }),
+      'iara',
+      BRUNO,
+      people,
+      ORIGIN,
+    )
+    expect(response.headers.get('Location')).toBe('/pessoas?feito=removida')
+    expect(acted.map((a) => a.action)).toEqual([{ kind: 'delete' }])
+  })
+
   it.each<[ErrorCode, string]>([
-    ['unknown_target', '/pessoas/iara?erro=alvo'],
-    ['invalid_usage', '/pessoas/iara?erro=pedido'],
-    ['unknown_veto', '/pessoas/iara?erro=item'],
-    ['ambiguous_stated', '/pessoas/iara?erro=item'],
+    ['unknown_target', '/pessoas/iara?erro=alvo&em=vetos#vetos'],
+    ['invalid_usage', '/pessoas/iara?erro=pedido&em=vetos#vetos'],
+    ['unknown_veto', '/pessoas/iara?erro=item&em=vetos#vetos'],
+    ['ambiguous_stated', '/pessoas/iara?erro=item&em=vetos#vetos'],
     ['unknown_person', '/pessoas?erro=pessoa'],
-    ['missing_database', '/pessoas/iara?erro=falha'],
+    ['missing_database', '/pessoas/iara?erro=falha&em=vetos#vetos'],
   ])('says why the engine refused: %s', async (code, location) => {
     const log = vi.spyOn(console, 'error').mockImplementation(() => {})
     const { people } = fakePeople(failure(code))
@@ -386,7 +447,14 @@ describe('the pages', () => {
   it('lists the Pessoas, or null when the engine cannot run', async () => {
     const { people } = fakePeople()
     expect(await peopleList(people)).toEqual([
-      { person: 'bruno', name: 'Bruno', aliases: [], owner: true },
+      {
+        person: 'bruno',
+        name: 'Bruno',
+        aliases: [],
+        owner: true,
+        ratings: 11,
+        vetoes: 0,
+      },
     ])
     const log = vi.spyOn(console, 'error').mockImplementation(() => {})
     expect(
@@ -457,6 +525,8 @@ describe('peopleFromEngine', () => {
         name: 'Bruno',
         aliases: ['eu'],
         owner: true,
+        ratings: 11,
+        vetoes: 0,
       })
       const page = await personPage('quim', people, BRUNO)
       if (page === null || page === 'unknown') throw new Error(String(page))
@@ -464,6 +534,12 @@ describe('peopleFromEngine', () => {
       expect(page.ratings?.length).toBe(4)
       expect(page.tagGroups.map((g) => g.key)).toEqual(['silly_comedy', 'slow'])
       expect(page).not.toHaveProperty('imports')
+      expect(page.imported).toBe(false)
+      expect(page.sessions).toEqual({
+        total: 0,
+        recent: [],
+        satisfaction: null,
+      })
       expect(page.viewer).toEqual({
         person: 'bruno',
         name: 'Bruno',
@@ -752,7 +828,7 @@ describe('access (#166)', () => {
           acao: 'dar-acesso',
           email: 'Quim@Example.org',
         }),
-      ).toBe('/pessoas/quim?feito=acesso-dado')
+      ).toBe('/pessoas/quim?feito=acesso-dado&em=acesso#acesso')
       expect(owners.ownerByEmail('quim@example.org')).toEqual({
         person: 'quim',
         name: 'Quim',
@@ -773,11 +849,13 @@ describe('access (#166)', () => {
       const grant = (person: string, email: string) =>
         send(ADMIN, person, { acao: 'dar-acesso', email })
       expect(await grant('quim', 'VERA@example.org')).toBe(
-        '/pessoas/quim?erro=email-usado',
+        '/pessoas/quim?erro=email-usado&em=acesso#acesso',
       )
-      expect(await grant('quim', 'quim@x')).toBe('/pessoas/quim?erro=email')
+      expect(await grant('quim', 'quim@x')).toBe(
+        '/pessoas/quim?erro=email&em=acesso#acesso',
+      )
       expect(await grant('vera', 'v@example.org')).toBe(
-        '/pessoas/vera?erro=ja-dono',
+        '/pessoas/vera?erro=ja-dono&em=acesso#acesso',
       )
       expect(owners.ownerByEmail('quim@x')).toBeNull()
       expect(owners.ownerByEmail('v@example.org')).toBeNull()
@@ -807,11 +885,11 @@ describe('access (#166)', () => {
     const { engine, people, send, owners } = useAccessForm()
     try {
       expect(await send(ADMIN, 'bruno', { acao: 'tirar-acesso' })).toBe(
-        '/meu-gosto?erro=proprio-acesso',
+        '/meu-gosto?erro=proprio-acesso&em=acesso#acesso',
       )
       expect(owners.ownerByEmail('bruno@example.org')?.person).toBe('bruno')
       expect(await send(ADMIN, 'vera', { acao: 'tirar-acesso' })).toBe(
-        '/pessoas/vera?feito=acesso-tirado',
+        '/pessoas/vera?feito=acesso-tirado&em=acesso#acesso',
       )
       expect(owners.ownerByEmail('vera@example.org')).toBeNull()
       const page = await personPage('vera', people, ADMIN)

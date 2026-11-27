@@ -38,7 +38,10 @@ const TITLES: Record<string, string | ((data: unknown) => string | null)> = {
   '/_owner/sessoes/$sessao/contar': 'Contar como foi',
   '/_owner/pessoas/': 'Pessoas',
   '/_owner/pessoas/$pessoa/': (data) => text(read(data, 'page', 'name')),
-  '/_owner/pessoas/$pessoa/importar': 'Importar',
+  '/_owner/pessoas/$pessoa/importar': (data) => {
+    const name = text(read(data, 'name'))
+    return name && `Importar para ${name}`
+  },
   '/_owner/meu-gosto/': 'Meu gosto',
   '/_owner/meu-gosto/notas': 'Dar notas',
   '/_owner/meu-gosto/importar': 'Importar',

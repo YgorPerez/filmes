@@ -33,10 +33,75 @@ export const PERSON = {
       ask: 'pedir um filme para hoje',
     },
   },
-  /** The fold of the fichas with nothing yet: "Vetos e Declarados: nada
-   * ainda". */
+  /** The fold of the fichas with nothing yet: "Ainda sem Declarados e Já
+   * vistos sem Nota · Acrescentar". */
   empties: (titles: readonly string[]) =>
-    `${titles.length === 1 ? titles[0] : `${titles.slice(0, -1).join(', ')} e ${titles.at(-1)}`}: nada ainda`,
+    `Ainda sem ${listed(titles)} · Acrescentar`,
+  /** Another Pessoa's page under her name (#273): how much the filmes knows
+   * of her, and the one thing to do next. */
+  summary: {
+    notes: (n: number) =>
+      n === 1 ? '1 Nota' : `${n.toLocaleString('pt-BR')} Notas`,
+    vetoes: (n: number) => (n === 1 ? '1 Veto' : `${n} Vetos`),
+    questions: (n: number) =>
+      n === 1 ? '1 pergunta aberta' : `${n} perguntas abertas`,
+    sessions: (n: number) => (n === 1 ? '1 Sessão' : `${n} Sessões`),
+    unknown: 'falta conhecer',
+    next: 'Próximo passo',
+    steps: {
+      import: (name: string) => `trazer o histórico de ${name}`,
+      questions: (n: number) =>
+        n === 1
+          ? 'responder a pergunta aberta'
+          : 'responder as perguntas abertas',
+      veto: (name: string) => `dizer o que ${name} não vê de jeito nenhum`,
+    },
+  },
+  /** The fold of what fine-tunes her taste: Ajustes, Declarados, Relatos,
+   * Acesso. */
+  refine: (titles: readonly string[]) => `Afinar: ${listed(titles)}`,
+  sessions: {
+    title: (name: string) => `Sessões com ${name}`,
+    /** Her Satisfação in words: the mean of her reactions, 0 to 1. */
+    satisfaction: (name: string, value: number, n: number) => {
+      const how =
+        value >= 0.75
+          ? 'tem saído contente'
+          : value >= 0.5
+            ? 'tem saído mais ou menos'
+            : 'tem saído sem gostar muito'
+      const of = n === 1 ? 'da última Sessão' : `das últimas ${n} Sessões`
+      return `${name} ${how} ${of} em que disse o que achou.`
+    },
+    noReaction: (name: string) =>
+      `${name} ainda não disse o que achou de nenhuma.`,
+    /** Her reaction to one Session's film, in words. */
+    reaction: (value: number | null) =>
+      value === null
+        ? 'sem reação'
+        : value >= 0.75
+          ? 'gostou'
+          : value >= 0.45
+            ? 'mais ou menos'
+            : 'não gostou',
+    nothingChosen: 'sem filme escolhido',
+  },
+  removePerson: {
+    title: 'Remover Pessoa',
+    lead: (name: string) =>
+      `Para quem entrou por engano: o arquivo de ${name} sai.`,
+    open: (name: string) => `Remover ${name}`,
+    warning: (name: string) =>
+      `${name} sai das Pessoas, com os Vetos, os Declarados e as Notas dadas aqui. Não dá para desfazer.`,
+    confirm: (name: string) => `Remover ${name} de vez`,
+    busy: 'Removendo…',
+    owner: (name: string) =>
+      `${name} entra no site: tire o acesso antes de remover.`,
+    sessions: (name: string, n: number) =>
+      `${name} está em ${n === 1 ? '1 Sessão' : `${n} Sessões`}: o arquivo fica, para elas continuarem lendo o gosto.`,
+    imported: (name: string) =>
+      `${name} tem histórico importado: tire as importações antes de remover.`,
+  },
   notes: {
     title: 'Notas',
     predictionError: (error: number, films: number) => {
@@ -46,21 +111,26 @@ export const PERSON = {
     },
     rate: 'Dar notas',
     import: 'Importar do Letterboxd, do Trakt, do IMDb ou do Simkl',
+    more: 'Baixar as Notas em CSV',
     download: 'Baixar CSV do IMDb',
     downloadLetterboxd: 'Baixar CSV do Letterboxd',
     movielens:
-      'O CSV do IMDb entra no MovieLens em Import or Export Data, como avaliações do IMDb. O do Letterboxd leva as Notas e os Já vistos ao diário dela, pelo import de dados do Letterboxd.',
+      'O CSV do IMDb entra no MovieLens em Import or Export Data, como avaliações do IMDb. O do Letterboxd leva as Notas e os Já vistos ao diário no Letterboxd, pelo import de dados de lá.',
     list: (n: number) => (n === 1 ? 'Ver a Nota' : `Ver as ${n} Notas`),
-    empty: (own: boolean) =>
+    empty: (own: boolean, name: string) =>
       own
         ? 'Nenhuma Nota ainda. Dê nota a filmes que você já viu, ou traga o seu histórico.'
-        : 'Nenhuma Nota ainda. Traga o histórico dela do Letterboxd, do Trakt, do IMDb ou do Simkl.',
+        : `Nenhuma Nota ainda. Traga o histórico de ${name} do Letterboxd, do Trakt, do IMDb ou do Simkl.`,
     noDatabase: 'As Notas aparecem depois que o banco for reconstruído.',
   },
   contents: 'Nesta página',
   owner: 'Dono',
   aliases: (aliases: readonly string[]) => `também ${aliases.join(', ')}`,
-  unknown: 'Nenhuma Pessoa com esse nome no repo de dados.',
+  unknown: {
+    title: 'Pessoa não encontrada',
+    lead: 'Ninguém com esse nome nas Pessoas. O endereço pode ter mudado, ou a Pessoa foi removida.',
+    back: 'Ver as Pessoas',
+  },
   unavailable:
     'Não deu para abrir a Pessoa: o site está com um problema, e ele ficou registrado no log do servidor.',
   remove: 'Tirar',
@@ -75,59 +145,79 @@ export const PERSON = {
     gravado: 'Gravado no seu arquivo.',
     removido: 'Tirado do seu arquivo.',
   } satisfies Partial<Record<PersonNotice, string>>,
-  notices: {
-    gravado: 'Gravado no arquivo dela.',
-    igual: 'Já estava assim: nada mudou.',
-    ajustado: 'Ajuste gravado.',
-    removido: 'Tirado do arquivo dela.',
-    pulada: 'Pergunta pulada: ela volta uma vez, quando o assunto aparecer.',
-    saiu: 'Pulada duas vezes: a pergunta saiu da lista.',
-    respondida: 'Resposta gravada como Declarado; a pergunta saiu da lista.',
-    criada: 'Pessoa criada. Conte o gosto dela aqui.',
-    'acesso-dado':
-      'Acesso dado: ela já entra no site e no conector com esse e-mail.',
-    'acesso-tirado':
-      'Acesso tirado: ela não entra mais. O gosto dela continua aqui.',
-  } satisfies Record<PersonNotice, string>,
-  refusals: {
-    alvo: 'Esse ID não está no Catálogo. Confira o tt… do filme ou o Q… da entidade.',
-    pedido:
-      'Faltou um campo, ou um valor não vale: confira o texto, o alvo (tt… ou Q…) e a Nota de 1 a 10.',
-    item: 'Esse item já não está no arquivo dela.',
-    email: 'Para entrar, ela precisa de um e-mail do Google válido.',
-    'email-usado': 'Esse e-mail já é de outra Pessoa.',
-    'ja-dono': 'Ela já tem acesso. Para trocar o e-mail, tire o acesso antes.',
-    'proprio-acesso': 'O seu próprio acesso não sai por aqui.',
-    exportar: 'Não deu para gerar o CSV agora. Tente de novo daqui a pouco.',
-    indisponivel: 'Não deu para gravar agora. Tente de novo daqui a pouco.',
-    falha:
-      'O site está com um problema, e ele ficou registrado no log do servidor. Tentar de novo não resolve.',
-  } satisfies Record<PersonRefusal, string>,
+  /** What the last form did, by her name (#273): every Pessoa is not
+   * "ela". */
+  notices: (name: string) =>
+    ({
+      gravado: `Gravado no arquivo de ${name}.`,
+      igual: 'Já estava assim: nada mudou.',
+      ajustado: 'gravado',
+      removido: `Tirado do arquivo de ${name}.`,
+      pulada: 'Pergunta pulada: ela volta uma vez, quando o assunto aparecer.',
+      saiu: 'Pulada duas vezes: a pergunta saiu da lista.',
+      respondida: 'Resposta gravada como Declarado; a pergunta saiu da lista.',
+      criada: `Pessoa criada. Conte aqui o gosto de ${name}.`,
+      'acesso-dado': `Acesso dado: ${name} já entra no site e no conector com esse e-mail.`,
+      'acesso-tirado': `Acesso tirado: ${name} não entra mais. O gosto continua aqui.`,
+      removida: 'Pessoa removida.',
+    }) satisfies Record<PersonNotice, string>,
+  refusals: (name: string) =>
+    ({
+      alvo: 'Esse filme ou nome não está no Catálogo. Busque de novo e escolha um resultado.',
+      pedido:
+        'Faltou um campo, ou um valor não vale: confira o texto, o alvo e a Nota de 1 a 10.',
+      item: `Esse item já não está no arquivo de ${name}.`,
+      email: `Para entrar, ${name} precisa de um e-mail do Google válido.`,
+      'email-usado': 'Esse e-mail já é de outra Pessoa.',
+      'ja-dono': `${name} já tem acesso. Para trocar o e-mail, tire o acesso antes.`,
+      'proprio-acesso': 'O seu próprio acesso não sai por aqui.',
+      'e-dono': `${name} entra no site: tire o acesso antes de remover.`,
+      'tem-import': `${name} tem histórico importado: tire as importações antes de remover.`,
+      'em-sessao': `${name} está numa Sessão: o arquivo fica, para ela continuar lendo o gosto.`,
+      exportar: 'Não deu para gerar o CSV agora. Tente de novo daqui a pouco.',
+      indisponivel: 'Não deu para gravar agora. Tente de novo daqui a pouco.',
+      falha:
+        'O site está com um problema, e ele ficou registrado no log do servidor. Tentar de novo não resolve.',
+    }) satisfies Record<PersonRefusal, string>,
 
   // Fields.
   text: 'O que foi dito',
-  target: 'Alvo',
-  targetHint: 'opcional: tt… de um filme ou Q… de uma entidade do Catálogo',
-  idHint: 'tt… de um filme ou Q… de uma entidade do Catálogo',
-  reaction: 'Reação ao alvo',
-  noReaction: 'só sobre',
+  /** The target's field (#273): a search, not an ID to paste. */
+  target: 'Diga o quê: um filme, uma pessoa, um gênero ou um grupo',
+  statementTarget: 'Sobre o quê',
+  targetHint: 'opcional: um filme, uma pessoa, um gênero ou uma série',
+  targetSearch: 'Busque pelo nome',
+  /** Before the JavaScript, the field takes the ID. */
+  idHint: 'tt… de um filme ou Q… de uma pessoa, gênero ou série',
+  groupsLabel: 'ou um grupo',
+  targetChip: (label: string, kind: string) => `${label} · ${kind}`,
+  film: 'Filme',
+  filmKind: 'filme',
+  clearTarget: (label: string) => `Trocar ${label}`,
+  reaction: 'Reação',
+  noReaction: 'só menciona',
   source: 'Fonte',
   sourceHint: (fallback: string) => `opcional; sem ela, “${fallback}”`,
-  film: 'Filme',
   filmHint: 'tt… do Catálogo',
   rating: 'Nota',
   noRating: 'sem Nota',
-  group: 'Grupo de tags',
-  noGroup: 'nenhum: filme ou entidade pelo ID',
+  noGroup: 'nenhum',
 
   questions: {
     title: 'Perguntas abertas',
     empty: 'Nenhuma pergunta aberta.',
     skips: (n: number) => (n === 1 ? 'pulada 1 vez' : `pulada ${n} vezes`),
-    answer: 'Responder',
-    answerText: 'A resposta dela',
+    answer: 'Responder com palavras',
+    answerText: (name: string) => `A resposta de ${name}`,
     skip: 'Pular',
     skipping: 'Pulando…',
+    /** One tap answers (#273): what she said, as the Declarado's text. */
+    likes: 'Curte',
+    dislikes: 'Não curte',
+    likesText: (about: string | null) =>
+      about === null ? 'curte' : `curte ${about}`,
+    dislikesText: (about: string | null) =>
+      about === null ? 'não curte' : `não curte ${about}`,
   },
   vetoes: {
     title: 'Vetos',
@@ -138,17 +228,23 @@ export const PERSON = {
   },
   adjustments: {
     title: 'Ajustes',
-    lead: 'Quanto cada elo entre filmes pesa para ela. O que ela disse sobre um nome continua valendo.',
+    lead: (name: string) =>
+      `Quanto cada elo entre filmes pesa para ${name}. O que foi dito sobre um nome continua valendo.`,
     ownLead:
       'Quanto cada elo entre filmes pesa para você. O que você disse sobre um nome continua valendo.',
+    /** What each level does, one line (#273). */
+    levelsHint:
+      'nada: o elo não conta · pouco: conta metade · muito: conta uma vez e meia',
+    changed: (n: number) =>
+      n === 1 ? '1 fora do normal' : `${n} fora do normal`,
+    noneChanged: 'todos normais',
+    saved: 'gravado',
     level: (link: string) => `Ajuste de ${link}`,
     change: 'Mudar',
-    allNormal: 'Todos no normal: mudar',
-    restNormal: 'Os outros no normal: mudar',
   },
   stated: {
     title: 'Declarados',
-    lead: 'O que ela disse do próprio gosto.',
+    lead: (name: string) => `O que ${name} disse do próprio gosto.`,
     ownLead: 'O que você disse do seu gosto.',
     empty: 'Nenhum Declarado.',
     add: 'Acrescentar Declarado',
@@ -156,21 +252,22 @@ export const PERSON = {
   },
   reports: {
     title: 'Relatos',
-    lead: 'O que o Dono contou do gosto dela.',
+    lead: (name: string) => `O que um Dono contou do gosto de ${name}.`,
     ownLead: 'O que outro Dono contou do seu gosto.',
     empty: 'Nenhum Relato.',
     add: 'Acrescentar Relato',
     source: reportSource,
   },
   seen: {
-    title: 'Já vistos',
-    empty: 'Nenhum Já visto dito na conversa.',
+    title: 'Já vistos sem Nota',
+    empty: 'Nenhum Já visto sem Nota: os filmes com Nota estão nas Notas.',
     add: 'Acrescentar Já visto',
     source: 'conversa com o Dono',
   },
   access: {
     title: 'Acesso',
-    lead: 'Com acesso, ela vira Dono: entra no site e no conector do Claude com o e-mail do Google e vê tudo da casa.',
+    lead: (name: string) =>
+      `Com acesso, ${name} vira Dono: entra no site e no conector do Claude com o e-mail do Google e vê tudo da casa.`,
     none: 'Sem acesso.',
     owner: (email: string | null) =>
       email === null ? 'Tem acesso.' : `Entra com ${email}.`,
@@ -178,8 +275,10 @@ export const PERSON = {
     grant: 'Dar acesso',
     testUsers: PEOPLE.create.testUsers,
     revoke: 'Tirar acesso',
-    revokeHint:
-      'O próximo pedido dela, no site ou no conector, já é recusado. O gosto dela fica.',
+    revokeWarning: (name: string) =>
+      `${name} não entra mais no site nem no Claude. O gosto fica.`,
+    revokeConfirm: (name: string) => `Tirar o acesso de ${name}`,
+    revoking: 'Tirando…',
   },
 
   links: {
@@ -224,13 +323,16 @@ export const PERSON = {
   /** What is wrong with a field, under it (`formProblem`). */
   fieldProblem: ({ field, problem }: { field: string; problem: string }) => {
     if (problem === 'rating') return 'A Nota vai de 1 a 10.'
-    if (problem === 'film') return 'O filme é o tt… dele no Catálogo.'
+    if (problem === 'film')
+      return field === 'filme'
+        ? 'Falta o filme: busque pelo título e escolha um resultado.'
+        : 'O filme é o tt… dele no Catálogo.'
     if (problem === 'id')
-      return 'O alvo é um ID do Catálogo: tt… de um filme ou Q… de uma pessoa, gênero ou série.'
+      return 'Busque pelo nome e escolha um resultado do Catálogo.'
     if (problem === 'target')
-      return 'Falta o alvo: um filme ou uma entidade pelo ID (tt… ou Q…), ou um grupo de tags.'
+      return 'Falta o alvo: um filme, uma pessoa, um gênero ou um grupo.'
     if (problem === 'reaction')
-      return 'Uma reação precisa de um alvo: diga o ID (tt… ou Q…) a que ela reage.'
+      return 'Uma reação precisa de um alvo: diga sobre o quê.'
     return REQUIRED[field] ?? 'Falta preencher este campo.'
   },
 } as const
@@ -239,10 +341,16 @@ export const PERSON = {
 const tenScale = (rating: number) =>
   String(Math.round(rating * 20) / 10).replace('.', ',')
 
+/** "Vetos, Declarados e Relatos". */
+const listed = (titles: readonly string[]) =>
+  titles.length === 1
+    ? (titles[0] ?? '')
+    : `${titles.slice(0, -1).join(', ')} e ${titles.at(-1)}`
+
 const REQUIRED: Record<string, string> = {
   texto: 'Falta o texto: o que foi dito.',
-  filme: 'Falta o filme: o tt… dele no Catálogo.',
-  email: 'Falta o e-mail do Google dela.',
+  filme: 'Falta o filme: busque pelo título e escolha um resultado.',
+  email: 'Falta o e-mail do Google.',
 }
 
 /** The Notas a form offers, from 10 to 1, as the forms post them. */
