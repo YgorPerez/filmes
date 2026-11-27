@@ -136,10 +136,11 @@ function Fold({
 }) {
   return (
     <details
-      className="group border-t border-dashed border-rule pt-sm"
+      // Named: the import page's "Importar de novo" around it is a `group`.
+      className="group/fold border-t border-dashed border-rule pt-sm"
       open={open}
     >
-      <summary className="inline-flex min-h-touch cursor-pointer list-none items-center text-link text-ink-2 underline underline-offset-3 group-open:mb-md group-open:text-ink [&::-webkit-details-marker]:hidden">
+      <summary className="inline-flex min-h-touch cursor-pointer list-none items-center text-link text-ink-2 underline underline-offset-3 group-open/fold:mb-md group-open/fold:text-ink [&::-webkit-details-marker]:hidden">
         {summary}
       </summary>
       {children}

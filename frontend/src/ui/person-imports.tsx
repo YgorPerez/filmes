@@ -849,14 +849,16 @@ function ServiceGuides() {
           key={service}
           className="border-rule not-first:border-t not-first:border-dashed"
         >
-          <details className="group">
+          {/* A named group: the fold of "Importar de novo" around it is a
+              `group` too, and opens every + at once otherwise. */}
+          <details className="group/guide">
             <summary className="flex min-h-touch cursor-pointer list-none items-center justify-between gap-md font-display text-row-title [&::-webkit-details-marker]:hidden">
               {other.how(service)}
               {/* The drawn + of the flow's folds, a × while open (#274):
                   the → is for links that leave the page. */}
               <Icon
                 name="plus"
-                className="size-[18px] shrink-0 text-ink-2 transition-[rotate] group-open:rotate-45 motion-reduce:transition-none"
+                className="size-[18px] shrink-0 text-ink-2 transition-[rotate] group-open/guide:rotate-45 motion-reduce:transition-none"
               />
             </summary>
             <ol className="flex list-decimal flex-col gap-2xs pb-md pl-3xl text-evidence">
@@ -939,8 +941,10 @@ function Rss({
           </>
         )}
       </ImportForm>
-      <details className="group" open={refused !== undefined}>
-        <summary className="inline-flex min-h-touch cursor-pointer list-none items-center text-link text-ink-2 underline underline-offset-3 group-open:hidden [&::-webkit-details-marker]:hidden">
+      {/* Named: inside "Importar de novo", a bare `group` would hide this
+          link as soon as that fold opens (#274). */}
+      <details className="group/other" open={refused !== undefined}>
+        <summary className="inline-flex min-h-touch cursor-pointer list-none items-center text-link text-ink-2 underline underline-offset-3 group-open/other:hidden [&::-webkit-details-marker]:hidden">
           {rss.other}
         </summary>
         {field}
