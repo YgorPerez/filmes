@@ -310,12 +310,10 @@ async function sendAndSeeRedone(
   await expect(
     page.getByText(`Saiu da prateleira: ${swapped} (trocado)`),
   ).toBeVisible()
-  // The kept films stay at their number; the ones that came in are new.
+  // The kept films stay at their number; no card says "novo" (#326).
   expect(await titleOf(page, 3)).toBe(third)
   expect(await titleOf(page, 4)).toBe(fourth)
-  for (const n of [1, 2])
-    await expect(card(page, n).getByText('novo', { exact: true })).toBeVisible()
-  for (const n of [3, 4])
+  for (const n of [1, 2, 3, 4])
     await expect(card(page, n).getByText('novo', { exact: true })).toHaveCount(
       0,
     )
