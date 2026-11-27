@@ -631,12 +631,13 @@ export class OAuthServer {
     const row = this.db((db) =>
       db
         .prepare(
-          `SELECT g.client_id, g.email, g.scope, g.resource, t.expires_at, c.redirect_uris
+          `SELECT g.client_id, g.email, g.scope, g.resource, t.expires_at,
+                EXISTS (SELECT 1 FROM json_each(c.redirect_uris) WHERE value = ?) AS chatgpt
               FROM oauth_tokens t JOIN oauth_grants g USING (grant_id)
               JOIN oauth_clients c USING (client_id)
               WHERE t.token_hash = ? AND t.kind = 'access' AND t.expires_at > ?`,
         )
-        .get(hash(token), this.options.now()),
+        .get(CHATGPT_CALLBACK, hash(token), this.options.now()),
     )
     const owner = row
       ? this.options.owners.ownerByEmail(String(row.email))
@@ -654,9 +655,7 @@ export class OAuthServer {
       resource: new URL(String(row.resource)),
       extra: {
         owner,
-        chatgpt: (JSON.parse(String(row.redirect_uris)) as string[]).includes(
-          CHATGPT_CALLBACK,
-        ),
+        chatgpt: Number(row.chatgpt) === 1,
       },
     }
   }
