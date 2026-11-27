@@ -110,7 +110,7 @@ export function PersonScreen({
                 className: 'self-start',
               })}
             >
-              Conexão com o Trakt
+              {PERSON.trakt}
             </a>
           )}
           <Notes

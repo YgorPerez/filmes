@@ -20,6 +20,7 @@ type Strength = 'strong' | 'moderate' | 'weak' | 'guess'
 export const PERSON = {
   back: 'Pessoas',
   myTaste: 'Meu gosto',
+  trakt: 'Conexão com o Trakt',
   notes: {
     title: 'Notas',
     predictionError: (error: number, films: number) => {

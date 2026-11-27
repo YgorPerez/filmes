@@ -25,6 +25,8 @@
 // <name>". The fato_id does not depend on the origin: the same diary entry
 // in the RSS and in the ZIP is one Fato, and the ZIP's Fonte wins.
 
+import { attempt } from './attempt.ts'
+import { inCatalog } from './film-ids.ts'
 import { basename } from 'node:path'
 import { Effect } from 'effect'
 import { factId, pyFloat, pyInt, type PyValue } from '../compat/fact-id.ts'
@@ -34,7 +36,7 @@ import type { GitError } from '../data/git.ts'
 import { isPyFloat, isPyInt, pyTruthy, type YamlValue } from '../data/yaml.ts'
 import { readPeople, resolvePerson } from '../people/people.ts'
 import type { Person } from '../people/Person.ts'
-import { engineError, EngineError } from '../runtime/EngineError.ts'
+import { engineError, type EngineError } from '../runtime/EngineError.ts'
 import type { Environment } from '../runtime/Environment.ts'
 import { Run } from '../runtime/Run.ts'
 import { Sqlite, type Connection, type SqliteError } from '../sqlite/Sqlite.ts'
@@ -105,17 +107,6 @@ const outcome = (
 })
 
 type Services = Environment | Sqlite | Run
-
-/** Runs a function that throws the `EngineError` Python raised. */
-const attempt = <A>(f: () => A): Effect.Effect<A, EngineError> =>
-  Effect.suspend(() => {
-    try {
-      return Effect.succeed(f())
-    } catch (error) {
-      if (error instanceof EngineError) return Effect.fail(error)
-      throw error
-    }
-  })
 
 /** Python's `if decisao` on a decision. */
 const present = (
@@ -714,12 +705,12 @@ const loadNamedFilms = (
     const known = new Map<string, boolean>()
     for (const row of rows) {
       if (!row.imdb) continue
-      let inCatalog = known.get(row.imdb)
-      if (inCatalog === undefined) {
-        inCatalog = yield* inCatalogue(db, row.imdb)
-        known.set(row.imdb, inCatalog)
+      let catalogued = known.get(row.imdb)
+      if (catalogued === undefined) {
+        catalogued = yield* inCatalog(db, row.imdb)
+        known.set(row.imdb, catalogued)
       }
-      if (inCatalog)
+      if (catalogued)
         yield* insertFacts(
           db,
           person.slug,
@@ -729,16 +720,6 @@ const loadNamedFilms = (
         )
     }
   })
-
-/** Whether the Catálogo has the film. */
-export const inCatalogue = (
-  db: Connection,
-  film: string,
-): Effect.Effect<boolean, SqliteError> =>
-  Effect.map(
-    db.get('SELECT 1 FROM filmes WHERE id = ?', film),
-    (row) => row !== undefined,
-  )
 
 /** Redoes every Pessoa's Letterboxd Fatos in the database, offline
  * (`carregar`): the rebuild, and every change to an import. */

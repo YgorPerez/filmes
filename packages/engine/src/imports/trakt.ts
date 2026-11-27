@@ -6,6 +6,7 @@
 // change reloads the Pessoa's Trakt Fatos from all her stored exports, so
 // the database can always be rebuilt from filmes-dados. The watchlist is
 // the latest export's that has one (`withLatestWatchlist`).
+import { attempt } from './attempt.ts'
 import { basename } from 'node:path'
 import { Effect } from 'effect'
 import { factId, pyFloat } from '../compat/fact-id.ts'
@@ -17,7 +18,7 @@ import {
   TRAKT_ATTRIBUTION,
   type Attribution,
 } from '../recommendation/attributions.ts'
-import { engineError, EngineError } from '../runtime/EngineError.ts'
+import { engineError, type EngineError } from '../runtime/EngineError.ts'
 import type { Environment } from '../runtime/Environment.ts'
 import type { Run } from '../runtime/Run.ts'
 import { Sqlite, type Connection, type SqliteError } from '../sqlite/Sqlite.ts'
@@ -34,17 +35,6 @@ import { withLatestWatchlist, type ExportRows } from './watchlist.ts'
 export const TRAKT_KIND = 'trakt'
 
 const FACT_TABLES = ['notas', 'ja_visto', 'watchlist'] as const
-
-/** Runs a function that throws the `EngineError` Python raised. */
-const attempt = <A>(f: () => A): Effect.Effect<A, EngineError> =>
-  Effect.suspend(() => {
-    try {
-      return Effect.succeed(f())
-    } catch (error) {
-      if (error instanceof EngineError) return Effect.fail(error)
-      throw error
-    }
-  })
 
 /** Refuses a database built before the imports (`abrir_escrita`). */
 export const requireImportTables = (

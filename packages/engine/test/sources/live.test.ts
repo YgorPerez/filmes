@@ -535,9 +535,7 @@ describe('TMDB', () => {
       'https://api.themoviedb.org/3/movie/1?api_key=tmdb-key',
     ])
   })
-})
 
-describe('TMDB', () => {
   test('the trailer reads the TMDB id from the pt-BR /find, then asks for its videos', async () => {
     const fixture = useFixture()
     const net = fakeFetch((url) =>
