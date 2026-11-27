@@ -23,12 +23,13 @@ import {
   removeImport,
   reprocessLetterboxd,
   syncTrakt,
-  viewQueue,
+  viewQueueDetailed,
   type Author,
   type Engine,
   type ErrorOutput,
   type Outcome,
   type PersonImports,
+  type DetailedQueueItem,
   type QueueItem,
   type RatingChange,
   type TasteChange,
@@ -74,8 +75,31 @@ export type QueueSuggestion = {
   /** The TMDB film's page: confirming with it records the film. */
   link: string
   poster: string | null
-  /** TMDB's synopsis, for telling twins apart. */
+  /** TMDB's synopsis in Portuguese or English, for telling twins apart;
+   * null when it is only in another language (#274). */
   overview: string | null
+  /** What else tells twins apart (#274): the directors, the runtime, the
+   * production countries (ISO 3166-1) and, when it is not Portuguese,
+   * the original language (ISO 639-1). */
+  directors: string[]
+  runtime: number | null
+  countries: string[]
+  language: string | null
+}
+
+/** The languages a synopsis may show in: the page's, and English. */
+const READABLE = new Set(['pt', 'en'])
+
+/** The synopsis the page can show: TMDB's pt-BR one, else the search's
+ * when the film's language is one she reads (the search falls back to the
+ * original's, "Ein Segler verliert…"). */
+const overviewOf = (
+  search: string | null,
+  details: DetailedQueueItem['candidates'][number]['details'],
+) => {
+  if (details?.overviewPt) return details.overviewPt
+  if (details?.language && !READABLE.has(details.language)) return null
+  return search
 }
 
 export type QueueEntry = Omit<QueueItem, 'candidates' | 'people'> & {
@@ -94,7 +118,7 @@ export type QueuePage = {
 const textOr = (value: unknown, fallback: string | null) =>
   typeof value === 'string' && value !== '' ? value : fallback
 
-const entryOf = (item: QueueItem): QueueEntry => ({
+const entryOf = (item: DetailedQueueItem): QueueEntry => ({
   ...item,
   people: [...item.people],
   candidates: item.candidates.map((c) => {
@@ -107,7 +131,14 @@ const entryOf = (item: QueueItem): QueueEntry => ({
       year: c.year,
       link: c.link,
       poster: c.poster,
-      overview: c.overview,
+      overview: overviewOf(c.overview, c.details),
+      directors: [...(c.details?.directors ?? [])],
+      runtime: c.details?.runtime ?? null,
+      countries: [...(c.details?.countries ?? [])],
+      language:
+        c.details?.language && c.details.language !== 'pt'
+          ? c.details.language
+          : null,
     }
   }),
 })
@@ -196,7 +227,7 @@ type Run = Engine['run']
 async function queueOf(run: Run): Promise<Outcome<QueuePage>> {
   const people = await run(readPeople)
   if (people.exitCode !== 0) return people
-  return map(run(viewQueue), (queue) => ({
+  return map(run(viewQueueDetailed), (queue) => ({
     items: queue.items.map(entryOf),
     attributions: queue.attributions.map(({ source, text }) => ({
       source,

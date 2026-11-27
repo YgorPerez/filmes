@@ -153,7 +153,7 @@ async function confirmInQueue(page: Page, info: TestInfo, letterboxd: Locator) {
   await snap(page, info, 'fila')
 
   // Something that is not a film: the queue says why, and nothing changes.
-  await lost.getByText('Tenho o link').click()
+  await lost.getByText('Procurar outro título').click()
   const confirmLost = lost.getByRole('form', {
     name: 'Confirmar Filme Perdido (2001)',
   })
@@ -162,8 +162,11 @@ async function confirmInQueue(page: Page, info: TestInfo, letterboxd: Locator) {
   await expect(page).toHaveURL(/\/meu-gosto\/fila\?erro=filme$/)
   await expect(page.getByRole('alert')).toContainText('Cole um link')
 
+  // Each suggestion says its director, runtime and country (#274).
   await wind
-    .getByRole('button', { name: 'É este: Vento Norte (2020)', exact: true })
+    .getByRole('button', {
+      name: /^É este: Vento Norte \(2020\), Direção: Helena Prado/,
+    })
     .click()
   await expect(notice(page)).toHaveText(
     'Vento Norte (2020) confirmado: as Notas dele entraram no gosto de quem o tem.',
@@ -179,7 +182,9 @@ async function confirmInQueue(page: Page, info: TestInfo, letterboxd: Locator) {
     'Vento Norte (2020) voltou para a fila.',
   )
   await section(page, 'Vento Norte (2020)')
-    .getByRole('button', { name: 'É este: Vento Norte (2020)', exact: true })
+    .getByRole('button', {
+      name: /^É este: Vento Norte \(2020\), Direção: Helena Prado/,
+    })
     .click()
   await expect(section(page, 'Vento Norte (2020)')).toHaveCount(0)
   return lost

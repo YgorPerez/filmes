@@ -155,6 +155,39 @@ const runtimeOf = (answer: CachedAnswer | undefined) => {
   return truthy(minutes) ? Number(minutes) : undefined
 }
 
+/** What tells two films of the same title apart (#274): the directors,
+ * the runtime, the production countries (ISO 3166-1), the original
+ * language (ISO 639-1) and the pt-BR synopsis, when TMDB has one. */
+export interface FilmDetails {
+  readonly directors: ReadonlyArray<string>
+  readonly runtime: number | null
+  readonly countries: ReadonlyArray<string>
+  readonly language: string | null
+  readonly overviewPt: string | null
+}
+
+const detailsOf = (answer: CachedAnswer | undefined): FilmDetails | null => {
+  const body = answer?.body
+  if (!truthy(body)) return null
+  const minutes = field(body, 'runtime')
+  const language = field(body, 'original_language')
+  return {
+    directors: list(field(field(body, 'credits'), 'crew'))
+      .filter((person) => field(person, 'job') === 'Director')
+      .map((person) => text(field(person, 'name')))
+      .filter((name) => name !== ''),
+    runtime: truthy(minutes) ? Number(minutes) : null,
+    countries: list(field(body, 'production_countries'))
+      .map((country) => text(field(country, 'iso_3166_1')))
+      .filter((code) => /^[A-Z]{2}$/.test(code)),
+    language:
+      typeof language === 'string' && /^[a-z]{2}$/.test(language)
+        ? language
+        : null,
+    overviewPt: pyStrip(text(field(body, 'overview'))) || null,
+  }
+}
+
 /** The TMDB id of the film a /find answered. */
 const foundId = (answer: CachedAnswer | undefined) => {
   const [film] = list(field(answer?.body, 'movie_results'))
@@ -218,6 +251,11 @@ export class Tmdb extends Context.Service<
     readonly runtime: (
       tmdbId: string | number,
     ) => Effect.Effect<number | undefined, SourceError, Run>
+    /** Directors, runtime, countries, original language and the pt-BR
+     * synopsis of a TMDB film; null with no answer. */
+    readonly details: (
+      tmdbId: string | number,
+    ) => Effect.Effect<FilmDetails | null, SourceError, Run>
     /** Whether the search went off in this request (the import tells "no
      * answer" from "not found" by it). */
     readonly searchDisabled: Effect.Effect<boolean, never, Run>
@@ -273,6 +311,17 @@ export class Tmdb extends Context.Service<
           return Effect.map(
             ask(SEARCH, `detalhes-${id}`, `/movie/${id}`),
             runtimeOf,
+          )
+        },
+        details: (tmdbId) => {
+          const id = String(tmdbId)
+          if (!TMDB_ID.test(id)) return Effect.succeed(null)
+          return Effect.map(
+            ask(SEARCH, `ficha-${id}`, `/movie/${id}`, {
+              language: 'pt-BR',
+              append_to_response: 'credits',
+            }),
+            detailsOf,
           )
         },
         searchDisabled,

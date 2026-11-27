@@ -18,7 +18,7 @@ import {
   type Row,
   type SqliteError,
 } from '../sqlite/Sqlite.ts'
-import { TMDB_ATTRIBUTION, Tmdb } from '../sources/Tmdb.ts'
+import { TMDB_ATTRIBUTION, Tmdb, type FilmDetails } from '../sources/Tmdb.ts'
 import {
   ensureLetterboxdTables,
   loadLetterboxd,
@@ -97,6 +97,43 @@ export const viewQueue: Effect.Effect<
       ? [TMDB_ATTRIBUTION]
       : [],
   }
+})
+
+/** A candidate with what tells it from its twins (#274). */
+export interface DetailedCandidate extends QueueCandidate {
+  /** Null when TMDB did not answer. */
+  readonly details: FilmDetails | null
+}
+
+export interface DetailedQueueItem extends QueueItem {
+  readonly candidates: readonly DetailedCandidate[]
+}
+
+export interface DetailedQueueView extends QueueView {
+  readonly items: readonly DetailedQueueItem[]
+}
+
+/** The queue as the screen shows it (#274): each candidate with its
+ * directors, runtime, countries, original language and pt-BR synopsis,
+ * asked of TMDB once and then cached like any of its answers. Without
+ * TMDB, the details are null and the queue is `viewQueue`'s. */
+export const viewQueueDetailed: Effect.Effect<
+  DetailedQueueView,
+  EngineError | SqliteError,
+  Environment | Sqlite | Run | Tmdb
+> = Effect.gen(function* () {
+  const queue = yield* viewQueue
+  const tmdb = yield* Tmdb
+  const details = (id: unknown) =>
+    tmdb.details(String(id)).pipe(Effect.orElseSucceed(() => null))
+  const items: DetailedQueueItem[] = []
+  for (const item of queue.items) {
+    const candidates: DetailedCandidate[] = []
+    for (const candidate of item.candidates)
+      candidates.push({ ...candidate, details: yield* details(candidate.tmdb) })
+    items.push({ ...item, candidates })
+  }
+  return { ...queue, items }
 })
 
 /** A decision of the Dono on a queued film, as `fila confirmar` and `fila

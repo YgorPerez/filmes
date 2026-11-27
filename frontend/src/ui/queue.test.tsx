@@ -40,6 +40,10 @@ const QUEUE_PAGE: QueuePage = {
           link: 'https://www.themoviedb.org/movie/9102',
           poster: 'https://image.tmdb.org/t/p/w185/v.jpg',
           overview: 'Um faroleiro e a filha esperam o vento.',
+          directors: ['Helena Prado'],
+          runtime: 104,
+          countries: ['BR'],
+          language: null,
         },
         {
           tmdb: '9103',
@@ -49,6 +53,10 @@ const QUEUE_PAGE: QueuePage = {
           link: 'https://www.themoviedb.org/movie/9103',
           poster: null,
           overview: null,
+          directors: ['Jonas Weber'],
+          runtime: 88,
+          countries: ['DE', 'DK'],
+          language: 'de',
         },
       ],
     },
@@ -107,13 +115,24 @@ describe('QueueScreen', () => {
       'https://www.themoviedb.org/movie/9103',
     ])
     expect(screen.getByText(QUEUE.attribution)).toBeTruthy()
+    // The twins told apart by director, runtime and country; the German
+    // synopsis is not shown (#274).
+    expect(wind.textContent).toContain(
+      'Direção: Helena Prado · 1 h 44 · Brasil',
+    )
+    expect(wind.textContent).toContain(QUEUE.noOverview)
   })
 
   it('confirms a film with one of TMDB’s suggestions', () => {
     render(<QueueScreen queue={QUEUE_PAGE} />)
     const button = within(card('Vento Norte (2020)')).getByRole('button', {
-      name: QUEUE.pickLabel('Vento Norte (2020)', 'Nordwind'),
+      name: QUEUE.pickLabel(
+        'Vento Norte (2020)',
+        'Direção: Jonas Weber · 1 h 28 · Alemanha, Dinamarca · em alemão',
+      ),
     })
+    // One orange button: the first suggestion of the first card (#274).
+    expect(button.className).not.toContain('bg-sticker-orange')
     expect(posted(button.closest('form') as HTMLElement)).toEqual({
       kind: 'confirm',
       id: 'vento-norte-2020-e2bf439e1af6',

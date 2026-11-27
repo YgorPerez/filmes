@@ -481,7 +481,13 @@ export {
   type SourceProfile,
 } from './sources/Source.ts'
 export { SourceCache, type CachedAnswer } from './sources/SourceCache.ts'
-export { TMDB_ATTRIBUTION, TMDB_NAME, Tmdb, type Card } from './sources/Tmdb.ts'
+export {
+  TMDB_ATTRIBUTION,
+  TMDB_NAME,
+  Tmdb,
+  type Card,
+  type FilmDetails,
+} from './sources/Tmdb.ts'
 export {
   personAdjust,
   personQuestions,
@@ -561,6 +567,10 @@ export {
   discardQueueItem,
   reopenQueueItem,
   viewQueue,
+  viewQueueDetailed,
+  type DetailedCandidate,
+  type DetailedQueueItem,
+  type DetailedQueueView,
   type QueueDecision,
   type QueueItem,
   type QueueView,
