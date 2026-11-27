@@ -111,7 +111,9 @@ describe('the rating screen', () => {
         ?.textContent,
     ).toContain('8')
     expect(sent()).toEqual({ 'nota.tt9000601': '8' })
-    expect(screen.getByRole('button', { name: RATINGS.done(1) })).toBeTruthy()
+    expect(
+      screen.getByRole('button', { name: RATINGS.doneLabel(1) }),
+    ).toBeTruthy()
     // What the tap did: said aloud, counted toward ten, the focus on the
     // next film.
     expect(
@@ -144,7 +146,7 @@ describe('the rating screen', () => {
     expect(sent()).toEqual({})
   })
 
-  it('at ten, the card waits behind "Mais 10"', async () => {
+  it('at ten, says it once, then the card again with no further goal', async () => {
     const user = userEvent.setup()
     render(<RatingScreen queue={{ ...QUEUE, rated: 9 }} search={null} />)
     await user.click(card().getByRole('button', { name: 'Nota 8' }))
@@ -153,7 +155,10 @@ describe('the rating screen', () => {
     expect(screen.getByText(RATINGS.goal(10))).toBeTruthy()
     await user.click(screen.getByRole('button', { name: RATINGS.more }))
     expect(card().getByRole('heading').textContent).toBe('Casa Cheia')
-    expect(screen.getByText(RATINGS.progress(10, 20))).toBeTruthy()
+    // One goal (#274): past ten, the bar only counts.
+    expect(screen.getByText('10 Notas')).toBeTruthy()
+    await user.click(card().getByRole('button', { name: 'Nota 7' }))
+    expect(screen.getByText('11 Notas')).toBeTruthy()
   })
 })
 
@@ -198,7 +203,7 @@ describe('the rating screen', () => {
 
     expect(card().getByRole('heading').textContent).toBe('Casa Cheia')
     expect(sent()).toEqual({})
-    await user.click(screen.getByRole('button', { name: RATINGS.done(0) }))
+    await user.click(screen.getByRole('button', { name: RATINGS.doneLabel(0) }))
     expect(screen.getByText(RATINGS.nothing)).toBeTruthy()
     expect(fetched).not.toHaveBeenCalled()
   })
@@ -239,7 +244,7 @@ describe('the rating screen', () => {
     const user = userEvent.setup()
     const first = render(<RatingScreen queue={QUEUE} search={null} />)
     await user.click(card().getByRole('button', { name: 'Nota 8' }))
-    await user.click(screen.getByRole('button', { name: RATINGS.done(1) }))
+    await user.click(screen.getByRole('button', { name: RATINGS.doneLabel(1) }))
     first.unmount()
 
     render(<RatingScreen queue={QUEUE} search={null} written={1} />)
@@ -313,5 +318,67 @@ describe('the rating card, at its edges', () => {
       />,
     )
     expect(screen.getByText(RATINGS.writtenNext)).toBeTruthy()
+  })
+})
+
+describe('the rating screen and the Notas she has (#274)', () => {
+  it('says her Nota on a search result, without the ID, and its pick changes it', () => {
+    render(
+      <RatingScreen queue={QUEUE} search={SEARCH} rated={{ tt9000401: 10 }} />,
+    )
+    const results = screen.getByRole('region', { name: 'Buscar no Catálogo' })
+    expect(results.textContent).not.toContain('tt9000401')
+    expect(results.textContent).toContain(
+      'Direção: Rui Tavares · 40.000 votos · sua nota 10',
+    )
+    expect(
+      within(results)
+        .getByRole('link', { name: RATINGS.changeLabel('Fronteira (2008)') })
+        .getAttribute('href'),
+    ).toBe('/meu-gosto/notas?filme=tt9000401&buscar=fronteira')
+  })
+
+  it('opens a film no search found on its card, with her Nota', () => {
+    render(
+      <RatingScreen
+        queue={QUEUE}
+        search={null}
+        film="tt9000401"
+        rated={{ tt9000401: 10 }}
+        picked={{
+          id: 'tt9000401',
+          title: 'Fronteira',
+          titlePt: null,
+          year: 2008,
+          runtime: 101,
+          directors: ['Rui Tavares'],
+          poster: null,
+          synopsis: null,
+          attributions: [],
+        }}
+      />,
+    )
+    expect(card().getByRole('heading').textContent).toBe('Fronteira')
+    expect(card().getByText(RATINGS.ratedNow(10))).toBeTruthy()
+  })
+
+  it('keeps three discs and "+N" in the bar, and the count on one line', async () => {
+    const user = userEvent.setup()
+    const many: RatingQueue = {
+      ...QUEUE,
+      films: Array.from({ length: 6 }, (_, i) =>
+        film(`tt90010${i}`, `Filme ${i}`, 2000 + i),
+      ),
+    }
+    render(<RatingScreen queue={many} search={null} />)
+    for (const rating of [3, 4, 5, 6, 7])
+      await user.click(card().getByRole('button', { name: `Nota ${rating}` }))
+    const bar = screen.getByRole('region', { name: RATINGS.bar })
+    expect(bar.textContent).toContain('+2')
+    expect(bar.textContent).toContain('7 de 10')
+    expect(
+      within(bar).getByRole('button', { name: RATINGS.doneLabel(5) })
+        .textContent,
+    ).toBe('Pronto · 5')
   })
 })

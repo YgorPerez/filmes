@@ -481,7 +481,13 @@ export {
   type SourceProfile,
 } from './sources/Source.ts'
 export { SourceCache, type CachedAnswer } from './sources/SourceCache.ts'
-export { TMDB_ATTRIBUTION, TMDB_NAME, Tmdb, type Card } from './sources/Tmdb.ts'
+export {
+  TMDB_ATTRIBUTION,
+  TMDB_NAME,
+  Tmdb,
+  type Card,
+  type FilmDetails,
+} from './sources/Tmdb.ts'
 export {
   personAdjust,
   personQuestions,
@@ -561,6 +567,10 @@ export {
   discardQueueItem,
   reopenQueueItem,
   viewQueue,
+  viewQueueDetailed,
+  type DetailedCandidate,
+  type DetailedQueueItem,
+  type DetailedQueueView,
   type QueueDecision,
   type QueueItem,
   type QueueView,
@@ -682,6 +692,7 @@ export {
   type ImportRemoval,
   type ImportRemovalInput,
 } from './imports/remove.ts'
+export type { RatingChange, TasteChange } from './imports/taste-change.ts'
 export { rebuild, type Rebuilt } from './rebuild/rebuild.ts'
 export { schemaHash } from './rebuild/schema.ts'
 export { SCHEMA_VERSION } from './rebuild/schema-version.ts'
@@ -758,8 +769,10 @@ export {
   RATING_QUEUE_LIMIT_MAX,
   RATING_SCREEN_SOURCE,
   personRate,
+  personRatingsOf,
   ratingQueue,
   type GivenRating,
+  type PersonRatingsOfRequest,
   type PersonRateInput,
   type PersonRateResult,
   type QueueFilm,

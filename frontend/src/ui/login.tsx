@@ -4,6 +4,7 @@ import {
   TRAKT_DISCONNECT,
   type TraktError,
 } from '#/content/trakt-form'
+import { MY_TASTE } from '#/content/paths'
 import { LOGIN } from './login.copy'
 import { ShelfLabel } from './kit/shelf-label'
 import { Alert } from './kit/status'
@@ -12,7 +13,8 @@ import { SiteFooter } from './kit/site-footer'
 import { Slip } from './kit/slip'
 import { Button } from './shadcn/button'
 
-// The pages without a Dono, so outside the app shell: `/entrar` and `/trakt`.
+// The pages without a Dono, so outside the app shell: `/entrar`, and
+// `/trakt` for a Pessoa who is not a Dono (a Dono sees it in the shell).
 //
 // `/entrar`: the case-black bar with "filmes" and one card with the one
 // orange button. The button is a link, since `/auth/google` answers a GET with the
@@ -87,82 +89,145 @@ type TraktPage =
 export function TraktScreen({
   page,
   error,
+  inApp = false,
 }: {
   page: TraktPage
   error?: TraktError
+  /** A Dono is logged in: the page sits in the app shell, with the way
+   * back to Importar (#274). */
+  inApp?: boolean
 }) {
+  const body = (
+    <main className="mx-auto flex w-full max-w-[720px] flex-col gap-xl px-2xl py-3xl">
+      {inApp && (
+        <a
+          href={`${MY_TASTE}/importar`}
+          className={buttonVariants({
+            variant: 'option',
+            className: 'self-start',
+          })}
+        >
+          {TRAKT.back}
+        </a>
+      )}
+      <h1 className="font-display text-counter-title">Trakt</h1>
+      {error && <Alert>{traktErrors[error]}</Alert>}
+      <Slip id="trakt-history" title={TRAKT.title}>
+        <div className="flex flex-col items-start gap-lg">
+          <TraktBody page={page} />
+        </div>
+      </Slip>
+      <p className="text-meta text-ink-2">{TRAKT.notEndorsed}</p>
+    </main>
+  )
+  if (inApp) return body
   return (
     <div className="flex min-h-dvh flex-col">
-      <main className="mx-auto flex w-full max-w-[720px] flex-col gap-xl px-2xl py-3xl">
-        <h1 className="font-display text-counter-title">Trakt</h1>
-        {error && <Alert>{traktErrors[error]}</Alert>}
-        <Slip id="trakt-history" title="Histórico e notas">
-          <div className="flex flex-col items-start gap-lg">
-            {page.status === 'unavailable' ? (
-              <p>A conexão com o Trakt está indisponível.</p>
-            ) : page.status === 'login' ? (
-              <>
-                <p>
-                  Entre com o e-mail cadastrado no filmes para conectar sua
-                  conta do Trakt.
-                </p>
-                <a
-                  href="/auth/trakt-google"
-                  className={buttonVariants({ variant: 'primary' })}
-                >
-                  Entrar com Google
-                </a>
-              </>
-            ) : (
-              <>
-                <p className="font-semibold">{page.name}</p>
-                {page.status === 'connected' ? (
-                  <>
-                    <p>
-                      Sua conta está conectada: o filmes lê seu histórico a cada
-                      Sessão nova e envia o filme escolhido. Ao desconectar, ele
-                      deixa de ler e de enviar e apaga os dados de acesso. O que
-                      já entrou no seu gosto e seu histórico no Trakt ficam como
-                      estão.
-                    </p>
-                    <form action={TRAKT_DISCONNECT} method="post">
-                      <Button type="submit" variant="option">
-                        Desconectar Trakt
-                      </Button>
-                    </form>
-                  </>
-                ) : (
-                  <form
-                    action={TRAKT_CONNECT}
-                    method="post"
-                    className="flex flex-col items-start gap-lg"
-                  >
-                    <label className="flex items-start gap-sm">
-                      <input
-                        type="checkbox"
-                        name="consentir"
-                        value="sim"
-                        required
-                        className="mt-1"
-                      />
-                      Autorizo o filmes a ler do meu Trakt o histórico, as notas
-                      e a watchlist de filmes, a cada Sessão nova e quando eu
-                      pedir, e a enviar ao meu Trakt o filme escolhido na
-                      Sessão, os filmes marcados como Já vi no Cartaz e as notas
-                      que dei, ao salvar o Feedback.
-                    </label>
-                    <Button type="submit">Conectar Trakt</Button>
-                  </form>
-                )}
-              </>
-            )}
-          </div>
-        </Slip>
-        <p className="text-meta text-ink-2">
-          O filmes usa o Trakt e não é endossado nem certificado pelo Trakt.
-        </p>
-      </main>
+      {body}
       <SiteFooter />
     </div>
   )
+}
+
+/** What the connection holds: sign in, consent and connect, or the
+ * connected account and the way to disconnect it. */
+function TraktBody({ page }: { page: TraktPage }) {
+  if (page.status === 'unavailable') return <p>{TRAKT.unavailable}</p>
+  if (page.status === 'login')
+    return (
+      <>
+        <p>{TRAKT.login}</p>
+        <a
+          href="/auth/trakt-google"
+          className={buttonVariants({ variant: 'primary' })}
+        >
+          Entrar com Google
+        </a>
+      </>
+    )
+  return (
+    <>
+      <p className="font-semibold">{page.name}</p>
+      {page.status === 'connected' ? (
+        <>
+          <p>{TRAKT.connected}</p>
+          <form action={TRAKT_DISCONNECT} method="post">
+            <Button type="submit" variant="option">
+              Desconectar Trakt
+            </Button>
+          </form>
+        </>
+      ) : (
+        <form
+          action={TRAKT_CONNECT}
+          method="post"
+          className="flex w-full flex-col items-start gap-lg"
+        >
+          <TraktConsent />
+          <label className="flex min-h-touch w-full cursor-pointer items-center gap-md rounded-field bg-surface-2 px-lg py-sm">
+            <input
+              type="checkbox"
+              name="consentir"
+              value="sim"
+              required
+              className="size-5 shrink-0 accent-ink"
+            />
+            <span>{TRAKT.consent}</span>
+          </label>
+          <Button type="submit">Conectar Trakt</Button>
+          <p className="text-meta text-ink-2">{TRAKT.after}</p>
+        </form>
+      )}
+    </>
+  )
+}
+
+/** What the connection reads and what it sends, apart (#274). */
+function TraktConsent() {
+  return (
+    <div className="flex flex-col gap-sm">
+      {TRAKT.does.map(({ title, items }) => (
+        <div key={title} className="flex flex-col gap-2xs">
+          <p className="font-display text-field-label">{title}</p>
+          <ul className="flex list-disc flex-col gap-2xs pl-2xl text-evidence">
+            {items.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/** The words of `/trakt`. */
+const TRAKT = {
+  back: 'Importar',
+  title: 'Histórico e notas',
+  unavailable: 'A conexão com o Trakt está indisponível.',
+  login:
+    'Entre com o e-mail cadastrado no filmes para conectar sua conta do Trakt.',
+  connected:
+    'Sua conta está conectada: o filmes lê seu histórico a cada Sessão nova e envia o filme escolhido. Ao desconectar, ele deixa de ler e de enviar e apaga os dados de acesso. O que já entrou no seu gosto e seu histórico no Trakt ficam como estão.',
+  does: [
+    {
+      title: 'O filmes lê do seu Trakt',
+      items: [
+        'o histórico, as notas e a watchlist de filmes',
+        'a cada Sessão nova, e quando você pedir em Importar',
+      ],
+    },
+    {
+      title: 'O filmes envia ao seu Trakt, ao salvar o Feedback',
+      items: [
+        'o filme escolhido na Sessão',
+        'os filmes marcados como Já vi no Cartaz, com as notas que você deu',
+      ],
+    },
+  ],
+  consent: 'Autorizo a leitura e o envio acima',
+  after:
+    'O Trakt pede que você entre e aprove. Depois ele volta para esta página, já conectada, e o histórico entra na próxima Sessão.',
+  notEndorsed:
+    'O filmes usa o Trakt e não é endossado nem certificado pelo Trakt.',
 }

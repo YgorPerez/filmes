@@ -52,8 +52,37 @@ const shelfOf = (s: SessionItem) => {
   return SESSIONS.list.shelf(titles.slice(0, 3), titles.length - 3)
 }
 
+/** What was asked, in one quiet line (#272): the Dono's words and what
+ * she added later; the Climas and Restrições only when she typed no words,
+ * as they say the same thing. */
+const askedOf = (s: SessionItem) => {
+  const said = [s.request, ...s.additions.map((a) => `+ ${a}`)].filter(
+    (text): text is string => Boolean(text),
+  )
+  if (said.length > 0) return said.join(' ')
+  return [...s.moods, ...s.constraints].join(', ')
+}
+
+/** "para contar" or "contada", and the version once redone (#272). */
+function RowState({ session: s }: { session: SessionItem }) {
+  const { list } = SESSIONS
+  return (
+    <span className="flex flex-wrap items-center gap-x-sm gap-y-2xs text-meta text-ink-2">
+      <SessionDate date={s.date} />
+      {s.version > 1 && <span>· {list.version(s.version)}</span>}
+      <span
+        className={`rounded-pill border px-sm font-display text-label uppercase ${
+          s.open ? 'border-ink text-ink' : 'border-rule text-ink-2'
+        }`}
+      >
+        {s.open ? list.toTell : list.told}
+      </span>
+    </span>
+  )
+}
+
 function SessionRow({ session: s }: { session: SessionItem }) {
-  const context = [...s.moods, ...s.constraints].join(', ')
+  const asked = askedOf(s)
   return (
     <li>
       <Slip
@@ -68,9 +97,7 @@ function SessionRow({ session: s }: { session: SessionItem }) {
               <span className="font-display text-step-title">
                 {names(s.attendees)}
               </span>
-              <span className="text-meta text-ink-2">
-                <SessionDate date={s.date} />
-              </span>
+              <RowState session={s} />
             </span>
             <RowArrow />
           </a>
@@ -81,11 +108,10 @@ function SessionRow({ session: s }: { session: SessionItem }) {
             <p className="font-medium text-pretty">
               {s.open ? shelfOf(s) : outcome(s)}
             </p>
-            {s.request && (
-              <p className="mt-2xs text-ink-2 wrap-anywhere">{s.request}</p>
-            )}
-            {s.open && context && (
-              <p className="mt-2xs text-meta text-ink-2">{context}</p>
+            {asked && (
+              <p className="mt-2xs text-meta text-ink-2 wrap-anywhere">
+                {asked}
+              </p>
             )}
           </div>
           {s.open && (
@@ -116,6 +142,13 @@ function EmptyList({ pendingOnly }: { pendingOnly: boolean }) {
   )
 }
 
+/** The open Sessions first, then the told ones, each the latest first
+ * (#272). */
+const openFirst = (sessions: readonly SessionItem[]) => [
+  ...sessions.filter((s) => s.open),
+  ...sessions.filter((s) => !s.open),
+]
+
 /** The history or the Sessions still waiting for Feedback. */
 export function SessionList({
   sessions,
@@ -133,7 +166,10 @@ export function SessionList({
     <main className="mx-auto flex max-w-[720px] flex-col gap-xl px-2xl py-3xl">
       <header className="flex flex-wrap items-center justify-between gap-lg">
         <h1 className="font-display text-counter-title">{list.title}</h1>
-        <NewSessionLink>{list.create}</NewSessionLink>
+        {/* One orange button (#272): the empty list has its own. */}
+        {(pendingOnly || (sessions?.length ?? 0) > 0) && (
+          <NewSessionLink>{list.create}</NewSessionLink>
+        )}
       </header>
       <nav
         aria-label={list.filters}
@@ -163,7 +199,7 @@ export function SessionList({
           aria-label={pendingOnly ? list.pending : list.title}
           className="flex flex-col gap-md"
         >
-          {sessions.map((session) => (
+          {openFirst(sessions).map((session) => (
             <SessionRow key={session.id} session={session} />
           ))}
         </ul>
@@ -370,6 +406,7 @@ function TapeReturned({ page }: { page: CartazPage }) {
           bare
         />
       )}
+      <CartazNotes notes={card?.notes} />
       {page.satisfaction && page.satisfaction.length > 0 && (
         <div className="flex flex-col gap-xs text-meta text-ink-2">
           <p>{session.satisfaction}</p>
@@ -390,6 +427,29 @@ function TapeReturned({ page }: { page: CartazPage }) {
         {session.again}
       </a>
     </section>
+  )
+}
+
+type Notes = NonNullable<
+  NonNullable<CartazPage['billboard']>['films'][number]['notes']
+>
+
+/** What the Cartaz kept of the film they saw (#272): its stars and the
+ * comments, in the clerk's hand. */
+function CartazNotes({ notes }: { notes: Notes | undefined }) {
+  const { session } = SESSIONS
+  if (!notes || (notes.stars === null && notes.comments.length === 0))
+    return null
+  return (
+    <p className="flex flex-wrap items-baseline gap-x-sm gap-y-2xs text-meta text-ink-2">
+      <span>{session.onCartaz}</span>
+      {notes.stars !== null && <span>{session.stars(notes.stars)}</span>}
+      {notes.comments.map((comment) => (
+        <span key={comment} className="font-hand text-hand-small text-ink">
+          “{comment}”
+        </span>
+      ))}
+    </p>
   )
 }
 

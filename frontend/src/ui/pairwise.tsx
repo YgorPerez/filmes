@@ -74,7 +74,7 @@ export function PairwiseQuestion({
           id="pergunta"
           ref={thanks}
           tabIndex={-1}
-          className="font-display text-title"
+          className="font-display text-page-title"
         >
           {done ? PAIRWISE.doneTitle : PAIRWISE.noneTitle}
         </h1>
@@ -89,7 +89,7 @@ export function PairwiseQuestion({
   }
   return (
     <section aria-labelledby="pergunta" className="flex flex-col gap-lg">
-      <h1 id="pergunta" className="font-display text-title">
+      <h1 id="pergunta" className="font-display text-page-title">
         {PAIRWISE.title}
       </h1>
       {page === null || pair === null ? (

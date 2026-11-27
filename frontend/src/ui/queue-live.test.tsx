@@ -41,6 +41,10 @@ const QUEUE_PAGE: QueuePage = {
           link: 'https://www.themoviedb.org/movie/9102',
           poster: null,
           overview: null,
+          directors: [],
+          runtime: null,
+          countries: [],
+          language: null,
         },
       ],
     },
@@ -108,7 +112,7 @@ it('keeps what the Dono typed when the post is refused', async () => {
   Element.prototype.scrollIntoView = () => {}
   renderRouted()
   const user = userEvent.setup()
-  await user.click((await card()).getByText(QUEUE.link))
+  await user.click((await card()).getByText(QUEUE.search))
   const confirm = within(
     (await card()).getByRole('form', {
       name: 'Confirmar Filme Perdido (2001)',

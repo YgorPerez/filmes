@@ -160,6 +160,11 @@ describe('AppShell, the alert and the footer', () => {
     ).toHaveProperty('pathname', '/operacoes')
   })
 
+  it('leaves the strip out on Operações, whose push section says it first', () => {
+    show({ admin: true, alert: ALERT, path: '/operacoes' })
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
   it('links the credits from the footer, after the page', () => {
     show()
     const footer = screen.getByRole('contentinfo')

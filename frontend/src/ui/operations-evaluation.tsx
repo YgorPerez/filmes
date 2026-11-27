@@ -117,8 +117,19 @@ function Measures({ result }: { result: EvaluationSummary }) {
   )
 }
 
-function BestRow({ entry, rank }: { entry: GridBest; rank: number }) {
+/** One of the grid's best sets. `gain`: it measured better than today's
+ * weights, the only case where copying its weights is worth it. */
+function BestRow({
+  entry,
+  rank,
+  gain,
+}: {
+  entry: GridBest
+  rank: number
+  gain: boolean
+}) {
   const current = entry.changes.length === 0
+  const noGain = !current && !gain
   return (
     <tr className="border-b border-rule align-top">
       <th scope="row" className="whitespace-nowrap">
@@ -135,13 +146,14 @@ function BestRow({ entry, rank }: { entry: GridBest; rank: number }) {
               </span>
             ))
           )}
-          {(current || entry.tie) && (
+          {(current || entry.tie || noGain) && (
             <span className="flex flex-wrap gap-xs">
               {current && <Tag>{COPY.currentTag}</Tag>}
               {entry.tie && <Tag>{COPY.tie}</Tag>}
+              {noGain && <Tag>{COPY.noGain}</Tag>}
             </span>
           )}
-          {!current && (
+          {gain && (
             <CopyButton
               text={COPY.toml(entry.changes)}
               label={COPY.copyWeights}
@@ -165,9 +177,23 @@ function Tag({ children }: { children: string }) {
   )
 }
 
-function Best({ best }: { best: GridBest[] }) {
+/** The grid's best sets, under the line that says whether any beats
+ * today's weights. The engine orders them by Recall@50, then coverage, then
+ * fewest changes, so with today's weights among them (no change), only the
+ * rows above it measured better. */
+function Best({
+  best,
+  combinations,
+}: {
+  best: GridBest[]
+  combinations: number | null
+}) {
+  const current = best.findIndex((entry) => entry.changes.length === 0)
   return (
     <div className="flex flex-col gap-xs">
+      <p className="font-semibold text-pretty">
+        {COPY.gridVerdict(combinations, current, best.length)}
+      </p>
       <div className="overflow-x-auto">
         <table className={TABLE}>
           <caption className={CAPTION}>{COPY.best}</caption>
@@ -181,7 +207,12 @@ function Best({ best }: { best: GridBest[] }) {
           </thead>
           <tbody>
             {best.map((entry, i) => (
-              <BestRow key={COPY.bestRow(i + 1)} entry={entry} rank={i + 1} />
+              <BestRow
+                key={COPY.bestRow(i + 1)}
+                entry={entry}
+                rank={i + 1}
+                gain={current < 0 || i < current}
+              />
             ))}
           </tbody>
         </table>
@@ -211,7 +242,7 @@ function Verdict({
         {COPY.verdict(people.recall50, people.people)}
         {delta && <span className="text-ink-2"> {delta}</span>}
       </p>
-      <p className="text-ink-2">{COPY.priority(result.priority)}</p>
+      <p className="text-meta text-ink-2">{COPY.priority(result.priority)}</p>
       {people.people < SMALL_SAMPLE && (
         <p className="flex items-start gap-sm text-meta">
           <Icon name="alert" className="mt-px size-[16px] shrink-0" />
@@ -239,9 +270,12 @@ function Done({
       <Verdict result={result} previous={previous} />
       <div className="grid gap-2xl sm:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] sm:items-start">
         <Measures result={result} />
-        <p className="text-meta">
-          {COPY.online(result.online.sessions, result.online.rateTop5)}
-        </p>
+        <div className="flex flex-col">
+          <h3 className={CAPTION}>{COPY.onlineTitle}</h3>
+          <p className="text-meta">
+            {COPY.online(result.online.sessions, result.online.rateTop5)}
+          </p>
+        </div>
       </div>
       {warnings.length > 0 && (
         <ul className="list-disc space-y-xs pl-2xl text-meta text-ink-2">
@@ -250,7 +284,9 @@ function Done({
           ))}
         </ul>
       )}
-      {result.best && <Best best={result.best} />}
+      {result.best && (
+        <Best best={result.best} combinations={result.combinations} />
+      )}
     </div>
   )
 }

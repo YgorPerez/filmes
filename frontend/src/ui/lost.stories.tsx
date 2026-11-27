@@ -63,6 +63,12 @@ export const Alone: Story = {
       '/entrar',
     )
     await expect(page.queryByRole('link', { name: 'Ver Sessões' })).toBeNull()
+    await expect(
+      page.queryByRole('link', { name: 'Ir para o início' }),
+    ).toBeNull()
+    await expect(
+      page.getByRole('link', { name: 'Créditos das fontes' }),
+    ).toBeVisible()
   },
 }
 

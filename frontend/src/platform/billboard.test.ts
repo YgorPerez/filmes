@@ -37,6 +37,8 @@ const SESSION: SessionItem = {
   chosen: null,
   moods: [],
   constraints: [],
+  version: 1,
+  additions: [],
 }
 
 const sessions = (list: Outcome<SessionItem[]>): Sessions => ({

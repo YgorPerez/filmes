@@ -612,6 +612,7 @@ describe('the Cartaz model', () => {
 
     expect(request).toEqual({
       speech: null,
+      additions: [],
       who: 'Você',
       parts: ['nota 7+ no IMDb'],
       unseen: false,
@@ -740,7 +741,7 @@ describe('the predicted rating (#175)', () => {
 describe('the closed Cartaz (#264)', () => {
   const closed = async (
     fixture: Fixture,
-    feedback: { ratings?: string[]; reports?: string[] },
+    feedback: { ratings?: string[]; reports?: string[]; comments?: string[] },
   ) => {
     const session = await fixture.ok(
       recommendSession({ attendees: ['bruno', 'teo'], count: 50 }),
@@ -759,6 +760,7 @@ describe('the closed Cartaz (#264)', () => {
     const { id, film } = await closed(fixture, {
       ratings: ['bruno=3'],
       reports: ['teo=gostou'],
+      comments: ['teo=dormiu no meio'],
     })
 
     // With the default minimum of 10 shared films Bruno has no neighbour
@@ -767,8 +769,20 @@ describe('the closed Cartaz (#264)', () => {
 
     const chosen = model.films.find((f) => f.id === film.id)
     expect(chosen?.reactions).toEqual([
-      { person: 'bruno', predicted: '8,8', rating: '6', reaction: null },
-      { person: 'teo', predicted: null, rating: null, reaction: 'liked' },
+      {
+        person: 'bruno',
+        predicted: '8,8',
+        rating: '6',
+        reaction: null,
+        comment: null,
+      },
+      {
+        person: 'teo',
+        predicted: null,
+        rating: null,
+        reaction: 'liked',
+        comment: 'dormiu no meio',
+      },
     ])
     expect(
       model.films.filter((f) => f.reactions !== undefined).map((f) => f.id),
@@ -782,7 +796,13 @@ describe('the closed Cartaz (#264)', () => {
     const model = await fixture.ok(billboardModel({ session: id }))
 
     expect(model.films.find((f) => f.id === film.id)?.reactions).toEqual([
-      { person: 'bruno', predicted: '8,8', rating: null, reaction: null },
+      {
+        person: 'bruno',
+        predicted: '8,8',
+        rating: null,
+        reaction: null,
+        comment: null,
+      },
     ])
   })
 
@@ -810,8 +830,20 @@ describe('the closed Cartaz (#264)', () => {
       title: 'Curta da Madrugada',
       year: 2010,
       reactions: [
-        { person: 'bruno', predicted: null, rating: '8', reaction: null },
-        { person: 'teo', predicted: null, rating: null, reaction: 'disliked' },
+        {
+          person: 'bruno',
+          predicted: null,
+          rating: '8',
+          reaction: null,
+          comment: null,
+        },
+        {
+          person: 'teo',
+          predicted: null,
+          rating: null,
+          reaction: 'disliked',
+          comment: null,
+        },
       ],
     })
     expect(model.films.every((f) => f.reactions === undefined)).toBe(true)
@@ -834,7 +866,13 @@ describe('the closed Cartaz (#264)', () => {
       title: 'Pequenos Milagres',
       year: film.year,
       reactions: [
-        { person: 'bruno', predicted: '8,8', rating: '6', reaction: null },
+        {
+          person: 'bruno',
+          predicted: '8,8',
+          rating: '6',
+          reaction: null,
+          comment: null,
+        },
       ],
     })
   })
@@ -872,8 +910,20 @@ describe('the closed Cartaz (#264)', () => {
     const model = await fixture.ok(billboardModel({ session: id }))
 
     expect(model.films.find((f) => f.id === film.id)?.reactions).toEqual([
-      { person: 'bruno', predicted: '8,8', rating: '6', reaction: null },
-      { person: 'teo', predicted: null, rating: null, reaction: 'liked' },
+      {
+        person: 'bruno',
+        predicted: '8,8',
+        rating: '6',
+        reaction: null,
+        comment: null,
+      },
+      {
+        person: 'teo',
+        predicted: null,
+        rating: null,
+        reaction: 'liked',
+        comment: null,
+      },
     ])
   })
 
@@ -887,5 +937,28 @@ describe('the closed Cartaz (#264)', () => {
 
     for (const model of [open, none])
       expect(model.films.every((f) => f.reactions === undefined)).toBe(true)
+  })
+})
+
+describe('the Cartaz model, what the Dono gave each film (#272)', () => {
+  test('the stars are the last given and a comment pasted again shows once', async () => {
+    const fixture = useFixture()
+    const session = await recommend(fixture, { attendees: ['dono', 'iara'] })
+    const id = session.session.id
+    const film = session.films[0]!.id
+    for (const stars of [2, 4])
+      await fixture.ok(
+        answerBillboard({
+          session: id,
+          text: `#cartaz ${id} v1\n1 ${film} · estrelas: ${stars} · comentário: curto\n`,
+        }),
+      )
+
+    const model = await fixture.ok(billboardModel({ session: id }))
+
+    expect(model.films.find((f) => f.id === film)?.notes).toEqual({
+      stars: 4,
+      comments: ['curto'],
+    })
   })
 })

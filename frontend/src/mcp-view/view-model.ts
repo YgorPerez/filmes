@@ -88,7 +88,11 @@ type SentReply = Pick<
   | 'seen'
 >
 
-type Seen = { people: string[]; ratings: string[] }
+/** Who saw a film, and the Notas they gave, each with who gave it. */
+type Seen = {
+  people: string[]
+  ratings: { name: string; owner: boolean; rating: string }[]
+}
 
 /** Who saw each film, by title, in the order the reply lists them. */
 function seenByTitle(
@@ -100,17 +104,26 @@ function seenByTitle(
   for (const s of seen) {
     const person = bySlug.get(s.person)
     const name = person?.name ?? s.person
+    const owner = person?.owner ?? false
     const entry = byTitle.get(s.title) ?? { people: [], ratings: [] }
-    entry.people.push(person?.owner ? 'eu' : name)
+    entry.people.push(owner ? 'eu' : name)
     if (s.rating !== null)
-      entry.ratings.push(
-        person?.owner
-          ? `nota ${tenScale(s.rating)}`
-          : `${name} deu ${tenScale(s.rating)}`,
-      )
+      entry.ratings.push({ name, owner, rating: tenScale(s.rating) })
     byTitle.set(s.title, entry)
   }
   return byTitle
+}
+
+/** The Notas in brackets: "nota 8" when one Presente saw it (the sentence
+ * named her already, #277); with more, whose each one is ("nota 8, Iara
+ * deu 6"). */
+function ratingsText({ people: who, ratings }: Seen) {
+  if (ratings.length === 0) return ''
+  const one = who.length === 1
+  const said = ratings.map((r) =>
+    one || r.owner ? `nota ${r.rating}` : `${r.name} deu ${r.rating}`,
+  )
+  return ` (${said.join(', ')})`
 }
 
 /** "já vimos", "já viram", "Já vi" or "já viu", by who saw it. */
@@ -120,16 +133,18 @@ function seenVerb(names: readonly string[]) {
   return owner ? 'Já vi' : 'já viu'
 }
 
-/** "Eu e Iara já vimos Fronteira (nota 8)." */
-function seenSentence(title: string, { people: who, ratings }: Seen) {
+/** "Eu e Iara já vimos Fronteira (Iara deu 8).", "Iara já viu Fronteira
+ * (nota 8)." */
+function seenSentence(title: string, seen: Seen) {
   // The Dono first ("Eu e Iara já vimos").
-  const names = who.toSorted((a, b) => Number(b === 'eu') - Number(a === 'eu'))
+  const names = seen.people.toSorted(
+    (a, b) => Number(b === 'eu') - Number(a === 'eu'),
+  )
   const subject =
     names.length === 1 && names[0] === 'eu'
       ? ''
       : `${andList(names).replace(/^eu/u, 'Eu')} `
-  const notes = ratings.length > 0 ? ` (${ratings.join(', ')})` : ''
-  return `${subject}${seenVerb(names)} ${line(title)}${notes}.`
+  return `${subject}${seenVerb(names)} ${line(title)}${ratingsText(seen)}.`
 }
 
 /** "Quero o clima leve.", "Tirei o clima." or nothing. */
@@ -176,22 +191,34 @@ function spoken(reply: SentReply, people: readonly BillboardPerson[]) {
   return sentences.filter(Boolean).join(' ')
 }
 
+/** The words that open a second Enviar of the same version: it replaces
+ * what went before, which Claude may be redoing already (#277). */
+export const AGAIN = 'Corrigindo o que mandei:'
+
+/** The Cartaz's tag, ending the Dono's message: short, so the bubble stays
+ * hers (#277). The Session is the Cartaz's above it in the chat. */
+const tagOf = (reply: SentReply) => `(pelo Cartaz · v${reply.version})`
+
 /** What Claude gets after Enviar, when there is something for him: `text`,
- * the Dono's message, which ends in the Cartaz's tag ("enviado pelo
- * Cartaz · <sessao> v<n>"), and `context`, what the tool recorded and the
- * regenerate needs (the ids to keep, the Climas, the free text), for the
- * host's model context. Null when there is nothing for him (stars, or
- * Notas that dropped no film). */
+ * the Dono's message, which ends in the Cartaz's tag ("pelo Cartaz ·
+ * v<n>"), and `context`, what the tool recorded and the regenerate needs
+ * (the ids to keep, the Climas, the free text), for the host's model
+ * context. A host without one gets only `text`: Claude reads the rest
+ * from the Session (`billboard`). `again` when a message of this version
+ * went already: this one says it replaces it. Null when there is nothing
+ * for him (stars, or Notas that dropped no film). */
 export function replyMessage(
   reply: SentReply,
   people: readonly BillboardPerson[],
+  again = false,
 ): { text: string; context: string } | null {
   const comments = saidComments(reply)
   if (!reply.regenerate && reply.addition === null && comments.length === 0)
     return null
-  const tag = `(enviado pelo Cartaz · ${reply.session.id} v${reply.version})`
+  const tag = tagOf(reply)
+  const said = [again && AGAIN, spoken(reply, people)].filter(Boolean).join(' ')
   const lines = [
-    `Resposta do Cartaz ${reply.session.id} v${reply.version}, já gravada por answer_billboard (não chame de novo):`,
+    `Resposta do Cartaz ${reply.session.id} v${reply.version}, já gravada por answer_billboard (não chame de novo)${again ? '; substitui a anterior' : ''}:`,
     reply.regenerate &&
       `refazer · manter: ${reply.keep.length > 0 ? reply.keep.join(', ') : 'nenhum'}`,
     reply.moods !== null &&
@@ -203,12 +230,8 @@ export function replyMessage(
     ),
   ]
   return {
-    text: `${spoken(reply, people)}\n${tag}`.slice(0, MESSAGE_LIMIT),
+    // The tag always fits: the Dono's words give way.
+    text: `${said.slice(0, MESSAGE_LIMIT - tag.length - 1)}\n${tag}`,
     context: lines.filter(Boolean).join('\n').slice(0, MESSAGE_LIMIT),
   }
 }
-
-/** The message when the host takes no model context: the Dono's words,
- * then the detail Claude needs, within the host's limit. */
-export const withContext = (message: { text: string; context: string }) =>
-  `${message.text}\n${message.context}`.slice(0, MESSAGE_LIMIT)

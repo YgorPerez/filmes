@@ -40,6 +40,18 @@ function setInsets(insets: HostContext['safeAreaInsets']) {
     )
 }
 
+/** The frame's `color-scheme`. The inline card has no floor and sits on
+ * the host's: a frame whose scheme differs from the page around it gets an
+ * opaque canvas from Chrome, so inline it declares none, as the host's
+ * page does, and its colours come from `data-theme` alone (#277). The
+ * fullscreen and the whole Cartaz of a host without one lay their own
+ * ground, and take the theme's scheme for the native controls. */
+const schemeOf = (c: HostContext) =>
+  c.displayMode !== 'fullscreen' &&
+  c.availableDisplayModes?.includes('fullscreen')
+    ? 'normal'
+    : (c.theme ?? '')
+
 /** Renders the view in `root` and connects it to the host (`connect`):
  * the tool result, the host's theme (`data-theme`, which `ui/tokens.css`
  * follows), its safe area and its display modes. */
@@ -62,7 +74,7 @@ export async function mountView(
     context = { ...context, ...next }
     if (context.theme) {
       document.documentElement.dataset.theme = context.theme
-      document.documentElement.style.colorScheme = context.theme
+      document.documentElement.style.colorScheme = schemeOf(context)
     }
     setInsets(context.safeAreaInsets)
     changed()

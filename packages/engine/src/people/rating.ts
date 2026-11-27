@@ -202,6 +202,40 @@ export const ratingQueue = (
     )
   })
 
+export interface PersonRatingsOfRequest {
+  /** Slug, name or alias; "dono" is the Dono. */
+  readonly person: string
+  /** The films' Catalog ids (tt...). */
+  readonly films: ReadonlyArray<string>
+}
+
+/** Her Nota in force for each of the films that has one, on 1 to 10 as the
+ * rating screen gives it (#274): the screen says "sua nota 9" before she
+ * rates a film again. */
+export const personRatingsOf = (
+  request: PersonRatingsOfRequest,
+): Effect.Effect<
+  Readonly<Record<string, number>>,
+  EngineError | SqliteError,
+  Sqlite | Environment
+> =>
+  Effect.gen(function* () {
+    const person = yield* resolvePerson(request.person)
+    const films = [...new Set(request.films)]
+    if (films.length === 0) return {}
+    const rows = yield* (yield* Sqlite).read((db) =>
+      db.all(
+        `SELECT filme_id, nota FROM notas_vigentes
+         WHERE pessoa = ? AND filme_id IN (${films.map(() => '?').join(', ')})`,
+        person.slug,
+        ...films,
+      ),
+    )
+    return Object.fromEntries(
+      rows.map((row) => [text(row, 'filme_id'), Number(row.nota) * 2]),
+    )
+  })
+
 /** Where a Nota of the rating screen comes from. */
 export const RATING_SCREEN_SOURCE = 'notas no site'
 

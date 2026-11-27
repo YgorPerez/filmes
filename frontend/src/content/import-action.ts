@@ -260,7 +260,14 @@ export type QueueRefusal = (typeof QUEUE_REFUSALS)[number]
  * one that was sent (`?de=` of the action, back in the page's query): the
  * guided Letterboxd upload, the other services' upload, the profile and
  * the Trakt read by the API (#269). */
-const IMPORT_FORMS = ['letterboxd', 'outro', 'perfil', 'trakt'] as const
+const IMPORT_FORMS = [
+  'letterboxd',
+  'outro',
+  'perfil',
+  'trakt',
+  // The Trakt ZIP, folded in the Trakt slip (#274).
+  'trakt-zip',
+] as const
 
 export type ImportForm = (typeof IMPORT_FORMS)[number]
 
@@ -275,7 +282,7 @@ export function refusedForm(
   if (['consentimento', 'usuario', 'rss', 'fonte'].includes(refusal))
     return 'perfil'
   if (['arquivo', 'origem', 'grande'].includes(refusal))
-    return sent === 'outro' ? 'outro' : 'letterboxd'
+    return sent === 'outro' || sent === 'trakt-zip' ? sent : 'letterboxd'
   return null
 }
 
@@ -295,5 +302,33 @@ export const countOf = (value: unknown): number | undefined => {
         : NaN
   return Number.isSafeInteger(n) && n >= 0 ? n : undefined
 }
+
+/** A Nota an import replaced (#274): the film and the Nota before and
+ * after, 1 to 10, as her Notas list shows them. */
+export type ChangedRating = { title: string; from: number; to: number }
+
+/** The changed Notas in the query: `Maré Baixa (2015)~9~1`, joined by
+ * `|`; nothing when none changed. */
+export const changesParam = (changes: readonly ChangedRating[] = []) =>
+  changes.length === 0
+    ? undefined
+    : changes
+        .map(({ title, from, to }) =>
+          [title.replaceAll(/[~|]/g, ' '), from, to].join('~'),
+        )
+        .join('|')
+
+const NOTE = /^(?:10|[1-9])$/
+
+/** The changed Notas the query names; what does not read is left out. */
+export const changesOf = (value: unknown): ChangedRating[] =>
+  typeof value !== 'string'
+    ? []
+    : value.split('|').flatMap((entry) => {
+        const [title, from, to] = entry.split('~')
+        return title && from && to && NOTE.test(from) && NOTE.test(to)
+          ? [{ title, from: Number(from), to: Number(to) }]
+          : []
+      })
 
 export { IMPORT_NOTICES, IMPORT_REFUSALS, QUEUE_NOTICES, QUEUE_REFUSALS }

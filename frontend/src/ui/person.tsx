@@ -82,15 +82,31 @@ function useRefusedField(id: string): FieldProblem | null {
     : null
 }
 
-const noticeOfOwn = (notice: PersonNotice): string | undefined =>
-  (PERSON.ownNotices as Partial<Record<PersonNotice, string>>)[notice]
+/** What a save or a Tirar did, by the ficha that posted it: "Veto
+ * gravado.". */
+const noticeIn = (
+  spot: string | undefined,
+  notice: PersonNotice,
+): string | undefined => {
+  if (spot === undefined) return undefined
+  const words: Partial<Record<string, Partial<Record<PersonNotice, string>>>> =
+    PERSON.savedIn
+  return words[sectionOfSpot(spot)]?.[notice]
+}
+
+/** The hint of a form's Fonte: on her own page, what she says counts as
+ * said by her (#274). */
+function useSourceHint(fallback: string) {
+  const { own } = useContext(PostedAt)
+  return own ? PERSON.ownSourceHint : PERSON.sourceHint(fallback)
+}
 
 /** The words of a notice or a refusal, for her. */
 function useAnswerText() {
-  const { name, own, problem } = useContext(PostedAt)
+  const { name, spot, problem } = useContext(PostedAt)
   return {
     notice: (notice: PersonNotice) =>
-      (own ? noticeOfOwn(notice) : undefined) ?? PERSON.notices(name)[notice],
+      noticeIn(spot, notice) ?? PERSON.notices(name)[notice],
     refusal: (refusal: PersonRefusal) =>
       refusal === 'pedido' && problem
         ? PERSON.fieldProblem(problem)
@@ -110,6 +126,9 @@ function SpotStatus({ id }: { id: string }) {
   return notice ? <Notice>{text.notice(notice)}</Notice> : null
 }
 
+/** Her Trakt connection, as Meu gosto's Notas say it (#274). */
+type TraktState = 'connected' | 'disconnected' | null
+
 type PersonScreenProps = {
   slug: string
   page: PersonPage | 'unknown' | null
@@ -119,7 +138,9 @@ type PersonScreenProps = {
   problem?: FieldProblem
   /** Meu gosto's part of the setup guide; only on her own page. */
   start?: MyStart
-  showTrakt?: boolean
+  /** On Meu gosto, her Trakt connection; null when the server has no
+   * Trakt. */
+  trakt?: TraktState
   /** On Meu gosto, the films of her imports that wait in the queue. */
   pending?: number
   /** On Meu gosto, her genres and directors. */
@@ -145,7 +166,7 @@ export function PersonScreen({
   spot,
   problem,
   start,
-  showTrakt = false,
+  trakt = null,
   pending = 0,
   taste = null,
 }: PersonScreenProps) {
@@ -174,7 +195,7 @@ export function PersonScreen({
               page={page}
               own={own}
               start={start}
-              showTrakt={showTrakt}
+              trakt={trakt}
               pending={pending}
               taste={taste}
             />
@@ -185,15 +206,18 @@ export function PersonScreen({
   )
 }
 
-/** From 900px, two columns: her Sessões and Notas (and on Meu gosto what
- * the guide left) on the left, what the Dono acts on at the right. On a
- * phone, another Pessoa's page puts what the Dono acts on first (#273). */
+/** From 900px, two columns in the order a phone reads them (#273): on
+ * another Pessoa's page, what the Dono acts on at the left (the open
+ * questions, the Vetos, the Já vistos) and her Sessões and Notas at the
+ * right; on Meu gosto, the glance and the Notas first. Then, the whole
+ * width, "Afinar" and, on another Pessoa's page, "Remover Pessoa": the
+ * DOM, the focus and the screen go the same way at every width. */
 function PersonColumns({
   slug,
   page,
   own,
   start,
-  showTrakt,
+  trakt,
   pending,
   taste,
 }: {
@@ -201,47 +225,77 @@ function PersonColumns({
   page: PersonPage
   own: boolean
   start?: MyStart
-  showTrakt: boolean
+  trakt: TraktState
   pending: number
   taste: TasteSummary | null
 }) {
+  const { spot } = useContext(PostedAt)
+  const posted = spot === undefined ? undefined : sectionOfSpot(spot)
+  const column = 'flex min-w-0 flex-col gap-2xl'
+  const notes = (
+    <Notes
+      slug={slug}
+      own={own}
+      page={page}
+      pending={own ? pending : 0}
+      trakt={own ? trakt : null}
+    />
+  )
   return (
-    <div className="grid gap-2xl min-[900px]:grid-cols-2 min-[900px]:items-start">
-      <div className="flex min-w-0 flex-col gap-2xl">
+    <>
+      <div className="grid gap-2xl min-[900px]:grid-cols-2 min-[900px]:items-start">
         {own ? (
           <>
-            <Glance page={page} start={start} pending={pending} taste={taste} />
-            {showTrakt && <TraktLink />}
+            <div className={column}>
+              <Glance
+                page={page}
+                start={start}
+                pending={pending}
+                taste={taste}
+              />
+              {notes}
+            </div>
+            <div className={column}>
+              <Contents page={page} />
+              <Taste slug={slug} page={page} />
+              {/* The connector and the skipped steps go right, so the two
+                  columns end near each other on a desktop (#274). */}
+              {start && <MyStartSections start={start} person={slug} />}
+            </div>
           </>
         ) : (
-          <SessionsWith page={page} />
+          <>
+            <div className={column}>
+              <Taste slug={slug} page={page} />
+            </div>
+            <div className={column}>
+              <SessionsWith page={page} />
+              {notes}
+            </div>
+          </>
         )}
-        <Notes slug={slug} own={own} page={page} pending={own ? pending : 0} />
-        {own && start && <MyStartSections start={start} person={slug} />}
-        {!own && <RemovePerson slug={slug} page={page} />}
       </div>
-      <div
-        className={`flex min-w-0 flex-col gap-2xl ${own ? '' : 'max-[899px]:order-first'}`}
-      >
-        {own && <Contents page={page} />}
-        <Taste slug={slug} page={page} />
-      </div>
-    </div>
+      <Refine
+        slug={slug}
+        page={page}
+        open={posted !== undefined && REFINE.has(posted)}
+      />
+      {!own && <RemovePerson slug={slug} page={page} />}
+    </>
   )
 }
 
-/** Meu gosto's way to her Trakt connection. */
-function TraktLink() {
+/** Meu gosto's line of her Trakt connection, in the Notas (#274): whether
+ * it is connected, and the way to the connection. */
+function TraktStatus({ state }: { state: 'connected' | 'disconnected' }) {
+  const { trakt } = PERSON.notes
   return (
-    <a
-      href={TRAKT_PATH}
-      className={buttonVariants({
-        variant: 'option',
-        className: 'self-start',
-      })}
-    >
-      Conexão com o Trakt
-    </a>
+    <p className="text-meta text-ink-2">
+      {trakt.state(state === 'connected')} ·{' '}
+      <a href={TRAKT_PATH} className="text-ink underline underline-offset-3">
+        {trakt.link(state === 'connected')}
+      </a>
+    </p>
   )
 }
 
@@ -329,8 +383,9 @@ function DownloadAgain({ slug }: { slug: string }) {
 }
 
 /** Another Pessoa at a glance (#273): "também Quinzinho · 4 Notas · 1
- * Veto", or "falta conhecer", and the one next step: her history when she
- * has no Nota, else the open questions, else a Veto. */
+ * Veto", or "falta conhecer"; what her Notas say she likes; and the one
+ * next step, the page's orange button: her history when she has no Nota,
+ * else the open questions, else a first Veto, else a film with her. */
 function Summary({ slug, page }: { slug: string; page: PersonPage }) {
   const { summary } = PERSON
   const notes = page.ratings?.length ?? 0
@@ -342,12 +397,8 @@ function Summary({ slug, page }: { slug: string; page: PersonPage }) {
       : null,
     page.sessions.total > 0 ? summary.sessions(page.sessions.total) : null,
   ].filter((part) => part !== null)
-  const [step, href] =
-    page.ratings !== null && notes === 0
-      ? [summary.steps.import(page.name), importsPath(slug, false)]
-      : page.openQuestions.length > 0
-        ? [summary.steps.questions(page.openQuestions.length), '#perguntas']
-        : [summary.steps.veto(page.name), '#acrescentar-veto']
+  const [step, href] = nextStep(slug, page)
+  const likes = likesOf(page)
   return (
     <>
       <Meta
@@ -356,14 +407,54 @@ function Summary({ slug, page }: { slug: string; page: PersonPage }) {
           ...(counts.length > 0 ? counts : [summary.unknown]),
         ]}
       />
-      <p className="mt-xs">
-        {summary.next}:{' '}
-        <a href={href} className="text-ink underline underline-offset-3">
+      {likes && <p className="max-w-[60ch]">{likes}</p>}
+      <div className="mt-sm flex flex-col items-start gap-xs">
+        <span className="font-display text-label text-ink-2 uppercase">
+          {summary.next}
+        </span>
+        <a href={href} className={buttonVariants()}>
           {step}
         </a>
-      </p>
+      </div>
     </>
   )
+}
+
+/** A Nota from 4 of 5 (8 of 10) on is a high one, as the engine's
+ * `tasteSummary` reads it. */
+const HIGH_NOTE = 4
+
+/** What her Notas say she likes (#273): her genres and directors, or,
+ * when the films she liked have none, the titles of her highest Notas;
+ * null when no Nota is high. */
+function likesOf(page: PersonPage): string | null {
+  const { summary } = PERSON
+  const names = page.likes
+    ? [...page.likes.genres, ...page.likes.directors]
+    : []
+  if (names.length > 0) return summary.likes(page.name, names)
+  const titles = (page.ratings ?? [])
+    .filter((r) => r.rating >= HIGH_NOTE && r.title !== null)
+    .toSorted((a, b) => b.rating - a.rating)
+    .slice(0, 3)
+    .map((r) => r.title ?? '')
+  return titles.length > 0 ? summary.liked(page.name, titles) : null
+}
+
+/** Another Pessoa's next step and where it goes (#273). A Veto is offered
+ * only while she has none: once saved, the step moves on. */
+function nextStep(slug: string, page: PersonPage): [string, string] {
+  const { steps } = PERSON.summary
+  if (page.ratings?.length === 0)
+    return [steps.import(page.name), importsPath(slug, false)]
+  if (page.openQuestions.length > 0)
+    return [steps.questions(page.openQuestions.length), '#perguntas']
+  if (page.vetoes.length === 0)
+    return [steps.veto(page.name), '#acrescentar-veto']
+  const attendees = new URLSearchParams({
+    presentes: [page.viewer.person, slug].join(','),
+  })
+  return [steps.ask(page.name), `/sessoes/nova?${attendees.toString()}`]
 }
 
 /** The Sessões she was in (#273): her Satisfação in words, and the latest
@@ -419,11 +510,13 @@ function Notes({
   own,
   page,
   pending,
+  trakt,
 }: {
   slug: string
   own: boolean
   page: PersonPage
   pending: number
+  trakt: TraktState
 }) {
   const { notes } = PERSON
   const { ratings, predictionError } = page
@@ -457,9 +550,10 @@ function Notes({
           {notes.import}
         </a>
       </div>
+      {trakt && <TraktStatus state={trakt} />}
       {ratings !== null && ratings.length > 0 && (
         <>
-          <NotesList ratings={ratings} />
+          <NotesList slug={slug} own={own} page={page} ratings={ratings} />
           <NotesMore slug={slug} own={own} page={page} count={ratings.length} />
         </>
       )}
@@ -482,33 +576,72 @@ function Pending({ pending }: { pending: number }) {
   )
 }
 
-/** Her Notas, folded: the list can be long. */
+/** Her Notas, folded: the list can be long. On Meu gosto each one can be
+ * changed on Dar notas (a newer Nota is the one in force); one her file
+ * holds (Dar notas, a Já visto with a Nota) can be taken out, and the one
+ * it covered, if any, counts again. An imported one leaves with its
+ * import (#274). */
 function NotesList({
+  slug,
+  own,
+  page,
   ratings,
 }: {
+  slug: string
+  own: boolean
+  page: PersonPage
   ratings: NonNullable<PersonPage['ratings']>
 }) {
+  const { notes } = PERSON
+  const inFile = new Set(page.seen.map((s) => s.factId))
   return (
-    <Disclosure summary={PERSON.notes.list(ratings.length)}>
+    <Disclosure summary={notes.list(ratings.length)}>
       <ul className="flex flex-col">
-        {ratings.map((r) => (
-          <Item key={r.factId}>
-            <span>{r.title ?? r.filmId}</span>
-            <Meta
-              parts={[
-                PERSON.ratingText(r.rating),
-                shortDate(r.date),
-                PERSON.ratingSource(r.rating, r.source),
-              ]}
-            />
-          </Item>
-        ))}
+        {ratings.map((r) => {
+          const title = r.title ?? r.filmId
+          return (
+            <Item
+              key={r.factId}
+              actions={
+                <span className="flex shrink-0 items-center gap-xs">
+                  {own && (
+                    <a
+                      href={`${RATINGS_PATH}?filme=${encodeURIComponent(r.filmId)}`}
+                      aria-label={notes.changeLabel(title)}
+                      className={buttonVariants({ variant: 'option' })}
+                    >
+                      {notes.change}
+                    </a>
+                  )}
+                  {inFile.has(r.factId) && (
+                    <RemoveForm
+                      slug={slug}
+                      what="seen"
+                      id={r.factId}
+                      label={notes.removeWhat(title)}
+                    />
+                  )}
+                </span>
+              }
+            >
+              <span>{title}</span>
+              <Meta
+                parts={[
+                  PERSON.ratingText(r.rating),
+                  shortDate(r.date),
+                  PERSON.ratingSource(r.rating, r.source, page.name),
+                ]}
+              />
+            </Item>
+          )
+        })}
       </ul>
     </Disclosure>
   )
 }
 
-/** The CSVs of her Notas, folded, and for an admin the MovieLens word. */
+/** The CSVs of her Notas, as two links, and for an admin the MovieLens
+ * word (#274). */
 function NotesMore({
   slug,
   own,
@@ -521,25 +654,26 @@ function NotesMore({
   count: number
 }) {
   const { notes } = PERSON
-  const option = buttonVariants({ variant: 'option' })
+  const link =
+    'inline-flex min-h-touch items-center text-ink underline underline-offset-3'
   return (
-    <Disclosure summary={notes.more}>
-      <div className="flex flex-col gap-md">
-        <div className="flex flex-wrap items-center gap-xs">
-          <a href={imdbCsvPath(slug)} className={option}>
-            {notes.download}
-          </a>
-          <a href={letterboxdCsvPath(slug)} className={option}>
-            {notes.downloadLetterboxd}
-          </a>
-        </div>
-        {page.viewer.admin && (
-          <p className="text-meta text-ink-2">
-            {notes.movielens(own, count, page.name)}
-          </p>
-        )}
-      </div>
-    </Disclosure>
+    <div className="flex flex-col gap-2xs">
+      <p className="flex flex-wrap items-center gap-x-sm text-meta text-ink-2">
+        {notes.more}
+        <a href={imdbCsvPath(slug)} className={link}>
+          {notes.download}
+        </a>
+        <span aria-hidden="true">·</span>
+        <a href={letterboxdCsvPath(slug)} className={link}>
+          {notes.downloadLetterboxd}
+        </a>
+      </p>
+      {page.viewer.admin && (
+        <p className="text-meta text-ink-2">
+          {notes.movielens(own, count, page.name)}
+        </p>
+      )}
+    </div>
   )
 }
 
@@ -613,8 +747,8 @@ function Glance({
           </span>
         )}
       </p>
-      {taste && taste.genres.length > 0 && (
-        <p>{glance.likes([...taste.genres, ...taste.directors])}</p>
+      {taste && taste.genres.length + taste.directors.length > 0 && (
+        <p>{glance.likes(taste.genres, taste.directors)}</p>
       )}
       <p className="text-ink-2">
         {said.length === 0
@@ -662,10 +796,9 @@ const REFINE = new Set(['ajustes', 'declarados', 'relatos', 'acesso'])
 
 /** What the Dono acts on, in that order (#273): the open questions (only
  * when there is one), the Vetos (always: the strongest thing she can say),
- * the Já vistos without a Nota; the empty ones in one fold ("Ainda sem
- * Já vistos sem Nota · Acrescentar"); then "Afinar", folded, with the
- * Ajustes, Declarados, Relatos and Acesso. A fold opens by itself when its
- * ficha posted the last form. */
+ * the Já vistos without a Nota, folded in one line while there is none
+ * ("Já vistos sem Nota: nenhum"). A fold opens by itself when its ficha
+ * posted the last form. */
 function Taste({ slug, page }: { slug: string; page: PersonPage }) {
   const { spot } = useContext(PostedAt)
   const posted = spot === undefined ? undefined : sectionOfSpot(spot)
@@ -682,17 +815,12 @@ function Taste({ slug, page }: { slug: string; page: PersonPage }) {
         <Seen slug={slug} page={page} />
       ) : (
         <Disclosure
-          summary={PERSON.empties([PERSON.seen.title])}
+          summary={PERSON.empty(PERSON.seen.title)}
           open={posted === 'vistos' || undefined}
         >
           <Seen slug={slug} page={page} />
         </Disclosure>
       )}
-      <Refine
-        slug={slug}
-        page={page}
-        open={posted !== undefined && REFINE.has(posted)}
-      />
     </>
   )
 }
@@ -725,25 +853,27 @@ function Refine({
       )}
       open={open || undefined}
     >
-      <div className="flex flex-col gap-2xl">
+      <div className="grid gap-2xl min-[900px]:grid-cols-2 min-[900px]:items-start">
         <Adjustments slug={slug} page={page} />
-        <Statements
-          slug={slug}
-          kind="stated"
-          own={own}
-          items={page.stated}
-          source={PERSON.stated.source}
-        />
-        {reports && (
+        <div className="flex min-w-0 flex-col gap-2xl">
           <Statements
             slug={slug}
-            kind="report"
+            kind="stated"
             own={own}
-            items={page.reports}
-            source={own ? null : PERSON.reports.source(page.viewer.name)}
+            items={page.stated}
+            source={PERSON.stated.source}
           />
-        )}
-        {access && <Access slug={slug} page={page} />}
+          {reports && (
+            <Statements
+              slug={slug}
+              kind="report"
+              own={own}
+              items={page.reports}
+              source={own ? null : PERSON.reports.source(page.viewer.name)}
+            />
+          )}
+          {access && <Access slug={slug} page={page} />}
+        </div>
       </div>
     </Disclosure>
   )
@@ -962,22 +1092,36 @@ function Adjustments({ slug, page }: Part) {
     >
       <SpotStatus id="ajustes" />
       <p className="text-meta text-ink-2">{adjustments.levelsHint}</p>
-      <ul className="flex flex-col">
-        {Object.entries(PERSON.links).map(([link, name]) => (
-          <li
-            key={link}
-            id={`ajuste-${link}`}
-            className="scroll-mt-2xl border-rule py-md not-first:border-t"
+      {(['people', 'film'] as const).map((group) => (
+        <section
+          key={group}
+          aria-labelledby={`ajustes-${group}`}
+          className="flex flex-col"
+        >
+          <h3
+            id={`ajustes-${group}`}
+            className="font-display text-label text-ink-2 uppercase"
           >
-            <AdjustmentForm
-              slug={slug}
-              link={link}
-              legend={adjustments.level(name)}
-              current={levelOf(link)}
-            />
-          </li>
-        ))}
-      </ul>
+            {adjustments.groups[group]}
+          </h3>
+          <ul className="flex flex-col">
+            {PERSON.linkGroups[group].map((link) => (
+              <li
+                key={link}
+                id={`ajuste-${link}`}
+                className="scroll-mt-2xl border-rule py-md not-first:border-t"
+              >
+                <AdjustmentForm
+                  slug={slug}
+                  link={link}
+                  legend={adjustments.level(PERSON.links[link])}
+                  current={levelOf(link)}
+                />
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
     </Slip>
   )
 }
@@ -1050,9 +1194,9 @@ function LevelPicker({
           <span className="font-body font-normal text-ink-2"> {hint}</span>
         )}
         {saved && (
-          <span role="status" className="font-body font-normal text-ink-2">
-            {' · ✓ '}
-            {PERSON.adjustments.saved}
+          <span className="ml-sm font-body font-normal text-ink-2">
+            <span aria-hidden="true">✓ </span>
+            <span role="status">{PERSON.adjustments.saved}</span>
           </span>
         )}
       </legend>
@@ -1203,6 +1347,7 @@ function AddStatement({
   refused: FieldProblem | null
 }) {
   const copy = kind === 'stated' ? PERSON.stated : PERSON.reports
+  const hint = useSourceHint(source)
   return (
     <Disclosure summary={copy.add} open={refused !== null || undefined}>
       <ActionForm
@@ -1223,11 +1368,7 @@ function AddStatement({
           label={PERSON.reaction}
           options={REACTION_OPTIONS}
         />
-        <TextField
-          name="fonte"
-          label={PERSON.source}
-          hint={PERSON.sourceHint(source)}
-        />
+        <TextField name="fonte" label={PERSON.source} hint={hint} />
         <Submit>{PERSON.save}</Submit>
       </ActionForm>
     </Disclosure>
@@ -1237,6 +1378,7 @@ function AddStatement({
 function Seen({ slug, page }: Part) {
   const { seen } = PERSON
   const refused = useRefusedField('vistos')
+  const hint = useSourceHint(seen.source)
   return (
     <Slip id="vistos" title={seen.title} aside={countOf(seenOf(page))}>
       <SpotStatus id="vistos" />
@@ -1279,11 +1421,7 @@ function Seen({ slug, page }: Part) {
             label={PERSON.rating}
             options={RATING_OPTIONS}
           />
-          <TextField
-            name="fonte"
-            label={PERSON.source}
-            hint={PERSON.sourceHint(seen.source)}
-          />
+          <TextField name="fonte" label={PERSON.source} hint={hint} />
           <Submit>{PERSON.save}</Submit>
         </ActionForm>
       </Disclosure>
@@ -1358,7 +1496,7 @@ function Access({ slug, page }: { slug: string; page: PersonPage }) {
               required
             />
             <p className="text-meta text-ink-2">{copy.testUsers}</p>
-            <Submit variant="primary">{copy.grant}</Submit>
+            <Submit>{copy.grant}</Submit>
           </ActionForm>
         </>
       )}

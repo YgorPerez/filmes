@@ -31,12 +31,9 @@ const satisfaction = (page: Page) =>
 const reactionOf = (page: Page, name: string) =>
   page.getByRole('group', { name: new RegExp(`^${name}\\b`) })
 
-/** Her Nota of 1 to 10; for a Presente who is not the Dono, under "ou dar
- * nota". */
+/** Her Nota of 1 to 10, open in every row (#272). */
 async function rate(page: Page, name: string, n: string) {
   const reaction = reactionOf(page, name)
-  const give = reaction.getByText('ou dar nota de 1 a 10')
-  if (await give.count()) await give.click()
   await reaction
     .getByRole('radiogroup')
     .getByRole('radio', { name: n, exact: true })
@@ -60,7 +57,7 @@ test('the Dono closes a Session and the next one shows the satisfaction', async 
   // Sessões leads to its Feedback (the home shows only the latest, and the
   // other project opens its own at the same time).
   await tab(page, 'Sessões').click()
-  await page.getByRole('link', { name: 'Para contar' }).click()
+  await page.getByRole('link', { name: 'Para contar', exact: true }).click()
   await expect(page).toHaveURL(/\/sessoes\?filtro=para-contar$/)
   await page
     .getByRole('listitem')
@@ -91,6 +88,14 @@ test('the Dono closes a Session and the next one shows the satisfaction', async 
   ).toContainText('Bruno: deu 10 de 10')
   await snap(page, info, 'feedback-gravado')
   expect(await stillOpen(first)).toBe(false)
+  // "Pedir filme de novo com essa turma" opens Nova Sessão with the group
+  // (#272): the search survives the server's round-trip.
+  await page
+    .getByRole('link', { name: 'Pedir filme de novo com essa turma' })
+    .click()
+  await expect(page).toHaveURL(/\/sessoes\/nova\?presentes=/)
+  await expect(page.getByRole('checkbox', { name: 'Rosa' })).toBeChecked()
+  await expect(page.getByRole('checkbox', { name: 'Quim' })).toBeChecked()
   await page.goto('/feedback')
   await expect(page).toHaveURL(/\/sessoes\?filtro=para-contar$/)
   await expect(page.locator(`a[href="/sessoes/${first}"]`)).toHaveCount(0)
@@ -102,7 +107,7 @@ test('the Dono closes a Session and the next one shows the satisfaction', async 
   await page.goto(`/sessoes/${next}/contar`)
   await expect(satisfaction(page)).toContainText('Rosa')
   await expect(satisfaction(page)).toContainText(
-    /satisfação de Rosa nas últimas Sessões: 11%, e a mais alta do grupo, 100%; na de 2026-11-20 \(.+\), deu 1/,
+    /satisfação de Rosa nas últimas Sessões: 11%, e a mais alta do grupo, 100%; na de sex, 20 nov \(.+\), deu 2 de 10/,
   )
   await snap(page, info, 'feedback-satisfacao')
 })

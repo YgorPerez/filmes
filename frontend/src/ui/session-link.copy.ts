@@ -31,11 +31,15 @@ export const PARTICIPATION = {
     brokenLead:
       'O link pode ter vindo cortado ou ser de outra Sessão. Peça um novo pra quem te mandou.',
     closed: 'Essa Sessão já fechou',
-    closedLead:
-      'O filme da noite já foi escolhido, então não dá mais pra votar. Na próxima, peça o link novo pra quem te mandou.',
+    /** What the night ended with: the chosen film, when the Feedback
+     * named one. */
+    closedLead: (chosen: string | null) =>
+      chosen
+        ? `Vocês viram ${chosen}. A votação acabou; na próxima, peça o link novo pra quem te mandou.`
+        : 'A Sessão terminou sem filme escolhido, e a votação acabou. Na próxima, peça o link novo pra quem te mandou.',
   },
   unknownPerson: 'Esse nome não está nesta Sessão. Toque no seu nome abaixo.',
-  as: 'Votando como',
+  as: 'Você entrou como',
   notYou: 'Não é você?',
   films: 'Filmes da Sessão',
   lead: (n: number) =>

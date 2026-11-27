@@ -10,7 +10,9 @@ import { join } from 'node:path'
 import { describe, expect, test } from 'vite-plus/test'
 import {
   answerBillboard,
+  billboardModel,
   billboardText,
+  listSessions,
   parseYaml,
   personView,
   recommendSession,
@@ -191,6 +193,42 @@ describe('cartaz responder (test_cartaz_responder)', () => {
   })
 })
 
+describe('cartaz responder: the Trocar the Cartaz marked for a Já vi (#326)', () => {
+  test('takes the film off as the Já vi does and goes in swapped', async () => {
+    const fixture = useFixture()
+    const { id, f } = await open(fixture, 'iara')
+
+    const out = await answer(
+      fixture,
+      id,
+      `#cartaz ${id} v1\n2 ${f[1]!.id} · já vi: iara · trocar: já vi\n`,
+    )
+
+    expect(out.dropped).toEqual([
+      expect.objectContaining({ id: f[1]!.id, cause: 'seen' }),
+    ])
+    expect(front(fixture, id)['swapped']).toEqual([f[1]!.id])
+  })
+
+  test('the Copiar text writes it as trocar: já vi', () => {
+    const text = billboardText(
+      state('s', 1, ['bruno', 'iara'], '', [
+        {
+          position: 1,
+          id: 'tt1',
+          seen: ['iara'],
+          swap: true,
+          swapForSeen: true,
+        },
+        { position: 2, id: 'tt2', swap: true },
+      ]),
+    )
+    expect(text).toBe(
+      '#cartaz s v1\n1 tt1 · já vi: iara · trocar: já vi\n2 tt2 · trocar\n',
+    )
+  })
+})
+
 describe('cartaz responder (test_cartaz_responder)', () => {
   test('an old version’s text counts by film and ignores the Trocar of what left', async () => {
     const fixture = useFixture()
@@ -225,6 +263,12 @@ describe('cartaz responder (test_cartaz_responder)', () => {
     expect(top['versions'][0]['replies'][0]['films']).toEqual([
       { position: left.position, id: left.id, stars: 3 },
     ])
+    // The list gives the stars and the films that left the shelf (#272).
+    const { sessions } = await fixture.ok(listSessions)
+    const listed = sessions.find((s) => s.id === id)!
+    expect(listed.stars).toEqual({ [left.id]: 3 })
+    expect(listed.earlier).toContainEqual({ id: left.id, title: left.title })
+    expect(listed.earlier.map((e) => e.id)).not.toContain(second.films[0]!.id)
   })
 
   test('the current version’s replies go with it when the Session is redone', async () => {
@@ -524,6 +568,13 @@ describe('cartaz responder (test_cartaz_responder)', () => {
       { date: '2026-11-20', addition: 'chegou a Ana' },
     ])
     expect([out.regenerate, out.keep]).toEqual([true, f.map((x) => x.id)])
+    // The Cartaz and the list say it after the words she opened with (#272).
+    const model = await fixture.ok(billboardModel({ session: id }))
+    expect(model.request.additions).toEqual(['chegou a Ana'])
+    const { sessions } = await fixture.ok(listSessions)
+    expect(sessions.find((s) => s.id === id)?.additions).toEqual([
+      'chegou a Ana',
+    ])
   })
 })
 
@@ -609,6 +660,27 @@ const state = (
 })
 
 describe('the text the Cartaz copies (test_cartaz_responde)', () => {
+  test('a film without Notas or thoughts on it still writes its Já vi', () => {
+    expect(
+      billboardText({
+        session: 's',
+        version: 1,
+        attendees: ['bruno', 'iara'],
+        addition: '',
+        films: [
+          {
+            position: 1,
+            id: 'tt1',
+            seen: ['iara'],
+            swap: false,
+            stars: 0,
+            comment: '',
+          },
+        ],
+      }),
+    ).toBe('#cartaz s v1\n1 tt1 · já vi: iara\n')
+  })
+
   test('header, acrescentar and one line per marked film', () => {
     expect(
       billboardText(

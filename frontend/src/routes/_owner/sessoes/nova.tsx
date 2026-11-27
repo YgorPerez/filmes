@@ -34,11 +34,14 @@ export const Route = createFileRoute('/_owner/sessoes/nova')({
   component: NewSessionPage,
 })
 
-/** `?presentes=bruno,iara`: the group to start with (#272). */
-function peopleParam(value: unknown): string[] | undefined {
-  if (typeof value !== 'string') return undefined
-  const slugs = value.split(',').filter((slug) => /^[\w-]{1,64}$/.test(slug))
-  return slugs.length > 0 ? slugs.slice(0, 20) : undefined
+/** `?presentes=bruno,iara`: the group to start with (#272). Kept as the
+ * text it came in: an array here would be written back to the URL as JSON,
+ * and the server's redirect to that URL lost the group. */
+function peopleParam(value: unknown): string | undefined {
+  const text = Array.isArray(value) ? value.join(',') : value
+  if (typeof text !== 'string') return undefined
+  const slugs = text.split(',').filter((slug) => /^[\w-]{1,64}$/.test(slug))
+  return slugs.length > 0 ? slugs.slice(0, 20).join(',') : undefined
 }
 
 function NewSessionPage() {
@@ -52,7 +55,7 @@ function NewSessionPage() {
       refusal={erro}
       search={search}
       similar={parecido}
-      attendees={presentes}
+      attendees={presentes?.split(',')}
     />
   )
 }

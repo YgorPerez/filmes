@@ -20,3 +20,6 @@ export const Credits: Story = {
     ).toHaveAttribute('href', '/creditos')
   },
 }
+
+/** Under the Session link's pages: the guest column's width. */
+export const Narrow: Story = { args: { narrow: true } }

@@ -72,6 +72,9 @@ const fromStored = (
     case 'no_sad':
       request.noSad = true
       break
+    case 'no_mood':
+      request.noMoods = (stored['moods'] as unknown[]).map(String)
+      break
   }
 }
 

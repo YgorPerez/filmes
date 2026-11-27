@@ -46,6 +46,7 @@ test("the Restrições' order is the Python modules', in English, then the ones 
     ...pythonModules.map(
       (name) => (names.CONSTRAINTS as Record<string, string>)[name],
     ),
+    'no_mood',
     'series_order',
   ])
 })

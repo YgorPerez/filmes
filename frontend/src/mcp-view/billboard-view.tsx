@@ -16,7 +16,7 @@
 // `mountView` (`mount-view.tsx`) connects this view to the host.
 
 import type { Billboard as BillboardModel } from '@filmes/engine'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Billboard, type SendOutcome } from '../ui/billboard'
 import { SEND_STATUS } from '../ui/billboard-send.copy'
 import { BILLBOARD } from '../ui/billboard.copy'
@@ -26,7 +26,6 @@ import {
   errorCodeOf,
   replyMessage,
   replyOf,
-  withContext,
   type ToolResult,
 } from './view-model'
 
@@ -49,12 +48,17 @@ export type Host = {
 
 const { view } = BILLBOARD
 
-/** Records the reply and, when needed, tells the chat. */
+/** What became of an Enviar, and whether the chat heard of it. */
+type Sent = SendOutcome & { readonly told?: boolean }
+
+/** Records the reply and, when needed, tells the chat. `again` when the
+ * chat heard of an earlier Enviar of this version. */
 async function send(
   host: Host,
   billboard: BillboardModel,
   text: string,
-): Promise<SendOutcome> {
+  again: boolean,
+): Promise<Sent> {
   let result: ToolResult
   try {
     result = await host.callTool('answer_billboard', {
@@ -67,24 +71,20 @@ async function send(
   const reply = replyOf(result)
   if (reply === null)
     return { message: view.failed(errorCodeOf(result)), sent: false }
-  const message = replyMessage(reply, billboard.attendees)
+  const message = replyMessage(reply, billboard.attendees, again)
   if (message === null) return { message: view.recorded, sent: true }
-  const inContext =
-    host.updateContext !== undefined &&
-    (await host.updateContext(message.context).then(
-      () => true,
-      () => false,
-    ))
-  const told = await host
-    .sendMessage(inContext ? message.text : withContext(message))
-    .then(
-      (answer) => !answer.isError,
-      () => false,
-    )
+  // Without the model context, the bubble still carries only the Dono's
+  // words: Claude reads what was recorded from the Session (#277).
+  await host.updateContext?.(message.context).catch(() => {})
+  const told = await host.sendMessage(message.text).then(
+    (answer) => !answer.isError,
+    () => false,
+  )
   if (!told) return { message: SEND_STATUS.notNotified, sent: true }
   return {
     message: reply.regenerate ? SEND_STATUS.regenerating : SEND_STATUS.toChat,
     sent: true,
+    told: true,
   }
 }
 
@@ -96,10 +96,13 @@ function Cartaz({
   host: Host
 }) {
   const [sent, setSent] = useState(false)
+  // A message of this version reached the chat: the next one replaces it.
+  const told = useRef(false)
 
   const onSend = async (text: string) => {
-    const outcome = await send(host, billboard, text)
+    const outcome = await send(host, billboard, text, told.current)
     if (outcome.sent) setSent(true)
+    if (outcome.told) told.current = true
     return outcome
   }
 
@@ -117,9 +120,10 @@ function Cartaz({
 const layoutOf = (host: Host) =>
   host.inFullscreen ? 'fullscreen' : host.fullscreen ? 'inline' : 'page'
 
-/** The inline card's frame while the result comes: the label and five
- * empty rows, at about the card's height, so the chat does not jump when
- * it arrives (#277). */
+/** The inline card's frame while the result comes: the label, the
+ * paper and five empty rows, at the height of a first version's card (the
+ * label on one line, which it takes once the fixed minimum IMDb rating is
+ * off it), so the chat does not jump when it arrives (#277). */
 function Loading() {
   return (
     <section
@@ -130,14 +134,14 @@ function Loading() {
         {view.loading}
       </p>
       <div aria-hidden="true" className="flex flex-col items-start gap-xs">
-        <div className="h-[37px] w-3/5 rounded-rail bg-case" />
-        <div className="h-[26px] w-2/5 rounded-note bg-surface-2" />
+        <div className="h-[40px] w-3/5 rounded-rail bg-case" />
+        <div className="h-[29px] w-2/5 rounded-note bg-surface-2" />
       </div>
       <ul aria-hidden="true" className="flex flex-col gap-2xs">
         {[1, 2, 3, 4, 5].map((n) => (
           <li
             key={n}
-            className="grid h-[36px] grid-cols-[8px_minmax(0,1fr)] gap-sm overflow-hidden rounded-rail bg-surface"
+            className="grid h-[38px] grid-cols-[8px_minmax(0,1fr)] gap-sm overflow-hidden rounded-rail bg-surface"
           >
             <span className="bg-case" />
           </li>

@@ -83,6 +83,8 @@ const session = (id: string, attendees: string[]): LatestSession => ({
   chosen: null,
   moods: [],
   constraints: [],
+  version: 1,
+  additions: [],
 })
 
 describe('homeData', () => {

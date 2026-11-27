@@ -23,9 +23,12 @@ export const VOTES = {
   back: 'Voltar',
   summary: (yes: number, no: number) =>
     `${count(yes, 'sim', 'sins')} · ${count(no, 'não', 'nãos')}`,
-  recap: 'Toque num voto pra mudar.',
-  flip: (title: string, vote: 'yes' | 'no') =>
-    `${title}: ${vote === 'yes' ? 'sim' : 'não'}. Tocar muda pra ${vote === 'yes' ? 'não' : 'sim'}.`,
+  recap: 'Revise antes de enviar: dá pra mudar qualquer voto aqui.',
+  /** What a screen reader hears after the last card. */
+  end: (yes: number, no: number) =>
+    `Fim: ${count(yes, 'sim', 'sins')}, ${count(no, 'não', 'nãos')}. Revise e envie.`,
+  /** The name of a recap row's Não / Sim pair. */
+  voteOn: (title: string) => `Voto em ${title}`,
   leaving: (titles: readonly string[]) =>
     `Vai sair da noite: ${titles.join(', ')}.`,
   send: 'Enviar votos',
@@ -33,6 +36,11 @@ export const VOTES = {
   restart: 'Recomeçar',
   sent: 'Votos enviados',
   voted: 'Você já votou',
+  /** The title over a failure she cannot fix. */
+  stuck: {
+    falha: 'Seus votos não foram contados',
+    regerar: 'Votos contados',
+  },
   lineup: 'A lista da noite agora',
   revote: 'Mudar votos',
   list: 'Ver a lista',
@@ -45,9 +53,9 @@ export const VOTES = {
   },
   refusals: {
     regerar: (owner: string | null) =>
-      `Seus votos foram contados, mas a lista não foi refeita. Avise ${who(owner)}.`,
+      `Seus votos foram contados, mas a lista não foi refeita. Fale com ${who(owner)}.`,
     indisponivel: () => 'Não deu pra enviar os votos agora. Tente de novo.',
     falha: (owner: string | null) =>
-      `Deu um problema do nosso lado e seus votos não foram contados. Avise ${who(owner)}.`,
+      `Deu um problema do nosso lado e seus votos não foram contados. Fale com ${who(owner)}.`,
   },
 } as const

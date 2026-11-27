@@ -37,7 +37,11 @@ export function Operations({
       <div
         className={`grid grid-cols-1 gap-3xl ${failing ? '' : 'min-[900px]:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] min-[900px]:items-start'}`}
       >
-        <ConsultSection answer={page.consult} schema={page.schema} />
+        <ConsultSection
+          answer={page.consult}
+          schema={page.schema}
+          quiet={failing}
+        />
         {!failing && push}
       </div>
       <EvaluationSection

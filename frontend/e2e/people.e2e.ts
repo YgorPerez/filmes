@@ -73,7 +73,7 @@ async function expectPersonPage(page: Page, url: RegExp, name: string) {
   await expect(page.getByRole('heading', { name })).toBeVisible()
 }
 
-async function addTwoVetoes(page: Page, name: string) {
+async function addTwoVetoes(page: Page) {
   // A Veto to a genre found by its name (#273), and one to a tag group.
   let form = await addForm(page, 'Vetos', 'Acrescentar Veto')
   await form.getByLabel('O Veto, como foi dito').fill('nunca vê terror')
@@ -81,7 +81,7 @@ async function addTwoVetoes(page: Page, name: string) {
   await form.getByRole('button', { name: 'Gravar' }).click()
   // Said inside the ficha that posted it, under her name.
   await expect(section(page, 'Vetos').getByRole('status')).toHaveText(
-    `Gravado no arquivo de ${name}.`,
+    'Veto gravado.',
   )
   await expect(section(page, 'Vetos')).toContainText('“nunca vê terror”')
 
@@ -97,7 +97,7 @@ async function castAdjustmentToNothing(page: Page) {
   await refine(page)
   const cast = () => page.getByRole('group', { name: /^Ajuste de elenco/ })
   await cast().getByText('nada', { exact: true }).click()
-  await expect(cast().getByRole('status')).toContainText('gravado')
+  await expect(cast().getByRole('status')).toHaveText('Ajuste gravado')
   await expect(cast().getByRole('radio', { name: 'nada' })).toBeChecked()
 }
 
@@ -118,7 +118,7 @@ async function addStatedReportAndSeen(page: Page, info: TestInfo) {
   await form.getByRole('button', { name: 'Gravar' }).click()
   await expect(section(page, 'Relatos')).toContainText('odeia filme lento')
 
-  await page.getByText(/^Ainda sem Já vistos sem Nota/).click()
+  await page.getByText('Já vistos sem Nota: nenhum').click()
   form = await addForm(page, 'Já vistos sem Nota', 'Acrescentar Já visto')
   await target(form, /^Filme/, 'casa cheia', /^Usar Casa Cheia/)
   await form.getByLabel(/^Nota/).selectOption('8')
@@ -160,14 +160,14 @@ test('the Dono reads and changes a Pessoa’s taste', async ({ page }, info) => 
   // Every form below posts by fetch (#235): the page is never loaded again.
   await markPage(page)
 
-  await addTwoVetoes(page, name)
+  await addTwoVetoes(page)
   await castAdjustmentToNothing(page)
   await addStatedReportAndSeen(page, info)
 
   // Out again.
   await page.getByRole('button', { name: 'Tirar nunca vê terror' }).click()
   await expect(section(page, 'Vetos').getByRole('status')).toHaveText(
-    `Tirado do arquivo de ${name}.`,
+    'Veto tirado.',
   )
   await expect(section(page, 'Vetos')).not.toContainText('nunca vê terror')
   await expectSamePage(page)

@@ -103,7 +103,7 @@ async function openOlgaImports(page: Page, info: TestInfo) {
   await expect(page).toHaveURL(/\/pessoas\/olga$/)
   await section(page, 'Notas')
     .getByRole('link', {
-      name: 'Importar do Letterboxd, do Trakt, do IMDb ou do Simkl',
+      name: 'Importar de outro site',
     })
     .click()
   await expect(page).toHaveURL(/\/pessoas\/olga\/importar$/)
@@ -153,7 +153,7 @@ async function confirmInQueue(page: Page, info: TestInfo, letterboxd: Locator) {
   await snap(page, info, 'fila')
 
   // Something that is not a film: the queue says why, and nothing changes.
-  await lost.getByText('Tenho o link').click()
+  await lost.getByText('Procurar outro título').click()
   const confirmLost = lost.getByRole('form', {
     name: 'Confirmar Filme Perdido (2001)',
   })
@@ -162,8 +162,11 @@ async function confirmInQueue(page: Page, info: TestInfo, letterboxd: Locator) {
   await expect(page).toHaveURL(/\/meu-gosto\/fila\?erro=filme$/)
   await expect(page.getByRole('alert')).toContainText('Cole um link')
 
+  // Each suggestion says its director, runtime and country (#274).
   await wind
-    .getByRole('button', { name: 'É este: Vento Norte (2020)', exact: true })
+    .getByRole('button', {
+      name: /^É este: Vento Norte \(2020\), Direção: Helena Prado/,
+    })
     .click()
   await expect(notice(page)).toHaveText(
     'Vento Norte (2020) confirmado: as Notas dele entraram no gosto de quem o tem.',
@@ -179,7 +182,9 @@ async function confirmInQueue(page: Page, info: TestInfo, letterboxd: Locator) {
     'Vento Norte (2020) voltou para a fila.',
   )
   await section(page, 'Vento Norte (2020)')
-    .getByRole('button', { name: 'É este: Vento Norte (2020)', exact: true })
+    .getByRole('button', {
+      name: /^É este: Vento Norte \(2020\), Direção: Helena Prado/,
+    })
     .click()
   await expect(section(page, 'Vento Norte (2020)')).toHaveCount(0)
   return lost
@@ -267,7 +272,8 @@ test('the Dono imports a Trakt ZIP; a ZIP of neither and a profile that does not
     'outro',
   )
   await expect(notice(page)).toHaveText(
-    'O ZIP do Trakt entrou: entraram 2 Notas novas e 1 Já visto novo.',
+    // The film of the history has a Nota too: no Já visto alone (#274).
+    'O ZIP do Trakt entrou: entraram 2 Notas novas.',
   )
   await expect(section(page, RESULTS)).not.toContainText('Letterboxd:')
   await expect(section(page, RESULTS)).toContainText(
@@ -330,7 +336,7 @@ test('the Dono imports a Simkl backup ZIP', async ({ page }, info) => {
     'outro',
   )
   await expect(notice(page)).toHaveText(
-    'O backup do Simkl entrou: entraram 3 Notas novas e 2 Já vistos novos. 2 filmes ficaram de fora: o Catálogo do filmes não tem.',
+    /^O backup do Simkl entrou: entraram 3 Notas novas.* 2 filmes ficaram de fora: o Catálogo do filmes não tem\.$/,
   )
   await expect(section(page, RESULTS)).toContainText(
     'Simkl: 3 Notas e 2 Já vistos',
@@ -363,7 +369,7 @@ test('the Dono imports a TV Time backup', async ({ page }, info) => {
     'outro',
   )
   await expect(notice(page)).toHaveText(
-    'O backup do TV Time entrou: entraram 2 Notas novas e 3 Já vistos novos. 1 filme ficou de fora: o Catálogo do filmes não tem.',
+    /^O backup do TV Time entrou: entraram 2 Notas novas.* 1 filme ficou de fora: o Catálogo do filmes não tem\.$/,
   )
   await expect(section(page, RESULTS)).toContainText(
     'TV Time: 2 Notas e 3 Já vistos',
@@ -460,7 +466,7 @@ test('a Dona with no history rates from the Fila and the search, then Pronto', a
   await snap(page, info, 'notas-rascunho')
   await page
     .getByRole('region', { name: 'Suas Notas desta vez' })
-    .getByRole('button', { name: 'Pronto (2 Notas)' })
+    .getByRole('button', { name: 'Pronto: gravar 2 Notas' })
     .click()
 
   await expect(notice(page)).toHaveText('2 Notas gravadas no seu gosto.')

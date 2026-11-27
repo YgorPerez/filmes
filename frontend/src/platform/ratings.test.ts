@@ -8,6 +8,7 @@ import { useFixture } from '../../../packages/engine/test/fixture.ts'
 import { parseRatings } from '#/content/rating-form'
 import {
   filmCardOf,
+  myRatingsOf,
   rateAction,
   ratingQueuePage,
   ratingsFromEngine,
@@ -82,6 +83,28 @@ describe('the film card', () => {
 
       expect(card).toMatchObject({ title: 'Pequenos Milagres', runtime: 96 })
       expect(none).toBeNull()
+    } finally {
+      log.mockRestore()
+    }
+  })
+})
+
+describe('her Notas of some films', () => {
+  it('gives her Nota of each that has one, and none when the engine cannot run', async () => {
+    const fixture = useFixture()
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      expect(
+        await withRatings(fixture.vars, (r) => myRatingsOf([], TEO, r)),
+      ).toEqual({})
+      const none = await withRatings(
+        { ...fixture.vars, FILMES_BANCO: `${fixture.root}/none.sqlite` },
+        (r) => myRatingsOf(['tt9000601'], TEO, r),
+      )
+      expect(none).toEqual({})
+      expect(log).toHaveBeenCalledWith(
+        expect.stringMatching(/^engine: missing_database: /),
+      )
     } finally {
       log.mockRestore()
     }

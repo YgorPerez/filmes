@@ -79,11 +79,13 @@ it('writes the Notas by fetch, and the draft lets them go', async () => {
   const user = userEvent.setup()
 
   await user.click((await card()).getByRole('button', { name: 'Nota 8' }))
-  await user.click(screen.getByRole('button', { name: RATINGS.done(1) }))
+  await user.click(screen.getByRole('button', { name: RATINGS.doneLabel(1) }))
 
   expect(await screen.findByText(RATINGS.written(1))).toBeTruthy()
   expect(router.state.location.href).toBe('/meu-gosto/notas?feito=1')
-  expect(screen.getByRole('button', { name: RATINGS.done(0) })).toBeTruthy()
+  // Nothing left to send: the bar goes, and "Pedir filme" is the one
+  // orange button (#274).
+  expect(screen.queryByRole('region', { name: RATINGS.bar })).toBeNull()
   expect(scrolled).toHaveBeenCalled()
   const [, init] = answered.mock.calls[0] ?? []
   expect(new Headers(init?.headers).get('x-filmes-fetch')).toBe('1')
@@ -97,12 +99,14 @@ it('keeps the Notas when the post is refused', async () => {
   const user = userEvent.setup()
 
   await user.click((await card()).getByRole('button', { name: 'Nota 8' }))
-  await user.click(screen.getByRole('button', { name: RATINGS.done(1) }))
+  await user.click(screen.getByRole('button', { name: RATINGS.doneLabel(1) }))
 
   expect((await screen.findByRole('alert')).textContent).toContain(
     RATINGS.refusals.indisponivel,
   )
-  expect(screen.getByRole('button', { name: RATINGS.done(1) })).toBeTruthy()
+  expect(
+    screen.getByRole('button', { name: RATINGS.doneLabel(1) }),
+  ).toBeTruthy()
 })
 
 it('says it is writing while Pronto runs, and takes no second post', async () => {
@@ -112,7 +116,7 @@ it('says it is writing while Pronto runs, and takes no second post', async () =>
   const user = userEvent.setup()
 
   await user.click((await card()).getByRole('button', { name: 'Nota 8' }))
-  await user.click(screen.getByRole('button', { name: RATINGS.done(1) }))
+  await user.click(screen.getByRole('button', { name: RATINGS.doneLabel(1) }))
 
   const writing = screen.getByRole('button', {
     name: RATINGS.writing,

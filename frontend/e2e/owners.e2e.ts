@@ -76,7 +76,6 @@ async function feedbackSpeakingForHerself(page: Page, dono: Dono, id: string) {
   await expect(reaction('lara', '^="relato:"')).not.toHaveCount(0)
   await page.locator('input[name="filme"]').first().check()
   await reaction(dono.slug, '="nota:10"').check()
-  await page.getByText('ou dar nota de 1 a 10').click()
   await reaction('lara', '="nota:8"').check()
   await page.getByRole('button', { name: 'Gravar e fechar a Sessão' }).click()
   await expect(page).toHaveURL(new RegExp(`/sessoes/${id}\\?feito=contada$`))
@@ -99,7 +98,7 @@ async function writeOwnTaste(page: Page, dono: Dono) {
   const form = area.getByRole('form', { name: 'Acrescentar Declarado' })
   await form.getByLabel('O que foi dito').fill(`a ${dono.name} gosta de drama`)
   await form.getByRole('button', { name: 'Gravar' }).click()
-  await expect(notice(page)).toHaveText('Gravado no seu arquivo.')
+  await expect(notice(page)).toHaveText('Declarado gravado.')
   await expect(area).toContainText(`a ${dono.name} gosta de drama`)
 }
 
@@ -148,7 +147,7 @@ test('Bruno tells a Relato about Vera, and Vera sees it on her page', async ({
   await snap(bruno, info, 'relato-bruno-on-vera-form')
   await form.getByLabel('O que foi dito').fill('a Vera adora suspense')
   await form.getByRole('button', { name: 'Gravar' }).click()
-  await expect(notice(bruno)).toHaveText('Gravado no arquivo de Vera.')
+  await expect(notice(bruno)).toHaveText('Relato gravado.')
   await expect(told).toContainText('a Vera adora suspense')
   await bruno.close()
 

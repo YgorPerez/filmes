@@ -30,6 +30,7 @@ import {
   type TraktRow,
 } from './trakt-export.ts'
 import { withLatestWatchlist, type ExportRows } from './watchlist.ts'
+import { tasteChange, tasteSnapshot, type TasteChange } from './taste-change.ts'
 
 /** The kind of a Pessoa's `imports:` records this module reads. */
 export const TRAKT_KIND = 'trakt'
@@ -280,6 +281,8 @@ export interface TraktImport extends TraktReport {
   readonly newFile: boolean
   readonly facts: TraktFactCounts
   readonly newFacts: TraktFactCounts
+  /** What she sees on her Notas: new, changed and repeated Notas (#274). */
+  readonly changes: TasteChange
   readonly attributions: readonly Attribution[]
 }
 
@@ -317,6 +320,7 @@ export const importTrakt = (
           yield* requireImportTables(db)
           const person = yield* resolvePerson(input.person)
           const before = yield* traktFactCounts(db, person.slug)
+          const taste = yield* tasteSnapshot(db, person.slug)
           // Kept before loading, so the Fatos are those a rebuild gives:
           // the same file imported again stays where it was recorded.
           const kept = yield* storeImport(
@@ -338,6 +342,7 @@ export const importTrakt = (
             file: kept.file,
             newFile: kept.new,
             facts: after,
+            changes: yield* tasteChange(db, person.slug, TRAKT_KIND, taste),
             newFacts: {
               ratings: after.ratings - before.ratings,
               seen: after.seen - before.seen,
