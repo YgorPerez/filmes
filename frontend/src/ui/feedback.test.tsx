@@ -41,7 +41,7 @@ const PAGE: FeedbackPage = {
       person: 'iara',
       name: 'Iara',
       satisfaction: 0.1111,
-      line: 'satisfação de Iara nas últimas Sessões: 11%, e a mais alta do grupo, 100%; na de 2026-11-19 (Casa Cheia), deu 1',
+      line: 'satisfação de Iara nas últimas Sessões: 11%, e a mais alta do grupo, 100%; na de qui, 19 nov (Casa Cheia), deu 2 de 10',
     },
     { person: 'quim', name: 'Quim', satisfaction: 1, line: null },
   ],

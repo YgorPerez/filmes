@@ -80,7 +80,7 @@ const withFeedback = async (
 }
 
 const LINE =
-  'satisfação de Bruno nas últimas Sessões: 11%, e a mais alta do grupo, 100%; na de 2026-11-20 (Pequenos Milagres), deu 1'
+  'satisfação de Bruno nas últimas Sessões: 11%, e a mais alta do grupo, 100%; na de sex, 20 nov (Pequenos Milagres), deu 2 de 10'
 
 describe('the satisfaction', () => {
   test('the satisfaction now names the Session of who fell behind', async () => {
@@ -231,7 +231,7 @@ describe('the satisfaction', () => {
       'strong',
     ])
     expect(line?.text).toBe(
-      'satisfação de Quim nas últimas Sessões: 0%, e a mais alta do grupo, 100%; na de 2026-11-20 (Pequenos Milagres), não gostou',
+      'satisfação de Quim nas últimas Sessões: 0%, e a mais alta do grupo, 100%; na de sex, 20 nov (Pequenos Milagres), não gostou',
     )
   })
 
