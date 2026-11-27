@@ -457,3 +457,34 @@ describe('“Mais opções”', () => {
     expect(details().open).toBe(false)
   })
 })
+
+describe('the bar by Recomendar (#272)', () => {
+  it('says the Restrições as the Cartaz’s label does, and counts the rest', async () => {
+    showDraft(DRAFT)
+    const bar = screen.getByText(/nada lento/u)
+    expect(bar.textContent).toBe(
+      'Iara · até 2h · leve · nada lento · nada triste · nada repetido · com criança de 7 anos · + 3 limites',
+    )
+    const user = userEvent.setup()
+    await user.type(
+      screen.getByLabelText(copy.noMoods, { exact: false }),
+      'assustador, tenso',
+    )
+    expect(bar.textContent).toContain(
+      'leve · nada assustador nem tenso · nada lento',
+    )
+  })
+
+  it('says a child with no age, and one limit', async () => {
+    const { user } = show()
+    await user.click(screen.getByText(copy.details))
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: copy.child }),
+      copy.childNoAge,
+    )
+    await user.type(screen.getByLabelText(copy.language, { exact: false }), 'pt')
+    expect(
+      screen.getByText(`${copy.alone} · com criança · + 1 limite`),
+    ).toBeTruthy()
+  })
+})
