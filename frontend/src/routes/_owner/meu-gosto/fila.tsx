@@ -18,7 +18,7 @@ export const Route = createFileRoute('/_owner/meu-gosto/fila')({
 })
 
 function QueueRoute() {
-  const { feito, erro, resolvidos, restam, item, titulo, para } =
+  const { feito, erro, resolvidos, restam, item, titulo, para, de } =
     Route.useSearch()
   const { queue, search } = Route.useLoaderData()
   return (
@@ -35,6 +35,7 @@ function QueueRoute() {
       }
       refusal={erro}
       search={para && search ? { item: para, answer: search } : undefined}
+      from={de}
     />
   )
 }
