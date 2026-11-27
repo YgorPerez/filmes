@@ -145,7 +145,7 @@ async function importOlgaZip(page: Page, info: TestInfo) {
  * confirms it again; gives the section of Filme Perdido. */
 async function confirmInQueue(page: Page, info: TestInfo, letterboxd: Locator) {
   await letterboxd.getByRole('link', { name: 'Resolver agora' }).click()
-  await expect(page).toHaveURL(/\/meu-gosto\/fila$/)
+  await expect(page).toHaveURL(/\/meu-gosto\/fila\?de=olga$/)
   const wind = section(page, 'Vento Norte (2020)')
   const lost = section(page, 'Filme Perdido (2001)')
   await expect(wind).toContainText('Nordwind')
@@ -159,7 +159,7 @@ async function confirmInQueue(page: Page, info: TestInfo, letterboxd: Locator) {
   })
   await confirmLost.getByLabel(/^Link ou ID/).fill('um filme qualquer')
   await confirmLost.getByRole('button', { name: 'Confirmar' }).click()
-  await expect(page).toHaveURL(/\/meu-gosto\/fila\?erro=filme$/)
+  await expect(page).toHaveURL(/\/meu-gosto\/fila\?erro=filme&de=olga$/)
   await expect(page.getByRole('alert')).toContainText('Cole um link')
 
   // Each suggestion says its director, runtime and country (#274).
