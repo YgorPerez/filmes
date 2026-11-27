@@ -9,8 +9,8 @@ import { MarkText, PRESSED_PILL } from './kit/option'
 import { Avatar } from './kit/person'
 
 // The marks of one film of the Cartaz (DESIGN.md, Opções, Escala de nota,
-// Estrelas): Trocar and the stars on one line; Já vi per Presente and
-// "Todos", each Já vi opening her note (the 1 to 10 scale and what she
+// Estrelas): Trocar and the stars on one line; "Todos" and Já vi per
+// Presente, each Já vi opening her note (the 1 to 10 scale and what she
 // thought) on the blue card stock; last Comentar, whose field opens in its
 // place, so a card carries no empty field. A Trocar that came on by
 // itself (a Já vi with "Só filmes que ninguém viu", or 1 to 3 stars:
@@ -246,7 +246,6 @@ export function FilmMarksControls({
   // and stays open once someone is marked (#277).
   const [unfolded, setUnfolded] = useState(false)
   const folded = people.length > copy.seenFolded && !unfolded && seen.size === 0
-  const apart = people.length > copy.seenInline
   const everyone = (
     <Toggle
       compact
@@ -288,14 +287,8 @@ export function FilmMarksControls({
         aria-label={copy.seenGroup(film.position)}
         className="flex flex-wrap items-center gap-x-xs gap-y-sm"
       >
-        {/* With more than three Presentes, Todos goes up beside the label,
-         * never alone on a line of its own (#272). */}
-        {!folded && apart && (
-          <span className="flex w-full items-center justify-between gap-sm">
-            <span className={label}>{copy.seen}</span>
-            {everyone}
-          </span>
-        )}
+        {/* One shape for any number of Presentes: the label, Todos, then
+         * each name; a long row wraps after a name, never Todos (#272). */}
         {folded ? (
           <button
             type="button"
@@ -306,20 +299,21 @@ export function FilmMarksControls({
             {copy.seenMore}
           </button>
         ) : (
-          !apart && <span className={`${label} mr-2xs`}>{copy.seen}</span>
+          <>
+            <span className={`${label} mr-2xs`}>{copy.seen}</span>
+            {people.length > 1 && everyone}
+            {people.map((p) => (
+              <Toggle
+                key={p.slug}
+                compact
+                pressed={seen.has(p.slug)}
+                onChange={(on) => mark(p.slug, on)}
+              >
+                {p.label}
+              </Toggle>
+            ))}
+          </>
         )}
-        {!folded &&
-          people.map((p) => (
-            <Toggle
-              key={p.slug}
-              compact
-              pressed={seen.has(p.slug)}
-              onChange={(on) => mark(p.slug, on)}
-            >
-              {p.label}
-            </Toggle>
-          ))}
-        {!folded && !apart && people.length > 1 && everyone}
       </div>
       {people
         .filter((p) => seen.has(p.slug))

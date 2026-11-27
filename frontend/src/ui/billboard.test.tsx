@@ -1191,12 +1191,24 @@ describe('the Cartaz, what weighs against a film (#272)', () => {
     ).toBeTruthy()
   })
 
-  it('the case is stamped JÁ VI for who the engine knows saw it, the option unpressed', () => {
+  it('the case is stamped VISTO ANTES for who the engine knows saw it, the option unpressed', () => {
     render(<Billboard billboard={seen} action="/x" />)
     expect(
-      card(1).getByText(BILLBOARD.card.seenStampWho(['Você'])),
+      card(1).getByText(BILLBOARD.card.seenBeforeStampWho(['Você'])),
     ).toBeTruthy()
+    expect(
+      card(1).queryByText(BILLBOARD.card.seenStampWho(['Você'])),
+    ).toBeNull()
     expect(pressed(card(1).getByRole('button', { name: 'Você' }))).toBe(false)
+  })
+
+  it('a Já vi marked on the Cartaz turns the stamp into JÁ VI, with who the engine knows too', async () => {
+    const user = userEvent.setup()
+    render(<Billboard billboard={seen} action="/x" />)
+    await user.click(card(1).getByRole('button', { name: 'Iara' }))
+    // The row's label and the stamp; both saw it, so no initials.
+    expect(card(1).getAllByText(BILLBOARD.card.seenStamp)).toHaveLength(2)
+    expect(card(1).queryByText(BILLBOARD.card.seenBeforeStamp)).toBeNull()
   })
 })
 
@@ -1228,35 +1240,33 @@ describe('the Cartaz, a section of several films (#272)', () => {
   })
 })
 
-describe('the marks, Todos with more than three Presentes (#272)', () => {
-  it('goes up beside the label, still marking everyone', async () => {
-    const user = userEvent.setup()
-    const four = ['Teo', 'Rosa'].map((name, i) => ({
-      slug: name.toLowerCase(),
-      name,
-      label: name,
-      initial: name[0]!,
-      color: i + 3,
-      owner: false,
-    }))
-    render(
-      <Billboard
-        billboard={{ ...MODEL, attendees: [...MODEL.attendees, ...four] }}
-        action="/x"
-      />,
-    )
-    const row = card(1).getByRole('group', {
-      name: BILLBOARD.marks.seenGroup(1),
-    })
-    const all = within(row).getByRole('button', { name: BILLBOARD.marks.all })
-    expect(all.parentElement!.textContent).toBe(
-      `${BILLBOARD.marks.seen}${BILLBOARD.marks.all}`,
-    )
-    await user.click(all)
-    expect(
-      within(row)
-        .getAllByRole('button')
-        .every((b) => pressed(b)),
-    ).toBe(true)
-  })
+describe('the marks, Todos at any number of Presentes (#272)', () => {
+  it.each([0, 2])(
+    'comes right after the label and before the names, still marking everyone (%i more)',
+    async (more) => {
+      const user = userEvent.setup()
+      const extra = ['Teo', 'Rosa'].slice(0, more).map((name, i) => ({
+        slug: name.toLowerCase(),
+        name,
+        label: name,
+        initial: name[0]!,
+        color: i + 3,
+        owner: false,
+      }))
+      render(
+        <Billboard
+          billboard={{ ...MODEL, attendees: [...MODEL.attendees, ...extra] }}
+          action="/x"
+        />,
+      )
+      const row = card(1).getByRole('group', {
+        name: BILLBOARD.marks.seenGroup(1),
+      })
+      const buttons = within(row).getAllByRole('button')
+      expect(row.firstElementChild!.textContent).toBe(BILLBOARD.marks.seen)
+      expect(buttons[0]!.textContent).toBe(BILLBOARD.marks.all)
+      await user.click(buttons[0]!)
+      expect(buttons.every((b) => pressed(b))).toBe(true)
+    },
+  )
 })

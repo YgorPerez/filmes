@@ -3,7 +3,7 @@
 // has its Feedback; the Nota prevista line under "Por que", without one,
 // with a Presente without a Fato, and six Presentes on a phone; the
 // trailer link, and a film without one; a film the Dono saw before, whose
-// Já visto weighs against it, and four Presentes, Todos beside the label.
+// Já visto weighs against it (VISTO ANTES on the case), and four Presentes.
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
 import { expect, userEvent, within } from 'storybook/test'
@@ -302,25 +302,24 @@ export const SeenBefore: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByText('pesa contra')).toBeVisible()
-    await expect(canvas.getByText('Já vi: Você')).toBeInTheDocument()
+    await expect(canvas.getByText('Visto antes')).toBeVisible()
+    await expect(canvas.getByText('Visto antes: Você')).toBeInTheDocument()
   },
 }
 
-/** Four Presentes: Todos goes beside the "JÁ VI" label, and the four
- * names fit one line of a phone (#272). */
+/** Four Presentes: the Já vi row keeps the shape of three, the label,
+ * Todos, then the names (#272). */
 export const FourPresentes: Story = {
   args: { people: [BRUNO!, IARA!, ...MORE.slice(2)] },
   render: (args) => <Marked {...args} />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     const all = canvas.getByRole('button', { name: 'Todos' })
-    const teo = canvas.getByRole('button', { name: 'Teo' })
     const you = canvas.getByRole('button', { name: 'Você' })
-    await expect(all.getBoundingClientRect().bottom).toBeLessThanOrEqual(
-      you.getBoundingClientRect().top,
-    )
-    await expect(teo.getBoundingClientRect().top).toBe(
-      you.getBoundingClientRect().top,
-    )
+    const a = all.getBoundingClientRect()
+    const b = you.getBoundingClientRect()
+    // Todos on the label's line, before the names.
+    await expect(a.top).toBeLessThanOrEqual(b.top)
+    await expect(a.top === b.top ? a.left < b.left : true).toBe(true)
   },
 }
