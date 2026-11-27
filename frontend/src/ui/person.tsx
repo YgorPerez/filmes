@@ -319,7 +319,9 @@ function TraktStatus({ state }: { state: 'connected' | 'disconnected' }) {
 export function UnknownPerson() {
   const { unknown } = PERSON
   return (
-    <main className="mx-auto flex max-w-[720px] flex-col gap-xl px-2xl py-3xl">
+    // The Pessoa route is `wide`, so the bar is: the block takes its
+    // column too (#273).
+    <main className="mx-auto flex max-w-[720px] flex-col gap-xl px-2xl py-3xl min-[900px]:max-w-[1040px]">
       <div className="flex flex-col gap-xs">
         <h1 className="font-display text-page-title">{unknown.title}</h1>
         <p className="max-w-[60ch] text-ink-2">{unknown.lead}</p>
