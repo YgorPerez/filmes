@@ -37,11 +37,15 @@ const KINDS = {
   new: 'rotate-9 bg-sticker-yellow px-sm pt-xs pb-[5px] text-sticker text-on-sticker',
   /** Pink TROCAR, slapped on the cover. */
   swap: `-rotate-9 bg-sticker-pink px-md pt-[7px] pb-xs text-on-sticker ${BIG}`,
+  /** Green SIM, on the Link da Sessão's card dragged to the right (#275);
+   * the card dragged to the left gets the pink of TROCAR, since a não is
+   * one. */
+  yes: `rotate-9 bg-sticker-green px-md pt-[7px] pb-xs text-on-sticker ${BIG}`,
   /** JÁ VI of every Presente: no sticker colour, a 2px ink outline. */
   seen: `-rotate-9 border-2 border-ink bg-surface px-md pt-[5px] pb-2xs text-ink ${BIG}`,
 } as const
 
-/** A state sticker: NOVO, TROCAR or JÁ VI. */
+/** A state sticker: NOVO, TROCAR, SIM or JÁ VI. */
 export function Sticker({
   kind,
   children,
