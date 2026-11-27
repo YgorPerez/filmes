@@ -14,6 +14,7 @@ import { join } from 'node:path'
 import { describe, expect, test } from 'vite-plus/test'
 import {
   filmReason,
+  importImdb,
   personAdjust,
   personState,
   pyExp,
@@ -28,6 +29,8 @@ import {
   film,
   weightsWith,
 } from './support.ts'
+
+const AUTHOR = { name: 'Dono', email: 'dono@example.org' }
 
 const all = (fixture: Fixture, count = 100, vars = {}) =>
   engineRecommendation(fixture, { attendees: ['dono'], count }, vars)
@@ -342,27 +345,40 @@ describe('the cut of the N strongest', () => {
 describe('the content path by cinematography and producer', () => {
   // The Dono's decision on #283: both join the path at most weak, with
   // weight 0.5. In the fixture, Luz Rasante shares its cinematographer and
-  // Bilheteria its producer with Ensaio Geral, to which Rosa gave 5 (a strong
-  // seed). Both have 900 votes: only Candidates with a lower minimum.
-  const rosa = (fixture: Fixture) =>
-    engineRecommendation(
+  // Bilheteria its producer with Contraluz, which nobody rated: Vera gives it
+  // 10 here (a 5, a strong seed). All three have 900 votes: only Candidates
+  // with a lower minimum.
+  const SEED =
+    'Const,Your Rating,Date Rated,Title,Original Title,URL,Title Type,IMDb Rating,Runtime (mins),Year,Genres,Num Votes,Release Date,Directors\n' +
+    'tt9028403,10,2025-03-01,Contraluz,Contraluz,https://www.imdb.com/title/tt9028403/,Movie,7.2,101,2013,Drama,900,2013-04-05,\n'
+  const vera = async (fixture: Fixture) => {
+    await fixture.ok(
+      importImdb({
+        person: 'vera',
+        original: 'ratings.csv',
+        content: new TextEncoder().encode(SEED),
+        author: AUTHOR,
+      }),
+    )
+    return engineRecommendation(
       fixture,
-      { attendees: ['rosa'], count: 100 },
+      { attendees: ['vera'], count: 100 },
       weightsWith(fixture, 'min_votes = 1000', 'min_votes = 900'),
     )
+  }
 
   test('a shared cinematographer links the Nota to the Candidate, at most weak', async () => {
-    const out = await rosa(useFixture())
-    expect(sortedRows(evidenceOf(out, 'Luz Rasante', 'rosa'))).toEqual([
+    const out = await vera(useFixture())
+    expect(sortedRows(evidenceOf(out, 'Luz Rasante', 'vera'))).toEqual([
       [
-        'com fotografia de Íris Penha, como 1 filme a que deu nota alta: Ensaio Geral (2014)',
+        'com fotografia de Íris Penha, como 1 filme a que deu nota alta: Contraluz (2013)',
         'weak',
         'metadata',
         // 0.5 × 0.3.
         0.15,
       ],
       [
-        'deu 5 a Ensaio Geral (2014), também com fotografia de Íris Penha',
+        'deu 5 a Contraluz (2013), também com fotografia de Íris Penha',
         'weak',
         'rating',
         // 0.5 × 0.3, ×0.787 for the 5 of 2025-03-01.
@@ -372,21 +388,21 @@ describe('the content path by cinematography and producer', () => {
     expect(filmReason(film(out, 'Luz Rasante').evidence)).toEqual({
       kind: 'entity',
       name: 'Íris Penha',
-      people: ['rosa'],
+      people: ['vera'],
     })
   })
 
   test('a shared producer links the Nota to the Candidate, at most weak', async () => {
-    const out = await rosa(useFixture())
-    expect(sortedRows(evidenceOf(out, 'Bilheteria', 'rosa'))).toEqual([
+    const out = await vera(useFixture())
+    expect(sortedRows(evidenceOf(out, 'Bilheteria', 'vera'))).toEqual([
       [
-        'deu 5 a Ensaio Geral (2014), também produzido por Nestor Gil',
+        'deu 5 a Contraluz (2013), também produzido por Nestor Gil',
         'weak',
         'rating',
         0.1181,
       ],
       [
-        'produzido por Nestor Gil, como 1 filme a que deu nota alta: Ensaio Geral (2014)',
+        'produzido por Nestor Gil, como 1 filme a que deu nota alta: Contraluz (2013)',
         'weak',
         'metadata',
         0.15,
@@ -395,33 +411,33 @@ describe('the content path by cinematography and producer', () => {
     expect(filmReason(film(out, 'Bilheteria').evidence)).toEqual({
       kind: 'entity',
       name: 'Nestor Gil',
-      people: ['rosa'],
+      people: ['vera'],
     })
   })
 
   test('the Ajuste to each link reaches it', async () => {
     const fixture = useFixture()
     await fixture.ok(
-      personAdjust({ person: 'rosa', link: 'cinematography', level: 'none' }),
+      personAdjust({ person: 'vera', link: 'cinematography', level: 'none' }),
     )
     await fixture.ok(
-      personAdjust({ person: 'rosa', link: 'producer', level: 'high' }),
+      personAdjust({ person: 'vera', link: 'producer', level: 'high' }),
     )
-    const out = await rosa(fixture)
+    const out = await vera(fixture)
 
-    expect(evidenceOf(out, 'Luz Rasante', 'rosa')).toEqual([
+    expect(evidenceOf(out, 'Luz Rasante', 'vera')).toEqual([
       ['sem fato', 'weak', 'guess', 0],
     ])
     // 1.5 × the weight, and still weak.
-    expect(sortedRows(evidenceOf(out, 'Bilheteria', 'rosa'))).toEqual([
+    expect(sortedRows(evidenceOf(out, 'Bilheteria', 'vera'))).toEqual([
       [
-        'deu 5 a Ensaio Geral (2014), também produzido por Nestor Gil',
+        'deu 5 a Contraluz (2013), também produzido por Nestor Gil',
         'weak',
         'rating',
         0.1772,
       ],
       [
-        'produzido por Nestor Gil, como 1 filme a que deu nota alta: Ensaio Geral (2014)',
+        'produzido por Nestor Gil, como 1 filme a que deu nota alta: Contraluz (2013)',
         'weak',
         'metadata',
         0.225,
