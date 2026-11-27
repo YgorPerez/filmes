@@ -14,7 +14,7 @@ import {
   importTvTime,
   personCreate,
   personImports,
-  reloadLetterboxd,
+  reloadData,
   removeImport,
   Sqlite,
   TMDB_ATTRIBUTION,
@@ -175,7 +175,7 @@ describe('importTvTime, the GDPR export', () => {
     })
     expect(await veraFacts(fixture)).toEqual(before)
 
-    await fixture.ok(reloadLetterboxd)
+    await fixture.ok(reloadData)
     expect(await veraFacts(fixture)).toEqual(before)
   })
 

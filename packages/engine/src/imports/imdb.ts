@@ -24,7 +24,7 @@ import { storedImports, storeImport } from './stored.ts'
 import { requireImportTables } from './trakt.ts'
 
 /** The kind of a Pessoa's `imports:` records this module reads. */
-export const IMDB_KIND = 'imdb'
+const IMDB_KIND = 'imdb'
 
 /** Runs a reader that throws the `EngineError` of a bad file. */
 const attempt = <A>(f: () => A): Effect.Effect<A, EngineError> =>

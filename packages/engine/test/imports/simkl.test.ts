@@ -10,7 +10,7 @@ import {
   exportSource,
   importSimkl,
   personImports,
-  reloadSimkl,
+  reloadData,
   removeImport,
   Sqlite,
   TMDB_ATTRIBUTION,
@@ -137,7 +137,7 @@ describe('importSimkl', () => {
       readFileSync(join(fixture.data, 'people/vera.md'), 'utf8'),
     ).toContain("tmdb: {'9101': tt9000303}")
 
-    await fixture.ok(reloadSimkl, TMDB_OFF)
+    await fixture.ok(reloadData, TMDB_OFF)
     expect(await factsOf(fixture)).toEqual(WITH_RIO_ABAIXO)
   })
 })

@@ -46,7 +46,7 @@ import { requireImportTables } from './trakt.ts'
 import { withLatestWatchlist } from './watchlist.ts'
 
 /** The kind of a Pessoa's `imports:` records this module reads. */
-export const SIMKL_KIND = 'simkl'
+const SIMKL_KIND = 'simkl'
 
 /** The import record's field with TMDB's answers. */
 const TMDB_FIELD = 'tmdb'
