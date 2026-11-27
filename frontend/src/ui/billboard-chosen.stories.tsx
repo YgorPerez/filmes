@@ -51,7 +51,7 @@ export const EachCase: Story = {
       .getAllByRole('listitem')
       .map((item) => item.textContent)
     await expect(lines).toEqual([
-      'Bruno: previsto 8,3 · achou 6',
+      'Bruno: previsto 8,3 · deu 6 de 10',
       'Iara: previsto 7,1 · gostou',
       'Teo: neutro',
       'Vera: previsto 6,4 · não gostou',

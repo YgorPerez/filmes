@@ -1,24 +1,35 @@
-// The top of the Cartaz: the three Forças, the legend and what left the
-// shelf.
+// The top of the Cartaz: the three Forças, the key behind its "?" and the
+// line of what changed, with what left the shelf behind "por quê".
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, within } from 'storybook/test'
+import { expect, userEvent, within } from 'storybook/test'
 import { Dropped, Legend, Strength } from './billboard-top'
 import { MODEL } from './billboard.fixture'
 
 const meta = {
-  component: Legend,
+  component: Dropped,
   args: { billboard: MODEL },
-} satisfies Meta<typeof Legend>
+} satisfies Meta<typeof Dropped>
 
 export default meta
 
 type Story = StoryObj<typeof meta>
 
-export const LegendOfTwo: Story = {
+/** "Refeito: 1 saiu, 1 novo.", and why behind "por quê". */
+export const DroppedFilms: Story = {
   play: async ({ canvasElement }) => {
-    await expect(
-      within(canvasElement).getByRole('img', { name: 'Força forte' }),
-    ).toBeVisible()
+    const page = within(canvasElement)
+    await expect(page.getByText(/^Refeito:/)).toBeVisible()
+    await userEvent.click(page.getByText('por quê'))
+    await expect(page.getByText(/Saiu da prateleira/)).toBeVisible()
+  },
+}
+
+export const LegendBehindAsk: Story = {
+  render: () => <Legend />,
+  play: async ({ canvasElement }) => {
+    const page = within(canvasElement)
+    await userEvent.click(page.getByLabelText('O que querem dizer os pontos'))
+    await expect(page.getByRole('img', { name: 'Força forte' })).toBeVisible()
   },
 }
 
@@ -30,8 +41,4 @@ export const Strengths: Story = {
       <Strength strength="weak" />
     </p>
   ),
-}
-
-export const DroppedFilms: Story = {
-  render: (args) => <Dropped {...args} />,
 }

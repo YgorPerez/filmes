@@ -60,7 +60,7 @@ import { listText } from '../evidence/wording.ts'
 import { CAUTIOUS_BET_REASON } from '../recommendation/bet.ts'
 import { catalogFilm } from '../recommendation/candidates.ts'
 import type { StoredConstraint } from '../recommendation/constraints.ts'
-import { constraintLabel } from '../recommendation/constraints/index.ts'
+import { askedConstraintLabel } from '../recommendation/constraints/index.ts'
 import {
   unseenText,
   type UnseenBefore,
@@ -225,6 +225,16 @@ export interface BillboardFilm {
   /** Only on the chosen film of a Session with Feedback, in the
    * Presentes' order: a Presente with neither is left out. */
   readonly reactions?: ReadonlyArray<BillboardReaction>
+  /** The stars and comments the Dono gave it in any version of the
+   * Session (#272): they stay in sight after a redo and once the Session
+   * is closed. Absent with none. */
+  readonly notes?: BillboardNotes
+}
+
+/** A film's stars (the last given) and its comments, oldest first. */
+export interface BillboardNotes {
+  readonly stars: number | null
+  readonly comments: ReadonlyArray<string>
 }
 
 /** A run of neighbouring films with the same Motivo, under its title. */
@@ -419,9 +429,6 @@ export const votesText = (votes: number): string => {
   return String(votes)
 }
 
-/** The Restrição a refazer turns on by itself ("Fora da Sessão"). */
-const AUTOMATIC_CONSTRAINT = 'out_of_session'
-
 /** The reading of the request (`_pedido`). */
 const requestOf = (
   front: YamlMapping,
@@ -445,9 +452,7 @@ const requestOf = (
   // (`out_of_session`): the Dono did not ask for it (#277).
   const stored = get(context, 'constraints')
   for (const item of mappings(stored)) {
-    const constraint = yamlToJson(item) as StoredConstraint
-    if (constraint.name === AUTOMATIC_CONSTRAINT) continue
-    const label = constraintLabel(constraint)
+    const label = askedConstraintLabel(yamlToJson(item) as StoredConstraint)
     if (label) parts.push(label)
   }
   const rule = front.get('rule')
@@ -767,6 +772,32 @@ const chosenWithoutCard = (
     }
   })
 
+/** The stars and comments of every reply of every version, by film
+ * (#272): the versions in order, then the current one. */
+const notesOf = (front: YamlMapping): Map<string, BillboardNotes> => {
+  const replies = [
+    ...listOf(front.get('versions')).flatMap((version) =>
+      isMapping(version) ? listOf(version.get('replies')) : [],
+    ),
+    ...listOf(front.get('replies')),
+  ]
+  const notes = new Map<string, { stars: number | null; comments: string[] }>()
+  for (const reply of replies) {
+    if (!isMapping(reply)) continue
+    for (const film of mappings(reply.get('films'))) {
+      const id = pyStrValue(film.get('id') ?? null)
+      const note = notes.get(id) ?? { stars: null, comments: [] }
+      const stars = yamlToJson(film.get('stars') ?? null)
+      if (typeof stars === 'number') note.stars = stars
+      const comment = textOf(film.get('comment'))
+      if (comment && !note.comments.includes(comment))
+        note.comments.push(comment)
+      notes.set(id, note)
+    }
+  }
+  return notes
+}
+
 /** The Cartaz of a Session (`cartaz.gerar`), as data. Reads only. */
 export const billboardModel = (
   input: BillboardRequestInput,
@@ -808,18 +839,20 @@ export const billboardModel = (
           ]),
         )
         const people = billboardPeople(attendees, names, owner)
+        const notes = notesOf(front)
         const cards: BillboardFilm[] = []
-        for (const film of films)
-          cards.push(
-            yield* filmCard(db, {
-              id,
-              film,
-              listed,
-              attendees,
-              people,
-              feedback,
-            }),
-          )
+        for (const film of films) {
+          const card = yield* filmCard(db, {
+            id,
+            film,
+            listed,
+            attendees,
+            people,
+            feedback,
+          })
+          const note = notes.get(film.id)
+          cards.push(note === undefined ? card : { ...card, notes: note })
+        }
         const chosenBlock =
           feedback === null || cards.some((c) => c.id === feedback.chosen)
             ? null

@@ -72,7 +72,10 @@ test('the Dono opens a Session with Restrições and finds it in the list', asyn
 
   await expect(page).toHaveURL(/\/sessoes\/2026-11-20-iara[^/]*\?feito=aberta$/)
   const id = openedId(page)
-  await expect(page.getByRole('status')).toContainText('Sessão aberta')
+  // A new Session opens on its Cartaz, with no notice above it (#272).
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+    'Sex, 20 nov',
+  )
   await expect(
     page.getByRole('img', { name: /até 2h10 · .*com criança de 7 anos/ }),
   ).toBeVisible()
@@ -91,7 +94,7 @@ test('the Dono opens a Session with Restrições and finds it in the list', asyn
     constraints: ['até 2h10', 'com criança de 7 anos', 'nada lento'],
   })
 
-  await page.getByRole('link', { name: 'Voltar' }).click()
+  await tab(page, 'Sessões').click()
   const row = page
     .getByRole('list', { name: 'Sessões' })
     .getByRole('listitem')
@@ -140,7 +143,7 @@ test('“Ler” fills the form from one sentence and says what it left out', asy
   )
   await expect(page.getByLabel('Criança')).toHaveValue('7')
   const said = page.getByRole('status')
-  await expect(said).toContainText('Pelo que entendi, Presente: Bruno')
+  await expect(said).toContainText('Entendi: você, Iara')
   await expect(said).toContainText('Deixei “pipoca” de fora')
   await expect(
     page.getByText('Qual destes filmes você quis dizer com “Reprise”?'),
@@ -216,6 +219,7 @@ test('the Dono shares the current films with a Presente who has no login', async
   await loginAsBruno(page)
   const ownerPage = await page.goto(`/sessoes/${opened.session.id}`)
   expect(ownerPage?.headers()['cache-control']).toContain('no-store')
+  await page.getByLabel('Mais ações da Sessão').click()
   const link = page.getByRole('link', { name: 'Link para os Presentes' })
   await expect(link).toBeVisible()
   await snap(page, info, 'sessao-link')
@@ -311,7 +315,7 @@ test('the link only works for its Session while it is open', async ({
     await participant.goto(new URL(path, shared).href)
     await expect(
       participant.getByRole('heading', {
-        name: 'Sessão de 20 de novembro de 2026',
+        name: 'Sex, 20 nov',
       }),
     ).toBeVisible()
     await expect(
@@ -508,6 +512,7 @@ test('each Presente votes on the films; a no swaps the film and the Session is r
     await snap(participant, info, 'sessao-votos-enviados')
 
     await page.reload()
+    await page.getByText('por quê', { exact: true }).click()
     await expect(page.getByText(/Saiu da prateleira/u)).toBeVisible()
     const onCartaz = (title?: string) =>
       page.getByRole('heading', { level: 3 }).filter({ hasText: title })

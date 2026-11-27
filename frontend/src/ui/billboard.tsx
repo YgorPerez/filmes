@@ -1,4 +1,8 @@
-import type { Billboard as BillboardModel } from '@filmes/engine'
+import type {
+  Billboard as BillboardModel,
+  BillboardLine,
+  BillboardPerson,
+} from '@filmes/engine'
 import {
   useEffect,
   useState,
@@ -6,7 +10,7 @@ import {
   type FormEvent,
   type ReactNode,
 } from 'react'
-import { BillboardCard } from './billboard-card'
+import { BillboardCard, EvidenceLine } from './billboard-card'
 import { ChosenFilm } from './billboard-chosen'
 import { InlineBillboard } from './billboard-inline'
 import {
@@ -27,7 +31,7 @@ import {
 } from './billboard-marks'
 import { ReplyBar, ReplyBox, type BarPlace } from './billboard-reply'
 import { buttonVariants } from './kit/button-variants'
-import { Dropped, Legend } from './billboard-top'
+import { Dropped, Legend, PeopleLegend } from './billboard-top'
 import { BILLBOARD } from './billboard.copy'
 import { HandNote, ShelfLabel } from './kit/shelf-label'
 
@@ -77,6 +81,12 @@ type Props = {
   layout?: Layout
   /** Marcar on the inline card: asks the host for the fullscreen. */
   onExpand?: () => void
+  /** The acrescentar's words the web's reading did not take (#272): the
+   * bar asks before anything is sent. `onEdit` puts the Dono back in the
+   * acrescentar. */
+  unread?: { words: readonly string[]; onEdit: () => void }
+  /** After the last film, on the web: "Contar como foi" (#272). */
+  after?: ReactNode
 }
 
 /** Another tab changed the storage. */
@@ -87,7 +97,11 @@ const subscribe = (changed: () => void) => {
 
 /** The marks: what the server's page had (none, no storage); in the
  * browser, the kept ones until the Dono changes one; none once sent. */
-function useMarks(billboard: BillboardModel, sent: boolean) {
+function useMarks(
+  billboard: BillboardModel,
+  sent: boolean,
+  onChange?: () => void,
+) {
   const kept = useSyncExternalStore(
     subscribe,
     () => (sent ? null : storedMarks(billboard)),
@@ -106,6 +120,7 @@ function useMarks(billboard: BillboardModel, sent: boolean) {
   }, [billboard, sent])
 
   const change = (next: Marks) => {
+    onChange?.()
     setEdited(next)
     saveMarks(openStorage(), billboard, next)
   }
@@ -146,9 +161,15 @@ export function Billboard({
   sent = false,
   layout = 'page',
   onExpand,
+  unread,
+  after,
 }: Props) {
-  const { marks, change: keep, canKeep } = useMarks(billboard, sent)
   const [message, setMessage] = useState('')
+  // A status line speaks of the marks as they were: a new mark clears it
+  // (#272, #277).
+  const { marks, change, canKeep } = useMarks(billboard, sent, () =>
+    setMessage(''),
+  )
   // The text that went, and why the last try did not.
   const [sentText, setSentText] = useState<string | null>(null)
   const [failure, setFailure] = useState<'retry' | 'copy' | null>(null)
@@ -156,11 +177,6 @@ export function Billboard({
   const text = replyText(billboard, marks)
   const isSent = sentText === text
 
-  // A new mark makes the last status ("Nada marcado ainda.") stale (#277).
-  const change = (next: Marks) => {
-    keep(next)
-    setMessage('')
-  }
   const changeFilm = (id: string) => (film: FilmMarks) =>
     change({ ...marks, films: { ...marks.films, [id]: film } })
 
@@ -222,7 +238,8 @@ export function Billboard({
   const card = (film: BillboardModel['films'][number]) => (
     <BillboardCard
       key={film.id}
-      film={film}
+      // Once told, what came new in the last redo no longer matters.
+      film={billboard.open ? film : { ...film, new: false }}
       people={billboard.attendees}
       first={film === billboard.films[0]}
       level={grouped ? 3 : 2}
@@ -232,14 +249,30 @@ export function Billboard({
   )
   const byId = new Map(billboard.films.map((film) => [film.id, film]))
   const cards = grouped
-    ? billboard.sections.map((section) => (
-        <Section key={section.films[0]} section={section}>
-          {section.films.flatMap((id) => {
-            const film = byId.get(id)
-            return film ? [card(film)] : []
-          })}
-        </Section>
-      ))
+    ? billboard.sections.map((section) => {
+        const films = section.films.flatMap((id) => byId.get(id) ?? [])
+        const shared = sharedLines(films)
+        const own = new Set(shared.map(lineKey))
+        return (
+          <Section
+            key={section.films[0]}
+            section={section}
+            shared={shared}
+            people={billboard.attendees}
+          >
+            {films.map((film) =>
+              card(
+                own.size === 0
+                  ? film
+                  : {
+                      ...film,
+                      lines: film.lines.filter((l) => !own.has(lineKey(l))),
+                    },
+              ),
+            )}
+          </Section>
+        )
+      })
     : billboard.films.map(card)
   const fullscreen = layout === 'fullscreen'
   // The web has the app's tabs at the bottom of a phone; Claude's
@@ -257,6 +290,7 @@ export function Billboard({
       retry={failure === 'retry'}
       copy={failure === 'copy' ? text : null}
       onMessage={setMessage}
+      unread={unread}
     />
   )
   const shelf = (
@@ -268,17 +302,13 @@ export function Billboard({
             : BILLBOARD.empty}
         </p>
       )}
-      <Dropped billboard={billboard} />
       <ChosenFilm chosen={billboard.chosen} people={billboard.attendees} />
       {cards}
       {replying && (
         <ReplyBox
           billboard={billboard}
           marks={marks}
-          text={text}
-          copy={onSend === undefined}
           kept={canKeep}
-          onMessage={setMessage}
           onAddition={(addition) => change({ ...marks, addition })}
           onMoods={(moods) => change({ ...marks, moods })}
         />
@@ -297,14 +327,33 @@ export function Billboard({
           <HandNote compact>{speech}</HandNote>
         </div>
       )}
-      {!empty && <Legend billboard={billboard} />}
+      {billboard.open && <Dropped billboard={billboard} />}
+      {!empty && <PeopleLegend billboard={billboard} />}
       {shelf}
     </Fullscreen>
   ) : (
     <div className="flex flex-col gap-2xl">
-      <Request billboard={billboard} />
-      <Legend billboard={billboard} />
-      {onSend ? <Capped>{shelf}</Capped> : shelf}
+      {onSend ? (
+        // Claude without fullscreen: no page head names the Presentes.
+        <>
+          <Request billboard={billboard} />
+          <PeopleLegend billboard={billboard} />
+          {billboard.open && <Dropped billboard={billboard} />}
+          <Capped>{shelf}</Capped>
+        </>
+      ) : (
+        <>
+          <div className="flex flex-col gap-xs">
+            <div className="flex items-start justify-between gap-md">
+              <Request billboard={billboard} />
+              <Legend />
+            </div>
+            {billboard.open && <Dropped billboard={billboard} />}
+          </div>
+          {shelf}
+          {after}
+        </>
+      )}
       {bar}
     </div>
   )
@@ -317,6 +366,7 @@ export function Billboard({
       aria-label={BILLBOARD.label}
     >
       <input type="hidden" name="texto" value={text} />
+      <input type="hidden" name="acrescentar" value={marks.addition} />
       {post ? (
         <fieldset className="min-w-0" disabled={post.busy}>
           {body}
@@ -335,9 +385,13 @@ export function Billboard({
  * the Motivo was above already, and its cards. */
 function Section({
   section,
+  shared,
+  people,
   children,
 }: {
   section: BillboardModel['sections'][number]
+  shared: readonly BillboardLine[]
+  people: readonly BillboardPerson[]
   children: ReactNode
 }) {
   const id = `secao-${section.films[0]}`
@@ -358,6 +412,7 @@ function Section({
           </>
         )}
       </h2>
+      {shared.length > 0 && <SharedLines lines={shared} people={people} />}
       {children}
     </section>
   )
@@ -419,6 +474,45 @@ function Capped({ children }: { children: ReactNode }) {
           </button>
         </div>
       )}
+    </div>
+  )
+}
+
+/** An Evidência line by what it says and whose it is. */
+const lineKey = (line: BillboardLine) =>
+  `${line.people.join(' ')}:${line.strength}:${line.text}`
+
+/** The lines every film of a section has, when it has two films or more
+ * (#272): said once under the title, so each card keeps what is its own. */
+function sharedLines(
+  films: readonly BillboardModel['films'][number][],
+): BillboardLine[] {
+  const [first, ...rest] = films
+  if (!first || rest.length === 0) return []
+  return first.lines.filter((line) =>
+    rest.every((film) => film.lines.some((l) => lineKey(l) === lineKey(line))),
+  )
+}
+
+/** The shared lines, under a section's title. */
+function SharedLines({
+  lines,
+  people,
+}: {
+  lines: readonly BillboardLine[]
+  people: readonly BillboardPerson[]
+}) {
+  const known = new Map(people.map((p) => [p.slug, p]))
+  return (
+    <div className="flex flex-col gap-xs pl-md">
+      <p className="font-display text-label text-ink-2 uppercase">
+        {BILLBOARD.shared}
+      </p>
+      <ul aria-label={BILLBOARD.shared} className="flex flex-col gap-2.25">
+        {lines.map((line) => (
+          <EvidenceLine key={lineKey(line)} line={line} people={known} />
+        ))}
+      </ul>
     </div>
   )
 }

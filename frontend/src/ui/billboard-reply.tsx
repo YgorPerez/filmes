@@ -182,20 +182,12 @@ export function ReplyBox({
   billboard,
   marks,
   kept,
-  text,
-  copy = true,
-  onMessage,
   onAddition,
   onMoods,
 }: {
   billboard: BillboardModel
   marks: Marks
   kept: boolean
-  text: string
-  /** Copiar pro chat here: the web. In Claude it is in the bar, when
-   * Enviar could not go. */
-  copy?: boolean
-  onMessage: (message: string) => void
   onAddition: (text: string) => void
   onMoods: (moods: string[]) => void
 }) {
@@ -215,6 +207,7 @@ export function ReplyBox({
           </span>
         </span>
         <textarea
+          id="acrescentar"
           rows={2}
           value={marks.addition}
           onChange={(e) => onAddition(e.target.value)}
@@ -224,11 +217,9 @@ export function ReplyBox({
       {billboard.moodChoices.length > 0 && (
         <MoodChips billboard={billboard} marks={marks} onMoods={onMoods} />
       )}
-      {copy && (
-        <div className="flex flex-wrap items-center gap-sm">
-          <Copy text={text} onMessage={onMessage} />
-        </div>
-      )}
+      {/* No Copiar pro chat here: the web sends the reply itself (#272),
+          and in Claude, Copiar shows in the bar when Enviar cannot go
+          (#277). */}
       {kept && <p className="text-meta text-ink-2">{reply.kept}</p>}
       <noscript>
         <p className="text-meta text-ink-2">{reply.noScript}</p>
@@ -266,6 +257,7 @@ export function ReplyBar({
   retry,
   copy,
   onMessage,
+  unread,
 }: {
   summary: string
   /** The Climas the Dono chose, when they are not the version's: in bold,
@@ -280,6 +272,9 @@ export function ReplyBar({
   /** The text for Copiar, beside the status, when Enviar could not go. */
   copy?: string | null
   onMessage?: (message: string) => void
+  /** The acrescentar's words the reading did not take: the bar asks
+   * whether to send it as it is (#272). */
+  unread?: { words: readonly string[]; onEdit: () => void }
 }) {
   // In Claude's fullscreen the bar spans the frame and its content keeps
   // the Cartaz's column (#277).
@@ -289,26 +284,51 @@ export function ReplyBar({
       aria-label={reply.bar}
       className={`sticky z-10 flex flex-col gap-2xs border-rule bg-surface px-lg py-sm ${BAR[place]}`}
     >
-      <div className={`flex items-center justify-between gap-md ${column}`}>
-        <p className="min-w-0 text-meta text-ink-2">
-          {summary}
-          {moods !== null && (
-            <>
-              {summary !== '' && ' · '}
-              <strong className="font-bold text-ink">
-                {reply.moodsChosen(moods)}
-              </strong>
-            </>
-          )}
-        </p>
-        <SendButton
-          onSend={onSend}
-          sending={sending}
-          sent={sent}
-          retry={retry}
-          className="shrink-0"
-        />
-      </div>
+      {unread ? (
+        <div role="alert" className={`flex flex-col gap-sm py-2xs ${column}`}>
+          <p className="text-meta text-pretty text-ink">
+            {reply.unread(unread.words)}
+          </p>
+          <div className="flex flex-wrap justify-end gap-sm">
+            <button
+              type="button"
+              onClick={unread.onEdit}
+              className={buttonVariants({ variant: 'option' })}
+            >
+              {reply.edit}
+            </button>
+            <button
+              type="submit"
+              name="confirmar"
+              value="sim"
+              className={buttonVariants()}
+            >
+              {reply.sendAnyway}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className={`flex items-center justify-between gap-md ${column}`}>
+          <p className="min-w-0 text-meta text-ink-2">
+            {summary || (moods === null ? reply.hint : '')}
+            {moods !== null && (
+              <>
+                {summary !== '' && ' · '}
+                <strong className="font-bold text-ink">
+                  {reply.moodsChosen(moods)}
+                </strong>
+              </>
+            )}
+          </p>
+          <SendButton
+            onSend={onSend}
+            sending={sending}
+            sent={sent}
+            retry={retry}
+            className="shrink-0"
+          />
+        </div>
+      )}
       {(message || copy) && (
         <div className={`flex flex-wrap items-center gap-sm ${column}`}>
           <Status message={message} />

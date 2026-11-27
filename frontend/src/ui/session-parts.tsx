@@ -3,6 +3,7 @@ import { Icon } from './kit/icon'
 import { Avatar } from './kit/person'
 import { ShelfLabel } from './kit/shelf-label'
 import { buttonVariants } from './kit/button-variants'
+import { weekdayDate } from './dates'
 
 type Named = { readonly name: string }
 
@@ -14,18 +15,13 @@ const asPerson = (person: Named, index: number) => ({
   name: person.name,
 })
 
-/** The Presentes' avatars, overlapped with a ring of the surface under
- * them; decoration beside their names, so a screen reader skips them. */
+/** The Presentes' avatars side by side, so every initial shows (#272);
+ * decoration beside their names, so a screen reader skips them. */
 export function Avatars({ people }: { people: readonly Named[] }) {
   return (
-    <span aria-hidden="true" className="inline-flex shrink-0">
+    <span aria-hidden="true" className="inline-flex shrink-0 gap-0.5">
       {people.map((person, index) => (
-        <span
-          key={person.name}
-          className="-ml-[7px] rounded-round ring-2 ring-surface first:ml-0"
-        >
-          <Avatar person={asPerson(person, index)} />
-        </span>
+        <Avatar key={person.name} person={asPerson(person, index)} />
       ))}
     </span>
   )
@@ -46,19 +42,12 @@ export function PersonAvatar({
   )
 }
 
-const dateFormat = new Intl.DateTimeFormat('pt-BR', {
-  day: 'numeric',
-  month: 'long',
-  year: 'numeric',
-  timeZone: 'UTC',
-})
-
+/** A Session's day as every Session screen says it (#272): "Sex, 20
+ * nov". */
 export function SessionDate({ date }: { date: string }) {
-  const timestamp = Date.parse(date)
+  const day = weekdayDate(date)
   return (
-    <time dateTime={date}>
-      {Number.isNaN(timestamp) ? date : dateFormat.format(timestamp)}
-    </time>
+    <time dateTime={date}>{day.charAt(0).toUpperCase() + day.slice(1)}</time>
   )
 }
 

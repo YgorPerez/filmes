@@ -1,6 +1,7 @@
 import type {
   BillboardFilm,
   BillboardLine,
+  BillboardNotes,
   BillboardPerson,
 } from '@filmes/engine'
 import { useState } from 'react'
@@ -13,6 +14,7 @@ import { BILLBOARD } from './billboard.copy'
 import { BetStamp } from './billboard-bet'
 import { ChosenReactions } from './billboard-chosen'
 import { FilmMarksControls } from './billboard-card-marks'
+import { Icon } from './billboard-icons'
 import { Strength } from './billboard-top'
 
 // One film of the Cartaz (DESIGN.md, Card do filme): the tape in its case
@@ -27,7 +29,7 @@ import { Strength } from './billboard-top'
 
 /** The outlined chips that leave the app: the IMDb and the trailer. */
 const LINK_CHIP =
-  'rounded-pill border-(length:--border-width-stroke) border-rule px-2.25 py-1 font-display text-chip font-bold text-ink tabular-nums no-underline'
+  'relative rounded-pill after:absolute after:inset-x-0 after:-inset-y-[11px] after:content-[""]  border-(length:--border-width-stroke) border-rule px-2.25 py-1 font-display text-chip font-bold text-ink tabular-nums no-underline'
 
 /** The film's title level: 2 alone, 3 under a section's title. */
 type Level = 2 | 3
@@ -52,8 +54,8 @@ function Poster({
   const { card } = BILLBOARD
   const without = new Set(film.withoutFact)
   const predicted = new Map(film.predictedRatings.map((p) => [p.person, p]))
-  // A poster that does not load gives way to the title, as none does
-  // (#277).
+  // A poster that does not load gives way to the title, as none does: the
+  // browser's clipped alt text never shows under the stickers (#272, #277).
   const [broken, setBroken] = useState(false)
   const cover = film.poster !== null && !broken
   return (
@@ -73,11 +75,16 @@ function Poster({
                 alt={card.poster(film.title)}
                 loading={first ? 'eager' : 'lazy'}
                 onError={() => setBroken(true)}
-                className="absolute inset-0 size-full object-cover group-data-swap/card:opacity-70"
+                // It may have failed before the page came alive.
+                ref={(img) => {
+                  if (img?.complete && img.naturalWidth === 0) setBroken(true)
+                }}
+                // The alt text is for a screen reader, never drawn.
+                className="absolute inset-0 size-full object-cover text-transparent group-data-swap/card:opacity-70"
               />
             ) : (
               // The title on the top half: a stamp goes on the bottom one.
-              <span className="self-start pt-lg text-center text-balance">
+              <span className="self-start pt-lg text-center font-display text-row-title text-balance">
                 {film.title}
               </span>
             )}
@@ -195,7 +202,7 @@ function Header({
 
 /** One line of "Por que": the Força, then whose it is and the engine's
  * text, with the Fonte below. */
-function Line({
+export function EvidenceLine({
   line,
   people,
 }: {
@@ -249,7 +256,7 @@ function Why({
           <li className="text-evidence text-ink-2">{film.cautiousBetReason}</li>
         )}
         {film.lines.map((line) => (
-          <Line
+          <EvidenceLine
             key={`${line.people.join(' ')}:${line.text}`}
             line={line}
             people={known}
@@ -260,8 +267,40 @@ function Why({
             {card.withoutFact(namesOf(without))}
           </li>
         )}
+        {film.lines.length === 0 &&
+          without.length === 0 &&
+          !film.cautiousBetReason && (
+            <li className="text-evidence text-ink-2">{card.sectionWhy}</li>
+          )}
       </ul>
     </div>
+  )
+}
+
+/** The stars and comments the Dono gave the film in this Session, kept
+ * in sight after a redo and once it is closed (#272). */
+function Notes({ notes }: { notes: BillboardNotes }) {
+  const { card } = BILLBOARD
+  return (
+    <p className="col-span-2 flex flex-wrap items-center gap-x-sm gap-y-2xs text-meta text-ink-2 min-[560px]:col-span-1 min-[560px]:col-start-2">
+      <span className="font-display text-label uppercase">{card.notes}</span>
+      {notes.stars !== null && (
+        <span
+          role="img"
+          aria-label={card.notesStars(notes.stars)}
+          className="inline-flex text-star"
+        >
+          {Array.from({ length: notes.stars }, (_, i) => (
+            <Icon key={i} name="star" className="size-4 fill-current" />
+          ))}
+        </span>
+      )}
+      {notes.comments.map((comment) => (
+        <q key={comment} className="text-ink">
+          {comment}
+        </q>
+      ))}
+    </p>
   )
 }
 
@@ -297,6 +336,7 @@ export function BillboardCard({
       <Poster film={film} people={people} first={first} stamp={stamp} />
       <Header film={film} id={`filme-${film.id}`} level={level} />
       <Why film={film} people={people} level={level} />
+      {film.notes && <Notes notes={film.notes} />}
       {film.reactions && (
         <ChosenReactions
           reactions={film.reactions}

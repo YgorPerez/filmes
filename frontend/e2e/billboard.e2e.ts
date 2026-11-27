@@ -287,8 +287,19 @@ test('the Dono marks, reloads, sends, and the Cartaz comes back redone', async (
     'longo',
   )
 
-  await send(page, id, 'regerada', 'Recomendação refeita')
+  // The reading does not take "na próxima vez": the bar asks before
+  // anything is recorded, and "Enviar assim" sends it as a note (#272).
+  await page.getByRole('button', { name: 'Enviar' }).click()
+  await expect(bar.getByRole('alert')).toContainText('“na próxima vez”')
+  await expect(page).toHaveURL(new RegExp(`/sessoes/${id}$`))
+  await bar.getByRole('button', { name: 'Enviar assim' }).click()
+  await expect(page).toHaveURL(
+    new RegExp(`/sessoes/${id}\\?feito=regerada(&nota=[\\w-]+)?$`),
+  )
   await expect(page.getByText(/na próxima vez/)).toBeVisible()
+  // One line says what changed; why each left is behind "por quê".
+  await expect(page.getByText('Refeito: 2 saíram, 2 novos.')).toBeVisible()
+  await page.getByText('por quê', { exact: true }).click()
   await expect(
     page.getByText(`Saiu da prateleira: ${seen} (Nina já viu)`),
   ).toBeVisible()
@@ -311,12 +322,10 @@ test('the Dono marks, reloads, sends, and the Cartaz comes back redone', async (
   await snap(page, info, 'cartaz-regerado')
 })
 
-test('in the dark, Copiar pro chat gives the text, and stars alone only note', async ({
+test('in the dark, stars alone only note, and stay on the card (#272)', async ({
   page,
-  context,
 }, info) => {
   test.skip(info.project.name !== 'mobile', 'one Pessoa per project')
-  await context.grantPermissions(['clipboard-read', 'clipboard-write'])
   await page.emulateMedia({ colorScheme: 'dark' })
   await addPerson('Otto')
   const id = await openSession('otto', 3)
@@ -331,11 +340,11 @@ test('in the dark, Copiar pro chat gives the text, and stars alone only note', a
   const imdb = /tt\d+/.exec(film ?? '')?.[0]
 
   await card(page, 1).getByRole('button', { name: '5 de 5' }).click()
-  await page.getByRole('button', { name: 'Copiar pro chat' }).click()
-  await expect(page.getByText('Copiado. Cole no chat.')).toBeVisible()
-  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
-    `#cartaz ${id} v1\n1 ${imdb} · estrelas: 5\n`,
-  )
+  // The web sends the reply itself: no Copiar pro chat (#272).
+  await expect(
+    page.getByRole('button', { name: 'Copiar pro chat' }),
+  ).toHaveCount(0)
+  expect(imdb).toMatch(/^tt\d+$/)
   await snap(page, info, 'cartaz-escuro')
 
   await send(page, id, 'anotada', 'Estrelas e comentários')
@@ -343,6 +352,10 @@ test('in the dark, Copiar pro chat gives the text, and stars alone only note', a
   await expect(
     card(page, 1).getByRole('button', { name: '5 de 5' }),
   ).toHaveAttribute('aria-pressed', 'false')
+  // The stars it was given stay in sight, read-only.
+  await expect(
+    card(page, 1).getByRole('img', { name: '5 de 5 estrelas' }),
+  ).toBeVisible()
   await snap(page, info, 'cartaz-anotado')
 })
 

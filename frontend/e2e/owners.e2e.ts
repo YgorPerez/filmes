@@ -81,14 +81,14 @@ for (const dono of DONOS)
 
     // The Feedback: her Nota is hers; Lara's she relays.
     await page.goto(`/sessoes/${id}/contar`)
-    const own = page.getByLabel(`Reação: ${dono.name}`)
-    await expect(own.locator('option[value^="relato:"]')).toHaveCount(0)
-    await expect(
-      page.getByLabel('Reação: Lara').locator('option[value^="relato:"]'),
-    ).not.toHaveCount(0)
+    const reaction = (slug: string, value: string) =>
+      page.locator(`input[name="reacao.${slug}"][value${value}]`)
+    await expect(reaction(dono.slug, '^="relato:"')).toHaveCount(0)
+    await expect(reaction('lara', '^="relato:"')).not.toHaveCount(0)
     await page.locator('input[name="filme"]').first().check()
-    await own.selectOption('nota:5')
-    await page.getByLabel('Reação: Lara').selectOption('nota:4')
+    await reaction(dono.slug, '="nota:10"').check()
+    await page.getByText('ou dar nota de 1 a 10').click()
+    await reaction('lara', '="nota:8"').check()
     await page.getByRole('button', { name: 'Gravar e fechar a Sessão' }).click()
     await expect(page).toHaveURL(new RegExp(`/sessoes/${id}\\?feito=contada$`))
     expect(await ratings(id)).toEqual(

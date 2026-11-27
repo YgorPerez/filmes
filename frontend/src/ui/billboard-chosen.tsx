@@ -4,11 +4,12 @@ import type {
   BillboardReaction,
 } from '@filmes/engine'
 import { CHOSEN } from './billboard-chosen.copy'
+import { Avatar } from './kit/person'
 
 // The chosen film on a closed Cartaz (#264): below "Por que", opened by
 // the same dashed rule, one line per Presente with the Nota prevista the
 // version stored beside her Reação ("Ana: previsto 8,3 · gostou", "Bruno:
-// previsto 7,1 · achou 6"). A Presente with only one of the two has that
+// previsto 7,1 · deu 6 de 10"). A Presente with only one of the two has that
 // one; the engine leaves out who has neither. A chosen film with no card
 // (outside the Recomendação, or not among the films shown) has a block of
 // its own above the cards, `ChosenFilm`, with its title and the same lines.
@@ -26,7 +27,8 @@ const lineOf = (name: string, reaction: BillboardReaction) => {
   return CHOSEN.line(name, parts)
 }
 
-/** The Presentes' lines, under a title of the caller's. */
+/** The Presentes' lines, under a title of the caller's, each with her
+ * avatar in the Session's colour. */
 function Lines({
   reactions,
   people,
@@ -34,17 +36,25 @@ function Lines({
   reactions: readonly BillboardReaction[]
   people: readonly BillboardPerson[]
 }) {
-  const names = new Map(people.map((p) => [p.slug, p.name]))
+  const known = new Map(people.map((p) => [p.slug, p]))
   return (
     <ul aria-label={CHOSEN.title} className="flex flex-col gap-xs">
-      {reactions.map((reaction) => (
-        <li
-          key={reaction.person}
-          className="text-evidence tabular-nums text-pretty"
-        >
-          {lineOf(names.get(reaction.person) ?? reaction.person, reaction)}
-        </li>
-      ))}
+      {reactions.map((reaction) => {
+        const person = known.get(reaction.person)
+        return (
+          <li
+            key={reaction.person}
+            className="flex items-start gap-sm text-evidence tabular-nums text-pretty"
+          >
+            {person && (
+              <span aria-hidden="true" className="mt-px inline-flex">
+                <Avatar person={person} />
+              </span>
+            )}
+            <span>{lineOf(person?.name ?? reaction.person, reaction)}</span>
+          </li>
+        )
+      })}
     </ul>
   )
 }
@@ -53,13 +63,18 @@ export function ChosenReactions({
   reactions,
   people,
   level = 2,
+  bare = false,
 }: {
   reactions: readonly BillboardReaction[]
   people: readonly BillboardPerson[]
   level?: Level
+  /** The lines alone, under a title of the caller's: the told Session's
+   * "Fita devolvida" (#272). */
+  bare?: boolean
 }) {
   const Label = level === 3 ? 'h4' : 'h3'
   if (reactions.length === 0) return null
+  if (bare) return <Lines reactions={reactions} people={people} />
   return (
     <div className="col-span-2 flex flex-col gap-sm border-t border-dashed border-rule pt-lg min-[560px]:col-span-1 min-[560px]:col-start-2">
       <Label className="font-display text-label text-ink-2 uppercase">

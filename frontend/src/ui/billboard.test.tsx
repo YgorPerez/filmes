@@ -142,8 +142,9 @@ describe('the Cartaz shows', () => {
     expect(horas.getByText('Mistério')).toBeTruthy()
     const sal = card(2)
     expect(sal.queryByRole('img', { name: /^Capa/ })).toBeNull()
+    // No rating says so, never a chip that reads cut (#272).
     expect(sal.getByRole('link', { name: /IMDb/ }).textContent).toBe(
-      'IMDb · 870 votos',
+      'IMDb: sem nota · 870 votos',
     )
   })
 
@@ -259,9 +260,10 @@ describe('the Cartaz shows', () => {
       screen.getByRole('region', { name: 'Filme escolhido' }),
     )
     expect(block.getByText('Curta da Madrugada (2010)')).toBeTruthy()
+    // Each line opens with her avatar, whose initial a screen reader skips.
     expect(block.getAllByRole('listitem').map((li) => li.textContent)).toEqual([
-      'Bruno: achou 8',
-      'Iara: não gostou',
+      'BBruno: deu 8 de 10',
+      'IIara: não gostou',
     ])
     expect(cards()).toHaveLength(2)
   })
@@ -391,12 +393,14 @@ describe('Enviar and Copiar pro chat', () => {
     expect(
       within(box).queryByRole('button', { name: BILLBOARD.reply.send }),
     ).toBeNull()
+    // The web sends the reply itself: no Copiar pro chat there (#272).
     expect(
-      within(box).getByRole('button', { name: BILLBOARD.reply.copy }),
-    ).toBeTruthy()
+      within(box).queryByRole('button', { name: BILLBOARD.reply.copy }),
+    ).toBeNull()
     expect(
       box.compareDocumentPosition(bar) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy()
+    expect(within(bar).getByText(BILLBOARD.reply.hint)).toBeTruthy()
     await user.click(card(2).getByRole('button', { name: 'Trocar' }))
     expect(within(bar).getByText('1 Trocar')).toBeTruthy()
   })
@@ -407,6 +411,36 @@ describe('Enviar and Copiar pro chat', () => {
     fireEvent.error(poster)
     expect(card(1).queryByRole('img', { name: /^Capa/ })).toBeNull()
     expect(card(1).getAllByText('As Horas Lentas').length).toBeGreaterThan(1)
+  })
+
+  it('a status line goes with the next mark, so it never contradicts the summary', async () => {
+    const user = userEvent.setup()
+    render(<Billboard billboard={MODEL} action="/x" />)
+    await user.click(screen.getByRole('button', { name: BILLBOARD.reply.send }))
+    expect(screen.getByRole('status').textContent).toBe(BILLBOARD.reply.nothing)
+    await user.click(card(2).getByRole('button', { name: 'Trocar' }))
+    expect(screen.queryByRole('status')).toBeNull()
+  })
+
+  it('an acrescentar the reading did not take is asked in the bar before anything goes', async () => {
+    const user = userEvent.setup()
+    const onEdit = vi.fn<() => void>()
+    render(
+      <Billboard
+        billboard={MODEL}
+        action="/x"
+        unread={{ words: ['nada de terror'], onEdit }}
+      />,
+    )
+    const bar = within(
+      screen.getByRole('region', { name: BILLBOARD.reply.bar }),
+    )
+    expect(bar.getByRole('alert').textContent).toContain('“nada de terror”')
+    const anyway = bar.getByRole('button', { name: BILLBOARD.reply.sendAnyway })
+    expect(anyway.getAttribute('name')).toBe('confirmar')
+    expect(anyway.getAttribute('value')).toBe('sim')
+    await user.click(bar.getByRole('button', { name: BILLBOARD.reply.edit }))
+    expect(onEdit).toHaveBeenCalled()
   })
 
   it('a closed Session has no bar', () => {
@@ -461,9 +495,23 @@ describe('Enviar and Copiar pro chat', () => {
       .spyOn(navigator.clipboard, 'writeText')
       .mockResolvedValueOnce(undefined)
       .mockRejectedValueOnce(new Error('negado'))
-    render(<Billboard billboard={MODEL} action="/x" />)
+    // Copiar shows only when the host cannot take the reply (#277).
+    render(
+      <Billboard
+        billboard={MODEL}
+        onSend={() =>
+          Promise.resolve({ message: 'sem envio', sent: false, copy: true })
+        }
+      />,
+    )
     await user.click(card(2).getByRole('button', { name: 'Trocar' }))
-    const copy = screen.getByRole('button', { name: BILLBOARD.reply.copy })
+    expect(
+      screen.queryByRole('button', { name: BILLBOARD.reply.copy }),
+    ).toBeNull()
+    await user.click(screen.getByRole('button', { name: BILLBOARD.reply.send }))
+    const copy = await screen.findByRole('button', {
+      name: BILLBOARD.reply.copy,
+    })
     await user.click(copy)
     expect(writeText).toHaveBeenCalledWith(
       '#cartaz 2026-11-20-iara v2\n2 tt9000105 · trocar\n',
