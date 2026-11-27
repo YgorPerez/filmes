@@ -11,6 +11,7 @@ import { DoesTheDogDie } from '../sources/DoesTheDogDie.ts'
 import { Omdb } from '../sources/Omdb.ts'
 import { Transport } from '../sources/Source.ts'
 import { SourceCache } from '../sources/SourceCache.ts'
+import { TraktAccess, type TraktConnection } from '../sources/Trakt.ts'
 import { Tmdb } from '../sources/Tmdb.ts'
 import { Sqlite } from '../sqlite/Sqlite.ts'
 import { EngineError, type ErrorCode, type ErrorReason } from './EngineError.ts'
@@ -29,6 +30,7 @@ export type EngineServices =
   | Omdb
   | DoesTheDogDie
   | Tmdb
+  | Transport
 
 /** The on-demand sources, sharing one cache connection and one transport
  * (the network, or `FILMES_GRAVACOES`). */
@@ -36,7 +38,10 @@ const sourcesLayer = Layer.mergeAll(
   Omdb.layer,
   DoesTheDogDie.layer,
   Tmdb.layer,
-).pipe(Layer.provide(Transport.layer), Layer.provideMerge(SourceCache.layer))
+).pipe(
+  Layer.provideMerge(Transport.layer),
+  Layer.provideMerge(SourceCache.layer),
+)
 
 /** The process-wide services, from the environment variables. The writer
  * shares the one `Sqlite` (and so its write lock). */
@@ -104,14 +109,18 @@ export interface Engine {
 /** The engine of a process. The services are built on the first `run`; when
  * the environment is broken (no `FILMES_CONFIG`, a bad `weights.toml`), every
  * `run` returns that error. */
-export const makeEngine = (vars: Vars): Engine => {
+export const makeEngine = (
+  vars: Vars,
+  options: { readonly trakt?: TraktConnection } = {},
+): Engine => {
   const runtime = ManagedRuntime.make(engineLayer(vars))
   return {
-    run: async (effect, options = {}) => {
+    run: async (effect, runOptions = {}) => {
       const exit = await runtime.runPromiseExit(
         effect.pipe(
           Effect.provide(Run.layer),
-          Effect.provideService(Owner, options.owner ?? null),
+          Effect.provideService(Owner, runOptions.owner ?? null),
+          Effect.provideService(TraktAccess, options.trakt ?? null),
         ),
       )
       return Exit.isSuccess(exit)

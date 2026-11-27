@@ -191,6 +191,10 @@ export const MyTaste: Story = {
   },
 }
 
+export const MyTasteWithTrakt: Story = {
+  args: { ...MyTaste.args, showTrakt: true },
+}
+
 export const AdminGrantsAccess: Story = {
   args: {
     page: {

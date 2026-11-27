@@ -16,9 +16,12 @@
 //   A network failure is recorded as `<key>.falha.json`,
 //   `{"motivo": "...", "vezes": N}`: it fails the first N times in the
 //   request and then reads `<key>.json`; without `vezes` it always fails.
+// - A POST recording contains `request: { path, body }` and `response`.
+//   A missing or mismatched request fails instead of pretending to write.
 
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { isDeepStrictEqual } from 'node:util'
 import {
   Context,
   Effect,
@@ -32,6 +35,7 @@ import { Environment, type SourceKeyVariable } from '../runtime/Environment.ts'
 import type { EngineError } from '../runtime/EngineError.ts'
 import { Run } from '../runtime/Run.ts'
 import type { SqliteError } from '../sqlite/Sqlite.ts'
+import { field } from './json.ts'
 import { SourceCache, type CachedAnswer } from './SourceCache.ts'
 
 /** Seconds per HTTP request. */
@@ -70,6 +74,11 @@ export interface SourceProfile {
   readonly notFound: unknown
 }
 
+type RecordingProfile = Pick<SourceProfile, 'folder' | 'id' | 'notFound'>
+
+/** Recordings for writes match the request body before returning a response. */
+type RecordedPost = Readonly<{ path: string; body: unknown }>
+
 /** How a source's request reaches an answer: the API, or the recordings. */
 export class Transport extends Context.Service<
   Transport,
@@ -77,9 +86,10 @@ export class Transport extends Context.Service<
     /** The answer for `key`, with transient failures tried again. `live`
      * asks the API once. */
     readonly answer: (
-      profile: SourceProfile,
+      profile: RecordingProfile,
       key: string,
       live: Effect.Effect<unknown, SourceFailure>,
+      post?: RecordedPost,
     ) => Effect.Effect<unknown, SourceFailure, Run>
   }
 >()('@filmes/engine/sources/Transport') {
@@ -101,8 +111,8 @@ export class Transport extends Context.Service<
     Layer.succeed(
       Transport,
       Transport.of({
-        answer: (profile, key) =>
-          Effect.retry(readRecording(dir, profile, key), {
+        answer: (profile, key, _live, post) =>
+          Effect.retry(readRecording(dir, profile, key, post), {
             times: TRIES - 1,
             while: (failure) => failure.transient,
           }),
@@ -131,10 +141,19 @@ const readJson = (path: string): unknown =>
 
 const readRecording = (
   dir: string,
-  profile: SourceProfile,
+  profile: RecordingProfile,
   key: string,
+  post?: RecordedPost,
 ): Effect.Effect<unknown, SourceFailure, Run> =>
   Effect.gen(function* () {
+    const path = join(dir, profile.folder, `${key}.json`)
+    const read = () => (existsSync(path) ? readJson(path) : profile.notFound)
+    const answer = post ? read() : undefined
+    if (post && !isDeepStrictEqual(field(answer, 'request'), post))
+      return yield* new SourceFailure({
+        reason: 'gravação não corresponde ao POST',
+        transient: false,
+      })
     const failurePath = join(dir, profile.folder, `${key}.falha.json`)
     if (existsSync(failurePath)) {
       // A broken recording is a defect, as Python's KeyError was.
@@ -149,8 +168,7 @@ const readRecording = (
           transient: true,
         })
     }
-    const path = join(dir, profile.folder, `${key}.json`)
-    return existsSync(path) ? readJson(path) : profile.notFound
+    return post ? field(answer, 'response') : read()
   })
 
 /** The `fetch` the sources call: the global one, unless an effect provides
@@ -177,11 +195,11 @@ export const networkReason = (error: unknown): string => {
   return message
 }
 
-/** A GET for JSON: the body, `null` for a 404, and a `SourceFailure` for the
- * rest (Python's `pegar_json`), within `TIMEOUT`. */
-export const getJson = (
+/** Reads JSON within `TIMEOUT`. A 404 returns null, other errors fail. */
+const requestJson = (
   url: string,
-  headers: Readonly<Record<string, string>> = {},
+  headers: Readonly<Record<string, string>>,
+  postBody?: string,
 ): Effect.Effect<unknown, SourceFailure> =>
   Effect.gen(function* () {
     const fetch = yield* Fetch
@@ -194,8 +212,16 @@ export const getJson = (
             ...headers,
           },
           signal,
+          ...(postBody !== undefined && {
+            method: 'POST',
+            body: postBody,
+            redirect: 'error',
+          }),
         }),
-      catch: (error) => transient(networkReason(error)),
+      catch: (error) =>
+        transient(
+          postBody === undefined ? networkReason(error) : 'erro de conexão',
+        ),
     })
     if (response.status === 404) return null
     if (response.status >= 400)
@@ -205,7 +231,10 @@ export const getJson = (
       })
     const body = yield* Effect.tryPromise({
       try: () => response.text(),
-      catch: (error) => transient(networkReason(error)),
+      catch: (error) =>
+        transient(
+          postBody === undefined ? networkReason(error) : 'erro de conexão',
+        ),
     })
     return yield* Effect.try({
       try: (): unknown => JSON.parse(body),
@@ -218,6 +247,17 @@ export const getJson = (
       orElse: () => Effect.fail(transient('timed out')),
     }),
   )
+
+export const getJson = (
+  url: string,
+  headers: Readonly<Record<string, string>> = {},
+) => requestJson(url, headers)
+
+export const postJson = (
+  url: string,
+  headers: Readonly<Record<string, string>>,
+  body: string,
+) => requestJson(url, { ...headers, 'Content-Type': 'application/json' }, body)
 
 /** Asks a source for `key`: the cache, then (with the key, unless the
  * source is off in this request) the transport. `live` gets the API key.

@@ -57,6 +57,7 @@ import { ownersOf, syncSession } from './database.ts'
 import { comments, reactions, sessionSeen, type ReportLevel } from './facts.ts'
 import { isOpen, readSession, sessionRelative, writeSession } from './file.ts'
 import { authorFor } from './open.ts'
+import { syncTraktFeedback } from './trakt.ts'
 
 export interface FeedbackRequest {
   /** The Session's id, as `sessoes-abertas` lists it. */
@@ -99,6 +100,7 @@ export interface FeedbackResult {
   readonly facts: ReadonlyArray<FeedbackFact>
   /** The Presentes with no reaction (only with a chosen film). */
   readonly withoutReaction: ReadonlyArray<string>
+  readonly warnings?: ReadonlyArray<string>
 }
 
 /** The Relato levels as the Dono says them, and as the file keeps them. */
@@ -638,9 +640,12 @@ export const recordFeedback = (
     const id = request.session
     const writer = yield* DataWriter
     const author = yield* authorFor(yield* sessionOwner(id))
-    return yield* writer.write({ author, message: `feedback ${id}` }, (db) =>
-      writeFeedback(db, request, today),
+    const result = yield* writer.write(
+      { author, message: `feedback ${id}` },
+      (db) => writeFeedback(db, request, today),
     )
+    const warning = yield* syncTraktFeedback(id)
+    return warning ? { ...result, warnings: [warning] } : result
   })
 
 /** Takes a Pessoa's comment out of her reaction in a Session's Feedback,

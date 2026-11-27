@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vite-plus/test'
 import { useFixture } from '../../../packages/engine/test/fixture.ts'
 import { Auth, authFromEnvironment } from './auth'
 import { ownersFromDataRepo } from './owners'
+import { peopleFromDataRepo } from './people-directory'
 import { serverEnv } from './server-env'
 
 const ORIGIN = 'http://localhost:3000'
@@ -43,6 +44,8 @@ function setup(
     data?: string
     identity?: () => Identity | 'down'
     configured?: boolean
+    /** Lets any Pessoa with an email sign in for Trakt (#295). */
+    trakt?: boolean
   } = {},
 ) {
   let identity: Identity | 'down' = {
@@ -56,6 +59,9 @@ function setup(
     clientSecret: 'secret',
     databasePath: join(mkdtempSync(join(tmpdir(), 'auth-')), 'auth.sqlite'),
     owners: ownersFromDataRepo(options.data ?? FIXTURE),
+    personByEmail: options.trakt
+      ? peopleFromDataRepo(options.data ?? FIXTURE).byEmail
+      : undefined,
     endpoints: {
       authorize: 'https://google.test/authorize',
       token: 'https://google.test/token',
@@ -128,6 +134,7 @@ function setup(
     google,
     request,
     login,
+    googleReturn,
     connector,
     session,
     owner,
@@ -245,6 +252,43 @@ describe('the Google login', () => {
     const { request } = setup()
     expect(await request('/')).toBeNull()
     expect((await request('/auth/nothing'))!.status).toBe(404)
+  })
+})
+
+describe('the Trakt sign-in', () => {
+  /** The /trakt sign-in, through Google when it starts at all. */
+  const traktLogin = async (ctx: ReturnType<typeof setup>) => {
+    const start = (await ctx.request('/auth/trakt-google'))!
+    return start.headers.get('location')!.startsWith('/')
+      ? start
+      : (await ctx.googleReturn(start))!
+  }
+
+  it('is off without Trakt, and never starts Google', async () => {
+    const ctx = setup()
+    const response = await traktLogin(ctx)
+    expect(response.headers.get('location')).toBe('/trakt?erro=login')
+    expect(ctx.google.calls).toEqual([])
+  })
+
+  it('lets a Presente in for Trakt without making her Dono', async () => {
+    const ctx = setup({ trakt: true })
+    ctx.setIdentity({ email: 'Iara@example.org', email_verified: true })
+    const response = await traktLogin(ctx)
+    expect(response.headers.get('location')).toBe('/trakt')
+    const cookie = ctx.session(response)!
+    expect(cookie).toBeDefined()
+    expect(ctx.owner(cookie)).toBeNull()
+    const request = new Request(`${ORIGIN}/trakt`, { headers: { cookie } })
+    expect(ctx.auth.verifiedSession(request)?.email).toBe('iara@example.org')
+  })
+
+  it('refuses an email that is on no Pessoa', async () => {
+    const ctx = setup({ trakt: true })
+    ctx.setIdentity({ email: 'stranger@example.org', email_verified: true })
+    const response = await traktLogin(ctx)
+    expect(response.headers.get('location')).toBe('/trakt?erro=login')
+    expect(ctx.session(response)).toBeUndefined()
   })
 })
 
@@ -391,6 +435,21 @@ describe('from the environment', () => {
     expect(await googleTarget('http://localhost:3000')).toBe(
       'http://localhost:9999',
     )
+  })
+
+  it('starts the Trakt sign-in only with a Trakt client', async () => {
+    const start = (variables: Record<string, string>) =>
+      authFromEnvironment({ ...env(ORIGIN), ...variables }).handle(
+        new Request(`${ORIGIN}/auth/trakt-google`),
+      )
+    expect((await start({}))!.headers.get('location')).toBe('/trakt?erro=login')
+    expect(
+      new URL(
+        (await start({ FILMES_TRAKT_CLIENT_ID: 'trakt' }))!.headers.get(
+          'location',
+        )!,
+      ).origin,
+    ).toBe('http://localhost:9999')
   })
 
   it('ignores the stand-in on a real origin', async () => {
