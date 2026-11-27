@@ -20,6 +20,7 @@ import {
   type SqliteError,
 } from '../sqlite/Sqlite.ts'
 import { LINK_PREDICATE } from '../sqlite/vocabulary.ts'
+import { genreInPortuguese, WIKIDATA_GENRE } from './genres.ts'
 import { searchKey } from './search-key.ts'
 
 export const SEARCH_KINDS = ['film', 'person', 'genre', 'series'] as const
@@ -143,6 +144,16 @@ const searchFilms = (
     )
   })
 
+/** The genre entities an IMDb genre's name finds (#347): Meu gosto names
+ * the IMDb genres ("Crime"), and a Veto or a Declarado takes the Wikidata
+ * entity `WIKIDATA_GENRE` ties each to ("filme policial"). Each as
+ * [QID, the name's key], for the rank. */
+const imdbGenreAliases = (key: string): ReadonlyArray<[string, string]> =>
+  [...WIKIDATA_GENRE].flatMap(([imdb, entity]) => {
+    const name = searchKey(genreInPortuguese(imdb))
+    return name.includes(key) ? [[entity, name] as [string, string]] : []
+  })
+
 const searchEntities = (
   db: Connection,
   query: string,
@@ -165,13 +176,23 @@ const searchEntities = (
           predicates,
         )
       : yield* db.all(
+          // A label that has the query ranks by itself; an entity only an
+          // IMDb genre's name finds, by that name.
           `SELECT id, rotulo, n FROM (
-             SELECT e.id, e.rotulo, search_key(e.rotulo) AS k, (${linked}) AS n
-             FROM entidades e WHERE instr(search_key(e.rotulo), ?1) > 0)
+             SELECT e.id, e.rotulo, (${linked}) AS n,
+               CASE WHEN instr(search_key(e.rotulo), ?1) > 0
+                 THEN search_key(e.rotulo)
+                 ELSE (SELECT value ->> 1 FROM json_each(?4)
+                       WHERE value ->> 0 = e.id) END AS k
+             FROM entidades e WHERE instr(search_key(e.rotulo), ?1) > 0
+               OR e.id IN (SELECT value ->> 0 FROM json_each(?4)))
            WHERE n > 0 ORDER BY ${RANK}, n DESC, id LIMIT ?3`,
           searchKey(trimmed),
           predicates,
           limit,
+          JSON.stringify(
+            kind === 'genre' ? imdbGenreAliases(searchKey(trimmed)) : [],
+          ),
         )
     return yield* Effect.forEach(rows, (row) =>
       Effect.gen(function* () {

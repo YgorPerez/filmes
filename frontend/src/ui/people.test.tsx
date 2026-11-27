@@ -261,10 +261,15 @@ describe('PeopleList create form, refusals', () => {
     )
     const form = screen.getByRole('form', { name: PEOPLE.create.title })
     expect(form.closest('details')?.open).toBe(true)
-    expect(screen.getByRole('alert').textContent).toContain(
-      PEOPLE.create.refusals['email-usado'],
-    )
     const fields = within(form)
+    // Under the field it is about, marked (#347).
+    const email = fields.getByRole('textbox', {
+      name: new RegExp(`^${PEOPLE.create.email}`),
+      description: PEOPLE.create.refusals['email-usado'],
+    })
+    expect(email.getAttribute('aria-invalid')).toBe('true')
+    expect(document.activeElement).toBe(email)
+    expect(screen.queryByRole('alert')).toBeNull()
     expect(
       (fields.getByLabelText(PEOPLE.create.name) as HTMLInputElement).value,
     ).toBe('Farias')
@@ -285,6 +290,32 @@ describe('PeopleList create form, refusals', () => {
         }) as HTMLInputElement
       ).value,
     ).toBe('bruno@example.org')
+  })
+
+  it('marks the name a taken file name is about (#347)', () => {
+    render(
+      <PeopleList
+        people={[BRUNO]}
+        create={{ refusal: 'existe', typed: { name: 'Bruno' } }}
+      />,
+    )
+    const name = screen.getByRole('textbox', {
+      name: new RegExp(`^${PEOPLE.create.name}`),
+      description: PEOPLE.create.refusals.existe,
+    })
+    expect(name.getAttribute('aria-invalid')).toBe('true')
+  })
+
+  it('keeps a refusal of no one field over the form', () => {
+    render(
+      <PeopleList
+        people={[BRUNO]}
+        create={{ refusal: 'indisponivel', typed: { name: 'Farias' } }}
+      />,
+    )
+    expect(screen.getByRole('alert').textContent).toContain(
+      PEOPLE.create.refusals.indisponivel,
+    )
   })
 
   it('has a sentence for every refusal', () => {

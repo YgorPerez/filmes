@@ -321,3 +321,32 @@ it('is plain forms that post before the JavaScript', () => {
   expect(doc.querySelector('button[disabled]')).toBeNull()
   expect(doc.body.textContent).not.toContain(PERSON.saving)
 })
+
+it('lets a pending “Tirar de vez” go once another form posts (#347)', async () => {
+  const router = showRouted()
+  const user = userEvent.setup()
+  await user.click(
+    await screen.findByRole('button', {
+      name: PERSON.removeLabel('nunca vê terror'),
+    }),
+  )
+  expect(
+    screen.getByRole('button', { name: PERSON.removeSure('nunca vê terror') }),
+  ).toBeTruthy()
+
+  answering('/pessoas/iara?feito=gravado')
+  const { form } = await typeVeto('nunca')
+  await user.click(within(form).getByRole('button', { name: PERSON.save }))
+
+  await waitFor(() =>
+    expect(router.state.location.href).toBe('/pessoas/iara?feito=gravado'),
+  )
+  expect(
+    screen.queryByRole('button', {
+      name: PERSON.removeSure('nunca vê terror'),
+    }),
+  ).toBeNull()
+  expect(
+    screen.getByRole('button', { name: PERSON.removeLabel('nunca vê terror') }),
+  ).toBeTruthy()
+})
