@@ -125,6 +125,12 @@ export const CREDITS: ReadonlyArray<Credit> = [
     use: 'O histórico, as notas e a lista para ver do export que cada Pessoa baixa.',
     notice: null,
   },
+  {
+    source: 'YouTube',
+    url: 'https://www.youtube.com',
+    use: 'Os trailers, pelo link do card.',
+    notice: null,
+  },
 ]
 
 /** The attributions of the sources named, each once, in the fixed order. */

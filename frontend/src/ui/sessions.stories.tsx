@@ -141,6 +141,19 @@ export const SessionClosed: Story = {
   ),
 }
 
+export const SessionClosedWithTraktWarning: Story = {
+  render: () => (
+    <SessionScreen
+      page={{
+        ...PAGE,
+        session: CLOSED,
+        billboard: { ...MODEL, open: false },
+        warnings: ['O Feedback foi salvo. O envio ao Trakt falhou.'],
+      }}
+    />
+  ),
+}
+
 export const SessionUnknown: Story = {
   render: () => <SessionScreen page="unknown" />,
 }

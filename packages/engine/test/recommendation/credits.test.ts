@@ -35,6 +35,7 @@ describe('the credits', () => {
       'Does the Dog Die',
       'Trakt',
       'Letterboxd',
+      'YouTube',
     ])
     for (const { url, use } of CREDITS) {
       expect(url).toMatch(/^https:\/\//)
