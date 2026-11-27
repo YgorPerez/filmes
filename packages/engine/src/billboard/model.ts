@@ -273,6 +273,9 @@ export interface Billboard {
   readonly moodChoices: ReadonlyArray<string>
   /** The Session is still open: it can take a reply. */
   readonly open: boolean
+  /** The version asked Sem Já visto: on the Cartaz, a Já vi turns the
+   * film's Trocar on (#326). */
+  readonly unseen?: true
   /** Only when the Session has Feedback and its chosen film has no card. */
   readonly chosen?: BillboardChosen
 }
@@ -474,6 +477,12 @@ const requestOf = (
     parts,
   }
 }
+
+/** The version asked Sem Já visto (`unseen`). */
+const asksUnseen = (front: YamlMapping): boolean =>
+  mappings(get(front.get('context'), 'constraints')).some(
+    (item) => textOf(item.get('name')) === 'unseen',
+  )
 
 /** What left the previous version, and why (`_saiu`). */
 const droppedOf = (
@@ -876,6 +885,7 @@ export const billboardModel = (
           moods: texts(get(front.get('context'), 'moods')),
           moodChoices: (yield* readMoods).map((m) => m.name),
           open: isOpen(front),
+          ...(asksUnseen(front) && { unseen: true as const }),
           ...(chosenBlock !== null && { chosen: chosenBlock }),
         }
       }),
