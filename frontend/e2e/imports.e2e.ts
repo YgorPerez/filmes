@@ -150,42 +150,53 @@ test('the Dono imports a Letterboxd ZIP and works the queue', async ({
   const wind = section(page, 'Vento Norte (2020)')
   const lost = section(page, 'Filme Perdido (2001)')
   await expect(wind).toContainText('Nordwind')
-  await expect(lost).toContainText('de Olga')
+  await expect(lost).toContainText('Conta no gosto de Olga')
   await snap(page, info, 'fila')
 
   // Something that is not a film: the queue says why, and nothing changes.
+  await lost.getByText('Tenho o link').click()
   const confirmLost = lost.getByRole('form', {
     name: 'Confirmar Filme Perdido (2001)',
   })
-  await confirmLost.getByLabel(/^Filme/).fill('um filme qualquer')
+  await confirmLost.getByLabel(/^Link ou ID/).fill('um filme qualquer')
   await confirmLost.getByRole('button', { name: 'Confirmar' }).click()
   await expect(page).toHaveURL(/\/meu-gosto\/fila\?erro=filme$/)
-  await expect(page.getByRole('alert')).toContainText('Use um tt…')
+  await expect(page.getByRole('alert')).toContainText('Cole um link')
 
   await wind
-    .getByRole('button', { name: 'É este: Vento Norte (2020), TMDB 9102' })
+    .getByRole('button', { name: 'É este: Vento Norte (2020)', exact: true })
     .click()
   await expect(notice(page)).toHaveText(
-    'Filme confirmado: os Fatos dele entraram para quem o tem.',
+    'Vento Norte (2020) confirmado: as Notas dele entraram no gosto de quem o tem.',
   )
   await expect(section(page, 'Vento Norte (2020)')).toHaveCount(0)
+  // Taken back, it waits again; then confirmed for good.
+  await page
+    .getByRole('button', {
+      name: 'Desfazer a decisão sobre Vento Norte (2020)',
+    })
+    .click()
+  await expect(notice(page)).toHaveText(
+    'Vento Norte (2020) voltou para a fila.',
+  )
+  await section(page, 'Vento Norte (2020)')
+    .getByRole('button', { name: 'É este: Vento Norte (2020)', exact: true })
+    .click()
+  await expect(section(page, 'Vento Norte (2020)')).toHaveCount(0)
 
-  await lost.getByText('Descartar este filme').click()
-  const discard = lost.getByRole('form', {
-    name: 'Descartar Filme Perdido (2001)',
-  })
-  await discard.getByLabel(/^Motivo/).fill('não é filme')
-  await discard.getByRole('button', { name: 'Descartar' }).click()
-  await expect(notice(page)).toHaveText('Filme descartado: saiu da fila.')
+  await lost
+    .getByRole('button', { name: 'Não é filme: Filme Perdido (2001)' })
+    .click()
+  await expect(notice(page)).toHaveText('Filme Perdido (2001) saiu da fila.')
   const queue = await engineRun((engine) => engine.run(viewQueue))
   expect(queue.items.map((i) => i.name)).not.toContain('Filme Perdido')
   expect(queue.items.map((i) => i.name)).not.toContain('Vento Norte')
 
   await page
-    .getByRole('form', { name: 'Perguntar ao TMDB de novo' })
+    .getByRole('form', { name: 'Procurar de novo' })
     .getByRole('button')
     .click()
-  await expect(notice(page)).toContainText('TMDB consultado de novo')
+  await expect(notice(page)).toContainText('Procurei de novo')
   await snap(page, info, 'fila-decidida')
 
   await page.goto('/importar/olga')
@@ -391,17 +402,22 @@ test('a Dona with no history rates from the Fila and the search, then Pronto', a
   const search = section(page, 'Buscar no Catálogo')
   await search.getByRole('searchbox').fill('fronteira')
   await search.getByRole('button', { name: 'Buscar' }).click()
-  await page.getByRole('link', { name: 'Usar Fronteira (2008)' }).click()
+  await page.getByRole('link', { name: 'Dar nota a Fronteira (2008)' }).click()
   await expect(card.getByRole('heading')).toHaveText('Fronteira')
   await card.getByRole('button', { name: 'Nota 6' }).click()
 
-  const mine = section(page, 'Suas Notas')
+  const mine = section(page, 'Ainda não gravadas')
   await expect(mine.getByRole('listitem')).toHaveCount(2)
   await snap(page, info, 'notas-rascunho')
-  await mine.getByRole('button', { name: 'Pronto (2 Notas)' }).click()
+  await page
+    .getByRole('region', { name: 'Suas Notas desta vez' })
+    .getByRole('button', { name: 'Pronto (2 Notas)' })
+    .click()
 
   await expect(notice(page)).toHaveText('2 Notas gravadas no seu gosto.')
-  await expect(mine.getByRole('listitem')).toHaveCount(0)
+  await expect(page.getByRole('link', { name: 'Pedir filme' })).toBeVisible()
+  await expect(section(page, 'Ainda não gravadas')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Dar mais notas' }).click()
   await expect(card.getByRole('heading')).not.toHaveText('Pequenos Milagres')
   const view = await engineRun((engine) => engine.run(personView(slug)))
   expect(

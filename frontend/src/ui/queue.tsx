@@ -1,25 +1,30 @@
 import { FIELD } from './kit/field'
 import type { ReactNode } from 'react'
 import type { QueueNotice, QueueRefusal } from '#/content/import-action'
-import { MY_TASTE } from '#/content/paths'
+import { MY_TASTE, QUEUE_PATH } from '#/content/paths'
+import type { SearchAnswer } from '#/platform/catalog-search'
 import type { QueueEntry, QueuePage, QueueSuggestion } from '#/platform/imports'
 import { ImportsFrame } from './imports'
-import { QUEUE } from './imports.copy'
-import { FieldLabel } from './kit/field-label'
+import { QUEUE } from './queue.copy'
 import { PostAnswers, PostForm } from './kit/post-form'
 import { usePostedFeedback } from './kit/posted-feedback'
 import { PageHead } from './kit/page-head'
 import { TapeCase } from './kit/tape-case'
-import { Alert, Notice, Submit, TextField } from './person-parts'
-import { buttonVariants } from './kit/button-variants'
+import { Alert, Disclosure, Notice, Submit, TextField } from './person-parts'
 import { Button } from './shadcn/button'
 
-/** What the last decision did. */
+/** What the last decision did, and on which film (`item`, to take it
+ * back, and its `title`). */
 export type QueueDoneView = {
   notice: QueueNotice
   resolved?: number
   left?: number
+  item?: string
+  title?: string
 }
+
+/** The Catálogo search one film's card asked for (`?buscar=&para=`). */
+export type QueueSearchView = { item: string; answer: SearchAnswer }
 
 /** A form of the queue: a POST to `/fila/acao`, by `fetch` once the
  * JavaScript is in (#240). `children` see whether its post is running. */
@@ -30,7 +35,7 @@ function QueueForm({
   className = 'flex flex-col gap-xl',
   children,
 }: {
-  action: 'confirmar' | 'descartar' | 'reprocessar'
+  action: 'confirmar' | 'descartar' | 'reprocessar' | 'reabrir'
   id?: string
   label?: string
   className?: string
@@ -49,17 +54,22 @@ function QueueForm({
   )
 }
 
-/** The resolution queue (`QUEUE_PATH`): the films of the Letterboxd imports that wait for the Dono, one
- * card each, with TMDB's suggestions and the forms to confirm or discard;
- * and asking TMDB again. `queue` is null when the engine cannot run here. */
+/** The resolution queue (`QUEUE_PATH`): the films of the imports that wait
+ * for the Dono, one card each, with TMDB's suggestions (poster and
+ * synopsis, to tell twins apart), the Catálogo search for another title,
+ * the link as a last resort, and the reasons to take a film out. What the
+ * last decision did names the film, with Desfazer. `queue` is null when
+ * the engine cannot run here. */
 export function QueueScreen({
   queue,
   done,
   refusal,
+  search,
 }: {
   queue: QueuePage | null
   done?: QueueDoneView
   refusal?: QueueRefusal
+  search?: QueueSearchView
 }) {
   const { feedback, onAnswer } = usePostedFeedback()
   return (
@@ -69,11 +79,7 @@ export function QueueScreen({
         {(refusal || done) && (
           <div ref={feedback}>
             {refusal && <Alert>{QUEUE.refusals[refusal]}</Alert>}
-            {done && (
-              <Notice>
-                {QUEUE.notices[done.notice](done.resolved, done.left)}
-              </Notice>
-            )}
+            {done && <Done done={done} />}
           </div>
         )}
         {!queue ? (
@@ -85,16 +91,14 @@ export function QueueScreen({
             ) : (
               <ul className="flex flex-col gap-2xl">
                 {queue.items.map((item) => (
-                  <Card key={item.id} item={item} names={queue.names} />
+                  <Card
+                    key={item.id}
+                    item={item}
+                    names={queue.names}
+                    search={search?.item === item.id ? search.answer : null}
+                  />
                 ))}
               </ul>
-            )}
-            {queue.items.length > 0 && (
-              <datalist id="motivos">
-                {QUEUE.reasons.map((reason) => (
-                  <option key={reason} value={reason} />
-                ))}
-              </datalist>
             )}
             <QueueForm
               action="reprocessar"
@@ -112,15 +116,41 @@ export function QueueScreen({
                 </>
               )}
             </QueueForm>
-            {queue.attributions.map(({ source, text }) => (
-              <p key={source} className="text-source text-ink-2">
-                {text}
-              </p>
-            ))}
+            {queue.attributions.length > 0 && (
+              <p className="text-source text-ink-2">{QUEUE.attribution}</p>
+            )}
           </>
         )}
       </ImportsFrame>
     </PostAnswers>
+  )
+}
+
+/** The last decision, naming the film, with Desfazer when it can be. */
+function Done({ done }: { done: QueueDoneView }) {
+  const undoable =
+    done.item !== undefined &&
+    (done.notice === 'confirmado' || done.notice === 'descartado')
+  return (
+    <div className="flex flex-col gap-xs">
+      <Notice>
+        {QUEUE.notices[done.notice](done.title, done.resolved, done.left)}
+      </Notice>
+      {undoable && (
+        <QueueForm action="reabrir" id={done.item} className="self-start">
+          {(busy) => (
+            <Button
+              type="submit"
+              variant="link"
+              disabled={busy}
+              aria-label={QUEUE.undoLabel(done.title ?? '')}
+            >
+              {busy ? QUEUE.busy.reopen : QUEUE.undo}
+            </Button>
+          )}
+        </QueueForm>
+      )}
+    </div>
   )
 }
 
@@ -138,9 +168,11 @@ function BlankTape() {
 function Card({
   item,
   names,
+  search,
 }: {
   item: QueueEntry
   names: Record<string, string>
+  search: SearchAnswer | null
 }) {
   const title = QUEUE.item(item.name, item.year)
   const headingId = `fila-${item.id}`
@@ -158,19 +190,25 @@ function Card({
             </h2>
             <p className="text-meta text-ink-2">{item.reason}</p>
             <p className="text-meta">
-              {QUEUE.of} {item.people.map((p) => names[p] ?? p).join(', ')}
+              {QUEUE.stake(item.people.map((p) => names[p] ?? p))}
             </p>
           </div>
         </div>
         {item.candidates.length > 0 && <Suggestions item={item} />}
-        <Confirm id={item.id} title={title} />
+        <Disclosure summary={QUEUE.search} open={search !== null}>
+          <FindInCatalog item={item} title={title} search={search} />
+        </Disclosure>
+        <Disclosure summary={QUEUE.link}>
+          <Confirm id={item.id} title={title} />
+        </Disclosure>
         <Discard id={item.id} title={title} />
       </section>
     </li>
   )
 }
 
-/** TMDB's films with the title, each confirmed with one click. */
+/** TMDB's films with the title, each with its poster and synopsis and
+ * confirmed with one tap. */
 function Suggestions({ item }: { item: QueueEntry }) {
   return (
     <div className="flex flex-col gap-xs border-t border-dashed border-rule pt-lg">
@@ -195,8 +233,26 @@ function Suggestion({
 }) {
   const label = QUEUE.item(candidate.title, candidate.year)
   return (
-    <li className="flex items-center justify-between gap-sm border-rule py-sm not-first:border-t">
-      <span className="flex min-w-0 flex-col gap-2xs">
+    <li className="flex items-start gap-md border-rule py-md not-first:border-t">
+      <div className="w-14 shrink-0">
+        <TapeCase
+          cover={
+            candidate.poster ? (
+              <img
+                src={candidate.poster}
+                alt={QUEUE.poster(label)}
+                loading="lazy"
+                className="absolute inset-0 size-full object-cover"
+              />
+            ) : (
+              <span aria-hidden="true" className="text-cover-mark">
+                ?
+              </span>
+            )
+          }
+        />
+      </div>
+      <div className="flex min-w-0 flex-1 flex-col gap-2xs">
         <a
           href={candidate.link}
           rel="noreferrer"
@@ -207,37 +263,134 @@ function Suggestion({
         </a>
         {candidate.originalTitle && (
           <span className="text-meta text-ink-2">
-            {candidate.originalTitle}
+            {QUEUE.original(candidate.originalTitle)}
           </span>
         )}
-      </span>
-      <QueueForm action="confirmar" id={id} className="shrink-0">
-        {(busy) => (
-          <>
-            <input type="hidden" name="filme" value={candidate.link} />
-            <Button
-              type="submit"
-              variant="option"
-              disabled={busy}
-              aria-label={QUEUE.pickLabel(label, candidate.tmdb)}
-            >
-              {busy ? QUEUE.busy.confirm : QUEUE.pick}
-            </Button>
-          </>
+        {candidate.overview && (
+          <p className="line-clamp-2 text-meta text-ink-2">
+            {candidate.overview}
+          </p>
         )}
-      </QueueForm>
+        <QueueForm action="confirmar" id={id} className="mt-xs self-start">
+          {(busy) => (
+            <>
+              <input type="hidden" name="filme" value={candidate.link} />
+              <Button
+                type="submit"
+                disabled={busy}
+                aria-label={QUEUE.pickLabel(label, candidate.originalTitle)}
+              >
+                {busy ? QUEUE.busy.confirm : QUEUE.pick}
+              </Button>
+            </>
+          )}
+        </QueueForm>
+      </div>
     </li>
   )
 }
 
-/** The film the Dono names: a tconst, an IMDb or a TMDB link. */
+/** The Catálogo search for this film: a GET to the queue with the film it
+ * is for (`para`), each result confirmed with one tap. */
+function FindInCatalog({
+  item,
+  title,
+  search,
+}: {
+  item: QueueEntry
+  title: string
+  search: SearchAnswer | null
+}) {
+  return (
+    <div className="flex flex-col gap-lg">
+      <form
+        method="get"
+        action={QUEUE_PATH}
+        role="search"
+        aria-label={QUEUE.searchLabel(title)}
+        className="flex flex-wrap items-end gap-sm"
+      >
+        <input type="hidden" name="para" value={item.id} />
+        <label className="flex min-w-0 flex-1 basis-[200px] flex-col gap-xs">
+          <span className="font-display text-field-label">
+            {QUEUE.searchField}{' '}
+            <span className="font-body font-normal text-ink-2">
+              {QUEUE.searchHint}
+            </span>
+          </span>
+          <input
+            type="search"
+            name="buscar"
+            defaultValue={search?.query ?? item.name}
+            required
+            autoComplete="off"
+            className={`${FIELD} w-full`}
+          />
+        </label>
+        <Submit>{QUEUE.searchSubmit}</Submit>
+      </form>
+      {search && <Found item={item} answer={search} />}
+    </div>
+  )
+}
+
+function Found({ item, answer }: { item: QueueEntry; answer: SearchAnswer }) {
+  if ('refused' in answer) return <Alert>{QUEUE.refusals.indisponivel}</Alert>
+  const { films } = answer.found
+  if (films.length === 0)
+    return <p className="text-meta text-ink-2">{QUEUE.none}</p>
+  return (
+    <div className="flex flex-col gap-xs">
+      <p role="status" className="text-meta text-ink-2">
+        {QUEUE.found(answer.query)}
+      </p>
+      <ul className="flex flex-col">
+        {films.map((film) => {
+          const label = QUEUE.item(film.title, film.year)
+          const directors = film.directors.join(', ')
+          return (
+            <li
+              key={film.id}
+              className="flex items-center justify-between gap-md border-rule py-sm not-first:border-t"
+            >
+              <span className="flex min-w-0 flex-col">
+                <span className="font-display text-row-title">{label}</span>
+                {directors && (
+                  <span className="text-meta text-ink-2">{directors}</span>
+                )}
+              </span>
+              <QueueForm action="confirmar" id={item.id} className="shrink-0">
+                {(busy) => (
+                  <>
+                    <input type="hidden" name="filme" value={film.id} />
+                    <Button
+                      type="submit"
+                      variant="option"
+                      disabled={busy}
+                      aria-label={QUEUE.pickLabel(label, directors || null)}
+                    >
+                      {busy ? QUEUE.busy.confirm : QUEUE.pick}
+                    </Button>
+                  </>
+                )}
+              </QueueForm>
+            </li>
+          )
+        })}
+      </ul>
+    </div>
+  )
+}
+
+/** The film the Dono names by its link: an IMDb or a TMDB link, or a
+ * tconst. */
 function Confirm({ id, title }: { id: string; title: string }) {
   return (
     <QueueForm
       action="confirmar"
       id={id}
       label={`${QUEUE.confirm} ${title}`}
-      className="flex flex-col gap-sm border-t border-dashed border-rule pt-lg sm:flex-row sm:items-end"
+      className="flex flex-col gap-sm sm:flex-row sm:items-end"
     >
       {(busy) => (
         <>
@@ -258,43 +411,35 @@ function Confirm({ id, title }: { id: string; title: string }) {
   )
 }
 
-/** Out of the queue, with a reason (the page's datalist suggests some). */
+/** Out of the queue, with one of the reasons, one button each. */
 function Discard({ id, title }: { id: string; title: string }) {
   return (
-    <details className="group">
-      <summary
-        className={buttonVariants({
-          variant: 'link',
-          className: 'list-none [&::-webkit-details-marker]:hidden',
-        })}
-      >
-        {QUEUE.discardOpen}
-      </summary>
-      <QueueForm
-        action="descartar"
-        id={id}
-        label={`${QUEUE.discard} ${title}`}
-        className="mt-xs flex flex-col gap-sm rounded-field bg-surface-2 p-lg sm:flex-row sm:items-end"
-      >
-        {(busy) => (
-          <>
-            <div className="min-w-0 flex-1">
-              <FieldLabel label={QUEUE.reason} hint={QUEUE.reasonHint}>
-                <input
-                  type="text"
-                  name="motivo"
-                  list="motivos"
-                  autoComplete="off"
-                  className={`${FIELD} w-full`}
-                />
-              </FieldLabel>
-            </div>
-            <Submit disabled={busy}>
-              {busy ? QUEUE.busy.discard : QUEUE.discard}
-            </Submit>
-          </>
-        )}
-      </QueueForm>
-    </details>
+    <QueueForm
+      action="descartar"
+      id={id}
+      label={`${QUEUE.discard}: ${title}`}
+      className="flex flex-wrap items-center gap-xs border-t border-dashed border-rule pt-lg"
+    >
+      {(busy) => (
+        <>
+          <span className="font-display text-field-label">
+            {QUEUE.discard}:
+          </span>
+          {QUEUE.reasons.map(({ value, label }) => (
+            <Button
+              key={value}
+              type="submit"
+              name="motivo"
+              value={value}
+              variant="option"
+              disabled={busy}
+              aria-label={QUEUE.reasonLabel(label, title)}
+            >
+              {busy ? QUEUE.busy.discard : label}
+            </Button>
+          ))}
+        </>
+      )}
+    </QueueForm>
   )
 }

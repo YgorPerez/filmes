@@ -16,7 +16,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, expect, it, vi } from 'vite-plus/test'
 import { queueSearch } from '#/content/queue-search'
 import type { QueuePage } from '#/platform/imports'
-import { QUEUE } from './imports.copy'
+import { QUEUE } from './queue.copy'
 import { QueueScreen } from './queue'
 
 afterEach(() => {
@@ -39,6 +39,8 @@ const QUEUE_PAGE: QueuePage = {
           originalTitle: null,
           year: 2001,
           link: 'https://www.themoviedb.org/movie/9102',
+          poster: null,
+          overview: null,
         },
       ],
     },
@@ -82,7 +84,7 @@ it('confirms by fetch, and says so where the Dono is', async () => {
 
   await userEvent.setup().click(
     (await card()).getByRole('button', {
-      name: QUEUE.pickLabel('Filme Perdido (2001)', '9102'),
+      name: QUEUE.pickLabel('Filme Perdido (2001)', null),
     }),
   )
 
@@ -106,6 +108,7 @@ it('keeps what the Dono typed when the post is refused', async () => {
   Element.prototype.scrollIntoView = () => {}
   renderRouted()
   const user = userEvent.setup()
+  await user.click((await card()).getByText(QUEUE.link))
   const confirm = within(
     (await card()).getByRole('form', {
       name: 'Confirmar Filme Perdido (2001)',
@@ -169,7 +172,7 @@ it('loads the queue again, so the film decided leaves it', async () => {
 
   await userEvent.setup().click(
     (await card()).getByRole('button', {
-      name: QUEUE.pickLabel('Filme Perdido (2001)', '9102'),
+      name: QUEUE.pickLabel('Filme Perdido (2001)', null),
     }),
   )
 

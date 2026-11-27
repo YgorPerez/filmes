@@ -3,9 +3,13 @@
 // its Notas to her file in one commit (`personRate`). Server only.
 
 import {
+  filmCard,
   personRate,
   ratingQueue,
+  tasteSummary,
   type Engine,
+  type FilmCard,
+  type TasteSummary,
   type ErrorOutput,
   type Outcome,
   type PersonRateResult,
@@ -33,6 +37,10 @@ export type Rater = {
 /** What the screen and Pronto need from the engine. */
 export interface Ratings {
   queue(person: string): Promise<Outcome<RatingQueue>>
+  /** What the card shows of one film, so she knows it (#274). */
+  card(film: string, person: string): Promise<Outcome<FilmCard>>
+  /** Meu gosto's look at her taste: her genres and directors (#274). */
+  summary(person: string): Promise<Outcome<TasteSummary>>
   /** Writes the Notas to the Dono `owner`, who signs the commit. */
   rate(
     ratings: readonly GivenRating[],
@@ -44,6 +52,9 @@ export function ratingsFromEngine(engine: Engine): Ratings {
   return {
     queue: (person) =>
       engine.run(ratingQueue({ person, limit: QUEUE_SIZE }), { owner: person }),
+    card: (film, person) => engine.run(filmCard({ film }), { owner: person }),
+    summary: (person) =>
+      engine.run(tasteSummary({ person }), { owner: person }),
     rate: (ratings, owner) =>
       engine.run(
         personRate({
@@ -75,6 +86,35 @@ export async function ratingQueuePage(
     return null
   }
   return queue.output
+}
+
+/** The film card of the rating screen, or null when the film is not in the
+ * Catálogo or the engine cannot run (logged: the card does without it). */
+export async function filmCardOf(
+  film: string,
+  owner: Pick<Rater, 'person'>,
+  ratings: Ratings,
+): Promise<FilmCard | null> {
+  const card = await ratings.card(film, owner.person)
+  if (card.exitCode !== 0) {
+    logEngineError(card)
+    return null
+  }
+  return card.output
+}
+
+/** The logged-in Dono's taste in one look, or null when the engine cannot
+ * run (logged: the ficha does without it). */
+export async function tasteSummaryOf(
+  owner: Pick<Rater, 'person'>,
+  ratings: Ratings,
+): Promise<TasteSummary | null> {
+  const summary = await ratings.summary(owner.person)
+  if (summary.exitCode !== 0) {
+    logEngineError(summary)
+    return null
+  }
+  return summary.output
 }
 
 function refusalOf(outcome: { output: ErrorOutput }): RatingRefusal {

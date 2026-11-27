@@ -116,6 +116,8 @@ const IARA: PersonPage = {
     { key: 'silly_comedy', label: 'comédia boba' },
     { key: 'slow', label: 'lento' },
   ],
+  sessions: { total: 0, recent: [], satisfaction: null },
+  imported: false,
 }
 
 /** The setup guide's steps, in its order (`SETUP_STEPS`). */
@@ -191,6 +193,21 @@ export const MyTaste: Story = {
   },
 }
 
+/** Two films of her import wait in the queue: the Notas slip says so, and
+ * the next step leads there. */
+export const MyTasteWithQueue: Story = {
+  args: {
+    ...MyTaste.args,
+    pending: 2,
+    taste: {
+      person: 'bruno',
+      liked: 8,
+      genres: ['Drama', 'Crime', 'Romance'],
+      directors: ['Helena Prado', 'Rui Tavares'],
+    },
+  },
+}
+
 export const MyTasteWithTrakt: Story = {
   args: { ...MyTaste.args, showTrakt: true },
 }
@@ -224,12 +241,67 @@ export const Empty: Story = {
   },
 }
 
-export const WithNotice: Story = { args: { notice: 'gravado' } }
+export const WithNotice: Story = { args: { notice: 'criada' } }
 
 export const WithRefusal: Story = { args: { refusal: 'alvo' } }
 
-export const WithSearchRefusal: Story = {
-  args: { search: { query: 'é', refused: 'curta' } },
+/** A Declarado saved: the Afinar fold opens on the ficha that posted, which
+ * says it (#273). */
+export const SavedInPlace: Story = {
+  args: { notice: 'gravado', spot: 'declarados' },
+  play: async ({ canvasElement }) => {
+    const stated = within(canvasElement).getByRole('region', {
+      name: PERSON.stated.title,
+    })
+    await expect(within(stated).getByRole('status')).toBeVisible()
+  },
+}
+
+/** A Veto refused without the JavaScript: its form open, the field marked. */
+export const RefusedField: Story = {
+  args: {
+    refusal: 'pedido',
+    spot: 'vetos',
+    problem: { field: 'alvo', problem: 'target' },
+  },
+}
+
+/** An Ajuste tapped: "gravado" beside it. */
+export const AdjustmentSaved: Story = {
+  args: { notice: 'ajustado', spot: 'ajuste-cast' },
+}
+
+/** A Pessoa who went to Sessões: the latest, and how she came out. */
+export const WithSessions: Story = {
+  args: {
+    page: {
+      ...IARA,
+      sessions: {
+        total: 5,
+        recent: [
+          {
+            id: '2026-11-19-bruno-iara',
+            date: '2026-11-19',
+            chosen: { id: 'tt9000302', title: 'Noite de Estreia' },
+            reaction: 1,
+          },
+          {
+            id: '2026-11-12-bruno-iara',
+            date: '2026-11-12',
+            chosen: { id: 'tt9000401', title: 'Fronteira' },
+            reaction: 0.3,
+          },
+          {
+            id: '2026-11-05-bruno-iara',
+            date: '2026-11-05',
+            chosen: null,
+            reaction: null,
+          },
+        ],
+        satisfaction: { value: 0.65, sessions: 2 },
+      },
+    },
+  },
 }
 
 export const Unknown: Story = { args: { slug: 'ninguem', page: 'unknown' } }

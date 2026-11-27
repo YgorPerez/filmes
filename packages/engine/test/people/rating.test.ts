@@ -4,7 +4,14 @@ import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, test } from 'vite-plus/test'
-import { consult, personRate, ratingQueue } from '../../src/index.ts'
+import {
+  consult,
+  filmCard,
+  personRate,
+  ratingQueue,
+  tasteSummary,
+} from '../../src/index.ts'
+import { RECORDINGS } from '../sources/support.ts'
 import { useFixture, type Fixture } from '../fixture.ts'
 
 const IARA = { name: 'Iara', email: 'iara@example.org' }
@@ -57,7 +64,17 @@ describe('the Fila de Notas', () => {
       title: 'Cidade de Vidro',
       year: 2018,
       genres: ['Crime', 'Drama'],
+      directors: expect.any(Array),
+      runtime: expect.any(Number),
     })
+  })
+
+  test('each film comes with its directors and runtime, so she knows it', async () => {
+    const fixture = useFixture()
+
+    const queue = await fixture.ok(ratingQueue({ person: 'teo', limit: 1 }))
+
+    expect(queue.films[0]).toMatchObject({ id: 'tt9000601', runtime: 96 })
   })
 
   test('a film she has seen is not in it', async () => {
@@ -66,6 +83,7 @@ describe('the Fila de Notas', () => {
     const queue = await fixture.ok(ratingQueue({ person: 'bruno', limit: 200 }))
 
     // Bruno gave Notas to O Farol de Areia, Maré Baixa and Cidade de Vidro.
+    expect(queue.rated).toBeGreaterThanOrEqual(3)
     const ids = queue.films.map((f) => f.id)
     expect(ids).toContain('tt9000601')
     expect(ids).not.toContain('tt9000101')
@@ -153,5 +171,76 @@ describe('the Notas of the rating screen', () => {
     expect(readFileSync(join(fixture.data, 'people', 'teo.md'), 'utf8')).toBe(
       before,
     )
+  })
+})
+
+describe('the film card', () => {
+  test('the Catalog with TMDB: Portuguese poster and synopsis', async () => {
+    const fixture = useFixture()
+
+    const card = await fixture.ok(filmCard({ film: 'tt9000601' }), {
+      FILMES_TMDB_CHAVE: 'chave-de-teste',
+      FILMES_GRAVACOES: RECORDINGS,
+    })
+
+    expect(card).toMatchObject({
+      id: 'tt9000601',
+      title: 'Pequenos Milagres',
+      titlePt: null,
+      year: 2019,
+      runtime: 96,
+      poster: 'https://image.tmdb.org/t/p/w185/pEqUeNoSmIlAgReS9601.jpg',
+      synopsis: expect.stringContaining('costureira'),
+    })
+    expect(card.attributions).toHaveLength(1)
+  })
+
+  test('without TMDB, the Catalog alone', async () => {
+    const fixture = useFixture()
+
+    const card = await fixture.ok(filmCard({ film: 'tt9000601' }), {
+      FILMES_TMDB_CHAVE: undefined,
+    })
+
+    expect(card).toMatchObject({ poster: null, synopsis: null })
+    expect(card.attributions).toEqual([])
+  })
+
+  test('a film out of the Catalog is unknown_target', async () => {
+    const fixture = useFixture()
+
+    const outcome = await fixture.run(filmCard({ film: 'tt0000001' }))
+
+    expect(outcome.exitCode).toBe(1)
+    expect(outcome.output).toMatchObject({ error: { code: 'unknown_target' } })
+  })
+})
+
+describe('the taste summary', () => {
+  test('names the genres and directors of the films she liked', async () => {
+    const fixture = useFixture()
+
+    const summary = await fixture.ok(tasteSummary({ person: 'bruno' }))
+
+    // Eight films with 8 or more of 10; a director counts with two.
+    expect(summary).toEqual({
+      person: 'bruno',
+      liked: 8,
+      genres: ['Drama', 'Crime', 'Romance'],
+      directors: ['Helena Prado', 'Otávio Lins', 'Rui Tavares'],
+    })
+  })
+
+  test('a Pessoa with no Nota has nothing to show', async () => {
+    const fixture = useFixture()
+
+    const summary = await fixture.ok(tasteSummary({ person: 'teo' }))
+
+    expect(summary).toEqual({
+      person: 'teo',
+      liked: 0,
+      genres: [],
+      directors: [],
+    })
   })
 })
