@@ -44,17 +44,21 @@ export function Section({
   id,
   title,
   lead,
+  plain = false,
   children,
 }: {
   id: string
   title: string
   lead?: string
+  /** No card: a section inside a fold or another card, apart by its
+   * heading and the space around it (#272). */
+  plain?: boolean
   children: ReactNode
 }) {
   return (
     <section
       aria-labelledby={id}
-      className="flex flex-col gap-xl rounded-card border border-rule bg-surface p-xl"
+      className={`flex flex-col gap-xl ${plain ? '' : 'rounded-card border border-rule bg-surface p-xl'}`}
     >
       <div className="flex flex-col gap-xs">
         <h2 id={id} className="font-display text-title">

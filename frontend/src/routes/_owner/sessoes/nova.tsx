@@ -11,6 +11,7 @@ export const Route = createFileRoute('/_owner/sessoes/nova')({
     buscar: searchParam(search.buscar),
     parecido: similarParam(search.parecido),
     nota: isNoteToken(search.nota) ? search.nota : undefined,
+    presentes: peopleParam(search.presentes),
   }),
   loaderDeps: ({ search }) => ({ buscar: search.buscar, nota: search.nota }),
   loader: async ({ deps }) => {
@@ -24,8 +25,15 @@ export const Route = createFileRoute('/_owner/sessoes/nova')({
   component: NewSessionPage,
 })
 
+/** `?presentes=bruno,iara`: the group to start with (#272). */
+function peopleParam(value: unknown): string[] | undefined {
+  if (typeof value !== 'string') return undefined
+  const slugs = value.split(',').filter((slug) => /^[\w-]{1,64}$/.test(slug))
+  return slugs.length > 0 ? slugs.slice(0, 20) : undefined
+}
+
 function NewSessionPage() {
-  const { erro, parecido, nota } = Route.useSearch()
+  const { erro, parecido, nota, presentes } = Route.useSearch()
   const { options, search, draft } = Route.useLoaderData()
   return (
     <NewSession
@@ -35,6 +43,7 @@ function NewSessionPage() {
       refusal={erro}
       search={search}
       similar={parecido}
+      attendees={presentes}
     />
   )
 }

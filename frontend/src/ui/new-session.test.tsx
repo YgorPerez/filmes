@@ -347,14 +347,18 @@ describe('the form “Ler” filled', () => {
     showDraft(DRAFT)
     const said = screen.getByRole('status').textContent
     const { reading } = DRAFT
-    expect(said).toContain(copy.reading.understood(reading!.understood))
+    // As a sentence: "Presente: Iara" is Iara, "Clima: leve" is leve (#272).
+    expect(said).toContain('Entendi: Iara, leve.')
     expect(said).toContain(copy.reading.notUnderstood(reading!.notUnderstood))
     expect(said).toContain(
-      copy.reading.ambiguous([
-        { words: 'Teo', candidates: ['Rosa', 'Teo'] },
-        { words: 'Amélie', candidates: [] },
-      ]),
+      copy.reading.ambiguous([{ words: 'Teo', candidates: ['Rosa', 'Teo'] }]),
     )
+    // A title the Catálogo lacks opens its search with the words (#272).
+    expect(
+      screen
+        .getByRole('link', { name: copy.reading.missingSearch })
+        .getAttribute('href'),
+    ).toBe('/sessoes/nova?buscar=Am%C3%A9lie')
   })
 
   it('lists the films of an unclear title, each with “Usar”', async () => {
@@ -421,8 +425,12 @@ describe('“Mais opções”', () => {
   })
 
   it('comes open for a refusal about a field under it, and only then', () => {
-    render(<NewSession options={OPTIONS} refusal="duracao" />)
+    render(<NewSession options={OPTIONS} refusal="anos" />)
     expect(details().open).toBe(true)
+    cleanup()
+    // The duration sits above the fold (#272): its refusal leaves it shut.
+    render(<NewSession options={OPTIONS} refusal="duracao" />)
+    expect(details().open).toBe(false)
     cleanup()
     render(<NewSession options={OPTIONS} refusal="presentes" />)
     expect(details().open).toBe(false)
