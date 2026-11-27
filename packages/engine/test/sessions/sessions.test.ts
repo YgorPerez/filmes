@@ -443,6 +443,27 @@ describe('every Session', () => {
     ])
   })
 
+  test('lists a hand-written Session with only its day, Presentes and words', async () => {
+    const fixture = useFixture()
+    mkdirSync(join(fixture.data, 'sessions'), { recursive: true })
+    writeFileSync(
+      sessionFile(fixture, '2026-11-17-rosa'),
+      '---\ndate: 2026-11-17\nattendees: [bruno, rosa]\nrule: {name: default}\ncontext: {request: oi}\n---\n',
+    )
+
+    const [only] = (await fixture.ok(listSessions)).sessions
+
+    expect(only).toMatchObject({
+      id: '2026-11-17-rosa',
+      created: null,
+      request: 'oi',
+      recommendation: [],
+      chosen: null,
+      moods: [],
+      constraints: [],
+    })
+  })
+
   test('lists the open and the closed ones, with their Restrições', async () => {
     const fixture = useFixture()
     expect(await fixture.ok(listSessions)).toEqual({ sessions: [] })

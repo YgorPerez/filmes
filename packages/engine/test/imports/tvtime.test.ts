@@ -253,6 +253,10 @@ describe('importTvTime, the Liberator export', () => {
     expect(report.outsideCatalog).toEqual([
       { film: 'tt9099999', title: 'Fora do Catálogo' },
     ])
+    // Her import page lists it later, from the backup she keeps (#274).
+    expect((await fixture.ok(personImports('vera'))).leftOut.tvtime).toEqual([
+      { name: 'Fora do Catálogo', year: null, id: 'tt9099999' },
+    ])
     expect(report.queue.map((i) => [i.name, i.year])).toEqual([
       ['Filme Perdido', null],
     ])

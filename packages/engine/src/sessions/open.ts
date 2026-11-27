@@ -341,8 +341,8 @@ const contextLabels = (context: YamlMapping | null): string[] => {
 /** When the Session opened (`created_at`), or null: a Session opened
  * before #272 has only its day. */
 const createdOf = (front: YamlMapping): string | null => {
-  const created = front.get('created_at')
-  return created === undefined || created === null ? null : pyStrValue(created)
+  const created = front.get('created_at') ?? null
+  return created === null ? null : pyStrValue(created)
 }
 
 const summary = (id: string, front: YamlMapping): SessionSummary => {
