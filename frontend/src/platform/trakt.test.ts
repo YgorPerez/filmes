@@ -7,13 +7,9 @@ import {
   type Fixture,
 } from '../../../packages/engine/test/fixture.ts'
 import { Auth } from './auth'
-import { ownersFromDataRepo, peopleFromDataRepo } from './owners'
-import {
-  handleTraktRequest,
-  Trakt,
-  traktConnection,
-  traktPage,
-} from './trakt'
+import { ownersFromDataRepo } from './owners'
+import { peopleFromDataRepo } from './people-directory'
+import { handleTraktRequest, Trakt, traktConnection, traktPage } from './trakt'
 
 const ORIGIN = 'https://cinema.example'
 const ACCOUNT = { person: 'iara', email: 'iara@example.org' }
@@ -250,20 +246,22 @@ test.each([
     () =>
       Response.json({ access_token: 'a', refresh_token: 'r', expires_in: 0 }),
   ],
-])('Trakt answering with %s leaves the Pessoa disconnected', async (_, answer) => {
-  const { identity, fetchToken, trakt, begin } = await setup(useFixture())
-  const { callback } = await begin()
-  fetchToken.mockResolvedValueOnce(answer())
-  expect((await trakt.handle(callback, identity)).headers.get('Location')).toBe(
-    '/trakt?erro=trakt',
-  )
-  expect(trakt.connected(identity)).toBe(false)
-})
+])(
+  'Trakt answering with %s leaves the Pessoa disconnected',
+  async (_, answer) => {
+    const { identity, fetchToken, trakt, begin } = await setup(useFixture())
+    const { callback } = await begin()
+    fetchToken.mockResolvedValueOnce(answer())
+    expect(
+      (await trakt.handle(callback, identity)).headers.get('Location'),
+    ).toBe('/trakt?erro=trakt')
+    expect(trakt.connected(identity)).toBe(false)
+  },
+)
 
 test('a refresh token is spent once, and a disconnect during the refresh keeps nothing', async () => {
-  const { identity, fetchToken, trakt, post, begin, expire } = await setup(
-    useFixture(),
-  )
+  const { identity, fetchToken, trakt, post, begin, expire } =
+    await setup(useFixture())
   const { callback } = await begin()
   fetchToken.mockResolvedValueOnce(issued('original'))
   await trakt.handle(callback, identity)
@@ -330,9 +328,9 @@ test('the app reads Trakt from its environment and only for a verified Pessoa', 
   expect(page({})).toEqual({ status: 'login' })
   expect((await connect({}))?.headers.get('Location')).toBe('/trakt')
   expect(page()).toEqual({ status: 'disconnected', name: 'Iara' })
-  expect(
-    new URL((await connect())!.headers.get('Location')!).origin,
-  ).toBe('https://auth.trakt.tv')
+  expect(new URL((await connect())!.headers.get('Location')!).origin).toBe(
+    'https://auth.trakt.tv',
+  )
 
   const { callback } = await begin()
   fetchToken.mockResolvedValueOnce(issued('original'))
@@ -342,9 +340,7 @@ test('the app reads Trakt from its environment and only for a verified Pessoa', 
   const engine = traktConnection(env)!
   expect(engine.clientId).toBe('public-test')
   const signal = new AbortController().signal
-  expect(await engine.accessToken('iara', signal)).toBe(
-    'trakt-access-original',
-  )
+  expect(await engine.accessToken('iara', signal)).toBe('trakt-access-original')
   expect(await engine.accessToken('vera', signal)).toBeNull()
   expect(await engine.accessToken('ninguem', signal)).toBeNull()
   expect(await engine.accessToken('../people/iara', signal)).toBeNull()

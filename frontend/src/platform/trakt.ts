@@ -7,12 +7,18 @@ import {
 import type { TraktConnection } from '@filmes/engine'
 import { authFromEnvironment } from './auth'
 import { tokenHash } from './auth-database'
-import { seeOther } from './form-post'
-import { peopleFromDataRepo } from './owners'
+import { peopleFromDataRepo } from './people-directory'
 import { serverEnv } from './server-env'
 import { TraktStore, type TraktIdentity, type TraktTokens } from './trakt-store'
 
 const CALLBACK = '/trakt/retorno'
+
+/** Back to a page; its own, as `oauth-server.ts` builds its answers. */
+const seeOther = (location: string) =>
+  new Response(null, {
+    status: 303,
+    headers: { Location: location, 'Cache-Control': 'private, no-store' },
+  })
 
 type TraktOptions = {
   origin: string

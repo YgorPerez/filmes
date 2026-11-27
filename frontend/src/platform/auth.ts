@@ -19,12 +19,8 @@ import {
   type GoogleEndpoints,
 } from './google-login'
 import { OAuthServer } from './oauth-server'
-import {
-  ownersFromDataRepo,
-  peopleFromDataRepo,
-  type Owner,
-  type OwnerDirectory,
-} from './owners'
+import { ownersFromDataRepo, type Owner, type OwnerDirectory } from './owners'
+import { peopleFromDataRepo } from './people-directory'
 import { serverEnv } from './server-env'
 import type { LoginRefusal } from '#/content/login-refusal'
 

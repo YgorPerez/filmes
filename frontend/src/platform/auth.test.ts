@@ -6,7 +6,8 @@ import { makeEngine, revokeAccess } from '@filmes/engine'
 import { describe, expect, it } from 'vite-plus/test'
 import { useFixture } from '../../../packages/engine/test/fixture.ts'
 import { Auth, authFromEnvironment } from './auth'
-import { ownersFromDataRepo, peopleFromDataRepo } from './owners'
+import { ownersFromDataRepo } from './owners'
+import { peopleFromDataRepo } from './people-directory'
 import { serverEnv } from './server-env'
 
 const ORIGIN = 'http://localhost:3000'
@@ -441,9 +442,7 @@ describe('from the environment', () => {
       authFromEnvironment({ ...env(ORIGIN), ...variables }).handle(
         new Request(`${ORIGIN}/auth/trakt-google`),
       )
-    expect((await start({}))!.headers.get('location')).toBe(
-      '/trakt?erro=login',
-    )
+    expect((await start({}))!.headers.get('location')).toBe('/trakt?erro=login')
     expect(
       new URL(
         (await start({ FILMES_TRAKT_CLIENT_ID: 'trakt' }))!.headers.get(

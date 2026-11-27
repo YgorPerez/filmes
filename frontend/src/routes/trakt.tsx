@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { readTraktPage } from '#/content/trakt'
 import { isTraktError } from '#/content/trakt-form'
-import { TraktScreen } from '#/ui/trakt'
+import { TraktScreen } from '#/ui/login'
 
 export const Route = createFileRoute('/trakt')({
   validateSearch: (search) => ({

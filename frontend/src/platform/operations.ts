@@ -30,10 +30,8 @@ import {
   parseOperation,
   type OperationsRefusal,
 } from '#/content/operations-form'
-import { currentOwner } from './auth'
 import { appEngine } from './engine'
-import { failureOf, formPoster, seeOther } from './form-post'
-import { serverEnv } from './server-env'
+import { appPoster, failureOf, formPoster, seeOther } from './form-post'
 
 /** What Operações needs of the logged-in Dono (`platform/owners.ts`'s
  * Owner): who she is, and whether admin. */
@@ -379,14 +377,10 @@ export const appPushAlert = (owner: Operator) =>
   pushAlert(owner, appOperations())
 
 /** The form's route for the app: the logged-in Dono, the process's engine. */
-export const serveOperationsAction = (request: Request) =>
-  operationsAction(
-    request,
-    currentOwner(request),
-    appOperations(),
-    appRuns(),
-    serverEnv().APP_ORIGIN,
-  )
+export const serveOperationsAction = (request: Request) => {
+  const { owner, origin } = appPoster(request)
+  return operationsAction(request, owner, appOperations(), appRuns(), origin)
+}
 
 // --- `/saude` -----------------------------------------------------------------
 

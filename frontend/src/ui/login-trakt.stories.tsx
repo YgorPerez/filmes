@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, within } from 'storybook/test'
-import { TraktScreen } from './trakt'
+import { TraktScreen } from './login'
 
 const meta = {
   title: 'Trakt/Conexão',

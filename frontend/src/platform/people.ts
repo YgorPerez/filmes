@@ -50,14 +50,12 @@ import {
 } from '#/content/person-create'
 import type { CatalogScope } from '#/content/catalog-search'
 import { personPath } from '#/content/paths'
-import { currentOwner } from './auth'
 import { catalogSearch } from './catalog-search'
 import { appEngine } from './engine'
-import { failureOf, formPoster, seeOther } from './form-post'
+import { appPoster, failureOf, formPoster, seeOther } from './form-post'
 import type { Owner } from './owners'
 
 export type { Owner }
-import { serverEnv } from './server-env'
 
 /** A Pessoa in the list. */
 export type PersonEntry = {
@@ -532,23 +530,16 @@ export const appPersonPage = (person: string, owner: Owner) =>
 
 /** The action route for the app: the logged-in Dono, the process's
  * engine. */
-export const servePersonAction = (request: Request, person: string) =>
-  personAction(
-    request,
-    person,
-    currentOwner(request),
-    appPeople(),
-    serverEnv().APP_ORIGIN,
-  )
+export const servePersonAction = (request: Request, person: string) => {
+  const { owner, origin } = appPoster(request)
+  return personAction(request, person, owner, appPeople(), origin)
+}
 
 /** The create route for the app. */
-export const servePersonCreate = (request: Request) =>
-  personCreateAction(
-    request,
-    currentOwner(request),
-    appPeople(),
-    serverEnv().APP_ORIGIN,
-  )
+export const servePersonCreate = (request: Request) => {
+  const { owner, origin } = appPoster(request)
+  return personCreateAction(request, owner, appPeople(), origin)
+}
 
 /** The Catálogo search for the app's screens (`catalog-search.ts`): the
  * Pessoa page's first, and Nova Sessão's and Feedback's. */
