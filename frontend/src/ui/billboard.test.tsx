@@ -901,7 +901,7 @@ describe('the inline card', () => {
     ).getAllByRole('listitem')
     expect(rows.map((row) => row.textContent)).toEqual([
       '1As Horas LentasTrocar2021 · 1h44',
-      '2Sal & FerrugemnovoJá vi',
+      '2Sal & FerrugemJá vi',
     ])
   })
 
