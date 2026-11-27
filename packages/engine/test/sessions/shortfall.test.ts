@@ -16,6 +16,7 @@ import {
 import { useFixture, type Fixture } from '../fixture.ts'
 
 const ESCREVER_CARTAS = 'tt9006701' // 4 similar films pass its Restrições
+const ESTRADA_AFORA = 'tt9006702'
 
 const recommend = (fixture: Fixture, request: RecommendSessionRequest) =>
   fixture.ok(recommendSession(request))
@@ -90,6 +91,22 @@ test('the Cartaz says the shortfall in its strip', async () => {
   )
 })
 
+test('the Cartaz names both references when just one similar film passes', async () => {
+  const fixture = useFixture()
+  const out = await recommend(fixture, {
+    attendees: ['dono'],
+    similar: [ESCREVER_CARTAS, ESTRADA_AFORA],
+    since: 2020,
+    count: 10,
+  })
+  const cartaz = await fixture.ok(billboard({ session: out.session.id }))
+
+  expect(out.films.map((film) => film.id)).toEqual(['tt9006716'])
+  expect(cartaz.billboard.shortfall).toBe(
+    'Acabaram os parecidos com Escrever Cartas e Estrada Afora: veio 1 dos 10 filmes pedidos.',
+  )
+})
+
 test('without a Parecido, the strip says only how many passed', async () => {
   const fixture = useFixture()
   const out = await recommend(fixture, {
@@ -104,6 +121,40 @@ test('without a Parecido, the strip says only how many passed', async () => {
     'Só 1 filme passou nas Restrições, dos 10 pedidos.',
   )
 })
+
+test.each([
+  {
+    since: 2023,
+    found: 2,
+    text: 'Só 2 filmes passaram nas Restrições, dos 10 pedidos.',
+  },
+  { since: 2026, found: 0, text: 'Nenhum filme passou nas Restrições.' },
+])(
+  'on redo, the Cartaz explains a list with $found films',
+  async ({ since, found, text }) => {
+    const fixture = useFixture()
+    const { session } = await recommend(fixture, {
+      attendees: ['dono'],
+      count: 10,
+    })
+    const redone = await recommend(fixture, {
+      attendees: ['dono'],
+      session: session.id,
+      count: 10,
+      since,
+    })
+    const cartaz = await fixture.ok(billboard({ session: session.id }))
+
+    expect(redone.films).toHaveLength(found)
+    expect(redone.shortfall).toEqual({
+      asked: 10,
+      found,
+      similar: [],
+      relaxed: [],
+    })
+    expect(cartaz.billboard.shortfall).toBe(text)
+  },
+)
 
 test('with something relaxed, the strip says what came in (#358)', async () => {
   const fixture = useFixture()
@@ -127,3 +178,39 @@ test('with something relaxed, the strip says what came in (#358)', async () => {
     'Acabaram os parecidos com Escrever Cartas; entraram 3 de antes de 1990.',
   )
 })
+
+test.each([
+  {
+    stored:
+      '{asked: 3, found: 3, relaxed: [{constraint: since, films: 1, text: de antes de 1990}]}',
+    expected: 'Faltaram filmes; entrou 1 de antes de 1990.',
+  },
+  {
+    stored: '{asked: 10, found: 3}',
+    expected: 'Só 3 filmes passaram nas Restrições, dos 10 pedidos.',
+  },
+  { stored: '{asked: 10}', expected: undefined },
+  { stored: '[10, 3]', expected: undefined },
+  { stored: 'incompleto', expected: undefined },
+])(
+  'the Cartaz reads a version with shortfall: $stored',
+  async ({ stored, expected }) => {
+    const fixture = useFixture()
+    const { session } = await recommend(fixture, {
+      attendees: ['dono'],
+      count: 3,
+    })
+    const file = join(fixture.data, session.file)
+    writeFileSync(
+      file,
+      readFileSync(file, 'utf8').replace(
+        /^---\n/,
+        `---\nshortfall: ${stored}\n`,
+      ),
+    )
+
+    const cartaz = await fixture.ok(billboard({ session: session.id }))
+
+    expect(cartaz.billboard.shortfall).toBe(expected)
+  },
+)
