@@ -1,10 +1,11 @@
 // TMDB (`filmes/sob_demanda/tmdb.py`): the film search by title and year,
 // for what Wikidata did not resolve in the Letterboxd import, and the card
-// (poster, Portuguese title, synopsis) of the Recommendation's films.
+// (poster, Portuguese title, synopsis) of the Recommendation's films, and
+// the trailer of the Cartaz's (#289).
 // Cached for 6 months; the key is FILMES_TMDB_CHAVE (the v3 key, sent as
 // `api_key`, or the v4 read token, sent in the header).
 //
-// Five requests, each one cache entry and one recording file:
+// Six requests, each one cache entry and one recording file:
 //
 //     filme-<slug>-<year>-<hash>   GET /search/movie?query=<title>&primary_release_year=<year>
 //     serie-<slug>-<year>-<hash>   GET /search/tv?query=<title>&first_air_date_year=<year>
@@ -12,11 +13,15 @@
 //     detalhes-<id>                GET /movie/<id>, for the runtime of candidates with few votes
 //     find-<tconst>-pt-BR          GET /find/<tconst>?external_source=imdb_id&language=pt-BR,
 //                                  for the poster, the Portuguese title and the synopsis
+//     videos-<id>                  GET /movie/<id>/videos?language=pt-BR&include_video_language=pt,en,
+//                                  for the trailer, with the TMDB id the /find gave
 //
 // The search takes the title as the export gave it; the hash tells apart
 // titles with the same slug. The import and the card are two profiles of the
 // one API, as in the Python (`TMDB` and `CapasTMDB`): each is switched off
-// on its own and warns with its own consequence. TMDB's terms ask for
+// on its own and warns with its own consequence; the trailer belongs to the
+// card. The trailer is the official one on YouTube, in pt-BR if there is
+// one, else in English: a link, never a player. TMDB's terms ask for
 // `TMDB_ATTRIBUTION` wherever its data shows.
 
 import { createHash } from 'node:crypto'
@@ -44,6 +49,7 @@ export const TMDB_ATTRIBUTION = {
 
 const URL = 'https://api.themoviedb.org/3'
 const IMAGES = 'https://image.tmdb.org/t/p/w185'
+const YOUTUBE = 'https://www.youtube.com/watch?v='
 
 const SEARCH: SourceProfile = {
   name: TMDB_NAME,
@@ -70,6 +76,7 @@ const searchKey = (kind: 'filme' | 'serie', title: string, year: number) => {
 
 const TMDB_ID = /^[0-9]+$/
 const TCONST = /^tt[0-9]+$/
+const YOUTUBE_KEY = /^[\w-]+$/
 
 /** What the card shows of a film; each one `null` with no answer, no film
  * or no value. */
@@ -148,6 +155,32 @@ const runtimeOf = (answer: CachedAnswer | undefined) => {
   return truthy(minutes) ? Number(minutes) : undefined
 }
 
+/** The TMDB id of the film a /find answered. */
+const foundId = (answer: CachedAnswer | undefined) => {
+  const [film] = list(field(answer?.body, 'movie_results'))
+  const id = field(film, 'id')
+  return Number.isSafeInteger(id) ? String(id) : undefined
+}
+
+/** The trailer's languages, the first preferred: pt-BR, then English. */
+const isPtBr = (video: unknown) =>
+  field(video, 'iso_639_1') === 'pt' && field(video, 'iso_3166_1') === 'BR'
+const isEnglish = (video: unknown) => field(video, 'iso_639_1') === 'en'
+
+/** The official YouTube trailer's link, pt-BR first, then English, in
+ * TMDB's order; `null` with none. */
+const trailerOf = (answer: CachedAnswer | undefined): string | null => {
+  const trailers = list(field(answer?.body, 'results')).filter(
+    (video) =>
+      field(video, 'site') === 'YouTube' &&
+      field(video, 'type') === 'Trailer' &&
+      field(video, 'official') === true &&
+      YOUTUBE_KEY.test(text(field(video, 'key'))),
+  )
+  const chosen = trailers.find(isPtBr) ?? trailers.find(isEnglish)
+  return chosen === undefined ? null : `${YOUTUBE}${text(field(chosen, 'key'))}`
+}
+
 const cardOf = (answer: CachedAnswer | undefined): Card => {
   const [film] = list(field(answer?.body, 'movie_results'))
   const poster = field(film, 'poster_path')
@@ -190,6 +223,11 @@ export class Tmdb extends Context.Service<
     readonly searchDisabled: Effect.Effect<boolean, never, Run>
     /** Poster, Portuguese title and overview, from one pt-BR lookup. */
     readonly card: (tconst: string) => Effect.Effect<Card, SourceError, Run>
+    /** The official YouTube trailer's link, from the card's lookup and the
+     * film's videos; `null` with no answer or no trailer. */
+    readonly trailer: (
+      tconst: string,
+    ) => Effect.Effect<string | null, SourceError, Run>
   }
 >()('@filmes/engine/sources/Tmdb') {
   static readonly layer: Layer.Layer<
@@ -204,6 +242,13 @@ export class Tmdb extends Context.Service<
 
       const ask = askWith(obtain)
       const search = searchWith(ask)
+      const find = (tconst: string) =>
+        TCONST.test(tconst)
+          ? ask(POSTERS, `find-${tconst}-pt-BR`, `/find/${tconst}`, {
+              external_source: 'imdb_id',
+              language: 'pt-BR',
+            })
+          : Effect.undefined
 
       return Tmdb.of({
         movies: search('filme', '/search/movie', 'primary_release_year'),
@@ -231,16 +276,18 @@ export class Tmdb extends Context.Service<
           )
         },
         searchDisabled,
-        card: (tconst) =>
-          Effect.map(
-            TCONST.test(tconst)
-              ? ask(POSTERS, `find-${tconst}-pt-BR`, `/find/${tconst}`, {
-                  external_source: 'imdb_id',
-                  language: 'pt-BR',
-                })
-              : Effect.undefined,
-            cardOf,
-          ),
+        card: (tconst) => Effect.map(find(tconst), cardOf),
+        trailer: (tconst) =>
+          Effect.gen(function* () {
+            const id = foundId(yield* find(tconst))
+            if (id === undefined) return null
+            return trailerOf(
+              yield* ask(POSTERS, `videos-${id}`, `/movie/${id}/videos`, {
+                language: 'pt-BR',
+                include_video_language: 'pt,en',
+              }),
+            )
+          }),
       })
     }),
   )

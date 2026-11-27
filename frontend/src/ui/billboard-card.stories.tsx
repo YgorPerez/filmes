@@ -1,7 +1,8 @@
 // One film of the Cartaz: with a poster and marks, a new bet without poster,
 // marked Trocar, and read-only once the Session has its Feedback; the dots
 // on the case with and without a Nota prevista, a hollow one with a number,
-// and six Presentes on the 112px case of a phone.
+// and six Presentes on the 112px case of a phone; the trailer link, and a
+// film without one.
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
 import { expect, userEvent, within } from 'storybook/test'
@@ -127,6 +128,31 @@ export const WithCritics: Story = {
     await expect(canvas.getByText('Oscar de melhor filme')).toBeVisible()
     await expect(canvas.getByText('93% no Rotten Tomatoes')).toBeVisible()
     await expect(canvas.getByText('nota 81 no Metacritic')).toBeVisible()
+  },
+}
+
+/** The trailer opens YouTube in a new tab: a link, never a player. */
+export const WithTrailer: Story = {
+  play: async ({ canvasElement }) => {
+    const trailer = within(canvasElement).getByRole('link', {
+      name: 'trailer',
+    })
+    await expect(trailer).toHaveAttribute(
+      'href',
+      'https://www.youtube.com/watch?v=hOrAsPtBr01',
+    )
+    await expect(trailer).toHaveAttribute('target', '_blank')
+    await expect(canvasElement.querySelector('iframe')).toBeNull()
+  },
+}
+
+/** TMDB has no official trailer in pt-BR or English: no link. */
+export const WithoutTrailer: Story = {
+  args: { film: { ...FILM, trailer: undefined } },
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).queryByRole('link', { name: 'trailer' }),
+    ).toBeNull()
   },
 }
 

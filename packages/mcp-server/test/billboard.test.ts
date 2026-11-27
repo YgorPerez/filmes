@@ -5,6 +5,7 @@ import assert from 'node:assert/strict'
 import { personView } from '@filmes/engine'
 import { describe, test } from 'vite-plus/test'
 import { useFixture } from '../../engine/test/fixture.ts'
+import { RECORDINGS } from '../../engine/test/sources/support.ts'
 import { connect } from './connect.ts'
 
 describe('billboard', () => {
@@ -21,6 +22,24 @@ describe('billboard', () => {
       recommendation.films.map((f: { id: string }) => f.id),
     )
     assert.equal(output.billboard.attendees[0].label, 'Você')
+  })
+
+  test('a card carries the trailer link TMDB gives, and no other has one', async () => {
+    const { ok } = await connect(useFixture(), null, {
+      FILMES_TMDB_CHAVE: 'chave-de-teste',
+      FILMES_GRAVACOES: RECORDINGS,
+    })
+    const recommendation = await ok('recommend', { attendees: ['dono'] })
+
+    const output = await ok('billboard', { session: recommendation.session.id })
+
+    const trailers = output.billboard.films
+      .filter((f: { trailer?: string }) => f.trailer !== undefined)
+      .map((f: { id: string; trailer: string }) => [f.id, f.trailer])
+    assert.deepEqual(trailers, [
+      ['tt9000104', 'https://www.youtube.com/watch?v=hOrAsPtBr01'],
+      ['tt9000105', 'https://www.youtube.com/watch?v=sAlTrUsTeN1'],
+    ])
   })
 
   test('with films, only those, in the given order, recorded as shown', async () => {

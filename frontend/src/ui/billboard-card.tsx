@@ -16,12 +16,17 @@ import { Strength } from './billboard-top'
 
 // One film of the Cartaz (DESIGN.md, Card do filme): the tape in its case
 // with the price sticker and a dot per Presente with her Nota prevista, the
-// header, "Por que cada um vai gostar" and, while the Session takes a reply, the marks
-// (`billboard-card-marks.tsx`). A grid: the case on the left (112px, 160px
-// from 560px), the header on the right; "Por que" and the marks across
-// below, each opened by a dashed rule, "Por que" going up under the chips
-// from 560px. The state is the Cartaz's (`billboard.tsx`). Inside a
+// header (with the IMDb and, when TMDB has one, the trailer on YouTube: a
+// link, never a player, #289), "Por que cada um vai gostar" and, while the
+// Session takes a reply, the marks (`billboard-card-marks.tsx`). A grid:
+// the case on the left (112px, 160px from 560px), the header on the right;
+// "Por que" and the marks across below, each opened by a dashed rule, "Por
+// que" going up under the chips from 560px. The state is the Cartaz's (`billboard.tsx`). Inside a
 // section by Motivo (#183) the title is a level below the section's.
+
+/** The outlined chips that leave the app: the IMDb and the trailer. */
+const LINK_CHIP =
+  'rounded-pill border-(length:--border-width-stroke) border-rule px-2.25 py-1 font-display text-chip font-bold text-ink tabular-nums no-underline'
 
 /** The film's title level: 2 alone, 3 under a section's title. */
 type Level = 2 | 3
@@ -153,10 +158,20 @@ function Header({
           href={film.imdbUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="rounded-pill border-(length:--border-width-stroke) border-rule px-2.25 py-1 font-display text-chip font-bold text-ink tabular-nums no-underline"
+          className={LINK_CHIP}
         >
           {card.imdb(film.imdbRatingText, film.votesText)}
         </a>
+        {film.trailer && (
+          <a
+            href={film.trailer}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={LINK_CHIP}
+          >
+            {card.trailer}
+          </a>
+        )}
       </div>
       {(film.awards || film.critics) && (
         <ul className="text-meta text-ink-2">
