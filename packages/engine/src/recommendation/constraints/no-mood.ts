@@ -78,7 +78,9 @@ const noMood = (names: ReadonlyArray<string>): Constraint => ({
           ? new Set<string>()
           : yield* marked(context.db, moods, context.weights.tag_vetoes, films)
       return new Map(
-        [...films.keys()].filter((id) => !out.has(id)).map((id) => [id, pass()]),
+        [...films.keys()]
+          .filter((id) => !out.has(id))
+          .map((id) => [id, pass()]),
       )
     }),
 })

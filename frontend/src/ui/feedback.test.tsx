@@ -128,7 +128,9 @@ describe('FeedbackScreen, what the Cartaz knows (#272)', () => {
       ...PAGE,
       stars: { tt9000101: 2, tt9000601: 4 },
     })
-    expect((screen.getByLabelText(/Pequenos Milagres/) as HTMLInputElement).checked).toBe(true)
+    expect(
+      (screen.getByLabelText(/Pequenos Milagres/) as HTMLInputElement).checked,
+    ).toBe(true)
     expect(screen.getByText(FEEDBACK.form.stars(4))).toBeTruthy()
     expect(posted(form)).toEqual({ ok: { film: 'tt9000601', reactions: [] } })
   })
@@ -139,7 +141,9 @@ describe('FeedbackScreen, what the Cartaz knows (#272)', () => {
       recommendation: [PAGE.recommendation[0]!],
       earlier: [{ id: 'tt9001106', title: 'Sessão Maldita' }],
     })
-    expect((screen.getByLabelText(/O Farol de Areia/) as HTMLInputElement).checked).toBe(true)
+    expect(
+      (screen.getByLabelText(/O Farol de Areia/) as HTMLInputElement).checked,
+    ).toBe(true)
     expect(screen.getByText(FEEDBACK.form.earlier)).toBeTruthy()
     await user.click(screen.getByLabelText(/Sessão Maldita/))
     expect(posted(form)).toEqual({ ok: { film: 'tt9001106', reactions: [] } })
@@ -147,8 +151,12 @@ describe('FeedbackScreen, what the Cartaz knows (#272)', () => {
 
   it('chooses nothing by itself when the Cartaz points to no film', () => {
     show()
-    expect((screen.getByLabelText(/O Farol de Areia/) as HTMLInputElement).checked).toBe(false)
-    expect((screen.getByLabelText(/Pequenos Milagres/) as HTMLInputElement).checked).toBe(false)
+    expect(
+      (screen.getByLabelText(/O Farol de Areia/) as HTMLInputElement).checked,
+    ).toBe(false)
+    expect(
+      (screen.getByLabelText(/Pequenos Milagres/) as HTMLInputElement).checked,
+    ).toBe(false)
   })
 
   it('gives every Presente the 1 to 10 in the open', () => {

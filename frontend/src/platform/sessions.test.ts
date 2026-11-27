@@ -314,7 +314,10 @@ describe('“Ler” in sessionRequestAction', () => {
       ['climas', 'tenso'],
       ['sem-tristeza', 'sim'],
       ['duracao', '90'],
-      ['pedido', 'eu e o Quim, algo leve, até 2h, 3 filmes, com pipoca, nada de terror'],
+      [
+        'pedido',
+        'eu e o Quim, algo leve, até 2h, 3 filmes, com pipoca, nada de terror',
+      ],
     ])
 
     expect(location).toMatch(/^\/sessoes\/nova\?nota=[\w-]+$/)
@@ -324,7 +327,8 @@ describe('“Ler” in sessionRequestAction', () => {
         rule: 'default',
         moods: ['tenso', 'leve'],
         count: 3,
-        request: 'eu e o Quim, algo leve, até 2h, 3 filmes, com pipoca, nada de terror',
+        request:
+          'eu e o Quim, algo leve, até 2h, 3 filmes, com pipoca, nada de terror',
         maxDuration: 120,
         noSad: true,
         noMoods: ['assustador'],

@@ -59,6 +59,29 @@ export const Open: Story = {
   },
 }
 
+/** What the Cartaz knew (#272): the starred film comes chosen, with its
+ * stars, and the films that left the shelf are there too. */
+export const FromTheCartaz: Story = {
+  args: {
+    page: {
+      ...PAGE,
+      additions: ['chegou a Rosa'],
+      stars: { [PAGE.recommendation[1]!.id]: 4 },
+      earlier: [{ id: 'tt9001106', title: 'Sessão Maldita' }],
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(
+      canvas.getByRole('radio', {
+        name: new RegExp(PAGE.recommendation[1]!.title),
+      }),
+    ).toBeChecked()
+    await expect(canvas.getByText(FEEDBACK.form.earlier)).toBeVisible()
+    await expect(canvas.getByText('+ chegou a Rosa')).toBeVisible()
+  },
+}
+
 export const WithSearch: Story = {
   args: {
     search: {

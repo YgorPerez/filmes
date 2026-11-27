@@ -38,14 +38,15 @@ describe('the Session pages’ queries', () => {
       presentes: undefined,
     })
     // A group the router had parsed as a list still comes through.
-    expect(search({ repetir: 3, presentes: ['bruno', 'iara'] })).toMatchObject(
-      { repetir: undefined, presentes: 'bruno,iara' },
-    )
+    expect(search({ repetir: 3, presentes: ['bruno', 'iara'] })).toMatchObject({
+      repetir: undefined,
+      presentes: 'bruno,iara',
+    })
     expect(search({ presentes: 7 }).presentes).toBeUndefined()
     const many = Array.from({ length: 30 }, (_, i) => `p${i}`).join(',')
-    expect(String(search({ presentes: many }).presentes).split(',')).toHaveLength(
-      20,
-    )
+    expect(
+      String(search({ presentes: many }).presentes).split(','),
+    ).toHaveLength(20)
   })
 })
 

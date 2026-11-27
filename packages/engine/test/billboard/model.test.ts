@@ -767,7 +767,13 @@ describe('the closed Cartaz (#264)', () => {
 
     const chosen = model.films.find((f) => f.id === film.id)
     expect(chosen?.reactions).toEqual([
-      { person: 'bruno', predicted: '8,8', rating: '6', reaction: null, comment: null },
+      {
+        person: 'bruno',
+        predicted: '8,8',
+        rating: '6',
+        reaction: null,
+        comment: null,
+      },
       {
         person: 'teo',
         predicted: null,
@@ -788,7 +794,13 @@ describe('the closed Cartaz (#264)', () => {
     const model = await fixture.ok(billboardModel({ session: id }))
 
     expect(model.films.find((f) => f.id === film.id)?.reactions).toEqual([
-      { person: 'bruno', predicted: '8,8', rating: null, reaction: null, comment: null },
+      {
+        person: 'bruno',
+        predicted: '8,8',
+        rating: null,
+        reaction: null,
+        comment: null,
+      },
     ])
   })
 
@@ -816,8 +828,20 @@ describe('the closed Cartaz (#264)', () => {
       title: 'Curta da Madrugada',
       year: 2010,
       reactions: [
-        { person: 'bruno', predicted: null, rating: '8', reaction: null, comment: null },
-        { person: 'teo', predicted: null, rating: null, reaction: 'disliked', comment: null },
+        {
+          person: 'bruno',
+          predicted: null,
+          rating: '8',
+          reaction: null,
+          comment: null,
+        },
+        {
+          person: 'teo',
+          predicted: null,
+          rating: null,
+          reaction: 'disliked',
+          comment: null,
+        },
       ],
     })
     expect(model.films.every((f) => f.reactions === undefined)).toBe(true)
@@ -840,7 +864,13 @@ describe('the closed Cartaz (#264)', () => {
       title: 'Pequenos Milagres',
       year: film.year,
       reactions: [
-        { person: 'bruno', predicted: '8,8', rating: '6', reaction: null, comment: null },
+        {
+          person: 'bruno',
+          predicted: '8,8',
+          rating: '6',
+          reaction: null,
+          comment: null,
+        },
       ],
     })
   })
@@ -878,8 +908,20 @@ describe('the closed Cartaz (#264)', () => {
     const model = await fixture.ok(billboardModel({ session: id }))
 
     expect(model.films.find((f) => f.id === film.id)?.reactions).toEqual([
-      { person: 'bruno', predicted: '8,8', rating: '6', reaction: null, comment: null },
-      { person: 'teo', predicted: null, rating: null, reaction: 'liked', comment: null },
+      {
+        person: 'bruno',
+        predicted: '8,8',
+        rating: '6',
+        reaction: null,
+        comment: null,
+      },
+      {
+        person: 'teo',
+        predicted: null,
+        rating: null,
+        reaction: 'liked',
+        comment: null,
+      },
     ])
   })
 

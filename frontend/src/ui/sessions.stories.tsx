@@ -2,7 +2,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import type { ComponentProps } from 'react'
 import { expect, within } from 'storybook/test'
-import { MODEL } from './billboard.fixture'
+import { CLOSED as TOLD, MODEL } from './billboard.fixture'
 import { SessionList, SessionScreen } from './sessions'
 
 // The screens' own props: the story leaves the server modules alone.
@@ -56,7 +56,11 @@ const PAGE: CartazPage = {
 const meta = {
   component: SessionList,
   args: {
-    sessions: [CLOSED, OPEN, { ...CLOSED, id: 'nada', chosen: null }],
+    sessions: [
+      CLOSED,
+      { ...OPEN, version: 2, additions: ['chegou a Rosa'] },
+      { ...CLOSED, id: 'nada', chosen: null },
+    ],
   },
 } satisfies Meta<typeof SessionList>
 
@@ -70,7 +74,12 @@ export const List: Story = {
     await expect(
       canvas.getByRole('link', { name: 'Nova Sessão' }),
     ).toBeVisible()
-    await expect(canvas.getAllByRole('listitem')).toHaveLength(3)
+    const rows = canvas.getAllByRole('listitem')
+    await expect(rows).toHaveLength(3)
+    // The open Session comes first, with its state and version (#272).
+    await expect(rows[0]).toHaveTextContent('para contar')
+    await expect(rows[0]).toHaveTextContent('versão 2')
+    await expect(rows[1]).toHaveTextContent('contada')
   },
 }
 
@@ -78,7 +87,17 @@ export const PendingEmpty: Story = {
   args: { sessions: [], pendingOnly: true },
 }
 
-export const Empty: Story = { args: { sessions: [] } }
+/** One orange button: the empty state's (#272). */
+export const Empty: Story = {
+  args: { sessions: [] },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.queryByRole('link', { name: 'Nova Sessão' })).toBeNull()
+    await expect(
+      canvas.getByRole('link', { name: 'Pedir filme' }),
+    ).toBeVisible()
+  },
+}
 
 export const ListUnavailable: Story = { args: { sessions: null } }
 
@@ -141,6 +160,46 @@ export const SessionClosed: Story = {
       }}
     />
   ),
+}
+
+/** The tape given back with each comment and what the Cartaz kept of the
+ * film (#272). */
+export const SessionToldWithComments: Story = {
+  render: () => {
+    const [seen, ...rest] = TOLD.films
+    return (
+      <SessionScreen
+        page={{
+          ...PAGE,
+          session: {
+            ...CLOSED,
+            attendees: OPEN.attendees,
+            chosen: { id: seen!.id, title: seen!.title },
+          },
+          billboard: {
+            ...TOLD,
+            films: [
+              {
+                ...seen!,
+                reactions: seen!.reactions!.map((r) =>
+                  r.person === 'iara' ? { ...r, comment: 'dormiu no meio' } : r,
+                ),
+                notes: { stars: 4, comments: ['a Iara riu do trailer'] },
+              },
+              ...rest,
+            ],
+          },
+        }}
+      />
+    )
+  },
+  play: async ({ canvasElement }) => {
+    const tape = within(canvasElement).getByRole('region', {
+      name: 'Fita devolvida',
+    })
+    await expect(tape).toHaveTextContent('“dormiu no meio”')
+    await expect(tape).toHaveTextContent('4 de 5 ★')
+  },
 }
 
 export const SessionClosedWithTraktWarning: Story = {

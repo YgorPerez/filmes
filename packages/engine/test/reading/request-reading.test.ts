@@ -416,7 +416,10 @@ describe('the whole sentence', () => {
 
     const reading = await read(fixture, 'algo leve, nada de terror')
 
-    expect(reading.request).toEqual({ moods: ['leve'], noMoods: ['assustador'] })
+    expect(reading.request).toEqual({
+      moods: ['leve'],
+      noMoods: ['assustador'],
+    })
     expect(reading.understood.map((i) => [i.words, i.label])).toEqual([
       ['leve', 'Clima: leve'],
       ['nada de terror', 'nada assustador'],

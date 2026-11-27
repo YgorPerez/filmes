@@ -37,11 +37,7 @@ export const MoodSynonyms = Schema.Record(
  * `invalid_config`. */
 export const moodTable = (
   synonyms: typeof MoodSynonyms.Type,
-): Effect.Effect<
-  Array<readonly [Phrase, string]>,
-  EngineError,
-  Environment
-> =>
+): Effect.Effect<Array<readonly [Phrase, string]>, EngineError, Environment> =>
   Effect.gen(function* () {
     const moods = new Map(
       (yield* readMoods).map((mood) => [
