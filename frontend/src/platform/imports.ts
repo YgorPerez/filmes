@@ -1,5 +1,7 @@
 // Imports (map #72, W5): a Pessoa's Letterboxd and Trakt exports, her
-// IMDb ratings CSV (#285), her Simkl backup (#299), her Letterboxd RSS, and the resolution queue the Letterboxd imports share.
+// IMDb ratings CSV (#285), her Simkl backup (#299), her TV Time backup
+// (#300), her Letterboxd RSS, and the resolution queue the Letterboxd and
+// TV Time imports share.
 // The pages read through `Imports`; a Pessoa's forms post to
 // `/importar/<slug>/acao` and the queue's to `/fila/acao`, which run as the
 // logged-in Dono (the commit's author) and go back with what happened.
@@ -14,6 +16,7 @@ import {
   importLetterboxdRss,
   importSimkl,
   importTrakt,
+  importTvTime,
   readPeople,
   personImports,
   removeImport,
@@ -94,7 +97,7 @@ export type ImportDone = {
   notice: ImportNotice
   /** Fatos that came in (or went, for a removal). */
   facts: number
-  /** Trakt, IMDb or Simkl films the Catalog could not resolve. */
+  /** Trakt, IMDb, Simkl or TV Time films the Catalog could not resolve. */
   outside?: number
 }
 
@@ -197,6 +200,15 @@ function runImport(
           outside: r.unresolved.length,
         }),
       )
+    case 'tvtime':
+      return map(
+        run(importTvTime({ person, ...upload(action), author })),
+        (r): ImportDone => ({
+          notice: r.newFile ? 'tvtime' : 'repetido',
+          facts: sum(r.newFacts),
+          outside: r.outsideCatalog.length,
+        }),
+      )
     case 'remove':
       return map(
         run(removeImport({ file: action.file, person, author })),
@@ -286,7 +298,7 @@ export async function importsPage(
 }
 
 /** The upload once its service is known by what the file holds; null when
- * it is none of Letterboxd's, Trakt's, IMDb's or Simkl's. */
+ * it is none of Letterboxd's, Trakt's, IMDb's, Simkl's or TV Time's. */
 function runOf(action: ImportAction): ImportRun | null {
   if (action.kind !== 'upload') return action
   const source = exportSource(action.content)
@@ -337,8 +349,8 @@ const query = (fields: Record<string, string | number | undefined>) => {
   return `?${params.toString()}`
 }
 
-/** `POST /importar/<slug>/acao`: a Letterboxd, Trakt or Simkl ZIP, the IMDb
- * CSV or the Simkl JSON (multipart, told apart by what it holds), the RSS (only with the Pessoa's consent,
+/** `POST /importar/<slug>/acao`: a Letterboxd, Trakt, Simkl or TV Time ZIP,
+ * the IMDb CSV or the Simkl JSON (multipart, told apart by what it holds), the RSS (only with the Pessoa's consent,
  * which the engine does not ask; on her own page the Dono answers for
  * herself), or removing an import; as the logged-in Dono, who signs the
  * commit. */

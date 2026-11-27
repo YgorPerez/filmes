@@ -3,6 +3,7 @@ import {
   importImdb,
   importLetterboxdRss,
   importSimkl,
+  importTvTime,
   removeImport,
 } from '@filmes/engine'
 import { z } from 'zod'
@@ -20,14 +21,17 @@ export default defineTool({
     'diário viram Notas e Já vistos), o CSV de avaliações do IMDb dela (`imdbCsv`, o texto do arquivo "Your Ratings" > ' +
     'Export: cada filme do Catálogo vira Nota e Já visto, a nota de 1 a 10 lida na Escala dela), o backup do Simkl dela ' +
     '(`simklJson`, o texto do SimklBackup.json: filmes e filmes de anime com nota viram Notas, os completed sem nota ' +
-    'Já vistos e os plantowatch a watchlist; séries ficam de fora), ou tira um import ' +
+    'Já vistos e os plantowatch a watchlist; séries ficam de fora), o backup do TV Time ' +
+    'dela (`tvtimeZip`, o ZIP em base64: o gdpr-data.zip do TV Time ou o tv-time-export.zip do TV Time Liberator; ' +
+    'cada filme assistido vira Já visto, a nota vira Nota, e o que ela queria ver vai para a watchlist), ou tira um import ' +
     '(`remove`: o registro na Pessoa, o arquivo guardado e os Fatos que só ele trazia). Uma coisa por chamada. O RSS só ' +
     'com o consentimento da própria Pessoa: pergunte a ela, pelo Dono, antes de baixar, e mande `consent: true` só com o ' +
     'sim; sem ele, nada é baixado. O ZIP do Letterboxd e o do Trakt sobem pelo app (Importar), não por aqui; o CSV do ' +
     'IMDb e o backup do Simkl sobem pelos dois. Devolve o relatório: no RSS, a resolução (filmes resolvidos por caminho, descartados, `queue` ' +
     'com os que esperam o Dono em import_queue, Fatos novos); no CSV do IMDb, os Fatos novos e `outsideCatalog` (títulos ' +
     'que o Catálogo não tem, como séries); no backup do Simkl, os Fatos novos, `resolved` e `unresolved` (filmes que ' +
-    'nem o ID do IMDb nem o do TMDB acharam no Catálogo); com remove, o import tirado e os Fatos que saíram. Usuário ou arquivo errado ' +
+    'nem o ID do IMDb nem o do TMDB acharam no Catálogo); no TV Time, a resolução como no RSS (o export GDPR não traz ID: ' +
+    'os filmes que o filmes não achou vão para import_queue) e `outsideCatalog`; com remove, o import tirado e os Fatos que saíram. Usuário ou arquivo errado ' +
     'é erro com código.',
   input: z.object({
     person: personName(
@@ -52,6 +56,12 @@ export default defineTool({
       .describe(
         'o texto inteiro do SimklBackup.json que a Pessoa mandou (o JSON de dentro do SimklBackup.zip)',
       ),
+    tvtimeZip: z
+      .string()
+      .trim()
+      .regex(/^[A-Za-z0-9+/]+={0,2}$/, 'o ZIP em base64')
+      .optional()
+      .describe('o ZIP do backup do TV Time que a Pessoa mandou, em base64'),
     consent: z
       .literal(true)
       .optional()
@@ -69,12 +79,16 @@ export default defineTool({
     Effect.gen(function* () {
       const author = yield* ownerAuthor
       const { person } = i
-      const asked = [i.letterboxdRss, i.imdbCsv, i.simklJson, i.remove].filter(
-        (value) => value !== undefined,
-      )
+      const asked = [
+        i.letterboxdRss,
+        i.imdbCsv,
+        i.simklJson,
+        i.tvtimeZip,
+        i.remove,
+      ].filter((value) => value !== undefined)
       if (asked.length !== 1)
         return yield* invalidUsage(
-          'mande letterboxdRss, imdbCsv, simklJson ou remove, um só',
+          'mande letterboxdRss, imdbCsv, simklJson, tvtimeZip ou remove, um só',
         )
       if (i.remove !== undefined)
         return yield* removeImport({ file: i.remove, person, author })
@@ -95,6 +109,16 @@ export default defineTool({
           person,
           original: 'SimklBackup.json',
           content: new TextEncoder().encode(i.simklJson),
+          author,
+        })
+      }
+      if (i.tvtimeZip !== undefined) {
+        if (person === undefined)
+          return yield* invalidUsage('o backup do TV Time precisa de person')
+        return yield* importTvTime({
+          person,
+          original: `${person}-tvtime.zip`,
+          content: Buffer.from(i.tvtimeZip, 'base64'),
           author,
         })
       }

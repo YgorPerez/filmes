@@ -184,12 +184,12 @@ _Evitar_: dado, sinal
 De onde um Fato veio: uma base pública, o export de uma Pessoa, uma resposta de questionário, uma descrição do Dono ou o Feedback de uma Sessão.
 _Evitar_: origem
 
-**Import** [import, `import`; tipo [kind: `letterboxd`, `letterboxd-rss`, `trakt`, `imdb`, `simkl`]]:
-Um export de uma Pessoa (o ZIP do Letterboxd ou do Trakt, o CSV de avaliações do IMDb, o backup do Simkl ou o RSS público do Letterboxd dela) guardado no repo de dados e registrado no arquivo dela. É a Fonte das Notas, dos Já vistos e da Watchlist que traz; tirar o Import tira os Fatos que só ele trazia. O RSS só entra com o sim da Pessoa.
+**Import** [import, `import`; tipo [kind: `letterboxd`, `letterboxd-rss`, `trakt`, `imdb`, `simkl`, `tvtime`]]:
+Um export de uma Pessoa (o ZIP do Letterboxd ou do Trakt, o CSV de avaliações do IMDb, o backup do Simkl, o do TV Time ou o RSS público do Letterboxd dela) guardado no repo de dados e registrado no arquivo dela. Do backup do TV Time (o export GDPR ou o do TV Time Liberator) fica só a parte dos filmes, nunca as credenciais da conta. É a Fonte das Notas, dos Já vistos e da Watchlist que traz; tirar o Import tira os Fatos que só ele trazia. O RSS só entra com o sim da Pessoa.
 _Evitar_: upload, sincronização
 
 **Fila de resolução** [resolution queue, `queue`]:
-Os filmes de um Import do Letterboxd que o filmes não achou no Catálogo sozinho e esperam o Dono: confirmar com o tconst, o link do IMDb ou o do TMDB, ou descartar com um motivo. A fila é uma só para todas as Pessoas, e a decisão vale para quem tem o filme.
+Os filmes de um Import do Letterboxd ou do TV Time que o filmes não achou no Catálogo sozinho e esperam o Dono: confirmar com o tconst, o link do IMDb ou o do TMDB, ou descartar com um motivo. A fila é uma só para todas as Pessoas, e a decisão vale para quem tem o filme.
 _Evitar_: pendências
 
 **Fila de Notas** [rating queue, `ratingQueue`]:
@@ -244,7 +244,7 @@ _Evitar_: envelhecimento, validade
 O que uma Pessoa disse sobre o próprio gosto ou sobre um filme, por exemplo num questionário ou numa review que ela escreveu.
 
 **Watchlist** [watchlist, `watchlist`]:
-Os filmes que uma Pessoa marcou para ver no Letterboxd, no Trakt ou no Simkl. Cada um é um Declarado a favor, de Força moderada, até ela ter Já visto o filme. Vale a watchlist do import mais recente que traz uma.
+Os filmes que uma Pessoa marcou para ver no Letterboxd, no Trakt, no Simkl ou no TV Time. Cada um é um Declarado a favor, de Força moderada, até ela ter Já visto o filme. Vale a watchlist do import mais recente que traz uma.
 
 **Relato** [report, `report`]:
 O que o Dono disse sobre o gosto de outra Pessoa, como "Leo odeia filme lento". Vale menos que a própria Pessoa dizendo.
