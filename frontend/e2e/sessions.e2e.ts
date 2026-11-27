@@ -398,9 +398,7 @@ async function brunoSharesWith(page: Page, path: string, person: string) {
 /** Prefers one film of the first pair and has not seen the second pair;
  * gives the form and the two films of the first pair. */
 async function answerTwoQuestions(participant: Page, info: TestInfo) {
-  await participant
-    .getByRole('link', { name: 'Responder perguntas de gosto' })
-    .click()
+  await participant.getByRole('link', { name: 'Responder perguntas' }).click()
   const question = participant.getByRole('form', {
     name: 'Qual dos dois você gostou mais?',
   })
@@ -681,5 +679,13 @@ test('a Presente sends only yes votes and the Dono sees the new Cartaz order', a
       second!.title,
     ])
     await snap(page, info, 'sessao-cartaz-reordenado')
+
+    // Mudar votos opens the deck again over every film (pass 4 F1): the
+    // router writes `mudar` back, and the page must keep it.
+    await participant
+      .getByRole('link', { name: 'Mudar votos', exact: true })
+      .click()
+    await expect(participant.getByText('Filme 1 de 3')).toBeVisible()
+    await expect(participant).toHaveURL(/[?&]mudar=true(?:&|$)/u)
   })
 })

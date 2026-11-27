@@ -8,15 +8,16 @@ import { VoteScreen } from '#/ui/session-votes'
 // screen she has not voted on yet.
 export const Route = createFileRoute('/participar/votar')({
   validateSearch: voteSearch,
-  loaderDeps: ({ search: { sessao, chave, presente, feito, erro } }) => ({
+  loaderDeps: ({ search: { sessao, chave, presente, feito, erro, fora } }) => ({
     sessao,
     chave,
     presente,
     feito,
     erro,
+    fora,
   }),
-  loader: ({ deps: { sessao, chave, presente } }) =>
-    readVoteDeck({ data: { sessao, chave, presente } }),
+  loader: ({ deps: { sessao, chave, presente, fora } }) =>
+    readVoteDeck({ data: { sessao, chave, presente, fora } }),
   component: VoteRoute,
 })
 

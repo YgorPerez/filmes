@@ -99,13 +99,15 @@ it('before any Voto, lists the films and asks for every Voto', () => {
   expect(screen.queryByText(new RegExp(PARTICIPATION.left, 'u'))).toBeNull()
   // Nothing came in after a Voto yet: no row says so.
   expect(screen.queryByText(PARTICIPATION.arrived)).toBeNull()
-  // The veto rule marks Não and Sim as the buttons it names.
+  // The veto rule marks Não and Sim with the buttons' colour, but not as
+  // a button: no outline to tap (pass 4 F2).
   const rule = screen.getByText(
     (_, el) => el?.tagName === 'P' && el.textContent === VOTES.ruleText,
   )
-  expect(within(rule).getByText(VOTES.rule.no).className).toContain(
-    'border-sticker-pink',
-  )
+  const no = within(rule).getByText(VOTES.rule.no)
+  expect(no.className).toContain('font-bold')
+  expect(no.className).not.toContain('border')
+  expect(no.querySelector('.bg-sticker-pink')).not.toBeNull()
 })
 
 it('after her Votos, marks them, names what left and asks only for the newcomer', () => {

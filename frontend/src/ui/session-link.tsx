@@ -207,26 +207,29 @@ export function LinkHeader({
   )
 }
 
-/** One row of the night's list: the tape, the title, the facts, and her
- * Voto when she cast one. */
-/** The veto rule, with Não and Sim drawn as the buttons they name, so
- * "Não tira o filme" reads as the button, not as a negation. */
+/** The veto rule, with Não and Sim in bold behind a filled dot of the
+ * buttons' colour and glyph, so "Não tira o filme" reads as the button,
+ * not as a negation. The dot is a shape the buttons never take: an
+ * outlined pill here read as a button to tap (pass 4 F2). */
 export function VoteRule() {
   const { rule } = VOTES
-  const mark =
-    'inline-flex items-center gap-0.5 rounded-pill border-2 bg-surface px-xs align-baseline font-bold leading-none whitespace-nowrap'
+  const term = (kind: 'no' | 'yes') => (
+    <span className="inline-flex items-baseline gap-1 font-bold whitespace-nowrap">
+      <span
+        aria-hidden="true"
+        className={`inline-flex size-[18px] shrink-0 items-center justify-center self-center rounded-full text-on-sticker ${kind === 'no' ? 'bg-sticker-pink' : 'bg-sticker-green'}`}
+      >
+        <Icon
+          name={kind === 'no' ? 'close' : 'check'}
+          className="size-[12px]"
+        />
+      </span>
+      {kind === 'no' ? rule.no : rule.yes}
+    </span>
+  )
   return (
-    <p className="max-w-[60ch] leading-loose text-pretty">
-      <span className={`${mark} border-sticker-pink`}>
-        <Icon name="close" className="size-[14px]" />
-        {rule.no}
-      </span>{' '}
-      {rule.noDoes}{' '}
-      <span className={`${mark} border-sticker-green`}>
-        <Icon name="check" className="size-[14px]" />
-        {rule.yes}
-      </span>{' '}
-      {rule.yesDoes}
+    <p className="max-w-[60ch] text-pretty">
+      {term('no')} {rule.noDoes} {term('yes')} {rule.yesDoes}
     </p>
   )
 }

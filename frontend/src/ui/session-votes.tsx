@@ -489,6 +489,9 @@ function VoteResults({
           {`${PARTICIPATION.left}: ${deck.left.join(', ')}.`}
         </p>
       )}
+      {sent && deck.stale && deck.stale.length > 0 && (
+        <p className="text-meta text-ink-2">{VOTES.stale(deck.stale)}</p>
+      )}
       <div className="flex flex-wrap items-center gap-md">
         {unvoted > 0 ? (
           <a href={links.deck} className={buttonVariants()}>
@@ -537,6 +540,7 @@ type VoteSearch = {
   feito?: VoteNotice | undefined
   erro?: VoteRefusal | undefined
   mudar?: boolean | undefined
+  fora?: string | undefined
 }
 
 /** The post of the Votos: `retry` once a write failed that a new try may

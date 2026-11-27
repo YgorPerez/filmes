@@ -1,6 +1,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import { setResponseHeaders } from '@tanstack/react-start/server'
 import { sessionLinkHeaders, sessionLinkSearch } from './session-link-address'
+import { voteSearch } from './session-votes-address'
 
 // The server functions of the Link da Sessão's public pages: the link
 // itself (#180), the Perguntas par a par (#181) and the group swipe's deck
@@ -33,9 +34,15 @@ export const readPairwise = createServerFn({ method: 'GET' })
     return appPairwisePage(data)
   })
 
+/** The deck's search: the link's, and the films her sim missed. */
+const deckSearch = (value: unknown) => ({
+  ...linkSearch(value),
+  fora: voteSearch((value ?? {}) as Record<string, unknown>).fora,
+})
+
 /** The group swipe's deck for the chosen Presente (`voteDeck`), or null. */
 export const readVoteDeck = createServerFn({ method: 'GET' })
-  .validator(linkSearch)
+  .validator(deckSearch)
   .handler(async ({ data }) => {
     setResponseHeaders(new Headers(sessionLinkHeaders))
     const { appVoteDeck } = await import('#/platform/billboard')
