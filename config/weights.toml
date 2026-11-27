@@ -163,6 +163,10 @@ on_demand_reach = 50
 min_relevance = 0.7
 min_users = 10
 
+# Bônus por filme com pelo menos um prêmio ou indicação de config/awards.toml.
+[awards]
+weight = 0.1
+
 [imdb_rating]
 # Bônus do filme pela nota do IMDb, somado à pontuação da Regra como o do Clima:
 # peso × (nota − mínima) / (10 − mínima), com a mínima de [catalogo]. Nota 7 ganha 0.

@@ -1,0 +1,8 @@
+# Categorias de melhor filme do Oscar e principais prêmios de Cannes, Veneza
+# e Berlim. As chaves são os itens do Wikidata usados em P166 e P1411.
+Q102427 = { win = "Oscar de melhor filme", nomination = "indicado ao Oscar de melhor filme" }
+Q105304 = { win = "Oscar de melhor filme internacional", nomination = "indicado ao Oscar de melhor filme internacional" }
+Q179808 = { win = "Palma de Ouro", nomination = "indicado à Palma de Ouro" }
+Q844804 = { win = "Grande Prêmio de Cannes", nomination = "indicado ao Grande Prêmio de Cannes" }
+Q209459 = { win = "Leão de Ouro", nomination = "indicado ao Leão de Ouro" }
+Q154590 = { win = "Urso de Ouro", nomination = "indicado ao Urso de Ouro" }

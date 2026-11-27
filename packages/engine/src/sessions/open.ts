@@ -40,6 +40,7 @@ import type {
   Recommendation,
   RecommendRequest,
 } from '../recommendation/recommend.ts'
+import { AWARDS_TABLE } from '../recommendation/signals/awards.ts'
 import type { EngineServices } from '../runtime/Engine.ts'
 import type { EngineError } from '../runtime/EngineError.ts'
 import { Owner } from '../runtime/Owner.ts'
@@ -122,28 +123,34 @@ export const recommendationFields = (
     [
       'recommendation',
       toYaml(
-        recommendation.films.map((f) => ({
-          position: f.position,
-          id: f.id,
-          title: f.title,
-          ...('new' in f && { new: f.new }),
-          ...(f.bet && { bet: true }),
-          ...(f.cautiousBet && { cautious_bet: true }),
-          // The Nota prevista the Cartaz shows (#175), kept with the
-          // version so an old version's Cartaz does not move when the
-          // neighbours do. Only the calibrated value (#210).
-          ...(f.predictedRating && {
-            predicted_rating: Object.fromEntries(
-              Object.entries(f.predictedRating).map(
-                ([person, { value, raters, deviation }]) => [
-                  person,
-                  { value, raters, deviation },
-                ],
+        recommendation.films.map((f) => {
+          const awards = f.filmLines
+            .filter((line) => line.factId?.startsWith(`${AWARDS_TABLE}:`))
+            .map((line) => line.text)
+          return {
+            position: f.position,
+            id: f.id,
+            title: f.title,
+            ...('new' in f && { new: f.new }),
+            ...(f.bet && { bet: true }),
+            ...(f.cautiousBet && { cautious_bet: true }),
+            ...(awards.length > 0 && { awards }),
+            // The Nota prevista the Cartaz shows (#175), kept with the
+            // version so an old version's Cartaz does not move when the
+            // neighbours do. Only the calibrated value (#210).
+            ...(f.predictedRating && {
+              predicted_rating: Object.fromEntries(
+                Object.entries(f.predictedRating).map(
+                  ([person, { value, raters, deviation }]) => [
+                    person,
+                    { value, raters, deviation },
+                  ],
+                ),
               ),
-            ),
-          }),
-          reason: filmReason(f.evidence),
-        })),
+            }),
+            reason: filmReason(f.evidence),
+          }
+        }),
       ),
     ],
   ]

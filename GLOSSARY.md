@@ -219,6 +219,9 @@ _Evitar_: categoria
 **Metadado** [metadata, `metadata`]:
 Um Fato sobre o filme em si, vindo de uma base pública: elenco, diretor, gênero, duração, classificação.
 
+**Prêmio ou indicação** [award or nomination, `awards`]:
+Uma distinção do Wikidata da lista de `config/awards.toml`. Cada distinção aparece como linha do filme no Cartaz. A Regra soma o bônus uma vez por filme, e a distinção não conta como Fato da Recomendação.
+
 **Nota** [rating, `Rating`]:
 A avaliação que uma Pessoa deu a um filme, sempre dita com o nome de quem deu.
 _Evitar_: nota própria, nota de amigo, rating
