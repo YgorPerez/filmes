@@ -379,7 +379,8 @@ describe('the rating screen and the Notas she has (#274)', () => {
       await user.click(card().getByRole('button', { name: `Nota ${rating}` }))
     const bar = screen.getByRole('region', { name: RATINGS.bar })
     expect(bar.textContent).toContain('+2')
-    expect(bar.textContent).toContain('7 de 10')
+    // The unit on the bar, toward the goal too (#348).
+    expect(bar.textContent).toContain('7 de 10 Notas')
     expect(
       within(bar).getByRole('button', { name: RATINGS.doneLabel(5) })
         .textContent,

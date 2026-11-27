@@ -14,6 +14,7 @@ import {
   importTrakt,
   LETTERBOXD_RSS_KIND,
   personCreate,
+  personImports,
   personSeen,
   personView,
   readTraktExport,
@@ -215,6 +216,11 @@ describe('importTrakt', () => {
     expect(report.facts).toEqual({ ratings: 0, seen: 2, watchlist: 0 })
     expect(report.unresolved).toEqual([
       { name: 'Filme perdido', imdb: 'tt9999999', tmdb: null, trakt: 99 },
+    ])
+    // What the notice said was left out stays on the page (#348).
+    const page = await fixture.ok(personImports('teo'))
+    expect(page.leftOut.trakt).toEqual([
+      { name: 'Filme perdido', year: null, id: 'tt9999999' },
     ])
   })
 })

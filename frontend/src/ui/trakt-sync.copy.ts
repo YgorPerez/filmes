@@ -5,9 +5,10 @@ export const TRAKT_SYNC = {
   /** Her own page, her account connected. */
   connected:
     'Sua conta do Trakt está conectada: o filmes lê o histórico, as notas e a watchlist a cada Sessão nova.',
-  /** Her own page, not connected yet: the one way recommended (#274). */
+  /** Her own page, not connected yet (#274): what connecting does, with
+   * no ranking against the Letterboxd guide above it (#348). */
   connect:
-    'O melhor caminho: conecte a sua conta do Trakt. O filmes lê o histórico e as notas, mesmo de perfil privado, a cada Sessão nova.',
+    'Conecte a sua conta do Trakt e o filmes lê sozinho o histórico e as notas, mesmo de perfil privado, a cada Sessão nova.',
   /** Her own page, a public profile read, no account connected. */
   linkedOwn:
     'O filmes lê o seu perfil público do Trakt a cada Sessão nova. Conectar a conta lê também um perfil privado e envia o filme escolhido.',

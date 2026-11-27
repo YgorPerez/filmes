@@ -22,7 +22,12 @@ import { engineError, type EngineError } from '../runtime/EngineError.ts'
 import type { Environment } from '../runtime/Environment.ts'
 import type { Run } from '../runtime/Run.ts'
 import { Sqlite, type Connection, type SqliteError } from '../sqlite/Sqlite.ts'
-import { hasWikidata, resolveFilmIds, type ResolvedBy } from './film-ids.ts'
+import {
+  hasWikidata,
+  resolveFilmIds,
+  type LeftOutFilm,
+  type ResolvedBy,
+} from './film-ids.ts'
 import { storedImports, storeImport } from './stored.ts'
 import {
   hasTraktWatchlist,
@@ -149,6 +154,66 @@ export interface TraktReport {
   readonly unresolved: readonly TraktUnresolved[]
 }
 
+/** Each row whose film the Catálogo has, with its tconst, and the films it
+ * does not have, each once. */
+const resolveRows = (
+  db: Connection,
+  rows: readonly TraktRow[],
+): Effect.Effect<
+  {
+    found: (readonly [TraktRow, readonly [string, ResolvedBy]])[]
+    unresolved: TraktUnresolved[]
+  },
+  SqliteError
+> =>
+  Effect.gen(function* () {
+    const wikidata = yield* hasWikidata(db)
+    const resolutions = new Map<string, readonly [string, ResolvedBy] | null>()
+    const found: (readonly [TraktRow, readonly [string, ResolvedBy]])[] = []
+    const unresolved: TraktUnresolved[] = []
+    for (const row of rows) {
+      const { film } = row
+      const key = JSON.stringify([
+        film.name,
+        film.imdb,
+        film.tmdb,
+        film.trakt?.toString() ?? null,
+      ])
+      let resolution = resolutions.get(key)
+      if (resolution === undefined) {
+        resolution = yield* resolveFilmIds(db, film, wikidata)
+        resolutions.set(key, resolution)
+        if (resolution === null)
+          unresolved.push({
+            name: film.name,
+            imdb: film.imdb,
+            tmdb: film.tmdb,
+            trakt: film.trakt === null ? null : Number(film.trakt),
+          })
+      }
+      if (resolution !== null) found.push([row, resolution])
+    }
+    return { found, unresolved }
+  })
+
+/** The films of her exports and latest snapshot the Catálogo does not
+ * have (#348): what the notice of each import said was left out. */
+export const traktLeftOut = (
+  db: Connection,
+  person: Person,
+): Effect.Effect<LeftOutFilm[], EngineError | SqliteError, Environment> =>
+  Effect.gen(function* () {
+    const { unresolved } = yield* resolveRows(
+      db,
+      yield* personTraktRows(person),
+    )
+    return unresolved.map(({ name, imdb, tmdb }) => ({
+      name,
+      year: null,
+      id: imdb ?? tmdb,
+    }))
+  })
+
 /** `_carregar_pessoa`: replaces the Pessoa's Trakt Fatos by those of the
  * rows. */
 export const loadPersonTrakt = (
@@ -162,33 +227,10 @@ export const loadPersonTrakt = (
         `DELETE FROM ${table} WHERE pessoa = ? AND fato_id LIKE 'trakt:%'`,
         person.slug,
       )
-    const wikidata = yield* hasWikidata(db)
     const source = `Trakt de ${person.name}`
-    const resolutions = new Map<string, readonly [string, ResolvedBy] | null>()
     const resolved = { imdb: new Set<string>(), tmdb: new Set<string>() }
-    const unresolved: TraktUnresolved[] = []
-    for (const row of rows) {
-      const { film } = row
-      const key = JSON.stringify([
-        film.name,
-        film.imdb,
-        film.tmdb,
-        film.trakt?.toString() ?? null,
-      ])
-      let found = resolutions.get(key)
-      if (found === undefined) {
-        found = yield* resolveFilmIds(db, film, wikidata)
-        resolutions.set(key, found)
-        if (found === null)
-          unresolved.push({
-            name: film.name,
-            imdb: film.imdb,
-            tmdb: film.tmdb,
-            trakt: film.trakt === null ? null : Number(film.trakt),
-          })
-      }
-      if (found === null) continue
-      const [id, by] = found
+    const { found, unresolved } = yield* resolveRows(db, rows)
+    for (const [row, [id, by]] of found) {
       resolved[by].add(id)
       yield* insertFact(db, person.slug, source, id, row)
     }

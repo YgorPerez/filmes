@@ -372,6 +372,10 @@ describe('personImports', () => {
     })
     // By film, as the notice counts (#274): the rated films are seen too.
     expect(report.films.tvtime).toEqual({ rated: 2, seen: 1, watchlist: 1 })
+    // What the notice said was left out stays on the page (#348).
+    expect(report.leftOut.tvtime).toEqual([
+      { name: 'Fora do Catálogo', year: null, id: 'tt9099999' },
+    ])
 
     const removed = await fixture.ok(removeImport({ file, author: AUTHOR }))
     expect(removed.removedFacts).toEqual({

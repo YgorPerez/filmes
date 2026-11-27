@@ -83,10 +83,23 @@ const entered = (head: string, done: Gave) => {
     : `${head}: ${body}`
 }
 
+/** Why another site's film was left out (#348). */
+const NOT_IN_CATALOG = 'o Catálogo do filmes não tem'
+
 const left = (outside = 0) =>
   outside === 0
     ? ''
-    : ` ${count(outside, 'filme ficou', 'filmes ficaram')} de fora: o Catálogo do filmes não tem.`
+    : ` ${count(outside, 'filme ficou', 'filmes ficaram')} de fora: ${NOT_IN_CATALOG}.`
+
+/** A site's films in the words of its notice: "2 Notas", "1 Já visto",
+ * "1 filme na watchlist", the ones there are. */
+const filmParts = ({ rated, seen, watchlist }: SourceFilms) =>
+  [
+    rated > 0 && count(rated, 'Nota', 'Notas'),
+    seen > 0 && count(seen, 'Já visto', 'Já vistos'),
+    watchlist > 0 &&
+      count(watchlist, 'filme na watchlist', 'filmes na watchlist'),
+  ].filter((part) => part !== false)
 
 /** Whose films went through the resolution queue: Letterboxd's, the TV
  * Time backup's (#300), or both. */
@@ -203,15 +216,13 @@ export const PERSON_IMPORTS = {
     /** What another site gave, by film, in the words of its notice
      * (#274): "TV Time: 2 Notas, 1 Já visto e 1 filme na watchlist". A
      * rated film is no Já visto of its own. */
-    site: (site: string, { rated, seen, watchlist }: SourceFilms) =>
-      `${site}: ${andList(
-        [
-          rated > 0 && count(rated, 'Nota', 'Notas'),
-          seen > 0 && count(seen, 'Já visto', 'Já vistos'),
-          watchlist > 0 &&
-            count(watchlist, 'filme na watchlist', 'filmes na watchlist'),
-        ].filter((part) => part !== false),
-      )}`,
+    site: (site: string, films: SourceFilms) => {
+      const parts = filmParts(films)
+      // Every film left out (#348): the line stays, for the fold under it.
+      return `${site}: ${parts.length > 0 ? andList(parts) : 'nenhum filme entrou'}`
+    },
+    /** Why another site's film was left out: the notice's words (#348). */
+    notInCatalog: NOT_IN_CATALOG,
     /** Her own page, Trakt not connected (#274): the recommended way,
      * also here once something came in. */
     traktOff: 'Trakt não conectado',
@@ -249,8 +260,16 @@ export const PERSON_IMPORTS = {
     on: (date: string) => `em ${shortDate(date)}`,
     remove: 'Tirar',
     removeLabel: (original: string) => `Tirar ${original}`,
-    removeWarning:
-      'O que só este arquivo trazia sai do gosto. As decisões da fila continuam valendo.',
+    /** Under Tirar (#348): what leaves, counted when it is her one file of
+     * the site (`gone`), and the way back, since nothing undoes it. */
+    removeWarning: (gone: SourceFilms | null) => {
+      const parts = gone === null ? [] : filmParts(gone)
+      const what =
+        parts.length > 0
+          ? `Saem do gosto ${andList(parts)} que vieram deste arquivo.`
+          : 'O que só este arquivo trazia sai do gosto.'
+      return `${what} As decisões da fila continuam valendo. Para voltar atrás, importe o arquivo de novo.`
+    },
     removeConfirm: 'Tirar este import',
     removeBusy: 'Tirando…',
   },

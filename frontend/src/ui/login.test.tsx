@@ -17,15 +17,15 @@ describe('Login', () => {
     expect(html).toContain(LOGIN.refusals[refusal])
   })
 
-  it('offers a quiet retry, not the orange button, when sign-in is unavailable', () => {
+  it('makes the retry the orange button when sign-in is unavailable', () => {
     const html = renderToStaticMarkup(<Login refusal="indisponivel" />)
     expect(html).not.toContain(LOGIN.google)
     const retry = new RegExp(
       `<a href="/auth/google" class="([^"]*)">${LOGIN.retry}</a>`,
       'u',
     ).exec(html)
-    expect(retry?.[1]).toContain('border-rule')
-    expect(retry?.[1]).not.toContain('bg-sticker-orange')
+    expect(retry?.[1]).toContain('bg-sticker-orange')
+    expect(retry?.[1]).not.toContain('border-rule')
   })
 
   it('says what the site is for and who gets in, before a trip to Google', () => {
@@ -84,6 +84,8 @@ describe('the Trakt connection screen', () => {
       /<input type="checkbox" required=""[^>]* name="consentir" value="sim"/,
     )
     expect(html).not.toContain('/trakt/desconectar')
+    // The one name of the action, as Meu gosto and the import say (#348).
+    expect(html).toMatch(/<button[^>]*>Conectar o Trakt<\/button>/)
   })
 
   it('splits what it reads from what it sends, and says where it leads (#274)', () => {
@@ -95,14 +97,16 @@ describe('the Trakt connection screen', () => {
     expect(html).toContain(
       'Depois você volta para esta página com a conta conectada',
     )
-    expect(html).not.toContain('Importar</a>')
+    expect(html).not.toContain('Importar Notas</a>')
   })
 
-  it('has the way back to Importar for a Dono, in the app', () => {
+  it('has the way back to Importar Notas for a Dono, in the app (#348)', () => {
     const html = renderToStaticMarkup(
       <TraktScreen page={{ status: 'connected', name: 'Iara' }} inApp />,
     )
-    expect(html).toMatch(/<a href="\/meu-gosto\/importar"[^>]*>Importar<\/a>/)
+    expect(html).toMatch(
+      /<a href="\/meu-gosto\/importar"[^>]*>Importar Notas<\/a>/,
+    )
     expect(html).not.toContain('Créditos')
   })
 

@@ -112,34 +112,23 @@ export function QueueScreen({
               {queue.items.length === 0 ? (
                 <p className="text-ink-2">{QUEUE.empty}</p>
               ) : (
-                <ul className="flex flex-col gap-2xl">
-                  {queue.items.map((item) => (
-                    <Card
-                      key={item.id}
-                      item={item}
-                      names={queue.names}
-                      search={search?.item === item.id ? search.answer : null}
-                      first={item.id === firstSuggested(queue)}
-                    />
-                  ))}
-                </ul>
+                <>
+                  <ul className="flex flex-col gap-2xl">
+                    {queue.items.map((item) => (
+                      <Card
+                        key={item.id}
+                        item={item}
+                        names={queue.names}
+                        search={search?.item === item.id ? search.answer : null}
+                        first={item.id === firstSuggested(queue)}
+                      />
+                    ))}
+                  </ul>
+                  {/* Only with a film waiting: TMDB has nothing to find in
+                      an empty queue (#348). */}
+                  <Reprocess />
+                </>
               )}
-              <QueueForm
-                action="reprocessar"
-                label={QUEUE.reprocess}
-                className="flex flex-col gap-md border-t border-dashed border-rule pt-2xl"
-              >
-                {(busy) => (
-                  <>
-                    <p className="max-w-[60ch] text-meta text-ink-2">
-                      {QUEUE.reprocessLead}
-                    </p>
-                    <Submit disabled={busy}>
-                      {busy ? QUEUE.busy.reprocess : QUEUE.reprocess}
-                    </Submit>
-                  </>
-                )}
-              </QueueForm>
               {queue.attributions.length > 0 && (
                 <p className="text-source text-ink-2">{QUEUE.attribution}</p>
               )}
@@ -148,6 +137,28 @@ export function QueueScreen({
         </ImportsFrame>
       </PostAnswers>
     </FromContext>
+  )
+}
+
+/** "Procurar de novo": TMDB asked again for every film that waits. */
+function Reprocess() {
+  return (
+    <QueueForm
+      action="reprocessar"
+      label={QUEUE.reprocess}
+      className="flex flex-col gap-md border-t border-dashed border-rule pt-2xl"
+    >
+      {(busy) => (
+        <>
+          <p className="max-w-[60ch] text-meta text-ink-2">
+            {QUEUE.reprocessLead}
+          </p>
+          <Submit disabled={busy}>
+            {busy ? QUEUE.busy.reprocess : QUEUE.reprocess}
+          </Submit>
+        </>
+      )}
+    </QueueForm>
   )
 }
 
