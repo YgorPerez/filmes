@@ -12,6 +12,9 @@ exports[`avaliar, as recorded > gives the recorded result and report 1`] = `
           "normal": 1,
         },
       },
+      "awards": {
+        "weight": 0.1,
+      },
       "bet": {
         "maxFacts": 1,
         "maxPredictedIncrease": 2,
@@ -442,6 +445,9 @@ Quanto das Notas retidas foi 4 ou mais, pela Força mais alta a favor do filme n
           "none": 0,
           "normal": 1,
         },
+      },
+      "awards": {
+        "weight": 0.1,
       },
       "bet": {
         "maxFacts": 1,
@@ -2144,6 +2150,9 @@ Foram testados 303 conjuntos. A ordem usa a média do Recall@50 entre as amostra
           "none": 0,
           "normal": 1,
         },
+      },
+      "awards": {
+        "weight": 0.1,
       },
       "bet": {
         "maxFacts": 1,

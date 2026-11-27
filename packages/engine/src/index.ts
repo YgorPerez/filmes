@@ -44,11 +44,11 @@ export { searchKey } from './catalog/search-key.ts'
 export {
   EXPORT_FORMATS,
   exportRatings,
-  IMDB_HEADER,
-  imdbRating,
   type ExportFormat,
   type ExportResult,
-} from './export/imdb.ts'
+} from './export/export.ts'
+export { IMDB_HEADER } from './export/imdb.ts'
+export { LETTERBOXD_HEADER } from './export/letterboxd.ts'
 export { resolveAttendees } from './recommendation/attendees.ts'
 export {
   attributionsOf,
@@ -598,6 +598,23 @@ export {
   type TraktReport,
   type TraktUnresolved,
 } from './imports/trakt.ts'
+export {
+  importImdb,
+  IMDB_KIND,
+  imdbFactCounts,
+  loadImdb,
+  reloadImdb,
+  reloadPersonImdb,
+  type ImdbFactCounts,
+  type ImdbImport,
+  type ImdbImportInput,
+  type ImdbOutside,
+} from './imports/imdb.ts'
+export {
+  isImdbRatings,
+  readImdbRatings,
+  type ImdbRatingRow,
+} from './imports/imdb-ratings.ts'
 export {
   personImports,
   type ImportRecord,

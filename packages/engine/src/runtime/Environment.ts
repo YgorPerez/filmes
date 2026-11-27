@@ -63,6 +63,7 @@ export type SourceKeyVariable = (typeof SOURCE_KEY_VARIABLES)[number]
 /** The config files besides `weights.toml` and `local.toml`, by the stem of
  * their English name. */
 export type ConfigName =
+  | 'awards'
   | 'moods'
   | 'group_alone'
   | 'sadness'

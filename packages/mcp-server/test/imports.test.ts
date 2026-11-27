@@ -1,7 +1,7 @@
 // The import tools (#110): the old MCP's letterboxd.test, trakt.test and
 // the import part of remover.test. The ZIPs go up through the app, not the
 // MCP, so the tests put them in with the engine and do the rest through
-// the tools. TMDB answers from the recordings; nothing touches the network.
+// the tools; the IMDb CSV is text, and goes through the tool (#285). TMDB answers from the recordings; nothing touches the network.
 import assert from 'node:assert/strict'
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -175,7 +175,7 @@ describe('import', () => {
 
     const removed = await c.ok('import', { remove: imported.file })
 
-    assert.deepEqual(imported.newFacts, { ratings: 2, seen: 1 })
+    assert.deepEqual(imported.newFacts, { ratings: 2, seen: 1, watchlist: 0 })
     assert.equal(removed.person, 'teo')
     assert.deepEqual(removed.removedFacts, {
       ratings: 2,
@@ -191,16 +191,54 @@ describe('import', () => {
     )
   })
 
-  test('takes one thing per call, and the RSS needs the Pessoa', async () => {
+  test("imports an IMDb ratings CSV sent as text, and refuses one that isn't", async () => {
+    const fixture = useFixture()
+    const c = await connect(fixture)
+    const csv = readFileSync(join(ROOT, 'tests/fixture/imdb/vera.csv'), 'utf8')
+
+    const report = await c.ok('import', { person: 'vera', imdbCsv: csv })
+
+    assert.equal(report.person, 'vera')
+    assert.deepEqual(report.newFacts, { ratings: 3 })
+    assert.deepEqual(report.outsideCatalog, [
+      { film: 'tt9028501', title: 'Cais, Episódio 1' },
+    ])
+    assert.match(report.file, /^imports\/vera\/imdb-[0-9a-f]{64}\.csv$/)
+    assert.deepEqual(
+      (await c.ok('person', { action: 'view', person: 'vera' })).imports.map(
+        (record: { kind: string; original: string }) => [
+          record.kind,
+          record.original,
+        ],
+      ),
+      [['imdb', 'vera-imdb-ratings.csv']],
+    )
+    assert.deepEqual(
+      (await c.error('import', { person: 'vera', imdbCsv: 'Date,Name\n' }))
+        .error,
+      {
+        code: 'invalid_file',
+        message:
+          'vera-imdb-ratings.csv: CSV sem as colunas Const, Your Rating e Date Rated do IMDb',
+      },
+    )
+  })
+
+  test('takes one thing per call, and the RSS and the CSV need the Pessoa', async () => {
     const c = await connect(useFixture())
 
     for (const [args, message] of [
-      [{ person: 'teo' }, 'mande letterboxdRss ou remove, um dos dois'],
+      [{ person: 'teo' }, 'mande letterboxdRss, imdbCsv ou remove, um só'],
       [
         { person: 'teo', letterboxdRss: 'x', remove: 'y' },
-        'mande letterboxdRss ou remove, um dos dois',
+        'mande letterboxdRss, imdbCsv ou remove, um só',
+      ],
+      [
+        { person: 'teo', imdbCsv: 'x', remove: 'y' },
+        'mande letterboxdRss, imdbCsv ou remove, um só',
       ],
       [{ letterboxdRss: 'x', consent: true }, 'o RSS precisa de person'],
+      [{ imdbCsv: 'x' }, 'o CSV do IMDb precisa de person'],
     ] as const)
       assert.deepEqual((await c.error('import', args)).error, {
         code: 'invalid_usage',
@@ -224,5 +262,23 @@ describe('export', () => {
       failureText(await c.call('export', { person: 'bruno', format: 'csv' })),
       /format/,
     )
+  })
+
+  test("hands back Bruno's Notas as the CSV Letterboxd imports", async () => {
+    const c = await connect(useFixture())
+
+    const result = await c.ok('export', {
+      person: 'dono',
+      format: 'letterboxd',
+    })
+
+    const lines = result.content.trim().split('\r\n')
+    assert.equal(result.format, 'letterboxd')
+    assert.equal(lines[0], 'imdbID,Title,Year,Rating10,WatchedDate,Review')
+    assert.equal(
+      lines.find((line: string) => line.startsWith('tt9000101,')),
+      'tt9000101,O Farol de Areia,2012,10,2025-06-01,',
+    )
+    assert.equal(lines.length - 1, result.ratings)
   })
 })

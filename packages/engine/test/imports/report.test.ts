@@ -1,5 +1,5 @@
 // A Pessoa's imports as the web app's Imports screen reads them (#117):
-// her records, the Letterboxd report and the Trakt counts, after real
+// her records, the Letterboxd report and the Trakt and IMDb counts, after real
 // imports of the fixture's files.
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -47,7 +47,8 @@ describe('personImports', () => {
         queue: [],
         discardedItems: [],
       },
-      trakt: { ratings: 0, seen: 0 },
+      trakt: { ratings: 0, seen: 0, watchlist: 0 },
+      imdb: { ratings: 0 },
     })
   })
 })

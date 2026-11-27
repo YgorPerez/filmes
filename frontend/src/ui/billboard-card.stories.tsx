@@ -100,6 +100,20 @@ export const ReadOnly: Story = {
 
 export const UnderSection: Story = { args: { level: 3 } }
 
+export const WithAwards: Story = {
+  args: {
+    film: {
+      ...FILM,
+      awards: ['Oscar de melhor filme', 'indicado à Palma de Ouro'],
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Oscar de melhor filme')).toBeVisible()
+    await expect(canvas.getByText('indicado à Palma de Ouro')).toBeVisible()
+  },
+}
+
 export const WithoutPredictedRating: Story = {
   args: { film: { ...FILM, predictedRatings: [] } },
   play: async ({ canvasElement }) => {
