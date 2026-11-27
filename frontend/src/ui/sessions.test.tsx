@@ -110,7 +110,9 @@ describe('the Sessions list', () => {
     ).toBeTruthy()
     expect(screen.getByText(SESSIONS.list.pendingEmptyLead)).toBeTruthy()
   })
+})
 
+describe('the Sessions list, its name and when empty', () => {
   it('names the list by its filter, and says when there is no Session at all', () => {
     render(<SessionList sessions={[OPEN]} pendingOnly />)
     expect(screen.getByRole('list', { name: 'Para contar' })).toBeTruthy()
@@ -146,14 +148,14 @@ describe('the Sessions list', () => {
   })
 })
 
-describe('a Session’s page', () => {
-  const PAGE: CartazPage = {
-    session: OPEN,
-    billboard: MODEL,
-    warnings: [],
-    addition: null,
-  }
+const PAGE: CartazPage = {
+  session: OPEN,
+  billboard: MODEL,
+  warnings: [],
+  addition: null,
+}
 
+describe('a Session’s page', () => {
   it('shows the Cartaz of a Session just opened, posting to its reply, and the way to its Feedback', () => {
     render(<SessionScreen page={PAGE} notice="aberta" />)
     // A new Session needs no notice: the Cartaz is it (#272).
@@ -172,7 +174,26 @@ describe('a Session’s page', () => {
       '/sessoes/2026-11-20-iara/contar',
     ])
   })
+})
 
+/** The Session's page under a router at `path`; gives the router. */
+function renderSessionAt(path: string, loader?: () => Promise<void> | void) {
+  const router = createRouter({
+    routeTree: createRootRoute({
+      ...(loader ? { loader } : {}),
+      component: () => <SessionScreen page={PAGE} />,
+    }),
+    history: createMemoryHistory({ initialEntries: [path] }),
+  })
+  render(<RouterProvider router={router} />)
+  return router
+}
+
+/** The acrescentar's box. */
+const additionBox = () =>
+  screen.getByRole<HTMLTextAreaElement>('textbox', { name: /Acrescentar/ })
+
+describe('a Session’s page, a refused reply', () => {
   it('keeps a refused Cartaz reply ready to retry and clears it when saved', async () => {
     const path = '/sessoes/2026-11-20-iara'
     const pending = Promise.withResolvers<Response>()
@@ -193,20 +214,10 @@ describe('a Session’s page', () => {
       value: () => {},
     })
     try {
-      const router = createRouter({
-        routeTree: createRootRoute({
-          component: () => <SessionScreen page={PAGE} />,
-        }),
-        history: createMemoryHistory({ initialEntries: [path] }),
-      })
-      render(<RouterProvider router={router} />)
+      const router = renderSessionAt(path)
       const user = userEvent.setup()
-      const addition = () =>
-        screen.getByRole<HTMLTextAreaElement>('textbox', {
-          name: /Acrescentar/,
-        })
       await screen.findByRole('textbox', { name: /Acrescentar/ })
-      await user.type(addition(), 'na próxima vez')
+      await user.type(additionBox(), 'na próxima vez')
       await user.click(screen.getByRole('button', { name: 'Enviar' }))
       expect(
         screen
@@ -219,12 +230,12 @@ describe('a Session’s page', () => {
         SESSIONS.session.refusals.indisponivel,
       )
       expect(router.state.location.href).toBe(path)
-      expect(addition().value).toBe('na próxima vez')
+      expect(additionBox().value).toBe('na próxima vez')
 
       await user.click(screen.getByRole('button', { name: 'Enviar' }))
       await waitFor(() => {
         expect(router.state.location.href).toBe(`${path}?feito=anotada`)
-        expect(addition().value).toBe('')
+        expect(additionBox().value).toBe('')
         expect(screen.queryByRole('alert')).toBeNull()
       })
     } finally {
@@ -233,7 +244,9 @@ describe('a Session’s page', () => {
       else Reflect.deleteProperty(Element.prototype, 'scrollIntoView')
     }
   })
+})
 
+describe('a Session’s page, the marks and the Link da Sessão', () => {
   it('keeps the Cartaz marks until the new Cartaz is in', async () => {
     const path = '/sessoes/2026-11-20-iara'
     vi.stubGlobal('scrollTo', vi.fn())
@@ -249,28 +262,19 @@ describe('a Session’s page', () => {
       if (first) first = false
       else return reload.promise
     })
-    const router = createRouter({
-      routeTree: createRootRoute({
-        loader: loads,
-        component: () => <SessionScreen page={PAGE} />,
-      }),
-      history: createMemoryHistory({ initialEntries: [path] }),
-    })
-    render(<RouterProvider router={router} />)
+    renderSessionAt(path, loads)
     const user = userEvent.setup()
-    const addition = () =>
-      screen.getByRole<HTMLTextAreaElement>('textbox', { name: /Acrescentar/ })
     await screen.findByRole('textbox', { name: /Acrescentar/ })
-    await user.type(addition(), 'na próxima vez')
+    await user.type(additionBox(), 'na próxima vez')
     expect(localStorage.length).toBe(1)
 
     await user.click(screen.getByRole('button', { name: 'Enviar' }))
 
     await waitFor(() => expect(loads).toHaveBeenCalledTimes(2))
-    expect(addition().value).toBe('na próxima vez')
+    expect(additionBox().value).toBe('na próxima vez')
     expect(localStorage.length).toBe(1)
     reload.resolve()
-    await waitFor(() => expect(addition().value).toBe(''))
+    await waitFor(() => expect(additionBox().value).toBe(''))
     expect(localStorage.length).toBe(0)
   })
 
@@ -283,7 +287,9 @@ describe('a Session’s page', () => {
     expect(await navigator.clipboard.readText()).toBe(sessionLink)
     expect(screen.getByRole('status').textContent).toBe('Link copiado')
   })
+})
 
+describe('a Session’s page, the Link da Sessão by hand and what the reply left', () => {
   it('shows the Link da Sessão to select when the clipboard refuses it', async () => {
     const user = userEvent.setup()
     const sessionLink = 'https://cinema.example/participar?sessao=x&chave=y'
@@ -334,7 +340,9 @@ describe('a Session’s page', () => {
       SESSIONS.session.refusals.regerar,
     )
   })
+})
 
+describe('a Session’s page, the acrescentar', () => {
   it('says what the acrescentar put in the request and what it did not understand', () => {
     render(
       <SessionScreen
@@ -373,7 +381,9 @@ describe('a Session’s page', () => {
       '/pessoas',
     )
   })
+})
 
+describe('a Session’s page, an acrescentar only noted and a told Session', () => {
   it('says an acrescentar with nothing understood was only noted', () => {
     render(
       <SessionScreen
@@ -420,7 +430,9 @@ describe('a Session’s page', () => {
       screen.queryByRole('link', { name: SESSIONS.list.feedback }),
     ).toBeNull()
   })
+})
 
+describe('a Session’s page, a told Session', () => {
   it('a told Session with its Reações: each one on the tape, the rest of the shelf folded', () => {
     render(
       <SessionScreen
@@ -454,7 +466,9 @@ describe('a Session’s page', () => {
     expect(screen.getByText(SESSIONS.session.shelf)).toBeTruthy()
     expect(screen.getAllByRole('article')).toHaveLength(2)
   })
+})
 
+describe('a Session’s page, the reading and refusals', () => {
   it('asks in the bar about the words the reading did not take, until the Dono goes to fix them', async () => {
     const user = userEvent.setup()
     const scrolled = vi.fn<() => void>()

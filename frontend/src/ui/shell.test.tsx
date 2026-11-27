@@ -93,7 +93,9 @@ describe('AppShell', () => {
       within(menu).queryByRole('link', { name: /Operações/, hidden: true }),
     ).toBeNull()
   })
+})
 
+describe('AppShell, the tabs and the menu', () => {
   it('puts Operações in the menu for an admin, saying when the push fails', () => {
     show({ admin: true })
     // Closed until the avatar opens it: hidden from the tree till then.
@@ -144,7 +146,9 @@ describe('AppShell', () => {
     const menu = menuOf(screen.getByRole('button', { name: /Sua conta/ }))
     expect(menu.textContent).toContain('Entrou com bruno@example.org')
   })
+})
 
+describe('AppShell, the alert and the footer', () => {
   it('shows an admin the strip of a push that keeps failing, with a link to Operações', () => {
     show({ admin: true, alert: ALERT })
     const alert = screen.getByRole('alert')

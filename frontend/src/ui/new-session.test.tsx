@@ -50,7 +50,9 @@ describe('the Nova Sessão form', () => {
       ok: { attendees: ['bruno'], rule: 'default', moods: [] },
     })
   })
+})
 
+describe('the Nova Sessão form, what it posts', () => {
   it('posts the Presentes, the Regra, the Climas and every Restrição', async () => {
     const { user, form } = show()
     await user.click(screen.getByRole('checkbox', { name: 'Iara' }))
@@ -109,7 +111,9 @@ describe('the Nova Sessão form', () => {
       },
     })
   })
+})
 
+describe('the Nova Sessão form, the Série and refusals', () => {
   it('starts the Série na ordem at its default, marked, and offers the other two', async () => {
     const { user, form } = show()
     await user.click(screen.getByText(copy.details))
@@ -162,7 +166,9 @@ describe('the Nova Sessão form', () => {
       SESSIONS.refusals[refusal],
     )
   })
+})
 
+describe('the Nova Sessão form, its start', () => {
   it('starts with the Presentes of “Pedir filme de novo com essa turma”', () => {
     render(<NewSession options={OPTIONS} attendees={['iara', 'quim']} />)
     const form = screen.getByRole('form', { name: SESSIONS.form.label })
@@ -368,7 +374,9 @@ describe('the form “Ler” filled', () => {
         .getAttribute('href'),
     ).toBe('/sessoes/nova?buscar=Am%C3%A9lie')
   })
+})
 
+describe('the form “Ler” filled, unclear titles and nothing understood', () => {
   it('lists the films of an unclear title, each with “Usar”', async () => {
     const form = showDraft({
       fields: { similar: ['tt9000101'] },

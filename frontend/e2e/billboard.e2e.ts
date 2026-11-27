@@ -16,7 +16,7 @@ import {
 } from 'node:fs'
 import { join } from 'node:path'
 import { recommend, recommendSession } from '@filmes/engine'
-import { type Page } from '@playwright/test'
+import { type Locator, type Page, type TestInfo } from '@playwright/test'
 import {
   addPerson,
   engineRoot,
@@ -194,27 +194,9 @@ bet_marks: [{person: bruno, film: tt9000105, kind: swapped, rating: null, date: 
   await snap(page, info, 'cartaz-aposta-cautelosa')
 })
 
-test('the Dono marks, reloads, sends, and the Cartaz comes back redone', async ({
-  page,
-}, info) => {
-  test.skip(info.project.name !== 'desktop', 'one Pessoa per project')
-  await addPerson('Nina')
-  const id = await openSession('nina', 4)
-  await loginAsBruno(page)
-  await page.goto(`/sessoes/${id}`)
-  await expect(cards(page)).toHaveCount(4)
-  await expect(page.getByText('Vocês dois', { exact: false })).toBeVisible()
-  await hydrated(page)
-  await snap(page, info, 'cartaz')
-  const [seen, swapped, third, fourth] = await Promise.all(
-    [1, 2, 3, 4].map((n) => titleOf(page, n)),
-  )
-
-  // Nothing marked: Enviar says so and stays.
-  await page.getByRole('button', { name: 'Enviar' }).click()
-  await expect(page.getByText('Nada marcado ainda.')).toBeVisible()
-  await expect(page).toHaveURL(new RegExp(`/sessoes/${id}$`))
-
+/** Marks a Já vi with a Nota and a comment, a Trocar, stars, a comment
+ * and the acrescentar; gives the bar at the foot. */
+async function markEveryKind(page: Page) {
   await card(page, 1).getByRole('button', { name: 'Nina' }).click()
   await page
     .getByRole('group', { name: 'nota de Nina para o filme 1, de 1 a 10' })
@@ -241,7 +223,10 @@ test('the Dono marks, reloads, sends, and the Cartaz comes back redone', async (
     ),
   ).toBeVisible()
   await expect(bar.getByRole('button', { name: 'Enviar' })).toBeInViewport()
+  return bar
+}
 
+async function expectMarksBack(page: Page, info: TestInfo) {
   // A reload gives the marks back (one key per Session and version).
   await page.reload()
   await expect(
@@ -258,7 +243,14 @@ test('the Dono marks, reloads, sends, and the Cartaz comes back redone', async (
   ).toHaveAttribute('aria-pressed', 'true')
   await expect(page.getByText('fica guardado neste navegador')).toBeVisible()
   await snap(page, info, 'cartaz-marcado')
+}
 
+async function refusedPostKeepsReply(
+  page: Page,
+  info: TestInfo,
+  id: string,
+  bar: Locator,
+) {
   // A refused post leaves the reply ready to retry.
   const refusal = Promise.withResolvers<void>()
   await page.route(
@@ -287,7 +279,15 @@ test('the Dono marks, reloads, sends, and the Cartaz comes back redone', async (
   await expect(page.getByLabel('comentário sobre o filme 3')).toHaveValue(
     'longo',
   )
+}
 
+async function sendAndSeeRedone(
+  page: Page,
+  info: TestInfo,
+  id: string,
+  bar: Locator,
+  [seen, swapped, third, fourth]: string[],
+) {
   // The reading does not take "na próxima vez": the bar asks before
   // anything is recorded, and "Enviar assim" sends it as a note (#272).
   await page.getByRole('button', { name: 'Enviar' }).click()
@@ -324,6 +324,33 @@ test('the Dono marks, reloads, sends, and the Cartaz comes back redone', async (
     card(page, 2).getByRole('button', { name: 'Trocar' }),
   ).toHaveAttribute('aria-pressed', 'false')
   await snap(page, info, 'cartaz-regerado')
+}
+
+test('the Dono marks, reloads, sends, and the Cartaz comes back redone', async ({
+  page,
+}, info) => {
+  test.skip(info.project.name !== 'desktop', 'one Pessoa per project')
+  await addPerson('Nina')
+  const id = await openSession('nina', 4)
+  await loginAsBruno(page)
+  await page.goto(`/sessoes/${id}`)
+  await expect(cards(page)).toHaveCount(4)
+  await expect(page.getByText('Vocês dois', { exact: false })).toBeVisible()
+  await hydrated(page)
+  await snap(page, info, 'cartaz')
+  const [seen, swapped, third, fourth] = await Promise.all(
+    [1, 2, 3, 4].map((n) => titleOf(page, n)),
+  )
+
+  // Nothing marked: Enviar says so and stays.
+  await page.getByRole('button', { name: 'Enviar' }).click()
+  await expect(page.getByText('Nada marcado ainda.')).toBeVisible()
+  await expect(page).toHaveURL(new RegExp(`/sessoes/${id}$`))
+
+  const bar = await markEveryKind(page)
+  await expectMarksBack(page, info)
+  await refusedPostKeepsReply(page, info, id, bar)
+  await sendAndSeeRedone(page, info, id, bar, [seen, swapped, third, fourth])
 })
 
 test('in the dark, stars alone only note, and stay on the card (#272)', async ({

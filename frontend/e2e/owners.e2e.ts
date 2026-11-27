@@ -13,8 +13,10 @@
 // this file alone her Acesso (#166), she logs in, and once it is taken
 // away her next request goes to the login. Only the desktop runs it.
 
-import { consult, personCreate } from '@filmes/engine'
+import { consult } from '@filmes/engine'
+import { type Page } from '@playwright/test'
 import {
+  addOwner,
   addPerson,
   engineRun,
   expect,
@@ -43,6 +45,64 @@ const ratings = async (session: string) =>
     )
   ).rows
 
+type Dono = (typeof DONOS)[number]
+
+/** Opens a Session with Lara from the form; gives its id. */
+async function openSessionWithLara(page: Page, dono: Dono) {
+  // The form checks her, and only her, as the Dono.
+  await page.goto('/sessoes/nova')
+  await expect(
+    page.getByRole('checkbox', { name: new RegExp(`^${dono.name}`) }),
+  ).toBeChecked()
+  await expect(
+    page.getByRole('checkbox', { name: dono.other, exact: true }),
+  ).not.toBeChecked()
+  await page.getByRole('checkbox', { name: 'Lara' }).check()
+  await page.getByText('Mais opções', { exact: true }).click()
+  await page.getByLabel('Quantos filmes', { exact: false }).fill('3')
+  await page.getByRole('button', { name: 'Recomendar' }).click()
+  await expect(page).toHaveURL(/\/sessoes\/2026-11-20-lara[^/]*\?feito=aberta$/)
+  return decodeURIComponent(
+    new URL(page.url()).pathname.split('/').at(-1) ?? '',
+  )
+}
+
+async function feedbackSpeakingForHerself(page: Page, dono: Dono, id: string) {
+  // The Feedback: her Nota is hers; Lara's she relays.
+  await page.goto(`/sessoes/${id}/contar`)
+  const reaction = (slug: string, value: string) =>
+    page.locator(`input[name="reacao.${slug}"][value${value}]`)
+  await expect(reaction(dono.slug, '^="relato:"')).toHaveCount(0)
+  await expect(reaction('lara', '^="relato:"')).not.toHaveCount(0)
+  await page.locator('input[name="filme"]').first().check()
+  await reaction(dono.slug, '="nota:10"').check()
+  await page.getByText('ou dar nota de 1 a 10').click()
+  await reaction('lara', '="nota:8"').check()
+  await page.getByRole('button', { name: 'Gravar e fechar a Sessão' }).click()
+  await expect(page).toHaveURL(new RegExp(`/sessoes/${id}\\?feito=contada$`))
+  expect(await ratings(id)).toEqual(
+    [
+      [dono.slug, 0],
+      ['lara', 1],
+    ].toSorted(([a], [b]) => String(a).localeCompare(String(b))),
+  )
+}
+
+async function writeOwnTaste(page: Page, dono: Dono) {
+  // Taste on her own page, Meu gosto.
+  await page.goto(`/pessoas/${dono.slug}`)
+  await expect(page).toHaveURL(/\/meu-gosto$/)
+  // Declarados is in the Afinar fold (#273).
+  await page.getByText(/^Afinar:/).click()
+  const area = section(page, 'Declarados')
+  await area.getByText('Acrescentar Declarado', { exact: true }).click()
+  const form = area.getByRole('form', { name: 'Acrescentar Declarado' })
+  await form.getByLabel('O que foi dito').fill(`a ${dono.name} gosta de drama`)
+  await form.getByRole('button', { name: 'Gravar' }).click()
+  await expect(notice(page)).toHaveText('Gravado no seu arquivo.')
+  await expect(area).toContainText(`a ${dono.name} gosta de drama`)
+}
+
 for (const dono of DONOS)
   test(`${dono.name}, one of two Donos, is the Dono on every screen`, async ({
     page,
@@ -53,65 +113,15 @@ for (const dono of DONOS)
     await expect(
       page.getByRole('button', { name: `Sua conta: ${dono.name}` }),
     ).toBeVisible()
-
-    // The form checks her, and only her, as the Dono.
-    await page.goto('/sessoes/nova')
-    await expect(
-      page.getByRole('checkbox', { name: new RegExp(`^${dono.name}`) }),
-    ).toBeChecked()
-    await expect(
-      page.getByRole('checkbox', { name: dono.other, exact: true }),
-    ).not.toBeChecked()
-    await page.getByRole('checkbox', { name: 'Lara' }).check()
-    await page.getByText('Mais opções', { exact: true }).click()
-    await page.getByLabel('Quantos filmes', { exact: false }).fill('3')
-    await page.getByRole('button', { name: 'Recomendar' }).click()
-    await expect(page).toHaveURL(
-      /\/sessoes\/2026-11-20-lara[^/]*\?feito=aberta$/,
-    )
-    const id = decodeURIComponent(
-      new URL(page.url()).pathname.split('/').at(-1) ?? '',
-    )
+    const id = await openSessionWithLara(page, dono)
 
     // On the Cartaz she is "Você".
     const first = page.getByRole('article').first()
     await expect(first.getByRole('button', { name: 'Você' })).toBeVisible()
     await expect(first.getByRole('button', { name: 'Lara' })).toBeVisible()
     await snap(page, info, `donos-cartaz-${dono.slug}`)
-
-    // The Feedback: her Nota is hers; Lara's she relays.
-    await page.goto(`/sessoes/${id}/contar`)
-    const reaction = (slug: string, value: string) =>
-      page.locator(`input[name="reacao.${slug}"][value${value}]`)
-    await expect(reaction(dono.slug, '^="relato:"')).toHaveCount(0)
-    await expect(reaction('lara', '^="relato:"')).not.toHaveCount(0)
-    await page.locator('input[name="filme"]').first().check()
-    await reaction(dono.slug, '="nota:10"').check()
-    await page.getByText('ou dar nota de 1 a 10').click()
-    await reaction('lara', '="nota:8"').check()
-    await page.getByRole('button', { name: 'Gravar e fechar a Sessão' }).click()
-    await expect(page).toHaveURL(new RegExp(`/sessoes/${id}\\?feito=contada$`))
-    expect(await ratings(id)).toEqual(
-      [
-        [dono.slug, 0],
-        ['lara', 1],
-      ].toSorted(([a], [b]) => String(a).localeCompare(String(b))),
-    )
-
-    // Taste on her own page, Meu gosto.
-    await page.goto(`/pessoas/${dono.slug}`)
-    await expect(page).toHaveURL(/\/meu-gosto$/)
-    // Declarados is in the Afinar fold (#273).
-    await page.getByText(/^Afinar:/).click()
-    const area = section(page, 'Declarados')
-    await area.getByText('Acrescentar Declarado', { exact: true }).click()
-    const form = area.getByRole('form', { name: 'Acrescentar Declarado' })
-    await form
-      .getByLabel('O que foi dito')
-      .fill(`a ${dono.name} gosta de drama`)
-    await form.getByRole('button', { name: 'Gravar' }).click()
-    await expect(notice(page)).toHaveText('Gravado no seu arquivo.')
-    await expect(area).toContainText(`a ${dono.name} gosta de drama`)
+    await feedbackSpeakingForHerself(page, dono, id)
+    await writeOwnTaste(page, dono)
   })
 
 test('Bruno tells a Relato about Vera, and Vera sees it on her page', async ({
@@ -179,13 +189,7 @@ test('a new Dono sees the setup guide, and a skipped step stays skipped', async 
   page,
 }, info) => {
   const email = `nova-${info.project.name}@example.org`
-  await engineRun((engine) =>
-    engine.run(
-      personCreate({ name: `Nova ${info.project.name}`, owner: true, email }),
-    ),
-  ).catch((error: Error) => {
-    if (!error.message.includes('person_exists')) throw error
-  })
+  await addOwner(`Nova ${info.project.name}`, email)
   await loginAs(page, email)
   const guide = page.getByRole('region', { name: 'Para começar', exact: true })
   await expect(guide).toBeVisible()

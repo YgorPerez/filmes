@@ -120,7 +120,9 @@ describe('QueueScreen', () => {
       film: 'https://www.themoviedb.org/movie/9103',
     })
   })
+})
 
+describe('QueueScreen, confirming by hand and taking out', () => {
   it('confirms a film by the tconst or link the Dono types', async () => {
     render(<QueueScreen queue={QUEUE_PAGE} />)
     const user = userEvent.setup()
@@ -170,7 +172,9 @@ describe('QueueScreen', () => {
       reason: 'ignorar',
     })
   })
+})
 
+describe('QueueScreen, the Catálogo search', () => {
   it('finds another title in the Catálogo and confirms it with one tap', () => {
     render(
       <QueueScreen
@@ -216,7 +220,9 @@ describe('QueueScreen', () => {
       film: 'tt9000303',
     })
   })
+})
 
+describe('QueueScreen, decisions and notices', () => {
   it('names the film decided and takes the decision back', () => {
     render(
       <QueueScreen
@@ -267,7 +273,9 @@ describe('QueueScreen', () => {
       QUEUE.notices[notice](undefined, 2, 1),
     )
   })
+})
 
+describe('QueueScreen, reprocessing and refusals', () => {
   it('counts what reprocessing did', () => {
     expect(QUEUE.notices.reprocessado(undefined, 1, 0)).toBe(
       'Procurei de novo: 1 filme saiu da fila, 0 continuam.',

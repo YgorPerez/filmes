@@ -88,7 +88,9 @@ describe('the Cartaz shows', () => {
     )
     expect(within(again!).getAllByRole('article')).toEqual([cards()[1]])
   })
+})
 
+describe('the Cartaz shows, the Aposta and the shelf label', () => {
   it('a Session from before the Motivos: the cards with no section, as before', () => {
     render(<Billboard billboard={{ ...MODEL, sections: [] }} />)
     expect(cards().some((c) => c.closest('section') !== null)).toBe(false)
@@ -124,7 +126,9 @@ describe('the Cartaz shows', () => {
       'Saiu da prateleira: Sessão Maldita (Iara já viu)',
     )
   })
+})
 
+describe('the Cartaz shows, the header and the trailer', () => {
   it('the header: the w500 poster, the IMDb chip, the synopsis', () => {
     render(<Billboard billboard={MODEL} />)
     const horas = card(1)
@@ -158,7 +162,9 @@ describe('the Cartaz shows', () => {
     expect(document.querySelector('iframe')).toBeNull()
     expect(card(2).queryByRole('link', { name: 'trailer' })).toBeNull()
   })
+})
 
+describe('the Cartaz shows, shared Evidence and the Nota prevista', () => {
   it('a shared Evidence on one line, opened by the names, and who has no Fato on hers, with no Força', () => {
     render(<Billboard billboard={MODEL} />)
     const why = (n: number) =>
@@ -204,7 +210,9 @@ describe('the Cartaz shows', () => {
       card(1).getByRole('button', { name: 'Bruno: 8,3 de 10' }).textContent,
     ).toBe('8,3')
   })
+})
 
+describe('the Cartaz shows, Evidence, dots and the cover', () => {
   it('an Evidence about no Presente of the Cartaz, without a name before it', () => {
     const [, salt] = MODEL.films
     const film = {
@@ -253,7 +261,9 @@ describe('the Cartaz shows', () => {
       screen.queryByRole('button', { name: BILLBOARD.reply.send }),
     ).toBeNull()
   })
+})
 
+describe('the Cartaz shows, the chosen film', () => {
   it('a chosen film without a card in a block of its own, with each Reação', () => {
     render(<Billboard billboard={CHOSEN_OUTSIDE} />)
     const block = within(
@@ -287,7 +297,9 @@ describe('the Cartaz shows', () => {
       card(1).getByRole('heading', { level: 3, name: 'Filme escolhido' }),
     ).toBeTruthy()
   })
+})
 
+describe('the Cartaz shows, a Reação from outside', () => {
   it('a Reação of someone not on the Cartaz, by her slug', () => {
     render(
       <Billboard
@@ -314,7 +326,9 @@ describe('the Cartaz shows', () => {
       'teo: previsto 7 · neutro',
     )
   })
+})
 
+describe('the Cartaz shows, what was marked and the awards', () => {
   it('what the Dono marked before, the awards, a cautious Aposta, and a film whose why is its section', () => {
     const [hours, salt] = MODEL.films
     render(
@@ -362,7 +376,9 @@ describe('the Cartaz shows', () => {
     expect(card(1).getByText('Aposta mais exigente')).toBeTruthy()
     expect(card(1).queryByText(BILLBOARD.card.sectionWhy)).toBeNull()
   })
+})
 
+describe('the Cartaz shows, section lines and no film', () => {
   it('the lines every film of a section has, said once under its title', () => {
     const [hours, salt] = MODEL.films
     const shared = hours!.lines[0]!
@@ -434,7 +450,9 @@ describe('the marks', () => {
     // Trocar stamps the poster.
     expect(card(2).getAllByText(BILLBOARD.card.swapStamp)).toHaveLength(2)
   })
+})
 
+describe('the marks, Climas and Todos', () => {
   it('the Clima chips start at the version’s and ask for another in the text', async () => {
     const user = userEvent.setup()
     render(<Billboard billboard={MODEL} action="/x" />)
@@ -478,7 +496,9 @@ describe('the marks', () => {
     await user.click(card(1).getByRole('button', { name: /Todos/ }))
     expect(text()).toBe('#cartaz 2026-11-20-iara v2\n')
   })
+})
 
+describe('the marks, comments and stars', () => {
   it('the comment opens from Comentar, focused, and stays open with text', async () => {
     const user = userEvent.setup()
     render(<Billboard billboard={MODEL} action="/x" />)
@@ -554,7 +574,9 @@ describe('Enviar and Copiar pro chat', () => {
         Object.defineProperty(HTMLImageElement.prototype, 'complete', complete)
     }
   })
+})
 
+describe('Enviar and Copiar pro chat, the status and the bar', () => {
   it('a status line goes with the next mark, so it never contradicts the summary', async () => {
     const user = userEvent.setup()
     render(<Billboard billboard={MODEL} action="/x" />)
@@ -603,7 +625,9 @@ describe('Enviar and Copiar pro chat', () => {
     await user.click(card(1).getByRole('button', { name: 'Trocar' }))
     expect(screen.queryByRole('status')).toBeNull()
   })
+})
 
+describe('Enviar and Copiar pro chat, in the view and on the web', () => {
   it('in the MCP Apps view, Copiar waits for an Enviar that could not go', () => {
     render(
       <Billboard billboard={MODEL} onSend={vi.fn<(t: string) => void>()} />,
@@ -630,7 +654,9 @@ describe('Enviar and Copiar pro chat', () => {
       '#cartaz 2026-11-20-iara v2\n1 tt9000104 · trocar\n',
     )
   })
+})
 
+describe('Enviar and Copiar pro chat, the clipboard', () => {
   it('Copiar puts the text on the clipboard, or selected in a box', async () => {
     const user = userEvent.setup()
     const writeText = vi
@@ -831,9 +857,9 @@ describe('the marks kept in the browser', () => {
   })
 })
 
-describe('parseMarks', () => {
-  const store = (value: string) => value
+const store = (value: string) => value
 
+describe('parseMarks', () => {
   it('keeps only what reads, for the films and Presentes of the Cartaz', () => {
     const marks = parseMarks(
       store(
@@ -887,7 +913,9 @@ describe('parseMarks', () => {
     expect(marks([])).toEqual([])
     expect(marks('leve')).toBeNull()
   })
+})
 
+describe('parseMarks, what does not read', () => {
   it('gives none for what does not read', () => {
     const none = { addition: '', moods: null, films: {} }
     expect(parseMarks(store('{'), MODEL)).toEqual(none)

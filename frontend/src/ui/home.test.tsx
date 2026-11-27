@@ -121,9 +121,9 @@ describe('Home', () => {
   })
 })
 
-describe('Home, the latest Sessão', () => {
-  const card = () => screen.getByRole('region', { name: 'Última Sessão' })
+const card = () => screen.getByRole('region', { name: 'Última Sessão' })
 
+describe('Home, the latest Sessão', () => {
   it('shows it under "pedir filme", with its films and the way to tell how it went', () => {
     const { container } = show({ latest: SESSION })
     expect(
@@ -173,7 +173,9 @@ describe('Home, the latest Sessão', () => {
       }),
     ).toBeTruthy()
   })
+})
 
+describe('Home, the latest Sessão, its date and what comes next', () => {
   it.each([
     ['2026-11-22', 'Ontem'],
     ['2026-11-25', 'Sábado'],
@@ -260,7 +262,9 @@ describe('Home, the setup guide', () => {
     expect(screen.queryByRole('img', { name: /de 10 Notas/ })).toBeNull()
     expect(guide()!.textContent).toContain('Leva uns 2 minutos.')
   })
+})
 
+describe('Home, the setup guide, the MCP URL and skipped steps', () => {
   it('gives the MCP URL and how to add it in Claude, copies it and says where to paste', async () => {
     const writeText = vi.fn<(text: string) => Promise<void>>(
       async () => undefined,
@@ -309,7 +313,9 @@ describe('Home, the setup guide', () => {
     show(guiding({ taste: 'done', connector: 'done' }))
     expect(guide()).toBeNull()
   })
+})
 
+describe('Home, the setup guide, never blocking', () => {
   it('never blocks: "pedir filme" comes before the guide', () => {
     const { container } = show(guiding())
     const html = container.innerHTML

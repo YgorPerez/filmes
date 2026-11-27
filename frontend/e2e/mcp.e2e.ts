@@ -9,6 +9,7 @@ import {
   Client,
   StreamableHTTPClientTransport,
 } from '@modelcontextprotocol/client'
+import { type Page } from '@playwright/test'
 import { expect, test } from './server-test'
 
 /** A JSON answer's fields. */
@@ -28,28 +29,26 @@ async function firstFilm(client: Client, query: string) {
     ?.id
 }
 
-test('a client connects through Google and calls a tool with its token', async ({
-  page,
-  baseURL,
-}) => {
-  const origin = baseURL!
-  const unauthenticated = await fetch(`${origin}/mcp`, { method: 'POST' })
-  expect(unauthenticated.status).toBe(401)
-  expect(unauthenticated.headers.get('www-authenticate')).toContain(
-    `${origin}/.well-known/oauth-protected-resource`,
-  )
-  const metadata = await json(
-    await fetch(`${origin}/.well-known/oauth-authorization-server`),
-  )
-
-  const registered = await fetch(metadata.registration_endpoint, {
+/** Registers a client with the loopback redirect; gives its id. */
+async function register(endpoint: string) {
+  const registered = await fetch(endpoint, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ client_name: 'e2e', redirect_uris: [CALLBACK] }),
   })
   expect(registered.status).toBe(201)
   const { client_id: clientId } = await json(registered)
+  return clientId
+}
 
+/** Goes through `/oauth/authorize` and the stand-in Google as Bruno, with
+ * PKCE; gives the code at the loopback redirect and its verifier. */
+async function authorizeAsBruno(
+  page: Page,
+  metadata: Record<string, string>,
+  clientId: string,
+  origin: string,
+) {
   const verifier = randomBytes(32).toString('base64url')
   const authorize = new URL(metadata.authorization_endpoint)
   authorize.search = new URLSearchParams({
@@ -74,6 +73,30 @@ test('a client connects through Google and calls a tool with its token', async (
   await page.getByRole('button', { name: 'Continuar' }).click()
   await expect.poll(() => back?.searchParams.get('state')).toBe('e2e-state')
   const code = back!.searchParams.get('code')!
+  return { code, verifier }
+}
+
+test('a client connects through Google and calls a tool with its token', async ({
+  page,
+  baseURL,
+}) => {
+  const origin = baseURL!
+  const unauthenticated = await fetch(`${origin}/mcp`, { method: 'POST' })
+  expect(unauthenticated.status).toBe(401)
+  expect(unauthenticated.headers.get('www-authenticate')).toContain(
+    `${origin}/.well-known/oauth-protected-resource`,
+  )
+  const metadata = await json(
+    await fetch(`${origin}/.well-known/oauth-authorization-server`),
+  )
+
+  const clientId = await register(metadata.registration_endpoint)
+  const { code, verifier } = await authorizeAsBruno(
+    page,
+    metadata,
+    clientId,
+    origin,
+  )
 
   const token = await fetch(metadata.token_endpoint, {
     method: 'POST',

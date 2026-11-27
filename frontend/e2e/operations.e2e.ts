@@ -6,6 +6,7 @@
 
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { type Locator, type Page, type TestInfo } from '@playwright/test'
 import {
   accountMenu,
   engineRoot,
@@ -56,18 +57,13 @@ test('the admin consults the database, read-only', async ({ page }, info) => {
   await snap(page, info, 'operacoes-consulta-recusada')
 })
 
-test('the admin can retry a refused evaluation and read the report', async ({
-  page,
-}, info) => {
-  test.skip(info.project.name === 'mobile', 'one evaluation per server')
-  await loginAsBruno(page)
-  await page.goto('/operacoes')
-
-  // No remote in the e2e: the push is off, and says so.
-  await expect(section(page, 'Envio dos dados')).toContainText(
-    'O envio está desligado neste servidor',
-  )
-
+/** An Avaliar whose post the server refuses: the button waits while it
+ * goes, and the form stays as it was. */
+async function refusedEvaluation(
+  page: Page,
+  info: TestInfo,
+  evaluation: Locator,
+) {
   await page.locator('html').evaluate((root) => {
     root.dataset.evaluation = 'open'
   })
@@ -82,7 +78,6 @@ test('the admin can retry a refused evaluation and read the report', async ({
     { times: 1 },
   )
 
-  const evaluation = section(page, 'Avaliar a Recomendação')
   const grid = evaluation.getByRole('checkbox', {
     name: 'Testar outras combinações de pesos',
   })
@@ -105,7 +100,15 @@ test('the admin can retry a refused evaluation and read the report', async ({
   await expect(
     evaluation.getByRole('button', { name: 'Avaliar', exact: true }),
   ).toBeEnabled()
+  return grid
+}
 
+async function evaluationReport(
+  page: Page,
+  info: TestInfo,
+  evaluation: Locator,
+  grid: Locator,
+) {
   await grid.uncheck()
   await evaluation.getByRole('button', { name: 'Avaliar', exact: true }).click()
   await expect(page).toHaveURL(/\/operacoes\?feito=avaliando#avaliar$/)
@@ -127,4 +130,21 @@ test('the admin can retry a refused evaluation and read the report', async ({
 
   const report = join(engineRoot(), 'evaluations/2026-11-20.md')
   expect(readFileSync(report, 'utf8')).toContain('Recall@50')
+}
+
+test('the admin can retry a refused evaluation and read the report', async ({
+  page,
+}, info) => {
+  test.skip(info.project.name === 'mobile', 'one evaluation per server')
+  await loginAsBruno(page)
+  await page.goto('/operacoes')
+
+  // No remote in the e2e: the push is off, and says so.
+  await expect(section(page, 'Envio dos dados')).toContainText(
+    'O envio está desligado neste servidor',
+  )
+
+  const evaluation = section(page, 'Avaliar a Recomendação')
+  const grid = await refusedEvaluation(page, info, evaluation)
+  await evaluationReport(page, info, evaluation, grid)
 })

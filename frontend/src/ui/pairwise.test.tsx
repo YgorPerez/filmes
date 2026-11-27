@@ -72,7 +72,9 @@ describe('PairwiseQuestion', () => {
     )
     expect(screen.getByRole('alert').textContent).toBe(PAIRWISE.failed)
   })
+})
 
+describe('PairwiseQuestion, done or none', () => {
   it('thanks once every pair is answered, and says when none is asked', () => {
     const { rerender } = render(
       <PairwiseQuestion

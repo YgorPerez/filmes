@@ -7,7 +7,7 @@
 // capture of each screen there.
 
 import { personSkip, personView } from '@filmes/engine'
-import { type Page } from '@playwright/test'
+import { type Page, type TestInfo } from '@playwright/test'
 import {
   tab,
   engineRun,
@@ -67,24 +67,13 @@ async function vetoOutsideCatalog(page: Page) {
   return form
 }
 
-test('the Dono reads and changes a Pessoa’s taste', async ({ page }, info) => {
-  const slug = info.project.name === 'desktop' ? 'rosa' : 'teo'
-  const name = slug === 'rosa' ? 'Rosa' : 'Teo'
-  await loginAsBruno(page)
-
-  await tab(page, 'Pessoas').click()
-  await expect(page).toHaveURL(/\/pessoas$/)
-  await expect(page.getByRole('heading', { name: 'Pessoas' })).toBeVisible()
-  await expect(page.getByRole('link', { name: /Bruno.*Dono/ })).toBeVisible()
-  await snap(page, info, 'pessoas')
-
-  await page.getByRole('link', { name: new RegExp(name) }).click()
-  await expect(page).toHaveURL(new RegExp(`/pessoas/${slug}$`))
+/** Her page, open, under her name. */
+async function expectPersonPage(page: Page, url: RegExp, name: string) {
+  await expect(page).toHaveURL(url)
   await expect(page.getByRole('heading', { name })).toBeVisible()
-  await snap(page, info, 'pessoa-vazia')
-  // Every form below posts by fetch (#235): the page is never loaded again.
-  await markPage(page)
+}
 
+async function addTwoVetoes(page: Page, name: string) {
   // A Veto to a genre found by its name (#273), and one to a tag group.
   let form = await addForm(page, 'Vetos', 'Acrescentar Veto')
   await form.getByLabel('O Veto, como foi dito').fill('nunca vê terror')
@@ -101,16 +90,20 @@ test('the Dono reads and changes a Pessoa’s taste', async ({ page }, info) => 
   await form.getByText('lento', { exact: true }).click()
   await form.getByRole('button', { name: 'Gravar' }).click()
   await expect(section(page, 'Vetos')).toContainText('“nada lento”')
+}
 
+async function castAdjustmentToNothing(page: Page) {
   // The cast Ajuste down to nothing: a tap saves it, "gravado" beside it.
   await refine(page)
   const cast = () => page.getByRole('group', { name: /^Ajuste de elenco/ })
   await cast().getByText('nada', { exact: true }).click()
   await expect(cast().getByRole('status')).toContainText('gravado')
   await expect(cast().getByRole('radio', { name: 'nada' })).toBeChecked()
+}
 
+async function addStatedReportAndSeen(page: Page, info: TestInfo) {
   // A Declarado about an entity, a Relato, a Já visto with a Nota.
-  form = await addForm(page, 'Declarados', 'Acrescentar Declarado')
+  let form = await addForm(page, 'Declarados', 'Acrescentar Declarado')
   await form.getByLabel('O que foi dito').fill('adoro os filmes dela')
   await target(form, /^Sobre o quê/, 'sofia rangel', /^Usar Sofia Rangel/)
   await form.getByLabel('Reação').selectOption({ label: 'ama' })
@@ -133,15 +126,9 @@ test('the Dono reads and changes a Pessoa’s taste', async ({ page }, info) => 
   await expect(section(page, 'Já vistos sem Nota')).toContainText('Casa Cheia')
   await expect(section(page, 'Já vistos sem Nota')).toContainText('nota 8')
   await snap(page, info, 'pessoa-com-gosto')
+}
 
-  // Out again.
-  await page.getByRole('button', { name: 'Tirar nunca vê terror' }).click()
-  await expect(section(page, 'Vetos').getByRole('status')).toHaveText(
-    `Tirado do arquivo de ${name}.`,
-  )
-  await expect(section(page, 'Vetos')).not.toContainText('nunca vê terror')
-  await expectSamePage(page)
-
+async function engineReadsItBack(slug: string) {
   // The engine reads it all back from her file.
   const view = await engineView(slug)
   expect(view.vetoes.map((v) => v.target)).toEqual(['slow'])
@@ -154,6 +141,38 @@ test('the Dono reads and changes a Pessoa’s taste', async ({ page }, info) => 
   expect(view.reports.map((r) => r.text)).toEqual(['odeia filme lento'])
   // An 8 on the 1 to 10 scale is the engine's 4 of 5.
   expect(view.seen.map((s) => [s.film, s.rating])).toEqual([['tt9000602', 4]])
+}
+
+test('the Dono reads and changes a Pessoa’s taste', async ({ page }, info) => {
+  const slug = info.project.name === 'desktop' ? 'rosa' : 'teo'
+  const name = slug === 'rosa' ? 'Rosa' : 'Teo'
+  await loginAsBruno(page)
+
+  await tab(page, 'Pessoas').click()
+  await expect(page).toHaveURL(/\/pessoas$/)
+  await expect(page.getByRole('heading', { name: 'Pessoas' })).toBeVisible()
+  await expect(page.getByRole('link', { name: /Bruno.*Dono/ })).toBeVisible()
+  await snap(page, info, 'pessoas')
+
+  await page.getByRole('link', { name: new RegExp(name) }).click()
+  await expectPersonPage(page, new RegExp(`/pessoas/${slug}$`), name)
+  await snap(page, info, 'pessoa-vazia')
+  // Every form below posts by fetch (#235): the page is never loaded again.
+  await markPage(page)
+
+  await addTwoVetoes(page, name)
+  await castAdjustmentToNothing(page)
+  await addStatedReportAndSeen(page, info)
+
+  // Out again.
+  await page.getByRole('button', { name: 'Tirar nunca vê terror' }).click()
+  await expect(section(page, 'Vetos').getByRole('status')).toHaveText(
+    `Tirado do arquivo de ${name}.`,
+  )
+  await expect(section(page, 'Vetos')).not.toContainText('nunca vê terror')
+  await expectSamePage(page)
+
+  await engineReadsItBack(slug)
 })
 
 test('the Dono answers or skips an open question', async ({ page }, info) => {
@@ -259,8 +278,11 @@ test('the Dono adds a Pessoa, who is a Presente at once', async ({
   await form.getByLabel('Nome').fill(name)
   await form.getByLabel(/^Apelidos/).fill(name.slice(0, 2))
   await form.getByRole('button', { name: 'Acrescentar' }).click()
-  await expect(page).toHaveURL(new RegExp(`/pessoas/${slug}\\?feito=criada$`))
-  await expect(page.getByRole('heading', { name })).toBeVisible()
+  await expectPersonPage(
+    page,
+    new RegExp(`/pessoas/${slug}\\?feito=criada$`),
+    name,
+  )
   await expect(notice(page)).toHaveText(
     `Pessoa criada. Conte aqui o gosto de ${name}.`,
   )

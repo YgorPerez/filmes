@@ -146,7 +146,9 @@ describe('the console', () => {
       within(area).getByRole('button', { name: 'Consultar' }),
     ).toHaveProperty('type', 'submit')
   })
+})
 
+describe('the console, the table', () => {
   it('shows the table, NULL apart, and how many rows came', () => {
     const answer: ConsultAnswer = {
       sql: 'SELECT slug, apelido FROM pessoas',
@@ -195,7 +197,9 @@ describe('the console', () => {
       'Mostrando as primeiras 2 de 250 linhas. Use LIMIT e OFFSET para ver o resto.',
     )
   })
+})
 
+describe('the console, cells, empty answers and tables', () => {
   it('wraps a long cell at its words, in a column of its own', () => {
     const long = 'palavra '.repeat(8).trim()
     show(
@@ -247,7 +251,9 @@ describe('the console', () => {
       OPERATIONS.consult.queries.length,
     )
   })
+})
 
+describe('the console, refusals and errors', () => {
   it.each([
     ['read_only', 'O console só lê o banco. Use um SELECT.'],
     ['invalid_sql', 'O banco recusou o SQL.'],
@@ -324,7 +330,9 @@ describe('the evaluation', () => {
     expect(within(area).getByText(/Bruno iniciou/)).toBeTruthy()
     expect(within(area).queryByRole('button', { name: 'Avaliar' })).toBeNull()
   })
+})
 
+describe('the evaluation, following the run', () => {
   it('follows the run until it ends', async () => {
     const read = vi
       .fn<() => Promise<EvaluationPanel>>()
@@ -353,7 +361,9 @@ describe('the evaluation', () => {
       false,
     )
   })
+})
 
+describe('the evaluation, the measures', () => {
   it('shows the measures of the run that ended', () => {
     show(page({ evaluation: { ...IDLE, job: DONE } }))
     const area = region(OPERATIONS.evaluation.title)
@@ -404,7 +414,9 @@ describe('the evaluation', () => {
     )
     expect(screen.getByText('+5 pontos desde 13 nov 2026.')).toBeTruthy()
   })
+})
 
+describe('the evaluation, the weights, the report and the focus', () => {
   it('copies a better weight set as TOML', async () => {
     const writeText = vi.fn<(text: string) => Promise<void>>(async () => {})
     Object.defineProperty(navigator, 'clipboard', {
@@ -452,7 +464,9 @@ describe('the evaluation', () => {
       'Medindo o quanto a lista acerta',
     )
   })
+})
 
+describe('the evaluation, a run that stopped', () => {
   it('says why the run stopped', () => {
     show(
       page({
@@ -530,7 +544,9 @@ describe('the push', () => {
       sections.indexOf('consultar'),
     )
   })
+})
 
+describe('the push, a clear queue and pushing off', () => {
   it('shows that the queue is clear after a successful retry', () => {
     show(page({ push: { ...STATUS, lastPushedAt: '2026-11-20T15:00:00Z' } }), {
       notice: 'enviado',

@@ -124,7 +124,9 @@ describe('the view shows', () => {
     render(<BillboardView result={odd} host={fakeHost(json({}))} />)
     expect(screen.getByRole('alert').textContent).toBe(view.error(null))
   })
+})
 
+describe('the view shows, with no text or as the page', () => {
   it('a result with no text at all is an error too', () => {
     render(
       <BillboardView result={{ isError: true }} host={fakeHost(json({}))} />,
@@ -188,7 +190,9 @@ describe('Enviar', () => {
     await user.click(screen.getByRole('button', { name: copy.send }))
     expect(host.callTool).toHaveBeenCalledTimes(2)
   })
+})
 
+describe('Enviar, stars, comments and refusals', () => {
   it('stars alone are recorded, without a chat message', async () => {
     const host = fakeHost(json({ ...REPLY, regenerate: false, keep: [] }))
     const user = userEvent.setup()
@@ -242,7 +246,9 @@ describe('Enviar', () => {
       ),
     ).toBeTruthy()
   })
+})
 
+describe('Enviar, a message refused and one send at a time', () => {
   it('recorded but the message did not go: says so', async () => {
     const refusedMessage = fakeHost(json(REPLY), { isError: true })
     render(<BillboardView result={shown} host={refusedMessage} />)
@@ -278,9 +284,9 @@ describe('Enviar', () => {
   })
 })
 
-describe('the chat follow-up message', () => {
-  const people = MODEL.attendees
+const people = MODEL.attendees
 
+describe('the chat follow-up message', () => {
   it('her words first, the Cartaz’s tag, and the detail apart', () => {
     const message = replyMessage(
       {
@@ -335,7 +341,9 @@ describe('the chat follow-up message', () => {
       'comentário 2 tt2 (Sal e Ferrugem): lindo',
     ])
   })
+})
 
+describe('the chat follow-up message, for the Dono and her Climas', () => {
   it('the Dono alone: Já vi, with her note', () => {
     const message = replyMessage(
       {
@@ -373,7 +381,9 @@ describe('the chat follow-up message', () => {
       'clima: nenhum',
     ])
   })
+})
 
+describe('the chat follow-up message, for others who saw it', () => {
   it('others who saw it, by name or slug, and films without a title', () => {
     const message = replyMessage(
       {
@@ -424,7 +434,9 @@ describe('the chat follow-up message', () => {
       'comentário 4 tt4: curto',
     ])
   })
+})
 
+describe('the chat follow-up message, alone, none or long', () => {
   it('a comment alone, without a redo', () => {
     const message = replyMessage(
       {
@@ -511,7 +523,9 @@ describe('mountView', () => {
     })
     root.remove()
   })
+})
 
+describe('mountView, the safe area', () => {
   it('the host’s safe area becomes the bar’s inset', async () => {
     const app = fakeApp({
       displayMode: 'fullscreen',
@@ -532,7 +546,9 @@ describe('mountView', () => {
     expect(style.getPropertyValue('--host-inset-top')).toBe('8px')
     root.remove()
   })
+})
 
+describe('mountView, inline', () => {
   it('inline, the compact card: one line per film, Marcar asks for fullscreen', async () => {
     const app = fakeApp({
       displayMode: 'inline',
@@ -566,7 +582,9 @@ describe('mountView', () => {
     expect(document.documentElement.dataset.theme).toBeUndefined()
     root.remove()
   })
+})
 
+describe('mountView, from fullscreen back inline', () => {
   it('the marks made in fullscreen go with Enviar back inline', async () => {
     const modes = { availableDisplayModes: ['inline', 'fullscreen'] }
     const app = fakeApp({ displayMode: 'fullscreen', ...modes })
@@ -603,7 +621,9 @@ describe('mountView', () => {
     ).toBeTruthy()
     root.remove()
   })
+})
 
+describe('mountView, Limpar inline', () => {
   it('inline, Limpar takes every mark off', async () => {
     const modes = { availableDisplayModes: ['inline', 'fullscreen'] }
     const app = fakeApp({ displayMode: 'fullscreen', ...modes })

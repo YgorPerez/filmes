@@ -117,7 +117,9 @@ describe('FeedbackScreen', () => {
       },
     })
   })
+})
 
+describe('FeedbackScreen, Relatos and the choice', () => {
   it('records a Relato of the Dono about another Presente', async () => {
     const { user, form } = show()
     await user.click(screen.getByLabelText(/Pequenos Milagres/))
@@ -169,7 +171,9 @@ describe('FeedbackScreen', () => {
     await user.click(screen.getByLabelText(/Não vimos nada/))
     expect(posted(form)).toEqual({ ok: { film: null, reactions: [] } })
   })
+})
 
+describe('FeedbackScreen, checks and satisfaction', () => {
   it('omits reactions when the choice changes to "não vimos nada"', async () => {
     const { user, form } = show()
     await user.click(screen.getByLabelText(/O Farol de Areia/))
@@ -220,7 +224,9 @@ describe('FeedbackScreen', () => {
       screen.queryByRole('region', { name: FEEDBACK.satisfaction.title }),
     ).toBe(null)
   })
+})
 
+describe('FeedbackScreen, refusals', () => {
   it('says every refusal, and when the Session is not open', () => {
     for (const refusal of FEEDBACK_REFUSALS) {
       render(<FeedbackScreen session={PAGE.id} page={PAGE} refusal={refusal} />)

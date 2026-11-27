@@ -41,7 +41,9 @@ describe('PeopleList', () => {
     expect(html.match(new RegExp(`>${PEOPLE.owner}<`, 'g'))).toHaveLength(1)
     expect(html).not.toContain('role="alert"')
   })
+})
 
+describe('PeopleList, the logged-in Dono', () => {
   it('lists the logged-in Dono first, linking to Meu gosto', () => {
     render(
       <PeopleList
@@ -84,7 +86,9 @@ describe('PeopleList', () => {
     ])
     expect(links[0]?.textContent).toContain(PEOPLE.myTaste)
   })
+})
 
+describe('PeopleList, what it knows and when empty', () => {
   it('says how much the filmes knows of each one', () => {
     render(
       <PeopleList
@@ -200,7 +204,9 @@ describe('PeopleList create form', () => {
     await user.type(fields.getByLabelText(PEOPLE.create.name), 'Farias')
     expect(posted()).toBe('email')
   })
+})
 
+describe('PeopleList create form, a taken name', () => {
   it('says a name another Pessoa has apart from a taken file name', () => {
     render(
       <PeopleList
@@ -212,7 +218,9 @@ describe('PeopleList create form', () => {
     expect(alert).toContain(PEOPLE.create.refusals['nome-usado'])
     expect(alert).not.toContain(PEOPLE.create.refusals.existe)
   })
+})
 
+describe('PeopleList create form, refusals', () => {
   it('comes back open with the reason and what the Dono typed', () => {
     render(
       <PeopleList

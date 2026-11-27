@@ -23,6 +23,17 @@ const search = (page: Page, query: string) =>
 const results = (page: Page) =>
   section(page, 'Buscar no Catálogo').getByRole('listitem')
 
+/** Opens a Session for Bruno alone and goes to its Feedback, as him. */
+async function openFeedbackOfNewSession(page: Page) {
+  const { session } = await engineRun((engine) =>
+    engine.run(recommendSession({ attendees: ['dono'], count: 2 }), {
+      owner: 'bruno',
+    }),
+  )
+  await loginAsBruno(page)
+  await page.goto(`/sessoes/${encodeURIComponent(session.id)}/contar`)
+}
+
 test('Nova Sessão: two searches fill “Parecido com”', async ({
   page,
 }, info) => {
@@ -50,13 +61,7 @@ test('Nova Sessão: two searches fill “Parecido com”', async ({
 test('Feedback: the film the search found is “Outro filme”', async ({
   page,
 }, info) => {
-  const { session } = await engineRun((engine) =>
-    engine.run(recommendSession({ attendees: ['dono'], count: 2 }), {
-      owner: 'bruno',
-    }),
-  )
-  await loginAsBruno(page)
-  await page.goto(`/sessoes/${encodeURIComponent(session.id)}/contar`)
+  await openFeedbackOfNewSession(page)
   await page.getByLabel('Outro filme').check()
   await search(page, 'fronteira (2012)')
   await expect(results(page)).toHaveCount(1)
@@ -72,13 +77,7 @@ test('Feedback: the film the search found is “Outro filme”', async ({
 test('Feedback: the search and its “Usar” keep the reactions and comments', async ({
   page,
 }) => {
-  const { session } = await engineRun((engine) =>
-    engine.run(recommendSession({ attendees: ['dono'], count: 2 }), {
-      owner: 'bruno',
-    }),
-  )
-  await loginAsBruno(page)
-  await page.goto(`/sessoes/${encodeURIComponent(session.id)}/contar`)
+  await openFeedbackOfNewSession(page)
   // The reactions show once a film is chosen (#272).
   await page.getByLabel('Outro filme').check()
   const nine = page.locator('input[name="reacao.bruno"][value="nota:9"]')

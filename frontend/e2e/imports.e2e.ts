@@ -7,16 +7,12 @@
 
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import {
-  personCreate,
-  personImports,
-  personView,
-  viewQueue,
-} from '@filmes/engine'
-import { type Page } from '@playwright/test'
+import { personImports, personView, viewQueue } from '@filmes/engine'
+import { type Locator, type Page, type TestInfo } from '@playwright/test'
 import { zipOf } from '../../packages/engine/test/imports/zip.ts'
 import {
   tab,
+  addOwner,
   addPerson,
   engineRun,
   expect,
@@ -100,12 +96,7 @@ async function removeImport(page: Page, original: string) {
     .click()
 }
 
-test('the Dono imports a Letterboxd ZIP and works the queue', async ({
-  page,
-}, info) => {
-  test.skip(info.project.name !== 'desktop', 'the queue is shared: one project')
-  await addPerson('Olga')
-  await loginAsBruno(page)
+async function openOlgaImports(page: Page, info: TestInfo) {
   // A Pessoa's imports are on her page, under Pessoas.
   await tab(page, 'Pessoas').click()
   await page.getByRole('link', { name: /Olga/ }).click()
@@ -130,7 +121,10 @@ test('the Dono imports a Letterboxd ZIP and works the queue', async ({
   ).toHaveAttribute('href', 'https://letterboxd.com/settings/data/')
   await expect((await profile(page)).getByRole('checkbox')).toHaveCount(1)
   await snap(page, info, 'importar-pessoa-vazia')
+}
 
+/** Gives the section of what came in. */
+async function importOlgaZip(page: Page, info: TestInfo) {
   await upload(page, 'letterboxd-olga.zip', folderZip('letterboxd/olga'))
   await expect(notice(page)).toContainText(
     'O ZIP do Letterboxd entrou: entraram',
@@ -144,7 +138,12 @@ test('the Dono imports a Letterboxd ZIP and works the queue', async ({
     '2 filmes do Letterboxd esperam você confirmar qual é',
   )
   await snap(page, info, 'importar-letterboxd')
+  return letterboxd
+}
 
+/** Refuses what is not a film, confirms Vento Norte, takes it back and
+ * confirms it again; gives the section of Filme Perdido. */
+async function confirmInQueue(page: Page, info: TestInfo, letterboxd: Locator) {
   await letterboxd.getByRole('link', { name: 'Resolver agora' }).click()
   await expect(page).toHaveURL(/\/meu-gosto\/fila$/)
   const wind = section(page, 'Vento Norte (2020)')
@@ -183,7 +182,10 @@ test('the Dono imports a Letterboxd ZIP and works the queue', async ({
     .getByRole('button', { name: 'É este: Vento Norte (2020)', exact: true })
     .click()
   await expect(section(page, 'Vento Norte (2020)')).toHaveCount(0)
+  return lost
+}
 
+async function dropAndSearchAgain(page: Page, info: TestInfo, lost: Locator) {
   await lost
     .getByRole('button', { name: 'Não é filme: Filme Perdido (2001)' })
     .click()
@@ -198,7 +200,9 @@ test('the Dono imports a Letterboxd ZIP and works the queue', async ({
     .click()
   await expect(notice(page)).toContainText('Procurei de novo')
   await snap(page, info, 'fila-decidida')
+}
 
+async function readRssAndRemoveZip(page: Page, info: TestInfo) {
   await page.goto('/importar/olga')
   // Nothing waits for her: the count says 0 and no film asks to be solved.
   await expect(section(page, RESULTS)).toContainText('esperam você0')
@@ -224,6 +228,19 @@ test('the Dono imports a Letterboxd ZIP and works the queue', async ({
   expect((await importsOf('olga')).imports.map((i) => i.kind)).toEqual([
     'letterboxd-rss',
   ])
+}
+
+test('the Dono imports a Letterboxd ZIP and works the queue', async ({
+  page,
+}, info) => {
+  test.skip(info.project.name !== 'desktop', 'the queue is shared: one project')
+  await addPerson('Olga')
+  await loginAsBruno(page)
+  await openOlgaImports(page, info)
+  const letterboxd = await importOlgaZip(page, info)
+  const lost = await confirmInQueue(page, info, letterboxd)
+  await dropAndSearchAgain(page, info, lost)
+  await readRssAndRemoveZip(page, info)
 })
 
 test('the Dono imports a Trakt ZIP; a ZIP of neither and a profile that does not exist say so', async ({
@@ -384,13 +401,7 @@ test('a Dona with no history rates from the Fila and the search, then Pronto', a
 }, info) => {
   const slug = `nina-${info.project.name}`
   const email = `${slug}@example.org`
-  await engineRun((engine) =>
-    engine.run(
-      personCreate({ name: `Nina ${info.project.name}`, owner: true, email }),
-    ),
-  ).catch((error: Error) => {
-    if (!/taken|exists/.test(error.message)) throw error
-  })
+  await addOwner(`Nina ${info.project.name}`, email)
   await loginAs(page, email)
   await page.getByRole('link', { name: 'Dar notas' }).click()
   await expect(page).toHaveURL(/\/meu-gosto\/notas$/)

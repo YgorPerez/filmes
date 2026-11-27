@@ -56,7 +56,9 @@ describe('the Operações copy', () => {
     expect(COPY.priority('online')).toMatch(/^Já há Sessões suficientes/u)
     expect(COPY.priority('offline')).toMatch(/^Ainda há poucas Sessões/u)
   })
+})
 
+describe('the Operações copy, weights and rows', () => {
   it('names a weight it knows and writes the key of one it does not', () => {
     expect(
       COPY.change({
