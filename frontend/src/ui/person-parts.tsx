@@ -568,9 +568,13 @@ function CatalogResults({
   answer,
   pick,
   onPick,
+  onEntityPick,
   filmLabel = filmText,
 }: Pick & {
   answer: SearchAnswer
+  /** "Usar" on a director, a genre or a series too: only where an entity
+   * can be the target. */
+  onEntityPick?: Pick['onPick']
   /** How a picked film is named: its title, or its chip. */
   filmLabel?: (film: FilmRef) => string
 }) {
@@ -578,7 +582,7 @@ function CatalogResults({
   if ('refused' in answer) return <Alert>{refusals[answer.refused]}</Alert>
   const { films, people, genres, series } = answer.found
   const entities = (list: readonly EntityMatch[]) =>
-    list.map((e) => <EntityItem key={e.id} entity={e} onPick={onPick} />)
+    list.map((e) => <EntityItem key={e.id} entity={e} onPick={onEntityPick} />)
   const empty =
     films.length + people.length + genres.length + series.length === 0
   return (
@@ -735,6 +739,9 @@ export function TargetField({
             PERSON.targetChip(filmText(film), PERSON.filmKind)
           }
           onPick={(film) => setPicked(film)}
+          onEntityPick={
+            scope === 'films' ? undefined : (entity) => setPicked(entity)
+          }
         />
       )}
       {groups.length > 0 && <GroupPills groups={groups} />}
