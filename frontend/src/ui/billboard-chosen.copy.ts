@@ -11,6 +11,8 @@ export const CHOSEN = {
   /** Her Nota on the Já vi's scale, said with it (#272). */
   rating: (rating: string) => `deu ${rating} de 10`,
   reaction: { liked: 'gostou', neutral: 'neutro', disliked: 'não gostou' },
+  /** Her comment in the Feedback, quoted (#272). */
+  comment: (text: string) => `“${text}”`,
   line: (name: string, parts: readonly string[]) =>
     `${name}: ${parts.join(' · ')}`,
 } as const

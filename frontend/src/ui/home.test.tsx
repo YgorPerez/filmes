@@ -51,6 +51,8 @@ const SESSION: LatestSession = {
   chosen: null,
   moods: [],
   constraints: [],
+  version: 1,
+  additions: [],
 }
 
 const show = (home: Partial<HomeData> = {}) =>
@@ -198,7 +200,7 @@ describe('Home, the latest Sessão, its date and what comes next', () => {
         chosen: { id: 'tt2', title: 'Maré Baixa' },
       },
     })
-    expect(card().textContent).toContain('vimos Maré Baixa')
+    expect(card().textContent).toContain('Viram Maré Baixa')
     expect(card().textContent).not.toContain('Falta contar como foi')
     expect(card().querySelector('a[href$="/contar"]')).toBeNull()
   })

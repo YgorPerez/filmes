@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { BILLBOARD } from './billboard.copy'
 import { chosenMoods, hasMarks, type Marks } from './billboard-marks'
 import { buttonVariants } from './kit/button-variants'
+import { Icon } from './kit/icon'
 import { FIELD } from './kit/field'
 import { Option } from './kit/option'
 
@@ -147,11 +148,19 @@ function MoodChips({
   // Folded: any chip redoes the whole list, so it takes a tap to reach
   // them (#277); open once the Dono changed the Clima.
   return (
-    <details open={marks.moods !== null} className="flex flex-col gap-xs">
-      <summary className="flex min-h-touch cursor-pointer items-center font-display text-field-label">
+    <details
+      open={marks.moods !== null}
+      className="group/moods rounded-field border border-rule"
+    >
+      {/* The kit's fold (#272): the drawn +, a × while open. */}
+      <summary className="flex min-h-touch cursor-pointer list-none items-center justify-between gap-sm px-3 font-display text-field-label select-none [&::-webkit-details-marker]:hidden">
         {reply.moodsOpen}
+        <Icon
+          name="plus"
+          className="size-[18px] text-ink-2 transition-[rotate] group-open/moods:rotate-45 motion-reduce:transition-none"
+        />
       </summary>
-      <fieldset className="flex flex-col gap-xs">
+      <fieldset className="flex flex-col gap-xs border-t border-rule p-lg">
         <legend className="mb-xs font-display text-field-label">
           {reply.moods}{' '}
           <span className="font-body font-normal text-ink-2">

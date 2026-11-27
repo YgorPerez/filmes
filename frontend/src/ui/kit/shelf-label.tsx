@@ -5,7 +5,8 @@ import { Fragment } from 'react'
 // dots (orange, green, pink, repeating), and the Dono's words in marker on
 // the yellow paper beside it. A screen reader gets the whole request from
 // the `aria-label`; the items and the dots are hidden from it (The Shelf
-// Label Rule).
+// Label Rule). What she added later (an acrescentar of the Cartaz) goes on
+// papers of its own under the first, tilted the other way (#272).
 
 const DOTS = ['bg-sticker-orange', 'bg-sticker-green', 'bg-sticker-pink']
 
@@ -15,6 +16,7 @@ export function ShelfLabel({
   items,
   label,
   note,
+  added = [],
   compact = false,
   single = false,
   tag,
@@ -23,6 +25,8 @@ export function ShelfLabel({
   label?: string
   /** What the Dono said, on the yellow paper; none without it. */
   note?: string | null
+  /** What she added since, each on its own paper, after `note`. */
+  added?: readonly string[]
   /** 15px on the label and 16px on the paper: Claude's inline card and
    * the top of its fullscreen. */
   compact?: boolean
@@ -84,6 +88,11 @@ export function ShelfLabel({
         )}
       </div>
       {note && <HandNote compact={compact}>{note}</HandNote>}
+      {added.map((words) => (
+        <HandNote key={words} compact={compact} tilt="right">
+          {`+ ${words}`}
+        </HandNote>
+      ))}
     </div>
   )
 }
@@ -93,13 +102,16 @@ export function ShelfLabel({
 export function HandNote({
   children,
   compact = false,
+  tilt = 'left',
 }: {
   children: string
   compact?: boolean
+  /** -2°, or 1.5° the other way for a paper added under another. */
+  tilt?: 'left' | 'right'
 }) {
   return (
     <p
-      className={`-rotate-2 rounded-note bg-sticker-yellow px-xl pt-1.25 pb-2xs font-hand text-on-sticker ${compact ? 'text-hand-compact' : 'text-hand'}`}
+      className={`${tilt === 'left' ? '-rotate-2' : 'rotate-[1.5deg]'} rounded-note bg-sticker-yellow px-xl pt-1.25 pb-2xs font-hand text-on-sticker ${compact ? 'text-hand-compact' : 'text-hand'}`}
     >
       {children}
     </p>

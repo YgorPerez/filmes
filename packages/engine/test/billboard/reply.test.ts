@@ -10,7 +10,9 @@ import { join } from 'node:path'
 import { describe, expect, test } from 'vite-plus/test'
 import {
   answerBillboard,
+  billboardModel,
   billboardText,
+  listSessions,
   parseYaml,
   personView,
   recommendSession,
@@ -225,6 +227,12 @@ describe('cartaz responder (test_cartaz_responder)', () => {
     expect(top['versions'][0]['replies'][0]['films']).toEqual([
       { position: left.position, id: left.id, stars: 3 },
     ])
+    // The list gives the stars and the films that left the shelf (#272).
+    const { sessions } = await fixture.ok(listSessions)
+    const listed = sessions.find((s) => s.id === id)!
+    expect(listed.stars).toEqual({ [left.id]: 3 })
+    expect(listed.earlier).toContainEqual({ id: left.id, title: left.title })
+    expect(listed.earlier.map((e) => e.id)).not.toContain(second.films[0]!.id)
   })
 
   test('the current version’s replies go with it when the Session is redone', async () => {
@@ -524,6 +532,13 @@ describe('cartaz responder (test_cartaz_responder)', () => {
       { date: '2026-11-20', addition: 'chegou a Ana' },
     ])
     expect([out.regenerate, out.keep]).toEqual([true, f.map((x) => x.id)])
+    // The Cartaz and the list say it after the words she opened with (#272).
+    const model = await fixture.ok(billboardModel({ session: id }))
+    expect(model.request.additions).toEqual(['chegou a Ana'])
+    const { sessions } = await fixture.ok(listSessions)
+    expect(sessions.find((s) => s.id === id)?.additions).toEqual([
+      'chegou a Ana',
+    ])
   })
 })
 

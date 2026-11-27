@@ -27,6 +27,7 @@ const ASKED: RecommendSessionRequest = {
   unseen: true,
   noSlow: true,
   noSad: true,
+  noMoods: ['tenso'],
   similar: ['tt9000104'],
 }
 
@@ -57,6 +58,7 @@ describe('sessionRedoRequest', () => {
       unseen: true,
       noSlow: true,
       noSad: true,
+      noMoods: ['tenso'],
     })
     // Redone with it, the Session keeps every Restrição it had.
     const redone = await fixture.ok(recommendSession(request))

@@ -54,6 +54,10 @@ export type SessionItem = {
   moods: string[]
   /** The Restrições' labels ("até 2h", "com criança de 7 anos"). */
   constraints: string[]
+  /** The current version: 2 after one redo (#272). */
+  version: number
+  /** What the Dono added from the Cartaz, in order. */
+  additions: string[]
 }
 
 /** What the form offers: every Pessoa (the logged-in Dono first, and
@@ -102,6 +106,8 @@ function item(
           },
     moods: [...s.moods],
     constraints: [...s.constraints],
+    version: s.version,
+    additions: [...s.additions],
   }
 }
 
@@ -327,6 +333,7 @@ export function repeatDraft(asked: RecommendSessionRequest): NewSessionDraft {
       unseen: asked.unseen,
       noSlow: asked.noSlow,
       noSad: asked.noSad,
+      noMoods: asked.noMoods && [...asked.noMoods],
     },
     reading: null,
   }

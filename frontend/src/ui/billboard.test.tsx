@@ -313,6 +313,7 @@ describe('the Cartaz shows, a Reação from outside', () => {
                 predicted: '7',
                 rating: null,
                 reaction: 'neutral',
+                comment: null,
               },
             ],
           },

@@ -118,8 +118,8 @@ export const HOME = {
     open: 'Falta contar como foi',
     openText: 'Viram algum? Conte qual e o que cada um achou.',
     feedback: 'Contar como foi',
-    chosen: (title: string) => `vimos ${title}`,
-    nothing: 'não vimos nada',
+    chosen: (title: string) => `Viram ${title}`,
+    nothing: 'Não viram nada',
     billboard: 'Ver o Cartaz',
     again: 'Pedir de novo:',
     againWhat: (names: readonly string[], constraints: readonly string[]) =>

@@ -149,6 +149,7 @@ function Request({
       }
       items={[billboard.request.who, ...billboard.request.parts]}
       note={single ? null : billboard.request.speech}
+      added={single ? [] : billboard.request.additions}
     />
   )
 }
@@ -352,6 +353,11 @@ function FullscreenBody({
           <HandNote compact>{speech}</HandNote>
         </div>
       )}
+      {billboard.request.additions.map((words) => (
+        <div key={words} className="flex">
+          <HandNote compact tilt="right">{`+ ${words}`}</HandNote>
+        </div>
+      ))}
       {billboard.open && <Dropped billboard={billboard} />}
       {billboard.films.length > 0 && <PeopleLegend billboard={billboard} />}
       {children}

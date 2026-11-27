@@ -24,6 +24,19 @@ export const WithNote: Story = {
   },
 }
 
+/** What the Dono added from the Cartaz, on papers of its own (#272). */
+export const WithAdditions: Story = {
+  args: {
+    note: 'eu, a Iara e o Teo, algo leve',
+    added: ['chegou a Rosa', 'nada de terror'],
+  },
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByText('+ chegou a Rosa'),
+    ).toBeVisible()
+  },
+}
+
 export const ItemsOnly: Story = {}
 
 export const Compact: Story = {

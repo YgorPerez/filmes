@@ -64,6 +64,9 @@ const PAGE: FeedbackPage = {
   attendees: [{ person: 'bruno', name: 'Bruno', owner: true }],
   moods: [],
   constraints: [],
+  additions: [],
+  stars: {},
+  earlier: [],
   recommendation: [],
   satisfaction: [],
 }
