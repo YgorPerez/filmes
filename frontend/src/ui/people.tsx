@@ -33,6 +33,13 @@ const selfFirst = (people: PersonEntry[], self?: string) => [
   ...people.filter((p) => p.person !== self),
 ]
 
+/** Her aliases on her row: on the logged-in Dono's, "eu", how she says
+ * herself in the chat, is no name to show beside "Meu gosto" (#273). */
+const aliasesOf = (aliases: readonly string[], self: boolean) =>
+  self
+    ? aliases.filter((alias) => alias.trim().toLowerCase() !== 'eu')
+    : aliases
+
 /** What the filmes knows of her, on her row (#273): "4 Notas · 1 Veto",
  * or "falta conhecer". Without a database, only the Vetos. */
 const knownOf = ({ ratings, vetoes }: PersonEntry) => {
@@ -79,7 +86,8 @@ export function PeopleList({
       ) : (
         <ul className="flex flex-col gap-xs" aria-label={PEOPLE.title}>
           {selfFirst(people, self).map((entry) => {
-            const { person, name, aliases, owner } = entry
+            const { person, name, owner } = entry
+            const aliases = aliasesOf(entry.aliases, person === self)
             return (
               <li key={person}>
                 <a

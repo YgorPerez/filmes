@@ -66,8 +66,8 @@ export const PERSON_IMPORTS = {
     own ? 'Importar Notas' : `Importar as Notas de ${name}`,
   lead: (name: string, own: boolean) =>
     own
-      ? 'Traga o que você já viu e as Notas que deu em outro site. O filmes guarda o arquivo e lê os filmes dele.'
-      : `Traga o que ${name} já viu e as Notas que deu em outro site. O filmes guarda o arquivo e lê os filmes dele.`,
+      ? 'Traga o que você já viu e as Notas que deu em outro site. O filmes guarda o arquivo e lê esses filmes.'
+      : `Traga o que ${name} já viu e as Notas que deu em outro site. O filmes guarda o arquivo e lê esses filmes.`,
   unknown: 'Nenhuma Pessoa com esse nome no repo de dados.',
   unavailable: UNAVAILABLE,
   notices: {
@@ -105,7 +105,7 @@ export const PERSON_IMPORTS = {
       'Isso não é um nome de perfil do Letterboxd. Use só o nome, que aparece no endereço do perfil (letterboxd.com/nome), ou o endereço inteiro.',
     rss: 'O Letterboxd não tem um perfil com esse nome. Confira como ele aparece no endereço do perfil (letterboxd.com/nome).',
     fonte: 'O Letterboxd não respondeu agora. Tente de novo daqui a pouco.',
-    item: 'Esse import já não está no arquivo dela.',
+    item: 'Esse import já não está aqui: alguém o tirou.',
     'trakt-usuario':
       'O Trakt não tem um perfil com esse nome. Use o nome que aparece no endereço do perfil (trakt.tv/users/nome).',
     'trakt-privado':
