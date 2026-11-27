@@ -272,7 +272,10 @@ test('the Dono shares the current films with a Presente who has no login', async
     await expect(
       participant.getByRole('heading', { name: 'Quem é você?' }),
     ).toBeVisible()
-    await expect(participant.getByRole('link', { name: 'Bruno' })).toBeVisible()
+    // The Dono who opened it is no guest to pick (#275).
+    await expect(participant.getByRole('link', { name: 'Bruno' })).toHaveCount(
+      0,
+    )
     await expect(participant.getByRole('link', { name: 'Iara' })).toHaveCount(0)
     await snap(participant, info, 'sessao-escolher-presente')
     const choice = participant.getByRole('link', { name, exact: true })

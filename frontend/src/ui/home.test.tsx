@@ -51,6 +51,8 @@ const SESSION: LatestSession = {
   chosen: null,
   moods: [],
   constraints: [],
+  version: 1,
+  additions: [],
 }
 
 const show = (home: Partial<HomeData> = {}) =>
@@ -133,9 +135,7 @@ describe('Home, the latest Sessão', () => {
     expect(card().textContent).toContain('algo leve')
     expect(card().textContent).toContain('Falta contar como foi')
     expect(
-      within(card()).getByRole('link', {
-        name: 'Contar como foi a Sessão 2026-11-21-1',
-      }),
+      within(card()).getByRole('link', { name: 'Contar como foi' }),
     ).toHaveProperty('pathname', '/sessoes/2026-11-21-1/contar')
     const html = container.innerHTML
     expect(html.indexOf('Pedir filme')).toBeLessThan(
@@ -168,9 +168,7 @@ describe('Home, the latest Sessão', () => {
     ).toHaveProperty('pathname', '/sessoes/2026-11-21-1')
     expect(card().textContent).not.toContain('Falta contar como foi')
     expect(
-      within(card()).getByRole('link', {
-        name: 'Contar como foi a Sessão 2026-11-21-1',
-      }),
+      within(card()).getByRole('link', { name: 'Contar como foi' }),
     ).toBeTruthy()
   })
 })
@@ -202,7 +200,7 @@ describe('Home, the latest Sessão, its date and what comes next', () => {
         chosen: { id: 'tt2', title: 'Maré Baixa' },
       },
     })
-    expect(card().textContent).toContain('vimos Maré Baixa')
+    expect(card().textContent).toContain('Viram Maré Baixa')
     expect(card().textContent).not.toContain('Falta contar como foi')
     expect(card().querySelector('a[href$="/contar"]')).toBeNull()
   })
@@ -217,8 +215,18 @@ describe('Home, the setup guide', () => {
         .getAllByRole('heading', { level: 3 })
         .map((h) => h.textContent),
     ).toEqual(['Meu gostofeito, 12 notas', 'Conector no Claude, falta fazer'])
-    expect(region.textContent).toContain('a lista sai só com palpites')
     expect(within(region).queryByRole('progressbar')).toBeNull()
+  })
+
+  it('says what Meu gosto buys her only while it is pending', () => {
+    show(guiding())
+    expect(guide()!.textContent).toContain('a lista sai só com palpites')
+    cleanup()
+    show(guiding({ taste: 'done' }, 12))
+    expect(guide()!.textContent).not.toContain('palpites')
+    cleanup()
+    show(guiding({ taste: 'skipped' }))
+    expect(guide()!.textContent).not.toContain('palpites')
   })
 
   it('gives Meu gosto both ways to do it, and each pending step a "pular"', () => {
@@ -241,20 +249,46 @@ describe('Home, the setup guide', () => {
     expect(href('Importar')).toBe('/meu-gosto/importar')
   })
 
-  it('says what the connector is even behind Meu gosto, and folds how to add it', () => {
+  it('says what the connector is even behind Meu gosto, and folds how to add it', async () => {
     const { container } = show(guiding())
     expect(screen.getByRole('img', { name: '4 de 10 Notas' })).toBeTruthy()
     expect(container.textContent).toContain(
       'Para pedir filme conversando com o Claude',
     )
-    const how = container.querySelector('details')!
-    expect(how.open).toBe(false)
-    expect(how.querySelector('summary')?.textContent).toContain(
-      'Ver como conectar',
-    )
-    expect(how.textContent).toContain('https://cinema.example/mcp')
+    expect(container.textContent).not.toContain('https://cinema.example/mcp')
     expect(orange(container)).toHaveLength(1)
     expect(orange(container)[0]?.textContent).toBe('Pedir filme')
+    // Closed, "Pular" sits beside the toggle.
+    const opener = screen.getByRole('button', { name: 'Ver como conectar' })
+    expect(opener.getAttribute('aria-expanded')).toBe('false')
+    expect(
+      opener.parentElement?.querySelector('input[value="connector"]'),
+    ).toBeTruthy()
+    await userEvent.click(opener)
+    expect(container.textContent).toContain('https://cinema.example/mcp')
+    const body = container.querySelector('#como-conectar')!
+    expect(document.activeElement).toBe(body)
+    // Open, "Fechar" comes last, after Copiar endereço and Pular.
+    const row = screen.getByRole('button', { name: 'Fechar' }).parentElement!
+    expect(
+      [...row.querySelectorAll('button')].map((b) => b.textContent),
+    ).toEqual(['Copiar endereço', 'Pular', 'Fechar'])
+    await userEvent.click(screen.getByRole('button', { name: 'Fechar' }))
+    expect(container.textContent).not.toContain('https://cinema.example/mcp')
+    expect(document.activeElement).toBe(
+      screen.getByRole('button', { name: 'Ver como conectar' }),
+    )
+  })
+
+  it('folds the connector once she has a Sessão, even as the only step left', () => {
+    const { container } = show({
+      ...guiding({ taste: 'done' }, 12),
+      latest: SESSION,
+    })
+    expect(
+      screen.getByRole('button', { name: 'Ver como conectar' }),
+    ).toBeTruthy()
+    expect(container.textContent).not.toContain('Este passo se marca sozinho')
   })
 
   it('at zero Notas, says how long it takes instead of ten empty dots', () => {

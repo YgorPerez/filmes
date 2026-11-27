@@ -67,6 +67,7 @@ import {
 import { storedImports, storeImport } from './stored.ts'
 import { readTvTimeBackup, TVTIME_KIND } from './tvtime-backup.ts'
 import { withLatestWatchlist } from './watchlist.ts'
+import { tasteChange, tasteSnapshot, type TasteChange } from './taste-change.ts'
 
 /** The kinds of a Pessoa's `imports:` records this module reads. */
 export const LETTERBOXD_KIND = 'letterboxd'
@@ -891,6 +892,8 @@ export interface LetterboxdImport extends LetterboxdReport {
   readonly newFile: boolean
   readonly facts: FactCounts
   readonly newFacts: FactCounts
+  /** What she sees on her Notas: new, changed and repeated Notas (#274). */
+  readonly changes: TasteChange
   readonly warnings: readonly string[]
   readonly attributions: readonly (typeof TMDB_ATTRIBUTION)[]
 }
@@ -955,6 +958,7 @@ const importRows = (
           yield* ensureLetterboxdTables(db)
           const found = yield* resolvePerson(person)
           const before = yield* countFacts(db, found.slug)
+          const taste = yield* tasteSnapshot(db, found.slug)
           const { resolutions, usedTmdb } = yield* recordTmdbAnswers(db, [
             ...rows,
             ...(yield* personLetterboxdRows(found)),
@@ -977,6 +981,7 @@ const importRows = (
             file: stored.file,
             newFile: stored.new,
             facts: after,
+            changes: yield* tasteChange(db, found.slug, LETTERBOXD_KIND, taste),
             newFacts: Object.fromEntries(
               Object.entries(after).map(([k, n]) => [
                 k,

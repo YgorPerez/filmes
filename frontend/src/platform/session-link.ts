@@ -35,13 +35,12 @@ export type LinkPerson = {
 }
 
 /** A film of the current screen, with its public card (null when the
- * Catálogo no longer has it), whether this version brought it in, and the
- * chosen Presente's standing Voto on it. */
+ * Catálogo no longer has it) and the chosen Presente's standing Voto on
+ * it. */
 export type LinkFilm = {
   position: number
   id: string
   title: string
-  new: boolean
   card: PublicFilmCard | null
   mine: VoteValue | null
 }
@@ -126,17 +125,31 @@ function signed(
     : null
 }
 
-/** A link that was issued for a Session now closed: its page says the
- * Session ended instead of that the link is broken. */
+/** A Session the link was issued for, now closed: its page says the
+ * Session ended, with the film the Feedback chose (null for "não vimos
+ * nada"), instead of that the link is broken. */
+export type ClosedSession = { chosen: string | null }
+
+/** The closed Session `search` was issued for, or null: a broken link,
+ * or a Session still open. */
 export async function closedSessionLink(
   search: SessionLinkSearch,
   engine: Engine,
   database: string,
-): Promise<boolean> {
+): Promise<ClosedSession | null> {
   const session = signed(search, database)
-  if (session === null) return false
+  if (session === null) return null
   const result = await engine.run(readSession(session))
-  return result.exitCode === 0 && !isOpen(result.output.frontmatter)
+  if (result.exitCode !== 0) return null
+  const front = result.output.frontmatter
+  if (isOpen(front)) return null
+  const chosen = text(front.get('chosen'))
+  if (chosen === null) return { chosen: null }
+  const shown = sessionVersions(front)
+    .flatMap(shownFilms)
+    .find((film) => film.id === chosen)
+  const card = (await cardsById(engine, [chosen])).get(chosen)
+  return { chosen: card?.title ?? shown?.title ?? chosen }
 }
 
 /** The public cards of `ids`, by id; none when the engine could not
@@ -157,12 +170,6 @@ async function screenOf(
   engine: Engine,
 ): Promise<Pick<SessionLinkView, 'films' | 'left' | 'questions'>> {
   const current = currentVersion(front)
-  const listed = yamlToJson(current.get('recommendation') ?? null)
-  const fresh = new Set(
-    (Array.isArray(listed) ? (listed as Record<string, unknown>[]) : [])
-      .filter((item) => item.new === true)
-      .map((item) => String(item.id)),
-  )
   const screen = shownFilms(current)
   const mine = latestVotes(front, person)
   const byId = await cardsById(
@@ -184,7 +191,6 @@ async function screenOf(
         position: film.position,
         id: film.id,
         title: card?.title ?? film.title ?? film.id,
-        new: fresh.has(film.id),
         card,
         mine: mine.get(film.id) ?? null,
       }

@@ -1,5 +1,7 @@
 // The Cartaz's words, for the app and for the MCP Apps view (#111).
 
+import { askedParts, isDuration } from './billboard-request'
+
 const plural = (n: number, one: string, many: string) =>
   `${n} ${n === 1 ? one : many}`
 
@@ -37,7 +39,6 @@ export const BILLBOARD = {
 
   card: {
     poster: (title: string) => `Capa de ${title}`,
-    isNew: 'novo',
     bet: 'aposta',
     betHint:
       'Aposta: pouca Evidência, mas quem tem gosto parecido deu nota alta',
@@ -47,23 +48,33 @@ export const BILLBOARD = {
         : `${rating} IMDb · ${votes} votos`,
     /** The link to the film's trailer on YouTube (#289). */
     trailer: 'trailer',
-    /** The hint of a Presente's dot: "Ana: 8,3 de 10 · 12 vizinhos", or
-     * "Ana: 8,3 de 10" when the version did not keep how many. */
-    predicted: (name: string, rating: string, raters?: number) =>
-      raters === undefined
-        ? `${name}: ${rating} de 10`
-        : `${name}: ${rating} de 10 · ${plural(raters, 'vizinho', 'vizinhos')}`,
+    /** The Nota prevista line under "Por que" (#326): "previsto · Ana 8,3
+     * · Iara 7,1". */
+    predicted: 'previsto',
+    /** The hint of a name in it, when the version kept how many taste
+     * neighbours back it. */
+    predictedHint: (raters: number) =>
+      `pela nota de ${plural(raters, 'pessoa', 'pessoas')} de gosto parecido`,
+    predictedLabel: (name: string, hint: string) => `${name}: ${hint}`,
     /** Who an Evidência is about, opening its line: "Ana e Bruno". */
     whose: (names: readonly string[]) => andList(names),
     why: 'Por que cada um vai gostar',
-    /** Every line of the card is the section's, said under its title. */
-    sectionWhy: 'Os motivos da seção, logo acima.',
+    /** The same block once the Session was told (#272). */
+    whyClosed: 'Por que estava na lista',
     withoutFact: (names: string) => `${names}: sem fato sobre este filme`,
     /** What the Dono gave it in this Session (#272). */
     notes: 'Você marcou',
     notesStars: (n: number) => `${n} de 5 estrelas`,
+    /** Beside the stars given, so they never read as a Nota (#272). */
+    notesStarsText: (n: number) => `${n} de 5`,
+    /** Once the Session takes marks, only her comments stay in this line:
+     * the stars are back in their controls (#272). */
+    notesComments: 'Você comentou',
     swapStamp: 'Trocar',
     seenStamp: 'Já vi',
+    /** Who marked Já vi, for a screen reader, when not every Presente did
+     * (#272): the stamp shows their initials. */
+    seenStampWho: (names: readonly string[]) => `Já vi: ${andList(names)}`,
   },
 
   section: {
@@ -83,6 +94,14 @@ export const BILLBOARD = {
     thoughtLabel: (who: string, n: number) =>
       `o que ${who} achou do filme ${n}`,
     swap: 'Trocar',
+    /** Why the Trocar came on by itself (#326): "Trocar marcado: você já
+     * viu", "Trocar marcado: 2 estrelas". */
+    swapWhy: {
+      seen: (who: readonly string[]) =>
+        `Trocar marcado: ${andList(who)} ${who.length === 1 ? 'já viu' : 'já viram'}`,
+      stars: (n: number) =>
+        `Trocar marcado: ${plural(n, 'estrela', 'estrelas')}`,
+    },
     stars: 'quanto animou',
     /** More than this many Presentes: their Já vi options open from one
      * "Já vi…" (#277). */
@@ -184,9 +203,13 @@ export const BILLBOARD = {
     open: 'Ver o Cartaz',
     markAgain: 'Marcar de novo',
     sentTitle: 'Enviado',
+    /** The small tag at the end of an inline row (#277). */
+    tag: { swap: 'Trocar', seen: 'Já vi', chosen: 'Escolhido' },
+    /** A Session with its Feedback, on the inline card (#277). */
+    closed: 'Sessão fechada',
+    chosen: 'Filme escolhido:',
     /** "v2" beside the label, from the second version on. */
     version: (n: number) => `v${n}`,
-    isNew: 'novo',
     /** What a regenerate changed, on the inline card: "Saiu: Cais 2
      * (trocado) · entrou: Fronteira". */
     changes: (
@@ -200,9 +223,25 @@ export const BILLBOARD = {
       ]
         .filter(Boolean)
         .join(' · '),
-    /** No film passed: the request's limits, and what to say to Claude. */
-    empty: (limits: readonly string[]) =>
-      `Nenhum filme passou ${limits.length > 0 ? `nos limites deste pedido (${limits.join(' · ')})` : 'nas Restrições deste pedido'}. Peça no chat com mais tempo ou menos limites.`,
+    /** No film passed: the limits the Dono asked for, out of the request's
+     * parts (none: the minimum IMDb rating alone), and what to say to
+     * Claude (#277). */
+    empty: (parts: readonly string[]) => {
+      const limits = askedParts(parts)
+      const passed =
+        limits.length === 0
+          ? 'Nenhum filme passou neste pedido.'
+          : limits.length === 1
+            ? `Nenhum filme passou no limite ${limits[0]}.`
+            : `Nenhum filme passou nos limites deste pedido (${limits.join(' · ')}).`
+      const ask =
+        limits.length === 0
+          ? 'Peça outro no chat.'
+          : limits.some(isDuration)
+            ? 'Peça no chat com mais tempo ou menos limites.'
+            : 'Peça no chat com menos limites.'
+      return `${passed} ${ask}`
+    },
     /** A host without fullscreen shows the Cartaz inline: it opens whole
      * from here (#277). */
     seeAll: 'Ver o Cartaz inteiro',

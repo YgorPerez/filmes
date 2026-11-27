@@ -14,20 +14,39 @@ export type ReportBlock =
 
 export type ReportSection = { title: string; blocks: ReportBlock[] }
 
-/** A number with three decimals or more ("0.27708333333333335"), not part
- * of a word, a hash or a version. */
-const LONG_NUMBER = /(?<![\w.])-?\d+\.\d{3,}(?!\w|\.\d)/g
+/** A decimal number written by the engine ("80.0", "0.28"), not part of a
+ * word, a file name, a hash or a version. */
+const DECIMAL = /(?<![\w.])-?\d+\.\d+(?![\w.]\w|\w)/g
 
-/** Every long number cut to two decimals, as the page shows it. */
-export const roundNumbers = (text: string) =>
-  text.replace(LONG_NUMBER, (n) => String(Number(Number(n).toFixed(2))))
+/** The engine's words for the measure that decides, as the page says them. */
+const PRIORITY: Readonly<Record<string, string>> = {
+  offline: 'o teste com Notas reservadas',
+  online: 'o Feedback das Sessões',
+}
+
+/** The report's prose as the rest of the page writes it: decimals in
+ * pt-BR, at most two of them ("80.0%" is "80%", "0.27708" is "0,28"), and
+ * the measure that decides in words. The YAML blocks keep the engine's
+ * text: they copy back to `config/weights.toml`. */
+export const localize = (text: string) =>
+  text
+    .replace(DECIMAL, (n) =>
+      Number(n).toLocaleString('pt-BR', {
+        maximumFractionDigits: 2,
+        useGrouping: false,
+      }),
+    )
+    .replace(
+      /^(Medida que decide: )(offline|online)$/,
+      (_, label: string, value: string) => `${label}${PRIORITY[value]}`,
+    )
 
 const cells = (line: string) =>
   line
     .trim()
     .replace(/^\||\|$/g, '')
     .split('|')
-    .map((cell) => roundNumbers(cell.trim()))
+    .map((cell) => localize(cell.trim()))
 
 const alignOf = (cell: string): Align =>
   cell.startsWith(':') && cell.endsWith(':')
@@ -47,10 +66,7 @@ function blocksOf(lines: readonly string[]): ReportBlock[] {
     } else if (line.startsWith('```')) {
       const end = lines.findIndex((l, j) => j > i && l.startsWith('```'))
       const stop = end === -1 ? lines.length : end
-      blocks.push({
-        kind: 'code',
-        text: roundNumbers(lines.slice(i + 1, stop).join('\n')),
-      })
+      blocks.push({ kind: 'code', text: lines.slice(i + 1, stop).join('\n') })
       i = stop + 1
     } else if (line.startsWith('|')) {
       const table: string[] = []
@@ -66,7 +82,7 @@ function blocksOf(lines: readonly string[]): ReportBlock[] {
     } else if (line.startsWith('- ')) {
       const items: string[] = []
       while (i < lines.length && lines[i]!.startsWith('- '))
-        items.push(roundNumbers(lines[i++]!.slice(2)))
+        items.push(localize(lines[i++]!.slice(2)))
       blocks.push({ kind: 'list', items })
     } else {
       const text: string[] = []
@@ -76,7 +92,7 @@ function blocksOf(lines: readonly string[]): ReportBlock[] {
         !/^(```|\||- )/.test(lines[i]!)
       )
         text.push(lines[i++]!)
-      blocks.push({ kind: 'paragraph', text: roundNumbers(text.join(' ')) })
+      blocks.push({ kind: 'paragraph', text: localize(text.join(' ')) })
     }
   }
   return blocks

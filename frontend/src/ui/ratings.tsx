@@ -14,7 +14,7 @@ import { useFetchForm, type Answered } from './kit/fetch-form'
 import { usePostedFeedback } from './kit/posted-feedback'
 import { Chip } from './kit/chip'
 import { PageHead } from './kit/page-head'
-import { TapeCase } from './kit/tape-case'
+import { PosterCover, TapeCase } from './kit/tape-case'
 import { ImportsFrame } from './imports'
 import { Alert, CatalogSearch, Meta, Notice, PostFailed } from './person-parts'
 import {
@@ -81,22 +81,38 @@ function filmsLeft(
   draft: Draft,
   search: SearchAnswer | null,
   film: string | undefined,
+  card: FilmCard | null | undefined,
 ): CardFilm[] {
-  const picked =
-    film !== undefined && search && 'found' in search && !taken(draft, film)
+  const found =
+    film !== undefined && search && 'found' in search
       ? search.found.films.find((f) => f.id === film)
       : undefined
+  // A film no search found ("Mudar" on Meu gosto, #274): its card.
+  const picked =
+    film === undefined || taken(draft, film)
+      ? undefined
+      : found
+        ? { ...found, genres: [], runtime: null }
+        : card?.id === film
+          ? {
+              id: card.id,
+              title: card.title,
+              year: card.year,
+              genres: [],
+              directors: card.directors,
+              runtime: card.runtime,
+            }
+          : undefined
   const fromQueue = queue.films.filter(
     (f) => !taken(draft, f.id) && f.id !== picked?.id,
   )
 
-  return picked
-    ? [{ ...picked, genres: [], runtime: null }, ...fromQueue]
-    : fromQueue
+  return picked ? [picked, ...fromQueue] : fromQueue
 }
 
-/** The next ten: 10 for a Dono with fewer, else the ten above what she has. */
-const nextGoal = (n: number) => Math.max(10, (Math.floor(n / 10) + 1) * 10)
+/** The one goal of Notas (DESIGN.md: "faltam N para 10"): with ten, the
+ * recommendation has enough to go on (#274). */
+const RATING_GOAL = 10
 
 /** The rating screen (`RATINGS_PATH`). The Notas wait in the browser's
  * draft until Pronto posts them to `/notas/enviar`, which writes them in
@@ -107,6 +123,8 @@ export function RatingScreen({
   queue,
   search,
   film,
+  picked,
+  rated = {},
   written,
   refusal,
   loadCard,
@@ -114,6 +132,10 @@ export function RatingScreen({
   queue: RatingQueue | null
   search: SearchAnswer | null
   film?: string
+  /** The card of `film`, when no search holds it. */
+  picked?: FilmCard | null
+  /** Her Nota of the films on screen that have one, 1 to 10. */
+  rated?: Readonly<Record<string, number>>
   written?: number
   refusal?: RatingRefusal
   loadCard?: LoadCard
@@ -134,6 +156,8 @@ export function RatingScreen({
           queue={queue}
           search={search}
           film={film}
+          picked={picked}
+          rated={rated}
           written={written}
           settled={written !== undefined ? 'written' : refusal && 'refused'}
           onAnswer={onAnswer}
@@ -251,6 +275,8 @@ type RatingProps = {
   queue: RatingQueue
   search: SearchAnswer | null
   film?: string
+  picked?: FilmCard | null
+  rated: Readonly<Record<string, number>>
   written?: number
   settled?: 'written' | 'refused'
   onAnswer: OnAnswer
@@ -262,6 +288,8 @@ function Rating({
   queue,
   search,
   film,
+  picked,
+  rated,
   written,
   settled,
   onAnswer,
@@ -269,9 +297,9 @@ function Rating({
   loadCard,
 }: RatingProps) {
   const sitting = useSitting(queue, settled, onAnswer)
-  const { draft, change, goal } = sitting
+  const { draft, change } = sitting
   const voice = useVoice()
-  const left = filmsLeft(queue, draft, search, film)
+  const left = filmsLeft(queue, draft, search, film, picked)
   const [current, next] = left
   const cards = useCards(
     loadCard,
@@ -298,23 +326,35 @@ function Rating({
         voice={voice}
         actions={actions}
         film={current}
-        card={current && cards[current.id]}
+        card={
+          current &&
+          (cards[current.id] ??
+            (current.id === picked?.id ? picked : undefined))
+        }
+        rated={current && rated[current.id]}
       />
       <DraftList
         draft={draft}
         onRemove={(id) => change(withoutRating(draft, id))}
       />
-      <RatingSearch search={search} />
-      <RatingBar
-        draft={draft}
-        count={count}
-        goal={goal}
-        onSend={() => saveDraft(queue.person, sending(draft))}
-        onAnswer={sitting.sent}
-      />
+      <RatingSearch search={search} rated={rated} />
+      {/* After Pronto, with nothing left to send, the bar goes: its
+          button would be a second orange one next to "Pedir filme"
+          (#274). */}
+      {!(written !== undefined && !sitting.more && rated0(draft)) && (
+        <RatingBar
+          draft={draft}
+          count={count}
+          onSend={() => saveDraft(queue.person, sending(draft))}
+          onAnswer={sitting.sent}
+        />
+      )}
     </>
   )
 }
+
+/** No Nota waits in the draft. */
+const rated0 = (draft: Draft) => Object.keys(draft.ratings).length === 0
 
 /** What each tap did, aloud (`aria-live`, not a status: the page's status
  * is what the last post did). */
@@ -337,6 +377,7 @@ function Stage({
   actions,
   film,
   card,
+  rated,
 }: {
   queue: RatingQueue
   written?: number
@@ -346,10 +387,12 @@ function Stage({
   actions: ReturnType<typeof taps>
   film: CardFilm | undefined
   card: FilmCard | null | undefined
+  /** Her Nota of the film on the card, if she gave one. */
+  rated: number | undefined
 }) {
-  const { draft, goal, setGoal, more, setMore } = sitting
-  const rated = Object.keys(draft.ratings).length
-  const count = queue.rated + rated
+  const { draft, reached, setReached, more, setMore } = sitting
+  const inDraft = Object.keys(draft.ratings).length
+  const count = queue.rated + inDraft
   if (written !== undefined && !more)
     return (
       <WrittenBlock
@@ -358,19 +401,20 @@ function Stage({
         feedback={feedback}
         onMore={() => {
           setMore(true)
-          setGoal(nextGoal(queue.rated))
           voice.say(null)
         }}
       />
     )
-  if (count >= goal && rated > 0)
-    return <GoalBlock goal={goal} onMore={() => setGoal(nextGoal(count))} />
+  // The goal reached in this sitting: said once, then the card again.
+  if (queue.rated < RATING_GOAL && count >= RATING_GOAL && !reached)
+    return <GoalBlock onMore={() => setReached(true)} />
   return (
     <>
       <LastTaken draft={draft} queue={queue} onUndo={actions.undo} />
       <CardOrOver
         film={film}
         card={card}
+        rated={rated}
         titleRef={voice.title}
         onRate={actions.rate}
         onSkip={actions.skip}
@@ -379,15 +423,32 @@ function Stage({
   )
 }
 
-/** The Catálogo search, to rate a film the Fila does not hold. */
-function RatingSearch({ search }: { search: SearchAnswer | null }) {
+/** The Catálogo search, to rate a film the Fila does not hold: each
+ * result says her Nota when she gave one, and its pick changes it
+ * (#274). */
+function RatingSearch({
+  search,
+  rated,
+}: {
+  search: SearchAnswer | null
+  rated: Readonly<Record<string, number>>
+}) {
   return (
     <CatalogSearch
       action={RATINGS_PATH}
       scope="films"
       answer={search}
       pick={pickIn(search)}
-      pickAs={{ text: RATINGS.pick, label: RATINGS.pickLabel }}
+      pickAs={{
+        text: RATINGS.pick,
+        label: RATINGS.pickLabel,
+        card: {
+          directedBy: RATINGS.directedBy,
+          rated: (id) => rated[id],
+          ratedText: RATINGS.yourRating,
+          change: { text: RATINGS.change, label: RATINGS.changeLabel },
+        },
+      }}
       lead={RATINGS.searchLead}
     />
   )
@@ -401,7 +462,7 @@ function useSitting(
   onAnswer: OnAnswer,
 ) {
   const [draft, change] = useDraft(queue.person, settled)
-  const [goal, setGoal] = useState(() => nextGoal(queue.rated))
+  const [reached, setReached] = useState(false)
   const [more, setMore] = useState(false)
   const sent: OnAnswer = (to, form) => {
     settleAnswer(to, (written) =>
@@ -410,7 +471,7 @@ function useSitting(
     setMore(false)
     return onAnswer(to, form)
   }
-  return { draft, change, goal, setGoal, more, setMore, sent }
+  return { draft, change, reached, setReached, more, setMore, sent }
 }
 
 /** What the screen says aloud, and the card's title the focus goes back
@@ -469,7 +530,7 @@ function WrittenNote({
   return (
     <section className="flex flex-col gap-lg rounded-card border border-rule bg-surface p-xl">
       <Notice>{RATINGS.written(written)}</Notice>
-      {count >= 10 && (
+      {count >= RATING_GOAL && (
         <p className="font-hand text-hand-large leading-tight text-ink">
           {RATINGS.writtenNext}
         </p>
@@ -486,12 +547,12 @@ function WrittenNote({
   )
 }
 
-/** The ten reached: the card waits until she asks for ten more. */
-function GoalBlock({ goal, onMore }: { goal: number; onMore: () => void }) {
+/** The ten reached in this sitting: said once, then the card again. */
+function GoalBlock({ onMore }: { onMore: () => void }) {
   return (
     <section className="flex flex-col gap-lg rounded-card border border-rule bg-surface p-xl">
       <p className="font-hand text-hand-large leading-tight text-ink">
-        {RATINGS.goal(goal)}
+        {RATINGS.goal(RATING_GOAL)}
       </p>
       <p className="text-ink-2">{RATINGS.goalLead}</p>
       <Button variant="option" className="self-start" onClick={onMore}>
@@ -591,13 +652,11 @@ function DraftList({
 function RatingBar({
   draft,
   count,
-  goal,
   onSend,
   onAnswer,
 }: {
   draft: Draft
   count: number
-  goal: number
   onSend: () => void
   onAnswer: OnAnswer
 }) {
@@ -632,9 +691,12 @@ function RatingBar({
             value={entry.rating}
           />
         ))}
-        <Progress draft={draft} count={count} goal={goal} />
+        <Progress draft={draft} count={count} />
         <button
           type="submit"
+          aria-label={
+            busy === null ? RATINGS.doneLabel(rated.length) : undefined
+          }
           className={buttonVariants({ className: 'shrink-0' })}
           disabled={busy !== null}
         >
@@ -649,42 +711,51 @@ function RatingBar({
   )
 }
 
-/** The last Notas of the draft on small discs, and how many she has
- * toward the goal. */
-function Progress({
-  draft,
-  count,
-  goal,
-}: {
-  draft: Draft
-  count: number
-  goal: number
-}) {
-  const recent = draft.history
-    .filter((id) => id in draft.ratings)
-    .slice(-5)
+/** Discs the bar shows before "+N": three keep the count and Pronto on
+ * one line at 390px (#274). */
+const BAR_DISCS = 3
+
+/** The last Notas of the draft on small discs (three, then "+N"), and how
+ * many she has: toward the ten, or just how many once she has them. */
+function Progress({ draft, count }: { draft: Draft; count: number }) {
+  const all = draft.history.filter((id) => id in draft.ratings)
+  const recent = all
+    .slice(-BAR_DISCS)
     .map((id) => [id, draft.ratings[id]?.rating ?? 0] as const)
+  const hidden = all.length - recent.length
   return (
     <div className="flex min-w-0 items-center gap-sm">
-      <span aria-hidden="true" className="flex -space-x-2">
-        {recent.map(([id, rating]) => (
-          <SmallDisc key={id}>{rating}</SmallDisc>
-        ))}
-      </span>
+      {recent.length > 0 && (
+        <span aria-hidden="true" className="flex shrink-0 -space-x-2">
+          {recent.map(([id, rating]) => (
+            <SmallDisc key={id}>{rating}</SmallDisc>
+          ))}
+          {hidden > 0 && <SmallDisc muted>{`+${hidden}`}</SmallDisc>}
+        </span>
+      )}
       <span
-        aria-label={RATINGS.progressLabel(count, goal)}
-        className="font-display text-row-title tabular-nums"
+        aria-label={RATINGS.progressLabel(count, RATING_GOAL)}
+        className="font-display text-row-title whitespace-nowrap tabular-nums"
       >
-        {RATINGS.progress(count, goal)}
+        {RATINGS.progress(count, RATING_GOAL)}
       </span>
     </div>
   )
 }
 
-/** A Nota of the draft in the bar: the orange disc, small. */
-function SmallDisc({ children }: { children: ReactNode }) {
+/** A Nota of the draft in the bar: the orange disc, small; `muted`, the
+ * count of the ones it leaves out. */
+function SmallDisc({
+  children,
+  muted = false,
+}: {
+  children: ReactNode
+  muted?: boolean
+}) {
   return (
-    <span className="inline-grid size-7 place-items-center rounded-round border-2 border-surface bg-sticker-orange font-display text-meta-strong text-on-sticker tabular-nums">
+    <span
+      className={`inline-grid size-7 place-items-center rounded-round border-2 border-surface font-display text-meta-strong tabular-nums ${muted ? 'bg-surface-2 text-ink' : 'bg-sticker-orange text-on-sticker'}`}
+    >
       {children}
     </span>
   )
@@ -699,12 +770,15 @@ function SmallDisc({ children }: { children: ReactNode }) {
 function FilmCardView({
   film,
   card,
+  rated,
   titleRef,
   onRate,
   onSkip,
 }: {
   film: CardFilm
   card?: FilmCard | null
+  /** Her Nota of the film, if she gave one: a tap changes it. */
+  rated?: number
   titleRef: RefObject<HTMLHeadingElement | null>
   onRate: (rating: number) => void
   onSkip: () => void
@@ -726,19 +800,18 @@ function FilmCardView({
         <TapeCase
           className="w-[96px] sm:w-[120px]"
           cover={
-            card?.poster ? (
-              <img
-                src={card.poster}
-                alt={RATINGS.poster(shown)}
-                className="absolute inset-0 size-full object-cover"
-              />
-            ) : (
-              <span aria-hidden="true">{shown}</span>
-            )
+            <PosterCover
+              src={card?.poster ?? null}
+              title={shown}
+              alt={RATINGS.poster(shown)}
+            />
           }
         />
         <CardDetails film={film} card={card} titleRef={titleRef} />
       </div>
+      {rated !== undefined && (
+        <p className="text-meta text-ink-2">{RATINGS.ratedNow(rated)}</p>
+      )}
       <Scale onRate={onRate} />
       <Button variant="option" className="self-start" onClick={onSkip}>
         {RATINGS.notSeen}

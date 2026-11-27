@@ -149,13 +149,17 @@ function SavedQueries() {
 }
 
 /** The read-only SQL console: a plain GET of this page, so the query is in
- * the address and works before the JavaScript loads. */
+ * the address and works before the JavaScript loads. Consultar is the
+ * page's orange button, except while pushes fail (`quiet`): then the push's
+ * retry is. */
 export function ConsultSection({
   answer,
   schema,
+  quiet = false,
 }: {
   answer: ConsultAnswer | null
   schema: readonly SchemaTable[] | null
+  quiet?: boolean
 }) {
   return (
     <Section id="consultar" title={COPY.title} lead={COPY.lead}>
@@ -171,7 +175,7 @@ export function ConsultSection({
             className={`${FIELD} resize-y font-mono`}
           />
         </FieldLabel>
-        <Submit variant="primary">{COPY.run}</Submit>
+        <Submit variant={quiet ? 'option' : 'primary'}>{COPY.run}</Submit>
       </form>
       {answer && <ConsultResult answer={answer} />}
       <SavedQueries />

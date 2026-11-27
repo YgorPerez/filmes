@@ -61,6 +61,10 @@ _Evitar_: filtro, veto da sessão
 A Restrição, ligada por padrão, que tira a continuação de uma série de filmes quando algum Presente não viu o filme antes dela. A série é a do Wikidata com classe "série de filmes"; franquia (Marvel, Star Wars) não conta. A ordem vem da data de estreia, e data igual ou ausente não põe um filme antes do outro. Três modos: só se viram o anterior (o padrão), só se viram todos os anteriores, ou tanto faz. O filme só sai; o anterior não é empurrado para a lista.
 _Evitar_: sequência, franquia, saga
 
+**Nada de um Clima** [no mood, `no_mood`, `noMoods`]:
+A Restrição que tira os filmes de um Clima que o Dono não quer hoje ("nada de terror", "sem comédia"): um dos gêneros do Clima ou uma das tags dele com o mínimo do Veto por grupo. O Clima puxa a ordem; esta só tira.
+_Evitar_: clima negativo, anticlima
+
 **Clima** [mood, `Mood`]:
 O que uma Sessão quer sem excluir nenhum filme: a energia ("algo leve"), a ocasião ("aniversário da Ana"), a vontade do momento. Puxa a ordem, nunca tira um filme.
 _Evitar_: desejo, mood, preferência
@@ -148,7 +152,7 @@ Um filme da versão anterior que não está na nova, com a causa. A causa `mood`
 O pôster do filme, vindo do TMDB. Não é o Cartaz, que é a Recomendação inteira.
 
 **Regerar** [regenerate, `regenerate`]:
-Fazer a próxima versão da Sessão a partir do Cartaz colado, trocando só o que caiu (Já visto, Trocar, Restrição ou Veto novos). O resto fica como Mantido; os que entram levam o selo "novo".
+Fazer a próxima versão da Sessão a partir do Cartaz colado, trocando só o que caiu (Já visto, Trocar, Restrição ou Veto novos). O resto fica como Mantido; os que entram não levam marca (#326).
 _Evitar_: refazer do zero, recomendar de novo
 
 **Filmes mostrados** [shown films, `shown`]:

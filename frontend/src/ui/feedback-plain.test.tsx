@@ -16,6 +16,9 @@ const PAGE: FeedbackPage = {
   attendees: [{ person: 'bruno', name: 'Bruno', owner: true }],
   moods: [],
   constraints: [],
+  additions: [],
+  stars: {},
+  earlier: [],
   recommendation: [{ position: 1, id: 'tt9000101', title: 'O Farol de Areia' }],
   satisfaction: [],
 }

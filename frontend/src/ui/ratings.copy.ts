@@ -36,21 +36,25 @@ export const RATINGS = {
     `${title} pulado.${next ? ` Próximo: ${next}.` : ''}`,
   announceUndone: (title: string) => `De volta a ${title}.`,
   over: 'Acabou a fila. Busque um filme pelo título para dar mais Notas.',
-  /** The bar: how many she has, toward the goal. */
-  progress: (n: number, goal: number) => `${n} de ${goal}`,
+  /** The bar: how many she has, toward the goal until she reaches it. */
+  progress: (n: number, goal: number) =>
+    n < goal ? `${n} de ${goal}` : notas(n),
   progressLabel: (n: number, goal: number) =>
-    `${notas(n)} de ${goal}, contando as que ainda não foram gravadas`,
+    n < goal
+      ? `${notas(n)} de ${goal}, contando as que ainda não foram gravadas`
+      : `${notas(n)}, contando as que ainda não foram gravadas`,
   bar: 'Suas Notas desta vez',
-  /** The goal reached: the card waits behind "Mais 10". */
+  /** The goal reached: the card waits behind "Continuar dando notas". */
   goal: (goal: number) => `${goal} Notas. Já dá pra pedir filme.`,
   goalLead:
     'Toque em Pronto para gravar as que faltam. Quanto mais Notas, melhor a escolha.',
-  more: 'Mais 10',
+  more: 'Continuar dando notas',
   ask: 'Pedir filme',
   draft: 'Ainda não gravadas',
   remove: (title: string) => `Tirar a Nota de ${title}`,
   removeLabel: 'Tirar',
-  done: (n: number) => (n === 0 ? 'Pronto' : `Pronto (${notas(n)})`),
+  done: (n: number) => (n === 0 ? 'Pronto' : `Pronto · ${n}`),
+  doneLabel: (n: number) => (n === 0 ? 'Pronto' : `Pronto: gravar ${notas(n)}`),
   /** Pronto with nothing to send. */
   nothing: 'Dê nota a pelo menos um filme.',
   /** Pronto while its post runs. */
@@ -66,6 +70,12 @@ export const RATINGS = {
   searchLead: 'Não está na fila? Busque pelo título e dê nota direto.',
   pick: 'Dar nota',
   pickLabel: (title: string) => `Dar nota a ${title}`,
+  /** A film she already gave a Nota (#274). */
+  yourRating: (rating: number) => `sua nota ${rating}`,
+  change: 'Mudar',
+  changeLabel: (title: string) => `Mudar a Nota de ${title}`,
+  ratedNow: (rating: number) =>
+    `Sua nota: ${rating}. Toque em outra para mudar.`,
   refusals: {
     pedido:
       'Algo no pedido veio errado: as Notas continuam aqui. Tente de novo.',

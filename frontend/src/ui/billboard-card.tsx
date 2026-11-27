@@ -7,7 +7,8 @@ import type {
 import { useState } from 'react'
 import type { FilmMarks } from './billboard-marks'
 import { Chip } from './kit/chip'
-import { PersonDot } from './kit/person'
+import { Hint } from './kit/hint'
+import { Avatar } from './kit/person'
 import { PriceSticker, Sticker } from './kit/sticker'
 import { TapeCase } from './kit/tape-case'
 import { BILLBOARD } from './billboard.copy'
@@ -18,18 +19,21 @@ import { Icon } from './billboard-icons'
 import { Strength } from './billboard-top'
 
 // One film of the Cartaz (DESIGN.md, Card do filme): the tape in its case
-// with the price sticker and a dot per Presente with her Nota prevista, the
-// header (with the IMDb and, when TMDB has one, the trailer on YouTube: a
-// link, never a player, #289), "Por que cada um vai gostar" and, while the
-// Session takes a reply, the marks (`billboard-card-marks.tsx`). A grid:
+// with the price sticker, the header (with the IMDb and, when TMDB has one,
+// the trailer on YouTube: a link, never a player, #289), "Por que cada um
+// vai gostar", opened by each Presente's Nota prevista (#326), and, while
+// the Session takes a reply, the marks (`billboard-card-marks.tsx`). A grid:
 // the case on the left (112px, 160px from 560px), the header on the right;
 // "Por que" and the marks across below, each opened by a dashed rule, "Por
 // que" going up under the chips from 560px. The state is the Cartaz's (`billboard.tsx`). Inside a
 // section by Motivo (#183) the title is a level below the section's.
 
-/** The outlined chips that leave the app: the IMDb and the trailer. */
+/** The outlined chips that leave the app: the IMDb and the trailer. The
+ * link is 44px tall and the chip drawn inside it (#272, #277). */
 const LINK_CHIP =
-  'relative rounded-pill after:absolute after:inset-x-0 after:-inset-y-[11px] after:content-[""]  border-(length:--border-width-stroke) border-rule px-2.25 py-1 font-display text-chip font-bold text-ink tabular-nums no-underline'
+  'inline-flex min-h-touch items-center font-display text-chip font-bold text-ink tabular-nums no-underline'
+const LINK_CHIP_FACE =
+  'rounded-pill border-(length:--border-width-stroke) border-rule px-2.25 py-1'
 
 /** The film's title level: 2 alone, 3 under a section's title. */
 type Level = 2 | 3
@@ -40,20 +44,22 @@ const byslug = (people: readonly BillboardPerson[]) =>
 const namesOf = (people: readonly BillboardPerson[]) =>
   BILLBOARD.card.whose(people.map((p) => p.name))
 
+/** The stamp on the cover: TROCAR, or JÁ VI with the initials of who saw
+ * it when not every Presente did (#272). */
+type Stamp = { kind: 'swap' } | { kind: 'seen'; who: BillboardPerson[] }
+
 function Poster({
   film,
-  people,
   first,
   stamp,
+  everyone,
 }: {
   film: BillboardFilm
-  people: readonly BillboardPerson[]
   first: boolean
-  stamp: 'swap' | 'seen' | null
+  stamp: Stamp | null
+  everyone: boolean
 }) {
   const { card } = BILLBOARD
-  const without = new Set(film.withoutFact)
-  const predicted = new Map(film.predictedRatings.map((p) => [p.person, p]))
   // A poster that does not load gives way to the title, as none does: the
   // browser's clipped alt text never shows under the stickers (#272, #277).
   const [broken, setBroken] = useState(false)
@@ -90,40 +96,30 @@ function Poster({
             )}
           </a>
         }
-      >
-        {people.map((p) => {
-          const rating = predicted.get(p.slug)
-          return (
-            <PersonDot
-              key={p.slug}
-              person={p}
-              hollow={without.has(p.slug)}
-              rating={
-                rating && {
-                  text: rating.text,
-                  hint: card.predicted(p.name, rating.text, rating.raters),
-                }
-              }
-            />
-          )
-        })}
-      </TapeCase>
+      />
       {stamp && (
         <Sticker
-          kind={stamp}
-          className={`absolute left-1/2 -translate-x-1/2 ${cover ? 'top-[40%]' : 'top-[62%]'}`}
+          kind={stamp.kind}
+          className={`absolute left-1/2 inline-flex -translate-x-1/2 items-center gap-xs whitespace-nowrap ${cover ? 'top-[40%]' : 'top-[62%]'}`}
         >
-          {stamp === 'swap' ? card.swapStamp : card.seenStamp}
-        </Sticker>
-      )}
-      {film.new && (
-        <Sticker kind="new" className="absolute top-sm -right-md">
-          {card.isNew}
+          {stamp.kind === 'swap' ? card.swapStamp : card.seenStamp}
+          {stamp.kind === 'seen' && !everyone && (
+            <>
+              <span aria-hidden="true" className="inline-flex gap-0.5">
+                {stamp.who.map((p) => (
+                  <Avatar key={p.slug} person={p} />
+                ))}
+              </span>
+              <span className="sr-only">
+                {card.seenStampWho(stamp.who.map((p) => p.label))}
+              </span>
+            </>
+          )}
         </Sticker>
       )}
       {film.bet && (
         <>
-          <BetStamp className="absolute bottom-[38px] -left-sm">
+          <BetStamp className="absolute bottom-[17px] -left-sm">
             {card.bet}
           </BetStamp>
           <span className="sr-only">{card.betHint}</span>
@@ -149,9 +145,11 @@ function Header({
   const Title = level === 3 ? 'h3' : 'h2'
   return (
     <div className="flex min-w-0 flex-col gap-sm">
+      {/* The anchor of a tape on the home (`#filme-…`): room above for the
+       * card's padding, the price sticker and a gutter (#271). */}
       <Title
         id={id}
-        className="flex flex-col gap-y-0.5 font-display text-title"
+        className="flex scroll-mt-10 flex-col gap-y-0.5 font-display text-title"
       >
         <span className="sr-only">{film.position}</span>
         <span>{film.title}</span>
@@ -166,7 +164,7 @@ function Header({
           {film.synopsis}
         </p>
       )}
-      <div className="flex flex-wrap gap-xs">
+      <div className="flex flex-wrap items-center gap-x-xs">
         {film.chips.map((chip) => (
           <Chip key={chip}>{chip}</Chip>
         ))}
@@ -176,7 +174,9 @@ function Header({
           rel="noopener noreferrer"
           className={LINK_CHIP}
         >
-          {card.imdb(film.imdbRatingText, film.votesText)}
+          <span className={LINK_CHIP_FACE}>
+            {card.imdb(film.imdbRatingText, film.votesText)}
+          </span>
         </a>
         {film.trailer && (
           <a
@@ -185,7 +185,7 @@ function Header({
             rel="noopener noreferrer"
             className={LINK_CHIP}
           >
-            {card.trailer}
+            <span className={LINK_CHIP_FACE}>{card.trailer}</span>
           </a>
         )}
       </div>
@@ -230,27 +230,79 @@ export function EvidenceLine({
   )
 }
 
-function Why({
+/** Each Presente's Nota prevista, in the people's order, under the title
+ * of "Por que": "previsto · Ana 8,3 · Iara 7,1". Her name carries the hint
+ * of how many taste neighbours back it, when the version kept it. Who has
+ * none is left out, and with nobody there is no line (#326). */
+function Predicted({
   film,
   people,
-  level,
 }: {
   film: BillboardFilm
   people: readonly BillboardPerson[]
-  level: Level
 }) {
   const { card } = BILLBOARD
-  const Label = level === 3 ? 'h4' : 'h3'
+  const predicted = new Map(film.predictedRatings.map((p) => [p.person, p]))
+  const shown = people.flatMap((person) => {
+    const rating = predicted.get(person.slug)
+    return rating ? [{ person, rating }] : []
+  })
+  if (shown.length === 0) return null
+  return (
+    <p className="text-meta text-ink-2 tabular-nums">
+      {card.predicted}
+      {shown.map(({ person, rating }) => {
+        const hint =
+          rating.raters === undefined ? null : card.predictedHint(rating.raters)
+        return (
+          <span key={person.slug}>
+            {' · '}
+            {hint === null ? (
+              person.name
+            ) : (
+              <Hint label={card.predictedLabel(person.name, hint)} hint={hint}>
+                {person.name}
+              </Hint>
+            )}{' '}
+            {rating.text}
+          </span>
+        )
+      })}
+    </p>
+  )
+}
+
+/** "Por que cada um vai gostar": its label is a label, never a heading,
+ * so five cards do not make five equal headings (#277). A card with no
+ * reason of its own (no line, no Nota prevista, no cautious Aposta) has no
+ * block: its section's title says it (#272). */
+function Why({
+  film,
+  people,
+  open,
+}: {
+  film: BillboardFilm
+  people: readonly BillboardPerson[]
+  open: boolean
+}) {
+  const { card } = BILLBOARD
   const known = byslug(people)
   const without = film.withoutFact.flatMap((slug) => known.get(slug) ?? [])
+  if (
+    film.lines.length === 0 &&
+    film.predictedRatings.length === 0 &&
+    !film.cautiousBetReason
+  )
+    return null
   return (
     <div className="col-span-2 flex flex-col gap-sm border-t border-dashed border-rule pt-lg min-[560px]:col-span-1 min-[560px]:col-start-2">
-      <Label className="flex justify-between gap-sm font-display text-label text-ink-2 uppercase">
-        {card.why}
+      <p className="flex justify-between gap-sm font-display text-label text-ink-2 uppercase">
+        <span>{open ? card.why : card.whyClosed}</span>
         <span className="font-medium tracking-normal normal-case">
           {film.coverage}
         </span>
-      </Label>
+      </p>
+      <Predicted film={film} people={people} />
       <ul aria-label={card.why} className="flex flex-col gap-2.25">
         {film.cautiousBetReason && (
           <li className="text-evidence text-ink-2">{film.cautiousBetReason}</li>
@@ -267,11 +319,6 @@ function Why({
             {card.withoutFact(namesOf(without))}
           </li>
         )}
-        {film.lines.length === 0 &&
-          without.length === 0 &&
-          !film.cautiousBetReason && (
-            <li className="text-evidence text-ink-2">{card.sectionWhy}</li>
-          )}
       </ul>
     </div>
   )
@@ -279,20 +326,34 @@ function Why({
 
 /** The stars and comments the Dono gave the film in this Session, kept
  * in sight after a redo and once it is closed (#272). */
-function Notes({ notes }: { notes: BillboardNotes }) {
+function Notes({
+  notes,
+  marking,
+}: {
+  notes: BillboardNotes
+  /** The Session takes marks: the stars are in their controls. */
+  marking: boolean
+}) {
   const { card } = BILLBOARD
+  const stars = marking ? null : notes.stars
+  if (stars === null && notes.comments.length === 0) return null
   return (
     <p className="col-span-2 flex flex-wrap items-center gap-x-sm gap-y-2xs text-meta text-ink-2 min-[560px]:col-span-1 min-[560px]:col-start-2">
-      <span className="font-display text-label uppercase">{card.notes}</span>
-      {notes.stars !== null && (
-        <span
-          role="img"
-          aria-label={card.notesStars(notes.stars)}
-          className="inline-flex text-star"
-        >
-          {Array.from({ length: notes.stars }, (_, i) => (
-            <Icon key={i} name="star" className="size-4 fill-current" />
-          ))}
+      <span className="font-display text-label uppercase">
+        {marking ? card.notesComments : card.notes}
+      </span>
+      {stars !== null && (
+        <span className="inline-flex items-center gap-xs">
+          <span
+            role="img"
+            aria-label={card.notesStars(stars)}
+            className="inline-flex text-star"
+          >
+            {Array.from({ length: stars }, (_, i) => (
+              <Icon key={i} name="star" className="size-4 fill-current" />
+            ))}
+          </span>
+          <span aria-hidden="true">{card.notesStarsText(stars)}</span>
         </span>
       )}
       {notes.comments.map((comment) => (
@@ -322,21 +383,28 @@ export function BillboardCard({
   marks?: FilmMarks
   onChange?: (marks: FilmMarks) => void
 }) {
-  const allSeen =
-    marks !== undefined &&
-    people.length > 0 &&
-    marks.seen.length === people.length
-  const stamp = marks?.swap ? 'swap' : allSeen ? 'seen' : null
+  const seenBy = new Set(marks?.seen)
+  const seen = people.filter((p) => seenBy.has(p.slug))
+  const stamp: Stamp | null = marks?.swap
+    ? { kind: 'swap' }
+    : seen.length > 0
+      ? { kind: 'seen', who: seen }
+      : null
   return (
     <article
       aria-labelledby={`filme-${film.id}`}
       data-swap={marks?.swap || undefined}
       className="group/card grid grid-cols-[112px_1fr] content-start gap-xl rounded-card border border-rule bg-surface px-xl pt-2xl pb-xl min-[560px]:grid-cols-[160px_1fr]"
     >
-      <Poster film={film} people={people} first={first} stamp={stamp} />
+      <Poster
+        film={film}
+        first={first}
+        stamp={stamp}
+        everyone={seen.length === people.length}
+      />
       <Header film={film} id={`filme-${film.id}`} level={level} />
-      <Why film={film} people={people} level={level} />
-      {film.notes && <Notes notes={film.notes} />}
+      <Why film={film} people={people} open={marks !== undefined} />
+      {film.notes && <Notes notes={film.notes} marking={marks !== undefined} />}
       {film.reactions && (
         <ChosenReactions
           reactions={film.reactions}

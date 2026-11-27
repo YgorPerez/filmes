@@ -16,9 +16,15 @@
 /* The stories are not the Cartaz (`pnpm storybook`). */
 @source not '../ui/**/*.stories.tsx';
 
-/* Inline, the card sits on the host's own floor (#277): the frame has none.
- * The fullscreen lays the ground itself (`billboard.tsx`). */
+/* Inline, the card sits on the host's own floor (#277): the frame has none,
+ * and declares no colour scheme, as the host's page does, or Chrome paints
+ * an opaque canvas behind it. The fullscreen lays the ground itself
+ * (`billboard.tsx`), and `mount-view.tsx` gives it the theme's scheme. */
 @layer base {
+  html {
+    color-scheme: normal;
+  }
+
   body {
     background: transparent;
   }

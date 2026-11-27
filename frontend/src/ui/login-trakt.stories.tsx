@@ -23,3 +23,14 @@ export const Consent: Story = {
 export const Connected: Story = {
   args: { page: { status: 'connected', name: 'Iara' } },
 }
+
+/** A Dono, in the app: the way back to Importar, no footer of its own
+ * (#274). */
+export const ConsentInApp: Story = {
+  args: { page: { status: 'disconnected', name: 'Bruno' }, inApp: true },
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByRole('link', { name: 'Importar' }),
+    ).toBeVisible()
+  },
+}

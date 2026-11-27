@@ -268,6 +268,7 @@ describe('EvaluationRuns', () => {
           { recall50: 0.5, coverageTop5: 0.2, changes: [], tie: false },
           { recall50: null, coverageTop5: null, changes: [], tie: false },
         ],
+        combinations: 3,
         file: '2026-11-20.md',
       },
     })
@@ -291,7 +292,7 @@ describe('EvaluationRuns, when the engine fails', () => {
     await runs.start('Bruno', false)
     expect(runs.current).toMatchObject({
       state: 'done',
-      result: { best: null },
+      result: { best: null, combinations: null },
     })
     log.mockRestore()
   })

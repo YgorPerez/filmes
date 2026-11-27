@@ -8,10 +8,10 @@ const COPY = OPERATIONS.evaluation
 
 describe('the Operações copy', () => {
   it('says how much of the queue it lists', () => {
-    expect(OPERATIONS.push.queued(5, 12)).toBe(
-      'Os 5 commits mais recentes da fila:',
+    expect(OPERATIONS.push.pendingList(12, 5)).toBe(
+      '12 commits na fila. Os 5 mais recentes:',
     )
-    expect(OPERATIONS.push.queued(3, 3)).toBe('Na fila:')
+    expect(OPERATIONS.push.pendingList(3, 3)).toBe('3 commits na fila:')
   })
 
   it('says who started which run and how long it takes', () => {

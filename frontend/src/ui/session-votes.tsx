@@ -45,23 +45,32 @@ const still = () =>
 type Film = VoteDeck['films'][number]
 
 /** The Votos cast so far, a film each in order, and what the live region
- * says. After each Voto, the next card's title takes the focus. */
+ * says. After each Voto, the next card's title takes the focus; after the
+ * last, the recap's title, and the live region says the count. */
 function useVotes(films: readonly Film[]) {
   const [votes, setVotes] = useState<Vote[]>([])
   const [said, setSaid] = useState('')
   const heading = useRef<HTMLHeadingElement>(null)
+  const recap = useRef<HTMLHeadingElement>(null)
   const moved = useRef(false)
   const film = films[votes.length]
 
   useEffect(() => {
     if (!moved.current) return
     if (film) heading.current?.focus()
+    else recap.current?.focus()
   }, [film])
 
   const cast = (vote: Vote) => {
     moved.current = true
     const next = films[votes.length + 1]
-    setSaid(next ? VOTES.now(votes.length + 2, films.length, next.title) : '')
+    const cast = [...votes, vote]
+    const yes = cast.filter((v) => v === 'yes').length
+    setSaid(
+      next
+        ? VOTES.now(votes.length + 2, films.length, next.title)
+        : VOTES.end(yes, cast.length - yes),
+    )
     setVotes((v) => [...v, vote].slice(0, films.length))
   }
   const back = () => {
@@ -70,10 +79,10 @@ function useVotes(films: readonly Film[]) {
     if (previous) setSaid(VOTES.wentBack(previous.title))
     setVotes((v) => v.slice(0, -1))
   }
-  const flip = (i: number) =>
-    setVotes((v) => v.map((vote, j) => (j === i ? other(vote) : vote)))
+  const change = (i: number, to: Vote) =>
+    setVotes((v) => v.map((vote, j) => (j === i ? to : vote)))
   const restart = () => setVotes([])
-  return { votes, said, film, heading, cast, back, flip, restart }
+  return { votes, said, film, heading, recap, cast, back, change, restart }
 }
 
 /** The arrow keys vote while a card is up, outside the fields. */
@@ -146,7 +155,7 @@ export function VoteCards({
 }) {
   const films = revote ? deck.films : deck.films.filter((f) => !f.mine)
   const standing = revote ? [] : deck.films.filter((f) => f.mine)
-  const { votes, said, film, heading, cast, back, flip, restart } =
+  const { votes, said, film, heading, recap, cast, back, change, restart } =
     useVotes(films)
   useArrowKeys(film !== undefined, cast)
   return (
@@ -205,7 +214,8 @@ export function VoteCards({
           films={films}
           votes={votes}
           sending={sending}
-          flip={flip}
+          heading={recap}
+          change={change}
           restart={restart}
         />
       )}
@@ -251,7 +261,7 @@ function VoteCard({
         {stamp && (
           <Sticker
             kind={stamp === 'yes' ? 'yes' : 'swap'}
-            className="absolute top-[40%] left-1/2 -translate-x-1/2"
+            className="absolute -top-xs -right-sm"
           >
             {stamp === 'yes' ? VOTES.stampYes : VOTES.stampNo}
           </Sticker>
@@ -280,7 +290,7 @@ function VoteCard({
             {film.card.synopsis}
           </p>
         )}
-        <div className="mt-auto grid grid-cols-2 gap-sm">
+        <div className="grid grid-cols-2 gap-sm">
           <button
             type="button"
             onClick={() => cast('no')}
@@ -309,19 +319,21 @@ function VoteCard({
   )
 }
 
-/** After the last film: the recap, where a tap flips a Voto, and Enviar
- * votos. */
+/** After the last film: the recap, where each film's Não / Sim pair
+ * shows her Voto and changes it, and Enviar votos. */
 function VoteRecap({
   films,
   votes,
   sending,
-  flip,
+  heading,
+  change,
   restart,
 }: {
   films: readonly Film[]
   votes: readonly Vote[]
   sending: boolean
-  flip: (i: number) => void
+  heading: RefObject<HTMLHeadingElement | null>
+  change: (i: number, to: Vote) => void
   restart: () => void
 }) {
   const yes = votes.filter((v) => v === 'yes').length
@@ -329,19 +341,23 @@ function VoteRecap({
   return (
     <>
       <div className="flex flex-col gap-xs">
-        <h2 className="font-display text-step-title">
+        <h2
+          ref={heading}
+          tabIndex={-1}
+          className="font-display text-step-title"
+        >
           {VOTES.summary(yes, votes.length - yes)}
         </h2>
         <p className="text-meta text-ink-2">{VOTES.recap}</p>
       </div>
-      <ul className="flex flex-col gap-xs">
+      <ul className="flex flex-col">
         {films.map((f, i) => (
           <RecapRow
             key={f.id}
             title={f.title}
             vote={votes[i] ?? 'yes'}
             sending={sending}
-            onFlip={() => flip(i)}
+            onChange={(to) => change(i, to)}
           />
         ))}
       </ul>
@@ -365,40 +381,63 @@ function VoteRecap({
   )
 }
 
-/** A film of the recap, with its Voto to flip. */
+/** The options of a recap row, Não first as on the card. */
+const CHOICES = [
+  {
+    vote: 'no',
+    label: VOTES.no,
+    icon: 'close',
+    on: 'border-sticker-pink bg-sticker-pink',
+  },
+  {
+    vote: 'yes',
+    label: VOTES.yes,
+    icon: 'check',
+    on: 'border-sticker-green bg-sticker-green',
+  },
+] as const
+
+/** A film of the recap with her Voto as a two-way switch: the chosen side
+ * is filled in its sticker colour, and a tap on the other changes it. */
 function RecapRow({
   title,
   vote,
   sending,
-  onFlip,
+  onChange,
 }: {
   title: string
   vote: Vote
   sending: boolean
-  onFlip: () => void
+  onChange: (to: Vote) => void
 }) {
-  const yes = vote === 'yes'
   return (
-    <li className="flex items-center justify-between gap-md border-b border-rule py-xs last:border-b-0">
+    <li className="flex items-center justify-between gap-md border-b border-rule py-sm last:border-b-0">
       <span className="min-w-0 font-display">{title}</span>
-      <button
-        type="button"
-        onClick={onFlip}
-        disabled={sending}
-        aria-label={VOTES.flip(title, vote)}
-        className={buttonVariants({
-          variant: 'option',
-          className: `min-w-[96px] border-2 ${yes ? 'border-sticker-green' : 'border-sticker-pink'}`,
-        })}
+      <div
+        role="group"
+        aria-label={VOTES.voteOn(title)}
+        className="flex shrink-0 rounded-pill border-(length:--border-width-stroke) border-rule bg-surface p-1"
       >
-        <Icon name={yes ? 'check' : 'close'} className="size-[18px]" />
-        {yes ? VOTES.yes : VOTES.no}
-      </button>
+        {CHOICES.map((choice) => {
+          const chosen = choice.vote === vote
+          return (
+            <button
+              key={choice.vote}
+              type="button"
+              aria-pressed={chosen}
+              disabled={sending}
+              onClick={() => onChange(choice.vote)}
+              className={`inline-flex min-h-touch min-w-[72px] cursor-pointer items-center justify-center gap-xs rounded-pill border-2 px-sm font-display text-control disabled:cursor-default disabled:opacity-60 ${chosen ? `${choice.on} text-on-sticker font-bold` : 'border-transparent text-ink-2 hover:text-ink'}`}
+            >
+              <Icon name={choice.icon} className="size-[18px]" />
+              {choice.label}
+            </button>
+          )
+        })}
+      </div>
     </li>
   )
 }
-
-const other = (vote: Vote): Vote => (vote === 'yes' ? 'no' : 'yes')
 
 /** After the Votos went, or with every film voted: the night's list as it
  * is now with her Voto on each, what her não took out, and the next step. */
@@ -516,12 +555,16 @@ function screenOf(
   return 'results'
 }
 
-/** The screen's title. */
+/** The screen's title: a failure she cannot fix says what became of her
+ * Votos, as the alert under it does. */
 function screenTitle(
   screen: ReturnType<typeof screenOf>,
   deck: VoteDeck | null,
   sent: boolean,
+  erro: VoteRefusal | undefined,
 ) {
+  if (screen === 'stuck' && (erro === 'falha' || erro === 'regerar'))
+    return VOTES.stuck[erro]
   if (screen === 'vote' || !deck) return VOTES.title
   return sent ? VOTES.sent : VOTES.voted
 }
@@ -574,8 +617,8 @@ export function VoteScreen({
   const sent = Boolean(feito) && !failed
   return (
     <section aria-labelledby="votar" className="flex flex-col gap-lg">
-      <h1 id="votar" className="font-display text-title">
-        {screenTitle(screen, deck, sent)}
+      <h1 id="votar" className="font-display text-page-title">
+        {screenTitle(screen, deck, sent, erro)}
       </h1>
       {sent && feito && <Notice>{VOTES.notices[feito]}</Notice>}
       {refusal && <Alert>{VOTES.refusals[refusal](owner)}</Alert>}

@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { importsPath, RATINGS_PATH } from '#/content/paths'
 import { feedbackPath, sessionPath } from '#/content/session-paths'
 import type { LatestSession, SetupView } from '#/platform/setup-guide'
@@ -154,10 +154,7 @@ export function Latest({
       </a>
       {s.request && <p className="text-evidence text-ink-2">{s.request}</p>}
       {s.recommendation.length > 0 && (
-        <ol
-          aria-label={latest.films}
-          className="grid gap-xs min-[560px]:grid-cols-2"
-        >
+        <ol aria-label={latest.films} className="flex flex-col gap-xs">
           {s.recommendation.map((film, i) => (
             <Tape
               key={film.id}
@@ -179,7 +176,6 @@ export function Latest({
           </a>
           <a
             href={feedbackPath(s.id)}
-            aria-label={latest.feedbackLabel(s.id)}
             className={buttonVariants({ variant: 'link' })}
           >
             {latest.feedback}
@@ -193,7 +189,6 @@ export function Latest({
           <p className="text-evidence">{latest.openText}</p>
           <a
             href={feedbackPath(s.id)}
-            aria-label={latest.feedbackLabel(s.id)}
             className={buttonVariants({ variant: 'option' })}
           >
             {latest.feedback}
@@ -334,7 +329,9 @@ function ConnectorHow() {
     <>
       <ol className="flex list-decimal flex-col gap-2xs pl-3xl text-evidence">
         {guide.how.map((line) => (
-          <li key={line}>{line}</li>
+          <li key={line} className="text-pretty">
+            {line}
+          </li>
         ))}
       </ol>
       <p className="text-meta text-pretty text-ink-2">{guide.auto}</p>
@@ -396,6 +393,8 @@ type StepProps = {
   ratings: number
   /** The first pending step: it shows its whole content. */
   first: boolean
+  /** She has a Sessão: the connector stays folded even when first. */
+  fold?: boolean
 }
 
 /** What the step holds beyond its line: the counter of Meu gosto, the
@@ -429,10 +428,10 @@ function StepContent({
 }
 
 /** A pending step: its line, always, then its content. The connector
- * behind another pending step keeps its content folded under "Ver como
- * conectar", so the guide stays short and the address is never copied
- * blind. */
-function Pending({ step, n, person, mcpUrl, ratings, first }: StepProps) {
+ * keeps its content folded under "Ver como conectar" behind another pending
+ * step, and once she has a Sessão (`fold`), so the guide stays short for a
+ * Dono who does not use Claude, and the address is never copied blind. */
+function Pending({ step, n, person, mcpUrl, ratings, first, fold }: StepProps) {
   const { guide } = HOME
   const copy = guide.steps[step.step]
   return (
@@ -442,7 +441,7 @@ function Pending({ step, n, person, mcpUrl, ratings, first }: StepProps) {
         <span className="sr-only">, {guide.state.pending}</span>
       </h3>
       <p className="text-evidence-step text-pretty text-ink-2">{copy.text}</p>
-      {first || step.step === 'taste' ? (
+      {step.step === 'taste' || (first && !fold) ? (
         <StepContent
           step={step}
           person={person}
@@ -451,35 +450,67 @@ function Pending({ step, n, person, mcpUrl, ratings, first }: StepProps) {
           skip
         />
       ) : (
-        <>
-          <details className="group">
-            <summary
-              className={buttonVariants({
-                variant: 'option',
-                className:
-                  'w-fit cursor-pointer list-none [&::-webkit-details-marker]:hidden',
-              })}
-            >
-              <span className="group-open:hidden">{guide.howToConnect}</span>
-              <span className="hidden group-open:inline">{guide.close}</span>
-            </summary>
-            <div className="mt-md flex flex-col gap-sm">
-              <StepContent
-                step={step}
-                person={person}
-                mcpUrl={mcpUrl}
-                ratings={ratings}
-                skip={false}
-              />
-            </div>
-          </details>
-          {/* Alone on its row, "Pular" lines up with the text above. */}
-          <div className="-ml-sm">
-            <Skip step={step.step} />
-          </div>
-        </>
+        <FoldedConnector mcpUrl={mcpUrl} />
       )}
     </StepFrame>
+  )
+}
+
+/** The connector folded: "Ver como conectar" with "Pular" beside it;
+ * open, the address and how to add it, then Copiar endereço, Pular and
+ * "Fechar" at the end, where the reading stops. */
+function FoldedConnector({ mcpUrl }: { mcpUrl: string | null }) {
+  const { guide } = HOME
+  const [open, setOpen] = useState(false)
+  // Focus follows the toggle: to what opened, and back to the button that
+  // opens it again; not on the first render.
+  const toggled = useRef(false)
+  const body = useRef<HTMLDivElement>(null)
+  const opener = useRef<HTMLButtonElement>(null)
+  useEffect(() => {
+    if (!toggled.current) return
+    ;(open ? body : opener).current?.focus()
+  }, [open])
+  const toggle = (next: boolean) => {
+    toggled.current = true
+    setOpen(next)
+  }
+  const id = 'como-conectar'
+  return open ? (
+    <div
+      id={id}
+      ref={body}
+      tabIndex={-1}
+      className="flex flex-col gap-sm outline-none"
+    >
+      {mcpUrl && <ConnectorBody url={mcpUrl} />}
+      <div className="flex flex-wrap items-center gap-xs">
+        {mcpUrl && <CopyAddress url={mcpUrl} label={guide.copyAddress} />}
+        <Skip step="connector" />
+        <button
+          type="button"
+          aria-expanded="true"
+          aria-controls={id}
+          onClick={() => toggle(false)}
+          className={buttonVariants({ variant: 'link', className: 'px-sm' })}
+        >
+          {guide.close}
+        </button>
+      </div>
+    </div>
+  ) : (
+    <div className="flex flex-wrap items-center gap-xs">
+      <button
+        type="button"
+        ref={opener}
+        aria-expanded="false"
+        onClick={() => toggle(true)}
+        className={buttonVariants({ variant: 'option' })}
+      >
+        {guide.howToConnect}
+      </button>
+      <Skip step="connector" />
+    </div>
   )
 }
 
@@ -565,17 +596,24 @@ function Step(props: StepProps) {
   )
 }
 
-/** The setup guide while a step is pending: what it buys her, then its two
- * steps in order, done ones included, so she sees where she stands. */
+/** The setup guide while a step is pending: what Meu gosto buys her while
+ * it is pending (none when only the connector is left), then its two steps
+ * in order, done ones included, so she sees where she stands. */
 export function Guide({
   setup,
   person,
   mcpUrl,
+  fold = false,
 }: {
   setup: SetupView
   person: string
   mcpUrl: string | null
+  /** She has a Sessão: the connector stays folded. */
+  fold?: boolean
 }) {
+  const tastePending = guideSteps(setup).some(
+    (s) => s.step === 'taste' && stateOf(s) === 'pending',
+  )
   return (
     <section
       aria-labelledby="guia"
@@ -585,11 +623,13 @@ export function Guide({
         <h2 id="guia" className="font-display text-step-title">
           {HOME.guide.title}
         </h2>
-        <p className="text-evidence text-pretty text-ink-2">
-          {HOME.guide.payoff}
-        </p>
+        {tastePending && (
+          <p className="text-evidence text-pretty text-ink-2">
+            {HOME.guide.payoff}
+          </p>
+        )}
       </div>
-      <StepList setup={setup} person={person} mcpUrl={mcpUrl} />
+      <StepList setup={setup} person={person} mcpUrl={mcpUrl} fold={fold} />
     </section>
   )
 }
@@ -601,11 +641,13 @@ export function StepList({
   person,
   mcpUrl,
   skippedOnly = false,
+  fold = false,
 }: {
   setup: SetupView
   person: string
   mcpUrl: string | null
   skippedOnly?: boolean
+  fold?: boolean
 }) {
   const all = guideSteps(setup)
   const first = all.find((s) => stateOf(s) === 'pending')
@@ -621,6 +663,7 @@ export function StepList({
           mcpUrl={mcpUrl}
           ratings={setup.ratings}
           first={step === first}
+          fold={fold}
         />
       ))}
     </ol>

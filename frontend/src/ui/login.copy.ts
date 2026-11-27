@@ -8,7 +8,8 @@ export const LOGIN = {
    * visitor has to know anything else. */
   tagline: ['Filme pra hoje', 'Pra sala toda'],
   taglineLabel: 'Filme pra hoje, pra sala toda.',
-  lead: 'Entre com a sua conta Google.',
+  /** What the visitor gets, not the button again. */
+  lead: 'Sua lista da noite e as suas Sessões ficam aqui.',
   /** Who gets in, before a failed trip to Google says it. */
   access:
     'Só entra quem já está em Pessoas como Dono. Peça a quem já usa para pôr o seu e-mail.',
@@ -23,22 +24,41 @@ export const LOGIN = {
   } satisfies Record<LoginRefusal, string>,
 } as const
 
-/** `/trakt` (#295, #269): a Pessoa connects her own Trakt, which the filmes
- * reads and sends to, or disconnects it. */
+/** `/trakt` (#295, #269, #274): a Pessoa connects her own Trakt, which the
+ * filmes reads and sends to, or disconnects it. */
 export const TRAKT_SCREEN = {
-  title: 'Trakt',
-  slip: 'Histórico e notas',
+  heading: 'Trakt',
+  back: 'Importar',
+  title: 'Histórico e notas',
+  google: 'Entrar com Google',
+  disconnect: 'Desconectar Trakt',
+  connect: 'Conectar Trakt',
   unavailable: 'A conexão com o Trakt está indisponível.',
   login:
     'Entre com o e-mail cadastrado no filmes para conectar sua conta do Trakt.',
-  google: 'Entrar com Google',
   connected:
     'Sua conta está conectada: o filmes lê seu histórico a cada Sessão nova e envia o filme escolhido. Ao desconectar, ele deixa de ler e de enviar e apaga os dados de acesso. O que já entrou no seu gosto e seu histórico no Trakt ficam como estão.',
-  disconnect: 'Desconectar Trakt',
-  consent:
-    'Autorizo o filmes a ler do meu Trakt o histórico, as notas e a watchlist de filmes, a cada Sessão nova e quando eu pedir, e a enviar ao meu Trakt o filme escolhido na Sessão, os filmes marcados como Já vi no Cartaz e as notas que dei, ao salvar o Feedback.',
-  connect: 'Conectar Trakt',
-  notice: 'O filmes usa o Trakt e não é endossado nem certificado pelo Trakt.',
+  does: [
+    {
+      title: 'O filmes lê do seu Trakt',
+      items: [
+        'o histórico, as notas e a watchlist de filmes',
+        'a cada Sessão nova, e quando você pedir em Importar',
+      ],
+    },
+    {
+      title: 'O filmes envia ao seu Trakt, ao salvar o Feedback',
+      items: [
+        'o filme escolhido na Sessão',
+        'os filmes marcados como Já vi no Cartaz, com as notas que você deu',
+      ],
+    },
+  ],
+  consent: 'Autorizo a leitura e o envio acima',
+  after:
+    'O Trakt pede que você entre e aprove. Depois ele volta para esta página, já conectada, e o histórico entra na próxima Sessão.',
+  notEndorsed:
+    'O filmes usa o Trakt e não é endossado nem certificado pelo Trakt.',
   errors: {
     login: 'Entre com o e-mail cadastrado no filmes.',
     trakt: 'O Trakt não concluiu a conexão. Tente de novo.',

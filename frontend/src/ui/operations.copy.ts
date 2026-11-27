@@ -64,11 +64,14 @@ export const OPERATIONS = {
     off: 'O envio está desligado neste servidor. Os commits ficam só aqui, sem ir para o GitHub.',
     remoteSetting: 'FILMES_DATA_REMOTE',
     pending: (n: number) => `${commits(n)} na fila.`,
+    /** The queue line over its list, while pushes fail. */
+    pendingList: (total: number, shown: number) =>
+      shown < total
+        ? `${commits(total)} na fila. Os ${shown} mais recentes:`
+        : `${commits(total)} na fila:`,
     failing: 'O envio dos dados está falhando',
     nextStep:
       'Tente enviar agora. Se continuar falhando, confira a deploy key do filmes-dados na VPS e o último erro do Git, abaixo.',
-    queued: (shown: number, total: number) =>
-      shown < total ? `Os ${shown} commits mais recentes da fila:` : 'Na fila:',
     failures: (n: number) =>
       n === 1 ? '1 falha seguida.' : `${n} falhas seguidas.`,
     since: (iso: string) => `A primeira falha foi em ${time(iso)}.`,
@@ -126,13 +129,33 @@ export const OPERATIONS = {
         ? `Feedback de ${count}. Sem taxa de escolha no top 5.`
         : `Feedback de ${count}. O filme escolhido estava no top 5 em ${percent(rate)} delas.`
     },
+    onlineTitle: 'Feedback das Sessões',
     priority: (priority: 'online' | 'offline') =>
       priority === 'online'
         ? 'Já há Sessões suficientes com Feedback, e ele vale mais que o teste com Notas.'
         : 'Ainda há poucas Sessões com Feedback, então vale mais o teste com Notas.',
     best: 'Combinações com melhor resultado',
+    /** Above the grid's table: whether any combination beats today's
+     * weights. `current`: the rank of today's weights among the best (0
+     * first), -1 when they are not among them. */
+    gridVerdict: (tried: number | null, current: number, shown: number) => {
+      const among =
+        tried === null
+          ? 'das combinações testadas'
+          : `das ${count(tried)} combinações testadas`
+      if (current === 0) return `Nenhuma ${among} supera os pesos de hoje.`
+      if (current < 0)
+        return shown === 1
+          ? `A melhor ${among} supera os pesos de hoje.`
+          : `As ${shown} melhores ${among} superam os pesos de hoje.`
+      return current === 1
+        ? `Só a 1ª ${among} supera os pesos de hoje.`
+        : `As ${current} primeiras ${among} superam os pesos de hoje.`
+    },
     bestHint:
-      'No empate, vem antes a que muda menos pesos. Para usar uma, copie os pesos para o config/weights.toml.',
+      'A ordem é pelo Recall@50; no empate, pela cobertura no top 5 e depois pela que muda menos pesos. Para usar uma, copie os pesos para o config/weights.toml.',
+    noGain: 'sem ganho',
+    gridFile: 'As medidas de cada combinação ficam no arquivo do relatório.',
     rank: 'Posição',
     bestRow: (n: number) => `${n}º`,
     changes: 'O que muda',
@@ -191,7 +214,7 @@ export const OPERATIONS = {
         sql: 'SELECT predicado, count(*) AS fatos FROM arestas\nGROUP BY predicado ORDER BY fatos DESC',
       },
       {
-        name: 'Pessoas',
+        name: 'Todas as Pessoas',
         sql: 'SELECT * FROM pessoas',
       },
     ],

@@ -61,3 +61,37 @@ export const tasteNeighborsText = (
   meanRating: number,
 ): string =>
   `${integerText(raters)} pessoas de gosto parecido deram ${ratingText(pyRound(meanRating, 1))} em média a este filme`
+
+const MONTHS = [
+  'jan',
+  'fev',
+  'mar',
+  'abr',
+  'mai',
+  'jun',
+  'jul',
+  'ago',
+  'set',
+  'out',
+  'nov',
+  'dez',
+] as const
+
+const WEEKDAYS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'] as const
+
+/** "sex, 20 nov": an ISO day (a Session's `data`) as the app writes a
+ * Session's day (#272). */
+export const weekdayDateText = (iso: string): string => {
+  const [year, month, day] = iso.slice(0, 10).split('-').map(Number) as [
+    number,
+    number,
+    number,
+  ]
+  const weekday = new Date(Date.UTC(year, month - 1, day)).getUTCDay()
+  return `${WEEKDAYS[weekday]}, ${day} ${MONTHS[month - 1]}`
+}
+
+/** "8 de 10": a Nota of the 0,5–5 scale as the app shows it, on 1–10
+ * (#272). */
+export const tenScaleText = (value: number): string =>
+  `${ratingText(value * 2)} de 10`

@@ -77,6 +77,7 @@ import { Run } from '../runtime/Run.ts'
 import { Tmdb } from '../sources/Tmdb.ts'
 import { Sqlite, type Connection, type SqliteError } from '../sqlite/Sqlite.ts'
 import { pyInt } from '../compat/fact-id.ts'
+import { additionsOf } from '../sessions/history.ts'
 import { sessionOwner } from '../sessions/feedback.ts'
 import {
   readableReactions,
@@ -119,12 +120,17 @@ export interface BillboardPerson {
 export interface BillboardRequest {
   /** What the Dono typed or said, if anything. */
   readonly speech: string | null
+  /** What she added from the Cartaz since, in order (#272). */
+  readonly additions: ReadonlyArray<string>
   /** "Você", "Iara", "Vocês dois"... */
   readonly who: string
   /** What follows `who`, joined by " · " on the page: the maximum
    * duration, the minimum IMDb rating, the Climas, the Restrições' labels
    * and the Regra. */
   readonly parts: ReadonlyArray<string>
+  /** "Só filmes que ninguém viu" (`unseen`) is on: a Já vi on the Cartaz
+   * marks the film's Trocar (#326). */
+  readonly unseen: boolean
 }
 
 /** A film of the previous version that left, with the reason as the page
@@ -169,6 +175,8 @@ export interface BillboardReaction {
   readonly rating: string | null
   /** Her Relato; null without one. */
   readonly reaction: ReportLevel | null
+  /** What she said of it in the Feedback (#272); null without one. */
+  readonly comment: string | null
 }
 
 /** The chosen film of a Session with Feedback when no card shows it: it
@@ -406,12 +414,12 @@ const predictionsOf = (
  * film (#264). */
 const reactionsOf = (
   predicted: ReadonlyArray<BillboardPrediction>,
-  given: ReadonlyArray<Reaction>,
+  feedback: Told,
   attendees: ReadonlyArray<string>,
 ): BillboardReaction[] =>
   attendees.flatMap((person) => {
     const prediction = predicted.find((p) => p.person === person)
-    const reaction = given.find((r) => r.person === person)
+    const reaction = feedback.given.find((r) => r.person === person)
     if (prediction === undefined && reaction === undefined) return []
     const rating = reaction?.rating ?? null
     return [
@@ -420,9 +428,29 @@ const reactionsOf = (
         predicted: prediction?.text ?? null,
         rating: rating === null ? null : formatRating(rating * 2),
         reaction: reaction?.reaction ?? null,
+        comment: feedback.comments.get(person) ?? null,
       },
     ]
   })
+
+/** The Feedback of a told Session: the chosen film, the reactions and
+ * each Presente's comment. */
+interface Told {
+  readonly chosen: string
+  readonly given: ReadonlyArray<Reaction>
+  readonly comments: ReadonlyMap<string, string>
+}
+
+/** Each Presente's comment in the Feedback, by slug (#272). */
+const feedbackComments = (front: YamlMapping): Map<string, string> => {
+  const comments = new Map<string, string>()
+  for (const reaction of mappings(get(front.get('feedback'), 'reactions'))) {
+    const person = textOf(reaction.get('person'))
+    const comment = textOf(reaction.get('comment'))
+    if (person && comment) comments.set(person, comment)
+  }
+  return comments
+}
 
 /** 2_400 is "2 mil"; 1_250_000 is "1,2 mi" (`_votos`). */
 export const votesText = (votes: number): string => {
@@ -453,9 +481,11 @@ const requestOf = (
   // A stored Restrição that no longer exists (an old Session's no_repeat)
   // does not show, nor the one the Session turns on by itself
   // (`out_of_session`): the Dono did not ask for it (#277).
-  const stored = get(context, 'constraints')
-  for (const item of mappings(stored)) {
-    const label = askedConstraintLabel(yamlToJson(item) as StoredConstraint)
+  const stored = mappings(get(context, 'constraints')).map(
+    (item) => yamlToJson(item) as StoredConstraint,
+  )
+  for (const item of stored) {
+    const label = askedConstraintLabel(item)
     if (label) parts.push(label)
   }
   const rule = front.get('rule')
@@ -470,8 +500,10 @@ const requestOf = (
   const speech = get(context, 'request')
   return {
     speech: textOf(speech),
+    additions: additionsOf(front),
     who,
     parts,
+    unseen: stored.some((item) => item.name === 'unseen'),
   }
 }
 
@@ -680,10 +712,7 @@ const filmCard = (
     readonly attendees: ReadonlyArray<string>
     readonly people: ReadonlyArray<BillboardPerson>
     /** The Feedback's chosen film and reactions, when it has them. */
-    readonly feedback: {
-      readonly chosen: string
-      readonly given: ReadonlyArray<Reaction>
-    } | null
+    readonly feedback: Told | null
   },
 ) =>
   Effect.gen(function* () {
@@ -741,7 +770,7 @@ const filmCard = (
     if (feedback?.chosen !== film.id) return card
     return {
       ...card,
-      reactions: reactionsOf(card.predictedRatings, feedback.given, attendees),
+      reactions: reactionsOf(card.predictedRatings, feedback, attendees),
     }
   })
 
@@ -750,10 +779,7 @@ const filmCard = (
  * no longer has it. */
 const chosenWithoutCard = (
   db: Connection,
-  feedback: {
-    readonly chosen: string
-    readonly given: ReadonlyArray<Reaction>
-  },
+  feedback: Told,
   listed: ReadonlyMap<string, YamlMapping>,
   attendees: ReadonlyArray<string>,
 ): Effect.Effect<
@@ -771,7 +797,7 @@ const chosenWithoutCard = (
       year: row.year,
       reactions: reactionsOf(
         predictionsOf(listed.get(feedback.chosen), attendees),
-        feedback.given,
+        feedback,
         attendees,
       ),
     }
@@ -834,6 +860,7 @@ export const billboardModel = (
         : {
             chosen: pyStrValue(chosen ?? null),
             given: readableReactions(id, front),
+            comments: feedbackComments(front),
           }
     return yield* (yield* Sqlite).read((db) =>
       Effect.gen(function* () {

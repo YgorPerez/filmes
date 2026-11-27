@@ -25,6 +25,7 @@ import {
   revokeAccess,
   setupGuide,
   skipSetupStep,
+  tasteSummary,
   type Author,
   type Engine,
   type ErrorOutput,
@@ -35,6 +36,7 @@ import {
   type SetupGuide,
   type SetupStep,
   type SkipSetupResult,
+  type TasteSummary,
 } from '@filmes/engine'
 import {
   formProblem,
@@ -92,6 +94,9 @@ export type PersonPage = Omit<PersonView, 'imports' | 'warning'> & {
   sessions: PersonSessions
   /** Whether an import holds her history: she cannot be taken out. */
   imported: boolean
+  /** What her Notas say she likes (#273): her genres and directors; null
+   * when the engine could not read them (the page does without). */
+  likes: TasteSummary | null
 }
 
 /** What the screens and the actions need from the engine. */
@@ -99,6 +104,8 @@ export interface People {
   list(): Promise<Outcome<PersonEntry[]>>
   view(person: string): Promise<Outcome<PersonView>>
   sessions(person: string): Promise<Outcome<PersonSessions>>
+  /** The genres and directors of the films she gave a high Nota. */
+  taste(person: string): Promise<Outcome<TasteSummary>>
   tagGroups(): Promise<Outcome<TagGroupChoice[]>>
   /** The e-mail in her file, for the admin's Acesso section. */
   email(person: string): Promise<Outcome<string | null>>
@@ -154,6 +161,7 @@ export function peopleFromEngine(engine: Engine): People {
       ),
     view: (person) => engine.run(personView(person, { predictionError: true })),
     sessions: (person) => engine.run(personSessions(person)),
+    taste: (person) => engine.run(tasteSummary({ person })),
 
     email: (person) => map(engine.run(resolvePerson(person)), (p) => p.email),
     create: (input, owner) =>
@@ -372,9 +380,10 @@ export async function personPage(
     logEngineError(view)
     return null
   }
-  const [groups, sessions] = await Promise.all([
+  const [groups, sessions, taste] = await Promise.all([
     people.tagGroups(),
     people.sessions(person),
+    people.taste(person),
   ])
   if (groups.exitCode !== 0) {
     logEngineError(groups)
@@ -384,6 +393,7 @@ export async function personPage(
     logEngineError(sessions)
     return null
   }
+  if (taste.exitCode !== 0) logEngineError(taste)
   const { imports, warning: _warning, ...page } = view.output
   const viewer = { person: owner.person, name: owner.name, admin: owner.admin }
   const read = {
@@ -392,6 +402,7 @@ export async function personPage(
     viewer,
     sessions: sessions.output,
     imported: imports.length > 0,
+    likes: taste.exitCode === 0 ? taste.output : null,
   }
   if (!owner.admin) return read
   const access = await accessOf(page.person, people)

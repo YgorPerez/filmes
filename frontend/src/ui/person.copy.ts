@@ -17,10 +17,12 @@ type Level = 'none' | 'low' | 'normal' | 'high'
 type Reaction = 'love' | 'like' | 'dislike' | 'hate'
 type Strength = 'strong' | 'moderate' | 'weak' | 'guess'
 
+const escapeRegExp = (text: string) =>
+  text.replaceAll(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
 export const PERSON = {
   back: 'Pessoas',
   myTaste: 'Meu gosto',
-  trakt: 'Conexão com o Trakt',
   /** Meu gosto's line under the h1: the name the Sessões give her. */
   ownName: (name: string, aliases: readonly string[]) => {
     const others = namesOnly(aliases)
@@ -33,9 +35,16 @@ export const PERSON = {
     notes: (n: number) =>
       n === 1 ? '1 Nota' : `${n.toLocaleString('pt-BR')} Notas`,
     toTen: (n: number) => `faltam ${10 - n} para 10`,
-    /** The genres and directors of the films she liked. */
-    likes: (names: readonly string[]) =>
-      `Pelas suas Notas, você gosta de ${names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} e ${names.at(-1)}`}.`,
+    /** The genres and directors of the films she liked, each part with
+     * its label (#274). */
+    likes: (genres: readonly string[], directors: readonly string[]) => {
+      const parts = [
+        genres.length > 0 &&
+          `${genres.length === 1 ? 'do gênero' : 'dos gêneros'} ${listed(genres)}`,
+        directors.length > 0 && `da direção de ${listed(directors)}`,
+      ].filter((part) => part !== false)
+      return `Pelas suas Notas, você gosta ${parts.join(' e ')}.`
+    },
     said: 'O que você disse',
     nothingSaid: 'Nada dito ainda sobre o seu gosto.',
     next: 'Próximo passo',
@@ -50,10 +59,9 @@ export const PERSON = {
       ask: 'pedir um filme para hoje',
     },
   },
-  /** The fold of the fichas with nothing yet: "Ainda sem Declarados e Já
-   * vistos sem Nota · Acrescentar". */
-  empties: (titles: readonly string[]) =>
-    `Ainda sem ${listed(titles)} · Acrescentar`,
+  /** The fold of a ficha with nothing yet (#273): "Já vistos sem Nota:
+   * nenhum", its + the way to add one. */
+  empty: (title: string) => `${title}: nenhum`,
   /** Another Pessoa's page under her name (#273): how much the filmes knows
    * of her, and the one thing to do next. */
   summary: {
@@ -64,14 +72,20 @@ export const PERSON = {
       n === 1 ? '1 pergunta aberta' : `${n} perguntas abertas`,
     sessions: (n: number) => (n === 1 ? '1 Sessão' : `${n} Sessões`),
     unknown: 'falta conhecer',
+    /** What her Notas say she likes (#273): her genres and directors. */
+    likes: (name: string, names: readonly string[]) =>
+      `Pelas Notas, ${name} gosta de ${listed(names)}.`,
+    /** Without genres to say, the films of her highest Notas. */
+    liked: (name: string, titles: readonly string[]) =>
+      `${name} deu nota alta a ${listed(titles)}.`,
     next: 'Próximo passo',
+    /** The next step, a button: short, it is in capitals (#273). */
     steps: {
-      import: (name: string) => `trazer o histórico de ${name}`,
+      import: (name: string) => `Trazer o histórico de ${name}`,
       questions: (n: number) =>
-        n === 1
-          ? 'responder a pergunta aberta'
-          : 'responder as perguntas abertas',
-      veto: (name: string) => `dizer o que ${name} não vê de jeito nenhum`,
+        n === 1 ? 'Responder a pergunta' : 'Responder as perguntas',
+      veto: (name: string) => `Dizer o que ${name} não vê`,
+      ask: (name: string) => `Pedir um filme com ${name}`,
     },
   },
   /** The fold of what fine-tunes her taste: Ajustes, Declarados, Relatos,
@@ -127,10 +141,20 @@ export const PERSON = {
       return `a previsão erra ${rounded.toLocaleString('pt-BR')} ${points} em média, em ${films.toLocaleString('pt-BR')} filmes`
     },
     rate: 'Dar notas',
-    import: 'Importar do Letterboxd, do Trakt, do IMDb ou do Simkl',
-    more: 'Baixar as Notas em CSV',
-    download: 'Baixar CSV do IMDb',
-    downloadLetterboxd: 'Baixar CSV do Letterboxd',
+    import: 'Importar de outro site',
+    more: 'Baixar as Notas:',
+    download: 'CSV do IMDb',
+    downloadLetterboxd: 'CSV do Letterboxd',
+    /** Each Nota of the list: change it on Dar notas, or take it out. */
+    change: 'Mudar',
+    changeLabel: (title: string) => `Mudar a Nota de ${title}`,
+    removeWhat: (title: string) => `a Nota de ${title}`,
+    /** Her Trakt connection, under the buttons (#274). */
+    trakt: {
+      state: (connected: boolean) =>
+        connected ? 'Trakt conectado' : 'Trakt não conectado',
+      link: (connected: boolean) => (connected ? 'ver a conexão' : 'conectar'),
+    },
     /** For an admin: why and where the CSVs go (#274, #276). */
     movielens: (own: boolean, n: number, name: string) => {
       const notes = n === 1 ? 'a Nota' : `as ${n.toLocaleString('pt-BR')} Notas`
@@ -171,20 +195,26 @@ export const PERSON = {
   saving: 'Gravando…',
   imported: 'importado',
   fromFeedback: 'do Feedback',
-  /** On Meu gosto, the notices that name whose file it is. */
-  ownNotices: {
-    gravado: 'Gravado no seu arquivo.',
-    removido: 'Tirado do seu arquivo.',
-  } satisfies Partial<Record<PersonNotice, string>>,
+  /** What a save or a Tirar did, by the ficha that posted it (#273):
+   * "Veto gravado.", not where the file is. */
+  savedIn: {
+    vetos: { gravado: 'Veto gravado.', removido: 'Veto tirado.' },
+    declarados: {
+      gravado: 'Declarado gravado.',
+      removido: 'Declarado tirado.',
+    },
+    relatos: { gravado: 'Relato gravado.', removido: 'Relato tirado.' },
+    vistos: { gravado: 'Já visto gravado.', removido: 'Já visto tirado.' },
+  } satisfies Record<string, Partial<Record<PersonNotice, string>>>,
   /** What the last form did, by her name (#273): every Pessoa is not
    * "ela". */
   notices: (name: string) =>
     ({
-      gravado: `Gravado no arquivo de ${name}.`,
+      gravado: 'Gravado.',
       igual: 'Já estava assim: nada mudou.',
-      ajustado: 'gravado',
-      removido: `Tirado do arquivo de ${name}.`,
-      pulada: 'Pergunta pulada: ela volta uma vez, quando o assunto aparecer.',
+      ajustado: 'Ajuste gravado.',
+      removido: 'Tirado.',
+      pulada: 'Pergunta pulada: volta uma vez, quando o assunto aparecer.',
       saiu: 'Pulada duas vezes: a pergunta saiu da lista.',
       respondida: 'Resposta gravada como Declarado; a pergunta saiu da lista.',
       criada: `Pessoa criada. Conte aqui o gosto de ${name}.`,
@@ -204,7 +234,7 @@ export const PERSON = {
       'proprio-acesso': 'O seu próprio acesso não sai por aqui.',
       'e-dono': `${name} entra no site: tire o acesso antes de remover.`,
       'tem-import': `${name} tem histórico importado: tire as importações antes de remover.`,
-      'em-sessao': `${name} está numa Sessão: o arquivo fica, para ela continuar lendo o gosto.`,
+      'em-sessao': `${name} está numa Sessão: o arquivo fica, para a Sessão continuar lendo o gosto.`,
       exportar: 'Não deu para gerar o CSV agora. Tente de novo daqui a pouco.',
       indisponivel: 'Não deu para gravar agora. Tente de novo daqui a pouco.',
       falha:
@@ -229,6 +259,7 @@ export const PERSON = {
   noReaction: 'só menciona',
   source: 'Fonte',
   sourceHint: (fallback: string) => `opcional; sem ela, “${fallback}”`,
+  ownSourceHint: 'opcional; sem ela, conta como dito por você',
   filmHint: 'tt… do Catálogo',
   rating: 'Nota',
   noRating: 'sem Nota',
@@ -260,16 +291,23 @@ export const PERSON = {
   adjustments: {
     title: 'Ajustes',
     lead: (name: string) =>
-      `Quanto cada elo entre filmes pesa para ${name}. O que foi dito sobre um nome continua valendo.`,
+      `O quanto conta, para ${name}, um filme ter a mesma direção, o mesmo elenco ou o mesmo gênero de outro. O que foi dito sobre um nome continua valendo.`,
     ownLead:
-      'Quanto cada elo entre filmes pesa para você. O que você disse sobre um nome continua valendo.',
+      'O quanto conta, para você, um filme ter a mesma direção, o mesmo elenco ou o mesmo gênero de outro. O que você disse sobre um nome continua valendo.',
     /** What each level does, one line (#273). */
     levelsHint:
-      'nada: o elo não conta · pouco: conta metade · muito: conta uma vez e meia',
+      'nada: não conta · pouco: conta metade · muito: conta uma vez e meia',
+    /** The two groups of Ajustes (#273): who made the film, and what it
+     * is. */
+    groups: {
+      people: 'Pessoas do filme',
+      film: 'Do filme',
+    },
     changed: (n: number) =>
       n === 1 ? '1 fora do normal' : `${n} fora do normal`,
     noneChanged: 'todos normais',
-    saved: 'gravado',
+    /** Beside the Ajuste just saved, after its ✓. */
+    saved: 'Ajuste gravado',
     level: (link: string) => `Ajuste de ${link}`,
     change: 'Mudar',
   },
@@ -312,15 +350,21 @@ export const PERSON = {
     revoking: 'Tirando…',
   },
 
+  /** The Ajustes, in their two groups (#273): who made the film, then
+   * what the film is. */
   links: {
-    director: 'diretor',
+    director: 'direção',
     writer: 'roteiro',
     cast: 'elenco',
+    cinematography: 'fotografia',
+    producer: 'produção',
     series: 'série',
     genre: 'gênero',
-    cinematography: 'fotografia',
-    producer: 'produtor',
   } satisfies Record<Link, string>,
+  linkGroups: {
+    people: ['director', 'writer', 'cast', 'cinematography', 'producer'],
+    film: ['series', 'genre'],
+  } satisfies Record<'people' | 'film', readonly Link[]>,
   levels: {
     none: 'nada',
     low: 'pouco',
@@ -358,12 +402,25 @@ export const PERSON = {
    * Cartaz's Já vi): the engine keeps it from 0,5 to 5, so 4.5 is "nota 9"
    * (#268). */
   ratingText: (rating: number) => `nota ${tenScale(rating)}`,
-  /** Where a Nota came from, with the stars it had there when the source
-   * rates on 5 (Letterboxd): "4,5★ no Letterboxd da Iara". */
-  ratingSource: (rating: number, source: string | null) =>
-    source !== null && /letterboxd/i.test(source)
-      ? `${String(rating).replace('.', ',')}★ no ${source}`
-      : source,
+  /** Where a Nota came from, by its service on the page of the Pessoa
+   * (`name`), with the stars it had there when the source rates on 5:
+   * "Letterboxd (4,5★)". */
+  ratingSource: (rating: number, source: string | null, name = '') => {
+    if (source === null) return null
+    // The rating screen's Notas (the engine's `RATING_SCREEN_SOURCE`).
+    if (source === 'notas no site') return 'Dar notas'
+    // "Letterboxd do Bruno" on Bruno's own page: the service alone (#274).
+    const service =
+      name === ''
+        ? null
+        : (new RegExp(`^(.+?) d[eoa] ${escapeRegExp(name)}$`).exec(
+            source,
+          )?.[1] ?? null)
+    const label = service ?? source
+    return /letterboxd/i.test(label)
+      ? `${label} (${String(rating).replace('.', ',')}★)`
+      : label
+  },
   /** What is wrong with a field, under it (`formProblem`). */
   fieldProblem: ({ field, problem }: { field: string; problem: string }) => {
     if (problem === 'rating') return 'A Nota vai de 1 a 10.'

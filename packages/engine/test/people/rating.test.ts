@@ -8,6 +8,7 @@ import {
   consult,
   filmCard,
   personRate,
+  personRatingsOf,
   ratingQueue,
   tasteSummary,
 } from '../../src/index.ts'
@@ -138,6 +139,18 @@ describe('the Notas of the rating screen', () => {
     ])
     const queue = await fixture.ok(ratingQueue({ person: 'teo', limit: 3 }))
     expect(queue.films.map((f) => f.id)).not.toContain('tt9000601')
+    // Her Nota in force of each film that has one, on 1 to 10 (#274).
+    expect(
+      await fixture.ok(
+        personRatingsOf({
+          person: 'teo',
+          films: ['tt9000601', 'tt9000701', 'tt9000601', 'tt9999999'],
+        }),
+      ),
+    ).toEqual({ tt9000601: 8, tt9000701: 3 })
+    expect(
+      await fixture.ok(personRatingsOf({ person: 'teo', films: [] })),
+    ).toEqual({})
   })
 })
 

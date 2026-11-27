@@ -9,20 +9,26 @@ import { MarkText, PRESSED_PILL } from './kit/option'
 import { Avatar } from './kit/person'
 
 // The marks of one film of the Cartaz (DESIGN.md, Opções, Escala de nota,
-// Estrelas): Trocar, the stars and Comentar on one line; Já vi per
-// Presente and "Todos", each Já vi opening her note (the 1 to 10 scale and
-// what she thought) on the blue card stock. The comment's field opens from
-// Comentar, so a card carries no empty field.
+// Estrelas): Trocar and the stars on one line; Já vi per Presente and
+// "Todos", each Já vi opening her note (the 1 to 10 scale and what she
+// thought) on the blue card stock; last Comentar, whose field opens in its
+// place, so a card carries no empty field. A Trocar that came on by
+// itself (a Já vi with "Só filmes que ninguém viu", or 1 to 3 stars:
+// `withSwap` in `billboard-marks.ts`) says why under the buttons (#326).
 
 /** An option that stays pressed, with the ✓ before the word, the same
  * width pressed or not (`kit/option.tsx`): pressing never wraps the row. */
 function Toggle({
   pressed,
   onChange,
+  compact = false,
   children,
 }: {
   pressed: boolean
   onChange: (pressed: boolean) => void
+  /** The Já vi row's tighter pill, the same 32px of room for the ✓: three
+   * Presentes and Todos fit one line of a phone (#272). */
+  compact?: boolean
   children: ReactNode
 }) {
   return (
@@ -32,7 +38,9 @@ function Toggle({
       onClick={() => onChange(!pressed)}
       className={buttonVariants({
         variant: 'option',
-        className: `gap-sm ${PRESSED_PILL}`,
+        className: compact
+          ? 'gap-2xs px-2xl aria-pressed:px-1.5'
+          : `gap-sm ${PRESSED_PILL}`,
       })}
     >
       {pressed && <Icon name="check" className="size-4 shrink-0" />}
@@ -124,14 +132,19 @@ function SeenNote({
   )
 }
 
+/** Five stars. Those the Dono gave in an earlier version show until she
+ * gives others (#272): the card never shows the stars twice. */
 function Stars({
   stars,
+  before,
   onChange,
 }: {
   stars: number
+  before: number
   onChange: (stars: number) => void
 }) {
   const { marks: copy } = BILLBOARD
+  const shown = stars > 0 ? stars : before
   return (
     <div role="group" aria-label={copy.stars} className="inline-flex">
       {[1, 2, 3, 4, 5].map((value) => (
@@ -139,11 +152,11 @@ function Stars({
           key={value}
           type="button"
           aria-label={copy.star(value)}
-          aria-pressed={stars === value}
+          aria-pressed={shown === value}
           // The same star again takes the stars off.
           onClick={() => onChange(stars === value ? 0 : value)}
           className={`grid size-touch cursor-pointer place-items-center ${
-            value <= stars ? 'text-star [&_svg]:fill-current' : 'text-ink-2/45'
+            value <= shown ? 'text-star [&_svg]:fill-current' : 'text-ink-2/45'
           }`}
         >
           <Icon name="star" className="size-6" />
@@ -186,9 +199,33 @@ function Comment({
   )
 }
 
-/** The marks of one film: Trocar, the stars and Comentar on one line
- * (it wraps on a phone), then Já vi per Presente with each one's note,
- * and the comment once Comentar opened it or it has text. */
+/** Why the Trocar came on by itself, or nothing. */
+function SwapWhy({
+  marks,
+  people,
+}: {
+  marks: FilmMarks
+  people: readonly BillboardPerson[]
+}) {
+  const { swapWhy } = BILLBOARD.marks
+  if (!marks.swap) return null
+  const seen = new Set(marks.seen)
+  const why =
+    marks.swapWhy === 'stars'
+      ? swapWhy.stars(marks.stars)
+      : marks.swapWhy === 'seen'
+        ? swapWhy.seen(
+            people
+              .filter((p) => seen.has(p.slug))
+              .map((p) => (p.owner ? 'você' : p.name)),
+          )
+        : null
+  return why && <p className="text-meta text-ink-2">{why}</p>
+}
+
+/** The marks of one film: Trocar and the stars on one line, the reason
+ * of a Trocar the Cartaz turned on, then Já vi per Presente with each
+ * one's note, and last Comentar, where the comment opens. */
 export function FilmMarksControls({
   film,
   people,
@@ -228,23 +265,15 @@ export function FilmMarksControls({
         </Toggle>
         <Stars
           stars={marks.stars}
+          before={film.notes?.stars ?? 0}
           onChange={(stars) => onChange({ ...marks, stars })}
         />
-        {!commenting && (
-          <button
-            type="button"
-            aria-expanded={false}
-            onClick={() => setOpened(true)}
-            className={buttonVariants({ variant: 'link' })}
-          >
-            {copy.openComment}
-          </button>
-        )}
       </div>
+      <SwapWhy marks={marks} people={people} />
       <div
         role="group"
         aria-label={copy.seenGroup(film.position)}
-        className="flex flex-wrap items-center gap-sm"
+        className="flex flex-wrap items-center gap-x-xs gap-y-sm"
       >
         {folded ? (
           <button
@@ -256,12 +285,13 @@ export function FilmMarksControls({
             {copy.seenMore}
           </button>
         ) : (
-          <span className={label}>{copy.seen}</span>
+          <span className={`${label} mr-2xs`}>{copy.seen}</span>
         )}
         {!folded &&
           people.map((p) => (
             <Toggle
               key={p.slug}
+              compact
               pressed={seen.has(p.slug)}
               onChange={(on) => mark(p.slug, on)}
             >
@@ -270,6 +300,7 @@ export function FilmMarksControls({
           ))}
         {!folded && people.length > 1 && (
           <Toggle
+            compact
             pressed={seen.size === people.length}
             onChange={(on) =>
               onChange({ ...marks, seen: on ? people.map((p) => p.slug) : [] })
@@ -290,6 +321,19 @@ export function FilmMarksControls({
             onChange={onChange}
           />
         ))}
+      {!commenting && (
+        <button
+          type="button"
+          aria-expanded={false}
+          onClick={() => setOpened(true)}
+          className={buttonVariants({
+            variant: 'link',
+            className: 'self-start',
+          })}
+        >
+          {copy.openComment}
+        </button>
+      )}
       {commenting && (
         <Comment
           position={film.position}

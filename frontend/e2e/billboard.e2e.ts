@@ -1,8 +1,8 @@
 // The Cartaz over the build, on the fixture copy (never the real
 // filmes-dados), with the sources answering from the recordings. The Dono
 // marks films, reloads (the marks come back), sends, and the Session is
-// redone: the films that stayed keep their number, the new ones have the
-// "novo" mark, and "Saiu" says what left and why. A Já vi writes a Já
+// redone: the films that stayed keep their number, no film has a "novo"
+// mark (#326), and "Saiu" says what left and why. A Já vi writes a Já
 // visto in the Pessoa's file, so each project marks a Pessoa of its own
 // (the file's other tests read the fixture's Pessoas).
 // `E2E_SCREENSHOTS=<folder>` saves each screen.
@@ -297,28 +297,26 @@ async function sendAndSeeRedone(
   await expect(page).toHaveURL(
     new RegExp(`/sessoes/${id}\\?feito=regerada(&nota=[\\w-]+)?$`),
   )
-  await expect(page.getByText(/na próxima vez/)).toBeVisible()
+  // The notice says it; the hand note under the request shows it (#272).
+  await expect(
+    page.getByRole('status').filter({ hasText: /na próxima vez/ }),
+  ).toBeVisible()
   // One line says what changed; why each left is behind "por quê".
   await expect(page.getByText('Refeito: 2 saíram, 2 novos.')).toBeVisible()
   const left = page.getByText(`Saiu da prateleira: ${seen} (Nina já viu)`)
   // The page may still settle after the post: open the fold until it stays.
+  const traded = page.getByText(`Saiu da prateleira: ${swapped} (trocado)`)
   await expect(async () => {
     if (!(await left.isVisible()))
       await page.getByText('por quê', { exact: true }).click()
     await expect(left).toBeVisible({ timeout: 1000 })
+    await expect(traded).toBeVisible({ timeout: 1000 })
   }).toPass()
-  await expect(
-    page.getByText(`Saiu da prateleira: ${swapped} (trocado)`),
-  ).toBeVisible()
-  // The kept films stay at their number; the ones that came in are new.
+  // The kept films stay at their number; the ones that came in carry no
+  // "novo" mark (#326).
   expect(await titleOf(page, 3)).toBe(third)
   expect(await titleOf(page, 4)).toBe(fourth)
-  for (const n of [1, 2])
-    await expect(card(page, n).getByText('novo', { exact: true })).toBeVisible()
-  for (const n of [3, 4])
-    await expect(card(page, n).getByText('novo', { exact: true })).toHaveCount(
-      0,
-    )
+  await expect(page.getByText('novo', { exact: true })).toHaveCount(0)
   // The new version starts with no marks.
   await expect(
     card(page, 2).getByRole('button', { name: 'Trocar' }),
@@ -380,13 +378,13 @@ test('in the dark, stars alone only note, and stay on the card (#272)', async ({
 
   await send(page, id, 'anotada', 'Estrelas e comentários')
   await expect(page.getByText('Saiu da prateleira:')).toHaveCount(0)
+  // The stars it was given fill its controls, never a second row (#272).
   await expect(
     card(page, 1).getByRole('button', { name: '5 de 5' }),
-  ).toHaveAttribute('aria-pressed', 'false')
-  // The stars it was given stay in sight, read-only.
+  ).toHaveAttribute('aria-pressed', 'true')
   await expect(
-    card(page, 1).getByRole('img', { name: '5 de 5 estrelas' }),
-  ).toBeVisible()
+    card(page, 1).getByRole('img', { name: /estrelas/ }),
+  ).toHaveCount(0)
   await snap(page, info, 'cartaz-anotado')
 })
 
@@ -421,10 +419,14 @@ test('the Nota prevista the Session recorded, per Presente who has one', async (
   await snap(page, info, 'cartaz-nota-prevista')
   await snap(page, info, 'cartaz-nota-prevista-card', card(page, at))
 
-  const dot = card(page, at).getByRole('button', {
-    name: 'Bruno: 8,8 de 10 · 3 vizinhos',
-  })
-  await expect(dot).toHaveText('8,8')
-  await dot.click()
-  await expect(page.getByText('Bruno: 8,8 de 10 · 3 vizinhos')).toBeVisible()
+  // Under "Por que", the line of each one's Nota prevista; the name opens
+  // how many taste neighbours back it (#326).
+  const hint = 'pela nota de 3 pessoas de gosto parecido'
+  const name = card(page, at).getByRole('button', { name: `Bruno: ${hint}` })
+  await expect(card(page, at).locator('p', { hasText: 'previsto' })).toHaveText(
+    /^previsto · Bruno 8,8/,
+    { useInnerText: true },
+  )
+  await name.click()
+  await expect(card(page, at).getByText(hint)).toBeVisible()
 })

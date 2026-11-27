@@ -13,6 +13,8 @@ import { Avatar } from './kit/person'
 // one; the engine leaves out who has neither. A chosen film with no card
 // (outside the Recomendação, or not among the films shown) has a block of
 // its own above the cards, `ChosenFilm`, with its title and the same lines.
+// What a Presente said of it in the Feedback goes under her line, in the
+// clerk's hand (#272).
 
 /** The film's title level: 2 alone, 3 under a section's title. */
 type Level = 2 | 3
@@ -51,7 +53,14 @@ function Lines({
                 <Avatar person={person} />
               </span>
             )}
-            <span>{lineOf(person?.name ?? reaction.person, reaction)}</span>
+            <span className="flex flex-col gap-2xs">
+              <span>{lineOf(person?.name ?? reaction.person, reaction)}</span>
+              {reaction.comment && (
+                <span className="font-hand text-hand-small text-ink">
+                  {CHOSEN.comment(reaction.comment)}
+                </span>
+              )}
+            </span>
           </li>
         )
       })}

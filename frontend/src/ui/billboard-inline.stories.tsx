@@ -5,10 +5,11 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, within } from 'storybook/test'
 import { InlineBillboard } from './billboard-inline'
-import { MODEL } from './billboard.fixture'
+import { CLOSED, MODEL } from './billboard.fixture'
 import { SEND_STATUS } from './billboard-send.copy'
 
 const MARKED = ['Trocar: As Horas Lentas', 'Já vi: Sal & Ferrugem (Iara)']
+const TAGS = { tt9000104: ['swap'], tt9000105: ['seen'] } as const
 
 const meta = {
   component: InlineBillboard,
@@ -33,10 +34,12 @@ export const NothingMarked: Story = {
 }
 
 export const Marked: Story = {
-  args: { marked: MARKED, onSend: fn(), onClear: fn() },
+  args: { marked: MARKED, tags: TAGS, onSend: fn(), onClear: fn() },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByText(MARKED[0]!)).toBeVisible()
+    // The marked film keeps its row, with its tag (#277).
+    await expect(canvas.getByText('Trocar', { exact: true })).toBeVisible()
     await expect(canvas.getByRole('button', { name: 'Limpar' })).toBeVisible()
   },
 }
@@ -46,7 +49,12 @@ export const WithStatus: Story = {
 }
 
 export const Sent: Story = {
-  args: { marked: MARKED, sent: true, message: SEND_STATUS.regenerating },
+  args: {
+    marked: MARKED,
+    tags: TAGS,
+    sent: true,
+    message: SEND_STATUS.regenerating,
+  },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.queryByRole('button', { name: 'Enviar' })).toBeNull()
@@ -78,9 +86,14 @@ export const Empty: Story = {
     },
   },
   play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.queryByRole('button', { name: /Marcar/ })).toBeNull()
+    // The minimum IMDb rating holds always: it is no limit to loosen.
     await expect(
-      within(canvasElement).queryByRole('button', { name: /Marcar/ }),
-    ).toBeNull()
+      canvas.getByText(
+        'Nenhum filme passou no limite até 30min. Peça no chat com mais tempo ou menos limites.',
+      ),
+    ).toBeVisible()
   },
 }
 
@@ -95,5 +108,10 @@ export const CouldNotSend: Story = {
 }
 
 export const Closed: Story = {
-  args: { billboard: { ...MODEL, open: false } },
+  args: { billboard: CLOSED },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText(/^Sessão fechada/u)).toBeVisible()
+    await expect(canvas.getByText('Escolhido')).toBeVisible()
+  },
 }

@@ -11,6 +11,7 @@ import type {
   ConsultAnswer,
   EvaluationJob,
   EvaluationPanel,
+  EvaluationSummary,
   OperationsPage,
 } from '#/platform/operations'
 import { Operations } from './operations'
@@ -109,16 +110,17 @@ const DONE: EvaluationJob = {
     priority: 'offline',
     warnings: ['A amostra offline do MovieLens exige ml-32m.'],
     best: [
-      { recall50: 0.5, coverageTop5: null, changes: [], tie: false },
       {
-        recall50: 0.4,
+        recall50: 0.5,
         coverageTop5: null,
         changes: [
           { section: 'path.weight', key: 'cast', from: 0.5, to: 0.625 },
         ],
         tie: false,
       },
+      { recall50: 0.4, coverageTop5: null, changes: [], tie: false },
     ],
+    combinations: 411,
     file: '2026-11-20.md',
   },
 }
@@ -383,9 +385,15 @@ describe('the evaluation, the measures', () => {
         .slice(1)
         .map((r) => r.textContent),
     ).toEqual([
-      '1ºos pesos de hojeatual50%—',
-      '2ºelenco 0,5 → 0,625Copiar pesos40%—',
+      '1ºelenco 0,5 → 0,625Copiar pesos50%—',
+      '2ºos pesos de hojeatual40%—',
     ])
+    expect(
+      within(area).getByText(
+        'Só a 1ª das 411 combinações testadas supera os pesos de hoje.',
+      ),
+    ).toBeTruthy()
+    expect(within(area).getByText('Feedback das Sessões')).toBeTruthy()
     expect(
       within(area).getByText(
         'A lista acerta 40% das Notas altas reservadas, com 4 Pessoas.',
@@ -416,6 +424,58 @@ describe('the evaluation, the measures', () => {
   })
 })
 
+describe('the evaluation, whether the grid beats today', () => {
+  const grid = (
+    best: EvaluationSummary['best'],
+    combinations: number | null = 411,
+  ) => {
+    if (DONE.state !== 'done') throw new Error('DONE is done')
+    const job = { ...DONE, result: { ...DONE.result, best, combinations } }
+    show(page({ evaluation: { ...IDLE, job } }))
+    return region(OPERATIONS.evaluation.title)
+  }
+  const CHANGE = [{ section: 'path.weight', key: 'cast', from: 0.5, to: 0.375 }]
+
+  it('says when nothing beats today, and offers no copy', () => {
+    const area = grid([
+      { recall50: 0.8, coverageTop5: 0.7, changes: [], tie: true },
+      { recall50: 0.8, coverageTop5: 0.7, changes: CHANGE, tie: true },
+    ])
+    expect(
+      within(area).getByText(
+        'Nenhuma das 411 combinações testadas supera os pesos de hoje.',
+      ),
+    ).toBeTruthy()
+    expect(within(area).getByText('sem ganho')).toBeTruthy()
+    expect(
+      within(area).queryByRole('button', { name: /Copiar os pesos/ }),
+    ).toBeNull()
+  })
+
+  it('says how many beat today, with today among the best or not', () => {
+    grid(
+      [
+        { recall50: 0.9, coverageTop5: 0.7, changes: CHANGE, tie: false },
+        { recall50: 0.85, coverageTop5: 0.7, changes: CHANGE, tie: false },
+        { recall50: 0.8, coverageTop5: 0.7, changes: [], tie: false },
+      ],
+      null,
+    )
+    expect(
+      screen.getByText(
+        'As 2 primeiras das combinações testadas superam os pesos de hoje.',
+      ),
+    ).toBeTruthy()
+    cleanup()
+    grid([{ recall50: 0.9, coverageTop5: 0.7, changes: CHANGE, tie: false }])
+    expect(
+      screen.getByText(
+        'A melhor das 411 combinações testadas supera os pesos de hoje.',
+      ),
+    ).toBeTruthy()
+  })
+})
+
 describe('the evaluation, the weights, the report and the focus', () => {
   it('copies a better weight set as TOML', async () => {
     const writeText = vi.fn<(text: string) => Promise<void>>(async () => {})
@@ -425,7 +485,7 @@ describe('the evaluation, the weights, the report and the focus', () => {
     })
     show(page({ evaluation: { ...IDLE, job: DONE } }))
     await userEvent.click(
-      screen.getByRole('button', { name: 'Copiar os pesos da 2ª combinação' }),
+      screen.getByRole('button', { name: 'Copiar os pesos da 1ª combinação' }),
     )
     expect(writeText).toHaveBeenCalledWith('[path.weight]\ncast = 0.625')
     expect(await screen.findByText('Copiado.')).toBeTruthy()
@@ -447,8 +507,12 @@ describe('the evaluation, the weights, the report and the focus', () => {
     expect(
       within(area).getByRole('heading', { name: 'Relatório de 20 nov 2026' }),
     ).toBeTruthy()
-    expect(within(area).getByRole('cell', { name: '0.28' })).toBeTruthy()
+    expect(within(area).getByRole('cell', { name: '0,28' })).toBeTruthy()
     expect(within(area).getByText('Avisos')).toBeTruthy()
+    // The summary is the answer: every fold of the report starts closed.
+    expect(
+      [...area.querySelectorAll('details')].map((fold) => fold.open),
+    ).toEqual([false, false])
     expect(
       within(area)
         .getByRole('link', { name: OPERATIONS.evaluation.download })
@@ -532,10 +596,17 @@ describe('the push', () => {
     expect(within(area).getByRole('alert').textContent).toMatch(
       /^O envio dos dados está falhando3 falhas seguidas\. A primeira falha foi em 20 nov 2026, 12:00\.$/,
     )
+    expect(within(area).getByText('1 commit na fila:')).toBeTruthy()
     expect(
-      within(area).getByText('Bruno deu nota a Fronteira (2008)'),
-    ).toBeTruthy()
+      within(area).getByText('Bruno deu nota a Fronteira (2008)').tagName,
+    ).toBe('CODE')
     expect(within(area).getByText('git push exited with 128')).toBeTruthy()
+    // While it fails, the retry is the page's orange button, not Consultar.
+    expect(
+      [...document.querySelectorAll('button.bg-sticker-orange')].map(
+        (b) => b.textContent,
+      ),
+    ).toEqual(['Tentar enviar agora'])
     // It comes first, before the console.
     const sections = screen
       .getAllByRole('region')

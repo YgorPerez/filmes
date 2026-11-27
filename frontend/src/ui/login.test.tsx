@@ -28,6 +28,9 @@ describe('Login', () => {
     expect(html).toContain(`aria-label="${LOGIN.taglineLabel}"`)
     expect(html).toMatch(/<h1 id="entrar"[^>]*>Entrar<\/h1>/u)
     expect(html).toContain(LOGIN.access)
+    // The lead says what she gets there, not the button again.
+    expect(html).toContain('Sua lista da noite e as suas Sessões ficam aqui.')
+    expect(html).not.toContain('Entre com a sua conta Google')
   })
 
   it('leaves the access line out when the refusal already says it', () => {
@@ -76,6 +79,24 @@ describe('the Trakt connection screen', () => {
       /<input type="checkbox" required=""[^>]* name="consentir" value="sim"/,
     )
     expect(html).not.toContain('/trakt/desconectar')
+  })
+
+  it('splits what it reads from what it sends, and says where it leads (#274)', () => {
+    const html = renderToStaticMarkup(
+      <TraktScreen page={{ status: 'disconnected', name: 'Iara' }} />,
+    )
+    expect(html).toContain('O filmes lê do seu Trakt')
+    expect(html).toContain('O filmes envia ao seu Trakt, ao salvar o Feedback')
+    expect(html).toContain('Depois ele volta para esta página')
+    expect(html).not.toContain('Importar</a>')
+  })
+
+  it('has the way back to Importar for a Dono, in the app', () => {
+    const html = renderToStaticMarkup(
+      <TraktScreen page={{ status: 'connected', name: 'Iara' }} inApp />,
+    )
+    expect(html).toMatch(/<a href="\/meu-gosto\/importar"[^>]*>Importar<\/a>/)
+    expect(html).not.toContain('Créditos')
   })
 
   it('lets a connected Pessoa disconnect', () => {

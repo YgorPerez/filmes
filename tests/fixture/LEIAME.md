@@ -195,6 +195,9 @@ linhas. As tags de O Farol de Areia aparecem tanto no diário quanto na review.
   busca de séries do TMDB. Os dois são descartados.
 - Vento Norte fica na fila com dois candidatos do TMDB. Confirmar o primeiro
   usa `externos-9102.json`. Filme Perdido também fica na fila, sem candidato.
+  A fila mostra a ficha de cada candidato (`ficha-9102.json`, brasileiro, de
+  Helena Prado; `ficha-9103.json`, alemão, sem sinopse em português), para
+  separar os dois (#274).
 
 ### Série e curta homônimos (#53)
 

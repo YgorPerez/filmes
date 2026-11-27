@@ -48,6 +48,12 @@ export type FeedbackSession = {
   recommendation: FeedbackFilm[]
   moods: readonly string[]
   constraints: readonly string[]
+  /** What the Dono added from the Cartaz, in order (#272). */
+  additions: readonly string[]
+  /** The stars each film got on the Cartaz, by IMDb id. */
+  stars: Readonly<Record<string, number>>
+  /** The films that left the shelf in a redo. */
+  earlier: readonly { id: string; title: string }[]
 }
 
 /** A Presente's satisfaction now: what the next Recomendação of this group
@@ -121,6 +127,9 @@ export function feedbackFromEngine(
             recommendation: sessionFilms(s.recommendation),
             moods: s.moods,
             constraints: s.constraints,
+            additions: s.additions,
+            stars: s.stars,
+            earlier: s.earlier,
           })),
       )
     },

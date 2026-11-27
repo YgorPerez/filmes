@@ -89,6 +89,8 @@ export type EvaluationSummary = {
   warnings: string[]
   /** The grid's three best weight sets, when it ran. */
   best: GridBest[] | null
+  /** How many weight sets the grid tried, when it ran. */
+  combinations: number | null
   /** The report's file name in the evaluations folder. */
   file: string
 }
@@ -253,6 +255,7 @@ const summaryOf = (evaluation: Evaluation): EvaluationSummary => ({
   priority: evaluation.priority,
   warnings: [...evaluation.warnings],
   best: bestOf(evaluation.grid, evaluation.weights),
+  combinations: evaluation.grid?.combinations ?? null,
   file: basename(evaluation.file),
 })
 

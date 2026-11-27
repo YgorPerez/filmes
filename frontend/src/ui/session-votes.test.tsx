@@ -1,7 +1,13 @@
 // @vitest-environment jsdom
 // The group swipe's deck (#182): one film at a time, Não or Sim, and the
 // form that posts every Voto at once.
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, expect, it, vi } from 'vite-plus/test'
 import { FETCH_HEADER } from '#/content/fetch-answer'
@@ -149,7 +155,7 @@ it('the deck posts the link’s search', () => {
 it('with every film voted on, it shows the night’s list with her Votos', () => {
   const films = [
     { ...FILMS[0]!, mine: 'yes' as const },
-    { ...FILMS[1]!, mine: 'yes' as const, new: true },
+    { ...FILMS[1]!, mine: 'yes' as const },
   ]
   render(
     <VoteScreen
@@ -212,6 +218,10 @@ it('a failure she cannot fix names the Dono and leaves only the list', () => {
   expect(screen.getByRole('alert').textContent).toBe(
     VOTES.refusals.falha('Bruno'),
   )
+  // The title says what the alert says, not "Você já votou".
+  expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
+    VOTES.stuck.falha,
+  )
   expect(screen.queryByRole('form')).toBeNull()
   expect(
     screen.getAllByRole('link').map((a) => a.getAttribute('href')),
@@ -242,7 +252,7 @@ it('her standing Votos go again with the new ones; mudar asks every film', async
   expect(posted()).toEqual([['versao', '3']])
 })
 
-it('the arrow keys vote, the next title takes the focus and is announced; the recap flips a Voto', async () => {
+it('the arrow keys vote, the next title takes the focus and is announced; the recap changes a Voto', async () => {
   const user = userEvent.setup()
   render(<VoteCards deck={DECK} action="/participar/votos" />)
 
@@ -258,12 +268,26 @@ it('the arrow keys vote, the next title takes the focus and is announced; the re
     VOTES.wentBack('Pequenos Milagres'),
   )
   await user.keyboard('{ArrowLeft}{ArrowRight}')
-
-  await user.click(
-    screen.getByRole('button', {
-      name: VOTES.flip('Pequenos Milagres', 'no'),
-    }),
+  // After the last card: the count is said and the recap's title has the
+  // focus.
+  expect(screen.getByRole('status').textContent).toBe(VOTES.end(2, 1))
+  expect(document.activeElement).toBe(
+    screen.getByRole('heading', { name: VOTES.summary(2, 1) }),
   )
+
+  const row = within(
+    screen.getByRole('group', { name: VOTES.voteOn('Pequenos Milagres') }),
+  )
+  expect(
+    row.getByRole('button', { name: VOTES.no }).getAttribute('aria-pressed'),
+  ).toBe('true')
+  // The side already chosen changes nothing.
+  await user.click(row.getByRole('button', { name: VOTES.no }))
+  expect(screen.getByText(VOTES.summary(2, 1))).toBeTruthy()
+  await user.click(row.getByRole('button', { name: VOTES.yes }))
+  expect(
+    row.getByRole('button', { name: VOTES.yes }).getAttribute('aria-pressed'),
+  ).toBe('true')
   expect(posted()).toEqual([
     ['versao', '2'],
     ['sim', 'tt9000101'],
@@ -357,7 +381,7 @@ it('the arrow keys in a field type there, and do not vote', async () => {
   expect(posted()).toEqual([['versao', '2']])
 })
 
-it('a standing não goes again, the original title shows, and the recap flips a sim', async () => {
+it('a standing não goes again, the original title shows, and the recap turns a sim into a não', async () => {
   const user = userEvent.setup()
   const films = [
     { ...FILMS[0]!, mine: 'no' as const },
@@ -375,9 +399,9 @@ it('a standing não goes again, the original title shows, and the recap flips a 
   expect(screen.getByText('Little Miracles')).toBeTruthy()
   await user.click(screen.getByRole('button', { name: VOTES.yes }))
   await user.click(
-    screen.getByRole('button', {
-      name: VOTES.flip('Pequenos Milagres', 'yes'),
-    }),
+    within(
+      screen.getByRole('group', { name: VOTES.voteOn('Pequenos Milagres') }),
+    ).getByRole('button', { name: VOTES.no }),
   )
   expect(posted()).toEqual([
     ['versao', '4'],
@@ -419,6 +443,22 @@ it('films still to vote on after sending lead first, the Perguntas after', () =>
     VOTES.revote,
     VOTES.questions,
   ])
+})
+
+it('a redo that failed says the Votos were counted, in the title and the alert', () => {
+  render(
+    <VoteScreen
+      deck={DECK}
+      search={{ ...LINK, erro: 'regerar' }}
+      home={HOME}
+    />,
+  )
+  expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
+    VOTES.stuck.regerar,
+  )
+  expect(screen.getByRole('alert').textContent).toBe(
+    VOTES.refusals.regerar(null),
+  )
 })
 
 it('without a deck, the way back to the link’s list', () => {

@@ -13,6 +13,7 @@ import { describe, expect, it, onTestFinished, vi } from 'vite-plus/test'
 import { ROOT, useFixture } from '../../../packages/engine/test/fixture.ts'
 import { zipOf } from '../../../packages/engine/test/imports/zip.ts'
 import {
+  changesOf,
   MAX_UPLOAD_BYTES,
   parseImport,
   parseQueue,
@@ -268,6 +269,48 @@ describe('importAction', () => {
         author: { name: 'Bruno', email: 'bruno@example.org' },
       },
     ])
+  })
+
+  it('carries the Notas an import replaced, by name (#274)', async () => {
+    const { imports } = fakeImports({
+      exitCode: 0,
+      output: {
+        notice: 'trakt',
+        facts: 3,
+        ratings: 1,
+        seen: 0,
+        changed: 2,
+        changes: [
+          { title: 'Maré Baixa (2015)', from: 9, to: 1 },
+          { title: 'A~B|C', from: 2, to: 10 },
+        ],
+        repeated: 1,
+        watchlist: 0,
+      },
+    })
+    const response = await importAction(
+      post('/importar/teo/acao', { acao: 'arquivo', arquivo: traktZip }),
+      'teo',
+      BRUNO,
+      imports,
+      ORIGIN,
+    )
+    const location = new URL(String(response.headers.get('Location')), ORIGIN)
+    expect(Object.fromEntries(location.searchParams)).toEqual({
+      feito: 'trakt',
+      novos: '3',
+      notas: '1',
+      vistos: '0',
+      mudaram: '2',
+      mudou: 'Maré Baixa (2015)~9~1|A B C~2~10',
+      iguais: '1',
+    })
+    expect(changesOf(location.searchParams.get('mudou'))).toEqual([
+      { title: 'Maré Baixa (2015)', from: 9, to: 1 },
+      { title: 'A B C', from: 2, to: 10 },
+    ])
+    expect(changesOf('x~11~1|~1~2|só')).toEqual([])
+    expect(changesOf(undefined)).toEqual([])
   })
 
   it('carries the Trakt films left out', async () => {
@@ -715,26 +758,32 @@ async function importEach(run: (action: ImportRun) => Promise<ImportDone>) {
     facts: 0,
     ratings: 0,
     seen: 0,
+    changed: 0,
+    changes: [],
+    repeated: 4,
+    watchlist: 0,
   })
+  // Trakt's newer Nota of Maré Baixa replaces Letterboxd's, and says so
+  // (#274).
   expect(await run(TRAKT)).toEqual({
     notice: 'trakt',
     facts: 3,
-    ratings: 2,
-    seen: 1,
+    ratings: 0,
+    seen: 0,
+    changed: 1,
+    changes: [{ title: 'Maré Baixa (2015)', from: 7, to: 1 }],
+    repeated: 1,
+    watchlist: 0,
     outside: 0,
   })
-  expect(await run(IMDB)).toEqual({
+  expect(await run(IMDB)).toMatchObject({
     notice: 'imdb',
     facts: 3,
-    ratings: 3,
-    seen: 0,
     outside: 1,
   })
   expect(await run(SIMKL)).toMatchObject({
     notice: 'simkl',
     facts: 6,
-    ratings: 3,
-    seen: 2,
     outside: 2,
   })
 }
@@ -781,11 +830,17 @@ describe('importsFromEngine, imports', () => {
 describe('importsFromEngine, TV Time', () => {
   it('imports the backup as the Dono, and its film without an id waits in the queue', async () => {
     const { imports, ok, log } = useImportsRepo()
+    // Six Fatos: two Notas, one film seen without a Nota, one in the
+    // watchlist (the other Já vistos are of the films with a Nota).
     expect(await ok(imports.run('quim', TVTIME, AUTHOR))).toEqual({
       notice: 'tvtime',
       facts: 6,
       ratings: 2,
-      seen: 3,
+      seen: 1,
+      changed: 0,
+      changes: [],
+      repeated: 0,
+      watchlist: 1,
       outside: 1,
     })
     const page = await ok(imports.page('quim'))

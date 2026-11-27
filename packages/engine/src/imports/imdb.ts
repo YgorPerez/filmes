@@ -23,6 +23,7 @@ import { Sqlite, type Connection, type SqliteError } from '../sqlite/Sqlite.ts'
 import { readImdbRatings, type ImdbRatingRow } from './imdb-ratings.ts'
 import { storedImports, storeImport } from './stored.ts'
 import { requireImportTables } from './trakt.ts'
+import { tasteChange, tasteSnapshot, type TasteChange } from './taste-change.ts'
 
 /** The kind of a Pessoa's `imports:` records this module reads. */
 const IMDB_KIND = 'imdb'
@@ -150,6 +151,8 @@ export interface ImdbImport {
   readonly newFile: boolean
   readonly facts: ImdbFactCounts
   readonly newFacts: ImdbFactCounts
+  /** What she sees on her Notas: new, changed and repeated Notas (#274). */
+  readonly changes: TasteChange
   /** Rated titles the Catálogo does not have, from all her CSVs. */
   readonly outsideCatalog: readonly ImdbOutside[]
 }
@@ -189,6 +192,7 @@ export const importImdb = (
           yield* requireImportTables(db)
           const person = yield* resolvePerson(input.person)
           const before = yield* imdbFactCounts(db, person.slug)
+          const taste = yield* tasteSnapshot(db, person.slug)
           const stored = yield* personImdbRows(person)
           const outsideCatalog = yield* loadPerson(db, person, [
             ...stored,
@@ -207,6 +211,7 @@ export const importImdb = (
             file: kept.file,
             newFile: kept.new,
             facts: after,
+            changes: yield* tasteChange(db, person.slug, IMDB_KIND, taste),
             newFacts: { ratings: after.ratings - before.ratings },
             outsideCatalog,
           }

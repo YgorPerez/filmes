@@ -144,6 +144,7 @@ function Heading({ page }: { page: FeedbackPage }) {
       <NightRequest
         items={[...page.moods, ...page.constraints]}
         note={page.request}
+        added={page.additions}
       />
     </div>
   )
@@ -167,11 +168,12 @@ function FeedbackForm({
   refusal?: FeedbackRefusal
 }) {
   const { form } = FEEDBACK
-  const listed = page.recommendation.some((item) => item.id === film)
+  const listed = shelfOf(page).some((item) => item.id === film)
   const other = !listed && (film !== undefined || search !== null)
-  // The film radio marked: a film of the list, `outro` or `nada`.
+  // The film radio marked: a film of the list, `outro` or `nada`; with
+  // none asked, the one the Cartaz points to (#272).
   const [choice, setChoice] = useState(
-    listed ? film : other ? 'outro' : undefined,
+    listed ? film : other ? 'outro' : likelyFilm(page),
   )
   const { refused, alert, onAnswer } = useRefusalInPlace(
     refusal,
@@ -240,7 +242,7 @@ function FeedbackForm({
 
       {!alone && <Satisfaction page={page} />}
       {/* The way out stays a thumb away, as the Cartaz's Enviar. */}
-      <div className="sticky bottom-[calc(68px+env(safe-area-inset-bottom))] z-10 -mx-lg rounded-t-panel border-x border-t border-rule bg-surface px-lg py-sm min-[900px]:bottom-0">
+      <div className="sticky bottom-[calc(68px+env(safe-area-inset-bottom))] z-10 rounded-t-panel border-x border-t border-rule bg-surface px-lg py-sm min-[900px]:bottom-0">
         <Submit
           variant="primary"
           disabled={busy !== null}
@@ -251,6 +253,25 @@ function FeedbackForm({
       </div>
     </form>
   )
+}
+
+/** Every film the Session showed: the current shelf, then the ones that
+ * left it in a redo (#272). */
+const shelfOf = (page: FeedbackPage) => [
+  ...page.recommendation,
+  ...page.earlier,
+]
+
+/** The film the Cartaz points to (#272): the one with the most stars (the
+ * first of a tie), else the only one on the shelf. */
+function likelyFilm(page: FeedbackPage): string | undefined {
+  const starred = shelfOf(page)
+    .filter((item) => (page.stars[item.id] ?? 0) > 0)
+    .toSorted((a, b) => (page.stars[b.id] ?? 0) - (page.stars[a.id] ?? 0))
+  if (starred[0]) return starred[0].id
+  return page.recommendation.length === 1
+    ? page.recommendation[0]?.id
+    : undefined
 }
 
 /** The refusals a film's choice answers. */
@@ -290,7 +311,7 @@ function FilmChoice({
   // The title of the film the field holds, until the Dono types over it.
   const [title, setTitle] = useState(other ? selected?.title : undefined)
   const take = (picked: { id: string; label: string }) => {
-    const inList = page.recommendation.some((item) => item.id === picked.id)
+    const inList = shelfOf(page).some((item) => item.id === picked.id)
     onChoose(inList ? picked.id : 'outro')
     setTitle(inList ? undefined : picked.label)
   }
@@ -313,6 +334,20 @@ function FilmChoice({
             <span className="flex items-center gap-md">
               <PriceSticker compact>{item.position}</PriceSticker>
               <span className="font-display text-row-title">{item.title}</span>
+              <Stars stars={page.stars[item.id]} />
+            </span>
+          </Option>
+        ))}
+        {page.earlier.length > 0 && (
+          <p className="pt-sm text-meta font-semibold text-ink-2">
+            {form.earlier}
+          </p>
+        )}
+        {page.earlier.map((item) => (
+          <Option key={item.id} {...radio(item.id)}>
+            <span className="flex items-center gap-md">
+              <span className="font-display text-row-title">{item.title}</span>
+              <Stars stars={page.stars[item.id]} />
             </span>
           </Option>
         ))}
@@ -333,6 +368,16 @@ function FilmChoice({
         <Option {...radio('nada')}>{form.nothing(alone)}</Option>
       </fieldset>
     </Section>
+  )
+}
+
+/** The stars the Cartaz gave a film, as a quiet note: "4 de 5 ★". */
+function Stars({ stars }: { stars: number | undefined }) {
+  if (!stars) return null
+  return (
+    <span className="shrink-0 text-meta font-normal text-ink-2">
+      {FEEDBACK.form.stars(stars)}
+    </span>
   )
 }
 
@@ -380,9 +425,10 @@ function RatingRadios({
 }
 
 /** One Presente's reaction (#272): her avatar in the Session's colour and
- * her name; for the others, the Relato in three pills or a Nota folded
- * under them; for the Dono, her Nota; then "comentar". Filled with what the
- * Catálogo search `kept`. */
+ * her name, the 1 to 10, then one row of pills: "sem nota" and, for the
+ * others, the Relato (gostou, neutro, não gostou), which the Dono does not
+ * give about herself; then "comentar". Every row has the same parts in the
+ * same place. Filled with what the Catálogo search `kept`. */
 function Reaction({
   attendee,
   index,
@@ -395,13 +441,6 @@ function Reaction({
   const { form } = FEEDBACK
   const name = `reacao.${attendee.person}`
   const value = kept?.reaction ?? ''
-  const scale = (
-    <RatingRadios
-      name={name}
-      label={form.ratingLabel(attendee.name)}
-      value={value}
-    />
-  )
   return (
     <fieldset className="flex min-w-0 flex-col gap-sm border-dashed border-rule py-lg first:pt-0 not-first:border-t">
       <legend className="float-left w-full">
@@ -411,7 +450,14 @@ function Reaction({
           {attendee.owner && <OwnerTag />}
         </span>
       </legend>
-      <div className="clear-left flex flex-wrap gap-sm pt-sm">
+      <div className="clear-left pt-sm">
+        <RatingRadios
+          name={name}
+          label={form.ratingLabel(attendee.name)}
+          value={value}
+        />
+      </div>
+      <div className="flex flex-wrap gap-sm">
         <Option type="radio" name={name} value="" defaultChecked={value === ''}>
           {attendee.owner ? form.noRating : form.none}
         </Option>
@@ -428,19 +474,6 @@ function Reaction({
             </Option>
           ))}
       </div>
-      {attendee.owner ? (
-        scale
-      ) : (
-        <details
-          open={value.startsWith('nota:')}
-          className="group/give flex flex-col"
-        >
-          <summary className="flex min-h-touch cursor-pointer list-none items-center text-meta font-semibold text-ink underline underline-offset-2 [&::-webkit-details-marker]:hidden">
-            {form.giveRating}
-          </summary>
-          {scale}
-        </details>
-      )}
       <details open={Boolean(kept?.comment)} className="flex flex-col">
         <summary className="flex min-h-touch cursor-pointer list-none items-center text-meta font-semibold text-ink underline underline-offset-2 [&::-webkit-details-marker]:hidden">
           {form.openComment}

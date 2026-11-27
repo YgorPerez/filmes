@@ -16,6 +16,7 @@ import {
   Sqlite,
   TMDB_ATTRIBUTION,
   viewQueue,
+  viewQueueDetailed,
   type Vars,
 } from '../../src/index.ts'
 import { ROOT, useFixture, type Fixture } from '../fixture.ts'
@@ -166,6 +167,47 @@ describe('reprocessLetterboxd', () => {
       vars,
     )
     expect(again.resolved.map((i) => i.name)).toContain(RIO)
+  })
+})
+
+describe('viewQueueDetailed', () => {
+  test('gives each candidate what tells it from its twin (#274)', async () => {
+    const fixture = useFixture()
+    await addOlga(fixture)
+    await importZip(fixture, 'olga', olgaZip(), TMDB_ON)
+
+    const view = await fixture.ok(viewQueueDetailed, TMDB_ON)
+    const vento = view.items.find((item) => item.name === 'Vento Norte')
+    expect(vento?.candidates.map((c) => [c.tmdb, c.details])).toEqual([
+      [
+        9102,
+        {
+          directors: ['Helena Prado'],
+          runtime: 104,
+          countries: ['BR'],
+          language: 'pt',
+          overviewPt:
+            'Um faroleiro e a filha esperam o vento que traz o barco do irmão, que não volta há dez anos.',
+        },
+      ],
+      [
+        9103,
+        {
+          directors: ['Jonas Weber'],
+          runtime: 88,
+          countries: ['DE', 'DK'],
+          language: 'de',
+          overviewPt: null,
+        },
+      ],
+    ])
+    // Cached like any TMDB answer: the next view asks nothing.
+    const again = await fixture.ok(viewQueueDetailed, RECORDED)
+    expect(
+      again.items
+        .find((item) => item.name === 'Vento Norte')
+        ?.candidates.map((c) => c.details?.runtime),
+    ).toEqual([104, 88])
   })
 })
 

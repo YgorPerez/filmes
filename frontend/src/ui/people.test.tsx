@@ -86,6 +86,29 @@ describe('PeopleList, the logged-in Dono', () => {
     ])
     expect(links[0]?.textContent).toContain(PEOPLE.myTaste)
   })
+
+  it('hides "eu" on her own row, and keeps her other aliases', () => {
+    render(
+      <PeopleList
+        self="bruno"
+        people={[
+          {
+            person: 'bruno',
+            name: 'Bruno',
+            aliases: ['eu', 'Bru'],
+            owner: true,
+            ratings: 11,
+            vetoes: 0,
+          },
+        ]}
+      />,
+    )
+    const row = screen.getByRole('link', { name: /Bruno/ })
+    expect(row.textContent).toContain(
+      [PEOPLE.myTaste, PEOPLE.aliases(['Bru']), PEOPLE.ratings(11)].join(' · '),
+    )
+    expect(row.textContent).not.toMatch(/\beu\b/)
+  })
 })
 
 describe('PeopleList, what it knows and when empty', () => {

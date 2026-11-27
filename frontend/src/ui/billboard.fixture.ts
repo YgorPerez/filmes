@@ -29,8 +29,10 @@ export const MODEL: Billboard = {
   ],
   request: {
     speech: 'algo leve pra hoje',
+    additions: [],
     who: 'Vocês dois',
     parts: ['até 2h05', 'nota 7+ no IMDb', 'leve'],
+    unseen: false,
   },
   moods: ['leve'],
   moodChoices: ['leve', 'pra rir', 'tenso'],
@@ -125,8 +127,20 @@ export const CLOSED: Billboard = {
     {
       ...HOURS!,
       reactions: [
-        { person: 'bruno', predicted: '8,3', rating: '6', reaction: null },
-        { person: 'iara', predicted: null, rating: null, reaction: 'liked' },
+        {
+          person: 'bruno',
+          predicted: '8,3',
+          rating: '6',
+          reaction: null,
+          comment: null,
+        },
+        {
+          person: 'iara',
+          predicted: null,
+          rating: null,
+          reaction: 'liked',
+          comment: null,
+        },
       ],
     },
     SALT!,
@@ -144,8 +158,20 @@ export const CHOSEN_OUTSIDE: Billboard = {
     title: 'Curta da Madrugada',
     year: 2010,
     reactions: [
-      { person: 'bruno', predicted: null, rating: '8', reaction: null },
-      { person: 'iara', predicted: null, rating: null, reaction: 'disliked' },
+      {
+        person: 'bruno',
+        predicted: null,
+        rating: '8',
+        reaction: null,
+        comment: null,
+      },
+      {
+        person: 'iara',
+        predicted: null,
+        rating: null,
+        reaction: 'disliked',
+        comment: null,
+      },
     ],
   },
 }

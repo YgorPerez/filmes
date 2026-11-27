@@ -29,11 +29,41 @@ const meta = {
   args: {
     people: PEOPLE,
     reactions: [
-      { person: 'bruno', predicted: '8,3', rating: '6', reaction: null },
-      { person: 'iara', predicted: '7,1', rating: null, reaction: 'liked' },
-      { person: 'teo', predicted: null, rating: null, reaction: 'neutral' },
-      { person: 'vera', predicted: '6,4', rating: null, reaction: 'disliked' },
-      { person: 'quim', predicted: '9,0', rating: null, reaction: null },
+      {
+        person: 'bruno',
+        predicted: '8,3',
+        rating: '6',
+        reaction: null,
+        comment: null,
+      },
+      {
+        person: 'iara',
+        predicted: '7,1',
+        rating: null,
+        reaction: 'liked',
+        comment: null,
+      },
+      {
+        person: 'teo',
+        predicted: null,
+        rating: null,
+        reaction: 'neutral',
+        comment: 'dormiu no meio',
+      },
+      {
+        person: 'vera',
+        predicted: '6,4',
+        rating: null,
+        reaction: 'disliked',
+        comment: null,
+      },
+      {
+        person: 'quim',
+        predicted: '9,0',
+        rating: null,
+        reaction: null,
+        comment: null,
+      },
     ],
   },
 } satisfies Meta<typeof ChosenReactions>

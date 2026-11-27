@@ -32,7 +32,7 @@ describe('NotFound', () => {
     ).toHaveProperty('pathname', '/sessoes')
   })
 
-  it('alone, offers Entrar and no Sessões', () => {
+  it('alone, leads in through Entrar, names no Sessão and ends with the credits', () => {
     render(
       <LostAlone>
         <NotFound owner={false} />
@@ -45,8 +45,9 @@ describe('NotFound', () => {
     ).toEqual([
       ['filmes', '/'],
       ['Entrar', '/entrar'],
-      ['Ir para o início', '/'],
+      ['Créditos das fontes', '/creditos'],
     ])
+    expect(screen.getByRole('main').textContent).not.toContain('Sessão')
   })
 })
 

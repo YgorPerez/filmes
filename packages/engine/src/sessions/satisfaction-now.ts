@@ -22,7 +22,7 @@ export interface PersonSatisfactionNow {
    * no reaction in her recent shared Sessions. */
   readonly satisfaction: number | null
   /** "satisfação de <nome> nas últimas Sessões: 11%, e a mais alta do
-   * grupo, 100%; na de <data> (<filme>), deu 1"; null when she is behind
+   * grupo, 100%; na de sex, 20 nov (<filme>), deu 2 de 10"; null when she is behind
    * nobody. */
   readonly line: string | null
 }

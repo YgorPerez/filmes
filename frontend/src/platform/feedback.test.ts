@@ -46,6 +46,9 @@ const SESSION: FeedbackSession = {
   recommendation: [{ position: 1, id: 'tt9000101', title: 'O Farol de Areia' }],
   moods: [],
   constraints: [],
+  additions: [],
+  stars: {},
+  earlier: [],
 }
 
 const RECORDED: FeedbackResult = {
@@ -319,7 +322,7 @@ describe('feedbackDraft', () => {
 describe('the pages', () => {
   it('shows the open Session with its Presentes’ satisfaction', async () => {
     const line =
-      'satisfação de Quim nas últimas Sessões: 0%, e a mais alta do grupo, 100%; na de 2026-11-19 (Casa Cheia), deu 0,5'
+      'satisfação de Quim nas últimas Sessões: 0%, e a mais alta do grupo, 100%; na de qui, 19 nov (Casa Cheia), deu 1 de 10'
     const { feedback } = fake({
       satisfaction: {
         exitCode: 0,
@@ -401,6 +404,9 @@ const expectOnlyOpen = async (
       request: null,
       moods: [],
       constraints: [],
+      additions: [],
+      stars: {},
+      earlier: [],
       attendees: [
         { person: 'bruno', name: 'Bruno', owner: true },
         { person: 'quim', name: 'Quim', owner: false },
@@ -457,7 +463,7 @@ describe('feedbackFromEngine', () => {
           person: 'bruno',
           name: 'Bruno',
           satisfaction: 0.1111,
-          line: 'satisfação de Bruno nas últimas Sessões: 11%, e a mais alta do grupo, 100%; na de 2026-11-20 (Pequenos Milagres), deu 1',
+          line: 'satisfação de Bruno nas últimas Sessões: 11%, e a mais alta do grupo, 100%; na de sex, 20 nov (Pequenos Milagres), deu 2 de 10',
         },
         { person: 'quim', name: 'Quim', satisfaction: 1, line: null },
       ])

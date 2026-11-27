@@ -1,12 +1,16 @@
 export const LOST = {
   brand: 'filmes',
   home: 'filmes, início',
-  signIn: 'Entrar',
   notFound: {
     title: 'Essa fita não está na prateleira',
-    lead: 'O endereço pode ter mudado, ou a Sessão foi apagada.',
+    lead: 'O endereço pode ter mudado, ou o link veio cortado.',
     home: 'Ir para o início',
     sessions: 'Ver Sessões',
+  },
+  /** Logged out: no Sessão to have lost, and Entrar is the way in. */
+  notFoundAlone: {
+    lead: 'O endereço pode ter mudado, ou veio cortado.',
+    signIn: 'Entrar',
   },
   sessionNotFound: {
     title: 'Essa Sessão não está na prateleira',

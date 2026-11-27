@@ -4,7 +4,8 @@ import {
   TRAKT_DISCONNECT,
   type TraktError,
 } from '#/content/trakt-form'
-import { LOGIN, TRAKT_SCREEN } from './login.copy'
+import { MY_TASTE } from '#/content/paths'
+import { LOGIN, TRAKT_SCREEN as TRAKT } from './login.copy'
 import { ShelfLabel } from './kit/shelf-label'
 import { Alert } from './kit/status'
 import { buttonVariants } from './kit/button-variants'
@@ -12,7 +13,8 @@ import { SiteFooter } from './kit/site-footer'
 import { Slip } from './kit/slip'
 import { Button } from './shadcn/button'
 
-// The pages without a Dono, so outside the app shell: `/entrar` and `/trakt`.
+// The pages without a Dono, so outside the app shell: `/entrar`, and
+// `/trakt` for a Pessoa who is not a Dono (a Dono sees it in the shell).
 //
 // `/entrar`: the case-black bar with "filmes" and one card with the one
 // orange button. The button is a link, since `/auth/google` answers a GET with the
@@ -81,69 +83,113 @@ type TraktPage =
 export function TraktScreen({
   page,
   error,
+  inApp = false,
 }: {
   page: TraktPage
   error?: TraktError
+  /** A Dono is logged in: the page sits in the app shell, with the way
+   * back to Importar (#274). */
+  inApp?: boolean
 }) {
+  const body = (
+    <main className="mx-auto flex w-full max-w-[720px] flex-col gap-xl px-2xl py-3xl">
+      {inApp && (
+        <a
+          href={`${MY_TASTE}/importar`}
+          className={buttonVariants({
+            variant: 'option',
+            className: 'self-start',
+          })}
+        >
+          {TRAKT.back}
+        </a>
+      )}
+      <h1 className="font-display text-counter-title">{TRAKT.heading}</h1>
+      {error && <Alert>{TRAKT.errors[error]}</Alert>}
+      <Slip id="trakt-history" title={TRAKT.title}>
+        <div className="flex flex-col items-start gap-lg">
+          <TraktBody page={page} />
+        </div>
+      </Slip>
+      <p className="text-meta text-ink-2">{TRAKT.notEndorsed}</p>
+    </main>
+  )
+  if (inApp) return body
   return (
     <div className="flex min-h-dvh flex-col">
-      <main className="mx-auto flex w-full max-w-[720px] flex-col gap-xl px-2xl py-3xl">
-        <h1 className="font-display text-counter-title">
-          {TRAKT_SCREEN.title}
-        </h1>
-        {error && <Alert>{TRAKT_SCREEN.errors[error]}</Alert>}
-        <Slip id="trakt-history" title={TRAKT_SCREEN.slip}>
-          <div className="flex flex-col items-start gap-lg">
-            {page.status === 'unavailable' ? (
-              <p>{TRAKT_SCREEN.unavailable}</p>
-            ) : page.status === 'login' ? (
-              <>
-                <p>{TRAKT_SCREEN.login}</p>
-                <a
-                  href="/auth/trakt-google"
-                  className={buttonVariants({ variant: 'primary' })}
-                >
-                  {TRAKT_SCREEN.google}
-                </a>
-              </>
-            ) : (
-              <>
-                <p className="font-semibold">{page.name}</p>
-                {page.status === 'connected' ? (
-                  <>
-                    <p>{TRAKT_SCREEN.connected}</p>
-                    <form action={TRAKT_DISCONNECT} method="post">
-                      <Button type="submit" variant="option">
-                        {TRAKT_SCREEN.disconnect}
-                      </Button>
-                    </form>
-                  </>
-                ) : (
-                  <form
-                    action={TRAKT_CONNECT}
-                    method="post"
-                    className="flex flex-col items-start gap-lg"
-                  >
-                    <label className="flex items-start gap-sm">
-                      <input
-                        type="checkbox"
-                        name="consentir"
-                        value="sim"
-                        required
-                        className="mt-1"
-                      />
-                      {TRAKT_SCREEN.consent}
-                    </label>
-                    <Button type="submit">{TRAKT_SCREEN.connect}</Button>
-                  </form>
-                )}
-              </>
-            )}
-          </div>
-        </Slip>
-        <p className="text-meta text-ink-2">{TRAKT_SCREEN.notice}</p>
-      </main>
+      {body}
       <SiteFooter />
+    </div>
+  )
+}
+
+/** What the connection holds: sign in, consent and connect, or the
+ * connected account and the way to disconnect it. */
+function TraktBody({ page }: { page: TraktPage }) {
+  if (page.status === 'unavailable') return <p>{TRAKT.unavailable}</p>
+  if (page.status === 'login')
+    return (
+      <>
+        <p>{TRAKT.login}</p>
+        <a
+          href="/auth/trakt-google"
+          className={buttonVariants({ variant: 'primary' })}
+        >
+          {TRAKT.google}
+        </a>
+      </>
+    )
+  return (
+    <>
+      <p className="font-semibold">{page.name}</p>
+      {page.status === 'connected' ? (
+        <>
+          <p>{TRAKT.connected}</p>
+          <form action={TRAKT_DISCONNECT} method="post">
+            <Button type="submit" variant="option">
+              {TRAKT.disconnect}
+            </Button>
+          </form>
+        </>
+      ) : (
+        <form
+          action={TRAKT_CONNECT}
+          method="post"
+          className="flex w-full flex-col items-start gap-lg"
+        >
+          <TraktConsent />
+          <label className="flex min-h-touch w-full cursor-pointer items-center gap-md rounded-field bg-surface-2 px-lg py-sm">
+            <input
+              type="checkbox"
+              name="consentir"
+              value="sim"
+              required
+              className="size-5 shrink-0 accent-ink"
+            />
+            <span>{TRAKT.consent}</span>
+          </label>
+          <Button type="submit">{TRAKT.connect}</Button>
+          <p className="text-meta text-ink-2">{TRAKT.after}</p>
+        </form>
+      )}
+    </>
+  )
+}
+
+/** What the connection reads and what it sends, apart (#274). */
+function TraktConsent() {
+  return (
+    <div className="flex flex-col gap-sm">
+      {TRAKT.does.map(({ title, items }) => (
+        <div key={title} className="flex flex-col gap-2xs">
+          <p className="font-display text-field-label">{title}</p>
+          <ul className="flex list-disc flex-col gap-2xs pl-2xl text-evidence">
+            {items.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </div>
+      ))}
     </div>
   )
 }
