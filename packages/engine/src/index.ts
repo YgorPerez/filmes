@@ -735,3 +735,8 @@ export {
   type RatingQueue,
   type RatingQueueRequest,
 } from './people/rating.ts'
+export {
+  tasteSummary,
+  type TasteSummary,
+  type TasteSummaryRequest,
+} from './people/taste-summary.ts'

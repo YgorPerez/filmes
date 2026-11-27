@@ -4,7 +4,13 @@ import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, test } from 'vite-plus/test'
-import { consult, filmCard, personRate, ratingQueue } from '../../src/index.ts'
+import {
+  consult,
+  filmCard,
+  personRate,
+  ratingQueue,
+  tasteSummary,
+} from '../../src/index.ts'
 import { RECORDINGS } from '../sources/support.ts'
 import { useFixture, type Fixture } from '../fixture.ts'
 
@@ -207,5 +213,34 @@ describe('the film card', () => {
 
     expect(outcome.exitCode).toBe(1)
     expect(outcome.output).toMatchObject({ error: { code: 'unknown_target' } })
+  })
+})
+
+describe('the taste summary', () => {
+  test('names the genres and directors of the films she liked', async () => {
+    const fixture = useFixture()
+
+    const summary = await fixture.ok(tasteSummary({ person: 'bruno' }))
+
+    // Eight films with 8 or more of 10; a director counts with two.
+    expect(summary).toEqual({
+      person: 'bruno',
+      liked: 8,
+      genres: ['Drama', 'Crime', 'Romance'],
+      directors: ['Helena Prado', 'Otávio Lins', 'Rui Tavares'],
+    })
+  })
+
+  test('a Pessoa with no Nota has nothing to show', async () => {
+    const fixture = useFixture()
+
+    const summary = await fixture.ok(tasteSummary({ person: 'teo' }))
+
+    expect(summary).toEqual({
+      person: 'teo',
+      liked: 0,
+      genres: [],
+      directors: [],
+    })
   })
 })
