@@ -68,7 +68,7 @@ export const HOME = {
   guide: {
     title: 'Para começar',
     payoff:
-      'Dá para pedir filme já. Sem isso, a lista sai só com palpites; com 10 notas, cada filme vem com o seu motivo.',
+      'Dá para pedir filme já. Sem notas, a lista sai só com palpites; com 10, cada filme vem com o seu motivo.',
     state: { done: 'feito', skipped: 'pulado', pending: 'falta fazer' },
     doneRatings: (n: number) =>
       n === 1 ? 'feito, 1 nota' : `feito, ${n} notas`,
@@ -118,7 +118,6 @@ export const HOME = {
     open: 'Falta contar como foi',
     openText: 'Viram algum? Conte qual e o que cada um achou.',
     feedback: 'Contar como foi',
-    feedbackLabel: (id: string) => `Contar como foi a Sessão ${id}`,
     chosen: (title: string) => `vimos ${title}`,
     nothing: 'não vimos nada',
     billboard: 'Ver o Cartaz',

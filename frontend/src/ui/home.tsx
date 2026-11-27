@@ -26,7 +26,12 @@ export function Home({ home }: { home: HomeData }) {
         !guiding && <NoSession />
       )}
       {setup && guiding && (
-        <Guide setup={setup} person={home.person} mcpUrl={home.mcpUrl} />
+        <Guide
+          setup={setup}
+          person={home.person}
+          mcpUrl={home.mcpUrl}
+          fold={home.latest !== null}
+        />
       )}
     </main>
   )

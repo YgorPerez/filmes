@@ -1,7 +1,7 @@
 // The home's parts on their own: the counter, the latest Sessão, the guide
 // and its steps, and the connector's address with its copy button.
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, within } from 'storybook/test'
+import { expect, userEvent, within } from 'storybook/test'
 import { COVERS, LATEST, MCP_URL, setupOf } from './home.fixture'
 import {
   Ask,
@@ -99,8 +99,32 @@ export const GuideFromZero: Story = {
     const guide = within(canvasElement)
     await expect(guide.getByText('Leva uns 2 minutos.')).toBeVisible()
     await expect(
+      guide.queryByRole('button', { name: 'Copiar endereço' }),
+    ).toBeNull()
+    await userEvent.click(
+      guide.getByRole('button', { name: 'Ver como conectar' }),
+    )
+    await expect(
       guide.getByRole('button', { name: 'Copiar endereço' }),
-    ).not.toBeVisible()
+    ).toBeVisible()
+  },
+}
+
+export const ConnectorLeftWithASession: Story = {
+  render: () => (
+    <Guide
+      setup={setupOf({ taste: 'done' }, 12)}
+      person="bruno"
+      mcpUrl={MCP_URL}
+      fold
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const guide = within(canvasElement)
+    await expect(
+      guide.getByRole('button', { name: 'Ver como conectar' }),
+    ).toBeVisible()
+    await expect(guide.queryByText(/palpites/)).toBeNull()
   },
 }
 
