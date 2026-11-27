@@ -13,6 +13,8 @@ import { refusalOn, useRefusalInPlace } from './kit/refusal-in-place'
 import {
   Alert,
   Disclosure,
+  Meta,
+  Notice,
   PostFailed,
   Submit,
   TextField,
@@ -31,19 +33,35 @@ const selfFirst = (people: PersonEntry[], self?: string) => [
   ...people.filter((p) => p.person !== self),
 ]
 
-/** `/pessoas`: every Pessoa of filmes-dados, each a link to her page; the
- * logged-in Dono (`self`) first, to Meu gosto. `people` is null when the
- * engine cannot run on this server. */
+/** What the filmes knows of her, on her row (#273): "4 Notas · 1 Veto",
+ * or "falta conhecer". Without a database, only the Vetos. */
+const knownOf = ({ ratings, vetoes }: PersonEntry) => {
+  const parts = [
+    ratings ? PEOPLE.ratings(ratings) : null,
+    vetoes > 0 ? PEOPLE.vetoes(vetoes) : null,
+  ].filter((part) => part !== null)
+  return parts.length > 0 || ratings === null ? parts : [PEOPLE.unknown]
+}
+
+/** `/pessoas`: every Pessoa of filmes-dados, each a link to her page with
+ * how much the filmes knows of her; the logged-in Dono (`self`) first, to
+ * Meu gosto. `people` is null when the engine cannot run on this server.
+ * `admin` sees what a new Dono needs in Google Cloud. */
 export function PeopleList({
   people,
   self,
   gone,
+  removed = false,
+  admin = false,
   create,
 }: {
   people: PersonEntry[] | null
   self?: string
   /** Why the page came back: a form's Pessoa is gone, or a download's. */
   gone?: PeopleRefusal
+  /** A Pessoa was just taken out. */
+  removed?: boolean
+  admin?: boolean
   create?: CreateState
 }) {
   return (
@@ -53,45 +71,50 @@ export function PeopleList({
         <p className="text-ink-2">{PEOPLE.lead}</p>
       </div>
       {gone && <Alert>{PEOPLE.gone[gone]}</Alert>}
+      {removed && <Notice>{PEOPLE.removed}</Notice>}
       {!people ? (
         <Alert>{PEOPLE.unavailable}</Alert>
       ) : people.length === 0 ? (
         <p className="text-ink-2">{PEOPLE.empty}</p>
       ) : (
         <ul className="flex flex-col gap-xs" aria-label={PEOPLE.title}>
-          {selfFirst(people, self).map(({ person, name, aliases, owner }) => (
-            <li key={person}>
-              <a
-                href={personPath(person, person === self)}
-                className="flex min-h-[52px] items-stretch overflow-hidden rounded-nav-row border border-rule bg-surface text-ink no-underline hover:bg-surface-2"
-              >
-                <span
-                  aria-hidden="true"
-                  className="w-2 shrink-0 border-r border-case-edge bg-case"
-                />
-                <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-sm gap-y-2xs py-sm pl-xl">
-                  <span className="font-display text-row-title">{name}</span>
-                  {owner && <OwnerTag />}
-                  {person === self && (
-                    <span className="text-meta text-ink-2">
-                      {PEOPLE.myTaste}
+          {selfFirst(people, self).map((entry) => {
+            const { person, name, aliases, owner } = entry
+            return (
+              <li key={person}>
+                <a
+                  href={personPath(person, person === self)}
+                  className="flex min-h-[52px] items-stretch overflow-hidden rounded-nav-row border border-rule bg-surface text-ink no-underline hover:bg-surface-2"
+                >
+                  <span
+                    aria-hidden="true"
+                    className="w-2 shrink-0 border-r border-case-edge bg-case"
+                  />
+                  <span className="flex min-w-0 flex-1 flex-col justify-center gap-2xs py-sm pl-xl">
+                    <span className="flex flex-wrap items-center gap-x-sm gap-y-2xs">
+                      <span className="font-display text-row-title">
+                        {name}
+                      </span>
+                      {owner && <OwnerTag />}
                     </span>
-                  )}
-                  {aliases.length > 0 && (
-                    <span className="text-meta text-ink-2">
-                      {PEOPLE.aliases(aliases)}
-                    </span>
-                  )}
-                </span>
-                <span className="flex items-center px-xl">
-                  <RowArrow />
-                </span>
-              </a>
-            </li>
-          ))}
+                    <Meta
+                      parts={[
+                        person === self ? PEOPLE.myTaste : null,
+                        aliases.length > 0 ? PEOPLE.aliases(aliases) : null,
+                        ...knownOf(entry),
+                      ]}
+                    />
+                  </span>
+                  <span className="flex items-center px-xl">
+                    <RowArrow />
+                  </span>
+                </a>
+              </li>
+            )
+          })}
         </ul>
       )}
-      {people && <CreateForm state={create} />}
+      {people && <CreateForm state={create} admin={admin} />}
     </main>
   )
 }
@@ -100,7 +123,7 @@ export function PeopleList({
  * Open, with what was typed and why not, when the server refused it. With
  * the JavaScript (#235), it posts by `fetch`: a refusal shows in place,
  * over what was typed, and the new Pessoa's page opens without reloading. */
-function CreateForm({ state }: { state?: CreateState }) {
+function CreateForm({ state, admin }: { state?: CreateState; admin: boolean }) {
   const { create } = PEOPLE
   const typed = state?.typed ?? {}
   const { refused, alert, onAnswer } = useRefusalInPlace(
@@ -115,7 +138,7 @@ function CreateForm({ state }: { state?: CreateState }) {
         action="/pessoas/nova/enviar"
         aria-label={create.title}
         onSubmit={onSubmit}
-        className="flex flex-col gap-xl"
+        className="group/new flex flex-col gap-xl"
       >
         {refused && (
           <div ref={alert}>
@@ -145,14 +168,18 @@ function CreateForm({ state }: { state?: CreateState }) {
           />
           <span className="font-semibold">{create.owner}</span>
         </label>
-        <TextField
-          name="email"
-          type="email"
-          label={create.email}
-          hint={create.emailHint}
-          defaultValue={typed.email}
-        />
-        <p className="text-meta text-ink-2">{create.testUsers}</p>
+        {/* A Dono's e-mail, only once "É Dono" is marked: CSS, so it
+            works before the JavaScript (#273). */}
+        <div className="hidden flex-col gap-xl group-has-checked/new:flex">
+          <TextField
+            name="email"
+            type="email"
+            label={create.email}
+            hint={create.emailHint}
+            defaultValue={typed.email}
+          />
+          {admin && <p className="text-meta text-ink-2">{create.testUsers}</p>}
+        </div>
         <Submit variant="primary" disabled={busy !== null}>
           {busy === null ? create.submit : create.submitting}
         </Submit>

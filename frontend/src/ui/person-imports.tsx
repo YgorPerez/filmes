@@ -2,7 +2,8 @@ import { FIELD } from './kit/field'
 import { FieldLabel } from './kit/field-label'
 import { PostAnswers, PostForm } from './kit/post-form'
 import { usePostedFeedback } from './kit/posted-feedback'
-import type { ReactNode } from 'react'
+import { useHydrated } from './kit/fetch-form'
+import { useId, useState, type ReactNode } from 'react'
 import type { PersonImports } from '@filmes/engine'
 import type { ImportNotice, ImportRefusal } from '#/content/import-action'
 import { personPath, QUEUE_PATH } from '#/content/paths'
@@ -360,6 +361,62 @@ function Refusal({ refusal }: { refusal: ImportRefusal }) {
   )
 }
 
+const ACCEPT = '.zip,application/zip,.csv,text/csv,.json,application/json'
+
+/** The file field (#273). With the JavaScript, the browser's own control
+ * hides behind a pill and the chosen file's name, which never cut off
+ * on a phone; before it, the browser's. */
+function FilePicker() {
+  const { upload } = COPY
+  const live = useHydrated()
+  const id = useId()
+  const [chosen, setChosen] = useState<string | null>(null)
+  if (!live)
+    return (
+      <FieldLabel label={upload.file}>
+        <input
+          type="file"
+          name="arquivo"
+          required
+          accept={ACCEPT}
+          className={fileControl}
+        />
+      </FieldLabel>
+    )
+  return (
+    <div className="flex flex-col gap-xs">
+      <span id={`${id}-label`} className="font-display text-field-label">
+        {upload.file}
+      </span>
+      <div className="flex flex-wrap items-center gap-sm">
+        <input
+          id={id}
+          type="file"
+          name="arquivo"
+          required
+          accept={ACCEPT}
+          aria-labelledby={`${id}-label`}
+          onChange={(event) => setChosen(event.target.files?.[0]?.name ?? null)}
+          className="peer sr-only"
+        />
+        <label
+          htmlFor={id}
+          className={buttonVariants({
+            variant: 'option',
+            className:
+              'peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-focus',
+          })}
+        >
+          {upload.choose}
+        </label>
+        <span className="min-w-0 text-meta break-all text-ink-2">
+          {chosen ?? upload.none}
+        </span>
+      </div>
+    </div>
+  )
+}
+
 /** The page's main action, always open: one file field for either
  * service, and the only orange button on the screen (The One Orange Button
  * Rule). The import starts on the button, not on picking the file. */
@@ -371,16 +428,9 @@ function Upload({ slug }: { slug: string }) {
         {(busy) => (
           <>
             <div className="flex flex-col gap-sm">
-              <FieldLabel label={upload.file}>
-                <input
-                  type="file"
-                  name="arquivo"
-                  required
-                  accept=".zip,application/zip,.csv,text/csv,.json,application/json"
-                  className={fileControl}
-                />
-              </FieldLabel>
+              <FilePicker />
               <HowTo />
+              <p className="text-meta text-ink-2">{upload.computer}</p>
             </div>
             <Submit variant="primary" disabled={busy}>
               {busy ? upload.busy : upload.submit}

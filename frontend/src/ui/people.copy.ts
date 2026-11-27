@@ -9,14 +9,18 @@ export const PEOPLE = {
   myTaste: 'Meu gosto',
   owner: 'Dono',
   aliases: (aliases: readonly string[]) => `também ${aliases.join(', ')}`,
-  empty: 'Nenhuma Pessoa no repo de dados ainda.',
+  empty: 'Nenhuma Pessoa ainda. Acrescente quem assiste com você.',
   unavailable:
     'Não deu para abrir as Pessoas: o site está com um problema, e ele ficou registrado no log do servidor.',
   gone: {
-    pessoa: 'Essa Pessoa não está mais no repo de dados.',
-    baixar:
-      'Não deu para baixar o CSV: essa Pessoa não está mais no repo de dados.',
+    pessoa: 'Essa Pessoa não existe mais: alguém a removeu.',
+    baixar: 'Não deu para baixar o CSV: essa Pessoa não existe mais.',
   } satisfies Record<PeopleRefusal, string>,
+  removed: 'Pessoa removida.',
+  ratings: (n: number) =>
+    n === 1 ? '1 Nota' : `${n.toLocaleString('pt-BR')} Notas`,
+  vetoes: (n: number) => (n === 1 ? '1 Veto' : `${n} Vetos`),
+  unknown: 'falta conhecer',
   create: {
     title: 'Acrescentar Pessoa',
     name: 'Nome',
@@ -24,7 +28,7 @@ export const PEOPLE = {
     aliasesHint: 'opcional, separados por vírgula',
     owner: 'É Dono: entra no site e no conector',
     email: 'E-mail do Google',
-    emailHint: 'só para um Dono',
+    emailHint: 'o que ele usa para entrar',
     testUsers:
       'Enquanto a tela de consentimento do Google estiver em teste, um Dono novo também precisa estar em Test users no Google Cloud, ou o primeiro login dele falha.',
     submit: 'Acrescentar',

@@ -16,8 +16,22 @@ describe('PeopleList', () => {
     const html = renderToStaticMarkup(
       <PeopleList
         people={[
-          { person: 'bruno', name: 'Bruno', aliases: ['eu'], owner: true },
-          { person: 'iara', name: 'Iara', aliases: [], owner: false },
+          {
+            person: 'bruno',
+            name: 'Bruno',
+            aliases: ['eu'],
+            owner: true,
+            ratings: 0,
+            vetoes: 0,
+          },
+          {
+            person: 'iara',
+            name: 'Iara',
+            aliases: [],
+            owner: false,
+            ratings: 0,
+            vetoes: 0,
+          },
         ]}
       />,
     )
@@ -33,9 +47,30 @@ describe('PeopleList', () => {
       <PeopleList
         self="vera"
         people={[
-          { person: 'bruno', name: 'Bruno', aliases: [], owner: true },
-          { person: 'iara', name: 'Iara', aliases: [], owner: false },
-          { person: 'vera', name: 'Vera', aliases: [], owner: true },
+          {
+            person: 'bruno',
+            name: 'Bruno',
+            aliases: [],
+            owner: true,
+            ratings: 0,
+            vetoes: 0,
+          },
+          {
+            person: 'iara',
+            name: 'Iara',
+            aliases: [],
+            owner: false,
+            ratings: 0,
+            vetoes: 0,
+          },
+          {
+            person: 'vera',
+            name: 'Vera',
+            aliases: [],
+            owner: true,
+            ratings: 0,
+            vetoes: 0,
+          },
         ]}
       />,
     )
@@ -50,6 +85,34 @@ describe('PeopleList', () => {
     expect(links[0]?.textContent).toContain(PEOPLE.myTaste)
   })
 
+  it('says how much the filmes knows of each one', () => {
+    render(
+      <PeopleList
+        people={[
+          { ...BRUNO, aliases: [], ratings: 11, vetoes: 1 },
+          { ...BRUNO, person: 'teo', name: 'Teo', owner: false, aliases: [] },
+          {
+            ...BRUNO,
+            person: 'iara',
+            name: 'Iara',
+            owner: false,
+            aliases: [],
+            ratings: null,
+          },
+        ]}
+        self="bruno"
+      />,
+    )
+    const rows = within(
+      screen.getByRole('list', { name: PEOPLE.title }),
+    ).getAllByRole('link')
+    expect(rows.map((row) => row.textContent)).toEqual([
+      `Bruno${PEOPLE.owner}${PEOPLE.myTaste} · 11 Notas · 1 Veto`,
+      `Teo${PEOPLE.unknown}`,
+      'Iara',
+    ])
+  })
+
   it('says when there is no one, when one is gone, when the engine cannot run', () => {
     expect(renderToStaticMarkup(<PeopleList people={[]} />)).toContain(
       PEOPLE.empty,
@@ -57,13 +120,23 @@ describe('PeopleList', () => {
     expect(
       renderToStaticMarkup(<PeopleList people={[]} gone="pessoa" />),
     ).toContain(PEOPLE.gone.pessoa)
+    expect(renderToStaticMarkup(<PeopleList people={[]} removed />)).toContain(
+      PEOPLE.removed,
+    )
     const html = renderToStaticMarkup(<PeopleList people={null} />)
     expect(html).toContain(PEOPLE.unavailable)
     expect(html).not.toContain('<ul')
   })
 })
 
-const BRUNO = { person: 'bruno', name: 'Bruno', aliases: ['eu'], owner: true }
+const BRUNO = {
+  person: 'bruno',
+  name: 'Bruno',
+  aliases: ['eu'],
+  owner: true,
+  ratings: 0,
+  vetoes: 0,
+}
 
 /** The create form, opened, and what it posts as the server reads it. */
 async function createForm() {
@@ -101,8 +174,8 @@ describe('PeopleList create form', () => {
     })
   })
 
-  it('posts a Dono with her Google e-mail, and warns about the Test users', async () => {
-    render(<PeopleList people={[BRUNO]} />)
+  it('posts a Dono with her Google e-mail, and warns an admin about the Test users', async () => {
+    render(<PeopleList people={[BRUNO]} admin />)
     const { user, fields, posted } = await createForm()
     await user.type(fields.getByLabelText(PEOPLE.create.name), 'Farias')
     await user.click(fields.getByLabelText(PEOPLE.create.owner))

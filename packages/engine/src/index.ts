@@ -43,6 +43,11 @@ export {
 } from './catalog/search.ts'
 export { searchKey } from './catalog/search-key.ts'
 export {
+  filmCard,
+  type FilmCard,
+  type FilmCardRequest,
+} from './catalog/film-card.ts'
+export {
   EXPORT_FORMATS,
   exportRatings,
   type ExportFormat,
@@ -507,6 +512,16 @@ export {
   type SkipSetupResult,
 } from './people/setup.ts'
 export {
+  peopleCounts,
+  personDelete,
+  personSessions,
+  type PersonCounts,
+  type PersonDeleteInput,
+  type PersonDeleteResult,
+  type PersonSession,
+  type PersonSessions,
+} from './people/directory.ts'
+export {
   grantAccess,
   revokeAccess,
   type AccessResult,
@@ -540,6 +555,7 @@ export {
 export {
   confirmQueueItem,
   discardQueueItem,
+  reopenQueueItem,
   viewQueue,
   type QueueDecision,
   type QueueItem,
@@ -730,3 +746,8 @@ export {
   type RatingQueue,
   type RatingQueueRequest,
 } from './people/rating.ts'
+export {
+  tasteSummary,
+  type TasteSummary,
+  type TasteSummaryRequest,
+} from './people/taste-summary.ts'
