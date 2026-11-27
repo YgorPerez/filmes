@@ -424,6 +424,10 @@ const CREATE_REFUSALS: Record<ErrorReason, PersonCreateRefusal> = {
   // Not met on create: giving or taking access.
   already_owner: 'indisponivel',
   own_access: 'indisponivel',
+  // Not met on create: taking a Pessoa out.
+  is_owner: 'indisponivel',
+  has_imports: 'indisponivel',
+  in_session: 'indisponivel',
 }
 
 /** Why the engine refused a new Pessoa, by its reason; without one, it
