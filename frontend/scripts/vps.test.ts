@@ -45,7 +45,10 @@ function aVps() {
   }
 }
 
-describe.skipIf(process.platform === 'win32')('the deploy on the VPS', () => {
+/** The VPS tests run the plan in a bash, which Windows lacks. */
+const NO_BASH = process.platform === 'win32'
+
+describe.skipIf(NO_BASH)('the deploy on the VPS', () => {
   it('the first deploy starts the app on the first port, with the volume, and installs the vhost', () => {
     const vps = aVps()
 
@@ -93,7 +96,9 @@ describe.skipIf(process.platform === 'win32')('the deploy on the VPS', () => {
       'temestudo-stats',
     ])
   })
+})
 
+describe.skipIf(NO_BASH)('the next deploys on the VPS', () => {
   it('the log says how long each step took, and the total', () => {
     const vps = aVps()
 
@@ -143,7 +148,9 @@ describe.skipIf(process.platform === 'win32')('the deploy on the VPS', () => {
       `filmes-app:sha-${SHA_3}`,
     ])
   })
+})
 
+describe.skipIf(NO_BASH)('rolling back on the VPS', () => {
   it('rolling back without a SHA swaps to the previous deploy, without touching the vhost', () => {
     const vps = aVps()
     vps.publish(SHA_1)
@@ -184,7 +191,9 @@ describe.skipIf(process.platform === 'win32')('the deploy on the VPS', () => {
     expect(() => vps.publish('abc; rm -rf /')).toThrow('is not a SHA')
     expect(vps.calls()).toEqual([])
   })
+})
 
+describe.skipIf(NO_BASH)('a deploy on the VPS that fails', () => {
   it('a new container that does not answer goes, and the old one stays live', () => {
     const vps = aVps()
     vps.publish(SHA_1)
@@ -261,7 +270,7 @@ function aDataRemote() {
   return remote
 }
 
-describe.skipIf(process.platform === 'win32')('filmes-dados on the VPS', () => {
+describe.skipIf(NO_BASH)('filmes-dados on the VPS', () => {
   it('writes the key for the container only, clones once and sets app.env', () => {
     const vps = aVps()
     const remote = aDataRemote()

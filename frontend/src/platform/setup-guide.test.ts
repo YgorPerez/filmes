@@ -93,6 +93,8 @@ describe('homeData', () => {
       setup: { steps: STEPS, ratings: 4 },
       latest: null,
       mcpUrl: 'http://localhost/mcp',
+      today: null,
+      covers: {},
     })
   })
 
@@ -110,6 +112,28 @@ describe('homeData', () => {
     const home = await homeData(BRUNO, fakeSource().source, list, ORIGIN)
     expect(home.latest?.id).toBe('2026-11-19-1')
   })
+})
+
+describe('homeData, on the shelf and a failing engine', () => {
+  it('asks the shelf for today and for the covers of the latest Sessão only', async () => {
+    const asked: string[][] = []
+    const home = await homeData(
+      BRUNO,
+      fakeSource().source,
+      [session('2026-11-19-1', ['bruno'])],
+      ORIGIN,
+      {
+        today: async () => '2026-11-20',
+        covers: async (films) => {
+          asked.push([...films])
+          return { tt1: 'https://image.example/tt1.jpg' }
+        },
+      },
+    )
+    expect(home.today).toBe('2026-11-20')
+    expect(home.covers).toEqual({ tt1: 'https://image.example/tt1.jpg' })
+    expect(asked).toEqual([home.latest?.recommendation.map((f) => f.id)])
+  })
 
   it('shows no guide and no Sessão when the engine cannot run', async () => {
     const home = await homeData(
@@ -123,6 +147,8 @@ describe('homeData', () => {
       setup: null,
       latest: null,
       mcpUrl: null,
+      today: null,
+      covers: {},
     })
   })
 })

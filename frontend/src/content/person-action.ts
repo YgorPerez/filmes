@@ -18,6 +18,8 @@ const PERSON_ACTIONS = [
   // Access (#166): only an admin, checked by the server.
   'dar-acesso',
   'tirar-acesso',
+  // Takes out a Pessoa made by mistake (#273).
+  'remover-pessoa',
 ] as const
 
 type Reaction = 'love' | 'like' | 'dislike' | 'hate'
@@ -47,12 +49,15 @@ export type PersonAction =
     }
   | { kind: 'grant'; email: string }
   | { kind: 'revoke' }
+  | { kind: 'delete' }
 
 const REACTIONS = ['love', 'like', 'dislike', 'hate'] as const
 const LINKS = ['director', 'writer', 'cast', 'series', 'genre'] as const
 const LEVELS = ['none', 'low', 'normal', 'high'] as const
 const REMOVABLE = ['stated', 'report', 'veto', 'seen'] as const
-const RATING = /^(?:[1-4](?:,5)?|0,5|5)$/
+// A Nota as the forms give it: 1 to 10 with "/10" (#268), or the engine's
+// own 0,5 to 5.
+const RATING = /^(?:(?:[1-9]|10)\/10|[1-4](?:,5)?|0,5|5)$/
 const ID = /^(?:tt|Q)\d+$/
 
 type Reader = (form: FormData) => PersonAction | null
@@ -131,11 +136,69 @@ const READERS: Record<(typeof PERSON_ACTIONS)[number], Reader> = {
   remover: remove,
   'dar-acesso': grant,
   'tirar-acesso': () => ({ kind: 'revoke' }),
+  'remover-pessoa': () => ({ kind: 'delete' }),
 }
 
 /** An action only an admin may take: giving or taking a Pessoa's access. */
 export const isAccessAction = (action: PersonAction) =>
   action.kind === 'grant' || action.kind === 'revoke'
+
+/** What is wrong with one field of a form, for the page to mark it before
+ * the post (#268): `required`, empty; `id`, not a tt… or Q…; `film`, not a
+ * tt…; `rating`, off the scale; `target`, a Veto with neither an id nor a
+ * tag group; `reaction`, a reaction with no target to react to. */
+export type FieldProblem = {
+  field: string
+  problem: 'required' | 'id' | 'film' | 'rating' | 'target' | 'reaction'
+}
+
+const statementProblem = (form: FormData): FieldProblem | null => {
+  const target = field(form, 'alvo')
+  if (!field(form, 'texto')) return { field: 'texto', problem: 'required' }
+  if (target !== undefined && !ID.test(target))
+    return { field: 'alvo', problem: 'id' }
+  if (field(form, 'reacao') !== undefined && target === undefined)
+    return { field: 'alvo', problem: 'reaction' }
+  return null
+}
+
+const PROBLEMS: Partial<
+  Record<
+    (typeof PERSON_ACTIONS)[number],
+    (form: FormData) => FieldProblem | null
+  >
+> = {
+  declarar: statementProblem,
+  relatar: statementProblem,
+  visto: (form) => {
+    const film = field(form, 'filme')
+    const rating = field(form, 'nota')
+    if (!film) return { field: 'filme', problem: 'required' }
+    if (!/^tt\d+$/.test(film)) return { field: 'filme', problem: 'film' }
+    if (rating !== undefined && !RATING.test(rating))
+      return { field: 'nota', problem: 'rating' }
+    return null
+  },
+  vetar: (form) => {
+    const target = field(form, 'alvo')
+    if (!field(form, 'texto')) return { field: 'texto', problem: 'required' }
+    if (field(form, 'grupo') !== undefined) return null
+    if (target === undefined) return { field: 'alvo', problem: 'target' }
+    return ID.test(target) ? null : { field: 'alvo', problem: 'id' }
+  },
+  responder: (form) =>
+    field(form, 'texto') ? null : { field: 'texto', problem: 'required' },
+  'dar-acesso': (form) =>
+    field(form, 'email') ? null : { field: 'email', problem: 'required' },
+}
+
+/** The first field of the form that its action would refuse, or null: the
+ * page marks it and keeps the post (`ActionForm`); the server refuses the
+ * same form as `pedido`. */
+export function formProblem(form: FormData): FieldProblem | null {
+  const kind = oneOf(PERSON_ACTIONS, field(form, 'acao'))
+  return kind ? (PROBLEMS[kind]?.(form) ?? null) : null
+}
 
 /** The form's action, or null when a field is missing or not one the page
  * offers. Whatever the engine itself checks (the target in the Catalog,
@@ -143,6 +206,74 @@ export const isAccessAction = (action: PersonAction) =>
 export function parseAction(form: FormData): PersonAction | null {
   const kind = oneOf(PERSON_ACTIONS, field(form, 'acao'))
   return kind ? READERS[kind](form) : null
+}
+
+/** The ficha a removal comes back to, by what it removes. */
+const REMOVED_IN: Record<(typeof REMOVABLE)[number], string> = {
+  stated: 'declarados',
+  report: 'relatos',
+  veto: 'vetos',
+  seen: 'vistos',
+}
+
+/** The ficha each action comes back to. */
+const SPOTS: Record<(typeof PERSON_ACTIONS)[number], string> = {
+  declarar: 'declarados',
+  relatar: 'relatos',
+  visto: 'vistos',
+  vetar: 'vetos',
+  ajustar: 'ajustes',
+  pular: 'perguntas',
+  responder: 'perguntas',
+  remover: 'vetos',
+  'dar-acesso': 'acesso',
+  'tirar-acesso': 'acesso',
+  'remover-pessoa': 'remover-pessoa',
+}
+
+/** Where on her page the form's answer goes (#273): the id of the ficha
+ * that posted, or of the Ajuste's row (`ajuste-<elo>`), so the page comes
+ * back there (`#<spot>`) and says what happened inside it. Undefined for
+ * a form that is not one of the page's. */
+export function spotOf(form: FormData): string | undefined {
+  const kind = oneOf(PERSON_ACTIONS, field(form, 'acao'))
+  if (!kind) return undefined
+  if (kind === 'ajustar') {
+    const link = oneOf(LINKS, field(form, 'elo'))
+    return link ? `ajuste-${link}` : 'ajustes'
+  }
+  if (kind === 'remover') {
+    const what = oneOf(REMOVABLE, field(form, 'tipo'))
+    return what ? REMOVED_IN[what] : SPOTS.remover
+  }
+  return SPOTS[kind]
+}
+
+/** The ficha a spot is in: an Ajuste's row is in Ajustes. */
+export const sectionOfSpot = (spot: string) =>
+  spot.startsWith('ajuste-') ? 'ajustes' : spot
+
+const PROBLEM_KINDS = [
+  'required',
+  'id',
+  'film',
+  'rating',
+  'target',
+  'reaction',
+] as const
+
+/** A field problem as `?campo=` carries it: `alvo:target`. */
+export const problemParam = ({ field: name, problem }: FieldProblem) =>
+  `${name}:${problem}`
+
+/** `?campo=` read back; undefined when it is not one. */
+export function readProblemParam(value: unknown): FieldProblem | undefined {
+  if (typeof value !== 'string') return undefined
+  const [name, problem] = value.split(':')
+  const kind = oneOf(PROBLEM_KINDS, problem)
+  return name && /^[a-z]+$/.test(name) && kind
+    ? { field: name, problem: kind }
+    : undefined
 }
 
 /** What happened, in `?feito=`. */
@@ -164,6 +295,8 @@ export const PERSON_NOTICES = [
   // She is a Dono now, or no longer (#166).
   'acesso-dado',
   'acesso-tirado',
+  // She was taken out (#273): the answer goes to `/pessoas`.
+  'removida',
 ] as const
 export type PersonNotice = (typeof PERSON_NOTICES)[number]
 
@@ -183,6 +316,11 @@ export const PERSON_REFUSALS = [
   'ja-dono',
   // Access: the logged-in Dono taking her own away.
   'proprio-acesso',
+  // Taking her out (#273): she is a Dono, an import holds her history, or
+  // a Session lists her.
+  'e-dono',
+  'tem-import',
+  'em-sessao',
   // The IMDb or Letterboxd CSV did not come (`platform/export.ts`): the
   // engine failed.
   'exportar',
@@ -198,9 +336,33 @@ export type PersonRefusal = (typeof PERSON_REFUSALS)[number]
 export const isPersonNotice = within(PERSON_NOTICES)
 export const isPersonRefusal = within(PERSON_REFUSALS)
 
-/** Why `/pessoas` shows a refusal: the Pessoa of a form is gone. */
-export const isPeopleRefusal = (value: unknown): value is 'pessoa' =>
-  value === 'pessoa'
+/** Why `/pessoas` shows a refusal: the Pessoa of a form is gone
+ * (`pessoa`), or the one whose CSV was asked for (`baixar`). */
+export type PeopleRefusal = 'pessoa' | 'baixar'
+export const isPeopleRefusal = (value: unknown): value is PeopleRefusal =>
+  value === 'pessoa' || value === 'baixar'
+
+/** What `/pessoas` says after a Pessoa was taken out (`?feito=removida`). */
+export const isPeopleNotice = (value: unknown): value is 'removida' =>
+  value === 'removida'
+
+/** The query of a Pessoa's page and Meu gosto: what the last form did
+ * (`feito`, `erro`), where (`em`) and, refused, the field it was
+ * (`campo`). */
+export const personSearch = (search: Record<string, unknown>) => ({
+  feito: isPersonNotice(search.feito) ? search.feito : undefined,
+  erro: isPersonRefusal(search.erro) ? search.erro : undefined,
+  em:
+    typeof search.em === 'string' && /^[a-z-]+$/.test(search.em)
+      ? search.em
+      : undefined,
+  // Kept as the text it came as: the router writes the query back from
+  // what this gives. `readProblemParam` reads it.
+  campo:
+    readProblemParam(search.campo) === undefined
+      ? undefined
+      : (search.campo as string),
+})
 
 /** A Relato's source when the form gives none: who told it, since several
  * Donos may tell (and be told about). */

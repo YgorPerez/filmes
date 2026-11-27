@@ -13,10 +13,8 @@
 
 import {
   castVotes,
-  readSession,
   recommendSession,
   sessionRedoRequest,
-  votedBy,
   type Engine,
   type ErrorOutput,
 } from '@filmes/engine'
@@ -30,13 +28,14 @@ import {
   type VoteRefusal,
 } from '#/content/session-votes-address'
 import { failureOf, seeOther } from './form-post'
-import type { SessionFilm } from './session-fields'
-import { resolveSessionLink } from './session-link'
+import { resolveSessionLink, type SessionLinkView } from './session-link'
 import { fromThisSite } from './same-site'
 
-/** What the deck shows the chosen Presente: the current version and the
- * films of its screen she has not voted on in the Session. */
-export type VoteDeck = { version: number; films: SessionFilm[] }
+/** What the deck shows the chosen Presente: the current version, the
+ * films of its screen with her standing Voto on each (the deck asks for
+ * the ones she has not voted on, and sends the rest again, since her
+ * latest submission is the one that counts), and what her no took out. */
+export type VoteDeck = Pick<SessionLinkView, 'version' | 'films' | 'left'>
 
 export async function voteDeck(
   search: ReturnType<typeof sessionLinkSearch>,
@@ -45,13 +44,7 @@ export async function voteDeck(
 ): Promise<VoteDeck | null> {
   const link = await resolveSessionLink(search, engine, database)
   if (!link?.selected) return null
-  const read = await engine.run(readSession(link.session))
-  if (read.exitCode !== 0) return null
-  const voted = votedBy(read.output.frontmatter, link.selected.person)
-  return {
-    version: link.version,
-    films: link.films.filter((film) => !voted.has(film.id)),
-  }
+  return { version: link.version, films: link.films, left: link.left }
 }
 
 /** One Session's Votos and redo at a time, in this process. */

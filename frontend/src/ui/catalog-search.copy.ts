@@ -5,17 +5,16 @@ const films = (n: number) => (n === 1 ? '1 filme' : `${n} filmes`)
 
 export const CATALOG_SEARCH = {
   title: 'Buscar no Catálogo',
-  leadFilms:
-    'Ache o ID de um filme pelo título, sem ligar para acento. A busca recarrega a página: busque antes de preencher o resto.',
+  leadFilms: 'Ache um filme pelo título, sem ligar para acento.',
   leadAll:
-    'Ache o ID de um filme (tt…), de um diretor, ator, gênero ou série (Q…) pelo nome, sem ligar para acento. Copie o ID para o campo de alvo.',
+    'Ache um filme, diretor ou ator para usar num Veto ou Declarado. Usar põe o ID nos campos de alvo.',
   label: 'Título ou nome',
   hint: '“Título (ano)” filtra pelo ano',
   submit: 'Buscar',
   searching: 'Buscando…',
   remove: (title: string) => `Tirar ${title}`,
   results: (query: string) => `Resultado para “${query}”`,
-  none: 'Nada no Catálogo com esse nome. Tente o título original.',
+  none: 'Nada no Catálogo com esse nome. Tente o título original, ou o ano: Matrix (1999).',
   pick: 'Usar',
   pickLabel: (title: string) => `Usar ${title}`,
   groups: {

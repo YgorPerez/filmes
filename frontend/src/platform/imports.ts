@@ -8,6 +8,7 @@
 import {
   confirmQueueItem,
   discardQueueItem,
+  reopenQueueItem,
   exportSource,
   importImdb,
   importLetterboxd,
@@ -18,6 +19,7 @@ import {
   personImports,
   removeImport,
   reprocessLetterboxd,
+  syncTrakt,
   viewQueue,
   type Author,
   type Engine,
@@ -27,6 +29,7 @@ import {
   type QueueItem,
 } from '@filmes/engine'
 import {
+  isImportForm,
   MAX_UPLOAD_BYTES,
   parseImport,
   parseQueue,
@@ -42,7 +45,14 @@ import { importsPath, QUEUE_PATH } from '#/content/paths'
 import { appEngine } from './engine'
 import { appPoster, failureOf, formPoster, seeOther } from './form-post'
 import { ownerAuthor } from './people'
-import { rateAction, ratingQueuePage, ratingsFromEngine } from './ratings'
+import {
+  filmCardOf,
+  rateAction,
+  ratingQueuePage,
+  ratingsFromEngine,
+  tasteSummaryOf,
+} from './ratings'
+import { traktLink } from './trakt'
 
 /** Whoever is logged in, as the login reads her (`appPoster`). */
 type LoggedIn = ReturnType<typeof appPoster>['owner']
@@ -55,6 +65,9 @@ export type QueueSuggestion = {
   year: number | null
   /** The TMDB film's page: confirming with it records the film. */
   link: string
+  poster: string | null
+  /** TMDB's synopsis, for telling twins apart. */
+  overview: string | null
 }
 
 export type QueueEntry = Omit<QueueItem, 'candidates' | 'people'> & {
@@ -85,6 +98,8 @@ const entryOf = (item: QueueItem): QueueEntry => ({
       originalTitle: original === title ? null : original,
       year: c.year,
       link: c.link,
+      poster: c.poster,
+      overview: c.overview,
     }
   }),
 })
@@ -94,12 +109,17 @@ export type ImportDone = {
   notice: ImportNotice
   /** Fatos that came in (or went, for a removal). */
   facts: number
+  /** Of them, the Notas and the Já vistos: what the notice counts. */
+  ratings?: number
+  seen?: number
   /** Trakt, IMDb or Simkl films the Catalog could not resolve. */
   outside?: number
 }
 
 export type QueueDone = {
   notice: QueueNotice
+  /** The film decided on: its queue id, to take it back, and its name. */
+  item?: { id: string; title: string }
   /** Reprocessing: films that left the queue, films still there. */
   resolved?: number
   left?: number
@@ -128,6 +148,13 @@ const map = async <A, B>(
 const sum = (counts: Readonly<Record<string, number>>) =>
   Object.values(counts).reduce((a, b) => a + b, 0)
 
+/** The Notas and Já vistos of an import's new Fatos. */
+const counted = (newFacts: { ratings: number; seen?: number }) => ({
+  facts: sum(newFacts),
+  ratings: newFacts.ratings,
+  seen: newFacts.seen ?? 0,
+})
+
 type Run = Engine['run']
 
 /** The queue with the Pessoas' names, from the engine's queue and list. */
@@ -146,6 +173,16 @@ async function queueOf(run: Run): Promise<Outcome<QueuePage>> {
   }))
 }
 
+/** What a file import did: its notice, or `repetido` for a file she had
+ * sent already, and its counts. */
+const filed = (
+  notice: ImportNotice,
+  r: { newFile: boolean; newFacts: { ratings: number; seen?: number } },
+): ImportDone => ({
+  notice: r.newFile ? notice : 'repetido',
+  ...counted(r.newFacts),
+})
+
 /** An import or a removal on the Pessoa's files, as `author`. */
 function runImport(
   run: Run,
@@ -157,53 +194,50 @@ function runImport(
     case 'letterboxd':
       return map(
         run(importLetterboxd({ person, ...upload(action), author })),
-        (r): ImportDone => ({
-          notice: r.newFile ? 'letterboxd' : 'repetido',
-          facts: sum(r.newFacts),
-        }),
+        (r) => filed('letterboxd', r),
       )
     case 'rss':
       return map(
         run(importLetterboxdRss({ person, user: action.user, author })),
-        (r): ImportDone => ({
-          notice: r.newFile ? 'rss' : 'repetido',
-          facts: sum(r.newFacts),
-        }),
+        (r) => filed('rss', r),
       )
     case 'trakt':
       return map(
         run(importTrakt({ person, ...upload(action), author })),
-        (r): ImportDone => ({
-          notice: r.newFile ? 'trakt' : 'repetido',
-          facts: sum(r.newFacts),
+        (r) => ({
+          ...filed('trakt', r),
           outside: r.unresolved.length,
         }),
       )
     case 'imdb':
       return map(
         run(importImdb({ person, ...upload(action), author })),
-        (r): ImportDone => ({
-          notice: r.newFile ? 'imdb' : 'repetido',
-          facts: r.newFacts.ratings,
+        (r) => ({
+          ...filed('imdb', r),
           outside: r.outsideCatalog.length,
         }),
       )
     case 'simkl':
       return map(
         run(importSimkl({ person, ...upload(action), author })),
+        (r) => ({
+          ...filed('simkl', r),
+          outside: r.unresolved.length,
+        }),
+      )
+    case 'trakt-sync':
+      return map(
+        run(syncTrakt({ person, user: action.user ?? undefined, author })),
         (r): ImportDone => ({
-          notice: r.newFile ? 'simkl' : 'repetido',
-          facts: sum(r.newFacts),
+          notice: 'sincronizado',
+          ...counted(r.newFacts),
           outside: r.unresolved.length,
         }),
       )
     case 'remove':
       return map(
         run(removeImport({ file: action.file, person, author })),
-        (r): ImportDone => ({
-          notice: 'removido',
-          facts: sum(r.removedFacts),
-        }),
+        (r): ImportDone => ({ notice: 'removido', facts: sum(r.removedFacts) }),
       )
   }
 }
@@ -219,6 +253,10 @@ const upload = ({
   content,
 })
 
+/** "Vento Norte (2020)": a queued film as the notices name it. */
+const itemTitle = (name: string, year: number | null) =>
+  year === null ? name : `${name} (${year})`
+
 /** The Dono's decision on the queue, as `author`. */
 function runDecision(
   run: Run,
@@ -229,12 +267,26 @@ function runDecision(
     case 'confirm':
       return map(
         run(confirmQueueItem({ id: action.id, film: action.film, author })),
-        (r): QueueDone => ({ notice: r.new ? 'confirmado' : 'igual' }),
+        (r): QueueDone => ({
+          notice: r.new ? 'confirmado' : 'igual',
+          item: { id: action.id, title: itemTitle(r.name, r.year) },
+        }),
       )
     case 'discard':
       return map(
         run(discardQueueItem({ id: action.id, reason: action.reason, author })),
-        (r): QueueDone => ({ notice: r.new ? 'descartado' : 'igual' }),
+        (r): QueueDone => ({
+          notice: r.new ? 'descartado' : 'igual',
+          item: { id: action.id, title: itemTitle(r.name, r.year) },
+        }),
+      )
+    case 'reopen':
+      return map(
+        run(reopenQueueItem({ id: action.id, author })),
+        (r): QueueDone => ({
+          notice: 'reaberto',
+          item: { id: action.id, title: itemTitle(r.name, r.year) },
+        }),
       )
     case 'reprocess':
       return map(run(reprocessLetterboxd({ author })), (r): QueueDone => ({
@@ -296,7 +348,24 @@ function runOf(action: ImportAction): ImportRun | null {
 /** What the resolution queue (`QUEUE_PATH`) shows. */
 export const queuePage = (imports: Imports) => shown(imports.queue())
 
-function importRefusal(outcome: { output: ErrorOutput }): ImportRefusal {
+/** Why her Trakt could not be read (#269), by the engine's reason. */
+const TRAKT_REFUSALS: Partial<Record<string, ImportRefusal>> = {
+  trakt_user_missing: 'trakt-usuario',
+  trakt_private: 'trakt-privado',
+  trakt_not_linked: 'trakt-sem',
+  trakt_off: 'trakt-off',
+}
+
+function importRefusal(
+  outcome: { output: ErrorOutput },
+  kind?: ImportRun['kind'],
+): ImportRefusal {
+  if (kind === 'trakt-sync') {
+    const { code, reason } = outcome.output.error
+    const refusal = reason === undefined ? undefined : TRAKT_REFUSALS[reason]
+    if (refusal) return refusal
+    if (code === 'source_unavailable') return 'trakt-fonte'
+  }
   switch (outcome.output.error.code) {
     case 'invalid_file':
     case 'missing_file':
@@ -352,25 +421,29 @@ export async function importAction(
   const signer = formPoster(request, owner, origin)
   if (signer instanceof Response) return signer
   const page = importsPath(person, person === signer.person)
+  // The form that was sent, so the page shows its refusal under it.
+  const sent = new URL(request.url).searchParams.get('de')
+  const from = isImportForm(sent) ? sent : undefined
+  const refused = (erro: ImportRefusal) =>
+    seeOther(`${page}${query({ erro, de: from })}`)
   if (Number(request.headers.get('content-length')) > MAX_UPLOAD_BYTES)
-    return seeOther(`${page}${query({ erro: 'grande' })}`)
+    return refused('grande')
   const action = await parseImport(
     await request.formData(),
     person === signer.person,
   )
-  if (typeof action === 'string')
-    return seeOther(`${page}${query({ erro: action })}`)
+  if (typeof action === 'string') return refused(action)
   const run = runOf(action)
-  if (run === null) return seeOther(`${page}${query({ erro: 'origem' })}`)
+  if (run === null) return refused('origem')
   const outcome = await imports.run(person, run, ownerAuthor(signer))
   if (outcome.exitCode !== 0) {
     if (outcome.output.error.code === 'unknown_person')
       return seeOther('/pessoas?erro=pessoa')
-    return seeOther(`${page}${query({ erro: importRefusal(outcome) })}`)
+    return refused(importRefusal(outcome, run.kind))
   }
-  const { notice, facts, outside } = outcome.output
+  const { notice, facts, ratings, seen, outside } = outcome.output
   return seeOther(
-    `${page}${query({ feito: notice, novos: facts, fora: outside })}`,
+    `${page}${query({ feito: notice, novos: facts, notas: ratings, vistos: seen, fora: outside })}`,
   )
 }
 
@@ -389,9 +462,15 @@ export async function queueAction(
   const outcome = await imports.decide(action, ownerAuthor(signer))
   if (outcome.exitCode !== 0)
     return seeOther(`${QUEUE_PATH}${query({ erro: queueRefusal(outcome) })}`)
-  const { notice, resolved, left } = outcome.output
+  const { notice, resolved, left, item } = outcome.output
   return seeOther(
-    `${QUEUE_PATH}${query({ feito: notice, resolvidos: resolved, restam: left })}`,
+    `${QUEUE_PATH}${query({
+      feito: notice,
+      resolvidos: resolved,
+      restam: left,
+      item: item?.id,
+      titulo: item?.title,
+    })}`,
   )
 }
 
@@ -399,8 +478,14 @@ export async function queueAction(
 
 const appImports = () => importsFromEngine(appEngine())
 
-export const appImportsPage = (person: string, viewer: string) =>
-  importsPage(person, viewer, appImports())
+/** The page with what it needs of Trakt (#269): whether the server reads
+ * it, and whether she connected hers. */
+export const appImportsPage = async (person: string, viewer: string) => {
+  const page = await importsPage(person, viewer, appImports())
+  return page && page !== 'unknown'
+    ? { ...page, traktLink: traktLink(page.person) }
+    : page
+}
 
 export const appQueuePage = () => queuePage(appImports())
 
@@ -422,6 +507,14 @@ const appRatings = () => ratingsFromEngine(appEngine())
 /** The Fila de Notas for the app, of the logged-in Dono. */
 export const appRatingQueue = (owner: { person: string }) =>
   ratingQueuePage(owner, appRatings())
+
+/** One film's card for the rating screen, for the logged-in Dono. */
+export const appFilmCard = (film: string, owner: { person: string }) =>
+  filmCardOf(film, owner, appRatings())
+
+/** Meu gosto's look at the logged-in Dono's taste. */
+export const appTasteSummary = (owner: { person: string }) =>
+  tasteSummaryOf(owner, appRatings())
 
 /** Pronto's route for the app: the logged-in Dono, the process's engine. */
 export const serveRate = (request: Request) => {

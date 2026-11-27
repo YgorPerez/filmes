@@ -1,7 +1,12 @@
 import { execFileSync } from 'node:child_process'
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { makeEngine, type ErrorCode, type Outcome } from '@filmes/engine'
+import {
+  makeEngine,
+  type ErrorCode,
+  type ErrorReason,
+  type Outcome,
+} from '@filmes/engine'
 import { describe, expect, it, onTestFinished, vi } from 'vite-plus/test'
 import { ROOT, useFixture } from '../../../packages/engine/test/fixture.ts'
 import { zipOf } from '../../../packages/engine/test/imports/zip.ts'
@@ -112,7 +117,9 @@ describe('parseImport', () => {
       await parseImport(form({ acao: 'rss', usuario: 'ygorperez' }), true),
     ).toEqual({ kind: 'rss', user: 'ygorperez' })
   })
+})
 
+describe('parseImport', () => {
   it.each<[Record<string, string | Blob>, ImportAction | string]>([
     [{ acao: 'arquivo' }, 'arquivo'],
     [{ acao: 'arquivo', arquivo: zipFile('vazio.zip', []) }, 'arquivo'],
@@ -121,23 +128,43 @@ describe('parseImport', () => {
       { kind: 'rss', user: 'olga_farol' },
     ],
     [{ acao: 'rss', usuario: 'olga_farol' }, 'consentimento'],
-    [{ acao: 'rss', usuario: 'olga farol', consentimento: 'sim' }, 'pedido'],
-    [{ acao: 'rss', usuario: '@', consentimento: 'sim' }, 'pedido'],
+    [{ acao: 'rss', usuario: 'olga farol', consentimento: 'sim' }, 'usuario'],
+    [{ acao: 'rss', usuario: '@', consentimento: 'sim' }, 'usuario'],
     [
       {
         acao: 'rss',
         usuario: 'https://trakt.tv/users/olga_farol',
         consentimento: 'sim',
       },
-      'pedido',
+      'usuario',
     ],
-    [{ acao: 'rss', consentimento: 'sim' }, 'pedido'],
+    [{ acao: 'rss', consentimento: 'sim' }, 'usuario'],
     [
       { acao: 'remover', arquivo: ' imports/teo/trakt-1.zip ' },
       { kind: 'remove', file: 'imports/teo/trakt-1.zip' },
     ],
     [{ acao: 'remover' }, 'pedido'],
     [{ acao: 'outra' }, 'pedido'],
+    // Her Trakt (#269): her connection or the username of before, a public
+    // profile by its name, @name or address, and another Pessoa's yes.
+    [{ acao: 'trakt' }, { kind: 'trakt-sync', user: null }],
+    [
+      {
+        acao: 'trakt',
+        usuario: 'https://trakt.tv/users/olga-f',
+        consentimento: 'sim',
+      },
+      { kind: 'trakt-sync', user: 'olga-f' },
+    ],
+    [
+      { acao: 'trakt', usuario: '@olga', consentimento: 'sim' },
+      { kind: 'trakt-sync', user: 'olga' },
+    ],
+    [{ acao: 'trakt', usuario: 'olga' }, 'consentimento'],
+    [
+      { acao: 'trakt', usuario: 'olga f', consentimento: 'sim' },
+      'trakt-usuario',
+    ],
   ])('%o → %o', async (fields, expected) => {
     expect(await parseImport(form(fields))).toEqual(expected)
   })
@@ -249,7 +276,9 @@ describe('importAction', () => {
       '/pessoas/teo/importar?feito=trakt&novos=3&fora=2',
     )
   })
+})
 
+describe('importAction', () => {
   it('tells Letterboxd, Trakt and Simkl by what the ZIP holds, IMDb by its CSV and Simkl by its JSON', async () => {
     const { imports, calls } = fakeImports()
     const upload = (file: File) =>
@@ -289,6 +318,35 @@ describe('importAction', () => {
     )
     expect(calls).toHaveLength(5)
   })
+})
+
+describe('importAction', () => {
+  it('names the form a refusal came from, so the page shows it there', async () => {
+    const { imports } = fakeImports()
+    const refused = await importAction(
+      post('/importar/teo/acao?de=outro', {
+        acao: 'arquivo',
+        arquivo: new File(['x'], 'nada.txt'),
+      }),
+      'teo',
+      BRUNO,
+      imports,
+      ORIGIN,
+    )
+    expect(refused.headers.get('Location')).toBe(
+      '/pessoas/teo/importar?erro=origem&de=outro',
+    )
+    const profile = await importAction(
+      post('/importar/teo/acao?de=perfil', { acao: 'rss', usuario: 'a b' }),
+      'teo',
+      BRUNO,
+      imports,
+      ORIGIN,
+    )
+    expect(profile.headers.get('Location')).toBe(
+      '/pessoas/teo/importar?erro=usuario&de=perfil',
+    )
+  })
 
   it('takes the RSS without the consent box on the Dono’s own page', async () => {
     const { imports, calls } = fakeImports()
@@ -306,7 +364,9 @@ describe('importAction', () => {
       { action: { kind: 'rss', user: 'olga_farol' } },
     ])
   })
+})
 
+describe('importAction', () => {
   it('sends whoever is not a Dono to the login, and refuses another site', async () => {
     const { imports, calls } = fakeImports()
     const anonymous = await importAction(
@@ -354,6 +414,38 @@ describe('importAction', () => {
       '/pessoas/teo/importar?erro=grande',
     )
     expect(calls).toEqual([])
+  })
+})
+
+describe('importAction', () => {
+  it.each<[ErrorCode, ErrorReason | undefined, string]>([
+    ['invalid_usage', 'trakt_user_missing', 'trakt-usuario'],
+    ['source_unavailable', 'trakt_private', 'trakt-privado'],
+    ['invalid_usage', 'trakt_not_linked', 'trakt-sem'],
+    ['source_unavailable', 'trakt_off', 'trakt-off'],
+    ['source_unavailable', undefined, 'trakt-fonte'],
+  ])('says why her Trakt was not read: %s %s', async (code, reason, erro) => {
+    const { imports, calls } = fakeImports({
+      exitCode: 1,
+      output: {
+        error: {
+          code,
+          message: 'x',
+          ...(reason !== undefined && { reason }),
+        },
+      },
+    })
+    const response = await importAction(
+      post('/importar/teo/acao', { acao: 'trakt' }),
+      'teo',
+      BRUNO,
+      imports,
+      ORIGIN,
+    )
+    expect(response.headers.get('Location')).toBe(
+      `/pessoas/teo/importar?erro=${erro}`,
+    )
+    expect(calls).toHaveLength(1)
   })
 
   it.each<[ErrorCode, string]>([
@@ -415,7 +507,9 @@ describe('queueAction', () => {
       '/meu-gosto/fila?feito=reprocessado&resolvidos=2&restam=1',
     )
   })
+})
 
+describe('queueAction', () => {
   it('refuses an incomplete form, no Dono, another site', async () => {
     const { imports, calls } = fakeImports()
     const incomplete = await queueAction(
@@ -589,15 +683,47 @@ function useImportsRepo() {
   return { fixture, imports, ok, log }
 }
 
+/** Each site's file once, and Letterboxd's twice: the second changes
+ * nothing. */
+async function importEach(run: (action: ImportRun) => Promise<ImportDone>) {
+  expect(await run(LETTERBOXD)).toMatchObject({
+    notice: 'letterboxd',
+    facts: 14,
+  })
+  expect(await run(LETTERBOXD)).toEqual({
+    notice: 'repetido',
+    facts: 0,
+    ratings: 0,
+    seen: 0,
+  })
+  expect(await run(TRAKT)).toEqual({
+    notice: 'trakt',
+    facts: 3,
+    ratings: 2,
+    seen: 1,
+    outside: 0,
+  })
+  expect(await run(IMDB)).toEqual({
+    notice: 'imdb',
+    facts: 3,
+    ratings: 3,
+    seen: 0,
+    outside: 1,
+  })
+  expect(await run(SIMKL)).toMatchObject({
+    notice: 'simkl',
+    facts: 6,
+    ratings: 3,
+    seen: 2,
+    outside: 2,
+  })
+}
+
 describe('importsFromEngine, imports', () => {
   it('imports, reports and removes, each a commit signed by the Dono', async () => {
     const { fixture, imports, ok, log } = useImportsRepo()
     const run = (action: ImportRun) => ok(imports.run('quim', action, AUTHOR))
-    expect(await run(LETTERBOXD)).toEqual({ notice: 'letterboxd', facts: 14 })
-    expect(await run(LETTERBOXD)).toEqual({ notice: 'repetido', facts: 0 })
-    expect(await run(TRAKT)).toEqual({ notice: 'trakt', facts: 3, outside: 0 })
-    expect(await run(IMDB)).toEqual({ notice: 'imdb', facts: 3, outside: 1 })
-    expect(await run(SIMKL)).toEqual({ notice: 'simkl', facts: 6, outside: 2 })
+    await importEach(run)
 
     const page = await ok(imports.page('quim'))
     expect(page.imports.map((i) => [i.kind, i.original])).toEqual([
@@ -651,12 +777,22 @@ describe('importsFromEngine, the queue', () => {
 
     const decide = (action: QueueAction) => ok(imports.decide(action, AUTHOR))
     const film = 'https://www.themoviedb.org/movie/9102'
+    const vento = { id: VENTO, title: 'Vento Norte (2020)' }
+    const lost = { id: LOST, title: 'Filme Perdido (2001)' }
     expect(await decide({ kind: 'confirm', id: VENTO, film })).toEqual({
       notice: 'confirmado',
+      item: vento,
     })
+    // Taken back, it waits again; confirmed again for good.
+    expect(await decide({ kind: 'reopen', id: VENTO })).toEqual({
+      notice: 'reaberto',
+      item: vento,
+    })
+    expect((await ok(imports.queue())).items).toHaveLength(2)
+    await decide({ kind: 'confirm', id: VENTO, film })
     const discard = { kind: 'discard', id: LOST, reason: 'ignorar' } as const
-    expect(await decide(discard)).toEqual({ notice: 'descartado' })
-    expect(await decide(discard)).toEqual({ notice: 'igual' })
+    expect(await decide(discard)).toEqual({ notice: 'descartado', item: lost })
+    expect(await decide(discard)).toEqual({ notice: 'igual', item: lost })
     expect(await decide({ kind: 'reprocess' })).toEqual({
       notice: 'reprocessado',
       resolved: 0,
@@ -667,7 +803,30 @@ describe('importsFromEngine, the queue', () => {
     expect(log()).toEqual([
       'Bruno <bruno@example.org>|import letterboxd quim: olga.zip',
       `Bruno <bruno@example.org>|letterboxd queue confirm ${VENTO}`,
+      `Bruno <bruno@example.org>|letterboxd queue reopen ${VENTO}`,
+      `Bruno <bruno@example.org>|letterboxd queue confirm ${VENTO}`,
       `Bruno <bruno@example.org>|letterboxd queue discard ${LOST}`,
     ])
+  })
+})
+
+describe('importsFromEngine, what does not go', () => {
+  it('passes on the engine’s refusal, and a decision taken twice is the same', async () => {
+    const { imports, ok } = useImportsRepo()
+    const unknown = await imports.run('ninguem', LETTERBOXD, AUTHOR)
+    expect(unknown.exitCode).not.toBe(0)
+    const sync = await imports.run(
+      'quim',
+      { kind: 'trakt-sync', user: null },
+      AUTHOR,
+    )
+    expect(sync.exitCode).not.toBe(0)
+    await ok(imports.run('quim', LETTERBOXD, AUTHOR))
+    const film = 'https://www.themoviedb.org/movie/9102'
+    const confirm = { kind: 'confirm', id: VENTO, film } as const
+    await ok(imports.decide(confirm, AUTHOR))
+    expect(await ok(imports.decide(confirm, AUTHOR))).toMatchObject({
+      notice: 'igual',
+    })
   })
 })

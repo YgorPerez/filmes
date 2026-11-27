@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { readImportsPage } from '#/content/imports'
-import { importsSearch } from '#/content/imports-search'
+import { doneOf, importsSearch } from '#/content/imports-search'
 import { PersonImportsScreen } from '#/ui/person-imports'
 
 // The Dono's own imports, under Meu gosto.
@@ -12,13 +12,14 @@ export const Route = createFileRoute('/_owner/meu-gosto/importar')({
 
 function MyImportsRoute() {
   const { owner } = Route.useRouteContext()
-  const { feito, erro, novos, fora } = Route.useSearch()
+  const search = Route.useSearch()
   return (
     <PersonImportsScreen
       slug={owner.person}
       page={Route.useLoaderData()}
-      done={feito && { notice: feito, facts: novos ?? 0, outside: fora }}
-      refusal={erro}
+      done={doneOf(search)}
+      refusal={search.erro}
+      refusedIn={search.de}
     />
   )
 }

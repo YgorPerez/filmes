@@ -1,8 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { filmParam, searchFor, searchParam } from '#/content/catalog-search'
 import { isRatingRefusal, writtenCount } from '#/content/rating-form'
-import { readRatingQueue } from '#/content/ratings'
-import { RatingScreen } from '#/ui/imports'
+import { readFilmCard, readRatingQueue } from '#/content/ratings'
+import { RatingScreen } from '#/ui/ratings'
 
 export const Route = createFileRoute('/_owner/meu-gosto/notas')({
   validateSearch: (search) => ({
@@ -22,6 +22,9 @@ export const Route = createFileRoute('/_owner/meu-gosto/notas')({
   component: RatingRoute,
 })
 
+/** The card of the film on screen, asked as it comes up. */
+const loadCard = (id: string) => readFilmCard({ data: { id } })
+
 function RatingRoute() {
   const { feito, erro, filme } = Route.useSearch()
   const { queue, search } = Route.useLoaderData()
@@ -32,6 +35,7 @@ function RatingRoute() {
       film={filme}
       written={feito}
       refusal={erro}
+      loadCard={loadCard}
     />
   )
 }

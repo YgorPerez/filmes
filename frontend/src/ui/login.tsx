@@ -5,6 +5,7 @@ import {
   type TraktError,
 } from '#/content/trakt-form'
 import { LOGIN } from './login.copy'
+import { ShelfLabel } from './kit/shelf-label'
 import { Alert } from './kit/status'
 import { buttonVariants } from './kit/button-variants'
 import { SiteFooter } from './kit/site-footer'
@@ -35,20 +36,18 @@ export function Login({ refusal }: { refusal?: LoginRefusal }) {
           className="overflow-hidden rounded-panel"
         >
           <div className="bg-case p-xs">
-            <h1
-              id="entrar"
-              className="rounded-cover bg-shelf-label px-lg py-sm font-display text-counter-title text-on-sticker"
-            >
-              {LOGIN.title}
-            </h1>
+            <ShelfLabel items={LOGIN.tagline} label={LOGIN.taglineLabel} />
           </div>
           <div className="flex flex-col gap-2xl bg-card-stock p-2xl text-card-stock-ink sm:p-3xl">
+            <h1 id="entrar" className="font-display text-counter-title">
+              {LOGIN.title}
+            </h1>
             {refusal ? (
               <Alert className="bg-surface text-evidence">
                 {LOGIN.refusals[refusal]}
               </Alert>
             ) : (
-              <p className="text-pretty">{LOGIN.lead}</p>
+              <p className="text-balance">{LOGIN.lead}</p>
             )}
             {refusal !== 'indisponivel' && (
               <a
@@ -57,6 +56,11 @@ export function Login({ refusal }: { refusal?: LoginRefusal }) {
               >
                 {googleLabel}
               </a>
+            )}
+            {refusal !== 'nao-dono' && (
+              <p className="border-t border-dashed border-card-stock-ink/40 pt-lg text-meta text-pretty">
+                {LOGIN.access}
+              </p>
             )}
           </div>
         </section>
@@ -72,7 +76,7 @@ export function Login({ refusal }: { refusal?: LoginRefusal }) {
 const traktErrors: Record<TraktError, string> = {
   login: 'Entre com o e-mail cadastrado no filmes.',
   trakt: 'O Trakt não concluiu a conexão. Tente de novo.',
-  consentimento: 'Marque a caixa para autorizar o envio ao Trakt.',
+  consentimento: 'Marque a caixa para autorizar a leitura e o envio ao Trakt.',
 }
 
 type TraktPage =
@@ -115,9 +119,11 @@ export function TraktScreen({
                 {page.status === 'connected' ? (
                   <>
                     <p>
-                      Sua conta está conectada. Ao desconectar, o filmes deixa
-                      de enviar seus filmes e apaga os dados de acesso. Seu
-                      histórico no Trakt fica como está.
+                      Sua conta está conectada: o filmes lê seu histórico a cada
+                      Sessão nova e envia o filme escolhido. Ao desconectar, ele
+                      deixa de ler e de enviar e apaga os dados de acesso. O que
+                      já entrou no seu gosto e seu histórico no Trakt ficam como
+                      estão.
                     </p>
                     <form action={TRAKT_DISCONNECT} method="post">
                       <Button type="submit" variant="option">
@@ -139,9 +145,11 @@ export function TraktScreen({
                         required
                         className="mt-1"
                       />
-                      Autorizo o filmes a enviar ao meu Trakt o filme escolhido
-                      na Sessão, os filmes marcados como Já vi no Cartaz e as
-                      notas que dei. O envio acontece ao salvar o Feedback.
+                      Autorizo o filmes a ler do meu Trakt o histórico, as notas
+                      e a watchlist de filmes, a cada Sessão nova e quando eu
+                      pedir, e a enviar ao meu Trakt o filme escolhido na
+                      Sessão, os filmes marcados como Já vi no Cartaz e as notas
+                      que dei, ao salvar o Feedback.
                     </label>
                     <Button type="submit">Conectar Trakt</Button>
                   </form>

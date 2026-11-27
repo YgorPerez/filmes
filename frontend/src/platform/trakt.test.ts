@@ -9,13 +9,22 @@ import {
 import { Auth } from './auth'
 import { ownersFromDataRepo } from './owners'
 import { peopleFromDataRepo } from './people-directory'
-import { handleTraktRequest, Trakt, traktConnection, traktPage } from './trakt'
+import {
+  handleTraktRequest,
+  Trakt,
+  traktConnection,
+  traktLink,
+  traktPage,
+} from './trakt'
 
 const ORIGIN = 'https://cinema.example'
 const ACCOUNT = { person: 'iara', email: 'iara@example.org' }
 
-async function setup(fixture: Fixture) {
-  let now = Date.UTC(2026, 10, 20)
+type Clock = { now: number }
+
+/** Iara signs in with Google for `/trakt`: her browser's cookie and her
+ * verified identity. */
+async function signIn(fixture: Fixture, clock: Clock) {
   const databasePath = join(fixture.root, 'auth.sqlite')
   const auth = new Auth({
     origin: ORIGIN,
@@ -24,7 +33,7 @@ async function setup(fixture: Fixture) {
     databasePath,
     owners: ownersFromDataRepo(fixture.data),
     personByEmail: peopleFromDataRepo(fixture.data).byEmail,
-    now: () => now,
+    now: () => clock.now,
     fetch: async (input) =>
       (input instanceof Request ? input.url : input.toString()).endsWith(
         '/token',
@@ -50,6 +59,16 @@ async function setup(fixture: Fixture) {
   expect(auth.current(request)).toBeNull()
   const verified = auth.verifiedSession(request)!
   const identity = { ...ACCOUNT, sessionHash: verified.hash }
+  return { cookie, identity, databasePath }
+}
+
+/** The Trakt connection of her identity, with a fake token endpoint;
+ * `begin` sends her to Trakt's consent and gives its callback. */
+function traktOf(
+  identity: { person: string; email: string; sessionHash: string },
+  databasePath: string,
+  clock: Clock,
+) {
   const fetchToken = vi.fn<typeof fetch>()
   const trakt = new Trakt({
     origin: ORIGIN,
@@ -57,7 +76,7 @@ async function setup(fixture: Fixture) {
     tokenKey: Buffer.alloc(32, 42),
     databasePath,
     fetch: fetchToken,
-    now: () => now,
+    now: () => clock.now,
   })
   const post = (
     path: string,
@@ -87,16 +106,19 @@ async function setup(fixture: Fixture) {
       ),
     }
   }
+  return { fetchToken, trakt, post, begin }
+}
+
+async function setup(fixture: Fixture) {
+  const clock = { now: Date.UTC(2026, 10, 20) }
+  const { cookie, identity, databasePath } = await signIn(fixture, clock)
   return {
     cookie,
     identity,
     databasePath,
-    fetchToken,
-    trakt,
-    post,
-    begin,
+    ...traktOf(identity, databasePath, clock),
     expire: () => {
-      now += 86_400_000
+      clock.now += 86_400_000
     },
   }
 }
@@ -107,6 +129,48 @@ const issued = (version: string) =>
     refresh_token: `trakt-refresh-${version}`,
     expires_in: 3600,
   })
+
+/** The callback traded Trakt's code at its token endpoint, with the
+ * verifier of the consent's challenge. */
+function expectCodeExchange(
+  fetchToken: ReturnType<typeof vi.fn<typeof fetch>>,
+  challenge: string | null,
+) {
+  const [url, init] = fetchToken.mock.calls[0]!
+  expect(url).toBe('https://auth.trakt.tv/oauth/token')
+  const body = JSON.parse(
+    typeof init?.body === 'string' ? init.body : '{}',
+  ) as Record<string, string>
+  expect(body).toMatchObject({
+    client_id: 'public-test',
+    grant_type: 'authorization_code',
+    code: 'trakt-code',
+  })
+  expect(
+    createHash('sha256').update(body.code_verifier!).digest('base64url'),
+  ).toBe(challenge)
+}
+
+/** Expired, the token is renewed once with the refresh token, and the
+ * renewed one is kept. */
+async function expectRenewal(
+  fetchToken: ReturnType<typeof vi.fn<typeof fetch>>,
+  access: () => Promise<string | null>,
+  expire: () => void,
+) {
+  expire()
+  fetchToken.mockResolvedValueOnce(issued('renewed'))
+  expect(await access()).toBe('trakt-access-renewed')
+  expect(await access()).toBe('trakt-access-renewed')
+  expect(fetchToken).toHaveBeenCalledTimes(2)
+  const refreshBody = fetchToken.mock.calls[1]![1]?.body
+  expect(
+    JSON.parse(typeof refreshBody === 'string' ? refreshBody : '{}'),
+  ).toMatchObject({
+    grant_type: 'refresh_token',
+    refresh_token: 'trakt-refresh-original',
+  })
+}
 
 test('a verified Presente grants consent, refreshes encrypted tokens and can disconnect', async () => {
   const { identity, databasePath, fetchToken, trakt, post, begin, expire } =
@@ -140,19 +204,7 @@ test('a verified Presente grants consent, refreshes encrypted tokens and can dis
   expect((await trakt.handle(callback, identity)).headers.get('Location')).toBe(
     '/trakt',
   )
-  const [url, init] = fetchToken.mock.calls[0]!
-  expect(url).toBe('https://auth.trakt.tv/oauth/token')
-  const body = JSON.parse(
-    typeof init?.body === 'string' ? init.body : '{}',
-  ) as Record<string, string>
-  expect(body).toMatchObject({
-    client_id: 'public-test',
-    grant_type: 'authorization_code',
-    code: 'trakt-code',
-  })
-  expect(
-    createHash('sha256').update(body.code_verifier!).digest('base64url'),
-  ).toBe(challenge)
+  expectCodeExchange(fetchToken, challenge)
   expect((await trakt.handle(callback, identity)).headers.get('Location')).toBe(
     '/trakt?erro=trakt',
   )
@@ -170,18 +222,7 @@ test('a verified Presente grants consent, refreshes encrypted tokens and can dis
     false,
   )
 
-  expire()
-  fetchToken.mockResolvedValueOnce(issued('renewed'))
-  expect(await access()).toBe('trakt-access-renewed')
-  expect(await access()).toBe('trakt-access-renewed')
-  expect(fetchToken).toHaveBeenCalledTimes(2)
-  const refreshBody = fetchToken.mock.calls[1]![1]?.body
-  expect(
-    JSON.parse(typeof refreshBody === 'string' ? refreshBody : '{}'),
-  ).toMatchObject({
-    grant_type: 'refresh_token',
-    refresh_token: 'trakt-refresh-original',
-  })
+  await expectRenewal(fetchToken, access, expire)
   await post('/trakt/desconectar')
   expect(trakt.connected(identity)).toBe(false)
   expect(await access()).toBeNull()
@@ -278,6 +319,17 @@ test('a refresh token is spent once, and a disconnect during the refresh keeps n
   expect(trakt.connected(identity)).toBe(false)
 })
 
+/** The app's environment with Google and Trakt on. */
+const appEnv = (fixture: Fixture, databasePath: string) => ({
+  APP_ORIGIN: ORIGIN,
+  GOOGLE_CLIENT_ID: 'google-test',
+  GOOGLE_CLIENT_SECRET: 'google-secret-test',
+  AUTH_DATABASE_PATH: databasePath,
+  DATA_REPO_PATH: fixture.data,
+  FILMES_TRAKT_CLIENT_ID: 'public-test',
+  FILMES_TRAKT_TOKEN_KEY: Buffer.alloc(32, 42).toString('base64'),
+})
+
 test('the app reads Trakt from its environment and only for a verified Pessoa', async () => {
   // The app's own instances read the clock and the global fetch.
   vi.useFakeTimers({ toFake: ['Date'] })
@@ -286,15 +338,7 @@ test('the app reads Trakt from its environment and only for a verified Pessoa', 
   const fixture = useFixture()
   const { cookie, databasePath, identity, fetchToken, trakt, begin } =
     await setup(fixture)
-  const env = {
-    APP_ORIGIN: ORIGIN,
-    GOOGLE_CLIENT_ID: 'google-test',
-    GOOGLE_CLIENT_SECRET: 'google-secret-test',
-    AUTH_DATABASE_PATH: databasePath,
-    DATA_REPO_PATH: fixture.data,
-    FILMES_TRAKT_CLIENT_ID: 'public-test',
-    FILMES_TRAKT_TOKEN_KEY: Buffer.alloc(32, 42).toString('base64'),
-  }
+  const env = appEnv(fixture, databasePath)
   const stub = (variables: Partial<typeof env>) => {
     vi.unstubAllEnvs()
     for (const [name, value] of Object.entries({ ...env, ...variables }))
@@ -311,16 +355,16 @@ test('the app reads Trakt from its environment and only for a verified Pessoa', 
       }),
     )
 
-  for (const [off, engineToo] of [
-    [{ FILMES_TRAKT_CLIENT_ID: '' }, true],
-    [{ FILMES_TRAKT_TOKEN_KEY: Buffer.alloc(16).toString('base64') }, true],
-    [{ APP_ORIGIN: 'http://cinema.example' }, true],
-    [{ GOOGLE_CLIENT_ID: '' }, false],
-  ] as const) {
+  for (const off of [
+    { FILMES_TRAKT_CLIENT_ID: '' },
+    { FILMES_TRAKT_TOKEN_KEY: Buffer.alloc(16).toString('base64') },
+    { APP_ORIGIN: 'http://cinema.example' },
+    { GOOGLE_CLIENT_ID: '' },
+  ]) {
     stub(off)
     expect(page()).toEqual({ status: 'unavailable' })
     expect((await connect())?.headers.get('Location')).toBe('/trakt')
-    expect(traktConnection({ ...env, ...off }) === undefined).toBe(engineToo)
+    await expectNoToken({ ...env, ...off }, 'FILMES_TRAKT_CLIENT_ID' in off)
   }
 
   stub({})
@@ -337,6 +381,24 @@ test('the app reads Trakt from its environment and only for a verified Pessoa', 
   await trakt.handle(callback, identity)
   expect(page()).toEqual({ status: 'connected', name: 'Iara' })
 
+  await expectTokens(env)
+
+  expectTraktLinks(env)
+})
+
+/** With part of its environment off, the app has no Pessoa's token. The
+ * client id alone still reads public profiles (#269): only without it
+ * (`noClient`) has the engine no Trakt. */
+async function expectNoToken(env: NodeJS.ProcessEnv, noClient: boolean) {
+  const engine = traktConnection(env)
+  expect(engine === undefined).toBe(noClient)
+  const token = await engine?.accessToken('iara', new AbortController().signal)
+  expect(token ?? null).toBeNull()
+}
+
+/** The engine's Trakt gives Iara's token, once she connected, and no one
+ * else's. */
+async function expectTokens(env: NodeJS.ProcessEnv) {
   const engine = traktConnection(env)!
   expect(engine.clientId).toBe('public-test')
   const signal = new AbortController().signal
@@ -344,4 +406,19 @@ test('the app reads Trakt from its environment and only for a verified Pessoa', 
   expect(await engine.accessToken('vera', signal)).toBeNull()
   expect(await engine.accessToken('ninguem', signal)).toBeNull()
   expect(await engine.accessToken('../people/iara', signal)).toBeNull()
-})
+}
+
+/** The import page's word (#269), once Iara connected: whether the server
+ * reads Trakt at all, and whether she connected hers. */
+function expectTraktLinks(env: NodeJS.ProcessEnv) {
+  expect(traktLink('iara')).toEqual({ available: true, connected: true })
+  expect(traktLink('vera', env)).toEqual({ available: true, connected: false })
+  expect(traktLink('iara', { ...env, FILMES_TRAKT_TOKEN_KEY: '' })).toEqual({
+    available: true,
+    connected: false,
+  })
+  expect(traktLink('iara', { ...env, FILMES_TRAKT_CLIENT_ID: '' })).toEqual({
+    available: false,
+    connected: false,
+  })
+}

@@ -15,14 +15,24 @@ import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, expect, it, vi } from 'vite-plus/test'
 import { isRatingRefusal, writtenCount } from '#/content/rating-form'
-import { RatingScreen } from './imports'
+import { RatingScreen } from './ratings'
 import { RATINGS } from './ratings.copy'
+
+const film = (id: string, title: string, year: number) => ({
+  id,
+  title,
+  year,
+  genres: [],
+  directors: [],
+  runtime: null,
+})
 
 const QUEUE: RatingQueue = {
   person: 'teo',
+  rated: 0,
   films: [
-    { id: 'tt9000601', title: 'Pequenos Milagres', year: 2019, genres: [] },
-    { id: 'tt9000602', title: 'Casa Cheia', year: 2021, genres: [] },
+    film('tt9000601', 'Pequenos Milagres', 2019),
+    film('tt9000602', 'Casa Cheia', 2021),
   ],
 }
 
@@ -71,9 +81,7 @@ it('writes the Notas by fetch, and the draft lets them go', async () => {
   await user.click((await card()).getByRole('button', { name: 'Nota 8' }))
   await user.click(screen.getByRole('button', { name: RATINGS.done(1) }))
 
-  expect((await screen.findByRole('status')).textContent).toBe(
-    RATINGS.written(1),
-  )
+  expect(await screen.findByText(RATINGS.written(1))).toBeTruthy()
   expect(router.state.location.href).toBe('/meu-gosto/notas?feito=1')
   expect(screen.getByRole('button', { name: RATINGS.done(0) })).toBeTruthy()
   expect(scrolled).toHaveBeenCalled()

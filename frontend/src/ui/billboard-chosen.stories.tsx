@@ -47,16 +47,19 @@ export const EachCase: Story = {
     const list = within(canvasElement).getByRole('list', {
       name: 'Filme escolhido',
     })
-    const lines = within(list)
-      .getAllByRole('listitem')
-      .map((item) => item.textContent)
-    await expect(lines).toEqual([
-      'Bruno: previsto 8,3 · achou 6',
+    // Each line opens with the Presente's avatar, then what she reacted.
+    const lines = within(list).getAllByRole('listitem')
+    const expected = [
+      'Bruno: previsto 8,3 · deu 6 de 10',
       'Iara: previsto 7,1 · gostou',
       'Teo: neutro',
       'Vera: previsto 6,4 · não gostou',
       'Quim: previsto 9,0',
-    ])
+    ]
+    await expect(lines).toHaveLength(expected.length)
+    for (const [i, line] of expected.entries()) {
+      await expect(lines[i]).toHaveTextContent(line)
+    }
   },
 }
 

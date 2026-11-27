@@ -39,7 +39,9 @@ describe('the Pessoas routes', () => {
       erro: undefined,
     })
   })
+})
 
+describe('the Pessoas routes without a Dono session', () => {
   it('sends a create form with no Dono session to the login', async () => {
     const handlers = Create.options.server?.handlers as {
       POST: (ctx: { request: Request }) => Promise<Response>

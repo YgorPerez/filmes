@@ -22,6 +22,40 @@ export function sessionLinkPath(
   return `/participar?${query}`
 }
 
+/** The link's film list for the chosen Presente, where its child pages go
+ * back to; null for a link without its Session and key. */
+export function sessionLinkHome({
+  sessao,
+  chave,
+  presente,
+}: SessionLinkSearch): string | null {
+  return sessao && chave ? sessionLinkPath(sessao, chave, presente) : null
+}
+
+/** The pages under the link a name can lead to, keeping the page the
+ * link asked for (#275). */
+const CHILDREN = new Set(['/participar/votar', '/participar/perguntas'])
+
+/** The page the link asked for: one of its child pages, else the names. */
+export function askedLinkPage(pathname: string): string {
+  const path = pathname.replace(/\/$/, '')
+  return CHILDREN.has(path) ? path : '/participar'
+}
+
+/** Where a name on the link's first screen leads: the page the link asked
+ * for, as that Presente. */
+export function pickedLinkPath(
+  session: string,
+  token: string,
+  person: string,
+  asked: string,
+): string {
+  return sessionLinkPath(session, token, person).replace(
+    '/participar?',
+    `${asked}?`,
+  )
+}
+
 export const sessionLinkHeaders = {
   'Cache-Control': 'private, no-store',
   'Referrer-Policy': 'no-referrer',

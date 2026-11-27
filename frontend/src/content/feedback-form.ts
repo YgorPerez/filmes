@@ -5,7 +5,8 @@
 //
 // Fields (PT, as the other forms): `filme` is a film of the Recomendação
 // (its tt…), `outro` (then `busca`, a title or an IMDb id) or `nada` ("não
-// vimos nada"); per Presente, `reacao.<slug>` is `nota:<0,5…5>` or
+// vimos nada"); per Presente, `reacao.<slug>` is `nota:<1…10>` (the 1 to
+// 10 of the Cartaz's Já vi, #272, halved to the engine's 0,5 to 5) or
 // `relato:<gostou|neutro|nao-gostou>` (empty: no reaction) and
 // `comentario.<slug>` what she thought.
 
@@ -19,19 +20,23 @@ export const REPORT_CHOICES = {
 } as const
 type ReportChoice = keyof typeof REPORT_CHOICES
 
-/** The Notas the form offers, on the engine's scale. */
+/** The Notas the form offers: 1 to 10, as on the Cartaz's Já vi (#272). */
 export const RATING_CHOICES = [
-  '5',
-  '4,5',
-  '4',
-  '3,5',
-  '3',
-  '2,5',
-  '2',
-  '1,5',
   '1',
-  '0,5',
+  '2',
+  '3',
+  '4',
+  '5',
+  '6',
+  '7',
+  '8',
+  '9',
+  '10',
 ] as const
+
+/** A Nota of 1 to 10 on the engine's 0,5 to 5: 9 is "4,5". */
+const engineRating = (value: string) =>
+  String(Number(value) / 2).replace('.', ',')
 
 /** A Presente's reaction, as the form says it. */
 export type FeedbackReaction =
@@ -133,7 +138,9 @@ function reactionOf(
   const kind = said.slice(0, sep)
   const value = said.slice(sep + 1)
   if (kind === 'nota' && isRating(value))
-    return { ok: { person, kind: 'rating', rating: value, comment } }
+    return {
+      ok: { person, kind: 'rating', rating: engineRating(value), comment },
+    }
   if (kind === 'relato' && isReport(value))
     return {
       ok: { person, kind: 'report', level: REPORT_CHOICES[value], comment },

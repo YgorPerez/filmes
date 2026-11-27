@@ -1,7 +1,7 @@
 import { Effect } from 'effect'
 import { TestClock } from 'effect/testing'
 import { describe, expect, test } from 'vite-plus/test'
-import { Run, Today } from '../src/index.ts'
+import { requestToday, Run, Today } from '../src/index.ts'
 import { FIXTURE_TODAY, useFixture } from './fixture.ts'
 
 /** Today's date at the instant `iso`, by a test clock. */
@@ -24,6 +24,10 @@ describe('today', () => {
     )
 
     expect(today).toBe(FIXTURE_TODAY)
+  })
+
+  test('requestToday gives the screens the same date', async () => {
+    expect(await useFixture().ok(requestToday)).toBe(FIXTURE_TODAY)
   })
 
   test('otherwise it is the date in São Paulo, not in UTC', async () => {

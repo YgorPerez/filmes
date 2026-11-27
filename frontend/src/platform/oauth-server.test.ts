@@ -227,7 +227,9 @@ describe('registration', () => {
       expect(response.headers.has('location')).toBe(false)
     }
   })
+})
 
+describe('registration, refusing', () => {
   it('refuses another redirect, or none', async () => {
     const server = new Server()
     for (const body of [

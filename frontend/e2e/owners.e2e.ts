@@ -13,8 +13,10 @@
 // this file alone her Acesso (#166), she logs in, and once it is taken
 // away her next request goes to the login. Only the desktop runs it.
 
-import { consult, personCreate } from '@filmes/engine'
+import { consult } from '@filmes/engine'
+import { type Page } from '@playwright/test'
 import {
+  addOwner,
   addPerson,
   engineRun,
   expect,
@@ -43,6 +45,64 @@ const ratings = async (session: string) =>
     )
   ).rows
 
+type Dono = (typeof DONOS)[number]
+
+/** Opens a Session with Lara from the form; gives its id. */
+async function openSessionWithLara(page: Page, dono: Dono) {
+  // The form checks her, and only her, as the Dono.
+  await page.goto('/sessoes/nova')
+  await expect(
+    page.getByRole('checkbox', { name: new RegExp(`^${dono.name}`) }),
+  ).toBeChecked()
+  await expect(
+    page.getByRole('checkbox', { name: dono.other, exact: true }),
+  ).not.toBeChecked()
+  await page.getByRole('checkbox', { name: 'Lara' }).check()
+  await page.getByText('Mais opções', { exact: true }).click()
+  await page.getByLabel('Quantos filmes', { exact: false }).fill('3')
+  await page.getByRole('button', { name: 'Recomendar' }).click()
+  await expect(page).toHaveURL(/\/sessoes\/2026-11-20-lara[^/]*\?feito=aberta$/)
+  return decodeURIComponent(
+    new URL(page.url()).pathname.split('/').at(-1) ?? '',
+  )
+}
+
+async function feedbackSpeakingForHerself(page: Page, dono: Dono, id: string) {
+  // The Feedback: her Nota is hers; Lara's she relays.
+  await page.goto(`/sessoes/${id}/contar`)
+  const reaction = (slug: string, value: string) =>
+    page.locator(`input[name="reacao.${slug}"][value${value}]`)
+  await expect(reaction(dono.slug, '^="relato:"')).toHaveCount(0)
+  await expect(reaction('lara', '^="relato:"')).not.toHaveCount(0)
+  await page.locator('input[name="filme"]').first().check()
+  await reaction(dono.slug, '="nota:10"').check()
+  await page.getByText('ou dar nota de 1 a 10').click()
+  await reaction('lara', '="nota:8"').check()
+  await page.getByRole('button', { name: 'Gravar e fechar a Sessão' }).click()
+  await expect(page).toHaveURL(new RegExp(`/sessoes/${id}\\?feito=contada$`))
+  expect(await ratings(id)).toEqual(
+    [
+      [dono.slug, 0],
+      ['lara', 1],
+    ].toSorted(([a], [b]) => String(a).localeCompare(String(b))),
+  )
+}
+
+async function writeOwnTaste(page: Page, dono: Dono) {
+  // Taste on her own page, Meu gosto.
+  await page.goto(`/pessoas/${dono.slug}`)
+  await expect(page).toHaveURL(/\/meu-gosto$/)
+  // Declarados is in the Afinar fold (#273).
+  await page.getByText(/^Afinar:/).click()
+  const area = section(page, 'Declarados')
+  await area.getByText('Acrescentar Declarado', { exact: true }).click()
+  const form = area.getByRole('form', { name: 'Acrescentar Declarado' })
+  await form.getByLabel('O que foi dito').fill(`a ${dono.name} gosta de drama`)
+  await form.getByRole('button', { name: 'Gravar' }).click()
+  await expect(notice(page)).toHaveText('Gravado no seu arquivo.')
+  await expect(area).toContainText(`a ${dono.name} gosta de drama`)
+}
+
 for (const dono of DONOS)
   test(`${dono.name}, one of two Donos, is the Dono on every screen`, async ({
     page,
@@ -53,63 +113,15 @@ for (const dono of DONOS)
     await expect(
       page.getByRole('button', { name: `Sua conta: ${dono.name}` }),
     ).toBeVisible()
-
-    // The form checks her, and only her, as the Dono.
-    await page.goto('/sessoes/nova')
-    await expect(
-      page.getByRole('checkbox', { name: new RegExp(`^${dono.name}`) }),
-    ).toBeChecked()
-    await expect(
-      page.getByRole('checkbox', { name: dono.other, exact: true }),
-    ).not.toBeChecked()
-    await page.getByRole('checkbox', { name: 'Lara' }).check()
-    await page.getByText('Mais opções', { exact: true }).click()
-    await page.getByLabel('Quantos filmes', { exact: false }).fill('3')
-    await page.getByRole('button', { name: 'Recomendar' }).click()
-    await expect(page).toHaveURL(
-      /\/sessoes\/2026-11-20-lara[^/]*\?feito=aberta$/,
-    )
-    const id = decodeURIComponent(
-      new URL(page.url()).pathname.split('/').at(-1) ?? '',
-    )
+    const id = await openSessionWithLara(page, dono)
 
     // On the Cartaz she is "Você".
     const first = page.getByRole('article').first()
     await expect(first.getByRole('button', { name: 'Você' })).toBeVisible()
     await expect(first.getByRole('button', { name: 'Lara' })).toBeVisible()
     await snap(page, info, `donos-cartaz-${dono.slug}`)
-
-    // The Feedback: her Nota is hers; Lara's she relays.
-    await page.goto(`/sessoes/${id}/contar`)
-    const own = page.getByLabel(`Reação: ${dono.name}`)
-    await expect(own.locator('option[value^="relato:"]')).toHaveCount(0)
-    await expect(
-      page.getByLabel('Reação: Lara').locator('option[value^="relato:"]'),
-    ).not.toHaveCount(0)
-    await page.locator('input[name="filme"]').first().check()
-    await own.selectOption('nota:5')
-    await page.getByLabel('Reação: Lara').selectOption('nota:4')
-    await page.getByRole('button', { name: 'Gravar e fechar a Sessão' }).click()
-    await expect(page).toHaveURL(new RegExp(`/sessoes/${id}\\?feito=contada$`))
-    expect(await ratings(id)).toEqual(
-      [
-        [dono.slug, 0],
-        ['lara', 1],
-      ].toSorted(([a], [b]) => String(a).localeCompare(String(b))),
-    )
-
-    // Taste on her own page, Meu gosto.
-    await page.goto(`/pessoas/${dono.slug}`)
-    await expect(page).toHaveURL(/\/meu-gosto$/)
-    const area = section(page, 'Declarados')
-    await area.getByText('Acrescentar Declarado', { exact: true }).click()
-    const form = area.getByRole('form', { name: 'Acrescentar Declarado' })
-    await form
-      .getByLabel('O que foi dito')
-      .fill(`a ${dono.name} gosta de drama`)
-    await form.getByRole('button', { name: 'Gravar' }).click()
-    await expect(notice(page)).toHaveText('Gravado no arquivo dela.')
-    await expect(area).toContainText(`a ${dono.name} gosta de drama`)
+    await feedbackSpeakingForHerself(page, dono, id)
+    await writeOwnTaste(page, dono)
   })
 
 test('Bruno tells a Relato about Vera, and Vera sees it on her page', async ({
@@ -121,12 +133,14 @@ test('Bruno tells a Relato about Vera, and Vera sees it on her page', async ({
 
   // On his own page, no Relato form: what he says of himself is Declarado.
   await bruno.goto('/meu-gosto')
+  await bruno.getByText(/^Afinar:/).click()
   await expect(section(bruno, 'Declarados')).toBeVisible()
   await expect(section(bruno, 'Relatos')).toHaveCount(0)
   await snap(bruno, info, 'relato-bruno-own-page')
 
   // On Vera's, a Dono too, he tells what he saw her like.
   await bruno.goto('/pessoas/vera')
+  await bruno.getByText(/^Afinar:/).click()
   const told = section(bruno, 'Relatos')
   await told.getByText('Acrescentar Relato', { exact: true }).click()
   const form = told.getByRole('form', { name: 'Acrescentar Relato' })
@@ -134,7 +148,7 @@ test('Bruno tells a Relato about Vera, and Vera sees it on her page', async ({
   await snap(bruno, info, 'relato-bruno-on-vera-form')
   await form.getByLabel('O que foi dito').fill('a Vera adora suspense')
   await form.getByRole('button', { name: 'Gravar' }).click()
-  await expect(notice(bruno)).toHaveText('Gravado no arquivo dela.')
+  await expect(notice(bruno)).toHaveText('Gravado no arquivo de Vera.')
   await expect(told).toContainText('a Vera adora suspense')
   await bruno.close()
 
@@ -142,6 +156,7 @@ test('Bruno tells a Relato about Vera, and Vera sees it on her page', async ({
   const vera = await browser.newPage()
   await loginAs(vera, 'vera@example.org')
   await vera.goto('/pessoas/vera')
+  await vera.getByText(/^Afinar:/).click()
   const hers = section(vera, 'Relatos')
   await expect(hers).toContainText('a Vera adora suspense')
   await expect(hers).toContainText('descrição de Bruno')
@@ -150,8 +165,7 @@ test('Bruno tells a Relato about Vera, and Vera sees it on her page', async ({
   await vera.close()
 })
 
-const SKIP_IMPORT =
-  'Pular: Importar do Letterboxd, do Trakt, do IMDb ou do Simkl'
+const SKIP_TASTE = 'Pular: Meu gosto'
 
 test.describe('without JavaScript', () => {
   test.use({ javaScriptEnabled: false })
@@ -175,17 +189,16 @@ test('a new Dono sees the setup guide, and a skipped step stays skipped', async 
   page,
 }, info) => {
   const email = `nova-${info.project.name}@example.org`
-  await engineRun((engine) =>
-    engine.run(
-      personCreate({ name: `Nova ${info.project.name}`, owner: true, email }),
-    ),
-  ).catch((error: Error) => {
-    if (!error.message.includes('person_exists')) throw error
-  })
+  await addOwner(`Nova ${info.project.name}`, email)
   await loginAs(page, email)
   const guide = page.getByRole('region', { name: 'Para começar', exact: true })
   await expect(guide).toBeVisible()
   await expect(guide.getByRole('heading', { name: 'Meu gosto' })).toBeVisible()
+  // The connector behind Meu gosto says what it is, and folds the rest.
+  await expect(
+    guide.getByRole('button', { name: 'Copiar endereço' }),
+  ).toBeHidden()
+  await guide.getByText('Ver como conectar').click()
   await expect(
     guide.getByRole('button', { name: 'Copiar endereço' }),
   ).toBeVisible()
@@ -206,7 +219,7 @@ test('a new Dono sees the setup guide, and a skipped step stays skipped', async 
     { times: 1 },
   )
   try {
-    await guide.getByRole('button', { name: SKIP_IMPORT }).click()
+    await guide.getByRole('button', { name: SKIP_TASTE }).click()
     await expect(guide.getByRole('button', { name: 'Pulando…' })).toBeDisabled()
     await snap(page, info, 'home-guide-pulando')
   } finally {
@@ -218,10 +231,10 @@ test('a new Dono sees the setup guide, and a skipped step stays skipped', async 
   await expect(page).toHaveURL(/\/$/)
   await page.reload()
   await expect(guide.getByText('Retomar')).toBeVisible()
-  await expect(guide.getByRole('button', { name: SKIP_IMPORT })).toHaveCount(0)
+  await expect(guide.getByRole('button', { name: SKIP_TASTE })).toHaveCount(0)
 
-  // Every step out of the way: the guide leaves, "pedir filme" stays.
-  await guide.getByRole('button', { name: 'Pular: Meu gosto' }).click()
+  // Every step out of the way: the guide leaves, "pedir filme" stays. The
+  // connector, now the first pending step, shows its address.
   await expect(guide.getByText(/^http:\/\/localhost:\d+\/mcp$/)).toBeVisible()
   await guide.getByRole('button', { name: 'Pular: Conector no Claude' }).click()
   await expect(guide).toHaveCount(0)
@@ -238,6 +251,8 @@ test('the admin gives a Pessoa access and takes it away', async ({
   await addPerson('Odete')
   await loginAs(page, 'bruno@example.org')
   await page.goto('/pessoas/odete')
+  // Acesso is in the Afinar fold (#273).
+  await page.getByText(/^Afinar:/).click()
   const access = section(page, 'Acesso')
   await expect(access).toContainText('Sem acesso.')
   await snap(page, info, 'access-none')
@@ -250,7 +265,9 @@ test('the admin gives a Pessoa access and takes it away', async ({
   const odete = await browser.newPage()
   await loginAs(odete, 'odete@example.org')
 
-  await access.getByRole('button', { name: 'Tirar acesso' }).click()
+  // It asks first.
+  await access.getByText('Tirar acesso', { exact: true }).click()
+  await access.getByRole('button', { name: 'Tirar o acesso de Odete' }).click()
   await expect(notice(page)).toContainText('Acesso tirado')
   await expect(access).toContainText('Sem acesso.')
 
@@ -264,9 +281,12 @@ test("the admin's own page offers no way out", async ({ page }, info) => {
   makeBrunoAdmin()
   await loginAs(page, 'bruno@example.org')
   await page.goto('/pessoas/bruno')
-  const access = section(page, 'Acesso')
-  await expect(access).toContainText('o seu próprio acesso não sai por aqui')
-  await expect(access.getByRole('button')).toHaveCount(0)
+  // Her own page has no Acesso at all (#273), even in the Afinar fold.
+  await page.getByText(/^Afinar:/).click()
+  await expect(section(page, 'Acesso')).toHaveCount(0)
+  await expect(
+    page.getByRole('button', { name: /Tirar o acesso/ }),
+  ).toHaveCount(0)
 })
 
 test('a Dono who is not admin sees no Acesso', async ({ page }, info) => {

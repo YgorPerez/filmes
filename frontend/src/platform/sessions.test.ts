@@ -16,6 +16,7 @@ import {
 } from '#/content/session-request'
 import {
   newSessionDraft,
+  repeatDraft,
   requestOptions,
   sessionList,
   sessionPage,
@@ -95,10 +96,11 @@ const BASIC: [string, string][] = [
   ['presentes', 'iara'],
 ]
 
-describe('parseSessionRequest', () => {
-  const parse = (fields: [string, string][]) =>
-    parseSessionRequest(form([...BASIC, ...fields]))
+/** `parseSessionRequest` of the basic form plus `fields`. */
+const parse = (fields: [string, string][]) =>
+  parseSessionRequest(form([...BASIC, ...fields]))
 
+describe('parseSessionRequest', () => {
   it('asks for no Série na ordem in its default mode, nor for a mode it does not offer', () => {
     expect(parse([['serie', 'anterior']])).toEqual(parse([]))
     expect(parse([['serie', 'sempre']])).toEqual(parse([]))
@@ -150,7 +152,9 @@ describe('parseSessionRequest', () => {
       } satisfies SessionRequestForm,
     })
   })
+})
 
+describe('parseSessionRequest, on what is missing or wrong', () => {
   it('leaves out what was not asked', () => {
     expect(
       parse([
@@ -178,14 +182,15 @@ describe('parseSessionRequest', () => {
   })
 })
 
-describe('sessionRequestAction', () => {
-  const act = (
-    request: Request,
-    sessions: Sessions,
-    owner: typeof BRUNO | null = BRUNO,
-    notes = new Notes(),
-  ) => sessionRequestAction(request, owner, sessions, notes, ORIGIN)
+/** `sessionRequestAction` as `owner` (Bruno by default). */
+const act = (
+  request: Request,
+  sessions: Sessions,
+  owner: typeof BRUNO | null = BRUNO,
+  notes = new Notes(),
+) => sessionRequestAction(request, owner, sessions, notes, ORIGIN)
 
+describe('sessionRequestAction', () => {
   it('opens the Session as the logged-in Dono and goes to its page', async () => {
     const { sessions, open } = fake()
     const response = await act(post([...BASIC, ['sem-lento', 'sim']]), sessions)
@@ -218,7 +223,9 @@ describe('sessionRequestAction', () => {
     expect(location).toMatch(/^\/sessoes\/2026-11-20-iara\?feito=aberta&nota=/)
     expect(notes.recall(token)).toEqual({ warnings, addition: null })
   })
+})
 
+describe('sessionRequestAction refusing', () => {
   it('sends who is not logged in to the login, and refuses another site', async () => {
     const { sessions, open } = fake()
     expect(
@@ -349,7 +356,9 @@ describe('“Ler” in sessionRequestAction', () => {
     ])
     expect(both.draft?.fields.similar).toEqual(['tt9000101', 'tt9001904'])
   })
+})
 
+describe('“Ler” in sessionRequestAction, on titles and taste', () => {
   it('keeps the films of an unclear title, with their ids, for “Usar”', async () => {
     const { draft } = await readForm(useFixture(), [
       ...BASIC,
@@ -387,7 +396,9 @@ describe('“Ler” in sessionRequestAction', () => {
     ])
     expect(long.location).toBe('/sessoes/nova?erro=frase-longa')
   })
+})
 
+describe('“Ler” in sessionRequestAction failing', () => {
   it('says so, and logs why, when the engine cannot read', async () => {
     const log = vi.spyOn(console, 'error').mockImplementation(() => {})
     const response = await sessionRequestAction(
@@ -416,16 +427,17 @@ describe('“Ler” in sessionRequestAction', () => {
   })
 })
 
-describe('the Catálogo search in sessionRequestAction', () => {
-  const search = (fields: [string, string][], notes = new Notes()) =>
-    sessionRequestAction(
-      post([...fields, ['buscar-catalogo', 'sim']]),
-      BRUNO,
-      fake().sessions,
-      notes,
-      ORIGIN,
-    )
+/** The Catálogo search of New Session posted with `fields`, as Bruno. */
+const search = (fields: [string, string][], notes = new Notes()) =>
+  sessionRequestAction(
+    post([...fields, ['buscar-catalogo', 'sim']]),
+    BRUNO,
+    fake().sessions,
+    notes,
+    ORIGIN,
+  )
 
+describe('the Catálogo search in sessionRequestAction', () => {
   it('comes back with the search and the form as the Dono left it, opening nothing', async () => {
     const notes = new Notes()
     const { sessions, open } = fake()
@@ -462,7 +474,9 @@ describe('the Catálogo search in sessionRequestAction', () => {
       reading: null,
     })
   })
+})
 
+describe('the Catálogo search in sessionRequestAction, with Enter', () => {
   it('keeps what “Ler” said about the sentence', async () => {
     const notes = new Notes()
     const reading = {
@@ -503,7 +517,9 @@ describe('the Catálogo search in sessionRequestAction', () => {
     expect(location.searchParams.get('buscar')).toBe('farol')
     expect(open).not.toHaveBeenCalled()
   })
+})
 
+describe('the Catálogo search in sessionRequestAction, run or empty', () => {
   it('Enter with the search already run opens the Session', async () => {
     const { sessions, open } = fake()
     await sessionRequestAction(
@@ -540,6 +556,33 @@ describe('newSessionDraft', () => {
   })
 })
 
+describe('repeatDraft', () => {
+  it('fills Nova Sessão as the Sessão was asked, leaving out what the form asks again', () => {
+    expect(
+      repeatDraft({
+        attendees: ['bruno', 'iara'],
+        session: '2026-11-20-1',
+        moods: ['leve'],
+        count: 5,
+        request: null,
+        maxDuration: 120,
+        noSlow: true,
+        similar: ['tt1'],
+      }),
+    ).toEqual({
+      fields: {
+        attendees: ['bruno', 'iara'],
+        rule: 'default',
+        moods: ['leve'],
+        count: 5,
+        maxDuration: 120,
+        noSlow: true,
+      },
+      reading: null,
+    })
+  })
+})
+
 describe('the pages', () => {
   it('find the Session by its id, or say there is none', async () => {
     const { sessions } = fake()
@@ -571,6 +614,26 @@ const commitAll = (cwd: string) =>
     { cwd },
   )
 
+/** The fixture's form options, with the Dono first, and no Session yet. */
+const expectFreshFixture = async (sessions: Sessions) => {
+  const options = await requestOptions(sessions)
+  expect(options?.people[0]).toEqual({
+    person: 'bruno',
+    name: 'Bruno',
+    owner: true,
+  })
+  expect(options?.people.map((p) => p.person).toSorted()).toEqual([
+    'bruno',
+    'iara',
+    'quim',
+    'rosa',
+    'teo',
+    'vera',
+  ])
+  expect(options?.moods).toContain('leve')
+  expect(await sessionList(sessions)).toEqual([])
+}
+
 describe('sessionsFromEngine', () => {
   it('opens a Session with the form’s Restrições, signed by the Dono, and lists it', async () => {
     const fixture = useFixture()
@@ -578,22 +641,7 @@ describe('sessionsFromEngine', () => {
     const engine = makeEngine(fixture.vars)
     try {
       const sessions = sessionsFromEngine(engine)
-      const options = await requestOptions(sessions)
-      expect(options?.people[0]).toEqual({
-        person: 'bruno',
-        name: 'Bruno',
-        owner: true,
-      })
-      expect(options?.people.map((p) => p.person).toSorted()).toEqual([
-        'bruno',
-        'iara',
-        'quim',
-        'rosa',
-        'teo',
-        'vera',
-      ])
-      expect(options?.moods).toContain('leve')
-      expect(await sessionList(sessions)).toEqual([])
+      await expectFreshFixture(sessions)
 
       const parsed = parseSessionRequest(
         form([

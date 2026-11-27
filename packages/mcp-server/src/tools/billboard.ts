@@ -24,8 +24,8 @@ export default defineTool({
     '"Fronteira (2008) — previsto: Ana 8,3, Bruno 7,1", com "Você" para o Dono; Presente sem Nota prevista fica fora da lista, ' +
     'e filme sem nenhuma não tem "previsto". ' +
     'Onde o app mostra telas (MCP Apps), o resultado aparece como o Cartaz (`ui://filmes/cartaz.html`): o Dono marca ali, e o Enviar ' +
-    'grava a resposta com `answer_billboard` sem passar por você e, se algo caiu ou veio texto livre, manda uma mensagem que começa com ' +
-    '`Enviei o Cartaz <sessao> v<n> pela tela`.',
+    'grava a resposta com `answer_billboard` sem passar por você e, se algo caiu ou veio texto livre, manda uma mensagem nas palavras do Dono ' +
+    'que termina com `(enviado pelo Cartaz · <sessao> v<n>)`, com o que a ferramenta devolveu no seu contexto.',
   input: z.object({
     session: sessionId('ID da Sessão, o session.id que recommend devolveu'),
     films: z

@@ -50,7 +50,9 @@ describe('the Nova Sessão form', () => {
       ok: { attendees: ['bruno'], rule: 'default', moods: [] },
     })
   })
+})
 
+describe('the Nova Sessão form, what it posts', () => {
   it('posts the Presentes, the Regra, the Climas and every Restrição', async () => {
     const { user, form } = show()
     await user.click(screen.getByRole('checkbox', { name: 'Iara' }))
@@ -109,7 +111,9 @@ describe('the Nova Sessão form', () => {
       },
     })
   })
+})
 
+describe('the Nova Sessão form, the Série and refusals', () => {
   it('starts the Série na ordem at its default, marked, and offers the other two', async () => {
     const { user, form } = show()
     await user.click(screen.getByText(copy.details))
@@ -161,6 +165,16 @@ describe('the Nova Sessão form', () => {
     expect(screen.getByRole('alert').textContent).toContain(
       SESSIONS.refusals[refusal],
     )
+  })
+})
+
+describe('the Nova Sessão form, its start', () => {
+  it('starts with the Presentes of “Pedir filme de novo com essa turma”', () => {
+    render(<NewSession options={OPTIONS} attendees={['iara', 'quim']} />)
+    const form = screen.getByRole('form', { name: SESSIONS.form.label })
+    expect(posted(form as HTMLFormElement)).toEqual({
+      ok: { attendees: ['iara', 'quim'], rule: 'default', moods: [] },
+    })
   })
 
   it('says when the engine cannot run here', () => {
@@ -347,16 +361,22 @@ describe('the form “Ler” filled', () => {
     showDraft(DRAFT)
     const said = screen.getByRole('status').textContent
     const { reading } = DRAFT
-    expect(said).toContain(copy.reading.understood(reading!.understood))
+    // As a sentence: "Presente: Iara" is Iara, "Clima: leve" is leve (#272).
+    expect(said).toContain('Entendi: Iara, leve.')
     expect(said).toContain(copy.reading.notUnderstood(reading!.notUnderstood))
     expect(said).toContain(
-      copy.reading.ambiguous([
-        { words: 'Teo', candidates: ['Rosa', 'Teo'] },
-        { words: 'Amélie', candidates: [] },
-      ]),
+      copy.reading.ambiguous([{ words: 'Teo', candidates: ['Rosa', 'Teo'] }]),
     )
+    // A title the Catálogo lacks opens its search with the words (#272).
+    expect(
+      screen
+        .getByRole('link', { name: copy.reading.missingSearch })
+        .getAttribute('href'),
+    ).toBe('/sessoes/nova?buscar=Am%C3%A9lie')
   })
+})
 
+describe('the form “Ler” filled, unclear titles and nothing understood', () => {
   it('lists the films of an unclear title, each with “Usar”', async () => {
     const form = showDraft({
       fields: { similar: ['tt9000101'] },
@@ -421,8 +441,12 @@ describe('“Mais opções”', () => {
   })
 
   it('comes open for a refusal about a field under it, and only then', () => {
-    render(<NewSession options={OPTIONS} refusal="duracao" />)
+    render(<NewSession options={OPTIONS} refusal="anos" />)
     expect(details().open).toBe(true)
+    cleanup()
+    // The duration sits above the fold (#272): its refusal leaves it shut.
+    render(<NewSession options={OPTIONS} refusal="duracao" />)
+    expect(details().open).toBe(false)
     cleanup()
     render(<NewSession options={OPTIONS} refusal="presentes" />)
     expect(details().open).toBe(false)

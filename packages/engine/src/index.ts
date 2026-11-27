@@ -7,6 +7,7 @@ export {
   type ConsultResult,
   type ConsultValue,
 } from './consult/consult.ts'
+export { consultSchema, type SchemaTable } from './consult/schema.ts'
 export {
   contribution,
   evidenceToJson,
@@ -41,6 +42,13 @@ export {
   type SearchKind,
 } from './catalog/search.ts'
 export { searchKey } from './catalog/search-key.ts'
+export { filmCovers, type CoversRequest } from './catalog/covers.ts'
+export {
+  filmCard,
+  type FilmCard,
+  type FilmCardRequest,
+} from './catalog/film-card.ts'
+export { filmCards, type PublicFilmCard } from './catalog/cards.ts'
 export {
   EXPORT_FORMATS,
   exportRatings,
@@ -194,6 +202,7 @@ export {
   sessionRelative,
   sessionsFolder,
   SESSIONS_FOLDER,
+  sessionVersions,
   shownFilms,
   STRENGTH_IN_BODY,
   VERSION_EXTRAS,
@@ -271,6 +280,7 @@ export {
 export {
   castVotes,
   votedBy,
+  latestVotes,
   yesVotes,
   type CastVotes,
   type CastVotesRequest,
@@ -304,7 +314,7 @@ export {
   type SourceKeyVariable,
   type Vars,
 } from './runtime/Environment.ts'
-export { Run } from './runtime/Run.ts'
+export { requestToday, Run } from './runtime/Run.ts'
 export { TIME_ZONE, Today } from './runtime/Today.ts'
 export { Weights } from './runtime/Weights.ts'
 export { num, numOrNull, text, textOrNull } from './sqlite/row.ts'
@@ -506,6 +516,16 @@ export {
   type SkipSetupResult,
 } from './people/setup.ts'
 export {
+  peopleCounts,
+  personDelete,
+  personSessions,
+  type PersonCounts,
+  type PersonDeleteInput,
+  type PersonDeleteResult,
+  type PersonSession,
+  type PersonSessions,
+} from './people/directory.ts'
+export {
   grantAccess,
   revokeAccess,
   type AccessResult,
@@ -539,6 +559,7 @@ export {
 export {
   confirmQueueItem,
   discardQueueItem,
+  reopenQueueItem,
   viewQueue,
   type QueueDecision,
   type QueueItem,
@@ -599,6 +620,13 @@ export {
   type TraktReport,
   type TraktUnresolved,
 } from './imports/trakt.ts'
+export {
+  linkedTraktUser,
+  syncAttendeesTrakt,
+  syncTrakt,
+  type TraktSync,
+  type TraktSyncInput,
+} from './imports/trakt-sync.ts'
 export {
   importImdb,
   IMDB_KIND,
@@ -707,6 +735,7 @@ export {
   type BillboardDropped,
   type BillboardFilm,
   type BillboardLine,
+  type BillboardNotes,
   type BillboardPrediction,
   type BillboardChosen,
   type BillboardReaction,
@@ -729,3 +758,8 @@ export {
   type RatingQueue,
   type RatingQueueRequest,
 } from './people/rating.ts'
+export {
+  tasteSummary,
+  type TasteSummary,
+  type TasteSummaryRequest,
+} from './people/taste-summary.ts'

@@ -33,6 +33,7 @@ function PairwiseRoute() {
       }}
       failed={erro === 1}
       back={home}
+      owner={participation.owner}
     />
   )
 }

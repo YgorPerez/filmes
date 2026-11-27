@@ -18,7 +18,8 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 import type { CartazPage } from '#/platform/billboard'
 import type { SessionItem } from '#/platform/sessions'
-import { MODEL } from './billboard.fixture'
+import { BILLBOARD } from './billboard.copy'
+import { CLOSED as TOLD, MODEL } from './billboard.fixture'
 import { SessionList, SessionScreen } from './sessions'
 import { SESSIONS } from './sessions.copy'
 
@@ -73,7 +74,7 @@ describe('the Sessions list', () => {
       within(closed!).getByRole('link', { name: /Quim/ }).getAttribute('href'),
     ).toBe('/sessoes/2026-11-19-quim')
     expect(closed!.textContent).toContain('Viram Pequenos Milagres')
-    expect(closed!.textContent).toContain('19 de novembro de 2026')
+    expect(closed!.textContent).toContain('Qui, 19 nov')
     expect(
       within(closed!).queryByRole('link', { name: 'Contar como foi' }),
     ).toBeNull()
@@ -83,6 +84,8 @@ describe('the Sessions list', () => {
         .getAttribute('href'),
     ).toBe('/sessoes/2026-11-20-iara')
     expect(open!.textContent).toContain('eu e a Iara')
+    // The shelf by title, so the night is easy to place (#272).
+    expect(open!.textContent).toContain('O Farol de Areia · Pequenos Milagres')
     expect(open!.textContent).toContain('até 2h')
     expect(
       within(open!)
@@ -102,9 +105,14 @@ describe('the Sessions list', () => {
     expect(
       screen.getByRole('link', { name: 'Todas' }).getAttribute('href'),
     ).toBe('/sessoes')
-    expect(screen.getByText('Nenhuma Sessão para contar.')).toBeTruthy()
+    expect(
+      screen.getByRole('heading', { name: SESSIONS.list.pendingEmpty }),
+    ).toBeTruthy()
+    expect(screen.getByText(SESSIONS.list.pendingEmptyLead)).toBeTruthy()
   })
+})
 
+describe('the Sessions list, its name and when empty', () => {
   it('names the list by its filter, and says when there is no Session at all', () => {
     render(<SessionList sessions={[OPEN]} pendingOnly />)
     expect(screen.getByRole('list', { name: 'Para contar' })).toBeTruthy()
@@ -113,7 +121,23 @@ describe('the Sessions list', () => {
     expect(
       screen.getByRole('link', { name: 'Todas' }).getAttribute('aria-current'),
     ).toBe('page')
-    expect(screen.getByText(SESSIONS.list.empty)).toBeTruthy()
+    expect(
+      screen.getByRole('heading', { name: SESSIONS.list.empty }),
+    ).toBeTruthy()
+    // Empty, the list says what a Session is and opens one (#272).
+    expect(screen.getByText(SESSIONS.list.emptyLead)).toBeTruthy()
+    expect(
+      screen
+        .getByRole('link', { name: SESSIONS.list.emptyAction })
+        .getAttribute('href'),
+    ).toBe('/sessoes/nova')
+  })
+
+  it('an open Session with no film says so on its row', () => {
+    render(<SessionList sessions={[{ ...OPEN, recommendation: [] }]} />)
+    expect(screen.getByRole('listitem').textContent).toContain(
+      SESSIONS.films(0),
+    )
   })
 
   it('says when the engine cannot run here', () => {
@@ -124,33 +148,52 @@ describe('the Sessions list', () => {
   })
 })
 
-describe('a Session’s page', () => {
-  const PAGE: CartazPage = {
-    session: OPEN,
-    billboard: MODEL,
-    warnings: [],
-    addition: null,
-  }
+const PAGE: CartazPage = {
+  session: OPEN,
+  billboard: MODEL,
+  warnings: [],
+  addition: null,
+}
 
+describe('a Session’s page', () => {
   it('shows the Cartaz of a Session just opened, posting to its reply, and the way to its Feedback', () => {
     render(<SessionScreen page={PAGE} notice="aberta" />)
-    expect(screen.getByRole('status').textContent).toBe(
-      SESSIONS.session.notices.aberta,
-    )
+    // A new Session needs no notice: the Cartaz is it (#272).
+    expect(screen.queryByRole('status')).toBeNull()
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
-      'Sessão de 20 de novembro de 2026',
+      'Sex, 20 nov',
     )
     expect(screen.getAllByRole('article')).toHaveLength(2)
     expect(
       screen.getByRole('form', { name: 'Cartaz' }).getAttribute('action'),
     ).toBe('/sessoes/2026-11-20-iara/responder')
-    expect(
-      screen
-        .getByRole('link', { name: SESSIONS.list.feedback })
-        .getAttribute('href'),
-    ).toBe('/sessoes/2026-11-20-iara/contar')
+    // In the head's ⋯ menu, and after the last film.
+    const told = screen.getAllByRole('link', { name: SESSIONS.list.feedback })
+    expect(told.map((link) => link.getAttribute('href'))).toEqual([
+      '/sessoes/2026-11-20-iara/contar',
+      '/sessoes/2026-11-20-iara/contar',
+    ])
   })
+})
 
+/** The Session's page under a router at `path`; gives the router. */
+function renderSessionAt(path: string, loader?: () => Promise<void> | void) {
+  const router = createRouter({
+    routeTree: createRootRoute({
+      ...(loader ? { loader } : {}),
+      component: () => <SessionScreen page={PAGE} />,
+    }),
+    history: createMemoryHistory({ initialEntries: [path] }),
+  })
+  render(<RouterProvider router={router} />)
+  return router
+}
+
+/** The acrescentar's box. */
+const additionBox = () =>
+  screen.getByRole<HTMLTextAreaElement>('textbox', { name: /Acrescentar/ })
+
+describe('a Session’s page, a refused reply', () => {
   it('keeps a refused Cartaz reply ready to retry and clears it when saved', async () => {
     const path = '/sessoes/2026-11-20-iara'
     const pending = Promise.withResolvers<Response>()
@@ -171,20 +214,10 @@ describe('a Session’s page', () => {
       value: () => {},
     })
     try {
-      const router = createRouter({
-        routeTree: createRootRoute({
-          component: () => <SessionScreen page={PAGE} />,
-        }),
-        history: createMemoryHistory({ initialEntries: [path] }),
-      })
-      render(<RouterProvider router={router} />)
+      const router = renderSessionAt(path)
       const user = userEvent.setup()
-      const addition = () =>
-        screen.getByRole<HTMLTextAreaElement>('textbox', {
-          name: /Acrescentar/,
-        })
       await screen.findByRole('textbox', { name: /Acrescentar/ })
-      await user.type(addition(), 'na próxima vez')
+      await user.type(additionBox(), 'na próxima vez')
       await user.click(screen.getByRole('button', { name: 'Enviar' }))
       expect(
         screen
@@ -197,12 +230,12 @@ describe('a Session’s page', () => {
         SESSIONS.session.refusals.indisponivel,
       )
       expect(router.state.location.href).toBe(path)
-      expect(addition().value).toBe('na próxima vez')
+      expect(additionBox().value).toBe('na próxima vez')
 
       await user.click(screen.getByRole('button', { name: 'Enviar' }))
       await waitFor(() => {
         expect(router.state.location.href).toBe(`${path}?feito=anotada`)
-        expect(addition().value).toBe('')
+        expect(additionBox().value).toBe('')
         expect(screen.queryByRole('alert')).toBeNull()
       })
     } finally {
@@ -211,7 +244,9 @@ describe('a Session’s page', () => {
       else Reflect.deleteProperty(Element.prototype, 'scrollIntoView')
     }
   })
+})
 
+describe('a Session’s page, the marks and the Link da Sessão', () => {
   it('keeps the Cartaz marks until the new Cartaz is in', async () => {
     const path = '/sessoes/2026-11-20-iara'
     vi.stubGlobal('scrollTo', vi.fn())
@@ -227,28 +262,19 @@ describe('a Session’s page', () => {
       if (first) first = false
       else return reload.promise
     })
-    const router = createRouter({
-      routeTree: createRootRoute({
-        loader: loads,
-        component: () => <SessionScreen page={PAGE} />,
-      }),
-      history: createMemoryHistory({ initialEntries: [path] }),
-    })
-    render(<RouterProvider router={router} />)
+    renderSessionAt(path, loads)
     const user = userEvent.setup()
-    const addition = () =>
-      screen.getByRole<HTMLTextAreaElement>('textbox', { name: /Acrescentar/ })
     await screen.findByRole('textbox', { name: /Acrescentar/ })
-    await user.type(addition(), 'na próxima vez')
+    await user.type(additionBox(), 'na próxima vez')
     expect(localStorage.length).toBe(1)
 
     await user.click(screen.getByRole('button', { name: 'Enviar' }))
 
     await waitFor(() => expect(loads).toHaveBeenCalledTimes(2))
-    expect(addition().value).toBe('na próxima vez')
+    expect(additionBox().value).toBe('na próxima vez')
     expect(localStorage.length).toBe(1)
     reload.resolve()
-    await waitFor(() => expect(addition().value).toBe(''))
+    await waitFor(() => expect(additionBox().value).toBe(''))
     expect(localStorage.length).toBe(0)
   })
 
@@ -261,7 +287,9 @@ describe('a Session’s page', () => {
     expect(await navigator.clipboard.readText()).toBe(sessionLink)
     expect(screen.getByRole('status').textContent).toBe('Link copiado')
   })
+})
 
+describe('a Session’s page, the Link da Sessão by hand and what the reply left', () => {
   it('shows the Link da Sessão to select when the clipboard refuses it', async () => {
     const user = userEvent.setup()
     const sessionLink = 'https://cinema.example/participar?sessao=x&chave=y'
@@ -298,8 +326,9 @@ describe('a Session’s page', () => {
         refusal="regerar"
       />,
     )
-    const [regenerated, warnings, addition] = screen.getAllByRole('status')
-    expect(regenerated!.textContent).toBe(SESSIONS.session.notices.regerada)
+    // The redo is said by the Cartaz's own line ("Refeito: ..."), #272.
+    expect(screen.getByText(/^Refeito:/)).toBeTruthy()
+    const [warnings, addition] = screen.getAllByRole('status')
     expect(warnings!.textContent).toBe(
       `${SESSIONS.session.warnings}só 2 passaram nas Restrições`,
     )
@@ -311,7 +340,9 @@ describe('a Session’s page', () => {
       SESSIONS.session.refusals.regerar,
     )
   })
+})
 
+describe('a Session’s page, the acrescentar', () => {
   it('says what the acrescentar put in the request and what it did not understand', () => {
     render(
       <SessionScreen
@@ -337,10 +368,10 @@ describe('a Session’s page', () => {
         notice="regerada"
       />,
     )
-    const [, addition] = screen.getAllByRole('status')
+    const [addition] = screen.getAllByRole('status')
+    // The reading as a sentence (#272).
     expect(addition!.textContent).toBe(
-      'Você acrescentou “chegou a Iara e o Zeca, parecido com Reprise e Amélie”. ' +
-        'Acrescentei ao pedido Presente: Iara, até 1h50. ' +
+      'Entendi: Iara, até 1h50. ' +
         'Deixei “Zeca” só como anotação. ' +
         '“Reprise” pode ser Reprise (2011) ou Reprise (2004). Diga qual na próxima vez. ' +
         '“Amélie” não está no Catálogo. ' +
@@ -350,7 +381,9 @@ describe('a Session’s page', () => {
       '/pessoas',
     )
   })
+})
 
+describe('a Session’s page, an acrescentar only noted and a told Session', () => {
   it('says an acrescentar with nothing understood was only noted', () => {
     render(
       <SessionScreen
@@ -374,21 +407,96 @@ describe('a Session’s page', () => {
     )
   })
 
-  it('says a closed Session is closed, and what they saw', () => {
+  it('opens a told Session with the tape given back, and folds the shelf', () => {
     render(
       <SessionScreen
         page={{
           ...PAGE,
           session: CLOSED,
           billboard: { ...MODEL, open: false },
+          satisfaction: ['satisfação de Quim nas últimas Sessões: 40%'],
         }}
       />,
     )
-    expect(screen.getByText('Fechada.')).toBeTruthy()
-    expect(screen.getByText('Viram Pequenos Milagres.')).toBeTruthy()
+    const tape = screen.getByRole('region', { name: SESSIONS.session.returned })
+    expect(tape.textContent).toContain('Pequenos Milagres')
+    expect(tape.textContent).toContain('satisfação de Quim')
+    expect(
+      within(tape)
+        .getByRole('link', { name: SESSIONS.session.again })
+        .getAttribute('href'),
+    ).toBe('/sessoes/nova?presentes=quim')
     expect(
       screen.queryByRole('link', { name: SESSIONS.list.feedback }),
     ).toBeNull()
+  })
+})
+
+describe('a Session’s page, a told Session', () => {
+  it('a told Session with its Reações: each one on the tape, the rest of the shelf folded', () => {
+    render(
+      <SessionScreen
+        page={{
+          ...PAGE,
+          session: {
+            ...CLOSED,
+            chosen: { id: 'tt9000104', title: 'As Horas Lentas' },
+          },
+          billboard: TOLD,
+        }}
+      />,
+    )
+    const tape = screen.getByRole('region', { name: SESSIONS.session.returned })
+    expect(within(tape).getAllByRole('listitem')).toHaveLength(2)
+    expect(screen.getByText(SESSIONS.session.others(1))).toBeTruthy()
+    expect(screen.getAllByRole('article')).toHaveLength(1)
+  })
+
+  it('a told Session where nothing was seen says so, over the whole shelf', () => {
+    render(
+      <SessionScreen
+        page={{
+          ...PAGE,
+          session: { ...CLOSED, chosen: null },
+          billboard: { ...MODEL, open: false },
+        }}
+      />,
+    )
+    expect(screen.getByText(SESSIONS.session.returnedNothing)).toBeTruthy()
+    expect(screen.getByText(SESSIONS.session.shelf)).toBeTruthy()
+    expect(screen.getAllByRole('article')).toHaveLength(2)
+  })
+})
+
+describe('a Session’s page, the reading and refusals', () => {
+  it('asks in the bar about the words the reading did not take, until the Dono goes to fix them', async () => {
+    const user = userEvent.setup()
+    const scrolled = vi.fn<() => void>()
+    Object.defineProperty(Element.prototype, 'scrollIntoView', {
+      configurable: true,
+      value: scrolled,
+    })
+    try {
+      render(<SessionScreen page={PAGE} refusal="leitura" words={['xpto']} />)
+      // The bar asks; no refusal is alerted above.
+      expect(screen.getByRole('alert').textContent).toContain(
+        BILLBOARD.reply.unread(['xpto']),
+      )
+      await user.click(
+        screen.getByRole('button', { name: BILLBOARD.reply.edit }),
+      )
+      expect(screen.queryByRole('alert')).toBeNull()
+      expect(scrolled).toHaveBeenCalled()
+    } finally {
+      Reflect.deleteProperty(Element.prototype, 'scrollIntoView')
+    }
+  })
+
+  it('a reading refusal with no words left is an alert', () => {
+    render(<SessionScreen page={PAGE} refusal="leitura" />)
+    expect(screen.getByRole('alert').textContent).toBe(
+      SESSIONS.session.refusals.leitura,
+    )
   })
 
   it('says when the Cartaz could not be made, when there is no such Session, or the engine cannot run', () => {
@@ -398,9 +506,14 @@ describe('a Session’s page', () => {
     )
     cleanup()
     render(<SessionScreen page="unknown" />)
-    expect(screen.getByRole('alert').textContent).toContain(
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
       SESSIONS.session.unknown,
     )
+    expect(
+      screen
+        .getByRole('link', { name: SESSIONS.session.toList })
+        .getAttribute('href'),
+    ).toBe('/sessoes')
     cleanup()
     render(<SessionScreen page={null} />)
     expect(screen.getByRole('alert').textContent).toContain(

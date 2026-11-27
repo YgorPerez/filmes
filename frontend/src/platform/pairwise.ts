@@ -26,15 +26,19 @@ import {
   type SessionLinkSearch,
 } from '#/content/session-link-address'
 import { formPoster, seeOther } from './form-post'
-import { resolveSessionLink } from './session-link'
+import { cardsById, resolveSessionLink } from './session-link'
 import { fromThisSite } from './same-site'
+
+/** A film of a pair, with its cover (#275), or null without one. The
+ * title stays the Catálogo's, the one the Dono reads the answers by. */
+export type PairFilm = FilmRef & { poster: string | null }
 
 /** What `/participar/perguntas` shows: how many she answered, of how many,
  * and the next pair (null once all are answered). */
 export type PairwisePage = {
   answered: number
   total: number
-  pair: readonly [FilmRef, FilmRef] | null
+  pair: readonly [PairFilm, PairFilm] | null
 }
 
 function logEngineError({ output }: { output: ErrorOutput }): void {
@@ -57,7 +61,18 @@ export async function pairwisePage(
     return null
   }
   const { answered, pairs } = asked.output
-  return { answered, total: answered + pairs.length, pair: pairs[0] ?? null }
+  const total = answered + pairs.length
+  const next = pairs[0]
+  if (!next) return { answered, total, pair: null }
+  const byId = await cardsById(
+    engine,
+    next.map((film) => film.id),
+  )
+  const withCover = (film: FilmRef): PairFilm => {
+    const card = byId.get(film.id)
+    return { ...film, poster: card?.poster ?? null }
+  }
+  return { answered, total, pair: [withCover(next[0]), withCover(next[1])] }
 }
 
 const field = (form: FormData, name: string) => {

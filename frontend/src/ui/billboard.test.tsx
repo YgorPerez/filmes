@@ -4,11 +4,17 @@
 // top) and test_cartaz_guarda.py in the browser (the marks come back after
 // a reload, and without storage the Cartaz still works, saying nothing),
 // plus the text the marks make, the same `answerBillboard` reads.
-import { cleanup, render, screen, within } from '@testing-library/react'
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { Billboard } from './billboard'
-import { CHOSEN_OUTSIDE, MODEL } from './billboard.fixture'
+import { CHOSEN_OUTSIDE, CLOSED, MODEL } from './billboard.fixture'
 import { parseMarks } from './billboard-marks'
 import { BILLBOARD } from './billboard.copy'
 
@@ -82,7 +88,9 @@ describe('the Cartaz shows', () => {
     )
     expect(within(again!).getAllByRole('article')).toEqual([cards()[1]])
   })
+})
 
+describe('the Cartaz shows, the Aposta and the shelf label', () => {
   it('a Session from before the Motivos: the cards with no section, as before', () => {
     render(<Billboard billboard={{ ...MODEL, sections: [] }} />)
     expect(cards().some((c) => c.closest('section') !== null)).toBe(false)
@@ -118,7 +126,9 @@ describe('the Cartaz shows', () => {
       'Saiu da prateleira: Sessão Maldita (Iara já viu)',
     )
   })
+})
 
+describe('the Cartaz shows, the header and the trailer', () => {
   it('the header: the w500 poster, the IMDb chip, the synopsis', () => {
     render(<Billboard billboard={MODEL} />)
     const horas = card(1)
@@ -136,8 +146,9 @@ describe('the Cartaz shows', () => {
     expect(horas.getByText('Mistério')).toBeTruthy()
     const sal = card(2)
     expect(sal.queryByRole('img', { name: /^Capa/ })).toBeNull()
+    // No rating says so, never a chip that reads cut (#272).
     expect(sal.getByRole('link', { name: /IMDb/ }).textContent).toBe(
-      'IMDb · 870 votos',
+      'IMDb: sem nota · 870 votos',
     )
   })
 
@@ -151,7 +162,9 @@ describe('the Cartaz shows', () => {
     expect(document.querySelector('iframe')).toBeNull()
     expect(card(2).queryByRole('link', { name: 'trailer' })).toBeNull()
   })
+})
 
+describe('the Cartaz shows, shared Evidence and the Nota prevista', () => {
   it('a shared Evidence on one line, opened by the names, and who has no Fato on hers, with no Força', () => {
     render(<Billboard billboard={MODEL} />)
     const why = (n: number) =>
@@ -197,7 +210,9 @@ describe('the Cartaz shows', () => {
       card(1).getByRole('button', { name: 'Bruno: 8,3 de 10' }).textContent,
     ).toBe('8,3')
   })
+})
 
+describe('the Cartaz shows, Evidence, dots and the cover', () => {
   it('an Evidence about no Presente of the Cartaz, without a name before it', () => {
     const [, salt] = MODEL.films
     const film = {
@@ -246,18 +261,151 @@ describe('the Cartaz shows', () => {
       screen.queryByRole('button', { name: BILLBOARD.reply.send }),
     ).toBeNull()
   })
+})
 
+describe('the Cartaz shows, the chosen film', () => {
   it('a chosen film without a card in a block of its own, with each Reação', () => {
     render(<Billboard billboard={CHOSEN_OUTSIDE} />)
     const block = within(
       screen.getByRole('region', { name: 'Filme escolhido' }),
     )
     expect(block.getByText('Curta da Madrugada (2010)')).toBeTruthy()
+    // Each line opens with her avatar, whose initial a screen reader skips.
     expect(block.getAllByRole('listitem').map((li) => li.textContent)).toEqual([
-      'Bruno: achou 8',
-      'Iara: não gostou',
+      'BBruno: deu 8 de 10',
+      'IIara: não gostou',
     ])
     expect(cards()).toHaveLength(2)
+  })
+
+  it('the chosen film’s card with each Reação, under a section or alone', () => {
+    render(<Billboard billboard={CLOSED} />)
+    const reactions = () =>
+      card(1)
+        .getByRole('list', { name: 'Filme escolhido' })
+        .querySelectorAll('li')
+    expect([...reactions()].map((li) => li.textContent)).toEqual([
+      'BBruno: previsto 8,3 · deu 6 de 10',
+      'IIara: gostou',
+    ])
+    expect(
+      card(1).getByRole('heading', { level: 4, name: 'Filme escolhido' }),
+    ).toBeTruthy()
+    cleanup()
+    render(<Billboard billboard={{ ...CLOSED, sections: [] }} />)
+    expect(
+      card(1).getByRole('heading', { level: 3, name: 'Filme escolhido' }),
+    ).toBeTruthy()
+  })
+})
+
+describe('the Cartaz shows, a Reação from outside', () => {
+  it('a Reação of someone not on the Cartaz, by her slug', () => {
+    render(
+      <Billboard
+        billboard={{
+          ...CHOSEN_OUTSIDE,
+          chosen: {
+            ...CHOSEN_OUTSIDE.chosen!,
+            reactions: [
+              {
+                person: 'teo',
+                predicted: '7',
+                rating: null,
+                reaction: 'neutral',
+              },
+            ],
+          },
+        }}
+      />,
+    )
+    const block = within(
+      screen.getByRole('region', { name: 'Filme escolhido' }),
+    )
+    expect(block.getByRole('listitem').textContent).toBe(
+      'teo: previsto 7 · neutro',
+    )
+  })
+})
+
+describe('the Cartaz shows, what was marked and the awards', () => {
+  it('what the Dono marked before, the awards, a cautious Aposta, and a film whose why is its section', () => {
+    const [hours, salt] = MODEL.films
+    render(
+      <Billboard
+        billboard={{
+          ...MODEL,
+          open: false,
+          films: [
+            {
+              ...hours!,
+              awards: ['Oscar de melhor filme'],
+              notes: { stars: 3, comments: ['lindo'] },
+            },
+            {
+              ...salt!,
+              poster: 'https://image.tmdb.org/t/p/w500/sal.jpg',
+              lines: [],
+              withoutFact: ['teo'],
+              notes: { stars: null, comments: ['curto'] },
+            },
+          ],
+        }}
+      />,
+    )
+    expect(card(1).getByText('Oscar de melhor filme')).toBeTruthy()
+    expect(card(1).getByRole('img', { name: '3 de 5 estrelas' })).toBeTruthy()
+    expect(card(1).getByText('lindo')).toBeTruthy()
+    expect(card(2).queryByRole('img', { name: /estrelas/u })).toBeNull()
+    expect(card(2).getByText('curto')).toBeTruthy()
+    expect(card(2).getByText(BILLBOARD.card.sectionWhy)).toBeTruthy()
+    expect(
+      card(2)
+        .getByRole('img', { name: 'Capa de Sal & Ferrugem' })
+        .getAttribute('loading'),
+    ).toBe('lazy')
+    cleanup()
+    render(
+      <Billboard
+        billboard={{
+          ...MODEL,
+          films: [{ ...salt!, cautiousBetReason: 'Aposta mais exigente' }],
+        }}
+      />,
+    )
+    expect(card(1).getByText('Aposta mais exigente')).toBeTruthy()
+    expect(card(1).queryByText(BILLBOARD.card.sectionWhy)).toBeNull()
+  })
+})
+
+describe('the Cartaz shows, section lines and no film', () => {
+  it('the lines every film of a section has, said once under its title', () => {
+    const [hours, salt] = MODEL.films
+    const shared = hours!.lines[0]!
+    render(
+      <Billboard
+        billboard={{
+          ...MODEL,
+          films: [
+            { ...hours!, reactions: [] },
+            { ...salt!, lines: [...salt!.lines, shared] },
+          ],
+          sections: [
+            {
+              kind: 'entity',
+              title: 'Porque gostam de Helena Prado',
+              again: false,
+              films: [hours!.id, salt!.id],
+            },
+          ],
+        }}
+      />,
+    )
+    const together = screen.getByRole('list', { name: BILLBOARD.shared })
+    expect(together.textContent).toContain(shared.text)
+    expect(card(1).queryByText(shared.text)).toBeNull()
+    expect(card(2).getByText('deu 5 a Maré Baixa')).toBeTruthy()
+    expect(card(1).queryByRole('list', { name: 'Filme escolhido' })).toBeNull()
   })
 
   it('that nothing passed the Restrições', () => {
@@ -302,7 +450,9 @@ describe('the marks', () => {
     // Trocar stamps the poster.
     expect(card(2).getAllByText(BILLBOARD.card.swapStamp)).toHaveLength(2)
   })
+})
 
+describe('the marks, Climas and Todos', () => {
   it('the Clima chips start at the version’s and ask for another in the text', async () => {
     const user = userEvent.setup()
     render(<Billboard billboard={MODEL} action="/x" />)
@@ -316,7 +466,8 @@ describe('the marks', () => {
 
     await user.click(chip('tenso'))
     expect(text()).toBe('#cartaz 2026-11-20-iara v2\nclima: leve, tenso\n')
-    expect(screen.getByText('outro Clima')).toBeTruthy()
+    // The bar says the Clima in bold, since it redoes the whole list.
+    expect(screen.getByText('Clima: leve, tenso').tagName).toBe('STRONG')
 
     await user.click(chip('leve'))
     await user.click(chip('tenso'))
@@ -345,7 +496,9 @@ describe('the marks', () => {
     await user.click(card(1).getByRole('button', { name: /Todos/ }))
     expect(text()).toBe('#cartaz 2026-11-20-iara v2\n')
   })
+})
 
+describe('the marks, comments and stars', () => {
   it('the comment opens from Comentar, focused, and stays open with text', async () => {
     const user = userEvent.setup()
     render(<Billboard billboard={MODEL} action="/x" />)
@@ -384,14 +537,74 @@ describe('Enviar and Copiar pro chat', () => {
     expect(
       within(box).queryByRole('button', { name: BILLBOARD.reply.send }),
     ).toBeNull()
+    // The web sends the reply itself: no Copiar pro chat there (#272).
     expect(
-      within(box).getByRole('button', { name: BILLBOARD.reply.copy }),
-    ).toBeTruthy()
+      within(box).queryByRole('button', { name: BILLBOARD.reply.copy }),
+    ).toBeNull()
     expect(
       box.compareDocumentPosition(bar) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy()
+    expect(within(bar).getByText(BILLBOARD.reply.hint)).toBeTruthy()
     await user.click(card(2).getByRole('button', { name: 'Trocar' }))
     expect(within(bar).getByText('1 Trocar')).toBeTruthy()
+  })
+
+  it('a poster that does not load gives way to the title', () => {
+    render(<Billboard billboard={MODEL} action="/x" />)
+    const poster = card(1).getByRole('img', { name: 'Capa de As Horas Lentas' })
+    fireEvent.error(poster)
+    expect(card(1).queryByRole('img', { name: /^Capa/ })).toBeNull()
+    expect(card(1).getAllByText('As Horas Lentas').length).toBeGreaterThan(1)
+  })
+
+  it('a poster that failed before the page came alive gives way to the title', () => {
+    const complete = Object.getOwnPropertyDescriptor(
+      HTMLImageElement.prototype,
+      'complete',
+    )
+    Object.defineProperty(HTMLImageElement.prototype, 'complete', {
+      configurable: true,
+      get: () => true,
+    })
+    try {
+      render(<Billboard billboard={MODEL} action="/x" />)
+      expect(card(1).queryByRole('img', { name: /^Capa/ })).toBeNull()
+    } finally {
+      if (complete)
+        Object.defineProperty(HTMLImageElement.prototype, 'complete', complete)
+    }
+  })
+})
+
+describe('Enviar and Copiar pro chat, the status and the bar', () => {
+  it('a status line goes with the next mark, so it never contradicts the summary', async () => {
+    const user = userEvent.setup()
+    render(<Billboard billboard={MODEL} action="/x" />)
+    await user.click(screen.getByRole('button', { name: BILLBOARD.reply.send }))
+    expect(screen.getByRole('status').textContent).toBe(BILLBOARD.reply.nothing)
+    await user.click(card(2).getByRole('button', { name: 'Trocar' }))
+    expect(screen.queryByRole('status')).toBeNull()
+  })
+
+  it('an acrescentar the reading did not take is asked in the bar before anything goes', async () => {
+    const user = userEvent.setup()
+    const onEdit = vi.fn<() => void>()
+    render(
+      <Billboard
+        billboard={MODEL}
+        action="/x"
+        unread={{ words: ['nada de terror'], onEdit }}
+      />,
+    )
+    const bar = within(
+      screen.getByRole('region', { name: BILLBOARD.reply.bar }),
+    )
+    expect(bar.getByRole('alert').textContent).toContain('“nada de terror”')
+    const anyway = bar.getByRole('button', { name: BILLBOARD.reply.sendAnyway })
+    expect(anyway.getAttribute('name')).toBe('confirmar')
+    expect(anyway.getAttribute('value')).toBe('sim')
+    await user.click(bar.getByRole('button', { name: BILLBOARD.reply.edit }))
+    expect(onEdit).toHaveBeenCalled()
   })
 
   it('a closed Session has no bar', () => {
@@ -407,9 +620,21 @@ describe('Enviar and Copiar pro chat', () => {
     render(<Billboard billboard={MODEL} onSend={onSend} />)
     await user.click(screen.getByRole('button', { name: BILLBOARD.reply.send }))
     expect(screen.getByRole('status').textContent).toBe(BILLBOARD.reply.nothing)
-    await user.click(screen.getByRole('button', { name: BILLBOARD.reply.copy }))
-    expect(screen.getByRole('status').textContent).toBe(BILLBOARD.reply.nothing)
     expect(onSend).not.toHaveBeenCalled()
+    // A mark makes it stale: it goes.
+    await user.click(card(1).getByRole('button', { name: 'Trocar' }))
+    expect(screen.queryByRole('status')).toBeNull()
+  })
+})
+
+describe('Enviar and Copiar pro chat, in the view and on the web', () => {
+  it('in the MCP Apps view, Copiar waits for an Enviar that could not go', () => {
+    render(
+      <Billboard billboard={MODEL} onSend={vi.fn<(t: string) => void>()} />,
+    )
+    expect(
+      screen.queryByRole('button', { name: BILLBOARD.reply.copy }),
+    ).toBeNull()
   })
 
   it('on the web, the empty form is not posted and says so', async () => {
@@ -429,16 +654,32 @@ describe('Enviar and Copiar pro chat', () => {
       '#cartaz 2026-11-20-iara v2\n1 tt9000104 · trocar\n',
     )
   })
+})
 
+describe('Enviar and Copiar pro chat, the clipboard', () => {
   it('Copiar puts the text on the clipboard, or selected in a box', async () => {
     const user = userEvent.setup()
     const writeText = vi
       .spyOn(navigator.clipboard, 'writeText')
       .mockResolvedValueOnce(undefined)
       .mockRejectedValueOnce(new Error('negado'))
-    render(<Billboard billboard={MODEL} action="/x" />)
+    // Copiar shows only when the host cannot take the reply (#277).
+    render(
+      <Billboard
+        billboard={MODEL}
+        onSend={() =>
+          Promise.resolve({ message: 'sem envio', sent: false, copy: true })
+        }
+      />,
+    )
     await user.click(card(2).getByRole('button', { name: 'Trocar' }))
-    const copy = screen.getByRole('button', { name: BILLBOARD.reply.copy })
+    expect(
+      screen.queryByRole('button', { name: BILLBOARD.reply.copy }),
+    ).toBeNull()
+    await user.click(screen.getByRole('button', { name: BILLBOARD.reply.send }))
+    const copy = await screen.findByRole('button', {
+      name: BILLBOARD.reply.copy,
+    })
     await user.click(copy)
     expect(writeText).toHaveBeenCalledWith(
       '#cartaz 2026-11-20-iara v2\n2 tt9000105 · trocar\n',
@@ -452,6 +693,109 @@ describe('Enviar and Copiar pro chat', () => {
     )
     expect(document.activeElement).toBe(box)
     writeText.mockRestore()
+  })
+})
+
+describe('the inline card', () => {
+  const expand = () => {}
+
+  it('a closed Session opens the whole Cartaz; a first version says no change', () => {
+    render(
+      <Billboard
+        billboard={{ ...MODEL, open: false, version: 1 }}
+        layout="inline"
+        onExpand={expand}
+      />,
+    )
+    expect(
+      screen.getByRole('button', { name: BILLBOARD.view.open }),
+    ).toBeTruthy()
+    expect(screen.queryByText(/^Saiu:/u)).toBeNull()
+  })
+
+  it('with no film, says why and offers nothing to mark', () => {
+    render(
+      <Billboard
+        billboard={{ ...MODEL, films: [] }}
+        layout="inline"
+        onExpand={expand}
+      />,
+    )
+    expect(
+      screen.getByText(BILLBOARD.view.empty(MODEL.request.parts)),
+    ).toBeTruthy()
+    expect(screen.queryByRole('button')).toBeNull()
+  })
+
+  it('the marks made before go with Enviar, and Copiar comes when it could not', async () => {
+    const user = userEvent.setup()
+    render(<Billboard billboard={MODEL} action="/x" />)
+    await user.click(card(2).getByRole('button', { name: 'Trocar' }))
+    cleanup()
+
+    const onSend = vi.fn<
+      (
+        text: string,
+      ) => Promise<{ message: string; sent: boolean; copy: boolean }>
+    >(() => Promise.resolve({ message: 'Não deu.', sent: false, copy: true }))
+    render(
+      <Billboard
+        billboard={MODEL}
+        layout="inline"
+        onExpand={expand}
+        onSend={onSend}
+      />,
+    )
+    expect(screen.getByText('Trocar: Sal & Ferrugem')).toBeTruthy()
+    await user.click(screen.getByRole('button', { name: BILLBOARD.reply.send }))
+    expect(onSend).toHaveBeenCalledOnce()
+    expect(
+      await screen.findByRole('button', { name: BILLBOARD.reply.copy }),
+    ).toBeTruthy()
+  })
+})
+
+describe('in the MCP Apps view without fullscreen', () => {
+  const onSend = () => {}
+
+  it('with no film, says what to ask in the chat', () => {
+    render(<Billboard billboard={{ ...MODEL, films: [] }} onSend={onSend} />)
+    expect(
+      screen.getByText(BILLBOARD.view.empty(MODEL.request.parts)),
+    ).toBeTruthy()
+  })
+
+  it('a long shelf is capped, with the way to see it whole', async () => {
+    const sizes = ['scrollHeight', 'clientHeight'].map(
+      (name) =>
+        [
+          name,
+          Object.getOwnPropertyDescriptor(HTMLElement.prototype, name),
+        ] as const,
+    )
+    Object.defineProperty(HTMLElement.prototype, 'scrollHeight', {
+      configurable: true,
+      get: () => 2000,
+    })
+    Object.defineProperty(HTMLElement.prototype, 'clientHeight', {
+      configurable: true,
+      get: () => 880,
+    })
+    try {
+      const user = userEvent.setup()
+      render(<Billboard billboard={MODEL} onSend={onSend} />)
+      await user.click(
+        screen.getByRole('button', { name: BILLBOARD.view.seeAll }),
+      )
+      expect(
+        screen.queryByRole('button', { name: BILLBOARD.view.seeAll }),
+      ).toBeNull()
+      expect(cards()).toHaveLength(2)
+    } finally {
+      for (const [name, descriptor] of sizes)
+        if (descriptor)
+          Object.defineProperty(HTMLElement.prototype, name, descriptor)
+    }
   })
 })
 
@@ -513,9 +857,9 @@ describe('the marks kept in the browser', () => {
   })
 })
 
-describe('parseMarks', () => {
-  const store = (value: string) => value
+const store = (value: string) => value
 
+describe('parseMarks', () => {
   it('keeps only what reads, for the films and Presentes of the Cartaz', () => {
     const marks = parseMarks(
       store(
@@ -569,7 +913,9 @@ describe('parseMarks', () => {
     expect(marks([])).toEqual([])
     expect(marks('leve')).toBeNull()
   })
+})
 
+describe('parseMarks, what does not read', () => {
   it('gives none for what does not read', () => {
     const none = { addition: '', moods: null, films: {} }
     expect(parseMarks(store('{'), MODEL)).toEqual(none)

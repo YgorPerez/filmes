@@ -1,25 +1,45 @@
-import type {
-  ImportNotice,
-  ImportRefusal,
-  QueueNotice,
-  QueueRefusal,
-} from '#/content/import-action'
+import type { ImportNotice, ImportRefusal } from '#/content/import-action'
+import { shortDate } from './dates'
 
 const count = (n: number, one: string, many: string) =>
   n === 1 ? `1 ${one}` : `${n} ${many}`
 
-const facts = (n: number) =>
-  n === 0 ? 'nenhum Fato novo' : count(n, 'Fato novo', 'Fatos novos')
+/** What an import gave, as its notice counts it: the Notas and the Já
+ * vistos, the two things she knows by name. */
+type Gave = { facts: number; ratings: number; seen: number; outside?: number }
+
+const gave = ({ facts, ratings, seen }: Gave) => {
+  const parts = [
+    ratings > 0 && count(ratings, 'Nota nova', 'Notas novas'),
+    seen > 0 && count(seen, 'Já visto novo', 'Já vistos novos'),
+  ].filter((part) => part !== false)
+  if (parts.length > 0) return `entraram ${parts.join(' e ')}`
+  return facts === 0
+    ? 'nada novo, esses filmes já estavam aqui'
+    : 'nenhuma Nota nem Já visto novo, só o resto do que ele trazia'
+}
+
+const left = (outside = 0) =>
+  outside === 0
+    ? ''
+    : ` ${count(outside, 'filme ficou', 'filmes ficaram')} de fora: o Catálogo do filmes não tem.`
 
 const UNAVAILABLE =
   'Não deu para abrir os imports: o site está com um problema, e ele ficou registrado no log do servidor.'
 
 const KINDS: Record<string, string> = {
-  letterboxd: 'Arquivo do Letterboxd',
-  'letterboxd-rss': 'RSS do Letterboxd',
-  trakt: 'Arquivo do Trakt',
+  letterboxd: 'ZIP do Letterboxd',
+  'letterboxd-rss': 'Perfil do Letterboxd',
+  trakt: 'ZIP do Trakt',
+  'trakt-api': 'Lido do Trakt',
   imdb: 'CSV do IMDb',
   simkl: 'Backup do Simkl',
+}
+
+/** The Letterboxd user of an RSS import's address, `@nome`. */
+export const rssUser = (address: string) => {
+  const user = /letterboxd\.com\/([A-Za-z0-9_]+)/i.exec(address)?.[1]
+  return user === undefined ? null : `@${user}`
 }
 
 export const PERSON_IMPORTS = {
@@ -27,181 +47,178 @@ export const PERSON_IMPORTS = {
   back: (name: string, own: boolean) => (own ? 'Meu gosto' : name),
   title: (name: string, own: boolean) =>
     own ? 'Importar Notas' : `Importar as Notas de ${name}`,
+  lead: (name: string, own: boolean) =>
+    own
+      ? 'Traga o que você já viu e as Notas que deu em outro site. O filmes guarda o arquivo e lê os filmes dele.'
+      : `Traga o que ${name} já viu e as Notas que deu em outro site. O filmes guarda o arquivo e lê os filmes dele.`,
   unknown: 'Nenhuma Pessoa com esse nome no repo de dados.',
   unavailable: UNAVAILABLE,
   notices: {
-    letterboxd: (n: number) => `Arquivo do Letterboxd importado: ${facts(n)}.`,
-    rss: (n: number) => `RSS do Letterboxd importado: ${facts(n)}.`,
-    trakt: (n: number, outside = 0) =>
-      `Arquivo do Trakt importado: ${facts(n)}.` +
-      (outside === 0
-        ? ''
-        : ` ${count(outside, 'filme ficou', 'filmes ficaram')} de fora: o Catálogo não tem.`),
-    imdb: (n: number, outside = 0) =>
-      `CSV do IMDb importado: ${facts(n)}.` +
-      (outside === 0
-        ? ''
-        : ` ${count(outside, 'título ficou', 'títulos ficaram')} de fora: o Catálogo não tem.`),
-    simkl: (n: number, outside = 0) =>
-      `Backup do Simkl importado: ${facts(n)}.` +
-      (outside === 0
-        ? ''
-        : ` ${count(outside, 'filme ficou', 'filmes ficaram')} de fora: o Catálogo não tem.`),
-    repetido: (n: number) =>
-      `Esse arquivo já tinha sido importado: ${facts(n)}.`,
-    removido: (n: number) =>
-      n === 0
-        ? 'Import tirado. Nenhum Fato saiu: outro import tinha os mesmos.'
-        : `Import tirado: ${count(n, 'Fato saiu', 'Fatos saíram')}.`,
-  } satisfies Record<ImportNotice, (n: number, outside?: number) => string>,
+    letterboxd: (done: Gave) => `O ZIP do Letterboxd entrou: ${gave(done)}.`,
+    rss: (done: Gave) => `Perfil do Letterboxd lido: ${gave(done)}.`,
+    trakt: (done: Gave) =>
+      `O ZIP do Trakt entrou: ${gave(done)}.${left(done.outside)}`,
+    imdb: (done: Gave) =>
+      `O CSV do IMDb entrou: ${gave(done)}.${left(done.outside)}`,
+    simkl: (done: Gave) =>
+      `O backup do Simkl entrou: ${gave(done)}.${left(done.outside)}`,
+    repetido: () => 'Esse arquivo já tinha entrado antes: nada mudou.',
+    sincronizado: (done: Gave) =>
+      done.facts === 0
+        ? `Trakt lido: nada novo desde a última vez.${left(done.outside)}`
+        : `Trakt lido: ${gave(done)}.${left(done.outside)}`,
+    removido: (done: Gave) =>
+      done.facts === 0
+        ? 'Import tirado. Nada saiu do gosto: outro import trazia o mesmo.'
+        : 'Import tirado: o que só ele trazia saiu do gosto.',
+  } satisfies Record<ImportNotice, (done: Gave) => string>,
   refusals: {
     pedido: 'Faltou um campo, ou um valor não vale. Confira o formulário.',
     arquivo:
-      'Não deu para ler esse arquivo. Envie o ZIP como o Letterboxd, o Trakt ou o Simkl te deu, sem descompactar, ou o CSV do IMDb como ele veio.',
+      'Não deu para ler esse arquivo. Envie o ZIP como o site te deu, sem abrir, ou o CSV do IMDb como ele veio.',
     origem:
-      'Esse arquivo não parece ser do Letterboxd, do Trakt, do IMDb nem do Simkl.',
+      'Esse arquivo não parece ser do Letterboxd, do Trakt, do IMDb nem do Simkl. Confira os passos acima.',
     grande:
       'O arquivo passa de 20 MB. O ZIP do Letterboxd, do Trakt ou do Simkl e o CSV do IMDb costumam ter poucos MB: confira se é o certo.',
     consentimento:
       'Sem o sim da Pessoa, o filmes não lê o diário do Letterboxd. Pergunte e marque a caixa.',
-    rss: 'O Letterboxd não achou esse perfil. Confira o nome no endereço do perfil.',
+    usuario:
+      'Isso não é um nome de perfil do Letterboxd. Use só o nome, que aparece no endereço do perfil (letterboxd.com/nome), ou o endereço inteiro.',
+    rss: 'O Letterboxd não tem um perfil com esse nome. Confira como ele aparece no endereço do perfil (letterboxd.com/nome).',
     fonte: 'O Letterboxd não respondeu agora. Tente de novo daqui a pouco.',
     item: 'Esse import já não está no arquivo dela.',
+    'trakt-usuario':
+      'O Trakt não tem um perfil com esse nome. Use o nome que aparece no endereço do perfil (trakt.tv/users/nome).',
+    'trakt-privado':
+      'Esse perfil do Trakt é privado. Torne-o público no Trakt, ou conecte a conta (só a própria Pessoa pode conectar).',
+    'trakt-sem':
+      'Ainda não há Trakt para ler: conecte a conta ou escreva o nome do perfil público.',
+    'trakt-off':
+      'Este site ainda não lê o Trakt. Use o ZIP do Trakt, em De outro site.',
+    'trakt-fonte': 'O Trakt não respondeu agora. Tente de novo daqui a pouco.',
     indisponivel: 'Não deu para importar agora. Tente de novo daqui a pouco.',
     falha:
       'O site está com um problema, e ele ficou registrado no log do servidor. Tentar de novo não resolve.',
   } satisfies Record<ImportRefusal, string>,
 
+  /** What the imports gave, first once there is any. */
+  results: {
+    title: 'O que já entrou',
+    letterboxd: (films: number) =>
+      `Letterboxd: ${count(films, 'filme', 'filmes')}`,
+    found: 'achados',
+    outside: 'deixados de fora',
+    waiting: 'esperam você',
+    seeOutside: (n: number) =>
+      n === 1 ? 'Ver o filme deixado de fora' : `Ver os ${n} deixados de fora`,
+    trakt: (ratings: number, seen: number) =>
+      `Trakt: ${count(ratings, 'Nota', 'Notas')} e ${count(seen, 'Já visto', 'Já vistos')}`,
+    imdb: (ratings: number) => `IMDb: ${count(ratings, 'Nota', 'Notas')}`,
+    simkl: (ratings: number, seen: number) =>
+      `Simkl: ${count(ratings, 'Nota', 'Notas')} e ${count(seen, 'Já visto', 'Já vistos')}`,
+    queued: (n: number) =>
+      n === 1
+        ? '1 filme do Letterboxd espera você confirmar qual é'
+        : `${n} filmes do Letterboxd esperam você confirmar qual é`,
+    queuedLead:
+      'O filmes não achou estes sozinho no Catálogo. Até você confirmar, as Notas deles não contam.',
+    toQueue: 'Resolver agora',
+    again: 'Importar de novo ou de outro site',
+  },
   files: {
     title: 'Arquivos importados',
-    lead: 'Tirar um import tira os Fatos que só ele trazia.',
-    empty: 'Nenhum import ainda.',
+    lead: 'Tirar um import tira as Notas e os Já vistos que só ele trazia.',
     kind: (kind: string) => KINDS[kind] ?? kind,
-    on: (date: string) => `em ${date}`,
+    on: (date: string) => `em ${shortDate(date)}`,
     remove: 'Tirar',
     removeLabel: (original: string) => `Tirar ${original}`,
     removeWarning:
-      'Os Fatos deste arquivo saem do gosto dela. As decisões da fila continuam valendo.',
+      'O que só este arquivo trazia sai do gosto. As decisões da fila continuam valendo.',
     removeConfirm: 'Tirar este import',
     removeBusy: 'Tirando…',
   },
+  /** The guided Letterboxd flow (#270): the ZIP once, the profile after. */
   letterboxd: {
-    title: 'Letterboxd',
-    films: (n: number) =>
-      n === 0 ? 'Nenhum filme importado.' : count(n, 'filme', 'filmes'),
-    resolved: 'Achados no Catálogo',
-    discarded: 'Descartados',
-    paths: {
-      wikidata: 'pelo Wikidata',
-      tmdb: 'pelo TMDB',
-      manual: 'pelo Dono',
+    title: 'Do Letterboxd',
+    lead: 'O Letterboxd não deixa outro site entrar na conta. Então são dois caminhos: o ZIP traz o histórico inteiro, uma vez, e o perfil mantém em dia.',
+    open: {
+      title: 'Abra a página de dados do Letterboxd',
+      text: 'Entre com a conta, pelo navegador do celular ou do computador: o app do Letterboxd não exporta.',
+      href: 'https://letterboxd.com/settings/data/',
+      link: 'Abrir letterboxd.com/settings/data',
     },
-    queued: (n: number) =>
-      count(n, 'filme espera', 'filmes esperam') + ' na fila de resolução',
-    toQueue: 'Abrir a fila',
+    export: {
+      title: 'Toque em “Export your data”',
+      text: 'O Letterboxd baixa na hora um ZIP com o diário, as Notas e a watchlist. Não precisa abrir o ZIP.',
+    },
+    send: {
+      title: 'Envie o ZIP aqui',
+      file: 'ZIP do Letterboxd',
+      wrongType:
+        'Esse não é o ZIP do Letterboxd: ele termina em .zip. Envie como baixou, sem abrir.',
+      submit: 'Importar o ZIP',
+      busy: 'Importando…',
+    },
+    profile: {
+      title: 'Para manter em dia: o perfil',
+      text: 'Depois do ZIP, o filmes lê do perfil público as 50 entradas mais recentes do diário. Volte aqui quando registrar filmes novos.',
+    },
   },
-  trakt: {
-    title: 'Trakt',
-    summary: (ratings: number, seen: number) =>
-      `${count(ratings, 'Nota', 'Notas')} e ${count(seen, 'Já visto', 'Já vistos')} do Trakt.`,
+  rss: {
+    title: 'Perfil do Letterboxd',
+    user: 'Nome do perfil no Letterboxd',
+    userHint: 'como em letterboxd.com/nome',
+    consent: (name: string) =>
+      `${name} concordou que o filmes leia o diário público do Letterboxd e guarde as Notas`,
+    submit: 'Ler o perfil',
+    update: (user: string) => `Atualizar de ${user}`,
+    other: 'Ler outro perfil',
+    busy: 'Lendo o perfil…',
   },
-  imdb: {
-    title: 'IMDb',
-    summary: (ratings: number) => `${count(ratings, 'Nota', 'Notas')} do IMDb.`,
-  },
-  simkl: {
-    title: 'Simkl',
-    summary: (ratings: number, seen: number) =>
-      `${count(ratings, 'Nota', 'Notas')} e ${count(seen, 'Já visto', 'Já vistos')} do Simkl.`,
-  },
-  upload: {
-    title: 'O arquivo do Letterboxd, do Trakt, do IMDb ou do Simkl',
-    file: 'Arquivo que o Letterboxd, o Trakt, o Simkl (ZIP) ou o IMDb (CSV) te deu',
-    /** How to download the file, one line per service: the service's name
-     * links to where it is exported. */
-    how: [
-      {
-        service: 'Letterboxd',
-        href: 'https://letterboxd.com/settings/data/',
-        steps: 'Settings › Data › Export your data.',
-      },
+  /** The other services, behind the Letterboxd flow. */
+  other: {
+    title: 'De outro site',
+    lead: 'Trakt, IMDb ou Simkl: baixe o arquivo no site de cada um, pelo computador, e envie aqui como veio.',
+    file: 'Arquivo do Trakt, do IMDb ou do Simkl',
+    wrongType:
+      'Esse arquivo não é de nenhum deles: o Trakt e o Simkl dão um .zip, e o IMDb um .csv.',
+    how: (service: string) => `Como baixar do ${service}`,
+    services: [
       {
         service: 'Trakt',
         href: 'https://trakt.tv/settings/data',
-        steps: 'Settings › Data › Export.',
+        steps: [
+          'Abra trakt.tv/settings/data, com a conta do Trakt.',
+          'Em “Export”, baixe o ZIP dos dados.',
+          'Envie o ZIP aqui, sem abrir.',
+        ],
       },
       {
         service: 'IMDb',
         href: 'https://www.imdb.com/list/ratings',
-        steps: 'Your Ratings › Export; o CSV fica em Exports.',
+        steps: [
+          'Abra “Your Ratings” no IMDb, com a conta.',
+          'No menu da lista, toque em “Export”; o CSV fica pronto em “Exports”.',
+          'Baixe o CSV e envie aqui.',
+        ],
       },
       {
         service: 'Simkl',
         href: 'https://docs.simkl.org/how-to-use-simkl/advanced-usage/import-export-data/exporting-from-simkl/export-data-formats',
-        steps: 'Apps › Export › “.zip archive with .json file”.',
+        steps: [
+          'No Simkl, abra “Apps” e depois “Export”.',
+          'Escolha “.zip archive with .json file” e baixe.',
+          'Envie o ZIP aqui, sem abrir.',
+        ],
       },
     ],
     submit: 'Importar',
-    /** Importar while its post runs. */
     busy: 'Importando…',
   },
-  rss: {
-    title: 'Ou só o recente, pelo perfil',
-    lead: 'Sem o ZIP, o filmes lê as entradas mais recentes do diário público no Letterboxd. Para o histórico inteiro, use o arquivo acima.',
-    user: 'Perfil no Letterboxd',
-    userHint: 'o nome, @nome ou o endereço do perfil',
-    consent: (name: string) =>
-      `${name} concordou que o filmes leia o diário público do Letterboxd e guarde as Notas`,
-    submit: 'Importar do perfil',
-    busy: 'Lendo o perfil…',
+  /** The file picker: before a file, after one. */
+  picker: {
+    pick: 'Escolher o arquivo',
+    none: 'Nenhum arquivo escolhido',
+    change: 'Tocar para trocar',
   },
-} as const
-
-export const QUEUE = {
-  back: 'Voltar',
-  title: 'Fila de resolução',
-  lead: 'Filmes dos arquivos do Letterboxd que o filmes não achou no Catálogo sozinho. A decisão vale para todas as Pessoas que têm o filme.',
-  unavailable: UNAVAILABLE,
-  empty: 'Nenhum filme esperando. Tudo resolvido.',
-  of: 'de',
-  candidates: 'O TMDB sugere',
-  pick: 'É este',
-  pickLabel: (title: string, tmdb: string) => `É este: ${title}, TMDB ${tmdb}`,
-  confirm: 'Confirmar',
-  film: 'Filme',
-  filmHint: 'tt…, link do IMDb ou link de filme do TMDB',
-  discard: 'Descartar',
-  discardOpen: 'Descartar este filme',
-  reason: 'Motivo',
-  reasonHint: 'sem motivo, “ignorar”',
-  reasons: ['não é filme', 'ignorar'],
-  reprocess: 'Perguntar ao TMDB de novo',
-  reprocessLead:
-    'O TMDB pode achar agora o que não achou no import. O que ele já respondeu vem do cache.',
-  /** A button while its post runs. */
-  busy: {
-    confirm: 'Confirmando…',
-    discard: 'Descartando…',
-    reprocess: 'Perguntando ao TMDB…',
-  },
-  item: (name: string, year: number | null) =>
-    year === null ? name : `${name} (${year})`,
-  notices: {
-    confirmado: () =>
-      'Filme confirmado: os Fatos dele entraram para quem o tem.',
-    descartado: () => 'Filme descartado: saiu da fila.',
-    igual: () => 'Já estava decidido assim: nada mudou.',
-    reprocessado: (resolved = 0, left = 0) =>
-      `TMDB consultado de novo: ${count(resolved, 'filme saiu', 'filmes saíram')} da fila, ${left === 1 ? '1 continua' : `${left} continuam`}.`,
-  } satisfies Record<QueueNotice, (resolved?: number, left?: number) => string>,
-  refusals: {
-    pedido: 'Faltou um campo, ou um valor não vale. Confira o formulário.',
-    filme: 'Use um tt…, um link de filme do IMDb ou um link de filme do TMDB.',
-    'sem-imdb':
-      'O TMDB não tem o ID do IMDb desse filme. Confirme com o tt… ou com o link do IMDb.',
-    item: 'Esse filme já saiu da fila: alguém decidiu antes.',
-    indisponivel: 'Não deu para gravar agora. Tente de novo daqui a pouco.',
-    falha:
-      'O site está com um problema, e ele ficou registrado no log do servidor. Tentar de novo não resolve.',
-  } satisfies Record<QueueRefusal, string>,
 } as const
