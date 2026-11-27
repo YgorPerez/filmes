@@ -96,10 +96,10 @@ describe('the view shows', () => {
 
   it('the Nota prevista the tool result carries', () => {
     render(<BillboardView result={shown} host={fakeHost(json({}))} />)
-    expect(
-      card(1).getByRole('button', { name: 'Bruno: 8,3 de 10 · 12 vizinhos' })
-        .textContent,
-    ).toBe('8,3')
+    const name = card(1).getByRole('button', {
+      name: 'Bruno: pela nota de 12 pessoas de gosto parecido',
+    })
+    expect(name.closest('p')?.textContent).toMatch(/^previsto · Bruno.* 8,3$/u)
   })
 
   it("plain words for the engine's error, never its message", () => {
@@ -566,7 +566,7 @@ describe('mountView, inline', () => {
       within(films)
         .getAllByRole('listitem')
         .map((li) => li.textContent),
-    ).toEqual(['1As Horas Lentas2021 · 1h44', '2Sal & Ferrugemnovo'])
+    ).toEqual(['1As Horas Lentas2021 · 1h44', '2Sal & Ferrugem'])
     // What left and what came in with this version.
     expect(
       within(root).getByText(

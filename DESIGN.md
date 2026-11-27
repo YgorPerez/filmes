@@ -405,7 +405,7 @@ components:
 
 **Creative North Star: "Locadora de bairro"**
 
-O filmes é a locadora da esquina de quem usa. Cada filme é uma fita no estojo preto da prateleira, com o número num adesivo de preço laranja e o gênero num adesivo colorido. O pedido da noite está impresso na etiqueta da frente da prateleira ("VOCÊS DOIS · ATÉ 1H50 · ALGO LEVE"), e a fala do Dono vai escrita à mão, de pincel atômico, num papel amarelo colado ao lado. Trocar é um adesivo rosa batido na capa; "novo" é um adesivo amarelo no canto do estojo. Na home, o pedido se faz no balcão: o estojo preto com a etiqueta da prateleira ainda em branco. Depois da Sessão, contar como foi é "devolver a fita".
+O filmes é a locadora da esquina de quem usa. Cada filme é uma fita no estojo preto da prateleira, com o número num adesivo de preço laranja e o gênero num adesivo colorido. O pedido da noite está impresso na etiqueta da frente da prateleira ("VOCÊS DOIS · ATÉ 1H50 · ALGO LEVE"), e a fala do Dono vai escrita à mão, de pincel atômico, num papel amarelo colado ao lado. Trocar é um adesivo rosa batido na capa. Na home, o pedido se faz no balcão: o estojo preto com a etiqueta da prateleira ainda em branco. Depois da Sessão, contar como foi é "devolver a fita".
 
 Por baixo dos objetos, o filmes é uma tela de trabalho clara: cards, listas, opções em pílula e campos que qualquer um sabe usar com uma mão, no sofá. Os objetos da locadora (estojo, etiqueta, adesivo, carimbo) ficam nas bordas da informação, nunca no lugar dela. A capa do filme continua sendo a imagem do produto.
 
@@ -418,7 +418,7 @@ Celular primeiro. O Cartaz roda em dois lugares, com o mesmo componente React: d
 **Key Characteristics:**
 
 - Tela fria e clara de dia, azul-noite no escuro; os objetos da locadora (estojo preto, etiqueta clara, adesivos vivos) são os mesmos nos dois temas.
-- Quatro adesivos com um papel cada: laranja é número e ação principal, amarelo é "novo" e a letra do Dono, rosa é Trocar, violeta é carimbo (o passo feito do guia).
+- Quatro adesivos com um papel cada: laranja é número e ação principal, amarelo é a letra do Dono, rosa é Trocar, violeta é carimbo (o passo feito do guia).
 - Rubik (500, 700, 800) é a letra dos objetos e dos controles; Permanent Marker é a mão do balconista, em frases curtas; a fonte do sistema fica com o texto que se lê (sinopse, Evidência, legenda).
 - Uma cor por Presente, sempre com a inicial junto.
 - Estados se colam no objeto (adesivo, carimbo), e nada some sem dizer por quê.
@@ -434,14 +434,14 @@ Neutros frios fazem a tela. Os adesivos e as cores dos Presentes têm um papel c
 
 ### Secondary
 
-- **Amarelo-novo** (sticker-yellow): o adesivo "NOVO" de quem entrou ao regerar, o papel com a fala do Dono ao lado da etiqueta da prateleira e a cor de seleção de texto (a 53% de opacidade). Texto em on-sticker.
+- **Amarelo-novo** (sticker-yellow): o papel com a fala do Dono ao lado da etiqueta da prateleira e a cor de seleção de texto (a 53% de opacidade). Texto em on-sticker.
 - **Rosa-troca** (sticker-pink): só o adesivo "TROCAR". Texto em on-sticker.
 - **Violeta-carimbo** (stamp; dark-stamp no escuro): o passo feito do guia da home (marca, segmento do progresso e pontos do contador), o carimbo APOSTA no Cartaz e as notas do balconista em letra de mão ("Este passo se marca sozinho..."). No escuro vira lilás claro para ler sobre o cartão escuro.
 - **Verde-etiqueta** (sticker-green): só os pontos que separam os itens na etiqueta da prateleira, junto com o laranja e o rosa, como as bolinhas coloridas de uma etiqueta de preço.
 
 ### Tertiary
 
-- **Cores dos Presentes** (person-1 a person-6, e dark-person no escuro): uma por Presente, na ordem dos Presentes da Sessão, a mesma no ponto sob a capa, no avatar da legenda e no das marcações. Azul, verde, magenta, marrom, violeta e petróleo. Nenhuma é laranja nem rosa vivo, para um avatar não ser lido como adesivo de preço ou de troca. No claro a inicial vai em on-person branco (4,7:1 ou mais); no escuro, em dark-on-person (#121417, 6,5:1 ou mais).
+- **Cores dos Presentes** (person-1 a person-6, e dark-person no escuro): uma por Presente, na ordem dos Presentes da Sessão, a mesma no avatar da legenda e no das marcações. Azul, verde, magenta, marrom, violeta e petróleo. Nenhuma é laranja nem rosa vivo, para um avatar não ser lido como adesivo de preço ou de troca. No claro a inicial vai em on-person branco (4,7:1 ou mais); no escuro, em dark-on-person (#121417, 6,5:1 ou mais).
 - **Cores de gênero** (genre-*): o ponto de 9px dentro do chip de gênero, como a etiqueta colorida na lombada. O nome do gênero está sempre escrito ao lado; a cor é só lembrete. Mapa fixo dos gêneros do IMDb:
   - genre-blue: Drama, Biography, History, War
   - genre-violet: Mystery, Crime, Thriller, Horror, Sci-Fi, Fantasy, Film-Noir
@@ -478,7 +478,7 @@ Neutros frios fazem a tela. Os adesivos e as cores dos Presentes têm um papel c
 
 **The Same Objects Rule.** Estojo, etiqueta e adesivos têm a mesma cor no claro e no escuro. Só o chão, as superfícies, a tinta, o fio, o cartão e o carimbo trocam com o tema; a borda do estojo só aparece no escuro.
 
-**The Flat Color Rule.** Cor chapada. Nenhum gradiente, nem na capa: os pontos dos Presentes ficam no estojo, sob a capa, e não precisam de faixa escura.
+**The Flat Color Rule.** Cor chapada. Nenhum gradiente, nem na capa: nada se escreve sobre o pôster, então ele não precisa de faixa escura.
 
 ## Typography
 
@@ -496,7 +496,7 @@ As duas fontes vão auto-hospedadas no app, em woff2, só nos pesos usados (Rubi
 - **Shelf label** (Rubik 800, 17px, 1.15, 0.01em, maiúsculas): o pedido na etiqueta da prateleira; 15px na versão compacta (Claude inline e topo da tela cheia).
 - **Hand** (Permanent Marker 400, 18px, 1.2): a fala do Dono no papel amarelo (16px na versão compacta), o título do que saiu em "Saiu da prateleira" (15px), a data na ficha da última Sessão (16px), "Falta contar como foi" (19px), a nota do balconista (15px).
 - **Price** (Rubik 800, 18px, 1): o número no adesivo de preço; 14px na lista compacta e na marca do passo do guia.
-- **Sticker** (Rubik 800, 12px, 1, 0.06em, maiúsculas): "NOVO"; "TROCAR" em 15px.
+- **Sticker** (Rubik 800, 12px, 1, 0.06em, maiúsculas): "APOSTA"; "TROCAR" em 15px.
 - **Title** (Rubik 700, 19px, 1.2): título do filme em português; o original embaixo em 13px da fonte do sistema, tinta clara.
 - **Counter title** (Rubik 800, 24px, 1.2): a pergunta do balcão da home, "O que vai ser hoje?", em case-ink.
 - **Step title** (Rubik 700, 17px, 1.25): "Para começar", o título do guia; o título de cada passo em 15.5px.
@@ -539,7 +539,7 @@ Uma coluna, celular primeiro, a partir de 360px. O conteúdo tem até 720px de l
 
 O card do filme é uma grade: o estojo com a capa à esquerda (112px no celular, 160px a partir de 560px), título, sinopse e chips à direita; "Por que cada um vai gostar" e os controles de marcar ocupam a largura toda embaixo, cada bloco aberto por uma divisória tracejada de 1px. A partir de 560px, "Por que" sobe para a coluna da direita, sob os chips.
 
-Os adesivos saem para fora do estojo: o de preço fica 9px para cima e para a esquerda do canto, o "NOVO" 10px para fora da direita. O card reserva esse respiro no padding (16px em cima, 14px dos lados), e nenhum adesivo cobre o título.
+Os adesivos saem para fora do estojo: o de preço fica 9px para cima e para a esquerda do canto. O card reserva esse respiro no padding (16px em cima, 14px dos lados), e nenhum adesivo cobre o título.
 
 ### Dentro do Claude
 
@@ -548,7 +548,7 @@ No Claude, o Cartaz é uma view do MCP Apps: um só arquivo HTML com o JS e o CS
 - **Card inline, compacto.** É o que aparece na conversa. No celular a conversa é dona da rolagem vertical: a altura do card inline tem teto, o que passa dele é cortado e não há rolagem interna. Por isso o card inline mostra, de cima para baixo, sem fundo próprio (fica sobre o chão do Claude, claro ou escuro), com fio de 1px e raio 14px:
   1. a etiqueta da prateleira compacta (15px) com o papel amarelo da fala do Dono (16px); o Claude já diz de que app é o card, então não há rótulo acima dela;
   2. depois de um refazer, uma linha em meta com o que saiu e o que entrou ("Saiu: Cais 2 (trocado) · entrou: Fronteira");
-  3. a lista das 5 fitas, uma linha cada, de 6px de raio sobre superfície: lombada preta de 8px à esquerda, com fio de 1px em estojo-borda (no escuro ela não some), adesivo de preço de 26px, título em Rubik 700 15px (corta com reticências), um ponto amarelo de 8px no filme novo e "2021 · 1h44" em meta à direita;
+  3. a lista das 5 fitas, uma linha cada, de 6px de raio sobre superfície: lombada preta de 8px à esquerda, com fio de 1px em estojo-borda (no escuro ela não some), adesivo de preço de 26px, título em Rubik 700 15px (corta com reticências) e "2021 · 1h44" em meta à direita; nenhuma marca de filme novo (#326);
   4. sem nada marcado, uma ação na largura toda: "Marcar" (opção com ícone de expandir, que abre a tela cheia). Depois de marcar na tela cheia, o que foi marcado com o nome dos filmes, uma linha em meta por tipo, cortada com reticências ("Trocar: Cais 2", "Já vi: Fronteira (Iara)"), o link "Limpar", e duas ações lado a lado, metade cada: "Marcar" e "Enviar" (botão laranja). Não há Enviar para mandar nada;
   5. depois do Enviar, "Enviado" em negrito sobre as mesmas linhas, a linha de status ("O Claude está refazendo a lista.") e uma ação só, "Marcar de novo". A mesma resposta nunca sai duas vezes.
 
@@ -580,7 +580,7 @@ Plano. Profundidade só por tom (chão, superfície, superfície 2), pelo preto 
 
 Raios pequenos onde o mundo é papel e plástico (etiqueta 2px, capa e adesivo 3px, papel da fala 4px, trilho 6px, estojo 8px), médios onde é app (campo e nota de Já vi 8px, item de navegação 10px, card, guia e menu do avatar 12px, balcão da home, card inline e botão grande 14px) e pílula nos controles de toque (opções, chips, botão principal). Avatares, pontos, adesivo de preço, marca do passo e carimbo são círculos.
 
-Só adesivos e carimbos giram, e nunca mais de 12°: papel da fala -2°, adesivo de preço -8°, "NOVO" 9°, "TROCAR" -9°. Card, botão, campo e texto do motor nunca giram.
+Só adesivos e carimbos giram, e nunca mais de 12°: papel da fala -2°, adesivo de preço -8°, "TROCAR" -9°, "APOSTA" -6°. Card, botão, campo e texto do motor nunca giram.
 
 ## Motion
 
@@ -594,10 +594,10 @@ Trilho preto (estojo, 5px, raio 6px) e, dentro, a etiqueta clara (shelf-label, r
 
 ### Fita (estojo e capa)
 
-- **Estojo:** preto, raio 8px, 5px de borda em cima e dos lados. Dentro, a capa.
+- **Estojo:** preto, raio 8px, 5px de borda em volta. Dentro, a capa.
 - **Capa:** pôster do TMDB 2:3, raio 3px. Sem capa, o título em Rubik 700 13px, tinta clara, no centro sobre superfície 2.
-- **Pontos dos Presentes:** embaixo da capa, ainda no estojo, um ponto de 12px por Presente, 6px entre eles, centrados, quebrando em mais linhas quando não cabem: cheio quem tem Fato, vazado (anel de 2px) quem não tem. Cada Presente aparece só aqui no card. Quem tem Nota prevista leva o número ao lado do ponto (ver Nota prevista); o ponto sozinho é só desenho, e quem não tem Fato se lê no texto de "Por que".
-- **Link:** só a capa é link para o IMDb; os pontos e os adesivos ficam fora dele.
+- **Sem pontos:** a fita não leva ponto nem número dos Presentes (#326): a Nota prevista fica em "Por que" (ver Nota prevista), e quem não tem Fato se lê no texto de "Por que".
+- **Link:** só a capa é link para o IMDb; os adesivos ficam fora dele.
 - **Adesivo de preço:** círculo laranja de 34px, número da posição em Rubik 800 18px, girado -8°, 9px para fora do canto de cima à esquerda, com anel de 2px na cor da superfície.
 - **Versão pequena** (ficha da última Sessão): estojo com 3px de borda e raio 5px, só a capa, sem pontos nem adesivos.
 
@@ -617,18 +617,17 @@ Os cards ficam sob o título do Motivo deles, na ordem da Recomendação: um tí
 ### Adesivos de estado
 
 - **TROCAR:** rosa, Rubik 800 15px maiúsculo, girado -9°, colado no meio da capa (40% da altura). Desmarcar Trocar tira o adesivo.
-- **NOVO:** amarelo, Rubik 800 12px maiúsculo, girado 9°, no canto de cima à direita do estojo, 10px para fora. Só em quem entrou ao regerar.
-- **APOSTA:** carimbo violeta (stamp; dark-stamp no escuro) num retalho de superfície com contorno de 2px, Rubik 800 12px maiúsculo, girado -6°, no canto de baixo à esquerda da capa, 38px acima do pé do estojo e para fora como o adesivo de preço. Só na Aposta da Recomendação. É carimbo, não adesivo: o palpite do balconista. Fica longe do NOVO, porque a Aposta que entrou ao regerar leva os dois. O título do carimbo diz por quê ("pouca Evidência, mas quem tem gosto parecido deu nota alta").
+- **APOSTA:** carimbo violeta (stamp; dark-stamp no escuro) num retalho de superfície com contorno de 2px, Rubik 800 12px maiúsculo, girado -6°, no canto de baixo à esquerda da capa, 17px acima do pé do estojo e para fora como o adesivo de preço. Só na Aposta da Recomendação. É carimbo, não adesivo: o palpite do balconista. Não há adesivo NOVO: quem entrou ao regerar não leva marca (#326). O título do carimbo diz por quê ("pouca Evidência, mas quem tem gosto parecido deu nota alta").
 - **JÁ VI:** quando todos os Presentes marcaram Já vi, um adesivo em superfície com contorno de 2px e texto em tinta, mesmo tamanho e rotação do TROCAR, no mesmo lugar. Já vi de só parte dos Presentes não cola adesivo: aparece nas opções marcadas e na nota de Já vi.
 - **Saiu da prateleira:** acima do primeiro card, em meta tinta clara, "Saiu da prateleira:" e o título do que saiu em letra de mão 15px tinta, com o motivo entre parênteses ("Teo já viu"). Um por linha quando sai mais de um.
 
 ### Nota prevista
 
-No ponto do Presente, no estojo: o número em Rubik 700 11px tabular, case-ink, 2px depois do ponto, com uma casa ("8,3"), na escala de 1 a 10 do Já vi; no ponto vazado também. Quem não tem Nota prevista fica só com o ponto: nunca um palpite nem um traço. O ponto com número é um botão, com um alvo invisível de 44px de altura (e 44px de largura no mínimo) centrado nele, sem mudar o tamanho do ponto: o toque, o clique ou o mouse em cima abrem embaixo dele, correndo para a direita, um balão em superfície com fio de 1px, raio 8px e texto meta, "Bruno: 8,3 de 10 · 12 vizinhos" (os vizinhos de gosto que a sustentam); tocar fora ou Esc fecha. O leitor de tela ouve o mesmo texto no botão. A nota é a que a versão gravou na Sessão; ela não muda depois.
+Uma linha em meta tinta clara, tabular, logo abaixo do título de "Por que cada um vai gostar": "previsto · Ygor 8,3 · Iara 7,1", com uma casa, na escala de 1 a 10 do Já vi, na ordem dos Presentes (#326). Quem não tem Nota prevista fica de fora: nunca um palpite nem um traço; sem ninguém, não há linha. O nome com dica é um botão, sublinhado pontilhado, com um alvo invisível de 44px de altura (e 44px de largura no mínimo) centrado nele: o toque, o clique ou o mouse em cima abrem embaixo dele, correndo para a direita, um balão em superfície com fio de 1px, raio 8px e texto meta, "pela nota de 4 pessoas de gosto parecido" (os vizinhos de gosto que a sustentam); tocar fora ou Esc fecha. O leitor de tela ouve "Ygor: pela nota de 4 pessoas de gosto parecido" no botão. Nota gravada sem quantos vizinhos fica sem dica. A nota é a que a versão gravou na Sessão; ela não muda depois.
 
 ### Por que cada um vai gostar
 
-Rótulo em label, com "Fato sobre N de M" à direita. Uma linha por Evidência, grade de 28px e o resto: a Força em três pontos, centrada na primeira linha, e o texto, que abre com o nome de quem é a Evidência em semibold ("Bruno:", "Bruno e Iara:") e segue com o texto do motor, a Fonte embaixo. Sem avatar: a pessoa aparece no ponto do estojo. Quem não tem Fato fecha a lista só com o texto "Fulano: sem fato sobre este filme", em tinta clara.
+Rótulo em label, com "Fato sobre N de M" à direita. Uma linha por Evidência, grade de 28px e o resto: a Força em três pontos, centrada na primeira linha, e o texto, que abre com o nome de quem é a Evidência em semibold ("Bruno:", "Bruno e Iara:") e segue com o texto do motor, a Fonte embaixo. Sem avatar: o nome basta. Quem não tem Fato fecha a lista só com o texto "Fulano: sem fato sobre este filme", em tinta clara.
 
 ### Legenda
 
@@ -645,6 +644,7 @@ Três pontos de 7px em tinta: ●●● forte, ●●○ moderada, ●○○ fra
 - **Foco:** anel de 2px em focus (dark-focus no escuro), afastado 2px. Vale para todo controle.
 - Os controles do card vêm em duas linhas: primeiro Trocar, as estrelas e o link "Comentar" (no celular o link pode descer); depois a linha de Já vi, que começa com o rótulo "JÁ VI" e tem uma opção por Presente ("Você", "Teo") e "Todos". O campo do comentário só aparece depois do toque em Comentar (já com o foco) ou quando já tem texto, no fim dos controles: o card não carrega campo vazio.
 - Marcar Já vi de uma Pessoa abre, logo abaixo, a **nota de Já vi**: cartão azul (card-stock, raio 8px, 10px 12px) com o avatar e "Nota do Teo" em Rubik 700 14px, a escala de 1 a 10 e o campo "o que Teo achou (opcional)".
+- **Trocar marcado sozinho** (#326): com "Só filmes que ninguém viu" ligado, o Já vi de qualquer Presente marca o Trocar; de 1 a 3 estrelas também (4 ou mais, ou nenhuma, desmarcam, a não ser que o Dono tenha marcado à mão). O Dono pode desmarcar. Enquanto vale, uma linha em meta tinta clara embaixo dos botões diz por quê: "Trocar marcado: você já viu", "Trocar marcado: Iara e você já viram", "Trocar marcado: 2 estrelas".
 - Com mais de 4 Presentes, a linha de Já vi começa fechada numa opção só, "Já vi…", que abre as opções de cada um; com alguém marcado, ela fica aberta.
 
 ### Escala de nota (1 a 10)
@@ -780,7 +780,7 @@ Círculo de 24px na cor do Presente, inicial em Rubik 700 11px em on-person. Vaz
 
 - **Do** abrir o Cartaz e as telas de Sessão com a etiqueta da prateleira do pedido, e a fala do Dono no papel amarelo quando houver.
 - **Do** pôr cada filme num estojo preto, com o número no adesivo de preço laranja.
-- **Do** colar o estado no objeto: TROCAR rosa, NOVO amarelo, JÁ VI de todos; e dizer em "Saiu da prateleira" o que saiu e por quê.
+- **Do** colar o estado no objeto: TROCAR rosa, JÁ VI de todos; e dizer em "Saiu da prateleira" o que saiu e por quê.
 - **Do** manter estojo, etiqueta e adesivos iguais no claro e no escuro, com texto #121417 nos adesivos.
 - **Do** dar a cada Presente a mesma cor no ponto, no avatar e na legenda, sempre com a inicial.
 - **Do** mostrar a Força pelo preenchimento dos três pontos, com `aria-label`.

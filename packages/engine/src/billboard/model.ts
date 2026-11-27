@@ -125,6 +125,9 @@ export interface BillboardRequest {
    * duration, the minimum IMDb rating, the Climas, the Restrições' labels
    * and the Regra. */
   readonly parts: ReadonlyArray<string>
+  /** "Só filmes que ninguém viu" (`unseen`) is on: a Já vi on the Cartaz
+   * marks the film's Trocar (#326). */
+  readonly unseen: boolean
 }
 
 /** A film of the previous version that left, with the reason as the page
@@ -453,9 +456,11 @@ const requestOf = (
   // A stored Restrição that no longer exists (an old Session's no_repeat)
   // does not show, nor the one the Session turns on by itself
   // (`out_of_session`): the Dono did not ask for it (#277).
-  const stored = get(context, 'constraints')
-  for (const item of mappings(stored)) {
-    const label = askedConstraintLabel(yamlToJson(item) as StoredConstraint)
+  const stored = mappings(get(context, 'constraints')).map(
+    (item) => yamlToJson(item) as StoredConstraint,
+  )
+  for (const item of stored) {
+    const label = askedConstraintLabel(item)
     if (label) parts.push(label)
   }
   const rule = front.get('rule')
@@ -472,6 +477,7 @@ const requestOf = (
     speech: textOf(speech),
     who,
     parts,
+    unseen: stored.some((item) => item.name === 'unseen'),
   }
 }
 

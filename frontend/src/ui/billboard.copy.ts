@@ -37,7 +37,6 @@ export const BILLBOARD = {
 
   card: {
     poster: (title: string) => `Capa de ${title}`,
-    isNew: 'novo',
     bet: 'aposta',
     betHint:
       'Aposta: pouca Evidência, mas quem tem gosto parecido deu nota alta',
@@ -47,12 +46,14 @@ export const BILLBOARD = {
         : `${rating} IMDb · ${votes} votos`,
     /** The link to the film's trailer on YouTube (#289). */
     trailer: 'trailer',
-    /** The hint of a Presente's dot: "Ana: 8,3 de 10 · 12 vizinhos", or
-     * "Ana: 8,3 de 10" when the version did not keep how many. */
-    predicted: (name: string, rating: string, raters?: number) =>
-      raters === undefined
-        ? `${name}: ${rating} de 10`
-        : `${name}: ${rating} de 10 · ${plural(raters, 'vizinho', 'vizinhos')}`,
+    /** The Nota prevista line under "Por que" (#326): "previsto · Ana 8,3
+     * · Iara 7,1". */
+    predicted: 'previsto',
+    /** The hint of a name in it, when the version kept how many taste
+     * neighbours back it. */
+    predictedHint: (raters: number) =>
+      `pela nota de ${plural(raters, 'pessoa', 'pessoas')} de gosto parecido`,
+    predictedLabel: (name: string, hint: string) => `${name}: ${hint}`,
     /** Who an Evidência is about, opening its line: "Ana e Bruno". */
     whose: (names: readonly string[]) => andList(names),
     why: 'Por que cada um vai gostar',
@@ -83,6 +84,14 @@ export const BILLBOARD = {
     thoughtLabel: (who: string, n: number) =>
       `o que ${who} achou do filme ${n}`,
     swap: 'Trocar',
+    /** Why the Trocar came on by itself (#326): "Trocar marcado: você já
+     * viu", "Trocar marcado: 2 estrelas". */
+    swapWhy: {
+      seen: (who: readonly string[]) =>
+        `Trocar marcado: ${andList(who)} ${who.length === 1 ? 'já viu' : 'já viram'}`,
+      stars: (n: number) =>
+        `Trocar marcado: ${plural(n, 'estrela', 'estrelas')}`,
+    },
     stars: 'quanto animou',
     /** More than this many Presentes: their Já vi options open from one
      * "Já vi…" (#277). */
@@ -186,7 +195,6 @@ export const BILLBOARD = {
     sentTitle: 'Enviado',
     /** "v2" beside the label, from the second version on. */
     version: (n: number) => `v${n}`,
-    isNew: 'novo',
     /** What a regenerate changed, on the inline card: "Saiu: Cais 2
      * (trocado) · entrou: Fronteira". */
     changes: (

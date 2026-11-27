@@ -69,7 +69,7 @@ export const SESSIONS = {
     notices: {
       aberta: 'Sessão aberta.',
       regerada:
-        'Recomendação refeita. Os filmes que entraram têm o selo “novo”.',
+        'Recomendação refeita. No topo do Cartaz, o que saiu e quantos entraram.',
       anotada:
         'Estrelas e comentários ficaram na Sessão. Eles não mexem no gosto de ninguém.',
       'perguntas-gravadas':

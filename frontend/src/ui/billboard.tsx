@@ -20,6 +20,7 @@ import {
   markCounts,
   markedFilms,
   marksOf,
+  withSwap,
   openStorage,
   otherMoods,
   parseMarks,
@@ -467,8 +468,7 @@ function Cards({
   const card = (film: Film) => (
     <BillboardCard
       key={film.id}
-      // Once told, what came new in the last redo no longer matters.
-      film={billboard.open ? film : { ...film, new: false }}
+      film={film}
       people={billboard.attendees}
       first={film === billboard.films[0]}
       level={grouped ? 3 : 2}
@@ -476,7 +476,17 @@ function Cards({
       onChange={
         billboard.open
           ? (next: FilmMarks) =>
-              change({ ...marks, films: { ...marks.films, [film.id]: next } })
+              change({
+                ...marks,
+                films: {
+                  ...marks.films,
+                  [film.id]: withSwap(
+                    marksOf(marks, film.id),
+                    next,
+                    billboard.request.unseen,
+                  ),
+                },
+              })
           : undefined
       }
     />
