@@ -436,9 +436,3 @@ const REQUIRED: Record<string, string> = {
   filme: 'Falta o filme: busque pelo título e escolha um resultado.',
   email: 'Falta o e-mail do Google.',
 }
-
-/** The Notas a form offers, from 10 to 1, as the forms post them. */
-export const RATING_CHOICES = Array.from({ length: 10 }, (_, i) => ({
-  value: `${10 - i}/10`,
-  label: String(10 - i),
-}))

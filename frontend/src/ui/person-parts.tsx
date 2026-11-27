@@ -892,7 +892,7 @@ export function TargetField({
   const [group, setGroup] = useState(initialGroup ?? '')
   // The result a group took the place of: letting the group go brings it
   // back, so a tap on a pill never loses the target for good.
-  const [before, setBefore] = useState<Target | null>(null)
+  const before = useRef<Target | null>(null)
   return (
     <div className={`flex flex-col ${live ? 'gap-lg' : 'gap-xl'}`}>
       {live ? (
@@ -925,11 +925,11 @@ export function TargetField({
           onMark={(key) => {
             setGroup(key)
             if (key !== '') {
-              if (picked !== null) setBefore(picked)
+              if (picked !== null) before.current = picked
               setPicked(null)
-            } else if (before !== null) {
-              setPicked(before)
-              setBefore(null)
+            } else if (before.current !== null) {
+              setPicked(before.current)
+              before.current = null
             }
           }}
         />
