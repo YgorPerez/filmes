@@ -447,9 +447,21 @@ describe('the evaluation, whether the grid beats today', () => {
       ),
     ).toBeTruthy()
     expect(within(area).getByText('sem ganho')).toBeTruthy()
+    // Below today's weights a tie says nothing "sem ganho" does not.
+    expect(within(area).queryByText('empate')).toBeNull()
     expect(
       within(area).queryByRole('button', { name: /Copiar os pesos/ }),
     ).toBeNull()
+  })
+
+  it('marks a tie only between sets that beat today', () => {
+    const area = grid([
+      { recall50: 0.9, coverageTop5: 0.7, changes: CHANGE, tie: true },
+      { recall50: 0.9, coverageTop5: 0.7, changes: CHANGE, tie: true },
+      { recall50: 0.8, coverageTop5: 0.7, changes: [], tie: false },
+    ])
+    expect(within(area).getAllByText('empate')).toHaveLength(2)
+    expect(within(area).getByText('atual')).toBeTruthy()
   })
 
   it('says how many beat today, with today among the best or not', () => {

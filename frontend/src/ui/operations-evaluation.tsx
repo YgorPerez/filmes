@@ -118,7 +118,8 @@ function Measures({ result }: { result: EvaluationSummary }) {
 }
 
 /** One of the grid's best sets. `gain`: it measured better than today's
- * weights, the only case where copying its weights is worth it. */
+ * weights, the only case where copying its weights is worth it. One tag at
+ * most: "atual", "sem ganho", or "empate" between sets that gain. */
 function BestRow({
   entry,
   rank,
@@ -130,6 +131,9 @@ function BestRow({
 }) {
   const current = entry.changes.length === 0
   const noGain = !current && !gain
+  // A tie says something only among the sets that beat today's weights:
+  // today's ties only with sets that do not, which "sem ganho" says.
+  const tie = gain && entry.tie
   return (
     <tr className="border-b border-rule align-top">
       <th scope="row" className="whitespace-nowrap">
@@ -146,10 +150,10 @@ function BestRow({
               </span>
             ))
           )}
-          {(current || entry.tie || noGain) && (
+          {(current || tie || noGain) && (
             <span className="flex flex-wrap gap-xs">
               {current && <Tag>{COPY.currentTag}</Tag>}
-              {entry.tie && <Tag>{COPY.tie}</Tag>}
+              {tie && <Tag>{COPY.tie}</Tag>}
               {noGain && <Tag>{COPY.noGain}</Tag>}
             </span>
           )}
