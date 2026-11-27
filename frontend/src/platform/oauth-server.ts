@@ -60,6 +60,8 @@ const CLAUDE_CALLBACKS = new Set([
   'https://claude.ai/api/mcp/auth_callback',
   'https://claude.com/api/mcp/auth_callback',
 ])
+// Stable ChatGPT callback for issuers that identify themselves per RFC 9207.
+const CHATGPT_CALLBACK = 'https://chatgpt.com/connector_platform_oauth_redirect'
 const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]'])
 
 const random = () => randomBytes(32).toString('base64url')
@@ -82,10 +84,11 @@ function loopback(uri: string): URL | null {
     : null
 }
 
-/** A redirect a client may register: Claude's callback, or a loopback one
- * on any port (Claude Code, RFC 8252). */
+/** Hosted callbacks match exactly. Loopback clients can use any port (RFC 8252). */
 export const allowedRedirect = (uri: string) =>
-  CLAUDE_CALLBACKS.has(uri) || loopback(uri) !== null
+  uri === CHATGPT_CALLBACK ||
+  CLAUDE_CALLBACKS.has(uri) ||
+  loopback(uri) !== null
 
 /** Whether `requested` is `registered`; a loopback redirect matches on any
  * port (RFC 8252 §7.3), since the client picks a free one each time. */
@@ -190,7 +193,7 @@ function clientMetadata(text: string | null) {
   )
     return oauthError(
       'invalid_redirect_uri',
-      'Only the Claude callback and loopback redirects are allowed.',
+      'Only the supported host callbacks and loopback redirects are allowed.',
     )
   const grants = metadata.grant_types
   const grantsOk =
@@ -346,7 +349,7 @@ export class OAuthServer {
     if (!registered)
       return plain(
         400,
-        'Este aplicativo não está registrado no filmes. Conecte de novo pelo Claude.',
+        'Este aplicativo não está registrado no filmes. Conecte o filmes de novo no seu chat.',
       )
     const asked = single(params, 'redirect_uri')
     const redirectUri =
@@ -360,7 +363,7 @@ export class OAuthServer {
     if (redirectUri === undefined)
       return plain(
         400,
-        'O endereço de retorno deste aplicativo não confere. Conecte de novo pelo Claude.',
+        'O endereço de retorno deste aplicativo não confere. Conecte o filmes de novo no seu chat.',
       )
     const state = single(params, 'state')
     const back = (error: string, description: string) =>
@@ -628,8 +631,9 @@ export class OAuthServer {
     const row = this.db((db) =>
       db
         .prepare(
-          `SELECT g.client_id, g.email, g.scope, g.resource, t.expires_at
+          `SELECT g.client_id, g.email, g.scope, g.resource, t.expires_at, c.redirect_uris
               FROM oauth_tokens t JOIN oauth_grants g USING (grant_id)
+              JOIN oauth_clients c USING (client_id)
               WHERE t.token_hash = ? AND t.kind = 'access' AND t.expires_at > ?`,
         )
         .get(hash(token), this.options.now()),
@@ -648,7 +652,12 @@ export class OAuthServer {
       scopes: String(row.scope).split(' '),
       expiresAt: Math.floor(Number(row.expires_at) / 1000),
       resource: new URL(String(row.resource)),
-      extra: { owner },
+      extra: {
+        owner,
+        chatgpt: (JSON.parse(String(row.redirect_uris)) as string[]).includes(
+          CHATGPT_CALLBACK,
+        ),
+      },
     }
   }
 }

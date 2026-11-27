@@ -8,7 +8,7 @@
 // (`createMcpHandler`'s factory), and each tool call runs on the process's
 // one engine as that Owner, in its own Run.
 
-import { createMcpServer } from '@filmes/mcp-server'
+import { createMcpServer, TOOLS } from '@filmes/mcp-server'
 import type { Engine } from '@filmes/engine'
 import {
   buildOAuthProtectedResourceMetadata,
@@ -22,6 +22,20 @@ import { adminOf, MCP_SCOPE, ownerOf, type OAuthServer } from './oauth-server'
 import { serverEnv } from './server-env'
 
 const METADATA_PATH = '/.well-known/oauth-protected-resource'
+
+// The pilot includes the recommendation and Cartaz flow, plus the Session's
+// Feedback, title lookup and Markdown fallback.
+const SESSION_TOOLS = TOOLS.filter(({ name }) =>
+  [
+    'open_sessions',
+    'recommend',
+    'billboard',
+    'answer_billboard',
+    'verify_answer',
+    'record_feedback',
+    'search_catalog',
+  ].includes(name),
+)
 
 const plain = (status: number, message: string) =>
   new Response(message, {
@@ -45,6 +59,8 @@ export function mcpHandler(engine: () => Engine): McpHttpHandler {
       engine: engine(),
       owner,
       admin: adminOf(ctx.authInfo),
+      oauthScope: MCP_SCOPE,
+      ...(ctx.authInfo?.extra?.chatgpt === true && { tools: SESSION_TOOLS }),
       ...(APP_ORIGIN && { appOrigin: APP_ORIGIN }),
     })
   })

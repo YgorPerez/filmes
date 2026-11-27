@@ -13,6 +13,11 @@ const IGNORE = 'ignorar'
 
 export default defineTool({
   name: 'import_queue',
+  annotations: {
+    readOnlyHint: false,
+    destructiveHint: true,
+    openWorldHint: true,
+  },
   description:
     'A fila do Letterboxd: os filmes de um import que o motor não resolveu sozinho esperam a decisão do Dono. ' +
     'view: os itens (id, nome, ano, por que estão na fila, de quem) com os candidatos que o TMDB já deu. ' +

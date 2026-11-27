@@ -104,7 +104,7 @@ export const BILLBOARD = {
   },
 
   // The MCP Apps view (`mcp-view/`): Enviar goes to `answer_billboard`
-  // through the host, and Claude gets a message when it has to regenerate.
+  // through the host, then asks the chat to follow up.
   view: {
     loading: 'Montando o Cartaz…',
     list: 'Os filmes do Cartaz',
@@ -112,10 +112,10 @@ export const BILLBOARD = {
     open: 'Ver o Cartaz',
     sending: 'Enviando…',
     recorded: 'Anotado.',
-    regenerating: 'Anotado. O Claude refaz a lista no chat.',
-    toClaude: 'Anotado. O Claude lê o que você escreveu no chat.',
+    regenerating: 'Anotado. Pedi ao chat pra refazer a lista.',
+    toChat: 'Anotado. Mandei seu texto pro chat.',
     notNotified:
-      'Anotado, mas o aviso pro Claude não saiu: peça no chat pra ele refazer a lista.',
+      'Anotado. O aviso não chegou ao chat. Se precisar refazer a lista, peça lá.',
     failed: (message: string) =>
       `Não deu pra enviar: ${message} Use Copiar pro chat.`,
     unavailable: 'Este app não envia daqui. Use Copiar pro chat.',

@@ -25,6 +25,8 @@ export interface McpServerOptions {
    * them. Unset (stdio), each call of an admin tool reads the Dono's file
    * and answers `ADMIN_ONLY` to a non-admin. */
   readonly admin?: boolean
+  /** The OAuth scope required by the HTTP bearer check, when applicable. */
+  readonly oauthScope?: string
   /** The app's address (`APP_ORIGIN`), when the server runs in the app:
    * the Cartaz's view loads the fonts from it. */
   readonly appOrigin?: string
@@ -70,6 +72,7 @@ export function createMcpServer({
   owner,
   tools = TOOLS,
   admin,
+  oauthScope,
   appOrigin,
 }: McpServerOptions): McpServer {
   const server = new McpServer(SERVER_INFO, { instructions: INSTRUCTIONS })
@@ -79,7 +82,15 @@ export function createMcpServer({
       {
         description: tool.description,
         inputSchema: tool.input,
-        ...(tool.meta && { _meta: tool.meta }),
+        annotations: tool.annotations,
+        ...(oauthScope
+          ? {
+              _meta: {
+                ...tool.meta,
+                securitySchemes: [{ type: 'oauth2', scopes: [oauthScope] }],
+              },
+            }
+          : tool.meta && { _meta: tool.meta }),
       },
       async (input: unknown, ctx: ServerContext) => {
         const options = owner === null ? {} : { owner }
