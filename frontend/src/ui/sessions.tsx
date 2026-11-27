@@ -421,6 +421,16 @@ const SPOKEN_NOTICES: ReadonlySet<SessionNotice> = new Set<SessionNotice>([
  * saw and how each one took it, who the group weighs more next time, and
  * the same group again. */
 function TapeReturned({ page }: { page: CartazPage }) {
+  // The night's label and the Dono's note open it, as on Contar (#346).
+  return (
+    <>
+      {page.billboard && <BillboardRequest billboard={page.billboard} />}
+      <Tape page={page} />
+    </>
+  )
+}
+
+function Tape({ page }: { page: CartazPage }) {
   const { session } = SESSIONS
   const s = page.session
   const billboard = page.billboard
@@ -724,11 +734,6 @@ function SessionView({
         waiting={page.pairwise ?? []}
         post={{ onSubmit, busy }}
       />
-      {/* Told, the night's label and the Dono's note open the Session, as
-          on Contar (#346). */}
-      {closed && billboard !== null && (
-        <BillboardRequest billboard={billboard} />
-      )}
       {closed && <TapeReturned page={page} />}
       {closed && shelf !== null ? (
         <ClosedShelf chosen={Boolean(s.chosen)} others={shelf.films.length}>
