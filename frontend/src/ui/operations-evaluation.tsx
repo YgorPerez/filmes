@@ -102,7 +102,7 @@ function Measures({ result }: { result: EvaluationSummary }) {
         <thead>
           <tr className="border-b border-rule font-display">
             <th scope="col">{COPY.sample}</th>
-            <th scope="col">{COPY.people}</th>
+            <th scope="col">{COPY.count}</th>
             <th scope="col">{COPY.recall}</th>
             <th scope="col">{COPY.coverage}</th>
           </tr>
