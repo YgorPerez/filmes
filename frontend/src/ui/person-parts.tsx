@@ -392,14 +392,14 @@ export function Disclosure({
       open={open}
       className="scroll-mt-2xl rounded-field border border-rule"
     >
-      <summary className="flex min-h-touch cursor-pointer list-none items-center justify-between gap-sm px-3 font-semibold select-none [&::-webkit-details-marker]:hidden">
+      <summary className="flex min-h-touch cursor-pointer list-none items-center justify-between gap-sm px-3 py-sm font-semibold select-none [&::-webkit-details-marker]:hidden">
         {summary}
         {/* The drawn +, a × while open: the fold's state not by colour.
          * Only its own fold turns it: a group variant would match any open
          * fold around this one too. */}
         <Icon
           name="plus"
-          className="size-[18px] text-ink-2 transition-[rotate] motion-reduce:transition-none [details[open]>summary>&]:rotate-45"
+          className="size-[18px] shrink-0 text-ink-2 transition-[rotate] motion-reduce:transition-none [details[open]>summary>&]:rotate-45"
         />
       </summary>
       <div className="border-t border-rule p-xl">{children}</div>
