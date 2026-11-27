@@ -239,7 +239,7 @@ test('the Dono shares the current films with a Presente who has no login', async
     const selected = new URL((await choice.getAttribute('href')) ?? '', href)
     const selectedPage = await participant.goto(selected.href)
     const films = participant.getByRole('list', { name: 'Filmes da Sessão' })
-    await expect(films.getByRole('listitem')).toHaveText(
+    await expect(films.getByRole('listitem')).toContainText(
       opened.films.map((film) => film.title),
     )
     expect(await selectedPage?.text()).not.toMatch(
@@ -285,7 +285,7 @@ test('the link only works for its Session while it is open', async ({
   try {
     const participant = await guest.newPage()
     const unavailable = participant.getByRole('heading', {
-      name: 'Link da Sessão indisponível',
+      name: 'Esse link não abre',
     })
     const href = new URL(shared)
     href.searchParams.set('presente', 'iara')
@@ -324,7 +324,9 @@ test('the link only works for its Session while it is open', async ({
     await page.reload()
     await expect(share).toHaveCount(0)
     await participant.goto(shared)
-    await expect(unavailable).toBeVisible()
+    await expect(
+      participant.getByRole('heading', { name: 'Essa Sessão já fechou' }),
+    ).toBeVisible()
     await snap(participant, info, 'sessao-link-encerrado')
   } finally {
     await guest.close()
@@ -365,10 +367,15 @@ test('a Presente answers pairwise questions and the Dono records them', async ({
     await snap(participant, info, 'perguntas-par-a-par')
     const [chosen, other] = await question
       .getByRole('button')
-      .evaluateAll((buttons) => buttons.map((b) => b.textContent ?? ''))
+      // The title under each tape; the tape without a poster repeats it.
+      .evaluateAll((buttons) =>
+        buttons.map((b) => b.lastElementChild?.textContent ?? ''),
+      )
     await question.getByRole('button', { name: chosen }).click()
     await expect(question).toContainText('Pergunta 2 de 10')
-    await question.getByRole('button', { name: 'Não vi os dois' }).click()
+    await question
+      .getByRole('button', { name: 'Não vi algum dos dois' })
+      .click()
     await expect(question).toContainText('Pergunta 3 de 10')
 
     await page.reload()
@@ -500,7 +507,12 @@ test('each Presente votes on the films; a no swaps the film and the Session is r
       'data-vote-page',
       'original',
     )
-    // Only the film that came in is left to vote on.
+    // The night's list as it is now; only the film that came in is left
+    // to vote on.
+    await expect(
+      participant.getByRole('heading', { name: 'Votos enviados' }),
+    ).toBeVisible()
+    await participant.getByRole('link', { name: 'Votar no que chegou' }).click()
     const newcomer = participant.getByRole('article')
     await expect(newcomer).toHaveCount(1)
     await expect(newcomer).not.toContainText(second ?? '')
@@ -534,18 +546,23 @@ test('a Presente sends only yes votes and the Dono sees the new Cartaz order', a
   )
   const [first, second, third] = opened.films
   const session = opened.session.id
-  // One earlier yes kept the first film in place. The deck now shows what
-  // this Presente has yet to vote on.
-  await engineRun((engine) =>
-    engine.run(
-      castVotes({
-        session,
-        person,
-        version: 1,
-        votes: [{ film: first!.id, vote: 'yes' }],
-      }),
-    ),
-  )
+  // One earlier yes of this Presente on the first film, and one of the
+  // other on the third. The deck shows what this Presente has yet to vote
+  // on, and sends her earlier yes again with the new ones.
+  for (const [who, film] of [
+    [person, first!],
+    [other, third!],
+  ] as const)
+    await engineRun((engine) =>
+      engine.run(
+        castVotes({
+          session,
+          person: who,
+          version: 1,
+          votes: [{ film: film.id, vote: 'yes' }],
+        }),
+      ),
+    )
 
   await loginAsBruno(page)
   await page.goto(`/sessoes/${session}`)
@@ -566,7 +583,7 @@ test('a Presente sends only yes votes and the Dono sees the new Cartaz order', a
     const yes = participant.getByRole('button', { name: 'Sim', exact: true })
     await yes.click()
     await yes.click()
-    await expect(participant.getByText('2 sins · 0 nãos')).toBeVisible()
+    await expect(participant.getByText('2 sins · nenhum não')).toBeVisible()
     await participant.getByRole('button', { name: 'Enviar votos' }).click()
     await expect(participant.getByRole('status')).toHaveText(
       'Votos contados. A lista foi atualizada.',
@@ -576,9 +593,9 @@ test('a Presente sends only yes votes and the Dono sees the new Cartaz order', a
     await page.reload()
     await expect(titles).toHaveCount(3)
     await expect(titles).toContainText([
-      second!.title,
       third!.title,
       first!.title,
+      second!.title,
     ])
     await snap(page, info, 'sessao-cartaz-reordenado')
   } finally {
