@@ -358,10 +358,14 @@ function PersonHeader({
   return (
     <>
       <div className="flex flex-col gap-xs">
-        <h1 className="flex flex-wrap items-center gap-sm font-display text-page-title">
-          {own ? PERSON.myTaste : page.name}
+        {/* The sticker beside the h1, not in it: the heading is her name
+            alone (#273). */}
+        <div className="flex flex-wrap items-center gap-sm">
+          <h1 className="font-display text-page-title">
+            {own ? PERSON.myTaste : page.name}
+          </h1>
           {!own && page.owner && <OwnerTag />}
-        </h1>
+        </div>
         {own ? (
           <Meta parts={[PERSON.ownName(page.name, page.aliases)]} />
         ) : (
@@ -413,7 +417,7 @@ function Summary({ slug, page }: { slug: string; page: PersonPage }) {
       : null,
     page.sessions.total > 0 ? summary.sessions(page.sessions.total) : null,
   ].filter((part) => part !== null)
-  const [step, href] = nextStep(slug, page)
+  const next = nextStep(slug, page)
   const likes = likesOf(page)
   return (
     <>
@@ -424,15 +428,22 @@ function Summary({ slug, page }: { slug: string; page: PersonPage }) {
         ]}
       />
       {likes && <p className="max-w-[60ch]">{likes}</p>}
-      <div className="mt-sm flex flex-col items-start gap-xs">
-        <span className="font-display text-label text-ink-2 uppercase">
-          {summary.next}
-        </span>
-        <a href={href} className={buttonVariants()}>
-          {step}
-        </a>
-      </div>
+      {next && <NextStep step={next[0]} href={next[1]} />}
     </>
+  )
+}
+
+/** The page's one next step (#273): its label, and the orange button. */
+function NextStep({ step, href }: { step: string; href: string }) {
+  return (
+    <div className="mt-sm flex flex-col items-start gap-xs">
+      <span className="font-display text-label text-ink-2 uppercase">
+        {PERSON.summary.next}
+      </span>
+      <a href={href} className={buttonVariants()}>
+        {step}
+      </a>
+    </div>
   )
 }
 
@@ -445,10 +456,9 @@ const HIGH_NOTE = 4
  * null when no Nota is high. */
 function likesOf(page: PersonPage): string | null {
   const { summary } = PERSON
-  const names = page.likes
-    ? [...page.likes.genres, ...page.likes.directors]
-    : []
-  if (names.length > 0) return summary.likes(page.name, names)
+  const { genres = [], directors = [] } = page.likes ?? {}
+  if (genres.length + directors.length > 0)
+    return summary.likes(page.name, genres, directors)
   const titles = (page.ratings ?? [])
     .filter((r) => r.rating >= HIGH_NOTE && r.title !== null)
     .toSorted((a, b) => b.rating - a.rating)
@@ -457,14 +467,16 @@ function likesOf(page: PersonPage): string | null {
   return titles.length > 0 ? summary.liked(page.name, titles) : null
 }
 
-/** Another Pessoa's next step and where it goes (#273). A Veto is offered
- * only while she has none: once saved, the step moves on. */
-function nextStep(slug: string, page: PersonPage): [string, string] {
+/** Another Pessoa's next step and where it goes (#273), or none while
+ * the open questions ask. A Veto is offered only while she has none: once
+ * saved, the step moves on. */
+function nextStep(slug: string, page: PersonPage): [string, string] | null {
   const { steps } = PERSON.summary
   if (page.ratings?.length === 0)
     return [steps.import(page.name), importsPath(slug, false)]
-  if (page.openQuestions.length > 0)
-    return [steps.questions(page.openQuestions.length), '#perguntas']
+  // The open questions are the first ficha right below, with their own
+  // answers: a button to them would be a second call for the same thing.
+  if (page.openQuestions.length > 0) return null
   if (page.vetoes.length === 0)
     return [steps.veto(page.name), '#acrescentar-veto']
   const attendees = new URLSearchParams({
@@ -558,7 +570,8 @@ function Notes({
       )}
       <div className="flex flex-wrap items-center gap-xs">
         {own && (
-          <a href={RATINGS_PATH} className={buttonVariants()}>
+          // An option: the glance's next step is the page's orange button.
+          <a href={RATINGS_PATH} className={option}>
             {notes.rate}
           </a>
         )}
@@ -771,12 +784,7 @@ function Glance({
           ? glance.nothingSaid
           : `${glance.said}: ${said.join(' · ')}`}
       </p>
-      <p>
-        {glance.next}:{' '}
-        <a href={href} className="text-ink underline underline-offset-3">
-          {step}
-        </a>
-      </p>
+      <NextStep step={step} href={href} />
     </Slip>
   )
 }
@@ -812,13 +820,10 @@ const REFINE = new Set(['ajustes', 'declarados', 'relatos', 'acesso'])
 
 /** What the Dono acts on, in that order (#273): the open questions (only
  * when there is one), the Vetos (always: the strongest thing she can say),
- * the Já vistos without a Nota, folded in one line while there is none
- * ("Já vistos: nenhum"). A fold opens by itself when its ficha posted
- * the last form. */
+ * the Já vistos without a Nota. */
 function Taste({ slug, page }: { slug: string; page: PersonPage }) {
   const { spot } = useContext(PostedAt)
   const posted = spot === undefined ? undefined : sectionOfSpot(spot)
-  const seen = seenOf(page)
   return (
     <>
       {/* Only with a question, or right after the last one left: it
@@ -827,16 +832,9 @@ function Taste({ slug, page }: { slug: string; page: PersonPage }) {
         <OpenQuestions slug={slug} page={page} />
       )}
       <Vetoes slug={slug} page={page} />
-      {seen.length > 0 ? (
-        <Seen slug={slug} page={page} />
-      ) : (
-        <Disclosure
-          summary={PERSON.empty(PERSON.seen.title)}
-          open={posted === 'vistos' || undefined}
-        >
-          <Seen slug={slug} page={page} />
-        </Disclosure>
-      )}
+      {/* A plain slip even while empty, like the Vetos: its add fold is
+          the one step to a Já visto (#273). */}
+      <Seen slug={slug} page={page} />
     </>
   )
 }
@@ -923,6 +921,8 @@ function OpenQuestions({ slug, page }: Part) {
 
 type OpenQuestion = PersonPage['openQuestions'][number]
 
+const sentence = (text: string) => text.charAt(0).toUpperCase() + text.slice(1)
+
 /** One tap's answer to a question: "Curte" or "Não curte". */
 function QuickAnswer({
   slug,
@@ -975,7 +975,9 @@ function Question({
   const { questions } = PERSON
   return (
     <Item>
-      <span>{q.text}</span>
+      {/* The engine words it as a phrase ("o Quim curte…?"): here it
+          starts the line. */}
+      <span>{sentence(q.text)}</span>
       <Meta parts={[questions.skips(q.skips), shortDate(q.date)]} />
       <div className="mt-sm flex flex-col gap-sm">
         <div className="flex flex-wrap gap-xs">
@@ -1173,7 +1175,6 @@ function AdjustmentForm({
       <input type="hidden" name="elo" value={link} />
       <LevelPicker
         legend={legend}
-        hint={current && shortDate(current.date)}
         saved={saved}
         level={current?.level ?? 'normal'}
         onPick={hydrated ? (form) => form?.requestSubmit() : undefined}
@@ -1188,13 +1189,11 @@ function AdjustmentForm({
  * wide. */
 function LevelPicker({
   legend,
-  hint,
   saved,
   level,
   onPick,
 }: {
   legend: string
-  hint?: string
   saved: boolean
   level: string
   /** A level was tapped: the fieldset's form. */
@@ -1207,11 +1206,10 @@ function LevelPicker({
     >
       <legend className="mb-xs font-display text-field-label">
         {legend}
-        {hint && (
-          <span className="font-body font-normal text-ink-2"> {hint}</span>
-        )}
+        {/* The tick stays on the label's line: no date beside it, which
+            said nothing to the Dono there (#273). */}
         {saved && (
-          <span className="ml-sm font-body font-normal text-ink-2">
+          <span className="ml-sm font-body font-normal whitespace-nowrap text-ink-2">
             <span aria-hidden="true">✓ </span>
             <span role="status">{PERSON.adjustments.saved}</span>
           </span>

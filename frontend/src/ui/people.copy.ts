@@ -25,7 +25,8 @@ export const PEOPLE = {
     title: 'Acrescentar Pessoa',
     name: 'Nome',
     aliases: 'Apelidos',
-    aliasesHint: 'opcional, separados por vírgula',
+    /** The example in the hint, not a placeholder: one reads as typed. */
+    aliasesHint: 'opcional, separados por vírgula; ex.: Lu, Luana',
     owner: 'É Dono: entra no site e no conector',
     email: 'E-mail do Google',
     emailHint: 'o e-mail com que entra',
