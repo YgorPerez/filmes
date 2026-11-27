@@ -12,6 +12,17 @@ export const readFeedbackPage = createServerFn({ method: 'GET' })
     return appFeedbackPage(data, context.owner.person)
   })
 
+/** A told Session's form, filled with what was told
+ * (`feedbackCorrection`, #344). */
+export const readFeedbackCorrection = createServerFn({ method: 'GET' })
+  .middleware([ownerMiddleware])
+  .validator(pathSlug)
+  .handler(async ({ context, data }) => {
+    requireOwner(context.owner)
+    const { appFeedbackCorrection } = await import('#/platform/feedback')
+    return appFeedbackCorrection(data, context.owner.person)
+  })
+
 /** The reactions and comments the Catálogo search kept, in the note
  * `/sessoes/<sessao>/contar?nota=` names (`feedbackDraft`). */
 const readFeedbackDraft = createServerFn({ method: 'GET' })

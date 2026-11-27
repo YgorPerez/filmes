@@ -28,12 +28,23 @@ export const listedSessions = <S extends { open: boolean }>(
  * (#272). Undefined when `id` is not one. */
 export function toldSession(
   sessions:
-    | readonly { id: string; open: boolean; chosen: { title: string } | null }[]
+    | readonly {
+        id: string
+        open: boolean
+        chosen: { title: string } | null
+        attendees: readonly { owner: boolean }[]
+      }[]
     | null,
   id: string,
-): { title: string | null } | undefined {
+): { title: string | null; mine: boolean } | undefined {
   const told = sessions?.find((s) => s.id === id && !s.open)
-  return told && { title: told.chosen?.title ?? null }
+  return (
+    told && {
+      title: told.chosen?.title ?? null,
+      // The Dono looking was there: she may correct it (#344).
+      mine: told.attendees.some((a) => a.owner),
+    }
+  )
 }
 
 /** What `/` shows (`homeData`): the setup guide, the latest Sessão and the

@@ -6,6 +6,7 @@ import {
   type ErrorCode,
   type FeedbackResult,
   type Outcome,
+  type ToldFeedback,
 } from '@filmes/engine'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { useFixture } from '../../../packages/engine/test/fixture.ts'
@@ -13,6 +14,7 @@ import {
   feedbackAction,
   feedbackDraft,
   feedbackFromEngine,
+  feedbackCorrection,
   feedbackPage,
   openSessionList,
   type Feedback,
@@ -51,6 +53,15 @@ const SESSION: FeedbackSession = {
   earlier: [],
 }
 
+const TOLD: ToldFeedback = {
+  session: SESSION.id,
+  chosen: 'tt9000101',
+  reactions: [
+    { person: 'bruno', rating: 9, report: null, comment: 'lindo' },
+    { person: 'quim', rating: null, report: 'disliked', comment: null },
+  ],
+}
+
 const RECORDED: FeedbackResult = {
   session: { id: SESSION.id, file: `sessions/${SESSION.id}.md` },
   chosen: null,
@@ -65,6 +76,7 @@ function fake(
     sessions?: Outcome<FeedbackSession[]>
     satisfaction?: Outcome<SatisfactionNow>
     record?: Outcome<FeedbackResult>
+    told?: Outcome<ToldFeedback | null>
   } = {},
 ) {
   const record = vi.fn<Feedback['record']>(
@@ -73,6 +85,7 @@ function fake(
   const feedback: Feedback = {
     sessions: async () =>
       outcomes.sessions ?? { exitCode: 0, output: [SESSION] },
+    told: async () => outcomes.told ?? { exitCode: 0, output: TOLD },
     satisfaction: async (attendees) =>
       outcomes.satisfaction ?? {
         exitCode: 0,
@@ -471,4 +484,49 @@ describe('feedbackFromEngine', () => {
       await engine.dispose()
     }
   }, 60_000) // real git commits: slow on a loaded machine
+})
+
+describe('correcting a told Session (#344)', () => {
+  it('fills the form with what was told, for a Dono who was there', async () => {
+    const { feedback } = fake()
+    const correction = await feedbackCorrection(SESSION.id, feedback)
+    expect(correction).toMatchObject({
+      page: { id: SESSION.id },
+      film: 'tt9000101',
+      draft: {
+        bruno: { reaction: 'nota:9', comment: 'lindo' },
+        quim: { reaction: 'relato:nao-gostou' },
+      },
+    })
+  })
+
+  it('is unknown to a Dono who was not there, or while the Session is open', async () => {
+    const away = {
+      ...SESSION,
+      attendees: SESSION.attendees.map((a) => ({ ...a, owner: false })),
+    }
+    const { feedback: other } = fake({
+      sessions: { exitCode: 0, output: [away] },
+    })
+    expect(await feedbackCorrection(SESSION.id, other)).toBe('unknown')
+    const { feedback: open } = fake({ told: { exitCode: 0, output: null } })
+    expect(await feedbackCorrection(SESSION.id, open)).toBe('unknown')
+  })
+
+  it('records it as a correction and says so on the Session', async () => {
+    const { feedback, record } = fake()
+    const response = await act(post({ ...FORM, corrigir: 'sim' }), feedback)
+    expect(record.mock.calls[0]?.[1]).toMatchObject({ correct: true })
+    expect(response.headers.get('location')).toBe(
+      `/sessoes/${SESSION.id}?feito=corrigida`,
+    )
+  })
+
+  it('a refused correction goes back to the correction’s form', async () => {
+    const { feedback } = fake({ record: failure('invalid_usage') })
+    const response = await act(post({ ...FORM, corrigir: 'sim' }), feedback)
+    expect(response.headers.get('location')).toBe(
+      `/sessoes/${SESSION.id}/contar?erro=pedido&corrigir=sim`,
+    )
+  })
 })

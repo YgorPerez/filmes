@@ -7,6 +7,7 @@
 import {
   readPeople,
   listSessions,
+  recordedFeedback,
   recordFeedback,
   satisfactionNow,
   type PersonSatisfactionNow,
@@ -15,6 +16,7 @@ import {
   type ErrorOutput,
   type FeedbackResult,
   type Outcome,
+  type ToldFeedback,
 } from '@filmes/engine'
 import {
   feedbackDraftOf,
@@ -65,10 +67,22 @@ export type FeedbackPage = FeedbackSession & {
   satisfaction: FeedbackSatisfaction[]
 }
 
+/** A told Session's form, to correct it (#344): the page, and the film
+ * and the reactions as they were told, to fill it with. `film` is the
+ * chosen film's id, or null for "não vimos nada". */
+export type FeedbackCorrection = {
+  page: FeedbackPage
+  film: string | null
+  draft: FeedbackDraft
+}
+
 /** What the screens and the form need from the engine. */
 export interface Feedback {
-  /** The open Sessions, the latest first. */
-  sessions(): Promise<Outcome<FeedbackSession[]>>
+  /** The open Sessions, the latest first; with `told`, the told ones
+   * too. */
+  sessions(told?: boolean): Promise<Outcome<FeedbackSession[]>>
+  /** What a told Session's Feedback says; null while it is open. */
+  told(session: string): Promise<Outcome<ToldFeedback | null>>
   satisfaction(attendees: readonly string[]): Promise<Outcome<SatisfactionNow>>
   /** Records the Feedback and closes the Session, as the Dono `owner`
    * (a slug). */
@@ -93,7 +107,14 @@ function requestOf(session: string, form: FeedbackForm) {
     if (reaction.comment !== undefined)
       comments.push(`${reaction.person}=${reaction.comment}`)
   }
-  return { session, film: form.film, ratings, reports, comments }
+  return {
+    session,
+    film: form.film,
+    ratings,
+    reports,
+    comments,
+    ...(form.correct === true && { correct: true }),
+  }
 }
 
 /** The Feedback as `viewer` (the logged-in Dono's slug) records it. */
@@ -103,7 +124,7 @@ export function feedbackFromEngine(
 ): Feedback {
   const run = engine.run
   return {
-    async sessions() {
+    async sessions(told = false) {
       const open = await run(listSessions)
       if (open.exitCode !== 0) return open
       const people = await run(readPeople)
@@ -111,7 +132,7 @@ export function feedbackFromEngine(
       const byslug = new Map(people.output.map((p) => [p.slug, p]))
       return ok(
         open.output.sessions
-          .filter((session) => session.open)
+          .filter((session) => told || session.open)
           .map((s) => ({
             id: s.id,
             date: s.date,
@@ -133,6 +154,7 @@ export function feedbackFromEngine(
           })),
       )
     },
+    told: (session) => run(recordedFeedback(session)),
     satisfaction: (attendees) => run(satisfactionNow(attendees)),
     record: (session, form, owner) =>
       run(recordFeedback(requestOf(session, form)), { owner }),
@@ -170,6 +192,15 @@ export async function feedbackPage(
   if (list === null) return null
   const session = list.find((s) => s.id === id)
   if (!session) return 'unknown'
+  return withSatisfaction(session, feedback)
+}
+
+/** The Session with its Presentes' satisfaction now; null when the engine
+ * cannot run here. */
+async function withSatisfaction(
+  session: FeedbackSession,
+  feedback: Feedback,
+): Promise<FeedbackPage | null> {
   const satisfaction = await feedback.satisfaction(
     session.attendees.map((a) => a.person),
   )
@@ -185,6 +216,55 @@ export async function feedbackPage(
       name: names.get(c.person) ?? c.person,
     })),
   }
+}
+
+/** The form's value of each engine Relato level. */
+const REPORT_VALUES = {
+  liked: 'gostou',
+  neutral: 'neutro',
+  disliked: 'nao-gostou',
+} as const
+
+/** What was told, as the form's fields hold it. */
+export function toldDraft(told: ToldFeedback): FeedbackDraft {
+  return Object.fromEntries(
+    told.reactions.map((r) => [
+      r.person,
+      {
+        ...(r.rating !== null
+          ? { reaction: `nota:${r.rating}` }
+          : r.report !== null && {
+              reaction: `relato:${REPORT_VALUES[r.report]}`,
+            }),
+        ...(r.comment !== null && { comment: r.comment }),
+      },
+    ]),
+  )
+}
+
+/** A told Session's form, filled with what was told (#344): `'unknown'`
+ * when no told Session has that id or the Dono looking was not among its
+ * Presentes, null when the engine cannot run here. */
+export async function feedbackCorrection(
+  id: string,
+  feedback: Feedback,
+): Promise<FeedbackCorrection | 'unknown' | null> {
+  const list = await feedback.sessions(true)
+  if (list.exitCode !== 0) {
+    logEngineError(list)
+    return null
+  }
+  const session = list.output.find((s) => s.id === id)
+  if (!session || !session.attendees.some((a) => a.owner)) return 'unknown'
+  const told = await feedback.told(id)
+  if (told.exitCode !== 0) {
+    logEngineError(told)
+    return null
+  }
+  if (told.output === null) return 'unknown'
+  const page = await withSatisfaction(session, feedback)
+  if (page === null) return null
+  return { page, film: told.output.chosen, draft: toldDraft(told.output) }
 }
 
 /** Why the engine refused the Feedback. */
@@ -213,6 +293,7 @@ function searchCatalog(
   query: string,
   session: string,
   notes: Notes,
+  again = '',
 ): Response {
   const draft = feedbackDraftOf(form)
   const token = notes.remember({
@@ -224,7 +305,7 @@ function searchCatalog(
     query ? { buscar: query } : { erro: 'filme' },
   )
   if (token) params.set('nota', token)
-  return seeOther(`${feedbackPath(session)}?${params}`)
+  return seeOther(`${feedbackPath(session)}?${params}${again}`)
 }
 
 /** `POST /feedback/<sessao>/enviar`: records the form's Feedback as the
@@ -245,22 +326,28 @@ export async function feedbackAction(
   const poster = formPoster(request, owner, origin)
   if (poster instanceof Response) return poster
   const form = await request.formData()
+  // A correction goes back to the correction's form (#344).
+  const again = form.get('corrigir') === 'sim' ? '&corrigir=sim' : ''
   const query = feedbackSearch(form)
-  if (query !== undefined) return searchCatalog(form, query, session, notes)
+  if (query !== undefined)
+    return searchCatalog(form, query, session, notes, again)
   const parsed = parseFeedback(form)
   if ('refused' in parsed)
-    return seeOther(`${feedbackPath(session)}?erro=${parsed.refused}`)
+    return seeOther(`${feedbackPath(session)}?erro=${parsed.refused}${again}`)
   const outcome = await feedback.record(session, parsed.ok, poster.person)
   if (outcome.exitCode !== 0) {
     if (outcome.output.error.code === 'unknown_session')
       return seeOther(sessionPath(session))
-    return seeOther(`${feedbackPath(session)}?erro=${refusalOf(outcome)}`)
+    return seeOther(
+      `${feedbackPath(session)}?erro=${refusalOf(outcome)}${again}`,
+    )
   }
   const token = notes.remember({
     warnings: outcome.output.warnings ?? [],
     addition: null,
   })
-  const notice = token ? `feito=contada&nota=${token}` : 'feito=contada'
+  const done = parsed.ok.correct === true ? 'corrigida' : 'contada'
+  const notice = token ? `feito=${done}&nota=${token}` : `feito=${done}`
   return seeOther(`${sessionPath(session)}?${notice}`)
 }
 
@@ -294,6 +381,11 @@ export const serveFeedbackAction = (request: Request, session: string) => {
     origin,
   )
 }
+
+/** A told Session's form, filled with what was told, for the logged-in
+ * Dono `viewer` (#344). */
+export const appFeedbackCorrection = (id: string, viewer: string) =>
+  feedbackCorrection(id, appFeedback(viewer))
 
 /** The draft of `/sessoes/<sessao>/contar?nota=`, for the app. */
 export const appFeedbackDraft = (token: string) =>

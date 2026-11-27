@@ -5,7 +5,11 @@
 // Teo and Iara (the satisfaction only counts Sessions shared with today's
 // Presentes). `E2E_SCREENSHOTS=<folder>` saves a capture of each screen.
 
-import { openSessions, recommendSession } from '@filmes/engine'
+import {
+  openSessions,
+  recommendSession,
+  recordedFeedback,
+} from '@filmes/engine'
 import { type Page } from '@playwright/test'
 import { engineRun, expect, loginAsBruno, snap, tab, test } from './support'
 
@@ -161,6 +165,30 @@ test('a relayed Relato, a film by its title, and a refusal in place', async ({
     'Esta Sessão já foi contada',
   )
   await expect(page.getByRole('link', { name: 'Ver a Sessão' })).toBeVisible()
+
+  // Bruno was there, so he may correct it (#344): the form comes with what
+  // was told, and saving replaces it.
+  await page.getByRole('link', { name: 'Corrigir o que contei' }).click()
+  await expect(page).toHaveURL(
+    new RegExp(`/sessoes/${id}/contar\\?corrigir=sim$`),
+  )
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+    'Corrigir o que contei',
+  )
+  await expect(
+    reactionOf(page, 'Iara').getByRole('radio', {
+      name: 'gostou',
+      exact: true,
+    }),
+  ).toBeChecked()
+  await expect(page.getByLabel('Comentário: Iara')).toHaveValue('riu muito')
+  await snap(page, info, 'feedback-corrigir')
+  await rate(page, 'Bruno', '6')
+  await page.getByRole('button', { name: 'Gravar a correção' }).click()
+  await expect(page).toHaveURL(new RegExp(`/sessoes/${id}\\?feito=corrigida$`))
+  await expect(page.getByText('Correção gravada')).toBeVisible()
+  const told = await engineRun((engine) => engine.run(recordedFeedback(id)))
+  expect(told?.reactions.find((r) => r.person === 'bruno')?.rating).toBe(6)
 })
 
 test.describe('without the JavaScript', () => {
