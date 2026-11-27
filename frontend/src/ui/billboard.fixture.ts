@@ -54,6 +54,7 @@ export const MODEL: Billboard = {
       bet: false,
       poster: 'https://image.tmdb.org/t/p/w500/hOrAsLeNtAs9104.jpg',
       imdbUrl: 'https://www.imdb.com/title/tt9000104/',
+      trailer: 'https://www.youtube.com/watch?v=hOrAsPtBr01',
       imdbRating: 7.4,
       imdbRatingText: '7,4',
       votesText: '28 mil',

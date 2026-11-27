@@ -536,3 +536,57 @@ describe('TMDB', () => {
     ])
   })
 })
+
+describe('TMDB', () => {
+  test('the trailer reads the TMDB id from the pt-BR /find, then asks for its videos', async () => {
+    const fixture = useFixture()
+    const net = fakeFetch((url) =>
+      url.includes('/find/')
+        ? json({ movie_results: [{ id: 9104 }] })
+        : json({
+            id: 9104,
+            results: [
+              {
+                iso_639_1: 'en',
+                key: 'enTrailer01',
+                site: 'YouTube',
+                type: 'Trailer',
+                official: true,
+              },
+            ],
+          }),
+    )
+
+    const trailer = await fixture.ok(
+      over(net.fetch)(
+        Effect.flatMap(Effect.service(Tmdb), (tmdb) =>
+          tmdb.trailer('tt9000104'),
+        ),
+      ),
+      KEYS,
+    )
+
+    expect(trailer).toBe('https://www.youtube.com/watch?v=enTrailer01')
+    expect(net.calls.map((call) => call.url)).toEqual([
+      'https://api.themoviedb.org/3/find/tt9000104?external_source=imdb_id&language=pt-BR&api_key=tmdb-key',
+      'https://api.themoviedb.org/3/movie/9104/videos?language=pt-BR&include_video_language=pt%2Cen&api_key=tmdb-key',
+    ])
+  })
+
+  test('a film TMDB does not find asks for no videos', async () => {
+    const fixture = useFixture()
+    const net = fakeFetch(() => json({ movie_results: [] }))
+
+    const trailer = await fixture.ok(
+      over(net.fetch)(
+        Effect.flatMap(Effect.service(Tmdb), (tmdb) =>
+          tmdb.trailer('tt9000104'),
+        ),
+      ),
+      KEYS,
+    )
+
+    expect(trailer).toBeNull()
+    expect(net.calls).toHaveLength(1)
+  })
+})
