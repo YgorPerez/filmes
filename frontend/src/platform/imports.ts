@@ -173,6 +173,16 @@ async function queueOf(run: Run): Promise<Outcome<QueuePage>> {
   }))
 }
 
+/** What a file import did: its notice, or `repetido` for a file she had
+ * sent already, and its counts. */
+const filed = (
+  notice: ImportNotice,
+  r: { newFile: boolean; newFacts: { ratings: number; seen?: number } },
+): ImportDone => ({
+  notice: r.newFile ? notice : 'repetido',
+  ...counted(r.newFacts),
+})
+
 /** An import or a removal on the Pessoa's files, as `author`. */
 function runImport(
   run: Run,
@@ -184,43 +194,34 @@ function runImport(
     case 'letterboxd':
       return map(
         run(importLetterboxd({ person, ...upload(action), author })),
-        (r): ImportDone => ({
-          notice: r.newFile ? 'letterboxd' : 'repetido',
-          ...counted(r.newFacts),
-        }),
+        (r) => filed('letterboxd', r),
       )
     case 'rss':
       return map(
         run(importLetterboxdRss({ person, user: action.user, author })),
-        (r): ImportDone => ({
-          notice: r.newFile ? 'rss' : 'repetido',
-          ...counted(r.newFacts),
-        }),
+        (r) => filed('rss', r),
       )
     case 'trakt':
       return map(
         run(importTrakt({ person, ...upload(action), author })),
-        (r): ImportDone => ({
-          notice: r.newFile ? 'trakt' : 'repetido',
-          ...counted(r.newFacts),
+        (r) => ({
+          ...filed('trakt', r),
           outside: r.unresolved.length,
         }),
       )
     case 'imdb':
       return map(
         run(importImdb({ person, ...upload(action), author })),
-        (r): ImportDone => ({
-          notice: r.newFile ? 'imdb' : 'repetido',
-          ...counted(r.newFacts),
+        (r) => ({
+          ...filed('imdb', r),
           outside: r.outsideCatalog.length,
         }),
       )
     case 'simkl':
       return map(
         run(importSimkl({ person, ...upload(action), author })),
-        (r): ImportDone => ({
-          notice: r.newFile ? 'simkl' : 'repetido',
-          ...counted(r.newFacts),
+        (r) => ({
+          ...filed('simkl', r),
           outside: r.unresolved.length,
         }),
       )
@@ -236,10 +237,7 @@ function runImport(
     case 'remove':
       return map(
         run(removeImport({ file: action.file, person, author })),
-        (r): ImportDone => ({
-          notice: 'removido',
-          facts: sum(r.removedFacts),
-        }),
+        (r): ImportDone => ({ notice: 'removido', facts: sum(r.removedFacts) }),
       )
   }
 }

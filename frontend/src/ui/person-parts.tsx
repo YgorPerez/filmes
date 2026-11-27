@@ -195,6 +195,18 @@ function useProblemFocus(initial: FieldProblem | null) {
   return { form, problem, setProblem }
 }
 
+type ActionFormProps = {
+  slug: string
+  action: string
+  label?: string
+  className?: string
+  busy?: string
+  /** The field the server refused, when this form came back refused
+   * without the JavaScript (#273): marked from the start. */
+  problem?: FieldProblem | null
+  children: ReactNode
+}
+
 /** A form that posts one action to the Pessoa's route
  * (`platform/people.ts`). A plain POST: it works before the JavaScript.
  * With it (#235), it posts by `fetch`: a refusal shows here, over what was
@@ -210,17 +222,7 @@ export function ActionForm({
   busy = PERSON.saving,
   problem: initialProblem = null,
   children,
-}: {
-  slug: string
-  action: string
-  label?: string
-  className?: string
-  busy?: string
-  /** The field the server refused, when this form came back refused
-   * without the JavaScript (#273): marked from the start. */
-  problem?: FieldProblem | null
-  children: ReactNode
-}) {
+}: ActionFormProps) {
   const id = useId()
   const shared = useContext(RefusedIn)
   const { refused, alert, onAnswer } = useRefusalInPlace(
@@ -843,6 +845,15 @@ function Kept({
   )
 }
 
+type CatalogSearchProps = Pick & {
+  action: string
+  scope: CatalogScope
+  answer: SearchAnswer | null
+  keep?: Readonly<Record<string, string | undefined>>
+  /** What the search is for here, over the default. */
+  lead?: string
+}
+
 /** The search card: the form, then the answer of the page's `?buscar=`.
  * `keep` are the page's other query values the search must not lose (the
  * films Nova Sessão already took for "Parecido com"). */
@@ -855,14 +866,7 @@ export function CatalogSearch({
   onPick,
   pickAs,
   lead,
-}: Pick & {
-  action: string
-  scope: CatalogScope
-  answer: SearchAnswer | null
-  keep?: Readonly<Record<string, string | undefined>>
-  /** What the search is for here, over the default. */
-  lead?: string
-}) {
+}: CatalogSearchProps) {
   const { title, leadFilms, leadAll, label, hint, submit } = CATALOG_SEARCH
   const onSubmit = useGetForm()
   return (

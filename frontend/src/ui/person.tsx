@@ -110,6 +110,22 @@ function SpotStatus({ id }: { id: string }) {
   return notice ? <Notice>{text.notice(notice)}</Notice> : null
 }
 
+type PersonScreenProps = {
+  slug: string
+  page: PersonPage | 'unknown' | null
+  notice?: PersonNotice
+  refusal?: PersonRefusal
+  spot?: string
+  problem?: FieldProblem
+  /** Meu gosto's part of the setup guide; only on her own page. */
+  start?: MyStart
+  showTrakt?: boolean
+  /** On Meu gosto, the films of her imports that wait in the queue. */
+  pending?: number
+  /** On Meu gosto, her genres and directors. */
+  taste?: TasteSummary | null
+}
+
 /** `/pessoas/<slug>`, or Meu gosto for the Dono's own. Another Pessoa's
  * opens with how much the filmes knows of her and the one next step
  * (#273); then her Sessões and Notas on the left, and on the right what
@@ -132,21 +148,7 @@ export function PersonScreen({
   showTrakt = false,
   pending = 0,
   taste = null,
-}: {
-  slug: string
-  page: PersonPage | 'unknown' | null
-  notice?: PersonNotice
-  refusal?: PersonRefusal
-  spot?: string
-  problem?: FieldProblem
-  /** Meu gosto's part of the setup guide; only on her own page. */
-  start?: MyStart
-  showTrakt?: boolean
-  /** On Meu gosto, the films of her imports that wait in the queue. */
-  pending?: number
-  /** On Meu gosto, her genres and directors. */
-  taste?: TasteSummary | null
-}) {
+}: PersonScreenProps) {
   if (page === 'unknown') return <UnknownPerson />
   const own = page !== null && page.person === page.viewer.person
   return (

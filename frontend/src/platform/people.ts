@@ -172,79 +172,98 @@ export function peopleFromEngine(engine: Engine): People {
       const run: Engine['run'] = (effect) =>
         engine.run(effect, { owner: owner.person })
       const by = { person, author: ownerAuthor(owner) }
-      switch (action.kind) {
-        case 'state':
-          return map(run(personState({ ...by, ...statement(action) })), (r) =>
-            newOrSame(r.new),
-          )
-        case 'report':
-          return map(
-            run(
-              personReport({
-                ...by,
-                ...statement(action),
-                source: action.source ?? reportSource(owner.name),
-              }),
-            ),
-            (r) => newOrSame(r.new),
-          )
-        case 'seen':
-          return map(
-            run(
-              personSeen({
-                ...by,
-                film: action.film,
-                rating: action.rating,
-                source: action.source,
-              }),
-            ),
-            (r) => newOrSame(r.new),
-          )
-        case 'veto':
-          return map(
-            run(
-              personVeto({
-                ...by,
-                text: action.text,
-                target: action.target,
-                group: action.group,
-              }),
-            ),
-            (r) => newOrSame(r.new),
-          )
-        case 'adjust':
-          return map(
-            run(
-              personAdjust({ ...by, link: action.link, level: action.level }),
-            ),
-            (r): PersonNotice => (r.new ? 'ajustado' : 'igual'),
-          )
-        case 'skip':
-          return map(
-            run(
-              personSkip({
-                ...by,
-                text: action.text,
-                subject: action.subject,
-                group: action.subject !== undefined && isGroup(action.subject),
-              }),
-            ),
-            (r): PersonNotice => (r.dropped ? 'saiu' : 'pulada'),
-          )
-        case 'answer':
-          return answer(run, by, action)
-        case 'remove':
-          return map(
-            run(personRemove({ ...by, kind: action.what, id: action.id })),
-            (): PersonNotice => 'removido',
-          )
-        case 'grant':
-        case 'revoke':
-          return access(run, by, action)
-        case 'delete':
-          return map(run(personDelete(by)), (): PersonNotice => 'removida')
-      }
+      return isFactWrite(action)
+        ? writeFact(run, by, action, owner)
+        : changeFile(run, by, action)
     },
+  }
+}
+
+type By = { person: string; author: Author }
+
+/** The actions that write a Fato about her, which say whether it is new. */
+type FactWrite = Extract<
+  PersonAction,
+  { kind: 'state' | 'report' | 'seen' | 'veto' | 'adjust' }
+>
+
+const FACT_WRITES: ReadonlySet<PersonAction['kind']> = new Set<
+  PersonAction['kind']
+>(['state', 'report', 'seen', 'veto', 'adjust'])
+
+const isFactWrite = (action: PersonAction): action is FactWrite =>
+  FACT_WRITES.has(action.kind)
+
+/** A Declarado, a Relato, a Já visto, a Veto or an Ajuste. */
+function writeFact(
+  run: Engine['run'],
+  by: By,
+  action: FactWrite,
+  owner: Owner,
+): Promise<Outcome<PersonNotice>> {
+  const added = (r: { new: boolean }) => newOrSame(r.new)
+  switch (action.kind) {
+    case 'state':
+      return map(run(personState({ ...by, ...statement(action) })), added)
+    case 'report':
+      return map(
+        run(
+          personReport({
+            ...by,
+            ...statement(action),
+            source: action.source ?? reportSource(owner.name),
+          }),
+        ),
+        added,
+      )
+    case 'seen': {
+      const { film, rating, source } = action
+      return map(run(personSeen({ ...by, film, rating, source })), added)
+    }
+    case 'veto': {
+      const { text, target, group } = action
+      return map(run(personVeto({ ...by, text, target, group })), added)
+    }
+    case 'adjust':
+      return map(
+        run(personAdjust({ ...by, link: action.link, level: action.level })),
+        (r): PersonNotice => (r.new ? 'ajustado' : 'igual'),
+      )
+  }
+}
+
+/** What else changes her file: a question skipped or answered, an item
+ * taken out, her access, the Pessoa herself. */
+function changeFile(
+  run: Engine['run'],
+  by: By,
+  action: Exclude<PersonAction, FactWrite>,
+): Promise<Outcome<PersonNotice>> {
+  switch (action.kind) {
+    case 'skip':
+      return map(
+        run(
+          personSkip({
+            ...by,
+            text: action.text,
+            subject: action.subject,
+            group: action.subject !== undefined && isGroup(action.subject),
+          }),
+        ),
+        (r): PersonNotice => (r.dropped ? 'saiu' : 'pulada'),
+      )
+    case 'answer':
+      return answer(run, by, action)
+    case 'remove':
+      return map(
+        run(personRemove({ ...by, kind: action.what, id: action.id })),
+        (): PersonNotice => 'removido',
+      )
+    case 'grant':
+    case 'revoke':
+      return access(run, by, action)
+    case 'delete':
+      return map(run(personDelete(by)), (): PersonNotice => 'removida')
   }
 }
 
