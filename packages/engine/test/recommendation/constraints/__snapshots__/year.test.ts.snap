@@ -1616,7 +1616,7 @@ exports[`the whole output, as recorded > {"since":2016} 1`] = `
             "person": "bruno",
             "source": "MovieLens ml-32m",
             "strength": "weak",
-            "text": "deu 7 de 10 a Rio Abaixo (2014); das 900 pessoas que deram 8 ou mais a ele, 70% fizeram o mesmo com este",
+            "text": "deu 7 de 10 a Rio Abaixo (2014); das 900 pessoas que deram 8 ou mais a ele, 70% deram 8 ou mais a este",
           },
         ],
       },

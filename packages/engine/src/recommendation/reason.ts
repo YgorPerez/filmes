@@ -36,12 +36,15 @@ type Line = Pick<EvidenceJson, 'text' | 'kind' | 'contribution'>
 // mais"; the Motivo reads both.
 const SEED = String.raw`(?:deu [\d,]+(?: de 10)? a|disse que ama|segundo o Dono, ama)`
 const HIGH = String.raw`como \d+ filmes? a que deu nota alta`
+// A Nota under 8 of 10 that her percentile reads for her says so after the
+// film (`OWN_SCALE_TEXT`, #272), and its share says it whole.
+const OWN = String.raw`(?:, uma das notas mais altas que dá)?`
 
 /** Each wording and what it is about, the more specific first. */
 const READINGS: ReadonlyArray<readonly [RegExp, ReasonKind]> = [
   [
     new RegExp(
-      String.raw`^${SEED} (.+); das [\d.]+ pessoas que deram [48] ou mais a ele, \d+% fizeram o mesmo com este$`,
+      String.raw`^${SEED} (.+?)${OWN}; das [\d.]+ pessoas que deram [48] ou mais a ele, \d+% (?:fizeram o mesmo com este|deram 8 ou mais a este)$`,
       'u',
     ),
     'film',

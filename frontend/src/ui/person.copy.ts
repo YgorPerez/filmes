@@ -152,7 +152,9 @@ export const PERSON = {
       return `a previsão erra ${rounded.toLocaleString('pt-BR')} ${points} em média, em ${films.toLocaleString('pt-BR')} filmes`
     },
     rate: 'Dar notas',
-    import: 'Importar de outro site',
+    // The page's own title (#274): "De outro site" there is IMDb, Simkl and
+    // TV Time only.
+    import: 'Importar Notas',
     more: 'Baixar as Notas:',
     download: 'CSV do IMDb',
     downloadLetterboxd: 'CSV do Letterboxd',
@@ -386,7 +388,8 @@ export const PERSON = {
   },
   seen: {
     title: 'Já vistos',
-    empty: 'Nenhum Já visto dito aqui. As Notas do site ficam nas Notas.',
+    empty:
+      'Nenhum filme visto sem Nota. Os que têm Nota já contam como vistos.',
     add: 'Acrescentar Já visto',
     source: 'conversa com o Dono',
   },

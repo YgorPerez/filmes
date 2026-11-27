@@ -226,3 +226,72 @@ test('two Presentes posting at once both count', async () => {
     await engine.dispose()
   }
 })
+
+test('a sim from an older deck on a film that already left is named on the deck', async () => {
+  const fixture = useFixture()
+  const engine = makeEngine(fixture.vars)
+  const database = join(fixture.root, 'auth.sqlite')
+  try {
+    const first = await fixture.ok(
+      recommendSession({ attendees: ['dono', 'iara'], count: 3 }),
+      {},
+      { owner: 'bruno' },
+    )
+    const session = first.session.id
+    const [a, b] = first.films.map((f) => f.id)
+    const url = await issueSessionLink(
+      session,
+      'bruno',
+      engine,
+      database,
+      ORIGIN,
+    )
+    if (!url) throw new Error('Expected a Session link')
+    const link = Object.fromEntries(new URL(url).searchParams)
+    const post = (presente: string, body: string) =>
+      voteAction(
+        new Request(
+          `${ORIGIN}/participar/votos?${new URLSearchParams({ ...link, presente })}`,
+          {
+            method: 'POST',
+            headers: {
+              origin: ORIGIN,
+              'content-type': 'application/x-www-form-urlencoded',
+            },
+            body,
+          },
+        ),
+        engine,
+        database,
+        ORIGIN,
+      )
+    const where = (r: Response) =>
+      new URL(r.headers.get('location') ?? '', ORIGIN).searchParams
+
+    await post('iara', `versao=1&nao=${b}`)
+    // Bruno's deck still showed version 1: his sim on b came too late.
+    const late = where(await post('bruno', `versao=1&sim=${a}&sim=${b}`))
+    expect(late.get('fora')).toBe(b)
+    const deck = await voteDeck(
+      sessionLinkSearch({ ...link, presente: 'bruno' }),
+      engine,
+      database,
+    )
+    expect(deck?.stale).toBeUndefined()
+    const told = await voteDeck(
+      {
+        ...sessionLinkSearch({ ...link, presente: 'bruno' }),
+        fora: `${b},${a},zz`,
+      },
+      engine,
+      database,
+    )
+    // Only a film the Session showed and no longer shows is named.
+    expect(told?.stale).toEqual([first.films[1]?.title])
+
+    const onTime = where(await post('iara', `versao=2&sim=${a}`))
+    expect(onTime.get('fora')).toBeNull()
+  } finally {
+    await engine.dispose()
+  }
+})

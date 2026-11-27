@@ -113,6 +113,8 @@ export const WithoutCard: Story = {
       name: 'Filme escolhido',
     })
     await expect(block).toHaveTextContent('Curta da Madrugada (2010)')
-    await expect(within(block).getAllByRole('listitem')).toHaveLength(2)
+    // The two who reacted, then who did not, muted (#272).
+    await expect(within(block).getAllByRole('listitem')).toHaveLength(3)
+    await expect(block).toHaveTextContent('sem reação')
   },
 }

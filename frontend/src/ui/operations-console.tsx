@@ -1,4 +1,5 @@
 import type { ConsultValue, SchemaTable } from '@filmes/engine'
+import { useEffect, useRef, useState } from 'react'
 import type { ConsultAnswer } from '#/platform/operations'
 import { buttonVariants } from './kit/button-variants'
 import { FIELD } from './kit/field'
@@ -27,22 +28,57 @@ function Cell({ value }: { value: ConsultValue }) {
   )
 }
 
+/** Whether the box's content runs past its right edge. False before the
+ * JavaScript, and when everything fits. */
+function useSideways<T extends HTMLElement>() {
+  const box = useRef<T>(null)
+  const [wide, setWide] = useState(false)
+  useEffect(() => {
+    const el = box.current
+    if (!el) return undefined
+    const measure = () => setWide(el.scrollWidth - el.clientWidth > 1)
+    measure()
+    if (typeof ResizeObserver === 'undefined') return undefined
+    const observer = new ResizeObserver(measure)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+  return { box, wide }
+}
+
 /** The console's answer: the table (its header even with no row), or the
  * engine's refusal with its code. */
 function ConsultResult({ answer }: { answer: ConsultAnswer }) {
-  if ('error' in answer) {
-    const { code, message } = answer.error
-    const known = COPY.errors[code]
-    return (
-      <Alert>
-        {known ?? COPY.other}
-        <Detail>
-          <code>{code}</code>
-          {code === 'invalid_sql' && <> ({message})</>}
-        </Detail>
-      </Alert>
-    )
-  }
+  if ('error' in answer) return <ConsultRefusal answer={answer} />
+  return <ConsultTable answer={answer} />
+}
+
+function ConsultRefusal({
+  answer,
+}: {
+  answer: Extract<ConsultAnswer, { error: unknown }>
+}) {
+  const { code, message } = answer.error
+  const known = COPY.errors[code]
+  return (
+    <Alert>
+      {known ?? COPY.other}
+      <Detail>
+        <code>{code}</code>
+        {code === 'invalid_sql' && <> ({message})</>}
+      </Detail>
+    </Alert>
+  )
+}
+
+/** The answer's rows. A table wider than the card scrolls sideways, and
+ * a line above it says so. */
+function ConsultTable({
+  answer,
+}: {
+  answer: Exclude<ConsultAnswer, { error: unknown }>
+}) {
+  const { box, wide } = useSideways<HTMLDivElement>()
   return (
     <div className="flex flex-col gap-xs border-t border-rule pt-xl">
       <h3 id="resultado-consulta" className="font-display text-step-title">
@@ -53,8 +89,14 @@ function ConsultResult({ answer }: { answer: ConsultAnswer }) {
           ? COPY.empty
           : COPY.rows(answer.total, answer.rows.length)}
       </p>
+      {wide && (
+        <p className="text-meta text-ink-2">
+          {COPY.sideways(answer.columns.length)}
+        </p>
+      )}
       {answer.columns.length > 0 && (
         <div
+          ref={box}
           role="region"
           aria-labelledby="resultado-consulta"
           tabIndex={0}

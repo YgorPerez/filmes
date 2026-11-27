@@ -316,8 +316,9 @@ export const appClosedSessionLink = (search: SessionLinkSearch) =>
   closedSessionLink(search, appEngine(), serverEnv().AUTH_DATABASE_PATH)
 
 /** The group swipe's deck (#182), for the app. */
-export const appVoteDeck = (search: SessionLinkSearch) =>
-  voteDeck(search, appEngine(), serverEnv().AUTH_DATABASE_PATH)
+export const appVoteDeck = (
+  search: SessionLinkSearch & { fora?: string | undefined },
+) => voteDeck(search, appEngine(), serverEnv().AUTH_DATABASE_PATH)
 
 /** The group swipe's post (#182), for the app. */
 export const serveVotes = (request: Request) => {

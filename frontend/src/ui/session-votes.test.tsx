@@ -179,7 +179,7 @@ it('with every film voted on, it shows the night’s list with her Votos', () =>
   expect(
     screen.getByRole('link', { name: VOTES.revote }).getAttribute('href'),
   ).toBe(
-    '/participar/votar?sessao=2026-11-20-iara&chave=k&presente=iara&mudar=1',
+    '/participar/votar?sessao=2026-11-20-iara&chave=k&presente=iara&mudar=true',
   )
 })
 
@@ -204,6 +204,23 @@ it('after sending, it says so and offers the films that came in', () => {
       .getByRole('link', { name: 'Votar no que chegou' })
       .getAttribute('href'),
   ).toBe('/participar/votar?sessao=2026-11-20-iara&chave=k&presente=iara')
+  expect(screen.queryByText(/antes do seu sim/u)).toBeNull()
+})
+
+it('after sending from an older deck, names the films her sim missed', () => {
+  const films = [{ ...FILMS[0]!, mine: 'yes' as const }]
+  const deck = { version: 3, films, left: [], stale: ['Quermesse'] }
+  const { rerender } = render(
+    <VoteScreen
+      deck={deck}
+      search={{ ...LINK, feito: 'regerada' }}
+      home={HOME}
+    />,
+  )
+  expect(screen.getByText(VOTES.stale(['Quermesse']))).toBeTruthy()
+  // Coming back later, without the send, the list does not say it.
+  rerender(<VoteScreen deck={deck} search={LINK} home={HOME} />)
+  expect(screen.queryByText(VOTES.stale(['Quermesse']))).toBeNull()
 })
 
 it('a failure she cannot fix names the Dono and leaves only the list', () => {
@@ -310,12 +327,37 @@ it('without a link there is no deck and no list', () => {
 it('the page’s search keeps only the notices and refusals it knows', () => {
   expect(
     voteSearch({ feito: 'votado', erro: 'indisponivel', mudar: 1 }),
-  ).toEqual({ feito: 'votado', erro: 'indisponivel', mudar: true })
-  expect(voteSearch({ feito: 'x', erro: 3, mudar: 'sim' })).toEqual({
+  ).toEqual({
+    feito: 'votado',
+    erro: 'indisponivel',
+    mudar: true,
+    fora: undefined,
+  })
+  expect(
+    voteSearch({ feito: 'x', erro: 3, mudar: 'sim', fora: ['tt1'] }),
+  ).toEqual({
     feito: undefined,
     erro: undefined,
     mudar: undefined,
+    fora: undefined,
   })
+  expect(voteSearch({ fora: 'a b,,' })).toMatchObject({ fora: undefined })
+})
+
+it('mudar survives the router writing it back (pass 4 F1)', () => {
+  // The router reads `mudar=true` as `true` and writes `true` back.
+  for (const mudar of [true, 'true', 1, '1'])
+    expect(voteSearch({ mudar }).mudar).toBe(true)
+  const href = votePath('votar', { sessao: 's', chave: 'k' }, { mudar: true })
+  const read = new URL(href, 'https://x').searchParams.get('mudar')
+  expect(voteSearch({ mudar: JSON.parse(read ?? '') }).mudar).toBe(true)
+})
+
+it('fora keeps up to ten film ids', () => {
+  const ids = Array.from({ length: 12 }, (_, i) => `tt${i}`)
+  expect(voteSearch({ fora: [...ids, 'x y'].join(',') }).fora).toBe(
+    ids.slice(0, 10).join(','),
+  )
 })
 
 // The sticker on the card, not the button of the same word.

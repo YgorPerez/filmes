@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import type { PushStatus } from '@filmes/engine'
 import { Icon, type IconName } from './kit/icon'
 import { Avatar } from './kit/person'
-import { SiteFooter } from './kit/site-footer'
+import { CREDITS_PATH, SiteFooter } from './kit/site-footer'
 import { Alert } from './kit/status'
 import { OPERATIONS } from './operations.copy'
 import { SHELL } from './shell.copy'
@@ -275,7 +275,10 @@ export function AppShell({
       )}
       <div className="flex flex-1 flex-col pb-tab-clearance min-[900px]:pb-0">
         <div>{children}</div>
-        <SiteFooter width={wide ? 'wide' : 'page'} />
+        <SiteFooter
+          width={wide ? 'wide' : 'page'}
+          current={path === CREDITS_PATH}
+        />
       </div>
       <Tabs path={path} place="bottom" />
     </div>
@@ -285,8 +288,15 @@ export function AppShell({
 /** A page with no Dono (the 404 and the error outside the shell,
  * `/creditos` logged out): the case-black bar with "filmes" leading home,
  * over the page, in the 720px column, and the footer. The page carries its
- * own way in, so the bar has no Entrar. */
-export function OutsideShell({ children }: { children: ReactNode }) {
+ * own way in, so the bar has no Entrar. `path` is the page's, so the
+ * footer knows when it is on the credits. */
+export function OutsideShell({
+  path = '',
+  children,
+}: {
+  path?: string
+  children: ReactNode
+}) {
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="bg-case text-case-ink">
@@ -295,7 +305,7 @@ export function OutsideShell({ children }: { children: ReactNode }) {
         </div>
       </header>
       {children}
-      <SiteFooter />
+      <SiteFooter current={path === CREDITS_PATH} />
     </div>
   )
 }

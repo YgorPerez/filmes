@@ -267,6 +267,26 @@ test('a name no Pessoa has is a 404 that says so', async ({ page }) => {
   await expect(page.getByRole('link', { name: 'Ver as Pessoas' })).toBeVisible()
 })
 
+test('the bar and the page start at one edge on every Pessoas screen', async ({
+  page,
+}) => {
+  // The list, a Pessoa and the 404 share the wide column, so the top bar
+  // stays put between them (#273).
+  await page.setViewportSize({ width: 1280, height: 900 })
+  await loginAsBruno(page)
+  const edges: number[] = []
+  for (const path of ['/pessoas', '/pessoas/quim', '/pessoas/ninguem']) {
+    await page.goto(path)
+    const brand = await page
+      .getByRole('link', { name: 'filmes, início' })
+      .boundingBox()
+    const title = await page.getByRole('heading', { level: 1 }).boundingBox()
+    expect(title?.x).toBe(brand?.x)
+    edges.push(brand?.x ?? -1)
+  }
+  expect(new Set(edges).size).toBe(1)
+})
+
 /** Opens "Acrescentar Pessoa" on `/pessoas` and gives its form. */
 async function createForm(page: Page) {
   await page.goto('/pessoas')

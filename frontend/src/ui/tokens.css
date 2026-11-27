@@ -65,6 +65,17 @@
   --color-genre-green: #36b35a;
   --color-genre-orange: #ff7a1a;
   --color-genre-pink: #ff5c9a;
+  /* The floors of the Cartaz's MCP Apps view, set at run time from the
+   * host's context (`mcp-view/mount-view.tsx`, #277): `card-floor` is the
+   * inline card's own fill, the ground only in a dark frame whose host does
+   * not say its floor; `view-floor` is what the frame sits on, the host's
+   * own background when it gives one. Outside the view, nothing and the
+   * surface. */
+  --color-card-floor: var(--card-floor, transparent);
+  --color-view-floor: var(
+    --view-floor,
+    var(--card-floor, var(--color-surface))
+  );
 
   --font-*: initial;
   --font-display: Rubik, system-ui, sans-serif;

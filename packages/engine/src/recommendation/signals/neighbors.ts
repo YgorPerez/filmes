@@ -5,7 +5,9 @@
 // scale), or her stated "ama", is a seed.
 // For each neighbour Y of X that is a Candidate, one review Evidence: "deu
 // 10 de 10 a X; das 3.104 pessoas que deram 8 ou mais a ele, 64% fizeram o
-// mesmo com este" (on the 1 to 10 scale, #272). The
+// mesmo com este" (on the 1 to 10 scale, #272). A Nota under 8 of 10
+// that her percentile reads for her says so, and the share says "deram 8
+// ou mais a este" (`wording.ts`, #272). The
 // strength comes from the base and the share, capped by the seed's
 // strength; a Nota seed's Decaimento (`decay.ts`) scales the weight. A
 // stated rating opens the line as on the content path and has
@@ -20,7 +22,13 @@ import {
   seedStrength,
   type SeedKind,
 } from '../../evidence/ruler.ts'
-import { filmText, neighborhoodText, seedText } from '../../evidence/wording.ts'
+import {
+  belowNeighborhoodCut,
+  filmText,
+  neighborhoodText,
+  ownScaleText,
+  seedText,
+} from '../../evidence/wording.ts'
 import { num, numOrNull, text, textOrNull } from '../../sqlite/row.ts'
 import { kindOf } from '../../sqlite/vocabulary.ts'
 import { candidatesJson, scaleOf, type Signal } from './Signal.ts'
@@ -64,13 +72,15 @@ export const neighbors: Signal = {
         const strength = neighborStrength(base, both, seed)
         if (strength === null) return []
         const film = filmText(text(row, 'titulo'), numOrNull(row, 'ano'))
+        const rating = num(row, 'nota')
+        const own = ownScaleText(kind, rating, [seed, direction])
         return [
           makeEvidence({
             person,
             filmId: candidate,
             text:
-              `${seedText(kind, num(row, 'nota'), film)}; ` +
-              neighborhoodText(base, both),
+              `${seedText(kind, rating, film)}${own}; ` +
+              neighborhoodText(base, both, belowNeighborhoodCut(kind, rating)),
             source: text(row, 'fonte'),
             date: text(row, 'data'),
             strength,

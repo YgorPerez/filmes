@@ -647,8 +647,8 @@ function DraftList({
 /** The bar stuck above the tabs (the Cartaz's send bar): the last Notas
  * of the draft on small discs, how many she has toward the goal, and
  * Pronto, the screen's one orange button, which posts the draft (by
- * `fetch` once the JavaScript is in). With nothing to send, Pronto says so
- * instead of posting. */
+ * `fetch` once the JavaScript is in). With nothing to send, Pronto is a
+ * plain option, not the orange (#274), and says so instead of posting. */
 function RatingBar({
   draft,
   count,
@@ -697,7 +697,10 @@ function RatingBar({
           aria-label={
             busy === null ? RATINGS.doneLabel(rated.length) : undefined
           }
-          className={buttonVariants({ className: 'shrink-0' })}
+          className={buttonVariants({
+            variant: rated.length > 0 ? 'primary' : 'option',
+            className: 'shrink-0',
+          })}
           disabled={busy !== null}
         >
           {busy === null ? RATINGS.done(rated.length) : RATINGS.writing}

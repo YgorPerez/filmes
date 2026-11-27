@@ -6,6 +6,16 @@ import { PERSON_IMPORTS } from './imports.copy'
 import { PersonImportsScreen, type PersonImportsView } from './person-imports'
 
 const NONE = { wikidata: 0, tmdb: 0, manual: 0 }
+/** A site's films (#274), counted as its notice counts them. */
+const NO_FILMS = { rated: 0, seen: 0, watchlist: 0 }
+const FILMS = {
+  trakt: NO_FILMS,
+  imdb: NO_FILMS,
+  simkl: NO_FILMS,
+  tvtime: NO_FILMS,
+}
+const SIMKL_FILMS = { rated: 87, seen: 53, watchlist: 12 }
+const TVTIME_FILMS = { rated: 3, seen: 1, watchlist: 1 }
 const TRAKT_FILE = 'imports/quim/trakt-b1.zip'
 const IMDB_FILE = 'imports/quim/imdb-c1.csv'
 const SIMKL_FILE = 'imports/quim/simkl-d1.zip'
@@ -73,6 +83,12 @@ const QUIM: PersonImportsView = {
   imdb: { ratings: 412 },
   simkl: { ratings: 87, seen: 140, watchlist: 12 },
   tvtime: { ratings: 0, seen: 0, stated: 0, watchlist: 0 },
+  films: {
+    trakt: { rated: 2, seen: 0, watchlist: 0 },
+    imdb: { rated: 412, seen: 0, watchlist: 0 },
+    simkl: SIMKL_FILMS,
+    tvtime: NO_FILMS,
+  },
 }
 
 /** Quim with nothing imported yet. */
@@ -91,6 +107,7 @@ const EMPTY: PersonImportsView = {
   imdb: { ratings: 0 },
   simkl: { ratings: 0, seen: 0, watchlist: 0 },
   tvtime: { ratings: 0, seen: 0, stated: 0, watchlist: 0 },
+  films: FILMS,
 }
 
 /** Quim with only the IMDb CSV. */
@@ -98,6 +115,7 @@ const IMDB_ONLY: PersonImportsView = {
   ...EMPTY,
   imports: QUIM.imports.filter(({ kind }) => kind === 'imdb'),
   imdb: { ratings: 412 },
+  films: { ...FILMS, imdb: QUIM.films.imdb },
 }
 
 /** Quim with only the Simkl backup. */
@@ -105,6 +123,7 @@ const SIMKL_ONLY: PersonImportsView = {
   ...EMPTY,
   imports: QUIM.imports.filter(({ kind }) => kind === 'simkl'),
   simkl: QUIM.simkl,
+  films: { ...FILMS, simkl: SIMKL_FILMS },
 }
 
 /** Quim with the TV Time backup too: its films join the Letterboxd ones in
@@ -120,6 +139,7 @@ const WITH_TVTIME: PersonImportsView = {
     queue: [LOST, ...QUIM.letterboxd.queue],
   },
   tvtime: TVTIME_FACTS,
+  films: { ...QUIM.films, tvtime: TVTIME_FILMS },
 }
 
 /** Quim with only the TV Time backup. */
@@ -134,6 +154,7 @@ const TVTIME_ONLY: PersonImportsView = {
     queue: [LOST, ...QUIM.letterboxd.queue],
   },
   tvtime: TVTIME_FACTS,
+  films: { ...FILMS, tvtime: TVTIME_FILMS },
 }
 
 const meta = {
@@ -156,8 +177,27 @@ export const WithImports: Story = {
   },
 }
 
+/** Her own page with Trakt on the site and not connected: the way to
+ * connect stays in what came in, though the forms fold away (#274). */
 export const Own: Story = {
-  args: { slug: 'quim', page: { ...QUIM, own: true } },
+  args: {
+    slug: 'quim',
+    page: {
+      ...QUIM,
+      own: true,
+      traktLink: { available: true, connected: false },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const results = within(
+      within(canvasElement).getByRole('region', {
+        name: PERSON_IMPORTS.results.title,
+      }),
+    )
+    await expect(
+      results.getByRole('link', { name: PERSON_IMPORTS.results.traktConnect }),
+    ).toHaveAttribute('href', '/trakt')
+  },
 }
 
 export const NothingYet: Story = { args: { page: EMPTY } }
@@ -187,7 +227,9 @@ export const OnlyImdb: Story = {
   args: { page: IMDB_ONLY },
   play: async ({ canvasElement }) => {
     await expect(
-      within(canvasElement).getByText(PERSON_IMPORTS.results.imdb(412)),
+      within(canvasElement).getByText(
+        PERSON_IMPORTS.results.site('IMDb', QUIM.films.imdb),
+      ),
     ).toBeVisible()
   },
 }
@@ -203,7 +245,9 @@ export const OnlySimkl: Story = {
   args: { page: SIMKL_ONLY },
   play: async ({ canvasElement }) => {
     await expect(
-      within(canvasElement).getByText(PERSON_IMPORTS.results.simkl(87, 140)),
+      within(canvasElement).getByText(
+        PERSON_IMPORTS.results.site('Simkl', SIMKL_FILMS),
+      ),
     ).toBeVisible()
   },
 }
@@ -227,7 +271,7 @@ export const WithTvTime: Story = {
       }),
     ).toBeVisible()
     await expect(
-      canvas.getByText(PERSON_IMPORTS.results.tvtime(3, 4)),
+      canvas.getByText(PERSON_IMPORTS.results.site('TV Time', TVTIME_FILMS)),
     ).toBeVisible()
     await expect(
       canvas.getByText(PERSON_IMPORTS.results.queued(2, 'both')),

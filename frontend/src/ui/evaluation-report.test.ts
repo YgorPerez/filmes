@@ -144,4 +144,25 @@ describe('tidyReport', () => {
       },
     ])
   })
+
+  it('calls the grid’s sets of weights combinações, as the page does', () => {
+    const sections = parseReport(
+      [
+        '## Grade de pesos',
+        '',
+        'Foram testados 411 conjuntos. A ordem usa a média do Recall@50.',
+      ].join('\n'),
+    )
+    expect(tidyReport(sections, {})).toEqual([
+      {
+        title: 'Grade de pesos',
+        blocks: [
+          {
+            kind: 'paragraph',
+            text: 'Foram testadas 411 combinações. A ordem usa a média do Recall@50.',
+          },
+        ],
+      },
+    ])
+  })
 })

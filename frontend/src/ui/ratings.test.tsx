@@ -111,9 +111,10 @@ describe('the rating screen', () => {
         ?.textContent,
     ).toContain('8')
     expect(sent()).toEqual({ 'nota.tt9000601': '8' })
+    // With a Nota to send, Pronto turns into the screen's orange (#274).
     expect(
-      screen.getByRole('button', { name: RATINGS.doneLabel(1) }),
-    ).toBeTruthy()
+      screen.getByRole('button', { name: RATINGS.doneLabel(1) }).className,
+    ).toContain('bg-sticker-orange')
     // What the tap did: said aloud, counted toward ten, the focus on the
     // next film.
     expect(
@@ -203,7 +204,10 @@ describe('the rating screen', () => {
 
     expect(card().getByRole('heading').textContent).toBe('Casa Cheia')
     expect(sent()).toEqual({})
-    await user.click(screen.getByRole('button', { name: RATINGS.doneLabel(0) }))
+    // Nothing to send: Pronto is no orange button yet (#274).
+    const pronto = screen.getByRole('button', { name: RATINGS.doneLabel(0) })
+    expect(pronto.className).not.toContain('bg-sticker-orange')
+    await user.click(pronto)
     expect(screen.getByText(RATINGS.nothing)).toBeTruthy()
     expect(fetched).not.toHaveBeenCalled()
   })

@@ -503,7 +503,8 @@ function Satisfaction({ page }: { page: FeedbackPage }) {
             ? []
             : [
                 <Item key={c.person}>
-                  <span>{c.line}</span>
+                  {/* Small, under the block's own lead (#272). */}
+                  <span className="text-meta text-ink">{c.line}</span>
                 </Item>,
               ],
         )}

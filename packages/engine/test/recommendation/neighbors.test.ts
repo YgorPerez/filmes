@@ -5,6 +5,7 @@
 import { describe, expect, test } from 'vite-plus/test'
 import {
   consult,
+  filmReason,
   personCreate,
   personReport,
   personState,
@@ -133,6 +134,53 @@ describe('the neighbourhood path', () => {
       x.text.startsWith('deu 7 de 10 a Rio Abaixo'),
     )
     expect(e?.strength).toBe('moderate')
+    // A Nota under 8 of 10 that the ruler reads for her says so, and the
+    // share does not say "o mesmo" of what she did not do (#272).
+    expect(e?.text).toBe(
+      'deu 7 de 10 a Rio Abaixo (2014), uma das notas mais altas que dá; das 900 pessoas que deram 8 ou mais a ele, 70% deram 8 ou mais a este',
+    )
+  })
+
+  test('the content path says the same of a Nota under 8 of 10 she rates high, and the Motivo reads both', async () => {
+    const fixture = useFixture()
+    const opened = await fixture.ok(
+      recommendSession({ attendees: ['dono'], count: 50 }),
+    )
+    await fixture.ok(
+      recordFeedback({
+        session: opened.session.id,
+        film: 'Rio Abaixo',
+        ratings: ['dono=3,5'],
+      }),
+    )
+    const out = await all(fixture)
+
+    const content = (film(out, 'Vento Norte').evidence['bruno'] ?? []).find(
+      (e) => e.text.startsWith('deu 7 de 10 a Rio Abaixo'),
+    )
+    expect(content?.text).toBe(
+      'deu 7 de 10 a Rio Abaixo (2014), uma das notas mais altas que dá, também de Marta Quintal',
+    )
+    const [neighbour] = reviews(out, 'Luz de Inverno').filter((x) =>
+      x.text.startsWith('deu 7 de 10 a Rio Abaixo'),
+    )
+    expect(
+      [content, neighbour].map((line) =>
+        filmReason({ bruno: line === undefined ? [] : [line] }),
+      ),
+    ).toEqual([
+      { kind: 'entity', name: 'Marta Quintal', people: ['bruno'] },
+      { kind: 'film', name: 'Rio Abaixo (2014)', people: ['bruno'] },
+    ])
+  })
+
+  test('a weak seed under 8 of 10 says the share whole, with no qualifier', async () => {
+    const [e] = reviews(await all(useFixture()), 'Luz de Inverno').filter((x) =>
+      x.text.startsWith('deu 7 de 10 a Rio Abaixo'),
+    )
+    expect(e?.text).toBe(
+      'deu 7 de 10 a Rio Abaixo (2014); das 900 pessoas que deram 8 ou mais a ele, 70% deram 8 ou mais a este',
+    )
   })
 })
 

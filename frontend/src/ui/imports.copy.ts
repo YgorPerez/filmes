@@ -1,3 +1,4 @@
+import type { SourceFilms } from '@filmes/engine'
 import type {
   ChangedRating,
   ImportNotice,
@@ -110,7 +111,6 @@ const KINDS: Record<string, string> = {
   letterboxd: 'ZIP do Letterboxd',
   'letterboxd-rss': 'Perfil do Letterboxd',
   trakt: 'ZIP do Trakt',
-  'trakt-api': 'Lido do Trakt',
   imdb: 'CSV do IMDb',
   simkl: 'Backup do Simkl',
   tvtime: 'Backup do TV Time',
@@ -200,13 +200,22 @@ export const PERSON_IMPORTS = {
     waiting: 'esperam você',
     seeOutside: (n: number) =>
       n === 1 ? 'Ver o filme deixado de fora' : `Ver os ${n} deixados de fora`,
-    trakt: (ratings: number, seen: number) =>
-      `Trakt: ${count(ratings, 'Nota', 'Notas')} e ${count(seen, 'Já visto', 'Já vistos')}`,
-    imdb: (ratings: number) => `IMDb: ${count(ratings, 'Nota', 'Notas')}`,
-    simkl: (ratings: number, seen: number) =>
-      `Simkl: ${count(ratings, 'Nota', 'Notas')} e ${count(seen, 'Já visto', 'Já vistos')}`,
-    tvtime: (ratings: number, seen: number) =>
-      `TV Time: ${count(ratings, 'Nota', 'Notas')} e ${count(seen, 'Já visto', 'Já vistos')}`,
+    /** What another site gave, by film, in the words of its notice
+     * (#274): "TV Time: 2 Notas, 1 Já visto e 1 filme na watchlist". A
+     * rated film is no Já visto of its own. */
+    site: (site: string, { rated, seen, watchlist }: SourceFilms) =>
+      `${site}: ${andList(
+        [
+          rated > 0 && count(rated, 'Nota', 'Notas'),
+          seen > 0 && count(seen, 'Já visto', 'Já vistos'),
+          watchlist > 0 &&
+            count(watchlist, 'filme na watchlist', 'filmes na watchlist'),
+        ].filter((part) => part !== false),
+      )}`,
+    /** Her own page, Trakt not connected (#274): the recommended way,
+     * also here once something came in. */
+    traktOff: 'Trakt não conectado',
+    traktConnect: 'Conectar o Trakt',
     queued: (n: number, from: Resolved = 'letterboxd') =>
       n === 1
         ? `1 filme ${QUEUED_FROM[from]} espera você confirmar qual é`
@@ -229,7 +238,14 @@ export const PERSON_IMPORTS = {
   files: {
     title: 'Arquivos e perfis',
     lead: 'Tirar um import tira as Notas e os Já vistos que só ele trazia.',
-    kind: (kind: string) => KINDS[kind] ?? kind,
+    /** A Trakt read names the profile it read, as the profile form does
+     * (#274), or her connected account. */
+    kind: (kind: string, original = '') =>
+      kind === 'trakt-api'
+        ? original.startsWith('@')
+          ? 'Perfil do Trakt'
+          : 'Conta do Trakt'
+        : (KINDS[kind] ?? kind),
     on: (date: string) => `em ${shortDate(date)}`,
     remove: 'Tirar',
     removeLabel: (original: string) => `Tirar ${original}`,
@@ -262,7 +278,10 @@ export const PERSON_IMPORTS = {
     },
     profile: {
       title: 'Para manter em dia: o perfil',
-      text: 'Depois do ZIP, o filmes lê do perfil público as 50 entradas mais recentes do diário. Quando registrar filmes novos, toque em “Ler agora”.',
+      /** Before the first read the button is "Ler o perfil"; after it,
+       * "Ler agora" (#274). */
+      text: (read: boolean) =>
+        `Depois do ZIP, o filmes lê do perfil público as 50 entradas mais recentes do diário. ${read ? 'Quando registrar filmes novos, toque em “Ler agora”.' : 'Escreva o nome do perfil e toque em “Ler o perfil”.'}`,
     },
   },
   rss: {

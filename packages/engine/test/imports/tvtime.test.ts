@@ -370,6 +370,8 @@ describe('personImports', () => {
       stated: 0,
       watchlist: 1,
     })
+    // By film, as the notice counts (#274): the rated films are seen too.
+    expect(report.films.tvtime).toEqual({ rated: 2, seen: 1, watchlist: 1 })
 
     const removed = await fixture.ok(removeImport({ file, author: AUTHOR }))
     expect(removed.removedFacts).toEqual({

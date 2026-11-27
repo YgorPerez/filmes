@@ -26,8 +26,11 @@ export const Route = createFileRoute('/participar')({
       asked: askedLinkPage(location.pathname),
     }
   },
-  // The link's preview in a chat: who calls and with whom.
+  // The link's preview in a chat: who calls and with whom. `covers`: no
+  // child page shows (no Presente chosen, or the link is closed or
+  // broken), so this page's title is the tab's (pass 4 F7).
   loader: ({ context: { participation, closed } }) => ({
+    covers: !participation?.selected,
     title: participation?.selected
       ? PARTICIPATION.films
       : participation
@@ -62,7 +65,9 @@ function SessionLinkRoute() {
   const { participation, closed, asked } = Route.useRouteContext()
   const { chave, presente } = Route.useSearch()
   return (
-    <div className="flex min-h-dvh flex-col bg-ground">
+    // `overflow-x-clip`: the card dragged at 390px turns past the edge,
+    // and the page must not grow sideways mid-swipe (pass 4 F6).
+    <div className="flex min-h-dvh flex-col overflow-x-clip bg-ground">
       <main className="mx-auto flex w-full max-w-[640px] flex-col gap-xl px-2xl py-3xl max-[480px]:px-lg">
         {!participation || !chave ? (
           <LinkUnavailable closed={closed} />

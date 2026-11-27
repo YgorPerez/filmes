@@ -59,7 +59,13 @@ export const VOTES = {
   lineup: 'A lista da noite agora',
   revote: 'Mudar votos',
   list: 'Ver a lista',
-  questions: 'Responder perguntas de gosto (1 min)',
+  /** Short enough to stay on one line of the pill at 390px, with "1 min"
+   * kept whole (pass 4 F5). */
+  questions: 'Responder perguntas (1\u00a0min)',
+  /** Her sim on films another Presente's não had already taken out, on an
+   * older deck: the engine skipped them (pass 4 F3). */
+  stale: (titles: readonly string[]) =>
+    `Já tinha saído da noite antes do seu sim: ${titles.join(', ')}.`,
   notices: {
     votado: 'Votos contados.',
     atualizada: 'Votos contados. A lista foi atualizada.',
@@ -71,6 +77,6 @@ export const VOTES = {
       `Seus votos foram contados, mas a lista não foi refeita. Fale com ${who(owner)}.`,
     indisponivel: () => 'Não deu pra enviar os votos agora. Tente de novo.',
     falha: (owner: string | null) =>
-      `Deu um problema do nosso lado e seus votos não foram contados. Fale com ${who(owner)}.`,
+      `Deu um problema do nosso lado. Fale com ${who(owner)}.`,
   },
 } as const

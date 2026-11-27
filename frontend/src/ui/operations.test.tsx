@@ -201,6 +201,48 @@ describe('the console, the table', () => {
   })
 })
 
+describe('the console, a table wider than the card', () => {
+  const WIDE: ConsultAnswer = {
+    sql: 'SELECT * FROM arestas',
+    columns: ['fato_id', 'filme_id', 'predicado', 'alvo'].map((name, i) => ({
+      key: `c${i}`,
+      name,
+    })),
+    rows: [],
+    total: 0,
+    limit: 200,
+  }
+
+  // jsdom lays nothing out: the widths are the browser's at 390px.
+  const widths = (scroll: number, client: number) => {
+    vi.spyOn(HTMLElement.prototype, 'scrollWidth', 'get').mockReturnValue(
+      scroll,
+    )
+    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(
+      client,
+    )
+  }
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('says the table scrolls sideways', () => {
+    widths(900, 340)
+    show(page({ consult: WIDE }))
+    expect(
+      within(region(OPERATIONS.consult.title)).getByText(
+        OPERATIONS.consult.sideways(4),
+      ),
+    ).toBeTruthy()
+  })
+
+  it('says nothing when the columns fit', () => {
+    widths(340, 340)
+    show(page({ consult: WIDE }))
+    expect(screen.queryByText(OPERATIONS.consult.sideways(4))).toBeNull()
+  })
+})
+
 describe('the console, cells, empty answers and tables', () => {
   it('wraps a long cell at its words, in a column of its own', () => {
     const long = 'palavra '.repeat(8).trim()
@@ -365,6 +407,65 @@ describe('the evaluation, following the run', () => {
   })
 })
 
+describe('the evaluation, the focus when the run ends', () => {
+  const FAILED: EvaluationJob = {
+    state: 'failed',
+    by: 'Bruno',
+    grid: false,
+    startedAt: RUNNING.startedAt,
+    finishedAt: RUNNING.startedAt,
+    error: { code: 'missing_config', message: 'falta a pasta' },
+  }
+
+  const follow = (end: EvaluationJob) =>
+    render(
+      <EvaluationSection
+        initial={{ ...IDLE, job: RUNNING }}
+        read={async () => ({ ...IDLE, job: end })}
+        pollMs={0}
+        started
+      />,
+    )
+
+  it('gives the verdict the focus the progress had', async () => {
+    follow(DONE)
+    await screen.findByText(/^Terminou em/)
+    expect(document.activeElement?.textContent).toBe(
+      'A lista acerta 40% das Notas altas reservadas, com 4 Pessoas.',
+    )
+  })
+
+  it('gives why the run stopped the focus', async () => {
+    follow(FAILED)
+    await screen.findByRole('alert')
+    expect(document.activeElement?.textContent).toContain(
+      OPERATIONS.evaluation.failed,
+    )
+  })
+
+  it('leaves a focus the admin moved elsewhere', async () => {
+    render(
+      <>
+        <button type="button">fora</button>
+        <EvaluationSection
+          initial={{ ...IDLE, job: RUNNING }}
+          read={async () => ({ ...IDLE, job: DONE })}
+          pollMs={0}
+          started
+        />
+      </>,
+    )
+    screen.getByRole('button', { name: 'fora' }).focus()
+    await screen.findByText(/^Terminou em/)
+    expect(document.activeElement?.textContent).toBe('fora')
+  })
+
+  it('takes no focus for a run that had ended before the page', () => {
+    show(page({ evaluation: { ...IDLE, job: DONE } }))
+    expect(document.activeElement).toBe(document.body)
+  })
+})
+
 describe('the evaluation, the measures', () => {
   it('shows the measures of the run that ended', () => {
     show(page({ evaluation: { ...IDLE, job: DONE } }))
@@ -375,7 +476,7 @@ describe('the evaluation, the measures', () => {
         .getAllByRole('row')
         .map((r) => r.textContent),
     ).toEqual([
-      'AmostraMedidasRecall@50Cobertura no top 5',
+      'AmostraPessoasRecall@50Cobertura no top 5',
       'Pessoas440%25%',
       `MovieLens0${OPERATIONS.evaluation.noMovielens}`,
     ])

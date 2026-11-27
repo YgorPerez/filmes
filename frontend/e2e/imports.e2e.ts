@@ -103,7 +103,7 @@ async function openOlgaImports(page: Page, info: TestInfo) {
   await expect(page).toHaveURL(/\/pessoas\/olga$/)
   await section(page, 'Notas')
     .getByRole('link', {
-      name: 'Importar de outro site',
+      name: 'Importar Notas',
     })
     .click()
   await expect(page).toHaveURL(/\/pessoas\/olga\/importar$/)
@@ -274,9 +274,9 @@ test('the Dono imports a Trakt ZIP; a ZIP of neither and a profile that does not
     'O ZIP do Trakt entrou: entraram 2 Notas novas.',
   )
   await expect(section(page, RESULTS)).not.toContainText('Letterboxd:')
-  await expect(section(page, RESULTS)).toContainText(
-    'Trakt: 2 Notas e 1 Já visto',
-  )
+  // The card counts by film, as the notice (#274).
+  await expect(section(page, RESULTS)).toContainText('Trakt: 2 Notas')
+  await expect(section(page, RESULTS)).not.toContainText('Já visto')
   await snap(page, info, 'importar-trakt')
 
   const rss = await profile(page)
@@ -337,7 +337,7 @@ test('the Dono imports a Simkl backup ZIP', async ({ page }, info) => {
     /^O backup do Simkl entrou: entraram 3 Notas novas.* 2 filmes ficaram de fora: o Catálogo do filmes não tem\.$/,
   )
   await expect(section(page, RESULTS)).toContainText(
-    'Simkl: 3 Notas e 2 Já vistos',
+    'Simkl: 3 Notas, 2 Já vistos e 1 filme na watchlist',
   )
   await snap(page, info, 'importar-simkl')
   expect((await importsOf('sara')).simkl).toEqual({
@@ -370,7 +370,7 @@ test('the Dono imports a TV Time backup', async ({ page }, info) => {
     /^O backup do TV Time entrou: entraram 2 Notas novas.* 1 filme ficou de fora: o Catálogo do filmes não tem\.$/,
   )
   await expect(section(page, RESULTS)).toContainText(
-    'TV Time: 2 Notas e 3 Já vistos',
+    'TV Time: 2 Notas, 1 Já visto e 1 filme na watchlist',
   )
   await snap(page, info, 'importar-tvtime')
   expect((await importsOf('ravi')).tvtime).toEqual({

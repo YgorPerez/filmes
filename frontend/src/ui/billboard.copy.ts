@@ -86,6 +86,10 @@ export const BILLBOARD = {
     /** Who marked Já vi, for a screen reader, when not every Presente did
      * (#272): the stamp shows their initials. */
     seenStampWho: (names: readonly string[]) => `Já vi: ${andList(names)}`,
+    /** A Já visto the engine knows, with no Já vi marked here (#272). */
+    seenBeforeStamp: 'Visto antes',
+    seenBeforeStampWho: (names: readonly string[]) =>
+      `Visto antes: ${andList(names)}`,
   },
 
   section: {
@@ -117,9 +121,6 @@ export const BILLBOARD = {
     /** More than this many Presentes: their Já vi options open from one
      * "Já vi…" (#277). */
     seenFolded: 4,
-    /** Up to this many Presentes, Todos ends their Já vi line; with more,
-     * it goes beside the label (#272). */
-    seenInline: 3,
     seenMore: 'Já vi…',
     star: (value: number) => `${value} de 5`,
     comment: 'comentário',
