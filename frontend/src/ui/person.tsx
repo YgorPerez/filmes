@@ -127,7 +127,7 @@ function SpotStatus({ id }: { id: string }) {
 }
 
 /** Her Trakt connection, as Meu gosto's Notas say it (#274). */
-export type TraktState = 'connected' | 'disconnected' | null
+type TraktState = 'connected' | 'disconnected' | null
 
 type PersonScreenProps = {
   slug: string

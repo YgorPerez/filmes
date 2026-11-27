@@ -195,7 +195,7 @@ const sum = (counts: Readonly<Record<string, number>>) =>
   Object.values(counts).reduce((a, b) => a + b, 0)
 
 /** How many changed Notas the notice names; the rest it counts. */
-export const NAMED_CHANGES = 3
+const NAMED_CHANGES = 3
 
 /** "Maré Baixa (2015)": a film as the notices name it. */
 const filmTitle = (change: RatingChange) => {

@@ -112,7 +112,7 @@ function filmsLeft(
 
 /** The one goal of Notas (DESIGN.md: "faltam N para 10"): with ten, the
  * recommendation has enough to go on (#274). */
-export const RATING_GOAL = 10
+const RATING_GOAL = 10
 
 /** The rating screen (`RATINGS_PATH`). The Notas wait in the browser's
  * draft until Pronto posts them to `/notas/enviar`, which writes them in
