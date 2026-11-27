@@ -24,7 +24,8 @@ async function download(
   const notes = section(page, 'Notas')
   // Folded under the Notas (#273).
   await notes.getByText('Baixar as Notas em CSV', { exact: true }).click()
-  await expect(notes.getByText('Import or Export Data')).toBeVisible()
+  // Where each CSV goes is said to an admin only (#274); Bruno is not one.
+  await expect(notes.getByText('Import or Export Data')).toHaveCount(0)
   const [file] = await Promise.all([
     page.waitForEvent('download'),
     notes.getByRole('link', { name: LINKS[format] }).click(),
