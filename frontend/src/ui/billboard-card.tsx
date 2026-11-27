@@ -397,6 +397,7 @@ export function BillboardCard({
   level = 2,
   marks,
   onChange,
+  reactionsOnTop = false,
 }: {
   film: BillboardFilm
   people: readonly BillboardPerson[]
@@ -404,6 +405,9 @@ export function BillboardCard({
   level?: Level
   marks?: FilmMarks
   onChange?: (marks: FilmMarks) => void
+  /** The Cartaz's head says the chosen film's lines: the card keeps only
+   * its label (#351). */
+  reactionsOnTop?: boolean
 }) {
   // Who marked Já vi, and who the engine knows saw it (#272).
   const marked = marks?.seen ?? []
@@ -436,6 +440,7 @@ export function BillboardCard({
           reactions={film.reactions}
           people={people}
           level={level}
+          labelOnly={reactionsOnTop}
         />
       )}
       {marks && onChange && (

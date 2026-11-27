@@ -158,11 +158,26 @@ describe('the view shows, a closed Session', () => {
     expect(
       screen.getByText(new RegExp(`^${view.closed}`, 'u')).textContent,
     ).toBe('Sessão fechada · Filme escolhido: As Horas Lentas')
-    // Under the request, and again in the chosen film's card.
+    // Said once, under the request; the chosen film's card keeps only its
+    // label (#351).
     expect(reactions().map((list) => list.textContent)).toEqual([
       'BVocê: previsto 8,3 · deu 6 de 10IIara: gostou',
-      'BVocê: previsto 8,3 · deu 6 de 10IIara: gostou',
     ])
+    const card = screen.getByRole('article', { name: /As Horas Lentas/u })
+    expect(
+      within(card).getByRole('heading', { name: 'Filme escolhido' }),
+    ).toBeTruthy()
+    // The lines name every Presente: no row of the same faces under them.
+    expect(screen.queryByRole('list', { name: view.attendees })).toBeNull()
+  })
+
+  it('an open Cartaz keeps the Presentes in the legend', () => {
+    render(<BillboardView result={shown} host={fakeHost(json({}))} />)
+    expect(
+      within(screen.getByRole('list', { name: view.attendees }))
+        .getAllByRole('listitem')
+        .map((item) => item.textContent),
+    ).toEqual(['BVocê', 'IIara'])
   })
 
   it('without fullscreen, the same; a chosen film with a block of its own says its lines once', () => {
@@ -171,6 +186,15 @@ describe('the view shows, a closed Session', () => {
       screen.getByText(new RegExp(`^${view.closed}`, 'u')).textContent,
     ).toBe('Sessão fechada · Filme escolhido: Curta da Madrugada')
     expect(reactions()).toHaveLength(1)
+    // The lines come later, in the chosen film's block: the legend keeps
+    // the Presentes.
+    expect(screen.getByRole('list', { name: view.attendees })).toBeTruthy()
+  })
+
+  it('without fullscreen, a chosen film with a card says its lines once too', () => {
+    closed(CLOSED)
+    expect(reactions()).toHaveLength(1)
+    expect(screen.queryByRole('list', { name: view.attendees })).toBeNull()
   })
 })
 
