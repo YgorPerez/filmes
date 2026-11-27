@@ -77,6 +77,7 @@ import { Run } from '../runtime/Run.ts'
 import { Tmdb } from '../sources/Tmdb.ts'
 import { Sqlite, type Connection, type SqliteError } from '../sqlite/Sqlite.ts'
 import { pyInt } from '../compat/fact-id.ts'
+import { additionsOf } from '../sessions/additions.ts'
 import { sessionOwner } from '../sessions/feedback.ts'
 import {
   readableReactions,
@@ -119,6 +120,8 @@ export interface BillboardPerson {
 export interface BillboardRequest {
   /** What the Dono typed or said, if anything. */
   readonly speech: string | null
+  /** What she added from the Cartaz since, in order (#272). */
+  readonly additions: ReadonlyArray<string>
   /** "Você", "Iara", "Vocês dois"... */
   readonly who: string
   /** What follows `who`, joined by " · " on the page: the maximum
@@ -470,6 +473,7 @@ const requestOf = (
   const speech = get(context, 'request')
   return {
     speech: textOf(speech),
+    additions: additionsOf(front),
     who,
     parts,
   }

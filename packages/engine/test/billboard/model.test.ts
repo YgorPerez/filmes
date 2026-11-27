@@ -611,6 +611,7 @@ describe('the Cartaz model', () => {
 
     expect(request).toEqual({
       speech: null,
+      additions: [],
       who: 'Você',
       parts: ['nota 7+ no IMDb'],
     })

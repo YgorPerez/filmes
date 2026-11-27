@@ -6,6 +6,7 @@
 // signed by the request's Dono. The id is the date and the Presentes other
 // than the Dono (the Dono alone when there is no one else).
 
+import { additionsOf } from './additions.ts'
 import { join } from 'node:path'
 import { Effect } from 'effect'
 import { compareTuple } from '../compat/compare.ts'
@@ -293,6 +294,8 @@ export interface SessionSummary extends OpenSession {
   readonly chosen: string | null
   readonly moods: ReadonlyArray<string>
   readonly constraints: ReadonlyArray<string>
+  /** What the Dono added from the Cartaz, in order (#272). */
+  readonly additions: ReadonlyArray<string>
 }
 
 const contextOf = (front: YamlMapping): YamlMapping | null => {
@@ -337,6 +340,7 @@ const summary = (id: string, front: YamlMapping): SessionSummary => {
     chosen: typeof chosen === 'string' ? chosen : null,
     moods: Array.isArray(moods) ? moods.map(String) : [],
     constraints: contextLabels(context),
+    additions: additionsOf(front),
   }
 }
 
