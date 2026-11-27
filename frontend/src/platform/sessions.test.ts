@@ -128,7 +128,7 @@ describe('parseSessionRequest', () => {
         ['sem-ja-visto', 'sim'],
         ['sem-lento', 'sim'],
         ['sem-tristeza', 'sim'],
-        ['sem-climas', 'assustador'],
+        ['sem-climas', 'assustador, '],
         ['serie', 'todos'],
       ]),
     ).toEqual({

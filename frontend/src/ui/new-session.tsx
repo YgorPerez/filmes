@@ -705,7 +705,6 @@ function Constraints({
   moods: readonly string[]
 }) {
   const { form } = SESSIONS
-  const turnedAway = new Set(asked.noMoods)
   const year = { type: 'number', min: 1870, max: 2100 } as const
   return (
     <Section
@@ -727,27 +726,6 @@ function Constraints({
           </Option>
         </div>
       </div>
-      <fieldset className="flex flex-col gap-sm">
-        <legend className="mb-sm font-semibold">
-          {form.noMoods}{' '}
-          <span className="text-meta font-normal text-ink-2">
-            {form.noMoodsHint}
-          </span>
-        </legend>
-        <div className={pills}>
-          {moods.map((mood) => (
-            <Option
-              key={mood}
-              name="sem-climas"
-              value={mood}
-              defaultChecked={turnedAway.has(mood)}
-            >
-              <span className="sr-only">{`${form.noMoodsEach} `}</span>
-              {mood}
-            </Option>
-          ))}
-        </div>
-      </fieldset>
       <div className={grid}>
         <SelectField
           name="crianca"
@@ -775,6 +753,12 @@ function Constraints({
         label={form.language}
         hint={form.languageHint}
         defaultValue={asked.language}
+      />
+      <TextField
+        name="sem-climas"
+        label={form.noMoods}
+        hint={form.noMoodsHint(moods)}
+        defaultValue={asked.noMoods?.join(', ')}
       />
       <TextField
         name="gatilhos"
