@@ -15,6 +15,8 @@ const ALERT: PushStatus = {
   failingSince: '2026-11-20T10:00:00Z',
   lastError: 'fatal',
   alert: true,
+  lastPushedAt: null,
+  queued: [],
 }
 
 const show = ({

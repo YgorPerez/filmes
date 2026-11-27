@@ -45,6 +45,8 @@ const STATUS: PushStatus = {
   failingSince: null,
   lastError: null,
   alert: false,
+  lastPushedAt: null,
+  queued: [],
 }
 
 const MEASURES = {

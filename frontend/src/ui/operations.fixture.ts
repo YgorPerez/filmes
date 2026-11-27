@@ -14,6 +14,8 @@ export const PUSH_OK: PushStatus = {
   failingSince: null,
   lastError: null,
   alert: false,
+  lastPushedAt: '2026-11-20T09:12:00Z',
+  queued: [],
 }
 
 export const PUSH_FAILING: PushStatus = {
@@ -23,6 +25,12 @@ export const PUSH_FAILING: PushStatus = {
   failingSince: '2026-11-20T10:00:00Z',
   lastError: 'fatal: could not read from remote repository',
   alert: true,
+  lastPushedAt: null,
+  queued: [
+    'Bruno deu nota a Fronteira (2008)',
+    'Iara vetou comédia boba',
+    'Sessão de 20 nov: Feedback',
+  ],
 }
 
 export const IDLE: EvaluationPanel = {
