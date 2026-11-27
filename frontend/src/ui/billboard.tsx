@@ -694,7 +694,8 @@ function SharedLines({
   people: readonly BillboardPerson[]
 }) {
   const known = new Map(people.map((p) => [p.slug, p]))
-  const nobody = people.filter((p) => without.includes(p.slug))
+  const absent = new Set(without)
+  const nobody = people.filter((p) => absent.has(p.slug))
   return (
     <div className="flex flex-col gap-xs pl-md">
       <p className="font-display text-label text-ink-2 uppercase">
