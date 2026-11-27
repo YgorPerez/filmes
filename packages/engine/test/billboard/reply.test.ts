@@ -5,7 +5,7 @@
 // comments and acrescentar stay in the Session's version. The answer says
 // whether to regenerate and what to keep.
 
-import { readFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, test } from 'vite-plus/test'
 import {
@@ -125,8 +125,16 @@ describe('comments on a Cartaz redo (#359)', () => {
     expect(next.films[0]?.runtimeMinutes).toBeGreaterThan(90)
   })
 
-  test('a Parecido in a comment from an older Cartaz fills a vacancy', async () => {
+  test('a Parecido capped at one fills a vacancy and leaves the kept films in place', async () => {
     const fixture = useFixture()
+    const weights = join(fixture.config, 'weights.toml')
+    writeFileSync(
+      weights,
+      readFileSync(weights, 'utf8').replace(
+        'candidates = 50',
+        'candidates = 1',
+      ),
+    )
     const request = { attendees: ['dono'], count: 3 }
     const first = await fixture.ok(recommendSession(request))
     const session = first.session.id

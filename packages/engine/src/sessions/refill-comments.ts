@@ -6,8 +6,7 @@ import {
   REQUEST_READING_MAX_LENGTH,
 } from '../reading/read-request.ts'
 import type { ReadFields } from '../reading/reader.ts'
-import type { Candidate } from '../recommendation/candidates.ts'
-import { pass, type Constraint } from '../recommendation/constraints.ts'
+import type { Constraint } from '../recommendation/constraints.ts'
 import { readConstraints } from '../recommendation/constraints/index.ts'
 import { isKept, type Regenerate } from '../recommendation/kept.ts'
 
@@ -39,16 +38,6 @@ export const refillConstraints = (
       .filter((constraint) => constraint.name !== 'series_order')
       .map((constraint): Constraint => ({
         ...constraint,
-        evaluate: (context, films) =>
-          Effect.gen(function* () {
-            const kept = new Map<string, ReturnType<typeof pass>>()
-            const candidates = new Map<string, Candidate>()
-            for (const [id, film] of films) {
-              if (isKept(regenerate, id)) kept.set(id, pass())
-              else candidates.set(id, film)
-            }
-            const evaluated = yield* constraint.evaluate(context, candidates)
-            return new Map([...evaluated, ...kept])
-          }),
+        appliesTo: (filmId) => !isKept(regenerate, filmId),
       })),
   )
