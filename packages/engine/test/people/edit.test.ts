@@ -1,7 +1,7 @@
 // `person edit` (#330): a Declarado, a Relato, a Veto or a Já visto
 // corrected in place, keeping its date and line, with `editado <today>`
 // outside the fato_id.
-import { readFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { Effect } from 'effect'
 import { describe, expect, test } from 'vite-plus/test'
@@ -321,5 +321,118 @@ describe('person edit', () => {
         }),
       ),
     ).toMatchObject({ code: 'unknown_stated' })
+  })
+
+  test('a target two items share asks for the fato_id', async () => {
+    const fixture = useFixture()
+    await ana(fixture)
+    await fixture.ok(personState({ person: 'ana', text: 'um', target: FAROL }))
+    await fixture.ok(
+      personState({ person: 'ana', text: 'dois', target: FAROL }),
+    )
+
+    expect(
+      await errorOf(
+        fixture,
+        personEdit({ person: 'ana', kind: 'stated', id: FAROL, text: 'três' }),
+      ),
+    ).toMatchObject({ code: 'ambiguous_stated' })
+  })
+
+  test('a Declarado cannot become another one of hers', async () => {
+    const fixture = useFixture()
+    await ana(fixture)
+    await fixture.ok(personState({ person: 'ana', text: 'um', target: FAROL }))
+    const two = await fixture.ok(
+      personState({ person: 'ana', text: 'dois', target: FAROL }),
+    )
+
+    expect(
+      await errorOf(
+        fixture,
+        personEdit({
+          person: 'ana',
+          kind: 'stated',
+          id: two.stated.factId,
+          text: 'um',
+        }),
+      ),
+    ).toMatchObject({ code: 'invalid_usage', reason: 'duplicate_item' })
+  })
+
+  test('a Veto to another Catalog id takes its label, and reads back edited', async () => {
+    const fixture = useFixture()
+    await ana(fixture)
+    await fixture.ok(
+      personVeto({ person: 'ana', text: 'nunca vê terror', target: TERROR }),
+    )
+
+    await fixture.ok(
+      personEdit({ person: 'ana', kind: 'veto', id: TERROR, target: COMEDY }),
+    )
+
+    expect((await fixture.ok(personView('ana'))).vetoes).toEqual([
+      expect.objectContaining({
+        text: 'nunca vê terror',
+        target: COMEDY,
+        label: 'Comédia',
+        edited: FIXTURE_TODAY,
+      }),
+    ])
+  })
+
+  test('a Veto said again as it is writes nothing', async () => {
+    const fixture = useFixture()
+    await ana(fixture)
+    await fixture.ok(
+      personVeto({ person: 'ana', text: 'nunca vê terror', target: TERROR }),
+    )
+
+    const result = await fixture.ok(
+      personEdit({
+        person: 'ana',
+        kind: 'veto',
+        id: TERROR,
+        text: 'nunca vê terror',
+        target: TERROR,
+      }),
+    )
+
+    expect(result.changed).toBe(false)
+  })
+
+  test('a Já visto keeps its pairwise mark while its Nota stays, and the same Nota writes nothing', async () => {
+    const fixture = useFixture()
+    await ana(fixture)
+    await fixture.ok(
+      personSeen({ person: 'ana', film: PEQUENOS_MILAGRES, rating: '4' }),
+    )
+    const file = join(fixture.data, 'people', 'ana.md')
+    writeFileSync(
+      file,
+      read(fixture, 'ana').replace('· nota 4', '· nota 4 · par a par'),
+    )
+
+    const same = await fixture.ok(
+      personEdit({
+        person: 'ana',
+        kind: 'seen',
+        id: PEQUENOS_MILAGRES,
+        rating: '8/10',
+      }),
+    )
+    expect(same.changed).toBe(false)
+
+    await fixture.ok(
+      personEdit({
+        person: 'ana',
+        kind: 'seen',
+        id: PEQUENOS_MILAGRES,
+        source: 'cinema',
+      }),
+    )
+    expect(read(fixture, 'ana')).toContain(
+      `· nota 4 · par a par · editado ${FIXTURE_TODAY}`,
+    )
   })
 })
