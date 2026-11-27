@@ -124,6 +124,7 @@ describe('recomendar opens the Session', () => {
       chosen: null,
       chosen_in_recommendation: null,
       feedback: null,
+      opened_at: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/u),
     })
   })
 })
@@ -426,6 +427,25 @@ describe('sessoes-abertas', () => {
 })
 
 describe('every Session', () => {
+  test('two Sessions of one day come by when they were opened, the newest first (#346)', async () => {
+    const fixture = useFixture()
+    // "iara" sorts before "teo": the order of the ids would put Teo first.
+    await open(fixture, { attendees: ['dono', 'teo'], count: 1 })
+    await open(fixture, { attendees: ['dono', 'iara'], count: 1 })
+    await open(fixture, { attendees: ['dono', 'teo'], count: 1 })
+
+    const { sessions } = await fixture.ok(listSessions)
+
+    expect(sessions.map((s) => s.id)).toEqual([
+      '2026-11-20-teo-2',
+      '2026-11-20-iara',
+      '2026-11-20-teo',
+    ])
+    expect(readFile(fixture, '2026-11-20-iara').front['opened_at']).toMatch(
+      /^\d{4}-\d{2}-\d{2}T/u,
+    )
+  })
+
   test('lists the open and the closed ones, with their Restrições', async () => {
     const fixture = useFixture()
     expect(await fixture.ok(listSessions)).toEqual({ sessions: [] })

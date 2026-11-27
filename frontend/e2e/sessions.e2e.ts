@@ -34,6 +34,10 @@ const ask = (page: Page) =>
   page.getByRole('button', { name: 'Recomendar' }).click()
 
 /** The id of the Session whose page is open. */
+/** A Clima asked, apart from the same chip under "Nada de" (#346). */
+const mood = (page: Page, name: string) =>
+  page.getByRole('region', { name: 'Clima' }).getByRole('checkbox', { name })
+
 const openedId = (page: Page) =>
   decodeURIComponent(new URL(page.url()).pathname.split('/').at(-1) ?? '')
 
@@ -86,7 +90,7 @@ test('the Dono opens a Session with Restrições and finds it in the list', asyn
   await expect(page).toHaveURL(/\/sessoes\/nova$/)
   await expect(page.getByRole('checkbox', { name: /Bruno/ })).toBeChecked()
   await page.getByRole('checkbox', { name: 'Iara' }).check()
-  await page.getByRole('checkbox', { name: 'leve' }).check()
+  await mood(page, 'leve').check()
   await page.getByText('Mais opções', { exact: true }).click()
   await page.getByLabel('Quantos filmes', { exact: false }).fill('3')
   await page.getByLabel('Em uma frase', { exact: false }).fill('eu e a Iara')
@@ -137,7 +141,7 @@ test('“Ler” fills the form from one sentence and says what it left out', asy
   await expect(page).toHaveURL(/\/sessoes\/nova$/)
 
   // What the Dono set before "Ler" stays: the reading fills on top.
-  await page.getByRole('checkbox', { name: 'pra rir' }).check()
+  await mood(page, 'pra rir').check()
   const sentence =
     'eu e a Iara, algo leve, até 2h, tem criança de 7, nada lento, parecido com Reprise, com pipoca'
   await page.getByLabel('Em uma frase', { exact: false }).fill(sentence)
@@ -150,8 +154,8 @@ test('“Ler” fills the form from one sentence and says what it left out', asy
   )
   await expect(page.getByRole('checkbox', { name: /Bruno/ })).toBeChecked()
   await expect(page.getByRole('checkbox', { name: 'Iara' })).toBeChecked()
-  await expect(page.getByRole('checkbox', { name: 'pra rir' })).toBeChecked()
-  await expect(page.getByRole('checkbox', { name: 'leve' })).toBeChecked()
+  await expect(mood(page, 'pra rir')).toBeChecked()
+  await expect(mood(page, 'leve')).toBeChecked()
   await expect(page.getByRole('checkbox', { name: 'Nada lento' })).toBeChecked()
   await expect(page.getByLabel('Duração máxima', { exact: false })).toHaveValue(
     '120',
@@ -173,7 +177,7 @@ test('“Ler” fills the form from one sentence and says what it left out', asy
   ).toBeVisible()
   await expect(page).toHaveURL(/\/sessoes\/nova\?nota=[\w-]+$/)
   await snap(page, info, 'sessoes-nova-parecido')
-  await expect(page.getByRole('checkbox', { name: 'pra rir' })).toBeChecked()
+  await expect(mood(page, 'pra rir')).toBeChecked()
   await expect(page.getByLabel('Criança')).toHaveValue('7')
 })
 

@@ -158,6 +158,25 @@ describe('parseSessionRequest', () => {
   })
 })
 
+describe('parseSessionRequest, the Nada de chips (#346)', () => {
+  it('takes each Clima checked under Nada de, once', () => {
+    expect(
+      parse([
+        ['sem-climas', 'assustador'],
+        ['sem-climas', 'tenso'],
+        ['sem-climas', 'assustador'],
+      ]),
+    ).toEqual({
+      ok: {
+        attendees: ['bruno', 'iara'],
+        rule: 'default',
+        moods: [],
+        noMoods: ['assustador', 'tenso'],
+      },
+    })
+  })
+})
+
 describe('parseSessionRequest, on what is missing or wrong', () => {
   it('leaves out what was not asked', () => {
     expect(

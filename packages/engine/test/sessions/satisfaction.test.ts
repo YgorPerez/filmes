@@ -80,7 +80,10 @@ const withFeedback = async (
 }
 
 const LINE =
-  'Bruno: satisfação de 11% nas últimas Sessões (a mais alta do grupo, 100%); na de sex, 20 nov, deu 2 de 10 a Pequenos Milagres'
+  'Bruno: 11% nas últimas Sessões (deu 2 de 10 a Pequenos Milagres); Quim, 100%'
+/** Contar says it to the Dono who looks: she is "Você" (#346). */
+const LINE_NOW =
+  'Você: 11% nas últimas Sessões (deu 2 de 10 a Pequenos Milagres); Quim, 100%'
 
 describe('the satisfaction', () => {
   test('the satisfaction now names the Session of who fell behind', async () => {
@@ -98,7 +101,7 @@ describe('the satisfaction', () => {
 
     expect(await fixture.ok(satisfactionNow(['bruno', 'quim']), vars)).toEqual({
       people: [
-        { person: 'bruno', satisfaction: 0.1111, line: LINE },
+        { person: 'bruno', satisfaction: 0.1111, line: LINE_NOW },
         { person: 'quim', satisfaction: 1, line: null },
       ],
       disagreement: 0.8889,
@@ -167,7 +170,10 @@ describe('the satisfaction', () => {
     const strengths = async (weights: Vars) =>
       (await recommend(fixture, weights, DONO_QUIM)).films.flatMap((f) =>
         f.filmLines
-          .filter((l) => l.text.startsWith('Bruno: satisfação de'))
+          .filter(
+            (l) =>
+              l.person === 'bruno' && l.text.includes(' nas últimas Sessões ('),
+          )
           .map((l) => l.strength),
       )
 
@@ -231,7 +237,7 @@ describe('the satisfaction', () => {
       'strong',
     ])
     expect(line?.text).toBe(
-      'Quim: satisfação de 0% nas últimas Sessões (a mais alta do grupo, 100%); na de sex, 20 nov, não gostou de Pequenos Milagres',
+      'Quim: 0% nas últimas Sessões (não gostou de Pequenos Milagres); Bruno, 100%',
     )
   })
 
@@ -459,7 +465,7 @@ describe('the satisfaction’s window', () => {
 
 describe('regenerating with the satisfaction', () => {
   const satisfactionLines = (f: Recommendation['films'][number]) =>
-    f.filmLines.filter((line) => line.text.includes(': satisfação de '))
+    f.filmLines.filter((line) => line.text.includes('% nas últimas Sessões ('))
 
   test('only the free places compete, and a kept film gets no satisfaction line', async () => {
     // With Bruno behind, As Horas Lentas goes past Ruído Branco and Voo

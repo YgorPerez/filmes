@@ -13,8 +13,8 @@ import {
   type EarlierFilm,
 } from './history.ts'
 import { join } from 'node:path'
-import { Effect } from 'effect'
-import { compareTuple } from '../compat/compare.ts'
+import { Clock, Effect } from 'effect'
+import { compareTuple, type PyOrderable } from '../compat/compare.ts'
 import { pyFloat, pyInt } from '../compat/fact-id.ts'
 import {
   authorOf,
@@ -268,6 +268,11 @@ export const openSession = (
             ['chosen', null],
             ['chosen_in_recommendation', null],
             ['feedback', null],
+            // When it was opened: two Sessions of one day list by it (#346).
+            [
+              'opened_at',
+              new Date(yield* Clock.currentTimeMillis).toISOString(),
+            ],
           ])
           yield* syncSession(db, id, front)
           yield* writeSession(
@@ -370,19 +375,29 @@ const openFields = (s: SessionSummary): OpenSession => ({
   version: s.version,
 })
 
-/** Every Session, the latest first. Reads the files only. */
+/** Every Session, the latest first: by date, then, on the same day, by
+ * when it was opened (#346; a Session from before has no time and comes
+ * after), then by id. Reads the files only. */
 export const listSessions: Effect.Effect<
   { readonly sessions: ReadonlyArray<SessionSummary> },
   EngineError,
   EngineServices
 > = Effect.gen(function* () {
-  const list: SessionSummary[] = []
-  for (const id of yield* sessionIds)
-    list.push(summary(id, (yield* readSession(id)).frontmatter))
+  const list: Array<{ session: SessionSummary; key: PyOrderable[] }> = []
+  for (const id of yield* sessionIds) {
+    const front = (yield* readSession(id)).frontmatter
+    const session = summary(id, front)
+    const [date, ...rest] = sessionOrder(session)
+    const opened = front.get('opened_at')
+    list.push({
+      session,
+      key: [date, typeof opened === 'string' ? opened : '', ...rest],
+    })
+  }
   // `sorted(..., reverse=True)`: stable, so equal keys keep the file order.
-  const sessions = list.toSorted((a, b) =>
-    compareTuple([...sessionOrder(b)], [...sessionOrder(a)]),
-  )
+  const sessions = list
+    .toSorted((a, b) => compareTuple(b.key, a.key))
+    .map(({ session }) => session)
   return { sessions }
 })
 

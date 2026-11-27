@@ -433,6 +433,45 @@ describe('the Cartaz shows, section lines and no film', () => {
     expect(card(1).queryByRole('list', { name: 'Filme escolhido' })).toBeNull()
   })
 
+  it('a card whose own line only weighs against repeats its Motivo’s reason (#346)', () => {
+    const [hours, salt] = MODEL.films
+    const shared = hours!.lines[0]!
+    const glass = {
+      ...hours!,
+      id: 'tt9000106',
+      title: 'Cidade de Vidro',
+      position: 3,
+      lines: [
+        {
+          people: ['bruno'],
+          strength: 'strong' as const,
+          text: 'já viu',
+          source: null,
+          against: true,
+        },
+      ],
+    }
+    const helena = {
+      kind: 'entity' as const,
+      title: 'Porque gostam de Helena Prado',
+      again: false,
+      films: [hours!.id, salt!.id],
+    }
+    render(
+      <Billboard
+        billboard={{
+          ...MODEL,
+          films: [hours!, { ...salt!, lines: [...salt!.lines, shared] }, glass],
+          sections: [helena, { ...helena, again: true, films: [glass.id] }],
+        }}
+      />,
+    )
+    expect(card(3).getByText(shared.text)).toBeTruthy()
+    expect(card(3).getByText('já viu')).toBeTruthy()
+    // A card with a reason of its own keeps only it.
+    expect(card(2).queryByText(shared.text)).toBeNull()
+  })
+
   it('that nothing passed the Restrições', () => {
     render(<Billboard billboard={{ ...MODEL, films: [] }} />)
     expect(screen.getByText(BILLBOARD.empty)).toBeTruthy()

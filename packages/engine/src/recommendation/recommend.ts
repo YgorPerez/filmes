@@ -902,7 +902,7 @@ const filmLinesOf = (
         ).map((p) => {
           return satisfactionLine(
             p,
-            finish.names.get(p) ?? p,
+            (slug) => finish.names.get(slug) ?? slug,
             group,
             scaleOf(r.round, p),
             film.id,
