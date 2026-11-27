@@ -47,6 +47,7 @@ export {
   type FilmCard,
   type FilmCardRequest,
 } from './catalog/film-card.ts'
+export { filmCards, type PublicFilmCard } from './catalog/cards.ts'
 export {
   EXPORT_FORMATS,
   exportRatings,
@@ -200,6 +201,7 @@ export {
   sessionRelative,
   sessionsFolder,
   SESSIONS_FOLDER,
+  sessionVersions,
   shownFilms,
   STRENGTH_IN_BODY,
   VERSION_EXTRAS,
@@ -277,6 +279,7 @@ export {
 export {
   castVotes,
   votedBy,
+  latestVotes,
   yesVotes,
   type CastVotes,
   type CastVotesRequest,

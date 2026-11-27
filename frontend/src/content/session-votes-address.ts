@@ -15,9 +15,12 @@ export type VoteNotice = (typeof VOTE_NOTICES)[number]
 const VOTE_REFUSALS = ['regerar', 'indisponivel', 'falha'] as const
 export type VoteRefusal = (typeof VOTE_REFUSALS)[number]
 
+/** `mudar`: the deck over every film of the screen, to change her Votos
+ * (#275). */
 export const voteSearch = (search: Record<string, unknown>) => ({
   feito: within(VOTE_NOTICES)(search.feito) ? search.feito : undefined,
   erro: within(VOTE_REFUSALS)(search.erro) ? search.erro : undefined,
+  mudar: search.mudar === 1 || search.mudar === '1' ? true : undefined,
 })
 
 /** A page of the swipe, with the link's search and, after a post, what
@@ -33,15 +36,17 @@ export function votePath(
     chave?: string | undefined
     presente?: string | undefined
   },
-  outcome: { feito?: VoteNotice; erro?: VoteRefusal } = {},
+  outcome: { feito?: VoteNotice; erro?: VoteRefusal; mudar?: true } = {},
 ): string {
   const query = new URLSearchParams()
+  const { mudar, ...said } = outcome
   for (const [key, value] of Object.entries({
     sessao,
     chave,
     presente,
-    ...outcome,
+    ...said,
   }))
     if (value !== undefined) query.set(key, value)
+  if (mudar) query.set('mudar', '1')
   return `/participar/${page}?${query}`
 }

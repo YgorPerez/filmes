@@ -47,7 +47,8 @@ const TITLES: Record<string, string | ((data: unknown) => string | null)> = {
   '/_owner/meu-gosto/importar': 'Importar',
   '/_owner/meu-gosto/fila': 'Fila de resolução',
   '/_owner/operacoes': 'Operações',
-  '/participar/': 'Filmes da Sessão',
+  // The link's pages: the names until a Presente is chosen (#275).
+  '/participar': (data) => text(read(data, 'title')),
   '/participar/votar': 'Votar',
   '/participar/perguntas/': 'Perguntas de gosto',
 }

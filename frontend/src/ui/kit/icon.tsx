@@ -46,6 +46,7 @@ const PATHS = {
   arrow: <path d="M5 12h14M13.5 6.5L19 12l-5.5 5.5" />,
   plus: <path d="M12 5v14M5 12h14" />,
   check: <path d="M5 12.5l4.5 4.5L19 7.5" />,
+  close: <path d="M6.5 6.5l11 11M17.5 6.5l-11 11" />,
   alert: (
     <>
       <path d="M12 4l9 16H3z" />
