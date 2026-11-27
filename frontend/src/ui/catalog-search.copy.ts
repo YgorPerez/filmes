@@ -15,9 +15,6 @@ export const CATALOG_SEARCH = {
   remove: (title: string) => `Tirar ${title}`,
   results: (query: string) => `Resultado para “${query}”`,
   none: 'Nada no Catálogo com esse nome. Tente o título original, ou o ano: Matrix (1999).',
-  /** "Usar" took it: where the id went. */
-  picked: (label: string) =>
-    `${label} está nos campos de alvo: abra o formulário e grave.`,
   pick: 'Usar',
   pickLabel: (title: string) => `Usar ${title}`,
   groups: {

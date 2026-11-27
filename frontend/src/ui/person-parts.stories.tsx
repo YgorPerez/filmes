@@ -14,9 +14,9 @@ import {
   Notice,
   RemoveForm,
   Section,
-  SelectField,
   SessionFilmLookup,
   Submit,
+  TargetField,
   TextField,
 } from './person-parts'
 
@@ -102,19 +102,14 @@ export const SectionWithForm: Story = {
       </Items>
       <Disclosure summary="Acrescentar Veto">
         <ActionForm slug="iara" action="vetar" label="Acrescentar Veto">
-          <TextField name="texto" label="O que ela disse" required />
-          <TextField
+          <TextField name="texto" label="O Veto, como foi dito" required />
+          <TargetField
             name="alvo"
-            label="Alvo"
-            hint="(ID do Catálogo)"
-            placeholder="Q9001801"
-          />
-          <SelectField
-            name="grupo"
-            label="Grupo de tags"
-            options={[
-              { value: '', label: 'Nenhum' },
-              { value: 'silly_comedy', label: 'comédia boba' },
+            label="Diga o quê: um filme, uma pessoa, um gênero ou um grupo"
+            scope="all"
+            groups={[
+              { key: 'silly_comedy', label: 'comédia boba' },
+              { key: 'slow', label: 'lento' },
             ]}
           />
           <Submit>Gravar</Submit>
@@ -125,6 +120,21 @@ export const SectionWithForm: Story = {
   play: async ({ canvasElement }) => {
     await expect(
       within(canvasElement).getByRole('region', { name: 'Vetos' }),
+    ).toBeVisible()
+  },
+}
+
+/** A Já visto's film: a search by title, never an ID to paste (#273). */
+export const FilmTarget: Story = {
+  render: () => (
+    <ActionForm slug="iara" action="visto" label="Acrescentar Já visto">
+      <TargetField name="filme" label="Filme" scope="films" />
+      <Submit>Gravar</Submit>
+    </ActionForm>
+  ),
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByRole('searchbox', { name: 'Filme' }),
     ).toBeVisible()
   },
 }

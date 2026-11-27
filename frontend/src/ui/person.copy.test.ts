@@ -19,8 +19,9 @@ describe('the Pessoa copy', () => {
 
   it.each([
     ['nota', 'rating', 'A Nota vai de 1 a 10.'],
-    ['filme', 'film', 'O filme é o tt… dele no Catálogo.'],
-    ['alvo', 'id', /^O alvo é um ID/],
+    ['filme', 'film', /^Falta o filme: busque pelo título/],
+    ['nota', 'film', 'O filme é o tt… dele no Catálogo.'],
+    ['alvo', 'id', /^Busque pelo nome/],
     ['alvo', 'target', /^Falta o alvo/],
     ['alvo', 'reaction', /^Uma reação precisa de um alvo/],
     ['texto', 'required', 'Falta o texto: o que foi dito.'],
@@ -30,10 +31,16 @@ describe('the Pessoa copy', () => {
   })
 
   it('names the empty fichas and her name in the Sessões', () => {
-    expect(PERSON.empties(['Vetos'])).toBe('Vetos: nada ainda')
+    expect(PERSON.empties(['Vetos'])).toBe('Ainda sem Vetos · Acrescentar')
     expect(PERSON.empties(['Vetos', 'Declarados', 'Já vistos'])).toBe(
-      'Vetos, Declarados e Já vistos: nada ainda',
+      'Ainda sem Vetos, Declarados e Já vistos · Acrescentar',
     )
+    expect(PERSON.refine(['Ajustes', 'Declarados (2)'])).toBe(
+      'Afinar: Ajustes e Declarados (2)',
+    )
+    expect(PERSON.notices('Quim').gravado).toBe('Gravado no arquivo de Quim.')
+    expect(PERSON.sessions.reaction(null)).toBe('sem reação')
+    expect(PERSON.sessions.reaction(0.2)).toBe('não gostou')
     expect(PERSON.ownName('Bruno', [])).toBe('Nas Sessões, você é Bruno.')
     expect(PERSON.glance.notes(1)).toBe('1 Nota')
     expect(PERSON.glance.notes(1200)).toBe('1.200 Notas')

@@ -511,6 +511,16 @@ export {
   type SkipSetupResult,
 } from './people/setup.ts'
 export {
+  peopleCounts,
+  personDelete,
+  personSessions,
+  type PersonCounts,
+  type PersonDeleteInput,
+  type PersonDeleteResult,
+  type PersonSession,
+  type PersonSessions,
+} from './people/directory.ts'
+export {
   grantAccess,
   revokeAccess,
   type AccessResult,

@@ -1,4 +1,5 @@
-// The Catálogo search of the screens that take IDs (#128), over the build
+// The Catálogo search of the screens that take films (#128; a Pessoa's
+// targets search as she types since #273, in `people.e2e.ts`), over the build
 // and on the fixture copy, with JavaScript off. Each "Usar" is a plain link. Read only but for one Session the engine
 // opens for Bruno alone, whose Feedback is filled and never sent.
 // `E2E_SCREENSHOTS=<folder>` saves a capture of each screen.
@@ -21,25 +22,6 @@ const search = (page: Page, query: string) =>
 
 const results = (page: Page) =>
   section(page, 'Buscar no Catálogo').getByRole('listitem')
-
-test('on the Pessoa page, a director by name with accents gives her Q…', async ({
-  page,
-}, info) => {
-  await loginAsBruno(page)
-  await page.goto('/pessoas/iara')
-  await search(page, 'LIA MOURA')
-
-  await expect(page).toHaveURL(/\/pessoas\/iara\?buscar=LIA\+MOURA$/)
-  await expect(results(page)).toHaveCount(2)
-  await expect(results(page).first()).toContainText('Q9000006')
-  await expect(results(page).first()).toContainText('Pequenos Milagres (2019)')
-  await expect(results(page).nth(1)).toContainText('Q9006701')
-  await snap(page, info, 'busca-pessoa')
-
-  await search(page, 'maré')
-  await expect(results(page).first()).toContainText('Maré Baixa (2015)')
-  await expect(results(page).first()).toContainText('tt9000102')
-})
 
 test('Nova Sessão: two searches fill “Parecido com”', async ({
   page,

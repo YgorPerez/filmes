@@ -1,8 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { searchFor, searchParam } from '#/content/catalog-search'
 import { readQueue } from '#/content/imports'
 import { readTasteSummary } from '#/content/ratings'
-import { isPersonNotice, isPersonRefusal } from '#/content/person-action'
+import { personSearch, readProblemParam } from '#/content/person-action'
 import { readMyStart, readPersonPage } from '#/content/people'
 import { readTraktPage } from '#/content/trakt'
 import { PersonScreen } from '#/ui/person'
@@ -11,16 +10,10 @@ import { PersonScreen } from '#/ui/person'
 // what the setup guide left (the connector, the skipped steps), then her
 // taste (#222).
 export const Route = createFileRoute('/_owner/meu-gosto/')({
-  validateSearch: (search) => ({
-    feito: isPersonNotice(search.feito) ? search.feito : undefined,
-    erro: isPersonRefusal(search.erro) ? search.erro : undefined,
-    buscar: searchParam(search.buscar),
-  }),
-  loaderDeps: ({ search }) => ({ buscar: search.buscar }),
-  loader: async ({ context, deps }) => {
-    const [page, search, start, trakt, queue, taste] = await Promise.all([
+  validateSearch: personSearch,
+  loader: async ({ context }) => {
+    const [page, start, trakt, queue, taste] = await Promise.all([
       readPersonPage({ data: context.owner.person }),
-      searchFor(deps.buscar, 'all'),
       readMyStart(),
       readTraktPage(),
       readQueue(),
@@ -32,7 +25,6 @@ export const Route = createFileRoute('/_owner/meu-gosto/')({
         .length ?? 0
     return {
       page,
-      search,
       start,
       showTrakt: trakt.status !== 'unavailable',
       pending,
@@ -44,20 +36,20 @@ export const Route = createFileRoute('/_owner/meu-gosto/')({
 
 function MyTasteRoute() {
   const { owner } = Route.useRouteContext()
-  const { feito, erro } = Route.useSearch()
-  const { page, search, start, showTrakt, pending, taste } =
-    Route.useLoaderData()
+  const { feito, erro, em, campo } = Route.useSearch()
+  const { page, start, showTrakt, pending, taste } = Route.useLoaderData()
   return (
     <PersonScreen
       slug={owner.person}
       page={page}
-      search={search}
       start={start}
       showTrakt={showTrakt}
       pending={pending}
       taste={taste}
       notice={feito}
       refusal={erro}
+      spot={em}
+      problem={readProblemParam(campo)}
     />
   )
 }

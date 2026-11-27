@@ -101,6 +101,8 @@ for (const dono of DONOS)
     // Taste on her own page, Meu gosto.
     await page.goto(`/pessoas/${dono.slug}`)
     await expect(page).toHaveURL(/\/meu-gosto$/)
+    // Declarados is in the Afinar fold (#273).
+    await page.getByText(/^Afinar:/).click()
     const area = section(page, 'Declarados')
     await area.getByText('Acrescentar Declarado', { exact: true }).click()
     const form = area.getByRole('form', { name: 'Acrescentar Declarado' })
@@ -108,7 +110,7 @@ for (const dono of DONOS)
       .getByLabel('O que foi dito')
       .fill(`a ${dono.name} gosta de drama`)
     await form.getByRole('button', { name: 'Gravar' }).click()
-    await expect(notice(page)).toHaveText('Gravado no arquivo dela.')
+    await expect(notice(page)).toHaveText('Gravado no seu arquivo.')
     await expect(area).toContainText(`a ${dono.name} gosta de drama`)
   })
 
@@ -121,12 +123,14 @@ test('Bruno tells a Relato about Vera, and Vera sees it on her page', async ({
 
   // On his own page, no Relato form: what he says of himself is Declarado.
   await bruno.goto('/meu-gosto')
+  await bruno.getByText(/^Afinar:/).click()
   await expect(section(bruno, 'Declarados')).toBeVisible()
   await expect(section(bruno, 'Relatos')).toHaveCount(0)
   await snap(bruno, info, 'relato-bruno-own-page')
 
   // On Vera's, a Dono too, he tells what he saw her like.
   await bruno.goto('/pessoas/vera')
+  await bruno.getByText(/^Afinar:/).click()
   const told = section(bruno, 'Relatos')
   await told.getByText('Acrescentar Relato', { exact: true }).click()
   const form = told.getByRole('form', { name: 'Acrescentar Relato' })
@@ -134,7 +138,7 @@ test('Bruno tells a Relato about Vera, and Vera sees it on her page', async ({
   await snap(bruno, info, 'relato-bruno-on-vera-form')
   await form.getByLabel('O que foi dito').fill('a Vera adora suspense')
   await form.getByRole('button', { name: 'Gravar' }).click()
-  await expect(notice(bruno)).toHaveText('Gravado no arquivo dela.')
+  await expect(notice(bruno)).toHaveText('Gravado no arquivo de Vera.')
   await expect(told).toContainText('a Vera adora suspense')
   await bruno.close()
 
@@ -238,6 +242,8 @@ test('the admin gives a Pessoa access and takes it away', async ({
   await addPerson('Odete')
   await loginAs(page, 'bruno@example.org')
   await page.goto('/pessoas/odete')
+  // Acesso is in the Afinar fold (#273).
+  await page.getByText(/^Afinar:/).click()
   const access = section(page, 'Acesso')
   await expect(access).toContainText('Sem acesso.')
   await snap(page, info, 'access-none')
@@ -250,7 +256,9 @@ test('the admin gives a Pessoa access and takes it away', async ({
   const odete = await browser.newPage()
   await loginAs(odete, 'odete@example.org')
 
-  await access.getByRole('button', { name: 'Tirar acesso' }).click()
+  // It asks first.
+  await access.getByText('Tirar acesso', { exact: true }).click()
+  await access.getByRole('button', { name: 'Tirar o acesso de Odete' }).click()
   await expect(notice(page)).toContainText('Acesso tirado')
   await expect(access).toContainText('Sem acesso.')
 
