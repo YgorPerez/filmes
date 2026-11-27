@@ -8,7 +8,7 @@ import {
 import css from '../styles.css?url'
 // The tab's icon: the orange price sticker on the black case (DESIGN.md,
 // Barra do topo), so no request for `/favicon.ico` goes unanswered.
-import icon from '../favicon.svg?url'
+import icon from '#/ui/favicon.svg?url'
 import { readOwner } from '#/content/owner'
 import { LostAlone, NotFound } from '#/ui/lost'
 import { AppShell } from '#/ui/shell'
