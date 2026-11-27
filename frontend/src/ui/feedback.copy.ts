@@ -7,21 +7,38 @@ export const FEEDBACK = {
 
   form: {
     title: 'Contar como foi',
-    unknown: 'Não dá para contar como foi. A Sessão pode já estar fechada.',
+    unknown: 'Não encontrei essa Sessão.',
+    unknownLead: 'O endereço pode estar errado, ou a Sessão é de outro Dono.',
+    /** The Session was told already (#272): what they saw, and the way to
+     * it. */
+    told: (title: string | null) =>
+      title === null
+        ? 'Esta Sessão já foi contada: não viram nada da prateleira.'
+        : `Esta Sessão já foi contada: viram ${title}.`,
+    toSession: 'Ver a Sessão',
+    toList: 'Ver Sessões',
     label: 'Contar como foi',
-    film: 'O que vocês viram?',
+    /** Said to one when the Session had one Presente (#272). */
+    film: (alone: boolean) =>
+      alone ? 'O que você viu?' : 'O que vocês viram?',
     other: 'Outro filme',
     search: 'Título ou ID do IMDb',
-    nothing: 'Não vimos nada',
-    reactions: 'O que cada pessoa achou?',
+    nothing: (alone: boolean) => (alone ? 'Não vi nada' : 'Não vimos nada'),
+    reactions: (alone: boolean) =>
+      alone ? 'O que você achou?' : 'O que cada um achou?',
     reactionsLead:
-      'Use a Nota que a pessoa deu ou conte como ela reagiu. Sem uma reação, o filme fica registrado como Já visto.',
+      'Sem reação, o filme fica só como Já visto. A nota é a mesma de 1 a 10 do Cartaz.',
     reaction: 'Reação',
     none: 'sem reação',
+    noRating: 'sem nota',
     ratings: 'Nota',
+    /** The 1 to 10 of a Presente who is not the Dono, folded (#272). */
+    giveRating: 'ou dar nota de 1 a 10',
+    ratingLabel: (name: string) => `Nota de ${name}, de 1 a 10`,
     reports: 'Relato',
     rating: (value: string) => `Nota ${value}`,
     comment: 'Comentário',
+    openComment: 'comentar',
     submit: 'Gravar e fechar a Sessão',
     submitting: 'Gravando…',
   },

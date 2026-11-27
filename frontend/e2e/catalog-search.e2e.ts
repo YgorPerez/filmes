@@ -97,9 +97,12 @@ test('Feedback: the search and its “Usar” keep the reactions and comments', 
   )
   await loginAsBruno(page)
   await page.goto(`/sessoes/${encodeURIComponent(session.id)}/contar`)
-  await page.getByLabel('Reação: Bruno').selectOption('nota:4,5')
-  await page.getByLabel('Comentário: Bruno').fill('vale rever')
+  // The reactions show once a film is chosen (#272).
   await page.getByLabel('Outro filme').check()
+  const nine = page.locator('input[name="reacao.bruno"][value="nota:9"]')
+  await nine.check()
+  await page.getByText('comentar', { exact: true }).click()
+  await page.getByLabel('Comentário: Bruno').fill('vale rever')
   // Enter in the search box searches, without recording the Feedback.
   await section(page, 'Buscar no Catálogo')
     .getByRole('searchbox')
@@ -109,14 +112,14 @@ test('Feedback: the search and its “Usar” keep the reactions and comments', 
     .press('Enter')
   await expect(page).toHaveURL(/\/contar\?buscar=fronteira\+%282012%29&nota=/)
   await expect(results(page)).toHaveCount(1)
-  await expect(page.getByLabel('Reação: Bruno')).toHaveValue('nota:4,5')
+  await expect(nine).toBeChecked()
   await expect(page.getByLabel('Comentário: Bruno')).toHaveValue('vale rever')
 
   await page.getByRole('link', { name: 'Usar Fronteira II (2012)' }).click()
   await expect(
     page.getByLabel('Título ou ID do IMDb', { exact: false }),
   ).toHaveValue('tt9001903')
-  await expect(page.getByLabel('Reação: Bruno')).toHaveValue('nota:4,5')
+  await expect(nine).toBeChecked()
   await expect(page.getByLabel('Comentário: Bruno')).toHaveValue('vale rever')
 })
 

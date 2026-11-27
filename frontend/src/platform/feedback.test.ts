@@ -100,7 +100,7 @@ const post = (
   })
 }
 
-const FORM = { filme: 'tt9000101', 'reacao.bruno': 'nota:4' }
+const FORM = { filme: 'tt9000101', 'reacao.bruno': 'nota:8' }
 
 describe('feedbackAction', () => {
   const act = (
@@ -136,7 +136,7 @@ describe('feedbackAction', () => {
       post({
         filme: 'outro',
         busca: 'Casa Cheia',
-        'reacao.bruno': 'nota:4,5',
+        'reacao.bruno': 'nota:9',
         'reacao.quim': 'relato:nao-gostou',
         'comentario.quim': 'dormiu',
       }),
@@ -243,7 +243,7 @@ describe('the Catálogo search in feedbackAction', () => {
       {
         filme: 'outro',
         busca: 'fronteira',
-        'reacao.bruno': 'nota:4,5',
+        'reacao.bruno': 'nota:9',
         'reacao.quim': 'relato:gostou',
         'comentario.quim': 'quero ver de novo',
         'buscar-catalogo': 'sim',
@@ -256,7 +256,7 @@ describe('the Catálogo search in feedbackAction', () => {
     expect(
       feedbackDraft(location.searchParams.get('nota') ?? undefined, notes),
     ).toEqual({
-      bruno: { reaction: 'nota:4,5' },
+      bruno: { reaction: 'nota:9' },
       quim: { reaction: 'relato:gostou', comment: 'quero ver de novo' },
     })
     expect(record).not.toHaveBeenCalled()
@@ -268,7 +268,7 @@ describe('the Catálogo search in feedbackAction', () => {
       busca: 'fronteira',
       buscado: '',
       tecla: 'enter',
-      'reacao.bruno': 'nota:4',
+      'reacao.bruno': 'nota:8',
     })
     const location = searched((await response).headers.get('Location'))
     expect(location.searchParams.get('buscar')).toBe('fronteira')
@@ -281,7 +281,7 @@ describe('the Catálogo search in feedbackAction', () => {
       busca: 'Café Amargo',
       buscado: 'Café Amargo',
       tecla: 'enter',
-      'reacao.bruno': 'nota:4',
+      'reacao.bruno': 'nota:8',
     })
     expect((await enter.response).headers.get('Location')).toBe(
       '/sessoes/2026-11-20-quim?feito=contada',
@@ -290,7 +290,7 @@ describe('the Catálogo search in feedbackAction', () => {
       filme: 'outro',
       busca: 'Café Amargo',
       buscado: '',
-      'reacao.bruno': 'nota:4',
+      'reacao.bruno': 'nota:8',
     })
     expect((await click.response).headers.get('Location')).toBe(
       '/sessoes/2026-11-20-quim?feito=contada',
@@ -406,8 +406,8 @@ describe('feedbackFromEngine', () => {
         post({
           filme: 'outro',
           busca: 'Pequenos Milagres',
-          'reacao.bruno': 'nota:1',
-          'reacao.quim': 'nota:5',
+          'reacao.bruno': 'nota:2',
+          'reacao.quim': 'nota:10',
           'comentario.quim': 'chorei',
         }),
         first.session.id,
