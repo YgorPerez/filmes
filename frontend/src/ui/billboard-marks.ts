@@ -11,15 +11,20 @@ import {
   type BillboardState,
 } from '@filmes/engine/billboard-text'
 
-/** One film's marks. A Nota is the field's text until it leaves the page.
- * `swap` is the Trocar as it shows; `swapByHand` says the Dono pressed it
- * herself, and then it no longer follows the Já vi and the stars (#326). */
+/** Why the Trocar is as it is: the Dono pressed it (`owner`, on or off),
+ * or a Já vi or 1 to 3 stars turned it on (#326). */
+const SWAP_WHY = ['owner', 'seen', 'stars'] as const
+
+/** One of `SWAP_WHY`; null when nothing touched the Trocar. */
+export type SwapWhy = (typeof SWAP_WHY)[number] | null
+
+/** One film's marks. A Nota is the field's text until it leaves the page. */
 export type FilmMarks = {
   seen: string[]
   ratings: Record<string, string>
   thoughts: Record<string, string>
   swap: boolean
-  swapByHand: boolean
+  swapWhy: SwapWhy
   stars: number
   comment: string
 }
@@ -37,44 +42,9 @@ const NO_MARKS: FilmMarks = {
   ratings: {},
   thoughts: {},
   swap: false,
-  swapByHand: false,
+  swapWhy: null,
   stars: 0,
   comment: '',
-}
-
-/** The stars that turn the Trocar on: 1 to 3 of 5 (#326). */
-const LOW_STARS = 3
-
-/** Why the Cartaz turned the film's Trocar on by itself: who marked Já vi
- * (only with Sem Já visto on) and the stars, 1 to 3. Nothing when the Dono
- * pressed it herself. */
-export function swapReasons(
-  marks: FilmMarks,
-  unseen: boolean,
-): { seen: string[]; stars: number | null } {
-  if (marks.swapByHand) return { seen: [], stars: null }
-  return {
-    seen: unseen ? marks.seen : [],
-    stars: marks.stars >= 1 && marks.stars <= LOW_STARS ? marks.stars : null,
-  }
-}
-
-/** The marks with the Trocar the Já vi and the stars call for, unless the
- * Dono pressed it herself: on with a Já vi under Sem Já visto or with 1 to
- * 3 stars, off again once neither holds (#326). */
-export function settleSwap(marks: FilmMarks, unseen: boolean): FilmMarks {
-  if (marks.swapByHand) return marks
-  const why = swapReasons(marks, unseen)
-  return { ...marks, swap: why.seen.length > 0 || why.stars !== null }
-}
-
-/** The text's reason for the Trocar: `seen` when only a Já vi turned it
- * on, which teaches the Histórico de apostas nothing. */
-const swapReasonOf = (marks: FilmMarks, unseen: boolean) => {
-  const why = swapReasons(marks, unseen)
-  return marks.swap && why.stars === null && why.seen.length > 0
-    ? ('seen' as const)
-    : null
 }
 
 /** No mark at all: a Cartaz as it came, or after Limpar. */
@@ -108,6 +78,32 @@ export function otherMoods(model: Billboard, marks: Marks): string[] | null {
 export const marksOf = (marks: Marks, id: string): FilmMarks =>
   marks.films[id] ?? NO_MARKS
 
+/** What turns the Trocar on by itself: 1 to 3 stars, or, with "Só filmes
+ * que ninguém viu" (`unseen`), a Já vi. */
+const autoSwap = (marks: FilmMarks, unseen: boolean): SwapWhy =>
+  marks.stars >= 1 && marks.stars <= 3
+    ? 'stars'
+    : unseen && marks.seen.length > 0
+      ? 'seen'
+      : null
+
+/** The film's marks after a change (#326). Pressing Trocar is the Dono's
+ * and stays. Otherwise, when what turns it on by itself changes, the
+ * Trocar follows it: a new reason turns it on, even after the Dono took
+ * it off, and losing the reason turns it off; only one she pressed on
+ * stays on. */
+export function withSwap(
+  before: FilmMarks,
+  after: FilmMarks,
+  unseen: boolean,
+): FilmMarks {
+  if (after.swap !== before.swap) return { ...after, swapWhy: 'owner' }
+  const reason = autoSwap(after, unseen)
+  if (reason === autoSwap(before, unseen)) return after
+  if (after.swapWhy === 'owner' && after.swap) return after
+  return { ...after, swap: reason !== null, swapWhy: reason }
+}
+
 /** A Nota of 1 to 10, the Feedback's scale; anything else is none. */
 const rating = (text: string | undefined): number | undefined => {
   const value = Math.round(Number(text))
@@ -139,7 +135,7 @@ function billboardState(model: Billboard, marks: Marks): BillboardState {
         ratings,
         thoughts,
         swap: m.swap,
-        swapReason: swapReasonOf(m, model.unseen === true),
+        swapForSeen: m.swap && m.swapWhy === 'seen',
         stars: m.stars,
         comment: m.comment,
       }
@@ -235,7 +231,7 @@ function filmFrom(value: unknown, attendees: readonly string[]): FilmMarks {
     ratings: strings(value.ratings),
     thoughts: strings(value.thoughts),
     swap: value.swap === true,
-    swapByHand: value.swapByHand === true,
+    swapWhy: SWAP_WHY.find((why) => why === value.swapWhy) ?? null,
     stars: Number.isInteger(stars) && stars >= 1 && stars <= 5 ? stars : 0,
     comment: typeof value.comment === 'string' ? value.comment : '',
   }

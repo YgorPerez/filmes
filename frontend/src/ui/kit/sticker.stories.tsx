@@ -1,4 +1,4 @@
-// The price sticker, full and compact, and the NOVO, TROCAR, SIM and JÁ VI
+// The price sticker, full and compact, and the TROCAR, SIM and JÁ VI
 // stickers.
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, within } from 'storybook/test'
@@ -6,21 +6,19 @@ import { PriceSticker, Sticker } from './sticker'
 
 const meta = {
   component: Sticker,
-  args: { kind: 'new', children: 'Novo' },
+  args: { kind: 'swap', children: 'Trocar' },
 } satisfies Meta<typeof Sticker>
 
 export default meta
 
 type Story = StoryObj<typeof meta>
 
-export const New: Story = {
+export const Swap: Story = {
   // Not `toBeVisible`: the sticker comes in from transparent (`animate-stick`).
   play: async ({ canvasElement }) => {
-    await expect(within(canvasElement).getByText('Novo')).toBeInTheDocument()
+    await expect(within(canvasElement).getByText('Trocar')).toBeInTheDocument()
   },
 }
-
-export const Swap: Story = { args: { kind: 'swap', children: 'Trocar' } }
 
 export const Yes: Story = { args: { kind: 'yes', children: 'Sim' } }
 

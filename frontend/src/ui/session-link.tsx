@@ -5,7 +5,6 @@ import { buttonVariants } from './kit/button-variants'
 import { Chip } from './kit/chip'
 import { Avatar } from './kit/person'
 import { ShelfLabel } from './kit/shelf-label'
-import { Sticker } from './kit/sticker'
 import { TapeCase } from './kit/tape-case'
 import { PARTICIPATION } from './session-link.copy'
 import { VOTES } from './session-votes.copy'
@@ -218,11 +217,6 @@ export function LinkFilmRow({ film, first }: { film: Film; first: boolean }) {
           small
           className="w-full"
         />
-        {film.new && (
-          <Sticker kind="new" className="absolute -top-xs -right-sm">
-            {PARTICIPATION.isNew}
-          </Sticker>
-        )}
       </div>
       <div className="flex min-w-0 flex-col gap-xs">
         <p className="font-display text-row-title text-balance">

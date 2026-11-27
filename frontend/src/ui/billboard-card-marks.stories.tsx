@@ -12,7 +12,7 @@ const NO_MARKS: FilmMarks = {
   ratings: {},
   thoughts: {},
   swap: false,
-  swapByHand: false,
+  swapWhy: null,
   stars: 0,
   comment: '',
 }

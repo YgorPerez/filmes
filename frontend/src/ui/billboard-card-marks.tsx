@@ -1,7 +1,7 @@
 import type { BillboardFilm, BillboardPerson } from '@filmes/engine'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { BILLBOARD } from './billboard.copy'
-import { settleSwap, swapReasons, type FilmMarks } from './billboard-marks'
+import type { FilmMarks } from './billboard-marks'
 import { Icon } from './billboard-icons'
 import { buttonVariants } from './kit/button-variants'
 import { FIELD } from './kit/field'
@@ -12,9 +12,9 @@ import { Avatar } from './kit/person'
 // Estrelas): Trocar and the stars on one line; Já vi per Presente and
 // "Todos", each Já vi opening her note (the 1 to 10 scale and what she
 // thought) on the blue card stock; last Comentar, whose field opens in its
-// place, so a card carries no empty field. The Trocar turns on by itself
-// with a Já vi under Sem Já visto and with 1 to 3 stars, and a line under
-// the buttons says why; once the Dono presses it, it is hers (#326).
+// place, so a card carries no empty field. A Trocar that came on by
+// itself (a Já vi with "Só filmes que ninguém viu", or 1 to 3 stars:
+// `withSwap` in `billboard-marks.ts`) says why under the buttons (#326).
 
 /** An option that stays pressed, with the ✓ before the word, the same
  * width pressed or not (`kit/option.tsx`): pressing never wraps the row. */
@@ -199,6 +199,30 @@ function Comment({
   )
 }
 
+/** Why the Trocar came on by itself, or nothing. */
+function SwapWhy({
+  marks,
+  people,
+}: {
+  marks: FilmMarks
+  people: readonly BillboardPerson[]
+}) {
+  const { swapWhy } = BILLBOARD.marks
+  if (!marks.swap) return null
+  const seen = new Set(marks.seen)
+  const why =
+    marks.swapWhy === 'stars'
+      ? swapWhy.stars(marks.stars)
+      : marks.swapWhy === 'seen'
+        ? swapWhy.seen(
+            people
+              .filter((p) => seen.has(p.slug))
+              .map((p) => (p.owner ? 'você' : p.name)),
+          )
+        : null
+  return why && <p className="text-meta text-ink-2">{why}</p>
+}
+
 /** The marks of one film: Trocar and the stars on one line, the reason
  * of a Trocar the Cartaz turned on, then Já vi per Presente with each
  * one's note, and last Comentar, where the comment opens. */
@@ -206,23 +230,14 @@ export function FilmMarksControls({
   film,
   people,
   marks,
-  unseen = false,
-  onChange: change,
+  onChange,
 }: {
   film: BillboardFilm
   people: readonly BillboardPerson[]
   marks: FilmMarks
-  /** The Session asked Sem Já visto: a Já vi turns the Trocar on. */
-  unseen?: boolean
   onChange: (marks: FilmMarks) => void
 }) {
   const { marks: copy } = BILLBOARD
-  const onChange = (next: FilmMarks) => change(settleSwap(next, unseen))
-  const why = swapReasons(marks, unseen)
-  const seenBy = new Set(why.seen)
-  const names = people
-    .filter((p) => seenBy.has(p.slug))
-    .map((p) => (p.owner ? null : p.name))
   const [opened, setOpened] = useState(false)
   const commenting = opened || marks.comment !== ''
   const seen = new Set(marks.seen)
@@ -244,7 +259,7 @@ export function FilmMarksControls({
       <div className="flex flex-wrap items-center gap-x-sm">
         <Toggle
           pressed={marks.swap}
-          onChange={(swap) => onChange({ ...marks, swap, swapByHand: true })}
+          onChange={(swap) => onChange({ ...marks, swap })}
         >
           {copy.swap}
         </Toggle>
@@ -254,11 +269,7 @@ export function FilmMarksControls({
           onChange={(stars) => onChange({ ...marks, stars })}
         />
       </div>
-      {marks.swap && (names.length > 0 || why.stars !== null) && (
-        <p className="-mt-xs text-meta text-ink-2">
-          {copy.swapWhy(names, why.stars)}
-        </p>
-      )}
+      <SwapWhy marks={marks} people={people} />
       <div
         role="group"
         aria-label={copy.seenGroup(film.position)}

@@ -35,13 +35,12 @@ export type LinkPerson = {
 }
 
 /** A film of the current screen, with its public card (null when the
- * Catálogo no longer has it), whether this version brought it in, and the
- * chosen Presente's standing Voto on it. */
+ * Catálogo no longer has it) and the chosen Presente's standing Voto on
+ * it. */
 export type LinkFilm = {
   position: number
   id: string
   title: string
-  new: boolean
   card: PublicFilmCard | null
   mine: VoteValue | null
 }
@@ -171,12 +170,6 @@ async function screenOf(
   engine: Engine,
 ): Promise<Pick<SessionLinkView, 'films' | 'left' | 'questions'>> {
   const current = currentVersion(front)
-  const listed = yamlToJson(current.get('recommendation') ?? null)
-  const fresh = new Set(
-    (Array.isArray(listed) ? (listed as Record<string, unknown>[]) : [])
-      .filter((item) => item.new === true)
-      .map((item) => String(item.id)),
-  )
   const screen = shownFilms(current)
   const mine = latestVotes(front, person)
   const byId = await cardsById(
@@ -198,7 +191,6 @@ async function screenOf(
         position: film.position,
         id: film.id,
         title: card?.title ?? film.title ?? film.id,
-        new: fresh.has(film.id),
         card,
         mine: mine.get(film.id) ?? null,
       }

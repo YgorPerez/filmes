@@ -7,7 +7,8 @@ import type {
 import { useState } from 'react'
 import type { FilmMarks } from './billboard-marks'
 import { Chip } from './kit/chip'
-import { Avatar, PersonDot } from './kit/person'
+import { Hint } from './kit/hint'
+import { Avatar } from './kit/person'
 import { PriceSticker, Sticker } from './kit/sticker'
 import { TapeCase } from './kit/tape-case'
 import { BILLBOARD } from './billboard.copy'
@@ -20,13 +21,12 @@ import { Strength } from './billboard-top'
 // One film of the Cartaz (DESIGN.md, Card do filme): the tape in its case
 // with the price sticker, the header (with the IMDb and, when TMDB has one,
 // the trailer on YouTube: a link, never a player, #289), "Por que cada um
-// vai gostar" with each Presente's Nota prevista on a muted line under its
-// label (#326) and, while the Session takes a reply, the marks
-// (`billboard-card-marks.tsx`). A grid: the case on the left (112px, 160px
-// from 560px), the header on the right; "Por que" and the marks across
-// below, each opened by a dashed rule, "Por que" going up under the chips
-// from 560px. The state is the Cartaz's (`billboard.tsx`). Inside a section
-// by Motivo (#183) the title is a level below the section's.
+// vai gostar", opened by each Presente's Nota prevista (#326), and, while
+// the Session takes a reply, the marks (`billboard-card-marks.tsx`). A grid:
+// the case on the left (112px, 160px from 560px), the header on the right;
+// "Por que" and the marks across below, each opened by a dashed rule, "Por
+// que" going up under the chips from 560px. The state is the Cartaz's (`billboard.tsx`). Inside a
+// section by Motivo (#183) the title is a level below the section's.
 
 /** The outlined chips that leave the app: the IMDb and the trailer. The
  * link is 44px tall and the chip drawn inside it (#272, #277). */
@@ -119,7 +119,7 @@ function Poster({
       )}
       {film.bet && (
         <>
-          <BetStamp className="absolute bottom-[38px] -left-sm">
+          <BetStamp className="absolute bottom-[17px] -left-sm">
             {card.bet}
           </BetStamp>
           <span className="sr-only">{card.betHint}</span>
@@ -230,9 +230,10 @@ export function EvidenceLine({
   )
 }
 
-/** Each Presente's Nota prevista, muted, under the label of "Por que"
- * (#326): "previsto · Ygor 8,3 · Iara 7,1". Each name opens who backs it.
- * A Presente without one is left out, never guessed. */
+/** Each Presente's Nota prevista, in the people's order, under the title
+ * of "Por que": "previsto · Ana 8,3 · Iara 7,1". Her name carries the hint
+ * of how many taste neighbours back it, when the version kept it. Who has
+ * none is left out, and with nobody there is no line (#326). */
 function Predicted({
   film,
   people,
@@ -241,35 +242,32 @@ function Predicted({
   people: readonly BillboardPerson[]
 }) {
   const { card } = BILLBOARD
-  const without = new Set(film.withoutFact)
-  const byPerson = new Map(film.predictedRatings.map((p) => [p.person, p]))
-  const rated = people.flatMap((p) => {
-    const rating = byPerson.get(p.slug)
-    return rating ? [{ person: p, rating }] : []
+  const predicted = new Map(film.predictedRatings.map((p) => [p.person, p]))
+  const shown = people.flatMap((person) => {
+    const rating = predicted.get(person.slug)
+    return rating ? [{ person, rating }] : []
   })
-  if (rated.length === 0) return null
+  if (shown.length === 0) return null
   return (
-    <p className="-mt-xs flex flex-wrap items-center gap-x-sm text-meta text-ink-2">
-      <span>{card.predicted}</span>
-      {rated.map(({ person, rating }) => (
-        <span key={person.slug} className="inline-flex items-center gap-x-sm">
-          <span aria-hidden="true">·</span>
-          <PersonDot
-            person={person}
-            hollow={without.has(person.slug)}
-            rating={{
-              text: rating.text,
-              name: person.name,
-              hint: card.predictedHint(rating.raters),
-              label: card.predictedLabel(
-                person.name,
-                rating.text,
-                rating.raters,
-              ),
-            }}
-          />
-        </span>
-      ))}
+    <p className="text-meta text-ink-2 tabular-nums">
+      {card.predicted}
+      {shown.map(({ person, rating }) => {
+        const hint =
+          rating.raters === undefined ? null : card.predictedHint(rating.raters)
+        return (
+          <span key={person.slug}>
+            {' · '}
+            {hint === null ? (
+              person.name
+            ) : (
+              <Hint label={card.predictedLabel(person.name, hint)} hint={hint}>
+                {person.name}
+              </Hint>
+            )}{' '}
+            {rating.text}
+          </span>
+        )
+      })}
     </p>
   )
 }
@@ -376,7 +374,6 @@ export function BillboardCard({
   first,
   level = 2,
   marks,
-  unseen = false,
   onChange,
 }: {
   film: BillboardFilm
@@ -384,8 +381,6 @@ export function BillboardCard({
   first: boolean
   level?: Level
   marks?: FilmMarks
-  /** The Session asked Sem Já visto: a Já vi turns the Trocar on (#326). */
-  unseen?: boolean
   onChange?: (marks: FilmMarks) => void
 }) {
   const seenBy = new Set(marks?.seen)
@@ -422,7 +417,6 @@ export function BillboardCard({
           film={film}
           people={people}
           marks={marks}
-          unseen={unseen}
           onChange={onChange}
         />
       )}

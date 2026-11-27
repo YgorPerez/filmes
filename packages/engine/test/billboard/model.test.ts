@@ -263,6 +263,7 @@ describe('the Cartaz model', () => {
     expect([request.who, ...request.parts].join(' · ')).toContain(
       'Vocês dois · até 2h05 · nota 7+ no IMDb · leve · nada repetido',
     )
+    expect(request.unseen).toBe(true)
   })
 
   test('a refazer keeps the Dono’s words and the label leaves out the Restrição it turns on by itself', async () => {
@@ -289,20 +290,6 @@ describe('the Cartaz model', () => {
     })
     expect(request.speech).toBe('algo leve pra hoje')
     expect(request.parts.join(' · ')).not.toContain('nesta Sessão')
-  })
-
-  test('the Cartaz knows when the version asked Sem Já visto', async () => {
-    const fixture = useFixture()
-    const asked = await recommend(fixture, {
-      attendees: ['dono', 'iara'],
-      unseen: true,
-    })
-    const plain = await recommend(fixture, { attendees: ['dono'] })
-
-    const model = (id: string) => fixture.ok(billboardModel({ session: id }))
-
-    expect((await model(asked.session.id)).unseen).toBe(true)
-    expect((await model(plain.session.id)).unseen).toBeUndefined()
   })
 
   test('the Cartaz has the version’s Climas and the whole vocabulary for the chips', async () => {
@@ -628,6 +615,7 @@ describe('the Cartaz model', () => {
       additions: [],
       who: 'Você',
       parts: ['nota 7+ no IMDb'],
+      unseen: false,
     })
   })
 

@@ -57,7 +57,6 @@ export const PARTICIPATION = {
   questionsLead: (owner: string | null) =>
     `Umas perguntas rápidas sobre filmes que você já viu. ${owner ?? 'Quem abriu a Sessão'} vê as respostas e decide se viram gosto.`,
   mine: (vote: 'yes' | 'no') => (vote === 'yes' ? 'você: sim' : 'você: não'),
-  isNew: 'Novo',
   left: 'Saiu da noite pelo seu não',
   who,
 } as const

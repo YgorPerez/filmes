@@ -82,7 +82,6 @@ test('the public Session link follows the current version until Feedback closes 
           position: 1,
           id: film.id,
           title: film.title,
-          new: true,
           mine: null,
           card: expect.objectContaining({ id: film.id }),
         },

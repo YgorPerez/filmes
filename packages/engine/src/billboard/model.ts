@@ -128,6 +128,9 @@ export interface BillboardRequest {
    * duration, the minimum IMDb rating, the Climas, the Restrições' labels
    * and the Regra. */
   readonly parts: ReadonlyArray<string>
+  /** "Só filmes que ninguém viu" (`unseen`) is on: a Já vi on the Cartaz
+   * marks the film's Trocar (#326). */
+  readonly unseen: boolean
 }
 
 /** A film of the previous version that left, with the reason as the page
@@ -278,9 +281,6 @@ export interface Billboard {
   readonly moodChoices: ReadonlyArray<string>
   /** The Session is still open: it can take a reply. */
   readonly open: boolean
-  /** The version asked Sem Já visto: on the Cartaz, a Já vi turns the
-   * film's Trocar on (#326). */
-  readonly unseen?: true
   /** Only when the Session has Feedback and its chosen film has no card. */
   readonly chosen?: BillboardChosen
 }
@@ -481,9 +481,11 @@ const requestOf = (
   // A stored Restrição that no longer exists (an old Session's no_repeat)
   // does not show, nor the one the Session turns on by itself
   // (`out_of_session`): the Dono did not ask for it (#277).
-  const stored = get(context, 'constraints')
-  for (const item of mappings(stored)) {
-    const label = askedConstraintLabel(yamlToJson(item) as StoredConstraint)
+  const stored = mappings(get(context, 'constraints')).map(
+    (item) => yamlToJson(item) as StoredConstraint,
+  )
+  for (const item of stored) {
+    const label = askedConstraintLabel(item)
     if (label) parts.push(label)
   }
   const rule = front.get('rule')
@@ -501,14 +503,9 @@ const requestOf = (
     additions: additionsOf(front),
     who,
     parts,
+    unseen: stored.some((item) => item.name === 'unseen'),
   }
 }
-
-/** The version asked Sem Já visto (`unseen`). */
-const asksUnseen = (front: YamlMapping): boolean =>
-  mappings(get(front.get('context'), 'constraints')).some(
-    (item) => textOf(item.get('name')) === 'unseen',
-  )
 
 /** What left the previous version, and why (`_saiu`). */
 const droppedOf = (
@@ -906,7 +903,6 @@ export const billboardModel = (
           moods: texts(get(front.get('context'), 'moods')),
           moodChoices: (yield* readMoods).map((m) => m.name),
           open: isOpen(front),
-          ...(asksUnseen(front) && { unseen: true as const }),
           ...(chosenBlock !== null && { chosen: chosenBlock }),
         }
       }),

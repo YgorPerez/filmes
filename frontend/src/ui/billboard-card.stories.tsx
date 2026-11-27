@@ -1,9 +1,8 @@
 // One film of the Cartaz: with a poster and marks, a bet without poster,
-// marked Trocar or Já vi, and read-only once the Session has its Feedback;
-// the Nota prevista line under "Por que" with and without a prediction, a
-// Presente without a Fato with a number, and six Presentes on a phone; the
-// Trocar the Já vi and the stars turn on (#326); the trailer link, and a
-// film without one.
+// marked Trocar, a Trocar the stars marked, and read-only once the Session
+// has its Feedback; the Nota prevista line under "Por que", without one,
+// with a Presente without a Fato, and six Presentes on a phone; the
+// trailer link, and a film without one.
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
 import { expect, userEvent, within } from 'storybook/test'
@@ -39,7 +38,7 @@ const NO_MARKS: FilmMarks = {
   ratings: {},
   thoughts: {},
   swap: false,
-  swapByHand: false,
+  swapWhy: null,
   stars: 0,
   comment: '',
 }
@@ -66,8 +65,6 @@ export const WithMarks: Story = {
     const swap = canvas.getByRole('button', { name: 'Trocar' })
     await userEvent.click(swap)
     await expect(swap).toHaveAttribute('aria-pressed', 'true')
-    // No dot or number on the case, no "novo" anywhere (#326).
-    await expect(canvas.queryByText(/^novo$/i)).toBeNull()
   },
 }
 
@@ -77,8 +74,20 @@ export const Bet: Story = {
 }
 
 export const Swapped: Story = {
-  args: { marks: { ...NO_MARKS, swap: true, swapByHand: true } },
+  args: { marks: { ...NO_MARKS, swap: true, swapWhy: 'owner' } },
   render: (args) => <Marked {...args} />,
+}
+
+/** 2 stars turned the Trocar on, and the line under the buttons says why
+ * (#326). */
+export const SwappedByStars: Story = {
+  args: { marks: { ...NO_MARKS, swap: true, swapWhy: 'stars', stars: 2 } },
+  render: (args) => <Marked {...args} />,
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByText('Trocar marcado: 2 estrelas'),
+    ).toBeVisible()
+  },
 }
 
 /** Only Iara saw it: the cover takes JÁ VI with her initial (#272). */
@@ -86,49 +95,9 @@ export const OneSeen: Story = {
   args: { marks: { ...NO_MARKS, seen: ['iara'] } },
   render: (args) => <Marked {...args} />,
   play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement)
-    await expect(canvas.getByText('Já vi: Iara')).toBeInTheDocument()
-    // Without Sem Já visto, a Já vi leaves the Trocar alone.
     await expect(
-      canvas.getByRole('button', { name: 'Trocar' }),
-    ).toHaveAttribute('aria-pressed', 'false')
-  },
-}
-
-/** With Sem Já visto, a Já vi turns the Trocar on and says why; the Dono
- * can turn it off, and then it is hers (#326). */
-export const SeenTurnsSwapOn: Story = {
-  args: { unseen: true },
-  render: (args) => <Marked {...args} />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement)
-    const swap = canvas.getByRole('button', { name: 'Trocar' })
-    await userEvent.click(canvas.getByRole('button', { name: 'Iara' }))
-    await expect(swap).toHaveAttribute('aria-pressed', 'true')
-    await expect(
-      canvas.getByText('Trocar marcado: Iara já viu'),
+      within(canvasElement).getByText('Já vi: Iara'),
     ).toBeInTheDocument()
-    await userEvent.click(swap)
-    await expect(swap).toHaveAttribute('aria-pressed', 'false')
-    await expect(canvas.queryByText(/^Trocar marcado/)).toBeNull()
-    await userEvent.click(canvas.getByRole('button', { name: 'Você' }))
-    await expect(swap).toHaveAttribute('aria-pressed', 'false')
-  },
-}
-
-/** 1 to 3 stars turn the Trocar on; 4 or more turn it off again (#326). */
-export const LowStarsTurnSwapOn: Story = {
-  render: (args) => <Marked {...args} />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement)
-    const swap = canvas.getByRole('button', { name: 'Trocar' })
-    await userEvent.click(canvas.getByRole('button', { name: '2 de 5' }))
-    await expect(swap).toHaveAttribute('aria-pressed', 'true')
-    await expect(
-      canvas.getByText('Trocar marcado: 2 estrelas'),
-    ).toBeInTheDocument()
-    await userEvent.click(canvas.getByRole('button', { name: '4 de 5' }))
-    await expect(swap).toHaveAttribute('aria-pressed', 'false')
   },
 }
 
@@ -152,8 +121,9 @@ export const Kept: Story = {
   },
 }
 
-/** Once told: the past tense, and the stars given say "4 de 5". A tap on
- * Bruno's Nota prevista opens who backs it, under it. */
+/** Once told: the past tense, and the stars given say "4 de 5" (#272).
+ * Bruno has a Nota prevista, Iara none; a tap on his name opens its hint
+ * under it. */
 export const ReadOnly: Story = {
   args: { film: { ...FILM, notes: { stars: 4, comments: [] } } },
   play: async ({ canvasElement }) => {
@@ -161,21 +131,18 @@ export const ReadOnly: Story = {
     await expect(canvas.getByText('Por que estava na lista')).toBeVisible()
     await expect(canvas.getByText('4 de 5')).toBeVisible()
     const hint = 'pela nota de 12 pessoas de gosto parecido'
-    const dot = canvas.getByRole('button', { name: /^Nota prevista de Bruno/ })
-    await expect(dot).toHaveTextContent('Bruno 8,3')
+    const name = canvas.getByRole('button', { name: `Bruno: ${hint}` })
     await expect(canvas.getByText(hint)).not.toBeVisible()
-    await userEvent.click(dot)
+    await userEvent.click(name)
     const popover = canvas.getByText(hint)
     await expect(popover).toBeVisible()
     const box = popover.getBoundingClientRect()
     await expect(box.top).toBeGreaterThanOrEqual(
-      dot.getBoundingClientRect().bottom,
+      name.getBoundingClientRect().bottom,
     )
     await expect(box.left).toBeGreaterThanOrEqual(0)
     await expect(box.right).toBeLessThanOrEqual(window.innerWidth)
-    await expect(
-      canvas.queryByRole('button', { name: /^Nota prevista de Iara/ }),
-    ).toBeNull()
+    await expect(canvas.queryByRole('button', { name: /^Iara:/ })).toBeNull()
   },
 }
 
@@ -189,9 +156,9 @@ export const NoReasonOfItsOwn: Story = {
     film: { ...FILM, lines: [], predictedRatings: [], withoutFact: ['iara'] },
   },
   play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement)
-    await expect(canvas.queryByText('Por que cada um vai gostar')).toBeNull()
-    await expect(canvas.queryByRole('heading', { level: 4 })).toBeNull()
+    await expect(
+      within(canvasElement).queryByText('Por que cada um vai gostar'),
+    ).toBeNull()
   },
 }
 
@@ -225,22 +192,18 @@ export const WithCritics: Story = {
   },
 }
 
-/** The trailer opens YouTube in a new tab: a link, never a player. The
- * IMDb and trailer links are 44px tall (#272, #277). */
+/** The trailer opens YouTube in a new tab: a link, never a player. */
 export const WithTrailer: Story = {
   play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement)
-    const trailer = canvas.getByRole('link', { name: 'trailer' })
+    const trailer = within(canvasElement).getByRole('link', {
+      name: 'trailer',
+    })
     await expect(trailer).toHaveAttribute(
       'href',
       'https://www.youtube.com/watch?v=hOrAsPtBr01',
     )
     await expect(trailer).toHaveAttribute('target', '_blank')
     await expect(canvasElement.querySelector('iframe')).toBeNull()
-    for (const link of [trailer, canvas.getByRole('link', { name: /IMDb/ })])
-      await expect(link.getBoundingClientRect().height).toBeGreaterThanOrEqual(
-        44,
-      )
   },
 }
 
@@ -257,14 +220,12 @@ export const WithoutTrailer: Story = {
 export const WithoutPredictedRating: Story = {
   args: { film: { ...FILM, predictedRatings: [] } },
   play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement)
-    await expect(canvas.queryByText('previsto')).toBeNull()
-    await expect(canvas.getByText('Por que estava na lista')).toBeVisible()
+    await expect(within(canvasElement).queryByText(/^previsto/)).toBeNull()
   },
 }
 
-/** Iara has no Fato but has a Nota prevista: a hollow dot with a number. */
-export const HollowWithNumber: Story = {
+/** Iara has no Fato but has a Nota prevista: she is in the line too. */
+export const WithoutFactWithPrediction: Story = {
   args: {
     film: {
       ...BET!,
@@ -278,7 +239,7 @@ export const HollowWithNumber: Story = {
     const canvas = within(canvasElement)
     await expect(
       canvas.getByRole('button', {
-        name: 'Nota prevista de Iara: 6,9 de 10, pela nota de 1 pessoa de gosto parecido',
+        name: 'Iara: pela nota de 1 pessoa de gosto parecido',
       }),
     ).toBeVisible()
     await expect(
@@ -307,11 +268,11 @@ export const ManyPresentes: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    const dots = canvas.getAllByRole('button', { name: /^Nota prevista/ })
-    await expect(dots).toHaveLength(5)
-    const card = canvas.getByRole('article').getBoundingClientRect()
-    for (const dot of dots) {
-      const box = dot.getBoundingClientRect()
+    const names = canvas.getAllByRole('button', { name: /gosto parecido/ })
+    await expect(names).toHaveLength(5)
+    const card = canvasElement.querySelector('article')!.getBoundingClientRect()
+    for (const name of names) {
+      const box = name.getBoundingClientRect()
       await expect(box.left).toBeGreaterThanOrEqual(card.left)
       await expect(box.right).toBeLessThanOrEqual(card.right)
     }

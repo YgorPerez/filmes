@@ -5,12 +5,6 @@ import { askedParts, isDuration } from './billboard-request'
 const plural = (n: number, one: string, many: string) =>
   `${n} ${n === 1 ? one : many}`
 
-/** Who backs a Nota prevista: "pela nota de 4 pessoas de gosto parecido". */
-const backedBy = (raters?: number) =>
-  raters === undefined
-    ? 'pela nota de pessoas de gosto parecido'
-    : `pela nota de ${plural(raters, 'pessoa', 'pessoas')} de gosto parecido`
-
 /** "a", "a e b", "a, b e c". */
 const andList = (items: readonly string[]) =>
   items.length <= 1
@@ -54,14 +48,14 @@ export const BILLBOARD = {
         : `${rating} IMDb · ${votes} votos`,
     /** The link to the film's trailer on YouTube (#289). */
     trailer: 'trailer',
-    /** The muted line under "Por que" with each Presente's Nota prevista
-     * (#326): "previsto · Ygor 8,3 · Iara 7,1". */
+    /** The Nota prevista line under "Por que" (#326): "previsto · Ana 8,3
+     * · Iara 7,1". */
     predicted: 'previsto',
-    /** A name's hint on that line: who backs the number. */
-    predictedHint: backedBy,
-    /** What a screen reader hears on a name of that line. */
-    predictedLabel: (name: string, rating: string, raters?: number) =>
-      `Nota prevista de ${name}: ${rating} de 10, ${backedBy(raters)}`,
+    /** The hint of a name in it, when the version kept how many taste
+     * neighbours back it. */
+    predictedHint: (raters: number) =>
+      `pela nota de ${plural(raters, 'pessoa', 'pessoas')} de gosto parecido`,
+    predictedLabel: (name: string, hint: string) => `${name}: ${hint}`,
     /** Who an Evidência is about, opening its line: "Ana e Bruno". */
     whose: (names: readonly string[]) => andList(names),
     why: 'Por que cada um vai gostar',
@@ -100,19 +94,14 @@ export const BILLBOARD = {
     thoughtLabel: (who: string, n: number) =>
       `o que ${who} achou do filme ${n}`,
     swap: 'Trocar',
-    /** Why the Cartaz turned the Trocar on by itself (#326): "Trocar
-     * marcado: você já viu", "Trocar marcado: 2 estrelas". A null name is
-     * the Dono. */
-    swapWhy: (seen: readonly (string | null)[], stars: number | null) =>
-      `Trocar marcado: ${[
-        seen.length > 0 &&
-          `${andList(seen.map((name) => name ?? 'você'))} ${
-            seen.length === 1 ? 'já viu' : 'já viram'
-          }`,
-        stars !== null && plural(stars, 'estrela', 'estrelas'),
-      ]
-        .filter(Boolean)
-        .join(' · ')}`,
+    /** Why the Trocar came on by itself (#326): "Trocar marcado: você já
+     * viu", "Trocar marcado: 2 estrelas". */
+    swapWhy: {
+      seen: (who: readonly string[]) =>
+        `Trocar marcado: ${andList(who)} ${who.length === 1 ? 'já viu' : 'já viram'}`,
+      stars: (n: number) =>
+        `Trocar marcado: ${plural(n, 'estrela', 'estrelas')}`,
+    },
     stars: 'quanto animou',
     /** More than this many Presentes: their Já vi options open from one
      * "Já vi…" (#277). */

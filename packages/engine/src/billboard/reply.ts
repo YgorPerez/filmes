@@ -24,9 +24,8 @@
 //   version's text counts the same; the Trocar of a film no longer on the
 //   screen is ignored, with a warning. The Trocar goes in `swapped` of the
 //   current version, and the film never comes back in the Session (#66).
-//   The Dono's Trocar is a failure of the Aposta in the Histórico de
-//   apostas; `trocar: já vi` (the Cartaz turned it on because of a Já vi
-//   with Sem Já visto on) is not: only the Já vi teaches, by its Nota (#326).
+//   `trocar: já vi` is the Trocar the Cartaz marked for a Já vi: the same,
+//   but no failure in the Histórico de apostas (#326).
 //
 // - Clima (`clima: <name>, ...`, `clima: nenhum`): the Climas the Dono
 //   chose on the Cartaz, resolved by the vocabulary (a name outside it is a
@@ -96,7 +95,7 @@ import {
   type ShownFilm,
 } from '../sessions/file.ts'
 import { authorFor } from '../sessions/open.ts'
-import { NO_MOOD, SEEN_SWAP } from './text.ts'
+import { NO_MOOD } from './text.ts'
 
 // --- reading the text --------------------------------------------------------
 
@@ -126,8 +125,9 @@ export interface ReadMarks {
   readonly seen: string | null
   readonly thoughts: ReadonlyMap<string | null, string>
   readonly swap: boolean
-  /** The Trocar came from a Já vi on the same line (`trocar: já vi`). */
-  readonly swapSeen: boolean
+  /** The Trocar is `trocar: já vi`: the Cartaz marked it for a Já vi
+   * (#326). */
+  readonly swapForSeen: boolean
   readonly stars: number | null
   readonly comment: string | null
 }
@@ -173,7 +173,7 @@ const readMarks = (
     let seen: string | null = null
     const thoughts = new Map<string | null, string>()
     let swap = false
-    let swapSeen = false
+    let swapForSeen = false
     let stars: number | null = null
     let comment: string | null = null
     let rest = marks.replace(LEADING_SEPARATOR, '')
@@ -188,10 +188,8 @@ const readMarks = (
       const value = pyStrip(raw)
       const thought = THOUGHT.exec(name)
       if (part === 'trocar') swap = true
-      else if (name === 'trocar' && value === SEEN_SWAP) {
-        swap = true
-        swapSeen = true
-      } else if (name === 'já vi' && value) seen = value
+      else if (name === 'trocar' && value === 'já vi') swap = swapForSeen = true
+      else if (name === 'já vi' && value) seen = value
       else if (thought && value)
         thoughts.set(thought[1] ?? null, pyJoinWords(value))
       else if (name === 'estrelas' && STARS.has(value)) stars = Number(value)
@@ -208,8 +206,7 @@ const readMarks = (
       seen,
       thoughts,
       swap,
-      // Without a Já vi on the line, it is the Dono's own Trocar.
-      swapSeen: swapSeen && seen !== null,
+      swapForSeen,
       stars,
       comment,
     }
@@ -684,34 +681,32 @@ const swapsOnScreen = (
 }
 
 /** The Aposta marks of the reply: each Já vi with a Nota, and each Trocar
- * as the owner's, but the one that came from a Já vi (#326). */
+ * as the owner's, but the one the Cartaz marked for a Já vi (`trocar: já
+ * vi`), which teaches only through the Já vi's Nota (#326). */
 const betMarksOf = (
   seen: ReadonlyArray<ReplySeen>,
-  films: ReadonlyArray<ReadMarks>,
   swap: ReadonlySet<string>,
+  films: ReadonlyArray<ReadMarks>,
   owner: string | undefined,
   today: string,
-) => {
-  const fromSeen = new Set(films.filter((m) => m.swapSeen).map((m) => m.id))
-  return [
-    ...seen.flatMap(({ person, film, rating }) =>
-      rating === null
-        ? []
-        : [{ person, film, rating, kind: 'seen' as const, date: today }],
-    ),
-    ...(owner === undefined
+) => [
+  ...seen.flatMap(({ person, film, rating }) =>
+    rating === null
       ? []
-      : [...swap]
-          .filter((film) => !fromSeen.has(film))
-          .map((film) => ({
-            person: owner,
-            film,
-            rating: null,
-            kind: 'swapped' as const,
-            date: today,
-          }))),
-  ]
-}
+      : [{ person, film, rating, kind: 'seen' as const, date: today }],
+  ),
+  ...(owner === undefined
+    ? []
+    : [...swap]
+        .filter((film) => !films.some((m) => m.id === film && m.swapForSeen))
+        .map((film) => ({
+          person: owner,
+          film,
+          rating: null,
+          kind: 'swapped' as const,
+          date: today,
+        }))),
+]
 
 /** What the reply recorded and what regenerating needs. */
 const replyResult = (input: {
@@ -832,7 +827,7 @@ const recordReply = (input: ReplyInput) =>
     }
     const betMarksChanged = recordBetMarks(
       front,
-      betMarksOf(seen, films, swap, owner, today),
+      betMarksOf(seen, swap, films, owner, today),
     )
     if (write || betMarksChanged)
       yield* writeSession(id, front, opened.session.body)

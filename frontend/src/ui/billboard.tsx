@@ -20,6 +20,7 @@ import {
   markCounts,
   markedFilms,
   marksOf,
+  withSwap,
   openStorage,
   otherMoods,
   parseMarks,
@@ -491,14 +492,23 @@ function Cards({
       key={film.id}
       film={film}
       people={billboard.attendees}
-      unseen={billboard.unseen === true}
       first={film === billboard.films[0]}
       level={grouped ? 3 : 2}
       marks={billboard.open ? marksOf(marks, film.id) : undefined}
       onChange={
         billboard.open
           ? (next: FilmMarks) =>
-              change({ ...marks, films: { ...marks.films, [film.id]: next } })
+              change({
+                ...marks,
+                films: {
+                  ...marks.films,
+                  [film.id]: withSwap(
+                    marksOf(marks, film.id),
+                    next,
+                    billboard.request.unseen,
+                  ),
+                },
+              })
           : undefined
       }
     />
