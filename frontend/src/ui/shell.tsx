@@ -129,7 +129,6 @@ function PushStrip({ status, wide }: { status: PushStatus; wide: boolean }) {
 
 export type ShellOwner = { name: string; admin: boolean; email: string }
 
-
 /** The Dono's avatar, a button that opens her menu: her name and the
  * Google e-mail she entered with, Operações for an admin (saying so while
  * the push keeps failing), and Sair by POST. A native popover: it opens

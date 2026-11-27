@@ -138,12 +138,11 @@ const all = (form: FormData, name: string): string[] => [
 /** The words of a repeated field whose values may be lists too: the
  * "Nada de" chips, or the older comma list (#346). */
 const chips = (form: FormData, name: string): string[] | undefined => {
-  const items = all(form, name).flatMap(
-    (value) =>
-      value
-        .split(',')
-        .map((item) => item.trim())
-        .filter((item) => item !== ''),
+  const items = all(form, name).flatMap((value) =>
+    value
+      .split(',')
+      .map((item) => item.trim())
+      .filter((item) => item !== ''),
   )
   return items.length > 0 ? [...new Set(items)] : undefined
 }

@@ -78,14 +78,7 @@ export const satisfactionNow = (
           satisfaction: own === undefined ? null : pyRound(own.satisfaction, 4),
           line:
             group.behind.has(person) && scale
-              ? satisfactionLine(
-                  person,
-                  nameOf,
-                  group,
-                  scale,
-                  '',
-                  today,
-                ).text
+              ? satisfactionLine(person, nameOf, group, scale, '', today).text
               : null,
         }
       }),

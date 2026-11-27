@@ -726,7 +726,9 @@ function SessionView({
       />
       {/* Told, the night's label and the Dono's note open the Session, as
           on Contar (#346). */}
-      {closed && billboard !== null && <BillboardRequest billboard={billboard} />}
+      {closed && billboard !== null && (
+        <BillboardRequest billboard={billboard} />
+      )}
       {closed && <TapeReturned page={page} />}
       {closed && shelf !== null ? (
         <ClosedShelf chosen={Boolean(s.chosen)} others={shelf.films.length}>
