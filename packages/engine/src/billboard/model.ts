@@ -419,6 +419,9 @@ export const votesText = (votes: number): string => {
   return String(votes)
 }
 
+/** The Restrição a refazer turns on by itself ("Fora da Sessão"). */
+const AUTOMATIC_CONSTRAINT = 'out_of_session'
+
 /** The reading of the request (`_pedido`). */
 const requestOf = (
   front: YamlMapping,
@@ -438,10 +441,13 @@ const requestOf = (
   parts.push(`nota ${numberText(minRating)}+ no IMDb`)
   parts.push(...texts(get(context, 'moods')))
   // A stored Restrição that no longer exists (an old Session's no_repeat)
-  // does not show.
+  // does not show, nor the one the Session turns on by itself
+  // (`out_of_session`): the Dono did not ask for it (#277).
   const stored = get(context, 'constraints')
   for (const item of mappings(stored)) {
-    const label = constraintLabel(yamlToJson(item) as StoredConstraint)
+    const constraint = yamlToJson(item) as StoredConstraint
+    if (constraint.name === AUTOMATIC_CONSTRAINT) continue
+    const label = constraintLabel(constraint)
     if (label) parts.push(label)
   }
   const rule = front.get('rule')
