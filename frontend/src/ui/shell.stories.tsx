@@ -12,13 +12,15 @@ const FAILING: PushStatus = {
   failingSince: '2026-11-20T10:00:00Z',
   lastError: 'fatal',
   alert: true,
+  lastPushedAt: null,
+  queued: [],
 }
 
 const meta = {
   component: AppShell,
   parameters: { layout: 'fullscreen' },
   args: {
-    owner: { name: 'Bruno', admin: false },
+    owner: { name: 'Bruno', admin: false, email: 'bruno@example.org' },
     path: '/',
     alert: null,
     children: <main className="p-2xl">A página do Dono.</main>,
@@ -42,7 +44,10 @@ export const Home: Story = {
 export const Sessions: Story = { args: { path: '/sessoes' } }
 
 export const AdminWithFailingPush: Story = {
-  args: { owner: { name: 'Vera', admin: true }, alert: FAILING },
+  args: {
+    owner: { name: 'Vera', admin: true, email: 'vera@example.org' },
+    alert: FAILING,
+  },
   play: async ({ canvasElement }) => {
     await expect(within(canvasElement).getByRole('alert')).toBeVisible()
   },

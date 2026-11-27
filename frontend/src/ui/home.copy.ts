@@ -1,4 +1,4 @@
-import type { SetupStep } from '@filmes/engine'
+import type { GuideStep } from './setup-steps'
 
 const WEEKDAYS = [
   'Domingo',
@@ -24,13 +24,30 @@ const MONTHS = [
   'dez',
 ]
 
-/** "Sexta, 21 nov" from "2026-11-21"; the date itself when it is not one. */
-const day = (iso: string) => {
+const DAY_MS = 86_400_000
+
+/** The UTC midnight of "2026-11-21"; null when it is not a date. */
+const utc = (iso: string) => {
   const [year, month, date] = iso.split('-').map(Number)
-  const when = new Date(Date.UTC(year ?? 0, (month ?? 1) - 1, date ?? 1))
-  return Number.isNaN(when.getTime()) || !month || !date
-    ? iso
-    : `${WEEKDAYS[when.getUTCDay()]}, ${date} ${MONTHS[month - 1]}`
+  if (!year || !month || !date) return null
+  const when = Date.UTC(year, month - 1, date)
+  return Number.isNaN(when) ? null : when
+}
+
+/** The Sessão's day from today: "Hoje", "Ontem", the weekday alone within
+ * the week ("Sexta"), then "Sexta, 21 nov". Without today, the last; the
+ * date itself when it is not one. */
+const day = (iso: string, today: string | null) => {
+  const when = utc(iso)
+  if (when === null) return iso
+  const now = today === null ? null : utc(today)
+  const ago = now === null ? null : Math.round((now - when) / DAY_MS)
+  const date = new Date(when)
+  const weekday = WEEKDAYS[date.getUTCDay()] ?? ''
+  if (ago === 0) return 'Hoje'
+  if (ago === 1) return 'Ontem'
+  if (ago !== null && ago > 1 && ago < 7) return weekday
+  return `${weekday}, ${date.getUTCDate()} ${MONTHS[date.getUTCMonth()]}`
 }
 
 /** "Você e Teo", "Você, Teo e Ana". */
@@ -46,55 +63,56 @@ export const HOME = {
     blanks: ['Quem está', 'Quanto tempo', 'O que a noite pede'],
     blanksLabel:
       'O pedido: quem está, quanto tempo vocês têm e o que a noite pede.',
-    lead: 'Saem 5 filmes, cada um com o motivo de cada Presente gostar.',
+    lead: 'Saem 5 filmes, cada um com o motivo de cada um que está na sala gostar.',
   },
   guide: {
     title: 'Para começar',
-    progress: (done: number, total: number) => `${done} de ${total} feitos`,
-    progressLabel: 'Passos feitos',
+    payoff:
+      'Dá para pedir filme já. Sem isso, a lista sai só com palpites; com 10 notas, cada filme vem com o seu motivo.',
     state: { done: 'feito', skipped: 'pulado', pending: 'falta fazer' },
     doneRatings: (n: number) =>
       n === 1 ? 'feito, 1 nota' : `feito, ${n} notas`,
     skip: 'Pular',
     skipping: 'Pulando…',
-    skipLabel: (title: string) => `Pular: ${title}`,
+    skipLabel: (name: string) => `Pular: ${name}`,
     resume: 'Retomar',
+    close: 'Fechar',
+    quick: 'Leva uns 2 minutos.',
     counter: (n: number) => `${Math.min(n, 10)} de 10`,
     counterLabel: (n: number) => `${Math.min(n, 10)} de 10 Notas`,
     copied: 'Copiado',
+    pasteIt: 'Copiado. Agora cole no Claude, em Conectores.',
     copyAddress: 'Copiar endereço',
     copyFailed: 'Não deu para copiar. Selecione o endereço e copie.',
+    howToConnect: 'Ver como conectar',
     steps: {
       taste: {
-        title: 'Meu gosto',
-        text: 'Dê nota a 10 filmes que você já viu, ou importe o seu histórico. É com isso que a lista acerta.',
-        action: 'Dar notas',
-      },
-      import: {
-        title: 'Importar do Letterboxd, do Trakt, do IMDb ou do Simkl',
-        text: 'Traz de uma vez as suas notas e o que você já viu.',
-        action: 'Importar',
+        name: 'Meu gosto',
+        title: 'Meu gosto: dê 10 notas ou importe',
+        text: 'Dê nota a filmes que você já viu, ou traga as suas notas do Letterboxd, do Trakt, do IMDb ou do Simkl.',
+        rate: 'Dar notas',
+        import: 'Importar',
       },
       connector: {
+        name: 'Conector no Claude',
         title: 'Conector no Claude',
-        text: 'Para pedir filme conversando com o Claude, no celular.',
-        action: null,
+        text: 'Para pedir filme conversando com o Claude, também no celular.',
       },
     } satisfies Record<
-      SetupStep,
-      { title: string; text: string; action: string | null }
+      GuideStep['step'],
+      { name: string; title: string; text: string; [action: string]: string }
     >,
     how: [
-      'No Claude, abra Configurações e depois Conectores.',
-      'Toque em Adicionar conector personalizado.',
-      'Cole o endereço e entre com a sua conta Google.',
+      'Abra o claude.ai no navegador (ou o app do computador) e vá em Configurações, Conectores.',
+      'Toque em Adicionar conector personalizado e cole o endereço.',
+      'Entre com a sua conta Google. Depois disso o conector aparece também no app do Claude no celular.',
     ],
     auto: 'Este passo se marca sozinho quando o Claude entrar com o seu e-mail.',
   },
   latest: {
     title: 'Última Sessão',
-    when: (date: string, names: readonly string[]) =>
-      `${day(date)} · ${together(names)}`,
+    when: (date: string, today: string | null, names: readonly string[]) =>
+      `${day(date, today)} · ${together(names)}`,
     you: 'Você',
     films: 'Filmes da Sessão',
     open: 'Falta contar como foi',
@@ -103,5 +121,10 @@ export const HOME = {
     feedbackLabel: (id: string) => `Contar como foi a Sessão ${id}`,
     chosen: (title: string) => `vimos ${title}`,
     nothing: 'não vimos nada',
+    billboard: 'Ver o Cartaz',
+    again: 'Pedir de novo:',
+    againWhat: (names: readonly string[], constraints: readonly string[]) =>
+      [together(names), ...constraints].join(', '),
+    none: 'Sua primeira Sessão aparece aqui.',
   },
 } as const

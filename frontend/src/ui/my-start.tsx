@@ -1,6 +1,6 @@
 import type { SetupView } from '#/platform/setup-guide'
 import { ConnectorBody, CopyAddress, StepList } from './home-parts'
-import { isSkipped } from './setup-steps'
+import { guideSteps, isSkipped } from './setup-steps'
 import { Slip } from './kit/slip'
 import { MY_START } from './my-start.copy'
 
@@ -20,7 +20,7 @@ export function MyStartSections({
   start: MyStart
   person: string
 }) {
-  const skipped = setup?.steps.filter(isSkipped) ?? []
+  const skipped = setup ? guideSteps(setup).filter(isSkipped) : []
   const connector = setup?.steps.find((s) => s.step === 'connector')
   return (
     <>

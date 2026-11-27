@@ -42,7 +42,7 @@ type Story = StoryObj<typeof meta>
 export const WithItems: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByText('20 de novembro de 2026')).toBeVisible()
+    await expect(canvas.getByText('Sex, 20 nov')).toBeVisible()
     await expect(
       canvas.getByRole('link', { name: 'Nova Sessão' }),
     ).toBeVisible()

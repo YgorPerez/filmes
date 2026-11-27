@@ -80,6 +80,18 @@ export const constraintLabel = (
 ): string | null =>
   modules.find((module) => module.name === stored.name)?.label(stored) ?? null
 
+/** The Restrições the engine turns on by itself (`out_of_session`, #66):
+ * they filter, and the "Saiu" lines say so, but a summary of what the Dono
+ * asked (the shelf label, the Sessions list) leaves them out (#272). */
+const AUTOMATIC = new Set(['out_of_session'])
+
+/** `constraintLabel` for a summary of the request: null for a Restrição
+ * the engine turned on by itself. */
+export const askedConstraintLabel = (
+  stored: StoredConstraint,
+): string | null =>
+  AUTOMATIC.has(stored.name) ? null : constraintLabel(stored)
+
 /** The stored Restrições of the current version, by name (the last one
  * wins, as in Python's dict). */
 const byName = (stored: ReadonlyArray<StoredConstraint>) =>

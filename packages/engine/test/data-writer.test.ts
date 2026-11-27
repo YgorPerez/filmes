@@ -430,7 +430,11 @@ describe('push', () => {
       // The background fiber may have tried too (the start and the write
       // kick it), so these are lower bounds.
       const first = await ok(engine.run(pushNow))
-      expect(first).toMatchObject({ enabled: true, pending: 1 })
+      expect(first).toMatchObject({
+        enabled: true,
+        pending: 1,
+        queued: ['queued'],
+      })
       expect(first.failures).toBeGreaterThanOrEqual(1)
       expect(first.lastError).toMatch(/git push exited with/)
       expect(first.failingSince).toMatch(/^\d{4}-\d{2}-\d{2}T/)
@@ -450,6 +454,8 @@ describe('push', () => {
         failingSince: null,
         lastError: null,
         alert: false,
+        lastPushedAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
+        queued: [],
       })
     })
 

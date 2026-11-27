@@ -9,13 +9,19 @@ import { sessionLinkHeaders, sessionLinkSearch } from './session-link-address'
 const linkSearch = (value: unknown) =>
   sessionLinkSearch((value ?? {}) as Record<string, unknown>)
 
-/** The link, revalidated (`resolveSessionLink`), or null. */
+/** The link, revalidated (`resolveSessionLink`), or null; without it,
+ * whether the link was issued for a Session that closed since. */
 export const readSessionLink = createServerFn({ method: 'GET' })
   .validator(linkSearch)
   .handler(async ({ data }) => {
     setResponseHeaders(new Headers(sessionLinkHeaders))
-    const { appSessionLink } = await import('#/platform/billboard')
-    return appSessionLink(data)
+    const { appSessionLink, appClosedSessionLink } =
+      await import('#/platform/billboard')
+    const link = await appSessionLink(data)
+    return {
+      link,
+      closed: link === null && (await appClosedSessionLink(data)),
+    }
   })
 
 /** The next pair for the chosen Presente (`pairwisePage`), or null. */

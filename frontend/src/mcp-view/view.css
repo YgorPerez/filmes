@@ -15,3 +15,11 @@
 @source '../ui/kit';
 /* The stories are not the Cartaz (`pnpm storybook`). */
 @source not '../ui/**/*.stories.tsx';
+
+/* Inline, the card sits on the host's own floor (#277): the frame has none.
+ * The fullscreen lays the ground itself (`billboard.tsx`). */
+@layer base {
+  body {
+    background: transparent;
+  }
+}

@@ -57,6 +57,16 @@ export async function addPerson(name: string) {
   )
 }
 
+/** A Dono of one test alone, who logs in with `email`; on a retry she is
+ * already there. */
+export async function addOwner(name: string, email: string) {
+  await engineRun((engine) =>
+    engine.run(personCreate({ name, owner: true, email })),
+  ).catch((error: Error) => {
+    if (!/taken|exists/.test(error.message)) throw error
+  })
+}
+
 /** Through the stand-in Google as the Dono with `email`, to the home. The
  * fixture has two: Bruno (`bruno@example.org`), whom `operations.e2e.ts`
  * makes admin on its own copy, and Vera (`vera@example.org`), who is not. */

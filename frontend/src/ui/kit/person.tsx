@@ -72,6 +72,8 @@ const underDot = (popover: HTMLElement, dot: HTMLElement) => {
  * from the dot (the case is on the card's left), opened by a
  * tap or a click (a tap outside or Esc closes it) and by a mouse over it.
  * The hint is the button's name; the popover repeats it to the eye only.
+ * The dot stays small, and an invisible 44px box centred on it takes the tap
+ * (#268).
  * Without CSS anchor positioning (Firefox, Safari before 26) the popover
  * is placed under the dot by hand as it opens (`underDot`). */
 export function PersonDot({
@@ -108,7 +110,7 @@ export function PersonDot({
         onPointerEnter={hover(true)}
         onPointerLeave={hover(false)}
         style={{ anchorName: anchor }}
-        className="relative inline-flex cursor-pointer items-center gap-0.5 font-display text-avatar text-case-ink tabular-nums after:absolute after:-inset-x-0.5 after:-inset-y-2 after:content-['']"
+        className="relative inline-flex cursor-pointer items-center gap-0.5 font-display text-avatar text-case-ink tabular-nums after:absolute after:top-1/2 after:left-1/2 after:h-touch after:w-[max(100%,44px)] after:-translate-1/2 after:content-['']"
       >
         {dot}
         <span aria-hidden="true">{rating.text}</span>

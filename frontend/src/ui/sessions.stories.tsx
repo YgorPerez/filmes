@@ -85,7 +85,7 @@ export const Session: Story = {
   play: async ({ canvasElement }) => {
     await expect(
       within(canvasElement).getByRole('heading', { level: 1 }),
-    ).toHaveTextContent('Sessão de 20 de novembro de 2026')
+    ).toHaveTextContent('Sex, 20 nov')
   },
 }
 

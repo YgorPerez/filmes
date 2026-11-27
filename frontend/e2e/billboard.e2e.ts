@@ -16,7 +16,7 @@ import {
 } from 'node:fs'
 import { join } from 'node:path'
 import { recommend, recommendSession } from '@filmes/engine'
-import { type Page } from '@playwright/test'
+import { type Locator, type Page, type TestInfo } from '@playwright/test'
 import {
   addPerson,
   engineRoot,
@@ -194,27 +194,9 @@ bet_marks: [{person: bruno, film: tt9000105, kind: swapped, rating: null, date: 
   await snap(page, info, 'cartaz-aposta-cautelosa')
 })
 
-test('the Dono marks, reloads, sends, and the Cartaz comes back redone', async ({
-  page,
-}, info) => {
-  test.skip(info.project.name !== 'desktop', 'one Pessoa per project')
-  await addPerson('Nina')
-  const id = await openSession('nina', 4)
-  await loginAsBruno(page)
-  await page.goto(`/sessoes/${id}`)
-  await expect(cards(page)).toHaveCount(4)
-  await expect(page.getByText('Vocês dois', { exact: false })).toBeVisible()
-  await hydrated(page)
-  await snap(page, info, 'cartaz')
-  const [seen, swapped, third, fourth] = await Promise.all(
-    [1, 2, 3, 4].map((n) => titleOf(page, n)),
-  )
-
-  // Nothing marked: Enviar says so and stays.
-  await page.getByRole('button', { name: 'Enviar' }).click()
-  await expect(page.getByText('Nada marcado ainda.')).toBeVisible()
-  await expect(page).toHaveURL(new RegExp(`/sessoes/${id}$`))
-
+/** Marks a Já vi with a Nota and a comment, a Trocar, stars, a comment
+ * and the acrescentar; gives the bar at the foot. */
+async function markEveryKind(page: Page) {
   await card(page, 1).getByRole('button', { name: 'Nina' }).click()
   await page
     .getByRole('group', { name: 'nota de Nina para o filme 1, de 1 a 10' })
@@ -224,8 +206,9 @@ test('the Dono marks, reloads, sends, and the Cartaz comes back redone', async (
   await card(page, 2).getByRole('button', { name: 'Trocar' }).click()
   // The stamp on the poster, beside the cover link since #263.
   await expect(
+    // Not the button's own label (`data-text`).
     card(page, 2)
-      .locator('span')
+      .locator('span:not([data-text])')
       .filter({ hasText: /^Trocar$/ }),
   ).toBeVisible()
   await card(page, 3).getByRole('button', { name: '4 de 5' }).click()
@@ -240,7 +223,10 @@ test('the Dono marks, reloads, sends, and the Cartaz comes back redone', async (
     ),
   ).toBeVisible()
   await expect(bar.getByRole('button', { name: 'Enviar' })).toBeInViewport()
+  return bar
+}
 
+async function expectMarksBack(page: Page, info: TestInfo) {
   // A reload gives the marks back (one key per Session and version).
   await page.reload()
   await expect(
@@ -257,7 +243,14 @@ test('the Dono marks, reloads, sends, and the Cartaz comes back redone', async (
   ).toHaveAttribute('aria-pressed', 'true')
   await expect(page.getByText('fica guardado neste navegador')).toBeVisible()
   await snap(page, info, 'cartaz-marcado')
+}
 
+async function refusedPostKeepsReply(
+  page: Page,
+  info: TestInfo,
+  id: string,
+  bar: Locator,
+) {
   // A refused post leaves the reply ready to retry.
   const refusal = Promise.withResolvers<void>()
   await page.route(
@@ -286,12 +279,34 @@ test('the Dono marks, reloads, sends, and the Cartaz comes back redone', async (
   await expect(page.getByLabel('comentário sobre o filme 3')).toHaveValue(
     'longo',
   )
+}
 
-  await send(page, id, 'regerada', 'Recomendação refeita')
+async function sendAndSeeRedone(
+  page: Page,
+  info: TestInfo,
+  id: string,
+  bar: Locator,
+  [seen, swapped, third, fourth]: string[],
+) {
+  // The reading does not take "na próxima vez": the bar asks before
+  // anything is recorded, and "Enviar assim" sends it as a note (#272).
+  await page.getByRole('button', { name: 'Enviar' }).click()
+  await expect(bar.getByRole('alert')).toContainText('“próxima vez”')
+  await expect(page).toHaveURL(new RegExp(`/sessoes/${id}$`))
+  await bar.getByRole('button', { name: 'Enviar assim' }).click()
+  await expect(page).toHaveURL(
+    new RegExp(`/sessoes/${id}\\?feito=regerada(&nota=[\\w-]+)?$`),
+  )
   await expect(page.getByText(/na próxima vez/)).toBeVisible()
-  await expect(
-    page.getByText(`Saiu da prateleira: ${seen} (Nina já viu)`),
-  ).toBeVisible()
+  // One line says what changed; why each left is behind "por quê".
+  await expect(page.getByText('Refeito: 2 saíram, 2 novos.')).toBeVisible()
+  const left = page.getByText(`Saiu da prateleira: ${seen} (Nina já viu)`)
+  // The page may still settle after the post: open the fold until it stays.
+  await expect(async () => {
+    if (!(await left.isVisible()))
+      await page.getByText('por quê', { exact: true }).click()
+    await expect(left).toBeVisible({ timeout: 1000 })
+  }).toPass()
   await expect(
     page.getByText(`Saiu da prateleira: ${swapped} (trocado)`),
   ).toBeVisible()
@@ -309,14 +324,39 @@ test('the Dono marks, reloads, sends, and the Cartaz comes back redone', async (
     card(page, 2).getByRole('button', { name: 'Trocar' }),
   ).toHaveAttribute('aria-pressed', 'false')
   await snap(page, info, 'cartaz-regerado')
+}
+
+test('the Dono marks, reloads, sends, and the Cartaz comes back redone', async ({
+  page,
+}, info) => {
+  test.skip(info.project.name !== 'desktop', 'one Pessoa per project')
+  await addPerson('Nina')
+  const id = await openSession('nina', 4)
+  await loginAsBruno(page)
+  await page.goto(`/sessoes/${id}`)
+  await expect(cards(page)).toHaveCount(4)
+  await expect(page.getByText('Vocês dois', { exact: false })).toBeVisible()
+  await hydrated(page)
+  await snap(page, info, 'cartaz')
+  const [seen, swapped, third, fourth] = await Promise.all(
+    [1, 2, 3, 4].map((n) => titleOf(page, n)),
+  )
+
+  // Nothing marked: Enviar says so and stays.
+  await page.getByRole('button', { name: 'Enviar' }).click()
+  await expect(page.getByText('Nada marcado ainda.')).toBeVisible()
+  await expect(page).toHaveURL(new RegExp(`/sessoes/${id}$`))
+
+  const bar = await markEveryKind(page)
+  await expectMarksBack(page, info)
+  await refusedPostKeepsReply(page, info, id, bar)
+  await sendAndSeeRedone(page, info, id, bar, [seen, swapped, third, fourth])
 })
 
-test('in the dark, Copiar pro chat gives the text, and stars alone only note', async ({
+test('in the dark, stars alone only note, and stay on the card (#272)', async ({
   page,
-  context,
 }, info) => {
   test.skip(info.project.name !== 'mobile', 'one Pessoa per project')
-  await context.grantPermissions(['clipboard-read', 'clipboard-write'])
   await page.emulateMedia({ colorScheme: 'dark' })
   await addPerson('Otto')
   const id = await openSession('otto', 3)
@@ -331,11 +371,11 @@ test('in the dark, Copiar pro chat gives the text, and stars alone only note', a
   const imdb = /tt\d+/.exec(film ?? '')?.[0]
 
   await card(page, 1).getByRole('button', { name: '5 de 5' }).click()
-  await page.getByRole('button', { name: 'Copiar pro chat' }).click()
-  await expect(page.getByText('Copiado. Cole no chat.')).toBeVisible()
-  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
-    `#cartaz ${id} v1\n1 ${imdb} · estrelas: 5\n`,
-  )
+  // The web sends the reply itself: no Copiar pro chat (#272).
+  await expect(
+    page.getByRole('button', { name: 'Copiar pro chat' }),
+  ).toHaveCount(0)
+  expect(imdb).toMatch(/^tt\d+$/)
   await snap(page, info, 'cartaz-escuro')
 
   await send(page, id, 'anotada', 'Estrelas e comentários')
@@ -343,6 +383,10 @@ test('in the dark, Copiar pro chat gives the text, and stars alone only note', a
   await expect(
     card(page, 1).getByRole('button', { name: '5 de 5' }),
   ).toHaveAttribute('aria-pressed', 'false')
+  // The stars it was given stay in sight, read-only.
+  await expect(
+    card(page, 1).getByRole('img', { name: '5 de 5 estrelas' }),
+  ).toBeVisible()
   await snap(page, info, 'cartaz-anotado')
 })
 

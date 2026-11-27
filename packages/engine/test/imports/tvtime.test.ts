@@ -279,6 +279,73 @@ describe('importTvTime, the Liberator export', () => {
   })
 })
 
+describe('importTvTime, rows it skips', () => {
+  test('the GDPR export takes only film watches with a day, and the rating of a level', async () => {
+    const fixture = useFixture()
+    const records = [
+      'uuid,type,created_at,movie_name,entity_type,alpha_range_key,release_date,watch_date_range_key',
+      // The epoch in milliseconds.
+      'u1,watch,,O Farol de Areia,movie,watch-alpha-o-farol-de-areia,2012-03-02,watch-date-1682974800000',
+      'u1,follow,2024-01-01 10:00:00,O Farol de Areia,movie,watch-alpha-o-farol-de-areia,2012-03-02,',
+      'u2,watch,2024-01-01 10:00:00,SERIE-NAO-LER,series,watch-alpha-serie,2012-03-02,',
+      // No day it can read: 30 February, and no date at all.
+      'u3,watch,2023-02-30 10:00:00,Cais,movie,watch-alpha-cais,2012-03-02,',
+      'u4,watch,,Cais,movie,watch-alpha-cais,2012-03-02,watch-date-x',
+      ',watch,2024-01-01 10:00:00,Sem Uuid,movie,watch-alpha-sem-uuid,2012-03-02,',
+    ].join('\n')
+    const ratings = [
+      'uuid,vote_key',
+      'u1,stars_wording_scalev2-3',
+      'u1,stars_wording_scalev2-99',
+      ',stars_wording_scalev2-1',
+    ].join('\n')
+    const report = await importZip(
+      fixture,
+      zipOf([
+        ['tracking-prod-records.csv', records],
+        ['ratings-v2-prod-votes.csv', ratings],
+      ]),
+    )
+    expect(report.queue).toEqual([])
+    const [notas, seen, watchlist] = await veraFacts(fixture)
+    // Wow; the unknown level after it, and the row with no uuid, are skipped.
+    expect(notas).toEqual([['tt9000101', 5, '2023-05-01', 'TV Time de Vera']])
+    expect(seen).toEqual([['tt9000101', '2023-05-01', 'TV Time de Vera']])
+    expect(watchlist).toEqual([])
+  })
+
+  test('the Liberator export skips a film with no name nor id, or no day', async () => {
+    const fixture = useFixture()
+    const movies = [
+      // watched_at unreadable: the day it was added; a rating off the scale.
+      {
+        id: { imdb: 'tt9000202' },
+        title: 'Cais',
+        is_watched: true,
+        watched_at: 'ontem',
+        created_at: '2025-03-08T10:00:00Z',
+        rating: 11,
+      },
+      { id: { imdb: '-1' }, title: '', is_watched: true },
+      'não é um filme',
+      // On the list, but no day it was added; watched, with no day at all.
+      { id: { imdb: 'tt9000303' }, title: 'Ilha', is_watched: false },
+      { id: { imdb: 'tt9000301' }, title: 'Jardim', is_watched: true },
+    ]
+    await importZip(
+      fixture,
+      zipOf([['movies.json', JSON.stringify(movies)]]),
+      'vera',
+      'tv-time-export.zip',
+    )
+    expect(await veraFacts(fixture)).toEqual([
+      [],
+      [['tt9000202', '2025-03-08', 'TV Time de Vera']],
+      [],
+    ])
+  })
+})
+
 describe('personImports', () => {
   test('counts the TV Time Fatos, and removing the import takes them', async () => {
     const fixture = useFixture()
@@ -336,6 +403,22 @@ describe('importTvTime', () => {
       'a movies.json that is not a list',
       zipOf([['movies.json', '{}']]),
       'backup.zip: movies.json não é uma lista de filmes',
+    ],
+    [
+      'a ratings file without its columns',
+      zipOf([
+        [
+          'tracking-prod-records.csv',
+          'uuid,type,entity_type,alpha_range_key,release_date,created_at,watch_date_range_key\n',
+        ],
+        ['ratings-live-votes.csv', 'uuid\nx\n'],
+      ]),
+      'backup.zip: ratings-live-votes.csv sem as colunas uuid e vote_key',
+    ],
+    [
+      'records not in UTF-8',
+      zipOf([['tracking-prod-records.csv', new Uint8Array([0x75, 0xff])]]),
+      'backup.zip: tracking-prod-records.csv não está em UTF-8',
     ],
     [
       'bytes that are not a ZIP',

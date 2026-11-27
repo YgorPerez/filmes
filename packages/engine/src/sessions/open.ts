@@ -32,7 +32,7 @@ import type {
   StoredConstraint,
 } from '../recommendation/constraints.ts'
 import {
-  constraintLabel,
+  askedConstraintLabel,
   storedConstraints,
 } from '../recommendation/constraints/index.ts'
 import { filmReason } from '../recommendation/reason.ts'
@@ -313,7 +313,7 @@ const contextLabels = (context: YamlMapping | null): string[] => {
       : []),
     ...(Array.isArray(stored) ? (stored as StoredConstraint[]) : []),
   ]
-  return asked.flatMap((c) => constraintLabel(c) ?? [])
+  return asked.flatMap((c) => askedConstraintLabel(c) ?? [])
 }
 
 const summary = (id: string, front: YamlMapping): SessionSummary => {

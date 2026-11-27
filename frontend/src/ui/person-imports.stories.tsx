@@ -163,46 +163,59 @@ export const Own: Story = {
 export const NothingYet: Story = { args: { page: EMPTY } }
 
 export const Imported: Story = {
-  args: { done: { notice: 'trakt', facts: 3, outside: 2 } },
+  args: {
+    done: { notice: 'trakt', facts: 3, ratings: 2, seen: 1, outside: 2 },
+  },
 }
 
 export const OnlyImdb: Story = {
   args: { page: IMDB_ONLY },
   play: async ({ canvasElement }) => {
     await expect(
-      within(canvasElement).getByText(PERSON_IMPORTS.imdb.summary(412)),
+      within(canvasElement).getByText(PERSON_IMPORTS.results.imdb(412)),
     ).toBeVisible()
   },
 }
 
 export const ImdbImported: Story = {
-  args: { page: IMDB_ONLY, done: { notice: 'imdb', facts: 412, outside: 3 } },
+  args: {
+    page: IMDB_ONLY,
+    done: { notice: 'imdb', facts: 412, ratings: 412, seen: 0, outside: 3 },
+  },
 }
 
 export const OnlySimkl: Story = {
   args: { page: SIMKL_ONLY },
   play: async ({ canvasElement }) => {
     await expect(
-      within(canvasElement).getByText(PERSON_IMPORTS.simkl.summary(87, 140)),
+      within(canvasElement).getByText(PERSON_IMPORTS.results.simkl(87, 140)),
     ).toBeVisible()
   },
 }
 
 export const SimklImported: Story = {
-  args: { page: SIMKL_ONLY, done: { notice: 'simkl', facts: 239, outside: 4 } },
+  args: {
+    page: SIMKL_ONLY,
+    done: { notice: 'simkl', facts: 239, ratings: 87, seen: 140, outside: 4 },
+  },
 }
 
+/** The TV Time backup's films go through the Letterboxd resolution: the
+ * heading names both, and the counts get their own line. */
 export const WithTvTime: Story = {
   args: { page: WITH_TVTIME },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(
-      canvas.getByRole('region', {
-        name: PERSON_IMPORTS.letterboxd.withTvTime(true),
+      canvas.getByRole('heading', {
+        name: PERSON_IMPORTS.results.letterboxd(15, 'both'),
       }),
     ).toBeVisible()
     await expect(
-      canvas.getByText(PERSON_IMPORTS.tvtime.summary(3, 4)),
+      canvas.getByText(PERSON_IMPORTS.results.tvtime(3, 4)),
+    ).toBeVisible()
+    await expect(
+      canvas.getByText(PERSON_IMPORTS.results.queued(2, 'both')),
     ).toBeVisible()
   },
 }
@@ -210,18 +223,43 @@ export const WithTvTime: Story = {
 export const TvTimeImported: Story = {
   args: {
     page: TVTIME_ONLY,
-    done: { notice: 'tvtime', facts: 8, outside: 1 },
+    done: { notice: 'tvtime', facts: 8, ratings: 3, seen: 4, outside: 1 },
   },
   play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
     await expect(
-      within(canvasElement).getByRole('region', {
-        name: PERSON_IMPORTS.letterboxd.withTvTime(false),
+      canvas.getByText(
+        PERSON_IMPORTS.notices.tvtime({
+          facts: 8,
+          ratings: 3,
+          seen: 4,
+          outside: 1,
+        }),
+      ),
+    ).toBeVisible()
+    await expect(
+      canvas.getByRole('heading', {
+        name: PERSON_IMPORTS.results.letterboxd(6, 'tvtime'),
       }),
     ).toBeVisible()
   },
 }
 
-export const Refused: Story = { args: { refusal: 'origem' } }
+export const Refused: Story = {
+  args: { page: EMPTY, refusal: 'origem', refusedIn: 'letterboxd' },
+}
+
+/** The profile's name refused: the field is marked, the why under it. */
+export const ProfileRefused: Story = {
+  args: { page: EMPTY, refusal: 'usuario', refusedIn: 'perfil' },
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByRole('textbox', {
+        name: new RegExp(PERSON_IMPORTS.rss.user),
+      }),
+    ).toHaveAttribute('aria-invalid', 'true')
+  },
+}
 
 export const Unknown: Story = { args: { slug: 'ninguem', page: 'unknown' } }
 

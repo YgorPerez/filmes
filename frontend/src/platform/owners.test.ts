@@ -49,7 +49,9 @@ describe('the Donos in filmes-dados', () => {
     expect(owners.ownerByEmail('ana@example.org')?.person).toBe('ana')
     expect(owners.ownerByEmail('ygor@example.org')?.person).toBe('ygor')
   })
+})
 
+describe('the Donos in filmes-dados that do not count', () => {
   it('finds no one for an email two Donos share', () => {
     const owners = repo('people', {
       a: '---\nname: A\nowner: true\nemail: same@example.org\n---\n',

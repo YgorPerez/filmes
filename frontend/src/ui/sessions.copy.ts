@@ -22,6 +22,14 @@ const ambiguity = (words: string, candidates: readonly string[]) =>
 const films = (n: number) =>
   n === 0 ? 'nenhum filme' : n === 1 ? '1 filme' : `${n} filmes`
 
+/** A reading's item as a person says it (#272): "Presente: Iara" is
+ * "Iara", and the logged-in Dono is "você"; "Clima: leve" is "leve". */
+export const spoken = (label: string, owner?: string): string => {
+  const person = /^Presente: (.+)$/.exec(label)?.[1]
+  if (person !== undefined) return person === owner ? 'você' : person
+  return label.replace(/^Clima: /, '')
+}
+
 export const SESSIONS = {
   back: 'Voltar',
   unavailable:
@@ -34,16 +42,30 @@ export const SESSIONS = {
     filters: 'Filtrar Sessões',
     all: 'Todas',
     pending: 'Para contar',
-    empty: 'Você ainda não abriu nenhuma Sessão.',
-    pendingEmpty: 'Nenhuma Sessão para contar.',
+    empty: 'Nenhuma Sessão ainda.',
+    emptyLead:
+      'Uma Sessão é uma noite de filme: você diz quem vai assistir, e a prateleira traz os filmes com o porquê de cada um.',
+    emptyAction: 'Pedir filme',
+    pendingEmpty: 'Nada para devolver.',
+    pendingEmptyLead: 'Depois de ver um filme, conte aqui como foi.',
     feedback: 'Contar como foi',
     chosen: (title: string) => `Viram ${title}`,
     nothing: 'Não viram nada',
+    /** The open Session's films by title, the first three (#272). */
+    shelf: (titles: readonly string[], more: number) =>
+      more > 0 ? `${titles.join(' · ')} e mais ${more}` : titles.join(' · '),
   },
 
   session: {
     title: 'Sessão de',
     unknown: 'Não encontrei essa Sessão.',
+    unknownLead: 'O endereço pode estar errado, ou a Sessão é de outro Dono.',
+    toList: 'Ver Sessões',
+    toNew: 'Pedir filme',
+    /** The ⋯ menu of the page's head (#272). */
+    menu: 'Mais ações da Sessão',
+    /** After the last film, while the Session is open. */
+    seenIt: 'Já viram um filme?',
     notices: {
       aberta: 'Sessão aberta.',
       regerada:
@@ -57,6 +79,8 @@ export const SESSIONS = {
     } satisfies Record<SessionNotice, string>,
     refusals: {
       nada: 'Nada marcado ainda.',
+      leitura:
+        'Não entendi parte do acrescentar, e nada foi gravado. Corrija o texto ou envie assim mesmo.',
       texto:
         'A resposta não bate com o Cartaz desta Sessão. Recarregue a página e marque de novo.',
       fechada: 'Esta Sessão já está fechada.',
@@ -82,7 +106,18 @@ export const SESSIONS = {
         ? `${ambiguity(words, candidates)}.`
         : `${ambiguity(words, candidates)}. Diga qual na próxima vez.`,
     additionTaste: 'Para guardar um gosto,',
+    /** The reading as a sentence (#272): "Entendi: Iara, leve, até 2h." */
+    understood: (items: readonly string[]) => `Entendi: ${items.join(', ')}.`,
     closed: 'Fechada',
+    /** A told Session opens with the tape given back (#272). */
+    returned: 'Fita devolvida',
+    returnedNothing: 'Não viram nada da prateleira.',
+    satisfaction:
+      'Na próxima Sessão deste grupo, na Regra padrão, quem gostou menos pesa mais:',
+    again: 'Pedir filme de novo com essa turma',
+    others: (n: number) =>
+      n === 1 ? 'O outro filme da prateleira' : `Os outros ${n} da prateleira`,
+    shelf: 'A prateleira da noite',
   },
 
   form: {
@@ -106,9 +141,15 @@ export const SESSIONS = {
     wordsHint: 'opcional. Toque em Ler para preencher o pedido.',
     wordsPlaceholder: 'eu e a Iara, algo leve, até 2h',
     read: 'Ler',
+    /** "vocês dois", "vocês três": the bar's who (#272). */
+    together: (n: number) =>
+      `vocês ${['', 'um', 'dois', 'três', 'quatro', 'cinco', 'seis'][n] ?? n}`,
     reading: {
       understood: (labels: readonly string[]) =>
-        `Pelo que entendi, ${labels.join(', ')}.`,
+        `Entendi: ${labels.join(', ')}.`,
+      /** A title the Catálogo does not have, and the search for it. */
+      missing: (words: string) => `Não achei ${quoted(words)} no Catálogo.`,
+      missingSearch: 'Buscar em “Parecido com um filme?”',
       nothing: 'Não consegui preencher o pedido pela frase.',
       notUnderstood: (words: readonly string[]) =>
         `Deixei ${runs(words)} de fora.`,
@@ -125,6 +166,8 @@ export const SESSIONS = {
     },
     constraints: 'Restrições',
     constraintsLead: 'Marque só os limites desta noite.',
+    /** The duration out of the fold (#272), under its own question. */
+    time: 'Quanto tempo vocês têm?',
     duration: 'Duração máxima',
     durationHint: 'em minutos',
     since: 'Lançado desde',

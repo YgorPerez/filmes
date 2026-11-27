@@ -35,7 +35,7 @@ const toolResult = (value: unknown) => ({
 })
 
 /** The view in a frame-like page, and the host that answers it. */
-function open() {
+function open(options: { toolsFail?: boolean } = {}) {
   const sent: Message[] = []
   const copied: string[] = []
   const waiting = new Map<string, (message: Message) => void>()
@@ -84,6 +84,14 @@ function open() {
           billboard: MODEL,
         }),
       })
+    if (message.method === 'tools/call' && options.toolsFail) {
+      reply({
+        jsonrpc: '2.0',
+        id: message.id,
+        error: { code: -32601, message: 'sem ferramentas' },
+      })
+      return
+    }
     const answer = message.method && answers[message.method]
     if (answer && message.id !== undefined)
       reply({ jsonrpc: '2.0', id: message.id, result: answer(message) })
@@ -146,13 +154,20 @@ describe('the bundled view', () => {
     expect(page.queryByText(BILLBOARD.reply.kept)).toBeNull()
     dom.window.close()
   })
+})
 
-  it('Copiar pro chat gives exactly the #cartaz text', async () => {
-    const { dom, page, copied } = open()
+describe('the bundled view, when the host cannot send', () => {
+  it('Copiar pro chat, when the host cannot send, gives exactly the #cartaz text', async () => {
+    const { dom, page, copied } = open({ toolsFail: true })
     const [first] = await page.findAllByRole('article')
 
     within(first!).getByRole('button', { name: 'Trocar' }).click()
     await page.findByText('1 Trocar')
+    expect(
+      page.queryByRole('button', { name: BILLBOARD.reply.copy }),
+    ).toBeNull()
+    page.getByRole('button', { name: BILLBOARD.reply.send }).click()
+    await page.findByText(BILLBOARD.view.unavailable)
     page.getByRole('button', { name: BILLBOARD.reply.copy }).click()
     await page.findByText(BILLBOARD.reply.copied)
 
@@ -189,7 +204,9 @@ describe('the bundled view', () => {
     expect(copied[0]).toBe('#cartaz 2026-11-20-iara v2\n1 tt9000104 · trocar\n')
     dom.window.close()
   })
+})
 
+describe('the bundled view, sending through the host', () => {
   it('Enviar calls answer_billboard through the host, then tells Claude', async () => {
     const { dom, page, next } = open()
     const [first] = await page.findAllByRole('article')
@@ -212,8 +229,12 @@ describe('the bundled view', () => {
       content: [
         {
           type: 'text',
+          // This host takes no model context: the detail follows her
+          // words.
           text:
-            'Enviei o Cartaz 2026-11-20-iara v2 pela tela; answer_billboard já gravou.\n' +
+            'Refaz a lista mantendo o resto?\n' +
+            '(enviado pelo Cartaz · 2026-11-20-iara v2)\n' +
+            'Resposta do Cartaz 2026-11-20-iara v2, já gravada por answer_billboard (não chame de novo):\n' +
             'refazer · manter: tt9000105',
         },
       ],

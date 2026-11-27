@@ -18,7 +18,9 @@ import {
   type Engine,
   type ErrorOutput,
   type Outcome,
+  type RecommendSessionRequest,
   type RequestReading,
+  sessionRedoRequest,
   type SessionSummary,
 } from '@filmes/engine'
 import { field, searchAsked } from '#/content/form-fields'
@@ -304,6 +306,32 @@ export function newSessionDraft(
     : null
 }
 
+/** Nova Sessão filled as Sessão `asked` was asked (the home's "Pedir de
+ * novo"): its Presentes, Regra, Climas, words and Restrições. The similar
+ * and the Série na ordem stay out, as the form has its own. */
+export function repeatDraft(asked: RecommendSessionRequest): NewSessionDraft {
+  return {
+    fields: {
+      attendees: [...asked.attendees],
+      rule: asked.rule ?? 'default',
+      by: asked.by,
+      moods: [...(asked.moods ?? [])],
+      count: asked.count,
+      request: asked.request ?? undefined,
+      maxDuration: asked.maxDuration,
+      since: asked.since,
+      until: asked.until,
+      language: asked.language,
+      child: asked.child,
+      triggers: asked.triggers && [...asked.triggers],
+      unseen: asked.unseen,
+      noSlow: asked.noSlow,
+      noSad: asked.noSad,
+    },
+    reading: null,
+  }
+}
+
 // --- the app's -----------------------------------------------------------------
 
 const appSessions = (viewer: string | null = null) =>
@@ -327,3 +355,12 @@ export const serveSessionRequest = (request: Request) => {
 /** The draft of `/sessoes/nova?nota=`, for the app. */
 export const appNewSessionDraft = (token: string) =>
   newSessionDraft(token, appNotes())
+
+/** Nova Sessão as Sessão `id` was asked, for the app; null when the engine
+ * cannot read it (the form opens empty). */
+export const appRepeatDraft = async (id: string, viewer: string) => {
+  const asked = valueOf(
+    await appEngine().run(sessionRedoRequest(id), { owner: viewer }),
+  )
+  return asked && repeatDraft(asked)
+}

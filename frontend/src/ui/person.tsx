@@ -1,21 +1,28 @@
-import type { PersonNotice, PersonRefusal } from '#/content/person-action'
+import { useHydrated } from '@tanstack/react-router'
+import { createContext, useContext, type ReactNode } from 'react'
+import {
+  sectionOfSpot,
+  type FieldProblem,
+  type PersonNotice,
+  type PersonRefusal,
+} from '#/content/person-action'
 import {
   imdbCsvPath,
   letterboxdCsvPath,
   importsPath,
-  personPath,
+  QUEUE_PATH,
   RATINGS_PATH,
 } from '#/content/paths'
+import { sessionPath } from '#/content/session-paths'
 import { TRAKT_PATH } from '#/content/trakt-form'
-import type { SearchAnswer } from '#/platform/catalog-search'
 import type { PersonPage } from '#/platform/people'
+import type { TasteSummary } from '@filmes/engine'
 import { OwnerTag } from './kit/owner-tag'
 import { Slip } from './kit/slip'
 import {
   ActionForm,
   ActionForms,
   Alert,
-  CatalogSearch,
   Disclosure,
   Item,
   Items,
@@ -24,6 +31,7 @@ import {
   RemoveForm,
   SelectField,
   Submit,
+  TargetField,
   TextField,
   useRefusedInPlace,
 } from './person-parts'
@@ -31,11 +39,10 @@ import { MyStartSections, type MyStart } from './my-start'
 import { StrengthDots } from './person-marks'
 import { PERSON, RATING_CHOICES } from './person.copy'
 import { buttonVariants } from './kit/button-variants'
+import { shortDate, weekdayDate } from './dates'
 
 type Statement = PersonPage['stated'][number]
 type Reaction = keyof typeof PERSON.reactions
-
-const ID_PATTERN = '(tt|Q)[0-9]+'
 
 const REACTION_OPTIONS = [
   { value: '', label: PERSON.noReaction },
@@ -47,41 +54,105 @@ const REACTION_OPTIONS = [
 
 const RATING_OPTIONS = [
   { value: '', label: PERSON.noRating },
-  ...RATING_CHOICES.map((value) => ({ value, label: value })),
+  ...RATING_CHOICES,
 ]
 
-/** `/pessoas/<slug>`, or Meu gosto for the Dono's own: her Notas first
- * (rate, import, the CSV), then, on Meu gosto, the setup guide's leftovers
- * (`start`), then what the filmes knows of her taste, with a form for each
- * `pessoa` action. Every form is a plain POST that comes back here with
- * `notice` or `refusal`; with the JavaScript, it goes by `fetch` and
- * reloads the page in place (`ActionForm`). `page` is `'unknown'` when no Pessoa has the slug,
- * null when the engine cannot run on this server. `search` is the Catálogo
- * search of `?buscar=`, for the targets' IDs. */
+/** What the last form did and where (#273): the ficha that posted says it
+ * inside, where the Dono's eyes are, not under the h1. */
+type Posted = {
+  spot?: string
+  notice?: PersonNotice
+  refusal?: PersonRefusal
+  problem?: FieldProblem
+  name: string
+  own: boolean
+}
+
+const PostedAt = createContext<Posted>({ name: '', own: false })
+
+/** The field the server refused in the form of ficha `id`, when it came
+ * back refused there. */
+function useRefusedField(id: string): FieldProblem | null {
+  const { spot, refusal, problem } = useContext(PostedAt)
+  return spot !== undefined &&
+    sectionOfSpot(spot) === id &&
+    refusal === 'pedido' &&
+    problem
+    ? problem
+    : null
+}
+
+const noticeOfOwn = (notice: PersonNotice): string | undefined =>
+  (PERSON.ownNotices as Partial<Record<PersonNotice, string>>)[notice]
+
+/** The words of a notice or a refusal, for her. */
+function useAnswerText() {
+  const { name, own, problem } = useContext(PostedAt)
+  return {
+    notice: (notice: PersonNotice) =>
+      (own ? noticeOfOwn(notice) : undefined) ?? PERSON.notices(name)[notice],
+    refusal: (refusal: PersonRefusal) =>
+      refusal === 'pedido' && problem
+        ? PERSON.fieldProblem(problem)
+        : PERSON.refusals(name)[refusal],
+  }
+}
+
+/** What the last form did, inside the ficha `id` that posted it. An
+ * Ajuste says it beside its own row instead. */
+function SpotStatus({ id }: { id: string }) {
+  const { spot, notice, refusal } = useContext(PostedAt)
+  const stale = useRefusedInPlace()
+  const text = useAnswerText()
+  if (stale || spot === undefined || sectionOfSpot(spot) !== id) return null
+  if (spot.startsWith('ajuste-') && !refusal) return null
+  if (refusal) return <Alert>{text.refusal(refusal)}</Alert>
+  return notice ? <Notice>{text.notice(notice)}</Notice> : null
+}
+
+type PersonScreenProps = {
+  slug: string
+  page: PersonPage | 'unknown' | null
+  notice?: PersonNotice
+  refusal?: PersonRefusal
+  spot?: string
+  problem?: FieldProblem
+  /** Meu gosto's part of the setup guide; only on her own page. */
+  start?: MyStart
+  showTrakt?: boolean
+  /** On Meu gosto, the films of her imports that wait in the queue. */
+  pending?: number
+  /** On Meu gosto, her genres and directors. */
+  taste?: TasteSummary | null
+}
+
+/** `/pessoas/<slug>`, or Meu gosto for the Dono's own. Another Pessoa's
+ * opens with how much the filmes knows of her and the one next step
+ * (#273); then her Sessões and Notas on the left, and on the right what
+ * the Dono acts on: the open questions, the Vetos, and "Afinar" folded
+ * (Ajustes, Declarados, Relatos, Acesso). Meu gosto opens with its
+ * glance and the setup guide's leftovers (`start`). Every form is a plain
+ * POST that comes back to the ficha that posted it (`spot`, `#<spot>`),
+ * which says what happened (`notice`, `refusal`, the refused field in
+ * `problem`); with the JavaScript, it goes by `fetch` and reloads the
+ * page in place (`ActionForm`). `page` is null when the engine cannot run
+ * on this server. */
 export function PersonScreen({
   slug,
   page,
   notice,
   refusal,
-  search = null,
+  spot,
+  problem,
   start,
   showTrakt = false,
-}: {
-  slug: string
-  page: PersonPage | 'unknown' | null
-  notice?: PersonNotice
-  refusal?: PersonRefusal
-  search?: SearchAnswer | null
-  /** Meu gosto's part of the setup guide; only on her own page. */
-  start?: MyStart
-  showTrakt?: boolean
-}) {
-  const own =
-    typeof page === 'object' &&
-    page !== null &&
-    page.person === page.viewer.person
+  pending = 0,
+  taste = null,
+}: PersonScreenProps) {
+  if (page === 'unknown') return <UnknownPerson />
+  const own = page !== null && page.person === page.viewer.person
   return (
-    <main className="mx-auto flex max-w-[720px] flex-col gap-2xl px-2xl py-3xl">
+    <main className="mx-auto flex max-w-[720px] flex-col gap-2xl px-2xl py-3xl min-[900px]:max-w-[1040px]">
       {!own && (
         <a
           href="/pessoas"
@@ -92,90 +163,270 @@ export function PersonScreen({
       )}
       {page === null ? (
         <Alert>{PERSON.unavailable}</Alert>
-      ) : page === 'unknown' ? (
-        <Alert>{PERSON.unknown}</Alert>
       ) : (
-        <ActionForms>
-          <PersonHeader
-            page={page}
-            own={own}
-            notice={notice}
-            refusal={refusal}
-          />
-          {own && showTrakt && (
-            <a
-              href={TRAKT_PATH}
-              className={buttonVariants({
-                variant: 'option',
-                className: 'self-start',
-              })}
-            >
-              {PERSON.trakt}
-            </a>
-          )}
-          <Notes
-            slug={slug}
-            own={own}
-            ratings={page.ratings}
-            predictionError={page.predictionError}
-          />
-          {own && start && <MyStartSections start={start} person={slug} />}
-          <Contents page={page} />
-          <Details slug={slug} page={page} search={search} />
-        </ActionForms>
+        <PostedAt.Provider
+          value={{ spot, notice, refusal, problem, name: page.name, own }}
+        >
+          <ActionForms name={page.name}>
+            <PersonHeader slug={slug} page={page} own={own} />
+            <PersonColumns
+              slug={slug}
+              page={page}
+              own={own}
+              start={start}
+              showTrakt={showTrakt}
+              pending={pending}
+              taste={taste}
+            />
+          </ActionForms>
+        </PostedAt.Provider>
       )}
     </main>
   )
 }
 
-/** Her name (on Meu gosto, the page's name, then hers) and aliases, and
- * what the last form did. */
-function PersonHeader({
+/** From 900px, two columns: her Sessões and Notas (and on Meu gosto what
+ * the guide left) on the left, what the Dono acts on at the right. On a
+ * phone, another Pessoa's page puts what the Dono acts on first (#273). */
+function PersonColumns({
+  slug,
   page,
   own,
-  notice,
-  refusal,
+  start,
+  showTrakt,
+  pending,
+  taste,
 }: {
+  slug: string
   page: PersonPage
   own: boolean
-  notice?: PersonNotice
-  refusal?: PersonRefusal
+  start?: MyStart
+  showTrakt: boolean
+  pending: number
+  taste: TasteSummary | null
 }) {
-  const aliases = page.aliases.length > 0 ? PERSON.aliases(page.aliases) : null
+  return (
+    <div className="grid gap-2xl min-[900px]:grid-cols-2 min-[900px]:items-start">
+      <div className="flex min-w-0 flex-col gap-2xl">
+        {own ? (
+          <>
+            <Glance page={page} start={start} pending={pending} taste={taste} />
+            {showTrakt && <TraktLink />}
+          </>
+        ) : (
+          <SessionsWith page={page} />
+        )}
+        <Notes slug={slug} own={own} page={page} pending={own ? pending : 0} />
+        {own && start && <MyStartSections start={start} person={slug} />}
+        {!own && <RemovePerson slug={slug} page={page} />}
+      </div>
+      <div
+        className={`flex min-w-0 flex-col gap-2xl ${own ? '' : 'max-[899px]:order-first'}`}
+      >
+        {own && <Contents page={page} />}
+        <Taste slug={slug} page={page} />
+      </div>
+    </div>
+  )
+}
+
+/** Meu gosto's way to her Trakt connection. */
+function TraktLink() {
+  return (
+    <a
+      href={TRAKT_PATH}
+      className={buttonVariants({
+        variant: 'option',
+        className: 'self-start',
+      })}
+    >
+      {PERSON.trakt}
+    </a>
+  )
+}
+
+/** No Pessoa has the address's slug (#273): the route's 404. */
+export function UnknownPerson() {
+  const { unknown } = PERSON
+  return (
+    <main className="mx-auto flex max-w-[720px] flex-col gap-xl px-2xl py-3xl">
+      <div className="flex flex-col gap-xs">
+        <h1 className="font-display text-page-title">{unknown.title}</h1>
+        <p className="max-w-[60ch] text-ink-2">{unknown.lead}</p>
+      </div>
+      <a
+        href="/pessoas"
+        className={buttonVariants({
+          variant: 'option',
+          className: 'self-start',
+        })}
+      >
+        {unknown.back}
+      </a>
+    </main>
+  )
+}
+
+/** Her name (on Meu gosto, the page's name, then the name the Sessões give
+ * her) and aliases; on another Pessoa's, how much the filmes knows of her
+ * and the next step. What the last form did shows here only when no ficha
+ * posted it (a new Pessoa). */
+function PersonHeader({
+  slug,
+  page,
+  own,
+}: {
+  slug: string
+  page: PersonPage
+  own: boolean
+}) {
+  const { spot, notice, refusal } = useContext(PostedAt)
+  const text = useAnswerText()
   // A form's refusal in place says what the last post did now.
   const stale = useRefusedInPlace()
+  const here = spot === undefined && !stale
   return (
     <>
       <div className="flex flex-col gap-xs">
-        <h1 className="flex flex-wrap items-center gap-sm font-display text-title">
+        <h1 className="flex flex-wrap items-center gap-sm font-display text-page-title">
           {own ? PERSON.myTaste : page.name}
           {!own && page.owner && <OwnerTag />}
         </h1>
-        {(own || aliases) && (
-          <Meta parts={own ? [page.name, aliases] : [aliases]} />
+        {own ? (
+          <Meta parts={[PERSON.ownName(page.name, page.aliases)]} />
+        ) : (
+          <Summary slug={slug} page={page} />
         )}
       </div>
-      {refusal && !stale && <Alert>{PERSON.refusals[refusal]}</Alert>}
-      {notice && !stale && <Notice>{PERSON.notices[notice]}</Notice>}
+      {here && refusal && (
+        <Alert>
+          {text.refusal(refusal)}
+          {refusal === 'exportar' && <DownloadAgain slug={slug} />}
+        </Alert>
+      )}
+      {here && notice && <Notice>{text.notice(notice)}</Notice>}
     </>
   )
 }
 
+/** After a CSV that did not come, the two downloads again, inside the
+ * alert that says so (#276). */
+function DownloadAgain({ slug }: { slug: string }) {
+  const { notes } = PERSON
+  const link = 'text-ink underline underline-offset-3'
+  return (
+    <span className="mt-xs block">
+      {notes.retry}{' '}
+      <a href={imdbCsvPath(slug)} className={link}>
+        {notes.retryImdb}
+      </a>
+      {' · '}
+      <a href={letterboxdCsvPath(slug)} className={link}>
+        {notes.retryLetterboxd}
+      </a>
+    </span>
+  )
+}
+
+/** Another Pessoa at a glance (#273): "também Quinzinho · 4 Notas · 1
+ * Veto", or "falta conhecer", and the one next step: her history when she
+ * has no Nota, else the open questions, else a Veto. */
+function Summary({ slug, page }: { slug: string; page: PersonPage }) {
+  const { summary } = PERSON
+  const notes = page.ratings?.length ?? 0
+  const counts = [
+    notes > 0 ? summary.notes(notes) : null,
+    page.vetoes.length > 0 ? summary.vetoes(page.vetoes.length) : null,
+    page.openQuestions.length > 0
+      ? summary.questions(page.openQuestions.length)
+      : null,
+    page.sessions.total > 0 ? summary.sessions(page.sessions.total) : null,
+  ].filter((part) => part !== null)
+  const [step, href] =
+    page.ratings !== null && notes === 0
+      ? [summary.steps.import(page.name), importsPath(slug, false)]
+      : page.openQuestions.length > 0
+        ? [summary.steps.questions(page.openQuestions.length), '#perguntas']
+        : [summary.steps.veto(page.name), '#acrescentar-veto']
+  return (
+    <>
+      <Meta
+        parts={[
+          page.aliases.length > 0 ? PERSON.aliases(page.aliases) : null,
+          ...(counts.length > 0 ? counts : [summary.unknown]),
+        ]}
+      />
+      <p className="mt-xs">
+        {summary.next}:{' '}
+        <a href={href} className="text-ink underline underline-offset-3">
+          {step}
+        </a>
+      </p>
+    </>
+  )
+}
+
+/** The Sessões she was in (#273): her Satisfação in words, and the latest
+ * three, each a link to its page. Only once there is one. */
+function SessionsWith({ page }: { page: PersonPage }) {
+  const { sessions: copy } = PERSON
+  const { total, recent, satisfaction } = page.sessions
+  if (total === 0) return null
+  return (
+    <Slip
+      id="sessoes"
+      title={copy.title(page.name)}
+      aside={String(total)}
+      lead={
+        satisfaction === null
+          ? copy.noReaction(page.name)
+          : copy.satisfaction(
+              page.name,
+              satisfaction.value,
+              satisfaction.sessions,
+            )
+      }
+    >
+      <ul className="flex flex-col">
+        {recent.map((s) => (
+          <li key={s.id} className="border-rule not-first:border-t">
+            <a
+              href={sessionPath(s.id)}
+              className="flex min-h-touch flex-col justify-center gap-0.5 py-sm text-ink no-underline hover:underline"
+            >
+              <span className="font-semibold">
+                {s.chosen?.title ?? copy.nothingChosen}
+              </span>
+              <Meta
+                parts={[
+                  weekdayDate(s.date),
+                  s.chosen ? copy.reaction(s.reaction) : null,
+                ]}
+              />
+            </a>
+          </li>
+        ))}
+      </ul>
+    </Slip>
+  )
+}
+
 /** Her Notas and where they come and go: Dar notas (only on Meu gosto: the
- * queue writes for the Dono logged in), her import, and the IMDb CSV once
- * she has a Nota. The list itself opens on demand: it can be long. */
+ * queue writes for the Dono logged in), her import, and, folded, the CSVs
+ * once she has a Nota. The list itself opens on demand: it can be long. */
 function Notes({
   slug,
   own,
-  ratings,
-  predictionError,
+  page,
+  pending,
 }: {
   slug: string
   own: boolean
-  ratings: PersonPage['ratings']
-  predictionError: PersonPage['predictionError']
+  page: PersonPage
+  pending: number
 }) {
   const { notes } = PERSON
+  const { ratings, predictionError } = page
   const option = buttonVariants({ variant: 'option' })
   return (
     <Slip
@@ -184,8 +435,9 @@ function Notes({
       aside={ratings === null ? undefined : String(ratings.length)}
     >
       {ratings === null && <p className="text-ink-2">{notes.noDatabase}</p>}
+      {pending > 0 && <Pending pending={pending} />}
       {ratings?.length === 0 && (
-        <p className="text-ink-2">{notes.empty(own)}</p>
+        <p className="text-ink-2">{notes.empty(own, page.name)}</p>
       )}
       {predictionError && (
         <p className="text-meta text-ink-2">
@@ -204,56 +456,189 @@ function Notes({
         <a href={importsPath(slug, own)} className={option}>
           {notes.import}
         </a>
-        {ratings !== null && ratings.length > 0 && (
-          <>
-            <a href={imdbCsvPath(slug)} className={option}>
-              {notes.download}
-            </a>
-            <a href={letterboxdCsvPath(slug)} className={option}>
-              {notes.downloadLetterboxd}
-            </a>
-          </>
-        )}
       </div>
       {ratings !== null && ratings.length > 0 && (
-        <p className="text-meta text-ink-2">{notes.movielens}</p>
-      )}
-      {ratings !== null && ratings.length > 0 && (
-        <Disclosure summary={notes.list(ratings.length)}>
-          <ul className="flex flex-col">
-            {ratings.map((r) => (
-              <Item key={r.factId}>
-                <span>
-                  {r.title ?? r.filmId}{' '}
-                  <span className="text-ink-2">({r.filmId})</span>
-                </span>
-                <Meta parts={[PERSON.ratingText(r.rating), r.date, r.source]} />
-              </Item>
-            ))}
-          </ul>
-        </Disclosure>
+        <>
+          <NotesList ratings={ratings} />
+          <NotesMore slug={slug} own={own} page={page} count={ratings.length} />
+        </>
       )}
     </Slip>
   )
 }
 
-/** The page's fichas as a row of links, each with how many it holds: the
- * page is long, and the Dono comes for one of them. */
-function Contents({ page }: { page: PersonPage }) {
-  const own = page.person === page.viewer.person
-  const entries: readonly (readonly [string, string, number | null])[] = [
+/** The films of her imports that wait in the queue, with the way there. */
+function Pending({ pending }: { pending: number }) {
+  const { notes } = PERSON
+  return (
+    <p className="flex flex-wrap items-center gap-x-sm">
+      <span className="rounded-pill bg-sticker-orange px-sm font-display text-meta-strong text-on-sticker">
+        {notes.pending(pending)}
+      </span>
+      <a href={QUEUE_PATH} className="text-ink underline underline-offset-3">
+        {notes.resolve}
+      </a>
+    </p>
+  )
+}
+
+/** Her Notas, folded: the list can be long. */
+function NotesList({
+  ratings,
+}: {
+  ratings: NonNullable<PersonPage['ratings']>
+}) {
+  return (
+    <Disclosure summary={PERSON.notes.list(ratings.length)}>
+      <ul className="flex flex-col">
+        {ratings.map((r) => (
+          <Item key={r.factId}>
+            <span>{r.title ?? r.filmId}</span>
+            <Meta
+              parts={[
+                PERSON.ratingText(r.rating),
+                shortDate(r.date),
+                PERSON.ratingSource(r.rating, r.source),
+              ]}
+            />
+          </Item>
+        ))}
+      </ul>
+    </Disclosure>
+  )
+}
+
+/** The CSVs of her Notas, folded, and for an admin the MovieLens word. */
+function NotesMore({
+  slug,
+  own,
+  page,
+  count,
+}: {
+  slug: string
+  own: boolean
+  page: PersonPage
+  count: number
+}) {
+  const { notes } = PERSON
+  const option = buttonVariants({ variant: 'option' })
+  return (
+    <Disclosure summary={notes.more}>
+      <div className="flex flex-col gap-md">
+        <div className="flex flex-wrap items-center gap-xs">
+          <a href={imdbCsvPath(slug)} className={option}>
+            {notes.download}
+          </a>
+          <a href={letterboxdCsvPath(slug)} className={option}>
+            {notes.downloadLetterboxd}
+          </a>
+        </div>
+        {page.viewer.admin && (
+          <p className="text-meta text-ink-2">
+            {notes.movielens(own, count, page.name)}
+          </p>
+        )}
+      </div>
+    </Disclosure>
+  )
+}
+
+/** A Nota of the rating screen is a Já visto too; the Notas list shows it,
+ * so Já vistos leaves it out. The engine's `RATING_SCREEN_SOURCE`. */
+const SITE_RATINGS = 'notas no site'
+
+/** The Já vistos her page lists: what she said she saw, not her Notas. */
+const seenOf = (page: PersonPage) =>
+  page.seen.filter((s) => s.source !== SITE_RATINGS)
+
+/** Relatos have a ficha where a form can add one or one was told: not on
+ * the Dono's own page until another Dono tells something. */
+const hasReports = (page: PersonPage) =>
+  page.person !== page.viewer.person || page.reports.length > 0
+
+/** The fichas of her taste with how many each holds: what Meu gosto's
+ * glance and contents count. */
+function tasteParts(page: PersonPage) {
+  return [
     ['perguntas', PERSON.questions.title, page.openQuestions.length],
     ['vetos', PERSON.vetoes.title, page.vetoes.length],
-    ['ajustes', PERSON.adjustments.title, page.adjustments.length],
     ['declarados', PERSON.stated.title, page.stated.length],
-    ...(own && page.reports.length === 0
-      ? []
-      : [['relatos', PERSON.reports.title, page.reports.length] as const]),
-    ['vistos', PERSON.seen.title, page.seen.length],
-    ...(page.access === undefined
-      ? []
-      : [['acesso', PERSON.access.title, null] as const]),
-  ]
+    ...(hasReports(page)
+      ? [['relatos', PERSON.reports.title, page.reports.length] as const]
+      : []),
+    ['vistos', PERSON.seen.title, seenOf(page).length],
+  ] as const
+}
+
+/** How many elos she moved off normal (the engine lists only those). */
+const changedAdjustments = (page: PersonPage) => page.adjustments.length
+
+/** Meu gosto's opening ficha: how many Notas (and how many to 10), what
+ * she said of her taste, and the one next step. */
+function Glance({
+  page,
+  start,
+  pending,
+  taste,
+}: {
+  page: PersonPage
+  start?: MyStart
+  pending: number
+  taste: TasteSummary | null
+}) {
+  const { glance } = PERSON
+  const notes = page.ratings?.length ?? 0
+  const said = tasteParts(page)
+    .filter(([id, , n]) => n > 0 && id !== 'perguntas')
+    .map(([, title, n]) => `${n} ${title}`)
+  const connector = start?.setup?.steps.find((s) => s.step === 'connector')
+  const [step, href] =
+    pending > 0
+      ? [glance.steps.queue(pending), QUEUE_PATH]
+      : notes < 10
+        ? [glance.steps.rate, RATINGS_PATH]
+        : connector && !connector.done && !connector.skipped
+          ? [glance.steps.connector, '#conector']
+          : page.openQuestions.length > 0
+            ? [glance.steps.questions, '#perguntas']
+            : [glance.steps.ask, '/sessoes/nova']
+  return (
+    <Slip id="olhada" title={glance.title}>
+      <p className="font-display text-step-title">
+        {glance.notes(notes)}
+        {notes < 10 && (
+          <span className="font-body text-meta font-normal text-ink-2">
+            {' · '}
+            {glance.toTen(notes)}
+          </span>
+        )}
+      </p>
+      {taste && taste.genres.length > 0 && (
+        <p>{glance.likes([...taste.genres, ...taste.directors])}</p>
+      )}
+      <p className="text-ink-2">
+        {said.length === 0
+          ? glance.nothingSaid
+          : `${glance.said}: ${said.join(' · ')}`}
+      </p>
+      <p>
+        {glance.next}:{' '}
+        <a href={href} className="text-ink underline underline-offset-3">
+          {step}
+        </a>
+      </p>
+    </Slip>
+  )
+}
+
+/** Meu gosto's fichas that hold something, as a row of links with how
+ * many: the page is long, and the Dono comes for one of them. */
+function Contents({ page }: { page: PersonPage }) {
+  const entries: readonly (readonly [string, string, number])[] = [
+    ...tasteParts(page).filter(([, , n]) => n > 0),
+    ['ajustes', PERSON.adjustments.title, changedAdjustments(page)] as const,
+  ].filter(([, , n]) => n !== 0)
+  if (entries.length === 0) return null
   return (
     <nav aria-label={PERSON.contents}>
       <ul className="flex flex-wrap gap-xs">
@@ -263,11 +648,7 @@ function Contents({ page }: { page: PersonPage }) {
               href={`#${id}`}
               className="inline-flex min-h-touch items-center gap-xs rounded-pill border-(length:--border-width-stroke) border-rule bg-surface px-lg font-display text-control text-ink no-underline hover:bg-surface-2"
             >
-              {title}
-              {n !== null && ' '}
-              {n !== null && (
-                <span className="text-ink-2 tabular-nums">{n}</span>
-              )}
+              {title} <span className="text-ink-2 tabular-nums">{n}</span>
             </a>
           </li>
         ))}
@@ -276,37 +657,95 @@ function Contents({ page }: { page: PersonPage }) {
   )
 }
 
-/** The Pessoa's sections, one per kind of taste, after the Catálogo
- * search that finds the IDs their forms take. */
-function Details({
+/** The fichas the Afinar fold holds. */
+const REFINE = new Set(['ajustes', 'declarados', 'relatos', 'acesso'])
+
+/** What the Dono acts on, in that order (#273): the open questions (only
+ * when there is one), the Vetos (always: the strongest thing she can say),
+ * the Já vistos without a Nota; the empty ones in one fold ("Ainda sem
+ * Já vistos sem Nota · Acrescentar"); then "Afinar", folded, with the
+ * Ajustes, Declarados, Relatos and Acesso. A fold opens by itself when its
+ * ficha posted the last form. */
+function Taste({ slug, page }: { slug: string; page: PersonPage }) {
+  const { spot } = useContext(PostedAt)
+  const posted = spot === undefined ? undefined : sectionOfSpot(spot)
+  const seen = seenOf(page)
+  return (
+    <>
+      {/* Only with a question, or right after the last one left: it
+          says so there. */}
+      {(page.openQuestions.length > 0 || posted === 'perguntas') && (
+        <OpenQuestions slug={slug} page={page} />
+      )}
+      <Vetoes slug={slug} page={page} />
+      {seen.length > 0 ? (
+        <Seen slug={slug} page={page} />
+      ) : (
+        <Disclosure
+          summary={PERSON.empties([PERSON.seen.title])}
+          open={posted === 'vistos' || undefined}
+        >
+          <Seen slug={slug} page={page} />
+        </Disclosure>
+      )}
+      <Refine
+        slug={slug}
+        page={page}
+        open={posted !== undefined && REFINE.has(posted)}
+      />
+    </>
+  )
+}
+
+/** "Afinar", folded: the Ajustes, Declarados, Relatos and Acesso, each
+ * with how many it holds on the fold's summary. */
+function Refine({
   slug,
   page,
-  search,
+  open,
 }: {
   slug: string
   page: PersonPage
-  search: SearchAnswer | null
+  open: boolean
 }) {
+  const own = page.person === page.viewer.person
+  const access = !own && page.viewer.admin && page.access !== undefined
+  const reports = hasReports(page)
+  const refine: readonly (readonly [string, number])[] = [
+    [PERSON.adjustments.title, changedAdjustments(page)],
+    [PERSON.stated.title, page.stated.length],
+    ...(reports ? [[PERSON.reports.title, page.reports.length] as const] : []),
+    ...(access ? [[PERSON.access.title, 0] as const] : []),
+  ]
   return (
-    <>
-      <CatalogSearch
-        action={personPath(slug, page.person === page.viewer.person)}
-        scope="all"
-        answer={search}
-      />
-      <OpenQuestions slug={slug} page={page} />
-      <Vetoes slug={slug} page={page} />
-      <Adjustments slug={slug} page={page} />
-      <Statements
-        slug={slug}
-        kind="stated"
-        items={page.stated}
-        source={PERSON.stated.source}
-      />
-      <Reports slug={slug} page={page} />
-      <Seen slug={slug} page={page} />
-      <Access slug={slug} page={page} />
-    </>
+    <Disclosure
+      id="afinar"
+      summary={PERSON.refine(
+        refine.map(([title, n]) => (n > 0 ? `${title} (${n})` : title)),
+      )}
+      open={open || undefined}
+    >
+      <div className="flex flex-col gap-2xl">
+        <Adjustments slug={slug} page={page} />
+        <Statements
+          slug={slug}
+          kind="stated"
+          own={own}
+          items={page.stated}
+          source={PERSON.stated.source}
+        />
+        {reports && (
+          <Statements
+            slug={slug}
+            kind="report"
+            own={own}
+            items={page.reports}
+            source={own ? null : PERSON.reports.source(page.viewer.name)}
+          />
+        )}
+        {access && <Access slug={slug} page={page} />}
+      </div>
+    </Disclosure>
   )
 }
 
@@ -315,22 +754,9 @@ type Part = { slug: string; page: PersonPage }
 /** How many a ficha holds, on its stub. */
 const countOf = (items: readonly unknown[]) => String(items.length)
 
-/** What others told of her taste. On the logged-in Dono's own page there is
- * no form (what she says of herself is a Declarado), and no section until
- * another Dono tells something. */
-function Reports({ slug, page }: Part) {
-  const own = page.person === page.viewer.person
-  if (own && page.reports.length === 0) return null
-  return (
-    <Statements
-      slug={slug}
-      kind="report"
-      items={page.reports}
-      source={own ? null : PERSON.reports.source(page.viewer.name)}
-    />
-  )
-}
-
+/** Each open question: one tap says whether she likes what it asks about
+ * ("Curte", "Não curte"), which becomes a Declarado; "Pular" leaves it for
+ * later; a longer answer opens in words. */
 function OpenQuestions({ slug, page }: Part) {
   const { questions } = PERSON
   return (
@@ -339,71 +765,138 @@ function OpenQuestions({ slug, page }: Part) {
       title={questions.title}
       aside={countOf(page.openQuestions)}
     >
+      <SpotStatus id="perguntas" />
       <Items empty={questions.empty}>
         {page.openQuestions.map((q) => (
-          <Item key={q.factId}>
-            <span>{q.text}</span>
-            <Meta
-              parts={[
-                q.label && q.subject && `${q.label} (${q.subject})`,
-                questions.skips(q.skips),
-                q.date,
-              ]}
-            />
-            <div className="mt-sm flex flex-col gap-sm">
-              <Disclosure summary={questions.answer}>
-                <ActionForm
-                  slug={slug}
-                  action="responder"
-                  label={`${questions.answer}: ${q.text}`}
-                >
-                  <input type="hidden" name="pergunta" value={q.factId} />
-                  <TextField
-                    name="texto"
-                    label={questions.answerText}
-                    required
-                  />
-                  {q.subject?.startsWith('Q') && (
-                    <SelectField
-                      name="reacao"
-                      label={PERSON.reaction}
-                      hint={q.label ?? q.subject}
-                      options={REACTION_OPTIONS}
-                    />
-                  )}
-                  <Submit>{PERSON.save}</Submit>
-                </ActionForm>
-              </Disclosure>
-              <ActionForm
-                slug={slug}
-                action="pular"
-                className="self-start"
-                busy={questions.skipping}
-              >
-                <input type="hidden" name="texto" value={q.text} />
-                {q.subject && (
-                  <input type="hidden" name="assunto" value={q.subject} />
-                )}
-                <Submit
-                  variant="link"
-                  className=""
-                  aria-label={`${questions.skip}: ${q.text}`}
-                >
-                  {questions.skip}
-                </Submit>
-              </ActionForm>
-            </div>
-          </Item>
+          <Question key={q.factId} slug={slug} name={page.name} q={q} />
         ))}
       </Items>
     </Slip>
   )
 }
 
+type OpenQuestion = PersonPage['openQuestions'][number]
+
+/** One tap's answer to a question: "Curte" or "Não curte". */
+function QuickAnswer({
+  slug,
+  q,
+  reaction,
+}: {
+  slug: string
+  q: OpenQuestion
+  reaction: 'like' | 'dislike'
+}) {
+  const { questions } = PERSON
+  const about = q.label ?? null
+  const like = reaction === 'like'
+  return (
+    <ActionForm
+      slug={slug}
+      action="responder"
+      className="flex"
+      label={`${like ? questions.likes : questions.dislikes}: ${q.text}`}
+    >
+      <input type="hidden" name="pergunta" value={q.factId} />
+      <input
+        type="hidden"
+        name="texto"
+        value={
+          like ? questions.likesText(about) : questions.dislikesText(about)
+        }
+      />
+      {q.subject?.startsWith('Q') === true && (
+        <input type="hidden" name="reacao" value={reaction} />
+      )}
+      <Submit className="">
+        {like ? questions.likes : questions.dislikes}
+      </Submit>
+    </ActionForm>
+  )
+}
+
+/** An open question: the quick answers, "Pular" and, folded, the answer
+ * in words. */
+function Question({
+  slug,
+  name,
+  q,
+}: {
+  slug: string
+  name: string
+  q: OpenQuestion
+}) {
+  const { questions } = PERSON
+  return (
+    <Item>
+      <span>{q.text}</span>
+      <Meta parts={[questions.skips(q.skips), shortDate(q.date)]} />
+      <div className="mt-sm flex flex-col gap-sm">
+        <div className="flex flex-wrap gap-xs">
+          <QuickAnswer slug={slug} q={q} reaction="like" />
+          <QuickAnswer slug={slug} q={q} reaction="dislike" />
+          <ActionForm
+            slug={slug}
+            action="pular"
+            className="flex"
+            busy={questions.skipping}
+          >
+            <input type="hidden" name="texto" value={q.text} />
+            {q.subject && (
+              <input type="hidden" name="assunto" value={q.subject} />
+            )}
+            <Submit className="" aria-label={`${questions.skip}: ${q.text}`}>
+              {questions.skip}
+            </Submit>
+          </ActionForm>
+        </div>
+        <LongAnswer slug={slug} name={name} q={q} />
+      </div>
+    </Item>
+  )
+}
+
+/** The answer in words, folded, with the reaction when the question is
+ * about an entity. */
+function LongAnswer({
+  slug,
+  name,
+  q,
+}: {
+  slug: string
+  name: string
+  q: OpenQuestion
+}) {
+  const { questions } = PERSON
+  return (
+    <Disclosure summary={questions.answer}>
+      <ActionForm
+        slug={slug}
+        action="responder"
+        label={`${questions.answer}: ${q.text}`}
+      >
+        <input type="hidden" name="pergunta" value={q.factId} />
+        <TextField name="texto" label={questions.answerText(name)} required />
+        {q.subject?.startsWith('Q') === true && (
+          <SelectField
+            name="reacao"
+            label={PERSON.reaction}
+            hint={q.label ?? q.subject ?? undefined}
+            options={REACTION_OPTIONS}
+          />
+        )}
+        <Submit>{PERSON.save}</Submit>
+      </ActionForm>
+    </Disclosure>
+  )
+}
+
 function Vetoes({ slug, page }: Part) {
   const { vetoes } = PERSON
+  const refused = useRefusedField('vetos')
   return (
     <Slip id="vetos" title={vetoes.title} aside={countOf(page.vetoes)}>
+      <SpotStatus id="vetos" />
       <Items empty={vetoes.empty}>
         {page.vetoes.map((v) => (
           <Item
@@ -418,34 +911,32 @@ function Vetoes({ slug, page }: Part) {
             }
           >
             <span>“{v.text}”</span>
-            <Meta parts={[`${v.label} (${v.target})`, v.date]} />
+            <Meta parts={[PERSON.plainLabel(v.label), shortDate(v.date)]} />
           </Item>
         ))}
       </Items>
-      <Disclosure summary={vetoes.add}>
-        <ActionForm slug={slug} action="vetar" label={vetoes.add}>
+      <Disclosure
+        id="acrescentar-veto"
+        summary={vetoes.add}
+        open={refused !== null || undefined}
+      >
+        <ActionForm
+          slug={slug}
+          action="vetar"
+          label={vetoes.add}
+          problem={refused}
+        >
           <TextField
             name="texto"
             label={vetoes.text}
             placeholder={vetoes.placeholder}
             required
           />
-          <TextField
+          <TargetField
             name="alvo"
             label={PERSON.target}
-            hint={PERSON.idHint}
-            pattern={ID_PATTERN}
-          />
-          <SelectField
-            name="grupo"
-            label={PERSON.group}
-            options={[
-              { value: '', label: PERSON.noGroup },
-              ...page.tagGroups.map(({ key, label }) => ({
-                value: key,
-                label,
-              })),
-            ]}
+            scope="all"
+            groups={page.tagGroups}
           />
           <Submit>{PERSON.save}</Submit>
         </ActionForm>
@@ -456,56 +947,113 @@ function Vetoes({ slug, page }: Part) {
 
 function Adjustments({ slug, page }: Part) {
   const { adjustments } = PERSON
+  const own = page.person === page.viewer.person
+  const levelOf = (link: string) =>
+    page.adjustments.find((a) => a.link === link)
+  const changed = changedAdjustments(page)
   return (
     <Slip
       id="ajustes"
       title={adjustments.title}
-      aside={countOf(page.adjustments)}
-      lead={adjustments.lead}
+      aside={
+        changed > 0 ? adjustments.changed(changed) : adjustments.noneChanged
+      }
+      lead={own ? adjustments.ownLead : adjustments.lead(page.name)}
     >
+      <SpotStatus id="ajustes" />
+      <p className="text-meta text-ink-2">{adjustments.levelsHint}</p>
       <ul className="flex flex-col">
-        {Object.entries(PERSON.links).map(([link, name]) => {
-          const current = page.adjustments.find((a) => a.link === link)
-          return (
-            <li key={link} className="border-rule py-md not-first:border-t">
-              <ActionForm
-                slug={slug}
-                action="ajustar"
-                className="flex flex-wrap items-end gap-sm"
-              >
-                <input type="hidden" name="elo" value={link} />
-                <LevelPicker
-                  legend={adjustments.level(name)}
-                  hint={current?.date}
-                  level={current?.level ?? 'normal'}
-                />
-                <Submit className="">{adjustments.change}</Submit>
-              </ActionForm>
-            </li>
-          )
-        })}
+        {Object.entries(PERSON.links).map(([link, name]) => (
+          <li
+            key={link}
+            id={`ajuste-${link}`}
+            className="scroll-mt-2xl border-rule py-md not-first:border-t"
+          >
+            <AdjustmentForm
+              slug={slug}
+              link={link}
+              legend={adjustments.level(name)}
+              current={levelOf(link)}
+            />
+          </li>
+        ))}
       </ul>
     </Slip>
   )
 }
 
+/** One Ajuste: its four levels. With the JavaScript, a tap on a level
+ * saves it, and "gravado" shows beside it; before, "Mudar" posts the
+ * form. */
+function AdjustmentForm({
+  slug,
+  link,
+  legend,
+  current,
+}: {
+  slug: string
+  link: string
+  legend: string
+  current?: PersonPage['adjustments'][number]
+}) {
+  const hydrated = useHydrated()
+  const { spot, notice } = useContext(PostedAt)
+  const stale = useRefusedInPlace()
+  const saved =
+    !stale &&
+    spot === `ajuste-${link}` &&
+    (notice === 'ajustado' || notice === 'igual')
+  return (
+    <ActionForm
+      slug={slug}
+      action="ajustar"
+      className="flex flex-wrap items-end gap-sm"
+    >
+      <input type="hidden" name="elo" value={link} />
+      <LevelPicker
+        legend={legend}
+        hint={current && shortDate(current.date)}
+        saved={saved}
+        level={current?.level ?? 'normal'}
+        onPick={hydrated ? (form) => form?.requestSubmit() : undefined}
+      />
+      {!hydrated && <Submit className="">{PERSON.adjustments.change}</Submit>}
+    </ActionForm>
+  )
+}
+
 /** The four levels of an Ajuste side by side, one marked: radios, so the
- * form posts the marked one without JavaScript. */
+ * form posts the marked one without JavaScript. 44px tall, the whole row
+ * wide. */
 function LevelPicker({
   legend,
   hint,
+  saved,
   level,
+  onPick,
 }: {
   legend: string
   hint?: string
+  saved: boolean
   level: string
+  /** A level was tapped: the fieldset's form. */
+  onPick?: (form: HTMLFormElement | null) => void
 }) {
   return (
-    <fieldset className="flex min-w-0 flex-1 basis-[240px] flex-col gap-xs">
+    <fieldset
+      onChange={(event) => onPick?.(event.currentTarget.form)}
+      className="flex min-w-0 flex-1 basis-[240px] flex-col gap-xs"
+    >
       <legend className="mb-xs font-display text-field-label">
         {legend}
         {hint && (
           <span className="font-body font-normal text-ink-2"> {hint}</span>
+        )}
+        {saved && (
+          <span role="status" className="font-body font-normal text-ink-2">
+            {' · ✓ '}
+            {PERSON.adjustments.saved}
+          </span>
         )}
       </legend>
       <div className="grid grid-cols-4 rounded-pill border-(length:--border-width-stroke) border-rule bg-surface p-0.75">
@@ -518,7 +1066,7 @@ function LevelPicker({
               defaultChecked={value === level}
               className="peer sr-only"
             />
-            <span className="flex min-h-[38px] flex-1 cursor-pointer items-center justify-center rounded-pill px-xs font-display text-control text-ink-2 select-none peer-checked:bg-surface-2 peer-checked:font-bold peer-checked:text-ink peer-checked:ring-2 peer-checked:ring-ink peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-focus">
+            <span className="flex min-h-touch flex-1 cursor-pointer items-center justify-center rounded-pill px-xs font-display text-control text-ink-2 select-none peer-checked:bg-surface-2 peer-checked:font-bold peer-checked:text-ink peer-checked:ring-2 peer-checked:ring-ink peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-focus">
               {label}
             </span>
           </label>
@@ -537,113 +1085,163 @@ function originOf(kind: 'stated' | 'report', s: Statement) {
     : PERSON.imported
 }
 
-function statementTarget(s: Statement) {
+/** What the Declarado is about, in words, its title the link to the film
+ * or entity (the id stays behind it): "sobre O Farol de Areia", "ama
+ * Lia Couto", "só menciona a tag “chuva”". */
+function StatementTarget({ s }: { s: Statement }) {
   if (s.target === null) return null
   const reaction = s.reaction
     ? PERSON.reactions[s.reaction as Reaction]
-    : PERSON.noReaction
-  return `${reaction} ${s.label} (${s.target})`
+    : PERSON.about
+  return (
+    <span className="text-meta text-ink-2">
+      {reaction}{' '}
+      <a
+        href={PERSON.targetUrl(s.target)}
+        target="_blank"
+        rel="noreferrer"
+        className="text-ink underline decoration-rule underline-offset-3 hover:decoration-ink"
+      >
+        {PERSON.plainLabel(s.label ?? s.target)}
+      </a>
+    </span>
+  )
 }
 
 function Statements({
   slug,
   kind,
+  own,
   items,
   source,
 }: {
   slug: string
   kind: 'stated' | 'report'
+  /** Meu gosto: the lead speaks to her. */
+  own: boolean
   items: readonly Statement[]
   /** The source the engine writes when the form gives none; null for no
    * form. */
   source: string | null
 }) {
+  const { name } = useContext(PostedAt)
   const copy = kind === 'stated' ? PERSON.stated : PERSON.reports
+  const id = kind === 'stated' ? 'declarados' : 'relatos'
+  const refused = useRefusedField(id)
   return (
     <Slip
-      id={kind === 'stated' ? 'declarados' : 'relatos'}
+      id={id}
       title={copy.title}
       aside={countOf(items)}
-      lead={copy.lead}
+      lead={own ? copy.ownLead : copy.lead(name)}
     >
+      <SpotStatus id={id} />
       <Items empty={copy.empty}>
-        {items.map((s) => {
-          const origin = originOf(kind, s)
-          return (
-            <Item
-              key={s.factId}
-              actions={
-                origin === 'file' ? (
-                  <RemoveForm
-                    slug={slug}
-                    what={kind}
-                    id={s.factId}
-                    label={s.text}
-                  />
-                ) : (
-                  <span className="font-display text-label text-ink-2 uppercase">
-                    {origin}
-                  </span>
-                )
-              }
-            >
-              <span>“{s.text}”</span>
-              <span className="flex flex-wrap items-center gap-x-sm gap-y-2xs">
-                <StrengthDots
-                  strength={s.strength}
-                  word={PERSON.strengths[s.strength]}
-                />
-                <Meta
-                  parts={[
-                    statementTarget(s),
-                    s.specific ? PERSON.specific : PERSON.generic,
-                    s.date,
-                    s.source,
-                  ]}
-                />
-              </span>
-            </Item>
-          )
-        })}
+        {items.map((s) => (
+          <StatementItem key={s.factId} slug={slug} kind={kind} s={s} />
+        ))}
       </Items>
       {source !== null && (
-        <Disclosure summary={copy.add}>
-          <ActionForm
-            slug={slug}
-            action={kind === 'stated' ? 'declarar' : 'relatar'}
-            label={copy.add}
-          >
-            <TextField name="texto" label={PERSON.text} required />
-            <TextField
-              name="alvo"
-              label={PERSON.target}
-              hint={PERSON.targetHint}
-              pattern={ID_PATTERN}
-            />
-            <SelectField
-              name="reacao"
-              label={PERSON.reaction}
-              options={REACTION_OPTIONS}
-            />
-            <TextField
-              name="fonte"
-              label={PERSON.source}
-              hint={PERSON.sourceHint(source)}
-            />
-            <Submit>{PERSON.save}</Submit>
-          </ActionForm>
-        </Disclosure>
+        <AddStatement
+          slug={slug}
+          kind={kind}
+          source={source}
+          refused={refused}
+        />
       )}
     </Slip>
   )
 }
 
+/** A Declarado or Relato: its text, Força, target and source; "Tirar"
+ * when it came by a form, the file's word when it did not. */
+function StatementItem({
+  slug,
+  kind,
+  s,
+}: {
+  slug: string
+  kind: 'stated' | 'report'
+  s: Statement
+}) {
+  const origin = originOf(kind, s)
+  return (
+    <Item
+      actions={
+        origin === 'file' ? (
+          <RemoveForm slug={slug} what={kind} id={s.factId} label={s.text} />
+        ) : (
+          <span className="font-display text-label text-ink-2 uppercase">
+            {origin}
+          </span>
+        )
+      }
+    >
+      <span>{PERSON.statementText(s.text)}</span>
+      <span className="flex flex-wrap items-center gap-x-sm gap-y-2xs">
+        <StrengthDots
+          strength={s.strength}
+          word={PERSON.strengths[s.strength]}
+        />
+        <StatementTarget s={s} />
+        <Meta parts={[shortDate(s.date), s.source]} />
+      </span>
+    </Item>
+  )
+}
+
+/** The form that adds a Declarado or a Relato, folded. */
+function AddStatement({
+  slug,
+  kind,
+  source,
+  refused,
+}: {
+  slug: string
+  kind: 'stated' | 'report'
+  source: string
+  refused: FieldProblem | null
+}) {
+  const copy = kind === 'stated' ? PERSON.stated : PERSON.reports
+  return (
+    <Disclosure summary={copy.add} open={refused !== null || undefined}>
+      <ActionForm
+        slug={slug}
+        action={kind === 'stated' ? 'declarar' : 'relatar'}
+        label={copy.add}
+        problem={refused}
+      >
+        <TextField name="texto" label={PERSON.text} required />
+        <TargetField
+          name="alvo"
+          label={PERSON.statementTarget}
+          hint={PERSON.targetHint}
+          scope="all"
+        />
+        <SelectField
+          name="reacao"
+          label={PERSON.reaction}
+          options={REACTION_OPTIONS}
+        />
+        <TextField
+          name="fonte"
+          label={PERSON.source}
+          hint={PERSON.sourceHint(source)}
+        />
+        <Submit>{PERSON.save}</Submit>
+      </ActionForm>
+    </Disclosure>
+  )
+}
+
 function Seen({ slug, page }: Part) {
   const { seen } = PERSON
+  const refused = useRefusedField('vistos')
   return (
-    <Slip id="vistos" title={seen.title} aside={countOf(page.seen)}>
+    <Slip id="vistos" title={seen.title} aside={countOf(seenOf(page))}>
+      <SpotStatus id="vistos" />
       <Items empty={seen.empty}>
-        {page.seen.map((s) => (
+        {seenOf(page).map((s) => (
           <Item
             key={s.factId}
             actions={
@@ -655,28 +1253,27 @@ function Seen({ slug, page }: Part) {
               />
             }
           >
-            <span>
-              {s.title} <span className="text-ink-2">({s.film})</span>
-            </span>
+            <span>{s.title}</span>
             <Meta
               parts={[
                 s.rating === null ? null : PERSON.ratingText(s.rating),
-                s.date,
-                s.source,
+                shortDate(s.date),
+                s.rating === null
+                  ? s.source
+                  : PERSON.ratingSource(s.rating, s.source),
               ]}
             />
           </Item>
         ))}
       </Items>
-      <Disclosure summary={seen.add}>
-        <ActionForm slug={slug} action="visto" label={seen.add}>
-          <TextField
-            name="filme"
-            label={PERSON.film}
-            hint={PERSON.filmHint}
-            pattern="tt[0-9]+"
-            required
-          />
+      <Disclosure summary={seen.add} open={refused !== null || undefined}>
+        <ActionForm
+          slug={slug}
+          action="visto"
+          label={seen.add}
+          problem={refused}
+        >
+          <TargetField name="filme" label={PERSON.film} scope="films" />
           <SelectField
             name="nota"
             label={PERSON.rating}
@@ -694,26 +1291,60 @@ function Seen({ slug, page }: Part) {
   )
 }
 
+/** A step that asks first (#273): the button opens what it does and the
+ * confirm, as an import's Tirar. */
+function Confirm({
+  open,
+  warning,
+  children,
+}: {
+  open: string
+  warning: string
+  children: ReactNode
+}) {
+  return (
+    <details className="group">
+      <summary
+        className={buttonVariants({
+          variant: 'option',
+          className:
+            'list-none group-open:border-2 group-open:border-ink group-open:bg-surface-2 [&::-webkit-details-marker]:hidden',
+        })}
+      >
+        {open}
+      </summary>
+      <div className="mt-sm flex max-w-[360px] flex-col gap-sm rounded-field bg-surface-2 p-lg">
+        <p className="text-meta">{warning}</p>
+        {children}
+      </div>
+    </details>
+  )
+}
+
 /** The Acesso section of a Pessoa's page (#166), for an admin only: give
- * her a Google e-mail and she is a Dono; take it away and her next request
- * is refused. The admin's own access never leaves from here. */
+ * her a Google e-mail and she is a Dono; take it away, after a confirm,
+ * and her next request is refused. Not on Meu gosto: her own access never
+ * leaves from here. */
 function Access({ slug, page }: { slug: string; page: PersonPage }) {
   const { access } = page
   if (!page.viewer.admin || access === undefined) return null
   const copy = PERSON.access
   return (
-    <Slip id="acesso" title={copy.title} lead={copy.lead}>
+    <Slip id="acesso" title={copy.title} lead={copy.lead(page.name)}>
+      <SpotStatus id="acesso" />
       {page.owner ? (
         <>
           <p>{copy.owner(access.email)}</p>
-          {page.person === page.viewer.person ? (
-            <p className="text-meta text-ink-2">{copy.self}</p>
-          ) : (
-            <ActionForm slug={slug} action="tirar-acesso" label={copy.revoke}>
-              <p className="text-meta text-ink-2">{copy.revokeHint}</p>
-              <Submit>{copy.revoke}</Submit>
+          <Confirm open={copy.revoke} warning={copy.revokeWarning(page.name)}>
+            <ActionForm
+              slug={slug}
+              action="tirar-acesso"
+              label={copy.revoke}
+              busy={copy.revoking}
+            >
+              <Submit>{copy.revokeConfirm(page.name)}</Submit>
             </ActionForm>
-          )}
+          </Confirm>
         </>
       ) : (
         <>
@@ -732,5 +1363,49 @@ function Access({ slug, page }: { slug: string; page: PersonPage }) {
         </>
       )}
     </Slip>
+  )
+}
+
+/** "Remover Pessoa" (#273), folded at the bottom of another Pessoa's
+ * page: for one made by mistake, the fold says what goes and holds the
+ * confirm. A Dono, a Pessoa in a Session or one with an import stays, and
+ * the fold says why instead. */
+function RemovePerson({ slug, page }: { slug: string; page: PersonPage }) {
+  const copy = PERSON.removePerson
+  const { spot } = useContext(PostedAt)
+  const why = page.owner
+    ? copy.owner(page.name)
+    : page.sessions.total > 0
+      ? copy.sessions(page.name, page.sessions.total)
+      : page.imported
+        ? copy.imported(page.name)
+        : null
+  return (
+    <Disclosure
+      id="remover-pessoa"
+      summary={copy.title}
+      open={spot === 'remover-pessoa' || undefined}
+    >
+      <div className="flex flex-col gap-md">
+        <SpotStatus id="remover-pessoa" />
+        {why === null ? (
+          <>
+            <p className="text-meta text-ink-2">
+              {copy.lead(page.name)} {copy.warning(page.name)}
+            </p>
+            <ActionForm
+              slug={slug}
+              action="remover-pessoa"
+              label={copy.open(page.name)}
+              busy={copy.busy}
+            >
+              <Submit>{copy.confirm(page.name)}</Submit>
+            </ActionForm>
+          </>
+        ) : (
+          <p className="text-meta text-ink-2">{why}</p>
+        )}
+      </div>
+    </Disclosure>
   )
 }

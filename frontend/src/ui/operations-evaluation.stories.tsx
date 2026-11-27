@@ -1,8 +1,9 @@
-// The evaluation panel: ready to run, running, and without its folder.
+// The evaluation panel: ready to run, running, finished with the grid and
+// its report, and without its folder.
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, within } from 'storybook/test'
 import { EvaluationSection } from './operations-evaluation'
-import { IDLE, RUNNING, pending } from './operations.fixture'
+import { DONE, IDLE, RUNNING, pending } from './operations.fixture'
 
 const meta = {
   component: EvaluationSection,
@@ -19,7 +20,19 @@ export const Running: Story = {
   args: { initial: RUNNING },
   play: async ({ canvasElement }) => {
     await expect(
-      within(canvasElement).getByText(/Medindo recall e cobertura/),
+      within(canvasElement).getByText(/Medindo o quanto a lista acerta/),
+    ).toBeVisible()
+  },
+}
+
+export const Done: Story = {
+  args: { initial: DONE },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText(/A lista acerta 80%/)).toBeVisible()
+    await expect(canvas.getByText('elenco 0,5 → 0,625')).toBeVisible()
+    await expect(
+      canvas.getByRole('button', { name: 'Copiar os pesos da 2ª combinação' }),
     ).toBeVisible()
   },
 }

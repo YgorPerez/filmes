@@ -14,6 +14,7 @@ import {
   recommendSession,
   recordFeedback,
   votedBy,
+  latestVotes,
   yamlToJson,
   type CastVotes,
   type CastVotesRequest,
@@ -412,6 +413,36 @@ describe('castVotes', () => {
     const { frontmatter } = await fixture.ok(readSession(id))
     expect([...votedBy(frontmatter, 'iara')]).toEqual([f[0], f[1]])
     expect([...votedBy(frontmatter, owner)]).toEqual([f[2]])
+  })
+
+  test('latestVotes is a Presente’s latest submission, film by film', async () => {
+    const fixture = useFixture()
+    const { id, f } = await open(fixture)
+    await vote(fixture, {
+      session: id,
+      person: 'iara',
+      version: 1,
+      votes: [
+        { film: f[0]!, vote: 'yes' },
+        { film: f[1]!, vote: 'yes' },
+      ],
+    })
+    await vote(fixture, {
+      session: id,
+      person: 'iara',
+      version: 1,
+      votes: [
+        { film: f[0]!, vote: 'yes' },
+        { film: f[2]!, vote: 'yes' },
+      ],
+    })
+
+    const { frontmatter } = await fixture.ok(readSession(id))
+    expect([...latestVotes(frontmatter, 'iara')]).toEqual([
+      [f[0], 'yes'],
+      [f[2], 'yes'],
+    ])
+    expect(latestVotes(frontmatter, 'ninguem').size).toBe(0)
   })
 
   test('two Presentes’ no in the same version are both swapped; votes off the screen write nothing but still redo', async () => {

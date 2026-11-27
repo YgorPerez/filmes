@@ -474,7 +474,7 @@ describe('every Session', () => {
 })
 
 describe('every Session', () => {
-  test('a Restrição stored with no module left is not labelled', async () => {
+  test('a Restrição stored with no module left, or turned on by the engine, is not labelled', async () => {
     const fixture = useFixture()
     mkdirSync(join(fixture.data, 'sessions'))
     writeFileSync(
@@ -489,7 +489,6 @@ describe('every Session', () => {
 
     expect(sessions[0]?.constraints).toEqual([
       'parecidos com O Farol de Areia e Pequenos Milagres',
-      'nada trocado nem já visto nesta Sessão',
     ])
   })
 })

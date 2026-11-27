@@ -16,6 +16,9 @@ export type ImportAction =
   | ({ kind: 'upload' } & Upload)
   | { kind: 'rss'; user: string }
   | { kind: 'remove'; file: string }
+  // Her Trakt by the API (#269): a public username, or null for her
+  // connected account or the username she was linked to before.
+  | { kind: 'trakt-sync'; user: string | null }
 
 /** What the engine runs: the upload once its service is known. */
 export type ImportRun =
@@ -26,6 +29,7 @@ export type ImportRun =
 export type QueueAction =
   | { kind: 'confirm'; id: string; film: string }
   | { kind: 'discard'; id: string; reason: string }
+  | { kind: 'reopen'; id: string }
   | { kind: 'reprocess' }
 
 /** The biggest upload the server reads: a Letterboxd, Trakt or Simkl
@@ -55,43 +59,102 @@ function letterboxdUser(typed: string): string | null {
   return null
 }
 
+/** A Trakt user as its profile's address has it. */
+const TRAKT_USER = '[A-Za-z0-9][A-Za-z0-9_.-]*'
+
+const TRAKT_FORMS = [
+  new RegExp(`^@?(${TRAKT_USER})$`),
+  new RegExp(
+    `^(?:https?://)?(?:www\\.|app\\.)?trakt\\.tv/users/(${TRAKT_USER})(?:[/?#].*)?$`,
+    'i',
+  ),
+]
+
+/** The user in what the Dono typed: `olga`, `@olga` or the profile's
+ * address (`https://trakt.tv/users/olga`); null when it is none of them. */
+function traktUser(typed: string): string | null {
+  for (const form of TRAKT_FORMS) {
+    const user = form.exec(typed.trim())?.[1]
+    if (user !== undefined) return user
+  }
+  return null
+}
+
 /** The reason a discard records when the Dono gives none (the CLI's
  * default). */
 const DEFAULT_DISCARD_REASON = 'ignorar'
 
 /** Why an import form cannot run, before the engine sees it. */
-export type ImportFormError = 'pedido' | 'arquivo' | 'consentimento'
+export type ImportFormError =
+  | 'pedido'
+  | 'arquivo'
+  | 'consentimento'
+  | 'usuario'
+  | 'trakt-usuario'
 
 /** The form → the action. An upload with no file is `arquivo`; the RSS
- * without the Pessoa's consent is `consentimento`, unless `own` (the Dono's
- * own page, where she answers for herself). */
+ * with something that is no Letterboxd user is `usuario`, and without the
+ * Pessoa's consent `consentimento`, unless `own` (the Dono's own page,
+ * where she answers for herself). */
 export async function parseImport(
   form: FormData,
   own = false,
 ): Promise<ImportAction | ImportFormError> {
-  const action = field(form, 'acao')
-  if (action === 'arquivo') {
-    const file = form.get('arquivo')
-    if (file === null || typeof file === 'string' || file.size === 0)
-      return 'arquivo'
-    return {
-      kind: 'upload',
-      original: file.name || 'import.zip',
-      content: new Uint8Array(await file.arrayBuffer()),
-    }
-  }
-  if (action === 'rss') {
-    const user = letterboxdUser(field(form, 'usuario') ?? '')
-    if (user === null) return 'pedido'
-    if (!own && field(form, 'consentimento') !== 'sim') return 'consentimento'
-    return { kind: 'rss', user }
-  }
-  if (action === 'remover') {
-    const file = field(form, 'arquivo')
-    return file ? { kind: 'remove', file } : 'pedido'
-  }
-  return 'pedido'
+  const parse = IMPORT_PARSERS.get(field(form, 'acao') ?? '')
+  return parse ? parse(form, own) : 'pedido'
 }
+
+type ImportParser = (
+  form: FormData,
+  own: boolean,
+) => ImportAction | ImportFormError | Promise<ImportAction | ImportFormError>
+
+/** Whether the Pessoa said yes to reading her profile: on the Dono's own
+ * page (`own`) she answers for herself. */
+const consented = (form: FormData, own: boolean) =>
+  own || field(form, 'consentimento') === 'sim'
+
+/** A file uploaded: a ZIP, IMDb's CSV or Simkl's JSON. */
+const parseUpload: ImportParser = async (form) => {
+  const file = form.get('arquivo')
+  if (file === null || typeof file === 'string' || file.size === 0)
+    return 'arquivo'
+  return {
+    kind: 'upload',
+    original: file.name || 'import.zip',
+    content: new Uint8Array(await file.arrayBuffer()),
+  }
+}
+
+/** Her Letterboxd profile's diary. */
+const parseRss: ImportParser = (form, own) => {
+  const user = letterboxdUser(field(form, 'usuario') ?? '')
+  if (user === null) return 'usuario'
+  return consented(form, own) ? { kind: 'rss', user } : 'consentimento'
+}
+
+/** Her Trakt by the API: a public username, or none for her account. */
+const parseTrakt: ImportParser = (form, own) => {
+  const typed = field(form, 'usuario')
+  if (!typed) return { kind: 'trakt-sync', user: null }
+  const user = traktUser(typed)
+  if (user === null) return 'trakt-usuario'
+  return consented(form, own) ? { kind: 'trakt-sync', user } : 'consentimento'
+}
+
+/** Each form's action, by its `acao`. */
+const IMPORT_PARSERS: ReadonlyMap<string, ImportParser> = new Map([
+  ['arquivo', parseUpload],
+  ['rss', parseRss],
+  [
+    'remover',
+    (form) => {
+      const file = field(form, 'arquivo')
+      return file ? { kind: 'remove', file } : 'pedido'
+    },
+  ],
+  ['trakt', parseTrakt],
+])
 
 export function parseQueue(form: FormData): QueueAction | null {
   const action = field(form, 'acao')
@@ -108,6 +171,7 @@ export function parseQueue(form: FormData): QueueAction | null {
       id,
       reason: field(form, 'motivo') ?? DEFAULT_DISCARD_REASON,
     }
+  if (action === 'reabrir') return { kind: 'reopen', id }
   return null
 }
 
@@ -126,6 +190,8 @@ const IMPORT_NOTICES = [
   'repetido',
   // An import removed: `novos` Fatos less.
   'removido',
+  // Her Trakt read by the API (#269): `novos` Fatos more.
+  'sincronizado',
 ] as const
 
 export type ImportNotice = (typeof IMPORT_NOTICES)[number]
@@ -139,12 +205,22 @@ const IMPORT_REFUSALS = [
   'grande',
   // The RSS without the Pessoa's yes.
   'consentimento',
+  // The RSS with something that is no Letterboxd user's name or address.
+  'usuario',
   // No public RSS for that user.
   'rss',
   // Letterboxd did not answer.
   'fonte',
   // The import to remove is gone.
   'item',
+  // Her Trakt by the API (#269): no such user (or not a username), a
+  // private profile, nothing to read (no connection nor username), a
+  // server with no Trakt, Trakt not answering.
+  'trakt-usuario',
+  'trakt-privado',
+  'trakt-sem',
+  'trakt-off',
+  'trakt-fonte',
   'indisponivel',
   // The engine failed in a way waiting does not fix (#258).
   'falha',
@@ -155,6 +231,8 @@ export type ImportRefusal = (typeof IMPORT_REFUSALS)[number]
 const QUEUE_NOTICES = [
   'confirmado',
   'descartado',
+  // A decision taken back: the film is in the queue again (#274).
+  'reaberto',
   // The same decision again: nothing changed.
   'igual',
   // Asked TMDB again: `resolvidos` left the queue, `restam` wait.
@@ -178,6 +256,30 @@ const QUEUE_REFUSALS = [
 
 export type QueueRefusal = (typeof QUEUE_REFUSALS)[number]
 
+/** The import page's forms a refusal can belong to, so it shows under the
+ * one that was sent (`?de=` of the action, back in the page's query): the
+ * guided Letterboxd upload, the other services' upload, the profile and
+ * the Trakt read by the API (#269). */
+const IMPORT_FORMS = ['letterboxd', 'outro', 'perfil', 'trakt'] as const
+
+export type ImportForm = (typeof IMPORT_FORMS)[number]
+
+/** The form a refusal shows under: the profile's are the profile's, an
+ * upload's the upload that was sent (`sent`, the Letterboxd one when it is
+ * not known); the others belong to the page. */
+export function refusedForm(
+  refusal: ImportRefusal,
+  sent: ImportForm | undefined,
+): ImportForm | null {
+  if (sent === 'trakt') return 'trakt'
+  if (['consentimento', 'usuario', 'rss', 'fonte'].includes(refusal))
+    return 'perfil'
+  if (['arquivo', 'origem', 'grande'].includes(refusal))
+    return sent === 'outro' ? 'outro' : 'letterboxd'
+  return null
+}
+
+export const isImportForm = within(IMPORT_FORMS)
 export const isImportNotice = within(IMPORT_NOTICES)
 export const isImportRefusal = within(IMPORT_REFUSALS)
 export const isQueueNotice = within(QUEUE_NOTICES)

@@ -204,7 +204,7 @@ const makeTicker = (total: number, progress: Progress) =>
     let percent = MEASURE_FROM
     let lastNotice = yield* Clock.currentTimeMillis
     const ticker: { message: string; readonly advance: Effect.Effect<void> } = {
-      message: 'Medindo recall e cobertura',
+      message: 'Medindo o quanto a lista acerta',
       advance: Effect.gen(function* () {
         done += 1
         const now = MEASURE_FROM + (MEASURE_SPAN * done) / total
@@ -263,7 +263,7 @@ const measureAll = (
 
     const current = yield* measureWith(weights)
     if (!withGrid || space === null) return { current, grid: null }
-    ticker.message = 'Comparando os pesos da grade'
+    ticker.message = 'Comparando as combinações de pesos'
     const results: Array<readonly [Weights, OfflineResult]> = []
     for (const config of configs)
       results.push([

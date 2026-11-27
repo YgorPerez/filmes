@@ -1,4 +1,5 @@
-// The Catálogo search of the screens that take IDs (#128), over the build
+// The Catálogo search of the screens that take films (#128; a Pessoa's
+// targets search as she types since #273, in `people.e2e.ts`), over the build
 // and on the fixture copy, with JavaScript off. Each "Usar" is a plain link. Read only but for one Session the engine
 // opens for Bruno alone, whose Feedback is filled and never sent.
 // `E2E_SCREENSHOTS=<folder>` saves a capture of each screen.
@@ -22,24 +23,16 @@ const search = (page: Page, query: string) =>
 const results = (page: Page) =>
   section(page, 'Buscar no Catálogo').getByRole('listitem')
 
-test('on the Pessoa page, a director by name with accents gives her Q…', async ({
-  page,
-}, info) => {
+/** Opens a Session for Bruno alone and goes to its Feedback, as him. */
+async function openFeedbackOfNewSession(page: Page) {
+  const { session } = await engineRun((engine) =>
+    engine.run(recommendSession({ attendees: ['dono'], count: 2 }), {
+      owner: 'bruno',
+    }),
+  )
   await loginAsBruno(page)
-  await page.goto('/pessoas/iara')
-  await search(page, 'LIA MOURA')
-
-  await expect(page).toHaveURL(/\/pessoas\/iara\?buscar=LIA\+MOURA$/)
-  await expect(results(page)).toHaveCount(2)
-  await expect(results(page).first()).toContainText('Q9000006')
-  await expect(results(page).first()).toContainText('Pequenos Milagres (2019)')
-  await expect(results(page).nth(1)).toContainText('Q9006701')
-  await snap(page, info, 'busca-pessoa')
-
-  await search(page, 'maré')
-  await expect(results(page).first()).toContainText('Maré Baixa (2015)')
-  await expect(results(page).first()).toContainText('tt9000102')
-})
+  await page.goto(`/sessoes/${encodeURIComponent(session.id)}/contar`)
+}
 
 test('Nova Sessão: two searches fill “Parecido com”', async ({
   page,
@@ -68,13 +61,7 @@ test('Nova Sessão: two searches fill “Parecido com”', async ({
 test('Feedback: the film the search found is “Outro filme”', async ({
   page,
 }, info) => {
-  const { session } = await engineRun((engine) =>
-    engine.run(recommendSession({ attendees: ['dono'], count: 2 }), {
-      owner: 'bruno',
-    }),
-  )
-  await loginAsBruno(page)
-  await page.goto(`/sessoes/${encodeURIComponent(session.id)}/contar`)
+  await openFeedbackOfNewSession(page)
   await page.getByLabel('Outro filme').check()
   await search(page, 'fronteira (2012)')
   await expect(results(page)).toHaveCount(1)
@@ -90,16 +77,13 @@ test('Feedback: the film the search found is “Outro filme”', async ({
 test('Feedback: the search and its “Usar” keep the reactions and comments', async ({
   page,
 }) => {
-  const { session } = await engineRun((engine) =>
-    engine.run(recommendSession({ attendees: ['dono'], count: 2 }), {
-      owner: 'bruno',
-    }),
-  )
-  await loginAsBruno(page)
-  await page.goto(`/sessoes/${encodeURIComponent(session.id)}/contar`)
-  await page.getByLabel('Reação: Bruno').selectOption('nota:4,5')
-  await page.getByLabel('Comentário: Bruno').fill('vale rever')
+  await openFeedbackOfNewSession(page)
+  // The reactions show once a film is chosen (#272).
   await page.getByLabel('Outro filme').check()
+  const nine = page.locator('input[name="reacao.bruno"][value="nota:9"]')
+  await nine.check()
+  await page.getByText('comentar', { exact: true }).click()
+  await page.getByLabel('Comentário: Bruno').fill('vale rever')
   // Enter in the search box searches, without recording the Feedback.
   await section(page, 'Buscar no Catálogo')
     .getByRole('searchbox')
@@ -109,14 +93,14 @@ test('Feedback: the search and its “Usar” keep the reactions and comments', 
     .press('Enter')
   await expect(page).toHaveURL(/\/contar\?buscar=fronteira\+%282012%29&nota=/)
   await expect(results(page)).toHaveCount(1)
-  await expect(page.getByLabel('Reação: Bruno')).toHaveValue('nota:4,5')
+  await expect(nine).toBeChecked()
   await expect(page.getByLabel('Comentário: Bruno')).toHaveValue('vale rever')
 
   await page.getByRole('link', { name: 'Usar Fronteira II (2012)' }).click()
   await expect(
     page.getByLabel('Título ou ID do IMDb', { exact: false }),
   ).toHaveValue('tt9001903')
-  await expect(page.getByLabel('Reação: Bruno')).toHaveValue('nota:4,5')
+  await expect(nine).toBeChecked()
   await expect(page.getByLabel('Comentário: Bruno')).toHaveValue('vale rever')
 })
 

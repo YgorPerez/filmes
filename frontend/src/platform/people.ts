@@ -6,7 +6,10 @@
 
 import {
   grantAccess,
+  peopleCounts,
   personAdjust,
+  personDelete,
+  personSessions,
   personCreate,
   personQuestions,
   personRemove,
@@ -27,15 +30,19 @@ import {
   type ErrorOutput,
   type ErrorReason,
   type Outcome,
+  type PersonSessions,
   type PersonView,
   type SetupGuide,
   type SetupStep,
   type SkipSetupResult,
 } from '@filmes/engine'
 import {
+  formProblem,
   isAccessAction,
   parseAction,
+  problemParam,
   reportSource,
+  spotOf,
   type PersonAction,
   type PersonNotice,
   type PersonRefusal,
@@ -57,12 +64,15 @@ import type { Owner } from './owners'
 
 export type { Owner }
 
-/** A Pessoa in the list. */
+/** A Pessoa in the list, with how much the filmes knows of her: her
+ * Notas (null without a database) and her Vetos. */
 export type PersonEntry = {
   person: string
   name: string
   aliases: string[]
   owner: boolean
+  ratings: number | null
+  vetoes: number
 }
 
 /** A tag group a Veto or an open question can name. */
@@ -78,12 +88,17 @@ export type PersonPage = Omit<PersonView, 'imports' | 'warning'> & {
   /** Only for an admin (#166): the e-mail she logs in with, or the one
    * her file holds while she is not a Dono; null for none. */
   access?: { email: string | null }
+  /** The Sessões she was in, the latest three, and her Satisfação. */
+  sessions: PersonSessions
+  /** Whether an import holds her history: she cannot be taken out. */
+  imported: boolean
 }
 
 /** What the screens and the actions need from the engine. */
 export interface People {
   list(): Promise<Outcome<PersonEntry[]>>
   view(person: string): Promise<Outcome<PersonView>>
+  sessions(person: string): Promise<Outcome<PersonSessions>>
   tagGroups(): Promise<Outcome<TagGroupChoice[]>>
   /** The e-mail in her file, for the admin's Acesso section. */
   email(person: string): Promise<Outcome<string | null>>
@@ -125,15 +140,21 @@ const newOrSame = (added: boolean): PersonNotice =>
 export function peopleFromEngine(engine: Engine): People {
   return {
     list: () =>
-      map(engine.run(readPeople), (people) =>
-        people.map(({ slug, name, aliases, owner }) => ({
-          person: slug,
-          name,
-          aliases: [...aliases],
-          owner,
-        })),
+      chain(engine.run(readPeople), (people) =>
+        map(engine.run(peopleCounts), (counts) =>
+          people.map(({ slug, name, aliases, owner }, i) => ({
+            person: slug,
+            name,
+            aliases: [...aliases],
+            owner,
+            ratings: counts[i]?.ratings ?? null,
+            vetoes: counts[i]?.vetoes ?? 0,
+          })),
+        ),
       ),
     view: (person) => engine.run(personView(person, { predictionError: true })),
+    sessions: (person) => engine.run(personSessions(person)),
+
     email: (person) => map(engine.run(resolvePerson(person)), (p) => p.email),
     create: (input, owner) =>
       map(
@@ -151,77 +172,98 @@ export function peopleFromEngine(engine: Engine): People {
       const run: Engine['run'] = (effect) =>
         engine.run(effect, { owner: owner.person })
       const by = { person, author: ownerAuthor(owner) }
-      switch (action.kind) {
-        case 'state':
-          return map(run(personState({ ...by, ...statement(action) })), (r) =>
-            newOrSame(r.new),
-          )
-        case 'report':
-          return map(
-            run(
-              personReport({
-                ...by,
-                ...statement(action),
-                source: action.source ?? reportSource(owner.name),
-              }),
-            ),
-            (r) => newOrSame(r.new),
-          )
-        case 'seen':
-          return map(
-            run(
-              personSeen({
-                ...by,
-                film: action.film,
-                rating: action.rating,
-                source: action.source,
-              }),
-            ),
-            (r) => newOrSame(r.new),
-          )
-        case 'veto':
-          return map(
-            run(
-              personVeto({
-                ...by,
-                text: action.text,
-                target: action.target,
-                group: action.group,
-              }),
-            ),
-            (r) => newOrSame(r.new),
-          )
-        case 'adjust':
-          return map(
-            run(
-              personAdjust({ ...by, link: action.link, level: action.level }),
-            ),
-            (r): PersonNotice => (r.new ? 'ajustado' : 'igual'),
-          )
-        case 'skip':
-          return map(
-            run(
-              personSkip({
-                ...by,
-                text: action.text,
-                subject: action.subject,
-                group: action.subject !== undefined && isGroup(action.subject),
-              }),
-            ),
-            (r): PersonNotice => (r.dropped ? 'saiu' : 'pulada'),
-          )
-        case 'answer':
-          return answer(run, by, action)
-        case 'remove':
-          return map(
-            run(personRemove({ ...by, kind: action.what, id: action.id })),
-            (): PersonNotice => 'removido',
-          )
-        case 'grant':
-        case 'revoke':
-          return access(run, by, action)
-      }
+      return isFactWrite(action)
+        ? writeFact(run, by, action, owner)
+        : changeFile(run, by, action)
     },
+  }
+}
+
+type By = { person: string; author: Author }
+
+/** The actions that write a Fato about her, which say whether it is new. */
+type FactWrite = Extract<
+  PersonAction,
+  { kind: 'state' | 'report' | 'seen' | 'veto' | 'adjust' }
+>
+
+const FACT_WRITES: ReadonlySet<PersonAction['kind']> = new Set<
+  PersonAction['kind']
+>(['state', 'report', 'seen', 'veto', 'adjust'])
+
+const isFactWrite = (action: PersonAction): action is FactWrite =>
+  FACT_WRITES.has(action.kind)
+
+/** A Declarado, a Relato, a Já visto, a Veto or an Ajuste. */
+function writeFact(
+  run: Engine['run'],
+  by: By,
+  action: FactWrite,
+  owner: Owner,
+): Promise<Outcome<PersonNotice>> {
+  const added = (r: { new: boolean }) => newOrSame(r.new)
+  switch (action.kind) {
+    case 'state':
+      return map(run(personState({ ...by, ...statement(action) })), added)
+    case 'report':
+      return map(
+        run(
+          personReport({
+            ...by,
+            ...statement(action),
+            source: action.source ?? reportSource(owner.name),
+          }),
+        ),
+        added,
+      )
+    case 'seen': {
+      const { film, rating, source } = action
+      return map(run(personSeen({ ...by, film, rating, source })), added)
+    }
+    case 'veto': {
+      const { text, target, group } = action
+      return map(run(personVeto({ ...by, text, target, group })), added)
+    }
+    case 'adjust':
+      return map(
+        run(personAdjust({ ...by, link: action.link, level: action.level })),
+        (r): PersonNotice => (r.new ? 'ajustado' : 'igual'),
+      )
+  }
+}
+
+/** What else changes her file: a question skipped or answered, an item
+ * taken out, her access, the Pessoa herself. */
+function changeFile(
+  run: Engine['run'],
+  by: By,
+  action: Exclude<PersonAction, FactWrite>,
+): Promise<Outcome<PersonNotice>> {
+  switch (action.kind) {
+    case 'skip':
+      return map(
+        run(
+          personSkip({
+            ...by,
+            text: action.text,
+            subject: action.subject,
+            group: action.subject !== undefined && isGroup(action.subject),
+          }),
+        ),
+        (r): PersonNotice => (r.dropped ? 'saiu' : 'pulada'),
+      )
+    case 'answer':
+      return answer(run, by, action)
+    case 'remove':
+      return map(
+        run(personRemove({ ...by, kind: action.what, id: action.id })),
+        (): PersonNotice => 'removido',
+      )
+    case 'grant':
+    case 'revoke':
+      return access(run, by, action)
+    case 'delete':
+      return map(run(personDelete(by)), (): PersonNotice => 'removida')
   }
 }
 
@@ -330,16 +372,30 @@ export async function personPage(
     logEngineError(view)
     return null
   }
-  const groups = await people.tagGroups()
+  const [groups, sessions] = await Promise.all([
+    people.tagGroups(),
+    people.sessions(person),
+  ])
   if (groups.exitCode !== 0) {
     logEngineError(groups)
     return null
   }
-  const { imports: _imports, warning: _warning, ...page } = view.output
+  if (sessions.exitCode !== 0) {
+    logEngineError(sessions)
+    return null
+  }
+  const { imports, warning: _warning, ...page } = view.output
   const viewer = { person: owner.person, name: owner.name, admin: owner.admin }
-  if (!owner.admin) return { ...page, tagGroups: groups.output, viewer }
+  const read = {
+    ...page,
+    tagGroups: groups.output,
+    viewer,
+    sessions: sessions.output,
+    imported: imports.length > 0,
+  }
+  if (!owner.admin) return read
   const access = await accessOf(page.person, people)
-  return access && { ...page, tagGroups: groups.output, viewer, access }
+  return access && { ...read, access }
 }
 
 /** Her e-mail, for an admin's Acesso section; null when the engine
@@ -362,6 +418,9 @@ const ACCESS_REFUSALS: Partial<Record<ErrorReason, PersonRefusal>> = {
   email_taken: 'email-usado',
   already_owner: 'ja-dono',
   own_access: 'proprio-acesso',
+  is_owner: 'e-dono',
+  has_imports: 'tem-import',
+  in_session: 'em-sessao',
 }
 
 /** Why an action was refused, from the engine's error. */
@@ -391,25 +450,43 @@ export async function personAction(
 ): Promise<Response> {
   const poster = formPoster(request, owner, origin)
   if (poster instanceof Response) return poster
-  const action = parseAction(await request.formData())
-  if (!action)
+  const form = await request.formData()
+  const back = backTo(personPath(person, person === poster.person), form)
+  const action = parseAction(form)
+  if (!action) {
+    const problem = formProblem(form)
     return seeOther(
-      `${personPath(person, person === poster.person)}?erro=pedido`,
+      back({
+        erro: 'pedido',
+        ...(problem && { campo: problemParam(problem) }),
+      }),
     )
+  }
   if (isAccessAction(action) && !poster.admin)
     return new Response('Só um admin dá ou tira acesso', { status: 403 })
   const outcome = await people.act(person, action, poster)
   if (outcome.exitCode !== 0) {
     if (outcome.output.error.code === 'unknown_person')
       return seeOther('/pessoas?erro=pessoa')
-    return seeOther(
-      `${personPath(person, person === poster.person)}?erro=${refusalOf(outcome)}`,
-    )
+    return seeOther(back({ erro: refusalOf(outcome) }))
   }
-  return seeOther(
-    `${personPath(person, person === poster.person)}?feito=${outcome.output}`,
-  )
+  if (outcome.output === 'removida') return seeOther('/pessoas?feito=removida')
+  return seeOther(back({ feito: outcome.output }))
 }
+
+/** Her page's address after a form (#273): the query says what happened
+ * and in which ficha (`em`), and the fragment brings the page back to that
+ * ficha, where the form was. */
+const backTo =
+  (path: string, form: FormData) =>
+  (query: Record<string, string>): string => {
+    const spot = spotOf(form)
+    const params = new URLSearchParams({
+      ...query,
+      ...(spot !== undefined && { em: spot }),
+    })
+    return `${path}?${params.toString()}${spot === undefined ? '' : `#${spot}`}`
+  }
 
 /** The create form's reason for each of the engine's (`createPerson`). */
 const CREATE_REFUSALS: Record<ErrorReason, PersonCreateRefusal> = {
@@ -424,6 +501,15 @@ const CREATE_REFUSALS: Record<ErrorReason, PersonCreateRefusal> = {
   // Not met on create: giving or taking access.
   already_owner: 'indisponivel',
   own_access: 'indisponivel',
+  // Not met on create: reading a Pessoa's Trakt (#269).
+  trakt_user_missing: 'indisponivel',
+  trakt_private: 'indisponivel',
+  trakt_not_linked: 'indisponivel',
+  trakt_off: 'indisponivel',
+  // Not met on create: taking a Pessoa out.
+  is_owner: 'indisponivel',
+  has_imports: 'indisponivel',
+  in_session: 'indisponivel',
 }
 
 /** Why the engine refused a new Pessoa, by its reason; without one, it

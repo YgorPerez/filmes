@@ -265,6 +265,32 @@ describe('the Cartaz model', () => {
     )
   })
 
+  test('a refazer keeps the Dono’s words and the label leaves out the Restrição it turns on by itself', async () => {
+    const fixture = useFixture()
+    const first = await recommend(fixture, {
+      attendees: ['dono', 'iara'],
+      request: 'algo leve pra hoje',
+    })
+    const id = first.session.id
+    await recommend(fixture, {
+      attendees: ['dono', 'iara'],
+      session: id,
+      swap: [first.films[0]!.id],
+      keep: first.films.slice(1).map((f) => f.id),
+    })
+
+    const { request, version } = await fixture.ok(
+      billboardModel({ session: id }),
+    )
+
+    expect(version).toBe(2)
+    expect(front(fixture, id)['context']['constraints']).toContainEqual({
+      name: 'out_of_session',
+    })
+    expect(request.speech).toBe('algo leve pra hoje')
+    expect(request.parts.join(' · ')).not.toContain('nesta Sessão')
+  })
+
   test('the Cartaz has the version’s Climas and the whole vocabulary for the chips', async () => {
     const fixture = useFixture()
     const session = await recommend(fixture, {

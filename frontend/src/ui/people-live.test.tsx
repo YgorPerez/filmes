@@ -26,7 +26,14 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-const BRUNO = { person: 'bruno', name: 'Bruno', aliases: [], owner: true }
+const BRUNO = {
+  person: 'bruno',
+  name: 'Bruno',
+  aliases: [],
+  owner: true,
+  ratings: 0,
+  vetoes: 0,
+}
 
 function showRouted() {
   const router = createRouter({

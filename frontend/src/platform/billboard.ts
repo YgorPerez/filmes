@@ -24,6 +24,7 @@ import {
   billboard,
   readRequest,
   recommendSession,
+  satisfactionNow,
   sessionRedoRequest,
   withAddition,
   type Billboard,
@@ -45,7 +46,11 @@ import {
 } from './pairwise'
 import { pageReading, type PageReading } from './reading'
 import { serverEnv } from './server-env'
-import { issueSessionLink, resolveSessionLink } from './session-link'
+import {
+  closedSessionLink,
+  issueSessionLink,
+  resolveSessionLink,
+} from './session-link'
 import { voteAction, voteDeck } from './session-votes'
 import { sessionPage, sessionsFromEngine, type Sessions } from './sessions'
 import type { SessionItem } from './sessions'
@@ -64,6 +69,10 @@ export interface Billboards {
     text: string,
     owner: string,
   ): Promise<Outcome<ReplyDone> & { stage?: 'answer' | 'redo' }>
+  /** The runs of words of an acrescentar the Leitura do pedido does not
+   * take (#272), read before anything is recorded; none when the engine
+   * cannot read it here. */
+  unread?(addition: string, owner: string): Promise<readonly string[]>
 }
 
 /** The Cartaz as `viewer` (the logged-in Dono's slug) sees it: she is
@@ -87,6 +96,17 @@ export function billboardsFromEngine(
           warnings: [...made.output.warnings],
         },
       }
+    },
+    async unread(addition, owner) {
+      const read = await run(
+        readRequest({ text: addition, fields: ADDITION_FIELDS }),
+        { owner },
+      )
+      if (read.exitCode !== 0) {
+        logEngineError(read)
+        return []
+      }
+      return read.output.notUnderstood
     },
     async answer(id, text, owner) {
       const reply = await run(answerBillboard({ session: id, text }), {
@@ -162,6 +182,9 @@ export type CartazPage = {
   sessionLink?: string | null
   /** The Presentes' Perguntas par a par that wait for the Dono (#181). */
   pairwise?: ReadonlyArray<WaitingAnswers>
+  /** A closed Session's group: who the next Sessão weighs more, one line
+   * each (#272). */
+  satisfaction?: readonly string[]
 }
 
 export async function cartazPage(
@@ -216,10 +239,27 @@ export async function replyAction(
   const poster = formPoster(request, owner, origin)
   if (poster instanceof Response) return poster
   const page = `/sessoes/${encodeURIComponent(id)}`
-  const text = (await request.formData()).get('texto')
+  const form = await request.formData()
+  const text = form.get('texto')
   // Only the header: nothing was marked.
   if (typeof text !== 'string' || !text.trim().includes('\n'))
     return seeOther(`${page}?erro=nada`)
+  // An acrescentar with words the reading does not take stops here, before
+  // anything is recorded, until the Dono sends it as it is (#272).
+  const addition = form.get('acrescentar')
+  if (
+    typeof addition === 'string' &&
+    addition.trim() !== '' &&
+    form.get('confirmar') !== 'sim' &&
+    billboards.unread
+  ) {
+    const words = await billboards.unread(addition, poster.person)
+    if (words.length > 0) {
+      const query = new URLSearchParams({ erro: 'leitura' })
+      for (const word of words) query.append('palavra', word)
+      return seeOther(`${page}?${query.toString()}`)
+    }
+  }
   // A form sends its line breaks as CRLF.
   const done = await billboards.answer(
     id,
@@ -254,7 +294,17 @@ export async function appCartazPage(
   )
   if (!made || made === 'unknown') return made
   const page = { ...made, pairwise: await pairwiseWaiting(id, engine) }
-  if (!page.session.open) return page
+  if (!page.session.open) {
+    const slugs = page.session.attendees.map((a) => a.person)
+    if (slugs.length < 2) return page
+    const now = await engine.run(satisfactionNow(slugs))
+    if (now.exitCode !== 0) {
+      logEngineError(now)
+      return page
+    }
+    const lines = now.output.people.flatMap((p) => p.line ?? [])
+    return { ...page, satisfaction: lines }
+  }
   const { APP_ORIGIN, AUTH_DATABASE_PATH } = serverEnv()
   return {
     ...page,
@@ -271,6 +321,10 @@ export async function appCartazPage(
 /** The public page of a Link da Sessão, for the app. */
 export const appSessionLink = (search: SessionLinkSearch) =>
   resolveSessionLink(search, appEngine(), serverEnv().AUTH_DATABASE_PATH)
+
+/** A link issued for a Session that closed since (#275), for the app. */
+export const appClosedSessionLink = (search: SessionLinkSearch) =>
+  closedSessionLink(search, appEngine(), serverEnv().AUTH_DATABASE_PATH)
 
 /** The group swipe's deck (#182), for the app. */
 export const appVoteDeck = (search: SessionLinkSearch) =>

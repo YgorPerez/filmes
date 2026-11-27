@@ -31,6 +31,8 @@ const SET_UP: HomeData = {
   },
   latest: null,
   mcpUrl: 'https://cinema.example/mcp',
+  today: '2026-11-22',
+  covers: {},
 }
 
 const SESSION: LatestSession = {
@@ -86,9 +88,25 @@ describe('Home', () => {
   it('has no list of screens: the tabs lead to them', () => {
     show()
     expect(screen.queryByRole('navigation')).toBeNull()
-    expect(screen.getAllByRole('link').map((a) => a.textContent)).toEqual([
-      'Pedir filme',
-    ])
+    expect(
+      screen
+        .getAllByRole('link')
+        .map((a) => a.getAttribute('href'))
+        .every((href) => href === '/sessoes/nova'),
+    ).toBe(true)
+  })
+
+  it('says where the first Sessão will show, once the guide is out of the way', () => {
+    show()
+    expect(screen.getByText('Sua primeira Sessão aparece aqui.')).toBeTruthy()
+  })
+
+  it("lets a tap on the shelf label open the request too, out of the keyboard's way", () => {
+    const { container } = show()
+    const label = container.querySelector('a[tabindex="-1"]')!
+    expect(label.getAttribute('href')).toBe('/sessoes/nova')
+    expect(label.querySelector('[role="img"]')).toBeTruthy()
+    expect(label.getAttribute('tabindex')).toBe('-1')
   })
 
   it('hides the guide once no step is pending, skipped ones included', () => {
@@ -103,29 +121,76 @@ describe('Home', () => {
   })
 })
 
+const card = () => screen.getByRole('region', { name: 'Última Sessão' })
+
 describe('Home, the latest Sessão', () => {
   it('shows it under "pedir filme", with its films and the way to tell how it went', () => {
     const { container } = show({ latest: SESSION })
-    const card = screen.getByRole('region', { name: 'Última Sessão' })
     expect(
-      within(card).getByRole('link', { name: /Última Sessão/ }),
+      within(card()).getByRole('link', { name: /Última Sessão/ }),
     ).toHaveProperty('pathname', '/sessoes/2026-11-21-1')
-    expect(card.textContent).toContain('Sábado, 21 nov · Você e Teo')
-    expect(card.textContent).toContain('algo leve')
+    expect(card().textContent).toContain('Ontem · Você e Teo')
+    expect(card().textContent).toContain('algo leve')
+    expect(card().textContent).toContain('Falta contar como foi')
     expect(
-      within(card)
-        .getAllByRole('listitem')
-        .map((li) => li.textContent),
-    ).toEqual(['1O Farol de Areia', '2Maré Baixa'])
-    expect(card.textContent).toContain('Falta contar como foi')
-    expect(
-      within(card).getByRole('link', {
+      within(card()).getByRole('link', {
         name: 'Contar como foi a Sessão 2026-11-21-1',
       }),
     ).toHaveProperty('pathname', '/sessoes/2026-11-21-1/contar')
     const html = container.innerHTML
     expect(html.indexOf('Pedir filme')).toBeLessThan(
       html.indexOf('Última Sessão'),
+    )
+  })
+
+  it('makes each film a link to its card in the Cartaz, with its cover when there is one', () => {
+    show({
+      latest: SESSION,
+      covers: { tt1: 'https://image.example/tt1.jpg', tt2: null },
+    })
+    const films = within(card()).getByRole('list', { name: 'Filmes da Sessão' })
+    const links = within(films).getAllByRole('link')
+    expect(links.map((a) => [a.textContent, a.getAttribute('href')])).toEqual([
+      ['1O Farol de Areia', '/sessoes/2026-11-21-1#filme-tt1'],
+      ['2Maré Baixa', '/sessoes/2026-11-21-1#filme-tt2'],
+    ])
+    expect(links[0]?.querySelector('img')?.getAttribute('src')).toBe(
+      'https://image.example/tt1.jpg',
+    )
+    expect(links[1]?.querySelector('img')).toBeNull()
+  })
+
+  it('on the night it was made, leads back to the Cartaz first, and the Feedback is a link', () => {
+    show({ latest: SESSION, today: '2026-11-21' })
+    expect(card().textContent).toContain('Hoje · Você e Teo')
+    expect(
+      within(card()).getByRole('link', { name: 'Ver o Cartaz' }),
+    ).toHaveProperty('pathname', '/sessoes/2026-11-21-1')
+    expect(card().textContent).not.toContain('Falta contar como foi')
+    expect(
+      within(card()).getByRole('link', {
+        name: 'Contar como foi a Sessão 2026-11-21-1',
+      }),
+    ).toBeTruthy()
+  })
+})
+
+describe('Home, the latest Sessão, its date and what comes next', () => {
+  it.each([
+    ['2026-11-22', 'Ontem'],
+    ['2026-11-25', 'Sábado'],
+    ['2026-12-01', 'Sábado, 21 nov'],
+  ])('dates it from today (%s): %s', (today, label) => {
+    show({ latest: SESSION, today })
+    expect(card().textContent).toContain(`${label} · Você e Teo`)
+  })
+
+  it('asks for the same request again, filled as that Sessão was asked', () => {
+    show({ latest: { ...SESSION, constraints: ['até 2h'] } })
+    const again = within(card()).getByRole('link', { name: /Pedir de novo/ })
+    expect(again.textContent).toBe('Pedir de novo: Você e Teo, até 2h')
+    expect(again.getAttribute('href')).toBe(
+      '/sessoes/nova?repetir=2026-11-21-1',
     )
   })
 
@@ -137,35 +202,26 @@ describe('Home, the latest Sessão', () => {
         chosen: { id: 'tt2', title: 'Maré Baixa' },
       },
     })
-    const card = screen.getByRole('region', { name: 'Última Sessão' })
-    expect(card.textContent).toContain('vimos Maré Baixa')
-    expect(card.textContent).not.toContain('Falta contar como foi')
-    expect(card.querySelector('a[href$="/contar"]')).toBeNull()
+    expect(card().textContent).toContain('vimos Maré Baixa')
+    expect(card().textContent).not.toContain('Falta contar como foi')
+    expect(card().querySelector('a[href$="/contar"]')).toBeNull()
   })
 })
 
 describe('Home, the setup guide', () => {
-  it('lists the three steps once, each with its state, and the progress', () => {
+  it('lists two steps, each with its state, under what the guide buys her', () => {
     show(guiding({ taste: 'done', import: 'skipped' }, 12))
     const region = guide()!
     expect(
       within(region)
         .getAllByRole('heading', { level: 3 })
         .map((h) => h.textContent),
-    ).toEqual([
-      'Meu gostofeito, 12 notas',
-      'Importar do Letterboxd, do Trakt, do IMDb ou do Simkl' + 'pulado',
-      'Conector no Claude' + 'falta fazer',
-    ])
-    const progress = within(region).getByRole('progressbar', {
-      name: 'Passos feitos',
-    })
-    expect(progress.getAttribute('aria-valuenow')).toBe('1')
-    expect(progress.getAttribute('aria-valuemax')).toBe('3')
-    expect(progress.getAttribute('aria-valuetext')).toBe('1 de 3 feitos')
+    ).toEqual(['Meu gostofeito, 12 notas', 'Conector no Claude, falta fazer'])
+    expect(region.textContent).toContain('a lista sai só com palpites')
+    expect(within(region).queryByRole('progressbar')).toBeNull()
   })
 
-  it('gives each pending step its action and a "pular"', () => {
+  it('gives Meu gosto both ways to do it, and each pending step a "pular"', () => {
     show(guiding())
     const region = guide()!
     const skips = region.querySelectorAll('form[action="/inicio/pular"]')
@@ -176,28 +232,40 @@ describe('Home, the setup guide', () => {
       ]),
     ).toEqual([
       ['post', 'taste'],
-      ['post', 'import'],
       ['post', 'connector'],
     ])
     expect(
-      screen.getByRole('button', {
-        name: 'Pular: Importar do Letterboxd, do Trakt, do IMDb ou do Simkl',
-      }),
+      screen.getByRole('button', { name: 'Pular: Meu gosto' }),
     ).toBeTruthy()
     expect(href('Dar notas')).toBe('/meu-gosto/notas')
     expect(href('Importar')).toBe('/meu-gosto/importar')
-    expect(screen.getByRole('button', { name: 'Copiar endereço' })).toBeTruthy()
   })
 
-  it('opens only the first pending step, and keeps "pedir filme" the one orange button', () => {
+  it('says what the connector is even behind Meu gosto, and folds how to add it', () => {
     const { container } = show(guiding())
     expect(screen.getByRole('img', { name: '4 de 10 Notas' })).toBeTruthy()
-    expect(container.textContent).not.toContain('https://cinema.example/mcp')
+    expect(container.textContent).toContain(
+      'Para pedir filme conversando com o Claude',
+    )
+    const how = container.querySelector('details')!
+    expect(how.open).toBe(false)
+    expect(how.querySelector('summary')?.textContent).toContain(
+      'Ver como conectar',
+    )
+    expect(how.textContent).toContain('https://cinema.example/mcp')
     expect(orange(container)).toHaveLength(1)
     expect(orange(container)[0]?.textContent).toBe('Pedir filme')
   })
 
-  it('gives the MCP URL and how to add it in Claude, and copies it', async () => {
+  it('at zero Notas, says how long it takes instead of ten empty dots', () => {
+    show(guiding({}, 0))
+    expect(screen.queryByRole('img', { name: /de 10 Notas/ })).toBeNull()
+    expect(guide()!.textContent).toContain('Leva uns 2 minutos.')
+  })
+})
+
+describe('Home, the setup guide, the MCP URL and skipped steps', () => {
+  it('gives the MCP URL and how to add it in Claude, copies it and says where to paste', async () => {
     const writeText = vi.fn<(text: string) => Promise<void>>(
       async () => undefined,
     )
@@ -205,7 +273,7 @@ describe('Home, the setup guide', () => {
       value: { writeText },
       configurable: true,
     })
-    const { container } = show(guiding({ taste: 'done', import: 'done' }))
+    const { container } = show(guiding({ taste: 'done' }))
     expect(screen.getByText('https://cinema.example/mcp')).toBeTruthy()
     expect(container.textContent).toContain('Adicionar conector personalizado')
     expect(container.textContent).toContain('Este passo se marca sozinho')
@@ -214,6 +282,9 @@ describe('Home, the setup guide', () => {
     )
     expect(writeText).toHaveBeenCalledWith('https://cinema.example/mcp')
     expect(screen.getByRole('button', { name: 'Copiado' })).toBeTruthy()
+    expect(screen.getByRole('status').textContent).toBe(
+      'Copiado. Agora cole no Claude, em Conectores.',
+    )
   })
 
   it('says how to copy by hand when the clipboard refuses', async () => {
@@ -221,7 +292,7 @@ describe('Home, the setup guide', () => {
       value: { writeText: async () => Promise.reject(new Error('no')) },
       configurable: true,
     })
-    show(guiding({ taste: 'done', import: 'done' }))
+    show(guiding({ taste: 'done' }))
     await userEvent.click(
       screen.getByRole('button', { name: 'Copiar endereço' }),
     )
@@ -230,13 +301,21 @@ describe('Home, the setup guide', () => {
     )
   })
 
-  it('keeps a skipped step closed, to resume, with no "pular"', () => {
-    show(guiding({ import: 'skipped' }))
+  it('keeps a skipped step closed on one line, "pulado · Retomar", with no "pular"', () => {
+    show(guiding({ taste: 'skipped' }))
     const region = guide()!
-    expect(region.querySelector('input[value="import"]')).toBeNull()
-    expect(within(region).getByText('Retomar')).toBeTruthy()
+    expect(region.querySelector('input[value="taste"]')).toBeNull()
+    const summary = region.querySelector('summary')!
+    expect(summary.textContent).toBe('Meu gostopulado · RetomarFechar')
   })
 
+  it("leaves the engine's import step out: an import alone does not hold the guide open", () => {
+    show(guiding({ taste: 'done', connector: 'done' }))
+    expect(guide()).toBeNull()
+  })
+})
+
+describe('Home, the setup guide, never blocking', () => {
   it('never blocks: "pedir filme" comes before the guide', () => {
     const { container } = show(guiding())
     const html = container.innerHTML

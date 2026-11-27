@@ -13,8 +13,7 @@ import { FEEDBACK } from './feedback.copy'
 import { ImportsFrame } from './imports'
 import { useFetchForm, useHydrated } from './kit/fetch-form'
 import { refusalOn, useRefusalInPlace } from './kit/refusal-in-place'
-import { FIELD } from './kit/field'
-import { FieldLabel } from './kit/field-label'
+import { buttonVariants } from './kit/button-variants'
 import { Option } from './kit/option'
 import { PriceSticker } from './kit/sticker'
 import { OwnerTag } from './kit/owner-tag'
@@ -52,9 +51,12 @@ export function FeedbackScreen({
   film,
   draft = null,
   note,
+  told,
 }: {
   session: string
   page: FeedbackPage | 'unknown' | null
+  /** No open Session by that id, but a told one: what they saw (#272). */
+  told?: { title: string | null }
   refusal?: FeedbackRefusal
   search?: SearchAnswer | null
   film?: string
@@ -73,7 +75,7 @@ export function FeedbackScreen({
       {page === null ? (
         <Alert>{FEEDBACK.unavailable}</Alert>
       ) : page === 'unknown' ? (
-        <Alert>{FEEDBACK.form.unknown}</Alert>
+        <NotOpen session={session} told={told} />
       ) : (
         <>
           <Heading page={page} />
@@ -87,10 +89,38 @@ export function FeedbackScreen({
             pick={pick}
             refusal={refusal}
           />
-          {page.attendees.length > 1 && <Satisfaction page={page} />}
         </>
       )}
     </ImportsFrame>
+  )
+}
+
+/** No open Session to tell (#272): told already, with what they saw and
+ * the way to it, or none by that id. */
+function NotOpen({
+  session,
+  told,
+}: {
+  session: string
+  told?: { title: string | null }
+}) {
+  const { form } = FEEDBACK
+  return (
+    <section className="flex flex-col gap-lg">
+      <h1 className="font-display text-counter-title">
+        {told ? form.told(told.title) : form.unknown}
+      </h1>
+      {!told && <p className="text-ink-2">{form.unknownLead}</p>}
+      <a
+        href={told ? sessionPath(session) : '/sessoes'}
+        className={buttonVariants({
+          variant: 'option',
+          className: 'self-start',
+        })}
+      >
+        {told ? form.toSession : form.toList}
+      </a>
+    </section>
   )
 }
 
@@ -148,6 +178,9 @@ function FeedbackForm({
     refusalOn(isFeedbackRefusal, feedbackPath(session)),
   )
   const { onSubmit, busy, failed } = useFetchForm(onAnswer)
+  // A refusal about the film goes once a film is chosen (#272).
+  const [fixed, setFixed] = useState(false)
+  const alone = page.attendees.length === 1
   return (
     <form
       method="post"
@@ -162,7 +195,7 @@ function FeedbackForm({
       <button type="submit" name="tecla" value="enter" hidden>
         {form.submit}
       </button>
-      {refused && (
+      {refused && !(fixed && FILM_REFUSALS.has(refused)) && (
         <div ref={alert}>
           <Alert>{FEEDBACK.refusals[refused]}</Alert>
         </div>
@@ -175,14 +208,23 @@ function FeedbackForm({
         search={search}
         pick={pick}
         choice={choice}
-        onChoose={setChoice}
+        onChoose={(value) => {
+          setChoice(value)
+          setFixed(true)
+        }}
       />
 
+      {/* The reactions once a film is chosen, before the JavaScript too;
+          none for "não vimos nada". */}
       <fieldset
         disabled={choice === 'nada'}
-        className="min-w-0 group-has-[input[value=nada]:checked]/feedback:hidden"
+        className="hidden min-w-0 group-has-[input[name=filme]:checked]/feedback:block group-has-[input[value=nada]:checked]/feedback:hidden"
       >
-        <Section id="reacoes" title={form.reactions} lead={form.reactionsLead}>
+        <Section
+          id="reacoes"
+          title={form.reactions(alone)}
+          lead={form.reactionsLead}
+        >
           <div className="flex flex-col">
             {page.attendees.map((attendee, index) => (
               <Reaction
@@ -196,16 +238,26 @@ function FeedbackForm({
         </Section>
       </fieldset>
 
-      <Submit
-        variant="primary"
-        disabled={busy !== null}
-        className="w-full sm:w-auto sm:self-start"
-      >
-        {busy === null ? form.submit : form.submitting}
-      </Submit>
+      {!alone && <Satisfaction page={page} />}
+      {/* The way out stays a thumb away, as the Cartaz's Enviar. */}
+      <div className="sticky bottom-[calc(68px+env(safe-area-inset-bottom))] z-10 -mx-lg rounded-t-panel border-x border-t border-rule bg-surface px-lg py-sm min-[900px]:bottom-0">
+        <Submit
+          variant="primary"
+          disabled={busy !== null}
+          className="w-full sm:w-auto"
+        >
+          {busy === null ? form.submit : form.submitting}
+        </Submit>
+      </div>
     </form>
   )
 }
+
+/** The refusals a film's choice answers. */
+const FILM_REFUSALS: ReadonlySet<FeedbackRefusal> = new Set<FeedbackRefusal>([
+  'filme',
+  'nada',
+])
 
 /** The chosen film or a title to look up. `choice` is the radio marked.
  * With the JavaScript, "Usar" takes the film in place: its radio when the
@@ -229,6 +281,7 @@ function FilmChoice({
   onChoose: (value: string) => void
 }) {
   const { form } = FEEDBACK
+  const alone = page.attendees.length === 1
   const live = useHydrated()
   const selected =
     search && 'found' in search
@@ -252,9 +305,9 @@ function FilmChoice({
     },
   })
   return (
-    <Section id="filme" title={form.film}>
+    <Section id="filme" title={form.film(alone)}>
       <fieldset className="group/film flex min-w-0 flex-col gap-sm">
-        <legend className="sr-only">{form.film}</legend>
+        <legend className="sr-only">{form.film(alone)}</legend>
         {page.recommendation.map((item) => (
           <Option key={item.id} {...radio(item.id)}>
             <span className="flex items-center gap-md">
@@ -277,14 +330,58 @@ function FilmChoice({
             onType={() => setTitle(undefined)}
           />
         </div>
-        <Option {...radio('nada')}>{form.nothing}</Option>
+        <Option {...radio('nada')}>{form.nothing(alone)}</Option>
       </fieldset>
     </Section>
   )
 }
 
-/** One Presente's reaction: her avatar in the Session's colour and her
- * name, the Nota or the Relato, and the comment; filled with what the
+/** The 1 to 10 as radios (#272), the Cartaz's Escala de nota for a form
+ * that posts before the JavaScript: ten circles, the chosen one orange; a
+ * 5 by 2 grid on a phone. */
+function RatingRadios({
+  name,
+  label,
+  value,
+}: {
+  name: string
+  label: string
+  value: string
+}) {
+  return (
+    <div
+      role="radiogroup"
+      aria-label={label}
+      className="grid grid-cols-5 gap-0.75 min-[480px]:grid-cols-10"
+    >
+      {RATING_CHOICES.map((n) => (
+        <label
+          key={n}
+          className="group/rating relative grid h-touch min-w-0 cursor-pointer place-items-center rounded-rail bg-surface-2 font-display text-field-label text-ink tabular-nums has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-focus"
+        >
+          <input
+            type="radio"
+            name={name}
+            value={`nota:${n}`}
+            defaultChecked={value === `nota:${n}`}
+            aria-label={n}
+            className="absolute inset-0 m-0 size-full cursor-pointer opacity-0"
+          />
+          <span
+            aria-hidden="true"
+            className="grid size-7 place-items-center rounded-round group-has-checked/rating:bg-sticker-orange group-has-checked/rating:text-on-sticker"
+          >
+            {n}
+          </span>
+        </label>
+      ))}
+    </div>
+  )
+}
+
+/** One Presente's reaction (#272): her avatar in the Session's colour and
+ * her name; for the others, the Relato in three pills or a Nota folded
+ * under them; for the Dono, her Nota; then "comentar". Filled with what the
  * Catálogo search `kept`. */
 function Reaction({
   attendee,
@@ -296,9 +393,17 @@ function Reaction({
   kept?: FeedbackDraft[string]
 }) {
   const { form } = FEEDBACK
-  const id = `reacao-${attendee.person}`
+  const name = `reacao.${attendee.person}`
+  const value = kept?.reaction ?? ''
+  const scale = (
+    <RatingRadios
+      name={name}
+      label={form.ratingLabel(attendee.name)}
+      value={value}
+    />
+  )
   return (
-    <fieldset className="border-dashed border-rule py-xl first:pt-0 not-first:border-t">
+    <fieldset className="flex min-w-0 flex-col gap-sm border-dashed border-rule py-lg first:pt-0 not-first:border-t">
       <legend className="float-left w-full">
         <span className="flex items-center gap-sm font-display text-row-title">
           <PersonAvatar person={attendee} index={index} />
@@ -306,40 +411,46 @@ function Reaction({
           {attendee.owner && <OwnerTag />}
         </span>
       </legend>
-      <div className="clear-left grid grid-cols-1 gap-lg pt-lg sm:grid-cols-2">
-        <FieldLabel label={form.reaction}>
-          <select
-            id={id}
-            aria-label={`${form.reaction}: ${attendee.name}`}
-            name={`reacao.${attendee.person}`}
-            defaultValue={kept?.reaction ?? ''}
-            className={`${FIELD} w-full`}
-          >
-            <option value="">{form.none}</option>
-            <optgroup label={form.ratings}>
-              {RATING_CHOICES.map((value) => (
-                <option key={value} value={`nota:${value}`}>
-                  {form.rating(value)}
-                </option>
-              ))}
-            </optgroup>
-            {!attendee.owner && (
-              <optgroup label={form.reports}>
-                {Object.entries(REPORT_CHOICES).map(([value, label]) => (
-                  <option key={value} value={`relato:${value}`}>
-                    {label}
-                  </option>
-                ))}
-              </optgroup>
-            )}
-          </select>
-        </FieldLabel>
+      <div className="clear-left flex flex-wrap gap-sm pt-sm">
+        <Option type="radio" name={name} value="" defaultChecked={value === ''}>
+          {attendee.owner ? form.noRating : form.none}
+        </Option>
+        {!attendee.owner &&
+          Object.entries(REPORT_CHOICES).map(([report, label]) => (
+            <Option
+              key={report}
+              type="radio"
+              name={name}
+              value={`relato:${report}`}
+              defaultChecked={value === `relato:${report}`}
+            >
+              {label}
+            </Option>
+          ))}
+      </div>
+      {attendee.owner ? (
+        scale
+      ) : (
+        <details
+          open={value.startsWith('nota:')}
+          className="group/give flex flex-col"
+        >
+          <summary className="flex min-h-touch cursor-pointer list-none items-center text-meta font-semibold text-ink underline underline-offset-2 [&::-webkit-details-marker]:hidden">
+            {form.giveRating}
+          </summary>
+          {scale}
+        </details>
+      )}
+      <details open={Boolean(kept?.comment)} className="flex flex-col">
+        <summary className="flex min-h-touch cursor-pointer list-none items-center text-meta font-semibold text-ink underline underline-offset-2 [&::-webkit-details-marker]:hidden">
+          {form.openComment}
+        </summary>
         <TextField
           name={`comentario.${attendee.person}`}
           label={`${form.comment}: ${attendee.name}`}
           defaultValue={kept?.comment}
         />
-      </div>
+      </details>
     </fieldset>
   )
 }

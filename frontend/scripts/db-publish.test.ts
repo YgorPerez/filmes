@@ -131,7 +131,10 @@ const opens = (version: string) => [
   `FILMES_DATABASE=/data/db/${version}.sqlite`,
 ]
 
-describe.skipIf(process.platform === 'win32')('db:publish on the VPS', () => {
+/** The VPS tests run the plan in a bash, which Windows lacks. */
+const NO_BASH = process.platform === 'win32'
+
+describe.skipIf(NO_BASH)('db:publish on the VPS', () => {
   it('uploads the version, swaps the live image onto it on the other port, and keeps the app SHA', () => {
     const vps = aVps()
     const file = aDatabase('v1')
@@ -172,7 +175,9 @@ describe.skipIf(process.platform === 'win32')('db:publish on the VPS', () => {
       'Total: N s.',
     ])
   })
+})
 
+describe.skipIf(NO_BASH)('db:publish on the VPS keeps two versions', () => {
   it('keeps the live version and the previous one, and deletes the older ones', () => {
     const vps = aVps()
     vps.publishDatabase(aDatabase('v1'), 'v1')
@@ -223,7 +228,9 @@ describe.skipIf(process.platform === 'win32')('db:publish on the VPS', () => {
 
     expect(vps.versions()).toEqual(['v1.sqlite', 'v2.sqlite'])
   })
+})
 
+describe.skipIf(NO_BASH)('db:publish on the VPS beside the rest', () => {
   it("leaves auth.sqlite, the sources' cache and the neighbours alone", () => {
     const vps = aVps()
     writeFileSync(join(vps.paths.data, 'auth.sqlite'), 'logins')
@@ -258,7 +265,9 @@ describe.skipIf(process.platform === 'win32')('db:publish on the VPS', () => {
       image: `filmes-app:sha-${SHA_2}`,
     })
   })
+})
 
+describe.skipIf(NO_BASH)('db:publish --rollback on the VPS', () => {
   it('rolling back without a version swaps to the previous one, and twice comes back', () => {
     const vps = aVps()
     vps.publishDatabase(aDatabase('v1'), 'v1')
@@ -311,7 +320,9 @@ describe.skipIf(process.platform === 'win32')('db:publish on the VPS', () => {
       'The VPS kept no previous database: give the version.',
     )
   })
+})
 
+describe.skipIf(NO_BASH)('db:publish on the VPS when the swap fails', () => {
   it('a new container that does not answer goes; the old database stays live and the upload waits for the next retention', () => {
     const vps = aVps()
     vps.publishDatabase(aDatabase('v1'), 'v1')
@@ -359,49 +370,56 @@ describe.skipIf(process.platform === 'win32')('db:publish on the VPS', () => {
       image: `filmes-app:sha-${SHA_2}`,
     })
   })
+})
 
-  it('with --sha of an image the VPS does not have, stops before the upload', () => {
-    const vps = aVps()
+describe.skipIf(NO_BASH)(
+  'db:publish on the VPS stops before the upload',
+  () => {
+    it('with --sha of an image the VPS does not have, stops before the upload', () => {
+      const vps = aVps()
 
-    expect(() =>
-      vps.publishDatabase(aDatabase('v1'), 'v1', undefined, 'ccccccc'),
-    ).toThrow('The VPS does not have the image filmes-app:sha-ccccccc')
-    expect(vps.calls().filter((c) => c.startsWith('send'))).toEqual([])
-  })
+      expect(() =>
+        vps.publishDatabase(aDatabase('v1'), 'v1', undefined, 'ccccccc'),
+      ).toThrow('The VPS does not have the image filmes-app:sha-ccccccc')
+      expect(vps.calls().filter((c) => c.startsWith('send'))).toEqual([])
+    })
 
-  it('with no app live, stops before the upload', () => {
-    const vps = aVps({ appLive: false })
+    it('with no app live, stops before the upload', () => {
+      const vps = aVps({ appLive: false })
 
-    expect(() => vps.publishDatabase(aDatabase('v1'), 'v1')).toThrow(
-      'No app is live on the VPS: publish the app first',
-    )
-    expect(vps.calls().filter((c) => c.startsWith('send'))).toEqual([])
-  })
+      expect(() => vps.publishDatabase(aDatabase('v1'), 'v1')).toThrow(
+        'No app is live on the VPS: publish the app first',
+      )
+      expect(vps.calls().filter((c) => c.startsWith('send'))).toEqual([])
+    })
 
-  it('a version the VPS already has stops before the upload', () => {
-    const vps = aVps()
-    vps.publishDatabase(aDatabase('v1'), 'v1')
-    vps.calls()
+    it('a version the VPS already has stops before the upload', () => {
+      const vps = aVps()
+      vps.publishDatabase(aDatabase('v1'), 'v1')
+      vps.calls()
 
-    expect(() => vps.publishDatabase(aDatabase('other'), 'v1')).toThrow(
-      'The VPS already has the database v1.',
-    )
-    expect(vps.calls().filter((c) => c.startsWith('send'))).toEqual([])
-    expect(vps.read(join(vps.db, 'v1.sqlite'))).toBe('SQLite format 3\0v1')
-  })
+      expect(() => vps.publishDatabase(aDatabase('other'), 'v1')).toThrow(
+        'The VPS already has the database v1.',
+      )
+      expect(vps.calls().filter((c) => c.startsWith('send'))).toEqual([])
+      expect(vps.read(join(vps.db, 'v1.sqlite'))).toBe('SQLite format 3\0v1')
+    })
 
-  it('stops before the upload when the disk would keep less than 1 GB free', () => {
-    const vps = aVps()
-    const file = aDatabase('v1')
-    const size = 'SQLite format 3\0v1'.length
-    vps.freeBytes(1024 ** 3 + size - 1)
+    it('stops before the upload when the disk would keep less than 1 GB free', () => {
+      const vps = aVps()
+      const file = aDatabase('v1')
+      const size = 'SQLite format 3\0v1'.length
+      vps.freeBytes(1024 ** 3 + size - 1)
 
-    expect(() => vps.publishDatabase(file, 'v1')).toThrow(
-      /The VPS has \d+ bytes free in .*db; the database needs \d+, with 1 GB left/,
-    )
-    expect(vps.calls().filter((c) => c.startsWith('send'))).toEqual([])
-  })
+      expect(() => vps.publishDatabase(file, 'v1')).toThrow(
+        /The VPS has \d+ bytes free in .*db; the database needs \d+, with 1 GB left/,
+      )
+      expect(vps.calls().filter((c) => c.startsWith('send'))).toEqual([])
+    })
+  },
+)
 
+describe.skipIf(NO_BASH)('db:publish on the VPS with a broken upload', () => {
   it('the part an interrupted upload of the same version left counts as already there', () => {
     const vps = aVps()
     const file = aDatabase('v1')
@@ -673,7 +691,9 @@ describe('db:publish --build', () => {
     expect(rowCounts(built!)['pessoas']).toBe(6)
     rmSync(dirname(built!), { recursive: true })
   }, 120_000)
+})
 
+describe('db:publish --build, where filmes-dados is', () => {
   it('gives the engine filmes-dados and the config where they are', () => {
     const fixture = useFixture()
     const builder = fakeBuilder()
@@ -727,7 +747,9 @@ describe('db:publish --build', () => {
 
     expect(builder.calls).toHaveLength(1)
   })
+})
 
+describe('db:publish --build when the build fails', () => {
   it('without filmes-dados it says how to give it', () => {
     expect(() => build(['--dry-run'])).toThrow(
       '--build needs filmes-dados: pass --data <folder> or set FILMES_DADOS.',
@@ -773,7 +795,9 @@ describe('db:publish --build', () => {
       'the engine could not build the database: exit signal\nspawn node ENOENT',
     )
   })
+})
 
+describe('db:publish --build when the publish stops', () => {
   it('a publish that stops keeps the built file and says how to send it again', () => {
     const fixture = useFixture()
     const vps = aVps({ appLive: false })

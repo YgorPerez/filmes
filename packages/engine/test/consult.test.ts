@@ -1,7 +1,7 @@
 // `consultar` (tests/test_consultar.py): one read-only query, columns and
 // rows; anything that writes is refused and the database stays as it was.
 import { describe, expect, test } from 'vite-plus/test'
-import { consult } from '../src/index.ts'
+import { consult, consultSchema } from '../src/index.ts'
 import { useFixture } from './fixture.ts'
 
 const errorOf = (outcome: { exitCode: number; output: unknown }) => {
@@ -168,4 +168,21 @@ test('a recursive query reads', async () => {
   )
 
   expect(result).toEqual({ columns: ['x'], rows: [[1], [2], [3]] })
+})
+
+test('lists the tables and views with their columns, for the console', async () => {
+  const fixture = useFixture()
+
+  const schema = await fixture.ok(consultSchema)
+
+  expect(schema.find((t) => t.name === 'filmes')).toMatchObject({
+    name: 'filmes',
+    kind: 'table',
+    columns: expect.arrayContaining(['id', 'titulo', 'ano']),
+  })
+  expect(schema.find((t) => t.name === 'filmes')?.columns[0]).toBe('id')
+  expect(schema.find((t) => t.name === 'notas_vigentes')?.kind).toBe('view')
+  expect(schema.some((t) => t.name.startsWith('sqlite_'))).toBe(false)
+  const names = schema.map((t) => t.name)
+  expect(names).toEqual([...names].sort())
 })

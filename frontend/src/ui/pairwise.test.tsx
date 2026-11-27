@@ -4,15 +4,25 @@
 import { cleanup, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vite-plus/test'
 import { PairwiseAnswers } from './pairwise-answers'
-import { PairwiseInvite, PairwiseQuestion } from './pairwise'
+import { PairwiseQuestion } from './pairwise'
 import { pairwiseSearch } from '#/content/pairwise-address'
 import { PAIRWISE } from './pairwise.copy'
 
 afterEach(cleanup)
 
 const LINK = { session: '2026-11-20-teo', token: 'k'.repeat(43), person: 'teo' }
-const FAROL = { id: 'tt9000101', title: 'O Farol de Areia', year: 2012 }
-const PONTE = { id: 'tt9000201', title: 'Ponte Aérea', year: 2016 }
+const FAROL = {
+  id: 'tt9000101',
+  title: 'O Farol de Areia',
+  year: 2012,
+  poster: null,
+}
+const PONTE = {
+  id: 'tt9000201',
+  title: 'Ponte Aérea',
+  year: 2016,
+  poster: null,
+}
 const BACK = '/participar?sessao=2026-11-20-teo'
 
 const form = () => screen.getByRole('form', { name: PAIRWISE.title })
@@ -35,7 +45,11 @@ describe('PairwiseQuestion', () => {
     ).toEqual([LINK.session, LINK.token, 'teo', PONTE.id, FAROL.id])
     const choices = within(form()).getAllByRole('button')
     expect(
-      choices.map((b) => [b.textContent, b.getAttribute('value')]),
+      // The title under each tape; the tape without a poster repeats it.
+      choices.map((b) => [
+        (b.lastElementChild ?? b).textContent,
+        b.getAttribute('value'),
+      ]),
     ).toEqual([
       ['Ponte Aérea (2016)', PONTE.id],
       ['O Farol de Areia (2012)', FAROL.id],
@@ -58,7 +72,9 @@ describe('PairwiseQuestion', () => {
     )
     expect(screen.getByRole('alert').textContent).toBe(PAIRWISE.failed)
   })
+})
 
+describe('PairwiseQuestion, done or none', () => {
   it('thanks once every pair is answered, and says when none is asked', () => {
     const { rerender } = render(
       <PairwiseQuestion
@@ -67,7 +83,7 @@ describe('PairwiseQuestion', () => {
         back={BACK}
       />,
     )
-    expect(screen.getByRole('status').textContent).toBe(PAIRWISE.done)
+    expect(screen.getByRole('status').textContent).toBe(PAIRWISE.done(null))
     expect(screen.queryByRole('form')).toBeNull()
     rerender(
       <PairwiseQuestion
@@ -82,18 +98,33 @@ describe('PairwiseQuestion', () => {
   })
 })
 
-it('the film list leads to the questions with the link', () => {
-  render(<PairwiseInvite {...LINK} />)
-  const href = screen
-    .getByRole('link', { name: PAIRWISE.invite })
-    .getAttribute('href')!
-  const url = new URL(href, 'https://cinema.example')
-  expect(url.pathname).toBe('/participar/perguntas')
-  expect(Object.fromEntries(url.searchParams)).toEqual({
-    sessao: LINK.session,
-    chave: LINK.token,
-    presente: 'teo',
-  })
+it('after an answer, the focus goes to the count; once done, to the thanks', () => {
+  const { rerender } = render(
+    <PairwiseQuestion
+      page={{ answered: 0, total: 10, pair: [PONTE, FAROL] }}
+      link={LINK}
+      back={BACK}
+    />,
+  )
+  expect(document.activeElement).toBe(document.body)
+  rerender(
+    <PairwiseQuestion
+      page={{ answered: 1, total: 10, pair: [FAROL, PONTE] }}
+      link={LINK}
+      back={BACK}
+    />,
+  )
+  expect(document.activeElement?.textContent).toBe(PAIRWISE.progress(2, 10))
+  rerender(
+    <PairwiseQuestion
+      page={{ answered: 2, total: 2, pair: null }}
+      link={LINK}
+      back={BACK}
+      owner="Bruno"
+    />,
+  )
+  expect(document.activeElement?.textContent).toBe(PAIRWISE.doneTitle)
+  expect(screen.getByRole('status').textContent).toBe(PAIRWISE.done('Bruno'))
 })
 
 describe('PairwiseAnswers', () => {

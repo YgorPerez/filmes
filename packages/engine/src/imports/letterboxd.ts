@@ -321,18 +321,34 @@ export interface QueueCandidate {
   readonly originalTitle: unknown
   readonly year: number | null
   readonly link: string
+  /** The poster's URL, when the search gave one. */
+  readonly poster: string | null
+  /** TMDB's synopsis, in the language of the search, when it gave one. */
+  readonly overview: string | null
 }
+
+const TMDB_POSTERS = 'https://image.tmdb.org/t/p/w185'
 
 export const queueCandidate = (result: unknown): QueueCandidate => {
   const released = field(result, 'release_date')
   const head = (truthy(released) ? String(released) : '').slice(0, 4)
   const id = field(result, 'id')
+  const poster = field(result, 'poster_path')
+  const overview = field(result, 'overview')
   return {
     tmdb: id,
     title: field(result, 'title') ?? null,
     originalTitle: field(result, 'original_title') ?? null,
     year: /^[0-9]+$/.test(head) ? Number(head) : null,
     link: `https://www.themoviedb.org/movie/${String(id)}`,
+    poster:
+      typeof poster === 'string' && poster !== ''
+        ? `${TMDB_POSTERS}${poster}`
+        : null,
+    overview:
+      typeof overview === 'string' && overview.trim() !== ''
+        ? overview.trim()
+        : null,
   }
 }
 

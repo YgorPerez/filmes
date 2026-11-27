@@ -80,13 +80,16 @@ test('a Presente’s no swaps the film and redoes the Session; her yes stays and
     expect(anonymous.headers.get('location')).toMatch(/^\/participar\?/)
     expect(await films()).toEqual([a, b, c])
 
-    expect(await deck('iara')).toEqual({
+    expect(await deck('iara')).toMatchObject({
       version: 1,
       films: first.films.map(({ position, id, title }) => ({
         position,
         id,
         title,
+        mine: null,
+        card: expect.objectContaining({ id, year: expect.any(Number) }),
       })),
+      left: [],
     })
 
     const nowhere = await post({}, `versao=1&nao=${b}`)
@@ -114,9 +117,15 @@ test('a Presente’s no swaps the film and redoes the Session; her yes stays and
     expect(now).toContain(c)
     expect(now).not.toContain(b)
 
+    // Her yes stands on the film that stayed; her no took the other out.
     const mine = await deck('iara')
     expect(mine?.version).toBe(2)
-    expect(mine?.films.map((f) => f.id)).toEqual(now?.filter((id) => id !== a))
+    expect(mine?.films.map((f) => f.id)).toEqual(now)
+    expect(
+      mine?.films.filter((f) => f.mine).map((f) => [f.id, f.mine]),
+    ).toEqual([[a, 'yes']])
+    expect(mine?.films.filter((f) => f.new)).toHaveLength(1)
+    expect(mine?.left).toEqual([first.films[1]?.title])
     expect((await deck('bruno'))?.films.map((f) => f.id)).toEqual(now)
 
     const yes = await post(as('bruno'), `versao=2&sim=${c}`, {

@@ -5,7 +5,11 @@
 import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it } from 'vite-plus/test'
-import { FEEDBACK_REFUSALS, parseFeedback } from '#/content/feedback-form'
+import {
+  FEEDBACK_REFUSALS,
+  parseFeedback,
+  type FeedbackRefusal,
+} from '#/content/feedback-form'
 import type { FeedbackPage, FeedbackSession } from '#/platform/feedback'
 import { FEEDBACK } from './feedback.copy'
 import { FeedbackScreen } from './feedback'
@@ -43,8 +47,8 @@ const PAGE: FeedbackPage = {
   ],
 }
 
-function show(page: FeedbackPage = PAGE) {
-  render(<FeedbackScreen session={page.id} page={page} />)
+function show(page: FeedbackPage = PAGE, refusal?: FeedbackRefusal) {
+  render(<FeedbackScreen session={page.id} page={page} refusal={refusal} />)
   return {
     user: userEvent.setup(),
     form: screen.getByRole('form', { name: FEEDBACK.form.label }),
@@ -61,7 +65,16 @@ const posted = (form: HTMLElement) => {
   return parseFeedback(new FormData(element))
 }
 
-const reaction = (name: string) => screen.getByLabelText(`Reação: ${name}`)
+/** Her Nota on the 1 to 10 (#272). */
+const rate = (name: string, n: string) =>
+  within(
+    screen.getByRole('radiogroup', { name: FEEDBACK.form.ratingLabel(name) }),
+  ).getByRole('radio', { name: n })
+/** Her reaction's radio by its value: a Relato's pill, or "sem reação". */
+const reaction = (person: string, value: string) =>
+  document.querySelector(
+    `input[name="reacao.${person}"][value="${value}"]`,
+  ) as HTMLInputElement | null
 const comment = (name: string) =>
   screen.getByLabelText(`Comentário: ${name}`, { exact: false })
 
@@ -69,7 +82,7 @@ describe('FeedbackScreen', () => {
   it('records the Dono’s Nota for a film of the list', async () => {
     const { user, form } = show()
     await user.click(screen.getByLabelText(/O Farol de Areia/))
-    await user.selectOptions(reaction('Bruno'), 'Nota 4,5')
+    await user.click(rate('Bruno', '9'))
     expect(posted(form)).toEqual({
       ok: {
         film: 'tt9000101',
@@ -88,7 +101,7 @@ describe('FeedbackScreen', () => {
   it('records the Nota another Presente gave, with her comment', async () => {
     const { user, form } = show()
     await user.click(screen.getByLabelText(/Pequenos Milagres/))
-    await user.selectOptions(reaction('Iara'), 'Nota 2')
+    await user.click(rate('Iara', '4'))
     await user.type(comment('Iara'), ' lento demais ')
     expect(posted(form)).toEqual({
       ok: {
@@ -104,12 +117,14 @@ describe('FeedbackScreen', () => {
       },
     })
   })
+})
 
+describe('FeedbackScreen, Relatos and the choice', () => {
   it('records a Relato of the Dono about another Presente', async () => {
     const { user, form } = show()
     await user.click(screen.getByLabelText(/Pequenos Milagres/))
-    await user.selectOptions(reaction('Quim'), 'não gostou')
-    await user.selectOptions(reaction('Iara'), 'gostou')
+    await user.click(reaction('quim', 'relato:nao-gostou')!)
+    await user.click(reaction('iara', 'relato:gostou')!)
     expect(posted(form)).toEqual({
       ok: {
         film: 'tt9000601',
@@ -123,13 +138,20 @@ describe('FeedbackScreen', () => {
 
   it('offers no Relato for the Dono: she speaks with her Nota', () => {
     show()
-    const options = within(reaction('Bruno')).getAllByRole('option')
-    expect(options.map((o) => o.textContent)).not.toContain('gostou')
-    expect(
-      within(reaction('Iara'))
-        .getAllByRole('option')
-        .map((o) => o.textContent),
-    ).toContain('gostou')
+    expect(reaction('bruno', 'relato:gostou')).toBeNull()
+    expect(reaction('bruno', '')).toBeTruthy()
+    expect(reaction('iara', 'relato:gostou')).toBeTruthy()
+  })
+
+  it('asks for reactions only once a film is chosen, and drops a film refusal then', async () => {
+    const { user } = show(PAGE, 'filme')
+    const reactions = screen
+      .getByRole('heading', { name: FEEDBACK.form.reactions(false) })
+      .closest('fieldset')!
+    expect(reactions.className).toContain('hidden')
+    expect(screen.getByRole('alert')).toBeTruthy()
+    await user.click(screen.getByLabelText(/O Farol de Areia/))
+    expect(screen.queryByRole('alert')).toBeNull()
   })
 
   it('records a film out of the list by its title', async () => {
@@ -149,11 +171,13 @@ describe('FeedbackScreen', () => {
     await user.click(screen.getByLabelText(/Não vimos nada/))
     expect(posted(form)).toEqual({ ok: { film: null, reactions: [] } })
   })
+})
 
+describe('FeedbackScreen, checks and satisfaction', () => {
   it('omits reactions when the choice changes to "não vimos nada"', async () => {
     const { user, form } = show()
     await user.click(screen.getByLabelText(/O Farol de Areia/))
-    await user.selectOptions(reaction('Bruno'), 'Nota 3')
+    await user.click(rate('Bruno', '6'))
     await user.click(screen.getByLabelText(/Não vimos nada/))
     expect(posted(form)).toEqual({ ok: { film: null, reactions: [] } })
   })
@@ -200,7 +224,9 @@ describe('FeedbackScreen', () => {
       screen.queryByRole('region', { name: FEEDBACK.satisfaction.title }),
     ).toBe(null)
   })
+})
 
+describe('FeedbackScreen, refusals', () => {
   it('says every refusal, and when the Session is not open', () => {
     for (const refusal of FEEDBACK_REFUSALS) {
       render(<FeedbackScreen session={PAGE.id} page={PAGE} refusal={refusal} />)
@@ -210,9 +236,26 @@ describe('FeedbackScreen', () => {
       cleanup()
     }
     render(<FeedbackScreen session="x" page="unknown" />)
-    expect(screen.getByRole('alert').textContent).toContain(
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
       FEEDBACK.form.unknown,
     )
+    cleanup()
+    // Told already: what they saw, and the way to it (#272).
+    render(
+      <FeedbackScreen
+        session="x"
+        page="unknown"
+        told={{ title: 'Pequenos Milagres' }}
+      />,
+    )
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
+      FEEDBACK.form.told('Pequenos Milagres'),
+    )
+    expect(
+      screen
+        .getByRole('link', { name: FEEDBACK.form.toSession })
+        .getAttribute('href'),
+    ).toBe('/sessoes/x')
     cleanup()
     render(<FeedbackScreen session="x" page={null} />)
     expect(screen.getByRole('alert').textContent).toContain(
@@ -229,7 +272,8 @@ describe('parseFeedback', () => {
   }
 
   it.each<Record<string, string>>([
-    { filme: 'tt1', 'reacao.iara': 'nota:7' },
+    { filme: 'tt1', 'reacao.iara': 'nota:4,5' },
+    { filme: 'tt1', 'reacao.iara': 'nota:11' },
     { filme: 'tt1', 'reacao.iara': 'relato:amou' },
     { filme: 'tt1', 'reacao.iara': 'estrelas' },
     { filme: '../x' },

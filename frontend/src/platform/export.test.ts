@@ -96,13 +96,15 @@ describe('csvDownload', () => {
     expect(response.headers.get('Location')).toBe('/entrar')
     expect(asked).toEqual([])
   })
+})
 
+describe('csvDownload when it cannot give the file', () => {
   it.each(['', '?pessoa=', '?pessoa=%20'])(
     'goes back to Pessoas when no Pessoa is chosen (%s)',
     async (query) => {
       const { fake, asked } = exporter({ exitCode: 0, output: CSV })
       const response = await imdbDownload(download(query), BRUNO, fake)
-      expect(response.headers.get('Location')).toBe('/pessoas?erro=pessoa')
+      expect(response.headers.get('Location')).toBe('/pessoas?erro=baixar')
       expect(asked).toEqual([])
     },
   )
@@ -111,7 +113,7 @@ describe('csvDownload', () => {
     const { fake } = exporter(failure('unknown_person'))
     const response = await imdbDownload(download('?pessoa=leo'), BRUNO, fake)
     expect(response.status).toBe(303)
-    expect(response.headers.get('Location')).toBe('/pessoas?erro=pessoa')
+    expect(response.headers.get('Location')).toBe('/pessoas?erro=baixar')
   })
 
   it('logs any other engine error and goes back to her page saying so', async () => {
