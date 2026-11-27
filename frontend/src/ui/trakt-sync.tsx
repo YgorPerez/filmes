@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { TRAKT_PATH } from '#/content/trakt-form'
 import { FIELD } from './kit/field'
 import { FieldLabel } from './kit/field-label'
+import { FoldRow } from './kit/fold-row'
 import { buttonVariants } from './kit/button-variants'
 import { PostForm } from './kit/post-form'
 import { RowArrow } from './kit/row-arrow'
@@ -86,9 +87,9 @@ export function TraktSync({
         <ProfileWay action={action} name={name} own={own} user={link.user} />
       )}
       {zip && (
-        <Fold summary={COPY.zip} open={zipOpen}>
+        <FoldRow summary={COPY.zip} open={zipOpen}>
           {zip}
-        </Fold>
+        </FoldRow>
       )}
     </Section>
   )
@@ -119,32 +120,12 @@ function ProfileWay({
 }) {
   const form = <UserForm action={action} name={name} own={own} />
   if (!own && user === null) return form
+  // A way that is not the recommended one: a + row, as every fold of the
+  // import page (#274).
   return (
-    <Fold summary={user === null ? COPY.ownUser : COPY.otherUser}>{form}</Fold>
-  )
-}
-
-/** A way that is not the recommended one, folded behind a link. */
-function Fold({
-  summary,
-  open = false,
-  children,
-}: {
-  summary: string
-  open?: boolean
-  children: ReactNode
-}) {
-  return (
-    <details
-      // Named: the import page's "Importar de novo" around it is a `group`.
-      className="group/fold border-t border-dashed border-rule pt-sm"
-      open={open}
-    >
-      <summary className="inline-flex min-h-touch cursor-pointer list-none items-center text-link text-ink-2 underline underline-offset-3 group-open/fold:mb-md group-open/fold:text-ink [&::-webkit-details-marker]:hidden">
-        {summary}
-      </summary>
-      {children}
-    </details>
+    <FoldRow summary={user === null ? COPY.ownUser : COPY.otherUser}>
+      {form}
+    </FoldRow>
   )
 }
 
