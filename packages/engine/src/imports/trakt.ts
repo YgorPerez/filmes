@@ -160,7 +160,7 @@ export interface TraktReport {
 
 /** `_carregar_pessoa`: replaces the Pessoa's Trakt Fatos by those of the
  * rows. */
-export const loadPerson = (
+export const loadPersonTrakt = (
   db: Connection,
   person: Person,
   rows: readonly TraktRow[],
@@ -216,7 +216,7 @@ export const loadTrakt = (
   Effect.gen(function* () {
     for (const person of yield* readPeople) {
       const rows = yield* personTraktRows(person)
-      if (rows.length > 0) yield* loadPerson(db, person, rows)
+      if (rows.length > 0) yield* loadPersonTrakt(db, person, rows)
     }
   })
 
@@ -245,7 +245,7 @@ export const reloadPersonTrakt = (
   person: Person,
 ): Effect.Effect<void, EngineError | SqliteError, Environment> =>
   Effect.flatMap(personTraktRows(person), (rows) =>
-    Effect.asVoid(loadPerson(db, person, rows)),
+    Effect.asVoid(loadPersonTrakt(db, person, rows)),
   )
 
 export type TraktFactCounts = Readonly<
@@ -326,7 +326,7 @@ export const importTrakt = (
             input.content,
             'zip',
           )
-          const report = yield* loadPerson(
+          const report = yield* loadPersonTrakt(
             db,
             kept.person,
             yield* personTraktRows(kept.person),

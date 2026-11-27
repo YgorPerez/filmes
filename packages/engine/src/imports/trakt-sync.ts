@@ -34,7 +34,7 @@ import {
 import type { Transport } from '../sources/Source.ts'
 import { storeImport } from './stored.ts'
 import {
-  loadPerson,
+  loadPersonTrakt,
   personTraktRows,
   requireImportTables,
   TRAKT_API_KIND,
@@ -190,7 +190,7 @@ export const syncTrakt = (
             'json',
           )
           const current = yield* dropOlderSnapshots(kept.person, kept.file)
-          const report = yield* loadPerson(
+          const report = yield* loadPersonTrakt(
             db,
             current,
             yield* personTraktRows(current),
