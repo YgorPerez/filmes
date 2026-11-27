@@ -43,6 +43,11 @@ export {
 export { searchKey } from './catalog/search-key.ts'
 export { filmCovers, type CoversRequest } from './catalog/covers.ts'
 export {
+  filmCard,
+  type FilmCard,
+  type FilmCardRequest,
+} from './catalog/film-card.ts'
+export {
   EXPORT_FORMATS,
   exportRatings,
   type ExportFormat,
@@ -550,6 +555,7 @@ export {
 export {
   confirmQueueItem,
   discardQueueItem,
+  reopenQueueItem,
   viewQueue,
   type QueueDecision,
   type QueueItem,
@@ -741,3 +747,8 @@ export {
   type RatingQueue,
   type RatingQueueRequest,
 } from './people/rating.ts'
+export {
+  tasteSummary,
+  type TasteSummary,
+  type TasteSummaryRequest,
+} from './people/taste-summary.ts'

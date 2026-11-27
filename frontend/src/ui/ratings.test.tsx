@@ -6,22 +6,32 @@ import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import type { SearchAnswer } from '#/platform/catalog-search'
-import { RatingScreen } from './imports'
+import { RatingScreen } from './ratings'
 import { RATINGS } from './ratings.copy'
 
 const KEY = 'filmes-notas:teo'
 
+const film = (id: string, title: string, year: number) => ({
+  id,
+  title,
+  year,
+  genres: [],
+  directors: [],
+  runtime: null,
+})
+
 const QUEUE: RatingQueue = {
   person: 'teo',
+  rated: 2,
   films: [
     {
-      id: 'tt9000601',
-      title: 'Pequenos Milagres',
-      year: 2019,
+      ...film('tt9000601', 'Pequenos Milagres', 2019),
       genres: ['Comédia'],
+      directors: ['Lia Couto'],
+      runtime: 96,
     },
-    { id: 'tt9000602', title: 'Casa Cheia', year: 2021, genres: [] },
-    { id: 'tt9000701', title: 'Deserto Branco', year: 2015, genres: [] },
+    film('tt9000602', 'Casa Cheia', 2021),
+    film('tt9000701', 'Deserto Branco', 2015),
   ],
 }
 
@@ -62,10 +72,10 @@ const sent = () =>
   )
 
 describe('the rating screen', () => {
-  it('shows the first film of the Fila with its year and genres', () => {
+  it('shows the first film of the Fila with its directors, year, runtime and genres', () => {
     render(<RatingScreen queue={QUEUE} search={null} />)
     expect(card().getByRole('heading').textContent).toBe('Pequenos Milagres')
-    expect(card().getByText('2019')).toBeTruthy()
+    expect(card().getByText('Direção: Lia Couto · 2019 · 1 h 36')).toBeTruthy()
     expect(card().getByText('Comédia')).toBeTruthy()
     expect(
       card()
@@ -97,13 +107,86 @@ describe('the rating screen', () => {
 
     expect(card().getByRole('heading').textContent).toBe('Casa Cheia')
     expect(
-      screen.getByText('Pequenos Milagres').closest('li')?.textContent,
+      screen.getAllByText('Pequenos Milagres').at(-1)?.closest('li')
+        ?.textContent,
     ).toContain('8')
     expect(sent()).toEqual({ 'nota.tt9000601': '8' })
     expect(screen.getByRole('button', { name: RATINGS.done(1) })).toBeTruthy()
+    // What the tap did: said aloud, counted toward ten, the focus on the
+    // next film.
+    expect(
+      screen.getByText(
+        RATINGS.announceRated(8, 'Pequenos Milagres', 'Casa Cheia'),
+      ),
+    ).toBeTruthy()
+    expect(screen.getByText(RATINGS.progress(3, 10))).toBeTruthy()
   })
 
-  it('"Não vi" moves on with no Nota, and Pronto waits for one', async () => {
+  it('"Voltar ao anterior" brings the last film back, Nota or "Não vi"', async () => {
+    const user = userEvent.setup()
+    render(<RatingScreen queue={QUEUE} search={null} />)
+    await user.click(card().getByRole('button', { name: 'Nota 8' }))
+    await user.click(card().getByRole('button', { name: RATINGS.notSeen }))
+    expect(card().getByRole('heading').textContent).toBe('Deserto Branco')
+
+    await user.click(
+      screen.getByRole('button', { name: RATINGS.undoLabel('Casa Cheia') }),
+    )
+    expect(card().getByRole('heading').textContent).toBe('Casa Cheia')
+    await user.click(
+      screen.getByRole('button', {
+        name: RATINGS.undoLabel('Pequenos Milagres'),
+      }),
+    )
+    expect(card().getByRole('heading').textContent).toBe('Pequenos Milagres')
+    expect(sent()).toEqual({})
+  })
+
+  it('at ten, the card waits behind "Mais 10"', async () => {
+    const user = userEvent.setup()
+    render(<RatingScreen queue={{ ...QUEUE, rated: 9 }} search={null} />)
+    await user.click(card().getByRole('button', { name: 'Nota 8' }))
+
+    expect(screen.queryByRole('article')).toBeNull()
+    expect(screen.getByText(RATINGS.goal(10))).toBeTruthy()
+    await user.click(screen.getByRole('button', { name: RATINGS.more }))
+    expect(card().getByRole('heading').textContent).toBe('Casa Cheia')
+    expect(screen.getByText(RATINGS.progress(10, 20))).toBeTruthy()
+  })
+
+  it('shows the card the route loads: poster, Portuguese title, synopsis', async () => {
+    render(
+      <RatingScreen
+        queue={QUEUE}
+        search={null}
+        loadCard={(id) =>
+          Promise.resolve({
+            id,
+            title: 'Pequenos Milagres',
+            titlePt: 'Milagrinhos',
+            year: 2019,
+            runtime: 96,
+            directors: ['Lia Couto'],
+            poster: 'https://image.tmdb.org/t/p/w185/p.jpg',
+            synopsis: 'Uma costureira reabre o cinema.',
+            attributions: [],
+          })
+        }
+      />,
+    )
+    expect((await card().findByRole('heading')).textContent).toBe('Milagrinhos')
+    expect(
+      await card().findByText(RATINGS.original('Pequenos Milagres')),
+    ).toBeTruthy()
+    expect(card().getByText('Uma costureira reabre o cinema.')).toBeTruthy()
+    expect(
+      card().getByRole('img', { name: RATINGS.poster('Milagrinhos') }),
+    ).toBeTruthy()
+  })
+
+  it('"Não vi" moves on with no Nota, and Pronto says it needs one', async () => {
+    const fetched = vi.fn<typeof fetch>()
+    vi.stubGlobal('fetch', fetched)
     const user = userEvent.setup()
     render(<RatingScreen queue={QUEUE} search={null} />)
 
@@ -111,13 +194,9 @@ describe('the rating screen', () => {
 
     expect(card().getByRole('heading').textContent).toBe('Casa Cheia')
     expect(sent()).toEqual({})
-    expect(
-      (
-        screen.getByRole('button', {
-          name: RATINGS.done(0),
-        }) as HTMLButtonElement
-      ).disabled,
-    ).toBe(true)
+    await user.click(screen.getByRole('button', { name: RATINGS.done(0) }))
+    expect(screen.getByText(RATINGS.nothing)).toBeTruthy()
+    expect(fetched).not.toHaveBeenCalled()
   })
 
   it('a Nota taken back leaves the draft', async () => {
@@ -159,7 +238,10 @@ describe('the rating screen', () => {
 
     render(<RatingScreen queue={QUEUE} search={null} written={1} />)
 
-    expect(screen.getByRole('status').textContent).toBe(RATINGS.written(1))
+    expect(screen.getByText(RATINGS.written(1)).getAttribute('role')).toBe(
+      'status',
+    )
+    expect(screen.getByRole('link', { name: RATINGS.ask })).toBeTruthy()
     expect(sent()).toEqual({})
     expect(localStorage.getItem(KEY)).not.toContain('tt9000601"')
   })
@@ -167,15 +249,17 @@ describe('the rating screen', () => {
   it('a film picked in the search is the one to rate', () => {
     render(<RatingScreen queue={QUEUE} search={SEARCH} film="tt9000401" />)
     expect(card().getByRole('heading').textContent).toBe('Fronteira')
-    expect(card().getByText('2008')).toBeTruthy()
-    expect(card().getByText('Rui Tavares')).toBeTruthy()
+    expect(card().getByText('Direção: Rui Tavares · 2008')).toBeTruthy()
+    expect(
+      screen.getByRole('link', { name: RATINGS.pickLabel('Fronteira (2008)') }),
+    ).toBeTruthy()
   })
 
   it('says when the Fila is over, and when the engine cannot run', async () => {
     const user = userEvent.setup()
     render(
       <RatingScreen
-        queue={{ person: 'teo', films: QUEUE.films.slice(0, 1) }}
+        queue={{ ...QUEUE, films: QUEUE.films.slice(0, 1) }}
         search={null}
       />,
     )

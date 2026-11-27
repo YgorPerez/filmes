@@ -10,11 +10,13 @@ import {
   imdbCsvPath,
   letterboxdCsvPath,
   importsPath,
+  QUEUE_PATH,
   RATINGS_PATH,
 } from '#/content/paths'
 import { sessionPath } from '#/content/session-paths'
 import { TRAKT_PATH } from '#/content/trakt-form'
 import type { PersonPage } from '#/platform/people'
+import type { TasteSummary } from '@filmes/engine'
 import { OwnerTag } from './kit/owner-tag'
 import { Slip } from './kit/slip'
 import {
@@ -128,6 +130,8 @@ export function PersonScreen({
   problem,
   start,
   showTrakt = false,
+  pending = 0,
+  taste = null,
 }: {
   slug: string
   page: PersonPage | 'unknown' | null
@@ -138,6 +142,10 @@ export function PersonScreen({
   /** Meu gosto's part of the setup guide; only on her own page. */
   start?: MyStart
   showTrakt?: boolean
+  /** On Meu gosto, the films of her imports that wait in the queue. */
+  pending?: number
+  /** On Meu gosto, her genres and directors. */
+  taste?: TasteSummary | null
 }) {
   if (page === 'unknown') return <UnknownPerson />
   const own = page !== null && page.person === page.viewer.person
@@ -165,7 +173,14 @@ export function PersonScreen({
                 what the Dono acts on first (#273). */}
             <div className="grid gap-2xl min-[900px]:grid-cols-2 min-[900px]:items-start">
               <div className="flex min-w-0 flex-col gap-2xl">
-                {own && <Glance page={page} start={start} />}
+                {own && (
+                  <Glance
+                    page={page}
+                    start={start}
+                    pending={pending}
+                    taste={taste}
+                  />
+                )}
                 {own && showTrakt && (
                   <a
                     href={TRAKT_PATH}
@@ -178,7 +193,12 @@ export function PersonScreen({
                   </a>
                 )}
                 {!own && <SessionsWith page={page} />}
-                <Notes slug={slug} own={own} page={page} />
+                <Notes
+                  slug={slug}
+                  own={own}
+                  page={page}
+                  pending={own ? pending : 0}
+                />
                 {own && start && (
                   <MyStartSections start={start} person={slug} />
                 )}
@@ -347,10 +367,12 @@ function Notes({
   slug,
   own,
   page,
+  pending,
 }: {
   slug: string
   own: boolean
   page: PersonPage
+  pending: number
 }) {
   const { notes } = PERSON
   const { ratings, predictionError } = page
@@ -362,6 +384,19 @@ function Notes({
       aside={ratings === null ? undefined : String(ratings.length)}
     >
       {ratings === null && <p className="text-ink-2">{notes.noDatabase}</p>}
+      {pending > 0 && (
+        <p className="flex flex-wrap items-center gap-x-sm">
+          <span className="rounded-pill bg-sticker-orange px-sm font-display text-meta-strong text-on-sticker">
+            {notes.pending(pending)}
+          </span>
+          <a
+            href={QUEUE_PATH}
+            className="text-ink underline underline-offset-3"
+          >
+            {notes.resolve}
+          </a>
+        </p>
+      )}
       {ratings?.length === 0 && (
         <p className="text-ink-2">{notes.empty(own, page.name)}</p>
       )}
@@ -412,7 +447,9 @@ function Notes({
                 {notes.downloadLetterboxd}
               </a>
             </div>
-            <p className="text-meta text-ink-2">{notes.movielens}</p>
+            {page.viewer.admin && (
+              <p className="text-meta text-ink-2">{notes.movielens(own)}</p>
+            )}
           </div>
         </Disclosure>
       )}
@@ -452,7 +489,17 @@ const changedAdjustments = (page: PersonPage) => page.adjustments.length
 
 /** Meu gosto's opening ficha: how many Notas (and how many to 10), what
  * she said of her taste, and the one next step. */
-function Glance({ page, start }: { page: PersonPage; start?: MyStart }) {
+function Glance({
+  page,
+  start,
+  pending,
+  taste,
+}: {
+  page: PersonPage
+  start?: MyStart
+  pending: number
+  taste: TasteSummary | null
+}) {
   const { glance } = PERSON
   const notes = page.ratings?.length ?? 0
   const said = tasteParts(page)
@@ -460,13 +507,15 @@ function Glance({ page, start }: { page: PersonPage; start?: MyStart }) {
     .map(([, title, n]) => `${n} ${title}`)
   const connector = start?.setup?.steps.find((s) => s.step === 'connector')
   const [step, href] =
-    notes < 10
-      ? [glance.steps.rate, RATINGS_PATH]
-      : connector && !connector.done && !connector.skipped
-        ? [glance.steps.connector, '#conector']
-        : page.openQuestions.length > 0
-          ? [glance.steps.questions, '#perguntas']
-          : [glance.steps.ask, '/sessoes/nova']
+    pending > 0
+      ? [glance.steps.queue(pending), QUEUE_PATH]
+      : notes < 10
+        ? [glance.steps.rate, RATINGS_PATH]
+        : connector && !connector.done && !connector.skipped
+          ? [glance.steps.connector, '#conector']
+          : page.openQuestions.length > 0
+            ? [glance.steps.questions, '#perguntas']
+            : [glance.steps.ask, '/sessoes/nova']
   return (
     <Slip id="olhada" title={glance.title}>
       <p className="font-display text-step-title">
@@ -478,6 +527,9 @@ function Glance({ page, start }: { page: PersonPage; start?: MyStart }) {
           </span>
         )}
       </p>
+      {taste && taste.genres.length > 0 && (
+        <p>{glance.likes([...taste.genres, ...taste.directors])}</p>
+      )}
       <p className="text-ink-2">
         {said.length === 0
           ? glance.nothingSaid
@@ -887,14 +939,27 @@ function originOf(kind: 'stated' | 'report', s: Statement) {
     : PERSON.imported
 }
 
-/** What the statement is about, in plain words: "ama Sofia Rangel", "só
- * menciona a tag “chuva”". The ID stays out. */
-function statementTarget(s: Statement) {
+/** What the Declarado is about, in words, its title the link to the film
+ * or entity (the id stays behind it): "sobre O Farol de Areia", "ama
+ * Lia Couto", "só menciona a tag “chuva”". */
+function StatementTarget({ s }: { s: Statement }) {
   if (s.target === null) return null
   const reaction = s.reaction
     ? PERSON.reactions[s.reaction as Reaction]
-    : PERSON.noReaction
-  return `${reaction} ${PERSON.plainLabel(s.label ?? s.target)}`
+    : PERSON.about
+  return (
+    <span className="text-meta text-ink-2">
+      {reaction}{' '}
+      <a
+        href={PERSON.targetUrl(s.target)}
+        target="_blank"
+        rel="noreferrer"
+        className="text-ink underline decoration-rule underline-offset-3 hover:decoration-ink"
+      >
+        {PERSON.plainLabel(s.label ?? s.target)}
+      </a>
+    </span>
+  )
 }
 
 function Statements({
@@ -946,20 +1011,14 @@ function Statements({
                 )
               }
             >
-              <span>“{s.text}”</span>
+              <span>{PERSON.statementText(s.text)}</span>
               <span className="flex flex-wrap items-center gap-x-sm gap-y-2xs">
                 <StrengthDots
                   strength={s.strength}
                   word={PERSON.strengths[s.strength]}
                 />
-                <Meta
-                  parts={[
-                    statementTarget(s),
-                    s.specific ? PERSON.specific : PERSON.generic,
-                    shortDate(s.date),
-                    s.source,
-                  ]}
-                />
+                <StatementTarget s={s} />
+                <Meta parts={[shortDate(s.date), s.source]} />
               </span>
             </Item>
           )

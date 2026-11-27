@@ -591,9 +591,14 @@ describe('PersonScreen', () => {
     const stated = screen
       .getByText('“adoro os filmes dela”')
       .closest('li') as HTMLElement
+    // What it is about, in words, the title the link (the id behind it).
+    expect(within(stated).getByText(/^ama/).textContent).toBe(
+      'ama Sofia Rangel',
+    )
     expect(
-      within(stated).getByText(/ama Sofia Rangel · específico/),
+      within(stated).getByRole('link', { name: 'Sofia Rangel' }),
     ).toBeTruthy()
+    expect(within(stated).queryByText(/específico/)).toBeNull()
     expect(
       within(stated).getByRole('img', { name: 'Força forte' }),
     ).toBeTruthy()
@@ -703,13 +708,23 @@ describe('the Notas section', () => {
     expect(link(notes, PERSON.notes.downloadLetterboxd)).toBe(
       '/exportar/letterboxd.csv?pessoa=iara',
     )
-    expect(within(notes).getByText(PERSON.notes.movielens)).toBeTruthy()
+    // Where the CSVs go is for an admin.
+    expect(within(notes).queryByText(PERSON.notes.movielens(false))).toBeNull()
     // The rating queue is the logged-in Dono's: not on another's page.
     expect(
       within(notes).queryByRole('link', { name: PERSON.notes.rate }),
     ).toBeNull()
     await userEvent.setup().click(within(notes).getByText(PERSON.notes.list(1)))
     expect(within(notes).getByText(/Fronteira/)).toBeTruthy()
+  })
+
+  it('tells an admin where the CSVs go', () => {
+    show({ ...IARA, viewer: { person: 'bruno', name: 'Bruno', admin: true } })
+    expect(
+      within(section(PERSON.notes.title)).getByText(
+        PERSON.notes.movielens(false),
+      ),
+    ).toBeTruthy()
   })
 
   it('offers no CSV without a Nota, and says how to get some', () => {
@@ -956,7 +971,56 @@ describe('Meu gosto in the second person', () => {
     expect(
       within(glance).getByRole('link', { name: PERSON.glance.steps.rate }),
     ).toHaveProperty('pathname', '/meu-gosto/notas')
-    expect(screen.getByText(PERSON.ownName('Bruno', ['eu']))).toBeTruthy()
+    // "eu" is how he says himself in the chat, not a name to show.
+    expect(screen.getByText('Nas Sessões, você é Bruno.')).toBeTruthy()
+  })
+
+  it('says how many of her films wait in the queue, and leads there first', () => {
+    render(<PersonScreen slug="bruno" page={OWN} pending={2} />)
+    const notes = section(PERSON.notes.title)
+    expect(within(notes).getByText(PERSON.notes.pending(2))).toBeTruthy()
+    expect(
+      within(notes).getByRole('link', { name: PERSON.notes.resolve }),
+    ).toHaveProperty('pathname', '/meu-gosto/fila')
+    expect(
+      within(section(PERSON.glance.title)).getByRole('link', {
+        name: PERSON.glance.steps.queue(2),
+      }),
+    ).toBeTruthy()
+  })
+
+  it('says what her Notas tell of her taste', () => {
+    render(
+      <PersonScreen
+        slug="bruno"
+        page={OWN}
+        taste={{
+          person: 'bruno',
+          liked: 8,
+          genres: ['Drama', 'Crime'],
+          directors: ['Rui Tavares'],
+        }}
+      />,
+    )
+    expect(
+      within(section(PERSON.glance.title)).getByText(
+        'Pelas suas Notas, você gosta de Drama, Crime e Rui Tavares.',
+      ),
+    ).toBeTruthy()
+  })
+
+  it('says a Letterboxd tag in words', () => {
+    render(
+      <PersonScreen
+        slug="bruno"
+        page={{
+          ...OWN,
+          stated: [{ ...IARA.stated[1]!, text: 'tag: chuva' }],
+        }}
+      />,
+    )
+    expect(screen.getByText('Marcou com a tag “chuva”')).toBeTruthy()
+    expect(screen.queryByText(/tag: chuva/)).toBeNull()
   })
 
   it('folds the empty fichas into one line, and says the Ajustes are all normal', () => {

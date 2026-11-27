@@ -1,9 +1,4 @@
-import type {
-  ImportNotice,
-  ImportRefusal,
-  QueueNotice,
-  QueueRefusal,
-} from '#/content/import-action'
+import type { ImportNotice, ImportRefusal } from '#/content/import-action'
 
 const count = (n: number, one: string, many: string) =>
   n === 1 ? `1 ${one}` : `${n} ${many}`
@@ -160,53 +155,4 @@ export const PERSON_IMPORTS = {
     submit: 'Importar do perfil',
     busy: 'Lendo o perfil…',
   },
-} as const
-
-export const QUEUE = {
-  back: 'Voltar',
-  title: 'Fila de resolução',
-  lead: 'Filmes dos arquivos do Letterboxd que o filmes não achou no Catálogo sozinho. A decisão vale para todas as Pessoas que têm o filme.',
-  unavailable: UNAVAILABLE,
-  empty: 'Nenhum filme esperando. Tudo resolvido.',
-  of: 'de',
-  candidates: 'O TMDB sugere',
-  pick: 'É este',
-  pickLabel: (title: string, tmdb: string) => `É este: ${title}, TMDB ${tmdb}`,
-  confirm: 'Confirmar',
-  film: 'Filme',
-  filmHint: 'tt…, link do IMDb ou link de filme do TMDB',
-  discard: 'Descartar',
-  discardOpen: 'Descartar este filme',
-  reason: 'Motivo',
-  reasonHint: 'sem motivo, “ignorar”',
-  reasons: ['não é filme', 'ignorar'],
-  reprocess: 'Perguntar ao TMDB de novo',
-  reprocessLead:
-    'O TMDB pode achar agora o que não achou no import. O que ele já respondeu vem do cache.',
-  /** A button while its post runs. */
-  busy: {
-    confirm: 'Confirmando…',
-    discard: 'Descartando…',
-    reprocess: 'Perguntando ao TMDB…',
-  },
-  item: (name: string, year: number | null) =>
-    year === null ? name : `${name} (${year})`,
-  notices: {
-    confirmado: () =>
-      'Filme confirmado: os Fatos dele entraram para quem o tem.',
-    descartado: () => 'Filme descartado: saiu da fila.',
-    igual: () => 'Já estava decidido assim: nada mudou.',
-    reprocessado: (resolved = 0, left = 0) =>
-      `TMDB consultado de novo: ${count(resolved, 'filme saiu', 'filmes saíram')} da fila, ${left === 1 ? '1 continua' : `${left} continuam`}.`,
-  } satisfies Record<QueueNotice, (resolved?: number, left?: number) => string>,
-  refusals: {
-    pedido: 'Faltou um campo, ou um valor não vale. Confira o formulário.',
-    filme: 'Use um tt…, um link de filme do IMDb ou um link de filme do TMDB.',
-    'sem-imdb':
-      'O TMDB não tem o ID do IMDb desse filme. Confirme com o tt… ou com o link do IMDb.',
-    item: 'Esse filme já saiu da fila: alguém decidiu antes.',
-    indisponivel: 'Não deu para gravar agora. Tente de novo daqui a pouco.',
-    falha:
-      'O site está com um problema, e ele ficou registrado no log do servidor. Tentar de novo não resolve.',
-  } satisfies Record<QueueRefusal, string>,
 } as const

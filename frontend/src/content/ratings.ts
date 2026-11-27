@@ -11,3 +11,30 @@ export const readRatingQueue = createServerFn({ method: 'GET' })
     const { appRatingQueue } = await import('#/platform/imports')
     return appRatingQueue(context.owner)
   })
+
+/** One film's card for the rating screen (#274): the poster, the synopsis,
+ * the directors and the runtime, asked as the card comes up, so the page
+ * opens without waiting for TMDB. Null when there is none. */
+export const readFilmCard = createServerFn({ method: 'GET' })
+  .middleware([ownerMiddleware])
+  .validator((value: unknown) => {
+    const film = (value ?? {}) as Record<string, unknown>
+    if (typeof film.id !== 'string' || !/^tt\d+$/.test(film.id))
+      throw new Error('film id required')
+    return { id: film.id }
+  })
+  .handler(async ({ context, data }) => {
+    requireOwner(context.owner)
+    const { appFilmCard } = await import('#/platform/imports')
+    return appFilmCard(data.id, context.owner)
+  })
+
+/** Meu gosto's look at her taste (#274): the genres and directors of the
+ * films she liked. Null when the engine cannot run. */
+export const readTasteSummary = createServerFn({ method: 'GET' })
+  .middleware([ownerMiddleware])
+  .handler(async ({ context }) => {
+    requireOwner(context.owner)
+    const { appTasteSummary } = await import('#/platform/imports')
+    return appTasteSummary(context.owner)
+  })

@@ -651,12 +651,22 @@ describe('importsFromEngine, the queue', () => {
 
     const decide = (action: QueueAction) => ok(imports.decide(action, AUTHOR))
     const film = 'https://www.themoviedb.org/movie/9102'
+    const vento = { id: VENTO, title: 'Vento Norte (2020)' }
+    const lost = { id: LOST, title: 'Filme Perdido (2001)' }
     expect(await decide({ kind: 'confirm', id: VENTO, film })).toEqual({
       notice: 'confirmado',
+      item: vento,
     })
+    // Taken back, it waits again; confirmed again for good.
+    expect(await decide({ kind: 'reopen', id: VENTO })).toEqual({
+      notice: 'reaberto',
+      item: vento,
+    })
+    expect((await ok(imports.queue())).items).toHaveLength(2)
+    await decide({ kind: 'confirm', id: VENTO, film })
     const discard = { kind: 'discard', id: LOST, reason: 'ignorar' } as const
-    expect(await decide(discard)).toEqual({ notice: 'descartado' })
-    expect(await decide(discard)).toEqual({ notice: 'igual' })
+    expect(await decide(discard)).toEqual({ notice: 'descartado', item: lost })
+    expect(await decide(discard)).toEqual({ notice: 'igual', item: lost })
     expect(await decide({ kind: 'reprocess' })).toEqual({
       notice: 'reprocessado',
       resolved: 0,
@@ -666,6 +676,8 @@ describe('importsFromEngine, the queue', () => {
     // nothing: no commit.
     expect(log()).toEqual([
       'Bruno <bruno@example.org>|import letterboxd quim: olga.zip',
+      `Bruno <bruno@example.org>|letterboxd queue confirm ${VENTO}`,
+      `Bruno <bruno@example.org>|letterboxd queue reopen ${VENTO}`,
       `Bruno <bruno@example.org>|letterboxd queue confirm ${VENTO}`,
       `Bruno <bruno@example.org>|letterboxd queue discard ${LOST}`,
     ])

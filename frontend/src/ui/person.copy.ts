@@ -14,15 +14,20 @@ export const PERSON = {
   back: 'Pessoas',
   myTaste: 'Meu gosto',
   /** Meu gosto's line under the h1: the name the Sessões give her. */
-  ownName: (name: string, aliases: readonly string[]) =>
-    aliases.length === 0
+  ownName: (name: string, aliases: readonly string[]) => {
+    const others = namesOnly(aliases)
+    return others.length === 0
       ? `Nas Sessões, você é ${name}.`
-      : `Nas Sessões, você é ${name} (também ${aliases.join(', ')}).`,
+      : `Nas Sessões, você é ${name} (também ${others.join(', ')}).`
+  },
   glance: {
     title: 'Seu gosto em uma olhada',
     notes: (n: number) =>
       n === 1 ? '1 Nota' : `${n.toLocaleString('pt-BR')} Notas`,
     toTen: (n: number) => `faltam ${10 - n} para 10`,
+    /** The genres and directors of the films she liked. */
+    likes: (names: readonly string[]) =>
+      `Pelas suas Notas, você gosta de ${names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} e ${names.at(-1)}`}.`,
     said: 'O que você disse',
     nothingSaid: 'Nada dito ainda sobre o seu gosto.',
     next: 'Próximo passo',
@@ -30,6 +35,10 @@ export const PERSON = {
       rate: 'dar notas a filmes que você viu',
       connector: 'ligar o conector no Claude',
       questions: 'responder as perguntas abertas',
+      queue: (n: number) =>
+        n === 1
+          ? 'dizer qual é o filme que espera na fila'
+          : `dizer quais são os ${n} filmes que esperam na fila`,
       ask: 'pedir um filme para hoje',
     },
   },
@@ -114,8 +123,12 @@ export const PERSON = {
     more: 'Baixar as Notas em CSV',
     download: 'Baixar CSV do IMDb',
     downloadLetterboxd: 'Baixar CSV do Letterboxd',
-    movielens:
-      'O CSV do IMDb entra no MovieLens em Import or Export Data, como avaliações do IMDb. O do Letterboxd leva as Notas e os Já vistos ao diário no Letterboxd, pelo import de dados de lá.',
+    /** For an admin: where the CSVs go. */
+    movielens: (own: boolean) =>
+      `O CSV do IMDb entra no MovieLens em Import or Export Data, como avaliações do IMDb. O do Letterboxd leva as Notas e os Já vistos ao ${own ? 'seu diário' : 'diário'} no Letterboxd, pelo import de dados de lá.`,
+    pending: (n: number) =>
+      n === 1 ? '1 filme espera você' : `${n} filmes esperam você`,
+    resolve: 'Resolver na fila',
     list: (n: number) => (n === 1 ? 'Ver a Nota' : `Ver as ${n} Notas`),
     empty: (own: boolean, name: string) =>
       own
@@ -125,7 +138,10 @@ export const PERSON = {
   },
   contents: 'Nesta página',
   owner: 'Dono',
-  aliases: (aliases: readonly string[]) => `também ${aliases.join(', ')}`,
+  aliases: (aliases: readonly string[]) =>
+    namesOnly(aliases).length === 0
+      ? null
+      : `também ${namesOnly(aliases).join(', ')}`,
   unknown: {
     title: 'Pessoa não encontrada',
     lead: 'Ninguém com esse nome nas Pessoas. O endereço pode ter mudado, ou a Pessoa foi removida.',
@@ -306,8 +322,19 @@ export const PERSON = {
     weak: 'fraca',
     guess: 'palpite',
   } satisfies Record<Strength, string>,
-  specific: 'específico',
-  generic: 'genérico',
+  /** A Declarado with no reaction, as the page says it. */
+  about: 'sobre',
+  /** A Declarado's text: a Letterboxd tag in words, the rest in quotes. */
+  statementText: (text: string) => {
+    const tag = /^tag: (.+)$/.exec(text)?.[1]
+    return tag === undefined ? `“${text}”` : `Marcou com a tag “${tag}”`
+  },
+  /** Where a target's title leads: the film on the IMDb, an entity on the
+   * Wikidata. */
+  targetUrl: (id: string) =>
+    id.startsWith('tt')
+      ? `https://www.imdb.com/title/${id}/`
+      : `https://www.wikidata.org/wiki/${id}`,
   /** An engine label in plain words: "tag: chuva" is the tag “chuva”. */
   plainLabel: (label: string) => label.replace(/^tag: (.+)$/, 'a tag “$1”'),
   /** A Nota on the 1 to 10 scale she gives it on (the rating screen, the
@@ -336,6 +363,11 @@ export const PERSON = {
     return REQUIRED[field] ?? 'Falta preencher este campo.'
   },
 } as const
+
+/** The aliases that are names: "eu", how the Dono says herself in the
+ * chat, is not one to show. */
+const namesOnly = (aliases: readonly string[]) =>
+  aliases.filter((alias) => alias.trim().toLowerCase() !== 'eu')
 
 /** The Nota of 0,5 to 5 the engine keeps, on the scale of 1 to 10. */
 const tenScale = (rating: number) =>
