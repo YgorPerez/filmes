@@ -4,6 +4,11 @@ import { defineTool } from '../tool.ts'
 
 export default defineTool({
   name: 'consult',
+  annotations: {
+    readOnlyHint: true,
+    destructiveHint: false,
+    openWorldHint: false,
+  },
   description:
     'Só para admin. Consulta SQL livre ao banco derivado, só leitura (um SELECT). Devolve {columns, rows}. ' +
     'Escrita é recusada com o erro read_only; SQL que não roda, com invalid_sql. Quem não tem admin: true recebe ' +

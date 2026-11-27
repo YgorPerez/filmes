@@ -9,6 +9,11 @@ import { defineTool } from '../tool.ts'
 
 export default defineTool({
   name: 'search_catalog',
+  annotations: {
+    readOnlyHint: true,
+    destructiveHint: false,
+    openWorldHint: false,
+  },
   description:
     'Busca no Catálogo pelo nome, sem ligar para acento nem maiúscula, e devolve os IDs que as outras ferramentas ' +
     'pedem: `films` ({id tt..., title, year, votes, rating, directors}), `people` (diretor, roteirista, ator), ' +

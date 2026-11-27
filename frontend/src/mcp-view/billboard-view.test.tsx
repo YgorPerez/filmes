@@ -1,12 +1,13 @@
 // @vitest-environment jsdom
 // The Cartaz's MCP Apps view (#111) with a fake host: what it shows for the
 // `billboard` tool's result, Enviar through `answer_billboard` and the
-// message Claude gets, the host's theme and fullscreen. The bundled file in
+// message the chat receives, the host's theme and fullscreen. The bundled file in
 // a real frame-like page is `scripts/billboard-view.test.ts`.
 import { act, cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 import { MODEL } from '../ui/billboard.fixture'
+import { SEND_STATUS } from '../ui/billboard-send.copy'
 import { BILLBOARD } from '../ui/billboard.copy'
 import { BillboardView, type Host } from './billboard-view'
 import { mountView, type ViewApp } from './mount-view'
@@ -106,7 +107,7 @@ describe('the view shows', () => {
 })
 
 describe('Enviar', () => {
-  it('records the reply with answer_billboard and tells Claude to regenerate', async () => {
+  it('records the reply with answer_billboard and asks the chat to regenerate', async () => {
     const host = fakeHost(json(REPLY))
     render(<BillboardView result={shown} host={host} />)
 
@@ -116,14 +117,15 @@ describe('Enviar', () => {
       session: MODEL.session,
       text: '#cartaz 2026-11-20-iara v2\n1 tt9000104 · trocar\n',
     })
-    expect(host.sendMessage).toHaveBeenCalledWith(
+    expect(host.callTool).toHaveBeenCalledTimes(1)
+    expect(host.sendMessage).toHaveBeenCalledExactlyOnceWith(
       'Enviei o Cartaz 2026-11-20-iara v2 pela tela; answer_billboard já gravou.\n' +
         'refazer · manter: tt9000105',
     )
-    expect(status()).toBe(view.regenerating)
+    expect(status()).toBe('Anotado. Pedi ao chat pra refazer a lista.')
   })
 
-  it('stars alone are recorded, and Claude gets nothing', async () => {
+  it('stars alone are recorded, without a chat message', async () => {
     const host = fakeHost(json({ ...REPLY, regenerate: false, keep: [] }))
     const user = userEvent.setup()
     render(<BillboardView result={shown} host={host} />)
@@ -135,7 +137,7 @@ describe('Enviar', () => {
     expect(status()).toBe(view.recorded)
   })
 
-  it('a comment goes to Claude without a regenerate', async () => {
+  it('a comment goes to the chat without regenerating', async () => {
     const host = fakeHost(
       json({
         ...REPLY,
@@ -145,7 +147,7 @@ describe('Enviar', () => {
     )
     render(<BillboardView result={shown} host={host} />)
     await swapFirstAndSend()
-    expect(status()).toBe(view.toClaude)
+    expect(status()).toBe('Anotado. Mandei seu texto pro chat.')
   })
 
   it("says the engine's refusal and points to Copiar", async () => {
@@ -172,7 +174,9 @@ describe('Enviar', () => {
     const refusedMessage = fakeHost(json(REPLY), { isError: true })
     render(<BillboardView result={shown} host={refusedMessage} />)
     await swapFirstAndSend()
-    expect(status()).toBe(view.notNotified)
+    expect(status()).toBe(
+      'Anotado. O aviso não chegou ao chat. Se precisar refazer a lista, peça lá.',
+    )
     cleanup()
 
     render(
@@ -182,7 +186,7 @@ describe('Enviar', () => {
       />,
     )
     await swapFirstAndSend()
-    expect(status()).toBe(view.notNotified)
+    expect(status()).toBe(SEND_STATUS.notNotified)
   })
 
   it('one send at a time', async () => {
@@ -199,11 +203,11 @@ describe('Enviar', () => {
     await user.click(screen.getByRole('button', { name: copy.send }))
     expect(host.callTool).toHaveBeenCalledTimes(1)
     await act(async () => answer(json(REPLY)))
-    expect(status()).toBe(view.regenerating)
+    expect(status()).toBe(SEND_STATUS.regenerating)
   })
 })
 
-describe('the message Claude gets', () => {
+describe('the chat follow-up message', () => {
   it('one line per field, the free text on one line and visible', () => {
     expect(
       replyMessage({
@@ -241,7 +245,7 @@ describe('the message Claude gets', () => {
     expect(clima([])).toEqual(['refazer · manter: nenhum', 'clima: nenhum'])
   })
 
-  it('none when Claude has nothing to do', () => {
+  it('none when there is no follow-up', () => {
     expect(
       replyMessage({ ...REPLY, regenerate: false, comments: [] }),
     ).toBeNull()

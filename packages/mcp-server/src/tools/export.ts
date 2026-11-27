@@ -4,6 +4,11 @@ import { defineTool, personName } from '../tool.ts'
 
 export default defineTool({
   name: 'export',
+  annotations: {
+    readOnlyHint: true,
+    destructiveHint: false,
+    openWorldHint: false,
+  },
   description:
     'As Notas de uma Pessoa no arquivo de outro serviço. format imdb: o CSV de avaliações do IMDb (a Nota vigente de ' +
     'cada filme, dobrada para 1 a 10), o único que o import do MovieLens aceita (movielens.org, Import or Export Data). ' +
