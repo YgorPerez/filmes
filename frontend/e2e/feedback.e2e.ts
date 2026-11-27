@@ -91,6 +91,14 @@ test('the Dono closes a Session and the next one shows the satisfaction', async 
   ).toContainText('Bruno: deu 10 de 10')
   await snap(page, info, 'feedback-gravado')
   expect(await stillOpen(first)).toBe(false)
+  // "Pedir filme de novo com essa turma" opens Nova Sessão with the group
+  // (#272): the search survives the server's round-trip.
+  await page
+    .getByRole('link', { name: 'Pedir filme de novo com essa turma' })
+    .click()
+  await expect(page).toHaveURL(/\/sessoes\/nova\?presentes=/)
+  await expect(page.getByRole('checkbox', { name: 'Rosa' })).toBeChecked()
+  await expect(page.getByRole('checkbox', { name: 'Quim' })).toBeChecked()
   await page.goto('/feedback')
   await expect(page).toHaveURL(/\/sessoes\?filtro=para-contar$/)
   await expect(page.locator(`a[href="/sessoes/${first}"]`)).toHaveCount(0)
@@ -102,7 +110,7 @@ test('the Dono closes a Session and the next one shows the satisfaction', async 
   await page.goto(`/sessoes/${next}/contar`)
   await expect(satisfaction(page)).toContainText('Rosa')
   await expect(satisfaction(page)).toContainText(
-    /satisfação de Rosa nas últimas Sessões: 11%, e a mais alta do grupo, 100%; na de 2026-11-20 \(.+\), deu 1/,
+    /satisfação de Rosa nas últimas Sessões: 11%, e a mais alta do grupo, 100%; na de sex, 20 nov \(.+\), deu 2 de 10/,
   )
   await snap(page, info, 'feedback-satisfacao')
 })
