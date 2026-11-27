@@ -22,7 +22,7 @@ export const refusalOn =
  * the last answer. `onAnswer` is `useFetchForm`'s: true when `to` is a
  * refusal (`readRefusal` gives it, `refusalOn` makes one), which then
  * shows here and in no new page; anything else clears it. `alert` goes on
- * the alert's box. */
+ * the alert's box; `refusals`, how many came back by `fetch`. */
 export function useRefusalInPlace<R extends string>(
   initial: R | undefined,
   readRefusal: (to: URL) => R | null,
@@ -40,5 +40,5 @@ export function useRefusalInPlace<R extends string>(
     setRefusals((n) => n + 1)
     return true
   }
-  return { refused, alert, onAnswer }
+  return { refused, refusals, alert, onAnswer }
 }

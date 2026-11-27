@@ -68,9 +68,11 @@ it('shows the refusal in place, keeping what was typed', async () => {
     within(form).getByRole('button', { name: PEOPLE.create.submit }),
   )
 
-  expect((await within(form).findByRole('alert')).textContent).toContain(
-    PEOPLE.create.refusals.existe,
-  )
+  // Under the name it is about (#347).
+  await within(form).findByRole('textbox', {
+    name: new RegExp(`^${PEOPLE.create.name}`),
+    description: PEOPLE.create.refusals.existe,
+  })
   expect(
     new Headers(answered.mock.calls[0]?.[1]?.headers).get('x-filmes-fetch'),
   ).toBe('1')
@@ -99,4 +101,34 @@ it('says it is adding while the post runs, and opens her page after', async () =
   await waitFor(() =>
     expect(router.state.location.href).toBe('/pessoas/luana-reis?feito=criada'),
   )
+})
+
+it('marks the e-mail when a Dono comes back without one, the focus on it (#347)', async () => {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn<typeof fetch>(() =>
+      Promise.resolve(
+        Response.json({ to: '/pessoas?erro=email&nome=Farias&dono=sim' }),
+      ),
+    ),
+  )
+  Element.prototype.scrollIntoView = vi.fn<() => void>()
+  showRouted()
+  const { user, form } = await typeName('Farias')
+  await user.click(within(form).getByLabelText(PEOPLE.create.owner))
+
+  await user.click(
+    within(form).getByRole('button', { name: PEOPLE.create.submit }),
+  )
+
+  const email = await within(form).findByRole('textbox', {
+    name: new RegExp(`^${PEOPLE.create.email}`),
+    description: PEOPLE.create.refusals.email,
+  })
+  expect(email.getAttribute('aria-invalid')).toBe('true')
+  await waitFor(() => expect(document.activeElement).toBe(email))
+  expect(within(form).queryByRole('alert')).toBeNull()
+
+  await user.type(email, 'f')
+  expect(email.getAttribute('aria-invalid')).toBeNull()
 })

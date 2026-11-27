@@ -8,6 +8,7 @@ import {
   useState,
   type ComponentProps,
   type ReactNode,
+  type Ref,
 } from 'react'
 import {
   formProblem,
@@ -441,6 +442,9 @@ export function TextField({
   min,
   max,
   defaultValue,
+  refusal,
+  inputRef,
+  onInput,
 }: {
   name: string
   label: string
@@ -452,12 +456,27 @@ export function TextField({
   min?: number
   max?: number
   defaultValue?: string
+  /** What a form outside `ActionForm` refused of this field (#347): said
+   * under it, the field marked. */
+  refusal?: string
+  inputRef?: Ref<HTMLInputElement>
+  onInput?: () => void
 }) {
-  const { error, aria } = useFieldProblem(name)
+  const fromForm = useFieldProblem(name)
+  const id = useId()
+  const { error, aria } =
+    refusal === undefined
+      ? fromForm
+      : {
+          error: { id, text: refusal },
+          aria: { 'aria-invalid': true, 'aria-describedby': id } as const,
+        }
   return (
     <FieldLabel label={label} hint={hint} error={error}>
       <input
         {...aria}
+        ref={inputRef}
+        onInput={onInput}
         type={type}
         min={min}
         max={max}
