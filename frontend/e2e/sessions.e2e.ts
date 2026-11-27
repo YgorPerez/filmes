@@ -36,7 +36,11 @@ const sessionFile = async (id: string) =>
     (s) => s.id === id,
   )
 
+/** The Link para os Presentes sits in the head's ⋯ menu (#272). */
+const openMenu = (page: Page) => page.getByLabel('Mais ações da Sessão').click()
+
 const sessionLinkFor = async (page: Page, person: string) => {
+  await openMenu(page)
   const shared = await page
     .getByRole('link', { name: 'Link para os Presentes' })
     .getAttribute('href')
@@ -279,10 +283,12 @@ test('the link only works for its Session while it is open', async ({
   const path = `/sessoes/${session}`
   await loginAsBruno(page)
   await page.goto(path)
+  await openMenu(page)
   const share = page.getByRole('link', { name: 'Link para os Presentes' })
   const shared = await share.getAttribute('href')
   if (!shared) throw new Error('the Session had no link')
   await page.reload()
+  await openMenu(page)
   await expect(share).toHaveAttribute('href', shared)
 
   const guest = await browser.newContext()
