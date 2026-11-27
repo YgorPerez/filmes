@@ -467,9 +467,9 @@ function Cards({
   const card = (film: Film) => (
     <BillboardCard
       key={film.id}
-      // Once told, what came new in the last redo no longer matters.
-      film={billboard.open ? film : { ...film, new: false }}
+      film={film}
       people={billboard.attendees}
+      unseen={billboard.unseen === true}
       first={film === billboard.films[0]}
       level={grouped ? 3 : 2}
       marks={billboard.open ? marksOf(marks, film.id) : undefined}

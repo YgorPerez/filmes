@@ -14,7 +14,7 @@ import { PriceSticker } from './kit/sticker'
 // Limpar, and Enviar comes beside Marcar; with nothing marked there is
 // nothing to send. Once sent, the card says what went and the one action
 // is "Marcar de novo" (#277). After a regenerate, a line says what left
-// and what came in, and each new film has the yellow dot. A Recomendação
+// and what came in; no film carries a "novo" mark (#326). A Recomendação
 // with no film says why and what to ask, with nothing to mark. A Session
 // that has its Feedback takes no marks: the one action opens the whole
 // Cartaz. The card has no floor of its own: it sits on the host's.
@@ -40,15 +40,8 @@ function InlineFilms({ films }: { films: BillboardModel['films'] }) {
             className="self-stretch border border-case-edge bg-case"
           />
           <PriceSticker compact>{film.position}</PriceSticker>
-          <span className="flex min-w-0 items-center gap-xs">
-            <span className="truncate font-display text-row-title">
-              {film.title}
-            </span>
-            {film.new && (
-              <span className="size-2 shrink-0 rounded-round bg-sticker-yellow ring-1 ring-on-sticker/40">
-                <span className="sr-only">{view.isNew}</span>
-              </span>
-            )}
+          <span className="truncate font-display text-row-title">
+            {film.title}
           </span>
           <span className="text-meta text-ink-2 tabular-nums">
             {factsOf(film.chips)}

@@ -1,9 +1,9 @@
 import { type PointerEvent, useId, useRef } from 'react'
 
 // A Presente's colour (DESIGN.md, Avatares; The One Color Per Person Rule):
-// one per Presente by her order in the Session, the same in the dot under
-// the cover, her avatar in the legend and in the marks, always with her
-// initial or name beside it (or, on the dot, in its hint). Hollow (a ring in her colour) is the Presente
+// one per Presente by her order in the Session, the same in the dot of her
+// Nota prevista, her avatar in the legend and in the marks, always with her
+// initial or name beside it. Hollow (a ring in her colour) is the Presente
 // without a Fato.
 
 /** What a colour needs to know of a Presente. */
@@ -64,15 +64,13 @@ const underDot = (popover: HTMLElement, dot: HTMLElement) => {
   popover.style.left = `${left}px`
 }
 
-/** Her 12px dot on the case, under the cover, with her Nota prevista
- * beside it when she has one ("8,3"). The dot alone is only a picture: the
- * card says in its text who has no Fato ("Fulano: sem fato sobre este
- * filme"). With a number, the dot is a button whose `hint` says whose it is
- * and how many neighbours back it: a native popover under it, running right
- * from the dot (the case is on the card's left), opened by a
- * tap or a click (a tap outside or Esc closes it) and by a mouse over it.
- * The hint is the button's name; the popover repeats it to the eye only.
- * The dot stays small, and an invisible 44px box centred on it takes the tap
+/** Her 12px dot, with her name and her Nota prevista beside it when she
+ * has one ("Iara 8,3", on the line under "Por que", #326). The dot alone is
+ * only a picture. With a number, it is a button whose `label` a screen
+ * reader hears and whose `hint` ("pela nota de 4 pessoas de gosto
+ * parecido") opens in a native popover under it, running right, by a tap
+ * or a click (a tap outside or Esc closes it) and by a mouse over it. The
+ * text stays small, and an invisible 44px box centred on it takes the tap
  * (#268).
  * Without CSS anchor positioning (Firefox, Safari before 26) the popover
  * is placed under the dot by hand as it opens (`underDot`). */
@@ -83,7 +81,7 @@ export function PersonDot({
 }: {
   person: Person
   hollow?: boolean
-  rating?: { text: string; hint: string }
+  rating?: { text: string; hint: string; label: string; name?: string }
 }) {
   const id = useId()
   const button = useRef<HTMLButtonElement>(null)
@@ -106,14 +104,17 @@ export function PersonDot({
         type="button"
         popoverTarget={id}
         popoverTargetAction="show"
-        aria-label={rating.hint}
+        aria-label={rating.label}
         onPointerEnter={hover(true)}
         onPointerLeave={hover(false)}
         style={{ anchorName: anchor }}
-        className="relative inline-flex cursor-pointer items-center gap-0.5 font-display text-avatar text-case-ink tabular-nums after:absolute after:top-1/2 after:left-1/2 after:h-touch after:w-[max(100%,44px)] after:-translate-1/2 after:content-['']"
+        className="relative inline-flex cursor-pointer items-center gap-xs text-inherit tabular-nums underline decoration-dotted decoration-1 underline-offset-3 after:absolute after:top-1/2 after:left-1/2 after:h-touch after:w-[max(100%,44px)] after:-translate-1/2 after:content-['']"
       >
         {dot}
-        <span aria-hidden="true">{rating.text}</span>
+        <span aria-hidden="true">
+          {rating.name && `${rating.name} `}
+          {rating.text}
+        </span>
       </button>
       <span
         id={id}
