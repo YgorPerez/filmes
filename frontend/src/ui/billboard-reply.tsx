@@ -1,7 +1,6 @@
 import type { Billboard as BillboardModel } from '@filmes/engine'
 import { useEffect, useRef, useState } from 'react'
 import { BILLBOARD } from './billboard.copy'
-import { Icon } from './billboard-icons'
 import { chosenMoods, hasMarks, type Marks } from './billboard-marks'
 import { buttonVariants } from './kit/button-variants'
 import { Icon } from './kit/icon'
