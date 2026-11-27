@@ -30,6 +30,8 @@ const OPEN: SessionItem = {
   chosen: null,
   moods: ['leve'],
   constraints: ['até 2h', 'com criança de 7 anos'],
+  version: 1,
+  additions: [],
 }
 
 const CLOSED: SessionItem = {

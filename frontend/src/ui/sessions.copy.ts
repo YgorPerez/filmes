@@ -51,6 +51,10 @@ export const SESSIONS = {
     feedback: 'Contar como foi',
     chosen: (title: string) => `Viram ${title}`,
     nothing: 'Não viram nada',
+    /** A row's state (#272). */
+    toTell: 'para contar',
+    told: 'contada',
+    version: (n: number) => `versão ${n}`,
     /** The open Session's films by title, the first three (#272). */
     shelf: (titles: readonly string[], more: number) =>
       more > 0 ? `${titles.join(' · ')} e mais ${more}` : titles.join(' · '),
@@ -115,6 +119,9 @@ export const SESSIONS = {
     satisfaction:
       'Na próxima Sessão deste grupo, na Regra padrão, quem gostou menos pesa mais:',
     again: 'Pedir filme de novo com essa turma',
+    /** The Cartaz's stars and comments on the film they saw (#272). */
+    onCartaz: 'No Cartaz:',
+    stars: (n: number) => `${n} de 5 ★`,
     others: (n: number) =>
       n === 1 ? 'O outro filme da prateleira' : `Os outros ${n} da prateleira`,
     shelf: 'A prateleira da noite',
@@ -141,6 +148,8 @@ export const SESSIONS = {
     wordsHint: 'opcional. Toque em Ler para preencher o pedido.',
     wordsPlaceholder: 'eu e a Iara, algo leve, até 2h',
     read: 'Ler',
+    /** The bar's who while only the Dono is checked (#272). */
+    alone: 'Só você · escolha quem mais',
     /** "vocês dois", "vocês três": the bar's who (#272). */
     together: (n: number) =>
       `vocês ${['', 'um', 'dois', 'três', 'quatro', 'cinco', 'seis'][n] ?? n}`,
