@@ -262,6 +262,7 @@ describe('personImports', () => {
       { kind: 'simkl', file, date: '2026-11-20', original: 'SimklBackup.json' },
     ])
     expect(report.simkl).toEqual({ ratings: 3, seen: 1, watchlist: 1 })
+    expect(report.films.simkl).toEqual({ rated: 3, seen: 1, watchlist: 1 })
 
     const removed = await fixture.ok(removeImport({ file, author: AUTHOR }))
     expect(removed.removedFacts).toEqual({
