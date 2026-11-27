@@ -57,6 +57,8 @@ describe('weights', () => {
       'series',
       'cast',
       'genre',
+      'cinematography',
+      'producer',
     ])
   })
 

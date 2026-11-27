@@ -21,8 +21,11 @@ test('every stored Tipo, level, link and tag group has its English name', () => 
     Object.fromEntries(
       Object.entries(LINK_PREDICATE).map(([en, pt]) => [pt, en]),
     ),
-  ).toEqual(names.LINKS)
-  for (const [pt, en] of Object.entries(names.LINKS))
+  ).toEqual({ ...names.LINKS, ...names.LATER_LINKS })
+  for (const [pt, en] of Object.entries({
+    ...names.LINKS,
+    ...names.LATER_LINKS,
+  }))
     expect(linkOf(pt)).toBe(en)
   for (const [pt, en] of Object.entries(names.TAG_GROUPS))
     expect(targetOf(pt)).toBe(en)

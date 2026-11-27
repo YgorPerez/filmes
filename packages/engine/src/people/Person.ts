@@ -50,6 +50,8 @@ export const LINKS = [
   'cast',
   'series',
   'genre',
+  'cinematography',
+  'producer',
 ] as const satisfies readonly Link[]
 
 /** An Ajuste's nível [level]; `normal` is never written to the file. */

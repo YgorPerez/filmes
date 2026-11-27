@@ -36,6 +36,8 @@ export const DB_LINKS: Readonly<Record<Link, string>> = {
   cast: 'elenco',
   series: 'serie',
   genre: 'genero',
+  cinematography: 'fotografia',
+  producer: 'produtor',
 }
 
 /** An Ajuste's nível, as the database keeps it. */

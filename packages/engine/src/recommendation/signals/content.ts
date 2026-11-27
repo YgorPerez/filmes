@@ -2,7 +2,8 @@
 // (`recomendacao/sinais/conteudo.py`).
 //
 // For each Candidate linked to an entity (director, writer, actor, series,
-// genre) of a film the Pessoa rated, two kinds of Evidence come out:
+// genre, cinematographer, producer) of a film the Pessoa rated, two kinds
+// of Evidence come out:
 //
 // - one per seed rating, with the strength of the rating ruler (its
 //   percentile on the Pessoa's scale) and the weight of its Decaimento (by
@@ -69,6 +70,11 @@ const WORDING: Readonly<
   cast: { seed: 'também com {}', node: 'com {} no elenco' },
   series: { seed: 'também da série {}', node: 'da série {}' },
   genre: { seed: null, node: 'do gênero {}' },
+  cinematography: {
+    seed: 'também com fotografia de {}',
+    node: 'com fotografia de {}',
+  },
+  producer: { seed: 'também produzido por {}', node: 'produzido por {}' },
 }
 
 const isLink = (name: string): name is Link => name in WORDING

@@ -212,11 +212,15 @@ describe('the Força ruler', () => {
       string,
       string
     >
-    expect(LINK_CEILING).toEqual(
-      Object.fromEntries(
+    // The links born after Python left are weak at most (the Dono's
+    // decision on #283).
+    expect(LINK_CEILING).toEqual({
+      ...Object.fromEntries(
         Object.entries(ceiling).map(([pt, s]) => [link(pt), strength(s)]),
       ),
-    )
+      cinematography: 'weak',
+      producer: 'weak',
+    })
   })
 })
 
