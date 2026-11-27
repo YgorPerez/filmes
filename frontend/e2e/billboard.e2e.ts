@@ -297,7 +297,10 @@ async function sendAndSeeRedone(
   await expect(page).toHaveURL(
     new RegExp(`/sessoes/${id}\\?feito=regerada(&nota=[\\w-]+)?$`),
   )
-  await expect(page.getByText(/na próxima vez/)).toBeVisible()
+  // The notice says it; the hand note under the request shows it (#272).
+  await expect(
+    page.getByRole('status').filter({ hasText: /na próxima vez/ }),
+  ).toBeVisible()
   // One line says what changed; why each left is behind "por quê".
   await expect(page.getByText('Refeito: 2 saíram, 2 novos.')).toBeVisible()
   const left = page.getByText(`Saiu da prateleira: ${seen} (Nina já viu)`)
