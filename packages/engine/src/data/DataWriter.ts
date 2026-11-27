@@ -232,7 +232,9 @@ const queueIn = (root: string, branch: string) =>
       tracking,
     ])
     const range = known.code === 0 ? `${tracking}..HEAD` : 'HEAD'
-    const count = Number((yield* git(root, ['rev-list', '--count', range])).trim())
+    const count = Number(
+      (yield* git(root, ['rev-list', '--count', range])).trim(),
+    )
     const subjects =
       count === 0
         ? ''
