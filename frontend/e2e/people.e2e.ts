@@ -203,7 +203,7 @@ test('the Dono answers or skips an open question', async ({ page }, info) => {
     await page.goto('/pessoas/quim')
     const questions = section(page, 'Perguntas abertas')
     await expect(questions).toContainText(
-      'o Quim curte os filmes da Helena Prado?',
+      'O Quim curte os filmes da Helena Prado?',
     )
     await snap(page, info, 'pergunta-aberta')
     await questions.getByText('Responder com palavras', { exact: true }).click()
