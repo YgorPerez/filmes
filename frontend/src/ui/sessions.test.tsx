@@ -514,6 +514,31 @@ describe('a Session’s page, an acrescentar only noted and a told Session', () 
 })
 
 describe('a Session’s page, a told Session', () => {
+  it('opens with the shelf label and the Dono’s note above the tape, not in the fold (#346)', () => {
+    render(
+      <SessionScreen
+        page={{
+          ...PAGE,
+          session: {
+            ...CLOSED,
+            chosen: { id: 'tt9000104', title: 'As Horas Lentas' },
+          },
+          billboard: TOLD,
+        }}
+      />,
+    )
+    const label = screen.getByRole('img', { name: /^Vocês dois/ })
+    const note = screen.getByText(TOLD.request.speech!)
+    const tape = screen.getByRole('region', { name: SESSIONS.session.returned })
+    for (const top of [label, note]) {
+      expect(top.closest('details')).toBeNull()
+      expect(
+        top.compareDocumentPosition(tape) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy()
+    }
+    expect(screen.getAllByRole('img', { name: /^Vocês dois/ })).toHaveLength(1)
+  })
+
   it('a told Session with its Reações: each one on the tape, the rest of the shelf folded', () => {
     render(
       <SessionScreen

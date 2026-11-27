@@ -13,7 +13,7 @@ import {
 import type { CartazPage } from '#/platform/billboard'
 import type { PageReading } from '#/platform/reading'
 import type { SessionItem } from '#/platform/sessions'
-import { Billboard } from './billboard'
+import { Billboard, BillboardRequest } from './billboard'
 import { forgetMarks, openStorage } from './billboard-marks'
 import { closeOnOutside, HEAD_POPOVERS } from './kit/dismiss'
 import { useFetchForm } from './kit/fetch-form'
@@ -645,6 +645,8 @@ function SessionBillboard({
       }}
       sent={sent}
       unread={unread}
+      // Closed, the label is above the tape given back (#346).
+      request={open}
       after={
         open && (
           <p className="flex flex-wrap items-center gap-sm text-ink-2">
@@ -714,6 +716,9 @@ function SessionView({
         waiting={page.pairwise ?? []}
         post={{ onSubmit, busy }}
       />
+      {/* Told, the night's label and the Dono's note open the Session, as
+          on Contar (#346). */}
+      {closed && billboard !== null && <BillboardRequest billboard={billboard} />}
       {closed && <TapeReturned page={page} />}
       {closed && shelf !== null ? (
         <ClosedShelf chosen={Boolean(s.chosen)} others={shelf.films.length}>
