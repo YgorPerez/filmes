@@ -17,6 +17,17 @@ type Level = 'none' | 'low' | 'normal' | 'high'
 type Reaction = 'love' | 'like' | 'dislike' | 'hate'
 type Strength = 'strong' | 'moderate' | 'weak' | 'guess'
 
+/** "do gênero Drama e da direção de Helena Prado": what the Notas say she
+ * likes, each part with its label (#274). */
+const likedParts = (genres: readonly string[], directors: readonly string[]) =>
+  [
+    genres.length > 0 &&
+      `${genres.length === 1 ? 'do gênero' : 'dos gêneros'} ${listed(genres)}`,
+    directors.length > 0 && `da direção de ${listed(directors)}`,
+  ]
+    .filter((part) => part !== false)
+    .join(' e ')
+
 const escapeRegExp = (text: string) =>
   text.replaceAll(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
@@ -37,31 +48,22 @@ export const PERSON = {
     toTen: (n: number) => `faltam ${10 - n} para 10`,
     /** The genres and directors of the films she liked, each part with
      * its label (#274). */
-    likes: (genres: readonly string[], directors: readonly string[]) => {
-      const parts = [
-        genres.length > 0 &&
-          `${genres.length === 1 ? 'do gênero' : 'dos gêneros'} ${listed(genres)}`,
-        directors.length > 0 && `da direção de ${listed(directors)}`,
-      ].filter((part) => part !== false)
-      return `Pelas suas Notas, você gosta ${parts.join(' e ')}.`
-    },
+    likes: (genres: readonly string[], directors: readonly string[]) =>
+      `Pelas suas Notas, você gosta ${likedParts(genres, directors)}.`,
     said: 'O que você disse',
     nothingSaid: 'Nada dito ainda sobre o seu gosto.',
-    next: 'Próximo passo',
+    /** The next step, a button as on another Pessoa's page (#273). */
     steps: {
-      rate: 'dar notas a filmes que você viu',
-      connector: 'ligar o conector no Claude',
-      questions: 'responder as perguntas abertas',
+      rate: 'Dar notas a filmes que você viu',
+      connector: 'Ligar o conector no Claude',
+      questions: 'Responder as perguntas abertas',
       queue: (n: number) =>
         n === 1
-          ? 'dizer qual é o filme que espera na fila'
-          : `dizer quais são os ${n} filmes que esperam na fila`,
-      ask: 'pedir um filme para hoje',
+          ? 'Dizer qual é o filme que espera na fila'
+          : `Dizer quais são os ${n} filmes que esperam na fila`,
+      ask: 'Pedir um filme para hoje',
     },
   },
-  /** The fold of a ficha with nothing yet (#273): "Já vistos sem Nota:
-   * nenhum", its + the way to add one. */
-  empty: (title: string) => `${title}: nenhum`,
   /** Another Pessoa's page under her name (#273): how much the filmes knows
    * of her, and the one thing to do next. */
   summary: {
@@ -72,9 +74,14 @@ export const PERSON = {
       n === 1 ? '1 pergunta aberta' : `${n} perguntas abertas`,
     sessions: (n: number) => (n === 1 ? '1 Sessão' : `${n} Sessões`),
     unknown: 'falta conhecer',
-    /** What her Notas say she likes (#273): her genres and directors. */
-    likes: (name: string, names: readonly string[]) =>
-      `Pelas Notas, ${name} gosta de ${listed(names)}.`,
+    /** What her Notas say she likes (#273): her genres and directors,
+     * each with its role, as Meu gosto says them: a bare name could read
+     * as a Pessoa of the house. */
+    likes: (
+      name: string,
+      genres: readonly string[],
+      directors: readonly string[],
+    ) => `Pelas Notas, ${name} gosta ${likedParts(genres, directors)}.`,
     /** Without genres to say, the films of her highest Notas. */
     liked: (name: string, titles: readonly string[]) =>
       `${name} deu nota alta a ${listed(titles)}.`,
@@ -82,8 +89,6 @@ export const PERSON = {
     /** The next step, a button: short, it is in capitals (#273). */
     steps: {
       import: (name: string) => `Trazer o histórico de ${name}`,
-      questions: (n: number) =>
-        n === 1 ? 'Responder a pergunta' : 'Responder as perguntas',
       veto: (name: string) => `Dizer o que ${name} não vê`,
       ask: (name: string) => `Pedir um filme com ${name}`,
     },
@@ -332,7 +337,7 @@ export const PERSON = {
     empty: 'Nenhum Veto.',
     add: 'Acrescentar Veto',
     text: 'O Veto, como foi dito',
-    placeholder: 'nunca vê terror',
+    placeholder: 'ex.: nunca vê terror',
   },
   adjustments: {
     title: 'Ajustes',

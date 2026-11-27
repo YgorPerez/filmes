@@ -118,7 +118,6 @@ async function addStatedReportAndSeen(page: Page, info: TestInfo) {
   await form.getByRole('button', { name: 'Gravar' }).click()
   await expect(section(page, 'Relatos')).toContainText('odeia filme lento')
 
-  await page.getByText('Já vistos: nenhum').click()
   form = await addForm(page, 'Já vistos', 'Acrescentar Já visto')
   await target(form, /^Filme/, 'casa cheia', /^Usar Casa Cheia/)
   await form
