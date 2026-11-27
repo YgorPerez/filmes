@@ -317,6 +317,27 @@ export function RemoveForm({
     if (asking) confirm.current?.focus()
     else if (asked) ask.current?.focus()
   }, [asking, asked])
+  // Another form's post lets the question go (#347): the page comes back
+  // with what that form did, not with this confirm still open.
+  useEffect(() => {
+    if (!asking) return
+    const letGo = (event: SubmitEvent) => {
+      // Its own post went: what it is doing stays on screen.
+      if (
+        event.target instanceof Node &&
+        confirm.current !== null &&
+        event.target.contains(confirm.current)
+      ) {
+        document.removeEventListener('submit', letGo, true)
+        return
+      }
+      setAsked(false)
+      setAsking(false)
+      onAsking?.(false)
+    }
+    document.addEventListener('submit', letGo, true)
+    return () => document.removeEventListener('submit', letGo, true)
+  }, [asking, onAsking])
   return (
     <ActionForm
       slug={slug}
