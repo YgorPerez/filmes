@@ -97,11 +97,11 @@ describe('the Trakt connection screen', () => {
     expect(html).not.toContain('Importar</a>')
   })
 
-  it('has the way back to Importar for a Dono, in the app', () => {
+  it('has the way back to Importar Notas for a Dono, in the app', () => {
     const html = renderToStaticMarkup(
       <TraktScreen page={{ status: 'connected', name: 'Iara' }} inApp />,
     )
-    expect(html).toMatch(/<a href="\/meu-gosto\/importar"[^>]*>Importar<\/a>/)
+    expect(html).toMatch(/<a href="\/meu-gosto\/importar"[^>]*>Importar Notas<\/a>/)
     expect(html).not.toContain('Créditos')
   })
 

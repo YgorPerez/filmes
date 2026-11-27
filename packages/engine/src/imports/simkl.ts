@@ -123,6 +123,27 @@ const resolveFilm = (
       : null
   })
 
+/** The films of every backup she keeps that resolve to no film of the
+ * Catálogo, each once (#274). */
+export const simklLeftOut = (
+  db: Connection,
+  person: Person,
+): Effect.Effect<SimklUnresolved[], EngineError | SqliteError, Environment> =>
+  Effect.gen(function* () {
+    const { rows, answers } = yield* personSimklBackups(person)
+    const wikidata = yield* hasWikidata(db)
+    const seen = new Set<string>()
+    const left: SimklUnresolved[] = []
+    for (const { film } of rows) {
+      const key = JSON.stringify(film)
+      if (seen.has(key)) continue
+      seen.add(key)
+      if ((yield* resolveFilm(db, film, wikidata, answers)) === null)
+        left.push(film)
+    }
+    return left
+  })
+
 const insertFact = (
   db: Connection,
   slug: string,

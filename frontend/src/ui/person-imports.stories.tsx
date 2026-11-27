@@ -89,6 +89,16 @@ const QUIM: PersonImportsView = {
     simkl: SIMKL_FILMS,
     tvtime: NO_FILMS,
   },
+  // What the Simkl backup gave that the Catálogo does not have (#274).
+  leftOut: {
+    trakt: [],
+    imdb: [],
+    simkl: [
+      { name: 'Rio Abaixo', year: 2014, id: null },
+      { name: 'Filme Perdido', year: 1999, id: 'tt9999901' },
+    ],
+    tvtime: [],
+  },
 }
 
 /** Quim with nothing imported yet. */
@@ -108,6 +118,7 @@ const EMPTY: PersonImportsView = {
   simkl: { ratings: 0, seen: 0, watchlist: 0 },
   tvtime: { ratings: 0, seen: 0, stated: 0, watchlist: 0 },
   films: FILMS,
+  leftOut: { trakt: [], imdb: [], simkl: [], tvtime: [] },
 }
 
 /** Quim with only the IMDb CSV. */
@@ -124,6 +135,7 @@ const SIMKL_ONLY: PersonImportsView = {
   imports: QUIM.imports.filter(({ kind }) => kind === 'simkl'),
   simkl: QUIM.simkl,
   films: { ...FILMS, simkl: SIMKL_FILMS },
+  leftOut: { ...EMPTY.leftOut, simkl: QUIM.leftOut.simkl },
 }
 
 /** Quim with the TV Time backup too: its films join the Letterboxd ones in

@@ -8,19 +8,20 @@ import { resolvePerson } from '../people/people.ts'
 import type { EngineError } from '../runtime/EngineError.ts'
 import type { Environment } from '../runtime/Environment.ts'
 import { Sqlite, type Connection, type SqliteError } from '../sqlite/Sqlite.ts'
-import { imdbFactCounts, type ImdbFactCounts } from './imdb.ts'
+import { imdbFactCounts, imdbLeftOut, type ImdbFactCounts } from './imdb.ts'
 import {
   letterboxdReport,
   type FactCounts,
   type LetterboxdReport,
 } from './letterboxd.ts'
-import { simklFactCounts, type SimklFactCounts } from './simkl.ts'
+import { simklFactCounts, simklLeftOut, type SimklFactCounts } from './simkl.ts'
 import {
   requireImportTables,
   traktFactCounts,
+  traktLeftOut,
   type TraktFactCounts,
 } from './trakt.ts'
-import { tvTimeFactCounts } from './tvtime.ts'
+import { tvTimeFactCounts, tvTimeLeftOut } from './tvtime.ts'
 
 /** An import recorded in the Pessoa's file. */
 export interface ImportRecord {
@@ -48,6 +49,17 @@ export interface PersonImports {
   /** What each of the other sites gave, film by film, the way the notice
    * of its import counts (#274). */
   readonly films: Readonly<Record<FilmSource, SourceFilms>>
+  /** The films of each of the other sites the Catálogo does not have, from
+   * every file she keeps (#274), as Letterboxd's `discardedItems`. */
+  readonly leftOut: Readonly<Record<FilmSource, readonly LeftOutFilm[]>>
+}
+
+/** A film a site gave that no film of the Catálogo matched: its name and
+ * year as the site gave them, and its IMDb id when it had one. */
+export interface LeftOutFilm {
+  readonly name: string | null
+  readonly year: number | null
+  readonly id: string | null
 }
 
 /** The sites whose Fatos `films` counts by film. */
@@ -141,6 +153,28 @@ export const personImports = (
             imdb: yield* sourceFilms(db, person.slug, 'imdb'),
             simkl: yield* sourceFilms(db, person.slug, 'simkl'),
             tvtime: yield* sourceFilms(db, person.slug, 'tvtime'),
+          },
+          leftOut: {
+            trakt: (yield* traktLeftOut(db, person)).map((f) => ({
+              name: f.name,
+              year: null,
+              id: f.imdb,
+            })),
+            imdb: (yield* imdbLeftOut(db, person)).map((f) => ({
+              name: f.title,
+              year: null,
+              id: f.film,
+            })),
+            simkl: (yield* simklLeftOut(db, person)).map((f) => ({
+              name: f.name,
+              year: f.year,
+              id: f.imdb,
+            })),
+            tvtime: (yield* tvTimeLeftOut(db, person)).map((f) => ({
+              name: f.title,
+              year: null,
+              id: f.film,
+            })),
           },
         }
       }),

@@ -30,7 +30,7 @@ export const ConsentInApp: Story = {
   args: { page: { status: 'disconnected', name: 'Bruno' }, inApp: true },
   play: async ({ canvasElement }) => {
     await expect(
-      within(canvasElement).getByRole('link', { name: 'Importar' }),
+      within(canvasElement).getByRole('link', { name: 'Importar Notas' }),
     ).toBeVisible()
   },
 }

@@ -124,6 +124,8 @@ export function QueueScreen({
                   ))}
                 </ul>
               )}
+              {/* Nothing waits: nothing to ask the TMDB again (#274). */}
+              {queue.items.length > 0 && (
               <QueueForm
                 action="reprocessar"
                 label={QUEUE.reprocess}
@@ -140,6 +142,7 @@ export function QueueScreen({
                   </>
                 )}
               </QueueForm>
+              )}
               {queue.attributions.length > 0 && (
                 <p className="text-source text-ink-2">{QUEUE.attribution}</p>
               )}
