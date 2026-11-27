@@ -43,6 +43,13 @@ const posted = (form: HTMLFormElement) => {
 
 const { form: copy } = SESSIONS
 
+/** A Clima's chip under "Nada de" (#346), apart from the Climas asked. */
+const noMood = (mood: string) =>
+  within(screen.getByRole('group', { name: copy.noMoods })).getByRole(
+    'checkbox',
+    { name: mood },
+  )
+
 describe('the Nova Sessão form', () => {
   it('asks for the Dono alone with the padrão Regra by default', () => {
     const { form } = show()
@@ -62,7 +69,12 @@ describe('the Nova Sessão form, what it posts', () => {
       screen.getByRole('combobox', { name: /^De quem/ }),
       'iara',
     )
-    await user.click(screen.getByRole('checkbox', { name: 'pra rir' }))
+    await user.click(
+      within(screen.getByRole('region', { name: copy.moods })).getByRole(
+        'checkbox',
+        { name: 'pra rir' },
+      ),
+    )
     await user.type(screen.getByLabelText(copy.count, { exact: false }), '3')
     await user.type(
       screen.getByLabelText(copy.words, { exact: false }),
@@ -86,10 +98,7 @@ describe('the Nova Sessão form, what it posts', () => {
     await user.click(screen.getByRole('checkbox', { name: copy.unseen }))
     await user.click(screen.getByRole('checkbox', { name: copy.noSlow }))
     await user.click(screen.getByRole('checkbox', { name: copy.noSad }))
-    await user.type(
-      screen.getByLabelText(copy.noMoods, { exact: false }),
-      'tenso',
-    )
+    await user.click(noMood('tenso'))
     await user.click(
       screen.getByRole('radio', { name: copy.seriesOrders.todos }),
     )
@@ -115,6 +124,42 @@ describe('the Nova Sessão form, what it posts', () => {
         seriesOrder: 'all',
       },
     })
+  })
+})
+
+describe('the Nova Sessão form, Mais opções (#346)', () => {
+  it('gives the three on/off Restrições one pill shape', async () => {
+    const { user } = show()
+    await user.click(screen.getByText(copy.details))
+    const shapes = [copy.unseen, copy.noSlow, copy.noSad].map(
+      (name) =>
+        screen.getByRole('checkbox', { name }).closest('label')?.className,
+    )
+    expect(new Set(shapes).size).toBe(1)
+  })
+
+  it('offers each Clima as a chip under Nada de, checked as asked', () => {
+    render(
+      <NewSession
+        options={OPTIONS}
+        draft={{
+          fields: { attendees: ['bruno'], moods: [], noMoods: ['tenso'] },
+          reading: { understood: [], notUnderstood: [], ambiguities: [] },
+        }}
+      />,
+    )
+    expect(
+      within(screen.getByRole('group', { name: copy.noMoods }))
+        .getAllByRole('checkbox')
+        .map((box) => [
+          box.closest('label')?.textContent,
+          (box as HTMLInputElement).checked,
+        ]),
+    ).toEqual([
+      ['leve', false],
+      ['pra rir', false],
+      ['tenso', true],
+    ])
   })
 })
 
@@ -466,12 +511,10 @@ describe('the bar by Recomendar (#272)', () => {
       'Iara · até 2h · leve · nada lento · nada triste · nada repetido · com criança de 7 anos · + 3 limites',
     )
     const user = userEvent.setup()
-    await user.type(
-      screen.getByLabelText(copy.noMoods, { exact: false }),
-      'assustador, tenso',
-    )
+    await user.click(noMood('pra rir'))
+    await user.click(noMood('tenso'))
     expect(bar.textContent).toContain(
-      'leve · nada assustador nem tenso · nada lento',
+      'leve · nada pra rir nem tenso · nada lento',
     )
   })
 

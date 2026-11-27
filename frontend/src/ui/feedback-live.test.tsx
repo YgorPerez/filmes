@@ -179,7 +179,7 @@ it('takes the film “Usar” picks in place, keeping what was filled', async ()
   await user.click(
     within(
       screen.getByRole('radiogroup', {
-        name: FEEDBACK.form.ratingLabel('Bruno'),
+        name: FEEDBACK.form.ownRatingLabel,
       }),
     ).getByRole('radio', { name: '8' }),
   )

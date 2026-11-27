@@ -133,7 +133,8 @@ export function feedbackFromEngine(
           })),
       )
     },
-    satisfaction: (attendees) => run(satisfactionNow(attendees)),
+    satisfaction: (attendees) =>
+      run(satisfactionNow(attendees), viewer === null ? {} : { owner: viewer }),
     record: (session, form, owner) =>
       run(recordFeedback(requestOf(session, form)), { owner }),
   }

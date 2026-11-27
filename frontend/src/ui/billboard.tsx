@@ -89,6 +89,9 @@ type Props = {
   unread?: { words: readonly string[]; onEdit: () => void }
   /** After the last film, on the web: "Contar como foi" (#272). */
   after?: ReactNode
+  /** False when the page put the shelf label above already: the closed
+   * Session opens with it, over the tape given back (#346). */
+  request?: boolean
 }
 
 /** Another tab changed the storage. */
@@ -129,7 +132,8 @@ function useMarks(
   return { marks, change, canKeep }
 }
 
-function Request({
+/** The shelf label of the night and the Dono's note. */
+export function BillboardRequest({
   billboard,
   compact = false,
   single = false,
@@ -251,6 +255,7 @@ export function Billboard({
   onExpand,
   unread,
   after,
+  request = true,
 }: Props) {
   const { message, setMessage, marks, change, canKeep } = useReplyMarks(
     billboard,
@@ -321,7 +326,12 @@ export function Billboard({
       {onSend ? (
         <ViewTop billboard={billboard} shelf={shelf} />
       ) : (
-        <PageTop billboard={billboard} shelf={shelf} after={after} />
+        <PageTop
+          billboard={billboard}
+          shelf={shelf}
+          after={after}
+          request={request}
+        />
       )}
       {bar}
     </div>
@@ -363,7 +373,7 @@ function FullscreenBody({
   const speech = billboard.request.speech
   return (
     <Fullscreen
-      top={<Request billboard={billboard} compact single />}
+      top={<BillboardRequest billboard={billboard} compact single />}
       foot={bar}
     >
       {speech && (
@@ -394,7 +404,7 @@ function ViewTop({
 }) {
   return (
     <>
-      <Request billboard={billboard} />
+      <BillboardRequest billboard={billboard} />
       <Standing billboard={billboard} block />
       <PeopleLegend billboard={billboard} />
       <Capped>{shelf}</Capped>
@@ -408,16 +418,18 @@ function PageTop({
   billboard,
   shelf,
   after,
+  request,
 }: {
   billboard: BillboardModel
   shelf: ReactNode
   after: ReactNode
+  request: boolean
 }) {
   return (
     <>
       <div className="flex flex-col gap-xs">
         <div className="flex items-start justify-between gap-md">
-          <Request billboard={billboard} />
+          {request && <BillboardRequest billboard={billboard} />}
           <Legend />
         </div>
         {billboard.open && <Dropped billboard={billboard} />}
@@ -525,6 +537,9 @@ function Cards({
   )
   if (!grouped) return <>{billboard.films.map(card)}</>
   const byId = new Map(billboard.films.map((film) => [film.id, film]))
+  // Each Motivo's reason: the lines for it its sections share, so a "de
+  // novo" section finds the one said above (#346).
+  const reasons = new Map<string, BillboardLine[]>()
   return (
     <>
       {billboard.sections.map((section) => {
@@ -533,6 +548,9 @@ function Cards({
         const without = sharedWithoutFact(films)
         const own = new Set(shared.map(lineKey))
         const none = new Set(without)
+        const reason = shared.filter((line) => !line.against)
+        if (reason.length > 0 && !reasons.has(section.title))
+          reasons.set(section.title, reason)
         return (
           <Section
             key={section.films[0]}
@@ -541,13 +559,29 @@ function Cards({
             without={without}
             people={billboard.attendees}
           >
-            {films.map((film) => card(withoutShared(film, own, none)))}
+            {films.map((film) =>
+              card(
+                withReason(
+                  withoutShared(film, own, none),
+                  reasons.get(section.title) ?? [],
+                ),
+              ),
+            )}
           </Section>
         )
       })}
     </>
   )
 }
+
+/** A card whose own lines all weigh against it says its Motivo's reason
+ * too (#346): read alone, it shows why it is on the shelf. */
+const withReason = (film: Film, reason: readonly BillboardLine[]): Film =>
+  reason.length > 0 &&
+  film.lines.length > 0 &&
+  film.lines.every((line) => line.against)
+    ? { ...film, lines: [...reason, ...film.lines] }
+    : film
 
 /** A section by Motivo (DESIGN.md, Seção do Cartaz): the title beside a 4px bar
  * in ink (the stamp's violet for the Aposta), "de novo" when

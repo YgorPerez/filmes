@@ -30,8 +30,15 @@ export const FEEDBACK = {
     nothing: (alone: boolean) => (alone ? 'Não vi nada' : 'Não vimos nada'),
     reactions: (alone: boolean) =>
       alone ? 'O que você achou?' : 'O que cada um achou?',
-    reactionsLead:
-      'A nota é a mesma de 1 a 10 do Cartaz. Para os outros, basta dizer se gostou. Sem reação, o filme fica só como Já visto.',
+    /** Alone, nothing about the others (#346). */
+    reactionsLead: (alone: boolean) =>
+      alone
+        ? 'A nota é a mesma de 1 a 10 do Cartaz. Sem reação, o filme fica só como Já visto.'
+        : 'A nota é a mesma de 1 a 10 do Cartaz. Para os outros, basta dizer se gostou. Sem reação, o filme fica só como Já visto.',
+    /** The Dono who looks, in her row, as the Cartaz says her (#346). */
+    you: 'Você',
+    ownRatingLabel: 'Sua nota, de 1 a 10',
+    ownComment: 'Seu comentário',
     reaction: 'Reação',
     none: 'sem reação',
     noRating: 'sem nota',
