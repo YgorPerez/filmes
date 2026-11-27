@@ -251,12 +251,6 @@ function Closed({
   )
 }
 
-/** Whether the closed Session's head says the chosen film's lines: it
- * does when a card shows the film (the block of one with no card says
- * them itself). Then the card and the legend do not repeat them (#351). */
-export const linesOnTop = (billboard: BillboardModel): boolean =>
-  !billboard.open && billboard.films.some((f) => (f.reactions?.length ?? 0) > 0)
-
 /** Where this version stands, under the request: what changed since the
  * last one, or, once closed, that it is closed and the Filme escolhido with
  * each Presente's line. The inline card, the fullscreen and the host

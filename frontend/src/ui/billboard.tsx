@@ -12,12 +12,8 @@ import {
 } from 'react'
 import { BillboardCard, EvidenceLine } from './billboard-card'
 import { ChosenFilm } from './billboard-chosen'
-import {
-  InlineBillboard,
-  linesOnTop,
-  Standing,
-  type RowTag,
-} from './billboard-inline'
+import { linesOnTop } from './billboard-closed'
+import { InlineBillboard, Standing, type RowTag } from './billboard-inline'
 import {
   emptyMarks,
   forgetMarks,
