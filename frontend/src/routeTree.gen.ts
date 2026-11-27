@@ -18,6 +18,7 @@ import { Route as OwnerIndexRouteImport } from './routes/_owner/index'
 import { Route as OwnerOperacoesRouteImport } from './routes/_owner/operacoes'
 import { Route as ExportarIndexRouteImport } from './routes/exportar/index'
 import { Route as ExportarImdbDotcsvRouteImport } from './routes/exportar/imdb[.]csv'
+import { Route as ExportarLetterboxdDotcsvRouteImport } from './routes/exportar/letterboxd[.]csv'
 import { Route as FeedbackIndexRouteImport } from './routes/feedback/index'
 import { Route as FilaIndexRouteImport } from './routes/fila/index'
 import { Route as FilaAcaoRouteImport } from './routes/fila/acao'
@@ -96,6 +97,12 @@ const ExportarImdbDotcsvRoute = ExportarImdbDotcsvRouteImport.update({
   path: '/exportar/imdb.csv',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ExportarLetterboxdDotcsvRoute =
+  ExportarLetterboxdDotcsvRouteImport.update({
+    id: '/exportar/letterboxd.csv',
+    path: '/exportar/letterboxd.csv',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const FeedbackIndexRoute = FeedbackIndexRouteImport.update({
   id: '/feedback/',
   path: '/feedback/',
@@ -274,6 +281,7 @@ export interface FileRoutesByFullPath {
   '/trakt': typeof TraktRoute
   '/operacoes': typeof OwnerOperacoesRoute
   '/exportar/imdb.csv': typeof ExportarImdbDotcsvRoute
+  '/exportar/letterboxd.csv': typeof ExportarLetterboxdDotcsvRoute
   '/fila/acao': typeof FilaAcaoRoute
   '/inicio/pular': typeof InicioPularRoute
   '/notas/enviar': typeof NotasEnviarRoute
@@ -315,6 +323,7 @@ export interface FileRoutesByTo {
   '/trakt': typeof TraktRoute
   '/operacoes': typeof OwnerOperacoesRoute
   '/exportar/imdb.csv': typeof ExportarImdbDotcsvRoute
+  '/exportar/letterboxd.csv': typeof ExportarLetterboxdDotcsvRoute
   '/fila/acao': typeof FilaAcaoRoute
   '/inicio/pular': typeof InicioPularRoute
   '/notas/enviar': typeof NotasEnviarRoute
@@ -360,6 +369,7 @@ export interface FileRoutesById {
   '/trakt': typeof TraktRoute
   '/_owner/operacoes': typeof OwnerOperacoesRoute
   '/exportar/imdb.csv': typeof ExportarImdbDotcsvRoute
+  '/exportar/letterboxd.csv': typeof ExportarLetterboxdDotcsvRoute
   '/fila/acao': typeof FilaAcaoRoute
   '/inicio/pular': typeof InicioPularRoute
   '/notas/enviar': typeof NotasEnviarRoute
@@ -406,6 +416,7 @@ export interface FileRouteTypes {
     | '/trakt'
     | '/operacoes'
     | '/exportar/imdb.csv'
+    | '/exportar/letterboxd.csv'
     | '/fila/acao'
     | '/inicio/pular'
     | '/notas/enviar'
@@ -447,6 +458,7 @@ export interface FileRouteTypes {
     | '/trakt'
     | '/operacoes'
     | '/exportar/imdb.csv'
+    | '/exportar/letterboxd.csv'
     | '/fila/acao'
     | '/inicio/pular'
     | '/notas/enviar'
@@ -491,6 +503,7 @@ export interface FileRouteTypes {
     | '/trakt'
     | '/_owner/operacoes'
     | '/exportar/imdb.csv'
+    | '/exportar/letterboxd.csv'
     | '/fila/acao'
     | '/inicio/pular'
     | '/notas/enviar'
@@ -535,6 +548,7 @@ export interface RootRouteChildren {
   SaudeRoute: typeof SaudeRoute
   TraktRoute: typeof TraktRoute
   ExportarImdbDotcsvRoute: typeof ExportarImdbDotcsvRoute
+  ExportarLetterboxdDotcsvRoute: typeof ExportarLetterboxdDotcsvRoute
   FilaAcaoRoute: typeof FilaAcaoRoute
   InicioPularRoute: typeof InicioPularRoute
   NotasEnviarRoute: typeof NotasEnviarRoute
@@ -618,6 +632,13 @@ declare module '@tanstack/react-router' {
       path: '/exportar/imdb.csv'
       fullPath: '/exportar/imdb.csv'
       preLoaderRoute: typeof ExportarImdbDotcsvRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/exportar/letterboxd.csv': {
+      id: '/exportar/letterboxd.csv'
+      path: '/exportar/letterboxd.csv'
+      fullPath: '/exportar/letterboxd.csv'
+      preLoaderRoute: typeof ExportarLetterboxdDotcsvRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/feedback/': {
@@ -915,6 +936,7 @@ const rootRouteChildren: RootRouteChildren = {
   SaudeRoute: SaudeRoute,
   TraktRoute: TraktRoute,
   ExportarImdbDotcsvRoute: ExportarImdbDotcsvRoute,
+  ExportarLetterboxdDotcsvRoute: ExportarLetterboxdDotcsvRoute,
   FilaAcaoRoute: FilaAcaoRoute,
   InicioPularRoute: InicioPularRoute,
   NotasEnviarRoute: NotasEnviarRoute,

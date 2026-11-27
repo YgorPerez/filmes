@@ -1,6 +1,6 @@
 // A Pessoa's imports as a screen shows them (#117): the files she has
 // imported, what her Letterboxd films became (resolved, discarded, queued)
-// and how many Trakt Fatos she has. Read only. Python had no such command:
+// and how many Trakt and IMDb Fatos she has. Read only. Python had no such command:
 // `importar` printed the report once, after an import.
 import { Effect } from 'effect'
 import { isMapping, pyStrValue, type YamlValue } from '../data/yaml.ts'
@@ -8,6 +8,7 @@ import { resolvePerson } from '../people/people.ts'
 import type { EngineError } from '../runtime/EngineError.ts'
 import type { Environment } from '../runtime/Environment.ts'
 import { Sqlite, type SqliteError } from '../sqlite/Sqlite.ts'
+import { imdbFactCounts, type ImdbFactCounts } from './imdb.ts'
 import { letterboxdReport, type LetterboxdReport } from './letterboxd.ts'
 import {
   requireImportTables,
@@ -17,7 +18,7 @@ import {
 
 /** An import recorded in the Pessoa's file. */
 export interface ImportRecord {
-  /** `letterboxd`, `letterboxd-rss` or `trakt`. */
+  /** `letterboxd`, `letterboxd-rss`, `trakt` or `imdb`. */
   readonly kind: string
   /** The kept copy, relative to filmes-dados: `removeImport` takes it. */
   readonly file: string
@@ -33,6 +34,7 @@ export interface PersonImports {
   readonly imports: readonly ImportRecord[]
   readonly letterboxd: LetterboxdReport
   readonly trakt: TraktFactCounts
+  readonly imdb: ImdbFactCounts
 }
 
 const field = (record: ReadonlyMap<string, YamlValue>, key: string) => {
@@ -65,6 +67,7 @@ export const personImports = (
           imports,
           letterboxd: yield* letterboxdReport(db, person.slug),
           trakt: yield* traktFactCounts(db, person.slug),
+          imdb: yield* imdbFactCounts(db, person.slug),
         }
       }),
     )

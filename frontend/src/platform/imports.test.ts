@@ -55,6 +55,11 @@ const traktZip = new File(
   [new Uint8Array(zipOf([['trakt/ratings-movies.json', '[]']]))],
   'trakt.zip',
 )
+const imdbCsv = new File(
+  [readFileSync(join(ROOT, 'tests/fixture/imdb/vera.csv'))],
+  'ratings.csv',
+  { type: 'text/csv' },
+)
 
 describe('parseImport', () => {
   it('reads an upload with its name and bytes, of either service', async () => {
@@ -225,7 +230,7 @@ describe('importAction', () => {
     )
   })
 
-  it('tells Letterboxd from Trakt by what the ZIP holds', async () => {
+  it('tells Letterboxd from Trakt by what the ZIP holds, and IMDb by its CSV', async () => {
     const { imports, calls } = fakeImports()
     const upload = (file: File) =>
       importAction(
@@ -237,12 +242,13 @@ describe('importAction', () => {
       )
     await upload(letterboxdZip)
     await upload(traktZip)
+    await upload(imdbCsv)
     expect(
       calls.map((call) => {
         const { action } = call as { action: ImportRun }
         return action.kind
       }),
-    ).toEqual(['letterboxd', 'trakt'])
+    ).toEqual(['letterboxd', 'trakt', 'imdb'])
     const neither = await upload(
       new File([new Uint8Array(zipOf([['notas.csv', 'x']]))], 'outro.zip'),
     )
@@ -253,7 +259,13 @@ describe('importAction', () => {
     expect(notZip.headers.get('Location')).toBe(
       '/pessoas/teo/importar?erro=origem',
     )
-    expect(calls).toHaveLength(2)
+    const otherCsv = await upload(
+      new File(['Date,Name,Year\n'], 'ratings.csv', { type: 'text/csv' }),
+    )
+    expect(otherCsv.headers.get('Location')).toBe(
+      '/pessoas/teo/importar?erro=origem',
+    )
+    expect(calls).toHaveLength(3)
   })
 
   it('takes the RSS without the consent box on the Dono’s own page', async () => {
@@ -451,6 +463,7 @@ describe('the pages', () => {
             discardedItems: [],
           },
           trakt: { ratings: 0, seen: 0, watchlist: 0 },
+          imdb: { ratings: 0 },
         },
       }),
     }
@@ -501,6 +514,11 @@ const TRAKT: ImportRun = {
   original: 'trakt.zip',
   content: folderZip(join(ROOT, 'tests/fixture/trakt'), 'trakt-export/'),
 }
+const IMDB: ImportRun = {
+  kind: 'imdb',
+  original: 'ratings.csv',
+  content: readFileSync(join(ROOT, 'tests/fixture/imdb/vera.csv')),
+}
 const VENTO = 'vento-norte-2020-e2bf439e1af6'
 const LOST = 'filme-perdido-2001-91d7fc73cdee'
 
@@ -550,13 +568,16 @@ describe('importsFromEngine, imports', () => {
     expect(await run(LETTERBOXD)).toEqual({ notice: 'letterboxd', facts: 14 })
     expect(await run(LETTERBOXD)).toEqual({ notice: 'repetido', facts: 0 })
     expect(await run(TRAKT)).toEqual({ notice: 'trakt', facts: 3, outside: 0 })
+    expect(await run(IMDB)).toEqual({ notice: 'imdb', facts: 3, outside: 1 })
 
     const page = await ok(imports.page('quim'))
     expect(page.imports.map((i) => [i.kind, i.original])).toEqual([
       ['letterboxd', 'olga.zip'],
       ['trakt', 'trakt.zip'],
+      ['imdb', 'ratings.csv'],
     ])
     expect(page.trakt).toEqual({ ratings: 2, seen: 1, watchlist: 0 })
+    expect(page.imdb).toEqual({ ratings: 3 })
     expect((await ok(imports.queue())).items).toHaveLength(2)
 
     expect(await run({ kind: 'rss', user: 'olga_farol' })).toMatchObject({
@@ -572,6 +593,7 @@ describe('importsFromEngine, imports', () => {
     expect(log()).toEqual([
       'Bruno <bruno@example.org>|import letterboxd quim: olga.zip',
       'Bruno <bruno@example.org>|import trakt quim: trakt.zip',
+      'Bruno <bruno@example.org>|import imdb quim: ratings.csv',
       'Bruno <bruno@example.org>|import letterboxd-rss quim: https://letterboxd.com/olga_farol/rss/',
       'Bruno <bruno@example.org>|remove import quim',
     ])
