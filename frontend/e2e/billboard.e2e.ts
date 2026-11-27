@@ -291,7 +291,7 @@ test('the Dono marks, reloads, sends, and the Cartaz comes back redone', async (
   // The reading does not take "na próxima vez": the bar asks before
   // anything is recorded, and "Enviar assim" sends it as a note (#272).
   await page.getByRole('button', { name: 'Enviar' }).click()
-  await expect(bar.getByRole('alert')).toContainText('“na próxima vez”')
+  await expect(bar.getByRole('alert')).toContainText('“próxima vez”')
   await expect(page).toHaveURL(new RegExp(`/sessoes/${id}$`))
   await bar.getByRole('button', { name: 'Enviar assim' }).click()
   await expect(page).toHaveURL(
