@@ -225,4 +225,22 @@ describe('export', () => {
       /format/,
     )
   })
+
+  test("hands back Bruno's Notas as the CSV Letterboxd imports", async () => {
+    const c = await connect(useFixture())
+
+    const result = await c.ok('export', {
+      person: 'dono',
+      format: 'letterboxd',
+    })
+
+    const lines = result.content.trim().split('\r\n')
+    assert.equal(result.format, 'letterboxd')
+    assert.equal(lines[0], 'imdbID,Title,Year,Rating10,WatchedDate,Review')
+    assert.equal(
+      lines.find((line: string) => line.startsWith('tt9000101,')),
+      'tt9000101,O Farol de Areia,2012,10,2025-06-01,',
+    )
+    assert.equal(lines.length - 1, result.ratings)
+  })
 })

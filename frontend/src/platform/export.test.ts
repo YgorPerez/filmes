@@ -7,9 +7,9 @@ import {
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { useFixture } from '../../../packages/engine/test/fixture.ts'
 import {
+  csvDownload,
+  csvFileName,
   exporterFromEngine,
-  imdbDownload,
-  imdbFileName,
   type Exporter,
 } from './export'
 import type { Owner } from './owners'
@@ -29,18 +29,18 @@ const failure = (code: ErrorCode): Outcome<never> => ({
   output: { error: { code, message: `mensagem de ${code}` } },
 })
 
-/** An exporter whose IMDb file is `outcome`, for any Pessoa. */
+/** An exporter whose file is `outcome`, for any Pessoa and format. */
 function exporter(outcome: Outcome<string>) {
   const asked: string[] = []
   const fake: Exporter = {
-    imdb: async (person) => {
-      asked.push(person)
+    file: async (person, format) => {
+      asked.push(`${person} ${format}`)
       return outcome.exitCode === 0
         ? {
             exitCode: 0,
             output: {
               person,
-              format: 'imdb',
+              format,
               ratings: 1,
               outsideCatalog: 0,
               content: outcome.output,
@@ -55,11 +55,17 @@ function exporter(outcome: Outcome<string>) {
 const download = (query: string) =>
   new Request(`http://localhost/exportar/imdb.csv${query}`)
 
-describe('imdbDownload', () => {
+const imdbDownload = (
+  request: Request,
+  owner: Owner | null,
+  exporter: Exporter,
+) => csvDownload(request, owner, exporter, 'imdb')
+
+describe('csvDownload', () => {
   it('gives the engine file byte for byte, as an attachment', async () => {
     const { fake, asked } = exporter({ exitCode: 0, output: CSV })
     const response = await imdbDownload(download('?pessoa=bruno'), BRUNO, fake)
-    expect(asked).toEqual(['bruno'])
+    expect(asked).toEqual(['bruno imdb'])
     expect(response.status).toBe(200)
     expect(response.headers.get('Content-Type')).toBe('text/csv; charset=utf-8')
     expect(response.headers.get('Content-Disposition')).toBe(
@@ -67,6 +73,20 @@ describe('imdbDownload', () => {
     )
     expect(response.headers.get('Cache-Control')).toBe('private, no-store')
     expect(await response.text()).toBe(CSV)
+  })
+
+  it('names the Letterboxd file by its format', async () => {
+    const { fake, asked } = exporter({ exitCode: 0, output: CSV })
+    const response = await csvDownload(
+      new Request('http://localhost/exportar/letterboxd.csv?pessoa=iara'),
+      BRUNO,
+      fake,
+      'letterboxd',
+    )
+    expect(asked).toEqual(['iara letterboxd'])
+    expect(response.headers.get('Content-Disposition')).toBe(
+      'attachment; filename="filmes-iara-letterboxd.csv"',
+    )
   })
 
   it('sends whoever is not a Dono to the login, without asking the engine', async () => {
@@ -112,10 +132,11 @@ describe('imdbDownload', () => {
   })
 })
 
-describe('imdbFileName', () => {
+describe('csvFileName', () => {
   it('keeps a slug as it is and replaces what a file name should not have', () => {
-    expect(imdbFileName('ana-clara')).toBe('filmes-ana-clara-imdb.csv')
-    expect(imdbFileName('a"b/c')).toBe('filmes-a_b_c-imdb.csv')
+    expect(csvFileName('ana-clara', 'imdb')).toBe('filmes-ana-clara-imdb.csv')
+    expect(csvFileName('a"b/c', 'imdb')).toBe('filmes-a_b_c-imdb.csv')
+    expect(csvFileName('iara', 'letterboxd')).toBe('filmes-iara-letterboxd.csv')
   })
 })
 
@@ -147,7 +168,7 @@ describe('exporterFromEngine', () => {
     const engine = makeEngine({})
     try {
       const exporter = exporterFromEngine(engine)
-      const file = await exporter.imdb('bruno')
+      const file = await exporter.file('bruno', 'imdb')
       expect(file).toMatchObject({
         exitCode: 1,
         output: { error: { code: 'missing_config' } },

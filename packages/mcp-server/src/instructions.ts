@@ -121,6 +121,10 @@ Os filmes que esperam decisão estão em \`import_queue\` (\`view\`). Mostre os 
 
 O MovieLens só importa o CSV de avaliações do IMDb. Chame \`export\` com a Pessoa e \`format: "imdb"\`: o arquivo volta em \`content\`. Entregue-o ao Dono como \`<pessoa>-imdb-ratings.csv\`. A Pessoa sobe o arquivo em movielens.org, Import or Export Data.
 
+### Exportar para o Letterboxd
+
+Para levar ao diário do Letterboxd o que a Pessoa deu nota e viu no filmes, chame \`export\` com a Pessoa e \`format: "letterboxd"\`. Entregue \`content\` ao Dono como \`<pessoa>-letterboxd.csv\`. A Pessoa sobe o arquivo no import de dados do Letterboxd (letterboxd.com/about/importing-data explica); cada filme entra no diário no dia em que ela viu, e exportar de novo atualiza a entrada em vez de repetir.
+
 ### Desfazer um registro
 
 Quando o Dono corrigir algo já gravado ("não era esse filme"), chame \`view\`, ache o item e chame \`remove\` com \`remove: {kind, id}\` (\`kind\` entre \`stated\`, \`report\`, \`veto\`, \`seen\`, \`open_question\`; \`id\` o \`factId\` do item, ou o alvo quando só um item daquele tipo o tem). Depois grave o certo, se houver. Declarado de \`factId\` \`letterboxd:\` veio de um import e não sai sozinho: para tirar um import inteiro, chame \`import\` com \`remove\` e o arquivo que \`view\` mostra em \`imports\`.

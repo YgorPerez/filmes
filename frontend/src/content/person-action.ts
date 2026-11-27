@@ -183,7 +183,8 @@ export const PERSON_REFUSALS = [
   'ja-dono',
   // Access: the logged-in Dono taking her own away.
   'proprio-acesso',
-  // The IMDb CSV did not come (`platform/export.ts`): the engine failed.
+  // The IMDb or Letterboxd CSV did not come (`platform/export.ts`): the
+  // engine failed.
   'exportar',
   // The engine cannot run here, or failed in a way that passes: the reason
   // is in the log.

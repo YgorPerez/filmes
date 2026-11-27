@@ -44,11 +44,11 @@ export { searchKey } from './catalog/search-key.ts'
 export {
   EXPORT_FORMATS,
   exportRatings,
-  IMDB_HEADER,
-  imdbRating,
   type ExportFormat,
   type ExportResult,
-} from './export/imdb.ts'
+} from './export/export.ts'
+export { IMDB_HEADER } from './export/imdb.ts'
+export { LETTERBOXD_HEADER } from './export/letterboxd.ts'
 export { resolveAttendees } from './recommendation/attendees.ts'
 export {
   attributionsOf,

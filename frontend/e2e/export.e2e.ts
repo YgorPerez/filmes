@@ -1,26 +1,35 @@
 import { readFileSync } from 'node:fs'
-import { exportRatings } from '@filmes/engine'
+import { exportRatings, type ExportFormat } from '@filmes/engine'
 import { type Page } from '@playwright/test'
 import { engineRun, expect, loginAsBruno, section, tab, test } from './support'
 
 /** The file the engine writes for `person`, over the same fixture copy the
  * app serves. */
-const engineFile = async (person: string) =>
-  (await engineRun((engine) => engine.run(exportRatings(person, 'imdb'))))
+const engineFile = async (person: string, format: ExportFormat) =>
+  (await engineRun((engine) => engine.run(exportRatings(person, format))))
     .content
+
+const LINKS: Record<ExportFormat, string> = {
+  imdb: 'Baixar CSV do IMDb',
+  letterboxd: 'Baixar CSV do Letterboxd',
+}
 
 /** Downloads the CSV from the Notas section of the page on screen, and
  * checks it is the engine's, byte for byte. */
-async function download(page: Page, slug: string) {
+async function download(
+  page: Page,
+  slug: string,
+  format: ExportFormat = 'imdb',
+) {
   const notes = section(page, 'Notas')
   await expect(notes.getByText('Import or Export Data')).toBeVisible()
   const [file] = await Promise.all([
     page.waitForEvent('download'),
-    notes.getByRole('link', { name: 'Baixar CSV do IMDb' }).click(),
+    notes.getByRole('link', { name: LINKS[format] }).click(),
   ])
-  expect(file.suggestedFilename()).toBe(`filmes-${slug}-imdb.csv`)
+  expect(file.suggestedFilename()).toBe(`filmes-${slug}-${format}.csv`)
   const saved = readFileSync(await file.path(), 'utf8')
-  expect(saved).toBe(await engineFile(slug))
+  expect(saved).toBe(await engineFile(slug, format))
   expect(saved.split('\r\n').length).toBeGreaterThan(2)
 }
 
@@ -35,6 +44,16 @@ test('the Dono downloads her own IMDb CSV and a Pessoa’s, equal to the engine�
   await tab(page, 'Pessoas').click()
   await page.getByRole('link', { name: /Iara/ }).click()
   await download(page, 'iara')
+  await expect(page).toHaveURL(/\/pessoas\/iara$/)
+})
+
+test('the Dono downloads a Pessoa’s Letterboxd CSV, equal to the engine’s', async ({
+  page,
+}) => {
+  await loginAsBruno(page)
+  await tab(page, 'Pessoas').click()
+  await page.getByRole('link', { name: /Iara/ }).click()
+  await download(page, 'iara', 'letterboxd')
   await expect(page).toHaveURL(/\/pessoas\/iara$/)
 })
 
@@ -72,9 +91,11 @@ test('the old export page is Meu gosto', async ({ page }) => {
 })
 
 test('the download needs a Dono', async ({ request }) => {
-  const response = await request.get('/exportar/imdb.csv?pessoa=bruno', {
-    maxRedirects: 0,
-  })
-  expect(response.status()).toBe(303)
-  expect(response.headers()['location']).toBe('/entrar')
+  for (const format of ['imdb', 'letterboxd']) {
+    const response = await request.get(`/exportar/${format}.csv?pessoa=bruno`, {
+      maxRedirects: 0,
+    })
+    expect(response.status()).toBe(303)
+    expect(response.headers()['location']).toBe('/entrar')
+  }
 })
