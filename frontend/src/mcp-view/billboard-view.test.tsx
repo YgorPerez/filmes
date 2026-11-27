@@ -11,7 +11,7 @@ import { SEND_STATUS } from '../ui/billboard-send.copy'
 import { BILLBOARD } from '../ui/billboard.copy'
 import { BillboardView, type Host } from './billboard-view'
 import { mountView, type ViewApp } from './mount-view'
-import { replyMessage, type ToolResult } from './view-model'
+import { AGAIN, replyMessage, type ToolResult } from './view-model'
 
 afterEach(() => {
   cleanup()
@@ -50,7 +50,7 @@ const REPLY = {
   warnings: [],
 }
 
-const TAG = '(enviado pelo Cartaz · 2026-11-20-iara v2)'
+const TAG = '(pelo Cartaz · v2)'
 const CONTEXT =
   'Resposta do Cartaz 2026-11-20-iara v2, já gravada por answer_billboard (não chame de novo):\n' +
   'refazer · manter: tt9000105'
@@ -154,9 +154,10 @@ describe('Enviar', () => {
       text: '#cartaz 2026-11-20-iara v2\n1 tt9000104 · trocar\n',
     })
     expect(host.callTool).toHaveBeenCalledTimes(1)
-    // A host without model context: the detail follows her words.
+    // A host without model context: still her words alone; Claude reads
+    // what was recorded from the Session (#277).
     expect(host.sendMessage).toHaveBeenCalledExactlyOnceWith(
-      `Troquei As Horas Lentas. Refaz a lista mantendo o resto?\n${TAG}\n${CONTEXT}`,
+      `Troquei As Horas Lentas. Refaz a lista mantendo o resto?\n${TAG}`,
     )
     expect(status()).toBe(SEND_STATUS.regenerating)
   })
@@ -189,6 +190,34 @@ describe('Enviar', () => {
     await user.click(card(2).getByRole('button', { name: 'Trocar' }))
     await user.click(screen.getByRole('button', { name: copy.send }))
     expect(host.callTool).toHaveBeenCalledTimes(2)
+    // The second message says it replaces the first (#277).
+    expect(host.sendMessage).toHaveBeenLastCalledWith(
+      expect.stringMatching(new RegExp(`^${AGAIN} Troquei`, 'u')),
+    )
+  })
+
+  it('a send the chat never heard of is not replaced by the next', async () => {
+    const host = fakeHost(json(REPLY), { isError: true })
+    render(<BillboardView result={shown} host={host} />)
+    const user = await swapFirstAndSend()
+    await user.click(card(2).getByRole('button', { name: 'Trocar' }))
+    await user.click(screen.getByRole('button', { name: copy.send }))
+    expect(host.sendMessage).toHaveBeenLastCalledWith(
+      expect.stringMatching(/^Troquei/u),
+    )
+  })
+
+  it('a model context that fails still sends her words', async () => {
+    const updateContext = vi.fn<NonNullable<Host['updateContext']>>(() =>
+      Promise.reject(new Error('sem contexto')),
+    )
+    const host = { ...fakeHost(json(REPLY)), updateContext }
+    render(<BillboardView result={shown} host={host} />)
+    await swapFirstAndSend()
+    expect(host.sendMessage).toHaveBeenCalledExactlyOnceWith(
+      `Troquei As Horas Lentas. Refaz a lista mantendo o resto?\n${TAG}`,
+    )
+    expect(status()).toBe(SEND_STATUS.regenerating)
   })
 })
 
@@ -424,7 +453,7 @@ describe('the chat follow-up message, for others who saw it', () => {
       people,
     )
     expect(message?.text.split('\n')[0]).toBe(
-      'Troquei o filme 3. teo já viu Fronteira (teo deu 6). ' +
+      'Troquei o filme 3. teo já viu Fronteira (nota 6). ' +
         'Iara e teo já viram Cais. Tirei o clima. ' +
         'Sobre o filme 4: “curto”. Refaz a lista?',
     )
@@ -456,10 +485,19 @@ describe('the chat follow-up message, alone, none or long', () => {
     ).toBeNull()
   })
 
-  it('at most the 8,000 characters a ui/message takes', () => {
+  it('at most the 8,000 characters a ui/message takes, the tag kept', () => {
     const long = replyMessage({ ...REPLY, addition: 'a'.repeat(9000) }, people)
     expect(long?.text).toHaveLength(8000)
+    expect(long?.text.endsWith(`\n${TAG}`)).toBe(true)
     expect(long?.context).toHaveLength(8000)
+  })
+
+  it('a second send of the version says it replaces the first', () => {
+    const again = replyMessage(REPLY, people, true)
+    expect(again?.text.split('\n')[0]).toBe(
+      `${AGAIN} Troquei As Horas Lentas. Refaz a lista mantendo o resto?`,
+    )
+    expect(again?.context.split('\n')[0]).toMatch(/substitui a anterior:$/u)
   })
 })
 
@@ -513,7 +551,7 @@ describe('mountView', () => {
     expect(app.sendMessage).toHaveBeenCalledWith({
       role: 'user',
       content: [
-        { type: 'text', text: expect.stringMatching(/enviado pelo Cartaz/) },
+        { type: 'text', text: expect.stringMatching(/pelo Cartaz · v2/) },
       ],
     })
     expect(app.updateModelContext).toHaveBeenCalledWith({
@@ -582,6 +620,23 @@ describe('mountView, inline', () => {
     expect(document.documentElement.dataset.theme).toBeUndefined()
     root.remove()
   })
+
+  it('inline declares no colour scheme, so the host’s floor shows; fullscreen takes the theme’s', async () => {
+    const modes = { availableDisplayModes: ['inline', 'fullscreen'] }
+    const app = fakeApp({ theme: 'dark', displayMode: 'inline', ...modes })
+    const root = document.body.appendChild(document.createElement('div'))
+    await act(() =>
+      mountView(app as unknown as ViewApp, root, () => Promise.resolve()),
+    )
+    const style = document.documentElement.style
+    expect(document.documentElement.dataset.theme).toBe('dark')
+    expect(style.colorScheme).toBe('normal')
+    await act(async () =>
+      app.onhostcontextchanged?.({ displayMode: 'fullscreen' }),
+    )
+    expect(style.colorScheme).toBe('dark')
+    root.remove()
+  })
 })
 
 describe('mountView, from fullscreen back inline', () => {
@@ -613,6 +668,11 @@ describe('mountView, from fullscreen back inline', () => {
         text: '#cartaz 2026-11-20-iara v2\n1 tt9000104 · trocar\n',
       },
     })
+    // The marked film keeps its row, with its tag (#277).
+    const films = within(root).getByRole('list', { name: view.list })
+    expect(within(films).getAllByRole('listitem')[0]!.textContent).toBe(
+      '1As Horas LentasTrocar2021 · 1h44',
+    )
     // Sent: it says so, and the one action is to mark again.
     expect(within(root).getByText(view.sentTitle)).toBeTruthy()
     expect(within(root).queryByRole('button', { name: copy.send })).toBeNull()

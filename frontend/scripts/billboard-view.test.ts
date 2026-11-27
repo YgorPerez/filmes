@@ -229,13 +229,9 @@ describe('the bundled view, sending through the host', () => {
       content: [
         {
           type: 'text',
-          // This host takes no model context: the detail follows her
-          // words.
-          text:
-            'Refaz a lista mantendo o resto?\n' +
-            '(enviado pelo Cartaz · 2026-11-20-iara v2)\n' +
-            'Resposta do Cartaz 2026-11-20-iara v2, já gravada por answer_billboard (não chame de novo):\n' +
-            'refazer · manter: tt9000105',
+          // This host takes no model context: her words alone all the
+          // same; Claude reads the rest from the Session (#277).
+          text: 'Refaz a lista mantendo o resto?\n(pelo Cartaz · v2)',
         },
       ],
     })
