@@ -577,14 +577,15 @@ describe('Meu gosto’s start', () => {
 
   it('resumes a skipped step, even once the home has no guide', async () => {
     mine({
-      setup: setup({ taste: 'done', import: 'skipped', connector: 'done' }),
+      setup: setup({ taste: 'skipped', connector: 'done' }),
       mcpUrl: MCP,
     })
     const skipped = section(MY_START.skipped.title)
     const resume = within(skipped).getByText(MY_START.resume)
-    expect(within(skipped).queryByText(/Meu gosto/)).toBeNull()
+    expect(within(skipped).queryByText(/Conector/)).toBeNull()
     await userEvent.setup().click(resume)
     expect(link(skipped, 'Importar')).toBe('/meu-gosto/importar')
+    expect(link(skipped, 'Dar notas')).toBe('/meu-gosto/notas')
   })
 
   it('keeps a skipped connector behind its Retomar, not twice', async () => {

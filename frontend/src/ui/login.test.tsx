@@ -23,6 +23,19 @@ describe('Login', () => {
     ).not.toContain('href="/auth/google"')
   })
 
+  it('says what the site is for and who gets in, before a trip to Google', () => {
+    const html = renderToStaticMarkup(<Login />)
+    expect(html).toContain(`aria-label="${LOGIN.taglineLabel}"`)
+    expect(html).toMatch(/<h1 id="entrar"[^>]*>Entrar<\/h1>/u)
+    expect(html).toContain(LOGIN.access)
+  })
+
+  it('leaves the access line out when the refusal already says it', () => {
+    expect(renderToStaticMarkup(<Login refusal="nao-dono" />)).not.toContain(
+      LOGIN.access,
+    )
+  })
+
   it('opens with the brand on the case-black bar', () => {
     expect(renderToStaticMarkup(<Login />)).toMatch(
       /<header class="bg-case"><p[^>]*>filmes<\/p><\/header>/u,

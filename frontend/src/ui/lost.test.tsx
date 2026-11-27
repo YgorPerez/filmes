@@ -22,6 +22,16 @@ describe('NotFound', () => {
     ])
   })
 
+  it('for a Sessão that does not exist, says so and leads to every Sessão', () => {
+    render(<NotFound what="session" />)
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
+      'Essa Sessão não está na prateleira',
+    )
+    expect(
+      screen.getByRole('link', { name: 'Ver todas as Sessões' }),
+    ).toHaveProperty('pathname', '/sessoes')
+  })
+
   it('alone, offers Entrar and no Sessões', () => {
     render(
       <LostAlone>
