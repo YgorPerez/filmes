@@ -54,7 +54,12 @@ describe('the Falta strip', () => {
   })
 
   it('appears in Claude while open', () => {
-    render(<Billboard billboard={{ ...MODEL, shortfall }} onSend={vi.fn()} />)
+    render(
+      <Billboard
+        billboard={{ ...MODEL, shortfall }}
+        onSend={vi.fn<(text: string) => void>()}
+      />,
+    )
     expect(screen.getByRole('note').textContent).toBe(shortfall)
   })
 
