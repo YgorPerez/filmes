@@ -191,7 +191,7 @@ const readMarks = (
       else if (name === 'trocar' && value === SEEN_SWAP) {
         swap = true
         swapSeen = true
-      }      else if (name === 'já vi' && value) seen = value
+      } else if (name === 'já vi' && value) seen = value
       else if (thought && value)
         thoughts.set(thought[1] ?? null, pyJoinWords(value))
       else if (name === 'estrelas' && STARS.has(value)) stars = Number(value)
@@ -694,22 +694,22 @@ const betMarksOf = (
 ) => {
   const fromSeen = new Set(films.filter((m) => m.swapSeen).map((m) => m.id))
   return [
-  ...seen.flatMap(({ person, film, rating }) =>
-    rating === null
+    ...seen.flatMap(({ person, film, rating }) =>
+      rating === null
+        ? []
+        : [{ person, film, rating, kind: 'seen' as const, date: today }],
+    ),
+    ...(owner === undefined
       ? []
-      : [{ person, film, rating, kind: 'seen' as const, date: today }],
-  ),
-  ...(owner === undefined
-    ? []
-    : [...swap]
-        .filter((film) => !fromSeen.has(film))
-        .map((film) => ({
-          person: owner,
-          film,
-          rating: null,
-          kind: 'swapped' as const,
-          date: today,
-        }))),
+      : [...swap]
+          .filter((film) => !fromSeen.has(film))
+          .map((film) => ({
+            person: owner,
+            film,
+            rating: null,
+            kind: 'swapped' as const,
+            date: today,
+          }))),
   ]
 }
 
