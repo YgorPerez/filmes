@@ -316,8 +316,9 @@ const sessionRequest = (
     )
     const asked = yield* readAsked(asking)
     const redo = yield* prepareRedo(front, { keep, asking, asked })
-    if (!front.has('refill_comments')) return redo
-    const read = yield* readRefillComments(front)
+    const comments = front.get('refill_comments')
+    if (!isSequence(comments)) return redo
+    const read = yield* readRefillComments(comments)
     return {
       ...redo,
       refillMoods: read.moods ?? [],
