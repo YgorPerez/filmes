@@ -854,7 +854,11 @@ describe('the similar in the Session (test_parecido_na_sessao)', () => {
     expect(ids(second)).toEqual(ids(first))
     expect(second.constraints['similar']?.['films']).toEqual([ESCREVER_CARTAS])
     expect(third.constraints['similar']?.['films']).toEqual([ESCREVER_CARTAS])
-    expect(ids(third).filter((f) => !ids(first).includes(f))).toEqual([])
+    // The similar films ran out: the list fills with others (#358).
+    expect(ids(third)).toHaveLength(10)
+    expect(third.shortfall?.relaxed.map((r) => r.constraint)).toEqual([
+      'similar',
+    ])
     expect(third.kept).toEqual([first.films[0]!.id])
   })
 
@@ -865,7 +869,7 @@ describe('the similar in the Session (test_parecido_na_sessao)', () => {
     const second = await redoTen(fixture, id, { noSimilar: true })
     const third = await redoTen(fixture, id)
 
-    expect(ids(first)).toEqual([PE_NA_ESTRADA])
+    expect(ids(first)[0]).toBe(PE_NA_ESTRADA)
     expect(second.constraints['similar']).toBeUndefined()
     expect(third.constraints['similar']).toBeUndefined()
     expect(ids(second)).toHaveLength(10)
@@ -879,8 +883,8 @@ describe('the similar in the Session (test_parecido_na_sessao)', () => {
     const third = await redoTen(fixture, id)
 
     expect(second.constraints['similar']?.['films']).toEqual([ESTRADA_AFORA])
-    expect(ids(second)).toEqual([PE_NA_ESTRADA])
-    expect(ids(third)).toEqual([PE_NA_ESTRADA])
+    expect(ids(second)[0]).toBe(PE_NA_ESTRADA)
+    expect(ids(third)[0]).toBe(PE_NA_ESTRADA)
   })
 })
 
@@ -895,16 +899,18 @@ describe('the similar in the Session (test_parecido_na_sessao)', () => {
       keep: [screen[0]!],
     })
 
-    expect(ids(second)).toEqual([PE_NA_ESTRADA])
+    expect(ids(second)[0]).toBe(PE_NA_ESTRADA)
     expect(second.kept).toEqual([])
-    expect(second.films.every((f) => f.new)).toBe(true)
+    // The similar film comes first; the list fills with others (#358),
+    // and the earlier screen's films may come back among them.
+    expect(second.films[0]?.new).toBe(true)
     expect(
       withoutPosterWarning(second.warnings).some(
         (w) => w.includes('--manter') && w.includes('parecido'),
       ),
     ).toBe(true)
     expect(second.dropped?.map((s) => s.id)).toEqual(
-      screen.filter((f) => f !== PE_NA_ESTRADA),
+      screen.filter((f) => !ids(second).includes(f)),
     )
     expect(
       new Set(

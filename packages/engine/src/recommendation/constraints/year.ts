@@ -23,6 +23,21 @@ const rangeText = (since: number | null, until: number | null): string => {
   return `entre ${since} e ${until}`
 }
 
+/** What the films a short list let in despite the range are (#358): "de
+ * antes de 1990", "de depois de 2015", "de fora de 2012 a 2016", "de
+ * outros anos" (a range of one year, on both sides of it). */
+const outsideText = (
+  films: ReadonlyArray<Candidate>,
+  since: number | null,
+  until: number | null,
+): string => {
+  const before = films.some((f) => since !== null && (f.year ?? 0) < since)
+  const after = films.some((f) => until !== null && (f.year ?? 0) > until)
+  if (before && !after) return `de antes de ${since}`
+  if (after && !before) return `de depois de ${until}`
+  return since === until ? 'de outros anos' : `de fora de ${since} a ${until}`
+}
+
 const year = (since: number | null, until: number | null): Constraint => {
   const inside = (value: number) =>
     (since === null || value >= since) && (until === null || value <= until)
@@ -39,6 +54,9 @@ const year = (since: number | null, until: number | null): Constraint => {
     toJson: () => ({ since, until }),
     stored: () => ({ name: 'year', since, until }),
     result: () => ({}),
+    // A film with no year stays out: nobody can say where it falls.
+    relaxes: (film) => film.year !== null,
+    relaxedText: (films) => outsideText(films, since, until),
     evaluate: (_, films) =>
       Effect.succeed(
         new Map(
