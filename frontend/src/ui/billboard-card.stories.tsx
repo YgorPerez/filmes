@@ -115,6 +115,22 @@ export const WithAwards: Story = {
   },
 }
 
+export const WithCritics: Story = {
+  args: {
+    film: {
+      ...FILM,
+      awards: ['Oscar de melhor filme'],
+      critics: ['93% no Rotten Tomatoes', 'nota 81 no Metacritic'],
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Oscar de melhor filme')).toBeVisible()
+    await expect(canvas.getByText('93% no Rotten Tomatoes')).toBeVisible()
+    await expect(canvas.getByText('nota 81 no Metacritic')).toBeVisible()
+  },
+}
+
 /** The trailer opens YouTube in a new tab: a link, never a player. */
 export const WithTrailer: Story = {
   play: async ({ canvasElement }) => {

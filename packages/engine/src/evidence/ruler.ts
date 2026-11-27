@@ -333,6 +333,11 @@ export const imdbRatingStrength = (): Strength => 'strong'
 /** A Wikidata award or nomination is exact metadata. */
 export const awardStrength = (): Strength => 'strong'
 
+/** The critics' score OMDb gives (Rotten Tomatoes, Metacritic) is the
+ * aggregator's own number: exact metadata. The bonus size comes from the
+ * score, not from the strength. */
+export const criticsStrength = (): Strength => 'strong'
+
 /** The "parecido com X" line of a similar request: the project's reading
  * of tags and neighbours, weak. Not a Fact, and adds to nothing. */
 export const similarStrength = (): Strength => 'weak'

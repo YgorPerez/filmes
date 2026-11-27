@@ -211,6 +211,9 @@ export interface BillboardFilm {
   readonly chips: ReadonlyArray<string>
   /** The major awards and nominations saved with the version. */
   readonly awards?: ReadonlyArray<string>
+  /** The critics' score saved with the version: "93% no Rotten
+   * Tomatoes". */
+  readonly critics?: ReadonlyArray<string>
   readonly synopsis: string | null
   /** The strongest Evidence of each Presente with a Fato, the strongest
    * lines first. */
@@ -683,9 +686,10 @@ const filmCard = (
     const header = yield* filmHeader(db, row)
     const trailer = yield* (yield* Tmdb).trailer(film.id)
     const recorded = listed.get(film.id)
-    const awards = listOf(recorded?.get('awards')).filter(
-      (label) => typeof label === 'string',
-    )
+    const labels = (key: string) =>
+      listOf(recorded?.get(key)).filter((label) => typeof label === 'string')
+    const awards = labels('awards')
+    const critics = labels('critics')
     const withoutFact = Object.entries(film.evidence)
       .filter(([, evidence]) => !evidence.some(isFact))
       .map(([person]) => person)
@@ -716,6 +720,7 @@ const filmCard = (
       votesText: votesText(header.imdbVotes),
       chips,
       ...(awards.length > 0 && { awards }),
+      ...(critics.length > 0 && { critics }),
       synopsis: header.synopsis,
       lines: linesOf(film),
       withoutFact,
