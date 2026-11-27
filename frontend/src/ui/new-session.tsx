@@ -243,7 +243,7 @@ function nightOf(data: FormData, options: RequestOptions): string[] {
       ? null
       : people.length === 1
         ? one?.owner
-          ? 'você'
+          ? SESSIONS.form.alone
           : (one?.name ?? null)
         : SESSIONS.form.together(people.length)
   const minutes = Number(data.get('duracao'))
@@ -488,7 +488,7 @@ function RecommendBar({
 }) {
   const { form } = SESSIONS
   return (
-    <div className="sticky bottom-[calc(68px+env(safe-area-inset-bottom))] z-10 -mx-lg flex items-center justify-between gap-md rounded-t-panel border-x border-t border-rule bg-surface px-lg py-sm min-[900px]:bottom-0">
+    <div className="sticky bottom-[calc(68px+env(safe-area-inset-bottom))] z-10 flex items-center justify-between gap-md rounded-t-panel border-x border-t border-rule bg-surface px-lg py-sm min-[900px]:bottom-0">
       <p className="min-w-0 font-display text-label text-ink-2 uppercase">
         {night?.join(' · ')}
       </p>
