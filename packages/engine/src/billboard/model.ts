@@ -598,6 +598,17 @@ const RELAYED = /, repassado pelo Dono$/u
 const sourceFor = (source: string, relayedByYou: boolean): string =>
   relayedByYou ? source.replace(RELAYED, ', repassado por você') : source
 
+/** A line two Presentes or more share says its verb in the plural:
+ * "Você e Iara: ... como 2 filmes a que deram nota alta", "deram 10 de 10
+ * a X", "já viram" (#277). */
+const sharedText = (text: string, people: number): string =>
+  people < 2
+    ? text
+    : text
+        .replace(/\ba que deu nota alta\b/u, 'a que deram nota alta')
+        .replace(/^deu /u, 'deram ')
+        .replace(/^já viu$/u, 'já viram')
+
 /** The strongest Evidence of each Presente with a Fato, the ones with the
  * same sharing a line, the strongest lines first (`_linhas`). */
 const linesOf = (film: FilmInBody, relayedByYou: boolean): BillboardLine[] => {
@@ -627,7 +638,7 @@ const linesOf = (film: FilmInBody, relayedByYou: boolean): BillboardLine[] => {
     .map(({ g }) => ({
       people: g.people,
       strength: g.evidence.strength as Strength,
-      text: g.evidence.text,
+      text: sharedText(g.evidence.text, g.people.length),
       source: g.evidence.source
         ? sourceFor(g.evidence.source, relayedByYou)
         : null,

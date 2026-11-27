@@ -129,13 +129,18 @@ function useMarks(
   return { marks, change, canKeep }
 }
 
-function Request({
+/** The shelf label: who, the request's parts, and the Dono's words in the
+ * yellow note. */
+export function BillboardRequest({
   billboard,
   compact = false,
+  narrow = false,
   single = false,
 }: {
   billboard: BillboardModel
   compact?: boolean
+  /** The papers compact below 560px (#277). */
+  narrow?: boolean
   /** One line with the version, and the Dono's words left to the body:
    * the fixed top of Claude's fullscreen (#277). */
   single?: boolean
@@ -143,6 +148,7 @@ function Request({
   return (
     <ShelfLabel
       compact={compact}
+      narrow={narrow}
       single={single}
       tag={
         single && billboard.version > 1
@@ -310,6 +316,7 @@ export function Billboard({
       change={change}
       canKeep={canKeep}
       viewed={onSend !== undefined}
+      reactionsAbove={headSaysReactions(billboard, layout, onSend)}
     />
   )
   const body = fullscreen ? (
@@ -363,7 +370,7 @@ function FullscreenBody({
   const speech = billboard.request.speech
   return (
     <Fullscreen
-      top={<Request billboard={billboard} compact single />}
+      top={<BillboardRequest billboard={billboard} compact single />}
       foot={bar}
     >
       {speech && (
@@ -377,7 +384,12 @@ function FullscreenBody({
         </div>
       ))}
       <Standing billboard={billboard} block />
-      {billboard.films.length > 0 && <PeopleLegend billboard={billboard} />}
+      {billboard.films.length > 0 && (
+        <PeopleLegend
+          billboard={billboard}
+          avatars={!reactionsInHead(billboard)}
+        />
+      )}
       {children}
     </Fullscreen>
   )
@@ -394,9 +406,16 @@ function ViewTop({
 }) {
   return (
     <>
-      <Request billboard={billboard} />
+      {/* 1px of room each side for the tilted paper's corners, so the
+          frame never scrolls sideways (#277). */}
+      <div className="px-0.5">
+        <BillboardRequest billboard={billboard} narrow />
+      </div>
       <Standing billboard={billboard} block />
-      <PeopleLegend billboard={billboard} />
+      <PeopleLegend
+        billboard={billboard}
+        avatars={!reactionsInHead(billboard)}
+      />
       <Capped>{shelf}</Capped>
     </>
   )
@@ -417,7 +436,9 @@ function PageTop({
     <>
       <div className="flex flex-col gap-xs">
         <div className="flex items-start justify-between gap-md">
-          <Request billboard={billboard} />
+          {/* Told, the label opens the page instead, over the tape given
+              back (#272). */}
+          {billboard.open && <BillboardRequest billboard={billboard} />}
           <Legend />
         </div>
         {billboard.open && <Dropped billboard={billboard} />}
@@ -436,6 +457,7 @@ function Shelf({
   change,
   canKeep,
   viewed,
+  reactionsAbove,
 }: {
   billboard: BillboardModel
   marks: Marks
@@ -443,6 +465,8 @@ function Shelf({
   canKeep: boolean
   /** In the MCP Apps view. */
   viewed: boolean
+  /** The head says each Reação of the chosen card already (#277). */
+  reactionsAbove: boolean
 }) {
   const empty = billboard.films.length === 0
   return (
@@ -455,7 +479,12 @@ function Shelf({
         </p>
       )}
       <ChosenFilm chosen={billboard.chosen} people={billboard.attendees} />
-      <Cards billboard={billboard} marks={marks} change={change} />
+      <Cards
+        billboard={billboard}
+        marks={marks}
+        change={change}
+        reactionsAbove={reactionsAbove}
+      />
       {billboard.open && !empty && (
         <ReplyBox
           billboard={billboard}
@@ -471,19 +500,40 @@ function Shelf({
 
 type Film = BillboardModel['films'][number]
 
-/** A film without the lines and the "sem fato" its section says once. */
-const withoutShared = (
+/** Closed, Claude's views (its fullscreen, or its view without one) open
+ * with each Reação of the chosen card (`Standing`): the card and the
+ * legend do not say them again (#277). */
+const headSaysReactions = (
+  billboard: BillboardModel,
+  layout: Props['layout'],
+  onSend: Props['onSend'],
+) =>
+  (layout === 'fullscreen' || onSend !== undefined) &&
+  reactionsInHead(billboard)
+
+/** Closed, with a card of the chosen film with Reações: `Standing` says
+ * each one at the top of Claude's views, every Presente named. */
+const reactionsInHead = (billboard: BillboardModel) =>
+  !billboard.open &&
+  billboard.films.some((film) => (film.reactions?.length ?? 0) > 0)
+
+/** A film without the lines and the "sem fato" its section says once. A
+ * card whose own lines all weigh against it keeps the shared ones too:
+ * read alone, it still says why it is there (#272). */
+function withoutShared(
   film: Film,
   shared: ReadonlySet<string>,
   without: ReadonlySet<string>,
-) =>
-  shared.size === 0 && without.size === 0
-    ? film
-    : {
-        ...film,
-        lines: film.lines.filter((l) => !shared.has(lineKey(l))),
-        withoutFact: film.withoutFact.filter((slug) => !without.has(slug)),
-      }
+): Film {
+  if (shared.size === 0 && without.size === 0) return film
+  const own = film.lines.filter((l) => !shared.has(lineKey(l)))
+  const onlyAgainst = own.length > 0 && own.every((l) => l.against)
+  return {
+    ...film,
+    lines: onlyAgainst ? film.lines : own,
+    withoutFact: film.withoutFact.filter((slug) => !without.has(slug)),
+  }
+}
 
 /** A card per film, under the section of its Motivo when there are
  * sections. */
@@ -491,15 +541,18 @@ function Cards({
   billboard,
   marks,
   change,
+  reactionsAbove,
 }: {
   billboard: BillboardModel
   marks: Marks
   change: (next: Marks) => void
+  reactionsAbove: boolean
 }) {
   const grouped = billboard.sections.length > 0
   const card = (film: Film) => (
     <BillboardCard
       key={film.id}
+      reactionsAbove={reactionsAbove}
       film={film}
       people={billboard.attendees}
       first={film === billboard.films[0]}

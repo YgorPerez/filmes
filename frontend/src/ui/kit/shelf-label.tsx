@@ -18,6 +18,7 @@ export function ShelfLabel({
   note,
   added = [],
   compact = false,
+  narrow = false,
   single = false,
   tag,
 }: {
@@ -30,6 +31,9 @@ export function ShelfLabel({
   /** 15px on the label and 16px on the paper: Claude's inline card and
    * the top of its fullscreen. */
   compact?: boolean
+  /** The papers compact below 560px: Claude's view without fullscreen,
+   * where the page has no ground around it (#277). */
+  narrow?: boolean
   /** One line, cut with an ellipsis: the top of Claude's fullscreen on a
    * phone, where the label is all that stays fixed (#277). */
   single?: boolean
@@ -87,13 +91,31 @@ export function ShelfLabel({
           </span>
         )}
       </div>
-      {note && <HandNote compact={compact}>{note}</HandNote>}
+      <Papers note={note} added={added} size={{ compact, narrow }} />
+    </div>
+  )
+}
+
+/** The Dono's words, then each acrescentar on a paper tilted the other
+ * way. */
+function Papers({
+  note,
+  added,
+  size,
+}: {
+  note?: string | null
+  added: readonly string[]
+  size: { compact: boolean; narrow: boolean }
+}) {
+  return (
+    <>
+      {note && <HandNote {...size}>{note}</HandNote>}
       {added.map((words) => (
-        <HandNote key={words} compact={compact} tilt="right">
+        <HandNote key={words} {...size} tilt="right">
           {`+ ${words}`}
         </HandNote>
       ))}
-    </div>
+    </>
   )
 }
 
@@ -102,16 +124,19 @@ export function ShelfLabel({
 export function HandNote({
   children,
   compact = false,
+  narrow = false,
   tilt = 'left',
 }: {
   children: string
   compact?: boolean
+  /** Compact below 560px only. */
+  narrow?: boolean
   /** -2°, or 1.5° the other way for a paper added under another. */
   tilt?: 'left' | 'right'
 }) {
   return (
     <p
-      className={`${tilt === 'left' ? '-rotate-2' : 'rotate-[1.5deg]'} rounded-note bg-sticker-yellow px-xl pt-1.25 pb-2xs font-hand text-on-sticker ${compact ? 'text-hand-compact' : 'text-hand'}`}
+      className={`${tilt === 'left' ? '-rotate-2' : 'rotate-[1.5deg]'} rounded-note bg-sticker-yellow px-xl pt-1.25 pb-2xs font-hand text-on-sticker ${compact ? 'text-hand-compact' : narrow ? 'text-hand-compact min-[560px]:text-hand' : 'text-hand'}`}
     >
       {children}
     </p>

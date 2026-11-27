@@ -3,11 +3,13 @@ import {
   createContext,
   useContext,
   useEffect,
+  useEffectEvent,
   useId,
   useRef,
   useState,
   type ComponentProps,
   type ReactNode,
+  type RefObject,
 } from 'react'
 import {
   formProblem,
@@ -284,6 +286,28 @@ export function ActionForm({
   )
 }
 
+/** While `asking`, another form that posts before the one holding
+ * `inside` leaves the question behind: `drop` takes it away, so it never
+ * comes back over that form's answer (#273). */
+function useLeftBehind(
+  asking: boolean,
+  inside: RefObject<HTMLElement | null>,
+  drop: () => void,
+) {
+  const leftBehind = useEffectEvent(drop)
+  useEffect(() => {
+    if (!asking) return
+    let answered = false
+    const elsewhere = (event: Event) => {
+      if (!(event.target instanceof Node) || answered) return
+      answered = event.target.contains(inside.current)
+      if (!answered) leftBehind()
+    }
+    document.addEventListener('submit', elsewhere, true)
+    return () => document.removeEventListener('submit', elsewhere, true)
+  }, [asking, inside])
+}
+
 /** "Tirar": takes one item out of her file. With the JavaScript, it asks
  * first, in place (#330): beside "Editar", a slip of the thumb would lose
  * the item. Before it, the post goes at once. */
@@ -317,6 +341,9 @@ export function RemoveForm({
     if (asking) confirm.current?.focus()
     else if (asked) ask.current?.focus()
   }, [asking, asked])
+  // Another form posted before this one: the question was left behind, so
+  // it goes, and never comes back over that form's answer (#273).
+  useLeftBehind(asking, confirm, () => toggle(false))
   return (
     <ActionForm
       slug={slug}
@@ -346,8 +373,8 @@ export function RemoveForm({
       ) : (
         <Submit
           ref={confirm}
-          // The decisive step, marked as a chosen option: no new colour.
-          variant={live ? 'chosen' : 'option'}
+          // The decisive step: no new colour, and not a chosen option's look.
+          variant={live ? 'commit' : 'option'}
           className=""
           aria-label={
             live ? PERSON.removeSure(label) : PERSON.removeLabel(label)
@@ -420,6 +447,7 @@ export function TextField({
   min,
   max,
   defaultValue,
+  refusal,
 }: {
   name: string
   label: string
@@ -431,8 +459,19 @@ export function TextField({
   min?: number
   max?: number
   defaultValue?: string
+  /** What the server refused about this field, said under it, when the
+   * form is no `ActionForm` (#273). */
+  refusal?: string
 }) {
-  const { error, aria } = useFieldProblem(name)
+  const id = useId()
+  const problem = useFieldProblem(name)
+  const { error, aria } =
+    refusal === undefined
+      ? problem
+      : {
+          error: { id, text: refusal },
+          aria: { 'aria-invalid': true, 'aria-describedby': id } as const,
+        }
   return (
     <FieldLabel label={label} hint={hint} error={error}>
       <input
@@ -486,7 +525,8 @@ export function SelectField({
 
 /** A Nota from 1 to 10 as radios, the scale the rating screen and the
  * Feedback use, with "sem Nota" first: ten cells, the chosen one on the
- * orange disc. Posts `n/10`, or nothing. */
+ * orange disc, and "sem Nota" chosen on the same orange. Posts `n/10`, or
+ * nothing. */
 export function RatingField({
   name,
   label,
@@ -512,7 +552,8 @@ export function RatingField({
             defaultChecked={defaultValue === ''}
             className={radio}
           />
-          <span className="rounded-pill px-sm py-0.5 group-has-checked/rating:bg-ink group-has-checked/rating:text-surface">
+          {/* Chosen, the same orange as a number's disc (#273). */}
+          <span className="rounded-pill px-sm py-0.5 group-has-checked/rating:bg-sticker-orange group-has-checked/rating:text-on-sticker">
             {PERSON.noRating}
           </span>
         </label>

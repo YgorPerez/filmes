@@ -1,5 +1,5 @@
 import { useId, type ReactNode, type Ref } from 'react'
-import type { PersonImports } from '@filmes/engine'
+import type { FilmSource, PersonImports, SourceFilms } from '@filmes/engine'
 import {
   refusedForm,
   type ChangedRating,
@@ -296,10 +296,13 @@ function RemoveImport({
   slug,
   file,
   original,
+  gives,
 }: {
   slug: string
   file: string
   original: string
+  /** What this file alone brought, when the page can tell. */
+  gives: SourceFilms | null
 }) {
   const { files } = COPY
   return (
@@ -315,7 +318,7 @@ function RemoveImport({
         {files.remove}
       </summary>
       <div className="mt-sm flex max-w-[300px] flex-col gap-sm rounded-field bg-surface-2 p-lg">
-        <p className="text-meta">{files.removeWarning}</p>
+        <p className="text-meta">{files.removeWarning(gives)}</p>
         <ImportForm slug={slug} action="remover">
           {(busy) => (
             <>
@@ -336,6 +339,25 @@ function RemoveImport({
   )
 }
 
+/** The sites whose files share one set of Fatos: a Trakt ZIP and a
+ * profile read give the same `trakt:` Fatos. */
+const SITE_OF: Readonly<Record<string, FilmSource>> = {
+  trakt: 'trakt',
+  'trakt-api': 'trakt',
+  imdb: 'imdb',
+  simkl: 'simkl',
+  tvtime: 'tvtime',
+}
+
+/** What a file of `kind` alone brings to her gosto, when it is the only
+ * file of its site: then the site's films are its own (#274). */
+function alone(page: PersonImports, kind: string): SourceFilms | null {
+  const site = SITE_OF[kind]
+  if (site === undefined) return null
+  const files = page.imports.filter((r) => SITE_OF[r.kind] === site)
+  return files.length === 1 ? page.films[site] : null
+}
+
 function Files({ slug, page }: Part) {
   const { files } = COPY
   return (
@@ -354,6 +376,7 @@ function Files({ slug, page }: Part) {
                 slug={slug}
                 file={record.file}
                 original={record.original}
+                gives={alone(page, record.kind)}
               />
             }
           >
@@ -465,25 +488,48 @@ function LetterboxdResult({
       {report.queued > 0 && (
         <Waiting report={report} from={from} queue={queue} />
       )}
-      {outside.length > 0 && (
-        <FoldRow summary={results.seeOutside(outside.length)}>
-          <ul className="flex flex-col gap-2xs text-meta">
-            {outside.map((item) => (
-              <li key={item.id}>
-                <span className="font-semibold">
-                  {item.year === null
-                    ? item.name
-                    : `${item.name} (${item.year})`}
-                </span>
-                {item.reason && (
-                  <span className="text-ink-2"> · {item.reason}</span>
-                )}
-              </li>
-            ))}
-          </ul>
-        </FoldRow>
-      )}
+      <LeftOut
+        films={outside.map((item) => ({
+          key: item.id,
+          name: item.name,
+          year: item.year,
+          reason: item.reason,
+        }))}
+      />
     </div>
+  )
+}
+
+type LeftOutRow = {
+  key: string
+  name: string | null
+  year: number | null
+  reason?: string | null
+}
+
+/** The films a source left out, folded under its line: each by name and
+ * year, and why when the source says it (#274). */
+function LeftOut({ films }: { films: readonly LeftOutRow[] }) {
+  const { results } = COPY
+  if (films.length === 0) return null
+  return (
+    <FoldRow summary={results.seeOutside(films.length)}>
+      <ul className="flex flex-col gap-2xs text-meta">
+        {films.map((item) => {
+          const name = item.name ?? results.unnamed
+          return (
+            <li key={item.key}>
+              <span className="font-semibold">
+                {item.year === null ? name : `${name} (${item.year})`}
+              </span>
+              {item.reason && (
+                <span className="text-ink-2"> · {item.reason}</span>
+              )}
+            </li>
+          )
+        })}
+      </ul>
+    </FoldRow>
   )
 }
 
@@ -522,12 +568,21 @@ const SITES = [
 ] as const
 
 /** One line per other site that gave a film, counted by film as its
- * notice counts them (#274). */
+ * notice counts them, with the films it left out (#274). */
 function resultLines(page: PersonImportsView) {
   return SITES.filter(([site]) => {
     const { rated, seen, watchlist } = page.films[site]
-    return rated + seen + watchlist > 0
-  }).map(([site, name]) => COPY.results.site(name, page.films[site]))
+    return rated + seen + watchlist + page.leftOut[site].length > 0
+  }).map(([site, name]) => ({
+    site,
+    line: COPY.results.site(name, page.films[site]),
+    leftOut: page.leftOut[site].map((film, index) => ({
+      key: film.id ?? `${film.name ?? ''}:${index}`,
+      name: film.name,
+      year: film.year,
+      reason: COPY.results.notInCatalog,
+    })),
+  }))
 }
 
 /** Her own Trakt, not connected while the site reads Trakt (#274): the
@@ -623,9 +678,10 @@ function Results({ slug, page }: { slug: string; page: PersonImportsView }) {
         <ul
           className={`flex flex-col gap-xs ${letterboxd ? 'border-t border-dashed border-rule pt-lg' : ''}`}
         >
-          {lines.map((line) => (
-            <li key={line} className="font-display text-step-title-small">
-              {line}
+          {lines.map(({ site, line, leftOut }) => (
+            <li key={site} className="flex flex-col gap-xs">
+              <span className="font-display text-step-title-small">{line}</span>
+              <LeftOut films={leftOut} />
             </li>
           ))}
         </ul>

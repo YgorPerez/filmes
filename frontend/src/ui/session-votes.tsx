@@ -503,16 +503,14 @@ function VoteResults({
       {sent && deck.stale && deck.stale.length > 0 && (
         <p className="text-meta text-ink-2">{VOTES.stale(deck.stale)}</p>
       )}
+      {/* The same order as the link's list (#275): what is left to vote
+          in orange, "Mudar votos" beside it, the questions quiet. */}
       <div className="flex flex-wrap items-center gap-md">
-        {unvoted > 0 ? (
+        {unvoted > 0 && (
           <a href={links.deck} className={buttonVariants()}>
             {PARTICIPATION.voteNew(unvoted)}
           </a>
-        ) : links.questions ? (
-          <a href={links.questions} className={buttonVariants()}>
-            {VOTES.questions}
-          </a>
-        ) : null}
+        )}
         {deck.films.length > 0 && (
           <a
             href={links.revote}
@@ -521,7 +519,7 @@ function VoteResults({
             {VOTES.revote}
           </a>
         )}
-        {unvoted > 0 && links.questions && (
+        {links.questions && (
           <a
             href={links.questions}
             className={buttonVariants({ variant: 'link' })}

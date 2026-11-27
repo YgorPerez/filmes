@@ -13,7 +13,7 @@ import {
   type EarlierFilm,
 } from './history.ts'
 import { join } from 'node:path'
-import { Effect } from 'effect'
+import { DateTime, Effect } from 'effect'
 import { compareTuple } from '../compat/compare.ts'
 import { pyFloat, pyInt } from '../compat/fact-id.ts'
 import {
@@ -263,6 +263,9 @@ export const openSession = (
           const id = yield* newSessionId(today, idParts(attendees, owners))
           const front = new Map<string, YamlValue>([
             ['date', today],
+            // The instant it opened, to put the newest first among the
+            // Sessions of one day (#272).
+            ['created_at', DateTime.formatIso(yield* DateTime.now)],
             ['owner', owners[0] ?? null],
             ...recommendationFields(recommendation, context),
             ['chosen', null],
@@ -298,6 +301,9 @@ export interface OpenSession {
  * is still open, the film the Feedback chose, the Climas and the
  * Restrições of the current version (their labels, `rotulo`). */
 export interface SessionSummary extends OpenSession {
+  /** The instant it opened (ISO, UTC), or null for one opened before
+   * #272. */
+  readonly created: string | null
   readonly open: boolean
   /** The chosen film's IMDb id, or null (open, or "não vimos nada"). */
   readonly chosen: string | null
@@ -332,6 +338,13 @@ const contextLabels = (context: YamlMapping | null): string[] => {
   return asked.flatMap((c) => askedConstraintLabel(c) ?? [])
 }
 
+/** When the Session opened (`created_at`), or null: a Session opened
+ * before #272 has only its day. */
+const createdOf = (front: YamlMapping): string | null => {
+  const created = front.get('created_at') ?? null
+  return created === null ? null : pyStrValue(created)
+}
+
 const summary = (id: string, front: YamlMapping): SessionSummary => {
   const context = contextOf(front)
   const recommendation = front.get('recommendation')
@@ -341,6 +354,7 @@ const summary = (id: string, front: YamlMapping): SessionSummary => {
     id,
     file: sessionRelative(id),
     date: pyStrValue(front.get('date') ?? null),
+    created: createdOf(front),
     attendees: yamlToJson(front.get('attendees') ?? null),
     request: context ? yamlToJson(context.get('request') ?? null) : null,
     recommendation: yamlToJson(
@@ -380,9 +394,13 @@ export const listSessions: Effect.Effect<
   for (const id of yield* sessionIds)
     list.push(summary(id, (yield* readSession(id)).frontmatter))
   // `sorted(..., reverse=True)`: stable, so equal keys keep the file order.
-  const sessions = list.toSorted((a, b) =>
-    compareTuple([...sessionOrder(b)], [...sessionOrder(a)]),
-  )
+  // On one day, the one opened last comes first (#272); one opened before
+  // the instant was kept falls back on the id.
+  const key = (s: SessionSummary) => {
+    const [date, ...rest] = sessionOrder(s)
+    return [date, s.created ?? '', ...rest]
+  }
+  const sessions = list.toSorted((a, b) => compareTuple(key(b), key(a)))
   return { sessions }
 })
 

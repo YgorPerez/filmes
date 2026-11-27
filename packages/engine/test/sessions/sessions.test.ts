@@ -106,6 +106,8 @@ describe('recomendar opens the Session', () => {
     expect(text).toContain('\ndate: 2026-11-20\n')
     expect(front).toEqual({
       date: '2026-11-20',
+      // The instant it opened, for the order of one day (#272).
+      created_at: expect.stringMatching(/^\d{4}-\d\d-\d\dT[\d:.]+Z$/u),
       owner: 'bruno',
       attendees: ['bruno', 'iara'],
       context: {
@@ -426,6 +428,42 @@ describe('sessoes-abertas', () => {
 })
 
 describe('every Session', () => {
+  test('puts the one opened last first among those of one day (#272)', async () => {
+    const fixture = useFixture()
+    await open(fixture, { attendees: ['dono', 'iara'], count: 1 })
+    await open(fixture, { attendees: ['dono', 'teo'], count: 1 })
+    await open(fixture, { attendees: ['dono', 'iara'], count: 1 })
+
+    const { sessions } = await fixture.ok(listSessions)
+
+    expect(sessions.map((s) => s.id)).toEqual([
+      '2026-11-20-iara-2',
+      '2026-11-20-teo',
+      '2026-11-20-iara',
+    ])
+  })
+
+  test('lists a hand-written Session with only its day, Presentes and words', async () => {
+    const fixture = useFixture()
+    mkdirSync(join(fixture.data, 'sessions'), { recursive: true })
+    writeFileSync(
+      sessionFile(fixture, '2026-11-17-rosa'),
+      '---\ndate: 2026-11-17\nattendees: [bruno, rosa]\nrule: {name: default}\ncontext: {request: oi}\n---\n',
+    )
+
+    const [only] = (await fixture.ok(listSessions)).sessions
+
+    expect(only).toMatchObject({
+      id: '2026-11-17-rosa',
+      created: null,
+      request: 'oi',
+      recommendation: [],
+      chosen: null,
+      moods: [],
+      constraints: [],
+    })
+  })
+
   test('lists the open and the closed ones, with their Restrições', async () => {
     const fixture = useFixture()
     expect(await fixture.ok(listSessions)).toEqual({ sessions: [] })

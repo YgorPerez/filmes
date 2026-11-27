@@ -90,6 +90,13 @@ describe('importSimkl', () => {
     expect(report.file).toBe(`imports/vera/simkl-${sha}.json`)
     expect(readFileSync(join(fixture.data, report.file))).toEqual(BACKUP)
     expect(report.resolved).toEqual({ imdb: 4, tmdb: 1 })
+    // Her import page lists them later, from the backup she keeps (#274).
+    expect(
+      (await fixture.ok(personImports('vera'))).leftOut.simkl.map((f) => [
+        f.name,
+        f.year,
+      ]),
+    ).toEqual(report.unresolved.map((f) => [f.name, f.year]))
     expect(report.unresolved).toEqual([
       {
         name: 'Rio Abaixo',

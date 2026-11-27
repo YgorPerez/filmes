@@ -294,12 +294,6 @@ export function LinkFilms({
 }) {
   const { films } = view
   const unvoted = films.filter((f) => f.mine === null).length
-  const action =
-    unvoted === films.length
-      ? { href: vote.deck, label: PARTICIPATION.vote }
-      : unvoted > 0
-        ? { href: vote.deck, label: PARTICIPATION.voteNew(unvoted) }
-        : { href: vote.revote, label: PARTICIPATION.revote }
   return (
     <section
       aria-labelledby="filmes-da-sessao"
@@ -341,28 +335,53 @@ export function LinkFilms({
               {`${PARTICIPATION.left}: ${view.left.join(', ')}.`}
             </p>
           )}
-          <div className="flex flex-col gap-sm">
-            <VoteRule />
-            <div className="flex flex-wrap items-center gap-md">
-              <a href={action.href} className={buttonVariants()}>
-                {action.label}
-              </a>
-              {unvoted > 0 && unvoted < films.length && (
-                <a
-                  href={vote.revote}
-                  className={buttonVariants({ variant: 'option' })}
-                >
-                  {VOTES.revote}
-                </a>
-              )}
-            </div>
-          </div>
+          <VoteActions unvoted={unvoted} films={films.length} vote={vote} />
         </>
       )}
       {view.questions > 0 && (
         <QuestionsInvite owner={view.owner} href={questions} />
       )}
     </section>
+  )
+}
+
+/** What is left to vote, in orange, and "Mudar votos" beside it. Every
+ * film voted: the state in words, as the swipe's page says it (#275), and
+ * no rule, with nothing left to vote. */
+function VoteActions({
+  unvoted,
+  films,
+  vote,
+}: {
+  unvoted: number
+  films: number
+  vote: { deck: string; revote: string }
+}) {
+  const label =
+    unvoted === films ? PARTICIPATION.vote : PARTICIPATION.voteNew(unvoted)
+  return (
+    <div className="flex flex-col gap-sm">
+      {unvoted > 0 ? (
+        <VoteRule />
+      ) : (
+        <p className="font-display text-row-title">{VOTES.voted}</p>
+      )}
+      <div className="flex flex-wrap items-center gap-md">
+        {unvoted > 0 && (
+          <a href={vote.deck} className={buttonVariants()}>
+            {label}
+          </a>
+        )}
+        {unvoted < films && (
+          <a
+            href={vote.revote}
+            className={buttonVariants({ variant: 'option' })}
+          >
+            {VOTES.revote}
+          </a>
+        )}
+      </div>
+    </div>
   )
 }
 

@@ -67,7 +67,7 @@ export const MODEL: Billboard = {
         {
           people: ['bruno', 'iara'],
           strength: 'moderate',
-          text: 'dirigido por Helena Prado, como 2 filmes a que deu nota alta',
+          text: 'dirigido por Helena Prado, como 2 filmes a que deram nota alta',
           source: 'Wikidata',
           against: false,
         },
