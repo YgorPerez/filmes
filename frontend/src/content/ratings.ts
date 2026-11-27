@@ -28,3 +28,13 @@ export const readFilmCard = createServerFn({ method: 'GET' })
     const { appFilmCard } = await import('#/platform/imports')
     return appFilmCard(data.id, context.owner)
   })
+
+/** Meu gosto's look at her taste (#274): the genres and directors of the
+ * films she liked. Null when the engine cannot run. */
+export const readTasteSummary = createServerFn({ method: 'GET' })
+  .middleware([ownerMiddleware])
+  .handler(async ({ context }) => {
+    requireOwner(context.owner)
+    const { appTasteSummary } = await import('#/platform/imports')
+    return appTasteSummary(context.owner)
+  })

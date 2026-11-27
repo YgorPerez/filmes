@@ -48,6 +48,7 @@ import {
   rateAction,
   ratingQueuePage,
   ratingsFromEngine,
+  tasteSummaryOf,
 } from './ratings'
 
 /** Whoever is logged in, as the login reads her (`appPoster`). */
@@ -463,6 +464,10 @@ export const appRatingQueue = (owner: { person: string }) =>
 /** One film's card for the rating screen, for the logged-in Dono. */
 export const appFilmCard = (film: string, owner: { person: string }) =>
   filmCardOf(film, owner, appRatings())
+
+/** Meu gosto's look at the logged-in Dono's taste. */
+export const appTasteSummary = (owner: { person: string }) =>
+  tasteSummaryOf(owner, appRatings())
 
 /** Pronto's route for the app: the logged-in Dono, the process's engine. */
 export const serveRate = (request: Request) => {

@@ -6,8 +6,10 @@ import {
   filmCard,
   personRate,
   ratingQueue,
+  tasteSummary,
   type Engine,
   type FilmCard,
+  type TasteSummary,
   type ErrorOutput,
   type Outcome,
   type PersonRateResult,
@@ -37,6 +39,8 @@ export interface Ratings {
   queue(person: string): Promise<Outcome<RatingQueue>>
   /** What the card shows of one film, so she knows it (#274). */
   card(film: string, person: string): Promise<Outcome<FilmCard>>
+  /** Meu gosto's look at her taste: her genres and directors (#274). */
+  summary(person: string): Promise<Outcome<TasteSummary>>
   /** Writes the Notas to the Dono `owner`, who signs the commit. */
   rate(
     ratings: readonly GivenRating[],
@@ -49,6 +53,8 @@ export function ratingsFromEngine(engine: Engine): Ratings {
     queue: (person) =>
       engine.run(ratingQueue({ person, limit: QUEUE_SIZE }), { owner: person }),
     card: (film, person) => engine.run(filmCard({ film }), { owner: person }),
+    summary: (person) =>
+      engine.run(tasteSummary({ person }), { owner: person }),
     rate: (ratings, owner) =>
       engine.run(
         personRate({
@@ -95,6 +101,20 @@ export async function filmCardOf(
     return null
   }
   return card.output
+}
+
+/** The logged-in Dono's taste in one look, or null when the engine cannot
+ * run (logged: the ficha does without it). */
+export async function tasteSummaryOf(
+  owner: Pick<Rater, 'person'>,
+  ratings: Ratings,
+): Promise<TasteSummary | null> {
+  const summary = await ratings.summary(owner.person)
+  if (summary.exitCode !== 0) {
+    logEngineError(summary)
+    return null
+  }
+  return summary.output
 }
 
 function refusalOf(outcome: { output: ErrorOutput }): RatingRefusal {

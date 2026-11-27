@@ -25,6 +25,9 @@ export const PERSON = {
     notes: (n: number) =>
       n === 1 ? '1 Nota' : `${n.toLocaleString('pt-BR')} Notas`,
     toTen: (n: number) => `faltam ${10 - n} para 10`,
+    /** The genres and directors of the films she liked. */
+    likes: (names: readonly string[]) =>
+      `Pelas suas Notas, você gosta de ${names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} e ${names.at(-1)}`}.`,
     said: 'O que você disse',
     nothingSaid: 'Nada dito ainda sobre o seu gosto.',
     next: 'Próximo passo',

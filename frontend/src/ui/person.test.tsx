@@ -765,6 +765,26 @@ describe('Meu gosto in the second person', () => {
     ).toBeTruthy()
   })
 
+  it('says what her Notas tell of her taste', () => {
+    render(
+      <PersonScreen
+        slug="bruno"
+        page={OWN}
+        taste={{
+          person: 'bruno',
+          liked: 8,
+          genres: ['Drama', 'Crime'],
+          directors: ['Rui Tavares'],
+        }}
+      />,
+    )
+    expect(
+      within(section(PERSON.glance.title)).getByText(
+        'Pelas suas Notas, você gosta de Drama, Crime e Rui Tavares.',
+      ),
+    ).toBeTruthy()
+  })
+
   it('says a Letterboxd tag in words', () => {
     render(
       <PersonScreen

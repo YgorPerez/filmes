@@ -12,6 +12,7 @@ import {
 import { TRAKT_PATH } from '#/content/trakt-form'
 import type { SearchAnswer } from '#/platform/catalog-search'
 import type { PersonPage } from '#/platform/people'
+import type { TasteSummary } from '@filmes/engine'
 import { OwnerTag } from './kit/owner-tag'
 import { Slip } from './kit/slip'
 import {
@@ -73,6 +74,7 @@ export function PersonScreen({
   start,
   showTrakt = false,
   pending = 0,
+  taste = null,
 }: {
   slug: string
   page: PersonPage | 'unknown' | null
@@ -84,6 +86,8 @@ export function PersonScreen({
   showTrakt?: boolean
   /** On Meu gosto, the films of her imports that wait in the queue. */
   pending?: number
+  /** On Meu gosto, her genres and directors. */
+  taste?: TasteSummary | null
 }) {
   const own =
     typeof page === 'object' &&
@@ -116,7 +120,14 @@ export function PersonScreen({
               on the left, the taste on the right. */}
             <div className="grid gap-2xl min-[900px]:grid-cols-2 min-[900px]:items-start">
               <div className="flex min-w-0 flex-col gap-2xl">
-                {own && <Glance page={page} start={start} pending={pending} />}
+                {own && (
+                  <Glance
+                    page={page}
+                    start={start}
+                    pending={pending}
+                    taste={taste}
+                  />
+                )}
                 {own && showTrakt && (
                   <a
                     href={TRAKT_PATH}
@@ -323,10 +334,12 @@ function Glance({
   page,
   start,
   pending,
+  taste,
 }: {
   page: PersonPage
   start?: MyStart
   pending: number
+  taste: TasteSummary | null
 }) {
   const { glance } = PERSON
   const notes = page.ratings?.length ?? 0
@@ -355,6 +368,9 @@ function Glance({
           </span>
         )}
       </p>
+      {taste && taste.genres.length > 0 && (
+        <p>{glance.likes([...taste.genres, ...taste.directors])}</p>
+      )}
       <p className="text-ink-2">
         {said.length === 0
           ? glance.nothingSaid

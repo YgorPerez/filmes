@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { searchFor, searchParam } from '#/content/catalog-search'
 import { readQueue } from '#/content/imports'
+import { readTasteSummary } from '#/content/ratings'
 import { isPersonNotice, isPersonRefusal } from '#/content/person-action'
 import { readMyStart, readPersonPage } from '#/content/people'
 import { readTraktPage } from '#/content/trakt'
@@ -17,12 +18,13 @@ export const Route = createFileRoute('/_owner/meu-gosto/')({
   }),
   loaderDeps: ({ search }) => ({ buscar: search.buscar }),
   loader: async ({ context, deps }) => {
-    const [page, search, start, trakt, queue] = await Promise.all([
+    const [page, search, start, trakt, queue, taste] = await Promise.all([
       readPersonPage({ data: context.owner.person }),
       searchFor(deps.buscar, 'all'),
       readMyStart(),
       readTraktPage(),
       readQueue(),
+      readTasteSummary(),
     ])
     // The films of her imports that wait for her in the queue (#274).
     const pending =
@@ -34,6 +36,7 @@ export const Route = createFileRoute('/_owner/meu-gosto/')({
       start,
       showTrakt: trakt.status !== 'unavailable',
       pending,
+      taste,
     }
   },
   component: MyTasteRoute,
@@ -42,7 +45,8 @@ export const Route = createFileRoute('/_owner/meu-gosto/')({
 function MyTasteRoute() {
   const { owner } = Route.useRouteContext()
   const { feito, erro } = Route.useSearch()
-  const { page, search, start, showTrakt, pending } = Route.useLoaderData()
+  const { page, search, start, showTrakt, pending, taste } =
+    Route.useLoaderData()
   return (
     <PersonScreen
       slug={owner.person}
@@ -51,6 +55,7 @@ function MyTasteRoute() {
       start={start}
       showTrakt={showTrakt}
       pending={pending}
+      taste={taste}
       notice={feito}
       refusal={erro}
     />

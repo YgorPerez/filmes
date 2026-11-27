@@ -194,7 +194,16 @@ export const MyTaste: Story = {
 /** Two films of her import wait in the queue: the Notas slip says so, and
  * the next step leads there. */
 export const MyTasteWithQueue: Story = {
-  args: { ...MyTaste.args, pending: 2 },
+  args: {
+    ...MyTaste.args,
+    pending: 2,
+    taste: {
+      person: 'bruno',
+      liked: 8,
+      genres: ['Drama', 'Crime', 'Romance'],
+      directors: ['Helena Prado', 'Rui Tavares'],
+    },
+  },
 }
 
 export const MyTasteWithTrakt: Story = {
