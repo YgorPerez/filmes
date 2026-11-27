@@ -3,7 +3,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
 import { expect, fn, userEvent, within } from 'storybook/test'
-import { BILLBOARD } from './billboard.copy'
+import { SEND_STATUS } from './billboard-send.copy'
 import { MODEL } from './billboard.fixture'
 import { replyText, type Marks } from './billboard-marks'
 import { ReplyBar, ReplyBox, SendButton, Status } from './billboard-reply'
@@ -72,9 +72,9 @@ export const SentToChat: Story = {
   render: () => (
     <div className="p-md">
       <div className="flex flex-col gap-md">
-        <Status message={BILLBOARD.view.regenerating} />
-        <Status message={BILLBOARD.view.toChat} />
-        <Status message={BILLBOARD.view.notNotified} />
+        <Status message={SEND_STATUS.regenerating} />
+        <Status message={SEND_STATUS.toChat} />
+        <Status message={SEND_STATUS.notNotified} />
       </div>
     </div>
   ),

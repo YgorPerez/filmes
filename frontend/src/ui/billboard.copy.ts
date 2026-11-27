@@ -112,10 +112,6 @@ export const BILLBOARD = {
     open: 'Ver o Cartaz',
     sending: 'Enviando…',
     recorded: 'Anotado.',
-    regenerating: 'Anotado. Pedi ao chat pra refazer a lista.',
-    toChat: 'Anotado. Mandei seu texto pro chat.',
-    notNotified:
-      'Anotado. O aviso não chegou ao chat. Se precisar refazer a lista, peça lá.',
     failed: (message: string) =>
       `Não deu pra enviar: ${message} Use Copiar pro chat.`,
     unavailable: 'Este app não envia daqui. Use Copiar pro chat.',

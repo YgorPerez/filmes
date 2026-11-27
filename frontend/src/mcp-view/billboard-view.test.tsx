@@ -7,6 +7,7 @@ import { act, cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 import { MODEL } from '../ui/billboard.fixture'
+import { SEND_STATUS } from '../ui/billboard-send.copy'
 import { BILLBOARD } from '../ui/billboard.copy'
 import { BillboardView, type Host } from './billboard-view'
 import { mountView, type ViewApp } from './mount-view'
@@ -185,7 +186,7 @@ describe('Enviar', () => {
       />,
     )
     await swapFirstAndSend()
-    expect(status()).toBe(view.notNotified)
+    expect(status()).toBe(SEND_STATUS.notNotified)
   })
 
   it('one send at a time', async () => {
@@ -202,7 +203,7 @@ describe('Enviar', () => {
     await user.click(screen.getByRole('button', { name: copy.send }))
     expect(host.callTool).toHaveBeenCalledTimes(1)
     await act(async () => answer(json(REPLY)))
-    expect(status()).toBe(view.regenerating)
+    expect(status()).toBe(SEND_STATUS.regenerating)
   })
 })
 

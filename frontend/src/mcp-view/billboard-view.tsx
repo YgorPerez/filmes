@@ -15,6 +15,7 @@
 import type { Billboard as BillboardModel } from '@filmes/engine'
 import { useRef, useState } from 'react'
 import { Billboard } from '../ui/billboard'
+import { SEND_STATUS } from '../ui/billboard-send.copy'
 import { BILLBOARD } from '../ui/billboard.copy'
 import {
   billboardOf,
@@ -65,9 +66,9 @@ async function send(
     (answer) => !answer.isError,
     () => false,
   )
-  if (!told) return { status: view.notNotified, recorded: true }
+  if (!told) return { status: SEND_STATUS.notNotified, recorded: true }
   return {
-    status: reply.regenerate ? view.regenerating : view.toChat,
+    status: reply.regenerate ? SEND_STATUS.regenerating : SEND_STATUS.toChat,
     recorded: true,
   }
 }
