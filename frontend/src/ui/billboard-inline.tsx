@@ -1,6 +1,7 @@
 import type { Billboard as BillboardModel } from '@filmes/engine'
 import { BILLBOARD } from './billboard.copy'
 import { ChosenReactions } from './billboard-chosen'
+import { INLINE_CARD } from './billboard-frame'
 import { Icon } from './billboard-icons'
 import { Copy, SendButton, Status } from './billboard-reply'
 import { askedParts } from './billboard-request'
@@ -23,7 +24,8 @@ import { PriceSticker } from './kit/sticker'
 // what to ask, with nothing to mark. A Session that has its Feedback takes
 // no marks: it says so, with the Filme escolhido and what each Presente
 // was predicted to give and gave, and the one action opens the whole
-// Cartaz. The card has no floor of its own: it sits on the host's.
+// Cartaz. The card has no floor of its own: it sits on the host's, except
+// in a dark frame whose host does not say what its floor is.
 
 /** What a row may say of its film: Trocar, Já vi, or the Filme
  * escolhido of a closed Session. */
@@ -211,9 +213,16 @@ function InlineStatus({
 }
 
 /** A closed Session: it says so, then the Filme escolhido and each
- * Presente's line ("Bruno: previsto 8,3 · deu 8 de 10"), when there was
- * a Feedback with one (#277). */
-function Closed({ billboard }: { billboard: BillboardModel }) {
+ * Presente's line ("Você: previsto 8,3 · deu 8 de 10"), when there was
+ * a Feedback with one (#277). The fullscreen and the host without one open
+ * with the same lines (`Standing`). */
+function Closed({
+  billboard,
+  block,
+}: {
+  billboard: BillboardModel
+  block: boolean
+}) {
   const { view } = BILLBOARD
   const card = billboard.films.find((f) => f.reactions !== undefined)
   const chosen = card ?? billboard.chosen
@@ -231,7 +240,7 @@ function Closed({ billboard }: { billboard: BillboardModel }) {
           </>
         )}
       </p>
-      {chosen?.reactions && (
+      {chosen?.reactions && (card || !block) && (
         <ChosenReactions
           bare
           reactions={chosen.reactions}
@@ -239,6 +248,26 @@ function Closed({ billboard }: { billboard: BillboardModel }) {
         />
       )}
     </div>
+  )
+}
+
+/** Where this version stands, under the request: what changed since the
+ * last one, or, once closed, that it is closed and the Filme escolhido with
+ * each Presente's line. The inline card, the fullscreen and the host
+ * without one say it the same way (#277). */
+export function Standing({
+  billboard,
+  block = false,
+}: {
+  billboard: BillboardModel
+  /** The shelf below has the block of a chosen film with no card, with its
+   * lines (`ChosenFilm`): they are not said twice. */
+  block?: boolean
+}) {
+  return billboard.open ? (
+    <Changes billboard={billboard} />
+  ) : (
+    <Closed billboard={billboard} block={block} />
   )
 }
 
@@ -289,18 +318,14 @@ export function InlineBillboard({
   return (
     <section
       aria-label={BILLBOARD.label}
-      className="flex flex-col gap-md rounded-panel border border-rule p-lg"
+      className={`flex flex-col gap-md ${INLINE_CARD}`}
     >
       <ShelfLabel
         compact
         items={[billboard.request.who, ...askedParts(billboard.request.parts)]}
         note={billboard.request.speech}
       />
-      {billboard.open ? (
-        <Changes billboard={billboard} />
-      ) : (
-        <Closed billboard={billboard} />
-      )}
+      <Standing billboard={billboard} />
       {empty ? (
         <p className="flex items-start gap-sm text-ink">
           {view.empty(billboard.request.parts)}

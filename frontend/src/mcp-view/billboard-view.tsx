@@ -12,14 +12,16 @@
 // compact inline card, whose Marcar asks for it; in fullscreen it is the
 // whole Cartaz with the top and the foot fixed. A host without one gets the
 // whole Cartaz inline, capped, on its own ground with the inline card's
-// rule and corners. After an Enviar that redoes the list, the fullscreen
-// gives way to the chat, where the new list comes.
+// rule and corners where the frame is wide enough for them. After an
+// Enviar that redoes the list, the fullscreen gives way to the chat, where
+// the new list comes.
 //
 // `mountView` (`mount-view.tsx`) connects this view to the host.
 
 import type { Billboard as BillboardModel } from '@filmes/engine'
 import { useRef, useState } from 'react'
 import { Billboard, type SendOutcome } from '../ui/billboard'
+import { INLINE_CARD } from '../ui/billboard-frame'
 import { SEND_STATUS } from '../ui/billboard-send.copy'
 import { BILLBOARD } from '../ui/billboard.copy'
 import { Alert } from '../ui/kit/status'
@@ -140,10 +142,7 @@ const layoutOf = (host: Host) =>
  * off it), so the chat does not jump when it arrives (#277). */
 function Loading() {
   return (
-    <section
-      aria-busy="true"
-      className="flex flex-col gap-md rounded-panel border border-rule p-lg"
-    >
+    <section aria-busy="true" className={`flex flex-col gap-md ${INLINE_CARD}`}>
       <p className="sr-only" role="status">
         {view.loading}
       </p>
@@ -166,6 +165,13 @@ function Loading() {
   )
 }
 
+/** A host without fullscreen: the whole Cartaz on its own ground, with
+ * the inline card's rule and corners, from 560px; narrower, the cards take
+ * the frame's width, as in the fullscreen's column, and sit on the frame's
+ * floor, so the chips, the stars and the Já vi keep their one line (#277). */
+const PAGE_GROUND =
+  'min-[560px]:rounded-panel min-[560px]:border min-[560px]:border-rule min-[560px]:bg-ground min-[560px]:p-lg'
+
 /** The view for the last tool result the host gave, or the wait for it. */
 export function BillboardView({
   result,
@@ -177,13 +183,7 @@ export function BillboardView({
   if (result === null) return <Loading />
   const shown = billboardOf(result)
   return (
-    <main
-      className={
-        layoutOf(host) === 'page'
-          ? 'rounded-panel border border-rule bg-ground p-lg'
-          : ''
-      }
-    >
+    <main className={layoutOf(host) === 'page' ? PAGE_GROUND : ''}>
       {'billboard' in shown ? (
         <>
           <h1 className="sr-only">
@@ -196,7 +196,7 @@ export function BillboardView({
           />
         </>
       ) : (
-        <section className="rounded-panel border border-rule p-lg">
+        <section className={INLINE_CARD}>
           <h1 className="sr-only">{BILLBOARD.label}</h1>
           <Alert strip>{view.error(shown.error)}</Alert>
         </section>

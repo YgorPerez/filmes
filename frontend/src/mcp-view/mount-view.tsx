@@ -45,13 +45,27 @@ function setInsets(insets: HostContext['safeAreaInsets']) {
  * Where the page around the frame declares another scheme, Chrome paints
  * an opaque canvas behind it, and that canvas is the theme's own: the dark
  * tokens on a dark canvas, the light ones on a light one, never the dark
- * ones on white (#277). Inline the frame lays no floor of its own and,
- * where the schemes agree, sits on the host's. */
+ * ones on white (#277). */
 const schemeOf = (c: HostContext) => c.theme ?? ''
+
+/** The host's floor, painted on the frame edge to edge (#277): with the
+ * host's own background (`--color-background-primary`), the opaque canvas
+ * Chrome puts behind a frame whose scheme differs from the page around it
+ * never shows, and the inline card still sits on the chat's floor. */
+const floorOf = (c: HostContext) =>
+  c.styles?.variables?.['--color-background-primary'] ?? ''
+
+/** Without that floor, in the dark theme, the inline card lays the
+ * Cartaz's ground under itself, inside its rule and corners: on a host
+ * page with no scheme Chrome's near-black square is behind the frame, and
+ * the card no longer reads as a hole in it. The light theme needs none: a
+ * canvas behind it is the host's own white. */
+const cardFloorOf = (c: HostContext) =>
+  floorOf(c) === '' && c.theme === 'dark' ? 'var(--color-ground)' : ''
 
 /** Renders the view in `root` and connects it to the host (`connect`):
  * the tool result, the host's theme (`data-theme`, which `ui/tokens.css`
- * follows), its safe area and its display modes. */
+ * follows), its floor, its safe area and its display modes. */
 export async function mountView(
   app: ViewApp,
   root: HTMLElement,
@@ -73,6 +87,9 @@ export async function mountView(
       document.documentElement.dataset.theme = context.theme
       document.documentElement.style.colorScheme = schemeOf(context)
     }
+    const root = document.documentElement.style
+    root.setProperty('--view-floor', floorOf(context))
+    root.setProperty('--card-floor', cardFloorOf(context))
     setInsets(context.safeAreaInsets)
     changed()
   }

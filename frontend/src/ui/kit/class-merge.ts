@@ -47,6 +47,8 @@ export const TOKENS = {
     'genre-green',
     'genre-orange',
     'genre-pink',
+    'card-floor',
+    'view-floor',
   ],
   text: [
     'shelf',
