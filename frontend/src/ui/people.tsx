@@ -157,9 +157,11 @@ function CreateForm({ state, admin }: { state?: CreateState; admin: boolean }) {
   const field = refused === undefined ? undefined : FIELD_OF[refused]
   const [clearedAt, setClearedAt] = useState<number | null>(null)
   const focused = useRef<HTMLInputElement>(null)
+  // Again at each refusal by `fetch`, even of the same field.
+  const focusAt = field === undefined ? null : refusals
   useEffect(() => {
-    if (field !== undefined) focused.current?.focus()
-  }, [field, refusals])
+    if (focusAt !== null) focused.current?.focus()
+  }, [focusAt])
   const refusalOf = (name: 'nome' | 'email') =>
     clearedAt !== refusals && refused !== undefined && field === name
       ? create.refusals[refused]
