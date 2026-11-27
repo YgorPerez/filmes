@@ -199,7 +199,7 @@ export const OPERATIONS = {
           : `${count(total)} linhas.`,
     empty: 'A consulta retornou 0 linhas.',
     tables: (n: number) => `Tabelas e visões (${n})`,
-    tablesHint: 'Toque num nome para ver as primeiras 20 linhas.',
+    tablesHint: 'Escolha um nome para ver as primeiras 20 linhas.',
     view: 'visão',
     saved: 'Consultas prontas',
     queries: [
