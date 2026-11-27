@@ -579,7 +579,10 @@ test('a Presente sends only yes votes and the Dono sees the new Cartaz order', a
   try {
     const participant = await guest.newPage()
     await participant.goto(href)
-    await participant.getByRole('link', { name: 'Votar nos filmes' }).click()
+    // Her earlier yes counts: the deck holds the 2 she has not voted on.
+    await participant
+      .getByRole('link', { name: 'Votar nos 2 que chegaram' })
+      .click()
     const yes = participant.getByRole('button', { name: 'Sim', exact: true })
     await yes.click()
     await yes.click()
