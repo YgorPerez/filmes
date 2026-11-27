@@ -2,7 +2,12 @@
 // prose in pt-BR, the YAML as the engine wrote it, and the weights back
 // as TOML.
 import { describe, expect, it } from 'vite-plus/test'
-import { localize, parseReport, weightsToml } from './evaluation-report'
+import {
+  localize,
+  parseReport,
+  tidyReport,
+  weightsToml,
+} from './evaluation-report'
 
 const REPORT = `# Avaliação de 2026-11-20
 
@@ -106,5 +111,37 @@ describe('weightsToml', () => {
 
   it('reads no list', () => {
     expect(weightsToml('moods:\n  - leve')).toBeNull()
+  })
+})
+
+describe('tidyReport', () => {
+  it('gives MovieLens its missing dump in its row, and drops the warning', () => {
+    const sections = parseReport(
+      [
+        '## Offline',
+        '| Amostra | Pessoas | Recall@50 |',
+        '| --- | ---: | ---: |',
+        '| Pessoas | 4 | 80.0% (4/5) |',
+        '| MovieLens | 0 | — (0/0) |',
+        '## Avisos',
+        '- A amostra offline do MovieLens exige ml-32m/ratings.csv no Catálogo.',
+      ].join('\n'),
+    )
+    expect(tidyReport(sections, {})).toEqual([
+      {
+        title: 'Offline',
+        blocks: [
+          {
+            kind: 'table',
+            head: ['Amostra', 'Pessoas', 'Recall@50'],
+            align: ['left', 'right', 'right'],
+            rows: [
+              ['Pessoas', '4', '80% (4/5)'],
+              ['MovieLens', 'sem dados: falta o ml-32m no Catálogo'],
+            ],
+          },
+        ],
+      },
+    ])
   })
 })

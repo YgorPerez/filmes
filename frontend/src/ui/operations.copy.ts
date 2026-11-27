@@ -176,6 +176,12 @@ export const OPERATIONS = {
     report: (date: string) => `Relatório de ${shortDate(date)}`,
     download: 'Baixar relatório (.md)',
     copyToml: 'Copiar como TOML',
+    /** A report row with no held-out Nota in any column. */
+    noRatingsRow: 'sem Notas nesse corte',
+    /** A report cell with no held-out Nota. */
+    noRatingsCell: 'sem Notas',
+    shortHashes:
+      'Os hashes vão encurtados; os inteiros estão no arquivo do relatório.',
     noReport: 'Ainda não há relatório.',
   },
   consult: {

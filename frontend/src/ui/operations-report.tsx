@@ -1,6 +1,11 @@
 import { useState } from 'react'
 import type { EvaluationReport } from '#/platform/operations'
-import { parseReport, weightsToml, type ReportBlock } from './evaluation-report'
+import {
+  parseReport,
+  tidyReport,
+  weightsToml,
+  type ReportBlock,
+} from './evaluation-report'
 import { buttonVariants } from './kit/button-variants'
 import { Icon } from './kit/icon'
 import { OPERATIONS } from './operations.copy'
@@ -76,7 +81,8 @@ const ALIGN = { left: 'text-left', right: 'text-right', center: 'text-center' }
 
 /** A report table: a grid at 640px and up; on the phone, where its columns
  * do not fit, each row stacks as "column: value" lines under its name, so
- * the last column (the calibration's "Sobe?") is never past the edge. */
+ * the last column (the calibration's "Sobe?") is never past the edge, and
+ * a cell with no Notas leaves the stack. */
 const REPORT_TABLE = [
   'w-full text-meta tabular-nums',
   '[&_td]:px-sm [&_td]:py-xs [&_th]:px-sm [&_th]:py-xs',
@@ -117,11 +123,21 @@ function Block({ block, weights }: { block: ReportBlock; weights: boolean }) {
                       >
                         {cell}
                       </th>
+                    ) : i === row.length - 1 &&
+                      row.length < block.head.length ? (
+                      // A row with nothing measured: one line that says why.
+                      <td
+                        key="empty"
+                        colSpan={block.head.length - i}
+                        className="text-left text-ink-2"
+                      >
+                        {cell}
+                      </td>
                     ) : (
                       <td
                         key={block.head[i] ?? cell}
                         data-label={block.head[i]}
-                        className={`sm:whitespace-nowrap ${ALIGN[block.align[i] ?? 'left']}`}
+                        className={`sm:whitespace-nowrap ${ALIGN[block.align[i] ?? 'left']} ${cell === COPY.noRatingsCell ? 'text-ink-2 max-sm:hidden' : ''}`}
                       >
                         {cell}
                       </td>
@@ -138,7 +154,9 @@ function Block({ block, weights }: { block: ReportBlock; weights: boolean }) {
       return (
         <div className="flex flex-col gap-sm">
           {toml && <CopyButton text={toml} label={COPY.copyToml} />}
-          <pre className="max-h-[50vh] overflow-auto rounded-field bg-surface-2 p-md font-mono text-meta">
+          <pre
+            className={`max-h-[50vh] overflow-auto rounded-field bg-surface-2 p-md font-mono text-meta ${toml ? '' : 'wrap-anywhere whitespace-pre-wrap'}`}
+          >
             {toml ?? block.text}
           </pre>
         </div>
@@ -163,7 +181,7 @@ function Block({ block, weights }: { block: ReportBlock; weights: boolean }) {
 export function Report({ report }: { report: EvaluationReport | null }) {
   if (report === null)
     return <p className="text-meta text-ink-2">{COPY.noReport}</p>
-  const sections = parseReport(report.text)
+  const sections = tidyReport(parseReport(report.text), report.names)
   const file = `/operacoes/relatorio.md?data=${report.date}`
   return (
     <div className="flex flex-col gap-md border-t border-rule pt-xl">

@@ -56,6 +56,9 @@ export const RUNNING: EvaluationPanel = {
   previous: null,
 }
 
+/** The Pessoas the report names, by slug. */
+export const REPORT_NAMES = { bruno: 'Bruno', iara: 'Iara' }
+
 /** A report as the engine writes it, cut short. */
 export const REPORT_TEXT = `# Avaliação de 2026-11-20
 
@@ -67,6 +70,15 @@ export const REPORT_TEXT = `# Avaliação de 2026-11-20
 | MovieLens | 0 | — (0/0) | — (0/0) |
 
 Parecença média no top 5 (quanto menor, mais variada a lista): Pessoas 0.27708333333333335, MovieLens —.
+
+## Calibração da Força
+
+| Quem | Fraca | Moderada | Forte | Nada a favor | Sobe? |
+| --- | ---: | ---: | ---: | ---: | :---: |
+| Pessoas | — (0/0) | — (0/0) | 100.0% (2/2) | 60.0% (3/5) | — |
+| MovieLens | — (0/0) | — (0/0) | — (0/0) | — (0/0) | — |
+| bruno | — (0/0) | — (0/0) | 100.0% (2/2) | 0.0% (0/1) | — |
+| iara | — (0/0) | — (0/0) | — (0/0) | 100.0% (1/1) | — |
 
 ## Online
 
@@ -82,6 +94,13 @@ path:
     director: 1
 utility:
   maxEvidence: 5
+\`\`\`
+
+## Versões dos dados
+
+\`\`\`yaml
+adultos.csv: cd83a7697b1ed11b0bffed5a9e1c4f0b2d3e6a7c8b9d0e1f2a3b4c5d6e7f8a9b
+filmes.csv: 0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c4b5a69788796a5b4c3d2e1f0
 \`\`\`
 
 ## Avisos
@@ -185,7 +204,7 @@ export const DONE: EvaluationPanel = {
       file: '2026-11-20.md',
     },
   },
-  report: { date: '2026-11-20', text: REPORT_TEXT },
+  report: { date: '2026-11-20', text: REPORT_TEXT, names: REPORT_NAMES },
   previous: { date: '2026-11-13', recall50: 0.75 },
 }
 

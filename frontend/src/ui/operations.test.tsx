@@ -345,7 +345,7 @@ describe('the evaluation, following the run', () => {
       .mockResolvedValueOnce({
         ...IDLE,
         job: DONE,
-        report: { date: '2026-11-20', text: '# Avaliação' },
+        report: { date: '2026-11-20', text: '# Avaliação', names: {} },
       })
     render(
       <EvaluationSection
@@ -499,6 +499,7 @@ describe('the evaluation, the weights, the report and the focus', () => {
           report: {
             date: '2026-11-20',
             text: '# Avaliação\n\n## Offline\n\n| A | B |\n| --- | ---: |\n| Pessoas | 0.27708333333333335 |\n\n## Avisos\n\n- sem MovieLens\n',
+            names: {},
           },
         },
       }),
