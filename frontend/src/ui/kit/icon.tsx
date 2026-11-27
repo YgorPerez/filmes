@@ -45,6 +45,9 @@ const PATHS = {
   ),
   arrow: <path d="M5 12h14M13.5 6.5L19 12l-5.5 5.5" />,
   plus: <path d="M12 5v14M5 12h14" />,
+  upload: (
+    <path d="M12 15.5V4.5M7 9l5-4.5L17 9M5 15v3.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V15" />
+  ),
   check: <path d="M5 12.5l4.5 4.5L19 7.5" />,
   alert: (
     <>
