@@ -109,7 +109,7 @@ export const mainThemes = (
 
 /** Ids as a JSON list, for `IN (SELECT value FROM json_each(?))`
  * (`lista_json`; membership only, so the order is free). */
-export const jsonList = (ids: Iterable<string>): string =>
+const jsonList = (ids: Iterable<string>): string =>
   JSON.stringify([...ids].sort())
 
 type Pairs = Map<string, Pair>
