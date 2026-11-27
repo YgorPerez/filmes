@@ -64,8 +64,10 @@ test('a Pessoa that is gone sends the Dono back to Pessoas with the reason', asy
 }) => {
   await loginAsBruno(page)
   await page.goto('/exportar/imdb.csv?pessoa=ninguem')
-  await expect(page).toHaveURL(/\/pessoas\?erro=pessoa$/)
-  await expect(page.getByRole('alert')).toContainText('não existe mais')
+  await expect(page).toHaveURL(/\/pessoas\?erro=baixar$/)
+  await expect(page.getByRole('alert')).toContainText(
+    'Não deu para baixar o CSV: essa Pessoa não existe mais.',
+  )
 })
 
 test('a download that fails shows the page with the reason, not a file', async ({

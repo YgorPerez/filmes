@@ -7,6 +7,7 @@ export {
   type ConsultResult,
   type ConsultValue,
 } from './consult/consult.ts'
+export { consultSchema, type SchemaTable } from './consult/schema.ts'
 export {
   contribution,
   evidenceToJson,

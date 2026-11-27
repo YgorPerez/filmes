@@ -1,6 +1,7 @@
 // The words of the Pessoas list (`/pessoas`) and its "Acrescentar Pessoa"
 // form. A Pessoa's own page has hers in `person.copy.ts`.
 import type { PersonCreateRefusal } from '#/content/person-create'
+import type { PeopleRefusal } from '#/content/person-action'
 
 export const PEOPLE = {
   title: 'Pessoas',
@@ -11,7 +12,10 @@ export const PEOPLE = {
   empty: 'Nenhuma Pessoa ainda. Acrescente quem assiste com você.',
   unavailable:
     'Não deu para abrir as Pessoas: o site está com um problema, e ele ficou registrado no log do servidor.',
-  gone: 'Essa Pessoa não existe mais: alguém a removeu.',
+  gone: {
+    pessoa: 'Essa Pessoa não existe mais: alguém a removeu.',
+    baixar: 'Não deu para baixar o CSV: essa Pessoa não existe mais.',
+  } satisfies Record<PeopleRefusal, string>,
   removed: 'Pessoa removida.',
   ratings: (n: number) =>
     n === 1 ? '1 Nota' : `${n.toLocaleString('pt-BR')} Notas`,

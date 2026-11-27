@@ -271,9 +271,33 @@ function PersonHeader({
           <Summary slug={slug} page={page} />
         )}
       </div>
-      {here && refusal && <Alert>{text.refusal(refusal)}</Alert>}
+      {here && refusal && (
+        <Alert>
+          {text.refusal(refusal)}
+          {refusal === 'exportar' && <DownloadAgain slug={slug} />}
+        </Alert>
+      )}
       {here && notice && <Notice>{text.notice(notice)}</Notice>}
     </>
+  )
+}
+
+/** After a CSV that did not come, the two downloads again, inside the
+ * alert that says so (#276). */
+function DownloadAgain({ slug }: { slug: string }) {
+  const { notes } = PERSON
+  const link = 'text-ink underline underline-offset-3'
+  return (
+    <span className="mt-xs block">
+      {notes.retry}{' '}
+      <a href={imdbCsvPath(slug)} className={link}>
+        {notes.retryImdb}
+      </a>
+      {' · '}
+      <a href={letterboxdCsvPath(slug)} className={link}>
+        {notes.retryLetterboxd}
+      </a>
+    </span>
   )
 }
 
@@ -448,7 +472,9 @@ function Notes({
               </a>
             </div>
             {page.viewer.admin && (
-              <p className="text-meta text-ink-2">{notes.movielens(own)}</p>
+              <p className="text-meta text-ink-2">
+                {notes.movielens(own, ratings.length, page.name)}
+              </p>
             )}
           </div>
         </Disclosure>

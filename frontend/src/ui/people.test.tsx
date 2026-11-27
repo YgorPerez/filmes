@@ -117,9 +117,9 @@ describe('PeopleList', () => {
     expect(renderToStaticMarkup(<PeopleList people={[]} />)).toContain(
       PEOPLE.empty,
     )
-    expect(renderToStaticMarkup(<PeopleList people={[]} gone />)).toContain(
-      PEOPLE.gone,
-    )
+    expect(
+      renderToStaticMarkup(<PeopleList people={[]} gone="pessoa" />),
+    ).toContain(PEOPLE.gone.pessoa)
     expect(renderToStaticMarkup(<PeopleList people={[]} removed />)).toContain(
       PEOPLE.removed,
     )

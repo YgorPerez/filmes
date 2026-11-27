@@ -26,18 +26,22 @@ const STATUS: PushStatus = {
   failingSince: null,
   lastError: null,
   alert: false,
+  lastPushedAt: null,
+  queued: [],
 }
 
 const IDLE: EvaluationPanel = {
   folder: 'ready',
   job: { state: 'idle' },
   report: null,
+  previous: null,
 }
 
 const page = (over: Partial<OperationsPage> = {}): OperationsPage => ({
   push: STATUS,
   evaluation: IDLE,
   consult: null,
+  schema: [{ name: 'filmes', kind: 'table', columns: ['id', 'titulo'] }],
   ...over,
 })
 
@@ -104,7 +108,17 @@ const DONE: EvaluationJob = {
     },
     priority: 'offline',
     warnings: ['A amostra offline do MovieLens exige ml-32m.'],
-    best: [{ recall50: 0.5, coverageTop5: null }],
+    best: [
+      { recall50: 0.5, coverageTop5: null, changes: [], tie: false },
+      {
+        recall50: 0.4,
+        coverageTop5: null,
+        changes: [
+          { section: 'path.weight', key: 'cast', from: 0.5, to: 0.625 },
+        ],
+        tie: false,
+      },
+    ],
     file: '2026-11-20.md',
   },
 }
@@ -115,7 +129,7 @@ const RUNNING: EvaluationJob = {
   grid: false,
   startedAt: '2026-11-20T15:00:00.000Z',
   progress: 35.5,
-  message: 'Medindo recall e cobertura',
+  message: 'Medindo o quanto a lista acerta',
 }
 
 describe('the console', () => {
@@ -157,6 +171,7 @@ describe('the console', () => {
         },
       ],
       total: 250,
+      limit: 2,
     }
     show(page({ consult: answer }))
     const area = region(OPERATIONS.consult.title)
@@ -177,17 +192,60 @@ describe('the console', () => {
         .map((r) => r.textContent),
     ).toEqual(['brunoNULL', 'iara7'])
     expect(within(area).getByRole('status').textContent).toBe(
-      'Mostrando 2 de 250 linhas.',
+      'Mostrando as primeiras 2 de 250 linhas. Use LIMIT e OFFSET para ver o resto.',
     )
   })
 
-  it('says when the query brought nothing', () => {
+  it('wraps a long cell at its words, in a column of its own', () => {
+    const long = 'palavra '.repeat(8).trim()
     show(
       page({
-        consult: { sql: 'SELECT 1 WHERE 0', columns: [], rows: [], total: 0 },
+        consult: {
+          sql: 'SELECT t',
+          columns: [{ key: 'c0', name: 't' }],
+          rows: [{ key: 'r0', cells: [{ key: 'c0', value: long }] }],
+          total: 1,
+          limit: 200,
+        },
       }),
     )
-    expect(screen.getByText(OPERATIONS.consult.empty)).toBeTruthy()
+    expect(screen.getByText(long).className).toContain('w-[32ch]')
+  })
+
+  it('says when the query brought nothing, under its columns', () => {
+    show(
+      page({
+        consult: {
+          sql: 'SELECT id FROM filmes WHERE 0',
+          columns: [{ key: 'c0', name: 'id' }],
+          rows: [],
+          total: 0,
+          limit: 200,
+        },
+      }),
+    )
+    expect(screen.getByRole('status').textContent).toBe(
+      OPERATIONS.consult.empty,
+    )
+    expect(screen.getByRole('columnheader').textContent).toBe('id')
+  })
+
+  it('lists the tables, each a link to its first rows, and ready queries', () => {
+    show(page())
+    const area = region(OPERATIONS.consult.title)
+    expect(within(area).getByText('Tabelas e visões (1)')).toBeTruthy()
+    expect(
+      within(area).getByRole('link', { name: 'filmes' }).getAttribute('href'),
+    ).toBe(
+      `/operacoes?sql=${encodeURIComponent('SELECT * FROM filmes LIMIT 20')}#consultar`,
+    )
+    expect(within(area).getByText('id, titulo')).toBeTruthy()
+    const ready = within(area).getByRole('navigation', {
+      name: OPERATIONS.consult.saved,
+    })
+    expect(within(ready).getAllByRole('link')).toHaveLength(
+      OPERATIONS.consult.queries.length,
+    )
   })
 
   it.each([
@@ -260,7 +318,9 @@ describe('the evaluation', () => {
       within(area).getByRole('progressbar', { name: 'Progresso da avaliação' }),
     ).toHaveProperty('value', 35.5)
     expect(within(area).getByText('35%')).toBeTruthy()
-    expect(within(area).getByText('Medindo recall e cobertura')).toBeTruthy()
+    expect(
+      within(area).getByText('Medindo o quanto a lista acerta'),
+    ).toBeTruthy()
     expect(within(area).getByText(/Bruno iniciou/)).toBeTruthy()
     expect(within(area).queryByRole('button', { name: 'Avaliar' })).toBeNull()
   })
@@ -285,11 +345,9 @@ describe('the evaluation', () => {
       />,
     )
     expect(await screen.findByText(/Gravando o relatório/)).toBeTruthy()
-    expect(
-      await screen.findByText(/Relatório gravado em 2026-11-20\.md/),
-    ).toBeTruthy()
+    expect(await screen.findByText(/^Terminou em 20 nov 2026/)).toBeTruthy()
     expect(read).toHaveBeenCalledTimes(2)
-    expect(screen.getByText('Relatório de 2026-11-20')).toBeTruthy()
+    expect(screen.getByText('Relatório de 20 nov 2026')).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Avaliar' })).toHaveProperty(
       'disabled',
       false,
@@ -305,23 +363,94 @@ describe('the evaluation', () => {
         .getAllByRole('row')
         .map((r) => r.textContent),
     ).toEqual([
-      'AmostraPerfisRecall@50Cobertura no top 5',
+      'AmostraMedidasRecall@50Cobertura no top 5',
       'Pessoas440%25%',
-      'MovieLens0——',
+      `MovieLens0${OPERATIONS.evaluation.noMovielens}`,
     ])
     expect(
       within(best!)
         .getAllByRole('row')
         .slice(1)
         .map((r) => r.textContent),
-    ).toEqual(['1º50%—'])
+    ).toEqual([
+      '1ºos pesos de hojeatual50%—',
+      '2ºelenco 0,5 → 0,625Copiar pesos40%—',
+    ])
+    expect(
+      within(area).getByText(
+        'A lista acerta 40% das Notas altas reservadas, com 4 Pessoas.',
+      ),
+    ).toBeTruthy()
+    expect(within(area).getByText(/Amostra pequena/)).toBeTruthy()
     expect(
       within(area).getByText(
         'Feedback de 1 Sessão. O filme escolhido estava no top 5 em 100% delas.',
       ),
     ).toBeTruthy()
-    expect(within(area).getByText(/ml-32m/)).toBeTruthy()
+    // The MovieLens warning is in its row, not again in a list.
+    expect(within(area).queryByRole('listitem')).toBeNull()
     expect(within(area).getByText(/poucas Sessões/)).toBeTruthy()
+  })
+
+  it('says the change since the report before', () => {
+    show(
+      page({
+        evaluation: {
+          ...IDLE,
+          job: DONE,
+          previous: { date: '2026-11-13', recall50: 0.35 },
+        },
+      }),
+    )
+    expect(screen.getByText('+5 pontos desde 13 nov 2026.')).toBeTruthy()
+  })
+
+  it('copies a better weight set as TOML', async () => {
+    const writeText = vi.fn<(text: string) => Promise<void>>(async () => {})
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    })
+    show(page({ evaluation: { ...IDLE, job: DONE } }))
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Copiar os pesos da 2ª combinação' }),
+    )
+    expect(writeText).toHaveBeenCalledWith('[path.weight]\ncast = 0.625')
+    expect(await screen.findByText('Copiado.')).toBeTruthy()
+  })
+
+  it('shows the report in sections, with the file to keep', () => {
+    show(
+      page({
+        evaluation: {
+          ...IDLE,
+          report: {
+            date: '2026-11-20',
+            text: '# Avaliação\n\n## Offline\n\n| A | B |\n| --- | ---: |\n| Pessoas | 0.27708333333333335 |\n\n## Avisos\n\n- sem MovieLens\n',
+          },
+        },
+      }),
+    )
+    const area = region(OPERATIONS.evaluation.title)
+    expect(
+      within(area).getByRole('heading', { name: 'Relatório de 20 nov 2026' }),
+    ).toBeTruthy()
+    expect(within(area).getByRole('cell', { name: '0.28' })).toBeTruthy()
+    expect(within(area).getByText('Avisos')).toBeTruthy()
+    expect(
+      within(area)
+        .getByRole('link', { name: OPERATIONS.evaluation.download })
+        .getAttribute('href'),
+    ).toBe('/operacoes/relatorio.md?data=2026-11-20')
+  })
+
+  it('takes the focus to the progress just after Avaliar', () => {
+    show(page({ evaluation: { ...IDLE, job: RUNNING } }), {
+      notice: 'avaliando',
+    })
+    expect(document.activeElement?.textContent).toContain(
+      'Medindo o quanto a lista acerta',
+    )
   })
 
   it('says why the run stopped', () => {
@@ -364,9 +493,10 @@ describe('the push', () => {
     })
     const area = region(OPERATIONS.push.title)
     expect(within(area).getByRole('alert').textContent).toContain(
-      'Envio falhando',
+      OPERATIONS.push.failing,
     )
     expect(within(area).getByText('1 commit na fila.')).toBeTruthy()
+    expect(within(area).getByText(OPERATIONS.push.nextStep)).toBeTruthy()
   })
 
   it('warns after three failures, with git’s last error', () => {
@@ -379,22 +509,35 @@ describe('the push', () => {
           failingSince: '2026-11-20T15:00:00.000Z',
           lastError: 'git push exited with 128',
           alert: true,
+          lastPushedAt: null,
+          queued: ['Bruno deu nota a Fronteira (2008)'],
         },
       }),
     )
     const area = region(OPERATIONS.push.title)
-    expect(within(area).getByRole('alert').textContent).toBe('Envio falhando')
+    expect(within(area).getByRole('alert').textContent).toMatch(
+      /^O envio dos dados está falhando3 falhas seguidas\. A primeira falha foi em 20 nov 2026, 12:00\.$/,
+    )
     expect(
-      within(area).getByText(/3 falhas seguidas.*A primeira falha foi em/),
+      within(area).getByText('Bruno deu nota a Fronteira (2008)'),
     ).toBeTruthy()
     expect(within(area).getByText('git push exited with 128')).toBeTruthy()
+    // It comes first, before the console.
+    const sections = screen
+      .getAllByRole('region')
+      .map((r) => r.id || r.getAttribute('aria-labelledby'))
+    expect(sections.indexOf('envio')).toBeLessThan(
+      sections.indexOf('consultar'),
+    )
   })
 
   it('shows that the queue is clear after a successful retry', () => {
-    show(page(), { notice: 'enviado' })
+    show(page({ push: { ...STATUS, lastPushedAt: '2026-11-20T15:00:00Z' } }), {
+      notice: 'enviado',
+    })
     const area = region(OPERATIONS.push.title)
     expect(within(area).getByRole('status').textContent).toBe(
-      'Fila em dia. Todos os commits foram enviados.',
+      'Em dia · último envio em 20 nov 2026, 12:00.',
     )
   })
 
@@ -404,7 +547,7 @@ describe('the push', () => {
     expect(within(area).getByRole('alert').textContent).toContain(
       'Não foi possível ler a fila de envio.',
     )
-    expect(within(area).queryByText(/Fila em dia/)).toBeNull()
+    expect(within(area).queryByText(/Em dia/)).toBeNull()
   })
 
   it('says when pushing is off, or cannot be read', () => {

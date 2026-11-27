@@ -21,8 +21,21 @@ export const Route = createFileRoute('/_owner')({
   },
   loader: ({ context }) => (context.owner.admin ? readPushAlert() : null),
   component: OwnerLayout,
-  notFoundComponent: () => <NotFound />,
+  notFoundComponent: OwnerNotFound,
 })
+
+/** The 404 inside the shell, with the bar and the tabs: the Dono is still
+ * in the app (an old link to a page only an admin opens lands here). No
+ * place is marked current: the address leads nowhere, and marking the
+ * avatar on `/operacoes` would say the page is there. */
+function OwnerNotFound() {
+  const { owner } = Route.useRouteContext()
+  return (
+    <AppShell owner={owner} path="" alert={null}>
+      <NotFound />
+    </AppShell>
+  )
+}
 
 function OwnerLayout() {
   const { owner } = Route.useRouteContext()

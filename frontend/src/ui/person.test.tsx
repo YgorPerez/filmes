@@ -653,6 +653,19 @@ describe('PersonScreen', () => {
     )
   })
 
+  it('offers the downloads again when a CSV did not come', () => {
+    render(<PersonScreen slug="iara" page={IARA} refusal="exportar" />)
+    const alert = screen.getByRole('alert')
+    expect(
+      within(alert)
+        .getAllByRole('link')
+        .map((a) => a.getAttribute('href')),
+    ).toEqual([
+      '/exportar/imdb.csv?pessoa=iara',
+      '/exportar/letterboxd.csv?pessoa=iara',
+    ])
+  })
+
   it('says when no Pessoa has the name, or the engine cannot run', () => {
     render(<PersonScreen slug="ninguem" page="unknown" />)
     expect(
@@ -709,7 +722,9 @@ describe('the Notas section', () => {
       '/exportar/letterboxd.csv?pessoa=iara',
     )
     // Where the CSVs go is for an admin.
-    expect(within(notes).queryByText(PERSON.notes.movielens(false))).toBeNull()
+    expect(
+      within(notes).queryByText(PERSON.notes.movielens(false, 1, IARA.name)),
+    ).toBeNull()
     // The rating queue is the logged-in Dono's: not on another's page.
     expect(
       within(notes).queryByRole('link', { name: PERSON.notes.rate }),
@@ -722,7 +737,7 @@ describe('the Notas section', () => {
     show({ ...IARA, viewer: { person: 'bruno', name: 'Bruno', admin: true } })
     expect(
       within(section(PERSON.notes.title)).getByText(
-        PERSON.notes.movielens(false),
+        PERSON.notes.movielens(false, IARA.ratings?.length ?? 0, IARA.name),
       ),
     ).toBeTruthy()
   })
