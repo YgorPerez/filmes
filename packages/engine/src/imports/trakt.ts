@@ -1,8 +1,6 @@
 // The Trakt import (`importar/trakt.py`): the Notas, Já vistos and
-// watchlist of a Pessoa's Raw Export, by the ids the export carries. A film resolves by its
-// IMDb id when the Catalog has it; otherwise by its TMDB id, when exactly
-// one film of the Catalog has that id (Letterboxd's slugs table or
-// Wikidata's P4947). The rest is reported, not queued.
+// watchlist of a Pessoa's Raw Export, by the ids the export carries
+// (`film-ids.ts`). The rest is reported, not queued.
 //
 // Fatos have a `trakt:...` fato_id and Fonte "Trakt de <name>". Every
 // change reloads the Pessoa's Trakt Fatos from all her stored exports, so
@@ -23,11 +21,11 @@ import { engineError, EngineError } from '../runtime/EngineError.ts'
 import type { Environment } from '../runtime/Environment.ts'
 import type { Run } from '../runtime/Run.ts'
 import { Sqlite, type Connection, type SqliteError } from '../sqlite/Sqlite.ts'
+import { hasWikidata, resolveFilmIds, type ResolvedBy } from './film-ids.ts'
 import { storedImports, storeImport } from './stored.ts'
 import {
   hasTraktWatchlist,
   readTraktExport,
-  type TraktFilm,
   type TraktRow,
 } from './trakt-export.ts'
 import { withLatestWatchlist, type ExportRows } from './watchlist.ts'
@@ -84,42 +82,6 @@ const personTraktRows = (
     ),
     (exports) => withLatestWatchlist(exports, (row) => row.watchlist),
   )
-
-type ResolvedBy = 'imdb' | 'tmdb'
-
-const resolveFilm = (
-  db: Connection,
-  film: TraktFilm,
-  wikidata: boolean,
-): Effect.Effect<readonly [string, ResolvedBy] | null, SqliteError> =>
-  Effect.gen(function* () {
-    if (
-      film.imdb &&
-      (yield* db.get('SELECT 1 FROM filmes WHERE id = ?', film.imdb))
-    )
-      return [film.imdb, 'imdb'] as const
-    if (!film.tmdb) return null
-    const ids = new Set(
-      (yield* db.all(
-        'SELECT f.id FROM slugs_letterboxd s JOIN filmes f ON f.id = s.imdb WHERE s.tmdb = ? ORDER BY f.id',
-        film.tmdb,
-      )).map((row) => String(row.id)),
-    )
-    if (wikidata)
-      for (const row of yield* db.all(
-        `SELECT f.id FROM metadados_wikidata t
-         JOIN metadados_wikidata i ON i.item = t.item AND i.propriedade = 'P345'
-         JOIN filmes f ON f.id = i.valor
-         WHERE t.propriedade = 'P4947' AND t.valor = ?
-         ORDER BY f.id`,
-        film.tmdb,
-      ))
-        ids.add(String(row.id))
-    const [only] = ids
-    return ids.size === 1 && only !== undefined
-      ? ([only, 'tmdb'] as const)
-      : null
-  })
 
 const insertFact = (
   db: Connection,
@@ -190,10 +152,7 @@ const loadPerson = (
         `DELETE FROM ${table} WHERE pessoa = ? AND fato_id LIKE 'trakt:%'`,
         person.slug,
       )
-    const wikidata =
-      (yield* db.get(
-        "SELECT 1 FROM sqlite_master WHERE name = 'metadados_wikidata'",
-      )) !== undefined
+    const wikidata = yield* hasWikidata(db)
     const source = `Trakt de ${person.name}`
     const resolutions = new Map<string, readonly [string, ResolvedBy] | null>()
     const resolved = { imdb: new Set<string>(), tmdb: new Set<string>() }
@@ -208,7 +167,7 @@ const loadPerson = (
       ])
       let found = resolutions.get(key)
       if (found === undefined) {
-        found = yield* resolveFilm(db, film, wikidata)
+        found = yield* resolveFilmIds(db, film, wikidata)
         resolutions.set(key, found)
         if (found === null)
           unresolved.push({
