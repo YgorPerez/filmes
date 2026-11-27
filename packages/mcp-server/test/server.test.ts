@@ -63,6 +63,12 @@ describe('the server', () => {
       destructiveHint: false,
       openWorldHint: false,
     })
+    // It posts to the Trakt of a Presente who connected.
+    assert.deepEqual(annotations.record_feedback, {
+      readOnlyHint: false,
+      destructiveHint: false,
+      openWorldHint: true,
+    })
   })
 
   test('sends the instructions, with the PT words for the output values', async () => {
