@@ -94,7 +94,7 @@ export interface PushStatus {
 }
 
 /** How many of the queued commits the status names. */
-export const QUEUED_SHOWN = 5
+const QUEUED_SHOWN = 5
 
 /** Failed attempts in a row before the banner shows. */
 export const ALERT_AFTER_FAILURES = 3
