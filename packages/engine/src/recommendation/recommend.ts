@@ -65,9 +65,11 @@ import {
 } from './candidates.ts'
 import {
   makeConstraintSet,
+  RELAX_ORDER,
   type Constraint,
   type ConstraintContext,
   type ConstraintSet,
+  type RelaxedConstraint,
 } from './constraints.ts'
 import { readConstraints, type ConstraintRequest } from './constraints/index.ts'
 import { criticsLines } from './critics.ts'
@@ -174,6 +176,9 @@ export interface Recommendation {
   readonly kept?: ReadonlyArray<string>
   /** Only when regenerating: what left the previous version, and why. */
   readonly dropped?: ReadonlyArray<Dropped>
+  /** Only when the list came up short and a Restrição was relaxed to fill
+   * it (#358): which, and how many of the films came in by it. */
+  readonly relaxed?: ReadonlyArray<RelaxedConstraint>
 }
 
 export interface RankOptions {
@@ -184,6 +189,8 @@ export interface RankOptions {
   readonly constraints?: ReadonlyArray<Constraint>
   /** Clima names as asked. */
   readonly moods?: ReadonlyArray<string>
+  /** Climas from Cartaz comments, for open places only. */
+  readonly refillMoods?: ReadonlyArray<string>
   /** The Candidates prepared once for many rounds (`avaliar`). */
   readonly selection?: CandidateSelection
   /** A refazer of a Session (Python's `regerar`): the kept films stay at
@@ -193,29 +200,38 @@ export interface RankOptions {
   readonly seed?: string
   /** The Session being redone, excluded from its own bet record. */
   readonly session?: string
+  /** A short list relaxes the Parecido, then the year, to fill `count`
+   * (#358). The Session's Recomendação asks for it; without it, the
+   * Restrições hold as asked and the list may come out shorter. */
+  readonly relax?: boolean
 }
 
 type Key = readonly PyOrderable[]
 
 interface Ordered extends Scored {
   readonly key: Key
+  readonly tier: number
+  readonly onlyGuesses: boolean
   readonly film: Candidate
   readonly utilities: ReadonlyMap<string, number | null>
   readonly evidence: ReadonlyArray<Evidence>
 }
 
+/** How many bands a tier of relaxed films holds (#358). */
+const BANDS = 3
+
 /** 0 with some known utility, 1 with Facts only in the film signals, 2
  * with guesses only. */
-const bandOf = (byRule: readonly number[] | null, hasFact: boolean): number =>
+const evidenceBand = (byRule: readonly number[] | null, hasFact: boolean) =>
   byRule !== null ? 0 : hasFact ? 1 : 2
 
 const orderKey = (
   byRule: readonly number[] | null,
-  hasFact: boolean,
+  band: number,
   film: Candidate,
   bonus: number,
 ): Key => [
-  bandOf(byRule, hasFact),
+  band,
   byRule !== null ? byRule.map((v) => -(v + bonus)) : [-bonus],
   -film.votes,
   film.id,
@@ -292,6 +308,11 @@ const prepare = (db: Connection, options: RankOptions): RankEffect<Ranking> =>
     )
     const moods = yield* resolveMoods(options.moods ?? [])
     for (const warning of moods.warnings) yield* run.warn(warning)
+    const refill = options.refillMoods?.length
+      ? (yield* resolveMoods(options.refillMoods)).moods
+      : []
+    const kept = (id: string) =>
+      regenerate !== undefined && isKept(regenerate, id)
     const context: ConstraintContext = {
       db,
       weights,
@@ -306,9 +327,14 @@ const prepare = (db: Connection, options: RankOptions): RankEffect<Ranking> =>
       db,
       weights,
       today: run.today,
-      candidates: yield* asked.candidates(vetoes.remaining),
+      candidates: yield* asked.candidates(
+        vetoes.remaining,
+        kept,
+        options.relax ? options.count : 0,
+      ),
       attendees,
       moods: moods.moods,
+      ...(refill.length > 0 && { refillMoods: { moods: refill, kept } }),
       scales,
     }
     return {
@@ -321,7 +347,7 @@ const prepare = (db: Connection, options: RankOptions): RankEffect<Ranking> =>
       vetoes,
       asked,
       round,
-      kept: (id) => regenerate !== undefined && isKept(regenerate, id),
+      kept,
     }
   })
 
@@ -467,20 +493,31 @@ const orderFilms = (
       (e) => e.kind !== 'guess' && e.countsAsFact,
     )
     const byRule = ruleKey(rule, utilities, adjustment)
+    const tier = r.asked.tierOf(filmId)
+    const band = tier * BANDS + evidenceBand(byRule, hasFact)
     ordered.push({
-      key: orderKey(byRule, hasFact, film, bonus),
+      key: orderKey(byRule, band, film, bonus),
       id: film.id,
-      band: bandOf(byRule, hasFact),
+      tier,
+      onlyGuesses: byRule === null && !hasFact,
+      band,
       score: (byRule?.[0] ?? 0) + bonus,
       film,
       utilities,
       evidence,
     })
-    if (adjustment.size > 0)
+    if (adjustment.size > 0) {
+      const raw = ruleKey(rule, utilities)
       unweighed.push({
-        key: orderKey(ruleKey(rule, utilities), hasFact, film, bonus),
+        key: orderKey(
+          raw,
+          tier * BANDS + evidenceBand(raw, hasFact),
+          film,
+          bonus,
+        ),
         id: filmId,
       })
+    }
   }
   ordered.sort(byKey)
   return { ordered, unweighed }
@@ -567,8 +604,9 @@ const betCandidates = (
   Effect.gen(function* () {
     const betOdds = new Map<string, BetCandidate>()
     if (betAt > 0 && r.options.count >= betAt)
-      for (const { film, utilities, evidence } of ordered) {
-        if (!hasLittleEvidence(evidence, utilities, r.weights)) continue
+      for (const { film, tier, utilities, evidence } of ordered) {
+        if (tier > 0 || !hasLittleEvidence(evidence, utilities, r.weights))
+          continue
         const odds = new Map<string, BetOdds>()
         for (const p of r.options.attendees) {
           const prediction = (yield* predictRatings(r.round, p)).get(film.id)
@@ -641,6 +679,7 @@ const withBet = (
   pool: ReadonlyArray<Ordered>,
   chosen: ReadonlyArray<Ordered>,
   places: number,
+  beforeBet: number,
 ): RankEffect<BetFill> =>
   Effect.gen(function* () {
     const { seed } = r.options
@@ -659,6 +698,8 @@ const withBet = (
     )
     if (!policy.offer) return yield* noBet
     const regular = yield* regularFill(r, pool, chosen, places - 1)
+    if (regular.slice(0, beforeBet).some((item) => item.tier > 0))
+      return yield* noBet
     return yield* drawBet(r, {
       seed,
       betOdds,
@@ -690,7 +731,7 @@ const placeFresh = (
     const { count } = r.options
     const { regular, bet, cautious } =
       betAt > 0 && count >= betAt
-        ? yield* withBet(r, betOdds, ordered, [], count)
+        ? yield* withBet(r, betOdds, ordered, [], count, betAt - 1)
         : {
             regular: yield* regularFill(r, ordered, [], count),
             bet: undefined,
@@ -782,6 +823,11 @@ const placeRegenerated = (
       others,
       fixed,
       places,
+      betAt -
+        1 -
+        fixed.filter(
+          (item) => (regenerate.positions.get(item.id) ?? betAt) < betAt,
+        ).length,
     )
     return {
       placed:
@@ -950,7 +996,7 @@ const recommendedFilm = (
   Effect.gen(function* () {
     const { weights } = r
     const { attendees, regenerate } = r.options
-    const { key, film, utilities, evidence } = item
+    const { onlyGuesses, film, utilities, evidence } = item
     const withoutFactOn = [...utilities]
       .filter(([, u]) => u === null)
       .map(([p]) => p)
@@ -973,7 +1019,7 @@ const recommendedFilm = (
         attendees: utilities.size,
         withoutFact: withoutFactOn,
       },
-      onlyGuesses: key[0] === 2,
+      onlyGuesses,
       utility: Object.fromEntries(
         [...utilities].map(([p, u]) => [p, u === null ? null : pyRound(u, 4)]),
       ),
@@ -1043,8 +1089,39 @@ const recommendation = (
           done.removed,
         ),
       }),
+      ...relaxedIn(r, films),
     }
   })
+
+/** The Restrições relaxed to let the placed films in, each with the films
+ * whose last relaxed Restrição it is (#358). */
+const relaxedIn = (
+  r: Ranking,
+  films: ReadonlyArray<RecommendedFilm>,
+): { readonly relaxed?: ReadonlyArray<RelaxedConstraint> } => {
+  const by = new Map<Constraint, Candidate[]>()
+  for (const { id } of films) {
+    const last = r.asked
+      .relaxedOf(id)
+      .toSorted(
+        (a, b) => RELAX_ORDER.indexOf(a.name) - RELAX_ORDER.indexOf(b.name),
+      )
+      .at(-1)
+    const film = r.round.candidates.get(id)
+    if (last !== undefined && film !== undefined)
+      by.set(last, [...(by.get(last) ?? []), film])
+  }
+  const relaxed = [...by]
+    .toSorted(
+      ([a], [b]) => RELAX_ORDER.indexOf(a.name) - RELAX_ORDER.indexOf(b.name),
+    )
+    .map(([c, came]) => ({
+      constraint: c.name,
+      films: came.length,
+      text: c.relaxedText?.(came) ?? '',
+    }))
+  return relaxed.length > 0 ? { relaxed } : {}
+}
 
 /** The recommendation for Presentes already resolved, on an open read
  * connection (Python's `recomendar(conn, ...)`). Warnings go to the
@@ -1167,7 +1244,7 @@ export const requestCount = (
  * the Presentes resolved, the Regra checked, then `rank`. `seedOf` gives
  * the Aposta's seed from the Presentes when the request has none. */
 export const rankRequest = (
-  request: RecommendRequest,
+  request: RecommendRequest & Pick<RankOptions, 'refillMoods' | 'relax'>,
   count: number,
   asked: ReadonlyArray<Constraint>,
   regenerate?: Regenerate,
@@ -1197,6 +1274,10 @@ export const rankRequest = (
           rule,
           constraints: asked,
           moods: request.moods ?? [],
+          ...(request.refillMoods !== undefined && {
+            refillMoods: request.refillMoods,
+          }),
+          ...(request.relax && { relax: true }),
           ...(regenerate !== undefined && { regenerate }),
           ...(seed !== undefined && { seed }),
           ...(request.session != null && { session: request.session }),

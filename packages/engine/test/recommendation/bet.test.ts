@@ -21,6 +21,7 @@ import {
   parseYaml,
   personRate,
   personSeen,
+  recommend,
   recommendSession,
   yamlToJson,
   type BetCandidate,
@@ -286,6 +287,21 @@ describe('the bet in the Session', () => {
     expect(front(fixture, out.session.id).recommendation[0]).not.toHaveProperty(
       'bet',
     )
+  })
+
+  test('an Aposta outside the year range cannot take a place from films inside it', async () => {
+    const fixture = useFixture()
+    const vars = betWeights(fixture)
+    const request = { attendees: ['bruno'], until: 2018 }
+    const strict = await fixture.ok(recommend({ ...request, count: 100 }), vars)
+    const out = await session(fixture, vars, {
+      ...request,
+      count: strict.films.length + 1,
+    })
+    expect(out.films).toHaveLength(strict.films.length + 1)
+    expect(
+      out.films.slice(0, -1).every((film) => (film.year ?? 0) <= 2018),
+    ).toBe(true)
   })
 
   test('the Cartaz marks it', async () => {

@@ -245,6 +245,7 @@ export const VERSION_EXTRAS = [
   'swapped',
   'votes',
   'bet_marks',
+  'shortfall',
 ] as const
 
 /** The version at the top of the frontmatter, shaped as an item of

@@ -1,6 +1,6 @@
 // The whole Cartaz: on the page, open and closed (the chosen film with its
 // reactions, on its card or, without one, in a block above the cards),
-// without sections, empty,
+// without sections, empty, short of films (#357),
 // and in the MCP Apps view's inline and fullscreen layouts.
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, within } from 'storybook/test'
@@ -73,6 +73,30 @@ export const ClosedChosenWithoutCard: Story = {
 
 export const Empty: Story = {
   args: { billboard: { ...LOCAL, films: [], sections: [], dropped: [] } },
+}
+
+const SHORT = {
+  ...LOCAL,
+  shortfall:
+    'Acabaram os parecidos com Esqueceram de Mim: vieram 2 dos 9 filmes pedidos.',
+}
+
+/** The Falta strip under the request (#357). */
+export const ShortOfFilms: Story = {
+  args: { billboard: SHORT },
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByRole('note')).toBeVisible()
+  },
+}
+
+export const ShortOfFilmsInline: Story = {
+  args: {
+    billboard: SHORT,
+    action: undefined,
+    layout: 'inline',
+    onExpand: fn(),
+    onSend: fn(),
+  },
 }
 
 export const Inline: Story = {

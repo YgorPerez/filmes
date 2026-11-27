@@ -141,6 +141,10 @@ _Evitar_: parser, interpretação
 Um filme que o Dono tirou da tela de uma versão: o Trocar do Cartaz, o não de um Presente no Voto e, ao refazer, o que ele mandou trocar e o que não ficou como Mantido. Fica fora da Sessão até o fim.
 _Evitar_: descartado, rejeitado
 
+**Falta** [shortfall, `shortfall`; `asked`, `found`, `similar`, `relaxed`]:
+O que a versão da Sessão guarda quando passaram menos filmes do que o pedido: quantos foram pedidos, quantos vieram, os títulos do Parecido cujos filmes acabaram e o que o motor afrouxou para encher a lista (#358). O Cartaz a diz numa faixa no topo ("Acabaram os parecidos com Home Alone; entraram 3 de antes de 1990"), e o `recommend` do MCP a devolve. Lista cheia sem nada afrouxado não tem Falta (#357, mapa #355).
+_Evitar_: aviso, erro
+
 **Voto** [vote, `votes`, `replaces`; `yes`, `no`]:
 O sim ou o não de um Presente a um filme da tela, dado no celular pelo Link da Sessão, um filme de cada vez (o swipe do grupo, #182). Fica na versão da Sessão com quem votou e a data. O não é um Trocado daquele Presente: o filme sai e a Sessão regera. Na contagem vale o último envio de cada Presente, cujo primeiro Voto tem `replaces: true`. Os Mantidos com mais sins vêm primeiro, nos números que os Mantidos já tinham, e os empates mantêm a ordem. Se a ordem muda, o sim por si só regera a Sessão (#205). Voto não é Fato e não mexe no gosto.
 _Evitar_: curtida, like

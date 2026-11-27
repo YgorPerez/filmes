@@ -42,6 +42,26 @@ describe('recommend', () => {
     }
   })
 
+  test('a short list says whose similar films ran out and what came in', async () => {
+    const { ok } = await connect(useFixture())
+
+    const output = await ok('recommend', {
+      attendees: ['dono'],
+      similar: ['tt9006701'],
+      maxDuration: 90,
+      count: 10,
+    })
+
+    assert.deepEqual(output.shortfall, {
+      asked: 10,
+      found: 4,
+      similar: ['Escrever Cartas'],
+      relaxed: [
+        { constraint: 'similar', films: 4, text: 'que não são parecidos' },
+      ],
+    })
+  })
+
   test('passes the Regra de escolha', async () => {
     const { ok } = await connect(useFixture())
 
@@ -142,7 +162,7 @@ describe('recommend', () => {
 
     const output = await ok('recommend', {
       attendees: ['dono'],
-      count: 50,
+      count: 10,
       since: 2015,
       until: 2016,
     })
@@ -318,19 +338,22 @@ describe('recommend with similar (#67, #68)', () => {
       similar: ['tt9006702'],
     })
 
-    assert.deepEqual(
-      output.films.map((f: Film) => f.id),
-      ['tt9006713'],
-    )
+    // The one similar film comes first; the others fill the list (#358).
+    assert.equal(output.films[0].id, 'tt9006713')
     assert.equal(
       output.films[0].filmLines[0].text,
       'parecido com Estrada Afora: road trip',
     )
     assert.ok(
-      output.warnings.includes(
-        'só 1 parecido com Estrada Afora passou nas Restrições',
-      ),
+      output.films
+        .slice(1)
+        .every(
+          (f: Film) => !f.filmLines.some((l) => l.text.startsWith('parecido')),
+        ),
     )
+    assert.deepEqual(output.shortfall.relaxed, [
+      { constraint: 'similar', films: 4, text: 'que não são parecidos' },
+    ])
   })
 
   test('similar stays in the Session and noSimilar takes it off', async () => {
@@ -349,10 +372,7 @@ describe('recommend with similar (#67, #68)', () => {
     })
 
     assert.deepEqual(second.constraints.similar.films, ['tt9006702'])
-    assert.deepEqual(
-      second.films.map((f: Film) => f.id),
-      ['tt9006713'],
-    )
+    assert.equal(second.films[0].id, 'tt9006713')
     assert.equal(third.constraints.similar, undefined)
   })
 })

@@ -803,6 +803,7 @@ const recordReply = (input: ReplyInput) =>
 
     const asked = yield* askedSeen(films, slugsOf(version.get('attendees')))
     const seen = yield* recordSeen(db, id, today, asked)
+    const clearedComments = front.delete('refill_comments')
     let write = yield* recordReplyMarks(
       db,
       id,
@@ -829,7 +830,7 @@ const recordReply = (input: ReplyInput) =>
       front,
       betMarksOf(seen, swap, films, owner, today),
     )
-    if (write || betMarksChanged)
+    if (write || clearedComments || betMarksChanged)
       yield* writeSession(id, front, opened.session.body)
     return replyResult({
       id,

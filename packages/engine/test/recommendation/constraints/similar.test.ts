@@ -1,18 +1,21 @@
 // `tests/test_parecido.py`: "algo igual X" (`similar`, #67). Only the
-// `[similar] candidates` most similar to the reference pass, counted before
-// the other Restrições and the minimum rating; among them the Regra orders.
+// `[similar] candidates` most similar to the reference pass after the IMDb
+// minimum, the Vetos and the other Restrições. The Regra orders them.
 // The films are the fixture's `tt90067NN` (see its LEIAME). The rebuild's
 // precomputed tables (`tags_no_catalogo`, `normas_tags_movielens`) come with
 // the rebuild's port; the hooks a refazer uses are in `hooks.test.ts`.
 
-import { readdirSync, readFileSync } from 'node:fs'
+import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { Effect } from 'effect'
 import { describe, expect, test } from 'vite-plus/test'
 import {
   constraintLabel,
+  personSeen,
+  personVeto,
   readConstraints,
   recommend,
+  recommendSession,
   storedConstraints,
   type Recommendation,
   type Vars,
@@ -69,13 +72,14 @@ test('only the similar ones come, and the Regra orders them', async () => {
   expect(out.constraints['similar']).toEqual({
     films: [WRITING_LETTERS],
     titles: ['Escrever Cartas'],
-    removed: 83,
+    removed: 81,
   })
 })
 
-test('cuts at the most similar, counted before the minimum rating, and warns', async () => {
+test('cuts at the most similar after the minimum rating, and warns', async () => {
   // The 3 most similar to Writing Letters: Ink and Paper, Sunday Table and
-  // Almost the Same, below the minimum. Its place does not go to Draft.
+  // Almost the Same. The minimum rating rules out Almost the Same, so Draft
+  // takes its place.
   const fixture = useFixture()
   const out = await similarTo(
     fixture,
@@ -84,10 +88,121 @@ test('cuts at the most similar, counted before the minimum rating, and warns', a
     candidates(fixture, 3),
   )
 
-  expect(ids(out)).toEqual([SUNDAY_TABLE, INK_AND_PAPER])
+  expect(ids(out)).toEqual([SUNDAY_TABLE, DRAFT, INK_AND_PAPER])
   expect(ids(out)).not.toContain(ALMOST_THE_SAME)
   expect(withoutPosterWarning(out.warnings)).toContain(
-    'só 2 parecidos com Escrever Cartas passaram nas Restrições',
+    'só 3 parecidos com Escrever Cartas passaram nas Restrições',
+  )
+})
+
+test('fills the count when unseen removes the two most similar films', async () => {
+  const fixture = useFixture()
+  await fixture.ok(personSeen({ person: 'dono', film: INK_AND_PAPER }))
+  await fixture.ok(personSeen({ person: 'dono', film: SUNDAY_TABLE }))
+
+  const out = await engineRecommendation(
+    fixture,
+    { attendees: ['dono'], similar: [WRITING_LETTERS], count: 2, unseen: true },
+    candidates(fixture, 2),
+  )
+
+  expect(ids(out)).toEqual([ON_THE_ROAD, DRAFT])
+  expect(withoutPosterWarning(out.warnings)).toEqual([])
+})
+
+test('refills a swapped place with the next similar film', async () => {
+  const fixture = useFixture()
+  const vars = candidates(fixture, 2)
+  const first = await fixture.ok(
+    recommendSession({
+      attendees: ['dono'],
+      similar: [WRITING_LETTERS],
+      count: 2,
+    }),
+    vars,
+  )
+  expect(ids(first)).toEqual([SUNDAY_TABLE, INK_AND_PAPER])
+
+  const second = await fixture.ok(
+    recommendSession({
+      attendees: ['dono'],
+      session: first.session.id,
+      keep: [SUNDAY_TABLE],
+      swap: [INK_AND_PAPER],
+    }),
+    vars,
+  )
+
+  expect(ids(second)).toEqual([SUNDAY_TABLE, DRAFT])
+  expect(second.kept).toEqual([SUNDAY_TABLE])
+})
+
+test('a vetoed film takes no place in the cut', async () => {
+  const fixture = useFixture()
+  await fixture.ok(
+    personVeto({
+      person: 'dono',
+      text: 'não vejo esse',
+      target: INK_AND_PAPER,
+    }),
+  )
+
+  const out = await similarTo(
+    fixture,
+    [WRITING_LETTERS],
+    1,
+    candidates(fixture, 1),
+  )
+
+  expect(ids(out)).toEqual([SUNDAY_TABLE])
+})
+
+test('fills the cut after an on-demand Restrição removes a film', async () => {
+  const fixture = useFixture()
+  const recordings = join(fixture.root, 'recordings')
+  const ddd = join(recordings, 'ddd')
+  mkdirSync(ddd, { recursive: true })
+  for (const [id, yesSum, noSum] of [
+    [INK_AND_PAPER, 4, 0],
+    [SUNDAY_TABLE, 0, 4],
+    [DRAFT, 4, 0],
+  ] as const) {
+    writeFileSync(
+      join(ddd, `${id}.json`),
+      JSON.stringify({
+        item: { imdbId: id },
+        topicItemStats: [
+          { topic: { id: 153, name: 'a dog dies' }, yesSum, noSum },
+        ],
+      }),
+    )
+  }
+  const out = await engineRecommendation(
+    fixture,
+    {
+      attendees: ['dono'],
+      similar: [WRITING_LETTERS],
+      count: 2,
+      triggers: ['a dog dies'],
+    },
+    {
+      ...weightsWith(fixture, '\ncandidates = 50\n', '\ncandidates = 2\n', [
+        ['\non_demand_reach = 50\n', '\non_demand_reach = 2\n'],
+      ]),
+      FILMES_DDD_CHAVE: 'chave-de-teste',
+      FILMES_GRAVACOES: recordings,
+    },
+  )
+
+  expect(ids(out)).toEqual([SUNDAY_TABLE, DRAFT])
+  expect(out.constraints['trigger']).toMatchObject({ removed: 1 })
+  expect(
+    film(out, 'Mesa de Domingo').filmLines.filter(
+      (l) => l.source === 'Does the Dog Die',
+    ),
+  ).toHaveLength(1)
+  expect(film(out, 'Rascunho').filmLines.map((l) => l.text)).toContain(
+    'sem informação do Does the Dog Die sobre "a dog dies"',
   )
 })
 
