@@ -40,3 +40,22 @@ export const SingleLine: Story = {
     items: ['Vocês três', 'até 1h50', 'nota 7+ no IMDb', 'leve', 'pra rir'],
   },
 }
+
+/** A narrow label wraps: each dot goes with the item after it, so a line
+ * never ends on a dot (the home's counter at 390px, #271). */
+export const Wrapping: Story = {
+  args: { items: ['Quem está', 'Quanto tempo', 'O que a noite pede'] },
+  decorators: [
+    (Story) => (
+      <div style={{ width: 260 }}>
+        <Story />
+      </div>
+    ),
+  ],
+  play: async ({ canvasElement }) => {
+    const dots = canvasElement.querySelectorAll('.rounded-round')
+    await expect(dots).toHaveLength(2)
+    for (const dot of dots)
+      await expect(dot.nextElementSibling?.textContent).toMatch(/\S/)
+  },
+}

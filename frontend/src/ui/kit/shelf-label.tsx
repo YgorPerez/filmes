@@ -50,17 +50,31 @@ export function ShelfLabel({
               compact ? 'text-shelf-compact' : 'text-shelf'
             } ${single ? 'truncate' : 'flex flex-wrap items-center gap-x-sm gap-y-2xs'}`}
           >
-            {items.map((item, index) => (
-              <Fragment key={item}>
-                {index > 0 && (
-                  <span
-                    aria-hidden="true"
-                    className={`${dot} rounded-round ${DOTS[(index - 1) % DOTS.length]}`}
-                  />
-                )}
-                <span aria-hidden="true">{item}</span>
-              </Fragment>
-            ))}
+            {items.map((item, index) => {
+              const mark = index > 0 && (
+                <span
+                  aria-hidden="true"
+                  className={`${dot} rounded-round ${DOTS[(index - 1) % DOTS.length]}`}
+                />
+              )
+              // On the wrapping label, each dot goes with the item after it,
+              // so a line never ends on a dot.
+              return single ? (
+                <Fragment key={item}>
+                  {mark}
+                  <span aria-hidden="true">{item}</span>
+                </Fragment>
+              ) : (
+                <span
+                  key={item}
+                  aria-hidden="true"
+                  className="flex min-w-0 items-center gap-x-sm"
+                >
+                  {mark}
+                  <span>{item}</span>
+                </span>
+              )
+            })}
           </p>
         </div>
         {tag && (
