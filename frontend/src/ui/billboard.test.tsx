@@ -44,25 +44,27 @@ const visibleText = (element: HTMLElement) => {
 const text = () =>
   (document.querySelector('input[name="texto"]') as HTMLInputElement).value
 
-describe('the Cartaz shows', () => {
-  it('the Falta strip at the top, on the web and in Claude, while open', () => {
-    const shortfall =
-      'Acabaram os parecidos com Esqueceram de Mim; entraram 3 de antes de 1990.'
+describe('the Falta strip', () => {
+  const shortfall =
+    'Acabaram os parecidos com Esqueceram de Mim; entraram 3 de antes de 1990.'
+
+  it('appears on the web Cartaz while open', () => {
     render(<Billboard billboard={{ ...MODEL, shortfall }} />)
     expect(screen.getByRole('note').textContent).toBe(shortfall)
-    cleanup()
-    render(
-      <Billboard
-        billboard={{ ...MODEL, shortfall }}
-        onSend={vi.fn<(t: string) => void>()}
-      />,
-    )
+  })
+
+  it('appears in Claude while open', () => {
+    render(<Billboard billboard={{ ...MODEL, shortfall }} onSend={vi.fn()} />)
     expect(screen.getByRole('note').textContent).toBe(shortfall)
-    cleanup()
+  })
+
+  it('is absent once the Session closes', () => {
     render(<Billboard billboard={{ ...CLOSED, shortfall }} />)
     expect(screen.queryByRole('note')).toBeNull()
   })
+})
 
+describe('the Cartaz shows', () => {
   it('one card per film, in the order of the screen', () => {
     render(<Billboard billboard={MODEL} action="/x" />)
     expect(
