@@ -9,6 +9,7 @@
 
 import { makeEngine, reloadData, type Engine, type Vars } from '@filmes/engine'
 import { serverEnv } from './server-env'
+import { traktConnection } from './trakt'
 
 /** The engine's variables from the server's. */
 export function engineVars(env: NodeJS.ProcessEnv): Vars {
@@ -25,7 +26,9 @@ let engine: Engine | undefined
 /** The process's engine. A broken environment (no `FILMES_CONFIG`) is not a
  * crash: every run answers with that error. */
 export const appEngine = (): Engine =>
-  (engine ??= makeEngine(engineVars(process.env)))
+  (engine ??= makeEngine(engineVars(process.env), {
+    trakt: traktConnection(process.env),
+  }))
 
 /** Reloads filmes-dados into the live database (#104): the database
  * `db:publish` swapped in was built from an older filmes-dados than the one

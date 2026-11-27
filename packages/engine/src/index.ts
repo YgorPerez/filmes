@@ -286,6 +286,7 @@ export {
   type Outcome,
   type RunOptions,
 } from './runtime/Engine.ts'
+export type { TraktConnection } from './sources/Trakt.ts'
 export { Owner, ownerOf } from './runtime/Owner.ts'
 export {
   ERROR_CODES,
@@ -610,6 +611,26 @@ export {
   type ImdbImportInput,
   type ImdbOutside,
 } from './imports/imdb.ts'
+export {
+  importSimkl,
+  loadSimkl,
+  reloadPersonSimkl,
+  reloadSimkl,
+  SIMKL_KIND,
+  simklFactCounts,
+  type SimklFactCounts,
+  type SimklImport,
+  type SimklImportInput,
+  type SimklReport,
+  type SimklUnresolved,
+} from './imports/simkl.ts'
+export {
+  isSimklBackup,
+  readSimklBackup,
+  type SimklFilm,
+  type SimklRow,
+  type SimklRowKind,
+} from './imports/simkl-backup.ts'
 export {
   isImdbRatings,
   readImdbRatings,

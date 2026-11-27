@@ -6,7 +6,7 @@
 import { ageRatings } from './age-ratings.ts'
 import { csvTables } from './csv-tables.ts'
 import { filmSeries } from './film-series.ts'
-import { imdb, letterboxd, trakt } from './imports.ts'
+import { imdb, letterboxd, simkl, trakt } from './imports.ts'
 import { people } from './people.ts'
 import { realCatalog } from './real-catalog.ts'
 import { sessions } from './sessions.ts'
@@ -24,6 +24,7 @@ export const STEPS: ReadonlyArray<Step> = [
   letterboxd,
   trakt,
   imdb,
+  simkl,
   sessions,
   ageRatings,
   similarity,

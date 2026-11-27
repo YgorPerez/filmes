@@ -19,6 +19,7 @@ const KINDS: Record<string, string> = {
   'letterboxd-rss': 'RSS do Letterboxd',
   trakt: 'Arquivo do Trakt',
   imdb: 'CSV do IMDb',
+  simkl: 'Backup do Simkl',
 }
 
 export const PERSON_IMPORTS = {
@@ -41,6 +42,11 @@ export const PERSON_IMPORTS = {
       (outside === 0
         ? ''
         : ` ${count(outside, 'título ficou', 'títulos ficaram')} de fora: o Catálogo não tem.`),
+    simkl: (n: number, outside = 0) =>
+      `Backup do Simkl importado: ${facts(n)}.` +
+      (outside === 0
+        ? ''
+        : ` ${count(outside, 'filme ficou', 'filmes ficaram')} de fora: o Catálogo não tem.`),
     repetido: (n: number) =>
       `Esse arquivo já tinha sido importado: ${facts(n)}.`,
     removido: (n: number) =>
@@ -51,10 +57,11 @@ export const PERSON_IMPORTS = {
   refusals: {
     pedido: 'Faltou um campo, ou um valor não vale. Confira o formulário.',
     arquivo:
-      'Não deu para ler esse arquivo. Envie o ZIP como o Letterboxd ou o Trakt te deu, sem descompactar, ou o CSV do IMDb como ele veio.',
-    origem: 'Esse arquivo não parece ser do Letterboxd, do Trakt nem do IMDb.',
+      'Não deu para ler esse arquivo. Envie o ZIP como o Letterboxd, o Trakt ou o Simkl te deu, sem descompactar, ou o CSV do IMDb como ele veio.',
+    origem:
+      'Esse arquivo não parece ser do Letterboxd, do Trakt, do IMDb nem do Simkl.',
     grande:
-      'O arquivo passa de 20 MB. O ZIP do Letterboxd ou do Trakt e o CSV do IMDb costumam ter poucos MB: confira se é o certo.',
+      'O arquivo passa de 20 MB. O ZIP do Letterboxd, do Trakt ou do Simkl e o CSV do IMDb costumam ter poucos MB: confira se é o certo.',
     consentimento:
       'Sem o sim da Pessoa, o filmes não lê o diário do Letterboxd. Pergunte e marque a caixa.',
     rss: 'O Letterboxd não achou esse perfil. Confira o nome no endereço do perfil.',
@@ -102,9 +109,14 @@ export const PERSON_IMPORTS = {
     title: 'IMDb',
     summary: (ratings: number) => `${count(ratings, 'Nota', 'Notas')} do IMDb.`,
   },
+  simkl: {
+    title: 'Simkl',
+    summary: (ratings: number, seen: number) =>
+      `${count(ratings, 'Nota', 'Notas')} e ${count(seen, 'Já visto', 'Já vistos')} do Simkl.`,
+  },
   upload: {
-    title: 'O arquivo do Letterboxd, do Trakt ou do IMDb',
-    file: 'Arquivo que o Letterboxd, o Trakt (ZIP) ou o IMDb (CSV) te deu',
+    title: 'O arquivo do Letterboxd, do Trakt, do IMDb ou do Simkl',
+    file: 'Arquivo que o Letterboxd, o Trakt, o Simkl (ZIP) ou o IMDb (CSV) te deu',
     /** How to download the file, one line per service: the service's name
      * links to where it is exported. */
     how: [
@@ -122,6 +134,11 @@ export const PERSON_IMPORTS = {
         service: 'IMDb',
         href: 'https://www.imdb.com/list/ratings',
         steps: 'Your Ratings › Export; o CSV fica em Exports.',
+      },
+      {
+        service: 'Simkl',
+        href: 'https://docs.simkl.org/how-to-use-simkl/advanced-usage/import-export-data/exporting-from-simkl/export-data-formats',
+        steps: 'Apps › Export › “.zip archive with .json file”.',
       },
     ],
     submit: 'Importar',

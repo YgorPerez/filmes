@@ -184,8 +184,8 @@ _Evitar_: dado, sinal
 De onde um Fato veio: uma base pública, o export de uma Pessoa, uma resposta de questionário, uma descrição do Dono ou o Feedback de uma Sessão.
 _Evitar_: origem
 
-**Import** [import, `import`; tipo [kind: `letterboxd`, `letterboxd-rss`, `trakt`]]:
-Um export de uma Pessoa (o ZIP do Letterboxd ou do Trakt, ou o RSS público do Letterboxd dela) guardado no repo de dados e registrado no arquivo dela. É a Fonte das Notas, dos Já vistos e da Watchlist que traz; tirar o Import tira os Fatos que só ele trazia. O RSS só entra com o sim da Pessoa.
+**Import** [import, `import`; tipo [kind: `letterboxd`, `letterboxd-rss`, `trakt`, `imdb`, `simkl`]]:
+Um export de uma Pessoa (o ZIP do Letterboxd ou do Trakt, o CSV de avaliações do IMDb, o backup do Simkl ou o RSS público do Letterboxd dela) guardado no repo de dados e registrado no arquivo dela. É a Fonte das Notas, dos Já vistos e da Watchlist que traz; tirar o Import tira os Fatos que só ele trazia. O RSS só entra com o sim da Pessoa.
 _Evitar_: upload, sincronização
 
 **Fila de resolução** [resolution queue, `queue`]:
@@ -234,7 +234,7 @@ Onde uma Nota fica na Escala da Pessoa, de 0 a 1: a parte das Notas da escala ab
 _Evitar_: posição, ranking
 
 **Escala da Pessoa** [rating scale, `RatingScale`]:
-As Notas contra as quais a régua lê uma Nota dela: as próprias Notas da Pessoa, quando ela tem pelo menos o mínimo de `[rating_percentile]`; abaixo dele, as notas da população do MovieLens, na mesma escala de 0,5 a 5. As do Letterboxd e as do Trakt entram juntas.
+As Notas contra as quais a régua lê uma Nota dela: as próprias Notas da Pessoa, quando ela tem pelo menos o mínimo de `[rating_percentile]`; abaixo dele, as notas da população do MovieLens, na mesma escala de 0,5 a 5. As do Letterboxd, do Trakt, do IMDb e do Simkl entram juntas.
 
 **Nota alta** [high rating, `isHighRating`]:
 Uma Nota que a régua lê a favor com Força moderada ou forte, só pelo percentil, sem o Feedback. É o que o metadado agregado do caminho de conteúdo conta ("como 3 filmes a que deu nota alta"). Num Declarado de filme, só o "ama".
@@ -247,7 +247,7 @@ _Evitar_: envelhecimento, validade
 O que uma Pessoa disse sobre o próprio gosto ou sobre um filme, por exemplo num questionário ou numa review que ela escreveu.
 
 **Watchlist** [watchlist, `watchlist`]:
-Os filmes que uma Pessoa marcou para ver no Letterboxd ou no Trakt. Cada um é um Declarado a favor, de Força moderada, até ela ter Já visto o filme. Vale a watchlist do import mais recente que traz uma.
+Os filmes que uma Pessoa marcou para ver no Letterboxd, no Trakt ou no Simkl. Cada um é um Declarado a favor, de Força moderada, até ela ter Já visto o filme. Vale a watchlist do import mais recente que traz uma.
 
 **Relato** [report, `report`]:
 O que o Dono disse sobre o gosto de outra Pessoa, como "Leo odeia filme lento". Vale menos que a própria Pessoa dizendo.

@@ -10,7 +10,7 @@
 
 import { randomBytes } from 'node:crypto'
 import type { DatabaseSync } from 'node:sqlite'
-import { normalizeEmail } from './owners'
+import { normalizeEmail } from './people-directory'
 import { tokenHash as hash } from './auth-database'
 
 export type GoogleEndpoints = {
