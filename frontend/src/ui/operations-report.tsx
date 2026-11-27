@@ -137,7 +137,7 @@ function Block({ block, weights }: { block: ReportBlock; weights: boolean }) {
                       <td
                         key={block.head[i] ?? cell}
                         data-label={block.head[i]}
-                        className={`sm:whitespace-nowrap ${ALIGN[block.align[i] ?? 'left']} ${cell === COPY.noRatingsCell ? 'text-ink-2 max-sm:hidden' : ''}`}
+                        className={`sm:whitespace-nowrap ${ALIGN[block.align[i] ?? 'left']} ${cell === COPY.noRatingsCell ? 'text-ink-2 max-sm:hidden!' : ''}`}
                       >
                         {cell}
                       </td>
