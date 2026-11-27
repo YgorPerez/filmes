@@ -35,6 +35,9 @@ export function FilePicker({
   const input = useRef<HTMLInputElement>(null)
   const [chosen, setChosen] = useState<string | null>(null)
   const [wrong, setWrong] = useState(false)
+  // The server's refusal stays until she picks another file; a new post
+  // may bring it back.
+  const [dismissed, setDismissed] = useState<string | undefined>(undefined)
   // The form emptied after a post that went through: so is the zone.
   useEffect(() => {
     const form = input.current?.form
@@ -43,10 +46,19 @@ export function FilePicker({
       setChosen(null)
       setWrong(false)
     }
+    const submit = () => setDismissed(undefined)
     form.addEventListener('reset', reset)
-    return () => form.removeEventListener('reset', reset)
+    form.addEventListener('submit', submit)
+    return () => {
+      form.removeEventListener('reset', reset)
+      form.removeEventListener('submit', submit)
+    }
   }, [])
-  const problem = wrong ? wrongType : chosen === null ? error : undefined
+  const problem = wrong
+    ? wrongType
+    : error !== undefined && error !== dismissed
+      ? error
+      : undefined
   const problemId = `${id}-problema`
   return (
     <div className="flex flex-col gap-xs">
@@ -86,6 +98,7 @@ export function FilePicker({
               !extensions.some((end) => file.name.toLowerCase().endsWith(end))
             setChosen(file?.name ?? null)
             setWrong(bad)
+            setDismissed(error)
             event.currentTarget.setCustomValidity(bad ? wrongType : '')
           }}
         />
