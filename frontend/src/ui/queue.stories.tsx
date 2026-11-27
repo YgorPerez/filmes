@@ -1,5 +1,6 @@
-// The resolution queue: each film that waits, with TMDB's suggestions and
-// the forms to confirm or discard it.
+// The resolution queue: each film that waits, with TMDB's suggestions
+// (poster and synopsis), the Catálogo search, the link and the reasons to
+// take it out; and what the last decision did, with Desfazer.
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, within } from 'storybook/test'
 import type { QueuePage } from '#/platform/imports'
@@ -28,6 +29,9 @@ const QUEUE_PAGE: QueuePage = {
           originalTitle: null,
           year: 2020,
           link: 'https://www.themoviedb.org/movie/9102',
+          poster: null,
+          overview:
+            'Um faroleiro e a filha esperam o vento que traz o barco do irmão, que não volta há dez anos.',
         },
         {
           tmdb: '9103',
@@ -35,6 +39,9 @@ const QUEUE_PAGE: QueuePage = {
           originalTitle: 'Nordwind',
           year: 2020,
           link: 'https://www.themoviedb.org/movie/9103',
+          poster: null,
+          overview:
+            'Ein Segler verliert auf der Nordsee den Kurs und findet eine Insel.',
         },
       ],
     },
@@ -66,7 +73,48 @@ export const Waiting: Story = {
 }
 
 export const Confirmed: Story = {
-  args: { done: { notice: 'confirmado', resolved: 2, left: 1 } },
+  args: {
+    done: {
+      notice: 'confirmado',
+      item: 'vento-norte-2020-e2bf439e1af6',
+      title: 'Vento Norte (2020)',
+    },
+  },
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByRole('button', {
+        name: 'Desfazer a decisão sobre Vento Norte (2020)',
+      }),
+    ).toBeVisible()
+  },
+}
+
+/** A film's card with the Catálogo search it asked for open. */
+export const SearchedInCatalog: Story = {
+  args: {
+    search: {
+      item: 'filme-perdido-2001-91d7fc73cdee',
+      answer: {
+        query: 'perdido',
+        found: {
+          query: 'perdido',
+          films: [
+            {
+              id: 'tt9000303',
+              title: 'O Filme Perdido',
+              year: 2001,
+              votes: 3000,
+              rating: 7.1,
+              directors: ['Ana Reis'],
+            },
+          ],
+          people: [],
+          genres: [],
+          series: [],
+        },
+      },
+    },
+  },
 }
 
 export const Refused: Story = { args: { refusal: 'filme' } }

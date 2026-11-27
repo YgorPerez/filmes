@@ -26,6 +26,7 @@ export type ImportRun =
 export type QueueAction =
   | { kind: 'confirm'; id: string; film: string }
   | { kind: 'discard'; id: string; reason: string }
+  | { kind: 'reopen'; id: string }
   | { kind: 'reprocess' }
 
 /** The biggest upload the server reads: a Letterboxd, Trakt or Simkl
@@ -108,6 +109,7 @@ export function parseQueue(form: FormData): QueueAction | null {
       id,
       reason: field(form, 'motivo') ?? DEFAULT_DISCARD_REASON,
     }
+  if (action === 'reabrir') return { kind: 'reopen', id }
   return null
 }
 
@@ -154,6 +156,8 @@ export type ImportRefusal = (typeof IMPORT_REFUSALS)[number]
 const QUEUE_NOTICES = [
   'confirmado',
   'descartado',
+  // A decision taken back: the film is in the queue again (#274).
+  'reaberto',
   // The same decision again: nothing changed.
   'igual',
   // Asked TMDB again: `resolvidos` left the queue, `restam` wait.

@@ -268,7 +268,9 @@ function Rating({
 
   return (
     <>
-      <p role="status" className="sr-only">
+      {/* What each tap did, aloud (`aria-live`, not a status: the page's
+          status is what the last post did). */}
+      <p aria-live="polite" className="sr-only">
         {announced}
       </p>
       {showWritten ? (

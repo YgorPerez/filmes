@@ -10,7 +10,7 @@ import {
   QUEUE_REFUSALS,
 } from '#/content/import-action'
 import type { QueuePage } from '#/platform/imports'
-import { QUEUE } from './imports.copy'
+import { QUEUE } from './queue.copy'
 import { QueueScreen } from './queue'
 
 afterEach(cleanup)
@@ -38,6 +38,8 @@ const QUEUE_PAGE: QueuePage = {
           originalTitle: null,
           year: 2020,
           link: 'https://www.themoviedb.org/movie/9102',
+          poster: 'https://image.tmdb.org/t/p/w185/v.jpg',
+          overview: 'Um faroleiro e a filha esperam o vento.',
         },
         {
           tmdb: '9103',
@@ -45,6 +47,8 @@ const QUEUE_PAGE: QueuePage = {
           originalTitle: 'Nordwind',
           year: 2020,
           link: 'https://www.themoviedb.org/movie/9103',
+          poster: null,
+          overview: null,
         },
       ],
     },
@@ -60,28 +64,40 @@ const QUEUE_PAGE: QueuePage = {
 
 const card = (title: string) => screen.getByRole('region', { name: title })
 
-/** The form's action as the server reads it. */
-const posted = (form: HTMLElement) => {
+/** The form's action as the server reads it, sent by `submitter`. */
+const posted = (form: HTMLElement, submitter?: HTMLElement) => {
   expect(form).toBeInstanceOf(HTMLFormElement)
   const element = form as HTMLFormElement
   expect(element.method).toBe('post')
   expect(new URL(element.action).pathname).toBe('/fila/acao')
-  return parseQueue(new FormData(element))
+  const data = new FormData(element)
+  if (submitter instanceof HTMLButtonElement && submitter.name)
+    data.set(submitter.name, submitter.value)
+  return parseQueue(data)
 }
 
 describe('QueueScreen', () => {
-  it('shows each film, why it waits and whose it is', () => {
+  it('shows each film, why it waits and whose taste it counts in', () => {
     render(<QueueScreen queue={QUEUE_PAGE} />)
     const lost = card('Filme Perdido (2001)')
     expect(lost.textContent).toContain(
       'nem o Wikidata nem o TMDB acharam o filme',
     )
     // A Pessoa the list does not name shows by her slug.
-    expect(lost.textContent).toContain('de Quim, olga')
+    expect(lost.textContent).toContain(QUEUE.stake(['Quim', 'olga']))
     expect(within(lost).queryByText(QUEUE.candidates)).toBeNull()
     const wind = card('Vento Norte (2020)')
     expect(within(wind).getByText(QUEUE.candidates)).toBeTruthy()
-    expect(within(wind).getByText('Nordwind')).toBeTruthy()
+    expect(within(wind).getByText(QUEUE.original('Nordwind'))).toBeTruthy()
+    // The twins told apart: a poster and a synopsis.
+    expect(
+      within(wind).getByRole('img', {
+        name: QUEUE.poster('Vento Norte (2020)'),
+      }),
+    ).toBeTruthy()
+    expect(
+      within(wind).getByText('Um faroleiro e a filha esperam o vento.'),
+    ).toBeTruthy()
     expect(
       within(wind)
         .getAllByRole('link', { name: 'Vento Norte (2020)' })
@@ -90,13 +106,13 @@ describe('QueueScreen', () => {
       'https://www.themoviedb.org/movie/9102',
       'https://www.themoviedb.org/movie/9103',
     ])
-    expect(screen.getByText(/uses the TMDB API/)).toBeTruthy()
+    expect(screen.getByText(QUEUE.attribution)).toBeTruthy()
   })
 
   it('confirms a film with one of TMDB’s suggestions', () => {
     render(<QueueScreen queue={QUEUE_PAGE} />)
     const button = within(card('Vento Norte (2020)')).getByRole('button', {
-      name: QUEUE.pickLabel('Vento Norte (2020)', '9103'),
+      name: QUEUE.pickLabel('Vento Norte (2020)', 'Nordwind'),
     })
     expect(posted(button.closest('form') as HTMLElement)).toEqual({
       kind: 'confirm',
@@ -122,27 +138,105 @@ describe('QueueScreen', () => {
     })
   })
 
-  it('discards a film with a reason, or with “ignorar” when none', async () => {
+  it('takes a film out with one of the reasons, one button each', () => {
     render(<QueueScreen queue={QUEUE_PAGE} />)
-    const user = userEvent.setup()
     const lost = card('Filme Perdido (2001)')
-    await user.click(within(lost).getByText(QUEUE.discardOpen))
     const form = within(lost).getByRole('form', {
-      name: 'Descartar Filme Perdido (2001)',
+      name: `${QUEUE.discard}: Filme Perdido (2001)`,
     })
-    expect(posted(form)).toEqual({
+    const [notFilm, ignore] = QUEUE.reasons
+    expect(
+      posted(
+        form,
+        within(form).getByRole('button', {
+          name: QUEUE.reasonLabel(notFilm.label, 'Filme Perdido (2001)'),
+        }),
+      ),
+    ).toEqual({
+      kind: 'discard',
+      id: 'filme-perdido-2001-91d7fc73cdee',
+      reason: 'não é filme',
+    })
+    expect(
+      posted(
+        form,
+        within(form).getByRole('button', {
+          name: QUEUE.reasonLabel(ignore.label, 'Filme Perdido (2001)'),
+        }),
+      ),
+    ).toEqual({
       kind: 'discard',
       id: 'filme-perdido-2001-91d7fc73cdee',
       reason: 'ignorar',
     })
-    await user.type(
-      within(form).getByLabelText(QUEUE.reason, { exact: false }),
-      'não é filme',
+  })
+
+  it('finds another title in the Catálogo and confirms it with one tap', () => {
+    render(
+      <QueueScreen
+        queue={QUEUE_PAGE}
+        search={{
+          item: 'filme-perdido-2001-91d7fc73cdee',
+          answer: {
+            query: 'perdido',
+            found: {
+              query: 'perdido',
+              films: [
+                {
+                  id: 'tt9000303',
+                  title: 'O Filme Perdido',
+                  year: 2001,
+                  votes: 3000,
+                  rating: 7.1,
+                  directors: ['Ana Reis'],
+                },
+              ],
+              people: [],
+              genres: [],
+              series: [],
+            },
+          },
+        }}
+      />,
     )
-    expect(posted(form)).toEqual({
-      kind: 'discard',
+    const lost = card('Filme Perdido (2001)')
+    const search = within(lost).getByRole('search', {
+      name: QUEUE.searchLabel('Filme Perdido (2001)'),
+    }) as HTMLFormElement
+    expect(new URL(search.action).pathname).toBe('/meu-gosto/fila')
+    expect(new FormData(search).get('para')).toBe(
+      'filme-perdido-2001-91d7fc73cdee',
+    )
+    const button = within(lost).getByRole('button', {
+      name: QUEUE.pickLabel('O Filme Perdido (2001)', 'Ana Reis'),
+    })
+    expect(posted(button.closest('form') as HTMLElement)).toEqual({
+      kind: 'confirm',
       id: 'filme-perdido-2001-91d7fc73cdee',
-      reason: 'não é filme',
+      film: 'tt9000303',
+    })
+  })
+
+  it('names the film decided and takes the decision back', () => {
+    render(
+      <QueueScreen
+        queue={QUEUE_PAGE}
+        done={{
+          notice: 'confirmado',
+          item: 'vento-norte-2020-e2bf439e1af6',
+          title: 'Vento Norte (2020)',
+        }}
+      />,
+    )
+    expect(screen.getByRole('status').textContent).toBe(
+      QUEUE.notices.confirmado('Vento Norte (2020)'),
+    )
+    const undo = screen.getByRole('button', {
+      name: QUEUE.undoLabel('Vento Norte (2020)'),
+    })
+    expect(posted(undo.closest('form') as HTMLElement)).toEqual({
+      kind: 'reopen',
+      id: 'vento-norte-2020-e2bf439e1af6',
     })
   })
 
@@ -170,16 +264,16 @@ describe('QueueScreen', () => {
       />,
     )
     expect(screen.getByRole('status').textContent).toContain(
-      QUEUE.notices[notice](2, 1),
+      QUEUE.notices[notice](undefined, 2, 1),
     )
   })
 
   it('counts what reprocessing did', () => {
-    expect(QUEUE.notices.reprocessado(1, 0)).toBe(
-      'TMDB consultado de novo: 1 filme saiu da fila, 0 continuam.',
+    expect(QUEUE.notices.reprocessado(undefined, 1, 0)).toBe(
+      'Procurei de novo: 1 filme saiu da fila, 0 continuam.',
     )
     expect(QUEUE.notices.reprocessado()).toBe(
-      'TMDB consultado de novo: 0 filmes saíram da fila, 0 continuam.',
+      'Procurei de novo: 0 filmes saíram da fila, 0 continuam.',
     )
   })
 

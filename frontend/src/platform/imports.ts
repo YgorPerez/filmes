@@ -8,6 +8,7 @@
 import {
   confirmQueueItem,
   discardQueueItem,
+  reopenQueueItem,
   exportSource,
   importImdb,
   importLetterboxd,
@@ -60,6 +61,9 @@ export type QueueSuggestion = {
   year: number | null
   /** The TMDB film's page: confirming with it records the film. */
   link: string
+  poster: string | null
+  /** TMDB's synopsis, for telling twins apart. */
+  overview: string | null
 }
 
 export type QueueEntry = Omit<QueueItem, 'candidates' | 'people'> & {
@@ -90,6 +94,8 @@ const entryOf = (item: QueueItem): QueueEntry => ({
       originalTitle: original === title ? null : original,
       year: c.year,
       link: c.link,
+      poster: c.poster,
+      overview: c.overview,
     }
   }),
 })
@@ -105,6 +111,8 @@ export type ImportDone = {
 
 export type QueueDone = {
   notice: QueueNotice
+  /** The film decided on: its queue id, to take it back, and its name. */
+  item?: { id: string; title: string }
   /** Reprocessing: films that left the queue, films still there. */
   resolved?: number
   left?: number
@@ -224,6 +232,10 @@ const upload = ({
   content,
 })
 
+/** "Vento Norte (2020)": a queued film as the notices name it. */
+const itemTitle = (name: string, year: number | null) =>
+  year === null ? name : `${name} (${year})`
+
 /** The Dono's decision on the queue, as `author`. */
 function runDecision(
   run: Run,
@@ -234,12 +246,26 @@ function runDecision(
     case 'confirm':
       return map(
         run(confirmQueueItem({ id: action.id, film: action.film, author })),
-        (r): QueueDone => ({ notice: r.new ? 'confirmado' : 'igual' }),
+        (r): QueueDone => ({
+          notice: r.new ? 'confirmado' : 'igual',
+          item: { id: action.id, title: itemTitle(r.name, r.year) },
+        }),
       )
     case 'discard':
       return map(
         run(discardQueueItem({ id: action.id, reason: action.reason, author })),
-        (r): QueueDone => ({ notice: r.new ? 'descartado' : 'igual' }),
+        (r): QueueDone => ({
+          notice: r.new ? 'descartado' : 'igual',
+          item: { id: action.id, title: itemTitle(r.name, r.year) },
+        }),
+      )
+    case 'reopen':
+      return map(
+        run(reopenQueueItem({ id: action.id, author })),
+        (r): QueueDone => ({
+          notice: 'reaberto',
+          item: { id: action.id, title: itemTitle(r.name, r.year) },
+        }),
       )
     case 'reprocess':
       return map(run(reprocessLetterboxd({ author })), (r): QueueDone => ({
@@ -394,9 +420,15 @@ export async function queueAction(
   const outcome = await imports.decide(action, ownerAuthor(signer))
   if (outcome.exitCode !== 0)
     return seeOther(`${QUEUE_PATH}${query({ erro: queueRefusal(outcome) })}`)
-  const { notice, resolved, left } = outcome.output
+  const { notice, resolved, left, item } = outcome.output
   return seeOther(
-    `${QUEUE_PATH}${query({ feito: notice, resolvidos: resolved, restam: left })}`,
+    `${QUEUE_PATH}${query({
+      feito: notice,
+      resolvidos: resolved,
+      restam: left,
+      item: item?.id,
+      titulo: item?.title,
+    })}`,
   )
 }
 
