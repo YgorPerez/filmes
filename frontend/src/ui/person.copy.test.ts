@@ -31,14 +31,19 @@ describe('the Pessoa copy', () => {
   })
 
   it('names the empty fichas and her name in the Sessões', () => {
-    expect(PERSON.empties(['Vetos'])).toBe('Ainda sem Vetos · Acrescentar')
-    expect(PERSON.empties(['Vetos', 'Declarados', 'Já vistos'])).toBe(
-      'Ainda sem Vetos, Declarados e Já vistos · Acrescentar',
+    expect(PERSON.empty('Já vistos sem Nota')).toBe(
+      'Já vistos sem Nota: nenhum',
     )
+    expect(PERSON.summary.likes('Quim', ['Drama'])).toBe(
+      'Pelas Notas, Quim gosta de Drama.',
+    )
+    expect(
+      PERSON.summary.likes('Quim', ['Drama', 'Crime', 'Rui Tavares']),
+    ).toBe('Pelas Notas, Quim gosta de Drama, Crime e Rui Tavares.')
     expect(PERSON.refine(['Ajustes', 'Declarados (2)'])).toBe(
       'Afinar: Ajustes e Declarados (2)',
     )
-    expect(PERSON.notices('Quim').gravado).toBe('Gravado no arquivo de Quim.')
+    expect(PERSON.savedIn.vetos.gravado).toBe('Veto gravado.')
     expect(PERSON.sessions.reaction(null)).toBe('sem reação')
     expect(PERSON.sessions.reaction(0.2)).toBe('não gostou')
     expect(PERSON.ownName('Bruno', [])).toBe('Nas Sessões, você é Bruno.')
@@ -85,8 +90,8 @@ describe('the Pessoa copy', () => {
 describe('the Pessoa copy', () => {
   it('counts the Notas, questions and Ajustes in the singular and the plural', () => {
     const { summary, notes, questions, adjustments } = PERSON
-    expect(summary.steps.questions(1)).toBe('responder a pergunta aberta')
-    expect(summary.steps.questions(2)).toBe('responder as perguntas abertas')
+    expect(summary.steps.questions(1)).toBe('Responder a pergunta')
+    expect(summary.steps.questions(2)).toBe('Responder as perguntas')
     expect([notes.pending(1), notes.pending(2)]).toEqual([
       '1 filme espera você',
       '2 filmes esperam você',
