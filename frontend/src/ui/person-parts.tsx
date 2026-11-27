@@ -299,6 +299,42 @@ export function Disclosure({
 
 const control = `${FIELD} w-full`
 
+// --- the target a search result fills in (#274) ------------------------------
+//
+// On a Pessoa's page, "Usar" on a Catálogo result puts its id in the
+// forms' target fields (`alvo`, and `filme` for a film), so she never
+// copies an id by hand. Before the JavaScript, the id is there to copy.
+
+type Picked = { id: string; label: string; film: boolean }
+
+const PickedTarget = createContext<{
+  picked: Picked | null
+  pick: (picked: Picked) => void
+}>({ picked: null, pick: () => {} })
+
+/** The page's picked target, for its search and its forms. */
+export function PickedTargetProvider({ children }: { children: ReactNode }) {
+  const [picked, pick] = useState<Picked | null>(null)
+  return (
+    <PickedTarget.Provider value={{ picked, pick }}>
+      {children}
+    </PickedTarget.Provider>
+  )
+}
+
+export const usePickedTarget = () => useContext(PickedTarget)
+
+/** A target field (`alvo`, or `filme` for films only): it takes the id
+ * "Usar" picked. */
+export function TargetField({
+  films = false,
+  ...props
+}: ComponentProps<typeof TextField> & { films?: boolean }) {
+  const { picked } = usePickedTarget()
+  const value = picked && (picked.film || !films) ? picked.id : undefined
+  return <TextField key={value} {...props} defaultValue={value} />
+}
+
 export function TextField({
   name,
   label,
@@ -508,10 +544,16 @@ function FilmItem({ film, pick, onPick, pickAs }: Pick & { film: FilmMatch }) {
   )
 }
 
-function EntityItem({ entity }: { entity: EntityMatch }) {
+function EntityItem({ entity, onPick }: Pick & { entity: EntityMatch }) {
   const { links, films } = CATALOG_SEARCH
   return (
-    <Item>
+    <Item
+      actions={
+        onPick && (
+          <PickFilm id={entity.id} label={entity.label} onPick={onPick} />
+        )
+      }
+    >
       <span className="flex flex-wrap items-center gap-sm">
         <span className="font-semibold">{entity.label}</span>{' '}
         <Id id={entity.id} />
@@ -541,13 +583,19 @@ function CatalogResults({
   answer,
   pick,
   onPick,
+  onEntityPick,
   pickAs,
-}: Pick & { answer: SearchAnswer }) {
+}: Pick & {
+  answer: SearchAnswer
+  /** "Usar" on a director, a genre or a series too. */
+  onEntityPick?: Pick['onPick']
+}) {
   const { groups, results, none, refusals } = CATALOG_SEARCH
+  const { picked } = usePickedTarget()
   if ('refused' in answer) return <Alert>{refusals[answer.refused]}</Alert>
   const { films, people, genres, series } = answer.found
   const entities = (list: readonly EntityMatch[]) =>
-    list.map((e) => <EntityItem key={e.id} entity={e} />)
+    list.map((e) => <EntityItem key={e.id} entity={e} onPick={onEntityPick} />)
   const empty =
     films.length + people.length + genres.length + series.length === 0
   return (
@@ -555,6 +603,7 @@ function CatalogResults({
       <p className="text-meta text-ink-2" role="status">
         {empty ? none : results(answer.query)}
       </p>
+      {picked && <Notice>{CATALOG_SEARCH.picked(picked.label)}</Notice>}
       <Group title={groups.films}>
         {films.map((f) => (
           <FilmItem
@@ -585,6 +634,7 @@ export function CatalogSearch({
   onPick,
   pickAs,
   lead,
+  targets = false,
 }: Pick & {
   action: string
   scope: CatalogScope
@@ -592,7 +642,12 @@ export function CatalogSearch({
   keep?: Readonly<Record<string, string | undefined>>
   /** What the search is for here, over the default. */
   lead?: string
+  /** "Usar" fills the page's target fields (`TargetField`). */
+  targets?: boolean
 }) {
+  const { pick: pickTarget } = usePickedTarget()
+  const hydrated = useHydrated()
+  const usable = targets && hydrated
   const { title, leadFilms, leadAll, label, hint, submit } = CATALOG_SEARCH
   const onSubmit = useGetForm()
   return (
@@ -635,7 +690,16 @@ export function CatalogSearch({
         <CatalogResults
           answer={answer}
           pick={pick}
-          onPick={onPick}
+          onPick={
+            usable
+              ? ({ id, label }) => pickTarget({ id, label, film: true })
+              : onPick
+          }
+          onEntityPick={
+            usable
+              ? ({ id, label }) => pickTarget({ id, label, film: false })
+              : undefined
+          }
           pickAs={pickAs}
         />
       )}

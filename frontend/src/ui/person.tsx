@@ -6,6 +6,7 @@ import {
   letterboxdCsvPath,
   importsPath,
   personPath,
+  QUEUE_PATH,
   RATINGS_PATH,
 } from '#/content/paths'
 import { TRAKT_PATH } from '#/content/trakt-form'
@@ -24,8 +25,10 @@ import {
   Meta,
   Notice,
   RemoveForm,
+  PickedTargetProvider,
   SelectField,
   Submit,
+  TargetField,
   TextField,
   useRefusedInPlace,
 } from './person-parts'
@@ -69,6 +72,7 @@ export function PersonScreen({
   search = null,
   start,
   showTrakt = false,
+  pending = 0,
 }: {
   slug: string
   page: PersonPage | 'unknown' | null
@@ -78,6 +82,8 @@ export function PersonScreen({
   /** Meu gosto's part of the setup guide; only on her own page. */
   start?: MyStart
   showTrakt?: boolean
+  /** On Meu gosto, the films of her imports that wait in the queue. */
+  pending?: number
 }) {
   const own =
     typeof page === 'object' &&
@@ -99,41 +105,47 @@ export function PersonScreen({
         <Alert>{PERSON.unknown}</Alert>
       ) : (
         <ActionForms>
-          <PersonHeader
-            page={page}
-            own={own}
-            notice={notice}
-            refusal={refusal}
-          />
-          {/* From 900px, two columns: her Notas and what the guide left
+          <PickedTargetProvider>
+            <PersonHeader
+              page={page}
+              own={own}
+              notice={notice}
+              refusal={refusal}
+            />
+            {/* From 900px, two columns: her Notas and what the guide left
               on the left, the taste on the right. */}
-          <div className="grid gap-2xl min-[900px]:grid-cols-2 min-[900px]:items-start">
-            <div className="flex min-w-0 flex-col gap-2xl">
-              {own && <Glance page={page} start={start} />}
-              {own && showTrakt && (
-                <a
-                  href={TRAKT_PATH}
-                  className={buttonVariants({
-                    variant: 'option',
-                    className: 'self-start',
-                  })}
-                >
-                  Conexão com o Trakt
-                </a>
-              )}
-              <Notes
-                slug={slug}
-                own={own}
-                ratings={page.ratings}
-                predictionError={page.predictionError}
-              />
-              {own && start && <MyStartSections start={start} person={slug} />}
+            <div className="grid gap-2xl min-[900px]:grid-cols-2 min-[900px]:items-start">
+              <div className="flex min-w-0 flex-col gap-2xl">
+                {own && <Glance page={page} start={start} pending={pending} />}
+                {own && showTrakt && (
+                  <a
+                    href={TRAKT_PATH}
+                    className={buttonVariants({
+                      variant: 'option',
+                      className: 'self-start',
+                    })}
+                  >
+                    Conexão com o Trakt
+                  </a>
+                )}
+                <Notes
+                  slug={slug}
+                  own={own}
+                  admin={page.viewer.admin}
+                  ratings={page.ratings}
+                  predictionError={page.predictionError}
+                  pending={own ? pending : 0}
+                />
+                {own && start && (
+                  <MyStartSections start={start} person={slug} />
+                )}
+              </div>
+              <div className="flex min-w-0 flex-col gap-2xl">
+                <Contents page={page} />
+                <Details slug={slug} page={page} search={search} />
+              </div>
             </div>
-            <div className="flex min-w-0 flex-col gap-2xl">
-              <Contents page={page} />
-              <Details slug={slug} page={page} search={search} />
-            </div>
-          </div>
+          </PickedTargetProvider>
         </ActionForms>
       )}
     </main>
@@ -188,13 +200,17 @@ function PersonHeader({
 function Notes({
   slug,
   own,
+  admin,
   ratings,
   predictionError,
+  pending,
 }: {
   slug: string
   own: boolean
+  admin: boolean
   ratings: PersonPage['ratings']
   predictionError: PersonPage['predictionError']
+  pending: number
 }) {
   const { notes } = PERSON
   const option = buttonVariants({ variant: 'option' })
@@ -205,6 +221,19 @@ function Notes({
       aside={ratings === null ? undefined : String(ratings.length)}
     >
       {ratings === null && <p className="text-ink-2">{notes.noDatabase}</p>}
+      {pending > 0 && (
+        <p className="flex flex-wrap items-center gap-x-sm">
+          <span className="rounded-pill bg-sticker-orange px-sm font-display text-meta-strong text-on-sticker">
+            {notes.pending(pending)}
+          </span>
+          <a
+            href={QUEUE_PATH}
+            className="text-ink underline underline-offset-3"
+          >
+            {notes.resolve}
+          </a>
+        </p>
+      )}
       {ratings?.length === 0 && (
         <p className="text-ink-2">{notes.empty(own)}</p>
       )}
@@ -236,8 +265,8 @@ function Notes({
           </>
         )}
       </div>
-      {ratings !== null && ratings.length > 0 && (
-        <p className="text-meta text-ink-2">{notes.movielens}</p>
+      {admin && ratings !== null && ratings.length > 0 && (
+        <p className="text-meta text-ink-2">{notes.movielens(own)}</p>
       )}
       {ratings !== null && ratings.length > 0 && (
         <Disclosure summary={notes.list(ratings.length)}>
@@ -290,7 +319,15 @@ const changedAdjustments = (page: PersonPage) => page.adjustments.length
 
 /** Meu gosto's opening ficha: how many Notas (and how many to 10), what
  * she said of her taste, and the one next step. */
-function Glance({ page, start }: { page: PersonPage; start?: MyStart }) {
+function Glance({
+  page,
+  start,
+  pending,
+}: {
+  page: PersonPage
+  start?: MyStart
+  pending: number
+}) {
   const { glance } = PERSON
   const notes = page.ratings?.length ?? 0
   const said = tasteParts(page)
@@ -298,13 +335,15 @@ function Glance({ page, start }: { page: PersonPage; start?: MyStart }) {
     .map(([, title, n]) => `${n} ${title}`)
   const connector = start?.setup?.steps.find((s) => s.step === 'connector')
   const [step, href] =
-    notes < 10
-      ? [glance.steps.rate, RATINGS_PATH]
-      : connector && !connector.done && !connector.skipped
-        ? [glance.steps.connector, '#conector']
-        : page.openQuestions.length > 0
-          ? [glance.steps.questions, '#perguntas']
-          : [glance.steps.ask, '/sessoes/nova']
+    pending > 0
+      ? [glance.steps.queue(pending), QUEUE_PATH]
+      : notes < 10
+        ? [glance.steps.rate, RATINGS_PATH]
+        : connector && !connector.done && !connector.skipped
+          ? [glance.steps.connector, '#conector']
+          : page.openQuestions.length > 0
+            ? [glance.steps.questions, '#perguntas']
+            : [glance.steps.ask, '/sessoes/nova']
   return (
     <Slip id="olhada" title={glance.title}>
       <p className="font-display text-step-title">
@@ -404,6 +443,7 @@ function Details({
         action={personPath(slug, own)}
         scope="all"
         answer={search}
+        targets
       />
       {parts
         .filter(([, , n]) => n > 0)
@@ -546,7 +586,7 @@ function Vetoes({ slug, page }: Part) {
             placeholder={vetoes.placeholder}
             required
           />
-          <TextField
+          <TargetField
             name="alvo"
             label={PERSON.target}
             hint={PERSON.idHint}
@@ -704,12 +744,27 @@ function originOf(kind: 'stated' | 'report', s: Statement) {
 /** What the statement is about, in plain words: "ama Sofia Rangel", "só
  * sobre a tag “chuva”". The ID stays out: the forms that need it find it
  * in the Catálogo search. */
-function statementTarget(s: Statement) {
+/** What the Declarado is about, in words, its title the link to the film
+ * or entity (the id stays behind it): "sobre O Farol de Areia", "ama
+ * Lia Couto". */
+function StatementTarget({ s }: { s: Statement }) {
   if (s.target === null) return null
   const reaction = s.reaction
     ? PERSON.reactions[s.reaction as Reaction]
-    : PERSON.noReaction
-  return `${reaction} ${PERSON.plainLabel(s.label ?? s.target)}`
+    : PERSON.about
+  return (
+    <span className="text-meta text-ink-2">
+      {reaction}{' '}
+      <a
+        href={PERSON.targetUrl(s.target)}
+        target="_blank"
+        rel="noreferrer"
+        className="text-ink underline decoration-rule underline-offset-3 hover:decoration-ink"
+      >
+        {PERSON.plainLabel(s.label ?? s.target)}
+      </a>
+    </span>
+  )
 }
 
 function Statements({
@@ -757,20 +812,14 @@ function Statements({
                 )
               }
             >
-              <span>“{s.text}”</span>
+              <span>{PERSON.statementText(s.text)}</span>
               <span className="flex flex-wrap items-center gap-x-sm gap-y-2xs">
                 <StrengthDots
                   strength={s.strength}
                   word={PERSON.strengths[s.strength]}
                 />
-                <Meta
-                  parts={[
-                    statementTarget(s),
-                    s.specific ? PERSON.specific : PERSON.generic,
-                    shortDate(s.date),
-                    s.source,
-                  ]}
-                />
+                <StatementTarget s={s} />
+                <Meta parts={[shortDate(s.date), s.source]} />
               </span>
             </Item>
           )
@@ -784,7 +833,7 @@ function Statements({
             label={copy.add}
           >
             <TextField name="texto" label={PERSON.text} required />
-            <TextField
+            <TargetField
               name="alvo"
               label={PERSON.target}
               hint={PERSON.targetHint}
@@ -840,7 +889,8 @@ function Seen({ slug, page }: Part) {
       </Items>
       <Disclosure summary={seen.add}>
         <ActionForm slug={slug} action="visto" label={seen.add}>
-          <TextField
+          <TargetField
+            films
             name="filme"
             label={PERSON.film}
             hint={PERSON.filmHint}
