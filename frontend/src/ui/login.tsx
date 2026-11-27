@@ -72,7 +72,7 @@ export function Login({ refusal }: { refusal?: LoginRefusal }) {
 const traktErrors: Record<TraktError, string> = {
   login: 'Entre com o e-mail cadastrado no filmes.',
   trakt: 'O Trakt não concluiu a conexão. Tente de novo.',
-  consentimento: 'Marque a caixa para autorizar o envio ao Trakt.',
+  consentimento: 'Marque a caixa para autorizar a leitura e o envio ao Trakt.',
 }
 
 type TraktPage =
@@ -115,9 +115,11 @@ export function TraktScreen({
                 {page.status === 'connected' ? (
                   <>
                     <p>
-                      Sua conta está conectada. Ao desconectar, o filmes deixa
-                      de enviar seus filmes e apaga os dados de acesso. Seu
-                      histórico no Trakt fica como está.
+                      Sua conta está conectada: o filmes lê seu histórico a cada
+                      Sessão nova e envia o filme escolhido. Ao desconectar, ele
+                      deixa de ler e de enviar e apaga os dados de acesso. O que
+                      já entrou no seu gosto e seu histórico no Trakt ficam como
+                      estão.
                     </p>
                     <form action={TRAKT_DISCONNECT} method="post">
                       <Button type="submit" variant="option">
@@ -139,9 +141,11 @@ export function TraktScreen({
                         required
                         className="mt-1"
                       />
-                      Autorizo o filmes a enviar ao meu Trakt o filme escolhido
-                      na Sessão, os filmes marcados como Já vi no Cartaz e as
-                      notas que dei. O envio acontece ao salvar o Feedback.
+                      Autorizo o filmes a ler do meu Trakt o histórico, as notas
+                      e a watchlist de filmes, a cada Sessão nova e quando eu
+                      pedir, e a enviar ao meu Trakt o filme escolhido na
+                      Sessão, os filmes marcados como Já vi no Cartaz e as notas
+                      que dei, ao salvar o Feedback.
                     </label>
                     <Button type="submit">Conectar Trakt</Button>
                   </form>

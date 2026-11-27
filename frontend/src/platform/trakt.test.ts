@@ -311,16 +311,24 @@ test('the app reads Trakt from its environment and only for a verified Pessoa', 
       }),
     )
 
-  for (const [off, engineToo] of [
-    [{ FILMES_TRAKT_CLIENT_ID: '' }, true],
-    [{ FILMES_TRAKT_TOKEN_KEY: Buffer.alloc(16).toString('base64') }, true],
-    [{ APP_ORIGIN: 'http://cinema.example' }, true],
-    [{ GOOGLE_CLIENT_ID: '' }, false],
-  ] as const) {
+  for (const off of [
+    { FILMES_TRAKT_CLIENT_ID: '' },
+    { FILMES_TRAKT_TOKEN_KEY: Buffer.alloc(16).toString('base64') },
+    { APP_ORIGIN: 'http://cinema.example' },
+    { GOOGLE_CLIENT_ID: '' },
+  ]) {
     stub(off)
     expect(page()).toEqual({ status: 'unavailable' })
     expect((await connect())?.headers.get('Location')).toBe('/trakt')
-    expect(traktConnection({ ...env, ...off }) === undefined).toBe(engineToo)
+    // The client id alone still reads public profiles (#269): only
+    // without it has the engine no Trakt; otherwise no Pessoa has a token.
+    const engine = traktConnection({ ...env, ...off })
+    expect(engine === undefined).toBe('FILMES_TRAKT_CLIENT_ID' in off)
+    const token = await engine?.accessToken(
+      'iara',
+      new AbortController().signal,
+    )
+    expect(token ?? null).toBeNull()
   }
 
   stub({})

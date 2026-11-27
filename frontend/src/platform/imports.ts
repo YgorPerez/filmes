@@ -18,6 +18,7 @@ import {
   personImports,
   removeImport,
   reprocessLetterboxd,
+  syncTrakt,
   viewQueue,
   type Author,
   type Engine,
@@ -43,6 +44,7 @@ import { appEngine } from './engine'
 import { appPoster, failureOf, formPoster, seeOther } from './form-post'
 import { ownerAuthor } from './people'
 import { rateAction, ratingQueuePage, ratingsFromEngine } from './ratings'
+import { traktLink } from './trakt'
 
 /** Whoever is logged in, as the login reads her (`appPoster`). */
 type LoggedIn = ReturnType<typeof appPoster>['owner']
@@ -197,6 +199,15 @@ function runImport(
           outside: r.unresolved.length,
         }),
       )
+    case 'trakt-sync':
+      return map(
+        run(syncTrakt({ person, user: action.user ?? undefined, author })),
+        (r): ImportDone => ({
+          notice: 'sincronizado',
+          facts: sum(r.newFacts),
+          outside: r.unresolved.length,
+        }),
+      )
     case 'remove':
       return map(
         run(removeImport({ file: action.file, person, author })),
@@ -296,7 +307,24 @@ function runOf(action: ImportAction): ImportRun | null {
 /** What the resolution queue (`QUEUE_PATH`) shows. */
 export const queuePage = (imports: Imports) => shown(imports.queue())
 
-function importRefusal(outcome: { output: ErrorOutput }): ImportRefusal {
+/** Why her Trakt could not be read (#269), by the engine's reason. */
+const TRAKT_REFUSALS: Partial<Record<string, ImportRefusal>> = {
+  trakt_user_missing: 'trakt-usuario',
+  trakt_private: 'trakt-privado',
+  trakt_not_linked: 'trakt-sem',
+  trakt_off: 'trakt-off',
+}
+
+function importRefusal(
+  outcome: { output: ErrorOutput },
+  kind?: ImportRun['kind'],
+): ImportRefusal {
+  if (kind === 'trakt-sync') {
+    const { code, reason } = outcome.output.error
+    const refusal = reason === undefined ? undefined : TRAKT_REFUSALS[reason]
+    if (refusal) return refusal
+    if (code === 'source_unavailable') return 'trakt-fonte'
+  }
   switch (outcome.output.error.code) {
     case 'invalid_file':
     case 'missing_file':
@@ -366,7 +394,9 @@ export async function importAction(
   if (outcome.exitCode !== 0) {
     if (outcome.output.error.code === 'unknown_person')
       return seeOther('/pessoas?erro=pessoa')
-    return seeOther(`${page}${query({ erro: importRefusal(outcome) })}`)
+    return seeOther(
+      `${page}${query({ erro: importRefusal(outcome, run.kind) })}`,
+    )
   }
   const { notice, facts, outside } = outcome.output
   return seeOther(
@@ -399,8 +429,14 @@ export async function queueAction(
 
 const appImports = () => importsFromEngine(appEngine())
 
-export const appImportsPage = (person: string, viewer: string) =>
-  importsPage(person, viewer, appImports())
+/** The page with what it needs of Trakt (#269): whether the server reads
+ * it, and whether she connected hers. */
+export const appImportsPage = async (person: string, viewer: string) => {
+  const page = await importsPage(person, viewer, appImports())
+  return page && page !== 'unknown'
+    ? { ...page, traktLink: traktLink(page.person) }
+    : page
+}
 
 export const appQueuePage = () => queuePage(appImports())
 

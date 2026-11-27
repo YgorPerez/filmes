@@ -424,6 +424,11 @@ const CREATE_REFUSALS: Record<ErrorReason, PersonCreateRefusal> = {
   // Not met on create: giving or taking access.
   already_owner: 'indisponivel',
   own_access: 'indisponivel',
+  // Not met on create: reading a Pessoa's Trakt (#269).
+  trakt_user_missing: 'indisponivel',
+  trakt_private: 'indisponivel',
+  trakt_not_linked: 'indisponivel',
+  trakt_off: 'indisponivel',
 }
 
 /** Why the engine refused a new Pessoa, by its reason; without one, it

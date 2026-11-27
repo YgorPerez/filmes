@@ -16,6 +16,9 @@ export type ImportAction =
   | ({ kind: 'upload' } & Upload)
   | { kind: 'rss'; user: string }
   | { kind: 'remove'; file: string }
+  // Her Trakt by the API (#269): a public username, or null for her
+  // connected account or the username she was linked to before.
+  | { kind: 'trakt-sync'; user: string | null }
 
 /** What the engine runs: the upload once its service is known. */
 export type ImportRun =
@@ -55,12 +58,37 @@ function letterboxdUser(typed: string): string | null {
   return null
 }
 
+/** A Trakt user as its profile's address has it. */
+const TRAKT_USER = '[A-Za-z0-9][A-Za-z0-9_.-]*'
+
+const TRAKT_FORMS = [
+  new RegExp(`^@?(${TRAKT_USER})$`),
+  new RegExp(
+    `^(?:https?://)?(?:www\\.|app\\.)?trakt\\.tv/users/(${TRAKT_USER})(?:[/?#].*)?$`,
+    'i',
+  ),
+]
+
+/** The user in what the Dono typed: `olga`, `@olga` or the profile's
+ * address (`https://trakt.tv/users/olga`); null when it is none of them. */
+function traktUser(typed: string): string | null {
+  for (const form of TRAKT_FORMS) {
+    const user = form.exec(typed.trim())?.[1]
+    if (user !== undefined) return user
+  }
+  return null
+}
+
 /** The reason a discard records when the Dono gives none (the CLI's
  * default). */
 const DEFAULT_DISCARD_REASON = 'ignorar'
 
 /** Why an import form cannot run, before the engine sees it. */
-export type ImportFormError = 'pedido' | 'arquivo' | 'consentimento'
+export type ImportFormError =
+  | 'pedido'
+  | 'arquivo'
+  | 'consentimento'
+  | 'trakt-usuario'
 
 /** The form → the action. An upload with no file is `arquivo`; the RSS
  * without the Pessoa's consent is `consentimento`, unless `own` (the Dono's
@@ -89,6 +117,14 @@ export async function parseImport(
   if (action === 'remover') {
     const file = field(form, 'arquivo')
     return file ? { kind: 'remove', file } : 'pedido'
+  }
+  if (action === 'trakt') {
+    const typed = field(form, 'usuario')
+    if (!typed) return { kind: 'trakt-sync', user: null }
+    const user = traktUser(typed)
+    if (user === null) return 'trakt-usuario'
+    if (!own && field(form, 'consentimento') !== 'sim') return 'consentimento'
+    return { kind: 'trakt-sync', user }
   }
   return 'pedido'
 }
@@ -125,6 +161,8 @@ const IMPORT_NOTICES = [
   'repetido',
   // An import removed: `novos` Fatos less.
   'removido',
+  // Her Trakt read by the API (#269): `novos` Fatos more.
+  'sincronizado',
 ] as const
 
 export type ImportNotice = (typeof IMPORT_NOTICES)[number]
@@ -144,6 +182,14 @@ const IMPORT_REFUSALS = [
   'fonte',
   // The import to remove is gone.
   'item',
+  // Her Trakt by the API (#269): no such user (or not a username), a
+  // private profile, nothing to read (no connection nor username), a
+  // server with no Trakt, Trakt not answering.
+  'trakt-usuario',
+  'trakt-privado',
+  'trakt-sem',
+  'trakt-off',
+  'trakt-fonte',
   'indisponivel',
   // The engine failed in a way waiting does not fix (#258).
   'falha',

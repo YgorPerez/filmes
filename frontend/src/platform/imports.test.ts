@@ -1,7 +1,12 @@
 import { execFileSync } from 'node:child_process'
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { makeEngine, type ErrorCode, type Outcome } from '@filmes/engine'
+import {
+  makeEngine,
+  type ErrorCode,
+  type ErrorReason,
+  type Outcome,
+} from '@filmes/engine'
 import { describe, expect, it, onTestFinished, vi } from 'vite-plus/test'
 import { ROOT, useFixture } from '../../../packages/engine/test/fixture.ts'
 import { zipOf } from '../../../packages/engine/test/imports/zip.ts'
@@ -138,6 +143,26 @@ describe('parseImport', () => {
     ],
     [{ acao: 'remover' }, 'pedido'],
     [{ acao: 'outra' }, 'pedido'],
+    // Her Trakt (#269): her connection or the username of before, a public
+    // profile by its name, @name or address, and another Pessoa's yes.
+    [{ acao: 'trakt' }, { kind: 'trakt-sync', user: null }],
+    [
+      {
+        acao: 'trakt',
+        usuario: 'https://trakt.tv/users/olga-f',
+        consentimento: 'sim',
+      },
+      { kind: 'trakt-sync', user: 'olga-f' },
+    ],
+    [
+      { acao: 'trakt', usuario: '@olga', consentimento: 'sim' },
+      { kind: 'trakt-sync', user: 'olga' },
+    ],
+    [{ acao: 'trakt', usuario: 'olga' }, 'consentimento'],
+    [
+      { acao: 'trakt', usuario: 'olga f', consentimento: 'sim' },
+      'trakt-usuario',
+    ],
   ])('%o → %o', async (fields, expected) => {
     expect(await parseImport(form(fields))).toEqual(expected)
   })
@@ -354,6 +379,36 @@ describe('importAction', () => {
       '/pessoas/teo/importar?erro=grande',
     )
     expect(calls).toEqual([])
+  })
+
+  it.each<[ErrorCode, ErrorReason | undefined, string]>([
+    ['invalid_usage', 'trakt_user_missing', 'trakt-usuario'],
+    ['source_unavailable', 'trakt_private', 'trakt-privado'],
+    ['invalid_usage', 'trakt_not_linked', 'trakt-sem'],
+    ['source_unavailable', 'trakt_off', 'trakt-off'],
+    ['source_unavailable', undefined, 'trakt-fonte'],
+  ])('says why her Trakt was not read: %s %s', async (code, reason, erro) => {
+    const { imports, calls } = fakeImports({
+      exitCode: 1,
+      output: {
+        error: {
+          code,
+          message: 'x',
+          ...(reason !== undefined && { reason }),
+        },
+      },
+    })
+    const response = await importAction(
+      post('/importar/teo/acao', { acao: 'trakt' }),
+      'teo',
+      BRUNO,
+      imports,
+      ORIGIN,
+    )
+    expect(response.headers.get('Location')).toBe(
+      `/pessoas/teo/importar?erro=${erro}`,
+    )
+    expect(calls).toHaveLength(1)
   })
 
   it.each<[ErrorCode, string]>([
