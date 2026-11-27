@@ -1,6 +1,6 @@
 import { createFileRoute, notFound } from '@tanstack/react-router'
 import { moved, MOVED_TO } from '#/content/moved'
-import { personSearch } from '#/content/person-action'
+import { personSearch, readProblemParam } from '#/content/person-action'
 import { readPersonPage } from '#/content/people'
 import { PersonScreen, UnknownPerson } from '#/ui/person'
 
@@ -32,7 +32,7 @@ function PersonRoute() {
       notice={feito}
       refusal={erro}
       spot={em}
-      problem={campo}
+      problem={readProblemParam(campo)}
     />
   )
 }

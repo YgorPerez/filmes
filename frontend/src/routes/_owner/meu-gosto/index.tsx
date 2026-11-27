@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { personSearch } from '#/content/person-action'
+import { personSearch, readProblemParam } from '#/content/person-action'
 import { readMyStart, readPersonPage } from '#/content/people'
 import { readTraktPage } from '#/content/trakt'
 import { PersonScreen } from '#/ui/person'
@@ -33,7 +33,7 @@ function MyTasteRoute() {
       notice={feito}
       refusal={erro}
       spot={em}
-      problem={campo}
+      problem={readProblemParam(campo)}
     />
   )
 }

@@ -267,7 +267,7 @@ export const problemParam = ({ field: name, problem }: FieldProblem) =>
   `${name}:${problem}`
 
 /** `?campo=` read back; undefined when it is not one. */
-function readProblemParam(value: unknown): FieldProblem | undefined {
+export function readProblemParam(value: unknown): FieldProblem | undefined {
   if (typeof value !== 'string') return undefined
   const [name, problem] = value.split(':')
   const kind = oneOf(PROBLEM_KINDS, problem)
@@ -354,7 +354,12 @@ export const personSearch = (search: Record<string, unknown>) => ({
     typeof search.em === 'string' && /^[a-z-]+$/.test(search.em)
       ? search.em
       : undefined,
-  campo: readProblemParam(search.campo),
+  // Kept as the text it came as: the router writes the query back from
+  // what this gives. `readProblemParam` reads it.
+  campo:
+    readProblemParam(search.campo) === undefined
+      ? undefined
+      : (search.campo as string),
 })
 
 /** A Relato's source when the form gives none: who told it, since several

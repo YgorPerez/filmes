@@ -277,6 +277,21 @@ describe('personAction', () => {
     expect(acted).toEqual([])
   })
 
+  it('names the field a form without the JavaScript lacked', async () => {
+    const { people, acted } = fakePeople()
+    const response = await personAction(
+      post({ acao: 'vetar', texto: 'x', alvo: '', grupo: '' }),
+      'iara',
+      BRUNO,
+      people,
+      ORIGIN,
+    )
+    expect(response.headers.get('Location')).toBe(
+      '/pessoas/iara?erro=pedido&campo=alvo%3Atarget&em=vetos#vetos',
+    )
+    expect(acted).toEqual([])
+  })
+
   it('goes back to the Ajuste that changed', async () => {
     const { people } = fakePeople()
     const response = await personAction(
