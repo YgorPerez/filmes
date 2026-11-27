@@ -158,6 +158,13 @@ function Header({
           {card.imdb(film.imdbRatingText, film.votesText)}
         </a>
       </div>
+      {film.awards && (
+        <ul className="text-meta text-ink-2">
+          {film.awards.map((award) => (
+            <li key={award}>{award}</li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }
