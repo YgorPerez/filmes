@@ -185,8 +185,16 @@ De onde um Fato veio: uma base pública, o export de uma Pessoa, uma resposta de
 _Evitar_: origem
 
 **Import** [import, `import`; tipo [kind: `letterboxd`, `letterboxd-rss`, `trakt`, `imdb`, `simkl`, `tvtime`]]:
-Um export de uma Pessoa (o ZIP do Letterboxd ou do Trakt, o CSV de avaliações do IMDb, o backup do Simkl, o do TV Time ou o RSS público do Letterboxd dela) guardado no repo de dados e registrado no arquivo dela. Do backup do TV Time (o export GDPR ou o do TV Time Liberator) fica só a parte dos filmes, nunca as credenciais da conta. É a Fonte das Notas, dos Já vistos e da Watchlist que traz; tirar o Import tira os Fatos que só ele trazia. O RSS só entra com o sim da Pessoa.
+Um export de uma Pessoa (o ZIP do Letterboxd ou do Trakt, o CSV de avaliações do IMDb, o backup do Simkl, o do TV Time ou o RSS público do Letterboxd dela) guardado no repo de dados e registrado no arquivo dela. Do backup do TV Time (o export GDPR ou o do TV Time Liberator) fica só a parte dos filmes: as linhas de filme, com as colunas que o import lê, nunca as credenciais da conta, as séries nem o `user_id`. É a Fonte das Notas, dos Já vistos e da Watchlist que traz; tirar o Import tira os Fatos que só ele trazia. O RSS só entra com o sim da Pessoa.
 _Evitar_: upload, sincronização
+
+**Conexão com o Trakt** [Trakt connection, `TraktConnection`; o registro, `trakt_grants`]:
+A autorização que uma Pessoa dá ao filmes para gravar na conta dela do Trakt: ela entra em `/trakt` com o e-mail do arquivo dela, marca o consentimento e conecta pelo Trakt. O registro só existe com o consentimento e fica no banco de login da VPS (`auth.sqlite`), com os tokens cifrados, fora do repo de dados. Desconectar apaga o registro e revoga o token no Trakt; um token que o Trakt recusa também apaga o registro, e ela precisa conectar de novo. O motor recebe do app só o acesso de cada Pessoa [Trakt access, `TraktAccess`]: o token, nada sem conexão, ou "recusado" [`TRAKT_REVOKED`].
+_Evitar_: login do Trakt, integração
+
+**Envio ao Trakt** [Trakt sync, `syncTraktFeedback`]:
+O que o filmes grava no Trakt de cada Presente com Conexão com o Trakt, depois de gravar o Feedback: o Filme escolhido e os Já vi do Cartaz no histórico, e as Notas, de 1 a 10. Filme que o Trakt não conhece fica de fora, com um aviso que o nomeia, e o resto segue. Se o Trakt falhar, o Feedback fica salvo e o resultado leva um aviso.
+_Evitar_: sincronização, export
 
 **Fila de resolução** [resolution queue, `queue`]:
 Os filmes de um Import do Letterboxd ou do TV Time que o filmes não achou no Catálogo sozinho e esperam o Dono: confirmar com o tconst, o link do IMDb ou o do TMDB, ou descartar com um motivo. A fila é uma só para todas as Pessoas, e a decisão vale para quem tem o filme.
@@ -238,7 +246,7 @@ Onde uma Nota fica na Escala da Pessoa, de 0 a 1: a parte das Notas da escala ab
 _Evitar_: posição, ranking
 
 **Escala da Pessoa** [rating scale, `RatingScale`]:
-As Notas contra as quais a régua lê uma Nota dela: as próprias Notas da Pessoa, quando ela tem pelo menos o mínimo de `[rating_percentile]`; abaixo dele, as notas da população do MovieLens, na mesma escala de 0,5 a 5. As do Letterboxd, do Trakt, do IMDb e do Simkl entram juntas.
+As Notas contra as quais a régua lê uma Nota dela: as próprias Notas da Pessoa, quando ela tem pelo menos o mínimo de `[rating_percentile]`; abaixo dele, as notas da população do MovieLens, na mesma escala de 0,5 a 5. As do Letterboxd, do Trakt, do IMDb, do Simkl e do TV Time entram juntas.
 
 **Nota alta** [high rating, `isHighRating`]:
 Uma Nota que a régua lê a favor com Força moderada ou forte, só pelo percentil, sem o Feedback. É o que o metadado agregado do caminho de conteúdo conta ("como 3 filmes a que deu nota alta"). Num Declarado de filme, só o "ama".
