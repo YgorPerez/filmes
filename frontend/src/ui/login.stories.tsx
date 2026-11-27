@@ -30,6 +30,8 @@ export const GoogleRefused: Story = { args: { refusal: 'google' } }
 export const Unavailable: Story = {
   args: { refusal: 'indisponivel' },
   play: async ({ canvasElement }) => {
-    await expect(within(canvasElement).queryByRole('link')).toBeNull()
+    await expect(
+      within(canvasElement).queryByRole('link', { name: LOGIN.google }),
+    ).toBeNull()
   },
 }

@@ -28,6 +28,13 @@ describe('Login', () => {
       /<header class="bg-case"><p[^>]*>filmes<\/p><\/header>/u,
     )
   })
+
+  it('links the credits from its footer, for a visitor', () => {
+    const html = renderToStaticMarkup(<Login />)
+    expect(html).toMatch(
+      /<footer[^>]*>.*<a href="\/creditos"[^>]*>Créditos das fontes<\/a>.*<\/footer>/,
+    )
+  })
 })
 
 describe('the Trakt connection screen', () => {
@@ -78,5 +85,12 @@ describe('the Trakt connection screen', () => {
     )
     expect(html).toContain('role="alert"')
     expect(html).toContain(message)
+  })
+  it('links the credits from its footer too', () => {
+    expect(
+      renderToStaticMarkup(<TraktScreen page={{ status: 'login' }} />),
+    ).toMatch(
+      /<footer[^>]*>.*<a href="\/creditos"[^>]*>Créditos das fontes<\/a>.*<\/footer>/,
+    )
   })
 })
