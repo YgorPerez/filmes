@@ -52,7 +52,7 @@ const QUIM: PersonImportsView = {
     ],
     discardedItems: [],
   },
-  trakt: { ratings: 2, seen: 1 },
+  trakt: { ratings: 2, seen: 1, watchlist: 0 },
 }
 
 /** Quim with nothing imported yet. */
@@ -67,7 +67,7 @@ const EMPTY: PersonImportsView = {
     queued: 0,
     queue: [],
   },
-  trakt: { ratings: 0, seen: 0 },
+  trakt: { ratings: 0, seen: 0, watchlist: 0 },
 }
 
 const show = (page: PersonImportsView = QUIM) =>

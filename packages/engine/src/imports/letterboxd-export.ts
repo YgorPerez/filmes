@@ -183,6 +183,11 @@ const readCsv = (file: ExportFile, text: string): LetterboxdRow[] => {
   return rows
 }
 
+/** Whether a Letterboxd export that reads has a `watchlist.csv`, even an
+ * empty one. */
+export const hasLetterboxdWatchlist = (content: Uint8Array): boolean =>
+  findCsvs(new Zip(Buffer.from(content)).names()).has('watchlist')
+
 /** The rows of a Letterboxd export (`zip_letterboxd.ler`): `name` is the
  * file's name, for the messages. Throws the `EngineError` Python raised. */
 export const readLetterboxdExport = (

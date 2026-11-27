@@ -450,7 +450,7 @@ describe('the pages', () => {
             queue: [],
             discardedItems: [],
           },
-          trakt: { ratings: 0, seen: 0 },
+          trakt: { ratings: 0, seen: 0, watchlist: 0 },
         },
       }),
     }
@@ -556,7 +556,7 @@ describe('importsFromEngine, imports', () => {
       ['letterboxd', 'olga.zip'],
       ['trakt', 'trakt.zip'],
     ])
-    expect(page.trakt).toEqual({ ratings: 2, seen: 1 })
+    expect(page.trakt).toEqual({ ratings: 2, seen: 1, watchlist: 0 })
     expect((await ok(imports.queue())).items).toHaveLength(2)
 
     expect(await run({ kind: 'rss', user: 'olga_farol' })).toMatchObject({
