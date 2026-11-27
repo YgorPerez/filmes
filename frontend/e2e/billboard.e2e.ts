@@ -224,8 +224,9 @@ test('the Dono marks, reloads, sends, and the Cartaz comes back redone', async (
   await card(page, 2).getByRole('button', { name: 'Trocar' }).click()
   // The stamp on the poster, beside the cover link since #263.
   await expect(
+    // Not the button's own label (`data-text`).
     card(page, 2)
-      .locator('span')
+      .locator('span:not([data-text])')
       .filter({ hasText: /^Trocar$/ }),
   ).toBeVisible()
   await card(page, 3).getByRole('button', { name: '4 de 5' }).click()
