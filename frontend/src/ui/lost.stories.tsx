@@ -41,6 +41,15 @@ export const InTheShell: Story = {
   },
 }
 
+export const SessionGone: Story = {
+  args: { what: 'session' },
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByRole('link', { name: 'Ver todas as Sessões' }),
+    ).toHaveAttribute('href', '/sessoes')
+  },
+}
+
 export const Alone: Story = {
   render: () => (
     <LostAlone>

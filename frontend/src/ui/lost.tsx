@@ -29,9 +29,16 @@ function Page({
   )
 }
 
-/** The 404: the one orange "Ir para o início", and Ver Sessões for a Dono. */
-export function NotFound({ owner = true }: { owner?: boolean }) {
-  const copy = LOST.notFound
+/** The 404: the one orange "Ir para o início", and Ver Sessões for a Dono.
+ * A Sessão that does not exist (`what="session"`) says so. */
+export function NotFound({
+  owner = true,
+  what = 'page',
+}: {
+  owner?: boolean
+  what?: 'page' | 'session'
+}) {
+  const copy = what === 'session' ? LOST.sessionNotFound : LOST.notFound
   return (
     <Page title={copy.title} lead={copy.lead}>
       <a href="/" className={buttonVariants()}>
