@@ -84,66 +84,112 @@ export function PersonImportsScreen({
   const own = typeof page === 'object' && page?.own === true
   const name = typeof page === 'object' && page !== null ? page.name : slug
   const { feedback, onAnswer } = usePostedFeedback()
-  const inForm = refusal && refusedForm(refusal, refusedIn)
-  /** The refusal of `form`, when it is the one refused. */
-  const refusedOf = (form: FormName) =>
-    refusal && inForm === form ? refusal : undefined
   return (
     <PostAnswers onAnswer={onAnswer}>
       <ImportsFrame back={COPY.back(name, own)} backTo={personPath(slug, own)}>
-        {page === null ? (
-          <Alert>{COPY.unavailable}</Alert>
-        ) : page === 'unknown' ? (
-          <Alert>{COPY.unknown}</Alert>
+        {page === null || page === 'unknown' ? (
+          <Alert>{page === null ? COPY.unavailable : COPY.unknown}</Alert>
         ) : (
-          <>
-            <PageHead
-              title={COPY.title(page.name, page.own)}
-              lead={COPY.lead(page.name, page.own)}
-            />
-            {((refusal && !inForm) || done) && (
-              <div ref={feedback}>
-                {refusal && !inForm && <Alert>{COPY.refusals[refusal]}</Alert>}
-                {done && <Notice>{COPY.notices[done.notice](done)}</Notice>}
-              </div>
-            )}
-            {page.imports.length > 0 ? (
-              <>
-                <Results page={page} />
-                <Files slug={slug} page={page} />
-                <details
-                  className="group"
-                  open={inForm !== null && inForm !== undefined}
-                >
-                  <summary
-                    className={buttonVariants({
-                      variant: 'option',
-                      className:
-                        'list-none group-open:mb-xl [&::-webkit-details-marker]:hidden',
-                    })}
-                  >
-                    {COPY.results.again}
-                  </summary>
-                  <Forms
-                    slug={slug}
-                    page={page}
-                    refusedOf={refusedOf}
-                    feedback={inForm ? feedback : undefined}
-                  />
-                </details>
-              </>
-            ) : (
-              <Forms
-                slug={slug}
-                page={page}
-                refusedOf={refusedOf}
-                feedback={inForm ? feedback : undefined}
-              />
-            )}
-          </>
+          <ImportsPage
+            slug={slug}
+            page={page}
+            done={done}
+            refusal={refusal}
+            refusedIn={refusedIn}
+            feedback={feedback}
+          />
         )}
       </ImportsFrame>
     </PostAnswers>
+  )
+}
+
+/** The page of a Pessoa there is: the head, the feedback of the last post
+ * and, once something came in, the results before the forms. */
+function ImportsPage({
+  slug,
+  page,
+  done,
+  refusal,
+  refusedIn,
+  feedback,
+}: {
+  slug: string
+  page: PersonImportsView
+  done?: ImportDoneView
+  refusal?: ImportRefusal
+  refusedIn?: FormName
+  feedback: Ref<HTMLDivElement>
+}) {
+  const inForm = refusal ? refusedForm(refusal, refusedIn) : undefined
+  /** The refusal of `form`, when it is the one refused. */
+  const refusedOf = (form: FormName) => (inForm === form ? refusal : undefined)
+  const forms = (
+    <Forms
+      slug={slug}
+      page={page}
+      refusedOf={refusedOf}
+      feedback={inForm ? feedback : undefined}
+    />
+  )
+  return (
+    <>
+      <PageHead
+        title={COPY.title(page.name, page.own)}
+        lead={COPY.lead(page.name, page.own)}
+      />
+      <PageFeedback
+        refusal={inForm ? undefined : refusal}
+        done={done}
+        feedback={feedback}
+      />
+      {page.imports.length > 0 ? (
+        <>
+          <Results page={page} />
+          <Files slug={slug} page={page} />
+          <Again open={Boolean(inForm)}>{forms}</Again>
+        </>
+      ) : (
+        forms
+      )}
+    </>
+  )
+}
+
+/** The refusal no form owns and the notice of what the last post did. */
+function PageFeedback({
+  refusal,
+  done,
+  feedback,
+}: {
+  refusal?: ImportRefusal
+  done?: ImportDoneView
+  feedback: Ref<HTMLDivElement>
+}) {
+  if (!refusal && !done) return null
+  return (
+    <div ref={feedback}>
+      {refusal && <Alert>{COPY.refusals[refusal]}</Alert>}
+      {done && <Notice>{COPY.notices[done.notice](done)}</Notice>}
+    </div>
+  )
+}
+
+/** "Importar de novo": the forms, folded under the results. */
+function Again({ open, children }: { open: boolean; children: ReactNode }) {
+  return (
+    <details className="group" open={open}>
+      <summary
+        className={buttonVariants({
+          variant: 'option',
+          className:
+            'list-none group-open:mb-xl [&::-webkit-details-marker]:hidden',
+        })}
+      >
+        {COPY.results.again}
+      </summary>
+      {children}
+    </details>
   )
 }
 
@@ -455,8 +501,7 @@ function LetterboxdGuide({
   page: PersonImportsView
   refusedOf: Refused
 }) {
-  const { letterboxd: guide, picker } = COPY
-  const refused = refusedOf('letterboxd')
+  const { letterboxd: guide } = COPY
   return (
     <Section id="letterboxd" title={guide.title} lead={guide.lead}>
       <ol className="flex flex-col">
@@ -479,30 +524,7 @@ function LetterboxdGuide({
           <p className="text-evidence text-ink-2">{guide.export.text}</p>
         </Step>
         <Step n={3} title={guide.send.title}>
-          <ImportForm
-            slug={slug}
-            action="arquivo"
-            form="letterboxd"
-            label={guide.send.title}
-            upload
-          >
-            {(busy) => (
-              <>
-                <FilePicker
-                  name="arquivo"
-                  label={guide.send.file}
-                  accept=".zip,application/zip"
-                  extensions={['.zip']}
-                  wrongType={guide.send.wrongType}
-                  copy={picker}
-                  error={refused && COPY.refusals[refused]}
-                />
-                <Submit variant="primary" disabled={busy}>
-                  {busy ? guide.send.busy : guide.send.submit}
-                </Submit>
-              </>
-            )}
-          </ImportForm>
+          <LetterboxdUpload slug={slug} refused={refusedOf('letterboxd')} />
         </Step>
         <Step n={4} title={guide.profile.title}>
           <p className="text-evidence text-ink-2">{guide.profile.text}</p>
@@ -510,6 +532,43 @@ function LetterboxdGuide({
         </Step>
       </ol>
     </Section>
+  )
+}
+
+/** The ZIP of her Letterboxd export, the guide's one orange button. */
+function LetterboxdUpload({
+  slug,
+  refused,
+}: {
+  slug: string
+  refused?: ImportRefusal
+}) {
+  const { letterboxd: guide, picker } = COPY
+  return (
+    <ImportForm
+      slug={slug}
+      action="arquivo"
+      form="letterboxd"
+      label={guide.send.title}
+      upload
+    >
+      {(busy) => (
+        <>
+          <FilePicker
+            name="arquivo"
+            label={guide.send.file}
+            accept=".zip,application/zip"
+            extensions={['.zip']}
+            wrongType={guide.send.wrongType}
+            copy={picker}
+            error={refused && COPY.refusals[refused]}
+          />
+          <Submit variant="primary" disabled={busy}>
+            {busy ? guide.send.busy : guide.send.submit}
+          </Submit>
+        </>
+      )}
+    </ImportForm>
   )
 }
 
@@ -525,44 +584,7 @@ function OtherSites({
   const { other, picker } = COPY
   return (
     <Section id="outros" title={other.title} lead={other.lead}>
-      <ul className="flex flex-col">
-        {other.services.map(({ service, href, steps }) => (
-          <li
-            key={service}
-            className="border-rule not-first:border-t not-first:border-dashed"
-          >
-            <details className="group">
-              <summary className="flex min-h-touch cursor-pointer list-none items-center justify-between gap-md font-display text-row-title [&::-webkit-details-marker]:hidden">
-                {other.how(service)}
-                <span
-                  aria-hidden="true"
-                  className="text-ink-2 transition-transform group-open:rotate-90"
-                >
-                  <RowArrow />
-                </span>
-              </summary>
-              <ol className="flex list-decimal flex-col gap-2xs pb-md pl-3xl text-evidence">
-                {steps.map((step, index) => (
-                  <li key={step}>
-                    {index === 0 ? (
-                      <a
-                        href={href}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="underline underline-offset-3"
-                      >
-                        {step}
-                      </a>
-                    ) : (
-                      step
-                    )}
-                  </li>
-                ))}
-              </ol>
-            </details>
-          </li>
-        ))}
-      </ul>
+      <ServiceGuides />
       <ImportForm
         slug={slug}
         action="arquivo"
@@ -589,6 +611,51 @@ function OtherSites({
   )
 }
 
+/** How to get each site's file, one folded list per site. */
+function ServiceGuides() {
+  const { other } = COPY
+  return (
+    <ul className="flex flex-col">
+      {other.services.map(({ service, href, steps }) => (
+        <li
+          key={service}
+          className="border-rule not-first:border-t not-first:border-dashed"
+        >
+          <details className="group">
+            <summary className="flex min-h-touch cursor-pointer list-none items-center justify-between gap-md font-display text-row-title [&::-webkit-details-marker]:hidden">
+              {other.how(service)}
+              <span
+                aria-hidden="true"
+                className="text-ink-2 transition-transform group-open:rotate-90"
+              >
+                <RowArrow />
+              </span>
+            </summary>
+            <ol className="flex list-decimal flex-col gap-2xs pb-md pl-3xl text-evidence">
+              {steps.map((step, index) => (
+                <li key={step}>
+                  {index === 0 ? (
+                    <a
+                      href={href}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="underline underline-offset-3"
+                    >
+                      {step}
+                    </a>
+                  ) : (
+                    step
+                  )}
+                </li>
+              ))}
+            </ol>
+          </details>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
 /** The latest Letterboxd profile she read, `@nome`, if any. */
 const lastProfile = (page: PersonImports) =>
   page.imports
@@ -612,18 +679,7 @@ function Rss({
 }) {
   const { rss } = COPY
   const last = lastProfile(page)
-  const consent = !page.own && (
-    <label className="flex min-h-touch cursor-pointer items-start gap-md rounded-field bg-surface-2 p-lg">
-      <input
-        type="checkbox"
-        name="consentimento"
-        value="sim"
-        required
-        className="mt-0.5 size-5 shrink-0 accent-ink"
-      />
-      <span>{rss.consent(page.name)}</span>
-    </label>
-  )
+  const consent = !page.own && <Consent name={page.name} />
   const field = (
     <ImportForm slug={slug} action="rss" form="perfil" label={rss.title}>
       {(busy) => (
@@ -661,6 +717,22 @@ function Rss({
         {field}
       </details>
     </div>
+  )
+}
+
+/** Another Pessoa's yes to reading her diary. */
+function Consent({ name }: { name: string }) {
+  return (
+    <label className="flex min-h-touch cursor-pointer items-start gap-md rounded-field bg-surface-2 p-lg">
+      <input
+        type="checkbox"
+        name="consentimento"
+        value="sim"
+        required
+        className="mt-0.5 size-5 shrink-0 accent-ink"
+      />
+      <span>{COPY.rss.consent(name)}</span>
+    </label>
   )
 }
 

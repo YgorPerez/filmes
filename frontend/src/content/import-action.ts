@@ -100,37 +100,61 @@ export async function parseImport(
   form: FormData,
   own = false,
 ): Promise<ImportAction | ImportFormError> {
-  const action = field(form, 'acao')
-  if (action === 'arquivo') {
-    const file = form.get('arquivo')
-    if (file === null || typeof file === 'string' || file.size === 0)
-      return 'arquivo'
-    return {
-      kind: 'upload',
-      original: file.name || 'import.zip',
-      content: new Uint8Array(await file.arrayBuffer()),
-    }
-  }
-  if (action === 'rss') {
-    const user = letterboxdUser(field(form, 'usuario') ?? '')
-    if (user === null) return 'usuario'
-    if (!own && field(form, 'consentimento') !== 'sim') return 'consentimento'
-    return { kind: 'rss', user }
-  }
-  if (action === 'remover') {
-    const file = field(form, 'arquivo')
-    return file ? { kind: 'remove', file } : 'pedido'
-  }
-  if (action === 'trakt') {
-    const typed = field(form, 'usuario')
-    if (!typed) return { kind: 'trakt-sync', user: null }
-    const user = traktUser(typed)
-    if (user === null) return 'trakt-usuario'
-    if (!own && field(form, 'consentimento') !== 'sim') return 'consentimento'
-    return { kind: 'trakt-sync', user }
-  }
-  return 'pedido'
+  const parse = IMPORT_PARSERS.get(field(form, 'acao') ?? '')
+  return parse ? parse(form, own) : 'pedido'
 }
+
+type ImportParser = (
+  form: FormData,
+  own: boolean,
+) => ImportAction | ImportFormError | Promise<ImportAction | ImportFormError>
+
+/** Whether the Pessoa said yes to reading her profile: on the Dono's own
+ * page (`own`) she answers for herself. */
+const consented = (form: FormData, own: boolean) =>
+  own || field(form, 'consentimento') === 'sim'
+
+/** A file uploaded: a ZIP, IMDb's CSV or Simkl's JSON. */
+const parseUpload: ImportParser = async (form) => {
+  const file = form.get('arquivo')
+  if (file === null || typeof file === 'string' || file.size === 0)
+    return 'arquivo'
+  return {
+    kind: 'upload',
+    original: file.name || 'import.zip',
+    content: new Uint8Array(await file.arrayBuffer()),
+  }
+}
+
+/** Her Letterboxd profile's diary. */
+const parseRss: ImportParser = (form, own) => {
+  const user = letterboxdUser(field(form, 'usuario') ?? '')
+  if (user === null) return 'usuario'
+  return consented(form, own) ? { kind: 'rss', user } : 'consentimento'
+}
+
+/** Her Trakt by the API: a public username, or none for her account. */
+const parseTrakt: ImportParser = (form, own) => {
+  const typed = field(form, 'usuario')
+  if (!typed) return { kind: 'trakt-sync', user: null }
+  const user = traktUser(typed)
+  if (user === null) return 'trakt-usuario'
+  return consented(form, own) ? { kind: 'trakt-sync', user } : 'consentimento'
+}
+
+/** Each form's action, by its `acao`. */
+const IMPORT_PARSERS: ReadonlyMap<string, ImportParser> = new Map([
+  ['arquivo', parseUpload],
+  ['rss', parseRss],
+  [
+    'remover',
+    (form) => {
+      const file = field(form, 'arquivo')
+      return file ? { kind: 'remove', file } : 'pedido'
+    },
+  ],
+  ['trakt', parseTrakt],
+])
 
 export function parseQueue(form: FormData): QueueAction | null {
   const action = field(form, 'acao')

@@ -180,6 +180,21 @@ function useFieldProblem(name: string) {
   }
 }
 
+/** The field a form would refuse, focused when it is marked. */
+function useProblemFocus(initial: FieldProblem | null) {
+  const [problem, setProblem] = useState<FieldProblem | null>(initial)
+  const form = useRef<HTMLFormElement>(null)
+  useEffect(() => {
+    if (!problem) return
+    // A search field stands for the hidden one it fills (`TargetField`).
+    const field =
+      form.current?.querySelector(`[data-field="${problem.field}"]`) ??
+      form.current?.elements.namedItem(problem.field)
+    if (field instanceof HTMLElement) field.focus()
+  }, [problem])
+  return { form, problem, setProblem }
+}
+
 /** A form that posts one action to the Pessoa's route
  * (`platform/people.ts`). A plain POST: it works before the JavaScript.
  * With it (#235), it posts by `fetch`: a refusal shows here, over what was
@@ -224,16 +239,7 @@ export function ActionForm({
     return false
   })
   const shown = shared === null || shared.form === id ? refused : undefined
-  const [problem, setProblem] = useState<FieldProblem | null>(initialProblem)
-  const form = useRef<HTMLFormElement>(null)
-  useEffect(() => {
-    if (!problem) return
-    // A search field stands for the hidden one it fills (`TargetField`).
-    const field =
-      form.current?.querySelector(`[data-field="${problem.field}"]`) ??
-      form.current?.elements.namedItem(problem.field)
-    if (field instanceof HTMLElement) field.focus()
-  }, [problem])
+  const { form, problem, setProblem } = useProblemFocus(initialProblem)
   return (
     <form
       ref={form}
@@ -642,38 +648,60 @@ type TagGroup = { key: string; label: string }
  * go; before it, "nenhum" does. */
 function GroupPills({ groups }: { groups: readonly TagGroup[] }) {
   const live = useHydrated()
-  const [marked, setMarked] = useState('')
-  const pill =
-    'flex min-h-touch cursor-pointer items-center rounded-pill border-(length:--border-width-stroke) border-rule bg-surface px-lg font-display text-control text-ink select-none peer-checked:border-2 peer-checked:border-ink peer-checked:bg-surface-2 peer-checked:font-bold peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-focus'
-  const choices = live
-    ? groups
-    : [{ key: '', label: PERSON.noGroup }, ...groups]
   return (
     <fieldset className="flex flex-col gap-xs">
       <legend className="mb-xs font-display text-field-label">
         {PERSON.groupsLabel}
       </legend>
       <div className="flex flex-wrap gap-xs">
-        {choices.map(({ key, label }) => (
-          <label key={key || 'nenhum'} className="flex">
-            <input
-              type="radio"
-              name="grupo"
-              value={key}
-              checked={live ? marked === key : undefined}
-              defaultChecked={live ? undefined : key === ''}
-              onChange={() => setMarked(key)}
-              onClick={() => {
-                if (live && marked === key) setMarked('')
-              }}
-              className="peer sr-only"
-            />
-            <span className={pill}>{label}</span>
-          </label>
-        ))}
+        {live ? <LivePills groups={groups} /> : <PlainPills groups={groups} />}
       </div>
     </fieldset>
   )
+}
+
+const PILL =
+  'flex min-h-touch cursor-pointer items-center rounded-pill border-(length:--border-width-stroke) border-rule bg-surface px-lg font-display text-control text-ink select-none peer-checked:border-2 peer-checked:border-ink peer-checked:bg-surface-2 peer-checked:font-bold peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-focus'
+
+/** The pills before the JavaScript: "nenhum" first and marked, so the
+ * form posts no group unless one is marked. */
+function PlainPills({ groups }: { groups: readonly TagGroup[] }) {
+  return [{ key: '', label: PERSON.noGroup }, ...groups].map(
+    ({ key, label }) => (
+      <label key={key || 'nenhum'} className="flex">
+        <input
+          type="radio"
+          name="grupo"
+          value={key}
+          defaultChecked={key === ''}
+          className="peer sr-only"
+        />
+        <span className={PILL}>{label}</span>
+      </label>
+    ),
+  )
+}
+
+/** The pills with the JavaScript: a second tap on the marked one lets it
+ * go. */
+function LivePills({ groups }: { groups: readonly TagGroup[] }) {
+  const [marked, setMarked] = useState('')
+  return groups.map(({ key, label }) => (
+    <label key={key} className="flex">
+      <input
+        type="radio"
+        name="grupo"
+        value={key}
+        checked={marked === key}
+        onChange={() => setMarked(key)}
+        onClick={() => {
+          if (marked === key) setMarked('')
+        }}
+        className="peer sr-only"
+      />
+      <span className={PILL}>{label}</span>
+    </label>
+  ))
 }
 
 /** The target of a form: `name` is the field it posts (`alvo`, or
@@ -693,43 +721,52 @@ export function TargetField({
   groups?: readonly TagGroup[]
 }) {
   const live = useHydrated()
-  const [picked, setPicked] = useState<{ id: string; label: string } | null>(
-    null,
-  )
-  const { error, aria } = useFieldProblem(name)
-  const search = useLiveSearch(live && picked === null, '', null, scope)
-  if (!live)
-    return (
-      <div className="flex flex-col gap-xl">
+  const film = name === 'filme'
+  return (
+    <div className={`flex flex-col ${live ? 'gap-lg' : 'gap-xl'}`}>
+      {live ? (
+        <TargetSearch name={name} label={label} hint={hint} scope={scope} />
+      ) : (
         <TextField
           name={name}
           label={label}
-          hint={name === 'filme' ? PERSON.filmHint : PERSON.idHint}
-          pattern={name === 'filme' ? 'tt[0-9]+' : '(tt|Q)[0-9]+'}
-          required={name === 'filme'}
+          hint={film ? PERSON.filmHint : PERSON.idHint}
+          pattern={film ? 'tt[0-9]+' : '(tt|Q)[0-9]+'}
+          required={film}
         />
-        {groups.length > 0 && <GroupPills groups={groups} />}
-      </div>
-    )
+      )}
+      {groups.length > 0 && <GroupPills groups={groups} />}
+    </div>
+  )
+}
+
+type Target = { id: string; label: string }
+
+/** The target with the JavaScript: a search by name; the picked result
+ * fills the hidden field and shows as a chip. */
+function TargetSearch({
+  name,
+  label,
+  hint,
+  scope,
+}: {
+  name: 'alvo' | 'filme'
+  label: string
+  hint?: string
+  scope: CatalogScope
+}) {
+  const [picked, setPicked] = useState<Target | null>(null)
+  const { error, aria } = useFieldProblem(name)
+  const search = useLiveSearch(picked === null, '', null, scope)
   return (
-    <div className="flex flex-col gap-lg">
+    <>
       <input type="hidden" name={name} value={picked?.id ?? ''} />
       {picked ? (
-        <div className="flex flex-col gap-xs">
-          <span className="font-display text-field-label">{label}</span>
-          <span className="flex items-center gap-xs self-start rounded-pill border border-rule bg-surface-2 py-1 pr-1 pl-3">
-            <span>{picked.label}</span>
-            <button
-              type="button"
-              aria-label={PERSON.clearTarget(picked.label)}
-              onClick={() => setPicked(null)}
-              className="flex size-touch cursor-pointer items-center justify-center rounded-pill text-ink-2"
-            >
-              {/* The drawn +, turned into a ×, as the chosen films'. */}
-              <Icon name="plus" className="size-[16px] rotate-45" />
-            </button>
-          </span>
-        </div>
+        <TargetChip
+          label={label}
+          picked={picked}
+          onClear={() => setPicked(null)}
+        />
       ) : (
         <FieldLabel label={label} hint={hint} error={error}>
           <input
@@ -755,14 +792,54 @@ export function TargetField({
           filmLabel={(film) =>
             PERSON.targetChip(filmText(film), PERSON.filmKind)
           }
-          onPick={(film) => setPicked(film)}
-          onEntityPick={
-            scope === 'films' ? undefined : (entity) => setPicked(entity)
-          }
+          onPick={setPicked}
+          onEntityPick={scope === 'films' ? undefined : setPicked}
         />
       )}
-      {groups.length > 0 && <GroupPills groups={groups} />}
+    </>
+  )
+}
+
+/** The picked target as a chip, with its × to let it go. */
+function TargetChip({
+  label,
+  picked,
+  onClear,
+}: {
+  label: string
+  picked: Target
+  onClear: () => void
+}) {
+  return (
+    <div className="flex flex-col gap-xs">
+      <span className="font-display text-field-label">{label}</span>
+      <span className="flex items-center gap-xs self-start rounded-pill border border-rule bg-surface-2 py-1 pr-1 pl-3">
+        <span>{picked.label}</span>
+        <button
+          type="button"
+          aria-label={PERSON.clearTarget(picked.label)}
+          onClick={onClear}
+          className="flex size-touch cursor-pointer items-center justify-center rounded-pill text-ink-2"
+        >
+          {/* The drawn +, turned into a ×, as the chosen films'. */}
+          <Icon name="plus" className="size-[16px] rotate-45" />
+        </button>
+      </span>
     </div>
+  )
+}
+
+/** The page's other query values, as hidden fields. */
+function Kept({
+  values,
+}: {
+  values: Readonly<Record<string, string | undefined>>
+}) {
+  return Object.entries(values).map(
+    ([name, value]) =>
+      value !== undefined && (
+        <input key={name} type="hidden" name={name} value={value} />
+      ),
   )
 }
 
@@ -802,12 +879,7 @@ export function CatalogSearch({
         onSubmit={onSubmit}
         className="flex flex-wrap items-end gap-sm"
       >
-        {Object.entries(keep).map(
-          ([name, value]) =>
-            value !== undefined && (
-              <input key={name} type="hidden" name={name} value={value} />
-            ),
-        )}
+        <Kept values={keep} />
         <label className="flex min-w-0 flex-1 basis-[220px] flex-col gap-xs">
           <span className="font-display text-field-label">
             {label}{' '}
@@ -942,34 +1014,17 @@ export function SessionFilmLookup({
   return (
     <section aria-label={CATALOG_SEARCH.title} className="flex flex-col gap-lg">
       <div className="grid items-end gap-sm sm:grid-cols-[1fr_auto]">
-        <FieldLabel label={label}>
-          <span className="relative flex">
-            <input
-              type="search"
-              name={name}
-              value={query}
-              onChange={(event) => {
-                setQuery(event.target.value)
-                onType?.()
-              }}
-              onKeyDown={(event) => {
-                if (live && event.key === 'Enter') event.preventDefault()
-              }}
-              autoComplete="off"
-              enterKeyHint="search"
-              aria-busy={searching}
-              className={`${FIELD} w-full ${searching ? 'pr-28' : ''}`}
-            />
-            {searching && (
-              <span
-                role="status"
-                className="pointer-events-none absolute top-1/2 right-10 -translate-y-1/2 text-meta text-ink-2"
-              >
-                {CATALOG_SEARCH.searching}
-              </span>
-            )}
-          </span>
-        </FieldLabel>
+        <LookupField
+          name={name}
+          label={label}
+          query={query}
+          live={live}
+          searching={searching}
+          onType={(text) => {
+            setQuery(text)
+            onType?.()
+          }}
+        />
         {!live && (
           <Submit name="buscar-catalogo" value="sim" formNoValidate>
             {CATALOG_SEARCH.submit}
@@ -982,27 +1037,60 @@ export function SessionFilmLookup({
   )
 }
 
-/** A film "Parecido com" took: its id, and its title once known. */
-export type ChosenFilm = { readonly id: string; readonly label?: string }
-
-/** The films "Parecido com" took, each with a × to let it go, over the
- * field the form posts (`name`, the ids by comma). The titles it does not
- * know yet (films that came in the URL) it looks up by id. */
-export function ChosenFilms({
+/** The lookup's field, with "buscando" in it while a search runs. With
+ * the JavaScript, Enter sends nothing. */
+function LookupField({
   name,
   label,
-  empty,
-  films,
-  onRemove,
-  onLabel,
+  query,
+  live,
+  searching,
+  onType,
 }: {
   name: string
   label: string
-  empty: string
-  films: readonly ChosenFilm[]
-  onRemove: (id: string) => void
-  onLabel: (id: string, label: string) => void
+  query: string
+  live: boolean
+  searching: boolean
+  onType: (text: string) => void
 }) {
+  return (
+    <FieldLabel label={label}>
+      <span className="relative flex">
+        <input
+          type="search"
+          name={name}
+          value={query}
+          onChange={(event) => onType(event.target.value)}
+          onKeyDown={(event) => {
+            if (live && event.key === 'Enter') event.preventDefault()
+          }}
+          autoComplete="off"
+          enterKeyHint="search"
+          aria-busy={searching}
+          className={`${FIELD} w-full ${searching ? 'pr-28' : ''}`}
+        />
+        {searching && (
+          <span
+            role="status"
+            className="pointer-events-none absolute top-1/2 right-10 -translate-y-1/2 text-meta text-ink-2"
+          >
+            {CATALOG_SEARCH.searching}
+          </span>
+        )}
+      </span>
+    </FieldLabel>
+  )
+}
+
+/** A film "Parecido com" took: its id, and its title once known. */
+export type ChosenFilm = { readonly id: string; readonly label?: string }
+
+/** Looks up by id the titles of the films that came without one. */
+function useFilmLabels(
+  films: readonly ChosenFilm[],
+  onLabel: (id: string, label: string) => void,
+) {
   const unknown = films
     .filter((film) => film.label === undefined)
     .map((film) => film.id)
@@ -1025,7 +1113,52 @@ export function ChosenFilms({
       live = false
     }
   }, [unknown, onLabel])
+}
 
+/** A film "Parecido com" took, with its × to let it go. */
+function ChosenChip({
+  film,
+  onRemove,
+}: {
+  film: ChosenFilm
+  onRemove: (id: string) => void
+}) {
+  const label = film.label ?? film.id
+  return (
+    <li className="flex items-center gap-xs rounded-pill border border-rule bg-surface-2 py-1 pr-1 pl-3">
+      <span>{label}</span>
+      <button
+        type="button"
+        aria-label={CATALOG_SEARCH.remove(label)}
+        onClick={() => onRemove(film.id)}
+        className="flex size-touch cursor-pointer items-center justify-center rounded-pill text-ink-2"
+      >
+        {/* The drawn +, turned into a ×, as the folds' close. */}
+        <Icon name="plus" className="size-[16px] rotate-45" />
+      </button>
+    </li>
+  )
+}
+
+/** The films "Parecido com" took, each with a × to let it go, over the
+ * field the form posts (`name`, the ids by comma). The titles it does not
+ * know yet (films that came in the URL) it looks up by id. */
+export function ChosenFilms({
+  name,
+  label,
+  empty,
+  films,
+  onRemove,
+  onLabel,
+}: {
+  name: string
+  label: string
+  empty: string
+  films: readonly ChosenFilm[]
+  onRemove: (id: string) => void
+  onLabel: (id: string, label: string) => void
+}) {
+  useFilmLabels(films, onLabel)
   return (
     <div className="flex flex-col gap-xs">
       <span className="font-display text-field-label">{label}</span>
@@ -1039,21 +1172,7 @@ export function ChosenFilms({
       ) : (
         <ul className="flex flex-wrap gap-sm">
           {films.map((film) => (
-            <li
-              key={film.id}
-              className="flex items-center gap-xs rounded-pill border border-rule bg-surface-2 py-1 pr-1 pl-3"
-            >
-              <span>{film.label ?? film.id}</span>
-              <button
-                type="button"
-                aria-label={CATALOG_SEARCH.remove(film.label ?? film.id)}
-                onClick={() => onRemove(film.id)}
-                className="flex size-touch cursor-pointer items-center justify-center rounded-pill text-ink-2"
-              >
-                {/* The drawn +, turned into a ×, as the folds' close. */}
-                <Icon name="plus" className="size-[16px] rotate-45" />
-              </button>
-            </li>
+            <ChosenChip key={film.id} film={film} onRemove={onRemove} />
           ))}
         </ul>
       )}
