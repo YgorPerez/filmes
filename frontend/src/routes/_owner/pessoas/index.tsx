@@ -9,8 +9,9 @@ import { readPeopleList } from '#/content/people'
 import { PeopleList } from '#/ui/people'
 
 export const Route = createFileRoute('/_owner/pessoas/')({
-  // `erro=pessoa`: a form's Pessoa is gone. Any other reason is the create
-  // form's, which comes back with what was typed.
+  // `erro=pessoa`: a form's Pessoa is gone; `erro=baixar`, a download's.
+  // Any other reason is the create form's, which comes back with what was
+  // typed.
   validateSearch: (search) => {
     const erro =
       isPeopleRefusal(search.erro) || isPersonCreateRefusal(search.erro)
@@ -30,7 +31,7 @@ function PeoplePage() {
     <PeopleList
       people={Route.useLoaderData()}
       self={owner.person}
-      gone={erro === 'pessoa'}
+      gone={isPeopleRefusal(erro) ? erro : undefined}
       create={
         isPersonCreateRefusal(erro)
           ? { refusal: erro, typed: typedOfQuery(query) }

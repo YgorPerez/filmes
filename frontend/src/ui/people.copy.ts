@@ -1,6 +1,7 @@
 // The words of the Pessoas list (`/pessoas`) and its "Acrescentar Pessoa"
 // form. A Pessoa's own page has hers in `person.copy.ts`.
 import type { PersonCreateRefusal } from '#/content/person-create'
+import type { PeopleRefusal } from '#/content/person-action'
 
 export const PEOPLE = {
   title: 'Pessoas',
@@ -11,7 +12,11 @@ export const PEOPLE = {
   empty: 'Nenhuma Pessoa no repo de dados ainda.',
   unavailable:
     'Não deu para abrir as Pessoas: o site está com um problema, e ele ficou registrado no log do servidor.',
-  gone: 'Essa Pessoa não está mais no repo de dados.',
+  gone: {
+    pessoa: 'Essa Pessoa não está mais no repo de dados.',
+    baixar:
+      'Não deu para baixar o CSV: essa Pessoa não está mais no repo de dados.',
+  } satisfies Record<PeopleRefusal, string>,
   create: {
     title: 'Acrescentar Pessoa',
     name: 'Nome',

@@ -43,6 +43,6 @@ export const CreateRefused: Story = {
 
 export const NoOne: Story = { args: { people: [], self: undefined } }
 
-export const Gone: Story = { args: { people: PEOPLE_LIST, gone: true } }
+export const Gone: Story = { args: { people: PEOPLE_LIST, gone: 'pessoa' } }
 
 export const Unavailable: Story = { args: { people: null } }

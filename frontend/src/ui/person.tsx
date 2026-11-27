@@ -100,6 +100,7 @@ export function PersonScreen({
       ) : (
         <ActionForms>
           <PersonHeader
+            slug={slug}
             page={page}
             own={own}
             notice={notice}
@@ -143,14 +144,35 @@ export function PersonScreen({
 const noticeOfOwn = (notice: PersonNotice): string | undefined =>
   (PERSON.ownNotices as Partial<Record<PersonNotice, string>>)[notice]
 
+/** After a CSV that did not come, the two downloads again, inside the
+ * alert that says so. */
+function DownloadAgain({ slug }: { slug: string }) {
+  const { notes } = PERSON
+  const link = 'text-ink underline underline-offset-3'
+  return (
+    <span className="mt-xs block">
+      {notes.retry}{' '}
+      <a href={imdbCsvPath(slug)} className={link}>
+        {notes.retryImdb}
+      </a>
+      {' · '}
+      <a href={letterboxdCsvPath(slug)} className={link}>
+        {notes.retryLetterboxd}
+      </a>
+    </span>
+  )
+}
+
 /** Her name (on Meu gosto, the page's name, then the name the Sessões give
  * her) and aliases, and what the last form did. */
 function PersonHeader({
+  slug,
   page,
   own,
   notice,
   refusal,
 }: {
+  slug: string
   page: PersonPage
   own: boolean
   notice?: PersonNotice
@@ -172,7 +194,12 @@ function PersonHeader({
           aliases && <Meta parts={[aliases]} />
         )}
       </div>
-      {refusal && !stale && <Alert>{PERSON.refusals[refusal]}</Alert>}
+      {refusal && !stale && (
+        <Alert>
+          {PERSON.refusals[refusal]}
+          {refusal === 'exportar' && <DownloadAgain slug={slug} />}
+        </Alert>
+      )}
       {notice && !stale && (
         <Notice>
           {(own ? noticeOfOwn(notice) : undefined) ?? PERSON.notices[notice]}
@@ -237,7 +264,9 @@ function Notes({
         )}
       </div>
       {ratings !== null && ratings.length > 0 && (
-        <p className="text-meta text-ink-2">{notes.movielens}</p>
+        <p className="text-meta text-ink-2">
+          {notes.movielens(own, ratings.length)}
+        </p>
       )}
       {ratings !== null && ratings.length > 0 && (
         <Disclosure summary={notes.list(ratings.length)}>

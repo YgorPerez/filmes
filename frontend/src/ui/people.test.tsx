@@ -54,9 +54,9 @@ describe('PeopleList', () => {
     expect(renderToStaticMarkup(<PeopleList people={[]} />)).toContain(
       PEOPLE.empty,
     )
-    expect(renderToStaticMarkup(<PeopleList people={[]} gone />)).toContain(
-      PEOPLE.gone,
-    )
+    expect(
+      renderToStaticMarkup(<PeopleList people={[]} gone="pessoa" />),
+    ).toContain(PEOPLE.gone.pessoa)
     const html = renderToStaticMarkup(<PeopleList people={null} />)
     expect(html).toContain(PEOPLE.unavailable)
     expect(html).not.toContain('<ul')

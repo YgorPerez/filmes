@@ -257,9 +257,11 @@ export type PersonRefusal = (typeof PERSON_REFUSALS)[number]
 export const isPersonNotice = within(PERSON_NOTICES)
 export const isPersonRefusal = within(PERSON_REFUSALS)
 
-/** Why `/pessoas` shows a refusal: the Pessoa of a form is gone. */
-export const isPeopleRefusal = (value: unknown): value is 'pessoa' =>
-  value === 'pessoa'
+/** Why `/pessoas` shows a refusal: the Pessoa of a form is gone
+ * (`pessoa`), or the one whose CSV was asked for (`baixar`). */
+export type PeopleRefusal = 'pessoa' | 'baixar'
+export const isPeopleRefusal = (value: unknown): value is PeopleRefusal =>
+  value === 'pessoa' || value === 'baixar'
 
 /** A Relato's source when the form gives none: who told it, since several
  * Donos may tell (and be told about). */

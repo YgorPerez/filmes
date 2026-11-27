@@ -48,8 +48,15 @@ export const PERSON = {
     import: 'Importar do Letterboxd, do Trakt, do IMDb ou do Simkl',
     download: 'Baixar CSV do IMDb',
     downloadLetterboxd: 'Baixar CSV do Letterboxd',
-    movielens:
-      'O CSV do IMDb entra no MovieLens em Import or Export Data, como avaliações do IMDb. O do Letterboxd leva as Notas e os Já vistos ao diário dela, pelo import de dados do Letterboxd.',
+    movielens: (own: boolean, n: number) => {
+      const notes = n === 1 ? 'a Nota' : `as ${n.toLocaleString('pt-BR')} Notas`
+      return own
+        ? `Para levar ${notes} a outro serviço. No MovieLens, o CSV do IMDb entra em Import or Export Data, como avaliações do IMDb. No Letterboxd, o outro CSV leva as Notas e os Já vistos ao seu diário, pelo import de dados.`
+        : `Para levar ${notes} dela a outro serviço. No MovieLens, o CSV do IMDb entra em Import or Export Data, como avaliações do IMDb. No Letterboxd, o outro CSV leva as Notas e os Já vistos ao diário dela, pelo import de dados.`
+    },
+    retry: 'Baixar de novo:',
+    retryImdb: 'CSV do IMDb',
+    retryLetterboxd: 'CSV do Letterboxd',
     list: (n: number) => (n === 1 ? 'Ver a Nota' : `Ver as ${n} Notas`),
     empty: (own: boolean) =>
       own

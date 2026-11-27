@@ -4,6 +4,7 @@ import {
   type TypedPerson,
 } from '#/content/person-create'
 import type { PersonEntry } from '#/platform/people'
+import type { PeopleRefusal } from '#/content/person-action'
 import { personPath } from '#/content/paths'
 import { PEOPLE } from './people.copy'
 import { useFetchForm } from './kit/fetch-form'
@@ -36,12 +37,13 @@ const selfFirst = (people: PersonEntry[], self?: string) => [
 export function PeopleList({
   people,
   self,
-  gone = false,
+  gone,
   create,
 }: {
   people: PersonEntry[] | null
   self?: string
-  gone?: boolean
+  /** Why the page came back: a form's Pessoa is gone, or a download's. */
+  gone?: PeopleRefusal
   create?: CreateState
 }) {
   return (
@@ -50,7 +52,7 @@ export function PeopleList({
         <h1 className="font-display text-page-title">{PEOPLE.title}</h1>
         <p className="text-ink-2">{PEOPLE.lead}</p>
       </div>
-      {gone && <Alert>{PEOPLE.gone}</Alert>}
+      {gone && <Alert>{PEOPLE.gone[gone]}</Alert>}
       {!people ? (
         <Alert>{PEOPLE.unavailable}</Alert>
       ) : people.length === 0 ? (
