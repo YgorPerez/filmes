@@ -48,8 +48,8 @@ type Film = VoteDeck['films'][number]
 /** The Votos cast so far, a film each in order, and what the live region
  * says. After each Voto, the next card's title takes the focus; after the
  * last, the recap's title, and the live region says the count. */
-function useVotes(films: readonly Film[]) {
-  const [votes, setVotes] = useState<Vote[]>([])
+function useVotes(films: readonly Film[], kept: readonly Vote[] = []) {
+  const [votes, setVotes] = useState<Vote[]>([...kept])
   const [said, setSaid] = useState('')
   const heading = useRef<HTMLHeadingElement>(null)
   const recap = useRef<HTMLHeadingElement>(null)
@@ -158,10 +158,15 @@ export function VoteCards({
    * page's title can say so. */
   header?: (reviewing: boolean) => ReactNode
 }) {
-  const films = revote ? deck.films : deck.films.filter((f) => !f.mine)
-  const standing = revote ? [] : deck.films.filter((f) => f.mine)
+  const voted = deck.films.filter((f) => f.mine)
+  const unvoted = deck.films.filter((f) => !f.mine)
+  // Mudar votos: every film, hers first and already chosen, so she opens
+  // on the recap, or on the films still without a Voto (#340).
+  const films = revote ? [...voted, ...unvoted] : unvoted
+  const standing = revote ? [] : voted
+  const kept = revote ? voted.flatMap((f) => (f.mine ? [f.mine] : [])) : []
   const { votes, said, film, heading, recap, cast, back, change, restart } =
-    useVotes(films)
+    useVotes(films, kept)
   useArrowKeys(film !== undefined, cast)
   const reviewing = film === undefined
   return (
@@ -230,6 +235,7 @@ export function VoteCards({
             heading={recap}
             change={change}
             restart={restart}
+            revote={revote}
           />
         )}
       </form>
@@ -342,6 +348,7 @@ function VoteRecap({
   heading,
   change,
   restart,
+  revote,
 }: {
   films: readonly Film[]
   votes: readonly Vote[]
@@ -349,6 +356,8 @@ function VoteRecap({
   heading: RefObject<HTMLHeadingElement | null>
   change: (i: number, to: Vote) => void
   restart: () => void
+  /** Mudar votos: her earlier Votos are the ones chosen. */
+  revote: boolean
 }) {
   const yes = votes.filter((v) => v === 'yes').length
   const leaving = films.filter((_, i) => votes[i] === 'no').map((f) => f.title)
@@ -362,7 +371,9 @@ function VoteRecap({
         >
           {VOTES.summary(yes, votes.length - yes)}
         </h2>
-        <p className="text-meta text-ink-2">{VOTES.recap}</p>
+        <p className="text-meta text-ink-2">
+          {revote ? VOTES.kept : VOTES.recap}
+        </p>
       </div>
       <ul className="flex flex-col">
         {films.map((f, i) => (

@@ -100,8 +100,25 @@ export const AllVoted: Story = {
   },
 }
 
+/** Mudar votos: her Votos come back chosen, on the recap (#340). */
 export const Revote: Story = {
-  args: { deck: AFTER, search: { ...LINK, mudar: true } },
+  args: {
+    deck: {
+      ...AFTER,
+      films: AFTER.films.map((f, i) => ({
+        ...f,
+        mine: i === 0 ? ('no' as const) : ('yes' as const),
+      })),
+    },
+    search: { ...LINK, mudar: true },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(
+      canvas.getByRole('heading', { level: 1, name: VOTES.review }),
+    ).toBeVisible()
+    await expect(canvas.getByText(VOTES.kept)).toBeVisible()
+  },
 }
 
 export const Failure: Story = {
