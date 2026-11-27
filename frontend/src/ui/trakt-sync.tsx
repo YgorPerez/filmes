@@ -21,7 +21,7 @@ export type TraktLinkView = {
 /** The one Trakt slip of a Pessoa's import page (#269, #274), with one
  * way recommended. On her own page: connect her account (`/trakt`), read
  * then at each new Session; once connected or linked to a public profile,
- * "Sincronizar agora". The profile by its name is folded under it, and so
+ * "Ler agora". The profile by its name is folded under it, and so
  * is the ZIP (`zip`). On another Pessoa's page, only she can connect hers:
  * her public profile with her yes, and no way to `/trakt`. On a server
  * with no Trakt client id, the ZIP is the way, unfolded. */
@@ -136,10 +136,11 @@ function Fold({
 }) {
   return (
     <details
-      className="group border-t border-dashed border-rule pt-sm"
+      // Named: the import page's "Importar de novo" around it is a `group`.
+      className="group/fold border-t border-dashed border-rule pt-sm"
       open={open}
     >
-      <summary className="inline-flex min-h-touch cursor-pointer list-none items-center text-link text-ink-2 underline underline-offset-3 group-open:mb-md group-open:text-ink [&::-webkit-details-marker]:hidden">
+      <summary className="inline-flex min-h-touch cursor-pointer list-none items-center text-link text-ink-2 underline underline-offset-3 group-open/fold:mb-md group-open/fold:text-ink [&::-webkit-details-marker]:hidden">
         {summary}
       </summary>
       {children}
@@ -149,17 +150,26 @@ function Fold({
 
 /** "Ler agora", where the import page says when her Trakt was read
  * (#274). */
-export function TraktReadNow({ slug, label }: { slug: string; label: string }) {
+export function TraktReadNow({
+  slug,
+  label,
+  name = label,
+}: {
+  slug: string
+  label: string
+  /** The form's accessible name. */
+  name?: string
+}) {
   return (
     <SyncForm
       action={`/importar/${encodeURIComponent(slug)}/acao?de=trakt`}
       label={label}
-      name={label}
+      name={name}
     />
   )
 }
 
-/** "Sincronizar agora": reads her Trakt again, now. */
+/** "Ler agora": reads her Trakt again, now. */
 function SyncForm({
   action,
   label,
@@ -195,7 +205,7 @@ function UserForm({
   return (
     <PostForm
       action={action}
-      label={COPY.read}
+      label={COPY.readLabel}
       className="flex flex-col gap-xl"
     >
       {(busy) => (

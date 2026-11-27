@@ -141,6 +141,37 @@ describe('QueueScreen', () => {
   })
 })
 
+describe('QueueScreen, from another Pessoa’s import', () => {
+  it('goes back to that import, and every form carries it (#274)', () => {
+    render(<QueueScreen queue={QUEUE_PAGE} from="quim" />)
+    expect(
+      screen
+        .getByRole('link', { name: QUEUE.backFrom('Quim') })
+        .getAttribute('href'),
+    ).toBe('/pessoas/quim/importar')
+    const forms = [...document.querySelectorAll<HTMLFormElement>('form')]
+    expect(forms.length).toBeGreaterThan(0)
+    for (const form of forms) expect(new FormData(form).get('de')).toBe('quim')
+  })
+
+  it('goes back to her own import when the Pessoa is not in the queue', () => {
+    render(<QueueScreen queue={QUEUE_PAGE} from="ninguem" />)
+    expect(
+      screen.getByRole('link', { name: QUEUE.back }).getAttribute('href'),
+    ).toBe('/meu-gosto/importar')
+    expect(document.querySelector('input[name=de]')).toBeNull()
+  })
+
+  it('puts the title on a tape with no poster, never a bare “?”', () => {
+    render(<QueueScreen queue={QUEUE_PAGE} />)
+    const lost = card('Filme Perdido (2001)')
+    expect(lost.textContent).not.toContain('?')
+    expect(
+      within(lost).getAllByText('Filme Perdido (2001)').length,
+    ).toBeGreaterThan(1)
+  })
+})
+
 describe('QueueScreen, confirming by hand and taking out', () => {
   it('confirms a film by the tconst or link the Dono types', async () => {
     render(<QueueScreen queue={QUEUE_PAGE} />)

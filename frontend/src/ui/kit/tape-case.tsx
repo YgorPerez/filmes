@@ -6,17 +6,23 @@ import { useState, type ReactNode } from 'react'
 
 export function TapeCase({
   cover,
+  small = false,
   className = '',
 }: {
   /** The poster or, without one, the title on `surface-2`. */
   cover: ReactNode
+  /** A narrow tape (80px, the queue's): the title in label size, with
+   * less margin, so it still fits on the cover (#274). */
+  small?: boolean
   className?: string
 }) {
   return (
     <div
       className={`relative flex shrink-0 flex-col self-start rounded-case bg-case p-1.25 ${className}`}
     >
-      <div className="relative grid aspect-[2/3] place-items-center overflow-hidden rounded-cover bg-surface-2 p-md text-center font-display text-meta-strong text-ink-2">
+      <div
+        className={`relative grid aspect-[2/3] place-items-center overflow-hidden rounded-cover bg-surface-2 text-center font-display text-ink-2 ${small ? 'p-2xs text-label break-words hyphens-auto' : 'p-md text-meta-strong'}`}
+      >
         {cover}
       </div>
     </div>

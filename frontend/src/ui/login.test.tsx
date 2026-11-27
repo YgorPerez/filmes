@@ -87,7 +87,9 @@ describe('the Trakt connection screen', () => {
     )
     expect(html).toContain('O filmes lê do seu Trakt')
     expect(html).toContain('O filmes envia ao seu Trakt, ao salvar o Feedback')
-    expect(html).toContain('Depois ele volta para esta página')
+    expect(html).toContain(
+      'Depois você volta para esta página com a conta conectada',
+    )
     expect(html).not.toContain('Importar</a>')
   })
 

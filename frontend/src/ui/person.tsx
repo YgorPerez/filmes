@@ -769,7 +769,7 @@ function Glance({
     <Slip id="olhada" title={glance.title}>
       <p className="font-display text-step-title">
         {glance.notes(notes)}
-        {notes < 10 && (
+        {notes > 0 && notes < 10 && (
           <span className="font-body text-meta font-normal text-ink-2">
             {' · '}
             {glance.toTen(notes)}
