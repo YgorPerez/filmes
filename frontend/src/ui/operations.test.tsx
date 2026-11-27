@@ -476,7 +476,7 @@ describe('the evaluation, the measures', () => {
         .getAllByRole('row')
         .map((r) => r.textContent),
     ).toEqual([
-      'AmostraPessoasRecall@50Cobertura no top 5',
+      'AmostraQuantasRecall@50Cobertura no top 5',
       'Pessoas440%25%',
       `MovieLens0${OPERATIONS.evaluation.noMovielens}`,
     ])
