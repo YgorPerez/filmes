@@ -10,13 +10,49 @@ import type { Strength } from './strength.ts'
 export const ratingText = (value: number): string =>
   pyFormatG(value).replaceAll('.', ',')
 
-/** How a stated rating opens a seed line ("love" is 5, "hate" is 1). */
-const STATED: Readonly<Record<string, string>> = {
-  'stated 5': 'disse que ama',
-  'stated 1': 'disse que odeia',
-  'report 5': 'segundo o Dono, ama',
-  'report 1': 'segundo o Dono, odeia',
+/** A Presente's own wording and how it reads when two or more Presentes
+ * share the line (#351): the Cartaz writes "Você e Iara: deram 10 de 10 a
+ * X" (`billboard/model.ts`). `start`: only as the line's opening. Each
+ * plural sits next to its singular, so a new singular wording comes with
+ * one. */
+export interface PluralWording {
+  readonly one: string
+  readonly many: string
+  readonly start: boolean
 }
+
+/** How a stated rating opens a seed line ("love" is 5, "hate" is 1). */
+const STATED: Readonly<Record<string, PluralWording>> = {
+  'stated 5': {
+    one: 'disse que ama ',
+    many: 'disseram que amam ',
+    start: true,
+  },
+  'stated 1': {
+    one: 'disse que odeia ',
+    many: 'disseram que odeiam ',
+    start: true,
+  },
+  'report 5': {
+    one: 'segundo o Dono, ama ',
+    many: 'segundo o Dono, amam ',
+    start: true,
+  },
+  'report 1': {
+    one: 'segundo o Dono, odeia ',
+    many: 'segundo o Dono, odeiam ',
+    start: true,
+  },
+}
+
+/** How a seed Nota opens its line: "deu 9 de 10 a X". */
+const RATED: PluralWording = { one: 'deu ', many: 'deram ', start: true }
+
+/** The plurals of a seed line's openings. */
+export const SEED_PLURALS: ReadonlyArray<PluralWording> = [
+  RATED,
+  ...Object.values(STATED),
+]
 
 /** The start of a seed rating's line: "deu 9 de 10 a X", "disse que ama
  * X", "segundo o Dono, odeia X". A Nota is written on the 1 to 10 scale of
@@ -27,12 +63,12 @@ export const seedText = (
   value: number,
   film: string,
 ): string => {
-  if (kind === 'rating') return `deu ${tenScaleText(value)} a ${film}`
+  if (kind === 'rating') return `${RATED.one}${tenScaleText(value)} a ${film}`
   const opening = STATED[`${kind} ${value}`]
   if (opening === undefined) {
     throw pythonError('KeyError', `('${kind}', ${pyRepr(value)})`)
   }
-  return `${opening} ${film}`
+  return `${opening.one}${film}`
 }
 
 /** "a", "a e b", "a, b e c". */
@@ -79,6 +115,12 @@ export const belowNeighborhoodCut = (kind: SeedKind, value: number): boolean =>
  * 6 de 10" under ●●○ is otherwise a lukewarm reason. A weak seed is no
  * high Nota, and a pairwise answer's is weak. */
 export const OWN_SCALE_TEXT = ', uma das notas mais altas que dá'
+
+export const OWN_SCALE_PLURAL: PluralWording = {
+  one: OWN_SCALE_TEXT,
+  many: ', uma das notas mais altas que dão',
+  start: false,
+}
 
 export const ownScaleText = (
   kind: SeedKind,

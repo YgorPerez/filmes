@@ -3,6 +3,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useEffectEvent,
   useId,
   useRef,
   useState,
@@ -320,6 +321,7 @@ export function RemoveForm({
   }, [asking, asked])
   // Another form's post lets the question go (#347): the page comes back
   // with what that form did, not with this confirm still open.
+  const letAskingGo = useEffectEvent(() => onAsking?.(false))
   useEffect(() => {
     if (!asking) return
     const letGo = (event: SubmitEvent) => {
@@ -334,11 +336,11 @@ export function RemoveForm({
       }
       setAsked(false)
       setAsking(false)
-      onAsking?.(false)
+      letAskingGo()
     }
     document.addEventListener('submit', letGo, true)
     return () => document.removeEventListener('submit', letGo, true)
-  }, [asking, onAsking])
+  }, [asking])
   return (
     <ActionForm
       slug={slug}

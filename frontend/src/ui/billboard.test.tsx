@@ -472,6 +472,45 @@ describe('the Cartaz shows, section lines and no film', () => {
     expect(card(2).queryByText(shared.text)).toBeNull()
   })
 
+  it('a card in the section that says the reason does not repeat it (#346)', () => {
+    const [hours] = MODEL.films
+    const shared = hours!.lines[0]!
+    const seen = {
+      people: ['bruno'],
+      strength: 'strong' as const,
+      text: 'já viu',
+      source: null,
+      against: true,
+    }
+    const glass = {
+      ...hours!,
+      id: 'tt9000106',
+      title: 'Cidade de Vidro',
+      position: 2,
+      lines: [shared, seen],
+    }
+    render(
+      <Billboard
+        billboard={{
+          ...MODEL,
+          films: [hours!, glass],
+          sections: [
+            {
+              kind: 'entity',
+              title: 'Porque gostam de Helena Prado',
+              again: false,
+              films: [hours!.id, glass.id],
+            },
+          ],
+        }}
+      />,
+    )
+    const together = screen.getByRole('list', { name: BILLBOARD.shared })
+    expect(together.textContent).toContain(shared.text)
+    expect(card(2).getByText('já viu')).toBeTruthy()
+    expect(card(2).queryByText(shared.text)).toBeNull()
+  })
+
   it('that nothing passed the Restrições', () => {
     render(<Billboard billboard={{ ...MODEL, films: [] }} />)
     expect(screen.getByText(BILLBOARD.empty)).toBeTruthy()

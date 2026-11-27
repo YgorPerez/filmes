@@ -7,6 +7,9 @@ import type { Connection, SqliteError } from '../sqlite/Sqlite.ts'
 
 export type ResolvedBy = 'imdb' | 'tmdb'
 
+/** The film's tconst and the id that gave it; null when none does. */
+export type FilmResolution = readonly [string, ResolvedBy] | null
+
 export interface FilmIds {
   readonly imdb: string | null
   readonly tmdb: string | null
@@ -20,6 +23,19 @@ export interface LeftOutFilm {
   readonly year: number | null
   readonly id: string | null
 }
+
+/** The left-out film of a file's names and ids: the IMDb id when it has
+ * one, else the TMDB id. */
+export const leftOutFilm = (film: {
+  readonly name: string | null
+  readonly year?: number | null
+  readonly imdb: string | null
+  readonly tmdb?: string | null
+}): LeftOutFilm => ({
+  name: film.name,
+  year: film.year ?? null,
+  id: film.imdb ?? film.tmdb ?? null,
+})
 
 /** Whether the database has Wikidata's table (a fixture may lack it). */
 export const hasWikidata = (
@@ -70,4 +86,48 @@ export const resolveFilmIds = (
     return ids.size === 1 && only !== undefined
       ? ([only, 'tmdb'] as const)
       : null
+  })
+
+/** Each row whose film the Catálogo has, with its tconst and the id that
+ * gave it, and the films it does not have, each once: `key` tells two
+ * rows of the same film apart, `resolve` finds the film, `unresolved` is
+ * how the report shows one left out. */
+export const resolveRows = <
+  Row extends { readonly film: Film },
+  Film,
+  Unresolved,
+>(
+  db: Connection,
+  rows: readonly Row[],
+  how: {
+    readonly key: (film: Film) => string
+    readonly resolve: (
+      film: Film,
+      wikidata: boolean,
+    ) => Effect.Effect<FilmResolution, SqliteError>
+    readonly unresolved: (film: Film) => Unresolved
+  },
+): Effect.Effect<
+  {
+    found: (readonly [Row, readonly [string, ResolvedBy]])[]
+    unresolved: Unresolved[]
+  },
+  SqliteError
+> =>
+  Effect.gen(function* () {
+    const wikidata = yield* hasWikidata(db)
+    const resolutions = new Map<string, FilmResolution>()
+    const found: (readonly [Row, readonly [string, ResolvedBy]])[] = []
+    const unresolved: Unresolved[] = []
+    for (const row of rows) {
+      const key = how.key(row.film)
+      let resolution = resolutions.get(key)
+      if (resolution === undefined) {
+        resolution = yield* how.resolve(row.film, wikidata)
+        resolutions.set(key, resolution)
+        if (resolution === null) unresolved.push(how.unresolved(row.film))
+      }
+      if (resolution !== null) found.push([row, resolution])
+    }
+    return { found, unresolved }
   })

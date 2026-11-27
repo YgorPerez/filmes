@@ -1,6 +1,5 @@
 // Catálogo search (#128): a name to the IDs the other operations take, for
 // any Dono, on the fixture's Catálogo.
-import { DatabaseSync } from 'node:sqlite'
 import { describe, expect, test } from 'vite-plus/test'
 import { consult, searchCatalog, searchKey } from '../src/index.ts'
 import { useFixture } from './fixture.ts'
@@ -146,13 +145,7 @@ test('a genre by the IMDb name Meu gosto says, as its Wikidata entity (#347)', a
   const fixture = useFixture()
   // Meu gosto names the IMDb genres ("Crime"); the Catálogo's entity is
   // Wikidata's (Q959790, "filme policial"), which a Veto or a Declarado
-  // takes. Here on this copy only: Cidade de Vidro (tt9000103) is Crime in
-  // the IMDb.
-  const db = new DatabaseSync(fixture.database)
-  db.exec(`INSERT INTO entidades (id, rotulo) VALUES ('Q959790', 'filme policial');
-    INSERT INTO arestas (fato_id, filme_id, predicado, entidade_id, fonte, data)
-    VALUES ('arestas:347', 'tt9000103', 'genero', 'Q959790', 'Wikidata', '2026-11-20')`)
-  db.close()
+  // takes. Cidade de Vidro (tt9000103) is Crime in the IMDb and carries it.
 
   const crime = await fixture.ok(
     searchCatalog({ query: 'crime', kinds: ['genre'] }),

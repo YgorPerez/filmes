@@ -714,16 +714,16 @@ function RatingBar({
   )
 }
 
-/** Discs the bar shows before "+N": three keep the count and Pronto on
- * one line at 390px (#274). */
+/** Circles the bar shows, "+N" among them when the draft has more: three
+ * keep "7 de 10 Notas" and "Pronto · 7" on one line at 390px (#274). */
 const BAR_DISCS = 3
 
-/** The last Notas of the draft on small discs (three, then "+N"), and how
+/** The last Notas of the draft on small discs (three, or two and "+N"), and how
  * many she has: toward the ten, or just how many once she has them. */
 function Progress({ draft, count }: { draft: Draft; count: number }) {
   const all = draft.history.filter((id) => id in draft.ratings)
   const recent = all
-    .slice(-BAR_DISCS)
+    .slice(all.length > BAR_DISCS ? 1 - BAR_DISCS : -BAR_DISCS)
     .map((id) => [id, draft.ratings[id]?.rating ?? 0] as const)
   const hidden = all.length - recent.length
   return (
