@@ -104,7 +104,7 @@ export const HOME = {
     >,
     how: [
       'Abra o claude.ai no navegador (ou o app do computador) e vá em Configurações, Conectores.',
-      'Toque em Adicionar conector personalizado e cole o endereço.',
+      'Clique em Adicionar conector personalizado e cole o endereço.',
       'Entre com a sua conta Google. Depois disso o conector aparece também no app do Claude no celular.',
     ],
     auto: 'Este passo se marca sozinho quando o Claude entrar com o seu e-mail.',
