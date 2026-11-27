@@ -129,7 +129,7 @@ function Block({ block, weights }: { block: ReportBlock; weights: boolean }) {
                       <td
                         key="empty"
                         colSpan={block.head.length - i}
-                        className="text-left text-ink-2"
+                        className="text-left text-ink-2 max-sm:block! max-sm:text-left!"
                       >
                         {cell}
                       </td>
