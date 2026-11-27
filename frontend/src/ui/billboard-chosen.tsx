@@ -14,7 +14,8 @@ import { Avatar } from './kit/person'
 // (outside the Recomendação, or not among the films shown) has a block of
 // its own above the cards, `ChosenFilm`, with its title and the same lines.
 // What a Presente said of it in the Feedback goes under her line, in the
-// clerk's hand (#272).
+// clerk's hand (#272). The Dono who looks is "Você" there, as in the rest
+// of the Cartaz (#277).
 
 /** The film's title level: 2 alone, 3 under a section's title. */
 type Level = 2 | 3
@@ -54,7 +55,7 @@ function Lines({
               </span>
             )}
             <span className="flex flex-col gap-2xs">
-              <span>{lineOf(person?.name ?? reaction.person, reaction)}</span>
+              <span>{lineOf(person?.label ?? reaction.person, reaction)}</span>
               {reaction.comment && (
                 <span className="font-hand text-hand-small text-ink">
                   {CHOSEN.comment(reaction.comment)}

@@ -290,7 +290,7 @@ describe('the Cartaz shows, the chosen film', () => {
     expect(block.getByText('Curta da Madrugada (2010)')).toBeTruthy()
     // Each line opens with her avatar, whose initial a screen reader skips.
     expect(block.getAllByRole('listitem').map((li) => li.textContent)).toEqual([
-      'BBruno: deu 8 de 10',
+      'BVocê: deu 8 de 10',
       'IIara: não gostou',
     ])
     expect(cards()).toHaveLength(2)
@@ -303,7 +303,7 @@ describe('the Cartaz shows, the chosen film', () => {
         .getByRole('list', { name: 'Filme escolhido' })
         .querySelectorAll('li')
     expect([...reactions()].map((li) => li.textContent)).toEqual([
-      'BBruno: previsto 8,3 · deu 6 de 10',
+      'BVocê: previsto 8,3 · deu 6 de 10',
       'IIara: gostou',
     ])
     expect(
@@ -864,7 +864,7 @@ describe('the inline card', () => {
     ).toBe('Sessão fechada · Filme escolhido: As Horas Lentas')
     expect(
       screen.getByRole('list', { name: 'Filme escolhido' }).textContent,
-    ).toBe('BBruno: previsto 8,3 · deu 6 de 10IIara: gostou')
+    ).toBe('BVocê: previsto 8,3 · deu 6 de 10IIara: gostou')
     const rows = within(
       screen.getByRole('list', { name: BILLBOARD.view.list }),
     ).getAllByRole('listitem')
