@@ -287,7 +287,7 @@ export {
   type Outcome,
   type RunOptions,
 } from './runtime/Engine.ts'
-export type { TraktConnection } from './sources/Trakt.ts'
+export { TRAKT_REVOKED, type TraktConnection } from './sources/Trakt.ts'
 export { Owner, ownerOf } from './runtime/Owner.ts'
 export {
   ERROR_CODES,
