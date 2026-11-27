@@ -2,12 +2,14 @@ import { Effect } from 'effect'
 import { filmText } from '../evidence/wording.ts'
 import { numOrNull, text } from '../sqlite/row.ts'
 import { Sqlite } from '../sqlite/Sqlite.ts'
-import { TRAKT_REVOKED, TraktAccess, writeTrakt } from '../sources/Trakt.ts'
+import {
+  TRAKT_REVOKED,
+  TraktAccess,
+  traktRevokedWarning,
+  writeTrakt,
+} from '../sources/Trakt.ts'
 
 const FAILED = 'O Feedback foi salvo. O envio ao Trakt falhou.'
-
-const revoked = (name: string) =>
-  `O Trakt de ${name} recusou a conexão; reconecte o Trakt para voltar a enviar.`
 
 const unknownFilm = (film: string) =>
   `O Trakt não encontrou ${film}; ele ficou fora do envio.`
@@ -93,7 +95,7 @@ export const syncTraktFeedback = (session: string) =>
         const sent = yield* writeTrakt('history', history, connection, person)
         if (sent === null) continue
         if (sent === TRAKT_REVOKED) {
-          warnings.push(revoked(yield* personName(person)))
+          warnings.push(traktRevokedWarning(yield* personName(person)))
           continue
         }
         for (const film of sent) missing.add(film)

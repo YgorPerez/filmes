@@ -168,6 +168,21 @@ export const Imported: Story = {
   },
 }
 
+/** Trakt refused her connection: the read went by her username, and the
+ * notice asks her to connect again. */
+export const TraktReconnect: Story = {
+  args: {
+    done: { notice: 'reconectar', facts: 3, ratings: 2, seen: 1 },
+  },
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByText(
+        PERSON_IMPORTS.notices.reconectar({ facts: 3, ratings: 2, seen: 1 }),
+      ),
+    ).toBeVisible()
+  },
+}
+
 export const OnlyImdb: Story = {
   args: { page: IMDB_ONLY },
   play: async ({ canvasElement }) => {

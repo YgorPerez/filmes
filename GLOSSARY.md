@@ -186,18 +186,18 @@ _Evitar_: origem
 
 **Import** [import, `import`; tipo [kind: `letterboxd`, `letterboxd-rss`, `trakt`, `trakt-api`, `imdb`, `simkl`, `tvtime`]]:
 Um export de uma Pessoa (o ZIP do Letterboxd ou do Trakt, o CSV de avaliações do IMDb, o backup do Simkl, o do TV Time, o RSS público do Letterboxd dela ou a foto do Trakt dela lida pela API) guardado no repo de dados e registrado no arquivo dela. Do backup do TV Time (o export GDPR ou o do TV Time Liberator) fica só a parte dos filmes: as linhas de filme, com as colunas que o import lê, nunca as credenciais da conta, as séries nem o `user_id`. É a Fonte das Notas, dos Já vistos e da Watchlist que traz; tirar o Import tira os Fatos que só ele trazia. O RSS só entra com o sim da Pessoa.
-_Evitar_: upload, sincronização
+_Evitar_: upload; "sincronização" para o Import de um arquivo (o termo vale só para a Leitura do Trakt)
 
 **Conexão com o Trakt** [Trakt connection, `TraktConnection`; o registro, `trakt_grants`]:
 A autorização que uma Pessoa dá ao filmes para ler e gravar na conta dela do Trakt: ela entra em `/trakt` com o e-mail do arquivo dela, marca o consentimento e conecta pelo Trakt. O registro só existe com o consentimento e fica no banco de login da VPS (`auth.sqlite`), com os tokens cifrados, fora do repo de dados. Desconectar apaga o registro e revoga o token no Trakt; um token que o Trakt recusa também apaga o registro, e ela precisa conectar de novo. O motor recebe do app só o acesso de cada Pessoa [Trakt access, `TraktAccess`]: o token, nada sem conexão, ou "recusado" [`TRAKT_REVOKED`].
 _Evitar_: login do Trakt, integração
 
 **Leitura do Trakt** [Trakt sync, `syncTrakt`]:
-O que o filmes lê do Trakt de uma Pessoa pela API: o histórico, as notas e a watchlist de filmes, da conta dela pela Conexão com o Trakt ou de um perfil público pelo nome. Fica em filmes-dados como um Import `trakt-api`, uma foto que a seguinte substitui, e carrega como o ZIP do Trakt. Roda no "Sincronizar agora" do import e quando uma Sessão nova abre, para cada Presente conectado ou com nome; uma falha vira aviso.
+O que o filmes lê do Trakt de uma Pessoa pela API: o histórico, as notas e a watchlist de filmes, da conta dela pela Conexão com o Trakt ou de um perfil público pelo nome. Fica em filmes-dados como um Import `trakt-api`, uma foto que a seguinte substitui, e carrega como o ZIP do Trakt. Roda no "Sincronizar agora" do import e quando uma Sessão nova abre, para cada Presente conectado ou com nome; uma falha vira aviso. Se o Trakt recusou a Conexão dela, a leitura vai pelo nome do perfil, quando ela tem um, e leva o mesmo aviso do Envio ao Trakt: reconectar o Trakt. "Sincronizar" vale aqui, e só aqui: trazer agora o Trakt dela para o filmes, num sentido só, trocando a foto anterior.
 
 **Envio ao Trakt** [Trakt write-back, `syncTraktFeedback`]:
 O que o filmes grava no Trakt de cada Presente com Conexão com o Trakt, depois de gravar o Feedback: o Filme escolhido e os Já vi do Cartaz no histórico, e as Notas, de 1 a 10. Filme que o Trakt não conhece fica de fora, com um aviso que o nomeia, e o resto segue. Se o Trakt falhar, o Feedback fica salvo e o resultado leva um aviso.
-_Evitar_: sincronização, export
+_Evitar_: sincronização (é a Leitura do Trakt, no sentido contrário), export
 
 **Fila de resolução** [resolution queue, `queue`]:
 Os filmes de um Import do Letterboxd ou do TV Time que o filmes não achou no Catálogo sozinho e esperam o Dono: confirmar com o tconst, o link do IMDb ou o do TMDB, ou descartar com um motivo. A fila é uma só para todas as Pessoas, e a decisão vale para quem tem o filme.

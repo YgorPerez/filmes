@@ -12,6 +12,7 @@ import {
   personImports,
   recommendSession,
   syncTrakt,
+  TRAKT_REVOKED,
   type Engine,
   type TraktConnection,
 } from '../../src/index.ts'
@@ -36,6 +37,27 @@ const withTrakt = (
     { trakt: connection },
   )
 }
+
+/** An engine whose Trakt refuses the grants of `revoked`: the app drops a
+ * refused grant, so the next ask finds her not connected. */
+const withRevoked = (fixture: Fixture, revoked: readonly string[]): Engine => {
+  const dropped = new Set<string>()
+  const connection: TraktConnection = {
+    clientId: 'fixture',
+    accessToken: async (person) => {
+      if (!revoked.includes(person) || dropped.has(person)) return null
+      dropped.add(person)
+      return TRAKT_REVOKED
+    },
+  }
+  return makeEngine(
+    { ...fixture.vars, FILMES_GRAVACOES: RECORDINGS },
+    { trakt: connection },
+  )
+}
+
+const RECONNECT = (name: string) =>
+  `O Trakt de ${name} recusou a conexão; reconecte o Trakt para voltar a ler e enviar o histórico.`
 
 const using = async <A>(engine: Engine, task: (e: Engine) => Promise<A>) => {
   try {
@@ -149,6 +171,41 @@ describe('syncTrakt', () => {
       'trakt_off',
     )
   })
+
+  test('a refused grant falls back to her username and asks to reconnect', async () => {
+    const fixture = useFixture()
+    await using(withTrakt(fixture), (engine) =>
+      engine.run(sync('teo', 'teo_trakt')),
+    )
+    const synced = await using(withRevoked(fixture, ['teo']), (engine) =>
+      engine.run(sync('teo')),
+    )
+    expect(synced).toMatchObject({
+      exitCode: 0,
+      output: { user: 'teo_trakt', warnings: [RECONNECT('Teo')] },
+    })
+  })
+
+  test('a refused grant with no username asks to reconnect', async () => {
+    const fixture = useFixture()
+    const refused = await using(withRevoked(fixture, ['iara']), (engine) =>
+      engine.run(sync('iara')),
+    )
+    expect(refused).toMatchObject({
+      exitCode: 2,
+      output: {
+        error: { reason: 'trakt_not_linked', message: RECONNECT('Iara') },
+      },
+    })
+  })
+
+  test('a read that works has no warning', async () => {
+    const fixture = useFixture()
+    const synced = await using(withTrakt(fixture), (engine) =>
+      engine.run(sync('teo', 'teo_trakt')),
+    )
+    expect(synced.output).not.toHaveProperty('warnings')
+  })
 })
 
 test('a new Session reads the Trakt of its linked Presentes first', async () => {
@@ -174,4 +231,26 @@ test('a new Session reads the Trakt of its linked Presentes first', async () => 
     iara.imports.filter((i) => i.kind === 'trakt-api').map((i) => i.original),
   ).toEqual(['conta conectada'])
   expect(iara.trakt).toMatchObject({ ratings: 2, seen: 1 })
+})
+
+test('a new Session says whose Trakt grant was refused', async () => {
+  const fixture = useFixture()
+  await using(withTrakt(fixture), (engine) =>
+    engine.run(sync('teo', 'teo_trakt')),
+  )
+  // Teo still has his username, and his Trakt is read by it; Iara has
+  // nothing else, and her read is left out. Both are asked to reconnect.
+  const open = await using(withRevoked(fixture, ['iara', 'teo']), (engine) =>
+    engine.run(recommendSession({ attendees: ['dono', 'iara', 'teo'] })),
+  )
+  expect(open).toMatchObject({
+    exitCode: 0,
+    output: {
+      warnings: expect.arrayContaining([RECONNECT('Iara'), RECONNECT('Teo')]),
+    },
+  })
+  if (open.exitCode !== 0) return
+  expect(
+    open.output.warnings?.filter((warning) => warning.includes('Trakt')),
+  ).toEqual([RECONNECT('Iara'), RECONNECT('Teo')])
 })

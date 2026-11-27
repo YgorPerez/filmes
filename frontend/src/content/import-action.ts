@@ -192,6 +192,9 @@ const IMPORT_NOTICES = [
   'removido',
   // Her Trakt read by the API (#269): `novos` Fatos more.
   'sincronizado',
+  // The same, by her username: Trakt refused her connection, and she has to
+  // connect it again.
+  'reconectar',
 ] as const
 
 export type ImportNotice = (typeof IMPORT_NOTICES)[number]

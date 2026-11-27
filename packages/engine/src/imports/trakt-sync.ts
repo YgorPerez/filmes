@@ -30,6 +30,7 @@ import {
   readTraktLists,
   TRAKT_REVOKED,
   TraktAccess,
+  traktRevokedWarning,
   type TraktConnection,
 } from '../sources/Trakt.ts'
 import type { Transport } from '../sources/Source.ts'
@@ -83,19 +84,20 @@ export interface TraktSync extends TraktReport {
   readonly facts: TraktFactCounts
   readonly newFacts: TraktFactCounts
   readonly attributions: readonly Attribution[]
+  /** Trakt refused her grant: read by her username, she must reconnect. */
+  readonly warnings?: readonly string[]
 }
 
-/** Her connection's token, or null: none, or Trakt refused to refresh it
- * (`TRAKT_REVOKED`: the app already dropped the grant, so she reads as not
- * connected and falls back to her username). */
+type Token = string | null | typeof TRAKT_REVOKED
+
+/** Her connection's token: null when she has none or it failed, or
+ * `TRAKT_REVOKED` when Trakt refused to refresh it. The app drops a refused
+ * grant, so the next ask finds her not connected: ask once per read. */
 const tokenOf = (connection: TraktConnection, person: string) =>
   Effect.tryPromise({
-    try: (signal) => connection.accessToken(person, signal),
+    try: (signal): Promise<Token> => connection.accessToken(person, signal),
     catch: () => null,
-  }).pipe(
-    Effect.map((token) => (token === TRAKT_REVOKED ? null : token)),
-    Effect.orElseSucceed(() => null),
-  )
+  }).pipe(Effect.orElseSucceed((): Token => null))
 
 /** The Pessoa without her snapshots older than `kept`, their files gone. */
 const dropOlderSnapshots = (person: Person, kept: string) =>
@@ -125,31 +127,27 @@ const dropOlderSnapshots = (person: Person, kept: string) =>
     return updated
   })
 
-/** Reads the Pessoa's Trakt and keeps it (`sincronizar agora`). */
-export const syncTrakt = (
-  input: TraktSyncInput,
-): Effect.Effect<
-  TraktSync,
-  EngineError | SqliteError | GitError,
-  Environment | Sqlite | Run | DataWriter | Transport
-> =>
+/** Reads her Trakt by `user`, or with `token`, or by the username she was
+ * linked to, and keeps it. */
+const readTrakt = (
+  connection: TraktConnection,
+  person: Person,
+  input: {
+    readonly user: string | undefined
+    readonly token: string | null
+    readonly author: Author
+    /** Why she cannot be read, when nothing links her. */
+    readonly unlinked?: string
+  },
+) =>
   Effect.gen(function* () {
-    const connection = yield* TraktAccess
-    if (connection === null)
-      return yield* engineError(
-        'source_unavailable',
-        'o Trakt não está configurado neste servidor (FILMES_TRAKT_CLIENT_ID)',
-        'trakt_off',
-      )
-    const person = yield* resolvePerson(input.person)
-    const typed = input.user?.trim().replace(/^@/, '') || undefined
-    const token =
-      typed === undefined ? yield* tokenOf(connection, person.slug) : null
-    const user = typed ?? (token !== null ? 'me' : linkedTraktUser(person))
+    const { token } = input
+    const user = input.user ?? (token !== null ? 'me' : linkedTraktUser(person))
     if (user === null)
       return yield* engineError(
         'invalid_usage',
-        `${person.name} não conectou o Trakt nem tem um usuário do Trakt`,
+        input.unlinked ??
+          `${person.name} não conectou o Trakt nem tem um usuário do Trakt`,
         'trakt_not_linked',
       )
     if (user !== 'me' && !TRAKT_USER.test(user))
@@ -202,7 +200,7 @@ export const syncTrakt = (
             yield* personTraktRows(current),
           )
           const after = yield* traktFactCounts(db, person.slug)
-          return {
+          const done: TraktSync = {
             ...report,
             person: person.slug,
             user,
@@ -216,8 +214,47 @@ export const syncTrakt = (
             },
             attributions: [TRAKT_ATTRIBUTION],
           }
+          return done
         }),
     )
+  })
+
+/** Reads the Pessoa's Trakt and keeps it (`sincronizar agora`). */
+export const syncTrakt = (
+  input: TraktSyncInput,
+): Effect.Effect<
+  TraktSync,
+  EngineError | SqliteError | GitError,
+  Environment | Sqlite | Run | DataWriter | Transport
+> =>
+  Effect.gen(function* () {
+    const connection = yield* TraktAccess
+    if (connection === null)
+      return yield* engineError(
+        'source_unavailable',
+        'o Trakt não está configurado neste servidor (FILMES_TRAKT_CLIENT_ID)',
+        'trakt_off',
+      )
+    const person = yield* resolvePerson(input.person)
+    const typed = input.user?.trim().replace(/^@/, '') || undefined
+    const token =
+      typed === undefined ? yield* tokenOf(connection, person.slug) : null
+    if (token !== TRAKT_REVOKED)
+      return yield* readTrakt(connection, person, {
+        user: typed,
+        token,
+        author: input.author,
+      })
+    // Refused: her username, if she has one, and a warning; without one,
+    // the refusal says it.
+    const warning = traktRevokedWarning(person.name)
+    const read = yield* readTrakt(connection, person, {
+      user: undefined,
+      token: null,
+      author: input.author,
+      unlinked: warning,
+    })
+    return { ...read, warnings: [warning] }
   })
 
 const SESSION_WARNING = (name: string) =>
@@ -242,12 +279,17 @@ export const syncAttendeesTrakt = (
     for (const name of attendees) {
       const person = yield* Effect.option(resolvePerson(name))
       if (Option.isNone(person)) continue
-      const linked =
-        linkedTraktUser(person.value) !== null ||
-        (yield* tokenOf(connection, person.value.slug)) !== null
-      if (!linked) continue
+      const token = yield* tokenOf(connection, person.value.slug)
+      if (token === TRAKT_REVOKED)
+        warnings.push(traktRevokedWarning(person.value.name))
+      const bearer = token === TRAKT_REVOKED ? null : token
+      if (bearer === null && linkedTraktUser(person.value) === null) continue
       const synced = yield* Effect.result(
-        syncTrakt({ person: person.value.slug, author }).pipe(
+        readTrakt(connection, person.value, {
+          user: undefined,
+          token: bearer,
+          author,
+        }).pipe(
           Effect.timeoutOrElse({
             duration: '20 seconds',
             orElse: () =>

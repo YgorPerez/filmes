@@ -86,6 +86,8 @@ export const PERSON_IMPORTS = {
       done.facts === 0
         ? `Trakt lido: nada novo desde a última vez.${left(done.outside)}`
         : `Trakt lido: ${gave(done)}.${left(done.outside)}`,
+    reconectar: (done: Gave) =>
+      `O Trakt recusou a conexão, então o perfil público foi lido: ${done.facts === 0 ? 'nada novo desde a última vez' : gave(done)}.${left(done.outside)} Conecte o Trakt de novo para voltar a ler e enviar o histórico.`,
     removido: (done: Gave) =>
       done.facts === 0
         ? 'Import tirado. Nada saiu do gosto: outro import trazia o mesmo.'
