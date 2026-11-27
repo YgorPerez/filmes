@@ -195,6 +195,7 @@ export {
   sessionRelative,
   sessionsFolder,
   SESSIONS_FOLDER,
+  sessionVersions,
   shownFilms,
   STRENGTH_IN_BODY,
   VERSION_EXTRAS,
