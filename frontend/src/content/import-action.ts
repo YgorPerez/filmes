@@ -29,6 +29,7 @@ export type ImportRun =
 export type QueueAction =
   | { kind: 'confirm'; id: string; film: string }
   | { kind: 'discard'; id: string; reason: string }
+  | { kind: 'reopen'; id: string }
   | { kind: 'reprocess' }
 
 /** The biggest upload the server reads: a Letterboxd, Trakt or Simkl
@@ -88,11 +89,13 @@ export type ImportFormError =
   | 'pedido'
   | 'arquivo'
   | 'consentimento'
+  | 'usuario'
   | 'trakt-usuario'
 
 /** The form → the action. An upload with no file is `arquivo`; the RSS
- * without the Pessoa's consent is `consentimento`, unless `own` (the Dono's
- * own page, where she answers for herself). */
+ * with something that is no Letterboxd user is `usuario`, and without the
+ * Pessoa's consent `consentimento`, unless `own` (the Dono's own page,
+ * where she answers for herself). */
 export async function parseImport(
   form: FormData,
   own = false,
@@ -110,7 +113,7 @@ export async function parseImport(
   }
   if (action === 'rss') {
     const user = letterboxdUser(field(form, 'usuario') ?? '')
-    if (user === null) return 'pedido'
+    if (user === null) return 'usuario'
     if (!own && field(form, 'consentimento') !== 'sim') return 'consentimento'
     return { kind: 'rss', user }
   }
@@ -144,6 +147,7 @@ export function parseQueue(form: FormData): QueueAction | null {
       id,
       reason: field(form, 'motivo') ?? DEFAULT_DISCARD_REASON,
     }
+  if (action === 'reabrir') return { kind: 'reopen', id }
   return null
 }
 
@@ -176,6 +180,8 @@ const IMPORT_REFUSALS = [
   'grande',
   // The RSS without the Pessoa's yes.
   'consentimento',
+  // The RSS with something that is no Letterboxd user's name or address.
+  'usuario',
   // No public RSS for that user.
   'rss',
   // Letterboxd did not answer.
@@ -200,6 +206,8 @@ export type ImportRefusal = (typeof IMPORT_REFUSALS)[number]
 const QUEUE_NOTICES = [
   'confirmado',
   'descartado',
+  // A decision taken back: the film is in the queue again (#274).
+  'reaberto',
   // The same decision again: nothing changed.
   'igual',
   // Asked TMDB again: `resolvidos` left the queue, `restam` wait.
@@ -223,6 +231,30 @@ const QUEUE_REFUSALS = [
 
 export type QueueRefusal = (typeof QUEUE_REFUSALS)[number]
 
+/** The import page's forms a refusal can belong to, so it shows under the
+ * one that was sent (`?de=` of the action, back in the page's query): the
+ * guided Letterboxd upload, the other services' upload, the profile and
+ * the Trakt read by the API (#269). */
+const IMPORT_FORMS = ['letterboxd', 'outro', 'perfil', 'trakt'] as const
+
+export type ImportForm = (typeof IMPORT_FORMS)[number]
+
+/** The form a refusal shows under: the profile's are the profile's, an
+ * upload's the upload that was sent (`sent`, the Letterboxd one when it is
+ * not known); the others belong to the page. */
+export function refusedForm(
+  refusal: ImportRefusal,
+  sent: ImportForm | undefined,
+): ImportForm | null {
+  if (sent === 'trakt') return 'trakt'
+  if (['consentimento', 'usuario', 'rss', 'fonte'].includes(refusal))
+    return 'perfil'
+  if (['arquivo', 'origem', 'grande'].includes(refusal))
+    return sent === 'outro' ? 'outro' : 'letterboxd'
+  return null
+}
+
+export const isImportForm = within(IMPORT_FORMS)
 export const isImportNotice = within(IMPORT_NOTICES)
 export const isImportRefusal = within(IMPORT_REFUSALS)
 export const isQueueNotice = within(QUEUE_NOTICES)

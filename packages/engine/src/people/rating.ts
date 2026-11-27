@@ -47,14 +47,23 @@ export interface RatingQueueRequest {
 export interface QueueFilm extends FilmRef {
   /** Its IMDb genres, in Portuguese, in the IMDb's order. */
   readonly genres: ReadonlyArray<string>
+  /** The directors' labels, in name order, so she knows the film. */
+  readonly directors: ReadonlyArray<string>
+  /** The runtime in minutes, when the Catalog has it. */
+  readonly runtime: number | null
 }
 
 export interface RatingQueue {
   readonly person: string
+  /** How many films she has a Nota for already, from anywhere. */
+  readonly rated: number
   readonly films: ReadonlyArray<QueueFilm>
 }
 
-type PoolFilm = FilmRef & { readonly genre: string | null }
+type PoolFilm = FilmRef & {
+  readonly genre: string | null
+  readonly runtime: number | null
+}
 
 const decadeOf = (film: PoolFilm) =>
   film.year === null ? null : Math.floor(film.year / 10)
@@ -84,6 +93,28 @@ function varied(pool: readonly PoolFilm[], limit: number): PoolFilm[] {
   }
   return order
 }
+
+/** The films' directors' labels, in name order. */
+const directorsOf = (
+  db: Connection,
+  ids: readonly string[],
+): Effect.Effect<Map<string, string[]>, SqliteError> =>
+  Effect.map(
+    db.all(
+      `SELECT a.filme_id, e.rotulo FROM arestas a JOIN entidades e ON e.id = a.entidade_id
+       WHERE a.predicado = 'diretor' AND a.filme_id IN (${ids.map(() => '?').join(', ')})
+       ORDER BY a.filme_id, e.rotulo, e.id`,
+      ...ids,
+    ),
+    (rows) => {
+      const directors = new Map<string, string[]>()
+      for (const row of rows) {
+        const id = text(row, 'filme_id')
+        directors.set(id, [...(directors.get(id) ?? []), text(row, 'rotulo')])
+      }
+      return directors
+    },
+  )
 
 const genresOf = (
   db: Connection,
@@ -128,7 +159,7 @@ export const ratingQueue = (
     return yield* sqlite.read((db) =>
       Effect.gen(function* () {
         const rows = yield* db.all(
-          `SELECT f.id, f.titulo, f.ano,
+          `SELECT f.id, f.titulo, f.ano, f.duracao_min,
                   (SELECT genero FROM generos_imdb g WHERE g.filme_id = f.id AND g.ordem = 1) AS genero
            FROM filmes f
            WHERE f.id NOT IN (SELECT filme_id FROM ja_vistos WHERE pessoa = ?)
@@ -142,24 +173,29 @@ export const ratingQueue = (
             id: text(row, 'id'),
             title: text(row, 'titulo'),
             year: numOrNull(row, 'ano'),
+            runtime: numOrNull(row, 'duracao_min'),
             genre: row.genero === null ? null : text(row, 'genero'),
           })),
           limit,
         )
-        const genres =
-          order.length === 0
-            ? new Map<string, string[]>()
-            : yield* genresOf(
-                db,
-                order.map((f) => f.id),
-              )
+        const rated = yield* db.get(
+          'SELECT COUNT(DISTINCT filme_id) AS n FROM notas WHERE pessoa = ?',
+          person.slug,
+        )
+        const ids = order.map((f) => f.id)
+        const none = new Map<string, string[]>()
+        const genres = ids.length === 0 ? none : yield* genresOf(db, ids)
+        const directors = ids.length === 0 ? none : yield* directorsOf(db, ids)
         return {
           person: person.slug,
-          films: order.map(({ id, title, year }) => ({
+          rated: Number(rated?.n ?? 0),
+          films: order.map(({ id, title, year, runtime }) => ({
             id,
             title,
             year,
             genres: genres.get(id) ?? [],
+            directors: directors.get(id) ?? [],
+            runtime,
           })),
         }
       }),

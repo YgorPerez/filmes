@@ -126,17 +126,17 @@ describe('parseImport', () => {
       { kind: 'rss', user: 'olga_farol' },
     ],
     [{ acao: 'rss', usuario: 'olga_farol' }, 'consentimento'],
-    [{ acao: 'rss', usuario: 'olga farol', consentimento: 'sim' }, 'pedido'],
-    [{ acao: 'rss', usuario: '@', consentimento: 'sim' }, 'pedido'],
+    [{ acao: 'rss', usuario: 'olga farol', consentimento: 'sim' }, 'usuario'],
+    [{ acao: 'rss', usuario: '@', consentimento: 'sim' }, 'usuario'],
     [
       {
         acao: 'rss',
         usuario: 'https://trakt.tv/users/olga_farol',
         consentimento: 'sim',
       },
-      'pedido',
+      'usuario',
     ],
-    [{ acao: 'rss', consentimento: 'sim' }, 'pedido'],
+    [{ acao: 'rss', consentimento: 'sim' }, 'usuario'],
     [
       { acao: 'remover', arquivo: ' imports/teo/trakt-1.zip ' },
       { kind: 'remove', file: 'imports/teo/trakt-1.zip' },
@@ -313,6 +313,33 @@ describe('importAction', () => {
       '/pessoas/teo/importar?erro=origem',
     )
     expect(calls).toHaveLength(5)
+  })
+
+  it('names the form a refusal came from, so the page shows it there', async () => {
+    const { imports } = fakeImports()
+    const refused = await importAction(
+      post('/importar/teo/acao?de=outro', {
+        acao: 'arquivo',
+        arquivo: new File(['x'], 'nada.txt'),
+      }),
+      'teo',
+      BRUNO,
+      imports,
+      ORIGIN,
+    )
+    expect(refused.headers.get('Location')).toBe(
+      '/pessoas/teo/importar?erro=origem&de=outro',
+    )
+    const profile = await importAction(
+      post('/importar/teo/acao?de=perfil', { acao: 'rss', usuario: 'a b' }),
+      'teo',
+      BRUNO,
+      imports,
+      ORIGIN,
+    )
+    expect(profile.headers.get('Location')).toBe(
+      '/pessoas/teo/importar?erro=usuario&de=perfil',
+    )
   })
 
   it('takes the RSS without the consent box on the Dono’s own page', async () => {
@@ -648,11 +675,37 @@ describe('importsFromEngine, imports', () => {
   it('imports, reports and removes, each a commit signed by the Dono', async () => {
     const { fixture, imports, ok, log } = useImportsRepo()
     const run = (action: ImportRun) => ok(imports.run('quim', action, AUTHOR))
-    expect(await run(LETTERBOXD)).toEqual({ notice: 'letterboxd', facts: 14 })
-    expect(await run(LETTERBOXD)).toEqual({ notice: 'repetido', facts: 0 })
-    expect(await run(TRAKT)).toEqual({ notice: 'trakt', facts: 3, outside: 0 })
-    expect(await run(IMDB)).toEqual({ notice: 'imdb', facts: 3, outside: 1 })
-    expect(await run(SIMKL)).toEqual({ notice: 'simkl', facts: 6, outside: 2 })
+    expect(await run(LETTERBOXD)).toMatchObject({
+      notice: 'letterboxd',
+      facts: 14,
+    })
+    expect(await run(LETTERBOXD)).toEqual({
+      notice: 'repetido',
+      facts: 0,
+      ratings: 0,
+      seen: 0,
+    })
+    expect(await run(TRAKT)).toEqual({
+      notice: 'trakt',
+      facts: 3,
+      ratings: 2,
+      seen: 1,
+      outside: 0,
+    })
+    expect(await run(IMDB)).toEqual({
+      notice: 'imdb',
+      facts: 3,
+      ratings: 3,
+      seen: 0,
+      outside: 1,
+    })
+    expect(await run(SIMKL)).toMatchObject({
+      notice: 'simkl',
+      facts: 6,
+      ratings: 3,
+      seen: 2,
+      outside: 2,
+    })
 
     const page = await ok(imports.page('quim'))
     expect(page.imports.map((i) => [i.kind, i.original])).toEqual([
@@ -706,12 +759,22 @@ describe('importsFromEngine, the queue', () => {
 
     const decide = (action: QueueAction) => ok(imports.decide(action, AUTHOR))
     const film = 'https://www.themoviedb.org/movie/9102'
+    const vento = { id: VENTO, title: 'Vento Norte (2020)' }
+    const lost = { id: LOST, title: 'Filme Perdido (2001)' }
     expect(await decide({ kind: 'confirm', id: VENTO, film })).toEqual({
       notice: 'confirmado',
+      item: vento,
     })
+    // Taken back, it waits again; confirmed again for good.
+    expect(await decide({ kind: 'reopen', id: VENTO })).toEqual({
+      notice: 'reaberto',
+      item: vento,
+    })
+    expect((await ok(imports.queue())).items).toHaveLength(2)
+    await decide({ kind: 'confirm', id: VENTO, film })
     const discard = { kind: 'discard', id: LOST, reason: 'ignorar' } as const
-    expect(await decide(discard)).toEqual({ notice: 'descartado' })
-    expect(await decide(discard)).toEqual({ notice: 'igual' })
+    expect(await decide(discard)).toEqual({ notice: 'descartado', item: lost })
+    expect(await decide(discard)).toEqual({ notice: 'igual', item: lost })
     expect(await decide({ kind: 'reprocess' })).toEqual({
       notice: 'reprocessado',
       resolved: 0,
@@ -721,6 +784,8 @@ describe('importsFromEngine, the queue', () => {
     // nothing: no commit.
     expect(log()).toEqual([
       'Bruno <bruno@example.org>|import letterboxd quim: olga.zip',
+      `Bruno <bruno@example.org>|letterboxd queue confirm ${VENTO}`,
+      `Bruno <bruno@example.org>|letterboxd queue reopen ${VENTO}`,
       `Bruno <bruno@example.org>|letterboxd queue confirm ${VENTO}`,
       `Bruno <bruno@example.org>|letterboxd queue discard ${LOST}`,
     ])

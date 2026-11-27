@@ -4,7 +4,7 @@ import { FieldLabel } from './kit/field-label'
 import { buttonVariants } from './kit/button-variants'
 import { PostForm } from './kit/post-form'
 import { RowArrow } from './kit/row-arrow'
-import { Section, Submit } from './person-parts'
+import { Alert, Section, Submit } from './person-parts'
 import { TRAKT_SYNC as COPY } from './trakt-sync.copy'
 
 /** What the import page knows of a Pessoa's Trakt (#269). */
@@ -28,14 +28,18 @@ export function TraktSync({
   name,
   own,
   link,
+  refusal,
 }: {
   slug: string
   name: string
   own: boolean
   link: TraktLinkView
+  /** Why the last read of hers did not go, said here, under its forms. */
+  refusal?: string
 }) {
   if (!link.available) return null
-  const action = `/importar/${encodeURIComponent(slug)}/acao`
+  // `de=trakt`: a refusal comes back to this section (#270).
+  const action = `/importar/${encodeURIComponent(slug)}/acao?de=trakt`
   const synced = (own && link.connected) || link.user !== null
   return (
     <Section
@@ -49,6 +53,7 @@ export function TraktSync({
           : COPY.other(name)
       }
     >
+      {refusal && <Alert>{refusal}</Alert>}
       {synced && (
         <PostForm action={action} label={COPY.sync}>
           {(busy) => (

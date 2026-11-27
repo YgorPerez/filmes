@@ -6,7 +6,10 @@
 
 import {
   grantAccess,
+  peopleCounts,
   personAdjust,
+  personDelete,
+  personSessions,
   personCreate,
   personQuestions,
   personRemove,
@@ -27,15 +30,19 @@ import {
   type ErrorOutput,
   type ErrorReason,
   type Outcome,
+  type PersonSessions,
   type PersonView,
   type SetupGuide,
   type SetupStep,
   type SkipSetupResult,
 } from '@filmes/engine'
 import {
+  formProblem,
   isAccessAction,
   parseAction,
+  problemParam,
   reportSource,
+  spotOf,
   type PersonAction,
   type PersonNotice,
   type PersonRefusal,
@@ -57,12 +64,15 @@ import type { Owner } from './owners'
 
 export type { Owner }
 
-/** A Pessoa in the list. */
+/** A Pessoa in the list, with how much the filmes knows of her: her
+ * Notas (null without a database) and her Vetos. */
 export type PersonEntry = {
   person: string
   name: string
   aliases: string[]
   owner: boolean
+  ratings: number | null
+  vetoes: number
 }
 
 /** A tag group a Veto or an open question can name. */
@@ -78,12 +88,17 @@ export type PersonPage = Omit<PersonView, 'imports' | 'warning'> & {
   /** Only for an admin (#166): the e-mail she logs in with, or the one
    * her file holds while she is not a Dono; null for none. */
   access?: { email: string | null }
+  /** The Sessões she was in, the latest three, and her Satisfação. */
+  sessions: PersonSessions
+  /** Whether an import holds her history: she cannot be taken out. */
+  imported: boolean
 }
 
 /** What the screens and the actions need from the engine. */
 export interface People {
   list(): Promise<Outcome<PersonEntry[]>>
   view(person: string): Promise<Outcome<PersonView>>
+  sessions(person: string): Promise<Outcome<PersonSessions>>
   tagGroups(): Promise<Outcome<TagGroupChoice[]>>
   /** The e-mail in her file, for the admin's Acesso section. */
   email(person: string): Promise<Outcome<string | null>>
@@ -125,15 +140,21 @@ const newOrSame = (added: boolean): PersonNotice =>
 export function peopleFromEngine(engine: Engine): People {
   return {
     list: () =>
-      map(engine.run(readPeople), (people) =>
-        people.map(({ slug, name, aliases, owner }) => ({
-          person: slug,
-          name,
-          aliases: [...aliases],
-          owner,
-        })),
+      chain(engine.run(readPeople), (people) =>
+        map(engine.run(peopleCounts), (counts) =>
+          people.map(({ slug, name, aliases, owner }, i) => ({
+            person: slug,
+            name,
+            aliases: [...aliases],
+            owner,
+            ratings: counts[i]?.ratings ?? null,
+            vetoes: counts[i]?.vetoes ?? 0,
+          })),
+        ),
       ),
     view: (person) => engine.run(personView(person, { predictionError: true })),
+    sessions: (person) => engine.run(personSessions(person)),
+
     email: (person) => map(engine.run(resolvePerson(person)), (p) => p.email),
     create: (input, owner) =>
       map(
@@ -220,6 +241,8 @@ export function peopleFromEngine(engine: Engine): People {
         case 'grant':
         case 'revoke':
           return access(run, by, action)
+        case 'delete':
+          return map(run(personDelete(by)), (): PersonNotice => 'removida')
       }
     },
   }
@@ -330,16 +353,30 @@ export async function personPage(
     logEngineError(view)
     return null
   }
-  const groups = await people.tagGroups()
+  const [groups, sessions] = await Promise.all([
+    people.tagGroups(),
+    people.sessions(person),
+  ])
   if (groups.exitCode !== 0) {
     logEngineError(groups)
     return null
   }
-  const { imports: _imports, warning: _warning, ...page } = view.output
+  if (sessions.exitCode !== 0) {
+    logEngineError(sessions)
+    return null
+  }
+  const { imports, warning: _warning, ...page } = view.output
   const viewer = { person: owner.person, name: owner.name, admin: owner.admin }
-  if (!owner.admin) return { ...page, tagGroups: groups.output, viewer }
+  const read = {
+    ...page,
+    tagGroups: groups.output,
+    viewer,
+    sessions: sessions.output,
+    imported: imports.length > 0,
+  }
+  if (!owner.admin) return read
   const access = await accessOf(page.person, people)
-  return access && { ...page, tagGroups: groups.output, viewer, access }
+  return access && { ...read, access }
 }
 
 /** Her e-mail, for an admin's Acesso section; null when the engine
@@ -362,6 +399,9 @@ const ACCESS_REFUSALS: Partial<Record<ErrorReason, PersonRefusal>> = {
   email_taken: 'email-usado',
   already_owner: 'ja-dono',
   own_access: 'proprio-acesso',
+  is_owner: 'e-dono',
+  has_imports: 'tem-import',
+  in_session: 'em-sessao',
 }
 
 /** Why an action was refused, from the engine's error. */
@@ -391,25 +431,43 @@ export async function personAction(
 ): Promise<Response> {
   const poster = formPoster(request, owner, origin)
   if (poster instanceof Response) return poster
-  const action = parseAction(await request.formData())
-  if (!action)
+  const form = await request.formData()
+  const back = backTo(personPath(person, person === poster.person), form)
+  const action = parseAction(form)
+  if (!action) {
+    const problem = formProblem(form)
     return seeOther(
-      `${personPath(person, person === poster.person)}?erro=pedido`,
+      back({
+        erro: 'pedido',
+        ...(problem && { campo: problemParam(problem) }),
+      }),
     )
+  }
   if (isAccessAction(action) && !poster.admin)
     return new Response('Só um admin dá ou tira acesso', { status: 403 })
   const outcome = await people.act(person, action, poster)
   if (outcome.exitCode !== 0) {
     if (outcome.output.error.code === 'unknown_person')
       return seeOther('/pessoas?erro=pessoa')
-    return seeOther(
-      `${personPath(person, person === poster.person)}?erro=${refusalOf(outcome)}`,
-    )
+    return seeOther(back({ erro: refusalOf(outcome) }))
   }
-  return seeOther(
-    `${personPath(person, person === poster.person)}?feito=${outcome.output}`,
-  )
+  if (outcome.output === 'removida') return seeOther('/pessoas?feito=removida')
+  return seeOther(back({ feito: outcome.output }))
 }
+
+/** Her page's address after a form (#273): the query says what happened
+ * and in which ficha (`em`), and the fragment brings the page back to that
+ * ficha, where the form was. */
+const backTo =
+  (path: string, form: FormData) =>
+  (query: Record<string, string>): string => {
+    const spot = spotOf(form)
+    const params = new URLSearchParams({
+      ...query,
+      ...(spot !== undefined && { em: spot }),
+    })
+    return `${path}?${params.toString()}${spot === undefined ? '' : `#${spot}`}`
+  }
 
 /** The create form's reason for each of the engine's (`createPerson`). */
 const CREATE_REFUSALS: Record<ErrorReason, PersonCreateRefusal> = {
@@ -429,6 +487,10 @@ const CREATE_REFUSALS: Record<ErrorReason, PersonCreateRefusal> = {
   trakt_private: 'indisponivel',
   trakt_not_linked: 'indisponivel',
   trakt_off: 'indisponivel',
+  // Not met on create: taking a Pessoa out.
+  is_owner: 'indisponivel',
+  has_imports: 'indisponivel',
+  in_session: 'indisponivel',
 }
 
 /** Why the engine refused a new Pessoa, by its reason; without one, it

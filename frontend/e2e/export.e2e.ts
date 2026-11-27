@@ -22,6 +22,8 @@ async function download(
   format: ExportFormat = 'imdb',
 ) {
   const notes = section(page, 'Notas')
+  // Folded under the Notas (#273).
+  await notes.getByText('Baixar as Notas em CSV', { exact: true }).click()
   await expect(notes.getByText('Import or Export Data')).toBeVisible()
   const [file] = await Promise.all([
     page.waitForEvent('download'),
@@ -63,9 +65,7 @@ test('a Pessoa that is gone sends the Dono back to Pessoas with the reason', asy
   await loginAsBruno(page)
   await page.goto('/exportar/imdb.csv?pessoa=ninguem')
   await expect(page).toHaveURL(/\/pessoas\?erro=pessoa$/)
-  await expect(page.getByRole('alert')).toContainText(
-    'não está mais no repo de dados',
-  )
+  await expect(page.getByRole('alert')).toContainText('não existe mais')
 })
 
 test('a download that fails shows the page with the reason, not a file', async ({
@@ -75,6 +75,9 @@ test('a download that fails shows the page with the reason, not a file', async (
   await tab(page, 'Meu gosto').click()
   // The login ran out while the page was open: the link goes to log in.
   await page.context().clearCookies()
+  await section(page, 'Notas')
+    .getByText('Baixar as Notas em CSV', { exact: true })
+    .click()
   await section(page, 'Notas')
     .getByRole('link', { name: 'Baixar CSV do IMDb' })
     .click()

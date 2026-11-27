@@ -41,12 +41,28 @@ async function addForm(page: Page, region: string, summary: string) {
   return area.getByRole('form', { name: summary })
 }
 
+/** The target's field (#273): a search by name, then "Usar" on the
+ * result that is `pick`. */
+async function target(
+  form: ReturnType<Page['getByRole']>,
+  label: RegExp,
+  query: string,
+  pick: RegExp,
+) {
+  await form.getByRole('searchbox', { name: label }).fill(query)
+  await form.getByRole('button', { name: pick }).first().click()
+}
+
+/** Opens "Afinar", where the Ajustes, Declarados and Relatos are. */
+const refine = (page: Page) => page.getByText(/^Afinar:/).click()
+
 /** Sends a Veto to an id the Catálogo does not have, which the server
- * refuses, and gives its form. */
+ * refuses, and gives its form. Before the JavaScript, the target's field
+ * takes the ID. */
 async function vetoOutsideCatalog(page: Page) {
   const form = await addForm(page, 'Vetos', 'Acrescentar Veto')
   await form.getByLabel('O Veto, como foi dito').fill('nunca')
-  await form.getByLabel(/^Alvo/).fill('Q1')
+  await form.getByLabel(/^Diga o quê/).fill('Q1')
   await form.getByRole('button', { name: 'Gravar' }).click()
   return form
 }
@@ -69,46 +85,38 @@ test('the Dono reads and changes a Pessoa’s taste', async ({ page }, info) => 
   // Every form below posts by fetch (#235): the page is never loaded again.
   await markPage(page)
 
-  // A Veto by id, and one to a tag group.
+  // A Veto to a genre found by its name (#273), and one to a tag group.
   let form = await addForm(page, 'Vetos', 'Acrescentar Veto')
   await form.getByLabel('O Veto, como foi dito').fill('nunca vê terror')
-  await form.getByLabel(/^Alvo/).fill('Q9001801')
+  await target(form, /^Diga o quê/, 'terror', /^Usar Terror/)
   await form.getByRole('button', { name: 'Gravar' }).click()
-  await expect(notice(page)).toHaveText('Gravado no arquivo dela.')
-  await expect(section(page, 'Vetos')).toContainText('Terror (Q9001801)')
+  // Said inside the ficha that posted it, under her name.
+  await expect(section(page, 'Vetos').getByRole('status')).toHaveText(
+    `Gravado no arquivo de ${name}.`,
+  )
+  await expect(section(page, 'Vetos')).toContainText('“nunca vê terror”')
 
   form = await addForm(page, 'Vetos', 'Acrescentar Veto')
   await form.getByLabel('O Veto, como foi dito').fill('nada lento')
-  await form.getByLabel('Grupo de tags').selectOption({ label: 'lento' })
+  await form.getByText('lento', { exact: true }).click()
   await form.getByRole('button', { name: 'Gravar' }).click()
-  await expect(section(page, 'Vetos')).toContainText('(slow)')
+  await expect(section(page, 'Vetos')).toContainText('“nada lento”')
 
-  // An id the Catalog does not have: refused in the form, what was typed
-  // still there.
-  form = await vetoOutsideCatalog(page)
-  await expect(form.getByRole('alert')).toContainText('não está no Catálogo')
-  await expect(form.getByLabel('O Veto, como foi dito')).toHaveValue('nunca')
-  await expect(page).not.toHaveURL(/erro=/)
-  await snap(page, info, 'pessoa-erro')
-
-  // The cast Ajuste down to nothing.
+  // The cast Ajuste down to nothing: a tap saves it, "gravado" beside it.
+  await refine(page)
   const cast = () => page.getByRole('group', { name: /^Ajuste de elenco/ })
   await cast().getByText('nada', { exact: true }).click()
-  await cast()
-    .locator('xpath=ancestor::form')
-    .getByRole('button', { name: 'Mudar' })
-    .click()
-  await expect(notice(page)).toHaveText('Ajuste gravado.')
+  await expect(cast().getByRole('status')).toContainText('gravado')
   await expect(cast().getByRole('radio', { name: 'nada' })).toBeChecked()
 
   // A Declarado about an entity, a Relato, a Já visto with a Nota.
   form = await addForm(page, 'Declarados', 'Acrescentar Declarado')
   await form.getByLabel('O que foi dito').fill('adoro os filmes dela')
-  await form.getByLabel(/^Alvo/).fill('Q9000018')
-  await form.getByLabel('Reação ao alvo').selectOption({ label: 'ama' })
+  await target(form, /^Sobre o quê/, 'sofia rangel', /^Usar Sofia Rangel/)
+  await form.getByLabel('Reação').selectOption({ label: 'ama' })
   await form.getByRole('button', { name: 'Gravar' }).click()
   await expect(section(page, 'Declarados')).toContainText(
-    'ama Sofia Rangel (Q9000018) · específico',
+    'ama Sofia Rangel · específico',
   )
 
   form = await addForm(page, 'Relatos', 'Acrescentar Relato')
@@ -116,18 +124,21 @@ test('the Dono reads and changes a Pessoa’s taste', async ({ page }, info) => 
   await form.getByRole('button', { name: 'Gravar' }).click()
   await expect(section(page, 'Relatos')).toContainText('odeia filme lento')
 
-  form = await addForm(page, 'Já vistos', 'Acrescentar Já visto')
-  await form.getByLabel(/^Filme/).fill('tt9000602')
+  await page.getByText(/^Ainda sem Já vistos sem Nota/).click()
+  form = await addForm(page, 'Já vistos sem Nota', 'Acrescentar Já visto')
+  await target(form, /^Filme/, 'casa cheia', /^Usar Casa Cheia/)
   await form.getByLabel(/^Nota/).selectOption('4')
   await form.getByRole('button', { name: 'Gravar' }).click()
-  await expect(section(page, 'Já vistos')).toContainText('Casa Cheia')
-  await expect(section(page, 'Já vistos')).toContainText('nota 4')
+  await expect(section(page, 'Já vistos sem Nota')).toContainText('Casa Cheia')
+  await expect(section(page, 'Já vistos sem Nota')).toContainText('nota 4')
   await snap(page, info, 'pessoa-com-gosto')
 
   // Out again.
   await page.getByRole('button', { name: 'Tirar nunca vê terror' }).click()
-  await expect(notice(page)).toHaveText('Tirado do arquivo dela.')
-  await expect(section(page, 'Vetos')).not.toContainText('Q9001801')
+  await expect(section(page, 'Vetos').getByRole('status')).toHaveText(
+    `Tirado do arquivo de ${name}.`,
+  )
+  await expect(section(page, 'Vetos')).not.toContainText('nunca vê terror')
   await expectSamePage(page)
 
   // The engine reads it all back from her file.
@@ -152,16 +163,15 @@ test('the Dono answers or skips an open question', async ({ page }, info) => {
       'o Quim curte os filmes da Helena Prado?',
     )
     await snap(page, info, 'pergunta-aberta')
-    await questions.getByText('Responder', { exact: true }).click()
+    await questions.getByText('Responder com palavras', { exact: true }).click()
     const answer = questions.getByRole('form', { name: /^Responder/ })
-    await answer.getByLabel('A resposta dela').fill('adora')
-    await answer.getByLabel(/^Reação ao alvo/).selectOption({ label: 'ama' })
+    await answer.getByLabel('A resposta de Quim').fill('adora')
+    await answer.getByLabel(/^Reação/).selectOption({ label: 'ama' })
     await answer.getByRole('button', { name: 'Gravar' }).click()
     await expect(notice(page)).toContainText('Resposta gravada como Declarado')
     await expect(questions).toContainText('Nenhuma pergunta aberta.')
-    await expect(section(page, 'Declarados')).toContainText(
-      'ama Helena Prado (Q9000001)',
-    )
+    await refine(page)
+    await expect(section(page, 'Declarados')).toContainText('ama Helena Prado')
     const view = await engineView('quim')
     expect(view.openQuestions).toEqual([])
     // Only her file's: the Feedback e2e gives Quim a Declarado of its own
@@ -204,12 +214,14 @@ test('a Pessoa’s form needs a Dono and this site', async ({ request }) => {
   expect(response.headers()['location']).toBe('/entrar')
 })
 
-test('a name no Pessoa has says so', async ({ page }) => {
+test('a name no Pessoa has is a 404 that says so', async ({ page }) => {
   await loginAsBruno(page)
-  await page.goto('/pessoas/ninguem')
-  await expect(page.getByRole('alert')).toContainText(
-    'Nenhuma Pessoa com esse nome',
-  )
+  const response = await page.goto('/pessoas/ninguem')
+  expect(response?.status()).toBe(404)
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'Pessoa não encontrada' }),
+  ).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Ver as Pessoas' })).toBeVisible()
 })
 
 /** Opens "Acrescentar Pessoa" on `/pessoas` and gives its form. */
@@ -248,7 +260,7 @@ test('the Dono adds a Pessoa, who is a Presente at once', async ({
   await expect(page).toHaveURL(new RegExp(`/pessoas/${slug}\\?feito=criada$`))
   await expect(page.getByRole('heading', { name })).toBeVisible()
   await expect(notice(page)).toHaveText(
-    'Pessoa criada. Conte o gosto dela aqui.',
+    `Pessoa criada. Conte aqui o gosto de ${name}.`,
   )
   await expectSamePage(page)
   await snap(page, info, 'pessoa-criada')
@@ -285,8 +297,11 @@ test.describe('before the JavaScript', () => {
     await loginAsBruno(page)
     await page.goto('/pessoas/iara')
     await vetoOutsideCatalog(page)
-    await expect(page).toHaveURL(/\/pessoas\/iara\?erro=alvo$/)
-    await expect(page.getByRole('alert')).toContainText('não está no Catálogo')
+    // Back to the Vetos, which say why (#273).
+    await expect(page).toHaveURL(/\/pessoas\/iara\?erro=alvo&em=vetos#vetos$/)
+    await expect(section(page, 'Vetos').getByRole('alert')).toContainText(
+      'não está no Catálogo',
+    )
 
     const create = await createForm(page)
     await create.getByLabel('Nome').fill('Iara')

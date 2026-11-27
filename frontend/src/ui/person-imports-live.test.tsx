@@ -21,7 +21,7 @@ import {
 import userEvent from '@testing-library/user-event'
 import { afterEach, expect, it, vi } from 'vite-plus/test'
 import { PERSON_IMPORTS } from './imports.copy'
-import { importsSearch } from '#/content/imports-search'
+import { doneOf, importsSearch } from '#/content/imports-search'
 import { PersonImportsScreen, type PersonImportsView } from './person-imports'
 
 afterEach(() => {
@@ -55,15 +55,14 @@ function renderRouted() {
   const router = createRouter({
     routeTree: createRootRoute({
       component: function Imports() {
-        const { feito, erro, novos, fora } = importsSearch(
-          useSearch({ strict: false }),
-        )
+        const search = importsSearch(useSearch({ strict: false }))
         return (
           <PersonImportsScreen
             slug="bruno"
             page={OWN}
-            done={feito && { notice: feito, facts: novos ?? 0, outside: fora }}
-            refusal={erro}
+            done={doneOf(search)}
+            refusal={search.erro}
+            refusedIn={search.de}
           />
         )
       },
@@ -80,7 +79,7 @@ const rssForm = async () =>
 it('imports the profile by fetch, says what came, and empties the form', async () => {
   const answered = vi.fn<typeof fetch>(() =>
     Promise.resolve(
-      Response.json({ to: '/meu-gosto/importar?feito=rss&novos=3' }),
+      Response.json({ to: '/meu-gosto/importar?feito=rss&novos=3&vistos=3' }),
     ),
   )
   vi.stubGlobal('fetch', answered)
@@ -95,14 +94,14 @@ it('imports the profile by fetch, says what came, and empties the form', async (
   await user.click(rss.getByRole('button', { name: COPY.rss.submit }))
 
   expect((await screen.findByRole('status')).textContent).toBe(
-    COPY.notices.rss(3),
+    COPY.notices.rss({ facts: 3, ratings: 0, seen: 3 }),
   )
   expect(router.state.location.href).toBe(
-    '/meu-gosto/importar?feito=rss&novos=3',
+    '/meu-gosto/importar?feito=rss&novos=3&vistos=3',
   )
   expect(scrolled).toHaveBeenCalled()
   const [url, init] = answered.mock.calls[0] ?? []
-  expect(url).toMatch(/\/importar\/bruno\/acao$/)
+  expect(url).toMatch(/\/importar\/bruno\/acao\?de=perfil$/)
   expect(new Headers(init?.headers).get('x-filmes-fetch')).toBe('1')
   expect((init?.body as FormData | undefined)?.get('usuario')).toBe('bruno')
   expect((field as HTMLInputElement).value).toBe('')
@@ -113,7 +112,7 @@ it('brings the notice into view again when a second import says the same', async
     'fetch',
     vi.fn<typeof fetch>(() =>
       Promise.resolve(
-        Response.json({ to: '/meu-gosto/importar?feito=rss&novos=3' }),
+        Response.json({ to: '/meu-gosto/importar?feito=rss&novos=3&vistos=3' }),
       ),
     ),
   )

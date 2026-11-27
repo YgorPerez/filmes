@@ -60,8 +60,8 @@ export const ERROR_CODES = [
 export type ErrorCode = (typeof ERROR_CODES)[number]
 
 /** Why, finer than the code, where a screen tells the cases apart: the app
- * reads it, never the PT-BR message. Only creating a Pessoa and giving or
- * taking her access have them. */
+ * reads it, never the PT-BR message. Only creating a Pessoa, giving or taking
+ * her access and taking her out have them. */
 const ERROR_REASONS = [
   // A Pessoa with that slug exists (`person_exists`).
   'slug_taken',
@@ -88,6 +88,11 @@ const ERROR_REASONS = [
   'trakt_private',
   'trakt_not_linked',
   'trakt_off',
+  // Taking a Pessoa out (#273, `invalid_usage`): she is a Dono, an import
+  // holds her history, or a Session lists her.
+  'is_owner',
+  'has_imports',
+  'in_session',
 ] as const
 
 export type ErrorReason = (typeof ERROR_REASONS)[number]
