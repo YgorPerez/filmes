@@ -118,8 +118,9 @@ function integer(
 /** The items of a list field, separated by commas, each trimmed, the empty
  * ones left out; undefined when none. */
 function list(form: FormData, name: string): string[] | undefined {
-  const items = (field(form, name) ?? '')
-    .split(',')
+  const items = form
+    .getAll(name)
+    .flatMap((value) => (typeof value === 'string' ? value.split(',') : []))
     .map((item) => item.trim())
     .filter((item) => item !== '')
   return items.length > 0 ? items : undefined

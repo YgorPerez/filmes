@@ -79,7 +79,7 @@ test('the Dono closes a Session and the next one shows the satisfaction', async 
 
   // Bruno and Quim loved the first film; Rosa did not.
   await page.locator('input[name="filme"]').first().check()
-  await rate(page, 'Bruno', '10')
+  await rate(page, 'Você', '10')
   await rate(page, 'Quim', '9')
   await commentOn(page, 'Quim', 'quero ver de novo')
   await rate(page, 'Rosa', '2')
@@ -151,7 +151,7 @@ test('a relayed Relato, a film by its title, and a refusal in place', async ({
   // Typed over, the field is a title again.
   await page.getByLabel('Comentário: Teo').fill('')
   await field.fill('Café Amargo')
-  await rate(page, 'Bruno', '8')
+  await rate(page, 'Você', '8')
   await reactionOf(page, 'Iara')
     .getByRole('radio', { name: 'gostou', exact: true })
     .check()
@@ -206,7 +206,7 @@ test('the Dono corrects a told Session, from the tape given back (#344)', async 
   ).toBeChecked()
   await expect(page.getByLabel('Comentário: Iara')).toHaveValue('riu muito')
   await snap(page, info, 'feedback-corrigir')
-  await rate(page, 'Bruno', '6')
+  await rate(page, 'Você', '6')
   await page.getByRole('button', { name: 'Gravar a correção' }).click()
   await expect(page).toHaveURL(new RegExp(`/sessoes/${id}\\?feito=corrigida$`))
   await expect(page.getByText('Correção gravada')).toBeVisible()

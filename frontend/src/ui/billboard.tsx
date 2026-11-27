@@ -89,6 +89,9 @@ type Props = {
   unread?: { words: readonly string[]; onEdit: () => void }
   /** After the last film, on the web: "Contar como foi" (#272). */
   after?: ReactNode
+  /** The shelf label is above, outside the Cartaz: a told Session opens
+   * with it, over the tape given back (#272). */
+  labelAbove?: boolean
 }
 
 /** Another tab changed the storage. */
@@ -129,7 +132,9 @@ function useMarks(
   return { marks, change, canKeep }
 }
 
-function Request({
+/** The shelf label: who, the request's parts, and the Dono's words in the
+ * yellow note. */
+export function BillboardRequest({
   billboard,
   compact = false,
   single = false,
@@ -251,6 +256,7 @@ export function Billboard({
   onExpand,
   unread,
   after,
+  labelAbove = false,
 }: Props) {
   const { message, setMessage, marks, change, canKeep } = useReplyMarks(
     billboard,
@@ -321,7 +327,12 @@ export function Billboard({
       {onSend ? (
         <ViewTop billboard={billboard} shelf={shelf} />
       ) : (
-        <PageTop billboard={billboard} shelf={shelf} after={after} />
+        <PageTop
+          billboard={billboard}
+          shelf={shelf}
+          after={after}
+          label={!labelAbove}
+        />
       )}
       {bar}
     </div>
@@ -363,7 +374,7 @@ function FullscreenBody({
   const speech = billboard.request.speech
   return (
     <Fullscreen
-      top={<Request billboard={billboard} compact single />}
+      top={<BillboardRequest billboard={billboard} compact single />}
       foot={bar}
     >
       {speech && (
@@ -394,7 +405,7 @@ function ViewTop({
 }) {
   return (
     <>
-      <Request billboard={billboard} />
+      <BillboardRequest billboard={billboard} />
       <Standing billboard={billboard} block />
       <PeopleLegend billboard={billboard} />
       <Capped>{shelf}</Capped>
@@ -408,16 +419,18 @@ function PageTop({
   billboard,
   shelf,
   after,
+  label,
 }: {
   billboard: BillboardModel
   shelf: ReactNode
   after: ReactNode
+  label: boolean
 }) {
   return (
     <>
       <div className="flex flex-col gap-xs">
         <div className="flex items-start justify-between gap-md">
-          <Request billboard={billboard} />
+          {label && <BillboardRequest billboard={billboard} />}
           <Legend />
         </div>
         {billboard.open && <Dropped billboard={billboard} />}
@@ -471,19 +484,23 @@ function Shelf({
 
 type Film = BillboardModel['films'][number]
 
-/** A film without the lines and the "sem fato" its section says once. */
-const withoutShared = (
+/** A film without the lines and the "sem fato" its section says once. A
+ * card whose own lines all weigh against it keeps the shared ones too:
+ * read alone, it still says why it is there (#272). */
+function withoutShared(
   film: Film,
   shared: ReadonlySet<string>,
   without: ReadonlySet<string>,
-) =>
-  shared.size === 0 && without.size === 0
-    ? film
-    : {
-        ...film,
-        lines: film.lines.filter((l) => !shared.has(lineKey(l))),
-        withoutFact: film.withoutFact.filter((slug) => !without.has(slug)),
-      }
+): Film {
+  if (shared.size === 0 && without.size === 0) return film
+  const own = film.lines.filter((l) => !shared.has(lineKey(l)))
+  const onlyAgainst = own.length > 0 && own.every((l) => l.against)
+  return {
+    ...film,
+    lines: onlyAgainst ? film.lines : own,
+    withoutFact: film.withoutFact.filter((slug) => !without.has(slug)),
+  }
+}
 
 /** A card per film, under the section of its Motivo when there are
  * sections. */

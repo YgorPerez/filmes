@@ -56,6 +56,7 @@ export function Option({
   checked,
   onChange,
   shape = 'pill',
+  label,
   children,
 }: {
   type?: 'checkbox' | 'radio'
@@ -65,6 +66,9 @@ export function Option({
   checked?: boolean
   onChange?: (checked: boolean) => void
   shape?: keyof typeof SHAPES
+  /** The control's name when the text alone repeats another option's:
+   * it starts with the text, as the screen says it. */
+  label?: string
   children: ReactNode
 }) {
   // The input covers the whole option, outline included, transparent: a
@@ -73,6 +77,7 @@ export function Option({
   const input = {
     name,
     value,
+    ...(label !== undefined && { 'aria-label': label }),
     ...(checked === undefined
       ? { defaultChecked }
       : {

@@ -106,6 +106,8 @@ describe('recomendar opens the Session', () => {
     expect(text).toContain('\ndate: 2026-11-20\n')
     expect(front).toEqual({
       date: '2026-11-20',
+      // The instant it opened, for the order of one day (#272).
+      created_at: expect.stringMatching(/^\d{4}-\d\d-\d\dT[\d:.]+Z$/u),
       owner: 'bruno',
       attendees: ['bruno', 'iara'],
       context: {
@@ -426,6 +428,21 @@ describe('sessoes-abertas', () => {
 })
 
 describe('every Session', () => {
+  test('puts the one opened last first among those of one day (#272)', async () => {
+    const fixture = useFixture()
+    await open(fixture, { attendees: ['dono', 'iara'], count: 1 })
+    await open(fixture, { attendees: ['dono', 'teo'], count: 1 })
+    await open(fixture, { attendees: ['dono', 'iara'], count: 1 })
+
+    const { sessions } = await fixture.ok(listSessions)
+
+    expect(sessions.map((s) => s.id)).toEqual([
+      '2026-11-20-iara-2',
+      '2026-11-20-teo',
+      '2026-11-20-iara',
+    ])
+  })
+
   test('lists the open and the closed ones, with their Restrições', async () => {
     const fixture = useFixture()
     expect(await fixture.ok(listSessions)).toEqual({ sessions: [] })

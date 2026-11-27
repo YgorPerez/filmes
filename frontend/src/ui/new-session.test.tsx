@@ -86,9 +86,10 @@ describe('the Nova Sessão form, what it posts', () => {
     await user.click(screen.getByRole('checkbox', { name: copy.unseen }))
     await user.click(screen.getByRole('checkbox', { name: copy.noSlow }))
     await user.click(screen.getByRole('checkbox', { name: copy.noSad }))
-    await user.type(
-      screen.getByLabelText(copy.noMoods, { exact: false }),
-      'tenso',
+    await user.click(
+      within(
+        screen.getByRole('group', { name: new RegExp(`^${copy.noMoods}`) }),
+      ).getByRole('checkbox', { name: 'nada tenso' }),
     )
     await user.click(
       screen.getByRole('radio', { name: copy.seriesOrders.todos }),
@@ -466,12 +467,13 @@ describe('the bar by Recomendar (#272)', () => {
       'Iara · até 2h · leve · nada lento · nada triste · nada repetido · com criança de 7 anos · + 3 limites',
     )
     const user = userEvent.setup()
-    await user.type(
-      screen.getByLabelText(copy.noMoods, { exact: false }),
-      'assustador, tenso',
+    const noMoods = within(
+      screen.getByRole('group', { name: new RegExp(`^${copy.noMoods}`) }),
     )
+    await user.click(noMoods.getByRole('checkbox', { name: 'nada pra rir' }))
+    await user.click(noMoods.getByRole('checkbox', { name: 'nada tenso' }))
     expect(bar.textContent).toContain(
-      'leve · nada assustador nem tenso · nada lento',
+      'leve · nada pra rir nem tenso · nada lento',
     )
   })
 
