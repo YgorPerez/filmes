@@ -5,7 +5,7 @@ import type { PeopleRefusal } from '#/content/person-action'
 
 export const PEOPLE = {
   title: 'Pessoas',
-  lead: 'Quem assiste com você e o que o filmes sabe do gosto de cada uma.',
+  lead: 'Quem assiste com você e o que o filmes sabe de cada gosto.',
   myTaste: 'Meu gosto',
   owner: 'Dono',
   aliases: (aliases: readonly string[]) => `também ${aliases.join(', ')}`,
@@ -28,9 +28,9 @@ export const PEOPLE = {
     aliasesHint: 'opcional, separados por vírgula',
     owner: 'É Dono: entra no site e no conector',
     email: 'E-mail do Google',
-    emailHint: 'o que ele usa para entrar',
+    emailHint: 'o e-mail com que entra',
     testUsers:
-      'Enquanto a tela de consentimento do Google estiver em teste, um Dono novo também precisa estar em Test users no Google Cloud, ou o primeiro login dele falha.',
+      'Enquanto a tela de consentimento do Google estiver em teste, um Dono novo também precisa estar em Test users no Google Cloud, ou o primeiro login falha.',
     submit: 'Acrescentar',
     submitting: 'Acrescentando…',
     refusals: {
