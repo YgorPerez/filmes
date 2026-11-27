@@ -102,10 +102,24 @@ export const CREDITS: ReadonlyArray<Credit> = [
   {
     source: 'OMDb',
     url: 'https://www.omdbapi.com',
-    use: 'A classificação etária, quando falta no Wikidata.',
+    use: 'A classificação etária, quando falta no Wikidata, e a nota da crítica dos primeiros filmes.',
     notice:
       'Dados do OMDb (https://www.omdbapi.com), sob licença CC BY-NC 4.0 ' +
       '(https://creativecommons.org/licenses/by-nc/4.0/)',
+  },
+  {
+    source: 'Rotten Tomatoes',
+    url: 'https://www.rottentomatoes.com',
+    use: 'O Tomatometer, pelo OMDb, na linha do filme.',
+    notice:
+      'Rotten Tomatoes® e Tomatometer® são marcas da Fandango; o filmes não é endossado por ela.',
+  },
+  {
+    source: 'Metacritic',
+    url: 'https://www.metacritic.com',
+    use: 'O Metascore, pelo OMDb, na linha do filme.',
+    notice:
+      'Metacritic e Metascore são marcas da Fandom; o filmes não é endossado por ela.',
   },
   {
     source: DDD_NAME,

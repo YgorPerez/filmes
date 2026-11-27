@@ -32,6 +32,8 @@ describe('the credits', () => {
       'MovieLens',
       'Tag Genome',
       'OMDb',
+      'Rotten Tomatoes',
+      'Metacritic',
       'Does the Dog Die',
       'Trakt',
       'Letterboxd',

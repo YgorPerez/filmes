@@ -98,6 +98,9 @@ export const Weights = Schema.Struct({
   awards: Schema.optionalKey(
     Schema.Struct({ weight: Weight.check(Schema.isGreaterThanOrEqualTo(0)) }),
   ),
+  critics: Schema.optionalKey(
+    Schema.Struct({ weight: Weight.check(Schema.isGreaterThanOrEqualTo(0)) }),
+  ),
   no_sad: Schema.Struct({
     min_users_sad: Count,
     min_users_heavy_theme: Count,

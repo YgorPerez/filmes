@@ -222,6 +222,9 @@ Um Fato sobre o filme em si, vindo de uma base pública: elenco, diretor, gêner
 **Prêmio ou indicação** [award or nomination, `awards`]:
 Uma distinção do Wikidata da lista de `config/awards.toml`. Cada distinção aparece como linha do filme no Cartaz. A Regra soma o bônus uma vez por filme, e a distinção não conta como Fato da Recomendação.
 
+**Nota da crítica** [critics' score, `critics`]:
+O Tomatometer do Rotten Tomatoes e o Metascore do Metacritic, lidos da resposta do OMDb só para os filmes que chegam às primeiras posições. Aparece como linha do filme no Cartaz ("93% no Rotten Tomatoes"), soma um bônus que só reordena essas posições e não conta como Fato.
+
 **Nota** [rating, `Rating`]:
 A avaliação que uma Pessoa deu a um filme, sempre dita com o nome de quem deu.
 _Evitar_: nota própria, nota de amigo, rating

@@ -32,6 +32,9 @@ exports[`avaliar, as recorded > gives the recorded result and report 1`] = `
       "constraints": {
         "onDemandReach": 50,
       },
+      "critics": {
+        "weight": 0.1,
+      },
       "diversity": {
         "depth": 10,
         "lambda": 1,
@@ -465,6 +468,9 @@ Quanto das Notas retidas foi 4 ou mais, pela Força mais alta a favor do filme n
       },
       "constraints": {
         "onDemandReach": 50,
+      },
+      "critics": {
+        "weight": 0.1,
       },
       "diversity": {
         "depth": 10,
@@ -2170,6 +2176,9 @@ Foram testados 303 conjuntos. A ordem usa a média do Recall@50 entre as amostra
       },
       "constraints": {
         "onDemandReach": 50,
+      },
+      "critics": {
+        "weight": 0.1,
       },
       "diversity": {
         "depth": 10,
