@@ -56,6 +56,7 @@ const QUIM: PersonImportsView = {
   trakt: { ratings: 2, seen: 1, watchlist: 0 },
   imdb: { ratings: 0 },
   simkl: { ratings: 0, seen: 0, watchlist: 0 },
+  tvtime: { ratings: 0, seen: 0, stated: 0, watchlist: 0 },
 }
 
 /** Quim with nothing imported yet. */
@@ -73,6 +74,7 @@ const EMPTY: PersonImportsView = {
   trakt: { ratings: 0, seen: 0, watchlist: 0 },
   imdb: { ratings: 0 },
   simkl: { ratings: 0, seen: 0, watchlist: 0 },
+  tvtime: { ratings: 0, seen: 0, stated: 0, watchlist: 0 },
 }
 
 const show = (page: PersonImportsView = QUIM) =>
@@ -275,6 +277,14 @@ describe('PersonImportsScreen', () => {
     expect(
       within(upload).getByLabelText(COPY.other.file).getAttribute('accept'),
     ).toBe('.zip,application/zip,.csv,text/csv,.json,application/json')
+    // TV Time is closed: its steps name the backup, with no link.
+    const tvtime = within(other)
+      .getByText(COPY.other.how('TV Time'))
+      .closest('details') as HTMLElement
+    expect(tvtime.textContent).toContain(
+      'O gdpr-data.zip que o TV Time mandou, ou o tv-time-export.zip do TV Time Liberator.',
+    )
+    expect(within(tvtime).queryByRole('link')).toBeNull()
   })
 
   it('links her RSS only with her consent', async () => {
@@ -415,6 +425,37 @@ describe('PersonImportsScreen', () => {
     expect(screen.queryByRole('region', { name: TRAKT_SYNC.title })).toBeNull()
   })
 
+  it('counts the TV Time backup, whose films share the Letterboxd resolution', () => {
+    const tvtime = { ratings: 3, seen: 4, stated: 0, watchlist: 1 }
+    const record = {
+      kind: 'tvtime',
+      file: 'imports/quim/tvtime-d1.zip',
+      date: '2026-11-23',
+      original: 'gdpr-data.zip',
+    }
+    show({ ...QUIM, imports: [...QUIM.imports, record], tvtime })
+    const results = section(COPY.results.title)
+    expect(results.textContent).toContain('Letterboxd e TV Time: 10 filmes')
+    expect(results.textContent).toContain(
+      '1 filme do Letterboxd e do TV Time espera você confirmar qual é',
+    )
+    expect(results.textContent).toContain('TV Time: 3 Notas e 4 Já vistos')
+    expect(section(COPY.files.title).textContent).toContain(
+      'Backup do TV Time · em 23 nov 2026',
+    )
+    cleanup()
+    show({
+      ...EMPTY,
+      imports: [record],
+      letterboxd: { ...QUIM.letterboxd, films: 4 },
+      tvtime,
+    })
+    const alone = section(COPY.results.title)
+    expect(alone.textContent).toContain('TV Time: 4 filmes')
+    expect(alone.textContent).toContain(COPY.results.queued(1, 'tvtime'))
+    expect(alone.textContent).not.toContain('Letterboxd')
+  })
+
   it('says when no Pessoa has the name, or the engine cannot run', () => {
     render(<PersonImportsScreen slug="ninguem" page="unknown" />)
     expect(screen.getByRole('alert').textContent).toContain(COPY.unknown)
@@ -445,6 +486,11 @@ describe('PersonImportsScreen', () => {
     )
     expect(COPY.notices.rss({ facts: 5, ratings: 0, seen: 3 })).toBe(
       'Perfil do Letterboxd lido: entraram 3 Já vistos novos.',
+    )
+    expect(
+      COPY.notices.tvtime({ facts: 6, ratings: 2, seen: 3, outside: 1 }),
+    ).toBe(
+      'O backup do TV Time entrou: entraram 2 Notas novas e 3 Já vistos novos. 1 filme ficou de fora: o Catálogo do filmes não tem.',
     )
     expect(COPY.notices.removido(none)).toContain('Nada saiu')
   })

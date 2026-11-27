@@ -24,6 +24,22 @@ const left = (outside = 0) =>
     ? ''
     : ` ${count(outside, 'filme ficou', 'filmes ficaram')} de fora: o Catálogo do filmes não tem.`
 
+/** Whose films went through the resolution queue: Letterboxd's, the TV
+ * Time backup's (#300), or both. */
+export type Resolved = 'letterboxd' | 'tvtime' | 'both'
+
+const RESOLVED: Record<Resolved, string> = {
+  letterboxd: 'Letterboxd',
+  tvtime: 'TV Time',
+  both: 'Letterboxd e TV Time',
+}
+
+const QUEUED_FROM: Record<Resolved, string> = {
+  letterboxd: 'do Letterboxd',
+  tvtime: 'do TV Time',
+  both: 'do Letterboxd e do TV Time',
+}
+
 const UNAVAILABLE =
   'Não deu para abrir os imports: o site está com um problema, e ele ficou registrado no log do servidor.'
 
@@ -34,6 +50,7 @@ const KINDS: Record<string, string> = {
   'trakt-api': 'Lido do Trakt',
   imdb: 'CSV do IMDb',
   simkl: 'Backup do Simkl',
+  tvtime: 'Backup do TV Time',
 }
 
 /** The Letterboxd user of an RSS import's address, `@nome`. */
@@ -62,6 +79,8 @@ export const PERSON_IMPORTS = {
       `O CSV do IMDb entrou: ${gave(done)}.${left(done.outside)}`,
     simkl: (done: Gave) =>
       `O backup do Simkl entrou: ${gave(done)}.${left(done.outside)}`,
+    tvtime: (done: Gave) =>
+      `O backup do TV Time entrou: ${gave(done)}.${left(done.outside)}`,
     repetido: () => 'Esse arquivo já tinha entrado antes: nada mudou.',
     sincronizado: (done: Gave) =>
       done.facts === 0
@@ -77,7 +96,7 @@ export const PERSON_IMPORTS = {
     arquivo:
       'Não deu para ler esse arquivo. Envie o ZIP como o site te deu, sem abrir, ou o CSV do IMDb como ele veio.',
     origem:
-      'Esse arquivo não parece ser do Letterboxd, do Trakt, do IMDb nem do Simkl. Confira os passos acima.',
+      'Esse arquivo não parece ser do Letterboxd, do Trakt, do IMDb, do Simkl nem do TV Time. Confira os passos acima.',
     grande:
       'O arquivo passa de 20 MB. O ZIP do Letterboxd, do Trakt ou do Simkl e o CSV do IMDb costumam ter poucos MB: confira se é o certo.',
     consentimento:
@@ -104,8 +123,10 @@ export const PERSON_IMPORTS = {
   /** What the imports gave, first once there is any. */
   results: {
     title: 'O que já entrou',
-    letterboxd: (films: number) =>
-      `Letterboxd: ${count(films, 'filme', 'filmes')}`,
+    /** The films that went through the resolution: Letterboxd's, and the
+     * TV Time backup's, which go through the same one. */
+    letterboxd: (films: number, from: Resolved = 'letterboxd') =>
+      `${RESOLVED[from]}: ${count(films, 'filme', 'filmes')}`,
     found: 'achados',
     outside: 'deixados de fora',
     waiting: 'esperam você',
@@ -116,10 +137,12 @@ export const PERSON_IMPORTS = {
     imdb: (ratings: number) => `IMDb: ${count(ratings, 'Nota', 'Notas')}`,
     simkl: (ratings: number, seen: number) =>
       `Simkl: ${count(ratings, 'Nota', 'Notas')} e ${count(seen, 'Já visto', 'Já vistos')}`,
-    queued: (n: number) =>
+    tvtime: (ratings: number, seen: number) =>
+      `TV Time: ${count(ratings, 'Nota', 'Notas')} e ${count(seen, 'Já visto', 'Já vistos')}`,
+    queued: (n: number, from: Resolved = 'letterboxd') =>
       n === 1
-        ? '1 filme do Letterboxd espera você confirmar qual é'
-        : `${n} filmes do Letterboxd esperam você confirmar qual é`,
+        ? `1 filme ${QUEUED_FROM[from]} espera você confirmar qual é`
+        : `${n} filmes ${QUEUED_FROM[from]} esperam você confirmar qual é`,
     queuedLead:
       'O filmes não achou estes sozinho no Catálogo. Até você confirmar, as Notas deles não contam.',
     toQueue: 'Resolver agora',
@@ -178,10 +201,10 @@ export const PERSON_IMPORTS = {
   /** The other services, behind the Letterboxd flow. */
   other: {
     title: 'De outro site',
-    lead: 'Trakt, IMDb ou Simkl: baixe o arquivo no site de cada um, pelo computador, e envie aqui como veio.',
-    file: 'Arquivo do Trakt, do IMDb ou do Simkl',
+    lead: 'Trakt, IMDb, Simkl ou o backup do TV Time: baixe o arquivo no site de cada um, pelo computador, e envie aqui como veio.',
+    file: 'Arquivo do Trakt, do IMDb, do Simkl ou do TV Time',
     wrongType:
-      'Esse arquivo não é de nenhum deles: o Trakt e o Simkl dão um .zip, e o IMDb um .csv.',
+      'Esse arquivo não é de nenhum deles: o Trakt, o Simkl e o TV Time dão um .zip, e o IMDb um .csv.',
     how: (service: string) => `Como baixar do ${service}`,
     services: [
       {
@@ -208,6 +231,17 @@ export const PERSON_IMPORTS = {
         steps: [
           'No Simkl, abra “Apps” e depois “Export”.',
           'Escolha “.zip archive with .json file” e baixe.',
+          'Envie o ZIP aqui, sem abrir.',
+        ],
+      },
+      {
+        service: 'TV Time',
+        // Shut down in July 2026: nothing to download any more, only the
+        // backup kept from before, so no link.
+        href: null,
+        steps: [
+          'O TV Time fechou em julho de 2026: vale o backup que você guardou.',
+          'O gdpr-data.zip que o TV Time mandou, ou o tv-time-export.zip do TV Time Liberator.',
           'Envie o ZIP aqui, sem abrir.',
         ],
       },

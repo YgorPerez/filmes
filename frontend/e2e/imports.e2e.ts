@@ -256,7 +256,7 @@ test('the Dono imports a Trakt ZIP; a ZIP of neither and a profile that does not
   await expect(
     page.getByRole('form', { name: LETTERBOXD_UPLOAD }).getByRole('alert'),
   ).toContainText(
-    'Esse arquivo não parece ser do Letterboxd, do Trakt, do IMDb nem do Simkl.',
+    'Esse arquivo não parece ser do Letterboxd, do Trakt, do IMDb, do Simkl nem do TV Time.',
   )
 
   await upload(
@@ -339,6 +339,40 @@ test('the Dono imports a Simkl backup ZIP', async ({ page }, info) => {
   expect((await importsOf('sara')).simkl).toEqual({
     ratings: 3,
     seen: 2,
+    watchlist: 1,
+  })
+})
+
+test('the Dono imports a TV Time backup', async ({ page }, info) => {
+  test.skip(info.project.name !== 'desktop', 'Ravi is the desktop’s')
+  await addPerson('Ravi')
+  await loginAsBruno(page)
+  await page.goto('/importar/ravi')
+
+  // The Liberator's films that name their tconst: none for the shared queue.
+  const movies = (
+    JSON.parse(
+      readFileSync(join(FIXTURE, 'tvtime/liberator/movies.json'), 'utf8'),
+    ) as { id: { imdb: string } }[]
+  ).filter((movie) => movie.id.imdb.startsWith('tt'))
+  await upload(
+    page,
+    'tv-time-export.zip',
+    zipOf([['movies.json', JSON.stringify(movies)]]),
+    'application/zip',
+    'outro',
+  )
+  await expect(notice(page)).toHaveText(
+    'O backup do TV Time entrou: entraram 2 Notas novas e 3 Já vistos novos. 1 filme ficou de fora: o Catálogo do filmes não tem.',
+  )
+  await expect(section(page, RESULTS)).toContainText(
+    'TV Time: 2 Notas e 3 Já vistos',
+  )
+  await snap(page, info, 'importar-tvtime')
+  expect((await importsOf('ravi')).tvtime).toEqual({
+    ratings: 2,
+    seen: 3,
+    stated: 0,
     watchlist: 1,
   })
 })
@@ -461,7 +495,7 @@ test.describe('with the JavaScript off', () => {
       /\/meu-gosto\/importar\?erro=origem&de=letterboxd$/,
     )
     await expect(page.getByRole('alert')).toContainText(
-      'Esse arquivo não parece ser do Letterboxd, do Trakt, do IMDb nem do Simkl.',
+      'Esse arquivo não parece ser do Letterboxd, do Trakt, do IMDb, do Simkl nem do TV Time.',
     )
   })
 })

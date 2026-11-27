@@ -60,6 +60,12 @@ export interface LetterboxdRow {
   readonly tmdb: string | null
   /** Opens the Fonte: "<origin> de <Pessoa's name>". */
   readonly origin: string
+  /** Starts the Fatos' `fato_id`; `letterboxd` when absent. The TV Time
+   * import's rows (#300) have their own. */
+  readonly factKind?: string
+  /** The tconst, when the export names it (the TV Time Liberator's): the
+   * film needs no resolution. */
+  readonly imdb?: string | null
 }
 
 /** A stable id for the pair (Name, Year), even when two names make the

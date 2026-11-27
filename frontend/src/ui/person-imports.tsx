@@ -14,7 +14,7 @@ import { Icon } from './kit/icon'
 import { PostAnswers, PostForm } from './kit/post-form'
 import { usePostedFeedback } from './kit/posted-feedback'
 import { ImportsFrame } from './imports'
-import { PERSON_IMPORTS, rssUser } from './imports.copy'
+import { PERSON_IMPORTS, rssUser, type Resolved } from './imports.copy'
 import { Slip } from './kit/slip'
 import { PageHead } from './kit/page-head'
 import { RowArrow } from './kit/row-arrow'
@@ -63,11 +63,13 @@ export type ImportDoneView = {
  * her in the queue with "Resolver agora", the files, and the forms folded
  * under "Importar de novo". Before that, the forms are the page: the
  * guided Letterboxd flow (#270: the data page, the ZIP once, the profile
- * after) and the other sites' upload. A refusal shows under the form that
- * was sent (`refusedIn`), with its field marked. Every form is a plain
- * POST (the upload multipart) that comes back here; with the JavaScript,
- * by `fetch`, without a reload (#240). `page` is `'unknown'` when no
- * Pessoa has the slug, null when the engine cannot run on this server. */
+ * after) and the other sites' upload (Trakt, IMDb, Simkl and the TV Time
+ * backup, told apart by what the file holds). A refusal shows under the
+ * form that was sent (`refusedIn`), with its field marked. Every form is
+ * a plain POST (the upload multipart) that comes back here; with the
+ * JavaScript, by `fetch`, without a reload (#240). `page` is `'unknown'`
+ * when no Pessoa has the slug, null when the engine cannot run on this
+ * server. */
 export function PersonImportsScreen({
   slug,
   page,
@@ -359,12 +361,18 @@ function Tally({ value, term }: { value: number; term: string }) {
 
 /** The films of her export that wait in the queue, on the card stock,
  * with the way to them: the next step, so it comes first. */
-function Waiting({ report }: { report: PersonImports['letterboxd'] }) {
+function Waiting({
+  report,
+  from,
+}: {
+  report: PersonImports['letterboxd']
+  from: Resolved
+}) {
   const { results } = COPY
   return (
     <div className="flex flex-col gap-md rounded-field bg-card-stock p-lg text-card-stock-ink">
       <div className="flex flex-col gap-2xs">
-        <p className="font-semibold">{results.queued(report.queued)}</p>
+        <p className="font-semibold">{results.queued(report.queued, from)}</p>
         <p className="text-meta">{results.queuedLead}</p>
       </div>
       <ul className="flex flex-col gap-2xs text-meta">
@@ -388,21 +396,38 @@ function Waiting({ report }: { report: PersonImports['letterboxd'] }) {
   )
 }
 
-/** Her Letterboxd films: found, left out (which, and why) and waiting. */
-function LetterboxdResult({ report }: { report: PersonImports['letterboxd'] }) {
+/** Whose films the resolution holds: the TV Time backup's go through the
+ * same one as Letterboxd's (#300). */
+function resolvedFrom(page: PersonImports): Resolved {
+  const kinds = new Set(page.imports.map(({ kind }) => kind))
+  if (!kinds.has('tvtime')) return 'letterboxd'
+  return kinds.has('letterboxd') || kinds.has('letterboxd-rss')
+    ? 'both'
+    : 'tvtime'
+}
+
+/** Her Letterboxd (and TV Time) films: found, left out (which, and why)
+ * and waiting. */
+function LetterboxdResult({
+  report,
+  from,
+}: {
+  report: PersonImports['letterboxd']
+  from: Resolved
+}) {
   const { results } = COPY
   const outside = report.discardedItems
   return (
     <div className="flex flex-col gap-lg">
       <h3 className="font-display text-step-title-small">
-        {results.letterboxd(report.films)}
+        {results.letterboxd(report.films, from)}
       </h3>
       <dl className="grid grid-cols-3 gap-lg">
         <Tally value={total(report.resolved)} term={results.found} />
         <Tally value={total(report.discarded)} term={results.outside} />
         <Tally value={report.queued} term={results.waiting} />
       </dl>
-      {report.queued > 0 && <Waiting report={report} />}
+      {report.queued > 0 && <Waiting report={report} from={from} />}
       {outside.length > 0 && (
         <details className="group">
           <summary className="inline-flex min-h-touch cursor-pointer list-none items-center text-link text-ink-2 underline underline-offset-3 [&::-webkit-details-marker]:hidden">
@@ -438,12 +463,16 @@ function Results({ page }: { page: PersonImports }) {
     page.imdb.ratings > 0 && results.imdb(page.imdb.ratings),
     (page.simkl.ratings > 0 || page.simkl.seen > 0) &&
       results.simkl(page.simkl.ratings, page.simkl.seen),
+    (page.tvtime.ratings > 0 || page.tvtime.seen > 0) &&
+      results.tvtime(page.tvtime.ratings, page.tvtime.seen),
   ].filter((line) => line !== false)
   const letterboxd = page.letterboxd.films > 0 || page.letterboxd.queued > 0
   if (!letterboxd && lines.length === 0) return null
   return (
     <Slip id="resultado" title={results.title}>
-      {letterboxd && <LetterboxdResult report={page.letterboxd} />}
+      {letterboxd && (
+        <LetterboxdResult report={page.letterboxd} from={resolvedFrom(page)} />
+      )}
       {lines.length > 0 && (
         <ul
           className={`flex flex-col gap-xs ${letterboxd ? 'border-t border-dashed border-rule pt-lg' : ''}`}
@@ -572,8 +601,9 @@ function LetterboxdUpload({
   )
 }
 
-/** The Trakt, IMDb and Simkl files: how to get each one, folded, and one
- * upload; the server tells the site by what the file holds. */
+/** The Trakt, IMDb and Simkl files and the TV Time backup: how to get each
+ * one, folded, and one upload; the server tells the site by what the file
+ * holds. */
 function OtherSites({
   slug,
   refused,
@@ -611,7 +641,8 @@ function OtherSites({
   )
 }
 
-/** How to get each site's file, one folded list per site. */
+/** How to get each site's file, one folded list per site; its first step
+ * links to the site's data page (TV Time, closed, has none). */
 function ServiceGuides() {
   const { other } = COPY
   return (
@@ -634,7 +665,7 @@ function ServiceGuides() {
             <ol className="flex list-decimal flex-col gap-2xs pb-md pl-3xl text-evidence">
               {steps.map((step, index) => (
                 <li key={step}>
-                  {index === 0 ? (
+                  {index === 0 && href !== null ? (
                     <a
                       href={href}
                       target="_blank"

@@ -16,8 +16,11 @@
 // the id. Each film carries each Presente's utility and Evidence, grouped by
 // slug in the Presentes' order; whoever has no Fact on the film gets the
 // "sem fato" line. The satisfaction line also goes in `filmLines` when
-// weighing who is behind changes the order. Then MMR (`diversity.ts`, #177)
-// picks the first places for Diversidade, before the on-demand Restrições.
+// weighing who is behind changes the order. The critics' score
+// (`critics.ts`, #282) then asks OMDb about the first `[constraints]
+// on_demand_reach` films and reorders only among them. Then MMR
+// (`diversity.ts`, #177) picks the first places for Diversidade, before the
+// on-demand Restrições.
 //
 // With a seed (the Session id), the Aposta (`bet.ts`, #178) takes the place
 // `[bet] position`: the Regra (and MMR) fills the other places, and the bet
@@ -67,6 +70,7 @@ import {
   type ConstraintSet,
 } from './constraints.ts'
 import { readConstraints, type ConstraintRequest } from './constraints/index.ts'
+import { criticsLines } from './critics.ts'
 import { diversify, type Scored } from './diversity.ts'
 import {
   groupSatisfaction,
@@ -481,6 +485,59 @@ const orderFilms = (
   ordered.sort(byKey)
   return { ordered, unweighed }
 }
+
+/** `key` with `bonus` more on the Regra's score. */
+const raisedKey = (key: Key, bonus: number): Key => [
+  key[0],
+  (key[1] as readonly number[]).map((v) => v - bonus),
+  ...key.slice(2),
+]
+
+/** The critics' score (#282): the films in the first `on_demand_reach`
+ * places ask OMDb, and their lines' bonus reorders them only among
+ * themselves; the films past that place are not asked and keep theirs.
+ * `unweighed` gets the same bonus, so the satisfaction line compares
+ * like with like. */
+const withCritics = (
+  r: Ranking,
+  { ordered, unweighed }: ReturnType<typeof orderFilms>,
+  ofFilm: ByFilm,
+): RankEffect<{
+  readonly ordered: ReadonlyArray<Ordered>
+  readonly unweighed: { key: Key; id: string }[]
+  readonly ofFilm: ByFilm
+}> =>
+  Effect.gen(function* () {
+    const weight = r.weights.critics?.weight
+    if (weight === undefined) return { ordered, unweighed, ofFilm }
+    const reach = r.weights.constraints.on_demand_reach
+    const lines = new Map(ofFilm)
+    const bonus = new Map<string, number>()
+    for (const { id } of ordered.slice(0, reach)) {
+      const found = yield* criticsLines(id, weight)
+      if (found.length === 0) continue
+      lines.set(id, [...(ofFilm.get(id) ?? []), ...found])
+      bonus.set(id, pySum(found.map((e) => contribution(e, r.weights))))
+    }
+    const raise = <A extends { key: Key; id: string }>(item: A) => {
+      const more = bonus.get(item.id)
+      return more ? { ...item, key: raisedKey(item.key, more) } : item
+    }
+    return {
+      ordered: [
+        ...ordered
+          .slice(0, reach)
+          .map((item) => {
+            const raised = raise(item)
+            return { ...raised, score: item.score + (bonus.get(item.id) ?? 0) }
+          })
+          .sort(byKey),
+        ...ordered.slice(reach),
+      ],
+      unweighed: unweighed.map(raise),
+      ofFilm: lines,
+    }
+  })
 
 const fill = (r: Ranking, pool: ReadonlyArray<Ordered>, places: number) =>
   r.asked.approve(
@@ -1002,13 +1059,13 @@ export const rank = (
     const warningsBefore = (yield* run.warnings).length
     const r = yield* prepare(db, options)
     const removed = yield* keptRemovals(r)
-    const { byFilm, ofFilm } = yield* signalEvidence(r.round)
+    const signals = yield* signalEvidence(r.round)
     const { group, adjustment } = yield* satisfactionOf(r)
-    const { ordered, unweighed } = orderFilms(r, {
-      byFilm,
-      ofFilm,
-      adjustment,
-    })
+    const { ordered, unweighed, ofFilm } = yield* withCritics(
+      r,
+      orderFilms(r, { ...signals, adjustment }),
+      signals.ofFilm,
+    )
     const placement = yield* placeFilms(r, ordered, removed)
     const finish: Finish = {
       ofFilm,

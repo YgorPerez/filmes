@@ -40,6 +40,7 @@ import type {
   Recommendation,
   RecommendRequest,
 } from '../recommendation/recommend.ts'
+import { CRITICS_TABLE } from '../recommendation/critics.ts'
 import { AWARDS_TABLE } from '../recommendation/signals/awards.ts'
 import type { EngineServices } from '../runtime/Engine.ts'
 import type { EngineError } from '../runtime/EngineError.ts'
@@ -127,6 +128,9 @@ export const recommendationFields = (
           const awards = f.filmLines
             .filter((line) => line.factId?.startsWith(`${AWARDS_TABLE}:`))
             .map((line) => line.text)
+          const critics = f.filmLines
+            .filter((line) => line.factId?.startsWith(`${CRITICS_TABLE}:`))
+            .map((line) => line.text)
           return {
             position: f.position,
             id: f.id,
@@ -135,6 +139,7 @@ export const recommendationFields = (
             ...(f.bet && { bet: true }),
             ...(f.cautiousBet && { cautious_bet: true }),
             ...(awards.length > 0 && { awards }),
+            ...(critics.length > 0 && { critics }),
             // The Nota prevista the Cartaz shows (#175), kept with the
             // version so an old version's Cartaz does not move when the
             // neighbours do. Only the calibrated value (#210).
