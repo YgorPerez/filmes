@@ -1,4 +1,5 @@
 import type { LoginRefusal } from '#/content/login-refusal'
+import type { TraktError } from '#/content/trakt-form'
 
 export const LOGIN = {
   brand: 'filmes',
@@ -21,4 +22,47 @@ export const LOGIN = {
     google: 'O Google não confirmou sua entrada. Tente de novo.',
     indisponivel: 'A entrada com Google está indisponível. Tente mais tarde.',
   } satisfies Record<LoginRefusal, string>,
+} as const
+
+/** `/trakt` (#295, #269, #274): a Pessoa connects her own Trakt, which the
+ * filmes reads and sends to, or disconnects it. */
+export const TRAKT_SCREEN = {
+  heading: 'Trakt',
+  back: 'Importar',
+  title: 'Histórico e notas',
+  google: 'Entrar com Google',
+  disconnect: 'Desconectar Trakt',
+  connect: 'Conectar Trakt',
+  unavailable: 'A conexão com o Trakt está indisponível.',
+  login:
+    'Entre com o e-mail cadastrado no filmes para conectar sua conta do Trakt.',
+  connected:
+    'Sua conta está conectada: o filmes lê seu histórico a cada Sessão nova e envia o filme escolhido. Ao desconectar, ele deixa de ler e de enviar e apaga os dados de acesso. O que já entrou no seu gosto e seu histórico no Trakt ficam como estão.',
+  does: [
+    {
+      title: 'O filmes lê do seu Trakt',
+      items: [
+        'o histórico, as notas e a watchlist de filmes',
+        'a cada Sessão nova, e quando você pedir em Importar',
+      ],
+    },
+    {
+      title: 'O filmes envia ao seu Trakt, ao salvar o Feedback',
+      items: [
+        'o filme escolhido na Sessão',
+        'os filmes marcados como Já vi no Cartaz, com as notas que você deu',
+      ],
+    },
+  ],
+  consent: 'Autorizo a leitura e o envio acima',
+  after:
+    'O Trakt pede que você entre e aprove. Depois ele volta para esta página, já conectada, e o histórico entra na próxima Sessão.',
+  notEndorsed:
+    'O filmes usa o Trakt e não é endossado nem certificado pelo Trakt.',
+  errors: {
+    login: 'Entre com o e-mail cadastrado no filmes.',
+    trakt: 'O Trakt não concluiu a conexão. Tente de novo.',
+    consentimento:
+      'Marque a caixa para autorizar a leitura e o envio ao Trakt.',
+  } satisfies Record<TraktError, string>,
 } as const

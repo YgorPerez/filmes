@@ -8,7 +8,6 @@ import { DatabaseSync } from 'node:sqlite'
 import { expect, test } from 'vite-plus/test'
 import {
   exportRatings,
-  LETTERBOXD_HEADER,
   personSeen,
   recommendSession,
   recordFeedback,
@@ -89,17 +88,6 @@ test('Notas, Já vistos and Reações go into the Letterboxd CSV', async () => {
       '',
     ].join('\r\n'),
   )
-})
-
-test('the header is the importer’s columns', () => {
-  expect(LETTERBOXD_HEADER).toEqual([
-    'imdbID',
-    'Title',
-    'Year',
-    'Rating10',
-    'WatchedDate',
-    'Review',
-  ])
 })
 
 test('a field with a comma or a quote is quoted, the quote escaped as Letterboxd asks', async () => {

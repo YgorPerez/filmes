@@ -10,13 +10,15 @@
 // on the Pessoa's Escala like any Nota) and the watchlist. The kept copy
 // holds only the film files. The Letterboxd loader redoes them with its
 // own, so the rebuild and the app's reload need no step of their own.
+import { attempt } from './attempt.ts'
+import { inCatalog } from './film-ids.ts'
 import { basename } from 'node:path'
 import { Effect } from 'effect'
 import { DataWriter, type Author } from '../data/DataWriter.ts'
 import type { GitError } from '../data/git.ts'
 import { resolvePerson } from '../people/people.ts'
 import type { Person } from '../people/Person.ts'
-import { EngineError } from '../runtime/EngineError.ts'
+import type { EngineError } from '../runtime/EngineError.ts'
 import type { Environment } from '../runtime/Environment.ts'
 import { Run } from '../runtime/Run.ts'
 import type { Connection, Sqlite, SqliteError } from '../sqlite/Sqlite.ts'
@@ -24,7 +26,6 @@ import { TMDB_ATTRIBUTION, type Tmdb } from '../sources/Tmdb.ts'
 import {
   countFacts,
   ensureLetterboxdTables,
-  inCatalogue,
   letterboxdReport,
   loadLetterboxd,
   recordTmdbAnswers,
@@ -37,19 +38,9 @@ import {
   keptTvTimeBackup,
   readTvTimeBackup,
   TVTIME_KIND,
+  tvTimeZip,
 } from './tvtime-backup.ts'
 import { tasteChange, tasteSnapshot, type TasteChange } from './taste-change.ts'
-
-/** Runs a reader that throws the `EngineError` of a bad file. */
-const attempt = <A>(f: () => A): Effect.Effect<A, EngineError> =>
-  Effect.suspend(() => {
-    try {
-      return Effect.succeed(f())
-    } catch (error) {
-      if (error instanceof EngineError) return Effect.fail(error)
-      throw error
-    }
-  })
 
 /** The rows of every backup the Pessoa has stored, in record order. */
 const personTvTimeRows = (
@@ -78,7 +69,7 @@ const outsideCatalog = (
       if (
         row.imdb &&
         !outside.has(row.imdb) &&
-        !(yield* inCatalogue(db, row.imdb))
+        !(yield* inCatalog(db, row.imdb))
       )
         outside.set(row.imdb, { film: row.imdb, title: row.name || null })
     return [...outside.values()]
@@ -112,7 +103,8 @@ export interface TvTimeImportInput {
   readonly person: string
   /** The file's name as uploaded: the messages and the record show it. */
   readonly original: string
-  /** The ZIP's bytes. */
+  /** The ZIP's bytes, or the Liberator's `movies.json` when `original`
+   * ends in `.json`. */
   readonly content: Uint8Array
   /** Who asked: the commit's author. */
   readonly author: Author
@@ -128,12 +120,9 @@ export const importTvTime = (
   Environment | Sqlite | Run | Tmdb | DataWriter
 > =>
   Effect.gen(function* () {
-    const rows = yield* attempt(() =>
-      readTvTimeBackup(input.original, input.content),
-    )
-    const kept = yield* attempt(() =>
-      keptTvTimeBackup(input.original, input.content),
-    )
+    const zip = tvTimeZip(input.original, input.content)
+    const rows = yield* attempt(() => readTvTimeBackup(input.original, zip))
+    const kept = yield* attempt(() => keptTvTimeBackup(input.original, zip))
     const writer = yield* DataWriter
     return yield* writer.write(
       {

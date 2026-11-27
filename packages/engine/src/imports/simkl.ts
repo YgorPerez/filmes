@@ -10,6 +10,7 @@
 // backup gives no day keeps the day of the import record. Every change
 // reloads the Pessoa's Simkl Fatos from all her stored backups; the
 // watchlist is the latest backup's.
+import { attempt } from './attempt.ts'
 import { basename } from 'node:path'
 import { Effect } from 'effect'
 import { factId, pyFloat } from '../compat/fact-id.ts'
@@ -24,7 +25,7 @@ import {
 import { readPeople, resolvePerson, savePerson } from '../people/people.ts'
 import type { Person } from '../people/Person.ts'
 import type { Attribution } from '../recommendation/attributions.ts'
-import { EngineError } from '../runtime/EngineError.ts'
+import type { EngineError } from '../runtime/EngineError.ts'
 import type { Environment } from '../runtime/Environment.ts'
 import { Run } from '../runtime/Run.ts'
 import { TMDB_ATTRIBUTION, Tmdb } from '../sources/Tmdb.ts'
@@ -47,23 +48,12 @@ import { withLatestWatchlist } from './watchlist.ts'
 import { tasteChange, tasteSnapshot, type TasteChange } from './taste-change.ts'
 
 /** The kind of a Pessoa's `imports:` records this module reads. */
-export const SIMKL_KIND = 'simkl'
+const SIMKL_KIND = 'simkl'
 
 /** The import record's field with TMDB's answers. */
 const TMDB_FIELD = 'tmdb'
 
 const FACT_TABLES = ['notas', 'ja_visto', 'watchlist'] as const
-
-/** Runs a reader that throws the `EngineError` of a bad file. */
-const attempt = <A>(f: () => A): Effect.Effect<A, EngineError> =>
-  Effect.suspend(() => {
-    try {
-      return Effect.succeed(f())
-    } catch (error) {
-      if (error instanceof EngineError) return Effect.fail(error)
-      throw error
-    }
-  })
 
 /** A row with its day: the backup's, or the import record's. */
 interface DatedRow extends SimklRow {

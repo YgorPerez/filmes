@@ -1,0 +1,23 @@
+{
+  "request": {
+    "path": "/sync/history",
+    "body": {
+      "movies": [
+        {
+          "ids": {
+            "imdb": "tt9000301"
+          },
+          "watched_at": "2026-11-20T12:00:00.000Z"
+        }
+      ]
+    }
+  },
+  "response": {
+    "added": {
+      "movies": 1
+    },
+    "not_found": {
+      "movies": []
+    }
+  }
+}

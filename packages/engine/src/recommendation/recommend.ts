@@ -508,8 +508,7 @@ const withCritics = (
   readonly ofFilm: ByFilm
 }> =>
   Effect.gen(function* () {
-    const weight = r.weights.critics?.weight
-    if (weight === undefined) return { ordered, unweighed, ofFilm }
+    const { weight } = r.weights.critics
     const reach = r.weights.constraints.on_demand_reach
     const lines = new Map(ofFilm)
     const bonus = new Map<string, number>()

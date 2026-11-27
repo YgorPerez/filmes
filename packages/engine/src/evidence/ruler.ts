@@ -326,9 +326,9 @@ export const statedStrength = (
   return strength
 }
 
-/** A film on the Pessoa's watchlist (Letterboxd, Trakt or Simkl): she said she
- * wants to see it, about the film itself, but only by putting it on a
- * list. Moderate, whatever its age (#280). */
+/** A film on the Pessoa's watchlist (Letterboxd, Trakt, Simkl or TV Time):
+ * she said she wants to see it, about the film itself, but only by putting
+ * it on a list. Moderate, whatever its age (#280). */
 export const watchlistStrength = (): Strength => 'moderate'
 
 /** The IMDb rating as a film line: exact metadata, strong. The bonus size

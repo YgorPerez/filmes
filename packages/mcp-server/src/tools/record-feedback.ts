@@ -23,8 +23,10 @@ export default defineTool({
   annotations: {
     readOnlyHint: false,
     destructiveHint: false,
-    openWorldHint: false,
+    // It also posts the Já vistos and Notas to the Trakt of whoever connected.
+    openWorldHint: true,
   },
+  session: true,
   description:
     'Registra o Feedback de uma Sessão aberta e a fecha. Mande `film` (título ou ID do IMDb, de dentro ou de fora ' +
     'da Recomendação) ou `nothing: true` ("não vimos nada", sem reação). `ratings`: a Nota do Dono ("dono") ou o número ' +

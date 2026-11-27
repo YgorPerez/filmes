@@ -26,6 +26,7 @@ export default defineTool({
     destructiveHint: false,
     openWorldHint: true,
   },
+  session: true,
   description:
     'Recomendação para uma Sessão: devolve o top 5 na ordem da Regra de escolha e abre uma Sessão (`session.id`). ' +
     'Antes, chame `open_sessions` e, se houver uma, pergunte por ela; o Dono pode pular. ' +

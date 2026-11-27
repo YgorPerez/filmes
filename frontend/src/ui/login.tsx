@@ -5,7 +5,7 @@ import {
   type TraktError,
 } from '#/content/trakt-form'
 import { MY_TASTE } from '#/content/paths'
-import { LOGIN } from './login.copy'
+import { LOGIN, TRAKT_SCREEN as TRAKT } from './login.copy'
 import { ShelfLabel } from './kit/shelf-label'
 import { Alert } from './kit/status'
 import { buttonVariants } from './kit/button-variants'
@@ -75,12 +75,6 @@ export function Login({ refusal }: { refusal?: LoginRefusal }) {
 // `/trakt` (#295): any Pessoa with an email signs in with Google, consents
 // and connects her own Trakt, or disconnects it.
 
-const traktErrors: Record<TraktError, string> = {
-  login: 'Entre com o e-mail cadastrado no filmes.',
-  trakt: 'O Trakt não concluiu a conexão. Tente de novo.',
-  consentimento: 'Marque a caixa para autorizar a leitura e o envio ao Trakt.',
-}
-
 type TraktPage =
   | { status: 'unavailable' }
   | { status: 'login' }
@@ -110,8 +104,8 @@ export function TraktScreen({
           {TRAKT.back}
         </a>
       )}
-      <h1 className="font-display text-counter-title">Trakt</h1>
-      {error && <Alert>{traktErrors[error]}</Alert>}
+      <h1 className="font-display text-counter-title">{TRAKT.heading}</h1>
+      {error && <Alert>{TRAKT.errors[error]}</Alert>}
       <Slip id="trakt-history" title={TRAKT.title}>
         <div className="flex flex-col items-start gap-lg">
           <TraktBody page={page} />
@@ -141,7 +135,7 @@ function TraktBody({ page }: { page: TraktPage }) {
           href="/auth/trakt-google"
           className={buttonVariants({ variant: 'primary' })}
         >
-          Entrar com Google
+          {TRAKT.google}
         </a>
       </>
     )
@@ -153,7 +147,7 @@ function TraktBody({ page }: { page: TraktPage }) {
           <p>{TRAKT.connected}</p>
           <form action={TRAKT_DISCONNECT} method="post">
             <Button type="submit" variant="option">
-              Desconectar Trakt
+              {TRAKT.disconnect}
             </Button>
           </form>
         </>
@@ -174,7 +168,7 @@ function TraktBody({ page }: { page: TraktPage }) {
             />
             <span>{TRAKT.consent}</span>
           </label>
-          <Button type="submit">Conectar Trakt</Button>
+          <Button type="submit">{TRAKT.connect}</Button>
           <p className="text-meta text-ink-2">{TRAKT.after}</p>
         </form>
       )}
@@ -198,36 +192,4 @@ function TraktConsent() {
       ))}
     </div>
   )
-}
-
-/** The words of `/trakt`. */
-const TRAKT = {
-  back: 'Importar',
-  title: 'Histórico e notas',
-  unavailable: 'A conexão com o Trakt está indisponível.',
-  login:
-    'Entre com o e-mail cadastrado no filmes para conectar sua conta do Trakt.',
-  connected:
-    'Sua conta está conectada: o filmes lê seu histórico a cada Sessão nova e envia o filme escolhido. Ao desconectar, ele deixa de ler e de enviar e apaga os dados de acesso. O que já entrou no seu gosto e seu histórico no Trakt ficam como estão.',
-  does: [
-    {
-      title: 'O filmes lê do seu Trakt',
-      items: [
-        'o histórico, as notas e a watchlist de filmes',
-        'a cada Sessão nova, e quando você pedir em Importar',
-      ],
-    },
-    {
-      title: 'O filmes envia ao seu Trakt, ao salvar o Feedback',
-      items: [
-        'o filme escolhido na Sessão',
-        'os filmes marcados como Já vi no Cartaz, com as notas que você deu',
-      ],
-    },
-  ],
-  consent: 'Autorizo a leitura e o envio acima',
-  after:
-    'O Trakt pede que você entre e aprove. Depois ele volta para esta página, já conectada, e o histórico entra na próxima Sessão.',
-  notEndorsed:
-    'O filmes usa o Trakt e não é endossado nem certificado pelo Trakt.',
 }

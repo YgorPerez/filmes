@@ -4,13 +4,22 @@ import { field } from './json.ts'
 import { Environment } from '../runtime/Environment.ts'
 import { getJson, postJson, SourceFailure, Transport } from './Source.ts'
 
-/** The app supplies consented credentials from its server-only store. */
+/** What the app answers when Trakt refused the Pessoa's refresh token
+ * (`invalid_grant`): it dropped the grant, and she has to connect again. */
+export const TRAKT_REVOKED: unique symbol = Symbol('Trakt grant revoked')
+
+/** What she is told when Trakt refused her grant, on a read or a send. */
+export const traktRevokedWarning = (name: string) =>
+  `O Trakt de ${name} recusou a conexão; reconecte o Trakt para voltar a ler e enviar o histórico.`
+
+/** The app supplies consented credentials from its server-only store: the
+ * token, `null` without consent, or `TRAKT_REVOKED`. */
 export interface TraktConnection {
   readonly clientId: string
   readonly accessToken: (
     person: string,
     signal: AbortSignal,
-  ) => Promise<string | null>
+  ) => Promise<string | null | typeof TRAKT_REVOKED>
 }
 
 export const TraktAccess = Context.Reference<TraktConnection | null>(
@@ -24,6 +33,21 @@ const SKIPPED = Symbol('no Trakt consent')
 const failure = (reason: string) =>
   new SourceFailure({ reason, transient: false })
 
+/** The IMDb ids in Trakt's `not_found.movies`, or `null` when the answer
+ * has no such list. */
+const notFound = (response: unknown): ReadonlyArray<string> | null => {
+  const movies = field(field(response, 'not_found'), 'movies')
+  if (!Array.isArray(movies)) return null
+  return movies.flatMap((movie: unknown) => {
+    const imdb = field(field(movie, 'ids'), 'imdb')
+    return typeof imdb === 'string' ? [imdb] : []
+  })
+}
+
+/** Posts `movies` to the Pessoa's Trakt. `null` when she has not consented,
+ * `TRAKT_REVOKED` when her grant was refused; otherwise the films Trakt did
+ * not find, which are a gap in its data and not a failure: the rest was
+ * written. */
 export const writeTrakt = (
   kind: 'history' | 'ratings',
   movies: ReadonlyArray<unknown>,
@@ -37,7 +61,11 @@ export const writeTrakt = (
       try: (signal) => connection.accessToken(person, signal),
       catch: () => failure('não foi possível acessar a conexão com o Trakt'),
     })
-    if (paths.recordings !== undefined && !(yield* tokenFor)) return false
+    if (paths.recordings !== undefined) {
+      const token = yield* tokenFor
+      if (!token) return null
+      if (token === TRAKT_REVOKED) return TRAKT_REVOKED
+    }
     const path = `/sync/${kind}`
     const body = { movies }
     const json = JSON.stringify(body)
@@ -49,6 +77,7 @@ export const writeTrakt = (
         // Recheck consent before each attempt, including retries.
         const token = yield* tokenFor
         if (!token) return SKIPPED
+        if (token === TRAKT_REVOKED) return TRAKT_REVOKED
         return yield* postJson(
           `https://api.trakt.tv${path}`,
           {
@@ -61,11 +90,12 @@ export const writeTrakt = (
       }),
       { path, body },
     )
-    if (response === SKIPPED) return false
-    const missing = field(field(response, 'not_found'), 'movies')
-    if (!Array.isArray(missing) || missing.length > 0)
-      return yield* failure('o Trakt não confirmou todos os filmes')
-    return true
+    if (response === SKIPPED) return null
+    if (response === TRAKT_REVOKED) return TRAKT_REVOKED
+    const missing = notFound(response)
+    if (missing === null)
+      return yield* failure('o Trakt respondeu sem a lista de não encontrados')
+    return missing
   })
 
 /** Films per page of the history; Trakt caps a page there. */

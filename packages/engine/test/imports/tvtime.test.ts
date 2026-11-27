@@ -14,7 +14,7 @@ import {
   importTvTime,
   personCreate,
   personImports,
-  reloadLetterboxd,
+  reloadData,
   removeImport,
   Sqlite,
   TMDB_ATTRIBUTION,
@@ -150,8 +150,14 @@ describe('importTvTime, the GDPR export', () => {
       'vera@example.org',
       'EMOCAO-NAO-LER',
       'SERIE-NAO-LER',
+      'user_id',
+      '4242',
     ])
       expect(kept.text).not.toContain(decoy)
+    // Only the film rows and the columns the reader takes.
+    expect(kept.text).toContain(
+      'uuid,type,entity_type,alpha_range_key,release_date,created_at,watch_date_range_key,movie_name\r\n',
+    )
   })
 
   test('the same backup again adds nothing, and the reload gives the same Fatos', async () => {
@@ -169,7 +175,7 @@ describe('importTvTime, the GDPR export', () => {
     })
     expect(await veraFacts(fixture)).toEqual(before)
 
-    await fixture.ok(reloadLetterboxd)
+    await fixture.ok(reloadData)
     expect(await veraFacts(fixture)).toEqual(before)
   })
 
@@ -267,6 +273,9 @@ describe('importTvTime, the Liberator export', () => {
     expect(kept.names).toEqual(['movies.json'])
     expect(kept.text).not.toContain('SERIE-NAO-LER')
     expect(kept.text).not.toContain('LISTA-NAO-LER')
+    // Without TV Time's own ids: the IMDb id and what the reader takes.
+    expect(kept.text).not.toContain('tvdb')
+    expect(kept.text).not.toContain('uuid')
   })
 })
 

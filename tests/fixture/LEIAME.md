@@ -355,9 +355,10 @@ Perguntas par a par (#181, `entropia_movielens.csv`): sete filmes com a entropia
 
 ### Fotografia e produtor (#284)
 
-Filmes `tt90284NN`, com entidades `Q90284NN`, para o caminho de conteúdo por fotografia e por produtor (decisão do Dono no #283: teto fraca, peso 0,5). Cada um liga a Ensaio Geral (`tt9005501`, 5 da Rosa) por um predicado só. Têm 900 votos, abaixo do mínimo de `[catalog]`: só são Candidatos no teste que baixa o `min_votes`, e por isso não mudam as saídas gravadas.
+Filmes `tt90284NN`, com entidades `Q90284NN`, para o caminho de conteúdo por fotografia e por produtor (decisão do Dono no #283: teto fraca, peso 0,5). Contraluz é a semente: ninguém da fixture deu Nota a ele, e o teste importa o 10 da Vera (o CSV do IMDb) antes de recomendar. Os outros dois ligam a ele por um predicado só. Os três têm 900 votos, abaixo do mínimo de `[catalog]`: só são Candidatos no teste que baixa o `min_votes`, e por isso não mudam as saídas gravadas.
 
 | Filme | Predicado e entidade | Liga a |
 |---|---|---|
-| Luz Rasante (9028401) | fotografia, Íris Penha (Q9028401) | Ensaio Geral (5501) |
-| Bilheteria (9028402) | produtor, Nestor Gil (Q9028402) | Ensaio Geral (5501) |
+| Contraluz (9028403, 2013) | fotografia e produtor | a semente |
+| Luz Rasante (9028401) | fotografia, Íris Penha (Q9028401) | Contraluz (9028403) |
+| Bilheteria (9028402) | produtor, Nestor Gil (Q9028402) | Contraluz (9028403) |

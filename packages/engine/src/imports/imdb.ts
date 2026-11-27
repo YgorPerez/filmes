@@ -8,6 +8,7 @@
 // like any Nota. Fatos have an `imdb:...` fato_id and Fonte "IMDb de
 // <name>". Every change reloads the Pessoa's IMDb Fatos from all her stored
 // CSVs, so the database can always be rebuilt from filmes-dados.
+import { attempt } from './attempt.ts'
 import { basename } from 'node:path'
 import { Effect } from 'effect'
 import { factId, pyFloat } from '../compat/fact-id.ts'
@@ -15,7 +16,7 @@ import { DataWriter, type Author } from '../data/DataWriter.ts'
 import type { GitError } from '../data/git.ts'
 import { readPeople, resolvePerson } from '../people/people.ts'
 import type { Person } from '../people/Person.ts'
-import { EngineError } from '../runtime/EngineError.ts'
+import type { EngineError } from '../runtime/EngineError.ts'
 import type { Environment } from '../runtime/Environment.ts'
 import type { Run } from '../runtime/Run.ts'
 import { Sqlite, type Connection, type SqliteError } from '../sqlite/Sqlite.ts'
@@ -25,18 +26,7 @@ import { requireImportTables } from './trakt.ts'
 import { tasteChange, tasteSnapshot, type TasteChange } from './taste-change.ts'
 
 /** The kind of a Pessoa's `imports:` records this module reads. */
-export const IMDB_KIND = 'imdb'
-
-/** Runs a reader that throws the `EngineError` of a bad file. */
-const attempt = <A>(f: () => A): Effect.Effect<A, EngineError> =>
-  Effect.suspend(() => {
-    try {
-      return Effect.succeed(f())
-    } catch (error) {
-      if (error instanceof EngineError) return Effect.fail(error)
-      throw error
-    }
-  })
+const IMDB_KIND = 'imdb'
 
 /** The rows of every CSV the Pessoa has stored, in record order. */
 const personImdbRows = (

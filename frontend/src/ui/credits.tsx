@@ -1,11 +1,11 @@
 import type { Credit } from '@filmes/engine'
-import { CREDITS_PAGE } from './credits.copy'
+import { CREDIT_USES, CREDITS_PAGE } from './credits.copy'
 import { PageHead } from './kit/page-head'
 import tmdbLogo from './tmdb-logo.svg?url'
 
 // `/creditos` (#292): every source filmes reads, linked, with what it gives
-// and the notice its terms ask for, word for word (`CREDITS` in the
-// engine). Public, outside the app shell like `/entrar`, and reached from
+// (`CREDIT_USES`) and the notice its terms ask for, word for word (`CREDITS`
+// in the engine). Public, outside the app shell like `/entrar`, and reached from
 // every page's footer. TMDB's terms also ask for its logo, smaller than the
 // "filmes" of the bar: its approved short logo, 12px high.
 
@@ -33,7 +33,7 @@ export function Credits({ credits }: { credits: readonly Credit[] }) {
       <main className="mx-auto flex w-full max-w-[720px] flex-col gap-3xl px-2xl py-3xl">
         <PageHead title={CREDITS_PAGE.title} lead={CREDITS_PAGE.lead} />
         <ul aria-label={CREDITS_PAGE.sources} className="flex flex-col gap-xl">
-          {credits.map(({ source, url, use, notice }) => (
+          {credits.map(({ source, url, notice }) => (
             <li
               key={source}
               className="flex flex-col gap-2xs border-t border-rule pt-lg"
@@ -47,7 +47,7 @@ export function Credits({ credits }: { credits: readonly Credit[] }) {
                   {source === 'TMDB' && <TmdbLogo />}
                 </a>
               </h2>
-              <p className="text-pretty text-ink-2">{use}</p>
+              <p className="text-pretty text-ink-2">{CREDIT_USES[source]}</p>
               {notice && (
                 <p className="text-source text-pretty break-words text-ink-2">
                   {notice}
