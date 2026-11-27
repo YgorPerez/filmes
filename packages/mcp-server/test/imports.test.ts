@@ -224,21 +224,66 @@ describe('import', () => {
     )
   })
 
+  test('imports a TV Time backup sent in base64', async () => {
+    const fixture = useFixture()
+    const c = await connect(fixture)
+    const folder = join(ROOT, 'tests/fixture/tvtime/liberator')
+    const zip = zipOf(
+      readdirSync(folder)
+        .sort()
+        .map((file) => [file, readFileSync(join(folder, file))] as const),
+    )
+
+    const report = await c.ok('import', {
+      person: 'vera',
+      tvtimeZip: zip.toString('base64'),
+    })
+
+    assert.equal(report.person, 'vera')
+    assert.deepEqual(report.newFacts, {
+      ratings: 2,
+      seen: 3,
+      stated: 0,
+      watchlist: 1,
+    })
+    assert.deepEqual(report.outsideCatalog, [
+      { film: 'tt9099999', title: 'Fora do Catálogo' },
+    ])
+    assert.deepEqual(
+      report.queue.map((item: { name: string }) => item.name),
+      ['Filme Perdido'],
+    )
+    assert.match(report.file, /^imports\/vera\/tvtime-[0-9a-f]{64}\.zip$/)
+    assert.deepEqual(
+      (
+        await c.error('import', {
+          person: 'vera',
+          tvtimeZip: Buffer.from('não é ZIP').toString('base64'),
+        })
+      ).error,
+      { code: 'invalid_file', message: 'vera-tvtime.zip: não é um ZIP' },
+    )
+  })
+
   test('takes one thing per call, and the RSS and the CSV need the Pessoa', async () => {
     const c = await connect(useFixture())
 
     for (const [args, message] of [
-      [{ person: 'teo' }, 'mande letterboxdRss, imdbCsv ou remove, um só'],
+      [
+        { person: 'teo' },
+        'mande letterboxdRss, imdbCsv, tvtimeZip ou remove, um só',
+      ],
       [
         { person: 'teo', letterboxdRss: 'x', remove: 'y' },
-        'mande letterboxdRss, imdbCsv ou remove, um só',
+        'mande letterboxdRss, imdbCsv, tvtimeZip ou remove, um só',
       ],
       [
         { person: 'teo', imdbCsv: 'x', remove: 'y' },
-        'mande letterboxdRss, imdbCsv ou remove, um só',
+        'mande letterboxdRss, imdbCsv, tvtimeZip ou remove, um só',
       ],
       [{ letterboxdRss: 'x', consent: true }, 'o RSS precisa de person'],
       [{ imdbCsv: 'x' }, 'o CSV do IMDb precisa de person'],
+      [{ tvtimeZip: 'eA==' }, 'o backup do TV Time precisa de person'],
     ] as const)
       assert.deepEqual((await c.error('import', args)).error, {
         code: 'invalid_usage',

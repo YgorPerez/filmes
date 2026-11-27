@@ -8,6 +8,19 @@ import { PersonImportsScreen, type PersonImportsView } from './person-imports'
 const NONE = { wikidata: 0, tmdb: 0, manual: 0 }
 const TRAKT_FILE = 'imports/quim/trakt-b1.zip'
 const IMDB_FILE = 'imports/quim/imdb-c1.csv'
+const TVTIME_RECORD = {
+  kind: 'tvtime',
+  file: 'imports/quim/tvtime-d1.zip',
+  date: '2026-11-23',
+  original: 'gdpr-data.zip',
+}
+const LOST = {
+  id: 'filme-perdido-91d7fc73cdee',
+  name: 'Filme Perdido',
+  year: null,
+  reason: 'o export não traz o ano do filme',
+}
+const TVTIME_FACTS = { ratings: 3, seen: 4, stated: 0, watchlist: 1 }
 
 const QUIM: PersonImportsView = {
   person: 'quim',
@@ -51,6 +64,7 @@ const QUIM: PersonImportsView = {
   },
   trakt: { ratings: 2, seen: 1, watchlist: 0 },
   imdb: { ratings: 412 },
+  tvtime: { ratings: 0, seen: 0, stated: 0, watchlist: 0 },
 }
 
 /** Quim with nothing imported yet. */
@@ -67,6 +81,7 @@ const EMPTY: PersonImportsView = {
   },
   trakt: { ratings: 0, seen: 0, watchlist: 0 },
   imdb: { ratings: 0 },
+  tvtime: { ratings: 0, seen: 0, stated: 0, watchlist: 0 },
 }
 
 /** Quim with only the IMDb CSV. */
@@ -74,6 +89,35 @@ const IMDB_ONLY: PersonImportsView = {
   ...EMPTY,
   imports: QUIM.imports.filter(({ kind }) => kind === 'imdb'),
   imdb: { ratings: 412 },
+}
+
+/** Quim with the TV Time backup too: its films join the Letterboxd ones in
+ * the resolution. */
+const WITH_TVTIME: PersonImportsView = {
+  ...QUIM,
+  imports: [...QUIM.imports, TVTIME_RECORD],
+  letterboxd: {
+    ...QUIM.letterboxd,
+    films: 15,
+    resolved: { wikidata: 8, tmdb: 2, manual: 0 },
+    queued: 2,
+    queue: [LOST, ...QUIM.letterboxd.queue],
+  },
+  tvtime: TVTIME_FACTS,
+}
+
+/** Quim with only the TV Time backup. */
+const TVTIME_ONLY: PersonImportsView = {
+  ...EMPTY,
+  imports: [TVTIME_RECORD],
+  letterboxd: {
+    ...EMPTY.letterboxd,
+    films: 6,
+    resolved: { wikidata: 3, tmdb: 1, manual: 0 },
+    queued: 2,
+    queue: [LOST, ...QUIM.letterboxd.queue],
+  },
+  tvtime: TVTIME_FACTS,
 }
 
 const meta = {
@@ -117,6 +161,35 @@ export const OnlyImdb: Story = {
 
 export const ImdbImported: Story = {
   args: { page: IMDB_ONLY, done: { notice: 'imdb', facts: 412, outside: 3 } },
+}
+
+export const WithTvTime: Story = {
+  args: { page: WITH_TVTIME },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(
+      canvas.getByRole('region', {
+        name: PERSON_IMPORTS.letterboxd.withTvTime(true),
+      }),
+    ).toBeVisible()
+    await expect(
+      canvas.getByText(PERSON_IMPORTS.tvtime.summary(3, 4)),
+    ).toBeVisible()
+  },
+}
+
+export const TvTimeImported: Story = {
+  args: {
+    page: TVTIME_ONLY,
+    done: { notice: 'tvtime', facts: 8, outside: 1 },
+  },
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByRole('region', {
+        name: PERSON_IMPORTS.letterboxd.withTvTime(false),
+      }),
+    ).toBeVisible()
+  },
 }
 
 export const Refused: Story = { args: { refusal: 'origem' } }

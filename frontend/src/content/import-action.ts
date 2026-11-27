@@ -18,7 +18,7 @@ export type ImportAction =
 
 /** What the engine runs: the upload once its service is known. */
 export type ImportRun =
-  | ({ kind: 'letterboxd' | 'trakt' | 'imdb' } & Upload)
+  | ({ kind: 'letterboxd' | 'trakt' | 'imdb' | 'tvtime' } & Upload)
   | Exclude<ImportAction, { kind: 'upload' }>
 
 /** What the Dono decides on the queue. */
@@ -118,6 +118,7 @@ const IMPORT_NOTICES = [
   'rss',
   'trakt',
   'imdb',
+  'tvtime',
   // The same file again: kept once, nothing new.
   'repetido',
   // An import removed: `novos` Fatos less.
@@ -130,7 +131,7 @@ const IMPORT_REFUSALS = [
   'pedido',
   // No file, or a file its service's reader refused.
   'arquivo',
-  // A file neither of Letterboxd, of Trakt nor of IMDb.
+  // A file of none of Letterboxd, Trakt, IMDb and TV Time.
   'origem',
   'grande',
   // The RSS without the Pessoa's yes.

@@ -37,7 +37,7 @@ export type ImportDoneView = {
 }
 
 /** A Pessoa's imports (`importsPath`): the upload first (one file field: the server tells
- * Letterboxd from Trakt by the ZIP, and IMDb by its CSV), then the Letterboxd profile, what the
+ * Letterboxd, Trakt and TV Time apart by the ZIP, and IMDb by its CSV), then the Letterboxd profile, what the
  * imports gave (only once they gave something) and the files, each with
  * its Tirar. Every form is a plain POST (the upload multipart) that comes
  * back here; with the JavaScript, by `fetch`, without a reload (#240). `page` is `'unknown'` when no Pessoa has the slug, null when
@@ -240,25 +240,41 @@ const hasLetterboxd = (page: PersonImports) =>
 const hasTrakt = (page: PersonImports) =>
   page.trakt.ratings > 0 || page.trakt.seen > 0
 
+const hasTvTime = (page: PersonImports) =>
+  page.tvtime.ratings > 0 || page.tvtime.seen > 0
+
 /** What the imports gave, by service: a card only once it gave something;
- * Trakt and IMDb, which only count, share the narrow column. */
+ * Trakt, IMDb and TV Time, which only count, share the narrow column. */
 function Summaries({ page }: { page: PersonImports }) {
   const letterboxd = hasLetterboxd(page)
   const trakt = hasTrakt(page)
   const imdb = page.imdb.ratings > 0
-  if (!letterboxd && !trakt && !imdb) return null
+  const tvtime = hasTvTime(page)
+  const counted = trakt || imdb || tvtime
+  if (!letterboxd && !counted) return null
   return (
     <div
-      className={`grid gap-2xl ${letterboxd && (trakt || imdb) ? 'sm:grid-cols-[3fr_2fr]' : ''}`}
+      className={`grid gap-2xl ${letterboxd && counted ? 'sm:grid-cols-[3fr_2fr]' : ''}`}
     >
       {letterboxd && <Letterboxd page={page} />}
-      {(trakt || imdb) && (
+      {counted && (
         <div className="grid content-start gap-2xl">
           {trakt && <Trakt page={page} />}
           {imdb && <Imdb page={page} />}
+          {tvtime && <TvTime page={page} />}
         </div>
       )}
     </div>
+  )
+}
+
+/** The resolution slip's title: the TV Time backup's films go through the
+ * same resolution as Letterboxd's. */
+function resolutionTitle(page: PersonImports): string {
+  const kinds = new Set(page.imports.map(({ kind }) => kind))
+  if (!kinds.has('tvtime')) return COPY.letterboxd.title
+  return COPY.letterboxd.withTvTime(
+    kinds.has('letterboxd') || kinds.has('letterboxd-rss'),
   )
 }
 
@@ -270,7 +286,11 @@ function Letterboxd({ page }: { page: PersonImports }) {
       .filter((path) => counts[path] > 0)
       .map((path) => `${counts[path]} ${copy.paths[path]}`)
   return (
-    <Slip id="letterboxd" title={copy.title} aside={copy.films(report.films)}>
+    <Slip
+      id="letterboxd"
+      title={resolutionTitle(page)}
+      aside={copy.films(report.films)}
+    >
       {report.films > 0 && (
         <dl className="grid gap-lg sm:grid-cols-2">
           <Tally
@@ -306,23 +326,37 @@ function Imdb({ page }: { page: PersonImports }) {
   )
 }
 
+function TvTime({ page }: { page: PersonImports }) {
+  const { tvtime } = COPY
+  return (
+    <Slip id="tvtime" title={tvtime.title}>
+      <p>{tvtime.summary(page.tvtime.ratings, page.tvtime.seen)}</p>
+    </Slip>
+  )
+}
+
 const fileControl = `${FIELD} w-full cursor-pointer file:mr-lg file:min-h-9 file:cursor-pointer file:rounded-pill file:border-(length:--border-width-stroke) file:border-rule file:bg-surface-2 file:px-xl file:font-display file:text-control file:text-ink`
 
 /** How to download the file: one line per service, its name a link to its
- * data settings. Spans, so it also fits inside the alert's paragraph. */
+ * data settings (TV Time, closed, has none). Spans, so it also fits inside
+ * the alert's paragraph. */
 function HowTo() {
   return (
     <span className="flex flex-col gap-2xs text-meta text-ink-2">
       {COPY.upload.how.map(({ service, href, steps }) => (
         <span key={service}>
-          <a
-            href={href}
-            target="_blank"
-            rel="noreferrer"
-            className="font-semibold text-ink underline underline-offset-3"
-          >
-            {service}
-          </a>
+          {href === null ? (
+            <span className="font-semibold text-ink">{service}</span>
+          ) : (
+            <a
+              href={href}
+              target="_blank"
+              rel="noreferrer"
+              className="font-semibold text-ink underline underline-offset-3"
+            >
+              {service}
+            </a>
+          )}
           : {steps}
         </span>
       ))}

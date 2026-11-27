@@ -234,6 +234,28 @@ Os filmes `tt90058NN` (#58) não têm diretor nem Nota, e ficam entre os só com
 - O Último Bonde (202) com 9, Rio Abaixo (303) com 7 e Pequenos Milagres (601) com 2: viram Notas 4,5, 3,5 e 1.
 - "Cais, Episódio 1" (`tt9028501`) é um episódio de série fora do Catálogo, com vírgula no título: fica de fora do import, no relatório.
 
+## Backups do TV Time
+
+`tvtime/` tem os dois backups do TV Time (#300), com nomes e colunas dos reais (pesquisa #288). Os testes montam o ZIP: `gdpr-data/` vai dentro da pasta `gdpr-data/`, como no export real; `liberator/` vai na raiz. Os testes importam para a Vera.
+
+`gdpr-data/` é o export GDPR, sem ID de filme. Os filmes são as linhas `movie` de `tracking-prod-records.csv` e se resolvem pelo slug em inglês de `alpha_range_key` e pelo ano de `release_date`:
+
+- O Farol de Areia: assistido em 2023-05-01 e revisto em 2025-01-10, com "great" (4) em `ratings-live-votes.csv`, que vale na revisão. Sai pelo Wikidata.
+- Cidade de Vidro: `movie_name` em japonês, e o slug resolve pelo Wikidata. Sem `watch_date_range_key`, a data é a de `created_at`, com "bad" (1).
+- Porto Seguro (2019): só o TMDB acha, como no import do Letterboxd. Nota "good" (3).
+- Vento Norte (2020) fica na fila com os dois candidatos do TMDB, a mesma entrada da Olga.
+- Filme Perdido tem `release_date` 0001-01-01 e fica na fila sem ano.
+- Jardim Suspenso é `towatch`: vai para a watchlist.
+- "Cais, Episódio 1" é um episódio e fica de fora.
+- Iscas, que o import nunca lê nem guarda: `emotions-live-votes.csv` (mesmo cabeçalho das notas, daria "wow" ao Farol), `access_token.csv` e `auth-prod-login.csv` (credenciais) e `tracking-prod-records-v2.csv` (episódios). Cada uma tem um texto `*-NAO-LER` que o teste procura na cópia guardada.
+
+`liberator/` é o export do TV Time Liberator: `movies.json` traz o tconst em `id.imdb` e a nota de 1 a 10.
+
+- O Último Bonde com 8 e Rio Abaixo com 10 viram Notas 4 e 5. Pequenos Milagres não tem `watched_at`: o Já visto fica com a data de `created_at`.
+- Jardim Suspenso tem `is_watched: false`: vai para a watchlist.
+- Filme Perdido tem `imdb: "-1"` e fica na fila, sem ano. Fora do Catálogo (`tt9099999`) não está no Catálogo e sai no relatório.
+- `shows.json` e `lists.json` são iscas: o import guarda só o `movies.json`.
+
 ## RSS do Letterboxd
 
 `gravacoes/letterboxd/rss-olga_farol.xml` é um RSS inventado no formato do real

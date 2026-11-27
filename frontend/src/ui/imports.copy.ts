@@ -19,6 +19,7 @@ const KINDS: Record<string, string> = {
   'letterboxd-rss': 'RSS do Letterboxd',
   trakt: 'Arquivo do Trakt',
   imdb: 'CSV do IMDb',
+  tvtime: 'Backup do TV Time',
 }
 
 export const PERSON_IMPORTS = {
@@ -41,6 +42,11 @@ export const PERSON_IMPORTS = {
       (outside === 0
         ? ''
         : ` ${count(outside, 'título ficou', 'títulos ficaram')} de fora: o Catálogo não tem.`),
+    tvtime: (n: number, outside = 0) =>
+      `Backup do TV Time importado: ${facts(n)}.` +
+      (outside === 0
+        ? ''
+        : ` ${count(outside, 'filme ficou', 'filmes ficaram')} de fora: o Catálogo não tem.`),
     repetido: (n: number) =>
       `Esse arquivo já tinha sido importado: ${facts(n)}.`,
     removido: (n: number) =>
@@ -51,8 +57,9 @@ export const PERSON_IMPORTS = {
   refusals: {
     pedido: 'Faltou um campo, ou um valor não vale. Confira o formulário.',
     arquivo:
-      'Não deu para ler esse arquivo. Envie o ZIP como o Letterboxd ou o Trakt te deu, sem descompactar, ou o CSV do IMDb como ele veio.',
-    origem: 'Esse arquivo não parece ser do Letterboxd, do Trakt nem do IMDb.',
+      'Não deu para ler esse arquivo. Envie o ZIP como o Letterboxd, o Trakt ou o TV Time te deu, sem descompactar, ou o CSV do IMDb como ele veio.',
+    origem:
+      'Esse arquivo não parece ser do Letterboxd, do Trakt, do IMDb nem do TV Time.',
     grande:
       'O arquivo passa de 20 MB. O ZIP do Letterboxd ou do Trakt e o CSV do IMDb costumam ter poucos MB: confira se é o certo.',
     consentimento:
@@ -80,6 +87,11 @@ export const PERSON_IMPORTS = {
   },
   letterboxd: {
     title: 'Letterboxd',
+    /** The slip's title when the TV Time backup's films went through the
+     * same resolution: with Letterboxd's, or alone (the TV Time slip, which
+     * counts its Fatos, has the plain name). */
+    withTvTime: (letterboxd: boolean) =>
+      letterboxd ? 'Letterboxd e TV Time' : 'Filmes do TV Time',
     films: (n: number) =>
       n === 0 ? 'Nenhum filme importado.' : count(n, 'filme', 'filmes'),
     resolved: 'Achados no Catálogo',
@@ -102,9 +114,14 @@ export const PERSON_IMPORTS = {
     title: 'IMDb',
     summary: (ratings: number) => `${count(ratings, 'Nota', 'Notas')} do IMDb.`,
   },
+  tvtime: {
+    title: 'TV Time',
+    summary: (ratings: number, seen: number) =>
+      `${count(ratings, 'Nota', 'Notas')} e ${count(seen, 'Já visto', 'Já vistos')} do TV Time.`,
+  },
   upload: {
-    title: 'O arquivo do Letterboxd, do Trakt ou do IMDb',
-    file: 'Arquivo que o Letterboxd, o Trakt (ZIP) ou o IMDb (CSV) te deu',
+    title: 'O arquivo do Letterboxd, do Trakt, do IMDb ou do TV Time',
+    file: 'Arquivo que o Letterboxd, o Trakt, o TV Time (ZIP) ou o IMDb (CSV) te deu',
     /** How to download the file, one line per service: the service's name
      * links to where it is exported. */
     how: [
@@ -122,6 +139,14 @@ export const PERSON_IMPORTS = {
         service: 'IMDb',
         href: 'https://www.imdb.com/list/ratings',
         steps: 'Your Ratings › Export; o CSV fica em Exports.',
+      },
+      {
+        service: 'TV Time',
+        // Shut down in July 2026: nothing to download any more, only the
+        // backup kept from before.
+        href: null,
+        steps:
+          'o gdpr-data.zip que o TV Time mandou, ou o tv-time-export.zip do TV Time Liberator.',
       },
     ],
     submit: 'Importar',
@@ -143,7 +168,7 @@ export const PERSON_IMPORTS = {
 export const QUEUE = {
   back: 'Voltar',
   title: 'Fila de resolução',
-  lead: 'Filmes dos arquivos do Letterboxd que o filmes não achou no Catálogo sozinho. A decisão vale para todas as Pessoas que têm o filme.',
+  lead: 'Filmes dos arquivos do Letterboxd e do TV Time que o filmes não achou no Catálogo sozinho. A decisão vale para todas as Pessoas que têm o filme.',
   unavailable: UNAVAILABLE,
   empty: 'Nenhum filme esperando. Tudo resolvido.',
   of: 'de',

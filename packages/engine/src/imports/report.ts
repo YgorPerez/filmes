@@ -1,6 +1,6 @@
 // A Pessoa's imports as a screen shows them (#117): the files she has
 // imported, what her Letterboxd films became (resolved, discarded, queued)
-// and how many Trakt and IMDb Fatos she has. Read only. Python had no such command:
+// and how many Trakt, IMDb and TV Time Fatos she has. Read only. Python had no such command:
 // `importar` printed the report once, after an import.
 import { Effect } from 'effect'
 import { isMapping, pyStrValue, type YamlValue } from '../data/yaml.ts'
@@ -9,16 +9,21 @@ import type { EngineError } from '../runtime/EngineError.ts'
 import type { Environment } from '../runtime/Environment.ts'
 import { Sqlite, type SqliteError } from '../sqlite/Sqlite.ts'
 import { imdbFactCounts, type ImdbFactCounts } from './imdb.ts'
-import { letterboxdReport, type LetterboxdReport } from './letterboxd.ts'
+import {
+  letterboxdReport,
+  type FactCounts,
+  type LetterboxdReport,
+} from './letterboxd.ts'
 import {
   requireImportTables,
   traktFactCounts,
   type TraktFactCounts,
 } from './trakt.ts'
+import { tvTimeFactCounts } from './tvtime.ts'
 
 /** An import recorded in the Pessoa's file. */
 export interface ImportRecord {
-  /** `letterboxd`, `letterboxd-rss`, `trakt` or `imdb`. */
+  /** `letterboxd`, `letterboxd-rss`, `trakt`, `imdb` or `tvtime`. */
   readonly kind: string
   /** The kept copy, relative to filmes-dados: `removeImport` takes it. */
   readonly file: string
@@ -35,6 +40,9 @@ export interface PersonImports {
   readonly letterboxd: LetterboxdReport
   readonly trakt: TraktFactCounts
   readonly imdb: ImdbFactCounts
+  /** Her TV Time Fatos; the films that needed resolving are in
+   * `letterboxd`, which holds every film of the resolution queue. */
+  readonly tvtime: FactCounts
 }
 
 const field = (record: ReadonlyMap<string, YamlValue>, key: string) => {
@@ -68,6 +76,7 @@ export const personImports = (
           letterboxd: yield* letterboxdReport(db, person.slug),
           trakt: yield* traktFactCounts(db, person.slug),
           imdb: yield* imdbFactCounts(db, person.slug),
+          tvtime: yield* tvTimeFactCounts(db, person.slug),
         }
       }),
     )

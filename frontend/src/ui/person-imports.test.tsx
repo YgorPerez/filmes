@@ -54,6 +54,7 @@ const QUIM: PersonImportsView = {
   },
   trakt: { ratings: 2, seen: 1, watchlist: 0 },
   imdb: { ratings: 0 },
+  tvtime: { ratings: 0, seen: 0, stated: 0, watchlist: 0 },
 }
 
 /** Quim with nothing imported yet. */
@@ -70,6 +71,7 @@ const EMPTY: PersonImportsView = {
   },
   trakt: { ratings: 0, seen: 0, watchlist: 0 },
   imdb: { ratings: 0 },
+  tvtime: { ratings: 0, seen: 0, stated: 0, watchlist: 0 },
 }
 
 const show = (page: PersonImportsView = QUIM) =>
@@ -236,7 +238,7 @@ describe('PersonImportsScreen', () => {
     render(<PersonImportsScreen slug="quim" page={QUIM} refusal="origem" />)
     const alert = screen.getByRole('alert')
     expect(alert.textContent).toContain(
-      'Esse arquivo não parece ser do Letterboxd, do Trakt nem do IMDb.',
+      'Esse arquivo não parece ser do Letterboxd, do Trakt, do IMDb nem do TV Time.',
     )
     expect(
       within(alert)
@@ -247,6 +249,40 @@ describe('PersonImportsScreen', () => {
       'https://trakt.tv/settings/data',
       'https://www.imdb.com/list/ratings',
     ])
+    // TV Time is closed: its line says which backup, with no link.
+    expect(alert.textContent).toContain(
+      'TV Time: o gdpr-data.zip que o TV Time mandou, ou o tv-time-export.zip do TV Time Liberator.',
+    )
+  })
+
+  it('counts the TV Time Fatos, and names TV Time on the resolution slip', () => {
+    const tvtime = { ratings: 3, seen: 4, stated: 0, watchlist: 1 }
+    const record = {
+      kind: 'tvtime',
+      file: 'imports/quim/tvtime-d1.zip',
+      date: '2026-11-23',
+      original: 'gdpr-data.zip',
+    }
+    show({ ...QUIM, imports: [...QUIM.imports, record], tvtime })
+    expect(section(COPY.tvtime.title).textContent).toContain(
+      '3 Notas e 4 Já vistos do TV Time.',
+    )
+    expect(section('Letterboxd e TV Time').textContent).toContain('10 filmes')
+    expect(section(COPY.files.title).textContent).toContain(
+      'Backup do TV Time · em 2026-11-23',
+    )
+    cleanup()
+    show({
+      ...EMPTY,
+      imports: [record],
+      letterboxd: { ...QUIM.letterboxd, films: 4 },
+      tvtime,
+    })
+    expect(section('Filmes do TV Time').textContent).toContain('4 filmes')
+    expect(section(COPY.tvtime.title).textContent).toContain('do TV Time.')
+    expect(
+      screen.queryByRole('region', { name: COPY.letterboxd.title }),
+    ).toBeNull()
   })
 
   it('says when no Pessoa has the name, or the engine cannot run', () => {
@@ -282,6 +318,9 @@ describe('PersonImportsScreen', () => {
     )
     expect(COPY.notices.imdb(1, 1)).toBe(
       'CSV do IMDb importado: 1 Fato novo. 1 título ficou de fora: o Catálogo não tem.',
+    )
+    expect(COPY.notices.tvtime(6, 1)).toBe(
+      'Backup do TV Time importado: 6 Fatos novos. 1 filme ficou de fora: o Catálogo não tem.',
     )
     expect(COPY.notices.removido(0)).toContain('Nenhum Fato saiu')
     expect(COPY.notices.removido(1)).toBe('Import tirado: 1 Fato saiu.')

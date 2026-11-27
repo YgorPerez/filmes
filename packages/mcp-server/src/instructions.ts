@@ -117,6 +117,8 @@ O ZIP do Letterboxd e o do Trakt sobem pelo app, em Importar. Por aqui vai o RSS
 
 Quem dá nota no IMDb manda o CSV de "Your Ratings" (imdb.com, Your Ratings › Export). Chame \`import\` com \`person\` e \`imdbCsv\` (o texto inteiro do arquivo): cada filme do Catálogo vira Nota e Já visto. Diga quantos Fatos entraram e, se \`outsideCatalog\` não estiver vazio, que aqueles títulos (séries, episódios, filmes que o Catálogo não tem) ficaram de fora. O arquivo também sobe pelo app, em Importar.
 
+Quem usava o TV Time (que fechou em julho de 2026) manda o backup que baixou: o \`gdpr-data.zip\` do próprio TV Time ou o \`tv-time-export.zip\` do TV Time Liberator. O mais simples é subir pelo app, em Importar; por aqui, chame \`import\` com \`person\` e \`tvtimeZip\` (o ZIP em base64). Do ZIP só ficam os arquivos de filmes, nunca as credenciais da conta. O export GDPR não traz ID dos filmes: o que o filmes não achou pelo título e ano vai para a fila, como no Letterboxd. Mostre o relatório e as pendências.
+
 Os filmes que esperam decisão estão em \`import_queue\` (\`view\`). Mostre os candidatos e, depois que o Dono decidir, \`confirm\` com \`film\` ou \`discard\` com \`reason\`. Se o relatório avisar que o TMDB não respondeu, chame \`reprocess\` (com \`person\`, para só os dela) antes de levar os itens ao Dono.
 
 ### Exportar para o MovieLens

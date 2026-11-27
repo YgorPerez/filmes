@@ -50,7 +50,7 @@ const countFacts = (
     const counts: Record<string, number> = {}
     for (const [table, name] of FACT_TABLES) {
       const row = yield* db.get(
-        `SELECT count(*) AS n FROM ${table} WHERE pessoa = ? AND (fato_id LIKE 'letterboxd:%' OR fato_id LIKE 'trakt:%' OR fato_id LIKE 'imdb:%')`,
+        `SELECT count(*) AS n FROM ${table} WHERE pessoa = ? AND (fato_id LIKE 'letterboxd:%' OR fato_id LIKE 'trakt:%' OR fato_id LIKE 'imdb:%' OR fato_id LIKE 'tvtime:%')`,
         slug,
       )
       counts[name] = Number(row?.n ?? 0)
