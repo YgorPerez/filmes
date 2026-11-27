@@ -22,18 +22,20 @@ export const FEEDBACK = {
     film: (alone: boolean) =>
       alone ? 'O que você viu?' : 'O que vocês viram?',
     other: 'Outro filme',
+    /** The films that left the shelf in a redo (#272). */
+    earlier: 'Também passaram pela prateleira',
+    /** The stars the Cartaz gave a film. */
+    stars: (n: number) => `${n} de 5 ★`,
     search: 'Título ou ID do IMDb',
     nothing: (alone: boolean) => (alone ? 'Não vi nada' : 'Não vimos nada'),
     reactions: (alone: boolean) =>
       alone ? 'O que você achou?' : 'O que cada um achou?',
     reactionsLead:
-      'Sem reação, o filme fica só como Já visto. A nota é a mesma de 1 a 10 do Cartaz.',
+      'A nota é a mesma de 1 a 10 do Cartaz. Para os outros, basta dizer se gostou. Sem reação, o filme fica só como Já visto.',
     reaction: 'Reação',
     none: 'sem reação',
     noRating: 'sem nota',
     ratings: 'Nota',
-    /** The 1 to 10 of a Presente who is not the Dono, folded (#272). */
-    giveRating: 'ou dar nota de 1 a 10',
     ratingLabel: (name: string) => `Nota de ${name}, de 1 a 10`,
     reports: 'Relato',
     rating: (value: string) => `Nota ${value}`,

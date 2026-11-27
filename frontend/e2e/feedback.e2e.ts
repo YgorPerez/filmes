@@ -31,12 +31,9 @@ const satisfaction = (page: Page) =>
 const reactionOf = (page: Page, name: string) =>
   page.getByRole('group', { name: new RegExp(`^${name}\\b`) })
 
-/** Her Nota of 1 to 10; for a Presente who is not the Dono, under "ou dar
- * nota". */
+/** Her Nota of 1 to 10, open in every row (#272). */
 async function rate(page: Page, name: string, n: string) {
   const reaction = reactionOf(page, name)
-  const give = reaction.getByText('ou dar nota de 1 a 10')
-  if (await give.count()) await give.click()
   await reaction
     .getByRole('radiogroup')
     .getByRole('radio', { name: n, exact: true })

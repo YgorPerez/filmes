@@ -76,7 +76,6 @@ async function feedbackSpeakingForHerself(page: Page, dono: Dono, id: string) {
   await expect(reaction('lara', '^="relato:"')).not.toHaveCount(0)
   await page.locator('input[name="filme"]').first().check()
   await reaction(dono.slug, '="nota:10"').check()
-  await page.getByText('ou dar nota de 1 a 10').click()
   await reaction('lara', '="nota:8"').check()
   await page.getByRole('button', { name: 'Gravar e fechar a Sessão' }).click()
   await expect(page).toHaveURL(new RegExp(`/sessoes/${id}\\?feito=contada$`))

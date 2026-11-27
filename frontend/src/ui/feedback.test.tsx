@@ -27,6 +27,9 @@ const SESSION: FeedbackSession = {
   ],
   moods: [],
   constraints: [],
+  additions: [],
+  stars: {},
+  earlier: [],
   recommendation: [
     { position: 1, id: 'tt9000101', title: 'O Farol de Areia' },
     { position: 2, id: 'tt9000601', title: 'Pequenos Milagres' },
@@ -116,6 +119,46 @@ describe('FeedbackScreen', () => {
         ],
       },
     })
+  })
+})
+
+describe('FeedbackScreen, what the Cartaz knows (#272)', () => {
+  it('starts on the film with the most stars, and says them', () => {
+    const { form } = show({
+      ...PAGE,
+      stars: { tt9000101: 2, tt9000601: 4 },
+    })
+    expect((screen.getByLabelText(/Pequenos Milagres/) as HTMLInputElement).checked).toBe(true)
+    expect(screen.getByText(FEEDBACK.form.stars(4))).toBeTruthy()
+    expect(posted(form)).toEqual({ ok: { film: 'tt9000601', reactions: [] } })
+  })
+
+  it('starts on the only film left, and offers the ones that left the shelf', async () => {
+    const { user, form } = show({
+      ...PAGE,
+      recommendation: [PAGE.recommendation[0]!],
+      earlier: [{ id: 'tt9001106', title: 'Sessão Maldita' }],
+    })
+    expect((screen.getByLabelText(/O Farol de Areia/) as HTMLInputElement).checked).toBe(true)
+    expect(screen.getByText(FEEDBACK.form.earlier)).toBeTruthy()
+    await user.click(screen.getByLabelText(/Sessão Maldita/))
+    expect(posted(form)).toEqual({ ok: { film: 'tt9001106', reactions: [] } })
+  })
+
+  it('chooses nothing by itself when the Cartaz points to no film', () => {
+    show()
+    expect((screen.getByLabelText(/O Farol de Areia/) as HTMLInputElement).checked).toBe(false)
+    expect((screen.getByLabelText(/Pequenos Milagres/) as HTMLInputElement).checked).toBe(false)
+  })
+
+  it('gives every Presente the 1 to 10 in the open', () => {
+    show()
+    for (const name of ['Bruno', 'Iara', 'Quim'])
+      expect(
+        screen.getByRole('radiogroup', {
+          name: FEEDBACK.form.ratingLabel(name),
+        }),
+      ).toBeTruthy()
   })
 })
 
