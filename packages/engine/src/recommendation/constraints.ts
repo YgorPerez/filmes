@@ -16,10 +16,12 @@
 //   on_demand_reach` (`consult` true); after that, `resolve` decides without
 //   asking.
 // - A film missing from `evaluate`'s answer is out.
+// - A Restrição with a `candidateLimit` runs after the other local filters.
+//   It returns matches in preference order and cuts after resolving their
+//   pending Restrições, using that order for the on-demand reach.
 //
-// `makeConstraintSet` applies the ones asked for, in Python's module order
-// (`CONSTRAINT_ORDER`): that order is the order of the film lines and says
-// which Restrição gets the credit for a film several would remove.
+// `makeConstraintSet` uses Python's module order (`CONSTRAINT_ORDER`) to
+// present film lines and to apply Restrições within each stage.
 //
 // Each Restrição lives in its own file under `constraints/`, which exports a
 // `ConstraintModule`: how it reads the request (`read`, Python's `pedido`),
@@ -140,6 +142,7 @@ export interface Constraint {
     context: ConstraintContext,
     films: ReadonlyMap<string, Candidate>,
   ) => ConstraintEffect<ReadonlyMap<string, Verdict>>
+  readonly candidateLimit?: (weights: Weights) => number
   /** Only called for a film `evaluate` left pending. */
   readonly resolve?: (
     context: ConstraintContext,
@@ -189,6 +192,7 @@ export interface ConstraintSet {
    * given order. */
   readonly candidates: (
     films: ReadonlyMap<string, Candidate>,
+    kept?: (filmId: string) => boolean,
   ) => ConstraintEffect<ReadonlyMap<string, Candidate>>
   /** The first `count` items of the order whose film passes the on-demand
    * Restrições. Only the films in the first `reach` places ask a source;
@@ -214,7 +218,8 @@ export interface ConstraintSet {
 
 /** What a `ConstraintSet` keeps as it applies its Restrições. */
 interface SetState {
-  readonly lines: Map<string, ReadonlyArray<Evidence>>
+  readonly lines: Map<string, Map<Constraint, ReadonlyArray<Evidence>>>
+  readonly onDemandLines: Map<string, ReadonlyArray<Evidence>>
   readonly pending: Map<string, ReadonlyArray<Constraint>>
   readonly removedBy: Map<string, Constraint>
   readonly dropDetails: Map<string, DropDetail>
@@ -222,14 +227,17 @@ interface SetState {
   readonly drops: Map<ConstraintName, Map<string, number>>
 }
 
-const linesIn = (state: SetState, filmId: string) =>
-  state.lines.get(filmId) ?? []
-
-const addLines = (
+const addLocalLines = (
   state: SetState,
   filmId: string,
-  more: ReadonlyArray<Evidence>,
-) => state.lines.set(filmId, [...linesIn(state, filmId), ...more])
+  constraint: Constraint,
+  lines: ReadonlyArray<Evidence>,
+) => {
+  if (lines.length === 0) return
+  const filmLines = state.lines.get(filmId) ?? new Map()
+  filmLines.set(constraint, lines)
+  state.lines.set(filmId, filmLines)
+}
 
 const countDrop = (
   state: SetState,
@@ -266,9 +274,48 @@ const passesOnDemandIn =
         }
         found.push(...verdict.lines)
       }
-      addLines(state, film.id, found)
+      if (found.length > 0) state.onDemandLines.set(film.id, found)
       return true
     })
+
+/** Take the first matches that pass, treating a pending drop as a drop by
+ * its own Restrição. Kept films can still consult a source past the reach. */
+const limitVerdicts = (
+  context: ConstraintContext,
+  state: SetState,
+  alive: Map<string, Candidate>,
+  verdicts: ReadonlyMap<string, Verdict>,
+  limit: number,
+  kept: (filmId: string) => boolean,
+) =>
+  Effect.gen(function* () {
+    const passesOnDemand = passesOnDemandIn(context, state)
+    const reach = context.weights.constraints.on_demand_reach
+    const selected = new Map<string, Pass>()
+    let position = 0
+    for (const [filmId, verdict] of verdicts) {
+      if (selected.size >= limit) break
+      const film = alive.get(filmId)
+      if (
+        film === undefined ||
+        verdict === 'pending' ||
+        verdict._tag === 'Drop'
+      )
+        continue
+      const consult = position < reach || kept(filmId)
+      position++
+      if (state.pending.has(filmId)) {
+        const passes = yield* passesOnDemand(film, consult)
+        state.pending.delete(filmId)
+        if (!passes) {
+          alive.delete(filmId)
+          continue
+        }
+      }
+      selected.set(filmId, verdict)
+    }
+    return selected
+  })
 
 const candidatesIn =
   (
@@ -278,12 +325,25 @@ const candidatesIn =
   ) =>
   (
     films: ReadonlyMap<string, Candidate>,
+    kept: (filmId: string) => boolean = () => false,
   ): ConstraintEffect<ReadonlyMap<string, Candidate>> =>
     Effect.gen(function* () {
       const { pending } = state
       const alive = new Map(films)
       for (const constraint of constraints) {
-        const verdicts = yield* constraint.evaluate(context, alive)
+        const evaluated = yield* constraint.evaluate(context, alive)
+        const limit = constraint.candidateLimit?.(context.weights)
+        const verdicts =
+          limit === undefined
+            ? evaluated
+            : yield* limitVerdicts(
+                context,
+                state,
+                alive,
+                evaluated,
+                limit,
+                kept,
+              )
         for (const filmId of Array.from(alive.keys())) {
           const verdict = verdicts.get(filmId) ?? drop()
           if (verdict === 'pending') {
@@ -292,7 +352,7 @@ const candidatesIn =
             alive.delete(filmId)
             countDrop(state, constraint, verdict, filmId)
           } else {
-            addLines(state, filmId, verdict.lines)
+            addLocalLines(state, filmId, constraint, verdict.lines)
           }
         }
       }
@@ -307,8 +367,12 @@ export const makeConstraintSet = (
     (a, b) =>
       CONSTRAINT_ORDER.indexOf(a.name) - CONSTRAINT_ORDER.indexOf(b.name),
   )
+  const evaluationOrder = constraints.toSorted(
+    (a, b) => Number(!!a.candidateLimit) - Number(!!b.candidateLimit),
+  )
   const state: SetState = {
     lines: new Map(),
+    onDemandLines: new Map(),
     pending: new Map(),
     removedBy: new Map(),
     dropDetails: new Map(),
@@ -322,8 +386,11 @@ export const makeConstraintSet = (
     pending: state.pending,
     removedBy: state.removedBy,
     dropDetails: state.dropDetails,
-    linesOf: (filmId) => linesIn(state, filmId),
-    candidates: candidatesIn(context, state, constraints),
+    linesOf: (filmId) => [
+      ...constraints.flatMap((c) => state.lines.get(filmId)?.get(c) ?? []),
+      ...(state.onDemandLines.get(filmId) ?? []),
+    ],
+    candidates: candidatesIn(context, state, evaluationOrder),
     approve: (ordered, count, reach, filmOf) =>
       Effect.gen(function* () {
         const approved: (typeof ordered)[number][] = []
