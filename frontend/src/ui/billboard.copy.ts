@@ -12,6 +12,24 @@ const andList = (items: readonly string[]) =>
 export const BILLBOARD = {
   label: 'Cartaz',
   dropped: 'Saiu da prateleira:',
+  /** The one line a redone Cartaz opens with: "Refeito: 2 saíram, 2
+   * novos.", and the button that shows why each one left. */
+  redone: (left: number, arrived: number) =>
+    `Refeito: ${
+      [
+        left > 0 && plural(left, 'saiu', 'saíram'),
+        arrived > 0 && plural(arrived, 'novo', 'novos'),
+      ]
+        .filter(Boolean)
+        .join(', ') || 'mesma lista'
+    }.`,
+  redoneWhy: 'por quê',
+  /** The Força key, behind its "?" (#272). */
+  legend: 'O que querem dizer os pontos',
+  legendLead: 'Os pontos antes de cada motivo dizem a Força da Evidência.',
+  /** The Evidência every film of a section shares, said once under its
+   * title (#272). */
+  shared: 'Vale para todos desta seção',
   empty:
     'Nenhum filme passou nas Restrições. Abra outra Sessão com menos limites.',
   strength: { strong: 'forte', moderate: 'moderada', weak: 'fraca' },
@@ -24,7 +42,9 @@ export const BILLBOARD = {
     betHint:
       'Aposta: pouca Evidência, mas quem tem gosto parecido deu nota alta',
     imdb: (rating: string | null, votes: string) =>
-      `${rating === null ? '' : `${rating} `}IMDb · ${votes} votos`,
+      rating === null
+        ? `IMDb: sem nota · ${votes} votos`
+        : `${rating} IMDb · ${votes} votos`,
     /** The link to the film's trailer on YouTube (#289). */
     trailer: 'trailer',
     /** The hint of a Presente's dot: "Ana: 8,3 de 10 · 12 vizinhos", or
@@ -36,7 +56,12 @@ export const BILLBOARD = {
     /** Who an Evidência is about, opening its line: "Ana e Bruno". */
     whose: (names: readonly string[]) => andList(names),
     why: 'Por que cada um vai gostar',
+    /** Every line of the card is the section's, said under its title. */
+    sectionWhy: 'Os motivos da seção, logo acima.',
     withoutFact: (names: string) => `${names}: sem fato sobre este filme`,
+    /** What the Dono gave it in this Session (#272). */
+    notes: 'Você marcou',
+    notesStars: (n: number) => `${n} de 5 estrelas`,
     swapStamp: 'Trocar',
     seenStamp: 'Já vi',
   },
@@ -75,6 +100,14 @@ export const BILLBOARD = {
     copy: 'Copiar pro chat',
     output: 'texto pra colar no chat',
     nothing: 'Nada marcado ainda.',
+    /** The bar's left side before any mark. */
+    hint: 'Marque Já vi, Trocar ou estrelas',
+    /** The acrescentar's words the reading did not take (#272): the
+     * Cartaz is not redone until the Dono decides. */
+    unread: (words: readonly string[]) =>
+      `Não entendi ${words.map((w) => `“${w}”`).join(', ')}. Enviar assim deixa isso só como anotação.`,
+    sendAnyway: 'Enviar assim',
+    edit: 'Corrigir',
     copied: 'Copiado. Cole no chat.',
     select:
       'Não deu pra copiar sozinho: o texto está selecionado na caixa, copie e cole no chat.',

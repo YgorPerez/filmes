@@ -38,7 +38,8 @@ export type HomeData = {
   /** The guide, also once complete (the home hides it then); null when the
    * engine cannot say. */
   setup: SetupView | null
-  /** The latest Sessão she was in, or null. */
+  /** The latest Sessão she was in still to tell, else the latest one;
+   * null with none. */
   latest: LatestSession | null
   /** Where the Claude app connects (`/mcp`); null without `APP_ORIGIN`. */
   mcpUrl: string | null
@@ -100,9 +101,13 @@ export async function homeData(
   origin: string | undefined,
   shelf: HomeShelf = NO_SHELF,
 ): Promise<HomeData> {
-  const latest =
-    sessions?.find((s) => s.attendees.some((a) => a.person === owner.person)) ??
-    null
+  const mine =
+    sessions?.filter((s) =>
+      s.attendees.some((a) => a.person === owner.person),
+    ) ?? []
+  // The latest still to tell comes first (#272): it is the one waiting
+  // for her, with "Contar como foi" at hand.
+  const latest = mine.find((s) => s.open) ?? mine[0] ?? null
   const [start, today, covers] = await Promise.all([
     startData(owner, source, origin),
     shelf.today(),

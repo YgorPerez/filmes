@@ -16,6 +16,7 @@ export const Route = createFileRoute('/_owner/sessoes/nova')({
       typeof search.repetir === 'string' && search.repetir !== ''
         ? search.repetir
         : undefined,
+    presentes: peopleParam(search.presentes),
   }),
   loaderDeps: ({ search }) => ({
     buscar: search.buscar,
@@ -33,8 +34,15 @@ export const Route = createFileRoute('/_owner/sessoes/nova')({
   component: NewSessionPage,
 })
 
+/** `?presentes=bruno,iara`: the group to start with (#272). */
+function peopleParam(value: unknown): string[] | undefined {
+  if (typeof value !== 'string') return undefined
+  const slugs = value.split(',').filter((slug) => /^[\w-]{1,64}$/.test(slug))
+  return slugs.length > 0 ? slugs.slice(0, 20) : undefined
+}
+
 function NewSessionPage() {
-  const { erro, parecido, nota, repetir } = Route.useSearch()
+  const { erro, parecido, nota, repetir, presentes } = Route.useSearch()
   const { options, search, draft } = Route.useLoaderData()
   return (
     <NewSession
@@ -44,6 +52,7 @@ function NewSessionPage() {
       refusal={erro}
       search={search}
       similar={parecido}
+      attendees={presentes}
     />
   )
 }

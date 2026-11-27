@@ -10,7 +10,13 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, expect, it, vi } from 'vite-plus/test'
 import { parseFeedback } from '#/content/feedback-form'
@@ -166,8 +172,14 @@ it('takes the film “Usar” picks in place, keeping what was filled', async ()
   render(<FeedbackScreen session={PAGE.id} page={PAGE} />)
   const user = userEvent.setup()
 
-  await user.selectOptions(screen.getByLabelText('Reação: Bruno'), 'nota:4')
   await user.click(screen.getByRole('radio', { name: FEEDBACK.form.other }))
+  await user.click(
+    within(
+      screen.getByRole('radiogroup', {
+        name: FEEDBACK.form.ratingLabel('Bruno'),
+      }),
+    ).getByRole('radio', { name: '8' }),
+  )
   await user.type(screen.getByRole('searchbox'), 'mare')
   await user.click(
     await screen.findByRole('button', {

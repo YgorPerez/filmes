@@ -27,6 +27,28 @@ const stillOpen = async (id: string) =>
 const satisfaction = (page: Page) =>
   page.getByRole('region', { name: 'Satisfação' })
 
+/** One Presente's reaction, by her name (#272). */
+const reactionOf = (page: Page, name: string) =>
+  page.getByRole('group', { name: new RegExp(`^${name}\\b`) })
+
+/** Her Nota of 1 to 10; for a Presente who is not the Dono, under "ou dar
+ * nota". */
+async function rate(page: Page, name: string, n: string) {
+  const reaction = reactionOf(page, name)
+  const give = reaction.getByText('ou dar nota de 1 a 10')
+  if (await give.count()) await give.click()
+  await reaction
+    .getByRole('radiogroup')
+    .getByRole('radio', { name: n, exact: true })
+    .check()
+}
+
+/** Her comment, under "comentar". */
+async function commentOn(page: Page, name: string, text: string) {
+  await reactionOf(page, name).getByText('comentar', { exact: true }).click()
+  await page.getByLabel(`Comentário: ${name}`).fill(text)
+}
+
 test('the Dono closes a Session and the next one shows the satisfaction', async ({
   page,
 }, info) => {
@@ -55,17 +77,18 @@ test('the Dono closes a Session and the next one shows the satisfaction', async 
 
   // Bruno and Quim loved the first film; Rosa did not.
   await page.locator('input[name="filme"]').first().check()
-  await page.getByLabel('Reação: Bruno').selectOption('nota:5')
-  await page.getByLabel('Reação: Quim').selectOption('nota:4,5')
-  await page.getByLabel('Comentário: Quim').fill('quero ver de novo')
-  await page.getByLabel('Reação: Rosa').selectOption('nota:1')
+  await rate(page, 'Bruno', '10')
+  await rate(page, 'Quim', '9')
+  await commentOn(page, 'Quim', 'quero ver de novo')
+  await rate(page, 'Rosa', '2')
   await snap(page, info, 'feedback-preenchido')
   await page.getByRole('button', { name: 'Gravar e fechar a Sessão' }).click()
 
   await expect(page).toHaveURL(new RegExp(`/sessoes/${first}\\?feito=contada$`))
+  // The told Session opens with the tape given back (#272).
   await expect(
-    page.getByRole('status').filter({ hasText: 'Feedback gravado' }),
-  ).toContainText('Feedback gravado e Sessão fechada')
+    page.getByRole('region', { name: 'Fita devolvida' }),
+  ).toContainText('Bruno: deu 10 de 10')
   await snap(page, info, 'feedback-gravado')
   expect(await stillOpen(first)).toBe(false)
   await page.goto('/feedback')
@@ -104,7 +127,7 @@ test('a relayed Relato, a film by its title, and a refusal in place', async ({
 
   // A comment with no reaction is refused on top, in place, and the
   // Session stays open.
-  await page.getByLabel('Comentário: Teo').fill('dormiu')
+  await commentOn(page, 'Teo', 'dormiu')
   await page.getByRole('button', { name: 'Gravar e fechar a Sessão' }).click()
   await expect(page.getByRole('alert')).toContainText(
     'O comentário vai junto da Nota ou do Relato',
@@ -118,18 +141,21 @@ test('a relayed Relato, a film by its title, and a refusal in place', async ({
   // Typed over, the field is a title again.
   await page.getByLabel('Comentário: Teo').fill('')
   await field.fill('Café Amargo')
-  await page.getByLabel('Reação: Bruno').selectOption('nota:4')
-  await page.getByLabel('Reação: Iara').selectOption('relato:gostou')
-  await page.getByLabel('Comentário: Iara').fill('riu muito')
+  await rate(page, 'Bruno', '8')
+  await reactionOf(page, 'Iara')
+    .getByRole('radio', { name: 'gostou', exact: true })
+    .check()
+  await commentOn(page, 'Iara', 'riu muito')
   await page.getByRole('button', { name: 'Gravar e fechar a Sessão' }).click()
   await expect(page).toHaveURL(new RegExp(`/sessoes/${id}\\?feito=contada$`))
   expect(await stillOpen(id)).toBe(false)
 
-  // The form of a closed Session says so.
+  // The form of a told Session says so, and leads to it (#272).
   await page.goto(`/sessoes/${id}/contar`)
-  await expect(page.getByRole('alert')).toContainText(
-    'A Sessão pode já estar fechada',
+  await expect(page.getByRole('heading', { level: 1 })).toContainText(
+    'Esta Sessão já foi contada',
   )
+  await expect(page.getByRole('link', { name: 'Ver a Sessão' })).toBeVisible()
 })
 
 test.describe('without the JavaScript', () => {

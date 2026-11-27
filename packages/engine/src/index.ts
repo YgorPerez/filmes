@@ -708,6 +708,7 @@ export {
   type BillboardDropped,
   type BillboardFilm,
   type BillboardLine,
+  type BillboardNotes,
   type BillboardPrediction,
   type BillboardChosen,
   type BillboardReaction,

@@ -29,7 +29,7 @@ export const PRESSED_PILL = 'px-3xl aria-pressed:px-[9.5px]'
 
 const SHAPES = {
   pill: MARK_PILL,
-  row: 'w-full rounded-nav-row px-lg py-sm',
+  row: 'w-full rounded-nav-row px-lg py-sm leading-snug',
 } as const
 
 /** The option's text with the width of its bold, marked weight kept in

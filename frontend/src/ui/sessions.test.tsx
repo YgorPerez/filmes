@@ -73,7 +73,7 @@ describe('the Sessions list', () => {
       within(closed!).getByRole('link', { name: /Quim/ }).getAttribute('href'),
     ).toBe('/sessoes/2026-11-19-quim')
     expect(closed!.textContent).toContain('Viram Pequenos Milagres')
-    expect(closed!.textContent).toContain('19 de novembro de 2026')
+    expect(closed!.textContent).toContain('Qui, 19 nov')
     expect(
       within(closed!).queryByRole('link', { name: 'Contar como foi' }),
     ).toBeNull()
@@ -83,6 +83,8 @@ describe('the Sessions list', () => {
         .getAttribute('href'),
     ).toBe('/sessoes/2026-11-20-iara')
     expect(open!.textContent).toContain('eu e a Iara')
+    // The shelf by title, so the night is easy to place (#272).
+    expect(open!.textContent).toContain('O Farol de Areia · Pequenos Milagres')
     expect(open!.textContent).toContain('até 2h')
     expect(
       within(open!)
@@ -102,7 +104,10 @@ describe('the Sessions list', () => {
     expect(
       screen.getByRole('link', { name: 'Todas' }).getAttribute('href'),
     ).toBe('/sessoes')
-    expect(screen.getByText('Nenhuma Sessão para contar.')).toBeTruthy()
+    expect(
+      screen.getByRole('heading', { name: SESSIONS.list.pendingEmpty }),
+    ).toBeTruthy()
+    expect(screen.getByText(SESSIONS.list.pendingEmptyLead)).toBeTruthy()
   })
 
   it('names the list by its filter, and says when there is no Session at all', () => {
@@ -113,7 +118,16 @@ describe('the Sessions list', () => {
     expect(
       screen.getByRole('link', { name: 'Todas' }).getAttribute('aria-current'),
     ).toBe('page')
-    expect(screen.getByText(SESSIONS.list.empty)).toBeTruthy()
+    expect(
+      screen.getByRole('heading', { name: SESSIONS.list.empty }),
+    ).toBeTruthy()
+    // Empty, the list says what a Session is and opens one (#272).
+    expect(screen.getByText(SESSIONS.list.emptyLead)).toBeTruthy()
+    expect(
+      screen
+        .getByRole('link', { name: SESSIONS.list.emptyAction })
+        .getAttribute('href'),
+    ).toBe('/sessoes/nova')
   })
 
   it('says when the engine cannot run here', () => {
@@ -134,21 +148,21 @@ describe('a Session’s page', () => {
 
   it('shows the Cartaz of a Session just opened, posting to its reply, and the way to its Feedback', () => {
     render(<SessionScreen page={PAGE} notice="aberta" />)
-    expect(screen.getByRole('status').textContent).toBe(
-      SESSIONS.session.notices.aberta,
-    )
+    // A new Session needs no notice: the Cartaz is it (#272).
+    expect(screen.queryByRole('status')).toBeNull()
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
-      'Sessão de 20 de novembro de 2026',
+      'Sex, 20 nov',
     )
     expect(screen.getAllByRole('article')).toHaveLength(2)
     expect(
       screen.getByRole('form', { name: 'Cartaz' }).getAttribute('action'),
     ).toBe('/sessoes/2026-11-20-iara/responder')
-    expect(
-      screen
-        .getByRole('link', { name: SESSIONS.list.feedback })
-        .getAttribute('href'),
-    ).toBe('/sessoes/2026-11-20-iara/contar')
+    // In the head's ⋯ menu, and after the last film.
+    const told = screen.getAllByRole('link', { name: SESSIONS.list.feedback })
+    expect(told.map((link) => link.getAttribute('href'))).toEqual([
+      '/sessoes/2026-11-20-iara/contar',
+      '/sessoes/2026-11-20-iara/contar',
+    ])
   })
 
   it('keeps a refused Cartaz reply ready to retry and clears it when saved', async () => {
@@ -298,8 +312,9 @@ describe('a Session’s page', () => {
         refusal="regerar"
       />,
     )
-    const [regenerated, warnings, addition] = screen.getAllByRole('status')
-    expect(regenerated!.textContent).toBe(SESSIONS.session.notices.regerada)
+    // The redo is said by the Cartaz's own line ("Refeito: ..."), #272.
+    expect(screen.getByText(/^Refeito:/)).toBeTruthy()
+    const [warnings, addition] = screen.getAllByRole('status')
     expect(warnings!.textContent).toBe(
       `${SESSIONS.session.warnings}só 2 passaram nas Restrições`,
     )
@@ -337,10 +352,10 @@ describe('a Session’s page', () => {
         notice="regerada"
       />,
     )
-    const [, addition] = screen.getAllByRole('status')
+    const [addition] = screen.getAllByRole('status')
+    // The reading as a sentence (#272).
     expect(addition!.textContent).toBe(
-      'Você acrescentou “chegou a Iara e o Zeca, parecido com Reprise e Amélie”. ' +
-        'Acrescentei ao pedido Presente: Iara, até 1h50. ' +
+      'Entendi: Iara, até 1h50. ' +
         'Deixei “Zeca” só como anotação. ' +
         '“Reprise” pode ser Reprise (2011) ou Reprise (2004). Diga qual na próxima vez. ' +
         '“Amélie” não está no Catálogo. ' +
@@ -374,18 +389,25 @@ describe('a Session’s page', () => {
     )
   })
 
-  it('says a closed Session is closed, and what they saw', () => {
+  it('opens a told Session with the tape given back, and folds the shelf', () => {
     render(
       <SessionScreen
         page={{
           ...PAGE,
           session: CLOSED,
           billboard: { ...MODEL, open: false },
+          satisfaction: ['satisfação de Quim nas últimas Sessões: 40%'],
         }}
       />,
     )
-    expect(screen.getByText('Fechada.')).toBeTruthy()
-    expect(screen.getByText('Viram Pequenos Milagres.')).toBeTruthy()
+    const tape = screen.getByRole('region', { name: SESSIONS.session.returned })
+    expect(tape.textContent).toContain('Pequenos Milagres')
+    expect(tape.textContent).toContain('satisfação de Quim')
+    expect(
+      within(tape)
+        .getByRole('link', { name: SESSIONS.session.again })
+        .getAttribute('href'),
+    ).toBe('/sessoes/nova?presentes=quim')
     expect(
       screen.queryByRole('link', { name: SESSIONS.list.feedback }),
     ).toBeNull()
@@ -398,9 +420,14 @@ describe('a Session’s page', () => {
     )
     cleanup()
     render(<SessionScreen page="unknown" />)
-    expect(screen.getByRole('alert').textContent).toContain(
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
       SESSIONS.session.unknown,
     )
+    expect(
+      screen
+        .getByRole('link', { name: SESSIONS.session.toList })
+        .getAttribute('href'),
+    ).toBe('/sessoes')
     cleanup()
     render(<SessionScreen page={null} />)
     expect(screen.getByRole('alert').textContent).toContain(
