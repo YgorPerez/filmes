@@ -1347,6 +1347,13 @@ describe('Meu gosto in the second person', () => {
     expect(screen.getByText('Nas Sessões, você é Bruno.')).toBeTruthy()
   })
 
+  it('says she has no Nota yet, with no countdown from zero (#274)', () => {
+    render(<PersonScreen slug="bruno" page={{ ...MY_PAGE, ratings: [] }} />)
+    const glance = section(PERSON.glance.title)
+    expect(glance.textContent).toContain('Nenhuma Nota ainda')
+    expect(glance.textContent).not.toContain('faltam')
+  })
+
   it('says how many of her films wait in the queue, and leads there first', () => {
     render(<PersonScreen slug="bruno" page={MY_PAGE} pending={2} />)
     const notes = section(PERSON.notes.title)

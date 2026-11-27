@@ -32,8 +32,14 @@ export const PERSON = {
   },
   glance: {
     title: 'Seu gosto em uma olhada',
+    /** At zero, no count and no countdown: the next step already says to
+     * give Notas (#274). */
     notes: (n: number) =>
-      n === 1 ? '1 Nota' : `${n.toLocaleString('pt-BR')} Notas`,
+      n === 0
+        ? 'Nenhuma Nota ainda'
+        : n === 1
+          ? '1 Nota'
+          : `${n.toLocaleString('pt-BR')} Notas`,
     toTen: (n: number) => `faltam ${10 - n} para 10`,
     /** The genres and directors of the films she liked, each part with
      * its label (#274). */
