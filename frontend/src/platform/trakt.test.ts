@@ -6,6 +6,7 @@ import {
   useFixture,
   type Fixture,
 } from '../../../packages/engine/test/fixture.ts'
+import { TRAKT_REVOKED } from '@filmes/engine'
 import { Auth } from './auth'
 import { ownersFromDataRepo } from './owners'
 import { peopleFromDataRepo } from './people-directory'
@@ -185,6 +186,81 @@ test('a verified Presente grants consent, refreshes encrypted tokens and can dis
   await post('/trakt/desconectar')
   expect(trakt.connected(identity)).toBe(false)
   expect(await access()).toBeNull()
+  // The disconnect also revokes the token on Trakt.
+  const [revokeUrl, revokeInit] = fetchToken.mock.calls[2]!
+  expect(revokeUrl).toBe('https://api.trakt.tv/oauth/revoke')
+  expect(
+    JSON.parse(typeof revokeInit?.body === 'string' ? revokeInit.body : '{}'),
+  ).toEqual({ token: 'trakt-access-renewed', client_id: 'public-test' })
+})
+
+test('a disconnect goes through when Trakt does not take the revoke', async () => {
+  const { identity, fetchToken, trakt, post, begin } = await setup(useFixture())
+  const { callback } = await begin()
+  fetchToken.mockResolvedValueOnce(issued('original'))
+  await trakt.handle(callback, identity)
+  fetchToken.mockRejectedValueOnce(new Error('no network'))
+  expect((await post('/trakt/desconectar')).headers.get('Location')).toBe(
+    '/trakt',
+  )
+  expect(fetchToken).toHaveBeenCalledTimes(2)
+  expect(trakt.connected(identity)).toBe(false)
+})
+
+test('a refresh token Trakt refuses drops the grant, so the Pessoa reconnects', async () => {
+  const { identity, fetchToken, trakt, begin, expire } =
+    await setup(useFixture())
+  const { callback } = await begin()
+  fetchToken.mockResolvedValueOnce(issued('original'))
+  await trakt.handle(callback, identity)
+  expire()
+  fetchToken.mockResolvedValueOnce(
+    Response.json({ error: 'invalid_grant' }, { status: 401 }),
+  )
+  const access = () => trakt.accessToken(identity, new AbortController().signal)
+  expect(await access()).toBe(TRAKT_REVOKED)
+  expect(trakt.connected(identity)).toBe(false)
+  expect(await access()).toBeNull()
+  expect(fetchToken).toHaveBeenCalledTimes(2)
+})
+
+test('another error on refresh keeps the grant for the next try', async () => {
+  const { identity, fetchToken, trakt, begin, expire } =
+    await setup(useFixture())
+  const { callback } = await begin()
+  fetchToken.mockResolvedValueOnce(issued('original'))
+  await trakt.handle(callback, identity)
+  expire()
+  fetchToken.mockResolvedValueOnce(new Response('busy', { status: 503 }))
+  const access = () => trakt.accessToken(identity, new AbortController().signal)
+  await expect(access()).rejects.toThrow('Trakt OAuth exchange failed')
+  expect(trakt.connected(identity)).toBe(true)
+  fetchToken.mockResolvedValueOnce(issued('renewed'))
+  expect(await access()).toBe('trakt-access-renewed')
+})
+
+test('tokens renewed after the lease ran out are kept, not dropped', async () => {
+  const { identity, fetchToken, trakt, begin, expire } =
+    await setup(useFixture())
+  const { callback } = await begin()
+  fetchToken.mockResolvedValueOnce(issued('original'))
+  await trakt.handle(callback, identity)
+  expire()
+  const access = () => trakt.accessToken(identity, new AbortController().signal)
+  const slow = Promise.withResolvers<Response>()
+  fetchToken.mockReturnValueOnce(slow.promise)
+  const first = access()
+  // The first refresh outlives its lease, and another process claims it.
+  expire()
+  const late = Promise.withResolvers<Response>()
+  fetchToken.mockReturnValueOnce(late.promise)
+  const second = access()
+  slow.resolve(issued('renewed'))
+  expect(await first).toBe('trakt-access-renewed')
+  late.resolve(Response.json({ error: 'invalid_grant' }, { status: 400 }))
+  await expect(second).rejects.toThrow('Trakt grant has changed')
+  expect(trakt.connected(identity)).toBe(true)
+  expect(await access()).toBe('trakt-access-renewed')
 })
 
 test('disconnect invalidates a callback that is exchanging its code', async () => {
@@ -274,7 +350,8 @@ test('a refresh token is spent once, and a disconnect during the refresh keeps n
   await post('/trakt/desconectar')
   renewed.resolve(issued('renewed'))
   expect(await first).toBeNull()
-  expect(fetchToken).toHaveBeenCalledTimes(2)
+  // The code, the refresh and the disconnect's revoke.
+  expect(fetchToken).toHaveBeenCalledTimes(3)
   expect(trakt.connected(identity)).toBe(false)
 })
 

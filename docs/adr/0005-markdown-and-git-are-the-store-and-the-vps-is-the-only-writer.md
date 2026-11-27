@@ -7,7 +7,7 @@ Pessoas and Sessions live as Markdown with YAML frontmatter in filmes-dados, a p
 - **Pessoas and Sessions stay Markdown in filmes-dados.** No database becomes the source of truth for them.
 - **The VPS is the only writer.** Every write is a commit authored by the logged-in Pessoa and pushed with a deploy key that can write to that repository only. Nobody else pushes to filmes-dados after launch; a hand fix goes through the app, or through a commit the VPS pulls before its next write.
 - **A failed push stays queued and is retried.** The commit is already in the VPS clone, so the write counts; after repeated failures the admin sees a banner.
-- **The derived SQLite is built on servidor-azul, never on the VPS**, and shipped by `pnpm db:publish` (rsync plus a blue/green swap). The on-demand sources' cache is a separate file that survives the swap. Web login sessions and OAuth tokens live in `auth.sqlite`, with no backup. Trakt access and refresh tokens are encrypted with a VPS environment key and tied to the Pessoa and verified email. Disconnecting deletes the local grant.
+- **The derived SQLite is built on servidor-azul, never on the VPS**, and shipped by `pnpm db:publish` (rsync plus a blue/green swap). The on-demand sources' cache is a separate file that survives the swap. Web login sessions and OAuth tokens live in `auth.sqlite`, with no backup; a web session can belong to a Pessoa who is not a Dono, only for `/trakt` (ADR 0007). Trakt access and refresh tokens are encrypted with a VPS environment key and tied to the Pessoa and verified email. Disconnecting deletes the local grant and revokes the token on Trakt; a refresh token Trakt refuses deletes the grant too.
 
 ## Why
 

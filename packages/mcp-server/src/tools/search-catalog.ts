@@ -14,6 +14,7 @@ export default defineTool({
     destructiveHint: false,
     openWorldHint: false,
   },
+  session: true,
   description:
     'Busca no Catálogo pelo nome, sem ligar para acento nem maiúscula, e devolve os IDs que as outras ferramentas ' +
     'pedem: `films` ({id tt..., title, year, votes, rating, directors}), `people` (diretor, roteirista, ator), ' +

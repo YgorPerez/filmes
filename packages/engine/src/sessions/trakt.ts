@@ -1,9 +1,16 @@
 import { Effect } from 'effect'
+import { filmText } from '../evidence/wording.ts'
 import { numOrNull, text } from '../sqlite/row.ts'
 import { Sqlite } from '../sqlite/Sqlite.ts'
-import { TraktAccess, writeTrakt } from '../sources/Trakt.ts'
+import { TRAKT_REVOKED, TraktAccess, writeTrakt } from '../sources/Trakt.ts'
 
-const WARNING = 'O Feedback foi salvo. O envio ao Trakt falhou.'
+const FAILED = 'O Feedback foi salvo. O envio ao Trakt falhou.'
+
+const revoked = (name: string) =>
+  `O Trakt de ${name} recusou a conexão; reconecte o Trakt para voltar a enviar.`
+
+const unknownFilm = (film: string) =>
+  `O Trakt não encontrou ${film}; ele ficou fora do envio.`
 
 interface Seen {
   readonly film: string
@@ -44,15 +51,39 @@ const seenForTrakt = (session: string) =>
     return people
   })
 
+/** "Título (ano)" for a warning, or the IMDb id outside the catalogue. */
+const filmName = (film: string) =>
+  Effect.gen(function* () {
+    const sqlite = yield* Sqlite
+    const row = yield* sqlite.read((db) =>
+      db.get('SELECT titulo, ano FROM filmes WHERE id = ?', film),
+    )
+    return row ? filmText(text(row, 'titulo'), numOrNull(row, 'ano')) : film
+  })
+
+const personName = (person: string) =>
+  Effect.gen(function* () {
+    const sqlite = yield* Sqlite
+    const row = yield* sqlite.read((db) =>
+      db.get('SELECT nome FROM pessoas WHERE slug = ?', person),
+    )
+    return row ? text(row, 'nome') : person
+  })
+
 // Only the date is known. Noon UTC keeps the date in the app's time zone
 // and gives a stable timestamp when Trakt deduplicates a retried POST.
 const timestamp = (date: string) => `${date}T12:00:00.000Z`
 
-/** Called after the Feedback and its commit. A failed source is done for this run. */
+/** Called after the Feedback and its commit; returns its warnings. A film
+ * Trakt does not know is left out with a warning, and the rest goes. A
+ * refused grant warns and skips that Pessoa. A failed source is done for
+ * this run. */
 export const syncTraktFeedback = (session: string) =>
   Effect.gen(function* () {
     const connection = yield* TraktAccess
-    if (!connection) return
+    if (!connection) return [] as ReadonlyArray<string>
+    const warnings: string[] = []
+    const missing = new Set<string>()
     return yield* Effect.gen(function* () {
       for (const [person, seen] of yield* seenForTrakt(session)) {
         const history = [...seen.values()].map(({ film, date }) => ({
@@ -60,9 +91,14 @@ export const syncTraktFeedback = (session: string) =>
           watched_at: timestamp(date),
         }))
         const sent = yield* writeTrakt('history', history, connection, person)
-        if (!sent) continue
+        if (sent === null) continue
+        if (sent === TRAKT_REVOKED) {
+          warnings.push(revoked(yield* personName(person)))
+          continue
+        }
+        for (const film of sent) missing.add(film)
         const ratings = [...seen.values()].flatMap(({ film, date, rating }) =>
-          rating === null
+          rating === null || missing.has(film)
             ? []
             : [
                 {
@@ -72,16 +108,28 @@ export const syncTraktFeedback = (session: string) =>
                 },
               ],
         )
-        if (ratings.length > 0)
-          yield* writeTrakt('ratings', ratings, connection, person)
+        if (ratings.length === 0) continue
+        const rated = yield* writeTrakt('ratings', ratings, connection, person)
+        if (rated !== null && rated !== TRAKT_REVOKED)
+          for (const film of rated) missing.add(film)
       }
+      for (const film of missing)
+        warnings.push(unknownFilm(yield* filmName(film)))
+      return warnings
     }).pipe(
-      Effect.as(undefined),
       // Leave room for the Feedback write under the web proxy's timeout.
       Effect.timeoutOrElse({
         duration: '45 seconds',
-        orElse: () => Effect.succeed(WARNING),
+        orElse: () => Effect.succeed([...warnings, FAILED]),
       }),
-      Effect.catchCause(() => Effect.succeed(WARNING)),
+      // A bug, not Trakt: logged without the tokens or the request, and the
+      // Feedback still answers with the warning.
+      Effect.catchDefect((defect) =>
+        Effect.logError(
+          'Trakt sync defect',
+          defect instanceof Error ? `${defect.name}: ${defect.message}` : '',
+        ).pipe(Effect.as([...warnings, FAILED])),
+      ),
+      Effect.orElseSucceed(() => [...warnings, FAILED]),
     )
   })

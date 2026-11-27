@@ -1,4 +1,5 @@
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto'
+import { TRAKT_REVOKED } from '@filmes/engine'
 import { openAuthDatabase, tokenHash } from './auth-database'
 
 export interface TraktTokens {
@@ -15,6 +16,14 @@ export interface TraktIdentity {
 interface Attempt extends TraktIdentity {
   readonly sessionHash: string
   readonly state: string
+}
+
+/** Trakt refused the refresh token (`invalid_grant`): revoked on trakt.tv,
+ * or spent. The grant cannot be renewed any more. */
+export class TraktGrantRefused extends Error {
+  constructor() {
+    super('Trakt refused the refresh token')
+  }
 }
 
 const aad = ({ person, email }: TraktIdentity) =>
@@ -86,19 +95,28 @@ export class TraktStore {
     ).run(person, tokenHash(state))
   }
 
-  disconnect({ person, email }: TraktIdentity) {
+  /** Drops the Pessoa's attempts and grant; the tokens it held, for the
+   * app to revoke on Trakt, or `null` without a grant. */
+  disconnect(identity: TraktIdentity): TraktTokens | null {
+    const { person, email } = identity
     using db = openAuthDatabase(this.database)
     db.exec('BEGIN IMMEDIATE')
+    let row: Record<string, unknown> | undefined
     try {
       db.prepare('DELETE FROM trakt_attempts WHERE person = ?').run(person)
-      db.prepare(
-        'DELETE FROM trakt_grants WHERE person = ? AND identity_hash = ?',
-      ).run(person, tokenHash(email))
+      row = db
+        .prepare(
+          'DELETE FROM trakt_grants WHERE person = ? AND identity_hash = ? RETURNING tokens',
+        )
+        .get(person, tokenHash(email))
       db.exec('COMMIT')
     } catch (error) {
       db.exec('ROLLBACK')
       throw error
     }
+    return row?.tokens instanceof Uint8Array
+      ? this.unseal(identity, Buffer.from(row.tokens))
+      : null
   }
 
   connected({ person, email }: TraktIdentity) {
@@ -144,17 +162,32 @@ export class TraktStore {
       .run(lease, person, row.tokens, now)
     if (claimed.changes !== 1) throw new Error('Trakt grant has changed')
     try {
-      const renewed = await refresh(tokens.refresh)
+      let renewed: TraktTokens
+      try {
+        renewed = await refresh(tokens.refresh)
+      } catch (error) {
+        if (!(error instanceof TraktGrantRefused)) throw error
+        // Revoked on trakt.tv: drop the grant, so the Pessoa is asked to
+        // connect again once instead of failing on every Feedback.
+        const dropped = db
+          .prepare(
+            'DELETE FROM trakt_grants WHERE person = ? AND tokens = ? AND refresh_until = ?',
+          )
+          .run(person, row.tokens, lease)
+        if (dropped.changes !== 1) throw new Error('Trakt grant has changed')
+        return TRAKT_REVOKED
+      }
+      // The old refresh token is spent: while the grant still holds it, the
+      // new tokens are the only good ones, even if the lease ran out.
       const saved = db
         .prepare(
-          'UPDATE trakt_grants SET tokens = ?, expires_at = ?, refresh_until = 0 WHERE person = ? AND tokens = ? AND refresh_until = ?',
+          'UPDATE trakt_grants SET tokens = ?, expires_at = ?, refresh_until = 0 WHERE person = ? AND tokens = ?',
         )
         .run(
           this.seal(identity, renewed),
           renewed.expiresAt,
           person,
           row.tokens,
-          lease,
         )
       return saved.changes === 1 ? renewed.access : null
     } finally {

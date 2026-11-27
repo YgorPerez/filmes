@@ -48,7 +48,6 @@ export {
   type ExportResult,
 } from './export/export.ts'
 export { IMDB_HEADER } from './export/imdb.ts'
-export { LETTERBOXD_HEADER } from './export/letterboxd.ts'
 export { resolveAttendees } from './recommendation/attendees.ts'
 export {
   attributionsOf,
@@ -56,6 +55,7 @@ export {
   TRAKT_ATTRIBUTION,
   type Attribution,
   type Credit,
+  type CreditSource,
 } from './recommendation/attributions.ts'
 export {
   catalogFilm,
@@ -286,7 +286,7 @@ export {
   type Outcome,
   type RunOptions,
 } from './runtime/Engine.ts'
-export type { TraktConnection } from './sources/Trakt.ts'
+export { TRAKT_REVOKED, type TraktConnection } from './sources/Trakt.ts'
 export { Owner, ownerOf } from './runtime/Owner.ts'
 export {
   ERROR_CODES,
@@ -569,12 +569,10 @@ export {
 } from './imports/letterboxd-rss.ts'
 export {
   importTvTime,
-  tvTimeFactCounts,
   type TvTimeImport,
   type TvTimeImportInput,
   type TvTimeOutside,
 } from './imports/tvtime.ts'
-export { readTvTimeBackup, TVTIME_KIND } from './imports/tvtime-backup.ts'
 export {
   readUpload,
   storedImports,
@@ -609,11 +607,6 @@ export {
 } from './imports/trakt.ts'
 export {
   importImdb,
-  IMDB_KIND,
-  imdbFactCounts,
-  loadImdb,
-  reloadImdb,
-  reloadPersonImdb,
   type ImdbFactCounts,
   type ImdbImport,
   type ImdbImportInput,
@@ -621,29 +614,12 @@ export {
 } from './imports/imdb.ts'
 export {
   importSimkl,
-  loadSimkl,
-  reloadPersonSimkl,
-  reloadSimkl,
-  SIMKL_KIND,
-  simklFactCounts,
   type SimklFactCounts,
   type SimklImport,
   type SimklImportInput,
   type SimklReport,
   type SimklUnresolved,
 } from './imports/simkl.ts'
-export {
-  isSimklBackup,
-  readSimklBackup,
-  type SimklFilm,
-  type SimklRow,
-  type SimklRowKind,
-} from './imports/simkl-backup.ts'
-export {
-  isImdbRatings,
-  readImdbRatings,
-  type ImdbRatingRow,
-} from './imports/imdb-ratings.ts'
 export {
   personImports,
   type ImportRecord,

@@ -37,12 +37,12 @@ describe('the credits', () => {
       'Does the Dog Die',
       'Trakt',
       'Letterboxd',
+      'Simkl',
+      'TV Time',
       'YouTube',
     ])
-    for (const { url, use } of CREDITS) {
-      expect(url).toMatch(/^https:\/\//)
-      expect(use).not.toBe('')
-    }
+    expect(new Set(sources).size).toBe(sources.length)
+    for (const { url } of CREDITS) expect(url).toMatch(/^https:\/\//)
   })
 
   test('OMDb and MovieLens get what their licenses ask', () => {

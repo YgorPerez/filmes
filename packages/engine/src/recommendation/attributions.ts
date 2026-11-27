@@ -7,11 +7,13 @@
 // ("Trakt da Ana"); TMDB also when some film comes with a poster or a
 // Portuguese title.
 //
-// `CREDITS` is the app's credits page (#292): every source the engine
+// `CREDITS` feeds the app's credits page (#292): every source the engine
 // reads, with these texts word for word and what the other licenses ask
 // (OMDb's CC BY-NC 4.0, MovieLens' "may not state or imply any
-// endorsement"), and nothing on the cards. A new source adds its line
-// there.
+// endorsement"), and nothing on the cards. Only the source, its site and
+// its notice live here; what filmes takes from each is the page's copy
+// (`frontend/src/ui/credits.copy.ts`). A new source adds its line here and
+// its use there.
 
 import { casefold } from '../compat/text.ts'
 import { DDD_ATTRIBUTION, DDD_NAME } from '../sources/DoesTheDogDie.ts'
@@ -48,13 +50,28 @@ const TEXTS: ReadonlyArray<Attribution> = [
   TMDB_ATTRIBUTION,
 ]
 
-/** A source on the credits page: its name, where it lives, what filmes
- * takes from it, and the notice its terms ask for, or `null` when they ask
- * for none. */
+/** The sources on the credits page, in the order it shows them. */
+export type CreditSource =
+  | 'IMDb'
+  | 'TMDB'
+  | 'Wikidata'
+  | 'MovieLens'
+  | 'Tag Genome'
+  | 'OMDb'
+  | 'Rotten Tomatoes'
+  | 'Metacritic'
+  | 'Does the Dog Die'
+  | 'Trakt'
+  | 'Letterboxd'
+  | 'Simkl'
+  | 'TV Time'
+  | 'YouTube'
+
+/** A source on the credits page: its name, where it lives, and the notice
+ * its terms ask for, or `null` when they ask for none. */
 export interface Credit {
-  readonly source: string
+  readonly source: CreditSource
   readonly url: string
-  readonly use: string
   readonly notice: string | null
 }
 
@@ -69,25 +86,21 @@ export const CREDITS: ReadonlyArray<Credit> = [
   {
     source: 'IMDb',
     url: 'https://www.imdb.com',
-    use: 'Os filmes, o elenco, a nota e os votos, e as notas que cada Pessoa importa.',
     notice: textOf('IMDb'),
   },
   {
-    source: TMDB_ATTRIBUTION.source,
+    source: 'TMDB',
     url: 'https://www.themoviedb.org',
-    use: 'As capas, os títulos em português e as sinopses.',
     notice: TMDB_ATTRIBUTION.text,
   },
   {
     source: 'Wikidata',
     url: 'https://www.wikidata.org',
-    use: 'Quem fez cada filme, séries, prêmios, datas de estreia, subgêneros e classificação etária.',
     notice: 'Dados do Wikidata, em domínio público (CC0).',
   },
   {
     source: 'MovieLens',
     url: 'https://grouplens.org/datasets/movielens/',
-    use: 'As notas de quem deu 4 ou mais a um filme e a outro.',
     notice:
       'MovieLens ml-32m, do GroupLens Research, da Universidade de Minnesota ' +
       '(F. Maxwell Harper e Joseph A. Konstan, 2015, https://doi.org/10.1145/2827872). ' +
@@ -96,13 +109,11 @@ export const CREDITS: ReadonlyArray<Credit> = [
   {
     source: 'Tag Genome',
     url: 'https://grouplens.org/datasets/movielens/tag-genome-2021/',
-    use: 'As tags dos filmes, que movem o Clima e o Parecido.',
     notice: textOf('Tag Genome'),
   },
   {
     source: 'OMDb',
     url: 'https://www.omdbapi.com',
-    use: 'A classificação etária, quando falta no Wikidata, e a nota da crítica dos primeiros filmes.',
     notice:
       'Dados do OMDb (https://www.omdbapi.com), sob licença CC BY-NC 4.0 ' +
       '(https://creativecommons.org/licenses/by-nc/4.0/)',
@@ -110,39 +121,43 @@ export const CREDITS: ReadonlyArray<Credit> = [
   {
     source: 'Rotten Tomatoes',
     url: 'https://www.rottentomatoes.com',
-    use: 'O Tomatometer, pelo OMDb, na linha do filme.',
     notice:
       'Rotten Tomatoes® e Tomatometer® são marcas da Fandango; o filmes não é endossado por ela.',
   },
   {
     source: 'Metacritic',
     url: 'https://www.metacritic.com',
-    use: 'O Metascore, pelo OMDb, na linha do filme.',
     notice:
       'Metacritic e Metascore são marcas da Fandom; o filmes não é endossado por ela.',
   },
   {
-    source: DDD_NAME,
+    source: 'Does the Dog Die',
     url: 'https://www.doesthedogdie.com',
-    use: 'Os avisos de conteúdo ("um cachorro morre").',
     notice: DDD_ATTRIBUTION,
   },
   {
-    source: TRAKT_ATTRIBUTION.source,
+    source: 'Trakt',
     url: 'https://trakt.tv',
-    use: 'O histórico, as notas e a lista para ver que cada Pessoa importa.',
     notice: TRAKT_ATTRIBUTION.text,
   },
   {
     source: 'Letterboxd',
     url: 'https://letterboxd.com',
-    use: 'O histórico, as notas e a lista para ver do export que cada Pessoa baixa.',
+    notice: null,
+  },
+  {
+    source: 'Simkl',
+    url: 'https://simkl.com',
+    notice: null,
+  },
+  {
+    source: 'TV Time',
+    url: 'https://www.tvtime.com',
     notice: null,
   },
   {
     source: 'YouTube',
     url: 'https://www.youtube.com',
-    use: 'Os trailers, pelo link do card.',
     notice: null,
   },
 ]

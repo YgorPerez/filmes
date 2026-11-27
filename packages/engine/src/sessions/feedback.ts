@@ -644,8 +644,8 @@ export const recordFeedback = (
       { author, message: `feedback ${id}` },
       (db) => writeFeedback(db, request, today),
     )
-    const warning = yield* syncTraktFeedback(id)
-    return warning ? { ...result, warnings: [warning] } : result
+    const warnings = yield* syncTraktFeedback(id)
+    return warnings.length > 0 ? { ...result, warnings } : result
   })
 
 /** Takes a Pessoa's comment out of her reaction in a Session's Feedback,

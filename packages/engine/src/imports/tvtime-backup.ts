@@ -16,7 +16,9 @@
 // Only those files are opened. The GDPR export also holds the account's
 // credentials (`access_token.csv`, `auth-prod-login.csv`) and emotions
 // with the ratings' very header (`emotions-live-votes.csv`); the import
-// keeps a copy with the film files alone (`keptTvTimeBackup`).
+// keeps a copy with the film files alone, and of them only the film rows
+// and the columns the reader takes: no series nor episode, no `user_id`
+// (`keptTvTimeBackup`).
 //
 // A film becomes rows of the Letterboxd import's shape, which its loader
 // takes: a GDPR film goes through the same resolution chain and queue, by
@@ -24,6 +26,7 @@
 // is a diary row (a Já visto that day), the rating rides on the latest
 // one, and towatch (or `is_watched: false`) is the watchlist.
 import { casefold, isalnum, pyStrip } from '../compat/text.ts'
+import { csvRow } from '../export/csv.ts'
 import { pyDecodeUtf8 } from '../compat/utf8.ts'
 import { engineError } from '../runtime/EngineError.ts'
 import { CsvDictReader, CsvError } from './csv.ts'
@@ -50,6 +53,20 @@ const RECORD_COLUMNS = [
   'release_date',
   'created_at',
   'watch_date_range_key',
+] as const
+
+/** The columns the kept copy holds: the required ones and the localized
+ * title the reader prefers. */
+const KEPT_RECORD_COLUMNS = [...RECORD_COLUMNS, 'movie_name'] as const
+const KEPT_RATING_COLUMNS = ['uuid', 'vote_key'] as const
+
+/** The fields of a Liberator film the reader takes. */
+const KEPT_MOVIE_FIELDS = [
+  'title',
+  'created_at',
+  'watched_at',
+  'is_watched',
+  'rating',
 ] as const
 
 /** `vote_key`'s levels (bad, ok, good, great, wow), as TV Time's rating set
@@ -317,6 +334,14 @@ const backupMembers = (
   return movies === undefined ? null : { kind: 'liberator', movies }
 }
 
+/** The backup as a ZIP: the Liberator's `movies.json` sent alone (the MCP
+ * takes only that, so the GDPR export never goes through the chat) is put
+ * in one; a ZIP is as it came. */
+export const tvTimeZip = (name: string, content: Uint8Array): Uint8Array =>
+  name.toLowerCase().endsWith('.json')
+    ? zipStored([{ name: MOVIES, content }])
+    : content
+
 /** Whether a ZIP's names are a TV Time backup's: the import page's one file
  * field takes it too (#163). */
 export const isTvTimeBackup = (names: readonly string[]): boolean =>
@@ -364,9 +389,81 @@ export const readTvTimeBackup = (
       : readLiberator(zip, members.movies, name)
   })
 
+/** A CSV member with only `columns` and the rows `keep` takes. */
+const keptCsv = (
+  zip: Zip,
+  path: string,
+  name: string,
+  columns: readonly string[],
+  keep: (get: (column: string) => string) => boolean,
+): Uint8Array => {
+  const reader = new CsvDictReader(csvText(zip, path, name))
+  let text = csvRow(columns)
+  for (const { row } of reader.rows()) {
+    const get = (column: string) => row.get(column) ?? ''
+    if (keep((column) => pyStrip(get(column)))) text += csvRow(columns.map(get))
+  }
+  return Buffer.from(text, 'utf8')
+}
+
+/** The GDPR export's film rows, and the ratings of those films. */
+const keptGdpr = (
+  zip: Zip,
+  records: string,
+  ratings: readonly string[],
+  name: string,
+) => {
+  const films = new Set<string>()
+  const members = [
+    {
+      name: records,
+      content: keptCsv(zip, records, name, KEPT_RECORD_COLUMNS, (get) => {
+        if (get('entity_type') !== 'movie') return false
+        films.add(get('uuid'))
+        return true
+      }),
+    },
+  ]
+  for (const path of ratings)
+    members.push({
+      name: path,
+      content: keptCsv(
+        zip,
+        path,
+        name,
+        KEPT_RATING_COLUMNS,
+        (get) => get('episode_id') === '' && films.has(get('uuid')),
+      ),
+    })
+  return members
+}
+
+/** The Liberator's films with the IMDb id and the fields the reader takes. */
+const keptLiberator = (zip: Zip, movies: string, name: string) => {
+  const entries: unknown = JSON.parse(csvText(zip, movies, name))
+  const kept = (Array.isArray(entries) ? entries : []).map((entry) => {
+    const imdb = field(field(entry, 'id'), 'imdb')
+    return {
+      ...(imdb !== undefined && { id: { imdb } }),
+      ...Object.fromEntries(
+        KEPT_MOVIE_FIELDS.filter((key) => field(entry, key) !== undefined).map(
+          (key) => [key, field(entry, key)],
+        ),
+      ),
+    }
+  })
+  return [
+    {
+      name: movies,
+      content: Buffer.from(`${JSON.stringify(kept, null, 2)}\n`, 'utf8'),
+    },
+  ]
+}
+
 /** The copy the import keeps: a ZIP with only the members the reader opens,
- * as they were. Credentials and the rest of the account never reach
- * filmes-dados. */
+ * and of them only the films and what the reader takes. Credentials, series,
+ * episodes and the account's ids never reach filmes-dados. Call it after
+ * `readTvTimeBackup`, which reports a bad file. */
 export const keptTvTimeBackup = (
   name: string,
   content: Uint8Array,
@@ -374,14 +471,11 @@ export const keptTvTimeBackup = (
   withZip(name, content, (zip) => {
     const members = backupMembers(zip)
     if (members === null) throw noBackup(name)
-    const kept = new Set(
-      members.kind === 'gdpr'
-        ? [members.records, ...members.ratings]
-        : [members.movies],
-    )
+    const order = zip.names()
     return zipStored(
-      [...new Set(zip.names())]
-        .filter((path) => kept.has(path))
-        .map((path) => ({ name: path, content: zip.read(path) })),
+      (members.kind === 'gdpr'
+        ? keptGdpr(zip, members.records, members.ratings, name)
+        : keptLiberator(zip, members.movies, name)
+      ).sort((a, b) => order.indexOf(a.name) - order.indexOf(b.name)),
     )
   })

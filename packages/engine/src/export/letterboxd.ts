@@ -21,7 +21,7 @@ import { Sqlite } from '../sqlite/Sqlite.ts'
 import { letterboxdRow } from './csv.ts'
 import { integer, tenScale, text, type FileWriter } from './file.ts'
 
-export const LETTERBOXD_HEADER = [
+const LETTERBOXD_HEADER = [
   'imdbID',
   'Title',
   'Year',
