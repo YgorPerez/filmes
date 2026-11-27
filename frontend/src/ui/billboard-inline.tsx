@@ -86,7 +86,11 @@ function InlineFilms({
           />
           <PriceSticker compact>{film.position}</PriceSticker>
           <span className="flex min-w-0 items-center gap-xs">
-            <span className="truncate font-display text-row-title">
+            {/* The Filme escolhido's title takes two lines before its tag
+                cuts it (#277). */}
+            <span
+              className={`font-display text-row-title ${(tags[film.id] ?? []).includes('chosen') ? 'line-clamp-2' : 'truncate'}`}
+            >
               {film.title}
             </span>
             {(tags[film.id] ?? []).map((kind) => (

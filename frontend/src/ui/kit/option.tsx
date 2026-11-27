@@ -67,8 +67,9 @@ export function Option({
   shape?: keyof typeof SHAPES
   children: ReactNode
 }) {
-  // The input covers the whole option, transparent: a tap anywhere on it
-  // is a tap on the control itself.
+  // The input covers the whole option, outline included, transparent: a
+  // tap anywhere on it is a tap on the control itself, and the control
+  // itself is the 44px of the pill (#277).
   const input = {
     name,
     value,
@@ -79,7 +80,8 @@ export function Option({
           onChange: (e: ChangeEvent<HTMLInputElement>) =>
             onChange?.(e.target.checked),
         }),
-    className: 'absolute inset-0 m-0 size-full cursor-pointer opacity-0',
+    className:
+      'absolute -inset-0.5 m-0 size-[calc(100%+4px)] cursor-pointer opacity-0',
   }
   return (
     <label
