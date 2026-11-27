@@ -232,7 +232,8 @@ function runImport(
       return map(
         run(syncTrakt({ person, user: action.user ?? undefined, author })),
         (r): ImportDone => ({
-          notice: 'sincronizado',
+          // Trakt refused her grant: read by her username instead.
+          notice: r.warnings === undefined ? 'sincronizado' : 'reconectar',
           ...counted(r.newFacts),
           outside: r.unresolved.length,
         }),

@@ -130,7 +130,7 @@ test('a refused grant asks to reconnect and skips only that Pessoa', async () =>
       exitCode: 0,
       output: {
         warnings: [
-          'O Trakt de Iara recusou a conexão; reconecte o Trakt para voltar a enviar.',
+          'O Trakt de Iara recusou a conexão; reconecte o Trakt para voltar a ler e enviar o histórico.',
         ],
       },
     })

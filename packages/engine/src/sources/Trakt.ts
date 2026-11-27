@@ -8,6 +8,10 @@ import { getJson, postJson, SourceFailure, Transport } from './Source.ts'
  * (`invalid_grant`): it dropped the grant, and she has to connect again. */
 export const TRAKT_REVOKED: unique symbol = Symbol('Trakt grant revoked')
 
+/** What she is told when Trakt refused her grant, on a read or a send. */
+export const traktRevokedWarning = (name: string) =>
+  `O Trakt de ${name} recusou a conexão; reconecte o Trakt para voltar a ler e enviar o histórico.`
+
 /** The app supplies consented credentials from its server-only store: the
  * token, `null` without consent, or `TRAKT_REVOKED`. */
 export interface TraktConnection {
