@@ -55,6 +55,16 @@ type Stamp =
   | { kind: 'seen'; who: BillboardPerson[] }
   | { kind: 'seenBefore'; who: BillboardPerson[] }
 
+/** Where the stamp sits on the poster: on the cover's middle, or under the
+ * title when there is no cover; a Já vi stamp from the left edge on the
+ * phone (#277). */
+const stampPlace = (stamp: Stamp, cover: boolean) =>
+  `${
+    stamp.kind === 'swap'
+      ? 'left-1/2 -translate-x-1/2'
+      : '-left-[9px] min-[560px]:left-1/2 min-[560px]:-translate-x-1/2'
+  } ${cover ? 'top-[40%]' : 'top-[62%]'}`
+
 function Poster({
   film,
   first,
@@ -110,11 +120,7 @@ function Poster({
           // A Já vi stamp, with its avatars, is wider than the phone's
           // 112px poster: from its left edge, 9px out like the price
           // sticker, so it keeps the gutter (#277). Centred otherwise.
-          className={`absolute inline-flex items-center gap-xs whitespace-nowrap ${
-            stamp.kind === 'swap'
-              ? 'left-1/2 -translate-x-1/2'
-              : '-left-[9px] min-[560px]:left-1/2 min-[560px]:-translate-x-1/2'
-          } ${cover ? 'top-[40%]' : 'top-[62%]'}`}
+          className={`absolute inline-flex items-center gap-xs whitespace-nowrap ${stampPlace(stamp, cover)}`}
         >
           {stamp.kind === 'swap'
             ? card.swapStamp

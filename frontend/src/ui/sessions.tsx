@@ -416,6 +416,17 @@ const SPOKEN_NOTICES: ReadonlySet<SessionNotice> = new Set<SessionNotice>([
   'corrigida',
 ])
 
+/** Told, the night's label and note open the page, as on Contar (#272):
+ * the fold below would hide what the night asked for. Then the tape. */
+function ClosedTop({ page }: { page: CartazPage }) {
+  return (
+    <>
+      {page.billboard && <BillboardRequest billboard={page.billboard} />}
+      <TapeReturned page={page} />
+    </>
+  )
+}
+
 /** A told Session opens with the tape given back (#272): the film they
  * saw and how each one took it, who the group weighs more next time, and
  * the same group again. */
@@ -727,12 +738,7 @@ function SessionView({
         waiting={page.pairwise ?? []}
         post={{ onSubmit, busy }}
       />
-      {/* Told, the night's label and note open the page, as on Contar
-          (#272): the fold below would hide what the night asked for. */}
-      {closed && billboard !== null && (
-        <BillboardRequest billboard={billboard} />
-      )}
-      {closed && <TapeReturned page={page} />}
+      {closed && <ClosedTop page={page} />}
       {closed && shelf !== null ? (
         <ClosedShelf chosen={Boolean(s.chosen)} others={shelf.films.length}>
           {cartaz}

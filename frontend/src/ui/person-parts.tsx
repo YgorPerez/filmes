@@ -3,6 +3,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useEffectEvent,
   useId,
   useRef,
   useState,
@@ -319,6 +320,7 @@ export function RemoveForm({
   }, [asking, asked])
   // Another form posted before this one: the question was left behind, so
   // it goes, and never comes back over that form's answer (#273).
+  const leftBehind = useEffectEvent(() => toggle(false))
   useEffect(() => {
     if (!asking) return
     let answered = false
@@ -328,12 +330,11 @@ export function RemoveForm({
         answered = true
         return
       }
-      setAsking(false)
-      onAsking?.(false)
+      leftBehind()
     }
     document.addEventListener('submit', elsewhere, true)
     return () => document.removeEventListener('submit', elsewhere, true)
-  }, [asking, onAsking])
+  }, [asking])
   return (
     <ActionForm
       slug={slug}
