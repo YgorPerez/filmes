@@ -144,6 +144,11 @@ export const PERSON_IMPORTS = {
     submit: 'Importar',
     /** Importar while its post runs. */
     busy: 'Importando…',
+    /** The file picker's button and what it says before a file (#273). */
+    choose: 'Escolher arquivo',
+    none: 'Nenhum arquivo escolhido',
+    computer:
+      'O arquivo sai do site de cada serviço: baixe pelo computador e mande daqui.',
   },
   rss: {
     title: 'Ou só o recente, pelo perfil',
