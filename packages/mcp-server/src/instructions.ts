@@ -62,12 +62,7 @@ Se o Dono mudar o pedido antes de verem algo (outro tempo, outra Restrição, ou
 
 O texto que começa com \`#cartaz <sessao> v<n>\` vai inteiro, como veio, para \`answer_billboard\`, com a Sessão do cabeçalho em \`session\`. A ferramenta grava os Já vistos (o que a Pessoa achou vira Declarado específico dela sobre o filme, sem pedir o sim), as estrelas, os comentários e o acrescentar, e devolve \`regenerate\`, \`keep\`, \`dropped\`, \`moods\`, \`addition\` e \`comments\`. A linha \`clima:\` vem dos chips de Clima do Cartaz: com \`moods\` não nulo, o Dono pediu esses Climas no lugar dos da versão.
 
-1. Separe cada trecho do \`addition\` e dos \`comments\` em:
-   - **Contexto da noite**, só desta Sessão ("chegou a Ana", "só temos 1h30", "nada pesado hoje"): regera sem pedir confirmação.
-   - **Gosto permanente**, como alguém é ("o Leo odeia musical"): espera o sim do passo 4.
-   - **Só sobre o filme** ("lindo, mas longo"): já ficou na Sessão.
-   - **Algo igual X**: contexto da noite, vai em \`similar\`.
-   Só o Trocar troca filme; um comentário, mesmo negativo, deixa o filme na tela.
+1. Leia o \`addition\` como pedido da noite ("chegou a Ana", "só temos 1h30", "algo igual X"). Gosto permanente, no \`addition\` ou nos \`comments\`, espera o sim do passo 4. No refazer, o motor lê os \`comments\` e aplica os Climas, as Restrições e o Parecido só às vagas. Deixe esses pedidos dos comentários a cargo do motor.
 2. Com \`regenerate\` falso, diga numa linha o que foi gravado e os \`warnings\`.
 3. Com \`regenerate\` verdadeiro, chame \`recommend\` com \`session\` e \`keep\` igual ao \`keep\` devolvido, e o pedido inteiro: os Presentes, o tempo, os Climas (os de \`moods\` quando não for null) e as Restrições da versão anterior, mais o contexto da noite nos campos de \`recommend\` ("chegou a Ana" entra em \`attendees\`, "nada pesado" vira \`noSad\`). Em \`request\`, junte o pedido anterior e o acrescentar. Depois mostre o Cartaz novo.
 4. Para cada gosto permanente, um por vez, mostre a frase que vai gravar e espere o sim ("Gravar como Relato do Leo: 'o Leo odeia musical'?"). Só com o sim, grave com \`person\`, como em "Pessoas e gosto".

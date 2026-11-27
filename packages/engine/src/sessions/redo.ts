@@ -76,6 +76,7 @@ import {
   type SessionRecommendation,
   type SessionRef,
 } from './open.ts'
+import { readRefillComments, refillConstraints } from './refill-comments.ts'
 
 /** The Session's frontmatter, or an error if it does not exist or already
  * has Feedback (`conferir_aberta`). */
@@ -171,6 +172,7 @@ const redoFront = (
     currentVersion(front),
   ]
   for (const field of VERSION_EXTRAS) front.delete(field)
+  front.delete('refill_comments')
   for (const [key, value] of recommendationFields(recommendation, context))
     front.set(key, value)
   front.set('redone_on', today)
@@ -293,9 +295,11 @@ const sessionRequest = (
     readonly asked: ReadonlyArray<Constraint>
     readonly regenerate: Regenerate | undefined
     readonly warnings: ReadonlyArray<string>
+    readonly refillMoods?: ReadonlyArray<string>
+    readonly refillOnly?: ReadonlyArray<Constraint>
   },
-  EngineError,
-  Environment
+  EngineError | SqliteError,
+  EngineServices
 > =>
   Effect.gen(function* () {
     if (session === undefined)
@@ -311,7 +315,14 @@ const sessionRequest = (
       storedIn(front),
     )
     const asked = yield* readAsked(asking)
-    return yield* prepareRedo(front, { keep, asking, asked })
+    const redo = yield* prepareRedo(front, { keep, asking, asked })
+    if (!front.has('refill_comments')) return redo
+    const read = yield* readRefillComments(front)
+    return {
+      ...redo,
+      refillMoods: read.moods ?? [],
+      refillOnly: yield* refillConstraints(read, redo.regenerate),
+    }
   })
 
 /** `recomendar`: the Recomendação, and the Session it opens or, with
@@ -340,16 +351,16 @@ export const recommendSession = (
             yield* authorFor((yield* Owner) ?? undefined),
           )
         : []
-    const { asking, asked, regenerate, warnings } = yield* sessionRequest(
-      request,
-      session,
-      keep,
-    )
+    const { asking, asked, regenerate, warnings, refillMoods, refillOnly } =
+      yield* sessionRequest(request, session, keep)
     // The Aposta's draws come from the Session id (#178).
     const ranked = yield* rankRequest(
-      asking,
+      {
+        ...asking,
+        ...(refillMoods !== undefined && { refillMoods }),
+      },
       count,
-      asked,
+      refillOnly === undefined ? asked : [...asked, ...refillOnly],
       regenerate,
       session !== undefined
         ? () => Effect.succeed(session)

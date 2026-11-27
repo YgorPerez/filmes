@@ -651,6 +651,10 @@ const recordReplyMarks = (
     const replies = listOf(target.get('replies'))
     if (replies.some((r) => sameReply(r, reply))) return false
     target.set('replies', [...replies, reply])
+    const comments = read.films.flatMap((mark) =>
+      mark.comment === null ? [] : [mark.comment],
+    )
+    if (comments.length > 0) front.set('refill_comments', comments)
     if (target !== front) {
       versions[read.version - 1] = target
       front.set('versions', versions)
