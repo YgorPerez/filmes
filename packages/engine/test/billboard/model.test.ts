@@ -1124,8 +1124,8 @@ describe('the Cartaz model, a line two Presentes share (#351)', () => {
     expect(
       shared.map((_, i) => cards[i]!.lines.map((l) => [l.people, l.text])),
     ).toEqual(shared.map(([, plural]) => [[['bruno', 'iara'], plural]]))
-    expect(cards[shared.length]!.lines.map((l) => [l.people, l.text])).toEqual(
-      [[['bruno'], shared[1]![0]]],
-    )
+    expect(cards[shared.length]!.lines.map((l) => [l.people, l.text])).toEqual([
+      [['bruno'], shared[1]![0]],
+    ])
   })
 })
