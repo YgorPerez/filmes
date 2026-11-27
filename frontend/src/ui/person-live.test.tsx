@@ -250,6 +250,40 @@ it('says what “Tirar” and “Pular” are doing while they post', async () =
   ).toBeTruthy()
 })
 
+it('drops a pending “Tirar de vez” once another form posts (#273)', async () => {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn<typeof fetch>(() => new Promise<Response>(() => {})),
+  )
+  showRouted()
+  const user = userEvent.setup()
+
+  await user.click(
+    await screen.findByRole('button', {
+      name: PERSON.removeLabel('nunca vê terror'),
+    }),
+  )
+  expect(
+    screen.getByRole('button', { name: PERSON.removeSure('nunca vê terror') }),
+  ).toBeTruthy()
+  await user.click(
+    screen.getByRole('button', {
+      name: `${PERSON.questions.skip}: a Iara curte terror?`,
+    }),
+  )
+
+  expect(
+    screen.queryByRole('button', {
+      name: PERSON.removeSure('nunca vê terror'),
+    }),
+  ).toBeNull()
+  expect(
+    within(vetoes()).getByRole('button', {
+      name: PERSON.removeLabel('nunca vê terror'),
+    }),
+  ).toBeTruthy()
+})
+
 it('hides the notice of the last post while a form shows its refusal', async () => {
   answering('/pessoas/iara?erro=alvo')
   Element.prototype.scrollIntoView = vi.fn<() => void>()
