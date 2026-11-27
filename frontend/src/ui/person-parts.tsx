@@ -204,6 +204,9 @@ type ActionFormProps = {
   /** The field the server refused, when this form came back refused
    * without the JavaScript (#273): marked from the start. */
   problem?: FieldProblem | null
+  /** After a post that went through, before the page reloads: an edit
+   * closes (#330). */
+  onDone?: () => void
   children: ReactNode
 }
 
@@ -221,6 +224,7 @@ export function ActionForm({
   className,
   busy = PERSON.saving,
   problem: initialProblem = null,
+  onDone,
   children,
 }: ActionFormProps) {
   const id = useId()
@@ -238,6 +242,7 @@ export function ActionForm({
     shared?.show(kept ? id : null)
     if (kept) return true
     settle(form)
+    onDone?.()
     return false
   })
   const shown = shared === null || shared.form === id ? refused : undefined
@@ -648,7 +653,14 @@ type TagGroup = { key: string; label: string }
 /** The tag groups as pills: radios, so the form posts the marked one
  * without the JavaScript. With it, a second tap on the marked one lets it
  * go; before it, "nenhum" does. */
-function GroupPills({ groups }: { groups: readonly TagGroup[] }) {
+function GroupPills({
+  groups,
+  initial = '',
+}: {
+  groups: readonly TagGroup[]
+  /** The group marked from the start: an edited Veto's (#330). */
+  initial?: string
+}) {
   const live = useHydrated()
   return (
     <fieldset className="flex flex-col gap-xs">
@@ -656,7 +668,11 @@ function GroupPills({ groups }: { groups: readonly TagGroup[] }) {
         {PERSON.groupsLabel}
       </legend>
       <div className="flex flex-wrap gap-xs">
-        {live ? <LivePills groups={groups} /> : <PlainPills groups={groups} />}
+        {live ? (
+          <LivePills groups={groups} initial={initial} />
+        ) : (
+          <PlainPills groups={groups} initial={initial} />
+        )}
       </div>
     </fieldset>
   )
@@ -667,7 +683,13 @@ const PILL =
 
 /** The pills before the JavaScript: "nenhum" first and marked, so the
  * form posts no group unless one is marked. */
-function PlainPills({ groups }: { groups: readonly TagGroup[] }) {
+function PlainPills({
+  groups,
+  initial,
+}: {
+  groups: readonly TagGroup[]
+  initial: string
+}) {
   return [{ key: '', label: PERSON.noGroup }, ...groups].map(
     ({ key, label }) => (
       <label key={key || 'nenhum'} className="flex">
@@ -675,7 +697,7 @@ function PlainPills({ groups }: { groups: readonly TagGroup[] }) {
           type="radio"
           name="grupo"
           value={key}
-          defaultChecked={key === ''}
+          defaultChecked={key === initial}
           className="peer sr-only"
         />
         <span className={PILL}>{label}</span>
@@ -686,8 +708,14 @@ function PlainPills({ groups }: { groups: readonly TagGroup[] }) {
 
 /** The pills with the JavaScript: a second tap on the marked one lets it
  * go. */
-function LivePills({ groups }: { groups: readonly TagGroup[] }) {
-  const [marked, setMarked] = useState('')
+function LivePills({
+  groups,
+  initial,
+}: {
+  groups: readonly TagGroup[]
+  initial: string
+}) {
+  const [marked, setMarked] = useState(initial)
   return groups.map(({ key, label }) => (
     <label key={key} className="flex">
       <input
@@ -714,6 +742,8 @@ export function TargetField({
   hint,
   scope,
   groups = [],
+  initial = null,
+  initialGroup,
 }: {
   name: 'alvo' | 'filme'
   label: string
@@ -721,13 +751,23 @@ export function TargetField({
   scope: CatalogScope
   /** The tag groups a Veto can name instead. */
   groups?: readonly TagGroup[]
+  /** The target picked from the start: an edited item's (#330). */
+  initial?: Target | null
+  /** The tag group marked from the start: an edited Veto's. */
+  initialGroup?: string
 }) {
   const live = useHydrated()
   const film = name === 'filme'
   return (
     <div className={`flex flex-col ${live ? 'gap-lg' : 'gap-xl'}`}>
       {live ? (
-        <TargetSearch name={name} label={label} hint={hint} scope={scope} />
+        <TargetSearch
+          name={name}
+          label={label}
+          hint={hint}
+          scope={scope}
+          initial={initial}
+        />
       ) : (
         <TextField
           name={name}
@@ -735,14 +775,17 @@ export function TargetField({
           hint={film ? PERSON.filmHint : PERSON.idHint}
           pattern={film ? 'tt[0-9]+' : '(tt|Q)[0-9]+'}
           required={film}
+          defaultValue={initial?.id}
         />
       )}
-      {groups.length > 0 && <GroupPills groups={groups} />}
+      {groups.length > 0 && (
+        <GroupPills groups={groups} initial={initialGroup} />
+      )}
     </div>
   )
 }
 
-type Target = { id: string; label: string }
+export type Target = { id: string; label: string }
 
 /** The target with the JavaScript: a search by name; the picked result
  * fills the hidden field and shows as a chip. */
@@ -751,13 +794,15 @@ function TargetSearch({
   label,
   hint,
   scope,
+  initial,
 }: {
   name: 'alvo' | 'filme'
   label: string
   hint?: string
   scope: CatalogScope
+  initial: Target | null
 }) {
-  const [picked, setPicked] = useState<Target | null>(null)
+  const [picked, setPicked] = useState<Target | null>(initial)
   const { error, aria } = useFieldProblem(name)
   const search = useLiveSearch(picked === null, '', null, scope)
   return (

@@ -9,6 +9,7 @@ import {
   peopleCounts,
   personAdjust,
   personDelete,
+  personEdit,
   personSessions,
   personCreate,
   personQuestions,
@@ -43,6 +44,7 @@ import {
   problemParam,
   reportSource,
   spotOf,
+  type Edit,
   type PersonAction,
   type PersonNotice,
   type PersonRefusal,
@@ -259,6 +261,10 @@ function changeFile(
         run(personRemove({ ...by, kind: action.what, id: action.id })),
         (): PersonNotice => 'removido',
       )
+    case 'edit':
+      return map(run(personEdit({ ...by, ...editInput(action) })), (r) =>
+        r.changed ? 'editado' : 'igual',
+      )
     case 'grant':
     case 'revoke':
       return access(run, by, action)
@@ -279,6 +285,36 @@ const access = (
         (): PersonNotice => 'acesso-dado',
       )
     : map(run(revokeAccess(by)), (r) => (r.new ? 'acesso-tirado' : 'igual'))
+
+/** The engine's edit from the form's: every field it sends. */
+const editInput = (action: Edit) => {
+  switch (action.what) {
+    case 'seen':
+      return {
+        kind: action.what,
+        id: action.id,
+        rating: action.rating,
+        ...(action.source !== undefined && { source: action.source }),
+      }
+    case 'veto':
+      return {
+        kind: action.what,
+        id: action.id,
+        text: action.text,
+        target: action.target,
+      }
+    case 'stated':
+    case 'report':
+      return {
+        kind: action.what,
+        id: action.id,
+        text: action.text,
+        target: action.target,
+        reaction: action.reaction,
+        ...(action.source !== undefined && { source: action.source }),
+      }
+  }
+}
 
 /** A subject that is not a Catalog entity (Q...) is a tag group's key. */
 const isGroup = (subject: string) => !subject.startsWith('Q')
@@ -421,6 +457,7 @@ const ACCESS_REFUSALS: Partial<Record<ErrorReason, PersonRefusal>> = {
   is_owner: 'e-dono',
   has_imports: 'tem-import',
   in_session: 'em-sessao',
+  duplicate_item: 'repetido',
 }
 
 /** Why an action was refused, from the engine's error. */
@@ -510,6 +547,8 @@ const CREATE_REFUSALS: Record<ErrorReason, PersonCreateRefusal> = {
   is_owner: 'indisponivel',
   has_imports: 'indisponivel',
   in_session: 'indisponivel',
+  // Not met on create: an edit equal to another item (#330).
+  duplicate_item: 'indisponivel',
 }
 
 /** Why the engine refused a new Pessoa, by its reason; without one, it

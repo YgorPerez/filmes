@@ -266,6 +266,34 @@ export const RefusedField: Story = {
   },
 }
 
+/** A Veto open for editing (#330): its form filled in its place. */
+export const EditingVeto: Story = {
+  args: { editing: 'vetos:1' },
+  play: async ({ canvasElement }) => {
+    const form = within(canvasElement).getByRole('form', {
+      name: PERSON.edit.label('nunca vê terror'),
+    })
+    await expect(form).toBeVisible()
+  },
+}
+
+/** A Já visto open for editing: the film fixed, its Nota and Fonte. */
+export const EditingSeen: Story = {
+  args: { editing: 'vistos:1' },
+}
+
+/** A corrected Já visto: its own date, then the day of the edit. */
+export const EditedItem: Story = {
+  args: {
+    notice: 'editado',
+    spot: 'vistos',
+    page: {
+      ...IARA,
+      seen: IARA.seen.map((s) => ({ ...s, rating: 4, edited: '2026-11-27' })),
+    },
+  },
+}
+
 /** An Ajuste tapped: "gravado" beside it. */
 export const AdjustmentSaved: Story = {
   args: { notice: 'ajustado', spot: 'ajuste-cast' },

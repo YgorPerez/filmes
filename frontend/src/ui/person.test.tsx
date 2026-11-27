@@ -473,6 +473,80 @@ describe('PersonScreen forms', () => {
   })
 })
 
+describe('PersonScreen edit', () => {
+  beforeEach(() => {
+    show()
+  })
+
+  const edit = async (label: string) => {
+    const user = userEvent.setup()
+    await user.click(
+      screen.getByRole('button', { name: PERSON.edit.label(label) }),
+    )
+    return {
+      user,
+      form: screen.getByRole('form', { name: PERSON.edit.label(label) }),
+    }
+  }
+
+  it('opens a Declarado filled in its place, and posts the correction', async () => {
+    const { user, form } = await edit('adoro os filmes dela')
+    const fields = within(form)
+    const text = fields.getByLabelText(PERSON.text, { exact: false })
+    expect(document.activeElement).toBe(text)
+    expect(fields.getByText('Sofia Rangel')).toBeTruthy()
+    await user.clear(text)
+    await user.type(text, 'adoro a Sofia')
+    expect(posted(form)).toEqual({
+      kind: 'edit',
+      what: 'stated',
+      id: 'declarados:1',
+      text: 'adoro a Sofia',
+      target: 'Q9000018',
+      reaction: 'love',
+      source: 'questionário',
+    })
+  })
+
+  it('opens a Veto to a genre with its target picked', async () => {
+    const { form } = await edit('nunca vê terror')
+    expect(posted(form)).toEqual({
+      kind: 'edit',
+      what: 'veto',
+      id: 'vetos:1',
+      text: 'nunca vê terror',
+      target: 'Q9001801',
+    })
+  })
+
+  it('opens a Já visto with its Nota on the 1 to 10 scale, the film fixed', async () => {
+    const { form } = await edit('Casa Cheia')
+    expect(within(form).getByText(PERSON.edit.filmFixed)).toBeTruthy()
+    expect(posted(form)).toEqual({
+      kind: 'edit',
+      what: 'seen',
+      id: 'vistos:1',
+      rating: '9/10',
+      source: 'conversa com o Dono',
+    })
+  })
+
+  it('cancels back to the item, the focus on its Editar', async () => {
+    const { user } = await edit('odeia filme lento')
+    await user.click(screen.getByRole('button', { name: PERSON.edit.cancel }))
+    const again = screen.getByRole('button', {
+      name: PERSON.edit.label('odeia filme lento'),
+    })
+    expect(document.activeElement).toBe(again)
+  })
+
+  it('offers no Editar on what came from an import', () => {
+    expect(
+      screen.queryByRole('button', { name: PERSON.edit.label('Ótimo') }),
+    ).toBeNull()
+  })
+})
+
 describe('PersonScreen', () => {
   it('shows what came from an import, without a way to remove it', () => {
     show()

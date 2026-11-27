@@ -163,6 +163,16 @@ export const PERSON = {
   },
   unavailable:
     'Não deu para abrir a Pessoa: o site está com um problema, e ele ficou registrado no log do servidor.',
+  /** Correcting an item in place (#330). */
+  edit: {
+    open: 'Editar',
+    label: (what: string) => `Editar ${what}`,
+    cancel: 'Cancelar',
+    /** In an item's line: the day of its last edit, after its own date. */
+    on: (date: string) => `editado ${date}`,
+    /** A Já visto's film stays: another film is another Já visto. */
+    filmFixed: 'Para trocar o filme, tire este Já visto e acrescente o certo.',
+  },
   remove: 'Tirar',
   removeLabel: (what: string) => `Tirar ${what}`,
   removing: 'Tirando…',
@@ -174,6 +184,7 @@ export const PERSON = {
   ownNotices: {
     gravado: 'Gravado no seu arquivo.',
     removido: 'Tirado do seu arquivo.',
+    editado: 'Corrigido no seu arquivo.',
   } satisfies Partial<Record<PersonNotice, string>>,
   /** What the last form did, by her name (#273): every Pessoa is not
    * "ela". */
@@ -183,6 +194,7 @@ export const PERSON = {
       igual: 'Já estava assim: nada mudou.',
       ajustado: 'gravado',
       removido: `Tirado do arquivo de ${name}.`,
+      editado: `Corrigido no arquivo de ${name}.`,
       pulada: 'Pergunta pulada: ela volta uma vez, quando o assunto aparecer.',
       saiu: 'Pulada duas vezes: a pergunta saiu da lista.',
       respondida: 'Resposta gravada como Declarado; a pergunta saiu da lista.',
@@ -197,6 +209,7 @@ export const PERSON = {
       pedido:
         'Faltou um campo, ou um valor não vale: confira o texto, o alvo e a Nota de 1 a 10.',
       item: `Esse item já não está no arquivo de ${name}.`,
+      repetido: `Assim ele ficaria igual a outro item do arquivo de ${name}. Nada mudou.`,
       email: `Para entrar, ${name} precisa de um e-mail do Google válido.`,
       'email-usado': 'Esse e-mail já é de outra Pessoa.',
       'ja-dono': `${name} já tem acesso. Para trocar o e-mail, tire o acesso antes.`,

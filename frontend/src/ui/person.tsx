@@ -1,5 +1,12 @@
 import { useHydrated } from '@tanstack/react-router'
-import { createContext, useContext, type ReactNode } from 'react'
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react'
 import {
   sectionOfSpot,
   type FieldProblem,
@@ -34,6 +41,7 @@ import {
   TargetField,
   TextField,
   useRefusedInPlace,
+  type Target,
 } from './person-parts'
 import { MyStartSections, type MyStart } from './my-start'
 import { StrengthDots } from './person-marks'
@@ -124,6 +132,8 @@ type PersonScreenProps = {
   pending?: number
   /** On Meu gosto, her genres and directors. */
   taste?: TasteSummary | null
+  /** Before the JavaScript, the item open for editing (`?editar=`). */
+  editing?: string
 }
 
 /** `/pessoas/<slug>`, or Meu gosto for the Dono's own. Another Pessoa's
@@ -148,6 +158,7 @@ export function PersonScreen({
   showTrakt = false,
   pending = 0,
   taste = null,
+  editing,
 }: PersonScreenProps) {
   if (page === 'unknown') return <UnknownPerson />
   const own = page !== null && page.person === page.viewer.person
@@ -168,16 +179,18 @@ export function PersonScreen({
           value={{ spot, notice, refusal, problem, name: page.name, own }}
         >
           <ActionForms name={page.name}>
-            <PersonHeader slug={slug} page={page} own={own} />
-            <PersonColumns
-              slug={slug}
-              page={page}
-              own={own}
-              start={start}
-              showTrakt={showTrakt}
-              pending={pending}
-              taste={taste}
-            />
+            <EditingItem initial={editing}>
+              <PersonHeader slug={slug} page={page} own={own} />
+              <PersonColumns
+                slug={slug}
+                page={page}
+                own={own}
+                start={start}
+                showTrakt={showTrakt}
+                pending={pending}
+                taste={taste}
+              />
+            </EditingItem>
           </ActionForms>
         </PostedAt.Provider>
       )}
@@ -899,20 +912,17 @@ function Vetoes({ slug, page }: Part) {
       <SpotStatus id="vetos" />
       <Items empty={vetoes.empty}>
         {page.vetoes.map((v) => (
-          <Item
+          <EditableItem
             key={v.factId}
-            actions={
-              <RemoveForm
-                slug={slug}
-                what="veto"
-                id={v.factId}
-                label={v.text}
-              />
-            }
+            slug={slug}
+            what="veto"
+            id={v.factId}
+            label={v.text}
+            form={<VetoFields v={v} groups={page.tagGroups} />}
           >
             <span>“{v.text}”</span>
-            <Meta parts={[PERSON.plainLabel(v.label), shortDate(v.date)]} />
-          </Item>
+            <Meta parts={[PERSON.plainLabel(v.label), ...dates(v)]} />
+          </EditableItem>
         ))}
       </Items>
       <Disclosure
@@ -1165,18 +1175,8 @@ function StatementItem({
   s: Statement
 }) {
   const origin = originOf(kind, s)
-  return (
-    <Item
-      actions={
-        origin === 'file' ? (
-          <RemoveForm slug={slug} what={kind} id={s.factId} label={s.text} />
-        ) : (
-          <span className="font-display text-label text-ink-2 uppercase">
-            {origin}
-          </span>
-        )
-      }
-    >
+  const body = (
+    <>
       <span>{PERSON.statementText(s.text)}</span>
       <span className="flex flex-wrap items-center gap-x-sm gap-y-2xs">
         <StrengthDots
@@ -1184,9 +1184,32 @@ function StatementItem({
           word={PERSON.strengths[s.strength]}
         />
         <StatementTarget s={s} />
-        <Meta parts={[shortDate(s.date), s.source]} />
+        <Meta parts={[...dates(s), s.source]} />
       </span>
-    </Item>
+    </>
+  )
+  if (origin !== 'file')
+    return (
+      <Item
+        actions={
+          <span className="font-display text-label text-ink-2 uppercase">
+            {origin}
+          </span>
+        }
+      >
+        {body}
+      </Item>
+    )
+  return (
+    <EditableItem
+      slug={slug}
+      what={kind}
+      id={s.factId}
+      label={s.text}
+      form={<StatementFields s={s} />}
+    >
+      {body}
+    </EditableItem>
   )
 }
 
@@ -1242,28 +1265,25 @@ function Seen({ slug, page }: Part) {
       <SpotStatus id="vistos" />
       <Items empty={seen.empty}>
         {seenOf(page).map((s) => (
-          <Item
+          <EditableItem
             key={s.factId}
-            actions={
-              <RemoveForm
-                slug={slug}
-                what="seen"
-                id={s.factId}
-                label={s.title}
-              />
-            }
+            slug={slug}
+            what="seen"
+            id={s.factId}
+            label={s.title}
+            form={<SeenFields s={s} />}
           >
             <span>{s.title}</span>
             <Meta
               parts={[
                 s.rating === null ? null : PERSON.ratingText(s.rating),
-                shortDate(s.date),
+                ...dates(s),
                 s.rating === null
                   ? s.source
                   : PERSON.ratingSource(s.rating, s.source),
               ]}
             />
-          </Item>
+          </EditableItem>
         ))}
       </Items>
       <Disclosure summary={seen.add} open={refused !== null || undefined}>
@@ -1407,5 +1427,264 @@ function RemovePerson({ slug, page }: { slug: string; page: PersonPage }) {
         )}
       </div>
     </Disclosure>
+  )
+}
+
+// --- editing an item in place (#330) ------------------------------------------
+
+type Editable = 'stated' | 'report' | 'veto' | 'seen'
+type Veto = PersonPage['vetoes'][number]
+type SeenItem = PersonPage['seen'][number]
+
+/** The item open for editing, one at a time, and the one just closed,
+ * whose "Editar" takes the focus back. */
+const Editing = createContext<{
+  open: string | null
+  closed: string | null
+  set: (id: string | null) => void
+}>({ open: null, closed: null, set: () => {} })
+
+function EditingItem({
+  initial,
+  children,
+}: {
+  initial?: string
+  children: ReactNode
+}) {
+  const [state, setState] = useState<{
+    open: string | null
+    closed: string | null
+  }>({ open: initial ?? null, closed: null })
+  return (
+    <Editing.Provider
+      value={{
+        ...state,
+        set: (id) => setState((was) => ({ open: id, closed: was.open })),
+      }}
+    >
+      {children}
+    </Editing.Provider>
+  )
+}
+
+/** An item's date, and the day of its last edit when it has one. */
+const dates = (item: { date: string; edited?: string }) => [
+  shortDate(item.date),
+  item.edited === undefined ? null : PERSON.edit.on(shortDate(item.edited)),
+]
+
+/** An item of her file: its lines with "Editar" and "Tirar" beside them,
+ * or, open, the form that corrects it in its place. */
+function EditableItem({
+  slug,
+  what,
+  id,
+  label,
+  form,
+  children,
+}: {
+  slug: string
+  what: Editable
+  id: string
+  label: string
+  /** The form's fields, filled with what the item says. */
+  form: ReactNode
+  children: ReactNode
+}) {
+  const editing = useContext(Editing)
+  if (editing.open === id)
+    return (
+      <EditForm slug={slug} what={what} id={id} label={label}>
+        {form}
+      </EditForm>
+    )
+  return (
+    <Item
+      actions={
+        <span className="flex shrink-0 flex-wrap gap-xs">
+          <EditOpen id={id} label={label} />
+          <RemoveForm slug={slug} what={what} id={id} label={label} />
+        </span>
+      }
+    >
+      {children}
+    </Item>
+  )
+}
+
+const OPTION = buttonVariants({ variant: 'option' })
+
+/** "Editar": opens the item's form. Before the JavaScript, a link the
+ * server opens it for (`?editar=`). */
+function EditOpen({ id, label }: { id: string; label: string }) {
+  const hydrated = useHydrated()
+  const editing = useContext(Editing)
+  const button = useRef<HTMLButtonElement>(null)
+  const back = editing.closed === id && editing.open === null
+  useEffect(() => {
+    if (back) button.current?.focus()
+  }, [back])
+  if (!hydrated)
+    return (
+      <a
+        href={`?editar=${encodeURIComponent(id)}#${itemAnchor(id)}`}
+        aria-label={PERSON.edit.label(label)}
+        className={OPTION}
+      >
+        {PERSON.edit.open}
+      </a>
+    )
+  return (
+    <button
+      ref={button}
+      type="button"
+      aria-label={PERSON.edit.label(label)}
+      onClick={() => editing.set(id)}
+      className={OPTION}
+    >
+      {PERSON.edit.open}
+    </button>
+  )
+}
+
+const itemAnchor = (id: string) => `item-${id.replace(':', '-')}`
+
+/** The open item: its form, filled, with "Gravar" and "Cancelar". The
+ * first field takes the focus. */
+function EditForm({
+  slug,
+  what,
+  id,
+  label,
+  children,
+}: {
+  slug: string
+  what: Editable
+  id: string
+  label: string
+  children: ReactNode
+}) {
+  const editing = useContext(Editing)
+  const hydrated = useHydrated()
+  const item = useRef<HTMLLIElement>(null)
+  useEffect(() => {
+    item.current
+      ?.querySelector<HTMLElement>('input:not([type=hidden]), select, textarea')
+      ?.focus()
+  }, [])
+  const close = () => editing.set(null)
+  return (
+    <li
+      ref={item}
+      id={itemAnchor(id)}
+      className="scroll-mt-2xl border-rule py-sm not-first:border-t"
+    >
+      <ActionForm
+        slug={slug}
+        action="editar"
+        label={PERSON.edit.label(label)}
+        onDone={close}
+        className="flex flex-col gap-xl rounded-field border-2 border-ink p-xl"
+      >
+        <input type="hidden" name="tipo" value={what} />
+        <input type="hidden" name="id" value={id} />
+        {children}
+        <span className="flex flex-wrap gap-sm">
+          <Submit className="">{PERSON.save}</Submit>
+          {hydrated ? (
+            <button type="button" onClick={close} className={OPTION}>
+              {PERSON.edit.cancel}
+            </button>
+          ) : (
+            <a href={`?#${itemAnchor(id)}`} className={OPTION}>
+              {PERSON.edit.cancel}
+            </a>
+          )}
+        </span>
+      </ActionForm>
+    </li>
+  )
+}
+
+/** The target the search shows picked: the item's, with its label. */
+const targetOf = (id: string | null, label: string | null): Target | null =>
+  id === null ? null : { id, label: PERSON.plainLabel(label ?? id) }
+
+/** A Declarado's or a Relato's fields, as the add form has them. */
+function StatementFields({ s }: { s: Statement }) {
+  return (
+    <>
+      <TextField
+        name="texto"
+        label={PERSON.text}
+        required
+        defaultValue={s.text}
+      />
+      <TargetField
+        name="alvo"
+        label={PERSON.statementTarget}
+        hint={PERSON.targetHint}
+        scope="all"
+        initial={targetOf(s.target, s.label)}
+      />
+      <SelectField
+        name="reacao"
+        label={PERSON.reaction}
+        options={REACTION_OPTIONS}
+        defaultValue={s.reaction ?? ''}
+      />
+      <TextField name="fonte" label={PERSON.source} defaultValue={s.source} />
+    </>
+  )
+}
+
+/** A Veto to an id or to a tag group, which the pills mark. */
+const isId = (target: string) => /^(?:tt|Q)\d+$/.test(target)
+
+function VetoFields({
+  v,
+  groups,
+}: {
+  v: Veto
+  groups: PersonPage['tagGroups']
+}) {
+  const { vetoes } = PERSON
+  return (
+    <>
+      <TextField
+        name="texto"
+        label={vetoes.text}
+        required
+        defaultValue={v.text}
+      />
+      <TargetField
+        name="alvo"
+        label={PERSON.target}
+        scope="all"
+        groups={groups}
+        initial={isId(v.target) ? targetOf(v.target, v.label) : null}
+        initialGroup={isId(v.target) ? '' : v.target}
+      />
+    </>
+  )
+}
+
+/** A Já visto's Nota and Fonte; its film stays, said above them. */
+function SeenFields({ s }: { s: SeenItem }) {
+  return (
+    <>
+      <p className="flex flex-col gap-2xs">
+        <span className="font-display text-field-label">{PERSON.film}</span>
+        <span>{s.title}</span>
+        <span className="text-meta text-ink-2">{PERSON.edit.filmFixed}</span>
+      </p>
+      <SelectField
+        name="nota"
+        label={PERSON.rating}
+        options={RATING_OPTIONS}
+        defaultValue={s.rating === null ? '' : `${Math.round(s.rating * 2)}/10`}
+      />
+      <TextField name="fonte" label={PERSON.source} defaultValue={s.source} />
+    </>
   )
 }

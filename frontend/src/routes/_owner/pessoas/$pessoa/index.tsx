@@ -23,7 +23,7 @@ export const Route = createFileRoute('/_owner/pessoas/$pessoa/')({
 
 function PersonRoute() {
   const { pessoa } = Route.useParams()
-  const { feito, erro, em, campo } = Route.useSearch()
+  const { feito, erro, em, campo, editar } = Route.useSearch()
   const { page } = Route.useLoaderData()
   return (
     <PersonScreen
@@ -33,6 +33,7 @@ function PersonRoute() {
       refusal={erro}
       spot={em}
       problem={readProblemParam(campo)}
+      editing={editar}
     />
   )
 }

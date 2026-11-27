@@ -15,6 +15,8 @@ const PERSON_ACTIONS = [
   'pular',
   'responder',
   'remover',
+  // Corrects an item in place (#330).
+  'editar',
   // Access (#166): only an admin, checked by the server.
   'dar-acesso',
   'tirar-acesso',
@@ -54,6 +56,7 @@ export type PersonAction =
       what: 'stated' | 'report' | 'veto' | 'seen'
       id: string
     }
+  | Edit
   | { kind: 'grant'; email: string }
   | { kind: 'revoke' }
   | { kind: 'delete' }
@@ -74,6 +77,33 @@ const REMOVABLE = ['stated', 'report', 'veto', 'seen'] as const
 // own 0,5 to 5.
 const RATING = /^(?:(?:[1-9]|10)\/10|[1-4](?:,5)?|0,5|5)$/
 const ID = /^(?:tt|Q)\d+$/
+
+/** An item corrected in place (#330): the form comes prefilled and sends
+ * every field, so an empty target, reaction or Nota clears it. */
+export type Edit =
+  | {
+      kind: 'edit'
+      what: 'stated' | 'report'
+      id: string
+      text: string
+      target: string | null
+      reaction: Reaction | null
+      source?: string
+    }
+  | {
+      kind: 'edit'
+      what: 'veto'
+      id: string
+      text: string
+      target: string
+    }
+  | {
+      kind: 'edit'
+      what: 'seen'
+      id: string
+      rating: string | null
+      source?: string
+    }
 
 type Reader = (form: FormData) => PersonAction | null
 
@@ -135,6 +165,40 @@ const remove: Reader = (form) => {
   return what && id ? { kind: 'remove', what, id } : null
 }
 
+const edit: Reader = (form) => {
+  const what = oneOf(REMOVABLE, field(form, 'tipo'))
+  const id = field(form, 'id')
+  if (!what || !id) return null
+  if (what === 'seen') {
+    const rating = field(form, 'nota')
+    if (rating !== undefined && !RATING.test(rating)) return null
+    return {
+      kind: 'edit',
+      what,
+      id,
+      rating: rating ?? null,
+      source: field(form, 'fonte'),
+    }
+  }
+  if (what === 'veto') {
+    const read = veto(form)
+    return read?.kind === 'veto'
+      ? { kind: 'edit', what, id, text: read.text, target: read.target }
+      : null
+  }
+  const read = statement(what === 'stated' ? 'state' : 'report')(form)
+  if (read?.kind !== 'state' && read?.kind !== 'report') return null
+  return {
+    kind: 'edit',
+    what,
+    id,
+    text: read.text,
+    target: read.target ?? null,
+    reaction: read.reaction ?? null,
+    source: read.source,
+  }
+}
+
 const grant: Reader = (form) => {
   const email = field(form, 'email')
   return email ? { kind: 'grant', email } : null
@@ -149,6 +213,7 @@ const READERS: Record<(typeof PERSON_ACTIONS)[number], Reader> = {
   pular: skip,
   responder: answer,
   remover: remove,
+  editar: edit,
   'dar-acesso': grant,
   'tirar-acesso': () => ({ kind: 'revoke' }),
   'remover-pessoa': () => ({ kind: 'delete' }),
@@ -201,6 +266,17 @@ const PROBLEMS: Partial<
     if (target === undefined) return { field: 'alvo', problem: 'target' }
     return ID.test(target) ? null : { field: 'alvo', problem: 'id' }
   },
+  editar: (form) => {
+    const what = oneOf(REMOVABLE, field(form, 'tipo'))
+    if (what === 'seen') {
+      const rating = field(form, 'nota')
+      return rating !== undefined && !RATING.test(rating)
+        ? { field: 'nota', problem: 'rating' }
+        : null
+    }
+    if (what === 'veto') return PROBLEMS.vetar?.(form) ?? null
+    return statementProblem(form)
+  },
   responder: (form) =>
     field(form, 'texto') ? null : { field: 'texto', problem: 'required' },
   'dar-acesso': (form) =>
@@ -241,6 +317,7 @@ const SPOTS: Record<(typeof PERSON_ACTIONS)[number], string> = {
   pular: 'perguntas',
   responder: 'perguntas',
   remover: 'vetos',
+  editar: 'vetos',
   'dar-acesso': 'acesso',
   'tirar-acesso': 'acesso',
   'remover-pessoa': 'remover-pessoa',
@@ -257,9 +334,9 @@ export function spotOf(form: FormData): string | undefined {
     const link = oneOf(LINKS, field(form, 'elo'))
     return link ? `ajuste-${link}` : 'ajustes'
   }
-  if (kind === 'remover') {
+  if (kind === 'remover' || kind === 'editar') {
     const what = oneOf(REMOVABLE, field(form, 'tipo'))
-    return what ? REMOVED_IN[what] : SPOTS.remover
+    return what ? REMOVED_IN[what] : SPOTS[kind]
   }
   return SPOTS[kind]
 }
@@ -299,6 +376,8 @@ export const PERSON_NOTICES = [
   'igual',
   'ajustado',
   'removido',
+  // Corrected in place (#330).
+  'editado',
   // An open question skipped once more, still on the list.
   'pulada',
   // Skipped twice: it left the list.
@@ -323,6 +402,8 @@ export const PERSON_REFUSALS = [
   'pedido',
   // The item is not in her file any more (removed in another tab).
   'item',
+  // An edit that would make it equal to another item of her file (#330).
+  'repetido',
   // Access: no e-mail, or one that is not an address.
   'email',
   // Access: another Pessoa has that e-mail.
@@ -363,7 +444,8 @@ export const isPeopleNotice = (value: unknown): value is 'removida' =>
 
 /** The query of a Pessoa's page and Meu gosto: what the last form did
  * (`feito`, `erro`), where (`em`) and, refused, the field it was
- * (`campo`). */
+ * (`campo`); before the JavaScript, the item open for editing
+ * (`editar`). */
 export const personSearch = (search: Record<string, unknown>) => ({
   feito: isPersonNotice(search.feito) ? search.feito : undefined,
   erro: isPersonRefusal(search.erro) ? search.erro : undefined,
@@ -377,6 +459,11 @@ export const personSearch = (search: Record<string, unknown>) => ({
     readProblemParam(search.campo) === undefined
       ? undefined
       : (search.campo as string),
+  // The item open for editing before the JavaScript (#330): its fato_id.
+  editar:
+    typeof search.editar === 'string' && /^[a-z_]+:[\w-]+$/.test(search.editar)
+      ? search.editar
+      : undefined,
 })
 
 /** A Relato's source when the form gives none: who told it, since several
