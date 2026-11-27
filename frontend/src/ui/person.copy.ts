@@ -229,7 +229,7 @@ export const PERSON = {
   /** What a save or a Tirar did, by the ficha that posted it (#273):
    * "Veto gravado.", not where the file is. */
   savedIn: {
-    vetos: { 
+    vetos: {
       gravado: 'Veto gravado.',
       removido: 'Veto tirado.',
       editado: 'Veto editado.',
