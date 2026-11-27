@@ -79,7 +79,7 @@ describe('importTrakt', () => {
     const report = await fixture.ok(importZip(zip))
 
     expect(report.resolved).toEqual({ imdb: 1, tmdb: 1 })
-    expect(report.newFacts).toEqual({ ratings: 2, seen: 1 })
+    expect(report.newFacts).toEqual({ ratings: 2, seen: 1, watchlist: 0 })
     expect(report.attributions).toEqual([TRAKT_ATTRIBUTION])
     const sha = createHash('sha256').update(zip).digest('hex')
     expect(report.file).toBe(`imports/teo/trakt-${sha}.zip`)
@@ -144,7 +144,7 @@ describe('importTrakt', () => {
     expect(before).toHaveLength(5)
     const again = await fixture.ok(importZip(trakt))
     expect(again.newFile).toBe(false)
-    expect(again.newFacts).toEqual({ ratings: 0, seen: 0 })
+    expect(again.newFacts).toEqual({ ratings: 0, seen: 0, watchlist: 0 })
     expect(await facts()).toEqual(before)
     await rebuild(fixture)
     expect(await facts()).toEqual(before)
@@ -189,7 +189,7 @@ describe('importTrakt', () => {
     )
     const report = await fixture.ok(importZip(zip))
 
-    expect(report.facts).toEqual({ ratings: 0, seen: 2 })
+    expect(report.facts).toEqual({ ratings: 0, seen: 2, watchlist: 0 })
     expect(report.unresolved).toEqual([
       { name: 'Filme perdido', imdb: 'tt9999999', tmdb: null, trakt: 99 },
     ])

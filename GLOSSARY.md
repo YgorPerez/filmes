@@ -185,7 +185,7 @@ De onde um Fato veio: uma base pública, o export de uma Pessoa, uma resposta de
 _Evitar_: origem
 
 **Import** [import, `import`; tipo [kind: `letterboxd`, `letterboxd-rss`, `trakt`]]:
-Um export de uma Pessoa (o ZIP do Letterboxd ou do Trakt, ou o RSS público do Letterboxd dela) guardado no repo de dados e registrado no arquivo dela. É a Fonte das Notas e dos Já vistos que traz; tirar o Import tira os Fatos que só ele trazia. O RSS só entra com o sim da Pessoa.
+Um export de uma Pessoa (o ZIP do Letterboxd ou do Trakt, ou o RSS público do Letterboxd dela) guardado no repo de dados e registrado no arquivo dela. É a Fonte das Notas, dos Já vistos e da Watchlist que traz; tirar o Import tira os Fatos que só ele trazia. O RSS só entra com o sim da Pessoa.
 _Evitar_: upload, sincronização
 
 **Fila de resolução** [resolution queue, `queue`]:
@@ -239,6 +239,9 @@ _Evitar_: envelhecimento, validade
 
 **Declarado** [stated, `stated`]:
 O que uma Pessoa disse sobre o próprio gosto ou sobre um filme, por exemplo num questionário ou numa review que ela escreveu.
+
+**Watchlist** [watchlist, `watchlist`]:
+Os filmes que uma Pessoa marcou para ver no Letterboxd ou no Trakt. Cada um é um Declarado a favor, de Força moderada, até ela ter Já visto o filme. Vale a watchlist do import mais recente que traz uma.
 
 **Relato** [report, `report`]:
 O que o Dono disse sobre o gosto de outra Pessoa, como "Leo odeia filme lento". Vale menos que a própria Pessoa dizendo.
