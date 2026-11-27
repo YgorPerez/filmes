@@ -209,6 +209,21 @@ describe('the head’s ⋯ menu and "?" legend (#272)', () => {
     return { menu, legend }
   }
 
+  it('lists its actions as rows with an icon, as the account menu (#346)', async () => {
+    const user = userEvent.setup()
+    const sessionLink = 'https://cinema.example/participar?sessao=x&chave=y'
+    render(<SessionScreen page={{ ...PAGE, sessionLink }} />)
+    await user.click(screen.getByLabelText(SESSIONS.session.menu))
+    const { menu } = opened()
+    const rows = within(menu).getAllByRole('listitem')
+    expect(rows.map((row) => row.textContent)).toEqual([
+      SESSIONS.list.feedback,
+      'Link para os Presentes',
+      'Copiar link',
+    ])
+    for (const row of rows) expect(row.querySelector('svg')).not.toBeNull()
+  })
+
   it('close on a tap outside and on Esc, and one opening closes the other', async () => {
     const user = userEvent.setup()
     render(<SessionScreen page={PAGE} />)
