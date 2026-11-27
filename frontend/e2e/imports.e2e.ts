@@ -191,6 +191,12 @@ async function confirmInQueue(page: Page, info: TestInfo, letterboxd: Locator) {
 }
 
 async function dropAndSearchAgain(page: Page, info: TestInfo, lost: Locator) {
+  // Searched again while a film still waits: an empty queue has no
+  // "Procurar de novo" (#348).
+  const reprocess = page.getByRole('form', { name: 'Procurar de novo' })
+  await reprocess.getByRole('button').click()
+  await expect(notice(page)).toContainText('Procurei de novo')
+
   await lost
     .getByRole('button', { name: 'Não é filme: Filme Perdido (2001)' })
     .click()
@@ -198,12 +204,7 @@ async function dropAndSearchAgain(page: Page, info: TestInfo, lost: Locator) {
   const queue = await engineRun((engine) => engine.run(viewQueue))
   expect(queue.items.map((i) => i.name)).not.toContain('Filme Perdido')
   expect(queue.items.map((i) => i.name)).not.toContain('Vento Norte')
-
-  await page
-    .getByRole('form', { name: 'Procurar de novo' })
-    .getByRole('button')
-    .click()
-  await expect(notice(page)).toContainText('Procurei de novo')
+  await expect(reprocess).toHaveCount(0)
   await snap(page, info, 'fila-decidida')
 }
 

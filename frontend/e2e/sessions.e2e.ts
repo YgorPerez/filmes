@@ -563,8 +563,9 @@ async function sendVotesSwapping(
   } finally {
     send.resolve()
   }
-  await expect(participant.getByRole('status')).toContainText(
-    'outro entrou no lugar',
+  // One não, so no "Cada não": the list names what left (pass 5 F3).
+  await expect(participant.getByRole('status')).toHaveText(
+    'Votos contados. A lista foi refeita.',
   )
   await expect(participant.locator('html')).toHaveAttribute(
     'data-vote-page',

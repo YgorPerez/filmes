@@ -291,7 +291,9 @@ describe('PeopleList create form, refusals', () => {
       ).value,
     ).toBe('bruno@example.org')
   })
+})
 
+describe('PeopleList create form, the refused field (#347)', () => {
   it('marks the name a taken file name is about (#347)', () => {
     render(
       <PeopleList
@@ -317,7 +319,9 @@ describe('PeopleList create form, refusals', () => {
       PEOPLE.create.refusals.indisponivel,
     )
   })
+})
 
+describe('PeopleList create form, every refusal and none', () => {
   it('has a sentence for every refusal', () => {
     for (const refusal of PERSON_CREATE_REFUSALS)
       expect(PEOPLE.create.refusals[refusal]).toBeTruthy()

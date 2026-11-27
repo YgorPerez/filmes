@@ -1066,7 +1066,9 @@ describe('pass 5 of the critique (#348)', () => {
       'Para voltar atrás, importe o arquivo de novo.',
     )
   })
+})
 
+describe('pass 5 of the critique (#348), a file another one covers', () => {
   it('gives no count when another file of the site has the same films', async () => {
     show({
       ...EMPTY,
