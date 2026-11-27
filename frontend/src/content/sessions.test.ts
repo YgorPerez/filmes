@@ -9,10 +9,16 @@ import {
   toldSession,
 } from './sessions'
 
+const THERE = [{ owner: true }, { owner: false }]
 const SESSIONS = [
-  { id: 'aberta', open: true, chosen: null },
-  { id: 'vimos', open: false, chosen: { title: 'Fronteira' } },
-  { id: 'nada', open: false, chosen: null },
+  { id: 'aberta', open: true, chosen: null, attendees: THERE },
+  {
+    id: 'vimos',
+    open: false,
+    chosen: { title: 'Fronteira' },
+    attendees: THERE,
+  },
+  { id: 'nada', open: false, chosen: null, attendees: [{ owner: false }] },
 ]
 
 describe('the Sessions server functions', () => {
@@ -36,8 +42,12 @@ describe('the Sessions server functions', () => {
   })
 
   it('finds what a told Session saw, and nothing for an open or unknown one', () => {
-    expect(toldSession(SESSIONS, 'vimos')).toEqual({ title: 'Fronteira' })
-    expect(toldSession(SESSIONS, 'nada')).toEqual({ title: null })
+    // `mine`: the Dono looking was there, and may correct it (#344).
+    expect(toldSession(SESSIONS, 'vimos')).toEqual({
+      title: 'Fronteira',
+      mine: true,
+    })
+    expect(toldSession(SESSIONS, 'nada')).toEqual({ title: null, mine: false })
     expect(toldSession(SESSIONS, 'aberta')).toBeUndefined()
     expect(toldSession(null, 'vimos')).toBeUndefined()
   })

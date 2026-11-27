@@ -8,7 +8,8 @@
 // vimos nada"); per Presente, `reacao.<slug>` is `nota:<1…10>` (the 1 to
 // 10 of the Cartaz's Já vi, #272, halved to the engine's 0,5 to 5) or
 // `relato:<gostou|neutro|nao-gostou>` (empty: no reaction) and
-// `comentario.<slug>` what she thought.
+// `comentario.<slug>` what she thought. `corrigir=sim` replaces a told
+// Session's Feedback (#344).
 
 import { field, searchAsked, within } from './form-fields'
 
@@ -48,6 +49,8 @@ export type FeedbackReaction =
 export type FeedbackForm = {
   film: string | null
   reactions: FeedbackReaction[]
+  /** It corrects a told Session (#344). */
+  correct?: boolean
 }
 
 /** Why not, in `?erro=`. */
@@ -173,7 +176,8 @@ export function parseFeedback(form: FormData): Parsed<FeedbackForm> {
   const film = filmOf(form)
   if ('refused' in film) return film
   if (film.ok === null && reactions.length > 0) return { refused: 'nada' }
-  return { ok: { film: film.ok, reactions } }
+  const correct = field(form, 'corrigir') === 'sim'
+  return { ok: { film: film.ok, reactions, ...(correct && { correct }) } }
 }
 
 export const isFeedbackRefusal = within(FEEDBACK_REFUSALS)

@@ -171,7 +171,8 @@ const datedReply = (reply: YamlMapping): YamlValue =>
 
 /** Where Python wrote a `date` object, which PyYAML writes plain: a
  * version's `date` and `redone_on`, a reply's `date`, the Feedback's
- * `recorded_on`, and the same in each earlier version. */
+ * `recorded_on` (and `corrected_on`, #344), and the same in each earlier
+ * version. */
 const dated = (front: YamlMapping): YamlMapping =>
   new Map(
     [...front].map(([key, value]): [string, YamlValue] => {
@@ -184,7 +185,7 @@ const dated = (front: YamlMapping): YamlMapping =>
           new Map(
             [...value].map(([k, v]) => [
               k,
-              k === 'recorded_on' ? asDate(v) : v,
+              k === 'recorded_on' || k === 'corrected_on' ? asDate(v) : v,
             ]),
           ),
         ]

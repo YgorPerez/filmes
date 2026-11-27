@@ -407,6 +407,8 @@ const SPOKEN_NOTICES: ReadonlySet<SessionNotice> = new Set<SessionNotice>([
   'anotada',
   'perguntas-gravadas',
   'perguntas-descartadas',
+  // A correction changes what the tape says, so it is said (#344).
+  'corrigida',
 ])
 
 /** A told Session opens with the tape given back (#272): the film they
@@ -446,15 +448,20 @@ function TapeReturned({ page }: { page: CartazPage }) {
         />
       )}
       <CartazNotes notes={card?.notes} />
-      <a
-        href={again}
-        className={buttonVariants({
-          variant: 'option',
-          className: 'self-start',
-        })}
-      >
-        {session.again}
-      </a>
+      <div className="flex flex-wrap items-center gap-lg">
+        <a href={again} className={buttonVariants({ variant: 'option' })}>
+          {session.again}
+        </a>
+        {/* A Dono who was there corrects what was told (#344). */}
+        {s.attendees.some((a) => a.owner) && (
+          <a
+            href={`${feedbackPath(s.id)}?corrigir=sim`}
+            className={buttonVariants({ variant: 'link' })}
+          >
+            {session.correct}
+          </a>
+        )}
+      </div>
     </section>
   )
 }

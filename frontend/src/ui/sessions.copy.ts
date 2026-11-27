@@ -88,6 +88,7 @@ export const SESSIONS = {
         'Respostas gravadas. O escolhido de cada par ganhou uma Nota fraca e o outro ficou como Já visto.',
       'perguntas-descartadas': 'Respostas descartadas.',
       contada: 'Feedback gravado e Sessão fechada.',
+      corrigida: 'Correção gravada: o que foi contado agora é este.',
     } satisfies Record<SessionNotice, string>,
     refusals: {
       nada: 'Nada marcado ainda.',
@@ -128,6 +129,8 @@ export const SESSIONS = {
     returned: 'Fita devolvida',
     returnedNothing: 'Não viram nada da prateleira.',
     again: 'Pedir filme de novo com essa turma',
+    /** A Dono who was there corrects a told Session (#344). */
+    correct: 'Corrigir o que contei',
     /** The Cartaz's stars and comments on the film they saw (#272). */
     onCartaz: 'No Cartaz:',
     stars: (n: number) => `${n} de 5 ★`,

@@ -113,3 +113,43 @@ export const Refused: Story = { args: { refusal: 'filme' } }
 export const Unknown: Story = { args: { session: 'x', page: 'unknown' } }
 
 export const Unavailable: Story = { args: { session: 'x', page: null } }
+
+/** Told already, by a Dono who was there: the way to correct it (#344). */
+export const Told: Story = {
+  args: {
+    page: 'unknown',
+    told: { title: 'Pequenos Milagres', mine: true },
+  },
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByRole('link', { name: FEEDBACK.form.correct }),
+    ).toBeVisible()
+  },
+}
+
+/** Correcting a told Session (#344): the form comes with what was told. */
+export const Correcting: Story = {
+  args: {
+    correcting: true,
+    film: 'tt9000601',
+    draft: {
+      bruno: { reaction: 'nota:9', comment: 'lindo' },
+      iara: { reaction: 'relato:nao-gostou' },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(
+      canvas.getByRole('heading', {
+        level: 1,
+        name: FEEDBACK.form.correctTitle,
+      }),
+    ).toBeVisible()
+    await expect(
+      canvas.getByRole('radio', { name: /Pequenos Milagres/ }),
+    ).toBeChecked()
+    await expect(
+      canvas.getByRole('button', { name: FEEDBACK.form.correctSubmit }),
+    ).toBeVisible()
+  },
+}
