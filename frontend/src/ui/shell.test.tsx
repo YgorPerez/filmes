@@ -180,6 +180,29 @@ describe('AppShell, the alert and the footer', () => {
     ).toBeTruthy()
   })
 
+  it('marks the footer link as the current page on the credits, and no tab', () => {
+    show({ path: '/creditos' })
+    const credits = within(screen.getByRole('contentinfo')).getByRole('link', {
+      name: 'Créditos das fontes',
+    })
+    expect(credits.getAttribute('aria-current')).toBe('page')
+    expect(credits.className).not.toContain('underline-offset')
+    expect(
+      screen
+        .getAllByRole('link')
+        .filter((a) => a.getAttribute('aria-current') === 'page'),
+    ).toEqual([credits])
+  })
+
+  it('leaves the footer link unmarked on any other page', () => {
+    show()
+    expect(
+      within(screen.getByRole('contentinfo'))
+        .getByRole('link', { name: 'Créditos das fontes' })
+        .getAttribute('aria-current'),
+    ).toBeNull()
+  })
+
   it('puts the bar, the strip and the footer on the page’s column, wide or not', () => {
     /** The max-width classes of a strip's inner column. */
     const column = (el: Element | null) =>
@@ -212,5 +235,23 @@ describe('OutsideShell', () => {
       ['filmes', '/'],
       ['Créditos das fontes', '/creditos'],
     ])
+    expect(
+      screen
+        .getByRole('link', { name: 'Créditos das fontes' })
+        .getAttribute('aria-current'),
+    ).toBeNull()
+  })
+
+  it('marks the footer link as the current page on the credits', () => {
+    render(
+      <OutsideShell path="/creditos">
+        <main>a página</main>
+      </OutsideShell>,
+    )
+    expect(
+      screen
+        .getByRole('link', { name: 'Créditos das fontes' })
+        .getAttribute('aria-current'),
+    ).toBe('page')
   })
 })
