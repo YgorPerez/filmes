@@ -88,63 +88,88 @@ type SentReply = Pick<
   | 'seen'
 >
 
+type Seen = { people: string[]; ratings: string[] }
+
+/** Who saw each film, by title, in the order the reply lists them. */
+function seenByTitle(
+  seen: SentReply['seen'],
+  people: readonly BillboardPerson[],
+) {
+  const bySlug = new Map(people.map((p) => [p.slug, p]))
+  const byTitle = new Map<string, Seen>()
+  for (const s of seen) {
+    const person = bySlug.get(s.person)
+    const name = person?.name ?? s.person
+    const entry = byTitle.get(s.title) ?? { people: [], ratings: [] }
+    entry.people.push(person?.owner ? 'eu' : name)
+    if (s.rating !== null)
+      entry.ratings.push(
+        person?.owner
+          ? `nota ${tenScale(s.rating)}`
+          : `${name} deu ${tenScale(s.rating)}`,
+      )
+    byTitle.set(s.title, entry)
+  }
+  return byTitle
+}
+
+/** "já vimos", "já viram", "Já vi" or "já viu", by who saw it. */
+function seenVerb(names: readonly string[]) {
+  const owner = names[0] === 'eu'
+  if (names.length > 1) return owner ? 'já vimos' : 'já viram'
+  return owner ? 'Já vi' : 'já viu'
+}
+
+/** "Eu e Iara já vimos Fronteira (nota 8)." */
+function seenSentence(title: string, { people: who, ratings }: Seen) {
+  // The Dono first ("Eu e Iara já vimos").
+  const names = who.toSorted((a, b) => (a === 'eu' ? -1 : b === 'eu' ? 1 : 0))
+  const subject =
+    names.length === 1 && names[0] === 'eu'
+      ? ''
+      : `${andList(names).replace(/^eu/u, 'Eu')} `
+  const notes = ratings.length > 0 ? ` (${ratings.join(', ')})` : ''
+  return `${subject}${seenVerb(names)} ${line(title)}${notes}.`
+}
+
+/** "Quero o clima leve.", "Tirei o clima." or nothing. */
+function moodSentence(moods: SentReply['moods']) {
+  if (moods === null) return false
+  return moods.length > 0
+    ? `Quero o clima ${andList(moods)}.`
+    : 'Tirei o clima.'
+}
+
+/** "Refaz a lista?" or "Refaz a lista mantendo o resto?", when it redoes. */
+function redoSentence(reply: SentReply) {
+  if (!reply.regenerate) return false
+  return reply.moods !== null || reply.keep.length === 0
+    ? 'Refaz a lista?'
+    : 'Refaz a lista mantendo o resto?'
+}
+
+/** The comments that say something. */
+const saidComments = (reply: SentReply) =>
+  reply.comments.filter((c) => line(c.comment ?? '') !== '')
+
 /** The Dono's sentence for what she sent: "Troquei Cais 2. Iara já viu
  * Fronteira (nota 8). Refaz a lista mantendo o resto?" */
 function spoken(reply: SentReply, people: readonly BillboardPerson[]) {
   const swapped = reply.dropped
     .filter((d) => d.cause === 'swapped')
     .map((d) => line(d.title ?? `o filme ${d.position}`))
-  // Who saw each film, the Dono first ("Eu e Iara já vimos").
-  const seen = new Map<string, { people: string[]; ratings: string[] }>()
-  for (const s of reply.seen) {
-    const person = people.find((p) => p.slug === s.person)
-    const name = person?.owner ? 'eu' : (person?.name ?? s.person)
-    const entry = seen.get(s.title) ?? { people: [], ratings: [] }
-    entry.people.push(name)
-    if (s.rating !== null)
-      entry.ratings.push(
-        person?.owner
-          ? `nota ${tenScale(s.rating)}`
-          : `${person?.name ?? s.person} deu ${tenScale(s.rating)}`,
-      )
-    seen.set(s.title, entry)
-  }
   const sentences = [
     swapped.length > 0 && `Troquei ${andList(swapped)}.`,
-    ...[...seen].map(([title, { people: who, ratings }]) => {
-      const names = who.toSorted((a, b) =>
-        a === 'eu' ? -1 : b === 'eu' ? 1 : 0,
-      )
-      const subject =
-        names.length === 1 && names[0] === 'eu'
-          ? ''
-          : `${andList(names).replace(/^eu/u, 'Eu')} `
-      const verb =
-        names.length > 1
-          ? names[0] === 'eu'
-            ? 'já vimos'
-            : 'já viram'
-          : names[0] === 'eu'
-            ? 'Já vi'
-            : 'já viu'
-      const notes = ratings.length > 0 ? ` (${ratings.join(', ')})` : ''
-      return `${subject}${verb} ${line(title)}${notes}.`
-    }),
-    reply.moods !== null &&
-      (reply.moods.length > 0
-        ? `Quero o clima ${andList(reply.moods)}.`
-        : 'Tirei o clima.'),
+    ...[...seenByTitle(reply.seen, people)].map(([title, seen]) =>
+      seenSentence(title, seen),
+    ),
+    moodSentence(reply.moods),
     reply.addition !== null && `Acrescentei: “${line(reply.addition)}”.`,
-    ...reply.comments
-      .filter((c) => line(c.comment ?? '') !== '')
-      .map(
-        (c) =>
-          `Sobre ${c.title ? line(c.title) : `o filme ${c.position}`}: “${line(c.comment ?? '')}”.`,
-      ),
-    reply.regenerate &&
-      (reply.moods !== null || reply.keep.length === 0
-        ? 'Refaz a lista?'
-        : 'Refaz a lista mantendo o resto?'),
+    ...saidComments(reply).map(
+      (c) =>
+        `Sobre ${c.title ? line(c.title) : `o filme ${c.position}`}: “${line(c.comment ?? '')}”.`,
+    ),
+    redoSentence(reply),
   ]
   return sentences.filter(Boolean).join(' ')
 }
@@ -159,7 +184,7 @@ export function replyMessage(
   reply: SentReply,
   people: readonly BillboardPerson[],
 ): { text: string; context: string } | null {
-  const comments = reply.comments.filter((c) => line(c.comment ?? '') !== '')
+  const comments = saidComments(reply)
   if (!reply.regenerate && reply.addition === null && comments.length === 0)
     return null
   const tag = `(enviado pelo Cartaz · ${reply.session.id} v${reply.version})`

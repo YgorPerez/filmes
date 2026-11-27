@@ -47,6 +47,23 @@ import { SESSIONS, spoken } from './sessions.copy'
 const labels = (candidates: readonly { label: string }[]) =>
   candidates.map((candidate) => candidate.label)
 
+type Ambiguity = PageReading['ambiguities'][number]
+
+/** The reading's doubts by how they show: a title of several films lists
+ * them, with "Usar"; a title the Catálogo does not have, the search with
+ * the words in it; the rest is a line. */
+function sortAmbiguities(ambiguities: readonly Ambiguity[]) {
+  const films: Ambiguity[] = []
+  const missing: Ambiguity[] = []
+  const others: Ambiguity[] = []
+  for (const a of ambiguities) {
+    if (a.field !== 'similar') others.push(a)
+    else if (a.candidates.length > 0) films.push(a)
+    else missing.push(a)
+  }
+  return { films, missing, others }
+}
+
 function ReadingSaid({
   reading,
   pick,
@@ -60,17 +77,7 @@ function ReadingSaid({
   owner?: string
 }) {
   const said = SESSIONS.form.reading
-  // A title of several films lists them, with "Usar"; the rest is a line.
-  const isFilms = (a: PageReading['ambiguities'][number]) =>
-    a.field === 'similar' && a.candidates.length > 0
-  const films = reading.ambiguities.filter(isFilms)
-  // A title the Catálogo does not have: the search, with the words in it.
-  const missing = reading.ambiguities.filter(
-    (a) => a.field === 'similar' && a.candidates.length === 0,
-  )
-  const others = reading.ambiguities.filter(
-    (a) => !isFilms(a) && !missing.includes(a),
-  )
+  const { films, missing, others } = sortAmbiguities(reading.ambiguities)
   const lines = [
     reading.understood.length > 0
       ? said.understood(reading.understood.map((label) => spoken(label, owner)))
@@ -323,6 +330,29 @@ export function NewSession({
   )
 }
 
+/** The form's fields to start with: the draft's, or the Presentes asked
+ * for. */
+const startingFields = (
+  draft: NewSessionDraft | null,
+  attendees: readonly string[] | undefined,
+): Asked => draft?.fields ?? (attendees ? { attendees: [...attendees] } : {})
+
+/** The night the form asks for so far, kept as the Dono changes it: on
+ * the bar by Recomendar (#272). */
+function useNight(options: RequestOptions) {
+  const [night, setNight] = useState<string[] | null>(null)
+  const listen = (event: FormEvent<HTMLFormElement>) =>
+    setNight(nightOf(new FormData(event.currentTarget), options))
+  // What the form starts with, once it is in the page.
+  const start = useCallback(
+    (form: HTMLFormElement | null) => {
+      if (form) setNight(nightOf(new FormData(form), options))
+    },
+    [options],
+  )
+  return { night, listen, start }
+}
+
 function NewSessionForm({
   options,
   similar,
@@ -343,8 +373,7 @@ function NewSessionForm({
   attendees?: readonly string[]
 }) {
   const { form } = SESSIONS
-  const asked: Asked =
-    draft?.fields ?? (attendees ? { attendees: [...attendees] } : {})
+  const asked = startingFields(draft, attendees)
   const live = useHydrated()
   const { refused, alert, onAnswer } = useRefusalInPlace(
     refusal,
@@ -352,19 +381,7 @@ function NewSessionForm({
   )
   const { onSubmit, busy, failed } = useFetchForm(onAnswer)
   const films = useChosenFilms(similar)
-  const onPick = live ? films.take : undefined
-  const owner = options.people.find((p) => p.owner)?.name
-  // The night so far, on the bar by Recomendar (#272).
-  const [night, setNight] = useState<string[] | null>(null)
-  const listen = (event: FormEvent<HTMLFormElement>) =>
-    setNight(nightOf(new FormData(event.currentTarget), options))
-  // What the form starts with, once it is in the page.
-  const start = useCallback(
-    (form: HTMLFormElement | null) => {
-      if (form) setNight(nightOf(new FormData(form), options))
-    },
-    [options],
-  )
+  const { night, listen, start } = useNight(options)
   return (
     <form
       ref={start}
@@ -393,9 +410,9 @@ function NewSessionForm({
         text={asked.request}
         reading={draft?.reading ?? null}
         pick={pick}
-        onPick={onPick}
+        onPick={live ? films.take : undefined}
         busy={busy}
-        owner={owner}
+        owner={options.people.find((p) => p.owner)?.name}
       />
       <Attendees options={options} asked={asked} />
       <Moods moods={options.moods} asked={asked} />
@@ -424,31 +441,60 @@ function NewSessionForm({
           pick={pick}
           films={live ? films : null}
         />
-        <Disclosure
-          summary={form.details}
-          open={
-            detailsAsked(asked) ||
-            (refused !== undefined && DETAILS_REFUSALS.has(refused))
-          }
-        >
-          <div className="flex flex-col gap-3xl">
-            <Constraints asked={asked} />
-            <Rule options={options} asked={asked} />
-            <SeriesOrder asked={asked} />
-          </div>
-        </Disclosure>
+        <Details options={options} asked={asked} refused={refused} />
       </div>
-      {/* Recomendar stays a thumb away, above the tabs, with the night
-          so far (#272). */}
-      <div className="sticky bottom-[calc(68px+env(safe-area-inset-bottom))] z-10 -mx-lg flex items-center justify-between gap-md rounded-t-panel border-x border-t border-rule bg-surface px-lg py-sm min-[900px]:bottom-0">
-        <p className="min-w-0 font-display text-label text-ink-2 uppercase">
-          {night?.join(' · ')}
-        </p>
-        <Submit variant="primary" disabled={busy !== null} className="shrink-0">
-          {busy !== null && busy !== 'ler' ? form.submitting : form.submit}
-        </Submit>
-      </div>
+      <RecommendBar night={night} busy={busy} />
     </form>
+  )
+}
+
+/** "Mais opções": the Restrições, the Regra and the Série na ordem, open
+ * when the draft set one or a refusal is about one. */
+function Details({
+  options,
+  asked,
+  refused,
+}: {
+  options: RequestOptions
+  asked: Asked
+  refused: SessionRequestRefusal | undefined
+}) {
+  return (
+    <Disclosure
+      summary={SESSIONS.form.details}
+      open={
+        detailsAsked(asked) ||
+        (refused !== undefined && DETAILS_REFUSALS.has(refused))
+      }
+    >
+      <div className="flex flex-col gap-3xl">
+        <Constraints asked={asked} />
+        <Rule options={options} asked={asked} />
+        <SeriesOrder asked={asked} />
+      </div>
+    </Disclosure>
+  )
+}
+
+/** Recomendar stays a thumb away, above the tabs, with the night so far
+ * (#272). */
+function RecommendBar({
+  night,
+  busy,
+}: {
+  night: readonly string[] | null
+  busy: string | null
+}) {
+  const { form } = SESSIONS
+  return (
+    <div className="sticky bottom-[calc(68px+env(safe-area-inset-bottom))] z-10 -mx-lg flex items-center justify-between gap-md rounded-t-panel border-x border-t border-rule bg-surface px-lg py-sm min-[900px]:bottom-0">
+      <p className="min-w-0 font-display text-label text-ink-2 uppercase">
+        {night?.join(' · ')}
+      </p>
+      <Submit variant="primary" disabled={busy !== null} className="shrink-0">
+        {busy !== null && busy !== 'ler' ? form.submitting : form.submit}
+      </Submit>
+    </div>
   )
 }
 

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import {
   isReplyRefusal,
   type ReplyRefusal,
@@ -393,32 +393,38 @@ function TapeReturned({ page }: { page: CartazPage }) {
   )
 }
 
-function SessionView({
-  page,
-  notice,
-  refusal,
-  words,
-}: {
-  page: CartazPage
-  notice?: SessionNotice
-  refusal?: ReplyRefusal
-  words?: readonly string[]
-}) {
-  const { session } = SESSIONS
-  const s = page.session
-  const billboard = page.billboard
+type BillboardOf = NonNullable<CartazPage['billboard']>
+
+/** Told, the shelf folds without the film they saw: the tape above has
+ * it. */
+function foldedShelf(billboard: BillboardOf): BillboardOf {
+  const chosenId = billboard.films.find((film) => film.reactions)?.id
+  return {
+    ...billboard,
+    films: billboard.films.filter((film) => film.id !== chosenId),
+    sections: billboard.sections
+      .map((section) => ({
+        ...section,
+        films: section.films.filter((id) => id !== chosenId),
+      }))
+      .filter((section) => section.films.length > 0),
+    chosen: undefined,
+  }
+}
+
+type Rejection = { reason: ReplyRefusal; words: readonly string[] }
+
+/** The reply's post: a refusal comes back in place (`rejection`), and a
+ * reply that went counts in `sentReplies` once the new Cartaz is in. */
+function useReplyPost(id: string, billboard: CartazPage['billboard']) {
   const [sentReplies, setSentReplies] = useState(0)
   const [editing, setEditing] = useState(false)
-  const [rejection, setRejection] = useState<{
-    reason: ReplyRefusal
-    words: readonly string[]
-  } | null>(null)
-
-  const { onSubmit, busy, failed } = useFetchForm((to) => {
+  const [rejection, setRejection] = useState<Rejection | null>(null)
+  const post = useFetchForm((to) => {
     const url = new URL(to, window.location.origin)
     if (
       url.origin !== window.location.origin ||
-      url.pathname !== sessionPath(s.id)
+      url.pathname !== sessionPath(id)
     )
       return false
     const reason = url.searchParams.get('erro')
@@ -436,78 +442,183 @@ function SessionView({
       setSentReplies((n) => n + 1)
     }
   })
-  const refused = rejection?.reason ?? refusal
-  const unreadWords = rejection ? rejection.words : (words ?? [])
-  // The words the reading did not take are asked in the bar, not alerted.
-  const asking = refused === 'leitura' && unreadWords.length > 0
+  return { ...post, sentReplies, editing, setEditing, rejection }
+}
+
+/** The refusal and the post that failed, scrolled into sight when they
+ * come. */
+function ReplyAlerts({
+  refused,
+  rejection,
+  failed,
+}: {
+  /** The refusal to alert, if any. */
+  refused: ReplyRefusal | undefined
+  /** The refusal that came back in place. */
+  rejection: Rejection | null
+  failed: boolean
+}) {
   const alert = useRef<HTMLDivElement>(null)
   useEffect(() => {
-    if ((rejection && !asking) || failed)
+    if ((rejection && refused) || failed)
       alert.current?.scrollIntoView({ block: 'nearest' })
-  }, [rejection, failed, asking])
-  const edit = () => {
+  }, [rejection, refused, failed])
+  if (!refused && !failed) return null
+  return (
+    <div ref={alert}>
+      {refused && <Alert>{SESSIONS.session.refusals[refused]}</Alert>}
+      <PostFailed failed={failed} />
+    </div>
+  )
+}
+
+/** A closed Session's shelf, folded under the tape. */
+function ClosedShelf({
+  chosen,
+  others,
+  children,
+}: {
+  chosen: boolean
+  others: number
+  children: ReactNode
+}) {
+  const { session } = SESSIONS
+  return (
+    <details className="group/shelf flex flex-col">
+      <summary className="flex min-h-touch cursor-pointer list-none items-center justify-between gap-sm font-display text-row-title [&::-webkit-details-marker]:hidden">
+        {chosen ? session.others(others) : session.shelf}
+        <Icon
+          name="plus"
+          className="size-[18px] text-ink-2 transition-transform group-open/shelf:rotate-45 motion-reduce:transition-none"
+        />
+      </summary>
+      <div className="pt-lg">{children}</div>
+    </details>
+  )
+}
+
+/** The words of the acrescentar the reading did not take, asked in the
+ * bar until the Dono goes back to edit them. */
+function unreadOf(
+  asking: boolean,
+  editing: boolean,
+  words: readonly string[],
+  setEditing: (editing: boolean) => void,
+) {
+  if (!asking || editing) return undefined
+  const onEdit = () => {
     setEditing(true)
     const field = document.getElementById('acrescentar')
     field?.scrollIntoView({ block: 'center' })
     field?.focus()
   }
+  return { words, onEdit }
+}
+
+/** The notice of what the last post did, when it is one to say. */
+function SpokenNotice({ notice }: { notice: SessionNotice | undefined }) {
+  if (!notice || !SPOKEN_NOTICES.has(notice)) return null
+  return (
+    <p role="status" className="text-meta text-ink-2">
+      {SESSIONS.session.notices[notice]}
+    </p>
+  )
+}
+
+/** The Cartaz of the Session, or why it cannot show. */
+function SessionBillboard({
+  id,
+  open,
+  shelf,
+  post,
+  sent,
+  unread,
+}: {
+  id: string
+  open: boolean
+  shelf: CartazPage['billboard']
+  post: {
+    onSubmit: ReturnType<typeof useFetchForm>['onSubmit']
+    busy: string | null
+  }
+  sent: boolean
+  unread: ReturnType<typeof unreadOf>
+}) {
+  if (shelf === null) return <Alert>{SESSIONS.unavailable}</Alert>
+  return (
+    <Billboard
+      billboard={shelf}
+      action={`${sessionPath(id)}/responder`}
+      post={{
+        onSubmit: post.onSubmit,
+        busy: post.busy !== null,
+        sending: post.busy === '',
+      }}
+      sent={sent}
+      unread={unread}
+      after={
+        open && (
+          <p className="flex flex-wrap items-center gap-sm text-ink-2">
+            {SESSIONS.session.seenIt} <FeedbackLink session={id} />
+          </p>
+        )
+      }
+    />
+  )
+}
+
+function SessionView({
+  page,
+  notice,
+  refusal,
+  words,
+}: {
+  page: CartazPage
+  notice?: SessionNotice
+  refusal?: ReplyRefusal
+  words?: readonly string[]
+}) {
+  const s = page.session
+  const billboard = page.billboard
+  const {
+    onSubmit,
+    busy,
+    failed,
+    sentReplies,
+    editing,
+    setEditing,
+    rejection,
+  } = useReplyPost(s.id, billboard)
+  const refused = rejection?.reason ?? refusal
+  const unreadWords = rejection ? rejection.words : (words ?? [])
+  // The words the reading did not take are asked in the bar, not alerted.
+  const asking = refused === 'leitura' && unreadWords.length > 0
   const closed = !s.open
-  // Told, the shelf folds without the film they saw: the tape above has it.
-  const chosenId = billboard?.films.find((film) => film.reactions)?.id
   const shelf =
-    closed && billboard !== null
-      ? {
-          ...billboard,
-          films: billboard.films.filter((film) => film.id !== chosenId),
-          sections: billboard.sections
-            .map((section) => ({
-              ...section,
-              films: section.films.filter((id) => id !== chosenId),
-            }))
-            .filter((section) => section.films.length > 0),
-          chosen: undefined,
-        }
-      : billboard
-  const others = shelf?.films.length ?? 0
-  const cartaz =
-    shelf === null ? (
-      <Alert>{SESSIONS.unavailable}</Alert>
-    ) : (
-      <Billboard
-        key={`${shelf.version}:${sentReplies}`}
-        billboard={shelf}
-        action={`${sessionPath(s.id)}/responder`}
-        post={{ onSubmit, busy: busy !== null, sending: busy === '' }}
-        sent={
-          sentReplies === 0 && (notice === 'regerada' || notice === 'anotada')
-        }
-        unread={
-          asking && !editing ? { words: unreadWords, onEdit: edit } : undefined
-        }
-        after={
-          s.open && (
-            <p className="flex flex-wrap items-center gap-sm text-ink-2">
-              {session.seenIt} <FeedbackLink session={s.id} />
-            </p>
-          )
-        }
-      />
-    )
+    closed && billboard !== null ? foldedShelf(billboard) : billboard
+  const cartaz = (
+    <SessionBillboard
+      key={`${shelf?.version}:${sentReplies}`}
+      id={s.id}
+      open={s.open}
+      shelf={shelf}
+      post={{ onSubmit, busy }}
+      sent={
+        sentReplies === 0 && (notice === 'regerada' || notice === 'anotada')
+      }
+      unread={unreadOf(asking, editing, unreadWords, setEditing)}
+    />
+  )
 
   return (
     <>
       <SessionHead page={page} />
-      {notice && SPOKEN_NOTICES.has(notice) && (
-        <p role="status" className="text-meta text-ink-2">
-          {session.notices[notice]}
-        </p>
-      )}
-      {((refused && !asking) || failed) && (
-        <div ref={alert}>
-          {refused && !asking && <Alert>{session.refusals[refused]}</Alert>}
-          <PostFailed failed={failed} />
-        </div>
-      )}
+      <SpokenNotice notice={notice} />
+      <ReplyAlerts
+        refused={asking ? undefined : refused}
+        rejection={rejection}
+        failed={failed}
+      />
       <Said page={page} />
       <PairwiseAnswers
         action={`${sessionPath(s.id)}/perguntas`}
@@ -515,17 +626,10 @@ function SessionView({
         post={{ onSubmit, busy }}
       />
       {closed && <TapeReturned page={page} />}
-      {closed && billboard !== null ? (
-        <details className="group/shelf flex flex-col">
-          <summary className="flex min-h-touch cursor-pointer list-none items-center justify-between gap-sm font-display text-row-title [&::-webkit-details-marker]:hidden">
-            {s.chosen ? session.others(others) : session.shelf}
-            <Icon
-              name="plus"
-              className="size-[18px] text-ink-2 transition-transform group-open/shelf:rotate-45 motion-reduce:transition-none"
-            />
-          </summary>
-          <div className="pt-lg">{cartaz}</div>
-        </details>
+      {closed && shelf !== null ? (
+        <ClosedShelf chosen={Boolean(s.chosen)} others={shelf.films.length}>
+          {cartaz}
+        </ClosedShelf>
       ) : (
         cartaz
       )}

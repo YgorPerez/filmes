@@ -153,34 +153,40 @@ function Request({
   )
 }
 
-export function Billboard({
-  billboard,
-  action,
-  post,
-  onSend,
-  sent = false,
-  layout = 'page',
-  onExpand,
-  unread,
-  after,
-}: Props) {
+/** The marks and the status line over them: a new mark clears it (#272,
+ * #277). */
+function useReplyMarks(billboard: BillboardModel, sent: boolean) {
   const [message, setMessage] = useState('')
-  // A status line speaks of the marks as they were: a new mark clears it
-  // (#272, #277).
   const { marks, change, canKeep } = useMarks(billboard, sent, () =>
     setMessage(''),
   )
-  // The text that went, and why the last try did not.
+  return { message, setMessage, marks, change, canKeep }
+}
+
+/** Why a hand-over that did not go failed: Copiar, or a new try. */
+const failureOf = (outcome: SendOutcome) => {
+  if (outcome.sent) return null
+  return outcome.copy ? 'copy' : 'retry'
+}
+
+/** Enviar: the web form posts only a reply; the view hands the text over
+ * instead, once per reply. `isSent` while the text is the one that went;
+ * `failure` says why the last try did not. */
+function useSend({
+  text,
+  onSend,
+  post,
+  setMessage,
+}: {
+  text: string
+  onSend: Props['onSend']
+  post: Props['post']
+  setMessage: (message: string) => void
+}) {
   const [sentText, setSentText] = useState<string | null>(null)
   const [failure, setFailure] = useState<'retry' | 'copy' | null>(null)
   const [busy, setBusy] = useState(false)
-  const text = replyText(billboard, marks)
   const isSent = sentText === text
-
-  const changeFilm = (id: string) => (film: FilmMarks) =>
-    change({ ...marks, films: { ...marks.films, [id]: film } })
-
-  // Send the web form only when there is a reply.
   const submit = (event: FormEvent<HTMLFormElement>) => {
     if (onSend === undefined && hasMarks(text)) {
       post?.onSubmit(event)
@@ -189,7 +195,6 @@ export function Billboard({
     event.preventDefault()
     if (onSend === undefined) setMessage(BILLBOARD.reply.nothing)
   }
-  // The view hands the text over instead, once per reply.
   const send = (handOver: NonNullable<Props['onSend']>) => () => {
     if (!hasMarks(text)) {
       setMessage(BILLBOARD.reply.nothing)
@@ -204,21 +209,45 @@ export function Billboard({
     void outcome.then((o) => {
       setBusy(false)
       setMessage(o.message)
-      setFailure(o.sent ? null : o.copy ? 'copy' : 'retry')
+      setFailure(failureOf(o))
       if (o.sent) setSentText(going)
     })
   }
-  const onSendClick = onSend && send(onSend)
-  const empty = billboard.films.length === 0
-  const replying = billboard.open && !empty
+  return { submit, onSendClick: onSend && send(onSend), isSent, failure }
+}
 
-  // What was marked, in a sentence ("1 Trocar e 1 Já vi"); the Clima
-  // apart, in bold.
-  const moods = otherMoods(billboard, marks)
-  const summary = BILLBOARD.reply.summary({
-    ...markCounts(billboard, marks),
-    mood: false,
+/** Where the bar sits: the web has the app's tabs at the bottom of a
+ * phone; Claude's fullscreen, its own foot; a frame sized to the content,
+ * nothing. */
+function barPlace(fullscreen: boolean, viewed: boolean): BarPlace {
+  if (fullscreen) return 'foot'
+  return viewed ? 'end' : 'tabs'
+}
+
+export function Billboard({
+  billboard,
+  action,
+  post,
+  onSend,
+  sent = false,
+  layout = 'page',
+  onExpand,
+  unread,
+  after,
+}: Props) {
+  const { message, setMessage, marks, change, canKeep } = useReplyMarks(
+    billboard,
+    sent,
+  )
+  const text = replyText(billboard, marks)
+  const { submit, onSendClick, isSent, failure } = useSend({
+    text,
+    onSend,
+    post,
+    setMessage,
   })
+  const copy = failure === 'copy' ? text : null
+
   if (layout === 'inline' && onExpand)
     return (
       <InlineBillboard
@@ -226,7 +255,7 @@ export function Billboard({
         marked={BILLBOARD.reply.marked(markedFilms(billboard, marks))}
         sent={isSent}
         message={message}
-        copy={failure === 'copy' ? text : null}
+        copy={copy}
         onMessage={setMessage}
         onExpand={onExpand}
         onSend={onSendClick}
@@ -234,131 +263,54 @@ export function Billboard({
       />
     )
 
-  const grouped = billboard.sections.length > 0
-  const card = (film: BillboardModel['films'][number]) => (
-    <BillboardCard
-      key={film.id}
-      // Once told, what came new in the last redo no longer matters.
-      film={billboard.open ? film : { ...film, new: false }}
-      people={billboard.attendees}
-      first={film === billboard.films[0]}
-      level={grouped ? 3 : 2}
-      marks={billboard.open ? marksOf(marks, film.id) : undefined}
-      onChange={billboard.open ? changeFilm(film.id) : undefined}
-    />
-  )
-  const byId = new Map(billboard.films.map((film) => [film.id, film]))
-  const cards = grouped
-    ? billboard.sections.map((section) => {
-        const films = section.films.flatMap((id) => byId.get(id) ?? [])
-        const shared = sharedLines(films)
-        const own = new Set(shared.map(lineKey))
-        return (
-          <Section
-            key={section.films[0]}
-            section={section}
-            shared={shared}
-            people={billboard.attendees}
-          >
-            {films.map((film) =>
-              card(
-                own.size === 0
-                  ? film
-                  : {
-                      ...film,
-                      lines: film.lines.filter((l) => !own.has(lineKey(l))),
-                    },
-              ),
-            )}
-          </Section>
-        )
-      })
-    : billboard.films.map(card)
+  const replying = billboard.open && billboard.films.length > 0
   const fullscreen = layout === 'fullscreen'
-  // The web has the app's tabs at the bottom of a phone; Claude's
-  // fullscreen, its own foot; a frame sized to the content, nothing.
-  const place: BarPlace = fullscreen ? 'foot' : onSend ? 'end' : 'tabs'
+  // What was marked, in a sentence ("1 Trocar e 1 Já vi"); the Clima
+  // apart, in bold.
   const bar = replying && (
     <ReplyBar
-      summary={summary}
-      moods={moods}
+      summary={BILLBOARD.reply.summary({
+        ...markCounts(billboard, marks),
+        mood: false,
+      })}
+      moods={otherMoods(billboard, marks)}
       message={message}
       onSend={onSendClick}
-      place={place}
+      place={barPlace(fullscreen, onSend !== undefined)}
       sending={post?.sending}
       sent={isSent}
       retry={failure === 'retry'}
-      copy={failure === 'copy' ? text : null}
+      copy={copy}
       onMessage={setMessage}
       unread={unread}
     />
   )
   const shelf = (
-    <>
-      {empty && (
-        <p className="text-ink-2">
-          {onSend
-            ? BILLBOARD.view.empty(billboard.request.parts)
-            : BILLBOARD.empty}
-        </p>
-      )}
-      <ChosenFilm chosen={billboard.chosen} people={billboard.attendees} />
-      {cards}
-      {replying && (
-        <ReplyBox
-          billboard={billboard}
-          marks={marks}
-          kept={canKeep}
-          onAddition={(addition) => change({ ...marks, addition })}
-          onMoods={(moods) => change({ ...marks, moods })}
-        />
-      )}
-    </>
+    <Shelf
+      billboard={billboard}
+      marks={marks}
+      change={change}
+      canKeep={canKeep}
+      viewed={onSend !== undefined}
+    />
   )
-
-  const speech = billboard.request.speech
   const body = fullscreen ? (
-    <Fullscreen
-      top={<Request billboard={billboard} compact single />}
-      foot={bar}
-    >
-      {speech && (
-        <div className="flex">
-          <HandNote compact>{speech}</HandNote>
-        </div>
-      )}
-      {billboard.open && <Dropped billboard={billboard} />}
-      {!empty && <PeopleLegend billboard={billboard} />}
+    <FullscreenBody billboard={billboard} bar={bar}>
       {shelf}
-    </Fullscreen>
+    </FullscreenBody>
   ) : (
     <div className="flex flex-col gap-2xl">
       {onSend ? (
-        // Claude without fullscreen: no page head names the Presentes.
-        <>
-          <Request billboard={billboard} />
-          <PeopleLegend billboard={billboard} />
-          {billboard.open && <Dropped billboard={billboard} />}
-          <Capped>{shelf}</Capped>
-        </>
+        <ViewTop billboard={billboard} shelf={shelf} />
       ) : (
-        <>
-          <div className="flex flex-col gap-xs">
-            <div className="flex items-start justify-between gap-md">
-              <Request billboard={billboard} />
-              <Legend />
-            </div>
-            {billboard.open && <Dropped billboard={billboard} />}
-          </div>
-          {shelf}
-          {after}
-        </>
+        <PageTop billboard={billboard} shelf={shelf} after={after} />
       )}
       {bar}
     </div>
   )
 
-  return replying ? (
+  if (!replying) return body
+  return (
     <form
       method="post"
       action={action}
@@ -375,8 +327,180 @@ export function Billboard({
         body
       )}
     </form>
-  ) : (
-    body
+  )
+}
+
+/** The fullscreen: the request fixed on top, the Dono's words, what left,
+ * the Presentes and the shelf, the bar at the foot. */
+function FullscreenBody({
+  billboard,
+  bar,
+  children,
+}: {
+  billboard: BillboardModel
+  bar: ReactNode
+  children: ReactNode
+}) {
+  const speech = billboard.request.speech
+  return (
+    <Fullscreen
+      top={<Request billboard={billboard} compact single />}
+      foot={bar}
+    >
+      {speech && (
+        <div className="flex">
+          <HandNote compact>{speech}</HandNote>
+        </div>
+      )}
+      {billboard.open && <Dropped billboard={billboard} />}
+      {billboard.films.length > 0 && <PeopleLegend billboard={billboard} />}
+      {children}
+    </Fullscreen>
+  )
+}
+
+/** Claude without fullscreen: no page head names the Presentes. */
+function ViewTop({
+  billboard,
+  shelf,
+}: {
+  billboard: BillboardModel
+  shelf: ReactNode
+}) {
+  return (
+    <>
+      <Request billboard={billboard} />
+      <PeopleLegend billboard={billboard} />
+      {billboard.open && <Dropped billboard={billboard} />}
+      <Capped>{shelf}</Capped>
+    </>
+  )
+}
+
+/** The web: the request beside the legend, what left, the shelf and what
+ * comes after it. */
+function PageTop({
+  billboard,
+  shelf,
+  after,
+}: {
+  billboard: BillboardModel
+  shelf: ReactNode
+  after: ReactNode
+}) {
+  return (
+    <>
+      <div className="flex flex-col gap-xs">
+        <div className="flex items-start justify-between gap-md">
+          <Request billboard={billboard} />
+          <Legend />
+        </div>
+        {billboard.open && <Dropped billboard={billboard} />}
+      </div>
+      {shelf}
+      {after}
+    </>
+  )
+}
+
+/** The shelf: why it is empty, the Filme escolhido, the cards and, while
+ * the Dono replies, the acrescentar and the Climas. */
+function Shelf({
+  billboard,
+  marks,
+  change,
+  canKeep,
+  viewed,
+}: {
+  billboard: BillboardModel
+  marks: Marks
+  change: (next: Marks) => void
+  canKeep: boolean
+  /** In the MCP Apps view. */
+  viewed: boolean
+}) {
+  const empty = billboard.films.length === 0
+  return (
+    <>
+      {empty && (
+        <p className="text-ink-2">
+          {viewed
+            ? BILLBOARD.view.empty(billboard.request.parts)
+            : BILLBOARD.empty}
+        </p>
+      )}
+      <ChosenFilm chosen={billboard.chosen} people={billboard.attendees} />
+      <Cards billboard={billboard} marks={marks} change={change} />
+      {billboard.open && !empty && (
+        <ReplyBox
+          billboard={billboard}
+          marks={marks}
+          kept={canKeep}
+          onAddition={(addition) => change({ ...marks, addition })}
+          onMoods={(moods) => change({ ...marks, moods })}
+        />
+      )}
+    </>
+  )
+}
+
+type Film = BillboardModel['films'][number]
+
+/** A film without the lines its section says once. */
+const withoutShared = (film: Film, shared: ReadonlySet<string>) =>
+  shared.size === 0
+    ? film
+    : { ...film, lines: film.lines.filter((l) => !shared.has(lineKey(l))) }
+
+/** A card per film, under the section of its Motivo when there are
+ * sections. */
+function Cards({
+  billboard,
+  marks,
+  change,
+}: {
+  billboard: BillboardModel
+  marks: Marks
+  change: (next: Marks) => void
+}) {
+  const grouped = billboard.sections.length > 0
+  const card = (film: Film) => (
+    <BillboardCard
+      key={film.id}
+      // Once told, what came new in the last redo no longer matters.
+      film={billboard.open ? film : { ...film, new: false }}
+      people={billboard.attendees}
+      first={film === billboard.films[0]}
+      level={grouped ? 3 : 2}
+      marks={billboard.open ? marksOf(marks, film.id) : undefined}
+      onChange={
+        billboard.open
+          ? (next: FilmMarks) =>
+              change({ ...marks, films: { ...marks.films, [film.id]: next } })
+          : undefined
+      }
+    />
+  )
+  if (!grouped) return <>{billboard.films.map(card)}</>
+  const byId = new Map(billboard.films.map((film) => [film.id, film]))
+  return (
+    <>
+      {billboard.sections.map((section) => {
+        const films = section.films.flatMap((id) => byId.get(id) ?? [])
+        const shared = sharedLines(films)
+        const own = new Set(shared.map(lineKey))
+        return (
+          <Section
+            key={section.films[0]}
+            section={section}
+            shared={shared}
+            people={billboard.attendees}
+          >
+            {films.map((film) => card(withoutShared(film, own)))}
+          </Section>
+        )
+      })}
+    </>
   )
 }
 
