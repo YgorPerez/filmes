@@ -1,12 +1,14 @@
-// Export (map #72, W6): a Pessoa's Notas as the IMDb ratings CSV, the file
-// the MovieLens import takes. The engine writes the file
-// (`exportRatings`); this hands it to the browser as a download, from the
-// Notas section of her page (#222). Server only.
+// Export (map #72, W6; #286): a Pessoa's Notas as the IMDb ratings CSV, the
+// file the MovieLens import takes, or as the CSV Letterboxd imports into her
+// diary. The engine writes the file (`exportRatings`); this hands it to the
+// browser as a download, from the Notas section of her page (#222). Server
+// only.
 
 import {
   exportRatings,
   type Engine,
   type ErrorOutput,
+  type ExportFormat,
   type ExportResult,
   type Outcome,
 } from '@filmes/engine'
@@ -16,12 +18,14 @@ import type { Owner } from './owners'
 
 /** What the download needs from the engine. */
 export interface Exporter {
-  /** The IMDb CSV of the Pessoa with this slug. */
-  imdb(person: string): Promise<Outcome<ExportResult>>
+  /** The file of the Pessoa with this slug, in `format`. */
+  file(person: string, format: ExportFormat): Promise<Outcome<ExportResult>>
 }
 
 export function exporterFromEngine(engine: Engine): Exporter {
-  return { imdb: (person) => engine.run(exportRatings(person, 'imdb')) }
+  return {
+    file: (person, format) => engine.run(exportRatings(person, format)),
+  }
 }
 
 /** An engine error the Dono cannot fix from the page goes to the server log
@@ -32,8 +36,8 @@ function logEngineError(outcome: { output: ErrorOutput }): void {
 }
 
 /** The file's name on the Dono's disk. */
-export const imdbFileName = (person: string) =>
-  `filmes-${person.replace(/[^\w-]/g, '_')}-imdb.csv`
+export const csvFileName = (person: string, format: ExportFormat) =>
+  `filmes-${person.replace(/[^\w-]/g, '_')}-${format}.csv`
 
 const back = (location: string) =>
   new Response(null, {
@@ -44,14 +48,15 @@ const back = (location: string) =>
 /** No Pessoa to go back to: Pessoas says she is gone. */
 const gone = () => back('/pessoas?erro=pessoa')
 
-/** `GET /exportar/imdb.csv?pessoa=<slug>`: the file, as the engine wrote it,
+/** `GET /exportar/<format>.csv?pessoa=<slug>`: the file, as the engine wrote it,
  * byte for byte. Only a Dono gets it (the page gate does not cover this
  * route). A Pessoa that is gone goes back to Pessoas; any other failure, to
  * her page, which says the file did not come. */
-export async function imdbDownload(
+export async function csvDownload(
   request: Request,
   owner: Owner | null,
   exporter: Exporter,
+  format: ExportFormat,
 ): Promise<Response> {
   if (!owner)
     return new Response(null, {
@@ -60,7 +65,7 @@ export async function imdbDownload(
     })
   const person = new URL(request.url).searchParams.get('pessoa')?.trim()
   if (!person) return gone()
-  const file = await exporter.imdb(person)
+  const file = await exporter.file(person, format)
   if (file.exitCode !== 0) {
     if (file.output.error.code === 'unknown_person') return gone()
     logEngineError(file)
@@ -70,7 +75,7 @@ export async function imdbDownload(
   return new Response(file.output.content, {
     headers: {
       'Content-Type': 'text/csv; charset=utf-8',
-      'Content-Disposition': `attachment; filename="${imdbFileName(file.output.person)}"`,
+      'Content-Disposition': `attachment; filename="${csvFileName(file.output.person, format)}"`,
       'Cache-Control': 'private, no-store',
       'X-Content-Type-Options': 'nosniff',
     },
@@ -78,5 +83,10 @@ export async function imdbDownload(
 }
 
 /** The app's download: the logged-in Dono, the process's engine. */
-export const serveImdbDownload = (request: Request) =>
-  imdbDownload(request, currentOwner(request), exporterFromEngine(appEngine()))
+export const serveCsvDownload = (request: Request, format: ExportFormat) =>
+  csvDownload(
+    request,
+    currentOwner(request),
+    exporterFromEngine(appEngine()),
+    format,
+  )

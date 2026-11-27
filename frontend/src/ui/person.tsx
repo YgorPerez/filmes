@@ -1,6 +1,7 @@
 import type { PersonNotice, PersonRefusal } from '#/content/person-action'
 import {
   imdbCsvPath,
+  letterboxdCsvPath,
   importsPath,
   personPath,
   RATINGS_PATH,
@@ -190,9 +191,14 @@ function Notes({
           {notes.import}
         </a>
         {ratings !== null && ratings.length > 0 && (
-          <a href={imdbCsvPath(slug)} className={option}>
-            {notes.download}
-          </a>
+          <>
+            <a href={imdbCsvPath(slug)} className={option}>
+              {notes.download}
+            </a>
+            <a href={letterboxdCsvPath(slug)} className={option}>
+              {notes.downloadLetterboxd}
+            </a>
+          </>
         )}
       </div>
       {ratings !== null && ratings.length > 0 && (
