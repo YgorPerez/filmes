@@ -300,10 +300,13 @@ test('the Dono marks, reloads, sends, and the Cartaz comes back redone', async (
   await expect(page.getByText(/na próxima vez/)).toBeVisible()
   // One line says what changed; why each left is behind "por quê".
   await expect(page.getByText('Refeito: 2 saíram, 2 novos.')).toBeVisible()
-  await page.getByText('por quê', { exact: true }).click()
-  await expect(
-    page.getByText(`Saiu da prateleira: ${seen} (Nina já viu)`),
-  ).toBeVisible()
+  const left = page.getByText(`Saiu da prateleira: ${seen} (Nina já viu)`)
+  // The page may still settle after the post: open the fold until it stays.
+  await expect(async () => {
+    if (!(await left.isVisible()))
+      await page.getByText('por quê', { exact: true }).click()
+    await expect(left).toBeVisible({ timeout: 1000 })
+  }).toPass()
   await expect(
     page.getByText(`Saiu da prateleira: ${swapped} (trocado)`),
   ).toBeVisible()
