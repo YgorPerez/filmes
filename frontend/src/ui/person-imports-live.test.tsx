@@ -46,6 +46,7 @@ const OWN: PersonImportsView = {
     discardedItems: [],
   },
   trakt: { ratings: 0, seen: 0 },
+  imdb: { ratings: 0 },
 }
 
 /** The screen under a router, reading its query as its route. */

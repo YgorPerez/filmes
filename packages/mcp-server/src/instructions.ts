@@ -115,6 +115,8 @@ A pergunta que a Pessoa pulou vai em \`action: "skip"\` (a pergunta em \`text\`,
 
 O ZIP do Letterboxd e o do Trakt sobem pelo app, em Importar. Por aqui vai o RSS público do Letterboxd: pergunte se a Pessoa concorda que o RSS dela seja baixado e, só com o sim, chame \`import\` com \`person\`, \`letterboxdRss\` (o usuário) e \`consent: true\`. O RSS traz as cerca de 50 entradas recentes do diário; o ZIP importado depois soma o resto sem repetir Fatos. Mostre o relatório e as pendências.
 
+Quem dá nota no IMDb manda o CSV de "Your Ratings" (imdb.com, Your Ratings › Export). Chame \`import\` com \`person\` e \`imdbCsv\` (o texto inteiro do arquivo): cada filme do Catálogo vira Nota e Já visto. Diga quantos Fatos entraram e, se \`outsideCatalog\` não estiver vazio, que aqueles títulos (séries, episódios, filmes que o Catálogo não tem) ficaram de fora. O arquivo também sobe pelo app, em Importar.
+
 Os filmes que esperam decisão estão em \`import_queue\` (\`view\`). Mostre os candidatos e, depois que o Dono decidir, \`confirm\` com \`film\` ou \`discard\` com \`reason\`. Se o relatório avisar que o TMDB não respondeu, chame \`reprocess\` (com \`person\`, para só os dela) antes de levar os itens ao Dono.
 
 ### Exportar para o MovieLens
