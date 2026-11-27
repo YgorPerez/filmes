@@ -39,6 +39,25 @@ describe('page titles', () => {
     ).toBe('Página não encontrada · filmes')
   })
 
+  it('names the link’s page when it shows in place of its child', () => {
+    const link = (covers: boolean, child: string) => [
+      { routeId: '__root__', status: 'success' },
+      {
+        routeId: '/participar',
+        status: 'success',
+        loaderData: { covers, title: 'Essa Sessão já fechou' },
+      },
+      { routeId: child, status: 'success' },
+    ]
+    expect(titleOf(link(true, '/participar/votar'))).toBe(
+      'Essa Sessão já fechou · filmes',
+    )
+    expect(titleOf(link(true, '/participar/perguntas/'))).toBe(
+      'Essa Sessão já fechou · filmes',
+    )
+    expect(titleOf(link(false, '/participar/votar'))).toBe('Votar · filmes')
+  })
+
   it('is filmes alone for a page with no title', () => {
     expect(titleOf(at('/saude'))).toBe('filmes')
     expect(pageTitle()).toBe('filmes')
