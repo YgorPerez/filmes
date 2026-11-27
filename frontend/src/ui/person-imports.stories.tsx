@@ -119,36 +119,58 @@ export const Own: Story = {
 export const NothingYet: Story = { args: { page: EMPTY } }
 
 export const Imported: Story = {
-  args: { done: { notice: 'trakt', facts: 3, outside: 2 } },
+  args: {
+    done: { notice: 'trakt', facts: 3, ratings: 2, seen: 1, outside: 2 },
+  },
 }
 
 export const OnlyImdb: Story = {
   args: { page: IMDB_ONLY },
   play: async ({ canvasElement }) => {
     await expect(
-      within(canvasElement).getByText(PERSON_IMPORTS.imdb.summary(412)),
+      within(canvasElement).getByText(PERSON_IMPORTS.results.imdb(412)),
     ).toBeVisible()
   },
 }
 
 export const ImdbImported: Story = {
-  args: { page: IMDB_ONLY, done: { notice: 'imdb', facts: 412, outside: 3 } },
+  args: {
+    page: IMDB_ONLY,
+    done: { notice: 'imdb', facts: 412, ratings: 412, seen: 0, outside: 3 },
+  },
 }
 
 export const OnlySimkl: Story = {
   args: { page: SIMKL_ONLY },
   play: async ({ canvasElement }) => {
     await expect(
-      within(canvasElement).getByText(PERSON_IMPORTS.simkl.summary(87, 140)),
+      within(canvasElement).getByText(PERSON_IMPORTS.results.simkl(87, 140)),
     ).toBeVisible()
   },
 }
 
 export const SimklImported: Story = {
-  args: { page: SIMKL_ONLY, done: { notice: 'simkl', facts: 239, outside: 4 } },
+  args: {
+    page: SIMKL_ONLY,
+    done: { notice: 'simkl', facts: 239, ratings: 87, seen: 140, outside: 4 },
+  },
 }
 
-export const Refused: Story = { args: { refusal: 'origem' } }
+export const Refused: Story = {
+  args: { page: EMPTY, refusal: 'origem', refusedIn: 'letterboxd' },
+}
+
+/** The profile's name refused: the field is marked, the why under it. */
+export const ProfileRefused: Story = {
+  args: { page: EMPTY, refusal: 'usuario', refusedIn: 'perfil' },
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByRole('textbox', {
+        name: new RegExp(PERSON_IMPORTS.rss.user),
+      }),
+    ).toHaveAttribute('aria-invalid', 'true')
+  },
+}
 
 export const Unknown: Story = { args: { slug: 'ninguem', page: 'unknown' } }
 

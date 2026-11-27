@@ -43,23 +43,51 @@ const folderZip = (folder: string, prefix = '') =>
 const importsOf = (person: string) =>
   engineRun((engine) => engine.run(personImports(person)))
 
-const UPLOAD = 'O arquivo do Letterboxd, do Trakt, do IMDb ou do Simkl'
-const PROFILE = 'Ou só o recente, pelo perfil'
+const LETTERBOXD_UPLOAD = 'Envie o ZIP aqui'
+const OTHER_UPLOAD = 'De outro site'
+const PROFILE = 'Perfil do Letterboxd'
+const RESULTS = 'O que já entrou'
 
-/** Sends a file through the one file field: the server tells the service. */
+/** Once something came in, the forms fold under "Importar de novo". */
+async function openForms(page: Page) {
+  const again = page.getByText('Importar de novo ou de outro site')
+  if ((await again.count()) === 0) return
+  const open = await again.evaluate(
+    (summary) => (summary.parentElement as HTMLDetailsElement).open,
+  )
+  if (!open) await again.click()
+}
+
+/** Sends a file through the guided Letterboxd upload, or the other sites'
+ * (`outro`): the server tells the service by what the file holds. */
 async function upload(
   page: Page,
   name: string,
   buffer: Buffer,
   mimeType = 'application/zip',
+  to: 'letterboxd' | 'outro' = 'letterboxd',
 ) {
-  const form = section(page, UPLOAD).getByRole('form', { name: UPLOAD })
+  await openForms(page)
+  const form = page.getByRole('form', {
+    name: to === 'letterboxd' ? LETTERBOXD_UPLOAD : OTHER_UPLOAD,
+  })
+  await form.locator('input[type=file]').setInputFiles({
+    name,
+    mimeType,
+    buffer,
+  })
   await form
-    .getByLabel(
-      'Arquivo que o Letterboxd, o Trakt, o Simkl (ZIP) ou o IMDb (CSV) te deu',
-    )
-    .setInputFiles({ name, mimeType, buffer })
-  await form.getByRole('button', { name: 'Importar', exact: true }).click()
+    .getByRole('button', {
+      name: to === 'letterboxd' ? 'Importar o ZIP' : 'Importar',
+      exact: true,
+    })
+    .click()
+}
+
+/** The profile's form, open. */
+async function profile(page: Page) {
+  await openForms(page)
+  return page.getByRole('form', { name: PROFILE })
 }
 
 async function removeImport(page: Page, original: string) {
@@ -91,30 +119,33 @@ test('the Dono imports a Letterboxd ZIP and works the queue', async ({
   await expect(
     page.getByRole('heading', { name: 'Importar as Notas de Olga' }),
   ).toBeVisible()
-  await expect(section(page, 'Arquivos importados')).toContainText(
-    'Nenhum import ainda.',
-  )
-  // Nothing imported: no summary cards, and Olga's diary needs her yes.
-  await expect(section(page, 'Letterboxd')).toHaveCount(0)
-  await expect(section(page, 'Trakt')).toHaveCount(0)
-  await expect(section(page, PROFILE).getByRole('checkbox')).toHaveCount(1)
+  // Nothing imported: the guided flow is the page, and Olga's diary needs
+  // her yes.
+  await expect(section(page, 'Arquivos importados')).toHaveCount(0)
+  await expect(section(page, RESULTS)).toHaveCount(0)
+  await expect(
+    section(page, 'Do Letterboxd').getByRole('link', {
+      name: 'Abrir letterboxd.com/settings/data',
+    }),
+  ).toHaveAttribute('href', 'https://letterboxd.com/settings/data/')
+  await expect((await profile(page)).getByRole('checkbox')).toHaveCount(1)
   await snap(page, info, 'importar-pessoa-vazia')
 
   await upload(page, 'letterboxd-olga.zip', folderZip('letterboxd/olga'))
-  await expect(notice(page)).toHaveText(
-    'Arquivo do Letterboxd importado: 14 Fatos novos.',
+  await expect(notice(page)).toContainText(
+    'O ZIP do Letterboxd entrou: entraram',
   )
   await expect(section(page, 'Arquivos importados')).toContainText(
     'letterboxd-olga.zip',
   )
-  const letterboxd = section(page, 'Letterboxd')
-  await expect(letterboxd).toContainText('10 filmes')
+  const letterboxd = section(page, RESULTS)
+  await expect(letterboxd).toContainText('Letterboxd: 10 filmes')
   await expect(letterboxd).toContainText(
-    '2 filmes esperam na fila de resolução',
+    '2 filmes do Letterboxd esperam você confirmar qual é',
   )
   await snap(page, info, 'importar-letterboxd')
 
-  await letterboxd.getByRole('link', { name: 'Abrir a fila' }).click()
+  await letterboxd.getByRole('link', { name: 'Resolver agora' }).click()
   await expect(page).toHaveURL(/\/meu-gosto\/fila$/)
   const wind = section(page, 'Vento Norte (2020)')
   const lost = section(page, 'Filme Perdido (2001)')
@@ -158,19 +189,19 @@ test('the Dono imports a Letterboxd ZIP and works the queue', async ({
   await snap(page, info, 'fila-decidida')
 
   await page.goto('/importar/olga')
-  await expect(section(page, 'Letterboxd')).toContainText('1 pelo Dono')
+  await expect(section(page, RESULTS)).not.toContainText('esperam você')
 
   // Her RSS, with her consent. Its TMDB ids would resolve Vento Norte for
   // everyone, so it comes after the queue.
-  const rss = section(page, PROFILE)
+  const rss = await profile(page)
   await rss
-    .getByLabel(/^Perfil no Letterboxd/)
+    .getByLabel(/^Nome do perfil no Letterboxd/)
     .fill('https://letterboxd.com/olga_farol/')
   await rss.getByLabel(/^Olga concordou que o filmes leia/).check()
-  await rss.getByRole('button', { name: 'Importar do perfil' }).click()
-  await expect(notice(page)).toContainText('RSS do Letterboxd importado')
+  await rss.getByRole('button', { name: 'Ler o perfil' }).click()
+  await expect(notice(page)).toContainText('Perfil do Letterboxd lido')
   await expect(section(page, 'Arquivos importados')).toContainText(
-    'https://letterboxd.com/olga_farol/rss/',
+    '@olga_farol',
   )
   await snap(page, info, 'importar-rss')
   await removeImport(page, 'letterboxd-olga.zip')
@@ -189,31 +220,41 @@ test('the Dono imports a Trakt ZIP; a ZIP of neither and a profile that does not
   await page.goto('/importar/lia')
 
   await upload(page, 'outro.zip', zipOf([['notas.csv', 'Nome,Nota\n']]))
-  await expect(page.getByRole('alert')).toContainText(
+  // The refusal shows under the upload that sent it.
+  await expect(
+    page.getByRole('form', { name: LETTERBOXD_UPLOAD }).getByRole('alert'),
+  ).toContainText(
     'Esse arquivo não parece ser do Letterboxd, do Trakt, do IMDb nem do Simkl.',
   )
-  await expect(page.getByRole('alert').getByRole('link')).toHaveCount(4)
 
-  await upload(page, 'trakt-lia.zip', folderZip('trakt', 'trakt-export/'))
-  await expect(notice(page)).toHaveText(
-    'Arquivo do Trakt importado: 3 Fatos novos.',
+  await upload(
+    page,
+    'trakt-lia.zip',
+    folderZip('trakt', 'trakt-export/'),
+    'application/zip',
+    'outro',
   )
-  await expect(section(page, 'Letterboxd')).toHaveCount(0)
-  await expect(section(page, 'Trakt')).toContainText(
-    '2 Notas e 1 Já visto do Trakt.',
+  await expect(notice(page)).toHaveText(
+    'O ZIP do Trakt entrou: entraram 2 Notas novas e 1 Já visto novo.',
+  )
+  await expect(section(page, RESULTS)).not.toContainText('Letterboxd:')
+  await expect(section(page, RESULTS)).toContainText(
+    'Trakt: 2 Notas e 1 Já visto',
   )
   await snap(page, info, 'importar-trakt')
 
-  const rss = section(page, PROFILE)
-  await rss.getByLabel(/^Perfil no Letterboxd/).fill('@ninguem_aqui')
+  const rss = await profile(page)
+  await rss.getByLabel(/^Nome do perfil no Letterboxd/).fill('@ninguem_aqui')
   await rss.getByLabel(/^Lia concordou que o filmes leia/).check()
-  await rss.getByRole('button', { name: 'Importar do perfil' }).click()
-  await expect(page.getByRole('alert')).toContainText(
-    'O Letterboxd não achou esse perfil',
-  )
+  await rss.getByRole('button', { name: 'Ler o perfil' }).click()
+  await expect(
+    page.getByRole('form', { name: PROFILE }).getByRole('alert'),
+  ).toContainText('O Letterboxd não tem um perfil com esse nome')
 
   await removeImport(page, 'trakt-lia.zip')
-  await expect(notice(page)).toHaveText('Import tirado: 3 Fatos saíram.')
+  await expect(notice(page)).toHaveText(
+    'Import tirado: o que só ele trazia saiu do gosto.',
+  )
   expect((await importsOf('lia')).imports).toEqual([])
 })
 
@@ -228,11 +269,12 @@ test('the Dono imports an IMDb ratings CSV', async ({ page }, info) => {
     'ratings.csv',
     readFileSync(join(FIXTURE, 'imdb/vera.csv')),
     'text/csv',
+    'outro',
   )
   await expect(notice(page)).toHaveText(
-    'CSV do IMDb importado: 3 Fatos novos. 1 título ficou de fora: o Catálogo não tem.',
+    'O CSV do IMDb entrou: entraram 3 Notas novas. 1 filme ficou de fora: o Catálogo do filmes não tem.',
   )
-  await expect(section(page, 'IMDb')).toContainText('3 Notas do IMDb.')
+  await expect(section(page, RESULTS)).toContainText('IMDb: 3 Notas')
   await snap(page, info, 'importar-imdb')
   expect((await importsOf('nina')).imdb).toEqual({ ratings: 3 })
 })
@@ -252,12 +294,14 @@ test('the Dono imports a Simkl backup ZIP', async ({ page }, info) => {
         readFileSync(join(FIXTURE, 'simkl/SimklBackup.json')),
       ],
     ]),
+    'application/zip',
+    'outro',
   )
   await expect(notice(page)).toHaveText(
-    'Backup do Simkl importado: 6 Fatos novos. 2 filmes ficaram de fora: o Catálogo não tem.',
+    'O backup do Simkl entrou: entraram 3 Notas novas e 2 Já vistos novos. 2 filmes ficaram de fora: o Catálogo do filmes não tem.',
   )
-  await expect(section(page, 'Simkl')).toContainText(
-    '3 Notas e 2 Já vistos do Simkl.',
+  await expect(section(page, RESULTS)).toContainText(
+    'Simkl: 3 Notas e 2 Já vistos',
   )
   await snap(page, info, 'importar-simkl')
   expect((await importsOf('sara')).simkl).toEqual({
@@ -303,8 +347,8 @@ test('the Dono’s own page asks no consent for her profile', async ({
   // The old address of his imports leads to Meu gosto's.
   await page.goto('/importar/bruno')
   await expect(page).toHaveURL(/\/meu-gosto\/importar$/)
-  const rss = section(page, PROFILE)
-  await expect(rss.getByLabel(/^Perfil no Letterboxd/)).toBeVisible()
+  const rss = await profile(page)
+  await expect(rss.getByLabel(/^Nome do perfil no Letterboxd/)).toBeVisible()
   await expect(rss.getByRole('checkbox')).toHaveCount(0)
 })
 
@@ -382,7 +426,9 @@ test.describe('with the JavaScript off', () => {
     await loginAsBruno(page)
     await page.goto('/meu-gosto/importar')
     await upload(page, 'outro.zip', zipOf([['notas.csv', 'Nome,Nota\n']]))
-    await expect(page).toHaveURL(/\/meu-gosto\/importar\?erro=origem$/)
+    await expect(page).toHaveURL(
+      /\/meu-gosto\/importar\?erro=origem&de=letterboxd$/,
+    )
     await expect(page.getByRole('alert')).toContainText(
       'Esse arquivo não parece ser do Letterboxd, do Trakt, do IMDb nem do Simkl.',
     )
