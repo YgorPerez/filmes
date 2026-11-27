@@ -146,21 +146,22 @@ function MoodChips({
       billboard.moodChoices.filter((m) => (m === mood ? checked : on.has(m))),
     )
   // Folded: any chip redoes the whole list, so it takes a tap to reach
-  // them (#277); open once the Dono changed the Clima.
+  // them (#277); open once the Dono changed the Clima. Inside the reply's
+  // card it is a fold under a rule, never a card of its own (#272).
   return (
     <details
       open={marks.moods !== null}
-      className="group/moods rounded-field border border-rule"
+      className="group/moods border-t border-rule"
     >
       {/* The kit's fold (#272): the drawn +, a × while open. */}
-      <summary className="flex min-h-touch cursor-pointer list-none items-center justify-between gap-sm px-3 font-display text-field-label select-none [&::-webkit-details-marker]:hidden">
+      <summary className="flex min-h-touch cursor-pointer list-none items-center justify-between gap-sm font-display text-field-label select-none [&::-webkit-details-marker]:hidden">
         {reply.moodsOpen}
         <Icon
           name="plus"
           className="size-[18px] text-ink-2 transition-[rotate] group-open/moods:rotate-45 motion-reduce:transition-none"
         />
       </summary>
-      <fieldset className="flex flex-col gap-xs border-t border-rule p-lg">
+      <fieldset className="flex flex-col gap-xs pb-xs">
         <legend className="mb-xs font-display text-field-label">
           {reply.moods}{' '}
           <span className="font-body font-normal text-ink-2">

@@ -16,7 +16,7 @@ import { BetStamp } from './billboard-bet'
 import { ChosenReactions } from './billboard-chosen'
 import { FilmMarksControls } from './billboard-card-marks'
 import { Icon } from './billboard-icons'
-import { Strength } from './billboard-top'
+import { AgainstMark, Strength } from './billboard-top'
 
 // One film of the Cartaz (DESIGN.md, Card do filme): the tape in its case
 // with the price sticker, the header (with the IMDb and, when TMDB has one,
@@ -41,8 +41,9 @@ type Level = 2 | 3
 const byslug = (people: readonly BillboardPerson[]) =>
   new Map(people.map((p) => [p.slug, p]))
 
-const namesOf = (people: readonly BillboardPerson[]) =>
-  BILLBOARD.card.whose(people.map((p) => p.name))
+/** Their names as the Cartaz says them: the Dono who looks is "Você"
+ * (#277). */
+const namesOf = (people: readonly BillboardPerson[]) => BILLBOARD.names(people)
 
 /** The stamp on the cover: TROCAR, or JÁ VI with the initials of who saw
  * it when not every Presente did (#272). */
@@ -201,7 +202,8 @@ function Header({
 }
 
 /** One line of "Por que": the Força, then whose it is and the engine's
- * text, with the Fonte below. */
+ * text, with the Fonte below. A line against the film (a Já visto) says
+ * "pesa contra" after it, never read as a reason to like it (#272). */
 export function EvidenceLine({
   line,
   people,
@@ -222,6 +224,12 @@ export function EvidenceLine({
           </>
         )}
         {line.text}
+        {line.against && (
+          <>
+            {' '}
+            <AgainstMark />
+          </>
+        )}
         {line.source && (
           <span className="block text-source text-ink-2">{line.source}</span>
         )}
@@ -258,10 +266,10 @@ function Predicted({
           <span key={person.slug}>
             {' · '}
             {hint === null ? (
-              person.name
+              person.label
             ) : (
-              <Hint label={card.predictedLabel(person.name, hint)} hint={hint}>
-                {person.name}
+              <Hint label={card.predictedLabel(person.label, hint)} hint={hint}>
+                {person.label}
               </Hint>
             )}{' '}
             {rating.text}
@@ -290,6 +298,7 @@ function Why({
   const without = film.withoutFact.flatMap((slug) => known.get(slug) ?? [])
   if (
     film.lines.length === 0 &&
+    without.length === 0 &&
     film.predictedRatings.length === 0 &&
     !film.cautiousBetReason
   )
@@ -383,7 +392,8 @@ export function BillboardCard({
   marks?: FilmMarks
   onChange?: (marks: FilmMarks) => void
 }) {
-  const seenBy = new Set(marks?.seen)
+  // Who marked Já vi, and who the engine knows saw it (#272).
+  const seenBy = new Set([...(marks?.seen ?? []), ...film.seen])
   const seen = people.filter((p) => seenBy.has(p.slug))
   const stamp: Stamp | null = marks?.swap
     ? { kind: 'swap' }

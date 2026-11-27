@@ -26,8 +26,9 @@ function Toggle({
 }: {
   pressed: boolean
   onChange: (pressed: boolean) => void
-  /** The Já vi row's tighter pill, the same 32px of room for the ✓: three
-   * Presentes and Todos fit one line of a phone (#272). */
+  /** The Já vi row's tighter pill, 14px a side and the same 28px of room
+   * for the ✓: three Presentes and Todos fit one line of a phone, with
+   * pixels to spare (#272, #277). */
   compact?: boolean
   children: ReactNode
 }) {
@@ -39,7 +40,7 @@ function Toggle({
       className={buttonVariants({
         variant: 'option',
         className: compact
-          ? 'gap-2xs px-2xl aria-pressed:px-1.5'
+          ? 'gap-2xs px-xl aria-pressed:px-1'
           : `gap-sm ${PRESSED_PILL}`,
       })}
     >
@@ -245,6 +246,18 @@ export function FilmMarksControls({
   // and stays open once someone is marked (#277).
   const [unfolded, setUnfolded] = useState(false)
   const folded = people.length > copy.seenFolded && !unfolded && seen.size === 0
+  const apart = people.length > copy.seenInline
+  const everyone = (
+    <Toggle
+      compact
+      pressed={seen.size === people.length}
+      onChange={(on) =>
+        onChange({ ...marks, seen: on ? people.map((p) => p.slug) : [] })
+      }
+    >
+      {copy.all}
+    </Toggle>
+  )
   const mark = (slug: string, on: boolean) => {
     const next = new Set(seen)
     if (on) next.add(slug)
@@ -275,6 +288,14 @@ export function FilmMarksControls({
         aria-label={copy.seenGroup(film.position)}
         className="flex flex-wrap items-center gap-x-xs gap-y-sm"
       >
+        {/* With more than three Presentes, Todos goes up beside the label,
+         * never alone on a line of its own (#272). */}
+        {!folded && apart && (
+          <span className="flex w-full items-center justify-between gap-sm">
+            <span className={label}>{copy.seen}</span>
+            {everyone}
+          </span>
+        )}
         {folded ? (
           <button
             type="button"
@@ -285,7 +306,7 @@ export function FilmMarksControls({
             {copy.seenMore}
           </button>
         ) : (
-          <span className={`${label} mr-2xs`}>{copy.seen}</span>
+          !apart && <span className={`${label} mr-2xs`}>{copy.seen}</span>
         )}
         {!folded &&
           people.map((p) => (
@@ -298,17 +319,7 @@ export function FilmMarksControls({
               {p.label}
             </Toggle>
           ))}
-        {!folded && people.length > 1 && (
-          <Toggle
-            compact
-            pressed={seen.size === people.length}
-            onChange={(on) =>
-              onChange({ ...marks, seen: on ? people.map((p) => p.slug) : [] })
-            }
-          >
-            {copy.all}
-          </Toggle>
-        )}
+        {!folded && !apart && people.length > 1 && everyone}
       </div>
       {people
         .filter((p) => seen.has(p.slug))
