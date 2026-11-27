@@ -306,6 +306,9 @@ describe('QueueScreen, decisions and notices', () => {
   it('says when nothing waits, and when the engine cannot run', () => {
     render(<QueueScreen queue={{ items: [], names: {}, attributions: [] }} />)
     expect(screen.getByText(QUEUE.empty)).toBeTruthy()
+    // Nothing waits: nothing to ask TMDB again (#348).
+    expect(screen.queryByRole('form', { name: QUEUE.reprocess })).toBeNull()
+    expect(screen.queryByText(QUEUE.reprocessLead)).toBeNull()
     cleanup()
     render(<QueueScreen queue={null} />)
     expect(screen.getByRole('alert').textContent).toContain(QUEUE.unavailable)

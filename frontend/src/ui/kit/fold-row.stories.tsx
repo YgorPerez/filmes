@@ -14,7 +14,7 @@ const meta = {
     (Story) => (
       <div className="flex max-w-[480px] flex-col gap-xl rounded-card border border-rule bg-surface p-xl">
         <p className="text-meta text-ink-2">
-          O melhor caminho: conecte a conta.
+          Conecte a conta e o filmes lê sozinho.
         </p>
         <Story />
       </div>

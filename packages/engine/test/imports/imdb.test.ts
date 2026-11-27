@@ -196,6 +196,10 @@ describe('personImports', () => {
       { kind: 'imdb', file, date: '2026-11-20', original: 'ratings.csv' },
     ])
     expect(report.imdb).toEqual({ ratings: 3 })
+    // What the notice said was left out stays on the page (#348).
+    expect(report.leftOut.imdb).toEqual([
+      { name: 'Cais, Episódio 1', year: null, id: 'tt9028501' },
+    ])
 
     const removed = await fixture.ok(removeImport({ file, author: AUTHOR }))
     expect(removed.removedFacts).toEqual({

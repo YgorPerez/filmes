@@ -14,6 +14,14 @@ const FILMS = {
   simkl: NO_FILMS,
   tvtime: NO_FILMS,
 }
+/** No site left a film out (#348). */
+const NO_LEFT_OUT = { trakt: [], imdb: [], simkl: [], tvtime: [] }
+/** What the IMDb CSV left out: an episode the Catálogo has not (#348). */
+const IMDB_LEFT_OUT = [
+  { name: 'Cais, Episódio 1', year: null, id: 'tt9028501' },
+  { name: 'Cais, Episódio 2', year: null, id: 'tt9028502' },
+  { name: null, year: null, id: 'tt9028503' },
+]
 const SIMKL_FILMS = { rated: 87, seen: 53, watchlist: 12 }
 const TVTIME_FILMS = { rated: 3, seen: 1, watchlist: 1 }
 const TRAKT_FILE = 'imports/quim/trakt-b1.zip'
@@ -89,6 +97,7 @@ const QUIM: PersonImportsView = {
     simkl: SIMKL_FILMS,
     tvtime: NO_FILMS,
   },
+  leftOut: NO_LEFT_OUT,
 }
 
 /** Quim with nothing imported yet. */
@@ -116,6 +125,7 @@ const IMDB_ONLY: PersonImportsView = {
   imports: QUIM.imports.filter(({ kind }) => kind === 'imdb'),
   imdb: { ratings: 412 },
   films: { ...FILMS, imdb: QUIM.films.imdb },
+  leftOut: { ...NO_LEFT_OUT, imdb: IMDB_LEFT_OUT },
 }
 
 /** Quim with only the Simkl backup. */
@@ -223,14 +233,19 @@ export const TraktReconnect: Story = {
   },
 }
 
+/** The IMDb CSV left 3 titles out: the card keeps them, folded, as the
+ * Letterboxd one does (#348). */
 export const OnlyImdb: Story = {
   args: { page: IMDB_ONLY },
-  play: async ({ canvasElement }) => {
+  play: async ({ canvasElement, userEvent }) => {
+    const canvas = within(canvasElement)
     await expect(
-      within(canvasElement).getByText(
-        PERSON_IMPORTS.results.site('IMDb', QUIM.films.imdb),
-      ),
+      canvas.getByText(PERSON_IMPORTS.results.site('IMDb', QUIM.films.imdb)),
     ).toBeVisible()
+    await userEvent.click(
+      canvas.getByText(PERSON_IMPORTS.results.seeOutside(3)),
+    )
+    await expect(canvas.getByText('Cais, Episódio 1')).toBeVisible()
   },
 }
 
