@@ -1,10 +1,12 @@
 // Clima: the names of `moods.toml`, the same as the chips, and their
 // synonyms. A Clima after a negation in its clause ("nada de terror",
-// "sem comédia") is never read as that Clima: it is not understood.
+// "sem comédia") is never read as that Clima: `no-moods.ts` reads it as
+// the Clima turned away (#272).
 
 import { Effect, Schema } from 'effect'
 import { readMoods } from '../../recommendation/moods.ts'
-import { engineError } from '../../runtime/EngineError.ts'
+import type { Environment } from '../../runtime/Environment.ts'
+import { engineError, type EngineError } from '../../runtime/EngineError.ts'
 import { longestOf, makeReader, scan } from '../reader.ts'
 import { phraseOf, type Phrase, type Words } from '../words.ts'
 
@@ -24,30 +26,51 @@ const denied = (
   return false
 }
 
+/** The `[moods]` section: each Clima's synonyms. */
+export const MoodSynonyms = Schema.Record(
+  Schema.String,
+  Schema.Array(Schema.String),
+)
+
+/** Every phrase that names a Clima (its name and its synonyms), with the
+ * Clima's name; a synonym of a name outside `moods.toml` is
+ * `invalid_config`. */
+export const moodTable = (
+  synonyms: typeof MoodSynonyms.Type,
+): Effect.Effect<
+  Array<readonly [Phrase, string]>,
+  EngineError,
+  Environment
+> =>
+  Effect.gen(function* () {
+    const moods = new Map(
+      (yield* readMoods).map((mood) => [
+        phraseOf(mood.name).join(' '),
+        mood.name,
+      ]),
+    )
+    const table: Array<readonly [Phrase, string]> = [...moods].map(
+      ([key, name]) => [key.split(' '), name],
+    )
+    for (const [mood, phrases] of Object.entries(synonyms)) {
+      const name = moods.get(phraseOf(mood).join(' '))
+      if (name === undefined)
+        return yield* engineError(
+          'invalid_config',
+          `request_reading.toml [moods]: '${mood}' não é um Clima de moods.toml`,
+        )
+      for (const phrase of phrases) table.push([phraseOf(phrase), name])
+    }
+    return table
+  })
+
 export const moodsReader = makeReader({
   field: 'moods',
   section: 'moods',
-  vocabulary: Schema.Record(Schema.String, Schema.Array(Schema.String)),
+  vocabulary: MoodSynonyms,
   read: (words, synonyms, context) =>
     Effect.gen(function* () {
-      const moods = new Map(
-        (yield* readMoods).map((mood) => [
-          phraseOf(mood.name).join(' '),
-          mood.name,
-        ]),
-      )
-      const table: Array<readonly [Phrase, string]> = [...moods].map(
-        ([key, name]) => [key.split(' '), name],
-      )
-      for (const [mood, phrases] of Object.entries(synonyms)) {
-        const name = moods.get(phraseOf(mood).join(' '))
-        if (name === undefined)
-          return yield* engineError(
-            'invalid_config',
-            `request_reading.toml [moods]: '${mood}' não é um Clima de moods.toml`,
-          )
-        for (const phrase of phrases) table.push([phraseOf(phrase), name])
-      }
+      const table = yield* moodTable(synonyms)
       return scan(words, (i) => {
         if (denied(words, i, context.negations)) return undefined
         const best = longestOf(words, i, table)

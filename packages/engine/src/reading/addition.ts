@@ -18,6 +18,7 @@ export const ADDITION_FIELDS: ReadonlyArray<ReadField> = [
   'unseen',
   'noSlow',
   'noSad',
+  'noMoods',
   'similar',
 ]
 

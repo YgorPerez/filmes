@@ -16,6 +16,7 @@ import type {
 import { childModule, type ChildRequest } from './child.ts'
 import { durationModule, type DurationRequest } from './duration.ts'
 import { languageModule, type LanguageRequest } from './language.ts'
+import { noMoodModule, type NoMoodRequest } from './no-mood.ts'
 import { noSadModule, type NoSadRequest } from './no-sad.ts'
 import { noSlowModule, type NoSlowRequest } from './no-slow.ts'
 import {
@@ -39,6 +40,7 @@ export type ConstraintRequest = YearRequest &
   UnseenRequest &
   NoSlowRequest &
   NoSadRequest &
+  NoMoodRequest &
   SeriesOrderRequest
 
 /** The Restrições ported so far, in `CONSTRAINT_ORDER`. */
@@ -55,6 +57,7 @@ export const CONSTRAINT_MODULES: ReadonlyArray<
   unseenModule,
   noSlowModule,
   noSadModule,
+  noMoodModule,
   seriesOrderModule,
 ]
 
