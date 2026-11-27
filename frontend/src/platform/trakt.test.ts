@@ -9,7 +9,13 @@ import {
 import { Auth } from './auth'
 import { ownersFromDataRepo } from './owners'
 import { peopleFromDataRepo } from './people-directory'
-import { handleTraktRequest, Trakt, traktConnection, traktPage } from './trakt'
+import {
+  handleTraktRequest,
+  Trakt,
+  traktConnection,
+  traktLink,
+  traktPage,
+} from './trakt'
 
 const ORIGIN = 'https://cinema.example'
 const ACCOUNT = { person: 'iara', email: 'iara@example.org' }
@@ -352,4 +358,16 @@ test('the app reads Trakt from its environment and only for a verified Pessoa', 
   expect(await engine.accessToken('vera', signal)).toBeNull()
   expect(await engine.accessToken('ninguem', signal)).toBeNull()
   expect(await engine.accessToken('../people/iara', signal)).toBeNull()
+
+  // The import page's word (#269): read at all, and connected by her.
+  expect(traktLink('iara')).toEqual({ available: true, connected: true })
+  expect(traktLink('vera', env)).toEqual({ available: true, connected: false })
+  expect(traktLink('iara', { ...env, FILMES_TRAKT_TOKEN_KEY: '' })).toEqual({
+    available: true,
+    connected: false,
+  })
+  expect(traktLink('iara', { ...env, FILMES_TRAKT_CLIENT_ID: '' })).toEqual({
+    available: false,
+    connected: false,
+  })
 })

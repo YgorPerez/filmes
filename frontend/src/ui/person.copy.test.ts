@@ -47,3 +47,105 @@ describe('the Pessoa copy', () => {
     expect(PERSON.plainLabel('tag: chuva')).toBe('a tag “chuva”')
   })
 })
+
+describe('the Pessoa copy', () => {
+  it('counts in the singular and the plural', () => {
+    const { glance, summary, notes, questions, adjustments } = PERSON
+    expect(glance.likes(['Terror'])).toBe(
+      'Pelas suas Notas, você gosta de Terror.',
+    )
+    expect(glance.likes(['Terror', 'Drama', 'Lia Couto'])).toBe(
+      'Pelas suas Notas, você gosta de Terror, Drama e Lia Couto.',
+    )
+    expect(glance.steps.queue(1)).toBe(
+      'dizer qual é o filme que espera na fila',
+    )
+    expect(glance.steps.queue(3)).toBe(
+      'dizer quais são os 3 filmes que esperam na fila',
+    )
+    expect([summary.notes(1), summary.notes(1200)]).toEqual([
+      '1 Nota',
+      '1.200 Notas',
+    ])
+    expect([summary.vetoes(1), summary.vetoes(2)]).toEqual([
+      '1 Veto',
+      '2 Vetos',
+    ])
+    expect([summary.questions(1), summary.questions(2)]).toEqual([
+      '1 pergunta aberta',
+      '2 perguntas abertas',
+    ])
+    expect([summary.sessions(1), summary.sessions(4)]).toEqual([
+      '1 Sessão',
+      '4 Sessões',
+    ])
+    expect(summary.steps.questions(1)).toBe('responder a pergunta aberta')
+    expect(summary.steps.questions(2)).toBe('responder as perguntas abertas')
+    expect([notes.pending(1), notes.pending(2)]).toEqual([
+      '1 filme espera você',
+      '2 filmes esperam você',
+    ])
+    expect([notes.list(1), notes.list(5)]).toEqual([
+      'Ver a Nota',
+      'Ver as 5 Notas',
+    ])
+    expect([questions.skips(1), questions.skips(3)]).toEqual([
+      'pulada 1 vez',
+      'pulada 3 vezes',
+    ])
+    expect([adjustments.changed(1), adjustments.changed(2)]).toEqual([
+      '1 fora do normal',
+      '2 fora do normal',
+    ])
+    expect(PERSON.removePerson.sessions('Quim', 1)).toMatch(
+      /^Quim está em 1 Sessão:/,
+    )
+    expect(PERSON.removePerson.sessions('Quim', 2)).toMatch(
+      /^Quim está em 2 Sessões:/,
+    )
+  })
+
+  it('says her Satisfação and each reaction in words', () => {
+    const { satisfaction, reaction } = PERSON.sessions
+    expect(satisfaction('Iara', 0.8, 1)).toBe(
+      'Iara tem saído contente da última Sessão em que disse o que achou.',
+    )
+    expect(satisfaction('Iara', 0.6, 3)).toBe(
+      'Iara tem saído mais ou menos das últimas 3 Sessões em que disse o que achou.',
+    )
+    expect(satisfaction('Iara', 0.2, 2)).toMatch(/tem saído sem gostar muito/)
+    expect(reaction(0.9)).toBe('gostou')
+    expect(reaction(0.5)).toBe('mais ou menos')
+  })
+})
+
+describe('the Pessoa copy', () => {
+  it('words the Notas section for her and for another Pessoa', () => {
+    const { notes, questions, access } = PERSON
+    expect(notes.predictionError(1.24, 1200)).toBe(
+      'a previsão erra 1,2 ponto em média, em 1.200 filmes',
+    )
+    expect(notes.predictionError(2.06, 30)).toBe(
+      'a previsão erra 2,1 pontos em média, em 30 filmes',
+    )
+    expect(notes.movielens(true, 1, 'Iara')).toMatch(
+      /^Para levar a Nota a outro/,
+    )
+    expect(notes.movielens(false, 1200, 'Iara')).toMatch(
+      /^Para levar as 1\.200 Notas de Iara a outro/,
+    )
+    expect(notes.empty(true, 'Iara')).toMatch(/você já viu/)
+    expect(notes.empty(false, 'Iara')).toMatch(/histórico de Iara/)
+    expect(questions.likesText(null)).toBe('curte')
+    expect(questions.likesText('terror')).toBe('curte terror')
+    expect(questions.dislikesText(null)).toBe('não curte')
+    expect(questions.dislikesText('terror')).toBe('não curte terror')
+    expect(access.owner(null)).toBe('Tem acesso.')
+    expect(access.owner('iara@exemplo.com')).toBe('Entra com iara@exemplo.com.')
+  })
+
+  it('names her other names only when she has some', () => {
+    expect(PERSON.aliases([])).toBeNull()
+    expect(PERSON.aliases(['Quinzinho'])).toBe('também Quinzinho')
+  })
+})

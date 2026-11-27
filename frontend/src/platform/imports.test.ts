@@ -117,7 +117,9 @@ describe('parseImport', () => {
       await parseImport(form({ acao: 'rss', usuario: 'ygorperez' }), true),
     ).toEqual({ kind: 'rss', user: 'ygorperez' })
   })
+})
 
+describe('parseImport', () => {
   it.each<[Record<string, string | Blob>, ImportAction | string]>([
     [{ acao: 'arquivo' }, 'arquivo'],
     [{ acao: 'arquivo', arquivo: zipFile('vazio.zip', []) }, 'arquivo'],
@@ -274,7 +276,9 @@ describe('importAction', () => {
       '/pessoas/teo/importar?feito=trakt&novos=3&fora=2',
     )
   })
+})
 
+describe('importAction', () => {
   it('tells Letterboxd, Trakt and Simkl by what the ZIP holds, IMDb by its CSV and Simkl by its JSON', async () => {
     const { imports, calls } = fakeImports()
     const upload = (file: File) =>
@@ -314,7 +318,9 @@ describe('importAction', () => {
     )
     expect(calls).toHaveLength(5)
   })
+})
 
+describe('importAction', () => {
   it('names the form a refusal came from, so the page shows it there', async () => {
     const { imports } = fakeImports()
     const refused = await importAction(
@@ -358,7 +364,9 @@ describe('importAction', () => {
       { action: { kind: 'rss', user: 'olga_farol' } },
     ])
   })
+})
 
+describe('importAction', () => {
   it('sends whoever is not a Dono to the login, and refuses another site', async () => {
     const { imports, calls } = fakeImports()
     const anonymous = await importAction(
@@ -407,7 +415,9 @@ describe('importAction', () => {
     )
     expect(calls).toEqual([])
   })
+})
 
+describe('importAction', () => {
   it.each<[ErrorCode, ErrorReason | undefined, string]>([
     ['invalid_usage', 'trakt_user_missing', 'trakt-usuario'],
     ['source_unavailable', 'trakt_private', 'trakt-privado'],
@@ -497,7 +507,9 @@ describe('queueAction', () => {
       '/meu-gosto/fila?feito=reprocessado&resolvidos=2&restam=1',
     )
   })
+})
 
+describe('queueAction', () => {
   it('refuses an incomplete form, no Dono, another site', async () => {
     const { imports, calls } = fakeImports()
     const incomplete = await queueAction(
@@ -671,41 +683,47 @@ function useImportsRepo() {
   return { fixture, imports, ok, log }
 }
 
+/** Each site's file once, and Letterboxd's twice: the second changes
+ * nothing. */
+async function importEach(run: (action: ImportRun) => Promise<ImportDone>) {
+  expect(await run(LETTERBOXD)).toMatchObject({
+    notice: 'letterboxd',
+    facts: 14,
+  })
+  expect(await run(LETTERBOXD)).toEqual({
+    notice: 'repetido',
+    facts: 0,
+    ratings: 0,
+    seen: 0,
+  })
+  expect(await run(TRAKT)).toEqual({
+    notice: 'trakt',
+    facts: 3,
+    ratings: 2,
+    seen: 1,
+    outside: 0,
+  })
+  expect(await run(IMDB)).toEqual({
+    notice: 'imdb',
+    facts: 3,
+    ratings: 3,
+    seen: 0,
+    outside: 1,
+  })
+  expect(await run(SIMKL)).toMatchObject({
+    notice: 'simkl',
+    facts: 6,
+    ratings: 3,
+    seen: 2,
+    outside: 2,
+  })
+}
+
 describe('importsFromEngine, imports', () => {
   it('imports, reports and removes, each a commit signed by the Dono', async () => {
     const { fixture, imports, ok, log } = useImportsRepo()
     const run = (action: ImportRun) => ok(imports.run('quim', action, AUTHOR))
-    expect(await run(LETTERBOXD)).toMatchObject({
-      notice: 'letterboxd',
-      facts: 14,
-    })
-    expect(await run(LETTERBOXD)).toEqual({
-      notice: 'repetido',
-      facts: 0,
-      ratings: 0,
-      seen: 0,
-    })
-    expect(await run(TRAKT)).toEqual({
-      notice: 'trakt',
-      facts: 3,
-      ratings: 2,
-      seen: 1,
-      outside: 0,
-    })
-    expect(await run(IMDB)).toEqual({
-      notice: 'imdb',
-      facts: 3,
-      ratings: 3,
-      seen: 0,
-      outside: 1,
-    })
-    expect(await run(SIMKL)).toMatchObject({
-      notice: 'simkl',
-      facts: 6,
-      ratings: 3,
-      seen: 2,
-      outside: 2,
-    })
+    await importEach(run)
 
     const page = await ok(imports.page('quim'))
     expect(page.imports.map((i) => [i.kind, i.original])).toEqual([
@@ -789,5 +807,26 @@ describe('importsFromEngine, the queue', () => {
       `Bruno <bruno@example.org>|letterboxd queue confirm ${VENTO}`,
       `Bruno <bruno@example.org>|letterboxd queue discard ${LOST}`,
     ])
+  })
+})
+
+describe('importsFromEngine, what does not go', () => {
+  it('passes on the engine’s refusal, and a decision taken twice is the same', async () => {
+    const { imports, ok } = useImportsRepo()
+    const unknown = await imports.run('ninguem', LETTERBOXD, AUTHOR)
+    expect(unknown.exitCode).not.toBe(0)
+    const sync = await imports.run(
+      'quim',
+      { kind: 'trakt-sync', user: null },
+      AUTHOR,
+    )
+    expect(sync.exitCode).not.toBe(0)
+    await ok(imports.run('quim', LETTERBOXD, AUTHOR))
+    const film = 'https://www.themoviedb.org/movie/9102'
+    const confirm = { kind: 'confirm', id: VENTO, film } as const
+    await ok(imports.decide(confirm, AUTHOR))
+    expect(await ok(imports.decide(confirm, AUTHOR))).toMatchObject({
+      notice: 'igual',
+    })
   })
 })

@@ -50,89 +50,94 @@ const form = (fields: Record<string, string>) => {
   return data
 }
 
+/** Each form of a Pessoa page and the action it asks. */
+const ACTION_FORMS: [Record<string, string>, PersonAction][] = [
+  [
+    { acao: 'declarar', texto: ' adora suspense ' },
+    {
+      kind: 'state',
+      text: 'adora suspense',
+      target: undefined,
+      reaction: undefined,
+      source: undefined,
+    },
+  ],
+  [
+    {
+      acao: 'relatar',
+      texto: 'odeia',
+      alvo: 'Q9001801',
+      reacao: 'hate',
+      fonte: 'jantar',
+    },
+    {
+      kind: 'report',
+      text: 'odeia',
+      target: 'Q9001801',
+      reaction: 'hate',
+      source: 'jantar',
+    },
+  ],
+  [
+    { acao: 'visto', filme: 'tt9000602', nota: '4,5', fonte: '' },
+    { kind: 'seen', film: 'tt9000602', rating: '4,5', source: undefined },
+  ],
+  [
+    { acao: 'visto', filme: 'tt9000602', nota: '' },
+    { kind: 'seen', film: 'tt9000602', rating: undefined, source: undefined },
+  ],
+  [
+    { acao: 'vetar', texto: 'nunca terror', alvo: 'Q9001801', grupo: '' },
+    { kind: 'veto', text: 'nunca terror', target: 'Q9001801', group: false },
+  ],
+  [
+    { acao: 'vetar', texto: 'nada bobo', alvo: '', grupo: 'silly_comedy' },
+    { kind: 'veto', text: 'nada bobo', target: 'silly_comedy', group: true },
+  ],
+  [
+    { acao: 'ajustar', elo: 'cast', nivel: 'none' },
+    { kind: 'adjust', link: 'cast', level: 'none' },
+  ],
+  [
+    { acao: 'pular', texto: 'curte terror?', assunto: 'Q9001801' },
+    { kind: 'skip', text: 'curte terror?', subject: 'Q9001801' },
+  ],
+  [
+    { acao: 'pular', texto: 'curte terror?' },
+    { kind: 'skip', text: 'curte terror?', subject: undefined },
+  ],
+  [
+    {
+      acao: 'responder',
+      pergunta: 'perguntas_abertas:1',
+      texto: 'sim',
+      reacao: 'like',
+    },
+    {
+      kind: 'answer',
+      question: 'perguntas_abertas:1',
+      text: 'sim',
+      reaction: 'like',
+    },
+  ],
+  [
+    { acao: 'remover', tipo: 'veto', id: 'vetos:abc' },
+    { kind: 'remove', what: 'veto', id: 'vetos:abc' },
+  ],
+  [
+    { acao: 'dar-acesso', email: ' iara@example.org ' },
+    { kind: 'grant', email: 'iara@example.org' },
+  ],
+  [{ acao: 'tirar-acesso' }, { kind: 'revoke' }],
+]
+
 describe('parseAction', () => {
-  it.each<[Record<string, string>, PersonAction]>([
-    [
-      { acao: 'declarar', texto: ' adora suspense ' },
-      {
-        kind: 'state',
-        text: 'adora suspense',
-        target: undefined,
-        reaction: undefined,
-        source: undefined,
-      },
-    ],
-    [
-      {
-        acao: 'relatar',
-        texto: 'odeia',
-        alvo: 'Q9001801',
-        reacao: 'hate',
-        fonte: 'jantar',
-      },
-      {
-        kind: 'report',
-        text: 'odeia',
-        target: 'Q9001801',
-        reaction: 'hate',
-        source: 'jantar',
-      },
-    ],
-    [
-      { acao: 'visto', filme: 'tt9000602', nota: '4,5', fonte: '' },
-      { kind: 'seen', film: 'tt9000602', rating: '4,5', source: undefined },
-    ],
-    [
-      { acao: 'visto', filme: 'tt9000602', nota: '' },
-      { kind: 'seen', film: 'tt9000602', rating: undefined, source: undefined },
-    ],
-    [
-      { acao: 'vetar', texto: 'nunca terror', alvo: 'Q9001801', grupo: '' },
-      { kind: 'veto', text: 'nunca terror', target: 'Q9001801', group: false },
-    ],
-    [
-      { acao: 'vetar', texto: 'nada bobo', alvo: '', grupo: 'silly_comedy' },
-      { kind: 'veto', text: 'nada bobo', target: 'silly_comedy', group: true },
-    ],
-    [
-      { acao: 'ajustar', elo: 'cast', nivel: 'none' },
-      { kind: 'adjust', link: 'cast', level: 'none' },
-    ],
-    [
-      { acao: 'pular', texto: 'curte terror?', assunto: 'Q9001801' },
-      { kind: 'skip', text: 'curte terror?', subject: 'Q9001801' },
-    ],
-    [
-      { acao: 'pular', texto: 'curte terror?' },
-      { kind: 'skip', text: 'curte terror?', subject: undefined },
-    ],
-    [
-      {
-        acao: 'responder',
-        pergunta: 'perguntas_abertas:1',
-        texto: 'sim',
-        reacao: 'like',
-      },
-      {
-        kind: 'answer',
-        question: 'perguntas_abertas:1',
-        text: 'sim',
-        reaction: 'like',
-      },
-    ],
-    [
-      { acao: 'remover', tipo: 'veto', id: 'vetos:abc' },
-      { kind: 'remove', what: 'veto', id: 'vetos:abc' },
-    ],
-    [
-      { acao: 'dar-acesso', email: ' iara@example.org ' },
-      { kind: 'grant', email: 'iara@example.org' },
-    ],
-    [{ acao: 'tirar-acesso' }, { kind: 'revoke' }],
-  ])('reads the form %j', (fields, action) => {
+  it.each(ACTION_FORMS)('reads the form %j', (fields, action) => {
     expect(parseAction(form(fields))).toEqual(action)
   })
+})
 
+describe('parseAction', () => {
   it.each<Record<string, string>>([
     {},
     { acao: 'apagar-tudo' },
@@ -260,7 +265,9 @@ describe('personAction', () => {
       expect(acted).toEqual([])
     },
   )
+})
 
+describe('personAction', () => {
   it('goes back with the reason when the form is incomplete', async () => {
     const { people, acted } = fakePeople()
     const response = await personAction(
@@ -318,7 +325,9 @@ describe('personAction', () => {
     expect(response.headers.get('Location')).toBe('/pessoas?feito=removida')
     expect(acted.map((a) => a.action)).toEqual([{ kind: 'delete' }])
   })
+})
 
+describe('personAction', () => {
   it.each<[ErrorCode, string]>([
     ['unknown_target', '/pessoas/iara?erro=alvo&em=vetos#vetos'],
     ['invalid_usage', '/pessoas/iara?erro=pedido&em=vetos#vetos'],
@@ -407,7 +416,9 @@ describe('personCreateAction', () => {
     )
     expect(created).toEqual([])
   })
+})
 
+describe('personCreateAction', () => {
   // By the engine's reason, never its wording: the message here says
   // nothing the app could read.
   it.each<[ErrorCode, ErrorReason | undefined, string]>([
@@ -549,7 +560,9 @@ describe('peopleFromEngine', () => {
       await engine.dispose()
     }
   })
+})
 
+describe('peopleFromEngine', () => {
   it('takes a Relato about another Dono, never about the logged-in one', async () => {
     const fixture = useFixture()
     commitFixture(fixture.data)
@@ -578,7 +591,9 @@ describe('peopleFromEngine', () => {
     expect(log.split('\n')[0]).toMatch(/^Bruno <bruno@example\.org>\|pessoa /)
     expect(log.split('\n')).toHaveLength(2)
   }, 30_000)
+})
 
+describe('peopleFromEngine', () => {
   it('writes each action to her file, one commit signed by the Dono', async () => {
     const fixture = useFixture()
     commitFixture(fixture.data)
@@ -718,7 +733,9 @@ describe('peopleFromEngine', () => {
     for (const line of writes)
       expect(line).toMatch(/^Bruno <bruno@example\.org>\|pessoa /)
   }, 60_000) // twelve real git commits: slow on a loaded machine
+})
 
+describe('peopleFromEngine', () => {
   it('creates a Pessoa and a Dono from the form, one commit each signed by the Dono', async () => {
     const fixture = useFixture()
     commitFixture(fixture.data)
@@ -785,40 +802,34 @@ describe('peopleFromEngine', () => {
   }, 60_000)
 })
 
-describe('access (#166)', () => {
-  const ADMIN: Owner = { ...BRUNO, admin: true }
+const ADMIN: Owner = { ...BRUNO, admin: true }
 
-  /** The fixture as a git repo and the page's form, posted as `owner`. */
-  const useAccessForm = () => {
-    const fixture = useFixture()
-    commitFixture(fixture.data)
-    const engine = makeEngine(fixture.vars)
-    const people = peopleFromEngine(engine)
-    const send = async (
-      owner: Owner,
-      person: string,
-      fields: Record<string, string>,
-    ) => {
-      const request = new Request(`${ORIGIN}/pessoas/${person}/acao`, {
-        method: 'POST',
-        headers: { Origin: ORIGIN },
-        body: form(fields),
-      })
-      const response = await personAction(
-        request,
-        person,
-        owner,
-        people,
-        ORIGIN,
-      )
-      return response.status === 303
-        ? response.headers.get('Location')
-        : response.status
-    }
-    const owners = ownersFromDataRepo(fixture.data)
-    return { fixture, engine, people, send, owners }
+/** The fixture as a git repo and the page's form, posted as `owner`. */
+const useAccessForm = () => {
+  const fixture = useFixture()
+  commitFixture(fixture.data)
+  const engine = makeEngine(fixture.vars)
+  const people = peopleFromEngine(engine)
+  const send = async (
+    owner: Owner,
+    person: string,
+    fields: Record<string, string>,
+  ) => {
+    const request = new Request(`${ORIGIN}/pessoas/${person}/acao`, {
+      method: 'POST',
+      headers: { Origin: ORIGIN },
+      body: form(fields),
+    })
+    const response = await personAction(request, person, owner, people, ORIGIN)
+    return response.status === 303
+      ? response.headers.get('Location')
+      : response.status
   }
+  const owners = ownersFromDataRepo(fixture.data)
+  return { fixture, engine, people, send, owners }
+}
 
+describe('access (#166)', () => {
   it('lets an admin make a Pessoa a Dono, who is not admin', async () => {
     const { fixture, engine, send, owners } = useAccessForm()
     try {
@@ -863,7 +874,9 @@ describe('access (#166)', () => {
       await engine.dispose()
     }
   }, 60_000)
+})
 
+describe('access (#166)', () => {
   it('refuses a Dono who is not admin', async () => {
     const { engine, send, owners } = useAccessForm()
     try {
@@ -958,4 +971,99 @@ describe('setupGuideFromEngine', () => {
       'Vera <vera@example.org>|pessoa pular passo vera: import',
     )
   }, 60_000)
+})
+
+describe('peopleFromEngine, writes that change nothing', () => {
+  it('says the same Ajuste or access again is the same, and answers a tag group’s question without a reaction', async () => {
+    const fixture = useFixture()
+    commitFixture(fixture.data)
+    const engine = makeEngine(fixture.vars)
+    try {
+      const people = peopleFromEngine(engine)
+      const act = (person: string, action: PersonAction) =>
+        people.act(person, action, BRUNO)
+      const adjust = { kind: 'adjust', link: 'cast', level: 'low' } as const
+      expect(await act('iara', adjust)).toEqual({
+        exitCode: 0,
+        output: 'ajustado',
+      })
+      expect(await act('iara', adjust)).toEqual({
+        exitCode: 0,
+        output: 'igual',
+      })
+      // Quim is no Dono: there is no access to take.
+      expect(await act('quim', { kind: 'revoke' })).toEqual({
+        exitCode: 0,
+        output: 'igual',
+      })
+      const lost = await act('ninguem', {
+        kind: 'answer',
+        question: 'x',
+        text: 'y',
+      })
+      expect(lost.exitCode).toBe(1)
+      expect(await act('rosa', { kind: 'delete' })).toEqual({
+        exitCode: 0,
+        output: 'removida',
+      })
+      const text = 'curte comédia boba?'
+      await act('iara', { kind: 'skip', text, subject: 'silly_comedy' })
+      const page = await personPage('iara', people, BRUNO)
+      if (page === null || page === 'unknown') throw new Error(String(page))
+      const question = page.openQuestions.find(
+        (q) => q.subject === 'silly_comedy',
+      )
+      expect(
+        await act('iara', {
+          kind: 'answer',
+          question: String(question?.factId),
+          text: 'não curte',
+          reaction: 'dislike',
+        }),
+      ).toEqual({ exitCode: 0, output: 'respondida' })
+      const after = await personPage('iara', people, BRUNO)
+      if (after === null || after === 'unknown') throw new Error(String(after))
+      // A tag group is no Catálogo entity: the Declarado is about nothing.
+      expect(after.stated.find((s) => s.text === 'não curte')).toMatchObject({
+        target: null,
+        reaction: null,
+      })
+    } finally {
+      await engine.dispose()
+    }
+  }, 60_000)
+})
+
+describe('the pages, when part of the engine fails', () => {
+  it('gives no page when the tag groups or her Sessões cannot be read', async () => {
+    const engine = makeEngine(useFixture().vars)
+    const people = peopleFromEngine(engine)
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      for (const broken of [
+        { tagGroups: async () => failure('missing_config') },
+        { sessions: async () => failure('missing_config') },
+      ])
+        expect(
+          await personPage('iara', { ...people, ...broken }, BRUNO),
+        ).toBeNull()
+      expect(log).toHaveBeenCalledTimes(2)
+    } finally {
+      log.mockRestore()
+      await engine.dispose()
+    }
+  })
+
+  it('goes back to the top of her page for an action it does not know', async () => {
+    const { people, acted } = fakePeople()
+    const response = await personAction(
+      post({ acao: 'nada' }),
+      'iara',
+      BRUNO,
+      people,
+      ORIGIN,
+    )
+    expect(response.headers.get('Location')).toBe('/pessoas/iara?erro=pedido')
+    expect(acted).toEqual([])
+  })
 })

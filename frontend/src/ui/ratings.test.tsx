@@ -121,7 +121,9 @@ describe('the rating screen', () => {
     ).toBeTruthy()
     expect(screen.getByText(RATINGS.progress(3, 10))).toBeTruthy()
   })
+})
 
+describe('the rating screen', () => {
   it('"Voltar ao anterior" brings the last film back, Nota or "Não vi"', async () => {
     const user = userEvent.setup()
     render(<RatingScreen queue={QUEUE} search={null} />)
@@ -153,7 +155,9 @@ describe('the rating screen', () => {
     expect(card().getByRole('heading').textContent).toBe('Casa Cheia')
     expect(screen.getByText(RATINGS.progress(10, 20))).toBeTruthy()
   })
+})
 
+describe('the rating screen', () => {
   it('shows the card the route loads: poster, Portuguese title, synopsis', async () => {
     render(
       <RatingScreen
@@ -210,7 +214,9 @@ describe('the rating screen', () => {
 
     expect(sent()).toEqual({})
   })
+})
 
+describe('the rating screen', () => {
   it('keeps the draft and the films passed over through a reload', async () => {
     const user = userEvent.setup()
     const first = render(<RatingScreen queue={QUEUE} search={null} />)
@@ -254,7 +260,9 @@ describe('the rating screen', () => {
       screen.getByRole('link', { name: RATINGS.pickLabel('Fronteira (2008)') }),
     ).toBeTruthy()
   })
+})
 
+describe('the rating screen', () => {
   it('says when the Fila is over, and when the engine cannot run', async () => {
     const user = userEvent.setup()
     render(
@@ -269,5 +277,41 @@ describe('the rating screen', () => {
 
     render(<RatingScreen queue={null} search={null} />)
     expect(screen.getByRole('alert').textContent).toContain(RATINGS.unavailable)
+  })
+})
+
+describe('the rating card, at its edges', () => {
+  it('ignores a digit held with a modifier and keys that are no digit', async () => {
+    const user = userEvent.setup()
+    render(<RatingScreen queue={QUEUE} search={null} />)
+    card().getByRole('button', { name: 'Nota 1' }).focus()
+    await user.keyboard('{Control>}8{/Control}')
+    await user.keyboard('x')
+    expect(card().getByRole('heading').textContent).toBe('Pequenos Milagres')
+  })
+
+  it('shows a film without a year by its name alone', () => {
+    render(
+      <RatingScreen
+        queue={{
+          ...QUEUE,
+          films: [{ ...film('tt9000801', 'Sem Data', 2000), year: null }],
+        }}
+        search={null}
+      />,
+    )
+    expect(card().getByRole('heading').textContent).toBe('Sem Data')
+    expect(card().queryByText(/2000/)).toBeNull()
+  })
+
+  it('says the next ten once she has more than ten', () => {
+    render(
+      <RatingScreen
+        queue={{ ...QUEUE, rated: 12 }}
+        search={null}
+        written={3}
+      />,
+    )
+    expect(screen.getByText(RATINGS.writtenNext)).toBeTruthy()
   })
 })

@@ -174,7 +174,9 @@ describe('PersonImportsScreen', () => {
       'Filme Perdido (2001) · nem o Wikidata nem o TMDB acharam o filme',
     )
   })
+})
 
+describe('PersonImportsScreen', () => {
   it('removes an import after a second click', async () => {
     show()
     const user = userEvent.setup()
@@ -190,7 +192,9 @@ describe('PersonImportsScreen', () => {
       file: TRAKT_FILE,
     })
   })
+})
 
+describe('PersonImportsScreen', () => {
   it('walks a first import through Letterboxd: page, export, ZIP, profile', async () => {
     const { container } = show(EMPTY)
     const user = userEvent.setup()
@@ -238,7 +242,9 @@ describe('PersonImportsScreen', () => {
       content: new Uint8Array([80, 75]),
     })
   })
+})
 
+describe('PersonImportsScreen', () => {
   it('catches a file of the wrong kind before the upload', async () => {
     show(EMPTY)
     const user = userEvent.setup({ applyAccept: false })
@@ -283,7 +289,9 @@ describe('PersonImportsScreen', () => {
     await user.click(within(rss).getByLabelText(COPY.rss.consent('Quim')))
     expect(await posted(rss)).toEqual({ kind: 'rss', user: 'olga_farol' })
   })
+})
 
+describe('PersonImportsScreen', () => {
   it('reads the last profile again with one tap', async () => {
     show({
       ...QUIM,
@@ -315,7 +323,9 @@ describe('PersonImportsScreen', () => {
       'Importar Notas',
     )
   })
+})
 
+describe('PersonImportsScreen', () => {
   it('shows a refusal under the form that was sent, its field marked', () => {
     render(
       <PersonImportsScreen
@@ -351,7 +361,9 @@ describe('PersonImportsScreen', () => {
       within(form(COPY.letterboxd.send.title)).queryByRole('alert'),
     ).toBeNull()
   })
+})
 
+describe('PersonImportsScreen', () => {
   it('reads her Trakt: one tap once linked, a public profile with her yes', async () => {
     show({
       ...QUIM,
@@ -410,7 +422,9 @@ describe('PersonImportsScreen', () => {
     render(<PersonImportsScreen slug="quim" page={null} />)
     expect(screen.getByRole('alert').textContent).toContain(COPY.unavailable)
   })
+})
 
+describe('PersonImportsScreen', () => {
   it.each(IMPORT_NOTICES)('says what happened: %s', (notice) => {
     const done = { notice, facts: 3, ratings: 2, seen: 1, outside: 2 }
     render(<PersonImportsScreen slug="quim" page={QUIM} done={done} />)
@@ -442,5 +456,136 @@ describe('PersonImportsScreen', () => {
         .getAllByRole('alert')
         .some((alert) => alert.textContent?.includes(COPY.refusals[refusal])),
     ).toBe(true)
+  })
+})
+
+describe('the Trakt section on her own page', () => {
+  it('syncs her connected account in one tap, with no profile to type', async () => {
+    show({
+      ...QUIM,
+      own: true,
+      traktLink: { available: true, connected: true },
+    })
+    const trakt = section(TRAKT_SYNC.title)
+    expect(trakt.textContent).toContain(TRAKT_SYNC.connected)
+    const sync = within(trakt).getByRole('form', { name: TRAKT_SYNC.sync })
+    expect(within(sync).getByRole('button').textContent).toBe(TRAKT_SYNC.sync)
+    expect(await posted(sync)).toEqual({ kind: 'trakt-sync', user: null })
+    expect(within(trakt).getByRole('link').textContent).toBe(TRAKT_SYNC.manage)
+    expect(
+      within(trakt).queryByRole('form', { name: TRAKT_SYNC.read }),
+    ).toBeNull()
+  })
+
+  it('asks her to connect, or to read her public profile, without a yes', () => {
+    show({
+      ...QUIM,
+      own: true,
+      traktLink: { available: true, connected: false },
+    })
+    const trakt = section(TRAKT_SYNC.title)
+    expect(trakt.textContent).toContain(TRAKT_SYNC.connect)
+    expect(within(trakt).getByRole('link').textContent).toBe(
+      TRAKT_SYNC.connectLink,
+    )
+    expect(
+      within(trakt).queryByRole('form', { name: TRAKT_SYNC.sync }),
+    ).toBeNull()
+    const read = within(trakt).getByRole('form', { name: TRAKT_SYNC.read })
+    expect(read.textContent).toContain(TRAKT_SYNC.ownUser)
+    expect(within(read).queryByRole('checkbox')).toBeNull()
+  })
+
+  it('points another Pessoa to the Trakt page, her yes asked', () => {
+    show({ ...QUIM, traktLink: { available: true, connected: true } })
+    const trakt = section(TRAKT_SYNC.title)
+    expect(trakt.textContent).toContain(TRAKT_SYNC.other('Quim'))
+    expect(within(trakt).getByRole('link').textContent).toBe(
+      TRAKT_SYNC.otherLink,
+    )
+    const read = within(trakt).getByRole('form', { name: TRAKT_SYNC.read })
+    expect(within(read).getByRole('checkbox')).toBeTruthy()
+  })
+})
+
+describe('what came in, site by site', () => {
+  it('lists the other sites without Letterboxd, and a profile by its address', () => {
+    show({
+      ...EMPTY,
+      imports: [
+        {
+          kind: 'letterboxd-rss',
+          file: 'imports/quim/rss-a1.xml',
+          date: '2026-11-22',
+          original: 'perfil antigo',
+        },
+      ],
+      imdb: { ratings: 3 },
+      simkl: { ratings: 0, seen: 2, watchlist: 0 },
+    })
+    const results = section(COPY.results.title)
+    expect(
+      within(results)
+        .getAllByRole('listitem')
+        .map((item) => item.textContent),
+    ).toEqual([COPY.results.imdb(3), COPY.results.simkl(0, 2)])
+    expect(within(results).queryByRole('definition')).toBeNull()
+    expect(section(COPY.files.title).textContent).toContain('perfil antigo')
+  })
+
+  it('shows nothing in for files that gave nothing', () => {
+    show({
+      ...EMPTY,
+      imports: [
+        {
+          kind: 'trakt',
+          file: TRAKT_FILE,
+          date: '2026-11-21',
+          original: 'trakt.zip',
+        },
+      ],
+    })
+    expect(
+      screen.queryByRole('region', { name: COPY.results.title }),
+    ).toBeNull()
+  })
+})
+
+describe('what came in, site by site', () => {
+  it('names the films without a year by their name alone, with why left out', async () => {
+    show({
+      ...QUIM,
+      letterboxd: {
+        ...QUIM.letterboxd,
+        queue: [{ id: 'sem-ano', name: 'Sem Ano', year: null, reason: '' }],
+        discardedItems: [
+          {
+            id: 'fora',
+            name: 'Fora',
+            year: null,
+            reason: 'curta',
+            resolvedBy: null,
+          },
+          {
+            id: 'outro',
+            name: 'Outro',
+            year: 1999,
+            reason: '',
+            resolvedBy: null,
+          },
+        ],
+      },
+    })
+    const results = section(COPY.results.title)
+    expect(results.textContent).toContain('Sem Ano')
+    expect(results.textContent).not.toContain('Sem Ano (')
+    await userEvent
+      .setup()
+      .click(within(results).getByText(COPY.results.seeOutside(2)))
+    const outside = within(results)
+      .getAllByRole('listitem')
+      .map((item) => item.textContent)
+    expect(outside).toContain('Fora · curta')
+    expect(outside).toContain('Outro (1999)')
   })
 })
