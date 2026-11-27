@@ -23,8 +23,9 @@ export const PERSON = {
     rate: 'Dar notas',
     import: 'Importar do Letterboxd ou do Trakt',
     download: 'Baixar CSV do IMDb',
+    downloadLetterboxd: 'Baixar CSV do Letterboxd',
     movielens:
-      'O CSV entra no MovieLens em Import or Export Data, como avaliações do IMDb.',
+      'O CSV do IMDb entra no MovieLens em Import or Export Data, como avaliações do IMDb. O do Letterboxd leva as Notas e os Já vistos ao diário dela, pelo import de dados do Letterboxd.',
     list: (n: number) => (n === 1 ? 'Ver a Nota' : `Ver as ${n} Notas`),
     empty: (own: boolean) =>
       own

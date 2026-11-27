@@ -24,3 +24,7 @@ export const importsPath = (person: string, self: boolean) =>
 /** The download of her Notas as the IMDb CSV. */
 export const imdbCsvPath = (person: string) =>
   `/exportar/imdb.csv?pessoa=${slug(person)}`
+
+/** The download of her Notas and Já vistos as the CSV Letterboxd imports. */
+export const letterboxdCsvPath = (person: string) =>
+  `/exportar/letterboxd.csv?pessoa=${slug(person)}`

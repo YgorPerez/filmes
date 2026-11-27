@@ -160,6 +160,11 @@ export const AnotherPerson: Story = {
       name: PERSON.notes.title,
     })
     await expect(within(notes).getByText(PREDICTION_ERROR)).toBeVisible()
+    await expect(
+      within(notes).getByRole('link', {
+        name: PERSON.notes.downloadLetterboxd,
+      }),
+    ).toHaveAttribute('href', '/exportar/letterboxd.csv?pessoa=iara')
   },
 }
 

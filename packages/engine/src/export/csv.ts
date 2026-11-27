@@ -14,3 +14,14 @@ export const csvRow = (fields: ReadonlyArray<string>): string =>
   (fields.length === 1 && fields[0] === ''
     ? '""'
     : fields.map(field).join(',')) + '\r\n'
+
+/** One row of a file for Letterboxd's importer
+ * (letterboxd.com/about/importing-data): a field with a comma, a quote or a
+ * line break goes in quotes, as in `csvRow`, but a quote inside is escaped
+ * with a backslash, as that page asks. */
+export const letterboxdRow = (fields: ReadonlyArray<string>): string =>
+  fields
+    .map((text) =>
+      NEEDS_QUOTES.test(text) ? `"${text.replaceAll('"', '\\"')}"` : text,
+    )
+    .join(',') + '\r\n'
