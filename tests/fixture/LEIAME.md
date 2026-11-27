@@ -227,6 +227,13 @@ Os filmes `tt90058NN` (#58) não têm diretor nem Nota, e ficam entre os só com
 
 "sad" e "tearjerker" estão no Clima "pra chorar"; nenhum teste pede esse Clima. As tags de "sozinho" (bleak, depressing) ficaram de fora de propósito, para não mudar quem é filme só com palpites.
 
+## CSV de avaliações do IMDb
+
+`imdb/vera.csv` está no formato do "Your Ratings" > Export do IMDb, com as colunas que `exportRatings` escreve (#285). A Vera não tem Nota na fixture; os testes importam o CSV para ela ou para uma Pessoa criada no teste.
+
+- O Último Bonde (202) com 9, Rio Abaixo (303) com 7 e Pequenos Milagres (601) com 2: viram Notas 4,5, 3,5 e 1.
+- "Cais, Episódio 1" (`tt9028501`) é um episódio de série fora do Catálogo, com vírgula no título: fica de fora do import, no relatório.
+
 ## RSS do Letterboxd
 
 `gravacoes/letterboxd/rss-olga_farol.xml` é um RSS inventado no formato do real

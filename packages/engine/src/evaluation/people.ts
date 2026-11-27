@@ -141,7 +141,7 @@ const diaries = (
     return out
   })
 
-/** `pessoas_medidas`: each Pessoa with Letterboxd or Trakt ratings up to
+/** `pessoas_medidas`: each Pessoa with Letterboxd, Trakt or IMDb ratings up to
  * today, cut in her diary (or, without one, in her rating dates), in slug
  * order. */
 export const measuredPeople = (
@@ -156,7 +156,7 @@ export const measuredPeople = (
       `SELECT n.pessoa, n.filme_id, n.nota, n.data FROM notas n
        JOIN pessoas p ON p.slug = n.pessoa
        WHERE n.tipo = 'nota' AND n.sessao IS NULL
-         AND (n.fonte LIKE 'Letterboxd %' OR n.fonte LIKE 'Trakt %')
+         AND (n.fonte LIKE 'Letterboxd %' OR n.fonte LIKE 'Trakt %' OR n.fonte LIKE 'IMDb %')
          AND n.data <= ?
        ORDER BY n.data DESC, n.fato_id`,
       today,

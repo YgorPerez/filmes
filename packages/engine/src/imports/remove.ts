@@ -23,6 +23,7 @@ import { engineError, type EngineError } from '../runtime/EngineError.ts'
 import { Environment } from '../runtime/Environment.ts'
 import type { Run } from '../runtime/Run.ts'
 import type { Connection, Sqlite, SqliteError } from '../sqlite/Sqlite.ts'
+import { reloadPersonImdb } from './imdb.ts'
 import { loadLetterboxd, type FactCounts } from './letterboxd.ts'
 import { posixName } from './trakt-export.ts'
 import { reloadPersonTrakt, requireImportTables } from './trakt.ts'
@@ -49,7 +50,7 @@ const countFacts = (
     const counts: Record<string, number> = {}
     for (const [table, name] of FACT_TABLES) {
       const row = yield* db.get(
-        `SELECT count(*) AS n FROM ${table} WHERE pessoa = ? AND (fato_id LIKE 'letterboxd:%' OR fato_id LIKE 'trakt:%')`,
+        `SELECT count(*) AS n FROM ${table} WHERE pessoa = ? AND (fato_id LIKE 'letterboxd:%' OR fato_id LIKE 'trakt:%' OR fato_id LIKE 'imdb:%')`,
         slug,
       )
       counts[name] = Number(row?.n ?? 0)
@@ -124,6 +125,7 @@ const dropImport = (
     yield* savePerson(person)
     yield* loadLetterboxd(db)
     yield* reloadPersonTrakt(db, person)
+    yield* reloadPersonImdb(db, person)
     const after = yield* countFacts(db, person.slug)
     yield* Effect.sync(() => rmSync(join(root, file), { force: true }))
     return {

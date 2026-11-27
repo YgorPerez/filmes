@@ -6,11 +6,11 @@
 
 import { field, within } from './form-fields'
 
-/** A ZIP as uploaded: its name and its bytes. */
+/** A file as uploaded (a ZIP, or IMDb's CSV): its name and its bytes. */
 type Upload = { original: string; content: Uint8Array }
 
 /** What the Dono asks on a Pessoa's imports page. The upload says nothing
- * of where the ZIP came from: the server tells it by what is inside. */
+ * of where the file came from: the server tells it by what is inside. */
 export type ImportAction =
   | ({ kind: 'upload' } & Upload)
   | { kind: 'rss'; user: string }
@@ -18,7 +18,7 @@ export type ImportAction =
 
 /** What the engine runs: the upload once its service is known. */
 export type ImportRun =
-  | ({ kind: 'letterboxd' | 'trakt' } & Upload)
+  | ({ kind: 'letterboxd' | 'trakt' | 'imdb' } & Upload)
   | Exclude<ImportAction, { kind: 'upload' }>
 
 /** What the Dono decides on the queue. */
@@ -28,7 +28,8 @@ export type QueueAction =
   | { kind: 'reprocess' }
 
 /** The biggest upload the server reads: a Letterboxd or Trakt export of
- * years of films is a few megabytes. Nginx lets 25 MB through. */
+ * years of films, or IMDb's CSV, is a few megabytes. Nginx lets 25 MB
+ * through. */
 export const MAX_UPLOAD_BYTES = 20 * 1024 * 1024
 
 /** A Letterboxd user, as the engine takes it. */
@@ -112,10 +113,11 @@ export function parseQueue(form: FormData): QueueAction | null {
 // --- what comes back -------------------------------------------------------------
 
 const IMPORT_NOTICES = [
-  // A ZIP or the RSS imported: `novos` Fatos more.
+  // A ZIP, the IMDb CSV or the RSS imported: `novos` Fatos more.
   'letterboxd',
   'rss',
   'trakt',
+  'imdb',
   // The same file again: kept once, nothing new.
   'repetido',
   // An import removed: `novos` Fatos less.
@@ -126,9 +128,9 @@ export type ImportNotice = (typeof IMPORT_NOTICES)[number]
 
 const IMPORT_REFUSALS = [
   'pedido',
-  // No file, or a ZIP its service's reader refused.
+  // No file, or a file its service's reader refused.
   'arquivo',
-  // A ZIP neither of Letterboxd nor of Trakt.
+  // A file neither of Letterboxd, of Trakt nor of IMDb.
   'origem',
   'grande',
   // The RSS without the Pessoa's yes.

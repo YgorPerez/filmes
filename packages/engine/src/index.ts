@@ -597,6 +597,23 @@ export {
   type TraktUnresolved,
 } from './imports/trakt.ts'
 export {
+  importImdb,
+  IMDB_KIND,
+  imdbFactCounts,
+  loadImdb,
+  reloadImdb,
+  reloadPersonImdb,
+  type ImdbFactCounts,
+  type ImdbImport,
+  type ImdbImportInput,
+  type ImdbOutside,
+} from './imports/imdb.ts'
+export {
+  isImdbRatings,
+  readImdbRatings,
+  type ImdbRatingRow,
+} from './imports/imdb-ratings.ts'
+export {
   personImports,
   type ImportRecord,
   type PersonImports,

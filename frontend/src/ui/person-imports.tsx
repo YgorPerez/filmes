@@ -37,7 +37,7 @@ export type ImportDoneView = {
 }
 
 /** A Pessoa's imports (`importsPath`): the upload first (one file field: the server tells
- * Letterboxd from Trakt by the ZIP), then the Letterboxd profile, what the
+ * Letterboxd from Trakt by the ZIP, and IMDb by its CSV), then the Letterboxd profile, what the
  * imports gave (only once they gave something) and the files, each with
  * its Tirar. Every form is a plain POST (the upload multipart) that comes
  * back here; with the JavaScript, by `fetch`, without a reload (#240). `page` is `'unknown'` when no Pessoa has the slug, null when
@@ -240,17 +240,24 @@ const hasLetterboxd = (page: PersonImports) =>
 const hasTrakt = (page: PersonImports) =>
   page.trakt.ratings > 0 || page.trakt.seen > 0
 
-/** What the imports gave, by service: a card only once it gave something. */
+/** What the imports gave, by service: a card only once it gave something;
+ * Trakt and IMDb, which only count, share the narrow column. */
 function Summaries({ page }: { page: PersonImports }) {
   const letterboxd = hasLetterboxd(page)
   const trakt = hasTrakt(page)
-  if (!letterboxd && !trakt) return null
+  const imdb = page.imdb.ratings > 0
+  if (!letterboxd && !trakt && !imdb) return null
   return (
     <div
-      className={`grid gap-2xl ${letterboxd && trakt ? 'sm:grid-cols-[3fr_2fr]' : ''}`}
+      className={`grid gap-2xl ${letterboxd && (trakt || imdb) ? 'sm:grid-cols-[3fr_2fr]' : ''}`}
     >
       {letterboxd && <Letterboxd page={page} />}
-      {trakt && <Trakt page={page} />}
+      {(trakt || imdb) && (
+        <div className="grid content-start gap-2xl">
+          {trakt && <Trakt page={page} />}
+          {imdb && <Imdb page={page} />}
+        </div>
+      )}
     </div>
   )
 }
@@ -290,9 +297,18 @@ function Trakt({ page }: { page: PersonImports }) {
   )
 }
 
+function Imdb({ page }: { page: PersonImports }) {
+  const { imdb } = COPY
+  return (
+    <Slip id="imdb" title={imdb.title}>
+      <p>{imdb.summary(page.imdb.ratings)}</p>
+    </Slip>
+  )
+}
+
 const fileControl = `${FIELD} w-full cursor-pointer file:mr-lg file:min-h-9 file:cursor-pointer file:rounded-pill file:border-(length:--border-width-stroke) file:border-rule file:bg-surface-2 file:px-xl file:font-display file:text-control file:text-ink`
 
-/** How to download the ZIP: one line per service, its name a link to its
+/** How to download the file: one line per service, its name a link to its
  * data settings. Spans, so it also fits inside the alert's paragraph. */
 function HowTo() {
   return (
@@ -314,7 +330,7 @@ function HowTo() {
   )
 }
 
-/** The refusal; a ZIP of neither service also says how to get the right
+/** The refusal; a file of no service also says how to get the right
  * one. */
 function Refusal({ refusal }: { refusal: ImportRefusal }) {
   return (
@@ -345,7 +361,7 @@ function Upload({ slug }: { slug: string }) {
                   type="file"
                   name="arquivo"
                   required
-                  accept=".zip,application/zip"
+                  accept=".zip,application/zip,.csv,text/csv"
                   className={fileControl}
                 />
               </FieldLabel>
