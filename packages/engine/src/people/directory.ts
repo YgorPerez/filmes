@@ -123,23 +123,21 @@ export const personSessions = (
            ORDER BY s.data DESC, s.id DESC`,
           slug,
         )
-        const sessions = rows.map(
-          (row): PersonSession => ({
-            id: text(row, 'id'),
-            date: text(row, 'data'),
-            chosen:
-              row.escolhido === null
-                ? null
-                : {
-                    id: String(row.escolhido),
-                    title:
-                      row.titulo === null
-                        ? String(row.escolhido)
-                        : String(row.titulo),
-                  },
-            reaction: row.reacao === null ? null : Number(row.reacao),
-          }),
-        )
+        const sessions = rows.map((row): PersonSession => ({
+          id: text(row, 'id'),
+          date: text(row, 'data'),
+          chosen:
+            row.escolhido === null
+              ? null
+              : {
+                  id: String(row.escolhido),
+                  title:
+                    row.titulo === null
+                      ? String(row.escolhido)
+                      : String(row.titulo),
+                },
+          reaction: row.reacao === null ? null : Number(row.reacao),
+        }))
         const reacted = sessions
           .flatMap((s) => (s.reaction === null ? [] : [s.reaction]))
           .slice(0, weights.satisfaction.window)

@@ -18,6 +18,8 @@ const PERSON_ACTIONS = [
   // Access (#166): only an admin, checked by the server.
   'dar-acesso',
   'tirar-acesso',
+  // Takes out a Pessoa made by mistake (#273).
+  'remover-pessoa',
 ] as const
 
 type Reaction = 'love' | 'like' | 'dislike' | 'hate'
@@ -47,6 +49,7 @@ export type PersonAction =
     }
   | { kind: 'grant'; email: string }
   | { kind: 'revoke' }
+  | { kind: 'delete' }
 
 const REACTIONS = ['love', 'like', 'dislike', 'hate'] as const
 const LINKS = ['director', 'writer', 'cast', 'series', 'genre'] as const
@@ -133,6 +136,7 @@ const READERS: Record<(typeof PERSON_ACTIONS)[number], Reader> = {
   remover: remove,
   'dar-acesso': grant,
   'tirar-acesso': () => ({ kind: 'revoke' }),
+  'remover-pessoa': () => ({ kind: 'delete' }),
 }
 
 /** An action only an admin may take: giving or taking a Pessoa's access. */
@@ -204,6 +208,74 @@ export function parseAction(form: FormData): PersonAction | null {
   return kind ? READERS[kind](form) : null
 }
 
+/** The ficha a removal comes back to, by what it removes. */
+const REMOVED_IN: Record<(typeof REMOVABLE)[number], string> = {
+  stated: 'declarados',
+  report: 'relatos',
+  veto: 'vetos',
+  seen: 'vistos',
+}
+
+/** The ficha each action comes back to. */
+const SPOTS: Record<(typeof PERSON_ACTIONS)[number], string> = {
+  declarar: 'declarados',
+  relatar: 'relatos',
+  visto: 'vistos',
+  vetar: 'vetos',
+  ajustar: 'ajustes',
+  pular: 'perguntas',
+  responder: 'perguntas',
+  remover: 'vetos',
+  'dar-acesso': 'acesso',
+  'tirar-acesso': 'acesso',
+  'remover-pessoa': 'remover-pessoa',
+}
+
+/** Where on her page the form's answer goes (#273): the id of the ficha
+ * that posted, or of the Ajuste's row (`ajuste-<elo>`), so the page comes
+ * back there (`#<spot>`) and says what happened inside it. Undefined for
+ * a form that is not one of the page's. */
+export function spotOf(form: FormData): string | undefined {
+  const kind = oneOf(PERSON_ACTIONS, field(form, 'acao'))
+  if (!kind) return undefined
+  if (kind === 'ajustar') {
+    const link = oneOf(LINKS, field(form, 'elo'))
+    return link ? `ajuste-${link}` : 'ajustes'
+  }
+  if (kind === 'remover') {
+    const what = oneOf(REMOVABLE, field(form, 'tipo'))
+    return what ? REMOVED_IN[what] : SPOTS.remover
+  }
+  return SPOTS[kind]
+}
+
+/** The ficha a spot is in: an Ajuste's row is in Ajustes. */
+export const sectionOfSpot = (spot: string) =>
+  spot.startsWith('ajuste-') ? 'ajustes' : spot
+
+const PROBLEM_KINDS = [
+  'required',
+  'id',
+  'film',
+  'rating',
+  'target',
+  'reaction',
+] as const
+
+/** A field problem as `?campo=` carries it: `alvo:target`. */
+export const problemParam = ({ field: name, problem }: FieldProblem) =>
+  `${name}:${problem}`
+
+/** `?campo=` read back; undefined when it is not one. */
+function readProblemParam(value: unknown): FieldProblem | undefined {
+  if (typeof value !== 'string') return undefined
+  const [name, problem] = value.split(':')
+  const kind = oneOf(PROBLEM_KINDS, problem)
+  return name && /^[a-z]+$/.test(name) && kind
+    ? { field: name, problem: kind }
+    : undefined
+}
+
 /** What happened, in `?feito=`. */
 export const PERSON_NOTICES = [
   // A new item went into her file.
@@ -223,6 +295,8 @@ export const PERSON_NOTICES = [
   // She is a Dono now, or no longer (#166).
   'acesso-dado',
   'acesso-tirado',
+  // She was taken out (#273): the answer goes to `/pessoas`.
+  'removida',
 ] as const
 export type PersonNotice = (typeof PERSON_NOTICES)[number]
 
@@ -242,6 +316,11 @@ export const PERSON_REFUSALS = [
   'ja-dono',
   // Access: the logged-in Dono taking her own away.
   'proprio-acesso',
+  // Taking her out (#273): she is a Dono, an import holds her history, or
+  // a Session lists her.
+  'e-dono',
+  'tem-import',
+  'em-sessao',
   // The IMDb or Letterboxd CSV did not come (`platform/export.ts`): the
   // engine failed.
   'exportar',
@@ -260,6 +339,23 @@ export const isPersonRefusal = within(PERSON_REFUSALS)
 /** Why `/pessoas` shows a refusal: the Pessoa of a form is gone. */
 export const isPeopleRefusal = (value: unknown): value is 'pessoa' =>
   value === 'pessoa'
+
+/** What `/pessoas` says after a Pessoa was taken out (`?feito=removida`). */
+export const isPeopleNotice = (value: unknown): value is 'removida' =>
+  value === 'removida'
+
+/** The query of a Pessoa's page and Meu gosto: what the last form did
+ * (`feito`, `erro`), where (`em`) and, refused, the field it was
+ * (`campo`). */
+export const personSearch = (search: Record<string, unknown>) => ({
+  feito: isPersonNotice(search.feito) ? search.feito : undefined,
+  erro: isPersonRefusal(search.erro) ? search.erro : undefined,
+  em:
+    typeof search.em === 'string' && /^[a-z-]+$/.test(search.em)
+      ? search.em
+      : undefined,
+  campo: readProblemParam(search.campo),
+})
 
 /** A Relato's source when the form gives none: who told it, since several
  * Donos may tell (and be told about). */

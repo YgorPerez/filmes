@@ -1,44 +1,38 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { searchFor, searchParam } from '#/content/catalog-search'
+import { createFileRoute, notFound } from '@tanstack/react-router'
 import { moved, MOVED_TO } from '#/content/moved'
-import { isPersonNotice, isPersonRefusal } from '#/content/person-action'
+import { personSearch } from '#/content/person-action'
 import { readPersonPage } from '#/content/people'
-import { PersonScreen } from '#/ui/person'
+import { PersonScreen, UnknownPerson } from '#/ui/person'
 
 // A Pessoa's page. The Dono's own is Meu gosto (`/meu-gosto`), with the
-// same query.
+// same query. No Pessoa with the slug is a 404 (#273).
 export const Route = createFileRoute('/_owner/pessoas/$pessoa/')({
-  validateSearch: (search) => ({
-    feito: isPersonNotice(search.feito) ? search.feito : undefined,
-    erro: isPersonRefusal(search.erro) ? search.erro : undefined,
-    buscar: searchParam(search.buscar),
-  }),
-  loaderDeps: ({ search }) => ({ buscar: search.buscar }),
+  validateSearch: personSearch,
   beforeLoad: ({ params, context, location }) => {
     if (params.pessoa === context.owner.person)
       moved(MOVED_TO.myTaste, location.searchStr)
   },
-  loader: async ({ params, deps }) => {
-    const [page, search] = await Promise.all([
-      readPersonPage({ data: params.pessoa }),
-      searchFor(deps.buscar, 'all'),
-    ])
-    return { page, search }
+  loader: async ({ params }) => {
+    const page = await readPersonPage({ data: params.pessoa })
+    if (page === 'unknown') throw notFound()
+    return { page }
   },
+  notFoundComponent: UnknownPerson,
   component: PersonRoute,
 })
 
 function PersonRoute() {
   const { pessoa } = Route.useParams()
-  const { feito, erro } = Route.useSearch()
-  const { page, search } = Route.useLoaderData()
+  const { feito, erro, em, campo } = Route.useSearch()
+  const { page } = Route.useLoaderData()
   return (
     <PersonScreen
       slug={pessoa}
       page={page}
-      search={search}
       notice={feito}
       refusal={erro}
+      spot={em}
+      problem={campo}
     />
   )
 }
