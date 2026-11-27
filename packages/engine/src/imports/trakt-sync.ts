@@ -38,10 +38,12 @@ import {
   personTraktRows,
   requireImportTables,
   TRAKT_API_KIND,
+  TRAKT_KIND,
   traktFactCounts,
   type TraktFactCounts,
   type TraktReport,
 } from './trakt.ts'
+import { tasteChange, tasteSnapshot, type TasteChange } from './taste-change.ts'
 
 /** A Trakt username as its profile's address has it. */
 const TRAKT_USER = /^[A-Za-z0-9][A-Za-z0-9_.-]*$/
@@ -81,6 +83,8 @@ export interface TraktSync extends TraktReport {
   readonly newFile: boolean
   readonly facts: TraktFactCounts
   readonly newFacts: TraktFactCounts
+  /** What she sees on her Notas: new, changed and repeated Notas (#274). */
+  readonly changes: TasteChange
   readonly attributions: readonly Attribution[]
 }
 
@@ -182,6 +186,7 @@ export const syncTrakt = (
         Effect.gen(function* () {
           yield* requireImportTables(db)
           const before = yield* traktFactCounts(db, person.slug)
+          const taste = yield* tasteSnapshot(db, person.slug)
           const kept = yield* storeImport(
             person,
             TRAKT_API_KIND,
@@ -203,6 +208,7 @@ export const syncTrakt = (
             file: kept.file,
             newFile: kept.new,
             facts: after,
+            changes: yield* tasteChange(db, person.slug, TRAKT_KIND, taste),
             newFacts: {
               ratings: after.ratings - before.ratings,
               seen: after.seen - before.seen,

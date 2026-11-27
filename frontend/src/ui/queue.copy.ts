@@ -3,6 +3,21 @@ import type { QueueNotice, QueueRefusal } from '#/content/import-action'
 const count = (n: number, one: string, many: string) =>
   n === 1 ? `1 ${one}` : `${n} ${many}`
 
+const minutes = (n: number) =>
+  n < 60
+    ? `${n} min`
+    : `${Math.floor(n / 60)} h ${String(n % 60).padStart(2, '0')}`
+
+/** A country or a language by its code, in Portuguese ("Alemanha",
+ * "alemão"); the code itself where the runtime has no name for it. */
+const displayName = (type: 'region' | 'language', code: string) => {
+  try {
+    return new Intl.DisplayNames(['pt-BR'], { type }).of(code) ?? code
+  } catch {
+    return code
+  }
+}
+
 const names = (people: readonly string[]) =>
   people.length === 1
     ? people[0]
@@ -23,6 +38,32 @@ export const QUEUE = {
   pickLabel: (title: string, detail: string | null) =>
     detail ? `É este: ${title}, ${detail}` : `É este: ${title}`,
   poster: (title: string) => `Cartaz de ${title}`,
+  /** What tells twins apart (#274): "Helena Prado · 1 h 44 · Brasil",
+   * and the original language when it is not Portuguese. Null when TMDB
+   * gave none of it. */
+  details: ({
+    directors,
+    runtime,
+    countries,
+    language,
+  }: {
+    directors: readonly string[]
+    runtime: number | null
+    countries: readonly string[]
+    language: string | null
+  }) => {
+    const parts = [
+      directors.length > 0 ? `Direção: ${names(directors)}` : null,
+      runtime === null ? null : minutes(runtime),
+      countries.length > 0
+        ? countries.map((code) => displayName('region', code)).join(', ')
+        : null,
+      language === null ? null : `em ${displayName('language', language)}`,
+    ].filter((part) => part !== null)
+    return parts.length === 0 ? null : parts.join(' · ')
+  },
+  /** A synopsis only in a language other than Portuguese or English. */
+  noOverview: 'Sem sinopse em português.',
   original: (title: string) => `Título original: ${title}`,
   /** The in-app search, in place of an id from another site. */
   search: 'Procurar outro título',
@@ -32,8 +73,8 @@ export const QUEUE = {
   searchSubmit: 'Procurar',
   found: (query: string) => `No Catálogo, para “${query}”`,
   none: 'Nada no Catálogo com esse nome. Tente o título original, ou o ano: Matrix (1999).',
-  /** The id paste, behind its fold. */
-  link: 'Tenho o link',
+  /** The id paste, inside the search's fold. */
+  link: 'Ou cole o link',
   confirm: 'Confirmar',
   film: 'Link ou ID do filme',
   filmHint: 'do IMDb (tt…) ou do TMDB',

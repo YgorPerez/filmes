@@ -27,7 +27,8 @@ const TABS: readonly Tab[] = [
   { key: 'home', href: '/', icon: 'home' },
   { key: 'sessions', href: '/sessoes', icon: 'film' },
   { key: 'people', href: '/pessoas', icon: 'people' },
-  { key: 'taste', href: '/meu-gosto', icon: 'taste' },
+  // `/trakt` is reached from Meu gosto's imports (#274).
+  { key: 'taste', href: '/meu-gosto', icon: 'taste', also: ['/trakt'] },
 ]
 
 const under = (path: string, root: string) =>

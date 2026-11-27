@@ -340,7 +340,7 @@ describe('PersonScreen forms', () => {
   it('shows her Notas on the 1 to 10 scale she gives them on', () => {
     const notes = section(PERSON.notes.title)
     expect(notes.textContent).toContain(
-      'nota 8 · 30 ago 2025 · 4★ no Letterboxd da Iara',
+      'nota 8 · 30 ago 2025 · Letterboxd (4★)',
     )
   })
 })
@@ -1094,6 +1094,44 @@ const glanceSteps = (start: MyStart | undefined, page: PersonPage) => {
   return name
 }
 
+describe('Meu gosto, her Notas list (#274)', () => {
+  it('changes any Nota on Dar notas, and takes out one her file holds', () => {
+    const own: PersonPage = {
+      ...MY_PAGE,
+      ratings: [
+        { ...IARA.ratings![0]!, source: 'Trakt de Bruno' },
+        {
+          ...IARA.ratings![0]!,
+          filmId: 'tt9000602',
+          title: 'Casa Cheia',
+          source: RATING_SCREEN_SOURCE,
+          factId: 'vistos:9',
+        },
+      ],
+    }
+    render(<PersonScreen slug="bruno" page={own} />)
+    const notes = section(PERSON.notes.title)
+    expect(
+      within(notes)
+        .getByRole('link', { name: PERSON.notes.changeLabel('Fronteira') })
+        .getAttribute('href'),
+    ).toBe('/meu-gosto/notas?filme=tt9000401')
+    // The imported one leaves with its import: no Tirar.
+    expect(
+      within(notes).queryByRole('button', {
+        name: PERSON.removeLabel(PERSON.notes.removeWhat('Fronteira')),
+      }),
+    ).toBeNull()
+    expect(
+      within(notes).getByRole('button', {
+        name: PERSON.removeLabel(PERSON.notes.removeWhat('Casa Cheia')),
+      }),
+    ).toBeTruthy()
+    expect(notes.textContent).toContain('nota 8 · 30 ago 2025 · Trakt')
+    expect(notes.textContent).toContain('Dar notas')
+  })
+})
+
 describe('Meu gosto in the second person', () => {
   it('opens with her taste in one look and one next step', () => {
     render(<PersonScreen slug="bruno" page={MY_PAGE} />)
@@ -1136,7 +1174,7 @@ describe('Meu gosto in the second person', () => {
     )
     expect(
       within(section(PERSON.glance.title)).getByText(
-        'Pelas suas Notas, você gosta de Drama, Crime e Rui Tavares.',
+        'Pelas suas Notas, você gosta dos gêneros Drama e Crime e da direção de Rui Tavares.',
       ),
     ).toBeTruthy()
   })
@@ -1301,17 +1339,28 @@ const IARA_OWN: PersonPage = {
 }
 
 describe('Meu gosto with little in it', () => {
-  it('says nothing was said, lists no contents and links her Trakt', () => {
-    render(<PersonScreen slug="iara" page={IARA_OWN} showTrakt />)
+  it('says nothing was said, lists no contents and says where her Trakt stands', () => {
+    render(<PersonScreen slug="iara" page={IARA_OWN} trakt="disconnected" />)
     expect(screen.getByText(PERSON.glance.nothingSaid)).toBeTruthy()
     expect(
       screen.queryByRole('navigation', { name: PERSON.contents }),
     ).toBeNull()
+    const notes = section(PERSON.notes.title)
+    expect(notes.textContent).toContain('Trakt não conectado')
     expect(
-      screen
-        .getByRole('link', { name: 'Conexão com o Trakt' })
+      within(notes)
+        .getByRole('link', { name: 'conectar' })
         .getAttribute('href'),
     ).toBe('/trakt')
+  })
+
+  it('says her Trakt is connected, with the way to the connection', () => {
+    render(<PersonScreen slug="iara" page={IARA_OWN} trakt="connected" />)
+    const notes = section(PERSON.notes.title)
+    expect(notes.textContent).toContain('Trakt conectado')
+    expect(
+      within(notes).getByRole('link', { name: 'ver a conexão' }),
+    ).toBeTruthy()
   })
 
   it('waits for the database before it lists her Notas', () => {

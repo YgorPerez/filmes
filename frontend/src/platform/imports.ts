@@ -23,19 +23,24 @@ import {
   removeImport,
   reprocessLetterboxd,
   syncTrakt,
-  viewQueue,
+  viewQueueDetailed,
   type Author,
   type Engine,
   type ErrorOutput,
   type Outcome,
   type PersonImports,
+  type DetailedQueueItem,
   type QueueItem,
+  type RatingChange,
+  type TasteChange,
 } from '@filmes/engine'
 import {
+  changesParam,
   isImportForm,
   MAX_UPLOAD_BYTES,
   parseImport,
   parseQueue,
+  type ChangedRating,
   type ImportAction,
   type ImportNotice,
   type ImportRefusal,
@@ -50,6 +55,7 @@ import { appPoster, failureOf, formPoster, seeOther } from './form-post'
 import { ownerAuthor } from './people'
 import {
   filmCardOf,
+  myRatingsOf,
   rateAction,
   ratingQueuePage,
   ratingsFromEngine,
@@ -69,8 +75,31 @@ export type QueueSuggestion = {
   /** The TMDB film's page: confirming with it records the film. */
   link: string
   poster: string | null
-  /** TMDB's synopsis, for telling twins apart. */
+  /** TMDB's synopsis in Portuguese or English, for telling twins apart;
+   * null when it is only in another language (#274). */
   overview: string | null
+  /** What else tells twins apart (#274): the directors, the runtime, the
+   * production countries (ISO 3166-1) and, when it is not Portuguese,
+   * the original language (ISO 639-1). */
+  directors: string[]
+  runtime: number | null
+  countries: string[]
+  language: string | null
+}
+
+/** The languages a synopsis may show in: the page's, and English. */
+const READABLE = new Set(['pt', 'en'])
+
+/** The synopsis the page can show: TMDB's pt-BR one, else the search's
+ * when the film's language is one she reads (the search falls back to the
+ * original's, "Ein Segler verliert…"). */
+const overviewOf = (
+  search: string | null,
+  details: DetailedQueueItem['candidates'][number]['details'],
+) => {
+  if (details?.overviewPt) return details.overviewPt
+  if (details?.language && !READABLE.has(details.language)) return null
+  return search
 }
 
 export type QueueEntry = Omit<QueueItem, 'candidates' | 'people'> & {
@@ -89,7 +118,7 @@ export type QueuePage = {
 const textOr = (value: unknown, fallback: string | null) =>
   typeof value === 'string' && value !== '' ? value : fallback
 
-const entryOf = (item: QueueItem): QueueEntry => ({
+const entryOf = (item: DetailedQueueItem): QueueEntry => ({
   ...item,
   people: [...item.people],
   candidates: item.candidates.map((c) => {
@@ -102,7 +131,14 @@ const entryOf = (item: QueueItem): QueueEntry => ({
       year: c.year,
       link: c.link,
       poster: c.poster,
-      overview: c.overview,
+      overview: overviewOf(c.overview, c.details),
+      directors: [...(c.details?.directors ?? [])],
+      runtime: c.details?.runtime ?? null,
+      countries: [...(c.details?.countries ?? [])],
+      language:
+        c.details?.language && c.details.language !== 'pt'
+          ? c.details.language
+          : null,
     }
   }),
 })
@@ -112,9 +148,16 @@ export type ImportDone = {
   notice: ImportNotice
   /** Fatos that came in (or went, for a removal). */
   facts: number
-  /** Of them, the Notas and the Já vistos: what the notice counts. */
+  /** What her Notas list sees (#274): films with a first Nota, films seen
+   * for the first time (without a Nota), films whose Nota in force
+   * changed, the first few of them by name, and films that kept theirs. */
   ratings?: number
   seen?: number
+  changed?: number
+  changes?: readonly ChangedRating[]
+  repeated?: number
+  /** Films that came into her watchlist. */
+  watchlist?: number
   /** Trakt, IMDb, Simkl or TV Time films the Catalog could not resolve. */
   outside?: number
 }
@@ -151,11 +194,31 @@ const map = async <A, B>(
 const sum = (counts: Readonly<Record<string, number>>) =>
   Object.values(counts).reduce((a, b) => a + b, 0)
 
-/** The Notas and Já vistos of an import's new Fatos. */
-const counted = (newFacts: { ratings: number; seen?: number }) => ({
+/** How many changed Notas the notice names; the rest it counts. */
+export const NAMED_CHANGES = 3
+
+/** "Maré Baixa (2015)": a film as the notices name it. */
+const filmTitle = (change: RatingChange) => {
+  const name = change.title ?? change.film
+  return change.year === null ? name : `${name} (${change.year})`
+}
+
+/** What an import did: its new Fatos, and what her Notas list sees. */
+const counted = (
+  newFacts: Readonly<Record<string, number>>,
+  changes: TasteChange,
+) => ({
   facts: sum(newFacts),
-  ratings: newFacts.ratings,
-  seen: newFacts.seen ?? 0,
+  ratings: changes.newRatings,
+  seen: changes.newSeen,
+  changed: changes.changedRatings.length,
+  changes: changes.changedRatings.slice(0, NAMED_CHANGES).map((change) => ({
+    title: filmTitle(change),
+    from: Math.round(change.from * 2),
+    to: Math.round(change.to * 2),
+  })),
+  repeated: changes.repeatedRatings,
+  watchlist: newFacts.watchlist ?? 0,
 })
 
 type Run = Engine['run']
@@ -164,7 +227,7 @@ type Run = Engine['run']
 async function queueOf(run: Run): Promise<Outcome<QueuePage>> {
   const people = await run(readPeople)
   if (people.exitCode !== 0) return people
-  return map(run(viewQueue), (queue) => ({
+  return map(run(viewQueueDetailed), (queue) => ({
     items: queue.items.map(entryOf),
     attributions: queue.attributions.map(({ source, text }) => ({
       source,
@@ -180,10 +243,14 @@ async function queueOf(run: Run): Promise<Outcome<QueuePage>> {
  * sent already, and its counts. */
 const filed = (
   notice: ImportNotice,
-  r: { newFile: boolean; newFacts: { ratings: number; seen?: number } },
+  r: {
+    newFile: boolean
+    newFacts: Readonly<Record<string, number>>
+    changes: TasteChange
+  },
 ): ImportDone => ({
   notice: r.newFile ? notice : 'repetido',
-  ...counted(r.newFacts),
+  ...counted(r.newFacts, r.changes),
 })
 
 /** An import or a removal on the Pessoa's files, as `author`. */
@@ -233,7 +300,7 @@ function runImport(
         run(syncTrakt({ person, user: action.user ?? undefined, author })),
         (r): ImportDone => ({
           notice: 'sincronizado',
-          ...counted(r.newFacts),
+          ...counted(r.newFacts, r.changes),
           outside: r.unresolved.length,
         }),
       )
@@ -452,9 +519,19 @@ export async function importAction(
       return seeOther('/pessoas?erro=pessoa')
     return refused(importRefusal(outcome, run.kind))
   }
-  const { notice, facts, ratings, seen, outside } = outcome.output
+  const done = outcome.output
   return seeOther(
-    `${page}${query({ feito: notice, novos: facts, notas: ratings, vistos: seen, fora: outside })}`,
+    `${page}${query({
+      feito: done.notice,
+      novos: done.facts,
+      notas: done.ratings,
+      vistos: done.seen,
+      mudaram: done.changed || undefined,
+      mudou: changesParam(done.changes),
+      iguais: done.repeated || undefined,
+      lista: done.watchlist || undefined,
+      fora: done.outside,
+    })}`,
   )
 }
 
@@ -522,6 +599,12 @@ export const appRatingQueue = (owner: { person: string }) =>
 /** One film's card for the rating screen, for the logged-in Dono. */
 export const appFilmCard = (film: string, owner: { person: string }) =>
   filmCardOf(film, owner, appRatings())
+
+/** The logged-in Dono's Notas of some films, for the rating screen. */
+export const appRatingsOf = (
+  films: readonly string[],
+  owner: { person: string },
+) => myRatingsOf(films, owner, appRatings())
 
 /** Meu gosto's look at the logged-in Dono's taste. */
 export const appTasteSummary = (owner: { person: string }) =>

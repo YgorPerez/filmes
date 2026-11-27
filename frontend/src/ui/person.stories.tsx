@@ -215,7 +215,7 @@ export const MyTasteWithQueue: Story = {
 }
 
 export const MyTasteWithTrakt: Story = {
-  args: { ...MyTaste.args, showTrakt: true },
+  args: { ...MyTaste.args, trakt: 'connected' },
 }
 
 export const AdminGrantsAccess: Story = {

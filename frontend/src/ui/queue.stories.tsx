@@ -32,6 +32,10 @@ const QUEUE_PAGE: QueuePage = {
           poster: null,
           overview:
             'Um faroleiro e a filha esperam o vento que traz o barco do irmão, que não volta há dez anos.',
+          directors: ['Helena Prado'],
+          runtime: 104,
+          countries: ['BR'],
+          language: null,
         },
         {
           tmdb: '9103',
@@ -40,8 +44,12 @@ const QUEUE_PAGE: QueuePage = {
           year: 2020,
           link: 'https://www.themoviedb.org/movie/9103',
           poster: null,
-          overview:
-            'Ein Segler verliert auf der Nordsee den Kurs und findet eine Insel.',
+          // Only a German synopsis: the page hides it (#274).
+          overview: null,
+          directors: ['Jonas Weber'],
+          runtime: 88,
+          countries: ['DE', 'DK'],
+          language: 'de',
         },
       ],
     },

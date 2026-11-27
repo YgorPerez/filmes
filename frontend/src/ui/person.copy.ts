@@ -17,6 +17,9 @@ type Level = 'none' | 'low' | 'normal' | 'high'
 type Reaction = 'love' | 'like' | 'dislike' | 'hate'
 type Strength = 'strong' | 'moderate' | 'weak' | 'guess'
 
+const escapeRegExp = (text: string) =>
+  text.replaceAll(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
 export const PERSON = {
   back: 'Pessoas',
   myTaste: 'Meu gosto',
@@ -32,9 +35,16 @@ export const PERSON = {
     notes: (n: number) =>
       n === 1 ? '1 Nota' : `${n.toLocaleString('pt-BR')} Notas`,
     toTen: (n: number) => `faltam ${10 - n} para 10`,
-    /** The genres and directors of the films she liked. */
-    likes: (names: readonly string[]) =>
-      `Pelas suas Notas, você gosta de ${names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} e ${names.at(-1)}`}.`,
+    /** The genres and directors of the films she liked, each part with
+     * its label (#274). */
+    likes: (genres: readonly string[], directors: readonly string[]) => {
+      const parts = [
+        genres.length > 0 &&
+          `${genres.length === 1 ? 'do gênero' : 'dos gêneros'} ${listed(genres)}`,
+        directors.length > 0 && `da direção de ${listed(directors)}`,
+      ].filter((part) => part !== false)
+      return `Pelas suas Notas, você gosta ${parts.join(' e ')}.`
+    },
     said: 'O que você disse',
     nothingSaid: 'Nada dito ainda sobre o seu gosto.',
     next: 'Próximo passo',
@@ -131,10 +141,20 @@ export const PERSON = {
       return `a previsão erra ${rounded.toLocaleString('pt-BR')} ${points} em média, em ${films.toLocaleString('pt-BR')} filmes`
     },
     rate: 'Dar notas',
-    import: 'Importar do Letterboxd, do Trakt, do IMDb ou do Simkl',
-    more: 'Baixar as Notas em CSV',
-    download: 'Baixar CSV do IMDb',
-    downloadLetterboxd: 'Baixar CSV do Letterboxd',
+    import: 'Importar de outro site',
+    more: 'Baixar as Notas:',
+    download: 'CSV do IMDb',
+    downloadLetterboxd: 'CSV do Letterboxd',
+    /** Each Nota of the list: change it on Dar notas, or take it out. */
+    change: 'Mudar',
+    changeLabel: (title: string) => `Mudar a Nota de ${title}`,
+    removeWhat: (title: string) => `a Nota de ${title}`,
+    /** Her Trakt connection, under the buttons (#274). */
+    trakt: {
+      state: (connected: boolean) =>
+        connected ? 'Trakt conectado' : 'Trakt não conectado',
+      link: (connected: boolean) => (connected ? 'ver a conexão' : 'conectar'),
+    },
     /** For an admin: why and where the CSVs go (#274, #276). */
     movielens: (own: boolean, n: number, name: string) => {
       const notes = n === 1 ? 'a Nota' : `as ${n.toLocaleString('pt-BR')} Notas`
@@ -239,6 +259,7 @@ export const PERSON = {
   noReaction: 'só menciona',
   source: 'Fonte',
   sourceHint: (fallback: string) => `opcional; sem ela, “${fallback}”`,
+  ownSourceHint: 'opcional; sem ela, conta como dito por você',
   filmHint: 'tt… do Catálogo',
   rating: 'Nota',
   noRating: 'sem Nota',
@@ -381,12 +402,25 @@ export const PERSON = {
    * Cartaz's Já vi): the engine keeps it from 0,5 to 5, so 4.5 is "nota 9"
    * (#268). */
   ratingText: (rating: number) => `nota ${tenScale(rating)}`,
-  /** Where a Nota came from, with the stars it had there when the source
-   * rates on 5 (Letterboxd): "4,5★ no Letterboxd da Iara". */
-  ratingSource: (rating: number, source: string | null) =>
-    source !== null && /letterboxd/i.test(source)
-      ? `${String(rating).replace('.', ',')}★ no ${source}`
-      : source,
+  /** Where a Nota came from, by its service on the page of the Pessoa
+   * (`name`), with the stars it had there when the source rates on 5:
+   * "Letterboxd (4,5★)". */
+  ratingSource: (rating: number, source: string | null, name = '') => {
+    if (source === null) return null
+    // The rating screen's Notas (the engine's `RATING_SCREEN_SOURCE`).
+    if (source === 'notas no site') return 'Dar notas'
+    // "Letterboxd do Bruno" on Bruno's own page: the service alone (#274).
+    const service =
+      name === ''
+        ? null
+        : (new RegExp(`^(.+?) d[eoa] ${escapeRegExp(name)}$`).exec(
+            source,
+          )?.[1] ?? null)
+    const label = service ?? source
+    return /letterboxd/i.test(label)
+      ? `${label} (${String(rating).replace('.', ',')}★)`
+      : label
+  },
   /** What is wrong with a field, under it (`formProblem`). */
   fieldProblem: ({ field, problem }: { field: string; problem: string }) => {
     if (problem === 'rating') return 'A Nota vai de 1 a 10.'

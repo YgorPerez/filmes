@@ -9,7 +9,7 @@ import { QUEUE } from './queue.copy'
 import { PostAnswers, PostForm } from './kit/post-form'
 import { usePostedFeedback } from './kit/posted-feedback'
 import { PageHead } from './kit/page-head'
-import { TapeCase } from './kit/tape-case'
+import { PosterCover, TapeCase } from './kit/tape-case'
 import { Alert, Disclosure, Notice, Submit, TextField } from './person-parts'
 import { Button } from './shadcn/button'
 
@@ -96,6 +96,7 @@ export function QueueScreen({
                     item={item}
                     names={queue.names}
                     search={search?.item === item.id ? search.answer : null}
+                    first={item.id === firstSuggested(queue)}
                   />
                 ))}
               </ul>
@@ -125,6 +126,11 @@ export function QueueScreen({
     </PostAnswers>
   )
 }
+
+/** The first film with TMDB's suggestions: its first one is the page's
+ * one orange button (#274). */
+const firstSuggested = (queue: QueuePage) =>
+  queue.items.find((item) => item.candidates.length > 0)?.id
 
 /** The last decision, naming the film, with Desfazer when it can be. */
 function Done({ done }: { done: QueueDoneView }) {
@@ -169,10 +175,14 @@ function Card({
   item,
   names,
   search,
+  first,
 }: {
   item: QueueEntry
   names: Record<string, string>
   search: SearchAnswer | null
+  /** The first card with suggestions: its first one is the one orange
+   * button (#274). */
+  first: boolean
 }) {
   const title = QUEUE.item(item.name, item.year)
   const headingId = `fila-${item.id}`
@@ -194,12 +204,17 @@ function Card({
             </p>
           </div>
         </div>
-        {item.candidates.length > 0 && <Suggestions item={item} />}
+        {item.candidates.length > 0 && (
+          <Suggestions item={item} first={first} />
+        )}
+        {/* One fold for the other ways: the Catálogo, then the link
+            (#274). */}
         <Disclosure summary={QUEUE.search} open={search !== null}>
           <FindInCatalog item={item} title={title} search={search} />
-        </Disclosure>
-        <Disclosure summary={QUEUE.link}>
-          <Confirm id={item.id} title={title} />
+          <div className="flex flex-col gap-sm border-t border-dashed border-rule pt-lg">
+            <p className="font-display text-field-label">{QUEUE.link}</p>
+            <Confirm id={item.id} title={title} />
+          </div>
         </Disclosure>
         <Discard id={item.id} title={title} />
       </section>
@@ -209,15 +224,20 @@ function Card({
 
 /** TMDB's films with the title, each with its poster and synopsis and
  * confirmed with one tap. */
-function Suggestions({ item }: { item: QueueEntry }) {
+function Suggestions({ item, first }: { item: QueueEntry; first: boolean }) {
   return (
     <div className="flex flex-col gap-xs border-t border-dashed border-rule pt-lg">
       <h3 className="font-display text-label text-ink-2 uppercase">
         {QUEUE.candidates}
       </h3>
       <ul className="flex flex-col">
-        {item.candidates.map((candidate) => (
-          <Suggestion key={candidate.tmdb} id={item.id} candidate={candidate} />
+        {item.candidates.map((candidate, index) => (
+          <Suggestion
+            key={candidate.tmdb}
+            id={item.id}
+            candidate={candidate}
+            primary={first && index === 0}
+          />
         ))}
       </ul>
     </div>
@@ -227,28 +247,30 @@ function Suggestions({ item }: { item: QueueEntry }) {
 function Suggestion({
   id,
   candidate,
+  primary,
 }: {
   id: string
   candidate: QueueSuggestion
+  primary: boolean
 }) {
   const label = QUEUE.item(candidate.title, candidate.year)
+  const details = QUEUE.details(candidate)
   return (
     <li className="flex items-start gap-md border-rule py-md not-first:border-t">
       <div className="w-14 shrink-0">
         <TapeCase
           cover={
-            candidate.poster ? (
-              <img
-                src={candidate.poster}
-                alt={QUEUE.poster(label)}
-                loading="lazy"
-                className="absolute inset-0 size-full object-cover"
-              />
-            ) : (
-              <span aria-hidden="true" className="text-cover-mark">
-                ?
-              </span>
-            )
+            <PosterCover
+              src={candidate.poster}
+              title={label}
+              alt={QUEUE.poster(label)}
+              lazy
+              fallback={
+                <span aria-hidden="true" className="text-cover-mark">
+                  ?
+                </span>
+              }
+            />
           }
         />
       </div>
@@ -266,10 +288,15 @@ function Suggestion({
             {QUEUE.original(candidate.originalTitle)}
           </span>
         )}
-        {candidate.overview && (
+        {details && <span className="text-meta">{details}</span>}
+        {candidate.overview ? (
           <p className="line-clamp-2 text-meta text-ink-2">
             {candidate.overview}
           </p>
+        ) : (
+          candidate.language && (
+            <p className="text-meta text-ink-2">{QUEUE.noOverview}</p>
+          )
         )}
         <QueueForm action="confirmar" id={id} className="mt-xs self-start">
           {(busy) => (
@@ -277,8 +304,12 @@ function Suggestion({
               <input type="hidden" name="filme" value={candidate.link} />
               <Button
                 type="submit"
+                variant={primary ? 'primary' : 'option'}
                 disabled={busy}
-                aria-label={QUEUE.pickLabel(label, candidate.originalTitle)}
+                aria-label={QUEUE.pickLabel(
+                  label,
+                  details ?? candidate.originalTitle,
+                )}
               >
                 {busy ? QUEUE.busy.confirm : QUEUE.pick}
               </Button>
@@ -418,26 +449,26 @@ function Discard({ id, title }: { id: string; title: string }) {
       action="descartar"
       id={id}
       label={`${QUEUE.discard}: ${title}`}
-      className="flex flex-wrap items-center gap-xs border-t border-dashed border-rule pt-lg"
+      className="flex flex-col gap-xs border-t border-dashed border-rule pt-lg"
     >
       {(busy) => (
         <>
-          <span className="font-display text-field-label">
-            {QUEUE.discard}:
+          <span className="font-display text-field-label">{QUEUE.discard}</span>
+          <span className="flex flex-wrap gap-xs">
+            {QUEUE.reasons.map(({ value, label }) => (
+              <Button
+                key={value}
+                type="submit"
+                name="motivo"
+                value={value}
+                variant="option"
+                disabled={busy}
+                aria-label={QUEUE.reasonLabel(label, title)}
+              >
+                {busy ? QUEUE.busy.discard : label}
+              </Button>
+            ))}
           </span>
-          {QUEUE.reasons.map(({ value, label }) => (
-            <Button
-              key={value}
-              type="submit"
-              name="motivo"
-              value={value}
-              variant="option"
-              disabled={busy}
-              aria-label={QUEUE.reasonLabel(label, title)}
-            >
-              {busy ? QUEUE.busy.discard : label}
-            </Button>
-          ))}
         </>
       )}
     </QueueForm>

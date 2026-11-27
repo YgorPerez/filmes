@@ -1,20 +1,72 @@
-import type { ImportNotice, ImportRefusal } from '#/content/import-action'
+import type {
+  ChangedRating,
+  ImportNotice,
+  ImportRefusal,
+} from '#/content/import-action'
 import { shortDate } from './dates'
 
 const count = (n: number, one: string, many: string) =>
   n === 1 ? `1 ${one}` : `${n} ${many}`
 
-/** What an import gave, as its notice counts it: the Notas and the Já
- * vistos, the two things she knows by name. */
-type Gave = { facts: number; ratings: number; seen: number; outside?: number }
+/** "a, b e c". */
+const andList = (parts: readonly string[]) =>
+  parts.length < 2
+    ? parts.join('')
+    : `${parts.slice(0, -1).join(', ')} e ${parts.at(-1)}`
 
-const gave = ({ facts, ratings, seen }: Gave) => {
-  const parts = [
+/** What an import did to her Notas list (#274): the films with a first
+ * Nota, the ones seen for the first time, the Notas it replaced (the
+ * first few by name) and the films that kept theirs. */
+type Gave = {
+  facts: number
+  ratings: number
+  seen: number
+  changed?: number
+  changes?: readonly ChangedRating[]
+  repeated?: number
+  watchlist?: number
+  outside?: number
+}
+
+/** "Maré Baixa (2015), de 9 para 1". */
+const changeText = ({ title, from, to }: ChangedRating) =>
+  `${title}, de ${from} para ${to}`
+
+const changedText = (n: number, named: readonly ChangedRating[]) => {
+  const rest = n - named.length
+  const names = named.map(changeText).join('; ')
+  const more = rest > 0 ? ` e mais ${count(rest, 'outra', 'outras')}` : ''
+  return n === 1
+    ? `1 Nota mudou: ${names}`
+    : `${n} Notas mudaram: ${names}${more}`
+}
+
+const gave = ({
+  facts,
+  ratings,
+  seen,
+  changed = 0,
+  changes = [],
+  repeated = 0,
+  watchlist = 0,
+}: Gave) => {
+  const fresh = [
     ratings > 0 && count(ratings, 'Nota nova', 'Notas novas'),
     seen > 0 && count(seen, 'Já visto novo', 'Já vistos novos'),
+    watchlist > 0 &&
+      count(watchlist, 'filme na watchlist', 'filmes na watchlist'),
   ].filter((part) => part !== false)
-  if (parts.length > 0) return `entraram ${parts.join(' e ')}`
-  return facts === 0
+  const sentences = [
+    fresh.length > 0 && `entraram ${andList(fresh)}`,
+    changed > 0 && changedText(changed, changes),
+    repeated > 0 &&
+      (fresh.length > 0 || changed > 0) &&
+      (repeated === 1
+        ? '1 filme ficou com a Nota que já tinha'
+        : `${repeated} filmes ficaram com a Nota que já tinham`),
+  ].filter((part) => part !== false)
+  if (sentences.length > 0) return sentences.join('. ')
+  return facts === 0 || repeated > 0
     ? 'nada novo, esses filmes já estavam aqui'
     : 'nenhuma Nota nem Já visto novo, só o resto do que ele trazia'
 }
@@ -70,6 +122,8 @@ export const PERSON_IMPORTS = {
       : `Traga o que ${name} já viu e as Notas que deu em outro site. O filmes guarda o arquivo e lê esses filmes.`,
   unknown: 'Nenhuma Pessoa com esse nome no repo de dados.',
   unavailable: UNAVAILABLE,
+  /** After a notice of a replaced Nota: where to change it back. */
+  changedLink: 'Ver e mudar as Notas',
   notices: {
     letterboxd: (done: Gave) => `O ZIP do Letterboxd entrou: ${gave(done)}.`,
     rss: (done: Gave) => `Perfil do Letterboxd lido: ${gave(done)}.`,
@@ -146,6 +200,14 @@ export const PERSON_IMPORTS = {
     queuedLead:
       'O filmes não achou estes sozinho no Catálogo. Até você confirmar, as Notas deles não contam.',
     toQueue: 'Resolver agora',
+    /** The sources kept in sync, and when they were read (#274). */
+    sync: {
+      trakt: 'lido a cada Sessão nova',
+      rss: 'lido quando você pede',
+      last: (date: string) => `última leitura em ${shortDate(date)}`,
+      traktNow: 'Ler agora',
+      rssNow: 'Ler o perfil agora',
+    },
     again: 'Importar de novo ou de outro site',
   },
   files: {
@@ -198,24 +260,28 @@ export const PERSON_IMPORTS = {
     other: 'Ler outro perfil',
     busy: 'Lendo o perfil…',
   },
-  /** The other services, behind the Letterboxd flow. */
+  /** The Trakt ZIP, folded in the Trakt slip (#274). */
+  trakt: {
+    href: 'https://trakt.tv/settings/data',
+    steps: [
+      'Abra trakt.tv/settings/data, com a conta do Trakt, pelo computador.',
+      'Em “Export”, baixe o ZIP dos dados.',
+      'Envie o ZIP aqui, sem abrir.',
+    ],
+    file: 'ZIP do Trakt',
+    wrongType: 'Esse não é o ZIP do Trakt: ele termina em .zip.',
+    submit: 'Importar o ZIP do Trakt',
+    busy: 'Importando…',
+  },
+  /** The other services, behind the Letterboxd flow and Trakt. */
   other: {
     title: 'De outro site',
-    lead: 'Trakt, IMDb, Simkl ou o backup do TV Time: baixe o arquivo no site de cada um, pelo computador, e envie aqui como veio.',
-    file: 'Arquivo do Trakt, do IMDb, do Simkl ou do TV Time',
+    lead: 'IMDb, Simkl ou o backup do TV Time: baixe o arquivo no site de cada um, pelo computador, e envie aqui como veio.',
+    file: 'Arquivo do IMDb, do Simkl ou do TV Time',
     wrongType:
-      'Esse arquivo não é de nenhum deles: o Trakt, o Simkl e o TV Time dão um .zip, e o IMDb um .csv.',
+      'Esse arquivo não é de nenhum deles: o Simkl e o TV Time dão um .zip, e o IMDb um .csv.',
     how: (service: string) => `Como baixar do ${service}`,
     services: [
-      {
-        service: 'Trakt',
-        href: 'https://trakt.tv/settings/data',
-        steps: [
-          'Abra trakt.tv/settings/data, com a conta do Trakt.',
-          'Em “Export”, baixe o ZIP dos dados.',
-          'Envie o ZIP aqui, sem abrir.',
-        ],
-      },
       {
         service: 'IMDb',
         href: 'https://www.imdb.com/list/ratings',

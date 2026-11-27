@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vite-plus/test'
+import { doneOf, importsSearch } from '#/content/imports-search'
 import { Route as QueuePost } from '#/routes/fila/acao'
 import { Route as ImportPost } from '#/routes/importar/$pessoa/acao'
 import { Route as Queue } from '#/routes/_owner/meu-gosto/fila'
@@ -18,6 +19,24 @@ describe('the Imports routes', () => {
     expect(
       person({ feito: 'trakt', erro: 'arquivo', novos: 3, fora: '2' }),
     ).toEqual({ feito: 'trakt', erro: 'arquivo', novos: 3, fora: 2 })
+    expect(
+      person({ mudaram: '1', mudou: 'Maré Baixa~9~1', iguais: 2, lista: 'x' }),
+    ).toEqual({ mudaram: 1, mudou: 'Maré Baixa~9~1', iguais: 2 })
+    expect(
+      doneOf(
+        importsSearch({ feito: 'trakt', notas: '1', mudou: 'Maré Baixa~9~1' }),
+      ),
+    ).toEqual({
+      notice: 'trakt',
+      facts: 0,
+      ratings: 1,
+      seen: 0,
+      changed: 0,
+      changes: [{ title: 'Maré Baixa', from: 9, to: 1 }],
+      repeated: 0,
+      watchlist: 0,
+      outside: undefined,
+    })
     expect(
       person({ feito: '<b>', erro: 'x', novos: -1, fora: 'muitos' }),
     ).toEqual({

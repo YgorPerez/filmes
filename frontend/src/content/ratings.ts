@@ -38,3 +38,23 @@ export const readTasteSummary = createServerFn({ method: 'GET' })
     const { appTasteSummary } = await import('#/platform/imports')
     return appTasteSummary(context.owner)
   })
+
+/** Her Nota of each of some films (#274), so the rating screen says "sua
+ * nota 9" on the film on the card and on the search's results. */
+export const readMyRatings = createServerFn({ method: 'GET' })
+  .middleware([ownerMiddleware])
+  .validator((value: unknown) => {
+    const films = (value ?? {}) as Record<string, unknown>
+    if (
+      !Array.isArray(films.ids) ||
+      films.ids.length > 100 ||
+      !films.ids.every((id) => typeof id === 'string' && /^tt\d+$/.test(id))
+    )
+      throw new Error('film ids required')
+    return { ids: films.ids as string[] }
+  })
+  .handler(async ({ context, data }) => {
+    requireOwner(context.owner)
+    const { appRatingsOf } = await import('#/platform/imports')
+    return appRatingsOf(data.ids, context.owner)
+  })
