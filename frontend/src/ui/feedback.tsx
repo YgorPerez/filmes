@@ -202,10 +202,8 @@ function FeedbackForm({
   const { form } = FEEDBACK
   const listed = shelfOf(page).some((item) => item.id === film)
   const other = !listed && (film !== undefined || search !== null)
-  // The film radio marked: a film of the list, `outro` or `nada`; with
-  // none asked, the one the Cartaz points to (#272).
-  const [choice, setChoice] = useState(
-    nothing ? 'nada' : listed ? film : other ? 'outro' : likelyFilm(page),
+  const [choice, setChoice] = useState(() =>
+    firstChoice(page, film, other, nothing),
   )
   const { refused, alert, onAnswer } = useRefusalInPlace(
     refusal,
@@ -274,22 +272,37 @@ function FeedbackForm({
       </fieldset>
 
       {!alone && <Satisfaction page={page} />}
-      {/* The way out stays a thumb away, as the Cartaz's Enviar. */}
-      <div className="sticky bottom-[calc(68px+env(safe-area-inset-bottom))] z-10 rounded-t-panel border-x border-t border-rule bg-surface px-lg py-sm min-[900px]:bottom-0">
-        <Submit
-          variant="primary"
-          disabled={busy !== null}
-          className="w-full sm:w-auto"
-        >
-          {busy === null
-            ? correcting
-              ? form.correctSubmit
-              : form.submit
-            : form.submitting}
-        </Submit>
-      </div>
+      <SendBar busy={busy !== null} correcting={correcting} />
     </form>
   )
+}
+
+/** The way out, a thumb away as the Cartaz's Enviar: it records, or
+ * records the correction (#344). */
+function SendBar({ busy, correcting }: { busy: boolean; correcting: boolean }) {
+  const { form } = FEEDBACK
+  const label = correcting ? form.correctSubmit : form.submit
+  return (
+    <div className="sticky bottom-[calc(68px+env(safe-area-inset-bottom))] z-10 rounded-t-panel border-x border-t border-rule bg-surface px-lg py-sm min-[900px]:bottom-0">
+      <Submit variant="primary" disabled={busy} className="w-full sm:w-auto">
+        {busy ? form.submitting : label}
+      </Submit>
+    </div>
+  )
+}
+
+/** The film radio marked first: "não vimos nada" when the corrected
+ * Session told it (#344), a film of the list, `outro`, or with none asked,
+ * the one the Cartaz points to (#272). */
+function firstChoice(
+  page: FeedbackPage,
+  film: string | undefined,
+  other: boolean,
+  nothing: boolean,
+): string | undefined {
+  if (nothing) return 'nada'
+  if (shelfOf(page).some((item) => item.id === film)) return film
+  return other ? 'outro' : likelyFilm(page)
 }
 
 /** Every film the Session showed: the current shelf, then the ones that
