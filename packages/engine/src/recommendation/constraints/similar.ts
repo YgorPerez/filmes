@@ -60,7 +60,7 @@ export interface SimilarRequest {
 }
 
 /** "A", "A e B", "A, B e C" (`_e`). */
-const andList = (names: ReadonlyArray<string>): string =>
+export const andList = (names: ReadonlyArray<string>): string =>
   names.length === 1
     ? (names[0] ?? '')
     : `${names.slice(0, -1).join(', ')} e ${names.at(-1) ?? ''}`

@@ -36,7 +36,7 @@ Título ou nome vira ID com \`search_catalog\`, que serve a qualquer Dono: filme
 
 1. Resolva cada título num ID do Catálogo com \`search_catalog\` (\`kinds: ["film"]\`). O Catálogo guarda o título do IMDb, quase sempre o original ou o em inglês: sem resultado para o título em português, tente o original antes de dizer que o filme está fora do Catálogo. Com vários, pergunte qual, com título e ano de cada um.
 2. Chame \`recommend\` com o pedido inteiro e os IDs em \`similar\`: um para "algo igual X", dois para "entre X e Y". Com Sessão aberta da noite, passe também \`session\`.
-3. Se a lista vier menor, com aviso de que faltaram parecidos, diga isso numa linha e ofereça afrouxar uma Restrição da noite.
+3. Se a lista vier menor (\`shortfall\`), diga isso numa linha e ofereça afrouxar uma Restrição da noite.
 
 Com \`session\`, o filtro fica nos refazeres seguintes sem repetir \`similar\`. Referências novas trocam a lista inteira, mesmo com \`keep\`. "Esquece o parecido" ou uma noite diferente ("agora quero terror") vai com \`noSimilar: true\`.
 

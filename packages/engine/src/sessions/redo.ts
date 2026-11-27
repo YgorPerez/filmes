@@ -76,6 +76,7 @@ import {
   type SessionRecommendation,
   type SessionRef,
 } from './open.ts'
+import { shortfallOf } from './shortfall.ts'
 
 /** The Session's frontmatter, or an error if it does not exist or already
  * has Feedback (`conferir_aberta`). */
@@ -355,9 +356,11 @@ export const recommendSession = (
         ? () => Effect.succeed(session)
         : (db, attendees) => nextSessionId(db, attendees),
     )
-    const recommendation: Recommendation = {
+    const shortfall = shortfallOf(ranked, count)
+    const recommendation: Omit<SessionRecommendation, 'session'> = {
       ...ranked,
       warnings: [...synced, ...warnings, ...ranked.warnings],
+      ...(shortfall && { shortfall }),
     }
     const context = sessionContext(
       asking.request ?? null,

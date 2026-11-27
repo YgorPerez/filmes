@@ -42,6 +42,8 @@ export default defineTool({
     '`cautiousBet: true` indica que o Histórico de apostas exigiu uma Nota prevista maior para a Aposta, com o Motivo em `filmLines`. ' +
     '`vetoes` lista os Vetos dos Presentes que tiraram filmes, com `filmsRemoved` e `byPath` ({direct, subgenres, imdbGenre, tags}): ' +
     'um Veto a gênero tira também os subgêneros do Wikidata e o gênero do IMDb; um Veto a grupo de tags, como comédia boba, conta em `tags`. ' +
+    'Quando passam menos filmes que o pedido, `shortfall` diz quantos foram pedidos e vieram (`asked`, `found`), os títulos do Parecido ' +
+    'cujos filmes acabaram (`similar`) e o que foi afrouxado para encher a lista (`relaxed`, com `text`); a Sessão o guarda e o Cartaz o mostra numa faixa. ' +
     'Presentes por slug, nome ou apelido; "dono" é o Dono. ' +
     'Restrições opcionais (duração, ano de lançamento, idioma, criança, gatilhos, sem Já visto, nada triste, nada lento, parecido) tiram filmes antes da ordenação; ' +
     '`constraints` diz o que cada uma tirou. Cada filme que passa traz em `filmLines` as linhas das Restrições, do Clima, de grupo ou sozinho, ' +

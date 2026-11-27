@@ -5,6 +5,7 @@ import { INLINE_CARD } from './billboard-frame'
 import { Icon } from './billboard-icons'
 import { Copy, SendButton, Status } from './billboard-reply'
 import { askedParts } from './billboard-request'
+import { ShortfallStrip } from './billboard-shortfall'
 import { buttonVariants } from './kit/button-variants'
 import { ShelfLabel } from './kit/shelf-label'
 import { PriceSticker } from './kit/sticker'
@@ -251,8 +252,8 @@ function Closed({
   )
 }
 
-/** Where this version stands, under the request: what changed since the
- * last one, or, once closed, that it is closed and the Filme escolhido with
+/** Where this version stands, under the request: the Falta strip and what
+ * changed since the last one, or, once closed, that it is closed and the Filme escolhido with
  * each Presente's line. The inline card, the fullscreen and the host
  * without one say it the same way (#277). */
 export function Standing({
@@ -265,7 +266,10 @@ export function Standing({
   block?: boolean
 }) {
   return billboard.open ? (
-    <Changes billboard={billboard} />
+    <>
+      <ShortfallStrip billboard={billboard} />
+      <Changes billboard={billboard} />
+    </>
   ) : (
     <Closed billboard={billboard} block={block} />
   )

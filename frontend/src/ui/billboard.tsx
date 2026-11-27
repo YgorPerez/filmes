@@ -32,6 +32,7 @@ import {
 } from './billboard-marks'
 import { ReplyBar, ReplyBox, type BarPlace } from './billboard-reply'
 import { askedParts } from './billboard-request'
+import { ShortfallStrip } from './billboard-shortfall'
 import { buttonVariants } from './kit/button-variants'
 import { Dropped, Legend, PeopleLegend } from './billboard-top'
 import { BILLBOARD } from './billboard.copy'
@@ -420,6 +421,7 @@ function PageTop({
           <Request billboard={billboard} />
           <Legend />
         </div>
+        <ShortfallStrip billboard={billboard} />
         {billboard.open && <Dropped billboard={billboard} />}
       </div>
       {shelf}
