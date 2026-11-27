@@ -327,6 +327,7 @@ export function repeatDraft(asked: RecommendSessionRequest): NewSessionDraft {
       unseen: asked.unseen,
       noSlow: asked.noSlow,
       noSad: asked.noSad,
+      noMoods: asked.noMoods && [...asked.noMoods],
     },
     reading: null,
   }

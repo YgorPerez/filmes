@@ -86,6 +86,7 @@ describe('the Nova Sessão form, what it posts', () => {
     await user.click(screen.getByRole('checkbox', { name: copy.unseen }))
     await user.click(screen.getByRole('checkbox', { name: copy.noSlow }))
     await user.click(screen.getByRole('checkbox', { name: copy.noSad }))
+    await user.click(screen.getByRole('checkbox', { name: /^nada ?tenso$/ }))
     await user.click(
       screen.getByRole('radio', { name: copy.seriesOrders.todos }),
     )
@@ -107,6 +108,7 @@ describe('the Nova Sessão form, what it posts', () => {
         unseen: true,
         noSlow: true,
         noSad: true,
+        noMoods: ['tenso'],
         seriesOrder: 'all',
       },
     })

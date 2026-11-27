@@ -9,7 +9,8 @@
 // `quantos`, `pedido` (the Dono's words), and the Restrições: `duracao`
 // (minutes), `desde`/`ate` (years), `idioma`, `crianca` (age, 0 = no age),
 // `gatilhos` and `parecido` (lists separated by commas), `sem-ja-visto`,
-// `sem-lento`, `sem-tristeza` (checkboxes), and `serie` (`anterior` |
+// `sem-lento`, `sem-tristeza` (checkboxes), `sem-climas` (repeated, the
+// Climas turned away, #272), and `serie` (`anterior` |
 // `todos` | `tanto-faz`, the Série na ordem, #165).
 
 import { field, oneOf, within } from './form-fields'
@@ -58,6 +59,7 @@ export type SessionRequestForm = {
   unseen?: boolean
   noSlow?: boolean
   noSad?: boolean
+  noMoods?: string[]
   seriesOrder?: (typeof SERIES_ORDER_CHOICES)[SeriesOrderChoice]
 }
 
@@ -133,6 +135,9 @@ const all = (form: FormData, name: string): string[] => [
   ),
 ]
 
+/** The list, or undefined when it is empty. */
+const some = (items: string[]) => (items.length > 0 ? items : undefined)
+
 const checked = (form: FormData, name: string) =>
   form.get(name) === 'sim' || undefined
 
@@ -195,6 +200,7 @@ function read(form: FormData): SessionRequestForm {
     unseen: checked(form, 'sem-ja-visto'),
     noSlow: checked(form, 'sem-lento'),
     noSad: checked(form, 'sem-tristeza'),
+    noMoods: some(all(form, 'sem-climas')),
     seriesOrder: seriesOrder(form),
   })
 }
@@ -243,6 +249,7 @@ export function draftOf(form: FormData): Partial<SessionRequestForm> {
     unseen: checked(form, 'sem-ja-visto'),
     noSlow: checked(form, 'sem-lento'),
     noSad: checked(form, 'sem-tristeza'),
+    noMoods: some(all(form, 'sem-climas')),
     seriesOrder: seriesOrder(form),
   })
 }

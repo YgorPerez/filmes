@@ -227,6 +227,7 @@ const detailsAsked = (asked: Asked) =>
     asked.by,
   ].some((value) => value !== undefined) ||
   Boolean(asked.unseen || asked.noSlow || asked.noSad) ||
+  (asked.noMoods?.length ?? 0) > 0 ||
   (asked.triggers?.length ?? 0) > 0 ||
   (asked.rule !== undefined && asked.rule !== 'default') ||
   (asked.seriesOrder !== undefined &&
@@ -468,7 +469,7 @@ function Details({
       }
     >
       <div className="flex flex-col gap-3xl">
-        <Constraints asked={asked} />
+        <Constraints asked={asked} moods={options.moods} />
         <Rule options={options} asked={asked} />
         <SeriesOrder asked={asked} />
       </div>
@@ -696,8 +697,15 @@ function Moods({ moods, asked }: { moods: readonly string[]; asked: Asked }) {
   )
 }
 
-function Constraints({ asked }: { asked: Asked }) {
+function Constraints({
+  asked,
+  moods,
+}: {
+  asked: Asked
+  moods: readonly string[]
+}) {
   const { form } = SESSIONS
+  const turnedAway = new Set(asked.noMoods)
   const year = { type: 'number', min: 1870, max: 2100 } as const
   return (
     <Section
@@ -719,6 +727,27 @@ function Constraints({ asked }: { asked: Asked }) {
           </Option>
         </div>
       </div>
+      <fieldset className="flex flex-col gap-sm">
+        <legend className="mb-sm font-semibold">
+          {form.noMoods}{' '}
+          <span className="text-meta font-normal text-ink-2">
+            {form.noMoodsHint}
+          </span>
+        </legend>
+        <div className={pills}>
+          {moods.map((mood) => (
+            <Option
+              key={mood}
+              name="sem-climas"
+              value={mood}
+              defaultChecked={turnedAway.has(mood)}
+            >
+              <span className="sr-only">{`${form.noMoodsEach} `}</span>
+              {mood}
+            </Option>
+          ))}
+        </div>
+      </fieldset>
       <div className={grid}>
         <SelectField
           name="crianca"
