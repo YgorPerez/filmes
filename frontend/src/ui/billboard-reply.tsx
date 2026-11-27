@@ -1,6 +1,7 @@
 import type { Billboard as BillboardModel } from '@filmes/engine'
 import { useEffect, useRef, useState } from 'react'
 import { BILLBOARD } from './billboard.copy'
+import { Icon } from './billboard-icons'
 import { chosenMoods, hasMarks, type Marks } from './billboard-marks'
 import { buttonVariants } from './kit/button-variants'
 import { FIELD } from './kit/field'
@@ -147,9 +148,17 @@ function MoodChips({
   // Folded: any chip redoes the whole list, so it takes a tap to reach
   // them (#277); open once the Dono changed the Clima.
   return (
-    <details open={marks.moods !== null} className="flex flex-col gap-xs">
-      <summary className="flex min-h-touch cursor-pointer items-center font-display text-field-label">
+    <details
+      open={marks.moods !== null}
+      className="group/moods flex flex-col gap-xs"
+    >
+      {/* The chevron says the row opens, and turns once open (#277). */}
+      <summary className="flex min-h-touch cursor-pointer list-none items-center justify-between gap-sm font-display text-field-label [&::-webkit-details-marker]:hidden">
         {reply.moodsOpen}
+        <Icon
+          name="chevron"
+          className="size-5 text-ink-2 transition-transform group-open/moods:rotate-180 motion-reduce:transition-none"
+        />
       </summary>
       <fieldset className="flex flex-col gap-xs">
         <legend className="mb-xs font-display text-field-label">
@@ -196,7 +205,9 @@ export function ReplyBox({
       aria-labelledby="responder"
       className="flex flex-col gap-md rounded-card border border-rule bg-surface p-xl"
     >
-      <h2 id="responder" className="sr-only">
+      {/* Visible, at the step of a page's titles: it sits among the film
+          titles, and must not read below them (#277). */}
+      <h2 id="responder" className="font-display text-page-title">
         {reply.title}
       </h2>
       <label className="flex flex-col gap-xs">
