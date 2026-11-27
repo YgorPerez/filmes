@@ -26,7 +26,12 @@ const DAY = /^(\d{4})-(\d{2})-(\d{2})/
 function partsOf(iso: string) {
   const match = DAY.exec(iso)
   if (!match) return null
-  const [, year, month, day] = match.map(Number) as [number, number, number, number]
+  const [, year, month, day] = match.map(Number) as [
+    number,
+    number,
+    number,
+    number,
+  ]
   if (month < 1 || month > 12 || day < 1 || day > 31) return null
   return { year, month, day }
 }

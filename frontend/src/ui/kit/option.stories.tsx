@@ -68,7 +68,13 @@ export const InsideAFold: Story = {
   render: () => (
     <Disclosure summary="Mais opções" open>
       <div className="flex flex-col gap-sm">
-        <Option type="radio" name="rule" value="default" shape="row" defaultChecked>
+        <Option
+          type="radio"
+          name="rule"
+          value="default"
+          shape="row"
+          defaultChecked
+        >
           Padrão
         </Option>
         <Option name="no-slow">Nada lento</Option>

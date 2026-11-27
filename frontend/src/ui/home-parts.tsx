@@ -97,7 +97,10 @@ export function Latest({
               key={film.id}
               className="flex min-h-[38px] items-center gap-md overflow-hidden rounded-rail bg-surface-2 pr-md"
             >
-              <span aria-hidden="true" className="w-2 self-stretch border-r border-case-edge bg-case" />
+              <span
+                aria-hidden="true"
+                className="w-2 self-stretch border-r border-case-edge bg-case"
+              />
               <PriceSticker compact>{i + 1}</PriceSticker>
               <span className="truncate font-display text-row-title">
                 {film.title}

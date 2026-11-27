@@ -27,7 +27,11 @@ const show = ({
   alert?: PushStatus | null
 } = {}) =>
   render(
-    <AppShell owner={{ name: 'Bruno', admin, email: 'bruno@example.org' }} path={path} alert={alert}>
+    <AppShell
+      owner={{ name: 'Bruno', admin, email: 'bruno@example.org' }}
+      path={path}
+      alert={alert}
+    >
       <main>a página</main>
     </AppShell>,
   )

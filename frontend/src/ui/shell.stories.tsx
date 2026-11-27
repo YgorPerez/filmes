@@ -42,7 +42,10 @@ export const Home: Story = {
 export const Sessions: Story = { args: { path: '/sessoes' } }
 
 export const AdminWithFailingPush: Story = {
-  args: { owner: { name: 'Vera', admin: true, email: 'vera@example.org' }, alert: FAILING },
+  args: {
+    owner: { name: 'Vera', admin: true, email: 'vera@example.org' },
+    alert: FAILING,
+  },
   play: async ({ canvasElement }) => {
     await expect(within(canvasElement).getByRole('alert')).toBeVisible()
   },

@@ -9,9 +9,9 @@ afterEach(cleanup)
 describe('NotFound', () => {
   it('leads a Dono home and to her Sessões', () => {
     render(<NotFound />)
-    expect(
-      screen.getByRole('heading', { level: 1 }).textContent,
-    ).toBe('Essa fita não está na prateleira')
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
+      'Essa fita não está na prateleira',
+    )
     expect(
       screen
         .getAllByRole('link')
@@ -42,7 +42,7 @@ describe('NotFound', () => {
 
 describe('LoadFailed', () => {
   it('tries the page again', () => {
-    const retry = vi.fn()
+    const retry = vi.fn<() => void>()
     render(<LoadFailed onRetry={retry} />)
     fireEvent.click(screen.getByRole('button', { name: 'Tentar de novo' }))
     expect(retry).toHaveBeenCalledOnce()

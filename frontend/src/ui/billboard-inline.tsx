@@ -52,7 +52,10 @@ export function InlineBillboard({
             key={film.id}
             className="grid grid-cols-[8px_26px_minmax(0,1fr)_auto] items-center gap-sm overflow-hidden rounded-rail bg-surface py-xs pr-md"
           >
-            <span aria-hidden="true" className="self-stretch border-r border-case-edge bg-case" />
+            <span
+              aria-hidden="true"
+              className="self-stretch border-r border-case-edge bg-case"
+            />
             <PriceSticker compact>{film.position}</PriceSticker>
             <span className="truncate font-display text-row-title">
               {film.title}

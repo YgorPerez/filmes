@@ -46,7 +46,10 @@ const REACTION_OPTIONS = [
   })),
 ]
 
-const RATING_OPTIONS = [{ value: '', label: PERSON.noRating }, ...RATING_CHOICES]
+const RATING_OPTIONS = [
+  { value: '', label: PERSON.noRating },
+  ...RATING_CHOICES,
+]
 
 /** `/pessoas/<slug>`, or Meu gosto for the Dono's own: her Notas first
  * (rate, import, the CSV), then, on Meu gosto, the setup guide's leftovers
@@ -262,6 +265,9 @@ function tasteParts(page: PersonPage) {
   ] as const
 }
 
+/** How many elos she moved off normal (the engine lists only those). */
+const changedAdjustments = (page: PersonPage) => page.adjustments.length
+
 /** Meu gosto's opening ficha: how many Notas (and how many to 10), what
  * she said of her taste, and the one next step. */
 function Glance({ page, start }: { page: PersonPage; start?: MyStart }) {
@@ -310,13 +316,15 @@ function Glance({ page, start }: { page: PersonPage; start?: MyStart }) {
  * one fold (`Details`). */
 function Contents({ page }: { page: PersonPage }) {
   const own = page.person === page.viewer.person
-  const entries: readonly (readonly [string, string, number | null])[] = [
+  const all: readonly (readonly [string, string, number | null])[] = [
     ...tasteParts(page).filter(([, , n]) => n > 0),
-    ['ajustes', PERSON.adjustments.title, page.adjustments.length],
+    ['ajustes', PERSON.adjustments.title, changedAdjustments(page)],
     ...(page.access === undefined || own
       ? []
       : [['acesso', PERSON.access.title, null] as const]),
   ]
+  const entries = all.filter(([, , n]) => n !== 0)
+  if (entries.length === 0) return null
   return (
     <nav aria-label={PERSON.contents}>
       <ul className="flex flex-wrap gap-xs">
@@ -547,8 +555,7 @@ function Adjustments({ slug, page }: Part) {
   const own = page.person === page.viewer.person
   const levelOf = (link: string) =>
     page.adjustments.find((a) => a.link === link)
-  const changed = (link: string) =>
-    (levelOf(link)?.level ?? 'normal') !== 'normal'
+  const changed = (link: string) => levelOf(link) !== undefined
   const links = Object.entries(PERSON.links)
   const row = ([link, name]: [string, string]) => (
     <li key={link} className="border-rule py-md not-first:border-t">
@@ -565,7 +572,7 @@ function Adjustments({ slug, page }: Part) {
     <Slip
       id="ajustes"
       title={adjustments.title}
-      aside={String(links.length - rest.length)}
+      aside={String(changedAdjustments(page))}
       lead={own ? adjustments.ownLead : adjustments.lead}
     >
       {rest.length < links.length && (

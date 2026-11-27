@@ -668,7 +668,9 @@ describe('the Acesso section', () => {
       viewer: ADMIN,
       access: { email: 'bruno@example.org' },
     })
-    expect(screen.queryByRole('region', { name: PERSON.access.title })).toBeNull()
+    expect(
+      screen.queryByRole('region', { name: PERSON.access.title }),
+    ).toBeNull()
   })
 })
 
@@ -749,4 +751,3 @@ describe('Meu gosto in the second person', () => {
     expect(within(seen).getByText(PERSON.seen.empty)).toBeTruthy()
   })
 })
-

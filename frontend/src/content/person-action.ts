@@ -159,7 +159,10 @@ const statementProblem = (form: FormData): FieldProblem | null => {
 }
 
 const PROBLEMS: Partial<
-  Record<(typeof PERSON_ACTIONS)[number], (form: FormData) => FieldProblem | null>
+  Record<
+    (typeof PERSON_ACTIONS)[number],
+    (form: FormData) => FieldProblem | null
+  >
 > = {
   declarar: statementProblem,
   relatar: statementProblem,

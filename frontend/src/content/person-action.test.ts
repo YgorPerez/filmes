@@ -22,14 +22,23 @@ describe('formProblem', () => {
       { field: 'alvo', problem: 'reaction' },
     ],
     [{ acao: 'visto' }, { field: 'filme', problem: 'required' }],
-    [{ acao: 'visto', filme: 'Q1' }, { field: 'filme', problem: 'film' }],
+    [
+      { acao: 'visto', filme: 'Q1' },
+      { field: 'filme', problem: 'film' },
+    ],
     [
       { acao: 'visto', filme: 'tt1', nota: '11/10' },
       { field: 'nota', problem: 'rating' },
     ],
     [{ acao: 'vetar' }, { field: 'texto', problem: 'required' }],
-    [{ acao: 'vetar', texto: 'x' }, { field: 'alvo', problem: 'target' }],
-    [{ acao: 'vetar', texto: 'x', alvo: 'x1' }, { field: 'alvo', problem: 'id' }],
+    [
+      { acao: 'vetar', texto: 'x' },
+      { field: 'alvo', problem: 'target' },
+    ],
+    [
+      { acao: 'vetar', texto: 'x', alvo: 'x1' },
+      { field: 'alvo', problem: 'id' },
+    ],
     [{ acao: 'responder' }, { field: 'texto', problem: 'required' }],
     [{ acao: 'dar-acesso' }, { field: 'email', problem: 'required' }],
   ])('marks %j', (fields, problem) => {

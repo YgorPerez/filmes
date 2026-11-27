@@ -280,7 +280,10 @@ export function Disclosure({
   children: ReactNode
 }) {
   return (
-    <details open={open} className="group/fold rounded-field border border-rule">
+    <details
+      open={open}
+      className="group/fold rounded-field border border-rule"
+    >
       <summary className="flex min-h-touch cursor-pointer list-none items-center justify-between gap-sm px-3 font-semibold select-none [&::-webkit-details-marker]:hidden">
         {summary}
         {/* The drawn +, a × while open: the fold's state not by colour. */}
