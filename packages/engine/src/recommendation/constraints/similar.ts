@@ -12,7 +12,9 @@
 // diretor", cited from what comes first (the Wikidata edge when it is only
 // the director). The line is no Fato: it adds to nobody's utility, and a
 // film with only it is still "só palpites". If fewer pass than asked, the
-// list comes out shorter, with a warning. Nothing is written to any Pessoa.
+// list comes out shorter, with a warning; the Session's Recomendação relaxes
+// it instead (#358): the films that are not similar fill the places after
+// the similar ones. Nothing is written to any Pessoa.
 //
 // In a Session (#68), the references are stored in the version's
 // `context.constraints`, and a refazer without `similar` keeps them
@@ -158,6 +160,8 @@ const similar = (films: ReadonlyArray<string>): Constraint => {
     stored: () => ({ name: 'similar', films: [...films], titles: [...titles] }),
     result: () => ({}),
     candidateLimit: (weights) => weights.similar.candidates,
+    relaxes: () => true,
+    relaxedText: () => 'que não são parecidos',
     replacesList: (stored) => {
       const before = new Set(storedFilms(stored))
       return films.length !== before.size || films.some((id) => !before.has(id))

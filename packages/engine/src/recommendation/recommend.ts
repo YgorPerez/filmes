@@ -65,9 +65,11 @@ import {
 } from './candidates.ts'
 import {
   makeConstraintSet,
+  RELAX_ORDER,
   type Constraint,
   type ConstraintContext,
   type ConstraintSet,
+  type RelaxedConstraint,
 } from './constraints.ts'
 import { readConstraints, type ConstraintRequest } from './constraints/index.ts'
 import { criticsLines } from './critics.ts'
@@ -174,6 +176,9 @@ export interface Recommendation {
   readonly kept?: ReadonlyArray<string>
   /** Only when regenerating: what left the previous version, and why. */
   readonly dropped?: ReadonlyArray<Dropped>
+  /** Only when the list came up short and a Restrição was relaxed to fill
+   * it (#358): which, and how many of the films came in by it. */
+  readonly relaxed?: ReadonlyArray<RelaxedConstraint>
 }
 
 export interface RankOptions {
@@ -195,6 +200,10 @@ export interface RankOptions {
   readonly seed?: string
   /** The Session being redone, excluded from its own bet record. */
   readonly session?: string
+  /** A short list relaxes the Parecido, then the year, to fill `count`
+   * (#358). The Session's Recomendação asks for it; without it, the
+   * Restrições hold as asked and the list may come out shorter. */
+  readonly relax?: boolean
 }
 
 type Key = readonly PyOrderable[]
@@ -206,18 +215,26 @@ interface Ordered extends Scored {
   readonly evidence: ReadonlyArray<Evidence>
 }
 
+/** How many bands a tier of relaxed films holds (#358). */
+const BANDS = 3
+
 /** 0 with some known utility, 1 with Facts only in the film signals, 2
- * with guesses only. */
-const bandOf = (byRule: readonly number[] | null, hasFact: boolean): number =>
-  byRule !== null ? 0 : hasFact ? 1 : 2
+ * with guesses only; a film a short list let in by relaxing a Restrição
+ * (`tier` above 0) comes after all of those (#358). */
+const bandOf = (
+  byRule: readonly number[] | null,
+  hasFact: boolean,
+  tier: number,
+): number => tier * BANDS + (byRule !== null ? 0 : hasFact ? 1 : 2)
 
 const orderKey = (
   byRule: readonly number[] | null,
   hasFact: boolean,
   film: Candidate,
   bonus: number,
+  tier: number,
 ): Key => [
-  bandOf(byRule, hasFact),
+  bandOf(byRule, hasFact, tier),
   byRule !== null ? byRule.map((v) => -(v + bonus)) : [-bonus],
   -film.votes,
   film.id,
@@ -313,7 +330,11 @@ const prepare = (db: Connection, options: RankOptions): RankEffect<Ranking> =>
       db,
       weights,
       today: run.today,
-      candidates: yield* asked.candidates(vetoes.remaining, kept),
+      candidates: yield* asked.candidates(
+        vetoes.remaining,
+        kept,
+        options.relax ? options.count : 0,
+      ),
       attendees,
       moods: moods.moods,
       ...(refill.length > 0 && { refillMoods: { moods: refill, kept } }),
@@ -475,10 +496,11 @@ const orderFilms = (
       (e) => e.kind !== 'guess' && e.countsAsFact,
     )
     const byRule = ruleKey(rule, utilities, adjustment)
+    const tier = r.asked.tierOf(filmId)
     ordered.push({
-      key: orderKey(byRule, hasFact, film, bonus),
+      key: orderKey(byRule, hasFact, film, bonus, tier),
       id: film.id,
-      band: bandOf(byRule, hasFact),
+      band: bandOf(byRule, hasFact, tier),
       score: (byRule?.[0] ?? 0) + bonus,
       film,
       utilities,
@@ -486,7 +508,7 @@ const orderFilms = (
     })
     if (adjustment.size > 0)
       unweighed.push({
-        key: orderKey(ruleKey(rule, utilities), hasFact, film, bonus),
+        key: orderKey(ruleKey(rule, utilities), hasFact, film, bonus, tier),
         id: filmId,
       })
   }
@@ -981,7 +1003,7 @@ const recommendedFilm = (
         attendees: utilities.size,
         withoutFact: withoutFactOn,
       },
-      onlyGuesses: key[0] === 2,
+      onlyGuesses: (key[0] as number) % BANDS === 2,
       utility: Object.fromEntries(
         [...utilities].map(([p, u]) => [p, u === null ? null : pyRound(u, 4)]),
       ),
@@ -1051,8 +1073,39 @@ const recommendation = (
           done.removed,
         ),
       }),
+      ...relaxedIn(r, films),
     }
   })
+
+/** The Restrições relaxed to let the placed films in, each with the films
+ * whose last relaxed Restrição it is (#358). */
+const relaxedIn = (
+  r: Ranking,
+  films: ReadonlyArray<RecommendedFilm>,
+): { readonly relaxed?: ReadonlyArray<RelaxedConstraint> } => {
+  const by = new Map<Constraint, Candidate[]>()
+  for (const { id } of films) {
+    const last = r.asked
+      .relaxedOf(id)
+      .toSorted(
+        (a, b) => RELAX_ORDER.indexOf(a.name) - RELAX_ORDER.indexOf(b.name),
+      )
+      .at(-1)
+    const film = r.round.candidates.get(id)
+    if (last !== undefined && film !== undefined)
+      by.set(last, [...(by.get(last) ?? []), film])
+  }
+  const relaxed = [...by]
+    .toSorted(
+      ([a], [b]) => RELAX_ORDER.indexOf(a.name) - RELAX_ORDER.indexOf(b.name),
+    )
+    .map(([c, came]) => ({
+      constraint: c.name,
+      films: came.length,
+      text: c.relaxedText?.(came) ?? '',
+    }))
+  return relaxed.length > 0 ? { relaxed } : {}
+}
 
 /** The recommendation for Presentes already resolved, on an open read
  * connection (Python's `recomendar(conn, ...)`). Warnings go to the
@@ -1175,7 +1228,7 @@ export const requestCount = (
  * the Presentes resolved, the Regra checked, then `rank`. `seedOf` gives
  * the Aposta's seed from the Presentes when the request has none. */
 export const rankRequest = (
-  request: RecommendRequest & Pick<RankOptions, 'refillMoods'>,
+  request: RecommendRequest & Pick<RankOptions, 'refillMoods' | 'relax'>,
   count: number,
   asked: ReadonlyArray<Constraint>,
   regenerate?: Regenerate,
@@ -1208,6 +1261,7 @@ export const rankRequest = (
           ...(request.refillMoods !== undefined && {
             refillMoods: request.refillMoods,
           }),
+          ...(request.relax && { relax: true }),
           ...(regenerate !== undefined && { regenerate }),
           ...(seed !== undefined && { seed }),
           ...(request.session != null && { session: request.session }),

@@ -54,6 +54,8 @@ export default defineTool({
     '`satisfaction` traz a Satisfação de cada Presente (0 a 1, média das reações nas últimas Sessões em grupo com alguém de hoje) e `disagreement` a mais alta menos a mais baixa, na Regra padrão em grupo; ' +
     'quem está abaixo da mais alta pesa mais na ordem. ' +
     'Com `similar`, só passam os parecidos com as referências, e cada filme traz a linha "parecido com X: ...", que não é Fato. ' +
+    'Quando a lista não enche, o motor afrouxa o parecido e depois o ano (`since`, `until`): os parecidos vêm primeiro e os outros enchem as vagas; ' +
+    'as outras Restrições e os Vetos nunca afrouxam, e `shortfall.relaxed` diz o que entrou. ' +
     'Com `session`, refaz a Recomendação nessa Sessão aberta em vez de abrir outra, e `session.version` conta as versões. ' +
     'O que a Sessão já mostrou pode voltar; só sai, sozinho, o que o Dono trocou em alguma versão dela e o que algum Presente marcou Já vi nela, ' +
     'em `constraints.out_of_session` ({swapped, seen, removed}). O parecido fica na Sessão: o refazer sem `similar` continua com as referências da versão anterior; ' +
@@ -100,7 +102,9 @@ export default defineTool({
       .min(1)
       .max(100)
       .optional()
-      .describe('tamanho da lista; padrão 5'),
+      .describe(
+        'tamanho da lista; padrão 5, e no refazer o tamanho da versão anterior',
+      ),
     request: z
       .string()
       .optional()
@@ -199,7 +203,7 @@ export default defineTool({
       .describe(
         '"algo igual X" ou "entre X e Y": os filmes de referência (tt... do IMDb). Só passam os 50 ' +
           'mais parecidos com eles (média entre as referências), e a Regra de escolha ordena entre esses. Faltando ' +
-          'parecidos, a lista sai menor, com aviso. O pedido é da noite: não grava gosto. Com session, fica nos ' +
+          'parecidos, outros filmes enchem a lista depois deles, e `shortfall` diz isso. O pedido é da noite: não grava gosto. Com session, fica nos ' +
           'refazeres seguintes sem repetir; referências novas trocam a lista inteira',
       ),
     seriesOrder: z

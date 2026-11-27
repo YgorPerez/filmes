@@ -4,18 +4,11 @@
 // strip at its top; without it the list would shrink in silence.
 
 import { andList } from '../recommendation/constraints/similar.ts'
+import type { RelaxedConstraint } from '../recommendation/constraints.ts'
 import type { Recommendation } from '../recommendation/recommend.ts'
 
 /** A Restrição the engine relaxed to fill the list (#358). */
-export interface ShortfallRelaxed {
-  /** The Restrição's name: `similar`, `since`. */
-  readonly constraint: string
-  /** How many films came in because of it. */
-  readonly films: number
-  /** What those films are, after "entraram 3": "de antes de 1990", "que
-   * não são parecidos". */
-  readonly text: string
-}
+export type ShortfallRelaxed = RelaxedConstraint
 
 export interface Shortfall {
   /** How many films the request asked. */
@@ -49,6 +42,14 @@ export const shortfallOf = (
 const cameIn = (r: ShortfallRelaxed): string =>
   `${r.films === 1 ? 'entrou 1' : `entraram ${r.films}`} ${r.text}`
 
+/** After a relax that did not fill the list: how many came. */
+const stillShort = (found: number, asked: number): string => {
+  if (found >= asked) return ''
+  return found === 1
+    ? ` Veio 1 dos ${asked} filmes pedidos.`
+    : ` Vieram ${found} dos ${asked} filmes pedidos.`
+}
+
 /** The strip at the top of the Cartaz: "Acabaram os parecidos com Home
  * Alone; entraram 3 de antes de 1990". */
 export const shortfallText = (shortfall: Shortfall): string => {
@@ -56,7 +57,7 @@ export const shortfallText = (shortfall: Shortfall): string => {
   const ranOut =
     similar.length > 0 ? `Acabaram os parecidos com ${andList(similar)}` : null
   if (relaxed.length > 0)
-    return `${ranOut ?? 'Faltaram filmes'}; ${andList(relaxed.map(cameIn))}.`
+    return `${ranOut ?? 'Faltaram filmes'}; ${andList(relaxed.map(cameIn))}.${stillShort(found, asked)}`
   if (ranOut !== null)
     return `${ranOut}: ${found === 1 ? 'veio 1' : `vieram ${found}`} dos ${asked} filmes pedidos.`
   if (found === 0) return `Nenhum filme passou nas Restrições.`

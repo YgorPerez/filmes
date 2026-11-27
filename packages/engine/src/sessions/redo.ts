@@ -284,6 +284,13 @@ const prepareRedo = (
     return { asking, asked, regenerate: prepared.regenerate, warnings }
   })
 
+/** How many films the current version shows: a refazer without a count
+ * keeps it (map #355), so swapping 4 of 9 gives back 9. */
+const sizeOf = (front: YamlMapping): number | undefined => {
+  const films = front.get('recommendation')
+  return isSequence(films) && films.length > 0 ? films.length : undefined
+}
+
 /** The request as the Session asks it: with the Restrições its current
  * version passes on and, in a refazer, what it regenerates. */
 const sessionRequest = (
@@ -312,7 +319,11 @@ const sessionRequest = (
       }
     const front = yield* openSessionFront(session)
     const asking = inheritConstraints(
-      { ...request, request: request.request ?? storedRequest(front) },
+      {
+        ...request,
+        request: request.request ?? storedRequest(front),
+        count: request.count ?? sizeOf(front),
+      },
       storedIn(front),
     )
     const asked = yield* readAsked(asking)
@@ -337,7 +348,7 @@ export const recommendSession = (
   EngineServices | Run
 > =>
   Effect.gen(function* () {
-    const count = yield* requestCount(request)
+    const requested = yield* requestCount(request)
     const keep = requestIds(request.keep)
     if (keep.length > 0 && !request.session)
       return yield* engineError(
@@ -355,11 +366,13 @@ export const recommendSession = (
         : []
     const { asking, asked, regenerate, warnings, refillMoods, refillOnly } =
       yield* sessionRequest(request, session, keep)
+    const count = asking.count ?? requested
     // The Aposta's draws come from the Session id (#178).
-    const ranked = yield* rankRequest(
+    const rankedWithRelaxed = yield* rankRequest(
       {
         ...asking,
         ...(refillMoods !== undefined && { refillMoods }),
+        relax: true,
       },
       count,
       refillOnly === undefined ? asked : [...asked, ...refillOnly],
@@ -368,7 +381,8 @@ export const recommendSession = (
         ? () => Effect.succeed(session)
         : (db, attendees) => nextSessionId(db, attendees),
     )
-    const shortfall = shortfallOf(ranked, count)
+    const { relaxed, ...ranked } = rankedWithRelaxed
+    const shortfall = shortfallOf(ranked, count, relaxed)
     const recommendation: Omit<SessionRecommendation, 'session'> = {
       ...ranked,
       warnings: [...synced, ...warnings, ...ranked.warnings],
