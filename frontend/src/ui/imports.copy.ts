@@ -20,6 +20,7 @@ const KINDS: Record<string, string> = {
   trakt: 'Arquivo do Trakt',
   imdb: 'CSV do IMDb',
   simkl: 'Backup do Simkl',
+  tvtime: 'Backup do TV Time',
 }
 
 export const PERSON_IMPORTS = {
@@ -47,6 +48,11 @@ export const PERSON_IMPORTS = {
       (outside === 0
         ? ''
         : ` ${count(outside, 'filme ficou', 'filmes ficaram')} de fora: o Catálogo não tem.`),
+    tvtime: (n: number, outside = 0) =>
+      `Backup do TV Time importado: ${facts(n)}.` +
+      (outside === 0
+        ? ''
+        : ` ${count(outside, 'filme ficou', 'filmes ficaram')} de fora: o Catálogo não tem.`),
     repetido: (n: number) =>
       `Esse arquivo já tinha sido importado: ${facts(n)}.`,
     removido: (n: number) =>
@@ -57,9 +63,9 @@ export const PERSON_IMPORTS = {
   refusals: {
     pedido: 'Faltou um campo, ou um valor não vale. Confira o formulário.',
     arquivo:
-      'Não deu para ler esse arquivo. Envie o ZIP como o Letterboxd, o Trakt ou o Simkl te deu, sem descompactar, ou o CSV do IMDb como ele veio.',
+      'Não deu para ler esse arquivo. Envie o ZIP como o Letterboxd, o Trakt, o Simkl ou o TV Time te deu, sem descompactar, ou o CSV do IMDb como ele veio.',
     origem:
-      'Esse arquivo não parece ser do Letterboxd, do Trakt, do IMDb nem do Simkl.',
+      'Esse arquivo não parece ser do Letterboxd, do Trakt, do IMDb, do Simkl nem do TV Time.',
     grande:
       'O arquivo passa de 20 MB. O ZIP do Letterboxd, do Trakt ou do Simkl e o CSV do IMDb costumam ter poucos MB: confira se é o certo.',
     consentimento:
@@ -87,6 +93,11 @@ export const PERSON_IMPORTS = {
   },
   letterboxd: {
     title: 'Letterboxd',
+    /** The slip's title when the TV Time backup's films went through the
+     * same resolution: with Letterboxd's, or alone (the TV Time slip, which
+     * counts its Fatos, has the plain name). */
+    withTvTime: (letterboxd: boolean) =>
+      letterboxd ? 'Letterboxd e TV Time' : 'Filmes do TV Time',
     films: (n: number) =>
       n === 0 ? 'Nenhum filme importado.' : count(n, 'filme', 'filmes'),
     resolved: 'Achados no Catálogo',
@@ -114,9 +125,14 @@ export const PERSON_IMPORTS = {
     summary: (ratings: number, seen: number) =>
       `${count(ratings, 'Nota', 'Notas')} e ${count(seen, 'Já visto', 'Já vistos')} do Simkl.`,
   },
+  tvtime: {
+    title: 'TV Time',
+    summary: (ratings: number, seen: number) =>
+      `${count(ratings, 'Nota', 'Notas')} e ${count(seen, 'Já visto', 'Já vistos')} do TV Time.`,
+  },
   upload: {
-    title: 'O arquivo do Letterboxd, do Trakt, do IMDb ou do Simkl',
-    file: 'Arquivo que o Letterboxd, o Trakt, o Simkl (ZIP) ou o IMDb (CSV) te deu',
+    title: 'O arquivo do Letterboxd, do Trakt, do IMDb, do Simkl ou do TV Time',
+    file: 'Arquivo que o Letterboxd, o Trakt, o Simkl, o TV Time (ZIP) ou o IMDb (CSV) te deu',
     /** How to download the file, one line per service: the service's name
      * links to where it is exported. */
     how: [
@@ -140,6 +156,14 @@ export const PERSON_IMPORTS = {
         href: 'https://docs.simkl.org/how-to-use-simkl/advanced-usage/import-export-data/exporting-from-simkl/export-data-formats',
         steps: 'Apps › Export › “.zip archive with .json file”.',
       },
+      {
+        service: 'TV Time',
+        // Shut down in July 2026: nothing to download any more, only the
+        // backup kept from before.
+        href: null,
+        steps:
+          'o gdpr-data.zip que o TV Time mandou, ou o tv-time-export.zip do TV Time Liberator.',
+      },
     ],
     submit: 'Importar',
     /** Importar while its post runs. */
@@ -160,7 +184,7 @@ export const PERSON_IMPORTS = {
 export const QUEUE = {
   back: 'Voltar',
   title: 'Fila de resolução',
-  lead: 'Filmes dos arquivos do Letterboxd que o filmes não achou no Catálogo sozinho. A decisão vale para todas as Pessoas que têm o filme.',
+  lead: 'Filmes dos arquivos do Letterboxd e do TV Time que o filmes não achou no Catálogo sozinho. A decisão vale para todas as Pessoas que têm o filme.',
   unavailable: UNAVAILABLE,
   empty: 'Nenhum filme esperando. Tudo resolvido.',
   of: 'de',

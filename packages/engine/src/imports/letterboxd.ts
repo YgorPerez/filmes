@@ -63,6 +63,7 @@ import {
   readLetterboxdRss,
 } from './letterboxd-rss.ts'
 import { storedImports, storeImport } from './stored.ts'
+import { readTvTimeBackup, TVTIME_KIND } from './tvtime-backup.ts'
 import { withLatestWatchlist } from './watchlist.ts'
 
 /** The kinds of a Pessoa's `imports:` records this module reads. */
@@ -75,6 +76,10 @@ export type ResolutionPath = (typeof RESOLUTION_PATHS)[number]
 
 /** The tables with the import's Fatos, by their database names. */
 const FACT_TABLES = ['notas', 'ja_visto', 'declarados', 'watchlist'] as const
+
+/** How the `fato_id` of the Fatos this loader writes starts: its own, and
+ * the TV Time import's (#300), whose films go through the same chain. */
+const FACT_KINDS = [LETTERBOXD_KIND, TVTIME_KIND] as const
 type FactTable = (typeof FACT_TABLES)[number]
 
 /** A film's state in `itens_letterboxd.situacao` (the database's values). */
@@ -473,7 +478,7 @@ const differs = (
 /** Asks TMDB for what the offline chain leaves in the queue and records the
  * answers in imports/letterboxd.md (`_registrar_respostas_do_tmdb`).
  * Returns the decisions and whether TMDB answered anything. */
-const recordTmdbAnswers = (
+export const recordTmdbAnswers = (
   db: Connection,
   rows: readonly LetterboxdRow[],
 ): Effect.Effect<
@@ -522,12 +527,14 @@ const recordTmdbAnswers = (
 
 // --- the load -----------------------------------------------------------------
 
-/** The rows by film, in the order they first appear (`_por_filme`). */
+/** The rows by film, in the order they first appear (`_por_filme`); a row
+ * that names its tconst needs no resolution and stays out. */
 const byFilm = (
   rows: readonly LetterboxdRow[],
 ): Map<string, LetterboxdRow[]> => {
   const films = new Map<string, LetterboxdRow[]>()
   for (const row of rows) {
+    if (row.imdb) continue
     const key = rowKey(row)
     const list = films.get(key)
     if (list) list.push(row)
@@ -541,8 +548,9 @@ const tmdbIdOf = (rows: readonly LetterboxdRow[]): string | null =>
   rows.find((row) => row.tmdb)?.tmdb ?? null
 
 /** The rows of the Pessoa's ZIPs, then those of her RSS copies, so the
- * ZIP's Fonte wins on a repeated Fato (`linhas_da_pessoa`). The watchlist
- * is the latest ZIP's that has one (`withLatestWatchlist`). */
+ * ZIP's Fonte wins on a repeated Fato (`linhas_da_pessoa`), then those of
+ * her TV Time backups (#300). The watchlist is the latest ZIP's that has
+ * one (`withLatestWatchlist`), and the latest backup's. */
 export const personLetterboxdRows = (
   person: Person,
 ): Effect.Effect<LetterboxdRow[], EngineError, Environment> =>
@@ -562,21 +570,29 @@ export const personLetterboxdRows = (
       (path, content) =>
         attempt(() => readLetterboxdRss(basename(path), content)),
     )
+    const backups = yield* storedImports(person, TVTIME_KIND, (path, content) =>
+      attempt(() => ({
+        rows: readTvTimeBackup(basename(path), content),
+        hasWatchlist: true,
+      })),
+    )
+    const isWatchlist = (row: LetterboxdRow) => row.file === 'watchlist'
     return [
-      ...withLatestWatchlist(zips, (row) => row.file === 'watchlist'),
+      ...withLatestWatchlist(zips, isWatchlist),
       ...feeds.flat(),
+      ...withLatestWatchlist(backups, isWatchlist),
     ]
   })
 
 /** Inserts one Letterboxd Fato of the film, its `fato_id` from the values. */
 const factInserter =
-  (db: Connection, slug: string, source: string, film: string) =>
+  (db: Connection, slug: string, source: string, film: string, kind: string) =>
   (
     table: FactTable,
     columns: readonly string[],
     values: readonly PyValue[],
   ) => {
-    const id = factId(LETTERBOXD_KIND, table, slug, film, ...values)
+    const id = factId(kind, table, slug, film, ...values)
     const target = table === 'declarados' ? 'alvo' : 'filme_id'
     const params = values.map((v) =>
       typeof v === 'object' && v !== null
@@ -604,7 +620,13 @@ const insertFacts = (
   row: LetterboxdRow,
 ): Effect.Effect<void, SqliteError> =>
   Effect.gen(function* () {
-    const insert = factInserter(db, slug, source, film)
+    const insert = factInserter(
+      db,
+      slug,
+      source,
+      film,
+      row.factKind ?? LETTERBOXD_KIND,
+    )
     if (row.file === 'watchlist') {
       yield* insert('watchlist', ['data'], [row.date])
       return
@@ -678,7 +700,45 @@ const loadPerson = (
             row,
           )
     }
+    yield* loadNamedFilms(db, person, rows)
   })
+
+/** The Fatos of the rows that name their tconst, when the Catálogo has the
+ * film; the others stay out, as in the IMDb import. */
+const loadNamedFilms = (
+  db: Connection,
+  person: Person,
+  rows: readonly LetterboxdRow[],
+): Effect.Effect<void, SqliteError> =>
+  Effect.gen(function* () {
+    const known = new Map<string, boolean>()
+    for (const row of rows) {
+      if (!row.imdb) continue
+      let inCatalog = known.get(row.imdb)
+      if (inCatalog === undefined) {
+        inCatalog = yield* inCatalogue(db, row.imdb)
+        known.set(row.imdb, inCatalog)
+      }
+      if (inCatalog)
+        yield* insertFacts(
+          db,
+          person.slug,
+          `${row.origin} de ${person.name}`,
+          row.imdb,
+          row,
+        )
+    }
+  })
+
+/** Whether the Catálogo has the film. */
+export const inCatalogue = (
+  db: Connection,
+  film: string,
+): Effect.Effect<boolean, SqliteError> =>
+  Effect.map(
+    db.get('SELECT 1 FROM filmes WHERE id = ?', film),
+    (row) => row !== undefined,
+  )
 
 /** Redoes every Pessoa's Letterboxd Fatos in the database, offline
  * (`carregar`): the rebuild, and every change to an import. */
@@ -688,7 +748,8 @@ export const loadLetterboxd = (
 ): Effect.Effect<void, EngineError | SqliteError, Environment> =>
   Effect.gen(function* () {
     for (const table of FACT_TABLES)
-      yield* db.run(`DELETE FROM ${table} WHERE fato_id LIKE 'letterboxd:%'`)
+      for (const kind of FACT_KINDS)
+        yield* db.run(`DELETE FROM ${table} WHERE fato_id LIKE '${kind}:%'`)
     yield* db.run('DELETE FROM itens_letterboxd')
     const decided = resolutions ?? (yield* readResolutions)
     for (const person of yield* readPeople) {
@@ -744,14 +805,21 @@ const item = (row: Record<string, unknown>): ImportItem => ({
   reason: asText(row.razao),
 })
 
+/** The report; with `ids`, of those films only (the TV Time import's,
+ * #300: the items are one per film, whichever import brought it). */
 export const letterboxdReport = (
   db: Connection,
   slug: string,
+  ids?: ReadonlySet<string>,
 ): Effect.Effect<LetterboxdReport, SqliteError> =>
   Effect.gen(function* () {
-    const counted = yield* db.all(
-      'SELECT situacao, caminho FROM itens_letterboxd WHERE pessoa = ? ORDER BY situacao, caminho, id',
-      slug,
+    const among = (rows: readonly Record<string, unknown>[]) =>
+      ids === undefined ? rows : rows.filter((row) => ids.has(String(row.id)))
+    const counted = among(
+      yield* db.all(
+        'SELECT id, situacao, caminho FROM itens_letterboxd WHERE pessoa = ? ORDER BY situacao, caminho, id',
+        slug,
+      ),
     )
     const count = (status: ItemStatus) =>
       Object.fromEntries(
@@ -761,14 +829,18 @@ export const letterboxdReport = (
             .length,
         ]),
       ) as CountsByPath
-    const queue = (yield* db.all(
-      "SELECT id, nome, ano, razao FROM itens_letterboxd WHERE pessoa = ? AND situacao = 'fila' ORDER BY id",
-      slug,
-    )).map(item)
-    const discardedItems = (yield* db.all(
-      "SELECT id, nome, ano, caminho, razao FROM itens_letterboxd WHERE pessoa = ? AND situacao = 'descartado' ORDER BY id",
-      slug,
-    )).map((row) => ({
+    const queue = among(
+      yield* db.all(
+        "SELECT id, nome, ano, razao FROM itens_letterboxd WHERE pessoa = ? AND situacao = 'fila' ORDER BY id",
+        slug,
+      ),
+    ).map(item)
+    const discardedItems = among(
+      yield* db.all(
+        "SELECT id, nome, ano, caminho, razao FROM itens_letterboxd WHERE pessoa = ? AND situacao = 'descartado' ORDER BY id",
+        slug,
+      ),
+    ).map((row) => ({
       ...item(row),
       resolvedBy: PATHS_BY_DB[String(row.caminho)] ?? null,
     }))
@@ -796,16 +868,19 @@ const FACT_NAMES: Readonly<Record<FactTable, keyof FactCounts>> = {
   watchlist: 'watchlist',
 }
 
-const countFacts = (
+/** The Pessoa's Fatos of an import kind (`letterboxd`, or `tvtime`). */
+export const countFacts = (
   db: Connection,
   slug: string,
+  kind: string = LETTERBOXD_KIND,
 ): Effect.Effect<FactCounts, SqliteError> =>
   Effect.gen(function* () {
     const counts: Record<string, number> = {}
     for (const table of FACT_TABLES) {
       const row = yield* db.get(
-        `SELECT count(*) AS n FROM ${table} WHERE pessoa = ? AND fato_id LIKE 'letterboxd:%'`,
+        `SELECT count(*) AS n FROM ${table} WHERE pessoa = ? AND fato_id LIKE ?`,
         slug,
+        `${kind}:%`,
       )
       counts[FACT_NAMES[table]] = Number(row?.n ?? 0)
     }

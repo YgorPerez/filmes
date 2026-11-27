@@ -3,14 +3,16 @@
 // ratings and history JSONs. The import page has one file field and lets
 // the server tell them apart (#163). IMDb's ratings come as a CSV, not a
 // ZIP, and are told by their header (#285). Simkl's backup is
-// `SimklBackup.json`, alone or in its ZIP (#299).
+// `SimklBackup.json`, alone or in its ZIP (#299). A TV Time backup has its
+// records CSV or the Liberator's `movies.json` (#300).
 import { isImdbRatings } from './imdb-ratings.ts'
 import { findCsvs } from './letterboxd-export.ts'
 import { isSimklBackup } from './simkl-backup.ts'
 import { isTraktFile } from './trakt-export.ts'
+import { isTvTimeBackup } from './tvtime-backup.ts'
 import { Zip, ZipError } from './zip.ts'
 
-export type ExportSource = 'letterboxd' | 'trakt' | 'imdb' | 'simkl'
+export type ExportSource = 'letterboxd' | 'trakt' | 'imdb' | 'simkl' | 'tvtime'
 
 /** The service whose reader takes the file: a ZIP by what it holds, a CSV
  * by its header, a JSON by its keys; null when none does. */
@@ -23,6 +25,7 @@ export const exportSource = (content: Uint8Array): ExportSource | null => {
     if (isImdbRatings(content)) return 'imdb'
     return isSimklBackup(content) ? 'simkl' : null
   }
+  if (isTvTimeBackup(names)) return 'tvtime'
   if (findCsvs(names).size > 0) return 'letterboxd'
   if (names.some(isTraktFile)) return 'trakt'
   return isSimklBackup(content) ? 'simkl' : null

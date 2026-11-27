@@ -55,6 +55,14 @@ const traktZip = new File(
   [new Uint8Array(zipOf([['trakt/ratings-movies.json', '[]']]))],
   'trakt.zip',
 )
+const tvtimeZip = new File(
+  [
+    new Uint8Array(
+      zipOf([['gdpr-data/tracking-prod-records.csv', 'uuid,type\n']]),
+    ),
+  ],
+  'gdpr-data.zip',
+)
 const imdbCsv = new File(
   [readFileSync(join(ROOT, 'tests/fixture/imdb/vera.csv'))],
   'ratings.csv',
@@ -265,12 +273,13 @@ describe('importAction', () => {
     await upload(imdbCsv)
     await upload(simklJson)
     await upload(simklZip)
+    await upload(tvtimeZip)
     expect(
       calls.map((call) => {
         const { action } = call as { action: ImportRun }
         return action.kind
       }),
-    ).toEqual(['letterboxd', 'trakt', 'imdb', 'simkl', 'simkl'])
+    ).toEqual(['letterboxd', 'trakt', 'imdb', 'simkl', 'simkl', 'tvtime'])
     const neither = await upload(
       new File([new Uint8Array(zipOf([['notas.csv', 'x']]))], 'outro.zip'),
     )
@@ -287,7 +296,7 @@ describe('importAction', () => {
     expect(otherCsv.headers.get('Location')).toBe(
       '/pessoas/teo/importar?erro=origem',
     )
-    expect(calls).toHaveLength(5)
+    expect(calls).toHaveLength(6)
   })
 
   it('takes the RSS without the consent box on the Dono’s own page', async () => {
@@ -487,6 +496,7 @@ describe('the pages', () => {
           trakt: { ratings: 0, seen: 0, watchlist: 0 },
           imdb: { ratings: 0 },
           simkl: { ratings: 0, seen: 0, watchlist: 0 },
+          tvtime: { ratings: 0, seen: 0, stated: 0, watchlist: 0 },
         },
       }),
     }
@@ -546,6 +556,11 @@ const SIMKL: ImportRun = {
   kind: 'simkl',
   original: 'SimklBackup.json',
   content: readFileSync(join(ROOT, 'tests/fixture/simkl/SimklBackup.json')),
+}
+const TVTIME: ImportRun = {
+  kind: 'tvtime',
+  original: 'tv-time-export.zip',
+  content: folderZip(join(ROOT, 'tests/fixture/tvtime/liberator')),
 }
 const VENTO = 'vento-norte-2020-e2bf439e1af6'
 const LOST = 'filme-perdido-2001-91d7fc73cdee'
@@ -628,6 +643,30 @@ describe('importsFromEngine, imports', () => {
       'Bruno <bruno@example.org>|import simkl quim: SimklBackup.json',
       'Bruno <bruno@example.org>|import letterboxd-rss quim: https://letterboxd.com/olga_farol/rss/',
       'Bruno <bruno@example.org>|remove import quim',
+    ])
+  })
+})
+
+describe('importsFromEngine, TV Time', () => {
+  it('imports the backup as the Dono, and its film without an id waits in the queue', async () => {
+    const { imports, ok, log } = useImportsRepo()
+    expect(await ok(imports.run('quim', TVTIME, AUTHOR))).toEqual({
+      notice: 'tvtime',
+      facts: 6,
+      outside: 1,
+    })
+    const page = await ok(imports.page('quim'))
+    expect(page.tvtime).toEqual({
+      ratings: 2,
+      seen: 3,
+      stated: 0,
+      watchlist: 1,
+    })
+    expect((await ok(imports.queue())).items.map((i) => i.name)).toEqual([
+      'Filme Perdido',
+    ])
+    expect(log()).toEqual([
+      'Bruno <bruno@example.org>|import tvtime quim: tv-time-export.zip',
     ])
   })
 })

@@ -1,0 +1,9 @@
+uuid,type,created_at,updated_at,movie_name,entity_type,alpha_range_key,release_date,watch_date_range_key,user_id
+7b1f0c2e-0001-4a00-8000-000000000001,watch,2023-05-01 21:05:00,2023-05-01 21:05:00,O Farol de Areia,movie,watch-alpha-o-farol-de-areia,2012-03-02,watch-date-1682974800,4242
+7b1f0c2e-0001-4a00-8000-000000000001,rewatch,2025-01-10 22:35:00,2025-01-10 22:35:00,O Farol de Areia,movie,watch-alpha-o-farol-de-areia,2012-03-02,watch-date-1736548200,4242
+7b1f0c2e-0002-4a00-8000-000000000002,watch,2022-08-15 19:00:00,2022-08-15 19:00:00,ガラスの街,movie,watch-alpha-cidade-de-vidro,2018-01-01,,4242
+7b1f0c2e-0003-4a00-8000-000000000003,watch,2021-07-04 23:40:00,2021-07-04 23:40:00,Porto Seguro,movie,watch-alpha-porto-seguro,2019-06-01,watch-date-1625441400,4242
+7b1f0c2e-0004-4a00-8000-000000000004,watch,2024-03-03 20:10:00,2024-03-03 20:10:00,Vento Norte,movie,watch-alpha-vento-norte,2020-01-01,watch-date-1709496000,4242
+7b1f0c2e-0005-4a00-8000-000000000005,watch,2022-12-25 18:00:00,2022-12-25 18:00:00,Filme Perdido,movie,watch-alpha-filme-perdido,0001-01-01,watch-date-1671991200,4242
+7b1f0c2e-0006-4a00-8000-000000000006,towatch,2024-09-01 10:00:00,2024-09-01 10:00:00,Jardim Suspenso,movie,watch-alpha-jardim-suspenso,2017-01-01,,4242
+7b1f0c2e-0007-4a00-8000-000000000007,watch,2023-02-02 20:00:00,2023-02-02 20:00:00,"Cais, Episódio 1",episode,watch-alpha-cais-episodio-1,2023-01-01,watch-date-1675368000,4242
