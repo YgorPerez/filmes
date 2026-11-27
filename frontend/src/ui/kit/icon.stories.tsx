@@ -13,6 +13,7 @@ const NAMES: readonly IconName[] = [
   'copy',
   'arrow',
   'plus',
+  'upload',
   'check',
   'close',
   'alert',

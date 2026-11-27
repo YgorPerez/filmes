@@ -757,6 +757,15 @@ Dar notas (h1 "Dar notas") e o import seguem como telas próprias, com o destino
 
 Círculo de 24px na cor do Presente, inicial em Rubik 700 11px em on-person. Vazado: fundo transparente, anel de 2px na cor e inicial na cor. Sobrepostos: -7px de margem e anel de 2px na cor da superfície.
 
+### Importar
+
+`/meu-gosto/importar` (e `/pessoas/<ela>/importar`): a opção de voltar, o h1 "Importar Notas" ("Importar as Notas de Iara") e um lead que diz o que a tela faz. O aviso do último formulário vem logo abaixo, em palavras dela: quantas Notas e Já vistos novos entraram, e quantos filmes ficaram de fora ("O ZIP do Trakt entrou: entraram 2 Notas novas e 1 Já visto novo."), nunca "Fatos".
+
+- **Com algum import, o resultado vem primeiro.** A ficha "O que já entrou": "Letterboxd: 10 filmes" e três contagens em title tabular (achados, deixados de fora, esperam você); os que esperam, no cartão, com o porquê ("até você confirmar, as Notas deles não contam") e "Resolver agora", que leva à fila; "Ver os 2 deixados de fora" abre o título e o motivo de cada um. Depois, uma linha por outro site que trouxe algo ("Trakt: 2 Notas e 1 Já visto"). Em seguida a ficha dos arquivos, com a data curta ("em 20 nov 2026") e "Tirar". Os formulários ficam fechados sob a opção "Importar de novo ou de outro site", que abre sozinha quando um deles foi recusado.
+- **Sem import, os formulários são a tela.** Primeiro "Do Letterboxd", um passo a passo numerado como o guia da home (número em anel de 1,5px em tinta, fio tracejado entre os passos): 1, abrir `letterboxd.com/settings/data` (link em opção, em nova aba; pelo navegador, que o app não exporta); 2, "Export your data"; 3, enviar o ZIP, com o botão laranja da tela ("Importar o ZIP"); 4, o perfil, que mantém em dia lendo as 50 entradas mais recentes do diário. Depois de ler um perfil, o passo 4 vira um toque ("Atualizar de @nome") e o campo de outro perfil fica atrás de um link. Embaixo, "De outro site": como baixar do Trakt, do IMDb e do Simkl, cada um um passo a passo que abre, e o envio em opção.
+- **Arquivo.** O campo de arquivo é uma área da largura toda, em superfície 2 com contorno tracejado de 1,5px em fio forte e o ícone de envio: "Escolher o arquivo" e, escolhido, o nome dele com "Tocar para trocar". Um arquivo de outro tipo é recusado ao escolher, antes do envio.
+- **Recusa no lugar.** A recusa aparece sob o formulário que a causou (o ZIP, o outro site ou o perfil), com o campo marcado (`aria-invalid`, contorno de 2px em tinta) e o porquê embaixo, em meta tinta com o ícone de alerta. Só o que não é de um formulário (o import que já saiu, o site fora do ar) fica no topo.
+
 ## Browser surfaces
 
 - Seleção de texto em sticker-yellow a 53%, texto em tinta.

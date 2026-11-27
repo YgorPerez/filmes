@@ -28,6 +28,7 @@ import {
   type QueueItem,
 } from '@filmes/engine'
 import {
+  isImportForm,
   MAX_UPLOAD_BYTES,
   parseImport,
   parseQueue,
@@ -106,6 +107,9 @@ export type ImportDone = {
   notice: ImportNotice
   /** Fatos that came in (or went, for a removal). */
   facts: number
+  /** Of them, the Notas and the Já vistos: what the notice counts. */
+  ratings?: number
+  seen?: number
   /** Trakt, IMDb or Simkl films the Catalog could not resolve. */
   outside?: number
 }
@@ -142,6 +146,13 @@ const map = async <A, B>(
 const sum = (counts: Readonly<Record<string, number>>) =>
   Object.values(counts).reduce((a, b) => a + b, 0)
 
+/** The Notas and Já vistos of an import's new Fatos. */
+const counted = (newFacts: { ratings: number; seen?: number }) => ({
+  facts: sum(newFacts),
+  ratings: newFacts.ratings,
+  seen: newFacts.seen ?? 0,
+})
+
 type Run = Engine['run']
 
 /** The queue with the Pessoas' names, from the engine's queue and list. */
@@ -173,7 +184,7 @@ function runImport(
         run(importLetterboxd({ person, ...upload(action), author })),
         (r): ImportDone => ({
           notice: r.newFile ? 'letterboxd' : 'repetido',
-          facts: sum(r.newFacts),
+          ...counted(r.newFacts),
         }),
       )
     case 'rss':
@@ -181,7 +192,7 @@ function runImport(
         run(importLetterboxdRss({ person, user: action.user, author })),
         (r): ImportDone => ({
           notice: r.newFile ? 'rss' : 'repetido',
-          facts: sum(r.newFacts),
+          ...counted(r.newFacts),
         }),
       )
     case 'trakt':
@@ -189,7 +200,7 @@ function runImport(
         run(importTrakt({ person, ...upload(action), author })),
         (r): ImportDone => ({
           notice: r.newFile ? 'trakt' : 'repetido',
-          facts: sum(r.newFacts),
+          ...counted(r.newFacts),
           outside: r.unresolved.length,
         }),
       )
@@ -198,7 +209,7 @@ function runImport(
         run(importImdb({ person, ...upload(action), author })),
         (r): ImportDone => ({
           notice: r.newFile ? 'imdb' : 'repetido',
-          facts: r.newFacts.ratings,
+          ...counted(r.newFacts),
           outside: r.outsideCatalog.length,
         }),
       )
@@ -207,7 +218,7 @@ function runImport(
         run(importSimkl({ person, ...upload(action), author })),
         (r): ImportDone => ({
           notice: r.newFile ? 'simkl' : 'repetido',
-          facts: sum(r.newFacts),
+          ...counted(r.newFacts),
           outside: r.unresolved.length,
         }),
       )
@@ -384,25 +395,29 @@ export async function importAction(
   const signer = formPoster(request, owner, origin)
   if (signer instanceof Response) return signer
   const page = importsPath(person, person === signer.person)
+  // The form that was sent, so the page shows its refusal under it.
+  const sent = new URL(request.url).searchParams.get('de')
+  const from = isImportForm(sent) ? sent : undefined
+  const refused = (erro: ImportRefusal) =>
+    seeOther(`${page}${query({ erro, de: from })}`)
   if (Number(request.headers.get('content-length')) > MAX_UPLOAD_BYTES)
-    return seeOther(`${page}${query({ erro: 'grande' })}`)
+    return refused('grande')
   const action = await parseImport(
     await request.formData(),
     person === signer.person,
   )
-  if (typeof action === 'string')
-    return seeOther(`${page}${query({ erro: action })}`)
+  if (typeof action === 'string') return refused(action)
   const run = runOf(action)
-  if (run === null) return seeOther(`${page}${query({ erro: 'origem' })}`)
+  if (run === null) return refused('origem')
   const outcome = await imports.run(person, run, ownerAuthor(signer))
   if (outcome.exitCode !== 0) {
     if (outcome.output.error.code === 'unknown_person')
       return seeOther('/pessoas?erro=pessoa')
-    return seeOther(`${page}${query({ erro: importRefusal(outcome) })}`)
+    return refused(importRefusal(outcome))
   }
-  const { notice, facts, outside } = outcome.output
+  const { notice, facts, ratings, seen, outside } = outcome.output
   return seeOther(
-    `${page}${query({ feito: notice, novos: facts, fora: outside })}`,
+    `${page}${query({ feito: notice, novos: facts, notas: ratings, vistos: seen, fora: outside })}`,
   )
 }
 
