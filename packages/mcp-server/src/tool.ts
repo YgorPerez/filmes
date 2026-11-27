@@ -18,6 +18,7 @@ import {
   type Person,
   type Run,
 } from '@filmes/engine'
+import type { ToolAnnotations } from '@modelcontextprotocol/server'
 import { z } from 'zod'
 
 /** What the server gives a tool besides its input. */
@@ -33,6 +34,9 @@ export interface Tool<Input extends z.ZodObject = z.ZodObject> {
   /** PT-BR, with the GLOSSARY terms: the model reads it. */
   readonly description: string
   readonly input: Input
+  readonly annotations: Required<
+    Pick<ToolAnnotations, 'readOnlyHint' | 'destructiveHint' | 'openWorldHint'>
+  >
   /** Only for the Pessoa logged in with `admin: true`; anyone else gets the
    * error `admin_only`. */
   readonly admin?: boolean

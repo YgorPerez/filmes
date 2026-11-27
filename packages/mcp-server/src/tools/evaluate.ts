@@ -4,6 +4,11 @@ import { defineTool } from '../tool.ts'
 
 export default defineTool({
   name: 'evaluate',
+  annotations: {
+    readOnlyHint: false,
+    destructiveHint: true,
+    openWorldHint: false,
+  },
   description:
     'Só para admin. Mede a Recomendação: recall@50 e cobertura no top 5 sobre as Notas guardadas de fora (offline, ' +
     'das Pessoas e de uma amostra do MovieLens), com a calibração da Força, o erro da nota prevista (ausente por ora) ' +
