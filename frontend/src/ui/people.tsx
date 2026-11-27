@@ -47,7 +47,7 @@ export function PeopleList({
   return (
     <main className="mx-auto flex max-w-[720px] flex-col gap-3xl px-2xl py-3xl">
       <div className="flex flex-col gap-sm">
-        <h1 className="font-display text-title">{PEOPLE.title}</h1>
+        <h1 className="font-display text-page-title">{PEOPLE.title}</h1>
         <p className="text-ink-2">{PEOPLE.lead}</p>
       </div>
       {gone && <Alert>{PEOPLE.gone}</Alert>}

@@ -53,7 +53,11 @@ function Scale({
   onChange: (value: string) => void
 }) {
   return (
-    <div role="group" aria-label={label} className="grid grid-cols-10 gap-0.75">
+    <div
+      role="group"
+      aria-label={label}
+      className="grid grid-cols-5 gap-0.75 min-[480px]:grid-cols-10"
+    >
       {Array.from({ length: 10 }, (_, i) => String(i + 1)).map((n) => (
         <button
           key={n}

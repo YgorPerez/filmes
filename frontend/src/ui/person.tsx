@@ -1,3 +1,4 @@
+import { Fragment, type ReactNode } from 'react'
 import type { PersonNotice, PersonRefusal } from '#/content/person-action'
 import {
   imdbCsvPath,
@@ -29,6 +30,7 @@ import { MyStartSections, type MyStart } from './my-start'
 import { StrengthDots } from './person-marks'
 import { PERSON, RATING_CHOICES } from './person.copy'
 import { buttonVariants } from './kit/button-variants'
+import { useHydrated } from './kit/fetch-form'
 import { shortDate } from './dates'
 
 type Statement = PersonPage['stated'][number]
@@ -75,7 +77,7 @@ export function PersonScreen({
     page !== null &&
     page.person === page.viewer.person
   return (
-    <main className="mx-auto flex max-w-[720px] flex-col gap-2xl px-2xl py-3xl">
+    <main className="mx-auto flex max-w-[720px] flex-col gap-2xl px-2xl py-3xl min-[900px]:max-w-[1040px]">
       {!own && (
         <a
           href="/pessoas"
@@ -96,23 +98,35 @@ export function PersonScreen({
             notice={notice}
             refusal={refusal}
           />
-          <Notes
-            slug={slug}
-            own={own}
-            ratings={page.ratings}
-            predictionError={page.predictionError}
-          />
-          {own && start && <MyStartSections start={start} person={slug} />}
-          <Contents page={page} />
-          <Details slug={slug} page={page} search={search} />
+          {/* From 900px, two columns: her Notas and what the guide left
+              on the left, the taste on the right. */}
+          <div className="grid gap-2xl min-[900px]:grid-cols-2 min-[900px]:items-start">
+            <div className="flex min-w-0 flex-col gap-2xl">
+              {own && <Glance page={page} start={start} />}
+              <Notes
+                slug={slug}
+                own={own}
+                ratings={page.ratings}
+                predictionError={page.predictionError}
+              />
+              {own && start && <MyStartSections start={start} person={slug} />}
+            </div>
+            <div className="flex min-w-0 flex-col gap-2xl">
+              <Contents page={page} />
+              <Details slug={slug} page={page} search={search} />
+            </div>
+          </div>
         </ActionForms>
       )}
     </main>
   )
 }
 
-/** Her name (on Meu gosto, the page's name, then hers) and aliases, and
- * what the last form did. */
+const noticeOfOwn = (notice: PersonNotice): string | undefined =>
+  (PERSON.ownNotices as Partial<Record<PersonNotice, string>>)[notice]
+
+/** Her name (on Meu gosto, the page's name, then the name the Sessões give
+ * her) and aliases, and what the last form did. */
 function PersonHeader({
   page,
   own,
@@ -130,16 +144,22 @@ function PersonHeader({
   return (
     <>
       <div className="flex flex-col gap-xs">
-        <h1 className="flex flex-wrap items-center gap-sm font-display text-title">
+        <h1 className="flex flex-wrap items-center gap-sm font-display text-page-title">
           {own ? PERSON.myTaste : page.name}
           {!own && page.owner && <OwnerTag />}
         </h1>
-        {(own || aliases) && (
-          <Meta parts={own ? [page.name, aliases] : [aliases]} />
+        {own ? (
+          <Meta parts={[PERSON.ownName(page.name, page.aliases)]} />
+        ) : (
+          aliases && <Meta parts={[aliases]} />
         )}
       </div>
       {refusal && !stale && <Alert>{PERSON.refusals[refusal]}</Alert>}
-      {notice && !stale && <Notice>{PERSON.notices[notice]}</Notice>}
+      {notice && !stale && (
+        <Notice>
+          {(own ? noticeOfOwn(notice) : undefined) ?? PERSON.notices[notice]}
+        </Notice>
+      )}
     </>
   )
 }
@@ -201,10 +221,7 @@ function Notes({
           <ul className="flex flex-col">
             {ratings.map((r) => (
               <Item key={r.factId}>
-                <span>
-                  {r.title ?? r.filmId}{' '}
-                  <span className="text-ink-2">({r.filmId})</span>
-                </span>
+                <span>{r.title ?? r.filmId}</span>
                 <Meta
                   parts={[
                     PERSON.ratingText(r.rating),
@@ -221,20 +238,82 @@ function Notes({
   )
 }
 
-/** The page's fichas as a row of links, each with how many it holds: the
- * page is long, and the Dono comes for one of them. */
-function Contents({ page }: { page: PersonPage }) {
+/** A Nota of the rating screen is a Já visto too; the Notas list shows it,
+ * so Já vistos leaves it out. The engine's `RATING_SCREEN_SOURCE`. */
+const SITE_RATINGS = 'notas no site'
+
+/** The Já vistos her page lists: what she said she saw, not her Notas. */
+const seenOf = (page: PersonPage) =>
+  page.seen.filter((s) => s.source !== SITE_RATINGS)
+
+/** The fichas of her taste, in the page's order, each with how many it
+ * holds. Relatos only where a form can add one or one was told; Acesso
+ * only for an admin on another Pessoa's page. */
+function tasteParts(page: PersonPage) {
   const own = page.person === page.viewer.person
-  const entries: readonly (readonly [string, string, number | null])[] = [
+  return [
     ['perguntas', PERSON.questions.title, page.openQuestions.length],
     ['vetos', PERSON.vetoes.title, page.vetoes.length],
-    ['ajustes', PERSON.adjustments.title, page.adjustments.length],
     ['declarados', PERSON.stated.title, page.stated.length],
     ...(own && page.reports.length === 0
       ? []
       : [['relatos', PERSON.reports.title, page.reports.length] as const]),
-    ['vistos', PERSON.seen.title, page.seen.length],
-    ...(page.access === undefined
+    ['vistos', PERSON.seen.title, seenOf(page).length],
+  ] as const
+}
+
+/** Meu gosto's opening ficha: how many Notas (and how many to 10), what
+ * she said of her taste, and the one next step. */
+function Glance({ page, start }: { page: PersonPage; start?: MyStart }) {
+  const { glance } = PERSON
+  const notes = page.ratings?.length ?? 0
+  const said = tasteParts(page)
+    .filter(([id, , n]) => n > 0 && id !== 'perguntas')
+    .map(([, title, n]) => `${n} ${title}`)
+  const connector = start?.setup?.steps.find((s) => s.step === 'connector')
+  const [step, href] =
+    notes < 10
+      ? [glance.steps.rate, RATINGS_PATH]
+      : connector && !connector.done && !connector.skipped
+        ? [glance.steps.connector, '#conector']
+        : page.openQuestions.length > 0
+          ? [glance.steps.questions, '#perguntas']
+          : [glance.steps.ask, '/sessoes/nova']
+  return (
+    <Slip id="olhada" title={glance.title}>
+      <p className="font-display text-step-title">
+        {glance.notes(notes)}
+        {notes < 10 && (
+          <span className="font-body text-meta font-normal text-ink-2">
+            {' · '}
+            {glance.toTen(notes)}
+          </span>
+        )}
+      </p>
+      <p className="text-ink-2">
+        {said.length === 0
+          ? glance.nothingSaid
+          : `${glance.said}: ${said.join(' · ')}`}
+      </p>
+      <p>
+        {glance.next}:{' '}
+        <a href={href} className="text-ink underline underline-offset-3">
+          {step}
+        </a>
+      </p>
+    </Slip>
+  )
+}
+
+/** The fichas that hold something, as a row of links with how many: the
+ * page is long, and the Dono comes for one of them. The empty ones are in
+ * one fold (`Details`). */
+function Contents({ page }: { page: PersonPage }) {
+  const own = page.person === page.viewer.person
+  const entries: readonly (readonly [string, string, number | null])[] = [
+    ...tasteParts(page).filter(([, , n]) => n > 0),
+    ['ajustes', PERSON.adjustments.title, page.adjustments.length],
+    ...(page.access === undefined || own
       ? []
       : [['acesso', PERSON.access.title, null] as const]),
   ]
@@ -261,7 +340,9 @@ function Contents({ page }: { page: PersonPage }) {
 }
 
 /** The Pessoa's sections, one per kind of taste, after the Catálogo
- * search that finds the IDs their forms take. */
+ * search that finds the IDs their forms take. The fichas with nothing yet
+ * fold into one line ("Vetos e Declarados: nada ainda"), each still with
+ * its form inside. */
 function Details({
   slug,
   page,
@@ -271,25 +352,47 @@ function Details({
   page: PersonPage
   search: SearchAnswer | null
 }) {
-  return (
-    <>
-      <CatalogSearch
-        action={personPath(slug, page.person === page.viewer.person)}
-        scope="all"
-        answer={search}
-      />
-      <OpenQuestions slug={slug} page={page} />
-      <Vetoes slug={slug} page={page} />
-      <Adjustments slug={slug} page={page} />
+  const own = page.person === page.viewer.person
+  const sections: Record<string, ReactNode> = {
+    perguntas: <OpenQuestions slug={slug} page={page} />,
+    vetos: <Vetoes slug={slug} page={page} />,
+    declarados: (
       <Statements
         slug={slug}
         kind="stated"
+        own={own}
         items={page.stated}
         source={PERSON.stated.source}
       />
-      <Reports slug={slug} page={page} />
-      <Seen slug={slug} page={page} />
-      <Access slug={slug} page={page} />
+    ),
+    relatos: <Reports slug={slug} page={page} />,
+    vistos: <Seen slug={slug} page={page} />,
+  }
+  const parts = tasteParts(page)
+  const empty = parts.filter(([, , n]) => n === 0)
+  return (
+    <>
+      <CatalogSearch
+        action={personPath(slug, own)}
+        scope="all"
+        answer={search}
+      />
+      {parts
+        .filter(([, , n]) => n > 0)
+        .map(([id]) => (
+          <Fragment key={id}>{sections[id]}</Fragment>
+        ))}
+      <Adjustments slug={slug} page={page} />
+      {empty.length > 0 && (
+        <Disclosure summary={PERSON.empties(empty.map(([, title]) => title))}>
+          <div className="flex flex-col gap-2xl">
+            {empty.map(([id]) => (
+              <Fragment key={id}>{sections[id]}</Fragment>
+            ))}
+          </div>
+        </Disclosure>
+      )}
+      {!own && <Access slug={slug} page={page} />}
     </>
   )
 }
@@ -309,6 +412,7 @@ function Reports({ slug, page }: Part) {
     <Statements
       slug={slug}
       kind="report"
+      own={own}
       items={page.reports}
       source={own ? null : PERSON.reports.source(page.viewer.name)}
     />
@@ -440,36 +544,79 @@ function Vetoes({ slug, page }: Part) {
 
 function Adjustments({ slug, page }: Part) {
   const { adjustments } = PERSON
+  const own = page.person === page.viewer.person
+  const levelOf = (link: string) =>
+    page.adjustments.find((a) => a.link === link)
+  const changed = (link: string) =>
+    (levelOf(link)?.level ?? 'normal') !== 'normal'
+  const links = Object.entries(PERSON.links)
+  const row = ([link, name]: [string, string]) => (
+    <li key={link} className="border-rule py-md not-first:border-t">
+      <AdjustmentForm
+        slug={slug}
+        link={link}
+        legend={adjustments.level(name)}
+        current={levelOf(link)}
+      />
+    </li>
+  )
+  const rest = links.filter(([link]) => !changed(link))
   return (
     <Slip
       id="ajustes"
       title={adjustments.title}
-      aside={countOf(page.adjustments)}
-      lead={adjustments.lead}
+      aside={String(links.length - rest.length)}
+      lead={own ? adjustments.ownLead : adjustments.lead}
     >
-      <ul className="flex flex-col">
-        {Object.entries(PERSON.links).map(([link, name]) => {
-          const current = page.adjustments.find((a) => a.link === link)
-          return (
-            <li key={link} className="border-rule py-md not-first:border-t">
-              <ActionForm
-                slug={slug}
-                action="ajustar"
-                className="flex flex-wrap items-end gap-sm"
-              >
-                <input type="hidden" name="elo" value={link} />
-                <LevelPicker
-                  legend={adjustments.level(name)}
-                  hint={current && shortDate(current.date)}
-                  level={current?.level ?? 'normal'}
-                />
-                <Submit className="">{adjustments.change}</Submit>
-              </ActionForm>
-            </li>
-          )
-        })}
-      </ul>
+      {rest.length < links.length && (
+        <ul className="flex flex-col">
+          {links.filter(([link]) => changed(link)).map(row)}
+        </ul>
+      )}
+      {rest.length > 0 && (
+        <Disclosure
+          summary={
+            rest.length === links.length
+              ? adjustments.allNormal
+              : adjustments.restNormal
+          }
+        >
+          <ul className="flex flex-col">{rest.map(row)}</ul>
+        </Disclosure>
+      )}
     </Slip>
+  )
+}
+
+/** One Ajuste: its four levels. With the JavaScript, a tap on a level
+ * saves it; before, "Mudar" posts the form. */
+function AdjustmentForm({
+  slug,
+  link,
+  legend,
+  current,
+}: {
+  slug: string
+  link: string
+  legend: string
+  current?: PersonPage['adjustments'][number]
+}) {
+  const hydrated = useHydrated()
+  return (
+    <ActionForm
+      slug={slug}
+      action="ajustar"
+      className="flex flex-wrap items-end gap-sm"
+    >
+      <input type="hidden" name="elo" value={link} />
+      <LevelPicker
+        legend={legend}
+        hint={current && shortDate(current.date)}
+        level={current?.level ?? 'normal'}
+        onPick={hydrated ? (form) => form?.requestSubmit() : undefined}
+      />
+      {!hydrated && <Submit className="">{PERSON.adjustments.change}</Submit>}
+    </ActionForm>
   )
 }
 
@@ -479,13 +626,19 @@ function LevelPicker({
   legend,
   hint,
   level,
+  onPick,
 }: {
   legend: string
   hint?: string
   level: string
+  /** A level was tapped: the fieldset's form. */
+  onPick?: (form: HTMLFormElement | null) => void
 }) {
   return (
-    <fieldset className="flex min-w-0 flex-1 basis-[240px] flex-col gap-xs">
+    <fieldset
+      onChange={(event) => onPick?.(event.currentTarget.form)}
+      className="flex min-w-0 flex-1 basis-[240px] flex-col gap-xs"
+    >
       <legend className="mb-xs font-display text-field-label">
         {legend}
         {hint && (
@@ -521,22 +674,28 @@ function originOf(kind: 'stated' | 'report', s: Statement) {
     : PERSON.imported
 }
 
+/** What the statement is about, in plain words: "ama Sofia Rangel", "só
+ * sobre a tag “chuva”". The ID stays out: the forms that need it find it
+ * in the Catálogo search. */
 function statementTarget(s: Statement) {
   if (s.target === null) return null
   const reaction = s.reaction
     ? PERSON.reactions[s.reaction as Reaction]
     : PERSON.noReaction
-  return `${reaction} ${s.label} (${s.target})`
+  return `${reaction} ${PERSON.plainLabel(s.label ?? s.target)}`
 }
 
 function Statements({
   slug,
   kind,
+  own,
   items,
   source,
 }: {
   slug: string
   kind: 'stated' | 'report'
+  /** Meu gosto: the lead speaks to her. */
+  own: boolean
   items: readonly Statement[]
   /** The source the engine writes when the form gives none; null for no
    * form. */
@@ -548,7 +707,7 @@ function Statements({
       id={kind === 'stated' ? 'declarados' : 'relatos'}
       title={copy.title}
       aside={countOf(items)}
-      lead={copy.lead}
+      lead={own ? copy.ownLead : copy.lead}
     >
       <Items empty={copy.empty}>
         {items.map((s) => {
@@ -625,9 +784,9 @@ function Statements({
 function Seen({ slug, page }: Part) {
   const { seen } = PERSON
   return (
-    <Slip id="vistos" title={seen.title} aside={countOf(page.seen)}>
+    <Slip id="vistos" title={seen.title} aside={countOf(seenOf(page))}>
       <Items empty={seen.empty}>
-        {page.seen.map((s) => (
+        {seenOf(page).map((s) => (
           <Item
             key={s.factId}
             actions={
@@ -639,9 +798,7 @@ function Seen({ slug, page }: Part) {
               />
             }
           >
-            <span>
-              {s.title} <span className="text-ink-2">({s.film})</span>
-            </span>
+            <span>{s.title}</span>
             <Meta
               parts={[
                 s.rating === null ? null : PERSON.ratingText(s.rating),
@@ -682,7 +839,7 @@ function Seen({ slug, page }: Part) {
 
 /** The Acesso section of a Pessoa's page (#166), for an admin only: give
  * her a Google e-mail and she is a Dono; take it away and her next request
- * is refused. The admin's own access never leaves from here. */
+ * is refused. Not on Meu gosto: her own access never leaves from here. */
 function Access({ slug, page }: { slug: string; page: PersonPage }) {
   const { access } = page
   if (!page.viewer.admin || access === undefined) return null
@@ -692,14 +849,10 @@ function Access({ slug, page }: { slug: string; page: PersonPage }) {
       {page.owner ? (
         <>
           <p>{copy.owner(access.email)}</p>
-          {page.person === page.viewer.person ? (
-            <p className="text-meta text-ink-2">{copy.self}</p>
-          ) : (
-            <ActionForm slug={slug} action="tirar-acesso" label={copy.revoke}>
-              <p className="text-meta text-ink-2">{copy.revokeHint}</p>
-              <Submit>{copy.revoke}</Submit>
-            </ActionForm>
-          )}
+          <ActionForm slug={slug} action="tirar-acesso" label={copy.revoke}>
+            <p className="text-meta text-ink-2">{copy.revokeHint}</p>
+            <Submit>{copy.revoke}</Submit>
+          </ActionForm>
         </>
       ) : (
         <>

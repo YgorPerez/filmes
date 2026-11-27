@@ -8,7 +8,9 @@ colors:
   ink: '#121417'
   ink-2: '#535963'
   rule: '#cfd5dd'
+  rule-strong: '#7d8592'
   case: '#17181b'
+  case-edge: '#17181b'
   case-ink: '#f7f7f2'
   case-ink-2: '#b9bec7'
   shelf-label: '#f7f7f2'
@@ -41,7 +43,9 @@ colors:
   dark-ink: '#f1f3f7'
   dark-ink-2: '#a5adbd'
   dark-rule: '#2a3348'
+  dark-rule-strong: '#6b7691'
   dark-case: '#04060a'
+  dark-case-edge: '#525d78'
   dark-stamp: '#b3a0ff'
   dark-card-stock: '#1b2b46'
   dark-card-stock-ink: '#dbe9ff'
@@ -455,6 +459,8 @@ Neutros frios fazem a tela. Os adesivos e as cores dos Presentes têm um papel c
 - **Tinta** (ink / dark-ink): texto e contorno da opção marcada.
 - **Tinta clara** (ink-2 / dark-ink-2): rótulos, fonte da Evidência, "sem fato", legenda, "Saiu da prateleira", contagens.
 - **Fio** (rule / dark-rule): bordas de 1px de cards, contorno de 1,5px das opções e dos campos, divisórias tracejadas dentro do card.
+- **Fio forte** (rule-strong / dark-rule-strong): o que falta num progresso ou num contador (segmento do guia, ponto vazio das 10 Notas), a 3:1 ou mais sobre a superfície nos dois temas (WCAG 1.4.11). Não é borda de card.
+- **Borda do estojo** (case-edge / dark-case-edge): 1px em volta do balcão da home e à direita de cada lombada. No claro é o próprio estojo, e não aparece; no escuro, um fio azulado que separa o objeto preto do chão escuro.
 - **Estojo** (case / dark-case): o preto do estojo da fita, do trilho da prateleira, da lombada na lista compacta, da barra do topo e do campo do endereço do conector. Quase preto nos dois temas: o estojo é um objeto, não muda de cor com o tema.
 - **Tinta do estojo** (case-ink, case-ink-2): texto sobre o estojo; case-ink-2 para o secundário (versão do Cartaz no topo).
 - **Etiqueta** (shelf-label): o papel claro da etiqueta da prateleira, igual nos dois temas, com texto em on-sticker.
@@ -470,7 +476,7 @@ Neutros frios fazem a tela. Os adesivos e as cores dos Presentes têm um papel c
 
 **The One Color Per Person Rule.** Dentro de uma Sessão, cada Presente tem uma cor só, dada pela ordem dos Presentes. A cor nunca aparece sem a inicial ou o nome.
 
-**The Same Objects Rule.** Estojo, etiqueta e adesivos têm a mesma cor no claro e no escuro. Só o chão, as superfícies, a tinta, o fio, o cartão e o carimbo trocam com o tema.
+**The Same Objects Rule.** Estojo, etiqueta e adesivos têm a mesma cor no claro e no escuro. Só o chão, as superfícies, a tinta, o fio, o cartão e o carimbo trocam com o tema; a borda do estojo só aparece no escuro.
 
 **The Flat Color Rule.** Cor chapada. Nenhum gradiente, nem na capa: os pontos dos Presentes ficam no estojo, sob a capa, e não precisam de faixa escura.
 
@@ -610,7 +616,7 @@ Os cards ficam sob o título do Motivo deles, na ordem da Recomendação: um tí
 
 ### Nota prevista
 
-No ponto do Presente, no estojo: o número em Rubik 700 11px tabular, case-ink, 2px depois do ponto, com uma casa ("8,3"), na escala de 1 a 10 do Já vi; no ponto vazado também. Quem não tem Nota prevista fica só com o ponto: nunca um palpite nem um traço. O ponto com número é um botão: o toque, o clique ou o mouse em cima abrem embaixo dele, correndo para a direita, um balão em superfície com fio de 1px, raio 8px e texto meta, "Bruno: 8,3 de 10 · 12 vizinhos" (os vizinhos de gosto que a sustentam); tocar fora ou Esc fecha. O leitor de tela ouve o mesmo texto no botão. A nota é a que a versão gravou na Sessão; ela não muda depois.
+No ponto do Presente, no estojo: o número em Rubik 700 11px tabular, case-ink, 2px depois do ponto, com uma casa ("8,3"), na escala de 1 a 10 do Já vi; no ponto vazado também. Quem não tem Nota prevista fica só com o ponto: nunca um palpite nem um traço. O ponto com número é um botão, com um alvo invisível de 44px de altura (e 44px de largura no mínimo) centrado nele, sem mudar o tamanho do ponto: o toque, o clique ou o mouse em cima abrem embaixo dele, correndo para a direita, um balão em superfície com fio de 1px, raio 8px e texto meta, "Bruno: 8,3 de 10 · 12 vizinhos" (os vizinhos de gosto que a sustentam); tocar fora ou Esc fecha. O leitor de tela ouve o mesmo texto no botão. A nota é a que a versão gravou na Sessão; ela não muda depois.
 
 ### Por que cada um vai gostar
 
@@ -626,15 +632,17 @@ Três pontos de 7px em tinta: ●●● forte, ●●○ moderada, ●○○ fra
 
 ### Opções (Já vi, Trocar, Todos)
 
-- **Style:** pílula, 44px de altura, 0 14px, contorno interno de 1,5px em fio, Rubik 500 14px, sobre superfície.
-- **State:** marcada ganha contorno de 2px em tinta, fundo superfície 2, peso 700 e um ícone de ✓ de 16px antes do texto. `aria-pressed` acompanha.
+- **Style:** pílula, 44px de altura, 0 22px, contorno interno de 1,5px em fio, Rubik 500 14px, sobre superfície. Um botão de ação em opção (que não marca) fica com 0 14px.
+- **State:** marcada ganha contorno de 2px em tinta, fundo superfície 2, peso 700 e um ícone de ✓ de 16px antes do texto, com 8px de vão e 9,5px de cada lado. Marcar não muda a largura da pílula: o espaço do ✓ e do peso 700 já está reservado, então a linha nunca quebra de novo ao marcar. `aria-pressed` acompanha. O ✓ responde só ao controle da própria opção, nunca a um marcado em volta (numa dobra, num fieldset).
 - **Foco:** anel de 2px em focus (dark-focus no escuro), afastado 2px. Vale para todo controle.
 - Os controles do card vêm em duas linhas: primeiro Trocar, as estrelas e o link "Comentar" (no celular o link pode descer); depois a linha de Já vi, que começa com o rótulo "JÁ VI" e tem uma opção por Presente ("Você", "Teo") e "Todos". O campo do comentário só aparece depois do toque em Comentar (já com o foco) ou quando já tem texto, no fim dos controles: o card não carrega campo vazio.
 - Marcar Já vi de uma Pessoa abre, logo abaixo, a **nota de Já vi**: cartão azul (card-stock, raio 8px, 10px 12px) com o avatar e "Nota do Teo" em Rubik 700 14px, a escala de 1 a 10 e o campo "o que achou".
 
 ### Escala de nota (1 a 10)
 
-Dez botões numa grade de 10 colunas, 3px entre eles, 44px de altura, raio 6px, superfície com número em Rubik 700 14px tabular. A nota escolhida vira um círculo laranja com o número em on-sticker. `role="group"` com `aria-label="Nota de 1 a 10"`; cada botão diz o número.
+Dez botões, 3px entre eles, 44px de altura, raio 6px, superfície com número em Rubik 700 14px tabular: duas linhas de 5 abaixo de 480px (cada botão com uns 60px de largura) e uma grade de 10 colunas a partir daí; as âncoras "1 · não gostei" e "adorei · 10" ficam embaixo. A nota escolhida vira um círculo laranja com o número em on-sticker. `role="group"` com `aria-label="Nota de 1 a 10"`; cada botão diz o número. Na tela de Dar notas, com o foco no card, as teclas 1 a 9 dão a Nota e o 0 dá 10.
+
+Toda Nota aparece na escala de 1 a 10, em todo lugar ("nota 9"), mesmo que o motor a guarde de 0,5 a 5. Quando a fonte dá estrelas de 5 (Letterboxd), a linha da Fonte diz as estrelas de lá: "4,5★ no Letterboxd da Iara". Os formulários que pedem Nota oferecem de 10 a 1.
 
 ### Estrelas
 
@@ -660,27 +668,34 @@ O resumo do que foi marcado e o Enviar ficam numa barra que gruda no pé da tela
 
 Superfície, contorno de 1,5px em fio, raio 8px, 44px de altura mínima, 9px 12px, sistema 15px. Rótulo em Rubik 700 14px com a dica em sistema 14px tinta clara ao lado ou embaixo. Placeholder em tinta clara (4,5:1 ou mais).
 
+Um campo que o formulário recusaria (falta o alvo, o ID não é tt… nem Q…) é marcado antes do envio: `aria-invalid`, contorno de 2px em tinta e, embaixo, em meta tinta com o ícone de alerta, o que falta dito com o nome do campo ("Falta o alvo: um filme ou uma entidade pelo ID (tt… ou Q…), ou um grupo de tags."). O foco vai para ele, e digitar tira a marca.
+
 ### Link
 
 Para "Pular", "Retomar" e ações menores: sem fundo, sistema 14px tinta clara, sublinhado com 3px de afastamento, alvo de 44px de altura.
 
 ### Barra do topo e abas (app web)
 
-- **Topo:** estojo preto, 56px, 4px 16px, brand em Rubik 800 18px case-ink; à direita o avatar do Dono com anel de 2px em estojo, num botão de 44px.
+- **Topo:** estojo preto, 56px, 4px 16px, brand em Rubik 800 18px case-ink, num link de 44px de altura que leva ao início; à direita o avatar do Dono com anel de 2px em estojo, num botão de 44px. Numa página do menu (Operações), o avatar é o lugar atual: `aria-current="page"` e o disco laranja a 85% atrás dele.
 - **Abas:** quatro, na ordem: **Início** (casa), **Sessões** (fita), **Pessoas** (duas pessoas) e **Meu gosto** (coração). Sessões fica atual em `/sessoes/...`, inclusive no Feedback (`/sessoes/<id>/contar`); Pessoas em `/pessoas/...`; Meu gosto em `/meu-gosto/...` (Notas, import, export, fila). A página da própria Pessoa do Dono é Meu gosto: `/pessoas/<ela>` redireciona para lá.
 - **Abas (celular):** fixas embaixo, superfície com fio de 1px em cima, 14px de respiro para a área segura. Uma coluna por aba, 54px, ícone de 20px sobre o rótulo em tab, tinta clara. A atual fica em tinta, peso 700, com um disco laranja de 30px atrás do ícone, a 85% de opacidade. `aria-current="page"`.
 - **Abas (900px ou mais):** no topo, à direita de "filmes", texto em case-ink-2; a atual em case-ink com o mesmo disco laranja atrás do ícone.
-- **Menu do avatar:** um `popover` nativo (abre sem JavaScript; um toque fora ou Esc fecha), preso 60px abaixo do topo, alinhado à direita da coluna de 1040px. Superfície, fio de 1px, raio 12px, 6px de padding, 240px. Em cima, o nome do Dono em Rubik 700 15px; embaixo, linhas de 44px em control com ícone de 20px e raio 6px, superfície 2 no hover: **Operações** (ferramentas, só admin; com o push falhando, "envio falhando" e o ícone de alerta em meta à direita) e **Sair** (porta com seta, POST para `/auth/logout`). O botão do avatar tem `aria-label` "Sua conta: Bruno", e o menu, "Conta".
+- **Menu do avatar:** um `popover` nativo (abre sem JavaScript; um toque fora ou Esc fecha), preso 60px abaixo do topo, alinhado à direita da coluna de 1040px. Superfície, fio de 1px, raio 12px, 6px de padding, 240px. Em cima, o nome do Dono em Rubik 700 15px e, sob ele, em meta tinta clara, o e-mail do Google com que entrou; embaixo, linhas de 44px em control com ícone de 20px e raio 6px, superfície 2 no hover: **Operações** (ferramentas, só admin; com o push falhando, "envio falhando" e o ícone de alerta em meta à direita) e **Sair** (porta com seta, POST para `/auth/logout`). O botão do avatar tem `aria-label` "Sua conta: Bruno", e o menu, "Conta".
 - **Aviso de push falhando** (só admin): faixa no topo da página, em superfície 2 com texto em tinta e ícone de alerta, com o link "Ver Operações".
+- **Título da aba:** cada página diz o que é antes de "filmes" ("Sessões · filmes", "Sessão de sex, 20 nov · filmes", "Bruno · filmes", "Página não encontrada · filmes"). O ícone da aba é o adesivo laranja no estojo preto.
+
+### Página perdida (404 e erro)
+
+Um endereço que não leva a nada fala como a locadora: h1 "Essa fita não está na prateleira" em page title, "O endereço pode ter mudado, ou a Sessão foi apagada." em tinta clara, o laranja "Ir para o início" e "Ver Sessões" em opção. Para um Dono, fica dentro da barra do topo e das abas, na coluna de 720px; para quem não entrou, a barra preta traz "filmes" e "Entrar" à direita, e só o "Ir para o início". Uma página só de admin aberta por outro Dono é esse mesmo 404: a página não diz por quê. Uma página que falhou ao abrir diz "A fita enroscou", que o problema ficou no log, e oferece "Tentar de novo" (laranja, carrega de novo) e "Ir para o início".
 
 ### Home: o balcão, a última Sessão e o guia
 
 Uma coluna, de cima para baixo, com 16px entre os blocos. Não há lista de telas: as abas levam a todas.
 
-1. **O balcão** (sempre). Um `section` no preto do estojo, raio 14px, 16px 14px 14px, texto em case-ink. Em cima, o h1 da página, "O que vai ser hoje?", em counter title. Embaixo, a etiqueta da prateleira em branco: "QUEM ESTÁ · QUANTO TEMPO · O QUE A NOITE PEDE", os três itens que o pedido preenche, com os pontos de sempre e `aria-label` "O pedido: quem está, quanto tempo vocês têm e o que a noite pede.". Depois, em meta case-ink-2, "Saem 5 filmes, cada um com o motivo de cada Presente gostar." e, por fim, o **botão grande** "Pedir filme", o único laranja da tela.
+1. **O balcão** (sempre). Um `section` no preto do estojo, com 1px de borda do estojo (só se vê no escuro), raio 14px, 16px 14px 14px, texto em case-ink. Em cima, o h1 da página, "O que vai ser hoje?", em counter title. Embaixo, a etiqueta da prateleira em branco: "QUEM ESTÁ · QUANTO TEMPO · O QUE A NOITE PEDE", os três itens que o pedido preenche, com os pontos de sempre e `aria-label` "O pedido: quem está, quanto tempo vocês têm e o que a noite pede.". Depois, em meta case-ink-2, "Saem 5 filmes, cada um com o motivo de cada Presente gostar." e, por fim, o **botão grande** "Pedir filme", o único laranja da tela.
 2. **Ficha da última Sessão** (quando houver uma com o Dono). Superfície com fio de 1px, raio 12px. Cabeçalho separado do resto por um fio tracejado de 1px (o canhoto), com "ÚLTIMA SESSÃO" em Rubik 800 13px maiúsculo tinta clara e, à direita, "Sexta, 21 nov · Você e Teo" em letra de mão 16px; o cabeçalho leva à Sessão. Embaixo, o pedido em evidence tinta clara, quando houver, e os filmes como lombadas: linhas de 38px em superfície 2, raio 6px, com a lombada preta de 8px à esquerda, o adesivo de preço compacto (26px) com a posição e o título em Rubik 700 15px, cortado com reticências; uma coluna no celular, duas a partir de 560px. Com Feedback pendente, a caixa **devolver** em card-stock (raio 8px, 12px): "Falta contar como foi" em letra de mão 19px, "Viram algum? Conte qual e o que cada um achou." em evidence e a opção "Contar como foi", que leva a `/sessoes/<id>/contar`. Sem pendência, uma linha em meta: "vimos Maré Baixa" ou "não vimos nada".
-3. **Guia "Para começar"** (só enquanto falta algum passo; pulado não conta como falta). Um `section` em superfície, fio de 1px, raio 12px, 14px. Em cima, "Para começar" em step title e o progresso: três segmentos de 6px, um por passo, violeta (stamp) quando feito, só contornado tracejado em tinta clara quando pulado, superfície 2 quando falta; à direita, "1 de 3 feitos" em Rubik 700 13px tinta clara, tabular. O `role="progressbar"` diz o mesmo. Depois, uma lista dos três passos, sempre os três, na ordem (**Meu gosto**, feito com 10 Notas ou um import; **Importar do Letterboxd ou do Trakt**; **Conector no Claude**, feito sozinho quando `oauth_grants` tem um grant para o e-mail do Dono), separados por fio tracejado. Cada passo tem a marca de 28px à esquerda e, ao lado, o título em 15.5px com o estado:
-   - **Falta fazer:** número em tinta num anel de 1,5px em tinta. Só o primeiro que falta diz o que pede (sistema 14.5px tinta clara) e mostra o conteúdo: em Meu gosto, o contador de 10 pontos de 14px (violeta os dados, anel de 1,5px em fio os que faltam) e "4 de 10"; no Conector, o endereço no preto do estojo (raio 8px, mono 14px em case-ink), os 3 passos de como adicionar o conector personalizado e a nota do balconista em letra de mão violeta 15px, "Este passo se marca sozinho quando o Claude entrar com o seu e-mail.". Todo passo que falta tem a ação em opção ("Dar notas", "Importar", "Copiar endereço") e "Pular" em link, que posta para `/inicio/pular`.
+3. **Guia "Para começar"** (só enquanto falta algum passo; pulado não conta como falta). Um `section` em superfície, fio de 1px, raio 12px, 14px. Em cima, "Para começar" em step title e o progresso: três segmentos de 6px, um por passo, violeta (stamp) quando feito, só contornado tracejado em tinta clara quando pulado, contornado de 1px em fio forte quando falta; à direita, "1 de 3 feitos" em Rubik 700 13px tinta clara, tabular. O `role="progressbar"` diz o mesmo. Depois, uma lista dos três passos, sempre os três, na ordem (**Meu gosto**, feito com 10 Notas ou um import; **Importar do Letterboxd ou do Trakt**; **Conector no Claude**, feito sozinho quando `oauth_grants` tem um grant para o e-mail do Dono), separados por fio tracejado. Cada passo tem a marca de 28px à esquerda e, ao lado, o título em 15.5px com o estado:
+   - **Falta fazer:** número em tinta num anel de 1,5px em tinta. Só o primeiro que falta diz o que pede (sistema 14.5px tinta clara) e mostra o conteúdo: em Meu gosto, o contador de 10 pontos de 14px (violeta os dados, anel de 1,5px em fio forte os que faltam) e "4 de 10"; no Conector, o endereço no preto do estojo (raio 8px, mono 14px em case-ink), os 3 passos de como adicionar o conector personalizado e a nota do balconista em letra de mão violeta 15px, "Este passo se marca sozinho quando o Claude entrar com o seu e-mail.". Todo passo que falta tem a ação em opção ("Dar notas", "Importar", "Copiar endereço") e "Pular" em link, que posta para `/inicio/pular`.
    - **Feito:** check violeta num anel de 2px em stamp; ao lado do título, em meta tinta clara, "feito" ("feito, 12 notas" em Meu gosto).
    - **Pulado:** o número num anel tracejado em tinta clara; ao lado do título, "pulado"; embaixo, "Retomar" em link abre o que o passo pede e a ação.
 
@@ -711,14 +726,15 @@ Um erro ou um aviso de configuração diz primeiro, em frase, o que houve e o qu
 
 **Pessoas** (`/pessoas`) é uma lista de linhas de 52px em superfície, raio 10px, com a lombada preta de 8px à esquerda, o nome em Rubik 700 15px, a etiqueta DONO de quem tem acesso, os apelidos em meta e a seta à direita. Quem entrou vem primeiro, com "Meu gosto" em meta ao lado do nome, e a linha dela leva a `/meu-gosto`; as outras seguem a ordem do motor. Embaixo, "Acrescentar Pessoa" abre o formulário. Não há "Voltar": Pessoas é aba.
 
-**A página de uma Pessoa** e **Meu gosto** (a página da Pessoa de quem entrou) são a mesma tela, uma coluna de fichas (`Slip`: superfície, fio de 1px, raio 12px, canhoto tracejado com o título em Rubik 800 13px maiúsculo e a contagem à direita), 16px entre elas. De cima para baixo:
+**A página de uma Pessoa** e **Meu gosto** (a página da Pessoa de quem entrou) são a mesma tela, de fichas (`Slip`: superfície, fio de 1px, raio 12px, canhoto tracejado com o título em Rubik 800 13px maiúsculo e a contagem à direita), 16px entre elas. No celular é uma coluna; a partir de 900px, na coluna de 1040px, duas: à esquerda a olhada, as Notas e o que o guia deixou (itens 2 a 4), à direita o gosto (item 5). Meu gosto fala com ela na segunda pessoa ("pesa para você", "O que você disse do seu gosto"); a página de outra Pessoa fala dela ("ela"). De cima para baixo:
 
-1. **Cabeçalho.** Na página de outra Pessoa, a opção "Pessoas" para voltar e o nome dela em title, com DONO quando ela tem acesso. Em Meu gosto, o h1 é "Meu gosto" e, embaixo, em meta, o nome e os apelidos de quem entrou. O aviso ou a recusa do último formulário vêm logo depois.
-2. **Notas** (sempre a primeira ficha). Sem Nota, uma linha diz como ter alguma. Depois, as ações numa fila de pílulas: em Meu gosto, "Dar notas" é o botão laranja, o único da tela (a fila de Notas grava para quem entrou, então só existe aqui); "Importar do Letterboxd ou do Trakt" em opção, que leva ao import dela (`/meu-gosto/importar` ou `/pessoas/<ela>/importar`); "Baixar CSV do IMDb" em opção, só com Notas, um link direto para o arquivo. Embaixo, em meta, onde o CSV entra no MovieLens. Por último, "Ver as 11 Notas" abre a lista, que pode ser longa.
-3. **Só em Meu gosto, o que o guia da home deixou.** "Conector no Claude": o endereço no preto do estojo, "Copiar endereço" em opção e, à direita do canhoto, "conectado" ou "falta conectar". Enquanto falta, os 3 passos de como adicionar e a nota do balconista; conectado, uma linha diz para usar o mesmo endereço em outro aparelho. "Passos pulados", só com algum passo pulado e não feito: os passos do guia nesse estado (marca tracejada, "pulado"), cada um com "Retomar" em link, que abre o que o passo pede e a ação, como na home. Um conector pulado mostra o endereço só atrás do "Retomar" dele, e a ficha do conector sai: o endereço aparece uma vez.
-4. **O gosto.** Os atalhos das fichas em pílula, com a contagem, a busca no Catálogo (acha o tt… ou Q… dos formulários) e as fichas: Perguntas abertas, Vetos, Ajustes, Declarados, Relatos, Já vistos e, só para admin, Acesso.
+1. **Cabeçalho.** Na página de outra Pessoa, a opção "Pessoas" para voltar e o nome dela em page title, com DONO quando ela tem acesso. Em Meu gosto, o h1 é "Meu gosto" em page title e, embaixo, em meta, "Nas Sessões, você é Bruno (também eu)." O aviso ou a recusa do último formulário vêm logo depois.
+2. **Seu gosto em uma olhada** (só em Meu gosto, a primeira ficha): quantas Notas ("11 Notas", e "faltam 4 para 10" enquanto não chegar a 10), o que ela disse do gosto em contagens ("2 Vetos · 3 Declarados") e um próximo passo só, em link: dar notas (menos de 10), ligar o conector (falta, sem pular), responder as perguntas abertas, ou pedir um filme.
+3. **Notas** (a primeira ficha na página de outra Pessoa). Sem Nota, uma linha diz como ter alguma. Depois, as ações numa fila de pílulas: em Meu gosto, "Dar notas" é o botão laranja, o único da tela (a fila de Notas grava para quem entrou, então só existe aqui); "Importar do Letterboxd ou do Trakt" em opção, que leva ao import dela (`/meu-gosto/importar` ou `/pessoas/<ela>/importar`); "Baixar CSV do IMDb" em opção, só com Notas, um link direto para o arquivo. Embaixo, em meta, onde o CSV entra no MovieLens. Por último, "Ver as 11 Notas" abre a lista, que pode ser longa: o título do filme, "nota 9 · 30 ago 2025 · 4,5★ no Letterboxd da Iara". Nenhuma lista mostra o tt… do filme nem o Q… da entidade, e as datas vêm curtas, em PT-BR ("1 jun 2025").
+4. **Só em Meu gosto, o que o guia da home deixou.** "Conector no Claude": o endereço no preto do estojo, "Copiar endereço" em opção e, à direita do canhoto, "conectado" ou "falta conectar". Enquanto falta, os 3 passos de como adicionar e a nota do balconista; conectado, uma linha diz para usar o mesmo endereço em outro aparelho. "Passos pulados", só com algum passo pulado e não feito: os passos do guia nesse estado (marca tracejada, "pulado"), cada um com "Retomar" em link, que abre o que o passo pede e a ação, como na home. Um conector pulado mostra o endereço só atrás do "Retomar" dele, e a ficha do conector sai: o endereço aparece uma vez.
+5. **O gosto.** Os atalhos das fichas que têm algo, em pílula com a contagem, a busca no Catálogo (acha o tt… ou Q… dos formulários) e as fichas: Perguntas abertas, Vetos, Declarados, Relatos, Já vistos, Ajustes e, só para admin na página de outra Pessoa, Acesso. As fichas vazias não ocupam tela: viram uma linha só que abre, "Perguntas abertas, Vetos e Já vistos: nada ainda", com cada ficha e o formulário dela dentro. Nos Ajustes, os elos no normal ficam numa linha que abre ("Todos no normal: mudar", ou "Os outros no normal: mudar" sob os que mudaram); com o JavaScript, tocar num nível já grava, sem "Mudar". Um Declarado diz o alvo em palavras ("ama Sofia Rangel", "só sobre a tag “chuva”"). Já vistos lista o que ela disse que viu; as Notas da tela de Dar notas ficam só em Notas.
 
-Dar notas e o import seguem como telas próprias, com "Meu gosto" (ou o nome dela) no botão de voltar: a escala de 1 a 10, um filme por vez, e os formulários do import não cabem numa ficha. Exportar deixou de ser tela: o download sai da ficha de Notas, e uma falha volta para a página dela com o motivo.
+Dar notas (h1 "Dar notas") e o import seguem como telas próprias, com o destino no botão de voltar ("Meu gosto", ou o nome dela; "Importar" na fila de resolução): a escala de 1 a 10, um filme por vez, e os formulários do import não cabem numa ficha. Exportar deixou de ser tela: o download sai da ficha de Notas, e uma falha volta para a página dela com o motivo.
 
 ### Avatares
 

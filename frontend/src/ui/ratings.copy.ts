@@ -4,7 +4,7 @@ const notas = (n: number) => (n === 1 ? '1 Nota' : `${n} Notas`)
 
 export const RATINGS = {
   back: 'Meu gosto',
-  title: 'Meu gosto',
+  title: 'Dar notas',
   lead: 'Dê uma Nota de 1 a 10 aos filmes que você viu; os que não viu, pule. As Notas ficam neste navegador até você tocar em Pronto, e aí vão todas de uma vez para o seu gosto.',
   unavailable:
     'Não deu para abrir a tela de Notas: o site está com um problema, e ele ficou registrado no log do servidor.',

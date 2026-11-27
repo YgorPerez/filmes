@@ -14,6 +14,30 @@ type Strength = 'strong' | 'moderate' | 'weak' | 'guess'
 export const PERSON = {
   back: 'Pessoas',
   myTaste: 'Meu gosto',
+  /** Meu gosto's line under the h1: the name the Sessões give her. */
+  ownName: (name: string, aliases: readonly string[]) =>
+    aliases.length === 0
+      ? `Nas Sessões, você é ${name}.`
+      : `Nas Sessões, você é ${name} (também ${aliases.join(', ')}).`,
+  glance: {
+    title: 'Seu gosto em uma olhada',
+    notes: (n: number) =>
+      n === 1 ? '1 Nota' : `${n.toLocaleString('pt-BR')} Notas`,
+    toTen: (n: number) => `faltam ${10 - n} para 10`,
+    said: 'O que você disse',
+    nothingSaid: 'Nada dito ainda sobre o seu gosto.',
+    next: 'Próximo passo',
+    steps: {
+      rate: 'dar notas a filmes que você viu',
+      connector: 'ligar o conector no Claude',
+      questions: 'responder as perguntas abertas',
+      ask: 'pedir um filme para hoje',
+    },
+  },
+  /** The fold of the fichas with nothing yet: "Vetos e Declarados: nada
+   * ainda". */
+  empties: (titles: readonly string[]) =>
+    `${titles.length === 1 ? titles[0] : `${titles.slice(0, -1).join(', ')} e ${titles.at(-1)}`}: nada ainda`,
   notes: {
     title: 'Notas',
     predictionError: (error: number, films: number) => {
@@ -46,6 +70,11 @@ export const PERSON = {
   saving: 'Gravando…',
   imported: 'importado',
   fromFeedback: 'do Feedback',
+  /** On Meu gosto, the notices that name whose file it is. */
+  ownNotices: {
+    gravado: 'Gravado no seu arquivo.',
+    removido: 'Tirado do seu arquivo.',
+  } satisfies Partial<Record<PersonNotice, string>>,
   notices: {
     gravado: 'Gravado no arquivo dela.',
     igual: 'Já estava assim: nada mudou.',
@@ -110,12 +139,17 @@ export const PERSON = {
   adjustments: {
     title: 'Ajustes',
     lead: 'Quanto cada elo entre filmes pesa para ela. O que ela disse sobre um nome continua valendo.',
+    ownLead:
+      'Quanto cada elo entre filmes pesa para você. O que você disse sobre um nome continua valendo.',
     level: (link: string) => `Ajuste de ${link}`,
     change: 'Mudar',
+    allNormal: 'Todos no normal: mudar',
+    restNormal: 'Os outros no normal: mudar',
   },
   stated: {
     title: 'Declarados',
     lead: 'O que ela disse do próprio gosto.',
+    ownLead: 'O que você disse do seu gosto.',
     empty: 'Nenhum Declarado.',
     add: 'Acrescentar Declarado',
     source: 'conversa com o Dono',
@@ -123,6 +157,7 @@ export const PERSON = {
   reports: {
     title: 'Relatos',
     lead: 'O que o Dono contou do gosto dela.',
+    ownLead: 'O que outro Dono contou do seu gosto.',
     empty: 'Nenhum Relato.',
     add: 'Acrescentar Relato',
     source: reportSource,
@@ -142,7 +177,6 @@ export const PERSON = {
     email: PEOPLE.create.email,
     grant: 'Dar acesso',
     testUsers: PEOPLE.create.testUsers,
-    self: 'É você: o seu próprio acesso não sai por aqui.',
     revoke: 'Tirar acesso',
     revokeHint:
       'O próximo pedido dela, no site ou no conector, já é recusado. O gosto dela fica.',
@@ -175,6 +209,8 @@ export const PERSON = {
   } satisfies Record<Strength, string>,
   specific: 'específico',
   generic: 'genérico',
+  /** An engine label in plain words: "tag: chuva" is the tag “chuva”. */
+  plainLabel: (label: string) => label.replace(/^tag: (.+)$/, 'a tag “$1”'),
   /** A Nota on the 1 to 10 scale she gives it on (the rating screen, the
    * Cartaz's Já vi): the engine keeps it from 0,5 to 5, so 4.5 is "nota 9"
    * (#268). */

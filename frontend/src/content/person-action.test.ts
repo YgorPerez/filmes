@@ -3,9 +3,10 @@
 import { describe, expect, it } from 'vite-plus/test'
 import { formProblem, parseAction } from './person-action'
 
-const form = (fields: Record<string, string>) => {
+const form = (fields: Record<string, string | undefined>) => {
   const data = new FormData()
-  for (const [name, value] of Object.entries(fields)) data.set(name, value)
+  for (const [name, value] of Object.entries(fields))
+    if (value !== undefined) data.set(name, value)
   return data
 }
 

@@ -12,7 +12,11 @@ import {
 import type { PersonPage } from '#/platform/people'
 import { PERSON } from './person.copy'
 import { CATALOG_SEARCH } from './catalog-search.copy'
-import { SETUP_STEPS, type SetupStep } from '@filmes/engine'
+import {
+  RATING_SCREEN_SOURCE,
+  SETUP_STEPS,
+  type SetupStep,
+} from '@filmes/engine'
 import type { SetupView } from '#/platform/setup-guide'
 import { MY_START } from './my-start.copy'
 import type { MyStart } from './my-start'
@@ -397,7 +401,7 @@ describe('PersonScreen', () => {
       .getByText('“adoro os filmes dela”')
       .closest('li') as HTMLElement
     expect(
-      within(stated).getByText(/ama Sofia Rangel \(Q9000018\) · específico/),
+      within(stated).getByText(/ama Sofia Rangel · específico/),
     ).toBeTruthy()
     expect(
       within(stated).getByRole('img', { name: 'Força forte' }),
@@ -655,7 +659,7 @@ describe('the Acesso section', () => {
     expect(posted(form)).toEqual({ kind: 'revoke' })
   })
 
-  it("never offers the admin's own access", () => {
+  it("has no Acesso on the admin's own page", () => {
     show({
       ...IARA,
       person: 'bruno',
@@ -664,9 +668,7 @@ describe('the Acesso section', () => {
       viewer: ADMIN,
       access: { email: 'bruno@example.org' },
     })
-    const region = section(PERSON.access.title)
-    expect(within(region).getByText(PERSON.access.self)).toBeTruthy()
-    expect(within(region).queryByRole('form')).toBeNull()
+    expect(screen.queryByRole('region', { name: PERSON.access.title })).toBeNull()
   })
 })
 
@@ -688,3 +690,63 @@ describe('the Catálogo search', () => {
     )
   })
 })
+
+describe('Meu gosto in the second person', () => {
+  const OWN: PersonPage = {
+    ...IARA,
+    person: 'bruno',
+    name: 'Bruno',
+    aliases: ['eu'],
+    owner: true,
+    vetoes: [],
+    openQuestions: [],
+    adjustments: [],
+    seen: [
+      {
+        film: 'tt9000401',
+        title: 'Fronteira',
+        rating: 4,
+        date: '2026-11-20',
+        source: RATING_SCREEN_SOURCE,
+        factId: 'vistos:9',
+      },
+    ],
+  }
+
+  it('opens with her taste in one look and one next step', () => {
+    render(<PersonScreen slug="bruno" page={OWN} />)
+    const glance = section(PERSON.glance.title)
+    expect(screen.getAllByRole('region')[0]).toBe(glance)
+    expect(glance.textContent).toContain('1 Nota · faltam 9 para 10')
+    expect(
+      within(glance).getByRole('link', { name: PERSON.glance.steps.rate }),
+    ).toHaveProperty('pathname', '/meu-gosto/notas')
+    expect(screen.getByText(PERSON.ownName('Bruno', ['eu']))).toBeTruthy()
+  })
+
+  it('folds the empty fichas into one line and the normal Ajustes into one row', () => {
+    render(<PersonScreen slug="bruno" page={OWN} />)
+    expect(
+      screen.getByText(
+        PERSON.empties([
+          PERSON.questions.title,
+          PERSON.vetoes.title,
+          PERSON.seen.title,
+        ]),
+      ),
+    ).toBeTruthy()
+    expect(screen.getByText(PERSON.adjustments.allNormal)).toBeTruthy()
+    expect(
+      within(section(PERSON.adjustments.title)).getByText(
+        PERSON.adjustments.ownLead,
+      ),
+    ).toBeTruthy()
+  })
+
+  it('leaves her site Notas out of Já vistos', () => {
+    render(<PersonScreen slug="bruno" page={OWN} />)
+    const seen = section(PERSON.seen.title)
+    expect(within(seen).getByText(PERSON.seen.empty)).toBeTruthy()
+  })
+})
+

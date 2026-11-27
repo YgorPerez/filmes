@@ -64,6 +64,10 @@ export function ImportsFrame({
 
 const SCALE = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const
 
+/** The Nota a digit key gives on the rating card: 1 to 9, and 0 for 10. */
+const digitRating = (key: string) =>
+  /^[0-9]$/.test(key) ? Number(key) || 10 : null
+
 /** The film on the card: the year and the genres (from the Fila) in chips,
  * or the year and the directors (from the search). */
 type CardFilm = {
@@ -127,7 +131,7 @@ export function RatingScreen({
   return (
     <ImportsFrame back={RATINGS.back} backTo={MY_TASTE}>
       <div className="flex flex-col gap-sm">
-        <h1 className="font-display text-title">{RATINGS.title}</h1>
+        <h1 className="font-display text-page-title">{RATINGS.title}</h1>
         <p className="text-ink-2">{RATINGS.lead}</p>
       </div>
       {(written !== undefined || refusal) && (
@@ -315,7 +319,9 @@ function DraftSection({
 
 /** The film to rate: on its tape (the title on the cover, as the Fila has
  * no poster), its year and genres in chips, and the scale of 1 to 10
- * (DESIGN.md, Escala de nota). A tap on a number is the Nota. */
+ * (DESIGN.md, Escala de nota): two rows of five on a phone, so each
+ * number keeps a 44px target. A tap on a number is the Nota; with the
+ * focus on the card, so is a digit key (0 for 10). */
 function FilmCard({
   film,
   onRate,
@@ -328,6 +334,13 @@ function FilmCard({
   return (
     <article
       aria-label={RATINGS.queueLabel}
+      onKeyDown={(event) => {
+        const rating = digitRating(event.key)
+        if (rating === null || event.altKey || event.ctrlKey || event.metaKey)
+          return
+        event.preventDefault()
+        onRate(rating)
+      }}
       className="flex flex-col gap-xl rounded-card border border-rule bg-surface p-xl pt-2xl"
     >
       <div className="flex gap-xl">
@@ -352,7 +365,7 @@ function FilmCard({
         <div
           role="group"
           aria-label={RATINGS.scale}
-          className="grid grid-cols-10 gap-0.75"
+          className="grid grid-cols-5 gap-0.75 min-[480px]:grid-cols-10"
         >
           {SCALE.map((rating) => (
             <button

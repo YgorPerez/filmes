@@ -74,6 +74,21 @@ describe('the rating screen', () => {
     ).toEqual(['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'Não vi'])
   })
 
+  it('takes a digit key as the Nota, 0 for 10, while the card has the focus', async () => {
+    const user = userEvent.setup()
+    render(<RatingScreen queue={QUEUE} search={null} />)
+    card().getByRole('button', { name: 'Nota 1' }).focus()
+    await user.keyboard('8')
+    expect(card().getByRole('heading').textContent).toBe('Casa Cheia')
+    card().getByRole('button', { name: 'Nota 1' }).focus()
+    await user.keyboard('0')
+    expect(card().getByRole('heading').textContent).toBe('Deserto Branco')
+    expect(sent()).toMatchObject({
+      'nota.tt9000601': '8',
+      'nota.tt9000602': '10',
+    })
+  })
+
   it('a Nota goes to the draft and the next film comes; Pronto posts the draft', async () => {
     const user = userEvent.setup()
     render(<RatingScreen queue={QUEUE} search={null} />)

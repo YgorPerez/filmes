@@ -5,7 +5,6 @@ import {
   useLocation,
 } from '@tanstack/react-router'
 import { readPushAlert } from '#/content/operations'
-import { readOwner } from '#/content/owner'
 import { NotFound } from '#/ui/lost'
 import { AppShell } from '#/ui/shell'
 
@@ -16,8 +15,7 @@ import { AppShell } from '#/ui/shell'
 // strip of a push that keeps failing. An address under it that leads
 // nowhere (or a page only an admin opens) is the 404 inside the shell.
 export const Route = createFileRoute('/_owner')({
-  beforeLoad: async () => {
-    const owner = await readOwner()
+  beforeLoad: ({ context: { owner } }) => {
     if (!owner) throw redirect({ to: '/entrar', search: { recusa: undefined } })
     return { owner }
   },

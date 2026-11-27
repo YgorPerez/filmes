@@ -3,8 +3,12 @@ import {
   HeadContent,
   Outlet,
   Scripts,
+  useLocation,
 } from '@tanstack/react-router'
 import css from '../styles.css?url'
+import { readOwner } from '#/content/owner'
+import { LostAlone, NotFound } from '#/ui/lost'
+import { AppShell } from '#/ui/shell'
 import { PAGE_TITLES, pageTitle } from '#/ui/page-title'
 
 // The tab's icon: the orange price sticker on the black case, inline, so no
@@ -14,6 +18,9 @@ const ICON = `data:image/svg+xml,${encodeURIComponent(
 )}`
 
 export const Route = createRootRoute({
+  // Who is logged in, once per navigation: the Dono gate (`_owner.tsx`),
+  // `/entrar` and the 404 read it from the context.
+  beforeLoad: async () => ({ owner: await readOwner() }),
   // A page names itself in its route's `head` (`ui/page-title.ts`); an
   // address that leads nowhere is "Página não encontrada".
   head: ({ matches }) => ({
@@ -22,7 +29,7 @@ export const Route = createRootRoute({
       { name: 'viewport', content: 'width=device-width, initial-scale=1' },
       {
         title: pageTitle(
-          matches.some((m) => m.status === 'notFound')
+          matches.some((m) => m.status === 'notFound' || m._notFound === true)
             ? PAGE_TITLES.notFound
             : null,
         ),
@@ -37,7 +44,26 @@ export const Route = createRootRoute({
     ],
   }),
   component: Root,
+  notFoundComponent: RootNotFound,
 })
+
+/** An address no route has: inside the app shell for a Dono, and with the
+ * bar and Entrar for anyone else. */
+function RootNotFound() {
+  const { owner } = Route.useRouteContext()
+  const { pathname } = useLocation()
+  if (!owner)
+    return (
+      <LostAlone>
+        <NotFound owner={false} />
+      </LostAlone>
+    )
+  return (
+    <AppShell owner={owner} path={pathname} alert={null}>
+      <NotFound />
+    </AppShell>
+  )
+}
 
 function Root() {
   return (
