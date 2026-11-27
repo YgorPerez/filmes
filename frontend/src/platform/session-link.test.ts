@@ -102,9 +102,47 @@ test('the public Session link follows the current version until Feedback closes 
     // The closed Session is told apart from a broken link.
     const closed = (search: Record<string, unknown>) =>
       closedSessionLink(sessionLinkSearch(search), engine, database)
-    expect(await closed(search)).toBe(true)
-    expect(await closed({ ...search, chave: 'x'.repeat(43) })).toBe(false)
-    expect(await closed({ ...search, sessao: 'another-session' })).toBe(false)
+    expect(await closed(search)).toEqual({ chosen: null })
+    expect(await closed({ ...search, chave: 'x'.repeat(43) })).toBeNull()
+    expect(await closed({ ...search, sessao: 'another-session' })).toBeNull()
+  } finally {
+    await engine.dispose()
+  }
+})
+
+test('a closed Session’s link names the film the night ended with', async () => {
+  const fixture = useFixture()
+  const engine = makeEngine(fixture.vars)
+  const database = join(fixture.root, 'auth.sqlite')
+  try {
+    const opened = await fixture.ok(
+      recommendSession({ attendees: ['dono', 'iara'], count: 1 }),
+      {},
+      { owner: 'bruno' },
+    )
+    const session = opened.session.id
+    const url = await issueSessionLink(
+      session,
+      'bruno',
+      engine,
+      database,
+      'https://cinema.example',
+    )
+    if (!url) throw new Error('Expected a Session link')
+    const search = sessionLinkSearch(
+      Object.fromEntries(new URL(url).searchParams),
+    )
+    // Still open: not closed.
+    expect(await closedSessionLink(search, engine, database)).toBeNull()
+    const film = opened.films[0]!
+    await fixture.ok(
+      recordFeedback({ session, film: film.id }),
+      {},
+      { owner: 'bruno' },
+    )
+    expect(await closedSessionLink(search, engine, database)).toEqual({
+      chosen: film.title,
+    })
   } finally {
     await engine.dispose()
   }

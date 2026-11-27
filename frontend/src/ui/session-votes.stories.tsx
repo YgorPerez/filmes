@@ -51,6 +51,18 @@ export const Recap: Story = {
     await expect(
       canvas.getByText(VOTES.leaving(['Pequenos Milagres'])),
     ).toBeVisible()
+    // Each row shows her Voto as the filled side of Não / Sim.
+    const row = within(
+      canvas.getByRole('group', { name: VOTES.voteOn('Pequenos Milagres') }),
+    )
+    await expect(row.getByRole('button', { name: VOTES.no })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    await userEvent.click(row.getByRole('button', { name: VOTES.yes }))
+    await expect(
+      canvas.getByRole('heading', { name: VOTES.summary(3, 0) }),
+    ).toBeVisible()
   },
 }
 
@@ -73,6 +85,14 @@ export const Revote: Story = {
 
 export const Failure: Story = {
   args: { search: { ...LINK, erro: 'falha' } },
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByRole('heading', {
+        level: 1,
+        name: VOTES.stuck.falha,
+      }),
+    ).toBeVisible()
+  },
 }
 
 export const RedoFailed: Story = {
