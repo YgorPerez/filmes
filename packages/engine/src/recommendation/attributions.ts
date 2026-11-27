@@ -5,8 +5,13 @@
 // The IMDb is always there: every Candidate comes from its datasets. The
 // others come in when some Evidence returned has a source with their name
 // ("Trakt da Ana"); TMDB also when some film comes with a poster or a
-// Portuguese title. Wikidata (CC0), Letterboxd, MovieLens ml-32m and OMDb
-// ask for no attribution on screen.
+// Portuguese title.
+//
+// `CREDITS` is the app's credits page (#292): every source the engine
+// reads, with these texts word for word and what the other licenses ask
+// (OMDb's CC BY-NC 4.0, MovieLens' "may not state or imply any
+// endorsement"), and nothing on the cards. A new source adds its line
+// there.
 
 import { casefold } from '../compat/text.ts'
 import { DDD_ATTRIBUTION, DDD_NAME } from '../sources/DoesTheDogDie.ts'
@@ -41,6 +46,85 @@ const TEXTS: ReadonlyArray<Attribution> = [
   },
   TRAKT_ATTRIBUTION,
   TMDB_ATTRIBUTION,
+]
+
+/** A source on the credits page: its name, where it lives, what filmes
+ * takes from it, and the notice its terms ask for, or `null` when they ask
+ * for none. */
+export interface Credit {
+  readonly source: string
+  readonly url: string
+  readonly use: string
+  readonly notice: string | null
+}
+
+const textOf = (source: string) => {
+  const found = TEXTS.find((t) => t.source === source)
+  if (!found) throw new Error(`no attribution for ${source}`)
+  return found.text
+}
+
+/** Every source the engine reads, in the order the credits page shows. */
+export const CREDITS: ReadonlyArray<Credit> = [
+  {
+    source: 'IMDb',
+    url: 'https://www.imdb.com',
+    use: 'Os filmes, o elenco, a nota e os votos.',
+    notice: textOf('IMDb'),
+  },
+  {
+    source: TMDB_ATTRIBUTION.source,
+    url: 'https://www.themoviedb.org',
+    use: 'As capas, os títulos em português e as sinopses.',
+    notice: TMDB_ATTRIBUTION.text,
+  },
+  {
+    source: 'Wikidata',
+    url: 'https://www.wikidata.org',
+    use: 'Quem fez cada filme, séries, datas de estreia, subgêneros e classificação etária.',
+    notice: 'Dados do Wikidata, em domínio público (CC0).',
+  },
+  {
+    source: 'MovieLens',
+    url: 'https://grouplens.org/datasets/movielens/',
+    use: 'As notas de quem deu 4 ou mais a um filme e a outro.',
+    notice:
+      'MovieLens ml-32m, do GroupLens Research, da Universidade de Minnesota ' +
+      '(F. Maxwell Harper e Joseph A. Konstan, 2015, https://doi.org/10.1145/2827872). ' +
+      'O GroupLens não endossa o filmes.',
+  },
+  {
+    source: 'Tag Genome',
+    url: 'https://grouplens.org/datasets/movielens/tag-genome-2021/',
+    use: 'As tags dos filmes, que movem o Clima e o Parecido.',
+    notice: textOf('Tag Genome'),
+  },
+  {
+    source: 'OMDb',
+    url: 'https://www.omdbapi.com',
+    use: 'A classificação etária, quando falta no Wikidata.',
+    notice:
+      'Dados do OMDb (https://www.omdbapi.com), sob licença CC BY-NC 4.0 ' +
+      '(https://creativecommons.org/licenses/by-nc/4.0/)',
+  },
+  {
+    source: DDD_NAME,
+    url: 'https://www.doesthedogdie.com',
+    use: 'Os avisos de conteúdo ("um cachorro morre").',
+    notice: DDD_ATTRIBUTION,
+  },
+  {
+    source: TRAKT_ATTRIBUTION.source,
+    url: 'https://trakt.tv',
+    use: 'O histórico e as notas que cada Pessoa importa.',
+    notice: TRAKT_ATTRIBUTION.text,
+  },
+  {
+    source: 'Letterboxd',
+    url: 'https://letterboxd.com',
+    use: 'O histórico e as notas do export que cada Pessoa baixa.',
+    notice: null,
+  },
 ]
 
 /** The attributions of the sources named, each once, in the fixed order. */

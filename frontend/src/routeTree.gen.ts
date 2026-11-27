@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as OwnerRouteImport } from './routes/_owner'
+import { Route as CreditosRouteImport } from './routes/creditos'
 import { Route as EntrarRouteImport } from './routes/entrar'
 import { Route as ParticiparRouteImport } from './routes/participar'
 import { Route as SaudeRouteImport } from './routes/saude'
@@ -53,6 +54,11 @@ import { Route as OwnerSessoesSessaoContarRouteImport } from './routes/_owner/se
 
 const OwnerRoute = OwnerRouteImport.update({
   id: '/_owner',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CreditosRoute = CreditosRouteImport.update({
+  id: '/creditos',
+  path: '/creditos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EntrarRoute = EntrarRouteImport.update({
@@ -262,6 +268,7 @@ const OwnerSessoesSessaoContarRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof OwnerIndexRoute
+  '/creditos': typeof CreditosRoute
   '/entrar': typeof EntrarRoute
   '/participar': typeof ParticiparRouteWithChildren
   '/saude': typeof SaudeRoute
@@ -303,6 +310,7 @@ export interface FileRoutesByFullPath {
   '/sessoes/$sessao/': typeof OwnerSessoesSessaoIndexRoute
 }
 export interface FileRoutesByTo {
+  '/creditos': typeof CreditosRoute
   '/entrar': typeof EntrarRoute
   '/saude': typeof SaudeRoute
   '/operacoes': typeof OwnerOperacoesRoute
@@ -346,6 +354,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_owner': typeof OwnerRouteWithChildren
+  '/creditos': typeof CreditosRoute
   '/entrar': typeof EntrarRoute
   '/participar': typeof ParticiparRouteWithChildren
   '/saude': typeof SaudeRoute
@@ -391,6 +400,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/creditos'
     | '/entrar'
     | '/participar'
     | '/saude'
@@ -432,6 +442,7 @@ export interface FileRouteTypes {
     | '/sessoes/$sessao/'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/creditos'
     | '/entrar'
     | '/saude'
     | '/operacoes'
@@ -474,6 +485,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_owner'
+    | '/creditos'
     | '/entrar'
     | '/participar'
     | '/saude'
@@ -518,6 +530,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   OwnerRoute: typeof OwnerRouteWithChildren
+  CreditosRoute: typeof CreditosRoute
   EntrarRoute: typeof EntrarRoute
   ParticiparRoute: typeof ParticiparRouteWithChildren
   SaudeRoute: typeof SaudeRoute
@@ -549,6 +562,13 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof OwnerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/creditos': {
+      id: '/creditos'
+      path: '/creditos'
+      fullPath: '/creditos'
+      preLoaderRoute: typeof CreditosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/entrar': {
@@ -890,6 +910,7 @@ const ParticiparRouteWithChildren = ParticiparRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   OwnerRoute: OwnerRouteWithChildren,
+  CreditosRoute: CreditosRoute,
   EntrarRoute: EntrarRoute,
   ParticiparRoute: ParticiparRouteWithChildren,
   SaudeRoute: SaudeRoute,
