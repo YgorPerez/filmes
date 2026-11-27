@@ -2,8 +2,15 @@ import type { LoginRefusal } from '#/content/login-refusal'
 
 export const LOGIN = {
   brand: 'filmes',
-  title: 'Entrar no filmes',
+  title: 'Entrar',
+  /** The shelf label over the card: what the site is for, before the
+   * visitor has to know anything else. */
+  tagline: ['Filme pra hoje', 'Pra todo mundo da sala'],
+  taglineLabel: 'Filme pra hoje, pra todo mundo da sala.',
   lead: 'Entre com a conta Google que tem acesso ao filmes.',
+  /** Who gets in, before a failed trip to Google says it. */
+  access:
+    'Só entra quem já está em Pessoas como Dono. Peça a quem já usa para pôr o seu e-mail.',
   google: 'Entrar com Google',
   otherAccount: 'Usar outra conta Google',
   refusals: {

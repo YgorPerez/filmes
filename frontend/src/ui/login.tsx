@@ -5,6 +5,7 @@ import {
   type TraktError,
 } from '#/content/trakt-form'
 import { LOGIN } from './login.copy'
+import { ShelfLabel } from './kit/shelf-label'
 import { Alert } from './kit/status'
 import { buttonVariants } from './kit/button-variants'
 import { SiteFooter } from './kit/site-footer'
@@ -35,20 +36,18 @@ export function Login({ refusal }: { refusal?: LoginRefusal }) {
           className="overflow-hidden rounded-panel"
         >
           <div className="bg-case p-xs">
-            <h1
-              id="entrar"
-              className="rounded-cover bg-shelf-label px-lg py-sm font-display text-counter-title text-on-sticker"
-            >
-              {LOGIN.title}
-            </h1>
+            <ShelfLabel items={LOGIN.tagline} label={LOGIN.taglineLabel} />
           </div>
           <div className="flex flex-col gap-2xl bg-card-stock p-2xl text-card-stock-ink sm:p-3xl">
+            <h1 id="entrar" className="font-display text-counter-title">
+              {LOGIN.title}
+            </h1>
             {refusal ? (
               <Alert className="bg-surface text-evidence">
                 {LOGIN.refusals[refusal]}
               </Alert>
             ) : (
-              <p className="text-pretty">{LOGIN.lead}</p>
+              <p className="text-balance">{LOGIN.lead}</p>
             )}
             {refusal !== 'indisponivel' && (
               <a
@@ -57,6 +56,11 @@ export function Login({ refusal }: { refusal?: LoginRefusal }) {
               >
                 {googleLabel}
               </a>
+            )}
+            {refusal !== 'nao-dono' && (
+              <p className="border-t border-dashed border-card-stock-ink/40 pt-lg text-meta text-pretty">
+                {LOGIN.access}
+              </p>
             )}
           </div>
         </section>
