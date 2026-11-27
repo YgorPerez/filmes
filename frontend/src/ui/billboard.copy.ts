@@ -25,6 +25,8 @@ export const BILLBOARD = {
       'Aposta: pouca Evidência, mas quem tem gosto parecido deu nota alta',
     imdb: (rating: string | null, votes: string) =>
       `${rating === null ? '' : `${rating} `}IMDb · ${votes} votos`,
+    /** The link to the film's trailer on YouTube (#289). */
+    trailer: 'trailer',
     /** The hint of a Presente's dot: "Ana: 8,3 de 10 · 12 vizinhos", or
      * "Ana: 8,3 de 10" when the version did not keep how many. */
     predicted: (name: string, rating: string, raters?: number) =>

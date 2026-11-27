@@ -141,6 +141,17 @@ describe('the Cartaz shows', () => {
     )
   })
 
+  it('the trailer: a link to YouTube in a new tab, only when the film has one', () => {
+    render(<Billboard billboard={MODEL} />)
+    const trailer = card(1).getByRole('link', { name: 'trailer' })
+    expect(trailer.getAttribute('href')).toBe(
+      'https://www.youtube.com/watch?v=hOrAsPtBr01',
+    )
+    expect(trailer.getAttribute('target')).toBe('_blank')
+    expect(document.querySelector('iframe')).toBeNull()
+    expect(card(2).queryByRole('link', { name: 'trailer' })).toBeNull()
+  })
+
   it('a shared Evidence on one line, opened by the names, and who has no Fato on hers, with no Força', () => {
     render(<Billboard billboard={MODEL} />)
     const why = (n: number) =>
