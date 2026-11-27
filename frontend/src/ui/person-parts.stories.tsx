@@ -12,6 +12,7 @@ import {
   Items,
   Meta as ItemMeta,
   Notice,
+  RatingField,
   RemoveForm,
   Section,
   SessionFilmLookup,
@@ -136,6 +137,20 @@ export const FilmTarget: Story = {
     await expect(
       within(canvasElement).getByRole('searchbox', { name: 'Filme' }),
     ).toBeVisible()
+  },
+}
+
+/** A Já visto's Nota (#330): the 1 to 10 of the rating screen, 8 chosen. */
+export const RatingScale: Story = {
+  render: () => (
+    <ActionForm slug="iara" action="visto" label="Nota">
+      <RatingField name="nota" label="Nota" defaultValue="8/10" />
+    </ActionForm>
+  ),
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByRole('radio', { name: '8' }),
+    ).toBeChecked()
   },
 }
 

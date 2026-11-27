@@ -248,6 +248,7 @@ describe('person', () => {
       [{ action: 'seen', person: 'teo' }, 'person seen precisa de: film'],
       [{ action: 'view' }, 'person view precisa de: person'],
       [{ action: 'remove', person: 'teo' }, 'person remove precisa de: remove'],
+      [{ action: 'edit', person: 'teo' }, 'person edit precisa de: edit'],
       [
         { action: 'veto', person: 'teo', text: 'nunca vê terror' },
         'person veto precisa de film, entity ou group',
@@ -387,5 +388,36 @@ describe('person', () => {
       git(fixture.data, 'log', '-1', '--format=%an <%ae>').trim(),
       'filmes <>',
     )
+  })
+
+  test('edits a Já visto in place: a new Nota, the date kept, and clear takes the Nota', async () => {
+    const c = await connect(useFixture())
+    await person(c, { action: 'create', name: 'Ana', slug: 'ana' })
+    await person(c, {
+      action: 'seen',
+      person: 'ana',
+      film: 'tt9000601',
+      rating: '4',
+      date: '2023-05-01',
+    })
+
+    const edited = await person(c, {
+      action: 'edit',
+      person: 'ana',
+      edit: { kind: 'seen', id: 'tt9000601' },
+      rating: '9/10',
+    })
+    assert.equal(edited.changed, true)
+    assert.equal(edited.edited.rating, 4.5)
+    assert.equal(edited.edited.date, '2023-05-01')
+    assert.equal(edited.edited.edited, '2026-11-20')
+
+    const cleared = await person(c, {
+      action: 'edit',
+      person: 'ana',
+      edit: { kind: 'seen', id: 'tt9000601' },
+      clear: ['rating'],
+    })
+    assert.equal(cleared.edited.rating, null)
   })
 })

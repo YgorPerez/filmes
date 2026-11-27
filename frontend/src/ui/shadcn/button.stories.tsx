@@ -28,6 +28,11 @@ export const Pressed: Story = {
   args: { variant: 'option', children: 'Já vi', 'aria-pressed': true },
 }
 
+/** The decisive step of a form (#330): "Gravar" an edit, "Tirar de vez". */
+export const Chosen: Story = {
+  args: { variant: 'chosen', children: 'Gravar' },
+}
+
 export const Link: Story = { args: { variant: 'link', children: 'Pular' } }
 
 export const Disabled: Story = { args: { disabled: true } }

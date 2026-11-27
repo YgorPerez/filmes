@@ -188,9 +188,40 @@ export const PERSON = {
   },
   unavailable:
     'Não deu para abrir a Pessoa: o site está com um problema, e ele ficou registrado no log do servidor.',
+  /** Correcting an item in place (#330). */
+  edit: {
+    open: 'Editar',
+    label: (what: string) => `Editar ${what}`,
+    cancel: 'Cancelar',
+    /** Above the open form: which item it is, as it was. */
+    heading: (kind: string) => `Editando ${kind}`,
+    kinds: {
+      veto: 'o Veto',
+      stated: 'o Declarado',
+      report: 'o Relato',
+      seen: 'o Já visto',
+    },
+    /** In an item's line: the day of its last edit, after its own date. */
+    on: (date: string) => `editado ${date}`,
+    /** Beside the item an edit just saved. */
+    saved: 'Editado',
+    /** Another "Editar", or Esc, while the open form has changes. */
+    held: 'Esta edição tem mudanças: grave ou cancele antes de sair dela.',
+    /** A Já visto's film stays: another film is another Já visto. */
+    filmFixed: 'Para trocar o filme, tire este Já visto e acrescente o certo.',
+    /** The Fonte of an edit: left empty, the one it had stays. */
+    sourceHint: 'de onde veio; apagada, fica a de antes',
+    /** Why an imported item has no "Editar", for a screen reader. */
+    readOnly: 'corrija na origem',
+  },
   remove: 'Tirar',
   removeLabel: (what: string) => `Tirar ${what}`,
   removing: 'Tirando…',
+  /** "Tirar" asks first (#330). */
+  removeSure: (what: string) => `Tirar ${what} de vez`,
+  removeSureShort: 'Tirar de vez',
+  removeKeep: 'Manter',
+  removeWarning: 'Sai do arquivo e não volta.',
   save: 'Gravar',
   saving: 'Gravando…',
   imported: 'importado',
@@ -198,13 +229,26 @@ export const PERSON = {
   /** What a save or a Tirar did, by the ficha that posted it (#273):
    * "Veto gravado.", not where the file is. */
   savedIn: {
-    vetos: { gravado: 'Veto gravado.', removido: 'Veto tirado.' },
+    vetos: {
+      gravado: 'Veto gravado.',
+      removido: 'Veto tirado.',
+      editado: 'Veto editado.',
+    },
     declarados: {
       gravado: 'Declarado gravado.',
       removido: 'Declarado tirado.',
+      editado: 'Declarado editado.',
     },
-    relatos: { gravado: 'Relato gravado.', removido: 'Relato tirado.' },
-    vistos: { gravado: 'Já visto gravado.', removido: 'Já visto tirado.' },
+    relatos: {
+      gravado: 'Relato gravado.',
+      removido: 'Relato tirado.',
+      editado: 'Relato editado.',
+    },
+    vistos: {
+      gravado: 'Já visto gravado.',
+      removido: 'Já visto tirado.',
+      editado: 'Já visto editado.',
+    },
   } satisfies Record<string, Partial<Record<PersonNotice, string>>>,
   /** What the last form did, by her name (#273): every Pessoa is not
    * "ela". */
@@ -214,6 +258,7 @@ export const PERSON = {
       igual: 'Já estava assim: nada mudou.',
       ajustado: 'Ajuste gravado.',
       removido: 'Tirado.',
+      editado: 'Editado.',
       pulada: 'Pergunta pulada: volta uma vez, quando o assunto aparecer.',
       saiu: 'Pulada duas vezes: a pergunta saiu da lista.',
       respondida: 'Resposta gravada como Declarado; a pergunta saiu da lista.',
@@ -228,6 +273,7 @@ export const PERSON = {
       pedido:
         'Faltou um campo, ou um valor não vale: confira o texto, o alvo e a Nota de 1 a 10.',
       item: `Esse item já não está no arquivo de ${name}.`,
+      repetido: `Assim ele ficaria igual a outro item do arquivo de ${name}. Nada mudou.`,
       email: `Para entrar, ${name} precisa de um e-mail do Google válido.`,
       'email-usado': 'Esse e-mail já é de outra Pessoa.',
       'ja-dono': `${name} já tem acesso. Para trocar o e-mail, tire o acesso antes.`,
@@ -250,7 +296,7 @@ export const PERSON = {
   targetSearch: 'Busque pelo nome',
   /** Before the JavaScript, the field takes the ID. */
   idHint: 'tt… de um filme ou Q… de uma pessoa, gênero ou série',
-  groupsLabel: 'ou um grupo',
+  groupsLabel: 'ou, em vez disso, um grupo',
   targetChip: (label: string, kind: string) => `${label} · ${kind}`,
   film: 'Filme',
   filmKind: 'filme',
@@ -328,8 +374,8 @@ export const PERSON = {
     source: reportSource,
   },
   seen: {
-    title: 'Já vistos sem Nota',
-    empty: 'Nenhum Já visto sem Nota: os filmes com Nota estão nas Notas.',
+    title: 'Já vistos',
+    empty: 'Nenhum Já visto dito aqui. As Notas do site ficam nas Notas.',
     add: 'Acrescentar Já visto',
     source: 'conversa com o Dono',
   },
@@ -432,6 +478,8 @@ export const PERSON = {
       return 'Busque pelo nome e escolha um resultado do Catálogo.'
     if (problem === 'target')
       return 'Falta o alvo: um filme, uma pessoa, um gênero ou um grupo.'
+    if (problem === 'both')
+      return 'Escolha um só: o alvo ou o grupo. O Veto vale para um deles.'
     if (problem === 'reaction')
       return 'Uma reação precisa de um alvo: diga sobre o quê.'
     return REQUIRED[field] ?? 'Falta preencher este campo.'
@@ -458,9 +506,3 @@ const REQUIRED: Record<string, string> = {
   filme: 'Falta o filme: busque pelo título e escolha um resultado.',
   email: 'Falta o e-mail do Google.',
 }
-
-/** The Notas a form offers, from 10 to 1, as the forms post them. */
-export const RATING_CHOICES = Array.from({ length: 10 }, (_, i) => ({
-  value: `${10 - i}/10`,
-  label: String(10 - i),
-}))

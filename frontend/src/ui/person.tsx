@@ -1,5 +1,12 @@
 import { useHydrated } from '@tanstack/react-router'
-import { createContext, useContext, type ReactNode } from 'react'
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react'
 import {
   sectionOfSpot,
   type FieldProblem,
@@ -17,6 +24,7 @@ import { sessionPath } from '#/content/session-paths'
 import { TRAKT_PATH } from '#/content/trakt-form'
 import type { PersonPage } from '#/platform/people'
 import type { TasteSummary } from '@filmes/engine'
+import { Icon } from './kit/icon'
 import { OwnerTag } from './kit/owner-tag'
 import { Slip } from './kit/slip'
 import {
@@ -28,16 +36,18 @@ import {
   Items,
   Meta,
   Notice,
+  RatingField,
   RemoveForm,
   SelectField,
   Submit,
   TargetField,
   TextField,
   useRefusedInPlace,
+  type Target,
 } from './person-parts'
 import { MyStartSections, type MyStart } from './my-start'
 import { StrengthDots } from './person-marks'
-import { PERSON, RATING_CHOICES } from './person.copy'
+import { PERSON } from './person.copy'
 import { buttonVariants } from './kit/button-variants'
 import { shortDate, weekdayDate } from './dates'
 
@@ -50,11 +60,6 @@ const REACTION_OPTIONS = [
     value,
     label,
   })),
-]
-
-const RATING_OPTIONS = [
-  { value: '', label: PERSON.noRating },
-  ...RATING_CHOICES,
 ]
 
 /** What the last form did and where (#273): the ficha that posted says it
@@ -120,8 +125,11 @@ function SpotStatus({ id }: { id: string }) {
   const { spot, notice, refusal } = useContext(PostedAt)
   const stale = useRefusedInPlace()
   const text = useAnswerText()
+  const { saved } = useContext(Editing)
   if (stale || spot === undefined || sectionOfSpot(spot) !== id) return null
   if (spot.startsWith('ajuste-') && !refusal) return null
+  // An edit says it beside its item (#330).
+  if (notice === 'editado' && saved !== undefined && !refusal) return null
   if (refusal) return <Alert>{text.refusal(refusal)}</Alert>
   return notice ? <Notice>{text.notice(notice)}</Notice> : null
 }
@@ -145,6 +153,10 @@ type PersonScreenProps = {
   pending?: number
   /** On Meu gosto, her genres and directors. */
   taste?: TasteSummary | null
+  /** Before the JavaScript, the item open for editing (`?editar=`). */
+  editing?: string
+  /** The item an edit just saved (`?item=`), marked in its place. */
+  saved?: string
 }
 
 /** `/pessoas/<slug>`, or Meu gosto for the Dono's own. Another Pessoa's
@@ -169,6 +181,8 @@ export function PersonScreen({
   trakt = null,
   pending = 0,
   taste = null,
+  editing,
+  saved,
 }: PersonScreenProps) {
   if (page === 'unknown') return <UnknownPerson />
   const own = page !== null && page.person === page.viewer.person
@@ -189,16 +203,18 @@ export function PersonScreen({
           value={{ spot, notice, refusal, problem, name: page.name, own }}
         >
           <ActionForms name={page.name}>
-            <PersonHeader slug={slug} page={page} own={own} />
-            <PersonColumns
-              slug={slug}
-              page={page}
-              own={own}
-              start={start}
-              trakt={trakt}
-              pending={pending}
-              taste={taste}
-            />
+            <EditingItem initial={editing} saved={saved}>
+              <PersonHeader slug={slug} page={page} own={own} />
+              <PersonColumns
+                slug={slug}
+                page={page}
+                own={own}
+                start={start}
+                trakt={trakt}
+                pending={pending}
+                taste={taste}
+              />
+            </EditingItem>
           </ActionForms>
         </PostedAt.Provider>
       )}
@@ -797,8 +813,8 @@ const REFINE = new Set(['ajustes', 'declarados', 'relatos', 'acesso'])
 /** What the Dono acts on, in that order (#273): the open questions (only
  * when there is one), the Vetos (always: the strongest thing she can say),
  * the Já vistos without a Nota, folded in one line while there is none
- * ("Já vistos sem Nota: nenhum"). A fold opens by itself when its ficha
- * posted the last form. */
+ * ("Já vistos: nenhum"). A fold opens by itself when its ficha posted
+ * the last form. */
 function Taste({ slug, page }: { slug: string; page: PersonPage }) {
   const { spot } = useContext(PostedAt)
   const posted = spot === undefined ? undefined : sectionOfSpot(spot)
@@ -1024,53 +1040,54 @@ function LongAnswer({
 function Vetoes({ slug, page }: Part) {
   const { vetoes } = PERSON
   const refused = useRefusedField('vetos')
+  const editingIn = useEditingIn()
   return (
     <Slip id="vetos" title={vetoes.title} aside={countOf(page.vetoes)}>
       <SpotStatus id="vetos" />
       <Items empty={vetoes.empty}>
         {page.vetoes.map((v) => (
-          <Item
+          <EditableItem
             key={v.factId}
-            actions={
-              <RemoveForm
-                slug={slug}
-                what="veto"
-                id={v.factId}
-                label={v.text}
-              />
-            }
+            slug={slug}
+            what="veto"
+            id={v.factId}
+            label={v.text}
+            context={[PERSON.plainLabel(v.label), shortDate(v.date)]}
+            form={<VetoFields v={v} groups={page.tagGroups} />}
           >
             <span>“{v.text}”</span>
-            <Meta parts={[PERSON.plainLabel(v.label), shortDate(v.date)]} />
-          </Item>
+            <Meta parts={[PERSON.plainLabel(v.label), ...dates(v)]} />
+          </EditableItem>
         ))}
       </Items>
-      <Disclosure
-        id="acrescentar-veto"
-        summary={vetoes.add}
-        open={refused !== null || undefined}
-      >
-        <ActionForm
-          slug={slug}
-          action="vetar"
-          label={vetoes.add}
-          problem={refused}
+      {!editingIn(page.vetoes) && (
+        <Disclosure
+          id="acrescentar-veto"
+          summary={vetoes.add}
+          open={refused !== null || undefined}
         >
-          <TextField
-            name="texto"
-            label={vetoes.text}
-            placeholder={vetoes.placeholder}
-            required
-          />
-          <TargetField
-            name="alvo"
-            label={PERSON.target}
-            scope="all"
-            groups={page.tagGroups}
-          />
-          <Submit>{PERSON.save}</Submit>
-        </ActionForm>
-      </Disclosure>
+          <ActionForm
+            slug={slug}
+            action="vetar"
+            label={vetoes.add}
+            problem={refused}
+          >
+            <TextField
+              name="texto"
+              label={vetoes.text}
+              placeholder={vetoes.placeholder}
+              required
+            />
+            <TargetField
+              name="alvo"
+              label={PERSON.target}
+              scope="all"
+              groups={page.tagGroups}
+            />
+            <Submit>{PERSON.save}</Submit>
+          </ActionForm>
+        </Disclosure>
+      )}
     </Slip>
   )
 }
@@ -1272,6 +1289,7 @@ function Statements({
   const copy = kind === 'stated' ? PERSON.stated : PERSON.reports
   const id = kind === 'stated' ? 'declarados' : 'relatos'
   const refused = useRefusedField(id)
+  const editingIn = useEditingIn()
   return (
     <Slip
       id={id}
@@ -1285,7 +1303,7 @@ function Statements({
           <StatementItem key={s.factId} slug={slug} kind={kind} s={s} />
         ))}
       </Items>
-      {source !== null && (
+      {source !== null && !editingIn(items) && (
         <AddStatement
           slug={slug}
           kind={kind}
@@ -1309,18 +1327,8 @@ function StatementItem({
   s: Statement
 }) {
   const origin = originOf(kind, s)
-  return (
-    <Item
-      actions={
-        origin === 'file' ? (
-          <RemoveForm slug={slug} what={kind} id={s.factId} label={s.text} />
-        ) : (
-          <span className="font-display text-label text-ink-2 uppercase">
-            {origin}
-          </span>
-        )
-      }
-    >
+  const body = (
+    <>
       <span>{PERSON.statementText(s.text)}</span>
       <span className="flex flex-wrap items-center gap-x-sm gap-y-2xs">
         <StrengthDots
@@ -1328,9 +1336,36 @@ function StatementItem({
           word={PERSON.strengths[s.strength]}
         />
         <StatementTarget s={s} />
-        <Meta parts={[shortDate(s.date), s.source]} />
+        <Meta parts={[...dates(s), s.source]} />
       </span>
-    </Item>
+    </>
+  )
+  if (origin !== 'file')
+    return (
+      <Item
+        actions={
+          <span className="flex shrink-0 flex-col items-end gap-2xs text-right">
+            <span className="font-display text-label text-ink-2 uppercase">
+              {origin}
+            </span>
+            <span className="text-meta text-ink-2">{PERSON.edit.readOnly}</span>
+          </span>
+        }
+      >
+        {body}
+      </Item>
+    )
+  return (
+    <EditableItem
+      slug={slug}
+      what={kind}
+      id={s.factId}
+      label={s.text}
+      context={[statementAbout(s), shortDate(s.date)]}
+      form={<StatementFields s={s} />}
+    >
+      {body}
+    </EditableItem>
   )
 }
 
@@ -1378,53 +1413,50 @@ function AddStatement({
 function Seen({ slug, page }: Part) {
   const { seen } = PERSON
   const refused = useRefusedField('vistos')
+  const editingIn = useEditingIn()
   const hint = useSourceHint(seen.source)
   return (
     <Slip id="vistos" title={seen.title} aside={countOf(seenOf(page))}>
       <SpotStatus id="vistos" />
       <Items empty={seen.empty}>
         {seenOf(page).map((s) => (
-          <Item
+          <EditableItem
             key={s.factId}
-            actions={
-              <RemoveForm
-                slug={slug}
-                what="seen"
-                id={s.factId}
-                label={s.title}
-              />
-            }
+            slug={slug}
+            what="seen"
+            id={s.factId}
+            label={s.title}
+            context={[s.title, shortDate(s.date)]}
+            form={<SeenFields s={s} />}
           >
             <span>{s.title}</span>
             <Meta
               parts={[
                 s.rating === null ? null : PERSON.ratingText(s.rating),
-                shortDate(s.date),
+                ...dates(s),
                 s.rating === null
                   ? s.source
                   : PERSON.ratingSource(s.rating, s.source),
               ]}
             />
-          </Item>
+          </EditableItem>
         ))}
       </Items>
-      <Disclosure summary={seen.add} open={refused !== null || undefined}>
-        <ActionForm
-          slug={slug}
-          action="visto"
-          label={seen.add}
-          problem={refused}
-        >
-          <TargetField name="filme" label={PERSON.film} scope="films" />
-          <SelectField
-            name="nota"
-            label={PERSON.rating}
-            options={RATING_OPTIONS}
-          />
-          <TextField name="fonte" label={PERSON.source} hint={hint} />
-          <Submit>{PERSON.save}</Submit>
-        </ActionForm>
-      </Disclosure>
+      {!editingIn(seenOf(page)) && (
+        <Disclosure summary={seen.add} open={refused !== null || undefined}>
+          <ActionForm
+            slug={slug}
+            action="visto"
+            label={seen.add}
+            problem={refused}
+          >
+            <TargetField name="filme" label={PERSON.film} scope="films" />
+            <RatingField name="nota" label={PERSON.rating} />
+            <TextField name="fonte" label={PERSON.source} hint={hint} />
+            <Submit>{PERSON.save}</Submit>
+          </ActionForm>
+        </Disclosure>
+      )}
     </Slip>
   )
 }
@@ -1545,5 +1577,421 @@ function RemovePerson({ slug, page }: { slug: string; page: PersonPage }) {
         )}
       </div>
     </Disclosure>
+  )
+}
+
+// --- editing an item in place (#330) ------------------------------------------
+
+type Editable = 'stated' | 'report' | 'veto' | 'seen'
+type Veto = PersonPage['vetoes'][number]
+type SeenItem = PersonPage['seen'][number]
+
+const CLOSED = {
+  open: null,
+  closed: null,
+  dirty: false,
+  held: 0,
+  warned: false,
+} as const
+
+type EditState = {
+  /** The item open for editing: one at a time. */
+  open: string | null
+  /** The one just closed, whose "Editar" takes the focus back. */
+  closed: string | null
+  /** The open form has changes: leaving it would lose them. */
+  dirty: boolean
+  /** Bumped when leaving was refused for that: the form takes the focus
+   * back. */
+  held: number
+  /** The form says why, until the next change in it. */
+  warned: boolean
+}
+
+const Editing = createContext<{
+  state: EditState
+  /** The item an edit just saved (`?item=`). */
+  saved?: string
+  /** Opens an item; with changes in the open one, holds it instead. */
+  open: (id: string) => void
+  /** Closes the open item, changes or not (Cancelar, a post that went). */
+  close: () => void
+  /** Esc: closes the open item unless it has changes. */
+  leave: () => void
+  touch: () => void
+  /** Whether another item may act now: not while the open one has
+   * changes, which it says. */
+  free: (id: string) => boolean
+}>({
+  state: CLOSED,
+  open: () => {},
+  close: () => {},
+  leave: () => {},
+  touch: () => {},
+  free: () => true,
+})
+
+function EditingItem({
+  initial,
+  saved,
+  children,
+}: {
+  initial?: string
+  saved?: string
+  children: ReactNode
+}) {
+  const [state, setState] = useState<EditState>({
+    ...CLOSED,
+    open: initial ?? null,
+  })
+  const close = () => setState((was) => ({ ...CLOSED, closed: was.open }))
+  const hold = (was: EditState) => ({
+    ...was,
+    held: was.held + 1,
+    warned: true,
+  })
+  const holding = (id: string) =>
+    state.open !== null && state.dirty && state.open !== id
+  return (
+    <Editing.Provider
+      value={{
+        state,
+        saved,
+        open: (id) =>
+          setState((was) =>
+            was.open !== null && was.dirty && was.open !== id
+              ? hold(was)
+              : { ...CLOSED, open: id, closed: was.open },
+          ),
+        close,
+        leave: () =>
+          setState((was) =>
+            was.dirty ? hold(was) : { ...CLOSED, closed: was.open },
+          ),
+        touch: () =>
+          setState((was) =>
+            was.dirty && !was.warned
+              ? was
+              : { ...was, dirty: true, warned: false },
+          ),
+        free: (id) => {
+          if (!holding(id)) return true
+          setState(hold)
+          return false
+        },
+      }}
+    >
+      {children}
+    </Editing.Provider>
+  )
+}
+
+/** Whether one of a ficha's items is open for editing: its add form stays
+ * out of the way meanwhile, not to read as the same form. */
+function useEditingIn() {
+  const { open } = useContext(Editing).state
+  return (items: readonly { factId: string }[]) =>
+    open !== null && items.some((item) => item.factId === open)
+}
+
+/** An item's date, and the day of its last edit when it has one. */
+const dates = (item: { date: string; edited?: string }) => [
+  unbroken(shortDate(item.date)),
+  item.edited === undefined
+    ? null
+    : unbroken(PERSON.edit.on(shortDate(item.edited))),
+]
+
+/** A date that does not break across lines: "editado 27 nov 2026" whole. */
+const unbroken = (text: string) => text.replaceAll(' ', '\u00a0')
+
+const itemAnchor = (id: string) => `item-${id.replace(':', '-')}`
+
+/** An item of her file: its lines with "Editar" and "Tirar" beside them,
+ * or, open, the form that corrects it in its place. Just saved, it says so
+ * beside its actions. */
+function EditableItem({
+  slug,
+  what,
+  id,
+  label,
+  context,
+  form,
+  children,
+}: {
+  slug: string
+  what: Editable
+  id: string
+  label: string
+  /** What the open form keeps of the item's line, under its heading. */
+  context: readonly (string | null)[]
+  /** The form's fields, filled with what the item says. */
+  form: ReactNode
+  children: ReactNode
+}) {
+  const editing = useContext(Editing)
+  const [asking, setAsking] = useState(false)
+  if (editing.state.open === id)
+    return (
+      <EditForm slug={slug} what={what} id={id} label={label} context={context}>
+        {form}
+      </EditForm>
+    )
+  return (
+    <Item
+      id={itemAnchor(id)}
+      actions={
+        <span className="flex shrink-0 flex-wrap items-center gap-xs">
+          {editing.saved === id && !asking && (
+            <span
+              role="status"
+              className="inline-flex items-center gap-2xs font-display text-row-title text-ink motion-safe:animate-stick"
+            >
+              <Icon name="check" className="size-[18px]" />
+              {PERSON.edit.saved}
+            </span>
+          )}
+          {!asking && <EditOpen id={id} label={label} />}
+          <RemoveForm
+            slug={slug}
+            what={what}
+            id={id}
+            label={label}
+            onAsking={setAsking}
+            mayAsk={() => editing.free(id)}
+          />
+        </span>
+      }
+    >
+      {children}
+    </Item>
+  )
+}
+
+/** The first field a person types in, in the open item. */
+const firstField = (item: HTMLElement | null) =>
+  // A scale's chosen radio, not its first one ("sem Nota").
+  item?.querySelector<HTMLElement>(
+    'input:not([type=hidden]):not([type=radio]), input[type=radio]:checked, select, textarea',
+  ) ?? null
+
+const OPTION = buttonVariants({ variant: 'option' })
+const LINK = buttonVariants({ variant: 'link' })
+
+/** "Editar": opens the item's form. Before the JavaScript, a link the
+ * server opens it for (`?editar=`). */
+function EditOpen({ id, label }: { id: string; label: string }) {
+  const hydrated = useHydrated()
+  const editing = useContext(Editing)
+  const button = useRef<HTMLButtonElement>(null)
+  const back = editing.state.closed === id && editing.state.open === null
+  useEffect(() => {
+    if (back) button.current?.focus()
+  }, [back])
+  if (!hydrated)
+    return (
+      <a
+        href={`?editar=${encodeURIComponent(id)}#${itemAnchor(id)}`}
+        aria-label={PERSON.edit.label(label)}
+        className={OPTION}
+      >
+        {PERSON.edit.open}
+      </a>
+    )
+  return (
+    <button
+      ref={button}
+      type="button"
+      aria-label={PERSON.edit.label(label)}
+      onClick={() => editing.open(id)}
+      className={OPTION}
+    >
+      {PERSON.edit.open}
+    </button>
+  )
+}
+
+/** The open item: which one it is, then its form, filled, with "Gravar"
+ * and "Cancelar". The first field takes the focus, and takes it back when
+ * leaving was held for its changes; Esc leaves a form without them. */
+function EditForm({
+  slug,
+  what,
+  id,
+  label,
+  context,
+  children,
+}: {
+  slug: string
+  what: Editable
+  id: string
+  label: string
+  context: readonly (string | null)[]
+  children: ReactNode
+}) {
+  const editing = useContext(Editing)
+  const { held, warned } = editing.state
+  const hydrated = useHydrated()
+  const item = useRef<HTMLLIElement>(null)
+  // Opened (held 0), and each time leaving was held: the first field.
+  useEffect(() => {
+    if (held >= 0) firstField(item.current)?.focus()
+  }, [held])
+  return (
+    <li
+      ref={item}
+      id={itemAnchor(id)}
+      className="scroll-mt-2xl border-rule py-sm not-first:border-t"
+    >
+      <ActionForm
+        slug={slug}
+        action="editar"
+        label={PERSON.edit.label(label)}
+        onDone={editing.close}
+        className="flex flex-col gap-xl rounded-field border-2 border-ink p-lg min-[480px]:p-xl"
+      >
+        <div className="flex flex-col gap-2xs">
+          <p className="font-display text-row-title">
+            {PERSON.edit.heading(PERSON.edit.kinds[what])}
+          </p>
+          <Meta parts={context} />
+        </div>
+        {warned && <Alert>{PERSON.edit.held}</Alert>}
+        <input type="hidden" name="tipo" value={what} />
+        <input type="hidden" name="id" value={id} />
+        <div
+          className="flex flex-col gap-xl"
+          onInput={editing.touch}
+          onChange={editing.touch}
+          onKeyDown={(event) => {
+            // Ctrl or ⌘ with Enter saves, from any field.
+            if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+              event.preventDefault()
+              event.currentTarget.closest('form')?.requestSubmit()
+              return
+            }
+            if (event.key !== 'Escape') return
+            // Esc in the target search closes its results, not the form.
+            const field = event.target
+            if (field instanceof HTMLInputElement && field.type === 'search')
+              return
+            event.preventDefault()
+            editing.leave()
+          }}
+        >
+          {children}
+        </div>
+        <span className="flex flex-wrap items-center gap-lg">
+          <Submit variant="chosen">{PERSON.save}</Submit>
+          {hydrated ? (
+            <button type="button" onClick={editing.close} className={LINK}>
+              {PERSON.edit.cancel}
+            </button>
+          ) : (
+            <a href={`?#${itemAnchor(id)}`} className={LINK}>
+              {PERSON.edit.cancel}
+            </a>
+          )}
+        </span>
+      </ActionForm>
+    </li>
+  )
+}
+
+/** What a Declarado is about, as its line says it: "ama Sofia Rangel". */
+const statementAbout = (s: Statement) =>
+  s.target === null
+    ? null
+    : `${s.reaction ? PERSON.reactions[s.reaction as Reaction] : PERSON.about} ${PERSON.plainLabel(s.label ?? s.target)}`
+
+/** The target the search shows picked: the item's, with its label. */
+const targetOf = (id: string | null, label: string | null): Target | null =>
+  id === null ? null : { id, label: PERSON.plainLabel(label ?? id) }
+
+/** A Declarado's or a Relato's fields, as the add form has them. */
+function StatementFields({ s }: { s: Statement }) {
+  return (
+    <>
+      <TextField
+        name="texto"
+        label={PERSON.text}
+        required
+        defaultValue={s.text}
+      />
+      <TargetField
+        name="alvo"
+        label={PERSON.statementTarget}
+        hint={PERSON.targetHint}
+        scope="all"
+        initial={targetOf(s.target, s.label)}
+      />
+      <SelectField
+        name="reacao"
+        label={PERSON.reaction}
+        options={REACTION_OPTIONS}
+        defaultValue={s.reaction ?? ''}
+      />
+      <TextField
+        name="fonte"
+        label={PERSON.source}
+        hint={PERSON.edit.sourceHint}
+        defaultValue={s.source}
+      />
+    </>
+  )
+}
+
+/** A Veto to an id or to a tag group, which the pills mark. */
+const isId = (target: string) => /^(?:tt|Q)\d+$/.test(target)
+
+function VetoFields({
+  v,
+  groups,
+}: {
+  v: Veto
+  groups: PersonPage['tagGroups']
+}) {
+  const { vetoes } = PERSON
+  return (
+    <>
+      <TextField
+        name="texto"
+        label={vetoes.text}
+        required
+        defaultValue={v.text}
+      />
+      <TargetField
+        name="alvo"
+        label={PERSON.target}
+        scope="all"
+        groups={groups}
+        initial={isId(v.target) ? targetOf(v.target, v.label) : null}
+        initialGroup={isId(v.target) ? '' : v.target}
+      />
+    </>
+  )
+}
+
+/** A Já visto's Nota and Fonte; its film stays, said above them. */
+function SeenFields({ s }: { s: SeenItem }) {
+  return (
+    <>
+      <p className="flex flex-col gap-2xs">
+        <span className="font-display text-field-label">{PERSON.film}</span>
+        <span>{s.title}</span>
+        <span className="text-meta text-ink-2">{PERSON.edit.filmFixed}</span>
+      </p>
+      <RatingField
+        name="nota"
+        label={PERSON.rating}
+        defaultValue={s.rating === null ? '' : `${Math.round(s.rating * 2)}/10`}
+      />
+      <TextField
+        name="fonte"
+        label={PERSON.source}
+        hint={PERSON.edit.sourceHint}
+        defaultValue={s.source}
+      />
+    </>
   )
 }

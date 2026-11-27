@@ -512,6 +512,14 @@ export {
   type RemoveResult,
 } from './people/remove.ts'
 export {
+  EDITABLE,
+  personEdit,
+  type Editable,
+  type EditedJson,
+  type EditInput,
+  type EditResult,
+} from './people/edit.ts'
+export {
   setupGuide,
   SETUP_RATINGS,
   skipSetupStep,

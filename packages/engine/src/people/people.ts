@@ -102,6 +102,9 @@ const decodeVeto = (
     target,
     label: pyTruthy(label) && label !== undefined ? pyStrValue(label) : target,
     date: pyStrValue(date),
+    ...(validDate(item.get('edited'))
+      ? { edited: pyStrValue(item.get('edited') ?? null) }
+      : {}),
   })
 }
 
@@ -337,6 +340,9 @@ export const encodePerson = (person: Person): YamlMapping => {
           ['target', v.target],
           ['label', v.label],
           ['date', v.date],
+          ...(v.edited === undefined
+            ? []
+            : [['edited', v.edited] as [string, YamlValue]]),
         ]),
     ),
   )

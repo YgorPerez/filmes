@@ -92,6 +92,8 @@ export interface VetoJson {
   readonly target: string
   readonly label: string
   readonly date: string
+  /** The day of the last edit (#330), absent when never edited. */
+  readonly edited?: string
   readonly factId: string
 }
 
@@ -124,6 +126,8 @@ export interface StatementJson {
   readonly strength: Strength
   /** The Nota it stands for: 5 for "ama" a film, 1 for "odeia". */
   readonly rating: number | null
+  /** The day of the last edit (#330), absent when never edited. */
+  readonly edited?: string
   readonly factId: string
 }
 
@@ -133,6 +137,8 @@ export interface SeenJson {
   readonly rating: number | null
   readonly date: string
   readonly source: string
+  /** The day of the last edit (#330), absent when never edited. */
+  readonly edited?: string
   readonly factId: string
 }
 
@@ -163,6 +169,10 @@ export interface PersonView extends PersonSummary {
   readonly warning?: string
 }
 
+/** `edited` when the item has one. */
+const editedOf = (item: { readonly edited?: string }) =>
+  item.edited === undefined ? {} : { edited: item.edited }
+
 const summary = (person: Person): PersonSummary => ({
   person: person.slug,
   name: person.name,
@@ -175,6 +185,7 @@ export const vetoJson = (slug: string, veto: Veto): VetoJson => ({
   target: veto.target,
   label: veto.label,
   date: veto.date,
+  ...editedOf(veto),
   factId: vetoId(slug, veto),
 })
 
@@ -218,6 +229,7 @@ export const statementJson = (
     kind,
     strength: statedStrength(kind, statement.specific, statement.date, today),
     rating: statedRating(statement),
+    ...editedOf(statement),
     factId: statementId(table, slug, statement),
   }
 }
@@ -228,6 +240,7 @@ export const seenJson = (slug: string, seen: Seen): SeenJson => ({
   rating: seen.rating,
   date: seen.date,
   source: seen.source,
+  ...editedOf(seen),
   factId: seenId(slug, seen),
 })
 
@@ -279,7 +292,7 @@ export const textOf = (text: string) => {
 }
 
 /** Where it came from: never empty, never with the body's separator. */
-const sourceOf = (source: string) => {
+export const sourceOf = (source: string) => {
   const words = pyJoinWords(source)
   return words === '' || words.includes(' · ')
     ? Effect.fail(invalidUsage("a fonte não pode ser vazia nem ter ' · '"))
@@ -451,7 +464,7 @@ export interface ReportResult {
 
 /** The Declarado or Relato the input states, checked against its flags;
  * the label and `specific` come from the Catalog when it names a target. */
-const statementOf = (
+export const statementOf = (
   input: StatementInput,
   defaultSource: string,
   db: Connection | null,

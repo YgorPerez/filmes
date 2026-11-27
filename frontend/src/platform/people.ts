@@ -9,6 +9,7 @@ import {
   peopleCounts,
   personAdjust,
   personDelete,
+  personEdit,
   personSessions,
   personCreate,
   personQuestions,
@@ -45,7 +46,9 @@ import {
   problemParam,
   reportSource,
   spotOf,
+  type Edit,
   type PersonAction,
+  type PersonDone,
   type PersonNotice,
   type PersonRefusal,
 } from '#/content/person-action'
@@ -115,7 +118,7 @@ export interface People {
     person: string,
     action: PersonAction,
     owner: Owner,
-  ): Promise<Outcome<PersonNotice>>
+  ): Promise<Outcome<PersonDone>>
   /** Creates a Pessoa as the logged-in Dono, who signs the commit; gives
    * her slug. */
   create(input: NewPersonForm, owner: Owner): Promise<Outcome<string>>
@@ -246,7 +249,7 @@ function changeFile(
   run: Engine['run'],
   by: By,
   action: Exclude<PersonAction, FactWrite>,
-): Promise<Outcome<PersonNotice>> {
+): Promise<Outcome<PersonDone>> {
   switch (action.kind) {
     case 'skip':
       return map(
@@ -266,6 +269,12 @@ function changeFile(
       return map(
         run(personRemove({ ...by, kind: action.what, id: action.id })),
         (): PersonNotice => 'removido',
+      )
+    case 'edit':
+      return map(
+        run(personEdit({ ...by, ...editInput(action) })),
+        (r): PersonDone =>
+          r.changed ? { notice: 'editado', item: r.edited.factId } : 'igual',
       )
     case 'grant':
     case 'revoke':
@@ -287,6 +296,36 @@ const access = (
         (): PersonNotice => 'acesso-dado',
       )
     : map(run(revokeAccess(by)), (r) => (r.new ? 'acesso-tirado' : 'igual'))
+
+/** The engine's edit from the form's: every field it sends. */
+const editInput = (action: Edit) => {
+  switch (action.what) {
+    case 'seen':
+      return {
+        kind: action.what,
+        id: action.id,
+        rating: action.rating,
+        ...(action.source !== undefined && { source: action.source }),
+      }
+    case 'veto':
+      return {
+        kind: action.what,
+        id: action.id,
+        text: action.text,
+        target: action.target,
+      }
+    case 'stated':
+    case 'report':
+      return {
+        kind: action.what,
+        id: action.id,
+        text: action.text,
+        target: action.target,
+        reaction: action.reaction,
+        ...(action.source !== undefined && { source: action.source }),
+      }
+  }
+}
 
 /** A subject that is not a Catalog entity (Q...) is a tag group's key. */
 const isGroup = (subject: string) => !subject.startsWith('Q')
@@ -432,6 +471,7 @@ const ACCESS_REFUSALS: Partial<Record<ErrorReason, PersonRefusal>> = {
   is_owner: 'e-dono',
   has_imports: 'tem-import',
   in_session: 'em-sessao',
+  duplicate_item: 'repetido',
 }
 
 /** Why an action was refused, from the engine's error. */
@@ -481,8 +521,13 @@ export async function personAction(
       return seeOther('/pessoas?erro=pessoa')
     return seeOther(back({ erro: refusalOf(outcome) }))
   }
-  if (outcome.output === 'removida') return seeOther('/pessoas?feito=removida')
-  return seeOther(back({ feito: outcome.output }))
+  const done = outcome.output
+  if (done === 'removida') return seeOther('/pessoas?feito=removida')
+  return seeOther(
+    typeof done === 'string'
+      ? back({ feito: done })
+      : back({ feito: done.notice, item: done.item }),
+  )
 }
 
 /** Her page's address after a form (#273): the query says what happened
@@ -521,6 +566,8 @@ const CREATE_REFUSALS: Record<ErrorReason, PersonCreateRefusal> = {
   is_owner: 'indisponivel',
   has_imports: 'indisponivel',
   in_session: 'indisponivel',
+  // Not met on create: an edit equal to another item (#330).
+  duplicate_item: 'indisponivel',
 }
 
 /** Why the engine refused a new Pessoa, by its reason; without one, it

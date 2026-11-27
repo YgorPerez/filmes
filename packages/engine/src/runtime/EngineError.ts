@@ -93,6 +93,9 @@ const ERROR_REASONS = [
   'is_owner',
   'has_imports',
   'in_session',
+  // An edit (#330) that would make the item equal to another of her file
+  // (`invalid_usage`).
+  'duplicate_item',
 ] as const
 
 export type ErrorReason = (typeof ERROR_REASONS)[number]
