@@ -210,6 +210,8 @@ type Key = readonly PyOrderable[]
 
 interface Ordered extends Scored {
   readonly key: Key
+  readonly tier: number
+  readonly onlyGuesses: boolean
   readonly film: Candidate
   readonly utilities: ReadonlyMap<string, number | null>
   readonly evidence: ReadonlyArray<Evidence>
@@ -219,22 +221,17 @@ interface Ordered extends Scored {
 const BANDS = 3
 
 /** 0 with some known utility, 1 with Facts only in the film signals, 2
- * with guesses only; a film a short list let in by relaxing a Restrição
- * (`tier` above 0) comes after all of those (#358). */
-const bandOf = (
-  byRule: readonly number[] | null,
-  hasFact: boolean,
-  tier: number,
-): number => tier * BANDS + (byRule !== null ? 0 : hasFact ? 1 : 2)
+ * with guesses only. */
+const evidenceBand = (byRule: readonly number[] | null, hasFact: boolean) =>
+  byRule !== null ? 0 : hasFact ? 1 : 2
 
 const orderKey = (
   byRule: readonly number[] | null,
-  hasFact: boolean,
+  band: number,
   film: Candidate,
   bonus: number,
-  tier: number,
 ): Key => [
-  bandOf(byRule, hasFact, tier),
+  band,
   byRule !== null ? byRule.map((v) => -(v + bonus)) : [-bonus],
   -film.votes,
   film.id,
@@ -497,20 +494,30 @@ const orderFilms = (
     )
     const byRule = ruleKey(rule, utilities, adjustment)
     const tier = r.asked.tierOf(filmId)
+    const band = tier * BANDS + evidenceBand(byRule, hasFact)
     ordered.push({
-      key: orderKey(byRule, hasFact, film, bonus, tier),
+      key: orderKey(byRule, band, film, bonus),
       id: film.id,
-      band: bandOf(byRule, hasFact, tier),
+      tier,
+      onlyGuesses: byRule === null && !hasFact,
+      band,
       score: (byRule?.[0] ?? 0) + bonus,
       film,
       utilities,
       evidence,
     })
-    if (adjustment.size > 0)
+    if (adjustment.size > 0) {
+      const raw = ruleKey(rule, utilities)
       unweighed.push({
-        key: orderKey(ruleKey(rule, utilities), hasFact, film, bonus, tier),
+        key: orderKey(
+          raw,
+          tier * BANDS + evidenceBand(raw, hasFact),
+          film,
+          bonus,
+        ),
         id: filmId,
       })
+    }
   }
   ordered.sort(byKey)
   return { ordered, unweighed }
@@ -597,8 +604,9 @@ const betCandidates = (
   Effect.gen(function* () {
     const betOdds = new Map<string, BetCandidate>()
     if (betAt > 0 && r.options.count >= betAt)
-      for (const { film, utilities, evidence } of ordered) {
-        if (!hasLittleEvidence(evidence, utilities, r.weights)) continue
+      for (const { film, tier, utilities, evidence } of ordered) {
+        if (tier > 0 || !hasLittleEvidence(evidence, utilities, r.weights))
+          continue
         const odds = new Map<string, BetOdds>()
         for (const p of r.options.attendees) {
           const prediction = (yield* predictRatings(r.round, p)).get(film.id)
@@ -671,6 +679,7 @@ const withBet = (
   pool: ReadonlyArray<Ordered>,
   chosen: ReadonlyArray<Ordered>,
   places: number,
+  beforeBet: number,
 ): RankEffect<BetFill> =>
   Effect.gen(function* () {
     const { seed } = r.options
@@ -689,6 +698,8 @@ const withBet = (
     )
     if (!policy.offer) return yield* noBet
     const regular = yield* regularFill(r, pool, chosen, places - 1)
+    if (regular.slice(0, beforeBet).some((item) => item.tier > 0))
+      return yield* noBet
     return yield* drawBet(r, {
       seed,
       betOdds,
@@ -720,7 +731,7 @@ const placeFresh = (
     const { count } = r.options
     const { regular, bet, cautious } =
       betAt > 0 && count >= betAt
-        ? yield* withBet(r, betOdds, ordered, [], count)
+        ? yield* withBet(r, betOdds, ordered, [], count, betAt - 1)
         : {
             regular: yield* regularFill(r, ordered, [], count),
             bet: undefined,
@@ -812,6 +823,11 @@ const placeRegenerated = (
       others,
       fixed,
       places,
+      betAt -
+        1 -
+        fixed.filter(
+          (item) => (regenerate.positions.get(item.id) ?? betAt) < betAt,
+        ).length,
     )
     return {
       placed:
@@ -980,7 +996,7 @@ const recommendedFilm = (
   Effect.gen(function* () {
     const { weights } = r
     const { attendees, regenerate } = r.options
-    const { key, film, utilities, evidence } = item
+    const { onlyGuesses, film, utilities, evidence } = item
     const withoutFactOn = [...utilities]
       .filter(([, u]) => u === null)
       .map(([p]) => p)
@@ -1003,7 +1019,7 @@ const recommendedFilm = (
         attendees: utilities.size,
         withoutFact: withoutFactOn,
       },
-      onlyGuesses: (key[0] as number) % BANDS === 2,
+      onlyGuesses,
       utility: Object.fromEntries(
         [...utilities].map(([p, u]) => [p, u === null ? null : pyRound(u, 4)]),
       ),

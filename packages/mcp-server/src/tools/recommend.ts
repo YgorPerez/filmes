@@ -127,6 +127,12 @@ export default defineTool({
         'com session: filmes que o Dono trocou, gravados como Trocados da Sessão antes de refazer; não voltam mais nela. ' +
           '"Nenhum desses, quero outros" no chat: passe todos os da tela',
       ),
+    refillComments: z
+      .array(z.string())
+      .optional()
+      .describe(
+        'Textos dos comentários da resposta do Cartaz que pediu este refazer. O motor lê e aplica só às vagas.',
+      ),
     maxDuration: z
       .number()
       .int()

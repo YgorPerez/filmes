@@ -76,7 +76,15 @@ describe('comments on a Cartaz redo (#359)', () => {
         `#cartaz ${session} v1\n1 ${swapped!.id} · trocar\n3 ${commented!.id} · comentário: algo mais leve\n`,
       )
       const redo = await fixture.ok(
-        recommendSession({ ...request, count: 3, session, keep: reply.keep }),
+        recommendSession({
+          ...request,
+          count: 3,
+          session,
+          keep: reply.keep,
+          refillComments: reply.comments.flatMap(
+            ({ comment }) => comment ?? [],
+          ),
+        }),
       )
       const baseline = await fixture.ok(
         recommend({ ...request, moods: ['leve'], count: 50 }),
@@ -114,7 +122,12 @@ describe('comments on a Cartaz redo (#359)', () => {
       `#cartaz ${session} v1\n1 ${swapped!.id} · trocar\n2 ${kept!.id} · comentário: até 90 minutos\n`,
     )
     const redo = await fixture.ok(
-      recommendSession({ ...request, session, keep: reply.keep }),
+      recommendSession({
+        ...request,
+        session,
+        keep: reply.keep,
+        refillComments: reply.comments.flatMap(({ comment }) => comment ?? []),
+      }),
     )
 
     expect(redo.films).toHaveLength(3)
@@ -123,6 +136,49 @@ describe('comments on a Cartaz redo (#359)', () => {
 
     const next = await fixture.ok(recommendSession({ ...request, session }))
     expect(next.films[0]?.runtimeMinutes).toBeGreaterThan(90)
+  })
+
+  test.each([false, true])(
+    'comments do not leak into another redo (correction: %s)',
+    async (correction) => {
+      const fixture = useFixture()
+      const { first, id, f } = await open(fixture)
+      const header = `#cartaz ${id} v1`
+      const reply = await answer(
+        fixture,
+        id,
+        `${header}\n1 ${f[0]!.id} · comentário: até 1 minuto\n${correction ? `2 ${f[1]!.id} · trocar\n` : ''}`,
+      )
+      expect(reply.regenerate).toBe(correction)
+      if (correction)
+        await answer(fixture, id, `${header}\n2 ${f[1]!.id} · trocar\n`)
+      const redo = await fixture.ok(
+        recommendSession({ attendees: ['dono'], session: id }),
+      )
+      expect(redo.films).toHaveLength(first.films.length)
+    },
+  )
+
+  test('a comment does not replace the Session Parecido in the result or shortfall', async () => {
+    const fixture = useFixture()
+    const request = { attendees: ['dono'], count: 10, similar: ['tt9006701'] }
+    const first = await fixture.ok(recommendSession(request))
+    const session = first.session.id
+    const reply = await answer(
+      fixture,
+      session,
+      `#cartaz ${session} v1\n1 ${first.films[0]!.id} · trocar\n2 ${first.films[1]!.id} · comentário: parecido com Estrada Afora\n`,
+    )
+    const redo = await fixture.ok(
+      recommendSession({
+        ...request,
+        session,
+        keep: reply.keep,
+        refillComments: reply.comments.flatMap(({ comment }) => comment ?? []),
+      }),
+    )
+    expect(redo.constraints['similar']?.['titles']).toEqual(['Escrever Cartas'])
+    expect(redo.shortfall?.similar).toEqual(['Escrever Cartas'])
   })
 
   test('a Parecido capped at one fills a vacancy and leaves the kept films in place', async () => {
@@ -146,7 +202,12 @@ describe('comments on a Cartaz redo (#359)', () => {
       `#cartaz ${session} v1\n1 ${swapped!.id} · trocar\n2 ${kept!.id} · comentário: parecido com Estrada Afora\n`,
     )
     const redo = await fixture.ok(
-      recommendSession({ ...request, session, keep: reply.keep }),
+      recommendSession({
+        ...request,
+        session,
+        keep: reply.keep,
+        refillComments: reply.comments.flatMap(({ comment }) => comment ?? []),
+      }),
     )
 
     expect(redo.films[0]?.title).toBe('Pé na Estrada')

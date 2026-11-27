@@ -126,6 +126,33 @@ describe('answer_billboard', () => {
     )
   })
 
+  test('refills with comments only when the redo includes them', async () => {
+    const { ok } = await connect(useFixture())
+    const request = { attendees: ['dono'], count: 3 }
+    const first = await ok('recommend', request)
+    const session = first.session.id
+    const [swapped, kept] = first.films
+    const reply = await ok('answer_billboard', {
+      session,
+      text: `#cartaz ${session} v1\n1 ${swapped.id} · trocar\n2 ${kept.id} · comentário: até 90 minutos\n`,
+    })
+
+    const redo = await ok('recommend', {
+      ...request,
+      session,
+      keep: reply.keep,
+      refillComments: reply.comments.map(
+        (note: { comment: string }) => note.comment,
+      ),
+    })
+    assert.ok(redo.films[0].runtimeMinutes <= 90)
+    assert.equal(redo.films[1].id, kept.id)
+    assert.ok(redo.films[1].runtimeMinutes > 90)
+
+    const later = await ok('recommend', { ...request, session })
+    assert.ok(later.films[0].runtimeMinutes > 90)
+  })
+
   test('a text that is not from the Cartaz is invalid_usage', async () => {
     const { ok, error } = await connect(useFixture())
     const session = (await ok('recommend', { attendees: ['dono'] })).session.id

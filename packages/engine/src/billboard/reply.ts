@@ -651,10 +651,6 @@ const recordReplyMarks = (
     const replies = listOf(target.get('replies'))
     if (replies.some((r) => sameReply(r, reply))) return false
     target.set('replies', [...replies, reply])
-    const comments = read.films.flatMap((mark) =>
-      mark.comment === null ? [] : [mark.comment],
-    )
-    if (comments.length > 0) front.set('refill_comments', comments)
     if (target !== front) {
       versions[read.version - 1] = target
       front.set('versions', versions)
@@ -807,6 +803,7 @@ const recordReply = (input: ReplyInput) =>
 
     const asked = yield* askedSeen(films, slugsOf(version.get('attendees')))
     const seen = yield* recordSeen(db, id, today, asked)
+    const clearedComments = front.delete('refill_comments')
     let write = yield* recordReplyMarks(
       db,
       id,
@@ -833,7 +830,7 @@ const recordReply = (input: ReplyInput) =>
       front,
       betMarksOf(seen, swap, films, owner, today),
     )
-    if (write || betMarksChanged)
+    if (write || clearedComments || betMarksChanged)
       yield* writeSession(id, front, opened.session.body)
     return replyResult({
       id,

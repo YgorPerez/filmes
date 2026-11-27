@@ -79,6 +79,8 @@ export interface SessionRef {
 export interface RecommendSessionRequest extends RecommendRequest {
   /** The request as the Dono said it, kept in the Session. */
   readonly request?: string | null
+  /** Comments from the Cartaz reply that triggered this redo. */
+  readonly refillComments?: ReadonlyArray<string>
 }
 
 export interface SessionRecommendation extends Recommendation {

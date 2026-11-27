@@ -213,6 +213,10 @@ test.each([
     stored: '{asked: 10, found: 3}',
     expected: 'Só 3 filmes passaram nas Restrições, dos 10 pedidos.',
   },
+  {
+    stored: '{asked: 10, found: 1, relaxed: [{constraint: year}]}',
+    expected: 'Só 1 filme passou nas Restrições, dos 10 pedidos.',
+  },
   { stored: '{asked: 10}', expected: undefined },
   { stored: '[10, 3]', expected: undefined },
   { stored: 'incompleto', expected: undefined },
