@@ -576,8 +576,9 @@ function Section({
 
 /** Claude's fullscreen: the request fixed on top, one line, the Dono's
  * words, the legend and the shelf scrolling, the bar fixed at the foot,
- * above the host's message box (its safe area, `--host-inset-*`). The
- * content keeps the web's column, centred (#277). */
+ * above the host's message box (its safe area, `--host-inset-*`); with
+ * no bar, the content ends above that box. The content keeps the web's
+ * column, centred (#277). */
 function Fullscreen({
   top,
   foot,
@@ -596,6 +597,11 @@ function Fullscreen({
       <div className={`flex flex-1 flex-col gap-2xl py-2xl ${column}`}>
         {children}
       </div>
+      {/* With no bar (a closed or an empty Cartaz), the end of the shelf
+          clears the host's message box by itself (#277). */}
+      {!foot && (
+        <div aria-hidden="true" className="h-(--host-inset-bottom) shrink-0" />
+      )}
       {foot}
     </div>
   )
