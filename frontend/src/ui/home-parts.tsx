@@ -200,7 +200,7 @@ export function Latest({
           <p className="font-hand text-hand-large leading-tight">
             {latest.open}
           </p>
-          <p className="text-evidence">{latest.openText}</p>
+          <p className="text-evidence text-pretty">{latest.openText}</p>
           <a
             href={feedbackPath(s.id)}
             className={buttonVariants({ variant: 'option' })}
@@ -337,15 +337,16 @@ export function ConnectorBody({
   )
 }
 
+/** How to add the connector in Claude. The steps wrap plainly: `pretty`
+ * broke the first one early at 1280 while the others ran the full measure
+ * (#345). */
 function ConnectorHow() {
   const { guide } = HOME
   return (
     <>
       <ol className="flex list-decimal flex-col gap-2xs pl-3xl text-evidence">
         {guide.how.map((line) => (
-          <li key={line} className="text-pretty">
-            {line}
-          </li>
+          <li key={line}>{line}</li>
         ))}
       </ol>
       <p className="text-meta text-pretty text-ink-2">{guide.auto}</p>

@@ -195,9 +195,10 @@ function AccountMenu({
                 <Icon name="tools" />
                 {SHELL.operations}
                 {alert && (
-                  <span className="ml-auto inline-flex items-center gap-2xs font-body text-meta text-ink-2">
+                  <span className="ml-auto inline-flex items-center gap-2xs font-body text-meta whitespace-nowrap text-ink-2">
                     <Icon name="alert" className="size-4" />
-                    {SHELL.pushFailing}
+                    <span className="sr-only">{SHELL.pushFailing.hidden}</span>
+                    {SHELL.pushFailing.shown}
                   </span>
                 )}
               </a>

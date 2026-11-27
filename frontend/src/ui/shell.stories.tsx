@@ -49,6 +49,17 @@ export const AdminWithFailingPush: Story = {
     alert: FAILING,
   },
   play: async ({ canvasElement }) => {
-    await expect(within(canvasElement).getByRole('alert')).toBeVisible()
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('alert')).toBeVisible()
+    // In the 240px menu, the warning beside Operações stays on one line.
+    canvas.getByRole('button', { name: /Sua conta/ }).click()
+    const note = canvas.getByText('falhando')
+    await expect(note).toBeVisible()
+    const lineHeight = Number.parseFloat(getComputedStyle(note).lineHeight)
+    await expect(note.getBoundingClientRect().height).toBeLessThan(
+      lineHeight * 1.5,
+    )
+    const row = canvas.getByRole('link', { name: /^Operações/ })
+    await expect(row.scrollWidth).toBeLessThanOrEqual(row.clientWidth)
   },
 }

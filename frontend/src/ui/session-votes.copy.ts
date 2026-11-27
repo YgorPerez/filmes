@@ -71,8 +71,8 @@ export const VOTES = {
   notices: {
     votado: 'Votos contados.',
     atualizada: 'Votos contados. A lista foi atualizada.',
-    regerada:
-      'Votos contados. Cada não tirou o filme, e outro entrou no lugar.',
+    /** The line under the list names what her não took out (pass 5 F3). */
+    regerada: 'Votos contados. A lista foi refeita.',
   },
   refusals: {
     regerar: (owner: string | null) =>

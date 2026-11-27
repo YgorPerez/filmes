@@ -29,6 +29,8 @@ const WEIGHT_NAMES: Readonly<Record<string, string>> = {
   'path.weight.series': 'série',
   'path.weight.cast': 'elenco',
   'path.weight.genre': 'gênero',
+  'path.weight.cinematography': 'fotografia',
+  'path.weight.producer': 'produtor',
   'strength.multiplier.strong': 'Força forte',
   'strength.multiplier.moderate': 'Força moderada',
   'strength.multiplier.weak': 'Força fraca',
@@ -118,6 +120,8 @@ export const OPERATIONS = {
     measures: 'Teste com Notas reservadas',
     sample: 'Amostra',
     people: 'Pessoas',
+    /** The column of how many people each sample has. */
+    count: 'Quantas',
     movielens: 'MovieLens',
     recall: 'Recall@50',
     coverage: 'Cobertura no top 5',

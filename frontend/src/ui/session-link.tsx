@@ -294,12 +294,7 @@ export function LinkFilms({
 }) {
   const { films } = view
   const unvoted = films.filter((f) => f.mine === null).length
-  const action =
-    unvoted === films.length
-      ? { href: vote.deck, label: PARTICIPATION.vote }
-      : unvoted > 0
-        ? { href: vote.deck, label: PARTICIPATION.voteNew(unvoted) }
-        : { href: vote.revote, label: PARTICIPATION.revote }
+  const done = films.length > 0 && unvoted === 0
   return (
     <section
       aria-labelledby="filmes-da-sessao"
@@ -341,28 +336,76 @@ export function LinkFilms({
               {`${PARTICIPATION.left}: ${view.left.join(', ')}.`}
             </p>
           )}
-          <div className="flex flex-col gap-sm">
-            <VoteRule />
-            <div className="flex flex-wrap items-center gap-md">
-              <a href={action.href} className={buttonVariants()}>
-                {action.label}
-              </a>
-              {unvoted > 0 && unvoted < films.length && (
-                <a
-                  href={vote.revote}
-                  className={buttonVariants({ variant: 'option' })}
-                >
-                  {VOTES.revote}
-                </a>
-              )}
+          {done ? (
+            <div className="flex flex-col gap-sm">
+              <p className="font-display font-bold">{PARTICIPATION.voted}</p>
+              <VotedActions
+                owner={view.owner}
+                questions={view.questions > 0 ? questions : null}
+                revote={vote.revote}
+              />
             </div>
-          </div>
+          ) : (
+            <div className="flex flex-col gap-sm">
+              <VoteRule />
+              <div className="flex flex-wrap items-center gap-md">
+                <a href={vote.deck} className={buttonVariants()}>
+                  {unvoted === films.length
+                    ? PARTICIPATION.vote
+                    : PARTICIPATION.voteNew(unvoted)}
+                </a>
+                {unvoted < films.length && (
+                  <a
+                    href={vote.revote}
+                    className={buttonVariants({ variant: 'option' })}
+                  >
+                    {VOTES.revote}
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
         </>
       )}
-      {view.questions > 0 && (
+      {!done && view.questions > 0 && (
         <QuestionsInvite owner={view.owner} href={questions} />
       )}
     </section>
+  )
+}
+
+/** With every film voted, on the film list and on the deck's page alike
+ * (pass 5 F2): the Perguntas par a par as the orange button, when some are
+ * left, with who sees the answers, then Mudar votos. */
+export function VotedActions({
+  owner,
+  questions,
+  revote,
+}: {
+  owner: string | null
+  /** The Perguntas par a par's address, when some are left for her. */
+  questions: string | null
+  /** The deck over every film. */
+  revote: string
+}) {
+  return (
+    <div className="flex flex-col gap-sm">
+      <div className="flex flex-wrap items-center gap-md">
+        {questions && (
+          <a href={questions} className={buttonVariants()}>
+            {VOTES.questions}
+          </a>
+        )}
+        <a href={revote} className={buttonVariants({ variant: 'option' })}>
+          {VOTES.revote}
+        </a>
+      </div>
+      {questions && (
+        <p className="max-w-[60ch] text-meta text-pretty text-ink-2">
+          {PARTICIPATION.questionsLead(owner)}
+        </p>
+      )}
+    </div>
   )
 }
 
