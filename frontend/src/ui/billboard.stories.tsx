@@ -67,9 +67,9 @@ export const ClosedChosenWithoutCard: Story = {
       within(canvasElement).getByRole('region', { name: 'Filme escolhido' }),
     )
     await expect(block.getByText('Curta da Madrugada (2010)')).toBeVisible()
-    await expect(block.getByRole('list')).toHaveTextContent(
-      'Bruno: deu 8 de 10Iara: não gostou',
-    )
+    const list = block.getByRole('list')
+    await expect(list).toHaveTextContent('Bruno: deu 8 de 10')
+    await expect(list).toHaveTextContent('Iara: não gostou')
   },
 }
 
