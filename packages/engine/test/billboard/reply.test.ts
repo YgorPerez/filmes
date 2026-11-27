@@ -227,6 +227,12 @@ describe('cartaz responder (test_cartaz_responder)', () => {
     expect(top['versions'][0]['replies'][0]['films']).toEqual([
       { position: left.position, id: left.id, stars: 3 },
     ])
+    // The list gives the stars and the films that left the shelf (#272).
+    const { sessions } = await fixture.ok(listSessions)
+    const listed = sessions.find((s) => s.id === id)!
+    expect(listed.stars).toEqual({ [left.id]: 3 })
+    expect(listed.earlier).toContainEqual({ id: left.id, title: left.title })
+    expect(listed.earlier.map((e) => e.id)).not.toContain(second.films[0]!.id)
   })
 
   test('the current version’s replies go with it when the Session is redone', async () => {

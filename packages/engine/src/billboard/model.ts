@@ -77,7 +77,7 @@ import { Run } from '../runtime/Run.ts'
 import { Tmdb } from '../sources/Tmdb.ts'
 import { Sqlite, type Connection, type SqliteError } from '../sqlite/Sqlite.ts'
 import { pyInt } from '../compat/fact-id.ts'
-import { additionsOf } from '../sessions/additions.ts'
+import { additionsOf } from '../sessions/history.ts'
 import { sessionOwner } from '../sessions/feedback.ts'
 import {
   readableReactions,
