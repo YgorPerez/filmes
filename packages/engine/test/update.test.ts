@@ -30,6 +30,7 @@ const ALL_DUMPS = [
   'wikidata-rotulos.json.gz',
   'ml-32m.zip',
   'genome_2021.zip',
+  'ml-latest.zip',
   'title.principals.tsv.gz',
   'wikidata-atores.json.gz',
   'wikidata-series.json.gz',
@@ -94,8 +95,11 @@ test('pins the dumps by date and hash', async () => {
   expect(new Set(Object.keys(dumps))).toEqual(new Set(ALL_DUMPS))
   for (const [name, dump] of Object.entries(dumps)) {
     expect(dump['date']).toBe(
-      { 'ml-32m.zip': '2023-10-13', 'genome_2021.zip': '2021-12-30' }[name] ??
-        '2026-11-20',
+      {
+        'ml-32m.zip': '2023-10-13',
+        'genome_2021.zip': '2021-12-30',
+        'ml-latest.zip': '2023-07-20',
+      }[name] ?? '2026-11-20',
     )
     const bytes = readFileSync(
       join(catalog.catalog, String(dump['sha256']), name),
@@ -156,22 +160,22 @@ test('reports its progress, step by step', async () => {
 
   expect(events[0]).toEqual({
     progress: 0,
-    total: 12,
+    total: 13,
     message: 'Baixando ml-32m.zip',
   })
   expect(events).toContainEqual({
-    progress: 5,
-    total: 12,
+    progress: 6,
+    total: 13,
     message: 'Consultando o QLever (ids)',
   })
   expect(events).toContainEqual({
-    progress: 11,
-    total: 12,
+    progress: 12,
+    total: 13,
     message: 'Consultando o QLever (rótulos)',
   })
   expect(events.at(-1)).toEqual({
-    progress: 12,
-    total: 12,
+    progress: 13,
+    total: 13,
     message: 'Versões do Catálogo gravadas',
   })
 })
@@ -595,8 +599,8 @@ test('a group QLever fails is asked to the WDQS by property', async () => {
     'wikidata-ids-P577.json.gz',
   ])
   expect(events).toContainEqual({
-    progress: 5.1,
-    total: 12,
+    progress: 6.1,
+    total: 13,
     message:
       'QLever falhou (ids): HTTP Error 500: Server Error. Consultando o WDQS por predicado.',
   })

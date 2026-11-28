@@ -26,6 +26,8 @@ export const IMDB_PRINCIPALS = 'title.principals.tsv.gz'
 export const LABELS = 'wikidata-rotulos.json.gz'
 export const MOVIELENS = 'ml-32m.zip'
 export const GENOME = 'genome_2021.zip'
+/** Optional: its genome fills the films the Tag Genome 2021 lacks (#410). */
+export const ML_LATEST = 'ml-latest.zip'
 const GROUPLENS = [MOVIELENS, GENOME]
 
 /** One pinned dump. */
@@ -85,7 +87,7 @@ const checkNames = (names: ReadonlySet<string>): void => {
       throw new Invalid('faltam dumps da GroupLens')
     for (const name of GROUPLENS) required.add(name)
   }
-  let rest = difference(names, [...required, IMDB_PRINCIPALS])
+  let rest = difference(names, [...required, IMDB_PRINCIPALS, ML_LATEST])
   if (!subset(required, names))
     throw new Invalid('faltam os dumps do IMDb ou os rótulos do Wikidata')
   for (const [group, properties] of GROUPS) {

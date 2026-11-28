@@ -2,7 +2,8 @@
 // From ml-32m, the item-item neighbourhood of the 4+ ratings, the tags
 // counted by distinct user and every rating counted by value (the
 // population's scale the ruler falls back on, #172); from the Tag Genome
-// 2021, each tag's relevance.
+// 2021, each tag's relevance; from ml-latest, its newer genome run, only for
+// the films the Tag Genome 2021 lacks (#410).
 // The evaluation shares the tag counting and the Fatos with the Catalog.
 
 import { Effect } from 'effect'
@@ -19,6 +20,7 @@ import { forEachBatch, lineBatches, utf8Text } from './text-source.ts'
 import {
   dumpPath,
   GENOME,
+  ML_LATEST,
   MOVIELENS,
   type Dump,
   type Dumps,
@@ -108,6 +110,14 @@ export const GROUPLENS_SOURCES: ReadonlyMap<
       url: 'https://files.grouplens.org/datasets/tag-genome-2021/genome_2021.zip',
     },
   ],
+  [
+    ML_LATEST,
+    {
+      source: 'MovieLens ml-latest',
+      date: '2023-07-20',
+      url: 'https://files.grouplens.org/datasets/movielens/ml-latest.zip',
+    },
+  ],
 ])
 
 const MOVIELENS_MEMBERS = {
@@ -119,15 +129,22 @@ const GENOME_MEMBERS = {
   metadata: 'movie_dataset_public_final/raw/metadata.json',
   scores: 'movie_dataset_public_final/scores/glmer.csv',
 } as const
+const ML_LATEST_MEMBERS = {
+  links: 'ml-latest/links.csv',
+  tags: 'ml-latest/genome-tags.csv',
+  scores: 'ml-latest/genome-scores.csv',
+} as const
+
+const MEMBERS: ReadonlyMap<string, Readonly<Record<string, string>>> = new Map([
+  [MOVIELENS, MOVIELENS_MEMBERS],
+  [GENOME, GENOME_MEMBERS],
+  [ML_LATEST, ML_LATEST_MEMBERS],
+])
 
 /** `validar_zip`: reads every member the loading reads to its end, so a
  * download cut short or corrupt fails here, before it is pinned. */
 export const validateZip = async (path: string, name: string) => {
-  const members =
-    name === MOVIELENS
-      ? Object.values(MOVIELENS_MEMBERS)
-      : Object.values(GENOME_MEMBERS)
-  for (const member of members)
+  for (const member of Object.values(MEMBERS.get(name)!))
     for await (const chunk of zipMember(path, member)) void chunk
 }
 
@@ -273,11 +290,11 @@ interface RatingsScan {
   readonly high: HighRatings
 }
 
-/** ml-32m's links: movieId to tconst. */
-const readLinks = (zip: string) =>
+/** A MovieLens links.csv: movieId to tconst. */
+const readLinks = (zip: string, member: string) =>
   Effect.gen(function* () {
     const map = new Map<string, string>()
-    yield* forEachBatch(csvRows(zip, MOVIELENS_MEMBERS.links), (rows) =>
+    yield* forEachBatch(csvRows(zip, member), (rows) =>
       Effect.sync(() => {
         for (const row of rows) {
           const imdb = imdbId(row('imdbId'))
@@ -387,7 +404,7 @@ const loadTags = (
 const loadMovielens = (db: Connection, zip: string, dump: Dump) =>
   Effect.gen(function* () {
     const sourceAndDate = sourceOf(dump)
-    const map = yield* readLinks(zip)
+    const map = yield* readLinks(zip, MOVIELENS_MEMBERS.links)
     const films = [...new Set(map.values())].sort((a, b) =>
       compareTuple([a], [b]),
     )
@@ -453,17 +470,80 @@ const loadGenome = (db: Connection, zip: string, dump: Dump) =>
             const film = itemId === null ? undefined : map.get(itemId)
             const tag = pyStrip(present(row('tag'), 'tag')).toLowerCase()
             if (film === undefined || tag === '') continue
-            const score = present(row('score'), 'score')
-            // The `fato_id` hashes the score as written, not the float.
-            const [source, date] = sourceAndDate
-            yield [
-              factId('genoma', film, tag, score, source, date),
+            yield genomeRow(
               film,
               tag,
-              pyParseFloat(score),
-              source,
-              date,
-            ]
+              present(row('score'), 'score'),
+              sourceAndDate,
+            )
+          }
+        })(),
+      ),
+    )
+  })
+
+/** The genome Fato of one score, its `fato_id` hashing the score as
+ * written, not the float. */
+const genomeRow = (
+  film: string,
+  tag: string,
+  score: string,
+  [source, date]: readonly [string, string],
+) => [
+  factId('genoma', film, tag, score, source, date),
+  film,
+  tag,
+  pyParseFloat(score),
+  source,
+  date,
+]
+
+/** ml-latest's genome, a newer run over more films (#410), only for the
+ * films the Tag Genome 2021 lacks and only in its tags, so it never changes
+ * a film the 2021 genome has. Two movieIds of one film keep the highest. */
+const fillGenome = (db: Connection, zip: string, dump: Dump) =>
+  Effect.gen(function* () {
+    const sourceAndDate = sourceOf(dump)
+    const covered = new Set(
+      (yield* db.all('SELECT DISTINCT filme_id FROM genoma')).map((row) =>
+        String(row['filme_id']),
+      ),
+    )
+    const vocabulary = new Set(
+      (yield* db.all('SELECT DISTINCT tag FROM genoma')).map((row) =>
+        String(row['tag']),
+      ),
+    )
+    const links = yield* readLinks(zip, ML_LATEST_MEMBERS.links)
+    const tags = new Map<string, string>()
+    yield* forEachBatch(csvRows(zip, ML_LATEST_MEMBERS.tags), (rows) =>
+      Effect.sync(() => {
+        for (const row of rows) {
+          const tag = pyStrip(present(row('tag'), 'tag')).toLowerCase()
+          if (vocabulary.has(tag)) tags.set(present(row('tagId'), 'tagId'), tag)
+        }
+      }),
+    )
+    yield* forEachBatch(csvRows(zip, ML_LATEST_MEMBERS.scores), (rows) =>
+      db.runMany(
+        `INSERT INTO genoma VALUES (?, ?, ?, ?, ?, ?)
+         ON CONFLICT(filme_id, tag) DO UPDATE SET
+             fato_id = excluded.fato_id, relevancia = excluded.relevancia
+         WHERE excluded.relevancia > genoma.relevancia`,
+        (function* () {
+          for (const row of rows) {
+            const movieId = row('movieId')
+            const film = movieId === null ? undefined : links.get(movieId)
+            const tagId = row('tagId')
+            const tag = tagId === null ? undefined : tags.get(tagId)
+            if (film === undefined || tag === undefined || covered.has(film))
+              continue
+            yield genomeRow(
+              film,
+              tag,
+              present(row('relevance'), 'relevance'),
+              sourceAndDate,
+            )
           }
         })(),
       ),
@@ -483,4 +563,7 @@ export const loadReview = (
     yield* loadMovielens(db, dumpPath(catalog, MOVIELENS, movielens), movielens)
     const genome = dumps.get(GENOME)!
     yield* loadGenome(db, dumpPath(catalog, GENOME, genome), genome)
+    const latest = dumps.get(ML_LATEST)
+    if (latest !== undefined)
+      yield* fillGenome(db, dumpPath(catalog, ML_LATEST, latest), latest)
   })

@@ -44,6 +44,7 @@ import {
   IMDB_PRINCIPALS,
   IMDB_RATINGS,
   LABELS,
+  ML_LATEST,
   MOVIELENS,
   wikidataName,
 } from './versions.ts'
@@ -606,6 +607,7 @@ const labels = (run: UpdateRun, progress: Fraction) =>
 const DOWNLOADS = [
   MOVIELENS,
   GENOME,
+  ML_LATEST,
   IMDB_BASICS,
   IMDB_RATINGS,
   IMDB_PRINCIPALS,

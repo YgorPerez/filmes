@@ -34,6 +34,7 @@ const sha256 = (bytes: Buffer) =>
 const SOURCES: Record<string, readonly [string, string]> = {
   'ml-32m.zip': ['MovieLens ml-32m', '2023-10-13'],
   'genome_2021.zip': ['Tag Genome 2021', '2021-12-30'],
+  'ml-latest.zip': ['MovieLens ml-latest', '2023-07-20'],
 }
 
 /** The dump's bytes from a recording: gzip for TSV and JSON, as is for a
@@ -678,7 +679,7 @@ test("ties the genome to the IMDb and keeps the score's precision", async () => 
   expect(
     await rows(
       pinned,
-      'SELECT filme_id, tag, relevancia, fonte, data FROM genoma ORDER BY filme_id',
+      "SELECT filme_id, tag, relevancia, fonte, data FROM genoma WHERE fonte = 'Tag Genome 2021' ORDER BY filme_id",
     ),
   ).toEqual([
     ['tt0108052', 'funny', 0.599999999999999, 'Tag Genome 2021', '2021-12-30'],
@@ -696,6 +697,62 @@ test("ties the genome to the IMDb and keeps the score's precision", async () => 
         credit.source === 'Tag Genome' && credit.text.includes('CC BY-NC 3.0'),
     ),
   ).toBe(true)
+})
+
+test("ml-latest's genome fills only the films the Tag Genome 2021 lacks", async () => {
+  const query = await rebuilt(usePinnedDumps())
+
+  // tt0133093 keeps its 2021 relevance (ml-latest says 0.5) and gets no
+  // "scary", a tag the 2021 genome lacks; tt0114709 has no 2021 row, so it
+  // takes ml-latest's highest of its two movieIds.
+  expect(
+    await query(
+      'SELECT filme_id, tag, relevancia, fonte, data FROM genoma ORDER BY filme_id, tag',
+    ),
+  ).toEqual([
+    ['tt0108052', 'funny', 0.599999999999999, 'Tag Genome 2021', '2021-12-30'],
+    [
+      'tt0114709',
+      'funny',
+      0.7250000000000001,
+      'MovieLens ml-latest',
+      '2023-07-20',
+    ],
+    ['tt0133093', 'funny', 0.876543210987654, 'Tag Genome 2021', '2021-12-30'],
+  ])
+})
+
+test('a Clima line from the ml-latest genome cites MovieLens ml-latest', async () => {
+  const recorded = (file: string) =>
+    readFileSync(join(RECORDED, 'catalogo', file), 'utf8')
+  // Toy Story, in ml-latest's genome only, becomes a Candidate.
+  const pinned = usePinnedDumps((dumps) =>
+    replacing(
+      'title.basics.tsv.gz',
+      gzipSync(
+        `${recorded('title.basics.tsv')}tt0114709\tmovie\tToy Story\tToy Story\t0\t1995\t\\N\t81\tAnimation,Comedy\n`,
+      ),
+    )(
+      replacing(
+        'title.ratings.tsv.gz',
+        gzipSync(`${recorded('title.ratings.tsv')}tt0114709\t8.3\t1100000\n`),
+      )(dumps),
+    ),
+  )
+  await pinned.fixture.ok(rebuild, pinned.vars)
+
+  const output = await pinned.fixture.ok(
+    recommend({ attendees: ['dono'], moods: ['pra rir'] }),
+    pinned.vars,
+  )
+
+  expect(output.attributions).toContainEqual({
+    source: 'MovieLens ml-latest',
+    text:
+      'MovieLens ml-latest, do GroupLens Research, da Universidade de Minnesota ' +
+      '(F. Maxwell Harper e Joseph A. Konstan, 2015, https://doi.org/10.1145/2827872). ' +
+      'O GroupLens não endossa o filmes.',
+  })
 })
 
 test('a catalog of dumps needs the manifest', async () => {

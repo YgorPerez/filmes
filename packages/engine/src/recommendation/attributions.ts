@@ -32,6 +32,13 @@ export const TRAKT_ATTRIBUTION: Attribution = {
   text: 'filmes uses Trakt but is not endorsed or certified by Trakt',
 }
 
+/** What MovieLens' Usage License asks: the citation of Harper & Konstan
+ * and no implied endorsement. */
+const movielensNotice = (datasets: string) =>
+  `${datasets}, do GroupLens Research, da Universidade de Minnesota ` +
+  '(F. Maxwell Harper e Joseph A. Konstan, 2015, https://doi.org/10.1145/2827872). ' +
+  'O GroupLens não endossa o filmes.'
+
 /** Source → the text it requires, in the order they come out. */
 const TEXTS: ReadonlyArray<Attribution> = [
   {
@@ -45,6 +52,11 @@ const TEXTS: ReadonlyArray<Attribution> = [
       'Tag Genome 2021, de Kotkov, Maslov e Neovius ' +
       '(https://grouplens.org/datasets/movielens/tag-genome-2021/), sob licença CC BY-NC 3.0 ' +
       '(https://creativecommons.org/licenses/by-nc/3.0/)',
+  },
+  // The genome that fills the films the Tag Genome 2021 lacks (#410).
+  {
+    source: 'MovieLens ml-latest',
+    text: movielensNotice('MovieLens ml-latest'),
   },
   TRAKT_ATTRIBUTION,
   TMDB_ATTRIBUTION,
@@ -101,10 +113,7 @@ export const CREDITS: ReadonlyArray<Credit> = [
   {
     source: 'MovieLens',
     url: 'https://grouplens.org/datasets/movielens/',
-    notice:
-      'MovieLens ml-32m, do GroupLens Research, da Universidade de Minnesota ' +
-      '(F. Maxwell Harper e Joseph A. Konstan, 2015, https://doi.org/10.1145/2827872). ' +
-      'O GroupLens não endossa o filmes.',
+    notice: movielensNotice('MovieLens ml-32m e ml-latest'),
   },
   {
     source: 'Tag Genome',

@@ -14,7 +14,8 @@ export const CREDIT_USES: Readonly<Record<CreditSource, string>> = {
   TMDB: 'As capas, os títulos em português e as sinopses.',
   Wikidata:
     'Quem fez cada filme, séries, prêmios, datas de estreia, subgêneros e classificação etária.',
-  MovieLens: 'As notas de quem deu 4 ou mais a um filme e a outro.',
+  MovieLens:
+    'As notas de quem deu 4 ou mais a um filme e a outro, e as tags dos filmes que o Tag Genome 2021 não tem.',
   'Tag Genome': 'As tags dos filmes, que movem o Clima e o Parecido.',
   OMDb: 'A classificação etária, quando falta no Wikidata, e a nota da crítica dos primeiros filmes.',
   'Rotten Tomatoes': 'O Tomatometer, pelo OMDb, na linha do filme.',

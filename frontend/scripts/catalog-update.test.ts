@@ -72,7 +72,7 @@ it("pins the dumps in the config folder's manifest", async () => {
 
   expect(code).toBe(0)
   const dumps = manifestOf(join(config, 'catalog-versions.json')).dumps
-  expect(Object.keys(dumps)).toHaveLength(12)
+  expect(Object.keys(dumps)).toHaveLength(13)
   expect(Object.keys(dumps['title.basics.tsv.gz']!)).toEqual([
     'bytes',
     'date',
@@ -88,14 +88,18 @@ it("pins the dumps in the config folder's manifest", async () => {
     date: '2023-10-13',
     source: 'MovieLens ml-32m',
   })
+  expect(dumps['ml-latest.zip']).toMatchObject({
+    date: '2023-07-20',
+    source: 'MovieLens ml-latest',
+  })
   expect(readdirSync(config).sort()).toEqual(
     readdirSync(join(ROOT, 'config'))
       .filter((name) => name !== 'local.toml')
       .sort(),
   )
   expect(events.at(-1)).toEqual({
-    progress: 12,
-    total: 12,
+    progress: 13,
+    total: 13,
     message: 'Versões do Catálogo gravadas',
   })
 })
