@@ -251,7 +251,7 @@ const listed = (data: FormData, name: string) =>
 function limitsOf(data: FormData): string[] {
   const { night } = SESSIONS.form
   const filled = (name: string) => fieldText(data, name).trim() !== ''
-  const noMoods = listed(data, 'sem-climas')
+  const noMoods = data.getAll('sem-climas').map(String)
   const child = fieldText(data, 'crianca')
   const more = [
     filled('desde') || filled('ate'),
@@ -736,6 +736,37 @@ function Moods({ moods, asked }: { moods: readonly string[]; asked: Asked }) {
   )
 }
 
+/** "Nada de" (#346): the Climas as chips, the same names as above, to
+ * recognize rather than type. */
+function NoMoods({ moods, asked }: { moods: readonly string[]; asked: Asked }) {
+  const { form } = SESSIONS
+  const chosen = new Set(asked.noMoods)
+  return (
+    <div
+      role="group"
+      aria-labelledby="sem-climas"
+      className="flex flex-col gap-xs"
+    >
+      <span id="sem-climas" className="font-display text-field-label">
+        {form.noMoods}
+      </span>
+      <span className="text-meta text-ink-2">{form.noMoodsHint}</span>
+      <div className={pills}>
+        {moods.map((mood) => (
+          <Option
+            key={mood}
+            name="sem-climas"
+            value={mood}
+            defaultChecked={chosen.has(mood)}
+          >
+            {mood}
+          </Option>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function Constraints({
   asked,
   moods,
@@ -752,19 +783,19 @@ function Constraints({
       lead={form.constraintsLead}
       plain
     >
-      <div className="flex flex-col gap-sm">
-        <Option name="sem-ja-visto" shape="row" defaultChecked={asked.unseen}>
+      {/* One shape for the on/off Restrições (#346). */}
+      <div className={pills}>
+        <Option name="sem-ja-visto" defaultChecked={asked.unseen}>
           {form.unseen}
         </Option>
-        <div className={pills}>
-          <Option name="sem-lento" defaultChecked={asked.noSlow}>
-            {form.noSlow}
-          </Option>
-          <Option name="sem-tristeza" defaultChecked={asked.noSad}>
-            {form.noSad}
-          </Option>
-        </div>
+        <Option name="sem-lento" defaultChecked={asked.noSlow}>
+          {form.noSlow}
+        </Option>
+        <Option name="sem-tristeza" defaultChecked={asked.noSad}>
+          {form.noSad}
+        </Option>
       </div>
+      <NoMoods moods={moods} asked={asked} />
       <div className={grid}>
         <SelectField
           name="crianca"
@@ -792,12 +823,6 @@ function Constraints({
         label={form.language}
         hint={form.languageHint}
         defaultValue={asked.language}
-      />
-      <TextField
-        name="sem-climas"
-        label={form.noMoods}
-        hint={form.noMoodsHint(moods)}
-        defaultValue={asked.noMoods?.join(', ')}
       />
       <TextField
         name="gatilhos"

@@ -26,6 +26,8 @@ const FILMS = {
   simkl: NO_FILMS,
   tvtime: NO_FILMS,
 }
+/** No site left a film out (#348). */
+const NO_LEFT_OUT = { trakt: [], imdb: [], simkl: [], tvtime: [] }
 
 const QUIM: PersonImportsView = {
   person: 'quim',
@@ -67,6 +69,7 @@ const QUIM: PersonImportsView = {
   tvtime: { ratings: 0, seen: 0, stated: 0, watchlist: 0 },
   // The history's film has a Nota: no Já visto of its own (#274).
   films: { ...FILMS, trakt: { rated: 2, seen: 0, watchlist: 0 } },
+  leftOut: NO_LEFT_OUT,
 }
 
 /** Quim with nothing imported yet. */
@@ -619,6 +622,10 @@ describe('the Trakt section on her own page', () => {
     })
     const trakt = section(TRAKT_SYNC.title)
     expect(trakt.textContent).toContain(TRAKT_SYNC.connect)
+    // It says what connecting does, not that it is the best of a page
+    // that shows Letterboxd first (#348).
+    expect(trakt.textContent).not.toContain('melhor caminho')
+    expect(trakt.textContent).toContain('sozinho')
     expect(
       within(trakt)
         .getByRole('link', { name: TRAKT_SYNC.connectLink })
@@ -958,5 +965,135 @@ describe('pass 4 of the critique (#274)', () => {
         'underline',
       )
     }
+  })
+})
+
+describe('pass 5 of the critique (#348)', () => {
+  it('lets every site show the films it left out, not only Letterboxd', async () => {
+    show({
+      ...EMPTY,
+      imports: [
+        {
+          kind: 'imdb',
+          file: 'imports/quim/imdb-c1.csv',
+          date: '2026-11-22',
+          original: 'ratings.csv',
+        },
+        {
+          kind: 'tvtime',
+          file: 'imports/quim/tvtime-d1.zip',
+          date: '2026-11-23',
+          original: 'tv-time-export.zip',
+        },
+      ],
+      imdb: { ratings: 3 },
+      films: { ...FILMS, imdb: { rated: 3, seen: 0, watchlist: 0 } },
+      leftOut: {
+        ...NO_LEFT_OUT,
+        imdb: [{ name: 'Cais, Episódio 1', year: null, id: 'tt9028501' }],
+        // A site whose every film was left out still has its line.
+        tvtime: [
+          { name: 'Fora do Catálogo', year: 2019, id: 'tt9099999' },
+          { name: null, year: null, id: 'tt9099998' },
+        ],
+      },
+    })
+    const results = section(COPY.results.title)
+    expect(results.textContent).toContain('IMDb: 3 Notas')
+    expect(results.textContent).toContain('TV Time: nenhum filme entrou')
+    const imdb = within(results)
+      .getByText('Ver o filme deixado de fora')
+      .closest('details')
+    expect(imdb?.open).toBe(false)
+    await userEvent
+      .setup()
+      .click(within(results).getByText('Ver os 2 deixados de fora'))
+    const items = within(results)
+      .getAllByRole('listitem')
+      .map((item) => item.textContent)
+    expect(items).toContain(
+      'Fora do Catálogo (2019) · o Catálogo do filmes não tem',
+    )
+    // No title: the id it named.
+    expect(items).toContain('tt9099998 · o Catálogo do filmes não tem')
+  })
+})
+
+describe('pass 5 of the critique (#348)', () => {
+  it('says under Tirar what leaves with the file, and how to get it back', async () => {
+    show({
+      ...EMPTY,
+      imports: [
+        {
+          kind: 'imdb',
+          file: 'imports/quim/imdb-c1.csv',
+          date: '2026-11-22',
+          original: 'ratings.csv',
+        },
+        {
+          kind: 'letterboxd',
+          file: 'imports/quim/letterboxd-a1.zip',
+          date: '2026-11-20',
+          original: 'letterboxd-quim.zip',
+        },
+      ],
+      imdb: { ratings: 3 },
+      films: { ...FILMS, imdb: { rated: 3, seen: 0, watchlist: 0 } },
+    })
+    const user = userEvent.setup()
+    const files = section(COPY.files.title)
+    await user.click(
+      within(files).getByLabelText(COPY.files.removeLabel('ratings.csv')),
+    )
+    // Her one IMDb file: its count is the IMDb line's.
+    const imdb = within(files)
+      .getByLabelText(COPY.files.removeLabel('ratings.csv'))
+      .closest('details')
+    expect(imdb?.textContent).toContain(
+      'Saem do gosto 3 Notas que vieram deste arquivo.',
+    )
+    expect(imdb?.textContent).toContain(
+      'Para voltar atrás, importe o arquivo de novo.',
+    )
+    // Letterboxd's films go by the resolution: no count to give.
+    const letterboxd = within(files)
+      .getByLabelText(COPY.files.removeLabel('letterboxd-quim.zip'))
+      .closest('details')
+    expect(letterboxd?.textContent).toContain(
+      'O que só este arquivo trazia sai do gosto.',
+    )
+    expect(letterboxd?.textContent).toContain(
+      'Para voltar atrás, importe o arquivo de novo.',
+    )
+  })
+})
+
+describe('pass 5 of the critique (#348), a file another one covers', () => {
+  it('gives no count when another file of the site has the same films', async () => {
+    show({
+      ...EMPTY,
+      imports: [
+        {
+          kind: 'trakt',
+          file: TRAKT_FILE,
+          date: '2026-11-21',
+          original: 'trakt.zip',
+        },
+        {
+          kind: 'trakt-api',
+          file: 'imports/quim/trakt-api-c1.json',
+          date: '2026-11-22',
+          original: '@quim_trakt',
+        },
+      ],
+      films: { ...FILMS, trakt: { rated: 2, seen: 0, watchlist: 0 } },
+    })
+    const fold = within(section(COPY.files.title))
+      .getByLabelText(COPY.files.removeLabel('trakt.zip'))
+      .closest('details')
+    expect(fold?.textContent).toContain(
+      'O que só este arquivo trazia sai do gosto.',
+    )
+    expect(fold?.textContent).not.toContain('Saem do gosto')
   })
 })

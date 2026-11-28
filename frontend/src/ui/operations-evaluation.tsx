@@ -102,7 +102,7 @@ function Measures({ result }: { result: EvaluationSummary }) {
         <thead>
           <tr className="border-b border-rule font-display">
             <th scope="col">{COPY.sample}</th>
-            <th scope="col">{COPY.people}</th>
+            <th scope="col">{COPY.count}</th>
             <th scope="col">{COPY.recall}</th>
             <th scope="col">{COPY.coverage}</th>
           </tr>
@@ -400,6 +400,20 @@ function RunForm() {
   )
 }
 
+/** Why `evaluate` cannot run: no folder set, or one it cannot read. */
+function FolderAlert({ folder }: { folder: EvaluationPanel['folder'] }) {
+  if (folder === 'unset')
+    return (
+      <Alert>
+        {OPERATIONS.refusals['sem-pasta']}
+        <Detail>
+          <code>{COPY.folderSetting}</code>
+        </Detail>
+      </Alert>
+    )
+  return folder === 'unavailable' ? <Alert>{COPY.unavailable}</Alert> : null
+}
+
 /** `evaluate` with its live progress: while a run goes on, the panel asks
  * `read` again every `pollMs`; it stops when the run ends. Without
  * JavaScript, "Atualizar" reloads the page. `started`: the page came back
@@ -442,15 +456,7 @@ export function EvaluationSection({
 
   return (
     <Section id="avaliar" title={COPY.title} lead={COPY.lead}>
-      {panel.folder === 'unset' && (
-        <Alert>
-          {OPERATIONS.refusals['sem-pasta']}
-          <Detail>
-            <code>{COPY.folderSetting}</code>
-          </Detail>
-        </Alert>
-      )}
-      {panel.folder === 'unavailable' && <Alert>{COPY.unavailable}</Alert>}
+      <FolderAlert folder={panel.folder} />
       <Job
         job={panel.job}
         previous={panel.previous}

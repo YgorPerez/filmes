@@ -56,7 +56,15 @@ import {
   type YamlValue,
 } from '../data/yaml.ts'
 import type { Strength } from '../evidence/strength.ts'
-import { listText } from '../evidence/wording.ts'
+import {
+  listText,
+  OWN_SCALE_PLURAL,
+  SEED_PLURALS,
+  type PluralWording,
+} from '../evidence/wording.ts'
+import { HIGH_RATINGS_PLURAL } from '../recommendation/signals/content.ts'
+import { SEEN_PLURAL } from '../recommendation/signals/seen.ts'
+import { WATCHLIST_PLURALS } from '../recommendation/signals/watchlist.ts'
 import { CAUTIOUS_BET_REASON } from '../recommendation/bet.ts'
 import { catalogFilm } from '../recommendation/candidates.ts'
 import type { StoredConstraint } from '../recommendation/constraints.ts'
@@ -595,13 +603,40 @@ const droppedOf = (
 const isFact = (e: BodyEvidence) => e.kind !== 'guess'
 
 /** A Já visto's line (`signals/seen.ts`). */
-const isSeen = (e: BodyEvidence) => e.against && e.text === 'já viu'
+const isSeen = (e: BodyEvidence) => e.against && e.text === SEEN_PLURAL.one
 
 /** A Feedback's Fonte as whoever looks reads it: the Dono who relayed it
  * is "você" (#277). */
 const RELAYED = /, repassado pelo Dono$/u
 const sourceFor = (source: string, relayedByYou: boolean): string =>
   relayedByYou ? source.replace(RELAYED, ', repassado por você') : source
+
+/** The plural of each singular wording of a Presente's own Evidence, as
+ * the files that write it give it, for a line two or more Presentes share
+ * (#351). */
+const PLURAL: ReadonlyArray<PluralWording> = [
+  ...SEED_PLURALS,
+  OWN_SCALE_PLURAL,
+  HIGH_RATINGS_PLURAL,
+  SEEN_PLURAL,
+  ...WATCHLIST_PLURALS,
+]
+
+/** A line as the names before it read: the engine writes each Presente's
+ * Evidence in the singular, and "Você e Iara: deu 10 de 10 a X" would not
+ * agree (#351). */
+const agreeing = (text: string, people: number): string =>
+  people > 1
+    ? PLURAL.reduce(
+        (out, { one, many, start }) =>
+          !start
+            ? out.replace(one, many)
+            : out.startsWith(one)
+              ? many + out.slice(one.length)
+              : out,
+        text,
+      )
+    : text
 
 /** The strongest Evidence of each Presente with a Fato, the ones with the
  * same sharing a line, the strongest lines first (`_linhas`). */
@@ -632,7 +667,7 @@ const linesOf = (film: FilmInBody, relayedByYou: boolean): BillboardLine[] => {
     .map(({ g }) => ({
       people: g.people,
       strength: g.evidence.strength as Strength,
-      text: g.evidence.text,
+      text: agreeing(g.evidence.text, g.people.length),
       source: g.evidence.source
         ? sourceFor(g.evidence.source, relayedByYou)
         : null,

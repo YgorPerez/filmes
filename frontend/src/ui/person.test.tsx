@@ -677,6 +677,14 @@ describe('PersonScreen after an edit', () => {
 })
 
 describe('PersonScreen', () => {
+  it('folds with no box of its own, so no card sits in a ficha (#274, #347)', () => {
+    const { container } = show()
+    const folds = [...container.querySelectorAll('details')]
+    expect(folds.length).toBeGreaterThan(0)
+    for (const fold of folds)
+      expect(fold.className.split(' ')).not.toContain('rounded-field')
+  })
+
   it('shows what came from an import, without a way to remove it', () => {
     show()
     expect(
@@ -1579,7 +1587,7 @@ describe('Meu gosto with little in it', () => {
     expect(notes.textContent).toContain('Trakt não conectado')
     expect(
       within(notes)
-        .getByRole('link', { name: 'conectar' })
+        .getByRole('link', { name: 'Conectar o Trakt' })
         .getAttribute('href'),
     ).toBe('/trakt')
   })

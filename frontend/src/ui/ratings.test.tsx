@@ -366,7 +366,7 @@ describe('the rating screen and the Notas she has (#274)', () => {
     expect(card().getByText(RATINGS.ratedNow(10))).toBeTruthy()
   })
 
-  it('keeps three discs and "+N" in the bar, and the count on one line', async () => {
+  it('keeps three circles in the bar, "+N" the last, and the count on one line', async () => {
     const user = userEvent.setup()
     const many: RatingQueue = {
       ...QUEUE,
@@ -378,8 +378,11 @@ describe('the rating screen and the Notas she has (#274)', () => {
     for (const rating of [3, 4, 5, 6, 7])
       await user.click(card().getByRole('button', { name: `Nota ${rating}` }))
     const bar = screen.getByRole('region', { name: RATINGS.bar })
-    expect(bar.textContent).toContain('+2')
-    expect(bar.textContent).toContain('7 de 10')
+    // Two discs and "+3": with "7 de 10 Notas" and Pronto, three circles
+    // are what fits one line at 390px.
+    expect(bar.textContent).toContain('+3')
+    // The unit on the bar, toward the goal too (#348).
+    expect(bar.textContent).toContain('7 de 10 Notas')
     expect(
       within(bar).getByRole('button', { name: RATINGS.doneLabel(5) })
         .textContent,

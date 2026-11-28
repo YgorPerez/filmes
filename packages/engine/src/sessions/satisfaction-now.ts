@@ -13,6 +13,7 @@ import {
 } from '../recommendation/group-satisfaction.ts'
 import type { EngineError } from '../runtime/EngineError.ts'
 import { Environment } from '../runtime/Environment.ts'
+import { ownerOf } from '../runtime/Owner.ts'
 import { Run } from '../runtime/Run.ts'
 import { Sqlite, type SqliteError } from '../sqlite/Sqlite.ts'
 
@@ -21,9 +22,9 @@ export interface PersonSatisfactionNow {
   /** Rounded to 4 places, as the Recomendação's `satisfaction`; null with
    * no reaction in her recent shared Sessions. */
   readonly satisfaction: number | null
-  /** "<nome>: satisfação de 11% nas últimas Sessões (a mais alta do
-   * grupo, 100%); na de sex, 20 nov, deu 2 de 10 a <filme>"; null when she
-   * is behind nobody. */
+  /** "<nome>: 11% nas últimas Sessões (deu 2 de 10 a <filme>); Iara,
+   * 100%", with "Você" for the Dono who looks (#346); null when she is
+   * behind nobody. */
   readonly line: string | null
 }
 
@@ -59,12 +60,15 @@ export const satisfactionNow = (
       (yield* readPeople).map((p) => [p.slug, p.name] as const),
     )
     const sqlite = yield* Sqlite
-    const [group, scales] = yield* sqlite.read((db) =>
+    const [group, scales, owner] = yield* sqlite.read((db) =>
       Effect.all([
         groupSatisfaction(db, attendees, weights.satisfaction.window),
         Effect.forEach(attendees, (p) => readRatingScale(db, p, weights)),
+        ownerOf(db),
       ]),
     )
+    const nameOf = (slug: string) =>
+      slug === owner ? 'Você' : (names.get(slug) ?? slug)
     return {
       people: attendees.map((person, i) => {
         const own = group.people.get(person)
@@ -74,14 +78,8 @@ export const satisfactionNow = (
           satisfaction: own === undefined ? null : pyRound(own.satisfaction, 4),
           line:
             group.behind.has(person) && scale
-              ? satisfactionLine(
-                  person,
-                  names.get(person) ?? person,
-                  group,
-                  scale,
-                  '',
-                  today,
-                ).text
+              ? satisfactionLine(person, nameOf, group, scale, '', today, owner)
+                  .text
               : null,
         }
       }),

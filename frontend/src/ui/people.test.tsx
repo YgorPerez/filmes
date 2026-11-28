@@ -261,10 +261,15 @@ describe('PeopleList create form, refusals', () => {
     )
     const form = screen.getByRole('form', { name: PEOPLE.create.title })
     expect(form.closest('details')?.open).toBe(true)
-    expect(screen.getByRole('alert').textContent).toContain(
-      PEOPLE.create.refusals['email-usado'],
-    )
     const fields = within(form)
+    // Under the field it is about, marked (#347).
+    const email = fields.getByRole('textbox', {
+      name: new RegExp(`^${PEOPLE.create.email}`),
+      description: PEOPLE.create.refusals['email-usado'],
+    })
+    expect(email.getAttribute('aria-invalid')).toBe('true')
+    expect(document.activeElement).toBe(email)
+    expect(screen.queryByRole('alert')).toBeNull()
     expect(
       (fields.getByLabelText(PEOPLE.create.name) as HTMLInputElement).value,
     ).toBe('Farias')
@@ -286,7 +291,37 @@ describe('PeopleList create form, refusals', () => {
       ).value,
     ).toBe('bruno@example.org')
   })
+})
 
+describe('PeopleList create form, the refused field (#347)', () => {
+  it('marks the name a taken file name is about (#347)', () => {
+    render(
+      <PeopleList
+        people={[BRUNO]}
+        create={{ refusal: 'existe', typed: { name: 'Bruno' } }}
+      />,
+    )
+    const name = screen.getByRole('textbox', {
+      name: new RegExp(`^${PEOPLE.create.name}`),
+      description: PEOPLE.create.refusals.existe,
+    })
+    expect(name.getAttribute('aria-invalid')).toBe('true')
+  })
+
+  it('keeps a refusal of no one field over the form', () => {
+    render(
+      <PeopleList
+        people={[BRUNO]}
+        create={{ refusal: 'indisponivel', typed: { name: 'Farias' } }}
+      />,
+    )
+    expect(screen.getByRole('alert').textContent).toContain(
+      PEOPLE.create.refusals.indisponivel,
+    )
+  })
+})
+
+describe('PeopleList create form, every refusal and none', () => {
   it('has a sentence for every refusal', () => {
     for (const refusal of PERSON_CREATE_REFUSALS)
       expect(PEOPLE.create.refusals[refusal]).toBeTruthy()

@@ -10,16 +10,25 @@
 import { Effect } from 'effect'
 import { makeEvidence } from '../../evidence/Evidence.ts'
 import { watchlistStrength } from '../../evidence/ruler.ts'
+import type { PluralWording } from '../../evidence/wording.ts'
 import { text } from '../../sqlite/row.ts'
 import { candidatesJson, type Signal } from './Signal.ts'
 
 /** Each import's line, by the start of its `fato_id`. */
-const LINE: Readonly<Record<string, string>> = {
-  letterboxd: 'está na lista do Letterboxd',
-  trakt: 'está na lista do Trakt',
-  simkl: 'está na lista do Simkl',
-  tvtime: 'está na lista do TV Time',
-}
+const LINE: Readonly<Record<string, PluralWording>> = Object.fromEntries(
+  ['Letterboxd', 'Trakt', 'Simkl', 'TV Time'].map((name) => [
+    name.toLowerCase().replace(' ', ''),
+    {
+      one: `está na lista do ${name}`,
+      many: `estão na lista do ${name}`,
+      start: true,
+    },
+  ]),
+)
+
+/** The plurals of the watchlist's lines. */
+export const WATCHLIST_PLURALS: ReadonlyArray<PluralWording> =
+  Object.values(LINE)
 
 const LATEST = `
 SELECT filme_id, fato_id, data, fonte FROM (
@@ -44,7 +53,7 @@ export const watchlist: Signal = {
           makeEvidence({
             person,
             filmId: text(row, 'filme_id'),
-            text: line,
+            text: line.one,
             source: text(row, 'fonte'),
             date: text(row, 'data'),
             strength: watchlistStrength(),

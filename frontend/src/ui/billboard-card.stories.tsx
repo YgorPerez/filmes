@@ -3,7 +3,8 @@
 // has its Feedback; the Nota prevista line under "Por que", without one,
 // with a Presente without a Fato, and six Presentes on a phone; the
 // trailer link, and a film without one; a film the Dono saw before, whose
-// Já visto weighs against it (VISTO ANTES on the case), and four Presentes.
+// Já visto weighs against it (VISTO ANTES on the case), the two who saw
+// it on a phone's case, and four Presentes.
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
 import { expect, userEvent, within } from 'storybook/test'
@@ -305,6 +306,23 @@ export const SeenBefore: Story = {
     // Not `toBeVisible`: the sticker comes in from transparent.
     await expect(canvas.getByText('Visto antes')).toBeInTheDocument()
     await expect(canvas.getByText('Visto antes: Você')).toBeInTheDocument()
+  },
+}
+
+/** Both saw it before: VISTO ANTES with two dots, on a phone's 112px
+ * case too. The stamp sticks out of the case no more than a sticker's 9px
+ * on either side, inside the card's padding (#351). */
+export const SeenBeforeByTwo: Story = {
+  args: { film: { ...FILM, seen: ['bruno', 'iara'] } },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const stamp = canvas.getByText('Visto antes')
+    // Measured without the sticker's entrance, which scales it.
+    stamp.style.animation = 'none'
+    const box = stamp.getBoundingClientRect()
+    const tape = stamp.parentElement!.getBoundingClientRect()
+    await expect(box.left).toBeGreaterThanOrEqual(tape.left - 10)
+    await expect(box.right).toBeLessThanOrEqual(tape.right + 10)
   },
 }
 

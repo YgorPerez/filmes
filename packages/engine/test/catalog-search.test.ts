@@ -141,6 +141,27 @@ test('a genre, and an entity with no content link is left out', async () => {
   expect(theme).toMatchObject({ films: [], people: [], genres: [], series: [] })
 })
 
+test('a genre by the IMDb name Meu gosto says, as its Wikidata entity (#347)', async () => {
+  const fixture = useFixture()
+  // Meu gosto names the IMDb genres ("Crime"); the Catálogo's entity is
+  // Wikidata's (Q959790, "filme policial"), which a Veto or a Declarado
+  // takes. Cidade de Vidro (tt9000103) is Crime in the IMDb and carries it.
+
+  const crime = await fixture.ok(
+    searchCatalog({ query: 'crime', kinds: ['genre'] }),
+  )
+  // An IMDb genre whose entity is not in the Catálogo finds nothing to
+  // take: Drama's Q130232 has no film here.
+  const drama = await fixture.ok(
+    searchCatalog({ query: 'drama', kinds: ['genre'] }),
+  )
+
+  expect(
+    crime.genres.map((g) => [g.id, g.label, g.links, g.filmCount]),
+  ).toEqual([['Q959790', 'filme policial', ['genre'], 1]])
+  expect(drama.genres).toEqual([])
+})
+
 test('an IMDb or Wikidata id finds that film or entity', async () => {
   const fixture = useFixture()
 

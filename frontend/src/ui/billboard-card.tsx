@@ -107,7 +107,10 @@ function Poster({
       {stamp && (
         <Sticker
           kind={stamp.kind === 'swap' ? 'swap' : 'seen'}
-          className={`absolute left-1/2 inline-flex -translate-x-1/2 items-center gap-xs whitespace-nowrap ${cover ? 'top-[40%]' : 'top-[62%]'}`}
+          // As wide as the case and 4px a side, the turn adding the rest of
+          // a sticker's 9px: the label and the dots wrap rather than spill
+          // past the card's padding on a phone's 112px case (#351).
+          className={`absolute left-1/2 inline-flex w-max max-w-[calc(100%+8px)] -translate-x-1/2 flex-wrap items-center justify-center gap-xs text-center ${cover ? 'top-[40%]' : 'top-[62%]'}`}
         >
           {stamp.kind === 'swap'
             ? card.swapStamp
@@ -387,25 +390,13 @@ function Notes({
   )
 }
 
-/** A film of the Cartaz. `marks` and `onChange` are absent when the
- * Session takes no reply (it has its Feedback). `level` 3 under a
- * section's title. */
-export function BillboardCard({
-  film,
-  people,
-  first,
-  level = 2,
-  marks,
-  onChange,
-}: {
-  film: BillboardFilm
-  people: readonly BillboardPerson[]
-  first: boolean
-  level?: Level
-  marks?: FilmMarks
-  onChange?: (marks: FilmMarks) => void
-}) {
-  // Who marked Já vi, and who the engine knows saw it (#272).
+/** Who marked Já vi, and who the engine knows saw it (#272); the poster's
+ * stamp from them, or Trocar's. */
+function stampOf(
+  film: BillboardFilm,
+  people: readonly BillboardPerson[],
+  marks: FilmMarks | undefined,
+): { seen: BillboardPerson[]; stamp: Stamp | null } {
   const marked = marks?.seen ?? []
   const seenBy = new Set([...marked, ...film.seen])
   const seen = people.filter((p) => seenBy.has(p.slug))
@@ -416,6 +407,32 @@ export function BillboardCard({
       : marked.length > 0
         ? { kind: 'seen', who: seen }
         : { kind: 'seenBefore', who: seen }
+  return { seen, stamp }
+}
+
+/** A film of the Cartaz. `marks` and `onChange` are absent when the
+ * Session takes no reply (it has its Feedback). `level` 3 under a
+ * section's title. */
+export function BillboardCard({
+  film,
+  people,
+  first,
+  level = 2,
+  marks,
+  onChange,
+  reactionsOnTop = false,
+}: {
+  film: BillboardFilm
+  people: readonly BillboardPerson[]
+  first: boolean
+  level?: Level
+  marks?: FilmMarks
+  onChange?: (marks: FilmMarks) => void
+  /** The Cartaz's head says the chosen film's lines: the card keeps only
+   * its label (#351). */
+  reactionsOnTop?: boolean
+}) {
+  const { seen, stamp } = stampOf(film, people, marks)
   return (
     <article
       aria-labelledby={`filme-${film.id}`}
@@ -436,6 +453,7 @@ export function BillboardCard({
           reactions={film.reactions}
           people={people}
           level={level}
+          labelOnly={reactionsOnTop}
         />
       )}
       {marks && onChange && (

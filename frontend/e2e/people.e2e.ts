@@ -311,7 +311,11 @@ test('the Dono adds a Pessoa, who is a Presente at once', async ({
   await form.getByLabel('Nome').fill('Iara')
   await form.getByLabel(/^Apelidos/).fill('ia')
   await form.getByRole('button', { name: 'Acrescentar' }).click()
-  await expect(page.getByRole('alert')).toContainText('Já existe uma Pessoa')
+  // Under the name it is about, the field marked (#347).
+  await expect(form.getByLabel('Nome')).toHaveAccessibleDescription(
+    /Já existe uma Pessoa/,
+  )
+  await expect(form.getByLabel('Nome')).toHaveAttribute('aria-invalid', 'true')
   await expect(page).toHaveURL(/\/pessoas$/)
   await expect(form.getByLabel('Nome')).toHaveValue('Iara')
   await expect(form.getByLabel(/^Apelidos/)).toHaveValue('ia')

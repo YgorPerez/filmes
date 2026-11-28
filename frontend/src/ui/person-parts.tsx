@@ -3,11 +3,13 @@ import {
   createContext,
   useContext,
   useEffect,
+  useEffectEvent,
   useId,
   useRef,
   useState,
   type ComponentProps,
   type ReactNode,
+  type Ref,
 } from 'react'
 import {
   formProblem,
@@ -317,6 +319,28 @@ export function RemoveForm({
     if (asking) confirm.current?.focus()
     else if (asked) ask.current?.focus()
   }, [asking, asked])
+  // Another form's post lets the question go (#347): the page comes back
+  // with what that form did, not with this confirm still open.
+  const letAskingGo = useEffectEvent(() => onAsking?.(false))
+  useEffect(() => {
+    if (!asking) return
+    const letGo = (event: SubmitEvent) => {
+      // Its own post went: what it is doing stays on screen.
+      if (
+        event.target instanceof Node &&
+        confirm.current !== null &&
+        event.target.contains(confirm.current)
+      ) {
+        document.removeEventListener('submit', letGo, true)
+        return
+      }
+      setAsked(false)
+      setAsking(false)
+      letAskingGo()
+    }
+    document.addEventListener('submit', letGo, true)
+    return () => document.removeEventListener('submit', letGo, true)
+  }, [asking])
   return (
     <ActionForm
       slug={slug}
@@ -346,8 +370,9 @@ export function RemoveForm({
       ) : (
         <Submit
           ref={confirm}
-          // The decisive step, marked as a chosen option: no new colour.
-          variant={live ? 'chosen' : 'option'}
+          // The decisive step, in the commit look: no new colour, and not
+          // the look of a marked option (#347).
+          variant={live ? 'commit' : 'option'}
           className=""
           aria-label={
             live ? PERSON.removeSure(label) : PERSON.removeLabel(label)
@@ -420,6 +445,9 @@ export function TextField({
   min,
   max,
   defaultValue,
+  refusal,
+  inputRef,
+  onInput,
 }: {
   name: string
   label: string
@@ -431,12 +459,27 @@ export function TextField({
   min?: number
   max?: number
   defaultValue?: string
+  /** What a form outside `ActionForm` refused of this field (#347): said
+   * under it, the field marked. */
+  refusal?: string
+  inputRef?: Ref<HTMLInputElement>
+  onInput?: () => void
 }) {
-  const { error, aria } = useFieldProblem(name)
+  const fromForm = useFieldProblem(name)
+  const id = useId()
+  const { error, aria } =
+    refusal === undefined
+      ? fromForm
+      : {
+          error: { id, text: refusal },
+          aria: { 'aria-invalid': true, 'aria-describedby': id } as const,
+        }
   return (
     <FieldLabel label={label} hint={hint} error={error}>
       <input
         {...aria}
+        ref={inputRef}
+        onInput={onInput}
         type={type}
         min={min}
         max={max}
@@ -512,7 +555,7 @@ export function RatingField({
             defaultChecked={defaultValue === ''}
             className={radio}
           />
-          <span className="rounded-pill px-sm py-0.5 group-has-checked/rating:bg-ink group-has-checked/rating:text-surface">
+          <span className="rounded-pill px-sm py-0.5 group-has-checked/rating:bg-sticker-orange group-has-checked/rating:text-on-sticker">
             {PERSON.noRating}
           </span>
         </label>

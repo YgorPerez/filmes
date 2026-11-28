@@ -44,7 +44,7 @@ const PAGE: FeedbackPage = {
       person: 'iara',
       name: 'Iara',
       satisfaction: 0.1111,
-      line: 'Iara: satisfação de 11% nas últimas Sessões (a mais alta do grupo, 100%); na de qui, 19 nov, deu 2 de 10 a Casa Cheia',
+      line: 'Iara: 11% nas últimas Sessões (deu 2 de 10 a Casa Cheia); você e Quim, 100%',
     },
     { person: 'quim', name: 'Quim', satisfaction: 1, line: null },
   ],
@@ -73,6 +73,11 @@ const rate = (name: string, n: string) =>
   within(
     screen.getByRole('radiogroup', { name: FEEDBACK.form.ratingLabel(name) }),
   ).getByRole('radio', { name: n })
+/** The Dono's own Nota. */
+const ownRating = (n: string) =>
+  within(
+    screen.getByRole('radiogroup', { name: FEEDBACK.form.ownRatingLabel }),
+  ).getByRole('radio', { name: n })
 /** Her reaction's radio by its value: a Relato's pill, or "sem reação". */
 const reaction = (person: string, value: string) =>
   document.querySelector(
@@ -85,7 +90,7 @@ describe('FeedbackScreen', () => {
   it('records the Dono’s Nota for a film of the list', async () => {
     const { user, form } = show()
     await user.click(screen.getByLabelText(/O Farol de Areia/))
-    await user.click(rate('Bruno', '9'))
+    await user.click(ownRating('9'))
     expect(posted(form)).toEqual({
       ok: {
         film: 'tt9000101',
@@ -161,12 +166,43 @@ describe('FeedbackScreen, what the Cartaz knows (#272)', () => {
 
   it('gives every Presente the 1 to 10 in the open', () => {
     show()
-    for (const name of ['Bruno', 'Iara', 'Quim'])
+    for (const name of ['Iara', 'Quim'])
       expect(
         screen.getByRole('radiogroup', {
           name: FEEDBACK.form.ratingLabel(name),
         }),
       ).toBeTruthy()
+    expect(
+      screen.getByRole('radiogroup', { name: FEEDBACK.form.ownRatingLabel }),
+    ).toBeTruthy()
+  })
+})
+
+describe('FeedbackScreen, the Dono and alone (#346)', () => {
+  it('calls the Dono who looks "Você" in her row', () => {
+    show()
+    expect(screen.getByRole('group', { name: FEEDBACK.form.you })).toBeTruthy()
+    expect(screen.queryByRole('group', { name: /Bruno/ })).toBeNull()
+    expect(
+      screen.getByRole('radiogroup', { name: FEEDBACK.form.ownRatingLabel }),
+    ).toBeTruthy()
+  })
+
+  it('says nothing of the others when the Dono is the only Presente', async () => {
+    const { user } = show({
+      ...PAGE,
+      attendees: PAGE.attendees.slice(0, 1),
+      satisfaction: PAGE.satisfaction.slice(0, 1),
+    })
+    await user.click(screen.getByLabelText(/O Farol de Areia/))
+    const reactions = screen
+      .getByRole('heading', { name: FEEDBACK.form.reactions(true) })
+      .closest('fieldset')!
+    expect(reactions.textContent).not.toContain('Para os outros')
+    expect(reactions.textContent).toContain(FEEDBACK.form.reactionsLead(true))
+    cleanup()
+    show()
+    expect(document.body.textContent).toContain('Para os outros')
   })
 })
 
@@ -228,7 +264,7 @@ describe('FeedbackScreen, checks and satisfaction', () => {
   it('omits reactions when the choice changes to "não vimos nada"', async () => {
     const { user, form } = show()
     await user.click(screen.getByLabelText(/O Farol de Areia/))
-    await user.click(rate('Bruno', '6'))
+    await user.click(ownRating('6'))
     await user.click(screen.getByLabelText(/Não vimos nada/))
     expect(posted(form)).toEqual({ ok: { film: null, reactions: [] } })
   })
@@ -253,7 +289,7 @@ describe('FeedbackScreen, checks and satisfaction', () => {
     expect(region.textContent).toMatch(/Iara/)
     expect(region.textContent).toMatch(/Casa Cheia/)
     expect(region.textContent).toContain('11%')
-    expect(region.textContent).not.toMatch(/Quim/)
+    expect(region.textContent).not.toMatch(/Quim:/)
   })
 
   it('says nobody is behind, and has no satisfaction alone', () => {

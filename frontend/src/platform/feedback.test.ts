@@ -335,7 +335,7 @@ describe('feedbackDraft', () => {
 describe('the pages', () => {
   it('shows the open Session with its Presentes’ satisfaction', async () => {
     const line =
-      'Quim: satisfação de 0% nas últimas Sessões (a mais alta do grupo, 100%); na de qui, 19 nov, deu 1 de 10 a Casa Cheia'
+      'Quim: 0% nas últimas Sessões (deu 1 de 10 a Casa Cheia); você, 100%'
     const { feedback } = fake({
       satisfaction: {
         exitCode: 0,
@@ -476,7 +476,7 @@ describe('feedbackFromEngine', () => {
           person: 'bruno',
           name: 'Bruno',
           satisfaction: 0.1111,
-          line: 'Bruno: satisfação de 11% nas últimas Sessões (a mais alta do grupo, 100%); na de sex, 20 nov, deu 2 de 10 a Pequenos Milagres',
+          line: 'Você: 11% nas últimas Sessões (deu 2 de 10 a Pequenos Milagres); Quim, 100%',
         },
         { person: 'quim', name: 'Quim', satisfaction: 1, line: null },
       ])

@@ -209,6 +209,21 @@ describe('the head’s ⋯ menu and "?" legend (#272)', () => {
     return { menu, legend }
   }
 
+  it('lists its actions as rows with an icon, as the account menu (#346)', async () => {
+    const user = userEvent.setup()
+    const sessionLink = 'https://cinema.example/participar?sessao=x&chave=y'
+    render(<SessionScreen page={{ ...PAGE, sessionLink }} />)
+    await user.click(screen.getByLabelText(SESSIONS.session.menu))
+    const { menu } = opened()
+    const rows = within(menu).getAllByRole('listitem')
+    expect(rows.map((row) => row.textContent)).toEqual([
+      SESSIONS.list.feedback,
+      'Link para os Presentes',
+      'Copiar link',
+    ])
+    for (const row of rows) expect(row.querySelector('svg')).not.toBeNull()
+  })
+
   it('close on a tap outside and on Esc, and one opening closes the other', async () => {
     const user = userEvent.setup()
     render(<SessionScreen page={PAGE} />)
@@ -539,6 +554,31 @@ describe('a Session’s page, an acrescentar only noted and a told Session', () 
 })
 
 describe('a Session’s page, a told Session', () => {
+  it('opens with the shelf label and the Dono’s note above the tape, not in the fold (#346)', () => {
+    render(
+      <SessionScreen
+        page={{
+          ...PAGE,
+          session: {
+            ...CLOSED,
+            chosen: { id: 'tt9000104', title: 'As Horas Lentas' },
+          },
+          billboard: TOLD,
+        }}
+      />,
+    )
+    const label = screen.getByRole('img', { name: /^Vocês dois/ })
+    const note = screen.getByText(TOLD.request.speech!)
+    const tape = screen.getByRole('region', { name: SESSIONS.session.returned })
+    for (const top of [label, note]) {
+      expect(top.closest('details')).toBeNull()
+      expect(
+        top.compareDocumentPosition(tape) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy()
+    }
+    expect(screen.getAllByRole('img', { name: /^Vocês dois/ })).toHaveLength(1)
+  })
+
   it('a told Session with its Reações: each one on the tape, the rest of the shelf folded', () => {
     render(
       <SessionScreen

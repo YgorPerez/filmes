@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react'
 import {
   isPersonCreateRefusal,
   type PersonCreateRefusal,
@@ -25,6 +26,16 @@ import { RowArrow } from './kit/row-arrow'
 export type CreateState = {
   refusal?: PersonCreateRefusal
   typed: TypedPerson
+}
+
+/** The field a refusal is about, said under it (#347); the others (a
+ * name or a nickname taken, the engine down) go over the form. */
+const FIELD_OF: Partial<Record<PersonCreateRefusal, 'nome' | 'email'>> = {
+  nome: 'nome',
+  reservado: 'nome',
+  existe: 'nome',
+  email: 'email',
+  'email-usado': 'email',
 }
 
 /** The logged-in Dono first; the others in the engine's order. */
@@ -136,11 +147,29 @@ export function PeopleList({
 function CreateForm({ state, admin }: { state?: CreateState; admin: boolean }) {
   const { create } = PEOPLE
   const typed = state?.typed ?? {}
-  const { refused, alert, onAnswer } = useRefusalInPlace(
+  const { refused, refusals, alert, onAnswer } = useRefusalInPlace(
     state?.refusal,
     refusalOn(isPersonCreateRefusal),
   )
   const { onSubmit, busy, failed } = useFetchForm(onAnswer)
+  // A refusal about one field is said under it, the field marked and
+  // focused; typing takes the mark away (#347).
+  const field = refused === undefined ? undefined : FIELD_OF[refused]
+  const [clearedAt, setClearedAt] = useState<number | null>(null)
+  const focused = useRef<HTMLInputElement>(null)
+  // Again at each refusal by `fetch`, even of the same field.
+  const focusAt = field === undefined ? null : refusals
+  useEffect(() => {
+    if (focusAt !== null) focused.current?.focus()
+  }, [focusAt])
+  const refusalOf = (name: 'nome' | 'email') =>
+    clearedAt !== refusals && refused !== undefined && field === name
+      ? create.refusals[refused]
+      : undefined
+  const fieldProps = (name: 'nome' | 'email') => ({
+    refusal: refusalOf(name),
+    onInput: () => setClearedAt(refusals),
+  })
   return (
     <Disclosure summary={create.title} open={state?.refusal !== undefined}>
       <form
@@ -150,7 +179,7 @@ function CreateForm({ state, admin }: { state?: CreateState; admin: boolean }) {
         onSubmit={onSubmit}
         className="group/new flex flex-col gap-xl"
       >
-        {refused && (
+        {refused && field === undefined && (
           <div ref={alert}>
             <Alert>{create.refusals[refused]}</Alert>
           </div>
@@ -161,6 +190,8 @@ function CreateForm({ state, admin }: { state?: CreateState; admin: boolean }) {
           label={create.name}
           required
           defaultValue={typed.name}
+          {...fieldProps('nome')}
+          inputRef={field === 'nome' ? focused : undefined}
         />
         <TextField
           name="apelidos"
@@ -188,6 +219,8 @@ function CreateForm({ state, admin }: { state?: CreateState; admin: boolean }) {
             label={create.email}
             hint={create.emailHint}
             defaultValue={typed.email}
+            {...fieldProps('email')}
+            inputRef={field === 'email' ? focused : undefined}
           />
           {admin && <p className="text-meta text-ink-2">{create.testUsers}</p>}
         </div>

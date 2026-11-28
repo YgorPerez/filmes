@@ -17,6 +17,7 @@ import type {
   SetupStepView,
 } from '#/platform/setup-guide'
 import { Home } from './home'
+import { HOME } from './home.copy'
 
 afterEach(cleanup)
 
@@ -147,6 +148,14 @@ describe('Home, the latest Sessão', () => {
     expect(html.indexOf('Pedir filme')).toBeLessThan(
       html.indexOf('Última Sessão'),
     )
+  })
+
+  it('keeps the last word of "Viram algum?" off a line of its own (#345)', () => {
+    show({ latest: SESSION })
+    expect(
+      within(card()).getByText('Viram algum? Conte qual e o que cada um achou.')
+        .className,
+    ).toContain('text-pretty')
   })
 
   it('makes each film a link to its card in the Cartaz, with its cover when there is one', () => {
@@ -340,6 +349,15 @@ describe('Home, the setup guide, the MCP URL and skipped steps', () => {
     expect(screen.getByRole('status').textContent).toBe(
       'Copiado. Agora cole no Claude, em Conectores.',
     )
+  })
+
+  it('runs each how-to step to the full measure, with no rewrapped lines (#345)', () => {
+    show(guiding({ taste: 'done' }))
+    for (const line of HOME.guide.how) {
+      const item = screen.getByText(line)
+      expect(item.tagName).toBe('LI')
+      expect(item.className).not.toMatch(/text-(?:pretty|balance)/u)
+    }
   })
 
   it('says how to copy by hand when the clipboard refuses', async () => {

@@ -10,7 +10,15 @@ import { makeEvidence } from '../../evidence/Evidence.ts'
 import { SEEN_STRENGTH } from '../../evidence/ruler.ts'
 import { text } from '../../sqlite/row.ts'
 import { kindOf } from '../../sqlite/vocabulary.ts'
+import type { PluralWording } from '../../evidence/wording.ts'
 import type { Signal } from './Signal.ts'
+
+/** A Já visto's line, and its plural. */
+export const SEEN_PLURAL: PluralWording = {
+  one: 'já viu',
+  many: 'já viram',
+  start: true,
+}
 
 const LATEST = `
 SELECT filme_id, fato_id, tipo, data, fonte FROM (
@@ -29,7 +37,7 @@ export const seen: Signal = {
           makeEvidence({
             person,
             filmId: text(row, 'filme_id'),
-            text: 'já viu',
+            text: SEEN_PLURAL.one,
             source: text(row, 'fonte'),
             date: text(row, 'data'),
             strength: SEEN_STRENGTH,

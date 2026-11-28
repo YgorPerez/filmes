@@ -54,6 +54,7 @@ import {
   listText,
   ownScaleText,
   seedText,
+  type PluralWording,
 } from '../../evidence/wording.ts'
 import { engineError } from '../../runtime/EngineError.ts'
 import { num, numOrNull, text, textOrNull } from '../../sqlite/row.ts'
@@ -139,12 +140,19 @@ const isHigh = (scale: RatingScale, seed: Row): boolean =>
     ? num(seed, 'par_a_par') === 0 && isHighRating(scale, num(seed, 'nota'))
     : num(seed, 'nota') >= HIGH_RATING
 
+/** The metadado agregado's "a que deu nota alta", and its plural. */
+export const HIGH_RATINGS_PLURAL: PluralWording = {
+  one: ' a que deu nota alta',
+  many: ' a que deram nota alta',
+  start: false,
+}
+
 const highRatings = (high: ReadonlyArray<Row>): string => {
   const n = high.length
   const films = high
     .slice(0, LIST_MAX)
     .map((s) => filmText(text(s, 'titulo'), numOrNull(s, 'ano')))
-  const start = `como ${n} ${n === 1 ? 'filme' : 'filmes'} a que deu nota alta`
+  const start = `como ${n} ${n === 1 ? 'filme' : 'filmes'}${HIGH_RATINGS_PLURAL.one}`
   return n > LIST_MAX
     ? `${start}, entre eles ${listText(films)}`
     : `${start}: ${listText(films)}`

@@ -1,6 +1,7 @@
 // The words Operações builds from the evaluation and the console: the
 // verdict, the change since the report before, the Feedback of the Sessões,
 // the weights a better combination changes, the rows a query returned.
+import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vite-plus/test'
 import { OPERATIONS } from './operations.copy'
 
@@ -58,7 +59,36 @@ describe('the Operações copy', () => {
   })
 })
 
+/** The keys of `[path.weight]` in `config/weights.toml`, which the grid
+ * varies every one of. */
+const pathWeightKeys = () => {
+  const toml = readFileSync(
+    new URL('../../../config/weights.toml', import.meta.url),
+    'utf8',
+  )
+  const section = toml.split(/^\[path\.weight\]$/mu)[1]?.split(/^\[/mu)[0]
+  return [...(section ?? '').matchAll(/^(\w+)\s*=/gmu)].map((m) => m[1]!)
+}
+
 describe('the Operações copy, weights and rows', () => {
+  it('names every weight of the content path the grid can change', () => {
+    const keys = pathWeightKeys()
+    expect(keys).toContain('cinematography')
+    expect(keys).toContain('producer')
+    for (const key of keys)
+      expect(
+        COPY.change({ section: 'path.weight', key, from: 1, to: 0.75 }),
+      ).not.toMatch(/^path\.weight\./u)
+    expect(
+      COPY.change({
+        section: 'path.weight',
+        key: 'cinematography',
+        from: 0.5,
+        to: 0.375,
+      }),
+    ).toBe('fotografia 0,5 → 0,375')
+  })
+
   it('names a weight it knows and writes the key of one it does not', () => {
     expect(
       COPY.change({

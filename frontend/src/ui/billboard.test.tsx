@@ -202,7 +202,7 @@ describe('the Cartaz shows, shared Evidence and the Nota prevista', () => {
       within(card(n).getByRole('list', { name: BILLBOARD.card.why }))
     const [shared] = why(1).getAllByRole('listitem')
     expect(shared!.textContent).toBe(
-      'Você e Iara: dirigido por Helena Prado, como 2 filmes a que deu nota altaWikidata',
+      'Você e Iara: dirigido por Helena Prado, como 2 filmes a que deram nota altaWikidata',
     )
     expect(within(shared!).getByLabelText('Força moderada').dataset.level).toBe(
       '2',
@@ -428,7 +428,7 @@ describe('the Cartaz shows, what was marked and the awards', () => {
   })
 })
 
-describe('the Cartaz shows, section lines and no film', () => {
+describe('the Cartaz shows, section lines', () => {
   it('the lines every film of a section has, said once under its title', () => {
     const [hours, salt] = MODEL.films
     const shared = hours!.lines[0]!
@@ -456,6 +456,86 @@ describe('the Cartaz shows, section lines and no film', () => {
     expect(card(1).queryByText(shared.text)).toBeNull()
     expect(card(2).getByText('deu 10 de 10 a Maré Baixa')).toBeTruthy()
     expect(card(1).queryByRole('list', { name: 'Filme escolhido' })).toBeNull()
+  })
+
+  it('a card whose own line only weighs against repeats its Motivo’s reason (#346)', () => {
+    const [hours, salt] = MODEL.films
+    const shared = hours!.lines[0]!
+    const glass = {
+      ...hours!,
+      id: 'tt9000106',
+      title: 'Cidade de Vidro',
+      position: 3,
+      lines: [
+        {
+          people: ['bruno'],
+          strength: 'strong' as const,
+          text: 'já viu',
+          source: null,
+          against: true,
+        },
+      ],
+    }
+    const helena = {
+      kind: 'entity' as const,
+      title: 'Porque gostam de Helena Prado',
+      again: false,
+      films: [hours!.id, salt!.id],
+    }
+    render(
+      <Billboard
+        billboard={{
+          ...MODEL,
+          films: [hours!, { ...salt!, lines: [...salt!.lines, shared] }, glass],
+          sections: [helena, { ...helena, again: true, films: [glass.id] }],
+        }}
+      />,
+    )
+    expect(card(3).getByText(shared.text)).toBeTruthy()
+    expect(card(3).getByText('já viu')).toBeTruthy()
+    // A card with a reason of its own keeps only it.
+    expect(card(2).queryByText(shared.text)).toBeNull()
+  })
+})
+
+describe('the Cartaz shows, a section’s reason once (#346), and no film', () => {
+  it('a card in the section that says the reason does not repeat it (#346)', () => {
+    const [hours] = MODEL.films
+    const shared = hours!.lines[0]!
+    const seen = {
+      people: ['bruno'],
+      strength: 'strong' as const,
+      text: 'já viu',
+      source: null,
+      against: true,
+    }
+    const glass = {
+      ...hours!,
+      id: 'tt9000106',
+      title: 'Cidade de Vidro',
+      position: 2,
+      lines: [shared, seen],
+    }
+    render(
+      <Billboard
+        billboard={{
+          ...MODEL,
+          films: [hours!, glass],
+          sections: [
+            {
+              kind: 'entity',
+              title: 'Porque gostam de Helena Prado',
+              again: false,
+              films: [hours!.id, glass.id],
+            },
+          ],
+        }}
+      />,
+    )
+    const together = screen.getByRole('list', { name: BILLBOARD.shared })
+    expect(together.textContent).toContain(shared.text)
+    expect(card(2).getByText('já viu')).toBeTruthy()
+    expect(card(2).queryByText(shared.text)).toBeNull()
   })
 
   it('that nothing passed the Restrições', () => {

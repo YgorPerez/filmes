@@ -22,12 +22,19 @@ import { engineError, type EngineError } from '../runtime/EngineError.ts'
 import type { Environment } from '../runtime/Environment.ts'
 import type { Run } from '../runtime/Run.ts'
 import { Sqlite, type Connection, type SqliteError } from '../sqlite/Sqlite.ts'
-import { hasWikidata, resolveFilmIds, type ResolvedBy } from './film-ids.ts'
+import {
+  leftOutFilm,
+  resolveFilmIds,
+  resolveRows,
+  type LeftOutFilm,
+  type ResolvedBy,
+} from './film-ids.ts'
 import { storedImports, storeImport } from './stored.ts'
 import {
   hasTraktWatchlist,
   readTraktExport,
   readTraktSnapshot,
+  type TraktFilm,
   type TraktRow,
 } from './trakt-export.ts'
 import { withLatestWatchlist, type ExportRows } from './watchlist.ts'
@@ -149,6 +156,40 @@ export interface TraktReport {
   readonly unresolved: readonly TraktUnresolved[]
 }
 
+/** Each row whose film the Catálogo has, with its tconst, and the films it
+ * does not have, each once. */
+const resolveTraktRows = (db: Connection, rows: readonly TraktRow[]) =>
+  resolveRows(db, rows, {
+    key: (film: TraktFilm) =>
+      JSON.stringify([
+        film.name,
+        film.imdb,
+        film.tmdb,
+        film.trakt?.toString() ?? null,
+      ]),
+    resolve: (film, wikidata) => resolveFilmIds(db, film, wikidata),
+    unresolved: (film): TraktUnresolved => ({
+      name: film.name,
+      imdb: film.imdb,
+      tmdb: film.tmdb,
+      trakt: film.trakt === null ? null : Number(film.trakt),
+    }),
+  })
+
+/** The films of her exports and latest snapshot the Catálogo does not
+ * have (#348): what the notice of each import said was left out. */
+export const traktLeftOut = (
+  db: Connection,
+  person: Person,
+): Effect.Effect<LeftOutFilm[], EngineError | SqliteError, Environment> =>
+  Effect.gen(function* () {
+    const { unresolved } = yield* resolveTraktRows(
+      db,
+      yield* personTraktRows(person),
+    )
+    return unresolved.map(leftOutFilm)
+  })
+
 /** `_carregar_pessoa`: replaces the Pessoa's Trakt Fatos by those of the
  * rows. */
 export const loadPersonTrakt = (
@@ -162,33 +203,10 @@ export const loadPersonTrakt = (
         `DELETE FROM ${table} WHERE pessoa = ? AND fato_id LIKE 'trakt:%'`,
         person.slug,
       )
-    const wikidata = yield* hasWikidata(db)
     const source = `Trakt de ${person.name}`
-    const resolutions = new Map<string, readonly [string, ResolvedBy] | null>()
     const resolved = { imdb: new Set<string>(), tmdb: new Set<string>() }
-    const unresolved: TraktUnresolved[] = []
-    for (const row of rows) {
-      const { film } = row
-      const key = JSON.stringify([
-        film.name,
-        film.imdb,
-        film.tmdb,
-        film.trakt?.toString() ?? null,
-      ])
-      let found = resolutions.get(key)
-      if (found === undefined) {
-        found = yield* resolveFilmIds(db, film, wikidata)
-        resolutions.set(key, found)
-        if (found === null)
-          unresolved.push({
-            name: film.name,
-            imdb: film.imdb,
-            tmdb: film.tmdb,
-            trakt: film.trakt === null ? null : Number(film.trakt),
-          })
-      }
-      if (found === null) continue
-      const [id, by] = found
+    const { found, unresolved } = yield* resolveTraktRows(db, rows)
+    for (const [row, [id, by]] of found) {
       resolved[by].add(id)
       yield* insertFact(db, person.slug, source, id, row)
     }

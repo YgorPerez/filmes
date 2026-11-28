@@ -28,8 +28,9 @@ export function ShelfLabel({
   /** What she added since, each on its own paper, after `note`. */
   added?: readonly string[]
   /** 15px on the label and 16px on the paper: Claude's inline card and
-   * the top of its fullscreen. */
-  compact?: boolean
+   * the top of its fullscreen. `narrow`: the full label, and the paper
+   * compact on a phone, as the fullscreen's: the host without one (#351). */
+  compact?: boolean | 'narrow'
   /** One line, cut with an ellipsis: the top of Claude's fullscreen on a
    * phone, where the label is all that stays fixed (#277). */
   single?: boolean
@@ -51,7 +52,7 @@ export function ShelfLabel({
            * would paint the text in the label's own colour. */}
           <p
             className={`rounded-plate bg-shelf-label px-md pt-1.75 pb-xs font-display text-on-sticker uppercase ${
-              compact ? 'text-shelf-compact' : 'text-shelf'
+              compact === true ? 'text-shelf-compact' : 'text-shelf'
             } ${single ? 'truncate' : 'flex flex-wrap items-center gap-x-sm gap-y-2xs'}`}
           >
             {items.map((item, index) => {
@@ -97,21 +98,34 @@ export function ShelfLabel({
   )
 }
 
+/** The hand's size: 16px when compact, 18px when not, and 16px below
+ * 560px only when narrow. */
+const HAND = {
+  compact: 'text-hand-compact',
+  narrow: 'text-hand-compact min-[560px]:text-hand',
+  full: 'text-hand',
+} as const
+
 /** The yellow paper with a short phrase in marker, stuck at -2° (The Hand
- * Is Short Rule: one sentence, never a number to check). */
+ * Is Short Rule: one sentence, never a number to check). It keeps 2px off
+ * each side, so the turned corners of a paper as wide as its row stay
+ * inside it, and a frame never scrolls sideways (#351). */
 export function HandNote({
   children,
   compact = false,
   tilt = 'left',
 }: {
   children: string
-  compact?: boolean
+  /** `narrow`: compact on a phone only. */
+  compact?: boolean | 'narrow'
   /** -2°, or 1.5° the other way for a paper added under another. */
   tilt?: 'left' | 'right'
 }) {
+  const hand =
+    compact === 'narrow' ? HAND.narrow : compact ? HAND.compact : HAND.full
   return (
     <p
-      className={`${tilt === 'left' ? '-rotate-2' : 'rotate-[1.5deg]'} rounded-note bg-sticker-yellow px-xl pt-1.25 pb-2xs font-hand text-on-sticker ${compact ? 'text-hand-compact' : 'text-hand'}`}
+      className={`${tilt === 'left' ? '-rotate-2' : 'rotate-[1.5deg]'} mx-0.5 max-w-[calc(100%-4px)] rounded-note bg-sticker-yellow px-xl pt-1.25 pb-2xs font-hand text-on-sticker ${hand}`}
     >
       {children}
     </p>

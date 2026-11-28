@@ -11,7 +11,7 @@
 // holds only the film files. The Letterboxd loader redoes them with its
 // own, so the rebuild and the app's reload need no step of their own.
 import { attempt } from './attempt.ts'
-import { inCatalog } from './film-ids.ts'
+import { inCatalog, leftOutFilm, type LeftOutFilm } from './film-ids.ts'
 import { basename } from 'node:path'
 import { Effect } from 'effect'
 import { DataWriter, type Author } from '../data/DataWriter.ts'
@@ -73,6 +73,20 @@ const outsideCatalog = (
       )
         outside.set(row.imdb, { film: row.imdb, title: row.name || null })
     return [...outside.values()]
+  })
+
+/** The films of all her backups named by a tconst the Catálogo does not
+ * have (#348); the rest went through the queue. */
+export const tvTimeLeftOut = (
+  db: Connection,
+  person: Person,
+): Effect.Effect<LeftOutFilm[], EngineError | SqliteError, Environment> =>
+  Effect.gen(function* () {
+    const rows = yield* personTvTimeRows(person)
+    const years = new Map(rows.map((row) => [row.imdb, row.year]))
+    return (yield* outsideCatalog(db, rows)).map(({ film, title }) =>
+      leftOutFilm({ name: title, year: years.get(film), imdb: film }),
+    )
   })
 
 export const tvTimeFactCounts = (

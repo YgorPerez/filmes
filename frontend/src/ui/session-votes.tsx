@@ -18,7 +18,13 @@ import { useFetchForm } from './kit/fetch-form'
 import { Icon } from './kit/icon'
 import { Alert, Notice, PostFailed } from './kit/status'
 import { Sticker } from './kit/sticker'
-import { FilmCover, FilmFacts, LinkFilmRow, VoteRule } from './session-link'
+import {
+  FilmCover,
+  FilmFacts,
+  LinkFilmRow,
+  VotedActions,
+  VoteRule,
+} from './session-link'
 import { PARTICIPATION } from './session-link.copy'
 import { VOTES } from './session-votes.copy'
 
@@ -470,10 +476,13 @@ function VoteResults({
   deck,
   sent,
   links,
+  owner,
 }: {
   deck: VoteDeck
   sent: boolean
   links: VoteLinks
+  /** Who opened the Session, who sees the Perguntas' answers. */
+  owner: string | null
 }) {
   const heading = useRef<HTMLHeadingElement>(null)
   useEffect(() => {
@@ -503,33 +512,33 @@ function VoteResults({
       {sent && deck.stale && deck.stale.length > 0 && (
         <p className="text-meta text-ink-2">{VOTES.stale(deck.stale)}</p>
       )}
-      <div className="flex flex-wrap items-center gap-md">
-        {unvoted > 0 ? (
+      {unvoted > 0 ? (
+        <div className="flex flex-wrap items-center gap-md">
           <a href={links.deck} className={buttonVariants()}>
             {PARTICIPATION.voteNew(unvoted)}
           </a>
-        ) : links.questions ? (
-          <a href={links.questions} className={buttonVariants()}>
-            {VOTES.questions}
-          </a>
-        ) : null}
-        {deck.films.length > 0 && (
           <a
             href={links.revote}
             className={buttonVariants({ variant: 'option' })}
           >
             {VOTES.revote}
           </a>
-        )}
-        {unvoted > 0 && links.questions && (
-          <a
-            href={links.questions}
-            className={buttonVariants({ variant: 'link' })}
-          >
-            {VOTES.questions}
-          </a>
-        )}
-      </div>
+          {links.questions && (
+            <a
+              href={links.questions}
+              className={buttonVariants({ variant: 'link' })}
+            >
+              {VOTES.questions}
+            </a>
+          )}
+        </div>
+      ) : deck.films.length > 0 ? (
+        <VotedActions
+          owner={owner}
+          questions={links.questions}
+          revote={links.revote}
+        />
+      ) : null}
     </div>
   )
 }
@@ -685,6 +694,7 @@ export function VoteScreen({
             revote: votePath('votar', link, { mudar: true }),
             questions,
           }}
+          owner={owner}
         />
       )}
     </section>
