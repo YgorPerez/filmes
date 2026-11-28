@@ -28,6 +28,7 @@ import {
   withAddition,
   type Billboard,
   type Engine,
+  sessionDeletion,
   type WaitingAnswers,
   type ErrorOutput,
   type Outcome,
@@ -181,6 +182,7 @@ export type CartazPage = {
   /** What the reading made of the acrescentar (#200). */
   reading?: PageReading
   sessionLink?: string | null
+  deletion?: { hasFacts: boolean }
   /** The Presentes' Perguntas par a par that wait for the Dono (#181). */
   pairwise?: ReadonlyArray<WaitingAnswers>
 }
@@ -291,7 +293,14 @@ export async function appCartazPage(
     appNotes(),
   )
   if (!made || made === 'unknown') return made
-  const page = { ...made, pairwise: await pairwiseWaiting(id, engine) }
+  const deletion = made.session.attendees.some((person) => person.owner)
+    ? await engine.run(sessionDeletion(id), { owner: viewer })
+    : null
+  const page = {
+    ...made,
+    pairwise: await pairwiseWaiting(id, engine),
+    ...(deletion?.exitCode === 0 && { deletion: deletion.output }),
+  }
   // A told Session is a record: only its own reactions, never the
   // Satisfação of now, which later Sessions change (#272). Contar and the
   // next Nova Sessão show that.

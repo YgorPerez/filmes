@@ -31,6 +31,8 @@ export const PARTICIPATION = {
     brokenLead:
       'O link pode ter vindo cortado ou ser de outra Sessão. Peça um novo pra quem te mandou.',
     closed: 'Essa Sessão já fechou',
+    deleted: 'Esta Sessão foi excluída',
+    deletedLead: 'O link deixou de aceitar votos e respostas.',
     /** What the night ended with: the chosen film, when the Feedback
      * named one. */
     closedLead: (chosen: string | null) =>

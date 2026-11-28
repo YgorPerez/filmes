@@ -32,6 +32,7 @@ export const ERROR_CODES = [
   'owner_exists',
   'unknown_session',
   'closed_session',
+  'deleted_session',
   'unknown_target',
   'unknown_film',
   'ambiguous_film',

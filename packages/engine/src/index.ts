@@ -185,6 +185,11 @@ export {
   type VetoPath,
   type VetoReport,
 } from './recommendation/vetoes.ts'
+export {
+  deleteSession,
+  sessionDeletion,
+  type DeleteSessionRequest,
+} from './sessions/delete.ts'
 export { sessionOrder } from './sessions/order.ts'
 export {
   currentVersion,

@@ -102,6 +102,7 @@ export const ERROR_CODES: Readonly<Record<string, string>> = {
   pessoa_existente: 'person_exists',
   dono_existente: 'owner_exists',
   sessao_desconhecida: 'unknown_session',
+  sessao_excluida: 'deleted_session',
   sessao_fechada: 'closed_session',
   alvo_desconhecido: 'unknown_target',
   filme_desconhecido: 'unknown_film',

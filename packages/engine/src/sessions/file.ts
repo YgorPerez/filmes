@@ -31,7 +31,13 @@
 //        - Filme
 //          - Evidência: ... · Fonte: IMDb · Força: forte · Tipo: metadado
 
-import { existsSync, readdirSync, renameSync, rmSync } from 'node:fs'
+import {
+  existsSync,
+  readdirSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
 import { basename, join } from 'node:path'
 import { Effect, Schema } from 'effect'
 import { compareTuple } from '../compat/compare.ts'
@@ -80,21 +86,50 @@ export const sessionPath = (
     return join(yield* sessionsFolder, `${id}.md`)
   })
 
-/** Every Session id in filmes-dados, sorted (`arquivo.ids`). */
-export const sessionIds: Effect.Effect<
-  ReadonlyArray<string>,
-  EngineError,
-  Environment
-> = Effect.flatMap(sessionsFolder, (folder) =>
-  Effect.sync(() =>
-    existsSync(folder)
-      ? readdirSync(folder, { withFileTypes: true })
-          .filter((entry) => entry.name.endsWith('.md'))
-          .map((entry) => entry.name.slice(0, -'.md'.length))
-          .sort((a, b) => compareTuple([a], [b]))
-      : [],
-  ),
-)
+const ERASED_SUFFIX = '.deleted'
+
+const idsWithSuffix = (suffix: string) =>
+  Effect.flatMap(sessionsFolder, (folder) =>
+    Effect.sync(() =>
+      existsSync(folder)
+        ? readdirSync(folder)
+            .filter((name) => name.endsWith(suffix))
+            .map((name) => name.slice(0, -suffix.length))
+            .sort((a, b) => compareTuple([a], [b]))
+        : [],
+    ),
+  )
+
+/** Session Markdown files, including files kept to rebuild their Fatos. */
+export const sessionIds = idsWithSuffix('.md')
+
+/** Erased ids remain reserved for old Session Links. The marker holds no
+ * Session contents. */
+export const erasedSessionIds = idsWithSuffix(ERASED_SUFFIX)
+
+const erasedPath = (file: string) =>
+  file.slice(0, -'.md'.length) + ERASED_SUFFIX
+
+export const eraseSessionFile = (id: string) =>
+  Effect.gen(function* () {
+    const file = yield* sessionPath(id)
+    yield* Effect.sync(() => {
+      const erased = erasedPath(file)
+      writeFileSync(erased, '', { flag: 'wx' })
+      try {
+        rmSync(file)
+      } catch (error) {
+        rmSync(erased)
+        throw error
+      }
+    })
+  })
+
+export const isDeleted = (front: YamlMapping): boolean =>
+  pyTruthy(front.get('deleted_on'))
+
+const deletedSession = () =>
+  engineError('deleted_session', 'Esta Sessão foi excluída')
 
 export interface SessionFile {
   readonly id: string
@@ -111,11 +146,13 @@ const PROTOTYPE_LINE = /^(\d+)\. (.+) \((tt\d+)\)$/gmu
 /** The Session's frontmatter and body (`arquivo.ler`): `unknown_session`
  * when there is no file, `invalid_data` without `date`, `attendees` or
  * `rule`. The prototype's rule and body-only list are read as today's. */
-export const readSession = (
+export const readSessionFile = (
   id: string,
 ): Effect.Effect<SessionFile, EngineError, Environment> =>
   Effect.gen(function* () {
     const file = yield* sessionPath(id)
+    if (yield* Effect.sync(() => existsSync(erasedPath(file))))
+      return yield* deletedSession()
     if (!(yield* Effect.sync(() => existsSync(file))))
       return yield* engineError(
         'unknown_session',
@@ -152,6 +189,15 @@ export const readSession = (
     return { id, frontmatter: front, body }
   })
 
+/** Read a Session for display or changes. Retained files are only read
+ * by consumers of their Fatos. */
+export const readSession = (id: string) =>
+  Effect.gen(function* () {
+    const session = yield* readSessionFile(id)
+    if (isDeleted(session.frontmatter)) return yield* deletedSession()
+    return session
+  })
+
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/u
 
 /** A text date as a `date` object. */
@@ -176,7 +222,8 @@ const datedReply = (reply: YamlMapping): YamlValue =>
 const dated = (front: YamlMapping): YamlMapping =>
   new Map(
     [...front].map(([key, value]): [string, YamlValue] => {
-      if (key === 'date' || key === 'redone_on') return [key, asDate(value)]
+      if (key === 'date' || key === 'redone_on' || key === 'deleted_on')
+        return [key, asDate(value)]
       if (key === 'replies') return [key, eachMapping(value, datedReply)]
       if (key === 'versions') return [key, eachMapping(value, dated)]
       if (key === 'feedback' && isMapping(value))
@@ -336,7 +383,12 @@ export const newSessionId = (
     for (let n = 1; ; n++) {
       const id = n === 1 ? base : `${base}-${n}`
       const file = yield* sessionPath(id)
-      if (!(yield* Effect.sync(() => existsSync(file)))) return id
+      if (
+        !(yield* Effect.sync(
+          () => existsSync(file) || existsSync(erasedPath(file)),
+        ))
+      )
+        return id
     }
   })
 

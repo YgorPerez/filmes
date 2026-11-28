@@ -27,6 +27,7 @@ import { ChosenReactions } from './billboard-chosen'
 import { Icon } from './kit/icon'
 import { MENU_ROW } from './kit/menu-row'
 import { PairwiseAnswers } from './pairwise-answers'
+import { SessionDelete } from './session-delete'
 import { ShareSessionLink } from './session-link-share'
 import { SESSIONS, spoken } from './sessions.copy'
 
@@ -271,7 +272,7 @@ function UnknownSession() {
 function SessionHead({ page }: { page: CartazPage }) {
   const s = page.session
   const canEditAttendees = s.attendees.some((attendee) => attendee.owner)
-  const menu = s.open || canEditAttendees
+  const menu = s.open || canEditAttendees || page.deletion !== undefined
   return (
     <header className="flex items-start justify-between gap-md">
       <div className="flex min-w-0 flex-col gap-2xs">
@@ -283,47 +284,65 @@ function SessionHead({ page }: { page: CartazPage }) {
           <span className="min-w-0 truncate">{names(s.attendees)}</span>
         </p>
       </div>
-      {menu && (
-        <details
-          ref={closeOnOutside}
-          name={HEAD_POPOVERS}
-          className="relative shrink-0"
-        >
-          <summary
-            aria-label={SESSIONS.session.menu}
-            className="grid size-touch cursor-pointer list-none place-items-center rounded-round border-(length:--border-width-stroke) border-rule bg-surface font-display text-title leading-none text-ink [&::-webkit-details-marker]:hidden"
-          >
-            <span aria-hidden="true">⋯</span>
-          </summary>
-          <div className="absolute top-full right-0 z-20 mt-xs flex w-[240px] max-w-[calc(100vw-32px)] flex-col rounded-card border border-rule bg-surface p-xs">
-            <ul className="flex flex-col">
-              {s.open && (
-                <li>
-                  <a href={feedbackPath(s.id)} className={MENU_ROW}>
-                    <Icon name="film" />
-                    {SESSIONS.list.feedback}
-                  </a>
-                </li>
-              )}
-              {canEditAttendees && (
-                <li>
-                  <a
-                    href={`${sessionPath(s.id)}?editar=presentes`}
-                    className={MENU_ROW}
-                  >
-                    <Icon name="people" />
-                    {SESSIONS.editAttendees.title}
-                  </a>
-                </li>
-              )}
-            </ul>
-            {page.sessionLink && (
-              <ShareSessionLink key={s.id} url={page.sessionLink} />
-            )}
-          </div>
-        </details>
-      )}
+      {menu && <SessionMenu page={page} canEditAttendees={canEditAttendees} />}
     </header>
+  )
+}
+
+/** The head's ⋯ menu: "Contar como foi" while open, editing the Presentes
+ * (#371), deleting the Session (#370) and the Link para os Presentes. */
+function SessionMenu({
+  page,
+  canEditAttendees,
+}: {
+  page: CartazPage
+  canEditAttendees: boolean
+}) {
+  const s = page.session
+  return (
+    <details
+      ref={closeOnOutside}
+      name={HEAD_POPOVERS}
+      className="relative shrink-0"
+    >
+      <summary
+        aria-label={SESSIONS.session.menu}
+        className="grid size-touch cursor-pointer list-none place-items-center rounded-round border-(length:--border-width-stroke) border-rule bg-surface font-display text-title leading-none text-ink [&::-webkit-details-marker]:hidden"
+      >
+        <span aria-hidden="true">⋯</span>
+      </summary>
+      <div className="absolute top-full right-0 z-20 mt-xs flex w-[240px] max-w-[calc(100vw-32px)] flex-col rounded-card border border-rule bg-surface p-xs">
+        <ul className="flex flex-col">
+          {s.open && (
+            <li>
+              <a href={feedbackPath(s.id)} className={MENU_ROW}>
+                <Icon name="film" />
+                {SESSIONS.list.feedback}
+              </a>
+            </li>
+          )}
+          {canEditAttendees && (
+            <li>
+              <a
+                href={`${sessionPath(s.id)}?editar=presentes`}
+                className={MENU_ROW}
+              >
+                <Icon name="people" />
+                {SESSIONS.editAttendees.title}
+              </a>
+            </li>
+          )}
+          {page.deletion && (
+            <li>
+              <SessionDelete session={s.id} hasFacts={page.deletion.hasFacts} />
+            </li>
+          )}
+        </ul>
+        {page.sessionLink && (
+          <ShareSessionLink key={s.id} url={page.sessionLink} />
+        )}
+      </div>
+    </details>
   )
 }
 

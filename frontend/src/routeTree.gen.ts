@@ -48,6 +48,7 @@ import { Route as ParticiparPerguntasEnviarRouteImport } from './routes/particip
 import { Route as PessoasPessoaAcaoRouteImport } from './routes/pessoas/$pessoa/acao'
 import { Route as PessoasNovaEnviarRouteImport } from './routes/pessoas/nova/enviar'
 import { Route as SessoesSessaoEditarPresentesRouteImport } from './routes/sessoes/$sessao/editar-presentes'
+import { Route as SessoesSessaoExcluirRouteImport } from './routes/sessoes/$sessao/excluir'
 import { Route as SessoesSessaoPerguntasRouteImport } from './routes/sessoes/$sessao/perguntas'
 import { Route as SessoesSessaoResponderRouteImport } from './routes/sessoes/$sessao/responder'
 import { Route as SessoesNovaEnviarRouteImport } from './routes/sessoes/nova/enviar'
@@ -254,6 +255,11 @@ const SessoesSessaoEditarPresentesRoute =
     path: '/sessoes/$sessao/editar-presentes',
     getParentRoute: () => rootRouteImport,
   } as any)
+const SessoesSessaoExcluirRoute = SessoesSessaoExcluirRouteImport.update({
+  id: '/sessoes/$sessao/excluir',
+  path: '/sessoes/$sessao/excluir',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SessoesSessaoPerguntasRoute = SessoesSessaoPerguntasRouteImport.update({
   id: '/sessoes/$sessao/perguntas',
   path: '/sessoes/$sessao/perguntas',
@@ -325,6 +331,7 @@ export interface FileRoutesByFullPath {
   '/pessoas/$pessoa/acao': typeof PessoasPessoaAcaoRoute
   '/pessoas/nova/enviar': typeof PessoasNovaEnviarRoute
   '/sessoes/$sessao/editar-presentes': typeof SessoesSessaoEditarPresentesRoute
+  '/sessoes/$sessao/excluir': typeof SessoesSessaoExcluirRoute
   '/sessoes/$sessao/perguntas': typeof SessoesSessaoPerguntasRoute
   '/sessoes/$sessao/responder': typeof SessoesSessaoResponderRoute
   '/sessoes/nova/enviar': typeof SessoesNovaEnviarRoute
@@ -371,6 +378,7 @@ export interface FileRoutesByTo {
   '/pessoas/$pessoa/acao': typeof PessoasPessoaAcaoRoute
   '/pessoas/nova/enviar': typeof PessoasNovaEnviarRoute
   '/sessoes/$sessao/editar-presentes': typeof SessoesSessaoEditarPresentesRoute
+  '/sessoes/$sessao/excluir': typeof SessoesSessaoExcluirRoute
   '/sessoes/$sessao/perguntas': typeof SessoesSessaoPerguntasRoute
   '/sessoes/$sessao/responder': typeof SessoesSessaoResponderRoute
   '/sessoes/nova/enviar': typeof SessoesNovaEnviarRoute
@@ -420,6 +428,7 @@ export interface FileRoutesById {
   '/pessoas/$pessoa/acao': typeof PessoasPessoaAcaoRoute
   '/pessoas/nova/enviar': typeof PessoasNovaEnviarRoute
   '/sessoes/$sessao/editar-presentes': typeof SessoesSessaoEditarPresentesRoute
+  '/sessoes/$sessao/excluir': typeof SessoesSessaoExcluirRoute
   '/sessoes/$sessao/perguntas': typeof SessoesSessaoPerguntasRoute
   '/sessoes/$sessao/responder': typeof SessoesSessaoResponderRoute
   '/sessoes/nova/enviar': typeof SessoesNovaEnviarRoute
@@ -469,6 +478,7 @@ export interface FileRouteTypes {
     | '/pessoas/$pessoa/acao'
     | '/pessoas/nova/enviar'
     | '/sessoes/$sessao/editar-presentes'
+    | '/sessoes/$sessao/excluir'
     | '/sessoes/$sessao/perguntas'
     | '/sessoes/$sessao/responder'
     | '/sessoes/nova/enviar'
@@ -515,6 +525,7 @@ export interface FileRouteTypes {
     | '/pessoas/$pessoa/acao'
     | '/pessoas/nova/enviar'
     | '/sessoes/$sessao/editar-presentes'
+    | '/sessoes/$sessao/excluir'
     | '/sessoes/$sessao/perguntas'
     | '/sessoes/$sessao/responder'
     | '/sessoes/nova/enviar'
@@ -563,6 +574,7 @@ export interface FileRouteTypes {
     | '/pessoas/$pessoa/acao'
     | '/pessoas/nova/enviar'
     | '/sessoes/$sessao/editar-presentes'
+    | '/sessoes/$sessao/excluir'
     | '/sessoes/$sessao/perguntas'
     | '/sessoes/$sessao/responder'
     | '/sessoes/nova/enviar'
@@ -602,6 +614,7 @@ export interface RootRouteChildren {
   PessoasPessoaAcaoRoute: typeof PessoasPessoaAcaoRoute
   PessoasNovaEnviarRoute: typeof PessoasNovaEnviarRoute
   SessoesSessaoEditarPresentesRoute: typeof SessoesSessaoEditarPresentesRoute
+  SessoesSessaoExcluirRoute: typeof SessoesSessaoExcluirRoute
   SessoesSessaoPerguntasRoute: typeof SessoesSessaoPerguntasRoute
   SessoesSessaoResponderRoute: typeof SessoesSessaoResponderRoute
   SessoesNovaEnviarRoute: typeof SessoesNovaEnviarRoute
@@ -884,6 +897,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SessoesSessaoEditarPresentesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/sessoes/$sessao/excluir': {
+      id: '/sessoes/$sessao/excluir'
+      path: '/sessoes/$sessao/excluir'
+      fullPath: '/sessoes/$sessao/excluir'
+      preLoaderRoute: typeof SessoesSessaoExcluirRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sessoes/$sessao/perguntas': {
       id: '/sessoes/$sessao/perguntas'
       path: '/sessoes/$sessao/perguntas'
@@ -1014,6 +1034,7 @@ const rootRouteChildren: RootRouteChildren = {
   PessoasPessoaAcaoRoute: PessoasPessoaAcaoRoute,
   PessoasNovaEnviarRoute: PessoasNovaEnviarRoute,
   SessoesSessaoEditarPresentesRoute: SessoesSessaoEditarPresentesRoute,
+  SessoesSessaoExcluirRoute: SessoesSessaoExcluirRoute,
   SessoesSessaoPerguntasRoute: SessoesSessaoPerguntasRoute,
   SessoesSessaoResponderRoute: SessoesSessaoResponderRoute,
   SessoesNovaEnviarRoute: SessoesNovaEnviarRoute,

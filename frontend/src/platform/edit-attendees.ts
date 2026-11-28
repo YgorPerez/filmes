@@ -5,6 +5,9 @@ import { appEngine } from './engine'
 import { appPoster, formPoster, seeOther } from './form-post'
 import { appNotes } from './notes'
 
+/** The Session left the open list (unknown, counted or deleted): back to it. */
+const GONE = new Set(['unknown_session', 'closed_session', 'deleted_session'])
+
 export async function serveAttendeeEdit(request: Request, session: string) {
   const { owner, origin } = appPoster(request)
   const poster = formPoster(request, owner, origin)
@@ -29,8 +32,7 @@ export async function serveAttendeeEdit(request: Request, session: string) {
   )
   if (edited.exitCode !== 0) {
     const { code, message } = edited.output.error
-    if (code === 'unknown_session' || code === 'closed_session')
-      return seeOther(path)
+    if (GONE.has(code)) return seeOther(path)
     console.error(`engine: ${code}: ${message}`)
     return seeOther(`${editor}&erroPresentes=falha`)
   }

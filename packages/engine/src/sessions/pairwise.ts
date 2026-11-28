@@ -121,6 +121,23 @@ const filmsOf = (answer: Stored): string[] =>
 const waits = (answer: Stored) =>
   answer.recorded_on === undefined && answer.discarded_on === undefined
 
+/** Discard the answers that have not become taste yet. */
+export function discardWaitingAnswers(
+  front: Map<string, YamlValue>,
+  today: string,
+) {
+  const answers = storedAnswers(front)
+  if (answers.length === 0) return
+  front.set(
+    'pairwise',
+    answers.map((answer) =>
+      isMapping(answer) && waits(plain(answer))
+        ? new Map([...answer, ['discarded_on', today]])
+        : answer,
+    ),
+  )
+}
+
 const invalid = (message: string) => engineError('invalid_usage', message)
 
 /** The open Session, with `person` among its Presentes. */
