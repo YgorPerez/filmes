@@ -16,6 +16,7 @@ import {
   recordFeedback,
   votedBy,
   latestVotes,
+  newSinceVote,
   yamlToJson,
   type CastVotes,
   type CastVotesRequest,
@@ -427,6 +428,38 @@ describe('castVotes', () => {
       [f[2], 'yes'],
     ])
     expect(latestVotes(frontmatter, 'ninguem').size).toBe(0)
+  })
+
+  test('newSinceVote is what came in after a Presente’s last Voto; nothing before her first', async () => {
+    const fixture = useFixture()
+    const { id, f, attendees } = await open(fixture)
+    const owner = attendees.find((p) => p !== 'iara')!
+    const first = await vote(fixture, {
+      session: id,
+      person: 'iara',
+      version: 1,
+      votes: [{ film: f[1]!, vote: 'no' }],
+    })
+    const second = await redo(fixture, id, first.keep)
+    const came = second.films
+      .map((film) => film.id)
+      .filter((x) => !f.includes(x))
+    expect(came).toHaveLength(1)
+
+    const read = async () => (await fixture.ok(readSession(id))).frontmatter
+    // Iara voted on version 1: the film that came in with version 2 is new
+    // to her. The Dono has not voted yet, so nothing is new to her.
+    expect([...newSinceVote(await read(), 'iara')]).toEqual(came)
+    expect(newSinceVote(await read(), owner).size).toBe(0)
+
+    // Once she votes on version 2, it is no longer new.
+    await vote(fixture, {
+      session: id,
+      person: 'iara',
+      version: 2,
+      votes: [{ film: came[0]!, vote: 'yes' }],
+    })
+    expect(newSinceVote(await read(), 'iara').size).toBe(0)
   })
 
   test('two Presentes’ no in the same version are both swapped; votes off the screen write nothing but still redo', async () => {

@@ -7,7 +7,8 @@
 //
 // Every answer revalidates the link (`resolveSessionLink`) with what the
 // request carries, and takes the Session and the Presente from it, never
-// from the form. The engine checks the pair is one it asks next. The app's
+// from the form, and never as the opener (no viewer: her Perguntas are not
+// the link's). The engine checks the pair is one it asks next. The app's
 // engine is wired in `billboard.ts`. Server only.
 
 import {
@@ -51,7 +52,7 @@ export async function pairwisePage(
   engine: Engine,
   database: string,
 ): Promise<PairwisePage | null> {
-  const link = await resolveSessionLink(search, engine, database)
+  const link = await resolveSessionLink(search, engine, database, null)
   if (!link?.selected) return null
   const asked = await engine.run(
     pairwiseQuestions({ session: link.session, person: link.selected.person }),
@@ -98,7 +99,7 @@ export async function pairwiseAnswerAction(
     chave: field(form, 'chave'),
     presente: field(form, 'presente'),
   })
-  const link = await resolveSessionLink(search, engine, database)
+  const link = await resolveSessionLink(search, engine, database, null)
   if (!link?.selected || !search.chave) return seeOther('/participar')
   const person = link.selected.person
   const back = pairwisePath(link.session, search.chave, person)

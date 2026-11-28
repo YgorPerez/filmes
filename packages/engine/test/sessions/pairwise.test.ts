@@ -232,6 +232,7 @@ describe('decidePairwise', () => {
             other: { id: 'tt9000202', title: 'O Último Bonde', year: 2019 },
           },
         ],
+        seen: [],
       },
       {
         person: 'quim',
@@ -242,6 +243,7 @@ describe('decidePairwise', () => {
             other: { id: 'tt9000101', title: 'O Farol de Areia', year: 2012 },
           },
         ],
+        seen: [],
       },
     ])
   })

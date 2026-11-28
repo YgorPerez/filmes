@@ -16,6 +16,10 @@
 // - A film no longer on the current screen is skipped, with a warning: the
 //   deck was of an older version and another Presente's no redid it.
 // - Votos are no Fato: no Nota, no Declarado, nothing about taste.
+// - The same submission carries the Presente's Vi e gostei / Vi e não
+//   gostei (`seen`, `seen-gestures.ts`), which are no Voto: the film leaves
+//   as a Já vi, and her taste is written now (the Session's Dono) or after
+//   the Dono's yes (a guest). A gesture wins over a Voto on the same film.
 //
 // It regenerates nothing. Like the Cartaz's reply (`answerBillboard`), it
 // returns `regenerate`, `keep` and `dropped`, and whoever asked redoes the
@@ -37,7 +41,7 @@ import type { DropCause } from '../recommendation/kept.ts'
 import type { EngineServices } from '../runtime/Engine.ts'
 import { engineError, type EngineError } from '../runtime/EngineError.ts'
 import { Run } from '../runtime/Run.ts'
-import type { SqliteError } from '../sqlite/Sqlite.ts'
+import type { Connection, SqliteError } from '../sqlite/Sqlite.ts'
 import { sessionOwner } from './feedback.ts'
 import {
   currentVersion,
@@ -49,6 +53,13 @@ import {
   type ShownFilm,
 } from './file.ts'
 import { authorFor } from './open.ts'
+import { resolvePerson } from '../people/people.ts'
+import {
+  addGestures,
+  gesturedFilms,
+  recordGestures,
+  type SeenGesture,
+} from './seen-gestures.ts'
 
 /** A Presente's answer to one film. */
 export type VoteValue = 'yes' | 'no'
@@ -64,6 +75,8 @@ export interface CastVotesRequest {
     readonly film: string
     readonly vote: VoteValue
   }>
+  /** Her Vi e gostei / Vi e não gostei on films of the screen (#378). */
+  readonly seen?: ReadonlyArray<SeenGesture>
   /** Her Ordem (#379): her yes films, the one she wants most first. Only
    * films she says yes to in this submission count. */
   readonly ranking?: ReadonlyArray<string>
@@ -73,11 +86,12 @@ export interface CastVotes {
   readonly session: { readonly id: string; readonly file: string }
   readonly version: number
   readonly currentVersion: number
-  /** A film was swapped or the Ordens changed the screen's order. */
+  /** A film was swapped or the yes votes changed the screen's order. */
   readonly regenerate: boolean
   /** The ids that stay, in the current screen's order. */
   readonly keep: ReadonlyArray<string>
-  /** What left the current screen: each no is `swapped`. */
+  /** What left the current screen: each no is `swapped`, each Vi e
+   * gostei / Vi e não gostei is `seen`. */
   readonly dropped: ReadonlyArray<ShownFilm & DropCause>
   readonly warnings: ReadonlyArray<string>
 }
@@ -130,6 +144,29 @@ export const latestVotes = (
     votes.set(film, vote)
   }
   return votes
+}
+
+/** The films of the current screen that came in after `person`'s last
+ * Voto in the Session: none shown in or before the version her last
+ * submission went to. Before her first Voto nothing is new to her (#380).
+ * A film that left and came back is not new. */
+export const newSinceVote = (
+  front: YamlMapping,
+  person: string,
+): ReadonlySet<string> => {
+  const versions = sessionVersions(front)
+  const last = versions.findLastIndex((version) =>
+    storedVotes(version).some((v) => v.person === person),
+  )
+  if (last < 0) return new Set()
+  const seen = new Set(
+    versions.slice(0, last + 1).flatMap((v) => shownFilms(v).map((f) => f.id)),
+  )
+  return new Set(
+    shownFilms(currentVersion(front))
+      .map((f) => f.id)
+      .filter((id) => !seen.has(id)),
+  )
 }
 
 /** `person`'s Ordem (#379): the one of her latest submission, or null when
@@ -238,43 +275,82 @@ const addVotes = (
   }
 }
 
-/** Records the Votos inside the write. */
-const recordVotes = (request: CastVotesRequest, today: string) =>
+/** The Votos and gestures of the request on the current screen; the
+ * others are warned about. A gesture wins over a Voto on the same film. */
+const onTheScreen = (
+  request: CastVotesRequest,
+  screen: ReadonlyArray<ShownFilm>,
+  currentNumber: number,
+) => {
+  const onScreen = new Set(screen.map((f) => f.id))
+  const warnings: string[] = []
+  const off = (what: string, film: string) =>
+    warnings.push(
+      `${what} ${film} ignorado: o filme não está mais na tela da versão ${currentNumber}`,
+    )
+  const seen = new Map<string, SeenGesture>()
+  for (const gesture of request.seen ?? [])
+    if (onScreen.has(gesture.film)) seen.set(gesture.film, gesture)
+    else off('vi', gesture.film)
+  const cast = new Map<string, VoteValue>()
+  for (const { film, vote } of request.votes)
+    if (!onScreen.has(film)) off('voto em', film)
+    else if (!seen.has(film)) cast.set(film, vote)
+  return { cast, seen: [...seen.values()], warnings }
+}
+
+/** What leaves the current screen and what stays, in its order. */
+const leaving = (front: YamlMapping, screen: ReadonlyArray<ShownFilm>) => {
+  const dropped: Array<ShownFilm & DropCause> = []
+  const keep: string[] = []
+  // What this version swapped or saw before stays out too: a redo that
+  // failed after an earlier no is done now.
+  const out = new Set(listOf(front.get('swapped')).map(pyStrValue))
+  const gestured = gesturedFilms(front)
+  for (const film of screen) {
+    const people = gestured.get(film.id)
+    if (people !== undefined) dropped.push({ ...film, cause: 'seen', people })
+    else if (out.has(film.id)) dropped.push({ ...film, cause: 'swapped' })
+    else keep.push(film.id)
+  }
+  return { dropped, keep }
+}
+
+/** Records the Votos and gestures inside the write. `owner` is the
+ * Session's Dono, whose gestures go into her file now. */
+const recordVotes = (
+  db: Connection | null,
+  request: CastVotesRequest,
+  today: string,
+  owner: string | undefined,
+) =>
   Effect.gen(function* () {
     const id = request.session
     const { session, front, current, currentNumber } =
       yield* openForVotes(request)
 
     const screen = shownFilms(current)
-    const onScreen = new Set(screen.map((f) => f.id))
-    const warnings: string[] = []
-    const cast = new Map<string, VoteValue>()
-    for (const { film, vote } of request.votes)
-      if (onScreen.has(film)) cast.set(film, vote)
-      else
-        warnings.push(
-          `voto em ${film} ignorado: o filme não está mais na tela da versão ${currentNumber}`,
-        )
-
+    const { cast, seen, warnings } = onTheScreen(request, screen, currentNumber)
+    const now = request.person === owner
+    if (now && seen.length > 0)
+      yield* recordGestures(db, {
+        person: yield* resolvePerson(request.person),
+        gestures: seen,
+        session: id,
+        today,
+      })
+    addGestures(front, request.person, seen, today, now ? today : null)
     const ranking = [
       ...new Set(
         (request.ranking ?? []).filter((film) => cast.get(film) === 'yes'),
       ),
     ]
     const before = latestRanking(front, request.person) ?? []
-    if (cast.size > 0) {
-      addVotes(front, request.person, cast, ranking, today)
+    if (cast.size > 0) addVotes(front, request.person, cast, ranking, today)
+    if (cast.size > 0 || seen.length > 0)
       yield* writeSession(id, front, session.body)
-    }
 
-    const dropped: Array<ShownFilm & DropCause> = []
-    const keep: string[] = []
-    // What this version swapped before stays out too: a redo that
-    // failed after an earlier no is done now.
-    const out = new Set(listOf(front.get('swapped')).map(pyStrValue))
-    for (const film of screen)
-      if (out.has(film.id)) dropped.push({ ...film, cause: 'swapped' })
-      else keep.push(film.id)
+    const { dropped, keep } = leaving(front, screen)
     const sums = rankSums(front, keep)
     const reordered =
       sums !== undefined &&
@@ -308,9 +384,10 @@ export const castVotes = (
     const id = request.session
     const { today } = yield* Run
     const writer = yield* DataWriter
-    const author = yield* authorFor(yield* sessionOwner(id))
+    const owner = yield* sessionOwner(id)
+    const author = yield* authorFor(owner)
     return yield* writer.writeFiles(
       { author, message: `vote session ${id}` },
-      () => recordVotes(request, today),
+      (db) => recordVotes(db, request, today, owner),
     )
   })

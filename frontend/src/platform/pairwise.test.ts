@@ -175,6 +175,7 @@ test('the Dono sees the waiting answers and records them on her yes', async () =
             other: { id: 'tt9000201', title: 'Ponte Aérea', year: 2016 },
           },
         ],
+        seen: [],
       },
     ])
 

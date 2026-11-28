@@ -33,6 +33,9 @@ export function PriceSticker({
 const BIG = 'text-[15px]/none font-extrabold tracking-[0.06em]'
 
 const KINDS = {
+  /** Yellow NOVO, on a film that came in: on the Cartaz, with this
+   * version; on the swipe and the ranking, after her last Voto (#380). */
+  new: 'rotate-9 bg-sticker-yellow px-sm pt-xs pb-[5px] text-sticker text-on-sticker',
   /** Pink TROCAR, slapped on the cover. */
   swap: `-rotate-9 bg-sticker-pink px-md pt-[7px] pb-xs text-on-sticker ${BIG}`,
   /** Green SIM, on the Link da Sessão's card dragged to the right (#275);
@@ -43,7 +46,7 @@ const KINDS = {
   seen: `-rotate-9 border-2 border-ink bg-surface px-md pt-[5px] pb-2xs text-ink ${BIG}`,
 } as const
 
-/** A state sticker: TROCAR, SIM or JÁ VI. */
+/** A state sticker: NOVO, TROCAR, SIM or JÁ VI. */
 export function Sticker({
   kind,
   children,
@@ -59,5 +62,18 @@ export function Sticker({
     >
       {children}
     </span>
+  )
+}
+
+/** The word on the NOVO sticker. */
+export const NEW_STICKER = 'novo'
+
+/** The yellow NOVO sticker, for any film that came in (#380): the Cartaz
+ * card, the swipe and the ranking place it the same way. */
+export function NewSticker({ className = '' }: { className?: string }) {
+  return (
+    <Sticker kind="new" className={className}>
+      {NEW_STICKER}
+    </Sticker>
   )
 }

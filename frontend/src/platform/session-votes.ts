@@ -1,15 +1,19 @@
 // The group swipe on the Link da Sessão (#182). A Presente votes yes or no
-// on each film of the screen and puts her yes films in her Ordem (#379);
-// the deck's form posts the Votos (`sim`, `nao`) and the Ordem (`ordem`,
-// in order) to `/participar/votos`. A no is a Trocar from that Presente:
-// the Session is redone with the films that stay (`recommendSession` with
-// `keep`, from the request the current version asked). An Ordem can also
-// redo the Session on its own by changing the order. Votos never touch taste. Server only.
+// on each film of the screen, or says she saw it and liked it or not (Vi e
+// gostei / Vi e não gostei, #378), and puts her yes films in her Ordem
+// (#379); the deck's form posts it all (the Ordem as `ordem`, in order) to
+// `/participar/votos`. A "vi" takes the film out like a no, and her taste
+// waits for the Dono's yes (her own goes in at once). A no is a Trocar
+// from that Presente: the Session is redone with the films that stay
+// (`recommendSession` with `keep`, from the request the current version
+// asked). An Ordem can also redo the Session on its own by changing the
+// order. Votos never touch taste. Server only.
 // Each film of the deck carries its full sheet (#377): the public facts for
 // anyone, and only the chosen Presente's own Evidence and Nota prevista.
 //
 // Every post revalidates the link first (`resolveSessionLink`, with a
-// Presente chosen) and takes only a form of this site (`same-site.ts`). The Session is
+// Presente chosen; the opener only by her login, #376) and takes only a
+// form of this site (`same-site.ts`). The Session is
 // derived from the link, never from the form. Votos and the redo of one
 // Session run one after another, so a redo always keeps the films of the
 // screen that is current when it starts.
@@ -131,8 +135,9 @@ export async function voteDeck(
   search: ReturnType<typeof sessionLinkSearch> & { fora?: string | undefined },
   engine: Engine,
   database: string,
+  viewer: string | null,
 ): Promise<VoteDeck | null> {
-  const link = await resolveSessionLink(search, engine, database)
+  const link = await resolveSessionLink(search, engine, database, viewer)
   if (!link?.selected) return null
   const { people, sheets } = await filmSheets(
     engine,
@@ -215,12 +220,14 @@ async function redoKeeping(
 
 /** `POST /participar/votos?sessao=…&chave=…&presente=…`: records the
  * chosen Presente's Votos, redoes the Session if a film left or the order
- * changed, and returns to the deck with what happened. */
+ * changed, and returns to the deck with what happened. `viewer` is the
+ * logged-in Dono's Pessoa, or null: only she votes as the opener (#376). */
 export async function voteAction(
   request: Request,
   engine: Engine,
   database: string,
   origin: string | undefined,
+  viewer: string | null,
 ): Promise<Response> {
   if (!fromThisSite(request, origin))
     return new Response('Origem recusada', { status: 403 })
@@ -235,7 +242,7 @@ export async function voteAction(
     )
   const form = await request.formData()
   return oneAtATime(search.sessao ?? '', async () => {
-    const link = await resolveSessionLink(search, engine, database)
+    const link = await resolveSessionLink(search, engine, database, viewer)
     if (!link?.selected) return back()
     const onScreen = new Set(link.films.map((f) => f.id))
     // A sim on a film that already left: the engine skips it, and the
@@ -255,12 +262,23 @@ export async function voteAction(
       ...filmsOf(form, 'sim').map((film) => ({ film, vote: 'yes' as const })),
       ...filmsOf(form, 'nao').map((film) => ({ film, vote: 'no' as const })),
     ]
+    const seen = [
+      ...filmsOf(form, 'gostei').map((film) => ({
+        film,
+        reaction: 'like' as const,
+      })),
+      ...filmsOf(form, 'naogostei').map((film) => ({
+        film,
+        reaction: 'dislike' as const,
+      })),
+    ]
     const cast = await engine.run(
       castVotes({
         session: link.session,
         person: link.selected.person,
         version: Number(form.get('versao')) || link.version,
         votes,
+        seen,
         ranking: filmsOf(form, 'ordem'),
       }),
     )
