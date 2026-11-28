@@ -156,7 +156,10 @@ const competitionSection = (
     if (!lead && headingsOf(body).length > 0) {
       const inner = competitionSection(body)
       if (inner !== undefined)
-        return { heading: `${heading.text} > ${inner.heading}`, body: inner.body }
+        return {
+          heading: `${heading.text} > ${inner.heading}`,
+          body: inner.body,
+        }
     }
     return { heading: heading.text, body }
   }
@@ -258,8 +261,9 @@ const articlesOf = (rows: ReadonlyArray<Binding>): ReadonlyArray<Article> => {
     const url = row['article']?.value
     if (festival === undefined || edition === undefined || url === undefined)
       continue
-    const title = decodeURIComponent(url.slice(url.indexOf('/wiki/') + 6))
-      .replaceAll('_', ' ')
+    const title = decodeURIComponent(
+      url.slice(url.indexOf('/wiki/') + 6),
+    ).replaceAll('_', ' ')
     if (!byTitle.has(title)) byTitle.set(title, { festival, edition, title })
   }
   return [...byTitle.values()].sort((a, b) => compare(a.title, b.title))

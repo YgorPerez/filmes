@@ -38,9 +38,13 @@ export const curatedLists: Signal = {
         (yield* round.db.all(
           `SELECT filme_id, entidade_id FROM arestas
             WHERE predicado IN ('premio', 'indicacao')
-              AND filme_id IN (SELECT value FROM json_each(?))`,
-          candidates,
-        )).map((row) => `${String(row['filme_id'])} ${String(row['entidade_id'])}`),
+              AND entidade_id IN (SELECT value FROM json_each(?))`,
+          JSON.stringify(
+            Object.values(lists).flatMap((list) => list.top_prize ?? []),
+          ),
+        )).map(
+          (row) => `${String(row['filme_id'])} ${String(row['entidade_id'])}`,
+        ),
       )
       const rows = yield* round.db.all(
         `SELECT filme_id, entidade_id, fato_id, fonte, data
