@@ -338,6 +338,10 @@ export const imdbRatingStrength = (): Strength => 'strong'
 /** A Wikidata award or nomination is exact metadata. */
 export const awardStrength = (): Strength => 'strong'
 
+/** A film on a curated list (the Criterion Collection, a festival's main
+ * competition) is exact metadata, as an award (#411). */
+export const curatedListStrength = (): Strength => 'strong'
+
 /** The critics' score OMDb gives (Rotten Tomatoes, Metacritic) is the
  * aggregator's own number: exact metadata. The bonus size comes from the
  * score, not from the strength. */

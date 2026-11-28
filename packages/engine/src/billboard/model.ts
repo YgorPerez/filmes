@@ -237,6 +237,9 @@ export interface BillboardFilm {
   readonly chips: ReadonlyArray<string>
   /** The major awards and nominations saved with the version. */
   readonly awards?: ReadonlyArray<string>
+  /** The curated lists saved with the version: "na Criterion Collection",
+   * "na competição de Cannes" (#411). */
+  readonly curatedLists?: ReadonlyArray<string>
   /** The critics' score saved with the version: "93% no Rotten
    * Tomatoes". */
   readonly critics?: ReadonlyArray<string>
@@ -860,6 +863,7 @@ const filmCard = (
     const labels = (key: string) =>
       listOf(recorded?.get(key)).filter((label) => typeof label === 'string')
     const awards = labels('awards')
+    const curatedLists = labels('curated_lists')
     const critics = labels('critics')
     const withoutFact = Object.entries(film.evidence)
       .filter(([, evidence]) => !evidence.some(isFact))
@@ -894,6 +898,7 @@ const filmCard = (
       votesText: votesText(header.imdbVotes),
       chips,
       ...(awards.length > 0 && { awards }),
+      ...(curatedLists.length > 0 && { curatedLists }),
       ...(critics.length > 0 && { critics }),
       synopsis: firstSentence(synopsis?.text ?? null),
       ...(synopsis?.language === 'en' && { synopsisLanguage: 'en' as const }),

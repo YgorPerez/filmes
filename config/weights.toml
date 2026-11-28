@@ -172,6 +172,12 @@ min_users = 10
 [awards]
 weight = 0.1
 
+# Bônus por filme em pelo menos uma lista de config/curated_lists.toml (a
+# Criterion Collection, a competição de Cannes, Berlim ou Veneza), à parte do
+# de [awards]. 0,1 de partida, como o dos prêmios, até o `evaluate` (#411).
+[curated_lists]
+weight = 0.1
+
 # Bônus da nota da crítica (Rotten Tomatoes e Metacritic, da resposta do OMDb),
 # só para os filmes que chegam às primeiras [constraints] on_demand_reach
 # posições: peso × a média das notas, de 0 a 1. Filme sem nota ganha 0.

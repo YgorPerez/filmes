@@ -48,6 +48,13 @@ const TEXTS: ReadonlyArray<Attribution> = [
   },
   TRAKT_ATTRIBUTION,
   TMDB_ATTRIBUTION,
+  {
+    source: 'Wikipedia',
+    text:
+      'Competições de Cannes, Berlim e Veneza das páginas da Wikipedia em inglês ' +
+      '(https://en.wikipedia.org), sob licença CC BY-SA 4.0 ' +
+      '(https://creativecommons.org/licenses/by-sa/4.0/)',
+  },
 ]
 
 /** The sources on the credits page, in the order it shows them. */
@@ -55,6 +62,7 @@ export type CreditSource =
   | 'IMDb'
   | 'TMDB'
   | 'Wikidata'
+  | 'Wikipedia'
   | 'MovieLens'
   | 'Tag Genome'
   | 'OMDb'
@@ -97,6 +105,11 @@ export const CREDITS: ReadonlyArray<Credit> = [
     source: 'Wikidata',
     url: 'https://www.wikidata.org',
     notice: 'Dados do Wikidata, em domínio público (CC0).',
+  },
+  {
+    source: 'Wikipedia',
+    url: 'https://en.wikipedia.org',
+    notice: textOf('Wikipedia'),
   },
   {
     source: 'MovieLens',

@@ -98,6 +98,9 @@ export const Weights = Schema.Struct({
   awards: Schema.Struct({
     weight: Weight.check(Schema.isGreaterThanOrEqualTo(0)),
   }),
+  curated_lists: Schema.Struct({
+    weight: Weight.check(Schema.isGreaterThanOrEqualTo(0)),
+  }),
   critics: Schema.Struct({
     weight: Weight.check(Schema.isGreaterThanOrEqualTo(0)),
   }),

@@ -17,8 +17,9 @@ describe('the credits', () => {
       'Does the Dog Die',
       'Tag Genome',
       'Trakt da Ana',
+      'Wikipedia',
     ])
-    expect(every).toHaveLength(5)
+    expect(every).toHaveLength(6)
     for (const { source, text } of every)
       expect(named(source).notice).toBe(text)
   })
@@ -29,6 +30,7 @@ describe('the credits', () => {
       'IMDb',
       'TMDB',
       'Wikidata',
+      'Wikipedia',
       'MovieLens',
       'Tag Genome',
       'OMDb',
@@ -47,6 +49,7 @@ describe('the credits', () => {
 
   test('OMDb and MovieLens get what their licenses ask', () => {
     expect(named('OMDb').notice).toContain('CC BY-NC 4.0')
+    expect(named('Wikipedia').notice).toContain('CC BY-SA 4.0')
     expect(named('MovieLens').notice).toContain('não endossa')
     expect(named('Wikidata').notice).toContain('CC0')
     expect(named('Letterboxd').notice).toBeNull()
