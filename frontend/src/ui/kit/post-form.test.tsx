@@ -11,8 +11,8 @@ import {
 } from '@tanstack/react-router'
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import type { ComponentProps } from 'react'
 import { afterEach, expect, it, vi } from 'vite-plus/test'
-import type { Answered } from './fetch-form'
 import { PostAnswers, PostForm } from './post-form'
 import { POST_FAILED } from './status'
 
@@ -36,7 +36,7 @@ function pageData(next: 'waits' | 'fails' = 'waits') {
 /** A `PostForm` on `/fila` under a router, as the app has it. */
 function showForm(
   loads: () => Promise<void> | void,
-  onAnswer: (to: string, form: HTMLFormElement) => Answered = () => false,
+  onAnswer: ComponentProps<typeof PostAnswers>['onAnswer'] = () => false,
 ) {
   const router = createRouter({
     routeTree: createRootRoute({

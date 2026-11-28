@@ -5,7 +5,7 @@ import { SessionDelete } from './session-delete'
 const meta = {
   title: 'Sessões/Excluir',
   component: SessionDelete,
-  args: { session: '2026-11-20-iara', hasFacts: true },
+  args: { action: '/sessoes/2026-11-20-iara/excluir', hasFacts: true },
 } satisfies Meta<typeof SessionDelete>
 export default meta
 

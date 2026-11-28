@@ -9,6 +9,7 @@ import {
   sessionPath,
   SESSIONS_PATH,
   PENDING_FEEDBACK_PATH,
+  sessionDeletePath,
 } from '#/content/session-paths'
 import type { CartazPage } from '#/platform/billboard'
 import type { PageReading } from '#/platform/reading'
@@ -334,7 +335,10 @@ function SessionMenu({
           )}
           {page.deletion && (
             <li>
-              <SessionDelete session={s.id} hasFacts={page.deletion.hasFacts} />
+              <SessionDelete
+                action={sessionDeletePath(s.id)}
+                hasFacts={page.deletion.hasFacts}
+              />
             </li>
           )}
         </ul>
@@ -592,6 +596,20 @@ function useReplyPost(id: string, billboard: CartazPage['billboard']) {
   return { ...post, sentReplies, editing, setEditing, rejection }
 }
 
+/** The refusal the page says, the one in place over the query's, and the
+ * words the reading did not take: those are asked in the bar (`asking`),
+ * not alerted. */
+function refusalOf(
+  rejection: Rejection | null,
+  refusal: ReplyRefusal | undefined,
+  words: readonly string[] | undefined,
+) {
+  const refused = rejection?.reason ?? refusal
+  const unreadWords = rejection ? rejection.words : (words ?? [])
+  const asking = refused === 'leitura' && unreadWords.length > 0
+  return { refused, unreadWords, asking }
+}
+
 /** The refusal and the post that failed, scrolled into sight when they
  * come. */
 function ReplyAlerts({
@@ -619,16 +637,21 @@ function ReplyAlerts({
   )
 }
 
-/** A closed Session's shelf, folded under the tape. */
+/** A closed Session's shelf, folded under the tape; an open Session's
+ * Cartaz as it is. */
 function ClosedShelf({
+  closed,
   chosen,
-  others,
+  shelf,
   children,
 }: {
+  closed: boolean
   chosen: boolean
-  others: number
+  shelf: BillboardOf | null
   children: ReactNode
 }) {
+  if (!closed || shelf === null) return children
+  const others = shelf.films.length
   const { session } = SESSIONS
   return (
     <details className="group/shelf flex flex-col">
@@ -738,27 +761,10 @@ function SessionView({
     setEditing,
     rejection,
   } = useReplyPost(s.id, billboard)
-  const refused = rejection?.reason ?? refusal
-  const unreadWords = rejection ? rejection.words : (words ?? [])
-  // The words the reading did not take are asked in the bar, not alerted.
-  const asking = refused === 'leitura' && unreadWords.length > 0
+  const { refused, unreadWords, asking } = refusalOf(rejection, refusal, words)
   const closed = !s.open
   const shelf =
     closed && billboard !== null ? foldedShelf(billboard) : billboard
-  const cartaz = (
-    <SessionBillboard
-      key={`${shelf?.version}:${sentReplies}`}
-      id={s.id}
-      open={s.open}
-      shelf={shelf}
-      post={{ onSubmit, busy }}
-      sent={
-        sentReplies === 0 && (notice === 'regerada' || notice === 'anotada')
-      }
-      unread={unreadOf(asking, editing, unreadWords, setEditing)}
-    />
-  )
-
   return (
     <>
       <SessionHead page={page} />
@@ -775,13 +781,19 @@ function SessionView({
         post={{ onSubmit, busy }}
       />
       {closed && <TapeReturned page={page} />}
-      {closed && shelf !== null ? (
-        <ClosedShelf chosen={Boolean(s.chosen)} others={shelf.films.length}>
-          {cartaz}
-        </ClosedShelf>
-      ) : (
-        cartaz
-      )}
+      <ClosedShelf closed={closed} chosen={Boolean(s.chosen)} shelf={shelf}>
+        <SessionBillboard
+          key={`${shelf?.version}:${sentReplies}`}
+          id={s.id}
+          open={s.open}
+          shelf={shelf}
+          post={{ onSubmit, busy }}
+          sent={
+            sentReplies === 0 && (notice === 'regerada' || notice === 'anotada')
+          }
+          unread={unreadOf(asking, editing, unreadWords, setEditing)}
+        />
+      </ClosedShelf>
     </>
   )
 }
