@@ -2,7 +2,7 @@
 // marked Trocar, a Trocar the stars marked, and read-only once the Session
 // has its Feedback; the Nota prevista line under "Por que", without one,
 // with a Presente without a Fato, and six Presentes on a phone; the
-// trailer link, and a film without one; a film the Dono saw before, whose
+// trailer link, and a film without one; a synopsis only in English; a film the Dono saw before, whose
 // Já visto weighs against it (VISTO ANTES on the case), the two who saw
 // it on a phone's case, and four Presentes.
 import type { Meta, StoryObj } from '@storybook/react-vite'
@@ -216,6 +216,33 @@ export const WithoutTrailer: Story = {
     await expect(
       within(canvasElement).queryByRole('link', { name: 'trailer' }),
     ).toBeNull()
+  },
+}
+
+/** TMDB has no pt-BR overview: the English one, marked English for a
+ * screen reader (#385). */
+export const EnglishSynopsis: Story = {
+  args: {
+    film: {
+      ...FILM,
+      synopsis:
+        'In a country town, a watchmaker notices the clocks in her house fall one minute behind every night.',
+      synopsisLanguage: 'en',
+    },
+  },
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByText(/watchmaker/)).toHaveAttribute(
+      'lang',
+      'en',
+    )
+  },
+}
+
+/** TMDB has no overview in pt-BR or English: no synopsis. */
+export const WithoutSynopsis: Story = {
+  args: { film: { ...FILM, synopsis: null } },
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).queryByText(/relojoeira/)).toBeNull()
   },
 }
 

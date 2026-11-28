@@ -503,6 +503,7 @@ export {
   Tmdb,
   type Card,
   type FilmDetails,
+  type Synopsis,
 } from './sources/Tmdb.ts'
 export {
   personAdjust,

@@ -1,11 +1,11 @@
 // TMDB (`filmes/sob_demanda/tmdb.py`): the film search by title and year,
 // for what Wikidata did not resolve in the Letterboxd import, and the card
 // (poster, Portuguese title, synopsis) of the Recommendation's films, and
-// the trailer of the Cartaz's (#289).
+// the trailer (#289) and the synopsis (#385) of the Cartaz's.
 // Cached for 6 months; the key is FILMES_TMDB_CHAVE (the v3 key, sent as
 // `api_key`, or the v4 read token, sent in the header).
 //
-// Six requests, each one cache entry and one recording file:
+// Seven requests, each one cache entry and one recording file:
 //
 //     filme-<slug>-<year>-<hash>   GET /search/movie?query=<title>&primary_release_year=<year>
 //     serie-<slug>-<year>-<hash>   GET /search/tv?query=<title>&first_air_date_year=<year>
@@ -15,13 +15,16 @@
 //                                  for the poster, the Portuguese title and the synopsis
 //     videos-<id>                  GET /movie/<id>/videos?language=pt-BR&include_video_language=pt,en,
 //                                  for the trailer, with the TMDB id the /find gave
+//     sinopse-<id>-en-US           GET /movie/<id>?language=en-US, for the English synopsis
+//                                  of a film with no pt-BR one, with the same id
 //
 // The search takes the title as the export gave it; the hash tells apart
 // titles with the same slug. The import and the card are two profiles of the
 // one API, as in the Python (`TMDB` and `CapasTMDB`): each is switched off
-// on its own and warns with its own consequence; the trailer belongs to the
-// card. The trailer is the official one on YouTube, in pt-BR if there is
-// one, else in English: a link, never a player. TMDB's terms ask for
+// on its own and warns with its own consequence; the trailer and the
+// synopsis belong to the card. The trailer is the official one on YouTube, in pt-BR if there is
+// one, else in English: a link, never a player. The synopsis is the pt-BR
+// overview, else the English one. TMDB's terms ask for
 // `TMDB_ATTRIBUTION` wherever its data shows.
 
 import { createHash } from 'node:crypto'
@@ -214,6 +217,16 @@ const trailerOf = (answer: CachedAnswer | undefined): string | null => {
   return chosen === undefined ? null : `${YOUTUBE}${text(field(chosen, 'key'))}`
 }
 
+/** A film's synopsis and the language it is in: TMDB's pt-BR overview,
+ * else its English one. */
+export interface Synopsis {
+  readonly text: string
+  readonly language: 'pt' | 'en'
+}
+
+const overviewOf = (body: unknown) =>
+  pyStrip(text(field(body, 'overview'))) || null
+
 const cardOf = (answer: CachedAnswer | undefined): Card => {
   const [film] = list(field(answer?.body, 'movie_results'))
   const poster = field(film, 'poster_path')
@@ -221,7 +234,7 @@ const cardOf = (answer: CachedAnswer | undefined): Card => {
   return {
     poster: truthy(poster) ? `${IMAGES}${String(poster)}` : null,
     titlePt: truthy(title) ? String(title) : null,
-    overview: pyStrip(text(field(film, 'overview'))) || null,
+    overview: overviewOf(film),
   }
 }
 
@@ -266,6 +279,11 @@ export class Tmdb extends Context.Service<
     readonly trailer: (
       tconst: string,
     ) => Effect.Effect<string | null, SourceError, Run>
+    /** The pt-BR overview of the card's lookup, else the English one of
+     * the film it gave; `null` with no answer or no overview. */
+    readonly synopsis: (
+      tconst: string,
+    ) => Effect.Effect<Synopsis | null, SourceError, Run>
   }
 >()('@filmes/engine/sources/Tmdb') {
   static readonly layer: Layer.Layer<
@@ -336,6 +354,21 @@ export class Tmdb extends Context.Service<
                 include_video_language: 'pt,en',
               }),
             )
+          }),
+        synopsis: (tconst) =>
+          Effect.gen(function* () {
+            const found = yield* find(tconst)
+            const [film] = list(field(found?.body, 'movie_results'))
+            const pt = overviewOf(film)
+            if (pt !== null) return { text: pt, language: 'pt' as const }
+            const id = foundId(found)
+            if (id === undefined) return null
+            const en = overviewOf(
+              (yield* ask(POSTERS, `sinopse-${id}-en-US`, `/movie/${id}`, {
+                language: 'en-US',
+              }))?.body,
+            )
+            return en === null ? null : { text: en, language: 'en' as const }
           }),
       })
     }),

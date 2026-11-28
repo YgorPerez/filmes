@@ -14,7 +14,7 @@ export default defineTool({
   description:
     'O Cartaz da Recomendação gravada numa Sessão, como dados: `billboard` traz o topo (`request.who` e `request.parts`, ' +
     'a leitura do pedido), os Presentes (`attendees`, com "Você" para o Dono), o que saiu na versão (`dropped`, com `reason`) e um card ' +
-    'por filme em `films` (position, title, originalTitle, poster, imdbRatingText, votesText, chips, synopsis, `trailer`, o link do trailer oficial no YouTube quando há, `new` quando o filme entrou nesta versão (o Cartaz não marca, só conta), ' +
+    'por filme em `films` (position, title, originalTitle, poster, imdbRatingText, votesText, chips, synopsis (a primeira frase da sinopse do TMDB em português; sem ela, a em inglês, com `synopsisLanguage: "en"`), `trailer`, o link do trailer oficial no YouTube quando há, `new` quando o filme entrou nesta versão (o Cartaz não marca, só conta), ' +
     '`lines` com a Evidência mais forte de cada Presente, `coverage` e `predictedRatings`, a Nota prevista de 1 a 10 de cada Presente que tem uma, ' +
     'como a versão gravou; numa Sessão com Feedback, o Filme escolhido traz `reactions`, a Nota prevista gravada de cada Presente ao lado da nota (de 1 a 10) ou do Relato dela; se nenhum card mostra o Filme escolhido (fora da Recomendação ou fora de `films`), ele vem em `chosen`, com id, title, year e as mesmas `reactions`). Com `films`, o Cartaz traz só esses, na ordem dada e ' +
     'numerados de 1 em diante, e a Sessão guarda a lista como mostrada, para o Feedback registrar a posição do Filme escolhido nela. ' +
