@@ -81,7 +81,11 @@ export const UnknownName: Story = {
 
 export const Header: Story = {
   render: () => (
-    <LinkHeader person={PEOPLE[1]!} notYou="/participar?sessao=s&chave=k" />
+    <LinkHeader
+      person={PEOPLE[1]!}
+      notYou="/participar?sessao=s&chave=k"
+      cartaz="/sessoes/s"
+    />
   ),
 }
 

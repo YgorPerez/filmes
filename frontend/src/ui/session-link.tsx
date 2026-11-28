@@ -183,13 +183,17 @@ export function LinkPicker({
 }
 
 /** Above every page once a Presente is chosen: her colour and name, at
- * body weight so the page's title leads, and the way back to the names. */
+ * body weight so the page's title leads, and the way back to the names;
+ * for the opener, who came by her login and is no name there, the way
+ * back to her Cartaz (#376). */
 export function LinkHeader({
   person,
   notYou,
+  cartaz,
 }: {
   person: LinkPerson
   notYou: string
+  cartaz: string
 }) {
   return (
     <header className="flex flex-wrap items-center gap-sm border-b border-rule pb-md">
@@ -201,13 +205,13 @@ export function LinkHeader({
         <strong className="font-display">{person.name}</strong>
       </p>
       <a
-        href={notYou}
+        href={person.owner ? cartaz : notYou}
         className={buttonVariants({
           variant: 'link',
           className: 'ml-auto min-h-touch',
         })}
       >
-        {PARTICIPATION.notYou}
+        {person.owner ? PARTICIPATION.toCartaz : PARTICIPATION.notYou}
       </a>
     </header>
   )

@@ -8,6 +8,7 @@ import {
   sessionLinkPath,
   sessionLinkSearch,
 } from '#/content/session-link-address'
+import { sessionPath } from '#/content/session-paths'
 import { SiteFooter } from '#/ui/kit/site-footer'
 import { LinkHeader, LinkPicker, LinkUnavailable } from '#/ui/session-link'
 import { PARTICIPATION } from '#/ui/session-link.copy'
@@ -78,6 +79,7 @@ function SessionLinkRoute() {
             <LinkHeader
               person={participation.selected}
               notYou={sessionLinkPath(participation.session, chave)}
+              cartaz={sessionPath(participation.session)}
             />
             <Outlet />
           </>
