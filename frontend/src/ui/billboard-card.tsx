@@ -10,7 +10,7 @@ import type { FilmMarks } from './billboard-marks'
 import { Chip } from './kit/chip'
 import { Hint } from './kit/hint'
 import { Avatar } from './kit/person'
-import { PriceSticker, Sticker } from './kit/sticker'
+import { NewSticker, PriceSticker, Sticker } from './kit/sticker'
 import { TapeCase } from './kit/tape-case'
 import { BILLBOARD } from './billboard.copy'
 import { BetStamp } from './billboard-bet'
@@ -20,7 +20,8 @@ import { Icon } from './billboard-icons'
 import { AgainstMark, Strength } from './billboard-top'
 
 // One film of the Cartaz (DESIGN.md, Card do filme): the tape in its case
-// with the price sticker, the header (with the IMDb and, when TMDB has one,
+// with the price sticker (and NOVO on a film that came in with this
+// version, #380), the header (with the IMDb and, when TMDB has one,
 // the trailer on YouTube: a link, never a player, #289), "Por que cada um
 // vai gostar", opened by each Presente's Nota prevista (#326), and, while
 // the Session takes a reply, the marks (`billboard-card-marks.tsx`). A grid:
@@ -135,6 +136,18 @@ function Poster({
             )}
         </Sticker>
       )}
+      <CornerMarks film={film} />
+    </div>
+  )
+}
+
+/** What sticks out of the case's corners: the price sticker, NOVO on a
+ * film that came in with this version (#380) and the Aposta's stamp. */
+function CornerMarks({ film }: { film: BillboardFilm }) {
+  const { card } = BILLBOARD
+  return (
+    <>
+      {film.new && <NewSticker className="absolute top-sm -right-md" />}
       {film.bet && (
         <>
           <BetStamp className="absolute bottom-[17px] -left-sm">
@@ -146,7 +159,7 @@ function Poster({
       <PriceSticker className="absolute -top-[9px] -left-[9px]">
         {film.position}
       </PriceSticker>
-    </div>
+    </>
   )
 }
 

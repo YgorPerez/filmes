@@ -152,6 +152,29 @@ export const latestVotes = (
   return votes
 }
 
+/** The films of the current screen that came in after `person`'s last
+ * Voto in the Session: none shown in or before the version her last
+ * submission went to. Before her first Voto nothing is new to her (#380).
+ * A film that left and came back is not new. */
+export const newSinceVote = (
+  front: YamlMapping,
+  person: string,
+): ReadonlySet<string> => {
+  const versions = sessionVersions(front)
+  const last = versions.findLastIndex((version) =>
+    storedVotes(version).some((v) => v.person === person),
+  )
+  if (last < 0) return new Set()
+  const seen = new Set(
+    versions.slice(0, last + 1).flatMap((v) => shownFilms(v).map((f) => f.id)),
+  )
+  return new Set(
+    shownFilms(currentVersion(front))
+      .map((f) => f.id)
+      .filter((id) => !seen.has(id)),
+  )
+}
+
 /** Most yes votes first. Ties keep the given screen order. */
 export const orderByYes = (
   films: ReadonlyArray<string>,

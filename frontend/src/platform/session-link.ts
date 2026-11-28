@@ -5,6 +5,7 @@ import {
   filmCards,
   isOpen,
   latestVotes,
+  newSinceVote,
   pairwiseQuestions,
   readPeople,
   readSession,
@@ -35,12 +36,14 @@ export type LinkPerson = {
 }
 
 /** A film of the current screen, with its public card (null when the
- * Catálogo no longer has it) and the chosen Presente's standing Voto on
- * it. */
+ * Catálogo no longer has it), the chosen Presente's standing Voto on it
+ * and whether it came in after her last Voto (`new`, the NOVO sticker on
+ * the swipe and the ranking, #380). */
 export type LinkFilm = {
   position: number
   id: string
   title: string
+  new: boolean
   card: PublicFilmCard | null
   mine: VoteValue | null
 }
@@ -173,6 +176,7 @@ async function screenOf(
   const current = currentVersion(front)
   const screen = shownFilms(current)
   const mine = latestVotes(front, person)
+  const fresh = newSinceVote(front, person)
   const byId = await cardsById(
     engine,
     screen.map((f) => f.id),
@@ -195,6 +199,7 @@ async function screenOf(
         position: film.position,
         id: film.id,
         title: card?.title ?? film.title ?? film.id,
+        new: fresh.has(film.id),
         card,
         mine: mine.get(film.id) ?? null,
       }

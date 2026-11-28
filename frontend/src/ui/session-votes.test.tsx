@@ -16,6 +16,7 @@ import { PARTICIPATION } from './session-link.copy'
 import { VOTES } from './session-votes.copy'
 import { VoteCards, VoteScreen } from './session-votes'
 import { BILLBOARD } from './billboard.copy'
+import { NEW_STICKER } from './kit/sticker'
 import { SHEET } from './film-sheet.copy'
 import {
   GUEST_DECK as DECK,
@@ -147,6 +148,16 @@ it('keeps the votes on screen when the server could not record them', async () =
     screen.getByRole<HTMLButtonElement>('button', { name: VOTES.send })
       .disabled,
   ).toBe(false)
+})
+
+it('the NOVO sticker on a film that came in after her last Voto only (#380)', async () => {
+  const user = userEvent.setup()
+  const films = [FILMS[0]!, { ...FILMS[1]!, new: true }]
+  render(<VoteScreen deck={{ ...DECK, films }} search={LINK} home={HOME} />)
+  const card = () => screen.getByRole('article', { name: /./u })
+  expect(within(card()).queryByText(NEW_STICKER)).toBeNull()
+  await user.click(screen.getByRole('button', { name: VOTES.yes }))
+  expect(within(card()).getByText(NEW_STICKER)).toBeTruthy()
 })
 
 it('the deck posts the link’s search', () => {
