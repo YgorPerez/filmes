@@ -35,6 +35,7 @@ export const FILMS: SessionLinkView['films'] = [
     position: 1,
     id: 'tt9000101',
     title: 'O Farol de Areia',
+    new: false,
     mine: null,
     card: card(
       'tt9000101',
@@ -49,6 +50,7 @@ export const FILMS: SessionLinkView['films'] = [
     position: 2,
     id: 'tt9000601',
     title: 'Pequenos Milagres',
+    new: false,
     mine: null,
     card: card(
       'tt9000601',
@@ -63,6 +65,7 @@ export const FILMS: SessionLinkView['films'] = [
     position: 3,
     id: 'tt9000701',
     title: 'Noite de Estreia',
+    new: false,
     mine: null,
     card: card(
       'tt9000701',
@@ -100,6 +103,7 @@ export const VOTED: SessionLinkView = {
       position: 3,
       id: 'tt9000801',
       title: 'Ponte Aérea',
+      new: true,
       mine: null,
       card: null,
     },

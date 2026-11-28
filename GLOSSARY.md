@@ -159,7 +159,7 @@ Um filme da versão anterior que não está na nova, com a causa. A causa `mood`
 O pôster do filme, vindo do TMDB. Não é o Cartaz, que é a Recomendação inteira.
 
 **Regerar** [regenerate, `regenerate`]:
-Fazer a próxima versão da Sessão a partir do Cartaz colado, trocando só o que caiu (Já visto, Trocar, Restrição ou Veto novos). O resto fica como Mantido; os que entram não levam marca (#326).
+Fazer a próxima versão da Sessão a partir do Cartaz colado, trocando só o que caiu (Já visto, Trocar, Restrição ou Veto novos). O resto fica como Mantido; os que entram levam o selo "novo" (#380).
 _Evitar_: refazer do zero, recomendar de novo
 
 **Filmes mostrados** [shown films, `shown`]:

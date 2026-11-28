@@ -17,7 +17,7 @@ import { buttonVariants } from './kit/button-variants'
 import { useFetchForm } from './kit/fetch-form'
 import { Icon } from './kit/icon'
 import { Alert, Notice, PostFailed } from './kit/status'
-import { Sticker } from './kit/sticker'
+import { NewSticker, Sticker } from './kit/sticker'
 import { FilmSheet } from './film-sheet'
 import { LinkFilmList, VotedActions, VoteRule } from './session-link'
 import { PARTICIPATION } from './session-link.copy'
@@ -28,7 +28,8 @@ import { VOTES } from './session-votes.copy'
 // bottom (DESIGN.md has no gradients) the title, the facts and her own
 // Nota prevista. Não or Sim by the round buttons, the
 // arrow keys or by dragging the card sideways (it follows the finger and
-// gets the SIM or NÃO sticker near the line). A tap on the card opens its
+// gets the SIM or NÃO sticker near the line). A film that came in after her
+// last Voto has the NOVO sticker (#380). A tap on the card opens its
 // full sheet (`film-sheet.tsx`), where she can vote too. What a não does
 // stays over the card. After the last film, the recap, where a tap flips a
 // Voto, and Enviar votos, the screen's one orange button, which posts
@@ -419,6 +420,9 @@ function VoteCard({
       >
         <PosterFill poster={film.card?.poster ?? null} title={film.title} />
         <div className="relative mt-auto flex flex-col gap-md bg-case/85 px-lg pt-lg pb-tab-safe">
+          {/* A film that came in after her last Voto, stuck on the band's
+           * top right corner as on the Cartaz's case (#380). */}
+          {film.new && <NewSticker className="absolute -top-sm right-lg" />}
           {stamp && (
             <Sticker
               kind={stamp === 'yes' ? 'yes' : 'swap'}
