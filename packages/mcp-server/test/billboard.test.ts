@@ -56,6 +56,25 @@ describe('billboard', () => {
     ])
   })
 
+  test('a film with no pt-BR synopsis carries the English one, marked English', async () => {
+    const { ok } = await connect(useFixture(), null, {
+      FILMES_TMDB_CHAVE: 'chave-de-teste',
+      FILMES_GRAVACOES: RECORDINGS,
+    })
+    const recommendation = await ok('recommend', { attendees: ['dono'] })
+
+    const output = await ok('billboard', { session: recommendation.session.id })
+
+    const premiere = output.billboard.films.find(
+      (f: { id: string }) => f.id === 'tt9000203',
+    )
+    assert.equal(
+      premiere.synopsis,
+      'On opening night, the power goes out in a small-town theater.',
+    )
+    assert.equal(premiere.synopsisLanguage, 'en')
+  })
+
   test('with films, only those, in the given order, recorded as shown', async () => {
     const { ok } = await connect(useFixture())
     const recommendation = await ok('recommend', { attendees: ['dono'] })
