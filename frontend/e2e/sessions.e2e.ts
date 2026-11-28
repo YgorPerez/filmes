@@ -527,6 +527,19 @@ test('a Presente answers pairwise questions and the Dono records them', async ({
 })
 
 /** Votes yes, no and yes on the three films, from the first. */
+/** The deck's first Voto, a sim. The deck page comes by a plain link, and
+ * a tap before it hydrates is lost on a busy machine, so the tap is
+ * repeated only while the first card is still up: never a second Voto. */
+async function firstYes(page: Page, total: number) {
+  const first = page.getByText(`Filme 1 de ${total}`)
+  await expect(first).toBeVisible()
+  await expect(async () => {
+    if (await first.isVisible())
+      await page.getByRole('button', { name: 'Sim', exact: true }).click()
+    await expect(first).toBeHidden({ timeout: 1000 })
+  }).toPass()
+}
+
 async function voteYesNoYes(
   participant: Page,
   info: TestInfo,
@@ -538,7 +551,7 @@ async function voteYesNoYes(
   await expect(participant.getByRole('heading', { name: first })).toBeVisible()
   await snap(participant, info, 'sessao-votar')
 
-  await participant.getByRole('button', { name: 'Sim', exact: true }).click()
+  await firstYes(participant, 3)
   await expect(participant.getByRole('heading', { name: second })).toBeVisible()
   await participant.getByRole('button', { name: 'Não', exact: true }).click()
   await participant.getByRole('button', { name: 'Sim', exact: true }).click()
@@ -673,9 +686,8 @@ test('a Presente sends only yes votes and the Dono sees the new Cartaz order', a
     await participant
       .getByRole('link', { name: 'Votar nos 2 que chegaram' })
       .click()
-    const yes = participant.getByRole('button', { name: 'Sim', exact: true })
-    await yes.click()
-    await yes.click()
+    await firstYes(participant, 2)
+    await participant.getByRole('button', { name: 'Sim', exact: true }).click()
     await expect(participant.getByText('2 sins · nenhum não')).toBeVisible()
     await participant.getByRole('button', { name: 'Enviar votos' }).click()
     await expect(participant.getByRole('status')).toHaveText(
@@ -718,7 +730,12 @@ test('the Dono votes from her Cartaz by the login, and the Cartaz follows', asyn
   browser,
 }, info) => {
   const { person } = guestOf(info)
-  const opened = await openAsBruno({ attendees: ['dono', person], count: 3 })
+  // A group no other test opens: Session ids are taken by checking the
+  // folder, so two workers opening the same group at once share one.
+  const opened = await openAsBruno({
+    attendees: ['dono', person, 'vera'],
+    count: 3,
+  })
   const [first, second, third] = opened.films.map((film) => film.title)
   await loginAsBruno(page)
   const cartaz = `/sessoes/${opened.session.id}`
@@ -733,9 +750,10 @@ test('the Dono votes from her Cartaz by the login, and the Cartaz follows', asyn
     0,
   )
   await expect(page.getByRole('heading', { name: first })).toBeVisible()
-  await page.getByRole('button', { name: 'Sim', exact: true }).click()
+  await firstYes(page, 3)
   await expect(page.getByRole('heading', { name: second })).toBeVisible()
   await page.getByRole('button', { name: 'Não', exact: true }).click()
+  await expect(page.getByRole('heading', { name: third })).toBeVisible()
   await page.getByRole('button', { name: 'Sim', exact: true }).click()
   await expect(page.getByText('2 sins · 1 não')).toBeVisible()
   await snap(page, info, 'sessao-dono-votos-resumo')
