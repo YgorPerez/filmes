@@ -102,7 +102,7 @@ function EditFields({
         open={open || (asked.similar?.length ?? 0) > 0}
       >
         <div className="flex flex-col gap-3xl">
-          <Constraints asked={asked} moods={page.moods} />
+          <Constraints asked={asked} noMoods={page.noMoods} />
           <TextField
             name="parecido"
             label={form.similar}

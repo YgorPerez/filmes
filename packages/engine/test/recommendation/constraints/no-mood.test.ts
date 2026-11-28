@@ -64,3 +64,15 @@ test('the Session stores the Climas, and it reads "nada assustador"', async () =
   const none = await Effect.runPromise(readConstraints({ noMoods: [] }))
   expect(none.map((c) => c.name)).not.toContain('no_mood')
 })
+
+test('a Clima of popularity removes nothing and warns', async () => {
+  const fixture = useFixture()
+  const before = titles(await all(fixture))
+
+  const out = await all(fixture, ['conhecido'])
+
+  expect(titles(out)).toEqual(before)
+  expect(out.warnings.join(' ')).toContain(
+    "o Clima 'conhecido' só puxa a ordem e não tira filme",
+  )
+})

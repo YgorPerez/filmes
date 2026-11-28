@@ -49,6 +49,7 @@ vi.mock('./kit/film-search', () => ({
 const OPTIONS = {
   people: [{ person: 'bruno', name: 'Bruno', owner: true }],
   moods: [],
+  noMoods: [],
 }
 
 beforeEach(() => {
