@@ -67,10 +67,6 @@ describe('importImdb', () => {
     expect(report.outsideCatalog).toEqual([
       { film: 'tt9028501', title: 'Cais, Episódio 1' },
     ])
-    // Her import page lists it later, from the CSV she keeps (#274).
-    expect((await fixture.ok(personImports('vera'))).leftOut.imdb).toEqual([
-      { name: 'Cais, Episódio 1', year: null, id: 'tt9028501' },
-    ])
     expect(
       await query(
         fixture,

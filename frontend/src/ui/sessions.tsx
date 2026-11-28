@@ -13,7 +13,7 @@ import {
 import type { CartazPage } from '#/platform/billboard'
 import type { PageReading } from '#/platform/reading'
 import type { SessionItem } from '#/platform/sessions'
-import { Billboard, BillboardRequest } from './billboard'
+import { Billboard } from './billboard'
 import { forgetMarks, openStorage } from './billboard-marks'
 import { closeOnOutside, HEAD_POPOVERS } from './kit/dismiss'
 import { useFetchForm } from './kit/fetch-form'
@@ -25,7 +25,6 @@ import { names } from './session-names'
 import { Avatars, SessionDate, NewSessionLink } from './session-parts'
 import { ChosenReactions } from './billboard-chosen'
 import { Icon } from './kit/icon'
-import { MENU_ROW } from './kit/menu-row'
 import { PairwiseAnswers } from './pairwise-answers'
 import { ShareSessionLink } from './session-link-share'
 import { SESSIONS, spoken } from './sessions.copy'
@@ -294,14 +293,10 @@ function SessionHead({ page }: { page: CartazPage }) {
           >
             <span aria-hidden="true">⋯</span>
           </summary>
-          {/* The account menu's rows, one tap away (#272). */}
-          <div className="absolute top-full right-0 z-20 mt-xs flex w-[240px] max-w-[calc(100vw-32px)] flex-col rounded-card border border-rule bg-surface p-xs">
-            <a href={feedbackPath(s.id)} className={MENU_ROW}>
-              <Icon name="film" />
-              {SESSIONS.list.feedback}
-            </a>
+          <div className="absolute top-full right-0 z-20 mt-xs flex w-max max-w-[calc(100vw-32px)] flex-col gap-sm rounded-card border border-rule bg-surface p-lg">
+            <FeedbackLink session={s.id} />
             {page.sessionLink && (
-              <ShareSessionLink key={s.id} url={page.sessionLink} rows />
+              <ShareSessionLink key={s.id} url={page.sessionLink} />
             )}
           </div>
         </details>
@@ -415,17 +410,6 @@ const SPOKEN_NOTICES: ReadonlySet<SessionNotice> = new Set<SessionNotice>([
   // A correction changes what the tape says, so it is said (#344).
   'corrigida',
 ])
-
-/** Told, the night's label and note open the page, as on Contar (#272):
- * the fold below would hide what the night asked for. Then the tape. */
-function ClosedTop({ page }: { page: CartazPage }) {
-  return (
-    <>
-      {page.billboard && <BillboardRequest billboard={page.billboard} />}
-      <TapeReturned page={page} />
-    </>
-  )
-}
 
 /** A told Session opens with the tape given back (#272): the film they
  * saw and how each one took it, who the group weighs more next time, and
@@ -737,7 +721,7 @@ function SessionView({
         waiting={page.pairwise ?? []}
         post={{ onSubmit, busy }}
       />
-      {closed && <ClosedTop page={page} />}
+      {closed && <TapeReturned page={page} />}
       {closed && shelf !== null ? (
         <ClosedShelf chosen={Boolean(s.chosen)} others={shelf.films.length}>
           {cartaz}

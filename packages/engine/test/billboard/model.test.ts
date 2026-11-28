@@ -237,16 +237,11 @@ describe('the Cartaz model', () => {
       {
         people: ['bruno', 'iara'],
         strength: strongest.strength,
-        // Said by two, in the plural (#277).
-        text: strongest.text.replace(
-          'a que deu nota alta',
-          'a que deram nota alta',
-        ),
+        text: strongest.text,
         source: strongest.source || null,
         against: false,
       },
     ])
-    expect(card!.lines[0]!.text).toContain('a que deram nota alta')
   })
 })
 

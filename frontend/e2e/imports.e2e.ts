@@ -199,14 +199,10 @@ async function dropAndSearchAgain(page: Page, info: TestInfo, lost: Locator) {
   expect(queue.items.map((i) => i.name)).not.toContain('Filme Perdido')
   expect(queue.items.map((i) => i.name)).not.toContain('Vento Norte')
 
-  // The other project shares the copy: with nothing left waiting, there is
-  // nothing to ask the TMDB again (#274).
-  const again = page.getByRole('form', { name: 'Procurar de novo' })
-  if (queue.items.length === 0) {
-    await expect(again).toHaveCount(0)
-    return
-  }
-  await again.getByRole('button').click()
+  await page
+    .getByRole('form', { name: 'Procurar de novo' })
+    .getByRole('button')
+    .click()
   await expect(notice(page)).toContainText('Procurei de novo')
   await snap(page, info, 'fila-decidida')
 }

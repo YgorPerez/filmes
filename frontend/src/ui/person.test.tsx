@@ -1579,7 +1579,7 @@ describe('Meu gosto with little in it', () => {
     expect(notes.textContent).toContain('Trakt não conectado')
     expect(
       within(notes)
-        .getByRole('link', { name: 'Conectar o Trakt' })
+        .getByRole('link', { name: 'conectar' })
         .getAttribute('href'),
     ).toBe('/trakt')
   })

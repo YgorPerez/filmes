@@ -675,7 +675,6 @@ export {
   personImports,
   type FilmSource,
   type ImportRecord,
-  type LeftOutFilm,
   type PersonImports,
   type SourceFilms,
 } from './imports/report.ts'

@@ -239,12 +239,10 @@ const fieldText = (data: FormData, name: string): string => {
   return typeof value === 'string' ? value : ''
 }
 
-/** The words of a list field ("assustador, tenso"), or of its repeated
- * checkboxes. */
+/** The words of a list field ("assustador, tenso"). */
 const listed = (data: FormData, name: string) =>
-  data
-    .getAll(name)
-    .flatMap((value) => (typeof value === 'string' ? value.split(',') : []))
+  fieldText(data, name)
+    .split(',')
     .map((word) => word.trim())
     .filter((word) => word !== '')
 
@@ -738,35 +736,6 @@ function Moods({ moods, asked }: { moods: readonly string[]; asked: Asked }) {
   )
 }
 
-/** "Nada de": the same Climas as chips, picked, not typed (#272). */
-function NoMoods({ moods, asked }: { moods: readonly string[]; asked: Asked }) {
-  const { form } = SESSIONS
-  const chosen = new Set(asked.noMoods)
-  return (
-    <fieldset className="flex min-w-0 flex-col gap-xs">
-      <legend className="float-left w-full pb-xs font-display text-field-label">
-        {form.noMoods}{' '}
-        <span className="font-body font-normal text-ink-2">
-          {form.noMoodsHint}
-        </span>
-      </legend>
-      <div className={`clear-left ${pills}`}>
-        {moods.map((mood) => (
-          <Option
-            key={mood}
-            name="sem-climas"
-            value={mood}
-            label={form.noMood(mood)}
-            defaultChecked={chosen.has(mood)}
-          >
-            {mood}
-          </Option>
-        ))}
-      </div>
-    </fieldset>
-  )
-}
-
 function Constraints({
   asked,
   moods,
@@ -783,17 +752,18 @@ function Constraints({
       lead={form.constraintsLead}
       plain
     >
-      {/* One group of on/off Restrições, one shape (#272). */}
-      <div className={pills}>
-        <Option name="sem-ja-visto" defaultChecked={asked.unseen}>
+      <div className="flex flex-col gap-sm">
+        <Option name="sem-ja-visto" shape="row" defaultChecked={asked.unseen}>
           {form.unseen}
         </Option>
-        <Option name="sem-lento" defaultChecked={asked.noSlow}>
-          {form.noSlow}
-        </Option>
-        <Option name="sem-tristeza" defaultChecked={asked.noSad}>
-          {form.noSad}
-        </Option>
+        <div className={pills}>
+          <Option name="sem-lento" defaultChecked={asked.noSlow}>
+            {form.noSlow}
+          </Option>
+          <Option name="sem-tristeza" defaultChecked={asked.noSad}>
+            {form.noSad}
+          </Option>
+        </div>
       </div>
       <div className={grid}>
         <SelectField
@@ -823,7 +793,12 @@ function Constraints({
         hint={form.languageHint}
         defaultValue={asked.language}
       />
-      <NoMoods moods={moods} asked={asked} />
+      <TextField
+        name="sem-climas"
+        label={form.noMoods}
+        hint={form.noMoodsHint(moods)}
+        defaultValue={asked.noMoods?.join(', ')}
+      />
       <TextField
         name="gatilhos"
         label={form.triggers}

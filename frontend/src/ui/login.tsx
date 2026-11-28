@@ -18,8 +18,8 @@ import { Button } from './shadcn/button'
 //
 // `/entrar`: the case-black bar with "filmes" and one card with the one
 // orange button. The button is a link, since `/auth/google` answers a GET with the
-// redirect to Google. When sign-in is off here the orange button says
-// "Tentar de novo", the one thing to do there: the same link, which lands on
+// redirect to Google. When sign-in is off here the orange goes, and a
+// quiet "Tentar de novo" takes its place: the same link, which lands on
 // Google once the server has sign-in again, or back on this refusal. Both pages end with the footer that
 // links the sources' credits. On `/entrar` the bar and the footer take the
 // card's 464px, so "filmes" sits over the card's left edge.
@@ -53,12 +53,24 @@ export function Login({ refusal }: { refusal?: LoginRefusal }) {
             ) : (
               <p className="text-balance">{LOGIN.lead}</p>
             )}
-            <a
-              href="/auth/google"
-              className={buttonVariants({ className: 'sm:self-start' })}
-            >
-              {refusal === 'indisponivel' ? LOGIN.retry : googleLabel}
-            </a>
+            {refusal === 'indisponivel' ? (
+              <a
+                href="/auth/google"
+                className={buttonVariants({
+                  variant: 'option',
+                  className: 'sm:self-start',
+                })}
+              >
+                {LOGIN.retry}
+              </a>
+            ) : (
+              <a
+                href="/auth/google"
+                className={buttonVariants({ className: 'sm:self-start' })}
+              >
+                {googleLabel}
+              </a>
+            )}
             {refusal !== 'nao-dono' && (
               <p className="border-t border-dashed border-card-stock-ink/40 pt-lg text-meta text-pretty">
                 {LOGIN.access}

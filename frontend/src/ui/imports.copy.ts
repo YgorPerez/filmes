@@ -15,21 +15,6 @@ const andList = (parts: readonly string[]) =>
     ? parts.join('')
     : `${parts.slice(0, -1).join(', ')} e ${parts.at(-1)}`
 
-/** A site's films in the words of its notice: "2 Notas, 1 Já visto e 1
- * filme na watchlist"; null with none. A rated film is no Já visto of its
- * own. */
-const filmsText = ({ rated, seen, watchlist }: SourceFilms) =>
-  rated + seen + watchlist === 0
-    ? null
-    : andList(
-        [
-          rated > 0 && count(rated, 'Nota', 'Notas'),
-          seen > 0 && count(seen, 'Já visto', 'Já vistos'),
-          watchlist > 0 &&
-            count(watchlist, 'filme na watchlist', 'filmes na watchlist'),
-        ].filter((part) => part !== false),
-      )
-
 /** What an import did to her Notas list (#274): the films with a first
  * Nota, the ones seen for the first time, the Notas it replaced (the
  * first few by name) and the films that kept theirs. */
@@ -215,15 +200,18 @@ export const PERSON_IMPORTS = {
     waiting: 'esperam você',
     seeOutside: (n: number) =>
       n === 1 ? 'Ver o filme deixado de fora' : `Ver os ${n} deixados de fora`,
-    /** Why another site's film was left out (#274). */
-    notInCatalog: 'o Catálogo do filmes não tem',
-    /** A left-out film the site gave with no name. */
-    unnamed: 'Filme sem nome',
     /** What another site gave, by film, in the words of its notice
      * (#274): "TV Time: 2 Notas, 1 Já visto e 1 filme na watchlist". A
      * rated film is no Já visto of its own. */
-    site: (site: string, films: SourceFilms) =>
-      `${site}: ${filmsText(films) ?? 'nenhum filme do Catálogo'}`,
+    site: (site: string, { rated, seen, watchlist }: SourceFilms) =>
+      `${site}: ${andList(
+        [
+          rated > 0 && count(rated, 'Nota', 'Notas'),
+          seen > 0 && count(seen, 'Já visto', 'Já vistos'),
+          watchlist > 0 &&
+            count(watchlist, 'filme na watchlist', 'filmes na watchlist'),
+        ].filter((part) => part !== false),
+      )}`,
     /** Her own page, Trakt not connected (#274): the recommended way,
      * also here once something came in. */
     traktOff: 'Trakt não conectado',
@@ -261,12 +249,8 @@ export const PERSON_IMPORTS = {
     on: (date: string) => `em ${shortDate(date)}`,
     remove: 'Tirar',
     removeLabel: (original: string) => `Tirar ${original}`,
-    /** `gives`: what this file alone brought, when the page can tell
-     * (#274): the only file of its site. */
-    removeWarning: (gives: SourceFilms | null) => {
-      const what = gives && filmsText(gives)
-      return `${what ? `Saem ${what}: o que só este arquivo trazia.` : 'O que só este arquivo trazia sai do gosto.'} As decisões da fila continuam valendo.`
-    },
+    removeWarning:
+      'O que só este arquivo trazia sai do gosto. As decisões da fila continuam valendo.',
     removeConfirm: 'Tirar este import',
     removeBusy: 'Tirando…',
   },

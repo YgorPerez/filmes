@@ -36,11 +36,8 @@ export const FEEDBACK = {
     nothing: (alone: boolean) => (alone ? 'Não vi nada' : 'Não vimos nada'),
     reactions: (alone: boolean) =>
       alone ? 'O que você achou?' : 'O que cada um achou?',
-    /** Alone, there are no others to just say if they liked it (#272). */
-    reactionsLead: (alone: boolean) =>
-      `A nota é a mesma de 1 a 10 do Cartaz.${alone ? '' : ' Para os outros, basta dizer se gostou.'} Sem reação, o filme fica só como Já visto.`,
-    /** The logged-in Dono's row, as the Cartaz names her (#272). */
-    you: 'Você',
+    reactionsLead:
+      'A nota é a mesma de 1 a 10 do Cartaz. Para os outros, basta dizer se gostou. Sem reação, o filme fica só como Já visto.',
     reaction: 'Reação',
     none: 'sem reação',
     noRating: 'sem nota',
@@ -58,9 +55,6 @@ export const FEEDBACK = {
     title: 'Satisfação',
     lead: 'Na regra padrão, quem gostou menos dos últimos filmes ganha mais peso na próxima Sessão do grupo.',
     empty: 'Ninguém deste grupo está atrás dos outros agora.',
-    /** Her own line opens with "Você", as the Cartaz names her (#272). */
-    own: (line: string, name: string) =>
-      line.startsWith(`${name}:`) ? `Você${line.slice(name.length)}` : line,
   },
 
   refusals: {

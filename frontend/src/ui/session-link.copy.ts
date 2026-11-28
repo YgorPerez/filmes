@@ -50,6 +50,7 @@ export const PARTICIPATION = {
   vote: 'Votar nos filmes',
   voteNew: (n: number) =>
     n === 1 ? 'Votar no que chegou' : `Votar nos ${n} que chegaram`,
+  revote: 'Você já votou · mudar votos',
   questionsTitle: 'Quer ajudar a acertar da próxima?',
   questionsLead: (owner: string | null) =>
     `Umas perguntas rápidas sobre filmes que você já viu. ${owner ?? 'Quem abriu a Sessão'} vê as respostas e decide se viram gosto.`,

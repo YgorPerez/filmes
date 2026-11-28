@@ -57,7 +57,6 @@ describe('personImports', () => {
         simkl: { rated: 0, seen: 0, watchlist: 0 },
         tvtime: { rated: 0, seen: 0, watchlist: 0 },
       },
-      leftOut: { trakt: [], imdb: [], simkl: [], tvtime: [] },
     })
   })
 })

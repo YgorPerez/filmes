@@ -30,11 +30,11 @@ export const LOGIN = {
  * filmes reads and sends to, or disconnects it. */
 export const TRAKT_SCREEN = {
   heading: 'Trakt',
-  back: 'Importar Notas',
+  back: 'Importar',
   title: 'Histórico e notas',
   google: 'Entrar com Google',
-  disconnect: 'Desconectar o Trakt',
-  connect: 'Conectar o Trakt',
+  disconnect: 'Desconectar Trakt',
+  connect: 'Conectar Trakt',
   unavailable: 'A conexão com o Trakt está indisponível.',
   login:
     'Entre com o e-mail cadastrado no filmes para conectar sua conta do Trakt.',

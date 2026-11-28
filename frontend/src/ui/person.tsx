@@ -25,7 +25,6 @@ import { TRAKT_PATH } from '#/content/trakt-form'
 import type { PersonPage } from '#/platform/people'
 import type { TasteSummary } from '@filmes/engine'
 import { Icon } from './kit/icon'
-import { FoldRow } from './kit/fold-row'
 import { OwnerTag } from './kit/owner-tag'
 import { Slip } from './kit/slip'
 import {
@@ -627,7 +626,7 @@ function NotesList({
   const { notes } = PERSON
   const inFile = new Set(page.seen.map((s) => s.factId))
   return (
-    <FoldRow summary={notes.list(ratings.length)}>
+    <Disclosure summary={notes.list(ratings.length)}>
       <ul className="flex flex-col">
         {ratings.map((r) => {
           const title = r.title ?? r.filmId
@@ -668,7 +667,7 @@ function NotesList({
           )
         })}
       </ul>
-    </FoldRow>
+    </Disclosure>
   )
 }
 
@@ -1020,7 +1019,7 @@ function LongAnswer({
 }) {
   const { questions } = PERSON
   return (
-    <FoldRow summary={questions.answer}>
+    <Disclosure summary={questions.answer}>
       <ActionForm
         slug={slug}
         action="responder"
@@ -1036,9 +1035,9 @@ function LongAnswer({
             options={REACTION_OPTIONS}
           />
         )}
-        <Submit variant="commit">{PERSON.save}</Submit>
+        <Submit variant="chosen">{PERSON.save}</Submit>
       </ActionForm>
-    </FoldRow>
+    </Disclosure>
   )
 }
 
@@ -1066,7 +1065,7 @@ function Vetoes({ slug, page }: Part) {
         ))}
       </Items>
       {!editingIn(page.vetoes) && (
-        <FoldRow
+        <Disclosure
           id="acrescentar-veto"
           summary={vetoes.add}
           open={refused !== null || undefined}
@@ -1092,10 +1091,10 @@ function Vetoes({ slug, page }: Part) {
             {/* Below a rule, apart from the group pills: a marked pill
                 has the save's look (#273). */}
             <div className="border-t border-rule pt-xl">
-              <Submit variant="commit">{PERSON.save}</Submit>
+              <Submit variant="chosen">{PERSON.save}</Submit>
             </div>
           </ActionForm>
-        </FoldRow>
+        </Disclosure>
       )}
     </Slip>
   )
@@ -1389,7 +1388,7 @@ function AddStatement({
   const copy = kind === 'stated' ? PERSON.stated : PERSON.reports
   const hint = useSourceHint(source)
   return (
-    <FoldRow summary={copy.add} open={refused !== null || undefined}>
+    <Disclosure summary={copy.add} open={refused !== null || undefined}>
       <ActionForm
         slug={slug}
         action={kind === 'stated' ? 'declarar' : 'relatar'}
@@ -1409,9 +1408,9 @@ function AddStatement({
           options={REACTION_OPTIONS}
         />
         <TextField name="fonte" label={PERSON.source} hint={hint} />
-        <Submit variant="commit">{PERSON.save}</Submit>
+        <Submit variant="chosen">{PERSON.save}</Submit>
       </ActionForm>
-    </FoldRow>
+    </Disclosure>
   )
 }
 
@@ -1448,7 +1447,7 @@ function Seen({ slug, page }: Part) {
         ))}
       </Items>
       {!editingIn(seenOf(page)) && (
-        <FoldRow summary={seen.add} open={refused !== null || undefined}>
+        <Disclosure summary={seen.add} open={refused !== null || undefined}>
           <ActionForm
             slug={slug}
             action="visto"
@@ -1458,9 +1457,9 @@ function Seen({ slug, page }: Part) {
             <TargetField name="filme" label={PERSON.film} scope="films" />
             <RatingField name="nota" label={PERSON.rating} />
             <TextField name="fonte" label={PERSON.source} hint={hint} />
-            <Submit variant="commit">{PERSON.save}</Submit>
+            <Submit variant="chosen">{PERSON.save}</Submit>
           </ActionForm>
-        </FoldRow>
+        </Disclosure>
       )}
     </Slip>
   )
@@ -1887,7 +1886,7 @@ function EditForm({
           {children}
         </div>
         <span className="flex flex-wrap items-center gap-lg">
-          <Submit variant="commit">{PERSON.save}</Submit>
+          <Submit variant="chosen">{PERSON.save}</Submit>
           {hydrated ? (
             <button type="button" onClick={editing.close} className={LINK}>
               {PERSON.edit.cancel}
