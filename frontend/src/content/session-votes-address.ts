@@ -78,3 +78,15 @@ export function votePath(
   if (mudar) query.set('mudar', 'true')
   return `/participar/${page}?${query}`
 }
+
+/** The swipe of the link `sessionLink` as `person`: the Votar on the
+ * Dono's own Cartaz (#376). The link opens it as her only while she is
+ * the one logged in. */
+export function ownVotePath(sessionLink: string, person: string): string {
+  const query = new URL(sessionLink).searchParams
+  return votePath('votar', {
+    sessao: query.get('sessao') ?? undefined,
+    chave: query.get('chave') ?? undefined,
+    presente: person,
+  })
+}

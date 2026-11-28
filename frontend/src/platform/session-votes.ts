@@ -6,7 +6,8 @@
 // on its own by changing the order. Votos never touch taste. Server only.
 //
 // Every post revalidates the link first (`resolveSessionLink`, with a
-// Presente chosen) and takes only a form of this site (`same-site.ts`). The Session is
+// Presente chosen; the opener only by her login, #376) and takes only a
+// form of this site (`same-site.ts`). The Session is
 // derived from the link, never from the form. Votos and the redo of one
 // Session run one after another, so a redo always keeps the films of the
 // screen that is current when it starts.
@@ -49,8 +50,9 @@ export async function voteDeck(
   search: ReturnType<typeof sessionLinkSearch> & { fora?: string | undefined },
   engine: Engine,
   database: string,
+  viewer: string | null,
 ): Promise<VoteDeck | null> {
-  const link = await resolveSessionLink(search, engine, database)
+  const link = await resolveSessionLink(search, engine, database, viewer)
   if (!link?.selected) return null
   const deck = { version: link.version, films: link.films, left: link.left }
   const asked = search.fora?.split(',') ?? []
@@ -119,12 +121,14 @@ async function redoKeeping(
 
 /** `POST /participar/votos?sessao=…&chave=…&presente=…`: records the
  * chosen Presente's Votos, redoes the Session if a film left or the order
- * changed, and returns to the deck with what happened. */
+ * changed, and returns to the deck with what happened. `viewer` is the
+ * logged-in Dono's Pessoa, or null: only she votes as the opener (#376). */
 export async function voteAction(
   request: Request,
   engine: Engine,
   database: string,
   origin: string | undefined,
+  viewer: string | null,
 ): Promise<Response> {
   if (!fromThisSite(request, origin))
     return new Response('Origem recusada', { status: 403 })
@@ -139,7 +143,7 @@ export async function voteAction(
     )
   const form = await request.formData()
   return oneAtATime(search.sessao ?? '', async () => {
-    const link = await resolveSessionLink(search, engine, database)
+    const link = await resolveSessionLink(search, engine, database, viewer)
     if (!link?.selected) return back()
     const onScreen = new Set(link.films.map((f) => f.id))
     // A sim on a film that already left: the engine skips it, and the

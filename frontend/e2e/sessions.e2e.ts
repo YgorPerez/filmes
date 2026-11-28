@@ -711,6 +711,60 @@ test('a Presente sends only yes votes and the Dono sees the new Cartaz order', a
   })
 })
 
+// The Dono's own Votar (#376): from her Cartaz, the group swipe opens as
+// her, by the login, with no name to pick; the address alone does not.
+test('the Dono votes from her Cartaz by the login, and the Cartaz follows', async ({
+  page,
+  browser,
+}, info) => {
+  const { person } = guestOf(info)
+  const opened = await openAsBruno({ attendees: ['dono', person], count: 3 })
+  const [first, second, third] = opened.films.map((film) => film.title)
+  await loginAsBruno(page)
+  const cartaz = `/sessoes/${opened.session.id}`
+  await page.goto(cartaz)
+  const vote = page.getByRole('link', { name: 'Votar', exact: true })
+  await snap(page, info, 'sessao-cartaz-votar')
+  const href = new URL((await vote.getAttribute('href')) ?? '', page.url())
+  await vote.click()
+
+  await expect(page.getByText('Você entrou como')).toContainText('Bruno')
+  await expect(page.getByRole('heading', { name: 'Quem é você?' })).toHaveCount(
+    0,
+  )
+  await expect(page.getByRole('heading', { name: first })).toBeVisible()
+  await page.getByRole('button', { name: 'Sim', exact: true }).click()
+  await expect(page.getByRole('heading', { name: second })).toBeVisible()
+  await page.getByRole('button', { name: 'Não', exact: true }).click()
+  await page.getByRole('button', { name: 'Sim', exact: true }).click()
+  await expect(page.getByText('2 sins · 1 não')).toBeVisible()
+  await snap(page, info, 'sessao-dono-votos-resumo')
+  await page.getByRole('button', { name: 'Enviar votos' }).click()
+  await expect(page.getByRole('status')).toHaveText(
+    'Votos contados. A lista foi refeita.',
+  )
+
+  // Her no is a Trocar from her, through the same path as a guest's.
+  await page.getByRole('link', { name: 'Voltar ao Cartaz' }).click()
+  await expect(page).toHaveURL(new RegExp(`${cartaz}$`, 'u'))
+  const onCartaz = (title?: string) =>
+    page.getByRole('heading', { level: 3 }).filter({ hasText: title })
+  await expect(onCartaz(second)).toHaveCount(0)
+  await expect(onCartaz(first)).toHaveCount(1)
+  await expect(onCartaz(third)).toHaveCount(1)
+  await snap(page, info, 'sessao-cartaz-depois-do-voto-do-dono')
+
+  // The same address, logged out: no swipe as her, only the names.
+  await asParticipant(browser, href.href, async (participant) => {
+    await expect(
+      participant.getByRole('heading', { name: 'Quem é você?' }),
+    ).toBeVisible()
+    await expect(participant.getByRole('link', { name: 'Bruno' })).toHaveCount(
+      0,
+    )
+  })
+})
+
 test('the Dono deletes a Session and its Link shows that it was deleted', async ({
   page,
 }, info) => {
