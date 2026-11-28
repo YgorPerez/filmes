@@ -787,3 +787,8 @@ export {
   type TasteSummary,
   type TasteSummaryRequest,
 } from './people/taste-summary.ts'
+export type {
+  TasteAnalysis,
+  TasteFilm,
+  TasteItem,
+} from './people/taste-analysis.ts'
