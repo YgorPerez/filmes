@@ -53,6 +53,7 @@ export function FeedbackScreen({
   note,
   told,
   correcting = false,
+  editAttendees = false,
   nothing = false,
 }: {
   session: string
@@ -62,6 +63,7 @@ export function FeedbackScreen({
   told?: { title: string | null; mine: boolean }
   /** The form corrects a told Session, filled with what was told (#344). */
   correcting?: boolean
+  editAttendees?: boolean
   /** "Não vimos nada" comes marked: what the corrected Session told. */
   nothing?: boolean
   refusal?: FeedbackRefusal
@@ -76,6 +78,9 @@ export function FeedbackScreen({
     if (search) params.set('buscar', search.query)
     if (note) params.set('nota', note)
     if (correcting) params.set('corrigir', 'sim')
+    if (editAttendees && page && page !== 'unknown')
+      for (const attendee of page.attendees)
+        params.append('presentes', attendee.person)
     return `${path}?${params.toString()}`
   }
   return (
@@ -97,6 +102,7 @@ export function FeedbackScreen({
             pick={pick}
             refusal={refusal}
             correcting={correcting}
+            editAttendees={editAttendees}
             nothing={nothing}
           />
         </>
@@ -186,6 +192,7 @@ function FeedbackForm({
   pick,
   refusal,
   correcting,
+  editAttendees,
   nothing,
 }: {
   session: string
@@ -196,6 +203,7 @@ function FeedbackForm({
   pick: (id: string) => string
   refusal?: FeedbackRefusal
   correcting: boolean
+  editAttendees: boolean
   nothing: boolean
 }) {
   const { form } = FEEDBACK
@@ -227,6 +235,10 @@ function FeedbackForm({
         {form.submit}
       </button>
       {correcting && <input type="hidden" name="corrigir" value="sim" />}
+      {editAttendees &&
+        page.attendees.map(({ person }) => (
+          <input key={person} type="hidden" name="presentes" value={person} />
+        ))}
       {refused && !(fixed && FILM_REFUSALS.has(refused)) && (
         <div ref={alert}>
           <Alert>{FEEDBACK.refusals[refused]}</Alert>

@@ -11,6 +11,16 @@ export const field = (form: FormData, name: string): string | undefined => {
   return trimmed === '' ? undefined : trimmed
 }
 
+/** The non-empty values of a repeated field (checkboxes), once each. */
+export const all = (form: FormData, name: string): string[] => [
+  ...new Set(
+    form
+      .getAll(name)
+      .filter((v): v is string => typeof v === 'string' && v.trim() !== '')
+      .map((v) => v.trim()),
+  ),
+]
+
 /** Whether the post asks for the Catálogo search of the field `name`:
  * by its button ("Buscar", `buscar-catalogo=sim`), or by Enter (the form's
  * default button, `tecla=enter`) while the field holds text the page has

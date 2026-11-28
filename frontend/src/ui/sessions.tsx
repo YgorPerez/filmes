@@ -270,7 +270,8 @@ function UnknownSession() {
  * ⋯ menu with the Link para os Presentes and "Contar como foi". */
 function SessionHead({ page }: { page: CartazPage }) {
   const s = page.session
-  const menu = s.open
+  const canEditAttendees = s.attendees.some((attendee) => attendee.owner)
+  const menu = s.open || canEditAttendees
   return (
     <header className="flex items-start justify-between gap-md">
       <div className="flex min-w-0 flex-col gap-2xs">
@@ -296,12 +297,25 @@ function SessionHead({ page }: { page: CartazPage }) {
           </summary>
           <div className="absolute top-full right-0 z-20 mt-xs flex w-[240px] max-w-[calc(100vw-32px)] flex-col rounded-card border border-rule bg-surface p-xs">
             <ul className="flex flex-col">
-              <li>
-                <a href={feedbackPath(s.id)} className={MENU_ROW}>
-                  <Icon name="film" />
-                  {SESSIONS.list.feedback}
-                </a>
-              </li>
+              {s.open && (
+                <li>
+                  <a href={feedbackPath(s.id)} className={MENU_ROW}>
+                    <Icon name="film" />
+                    {SESSIONS.list.feedback}
+                  </a>
+                </li>
+              )}
+              {canEditAttendees && (
+                <li>
+                  <a
+                    href={`${sessionPath(s.id)}?editar=presentes`}
+                    className={MENU_ROW}
+                  >
+                    <Icon name="people" />
+                    {SESSIONS.editAttendees.title}
+                  </a>
+                </li>
+              )}
             </ul>
             {page.sessionLink && (
               <ShareSessionLink key={s.id} url={page.sessionLink} />

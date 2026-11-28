@@ -75,6 +75,8 @@ export interface FeedbackRequest {
    * Feedback is replaced, by a Dono who was there. Without it, a told
    * Session refuses. */
   readonly correct?: boolean
+  /** Replaces the Presentes when correcting a told Session (#371). */
+  readonly attendees?: ReadonlyArray<string>
 }
 
 export interface ChosenFilm {
@@ -614,6 +616,14 @@ const writeFeedback = (
       )
     if (told) yield* mayCorrect(id, frontmatter)
     const front = new Map(frontmatter)
+    if (request.attendees !== undefined) {
+      if (!told || (yield* Owner) === null || request.attendees.length === 0)
+        return yield* engineError(
+          'invalid_usage',
+          'informe os Presentes ao corrigir uma Sessão já contada',
+        )
+      front.set('attendees', yield* resolveAttendees(db, request.attendees))
+    }
     const night = told ? toldOn(frontmatter) : null
     const { owners, attendees, list } = yield* feedbackReactions(
       db,

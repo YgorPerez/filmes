@@ -218,6 +218,7 @@ describe('the head’s ⋯ menu and "?" legend (#272)', () => {
     const rows = within(menu).getAllByRole('listitem')
     expect(rows.map((row) => row.textContent)).toEqual([
       SESSIONS.list.feedback,
+      SESSIONS.editAttendees.title,
       'Link para os Presentes',
       'Copiar link',
     ])

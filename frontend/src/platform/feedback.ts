@@ -27,11 +27,13 @@ import {
   type FeedbackRefusal,
 } from '#/content/feedback-form'
 import { feedbackPath, sessionPath } from '#/content/session-paths'
+import { all } from '#/content/form-fields'
 import { appPoster, failureOf, formPoster, seeOther } from './form-post'
 import { appEngine } from './engine'
 import { appNotes, type Notes } from './notes'
 import { attendeeSlugs, sessionFilms, type SessionFilm } from './session-fields'
 import type { Owner } from './owners'
+import { appRequestOptions } from './sessions'
 
 /** A Presente of the Session, with her name and whether she is the Dono
  * who records it, the logged-in one (she speaks for herself with a Nota; a
@@ -114,6 +116,7 @@ function requestOf(session: string, form: FeedbackForm) {
     reports,
     comments,
     ...(form.correct === true && { correct: true }),
+    ...(form.attendees !== undefined && { attendees: form.attendees }),
   }
 }
 
@@ -249,6 +252,7 @@ function toldDraft(told: ToldFeedback): FeedbackDraft {
 export async function feedbackCorrection(
   id: string,
   feedback: Feedback,
+  attendees?: FeedbackAttendee[],
 ): Promise<FeedbackCorrection | 'unknown' | null> {
   const list = await feedback.sessions(true)
   if (list.exitCode !== 0) {
@@ -263,7 +267,10 @@ export async function feedbackCorrection(
     return null
   }
   if (told.output === null) return 'unknown'
-  const page = await withSatisfaction(session, feedback)
+  const page = await withSatisfaction(
+    attendees === undefined ? session : { ...session, attendees },
+    feedback,
+  )
   if (page === null) return null
   return { page, film: told.output.chosen, draft: toldDraft(told.output) }
 }
@@ -328,7 +335,13 @@ export async function feedbackAction(
   if (poster instanceof Response) return poster
   const form = await request.formData()
   // A correction goes back to the correction's form (#344).
-  const again = form.get('corrigir') === 'sim' ? '&corrigir=sim' : ''
+  const correction = new URLSearchParams()
+  if (form.get('corrigir') === 'sim') {
+    correction.set('corrigir', 'sim')
+    for (const person of all(form, 'presentes'))
+      correction.append('presentes', person)
+  }
+  const again = correction.size > 0 ? `&${correction}` : ''
   const query = feedbackSearch(form)
   if (query !== undefined)
     return searchCatalog(form, query, session, notes, again)
@@ -385,8 +398,27 @@ export const serveFeedbackAction = (request: Request, session: string) => {
 
 /** A told Session's form, filled with what was told, for the logged-in
  * Dono `viewer` (#344). */
-export const appFeedbackCorrection = (id: string, viewer: string) =>
-  feedbackCorrection(id, appFeedback(viewer))
+export async function appFeedbackCorrection(
+  id: string,
+  viewer: string,
+  attendees?: string[],
+) {
+  const feedback = appFeedback(viewer)
+  if (attendees === undefined) return feedbackCorrection(id, feedback)
+  const options = await appRequestOptions(viewer)
+  if (options === null) return null
+  const people = new Map(
+    options.people.map((person) => [person.person, person]),
+  )
+  const selected: FeedbackAttendee[] = []
+  for (const slug of new Set(attendees)) {
+    const person = people.get(slug)
+    if (person === undefined) return 'unknown'
+    selected.push(person)
+  }
+  if (selected.length === 0) return 'unknown'
+  return feedbackCorrection(id, feedback, selected)
+}
 
 /** The draft of `/sessoes/<sessao>/contar?nota=`, for the app. */
 export const appFeedbackDraft = (token: string) =>

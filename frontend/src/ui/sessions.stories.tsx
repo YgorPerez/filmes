@@ -4,6 +4,7 @@ import type { ComponentProps } from 'react'
 import { expect, within } from 'storybook/test'
 import { CLOSED as TOLD, MODEL } from './billboard.fixture'
 import { SessionList, SessionScreen } from './sessions'
+import { SessionAttendees } from './session-attendees'
 
 // The screens' own props: the story leaves the server modules alone.
 type SessionItem = NonNullable<
@@ -221,4 +222,13 @@ export const SessionUnknown: Story = {
 
 export const SessionUnavailable: Story = {
   render: () => <SessionScreen page={null} />,
+}
+
+export const EditAttendees: Story = {
+  render: () => (
+    <SessionAttendees
+      session={OPEN}
+      people={[...OPEN.attendees, { person: 'teo', name: 'Teo', owner: false }]}
+    />
+  ),
 }
