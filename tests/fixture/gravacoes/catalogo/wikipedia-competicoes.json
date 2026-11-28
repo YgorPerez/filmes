@@ -1,0 +1,40 @@
+{
+  "editions": [
+    {
+      "festival": "Q42369",
+      "edition": "Q9041191",
+      "article": "2019 Cannes Film Festival",
+      "revision": 9041201,
+      "section": "Official selection > In Competition",
+      "items": [
+        "Q483941"
+      ]
+    },
+    {
+      "festival": "Q42369",
+      "edition": "Q9041194",
+      "article": "2020 Cannes Film Festival",
+      "revision": 9041204,
+      "section": null,
+      "items": []
+    },
+    {
+      "festival": "Q49024",
+      "edition": "Q9041193",
+      "article": "30th Venice International Film Festival",
+      "revision": 9041203,
+      "section": null,
+      "items": []
+    },
+    {
+      "festival": "Q130871",
+      "edition": "Q9041192",
+      "article": "66th Berlin International Film Festival",
+      "revision": 9041202,
+      "section": "Main Competition",
+      "items": [
+        "Q83495"
+      ]
+    }
+  ]
+}

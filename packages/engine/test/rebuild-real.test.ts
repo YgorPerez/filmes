@@ -456,6 +456,38 @@ test('without the series dump keeps every series edge', async () => {
   ])
 })
 
+test('loads the Criterion Collection and the festival competitions as edges (#411)', async () => {
+  const query = await rebuilt(usePinnedDumps())
+
+  // Hand-made answers: The Matrix with a Criterion id and spine and in a
+  // Berlin competition, Schindler's List in a Cannes one, and items of no
+  // film of the catalog.
+  expect(
+    await query(
+      "SELECT a.filme_id, a.predicado, a.entidade_id, a.fonte FROM arestas a WHERE a.predicado IN ('colecao', 'competicao') ORDER BY a.filme_id, a.predicado",
+    ),
+  ).toEqual([
+    ['tt0108052', 'competicao', 'Q42369', 'Wikipedia'],
+    ['tt0133093', 'colecao', 'Q1204187', 'Wikidata'],
+    ['tt0133093', 'competicao', 'Q130871', 'Wikipedia'],
+  ])
+})
+
+test('takes a manifest without the curated lists', async () => {
+  const query = await rebuilt(
+    usePinnedDumps(
+      without('wikidata-colecao.json.gz', 'wikipedia-competicoes.json.gz'),
+    ),
+  )
+
+  expect(
+    await query(
+      "SELECT count(*) FROM arestas WHERE predicado IN ('colecao', 'competicao')",
+    ),
+  ).toEqual([[0]])
+  expect(await query('SELECT count(*) FROM filmes')).toEqual([[4]])
+})
+
 test('keeps the Wikidata genre hierarchy', async () => {
   const query = await rebuilt(usePinnedDumps())
 

@@ -28,6 +28,17 @@ export const EDGES: ReadonlyMap<string, string> = new Map([
   ['P915', 'montagem'],
 ])
 
+/** The Criterion Collection (#411), the target of the `colecao` edge. */
+export const CRITERION = 'Q1204187'
+
+/** Wikidata property with a literal value (an id, a spine number) → the
+ * edge it becomes: a film with any of them is on the list (#411). */
+export const LIST_EDGES: ReadonlyMap<string, readonly [string, string]> =
+  new Map([
+    ['P9584', ['colecao', CRITERION]],
+    ['P12279', ['colecao', CRITERION]],
+  ])
+
 /** The age-rating properties (Python's `CLASSIFICACOES`). */
 export const RATING_PROPERTIES: ReadonlySet<string> = new Set([
   'P2758',
@@ -75,14 +86,16 @@ export const GROUPS: ReadonlyArray<readonly [string, readonly string[]]> = [
   ['atores', ['P345']],
   ['series', ['P31']],
   ['subgeneros', ['P279']],
+  ['colecao', [...LIST_EDGES.keys()]],
 ]
 
-/** Groups a manifest from before #35 (atores), #48 (subgeneros) or #49
- * (series) does not have. */
+/** Groups a manifest from before #35 (atores), #48 (subgeneros), #49
+ * (series) or #411 (colecao) does not have. */
 export const OPTIONAL_GROUPS: ReadonlySet<string> = new Set([
   'atores',
   'series',
   'subgeneros',
+  'colecao',
 ])
 
 /** A SPARQL term: `{ type, value, ... }`. */

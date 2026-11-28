@@ -1,0 +1,69 @@
+{
+  "head": {
+    "vars": [
+      "festival",
+      "edition",
+      "article"
+    ]
+  },
+  "results": {
+    "bindings": [
+      {
+        "festival": {
+          "type": "uri",
+          "value": "http://www.wikidata.org/entity/Q42369"
+        },
+        "edition": {
+          "type": "uri",
+          "value": "http://www.wikidata.org/entity/Q9041191"
+        },
+        "article": {
+          "type": "uri",
+          "value": "https://en.wikipedia.org/wiki/2019_Cannes_Film_Festival"
+        }
+      },
+      {
+        "festival": {
+          "type": "uri",
+          "value": "http://www.wikidata.org/entity/Q130871"
+        },
+        "edition": {
+          "type": "uri",
+          "value": "http://www.wikidata.org/entity/Q9041192"
+        },
+        "article": {
+          "type": "uri",
+          "value": "https://en.wikipedia.org/wiki/66th_Berlin_International_Film_Festival"
+        }
+      },
+      {
+        "festival": {
+          "type": "uri",
+          "value": "http://www.wikidata.org/entity/Q49024"
+        },
+        "edition": {
+          "type": "uri",
+          "value": "http://www.wikidata.org/entity/Q9041193"
+        },
+        "article": {
+          "type": "uri",
+          "value": "https://en.wikipedia.org/wiki/30th_Venice_International_Film_Festival"
+        }
+      },
+      {
+        "festival": {
+          "type": "uri",
+          "value": "http://www.wikidata.org/entity/Q42369"
+        },
+        "edition": {
+          "type": "uri",
+          "value": "http://www.wikidata.org/entity/Q9041194"
+        },
+        "article": {
+          "type": "uri",
+          "value": "https://en.wikipedia.org/wiki/2020_Cannes_Film_Festival"
+        }
+      }
+    ]
+  }
+}

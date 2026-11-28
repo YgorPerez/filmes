@@ -36,6 +36,16 @@ import { isInside, REPOSITORY } from '../rebuild/rebuild.ts'
 import { Environment } from '../runtime/Environment.ts'
 import { engineError, type EngineError } from '../runtime/EngineError.ts'
 import { Run } from '../runtime/Run.ts'
+import {
+  buildCompetitions,
+  COMPETITIONS,
+  EDITIONS_QUERY,
+  FESTIVALS,
+  parseCompetitions,
+  WIKIPEDIA,
+  WIKIPEDIA_API,
+  type Edition,
+} from './competitions.ts'
 import { GROUPLENS_SOURCES, validateZip } from './review.ts'
 import { gzipBytes } from './text-source.ts'
 import {
@@ -51,6 +61,7 @@ import {
   GROUPS,
   groupQuery,
   labelsQuery,
+  LIST_EDGES,
   QLEVER,
   qid,
   sparqlBindings,
@@ -540,6 +551,68 @@ const wikidata = (
     )
   })
 
+/** The rows of the editions query, from QLever or else the WDQS. */
+const editionRows = (run: UpdateRun) => {
+  const ask = (url: string) =>
+    Effect.gen(function* () {
+      const opened = yield* open(run.fetch, url, EDITIONS_QUERY)
+      return yield* attempt(async () => {
+        const rows: Binding[] = []
+        for await (const chunk of sparqlBindings(opened.bytes))
+          rows.push(...chunk)
+        return rows
+      })
+    })
+  return ask(QLEVER).pipe(Effect.catchTag('UpdateFailure', () => ask(WDQS)))
+}
+
+/** One MediaWiki API answer, as JSON. */
+const wikipediaApi =
+  (run: UpdateRun) => (params: Readonly<Record<string, string>>) =>
+    Effect.gen(function* () {
+      const opened = yield* open(
+        run.fetch,
+        `${WIKIPEDIA_API}?${new URLSearchParams(params).toString()}`,
+      )
+      return yield* attempt(async () => {
+        const chunks: Buffer[] = []
+        for await (const chunk of opened.bytes) chunks.push(chunk)
+        return JSON.parse(Buffer.concat(chunks).toString('utf8')) as unknown
+      })
+    })
+
+/** The festival competitions (#411): the editions' articles read from the
+ * English Wikipedia, or the recording of the dump. */
+const competitions = (run: UpdateRun) =>
+  Effect.gen(function* () {
+    const file = join(run.folder, COMPETITIONS)
+    let editions: ReadonlyArray<Edition>
+    if (run.recordings === undefined) {
+      editions = yield* buildCompetitions(
+        yield* editionRows(run),
+        wikipediaApi(run),
+      )
+      const text = `${JSON.stringify({ editions }, null, 2)}\n`
+      yield* attempt(() => compress(Readable.from([Buffer.from(text)]), file))
+    } else {
+      yield* attempt(() =>
+        compress(fileBytes(recording(run, COMPETITIONS)), file),
+      )
+      editions = yield* attempt(async () => {
+        const chunks: Buffer[] = []
+        for await (const chunk of gzipBytes(file)) chunks.push(chunk)
+        return parseCompetitions(Buffer.concat(chunks).toString('utf8'))
+      })
+    }
+    for (const festival of FESTIVALS) run.items.add(festival)
+    for (const edition of editions) run.items.add(edition.edition)
+    yield* keep(run, COMPETITIONS, {
+      source: WIKIPEDIA,
+      url: WIKIPEDIA_API,
+      date: run.today,
+    })
+  })
+
 /** Fetches the label batches into `gzip`, two in flight, consumed in order
  * (Python's `pool.map` with two workers); whether any went to the WDQS. */
 const writeLabelBatches = (
@@ -618,7 +691,7 @@ const downloadAll = (
   progress: (event: UpdateProgress) => Effect.Effect<void>,
 ) =>
   Effect.gen(function* () {
-    const steps = DOWNLOADS.length + GROUPS.length + 1
+    const steps = DOWNLOADS.length + GROUPS.length + 2
     for (const [position, name] of DOWNLOADS.entries()) {
       yield* progress({
         progress: position,
@@ -639,6 +712,15 @@ const downloadAll = (
         }),
       )
     }
+    // The Criterion edge points at the collection's item, which no row
+    // names (#411): its label comes with the others.
+    for (const [, target] of LIST_EDGES.values()) run.items.add(target)
+    yield* progress({
+      progress: steps - 2,
+      total: steps,
+      message: 'Lendo as competições na Wikipedia',
+    })
+    yield* competitions(run)
     yield* labels(run, (fraction, message) =>
       progress({ progress: steps - 1 + fraction, total: steps, message }),
     )
@@ -663,7 +745,7 @@ export const update = (
     const recordings = environment.paths.recordings
     const progress = request.onProgress ?? (() => Effect.void)
     mkdirSync(catalog, { recursive: true })
-    const steps = DOWNLOADS.length + GROUPS.length + 1
+    const steps = DOWNLOADS.length + GROUPS.length + 2
     const dumps = yield* Effect.acquireUseRelease(
       Effect.sync(() => mkdtempSync(join(catalog, 'tmp'))),
       (folder) =>

@@ -1,0 +1,30 @@
+{
+  "pages": {
+    "2019 Cannes Film Festival": {
+      "revid": 9041201,
+      "content": "The '''2019 Cannes Film Festival''' (hand-made for the fixture).\n\n==Juries==\n===Main Competition===\n* [[Alejandro González Iñárritu]], Mexican director (President)\n* ''[[The Matrix]]''\n\n==Official selection==\n===In Competition===\n{| class=\"wikitable\"\n! English title !! Director(s)\n|-\n| ''[[Schindler's List]]'' || [[Steven Spielberg]]\n|-\n| [[Category:Nothing]]\n|}\n\n===Un Certain Regard===\n* ''[[Matrix (film)|The Matrix]]''\n\n==Awards==\n* ''[[The Matrix]]'' – Palme d'Or\n"
+    },
+    "66th Berlin International Film Festival": {
+      "revid": 9041202,
+      "content": "The '''66th Berlin International Film Festival''' (hand-made for the fixture).\n\n==Main Competition==\nThe following films were selected for the main competition:\n* ''[[matrix (film)|The Matrix]]'' by [[Lana Wachowski]]\n\n=== Out of competition ===\n* ''[[Schindler's List]]''\n\n=== Panorama ===\n* ''[[Schindler's_List]]''\n\n==Official Awards==\n"
+    },
+    "30th Venice International Film Festival": {
+      "revid": 9041203,
+      "content": "The '''30th Venice International Film Festival''' (hand-made for the fixture).\n\n==Official Selections==\n* ''[[The Matrix]]''\n"
+    },
+    "2020 Cannes Film Festival": {
+      "revid": 9041204,
+      "content": "The '''2020 Cannes Film Festival''' (hand-made for the fixture) was not held.\n\n==Cannes 2020 label==\nThe films were given the \"Cannes 2020\" label.\n* ''[[Schindler's List]]''\n"
+    }
+  },
+  "redirects": {
+    "Matrix (film)": "The Matrix"
+  },
+  "items": {
+    "The Matrix": "Q83495",
+    "Schindler's List": "Q483941",
+    "Steven Spielberg": "Q8877",
+    "Alejandro González Iñárritu": "Q55400",
+    "Lana Wachowski": "Q9544977"
+  }
+}

@@ -6,7 +6,7 @@
 import { createHash } from 'node:crypto'
 import { cpSync, existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { crc32, gzipSync } from 'node:zlib'
+import { crc32, gunzipSync, gzipSync } from 'node:zlib'
 import { Effect } from 'effect'
 import { expect, test } from 'vite-plus/test'
 import {
@@ -20,6 +20,7 @@ import { ROOT, useFixture, type Fixture } from './fixture.ts'
 
 const RECORDED = join(ROOT, 'tests/fixture/gravacoes')
 const RECORDED_DUMPS = join(RECORDED, 'catalogo')
+const RECORDED_WIKIPEDIA = join(RECORDED, 'wikipedia')
 
 const ALL_DUMPS = [
   'title.basics.tsv.gz',
@@ -34,6 +35,8 @@ const ALL_DUMPS = [
   'wikidata-atores.json.gz',
   'wikidata-series.json.gz',
   'wikidata-subgeneros.json.gz',
+  'wikidata-colecao.json.gz',
+  'wikipedia-competicoes.json.gz',
 ]
 
 interface Catalog {
@@ -156,22 +159,27 @@ test('reports its progress, step by step', async () => {
 
   expect(events[0]).toEqual({
     progress: 0,
-    total: 12,
+    total: 14,
     message: 'Baixando ml-32m.zip',
   })
   expect(events).toContainEqual({
     progress: 5,
-    total: 12,
+    total: 14,
     message: 'Consultando o QLever (ids)',
   })
   expect(events).toContainEqual({
-    progress: 11,
-    total: 12,
+    progress: 12,
+    total: 14,
+    message: 'Lendo as competições na Wikipedia',
+  })
+  expect(events).toContainEqual({
+    progress: 13,
+    total: 14,
     message: 'Consultando o QLever (rótulos)',
   })
   expect(events.at(-1)).toEqual({
-    progress: 12,
-    total: 12,
+    progress: 14,
+    total: 14,
     message: 'Versões do Catálogo gravadas',
   })
 })
@@ -353,6 +361,7 @@ const groupOf = (query: string): string => {
   if (query.includes('wdt:P136/wdt:P279*')) return 'subgeneros'
   if (query.includes('?slug')) return 'ids'
   if (/VALUES \?p \{ wdt:P161 \}/.test(query)) return 'elenco'
+  if (query.includes('wdt:P9584')) return 'colecao'
   return 'conteudo'
 }
 
@@ -375,6 +384,62 @@ const labelRows = (query: string) => {
   })
 }
 
+/** The recorded English Wikipedia: each article's revision and wikitext,
+ * the redirects and each page's Wikidata item. */
+interface RecordedWikipedia {
+  readonly pages: Record<string, { revid: number; content: string }>
+  readonly redirects: Record<string, string>
+  readonly items: Record<string, string>
+}
+
+/** The MediaWiki API over the recording: titles normalized (`_` to space)
+ * and redirected; the revisions one page per answer, with `continue`. */
+const wikipedia = (url: URL): Response => {
+  const recording = JSON.parse(
+    readFileSync(join(RECORDED_WIKIPEDIA, 'api.json'), 'utf8'),
+  ) as RecordedWikipedia
+  const asked = url.searchParams.get('titles')!.split('|')
+  const normalized = asked
+    .filter((title) => title.includes('_'))
+    .map((from) => ({ from, to: from.replaceAll('_', ' ') }))
+  const named = asked.map((title) => title.replaceAll('_', ' '))
+  const redirects = named
+    .filter((title) => title in recording.redirects)
+    .map((from) => ({ from, to: recording.redirects[from]! }))
+  const titles = [
+    ...new Set(named.map((title) => recording.redirects[title] ?? title)),
+  ]
+  const query = (pages: unknown[]) => ({ normalized, redirects, pages })
+  if (url.searchParams.get('prop') === 'pageprops')
+    return Response.json({
+      query: query(
+        titles.map((title) =>
+          title in recording.items
+            ? { title, pageprops: { wikibase_item: recording.items[title] } }
+            : { title, missing: true },
+        ),
+      ),
+    })
+  const at = Number(url.searchParams.get('rvcontinue') ?? 0)
+  const title = titles[at]!
+  const page = recording.pages[title]
+  return Response.json({
+    ...(at + 1 < titles.length && {
+      continue: { rvcontinue: String(at + 1), continue: '||' },
+    }),
+    query: query([
+      page === undefined
+        ? { title, missing: true }
+        : {
+            title,
+            revisions: [
+              { revid: page.revid, slots: { main: { content: page.content } } },
+            ],
+          },
+    ]),
+  })
+}
+
 const hosts: Answer = ({ url, query }) => {
   if (url.host === 'datasets.imdbws.com')
     return new Response(
@@ -383,8 +448,11 @@ const hosts: Answer = ({ url, query }) => {
     )
   if (url.host === 'files.grouplens.org')
     return new Response(recorded(url.pathname.split('/').at(-1)!))
+  if (url.host === 'en.wikipedia.org') return wikipedia(url)
   if (query === undefined) return undefined
   if (query.includes('VALUES ?valor')) return sparqlJson(labelRows(query))
+  if (query.includes('schema:about'))
+    return new Response(readFileSync(join(RECORDED_WIKIPEDIA, 'edicoes.json')))
   return new Response(recorded(`wikidata-${groupOf(query)}.json`))
 }
 
@@ -452,6 +520,71 @@ test('downloads every dump and pins the IMDb run date', async () => {
       "SELECT r.en FROM arestas a JOIN rotulos_wikidata r ON r.item = a.entidade_id WHERE a.filme_id = 'tt0108052' AND a.predicado = 'diretor'",
     ),
   ).toEqual([['Steven Spielberg']])
+})
+
+test('builds the festival competitions from the edition articles (#411)', async () => {
+  const catalog = useCatalog('network')
+  const { fetch, asked } = fakeFetch()
+
+  const updated = await catalog.fixture.ok(update({ fetch }), catalog.vars)
+
+  expect(updated.dumps['wikipedia-competicoes.json.gz']).toMatchObject({
+    date: '2026-11-20',
+    source: 'Wikipedia',
+    url: 'https://en.wikipedia.org/w/api.php',
+  })
+  const api = asked.filter((request) => request.url.host === 'en.wikipedia.org')
+  expect(api.length).toBeGreaterThan(0)
+  for (const request of api) {
+    expect(request.url.searchParams.get('formatversion')).toBe('2')
+    expect(
+      request.url.searchParams.get('titles')!.split('|').length,
+    ).toBeLessThanOrEqual(50)
+  }
+  // The competition inside the official selection, not the jury's or Un
+  // Certain Regard's films; the 66th Berlinale's main competition without
+  // the sections under it; no competition in Venice 1969 nor in Cannes 2020.
+  await catalog.fixture.ok(rebuild, catalog.vars)
+  expect(
+    await rows(
+      catalog,
+      "SELECT filme_id, entidade_id, fonte FROM arestas WHERE predicado = 'competicao' ORDER BY filme_id",
+    ),
+  ).toEqual([
+    ['tt0108052', 'Q42369', 'Wikipedia'],
+    ['tt0133093', 'Q130871', 'Wikipedia'],
+  ])
+  expect(
+    await rows(
+      catalog,
+      "SELECT filme_id, entidade_id FROM arestas WHERE predicado = 'colecao'",
+    ),
+  ).toEqual([['tt0133093', 'Q1204187']])
+})
+
+test('builds the same competitions dump the recordings hold (#411)', async () => {
+  const network = useCatalog('network')
+  const { fetch } = fakeFetch()
+  const built = await network.fixture.ok(update({ fetch }), network.vars)
+  const recorded = useCatalog()
+  const pinnedDumps = await recorded.fixture.ok(update(), recorded.vars)
+
+  const editions = (catalog: Catalog, sha256: string) =>
+    JSON.parse(
+      gunzipSync(
+        readFileSync(
+          join(catalog.catalog, sha256, 'wikipedia-competicoes.json.gz'),
+        ),
+      ).toString('utf8'),
+    ) as unknown
+  expect(
+    editions(network, built.dumps['wikipedia-competicoes.json.gz']!.sha256),
+  ).toEqual(
+    editions(
+      recorded,
+      pinnedDumps.dumps['wikipedia-competicoes.json.gz']!.sha256,
+    ),
+  )
 })
 
 test('the series query asks which root each class falls under (#165)', async () => {
@@ -596,7 +729,7 @@ test('a group QLever fails is asked to the WDQS by property', async () => {
   ])
   expect(events).toContainEqual({
     progress: 5.1,
-    total: 12,
+    total: 14,
     message:
       'QLever falhou (ids): HTTP Error 500: Server Error. Consultando o WDQS por predicado.',
   })
@@ -624,6 +757,19 @@ test('an IMDb dump shorter than its header fails', async () => {
   ).toEqual({
     code: 'update_failed',
     message: 'cabeçalho inesperado em title.basics.tsv.gz',
+  })
+})
+
+test('a competitions dump of another shape fails (#411)', async () => {
+  expect(
+    await failWithRecording(
+      useCatalog(),
+      'wikipedia-competicoes.json',
+      '{"editions":[{"festival":"Cannes"}]}',
+    ),
+  ).toEqual({
+    code: 'update_failed',
+    message: 'wikipedia-competicoes.json.gz fora do formato',
   })
 })
 
