@@ -80,11 +80,29 @@ it('tells a closed Session, with the film it ended with, from a broken link', ()
 })
 
 it('heads her pages with her name and the way back to the names', () => {
-  render(<LinkHeader person={PEOPLE[1]!} notYou="/participar?sessao=s" />)
+  render(
+    <LinkHeader
+      person={PEOPLE[1]!}
+      notYou="/participar?sessao=s"
+      cartaz="/sessoes/s"
+    />,
+  )
   expect(screen.getByText('Iara')).toBeTruthy()
   expect(link(PARTICIPATION.notYou).getAttribute('href')).toBe(
     '/participar?sessao=s',
   )
+})
+
+it('heads the opener’s pages with the way back to her Cartaz (#376)', () => {
+  render(
+    <LinkHeader
+      person={PEOPLE[0]!}
+      notYou="/participar?sessao=s"
+      cartaz="/sessoes/s"
+    />,
+  )
+  expect(link(PARTICIPATION.toCartaz).getAttribute('href')).toBe('/sessoes/s')
+  expect(screen.queryByRole('link', { name: PARTICIPATION.notYou })).toBeNull()
 })
 
 it('before any Voto, lists the films and asks for every Voto', () => {

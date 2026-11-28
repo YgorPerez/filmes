@@ -170,7 +170,7 @@ export async function cardsById(
 async function screenOf(
   front: YamlMapping,
   session: string,
-  person: string,
+  { person, owner: opener }: LinkPerson,
   engine: Engine,
 ): Promise<Pick<SessionLinkView, 'films' | 'left' | 'questions'>> {
   const current = currentVersion(front)
@@ -187,9 +187,12 @@ async function screenOf(
       .map((f) => [f.id, f.title ?? f.id]),
   )
   const onScreen = new Set(screen.map((f) => f.id))
-  const asked = await engine.run(pairwiseQuestions({ session, person }))
+  // The Perguntas par a par are the guests': the opener has none here.
+  const asked = opener
+    ? null
+    : await engine.run(pairwiseQuestions({ session, person }))
   return {
-    questions: asked.exitCode === 0 ? asked.output.pairs.length : 0,
+    questions: asked?.exitCode === 0 ? asked.output.pairs.length : 0,
     films: screen.map((film) => {
       const card = byId.get(film.id) ?? null
       return {
@@ -219,11 +222,15 @@ function shelfOf(front: YamlMapping): string[] {
 }
 
 /** Revalidate the capability and current Presentes before returning any data.
- * The anonymous view receives an explicit projection of the Session. */
+ * The anonymous view receives an explicit projection of the Session.
+ * `viewer` is the logged-in Dono's Pessoa, or null: the opener is chosen
+ * only when she is the one logged in (her Cartaz's Votar, #376), so the
+ * link alone never votes as her. */
 export async function resolveSessionLink(
   search: SessionLinkSearch,
   engine: Engine,
   database: string,
+  viewer: string | null,
 ): Promise<SessionLinkView | null> {
   const sessao = signed(search, database)
   if (sessao === null) return null
@@ -245,7 +252,10 @@ export async function resolveSessionLink(
     color,
     owner: opened,
   }))
-  const selected = attendees.find((p) => p.person === presente) ?? null
+  const selected =
+    attendees.find(
+      (p) => p.person === presente && (!p.owner || p.person === viewer),
+    ) ?? null
   return {
     session: sessao,
     version: Number(yamlToJson(currentVersion(front).get('version') ?? null)),
@@ -255,7 +265,7 @@ export async function resolveSessionLink(
     selected,
     shelf: shelfOf(front),
     ...(selected
-      ? await screenOf(front, sessao, selected.person, engine)
+      ? await screenOf(front, sessao, selected, engine)
       : { films: [], left: [], questions: 0 }),
   }
 }
