@@ -24,8 +24,8 @@ export default defineTool({
     '`keep` (IDs que ficam, na ordem da tela), `dropped` ({position, id, title, cause: seen|swapped, people?}), ' +
     '`addition` e `comments` ({position, id, title, comment}) como vieram, `stars`, ' +
     '`seen` ({person, film, title, rating, new}), `version`, `currentVersion` e `warnings`. ' +
-    'Com `regenerate`, refaça com recommend (session, keep, e `moods` quando não for null) e um pedido montado do acrescentar; ' +
-    'o texto livre não é interpretado aqui. ' +
+    'Com `regenerate`, refaça com recommend (session, keep, e `moods` quando não for null) e um pedido montado do acrescentar. ' +
+    'Passe os textos de `comments` em `refillComments` no refazer desta resposta. O motor aplica Climas, Restrições e Parecido às vagas. ' +
     'O Enviar da tela do Cartaz chama esta ferramenta sozinho; a mensagem que termina com `(pelo Cartaz · v<n>)` ' +
     'já foi gravada: não chame de novo, refaça com o `manter` e o `clima` da `Resposta do Cartaz` que veio no seu contexto ' +
     '(sem ela, com os filmes do `billboard` que a mensagem não tirou).',

@@ -76,6 +76,8 @@ import {
   type SessionRecommendation,
   type SessionRef,
 } from './open.ts'
+import { readRefillComments, refillConstraints } from './refill-comments.ts'
+import { shortfallOf } from './shortfall.ts'
 
 /** The Session's frontmatter, or an error if it does not exist or already
  * has Feedback (`conferir_aberta`). */
@@ -171,6 +173,7 @@ const redoFront = (
     currentVersion(front),
   ]
   for (const field of VERSION_EXTRAS) front.delete(field)
+  front.delete('refill_comments')
   for (const [key, value] of recommendationFields(recommendation, context))
     front.set(key, value)
   front.set('redone_on', today)
@@ -281,6 +284,13 @@ const prepareRedo = (
     return { asking, asked, regenerate: prepared.regenerate, warnings }
   })
 
+/** How many films the current version shows: a refazer without a count
+ * keeps it (map #355), so swapping 4 of 9 gives back 9. */
+const sizeOf = (front: YamlMapping): number | undefined => {
+  const films = front.get('recommendation')
+  return isSequence(films) && films.length > 0 ? films.length : undefined
+}
+
 /** The request as the Session asks it: with the Restrições its current
  * version passes on and, in a refazer, what it regenerates. */
 const sessionRequest = (
@@ -293,9 +303,11 @@ const sessionRequest = (
     readonly asked: ReadonlyArray<Constraint>
     readonly regenerate: Regenerate | undefined
     readonly warnings: ReadonlyArray<string>
+    readonly refillMoods?: ReadonlyArray<string>
+    readonly refillOnly?: ReadonlyArray<Constraint>
   },
-  EngineError,
-  Environment
+  EngineError | SqliteError,
+  EngineServices
 > =>
   Effect.gen(function* () {
     if (session === undefined)
@@ -307,11 +319,23 @@ const sessionRequest = (
       }
     const front = yield* openSessionFront(session)
     const asking = inheritConstraints(
-      { ...request, request: request.request ?? storedRequest(front) },
+      {
+        ...request,
+        request: request.request ?? storedRequest(front),
+        count: request.count ?? sizeOf(front),
+      },
       storedIn(front),
     )
     const asked = yield* readAsked(asking)
-    return yield* prepareRedo(front, { keep, asking, asked })
+    const redo = yield* prepareRedo(front, { keep, asking, asked })
+    const comments = request.refillComments
+    if (!comments?.length) return redo
+    const read = yield* readRefillComments(comments)
+    return {
+      ...redo,
+      refillMoods: read.moods ?? [],
+      refillOnly: yield* refillConstraints(read, redo.regenerate),
+    }
   })
 
 /** `recomendar`: the Recomendação, and the Session it opens or, with
@@ -324,7 +348,7 @@ export const recommendSession = (
   EngineServices | Run
 > =>
   Effect.gen(function* () {
-    const count = yield* requestCount(request)
+    const requested = yield* requestCount(request)
     const keep = requestIds(request.keep)
     if (keep.length > 0 && !request.session)
       return yield* engineError(
@@ -340,24 +364,29 @@ export const recommendSession = (
             yield* authorFor((yield* Owner) ?? undefined),
           )
         : []
-    const { asking, asked, regenerate, warnings } = yield* sessionRequest(
-      request,
-      session,
-      keep,
-    )
+    const { asking, asked, regenerate, warnings, refillMoods, refillOnly } =
+      yield* sessionRequest(request, session, keep)
+    const count = asking.count ?? requested
     // The Aposta's draws come from the Session id (#178).
-    const ranked = yield* rankRequest(
-      asking,
+    const rankedWithRelaxed = yield* rankRequest(
+      {
+        ...asking,
+        ...(refillMoods !== undefined && { refillMoods }),
+        relax: true,
+      },
       count,
-      asked,
+      refillOnly === undefined ? asked : [...asked, ...refillOnly],
       regenerate,
       session !== undefined
         ? () => Effect.succeed(session)
         : (db, attendees) => nextSessionId(db, attendees),
     )
-    const recommendation: Recommendation = {
+    const { relaxed, ...ranked } = rankedWithRelaxed
+    const shortfall = shortfallOf(ranked, count, relaxed)
+    const recommendation: Omit<SessionRecommendation, 'session'> = {
       ...ranked,
       warnings: [...synced, ...warnings, ...ranked.warnings],
+      ...(shortfall && { shortfall }),
     }
     const context = sessionContext(
       asking.request ?? null,

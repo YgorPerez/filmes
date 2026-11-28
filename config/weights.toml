@@ -193,7 +193,8 @@ min_relevance = 0.6
 
 [similar]
 # `recomendar --parecido` (#67): só passam os `candidatos` filmes mais parecidos
-# com a referência, contados antes das outras Restrições e da nota mínima.
+# com a referência entre os que passaram pelo mínimo do IMDb, pelos Vetos e
+# pelas demais Restrições (#356).
 candidates = 50
 # Tags do genoma da referência que contam: as mais próprias dela (relevância
 # acima da média da tag no genoma). As candidatas a isso são as de maior relevância.

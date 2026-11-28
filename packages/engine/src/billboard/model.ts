@@ -110,6 +110,7 @@ import {
   type FilmInBody,
 } from '../sessions/file.ts'
 import { authorFor } from '../sessions/open.ts'
+import { shortfallText, storedShortfall } from '../sessions/shortfall.ts'
 
 /** The person colours of the design (`person-1` to `person-6`), by the
  * Presente's order. */
@@ -290,6 +291,10 @@ export interface Billboard {
   readonly request: BillboardRequest
   /** What left the previous version (`dropped`), in order. */
   readonly dropped: ReadonlyArray<BillboardDropped>
+  /** The strip at the top when the version came up short or was relaxed
+   * (#357): "Acabaram os parecidos com Home Alone; entraram 3 de antes de
+   * 1990". Absent with a full list. */
+  readonly shortfall?: string
   readonly films: ReadonlyArray<BillboardFilm>
   /** The films by Motivo, in order: every film in one section. None in a
    * Session from before #183. */
@@ -1011,6 +1016,9 @@ export const billboardModel = (
           const note = notes.get(film.id)
           cards.push(note === undefined ? card : { ...card, notes: note })
         }
+        const shortfall = storedShortfall(
+          yamlToJson(front.get('shortfall') ?? null),
+        )
         const chosenBlock =
           feedback === null || cards.some((c) => c.id === feedback.chosen)
             ? null
@@ -1024,6 +1032,9 @@ export const billboardModel = (
           attendees: people,
           request: requestOf(front, people, weights.catalog.min_imdb_rating),
           dropped: droppedOf(front, people, owner),
+          ...(shortfall !== undefined && {
+            shortfall: shortfallText(shortfall),
+          }),
           films: cards,
           sections: withReasons
             ? sectionsOf(cards, reasons, people, films)

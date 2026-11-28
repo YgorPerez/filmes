@@ -10,17 +10,35 @@ import { strongest } from './tags.ts'
 
 export const mood: Signal = {
   module: 'clima',
-  forFilm: (round) =>
-    Effect.map(
-      Effect.forEach(round.moods, (m) =>
-        strongest(
-          round,
-          `Clima ${m.name}`,
-          m.tags,
-          m.genres,
-          round.weights.mood.weight,
+  forFilm: (round) => {
+    const refill = round.refillMoods
+    const requested = new Set(round.moods.map((m) => m.name))
+    const moods = [
+      ...round.moods,
+      ...(refill?.moods.filter((m) => !requested.has(m.name)) ?? []),
+    ]
+    return Effect.map(
+      Effect.forEach(moods, (m) =>
+        Effect.map(
+          strongest(
+            round,
+            `Clima ${m.name}`,
+            m.tags,
+            m.genres,
+            round.weights.mood.weight,
+          ),
+          (lines) => {
+            if (!refill?.moods.some((extra) => extra.name === m.name))
+              return lines
+            const repeated = requested.has(m.name)
+            return lines.flatMap((line) => {
+              if (refill.kept(line.filmId)) return repeated ? [line] : []
+              return [repeated ? { ...line, base: 2 * line.base } : line]
+            })
+          },
         ),
       ),
       (lines) => lines.flat(),
-    ),
+    )
+  },
 }

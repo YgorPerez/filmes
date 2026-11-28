@@ -25,6 +25,10 @@ export interface Round {
   readonly attendees: ReadonlyArray<string>
   /** The Climas asked for, in the order asked. */
   readonly moods: ReadonlyArray<Mood>
+  readonly refillMoods?: {
+    readonly moods: ReadonlyArray<Mood>
+    readonly kept: (filmId: string) => boolean
+  }
   /** Each Presente's Escala, read once for the round: every signal reads
    * her Notas on the same scale. */
   readonly scales: ReadonlyMap<string, RatingScale>
