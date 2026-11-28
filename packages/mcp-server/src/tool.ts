@@ -26,6 +26,10 @@ export interface ToolContext {
   /** Sends a progress notification, when the client asked for them (a
    * `progressToken`); otherwise does nothing. */
   readonly progress: (event: EvaluationProgress) => Effect.Effect<void>
+  /** The Link da Sessão's address for a Session (#396), when the server
+   * runs in the app, which holds the key that signs it; absent otherwise
+   * (stdio). The tool decides whether its caller may have it. */
+  readonly sessionLink?: (session: string) => string | null
 }
 
 export interface Tool<Input extends z.ZodObject = z.ZodObject> {

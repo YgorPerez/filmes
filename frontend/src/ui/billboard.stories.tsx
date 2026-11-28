@@ -2,7 +2,7 @@
 // reactions, on its card or, without one, in a block above the cards),
 // without sections, empty, short of films (#357),
 // and in the MCP Apps view's inline and fullscreen layouts, and in a host
-// without fullscreen.
+// without fullscreen; "Mostrar QR" with the Link da Sessão (#396).
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, within } from 'storybook/test'
 import { Billboard } from './billboard'
@@ -139,4 +139,27 @@ export const ViewWithoutFullscreen: Story = {
     await expect(box.left).toBeGreaterThanOrEqual(row.left)
     await expect(box.right).toBeLessThanOrEqual(row.right)
   },
+}
+
+const LINK = 'https://cinema.temestudo.cloud/participar?sessao=x&chave=y'
+
+/** "Mostrar QR" under the request, for the Dono who has the Link da
+ * Sessão (#396). */
+export const WithSessionLink: Story = {
+  args: { sessionLink: LINK },
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByRole('button', { name: 'Mostrar QR' }),
+    ).toBeVisible()
+  },
+}
+
+export const WithSessionLinkInline: Story = {
+  args: { ...Inline.args, sessionLink: LINK },
+  play: WithSessionLink.play,
+}
+
+export const WithSessionLinkFullscreen: Story = {
+  args: { ...Fullscreen.args, sessionLink: LINK },
+  play: WithSessionLink.play,
 }

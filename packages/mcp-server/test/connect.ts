@@ -42,12 +42,13 @@ const text = (result: ToolResult): string => {
  * `useFixture()`), closed when the test ends. `owner` is the logged-in
  * Pessoa the server runs every call as; `vars` add to (or, `undefined`,
  * remove from) the fixture's; `edge` is what the HTTP edge adds: what it
- * says of her (`admin`) and the app's address (`appOrigin`). */
+ * says of her (`admin`), the app's address (`appOrigin`) and the Link da
+ * Sessão's signature (`sessionLink`). */
 export async function connect(
   fixture: Fixture,
   owner: string | null = null,
   vars: Vars = {},
-  edge: Pick<McpServerOptions, 'admin' | 'appOrigin'> = {},
+  edge: Pick<McpServerOptions, 'admin' | 'appOrigin' | 'sessionLink'> = {},
 ): Promise<Connected> {
   const engine = makeEngine({ ...fixture.vars, ...vars })
   const server = createMcpServer({
