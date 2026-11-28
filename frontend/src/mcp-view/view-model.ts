@@ -36,14 +36,21 @@ export function errorCodeOf(result: ToolResult): string | null {
     : null
 }
 
-/** The Cartaz a `billboard` result carries; the error's code otherwise
- * (null when it has none). The view never shows the engine's words. */
+/** The Cartaz a `billboard` result carries, with the Link da Sessão when
+ * the Dono has it (#396); the error's code otherwise (null when it has
+ * none). The view never shows the engine's words. */
 export function billboardOf(
   result: ToolResult,
-): { billboard: Billboard } | { error: string | null } {
+):
+  | { billboard: Billboard; sessionLink: string | null }
+  | { error: string | null } {
   const json = jsonOf(result)
   if (!result.isError && isRecord(json) && isRecord(json.billboard))
-    return { billboard: json.billboard as unknown as Billboard }
+    return {
+      billboard: json.billboard as unknown as Billboard,
+      sessionLink:
+        typeof json.sessionLink === 'string' ? json.sessionLink : null,
+    }
   return { error: errorCodeOf(result) }
 }
 

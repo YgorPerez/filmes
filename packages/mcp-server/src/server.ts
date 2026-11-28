@@ -30,6 +30,9 @@ export interface McpServerOptions {
   /** The app's address (`APP_ORIGIN`), when the server runs in the app:
    * the Cartaz's view loads the fonts from it. */
   readonly appOrigin?: string
+  /** Signs the Link da Sessão of a Session (#396), when the server runs in
+   * the app: the Cartaz's "Mostrar QR". */
+  readonly sessionLink?: (session: string) => string | null
 }
 
 export const SERVER_INFO = { name: 'filmes', version: '0.2.0' }
@@ -44,10 +47,15 @@ export const ADMIN_ONLY = {
   },
 } as const
 
-/** Progress notifications for the call, if its client sent a token. */
-const contextOf = (ctx: ServerContext): ToolContext => {
+/** Progress notifications for the call, if its client sent a token, and
+ * the edge's Link da Sessão. */
+const contextOf = (
+  ctx: ServerContext,
+  sessionLink: McpServerOptions['sessionLink'],
+): ToolContext => {
   const token = ctx.mcpReq._meta?.progressToken
   return {
+    ...(sessionLink && { sessionLink }),
     progress: (event: EvaluationProgress) =>
       token === undefined
         ? Effect.void
@@ -98,6 +106,7 @@ export function createMcpServer({
   admin,
   oauthScope,
   appOrigin,
+  sessionLink,
 }: McpServerOptions): McpServer {
   const server = new McpServer(SERVER_INFO, { instructions: INSTRUCTIONS })
   for (const tool of tools.filter((t) => !t.admin || admin !== false))
@@ -124,7 +133,7 @@ export function createMcpServer({
             return answer(ADMIN_ONLY, true)
         }
         const outcome = await engine.run(
-          tool.run(input as never, contextOf(ctx)),
+          tool.run(input as never, contextOf(ctx, sessionLink)),
           options,
         )
         return answer(outcome.output, outcome.exitCode !== 0)

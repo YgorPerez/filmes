@@ -24,6 +24,33 @@ describe('billboard', () => {
     assert.equal(output.billboard.attendees[0].label, 'Você')
   })
 
+  test('the Dono who opened the Session gets its link for the QR, while it is open (#396)', async () => {
+    const fixture = useFixture()
+    const sessionLink = (session: string) =>
+      `https://cinema.example/participar?sessao=${session}&chave=k`
+    const bruno = await connect(fixture, 'bruno', {}, { sessionLink })
+    const vera = await connect(fixture, 'vera', {}, { sessionLink })
+    const { session } = await bruno.ok('recommend', {
+      attendees: ['dono', 'iara'],
+    })
+
+    const own = await bruno.ok('billboard', { session: session.id })
+    assert.equal(own.sessionLink, sessionLink(session.id))
+    // Another Dono sees the Cartaz, not the link she did not issue.
+    const other = await vera.ok('billboard', { session: session.id })
+    assert.equal(other.sessionLink, undefined)
+    // Without the app (stdio), no link at all.
+    const { ok } = await connect(fixture, 'bruno')
+    assert.equal(
+      (await ok('billboard', { session: session.id })).sessionLink,
+      undefined,
+    )
+
+    await bruno.ok('record_feedback', { session: session.id, nothing: true })
+    const told = await bruno.ok('billboard', { session: session.id })
+    assert.equal(told.sessionLink, undefined)
+  })
+
   test('an unknown Session names no folder of the server', async () => {
     const { error } = await connect(useFixture())
 

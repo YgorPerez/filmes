@@ -1,7 +1,27 @@
-import { billboard } from '@filmes/engine'
+import { billboard, isOpen, readSession } from '@filmes/engine'
+import { Effect } from 'effect'
 import { z } from 'zod'
 import { billboardViewTool } from '../billboard-view.ts'
-import { defineTool, imdbId, sessionId } from '../tool.ts'
+import {
+  defineTool,
+  imdbId,
+  requestOwner,
+  sessionId,
+  type ToolContext,
+} from '../tool.ts'
+
+/** The Link da Sessão (#396), only for the Dono who opened the Session
+ * and while it is open, as on the Session's page; null otherwise. */
+const linkFor = (session: string, sign: ToolContext['sessionLink']) =>
+  sign === undefined
+    ? Effect.succeed(null)
+    : Effect.gen(function* () {
+        const { frontmatter } = yield* readSession(session)
+        const owner = yield* requestOwner
+        return isOpen(frontmatter) && frontmatter.get('owner') === owner.slug
+          ? sign(session)
+          : null
+      }).pipe(Effect.orElseSucceed(() => null))
 
 export default defineTool({
   name: 'billboard',
@@ -20,7 +40,8 @@ export default defineTool({
     'numerados de 1 em diante, e a Sessão guarda a lista como mostrada, para o Feedback registrar a posição do Filme escolhido nela. ' +
     'O Cartaz responde: em cada filme, Já vi (por Presente, com nota de 1 a 10 e o que achou), Trocar, estrelas e comentário; ' +
     'embaixo, o acrescentar. O texto que volta começa com `#cartaz <sessao> v<n>` e vai para `answer_billboard`. ' +
-    'Devolve também `session`, `films` (quantos cards) e `warnings`. ' +
+    'Devolve também `session`, `films` (quantos cards) e `warnings`; com a Sessão aberta e aberta por você, `sessionLink`, o Link para os Presentes, ' +
+    'que o Cartaz mostra como QR code em "Mostrar QR" para cada um entrar pelo celular e votar. ' +
     'Ao apresentar o Cartaz no chat, a linha de cada filme cita o `text` de `predictedRatings`, na ordem de `attendees`: ' +
     '"Fronteira (2008) — previsto: Ana 8,3, Bruno 7,1", com "Você" para o Dono; Presente sem Nota prevista fica fora da lista, ' +
     'e filme sem nenhuma não tem "previsto". ' +
@@ -38,6 +59,13 @@ export default defineTool({
       ),
   }),
   meta: billboardViewTool,
-  run: ({ session, films }) =>
-    billboard({ session, ...(films !== undefined && { shown: films }) }),
+  run: ({ session, films }, context) =>
+    Effect.gen(function* () {
+      const result = yield* billboard({
+        session,
+        ...(films !== undefined && { shown: films }),
+      })
+      const link = yield* linkFor(session, context.sessionLink)
+      return link === null ? result : { ...result, sessionLink: link }
+    }),
 })

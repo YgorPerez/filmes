@@ -72,6 +72,10 @@ _Evitar_: clima negativo, anticlima
 O que uma Sessão quer sem excluir nenhum filme: a energia ("algo leve"), a ocasião ("aniversário da Ana"), a vontade do momento. Puxa a ordem, nunca tira um filme.
 _Evitar_: desejo, mood, preferência
 
+**Programa** [preset, `Preset`]:
+Um nome fixo de `config/presets.toml` ("Noite com as crianças", "Encontro") com Climas e Restrições, para uma noite que se repete. Na nova Sessão, o chip do Programa marca os dele por cima do que o Dono já marcou; a Leitura do pedido lê o nome. Não fica gravado na Sessão: o que vale são os Climas e as Restrições que ele marcou.
+_Evitar_: preset, modelo, atalho
+
 **Contexto** [context, `context`]:
 Tudo o que o pedido diz além dos Presentes: as Restrições e o Clima. Vale só para a Sessão; o que diz como uma Pessoa é sempre (Veto, Declarado, Relato) é gosto, e só é gravado com um sim do Dono.
 
@@ -299,6 +303,10 @@ _Evitar_: ajuste (é outra coisa), correção de viés
 
 **Erro da Nota prevista** [prediction error, `predictionError`]:
 A média das diferenças absolutas [mean absolute error, `meanAbsoluteError`] entre a Nota prevista calibrada e a Nota da Pessoa, na escala de 1 a 10. A página da Pessoa usa os filmes comparados na Calibração e mostra a média junto do número de filmes, a partir de `[rating_percentile] min_ratings`.
+
+**Compatibilidade** [compatibility, `compatibility`]:
+O quanto duas Pessoas concordam nos filmes a que as duas deram Nota, de 0 a 1: 1 menos a diferença média entre o percentil de cada Nota, cada uma na Escala de quem a deu. Só entra quem divide `[compatibility] min_shared` filmes ou mais. A página da Pessoa a mostra com cada outra Pessoa, com os filmes em que mais concordam e os em que mais discordam. A Nota da Pergunta par a par fica fora. Não é Evidência.
+_Evitar_: afinidade, match
 
 **Palpite** [guess, `guess`]:
 Um Motivo sem Fato que o sustente.

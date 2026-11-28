@@ -5,7 +5,14 @@
 // a real frame-like page is `scripts/billboard-view.test.ts`.
 import { act, cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
+import {
+  afterEach,
+  describe,
+  expect,
+  it,
+  onTestFinished,
+  vi,
+} from 'vite-plus/test'
 import { CHOSEN_OUTSIDE, CLOSED, MODEL } from '../ui/billboard.fixture'
 import { SEND_STATUS } from '../ui/billboard-send.copy'
 import { BILLBOARD } from '../ui/billboard.copy'
@@ -833,6 +840,61 @@ describe('mountView, Limpar inline', () => {
 
     expect(within(root).queryByText('Trocar: As Horas Lentas')).toBeNull()
     expect(within(root).queryByRole('button', { name: copy.send })).toBeNull()
+    root.remove()
+  })
+})
+
+describe('mountView, Mostrar QR (#396)', () => {
+  const sessionLink = 'https://cinema.example/participar?sessao=x&chave=y'
+
+  it('shows the Link da Sessão only when the result carries it', () => {
+    render(<BillboardView result={shown} host={fakeHost(json({}))} />)
+    expect(screen.queryByRole('button', { name: 'Mostrar QR' })).toBeNull()
+    cleanup()
+    render(
+      <BillboardView
+        result={json({ session: MODEL.session, billboard: MODEL, sessionLink })}
+        host={fakeHost(json({}))}
+      />,
+    )
+    expect(screen.getByRole('button', { name: 'Mostrar QR' })).toBeTruthy()
+  })
+
+  it('inline, asks for the fullscreen and keeps the code open in it', async () => {
+    // jsdom has no modal dialog; Chrome opens it in session-qr.stories.tsx.
+    Object.defineProperty(HTMLDialogElement.prototype, 'showModal', {
+      configurable: true,
+      value(this: HTMLDialogElement) {
+        this.setAttribute('open', '')
+      },
+    })
+    onTestFinished(() => {
+      Reflect.deleteProperty(HTMLDialogElement.prototype, 'showModal')
+    })
+    const app = fakeApp({
+      displayMode: 'inline',
+      availableDisplayModes: ['inline', 'fullscreen'],
+    })
+    const root = document.body.appendChild(document.createElement('div'))
+    await act(() =>
+      mountView(app as unknown as ViewApp, root, () => Promise.resolve()),
+    )
+    await act(async () =>
+      app.ontoolresult?.(
+        json({ session: MODEL.session, billboard: MODEL, sessionLink }),
+      ),
+    )
+
+    const user = userEvent.setup()
+    await user.click(within(root).getByRole('button', { name: 'Mostrar QR' }))
+    expect(app.requestDisplayMode).toHaveBeenCalledWith({ mode: 'fullscreen' })
+    await act(async () =>
+      app.onhostcontextchanged?.({ displayMode: 'fullscreen' }),
+    )
+    expect(within(root).getAllByRole('article')).toHaveLength(2)
+    expect(
+      within(root).getByRole('dialog', { name: 'Entrem pelo celular' }),
+    ).toBeTruthy()
     root.remove()
   })
 })

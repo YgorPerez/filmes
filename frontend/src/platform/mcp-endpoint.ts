@@ -20,6 +20,7 @@ import { authFromEnvironment, type Auth } from './auth'
 import { appEngine } from './engine'
 import { adminOf, MCP_SCOPE, ownerOf, type OAuthServer } from './oauth-server'
 import { serverEnv } from './server-env'
+import { signedSessionLink } from './session-link'
 
 const METADATA_PATH = '/.well-known/oauth-protected-resource'
 
@@ -43,15 +44,20 @@ export function mcpHandler(engine: () => Engine): McpHttpHandler {
     // `mcpRequest` passes a verified token on every request.
     if (!owner) throw new Error('MCP request without a verified owner')
     // A non-admin's server has no `consult` nor `evaluate` at all. The
-    // Cartaz's view loads the fonts from the app's address.
-    const { APP_ORIGIN } = serverEnv()
+    // Cartaz's view loads the fonts from the app's address, and its
+    // "Mostrar QR" shows the Link da Sessão the app signs (#396).
+    const { APP_ORIGIN, AUTH_DATABASE_PATH } = serverEnv()
     return createMcpServer({
       engine: engine(),
       owner,
       admin: adminOf(ctx.authInfo),
       oauthScope: MCP_SCOPE,
       ...(ctx.authInfo?.extra?.chatgpt === true && { tools: SESSION_TOOLS }),
-      ...(APP_ORIGIN && { appOrigin: APP_ORIGIN }),
+      ...(APP_ORIGIN && {
+        appOrigin: APP_ORIGIN,
+        sessionLink: (session: string) =>
+          signedSessionLink(session, AUTH_DATABASE_PATH, APP_ORIGIN),
+      }),
     })
   })
 }

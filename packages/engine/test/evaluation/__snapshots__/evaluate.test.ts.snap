@@ -29,6 +29,10 @@ exports[`avaliar, as recorded > gives the recorded result and report 1`] = `
         "minImdbRating": 7,
         "minVotes": 1000,
       },
+      "compatibility": {
+        "films": 3,
+        "minShared": 10,
+      },
       "constraints": {
         "onDemandReach": 50,
       },
@@ -467,6 +471,10 @@ Quanto das Notas retidas foi 4 ou mais, pela Força mais alta a favor do filme n
       "catalog": {
         "minImdbRating": 7,
         "minVotes": 1000,
+      },
+      "compatibility": {
+        "films": 3,
+        "minShared": 10,
       },
       "constraints": {
         "onDemandReach": 50,
@@ -2199,6 +2207,10 @@ Foram testados 411 conjuntos. A ordem usa a média do Recall@50 entre as amostra
       "catalog": {
         "minImdbRating": 7,
         "minVotes": 1000,
+      },
+      "compatibility": {
+        "films": 3,
+        "minShared": 10,
       },
       "constraints": {
         "onDemandReach": 50,

@@ -27,6 +27,19 @@ const OPTIONS: RequestOptions = {
     { person: 'quim', name: 'Quim', owner: false },
   ],
   moods: ['leve', 'pra rir', 'tenso'],
+  presets: [
+    {
+      name: 'Noite com as crianças',
+      fields: {
+        moods: ['leve', 'pra rir'],
+        noMoods: ['tenso'],
+        child: 0,
+        maxDuration: 110,
+        noSad: true,
+      },
+    },
+    { name: 'Encontro', fields: { moods: ['tenso'], since: 1990 } },
+  ],
 }
 
 function show() {
@@ -349,6 +362,32 @@ const showDraft = (draft: NewSessionDraft, similar?: string) => {
     name: SESSIONS.form.label,
   }) as HTMLFormElement
 }
+
+describe('the Programas (#402)', () => {
+  it('posts the form with the Programa from its chip, and says what it marks', () => {
+    const { form } = show()
+    const region = within(screen.getByRole('region', { name: copy.presets }))
+    const chip = region.getByRole('button', {
+      name: 'Noite com as crianças',
+    }) as HTMLButtonElement
+    expect([chip.form, chip.name, chip.value]).toEqual([
+      form,
+      'programa',
+      'Noite com as crianças',
+    ])
+    expect(
+      region.getByText(
+        'leve, pra rir · nada tenso · com criança · até 1h50 · nada triste',
+      ),
+    ).toBeTruthy()
+    expect(region.getByText('tenso · desde 1990')).toBeTruthy()
+  })
+
+  it('shows no Programas when there are none', () => {
+    render(<NewSession options={{ ...OPTIONS, presets: [] }} />)
+    expect(screen.queryByRole('region', { name: copy.presets })).toBeNull()
+  })
+})
 
 describe('reading a sentence (“Ler”)', () => {
   it('posts the form with “ler” from its button, and Enter still sends it', () => {

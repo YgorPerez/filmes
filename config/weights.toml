@@ -113,6 +113,15 @@ neutral_band = 0.05
 # pesa n / (n + `pseudo_count`); o resto fica sem correção.
 pseudo_count = 20
 
+[compatibility]
+# Compatibilidade entre Pessoas (#403), na página da Pessoa: 1 menos a diferença
+# média entre o percentil da Nota de cada uma, cada Nota na Escala de quem a
+# deu, nos filmes a que as duas deram Nota. Só entra quem dividir `min_shared`
+# filmes ou mais; ao lado, os `films` filmes em que mais concordam e os
+# `films` em que mais discordam.
+min_shared = 10
+films = 3
+
 [bet]
 # A Aposta (#178): a vaga `position` da Recomendação (0 desliga) vai para um
 # Candidato que a Regra deixou de fora, com Nota prevista média de pelo menos

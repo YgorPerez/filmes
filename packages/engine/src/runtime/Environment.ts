@@ -70,6 +70,7 @@ export type ConfigName =
   | 'sadness'
   | 'tag_vetoes'
   | 'request_reading'
+  | 'presets'
 
 const LocalToml = Schema.Struct({
   paths: Schema.optionalKey(
