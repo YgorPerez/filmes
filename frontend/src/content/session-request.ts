@@ -13,7 +13,7 @@
 // Climas turned away, #272, #346; a value may be a comma list), and `serie` (`anterior` |
 // `todos` | `tanto-faz`, the Série na ordem, #165).
 
-import { field, oneOf, within } from './form-fields'
+import { all, field, oneOf, within } from './form-fields'
 
 /** The Regras the form offers, by their value in the form. */
 export const RULE_CHOICES = {
@@ -124,16 +124,6 @@ function list(form: FormData, name: string): string[] | undefined {
     .filter((item) => item !== '')
   return items.length > 0 ? items : undefined
 }
-
-/** The non-empty values of a repeated field (checkboxes), once each. */
-const all = (form: FormData, name: string): string[] => [
-  ...new Set(
-    form
-      .getAll(name)
-      .filter((v): v is string => typeof v === 'string' && v.trim() !== '')
-      .map((v) => v.trim()),
-  ),
-]
 
 /** The words of a repeated field whose values may be lists too: the
  * "Nada de" chips, or the older comma list (#346). */

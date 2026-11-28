@@ -139,6 +139,16 @@ export const SESSIONS = {
     shelf: 'A prateleira da noite',
   },
 
+  editAttendees: {
+    title: 'Editar Presentes',
+    back: 'Voltar à Sessão',
+    redo: 'Refazer com estes Presentes',
+    correct: 'Continuar para a correção',
+    refusals: {
+      vazio: 'Escolha pelo menos uma Pessoa.',
+      falha: 'Não foi possível editar os Presentes. Tente de novo.',
+    },
+  },
   form: {
     title: 'Nova Sessão',
     label: 'Nova Sessão',

@@ -1,4 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
+import { correctionAttendees } from './feedback-form'
 import { noteToken, ownerMiddleware, pathSlug, requireOwner } from './owner'
 
 /** What a Sessão's Feedback form shows (`feedbackPage`). A request with
@@ -16,11 +17,18 @@ export const readFeedbackPage = createServerFn({ method: 'GET' })
  * (`feedbackCorrection`, #344). */
 export const readFeedbackCorrection = createServerFn({ method: 'GET' })
   .middleware([ownerMiddleware])
-  .validator(pathSlug)
+  .validator((data: { session: string; attendees?: string[] }) => ({
+    session: pathSlug(data.session),
+    attendees: correctionAttendees(data.attendees),
+  }))
   .handler(async ({ context, data }) => {
     requireOwner(context.owner)
     const { appFeedbackCorrection } = await import('#/platform/feedback')
-    return appFeedbackCorrection(data, context.owner.person)
+    return appFeedbackCorrection(
+      data.session,
+      context.owner.person,
+      data.attendees,
+    )
   })
 
 /** The reactions and comments the Catálogo search kept, in the note

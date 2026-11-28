@@ -11,7 +11,7 @@
 // `comentario.<slug>` what she thought. `corrigir=sim` replaces a told
 // Session's Feedback (#344).
 
-import { field, searchAsked, within } from './form-fields'
+import { all, field, searchAsked, within } from './form-fields'
 
 /** The Relato levels the form offers, by their value in the form. */
 export const REPORT_CHOICES = {
@@ -51,6 +51,7 @@ export type FeedbackForm = {
   reactions: FeedbackReaction[]
   /** It corrects a told Session (#344). */
   correct?: boolean
+  attendees?: string[]
 }
 
 /** Why not, in `?erro=`. */
@@ -177,7 +178,23 @@ export function parseFeedback(form: FormData): Parsed<FeedbackForm> {
   if ('refused' in film) return film
   if (film.ok === null && reactions.length > 0) return { refused: 'nada' }
   const correct = field(form, 'corrigir') === 'sim'
-  return { ok: { film: film.ok, reactions, ...(correct && { correct }) } }
+  const attendees = all(form, 'presentes')
+  return {
+    ok: {
+      film: film.ok,
+      reactions,
+      ...(correct && { correct }),
+      ...(form.has('presentes') && { attendees }),
+    },
+  }
 }
 
 export const isFeedbackRefusal = within(FEEDBACK_REFUSALS)
+
+/** A proposed group for a Feedback correction, carried by its form and search. */
+export function correctionAttendees(value: unknown): string[] | undefined {
+  if (value === undefined) return undefined
+  return (Array.isArray(value) ? value : [value]).filter(
+    (slug): slug is string => typeof slug === 'string' && slug.length > 0,
+  )
+}

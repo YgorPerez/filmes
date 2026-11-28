@@ -266,6 +266,7 @@ export {
   openSessionFront,
   recommendSession,
   redoSession,
+  editSessionAttendees,
 } from './sessions/redo.ts'
 export { sessionRedoRequest } from './sessions/redo-request.ts'
 export {

@@ -142,6 +142,7 @@ export const prepareRegenerate = (
   swapped: ReadonlySet<string>,
   replacing: Constraint | undefined,
   newMood: boolean,
+  preservePositions: boolean,
 ): { readonly regenerate: Regenerate; readonly warnings: string[] } => {
   const version = currentVersion(front)
   const screen = shownFilms(version)
@@ -155,17 +156,17 @@ export const prepareRegenerate = (
   const attendees = yamlToJson(version.get('attendees') ?? null)
   const stored = storedBet(version)
   const bet = stored?.get('id')
+  const kept = keep.flatMap((id) => {
+    const position = positions.get(id)
+    return position === undefined ? [] : [[id, position] as const]
+  })
   return {
     regenerate: {
       previous: screen,
       date: pyStrValue(version.get('date') ?? null),
-      positions: liftKept(
-        keep.flatMap((id) => {
-          const position = positions.get(id)
-          return position === undefined ? [] : [[id, position] as const]
-        }),
-        yesVotes(front),
-      ),
+      positions: preservePositions
+        ? new Map(kept)
+        : liftKept(kept, yesVotes(front)),
       attendees: Array.isArray(attendees) ? attendees.map(String) : [],
       swapped,
       replacing,
