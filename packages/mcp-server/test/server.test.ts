@@ -20,6 +20,9 @@ describe('the server', () => {
         'answer_billboard',
         'verify_answer',
         'record_feedback',
+        'edit_attendees',
+        'edit_session_request',
+        'delete_session',
         'search_catalog',
         'person',
         'import',
@@ -68,6 +71,12 @@ describe('the server', () => {
       readOnlyHint: false,
       destructiveHint: false,
       openWorldHint: true,
+    })
+    // No undo: the Dono confirms first.
+    assert.deepEqual(annotations.delete_session, {
+      readOnlyHint: false,
+      destructiveHint: true,
+      openWorldHint: false,
     })
   })
 

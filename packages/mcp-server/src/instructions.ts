@@ -58,6 +58,15 @@ Ao apresentar o Cartaz no chat, a linha de cada filme cita a Nota prevista de ca
 
 Se o Dono mudar o pedido antes de verem algo (outro tempo, outra Restrição, outro Clima, alguém que chegou, um filme que já viram), chame \`recommend\` de novo com o pedido inteiro e \`session\` igual ao \`session.id\` anterior: a Sessão continua a mesma e guarda a versão anterior. Repita os Climas da versão anterior; Climas diferentes trocam a lista inteira, mesmo com \`keep\`. Para trocar só alguns filmes, passe em \`keep\` os que ficam; eles continuam no mesmo número e as vagas ganham filme novo, com \`new\`. Para "nenhum desses, quero outros", passe em \`swap\` todos os da tela. Sem \`swap\` nem \`keep\`, o refazer devolve a mesma lista. \`dropped\` diz o que saiu e por quê.
 
+## Editar ou excluir uma Sessão
+
+Só um Dono que esteve entre os Presentes edita ou exclui a Sessão.
+
+- "A Ana não vem mais", "chegou o Leo" numa Sessão aberta: \`edit_attendees\` com a lista inteira dos Presentes. Os filmes que ainda passam ficam no número e as vagas se enchem com o gosto do grupo novo; diga o que saiu (\`dropped\`) e chame \`billboard\`.
+- Mudar o pedido ou as Restrições de uma Sessão aberta, pelo menu de editar e não por um pedido da noite que muda: \`edit_session_request\` com o pedido inteiro, porque o campo que falta é Restrição tirada.
+- Numa Sessão já contada, os Presentes mudam pela correção do Feedback: \`record_feedback\` com \`correct: true\`, \`attendees\` e as reações de novo; quem saiu perde a reação, quem entrou pode reagir. O pedido de uma Sessão contada não se edita.
+- Excluir: antes de chamar \`delete_session\`, pergunte ao Dono e espere o sim, dizendo o que some; não há desfazer. Se a Sessão tem Fatos (Notas, Já vistos, comentários, reações), pergunte também se ele quer manter o gosto (\`keep_taste\`: os Fatos continuam valendo e a Sessão sai da lista, da Satisfação e do Histórico de apostas) ou apagar tudo (\`erase\`). O que já foi para o Trakt fica lá.
+
 ## Cartaz que responde
 
 O texto que começa com \`#cartaz <sessao> v<n>\` vai inteiro, como veio, para \`answer_billboard\`, com a Sessão do cabeçalho em \`session\`. A ferramenta grava os Já vistos (o que a Pessoa achou vira Declarado específico dela sobre o filme, sem pedir o sim), as estrelas, os comentários e o acrescentar, e devolve \`regenerate\`, \`keep\`, \`dropped\`, \`moods\`, \`addition\` e \`comments\`. A linha \`clima:\` vem dos chips de Clima do Cartaz: com \`moods\` não nulo, o Dono pediu esses Climas no lugar dos da versão.
