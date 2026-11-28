@@ -248,6 +248,10 @@ _Evitar_: aresta (é a linha do banco), relação
 **Prêmio ou indicação** [award or nomination, `awards`]:
 Uma distinção do Wikidata da lista de `config/awards.toml`. Cada distinção aparece como linha do filme no Cartaz. A Regra soma o bônus uma vez por filme, e a distinção não conta como Fato da Recomendação.
 
+**Lista curada** [curated list, `curated_lists`]:
+Uma lista de filmes escolhidos por alguém de fora, da lista de `config/curated_lists.toml`: a Criterion Collection (do Wikidata, aresta `colecao`) e a competição principal de Cannes, Berlim e Veneza (das páginas de cada edição na Wikipedia em inglês, aresta `competicao`). Cada lista aparece como linha do filme no Cartaz ("na Criterion Collection"). A Regra soma o bônus uma vez por filme, à parte do bônus dos Prêmios, e a lista não conta como Fato.
+_Evitar_: seleção, coleção (para o conjunto das listas)
+
 **Nota da crítica** [critics' score, `critics`]:
 O Tomatometer do Rotten Tomatoes e o Metascore do Metacritic, lidos da resposta do OMDb só para os filmes que chegam às primeiras posições. Aparece como linha do filme no Cartaz ("93% no Rotten Tomatoes"), soma um bônus que só reordena essas posições e não conta como Fato.
 
