@@ -317,11 +317,12 @@ export async function appCartazPage(
     AUTH_DATABASE_PATH,
     APP_ORIGIN,
   )
-  const there = page.session.attendees.some((person) => person.owner)
+  const ownerAttends = page.session.attendees.some((person) => person.owner)
   return {
     ...page,
     sessionLink,
-    voteLink: sessionLink && there ? ownVotePath(sessionLink, viewer) : null,
+    voteLink:
+      sessionLink && ownerAttends ? ownVotePath(sessionLink, viewer) : null,
   }
 }
 

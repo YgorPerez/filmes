@@ -473,7 +473,6 @@ test('the deck’s sheet has the public facts and only her own Evidence and Nota
     expect(
       owner.sheets.get(film.id)?.predictedRatings.map((p) => p.person),
     ).toEqual(['bruno'])
-
   } finally {
     await engine.dispose()
   }

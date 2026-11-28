@@ -58,7 +58,7 @@ it('shows one film at a time and posts every Voto with the version', async () =>
     screen.getByRole('heading', { name: VOTES.summary(2, 1) }),
   ).toBeTruthy()
   expect(screen.getByText(VOTES.leaving(['Pequenos Milagres']))).toBeTruthy()
-  // Two sins: the recap leads to her Ordem, which sends (#379).
+  // Two yes films: the recap leads to her Ordem, which sends (#379).
   expect(screen.queryByRole('button', { name: VOTES.send })).toBeNull()
   expect(document.querySelector('form')?.getAttribute('action')).toBe(
     '/participar/votos?sessao=s',
@@ -692,7 +692,7 @@ it('★ and ↑ are vi e gostei, 👎 and ↓ vi e não gostei; the recap counts
   const user = userEvent.setup()
   render(<VoteCards deck={DECK} action="/participar/votos" />)
 
-  await user.click(screen.getByRole('button', { name: VOTES.seenLiked }))
+  await user.click(screen.getByRole('button', { name: VOTES.like }))
   expect(screen.getByRole('status').textContent).toBe(
     VOTES.now(2, 3, 'Pequenos Milagres'),
   )
@@ -717,7 +717,7 @@ it('★ and ↑ are vi e gostei, 👎 and ↓ vi e não gostei; the recap counts
   )
   expect(
     row
-      .getByRole('button', { name: VOTES.seenDisliked })
+      .getByRole('button', { name: VOTES.dislike })
       .getAttribute('aria-pressed'),
   ).toBe('true')
   await user.click(row.getByRole('button', { name: VOTES.yes }))
@@ -739,13 +739,13 @@ it('a drag up is vi e gostei and down vi e não gostei, with their stickers', ()
 
   fireEvent.pointerDown(card(), { clientX: 200, clientY: 400 })
   fireEvent.pointerMove(card(), { clientX: 210, clientY: 340 })
-  expect(screen.getByText(VOTES.stampSeenLiked, STAMP)).toBeTruthy()
+  expect(screen.getByText(VOTES.stampLike, STAMP)).toBeTruthy()
   expect(card().style.transform).toBe('translate(10px, -60px) rotate(0.6deg)')
   fireEvent.pointerUp(card(), { clientX: 210, clientY: 300 })
 
   fireEvent.pointerDown(card(), { clientX: 200, clientY: 300 })
   fireEvent.pointerMove(card(), { clientX: 200, clientY: 360 })
-  expect(screen.getByText(VOTES.stampSeenDisliked, STAMP)).toBeTruthy()
+  expect(screen.getByText(VOTES.stampDislike, STAMP)).toBeTruthy()
   fireEvent.pointerUp(card(), { clientX: 200, clientY: 400 })
 
   expect(posted()).toEqual([
@@ -777,7 +777,7 @@ const voteAll = async (user: ReturnType<typeof userEvent.setup>) => {
     await user.click(screen.getByRole('button', { name }))
 }
 
-it('her sins start in the engine’s order; the handle moves a film with ↑ ↓ and says where it went', async () => {
+it('her yes films start in the engine’s order; the handle moves a film with ↑ ↓ and says where it went', async () => {
   const user = userEvent.setup()
   render(<VoteScreen deck={DECK} search={LINK} home={HOME} />)
   await voteAll(user)

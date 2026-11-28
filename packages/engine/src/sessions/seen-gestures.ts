@@ -36,6 +36,7 @@ import {
 } from '../people/Person.ts'
 import type { Connection } from '../sqlite/Sqlite.ts'
 import { billboardSource } from './facts.ts'
+import { awaitsOwner } from './waiting.ts'
 
 /** How the Presente felt about the film she saw: up is `like`, down is
  * `dislike`. */
@@ -69,9 +70,6 @@ const storedList = (front: YamlMapping): YamlValue[] => {
 const storedGestures = (front: YamlMapping): StoredGesture[] =>
   storedList(front).map(yamlToJson).filter(isStoredGesture)
 
-const waits = (g: StoredGesture) =>
-  g.recorded_on === undefined && g.discarded_on === undefined
-
 /** Film → who gestured it in the Session, waiting or not: each one is out
  * of the Session as a Já vi. */
 export const gesturedFilms = (
@@ -92,7 +90,7 @@ export const waitingGestures = (
   readonly person: string
   readonly film: string
   readonly reaction: SeenReaction
-}> => storedGestures(front).filter(waits)
+}> => storedGestures(front).filter(awaitsOwner)
 
 /** Keeps `person`'s gestures in `front`; `recordedOn` for the ones already
  * in her file. */
@@ -121,13 +119,13 @@ export const addGestures = (
   ])
 }
 
-/** Marks `person`'s waiting gestures recorded or discarded on `today`;
- * all of them with `person` null. */
+/** Marks the waiting gestures recorded or discarded on `today`: only
+ * `person`'s, or everyone's without one. */
 export const settleGestures = (
   front: Map<string, YamlValue>,
-  person: string | null,
-  record: boolean,
+  decision: 'record' | 'discard',
   today: string,
+  person?: string,
 ): void => {
   const list = storedList(front)
   if (list.length === 0) return
@@ -136,11 +134,11 @@ export const settleGestures = (
     list.map((item) => {
       const g = yamlToJson(item)
       return isStoredGesture(g) &&
-        waits(g) &&
-        (person === null || g.person === person)
+        awaitsOwner(g) &&
+        (person === undefined || g.person === person)
         ? new Map([
             ...(item as YamlMapping),
-            [record ? 'recorded_on' : 'discarded_on', today],
+            [decision === 'record' ? 'recorded_on' : 'discarded_on', today],
           ])
         : item
     }),

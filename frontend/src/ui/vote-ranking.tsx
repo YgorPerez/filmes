@@ -13,7 +13,7 @@ import { FilmSheet } from './film-sheet'
 import { FilmCover } from './session-link'
 import { VOTES } from './session-votes.copy'
 
-// The Ordem (#379): after the deck, with two or more sins, she puts her
+// The Ordem (#379): after the deck, with two or more yes films, she puts her
 // sim films in the order she wants them, the one she wants most first. A
 // list with the tape and a handle on each row: the handle drags the row
 // (pointer) or moves it with ↑ ↓ (keyboard), and a tap on the film opens
