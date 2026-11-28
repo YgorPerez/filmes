@@ -224,15 +224,28 @@ export function LinkHeader({
 export function VoteRule() {
   const { rule } = VOTES
   const look = {
-    no: { icon: 'close', fill: 'bg-sticker-pink', word: rule.no },
-    yes: { icon: 'check', fill: 'bg-sticker-green', word: rule.yes },
-    seen: { icon: 'star', fill: 'bg-sticker-yellow', word: rule.seen },
+    no: {
+      icon: 'close',
+      fill: 'bg-sticker-pink text-on-sticker',
+      word: rule.no,
+    },
+    yes: {
+      icon: 'check',
+      fill: 'bg-sticker-green text-on-sticker',
+      word: rule.yes,
+    },
+    // Vi as the JÁ VI stamp: yellow is only NOVO (DESIGN.md).
+    seen: {
+      icon: 'star',
+      fill: 'border border-ink bg-surface text-ink',
+      word: rule.seen,
+    },
   } as const
   const term = (kind: keyof typeof look) => (
     <span className="inline-flex items-baseline gap-1 font-bold whitespace-nowrap">
       <span
         aria-hidden="true"
-        className={`inline-flex size-[18px] shrink-0 items-center justify-center self-center rounded-full text-on-sticker ${look[kind].fill}`}
+        className={`inline-flex size-[18px] shrink-0 items-center justify-center self-center rounded-full ${look[kind].fill}`}
       >
         <Icon name={look[kind].icon} className="size-[12px]" />
       </span>
