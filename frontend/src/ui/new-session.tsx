@@ -16,7 +16,7 @@ import { ImportsFrame } from './imports'
 import { useFetchForm, useHydrated } from './kit/fetch-form'
 import { refusalOn, useRefusalInPlace } from './kit/refusal-in-place'
 import { Option } from './kit/option'
-import { OwnerTag } from './kit/owner-tag'
+import { AttendeeOptions } from './session-attendees'
 import {
   Alert,
   PostFailed,
@@ -454,7 +454,7 @@ function NewSessionForm({
         busy={busy}
         owner={options.people.find((p) => p.owner)?.name}
       />
-      <Attendees options={options} asked={asked} />
+      <AttendeeOptions people={options.people} selected={asked.attendees} />
       <Moods moods={options.moods} asked={asked} />
       <Section id="duracao" title={form.time}>
         <div className={grid}>
@@ -609,36 +609,6 @@ function Similar({
   )
 }
 
-function Attendees({
-  options,
-  asked,
-}: {
-  options: RequestOptions
-  asked: Asked
-}) {
-  const { form } = SESSIONS
-  const attending = asked.attendees && new Set(asked.attendees)
-  return (
-    <Section id="presentes" title={form.attendees}>
-      <div className={pills}>
-        {options.people.map((p) => (
-          <Option
-            key={p.person}
-            name="presentes"
-            value={p.person}
-            defaultChecked={attending ? attending.has(p.person) : p.owner}
-          >
-            <span className="flex items-center gap-sm">
-              {p.name}
-              {p.owner && <OwnerTag />}
-            </span>
-          </Option>
-        ))}
-      </div>
-    </Section>
-  )
-}
-
 function Rule({ options, asked }: { options: RequestOptions; asked: Asked }) {
   const { form } = SESSIONS
   const chosen = ruleChoice(asked.rule)
@@ -674,7 +644,7 @@ function Rule({ options, asked }: { options: RequestOptions; asked: Asked }) {
 
 /** The Série na ordem (#165): three modes, the default checked and
  * marked. */
-function SeriesOrder({ asked }: { asked: Asked }) {
+export function SeriesOrder({ asked }: { asked: Asked }) {
   const { form } = SESSIONS
   return (
     <Section
@@ -715,7 +685,13 @@ function SeriesOrder({ asked }: { asked: Asked }) {
   )
 }
 
-function Moods({ moods, asked }: { moods: readonly string[]; asked: Asked }) {
+export function Moods({
+  moods,
+  asked,
+}: {
+  moods: readonly string[]
+  asked: Asked
+}) {
   const { form } = SESSIONS
   const chosen = new Set(asked.moods)
   return (
@@ -767,7 +743,7 @@ function NoMoods({ moods, asked }: { moods: readonly string[]; asked: Asked }) {
   )
 }
 
-function Constraints({
+export function Constraints({
   asked,
   moods,
 }: {

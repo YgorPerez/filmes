@@ -2,8 +2,6 @@
 // the ficha that posted, the refused field, the notice and the refusal.
 import { describe, expect, it } from 'vite-plus/test'
 import {
-  isPeopleNotice,
-  isPeopleRefusal,
   personSearch,
   problemParam,
   readProblemParam,
@@ -83,15 +81,5 @@ describe('personSearch', () => {
       campo: undefined,
     })
     expect(personSearch({ em: 7 }).em).toBeUndefined()
-  })
-})
-
-describe('the Pessoas list query', () => {
-  it('knows its refusals and its one notice', () => {
-    expect(isPeopleRefusal('pessoa')).toBe(true)
-    expect(isPeopleRefusal('baixar')).toBe(true)
-    expect(isPeopleRefusal('outra')).toBe(false)
-    expect(isPeopleNotice('removida')).toBe(true)
-    expect(isPeopleNotice('gravado')).toBe(false)
   })
 })

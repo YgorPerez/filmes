@@ -6,7 +6,6 @@
 // left it.
 
 import { useEffect, useRef, useState } from 'react'
-import type { Answered } from './fetch-form'
 
 /** `feedback`, the box of the notice or alert, and `onAnswer`, for
  * `useFetchForm`: it lets the page go to the answer, and scrolls the box
@@ -17,7 +16,7 @@ export function usePostedFeedback() {
   useEffect(() => {
     if (answers > 0) feedback.current?.scrollIntoView({ block: 'nearest' })
   }, [answers])
-  const onAnswer = (to: string, form: HTMLFormElement): Answered => {
+  const onAnswer = (to: string, form: HTMLFormElement) => {
     if (!new URL(to, window.location.origin).searchParams.has('erro'))
       form.reset()
     return () => setAnswers((n) => n + 1)

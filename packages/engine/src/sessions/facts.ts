@@ -83,6 +83,9 @@ export interface SessionSeen {
 /** A Nota from 0.5 to 5 as the satisfaction's 0 to 1. */
 export const ratingValue = (rating: number): number => (rating - 0.5) / 4.5
 
+/** The Fonte of Já vistos and Declarados recorded on the Cartaz. */
+export const billboardSource = (id: string) => `cartaz ${id}`
+
 /** The Fonte of a Session's Fatos. */
 export const feedbackSource = (front: YamlMapping, relayed = false): string => {
   const text = `Feedback da Sessão ${pyStrValue(front.get('date') ?? null)}`

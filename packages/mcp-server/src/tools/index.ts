@@ -5,6 +5,9 @@ import type { Tool } from '../tool.ts'
 import answerBillboard from './answer-billboard.ts'
 import billboard from './billboard.ts'
 import consult from './consult.ts'
+import deleteSession from './delete-session.ts'
+import editAttendees from './edit-attendees.ts'
+import editSessionRequest from './edit-session-request.ts'
 import evaluate from './evaluate.ts'
 import exportTool from './export.ts'
 import importQueue from './import-queue.ts'
@@ -23,6 +26,9 @@ export const TOOLS: ReadonlyArray<Tool> = [
   answerBillboard,
   verifyAnswer,
   recordFeedback,
+  editAttendees,
+  editSessionRequest,
+  deleteSession,
   searchCatalog,
   person,
   importTool,

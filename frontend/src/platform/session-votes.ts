@@ -19,7 +19,6 @@ import {
   sessionVersions,
   shownFilms,
   type Engine,
-  type ErrorOutput,
 } from '@filmes/engine'
 import {
   sessionLinkPath,
@@ -30,6 +29,7 @@ import {
   type VoteNotice,
   type VoteRefusal,
 } from '#/content/session-votes-address'
+import { logEngineError } from './engine-log'
 import { failureOf, seeOther } from './form-post'
 import { resolveSessionLink, type SessionLinkView } from './session-link'
 import { fromThisSite } from './same-site'
@@ -95,12 +95,27 @@ function oneAtATime<A>(session: string, task: () => Promise<A>): Promise<A> {
   return run
 }
 
-function logEngineError({ output }: { output: ErrorOutput }): void {
-  console.error(`engine: ${output.error.code}: ${output.error.message}`)
-}
-
 const filmsOf = (form: FormData, name: string) =>
   form.getAll(name).filter((v): v is string => typeof v === 'string')
+
+/** The Sessão redone after the votes, with `keep` kept; false when the
+ * engine could not redo it. */
+async function redoKeeping(
+  engine: Engine,
+  session: string,
+  keep: readonly string[],
+): Promise<boolean> {
+  const asked = await engine.run(sessionRedoRequest(session))
+  if (asked.exitCode !== 0) {
+    logEngineError(asked)
+    return false
+  }
+  const redone = await engine.run(
+    recommendSession({ ...asked.output, keep: [keep.join(',')] }),
+  )
+  if (redone.exitCode !== 0) logEngineError(redone)
+  return redone.exitCode === 0
+}
 
 /** `POST /participar/votos?sessao=…&chave=…&presente=…`: records the
  * chosen Presente's Votos, redoes the Session if a film left or the order
@@ -157,18 +172,8 @@ export async function voteAction(
       return deck({ erro: failureOf(cast) })
     }
     if (!cast.output.regenerate) return deck({ feito: 'votado' })
-    const asked = await engine.run(sessionRedoRequest(link.session))
-    if (asked.exitCode !== 0) {
-      logEngineError(asked)
+    if (!(await redoKeeping(engine, link.session, cast.output.keep)))
       return deck({ erro: 'regerar' })
-    }
-    const redone = await engine.run(
-      recommendSession({ ...asked.output, keep: [cast.output.keep.join(',')] }),
-    )
-    if (redone.exitCode !== 0) {
-      logEngineError(redone)
-      return deck({ erro: 'regerar' })
-    }
     return deck({
       feito: cast.output.dropped.length > 0 ? 'regerada' : 'atualizada',
     })

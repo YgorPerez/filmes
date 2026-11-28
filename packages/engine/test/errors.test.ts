@@ -14,6 +14,9 @@ import {
 } from '../src/index.ts'
 import { useFixture } from './fixture.ts'
 
+/** Codes of what Python never did: a Sessão excluída (map #369). */
+const ENGINE_ONLY_CODES = ['deleted_session']
+
 const readDatabase = Effect.gen(function* () {
   const sqlite = yield* Sqlite
   return yield* sqlite.read((db) => db.all('SELECT 1'))
@@ -105,9 +108,11 @@ describe('the error contract', () => {
     expect(outcome.output.error.message).toContain('FILMES_DADOS')
   })
 
-  test('the codes are the English names of Python’s codes', () => {
+  test('the codes are the English names of Python’s codes, and the ones with no Python twin', () => {
     expect([...ERROR_CODES].sort()).toEqual(
-      [...new Set(Object.values(names.ERROR_CODES))].sort(),
+      [
+        ...new Set([...Object.values(names.ERROR_CODES), ...ENGINE_ONLY_CODES]),
+      ].sort(),
     )
   })
 })

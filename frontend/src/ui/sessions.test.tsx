@@ -21,6 +21,7 @@ import type { SessionItem } from '#/platform/sessions'
 import { BILLBOARD } from './billboard.copy'
 import { CLOSED as TOLD, MODEL } from './billboard.fixture'
 import { SessionList, SessionScreen } from './sessions'
+import { SESSION_EDIT } from './session-edit.copy'
 import { SESSIONS } from './sessions.copy'
 
 afterEach(() => {
@@ -218,6 +219,8 @@ describe('the head’s ⋯ menu and "?" legend (#272)', () => {
     const rows = within(menu).getAllByRole('listitem')
     expect(rows.map((row) => row.textContent)).toEqual([
       SESSIONS.list.feedback,
+      SESSIONS.editAttendees.title,
+      SESSION_EDIT.menu,
       'Link para os Presentes',
       'Copiar link',
     ])
@@ -247,6 +250,19 @@ describe('the head’s ⋯ menu and "?" legend (#272)', () => {
     // A tap inside keeps it open.
     await user.click(screen.getByText(BILLBOARD.legendLead))
     expect(legend.open).toBe(true)
+  })
+})
+
+describe('the head’s ⋯ menu, “Editar pedido” (#372)', () => {
+  it('offers "Editar pedido" only to a Dono who was there (#372)', async () => {
+    const user = userEvent.setup()
+    const session = {
+      ...PAGE.session,
+      attendees: PAGE.session.attendees.map((a) => ({ ...a, owner: false })),
+    }
+    render(<SessionScreen page={{ ...PAGE, session }} />)
+    await user.click(screen.getByLabelText(SESSIONS.session.menu))
+    expect(screen.queryByRole('link', { name: SESSION_EDIT.menu })).toBeNull()
   })
 })
 

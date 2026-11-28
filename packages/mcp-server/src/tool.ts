@@ -92,6 +92,13 @@ export const requestOwner: Effect.Effect<
       ),
 )
 
+/** Runs `effect` as the request's Dono: the stdio server, which has no
+ * login, names the data's Dono, as "dono" does. */
+export const asRequestOwner = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
+  Effect.flatMap(requestOwner, (person) =>
+    Effect.provideService(effect, Owner, person.slug),
+  )
+
 /** Who signs a write to filmes-dados: the request's Dono, or the engine
  * itself when there is none. */
 export const ownerAuthor: Effect.Effect<Author, never, EngineServices | Run> =

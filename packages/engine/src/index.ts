@@ -185,6 +185,11 @@ export {
   type VetoPath,
   type VetoReport,
 } from './recommendation/vetoes.ts'
+export {
+  deleteSession,
+  sessionDeletion,
+  type DeleteSessionRequest,
+} from './sessions/delete.ts'
 export { sessionOrder } from './sessions/order.ts'
 export {
   currentVersion,
@@ -266,8 +271,14 @@ export {
   openSessionFront,
   recommendSession,
   redoSession,
+  editSessionAttendees,
 } from './sessions/redo.ts'
 export { sessionRedoRequest } from './sessions/redo-request.ts'
+export {
+  editSessionRequest,
+  sessionRequestEditDraft,
+  type SessionRequestEdit,
+} from './sessions/edit-request.ts'
 export {
   answerPairwise,
   decidePairwise,

@@ -21,7 +21,7 @@ import { Sticker } from './kit/sticker'
 import {
   FilmCover,
   FilmFacts,
-  LinkFilmRow,
+  LinkFilmList,
   VotedActions,
   VoteRule,
 } from './session-link'
@@ -494,21 +494,11 @@ function VoteResults({
       <h2 ref={heading} tabIndex={-1} className="font-display text-step-title">
         {VOTES.lineup}
       </h2>
-      <ol className="rounded-card border border-rule bg-surface px-md">
-        {deck.films.map((film, i) => (
-          <LinkFilmRow
-            key={film.id}
-            film={film}
-            first={i === 0}
-            arrived={unvoted < deck.films.length}
-          />
-        ))}
-      </ol>
-      {deck.left.length > 0 && (
-        <p className="text-meta text-ink-2">
-          {`${PARTICIPATION.left}: ${deck.left.join(', ')}.`}
-        </p>
-      )}
+      <LinkFilmList
+        films={deck.films}
+        left={deck.left}
+        arrived={unvoted < deck.films.length}
+      />
       {sent && deck.stale && deck.stale.length > 0 && (
         <p className="text-meta text-ink-2">{VOTES.stale(deck.stale)}</p>
       )}

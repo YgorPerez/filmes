@@ -12,3 +12,6 @@ export const sessionPath = (session: string) =>
 /** Where the Dono tells how the Sessão went. */
 export const feedbackPath = (session: string) =>
   `${sessionPath(session)}/contar`
+
+export const sessionDeletePath = (session: string) =>
+  `${sessionPath(session)}/excluir`

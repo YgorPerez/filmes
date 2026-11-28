@@ -16,7 +16,7 @@ import { Environment } from '../runtime/Environment.ts'
 import { Sqlite, type Connection, type SqliteError } from '../sqlite/Sqlite.ts'
 import { num, text } from '../sqlite/row.ts'
 import { yamlToJson } from '../data/yaml.ts'
-import { readSession, sessionIds } from '../sessions/file.ts'
+import { readSessionFile, sessionIds } from '../sessions/file.ts'
 import {
   writePerson,
   type PersonServices,
@@ -180,12 +180,13 @@ const PERSON_TABLES = [
 
 /** Whether a Session file lists the Pessoa among its Presentes. The
  * files, not the database: a Session written since the last rebuild
- * counts. */
+ * counts. Retained Session files also keep Fatos about their Pessoas,
+ * including Declarados that require the Pessoa to exist on rebuild. */
 const inSomeSession = (slug: string) =>
   Effect.gen(function* () {
     for (const id of yield* sessionIds) {
       const attendees = yamlToJson(
-        (yield* readSession(id)).frontmatter.get('attendees') ?? null,
+        (yield* readSessionFile(id)).frontmatter.get('attendees') ?? null,
       )
       if (Array.isArray(attendees) && attendees.map(String).includes(slug))
         return true

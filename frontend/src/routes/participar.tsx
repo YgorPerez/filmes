@@ -35,9 +35,11 @@ export const Route = createFileRoute('/participar')({
       ? PARTICIPATION.films
       : participation
         ? PARTICIPATION.pick
-        : closed
-          ? PARTICIPATION.unavailable.closed
-          : PARTICIPATION.unavailable.broken,
+        : closed === 'deleted'
+          ? PARTICIPATION.unavailable.deleted
+          : closed
+            ? PARTICIPATION.unavailable.closed
+            : PARTICIPATION.unavailable.broken,
     preview: participation
       ? PARTICIPATION.preview(
           participation.owner,

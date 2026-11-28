@@ -568,6 +568,8 @@ const CREATE_REFUSALS: Record<ErrorReason, PersonCreateRefusal> = {
   in_session: 'indisponivel',
   // Not met on create: an edit equal to another item (#330).
   duplicate_item: 'indisponivel',
+  // Not met on create: changing a Session (map #369).
+  not_attending: 'indisponivel',
 }
 
 /** Why the engine refused a new Pessoa, by its reason; without one, it

@@ -1,6 +1,6 @@
 import { recordFeedback, REPORT_LEVELS } from '@filmes/engine'
 import { z } from 'zod'
-import { defineTool, sessionId } from '../tool.ts'
+import { asRequestOwner, defineTool, sessionId } from '../tool.ts'
 
 /** Goes before "=" in the engine's `PESSOA=VALOR`. */
 const person = z
@@ -37,7 +37,8 @@ export default defineTool({
     'Evidência com Força e Tipo) e `withoutReaction`. Aceite texto livre. Se faltar alguma reação, ' +
     'pergunte só por quem faltou. Mostre o registro e só chame depois da confirmação do Dono. Para corrigir uma ' +
     'Sessão já contada, leia o que foi contado (`billboard`) e mande o Feedback inteiro de novo com `correct: true`: ' +
-    'ele substitui o anterior, e o Trakt recebe só o que mudou.',
+    'ele substitui o anterior, e o Trakt recebe só o que mudou. Se os Presentes mudaram ("o Teo não estava, era o Leo"), ' +
+    'mande também `attendees` com a lista inteira: quem saiu perde a reação, quem entrou pode reagir.',
   input: z
     .object({
       session: sessionId(
@@ -59,6 +60,13 @@ export default defineTool({
         .optional()
         .describe(
           'true para corrigir uma Sessão já contada: o Feedback inteiro substitui o anterior',
+        ),
+      attendees: z
+        .array(person)
+        .min(1)
+        .optional()
+        .describe(
+          'só com correct: os Presentes corrigidos, a lista inteira; só um Dono entre os Presentes atuais corrige',
         ),
       ratings: z
         .array(
@@ -104,14 +112,19 @@ export default defineTool({
           'Relatos: a impressão do Dono sobre outra Pessoa ("ela curtiu" é liked)',
         ),
     })
+    .refine((f) => f.attendees === undefined || f.correct === true, {
+      message: 'attendees só vale com correct: true',
+      path: ['attendees'],
+    })
     .refine((f) => (f.film !== undefined) !== (f.nothing === true), {
       message: 'mande film ou nothing: true, um dos dois',
       path: ['film'],
     }),
-  run: ({ session, film, correct, ratings = [], reports = [] }) =>
-    recordFeedback({
+  run: ({ session, film, correct, attendees, ratings = [], reports = [] }) => {
+    const feedback = recordFeedback({
       session,
       ...(correct === true && { correct }),
+      ...(attendees !== undefined && { attendees }),
       film: film ?? null,
       ratings: ratings.map(
         (r) => `${r.person}=${r.rating}${r.scale === 10 ? '/10' : ''}`,
@@ -122,5 +135,9 @@ export default defineTool({
       comments: [...ratings, ...reports].flatMap((r) =>
         r.comment === undefined ? [] : [`${r.person}=${r.comment}`],
       ),
-    }),
+    })
+    // The engine lets only a Dono among the Presentes change them, so the
+    // stdio server, with no login, names its Dono.
+    return attendees === undefined ? feedback : asRequestOwner(feedback)
+  },
 })

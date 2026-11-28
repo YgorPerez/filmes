@@ -8,9 +8,9 @@
 
 import { Schema } from 'effect'
 
-/** Every code the engine can fail with, in English (ADR 0001). The English
- * names of Python's codes, which a test checks (`test/python-names.ts`): a
- * new code goes in both. */
+/** Every code the engine can fail with, in English (ADR 0001): the English
+ * names of Python's codes (`test/python-names.ts`, frozen), and the codes of
+ * what Python never did, which `test/errors.test.ts` lists. */
 export const ERROR_CODES = [
   'invalid_usage',
   'invalid_file',
@@ -32,6 +32,7 @@ export const ERROR_CODES = [
   'owner_exists',
   'unknown_session',
   'closed_session',
+  'deleted_session',
   'unknown_target',
   'unknown_film',
   'ambiguous_film',
@@ -61,7 +62,8 @@ export type ErrorCode = (typeof ERROR_CODES)[number]
 
 /** Why, finer than the code, where a screen tells the cases apart: the app
  * reads it, never the PT-BR message. Only creating a Pessoa, giving or taking
- * her access and taking her out have them. */
+ * her access, taking her out, reading her Trakt, editing her items and
+ * changing a Session someone was not at have them. */
 const ERROR_REASONS = [
   // A Pessoa with that slug exists (`person_exists`).
   'slug_taken',
@@ -96,6 +98,9 @@ const ERROR_REASONS = [
   // An edit (#330) that would make the item equal to another of her file
   // (`invalid_usage`).
   'duplicate_item',
+  // Deleting or editing a Session by someone who is no Dono among its
+  // Presentes (map #369, `invalid_usage`).
+  'not_attending',
 ] as const
 
 export type ErrorReason = (typeof ERROR_REASONS)[number]

@@ -102,6 +102,10 @@ export const ClosedWithoutFilm: Story = {
   render: () => <LinkUnavailable closed={{ chosen: null }} />,
 }
 
+export const Deleted: Story = {
+  render: () => <LinkUnavailable closed="deleted" />,
+}
+
 /** A poster that does not load: the tape falls back to the title, and the
  * small one to its initial. */
 export const PosterFails: Story = {

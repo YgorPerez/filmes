@@ -16,6 +16,7 @@ import {
   answerPairwise,
   billboardModel,
   decidePairwise,
+  deleteSession,
   drawBets,
   pairwiseQuestions,
   parseYaml,
@@ -23,6 +24,7 @@ import {
   personSeen,
   recommend,
   recommendSession,
+  rebuild,
   yamlToJson,
   type BetCandidate,
   type Recommendation,
@@ -401,6 +403,40 @@ ${facts}
 `,
   )
 }
+
+test.each(['erase', 'keep_taste'] as const)(
+  'drops the Aposta from the record after %s',
+  async (mode) => {
+    const fixture = useFixture()
+    const vars = betWeights(fixture, [
+      'min_success_rate = 0.25',
+      'min_success_rate = 1.0',
+    ])
+    const id = 'failed-bet'
+    const draw = () => bruno(fixture, vars, { seed: 'next-session' })
+    const fresh = bets(await draw())
+    expect(fresh).toEqual([[5, PEQUENOS_MILAGRES]])
+    pastBet(
+      fixture,
+      id,
+      `votes: [{person: bruno, film: ${HISTORY_FILM}, vote: 'no'}]
+chosen: tt9000101
+feedback:
+  recorded_on: 2026-11-20
+  reactions: [{person: iara, kind: rating, rating: 2}]`,
+      '2026-11-20',
+      'bruno',
+    )
+    await fixture.ok(rebuild)
+    expect(bets(await draw())).toEqual([])
+
+    await fixture.ok(deleteSession({ session: id, mode }), undefined, {
+      owner: 'bruno',
+    })
+    await fixture.ok(rebuild)
+    expect(bets(await draw())).toEqual(fresh)
+  },
+)
 
 describe('the bet record', () => {
   test('repeated no votes suppress bets for the voter across seeded draws', async () => {

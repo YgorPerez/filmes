@@ -4,7 +4,11 @@
 
 import { redirect } from '@tanstack/react-router'
 import { importsPath, MY_TASTE, QUEUE_PATH, RATINGS_PATH } from './paths'
-import { feedbackPath } from './session-paths'
+import {
+  feedbackPath,
+  PENDING_FEEDBACK_FILTER,
+  SESSIONS_PATH,
+} from './session-paths'
 
 /** Where each old page went. */
 export const MOVED_TO = {
@@ -16,6 +20,11 @@ export const MOVED_TO = {
   imports: `${MY_TASTE}/importar`,
   personImports: (person: string) => importsPath(person, false),
   feedback: feedbackPath,
+  // `/feedback`, the Sessões whose Feedback is pending, kept the query.
+  pendingFeedback: (search: URLSearchParams) => {
+    search.set('filtro', PENDING_FEEDBACK_FILTER)
+    return `${SESSIONS_PATH}?${search}`
+  },
 }
 
 /** An old path's page: off to where the screen lives now, with the same

@@ -128,7 +128,7 @@ function signed(
 /** A Session the link was issued for, now closed: its page says the
  * Session ended, with the film the Feedback chose (null for "não vimos
  * nada"), instead of that the link is broken. */
-export type ClosedSession = { chosen: string | null }
+export type ClosedSession = { chosen: string | null } | 'deleted'
 
 /** The closed Session `search` was issued for, or null: a broken link,
  * or a Session still open. */
@@ -140,7 +140,8 @@ export async function closedSessionLink(
   const session = signed(search, database)
   if (session === null) return null
   const result = await engine.run(readSession(session))
-  if (result.exitCode !== 0) return null
+  if (result.exitCode !== 0)
+    return result.output.error.code === 'deleted_session' ? 'deleted' : null
   const front = result.output.frontmatter
   if (isOpen(front)) return null
   const chosen = text(front.get('chosen'))

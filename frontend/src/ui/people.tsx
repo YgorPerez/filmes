@@ -5,7 +5,7 @@ import {
   type TypedPerson,
 } from '#/content/person-create'
 import type { PersonEntry } from '#/platform/people'
-import type { PeopleRefusal } from '#/content/person-action'
+import type { PeopleRefusal } from '#/content/people-search'
 import { personPath } from '#/content/paths'
 import { PEOPLE } from './people.copy'
 import { useFetchForm } from './kit/fetch-form'

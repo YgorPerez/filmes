@@ -1,7 +1,7 @@
 // The words of the Pessoas list (`/pessoas`) and its "Acrescentar Pessoa"
 // form. A Pessoa's own page has hers in `person.copy.ts`.
 import type { PersonCreateRefusal } from '#/content/person-create'
-import type { PeopleRefusal } from '#/content/person-action'
+import type { PeopleRefusal } from '#/content/people-search'
 
 export const PEOPLE = {
   title: 'Pessoas',

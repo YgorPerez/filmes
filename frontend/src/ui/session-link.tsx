@@ -98,18 +98,24 @@ export function LinkUnavailable({
 }: {
   /** Null for a broken link; for a closed Session, the chosen film's
    * title, or null when the Feedback named none. */
-  closed: { chosen: string | null } | null
+  closed: { chosen: string | null } | 'deleted' | null
 }) {
   const { unavailable } = PARTICIPATION
   return (
     <div className="flex flex-col gap-sm">
       <h1 className="font-display text-page-title text-balance">
-        {closed ? unavailable.closed : unavailable.broken}
+        {closed === 'deleted'
+          ? unavailable.deleted
+          : closed
+            ? unavailable.closed
+            : unavailable.broken}
       </h1>
       <p className="max-w-[60ch] text-pretty text-ink-2">
-        {closed
-          ? unavailable.closedLead(closed.chosen)
-          : unavailable.brokenLead}
+        {closed === 'deleted'
+          ? unavailable.deletedLead
+          : closed
+            ? unavailable.closedLead(closed.chosen)
+            : unavailable.brokenLead}
       </p>
     </div>
   )
@@ -236,7 +242,42 @@ export function VoteRule() {
 
 /** One row of the night's list. `arrived` marks a film she has not voted
  * on while she voted the rest: it came in after her Votos. */
-export function LinkFilmRow({
+/** The Sessão's films, one row each, and the Presentes who left (`left`).
+ * `arrived`: some film already has her vote. */
+export function LinkFilmList({
+  films,
+  left,
+  arrived,
+  labelledBy,
+}: Pick<SessionLinkView, 'films' | 'left'> & {
+  arrived: boolean
+  labelledBy?: string
+}) {
+  return (
+    <>
+      <ol
+        aria-labelledby={labelledBy}
+        className="rounded-card border border-rule bg-surface px-md"
+      >
+        {films.map((film, i) => (
+          <LinkFilmRow
+            key={film.id}
+            film={film}
+            first={i === 0}
+            arrived={arrived}
+          />
+        ))}
+      </ol>
+      {left.length > 0 && (
+        <p className="text-meta text-ink-2">
+          {`${PARTICIPATION.left}: ${left.join(', ')}.`}
+        </p>
+      )}
+    </>
+  )
+}
+
+function LinkFilmRow({
   film,
   first,
   arrived = false,
@@ -300,6 +341,37 @@ export function LinkFilms({
       aria-labelledby="filmes-da-sessao"
       className="flex flex-col gap-lg"
     >
+      <LinkFilmsHead view={view} />
+      {films.length === 0 ? (
+        <p>{PARTICIPATION.empty}</p>
+      ) : (
+        <>
+          <LinkFilmList
+            films={films}
+            left={view.left}
+            arrived={unvoted < films.length}
+            labelledBy="filmes-da-sessao"
+          />
+          <VoteCall
+            view={view}
+            vote={vote}
+            questions={questions}
+            unvoted={unvoted}
+          />
+        </>
+      )}
+      {!done && view.questions > 0 && (
+        <QuestionsInvite owner={view.owner} href={questions} />
+      )}
+    </section>
+  )
+}
+
+/** The link's date and shelf over its title, and the lead once it has
+ * films. */
+function LinkFilmsHead({ view }: { view: SessionLinkView }) {
+  return (
+    <>
       <ShelfLabel items={[weekdayDate(view.date), ...view.shelf]} />
       <div className="flex flex-col gap-xs">
         <h1
@@ -308,69 +380,77 @@ export function LinkFilms({
         >
           {PARTICIPATION.films}
         </h1>
-        {films.length > 0 && (
+        {view.films.length > 0 && (
           <p className="max-w-[60ch] text-pretty text-ink-2">
-            {PARTICIPATION.lead(films.length)}
+            {PARTICIPATION.lead(view.films.length)}
           </p>
         )}
       </div>
-      {films.length === 0 ? (
-        <p>{PARTICIPATION.empty}</p>
-      ) : (
-        <>
-          <ol
-            aria-labelledby="filmes-da-sessao"
-            className="rounded-card border border-rule bg-surface px-md"
+    </>
+  )
+}
+
+/** Under the films: done once every film has the Presente's vote, with
+ * what is left to do; else the call to vote. */
+function VoteCall({
+  view,
+  vote,
+  questions,
+  unvoted,
+}: {
+  view: SessionLinkView
+  vote: { deck: string; revote: string }
+  questions: string
+  unvoted: number
+}) {
+  if (unvoted > 0)
+    return (
+      <VoteInvite
+        vote={vote}
+        unvoted={unvoted}
+        voted={view.films.length - unvoted}
+      />
+    )
+  return (
+    <div className="flex flex-col gap-sm">
+      <p className="font-display font-bold">{PARTICIPATION.voted}</p>
+      <VotedActions
+        owner={view.owner}
+        questions={view.questions > 0 ? questions : null}
+        revote={vote.revote}
+      />
+    </div>
+  )
+}
+
+/** The call to vote while some film waits for the Presente's vote: the
+ * deck, and voting again on every film once some got a vote. */
+function VoteInvite({
+  vote,
+  unvoted,
+  voted,
+}: {
+  vote: { deck: string; revote: string }
+  unvoted: number
+  voted: number
+}) {
+  return (
+    <div className="flex flex-col gap-sm">
+      <VoteRule />
+      <div className="flex flex-wrap items-center gap-md">
+        <a href={vote.deck} className={buttonVariants()}>
+          {voted === 0 ? PARTICIPATION.vote : PARTICIPATION.voteNew(unvoted)}
+        </a>
+        {voted > 0 && (
+          <a
+            href={vote.revote}
+            className={buttonVariants({ variant: 'option' })}
           >
-            {films.map((film, i) => (
-              <LinkFilmRow
-                key={film.id}
-                film={film}
-                first={i === 0}
-                arrived={unvoted < films.length}
-              />
-            ))}
-          </ol>
-          {view.left.length > 0 && (
-            <p className="text-meta text-ink-2">
-              {`${PARTICIPATION.left}: ${view.left.join(', ')}.`}
-            </p>
-          )}
-          {done ? (
-            <div className="flex flex-col gap-sm">
-              <p className="font-display font-bold">{PARTICIPATION.voted}</p>
-              <VotedActions
-                owner={view.owner}
-                questions={view.questions > 0 ? questions : null}
-                revote={vote.revote}
-              />
-            </div>
-          ) : (
-            <div className="flex flex-col gap-sm">
-              <VoteRule />
-              <div className="flex flex-wrap items-center gap-md">
-                <a href={vote.deck} className={buttonVariants()}>
-                  {unvoted === films.length
-                    ? PARTICIPATION.vote
-                    : PARTICIPATION.voteNew(unvoted)}
-                </a>
-                {unvoted < films.length && (
-                  <a
-                    href={vote.revote}
-                    className={buttonVariants({ variant: 'option' })}
-                  >
-                    {VOTES.revote}
-                  </a>
-                )}
-              </div>
-            </div>
-          )}
-        </>
-      )}
-      {!done && view.questions > 0 && (
-        <QuestionsInvite owner={view.owner} href={questions} />
-      )}
-    </section>
+            {VOTES.revote}
+          </a>
+        )}
+      </div>
+    </div>
   )
 }
 

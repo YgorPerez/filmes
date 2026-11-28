@@ -1,11 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { isPeopleNotice, isPeopleRefusal } from '#/content/person-action'
 import {
   isPersonCreateRefusal,
   typedOfQuery,
   typedQuery,
 } from '#/content/person-create'
 import { readPeopleList } from '#/content/people'
+import { isPeopleNotice, isPeopleRefusal } from '#/content/people-search'
 import { PeopleList } from '#/ui/people'
 
 export const Route = createFileRoute('/_owner/pessoas/')({
