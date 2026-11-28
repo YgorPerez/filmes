@@ -1,15 +1,13 @@
-import type { SessionEditRefusal } from '#/content/session-edit'
-import { isSessionEditRefusal, sessionEditPath } from '#/content/session-edit'
+import {
+  sessionEditPath,
+  type SessionEditRefusal,
+} from '#/content/session-edit'
 import { sessionPath } from '#/content/session-paths'
 import type { SessionEditPage } from '#/platform/session-edit'
 import { ImportsFrame } from './imports'
-import { useFetchForm } from './kit/fetch-form'
-import { refusalOn, useRefusalInPlace } from './kit/refusal-in-place'
-import { Alert, PostFailed } from './kit/status'
 import { Constraints, Moods, SeriesOrder } from './new-session'
-import { Disclosure, Section, Submit, TextField } from './person-parts'
+import { Alert, Disclosure, Section, Submit, TextField } from './person-parts'
 import { SESSION_EDIT } from './session-edit.copy'
-import { SESSIONS } from './sessions.copy'
 
 const inputValue = (value: number | undefined) =>
   value === undefined ? undefined : String(value)
@@ -17,7 +15,7 @@ const inputValue = (value: number | undefined) =>
 /** `/sessoes/<id>/pedido`: the request and Restrições of an open Session,
  * filled with its current version (#372). Saving is a plain POST to
  * `/sessoes/<id>/pedido/enviar`, which redoes the Session with the films
- * that still pass. `page` is null when the engine cannot run here. */
+ * that still pass, or comes back here with the refusal in `?erro=`. `page` is null when the engine cannot run here. */
 export function SessionEditScreen({
   id,
   page,
@@ -31,7 +29,7 @@ export function SessionEditScreen({
     <ImportsFrame back={SESSION_EDIT.back} backTo={sessionPath(id)}>
       <h1 className="font-display text-counter-title">{SESSION_EDIT.title}</h1>
       {page === null ? (
-        <Alert>{SESSIONS.unavailable}</Alert>
+        <Alert>{SESSION_EDIT.unavailable}</Alert>
       ) : page === 'unknown' ? (
         <Alert>{SESSION_EDIT.unknown}</Alert>
       ) : page === 'closed' ? (
@@ -53,30 +51,17 @@ function SessionEditForm({
   refusal?: SessionEditRefusal
 }) {
   const path = sessionEditPath(page.id)
-  const { refused, alert, onAnswer } = useRefusalInPlace(
-    refusal,
-    refusalOn(isSessionEditRefusal, path),
-  )
-  const { onSubmit, busy, failed } = useFetchForm(onAnswer)
   return (
     <form
       method="post"
       action={`${path}/enviar`}
       aria-label={SESSION_EDIT.label}
-      onSubmit={onSubmit}
       className="flex flex-col gap-3xl"
     >
       <p className="text-ink-2">{SESSION_EDIT.lead}</p>
-      {refused && (
-        <div ref={alert}>
-          <Alert>{SESSION_EDIT.refusals[refused]}</Alert>
-        </div>
-      )}
-      <PostFailed failed={failed} />
-      <EditFields page={page} open={refused !== undefined} />
-      <Submit variant="primary" disabled={busy !== null}>
-        {busy === null ? SESSION_EDIT.submit : SESSION_EDIT.submitting}
-      </Submit>
+      {refusal && <Alert>{SESSION_EDIT.refusals[refusal]}</Alert>}
+      <EditFields page={page} open={refusal !== undefined} />
+      <Submit variant="primary">{SESSION_EDIT.submit}</Submit>
     </form>
   )
 }
@@ -91,7 +76,7 @@ function EditFields({
   page: Exclude<SessionEditPage, string>
   open: boolean
 }) {
-  const { form } = SESSIONS
+  const { form } = SESSION_EDIT
   const asked = page.fields
   return (
     <>

@@ -5,11 +5,8 @@ import {
   type Fixture,
 } from '../../../packages/engine/test/fixture.ts'
 import { Notes } from './notes'
-import {
-  sessionEditAction,
-  sessionEditPage,
-  sessionEditsFromEngine,
-} from './session-edit'
+import { sessionEditPage, sessionEditsFromEngine } from './session-edit'
+import { sessionEditAction } from './sessions'
 
 const ORIGIN = 'http://localhost'
 const BRUNO = { person: 'bruno' }

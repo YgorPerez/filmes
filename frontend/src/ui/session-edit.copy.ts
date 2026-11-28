@@ -3,6 +3,9 @@ import { SESSIONS } from './sessions.copy'
 
 /** The edit form of an open Session (#372). */
 export const SESSION_EDIT = {
+  /** Nova Sessão's fields, the same here. */
+  form: SESSIONS.form,
+  unavailable: SESSIONS.unavailable,
   back: 'Voltar para a Sessão',
   title: 'Editar o pedido',
   label: 'Editar o pedido da Sessão',
@@ -12,7 +15,6 @@ export const SESSION_EDIT = {
   words: 'O pedido',
   wordsHint: 'opcional. As palavras ficam guardadas com a Sessão.',
   submit: 'Salvar e refazer',
-  submitting: 'Refazendo…',
   unknown: 'Não encontrei essa Sessão.',
   closed:
     'Esta Sessão já foi contada: o pedido dela não muda mais. Para mudar quem estava, use Corrigir o que contei.',

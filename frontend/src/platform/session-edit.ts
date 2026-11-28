@@ -3,6 +3,7 @@
 // (`sessionRequestEditDraft`), and saving redoes the Session with every
 // film on the screen kept where it still passes (`editSessionRequest`).
 // Only a Dono among the Presentes edits, and a told Session has no edit.
+// The form's route is `sessionEditAction`, in `sessions.ts`.
 // Server only.
 
 import {
@@ -13,17 +14,8 @@ import {
   type ErrorOutput,
   type Outcome,
 } from '@filmes/engine'
-import {
-  sessionEditPath,
-  type SessionEditRefusal,
-} from '#/content/session-edit'
-import {
-  parseSessionEdit,
-  type SessionRequestEditForm,
-} from '#/content/session-request'
+import type { SessionRequestEditForm } from '#/content/session-request'
 import { appEngine } from './engine'
-import { appPoster, failureOf, formPoster, seeOther } from './form-post'
-import { appNotes, type Notes } from './notes'
 
 /** What the edit page shows: the form's fields and the Climas to choose
  * from; or why there is no form. */
@@ -115,63 +107,10 @@ export async function sessionEditPage(
   return { id, fields, moods: moods.output }
 }
 
-/** Why the engine refused the edit. */
-function refusalOf(outcome: { output: ErrorOutput }): SessionEditRefusal {
-  const { code, message } = outcome.output.error
-  switch (code) {
-    case 'closed_session':
-      return 'fechada'
-    case 'invalid_usage':
-      return message.startsWith('--parecido') ? 'parecido' : 'pedido'
-    default:
-      logEngineError(outcome)
-      return failureOf(outcome)
-  }
-}
-
-/** `POST /sessoes/<id>/pedido/enviar`: redoes Session `id` with the form
- * as its request, as the logged-in Dono, and goes to its page
- * (`?feito=regerada`, with `?nota=` for the warnings); or back to the
- * form saying why not (`?erro=`). Only a Dono among the Presentes, and
- * only a form of this site (the `Origin`). */
-export async function sessionEditAction(
-  request: Request,
-  id: string,
-  owner: { readonly person: string } | null,
-  edits: SessionEdits,
-  notes: Notes,
-  origin: string | undefined,
-): Promise<Response> {
-  const poster = formPoster(request, owner, origin)
-  if (poster instanceof Response) return poster
-  const back = (why: SessionEditRefusal) =>
-    seeOther(`${sessionEditPath(id)}?erro=${why}`)
-  const parsed = parseSessionEdit(await request.formData())
-  if ('refused' in parsed) return back(parsed.refused)
-  const draft = await edits.draft(id)
-  if (draft.exitCode !== 0) return back(refusalOf(draft))
-  if (!draft.output.attendees.includes(poster.person)) return back('ausente')
-  const done = await edits.edit(id, parsed.ok, poster.person)
-  if (done.exitCode !== 0) return back(refusalOf(done))
-  const token = notes.remember({
-    warnings: done.output.warnings,
-    addition: null,
-  })
-  return seeOther(
-    `/sessoes/${encodeURIComponent(id)}?feito=regerada${token ? `&nota=${token}` : ''}`,
-  )
-}
-
 // --- the app's -----------------------------------------------------------------
 
-const appEdits = () => sessionEditsFromEngine(appEngine())
+export const appEdits = () => sessionEditsFromEngine(appEngine())
 
 /** The edit page for the app. */
 export const appSessionEditPage = (id: string, viewer: string) =>
   sessionEditPage(id, viewer, appEdits())
-
-/** The edit form's route for the app. */
-export const serveSessionEdit = (request: Request, id: string) => {
-  const { owner, origin } = appPoster(request)
-  return sessionEditAction(request, id, owner, appEdits(), appNotes(), origin)
-}

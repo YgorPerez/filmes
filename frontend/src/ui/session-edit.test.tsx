@@ -5,7 +5,6 @@ import { cleanup, render, screen } from '@testing-library/react'
 import { afterEach, expect, it } from 'vite-plus/test'
 import { SessionEditScreen } from './session-edit'
 import { SESSION_EDIT } from './session-edit.copy'
-import { SESSIONS } from './sessions.copy'
 
 afterEach(cleanup)
 
@@ -31,13 +30,13 @@ it('is filled with the current version and posts to the Session’s edit', () =>
     'algo bom',
   )
   expect(
-    screen.getByLabelText(new RegExp(SESSIONS.form.duration)),
+    screen.getByLabelText(new RegExp(SESSION_EDIT.form.duration)),
   ).toHaveProperty('value', '120')
   expect(
-    screen.getByRole('checkbox', { name: SESSIONS.form.noSlow }),
+    screen.getByRole('checkbox', { name: SESSION_EDIT.form.noSlow }),
   ).toHaveProperty('checked', true)
   expect(
-    screen.getByLabelText(new RegExp(SESSIONS.form.similar)),
+    screen.getByLabelText(new RegExp(SESSION_EDIT.form.similar)),
   ).toHaveProperty('value', 'tt9006701')
   expect(screen.getByRole('link', { name: SESSION_EDIT.back })).toHaveProperty(
     'pathname',
@@ -55,7 +54,7 @@ it('has no form for a told Session, a Dono who was not there or none', () => {
     ['closed', SESSION_EDIT.closed],
     ['absent', SESSION_EDIT.absent],
     ['unknown', SESSION_EDIT.unknown],
-    [null, SESSIONS.unavailable],
+    [null, SESSION_EDIT.unavailable],
   ] as const) {
     render(<SessionEditScreen id={ID} page={page} />)
     expect(screen.getByText(text)).toBeTruthy()

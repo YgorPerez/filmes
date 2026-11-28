@@ -5,7 +5,6 @@
 // (`session-request.ts`) without the Presentes and the Regra. Shared by the
 // page and the server, so nothing here imports the engine.
 
-import { within } from './form-fields'
 import { SESSION_REQUEST_REFUSALS } from './session-request'
 
 /** Why not, in `?erro=`: the form's own, and the Session that was told
@@ -16,7 +15,10 @@ const SESSION_EDIT_REFUSALS = [
   'ausente',
 ] as const
 export type SessionEditRefusal = (typeof SESSION_EDIT_REFUSALS)[number]
-export const isSessionEditRefusal = within(SESSION_EDIT_REFUSALS)
+export const isSessionEditRefusal = (
+  value: unknown,
+): value is SessionEditRefusal =>
+  (SESSION_EDIT_REFUSALS as readonly unknown[]).includes(value)
 
 /** The address the edit form lives at. */
 export const sessionEditPath = (id: string) =>

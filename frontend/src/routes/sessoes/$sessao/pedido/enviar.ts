@@ -8,7 +8,7 @@ export const Route = createFileRoute('/sessoes/$sessao/pedido/enviar')({
   server: {
     handlers: {
       POST: async ({ request, params }) => {
-        const { serveSessionEdit } = await import('#/platform/session-edit')
+        const { serveSessionEdit } = await import('#/platform/sessions')
         return serveSessionEdit(request, params.sessao)
       },
     },
