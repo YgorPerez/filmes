@@ -1,8 +1,8 @@
 import {
+  sessionEditBack,
   sessionEditPath,
   type SessionEditRefusal,
 } from '#/content/session-edit'
-import { sessionPath } from '#/content/session-paths'
 import type { SessionEditPage } from '#/platform/session-edit'
 import { ImportsFrame } from './imports'
 import { Constraints, Moods, SeriesOrder } from './new-session'
@@ -26,7 +26,7 @@ export function SessionEditScreen({
   refusal?: SessionEditRefusal
 }) {
   return (
-    <ImportsFrame back={SESSION_EDIT.back} backTo={sessionPath(id)}>
+    <ImportsFrame back={SESSION_EDIT.back} backTo={sessionEditBack(id)}>
       <h1 className="font-display text-counter-title">{SESSION_EDIT.title}</h1>
       {page === null ? (
         <Alert>{SESSION_EDIT.unavailable}</Alert>

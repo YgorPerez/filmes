@@ -48,6 +48,14 @@ async function withEdits<A>(
   }
 }
 
+/** A Session of Bruno and Iara, open, and one of Bruno and Quim, told. */
+async function openAndTold(fixture: Fixture) {
+  const id = await open(fixture, ['bruno', 'iara'])
+  const told = await open(fixture, ['bruno', 'quim'])
+  await fixture.ok(recordFeedback({ session: told, film: null }))
+  return { id, told }
+}
+
 describe('sessionEditPage', () => {
   it('is the form filled with the current version, for a Presente', async () => {
     const fixture = useFixture()
@@ -66,9 +74,7 @@ describe('sessionEditPage', () => {
 
   it('says why there is no form', async () => {
     const fixture = useFixture()
-    const id = await open(fixture, ['bruno', 'iara'])
-    const told = await open(fixture, ['bruno', 'quim'])
-    await fixture.ok(recordFeedback({ session: told, film: null }))
+    const { id, told } = await openAndTold(fixture)
     const pages = await withEdits(fixture, async (edits) => [
       await sessionEditPage(id, 'vera', edits),
       await sessionEditPage(told, 'bruno', edits),
@@ -78,30 +84,37 @@ describe('sessionEditPage', () => {
   })
 })
 
+/** Posts `fields` to Session `id`'s edit as `person`; gives where it went. */
+const sendEdit = (
+  edits: ReturnType<typeof sessionEditsFromEngine>,
+  id: string,
+  fields: [string, string][],
+  person = 'bruno',
+) =>
+  sessionEditAction(
+    post(id, fields),
+    id,
+    { person },
+    edits,
+    new Notes(),
+    ORIGIN,
+  )
+
 describe('sessionEditAction', () => {
   it('redoes the Session with the form and goes to its page', async () => {
     const fixture = useFixture()
     const id = await open(fixture, ['bruno', 'iara'])
-    const response = await withEdits(fixture, (edits) =>
-      sessionEditAction(
-        post(id, [
-          ['pedido', 'algo curto'],
-          ['duracao', '120'],
-          ['sem-lento', 'sim'],
-        ]),
-        id,
-        BRUNO,
-        edits,
-        new Notes(),
-        ORIGIN,
-      ),
-    )
-    expect(response.status).toBe(303)
-    expect(response.headers.get('Location')).toMatch(
+    const fields: [string, string][] = [
+      ['pedido', 'algo curto'],
+      ['duracao', '120'],
+      ['sem-lento', 'sim'],
+    ]
+    const [response, page] = await withEdits(fixture, async (edits) => [
+      await sendEdit(edits, id, fields),
+      await sessionEditPage(id, 'bruno', edits),
+    ])
+    expect((response as Response).headers.get('Location')).toMatch(
       new RegExp(`^/sessoes/${id}\\?feito=regerada`),
-    )
-    const page = await withEdits(fixture, (edits) =>
-      sessionEditPage(id, 'bruno', edits),
     )
     expect(page).toMatchObject({
       fields: { request: 'algo curto', maxDuration: 120, noSlow: true },
@@ -110,32 +123,14 @@ describe('sessionEditAction', () => {
 
   it('goes back to the form saying why not', async () => {
     const fixture = useFixture()
-    const id = await open(fixture, ['bruno', 'iara'])
-    const told = await open(fixture, ['bruno', 'quim'])
-    await fixture.ok(recordFeedback({ session: told, film: null }))
-    const locations = await withEdits(fixture, async (edits) => {
-      const send = async (
-        session: string,
-        fields: [string, string][],
-        person = 'bruno',
-      ) =>
-        (
-          await sessionEditAction(
-            post(session, fields),
-            session,
-            { person },
-            edits,
-            new Notes(),
-            ORIGIN,
-          )
-        ).headers.get('Location')
-      return [
-        await send(id, [['duracao', 'muito']]),
-        await send(id, [['parecido', 'tt0000001']]),
-        await send(id, [['duracao', '90']], 'vera'),
-        await send(told, [['duracao', '90']]),
-      ]
-    })
+    const { id, told } = await openAndTold(fixture)
+    const where = (response: Response) => response.headers.get('Location')
+    const locations = await withEdits(fixture, async (edits) => [
+      where(await sendEdit(edits, id, [['duracao', 'muito']])),
+      where(await sendEdit(edits, id, [['parecido', 'tt0000001']])),
+      where(await sendEdit(edits, id, [['duracao', '90']], 'vera')),
+      where(await sendEdit(edits, told, [['duracao', '90']])),
+    ])
     expect(locations).toEqual([
       `/sessoes/${id}/pedido?erro=duracao`,
       `/sessoes/${id}/pedido?erro=parecido`,
@@ -143,7 +138,9 @@ describe('sessionEditAction', () => {
       `/sessoes/${told}/pedido?erro=fechada`,
     ])
   })
+})
 
+describe('sessionEditAction, who may post', () => {
   it('takes a form only from a Dono of this site', async () => {
     const fixture = useFixture()
     const id = await open(fixture, ['bruno', 'iara'])

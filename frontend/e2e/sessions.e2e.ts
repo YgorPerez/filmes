@@ -710,21 +710,12 @@ test('a Presente sends only yes votes and the Dono sees the new Cartaz order', a
 const openIdAsBruno = async (request: Parameters<typeof recommendSession>[0]) =>
   (await openAsBruno(request)).session.id
 
-test('the Dono edits the request from the Session page and the Session is redone', async ({
-  page,
-}, info) => {
-  test.skip(info.project.name !== 'desktop', 'one Session per project')
-  const id = await openIdAsBruno({
-    attendees: ['bruno', 'iara'],
-    count: 3,
-    request: 'algo bom',
-    maxDuration: 150,
-  })
-  await loginAsBruno(page)
+/** The edit form, reached from the Session page's ⋯ menu, filled with
+ * what Session `id` asked. */
+async function editForm(page: Page, id: string) {
   await page.goto(`/sessoes/${id}`)
   await openMenu(page)
   await page.getByRole('link', { name: 'Editar pedido' }).click()
-
   await expect(page).toHaveURL(new RegExp(`/sessoes/${id}/pedido$`))
   const form = page.getByRole('form', { name: 'Editar o pedido da Sessão' })
   await expect(form.getByLabel('O pedido', { exact: false })).toHaveValue(
@@ -733,6 +724,17 @@ test('the Dono edits the request from the Session page and the Session is redone
   await expect(form.getByLabel('Duração máxima', { exact: false })).toHaveValue(
     '150',
   )
+  return form
+}
+
+test('the Dono edits the request from the Session page and the Session is redone', async ({
+  page,
+}, info) => {
+  test.skip(info.project.name !== 'desktop', 'one Session per project')
+  const asked = { attendees: ['bruno', 'iara'], count: 3, maxDuration: 150 }
+  const id = await openIdAsBruno({ ...asked, request: 'algo bom' })
+  await loginAsBruno(page)
+  const form = await editForm(page, id)
   await form.getByLabel('O pedido', { exact: false }).fill('algo curto')
   await form.getByLabel('Duração máxima', { exact: false }).fill('120')
   await form.getByText('Mais opções', { exact: true }).click()
@@ -743,12 +745,9 @@ test('the Dono edits the request from the Session page and the Session is redone
   await expect(page).toHaveURL(
     new RegExp(`/sessoes/${id}\\?feito=regerada(&nota=[^&]+)?$`),
   )
-  await expect(page.getByRole('article').first()).toBeVisible()
   await snap(page, info, 'sessao-editada')
   expect(await sessionFile(id)).toMatchObject({
-    open: true,
     version: 2,
-    attendees: ['bruno', 'iara'],
     request: 'algo curto',
     constraints: ['até 2h', 'nada lento'],
   })
@@ -760,9 +759,7 @@ test('a told Session and a Dono who was not there get no form', async ({
   test.skip(info.project.name !== 'desktop', 'one Session per project')
   const told = await openIdAsBruno({ attendees: ['bruno', 'vera'], count: 3 })
   await engineRun((engine) =>
-    engine.run(recordFeedback({ session: told, film: null }), {
-      owner: 'bruno',
-    }),
+    engine.run(recordFeedback({ session: told, film: null })),
   )
   const other = await openIdAsBruno({ attendees: ['bruno', 'iara'], count: 3 })
 

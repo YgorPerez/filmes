@@ -298,35 +298,7 @@ function SessionHead({ page }: { page: CartazPage }) {
             <span aria-hidden="true">⋯</span>
           </summary>
           <div className="absolute top-full right-0 z-20 mt-xs flex w-[240px] max-w-[calc(100vw-32px)] flex-col rounded-card border border-rule bg-surface p-xs">
-            <ul className="flex flex-col">
-              {s.open && (
-                <li>
-                  <a href={feedbackPath(s.id)} className={MENU_ROW}>
-                    <Icon name="film" />
-                    {SESSIONS.list.feedback}
-                  </a>
-                </li>
-              )}
-              {canEditAttendees && (
-                <li>
-                  <a
-                    href={`${sessionPath(s.id)}?editar=presentes`}
-                    className={MENU_ROW}
-                  >
-                    <Icon name="people" />
-                    {SESSIONS.editAttendees.title}
-                  </a>
-                </li>
-              )}
-              {s.open && canEditAttendees && (
-                <li>
-                  <a href={sessionEditPath(s.id)} className={MENU_ROW}>
-                    <Icon name="tools" />
-                    {SESSION_EDIT.menu}
-                  </a>
-                </li>
-              )}
-            </ul>
+            <HeadActions session={s} />
             {page.sessionLink && (
               <ShareSessionLink key={s.id} url={page.sessionLink} />
             )}
@@ -334,6 +306,43 @@ function SessionHead({ page }: { page: CartazPage }) {
         </details>
       )}
     </header>
+  )
+}
+
+/** The ⋯ menu's actions: "Contar como foi" while open, and for a Dono who
+ * was there, "Editar Presentes" and, while open, "Editar pedido" (#372). */
+function HeadActions({ session: s }: { session: CartazPage['session'] }) {
+  const canEditAttendees = s.attendees.some((attendee) => attendee.owner)
+  return (
+    <ul className="flex flex-col">
+      {s.open && (
+        <li>
+          <a href={feedbackPath(s.id)} className={MENU_ROW}>
+            <Icon name="film" />
+            {SESSIONS.list.feedback}
+          </a>
+        </li>
+      )}
+      {canEditAttendees && (
+        <li>
+          <a
+            href={`${sessionPath(s.id)}?editar=presentes`}
+            className={MENU_ROW}
+          >
+            <Icon name="people" />
+            {SESSIONS.editAttendees.title}
+          </a>
+        </li>
+      )}
+      {s.open && canEditAttendees && (
+        <li>
+          <a href={sessionEditPath(s.id)} className={MENU_ROW}>
+            <Icon name="tools" />
+            {SESSION_EDIT.menu}
+          </a>
+        </li>
+      )}
+    </ul>
   )
 }
 

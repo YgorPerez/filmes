@@ -20,6 +20,9 @@ export const isSessionEditRefusal = (
 ): value is SessionEditRefusal =>
   (SESSION_EDIT_REFUSALS as readonly unknown[]).includes(value)
 
+/** Where the edit form goes back to: the Session's page (`sessionPath`). */
+export const sessionEditBack = (id: string) =>
+  `/sessoes/${encodeURIComponent(id)}`
+
 /** The address the edit form lives at. */
-export const sessionEditPath = (id: string) =>
-  `/sessoes/${encodeURIComponent(id)}/pedido`
+export const sessionEditPath = (id: string) => `${sessionEditBack(id)}/pedido`
