@@ -2,9 +2,10 @@ import { join } from 'node:path'
 import { makeEngine, recommendSession, recordFeedback } from '@filmes/engine'
 import { expect, test } from 'vite-plus/test'
 import { useFixture } from '../../../packages/engine/test/fixture'
+import { tasteWeights } from '../../../packages/engine/test/recommendation/support'
 import { sessionLinkSearch } from '#/content/session-link-address'
 import { issueSessionLink, resolveSessionLink } from './session-link'
-import { voteAction, voteDeck } from './session-votes'
+import { filmSheets, voteAction, voteDeck } from './session-votes'
 
 const ORIGIN = 'https://cinema.example'
 
@@ -399,6 +400,61 @@ test('only the logged-in Dono votes as the opener; a visitor with the link canno
     const now = await films()
     expect(now).toContain(a)
     expect(now).not.toContain(b)
+  } finally {
+    await engine.dispose()
+  }
+})
+
+test('the deck’s sheet has the public facts and only her own Evidence and Nota prevista; the Dono’s has everyone’s', async () => {
+  const fixture = useFixture()
+  const engine = makeEngine(fixture.vars)
+  const database = join(fixture.root, 'auth.sqlite')
+  try {
+    const opened = await fixture.ok(
+      recommendSession({ attendees: ['bruno', 'teo'], count: 50 }),
+      tasteWeights(fixture, 3, 5),
+      { owner: 'bruno' },
+    )
+    const session = opened.session.id
+    const url = await issueSessionLink(
+      session,
+      'bruno',
+      engine,
+      database,
+      ORIGIN,
+    )
+    if (!url) throw new Error('Expected a Session link')
+    const link = Object.fromEntries(new URL(url).searchParams)
+    const film = opened.films.find((f) => f.title === 'Pequenos Milagres')!
+
+    const teo = await voteDeck(
+      sessionLinkSearch({ ...link, presente: 'teo' }),
+      engine,
+      database,
+      null,
+    )
+    const owner = await filmSheets(engine, session, 'all')
+
+    expect(teo?.people.map((p) => [p.slug, p.label])).toEqual([['teo', 'Você']])
+    const sheet = teo?.films.find((f) => f.id === film.id)?.sheet
+    expect(sheet).toMatchObject({
+      imdbUrl: expect.stringContaining(film.id),
+      votesText: expect.any(String),
+      predictedRatings: [],
+    })
+    for (const f of teo?.films ?? []) {
+      expect(f.sheet?.lines.flatMap((l) => l.people) ?? []).not.toContain(
+        'bruno',
+      )
+      expect(f.sheet?.predictedRatings).toEqual([])
+    }
+    expect(owner.people.map((p) => [p.slug, p.label])).toEqual([
+      ['bruno', 'Você'],
+      ['teo', 'Teo'],
+    ])
+    expect(
+      owner.sheets.get(film.id)?.predictedRatings.map((p) => p.person),
+    ).toEqual(['bruno'])
   } finally {
     await engine.dispose()
   }

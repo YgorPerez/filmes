@@ -551,10 +551,34 @@ async function voteYesNoYes(
   await expect(participant.getByRole('heading', { name: first })).toBeVisible()
   await snap(participant, info, 'sessao-votar')
 
-  await firstYes(participant, 3)
-  await expect(participant.getByRole('heading', { name: second })).toBeVisible()
-  await participant.getByRole('button', { name: 'Não', exact: true }).click()
+  // A tap on the full-screen card opens its full sheet (#377). The first
+  // tap can land before the deck hydrates, so tap until the sheet opens.
+  const sheet = participant.getByRole('dialog')
+  await expect(async () => {
+    if ((await sheet.count()) === 0)
+      await participant
+        .getByRole('article')
+        .click({ position: { x: 24, y: 260 } })
+    await expect(sheet.getByRole('heading', { name: first })).toBeVisible({
+      timeout: 1000,
+    })
+  }).toPass()
+  await expect(
+    sheet.getByRole('link', { name: /IMDb.* votos$/u }),
+  ).toBeVisible()
+  await snap(participant, info, 'sessao-votar-ficha')
+  await sheet.getByRole('button', { name: 'Fechar' }).click()
+  await expect(sheet).toHaveCount(0)
+
+  // By button, by the keyboard, and from the sheet.
   await participant.getByRole('button', { name: 'Sim', exact: true }).click()
+  await expect(participant.getByRole('heading', { name: second })).toBeVisible()
+  await participant.keyboard.press('ArrowLeft')
+  await expect(participant.getByRole('heading', { name: second })).toHaveCount(
+    0,
+  )
+  await participant.getByRole('button', { name: 'Mais sobre o filme' }).click()
+  await sheet.getByRole('button', { name: 'Sim', exact: true }).click()
   await expect(participant.getByText('2 sins · 1 não')).toBeVisible()
   await snap(participant, info, 'sessao-votos-resumo')
 }

@@ -26,6 +26,10 @@ export const VOTES = {
     touch: 'Arraste o cartão pro lado ou toque nos botões.',
     keys: 'Arraste o cartão pro lado, toque nos botões ou use as setas ← →.',
   },
+  /** Opens the film's full sheet (#377). */
+  more: 'Mais sobre o filme',
+  /** Her own Nota prevista on the card: "previsto 8,3". */
+  predicted: (text: string) => `previsto ${text}`,
   of: (n: number, total: number) => `Filme ${n} de ${total}`,
   /** What a screen reader hears when the card changes. */
   now: (n: number, total: number, title: string) =>
@@ -33,6 +37,9 @@ export const VOTES = {
   wentBack: (title: string) => `Voltou: ${title}`,
   no: 'Não',
   yes: 'Sim',
+  /** The "vi" gestures, hidden until #378. */
+  seenLiked: 'Vi e gostei',
+  seenDisliked: 'Vi e não gostei',
   stampNo: 'Não',
   stampYes: 'Sim',
   back: 'Voltar',
