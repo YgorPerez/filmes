@@ -420,9 +420,6 @@ function VoteCard({
       >
         <PosterFill poster={film.card?.poster ?? null} title={film.title} />
         <div className="relative mt-auto flex flex-col gap-md bg-case/85 px-lg pt-lg pb-tab-safe">
-          {/* A film that came in after her last Voto, stuck on the band's
-           * top right corner as on the Cartaz's case (#380). */}
-          {film.new && <NewSticker className="absolute -top-sm right-lg" />}
           {stamp && (
             <Sticker
               kind={stamp === 'yes' ? 'yes' : 'swap'}
@@ -433,14 +430,18 @@ function VoteCard({
           )}
           <div className="mx-auto flex w-full max-w-[640px] flex-col gap-md">
             <div className="flex flex-col gap-2xs">
-              <h2
-                id="carta"
-                ref={heading}
-                tabIndex={-1}
-                className="font-display text-page-title text-balance"
-              >
-                {film.title}
-              </h2>
+              <div className="flex items-start justify-between gap-md">
+                <h2
+                  id="carta"
+                  ref={heading}
+                  tabIndex={-1}
+                  className="font-display text-page-title text-balance"
+                >
+                  {film.title}
+                </h2>
+                {/* A film that came in after her last Voto (#380). */}
+                {film.new && <NewSticker className="mt-xs shrink-0" />}
+              </div>
               {film.card?.originalTitle && (
                 <p className="text-meta text-case-ink-2">
                   {film.card.originalTitle}

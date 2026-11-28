@@ -4,6 +4,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, userEvent, within } from 'storybook/test'
 import { VoteCards, VoteScreen } from './session-votes'
 import { VOTES } from './session-votes.copy'
+import { NEW_STICKER } from './kit/sticker'
 import {
   GUEST_AFTER as AFTER,
   GUEST_DECK as DECK,
@@ -54,6 +55,19 @@ export const OwnerSheet: Story = {
     await userEvent.click(canvas.getByRole('button', { name: VOTES.more }))
     const page = within(canvasElement.ownerDocument.body)
     await expect(page.getByRole('dialog')).toBeVisible()
+  },
+}
+
+/** Back after her Votos: the film that came in since has NOVO (#380). */
+export const NewFilm: Story = {
+  args: { deck: AFTER },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(
+      canvas.getByRole('heading', { name: 'Ponte Aérea' }),
+    ).toBeVisible()
+    // Not `toBeVisible`: the sticker comes in from transparent.
+    await expect(canvas.getByText(NEW_STICKER)).toBeInTheDocument()
   },
 }
 
