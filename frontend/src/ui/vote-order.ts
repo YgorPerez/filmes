@@ -3,7 +3,7 @@ import type { VoteDeck } from '#/platform/session-votes'
 import { VOTES } from './session-votes.copy'
 
 // Her Ordem's state (#379), apart from the list that shows it
-// (`vote-ranking.tsx`): which films are her sins, where they start and
+// (`vote-ranking.tsx`): which films are her yes films, where they start and
 // where she dragged them.
 
 type Film = VoteDeck['films'][number]
@@ -33,9 +33,9 @@ export function moved<A>(list: readonly A[], from: number, to: number): A[] {
   return next
 }
 
-/** Her sins in the deck's order: the deck's films she said sim to, and
- * her standing sins she did not turn into não from the Ordem. */
-function sinsOf(
+/** Her yes films in the deck's order: the deck's films she said sim to, and
+ * her standing yes films she did not turn into não from the Ordem. */
+function yesFilmsOf(
   deck: VoteDeck,
   films: readonly Film[],
   votes: readonly (string | undefined)[],
@@ -50,7 +50,7 @@ function sinsOf(
   )
 }
 
-/** Her Ordem: her sins from her earlier Ordem or the engine's order, as
+/** Her Ordem: her yes films from her earlier Ordem or the engine's order, as
  * she drags them; whether she is on it; and what the list does. Going
  * back to the recap gives `recap` the focus. */
 export function useOrder({
@@ -83,26 +83,26 @@ export function useOrder({
     recap.current?.focus()
   }, [ranking, recap])
   const standingIds = new Set(standing.map((f) => f.id))
-  const yes = new Map(
-    sinsOf(deck, films, votes, standingIds, undone).map((f) => [f.id, f]),
+  const byId = new Map(
+    yesFilmsOf(deck, films, votes, standingIds, undone).map((f) => [f.id, f]),
   )
-  const ids = startingOrder([...yes.keys()], dragged ?? deck.ranking ?? [])
-  const sins = ids.flatMap((id) => yes.get(id) ?? [])
+  const ids = startingOrder([...byId.keys()], dragged ?? deck.ranking ?? [])
+  const yesFilms = ids.flatMap((id) => byId.get(id) ?? [])
   const leave = () => {
     left.current = true
     setRanking(false)
   }
   return {
-    /** She is on her Ordem: asked, with two or more sins. */
-    on: ranking && sins.length >= 2,
+    /** She is on her Ordem: asked, with two or more yesFilms. */
+    on: ranking && yesFilms.length >= 2,
     undone,
-    films: sins,
-    /** Leads to her Ordem, with two or more sins. */
-    start: sins.length >= 2 ? () => setRanking(true) : null,
+    films: yesFilms,
+    /** Leads to her Ordem, with two or more yesFilms. */
+    start: yesFilms.length >= 2 ? () => setRanking(true) : null,
     leave,
     move: (from: number, to: number) => {
       setDragged(moved(ids, from, to))
-      say(VOTES.rankMoved(sins[from]?.title ?? '', to + 1, sins.length))
+      say(VOTES.rankMoved(yesFilms[from]?.title ?? '', to + 1, yesFilms.length))
     },
     /** A não from the Ordem: the others keep their places, and a standing
      * sim goes as não. With one sim left, back to the recap. */
@@ -111,7 +111,7 @@ export function useOrder({
       if (i >= 0) drop(i)
       setDragged(ids.filter((other) => other !== id))
       if (standingIds.has(id)) setUndone((u) => new Set([...u, id]))
-      if (sins.length <= 2) leave()
+      if (yesFilms.length <= 2) leave()
     },
     reset: () => {
       setUndone(new Set())

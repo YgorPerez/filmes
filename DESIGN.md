@@ -478,7 +478,7 @@ Neutros frios fazem a tela. Os adesivos e as cores dos Presentes têm um papel c
 
 **The Same Objects Rule.** Estojo, etiqueta e adesivos têm a mesma cor no claro e no escuro. Só o chão, as superfícies, a tinta, o fio, o cartão e o carimbo trocam com o tema; a borda do estojo só aparece no escuro.
 
-**The Flat Color Rule.** Cor chapada. Nenhum gradiente, nem na capa: nada vai escrito sobre o pôster além dos adesivos, e nada precisa de faixa escura.
+**The Flat Color Rule.** Cor chapada. Nenhum gradiente, nem na capa: nada vai escrito sobre o pôster além dos adesivos, e nada precisa de faixa escura. A única exceção é o card do swipe, que é o próprio pôster em tela cheia (mapa #375, decisão do Dono de 2026-11-28): embaixo, uma faixa chapada de estojo a 85% leva o título, o ano, a duração, o IMDb, a Nota prevista de quem olha e os botões redondos, e em cima outra, a 75%, leva o passo do baralho e o que faz um não. Faixa chapada, nunca gradiente, e só no card do swipe.
 
 ## Typography
 
@@ -616,7 +616,7 @@ Os cards ficam sob o título do Motivo deles, na ordem da Recomendação: um tí
 
 ### Adesivos de estado
 
-- **NOVO:** amarelo, Rubik 800 12px maiúsculo, girado 9°, no canto de cima à direita do estojo, 10px para fora. No Cartaz (web e MCP Apps), só no filme que entrou nesta versão; no swipe e na ordenação, no filme que entrou depois do último Voto de quem olha, na faixa, à direita do título (#380). O card inline do Claude não leva o adesivo: a linha "entrou:" já diz.
+- **NOVO:** amarelo, Rubik 800 12px maiúsculo, girado 9°, no canto de cima à direita do estojo, 10px para fora. No Cartaz (web e MCP Apps), só no filme que entrou nesta versão; no swipe e na ordenação, no filme que entrou depois do último Voto de quem olha, à direita do título (no swipe, na faixa de baixo do card, a exceção da Flat Color Rule) (#380). O card inline do Claude não leva o adesivo: a linha "entrou:" já diz.
 - **TROCAR:** rosa, Rubik 800 15px maiúsculo, girado -9°, colado no meio da capa (40% da altura). Desmarcar Trocar tira o adesivo.
 - **JÁ VI de alguns:** o mesmo carimbo de contorno do JÁ VI de todos, com o avatar de cada Presente que marcou depois da palavra (#272). Um Já vi nunca deixa a capa sem marca, nem o Já visto que o motor já conhece: quem viu antes da Sessão carimba a capa com VISTO ANTES, o mesmo carimbo, sempre com o avatar de cada um que viu, e a opção dela fica solta, porque ela não marcou nada neste Cartaz; um Já vi marcado aqui troca o carimbo para JÁ VI, com quem marcou e quem o motor já sabia (#272).
 - **APOSTA:** carimbo violeta (stamp; dark-stamp no escuro) num retalho de superfície com contorno de 2px, Rubik 800 12px maiúsculo, girado -6°, no canto de baixo à esquerda da capa, 17px acima do pé do estojo e para fora como o adesivo de preço. Só na Aposta da Recomendação. É carimbo, não adesivo: o palpite do balconista. Fica longe do NOVO, que vai no canto de cima à direita. O título do carimbo diz por quê ("pouca Evidência, mas quem tem gosto parecido deu nota alta").

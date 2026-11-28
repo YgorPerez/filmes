@@ -100,7 +100,7 @@ export const Recap: Story = {
   },
 }
 
-/** Her Ordem (#379): three sins, the handle moves the last one up. */
+/** Her Ordem (#379): three yes films, the handle moves the last one up. */
 export const Ranking: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)

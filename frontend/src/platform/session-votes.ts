@@ -9,7 +9,8 @@
 // asked). An Ordem can also redo the Session on its own by changing the
 // order. Votos never touch taste. Server only.
 // Each film of the deck carries its full sheet (#377): the public facts for
-// anyone, and only the chosen Presente's own Evidence and Nota prevista.
+// anyone, and only the chosen Presente's own Evidence and Nota prevista;
+// the Dono who opened the Session sees everyone's.
 //
 // Every post revalidates the link first (`resolveSessionLink`, with a
 // Presente chosen; the opener only by her login, #376) and takes only a
@@ -139,10 +140,11 @@ export async function voteDeck(
 ): Promise<VoteDeck | null> {
   const link = await resolveSessionLink(search, engine, database, viewer)
   if (!link?.selected) return null
+  // The Dono sees everyone's, as on the Cartaz (map #375).
   const { people, sheets } = await filmSheets(
     engine,
     link.session,
-    link.selected.person,
+    link.selected.owner ? 'all' : link.selected.person,
   )
   const deck = {
     version: link.version,

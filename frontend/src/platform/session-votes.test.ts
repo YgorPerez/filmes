@@ -478,6 +478,52 @@ test('the deck’s sheet has the public facts and only her own Evidence and Nota
   }
 })
 
+test('the Dono who opens the deck by her login sees everyone’s Evidence and Nota prevista, as on the Cartaz', async () => {
+  const fixture = useFixture()
+  const engine = makeEngine(fixture.vars)
+  const database = join(fixture.root, 'auth.sqlite')
+  try {
+    const opened = await fixture.ok(
+      recommendSession({ attendees: ['bruno', 'iara'], count: 50 }),
+      tasteWeights(fixture, 3, 5),
+      { owner: 'bruno' },
+    )
+    const session = opened.session.id
+    const url = await issueSessionLink(
+      session,
+      'bruno',
+      engine,
+      database,
+      ORIGIN,
+    )
+    if (!url) throw new Error('Expected a Session link')
+    const link = Object.fromEntries(new URL(url).searchParams)
+
+    // Votar on her Cartaz (#376): the opener, chosen by her login.
+    const dono = await voteDeck(
+      sessionLinkSearch({ ...link, presente: 'bruno' }),
+      engine,
+      database,
+      'bruno',
+    )
+    const cartaz = await filmSheets(engine, session, 'all')
+
+    expect(dono?.people.map((p) => [p.slug, p.label])).toEqual([
+      ['bruno', 'Você'],
+      ['iara', 'Iara'],
+    ])
+    expect(
+      dono?.films.flatMap((f) => f.sheet?.lines.flatMap((l) => l.people) ?? []),
+    ).toContain('iara')
+    // In the fixture only bruno has a Nota prevista; the sheets are the
+    // Cartaz's, Nota prevista included.
+    for (const f of dono?.films ?? [])
+      expect(f.sheet).toEqual(cartaz.sheets.get(f.id))
+  } finally {
+    await engine.dispose()
+  }
+})
+
 test('a guest’s vi takes the film out and waits for the Dono; the Dono’s lands at once', async () => {
   const fixture = useFixture()
   const engine = makeEngine(fixture.vars)

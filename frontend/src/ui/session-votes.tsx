@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useId,
   useRef,
   useState,
   type FormEventHandler,
@@ -37,7 +38,7 @@ import { VoteRanking } from './vote-ranking'
 // where she can answer too. What each gesture does stays over the card.
 // After the last film, the recap, where a tap changes an answer, and
 // Enviar votos, the screen's one orange button, which posts every answer
-// at once; with two or more sins, Pôr em ordem leads first to her Ordem
+// at once; with two or more yes films, Pôr em ordem leads first to her Ordem
 // (#379, `vote-ranking.tsx`), whose Enviar votos posts it too. A screen
 // reader hears each new card. Her standing
 // Votos on the screen go again with the new ones: her latest submission is
@@ -45,20 +46,19 @@ import { VoteRanking } from './vote-ranking'
 
 /** What she answers on a card: a Voto, or a Vi e gostei / Vi e não
  * gostei. */
-type Vote = 'yes' | 'no' | 'seenLiked' | 'seenDisliked'
+type Vote = 'yes' | 'no' | 'like' | 'dislike'
 
 /** The form field each answer posts in. */
 const FIELD: Readonly<Record<Vote, string>> = {
   yes: 'sim',
   no: 'nao',
-  seenLiked: 'gostei',
-  seenDisliked: 'naogostei',
+  like: 'gostei',
+  dislike: 'naogostei',
 }
 
-const isSeen = (vote: Vote | undefined) =>
-  vote === 'seenLiked' || vote === 'seenDisliked'
+const isSeen = (vote: Vote | undefined) => vote === 'like' || vote === 'dislike'
 
-/** How many sins, nãos and "vi" in `votes`. */
+/** How many yes films, nãos and "vi" in `votes`. */
 const tally = (votes: readonly Vote[]) => {
   const yes = votes.filter((v) => v === 'yes').length
   const no = votes.filter((v) => v === 'no').length
@@ -134,8 +134,8 @@ function useVotes(films: readonly Film[], kept: readonly Vote[] = []) {
 const KEYS: Readonly<Record<string, Vote>> = {
   ArrowLeft: 'no',
   ArrowRight: 'yes',
-  ArrowUp: 'seenLiked',
-  ArrowDown: 'seenDisliked',
+  ArrowUp: 'like',
+  ArrowDown: 'dislike',
 }
 
 /** The arrow keys answer while a card is up, outside the fields. */
@@ -159,8 +159,8 @@ function useArrowKeys(active: boolean, cast: (vote: Vote) => void) {
  * along the axis it moved most. */
 const swiped = (dx: number, dy: number, line = SWIPE): Vote | null => {
   if (Math.abs(dy) > Math.abs(dx)) {
-    if (dy <= -line) return 'seenLiked'
-    return dy >= line ? 'seenDisliked' : null
+    if (dy <= -line) return 'like'
+    return dy >= line ? 'dislike' : null
   }
   if (dx >= line) return 'yes'
   return dx <= -line ? 'no' : null
@@ -216,7 +216,7 @@ function useSwipe(cast: (vote: Vote) => void, tap: () => void) {
 
 /** What the form posts: the version, her standing Votos (a standing sim
  * she took out from her Ordem goes as não), the deck's Votos and, from her
- * Ordem, the sins in order (#379). */
+ * Ordem, the yes films in order (#379). */
 function DeckFields({
   version,
   standing,
@@ -439,7 +439,8 @@ export function VoteCards({
 }
 
 /** The round buttons under the card, in the gestures' order: ✕ não,
- * 👎 vi e não gostei, ★ vi e gostei, ♥ sim. */
+ * 👎 vi e não gostei, ★ vi e gostei, ♥ sim. The two "vi" are in the case's
+ * ink, like the JÁ VI stamp they get (yellow is only NOVO, DESIGN.md). */
 const BUTTONS = [
   {
     vote: 'no',
@@ -449,17 +450,17 @@ const BUTTONS = [
     size: 'size-16',
   },
   {
-    vote: 'seenDisliked',
-    label: VOTES.seenDisliked,
+    vote: 'dislike',
+    label: VOTES.dislike,
     icon: 'thumbsDown',
     ring: 'border-case-ink-2 text-case-ink',
     size: 'size-13',
   },
   {
-    vote: 'seenLiked',
-    label: VOTES.seenLiked,
+    vote: 'like',
+    label: VOTES.like,
     icon: 'star',
-    ring: 'border-sticker-yellow text-sticker-yellow',
+    ring: 'border-case-ink text-case-ink',
     size: 'size-13',
   },
   {
@@ -541,7 +542,7 @@ function cardFacts(film: Film, viewer: string | null): string[] {
   return [
     ...(card?.year ? [String(card.year)] : []),
     ...(card?.duration ? [card.duration] : []),
-    ...(card?.imdbRating ? [`IMDb ${card.imdbRating}`] : []),
+    ...(card?.imdbRating ? [VOTES.imdb(card.imdbRating)] : []),
     ...(own ? [VOTES.predicted(own.text)] : []),
   ]
 }
@@ -551,8 +552,8 @@ function cardFacts(film: Film, viewer: string | null): string[] {
 const STAMPS = {
   yes: { kind: 'yes', text: VOTES.stampYes },
   no: { kind: 'swap', text: VOTES.stampNo },
-  seenLiked: { kind: 'seen', text: VOTES.stampSeenLiked },
-  seenDisliked: { kind: 'seen', text: VOTES.stampSeenDisliked },
+  like: { kind: 'seen', text: VOTES.stampLike },
+  dislike: { kind: 'seen', text: VOTES.stampDislike },
 } as const
 
 /** One film over the whole screen, Tinder-like: the poster, and over a
@@ -580,11 +581,12 @@ function VoteCard({
   open: () => void
 }) {
   const { drag, stamp, handlers } = useSwipe(cast, open)
+  const titleId = useId()
   const moved = drag.x !== 0 || drag.y !== 0
   return (
     <>
       <article
-        aria-labelledby="carta"
+        aria-labelledby={titleId}
         {...handlers}
         style={
           moved
@@ -606,7 +608,7 @@ function VoteCard({
             <div className="flex flex-col gap-2xs">
               <div className="flex items-start justify-between gap-md">
                 <h2
-                  id="carta"
+                  id={titleId}
                   ref={heading}
                   tabIndex={-1}
                   className="font-display text-page-title text-balance"
@@ -691,7 +693,7 @@ function VoteRecap({
   restart: () => void
   /** Mudar votos: her earlier Votos are the ones chosen. */
   revote: boolean
-  /** Leads to her Ordem, with two or more sins; else the recap sends. */
+  /** Leads to her Ordem, with two or more yes films; else the recap sends. */
   rank: (() => void) | null
 }) {
   const leaving = films
@@ -754,7 +756,8 @@ function VoteRecap({
 }
 
 /** The options of a recap row, in the buttons' order. The two "vi" show
- * a short word; their name is the whole gesture. */
+ * a short word; their name is the whole gesture. Chosen, both look like
+ * the JÁ VI stamp. */
 const CHOICES = [
   {
     vote: 'no',
@@ -763,18 +766,18 @@ const CHOICES = [
     on: 'border-sticker-pink bg-sticker-pink text-on-sticker',
   },
   {
-    vote: 'seenDisliked',
-    label: VOTES.seenDisliked,
+    vote: 'dislike',
+    label: VOTES.dislike,
     short: VOTES.recapDisliked,
     icon: 'thumbsDown',
     on: 'border-ink bg-surface text-ink',
   },
   {
-    vote: 'seenLiked',
-    label: VOTES.seenLiked,
+    vote: 'like',
+    label: VOTES.like,
     short: VOTES.recapLiked,
     icon: 'star',
-    on: 'border-sticker-yellow bg-sticker-yellow text-on-sticker',
+    on: 'border-ink bg-surface text-ink',
   },
   {
     vote: 'yes',

@@ -33,6 +33,7 @@ export const VOTES = {
   /** Opens the film's full sheet (#377). */
   more: 'Mais sobre o filme',
   /** Her own Nota prevista on the card: "previsto 8,3". */
+  imdb: (rating: string) => `IMDb ${rating}`,
   predicted: (text: string) => `previsto ${text}`,
   of: (n: number, total: number) => `Filme ${n} de ${total}`,
   /** What a screen reader hears when the card changes. */
@@ -42,16 +43,16 @@ export const VOTES = {
   no: 'Não',
   yes: 'Sim',
   /** The "vi" gestures (#378): up and down. */
-  seenLiked: 'Vi e gostei',
-  seenDisliked: 'Vi e não gostei',
+  like: 'Vi e gostei',
+  dislike: 'Vi e não gostei',
   /** Their short words on a recap row, where the name is the whole
    * gesture. */
   recapLiked: 'Gostei',
   recapDisliked: 'Não gostei',
   stampNo: 'Não',
   stampYes: 'Sim',
-  stampSeenLiked: 'Vi, gostei',
-  stampSeenDisliked: 'Vi, não gostei',
+  stampLike: 'Vi, gostei',
+  stampDislike: 'Vi, não gostei',
   back: 'Voltar',
   summary: (yes: number, no: number, seen = 0) =>
     [

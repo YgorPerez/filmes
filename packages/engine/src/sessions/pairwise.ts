@@ -62,6 +62,7 @@ import {
   waitingGestures,
   type SeenReaction,
 } from './seen-gestures.ts'
+import { awaitsOwner } from './waiting.ts'
 
 /** The chosen film's Nota: 3,5 of 5, weak on the ruler. */
 export const PAIRWISE_RATING = 3.5
@@ -135,21 +136,18 @@ const plain = (item: YamlValue): Stored =>
 const filmsOf = (answer: Stored): string[] =>
   Array.isArray(answer.films) ? answer.films.map(String) : []
 
-const waits = (answer: Stored) =>
-  answer.recorded_on === undefined && answer.discarded_on === undefined
-
 /** Discard the answers and gestures that have not become taste yet. */
 export function discardWaitingAnswers(
   front: Map<string, YamlValue>,
   today: string,
 ) {
-  settleGestures(front, null, false, today)
+  settleGestures(front, 'discard', today)
   const answers = storedAnswers(front)
   if (answers.length === 0) return
   front.set(
     'pairwise',
     answers.map((answer) =>
-      isMapping(answer) && waits(plain(answer))
+      isMapping(answer) && awaitsOwner(plain(answer))
         ? new Map([...answer, ['discarded_on', today]])
         : answer,
     ),
@@ -347,7 +345,7 @@ export const pairwiseAnswers = (
     const { frontmatter } = yield* readSession(session)
     const waiting = storedAnswers(frontmatter)
       .map(plain)
-      .filter((a) => waits(a) && typeof a.choice === 'string')
+      .filter((a) => awaitsOwner(a) && typeof a.choice === 'string')
     const gestures = waitingGestures(frontmatter)
     if (waiting.length === 0 && gestures.length === 0) return []
     return yield* (yield* Sqlite).read((db) =>
@@ -368,7 +366,7 @@ export const pairwiseAnswers = (
           string,
           { answers: WaitingAnswer[]; seen: WaitingGesture[] }
         >()
-        const of = (person: string) => {
+        const waitingOf = (person: string) => {
           const hers = byPerson.get(person) ?? { answers: [], seen: [] }
           byPerson.set(person, hers)
           return hers
@@ -376,13 +374,13 @@ export const pairwiseAnswers = (
         for (const answer of waiting) {
           const chosen = String(answer.choice)
           const other = filmsOf(answer).find((f) => f !== chosen)!
-          of(String(answer.person)).answers.push({
+          waitingOf(String(answer.person)).answers.push({
             chosen: films.get(chosen)!,
             other: films.get(other)!,
           })
         }
         for (const { person, film, reaction } of gestures)
-          of(person).seen.push({ film: films.get(film)!, reaction })
+          waitingOf(person).seen.push({ film: films.get(film)!, reaction })
         const names = new Map(
           (yield* db.all(
             `SELECT j.value AS slug, COALESCE(p.nome, j.value) AS nome
@@ -482,7 +480,7 @@ export const decidePairwise = (
           const stored = storedAnswers(front)
           const mine = stored
             .map((item, index) => [index, plain(item)] as const)
-            .filter(([, a]) => a.person === slug && waits(a))
+            .filter(([, a]) => a.person === slug && awaitsOwner(a))
           let added = 0
           if (record) {
             const recorded = yield* recordAnswers(db, {
@@ -506,7 +504,7 @@ export const decidePairwise = (
             })
             added += gestures.length
           }
-          settleGestures(front, slug, record, today)
+          settleGestures(front, record ? 'record' : 'discard', today, slug)
           if (mine.length > 0) {
             for (const [index] of mine)
               stored[index] = new Map([

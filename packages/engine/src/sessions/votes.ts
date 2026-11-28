@@ -331,15 +331,15 @@ const recordVotes = (
 
     const screen = shownFilms(current)
     const { cast, seen, warnings } = onTheScreen(request, screen, currentNumber)
-    const now = request.person === owner
-    if (now && seen.length > 0)
+    const byOwner = request.person === owner
+    if (byOwner && seen.length > 0)
       yield* recordGestures(db, {
         person: yield* resolvePerson(request.person),
         gestures: seen,
         session: id,
         today,
       })
-    addGestures(front, request.person, seen, today, now ? today : null)
+    addGestures(front, request.person, seen, today, byOwner ? today : null)
     const ranking = [
       ...new Set(
         (request.ranking ?? []).filter((film) => cast.get(film) === 'yes'),

@@ -598,7 +598,7 @@ async function sendVotesSwapping(
   await participant.evaluate(() => {
     document.documentElement.dataset.votePage = 'original'
   })
-  // Two sins: her Ordem comes before the send (#379); she keeps it.
+  // Two yes films: her Ordem comes before the send (#379); she keeps it.
   await participant.getByRole('button', { name: 'Pôr em ordem' }).click()
   try {
     await participant.getByRole('button', { name: 'Enviar votos' }).click()
@@ -755,7 +755,7 @@ const ordered = (participant: Page) =>
     .getByRole('listitem')
     .allInnerTexts()
 
-test('two Presentes rank their sins and the Cartaz follows the lowest sum of positions', async ({
+test('two Presentes rank their yes films and the Cartaz follows the lowest sum of positions', async ({
   page,
   browser,
 }, info) => {
@@ -882,7 +882,7 @@ test('the Dono votes from her Cartaz by the login, and the Cartaz follows', asyn
   await page.getByRole('button', { name: 'Sim', exact: true }).click()
   await expect(page.getByText('2 sins · 1 não')).toBeVisible()
   await snap(page, info, 'sessao-dono-votos-resumo')
-  // Two sins: her Ordem comes first (#379); she keeps it.
+  // Two yes films: her Ordem comes first (#379); she keeps it.
   await page.getByRole('button', { name: 'Pôr em ordem' }).click()
   await page.getByRole('button', { name: 'Enviar votos' }).click()
   await expect(page.getByRole('status')).toHaveText(
