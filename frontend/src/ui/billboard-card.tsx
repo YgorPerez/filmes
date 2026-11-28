@@ -212,9 +212,13 @@ function Header({
           </a>
         )}
       </div>
-      {(film.awards || film.critics) && (
+      {(film.awards || film.curatedLists || film.critics) && (
         <ul className="text-meta text-ink-2">
-          {[...(film.awards ?? []), ...(film.critics ?? [])].map((line) => (
+          {[
+            ...(film.awards ?? []),
+            ...(film.curatedLists ?? []),
+            ...(film.critics ?? []),
+          ].map((line) => (
             <li key={line}>{line}</li>
           ))}
         </ul>

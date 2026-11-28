@@ -194,6 +194,22 @@ export const WithCritics: Story = {
   },
 }
 
+export const WithCuratedLists: Story = {
+  args: {
+    film: {
+      ...FILM,
+      awards: ['indicado à Palma de Ouro'],
+      curatedLists: ['na Criterion Collection', 'na competição de Veneza'],
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('indicado à Palma de Ouro')).toBeVisible()
+    await expect(canvas.getByText('na Criterion Collection')).toBeVisible()
+    await expect(canvas.getByText('na competição de Veneza')).toBeVisible()
+  },
+}
+
 /** The trailer opens YouTube in a new tab: a link, never a player. */
 export const WithTrailer: Story = {
   play: async ({ canvasElement }) => {

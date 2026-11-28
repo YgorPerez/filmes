@@ -397,7 +397,7 @@ describe('the Cartaz shows, a Reação from outside', () => {
 })
 
 describe('the Cartaz shows, what was marked and the awards', () => {
-  it('what the Dono marked before, the awards, a cautious Aposta, and a film whose why is its section', () => {
+  it('what the Dono marked before, the awards and curated lists, a cautious Aposta, and a film whose why is its section', () => {
     const [hours, salt] = MODEL.films
     render(
       <Billboard
@@ -408,6 +408,7 @@ describe('the Cartaz shows, what was marked and the awards', () => {
             {
               ...hours!,
               awards: ['Oscar de melhor filme'],
+              curatedLists: ['na Criterion Collection'],
               notes: { stars: 3, comments: ['lindo'] },
             },
             {
@@ -422,6 +423,7 @@ describe('the Cartaz shows, what was marked and the awards', () => {
       />,
     )
     expect(card(1).getByText('Oscar de melhor filme')).toBeTruthy()
+    expect(card(1).getByText('na Criterion Collection')).toBeTruthy()
     expect(card(1).getByRole('img', { name: '3 de 5 estrelas' })).toBeTruthy()
     expect(card(1).getByText('3 de 5')).toBeTruthy()
     expect(card(1).getByText(BILLBOARD.card.whyClosed)).toBeTruthy()

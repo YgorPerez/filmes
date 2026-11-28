@@ -13,7 +13,9 @@ export const CREDIT_USES: Readonly<Record<CreditSource, string>> = {
   IMDb: 'Os filmes, o elenco, a nota e os votos, e as notas que cada Pessoa importa.',
   TMDB: 'As capas, os títulos em português e as sinopses.',
   Wikidata:
-    'Quem fez cada filme, séries, prêmios, datas de estreia, subgêneros e classificação etária.',
+    'Quem fez cada filme, séries, prêmios, a Criterion Collection, datas de estreia, subgêneros e classificação etária.',
+  Wikipedia:
+    'Os filmes da competição principal de Cannes, Berlim e Veneza, das páginas de cada edição.',
   MovieLens: 'As notas de quem deu 4 ou mais a um filme e a outro.',
   'Tag Genome': 'As tags dos filmes, que movem o Clima e o Parecido.',
   OMDb: 'A classificação etária, quando falta no Wikidata, e a nota da crítica dos primeiros filmes.',

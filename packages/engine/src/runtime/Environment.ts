@@ -64,6 +64,7 @@ export type SourceKeyVariable = (typeof SOURCE_KEY_VARIABLES)[number]
  * their English name. */
 export type ConfigName =
   | 'awards'
+  | 'curated_lists'
   | 'moods'
   | 'group_alone'
   | 'sadness'

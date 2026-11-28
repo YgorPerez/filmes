@@ -17,6 +17,7 @@ import { Effect } from 'effect'
 import { pyIsoDate } from '../compat/parse.ts'
 import { pyReprStr } from '../compat/text.ts'
 import { engineError, type EngineError } from '../runtime/EngineError.ts'
+import { COMPETITIONS } from './competitions.ts'
 import { GROUPS, OPTIONAL_GROUPS } from './wikidata.ts'
 
 export const IMDB_BASICS = 'title.basics.tsv.gz'
@@ -85,7 +86,7 @@ const checkNames = (names: ReadonlySet<string>): void => {
       throw new Invalid('faltam dumps da GroupLens')
     for (const name of GROUPLENS) required.add(name)
   }
-  let rest = difference(names, [...required, IMDB_PRINCIPALS])
+  let rest = difference(names, [...required, IMDB_PRINCIPALS, COMPETITIONS])
   if (!subset(required, names))
     throw new Invalid('faltam os dumps do IMDb ou os rótulos do Wikidata')
   for (const [group, properties] of GROUPS) {

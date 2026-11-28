@@ -9,12 +9,14 @@ import { pyReprStr } from '../compat/text.ts'
 import type { Connection, SqliteError } from '../sqlite/Sqlite.ts'
 import { text } from '../sqlite/row.ts'
 import { convertRating } from './age-rating.ts'
+import { COMPETITIONS, readCompetitions, WIKIPEDIA } from './competitions.ts'
 import { forEachBatch } from './text-source.ts'
 import { dumpPath, type Dump, type Dumps } from './versions.ts'
 import {
   EDGES,
   FILM_SERIES,
   lastSegment,
+  LIST_EDGES,
   MEDIA_FRANCHISE,
   qid,
   RATING_PROPERTIES,
@@ -225,7 +227,17 @@ const loadContent = (
     if (target !== undefined)
       ({ label, labels, code } = yield* entityOf(db, target, entities))
     const predicate = EDGES.get(property)
+    const list = LIST_EDGES.get(property)
+    if (list !== undefined) yield* entityOf(db, list[1], entities)
     for (const film of films) {
+      // Both Criterion properties give the same edge, once (#411).
+      if (list !== undefined)
+        yield* insertFact(
+          db,
+          'arestas',
+          'filme_id, predicado, entidade_id, fonte, data',
+          [film, list[0], list[1], SOURCE, date],
+        )
       if (target !== undefined && predicate !== undefined)
         yield* insertFact(
           db,
@@ -257,6 +269,32 @@ const loadContent = (
     }
   })
 
+/** The festival competitions (#411): an edge `competicao` → the festival
+ * for each film of an edition's main competition, Fonte Wikipedia. */
+const loadCompetitions = (
+  db: Connection,
+  catalog: string,
+  dumps: Dumps,
+  filmsByItem: ReadonlyMap<string, ReadonlyArray<string>>,
+  entities: Map<string, Entity>,
+): Effect.Effect<void, SqliteError> =>
+  Effect.gen(function* () {
+    const dump = dumps.get(COMPETITIONS)
+    if (dump === undefined) return
+    const editions = readCompetitions(dumpPath(catalog, COMPETITIONS, dump))
+    for (const edition of editions)
+      for (const item of edition.items)
+        for (const film of filmsByItem.get(item) ?? []) {
+          yield* entityOf(db, edition.festival, entities)
+          yield* insertFact(
+            db,
+            'arestas',
+            'filme_id, predicado, entidade_id, fonte, data',
+            [film, 'competicao', edition.festival, WIKIPEDIA, dump.date],
+          )
+        }
+  })
+
 export const loadGraph = (
   db: Connection,
   catalog: string,
@@ -283,6 +321,7 @@ export const loadGraph = (
       dumps,
       'wikidata-conteudo',
       'wikidata-elenco',
+      'wikidata-colecao',
     ))
       yield* forEachBatch(sparqlRows(dumpPath(catalog, name, dump)), (rows) =>
         Effect.forEach(
@@ -296,4 +335,5 @@ export const loadGraph = (
           { discard: true },
         ),
       )
+    yield* loadCompetitions(db, catalog, dumps, filmsByItem, entities)
   })

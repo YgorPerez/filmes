@@ -5,6 +5,7 @@
 import { awards } from './awards.ts'
 import { mood } from './mood.ts'
 import { content } from './content.ts'
+import { curatedLists } from './curated-lists.ts'
 import { group } from './group.ts'
 import { imdbRating } from './imdb-rating.ts'
 import { neighbors } from './neighbors.ts'
@@ -20,6 +21,7 @@ export const SIGNALS: ReadonlyArray<Signal> = [
   stated,
   group,
   seen,
+  curatedLists,
   imdbRating,
   awards,
   neighbors,

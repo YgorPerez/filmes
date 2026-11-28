@@ -1,0 +1,10 @@
+# Listas curadas (#411): a Criterion Collection, do Wikidata (P9584 e P12279),
+# e a competição principal de Cannes, Berlim e Veneza, das páginas de cada
+# edição na Wikipedia em inglês. As chaves são os itens do Wikidata a que as
+# arestas `colecao` e `competicao` apontam. `top_prize` é o prêmio máximo do
+# festival em config/awards.toml: o filme que ganhou ou foi indicado a ele já
+# diz que competiu, e fica sem a linha da competição.
+Q1204187 = { label = "na Criterion Collection" }
+Q42369 = { label = "na competição de Cannes", top_prize = "Q179808" }
+Q130871 = { label = "na competição de Berlim", top_prize = "Q154590" }
+Q49024 = { label = "na competição de Veneza", top_prize = "Q209459" }

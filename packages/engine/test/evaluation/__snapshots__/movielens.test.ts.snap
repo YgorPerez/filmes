@@ -284,6 +284,9 @@ exports[`avaliar on MovieLens files, as recorded > a messy sample with tags give
       "critics": {
         "weight": 0.1,
       },
+      "curatedLists": {
+        "weight": 0.1,
+      },
       "diversity": {
         "depth": 10,
         "lambda": 1,
@@ -700,6 +703,9 @@ exports[`avaliar on MovieLens files, as recorded > a small sample warns that Mov
         "onDemandReach": 50,
       },
       "critics": {
+        "weight": 0.1,
+      },
+      "curatedLists": {
         "weight": 0.1,
       },
       "diversity": {
@@ -1486,6 +1492,9 @@ exports[`the diaries, as recorded > a Trakt history dates the cut 1`] = `
         "onDemandReach": 50,
       },
       "critics": {
+        "weight": 0.1,
+      },
+      "curatedLists": {
         "weight": 0.1,
       },
       "diversity": {

@@ -35,6 +35,9 @@ exports[`avaliar, as recorded > gives the recorded result and report 1`] = `
       "critics": {
         "weight": 0.1,
       },
+      "curatedLists": {
+        "weight": 0.1,
+      },
       "diversity": {
         "depth": 10,
         "lambda": 1,
@@ -477,6 +480,9 @@ Quanto das Notas retidas foi 4 ou mais, pela Força mais alta a favor do filme n
         "onDemandReach": 50,
       },
       "critics": {
+        "weight": 0.1,
+      },
+      "curatedLists": {
         "weight": 0.1,
       },
       "diversity": {
@@ -2214,6 +2220,9 @@ Foram testados 411 conjuntos. A ordem usa a média do Recall@50 entre as amostra
         "onDemandReach": 50,
       },
       "critics": {
+        "weight": 0.1,
+      },
+      "curatedLists": {
         "weight": 0.1,
       },
       "diversity": {
