@@ -1,10 +1,16 @@
 import { join } from 'node:path'
-import { makeEngine, recommendSession, recordFeedback } from '@filmes/engine'
+import {
+  makeEngine,
+  personView,
+  recommendSession,
+  recordFeedback,
+} from '@filmes/engine'
 import { expect, test } from 'vite-plus/test'
 import { useFixture } from '../../../packages/engine/test/fixture'
 import { tasteWeights } from '../../../packages/engine/test/recommendation/support'
 import { sessionLinkSearch } from '#/content/session-link-address'
 import { issueSessionLink, resolveSessionLink } from './session-link'
+import { pairwiseWaiting } from './pairwise'
 import { filmSheets, voteAction, voteDeck } from './session-votes'
 
 const ORIGIN = 'https://cinema.example'
@@ -461,6 +467,83 @@ test('the deck’s sheet has the public facts and only her own Evidence and Nota
     expect(
       owner.sheets.get(film.id)?.predictedRatings.map((p) => p.person),
     ).toEqual(['bruno'])
+  } finally {
+    await engine.dispose()
+  }
+})
+
+test('a guest’s vi takes the film out and waits for the Dono; the Dono’s lands at once', async () => {
+  const fixture = useFixture()
+  const engine = makeEngine(fixture.vars)
+  const database = join(fixture.root, 'auth.sqlite')
+  try {
+    const first = await fixture.ok(
+      recommendSession({ attendees: ['dono', 'iara'], count: 3 }),
+      {},
+      { owner: 'bruno' },
+    )
+    const session = first.session.id
+    const [a, b, c] = first.films.map((f) => f.id)
+    const url = await issueSessionLink(
+      session,
+      'bruno',
+      engine,
+      database,
+      ORIGIN,
+    )
+    if (!url) throw new Error('Expected a Session link')
+    const link = Object.fromEntries(new URL(url).searchParams)
+    const post = (presente: string, body: string) =>
+      voteAction(
+        new Request(
+          `${ORIGIN}/participar/votos?${new URLSearchParams({ ...link, presente })}`,
+          {
+            method: 'POST',
+            headers: {
+              origin: ORIGIN,
+              'content-type': 'application/x-www-form-urlencoded',
+            },
+            body,
+          },
+        ),
+        engine,
+        database,
+        ORIGIN,
+        // Only the logged-in Dono votes as the opener (#376).
+        presente === 'bruno' ? 'bruno' : null,
+      )
+    const done = (r: Response) =>
+      new URL(r.headers.get('location') ?? '', ORIGIN).searchParams.get('feito')
+    const films = async () =>
+      (
+        await resolveSessionLink(
+          sessionLinkSearch({ ...link, presente: 'bruno' }),
+          engine,
+          database,
+          'bruno',
+        )
+      )?.films.map((f) => f.id)
+
+    expect(done(await post('iara', `versao=1&sim=${a}&naogostei=${b}`))).toBe(
+      'regerada',
+    )
+    expect(await films()).not.toContain(b)
+    expect(await pairwiseWaiting(session, engine)).toEqual([
+      expect.objectContaining({
+        person: 'iara',
+        seen: [
+          { film: expect.objectContaining({ id: b }), reaction: 'dislike' },
+        ],
+      }),
+    ])
+
+    expect(done(await post('bruno', `versao=2&gostei=${c}`))).toBe('regerada')
+    expect(await films()).not.toContain(c)
+    expect(await pairwiseWaiting(session, engine)).toHaveLength(1)
+    const bruno = await fixture.ok(personView('bruno'))
+    expect(bruno.stated).toContainEqual(
+      expect.objectContaining({ target: c, reaction: 'like' }),
+    )
   } finally {
     await engine.dispose()
   }

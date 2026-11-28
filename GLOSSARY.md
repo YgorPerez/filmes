@@ -152,6 +152,10 @@ _Evitar_: aviso, erro
 O sim ou o não de um Presente a um filme da tela, dado no celular pelo Link da Sessão, um filme de cada vez (o swipe do grupo, #182). Fica na versão da Sessão com quem votou e a data. O não é um Trocado daquele Presente: o filme sai e a Sessão regera. Na contagem vale o último envio de cada Presente, cujo primeiro Voto tem `replaces: true`. Os Mantidos com mais sins vêm primeiro, nos números que os Mantidos já tinham, e os empates mantêm a ordem. Se a ordem muda, o sim por si só regera a Sessão (#205). Voto não é Fato e não mexe no gosto.
 _Evitar_: curtida, like
 
+**Vi e gostei / Vi e não gostei** [seen gesture, `SeenGesture`, `seen_gestures`; reação [reaction: `like`, `dislike`]]:
+Os dois gestos do swipe do grupo para um filme que o Presente já viu: para cima (★, ↑) vi e gostei, para baixo (👎, ↓) vi e não gostei. Vão no mesmo envio dos Votos, mas não são Voto: o filme sai da lista do grupo na hora, como o Já vi do Cartaz, e outro pode entrar no lugar. Viram um Já visto sem Nota e um Declarado específico sem número (gosta ou não gosta) daquele Presente sobre o filme, com a Fonte do Cartaz. Os do Dono da Sessão vão para o arquivo dele na hora; os de um convidado esperam em `seen_gestures` da Sessão o sim do Dono, no mesmo lugar das Perguntas par a par (#378).
+_Evitar_: superlike, já vi do swipe
+
 **Saída** [dropped, `dropped`; causa: `seen`, `swapped`, `constraint`, `veto`, `min_rating`, `mood`]:
 Um filme da versão anterior que não está na nova, com a causa. A causa `mood` é de quem caiu porque o Dono pediu outro Clima: o filme continua elegível na Sessão. A causa não é Motivo: Motivo é por que um filme está na Recomendação.
 

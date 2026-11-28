@@ -656,6 +656,75 @@ test('each Presente votes on the films; a no swaps the film and the Session is r
   })
 })
 
+/** Drags the full-screen card up or down past the line, as a finger
+ * would. */
+async function dragCard(participant: Page, dy: number) {
+  const box = await participant.getByRole('article').boundingBox()
+  if (!box) throw new Error('Expected the card')
+  const x = box.x + box.width / 2
+  const y = box.y + box.height * 0.35
+  await participant.mouse.move(x, y)
+  await participant.mouse.down()
+  await participant.mouse.move(x, y + dy, { steps: 8 })
+  await participant.mouse.up()
+}
+
+test('a Presente swipes up and down on films she saw; they leave and wait for the Dono (#378)', async ({
+  page,
+  browser,
+}, info) => {
+  const { person, name } = guestOf(info)
+  const opened = await openAsBruno({ attendees: ['dono', person], count: 3 })
+  const [first, second, third] = opened.films.map((film) => film.title)
+  const path = `/sessoes/${opened.session.id}`
+  const href = await brunoSharesWith(page, path, person)
+
+  await asParticipant(browser, href, async (participant) => {
+    await participant.getByRole('link', { name: 'Votar nos filmes' }).click()
+    const card = (title?: string) =>
+      participant.getByRole('heading', { name: title })
+    await expect(card(first)).toBeVisible()
+    // Before the deck hydrates a drag does nothing: drag again until the
+    // card answers.
+    await expect(async () => {
+      if (await card(first).isVisible()) await dragCard(participant, -200)
+      await expect(card(second)).toBeVisible({ timeout: 1000 })
+    }).toPass()
+    await dragCard(participant, 200)
+    await expect(card(third)).toBeVisible()
+    await participant.getByRole('button', { name: 'Sim', exact: true }).click()
+    await expect(
+      participant.getByText('1 sim · nenhum não · 2 já vistos'),
+    ).toBeVisible()
+    await expect(
+      participant.getByText(`Vai sair da noite: ${first}, ${second}.`),
+    ).toBeVisible()
+    await snap(participant, info, 'sessao-vi-resumo')
+    await participant.getByRole('button', { name: 'Enviar votos' }).click()
+    await expect(participant.getByRole('status')).toHaveText(
+      'Votos contados. A lista foi refeita.',
+    )
+  })
+
+  await page.reload()
+  const onCartaz = (title?: string) =>
+    page.getByRole('heading', { level: 3 }).filter({ hasText: title })
+  await expect(onCartaz(first)).toHaveCount(0)
+  await expect(onCartaz(second)).toHaveCount(0)
+  await expect(onCartaz(third)).toHaveCount(1)
+  const answers = page.getByRole('form', { name })
+  const items = answers.getByRole('listitem')
+  await expect(items).toHaveCount(2)
+  await expect(items.nth(0)).toContainText(`Viu e gostou de ${first}`)
+  await expect(items.nth(1)).toContainText(`Viu e não gostou de ${second}`)
+  await snap(page, info, 'sessao-vi-dono')
+  await answers
+    .getByRole('button', { name: `Gravar as respostas de ${name}` })
+    .click()
+  await expect(page).toHaveURL(/\?feito=perguntas-gravadas$/u)
+  await expect(page.getByRole('form', { name })).toHaveCount(0)
+})
+
 /** One earlier yes of each `[who, film]`, on the first version. */
 async function castEarlierYes(
   session: string,

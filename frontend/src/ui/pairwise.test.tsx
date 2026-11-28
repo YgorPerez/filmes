@@ -137,15 +137,25 @@ describe('PairwiseAnswers', () => {
             person: 'teo',
             name: 'Teo',
             answers: [{ chosen: FAROL, other: PONTE }],
+            seen: [
+              { film: PONTE, reaction: 'like' },
+              { film: FAROL, reaction: 'dislike' },
+            ],
           },
         ]}
       />,
     )
     const teo = screen.getByRole('form', { name: 'Teo' })
     expect(teo.getAttribute('action')).toBe('/sessoes/s/perguntas')
-    expect(within(teo).getByRole('listitem').textContent).toBe(
+    expect(
+      within(teo)
+        .getAllByRole('listitem')
+        .map((item) => item.textContent),
+    ).toEqual([
       'Preferiu O Farol de Areia (2012) a Ponte Aérea (2016)',
-    )
+      'Viu e gostou de Ponte Aérea (2016)',
+      'Viu e não gostou de O Farol de Areia (2012)',
+    ])
     expect(
       teo.querySelector<HTMLInputElement>('input[name="presente"]')?.value,
     ).toBe('teo')
