@@ -148,7 +148,12 @@ test('a Presente’s no swaps the film and redoes the Session; her yes stays and
     expect(brunos?.films.map((f) => f.id)).toEqual(now)
     expect(brunos?.films.some((f) => f.new)).toBe(false)
 
-    const yes = await post(as('bruno'), `versao=2&sim=${c}`, {
+    // Her Ordem (#379) goes in `ordem`, in order, and moves the films.
+    const newcomer = now?.find((film) => film !== a && film !== c)
+    const ranked = [a, c, newcomer]
+      .map((film) => `sim=${film}&ordem=${film}`)
+      .join('&')
+    const yes = await post(as('bruno'), `versao=2&${ranked}`, {
       origin: ORIGIN,
     })
     expect(
@@ -156,11 +161,12 @@ test('a Presente’s no swaps the film and redoes the Session; her yes stays and
         'feito',
       ),
     ).toBe('atualizada')
-    const newcomer = now?.find((film) => film !== a && film !== c)
     expect(await films()).toEqual([a, c, newcomer])
     expect((await deck('bruno'))?.version).toBe(3)
+    expect((await deck('bruno'))?.ranking).toEqual([a, c, newcomer])
+    expect((await deck('iara'))?.ranking).toBeUndefined()
 
-    const repeated = await post(as('bruno'), `versao=3&sim=${c}`)
+    const repeated = await post(as('bruno'), `versao=3&${ranked}`)
     expect(
       new URL(repeated.headers.get('location') ?? '', ORIGIN).searchParams.get(
         'feito',

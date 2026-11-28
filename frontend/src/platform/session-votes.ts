@@ -1,11 +1,13 @@
 // The group swipe on the Link da Sessão (#182). A Presente votes yes or no
 // on each film of the screen, or says she saw it and liked it or not (Vi e
-// gostei / Vi e não gostei, #378); the deck's form posts it all to
+// gostei / Vi e não gostei, #378), and puts her yes films in her Ordem
+// (#379); the deck's form posts it all (the Ordem as `ordem`, in order) to
 // `/participar/votos`. A "vi" takes the film out like a no, and her taste
-// waits for the Dono's yes (her own goes in at once). A no is a Trocar from that Presente: the Session is
-// redone with the films that stay (`recommendSession` with `keep`, from
-// the request the current version asked). A yes can also redo the Session
-// on its own by changing the order. Votos never touch taste. Server only.
+// waits for the Dono's yes (her own goes in at once). A no is a Trocar
+// from that Presente: the Session is redone with the films that stay
+// (`recommendSession` with `keep`, from the request the current version
+// asked). An Ordem can also redo the Session on its own by changing the
+// order. Votos never touch taste. Server only.
 // Each film of the deck carries its full sheet (#377): the public facts for
 // anyone, and only the chosen Presente's own Evidence and Nota prevista.
 //
@@ -123,7 +125,7 @@ export type DeckFilm = SessionLinkView['films'][number] & {
  * Presentes the sheets name, what her no took out, and, by title, the
  * films her last sim went to after they had left the screen (`stale`: an
  * older deck, while another Presente's no redid the Session; pass 4 F3). */
-export type VoteDeck = Pick<SessionLinkView, 'version' | 'left'> & {
+export type VoteDeck = Pick<SessionLinkView, 'version' | 'left' | 'ranking'> & {
   films: DeckFilm[]
   people: BillboardPerson[]
   stale?: string[]
@@ -150,6 +152,7 @@ export async function voteDeck(
     })),
     people,
     left: link.left,
+    ...(link.ranking && { ranking: link.ranking }),
   }
   const asked = search.fora?.split(',') ?? []
   if (asked.length === 0) return deck
@@ -276,6 +279,7 @@ export async function voteAction(
         version: Number(form.get('versao')) || link.version,
         votes,
         seen,
+        ranking: filmsOf(form, 'ordem'),
       }),
     )
     if (cast.exitCode !== 0) {

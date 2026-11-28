@@ -17,13 +17,13 @@ export const VOTES = {
     no: 'Não',
     noDoes: 'tira o filme da noite pra todo mundo.',
     yes: 'Sim',
-    yesDoes: 'sobe ele na lista.',
+    yesDoes: 'entra na sua ordem, que você monta no fim.',
     seen: 'Vi',
     seenDoes: 'também tira e diz se você gostou.',
   },
   /** The rule as one sentence, for tests and the screen reader. */
   ruleText:
-    'Não tira o filme da noite pra todo mundo. Sim sobe ele na lista. Vi também tira e diz se você gostou.',
+    'Não tira o filme da noite pra todo mundo. Sim entra na sua ordem, que você monta no fim. Vi também tira e diz se você gostou.',
   /** How to vote: the arrow keys only where there is a keyboard. */
   hint: {
     touch:
@@ -74,6 +74,26 @@ export const VOTES = {
   leaving: (titles: readonly string[]) =>
     `Vai sair da noite: ${titles.join(', ')}.`,
   send: 'Enviar votos',
+  /** The recap's way to the Ordem (#379), with two or more sins. */
+  rankStart: 'Pôr em ordem',
+  /** The page's title over the Ordem. */
+  rankPage: 'Sua ordem',
+  rankTitle: 'Qual você quer mais?',
+  rankHint: {
+    touch:
+      'Arraste pela alça pra pôr na sua ordem: o primeiro é o que você mais quer. Se não quiser mexer, é só enviar.',
+    keys: 'Arraste pela alça ou use ↑ ↓ nela pra pôr na sua ordem: o primeiro é o que você mais quer. Se não quiser mexer, é só enviar.',
+  },
+  rankList: 'Sua ordem',
+  /** The handle's name, with where the film is now. */
+  rankMove: (title: string, n: number, total: number) =>
+    `Mover ${title}, ${n}º de ${total}`,
+  /** What a screen reader hears after a move. */
+  rankMoved: (title: string, n: number, total: number) =>
+    `${title}: ${n}º de ${total}`,
+  /** The sheet's não from the Ordem: the swipe's não. */
+  rankNo: 'Não, tira da noite',
+  rankBack: 'Voltar aos votos',
   sending: 'Enviando votos…',
   restart: 'Recomeçar',
   sent: 'Votos enviados',

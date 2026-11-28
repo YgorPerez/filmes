@@ -58,16 +58,28 @@ it('shows one film at a time and posts every Voto with the version', async () =>
     screen.getByRole('heading', { name: VOTES.summary(2, 1) }),
   ).toBeTruthy()
   expect(screen.getByText(VOTES.leaving(['Pequenos Milagres']))).toBeTruthy()
-  expect(screen.getByRole('button', { name: VOTES.send })).toBeTruthy()
+  // Two sins: the recap leads to her Ordem, which sends (#379).
+  expect(screen.queryByRole('button', { name: VOTES.send })).toBeNull()
   expect(document.querySelector('form')?.getAttribute('action')).toBe(
     '/participar/votos?sessao=s',
   )
-  expect(posted()).toEqual([
+  const votes = [
     ['versao', '2'],
     ['sim', 'tt9000101'],
     ['nao', 'tt9000601'],
     ['sim', 'tt9000701'],
+  ]
+  expect(posted()).toEqual(votes)
+  await user.click(screen.getByRole('button', { name: VOTES.rankStart }))
+  expect(screen.getByRole('button', { name: VOTES.send })).toBeTruthy()
+  expect(posted()).toEqual([
+    ...votes,
+    ['ordem', 'tt9000101'],
+    ['ordem', 'tt9000701'],
   ])
+  await user.click(screen.getByRole('button', { name: VOTES.rankBack }))
+  expect(document.activeElement?.textContent).toBe(VOTES.summary(2, 1))
+  expect(posted()).toEqual(votes)
 
   await user.click(screen.getByRole('button', { name: VOTES.restart }))
   expect(screen.getByRole('heading', { name: 'O Farol de Areia' })).toBeTruthy()
@@ -110,7 +122,7 @@ it('keeps the votes on screen when the server could not record them', async () =
   vi.stubGlobal('fetch', fetchVotes)
   render(<VoteScreen deck={DECK} search={LINK} home={HOME} />)
   const user = userEvent.setup()
-  for (const name of [VOTES.yes, VOTES.no, VOTES.yes]) {
+  for (const name of [VOTES.yes, VOTES.no, VOTES.yes, VOTES.rankStart]) {
     await user.click(screen.getByRole('button', { name }))
   }
   const fields = posted()
@@ -121,7 +133,7 @@ it('keeps the votes on screen when the server could not record them', async () =
   })
   expect(sending.disabled).toBe(true)
   expect(
-    screen.getByRole<HTMLButtonElement>('button', { name: VOTES.restart })
+    screen.getByRole<HTMLButtonElement>('button', { name: VOTES.rankBack })
       .disabled,
   ).toBe(true)
   sending.form?.requestSubmit()
@@ -142,7 +154,7 @@ it('keeps the votes on screen when the server could not record them', async () =
   expect((await screen.findByRole('alert')).textContent).toBe(
     VOTES.refusals.indisponivel(),
   )
-  expect(screen.getByText(VOTES.summary(2, 1))).toBeTruthy()
+  expect(screen.getByText(VOTES.rankTitle)).toBeTruthy()
   expect(posted()).toEqual(fields)
   expect(
     screen.getByRole<HTMLButtonElement>('button', { name: VOTES.send })
@@ -751,4 +763,160 @@ it('without a sheet the card still votes, and the sheet has the titles alone', a
   await user.click(screen.getByRole('button', { name: VOTES.more }))
   expect(sheetOf().queryByRole('list', { name: 'Por que' })).toBeNull()
   expect(sheetOf().queryByRole('link')).toBeNull()
+})
+
+// Her Ordem (#379).
+
+const order = () =>
+  within(screen.getByRole('list', { name: VOTES.rankList }))
+    .getAllByRole('listitem')
+    .map((li) => within(li).getByText(/^\d+\.$/u).parentElement?.textContent)
+
+const voteAll = async (user: ReturnType<typeof userEvent.setup>) => {
+  for (const name of [VOTES.yes, VOTES.yes, VOTES.yes, VOTES.rankStart])
+    await user.click(screen.getByRole('button', { name }))
+}
+
+it('her sins start in the engine’s order; the handle moves a film with ↑ ↓ and says where it went', async () => {
+  const user = userEvent.setup()
+  render(<VoteScreen deck={DECK} search={LINK} home={HOME} />)
+  await voteAll(user)
+
+  expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
+    VOTES.rankPage,
+  )
+  expect(document.activeElement?.textContent).toBe(VOTES.rankTitle)
+  expect(order()).toEqual([
+    '1. O Farol de Areia',
+    '2. Pequenos Milagres',
+    '3. Noite de Estreia',
+  ])
+  const handle = screen.getByRole('button', {
+    name: VOTES.rankMove('Noite de Estreia', 3, 3),
+  })
+  handle.focus()
+  await user.keyboard('{ArrowUp}{ArrowUp}{ArrowUp}')
+  expect(order()).toEqual([
+    '1. Noite de Estreia',
+    '2. O Farol de Areia',
+    '3. Pequenos Milagres',
+  ])
+  expect(screen.getAllByRole('status')[0]?.textContent).toBe(
+    VOTES.rankMoved('Noite de Estreia', 1, 3),
+  )
+  await user.keyboard('{ArrowDown}')
+  expect(posted().filter(([name]) => name === 'ordem')).toEqual([
+    ['ordem', 'tt9000101'],
+    ['ordem', 'tt9000701'],
+    ['ordem', 'tt9000601'],
+  ])
+})
+
+it('a drag by the handle moves the film to the row under the pointer', async () => {
+  const user = userEvent.setup()
+  render(<VoteCards deck={DECK} action="/participar/votos" />)
+  await voteAll(user)
+  const rows = within(
+    screen.getByRole('list', { name: VOTES.rankList }),
+  ).getAllByRole('listitem')
+  rows.forEach((row, i) => {
+    row.getBoundingClientRect = () => ({ top: i * 100, height: 100 }) as DOMRect
+  })
+  const handle = screen.getByRole('button', {
+    name: VOTES.rankMove('O Farol de Areia', 1, 3),
+  })
+  fireEvent.pointerDown(handle, { clientY: 50 })
+  fireEvent.pointerMove(handle, { clientY: 60 })
+  expect(order()[0]).toBe('1. O Farol de Areia')
+  fireEvent.pointerMove(handle, { clientY: 260 })
+  fireEvent.pointerUp(handle, { clientY: 260 })
+  fireEvent.pointerMove(handle, { clientY: 10 })
+  expect(order()).toEqual([
+    '1. Pequenos Milagres',
+    '2. Noite de Estreia',
+    '3. O Farol de Areia',
+  ])
+})
+
+it('a tap on a film opens its sheet; its Não takes the film out like the swipe’s não', async () => {
+  const user = userEvent.setup()
+  render(<VoteCards deck={DECK} action="/participar/votos" />)
+  await voteAll(user)
+
+  await user.click(screen.getByRole('button', { name: '2. Pequenos Milagres' }))
+  expect(
+    sheetOf().getByRole('heading', { name: 'Pequenos Milagres' }),
+  ).toBeTruthy()
+  await user.click(sheetOf().getByRole('button', { name: VOTES.rankNo }))
+
+  expect(screen.queryByRole('dialog')).toBeNull()
+  expect(order()).toEqual(['1. O Farol de Areia', '2. Noite de Estreia'])
+  expect(posted()).toEqual([
+    ['versao', '2'],
+    ['sim', 'tt9000101'],
+    ['nao', 'tt9000601'],
+    ['sim', 'tt9000701'],
+    ['ordem', 'tt9000101'],
+    ['ordem', 'tt9000701'],
+  ])
+
+  // One sim left: no Ordem, the recap sends.
+  await user.click(screen.getByRole('button', { name: '2. Noite de Estreia' }))
+  await user.click(sheetOf().getByRole('button', { name: VOTES.rankNo }))
+  expect(screen.queryByRole('list', { name: VOTES.rankList })).toBeNull()
+  expect(document.activeElement?.textContent).toBe(VOTES.summary(1, 2))
+  expect(screen.getByRole('button', { name: VOTES.send })).toBeTruthy()
+})
+
+it('the film that came in after her Ordem goes in its middle; a não on a standing sim goes as não', async () => {
+  const user = userEvent.setup()
+  const deck = {
+    version: 3,
+    films: [
+      { ...FILMS[0]!, mine: 'yes' as const },
+      { ...FILMS[1]!, mine: 'yes' as const },
+      FILMS[2]!,
+    ],
+    left: [],
+    people: IARA_SEES,
+    ranking: ['tt9000601', 'tt9000101'],
+  }
+  render(<VoteCards deck={deck} action="/participar/votos" />)
+  expect(screen.getByText(VOTES.of(1, 1))).toBeTruthy()
+  await user.click(screen.getByRole('button', { name: VOTES.yes }))
+  await user.click(screen.getByRole('button', { name: VOTES.rankStart }))
+
+  expect(order()).toEqual([
+    '1. Pequenos Milagres',
+    '2. Noite de Estreia',
+    '3. O Farol de Areia',
+  ])
+  await user.click(screen.getByRole('button', { name: '3. O Farol de Areia' }))
+  await user.click(sheetOf().getByRole('button', { name: VOTES.rankNo }))
+  expect(posted()).toEqual([
+    ['versao', '3'],
+    ['nao', 'tt9000101'],
+    ['sim', 'tt9000601'],
+    ['sim', 'tt9000701'],
+    ['ordem', 'tt9000601'],
+    ['ordem', 'tt9000701'],
+  ])
+})
+
+it('mudar opens her Ordem as she left it', async () => {
+  const user = userEvent.setup()
+  const deck = {
+    version: 3,
+    films: FILMS.map((f) => ({ ...f, mine: 'yes' as const })),
+    left: [],
+    people: IARA_SEES,
+    ranking: ['tt9000701', 'tt9000101', 'tt9000601'],
+  }
+  render(<VoteCards deck={deck} revote action="/participar/votos" />)
+  await user.click(screen.getByRole('button', { name: VOTES.rankStart }))
+  expect(order()).toEqual([
+    '1. Noite de Estreia',
+    '2. O Farol de Areia',
+    '3. Pequenos Milagres',
+  ])
 })
