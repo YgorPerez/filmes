@@ -135,16 +135,17 @@ const ML_LATEST_MEMBERS = {
   scores: 'ml-latest/genome-scores.csv',
 } as const
 
-const MEMBERS: ReadonlyMap<string, Readonly<Record<string, string>>> = new Map([
-  [MOVIELENS, MOVIELENS_MEMBERS],
-  [GENOME, GENOME_MEMBERS],
-  [ML_LATEST, ML_LATEST_MEMBERS],
+/** The members each GroupLens dump's loading reads. */
+const MEMBERS = new Map<string, readonly string[]>([
+  [MOVIELENS, Object.values(MOVIELENS_MEMBERS)],
+  [GENOME, Object.values(GENOME_MEMBERS)],
+  [ML_LATEST, Object.values(ML_LATEST_MEMBERS)],
 ])
 
 /** `validar_zip`: reads every member the loading reads to its end, so a
  * download cut short or corrupt fails here, before it is pinned. */
 export const validateZip = async (path: string, name: string) => {
-  for (const member of Object.values(MEMBERS.get(name)!))
+  for (const member of MEMBERS.get(name)!)
     for await (const chunk of zipMember(path, member)) void chunk
 }
 
