@@ -14,6 +14,7 @@ import { moodsReader } from './moods.ts'
 import { noMoodsReader } from './no-moods.ts'
 import { noSadReader } from './no-sad.ts'
 import { noSlowReader } from './no-slow.ts'
+import { presetReader } from './preset.ts'
 import { similarReader } from './similar.ts'
 import { unseenReader } from './unseen.ts'
 import { yearReader } from './year.ts'
@@ -32,4 +33,5 @@ export const READERS: ReadonlyArray<Reader> = [
   noMoodsReader,
   countReader,
   similarReader,
+  presetReader,
 ]

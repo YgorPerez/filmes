@@ -1,4 +1,6 @@
 import { execFileSync } from 'node:child_process'
+import { writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 import {
   makeEngine,
   REQUEST_READING_MAX_LENGTH,
@@ -74,6 +76,7 @@ function fake(
   const sessions: Sessions = {
     list: async () => outcomes.list ?? { exitCode: 0, output: [SESSION] },
     options: async () => failure('missing_database'),
+    presets: async () => failure('missing_database'),
     open,
     read: async () => failure('missing_database'),
   }
@@ -296,19 +299,21 @@ describe('sessionRequestAction refusing', () => {
 const ler = (fields: [string, string][], origin: string | null = ORIGIN) =>
   post([...fields, ['ler', 'sim']], origin)
 
-/** "Ler" posted with `fields` as the Dono `owner`, with the real engine on
- * `fixture`: where it went and the draft its note holds. Opens nothing. */
+/** "Ler" (or the button `button`) posted with `fields` as the Dono
+ * `owner`, with the real engine on `fixture`: where it went and the draft
+ * its note holds. Opens nothing. */
 async function readForm(
   fixture: Fixture,
   fields: [string, string][],
   owner = 'bruno',
+  button: [string, string] = ['ler', 'sim'],
 ) {
   const engine = makeEngine(fixture.vars)
   const open = vi.fn<Sessions['open']>()
   const notes = new Notes()
   try {
     const response = await sessionRequestAction(
-      ler(fields),
+      post([...fields, button]),
       { ...BRUNO, person: owner },
       { ...sessionsFromEngine(engine), open },
       notes,
@@ -384,6 +389,56 @@ describe('“Ler” in sessionRequestAction', () => {
       ['pedido', 'parecido com Poeira'],
     ])
     expect(both.draft?.fields.similar).toEqual(['tt9000101', 'tt9001904'])
+  })
+})
+
+/** The fixture with its own Programas, so the shipped ones can change. */
+const useFixtureWithPresets = () => {
+  const fixture = useFixture()
+  writeFileSync(
+    join(fixture.config, 'presets.toml'),
+    '[Encontro]\nmoods = ["romântico"]\nno_moods = ["assustador"]\nunseen = true\nmax_duration = 120\n',
+  )
+  return fixture
+}
+
+describe('a Programa’s chip in sessionRequestAction (#402)', () => {
+  it('goes back to the form with the Programa’s Climas and Restrições on top of what the Dono set', async () => {
+    const { location, draft } = await readForm(
+      useFixtureWithPresets(),
+      [...BASIC, ['climas', 'tenso'], ['duracao', '90'], ['pedido', 'oi']],
+      'bruno',
+      ['programa', 'Encontro'],
+    )
+
+    expect(location).toMatch(/^\/sessoes\/nova\?nota=[\w-]+$/)
+    expect(draft).toEqual({
+      fields: {
+        attendees: ['bruno', 'iara'],
+        rule: 'default',
+        moods: ['tenso', 'romântico'],
+        request: 'oi',
+        maxDuration: 120,
+        unseen: true,
+        noMoods: ['assustador'],
+      },
+      reading: null,
+    })
+  })
+
+  it('leaves the form as it was for a name no Programa has', async () => {
+    const { draft } = await readForm(
+      useFixtureWithPresets(),
+      [...BASIC, ['climas', 'tenso']],
+      'bruno',
+      ['programa', 'Noite antiga'],
+    )
+
+    expect(draft?.fields).toEqual({
+      attendees: ['bruno', 'iara'],
+      rule: 'default',
+      moods: ['tenso'],
+    })
   })
 })
 
@@ -660,6 +715,7 @@ const expectFreshFixture = async (sessions: Sessions) => {
     'vera',
   ])
   expect(options?.moods).toContain('leve')
+  expect(options?.presets.map((p) => p.name)).toContain('Encontro')
   expect(await sessionList(sessions)).toEqual([])
 }
 

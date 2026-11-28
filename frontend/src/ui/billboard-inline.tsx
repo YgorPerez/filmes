@@ -1,4 +1,5 @@
 import type { Billboard as BillboardModel } from '@filmes/engine'
+import type { ReactNode } from 'react'
 import { BILLBOARD } from './billboard.copy'
 import { ChosenReactions } from './billboard-chosen'
 import { INLINE_CARD } from './billboard-frame'
@@ -299,8 +300,12 @@ export function InlineBillboard({
   onExpand,
   onSend,
   onClear,
+  qr,
 }: {
   billboard: BillboardModel
+  /** "Mostrar QR" (#396), while the Session is open and the Dono has its
+   * link. */
+  qr?: ReactNode
   /** What was marked in the fullscreen, a line per kind; none with
    * nothing. */
   marked: readonly string[]
@@ -347,6 +352,7 @@ export function InlineBillboard({
           onSend={onSend}
         />
       )}
+      {qr && <div className="flex">{qr}</div>}
       <InlineStatus message={message} copy={copy} onMessage={onMessage} />
     </section>
   )

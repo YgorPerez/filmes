@@ -379,6 +379,37 @@ describe('a Session’s page, the marks and the Link da Sessão', () => {
   })
 })
 
+describe('a Session’s page, the Link da Sessão as a QR code (#396)', () => {
+  const sessionLink = 'https://cinema.example/participar?sessao=x&chave=y'
+
+  // The dialog itself opens in Chrome: session-qr.stories.tsx (jsdom has
+  // no showModal).
+  it('offers Mostrar QR on the Cartaz of an open Session with its link', () => {
+    render(<SessionScreen page={{ ...PAGE, sessionLink }} />)
+    const form = screen.getByRole('form', { name: BILLBOARD.label })
+    expect(
+      within(form).getByRole('button', { name: 'Mostrar QR' }),
+    ).toBeTruthy()
+  })
+
+  it('has no QR without the link or once the Session is told', () => {
+    render(<SessionScreen page={PAGE} />)
+    expect(screen.queryByRole('button', { name: 'Mostrar QR' })).toBeNull()
+    cleanup()
+    render(
+      <SessionScreen
+        page={{
+          ...PAGE,
+          session: { ...OPEN, open: false },
+          billboard: TOLD,
+          sessionLink,
+        }}
+      />,
+    )
+    expect(screen.queryByRole('button', { name: 'Mostrar QR' })).toBeNull()
+  })
+})
+
 describe('a Session’s page, the Link da Sessão by hand and what the reply left', () => {
   it('shows the Link da Sessão to select when the clipboard refuses it', async () => {
     const user = userEvent.setup()

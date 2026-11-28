@@ -22,6 +22,8 @@ import type { SetupView } from '#/platform/setup-guide'
 import { MY_START } from './my-start.copy'
 import type { MyStart } from './my-start'
 import { PersonScreen } from './person'
+import { TASTE_ANALYSIS } from './person-taste-analysis.copy'
+import { ANALYSIS } from './person-taste-analysis.fixture'
 
 afterEach(cleanup)
 
@@ -1629,6 +1631,25 @@ describe('Meu gosto with little in it', () => {
     expect(
       within(notes).getByText(PERSON.notes.movielens(true, 1, 'Iara')),
     ).toBeTruthy()
+  })
+})
+
+describe('the taste analysis on the page (#404)', () => {
+  it('follows her Notas when the engine has it, and is absent without', () => {
+    const { unmount } = show({ ...IARA, tasteAnalysis: ANALYSIS })
+    expect(
+      section(TASTE_ANALYSIS.title(false, 'Iara')).compareDocumentPosition(
+        section(PERSON.notes.title),
+      ) & Node.DOCUMENT_POSITION_PRECEDING,
+    ).toBeTruthy()
+    unmount()
+
+    show(IARA)
+    expect(
+      screen.queryByRole('region', {
+        name: TASTE_ANALYSIS.title(false, 'Iara'),
+      }),
+    ).toBeNull()
   })
 })
 

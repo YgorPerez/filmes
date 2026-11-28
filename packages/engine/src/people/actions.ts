@@ -48,6 +48,7 @@ import {
   vetoId,
   type StatementTable,
 } from './facts.ts'
+import { personTasteAnalysis, type TasteAnalysis } from './taste-analysis.ts'
 import {
   createPerson,
   resolvePerson,
@@ -166,6 +167,8 @@ export interface PersonView extends PersonSummary {
   readonly ratings: readonly RatingJson[] | null
   /** Only when requested and enough films have a leave-one-out prediction. */
   readonly predictionError?: PersonPredictionError
+  /** Only when requested and her own Escala has enough Notas (#404). */
+  readonly tasteAnalysis?: TasteAnalysis
   readonly warning?: string
 }
 
@@ -382,7 +385,7 @@ const ratingsOf = (db: Connection, slug: string) =>
 /** Everything the engine knows of the Pessoa (`pessoa ver`). */
 export const personView = (
   name: string,
-  options: { predictionError?: boolean } = {},
+  options: { predictionError?: boolean; tasteAnalysis?: boolean } = {},
 ): Effect.Effect<
   PersonView,
   EngineError | SqliteError,
@@ -419,11 +422,15 @@ export const personView = (
         const predictionError = options.predictionError
           ? yield* personPredictionError(db, path, slug, env.weights, today)
           : null
+        const tasteAnalysis = options.tasteAnalysis
+          ? yield* personTasteAnalysis(db, slug, env.weights)
+          : null
         return {
           ...view,
           stated: [...stated, ...imported],
           ratings: yield* ratingsOf(db, slug),
           ...(predictionError !== null && { predictionError }),
+          ...(tasteAnalysis !== null && { tasteAnalysis }),
         }
       }),
     )

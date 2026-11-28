@@ -66,6 +66,16 @@ export const PARTICIPATION = {
   who,
 } as const
 
+/** "Mostrar QR" on the Cartaz (#396): the Dono's words, the code's page
+ * read by the room. */
+export const SESSION_QR = {
+  show: 'Mostrar QR',
+  title: 'Entrem pelo celular',
+  lead: 'Aponte a câmera para o código: cada um toca no seu nome e vota nos filmes.',
+  image: 'QR code do link para os Presentes',
+  close: 'Fechar',
+} as const
+
 /** "Bruno, Iara e Quim". */
 function listed(names: readonly string[]): string {
   if (names.length <= 1) return names.join('')

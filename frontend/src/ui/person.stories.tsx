@@ -11,6 +11,8 @@ type PersonPage = Exclude<
   'unknown' | null
 >
 import { PERSON } from './person.copy'
+import { TASTE_ANALYSIS } from './person-taste-analysis.copy'
+import { ANALYSIS } from './person-taste-analysis.fixture'
 
 const IARA: PersonPage = {
   person: 'iara',
@@ -174,6 +176,21 @@ export const AnotherPerson: Story = {
         name: PERSON.notes.downloadLetterboxd,
       }),
     ).toHaveAttribute('href', '/exportar/letterboxd.csv?pessoa=iara')
+  },
+}
+
+/** With her own Escala, what she rates above her median, under the Notas
+ * (#404). */
+export const AnotherPersonWithTasteAnalysis: Story = {
+  args: {
+    page: { ...WITH_HISTORY, tasteAnalysis: { ...ANALYSIS, ratings: 30 } },
+  },
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByRole('region', {
+        name: TASTE_ANALYSIS.title(false, 'Iara'),
+      }),
+    ).toBeVisible()
   },
 }
 
