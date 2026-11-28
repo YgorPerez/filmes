@@ -166,6 +166,16 @@ export const SESSIONS = {
     byNone: 'ninguém',
     moods: 'Clima',
     moodsLead: 'Puxa a ordem, nunca tira um filme.',
+    /** The Programas' chips (#402). */
+    presets: 'Programas',
+    presetsLead:
+      'Toque num para marcar os Climas e as Restrições dele, sem perder o que já marcou.',
+    /** What a Programa marks, after its chip. */
+    presetSummary: {
+      since: (year: number) => `desde ${year}`,
+      until: (year: number) => `até ${year}`,
+      language: (code: string) => `idioma ${code}`,
+    },
     count: 'Quantos filmes',
     countHint: 'deixe em branco para usar o padrão',
     words: 'Em uma frase',

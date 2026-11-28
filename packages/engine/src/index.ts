@@ -115,6 +115,11 @@ export {
 } from './recommendation/header.ts'
 export { readMoods, resolveMoods, type Mood } from './recommendation/moods.ts'
 export {
+  readPresets,
+  type Preset,
+  type PresetFields,
+} from './recommendation/presets.ts'
+export {
   mergeReadFields,
   readRequest,
   REQUEST_READING_MAX_LENGTH,
@@ -793,3 +798,15 @@ export {
   type TasteSummary,
   type TasteSummaryRequest,
 } from './people/taste-summary.ts'
+export {
+  personCompatibility,
+  type Compatibility,
+  type CompatibilityFilm,
+  type CompatibilityRequest,
+  type PairCompatibility,
+} from './people/compatibility.ts'
+export type {
+  TasteAnalysis,
+  TasteFilm,
+  TasteItem,
+} from './people/taste-analysis.ts'

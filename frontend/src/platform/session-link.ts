@@ -99,6 +99,20 @@ async function openSession(engine: Engine, session: string) {
   return result.output.frontmatter
 }
 
+/** The shareable address of `session`, signed: no check of who asks.
+ * The MCP's `billboard` tool checks that itself (#396). */
+export function signedSessionLink(
+  session: string,
+  database: string,
+  origin: string | undefined,
+): string | null {
+  if (!origin) return null
+  const key = signingKey(database, true)
+  return key
+    ? new URL(sessionLinkPath(session, sign(session, key)), origin).href
+    : null
+}
+
 /** The shareable address, issued only to the Dono of an open Session. */
 export async function issueSessionLink(
   session: string,
@@ -110,10 +124,7 @@ export async function issueSessionLink(
   if (!origin) return null
   const front = await openSession(engine, session)
   if (front?.get('owner') !== owner) return null
-  const key = signingKey(database, true)
-  return key
-    ? new URL(sessionLinkPath(session, sign(session, key)), origin).href
-    : null
+  return signedSessionLink(session, database, origin)
 }
 
 const text = (value: unknown) => (typeof value === 'string' ? value : null)

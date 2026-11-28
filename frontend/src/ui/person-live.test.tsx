@@ -95,6 +95,7 @@ const IARA: PersonPage = {
   tagGroups: [],
   sessions: { total: 0, recent: [], satisfaction: null },
   imported: false,
+  compatibility: null,
   likes: null,
 }
 

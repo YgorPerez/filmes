@@ -106,9 +106,11 @@ async function regenerating(host: Host) {
 
 function Cartaz({
   billboard,
+  sessionLink,
   host,
 }: {
   billboard: BillboardModel
+  sessionLink: string | null
   host: Host
 }) {
   const [sent, setSent] = useState(false)
@@ -129,6 +131,7 @@ function Cartaz({
       sent={sent}
       layout={layoutOf(host)}
       onExpand={host.fullscreen}
+      sessionLink={sessionLink}
     />
   )
 }
@@ -192,6 +195,7 @@ export function BillboardView({
           <Cartaz
             key={`${shown.billboard.session}:${shown.billboard.version}`}
             billboard={shown.billboard}
+            sessionLink={shown.sessionLink}
             host={host}
           />
         </>

@@ -729,10 +729,12 @@ function SessionBillboard({
   post,
   sent,
   unread,
+  sessionLink,
 }: {
   id: string
   open: boolean
   shelf: CartazPage['billboard']
+  sessionLink: CartazPage['sessionLink']
   post: {
     onSubmit: ReturnType<typeof useFetchForm>['onSubmit']
     busy: string | null
@@ -754,6 +756,7 @@ function SessionBillboard({
       unread={unread}
       // Closed, the label is above the tape given back (#346).
       request={open}
+      sessionLink={sessionLink}
       after={
         open && (
           <p className="flex flex-wrap items-center gap-sm text-ink-2">
@@ -818,6 +821,7 @@ function SessionView({
             sentReplies === 0 && (notice === 'regerada' || notice === 'anotada')
           }
           unread={unreadOf(asking, editing, unreadWords, setEditing)}
+          sessionLink={page.sessionLink}
         />
       </ClosedShelf>
     </>

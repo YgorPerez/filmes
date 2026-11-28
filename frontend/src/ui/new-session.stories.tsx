@@ -15,6 +15,19 @@ const meta = {
         { person: 'quim', name: 'Quim', owner: false },
       ],
       moods: ['leve', 'pra rir', 'tenso'],
+      presets: [
+        {
+          name: 'Noite com as crianças',
+          fields: {
+            moods: ['leve', 'pra rir'],
+            noMoods: ['tenso'],
+            child: 0,
+            maxDuration: 110,
+            noSad: true,
+          },
+        },
+        { name: 'Encontro', fields: { moods: ['tenso'], unseen: true } },
+      ],
     },
   },
 } satisfies Meta<typeof NewSession>
@@ -30,6 +43,9 @@ export const Empty: Story = {
       canvas.getByRole('form', { name: SESSIONS.form.label }),
     ).toBeVisible()
     await expect(canvas.getByRole('checkbox', { name: 'Iara' })).toBeEnabled()
+    await expect(
+      canvas.getByRole('button', { name: 'Noite com as crianças' }),
+    ).toBeEnabled()
   },
 }
 
