@@ -38,6 +38,11 @@ const ask = (page: Page) =>
 const mood = (page: Page, name: string) =>
   page.getByRole('region', { name: 'Clima' }).getByRole('checkbox', { name })
 
+/** Nova Sessão once it has hydrated: the bar by Recomendar says the night
+ * only then, and a click before it posts the form plainly. */
+const newSessionReady = (page: Page) =>
+  expect(page.getByText('Só você · escolha quem mais')).toBeVisible()
+
 const openedId = (page: Page) =>
   decodeURIComponent(new URL(page.url()).pathname.split('/').at(-1) ?? '')
 
@@ -133,6 +138,7 @@ test('“Ler” fills the form from one sentence and says what it left out', asy
   // Reads only, so both projects run it: no Session is opened.
   await loginAsBruno(page)
   await page.goto('/sessoes/nova')
+  await newSessionReady(page)
   await snap(page, info, 'sessoes-nova-frase-vazia')
 
   // "Ler" with no sentence: the page says so, in place (#235).
@@ -187,6 +193,7 @@ test('the form says why it refused, and “o gosto de uma Pessoa” orders', asy
   test.skip(info.project.name !== 'mobile', 'one group per project')
   await loginAsBruno(page)
   await page.goto('/sessoes/nova')
+  await newSessionReady(page)
 
   // No Presente: the page refuses before the engine, in place, with the
   // form as it was (#235).
