@@ -392,7 +392,14 @@ export const listSessions: Effect.Effect<
 > = Effect.gen(function* () {
   const list: Array<{ session: SessionSummary; key: PyOrderable[] }> = []
   for (const id of yield* sessionIds) {
-    const front = (yield* readSession(id)).frontmatter
+    const file = yield* readSession(id).pipe(
+      Effect.catchIf(
+        (error) => error.code === 'deleted_session',
+        () => Effect.succeed(null),
+      ),
+    )
+    if (file === null) continue
+    const front = file.frontmatter
     const session = summary(id, front)
     const [date, ...rest] = sessionOrder(session)
     const opened = front.get('opened_at')

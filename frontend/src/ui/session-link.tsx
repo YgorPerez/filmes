@@ -98,18 +98,24 @@ export function LinkUnavailable({
 }: {
   /** Null for a broken link; for a closed Session, the chosen film's
    * title, or null when the Feedback named none. */
-  closed: { chosen: string | null } | null
+  closed: { chosen: string | null } | 'deleted' | null
 }) {
   const { unavailable } = PARTICIPATION
   return (
     <div className="flex flex-col gap-sm">
       <h1 className="font-display text-page-title text-balance">
-        {closed ? unavailable.closed : unavailable.broken}
+        {closed === 'deleted'
+          ? unavailable.deleted
+          : closed
+            ? unavailable.closed
+            : unavailable.broken}
       </h1>
       <p className="max-w-[60ch] text-pretty text-ink-2">
-        {closed
-          ? unavailable.closedLead(closed.chosen)
-          : unavailable.brokenLead}
+        {closed === 'deleted'
+          ? unavailable.deletedLead
+          : closed
+            ? unavailable.closedLead(closed.chosen)
+            : unavailable.brokenLead}
       </p>
     </div>
   )

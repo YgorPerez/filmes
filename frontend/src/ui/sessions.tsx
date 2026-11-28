@@ -27,6 +27,7 @@ import { ChosenReactions } from './billboard-chosen'
 import { Icon } from './kit/icon'
 import { MENU_ROW } from './kit/menu-row'
 import { PairwiseAnswers } from './pairwise-answers'
+import { SessionDelete } from './session-delete'
 import { ShareSessionLink } from './session-link-share'
 import { SESSIONS, spoken } from './sessions.copy'
 
@@ -270,7 +271,7 @@ function UnknownSession() {
  * ⋯ menu with the Link para os Presentes and "Contar como foi". */
 function SessionHead({ page }: { page: CartazPage }) {
   const s = page.session
-  const menu = s.open
+  const menu = s.open || page.deletion !== undefined
   return (
     <header className="flex items-start justify-between gap-md">
       <div className="flex min-w-0 flex-col gap-2xs">
@@ -296,12 +297,22 @@ function SessionHead({ page }: { page: CartazPage }) {
           </summary>
           <div className="absolute top-full right-0 z-20 mt-xs flex w-[240px] max-w-[calc(100vw-32px)] flex-col rounded-card border border-rule bg-surface p-xs">
             <ul className="flex flex-col">
-              <li>
-                <a href={feedbackPath(s.id)} className={MENU_ROW}>
-                  <Icon name="film" />
-                  {SESSIONS.list.feedback}
-                </a>
-              </li>
+              {s.open && (
+                <li>
+                  <a href={feedbackPath(s.id)} className={MENU_ROW}>
+                    <Icon name="film" />
+                    {SESSIONS.list.feedback}
+                  </a>
+                </li>
+              )}
+              {page.deletion && (
+                <li>
+                  <SessionDelete
+                    session={s.id}
+                    hasFacts={page.deletion.hasFacts}
+                  />
+                </li>
+              )}
             </ul>
             {page.sessionLink && (
               <ShareSessionLink key={s.id} url={page.sessionLink} />

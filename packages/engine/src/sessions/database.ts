@@ -19,7 +19,12 @@ import type { EngineError } from '../runtime/EngineError.ts'
 import type { Environment } from '../runtime/Environment.ts'
 import { Sqlite, type Connection, type SqliteError } from '../sqlite/Sqlite.ts'
 import { comments, reactions, REPORT_LEVELS, sessionSeen } from './facts.ts'
-import { readSession, sessionIds } from './file.ts'
+import {
+  isDeleted,
+  erasedSessionIds,
+  readSessionFile,
+  sessionIds,
+} from './file.ts'
 import type { RuleName } from '../recommendation/rule.ts'
 
 /** A Regra's name as `sessoes.regra` keeps it. */
@@ -117,22 +122,24 @@ const insertReactions = (
 ): Effect.Effect<void, EngineError | SqliteError> =>
   Effect.gen(function* () {
     for (const r of yield* reactions(id, front)) {
-      const level = r.reaction === null ? null : REPORT_LEVELS[r.reaction].db
-      yield* db.run(
-        `INSERT INTO reacoes (fato_id, sessao, pessoa, filme_id, tipo, nota, reacao, repassada, valor, data, fonte)
+      if (!isDeleted(front)) {
+        const level = r.reaction === null ? null : REPORT_LEVELS[r.reaction].db
+        yield* db.run(
+          `INSERT INTO reacoes (fato_id, sessao, pessoa, filme_id, tipo, nota, reacao, repassada, valor, data, fonte)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        r.factId,
-        r.session,
-        r.person,
-        r.filmId,
-        r.kind === 'rating' ? 'nota' : 'relato',
-        r.rating,
-        level,
-        r.relayed ? 1 : 0,
-        r.value,
-        r.date,
-        r.source,
-      )
+          r.factId,
+          r.session,
+          r.person,
+          r.filmId,
+          r.kind === 'rating' ? 'nota' : 'relato',
+          r.rating,
+          level,
+          r.relayed ? 1 : 0,
+          r.value,
+          r.date,
+          r.source,
+        )
+      }
       if (r.kind === 'rating')
         yield* db.run(
           'INSERT INTO notas (fato_id, pessoa, filme_id, nota, data, fonte, sessao) VALUES (?, ?, ?, ?, ?, ?, ?)',
@@ -182,17 +189,24 @@ const insertOwnerFacts = (
       )
   })
 
-/** Replaces one Session's rows with its frontmatter's (`banco.carregar`). */
+/** Drops all derived rows of this Session before erasing or reloading it. */
+export const clearSession = (db: Connection, id: string) =>
+  Effect.gen(function* () {
+    for (const table of SESSION_TABLES)
+      yield* db.run(`DELETE FROM ${table} WHERE sessao = ?`, id)
+    yield* db.run('DELETE FROM sessoes WHERE id = ?', id)
+  })
+
+/** Replaces one Session's rows with its frontmatter's. Deleted Sessions
+ * contribute taste without a Session row or Satisfação reactions. */
 export const syncSession = (
   db: Connection,
   id: string,
   front: YamlMapping,
 ): Effect.Effect<void, EngineError | SqliteError> =>
   Effect.gen(function* () {
-    for (const table of SESSION_TABLES)
-      yield* db.run(`DELETE FROM ${table} WHERE sessao = ?`, id)
-    yield* db.run('DELETE FROM sessoes WHERE id = ?', id)
-    yield* insertSession(db, id, front)
+    yield* clearSession(db, id)
+    if (!isDeleted(front)) yield* insertSession(db, id, front)
     yield* insertReactions(db, id, front)
     yield* insertOwnerFacts(db, id, front)
   })
@@ -207,9 +221,11 @@ export const loadSessions = (
   Environment
 > =>
   Effect.gen(function* () {
-    const ids = yield* sessionIds
+    const erased = new Set(yield* erasedSessionIds)
+    for (const id of erased) yield* clearSession(db, id)
+    const ids = (yield* sessionIds).filter((id) => !erased.has(id))
     for (const id of ids) {
-      const { frontmatter } = yield* readSession(id)
+      const { frontmatter } = yield* readSessionFile(id)
       yield* syncSession(db, id, frontmatter)
     }
     return ids
@@ -217,8 +233,7 @@ export const loadSessions = (
 
 /** Reloads every Session's rows from filmes-dados (`banco.carregar_todas`):
  * the start of a server whose database was built before the latest
- * writes. Returns the ids loaded. A Session whose file is gone keeps its
- * rows, as after a sync. */
+ * writes. Returns the ids loaded. Deletion markers also clear older rows of erased Sessions. */
 export const reloadSessions: Effect.Effect<
   ReadonlyArray<string>,
   EngineError | SqliteError,

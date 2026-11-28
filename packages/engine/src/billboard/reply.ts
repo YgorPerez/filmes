@@ -63,6 +63,7 @@ import {
   type YamlMapping,
   type YamlValue,
 } from '../data/yaml.ts'
+import { billboardSource } from '../sessions/facts.ts'
 import { required, savePersonAndSync } from '../people/actions.ts'
 import { targetLabel } from '../people/facts.ts'
 import {
@@ -606,7 +607,7 @@ const recordSeen = (
     const people = new Map<string, Person>()
     const changed = new Set<string>()
     const toSave = new Map<string, Person>()
-    const source = `cartaz ${id}`
+    const source = billboardSource(id)
     for (const item of labelled) {
       const { slug, film, thought, label } = item
       const marked = yield* markSeen(

@@ -703,3 +703,47 @@ test('a Presente sends only yes votes and the Dono sees the new Cartaz order', a
     await expect(participant.getByText('Filme 1 de 3')).toBeVisible()
   })
 })
+
+test('the Dono deletes a Session and its Link shows that it was deleted', async ({
+  page,
+}, info) => {
+  await loginAsBruno(page)
+  const withFacts = info.project.name === 'desktop'
+  const { session } = await engineRun((engine) =>
+    engine.run(
+      recommendSession({ attendees: ['bruno', withFacts ? 'iara' : 'quim'] }),
+    ),
+  )
+  await page.goto(`/sessoes/${session.id}`)
+  const link = await sessionLinkFor(page, withFacts ? 'iara' : 'quim')
+  if (withFacts) {
+    await engineRun((engine) =>
+      engine.run(
+        recordFeedback({
+          session: session.id,
+          film: 'Pequenos Milagres',
+          ratings: ['bruno=5'],
+        }),
+      ),
+    )
+    await page.reload()
+    await openMenu(page)
+  }
+  await snap(page, info, 'excluir-sessao-menu')
+  await page.getByRole('button', { name: 'Excluir', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: 'Excluir Sessão?' })
+  await expect(dialog).toBeVisible()
+  await expect(dialog.getByRole('radio')).toHaveCount(withFacts ? 2 : 0)
+  if (withFacts)
+    await dialog.getByRole('radio', { name: /Manter o gosto/ }).check()
+  await snap(page, info, 'excluir-sessao-confirmacao')
+  await dialog.getByRole('button', { name: 'Excluir Sessão' }).click()
+  await expect(page).toHaveURL(/\/sessoes$/)
+  await expect(page.locator(`a[href="/sessoes/${session.id}"]`)).toHaveCount(0)
+
+  await page.goto(link)
+  await expect(
+    page.getByRole('heading', { name: 'Esta Sessão foi excluída' }),
+  ).toBeVisible()
+  await snap(page, info, 'excluir-sessao-link')
+})
