@@ -72,7 +72,7 @@ it("pins the dumps in the config folder's manifest", async () => {
 
   expect(code).toBe(0)
   const dumps = manifestOf(join(config, 'catalog-versions.json')).dumps
-  expect(Object.keys(dumps)).toHaveLength(12)
+  expect(Object.keys(dumps)).toHaveLength(14)
   expect(Object.keys(dumps['title.basics.tsv.gz']!)).toEqual([
     'bytes',
     'date',
@@ -94,8 +94,8 @@ it("pins the dumps in the config folder's manifest", async () => {
       .sort(),
   )
   expect(events.at(-1)).toEqual({
-    progress: 12,
-    total: 12,
+    progress: 14,
+    total: 14,
     message: 'Versões do Catálogo gravadas',
   })
 })
