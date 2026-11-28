@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import type { PairFilm, PairwisePage } from '#/platform/pairwise'
+import { GroupPickQuestion } from './group-pick'
 import { buttonVariants } from './kit/button-variants'
 import { PostForm } from './kit/post-form'
 import { Alert } from './kit/status'
@@ -34,7 +35,8 @@ function Choice({ film, busy }: { film: PairFilm; busy: boolean }) {
   )
 }
 
-/** `/participar/perguntas`: one pair at a time, as a plain form to
+/** `/participar/perguntas`: the groups to pick first, when she has them
+ * (`GroupPickQuestion`, #415); then one pair at a time, as a plain form to
  * `/participar/perguntas/enviar` (it works before the JavaScript; with it,
  * the answer goes by `fetch` and the next pair comes without a reload,
  * #240). After each answer the focus goes to the question's count, which a
@@ -66,6 +68,16 @@ export function PairwiseQuestion({
     if (pair) progress.current?.focus()
     else thanks.current?.focus()
   }, [answered, pair])
+  if (page?.groups)
+    return (
+      <GroupPickQuestion
+        groups={page.groups}
+        link={link}
+        failed={failed}
+        back={back}
+        owner={owner}
+      />
+    )
   if (page !== null && pair === null) {
     const done = page.answered > 0
     return (

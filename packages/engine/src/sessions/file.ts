@@ -282,6 +282,31 @@ export const readOpenSession = (id: string, closed: string) =>
     return { session, front }
   })
 
+/** An open Session with `person` among its Presentes, as the Link da
+ * Sessão's quick taste questions need it (#181, #415): one with Feedback
+ * is `closed_session`, a Pessoa not there `invalid_usage`. */
+export const readAttendedSession = (session: string, person: string) =>
+  Effect.gen(function* () {
+    const file = yield* readSession(session)
+    const { frontmatter } = file
+    if (!isOpen(frontmatter))
+      return yield* engineError(
+        'closed_session',
+        `a Sessão ${session} já tem Feedback`,
+      )
+    const attendees = frontmatter.get('attendees')
+    const slugs =
+      pyTruthy(attendees) && isSequence(attendees)
+        ? attendees.map((a) => pyStrValue(a))
+        : []
+    if (!slugs.includes(person))
+      return yield* engineError(
+        'invalid_usage',
+        `${person} não está entre os Presentes da Sessão ${session}`,
+      )
+    return file
+  })
+
 /** The fields of a version, as they sit at the top of the frontmatter
  * (the current one) and in each item of `versions`. */
 export const VERSION_EXTRAS = [

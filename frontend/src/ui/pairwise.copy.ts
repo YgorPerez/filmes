@@ -19,8 +19,8 @@ export const PAIRWISE = {
   film: (title: string, year: number | null) =>
     year === null ? title : `${title} (${year})`,
   owner: {
-    title: 'Perguntas par a par',
-    lead: 'O que os Presentes responderam pelo link. Gravar faz o escolhido de cada par virar Nota fraca da Pessoa, e o outro, Já visto.',
+    title: 'Perguntas de gosto',
+    lead: 'O que os Presentes responderam pelo link. Gravar faz os filmes de cada grupo escolhido puxarem os parecidos, de leve; o escolhido de cada par virar Nota fraca da Pessoa, e o outro, Já visto.',
     prefers: (chosen: string, other: string) => `Preferiu ${chosen} a ${other}`,
     record: (name: string) => `Gravar as respostas de ${name}`,
     discard: 'Descartar',

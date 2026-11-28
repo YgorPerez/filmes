@@ -1,13 +1,14 @@
 import type { WaitingAnswers } from '@filmes/engine'
 import { buttonVariants } from './kit/button-variants'
 import type { FormEventHandler } from 'react'
+import { GROUP_PICK } from './group-pick.copy'
 import { PAIRWISE } from './pairwise.copy'
 
 const film = (f: { title: string; year: number | null }) =>
   PAIRWISE.film(f.title, f.year)
 
-/** The Session's page: the Perguntas par a par that wait for the Dono, by
- * Presente, each with "gravar" (her yes: they become taste) and
+/** The Session's page: the groups picked (#415) and the Perguntas par a
+ * par that wait for the Dono, by Presente, each with "gravar" (her yes: they become taste) and
  * "descartar", posted to `/sessoes/<id>/perguntas`. Nothing when none
  * waits. */
 export function PairwiseAnswers({
@@ -30,7 +31,7 @@ export function PairwiseAnswers({
         {owner.title}
       </h2>
       <p className="text-ink-2">{owner.lead}</p>
-      {waiting.map(({ person, name, answers }) => (
+      {waiting.map(({ person, name, groups, answers }) => (
         <form
           key={person}
           method="post"
@@ -41,6 +42,14 @@ export function PairwiseAnswers({
         >
           <h3 className="font-display font-bold">{name}</h3>
           <ul className="list-disc pl-5">
+            {groups.map((g) => (
+              <li key={g.id}>
+                {GROUP_PICK.chose(
+                  g.name,
+                  g.films.map((f) => f.title).join(', '),
+                )}
+              </li>
+            ))}
             {answers.map((a) => (
               <li key={`${a.chosen.id}-${a.other.id}`}>
                 {owner.prefers(film(a.chosen), film(a.other))}

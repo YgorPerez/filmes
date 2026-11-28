@@ -1,4 +1,5 @@
-// The Perguntas par a par that wait for the Dono, by Presente.
+// The Perguntas par a par and the groups picked (#415) that wait for the
+// Dono, by Presente.
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, within } from 'storybook/test'
 import { PairwiseAnswers } from './pairwise-answers'
@@ -15,6 +16,7 @@ const meta = {
       {
         person: 'teo',
         name: 'Teo',
+        groups: [],
         answers: [
           { chosen: FAROL, other: PONTE },
           { chosen: MILAGRES, other: FAROL },
@@ -23,6 +25,7 @@ const meta = {
       {
         person: 'iara',
         name: 'Iara',
+        groups: [],
         answers: [{ chosen: PONTE, other: FAROL }],
       },
     ],
@@ -37,6 +40,32 @@ export const Waiting: Story = {
   play: async ({ canvasElement }) => {
     await expect(
       within(canvasElement).getByRole('form', { name: 'Teo' }),
+    ).toBeVisible()
+  },
+}
+
+/** A new Presente picked a group before the pairs (#415). */
+export const WithGroups: Story = {
+  args: {
+    waiting: [
+      {
+        person: 'teo',
+        name: 'Teo',
+        groups: [
+          {
+            id: 'tides',
+            name: 'Faróis e marés',
+            labels: ['litorâneo', 'melancólico', 'contemplativo'],
+            films: [FAROL, PONTE, MILAGRES],
+          },
+        ],
+        answers: [{ chosen: FAROL, other: PONTE }],
+      },
+    ],
+  },
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByText(/^Escolheu o grupo Faróis e marés/u),
     ).toBeVisible()
   },
 }

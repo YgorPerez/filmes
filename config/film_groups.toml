@@ -1,0 +1,114 @@
+# Grupos de filmes da Escolha de grupo (#415): o Link da Sessão pergunta a um
+# Presente com menos Notas que `[rating_percentile] min_ratings` "Qual destes
+# grupos tem mais a sua cara?", e ela escolhe de 1 a 3 grupos ou nenhum.
+#
+# Cada grupo tem um nome, 3 filmes (tconst do IMDb) e 3 rótulos. Só os filmes
+# viram gosto: são sementes fracas da vizinhança do MovieLens. O nome e os
+# rótulos só mostram o grupo na tela. A pesquisa #405 mediu que os rótulos não
+# ajudam a recomendar; os filmes, sim.
+#
+# Feitos uma vez a partir do Tag Genome sobre os Candidatos (k-means esférico
+# nas 300 tags de maior variância, K=16 e K=20, banco de 2026-11-24) e revistos
+# à mão: cada grupo mostra 3 filmes conhecidos dentre os mais votados perto do
+# centro dele, e os rótulos traduzem as tags que mais o distinguem. Saíram os
+# grupos de sobra (drogas e depressão, música, política, um de clássicos que
+# repetia outro). Um grupo com filme fora do Catálogo não aparece.
+#
+# Os grupos aparecem na ordem do arquivo. A chave é o id gravado no arquivo da
+# Pessoa; não mude a de um grupo que já foi escolhido.
+
+[crime]
+name = "Crime e violência"
+# Pulp Fiction, O Poderoso Chefão, Clube da Luta
+films = ["tt0110912", "tt0068646", "tt0137523"]
+labels = ["crime", "violento", "estiloso"]
+
+[twists]
+name = "Suspense com reviravolta"
+# A Origem, Amnésia, Os Suspeitos
+films = ["tt1375666", "tt0209144", "tt0114814"]
+labels = ["suspense", "mistério", "final surpreendente"]
+
+[comedy]
+name = "Comédia escrachada"
+# Se Beber, Não Case!, Superbad, Todo Mundo Quase Morto
+films = ["tt1119646", "tt0829482", "tt0365748"]
+labels = ["hilário", "besteirol", "paródia"]
+
+[absurd]
+name = "Humor absurdo"
+# O Grande Lebowski, Monty Python em Busca do Cálice Sagrado, Dr. Fantástico
+films = ["tt0118715", "tt0071853", "tt0057012"]
+labels = ["sátira", "humor negro", "nonsense"]
+
+[romance]
+name = "Romance"
+# Diário de uma Paixão, Simplesmente Amor, Amor a Toda Prova
+films = ["tt0332280", "tt0314331", "tt1570728"]
+labels = ["romântico", "comédia romântica", "história de amor"]
+
+[blockbuster]
+name = "Aventura de superprodução"
+# Matrix, O Senhor dos Anéis: A Sociedade do Anel, Star Wars
+films = ["tt0133093", "tt0120737", "tt0076759"]
+labels = ["ação", "superprodução", "efeitos especiais"]
+
+[horror]
+name = "Terror"
+# O Iluminado, Alien, o Oitavo Passageiro, O Exorcista
+films = ["tt0081505", "tt0078748", "tt0070047"]
+labels = ["assustador", "arrepiante", "tenso"]
+
+[touching]
+name = "Dramas comoventes"
+# A Vida É Bela, Quem Quer Ser um Milionário?, O Curioso Caso de Benjamin Button
+films = ["tt0118799", "tt1010048", "tt0421715"]
+labels = ["comovente", "agridoce", "de partir o coração"]
+
+[quirky]
+name = "Excêntricos e sonhadores"
+# O Fabuloso Destino de Amélie Poulain, Brilho Eterno de uma Mente sem Lembranças, Peixe Grande
+films = ["tt0211915", "tt0338013", "tt0319061"]
+labels = ["excêntrico", "fantasioso", "imaginativo"]
+
+[inspiring]
+name = "Histórias que inspiram"
+# Um Sonho de Liberdade, Forrest Gump, Intocáveis
+films = ["tt0111161", "tt0109830", "tt1675434"]
+labels = ["inspirador", "sentimental", "superação"]
+
+[war]
+name = "Guerra e história"
+# O Resgate do Soldado Ryan, A Lista de Schindler, Coração Valente
+films = ["tt0120815", "tt0108052", "tt0112573"]
+labels = ["guerra", "histórico", "épico"]
+
+[noir]
+name = "Noir e suspense clássico"
+# Taxi Driver, Um Corpo que Cai, Chinatown
+films = ["tt0075314", "tt0052357", "tt0071315"]
+labels = ["noir", "sombrio", "tenso"]
+
+[surreal]
+name = "Estranhos e surreais"
+# Cidade dos Sonhos, Veludo Azul, Brazil, o Filme
+films = ["tt0166924", "tt0090756", "tt0088846"]
+labels = ["surreal", "enigmático", "onírico"]
+
+[world_cinema]
+name = "Cinema de autor"
+# Amor à Flor da Pele, Ladrões de Bicicleta, O Sétimo Selo
+films = ["tt0118694", "tt0040522", "tt0050976"]
+labels = ["intimista", "contemplativo", "estrangeiro"]
+
+[animation]
+name = "Animação para a família"
+# O Rei Leão, Up: Altas Aventuras, Procurando Nemo
+films = ["tt0110357", "tt1049413", "tt0266543"]
+labels = ["animação", "para a família", "para crianças"]
+
+[classics]
+name = "Clássicos em preto e branco"
+# Casablanca, 12 Homens e uma Sentença, Janela Indiscreta
+films = ["tt0034583", "tt0050083", "tt0047396"]
+labels = ["clássico", "preto e branco", "premiado"]

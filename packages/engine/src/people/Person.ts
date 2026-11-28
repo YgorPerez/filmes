@@ -25,6 +25,14 @@
 // whatever its Fonte says: the ruler keeps it weak and her scale leaves it
 // out.
 //
+// `## Escolhas de grupo` keeps the groups of `config/film_groups.toml` she
+// picked on the Link da Sessão (#415), each with its 3 films as they were:
+//
+//     - 2026-11-20 · escolha de grupo 2026-11-20-teo · Comoventes (bittersweet) · tt1049413, tt0211915, tt0118799
+//
+// Those films are weak seeds of the MovieLens neighbourhood; they are no
+// Nota and no Já visto.
+//
 // The body stays in Portuguese (ADR 0002); the rest
 // of it is free text and is kept as written.
 //
@@ -134,6 +142,20 @@ export interface Seen {
   readonly edited?: string
 }
 
+/** An Escolha de grupo [group pick] (#415): a group of
+ * `config/film_groups.toml` she said is most like her, with its films as
+ * the file had them. A line of `## Escolhas de grupo`. */
+export interface GroupPick {
+  readonly date: string
+  readonly source: string
+  /** The group's key in `film_groups.toml`. */
+  readonly group: string
+  /** The group's name, as it was. */
+  readonly label: string
+  /** Its films (tt...), in order. */
+  readonly films: readonly string[]
+}
+
 export interface Person {
   /** The file name without `.md`. */
   readonly slug: string
@@ -161,10 +183,17 @@ export const sameQuestion = (a: OpenQuestion, b: OpenQuestion): boolean =>
     ? a.subject === b.subject
     : casefold(a.text) === casefold(b.text)
 
+/** Two field values equal; a list, item by item. */
+const sameValue = (x: unknown, y: unknown): boolean =>
+  Array.isArray(x) && Array.isArray(y)
+    ? x.length === y.length && x.every((item, i) => item === y[i])
+    : x === y
+
 /** Python's `==` on the frozen dataclasses: every field equal. */
 const equal = <A extends object>(a: A, b: A): boolean =>
-  (Object.keys(a) as Array<keyof A>).every((key) => a[key] === b[key]) &&
-  Object.keys(a).length === Object.keys(b).length
+  (Object.keys(a) as Array<keyof A>).every((key) =>
+    sameValue(a[key], b[key]),
+  ) && Object.keys(a).length === Object.keys(b).length
 
 // --- body lines ----------------------------------------------------------
 
@@ -200,6 +229,12 @@ const SEEN_LINE = new RegExp(
   'u',
 )
 
+const GROUP_PICK_LINE = new RegExp(
+  `^- (?<date>[0-9]{4}-[0-9]{2}-[0-9]{2}) · (?<source>.+?) · (?<label>.+?) \\((?<group>${NOT_SPACE_OR_PARENS}+)\\)` +
+    ` · (?<films>tt[0-9]+(?:, tt[0-9]+)*)$`,
+  'u',
+)
+
 /** The body line of a Declarado or a Relato. */
 export const statementLine = (s: Statement): string => {
   const fields = [s.date, s.source, s.specific ? 'específico' : 'genérico']
@@ -228,6 +263,10 @@ export const seenLine = (s: Seen): string => {
   return `- ${fields.join(' · ')}`
 }
 
+/** The body line of an Escolha de grupo. */
+const groupPickLine = (p: GroupPick): string =>
+  `- ${[p.date, p.source, `${p.label} (${p.group})`, p.films.join(', ')].join(' · ')}`
+
 type Groups = Readonly<Record<string, string | undefined>>
 
 const statement = (g: Groups): Statement => ({
@@ -255,6 +294,15 @@ const seen = (g: Groups): Seen => ({
   ...(g.edited === undefined ? {} : { edited: g.edited }),
 })
 
+/** Every group of `GROUP_PICK_LINE` is in a line it matched. */
+const groupPick = (g: Groups): GroupPick => ({
+  date: g.date!,
+  source: g.source!,
+  group: g.group!,
+  label: g.label!,
+  films: g.films!.split(', '),
+})
+
 // --- sections --------------------------------------------------------------
 
 interface SectionItems {
@@ -264,6 +312,7 @@ interface SectionItems {
   readonly stated: Statement
   readonly reports: Statement
   readonly seen: Seen
+  readonly group_picks: GroupPick
 }
 
 /** Where a kind of item lives in the file. */
@@ -485,6 +534,12 @@ const SECTIONS: { readonly [S in Section]: SectionRules<SectionItems[S]> } = {
   stated: bodySection('Declarados', STATEMENT_LINE, statement, statementLine),
   reports: bodySection('Relatos', STATEMENT_LINE, statement, statementLine),
   seen: bodySection('Já vistos', SEEN_LINE, seen, seenLine),
+  group_picks: bodySection(
+    'Escolhas de grupo',
+    GROUP_PICK_LINE,
+    groupPick,
+    groupPickLine,
+  ),
 }
 
 /** The items of a section. A body line out of format is `invalid_data`. */

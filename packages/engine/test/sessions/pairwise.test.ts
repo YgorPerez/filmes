@@ -222,6 +222,7 @@ describe('decidePairwise', () => {
       {
         person: 'teo',
         name: 'Teo',
+        groups: [],
         answers: [
           {
             chosen: { id: 'tt9000101', title: 'O Farol de Areia', year: 2012 },
@@ -236,6 +237,7 @@ describe('decidePairwise', () => {
       {
         person: 'quim',
         name: 'Quim',
+        groups: [],
         answers: [
           {
             chosen: { id: 'tt9000702', title: 'A Última Estação', year: 2018 },

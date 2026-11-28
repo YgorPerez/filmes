@@ -39,6 +39,7 @@ import { appEngine } from './engine'
 import { appPoster, failureOf, formPoster, seeOther } from './form-post'
 import { appNotes, type Note, type Notes } from './notes'
 import {
+  groupPickAction,
   pairwiseAnswerAction,
   pairwiseDecisionAction,
   pairwisePage,
@@ -358,6 +359,12 @@ export const servePairwiseAnswer = (request: Request) => {
     AUTH_DATABASE_PATH,
     APP_ORIGIN,
   )
+}
+
+/** The route of a Presente's group pick (#415), for the app. */
+export const serveGroupPick = (request: Request) => {
+  const { AUTH_DATABASE_PATH, APP_ORIGIN } = serverEnv()
+  return groupPickAction(request, appEngine(), AUTH_DATABASE_PATH, APP_ORIGIN)
 }
 
 /** The route of the Dono's decision on the answers, for the app. */

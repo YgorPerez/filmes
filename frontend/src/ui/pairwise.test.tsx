@@ -136,6 +136,7 @@ describe('PairwiseAnswers', () => {
           {
             person: 'teo',
             name: 'Teo',
+            groups: [],
             answers: [{ chosen: FAROL, other: PONTE }],
           },
         ]}

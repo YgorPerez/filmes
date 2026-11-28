@@ -1,3 +1,4 @@
+import { writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
   consult,
@@ -10,6 +11,7 @@ import { useFixture, type Fixture } from '../../../packages/engine/test/fixture'
 import { pairwisePath } from '#/content/pairwise-address'
 import { sessionLinkSearch } from '#/content/session-link-address'
 import {
+  groupPickAction,
   pairwiseAnswerAction,
   pairwiseDecisionAction,
   pairwisePage,
@@ -169,6 +171,7 @@ test('the Dono sees the waiting answers and records them on her yes', async () =
       {
         person: 'teo',
         name: 'Teo',
+        groups: [],
         answers: [
           {
             chosen: { id: 'tt9000101', title: 'O Farol de Areia', year: 2012 },
@@ -236,6 +239,70 @@ test('the Dono sees the waiting answers and records them on her yes', async () =
         'location',
       ),
     ).toBe(`${page}?feito=perguntas-descartadas`)
+  } finally {
+    await engine.dispose()
+  }
+})
+
+test('a Presente with few Notas picks groups of films before the pairs (#415)', async () => {
+  const fixture = useFixture()
+  // The repo's groups are real films, out of the fixture's Catálogo.
+  writeFileSync(
+    join(fixture.config, 'film_groups.toml'),
+    `[tides]
+name = "Faróis e marés"
+films = ["tt9000101", "tt9000103", "tt9000102"]
+labels = ["litorâneo", "melancólico", "contemplativo"]
+
+[noise]
+name = "Barulho e fronteira"
+films = ["tt9000303", "tt9000401", "tt9000501"]
+labels = ["urbano", "tenso", "seco"]
+`,
+  )
+  const { engine, database, session, link, search } = await linkSession(fixture)
+  try {
+    const first = await pairwisePage(search('teo'), engine, database)
+    expect(first?.groups?.max).toBe(3)
+    expect(first?.groups?.choices.map((g) => g.id)).toEqual(['tides', 'noise'])
+    expect(first?.groups?.choices[0]?.films[0]).toMatchObject({
+      id: 'tt9000101',
+      title: 'O Farol de Areia',
+    })
+
+    const back = pairwisePath(session, link.chave, 'teo')
+    const send = (fields: Record<string, string>) =>
+      groupPickAction(
+        post('/participar/perguntas/grupos', {
+          ...link,
+          presente: 'teo',
+          ...fields,
+        }),
+        engine,
+        database,
+        ORIGIN,
+      )
+    // "Pronto" with nothing marked keeps nothing.
+    expect((await send({ acao: 'escolher' })).headers.get('location')).toBe(
+      `${back}&erro=1`,
+    )
+    const picked = await send({ acao: 'escolher', grupo: 'noise' })
+    expect(picked.status).toBe(303)
+    expect(picked.headers.get('location')).toBe(back)
+
+    // Then the pairs.
+    const next = await pairwisePage(search('teo'), engine, database)
+    expect(next?.groups).toBeUndefined()
+    expect(next?.pair).not.toBeNull()
+    expect(
+      (await pairwiseWaiting(session, engine)).map((w) =>
+        w.groups.map((g) => g.name),
+      ),
+    ).toEqual([['Barulho e fronteira']])
+    // Asked once.
+    expect((await send({ acao: 'nenhum' })).headers.get('location')).toBe(
+      `${back}&erro=1`,
+    )
   } finally {
     await engine.dispose()
   }

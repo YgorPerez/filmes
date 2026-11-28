@@ -5,6 +5,7 @@ import {
   filmCards,
   isOpen,
   latestVotes,
+  groupPickQuestion,
   pairwiseQuestions,
   readPeople,
   readSession,
@@ -61,7 +62,8 @@ export type SessionLinkView = {
   films: LinkFilm[]
   /** The films her no took out of the Session, by title. */
   left: string[]
-  /** How many Perguntas par a par are left for her (0 without one). */
+  /** How many Perguntas par a par are left for her, and 1 for the groups
+   * to pick first (#415); 0 without any. */
   questions: number
 }
 
@@ -194,9 +196,14 @@ async function screenOf(
       .map((f) => [f.id, f.title ?? f.id]),
   )
   const onScreen = new Set(screen.map((f) => f.id))
-  const asked = await engine.run(pairwiseQuestions({ session, person }))
+  const [asked, picks] = await Promise.all([
+    engine.run(pairwiseQuestions({ session, person })),
+    engine.run(groupPickQuestion({ session, person })),
+  ])
   return {
-    questions: asked.exitCode === 0 ? asked.output.pairs.length : 0,
+    questions:
+      (asked.exitCode === 0 ? asked.output.pairs.length : 0) +
+      (picks.exitCode === 0 && picks.output !== null ? 1 : 0),
     films: screen.map((film) => {
       const card = byId.get(film.id) ?? null
       return {
