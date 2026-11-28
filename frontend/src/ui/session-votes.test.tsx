@@ -15,14 +15,19 @@ import { votePath, voteSearch } from '#/content/session-votes-address'
 import { PARTICIPATION } from './session-link.copy'
 import { VOTES } from './session-votes.copy'
 import { VoteCards, VoteScreen } from './session-votes'
-import { FILMS } from './session-link.fixture'
+import { BILLBOARD } from './billboard.copy'
+import { SHEET } from './film-sheet.copy'
+import {
+  GUEST_DECK as DECK,
+  GUEST_FILMS as FILMS,
+  IARA_SEES,
+  OWNER_DECK,
+} from './session-votes.fixture'
 
 afterEach(() => {
   cleanup()
   vi.unstubAllGlobals()
 })
-
-const DECK = { version: 2, films: FILMS, left: [] }
 
 const posted = () => {
   const form = document.querySelector('form')
@@ -160,7 +165,7 @@ it('with every film voted on, it shows the night’s list with her Votos', () =>
   ]
   render(
     <VoteScreen
-      deck={{ version: 3, films, left: ['Sal e Ferrugem'] }}
+      deck={{ version: 3, films, left: ['Sal e Ferrugem'], people: IARA_SEES }}
       search={LINK}
       home={HOME}
       questions="/participar/perguntas?x"
@@ -198,7 +203,7 @@ it('after sending, it says so and offers the films that came in', () => {
   ]
   render(
     <VoteScreen
-      deck={{ version: 3, films, left: [] }}
+      deck={{ version: 3, films, left: [], people: IARA_SEES }}
       search={{ ...LINK, feito: 'regerada' }}
       home={HOME}
     />,
@@ -221,7 +226,13 @@ it('after sending, it says so and offers the films that came in', () => {
 
 it('after sending from an older deck, names the films her sim missed', () => {
   const films = [{ ...FILMS[0]!, mine: 'yes' as const }]
-  const deck = { version: 3, films, left: [], stale: ['Quermesse'] }
+  const deck = {
+    version: 3,
+    films,
+    left: [],
+    people: IARA_SEES,
+    stale: ['Quermesse'],
+  }
   const { rerender } = render(
     <VoteScreen
       deck={deck}
@@ -264,6 +275,7 @@ it('her standing Votos go again with the new ones; mudar asks every film', async
     version: 3,
     films: [{ ...FILMS[0]!, mine: 'yes' as const }, FILMS[1]!],
     left: [],
+    people: IARA_SEES,
   }
   const { unmount } = render(
     <VoteCards deck={voted} action="/participar/votos" />,
@@ -296,6 +308,7 @@ it('mudar opens on the recap with her Votos chosen; Recomeçar asks every film a
       { ...FILMS[1]!, mine: 'no' as const },
     ],
     left: [],
+    people: IARA_SEES,
   }
   render(<VoteCards deck={voted} revote action="/participar/votos" />)
   expect(screen.getByText(VOTES.kept)).toBeTruthy()
@@ -475,7 +488,7 @@ it('a standing não goes again, the original title shows, and the recap turns a 
   ]
   render(
     <VoteCards
-      deck={{ version: 4, films, left: [] }}
+      deck={{ version: 4, films, left: [], people: IARA_SEES }}
       action="/participar/votos"
     />,
   )
@@ -498,7 +511,7 @@ it('every film voted and no Perguntas left: only Mudar votos', () => {
   const films = [{ ...FILMS[0]!, mine: 'yes' as const }]
   render(
     <VoteScreen
-      deck={{ version: 3, films, left: [] }}
+      deck={{ version: 3, films, left: [], people: IARA_SEES }}
       search={LINK}
       home={HOME}
     />,
@@ -515,7 +528,7 @@ it('films still to vote on after sending lead first, the Perguntas after', () =>
   ]
   render(
     <VoteScreen
-      deck={{ version: 3, films, left: [] }}
+      deck={{ version: 3, films, left: [], people: IARA_SEES }}
       search={{ ...LINK, feito: 'votado' }}
       home={HOME}
       questions="/participar/perguntas?x"
@@ -572,4 +585,101 @@ it('without a deck, the way back to the link’s list', () => {
   expect(
     screen.getByRole('link', { name: VOTES.list }).getAttribute('href'),
   ).toBe(HOME)
+})
+
+// The full-screen card and its full sheet (#377).
+
+const sheetOf = () => within(screen.getByRole('dialog'))
+
+it('a tap on the card opens the full sheet with the public facts and only her own Evidence and Nota prevista', async () => {
+  const user = userEvent.setup()
+  render(<VoteCards deck={DECK} action="/participar/votos" />)
+  // The card: her own Nota prevista beside the IMDb.
+  expect(screen.getByText('2012 · 1h44 · IMDb 7,6 · previsto 7,1')).toBeTruthy()
+
+  await user.click(screen.getByRole('article'))
+
+  const sheet = sheetOf()
+  expect(sheet.getByRole('heading', { name: 'O Farol de Areia' })).toBeTruthy()
+  expect(
+    sheet.getByRole('link', { name: '7,6 IMDb · 12 mil votos' }),
+  ).toHaveProperty('href', 'https://www.imdb.com/title/tt9000101/')
+  expect(sheet.getByRole('link', { name: 'trailer' })).toBeTruthy()
+  expect(sheet.getByText('Vencedor do Oscar de Melhor Fotografia')).toBeTruthy()
+  expect(sheet.getByText('93% no Rotten Tomatoes')).toBeTruthy()
+  expect(
+    sheet.getByText(
+      'Uma faroleira descobre que a ilha onde vive está afundando.',
+    ),
+  ).toBeTruthy()
+  expect(sheet.getByText('Por que você vai gostar')).toBeTruthy()
+  const why = within(sheet.getByRole('list', { name: 'Por que' }))
+  expect(why.getAllByRole('listitem').map((li) => li.textContent)).toEqual([
+    'Você: deu 9 de 10 a Fronteira (2008), também de Helena PradoLetterboxd, 2025-03-02',
+  ])
+  expect(sheet.getByText(/previsto/u).textContent).toBe('previsto · Você 7,1')
+  expect(sheet.queryByText(/Bruno|Quim|8,3/u)).toBeNull()
+})
+
+it('the Dono’s sheet has every Presente’s Evidence and Nota prevista; the card, her own', async () => {
+  const user = userEvent.setup()
+  render(<VoteCards deck={OWNER_DECK} action="/participar/votos" />)
+  expect(screen.getByText('2012 · 1h44 · IMDb 7,6 · previsto 8,3')).toBeTruthy()
+
+  await user.click(screen.getByRole('button', { name: VOTES.more }))
+
+  const sheet = sheetOf()
+  expect(sheet.getByText(BILLBOARD.card.why)).toBeTruthy()
+  const why = within(sheet.getByRole('list', { name: 'Por que' }))
+  expect(why.getAllByRole('listitem').map((li) => li.textContent)).toEqual([
+    'Você: dirigido por Helena Prado, como 2 filmes a que deu nota alta',
+    'Iara: deu 9 de 10 a Fronteira (2008), também de Helena PradoLetterboxd, 2025-03-02',
+    'Quim: sem fato sobre este filme',
+  ])
+  // Her name carries the hint of how many neighbours back it.
+  expect(sheet.getByText(/previsto/u).textContent).toMatch(
+    /^previsto · Você.+ 8,3 · Iara 7,1$/u,
+  )
+})
+
+it('votes from the sheet, closes it with Fechar, and the arrow keys wait while it is open', async () => {
+  const user = userEvent.setup()
+  render(<VoteCards deck={DECK} action="/participar/votos" />)
+
+  await user.click(screen.getByRole('button', { name: VOTES.more }))
+  await user.keyboard('{ArrowRight}')
+  expect(screen.getByRole('dialog')).toBeTruthy()
+  await user.click(sheetOf().getByRole('button', { name: SHEET.close }))
+  expect(screen.queryByRole('dialog')).toBeNull()
+  expect(document.activeElement?.textContent).toBe('O Farol de Areia')
+
+  await user.click(screen.getByRole('article'))
+  await user.click(sheetOf().getByRole('button', { name: VOTES.yes }))
+  expect(screen.queryByRole('dialog')).toBeNull()
+  expect(
+    screen.getByRole('heading', { name: 'Pequenos Milagres' }),
+  ).toBeTruthy()
+  expect(posted()).toEqual([
+    ['versao', '2'],
+    ['sim', 'tt9000101'],
+  ])
+})
+
+it('the “vi” buttons are drawn but hidden until their Votos exist', () => {
+  render(<VoteCards deck={DECK} action="/participar/votos" />)
+  expect(screen.queryByRole('button', { name: VOTES.seenLiked })).toBeNull()
+  expect(screen.queryByRole('button', { name: VOTES.seenDisliked })).toBeNull()
+  expect(
+    [...document.querySelectorAll('button[hidden]')].map((b) => b.textContent),
+  ).toEqual([VOTES.seenDisliked, VOTES.seenLiked])
+})
+
+it('without a sheet the card still votes, and the sheet has the titles alone', async () => {
+  const user = userEvent.setup()
+  const films = DECK.films.map((f) => ({ ...f, sheet: null }))
+  render(<VoteCards deck={{ ...DECK, films }} action="/participar/votos" />)
+  expect(screen.getByText('2012 · 1h44 · IMDb 7,6')).toBeTruthy()
+  await user.click(screen.getByRole('button', { name: VOTES.more }))
+  expect(sheetOf().queryByRole('list', { name: 'Por que' })).toBeNull()
+  expect(sheetOf().queryByRole('link')).toBeNull()
 })

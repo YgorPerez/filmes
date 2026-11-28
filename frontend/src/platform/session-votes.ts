@@ -4,6 +4,8 @@
 // redone with the films that stay (`recommendSession` with `keep`, from
 // the request the current version asked). A yes can also redo the Session
 // on its own by changing the order. Votos never touch taste. Server only.
+// Each film of the deck carries its full sheet (#377): the public facts for
+// anyone, and only the chosen Presente's own Evidence and Nota prevista.
 //
 // Every post revalidates the link first (`resolveSessionLink`, with a
 // Presente chosen) and takes only a form of this site (`same-site.ts`). The Session is
@@ -12,12 +14,15 @@
 // screen that is current when it starts.
 
 import {
+  billboardModel,
   castVotes,
   readSession,
   recommendSession,
   sessionRedoRequest,
   sessionVersions,
   shownFilms,
+  type BillboardFilm,
+  type BillboardPerson,
   type Engine,
 } from '@filmes/engine'
 import {
@@ -34,14 +39,90 @@ import { failureOf, seeOther } from './form-post'
 import { resolveSessionLink, type SessionLinkView } from './session-link'
 import { fromThisSite } from './same-site'
 
+/** The full sheet of a film (#377), as the Cartaz's card has it: the
+ * public facts, and the Evidence and Nota prevista of whoever looks only
+ * (a Presente sees her own, the Dono everyone's). */
+export type FilmSheet = Pick<
+  BillboardFilm,
+  | 'imdbUrl'
+  | 'trailer'
+  | 'imdbRatingText'
+  | 'votesText'
+  | 'chips'
+  | 'awards'
+  | 'critics'
+  | 'synopsis'
+  | 'lines'
+  | 'withoutFact'
+  | 'coverage'
+  | 'predictedRatings'
+  | 'cautiousBetReason'
+>
+
+/** The sheets of the Session's films, by id, and the Presentes they name
+ * (whoever looks is "Você"): `viewer`'s own, or everyone's for the Dono.
+ * None when the engine could not build them (the deck shows the public
+ * card alone). */
+export async function filmSheets(
+  engine: Engine,
+  session: string,
+  /** A Presente's slug, or `all` for the Dono. */
+  viewer: string,
+): Promise<{
+  people: BillboardPerson[]
+  sheets: ReadonlyMap<string, FilmSheet>
+}> {
+  const made = await engine.run(
+    billboardModel(
+      viewer === 'all' ? { session } : { session, viewers: [viewer] },
+    ),
+    viewer === 'all' ? {} : { owner: viewer },
+  )
+  if (made.exitCode !== 0) {
+    logEngineError(made)
+    return { people: [], sheets: new Map() }
+  }
+  const { attendees, films } = made.output
+  return {
+    people: attendees.filter((p) => viewer === 'all' || p.slug === viewer),
+    sheets: new Map(films.map((film) => [film.id, sheetOf(film)])),
+  }
+}
+
+const sheetOf = (film: BillboardFilm): FilmSheet => ({
+  imdbUrl: film.imdbUrl,
+  ...(film.trailer !== undefined && { trailer: film.trailer }),
+  imdbRatingText: film.imdbRatingText,
+  votesText: film.votesText,
+  chips: film.chips,
+  ...(film.awards !== undefined && { awards: film.awards }),
+  ...(film.critics !== undefined && { critics: film.critics }),
+  synopsis: film.synopsis,
+  lines: film.lines,
+  withoutFact: film.withoutFact,
+  coverage: film.coverage,
+  predictedRatings: film.predictedRatings,
+  ...(film.cautiousBetReason !== undefined && {
+    cautiousBetReason: film.cautiousBetReason,
+  }),
+})
+
+/** A film of the deck: the link's, and its full sheet (null when the
+ * engine could not build it). */
+export type DeckFilm = SessionLinkView['films'][number] & {
+  sheet: FilmSheet | null
+}
+
 /** What the deck shows the chosen Presente: the current version, the
  * films of its screen with her standing Voto on each (the deck asks for
  * the ones she has not voted on, and sends the rest again, since her
- * latest submission is the one that counts), what her no took out, and,
- * by title, the films her last sim went to after they had left the screen
- * (`stale`: an older deck, while another Presente's no redid the Session;
- * pass 4 F3). */
-export type VoteDeck = Pick<SessionLinkView, 'version' | 'films' | 'left'> & {
+ * latest submission is the one that counts) and its full sheet, the
+ * Presentes the sheets name, what her no took out, and, by title, the
+ * films her last sim went to after they had left the screen (`stale`: an
+ * older deck, while another Presente's no redid the Session; pass 4 F3). */
+export type VoteDeck = Pick<SessionLinkView, 'version' | 'left'> & {
+  films: DeckFilm[]
+  people: BillboardPerson[]
   stale?: string[]
 }
 
@@ -52,7 +133,20 @@ export async function voteDeck(
 ): Promise<VoteDeck | null> {
   const link = await resolveSessionLink(search, engine, database)
   if (!link?.selected) return null
-  const deck = { version: link.version, films: link.films, left: link.left }
+  const { people, sheets } = await filmSheets(
+    engine,
+    link.session,
+    link.selected.person,
+  )
+  const deck = {
+    version: link.version,
+    films: link.films.map((film) => ({
+      ...film,
+      sheet: sheets.get(film.id) ?? null,
+    })),
+    people,
+    left: link.left,
+  }
   const asked = search.fora?.split(',') ?? []
   if (asked.length === 0) return deck
   const onScreen = new Set(link.films.map((f) => f.id))
