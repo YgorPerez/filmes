@@ -16,13 +16,20 @@ export interface Mood {
   readonly tags: ReadonlyArray<string>
   /** Wikidata genre QIDs, as the `genero` edges. */
   readonly genres: ReadonlyArray<string>
+  /** A Clima of the film's popularity (#387): it pulls by the IMDb votes,
+   * up for `known`, down for `unknown`, and has no tags or genres. */
+  readonly popularity: Popularity | null
 }
+
+const Popularity = Schema.Literals(['known', 'unknown'])
+export type Popularity = typeof Popularity.Type
 
 const MoodsToml = Schema.Record(
   Schema.String,
   Schema.Struct({
     tags: Schema.optionalKey(Schema.Array(Schema.String)),
     genres: Schema.optionalKey(Schema.Array(Schema.String)),
+    popularity: Schema.optionalKey(Popularity),
   }),
 )
 
@@ -37,6 +44,7 @@ export const readMoods: Effect.Effect<
     name,
     tags: (mood.tags ?? []).map((tag) => tag.toLowerCase()),
     genres: mood.genres ?? [],
+    popularity: mood.popularity ?? null,
   }))
 })
 

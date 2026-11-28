@@ -90,6 +90,13 @@ export const Weights = Schema.Struct({
    * asked in a Session. */
   pairwise: Schema.Struct({ pairs: Count }),
   mood: Schema.Struct({ weight: Weight }),
+  /** The Climas conhecido and desconhecido (#387): the bonus at the
+   * extremes and the votes of the log scale's ends. */
+  popularity: Schema.Struct({
+    weight: Weight,
+    votes_low: Count.check(Schema.isGreaterThan(0)),
+    votes_high: Count,
+  }),
   group: Schema.Struct({ weight: Weight }),
   people: Schema.Struct({ statement_weight: Weight }),
   constraints: Schema.Struct({ on_demand_reach: Count }),

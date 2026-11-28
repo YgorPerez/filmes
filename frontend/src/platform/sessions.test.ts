@@ -659,7 +659,12 @@ const expectFreshFixture = async (sessions: Sessions) => {
     'teo',
     'vera',
   ])
-  expect(options?.moods).toContain('leve')
+  expect(options?.moods).toEqual(
+    expect.arrayContaining(['leve', 'conhecido', 'desconhecido']),
+  )
+  // A Clima of popularity has nothing to turn away (#387).
+  expect(options?.noMoods).toContain('assustador')
+  expect(options?.noMoods).not.toContain('conhecido')
   expect(await sessionList(sessions)).toEqual([])
 }
 

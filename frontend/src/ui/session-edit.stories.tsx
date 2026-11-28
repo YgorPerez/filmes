@@ -17,7 +17,8 @@ const meta = {
         noSlow: true,
         similar: ['tt9006701'],
       },
-      moods: ['leve', 'tenso', 'terror'],
+      moods: ['leve', 'tenso', 'terror', 'conhecido', 'desconhecido'],
+      noMoods: ['leve', 'tenso', 'terror'],
     },
   },
 } satisfies Meta<typeof SessionEditScreen>

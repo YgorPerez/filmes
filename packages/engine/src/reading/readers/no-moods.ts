@@ -3,12 +3,18 @@
 // join the others between them, is the Restrição no_mood of that Clima
 // (#272). The item takes the negation, the words between and the Clima.
 // "nada triste" and "nada de chorar" stay the Restrição no_sad: those
-// phrases are as long, and that reader comes first.
+// phrases are as long, and that reader comes first. A Clima of popularity
+// turned away is its opposite, which `moods.ts` reads (#387).
 
 import { Effect } from 'effect'
 import { noMoodLabel } from '../../recommendation/constraints/no-mood.ts'
-import { longestOf, makeReader, scan } from '../reader.ts'
-import { MoodSynonyms, moodTable } from './moods.ts'
+import { makeReader, scan } from '../reader.ts'
+import {
+  MoodSynonyms,
+  moodTable,
+  negatedMood,
+  popularityOpposites,
+} from './moods.ts'
 
 export const noMoodsReader = makeReader({
   field: 'noMoods',
@@ -17,26 +23,17 @@ export const noMoodsReader = makeReader({
   read: (words, synonyms, context) =>
     Effect.gen(function* () {
       const table = yield* moodTable(synonyms)
+      const opposites = yield* popularityOpposites
       return scan(words, (i) => {
-        const negation = words.longest(i, context.negations)
-        if (negation === 0) return undefined
-        let at = i + negation
-        while (
-          words.clause(at) === words.clause(i) &&
-          context.fillers.has(words.key(at)) &&
-          longestOf(words, at, table) === undefined
-        )
-          at += 1
-        if (words.clause(at) !== words.clause(i)) return undefined
-        const best = longestOf(words, at, table)
-        if (best === undefined || !words.span(i, at + best.length))
+        const negated = negatedMood(words, i, table, context)
+        if (negated === undefined || opposites.has(negated.mood))
           return undefined
         return {
           start: i,
-          end: at + best.length,
+          end: negated.end,
           found: {
-            request: { noMoods: [best.value] },
-            label: noMoodLabel([best.value]),
+            request: { noMoods: [negated.mood] },
+            label: noMoodLabel([negated.mood]),
           },
         }
       })

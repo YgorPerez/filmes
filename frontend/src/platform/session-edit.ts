@@ -11,11 +11,18 @@ import {
   readMoods,
   sessionRequestEditDraft,
   type Engine,
+  type Mood,
   type Outcome,
 } from '@filmes/engine'
 import type { SessionRequestEditForm } from '#/content/session-request'
 import { appEngine } from './engine'
 import { logEngineError } from './engine-log'
+
+/** The Climas as chips: every one, and the ones "Nada de" can turn away. */
+export const moodChoices = (moods: ReadonlyArray<Mood>) => ({
+  moods: moods.map((m) => m.name),
+  noMoods: moods.filter((m) => m.popularity === null).map((m) => m.name),
+})
 
 /** What the edit page shows: the form's fields and the Climas to choose
  * from; or why there is no form. */
@@ -24,6 +31,8 @@ export type SessionEditPage =
       readonly id: string
       readonly fields: SessionRequestEditForm
       readonly moods: readonly string[]
+      /** The Climas "Nada de" can turn away (#387). */
+      readonly noMoods: readonly string[]
     }
   | 'unknown'
   | 'closed'
@@ -37,7 +46,8 @@ export interface SessionEdits {
   ): Promise<
     Outcome<SessionRequestEditForm & { readonly attendees: readonly string[] }>
   >
-  moods(): Promise<Outcome<readonly string[]>>
+  /** The Climas as chips, and the ones "Nada de" can turn away. */
+  moods(): Promise<Outcome<ReturnType<typeof moodChoices>>>
   /** Redoes Session `id` with `form`, as the Dono `owner` (a slug); gives
    * the Recomendação's warnings. */
   edit(
@@ -65,7 +75,7 @@ export function sessionEditsFromEngine(engine: Engine): SessionEdits {
     moods: async () => {
       const read = await run(readMoods)
       return read.exitCode === 0
-        ? { exitCode: 0, output: read.output.map((m) => m.name) }
+        ? { exitCode: 0, output: moodChoices(read.output) }
         : read
     },
     edit: async (id, form, owner) => {
@@ -99,7 +109,7 @@ export async function sessionEditPage(
     logEngineError(moods)
     return null
   }
-  return { id, fields, moods: moods.output }
+  return { id, fields, ...moods.output }
 }
 
 // --- the app's -----------------------------------------------------------------

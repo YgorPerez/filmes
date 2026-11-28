@@ -335,6 +335,10 @@ export const watchlistStrength = (): Strength => 'moderate'
  * comes from the rating itself, not from the strength. */
 export const imdbRatingStrength = (): Strength => 'strong'
 
+/** A film's IMDb votes, for a Clima of popularity, are exact metadata:
+ * the bonus already grows with the votes. */
+export const popularityStrength = (): Strength => 'strong'
+
 /** A Wikidata award or nomination is exact metadata. */
 export const awardStrength = (): Strength => 'strong'
 

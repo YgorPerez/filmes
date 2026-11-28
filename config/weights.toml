@@ -146,6 +146,15 @@ pairs = 10
 # de escolha (que vai de 0 a 1), vezes o multiplicador da Força.
 weight = 0.1
 
+[popularity]
+# Bônus dos Climas conhecido e desconhecido pelos votos do IMDb (#386), na
+# escala log de votes_low a votes_high, com o meio em 31.623 votos: o
+# conhecido sobe do meio para cima, o desconhecido do meio para baixo, e o
+# filme no meio não ganha nada. No extremo, o bônus é o de uma tag forte.
+weight = 0.1
+votes_low = 1000        # o mínimo de Candidato ([catalog] min_votes)
+votes_high = 1000000     # acima de votes_low
+
 [group]
 # Bônus do filme com tag de grupo numa Sessão em grupo, ou de sozinho numa
 # Sessão sozinha, somado à pontuação da Regra, vezes o multiplicador da Força.
