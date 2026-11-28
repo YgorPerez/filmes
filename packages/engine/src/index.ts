@@ -269,6 +269,11 @@ export {
 } from './sessions/redo.ts'
 export { sessionRedoRequest } from './sessions/redo-request.ts'
 export {
+  editSessionRequest,
+  sessionRequestEditDraft,
+  type SessionRequestEdit,
+} from './sessions/edit-request.ts'
+export {
   answerPairwise,
   decidePairwise,
   pairwiseAnswers,

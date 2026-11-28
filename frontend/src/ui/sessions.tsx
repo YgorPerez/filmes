@@ -10,6 +10,7 @@ import {
   SESSIONS_PATH,
   PENDING_FEEDBACK_PATH,
 } from '#/content/session-paths'
+import { sessionEditPath } from '#/content/session-edit'
 import type { CartazPage } from '#/platform/billboard'
 import type { PageReading } from '#/platform/reading'
 import type { SessionItem } from '#/platform/sessions'
@@ -22,6 +23,7 @@ import { Slip } from './kit/slip'
 import { buttonVariants } from './kit/button-variants'
 import { Alert, PostFailed } from './kit/status'
 import { names } from './session-names'
+import { SESSION_EDIT } from './session-edit.copy'
 import { Avatars, SessionDate, NewSessionLink } from './session-parts'
 import { ChosenReactions } from './billboard-chosen'
 import { Icon } from './kit/icon'
@@ -302,6 +304,14 @@ function SessionHead({ page }: { page: CartazPage }) {
                   {SESSIONS.list.feedback}
                 </a>
               </li>
+              {s.attendees.some((a) => a.owner) && (
+                <li>
+                  <a href={sessionEditPath(s.id)} className={MENU_ROW}>
+                    <Icon name="tools" />
+                    {SESSION_EDIT.menu}
+                  </a>
+                </li>
+              )}
             </ul>
             {page.sessionLink && (
               <ShareSessionLink key={s.id} url={page.sessionLink} />
