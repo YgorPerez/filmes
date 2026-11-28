@@ -1,11 +1,14 @@
 import { createServerFn } from '@tanstack/react-start'
 import { setResponseHeaders } from '@tanstack/react-start/server'
+import { ownerMiddleware } from './owner'
 import { sessionLinkHeaders, sessionLinkSearch } from './session-link-address'
 import { voteSearch } from './session-votes-address'
 
 // The server functions of the Link da Sessão's public pages: the link
 // itself (#180), the Perguntas par a par (#181) and the group swipe's deck
-// (#182). Each answers with the link's headers.
+// (#182). Each answers with the link's headers. The link and the deck
+// also know the logged-in Dono, if any: only she opens them as the opener
+// (her Cartaz's Votar, #376).
 
 const linkSearch = (value: unknown) =>
   sessionLinkSearch((value ?? {}) as Record<string, unknown>)
@@ -13,12 +16,13 @@ const linkSearch = (value: unknown) =>
 /** The link, revalidated (`resolveSessionLink`), or null; without it,
  * whether the link was issued for a Session that closed since. */
 export const readSessionLink = createServerFn({ method: 'GET' })
+  .middleware([ownerMiddleware])
   .validator(linkSearch)
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     setResponseHeaders(new Headers(sessionLinkHeaders))
     const { appSessionLink, appClosedSessionLink } =
       await import('#/platform/billboard')
-    const link = await appSessionLink(data)
+    const link = await appSessionLink(data, context.owner?.person ?? null)
     return {
       link,
       closed: link === null ? await appClosedSessionLink(data) : null,
@@ -42,9 +46,10 @@ const deckSearch = (value: unknown) => ({
 
 /** The group swipe's deck for the chosen Presente (`voteDeck`), or null. */
 export const readVoteDeck = createServerFn({ method: 'GET' })
+  .middleware([ownerMiddleware])
   .validator(deckSearch)
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     setResponseHeaders(new Headers(sessionLinkHeaders))
     const { appVoteDeck } = await import('#/platform/billboard')
-    return appVoteDeck(data)
+    return appVoteDeck(data, context.owner?.person ?? null)
   })

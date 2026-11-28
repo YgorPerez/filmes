@@ -38,6 +38,7 @@ test('a Presente’s no swaps the film and redoes the Session; her yes stays and
     const link = Object.fromEntries(new URL(url).searchParams)
     const as = (presente?: string) =>
       presente === undefined ? link : { ...link, presente }
+    // The opener votes logged in (#376); the guests, without a login.
     // The link's pages send no referrer, so a browser posts their form
     // with `Origin: null` and says where it came from in `Sec-Fetch-Site`.
     const post = (
@@ -63,15 +64,22 @@ test('a Presente’s no swaps the film and redoes the Session; her yes stays and
         engine,
         database,
         ORIGIN,
+        search.presente === 'bruno' ? 'bruno' : null,
       )
     const deck = (presente: string) =>
-      voteDeck(sessionLinkSearch(as(presente)), engine, database)
+      voteDeck(
+        sessionLinkSearch(as(presente)),
+        engine,
+        database,
+        presente === 'bruno' ? 'bruno' : null,
+      )
     const films = async () =>
       (
         await resolveSessionLink(
           sessionLinkSearch(as('bruno')),
           engine,
           database,
+          'bruno',
         )
       )?.films.map((f) => f.id)
 
@@ -204,6 +212,7 @@ test('two Presentes posting at once both count', async () => {
         engine,
         database,
         ORIGIN,
+        presente === 'bruno' ? 'bruno' : null,
       )
 
     const answers = await Promise.all([
@@ -223,6 +232,7 @@ test('two Presentes posting at once both count', async () => {
         sessionLinkSearch({ ...link, presente: 'bruno' }),
         engine,
         database,
+        'bruno',
       )
     )?.films.map((f) => f.id)
     expect(films).toHaveLength(3)
@@ -271,6 +281,7 @@ test('a sim from an older deck on a film that already left is named on the deck'
         engine,
         database,
         ORIGIN,
+        presente === 'bruno' ? 'bruno' : null,
       )
     const where = (r: Response) =>
       new URL(r.headers.get('location') ?? '', ORIGIN).searchParams
@@ -283,7 +294,9 @@ test('a sim from an older deck on a film that already left is named on the deck'
       sessionLinkSearch({ ...link, presente: 'bruno' }),
       engine,
       database,
+      'bruno',
     )
+    expect(deck?.version).toBe(2)
     expect(deck?.stale).toBeUndefined()
     const told = await voteDeck(
       {
@@ -292,12 +305,107 @@ test('a sim from an older deck on a film that already left is named on the deck'
       },
       engine,
       database,
+      'bruno',
     )
     // Only a film the Session showed and no longer shows is named.
     expect(told?.stale).toEqual([first.films[1]?.title])
 
     const onTime = where(await post('iara', `versao=2&sim=${a}`))
     expect(onTime.get('fora')).toBeNull()
+  } finally {
+    await engine.dispose()
+  }
+})
+
+test('only the logged-in Dono votes as the opener; a visitor with the link cannot', async () => {
+  const fixture = useFixture()
+  const engine = makeEngine(fixture.vars)
+  const database = join(fixture.root, 'auth.sqlite')
+  try {
+    const first = await fixture.ok(
+      recommendSession({ attendees: ['dono', 'iara'], count: 3 }),
+      {},
+      { owner: 'bruno' },
+    )
+    const session = first.session.id
+    const [a, b, c] = first.films.map((f) => f.id)
+    const url = await issueSessionLink(
+      session,
+      'bruno',
+      engine,
+      database,
+      ORIGIN,
+    )
+    if (!url) throw new Error('Expected a Session link')
+    // The Votar button's address: the link's swipe, as the opener.
+    const asOpener = {
+      ...Object.fromEntries(new URL(url).searchParams),
+      presente: 'bruno',
+    }
+    const post = (viewer: string | null, body: string) =>
+      voteAction(
+        new Request(
+          `${ORIGIN}/participar/votos?${new URLSearchParams(asOpener)}`,
+          {
+            method: 'POST',
+            headers: {
+              origin: ORIGIN,
+              'content-type': 'application/x-www-form-urlencoded',
+            },
+            body,
+          },
+        ),
+        engine,
+        database,
+        ORIGIN,
+        viewer,
+      )
+    const films = async () =>
+      (
+        await resolveSessionLink(
+          sessionLinkSearch(asOpener),
+          engine,
+          database,
+          'bruno',
+        )
+      )?.films.map((f) => f.id)
+
+    // Logged out, or logged in as another Dono: the link does not open as
+    // her, and nothing is recorded.
+    for (const viewer of [null, 'vera']) {
+      expect(
+        (
+          await resolveSessionLink(
+            sessionLinkSearch(asOpener),
+            engine,
+            database,
+            viewer,
+          )
+        )?.selected,
+      ).toBeNull()
+      expect(
+        await voteDeck(sessionLinkSearch(asOpener), engine, database, viewer),
+      ).toBeNull()
+      const refused = await post(viewer, `versao=1&nao=${b}`)
+      expect(refused.status).toBe(303)
+      expect(refused.headers.get('location')).toMatch(/^\/participar\?/)
+      expect(await films()).toEqual([a, b, c])
+    }
+
+    // Logged in as her: her deck, and her no swaps the film as a guest's.
+    expect(
+      (await voteDeck(sessionLinkSearch(asOpener), engine, database, 'bruno'))
+        ?.films,
+    ).toHaveLength(3)
+    const voted = await post('bruno', `versao=1&sim=${a}&nao=${b}`)
+    expect(
+      new URL(voted.headers.get('location') ?? '', ORIGIN).searchParams.get(
+        'feito',
+      ),
+    ).toBe('regerada')
+    const now = await films()
+    expect(now).toContain(a)
+    expect(now).not.toContain(b)
   } finally {
     await engine.dispose()
   }
@@ -329,6 +437,7 @@ test('the deck’s sheet has the public facts and only her own Evidence and Nota
       sessionLinkSearch({ ...link, presente: 'teo' }),
       engine,
       database,
+      null,
     )
     const owner = await filmSheets(engine, session, 'all')
 
