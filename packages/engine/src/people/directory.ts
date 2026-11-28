@@ -175,6 +175,7 @@ const PERSON_TABLES = [
   'vetos',
   'ajustes',
   'perguntas_abertas',
+  'escolhas_de_grupo',
   'apelidos',
 ] as const
 

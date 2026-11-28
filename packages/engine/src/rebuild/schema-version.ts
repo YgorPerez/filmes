@@ -4,4 +4,4 @@
 // `schemaHash()`, put the number it gives here. The database on the VPS
 // then needs `pnpm db:publish --build` along with the deploy.
 
-export const SCHEMA_VERSION = 54695172
+export const SCHEMA_VERSION = 35106989

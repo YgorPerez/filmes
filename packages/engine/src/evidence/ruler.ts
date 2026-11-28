@@ -331,6 +331,11 @@ export const statedStrength = (
  * it on a list. Moderate, whatever its age (#280). */
 export const watchlistStrength = (): Strength => 'moderate'
 
+/** An Escolha de grupo's film as a neighbourhood seed (#415): she said a
+ * group of 3 films is most like her, not that she liked this one. Weak,
+ * like a pairwise answer's Nota. */
+export const groupPickStrength = (): Strength => 'weak'
+
 /** The IMDb rating as a film line: exact metadata, strong. The bonus size
  * comes from the rating itself, not from the strength. */
 export const imdbRatingStrength = (): Strength => 'strong'

@@ -28,7 +28,6 @@ import type { GitError } from '../data/git.ts'
 import {
   isMapping,
   isSequence,
-  pyStrValue,
   pyTruthy,
   yamlToJson,
   type YamlMapping,
@@ -50,7 +49,16 @@ import {
   type SqliteError,
 } from '../sqlite/Sqlite.ts'
 import { sessionOwner } from './feedback.ts'
-import { isOpen, readSession, writeSession } from './file.ts'
+import { readAttendedSession, readSession, writeSession } from './file.ts'
+import {
+  addGroupPicks,
+  discardWaitingGroupPicks,
+  groupChoices,
+  markGroupPicks,
+  peopleWithGroupPicks,
+  waitingGroupPicksOf,
+  type GroupChoice,
+} from './group-pick.ts'
 import { authorFor } from './open.ts'
 
 /** The chosen film's Nota: 3,5 of 5, weak on the ruler. */
@@ -89,6 +97,8 @@ export interface WaitingAnswer {
 export interface WaitingAnswers {
   readonly person: string
   readonly name: string
+  /** The groups she picked (#415), before the pairs. */
+  readonly groups: ReadonlyArray<GroupChoice>
   readonly answers: ReadonlyArray<WaitingAnswer>
 }
 
@@ -121,11 +131,13 @@ const filmsOf = (answer: Stored): string[] =>
 const waits = (answer: Stored) =>
   answer.recorded_on === undefined && answer.discarded_on === undefined
 
-/** Discard the answers that have not become taste yet. */
+/** Discard the answers that have not become taste yet, the groups picked
+ * too. */
 export function discardWaitingAnswers(
   front: Map<string, YamlValue>,
   today: string,
 ) {
+  discardWaitingGroupPicks(front, today)
   const answers = storedAnswers(front)
   if (answers.length === 0) return
   front.set(
@@ -142,25 +154,7 @@ const invalid = (message: string) => engineError('invalid_usage', message)
 
 /** The open Session, with `person` among its Presentes. */
 const sessionFor = (request: PairwiseRequest) =>
-  Effect.gen(function* () {
-    const file = yield* readSession(request.session)
-    const { frontmatter } = file
-    if (!isOpen(frontmatter))
-      return yield* engineError(
-        'closed_session',
-        `a Sessão ${request.session} já tem Feedback`,
-      )
-    const attendees = frontmatter.get('attendees')
-    const slugs =
-      pyTruthy(attendees) && isSequence(attendees)
-        ? attendees.map((a) => pyStrValue(a))
-        : []
-    if (!slugs.includes(request.person))
-      return yield* invalid(
-        `${request.person} não está entre os Presentes da Sessão ${request.session}`,
-      )
-    return file
-  })
+  readAttendedSession(request.session, request.person)
 
 const QUESTION_FILMS = `
 SELECT f.id, f.titulo, f.ano
@@ -316,7 +310,8 @@ export const answerPairwise = (
   })
 
 /** What waits for the Dono's yes, by Presente in the order each first
- * answered: each answer with a choice, as chosen and other. */
+ * answered: the groups she picked, and each answer with a choice, as
+ * chosen and other. */
 export const pairwiseAnswers = (
   session: string,
 ): Effect.Effect<
@@ -329,7 +324,13 @@ export const pairwiseAnswers = (
     const waiting = storedAnswers(frontmatter)
       .map(plain)
       .filter((a) => waits(a) && typeof a.choice === 'string')
-    if (waiting.length === 0) return []
+    const people = [
+      ...new Set([
+        ...peopleWithGroupPicks(frontmatter),
+        ...waiting.map((a) => String(a.person)),
+      ]),
+    ]
+    if (people.length === 0) return []
     return yield* (yield* Sqlite).read((db) =>
       Effect.gen(function* () {
         const ids = [...new Set(waiting.flatMap(filmsOf))]
@@ -339,28 +340,30 @@ export const pairwiseAnswers = (
             filmOf(row),
           ]),
         )
-        const byPerson = new Map<string, WaitingAnswer[]>()
-        for (const answer of waiting) {
-          const person = String(answer.person)
-          const chosen = String(answer.choice)
-          const other = filmsOf(answer).find((f) => f !== chosen)!
-          byPerson.set(person, [
-            ...(byPerson.get(person) ?? []),
-            { chosen: films.get(chosen)!, other: films.get(other)! },
-          ])
-        }
         const names = new Map(
           (yield* db.all(
             `SELECT j.value AS slug, COALESCE(p.nome, j.value) AS nome
              FROM json_each(?) j LEFT JOIN pessoas p ON p.slug = j.value`,
-            JSON.stringify([...byPerson.keys()]),
+            JSON.stringify(people),
           )).map((row) => [text(row, 'slug'), text(row, 'nome')]),
         )
-        return [...byPerson].map(([person, answers]) => ({
-          person,
-          name: names.get(person)!,
-          answers,
-        }))
+        const out: WaitingAnswers[] = []
+        for (const person of people) {
+          const groups = yield* groupChoices(
+            db,
+            waitingGroupPicksOf(frontmatter, person).flatMap(([, g]) => g),
+          )
+          const answers = waiting
+            .filter((a) => a.person === person)
+            .map((answer) => {
+              const chosen = String(answer.choice)
+              const other = filmsOf(answer).find((f) => f !== chosen)!
+              return { chosen: films.get(chosen)!, other: films.get(other)! }
+            })
+          if (groups.length > 0 || answers.length > 0)
+            out.push({ person, name: names.get(person)!, groups, answers })
+        }
+        return out
       }),
     )
   })
@@ -411,15 +414,15 @@ const recordAnswers = (
         added += Number(result.added)
       }
     }
-    if (added > 0) yield* savePersonAndSync(db, person)
     return { person, added }
   })
 
 /** The Dono's decision on a Presente's waiting answers. Recorded, the
  * chosen films become Notas of `PAIRWISE_RATING` and the others Já vistos
- * with no Nota, skipping a film she already has a Já visto for; either
- * way the answers stop waiting. One commit. Works on a closed Session too:
- * the answers are still there. */
+ * with no Nota, skipping a film she already has a Já visto for, and each
+ * group she picked an Escolha de grupo (#415); either way the answers stop
+ * waiting. One commit. Works on a closed Session too: the answers are
+ * still there. */
 export const decidePairwise = (
   decision: PairwiseDecision,
 ): Effect.Effect<
@@ -447,6 +450,7 @@ export const decidePairwise = (
           const mine = stored
             .map((item, index) => [index, plain(item)] as const)
             .filter(([, a]) => a.person === slug && waits(a))
+          const picks = waitingGroupPicksOf(front, slug)
           let added = 0
           if (record) {
             const recorded = yield* recordAnswers(db, {
@@ -455,18 +459,33 @@ export const decidePairwise = (
               session,
               today,
             })
-            person = recorded.person
-            added = recorded.added
+            const picked = yield* addGroupPicks(yield* required(db), {
+              person: recorded.person,
+              groups: picks.flatMap(([, groups]) => groups),
+              session,
+              today,
+            })
+            person = picked.person
+            added = recorded.added + picked.added
+            if (added > 0) yield* savePersonAndSync(db, person)
           }
+          const mark = record ? 'recorded_on' : 'discarded_on'
           if (mine.length > 0) {
             for (const [index] of mine)
               stored[index] = new Map([
                 ...(stored[index] as YamlMapping),
-                [record ? 'recorded_on' : 'discarded_on', today],
+                [mark, today],
               ])
             front.set('pairwise', stored)
-            yield* writeSession(session, front, read.body)
           }
+          markGroupPicks(
+            front,
+            picks.map(([index]) => index),
+            mark,
+            today,
+          )
+          if (mine.length > 0 || picks.length > 0)
+            yield* writeSession(session, front, read.body)
           return { person: slug, added }
         }),
     )

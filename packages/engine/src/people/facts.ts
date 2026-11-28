@@ -20,6 +20,7 @@ import { readPeople } from './people.ts'
 import {
   items,
   type Adjustment,
+  type GroupPick,
   type OpenQuestion,
   type Person,
   type Seen,
@@ -146,6 +147,16 @@ export const seenId = (slug: string, seen: Seen): string =>
     seen.source,
     seen.target,
     ratingValue(seen.rating),
+  )
+
+export const groupPickId = (slug: string, pick: GroupPick): string =>
+  factId(
+    'escolhas_de_grupo',
+    slug,
+    pick.date,
+    pick.source,
+    pick.group,
+    pick.films.join(','),
   )
 
 /** About a film, "ama" is a Nota 5 and "odeia" a Nota 1; nothing else is a
@@ -323,6 +334,27 @@ const insertSeen = (db: Connection, person: Person) =>
     }
   })
 
+/** The Escolhas de grupo: one row per film of the group. */
+const insertGroupPicks = (db: Connection, person: Person) =>
+  Effect.gen(function* () {
+    const slug = person.slug
+    for (const pick of yield* items(person, 'group_picks')) {
+      const id = groupPickId(slug, pick)
+      for (const [order, film] of pick.films.entries())
+        yield* db.run(
+          'INSERT OR IGNORE INTO escolhas_de_grupo (fato_id, pessoa, grupo, rotulo, filme_id, ordem, data, fonte) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+          id,
+          slug,
+          pick.group,
+          pick.label,
+          film,
+          order,
+          pick.date,
+          pick.source,
+        )
+    }
+  })
+
 /** Inserts the Pessoa's rows (`pessoas.carregar`). */
 export const loadPerson = (
   db: Connection,
@@ -332,6 +364,7 @@ export const loadPerson = (
     yield* insertFrontmatter(db, person)
     yield* insertStatements(db, person)
     yield* insertSeen(db, person)
+    yield* insertGroupPicks(db, person)
   })
 
 /** The Pessoa tables that came after databases already built: a sync
@@ -374,7 +407,14 @@ const deleteRows = (db: Connection, slug: string | null) => {
       `DELETE FROM notas WHERE ${of}(fato_id LIKE 'declarados:%' OR fato_id LIKE 'relatos:%' OR fato_id LIKE 'vistos:%')`,
       `DELETE FROM ja_visto WHERE ${of}fato_id LIKE 'vistos:%'`,
       `DELETE FROM declarados WHERE ${of}fato_id LIKE 'declarados:%'`,
-      ...['vetos', 'ajustes', 'perguntas_abertas', 'relatos', 'apelidos'].map(
+      ...[
+        'vetos',
+        'ajustes',
+        'perguntas_abertas',
+        'relatos',
+        'escolhas_de_grupo',
+        'apelidos',
+      ].map(
         (table) =>
           slug === null
             ? `DELETE FROM ${table}`

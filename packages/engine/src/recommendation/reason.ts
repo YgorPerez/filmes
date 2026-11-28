@@ -7,7 +7,9 @@
 // de X" goes before "com X" and its "também com X"), Declarados and
 // Relatos about an entity (`signals/stated.ts`: `disse "..."; dirigido por
 // X`), the MovieLens neighbours (`signals/neighbors.ts`: "deu 10 de 10 a
-// F; das 1.000 pessoas...") and the taste neighbours (`wording.ts`). Any other line
+// F; das 1.000 pessoas...", and an Escolha de grupo's "escolheu o grupo de
+// ...; das 1.000 pessoas que deram 8 ou mais a F...") and the taste
+// neighbours (`wording.ts`). Any other line
 // (Já visto, a film line, a guess) is no Motivo.
 //
 // Only Evidence for the film counts: its contribution is positive. The
@@ -47,6 +49,10 @@ const READINGS: ReadonlyArray<readonly [RegExp, ReasonKind]> = [
       String.raw`^${SEED} (.+?)${OWN}; das [\d.]+ pessoas que deram [48] ou mais a ele, \d+% (?:fizeram o mesmo com este|deram 8 ou mais a este)$`,
       'u',
     ),
+    'film',
+  ],
+  [
+    /^escolheu o grupo de .+?; das [\d.]+ pessoas que deram 8 ou mais a (.+), \d+% fizeram o mesmo com este$/u,
     'film',
   ],
   [/^[\d.]+ pessoas de gosto parecido deram /u, 'taste'],

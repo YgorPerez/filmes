@@ -48,9 +48,17 @@ const STATED: Readonly<Record<string, PluralWording>> = {
 /** How a seed Nota opens its line: "deu 9 de 10 a X". */
 const RATED: PluralWording = { one: 'deu ', many: 'deram ', start: true }
 
+/** How an Escolha de grupo opens its line (#415). */
+const PICKED: PluralWording = {
+  one: 'escolheu o grupo de ',
+  many: 'escolheram o grupo de ',
+  start: true,
+}
+
 /** The plurals of a seed line's openings. */
 export const SEED_PLURALS: ReadonlyArray<PluralWording> = [
   RATED,
+  PICKED,
   ...Object.values(STATED),
 ]
 
@@ -144,6 +152,20 @@ export const neighborhoodText = (
   `das ${integerText(base)} pessoas que deram 8 ou mais a ele, ` +
   `${Math.floor((100 * both) / base)}% ` +
   (seedBelowCut ? 'deram 8 ou mais a este' : 'fizeram o mesmo com este')
+
+/** An Escolha de grupo's neighbourhood line (#415): "escolheu o grupo de
+ * Up, Amélie e A Vida É Bela; das 3.104 pessoas que deram 8 ou mais a Up
+ * (2009), 64% fizeram o mesmo com este". The group by its films' titles;
+ * the share is the seed film's, named whole since she never rated it. */
+export const groupPickText = (
+  titles: ReadonlyArray<string>,
+  film: string,
+  base: number,
+  both: number,
+): string =>
+  `${PICKED.one}${listText(titles)}; das ${integerText(base)} pessoas que ` +
+  `deram 8 ou mais a ${film}, ${Math.floor((100 * both) / base)}% ` +
+  'fizeram o mesmo com este'
 
 const MONTHS = [
   'jan',

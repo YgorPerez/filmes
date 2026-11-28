@@ -294,6 +294,16 @@ export {
   type WaitingAnswers,
 } from './sessions/pairwise.ts'
 export {
+  answerGroupPick,
+  groupPickQuestion,
+  groupPickSource,
+  MAX_GROUP_PICKS,
+  type GroupChoice,
+  type GroupPickAnswer,
+  type GroupPickRequest,
+} from './sessions/group-pick.ts'
+export { readFilmGroups, type FilmGroup } from './sessions/film-groups.ts'
+export {
   castVotes,
   votedBy,
   latestVotes,
@@ -407,6 +417,7 @@ export {
   STATEMENT_REACTIONS,
   statementLine,
   type Adjustment,
+  type GroupPick,
   type OpenQuestion,
   type Person,
   type Section,
