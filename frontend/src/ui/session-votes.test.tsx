@@ -430,7 +430,7 @@ it('the dragged card follows the finger and shows the Voto it is near', () => {
   fireEvent.pointerDown(card, { clientX: 200 })
   fireEvent.pointerMove(card, { clientX: 250 })
   expect(screen.getByText(VOTES.stampYes, STAMP)).toBeTruthy()
-  expect(card.style.transform).toBe('translateX(50px) rotate(3deg)')
+  expect(card.style.transform).toBe('translate(50px, 0px) rotate(3deg)')
   fireEvent.pointerMove(card, { clientX: 150 })
   expect(screen.getByText(VOTES.stampNo, STAMP)).toBeTruthy()
   fireEvent.pointerMove(card, { clientX: 210 })
@@ -665,13 +665,71 @@ it('votes from the sheet, closes it with Fechar, and the arrow keys wait while i
   ])
 })
 
-it('the “vi” buttons are drawn but hidden until their Votos exist', () => {
+it('★ and ↑ are vi e gostei, 👎 and ↓ vi e não gostei; the recap counts them and says they leave', async () => {
+  const user = userEvent.setup()
   render(<VoteCards deck={DECK} action="/participar/votos" />)
-  expect(screen.queryByRole('button', { name: VOTES.seenLiked })).toBeNull()
-  expect(screen.queryByRole('button', { name: VOTES.seenDisliked })).toBeNull()
+
+  await user.click(screen.getByRole('button', { name: VOTES.seenLiked }))
+  expect(screen.getByRole('status').textContent).toBe(
+    VOTES.now(2, 3, 'Pequenos Milagres'),
+  )
+  await user.keyboard('{ArrowDown}')
+  await user.keyboard('{ArrowUp}')
+
+  expect(screen.getByRole('status').textContent).toBe(VOTES.end(0, 0, 3))
   expect(
-    [...document.querySelectorAll('button[hidden]')].map((b) => b.textContent),
-  ).toEqual([VOTES.seenDisliked, VOTES.seenLiked])
+    screen.getByRole('heading', { name: VOTES.summary(0, 0, 3) }),
+  ).toBeTruthy()
+  expect(
+    screen.getByText(
+      VOTES.leaving([
+        'O Farol de Areia',
+        'Pequenos Milagres',
+        'Noite de Estreia',
+      ]),
+    ),
+  ).toBeTruthy()
+  const row = within(
+    screen.getByRole('group', { name: VOTES.voteOn('Pequenos Milagres') }),
+  )
+  expect(
+    row
+      .getByRole('button', { name: VOTES.seenDisliked })
+      .getAttribute('aria-pressed'),
+  ).toBe('true')
+  await user.click(row.getByRole('button', { name: VOTES.yes }))
+  expect(posted()).toEqual([
+    ['versao', '2'],
+    ['gostei', 'tt9000101'],
+    ['sim', 'tt9000601'],
+    ['gostei', 'tt9000701'],
+  ])
+  expect(
+    screen.getByRole('heading', { name: VOTES.summary(1, 0, 2) }),
+  ).toBeTruthy()
+})
+
+it('a drag up is vi e gostei and down vi e não gostei, with their stickers', () => {
+  motion(false)
+  render(<VoteCards deck={DECK} action="/participar/votos" />)
+  const card = () => screen.getByRole('article')
+
+  fireEvent.pointerDown(card(), { clientX: 200, clientY: 400 })
+  fireEvent.pointerMove(card(), { clientX: 210, clientY: 340 })
+  expect(screen.getByText(VOTES.stampSeenLiked, STAMP)).toBeTruthy()
+  expect(card().style.transform).toBe('translate(10px, -60px) rotate(0.6deg)')
+  fireEvent.pointerUp(card(), { clientX: 210, clientY: 300 })
+
+  fireEvent.pointerDown(card(), { clientX: 200, clientY: 300 })
+  fireEvent.pointerMove(card(), { clientX: 200, clientY: 360 })
+  expect(screen.getByText(VOTES.stampSeenDisliked, STAMP)).toBeTruthy()
+  fireEvent.pointerUp(card(), { clientX: 200, clientY: 400 })
+
+  expect(posted()).toEqual([
+    ['versao', '2'],
+    ['gostei', 'tt9000101'],
+    ['naogostei', 'tt9000601'],
+  ])
 })
 
 it('without a sheet the card still votes, and the sheet has the titles alone', async () => {

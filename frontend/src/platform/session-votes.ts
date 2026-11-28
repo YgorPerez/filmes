@@ -1,6 +1,8 @@
 // The group swipe on the Link da Sessão (#182). A Presente votes yes or no
-// on each film of the screen; the deck's form posts the Votos to
-// `/participar/votos`. A no is a Trocar from that Presente: the Session is
+// on each film of the screen, or says she saw it and liked it or not (Vi e
+// gostei / Vi e não gostei, #378); the deck's form posts it all to
+// `/participar/votos`. A "vi" takes the film out like a no, and her taste
+// waits for the Dono's yes (her own goes in at once). A no is a Trocar from that Presente: the Session is
 // redone with the films that stay (`recommendSession` with `keep`, from
 // the request the current version asked). A yes can also redo the Session
 // on its own by changing the order. Votos never touch taste. Server only.
@@ -253,12 +255,23 @@ export async function voteAction(
       ...filmsOf(form, 'sim').map((film) => ({ film, vote: 'yes' as const })),
       ...filmsOf(form, 'nao').map((film) => ({ film, vote: 'no' as const })),
     ]
+    const seen = [
+      ...filmsOf(form, 'gostei').map((film) => ({
+        film,
+        reaction: 'like' as const,
+      })),
+      ...filmsOf(form, 'naogostei').map((film) => ({
+        film,
+        reaction: 'dislike' as const,
+      })),
+    ]
     const cast = await engine.run(
       castVotes({
         session: link.session,
         person: link.selected.person,
         version: Number(form.get('versao')) || link.version,
         votes,
+        seen,
       }),
     )
     if (cast.exitCode !== 0) {

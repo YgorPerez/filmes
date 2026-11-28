@@ -213,29 +213,32 @@ export function LinkHeader({
   )
 }
 
-/** The veto rule, with Não and Sim in bold behind a filled dot of the
+/** The veto rule, with Não, Sim and Vi in bold behind a filled dot of the
  * buttons' colour and glyph, so "Não tira o filme" reads as the button,
  * not as a negation. The dot is a shape the buttons never take: an
  * outlined pill here read as a button to tap (pass 4 F2). */
 export function VoteRule() {
   const { rule } = VOTES
-  const term = (kind: 'no' | 'yes') => (
+  const look = {
+    no: { icon: 'close', fill: 'bg-sticker-pink', word: rule.no },
+    yes: { icon: 'check', fill: 'bg-sticker-green', word: rule.yes },
+    seen: { icon: 'star', fill: 'bg-sticker-yellow', word: rule.seen },
+  } as const
+  const term = (kind: keyof typeof look) => (
     <span className="inline-flex items-baseline gap-1 font-bold whitespace-nowrap">
       <span
         aria-hidden="true"
-        className={`inline-flex size-[18px] shrink-0 items-center justify-center self-center rounded-full text-on-sticker ${kind === 'no' ? 'bg-sticker-pink' : 'bg-sticker-green'}`}
+        className={`inline-flex size-[18px] shrink-0 items-center justify-center self-center rounded-full text-on-sticker ${look[kind].fill}`}
       >
-        <Icon
-          name={kind === 'no' ? 'close' : 'check'}
-          className="size-[12px]"
-        />
+        <Icon name={look[kind].icon} className="size-[12px]" />
       </span>
-      {kind === 'no' ? rule.no : rule.yes}
+      {look[kind].word}
     </span>
   )
   return (
     <p className="max-w-[60ch] text-pretty">
-      {term('no')} {rule.noDoes} {term('yes')} {rule.yesDoes}
+      {term('no')} {rule.noDoes} {term('yes')} {rule.yesDoes} {term('seen')}{' '}
+      {rule.seenDoes}
     </p>
   )
 }
