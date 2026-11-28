@@ -136,8 +136,7 @@ const above = (
     })
     .filter(({ excess }) => excess > 0)
     .toSorted(
-      (a, b) =>
-        b.excess - a.excess || a.item.label.localeCompare(b.item.label),
+      (a, b) => b.excess - a.excess || a.item.label.localeCompare(b.item.label),
     )
     .slice(0, TOP)
     .map(({ item }) => item)
