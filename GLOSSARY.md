@@ -121,7 +121,7 @@ Uma Recomendação de uma Sessão aberta. Quando o Dono pede outra lista na mesm
 _Evitar_: rodada, tentativa
 
 **Mantido** [kept, `kept`]:
-Um filme da versão anterior que o Dono quer na próxima. Ao regerar, ocupa um dos números dos Mantidos, em ordem de Votos, e só as vagas ganham filme novo. Na edição da Sessão (dos Presentes ou do pedido), cada Mantido fica no próprio número. Sai por Restrição ou Veto do pedido refeito, ou por estar abaixo da nota mínima do IMDb, nunca por gosto novo. O que sai da versão anterior vira uma saída, com o motivo: Já visto, trocado, a Restrição, o Veto ou a nota mínima.
+Um filme da versão anterior que o Dono quer na próxima. Ao regerar, ocupa um dos números dos Mantidos, na ordem das Ordens dos Presentes, e só as vagas ganham filme novo. Na edição da Sessão (dos Presentes ou do pedido), cada Mantido fica no próprio número. Sai por Restrição ou Veto do pedido refeito, ou por estar abaixo da nota mínima do IMDb, nunca por gosto novo. O que sai da versão anterior vira uma saída, com o motivo: Já visto, trocado, a Restrição, o Veto ou a nota mínima.
 _Evitar_: fixado, travado
 
 **Cartaz** [billboard, `Billboard`]:
@@ -153,8 +153,16 @@ O que a versão da Sessão guarda quando passaram menos filmes do que o pedido: 
 _Evitar_: aviso, erro
 
 **Voto** [vote, `votes`, `replaces`; `yes`, `no`]:
-O sim ou o não de um Presente a um filme da tela, dado no celular pelo Link da Sessão, um filme de cada vez (o swipe do grupo, #182). Fica na versão da Sessão com quem votou e a data. O não é um Trocado daquele Presente: o filme sai e a Sessão regera. Na contagem vale o último envio de cada Presente, cujo primeiro Voto tem `replaces: true`. Os Mantidos com mais sins vêm primeiro, nos números que os Mantidos já tinham, e os empates mantêm a ordem. Se a ordem muda, o sim por si só regera a Sessão (#205). Voto não é Fato e não mexe no gosto.
+O sim ou o não de um Presente a um filme da tela, dado no celular pelo Link da Sessão, um filme de cada vez (o swipe do grupo, #182). Fica na versão da Sessão com quem votou e a data. O não é um Trocado daquele Presente: o filme sai e a Sessão regera. Na contagem vale o último envio de cada Presente, cujo primeiro Voto tem `replaces: true` e leva a Ordem dela. O sim sozinho não mexe na ordem: quem ordena é a Ordem. Voto não é Fato e não mexe no gosto.
 _Evitar_: curtida, like
+
+**Vi e gostei / Vi e não gostei** [seen gesture, `SeenGesture`, `seen_gestures`; reação [reaction: `like`, `dislike`]]:
+Os dois gestos do swipe do grupo para um filme que o Presente já viu: para cima (★, ↑) vi e gostei, para baixo (👎, ↓) vi e não gostei. Vão no mesmo envio dos Votos, mas não são Voto: o filme sai da lista do grupo na hora, como o Já vi do Cartaz, e outro pode entrar no lugar. Viram um Já visto sem Nota e um Declarado específico sem número (gosta ou não gosta) daquele Presente sobre o filme, com a Fonte do Cartaz. Os do Dono da Sessão vão para o arquivo dele na hora; os de um convidado esperam em `seen_gestures` da Sessão o sim do Dono, no mesmo lugar das Perguntas par a par (#378).
+_Evitar_: superlike, já vi do swipe
+
+**Ordem** [ranking, `ranking`, `rankSums`]:
+Os filmes a que um Presente deu sim, na ordem em que ele os quer, montada no fim do swipe arrastando a lista (#379). Começa na ordem do motor, ou na Ordem anterior dele; o filme que entrou depois vai para o meio. Fica no primeiro Voto do último envio dele. A lista da Sessão segue a menor soma das posições entre os Presentes que ordenaram, nos números que os Mantidos já tinham; um filme que um Presente ainda não pôs na Ordem conta como o meio da lista dele. Empate, ou ninguém ordenou: a Regra de escolha. Se a ordem muda, a Ordem por si só regera a Sessão.
+_Evitar_: ranking, classificação, preferência
 
 **Saída** [dropped, `dropped`; causa: `seen`, `swapped`, `constraint`, `veto`, `min_rating`, `mood`]:
 Um filme da versão anterior que não está na nova, com a causa. A causa `mood` é de quem caiu porque o Dono pediu outro Clima: o filme continua elegível na Sessão. A causa não é Motivo: Motivo é por que um filme está na Recomendação.
@@ -163,7 +171,7 @@ Um filme da versão anterior que não está na nova, com a causa. A causa `mood`
 O pôster do filme, vindo do TMDB. Não é o Cartaz, que é a Recomendação inteira.
 
 **Regerar** [regenerate, `regenerate`]:
-Fazer a próxima versão da Sessão a partir do Cartaz colado, trocando só o que caiu (Já visto, Trocar, Restrição ou Veto novos). O resto fica como Mantido; os que entram não levam marca (#326).
+Fazer a próxima versão da Sessão a partir do Cartaz colado, trocando só o que caiu (Já visto, Trocar, Restrição ou Veto novos). O resto fica como Mantido; os que entram levam o selo "novo" (#380).
 _Evitar_: refazer do zero, recomendar de novo
 
 **Filmes mostrados** [shown films, `shown`]:

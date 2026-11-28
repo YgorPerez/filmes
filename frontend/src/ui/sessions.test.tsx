@@ -377,6 +377,19 @@ describe('a Session’s page, the marks and the Link da Sessão', () => {
     expect(await navigator.clipboard.readText()).toBe(sessionLink)
     expect(screen.getByRole('status').textContent).toBe('Link copiado')
   })
+
+  it('offers the Dono her own swipe, by the login, only when she may vote (#376)', () => {
+    const voteLink = '/participar/votar?sessao=x&chave=y&presente=bruno'
+    render(<SessionScreen page={{ ...PAGE, voteLink }} />)
+    expect(
+      screen.getByRole('link', { name: SESSIONS.session.vote }),
+    ).toHaveProperty('href', `http://localhost:3000${voteLink}`)
+    cleanup()
+    render(<SessionScreen page={{ ...PAGE, voteLink: null }} />)
+    expect(
+      screen.queryByRole('link', { name: SESSIONS.session.vote }),
+    ).toBeNull()
+  })
 })
 
 describe('a Session’s page, the Link da Sessão as a QR code (#396)', () => {

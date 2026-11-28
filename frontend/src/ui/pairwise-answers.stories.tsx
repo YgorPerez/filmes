@@ -1,4 +1,5 @@
-// The Perguntas par a par that wait for the Dono, by Presente.
+// The Perguntas par a par and the swipe's Vi e gostei / Vi e não gostei
+// that wait for the Dono, by Presente.
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, within } from 'storybook/test'
 import { PairwiseAnswers } from './pairwise-answers'
@@ -19,11 +20,16 @@ const meta = {
           { chosen: FAROL, other: PONTE },
           { chosen: MILAGRES, other: FAROL },
         ],
+        seen: [],
       },
       {
         person: 'iara',
         name: 'Iara',
         answers: [{ chosen: PONTE, other: FAROL }],
+        seen: [
+          { film: MILAGRES, reaction: 'like' },
+          { film: FAROL, reaction: 'dislike' },
+        ],
       },
     ],
   },

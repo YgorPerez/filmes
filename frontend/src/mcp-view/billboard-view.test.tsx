@@ -16,6 +16,7 @@ import {
 import { CHOSEN_OUTSIDE, CLOSED, MODEL } from '../ui/billboard.fixture'
 import { SEND_STATUS } from '../ui/billboard-send.copy'
 import { BILLBOARD } from '../ui/billboard.copy'
+import { NEW_STICKER } from '../ui/kit/sticker'
 import { BillboardView, type Host } from './billboard-view'
 import { mountView, type ViewApp } from './mount-view'
 import { AGAIN, replyMessage, type ToolResult } from './view-model'
@@ -99,6 +100,12 @@ describe('the view shows', () => {
     render(<BillboardView result={shown} host={fakeHost(json({}))} />)
     expect(card(2).getByText(BILLBOARD.card.bet)).toBeTruthy()
     expect(card(1).queryByText(BILLBOARD.card.bet)).toBeNull()
+  })
+
+  it('the NOVO sticker on the film that came in with this version (#380)', () => {
+    render(<BillboardView result={shown} host={fakeHost(json({}))} />)
+    expect(card(2).getByText(NEW_STICKER)).toBeTruthy()
+    expect(card(1).queryByText(NEW_STICKER)).toBeNull()
   })
 
   it('the Nota prevista the tool result carries', () => {

@@ -72,7 +72,7 @@ export function FilmCover({
 }
 
 /** "2021 · 1h44 · Drama": the chips of a film's card. */
-export function FilmFacts({ film }: { film: Film }) {
+function FilmFacts({ film }: { film: Film }) {
   const { card } = film
   if (!card) return null
   const chips = [
@@ -183,13 +183,17 @@ export function LinkPicker({
 }
 
 /** Above every page once a Presente is chosen: her colour and name, at
- * body weight so the page's title leads, and the way back to the names. */
+ * body weight so the page's title leads, and the way back to the names;
+ * for the opener, who came by her login and is no name there, the way
+ * back to her Cartaz (#376). */
 export function LinkHeader({
   person,
   notYou,
+  cartaz,
 }: {
   person: LinkPerson
   notYou: string
+  cartaz: string
 }) {
   return (
     <header className="flex flex-wrap items-center gap-sm border-b border-rule pb-md">
@@ -201,41 +205,57 @@ export function LinkHeader({
         <strong className="font-display">{person.name}</strong>
       </p>
       <a
-        href={notYou}
+        href={person.owner ? cartaz : notYou}
         className={buttonVariants({
           variant: 'link',
           className: 'ml-auto min-h-touch',
         })}
       >
-        {PARTICIPATION.notYou}
+        {person.owner ? PARTICIPATION.toCartaz : PARTICIPATION.notYou}
       </a>
     </header>
   )
 }
 
-/** The veto rule, with Não and Sim in bold behind a filled dot of the
+/** The veto rule, with Não, Sim and Vi in bold behind a filled dot of the
  * buttons' colour and glyph, so "Não tira o filme" reads as the button,
  * not as a negation. The dot is a shape the buttons never take: an
  * outlined pill here read as a button to tap (pass 4 F2). */
 export function VoteRule() {
   const { rule } = VOTES
-  const term = (kind: 'no' | 'yes') => (
+  const look = {
+    no: {
+      icon: 'close',
+      fill: 'bg-sticker-pink text-on-sticker',
+      word: rule.no,
+    },
+    yes: {
+      icon: 'check',
+      fill: 'bg-sticker-green text-on-sticker',
+      word: rule.yes,
+    },
+    // Vi as the JÁ VI stamp: yellow is only NOVO (DESIGN.md).
+    seen: {
+      icon: 'star',
+      fill: 'border border-ink bg-surface text-ink',
+      word: rule.seen,
+    },
+  } as const
+  const term = (kind: keyof typeof look) => (
     <span className="inline-flex items-baseline gap-1 font-bold whitespace-nowrap">
       <span
         aria-hidden="true"
-        className={`inline-flex size-[18px] shrink-0 items-center justify-center self-center rounded-full text-on-sticker ${kind === 'no' ? 'bg-sticker-pink' : 'bg-sticker-green'}`}
+        className={`inline-flex size-[18px] shrink-0 items-center justify-center self-center rounded-full ${look[kind].fill}`}
       >
-        <Icon
-          name={kind === 'no' ? 'close' : 'check'}
-          className="size-[12px]"
-        />
+        <Icon name={look[kind].icon} className="size-[12px]" />
       </span>
-      {kind === 'no' ? rule.no : rule.yes}
+      {look[kind].word}
     </span>
   )
   return (
     <p className="max-w-[60ch] text-pretty">
-      {term('no')} {rule.noDoes} {term('yes')} {rule.yesDoes}
+      {term('no')} {rule.noDoes} {term('yes')} {rule.yesDoes} {term('seen')}{' '}
+      {rule.seenDoes}
     </p>
   )
 }

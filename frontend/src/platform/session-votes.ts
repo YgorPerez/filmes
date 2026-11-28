@@ -1,23 +1,34 @@
 // The group swipe on the Link da Sessão (#182). A Presente votes yes or no
-// on each film of the screen; the deck's form posts the Votos to
-// `/participar/votos`. A no is a Trocar from that Presente: the Session is
-// redone with the films that stay (`recommendSession` with `keep`, from
-// the request the current version asked). A yes can also redo the Session
-// on its own by changing the order. Votos never touch taste. Server only.
+// on each film of the screen, or says she saw it and liked it or not (Vi e
+// gostei / Vi e não gostei, #378), and puts her yes films in her Ordem
+// (#379); the deck's form posts it all (the Ordem as `ordem`, in order) to
+// `/participar/votos`. A "vi" takes the film out like a no, and her taste
+// waits for the Dono's yes (her own goes in at once). A no is a Trocar
+// from that Presente: the Session is redone with the films that stay
+// (`recommendSession` with `keep`, from the request the current version
+// asked). An Ordem can also redo the Session on its own by changing the
+// order. Votos never touch taste. Server only.
+// Each film of the deck carries its full sheet (#377): the public facts for
+// anyone, and only the chosen Presente's own Evidence and Nota prevista;
+// the Dono who opened the Session sees everyone's.
 //
 // Every post revalidates the link first (`resolveSessionLink`, with a
-// Presente chosen) and takes only a form of this site (`same-site.ts`). The Session is
+// Presente chosen; the opener only by her login, #376) and takes only a
+// form of this site (`same-site.ts`). The Session is
 // derived from the link, never from the form. Votos and the redo of one
 // Session run one after another, so a redo always keeps the films of the
 // screen that is current when it starts.
 
 import {
+  billboardModel,
   castVotes,
   readSession,
   recommendSession,
   sessionRedoRequest,
   sessionVersions,
   shownFilms,
+  type BillboardFilm,
+  type BillboardPerson,
   type Engine,
 } from '@filmes/engine'
 import {
@@ -34,14 +45,90 @@ import { failureOf, seeOther } from './form-post'
 import { resolveSessionLink, type SessionLinkView } from './session-link'
 import { fromThisSite } from './same-site'
 
+/** The full sheet of a film (#377), as the Cartaz's card has it: the
+ * public facts, and the Evidence and Nota prevista of whoever looks only
+ * (a Presente sees her own, the Dono everyone's). */
+export type FilmSheet = Pick<
+  BillboardFilm,
+  | 'imdbUrl'
+  | 'trailer'
+  | 'imdbRatingText'
+  | 'votesText'
+  | 'chips'
+  | 'awards'
+  | 'critics'
+  | 'synopsis'
+  | 'lines'
+  | 'withoutFact'
+  | 'coverage'
+  | 'predictedRatings'
+  | 'cautiousBetReason'
+>
+
+/** The sheets of the Session's films, by id, and the Presentes they name
+ * (whoever looks is "Você"): `viewer`'s own, or everyone's for the Dono.
+ * None when the engine could not build them (the deck shows the public
+ * card alone). */
+export async function filmSheets(
+  engine: Engine,
+  session: string,
+  /** A Presente's slug, or `all` for the Dono. */
+  viewer: string,
+): Promise<{
+  people: BillboardPerson[]
+  sheets: ReadonlyMap<string, FilmSheet>
+}> {
+  const made = await engine.run(
+    billboardModel(
+      viewer === 'all' ? { session } : { session, viewers: [viewer] },
+    ),
+    viewer === 'all' ? {} : { owner: viewer },
+  )
+  if (made.exitCode !== 0) {
+    logEngineError(made)
+    return { people: [], sheets: new Map() }
+  }
+  const { attendees, films } = made.output
+  return {
+    people: attendees.filter((p) => viewer === 'all' || p.slug === viewer),
+    sheets: new Map(films.map((film) => [film.id, sheetOf(film)])),
+  }
+}
+
+const sheetOf = (film: BillboardFilm): FilmSheet => ({
+  imdbUrl: film.imdbUrl,
+  ...(film.trailer !== undefined && { trailer: film.trailer }),
+  imdbRatingText: film.imdbRatingText,
+  votesText: film.votesText,
+  chips: film.chips,
+  ...(film.awards !== undefined && { awards: film.awards }),
+  ...(film.critics !== undefined && { critics: film.critics }),
+  synopsis: film.synopsis,
+  lines: film.lines,
+  withoutFact: film.withoutFact,
+  coverage: film.coverage,
+  predictedRatings: film.predictedRatings,
+  ...(film.cautiousBetReason !== undefined && {
+    cautiousBetReason: film.cautiousBetReason,
+  }),
+})
+
+/** A film of the deck: the link's, and its full sheet (null when the
+ * engine could not build it). */
+export type DeckFilm = SessionLinkView['films'][number] & {
+  sheet: FilmSheet | null
+}
+
 /** What the deck shows the chosen Presente: the current version, the
  * films of its screen with her standing Voto on each (the deck asks for
  * the ones she has not voted on, and sends the rest again, since her
- * latest submission is the one that counts), what her no took out, and,
- * by title, the films her last sim went to after they had left the screen
- * (`stale`: an older deck, while another Presente's no redid the Session;
- * pass 4 F3). */
-export type VoteDeck = Pick<SessionLinkView, 'version' | 'films' | 'left'> & {
+ * latest submission is the one that counts) and its full sheet, the
+ * Presentes the sheets name, what her no took out, and, by title, the
+ * films her last sim went to after they had left the screen (`stale`: an
+ * older deck, while another Presente's no redid the Session; pass 4 F3). */
+export type VoteDeck = Pick<SessionLinkView, 'version' | 'left' | 'ranking'> & {
+  films: DeckFilm[]
+  people: BillboardPerson[]
   stale?: string[]
 }
 
@@ -49,10 +136,26 @@ export async function voteDeck(
   search: ReturnType<typeof sessionLinkSearch> & { fora?: string | undefined },
   engine: Engine,
   database: string,
+  viewer: string | null,
 ): Promise<VoteDeck | null> {
-  const link = await resolveSessionLink(search, engine, database)
+  const link = await resolveSessionLink(search, engine, database, viewer)
   if (!link?.selected) return null
-  const deck = { version: link.version, films: link.films, left: link.left }
+  // The Dono sees everyone's, as on the Cartaz (map #375).
+  const { people, sheets } = await filmSheets(
+    engine,
+    link.session,
+    link.selected.owner ? 'all' : link.selected.person,
+  )
+  const deck = {
+    version: link.version,
+    films: link.films.map((film) => ({
+      ...film,
+      sheet: sheets.get(film.id) ?? null,
+    })),
+    people,
+    left: link.left,
+    ...(link.ranking && { ranking: link.ranking }),
+  }
   const asked = search.fora?.split(',') ?? []
   if (asked.length === 0) return deck
   const onScreen = new Set(link.films.map((f) => f.id))
@@ -119,12 +222,14 @@ async function redoKeeping(
 
 /** `POST /participar/votos?sessao=…&chave=…&presente=…`: records the
  * chosen Presente's Votos, redoes the Session if a film left or the order
- * changed, and returns to the deck with what happened. */
+ * changed, and returns to the deck with what happened. `viewer` is the
+ * logged-in Dono's Pessoa, or null: only she votes as the opener (#376). */
 export async function voteAction(
   request: Request,
   engine: Engine,
   database: string,
   origin: string | undefined,
+  viewer: string | null,
 ): Promise<Response> {
   if (!fromThisSite(request, origin))
     return new Response('Origem recusada', { status: 403 })
@@ -139,7 +244,7 @@ export async function voteAction(
     )
   const form = await request.formData()
   return oneAtATime(search.sessao ?? '', async () => {
-    const link = await resolveSessionLink(search, engine, database)
+    const link = await resolveSessionLink(search, engine, database, viewer)
     if (!link?.selected) return back()
     const onScreen = new Set(link.films.map((f) => f.id))
     // A sim on a film that already left: the engine skips it, and the
@@ -159,12 +264,24 @@ export async function voteAction(
       ...filmsOf(form, 'sim').map((film) => ({ film, vote: 'yes' as const })),
       ...filmsOf(form, 'nao').map((film) => ({ film, vote: 'no' as const })),
     ]
+    const seen = [
+      ...filmsOf(form, 'gostei').map((film) => ({
+        film,
+        reaction: 'like' as const,
+      })),
+      ...filmsOf(form, 'naogostei').map((film) => ({
+        film,
+        reaction: 'dislike' as const,
+      })),
+    ]
     const cast = await engine.run(
       castVotes({
         session: link.session,
         person: link.selected.person,
         version: Number(form.get('versao')) || link.version,
         votes,
+        seen,
+        ranking: filmsOf(form, 'ordem'),
       }),
     )
     if (cast.exitCode !== 0) {

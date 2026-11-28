@@ -6,10 +6,10 @@ import { PAIRWISE } from './pairwise.copy'
 const film = (f: { title: string; year: number | null }) =>
   PAIRWISE.film(f.title, f.year)
 
-/** The Session's page: the Perguntas par a par that wait for the Dono, by
- * Presente, each with "gravar" (her yes: they become taste) and
- * "descartar", posted to `/sessoes/<id>/perguntas`. Nothing when none
- * waits. */
+/** The Session's page: the Perguntas par a par and the swipe's Vi e
+ * gostei / Vi e não gostei (#378) that wait for the Dono, by Presente,
+ * each with "gravar" (her yes: they become taste) and "descartar", posted
+ * to `/sessoes/<id>/perguntas`. Nothing when none waits. */
 export function PairwiseAnswers({
   action,
   waiting,
@@ -30,7 +30,7 @@ export function PairwiseAnswers({
         {owner.title}
       </h2>
       <p className="text-ink-2">{owner.lead}</p>
-      {waiting.map(({ person, name, answers }) => (
+      {waiting.map(({ person, name, answers, seen }) => (
         <form
           key={person}
           method="post"
@@ -44,6 +44,11 @@ export function PairwiseAnswers({
             {answers.map((a) => (
               <li key={`${a.chosen.id}-${a.other.id}`}>
                 {owner.prefers(film(a.chosen), film(a.other))}
+              </li>
+            ))}
+            {seen.map((g) => (
+              <li key={g.film.id}>
+                {owner.saw(film(g.film), g.reaction === 'like')}
               </li>
             ))}
           </ul>

@@ -270,8 +270,9 @@ function UnknownSession() {
   )
 }
 
-/** The page's head in one line (#272): the day, who was there, and the
- * ⋯ menu with the Link para os Presentes and "Contar como foi". */
+/** The page's head in one line (#272): the day, who was there, the
+ * Dono's Votar (#376: the group swipe, as her) and the ⋯ menu with the
+ * Link para os Presentes and "Contar como foi". */
 function SessionHead({ page }: { page: CartazPage }) {
   const s = page.session
   const canEditAttendees = s.attendees.some((attendee) => attendee.owner)
@@ -287,7 +288,17 @@ function SessionHead({ page }: { page: CartazPage }) {
           <span className="min-w-0 truncate">{names(s.attendees)}</span>
         </p>
       </div>
-      {menu && <SessionMenu page={page} />}
+      <div className="flex shrink-0 items-center gap-sm">
+        {page.voteLink && (
+          <a
+            href={page.voteLink}
+            className={buttonVariants({ variant: 'option' })}
+          >
+            {SESSIONS.session.vote}
+          </a>
+        )}
+        {menu && <SessionMenu page={page} />}
+      </div>
     </header>
   )
 }

@@ -24,7 +24,8 @@
 // some Presente, of now or of the previous version, has a Já visto of the
 // film dated on or after the previous version (the Cartaz's "Já vi"); an
 // older Já visto was already there when the film was shown, and the drop
-// counts as `swapped`.
+// counts as `swapped`. A Vi e gostei / Vi e não gostei of the swipe (#378)
+// counts as `seen` too, even while it waits for the Dono's yes.
 //
 // A new Restrição that replaces the whole list (a new similar, #68) is the
 // `constraint` cause of whoever leaves without being a Já vi nor swapped by
@@ -54,7 +55,8 @@ import {
   storedBet,
   type ShownFilm,
 } from '../sessions/file.ts'
-import { orderByYes, yesVotes } from '../sessions/votes.ts'
+import { orderByRanking, rankSums } from '../sessions/votes.ts'
+import { gesturedFilms } from '../sessions/seen-gestures.ts'
 import type { Candidate } from './candidates.ts'
 import type { Constraint, DropDetail } from './constraints.ts'
 import { constraintLabel } from './constraints/index.ts'
@@ -70,6 +72,9 @@ export interface Regenerate {
   /** Film → position, only of the kept films that were in the previous
    * version, in the order asked. */
   readonly positions: ReadonlyMap<string, number>
+  /** Kept film → the sum of its positions in the Presentes' Ordens
+   * (#379), when someone ranked and the Votos order the kept films. */
+  readonly rankSums?: ReadonlyMap<string, number>
   /** The previous version's Presentes. */
   readonly attendees: ReadonlyArray<string>
   /** What the Dono swapped from the previous version. */
@@ -79,6 +84,9 @@ export interface Regenerate {
   /** The request asks for other Climas than the previous version's, which
    * also replaces the whole list. */
   readonly newMood: boolean
+  /** Film → who gave it a Vi e gostei / Vi e não gostei in the Session
+   * (#378), waiting or not: a Já vi as the Cartaz's. */
+  readonly gestured: ReadonlyMap<string, ReadonlyArray<string>>
   /** The previous version's Aposta (#178), if any. */
   readonly bet?: string
   readonly cautiousBet?: boolean
@@ -116,19 +124,25 @@ export const isNew = (regenerate: Regenerate, filmId: string): boolean =>
 const titleOf = (regenerate: Regenerate, filmId: string): string =>
   regenerate.previous.find((f) => f.id === filmId)?.title || filmId
 
-/** The kept films' numbers after the Votos (#182): the same numbers, but
- * the film with more yes in the Session takes the first one; on a tie, the
- * one that was higher. With no yes, nothing moves. */
-const liftKept = (
-  kept: ReadonlyArray<readonly [string, number]>,
-  yes: ReadonlyMap<string, number>,
-): ReadonlyMap<string, number> => {
-  const onScreen = kept.toSorted(([, p], [, q]) => p - q)
-  const lifted = orderByYes(
-    onScreen.map(([id]) => id),
-    yes,
+/** The kept films that stay, `fixed` in the Regra's order, at the kept
+ * numbers by the Ordens (#379): the lowest sum of positions takes the
+ * first number; on a tie, the Regra's order. With no Ordem, nothing moves.
+ * */
+export const rankKept = <A>(
+  regenerate: Regenerate,
+  fixed: ReadonlyArray<A>,
+  idOf: (item: A) => string,
+): Regenerate => {
+  const sums = regenerate.rankSums
+  if (sums === undefined) return regenerate
+  const numbers = fixed
+    .map((item) => regenerate.positions.get(idOf(item)) ?? 0)
+    .toSorted((p, q) => p - q)
+  const positions = new Map(regenerate.positions)
+  orderByRanking(fixed, sums, idOf).forEach((item, i) =>
+    positions.set(idOf(item), numbers[i]!),
   )
-  return new Map(onScreen.map(([, position], i) => [lifted[i]!, position]))
+  return { ...regenerate, positions }
 }
 
 /** How a refazer regenerates: `keep`, the films asked to stay; `swapped`,
@@ -166,17 +180,23 @@ export const prepareRegenerate = (
     const position = positions.get(id)
     return position === undefined ? [] : [[id, position] as const]
   })
+  const sums = preservePositions
+    ? undefined
+    : rankSums(
+        front,
+        kept.map(([id]) => id),
+      )
   return {
     regenerate: {
       previous: screen,
       date: pyStrValue(version.get('date') ?? null),
-      positions: preservePositions
-        ? new Map(kept)
-        : liftKept(kept, yesVotes(front)),
+      positions: new Map(kept),
+      ...(sums !== undefined && { rankSums: sums }),
       attendees: Array.isArray(attendees) ? attendees.map(String) : [],
       swapped,
       replacing,
       newMood,
+      gestured: gesturedFilms(front),
       ...(bet !== undefined && bet !== null && { bet: pyStrValue(bet) }),
       ...(isCautiousBet(stored) && { cautiousBet: true }),
     },
@@ -312,7 +332,9 @@ export const droppedFilms = (
         list.push({ ...base, ...cause })
         continue
       }
-      const people = yield* sawIt(db, who, film.id, regenerate.date)
+      const saw = yield* sawIt(db, who, film.id, regenerate.date)
+      const gestured = regenerate.gestured.get(film.id) ?? []
+      const people = [...saw, ...gestured.filter((p) => !saw.includes(p))]
       if (people.length > 0) list.push({ ...base, cause: 'seen', people })
       else if (
         regenerate.replacing !== undefined &&

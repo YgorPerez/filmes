@@ -314,6 +314,10 @@ export interface BillboardRequestInput {
   /** Only these films of the Recomendação, in this order; recorded as the
    * Session's `shown` when it is open. */
   readonly shown?: ReadonlyArray<string>
+  /** Only these Presentes' Evidence, Nota prevista and Já visto on each
+   * film, in the Session's order; absent, everyone's (#377). The group
+   * swipe shows a Presente only her own. */
+  readonly viewers?: ReadonlyArray<string>
 }
 
 /** `cartaz`: the model, how many films it has and the warnings. */
@@ -823,6 +827,17 @@ const onlyShown = (
     }))
   })
 
+/** The film with only `people`'s Evidence. */
+const visibleTo = (
+  film: FilmInBody,
+  people: ReadonlyArray<string>,
+): FilmInBody => ({
+  ...film,
+  evidence: Object.fromEntries(
+    Object.entries(film.evidence).filter(([person]) => people.includes(person)),
+  ),
+})
+
 /** One film's card on the Cartaz; a film outside the Catálogo is
  * `invalid_data`. */
 const filmCard = (
@@ -831,8 +846,8 @@ const filmCard = (
     readonly id: string
     readonly film: FilmInBody
     readonly listed: ReadonlyMap<string, YamlMapping>
+    /** The Presentes whose Nota prevista and coverage it shows. */
     readonly attendees: ReadonlyArray<string>
-    readonly people: ReadonlyArray<BillboardPerson>
     /** The Feedback's chosen film and reactions, when it has them. */
     readonly feedback: Told | null
     /** Whoever looks is the Session's Dono, who relayed its Feedback. */
@@ -840,7 +855,7 @@ const filmCard = (
   },
 ) =>
   Effect.gen(function* () {
-    const { id, film, listed, attendees, people, feedback } = input
+    const { id, film, listed, attendees, feedback } = input
     const row = yield* catalogFilm(db, film.id)
     if (row === undefined)
       return yield* engineError(
@@ -892,7 +907,7 @@ const filmCard = (
       lines: linesOf(film, input.relayedByYou),
       withoutFact,
       seen,
-      coverage: `Fato sobre ${people.length - withoutFact.length} de ${people.length}`,
+      coverage: `Fato sobre ${attendees.length - withoutFact.length} de ${attendees.length}`,
       predictedRatings: predictionsOf(recorded, attendees),
     }
     if (feedback?.chosen !== film.id) return card
@@ -968,6 +983,11 @@ export const billboardModel = (
     let films: ReadonlyArray<FilmInBody> = filmsInBody(attendees, body)
     if (input.shown !== undefined)
       films = yield* onlyShown(id, films, input.shown)
+    const viewers = input.viewers
+    const visible =
+      viewers === undefined
+        ? attendees
+        : attendees.filter((slug) => viewers.includes(slug))
     const { weights } = yield* Environment
     // "Você" is whoever looks: the logged-in Pessoa, else the Session's Dono.
     const sessionOwner = textOf(front.get('owner'))
@@ -1006,10 +1026,9 @@ export const billboardModel = (
         for (const film of films) {
           const card = yield* filmCard(db, {
             id,
-            film,
+            film: viewers === undefined ? film : visibleTo(film, visible),
             listed,
-            attendees,
-            people,
+            attendees: visible,
             feedback,
             relayedByYou,
           })

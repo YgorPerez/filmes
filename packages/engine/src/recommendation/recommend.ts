@@ -89,6 +89,7 @@ import {
   isNew,
   keptWarning,
   place,
+  rankKept,
   type Dropped,
   type RemovalCause,
   type Regenerate,
@@ -785,7 +786,7 @@ const withBetAt = (
 
 const placeRegenerated = (
   r: Ranking,
-  regenerate: Regenerate,
+  asked: Regenerate,
   ordered: ReadonlyArray<Ordered>,
   removed: Map<string, RemovalCause>,
   { betAt, betOdds }: Bets,
@@ -793,6 +794,7 @@ const placeRegenerated = (
   Effect.gen(function* () {
     const { count } = r.options
     const fixed = yield* keptThatPass(r, ordered, removed)
+    const regenerate = rankKept(asked, fixed, idOf)
     const others = ordered.filter((item) => !r.kept(item.film.id))
     const places = Math.max(count - fixed.length, 0)
     // A kept bet stays the bet; else a new one, if its place is free.

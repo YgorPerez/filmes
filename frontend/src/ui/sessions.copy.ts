@@ -76,6 +76,8 @@ export const SESSIONS = {
     toNew: 'Pedir filme',
     /** The ⋯ menu of the page's head (#272). */
     menu: 'Mais ações da Sessão',
+    /** The Dono's own swipe on the Link da Sessão (#376). */
+    vote: 'Votar',
     /** After the last film, while the Session is open. */
     seenIt: 'Já viram um filme?',
     notices: {

@@ -1129,3 +1129,96 @@ describe('the Cartaz model, a line two Presentes share (#351)', () => {
     ])
   })
 })
+
+// The group swipe's sheet (#377): a Presente sees only her own Evidence and
+// Nota prevista; the Dono sees everyone's, as on the Cartaz.
+describe('the Cartaz model for some Presentes only (#377)', () => {
+  test('a line of hers keeps the singular, and nobody else’s line, Nota prevista or Já visto shows', async () => {
+    const fixture = useFixture()
+    const session = await fixture.ok(
+      recommendSession({ attendees: ['bruno', 'teo'], count: 50 }),
+      tasteWeights(fixture, 3, 5),
+    )
+    const id = session.session.id
+    const every = await fixture.ok(billboardModel({ session: id }))
+    const film = every.films.find((f) => f.title === 'Pequenos Milagres')!
+    expect(film.predictedRatings.map((p) => p.person)).toEqual(['bruno'])
+
+    const teo = await fixture.ok(
+      billboardModel({ session: id, viewers: ['teo'] }),
+    )
+    const bruno = await fixture.ok(
+      billboardModel({ session: id, viewers: ['bruno'] }),
+    )
+
+    for (const card of teo.films) {
+      expect(card.predictedRatings).toEqual([])
+      expect(card.lines.flatMap((l) => l.people)).not.toContain('bruno')
+      expect(card.withoutFact).not.toContain('bruno')
+      expect(card.seen).not.toContain('bruno')
+      expect(card.coverage).toMatch(/ de 1$/u)
+    }
+    const mine = bruno.films.find((f) => f.id === film.id)!
+    expect(mine.predictedRatings).toEqual(film.predictedRatings)
+    expect(mine.lines.map((l) => l.strength)).toEqual(
+      film.lines
+        .filter((l) => l.people.includes('bruno'))
+        .map((l) => l.strength),
+    )
+    expect(mine.lines.every((l) => l.people.join() === 'bruno')).toBe(true)
+    // The public facts stay.
+    expect({ ...mine, lines: [], predictedRatings: [] }).toMatchObject({
+      title: film.title,
+      imdbUrl: film.imdbUrl,
+      votesText: film.votesText,
+      chips: film.chips,
+      synopsis: film.synopsis,
+    })
+  })
+
+  test('a line two Presentes share reads in the singular for one of them', async () => {
+    const fixture = useFixture()
+    const session = await recommend(fixture, {
+      attendees: ['dono', 'iara'],
+      count: 3,
+    })
+    const id = session.session.id
+    const line = {
+      ...session.films[0]!.evidence['bruno']!.find((e) => e.kind !== 'guess')!,
+      text: 'está na lista do Letterboxd',
+      contribution: 0.5,
+    }
+    const films = session.films.map((f, i) =>
+      i === 0 ? { ...f, evidence: { bruno: [line], iara: [line] } } : f,
+    )
+    await fixture.ok(
+      Effect.gen(function* () {
+        const { frontmatter } = yield* readSession(id)
+        yield* writeSession(
+          id,
+          frontmatter,
+          sessionBody(
+            films,
+            new Map([
+              ['bruno', 'Bruno'],
+              ['iara', 'Iara'],
+            ]),
+          ),
+        )
+      }),
+    )
+
+    const all = await fixture.ok(billboardModel({ session: id }))
+    const iara = await fixture.ok(
+      billboardModel({ session: id, viewers: ['iara'] }),
+    )
+
+    expect(all.films[0]!.lines.map((l) => [l.people, l.text])).toEqual([
+      [['bruno', 'iara'], 'estão na lista do Letterboxd'],
+    ])
+    expect(iara.films[0]!.lines.map((l) => [l.people, l.text])).toEqual([
+      [['iara'], 'está na lista do Letterboxd'],
+    ])
+    expect(iara.films[0]!.coverage).toBe('Fato sobre 1 de 1')
+  })
+})

@@ -3,13 +3,14 @@ import type {
   BillboardLine,
   BillboardNotes,
   BillboardPerson,
+  BillboardPrediction,
 } from '@filmes/engine'
 import { useState } from 'react'
 import type { FilmMarks } from './billboard-marks'
 import { Chip } from './kit/chip'
 import { Hint } from './kit/hint'
 import { Avatar } from './kit/person'
-import { PriceSticker, Sticker } from './kit/sticker'
+import { NewSticker, PriceSticker, Sticker } from './kit/sticker'
 import { TapeCase } from './kit/tape-case'
 import { BILLBOARD } from './billboard.copy'
 import { BetStamp } from './billboard-bet'
@@ -19,7 +20,8 @@ import { Icon } from './billboard-icons'
 import { AgainstMark, Strength } from './billboard-top'
 
 // One film of the Cartaz (DESIGN.md, Card do filme): the tape in its case
-// with the price sticker, the header (with the IMDb and, when TMDB has one,
+// with the price sticker (and NOVO on a film that came in with this
+// version, #380), the header (with the IMDb and, when TMDB has one,
 // the trailer on YouTube: a link, never a player, #289), "Por que cada um
 // vai gostar", opened by each Presente's Nota prevista (#326), and, while
 // the Session takes a reply, the marks (`billboard-card-marks.tsx`). A grid:
@@ -30,9 +32,9 @@ import { AgainstMark, Strength } from './billboard-top'
 
 /** The outlined chips that leave the app: the IMDb and the trailer. The
  * link is 44px tall and the chip drawn inside it (#272, #277). */
-const LINK_CHIP =
+export const LINK_CHIP =
   'inline-flex min-h-touch items-center font-display text-chip font-bold text-ink tabular-nums no-underline'
-const LINK_CHIP_FACE =
+export const LINK_CHIP_FACE =
   'rounded-pill border-(length:--border-width-stroke) border-rule px-2.25 py-1'
 
 /** The film's title level: 2 alone, 3 under a section's title. */
@@ -134,6 +136,18 @@ function Poster({
             )}
         </Sticker>
       )}
+      <CornerMarks film={film} />
+    </div>
+  )
+}
+
+/** What sticks out of the case's corners: the price sticker, NOVO on a
+ * film that came in with this version (#380) and the Aposta's stamp. */
+function CornerMarks({ film }: { film: BillboardFilm }) {
+  const { card } = BILLBOARD
+  return (
+    <>
+      {film.new && <NewSticker className="absolute top-sm -right-md" />}
       {film.bet && (
         <>
           <BetStamp className="absolute bottom-[17px] -left-sm">
@@ -145,7 +159,7 @@ function Poster({
       <PriceSticker className="absolute -top-[9px] -left-[9px]">
         {film.position}
       </PriceSticker>
-    </div>
+    </>
   )
 }
 
@@ -258,15 +272,15 @@ export function EvidenceLine({
  * of "Por que": "previsto · Ana 8,3 · Iara 7,1". Her name carries the hint
  * of how many taste neighbours back it, when the version kept it. Who has
  * none is left out, and with nobody there is no line (#326). */
-function Predicted({
-  film,
+export function Predicted({
+  ratings,
   people,
 }: {
-  film: BillboardFilm
+  ratings: readonly BillboardPrediction[]
   people: readonly BillboardPerson[]
 }) {
   const { card } = BILLBOARD
-  const predicted = new Map(film.predictedRatings.map((p) => [p.person, p]))
+  const predicted = new Map(ratings.map((p) => [p.person, p]))
   const shown = people.flatMap((person) => {
     const rating = predicted.get(person.slug)
     return rating ? [{ person, rating }] : []
@@ -327,7 +341,7 @@ function Why({
           {film.coverage}
         </span>
       </p>
-      <Predicted film={film} people={people} />
+      <Predicted ratings={film.predictedRatings} people={people} />
       <ul aria-label={card.why} className="flex flex-col gap-2.25">
         {film.cautiousBetReason && (
           <li className="text-evidence text-ink-2">{film.cautiousBetReason}</li>

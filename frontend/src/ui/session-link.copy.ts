@@ -43,6 +43,8 @@ export const PARTICIPATION = {
   unknownPerson: 'Esse nome não está nesta Sessão. Toque no seu nome abaixo.',
   as: 'Você entrou como',
   notYou: 'Não é você?',
+  /** The opener's way back, in place of "Não é você?" (#376). */
+  toCartaz: 'Voltar ao Cartaz',
   films: 'Filmes da Sessão',
   lead: (n: number) =>
     n === 1

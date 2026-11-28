@@ -4,7 +4,9 @@ import {
   currentVersion,
   filmCards,
   isOpen,
+  latestRanking,
   latestVotes,
+  newSinceVote,
   pairwiseQuestions,
   readPeople,
   readSession,
@@ -35,12 +37,14 @@ export type LinkPerson = {
 }
 
 /** A film of the current screen, with its public card (null when the
- * Catálogo no longer has it) and the chosen Presente's standing Voto on
- * it. */
+ * Catálogo no longer has it), the chosen Presente's standing Voto on it
+ * and whether it came in after her last Voto (`new`, the NOVO sticker on
+ * the swipe and the ranking, #380). */
 export type LinkFilm = {
   position: number
   id: string
   title: string
+  new: boolean
   card: PublicFilmCard | null
   mine: VoteValue | null
 }
@@ -61,6 +65,9 @@ export type SessionLinkView = {
   films: LinkFilm[]
   /** The films her no took out of the Session, by title. */
   left: string[]
+  /** Her Ordem of her latest submission (#379), films of the screen only;
+   * absent when she has none. */
+  ranking?: string[]
   /** How many Perguntas par a par are left for her (0 without one). */
   questions: number
 }
@@ -178,12 +185,13 @@ export async function cardsById(
 async function screenOf(
   front: YamlMapping,
   session: string,
-  person: string,
+  { person, owner: opener }: LinkPerson,
   engine: Engine,
-): Promise<Pick<SessionLinkView, 'films' | 'left' | 'questions'>> {
+): Promise<Pick<SessionLinkView, 'films' | 'left' | 'questions' | 'ranking'>> {
   const current = currentVersion(front)
   const screen = shownFilms(current)
   const mine = latestVotes(front, person)
+  const fresh = newSinceVote(front, person)
   const byId = await cardsById(
     engine,
     screen.map((f) => f.id),
@@ -194,15 +202,23 @@ async function screenOf(
       .map((f) => [f.id, f.title ?? f.id]),
   )
   const onScreen = new Set(screen.map((f) => f.id))
-  const asked = await engine.run(pairwiseQuestions({ session, person }))
+  // The Perguntas par a par are the guests': the opener has none here.
+  const asked = opener
+    ? null
+    : await engine.run(pairwiseQuestions({ session, person }))
+  const ranking = (latestRanking(front, person) ?? []).filter((film) =>
+    onScreen.has(film),
+  )
   return {
-    questions: asked.exitCode === 0 ? asked.output.pairs.length : 0,
+    ...(ranking.length > 0 && { ranking }),
+    questions: asked?.exitCode === 0 ? asked.output.pairs.length : 0,
     films: screen.map((film) => {
       const card = byId.get(film.id) ?? null
       return {
         position: film.position,
         id: film.id,
         title: card?.title ?? film.title ?? film.id,
+        new: fresh.has(film.id),
         card,
         mine: mine.get(film.id) ?? null,
       }
@@ -225,11 +241,15 @@ function shelfOf(front: YamlMapping): string[] {
 }
 
 /** Revalidate the capability and current Presentes before returning any data.
- * The anonymous view receives an explicit projection of the Session. */
+ * The anonymous view receives an explicit projection of the Session.
+ * `viewer` is the logged-in Dono's Pessoa, or null: the opener is chosen
+ * only when she is the one logged in (her Cartaz's Votar, #376), so the
+ * link alone never votes as her. */
 export async function resolveSessionLink(
   search: SessionLinkSearch,
   engine: Engine,
   database: string,
+  viewer: string | null,
 ): Promise<SessionLinkView | null> {
   const sessao = signed(search, database)
   if (sessao === null) return null
@@ -251,7 +271,10 @@ export async function resolveSessionLink(
     color,
     owner: opened,
   }))
-  const selected = attendees.find((p) => p.person === presente) ?? null
+  const selected =
+    attendees.find(
+      (p) => p.person === presente && (!p.owner || p.person === viewer),
+    ) ?? null
   return {
     session: sessao,
     version: Number(yamlToJson(currentVersion(front).get('version') ?? null)),
@@ -261,7 +284,7 @@ export async function resolveSessionLink(
     selected,
     shelf: shelfOf(front),
     ...(selected
-      ? await screenOf(front, sessao, selected.person, engine)
+      ? await screenOf(front, sessao, selected, engine)
       : { films: [], left: [], questions: 0 }),
   }
 }
