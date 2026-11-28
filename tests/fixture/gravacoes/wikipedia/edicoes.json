@@ -63,6 +63,62 @@
           "type": "uri",
           "value": "https://en.wikipedia.org/wiki/2020_Cannes_Film_Festival"
         }
+      },
+      {
+        "festival": {
+          "type": "uri",
+          "value": "http://www.wikidata.org/entity/Q42369"
+        },
+        "edition": {
+          "type": "uri",
+          "value": "http://www.wikidata.org/entity/Q9041195"
+        },
+        "article": {
+          "type": "uri",
+          "value": "https://en.wikipedia.org/wiki/1960_Cannes_Film_Festival"
+        }
+      },
+      {
+        "festival": {
+          "type": "uri",
+          "value": "http://www.wikidata.org/entity/Q42369"
+        },
+        "edition": {
+          "type": "uri",
+          "value": "http://www.wikidata.org/entity/Q9041195"
+        },
+        "article": {
+          "type": "uri",
+          "value": "https://en.wikipedia.org/wiki/1960_Cannes_Film_Festival"
+        }
+      },
+      {
+        "festival": {
+          "type": "uri",
+          "value": "http://www.wikidata.org/entity/Q42369"
+        },
+        "edition": {
+          "type": "uri",
+          "value": "http://www.wikidata.org/entity/Q9041196"
+        },
+        "article": {
+          "type": "uri",
+          "value": "https://en.wikipedia.org/wiki/2099_Cannes_Film_Festival"
+        }
+      },
+      {
+        "festival": {
+          "type": "literal",
+          "value": "Cannes"
+        },
+        "edition": {
+          "type": "uri",
+          "value": "http://www.wikidata.org/entity/Q9041197"
+        },
+        "article": {
+          "type": "uri",
+          "value": "https://en.wikipedia.org/wiki/Festival_sem_item"
+        }
       }
     ]
   }

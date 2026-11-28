@@ -62,8 +62,8 @@ export const curatedLists: Signal = {
       for (const row of rows) {
         const filmId = String(row['filme_id'])
         const listId = String(row['entidade_id'])
-        const list = lists[listId]
-        if (list === undefined) continue
+        // The query reads only the lists of the config.
+        const list = lists[listId]!
         const seen = byFilm.get(filmId) ?? new Set<string>()
         if (seen.has(listId)) continue
         if (

@@ -409,7 +409,12 @@ const wikipedia = (url: URL): Response => {
   const titles = [
     ...new Set(named.map((title) => recording.redirects[title] ?? title)),
   ]
-  const query = (pages: unknown[]) => ({ normalized, redirects, pages })
+  // The API leaves out what is empty.
+  const query = (pages: unknown[]) => ({
+    ...(normalized.length > 0 && { normalized }),
+    ...(redirects.length > 0 && { redirects }),
+    pages,
+  })
   if (url.searchParams.get('prop') === 'pageprops')
     return Response.json({
       query: query(
@@ -543,7 +548,9 @@ test('builds the festival competitions from the edition articles (#411)', async 
   }
   // The competition inside the official selection, not the jury's or Un
   // Certain Regard's films; the 66th Berlinale's main competition without
-  // the sections under it; no competition in Venice 1969 nor in Cannes 2020.
+  // the sections under it; no competition in Venice 1969 nor in Cannes 2020;
+  // an article the API does not have, and a row without a festival item,
+  // left out.
   await catalog.fixture.ok(rebuild, catalog.vars)
   expect(
     await rows(
@@ -760,13 +767,13 @@ test('an IMDb dump shorter than its header fails', async () => {
   })
 })
 
-test('a competitions dump of another shape fails (#411)', async () => {
+test.each([
+  '{"editions":[{"festival":"Cannes"}]}',
+  '{"editions":[null]}',
+  '{"films":[]}',
+])('a competitions dump of another shape fails (#411): %s', async (dump) => {
   expect(
-    await failWithRecording(
-      useCatalog(),
-      'wikipedia-competicoes.json',
-      '{"editions":[{"festival":"Cannes"}]}',
-    ),
+    await failWithRecording(useCatalog(), 'wikipedia-competicoes.json', dump),
   ).toEqual({
     code: 'update_failed',
     message: 'wikipedia-competicoes.json.gz fora do formato',

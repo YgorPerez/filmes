@@ -2,6 +2,17 @@
   "editions": [
     {
       "festival": "Q42369",
+      "edition": "Q9041195",
+      "article": "1960 Cannes Film Festival",
+      "revision": 9041205,
+      "section": "Official selection",
+      "items": [
+        "Q18066",
+        "Q7371"
+      ]
+    },
+    {
+      "festival": "Q42369",
       "edition": "Q9041191",
       "article": "2019 Cannes Film Festival",
       "revision": 9041201,

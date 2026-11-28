@@ -15,6 +15,10 @@
     "2020 Cannes Film Festival": {
       "revid": 9041204,
       "content": "The '''2020 Cannes Film Festival''' (hand-made for the fixture) was not held.\n\n==Cannes 2020 label==\nThe films were given the \"Cannes 2020\" label.\n* ''[[Schindler's List]]''\n"
+    },
+    "1960 Cannes Film Festival": {
+      "revid": 9041205,
+      "content": "The '''1960 Cannes Film Festival''' (hand-made for the fixture).\n\n==''Official selection''==\n{| class=\"wikitable\"\n|-\n|-\n| style=\"background:#FFDEAD;\" | ''[[La Dolce Vita]]'' || [[Federico Fellini]]\n|-\n| ''[[Il Mattatore]]''\n|}\n* (title to be announced)\n\n===Screenings===\nAt the Palais des Festivals.\n"
     }
   },
   "redirects": {
@@ -25,6 +29,8 @@
     "Schindler's List": "Q483941",
     "Steven Spielberg": "Q8877",
     "Alejandro González Iñárritu": "Q55400",
-    "Lana Wachowski": "Q9544977"
+    "Lana Wachowski": "Q9544977",
+    "La Dolce Vita": "Q18066",
+    "Federico Fellini": "Q7371"
   }
 }

@@ -201,7 +201,7 @@ const filmLinks = (body: string): ReadonlyArray<string> => {
 interface QueryPart {
   readonly normalized?: ReadonlyArray<{ from: string; to: string }>
   readonly redirects?: ReadonlyArray<{ from: string; to: string }>
-  readonly pages?: ReadonlyArray<Record<string, unknown>>
+  readonly pages: ReadonlyArray<Record<string, unknown>>
 }
 
 /** Every `query` of a request, following `continue`. */
@@ -294,7 +294,7 @@ const pagesOf = <E>(
       })
       const byTitle = new Map<string, Page>()
       for (const part of parts)
-        for (const page of part.pages ?? []) {
+        for (const page of part.pages) {
           const revision = (
             page['revisions'] as
               | ReadonlyArray<{
@@ -336,7 +336,7 @@ const itemsOf = <E>(
       })
       const byTitle = new Map<string, string>()
       for (const part of parts)
-        for (const page of part.pages ?? []) {
+        for (const page of part.pages) {
           const item = (page['pageprops'] as { wikibase_item?: unknown })
             ?.wikibase_item
           if (typeof item === 'string' && QID.test(item))
@@ -391,7 +391,7 @@ export const buildCompetitions = <E>(
       const page = pages.get(article.title)
       if (page === undefined) return []
       const linked = new Set(
-        (linksOf.get(article.title) ?? []).flatMap((link) => {
+        linksOf.get(article.title)!.flatMap((link) => {
           const item = items.get(link)
           return item === undefined ? [] : [item]
         }),
