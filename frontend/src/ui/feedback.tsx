@@ -16,6 +16,7 @@ import { refusalOn, useRefusalInPlace } from './kit/refusal-in-place'
 import { buttonVariants } from './kit/button-variants'
 import { Option } from './kit/option'
 import { PriceSticker } from './kit/sticker'
+import { OwnerTag } from './kit/owner-tag'
 import {
   Alert,
   PostFailed,
@@ -255,7 +256,7 @@ function FeedbackForm({
         <Section
           id="reacoes"
           title={form.reactions(alone)}
-          lead={form.reactionsLead(alone)}
+          lead={form.reactionsLead}
         >
           <div className="flex flex-col">
             {page.attendees.map((attendee, index) => (
@@ -495,7 +496,8 @@ function Reaction({
       <legend className="float-left w-full">
         <span className="flex items-center gap-sm font-display text-row-title">
           <PersonAvatar person={attendee} index={index} />
-          {attendee.owner ? form.you : attendee.name}
+          {attendee.name}
+          {attendee.owner && <OwnerTag />}
         </span>
       </legend>
       <div className="clear-left pt-sm">
@@ -538,9 +540,6 @@ function Reaction({
 
 function Satisfaction({ page }: { page: FeedbackPage }) {
   const { satisfaction } = FEEDBACK
-  const owners = new Set(
-    page.attendees.filter((a) => a.owner).map((a) => a.person),
-  )
   return (
     <Section
       id="satisfacao"
@@ -554,11 +553,7 @@ function Satisfaction({ page }: { page: FeedbackPage }) {
             : [
                 <Item key={c.person}>
                   {/* Small, under the block's own lead (#272). */}
-                  <span className="text-meta text-ink">
-                    {owners.has(c.person)
-                      ? satisfaction.own(c.line, c.name)
-                      : c.line}
-                  </span>
+                  <span className="text-meta text-ink">{c.line}</span>
                 </Item>,
               ],
         )}

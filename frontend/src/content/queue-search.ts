@@ -32,17 +32,3 @@ export const queueSearch = (search: Record<string, unknown>) => ({
   para: textOf(search.para),
   de: queueFrom(search.de),
 })
-
-/** The place the tabs mark for a page (#274): another Pessoa's queue
- * (`/meu-gosto/fila?de=<p>`) is one of hers, under Pessoas, as the import
- * page that sent the Dono there. */
-export const tabPlace = (
-  pathname: string,
-  search: Record<string, unknown>,
-  viewer: string,
-) => {
-  const from = queueFrom(search.de)
-  return pathname === '/meu-gosto/fila' && from !== undefined && from !== viewer
-    ? `/pessoas/${from}/fila`
-    : pathname
-}

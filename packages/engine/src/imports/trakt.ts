@@ -28,7 +28,6 @@ import {
   hasTraktWatchlist,
   readTraktExport,
   readTraktSnapshot,
-  type TraktFilm,
   type TraktRow,
 } from './trakt-export.ts'
 import { withLatestWatchlist, type ExportRows } from './watchlist.ts'
@@ -199,30 +198,6 @@ export const loadPersonTrakt = (
       resolved: { imdb: resolved.imdb.size, tmdb: resolved.tmdb.size },
       unresolved,
     }
-  })
-
-/** The films of every export she keeps that resolve to no film of the
- * Catálogo, each once (#274). */
-export const traktLeftOut = (
-  db: Connection,
-  person: Person,
-): Effect.Effect<TraktFilm[], EngineError | SqliteError, Environment> =>
-  Effect.gen(function* () {
-    const wikidata = yield* hasWikidata(db)
-    const seen = new Set<string>()
-    const left: TraktFilm[] = []
-    for (const { film } of yield* personTraktRows(person)) {
-      const key = JSON.stringify([
-        film.name,
-        film.imdb,
-        film.tmdb,
-        film.trakt?.toString() ?? null,
-      ])
-      if (seen.has(key)) continue
-      seen.add(key)
-      if ((yield* resolveFilmIds(db, film, wikidata)) === null) left.push(film)
-    }
-    return left
   })
 
 /** Redoes every Pessoa's Trakt Fatos (`carregar`): the rebuild. */

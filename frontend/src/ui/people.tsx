@@ -1,4 +1,3 @@
-import { useEffect, useRef } from 'react'
 import {
   isPersonCreateRefusal,
   type PersonCreateRefusal,
@@ -130,20 +129,6 @@ export function PeopleList({
   )
 }
 
-/** A refusal about the e-mail is said under it, which takes the focus
- * (#273), as a Veto's target does: the refusal, and the form to focus in. */
-function useEmailRefusal(refused: PersonCreateRefusal | undefined) {
-  const email =
-    refused === 'email' || refused === 'email-usado' ? refused : undefined
-  const form = useRef<HTMLFormElement>(null)
-  useEffect(() => {
-    if (!email) return
-    const field = form.current?.elements.namedItem('email')
-    if (field instanceof HTMLElement) field.focus()
-  }, [email])
-  return { email, form }
-}
-
 /** "Acrescentar Pessoa": a plain POST, so it works before the JavaScript.
  * Open, with what was typed and why not, when the server refused it. With
  * the JavaScript (#235), it posts by `fetch`: a refusal shows in place,
@@ -156,18 +141,16 @@ function CreateForm({ state, admin }: { state?: CreateState; admin: boolean }) {
     refusalOn(isPersonCreateRefusal),
   )
   const { onSubmit, busy, failed } = useFetchForm(onAnswer)
-  const { email, form } = useEmailRefusal(refused)
   return (
     <Disclosure summary={create.title} open={state?.refusal !== undefined}>
       <form
-        ref={form}
         method="post"
         action="/pessoas/nova/enviar"
         aria-label={create.title}
         onSubmit={onSubmit}
         className="group/new flex flex-col gap-xl"
       >
-        {refused && !email && (
+        {refused && (
           <div ref={alert}>
             <Alert>{create.refusals[refused]}</Alert>
           </div>
@@ -205,7 +188,6 @@ function CreateForm({ state, admin }: { state?: CreateState; admin: boolean }) {
             label={create.email}
             hint={create.emailHint}
             defaultValue={typed.email}
-            refusal={email && create.refusals[email]}
           />
           {admin && <p className="text-meta text-ink-2">{create.testUsers}</p>}
         </div>

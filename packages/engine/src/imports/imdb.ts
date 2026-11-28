@@ -20,7 +20,6 @@ import type { EngineError } from '../runtime/EngineError.ts'
 import type { Environment } from '../runtime/Environment.ts'
 import type { Run } from '../runtime/Run.ts'
 import { Sqlite, type Connection, type SqliteError } from '../sqlite/Sqlite.ts'
-import { inCatalog } from './film-ids.ts'
 import { readImdbRatings, type ImdbRatingRow } from './imdb-ratings.ts'
 import { storedImports, storeImport } from './stored.ts'
 import { requireImportTables } from './trakt.ts'
@@ -45,20 +44,6 @@ export interface ImdbOutside {
   readonly film: string
   readonly title: string | null
 }
-
-/** The rated titles of every CSV she keeps that the Catálogo does not
- * have, each once (#274): what her import page lists as left out. */
-export const imdbLeftOut = (
-  db: Connection,
-  person: Person,
-): Effect.Effect<ImdbOutside[], EngineError | SqliteError, Environment> =>
-  Effect.gen(function* () {
-    const outside = new Map<string, ImdbOutside>()
-    for (const row of yield* personImdbRows(person))
-      if (!outside.has(row.film) && !(yield* inCatalog(db, row.film)))
-        outside.set(row.film, { film: row.film, title: row.title })
-    return [...outside.values()]
-  })
 
 /** Replaces the Pessoa's IMDb Fatos by those of the rows; the titles left
  * out, each once, in the order the rows had them. */

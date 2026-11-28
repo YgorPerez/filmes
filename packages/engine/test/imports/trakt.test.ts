@@ -14,7 +14,6 @@ import {
   importTrakt,
   LETTERBOXD_RSS_KIND,
   personCreate,
-  personImports,
   personSeen,
   personView,
   readTraktExport,
@@ -216,10 +215,6 @@ describe('importTrakt', () => {
     expect(report.facts).toEqual({ ratings: 0, seen: 2, watchlist: 0 })
     expect(report.unresolved).toEqual([
       { name: 'Filme perdido', imdb: 'tt9999999', tmdb: null, trakt: 99 },
-    ])
-    // Her import page lists it later, once, from the ZIP she keeps (#274).
-    expect((await fixture.ok(personImports('teo'))).leftOut.trakt).toEqual([
-      { name: 'Filme perdido', year: null, id: 'tt9999999' },
     ])
   })
 })

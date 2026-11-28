@@ -200,7 +200,7 @@ export function Latest({
           <p className="font-hand text-hand-large leading-tight">
             {latest.open}
           </p>
-          <p className="text-evidence text-pretty">{latest.openText}</p>
+          <p className="text-evidence">{latest.openText}</p>
           <a
             href={feedbackPath(s.id)}
             className={buttonVariants({ variant: 'option' })}
@@ -343,7 +343,9 @@ function ConnectorHow() {
     <>
       <ol className="flex list-decimal flex-col gap-2xs pl-3xl text-evidence">
         {guide.how.map((line) => (
-          <li key={line}>{line}</li>
+          <li key={line} className="text-pretty">
+            {line}
+          </li>
         ))}
       </ol>
       <p className="text-meta text-pretty text-ink-2">{guide.auto}</p>

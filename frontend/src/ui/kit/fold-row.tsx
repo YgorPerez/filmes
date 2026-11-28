@@ -10,15 +10,12 @@ import { Icon } from './icon'
 // → stays for links that leave the page.
 
 export function FoldRow({
-  id,
   summary,
   open,
   rule = true,
   className,
   children,
 }: {
-  /** For a link to the fold (`#id`). */
-  id?: string
   summary: string
   /** Open from the start: what it holds came back refused. */
   open?: boolean
@@ -29,10 +26,8 @@ export function FoldRow({
 }) {
   return (
     <details
-      id={id}
       open={open}
       className={mergeClasses(
-        'scroll-mt-2xl',
         rule ? 'border-t border-dashed border-rule' : undefined,
         className,
       )}

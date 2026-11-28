@@ -59,14 +59,6 @@ export interface TvTimeOutside {
   readonly title: string | null
 }
 
-/** The films of every backup she keeps, named by tconst, that the
- * Catálogo does not have (#274). */
-export const tvTimeLeftOut = (
-  db: Connection,
-  person: Person,
-): Effect.Effect<TvTimeOutside[], EngineError | SqliteError, Environment> =>
-  Effect.flatMap(personTvTimeRows(person), (rows) => outsideCatalog(db, rows))
-
 const outsideCatalog = (
   db: Connection,
   rows: readonly LetterboxdRow[],

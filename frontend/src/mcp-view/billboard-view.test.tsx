@@ -158,14 +158,11 @@ describe('the view shows, a closed Session', () => {
     expect(
       screen.getByText(new RegExp(`^${view.closed}`, 'u')).textContent,
     ).toBe('Sessão fechada · Filme escolhido: As Horas Lentas')
-    // Under the request only: the chosen film's card keeps its label
-    // (#277).
+    // Under the request, and again in the chosen film's card.
     expect(reactions().map((list) => list.textContent)).toEqual([
       'BVocê: previsto 8,3 · deu 6 de 10IIara: gostou',
+      'BVocê: previsto 8,3 · deu 6 de 10IIara: gostou',
     ])
-    expect(
-      screen.getAllByRole('heading', { name: 'Filme escolhido' }),
-    ).not.toHaveLength(0)
   })
 
   it('without fullscreen, the same; a chosen film with a block of its own says its lines once', () => {

@@ -6,7 +6,6 @@ import {
   useMatches,
 } from '@tanstack/react-router'
 import { readPushAlert } from '#/content/operations'
-import { tabPlace } from '#/content/queue-search'
 import { NotFound } from '#/ui/lost'
 import { AppShell } from '#/ui/shell'
 
@@ -41,7 +40,7 @@ function OwnerNotFound() {
 
 function OwnerLayout() {
   const { owner } = Route.useRouteContext()
-  const { pathname, search } = useLocation()
+  const { pathname } = useLocation()
   // A two-column page says so in its route's `staticData`.
   const wide = useMatches({
     select: (matches) => matches.some((match) => match.staticData.wide),
@@ -49,7 +48,7 @@ function OwnerLayout() {
   return (
     <AppShell
       owner={owner}
-      path={tabPlace(pathname, search, owner.person)}
+      path={pathname}
       alert={Route.useLoaderData()}
       wide={wide}
     >

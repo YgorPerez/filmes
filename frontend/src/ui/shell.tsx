@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react'
 import type { PushStatus } from '@filmes/engine'
 import { Icon, type IconName } from './kit/icon'
-import { MENU_ROW } from './kit/menu-row'
 import { Avatar } from './kit/person'
 import { CREDITS_PATH, SiteFooter } from './kit/site-footer'
 import { Alert } from './kit/status'
@@ -129,6 +128,9 @@ function PushStrip({ status, wide }: { status: PushStatus; wide: boolean }) {
 
 export type ShellOwner = { name: string; admin: boolean; email: string }
 
+const MENU_ROW =
+  'flex min-h-touch w-full cursor-pointer items-center gap-md rounded-rail px-md font-display text-control text-ink no-underline hover:bg-surface-2'
+
 /** The Dono's avatar, a button that opens her menu: her name and the
  * Google e-mail she entered with, Operações for an admin (saying so while
  * the push keeps failing), and Sair by POST. A native popover: it opens
@@ -195,7 +197,7 @@ function AccountMenu({
                 <Icon name="tools" />
                 {SHELL.operations}
                 {alert && (
-                  <span className="ml-auto inline-flex items-center gap-2xs font-body text-meta whitespace-nowrap text-ink-2">
+                  <span className="ml-auto inline-flex items-center gap-2xs font-body text-meta text-ink-2">
                     <Icon name="alert" className="size-4" />
                     {SHELL.pushFailing}
                   </span>

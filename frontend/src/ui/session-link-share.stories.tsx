@@ -19,15 +19,3 @@ export const Ready: Story = {
     ).toBeVisible()
   },
 }
-
-/** In the Session's ⋯ menu: the account menu's rows (#272). */
-export const InAMenu: Story = {
-  args: { rows: true },
-  play: async ({ canvasElement }) => {
-    await expect(
-      within(canvasElement).getByRole('link', {
-        name: 'Link para os Presentes',
-      }),
-    ).toBeVisible()
-  },
-}

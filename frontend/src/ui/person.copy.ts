@@ -166,8 +166,7 @@ export const PERSON = {
     trakt: {
       state: (connected: boolean) =>
         connected ? 'Trakt conectado' : 'Trakt não conectado',
-      link: (connected: boolean) =>
-        connected ? 'ver a conexão' : 'Conectar o Trakt',
+      link: (connected: boolean) => (connected ? 'ver a conexão' : 'conectar'),
     },
     /** For an admin: why and where the CSVs go (#274, #276). */
     movielens: (own: boolean, n: number, name: string) => {
