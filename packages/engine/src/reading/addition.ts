@@ -1,7 +1,8 @@
 // The Cartaz's Acrescentar on the web (#184): which items of its reading
 // go into the redo request, and how. Presentes and Climas are added; a
 // Restrição is added or replaces the same one (the year range as a whole);
-// a Parecido replaces the one there. How many films, the Regra and "de"
+// a Parecido replaces the one there; a Programa is its Climas and
+// Restrições, each as above (#402). How many films, the Regra and "de"
 // are not read from an Acrescentar: their words come back not understood.
 
 import { mergeReadFields } from './read-request.ts'
@@ -20,6 +21,7 @@ export const ADDITION_FIELDS: ReadonlyArray<ReadField> = [
   'noSad',
   'noMoods',
   'similar',
+  'preset',
 ]
 
 /** The redo request `asked` with what an Acrescentar read. */

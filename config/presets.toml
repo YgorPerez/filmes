@@ -1,0 +1,35 @@
+# Programas (#402, mapa #395): um nome fixo com Climas e Restrições, para não
+# marcar tudo de novo a cada noite parecida.
+#
+# Na nova Sessão do app, cada Programa é um chip: tocar nele marca no
+# formulário os Climas e as Restrições dele, por cima do que já estava. A
+# Leitura do pedido lê o nome na frase do Dono ("Encontro com a Iara"), sem
+# diferença de maiúscula nem de acento, e o nome mais longo ganha das outras
+# palavras ("noite com as crianças" é o Programa, não só a criança).
+#
+# Cada chave é a do pedido, como o MCP e o app a escrevem:
+#   moods        Climas de moods.toml (puxam a ordem)
+#   no_moods     Nada de um Clima (tira os filmes dele)
+#   child        idade da criança mais nova; 0 é criança sem idade
+#   max_duration minutos
+#   since, until anos de estreia
+#   language     idioma original (pt, en, fr...)
+#   unseen       só filmes que ninguém viu
+#   no_slow      nada lento
+#   no_sad       nada triste
+# Um Clima fora de moods.toml ou uma chave de fora recusam o arquivo.
+#
+# Os nomes aparecem como chips na ordem do arquivo. Mudar um Programa não
+# muda a Recomendação de quem não o pediu: não precisa rodar `evaluate`.
+
+["Noite com as crianças"]
+moods = ["leve", "pra rir"]
+no_moods = ["assustador", "sombrio"]
+child = 0
+no_sad = true
+max_duration = 110
+
+[Encontro]
+moods = ["romântico"]
+no_moods = ["assustador"]
+unseen = true

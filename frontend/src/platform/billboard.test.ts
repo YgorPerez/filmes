@@ -44,6 +44,7 @@ const SESSION: SessionItem = {
 const sessions = (list: Outcome<SessionItem[]>): Sessions => ({
   list: async () => list,
   options: async () => failure('missing_database'),
+  presets: async () => failure('missing_database'),
   open: async () => failure('missing_database'),
   read: async () => failure('missing_database'),
 })
