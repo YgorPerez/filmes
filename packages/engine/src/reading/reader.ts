@@ -24,6 +24,7 @@ export type ReadField =
   | 'similar'
   | 'count'
   | 'by'
+  | 'preset'
 
 /** The fields of a recommendation request a sentence can fill, with the
  * same names and values: what one item read, or a whole reading. */

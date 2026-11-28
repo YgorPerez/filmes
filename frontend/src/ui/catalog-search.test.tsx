@@ -80,6 +80,7 @@ it('puts the film lookup in the same form as the request', () => {
       options={{
         people: [{ person: 'bruno', name: 'Bruno', owner: true }],
         moods: [],
+        presets: [],
       }}
       search={null}
       similar="tt1"

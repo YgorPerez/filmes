@@ -11,7 +11,11 @@ import {
 import { similarParam } from '#/content/catalog-search'
 import type { SearchAnswer } from '#/platform/catalog-search'
 import type { PageReading } from '#/platform/reading'
-import type { NewSessionDraft, RequestOptions } from '#/platform/sessions'
+import type {
+  NewSessionDraft,
+  RequestOptions,
+  SessionPreset,
+} from '#/platform/sessions'
 import { ImportsFrame } from './imports'
 import { useFetchForm, useHydrated } from './kit/fetch-form'
 import { refusalOn, useRefusalInPlace } from './kit/refusal-in-place'
@@ -268,6 +272,35 @@ function limitsOf(data: FormData): string[] {
   ].filter((item): item is string => item !== null)
 }
 
+/** "até 2h", "até 1h50", "até 90min"; null with no minutes. */
+const durationOf = (minutes: number | undefined) => {
+  if (minutes === undefined || !(minutes > 0)) return null
+  const hours = Math.floor(minutes / 60)
+  return `até ${hours > 0 ? `${hours}h${minutes % 60 ? String(minutes % 60).padStart(2, '0') : ''}` : `${minutes}min`}`
+}
+
+/** What a Programa marks, as the bar says the night: its Climas, then
+ * its Restrições ("leve, pra rir · nada assustador · com criança"). */
+export function presetSummary(fields: SessionPreset['fields']): string {
+  const { night, presetSummary: said } = SESSIONS.form
+  return [
+    fields.moods && fields.moods.length > 0 ? fields.moods.join(', ') : null,
+    fields.noMoods && fields.noMoods.length > 0
+      ? night.noMoods(fields.noMoods)
+      : null,
+    fields.child === undefined ? null : night.child(String(fields.child)),
+    durationOf(fields.maxDuration),
+    fields.since === undefined ? null : said.since(fields.since),
+    fields.until === undefined ? null : said.until(fields.until),
+    fields.language === undefined ? null : said.language(fields.language),
+    fields.noSlow ? night.noSlow : null,
+    fields.noSad ? night.noSad : null,
+    fields.unseen ? night.unseen : null,
+  ]
+    .filter((item): item is string => item !== null)
+    .join(' · ')
+}
+
 /** The night the form asks for so far, as the shelf label would say it:
  * who ("você", "vocês dois"), the duration, the Climas and the
  * Restrições. */
@@ -282,15 +315,9 @@ function nightOf(data: FormData, options: RequestOptions): string[] {
           ? SESSIONS.form.alone
           : (one?.name ?? null)
         : SESSIONS.form.together(people.length)
-  const minutes = Number(data.get('duracao'))
-  const hours = Math.floor(minutes / 60)
-  const duration =
-    minutes > 0
-      ? `até ${hours > 0 ? `${hours}h${minutes % 60 ? String(minutes % 60).padStart(2, '0') : ''}` : `${minutes}min`}`
-      : null
   return [
     who,
-    duration,
+    durationOf(Number(data.get('duracao'))),
     ...data.getAll('climas').map(String),
     ...limitsOf(data),
   ].filter((item): item is string => item !== null)
@@ -455,6 +482,7 @@ function NewSessionForm({
         owner={options.people.find((p) => p.owner)?.name}
       />
       <AttendeeOptions people={options.people} selected={asked.attendees} />
+      <Presets presets={options.presets} busy={busy} />
       <Moods moods={options.moods} asked={asked} />
       <Section id="duracao" title={form.time}>
         <div className={grid}>
@@ -681,6 +709,44 @@ export function SeriesOrder({ asked }: { asked: Asked }) {
           </Option>
         ))}
       </div>
+    </Section>
+  )
+}
+
+/** The Programas (#402): each chip posts the form with `programa=`, and
+ * it comes back with the Programa's Climas and Restrições marked on top
+ * of what the Dono had set. None without a Programa in `presets.toml`. */
+export function Presets({
+  presets,
+  busy,
+}: {
+  presets: readonly SessionPreset[]
+  busy: string | null
+}) {
+  const { form } = SESSIONS
+  if (presets.length === 0) return null
+  return (
+    <Section id="programas" title={form.presets} lead={form.presetsLead}>
+      <ul className="flex flex-col gap-sm">
+        {presets.map((preset) => (
+          <li
+            key={preset.name}
+            className="flex flex-col gap-xs sm:flex-row sm:items-center sm:gap-md"
+          >
+            <Submit
+              name="programa"
+              value={preset.name}
+              disabled={busy !== null}
+              className="shrink-0 self-start sm:self-auto"
+            >
+              {preset.name}
+            </Submit>
+            <span className="text-meta text-ink-2">
+              {presetSummary(preset.fields)}
+            </span>
+          </li>
+        ))}
+      </ul>
     </Section>
   )
 }

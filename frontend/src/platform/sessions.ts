@@ -6,18 +6,23 @@
 // (#199) posts the same form with `ler=sim`: the route reads the sentence
 // (the engine's Leitura do pedido), puts what it understood on top of what
 // the Dono had set, and goes back to the form with that in a note
-// (`?nota=`, `notes.ts`). Server only.
+// (`?nota=`, `notes.ts`). A Programa's chip (#402) posts it with
+// `programa=<name>`: the route marks the Programa's Climas and Restrições
+// on top of what the Dono had set and goes back to the form, as "Ler".
+// Server only.
 
 import {
   readPeople,
   listSessions,
   mergeReadFields,
   readMoods,
+  readPresets,
   readRequest,
   recommendSession,
   type Engine,
   type ErrorOutput,
   type Outcome,
+  type Preset,
   type RecommendSessionRequest,
   type RequestReading,
   sessionRedoRequest,
@@ -68,15 +73,24 @@ export type SessionItem = {
   additions: string[]
 }
 
+/** A Programa as the form offers it: its name and what it marks. */
+export type SessionPreset = Preset
+
 /** What the form offers: every Pessoa (the logged-in Dono first, and
- * checked) and the Climas. */
-export type RequestOptions = { people: SessionPerson[]; moods: string[] }
+ * checked), the Climas and the Programas. */
+export type RequestOptions = {
+  people: SessionPerson[]
+  moods: string[]
+  presets: readonly SessionPreset[]
+}
 
 /** What the screens and the form need from the engine. */
 export interface Sessions {
   /** Every Session, the latest first. */
   list(): Promise<Outcome<SessionItem[]>>
   options(): Promise<Outcome<RequestOptions>>
+  /** The Programas, in `presets.toml`'s order. */
+  presets(): Promise<Outcome<ReadonlyArray<SessionPreset>>>
   /** Opens a Session for the form's request, as the Dono `owner` (a
    * slug); gives its id and the Recomendação's warnings. */
   open(
@@ -153,11 +167,15 @@ export function sessionsFromEngine(
       if (known.exitCode !== 0) return known
       const moods = await run(readMoods)
       if (moods.exitCode !== 0) return moods
+      const presets = await run(readPresets)
+      if (presets.exitCode !== 0) return presets
       return ok({
         people: known.output,
         moods: moods.output.map((m) => m.name),
+        presets: presets.output,
       })
     },
+    presets: () => run(readPresets),
     async open(form, owner) {
       const opened = await run(recommendSession(form), { owner })
       return opened.exitCode === 0
@@ -243,6 +261,31 @@ async function readSentence(
   return seeOther(`/sessoes/nova${token ? `?nota=${token}` : ''}`)
 }
 
+/** A Programa's chip: back to the form with what the Dono had set and, on
+ * top, the Programa's Climas and Restrições (`mergeReadFields`, as "Ler"),
+ * in a note. A name no Programa has any more leaves the form as it was. */
+async function applyPreset(
+  form: FormData,
+  name: string,
+  sessions: Sessions,
+  notes: Notes,
+): Promise<Response> {
+  const presets = await sessions.presets()
+  if (presets.exitCode !== 0) {
+    logEngineError(presets)
+    return seeOther(`/sessoes/nova?erro=${failureOf(presets)}`)
+  }
+  const preset = presets.output.find((p) => p.name === name)
+  const draft = draftOf(form)
+  const token = notes.remember({
+    warnings: [],
+    addition: null,
+    form: preset ? mergeReadFields(draft, preset.fields) : draft,
+    reading: notes.recall(field(form, 'nota'))?.reading,
+  })
+  return seeOther(`/sessoes/nova${token ? `?nota=${token}` : ''}`)
+}
+
 /** The search redirects without putting the request's fields in the URL. */
 function searchSimilar(form: FormData, notes: Notes): Response {
   const previous = notes.recall(field(form, 'nota'))
@@ -264,7 +307,8 @@ function searchSimilar(form: FormData, notes: Notes): Response {
  * the Recomendação's warnings), or back to the form saying why not
  * (`?erro=`). With `ler=sim` ("Ler"), opens nothing: back to the form
  * filled from its sentence (`readSentence`); nor with the Catálogo search
- * (its button, or Enter in its field: `searchSimilar`). Only a Dono, and only a form of
+ * (its button, or Enter in its field: `searchSimilar`), nor with a
+ * Programa's chip (`programa=`: `applyPreset`). Only a Dono, and only a form of
  * this site (the `Origin`): the page gate does not cover this route. */
 export async function sessionRequestAction(
   request: Request,
@@ -279,6 +323,8 @@ export async function sessionRequestAction(
   if (searchAsked(form, 'buscar')) return searchSimilar(form, notes)
   if (form.get('ler') === 'sim')
     return readSentence(form, poster.person, sessions, notes)
+  const preset = field(form, 'programa')
+  if (preset !== undefined) return applyPreset(form, preset, sessions, notes)
   const parsed = parseSessionRequest(form)
   if ('refused' in parsed)
     return seeOther(`/sessoes/nova?erro=${parsed.refused}`)

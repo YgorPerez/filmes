@@ -115,6 +115,11 @@ export {
 } from './recommendation/header.ts'
 export { readMoods, resolveMoods, type Mood } from './recommendation/moods.ts'
 export {
+  readPresets,
+  type Preset,
+  type PresetFields,
+} from './recommendation/presets.ts'
+export {
   mergeReadFields,
   readRequest,
   REQUEST_READING_MAX_LENGTH,
