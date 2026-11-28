@@ -29,7 +29,7 @@ export const EDGES: ReadonlyMap<string, string> = new Map([
 ])
 
 /** The Criterion Collection (#411), the target of the `colecao` edge. */
-export const CRITERION = 'Q1204187'
+const CRITERION = 'Q1204187'
 
 /** Wikidata property with a literal value (an id, a spine number) → the
  * edge it becomes: a film with any of them is on the list (#411). */
