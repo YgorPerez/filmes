@@ -19,6 +19,7 @@ const PAGE = {
     similar: ['tt9006701'],
   },
   moods: ['leve', 'tenso'],
+  noMoods: ['leve', 'tenso'],
 }
 
 it('is filled with the current version and posts to the Session’s edit', () => {

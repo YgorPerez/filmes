@@ -74,6 +74,15 @@ describe('each kind of field alone', () => {
   })
 
   test.each([
+    ['algo conhecido', 'conhecido'],
+    ['um filme famoso', 'conhecido'],
+    ['algo pouco conhecido', 'desconhecido'],
+    ['desconhecido', 'desconhecido'],
+  ])('Clima of popularity: "%s" is %s', async (text, mood) => {
+    expect(await fields(useFixture(), text)).toEqual({ moods: [mood] })
+  })
+
+  test.each([
     ['até 2h', 120],
     ['até 90 minutos', 90],
     ['no máximo 1h30', 90],
@@ -430,6 +439,23 @@ describe('the whole sentence', () => {
     })
     expect((await read(fixture, 'não quero terror')).request).toEqual({
       noMoods: ['assustador'],
+    })
+  })
+
+  test('a Clima of popularity turned away is its opposite', async () => {
+    const fixture = useFixture()
+
+    const reading = await read(fixture, 'nada muito conhecido')
+
+    expect(reading.request).toEqual({ moods: ['desconhecido'] })
+    expect(reading.understood.map((i) => [i.field, i.words, i.label])).toEqual([
+      ['moods', 'nada muito conhecido', 'Clima: desconhecido'],
+    ])
+    expect(await fields(fixture, 'sem filme famoso')).toEqual({
+      moods: ['desconhecido'],
+    })
+    expect(await fields(fixture, 'nada desconhecido')).toEqual({
+      moods: ['conhecido'],
     })
   })
 

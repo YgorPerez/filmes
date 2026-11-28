@@ -316,6 +316,8 @@ describe('the Cartaz model', () => {
       'assustador',
       'ação',
       'sombrio',
+      'conhecido',
+      'desconhecido',
     ])
   })
 })

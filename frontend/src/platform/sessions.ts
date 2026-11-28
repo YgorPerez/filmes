@@ -38,7 +38,7 @@ import {
 } from '#/content/session-request'
 import { appEngine } from './engine'
 import { logEngineError } from './engine-log'
-import { appEdits, type SessionEdits } from './session-edit'
+import { appEdits, moodChoices, type SessionEdits } from './session-edit'
 import { attendeeSlugs, sessionFilms, type SessionFilm } from './session-fields'
 import { appPoster, failureOf, formPoster, seeOther } from './form-post'
 import { appNotes, type Notes } from './notes'
@@ -69,8 +69,13 @@ export type SessionItem = {
 }
 
 /** What the form offers: every Pessoa (the logged-in Dono first, and
- * checked) and the Climas. */
-export type RequestOptions = { people: SessionPerson[]; moods: string[] }
+ * checked), the Climas, and the Climas "Nada de" can turn away: all but
+ * those of popularity, which have nothing to remove by (#387). */
+export type RequestOptions = {
+  people: SessionPerson[]
+  moods: string[]
+  noMoods: string[]
+}
 
 /** What the screens and the form need from the engine. */
 export interface Sessions {
@@ -155,7 +160,7 @@ export function sessionsFromEngine(
       if (moods.exitCode !== 0) return moods
       return ok({
         people: known.output,
-        moods: moods.output.map((m) => m.name),
+        ...moodChoices(moods.output),
       })
     },
     async open(form, owner) {

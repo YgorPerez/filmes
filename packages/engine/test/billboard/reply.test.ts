@@ -109,6 +109,56 @@ describe('comments on a Cartaz redo (#359)', () => {
     },
   )
 
+  test.each([
+    { moods: ['desconhecido'], multiplier: 2 },
+    { moods: [], multiplier: 1 },
+  ])(
+    'a comment gives a Clima of popularity a weight of $multiplier only in the free place (#387)',
+    async ({ moods, multiplier }) => {
+      const fixture = useFixture()
+      const request = { attendees: ['iara'], moods }
+      const first = await fixture.ok(recommendSession({ ...request, count: 3 }))
+      const session = first.session.id
+      const [swapped, kept, commented] = first.films
+
+      const reply = await answer(
+        fixture,
+        session,
+        `#cartaz ${session} v1\n1 ${swapped!.id} · trocar\n3 ${commented!.id} · comentário: algo pouco conhecido\n`,
+      )
+      const redo = await fixture.ok(
+        recommendSession({
+          ...request,
+          count: 3,
+          session,
+          keep: reply.keep,
+          refillComments: reply.comments.flatMap(
+            ({ comment }) => comment ?? [],
+          ),
+        }),
+      )
+      const baseline = await fixture.ok(
+        recommend({ ...request, moods: ['desconhecido'], count: 50 }),
+      )
+      const bonus = (film: (typeof first.films)[number] | undefined) =>
+        film?.filmLines.find((line) =>
+          line.text.startsWith('Clima desconhecido:'),
+        )?.contribution
+      const replacement = redo.films[0]
+      const ordinary = bonus(
+        baseline.films.find((f) => f.id === replacement?.id),
+      )
+      expect(redo.films.map((f) => f.id).slice(1)).toEqual([
+        kept!.id,
+        commented!.id,
+      ])
+      expect(ordinary).toBeGreaterThan(0)
+      // The output rounds each contribution to 4 places.
+      expect(bonus(replacement)).toBeCloseTo(multiplier * ordinary!, 3)
+      expect(bonus(redo.films[2])).toBe(bonus(commented))
+    },
+  )
+
   test('a comment limits the replacements and leaves a longer film in place', async () => {
     const fixture = useFixture()
     const request = { attendees: ['dono'], count: 3 }

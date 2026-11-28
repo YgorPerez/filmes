@@ -508,7 +508,7 @@ function Details({
       }
     >
       <div className="flex flex-col gap-3xl">
-        <Constraints asked={asked} moods={options.moods} />
+        <Constraints asked={asked} noMoods={options.noMoods} />
         <Rule options={options} asked={asked} />
         <SeriesOrder asked={asked} />
       </div>
@@ -713,7 +713,8 @@ export function Moods({
 }
 
 /** "Nada de" (#346): the Climas as chips, the same names as above, to
- * recognize rather than type. */
+ * recognize rather than type; a Clima of popularity is not among them
+ * (#387). */
 function NoMoods({ moods, asked }: { moods: readonly string[]; asked: Asked }) {
   const { form } = SESSIONS
   const chosen = new Set(asked.noMoods)
@@ -745,10 +746,11 @@ function NoMoods({ moods, asked }: { moods: readonly string[]; asked: Asked }) {
 
 export function Constraints({
   asked,
-  moods,
+  noMoods,
 }: {
   asked: Asked
-  moods: readonly string[]
+  /** The Climas "Nada de" can turn away. */
+  noMoods: readonly string[]
 }) {
   const { form } = SESSIONS
   const year = { type: 'number', min: 1870, max: 2100 } as const
@@ -771,7 +773,7 @@ export function Constraints({
           {form.noSad}
         </Option>
       </div>
-      <NoMoods moods={moods} asked={asked} />
+      <NoMoods moods={noMoods} asked={asked} />
       <div className={grid}>
         <SelectField
           name="crianca"

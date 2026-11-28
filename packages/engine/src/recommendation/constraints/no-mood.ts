@@ -4,7 +4,8 @@
 // its tags with the `[tag_vetoes]` minimums (relevance in the Tag Genome or
 // users in MovieLens' tags.csv), the same as a Veto by group. The Clima
 // asked for pulls the order and never removes a film; this one only
-// removes. A name outside `moods.toml` is a warning, as for the Clima.
+// removes. A name outside `moods.toml` is a warning, as for the Clima, and
+// so is a Clima of popularity (#387), which has nothing to remove by.
 
 import { Effect } from 'effect'
 import { Run } from '../../runtime/Run.ts'
@@ -18,7 +19,7 @@ import {
   type ConstraintModule,
 } from '../constraints.ts'
 import type { Candidate } from '../candidates.ts'
-import { resolveMoods, type Mood } from '../moods.ts'
+import { readMoods, resolveMoods, type Mood } from '../moods.ts'
 
 export interface NoMoodRequest {
   /** The Climas turned away, by name. */
@@ -59,6 +60,21 @@ const marked = (
     return out
   })
 
+/** A Clima of popularity has no tags or genres to remove by (#387): it
+ * stays out of the Restrição, and the warning names its opposite. */
+const popularityWarning = (
+  mood: Mood,
+  vocabulary: ReadonlyArray<Mood>,
+): string => {
+  const opposite = vocabulary.find(
+    (m) => m.popularity !== null && m.popularity !== mood.popularity,
+  )
+  return (
+    `o Clima '${mood.name}' só puxa a ordem e não tira filme` +
+    (opposite ? `; peça o Clima ${opposite.name}.` : '.')
+  )
+}
+
 /** "nada assustador", "nada leve nem tenso". */
 const labelOf = (names: ReadonlyArray<string>): string =>
   `nada ${names.join(' nem ')}`
@@ -70,9 +86,13 @@ const noMood = (names: ReadonlyArray<string>): Constraint => ({
   result: () => ({}),
   evaluate: (context, films) =>
     Effect.gen(function* () {
-      const { moods, warnings } = yield* resolveMoods(names)
+      const resolved = yield* resolveMoods(names)
       const run = yield* Run
-      for (const warning of warnings) yield* run.warn(warning)
+      for (const warning of resolved.warnings) yield* run.warn(warning)
+      const vocabulary = yield* readMoods
+      for (const mood of resolved.moods.filter((m) => m.popularity !== null))
+        yield* run.warn(popularityWarning(mood, vocabulary))
+      const moods = resolved.moods.filter((m) => m.popularity === null)
       const out =
         moods.length === 0
           ? new Set<string>()

@@ -9597,7 +9597,7 @@ exports[`the whole output, as recorded > Climas, one outside the vocabulary 1`] 
   "satisfaction": {},
   "vetoes": [],
   "warnings": [
-    "o Clima 'épico' não está no vocabulário e ficou de fora. Os Climas são leve, pra rir, tenso, romântico, pra chorar, pra pensar, assustador, ação, sombrio.",
+    "o Clima 'épico' não está no vocabulário e ficou de fora. Os Climas são leve, pra rir, tenso, romântico, pra chorar, pra pensar, assustador, ação, sombrio, conhecido, desconhecido.",
     "TMDB sem chave de API (defina FILMES_TMDB_CHAVE); os filmes saem sem capa, sem título em português e sem sinopse",
   ],
 }

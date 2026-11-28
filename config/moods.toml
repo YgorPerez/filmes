@@ -8,6 +8,10 @@
 # como aviso. No chat, o Claude traduz o pedido livre ("algo leve e
 # engraçado", "tipo X, só que mais sombrio") nesses nomes.
 #
+# Um Clima com `popularity` não tem tags nem gêneros: puxa pelos votos do
+# IMDb (#386), "known" quem tem muitos e "unknown" quem tem poucos, com os
+# limites de [popularity] em config/weights.toml.
+#
 # Os nomes aparecem como chips no Cartaz, na ordem do arquivo.
 #
 # As tags estão em minúsculas, como nas tabelas tags_movielens e genoma. Todas
@@ -58,3 +62,9 @@ genres = ["Q188473", "Q319221", "Q2678111"]
 tags = ["dark", "bleak", "gritty", "grim", "disturbing"]
 # filme noir
 genres = ["Q185867"]
+
+[conhecido]
+popularity = "known"
+
+[desconhecido]
+popularity = "unknown"

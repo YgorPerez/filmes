@@ -14,7 +14,8 @@ const meta = {
         { person: 'iara', name: 'Iara', owner: false },
         { person: 'quim', name: 'Quim', owner: false },
       ],
-      moods: ['leve', 'pra rir', 'tenso'],
+      moods: ['leve', 'pra rir', 'tenso', 'conhecido', 'desconhecido'],
+      noMoods: ['leve', 'pra rir', 'tenso'],
     },
   },
 } satisfies Meta<typeof NewSession>
