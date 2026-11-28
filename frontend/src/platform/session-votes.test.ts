@@ -134,7 +134,13 @@ test('a Presente’s no swaps the film and redoes the Session; her yes stays and
       mine?.films.filter((f) => f.mine).map((f) => [f.id, f.mine]),
     ).toEqual([[a, 'yes']])
     expect(mine?.left).toEqual([first.films[1]?.title])
-    expect((await deck('bruno'))?.films.map((f) => f.id)).toEqual(now)
+    // The film her no brought in came after her last Voto: new to her
+    // (#380). Bruno has not voted yet, so nothing is new to him.
+    const came = now?.filter((film) => film !== a && film !== c)
+    expect(mine?.films.filter((f) => f.new).map((f) => f.id)).toEqual(came)
+    const brunos = await deck('bruno')
+    expect(brunos?.films.map((f) => f.id)).toEqual(now)
+    expect(brunos?.films.some((f) => f.new)).toBe(false)
 
     const yes = await post(as('bruno'), `versao=2&sim=${c}`, {
       origin: ORIGIN,

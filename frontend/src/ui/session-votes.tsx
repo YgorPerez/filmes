@@ -17,7 +17,7 @@ import { buttonVariants } from './kit/button-variants'
 import { useFetchForm } from './kit/fetch-form'
 import { Icon } from './kit/icon'
 import { Alert, Notice, PostFailed } from './kit/status'
-import { Sticker } from './kit/sticker'
+import { NewSticker, Sticker } from './kit/sticker'
 import { FilmSheet } from './film-sheet'
 import { LinkFilmList, VotedActions, VoteRule } from './session-link'
 import { PARTICIPATION } from './session-link.copy'
@@ -28,7 +28,8 @@ import { VOTES } from './session-votes.copy'
 // bottom (DESIGN.md has no gradients) the title, the facts and her own
 // Nota prevista. Não or Sim by the round buttons, the
 // arrow keys or by dragging the card sideways (it follows the finger and
-// gets the SIM or NÃO sticker near the line). A tap on the card opens its
+// gets the SIM or NÃO sticker near the line). A film that came in after her
+// last Voto has the NOVO sticker (#380). A tap on the card opens its
 // full sheet (`film-sheet.tsx`), where she can vote too. What a não does
 // stays over the card. After the last film, the recap, where a tap flips a
 // Voto, and Enviar votos, the screen's one orange button, which posts
@@ -429,14 +430,18 @@ function VoteCard({
           )}
           <div className="mx-auto flex w-full max-w-[640px] flex-col gap-md">
             <div className="flex flex-col gap-2xs">
-              <h2
-                id="carta"
-                ref={heading}
-                tabIndex={-1}
-                className="font-display text-page-title text-balance"
-              >
-                {film.title}
-              </h2>
+              <div className="flex items-start justify-between gap-md">
+                <h2
+                  id="carta"
+                  ref={heading}
+                  tabIndex={-1}
+                  className="font-display text-page-title text-balance"
+                >
+                  {film.title}
+                </h2>
+                {/* A film that came in after her last Voto (#380). */}
+                {film.new && <NewSticker className="mt-xs shrink-0" />}
+              </div>
               {film.card?.originalTitle && (
                 <p className="text-meta text-case-ink-2">
                   {film.card.originalTitle}
