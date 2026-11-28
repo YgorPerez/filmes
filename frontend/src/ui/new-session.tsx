@@ -281,7 +281,7 @@ const durationOf = (minutes: number | undefined) => {
 
 /** What a Programa marks, as the bar says the night: its Climas, then
  * its Restrições ("leve, pra rir · nada assustador · com criança"). */
-export function presetSummary(fields: SessionPreset['fields']): string {
+function presetSummary(fields: SessionPreset['fields']): string {
   const { night, presetSummary: said } = SESSIONS.form
   return [
     fields.moods && fields.moods.length > 0 ? fields.moods.join(', ') : null,
@@ -716,7 +716,7 @@ export function SeriesOrder({ asked }: { asked: Asked }) {
 /** The Programas (#402): each chip posts the form with `programa=`, and
  * it comes back with the Programa's Climas and Restrições marked on top
  * of what the Dono had set. None without a Programa in `presets.toml`. */
-export function Presets({
+function Presets({
   presets,
   busy,
 }: {
