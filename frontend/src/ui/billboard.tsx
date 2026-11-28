@@ -35,6 +35,7 @@ import { ReplyBar, ReplyBox, type BarPlace } from './billboard-reply'
 import { askedParts } from './billboard-request'
 import { ShortfallStrip } from './billboard-shortfall'
 import { buttonVariants } from './kit/button-variants'
+import { SessionQr } from './session-qr'
 import { Dropped, Legend, PeopleLegend } from './billboard-top'
 import { BILLBOARD } from './billboard.copy'
 import { HandNote, ShelfLabel } from './kit/shelf-label'
@@ -94,6 +95,9 @@ type Props = {
   /** False when the page put the shelf label above already: the closed
    * Session opens with it, over the tape given back (#346). */
   request?: boolean
+  /** The Link da Sessão, issued to the Dono of an open Session: "Mostrar
+   * QR" opens it as a QR code, full screen (#396). */
+  sessionLink?: string | null
 }
 
 /** Another tab changed the storage. */
@@ -247,6 +251,29 @@ function barPlace(fullscreen: boolean, viewed: boolean): BarPlace {
   return viewed ? 'end' : 'tabs'
 }
 
+/** "Mostrar QR" while the Session is open and the Dono has its link
+ * (#396). Its dialog's state lives here, with the marks, so the code stays
+ * open when the inline card asks the host for the fullscreen (`expand`). */
+function useQr(
+  billboard: BillboardModel,
+  url: string | null | undefined,
+  expand: (() => void) | undefined,
+): ReactNode {
+  const [open, setOpen] = useState(false)
+  if (!url || !billboard.open) return null
+  return (
+    <SessionQr
+      url={url}
+      open={open}
+      onOpen={() => {
+        setOpen(true)
+        expand?.()
+      }}
+      onClose={() => setOpen(false)}
+    />
+  )
+}
+
 export function Billboard({
   billboard,
   action,
@@ -258,6 +285,7 @@ export function Billboard({
   unread,
   after,
   request = true,
+  sessionLink,
 }: Props) {
   const { message, setMessage, marks, change, canKeep } = useReplyMarks(
     billboard,
@@ -271,6 +299,11 @@ export function Billboard({
     setMessage,
   })
   const copy = failure === 'copy' ? text : null
+  const qr = useQr(
+    billboard,
+    sessionLink,
+    layout === 'inline' ? onExpand : undefined,
+  )
 
   if (layout === 'inline' && onExpand)
     return (
@@ -285,6 +318,7 @@ export function Billboard({
         onExpand={onExpand}
         onSend={onSendClick}
         onClear={() => change(emptyMarks())}
+        qr={qr}
       />
     )
 
@@ -320,19 +354,20 @@ export function Billboard({
     />
   )
   const body = fullscreen ? (
-    <FullscreenBody billboard={billboard} bar={bar}>
+    <FullscreenBody billboard={billboard} bar={bar} qr={qr}>
       {shelf}
     </FullscreenBody>
   ) : (
     <div className="flex flex-col gap-2xl">
       {onSend ? (
-        <ViewTop billboard={billboard} shelf={shelf} />
+        <ViewTop billboard={billboard} shelf={shelf} qr={qr} />
       ) : (
         <PageTop
           billboard={billboard}
           shelf={shelf}
           after={after}
           request={request}
+          qr={qr}
         />
       )}
       {bar}
@@ -366,10 +401,12 @@ export function Billboard({
 function FullscreenBody({
   billboard,
   bar,
+  qr,
   children,
 }: {
   billboard: BillboardModel
   bar: ReactNode
+  qr: ReactNode
   children: ReactNode
 }) {
   const speech = billboard.request.speech
@@ -388,6 +425,7 @@ function FullscreenBody({
           <HandNote compact tilt="right">{`+ ${words}`}</HandNote>
         </div>
       ))}
+      {qr && <div className="flex">{qr}</div>}
       <Standing billboard={billboard} block />
       {billboard.films.length > 0 && (
         <PeopleLegend billboard={billboard} named={linesOnTop(billboard)} />
@@ -402,13 +440,16 @@ function FullscreenBody({
 function ViewTop({
   billboard,
   shelf,
+  qr,
 }: {
   billboard: BillboardModel
   shelf: ReactNode
+  qr: ReactNode
 }) {
   return (
     <>
       <BillboardRequest billboard={billboard} compact="narrow" />
+      {qr && <div className="flex">{qr}</div>}
       <Standing billboard={billboard} block />
       <PeopleLegend billboard={billboard} named={linesOnTop(billboard)} />
       <Capped>{shelf}</Capped>
@@ -423,11 +464,13 @@ function PageTop({
   shelf,
   after,
   request,
+  qr,
 }: {
   billboard: BillboardModel
   shelf: ReactNode
   after: ReactNode
   request: boolean
+  qr: ReactNode
 }) {
   return (
     <>
@@ -436,6 +479,7 @@ function PageTop({
           {request && <BillboardRequest billboard={billboard} />}
           <Legend />
         </div>
+        {qr && <div className="flex">{qr}</div>}
         <ShortfallStrip billboard={billboard} />
         {billboard.open && <Dropped billboard={billboard} />}
       </div>
