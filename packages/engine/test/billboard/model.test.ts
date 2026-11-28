@@ -372,6 +372,54 @@ describe('the Cartaz model', () => {
   })
 })
 
+describe('the synopsis (#385)', () => {
+  test('a film with no pt-BR overview shows the first sentence of the English one, marked English', async () => {
+    const fixture = useFixture()
+    const session = await recommend(fixture, { attendees: ['dono'] })
+    const tmdb = { FILMES_TMDB_CHAVE: 'x', FILMES_GRAVACOES: RECORDINGS }
+
+    const out = await fixture.ok(
+      billboard({ session: session.session.id }),
+      tmdb,
+    )
+
+    const film = (id: string) => out.billboard.films.find((f) => f.id === id)!
+    const premiere = film('tt9000203')
+    expect(premiere.synopsis).toBe(
+      'On opening night, the power goes out in a small-town theater.',
+    )
+    expect(premiere.synopsisLanguage).toBe('en')
+    const hours = film('tt9000104')
+    expect(hours.synopsis).toBe(
+      'Numa cidade do interior, uma relojoeira percebe que os relógios da casa atrasam um minuto por noite.',
+    )
+    expect(hours).not.toHaveProperty('synopsisLanguage')
+    expect(out.warnings).toEqual([])
+  })
+
+  test('a film with no overview in either language has no synopsis', async () => {
+    const fixture = useFixture()
+    const session = await recommend(fixture, { attendees: ['dono'] })
+    const tmdb = { FILMES_TMDB_CHAVE: 'x', FILMES_GRAVACOES: RECORDINGS }
+
+    const out = await fixture.ok(
+      billboard({ session: session.session.id }),
+      tmdb,
+    )
+
+    const salt = out.billboard.films.find((f) => f.id === 'tt9000105')!
+    expect(salt.synopsis).not.toBeNull()
+    const without = out.billboard.films.filter(
+      (f) => !['tt9000104', 'tt9000105', 'tt9000203'].includes(f.id),
+    )
+    expect(without.length).toBeGreaterThan(0)
+    for (const film of without) {
+      expect(film.synopsis).toBeNull()
+      expect(film).not.toHaveProperty('synopsisLanguage')
+    }
+  })
+})
+
 describe('the trailer (#289)', () => {
   test('each card links the official YouTube trailer, pt-BR first, then English', async () => {
     const fixture = useFixture()

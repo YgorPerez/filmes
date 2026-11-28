@@ -587,4 +587,70 @@ describe('TMDB', () => {
     expect(trailer).toBeNull()
     expect(net.calls).toHaveLength(1)
   })
+
+  test('the synopsis is the pt-BR overview, with no other request', async () => {
+    const fixture = useFixture()
+    const net = fakeFetch(() =>
+      json({ movie_results: [{ id: 9104, overview: ' Uma relojoeira. ' }] }),
+    )
+
+    const synopsis = await fixture.ok(
+      over(net.fetch)(
+        Effect.flatMap(Effect.service(Tmdb), (tmdb) =>
+          tmdb.synopsis('tt9000104'),
+        ),
+      ),
+      KEYS,
+    )
+
+    expect(synopsis).toEqual({ text: 'Uma relojoeira.', language: 'pt' })
+    expect(net.calls).toHaveLength(1)
+  })
+
+  test('without a pt-BR overview, the synopsis is the English one of the film the /find gave', async () => {
+    const fixture = useFixture()
+    const net = fakeFetch((url) =>
+      url.includes('/find/')
+        ? json({ movie_results: [{ id: 9104, overview: '' }] })
+        : json({ id: 9104, overview: 'A watchmaker finds out.' }),
+    )
+
+    const synopsis = await fixture.ok(
+      over(net.fetch)(
+        Effect.flatMap(Effect.service(Tmdb), (tmdb) =>
+          tmdb.synopsis('tt9000104'),
+        ),
+      ),
+      KEYS,
+    )
+
+    expect(synopsis).toEqual({
+      text: 'A watchmaker finds out.',
+      language: 'en',
+    })
+    expect(net.calls.map((call) => call.url)).toEqual([
+      'https://api.themoviedb.org/3/find/tt9000104?external_source=imdb_id&language=pt-BR&api_key=tmdb-key',
+      'https://api.themoviedb.org/3/movie/9104?language=en-US&api_key=tmdb-key',
+    ])
+  })
+
+  test('a film with no overview in either language has no synopsis', async () => {
+    const fixture = useFixture()
+    const net = fakeFetch((url) =>
+      url.includes('/find/')
+        ? json({ movie_results: [{ id: 9104, overview: '' }] })
+        : json({ id: 9104, overview: '' }),
+    )
+
+    const synopsis = await fixture.ok(
+      over(net.fetch)(
+        Effect.flatMap(Effect.service(Tmdb), (tmdb) =>
+          tmdb.synopsis('tt9000104'),
+        ),
+      ),
+      KEYS,
+    )
+
+    expect(synopsis).toBeNull()
+  })
 })

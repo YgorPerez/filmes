@@ -183,6 +183,28 @@ describe('the Cartaz shows, the header and the trailer', () => {
     )
   })
 
+  it('a synopsis in English says so to the screen reader; one in Portuguese takes the page language', () => {
+    const [horas, sal] = MODEL.films
+    const english = 'On opening night, the power goes out in a theater.'
+    render(
+      <Billboard
+        billboard={{
+          ...MODEL,
+          films: [
+            horas!,
+            { ...sal!, synopsis: english, synopsisLanguage: 'en' },
+          ],
+        }}
+      />,
+    )
+    expect(card(2).getByText(english).getAttribute('lang')).toBe('en')
+    expect(
+      card(1)
+        .getByText(/relojoeira/)
+        .hasAttribute('lang'),
+    ).toBe(false)
+  })
+
   it('the trailer: a link to YouTube in a new tab, only when the film has one', () => {
     render(<Billboard billboard={MODEL} />)
     const trailer = card(1).getByRole('link', { name: 'trailer' })

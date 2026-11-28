@@ -19,8 +19,9 @@ import { Icon } from './billboard-icons'
 import { AgainstMark, Strength } from './billboard-top'
 
 // One film of the Cartaz (DESIGN.md, Card do filme): the tape in its case
-// with the price sticker, the header (with the IMDb and, when TMDB has one,
-// the trailer on YouTube: a link, never a player, #289), "Por que cada um
+// with the price sticker, the header (the synopsis, in English when TMDB
+// has no pt-BR one, #385; the IMDb and, when TMDB has one, the trailer on
+// YouTube: a link, never a player, #289), "Por que cada um
 // vai gostar", opened by each Presente's Nota prevista (#326), and, while
 // the Session takes a reply, the marks (`billboard-card-marks.tsx`). A grid:
 // the case on the left (112px, 160px from 560px), the header on the right;
@@ -177,7 +178,12 @@ function Header({
         )}
       </Title>
       {film.synopsis && (
-        <p className="max-w-[60ch] text-synopsis text-pretty">
+        // TMDB's English overview when it has no pt-BR one (#385): a screen
+        // reader reads it in English.
+        <p
+          lang={film.synopsisLanguage}
+          className="max-w-[60ch] text-synopsis text-pretty"
+        >
           {film.synopsis}
         </p>
       )}

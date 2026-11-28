@@ -16,7 +16,8 @@
 // The Evidence comes from the Session's body. The header (genres, rating,
 // poster, Portuguese title, synopsis) is rebuilt from the database and the
 // TMDB, which answers from the cache; so is the trailer (#289), a YouTube
-// link only when TMDB has one. The sources' attributions stay out, as in
+// link only when TMDB has one, and the synopsis falls back to the English
+// overview when TMDB has no pt-BR one (#385). The sources' attributions stay out, as in
 // the Markdown answer (the Dono's decision of 2026-11-21).
 //
 // In a version redone with `keep` (#59), a film that came in is `new`, and
@@ -73,7 +74,7 @@ import {
   unseenText,
   type UnseenBefore,
 } from '../recommendation/constraints/series-order.ts'
-import { filmHeader } from '../recommendation/header.ts'
+import { filmHeader, firstSentence } from '../recommendation/header.ts'
 import { readMoods } from '../recommendation/moods.ts'
 import type { DropCause } from '../recommendation/kept.ts'
 import {
@@ -239,7 +240,11 @@ export interface BillboardFilm {
   /** The critics' score saved with the version: "93% no Rotten
    * Tomatoes". */
   readonly critics?: ReadonlyArray<string>
+  /** The first sentence of TMDB's pt-BR overview, else of its English
+   * one; null with neither. */
   readonly synopsis: string | null
+  /** "en" when the synopsis is the English overview; absent in pt-BR. */
+  readonly synopsisLanguage?: 'en'
   /** The strongest Evidence of each Presente with a Fato, the strongest
    * lines first. */
   readonly lines: ReadonlyArray<BillboardLine>
@@ -848,7 +853,9 @@ const filmCard = (
         `Sessão ${id}: ${film.id} não está no Catálogo`,
       )
     const header = yield* filmHeader(db, row)
-    const trailer = yield* (yield* Tmdb).trailer(film.id)
+    const tmdb = yield* Tmdb
+    const trailer = yield* tmdb.trailer(film.id)
+    const synopsis = yield* tmdb.synopsis(film.id)
     const recorded = listed.get(film.id)
     const labels = (key: string) =>
       listOf(recorded?.get(key)).filter((label) => typeof label === 'string')
@@ -888,7 +895,8 @@ const filmCard = (
       chips,
       ...(awards.length > 0 && { awards }),
       ...(critics.length > 0 && { critics }),
-      synopsis: header.synopsis,
+      synopsis: firstSentence(synopsis?.text ?? null),
+      ...(synopsis?.language === 'en' && { synopsisLanguage: 'en' as const }),
       lines: linesOf(film, input.relayedByYou),
       withoutFact,
       seen,
