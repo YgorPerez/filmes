@@ -72,7 +72,7 @@ export function FilmCover({
 }
 
 /** "2021 · 1h44 · Drama": the chips of a film's card. */
-export function FilmFacts({ film }: { film: Film }) {
+function FilmFacts({ film }: { film: Film }) {
   const { card } = film
   if (!card) return null
   const chips = [

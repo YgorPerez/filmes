@@ -245,6 +245,9 @@
    * leaves under itself for that bar. */
   --spacing-tab-safe: max(14px, env(safe-area-inset-bottom));
   --spacing-tab-clearance: calc(68px + env(safe-area-inset-bottom));
+  /* A full-screen layer's breath under the top safe area (the swipe's
+   * card, #377). */
+  --spacing-top-safe: max(14px, env(safe-area-inset-top));
 
   /* The 1.5px outline of an option, a field, a chip (DESIGN.md: "contorno
    * de 1,5px"), as `border-(length:--border-width-stroke)`: `@shadcn/lint`

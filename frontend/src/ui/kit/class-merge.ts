@@ -113,6 +113,7 @@ export const TOKENS = {
     '3xl',
     'touch',
     'tab-safe',
+    'top-safe',
     'tab-clearance',
   ],
 } as const

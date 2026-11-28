@@ -3,6 +3,7 @@ import type {
   BillboardLine,
   BillboardNotes,
   BillboardPerson,
+  BillboardPrediction,
 } from '@filmes/engine'
 import { useState } from 'react'
 import type { FilmMarks } from './billboard-marks'
@@ -30,9 +31,9 @@ import { AgainstMark, Strength } from './billboard-top'
 
 /** The outlined chips that leave the app: the IMDb and the trailer. The
  * link is 44px tall and the chip drawn inside it (#272, #277). */
-const LINK_CHIP =
+export const LINK_CHIP =
   'inline-flex min-h-touch items-center font-display text-chip font-bold text-ink tabular-nums no-underline'
-const LINK_CHIP_FACE =
+export const LINK_CHIP_FACE =
   'rounded-pill border-(length:--border-width-stroke) border-rule px-2.25 py-1'
 
 /** The film's title level: 2 alone, 3 under a section's title. */
@@ -258,15 +259,15 @@ export function EvidenceLine({
  * of "Por que": "previsto · Ana 8,3 · Iara 7,1". Her name carries the hint
  * of how many taste neighbours back it, when the version kept it. Who has
  * none is left out, and with nobody there is no line (#326). */
-function Predicted({
-  film,
+export function Predicted({
+  ratings,
   people,
 }: {
-  film: BillboardFilm
+  ratings: readonly BillboardPrediction[]
   people: readonly BillboardPerson[]
 }) {
   const { card } = BILLBOARD
-  const predicted = new Map(film.predictedRatings.map((p) => [p.person, p]))
+  const predicted = new Map(ratings.map((p) => [p.person, p]))
   const shown = people.flatMap((person) => {
     const rating = predicted.get(person.slug)
     return rating ? [{ person, rating }] : []
@@ -327,7 +328,7 @@ function Why({
           {film.coverage}
         </span>
       </p>
-      <Predicted film={film} people={people} />
+      <Predicted ratings={film.predictedRatings} people={people} />
       <ul aria-label={card.why} className="flex flex-col gap-2.25">
         {film.cautiousBetReason && (
           <li className="text-evidence text-ink-2">{film.cautiousBetReason}</li>
