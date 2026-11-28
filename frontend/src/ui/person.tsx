@@ -47,6 +47,7 @@ import {
 } from './person-parts'
 import { MyStartSections, type MyStart } from './my-start'
 import { StrengthDots } from './person-marks'
+import { TasteAnalysisSlip } from './person-taste-analysis'
 import { PERSON } from './person.copy'
 import { buttonVariants } from './kit/button-variants'
 import { shortDate, weekdayDate } from './dates'
@@ -249,13 +250,22 @@ function PersonColumns({
   const posted = spot === undefined ? undefined : sectionOfSpot(spot)
   const column = 'flex min-w-0 flex-col gap-2xl'
   const notes = (
-    <Notes
-      slug={slug}
-      own={own}
-      page={page}
-      pending={own ? pending : 0}
-      trakt={own ? trakt : null}
-    />
+    <>
+      <Notes
+        slug={slug}
+        own={own}
+        page={page}
+        pending={own ? pending : 0}
+        trakt={own ? trakt : null}
+      />
+      {page.tasteAnalysis && (
+        <TasteAnalysisSlip
+          analysis={page.tasteAnalysis}
+          own={own}
+          name={page.name}
+        />
+      )}
+    </>
   )
   return (
     <>

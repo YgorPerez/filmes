@@ -162,7 +162,10 @@ export function peopleFromEngine(engine: Engine): People {
           })),
         ),
       ),
-    view: (person) => engine.run(personView(person, { predictionError: true })),
+    view: (person) =>
+      engine.run(
+        personView(person, { predictionError: true, tasteAnalysis: true }),
+      ),
     sessions: (person) => engine.run(personSessions(person)),
     taste: (person) => engine.run(tasteSummary({ person })),
 
