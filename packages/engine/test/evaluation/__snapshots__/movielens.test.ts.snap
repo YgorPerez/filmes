@@ -278,6 +278,10 @@ exports[`avaliar on MovieLens files, as recorded > a messy sample with tags give
         "minImdbRating": 7,
         "minVotes": 1000,
       },
+      "compatibility": {
+        "films": 3,
+        "minShared": 10,
+      },
       "constraints": {
         "onDemandReach": 50,
       },
@@ -691,6 +695,10 @@ exports[`avaliar on MovieLens files, as recorded > a small sample warns that Mov
         "minImdbRating": 7,
         "minVotes": 1000,
       },
+      "compatibility": {
+        "films": 3,
+        "minShared": 10,
+      },
       "constraints": {
         "onDemandReach": 50,
       },
@@ -1101,6 +1109,10 @@ exports[`the diaries, as recorded > a Trakt history dates the cut 1`] = `
       "catalog": {
         "minImdbRating": 7,
         "minVotes": 1000,
+      },
+      "compatibility": {
+        "films": 3,
+        "minShared": 10,
       },
       "constraints": {
         "onDemandReach": 50,

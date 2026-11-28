@@ -46,6 +46,7 @@ import {
   type Target,
 } from './person-parts'
 import { MyStartSections, type MyStart } from './my-start'
+import { CompatibilitySection } from './person-compatibility'
 import { StrengthDots } from './person-marks'
 import { TasteAnalysisSlip } from './person-taste-analysis'
 import { PERSON } from './person.copy'
@@ -226,7 +227,8 @@ export function PersonScreen({
 /** From 900px, two columns in the order a phone reads them (#273): on
  * another Pessoa's page, what the Dono acts on at the left (the open
  * questions, the Vetos, the Já vistos) and her Sessões and Notas at the
- * right; on Meu gosto, the glance and the Notas first. Then, the whole
+ * right; on Meu gosto, the glance and the Notas first. Her Compatibilidade
+ * (#403) follows the Notas in both. Then, the whole
  * width, "Afinar" and, on another Pessoa's page, "Remover Pessoa": the
  * DOM, the focus and the screen go the same way at every width. */
 function PersonColumns({
@@ -267,6 +269,13 @@ function PersonColumns({
       )}
     </>
   )
+  const compatibility = page.compatibility && (
+    <CompatibilitySection
+      name={page.name}
+      viewer={page.viewer.person}
+      compatibility={page.compatibility}
+    />
+  )
   return (
     <>
       <div className="grid gap-2xl min-[900px]:grid-cols-2 min-[900px]:items-start">
@@ -280,6 +289,7 @@ function PersonColumns({
                 taste={taste}
               />
               {notes}
+              {compatibility}
             </div>
             <div className={column}>
               <Contents page={page} />
@@ -297,6 +307,7 @@ function PersonColumns({
             <div className={column}>
               <SessionsWith page={page} />
               {notes}
+              {compatibility}
             </div>
           </>
         )}
