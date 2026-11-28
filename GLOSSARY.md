@@ -65,11 +65,11 @@ A Restrição, ligada por padrão, que tira a continuação de uma série de fil
 _Evitar_: sequência, franquia, saga
 
 **Nada de um Clima** [no mood, `no_mood`, `noMoods`]:
-A Restrição que tira os filmes de um Clima que o Dono não quer hoje ("nada de terror", "sem comédia"): um dos gêneros do Clima ou uma das tags dele com o mínimo do Veto por grupo. O Clima puxa a ordem; esta só tira.
+A Restrição que tira os filmes de um Clima que o Dono não quer hoje ("nada de terror", "sem comédia"): um dos gêneros do Clima ou uma das tags dele com o mínimo do Veto por grupo. O Clima puxa a ordem; esta só tira. Um Clima de popularidade não entra: "nada muito conhecido" é o Clima desconhecido.
 _Evitar_: clima negativo, anticlima
 
 **Clima** [mood, `Mood`]:
-O que uma Sessão quer sem excluir nenhum filme: a energia ("algo leve"), a ocasião ("aniversário da Ana"), a vontade do momento. Puxa a ordem, nunca tira um filme.
+O que uma Sessão quer sem excluir nenhum filme: a energia ("algo leve"), a ocasião ("aniversário da Ana"), a vontade do momento. Puxa a ordem, nunca tira um filme. Quase todo Clima é um grupo de tags e gêneros; o de popularidade (conhecido, desconhecido) é uma medida do filme, os votos do IMDb.
 _Evitar_: desejo, mood, preferência
 
 **Contexto** [context, `context`]:

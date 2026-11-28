@@ -13,6 +13,8 @@ export const MOODS = [
   'assustador',
   'ação',
   'sombrio',
+  'conhecido',
+  'desconhecido',
 ]
 
 const person = z
@@ -94,7 +96,9 @@ export default defineTool({
         `Climas do pedido, do vocabulário fixo: ${MOODS.join(', ')}. ` +
           'Traduza o pedido livre para esses nomes, um ou mais: "algo leve" é leve; "leve e engraçado" é leve e pra rir; ' +
           '"pra dar risada" é pra rir; "de roer as unhas" é tenso; "pesado, escuro" é sombrio. ' +
-          '"Tipo X, só que mais sombrio" é X em `similar` com sombrio aqui. Fora da lista, o motor devolve um aviso',
+          '"Tipo X, só que mais sombrio" é X em `similar` com sombrio aqui. ' +
+          'conhecido e desconhecido puxam pelos votos do IMDb: "algo famoso" é conhecido; "nada muito conhecido", "pouco conhecido" é desconhecido. ' +
+          'Fora da lista, o motor devolve um aviso',
       ),
     count: z
       .number()
@@ -200,7 +204,8 @@ export default defineTool({
       .optional()
       .describe(
         '"nada de terror", "sem comédia": os Climas do vocabulário de moods a tirar. Sai o filme de um dos ' +
-          'gêneros ou das tags do Clima; o Clima pedido em moods só puxa a ordem, este só tira',
+          'gêneros ou das tags do Clima; o Clima pedido em moods só puxa a ordem, este só tira. ' +
+          'conhecido e desconhecido não tiram filme: "nada famoso" é desconhecido em moods',
       ),
     similar: z
       .array(imdbId)

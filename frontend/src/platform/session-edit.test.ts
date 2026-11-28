@@ -70,6 +70,12 @@ describe('sessionEditPage', () => {
     expect(page !== null && typeof page === 'object' && page.moods).toContain(
       'leve',
     )
+    expect(page !== null && typeof page === 'object' && page.noMoods).toEqual(
+      expect.not.arrayContaining(['conhecido', 'desconhecido']),
+    )
+    expect(page !== null && typeof page === 'object' && page.noMoods).toContain(
+      'leve',
+    )
   })
 
   it('says why there is no form', async () => {

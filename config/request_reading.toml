@@ -60,6 +60,9 @@ tenso = ["suspense", "tensão"]
 assustador = ["terror", "medo", "de medo", "horror"]
 "ação" = ["aventura", "de ação"]
 sombrio = ["sombria", "dark"]
+# Negados ("nada muito conhecido", "sem filme famoso"), viram o outro Clima.
+conhecido = ["conhecida", "muito conhecido", "famoso", "famosa", "popular", "sucesso"]
+desconhecido = ["desconhecida", "pouco conhecido", "pouco conhecida", "obscuro", "obscura"]
 
 [duration]
 # "até 2h", "no máximo 90 minutos", "uma hora e meia". As palavras antes

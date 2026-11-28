@@ -26,7 +26,8 @@ const OPTIONS: RequestOptions = {
     { person: 'iara', name: 'Iara', owner: false },
     { person: 'quim', name: 'Quim', owner: false },
   ],
-  moods: ['leve', 'pra rir', 'tenso'],
+  moods: ['leve', 'pra rir', 'tenso', 'conhecido'],
+  noMoods: ['leve', 'pra rir', 'tenso'],
 }
 
 function show() {

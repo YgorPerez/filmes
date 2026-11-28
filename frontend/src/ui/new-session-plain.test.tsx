@@ -12,6 +12,7 @@ import { SESSIONS } from './sessions.copy'
 const OPTIONS = {
   people: [{ person: 'bruno', name: 'Bruno', owner: true }],
   moods: [],
+  noMoods: [],
 }
 
 const SEARCH = {
